@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>twopointsix — level editor → workbench</title>
+  <style>html, body { margin: 0; height: 100%; background: #000; color: #9cb; font: 12px ui-monospace, Menlo, monospace; display: flex; align-items: center; justify-content: center; }</style>
+</head>
+<body>
+  <p>The level editor is the workbench's <b>Level</b> mode now: <a id="go" href="workbench#mode=level">workbench#mode=level</a></p>
+  <script>
+    // /editor (dev) and editor.html (the build) FORWARD into the workbench's Level mode, keeping ?quality=… and the old hash:
+    // #file=<name> / #autosave / #blank become #mode=level&file=<name> (…&autosave / …&blank).
+    (function () {
+      var old = location.hash.replace(/^#/, '');
+      var page = /\.html$/.test(location.pathname) ? 'workbench.html' : 'workbench';
+      var target = page + location.search + '#mode=level' + (old ? '&' + old : '');
+      document.getElementById('go').href = target;
+      location.replace(target);
+    })();
+  </script>
+</body>
+</html>

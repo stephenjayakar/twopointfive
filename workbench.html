@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>twopointsix — workbench</title>
+  <style>
+    /* Layout: a two-row top bar over [palette | stage | inspector]. The Engine sizes itself from canvas#view (the stage cell); canvas#olay is the 2D overlay;
+       Panel instances live on .pnl containers (#props); showFatal() binds #fatal. Same dark mono + green accent as the viewer. */
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: ui-monospace, Menlo, monospace; color: #cfd; font-size: 11px; }
+    button, input, select { font: inherit; }
+    
+    body.resizing, body.resizing * { cursor: col-resize !important; user-select: none; }
+    body.scrubbing, body.scrubbing * { cursor: ew-resize !important; user-select: none; -webkit-user-select: none; }
+    /* ---- top bar */
+    #topbar { grid-column: 1 / 4; background: #070b0d; border-bottom: 1px solid #1c2a30; padding: 4px 8px 3px; display: flex; flex-direction: column; gap: 3px; z-index: 6; min-width: 0; position: relative; }
+    #topbar .tabs { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+    #topbar .brand { color: #5c8f7c; letter-spacing: .12em; text-transform: uppercase; margin-right: 6px; font-size: 10px; }
+    #topbar .sep { color: #2c4a44; margin: 0 2px; } #topbar .k { color: #587; margin: 0 2px 0 6px; } .spacer { flex: 1; }
+    .tb { background: #0c1519; color: #bdd; border: 1px solid #2a3c44; border-radius: 3px; padding: 2px 7px; cursor: pointer; white-space: nowrap; }
+    .tb:hover { border-color: #5a9; color: #eff; } .tb.on { background: #143026; border-color: #7fc; color: #b6f5d4; }
+    .tb.play { border-color: #7a6; color: #cfc; }
+    .tbsel { background: #0c1519; color: #cfe; border: 1px solid #2a3c44; border-radius: 3px; padding: 1px 3px; max-width: 150px; }
+    label.tog { display: inline-flex; align-items: center; gap: 2px; color: #9cb; cursor: pointer; margin: 0 3px; white-space: nowrap; } label.tog input { margin: 0; accent-color: #6cb; }
+    #topbar .status { color: #8aa; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 40vw; } #topbar .status.dirty { color: #f0d878; }
+    #topbar .fps { color: #6a8; }
+    .menu { position: absolute; top: 30px; left: 110px; z-index: 20; background: rgba(6,10,12,0.97); border: 1px solid #345; border-radius: 4px; padding: 4px; display: flex; flex-direction: column; gap: 2px; min-width: 320px; max-height: 70vh; overflow: auto; }
+    #savemenu { left: 170px; } .menu.hidden { display: none; }
+    .mi { text-align: left; background: transparent; color: #cfe; border: 1px solid transparent; border-radius: 3px; padding: 4px 8px; cursor: pointer; }
+    .mi:hover { background: #12232a; border-color: #345; } .mh { color: #6a8; font-size: 10px; letter-spacing: .1em; padding: 6px 8px 2px; text-transform: uppercase; }
+    /* ---- palette (left) */
+    #palette { background: #080c0e; border-right: 1px solid #1c2a30; overflow: auto; padding: 4px 5px 8px; display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+    #palette .ph { color: #5c8f7c; font-size: 9.5px; letter-spacing: .1em; margin: 7px 0 2px; }
+    .pi { text-align: left; background: #0c1519; color: #bdd; border: 1px solid #22343b; border-radius: 3px; padding: 2px 6px; cursor: pointer; }
+    .pi:hover { border-color: #5a9; color: #eff; } .pi.on { background: #143026; border-color: #7fc; color: #b6f5d4; } .pi.stub, .pi:disabled { color: #566; border-style: dashed; cursor: not-allowed; }
+    #palette .mats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+    .sw { height: 22px; border: 1px solid #22343b; border-radius: 3px; cursor: pointer; position: relative; padding: 0; }
+    .sw:hover { border-color: #fff; } .sw .swn { position: absolute; left: 2px; bottom: 1px; font-size: 8.5px; color: #fff; text-shadow: 0 0 2px #000, 0 0 2px #000; pointer-events: none; }
+    /* ---- stage */
+    #stage { position: relative; overflow: hidden; min-width: 0; min-height: 0; }
+    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; image-rendering: auto; }
+    canvas#olay { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #hud { position: absolute; left: 10px; top: 6px; right: 10px; font-size: 10.5px; line-height: 1.35; white-space: pre-wrap; pointer-events: none; color: #bfe; text-shadow: 0 1px 2px #000; }
+    #help { position: absolute; left: 10px; bottom: 5px; right: 10px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; color: #7f948e; text-shadow: 0 1px 2px #000; }
+    #log { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); max-width: 70%; font-size: 11px; color: #dfd; text-align: center; text-shadow: 0 1px 2px #000, 0 0 4px #000; white-space: pre-wrap; pointer-events: none; }
+    #problems { position: absolute; left: 8px; bottom: 22px; width: 560px; max-width: calc(100% - 16px); max-height: 45%; overflow: auto; background: rgba(4,8,10,0.92); border: 1px solid #345; border-radius: 4px; z-index: 5; padding: 4px 6px; }
+    #problems.hidden { display: none; } #problems .phd { display: flex; align-items: center; gap: 6px; color: #8aa; font-size: 10px; letter-spacing: .08em; border-bottom: 1px solid #1a262c; padding-bottom: 3px; margin-bottom: 3px; }
+    .pf { padding: 2px 4px; cursor: pointer; border-radius: 3px; line-height: 1.3; } .pf:hover { background: #12232a; }
+    .pf.error { color: #ff9a8a; } .pf.warn { color: #f0d878; } .pf.info { color: #9cd; } .pf.ok { color: #7fc; cursor: default; }
+    .iconbtn { background: #0c1519; color: #bdd; border: 1px solid #2a3c44; border-radius: 3px; padding: 0 6px; cursor: pointer; }
+    #drop { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(20,60,50,0.45); border: 3px dashed #7fc; color: #dff; font-size: 16px; z-index: 8; pointer-events: none; }
+    #drop.on { display: flex; }
+    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9cb; background: #000; z-index: 30; grid-column: 1 / 4; grid-row: 1 / 3; }
+    #fatal { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; z-index: 40; grid-column: 1 / 4; grid-row: 1 / 3; }
+    /* ---- panels (Panel instances) */
+    .pnl { font-size: 11px; background: rgba(6,10,12,0.95); border: 1px solid #234; border-radius: 4px; padding: 6px 8px; }
+    .pnl.hidden { display: none !important; }
+    .pnl .pbody { overflow: auto; min-height: 0; flex: 1 1 auto; }
+    .pnl h3 { margin: 7px 0 3px; font-size: 10.5px; color: #7fc; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; user-select: none; }
+    .pnl h3:first-child { margin-top: 2px; }
+    .pnl .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; min-height: 17px; }
+    .pnl .row label { flex: 0 0 96px; color: #9bb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .pnl .row input[type=range] { flex: 1; min-width: 0; height: 12px; accent-color: #6cb; }
+    .pnl .row .val { flex: 0 0 40px; text-align: right; color: #dfe; }
+    .pnl .row select, .pnl .row button { background: #123; color: #cfe; border: 1px solid #345; border-radius: 3px; padding: 1px 4px; }
+    .pnl .row select { max-width: 190px; min-width: 0; flex: 1 1 auto; }
+    .pnl .row button { cursor: pointer; } .pnl .row button:hover { background: #1a3040; }
+    .pnl .btnrow { flex-wrap: wrap; row-gap: 3px; } .pnl .btnrow label:empty { display: none; }
+    .pnl .textrow { line-height: 1.3; font-size: 10.5px; }
+    .pnl .numrow label { flex: 1 1 auto; }
+    .pnl .row input.num { width: 7ch; background: #0b1418; color: #dfe; border: 1px solid #26363d; border-radius: 3px; padding: 1px 4px; text-align: right; cursor: ew-resize; outline: none; }
+    .pnl .row input.num:hover { border-color: #4b8; } .pnl .row input.num:focus { cursor: text; border-color: #6cb; background: #0e1c22; color: #fff; }
+    .pnl .vecrow input.num { width: 5.6ch; padding: 1px 3px; }
+    .pnl .row input.txt { flex: 1 1 auto; min-width: 0; background: #0b1418; color: #dfe; border: 1px solid #26363d; border-radius: 3px; padding: 1px 4px; outline: none; }
+    .pnl .row input.txt:focus { border-color: #6cb; background: #0e1c22; color: #fff; } .pnl .row input.txt.bad { border-color: #f66; }
+    .pnl .txtrow label { flex: 0 0 96px; }
+    .pnl .row .rev { flex: 0 0 10px; color: #f0d878; cursor: pointer; font-size: 8px; text-align: center; visibility: hidden; }
+    .pnl .row.changed > label { color: #f0d878; }
+    /* ---- inspector */
+    #inspector { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #080c0e; border-left: 1px solid #1c2a30; }
+    #inspgrip { position: absolute; left: -4px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 3; } #inspgrip:hover { background: rgba(127,255,204,0.12); }
+    .ihead { padding: 4px 8px; color: #5c8f7c; font-size: 10px; letter-spacing: .12em; border-bottom: 1px solid #142026; background: #0a1013; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; flex: 0 0 auto; }
+    .ihead #proptitle { color: #7d9791; letter-spacing: 0; text-transform: none; overflow: hidden; text-overflow: ellipsis; }
+    #outliner-level { flex: 0 0 var(--outl-h, 36%); overflow: auto; padding: 4px 4px 6px; min-height: 40px; }
+    #splitter { flex: 0 0 5px; cursor: row-resize; background: #0d1518; border-top: 1px solid #1c2a30; border-bottom: 1px solid #1c2a30; } #splitter:hover { background: #1d3a34; }
+    #props { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; border: 0; border-radius: 0; background: transparent; padding: 2px 8px 6px; }
+    .olv .n { padding: 1px 4px; cursor: pointer; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cfe; line-height: 1.35; }
+    .olv .n:hover { background: #0f1c22; } .olv .n.sel { background: #f0d878; color: #111; }
+    .olv .n.grp { color: #6fd9b0; letter-spacing: 0.03em; font-size: 10px; text-transform: uppercase; margin-top: 2px; } .olv .n.dim { color: #6b8088; }
+    .olv .n .tw { display: inline-block; width: 11px; color: #587; }
+    /* ---- inspector tabs: properties | materials | markings (paintui.ts) */
+    .itabs { display: inline-flex; gap: 2px; margin-right: 6px; }
+    .itab { background: transparent; color: #7d9791; border: 1px solid transparent; border-bottom: 0; border-radius: 3px 3px 0 0; padding: 1px 7px; cursor: pointer; letter-spacing: .06em; text-transform: uppercase; font-size: 10px; }
+    .itab:hover { color: #cfe; border-color: #2a3c44; } .itab.on { color: #b6f5d4; background: #0f1d1c; border-color: #2f6a58; }
+    .pane { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; border: 0; border-radius: 0; background: transparent; padding: 2px 8px 6px; }
+    .pnl .row button.pb { background: #123; color: #cfe; border: 1px solid #345; border-radius: 3px; padding: 1px 5px; cursor: pointer; } .pnl .row button.pb:hover { background: #1a3040; }
+    .pnl .row button.pb.on { background: #143026; border-color: #7fc; color: #b6f5d4; } .pnl .row button.pb:disabled { opacity: 0.35; cursor: default; }
+    /* materials */
+    .matlist { display: flex; flex-direction: column; gap: 1px; margin: 3px 0 4px; max-height: 260px; overflow: auto; border: 1px solid #142026; border-radius: 3px; padding: 2px; }
+    .mrow { display: grid; grid-template-columns: 30px minmax(0, 1fr) 42px 52px; align-items: center; gap: 6px; padding: 1px 4px; border-radius: 3px; cursor: pointer; line-height: 1.5; }
+    .mrow:hover { background: #0f1c22; } .mrow.on { background: #1c2c1e; outline: 1px solid #7fc; }
+    .mrow .chip { display: inline-block; width: 28px; height: 14px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.15); }
+    .mrow .mname { color: #dfe; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .mrow .muse { color: #7a9; text-align: right; font-size: 10px; } .mrow .mfin { color: #9bd; text-align: right; font-size: 10px; }
+    .pnl .row.colrow input.col { width: 34px; height: 20px; padding: 0; border: 1px solid #345; background: #0b1418; border-radius: 3px; cursor: pointer; }
+    .pnl .row.colrow input.hex { flex: 0 0 auto; }
+    .pnl .row.roughrow input[type=range].unset { opacity: 0.4; }
+    /* markings */
+    .facerow button.face { min-width: 26px; }
+    .mklist { display: flex; flex-direction: column; gap: 1px; margin: 3px 0; border: 1px solid #142026; border-radius: 3px; padding: 2px; }
+    .mkrow { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto 74px; align-items: center; gap: 6px; padding: 1px 4px; border-radius: 3px; cursor: pointer; line-height: 1.5; }
+    .mkrow:hover { background: #0f1c22; } .mkrow.on { background: #1c2c1e; outline: 1px solid #7fc; } .mkrow .mki { color: #587; } .mkrow .mkd { color: #dfe; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .mkrow .mkl { color: #7a9; font-size: 10px; text-align: right; }
+    .mkchips { display: inline-flex; gap: 2px; } .mkchip { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2); } .mkchip.big { width: 22px; height: 13px; } .mkchip.emit { box-shadow: 0 0 4px 1px rgba(255,230,140,0.7); }
+    .patrow input.txt { min-width: 0; } .patrow input[type=checkbox] { margin: 0 2px; }
+    .entrow button.entry { min-width: 30px; font-weight: 600; } .entrow button.entry.emit { box-shadow: 0 0 5px 1px rgba(255,230,140,0.6); }
+    .painter { margin: 4px 0; padding: 4px; background: #05090b; border: 1px solid #1c2a30; border-radius: 3px; overflow: auto; text-align: center; }
+    canvas.paintcv { display: inline-block; cursor: crosshair; image-rendering: pixelated; outline: none; border: 1px solid #2a3c44; }
+    canvas.paintcv.focus { border-color: #7fc; box-shadow: 0 0 0 1px #7fc; }
+    .pstat { min-height: 14px; color: #8aa; font-size: 10px; }
+    .palent { border-left: 2px solid #23343b; margin: 5px 0 2px; padding-left: 6px; } .palent .palhead label { flex: 0 0 54px; color: #7fc; font-weight: 600; } .palent .paldesc { color: #8aa; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    textarea.ascii { width: 100%; box-sizing: border-box; background: #0b1418; color: #dfe; border: 1px solid #26363d; border-radius: 3px; font: 11px/1.15 ui-monospace, Menlo, monospace; letter-spacing: 0.15em; padding: 3px 4px; resize: vertical; white-space: pre; }
+  
+    /* ---- from the viewer: scene chips, the gait strip, the constants box, the gear / all-knobs overlays, group tools, its outliner tree */
+    .tab { background: transparent; color: #9bb; border: 1px solid transparent; border-radius: 3px; padding: 3px 9px; cursor: pointer; }
+    .tab:hover { color: #dfe; background: #0e1a1f; } .tab.on { color: #0b1410; background: #7fc; border-color: #7fc; font-weight: 600; }
+    .chips { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; min-height: 20px; }
+    .chip { font-size: 10.5px; background: #0c1519; color: #bdd; border: 1px solid #2a3c44; border-radius: 10px; padding: 2px 8px; cursor: pointer; }
+    .chip:hover { border-color: #5a9; color: #eff; } .chip.on { background: #143026; border-color: #7fc; color: #b6f5d4; }
+    .iconbtn.on { border-color: #7fc; color: #eff; }
+    #strip { display: flex; align-items: center; gap: 10px; color: #9cb; font-size: 10.5px; padding: 1px 2px 0; white-space: nowrap; overflow: hidden; }
+    #strip.hidden { display: none; } #strip .k { color: #587; }
+    #strip label { display: flex; align-items: center; gap: 3px; color: #e0c66e; cursor: pointer; }
+    #strip button { font-size: 10px; background: transparent; color: #8aa; border: 1px solid #2a3a40; border-radius: 3px; padding: 0 6px; cursor: pointer; } #strip button:hover { color: #dfe; border-color: #5a9; }
+    #gaitline { overflow: hidden; text-overflow: ellipsis; }
+    #outbox { position: absolute; left: 10px; bottom: 26px; width: 470px; max-width: calc(100% - 20px); max-height: 46%; display: flex; flex-direction: column; background: rgba(4,8,10,0.88); border: 1px solid #234; border-radius: 4px; z-index: 4; }
+    #outbox.hidden { display: none; }
+    #outbox .ohead { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-bottom: 1px solid #1a262c; color: #8aa; font-size: 10px; }
+    #outbox .ohead #outwhat { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #9cb; }
+    #outbox .ohead button { font-size: 10px; background: #123; color: #cfe; border: 1px solid #345; border-radius: 3px; padding: 0 6px; cursor: pointer; }
+    #rigout { flex: 1; overflow: auto; margin: 0; padding: 6px 8px; font-size: 10px; line-height: 1.3; color: #bfd; white-space: pre; user-select: text; -webkit-user-select: text; }
+    #gear { position: absolute; right: 6px; top: 6px; width: 320px; max-height: calc(100% - 12px); overflow: auto; z-index: 8; display: flex; flex-direction: column; }
+    #allknobs { position: absolute; right: 6px; top: 6px; bottom: 6px; width: 340px; z-index: 9; display: flex; flex-direction: column; }
+    #allknobs .atop { display: flex; align-items: center; gap: 6px; color: #6a8; font-size: 10px; letter-spacing: .1em; margin-bottom: 3px; }
+    .pnl .phead { display: flex; align-items: center; gap: 8px; padding: 2px 0 6px; border-bottom: 1px solid #234; margin-bottom: 4px; }
+    .pnl .phead input[type=search] { flex: 1; min-width: 0; background: #0c171b; color: #dfe; border: 1px solid #345; border-radius: 3px; padding: 3px 6px; outline: none; }
+    .pnl .row.changed input.num, .pnl .row.changed .val { color: #f8e79a; border-color: #6b5f2a; }
+    .pnl .gtools { display: flex; gap: 4px; justify-content: flex-end; align-items: center; margin: -1px 0 3px; }
+    .pnl .gtools button { font-size: 9.5px; background: transparent; color: #8aa; border: 1px solid #2a3a40; border-radius: 3px; padding: 0 5px; cursor: pointer; } .pnl .gtools button:hover { color: #dfe; border-color: #5a9; }
+    .pnl .gtools .gchanged { color: #f0d878; font-size: 9.5px; margin-right: auto; visibility: hidden; }
+    .pnl .row.hk label { flex: 0 0 150px; color: #dfe; } .pnl .row.hk span { color: #8aa; }
+    .ol .n { padding: 1px 4px; cursor: pointer; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cfe; line-height: 1.35; }
+    .ol .n:hover { background: #0f1c22; } .ol .n.sel { background: #f0d878; color: #111; }
+    .ol .n.grp { color: #6fd9b0; letter-spacing: 0.03em; font-size: 10px; text-transform: uppercase; margin-top: 2px; } .ol .n.dim { color: #6b8088; } .ol .n.inert { cursor: default; font-style: italic; } .ol .n .tw { display: inline-block; width: 11px; color: #587; }
+    /* ---- the WORKBENCH shell: [left: rail + outliner / tree + palette] [stage] [inspector]; per-mode pieces carry data-modes and are hidden outside them */
+    #app { position: fixed; inset: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); grid-template-columns: var(--left-w, 214px) minmax(0, 1fr) var(--insp-w, 340px); }
+    #app.insp-hidden { grid-template-columns: var(--left-w, 214px) minmax(0, 1fr) 0; } #app.insp-hidden #inspector { display: none; }
+    .wbhide { display: none !important; }
+    #left { display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #080c0e; border-right: 1px solid #1c2a30; }
+    #rail { flex: 0 0 auto; display: flex; flex-direction: column; gap: 2px; padding: 6px 5px 6px; border-bottom: 1px solid #1c2a30; background: #070b0d; }
+    #rail .rb { display: flex; align-items: center; gap: 7px; text-align: left; background: transparent; color: #9bb; border: 1px solid transparent; border-radius: 4px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
+    #rail .rb:hover { color: #eff; background: #0e1a1f; border-color: #22343b; } #rail .rb.on { color: #b6f5d4; background: #143026; border-color: #7fc; }
+    #rail .rb .ic { display: inline-block; width: 18px; text-align: center; font-size: 13px; color: #7fc; } #rail .rb .k { margin-left: auto; color: #587; font-size: 9.5px; }
+    #rail .rh { color: #5c8f7c; font-size: 9.5px; letter-spacing: .12em; margin: 2px 2px 3px; }
+    #left .lhead { padding: 4px 8px; color: #5c8f7c; font-size: 10px; letter-spacing: .12em; border-bottom: 1px solid #142026; border-top: 1px solid #1c2a30; background: #0a1013; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
+    #outliner-level { flex: 1 1 auto; overflow: auto; padding: 4px 4px 6px; min-height: 40px; }
+    #scenetree { flex: 1 1 auto; overflow: auto; padding: 4px 4px 6px; min-height: 40px; }
+    #app[data-mode="level"] #scenetree, #app[data-mode="materials"] #scenetree { flex: 0 0 auto; max-height: 30%; }
+    #scenetree .n.staged { outline: 1px solid #7fc; }
+    #splitter-left { flex: 0 0 5px; cursor: row-resize; background: #0d1518; border-top: 1px solid #1c2a30; border-bottom: 1px solid #1c2a30; }
+    #palette { flex: 0 0 var(--pal-h, 38%); border-right: 0; }
+    /* the right column: one sub-inspector per chrome */
+    #inspector { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #080c0e; border-left: 1px solid #1c2a30; }
+    .insp { display: flex; flex-direction: column; min-height: 0; flex: 1 1 auto; }
+    #outliner-chars { flex: 0 0 var(--voutl-h, 34%); overflow: auto; padding: 4px 4px 6px; min-height: 40px; }
+    #splitter-chars { flex: 0 0 5px; cursor: row-resize; background: #0d1518; border-top: 1px solid #1c2a30; border-bottom: 1px solid #1c2a30; } #splitter-chars:hover, #splitter-left:hover { background: #1d3a34; }
+    #props-chars { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; border: 0; border-radius: 0; background: transparent; padding: 2px 8px 6px; }
+    #insp-motion .stub { padding: 14px 12px; color: #9cb; line-height: 1.5; } #insp-motion .stub h2 { font-size: 12px; letter-spacing: .1em; color: #7fc; text-transform: uppercase; margin: 0 0 8px; }
+    #tb-chars .scenelabel { color: #b6f5d4; margin-right: 8px; } #tb-chars .tabs, #tb-motion .tabs { min-height: 22px; }
+    canvas#view.grab { cursor: grab; }
+  </style>
+</head>
+<body>
+  <div id="app" data-mode="level">
+    <div id="topbar">
+      <div id="tb-level" data-modes="level materials"></div>
+      <div id="tb-chars" data-modes="chars fx">
+        <div class="tabs"><span class="brand">2.6 workbench</span><span class="scenelabel" id="scenelabel"></span><span id="scenes" class="wbhide"></span><span class="spacer"></span><button id="gearbtn" class="iconbtn" title="stage &amp; camera, renderer, hotkeys, all knobs, copy all changed">⚙</button><button id="inspbtn" class="iconbtn on" title="hide / show the inspector (Tab)">◨</button></div>
+        <div id="variants" class="chips"></div>
+        <div id="strip" class="hidden"><span class="k">last 3 s:</span><span id="gaitline">—</span><span class="spacer"></span><label title="gaze off, bounce as authored, no warps / linger, no life layer, no foot lock, the old natural speeds — flip it while he moves"><input type="checkbox" id="alloff"> ALL TWEAKS OFF</label><button id="copygait" title="the paste block for src/game/character.ts (as the gait lab emitted it)">copy gait constants</button></div>
+      </div>
+      <div id="tb-motion" data-modes="motion"><div class="tabs"><span class="brand">2.6 workbench</span><span class="k">motion</span><span class="spacer"></span></div></div>
+    </div>
+    <div id="left">
+      <div id="rail"></div>
+      <div class="lhead" id="lhead-outliner" data-modes="level materials">OUTLINER</div>
+      <div id="outliner-level" class="olv" data-modes="level materials"></div>
+      <div class="lhead" id="lhead-scenes">SCENES ▸ VARIANTS</div>
+      <div id="scenetree" class="ol"></div>
+      <div id="splitter-left" data-modes="level materials" title="drag: palette height"></div>
+      <div id="palette" data-modes="level materials"></div>
+    </div>
+    <div id="stage">
+      <canvas id="view"></canvas>
+      <canvas id="olay" data-modes="level materials"></canvas>
+      <div id="hud"></div>
+      <div id="problems" class="hidden"></div>
+      <div id="outbox" class="hidden"><div class="ohead"><span>constants ·</span><span id="outwhat"></span><button id="outcopy">copy</button><button id="outclose">×</button></div><pre id="rigout"></pre></div>
+      <div id="log"></div>
+      <div id="help" data-modes="level materials"></div>
+      <div id="help-chars" data-modes="chars fx motion" style="position:absolute;left:10px;bottom:5px;right:10px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;color:#7f948e;text-shadow:0 1px 2px #000"></div>
+      <div id="drop">drop a level .json to load it</div>
+      <div id="gear" class="pnl hidden"></div>
+      <div id="allknobs" class="pnl hidden"><div class="atop">ALL KNOBS — every group, flat<span class="spacer"></span><button id="allclose" class="iconbtn">×</button></div></div>
+    </div>
+    <div id="inspector">
+      <div id="inspgrip" title="drag: inspector width"></div>
+      <div id="insp-level" class="insp" data-modes="level materials">
+        <div class="ihead" id="insphead">PROPERTIES <span id="proptitle"></span></div>
+        <div id="props" class="pnl"></div>
+        <div id="matpane" class="pnl pane hidden"></div>
+        <div id="markpane" class="pnl pane hidden"></div>
+      </div>
+      <div id="insp-chars" class="insp" data-modes="chars fx">
+        <div class="ihead">FIGURE · STAGE</div>
+        <div id="outliner-chars" class="ol"></div>
+        <div id="splitter-chars" title="drag: tree height"></div>
+        <div class="ihead">PROPERTIES <span id="proptitle-chars" style="color:#7d9791;letter-spacing:0;text-transform:none;overflow:hidden;text-overflow:ellipsis"></span></div>
+        <div id="props-chars" class="pnl"></div>
+      </div>
+      <div id="insp-motion" class="insp" data-modes="motion">
+        <div class="ihead">MOTION</div>
+        <div class="stub"><h2>Motion</h2><p>Reserved for Kimodo key-pose / posture-layer authoring: key poses over the mannequin's clips, the posture layers the animator blends (crouch, wall, tactical stances), and the paste-back of their tables — on the same stage, camera and inspector as the other modes. Nothing here yet.</p></div>
+      </div>
+    </div>
+    <div id="loading">loading…</div>
+    <div id="fatal"></div>
+    <input type="file" id="filepick" accept=".json,application/json" style="display:none" />
+  </div>
+  <script type="module" src="./src/workbench.ts"></script>
+</body>
+</html>

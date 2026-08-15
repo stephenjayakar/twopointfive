@@ -1,0 +1,5 @@
+{
+  "allow": {
+    "door-seal": { "ids": ["door:conference"], "reason": "the conference room's corridor wall is unglazed glazing (sill + header + mullions, no glass until the E3 glass experiment lands): the door hangs in an open screen, so nothing CAN seal there — sight and sound through that wall are the authored behaviour" }
+  }
+}

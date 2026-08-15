@@ -1,0 +1,500 @@
+{
+ "what": "the breach showcase's beat log (Breach.log = show notes + BreachDrill.beats + 'restore') per seed, t in seconds and rounded to the frame (f = round(t\u00b760))",
+ "provenance": {
+  "commit": "c988fb4e",
+  "takenAt": "2026-08-13T15:03:49.352Z",
+  "tree": "main AFTER the 08-13 doctrine change (the pair taken as the man clears the frame, one continuous flow to the corners, #1 holding the next door across the room, #2 with his back to the wall, muzzles on the next door through the restack) \u2014 knowingly re-frozen; the pre-port digest it replaces was frame-identical to main @0b51b27 through the port",
+  "recipe": "tools/qa/director-probes.ts breachBeats(seed): Math.random = mulberry(seed); standUp(); 30 \u00d7 step(1/60); new Breach(game, cam, smoke, input).start(); { breach.update(1/60); step(1/60, look); lights.upload } until it stops itself",
+  "seeds": [
+   11,
+   12
+  ],
+  "dt": 0.016666666666666666
+ },
+ "runs": {
+  "11": {
+   "frames": 1690,
+   "finished": true,
+   "timedOut": false,
+   "beats": [
+    {
+     "what": "daylight",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "cast",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Ten a.m.",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Stack",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "shot:Entry",
+     "f": 853,
+     "t": 14.2167
+    },
+    {
+     "what": "shot:Corners",
+     "f": 1041,
+     "t": 17.35
+    },
+    {
+     "what": "shot:Clear",
+     "f": 1420,
+     "t": 23.6667
+    },
+    {
+     "what": "start",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "go",
+     "f": 157,
+     "t": 2.6167
+    },
+    {
+     "what": "approach-done",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "stacked",
+     "f": 592,
+     "t": 9.8667
+    },
+    {
+     "what": "squeeze",
+     "f": 736,
+     "t": 12.2667
+    },
+    {
+     "what": "kick",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "kickL",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "door-flung",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "retreat",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "toss",
+     "f": 827,
+     "t": 13.7833
+    },
+    {
+     "what": "land",
+     "f": 857,
+     "t": 14.2833
+    },
+    {
+     "what": "bang",
+     "f": 884,
+     "t": 14.7333
+    },
+    {
+     "what": "enter1",
+     "f": 908,
+     "t": 15.1333
+    },
+    {
+     "what": "enter2",
+     "f": 966,
+     "t": 16.1
+    },
+    {
+     "what": "eyes1:0",
+     "f": 972,
+     "t": 16.2
+    },
+    {
+     "what": "shot1",
+     "f": 981,
+     "t": 16.35
+    },
+    {
+     "what": "down:0",
+     "f": 982,
+     "t": 16.3667
+    },
+    {
+     "what": "in1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "centre1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "corner1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "shot1",
+     "f": 991,
+     "t": 16.5167
+    },
+    {
+     "what": "eyes1:2",
+     "f": 1010,
+     "t": 16.8333
+    },
+    {
+     "what": "shot1",
+     "f": 1019,
+     "t": 16.9833
+    },
+    {
+     "what": "down:2",
+     "f": 1020,
+     "t": 17
+    },
+    {
+     "what": "eyes2:1",
+     "f": 1024,
+     "t": 17.0667
+    },
+    {
+     "what": "shot1",
+     "f": 1029,
+     "t": 17.15
+    },
+    {
+     "what": "shot2",
+     "f": 1033,
+     "t": 17.2167
+    },
+    {
+     "what": "down:1",
+     "f": 1034,
+     "t": 17.2333
+    },
+    {
+     "what": "in2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "centre2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "corner2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "shot2",
+     "f": 1043,
+     "t": 17.3833
+    },
+    {
+     "what": "hold1",
+     "f": 1120,
+     "t": 18.6667
+    },
+    {
+     "what": "hold2",
+     "f": 1171,
+     "t": 19.5167
+    },
+    {
+     "what": "clear",
+     "f": 1202,
+     "t": 20.0333
+    },
+    {
+     "what": "next",
+     "f": 1335,
+     "t": 22.25
+    },
+    {
+     "what": "stack2",
+     "f": 1565,
+     "t": 26.0833
+    },
+    {
+     "what": "cut",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "done",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "restore",
+     "f": 1690,
+     "t": 28.1667
+    }
+   ]
+  },
+  "12": {
+   "frames": 1690,
+   "finished": true,
+   "timedOut": false,
+   "beats": [
+    {
+     "what": "daylight",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "cast",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Ten a.m.",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Stack",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "shot:Entry",
+     "f": 853,
+     "t": 14.2167
+    },
+    {
+     "what": "shot:Corners",
+     "f": 1041,
+     "t": 17.35
+    },
+    {
+     "what": "shot:Clear",
+     "f": 1420,
+     "t": 23.6667
+    },
+    {
+     "what": "start",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "go",
+     "f": 157,
+     "t": 2.6167
+    },
+    {
+     "what": "approach-done",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "stacked",
+     "f": 592,
+     "t": 9.8667
+    },
+    {
+     "what": "squeeze",
+     "f": 736,
+     "t": 12.2667
+    },
+    {
+     "what": "kick",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "kickL",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "door-flung",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "retreat",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "toss",
+     "f": 827,
+     "t": 13.7833
+    },
+    {
+     "what": "land",
+     "f": 857,
+     "t": 14.2833
+    },
+    {
+     "what": "bang",
+     "f": 884,
+     "t": 14.7333
+    },
+    {
+     "what": "enter1",
+     "f": 908,
+     "t": 15.1333
+    },
+    {
+     "what": "enter2",
+     "f": 966,
+     "t": 16.1
+    },
+    {
+     "what": "eyes1:0",
+     "f": 972,
+     "t": 16.2
+    },
+    {
+     "what": "shot1",
+     "f": 981,
+     "t": 16.35
+    },
+    {
+     "what": "down:0",
+     "f": 982,
+     "t": 16.3667
+    },
+    {
+     "what": "in1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "centre1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "corner1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "shot1",
+     "f": 991,
+     "t": 16.5167
+    },
+    {
+     "what": "eyes1:2",
+     "f": 1010,
+     "t": 16.8333
+    },
+    {
+     "what": "shot1",
+     "f": 1019,
+     "t": 16.9833
+    },
+    {
+     "what": "down:2",
+     "f": 1020,
+     "t": 17
+    },
+    {
+     "what": "eyes2:1",
+     "f": 1024,
+     "t": 17.0667
+    },
+    {
+     "what": "shot1",
+     "f": 1029,
+     "t": 17.15
+    },
+    {
+     "what": "shot2",
+     "f": 1033,
+     "t": 17.2167
+    },
+    {
+     "what": "down:1",
+     "f": 1034,
+     "t": 17.2333
+    },
+    {
+     "what": "in2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "centre2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "corner2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "shot2",
+     "f": 1043,
+     "t": 17.3833
+    },
+    {
+     "what": "hold1",
+     "f": 1120,
+     "t": 18.6667
+    },
+    {
+     "what": "hold2",
+     "f": 1171,
+     "t": 19.5167
+    },
+    {
+     "what": "clear",
+     "f": 1202,
+     "t": 20.0333
+    },
+    {
+     "what": "next",
+     "f": 1335,
+     "t": 22.25
+    },
+    {
+     "what": "stack2",
+     "f": 1565,
+     "t": 26.0833
+    },
+    {
+     "what": "cut",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "done",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "restore",
+     "f": 1690,
+     "t": 28.1667
+    }
+   ]
+  }
+ }
+}

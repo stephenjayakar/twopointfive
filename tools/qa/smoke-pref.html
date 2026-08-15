@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>smoke — blind pairs</title>
+<style>
+  :root { --bg: #0b0e10; --panel: #12171a; --ink: #d9e2dd; --ink2: #8a9a93; --rule: #24302b; --acc: #79d69a; --warn: #e6b450; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  header { display: flex; align-items: center; gap: 16px; padding: 8px 14px; border-bottom: 1px solid var(--rule); background: var(--panel); }
+  header b { color: var(--acc); letter-spacing: 0.08em; }
+  header .sp { flex: 1; }
+  header .prog { color: var(--ink2); }
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px; height: calc(100% - 128px); box-sizing: border-box; }
+  .side { position: relative; background: #000; border: 2px solid transparent; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+  .side.pick { border-color: var(--acc); }
+  .side canvas { max-width: 100%; max-height: 100%; display: block; }
+  .side .lab { position: absolute; left: 10px; top: 8px; font-size: 22px; font-weight: 700; color: #fff; text-shadow: 0 1px 4px #000; opacity: 0.85; }
+  footer { display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-top: 1px solid var(--rule); background: var(--panel); flex-wrap: wrap; }
+  button { font: inherit; background: #1b2620; color: var(--ink); border: 1px solid #35513f; border-radius: 3px; padding: 5px 10px; cursor: pointer; }
+  button:hover { border-color: var(--acc); color: #fff; }
+  button.primary { background: var(--acc); color: #041008; border-color: var(--acc); font-weight: 700; }
+  input[type=text] { font: inherit; background: #0e1417; color: var(--ink); border: 1px solid var(--rule); border-radius: 3px; padding: 5px 8px; width: 34ch; }
+  .muted { color: var(--ink2); }
+  kbd { border: 1px solid var(--rule); border-radius: 3px; padding: 0 5px; background: #0e1417; }
+  #reveal { color: var(--warn); }
+  #done { display: none; padding: 20px; }
+  table { border-collapse: collapse; margin-top: 8px; } td, th { padding: 3px 10px; border-bottom: 1px solid var(--rule); text-align: left; }
+</style>
+</head>
+<body>
+<header><b>SMOKE — BLIND PAIRS</b><span id="scene" class="muted"></span><span class="sp"></span><span class="prog" id="prog"></span><span class="muted" id="fpsl"></span></header>
+<main>
+  <div class="side" id="A"><span class="lab">1</span><canvas></canvas></div>
+  <div class="side" id="B"><span class="lab">2</span><canvas></canvas></div>
+</main>
+<footer>
+  <span><kbd>1</kbd> left better · <kbd>2</kbd> right better · <kbd>=</kbd> can't tell · <kbd>space</kbd> pause · <kbd>←</kbd><kbd>→</kbd> scrub · <kbd>r</kbd> reveal after choosing · <kbd>s</kbd> skip</span>
+  <span class="sp" style="flex:1"></span>
+  <input type="text" id="why" placeholder="optional: why (enter to keep with the choice)">
+  <span id="reveal"></span>
+</footer>
+<div id="done"></div>
+<script>
+// Blind pairwise preference over the smoke battery's flipbook clips (tools/qa/smoke-battery.js → the sink's docs/shots/clips/). Pairs are drawn WITHIN a scene,
+// every variant against every other once (order and left/right randomized with a seeded shuffle so a reload resumes the same deck), both flipbooks step on ONE
+// clock (frame i on both sides — the plumes are the same throw), a choice is POSTed to the sink as a JSON line (docs/perf/<name>.jsonl) with the pair, the pick,
+// the seconds taken and the optional 'why'. ?sink=5174 (default) · ?name=smoke-pref (results file) · ?scenes=S1,S2 · ?variants=a,b,c (subset) · ?judge=sujay
+// ?secs=2.5 (default) loops only that many seconds from the MIDDLE of each clip (the orbit's swing) — ?secs=0 = the whole clip · ?mode=active (default) | roundrobin:
+// ACTIVE = adaptive design for Bradley–Terry: the judgments so far (GET /prefs/<name>, every scene pooled per variant + this session's) keep an online rating
+// μ, σ² per (scene, variant); the next pair shown is the unjudged-or-least-judged pair with the largest expected information p(1−p)·(σa²+σb²) — close calls
+// between uncertain variants first, foregone conclusions never — and the header says when the largest remaining information drops under the floor (stop then).
+const Q = new URLSearchParams(location.search);
+const SINK = `http://localhost:${Q.get('sink') || 5174}`;
+const NAME = Q.get('name') || 'smoke-pref';
+const JUDGE = Q.get('judge') || '';
+const $ = id => document.getElementById(id);
+const sides = { A: $('A'), B: $('B') };
+let manifest, clips = {}, deck = [], cur = -1, playing = true, frame = 0, lastT = 0, chosen = null, t0 = 0, results = [], prior = [];
+const SECS = Q.has('secs') ? +Q.get('secs') : 2.5; const MODE = Q.get('mode') || 'active'; const INFO_FLOOR = 0.035;
+// ---- online rating (Glicko-lite on the BT scale): μ starts 0, σ² starts 1; a judgment moves both by the logistic gradient, ties = half each way
+const R = {};   // key scene|variant → {mu, s2, n}
+function rk(sc, v) { return R[sc + '|' + v] ||= { mu: 0, s2: 1.0, n: 0 }; }
+function rateUpdate(sc, a, b, y) {   // y = 1 a won, 0 b won, 0.5 tie
+  const A = rk(sc, a), B = rk(sc, b); const p = 1 / (1 + Math.exp(B.mu - A.mu)); const g = y - p; const h = Math.max(p * (1 - p), 0.05);
+  const ka = A.s2 / (1 + h * A.s2), kb = B.s2 / (1 + h * B.s2); A.mu += ka * g; B.mu -= kb * g; A.s2 = Math.max(0.02, A.s2 - h * ka * A.s2); B.s2 = Math.max(0.02, B.s2 - h * kb * B.s2); A.n++; B.n++;
+}
+function pairInfo(sc, a, b, times) { const A = rk(sc, a), B = rk(sc, b); const p = 1 / (1 + Math.exp(B.mu - A.mu)); return p * (1 - p) * (A.s2 + B.s2) / (1 + times); }
+function rng(seed) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); }
+async function loadClip(name) {
+  if (clips[name]) return clips[name];
+  const meta = await j(`${SINK}/clips/${name}/meta.json`);
+  const frames = new Array(meta.frames);
+  await Promise.all(frames.fill(0).map((_, i) => new Promise((res, rej) => { const im = new Image(); im.crossOrigin = 'anonymous'; im.onload = () => { frames[i] = im; res(); }; im.onerror = () => rej(new Error('frame ' + i)); im.src = `${SINK}/clips/${name}/f${String(i).padStart(4, '0')}.jpg`; })));
+  return clips[name] = { meta, frames };
+}
+function buildDeck() {
+  const wantScenes = (Q.get('scenes') || '').split(',').filter(Boolean); const wantVars = (Q.get('variants') || '').split(',').filter(Boolean);
+  const byScene = {};
+  for (const c of manifest.clips) { if (wantScenes.length && !wantScenes.includes(c.scene)) continue; if (wantVars.length && !wantVars.includes(c.variant)) continue; (byScene[c.scene] ||= []).push(c); }
+  const r = rng(20260812); const pairs = [];
+  for (const [sc, list] of Object.entries(byScene)) for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) { const flip = r() < 0.5; pairs.push({ scene: sc, L: flip ? list[b] : list[a], R: flip ? list[a] : list[b] }); }
+  for (let i = pairs.length - 1; i > 0; i--) { const k = Math.floor(r() * (i + 1)); [pairs[i], pairs[k]] = [pairs[k], pairs[i]]; }
+  return pairs;   // (round-robin order; ACTIVE mode re-picks from this list every step by expected information)
+}
+async function loadResults() { try { const t = await (await fetch(`${SINK}/clips/${NAME}.results.json`, { cache: 'no-store' })).text(); return t ? JSON.parse(t) : []; } catch { return []; } }
+function judgedKey(p) { return [p.L.clip, p.R.clip].sort().join('|'); }
+function judgedTimes(p) { const k = [p.scene, [p.L.variant, p.R.variant].sort().join('|')].join('|'); let n = 0; for (const r of prior.concat(results)) if ([r.scene, [r.Lv, r.Rv].sort().join('|')].join('|') === k) n++; return n; }
+function pickActive() {   // the most informative remaining pair; null when nothing is worth asking
+  let best = null, bestI = -1;
+  for (let i = cur; i < deck.length; i++) { const p = deck[i]; const inf = pairInfo(p.scene, p.L.variant, p.R.variant, judgedTimes(p)); if (inf > bestI) { bestI = inf; best = i; } }
+  $('fpsl').textContent = `${manifest.clips.length} clips · ${deck.length - cur} pairs left · next info ${bestI.toFixed(3)}${bestI < INFO_FLOOR ? ' — CONVERGED: you can stop (s = keep going anyway)' : ''}`;
+  return best;
+}
+async function next() {
+  cur++; chosen = null; $('reveal').textContent = ''; $('why').value = ''; sides.A.classList.remove('pick'); sides.B.classList.remove('pick');
+  if (cur >= deck.length) return finish();
+  if (MODE === 'active') { const bi = pickActive(); if (bi !== null && bi !== cur) { [deck[cur], deck[bi]] = [deck[bi], deck[cur]]; } }
+  const p = deck[cur]; $('prog').textContent = `pair ${cur + 1} / ${deck.length}`; $('scene').textContent = `scene ${p.scene} — ${manifest.scenes?.[p.scene] || ''}`;
+  const [L, R] = await Promise.all([loadClip(p.L.clip), loadClip(p.R.clip)]);
+  p.Lc = L; p.Rc = R; frame = 0; playing = true; t0 = performance.now();
+  for (const [k, c] of [['A', L], ['B', R]]) { const cv = sides[k].querySelector('canvas'); cv.width = c.meta.w; cv.height = c.meta.h; }
+  // prefetch the next pair in the background
+  const n = deck[cur + 1]; if (n) { loadClip(n.L.clip).catch(() => {}); loadClip(n.R.clip).catch(() => {}); }
+}
+function draw() {
+  const p = deck[cur]; if (!p || !p.Lc) return;
+  const N0 = Math.min(p.Lc.frames.length, p.Rc.frames.length); const fps = p.Lc.meta.fps || 30; const W = SECS > 0 ? Math.min(N0, Math.max(10, Math.round(SECS * fps))) : N0; const S0 = Math.floor((N0 - W) / 2);   // (?secs: the middle of the clip — the orbit's swing)
+  const N = W; const f = S0 + (((frame % N) + N) % N);
+  for (const [k, c] of [['A', p.Lc], ['B', p.Rc]]) { const cv = sides[k].querySelector('canvas'); const im = c.frames[f]; if (im) cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height); }
+}
+function tick(t) {
+  const p = deck[cur]; const fps = p?.Lc?.meta?.fps || 30;
+  if (playing && p?.Lc && t - lastT >= 1000 / fps - 1) { frame++; lastT = t; draw(); }
+  requestAnimationFrame(tick);
+}
+async function choose(pick) {
+  const p = deck[cur]; if (!p || chosen) return;
+  chosen = pick; (pick === 'L' ? sides.A : pick === 'R' ? sides.B : null)?.classList.add('pick');
+  const rec = { at: new Date().toISOString(), judge: JUDGE, scene: p.scene, L: p.L.clip, R: p.R.clip, Lv: p.L.variant, Rv: p.R.variant, pick, winner: pick === 'L' ? p.L.variant : pick === 'R' ? p.R.variant : null, secs: +((performance.now() - t0) / 1000).toFixed(1), why: $('why').value.trim() };
+  results.push(rec); rateUpdate(p.scene, p.L.variant, p.R.variant, pick === 'L' ? 1 : pick === 'R' ? 0 : 0.5);
+  try { await fetch(`${SINK}/pref?name=${encodeURIComponent(NAME)}`, { method: 'POST', body: JSON.stringify(rec) }); } catch (e) { $('reveal').textContent = 'POST failed: ' + e.message; }
+  setTimeout(() => { if (chosen) next(); }, 350);
+}
+function reveal() { const p = deck[cur]; if (!p) return; $('reveal').textContent = chosen ? `1 = ${p.L.variant} · 2 = ${p.R.variant}` : 'choose first'; }
+function finish() {
+  document.querySelector('main').style.display = 'none'; const d = $('done'); d.style.display = 'block';
+  const wins = {}, games = {};
+  for (const r of results) { for (const v of [r.Lv, r.Rv]) { games[v] = (games[v] || 0) + 1; wins[v] = wins[v] || 0; } if (r.winner) wins[r.winner]++; else { wins[r.Lv] += 0.5; wins[r.Rv] += 0.5; } }
+  const rows = Object.keys(games).sort((a, b) => wins[b] / games[b] - wins[a] / games[a]).map(v => `<tr><td>${v}</td><td>${wins[v]} / ${games[v]}</td><td>${manifest.variants?.[v] || ''}</td></tr>`).join('');
+  d.innerHTML = `<b>Done — ${results.length} judgments this session</b> (saved to docs/perf/${NAME}.jsonl on the sink; the Bradley–Terry fit is run from there).<table><tr><th>variant</th><th>win share</th><th>what it is</th></tr>${rows}</table>`;
+}
+addEventListener('keydown', e => {
+  if (e.target === $('why') && e.key !== 'Enter' && e.key !== 'Escape') return;
+  if (e.key === '1') choose('L'); else if (e.key === '2') choose('R'); else if (e.key === '=' || e.key === '0') choose('tie');
+  else if (e.key === ' ') { playing = !playing; e.preventDefault(); } else if (e.key === 'ArrowLeft') { playing = false; frame--; draw(); } else if (e.key === 'ArrowRight') { playing = false; frame++; draw(); }
+  else if (e.key === 'r') reveal(); else if (e.key === 's') next(); else if (e.key === 'Escape') $('why').blur(); else if (e.key === 'Enter' && e.target === $('why')) $('why').blur();
+});
+sides.A.addEventListener('click', () => choose('L')); sides.B.addEventListener('click', () => choose('R'));
+(async () => {
+  try { manifest = await j(`${SINK}/clips/${Q.get('manifest') || 'sb_manifest.json'}`); } catch (e) { document.body.innerHTML = `<p style="padding:20px">no manifest at ${SINK}/clips/sb_manifest.json — run __sb.battery() first (${e.message})</p>`; return; }
+  deck = buildDeck(); $('fpsl').textContent = `${manifest.clips.length} clips · ${deck.length} pairs`;
+  try { const t = await (await fetch(`${SINK}/prefs/${encodeURIComponent(NAME)}`, { cache: 'no-store' })).text(); prior = t.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean); } catch { prior = []; }
+  for (const r of prior) rateUpdate(r.scene, r.Lv, r.Rv, r.pick === 'L' ? 1 : r.pick === 'R' ? 0 : 0.5);   // (everything judged before — any session, any scene — primes the ratings, so a reload carries on where the information is)
+  if (MODE === 'active') { const seen = new Set(prior.map(r => [r.scene, [r.Lv, r.Rv].sort().join('|')].join('|'))); const fresh = deck.filter(p => !seen.has([p.scene, [p.L.variant, p.R.variant].sort().join('|')].join('|'))); const again = deck.filter(p => !fresh.includes(p)); deck = fresh.concat(again); }   // judged pairs go to the back (still askable: a second opinion is information too, discounted by 1/(1+times))
+  await next(); requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>

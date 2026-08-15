@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>twopointsix — 2.5D RT stealth sandbox</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: ui-monospace, Menlo, monospace; color: #cfd; }
+    #app { position: fixed; inset: 0; }
+    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
+    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
+       right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
+    #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
+    #hud { font-size: 11px; line-height: 1.35; white-space: pre; color: #bfe; text-shadow: 0 1px 2px #000; max-height: calc(100vh - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
+    #hud:empty { display: none; }
+    #hud:not(:empty) { min-width: 330px; }   /* a steady left edge for the panel beside it while the numbers change */
+    /* interaction panel (overlay.ts setInteractions): what Space can do round here — one block per VERB (a shut door is 'push it open' and 'ease it open';
+       the man in the arm 'question him' and 'choke him out'), a thin bar for a lock being picked / the drive coming out / a leaf easing round; the highlighted row
+       (a tap does it; Space held opens the list to choose another) is lit. Same thin green mono as the meters / objective line, the kit slots' translucent backing. */
+    #interact { display: none; width: 260px; margin: 46px 0 0 8px; font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.1em; color: #79d69a; text-shadow: 0 1px 2px #000; opacity: 0.95; }
+    #interact.on { display: block; }
+    #hud:not(:empty) + #interact { margin-left: 0; }
+    #interact .it { position: relative; margin-bottom: 4px; padding: 4px 8px 5px 10px; background: rgba(4,10,12,0.55); border: 1px solid rgba(120,170,160,0.22); border-radius: 3px; }
+    #interact .it.primary { border-color: rgba(143,240,180,0.6); box-shadow: 0 0 8px rgba(60,160,120,0.22); background: rgba(4,12,10,0.66); }
+    #interact .it.primary::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 2px; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.55); border-radius: 2px 0 0 2px; }
+    #interact .what { display: flex; justify-content: space-between; gap: 8px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #a8f0c0; white-space: nowrap; }
+    #interact .what span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    #interact .what em { flex: none; font-style: normal; letter-spacing: 0.08em; text-transform: none; color: #8a9c96; }
+    #interact .it.k-door .what { color: #b4d8ff; } #interact .it.k-body .what { color: #f0b8a8; } #interact .it.k-guard .what { color: #ff9a8a; } #interact .it.k-objective .what { color: #b4ffd0; } #interact .it.k-breaker .what { color: #ffd08a; }
+    #interact .it.off .what { color: #f0b888; }
+    #interact .opt, #interact .hint { margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+    #interact .opt { font-size: 11px; color: #dff; }
+    #interact .hint { color: #8fb0a2; }
+    #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: #79d69a; color: #041008; font: 700 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
+    #interact .it.far .opt { color: #8a9c96; } #interact .it.far kbd { background: #4b665a; color: #0a1410; }
+    /* the selector (interact.ts): every row is one verb — SPACE lit only on the highlighted one (a tap does it), the others' key dimmed until the highlight reaches
+       them (Space held opens the list: wheel / arrows choose, let go acts); rows of the same thing tuck under its header; open, the frame brightens, a line at the
+       top says how it works and the cancel row closes the list */
+    #interact .it:not(.primary) .opt.verb kbd { background: rgba(121,214,154,0.28); color: #9fd8b6; }
+    #interact .it.cont { margin-top: -3px; border-top-color: transparent; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 1px; }
+    #interact .it.cont .what { height: 0; }
+    #interact .it.cont .what em:empty { display: none; }
+    #interact.open .it { border-color: rgba(150,220,200,0.35); }
+    #interact.open .it.primary { border-color: #b8ffd8; box-shadow: 0 0 12px rgba(90,220,160,0.45); }
+    #interact.open .it.primary::before { width: 3px; background: #d8ffe8; }
+    #interact .selhint { margin: 0 0 5px 2px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #b8f0d0; }
+    #interact .it.k-cancel { padding-top: 3px; padding-bottom: 4px; background: rgba(14,10,8,0.55); border-color: rgba(200,150,120,0.3); }
+    #interact .it.k-cancel .opt { margin-top: 0; color: #e8c8b0; } #interact .it.k-cancel kbd { background: rgba(230,170,130,0.35); color: #ffe0c8; }
+    #interact .it.k-cancel.primary { border-color: #ffcfa8; box-shadow: 0 0 10px rgba(230,150,100,0.35); } #interact .it.k-cancel.primary::before { background: #ffcfa8; box-shadow: 0 0 6px rgba(255,180,130,0.55); } #interact .it.k-cancel.primary kbd { background: #ffcfa8; color: #1a0c04; }
+    #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(121,214,154,0.45); background: rgba(0,10,4,0.5); }
+    #interact .prog b { display: block; width: 0; height: 100%; background: linear-gradient(90deg, rgba(121,214,154,0.55), #8ff0b4); box-shadow: 0 0 6px rgba(120,240,170,0.35); }
+    #interact .it.k-door .prog b { background: linear-gradient(90deg, rgba(160,210,255,0.5), #bfe6ff); box-shadow: 0 0 6px rgba(80,150,230,0.4); }
+    #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: #8a9c96; }
+    /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
+    body.touring #interact { margin-top: calc(7.5vh + 4px); }
+    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh + 190px); } }
+    /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
+       thin green mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
+       hover the panel and type, ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
+    #panel { position: absolute; right: 8px; top: 8px; width: 372px; max-height: calc(100% - 16px); overflow: hidden; z-index: 12; display: flex; flex-direction: column; font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfd; background: rgba(5,9,11,0.94); border: 1px solid rgba(120,170,160,0.22); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    #panel.hidden { display: none; }
+    #panel .phead { flex: none; padding: 6px 8px 5px; border-bottom: 1px solid rgba(120,170,160,0.16); background: rgba(4,10,10,0.6); }
+    #panel .pstat { font-size: 10px; letter-spacing: 0.06em; color: #79d69a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-bottom: 5px; text-shadow: 0 1px 2px #000; }
+    #panel .pstat:empty { display: none; }
+    #panel .psearch { display: flex; align-items: center; gap: 8px; }
+    #panel .psearch input[type=search] { flex: 1; min-width: 0; font: inherit; background: #0a1417; color: #dfe; border: 1px solid #2c3f44; border-radius: 3px; padding: 3px 7px; outline: none; }
+    #panel .psearch input[type=search]::placeholder { color: #56706a; }
+    #panel .psearch input[type=search]:focus { border-color: #79d69a; box-shadow: 0 0 0 1px rgba(121,214,154,0.25); }
+    #panel .psearch .all { color: #7f9a94; white-space: nowrap; display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 10px; letter-spacing: 0.06em; }
+    #panel .phits { font-size: 10px; color: #f3c86a; letter-spacing: 0.04em; margin-top: 4px; }
+    #panel .phits:empty { display: none; }
+    #panel .pmain { flex: 1 1 auto; min-height: 0; display: flex; }
+    /* the rail: one button per system — a glyph and a short label; the active one carries the green bar; dimmed = nothing on that page until 'all knobs'; a search lights the systems it hit */
+    #panel .prail { flex: 0 0 48px; display: flex; flex-direction: column; gap: 1px; padding: 4px 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; border-right: 1px solid rgba(120,170,160,0.14); background: rgba(2,6,7,0.5); }
+    #panel .prail::-webkit-scrollbar { display: none; }
+    #panel .prail .sys { all: unset; box-sizing: border-box; width: 100%; padding: 5px 2px 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer; color: #6f8a80; border-left: 2px solid transparent; }
+    #panel .prail .sys i { font: normal 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    #panel .prail .sys span { font-size: 7.5px; letter-spacing: 0.08em; text-transform: uppercase; max-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .prail .sys:hover { color: #bfe; background: rgba(120,170,160,0.08); }
+    #panel .prail .sys.on { color: #dfffea; border-left-color: #79d69a; background: rgba(121,214,154,0.1); text-shadow: 0 0 6px rgba(120,240,170,0.4); }
+    #panel .prail .sys.dim:not(.on) { opacity: 0.45; }
+    #panel.searching .prail .sys { opacity: 0.35; } #panel.searching .prail .sys.hit { opacity: 1; color: #f3d78a; }
+    #panel .pbody { flex: 1 1 auto; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 8px 10px; scrollbar-width: thin; scrollbar-color: #2c3f44 transparent; }
+    #panel .ptitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: #79d69a; padding: 7px 2px 3px; text-shadow: 0 0 8px rgba(120,240,170,0.25); }
+    #panel .ptitle span { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: 0.03em; text-transform: none; color: #6f8a7e; text-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pempty { margin: 10px 2px; font-size: 10px; color: #8a9890; font-style: italic; }
+    /* a section: header = caret · NAME · live one-line summary (shown while collapsed) · ↺ (where a shipped-defaults table exists) */
+    #panel .psec { border-top: 1px solid rgba(120,170,160,0.12); }
+    #panel .psec:first-of-type { border-top: none; }
+    #panel h3.pshead { display: flex; align-items: baseline; gap: 6px; margin: 0; padding: 6px 2px 5px; font: inherit; font-weight: 400; cursor: pointer; user-select: none; }
+    #panel h3.pshead:hover { background: rgba(120,170,160,0.06); }
+    #panel .pshead .caret { flex: 0 0 9px; color: #4f6a62; font-weight: 400; font-size: 9px; }
+    #panel .pshead .nm { flex: 0 1 auto; min-width: 0; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #7fcdb0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pshead.open .nm { color: #b8f0d0; }
+    #panel.searching .pshead .nm { color: #f3d78a; letter-spacing: 0.04em; }
+    #panel .pshead .sum { flex: 1 1 0; min-width: 0; text-align: right; font-size: 9.5px; color: #6f8a7e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .psec.open > .pshead .sum { opacity: 0.55; }
+    #panel .pshead .rst { all: unset; flex: none; cursor: pointer; color: #6f8a7e; font-size: 11px; padding: 0 3px; border-radius: 2px; }
+    #panel .pshead .rst:hover { color: #f0d878; background: rgba(240,216,120,0.1); }
+    #panel .psec.advsec > .pshead .nm::after { content: ' · A/B'; color: #56706a; font-weight: 400; letter-spacing: 0.04em; }
+    #panel .sbody { padding: 1px 0 6px 4px; }
+    /* rows: label left (ellipsis, full text in the tooltip), the control right; a thin track, a compact switch, tabular read-outs; A/B rows a shade dimmer with a dotted mark */
+    #panel .row { display: flex; align-items: center; gap: 6px; min-height: 18px; margin: 1px 0; padding: 1px 2px; border-radius: 2px; }
+    #panel .row:hover { background: rgba(120,170,160,0.05); }
+    #panel .row label { flex: 1 1 auto; min-width: 0; color: #9db8ad; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .row.adv label { color: #7d958c; } #panel .row.adv label::before { content: '· '; color: #4f6a62; }
+    #panel .row.changed label { color: #f0d878; }
+    #panel .row.flash { animation: pflash 1.4s ease-out; } @keyframes pflash { 0%, 30% { background: rgba(240,216,120,0.28); } 100% { background: transparent; } }
+    #panel .row .val { flex: 0 0 40px; text-align: right; color: #dfffea; font-variant-numeric: tabular-nums; font-size: 10.5px; }
+    #panel .row .rev { flex: 0 0 9px; color: #f0d878; cursor: pointer; font-size: 7px; text-align: center; visibility: hidden; }
+    #panel .row input[type=range] { flex: 0 0 96px; min-width: 0; height: 14px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+    #panel .row input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #2a423f; border-radius: 1px; }
+    #panel .row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; margin-top: -3.5px; border-radius: 50%; background: #8ff0b4; box-shadow: 0 0 5px rgba(120,240,170,0.45); border: none; }
+    #panel .row input[type=range]::-moz-range-track { height: 2px; background: #2a423f; } #panel .row input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: #8ff0b4; border: none; }
+    #panel .row input[type=range]:focus { outline: none; } #panel .row input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px rgba(121,214,154,0.35); }
+    #panel .row.changed input[type=range]::-webkit-slider-thumb { background: #f0d878; box-shadow: 0 0 5px rgba(240,216,120,0.45); }
+    /* the switch: a pill with its knob drawn as a background gradient (no pseudo-element — __panelShot's DOM raster keeps backgrounds, loses ::before) */
+    #panel .row input[type=checkbox] { -webkit-appearance: none; appearance: none; flex: 0 0 24px; width: 24px; height: 13px; margin: 0 1px 0 0; border-radius: 7px; border: 1px solid #34494c; cursor: pointer; background: #142125 radial-gradient(circle at 5.5px 50%, #647a72 0 4px, transparent 4.6px) no-repeat; transition: border-color .12s; }
+    #panel .row input[type=checkbox]:checked { border-color: rgba(121,214,154,0.75); background: rgba(121,214,154,0.22) radial-gradient(circle at 16.5px 50%, #8ff0b4 0 4px, rgba(143,240,180,0.35) 4.3px, transparent 6px) no-repeat; }
+    #panel .row input[type=checkbox]:hover { border-color: #56706a; } #panel .row input[type=checkbox]:checked:hover { border-color: #8ff0b4; }
+    #panel .row input[type=checkbox]:focus-visible { outline: 1px solid #79d69a; outline-offset: 1px; }
+    #panel.rastering .row input[type=range] { -webkit-appearance: auto; appearance: auto; accent-color: #8ff0b4; height: 12px; }   /* (__panelShot only: the custom track / thumb are pseudo-elements the DOM raster cannot carry — a capture shows the native slider in the panel's green instead) */
+    #panel .psearch input[type=checkbox] { accent-color: #79d69a; margin: 0; }
+    #panel .row select { flex: 0 1 auto; min-width: 0; max-width: 62%; font: inherit; font-size: 10.5px; background: #0d1a1e; color: #dfe; border: 1px solid #2c3f44; border-radius: 3px; padding: 1px 3px; outline: none; }
+    #panel .row select:focus { border-color: #79d69a; }
+    #panel .row.btnrow { align-items: baseline; flex-wrap: wrap; row-gap: 3px; }
+    #panel .row.btnrow label { flex: 0 0 auto; max-width: 40%; color: #7f9a94; font-size: 10px; letter-spacing: 0.04em; }
+    #panel .row.btnrow label:empty { display: none; }
+    #panel .row .btns { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; }
+    #panel .row button { font: inherit; font-size: 10px; letter-spacing: 0.03em; background: rgba(20,40,32,0.55); color: #bfeed2; border: 1px solid rgba(121,214,154,0.32); border-radius: 3px; padding: 1px 6px 2px; cursor: pointer; white-space: nowrap; }
+    #panel .row button:hover { background: rgba(40,80,62,0.7); border-color: #79d69a; color: #eafff2; }
+    #panel .row button:active { background: #79d69a; color: #041008; }
+    #panel .row.textrow { display: block; min-height: 0; margin: 3px 0 4px 1px; padding: 3px 6px 3px 7px; border-left: 2px solid rgba(120,170,160,0.22); background: rgba(0,10,6,0.28); font-size: 10px; line-height: 1.35; color: #8fa89e !important; white-space: pre-wrap; word-break: break-word; }
+    #panel .row.textrow.empty { display: none; }
+    /* the panel's own hover tip (ui/panel.ts installTips): descriptions and whatever an ellipsis above cut short, wrapped, at once */
+    #ptip { position: fixed; z-index: 40; max-width: 356px; padding: 5px 8px 6px; font: 10.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #dcefe6; background: rgba(6,14,16,0.97); border: 1px solid rgba(121,214,154,0.38); border-radius: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.6); pointer-events: none; white-space: pre-wrap; word-break: break-word; letter-spacing: 0.02em; }
+    #panel .row input.num { width: 7ch; background: #0b1418; color: #dfe; border: 1px solid #26363d; border-radius: 3px; padding: 1px 4px; text-align: right; cursor: ew-resize; outline: none; font: inherit; }
+    #panel .row input.num:focus { cursor: text; border-color: #79d69a; }
+    #fatal { position: absolute; inset: 0; display: none; z-index: 40; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; }
+    #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
+    .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: #8aa39a; font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: #8ba; font-weight: 400; font-size: 10px; }
+    .marker.civ { font-style: italic; opacity: 0.9; } .marker.civ.alert { color: #f96; } .marker.civ.sus { color: #fe9; }   /* the civilians' (civilians.ts): the same glyphs, softer and slanted — a frightened cleaner is not a man onto you */
+    /* the ring on the marker F acts on (what it offers is spelled out in the interaction panel, #interact); dimmer while the thing is out of reach */
+    .reticle { position: absolute; width: 22px; height: 22px; border: 1.5px solid #7fe; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 6px #3aa; }
+    .reticle.far { opacity: 0.55; }
+    .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
+    .reticle.aim.k-free { border-color: rgba(150,235,225,0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
+    .reticle.off { border-color: #f96; box-shadow: 0 0 6px #a53; }
+    .reticle.k-door { border-color: #9cd0ff; box-shadow: 0 0 6px #38a; } .reticle.k-body { border-color: #f0a090; box-shadow: 0 0 6px #a54; } .reticle.k-guard { border-color: #ff8070; box-shadow: 0 0 7px #b43; } .reticle.k-objective { border-color: #8ff0b4; box-shadow: 0 0 7px #3c8; } .reticle.k-breaker { border-color: #ffd08a; box-shadow: 0 0 7px #a83; }
+    /* progress ring round the reticle (a lock being picked, the drive coming out): a conic sweep masked to a 3 px annulus just outside the ring */
+    .reticle b { display: none; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#bfe6ff var(--p, 0%), rgba(160,210,255,0.14) 0); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); filter: drop-shadow(0 0 3px #38a); }
+    .reticle.k-objective b { background: conic-gradient(#b4ffd0 var(--p, 0%), rgba(150,240,190,0.14) 0); }
+    /* the right button's word beside the ring — 'RMB  OCP' (the pistol out, on a light or a man's burning torch) / 'RMB  RING' (the rifle up, its launcher selected):
+       only there when the button would do something to what the ring is on (overlay.ts) */
+    .reticle i { display: none; position: absolute; left: 100%; top: 100%; margin: 1px 0 0 5px; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; letter-spacing: 0.12em; white-space: pre; color: #9ff3c9; text-shadow: 0 1px 2px #000, 0 0 5px rgba(60,220,160,0.35); pointer-events: none; }
+    .reticle.k-light i { color: #ffe9a8; text-shadow: 0 1px 2px #000, 0 0 5px rgba(255,220,120,0.35); }
+    /* light / sound meters, bottom-left: two thin monochrome bars (Chaos-Theory-ish, minimal) */
+    #meters { position: absolute; left: 18px; bottom: 16px; width: 200px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.22em; color: #79d69a; text-shadow: 0 1px 2px #000; pointer-events: none; opacity: 0.92; }
+    #meters .m { position: relative; height: 20px; margin-top: 6px; }
+    #meters .m .lab { position: absolute; left: 0; top: 0; }
+    #meters .m .num { position: absolute; right: 0; top: 0; color: #a8f0c0; letter-spacing: 0.1em; }
+    #meters .m .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border: 1px solid rgba(121,214,154,0.55); background: rgba(0,10,4,0.45); }
+    #meters .m .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, rgba(121,214,154,0.55), #8ff0b4); box-shadow: 0 0 6px rgba(120,240,170,0.35); transition: width .08s linear; }
+    #meters .m .peak { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #d8ffe6; opacity: 0; }
+    #meters .m .ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(121,214,154,0.28) 19px 20px); }
+    #meters.hot .m.light .fill { background: linear-gradient(90deg, rgba(240,200,120,0.6), #ffe9a0); }
+    /* radio traffic (overlay.ts): only what goes over a net — the guards' channel you are listening in on, and (later) your own side. Everything else the old
+       message log printed is carried by the interaction panel, the kit column and the world itself. */
+    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw); font: italic 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color: #b9d6c8; text-align: center; text-shadow: 0 1px 2px #000; white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
+    #log .rx { display: block; opacity: 0.92; } #log .rx b { font-style: normal; font-weight: 600; color: #8fd9b0; letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; }
+    /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — same thin green language as the meters (overlay.ts) */
+    #objective { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.16em; color: #79d69a; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0.92; }
+    #objective.done { color: #a8f0c0; } #objective.failed { color: #f0a090; }
+    /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
+       a pulsing pip while an alarm episode is actually running (someone is alert / searching) */
+    #alarm { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.24em; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .4s; }
+    #alarm.on { opacity: 0.95; } #alarm.l1 { color: #f3c86a; } #alarm.l2 { color: #ff7a5c; }
+    #alarm i { display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: currentColor; vertical-align: 1px; opacity: 0.35; }
+    #alarm.live i { animation: alarmPip 0.9s ease-in-out infinite; opacity: 1; }
+    @keyframes alarmPip { 50% { opacity: 0.25; } }
+    /* checkpoint tag (game/savestate.ts, overlay.ts): a discreet CHECKPOINT under the objective line for a couple of seconds when one is written / loaded */
+    #checkpoint { position: absolute; right: 14px; top: 10px; font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.28em; color: #79d69a; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
+    #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
+    #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
+    body.touring #checkpoint, body.breaching #checkpoint { display: none; }
+    /* the session journal's REC tag (game/journal.ts, overlay.ts; F10): under the checkpoint tag, red while recording, amber while it waits for a moment it may start on */
+    #journal { position: absolute; right: 14px; top: 26px; font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.16em; color: #e8b04c; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
+    #journal.on { opacity: 0.9; }
+    #journal.rec { color: #ff5a4e; }
+    .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
+    .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid #8ff0b4; transform: rotate(45deg); box-shadow: 0 0 6px rgba(120,240,170,0.45); }
+    .objmark span { display: block; margin-top: 6px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; color: #a8f0c0; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+    .objmark.edge i { border-color: #79d69a; box-shadow: none; }
+    #menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 55%, rgba(2,6,8,0.25), rgba(2,6,8,0.78) 70%); z-index: 20; }
+    #menu.on { display: flex; }
+    body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .idot { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
+    body.attract #menu { background: radial-gradient(ellipse at 50% 55%, rgba(2,6,8,0.08), rgba(2,6,8,0.45) 75%); }   /* attract mode is running behind the start card (main.ts): a lighter vignette so the rooms round the card can be seen; the card's own look is untouched */
+    #menu .card { width: min(560px, calc(100% - 40px)); max-height: calc(100% - 60px); overflow: auto; padding: 26px 30px 18px; background: rgba(6,12,10,0.86); border: 1px solid rgba(121,214,154,0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4); border-radius: 6px; color: #cfe6da; font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #menu .t1 { font: 300 44px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.08em; color: #eef6f2; text-shadow: 0 0 24px rgba(120,220,190,0.25); }
+    #menu .t1 b { font-weight: 600; color: #9ff3c9; }
+    #menu .t2 { margin-top: 8px; color: #9db8ad; letter-spacing: 0.03em; }
+    #menu .actions { display: flex; gap: 10px; margin: 20px 0 6px; flex-wrap: wrap; }
+    #menu .btn { font: inherit; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; background: rgba(20,40,32,0.7); color: #bfeed2; border: 1px solid rgba(121,214,154,0.45); border-radius: 3px; cursor: pointer; }
+    #menu .btn:hover, #menu .btn:focus { background: rgba(40,80,62,0.8); outline: none; border-color: #8ff0b4; }
+    #menu .btn.primary { background: #79d69a; color: #041008; border-color: #79d69a; font-weight: 600; }
+    #menu .btn.primary:hover, #menu .btn.primary:focus { background: #9ff3c9; }
+    #menu .btn:disabled, #menu .btn:disabled:hover { opacity: 0.4; cursor: progress; background: rgba(20,40,32,0.7); border-color: rgba(121,214,154,0.45); }   /* the boot card (menu.ts bootCard): the start card's buttons wait for the renderer's kernels */
+    #menu .btn.primary:disabled, #menu .btn.primary:disabled:hover { background: #79d69a; border-color: #79d69a; }
+    #menu .note.bootstatus { color: #bfeed2; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+    #menu .sandbox { display: flex; gap: 18px; margin: 10px 2px 2px; font-size: 11px; letter-spacing: 0.06em; color: #9bb; text-transform: uppercase; }
+    #menu .sandbox label { display: flex; align-items: center; gap: 5px; cursor: pointer; } #menu .sandbox input { margin: 0; accent-color: #79d69a; }
+    #menu .tabs { display: flex; gap: 4px; margin: 14px 0 4px; border-bottom: 1px solid rgba(121,214,154,0.25); }
+    #menu .btn.tab { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 6px 10px; color: #8fb0a2; }
+    #menu .btn.tab.on { color: #dfffea; border-bottom-color: #79d69a; }
+    #menu .body { margin-top: 10px; }
+    #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    #menu .controls .k { flex: 0 0 128px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9ff3c9; letter-spacing: 0.04em; }
+    #menu .controls .v { flex: 1; color: #c9dbd3; }
+    #menu .group { margin: 8px 0 14px; }
+    #menu .gtitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: #79d69a; margin-bottom: 6px; }
+    #menu .srow { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+    #menu .srow label { flex: 0 0 190px; color: #c9dbd3; }
+    #menu .srow input[type=range] { flex: 1; accent-color: #79d69a; }
+    #menu .srow .val { flex: 0 0 44px; text-align: right; font: 12px ui-monospace, Menlo, monospace; color: #dfffea; }
+    #menu .srow select { font: inherit; background: #10201a; color: #dfffea; border: 1px solid rgba(121,214,154,0.4); border-radius: 3px; padding: 2px 6px; }
+    #menu .srow input[type=checkbox] { accent-color: #79d69a; width: 16px; height: 16px; }
+    #menu .note { font-size: 11px; color: #8a9890; margin: -2px 0 6px 2px; }
+    #menu .foot { margin-top: 12px; font: 11px ui-monospace, Menlo, monospace; color: #6f8a7e; letter-spacing: 0.06em; }
+    #menu .t2 b { color: #9ff3c9; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
+    /* the debrief (ui/debrief.ts): the end card, the down card, the pause card's 'Run so far' tab. A wider card in two columns — numbers / badges / timeline on the
+       left, the floor map and its legend on the right — in the HUD's thin green mono; one column when the window is narrow. */
+    #menu .card.wide { width: min(900px, calc(100% - 40px)); }
+    #menu .db { font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfe6da; }
+    #menu .db-head { display: flex; align-items: center; gap: 22px; }
+    #menu .db-rating { display: flex; align-items: baseline; gap: 12px; padding: 4px 14px 6px 0; border-right: 1px solid rgba(121,214,154,0.25); cursor: help; white-space: nowrap; }
+    #menu .db-rating b { font: 300 40px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.14em; color: #eef6f2; text-shadow: 0 0 22px rgba(120,220,190,0.3); }
+    #menu .db-rating.r-ghost b { color: #b8ffd8; } #menu .db-rating.r-shadow b { color: #9ff3c9; } #menu .db-rating.r-operative b { color: #f3d78a; text-shadow: 0 0 22px rgba(240,200,110,0.25); } #menu .db-rating.r-assault b { color: #ff9c84; text-shadow: 0 0 22px rgba(255,120,90,0.25); }
+    #menu .db-score { font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #79d69a; letter-spacing: 0.04em; }
+    #menu .db-score::after { content: '/100'; font-size: 11px; font-weight: 400; color: #6f8a7e; margin-left: 3px; letter-spacing: 0.08em; }
+    #menu .db-what { min-width: 0; }
+    #menu .db-t1 { font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.24em; text-transform: uppercase; color: #9ff3c9; }
+    #menu .db-t2 { margin-top: 5px; color: #9db8ad; letter-spacing: 0.03em; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #menu .db-t3 { margin-top: 4px; color: #7f968c; font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .db-actions { margin: 14px 0 4px; }
+    #menu .db-copytext { display: none; margin: 2px 0 6px; padding: 5px 8px; font-size: 10px; color: #dfffea; background: rgba(0,10,4,0.5); border: 1px dashed rgba(121,214,154,0.4); user-select: all; word-break: break-word; }
+    #menu .db-copytext.show { display: block; }
+    #menu .db-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 18px; margin-top: 10px; }
+    @media (max-width: 820px) { #menu .db-grid { grid-template-columns: minmax(0, 1fr); } }
+    #menu .db-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+    #menu .db-stats .st { padding: 4px 7px 5px; background: rgba(4,10,12,0.55); border: 1px solid rgba(120,170,160,0.22); border-radius: 3px; min-width: 0; }
+    #menu .db-stats .st i { display: block; font-style: normal; font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; color: #8fb0a2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .db-stats .st b { display: block; margin-top: 1px; font-size: 14px; font-weight: 600; color: #dfffea; letter-spacing: 0.04em; }
+    #menu .db-stats .st.good b { color: #9ff3c9; } #menu .db-stats .st.warn b { color: #f3d78a; } #menu .db-stats .st.bad b { color: #ff9c84; }
+    #menu .db-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 2px; }
+    #menu .db-badges .chip { padding: 2px 7px 3px; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; border: 1px solid rgba(120,170,160,0.28); border-radius: 10px; color: #5f756c; cursor: help; }
+    #menu .db-badges .chip.on { color: #dfffea; border-color: rgba(159,243,201,0.7); background: rgba(40,90,70,0.35); box-shadow: 0 0 8px rgba(90,220,160,0.25); text-shadow: 0 0 5px rgba(60,220,160,0.5); }
+    #menu .db-tlhead { margin: 12px 0 4px; }
+    #menu .db-timeline { max-height: min(30vh, 260px); overflow: auto; padding: 2px 4px 2px 0; border-top: 1px solid rgba(121,214,154,0.18); border-bottom: 1px solid rgba(121,214,154,0.18); }
+    #menu .db-timeline .ev { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: baseline; }
+    #menu .db-timeline .ev i { flex: 0 0 38px; font-style: normal; color: #79d69a; letter-spacing: 0.06em; }
+    #menu .db-timeline .ev u { flex: 0 0 104px; text-decoration: none; color: #8fb0a2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+    #menu .db-timeline .ev span { flex: 1; min-width: 0; color: #d5e8df; }
+    #menu .db-timeline .ev.k-spotted span, #menu .db-timeline .ev.k-down span, #menu .db-timeline .ev.k-kill span { color: #ffb0a0; }
+    #menu .db-timeline .ev.k-alarm span, #menu .db-timeline .ev.k-contact span, #menu .db-timeline .ev.k-bodyFound span { color: #f3d78a; }
+    #menu .db-timeline .ev.k-alarm.down span, #menu .db-timeline .ev.k-calm span, #menu .db-timeline .ev.k-lost span { color: #a8c8ba; }
+    #menu .db-timeline .ev.k-objective span { color: #9ff3c9; letter-spacing: 0.06em; }
+    #menu .db-timeline .ev.k-radio span { color: #b9d6c8; font-style: italic; }
+    #menu .db-timeline .ev.k-heard span { color: #c9dbd3; }
+    #menu .db-timeline .ev.empty { color: #6f8a7e; font-style: italic; border: none; }
+    #menu .db-map { position: relative; width: 100%; border: 1px solid rgba(121,214,154,0.3); background: #050b09; line-height: 0; }
+    #menu .db-canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
+    #menu .db-map .pin, #menu .db-map .mark { position: absolute; transform: translate(-50%, -50%); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; text-shadow: 0 0 3px #000, 0 0 6px #000; cursor: help; pointer-events: auto; line-height: 1; }
+    #menu .db-map .mark { font-size: 12px; color: #dfffea; text-shadow: 0 0 4px #000, 0 0 8px rgba(120,240,170,0.6); }
+    #menu .db-map .mark.rack { color: #8ff0b4; } #menu .db-map .mark.exit { color: #b4d8ff; font-size: 14px; }
+    #menu .db-map .pin.seen { color: #ff8070; font-size: 12px; } #menu .db-map .pin.alarm { color: #f3c86a; font-size: 13px; } #menu .db-map .pin.kill { color: #ff5040; } #menu .db-map .pin.ko { color: #9fd8c6; font-size: 12px; }
+    #menu .db-map .pin.light { color: #ffe9a0; } #menu .db-map .pin.body { color: #f0b8a8; } #menu .db-map .pin.down { color: #ff4030; font-size: 14px; } #menu .db-map .pin.door { color: #9cd0ff; font-size: 9px; }
+    #menu .db-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 7px; font-size: 9.5px; letter-spacing: 0.08em; color: #8fb0a2; line-height: 1.5; }
+    #menu .db-legend .lg i { font-style: normal; font-weight: 700; margin-right: 2px; }
+    #menu .db-legend .lg.seen i { color: #ff8070; } #menu .db-legend .lg.alarm i { color: #f3c86a; } #menu .db-legend .lg.kill i { color: #ff5040; } #menu .db-legend .lg.ko i { color: #9fd8c6; } #menu .db-legend .lg.light i { color: #ffe9a0; } #menu .db-legend .lg.body i { color: #f0b8a8; } #menu .db-legend .lg.down i { color: #ff4030; } #menu .db-legend .lg.door i { color: #9cd0ff; } #menu .db-legend .lg.mark i { color: #dfffea; }
+    #menu .db-legend .lg.path i { background: linear-gradient(90deg, hsl(170,78%,52%), hsl(105,78%,57%), hsl(40,78%,62%)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(4,10,8,0.62), rgba(4,10,8,0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(140,220,180,0.25); }
+    #caption.on { opacity: 1; }
+    /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
+       there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
+    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
+    #timeline.on { display: flex; }
+    body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
+    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(121,214,154,0.28); padding-top: 7px; color: rgba(190,240,210,0.45); transition: color .2s, border-color .2s; }
+    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.5); }
+    #timeline .seg.done { border-top-color: rgba(143,240,180,0.75); color: rgba(190,240,210,0.7); }
+    #timeline .seg.done b { width: 100% !important; opacity: 0; }
+    #timeline .seg.cur { color: #d8ffe6; }
+    #timeline .seg:hover { color: #fff; border-top-color: rgba(143,240,180,0.9); }
+    body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
+    #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
+    .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
+    .bar.top { top: 0; } .bar.bot { bottom: 0; }
+    body.touring .bar { height: 7.5%; }
+    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the tour's letterbox / fades (a caption points at the light meter) */
+    body.touring #equip .cond.god { display: none; }   /* the tour runs in god mode; no need to say so on screen */
+    body.touring #caption { top: calc(7.5% + 22px); }
+    #caption .cap { font: 600 20px/1.25 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; color: #f4f7f2; text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
+    #caption .sub { margin-top: 8px; font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #c9d6cf; text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+    /* the breach showcase (game/breach.ts adds body.breaching for its length): the caption is a ONE-LINE lower third — a slim translucent band sitting on the
+       bottom letterbox bar just over the beat strip, never over the men — and nothing of the player's HUD is drawn over an operation nobody is playing: no kit
+       column, meters, interaction panel, objective, alarm, read-out, state markers or interactable dots (the speech bubbles stay: they are the barks) */
+    body.breaching #caption { top: auto; bottom: calc(7.5% + 6px); width: auto; max-width: min(1100px, 92vw); padding: 7px 18px 8px; border-top: none; border-radius: 2px; background: rgba(4,10,8,0.5); box-shadow: none; z-index: 7; }
+    body.breaching #caption .cap { font: 600 15px/1.35 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.02em; color: #eef3ef; text-shadow: 0 1px 4px #000; }
+    body.breaching #caption .sub { display: none; }
+    body.breaching #log { bottom: calc(7.5% + 50px); }   /* radio lines ride above the lower third, not through it */
+    body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .objmark { display: none !important; }
+    #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
+       pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
+       3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */
+    #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font-size: 11px; color: #bfd6cf; text-shadow: 0 1px 2px #000; pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+    #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(120,170,160,0.25); background: rgba(4,10,12,0.55); border-radius: 3px; opacity: 0.55; white-space: nowrap; }
+    #equip .slot.sel { opacity: 1; border-color: rgba(140,230,210,0.7); box-shadow: 0 0 8px rgba(60,160,140,0.25); }
+    #equip .slot.holstered { opacity: 0.55; border-style: dashed; }   /* E: the selected item put away */
+    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: #7a9; font-size: 10px; letter-spacing: 0.1em; }
+    #equip .slot.slung.holstered::after { content: 'slung · E'; }   /* the FN2000's row: put away is on his back */
+    #equip .slot.slung .rounds i { width: 2px; } #equip .slot.slung .rounds i.spent { width: 0; }   /* thirty of them: slimmer pips */
+    #equip .slot.absent { opacity: 0.3; border-style: dotted; }   /* the rifle's row in a kit without it: kept (greyed) so smoke and stun keep their numbers */
+    #equip .slot.absent .name { color: #8aa; }
+    #equip .tag { font-size: 9px; letter-spacing: 0.14em; padding: 0 4px; border: 1px solid rgba(120,170,160,0.35); border-radius: 2px; color: #6f8580; }   /* SEMI / AUTO (Z) and RING ×n (B): lit = what the trigger does now */
+    #equip .tag.on { color: #9ff3c9; border-color: rgba(159,243,201,0.6); text-shadow: 0 0 5px #3d8; }
+    #equip .tag.rings.on { color: #ffd27a; border-color: rgba(255,210,122,0.65); text-shadow: 0 0 5px rgba(255,200,90,0.4); }
+    #equip .tag.ocp { margin-left: auto; display: inline-flex; align-items: center; }   /* the OCP's charge closes the pistol's row: the tag, then a slim meter of the charge inside it — lit (on) when a right click will fire it */
+    #equip .tag.ocp .ocpbar { width: 30px; height: 4px; margin-left: 5px; border-color: rgba(120,170,160,0.45); }
+    #equip .tag.ocp.on .ocpbar { border-color: rgba(160,220,210,0.6); }
+    #equip .tag.ocp:not(.on) .ocpbar b { background: #5d8f86; }
+    #equip .pace { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; color: #9bb; padding: 1px 7px; }
+    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(121,214,154,0.5); } #equip .pace .ticks i.on { background: #8ff0b4; box-shadow: 0 0 4px rgba(120,240,170,0.4); }
+    #equip .key { color: #7a9; font-weight: 700; }
+    #equip .name { letter-spacing: 0.06em; text-transform: uppercase; color: #dff; }
+    #equip .rounds { display: flex; gap: 2px; align-items: flex-end; }
+    #equip .rounds i { display: block; width: 3px; height: 9px; background: #cfe; opacity: 0.9; }
+    #equip .rounds i.spent { background: transparent; border: 1px solid rgba(200,255,240,0.3); width: 1px; height: 7px; }
+    #equip .rounds i.chamber { height: 11px; background: #ffd27a; }
+    #equip .mags { display: flex; gap: 3px; align-items: flex-end; margin-left: 4px; }
+    #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(200,255,240,0.55); position: relative; }
+    #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: #9dc; }
+    #equip .gadgets { display: flex; gap: 12px; padding: 1px 1px 2px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
+    #equip .g { color: #6f8580; } #equip .g.on { color: #9ff3c9; text-shadow: 0 0 6px #3d8; }
+    #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(160,220,210,0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
+    #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: #7fe0d0; }
+    #equip .cans { display: flex; gap: 3px; } #equip .cans i { display: block; width: 6px; height: 11px; background: #7d8f74; border-top: 2px solid #b23; }
+    #equip .cans.bangs i { background: #3e4346; border-top: 2px solid #e8e6dc; }
+    #equip .cond { display: flex; gap: 8px; align-items: center; padding: 1px 1px 4px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
+    #equip .cond .pips { display: flex; gap: 3px; } #equip .cond .pips i { display: block; width: 14px; height: 6px; background: #9fd8c6; box-shadow: 0 0 5px rgba(80,220,180,0.35); }
+    #equip .cond .pips i.lost { background: transparent; border: 1px solid rgba(220,120,110,0.6); box-shadow: none; }
+    #equip .cond.down .g { color: #ff9c8c; text-shadow: 0 0 6px #c43; }
+    #equip .cond .keytag { margin-left: auto; padding: 0 5px; border: 1px solid rgba(255,210,122,0.65); border-radius: 2px; color: #ffd27a; letter-spacing: 0.14em; text-shadow: 0 0 5px rgba(255,200,90,0.4); box-shadow: 0 0 6px rgba(255,200,90,0.15); }   /* a key taken off a questioned man (Player.keys): the chamber round's amber, pushed to the row's right edge */
+    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9cb; background: #000; }
+    /* speech bubbles over guards' heads (Game.say): a caption, not a balloon — small, translucent, a hairline tail */
+    .bubble { position: absolute; transform: translate(-50%, -100%); max-width: 190px; padding: 3px 7px 4px; font: 11px/1.3 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #dcebe3; background: rgba(6, 12, 10, 0.78); border: 1px solid rgba(150, 190, 170, 0.45); border-radius: 4px; white-space: normal; text-align: center; letter-spacing: 0.01em; text-shadow: 0 1px 2px #000; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+    .bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 7px; height: 7px; transform: translateX(-50%) rotate(45deg); background: rgba(6, 12, 10, 0.78); border-right: 1px solid rgba(150, 190, 170, 0.45); border-bottom: 1px solid rgba(150, 190, 170, 0.45); }
+    .bubble.sus { border-color: rgba(255, 214, 102, 0.6); color: #fff0c8; } .bubble.sus::after { border-color: rgba(255, 214, 102, 0.6); }
+    .bubble.alert { border-color: rgba(255, 96, 72, 0.7); color: #ffd8d0; } .bubble.alert::after { border-color: rgba(255, 96, 72, 0.7); }
+    /* Sam's own line to the man in his arm (player.ts askHeld → Player.bubble): the same caption in his goggles' cool green, a shade darker behind it */
+    .bubble.sam { color: #c8ffe4; background: rgba(2, 12, 9, 0.86); border-color: rgba(64, 230, 160, 0.6); } .bubble.sam::after { background: rgba(2, 12, 9, 0.86); border-color: rgba(64, 230, 160, 0.6); }
+    .bubble.radio { font-style: italic; }
+    .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the caption card / the interaction panel */
+    .bubble.below::after { bottom: auto; top: -5px; transform: translateX(-50%) rotate(225deg); }
+    #bubbles, .bubble { z-index: 9; }   /* above the tour's caption card and letterbox (z 8-ish) — a line being said is the thing to read */
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="view"></canvas>
+    <div id="overlay"><svg id="traj"></svg></div>
+    <div id="equip"></div>
+    <div id="lcol"><div id="hud"></div><div id="interact"></div></div>
+    <div id="meters"><div class="m light"><span class="lab">LIGHT</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="ticks"></div></div></div><div class="m sound"><span class="lab">SOUND</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="peak"></div><div class="ticks"></div></div></div></div>
+    <div id="log"></div>
+    <div id="objective"></div>
+    <div id="alarm"></div>
+    <div id="checkpoint"><b></b>CHECKPOINT</div>
+    <div id="journal"></div>
+    <div id="caption"></div>
+      <div id="timeline"></div>
+    <div class="bar top"></div><div class="bar bot"></div><div id="veil"></div>
+    <div id="panel" class="hidden"></div>
+    <div id="loading">loading…</div>
+    <div id="menu"></div>
+    <div id="fatal"></div>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

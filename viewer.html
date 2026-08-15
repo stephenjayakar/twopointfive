@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>twopointsix — character / prop viewer → workbench</title>
+  <style>html, body { margin: 0; height: 100%; background: #000; color: #9cb; font: 12px ui-monospace, Menlo, monospace; display: flex; align-items: center; justify-content: center; }</style>
+</head>
+<body>
+  <p>The character / prop viewer is the workbench's <b>Characters</b> mode now: <a id="go" href="workbench#mode=chars">workbench#mode=chars</a></p>
+  <script>
+    // /viewer (dev) and viewer.html (the build) FORWARD into the workbench's Characters mode, keeping ?quality=… and the old hash:
+    // #scene/variant&sel=<id> becomes #mode=chars&scene=scene/variant&sel=<id> (src/workbench/main.ts also reads the bare old form).
+    (function () {
+      var old = location.hash.replace(/^#/, '');
+      var page = /\.html$/.test(location.pathname) ? 'workbench.html' : 'workbench';
+      var hash = '#mode=chars' + (old ? '&scene=' + old : '');
+      var target = page + location.search + hash;
+      document.getElementById('go').href = target;
+      location.replace(target);
+    })();
+  </script>
+</body>
+</html>

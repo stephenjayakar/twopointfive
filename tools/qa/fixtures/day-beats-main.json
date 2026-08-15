@@ -1,0 +1,630 @@
+{
+ "what": "the DAY showcase's beat log (Breach.log = show notes + camera set-ups + BreachDrill.beats + 'restore' — the drill AND the loud half) per seed, t in seconds and rounded to the frame (f = round(t·60))",
+ "provenance": {
+  "commit": "bd6601d1",
+  "takenAt": "2026-08-13T21:46:30.541Z",
+  "tree": "feat/day-loud: the breach extended past its cut by the loud half (docs/internal/day-showcase.md); its first half held frame-identical to breach-beats-main.json @0b51b27 by the same probe",
+  "recipe": "tools/qa/director-probes.ts breachBeats(seed): Math.random = mulberry(seed); standUp(); 30 × step(1/60); new Breach(game, cam, smoke, input).start(); { breach.update(1/60); step(1/60, look); lights.upload } until it stops itself",
+  "seeds": [
+   11,
+   12
+  ],
+  "dt": 0.016666666666666666
+ },
+ "runs": {
+  "11": {
+   "frames": 7927,
+   "finished": true,
+   "timedOut": false,
+   "beats": [
+    {
+     "what": "daylight",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "cast",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Ten a.m.",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Stack",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "shot:Entry",
+     "f": 853,
+     "t": 14.2167
+    },
+    {
+     "what": "shot:Corners",
+     "f": 1041,
+     "t": 17.35
+    },
+    {
+     "what": "shot:Clear",
+     "f": 1420,
+     "t": 23.6667
+    },
+    {
+     "what": "shot:10:03 · corridor",
+     "f": 1682,
+     "t": 28.0333
+    },
+    {
+     "what": "shot:contact front",
+     "f": 2400,
+     "t": 40
+    },
+    {
+     "what": "shot:the glass",
+     "f": 2488,
+     "t": 41.4667
+    },
+    {
+     "what": "shot:contact front",
+     "f": 2742,
+     "t": 45.7
+    },
+    {
+     "what": "shot:10:04 · cubicles",
+     "f": 2925,
+     "t": 48.75
+    },
+    {
+     "what": "shot:the aisle",
+     "f": 3300,
+     "t": 55
+    },
+    {
+     "what": "shot:the mouth",
+     "f": 4091,
+     "t": 68.1833
+    },
+    {
+     "what": "shot:the charge",
+     "f": 4393,
+     "t": 73.2167
+    },
+    {
+     "what": "shot:the south aisle",
+     "f": 4883,
+     "t": 81.3833
+    },
+    {
+     "what": "shot:four down",
+     "f": 5684,
+     "t": 94.7333
+    },
+    {
+     "what": "shot:smoke",
+     "f": 6360,
+     "t": 106
+    },
+    {
+     "what": "shot:bounds",
+     "f": 6797,
+     "t": 113.2833
+    },
+    {
+     "what": "shot:10:05 · south lot",
+     "f": 7205,
+     "t": 120.0833
+    },
+    {
+     "what": "start",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "go",
+     "f": 157,
+     "t": 2.6167
+    },
+    {
+     "what": "approach-done",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "stacked",
+     "f": 592,
+     "t": 9.8667
+    },
+    {
+     "what": "squeeze",
+     "f": 736,
+     "t": 12.2667
+    },
+    {
+     "what": "kick",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "kickL",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "door-flung",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "retreat",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "toss",
+     "f": 827,
+     "t": 13.7833
+    },
+    {
+     "what": "land",
+     "f": 857,
+     "t": 14.2833
+    },
+    {
+     "what": "bang",
+     "f": 884,
+     "t": 14.7333
+    },
+    {
+     "what": "enter1",
+     "f": 908,
+     "t": 15.1333
+    },
+    {
+     "what": "enter2",
+     "f": 966,
+     "t": 16.1
+    },
+    {
+     "what": "eyes1:0",
+     "f": 972,
+     "t": 16.2
+    },
+    {
+     "what": "shot1",
+     "f": 981,
+     "t": 16.35
+    },
+    {
+     "what": "down:0",
+     "f": 982,
+     "t": 16.3667
+    },
+    {
+     "what": "in1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "centre1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "corner1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "shot1",
+     "f": 991,
+     "t": 16.5167
+    },
+    {
+     "what": "eyes1:2",
+     "f": 1010,
+     "t": 16.8333
+    },
+    {
+     "what": "shot1",
+     "f": 1019,
+     "t": 16.9833
+    },
+    {
+     "what": "down:2",
+     "f": 1020,
+     "t": 17
+    },
+    {
+     "what": "eyes2:1",
+     "f": 1024,
+     "t": 17.0667
+    },
+    {
+     "what": "shot1",
+     "f": 1029,
+     "t": 17.15
+    },
+    {
+     "what": "shot2",
+     "f": 1033,
+     "t": 17.2167
+    },
+    {
+     "what": "down:1",
+     "f": 1034,
+     "t": 17.2333
+    },
+    {
+     "what": "in2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "centre2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "corner2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "shot2",
+     "f": 1043,
+     "t": 17.3833
+    },
+    {
+     "what": "hold1",
+     "f": 1120,
+     "t": 18.6667
+    },
+    {
+     "what": "hold2",
+     "f": 1171,
+     "t": 19.5167
+    },
+    {
+     "what": "clear",
+     "f": 1202,
+     "t": 20.0333
+    },
+    {
+     "what": "next",
+     "f": 1335,
+     "t": 22.25
+    },
+    {
+     "what": "stack2",
+     "f": 1565,
+     "t": 26.0833
+    },
+    {
+     "what": "cut",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "done",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "restore",
+     "f": 7927,
+     "t": 132.1167
+    }
+   ]
+  },
+  "12": {
+   "frames": 7927,
+   "finished": true,
+   "timedOut": false,
+   "beats": [
+    {
+     "what": "daylight",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "cast",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Ten a.m.",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "shot:Stack",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "shot:Entry",
+     "f": 853,
+     "t": 14.2167
+    },
+    {
+     "what": "shot:Corners",
+     "f": 1041,
+     "t": 17.35
+    },
+    {
+     "what": "shot:Clear",
+     "f": 1420,
+     "t": 23.6667
+    },
+    {
+     "what": "shot:10:03 · corridor",
+     "f": 1682,
+     "t": 28.0333
+    },
+    {
+     "what": "shot:contact front",
+     "f": 2400,
+     "t": 40
+    },
+    {
+     "what": "shot:the glass",
+     "f": 2488,
+     "t": 41.4667
+    },
+    {
+     "what": "shot:contact front",
+     "f": 2742,
+     "t": 45.7
+    },
+    {
+     "what": "shot:10:04 · cubicles",
+     "f": 2925,
+     "t": 48.75
+    },
+    {
+     "what": "shot:the aisle",
+     "f": 3300,
+     "t": 55
+    },
+    {
+     "what": "shot:the mouth",
+     "f": 4091,
+     "t": 68.1833
+    },
+    {
+     "what": "shot:the charge",
+     "f": 4393,
+     "t": 73.2167
+    },
+    {
+     "what": "shot:the south aisle",
+     "f": 4883,
+     "t": 81.3833
+    },
+    {
+     "what": "shot:four down",
+     "f": 5684,
+     "t": 94.7333
+    },
+    {
+     "what": "shot:smoke",
+     "f": 6360,
+     "t": 106
+    },
+    {
+     "what": "shot:bounds",
+     "f": 6797,
+     "t": 113.2833
+    },
+    {
+     "what": "shot:10:05 · south lot",
+     "f": 7205,
+     "t": 120.0833
+    },
+    {
+     "what": "start",
+     "f": 0,
+     "t": 0
+    },
+    {
+     "what": "go",
+     "f": 157,
+     "t": 2.6167
+    },
+    {
+     "what": "approach-done",
+     "f": 436,
+     "t": 7.2667
+    },
+    {
+     "what": "stacked",
+     "f": 592,
+     "t": 9.8667
+    },
+    {
+     "what": "squeeze",
+     "f": 736,
+     "t": 12.2667
+    },
+    {
+     "what": "kick",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "kickL",
+     "f": 795,
+     "t": 13.25
+    },
+    {
+     "what": "door-flung",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "retreat",
+     "f": 818,
+     "t": 13.6333
+    },
+    {
+     "what": "toss",
+     "f": 827,
+     "t": 13.7833
+    },
+    {
+     "what": "land",
+     "f": 857,
+     "t": 14.2833
+    },
+    {
+     "what": "bang",
+     "f": 884,
+     "t": 14.7333
+    },
+    {
+     "what": "enter1",
+     "f": 908,
+     "t": 15.1333
+    },
+    {
+     "what": "enter2",
+     "f": 966,
+     "t": 16.1
+    },
+    {
+     "what": "eyes1:0",
+     "f": 972,
+     "t": 16.2
+    },
+    {
+     "what": "shot1",
+     "f": 981,
+     "t": 16.35
+    },
+    {
+     "what": "down:0",
+     "f": 982,
+     "t": 16.3667
+    },
+    {
+     "what": "in1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "centre1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "corner1",
+     "f": 986,
+     "t": 16.4333
+    },
+    {
+     "what": "shot1",
+     "f": 991,
+     "t": 16.5167
+    },
+    {
+     "what": "eyes1:2",
+     "f": 1010,
+     "t": 16.8333
+    },
+    {
+     "what": "shot1",
+     "f": 1019,
+     "t": 16.9833
+    },
+    {
+     "what": "down:2",
+     "f": 1020,
+     "t": 17
+    },
+    {
+     "what": "eyes2:1",
+     "f": 1024,
+     "t": 17.0667
+    },
+    {
+     "what": "shot1",
+     "f": 1029,
+     "t": 17.15
+    },
+    {
+     "what": "shot2",
+     "f": 1033,
+     "t": 17.2167
+    },
+    {
+     "what": "down:1",
+     "f": 1034,
+     "t": 17.2333
+    },
+    {
+     "what": "in2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "centre2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "corner2",
+     "f": 1037,
+     "t": 17.2833
+    },
+    {
+     "what": "shot2",
+     "f": 1043,
+     "t": 17.3833
+    },
+    {
+     "what": "hold1",
+     "f": 1120,
+     "t": 18.6667
+    },
+    {
+     "what": "hold2",
+     "f": 1171,
+     "t": 19.5167
+    },
+    {
+     "what": "clear",
+     "f": 1202,
+     "t": 20.0333
+    },
+    {
+     "what": "next",
+     "f": 1335,
+     "t": 22.25
+    },
+    {
+     "what": "stack2",
+     "f": 1565,
+     "t": 26.0833
+    },
+    {
+     "what": "cut",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "done",
+     "f": 1656,
+     "t": 27.6
+    },
+    {
+     "what": "restore",
+     "f": 7927,
+     "t": 132.1167
+    }
+   ]
+  }
+ }
+}

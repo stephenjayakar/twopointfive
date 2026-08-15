@@ -1,0 +1,180 @@
+// ---- GPU particles (EXPERIMENT, render/particles.ts): declarations shared by the simulation kernels (particles.wgsl) and the splat (particles_draw.wgsl).
+// One storage buffer holds a 64-byte header (per-frame counters the update kernel accumulates, read back for the panel) followed by CAP particles of 80 B.
+// Slots are dealt by the CPU in ring order — two rings, SHORT (sparks, dust) and LONG (debris chips, casings), so a storm of sparks can never evict brass
+// that is meant to lie on the lino for a minute — and only the live WINDOW of each ring (tail .. head, the CPU expires the tail by the emits' lifetimes)
+// is simulated and drawn: nothing alive = no thread, no vertex.
+
+const P_SPARK: u32 = 0u;    // incandescent: emissive, gravity, bounces low and skitters along the floor for as long as it burns, cools white-yellow → orange → red over 0.3–0.8 s
+const P_DEBRIS: u32 = 1u;   // chips knocked out of drywall / wood / concrete: LIT (albedo of what was hit), gravity, bounce, come to rest and stay ~20 s
+const P_DUST: u32 = 2u;     // a puff: LIT soft blob, drag-dominated, grows and fades over ~1.5 s (bullet impacts, the stun charge's ring, a kicked door)
+const P_CASING: u32 = 3u;   // spent brass: LIT + a glint off the strongest light, ejected per shot, bounces, lies on the floor
+const P_SHEET: u32 = 4u;    // a leaf of office paper (destruction.ts: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
+                            // gravity + anisotropic drag + flutter torque (game/sheetModel.ts is the CPU reference of the same equations), slides / settles
+                            // flat on what it lands on and sleeps like a chip; casts no shadow (a splat, not a box)
+const P_RAIN: u32 = 5u;     // a rain drop (game/rainFx.ts): born on top of the weather's rain slab over the outdoor ground near the view, falls at terminal speed with the wind
+                            // field's air, LIT like a chip (the strongest lights shadow-rayed) + refracting / glinting in the splat, dies where it hits and becomes its own
+                            // splash crown there (PB_ASLEEP = splashed); its own ring past the two gameplay rings (EmitBlock.rainWin)
+const P_KINDS: u32 = 6u;
+
+// Particle.bits
+const PB_KIND: u32 = 15u;         // low 4 bits: kind
+const PB_ASLEEP: u32 = 16u;       // resting on an up-facing surface: no integration, support re-tested now and then
+const PB_NEW: u32 = 32u;          // born this frame (the emit kernel pre-integrated it a random fraction of dt): the update kernel skips its step once
+const PB_BOUNCED: u32 = 64u;      // has met geometry at least once
+// bits 8..15: owner — the character id whose capsules / boxes this particle's rays ignore (a casing leaves the port INSIDE the shooter's arm capsules)
+
+struct Particle {
+  pos: vec3f, age: f32,
+  vel: vec3f, life: f32,
+  size: f32, bits: u32, seed: u32, color: u32,   // size: metres (a spark's streak thickness, a chip's width, a puff's radius at birth, a sheet's WIDTH); color: rgba8 albedo / tint
+  shade: vec3f, spin: f32,                       // shade: what the splat shows THIS frame — outgoing radiance of a lit particle, emitted radiance of a spark (bloom does the glow); spin: an angle (resting orientation, the casing's twinkle phase, the sheet's turn about its normal)
+  ori: u32, omg: u32, omgZ: u32, aux: u32,       // SHEET: unit normal (octahedral, 2 × snorm16), angular velocity rad/s (x, y as f16 × 2 | z as f16, high half spare); aux = pack2x16float(aspect = length ÷ width, SHEET: gust s — the blast wind still carrying it, 0 in still air) — every kind carries aspect (a splinter is a chip with aspect 3; 1 = the chip as it was)
+};
+
+// the sheet's two constants the kind block has no slot for (game/sheetModel.ts SHEET.ANG_DAMP / SPIN_MAX)
+const SHEET_ANG_DAMP: f32 = 1.8;
+const SHEET_SPIN_MAX: f32 = 3.0;
+// the sheet's IMPULSE response (game/sheetModel.ts SHEET_IMP / SHEET_GUST — the probes compare them): a kicked leaf is tipped off flat by up to TILT rad toward a hashed
+// side, set tumbling at TUMBLE rad/s per m/s of kick (|ω| ≤ WMAX), and carried by the blast's wind for GUST_TAU × clamp((kick − GUST0) / GUST1) s, during which drag
+// and flutter torque are taken against the co-moving air: × (1 − GUST_K·g), g = 1 until the last GUST_RAMP share of TAU, then falling to 0
+const SHEET_IMP_TILT: f32 = 0.9;
+const SHEET_IMP_TUMBLE: f32 = 3.0;
+const SHEET_IMP_WMAX: f32 = 12.0;
+const SHEET_IMP_GUST0: f32 = 0.5;
+const SHEET_IMP_GUST1: f32 = 1.5;
+const SHEET_GUST_TAU: f32 = 0.4;
+const SHEET_GUST_K: f32 = 0.98;
+const SHEET_GUST_RAMP: f32 = 0.35;
+/** below this scalar kick (m/s) an impulse leaves a particle alone (game/sheetModel.ts IMP_MIN_KICK) */
+const IMP_MIN_KICK: f32 = 0.03;
+/** per-particle raggedness of a push (game/sheetModel.ts IMP_JITTER): the kick × (1 − MAG/2 ‥ 1 + MAG/2), plus SIDE × the kick along a hashed bearing — a pile does not lift as one clump */
+const IMP_JITTER_MAG: f32 = 0.6;
+const IMP_JITTER_SIDE: f32 = 0.35;
+/** octahedral unit-vector codec (2 × snorm16 in a u32) for the sheet's normal */
+fn pOctEncode(nIn: vec3f) -> u32 {
+  let n = nIn / (abs(nIn.x) + abs(nIn.y) + abs(nIn.z) + 1e-9);
+  var e = n.xz;
+  if (n.y < 0.0) { e = (1.0 - abs(e.yx)) * select(vec2f(-1.0), vec2f(1.0), e >= vec2f(0.0)); }
+  return pack2x16snorm(e);
+}
+fn pOctDecode(u: u32) -> vec3f {
+  let e = unpack2x16snorm(u);
+  var n = vec3f(e.x, 1.0 - abs(e.x) - abs(e.y), e.y);
+  if (n.y < 0.0) { let t = (1.0 - abs(n.zx)) * select(vec2f(-1.0), vec2f(1.0), n.xz >= vec2f(0.0)); n = vec3f(t.x, n.y, t.y); }
+  return normalize(n);
+}
+fn packOmega(w: vec3f) -> vec2u { return vec2u(pack2x16float(w.xy), pack2x16float(vec2f(w.z, 0.0))); }
+fn unpackOmega(a: u32, b: u32) -> vec3f { return vec3f(unpack2x16float(a), unpack2x16float(b).x); }
+/** the sheet's in-plane frame: t across its width, b along its length, from the normal and the spin angle (the splat's quad and nothing else reads it) */
+fn sheetFrame(n: vec3f, spin: f32) -> mat2x3f {
+  let rf = normalize(mix(vec3f(1.0, 0.0, 0.0), vec3f(0.0, 0.0, 1.0), smoothstep(0.6, 0.95, abs(n.x))));   // a HORIZONTAL reference BLENDED from x toward z as the leaf turns to face ±x: continuous everywhere but two isolated directions — never in the near-flat band a fluttering leaf rocks through (an up reference flipped the quad's frame twice a swing; a hard switch snapped it four times a tumble)
+  let t0 = normalize(cross(rf, n)); let b0 = cross(n, t0);
+  let c = cos(spin); let s = sin(spin);
+  return mat2x3f(t0 * c + b0 * s, b0 * c - t0 * s);
+}
+
+// Per-kind numbers, live from the panel (render/particles.ts KIND_DEFAULTS): two vec4 per kind
+//   k0 = (gravity m/s², drag 1/s, restitution, tangential keep on a bounce)
+//   k1 = (sleep speed m/s — below it after a bounce on an up face the particle rests; SPARK: hold fraction · others: fade-out seconds at the end of life;
+//         SPARK/DEBRIS/CASING: streak shutter s · DUST: growth factor over life; SPARK: brightness × · DUST: peak opacity · others: 1)
+//   SHEET reads the same slots as (gravity, KT along-slip drag, KN_LIN, KN_Q) and (sleepV, fade s, FLUT torque gain, TRANS translucency) — game/sheetModel.ts SHEET
+struct Window { start: u32, size: u32, tail: u32, live: u32 };   // ring `start .. start+size`, live slots begin at offset `tail` (mod size), `live` of them
+
+// The frame's uniform block (render/particles.ts writes it): the emit queue + the live windows + the per-kind numbers. The simulation reads all of it, the
+// splat only the windows and the kind numbers.
+struct EmitRec {
+  pos: vec3f, count: u32,
+  dir: vec3f, speed: f32,
+  posB: vec3f, first: u32,        // posB: x = ring radius (SHEET: initial tumble rate cap rad/s), y = aspect (length ÷ width; 1 for everything but sheets and splinters), z = SHEET normal jitter 0‥1 (0 = born flat, 1 = any way up); first: index of this record's first particle among the frame's births
+  vadd: vec3f, shape: u32,        // velocity inherited from the emitter (the shooter's stride); 0 cone about dir · 1 ground burst (spread / lift) · 2 ring in XZ · 3 puff (sphere)
+  p: vec4f,                       // x spread (cone half-angle rad | burst spread), y life s, z size m, w speed jitter 0..1 (speed × (1 − w·r))
+  q: vec4f,                       // x life jitter (life × (1 − x + 2x·r)), y lift (burst / ring: vertical share), z size jitter, w position jitter radius m
+  k: vec4u,                       // x kind | owner << 8 | ring << 16, y seed, z slot offset within the ring of particle 0, w colour rgba8
+};
+const MAX_EMITS: u32 = 128u;
+// IMPULSES (render/particles.ts Particles.impulse; game/destruction.ts is where they come from — a stun charge, a round landing beside settled litter, a body /
+// boot / shoved desk thumping the floor; game/sheetModel.ts impulseKick + sheetImpulse are the CPU reference of what particles.wgsl applyImpulses does with one):
+// up to MAX_IMPS a frame, applied in the update kernel to every LIVE particle of the kinds each names within its radius — Δv = strength × gain(kind) ×
+// (1 − d/radius) × (radial with its downward part dropped + up × upK(kind) × ŷ + bias), |v| capped per kind — and WAKING the resting ones it kicks
+// harder than wake(kind), so paper already on the floor goes up again. numImps rides in EmitBlock.flags bits 8‥12: 0 = the kernel never touches the array
+// (frames without impulses cost one shift and a branch), and the CPU uploads the array only on frames that carry any.
+const MAX_IMPS: u32 = 16u;
+struct ImpulseRec {
+  pos: vec3f, radius: f32,       // centre of the push, its reach (m)
+  bias: vec3f, strength: f32,    // a direction folded into the push, |bias| = its weight (the round's travel along the surface it struck; zero for a blast); peak Δv (m/s) a SHEET gets at the centre — the other kinds scale it by their gain
+  eye: vec3f, up: f32,           // where the occlusion ray starts when iflags has bit 0 (a blast's reach judged from just over desk height, as destruction.ts judges the stacks); the upward share added to the radial direction
+  kinds: u32, seed: u32, iflags: u32, spare: u32,   // bit k set = kind k responds; the seed each kicked sheet hashes its tilt / tumble from with its slot; 1 = one any-hit ray + the glass panes eye → particle gate it (a partition or a pane between a charge and the litter behind it stops the push)
+};
+// WIND records (game/wind.ts → render/particles.ts setWind): the frame's ≤ 8 wind sources ride in the SAME array right BEHIND the impulses — imps[numImps ‥ numImps +
+// numWinds) — as ImpulseRec read another way (render/shaders/wind_field.wgsl is the field; particles.wgsl windAir sums it): a JET (iflags bits 2‥3 = 0): pos = the
+// diffuser's face centre, radius = reach (where it has halved), bias = unit axis, strength = m/s at the face this frame, eye = (tanSpread, r0, dMax), up = the
+// floor a down-jet turns along (≤ −100 = none); the STORM (bits 2‥3 = 1): pos.xyz + radius = the interior footprint x0 z0 x1 z1 it does not blow inside, eye + up
+// = the annex's, bias × strength = the wind. kinds = which kinds answer to it. Every wind record also carries the four live wind knobs (the same on each; read off
+// the first): seed = pack2x16float(sheet wake speed m/s, sheet kick ×), spare = pack2x16float(debris coupling 0‥1, spare). No wind record ever wakes,
+// gates or kicks by itself: the update kernel takes the summed AIR VELOCITY as what drag is measured against (dust follows it, chips a share of it, a sheet's
+// aerodynamics take the relative wind — the impulse gust's 'co-moving air' generalised to 'the air moves at v_air'), trembles a resting leaf and now and then wakes one.
+struct EmitBlock {
+  numRecs: u32, totalNew: u32, frameSeed: u32, flags: u32,   // flags: 1 = shadow rays for the three strongest lights (else all unshadowed and whole), 2 = collide at all, 4 = fog the splats by the volumetric transmittance; bits 8‥12 = numImps this frame; bits 16‥20 = numWinds (behind them)
+  win: array<Window, 2>,
+  kp: array<vec4f, 12>,           // per kind k: kp[2k] = k0, kp[2k+1] = k1 (above) — 2 × P_KINDS rows
+  ki: array<vec4f, 6>,            // per kind k, its IMPULSE response (game/sheetModel.ts IMP_RESPONSE, live from the panel): x gain on the record's strength (0 = the kind ignores impulses: sparks), y × its upward share, z |v| cap after the kick (m/s), w the least kick (m/s) that wakes a resting one — P_KINDS rows
+  recs: array<EmitRec, MAX_EMITS>,
+  imps: array<ImpulseRec, MAX_IMPS>,
+  rainWin: Window,                // the RAIN ring's window (experiment; render/particles.ts RAIN_RING) — in the tail so everything above sits where it always sat; live 0 unless it rains particles
+  // PARTICLE RAIN v2 — the rain kind's LOOK (render/particles.ts RainLook ← game/rainFx.ts PRAIN, live), written with the window above while the ring holds anything:
+  rainCfg: vec4f,                 // the drop's PHASE + glint: x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = the strand glint's weight (particles.wgsl rainPhase)
+  rainCfgB: vec4f,                // x = the glint lobe's own roughness (+ each emitter's angular half-size), y = its cap per light (× E × gain), z = × everything the drop scatters (gain), w = the TAIL's share of last frame's shade
+  rainCfgC: vec4f,                // REFRACTION in the splat (particles_draw.wgsl rainFragment, through refract_common.wgsl): x = on 0‥1 (× the streak's coverage as an 'over'), y = the refracted ray's reach behind the drop (m: the scene depth behind the pixel less the drop's own, capped here), z = each fetch's display-luminance clamp, w = depth guard (a fetch this much nearer the eye than the drop is not behind it)
+  rainCfgD: vec4f,                // x = streak LENGTH jitter 0‥1 per drop, y = BRIGHTNESS jitter 0‥1, z = half-width floor px + 16 × taps (2‥4), w = × the wind field's air on a drop (0 = falls plumb)
+  rainCfgE: vec4f,                // the drifting SHEETS births are thinned into (particles.wgsl emit): x = amplitude 0‥1, y = scale m, zw = the noise's running offset (∫ air dt, m: carried downwind)
+  rainCfgF: vec4f,                // the streak's WIDTH on screen (particles_draw.wgsl rainVertex): x = half-width CEILING px (a drop two metres off is a thin bright line, not a bar: what is wider is drawn this wide and brightened by as much …), y = … up to this ×, z = the near fade's reach (m: a drop closer to the lens than 0.35 × this shows nothing, fully itself from here), w = BEAD amplitude 0‥1: a big drop oscillates as it falls (~100+ Hz), so its streak is brightness-modulated along its length — 3‥6 beats per streak, phase and count per drop, mean 1
+};
+
+/** slot of live-window element t over the two rings, or 0xffffffff past the end */
+fn windowSlot(w0: Window, w1: Window, t: u32) -> u32 {
+  if (t < w0.live) { return w0.start + (w0.tail + t) % w0.size; }
+  let t1 = t - w0.live;
+  if (t1 < w1.live) { return w1.start + (w1.tail + t1) % w1.size; }
+  return 0xffffffffu;
+}
+/** … then the rain ring's window after those two (t counted over all three): the update kernel's / the splat's slot for thread / instance t */
+fn slotOf3(w0: Window, w1: Window, wr: Window, t: u32) -> u32 {
+  let s = windowSlot(w0, w1, t);
+  if (s != 0xffffffffu) { return s; }
+  let t2 = t - w0.live - w1.live;
+  if (t2 < wr.live) { return wr.start + (wr.tail + t2) % wr.size; }
+  return 0xffffffffu;
+}
+
+/** PARTICLE RAIN: is ground point p (xz) rained on — outside the interior footprint and the stair tower's (frame.weatherC / D, the rectangles volumetrics.wgsl outdoorsXZ cuts the
+ *  lattice rain by) and inside the world's rim. The recycler's disc is thrown over everything; births and drifting drops are kept to this. */
+fn rainOutdoors(p: vec2f) -> bool {
+  let I = frame.weatherC; let A = frame.weatherD;
+  return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w)
+      && p.x > WORLD_MIN.x + 0.25 && p.y > WORLD_MIN.z + 0.25 && p.x < WORLD_MAX.x - 0.25 && p.y < WORLD_MAX.z - 0.25;
+}
+/** … and is SURFACE point P under one of the two roofs — inside the interior / annex footprint AND below the ceiling slab (a wall's top or a unit standing on the roof is in the open).
+ *  Rain only exists outdoors, so nothing under a roof can ever be seen THROUGH a drop: the top-down raster looks straight through the NoPrimary roof and lays the lit rooms a few
+ *  pixels beside the outdoor drops ON SCREEN with three metres of wall and slab between them in the world — a screen-space read landing there is refused (particles_draw.wgsl
+ *  rainRefractTap keeps the pixel's own read), or the exit sign's green corridor floor shows up in the drops falling past the wall outside it. */
+fn rainRoofed(P: vec3f) -> bool {
+  let I = frame.weatherC; let A = frame.weatherD; let q = P.xz;
+  let inI = q.x >= I.x && q.y >= I.y && q.x <= I.z && q.y <= I.w;
+  let inA = q.x >= A.x && q.y >= A.y && q.x <= A.z && q.y <= A.w;
+  return (inI || inA) && P.y < CEIL_Y + 0.05;
+}
+// the rain kind's constants shared by the step (particles.wgsl rainStep) and the splat (particles_draw.wgsl rainVertex / rainFragment)
+const RAIN_TERMINAL: f32 = 9.0;      // fall speed the air's velocity is added to (m/s) = volumetrics.wgsl RAIN_V = weather.ts RAIN_V: air ÷ it is the lean both rain layers share
+const RAIN_P_GAIN: f32 = 0.045;      // fraction of the irradiance at a drop scattered toward the eye, per unit of kp brightness — calibrated on the lattice: its streak carries E × 0.11 × ⅔ × 6 mm
+                                     // × 0.65 per metre of length; an 8 mm-wide splat streak of radiance E × g carries E × g × 8 mm, and the splat's head-to-tail ramp averages 0.8 → g ≈ 0.045
+const RAIN_SPLASH_DROPLETS: u32 = 4u; // secondary droplets a landing throws out with its ring (drawn procedurally in the ONE quad the drop becomes: no allocation, the true landing point)
+
+fn unpackRgb8(c: u32) -> vec3f { return vec3f(f32(c & 255u), f32((c >> 8u) & 255u), f32((c >> 16u) & 255u)) / 255.0; }
+
+// the spark's colour ramp (game/sparks.ts boxes(): white-hot → orange → red as it cools; e is meant to clip — the bloom is the glow)
+const SPARK_EMISSIVE: f32 = 25.0;   // effects.ts sparks.emissive: HDR radiance at f = 1 before brightness
+fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
+  let f = select(max(0.0, 1.0 - (u - hold) / max(1e-3, 1.0 - hold)), 1.0, u < hold);
+  let e = f * f * brightness * SPARK_EMISSIVE;
+  return vec3f(e, e * (0.35 + 0.5 * f), e * (0.08 + 0.25 * f * f));
+}

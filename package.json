@@ -1,0 +1,12 @@
+{
+  "name": "twopointsix",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run tools/serve.ts",
+    "build": "bun run tools/build.ts",
+    "typecheck": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json",
+    "qa": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json && bun run tools/qa/tour.ts --runs 3 --quiet && bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet"
+  }
+}
