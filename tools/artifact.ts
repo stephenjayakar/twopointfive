@@ -51,12 +51,18 @@ const boot = `
     for (const k of Object.keys(PACK)) m.set(k, { type: PACK[k][0], buf: await gunzip(unb64(PACK[k][1])), });
     return m;
   })();
-  const passthrough = window.fetch.bind(window);
+  // Every fetch is answered from memory: the packed assets with their bytes, anything else with a synthetic
+  // failure. Enumerating the dev-server probes (/qa/commit, the shot server) would work until the next one is
+  // added, and the promise this page makes — one document, no second request — is not the sort that should
+  // depend on someone remembering. Callers see a non-ok Response, which is exactly what they see off a static
+  // build anyway; the warning names the URL so this reads as blocked rather than broken.
+  const blocked = new Set();
   window.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : (input && input.url) || String(input);
     const path = url.split(/[?#]/)[0];
     for (const [name, a] of await ready) if (path.endsWith(name)) return new Response(a.buf.slice(0), { status: 200, headers: { 'content-type': a.type } });
-    return passthrough(input, init);
+    if (!blocked.has(path)) { blocked.add(path); console.warn('[twopointsix] offline build: no request leaves this page —', url); }
+    return new Response(null, { status: 504, statusText: 'offline build' });
   };
 
   // Without a GPU the app's own fatal card says 'navigator.gpu missing', which is true and unhelpful:
