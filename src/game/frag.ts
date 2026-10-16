@@ -40,7 +40,10 @@ import { bangScorch } from './marks';
 import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
 import { fightLive } from './roomfight';
-import { PACE, canSee, canSeeChar } from './guards';
+import { PACE, canSee, canSeeChar, crossesDoor, frameOf } from './guards';   // (crossesDoor: asked inside fleeByDoor only)
+import type { Door } from './doors';
+import { lanePenalty } from './lanes';       // (asked inside fleeByDoor only)
+import { tacticsPenalty } from './tactics';
 import { THROW_RELEASE } from './character';
 import { glassBreakLive } from './glassbreak';
 import { shotEnergy } from './glasspen';
@@ -127,6 +130,20 @@ export const FRAG = {
    *  with those open (`withWallsOpen`). So the flee leaves a partition the burst is about to hole and a man behind one is not counted safe. ON in the page
    *  (`?nowallflee` = off); OFF here and on the frozen stand (`TPS_WALLFLEE=1`); a recording from before the key replays with it off. */
   wallFlee: false,
+  /** OUT BY THE OPEN DOOR (10-16; the maintainer's call on a squad caught by a grenade in a bare room: they go out through the already open doorway beside
+   *  them, never opening a shut door, never sprinting). The flee deals ONE STRAIGHT LEG; a bare room has no spot the burst has no line to, and its doorway
+   *  passes only a leg nearly square to it. With this, a man whose straight leg is nothing, would leave him in the burst's line, or ends in an open doorway's
+   *  mouth (`fleeDoorMouth` m of its middle: his mates' way out) is dealt a spot BESIDE AN OPEN DOORWAY, ON ITS FAR SIDE, that the burst has no line to, and
+   *  walks there by the floor's own path through that doorway (`fleeByDoor`). Open = the leaf off its hinges, or unlatched, not swinging to, and standing
+   *  `fleeDoorOpen` rad or more off its frame: he never opens a shut door, and the path crosses no other. The whole walk is inside `fleeDoorIn` of what his
+   *  legs make in the fuse left at the pace the flee already has (a teammate never sprints); no step of it is nearer where the grenade will rest than he
+   *  stands by more than `fleeDoorDip` m; none passes within `fleeDoorLeaf` m of a leaf standing open (the floor's path does not know a leaf: walked into
+   *  from behind it swings shut in the doorway); never a spot a mate is going to or staying at (fleeApart's lists). A man behind that doorway's own open
+   *  leaf is dealt the floor in front of the doorway past the leaf's end first (inside `fleeDoorVia` of his legs' reach) and dealt again within
+   *  `fleeDoorViaM` m of it. For the squad, floor it has been on is taken before floor it has not (`fleeDoorNew` off the score — cleared.ts). Acts only
+   *  with fleeWise; either side's men. ON in the page (`?nofleedoor` = off); OFF here and on the frozen stand (`TPS_FLEEDOOR=1`); a recording from before
+   *  the key replays with it off. */
+  fleeDoor: false, fleeDoorOpen: 1.0, fleeDoorIn: 1.0, fleeDoorDip: 0.6, fleeDoorMouth: 0.9, fleeDoorLeaf: 0.3, fleeDoorVia: 0.9, fleeDoorViaM: 0.45, fleeDoorNew: 30,
   /** DEFENDERS' OWN FRAGS (fragThrowTick, a room fight only). defenders = the switch (false: nobody on their side carries one and nothing of it runs — the game
    *  as it was); one man in `defShare` carries ONE, at most `defMax` on a floor. A carrier throws at the fix he is fighting from `defNear`‥`defFar` m when the
    *  man he saw inside `defFresh` s has been out of his line of fire for `defBlocked` s (behind cover, round a corner) or he has had two or more of them within
@@ -157,10 +174,10 @@ export interface BlastReport { at: Vec3; who: number; hits: BlastHit[]; killed: 
 
 /** QA: every burst's report, newest last (capped), and running counts. */
 export const FRAG_LOG: BlastReport[] = [];
-export const FRAG_STATS = { thrown: 0, bursts: 0, killed: 0, wounded: 0, shielded: 0, shouts: 0, fled: 0, own: 0, theirs: 0, cues: 0, /** a defender's wind-up that ended with the grenade still in his hand */ held: 0, /** bursts that stunned the player without putting him down */ samStunned: 0, /** men folded behind a door the burst took off or a wall / cover it broke (the player is the report's `player`) — FRAG.doorStun, FRAG.wallStun */ stunned: 0 };
+export const FRAG_STATS = { thrown: 0, bursts: 0, killed: 0, wounded: 0, shielded: 0, shouts: 0, fled: 0, /** legs dealt out by an open doorway (FRAG.fleeDoor) */ byDoor: 0, own: 0, theirs: 0, cues: 0, /** a defender's wind-up that ended with the grenade still in his hand */ held: 0, /** bursts that stunned the player without putting him down */ samStunned: 0, /** men folded behind a door the burst took off or a wall / cover it broke (the player is the report's `player`) — FRAG.doorStun, FRAG.wallStun */ stunned: 0 };
 /** QA: carrier-frames a defender with a frag did NOT throw, by the first reason (calm · stale · near · far · line · gap · hostage · arc · own) */
 export const FRAG_WHY: Record<string, number> = {};
-export function fragStatsReset() { FRAG_LOG.length = 0; for (const k of Object.keys(FRAG_WHY)) delete FRAG_WHY[k]; const S = FRAG_STATS; S.thrown = S.bursts = S.killed = S.wounded = S.shielded = S.shouts = S.fled = S.own = S.theirs = S.cues = S.held = S.samStunned = S.stunned = 0; }
+export function fragStatsReset() { FRAG_LOG.length = 0; for (const k of Object.keys(FRAG_WHY)) delete FRAG_WHY[k]; const S = FRAG_STATS; S.thrown = S.bursts = S.killed = S.wounded = S.shielded = S.shouts = S.fled = S.byDoor = S.own = S.theirs = S.cues = S.held = S.samStunned = S.stunned = 0; }
 
 function hash01(a: number, b: number): number { let x = (Math.imul(a | 0, 0x9E3779B1) ^ Math.imul((b | 0) + 0x7F4A7C15, 0x85EBCA6B)) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0xC2B2AE35) >>> 0; x ^= x >>> 13; return (x >>> 8) / 16777216; }
 
@@ -359,7 +376,7 @@ export function fragFuse(g: Game, it: Item, dt: number) { if (it.fired) return; 
 
 // ---------------------------------------------------------------- men and a live grenade
 /** One live grenade's book: who knows of it and from when, who has shouted, where each man in its line is going. */
-interface Live { it: Item; side: Team; knows: Map<Guard, number>; shouted: Set<Team>; flee: Map<Guard, GuardScript | null>; /** where it was (or was coming down) when each man's legs were dealt: it moves a metre on and they are dealt again */ fleeAt: Map<Guard, Vec3>; dealT: Map<Guard, number>; /** counted once in FRAG_STATS.fled */ counted: Set<Guard>; /** Sam has been told of it (a hostile one he can see, or hear land) */ cued: boolean; /** FRAG.fleeWise: where it will rest and the floor it has yet to cross, as last reckoned (restOf) */ rest?: Rest; /** FRAG.fleeWise: where and when each man on a leg last made ground (a man stood behind a mate in a corner is dealt another leg) */ made?: Map<Guard, { at: Vec3; t: number }>; }
+interface Live { it: Item; side: Team; knows: Map<Guard, number>; shouted: Set<Team>; flee: Map<Guard, GuardScript | null>; /** FRAG.fleeDoor: on the leg round an open leaf's end, the way out still to be dealt */ via?: Set<Guard>; /** where it was (or was coming down) when each man's legs were dealt: it moves a metre on and they are dealt again */ fleeAt: Map<Guard, Vec3>; dealT: Map<Guard, number>; /** counted once in FRAG_STATS.fled */ counted: Set<Guard>; /** Sam has been told of it (a hostile one he can see, or hear land) */ cued: boolean; /** FRAG.fleeWise: where it will rest and the floor it has yet to cross, as last reckoned (restOf) */ rest?: Rest; /** FRAG.fleeWise: where and when each man on a leg last made ground (a man stood behind a mate in a corner is dealt another leg) */ made?: Map<Guard, { at: Vec3; t: number }>; }
 /** men who heard the other side shout a grenade out, and until when it keeps them listening for it (fragThrowTick sets it; the notice test below reads it) */
 const warned = new WeakMap<Guard, number>();
 const books = new WeakMap<Game, Live[]>();
@@ -426,6 +443,12 @@ function shoulders(g: Game, a: Vec3, b: Vec3, q: Vec3): boolean {
   }
   return !g.col.solidBlocked([x, 0.45, z], [q[0], 0.45, q[2]]);
 }
+/** FRAG.fleeDoor: the leaves standing open within `R` m of `p`, each as its hinge and its end on the floor (x, z, x, z). The floor's path and the straight
+ *  leg know no leaf, and a man who walks into an open one from behind swings it shut in the doorway on whoever is leaving by it. */
+const openLeaves = (g: Game, p: Vec3, R: number): number[][] => g.doors.list.filter(x => !x.off && Math.abs(x.angle) > 0.15 && flat(x.frameCentre, p) < R).map(x => { const u = x.dir(), h = x.def.hinge; return [h[0], h[1], h[0] + u[0] * x.def.width, h[1] + u[1] * x.def.width]; });
+const leafDist = (L: number[][], x: number, z: number) => { let m = Infinity; for (const [ax, az, bx, bz] of L) { const ex = bx - ax, ez = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * ex + (z - az) * ez) / (ex * ex + ez * ez))); m = Math.min(m, Math.hypot(x - ax - ex * t, z - az - ez * t)); } return m; };
+/** a straight leg a → b comes within fleeDoorLeaf of one of them, and nearer it than `ref` (how near he began: a man beside a leaf may still walk off it) */
+const legByLeaf = (L: number[][], a: Vec3, b: Vec3, ref: number) => { const r = flat(a, b); for (let t = 0.25; t < r + 0.25; t += 0.25) { const u = r > 1e-3 ? Math.min(1, t / r) : 1, d = leafDist(L, a[0] + (b[0] - a[0]) * u, a[2] + (b[2] - a[2]) * u); if (d < FRAG.fleeDoorLeaf && d < ref - 0.05) return true; } return false; };
 /** `wise` (FRAG.fleeWise — `at` is then where it will REST): `path` = the floor it has yet to cross, `keep` = the spot he is already on his way to, `not` = a
  *  spot his legs could not make (a mate in the way): nothing within 0.8 m of it, `apart` = where others of his side are staying and going (FRAG.fleeApart):
  *  no leg that would shoulder a mate who is staying (`shoulders`), and no spot the blast has no line to within it of where a mate is going.
@@ -469,6 +492,7 @@ export function fleeSpot(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, lef
     const hidden = exposedTo(g, from, p, [p[0], 1.15, p[2]]) <= 0;
     const shaded = !hidden && shade(p);
     if (dp >= d0 - 0.05 && holds(p, true)) { best = plain = p; bestOpen = !hidden && !shaded; plainS = score(hidden, shaded, r, dp) + FRAG.fleeKeep; bestS = plainS - (hidden ? seenKept(p) : 0); } }
+  const leaves0 = wise && FRAG.fleeDoor ? openLeaves(g, c.pos, 8) : [], leaves = leaves0.length ? leaves0 : null, leaf0 = leaves ? leafDist(leaves, c.pos[0], c.pos[2]) : 0;
   for (const r of [1.2, 2, 3, 4, 5.5, 7]) {
     if (r > reach + 0.4) break;
     for (let k = 0; k < (wise ? 32 : 16); k++) {   // (wise: the turn walked twice as fine — the long leg along a wall, the gap between a crate and a door frame, found on the first deal)
@@ -478,7 +502,7 @@ export function fleeSpot(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, lef
       let barred = !!wise?.apart && wise.apart.stay.some(q => shoulders(g, c.pos, p, q));   // (a mate down behind his cover: the corner is his, and so is the floor a leg would shoulder him off on its way by)
       if (g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [p[0], 0.45, p[2]])) continue;
       let clear = true; for (let s = 0.4; s < r; s += 0.4) if (g.col.nav.isBlocked(c.pos[0] + Math.sin(a) * s, c.pos[2] + Math.cos(a) * s)) { clear = false; break; }
-      if (!clear) continue;
+      if (!clear || (leaves && legByLeaf(leaves, c.pos, p, leaf0))) continue;   // (FRAG.fleeDoor: nor a leg into a leaf standing open)
       const hidden = exposedTo(g, from, p, [p[0], 1.15, p[2]]) <= 0;   // (he gets down behind it when he arrives: judged as the blast will judge him, shin to head)
       const dp = Math.hypot(p[0] - it.pos[0], p[2] - it.pos[2]);
       const shaded = !hidden && shade(p);
@@ -494,6 +518,73 @@ export function fleeSpot(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, lef
   if (!best && bar && d0 < FRAG.lethalM) return bar;   // (FRAG.fleeApart: inside what it kills at, a mate shouldered beats a man dead — the rule gives way when it would leave him no leg at all)
   if (mind && best && best !== plain && best !== wise?.keep) PICTURE_STATS.moved++;
   return best;
+}
+
+/** FRAG.fleeDoor: a doorway a man can leave by as it stands — the leaf off its hinges, or unlatched and well off its frame */
+const openWay = (d: Door) => d.off || (!d.latched && !d.closing && Math.abs(d.angle) >= FRAG.fleeDoorOpen);
+/** FRAG.fleeDoor: his spot is in the mouth of an open doorway — the floor his mates' way out runs over */
+const inMouth = (g: Game, p: Vec3) => g.doors.list.some(d => openWay(d) && flat(d.frameCentre, p) < FRAG.fleeDoorMouth);
+/** FRAG.fleeDoor: the spot beside an open doorway, on its far side, that a grenade resting at `at` has no line to and this man's legs make by the floor's
+ *  own path through that doorway in the fuse left — null: none (the straight leg `fleeSpot` dealt stands). No shut door is on that path, no step of it is
+ *  nearer the thing than he stands by more than fleeDoorDip, and none runs into a leaf standing open (the floor's path does not know a leaf, and a man who
+ *  walks into one from behind swings it shut in the doorway). `via`: he is behind that doorway's own open leaf, and the goal is the floor in front of the
+ *  doorway past the leaf's end — he is dealt again there, with the way out then clear. `wise` as fleeSpot's: `keep` = the spot he is already on his way to
+ *  (returned itself when it is still the pick, so his path and stride are left as they are). `who`: the man himself — the way is then found as his own
+ *  feet will find it (goTo's prices: a lane his side knows is covered, a doorway his tactics hold dear). Exported for its check. */
+export function fleeByDoor(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, left: number, accel: number, wise: { path: Vec3[]; keep: Vec3 | null; not?: Vec3 | null; apart?: { stay: Vec3[]; go: Vec3[] } }, who?: Guard): { goal: Vec3; via: boolean } | null {
+  const K = FRAG, nav = g.col.nav, from: Vec3 = [at[0], at[1] + K.lift, at[2]];
+  const tt = Math.max(0, left - 0.15), ta = speed / accel, reach = (tt <= ta ? 0.5 * accel * tt * tt : speed * (tt - ta / 2)) * K.fleeDoorIn;
+  if (!(reach > 0.5)) return null;   // (no time for any of it — and 0 s at no ramp is not a number)
+  const d0 = flat(c.pos, at), offPath = (x: number, z: number) => { let m = K.lethalM; for (const q of wise.path) m = Math.min(m, Math.hypot(x - q[0], z - q[2])); return m; }, path0 = offPath(c.pos[0], c.pos[2]);
+  const near = (x: number, z: number) => Math.hypot(x - at[0], z - at[2]) < d0 - K.fleeDoorDip || offPath(x, z) < path0 - 0.3;
+  const leaves = openLeaves(g, c.pos, reach + 2);
+  /** one straight leg: 0 clear · 1 a step of it is nearer the thing · 2 a leaf stands in it (`ref`: how near a leaf the walk began) */
+  const clear = (a: Vec3, b: Vec3, ref: number): 0 | 1 | 2 => { const r = flat(a, b); for (let t = 0.25; t < r + 0.25; t += 0.25) { const u = r > 1e-3 ? Math.min(1, t / r) : 1; if (near(a[0] + (b[0] - a[0]) * u, a[2] + (b[2] - a[2]) * u)) return 1; } return legByLeaf(leaves, a, b, ref) ? 2 : 0; };
+  /** the floor's own way from `a` to the spot `p` through doorway `d`: its length — or -1 (no way, a door that is not open on it, a step nearer the thing, not through `d`) · -2 (a leaf stands in it) */
+  const walk = (a: Vec3, p: Vec3, d: Door): number => {
+    const way = nav.findPath(a, p, 6000, who ? lanePenalty(g, who, tacticsPenalty(g, who, p)) : undefined); if (!way) return -1;
+    let q = a, len = 0, thru = false; const ref = leafDist(leaves, a[0], a[2]);
+    for (const b of [...way, p]) {
+      for (const x of g.doors.list) if (crossesDoor(q, b, x) || onFrame(b, x)) { if (x === d) thru = true; else if (!openWay(x)) return -1; }
+      const cl = clear(q, b, ref); if (cl) return -cl;
+      len += flat(q, b); q = b;
+    }
+    return thru ? len : -1;
+  };
+  /** a point of the path lies on the door's own frame line, in the opening (a cell's middle on a frame: crossesDoor sees neither leg cross) */
+  const onFrame = (b: Vec3, x: Door) => { const f = frameOf(x); if (Math.abs((b[0] - f.hx) * f.nx + (b[2] - f.hz) * f.nz) > 1e-4) return false; const al = (b[0] - f.hx) * f.ux + (b[2] - f.hz) * f.uz; return al >= -0.1 && al <= f.W + 0.1; };
+  const ours = !who || who.team === 'operative';   // (cleared.ts is the squad's knowledge of the floor: nobody else's legs are steered by it)
+  let best: Vec3 | null = null, bestS = -Infinity, via = false;
+  const take = (goal: Vec3, p: Vec3, len: number, v: boolean) => {
+    const same = !!wise.keep && flat(goal, wise.keep) < 0.05, sc = 100 - len * 2 + Math.min(flat(p, at), 4) * 0.2 - (!ours || g.cleared.knownAt(p) ? 0 : K.fleeDoorNew) + (same ? K.fleeKeep : 0);
+    if (sc > bestS) { bestS = sc; best = same ? wise.keep : goal; via = v; }
+  };
+  for (const d of g.doors.list) {
+    if (!openWay(d)) continue;
+    const fc = d.frameCentre, W = d.def.width; if (flat(fc, c.pos) > reach) continue;
+    const th = d.def.closedDir, ux = Math.cos(th), uz = Math.sin(th), nx = -uz, nz = ux, side = (c.pos[0] - fc[0]) * nx + (c.pos[2] - fc[2]) * nz >= 0 ? 1 : -1;
+    if (((at[0] - fc[0]) * nx + (at[2] - fc[2]) * nz) * side < 0) continue;   // (it lies beyond that doorway: no way out is towards it)
+    const spots: Vec3[] = [];
+    for (const k of [1, -1]) for (const a of [0.4, 0.8, 1.6, 2.4]) for (const o of [0.7, 1.1]) {   // (beside the opening, either hand, room for the men who follow; a body off the wall)
+      const s = W / 2 + a, p: Vec3 = [fc[0] + ux * s * k - nx * o * side, 0, fc[2] + uz * s * k - nz * o * side];
+      if (nav.isBlocked(p[0], p[2]) || flat(p, at) < d0 - 0.05 || (wise.not && flat(p, wise.not) < 0.8)) continue;
+      if (wise.apart && (wise.apart.go.some(q => flat(p, q) < K.fleeApartM) || wise.apart.stay.some(q => flat(p, q) < K.fleeApartM))) continue;
+      if (exposedTo(g, from, p, [p[0], 1.15, p[2]]) === 0) spots.push(p);
+    }
+    let got = false, leafed = false;
+    for (const p of spots) { const len = walk(c.pos, p, d); if (len === -2) leafed = true; if (len < 0 || len > reach) continue; got = true; take(p, p, len, false); }
+    if (got || !leafed || d.off) continue;
+    // behind its own open leaf: round the leaf's end first, to the floor in front of the doorway, then out
+    const u = d.dir(), h = d.def.hinge, tipN = Math.max(0, ((h[0] + u[0] * W - fc[0]) * nx + (h[1] + u[1] * W - fc[2]) * nz) * side);
+    for (const m of [0.65, 1.0]) {   // (past the leaf's end by more than fleeDoorViaM + fleeDoorLeaf: dealt again there, the way on is clear of it)
+      const S: Vec3 = [fc[0] + nx * side * (tipN + m), 0, fc[2] + nz * side * (tipN + m)], l0 = flat(c.pos, S);
+      if (l0 < K.fleeDoorViaM || nav.isBlocked(S[0], S[2]) || !nav.walkable(c.pos, S) || clear(c.pos, S, leafDist(leaves, c.pos[0], c.pos[2])) || (wise.not && flat(S, wise.not) < 0.3)) continue;
+      let any = false;
+      for (const p of spots) { const len = walk(S, p, d); if (len < 0 || l0 + len > reach * K.fleeDoorVia) continue; any = true; take(S, p, l0 + len, true); }
+      if (any) break;
+    }
+  }
+  return best ? { goal: best, via } : null;
 }
 
 /** FRAG.fleeApart: the floor others of his side have a claim to while this grenade burns — where a mate on a leg off it is going, and where a mate is
@@ -558,6 +649,7 @@ export function fragTick(g: Game, _dt: number) {
         if (!cur?.goal || cur.arrived) M.delete(gd);
         else if (!m || flat(m.at, c.pos) > 0.3) M.set(gd, { at: v3.copy(c.pos), t: g.time });
         else if (g.time - m.t > 1.0 && it.fuse > 0.6) { not = cur.goal; M.delete(gd); L.flee.delete(gd); L.fleeAt.delete(gd); } }
+      if (L.via?.has(gd)) { const cur = L.flee.get(gd); if (cur?.goal && g.time - (L.dealT.get(gd) ?? -1) > 0.3 && flat(c.pos, cur.goal) < F.fleeDoorViaM) { L.via.delete(gd); L.flee.delete(gd); L.fleeAt.delete(gd); } }   // (FRAG.fleeDoor: round the leaf's end — the way out is dealt from here, in stride)
       { const cur = L.flee.get(gd), was = L.fleeAt.get(gd);   // dealt again when it has gone on from where he was running from, or when he has got where he was going (or was told to stay down) and it turns out to have a line to him there after all
         if (cur && was && g.time - (L.dealT.get(gd) ?? -1) > 0.3 && (flat(was, dz) > 0.4 || ((!cur.goal || (cur.arrived && !(F.fleeOnto && flat(c.pos, cur.goal) > 0.06 && gd.speed > 0.05))) && it.fuse > 0.6 && exposedTo(g, [dz[0], dz[1] + F.lift, dz[2]], c.pos, c.bones.head ?? v3.add(c.pos, [0, 1.6, 0])) > 0))) { if (wise && cur.goal && !cur.arrived) keep = cur; L.flee.delete(gd); L.fleeAt.delete(gd); } }
       if (L.flee.get(gd)) continue;
@@ -569,7 +661,10 @@ export function fragTick(g: Game, _dt: number) {
         continue;
       }
       const speed = gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed;   // (a teammate never sprints: the spot is one HIS legs make)
-      const spot = fleeSpot(g, c, dz, speed, it.fuse, gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time);
+      const acc = gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, W = wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined;
+      let spot = fleeSpot(g, c, dz, speed, it.fuse, acc, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);
+      // (FRAG.fleeDoor: the straight leg leaves him in its line — or there is none: out by an open doorway his legs make, to a spot beside it the burst has no line to)
+      if (W && F.fleeDoor && (!spot || exposedTo(g, [dz[0], dz[1] + F.lift, dz[2]], spot, [spot[0], 1.15, spot[2]]) > 0 || inMouth(g, spot))) { const out = fleeByDoor(g, c, dz, speed, it.fuse, acc, W, gd); if (out) { if (out.goal !== keep?.goal) FRAG_STATS.byDoor++; spot = out.goal; if (out.via) (L.via ?? (L.via = new Set())).add(gd); } }
       if (keep && spot === keep.goal) { L.flee.set(gd, keep); continue; }   // (the leg he has: his path and his stride are left as they are)
       L.flee.set(gd, spot ? { goal: spot, speed, upper: 'none', crouch: false } : { goal: null, upper: 'none', crouch: true });
       gd.path = []; gd.pathGoal = null; if (!L.counted.has(gd)) { L.counted.add(gd); FRAG_STATS.fled++; }

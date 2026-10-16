@@ -664,3 +664,91 @@ export const fragTheirs = guardedOrder(async () => {
   void comeDown;
   return F.done();
 });
+
+// ================================================================ frag-fleedoor: out by the open door
+// (FRAG.fleeDoor: a man caught by a grenade with no cover to get behind is dealt the floor's own path out through a doorway that already stands open —
+// frag.ts fleeByDoor. Raised here on either stand, with FRAG.fleeWise and the flee's manners; FLEEDOOR_BREAK=1 = left off and the same lines asked: (a) must
+// fail. THE STAGING IS READ OFF THE LEVEL, never written here: the first door of the four-man floodlit scenario with a bare room on one side of it — four
+// men by the frame, a grenade three metres in, and with the door shut no floor for any of them that it has no line to — and floor beyond it that two of
+// them make through the doorway when it stands open.)
+export const fragFleeDoor = guarded(async () => {
+  const BREAK = process.env.FLEEDOOR_BREAK === '1';
+  const F = family(`frag-fleedoor: caught by a grenade with no cover, a man leaves by a doorway that already stands open${BREAK ? ' (FLEEDOOR_BREAK: the rule left off)' : ''}`);
+  const FR: any = await import(`${ROOT}/src/game/frag.ts`); const J: any = await import(`${ROOT}/src/game/journal.ts`); const BT: any = await import('./bang-tally.ts');
+  const { killGuard } = await import(`${ROOT}/src/game/combat.ts`); const { PACE } = await import(`${ROOT}/src/game/guards.ts`); const { fragFlee, fleeSpot, fleeByDoor } = FR;
+  const hush = async <T>(fn: () => T | Promise<T>): Promise<T> => { const l = console.log, e = console.error, w = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = l; console.error = e; console.warn = w; } };
+  const { ROOMFIGHT } = await import(`${ROOT}/src/game/roomfight.ts`); const rally0 = ROOMFIGHT.rally;   // (the staging helper puts the rally off: put back at the end)
+  try {
+  const LEFT = 3.2;
+  type Site = { d: any; side: 1 | -1; G: number[]; marks: number[][] };
+  const frame = (d: any) => { const fc = d.frameCentre, th = d.def.closedDir; return { fc, u: [Math.cos(th), Math.sin(th)], n: [-Math.sin(th), Math.cos(th)] }; };
+  const pt = (d: any, side: number, across: number, along: number, y = 0): number[] => { const { fc, u, n } = frame(d); return [fc[0] + n[0] * side * across + u[0] * along, y, fc[2] + n[1] * side * across + u[1] * along]; };
+  const across = (d: any, p: number[]) => { const { fc, n } = frame(d); return (p[0] - fc[0]) * n[0] + (p[2] - fc[2]) * n[1]; };
+  const open = (d: any, side: number) => { d.latched = false; d.locked = false; d.angle = 1.5 * side; d.vel = 0; d.quietT = -30; };   // (swung to the grenade's side where the leaf is free to: the harder room to leave)
+  const shut = (d: any) => { d.angle = 0; d.vel = 0; d.latched = true; };
+  const put = (x: any, p: number[]) => { x.char.pos = [p[0], 0, p[2]]; x.char.vel = [0, 0, 0]; x.path = []; x.pathGoal = null; x.speed = 0; x.lastPos = [p[0], 0, p[2]]; };
+  const legOf = () => (PACE.on ? Math.min(FRAG.runSpeed, PACE.max) : FRAG.runSpeed), accOf = () => (PACE.on ? PACE.accel : Infinity);
+  const lineTo = (g: any, G: number[], p: number[]) => exposedTo(g, [G[0], G[1] + FRAG.lift, G[2]], p, [p[0], 1.15, p[2]]);
+  /** the scenario stood up, its defenders out of it but the farthest (the grenade is his), the four where the game put them */
+  const up = async () => { const S: any = await hush(() => BT.stage('floodlit-four', 5)); const g = S.g;
+    FRAG.fleeWise = true; FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = true; FRAG.fleeDoor = !BREAK; fragStatsReset();
+    const ours: any[] = g.guards.filter((x: any) => x.team === 'operative' && x.state !== 'dead').slice(0, 4); for (const x of ours) x.god = false;
+    const theirs: any[] = g.guards.filter((x: any) => x.team === 'hostile' && x.state !== 'dead').sort((a: any, b: any) => dist(b.char.pos, ours[0].char.pos) - dist(a.char.pos, ours[0].char.pos));
+    await hush(() => { for (const x of theirs.slice(1)) killGuard(g, x, [0, 0, 1], true); S.step(5); });
+    return { S, g, ours, thrower: theirs[0] }; };
+  const find = async (S: any, g: any): Promise<Site | null> => {
+    for (const d of [...g.doors.list].filter((x: any) => !x.off).sort((a: any, b: any) => (a.def.name < b.def.name ? -1 : 1))) for (const side of [1, -1] as const) {
+      const G = pt(d, side, 3.0, 0, 0.05), marks = [pt(d, side, 1.2, 1.0), pt(d, side, 1.2, -1.0), pt(d, side, 2.0, 1.7), pt(d, side, 2.0, -1.7)];
+      if ([G, ...marks].some(p => g.col.nav.isBlocked(p[0], p[2])) || marks.some(m => g.col.solidBlocked([G[0], 0.6, G[2]], [m[0], 0.6, m[2]]))) continue;
+      const was = [d.angle, d.latched, d.locked, d.vel, d.quietT];
+      shut(d); await hush(() => S.step(2));
+      const bare = marks.every(m => { const s = fleeSpot(g, { pos: m }, G, legOf(), LEFT, accOf(), { path: [], keep: null }); return !s || lineTo(g, G, s) > 0; });
+      let outs = 0; if (bare) { open(d, side); await hush(() => S.step(2)); outs = marks.filter(m => { const r = fleeByDoor(g, { pos: m }, G, legOf(), LEFT, accOf(), { path: [], keep: null }); return r && !r.via && across(d, r.goal) * side < 0; }).length; }
+      [d.angle, d.latched, d.locked, d.vel, d.quietT] = was; await hush(() => S.step(2));
+      if (bare && outs >= 2) return { d, side, G, marks };
+    }
+    return null; };
+  /** the four on their marks, the grenade down, run to the burst */
+  const live = async (state: 'open' | 'shut') => { const { S, g, ours, thrower } = await up(), site = await find(S, g); if (!site) return null;
+    const { d, side, G, marks } = site; const place = () => ours.forEach((x, i) => put(x, marks[i]));
+    place(); if (state === 'open') open(d, side); else shut(d); await hush(() => S.step(3)); place(); fragStatsReset();
+    const n0 = FRAG_LOG.length; g.items.spawn('frag', G, [0, 0, 0], { fuse: LEFT, who: thrower.char.id });
+    const where = new Map<any, number[]>(), last = new Map<any, number[]>(ours.map(x => [x, [...x.char.pos]])); let fastest = 0, swung = 0, unlatched = false;
+    await hush(() => { for (let i = 0; i < (LEFT + 0.5) * 60 && FRAG_LOG.length === n0; i++) { for (const x of ours) where.set(x, [...x.char.pos]); swung = Math.max(swung, Math.abs(d.angle)); unlatched ||= !d.latched; S.step(1);
+      for (const x of ours) if (x.state !== 'dead' && fragFlee(g, x)) { fastest = Math.max(fastest, dist(x.char.pos, last.get(x)!) * 60); } for (const x of ours) last.set(x, [...x.char.pos]); } });
+    const rep = FRAG_LOG[n0], rows = ours.map(x => { const p = where.get(x) ?? x.char.pos, h = rep?.hits.find((q: any) => q.id === x.char.id); return { x, p, out: across(d, p) * side < -0.2, hit: !!h && (h.result === 'killed' || h.result === 'wounded'), res: h?.result ?? 'not in it' }; });
+    return { site, rep, rows, byDoor: FRAG_STATS.byDoor, out: rows.filter(r => r.out).length, hitOut: rows.filter(r => r.out && r.hit).length, fastest, swung, unlatched,
+      text: `door ${d.def.name}, the grenade ${at(G)} · ${rows.map(r => `${r.x.callsign} from ${at(marks[ours.indexOf(r.x)])} to ${at(r.p)}${r.out ? ' (out)' : ''} ${r.res}`).join(' · ')}` }; };
+  // ───────────── (a) the door stands open: men leave by it, and the ones who do are out of its line ─────────────
+  { const r = await live('open');
+    if (!r) F.verdict(false, '(a) a door with a bare room on one side', 'none found on the floor');
+    else { const cap = legOf();
+      F.verdict(!!r.rep && r.byDoor >= 2 && r.out >= 2 && r.hitOut === 0, '(a) four men by an open door, a grenade three metres into a room with no cover: the way out through the doorway is dealt, at least two men are beyond it at the burst, and none of those is hit', `${r.text} · deals of the way out ${r.byDoor} · beyond the frame at the burst ${r.out} (hit there ${r.hitOut})`);
+      F.verdict(r.fastest <= cap + 0.1, '(a2) CONTROL (holds with the rule off) — nobody getting off it moves faster than the flee\'s own pace', `fastest step ${f2(r.fastest)} m/s · the pace ${f2(cap)} m/s`); } }
+  // ───────────── (b) the door is shut: nobody is dealt it, and nobody opens it ─────────────
+  { const r = await live('shut');
+    if (!r) F.verdict(false, '(b) a door with a bare room on one side', 'none found on the floor');
+    else F.verdict(!!r.rep && r.byDoor === 0 && r.swung < 0.02 && !r.unlatched, '(b) CONTROL (holds with the rule off) — the same four, the door shut: nobody is dealt a way out by it, and the leaf is on its latch until the burst', `${r.text} · deals of the way out ${r.byDoor} · the leaf swung ${f2(r.swung)} rad before the burst, ${r.unlatched ? 'OFF its latch' : 'on its latch'}`); }
+  // ───────────── (c) behind the open leaf: never straight through it ─────────────
+  { const { S, g } = await up(), site = await find(S, g);
+    if (!site) F.verdict(false, '(c) a door with a bare room on one side', 'none found on the floor');
+    else { const { d, side, G, marks } = site; open(d, side); await hush(() => S.step(3));
+      const { fc } = frame(d), h = d.def.hinge, ud = d.dir(), W = d.def.width, tip = [h[0] + ud[0] * W, h[1] + ud[1] * W];
+      /** the straight line from p to the middle of the doorway runs through the leaf as it stands */
+      const behind = (p: number[]) => { const x = (a: number[], b: number[], c: number[]) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]), A = [p[0], p[2]], B = [fc[0], fc[2]]; return x(A, B, h) * x(A, B, tip) < 0 && x(h, tip, A) * x(h, tip, B) < 0; };
+      const men = marks.filter(behind), ask = (m: number[], left: number) => fleeByDoor(g, { pos: m }, G, legOf(), left, accOf(), { path: [], keep: null });
+      if (!men.length) F.verdict(false, '(c) the staging has a man the open leaf stands in front of', `none: leaf ${f2(d.angle)} rad (the floor has changed: read the site again)`);
+      else { const got = men.map(m => ask(m, LEFT)), long = men.map(m => ask(m, 8)); const keep = FRAG.fleeDoorLeaf; FRAG.fleeDoorLeaf = 0; const blind = men.map(m => ask(m, 8)); FRAG.fleeDoorLeaf = keep;
+        const say = (r: any) => (r ? `${at(r.goal)}${r.via ? ' (round its end)' : ' STRAIGHT'}` : 'nothing');
+        F.verdict([...got, ...long].every(r => !r || (r.via && across(d, r.goal) * side > 0)) && long.some(r => r && r.via) && blind.some(r => r && !r.via), '(c) CONTROL (asked of the pick itself: holds with the rule off) — the men the open leaf stands in front of are never dealt the way straight through it: round the leaf\'s end first, to floor in front of the doorway (one of them at least, with time to spare), or no way out; with the leaf not reckoned the same pick does send one straight through',
+          `leaf ${f2(d.angle)} rad · ${men.map((m, i) => `the man at ${at(m)}: ${say(got[i])}, with time to spare ${say(long[i])}, the leaf not reckoned ${say(blind[i])}`).join(' · ')}`); } } }
+  // ───────────── (d) a recording from before the key replays with it off ─────────────
+  { const R = await rig(81), g = R.game; FRAG.fleeDoor = true; const old = J.knobsSnapshot(g), own = J.knobsSnapshot(g); const carried = 'fleeDoor' in old.tables.FRAG; delete old.tables.FRAG.fleeDoor;
+    J.applyKnobs(g, old); const without = FRAG.fleeDoor; FRAG.fleeDoor = false; J.applyKnobs(g, own); const withIt = FRAG.fleeDoor;
+    F.verdict(carried && without === false && withIt === true, '(d) a recording from before the key replays with it off, one that carries it with it as recorded', `the journal carries the key ${carried} · without it ${without} · with it ${withIt}`); }
+  // ───────────── (e) the two stands ─────────────
+  { await rig(82); const P: any = await import(`${ROOT}/src/host/profile.ts`), word = process.env.TPS_FLEEDOOR, shipped = P.harnessProfile() === 'shipped', want = word !== undefined ? word === '1' : shipped;
+    F.verdict(FRAG.fleeDoor === want && P.FROZEN_HOLDS['FRAG.fleeDoor'] === 'TPS_FLEEDOOR=1' && P.STAND_ENV.includes('TPS_FLEEDOOR'), `(e) the stand: ${want ? 'on, as the page opens' : 'held off, as every frozen digest was recorded'}; the two stands' list carries its word`, `fleeDoor ${FRAG.fleeDoor} · word ${word ?? 'none'} · ${shipped ? 'shipped' : 'frozen'}`); }
+  return F.done();
+  } finally { ROOMFIGHT.rally = rally0; }
+});
