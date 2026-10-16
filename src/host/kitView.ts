@@ -351,10 +351,14 @@ export function kitViewSlots(door: { hinge: V2; closedDir: number; width: number
   return { slots, blocked, s, n, mid };
 }
 
-/** where a kit picture's messages are posted: this page's own origin — and, for a page opened from disk (a `file:` address: its origin is the word
- *  'null', which postMessage refuses as a target), anywhere. The listener on either side still holds a message to the very window it must come from
- *  (`e.source`) and to this same origin word, so nothing else is let in */
-export const kitViewPostTo = (): string => (location.origin === 'null' ? '*' : location.origin);
+/** a page opened from disk (a `file:` address). Its windows have no origin to name: `location.origin` reads 'file://' (or the word 'null'), a message
+ *  posted to that target is dropped, and one that does arrive carries the origin 'null' */
+export const kitViewOnDisk = (): boolean => location.protocol === 'file:' || location.origin === 'null';
+/** where a kit picture's messages are posted: this page's own origin — anywhere on a page opened from disk. `kitViewFrom` is the listener's half */
+export const kitViewPostTo = (): string => (kitViewOnDisk() ? '*' : location.origin);
+/** a message's origin is this page's own — on a page opened from disk, the 'null' every window there has. Each listener ALSO holds a message to the
+ *  very window it must come from (`e.source`), which is what keeps anything else out on such a page */
+export const kitViewFrom = (origin: string): boolean => origin === location.origin || (kitViewOnDisk() && origin === 'null');
 /** this page has died (main.ts: fatalOnce — the frame loop threw and stopped, an uncaught error — the GPU device lost, a boot that failed): the parent is
  *  told there is no picture. Safe before kitViewStart and more than once (`none` again is nothing new to the parent) */
 export function kitViewFatal() { try { if (dead) dead(); else if (window.parent !== window) window.parent.postMessage({ kv: 'none' }, kitViewPostTo()); } catch { /* */ } }
@@ -1612,7 +1616,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
 
   // the parent's messages: the same origin, and from the window that holds this frame (this window itself when the page is opened alone: a check's)
   window.addEventListener('message', e => {
-    if (e.origin !== location.origin || e.source !== window.parent) return;
+    if (!kitViewFrom(e.origin) || e.source !== window.parent) return;
     const m = e.data as { kv?: unknown; members?: unknown; squad?: unknown; who?: unknown; field?: unknown; on?: unknown; cx?: unknown; cy?: unknown; h?: unknown; w?: unknown; man?: unknown; door?: unknown; left?: unknown; right?: unknown; keep?: unknown } | null; if (!m || typeof m !== 'object') return;
     if (m.kv === 'kit') {
       try {
