@@ -385,7 +385,23 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the south gate from the lorry park, where the pair starts — the
   // lot's pickup and the seized blue box over the wall behind them. The pallet of crates and the two tyres left outside the gate (`G.crates(11.4, 26.4 …)`,
   // `G.tyres(12.9, 25.3 …)` above) stand where the file of five forms, so they are out of the picture: by id, as the export numbers them.
-  const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: ['box_0304', 'box_0305', 'box_0306', 'box_0307', 'box_0308', 'box_0309', 'box_0310', 'box_0311', 'box_0312', 'box_0313', 'box_0314'] }] };
+  // FOR THE PICTURE ONLY (`add`: the mission never loads these): only `exterior` lamps stay lit in a picture and the lane's are 8 m off, so the strip behind the
+  // gate was black, and what makes this a crossing (the booms, the lane) is under the tiles. So the picture gets a work bulb on a pole against the wall,
+  // past the HESCO column (over its first cell, at 30, the cell's top burned white on the page still), and a spare boom — the lane's own post and arm (`add` at 10.3, 16.5 above), its arm down along the HESCO column, banded red.
+  // The camera sees the tops of things there, not the floor: both stand over 1 m. Never seen on a GPU.
+  const kitAdd: NonNullable<KitViewData['ways'][number]['add']> = {
+    boxes: [
+      { id: 'kv_pole', group: 'kv.lamp', c: [12.45, 1.2, 23.8], h: [0.035, 1.2, 0.035], material: 'galv' },
+      { id: 'kv_arm', group: 'kv.lamp', c: [12.45, 2.38, 23.52], h: [0.025, 0.025, 0.3], material: 'galv' },
+      { id: 'kv_fix', group: 'kv.lamp', c: [12.45, 2.3, 23.25], h: [0.06, 0.06, 0.06], material: 'plasticWhite', emissive: [40, 24, 7], flags: ['NoShadow'] },
+      { id: 'kv_boom_post', group: 'kv.boom', c: [12.2, 0.55, 23.15], h: [0.09, 0.55, 0.09], material: 'paintRust' },
+      { id: 'kv_boom_arm', group: 'kv.boom', c: [12.2, 1.02, 22.2], h: [0.04, 0.04, 1], material: 'paintCream', flags: ['NoShadow'] },   // 2 m of arm: at 2.9 its far end ran under the cards
+      ...[22.8, 22.2, 21.6].map((z, i) => ({ id: `kv_boom_band${i}`, group: 'kv.boom', c: [12.2, 1.02, z] as Vec3, h: [0.045, 0.045, 0.14] as Vec3, material: 'prodRed', flags: ['NoShadow' as const] })),
+      { id: 'kv_boom_rest', group: 'kv.boom', c: [12.2, 0.45, 21.3], h: [0.05, 0.45, 0.05], material: 'paintRust' },
+    ],
+    lamps: [{ id: 'kv_bulb', kind: 'point', pos: [12.45, 2.2, 23.25], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 14, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
+  };
+  const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: ['box_0304', 'box_0305', 'box_0306', 'box_0307', 'box_0308', 'box_0309', 'box_0310', 'box_0311', 'box_0312', 'box_0313', 'box_0314'], add: kitAdd }] };
   return { level, scenarios: { quiet: QUIET, kitView }, groups: trace.groups, surfaces };
 }
 
