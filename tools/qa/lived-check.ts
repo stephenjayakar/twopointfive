@@ -124,7 +124,7 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
     const inWorld = (x: number, z: number) => x > 0 && x < nav0.W * nav0.cell && z > 0 && z < nav0.H * nav0.cell;
     const num = (a: any, n: number) => Array.isArray(a) && a.length === n && a.every((v: any) => typeof v === 'number' && Number.isFinite(v));
     const walk = (v: any, path: string, key: string) => {
-      if (v == null || typeof v !== 'object' || path === 'scenarios.kitView.sets') return;   // (a gear screen SET is a stage of its own, never in the level: its boxes' places are no floor point of this one)
+      if (v == null || typeof v !== 'object' || path === 'scenarios.kitView.sets' || /^scenarios\.kitView\.ways\[\d+\]\.add$/.test(path)) return;   // (a gear screen SET is a stage of its own, never in the level: its boxes' places are no floor point of this one — nor are a way's ADDED pieces, `add`: boxes and lamps no mission loads, a low box's centre no place a man goes)
       if (Array.isArray(v)) {
         if (num(v, 3)) {
           // (a thing reached by hand — an objective's or a holder's `front`, the breaker — is a point ON A FACE, not floor: what must stay is the floor a man

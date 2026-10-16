@@ -301,7 +301,11 @@ export interface KitViewLight {
   porch: KitViewLamp & {
     /** a small glowing box that gives the lamp a source in the picture: its centre the same way as `offset`, its half extents [along the wall, up, out] and
      *  the radiance of its faces as a multiple of `color` (absent = none) */
-    fixture?: { at: Vec3; half: Vec3; glow: number } };
+    fixture?: { at: Vec3; half: Vec3; glow: number };
+    /** ITS INTENSITY BY DAY — at an hour whose outside lamps are out (game/hours.ts HourDef.lamps false: midday, the grey day; the level's own
+     *  `exterior` fixtures are opened by the same photocell). Absent: 0 — the lamp and its glowing box are not hung in full sun. A way under a roof
+     *  (the plan's `indoors`) is on no photocell: `intensity` at every hour */
+    day?: number };
   fill: KitViewLamp;
   /** the level's own interior lights, times this (0 = their groups switched off, 1 = as authored); the exterior group and every weapon light are left alone */
   roomLights: number;
@@ -327,6 +331,10 @@ export interface KitViewWay {
   /** out of the picture, in this instance only: `hide` = box ids, or box groups whole; `hidePaint` = box groups of which only the paint on the ground goes
    *  (boxes under 1 cm half-height: a look file's floor decals and the level's painted marks, not what stands on it) */
   hide?: string[]; hidePaint?: string[];
+  /** ONE THING MORE OUT OF THE PICTURE, the plan's own list kept (box ids, or box groups whole): added to what goes — to what the plan works out where the
+   *  way writes no `hide` (a written `hide` REPLACES that list; this never does), to the written `hide` where it does. A piece of the building named here
+   *  is the author's word that it goes: the plan's "not a thing to sink" is not said of it */
+  hideMore?: string[];
   /** = light.roomLights */
   roomLights?: number;
   /** THE ANCHOR WHERE THERE IS NO DOOR (src/host/kitViewPlan.ts): `span` = two floor points [x, z] — a stretch of blank wall to breach, or the two posts of an
@@ -346,6 +354,14 @@ export interface KitViewWay {
   lane?: number; out?: number; inside?: number;
   pane?: { box: string; stand?: [number, number, number] } | false;
   show?: string[]; indoors?: boolean; keepLights?: string[];
+  /** THE WAY'S OWN LAMPS THAT BURN BY DAY. The way's own lamps — its set's `lights`, its `add.lamps` — are on the level's photocell as the porch lamp is
+   *  (src/host/kitViewPlan.ts kitPlanDayOut): at an hour whose outside lamps are out (game/hours.ts HourDef.lamps false: midday, the grey day) a way under
+   *  the open sky has them OUT, each with its fixture's glow, as the game's own photocell takes the level's `exterior` fixtures (a set's gate lamp burned at
+   *  noon with its box glowing) — all but a lamp that stands UNDER A COVER (a ceiling or a roof over it: a room's lamp, lit at every hour as the game
+   *  leaves rooms). Lamp ids or light groups written here burn at every hour. Absent: none. A way under a roof (the plan's `indoors`) is on
+   *  no photocell; a lamp in the group `exterior` is the game's own photocell's, whatever is written; a sun or a moon (`dir`) is no lamp. A name that is
+   *  no own lamp of the way is a plan problem */
+  dayLights?: string[];
   /** THE ROOM BEHIND THE ANCHOR STAYS LIT (absent: it goes out with every room light — the wedge the picture shows behind the wall is then dark unless a
    *  yard lamp reaches it): the light groups with a lamp BEHIND the wall's far face that reaches the floor a metre in (src/host/kitViewPlan.ts
    *  kitPlanLitInside) are left lit as well as `keepLights` (written or measured). A level's own way; a set keeps its lamps lit anyway */

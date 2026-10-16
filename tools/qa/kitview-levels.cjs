@@ -9,8 +9,16 @@
 //   · THE PLAN HAS NO PROBLEMS (`__kitview.plan.problems`, as the page itself planned the way on the game's own floor: each is printed, any one FAILS the row);
 //   · the mission's men (a squad of four; a quiet mission's own — Sam alone, or Sam and his partner) on the plan's places, each on free floor on the team's side of the wall's face, nobody else on the floor;
 //   · EVERY TILE — Sam's gun, light, smoke, stun, frag, door charge, wand, camera, 40 mm (the launcher SHOULDERED down the wall and never fired: host/kitView.ts shellRow — on a card with no launcher the gun's row, said), wall charge; a teammate's gun, smoke, stun, frag, door charge — picked from rest:
-//     its row begins within FRAMES display frames of the pick — or, picked while Sam is on his half step home or the leaf is not yet to, after the picture's
-//     own wait, WAIT_MS at most — (a row the way cannot play — no leaf, a blank wall, no stretch to breach — is the GUN's row with
+//     its row begins within FRAMES display frames of the pick — or, where the DIRECTOR SAYS it kept the row back (`__kitview.held`), after the picture's
+//     own wait. THE WORD MUST ACCOUNT FOR THE DELAY, frame by frame — it is no pass by being there: (1) it is THIS row's word (the begun beat's number,
+//     its member, its thing — or the gun's row the director began for that thing, `refused` naming it; a new pick drops the word of one that never
+//     began); (2) the frames the page WORKED from the pick to the row's first, less the frames the director names a rule for, are FRAMES at most — a
+//     frame the director ran and named nothing for is the row's own lateness, as before the word existed (display frames the page passed over whole —
+//     the pace on a slow machine, `__kitview.pace.every`: every second, every third — are held to that pace, and FRAMES); (3) every rule is one this
+//     tool knows, with ITS bound: `mend` (what the last row broke hung / staged again under the dissolve) is the old bound outright — FRAMES frames of
+//     it at most, and a row held by nothing else begins within FRAMES display frames of the pick, as tools/qa/kitview-page.cjs asks of a restage
+//     (`began.frames <= 4`); `home` (the men walking home for a row of Sam's), `sam` (his half step home), `leaf` (not yet to), `arrive` (a card
+//     switch's walk): WAIT_MS on the wall clock from the pick; (4) the whole is within WAIT_MS — (a row the way cannot play — no leaf, a blank wall, no stretch to breach — is the GUN's row with
 //     the reason kept: said, and a pass), and ends with every man home on his place and the world whole (the leaf hung and to, a wall anchor standing, no
 //     charge left set, nobody hurt, no dissolve up) inside ROW_MS;
 //     (a way anchored on a BLANK WALL: a row that needs an opening blows the wall charge on the span first and the hole is kept — 'the world whole' is then
@@ -37,8 +45,21 @@
 //   · a row CUT mid-way by another pick leaves every man home and the world whole;
 //   · THE PICTURE RAISED NO ALARM: the level's devices sense nothing (host/kitView.ts kitViewInert — the game's own two switches), no device reported, the
 //     floor never went up, no alarm was placed — LATCHED ON EVERY DISPLAY FRAME (`__kvAlarm`) and judged IN EVERY TILE'S ROW, then once more over the whole
-//     run: every restage goes through the encounter's restart, which clears the devices' log, the floor and the placed alarm, so one reading at the end saw
+//     run — AND THE PARK HAD NOTHING TO PUT RIGHT (`__kitview.roused`, the child's own running count of the level's men its park found roused and of
+//     the alarm's marks it dropped: the park calms the men and drops the marks before this tool's eye opens, so a man stirred by sight or any road but
+//     his ears is read by that count alone — it rose under a row: that row FAILS; it is not 0 at the end, or the page does not say it: the run's row FAILS): every restage goes through the encounter's restart, which clears the devices' log, the floor and the placed alarm, so one reading at the end saw
 //     only what happened after the LAST restage. (A report made and cleared between two display frames is still not seen: the frame is the tool's eye.);
+//   · HOUR=<id> ONLY — THE PHOTOCELL, ON THE PAGE (`hour=<id>` put on the link in place of the mission's own; no HOUR: no such row). Judged where the page's
+//     own hour has the level's outside lamps out (`__hour.table[__hour.id].lamps` false: midday, overcast) and the plan stands under the open sky: the porch
+//     lamp is DISABLED and its glowing box is NOT among the world's statics (`__kitview.lamps.porch`, `__kitview.fixtureUp` — a way that writes
+//     `light.porch.day`: the lamp burns at that, said), and every lamp of the way's OWN (its set's `lights`, its `add.lamps`; less its `dayLights`, the
+//     group `exterior` and a lamp under a cover — a set's: worked out HERE from the set's own boxes, the plan's test written out; an added lamp's: the
+//     child's own list `__kitview.dayOut`, which must be said) is out at the game's own switch with its fixture box dark. An hour that burns its lamps (night, dawn, dusk), a way under a roof:
+//     said, NOTHING JUDGED. An hour the page did not take: FAIL. This is the row that fails when the child's photocell line is deleted or main.ts's
+//     `lampsOut` is inverted — tools/qa/kitview-plan.ts holds only the pure rule and the headless switch.
+//         HOUR=midday node tools/qa/kitview-levels.cjs          (every level-way; `HOUR=midday LEVEL=pass node tools/qa/kitview-levels.cjs` for one level)
+//         HOUR=night node tools/qa/kitview-levels.cjs           (the same rows, nothing judged: the control)
+//     (NEVER RUN as of this writing: owed a page.)
 //   · `pins` is 0 (the game's own men never had to be held), and the console said nothing.
 //
 //   node tools/qa/kitview-levels.cjs    env: PORT (5199) · QUALITY (verylow) · WARM (6) · SCALE (2) · LEVEL (comma list of level names; default: every
@@ -64,7 +85,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', WARM = +(process.env.WARM || 6), SCALE = +(process.env.SCALE || 2);
-const ROW_MS = +(process.env.ROW_MS || 240000), FRAMES = +(process.env.FRAMES || 4), WAIT_MS = +(process.env.WAIT_MS || 3000), BREAK = process.env.KITLEVELS_BREAK === '1', PLAIN = process.env.LOOK === 'plain';
+const ROW_MS = +(process.env.ROW_MS || 240000), FRAMES = +(process.env.FRAMES || 4), WAIT_MS = +(process.env.WAIT_MS || 3000), HELD = { mend: 'frames', home: 'ms', sam: 'ms', leaf: 'ms', arrive: 'ms' } /* the director's rules for a wait this tool knows, each with its bound: FRAMES of it · WAIT_MS from the pick */, BREAK = process.env.KITLEVELS_BREAK === '1', PLAIN = process.env.LOOK === 'plain', HOUR = (process.env.HOUR || '').trim();
 const SW = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|Failed to load resource|Failed to fetch/;
 const BASE = `http://localhost:${PORT}/`, T0 = Date.now(), DIR = path.join(__dirname, '../../levels');
@@ -129,7 +150,9 @@ async function one(browser, L) {
         set_: g.doorTools.set.length, ops: g.doorTools.ops.length, puppet: !!g.puppet, dz: k.dissolve.phase, settled: !!k.settled, beat: k.beat ? { n: k.beat.n, field: k.beat.field, i: k.beat.i, t: k.beat.t, phase: k.beat.phase } : null,
         wc: g.wallCharge ? g.wallCharge.set.length + g.wallCharge.ops.length : 0, last: k.last ? { n: k.last.n, field: k.last.field, how: k.last.how, marks: (k.last.marks || []).slice(), restOut: k.last.rest ? out(k.last.rest[0], k.last.rest[2]) : null } : null,
         alarm: (() => { const A = window.__kvAlarm; for (const r of (g.devices && g.devices.log) || []) { const s = `${r.device} ${r.what}`; if (!A.reports.includes(s)) A.reports.push(s); } A.level = Math.max(A.level, g.escalation || 0); if (g.alarm && g.alarm.placed) A.placed = true;   // (the latch, and this very moment folded into it)
-          return { reports: A.reports.slice(), level: A.level, placed: A.placed, sensing: !!(g.tune.devices || g.tune.lasers), frames: A.frames }; })(),
+          // (`roused`: THE PARK'S OWN COUNT — host/kitView.ts kitViewPark calms every man of the level's and drops the alarm's marks before any reader on this
+          //  page runs, so `placed` above and a man's state are true of nothing the park mended: what it had to put right is counted by the child, never reset. null: the page does not say it)
+          return { reports: A.reports.slice(), level: A.level, placed: A.placed, sensing: !!(g.tune.devices || g.tune.lasers), frames: A.frames, roused: k.roused ? { men: k.roused.men, alarms: k.roused.alarms } : null }; })(),
         refused: k.refused, pins: k.pins || 0, shots: k.shots || 0, cuts: k.cuts, restarts: k.restarts, hits: { ...(k.hits || {}) }, blocked: k.blocked }; };
     /** a pick, then every display frame until a NEW beat is up (`began`: frames and ms from the telling), until it is over and the picture has settled (`ended`) —
      *  or, `cutAt` given: until the beat is that many game seconds in, when `cutTo` is picked over it and THAT row is waited out. `ms`: the patience.
@@ -140,11 +163,12 @@ async function one(browser, L) {
      *  that beat was and what the pick's cut left of it (`how`, its marks, anything still set) — a row holds it to nothing */
     window.__kvRow = (msg, ms, cutAt, cutTo, shove) => new Promise(res => { const k = window.__kitview, g = window.__game, w0 = performance.now();
       // (`msg` null: nothing is told — the beat that is up now, or the loop's next, is the one waited out)
-      let n0 = k.beat ? k.beat.n - (msg ? 0 : 1) : k.last ? k.last.n : 0, frames = 0, began = null, cut = null, shoved = false, far = 0, said; const cuts0 = k.cuts;   // (`said`: `refused` on the first frame the row is over — the loop's next beat clears it as it begins)
+      let n0 = k.beat ? k.beat.n - (msg ? 0 : 1) : k.last ? k.last.n : 0, frames = 0, worked = 0, drawn = k.drawn, every = 1, began = null, cut = null, shoved = false, far = 0, said; const cuts0 = k.cuts;   // (`said`: `refused` on the first frame the row is over — the loop's next beat clears it as it begins)
       /** the furthest any man stands off his place of the plan, this frame (`far`: the most of it from the beat's first frame on) */
       const offNow = () => { const P = k.plan; if (!P) return 0; let m = 0; for (const x of k.men) { const s = P.slots[x.slot]; if (s) m = Math.max(m, Math.hypot(x.x - s[0], x.z - s[1])); } return m; };
       let stray = null;
-      if (msg) { const heard = e => { const m = e.data; if (e.source !== window || !m || m.kv !== msg.kv || m.who !== msg.who || m.field !== msg.field) return; window.removeEventListener('message', heard);
+      if (msg) { const told = { ...msg, kvn: window.__kvN = (window.__kvN || 0) + 1 };   // (THE VERY MESSAGE TOLD, by a number of its own: the director reads the keys it knows and no other)
+        const heard = e => { const m = e.data; if (e.source !== window || !m || m.kv !== told.kv || m.kvn !== told.kvn) return; window.removeEventListener('message', heard);
           const n1 = Math.max(k.beat ? k.beat.n : 0, k.last ? k.last.n : 0);   // (beats are numbered as they begin: the highest begun by now)
           const b = k.beat && k.beat.n === n1 ? k.beat : k.last;
           if (!(n1 > n0 && k.queue.length) || (b.i === (msg.who || 0) && b.field === msg.field)) return;   // (nothing began in between — or the director took no pick from it: the tile was already the one under the highlight — or what began is that member's turn of that very tile: the row asked for, as before)
@@ -152,10 +176,13 @@ async function one(browser, L) {
           // (another card's pick cuts in the message's own task: what that cut left is read here, before the picked row's first frame can set anything of its own)
           if (!k.beat && k.last && k.last.n === n1) stray.left = { set: g.doorTools.set.length, ops: g.doorTools.ops.length, wc: g.wallCharge ? g.wallCharge.set.length + g.wallCharge.ops.length : 0, far: offNow() };
           n0 = n1; began = null; far = 0; };
-        window.addEventListener('message', heard); window.postMessage(msg, location.origin); }
-      const f = () => { frames++; const el = performance.now() - w0;
+        window.addEventListener('message', heard); window.postMessage(told, location.origin); }
+      // (`worked`: display frames since the telling on which the page drew — `__kitview.drawn` moved: the director ran on those, and on no other · `every`: the most display frames the pace took for one, as the page says it)
+      /** the director's word for a wait, IF IT IS THIS BEAT'S: its number, its member, its thing — or the gun's row begun for that thing, `refused` naming it. A word of another pick is nobody's excuse */
+      const heldFor = b => { const h = k.held; if (!h || h.n !== b.n || h.i !== b.i || !(h.field === b.field || (b.field === 'weapon' && typeof k.refused === 'string' && k.refused.startsWith(h.field + ':')))) return null; return { why: h.why.slice(), by: { ...h.by }, s: h.s, frames: h.frames, field: h.field, i: h.i }; };
+      const f = () => { frames++; if (k.drawn !== drawn) { drawn = k.drawn; worked++; } if (!began) every = Math.max(every, (k.pace && k.pace.every) || 1); const el = performance.now() - w0;
         if (stray && stray.how === null && k.last && k.last.n >= stray.n) Object.assign(stray, k.last.n === stray.n ? { how: k.last.how, t: k.last.t, marks: (k.last.marks || []).slice() } : { how: 'never read', t: 0, marks: [] });
-        if (!began && k.beat && k.beat.n > n0) began = { frames, ms: el, field: k.beat.field, i: k.beat.i, n: k.beat.n, refused: k.refused, prelude: k.beat.marks.includes('prelude') };
+        if (!began && k.beat && k.beat.n > n0) began = { frames, ms: el, field: k.beat.field, i: k.beat.i, n: k.beat.n, refused: k.refused, prelude: k.beat.marks.includes('prelude'), worked, every, held: heldFor(k.beat), heldOther: k.held && k.held.n === k.beat.n && !heldFor(k.beat) ? `${k.held.i ? 'teammate ' + k.held.i + "'s" : "Sam's"} ${k.held.field}` : null };   // (`held`: the director's own word that THIS beat waited, by which rule and on how many of its frames — host/kitView.ts `__kitview.held`; `heldOther`: a word on this beat's number that is another pick's — said, and no excuse)
         if (began) far = Math.max(far, offNow());
         if (began && said === undefined && k.last && k.last.n >= began.n) said = k.last.n === began.n ? k.refused || null : null;
         if (began && cutAt !== undefined && !cut && k.beat && k.beat.n === began.n && k.beat.t >= cutAt) { cut = { at: k.beat.t, phase: k.beat.phase, field: k.beat.field }; window.postMessage(cutTo, location.origin); }
@@ -179,7 +206,7 @@ async function one(browser, L) {
   page.on('pageerror', e => { errors++; errs.push(String(e).slice(0, 200)); });
   page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text())) { errors++; errs.push(m.text().slice(0, 200)); } });
   // (THE MISSION'S OWN LINK — missionQuery above: the bundled office names no level file, a solo night no scenario, a quiet mission alone no size — and the way in)
-  const w = L.said, N = L.squad, own = L.own(), url = `${BASE}?${own}&way=${L.k + 1}&kitview=${WARM}&mute&noreplay&quality=${QUALITY}${PLAIN ? '&look=plain' : ''}`;
+  const w = L.said, N = L.squad, own = HOUR ? [...L.own().split('&').filter(p => p && !/^hour=/.test(p)), 'hour=' + encodeURIComponent(HOUR)].join('&') : L.own(), url = `${BASE}?${own}&way=${L.k + 1}&kitview=${WARM}&mute&noreplay&quality=${QUALITY}${PLAIN ? '&look=plain' : ''}`;
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   let ready = true;
   for (let i = 0; ; i++) {
@@ -197,6 +224,22 @@ async function one(browser, L) {
   const r0 = await page.evaluate(ms => window.__kvRow({ kv: 'sel', who: 0, field: 'weapon' }, ms), ROW_MS);
   row(r0.at.men.length === N + 1 && r0.at.offMax <= 0.3 && new Set(r0.at.men.map(m => m.slot)).size === N + 1, `${w}: ${N + 1 === 5 ? 'five men' : N ? `Sam and ${N}` : 'Sam alone'}, each on a place of the plan`, `${menSaid(r0.at)}${r0.at.dress ? ` · dressed (Sam first): ${r0.at.dress.map(d => d === 'suit' ? 'the sneaking suit' : 'the issue dress').join(', ')}` : ''}`);
   row(r0.at.men.every(m => m.free && m.out >= r0.at.face - 0.01) && r0.at.blocked === 0, `${w}: every man on free floor, on the team's side of the wall's face (${r0.at.face} m), nobody in a wall`, `${menSaid(r0.at)} · ${r0.at.blocked} place(s) the plan had to step over`);
+  // THE PHOTOCELL (HOUR given): read off the world after a whole row has run — the lamp the child hung, its box among the statics, the game's own switches
+  if (HOUR) { const ph = await page.evaluate(() => { const k = window.__kitview, g = window.__game, H = window.__hour, E = window.__engine, P = k.plan, KV = g.level.scenarios && g.level.scenarios.kitView, Y = KV && KV.ways ? KV.ways[k.way] : null;
+      const id = H ? H.id : null, def = H && H.table && id ? H.table[id] : null, day = (Y && Y.dayLights) || [], pd = Y && Y.light && Y.light.porch ? Y.light.porch.day : undefined;
+      const own = (!Y ? [] : Y.set !== undefined ? ((KV.sets || {})[Y.set] || {}).lights || [] : (Y.add || {}).lamps || []).filter(l => l.kind !== 'dir');
+      const T = Y && Y.set !== undefined ? (KV.sets || {})[Y.set] : null, said = Array.isArray(k.dayOut);
+      // (UNDER A COVER — host/kitViewPlan.ts kitPlanCovered, written out over the SET's own records: a box over the lamp with its underside 1.9 m up at least and no lower than the lamp, half a metre wide both ways. A level's own way: the boxes are the built level's, not on this page as records — the child's list is taken, and must be there)
+      const under = l => T ? (T.boxes || []).some(b => { const c = Math.cos(b.yaw || 0), s = Math.sin(b.yaw || 0), dx = l.pos[0] - b.c[0], dz = l.pos[2] - b.c[2], lx = c * dx - s * dz, lz = s * dx + c * dz; return b.c[1] - b.h[1] >= Math.max(1.9, l.pos[1] - 0.05) && Math.min(b.h[0], b.h[2]) >= 0.5 && Math.hypot(lx - Math.max(-b.h[0], Math.min(b.h[0], lx)), lz - Math.max(-b.h[2], Math.min(b.h[2], lz))) < 0.02; }) : said && !k.dayOut.includes(l.id);
+      const sw = l => { const t = g.targets.find(t => t.kind === 'analytic' && t.name === l.id); return { id: l.id, kept: l.group === 'exterior' ? 'exterior' : day.some(n => n === l.id || n === l.group) ? 'dayLights' : under(l) ? (T ? 'under a cover' : 'left by the child') : '', found: !!t, on: !!(t && t.on), lit: !!(t && t.light && t.light.enabled),
+        glow: t && E ? t.boxes.reduce((q, bi) => q + E.world.statics[bi].emissive.reduce((x, y) => x + y, 0), 0) : 0 }; };
+      const porch = k.lamps && k.lamps.porch ? { enabled: !!k.lamps.porch.enabled, intensity: +k.lamps.porch.intensity } : null;
+      return { hour: id, lampsOut: !!def && id !== 'night' && def.lamps === false, indoors: !!P.indoors, porch, fixtureUp: k.fixtureUp, dayOut: k.dayOut, porchDay: typeof pd === 'number' ? pd : null, own: own.map(sw) }; });
+    const took = ph.hour === HOUR, judged = took && ph.lampsOut && !ph.indoors, dayLit = ph.porchDay !== null && ph.porchDay > 0;
+    const porchOk = dayLit ? !!ph.porch && ph.porch.enabled && Math.abs(ph.porch.intensity - ph.porchDay) < 1e-6 : (!ph.porch || !ph.porch.enabled) && ph.fixtureUp === false;
+    const ownBad = ph.own.filter(l => l.kept === 'dayLights' ? !l.found || !l.on : l.kept === '' && (!l.found || l.on || l.lit || l.glow > 0)), saidOut = Array.isArray(ph.dayOut);
+    const said = `the page's hour '${ph.hour}' (${ph.lampsOut ? 'its outside lamps OUT' : 'its lamps burn'}), the plan ${ph.indoors ? 'under a roof' : 'under the open sky'} · the porch lamp ${ph.porch ? `${ph.porch.enabled ? 'ENABLED' : 'disabled'} at ${ph.porch.intensity}` : 'not hung'}${dayLit ? ` (the way writes light.porch.day ${ph.porchDay})` : ''}, its glowing box ${ph.fixtureUp === true ? 'AMONG the statics' : ph.fixtureUp === false ? 'not among the statics' : 'NOT SAID by the page (`__kitview.fixtureUp`)'} · the way's own lamps: ${ph.own.length ? ph.own.map(l => `${l.id}${l.kept ? ` (${l.kept})` : ''} ${l.found ? `${l.on ? 'on' : 'off'}/${l.lit ? 'lit' : 'dark'}${l.glow > 0 ? ', box glowing' : ''}` : 'NO SWITCH'}`).join(', ') : 'none'} · the child put out ${saidOut ? `[${ph.dayOut.join(', ')}]` : 'NOT SAID by the page (`__kitview.dayOut`)'}`;
+    row(took && (!judged || (porchOk && ownBad.length === 0 && saidOut)), `${w}: HOUR=${HOUR} — ${!took ? 'the page did not take the hour' : judged ? 'no lamp of the picture burns in full day (the porch lamp and its box, the way\'s own lamps)' : 'the photocell: NOTHING JUDGED (the lamps burn at this hour, or the way is under a roof)'}`, `${said}${judged && ownBad.length ? ` — STILL BURNING OR WRONGLY OUT: ${ownBad.map(l => l.id).join(', ')}` : ''}`); }
   row(r0.at.others === 0, `${w}: nobody else on the floor`, `${r0.at.others} who are not the team within the world`);
   // THE DRESS ON A SET IS THE MISSION'S (a set is staged as a room clear, whose men wear the issue dress: main.ts says the mission's own dress in this window —
   // host/kitViewSet.ts kitViewSetDress). A quiet mission dresses every man in the sneaking suit, the solo night Sam; a loud mission's set: nothing judged
@@ -212,6 +255,16 @@ async function one(browser, L) {
   const whole = (s, by) => off(s, by) <= HOME_M && s.hurt === 0 && s.alive === N && (!s.leaf || (!s.leaf.off && (by === 'next' || s.leaf.ajar < 0.05))) && (s.wallUp === null || s.hole === !s.wallUp) && (by === 'next' || (s.set_ === 0 && s.ops === 0 && !s.puppet && s.dz === ''));
   const wholeSaid = (s, by) => `the furthest man ${off(s, by).toFixed(2)} m off his place${by === 'next' ? ' (the next beat\'s own man apart)' : ''} · ${s.hurt} hurt, ${s.alive} of ${N} up${s.leaf ? ` · the leaf ${s.leaf.off ? 'OFF' : s.leaf.ajar.toFixed(2) + ' rad ajar'}` : ''}${s.wallUp !== null ? ` · the wall ${s.wallUp ? (s.hole ? 'STANDS WITH ITS HOLE FLAG UP' : 'stands') : s.hole ? 'open: the hole its charge left, kept' : 'OPEN, NO HOLE KEPT'}` : ''} · ${s.set_} charge(s) set, ${s.ops} door op(s)${s.puppet ? ' · Sam still a puppet' : ''}${s.dz ? ` · dissolve '${s.dz}'` : ''}`;
   const throwsSeen = [], guns = [], blown = [], mended = []; let burstOf = null;
+  /** A HELD ROW'S WORD, JUDGED (the header's four limbs; `b` = __kvRow's `began`): `ok`, and each limb that failed, said */
+  const heldJudge = b => { const h = b.held, bad = [], free = b.worked - h.frames, passed = b.frames - b.worked, odd = h.why.filter(y => !Object.hasOwn(HELD, y)), mend = h.by.mend || 0;
+    if (!h.why.length) bad.push('no rule named');
+    if (odd.length) bad.push(`a rule this tool does not know (${odd.join(', ')})`);
+    if (free > FRAMES) bad.push(`${free} worked frame(s) the director named no rule for (over ${FRAMES})`);
+    if (passed > FRAMES + (b.every - 1) * b.worked) bad.push(`${passed} display frame(s) passed over whole, the pace every ${b.every} at most`);
+    if (mend > FRAMES) bad.push(`${mend} frame(s) of mend (over ${FRAMES})`);
+    if (h.why.every(y => HELD[y] === 'frames') && b.frames > FRAMES) bad.push(`held by ${h.why.join(' + ')} alone and up ${b.frames} display frame(s) after the pick (over ${FRAMES}: a restage is no wait)`);
+    if (b.ms > WAIT_MS) bad.push(`${b.ms.toFixed(0)} ms after the pick (over ${WAIT_MS})`);
+    return { ok: bad.length === 0, bad }; };
   // (THE WAY HAS A THROW, as the plan says it: a door or a gap, and no problem of the floor behind it. The row's own word for the thing gone: the door tools' count)
   const throwWay = a.kind !== 'wall' && !a.problems.some(p => /for a throw/.test(p)), WORD = { smoke: 'smoke', bangs: 'bang', frags: 'frag' };
   const tile = async (who, f, timed) => { const b = await page.evaluate(() => window.__kvl()); let r = await page.evaluate(([msg, ms]) => window.__kvRow(msg, ms), [{ kv: 'sel', who, field: f }, ROW_MS]);
@@ -223,7 +276,7 @@ async function one(browser, L) {
       const r2 = await page.evaluate(ms => window.__kvRow(null, ms), ROW_MS); r = { ...r2, began: r.began, ended: r2.began && r2.began.field === f ? r2.ended : null }; }
     // (the mend that follows a burst runs as the NEXT row begins: this row's reading is the first after it)
     if (burstOf) { mended.push({ after: burstOf, up: r.at.props.up }); burstOf = null; }
-    const whoSaid = who ? `teammate ${who}'s` : 'Sam\'s', own = r.began && r.began.field === f && r.began.i === who, guns_ = r.began && r.began.field === 'weapon' && f !== 'weapon' && !!r.began.refused, held = b.puppet || (b.leaf && b.leaf.ajar >= 0.03), inTime = !timed || (r.began && (r.began.frames <= FRAMES || (held && r.began.ms <= WAIT_MS)));   // (`held`: the row's own WAIT — Sam on his half step home, the leaf not yet to — is the picture's rule, not a late row: WAIT_MS at most)
+    const whoSaid = who ? `teammate ${who}'s` : 'Sam\'s', own = r.began && r.began.field === f && r.began.i === who, guns_ = r.began && r.began.field === 'weapon' && f !== 'weapon' && !!r.began.refused, held = !!r.began && !!r.began.held, W = held ? heldJudge(r.began) : null, inTime = !timed || (r.began && (r.began.frames <= FRAMES || (held && W.ok)));   // (`held`: the row's own WAIT is the picture's rule, not a late row — BY THE DIRECTOR'S OWN WORD (`__kitview.held`: this very beat was kept back, and why), never guessed from a reading taken before the pick: that reading is another task's, frames old on a loaded machine, and knew two of the rules — the hall's front way, Sam's wand picked with the stack still stood off his charge: up 17 frames, 284 ms after the pick, and FAILED on a bound of 4. AND THE WORD MUST ACCOUNT FOR THE DELAY: heldJudge)
     // (THE LOOP'S OWN TURN, begun on a frame the pick had not yet been heard on — __kvRow's `stray`: the pick must have CUT it, with no mark made (nothing
     //  fired, thrown, set or blown; a wall charge's prelude is its first word, not a deed), nothing left set by it and no man walked off his place)
     const Y = r.stray, strayOk = !Y || (Y.how === 'cut' && Y.marks.every(m => m === 'prelude') && (!Y.left || (Y.left.set === 0 && Y.left.ops === 0 && Y.left.wc === 0 && Y.left.far <= HOME_M)));
@@ -232,10 +285,10 @@ async function one(browser, L) {
     const L_ = r.at.last && r.at.last.field === f ? r.at.last : null, must = who >= 1 && (f === 'bangs' || f === 'frags') && own && throwWay && !!r.ended, threw = !!L_ && L_.marks.includes(WORD[f]), why = r.said && r.said.startsWith(`${f}:`) ? r.said : null;
     const thrownSaid = !must ? '' : ` · ${threw ? `thrown (marks [${L_.marks.join(', ')}])` : why ? `not thrown, and said: '${why}'` : `NEVER THROWN and nothing said (marks [${L_ ? L_.marks.join(', ') : ''}]${r.at.locked ? '; the plan\'s door is locked' : ''}): the plan says this way has a throw`}`;
     // (NO ALARM UNDER THIS ROW: what the latch gained since the reading before the pick — a report, the floor up, an alarm placed — or the devices sensing now)
-    const al = r.at.alarm, al0 = b.alarm, rang = al.reports.length > al0.reports.length || al.level > al0.level || (al.placed && !al0.placed) || al.sensing;
-    const rangSaid = !rang ? '' : ` · AN ALARM UNDER THIS ROW: ${al.sensing ? 'the devices ARE SENSING · ' : ''}${al.reports.length > al0.reports.length ? 'reported: ' + al.reports.slice(al0.reports.length).slice(0, 4).join(', ') + ' · ' : ''}the floor ${al0.level} → ${al.level}${al.placed && !al0.placed ? ' · an alarm placed' : ''}`;
+    const al = r.at.alarm, al0 = b.alarm, rz = x => x.roused ? x.roused.men + x.roused.alarms : -1, stirred = !al.roused || rz(al) > rz(al0), rang = al.reports.length > al0.reports.length || al.level > al0.level || (al.placed && !al0.placed) || al.sensing || stirred;
+    const rangSaid = !rang ? '' : ` · AN ALARM UNDER THIS ROW: ${al.sensing ? 'the devices ARE SENSING · ' : ''}${al.reports.length > al0.reports.length ? 'reported: ' + al.reports.slice(al0.reports.length).slice(0, 4).join(', ') + ' · ' : ''}the floor ${al0.level} → ${al.level}${al.placed && !al0.placed ? ' · an alarm placed' : ''}${!stirred ? '' : !al.roused ? ' · THE PAGE DOES NOT SAY what its park put right (`__kitview.roused`)' : ` · THE PARK HAD TO PUT RIGHT ${al.roused.men - (al0.roused ? al0.roused.men : 0)} man-park(s) of the level's men roused and ${al.roused.alarms - (al0.roused ? al0.roused.alarms : 0)} alarm mark(s) under this row`}`;
     row(!!r.began && (own || guns_) && inTime && strayOk && !!r.ended && whole(r.at, r.ended && r.ended.by) && (!must || threw || !!why) && !rang, `${w}: ${whoSaid} ${f} — its row begins on the pick${timed ? '' : ' (as his card opens: he walks to the head of the file first)'}${must ? ', the thing is thrown' : ''} and ends with every man home, the world whole and no alarm raised`,
-      `${!r.began ? 'NO ROW BEGAN' : `${own ? `the ${f} row` : guns_ ? `THE GUN'S ROW ('${r.began.refused}')` : `ANOTHER ROW (${r.began.field}, member ${r.began.i}${r.began.refused ? `, '${r.began.refused}'` : ''})`} up ${r.began.frames} frame(s), ${r.began.ms.toFixed(0)} ms after the pick${held && r.began.frames > FRAMES ? ' (the row\'s own wait: ' + (b.puppet ? 'Sam on his half step home' : 'the leaf not yet to') + ')' : ''}`} · ${r.ended ? `over and ${r.ended.by === 'next' ? 'the loop\'s next beat up' : 'settled'} ${(r.ended.ms / 1000).toFixed(1)} s on (${r.at.last ? r.at.last.how : '?'})` : `NEVER SETTLED in ${ROW_MS / 1000} s (${r.at.state}${r.at.beat ? ', ' + r.at.beat.field + '/' + r.at.beat.phase : ''})`} · ${wholeSaid(r.at, r.ended && r.ended.by)}${opened ? ' · (the wall was opened for it first: its charge, then the row through the hole)' : ''}${thrownSaid}${straySaid}${rangSaid}`);
+      `${!r.began ? 'NO ROW BEGAN' : `${own ? `the ${f} row` : guns_ ? `THE GUN'S ROW ('${r.began.refused}')` : `ANOTHER ROW (${r.began.field}, member ${r.began.i}${r.began.refused ? `, '${r.began.refused}'` : ''})`} up ${r.began.frames} frame(s), ${r.began.ms.toFixed(0)} ms after the pick${held ? ` (the row's own wait, by the director's word: ${r.began.held.why.map(y => `${y} ${r.began.held.by[y] || 0}`).join(' + ')} frame(s), ${r.began.held.frames} held in all of ${r.began.worked} the page worked — ${r.began.held.s.toFixed(2)} s of the game's clock from the hearing to the row${timed && r.began.frames > FRAMES ? W.ok ? '' : ` — THE WORD DOES NOT ACCOUNT FOR THE DELAY: ${W.bad.join('; ')}` : ''})` : r.began.heldOther ? ` (a held word on this beat's number is ANOTHER PICK'S — ${r.began.heldOther}: no excuse)` : ''}`} · ${r.ended ? `over and ${r.ended.by === 'next' ? 'the loop\'s next beat up' : 'settled'} ${(r.ended.ms / 1000).toFixed(1)} s on (${r.at.last ? r.at.last.how : '?'})` : `NEVER SETTLED in ${ROW_MS / 1000} s (${r.at.state}${r.at.beat ? ', ' + r.at.beat.field + '/' + r.at.beat.phase : ''})`} · ${wholeSaid(r.at, r.ended && r.ended.by)}${opened ? ' · (the wall was opened for it first: its charge, then the row through the hole)' : ''}${thrownSaid}${straySaid}${rangSaid}`);
     if (own && THROWN.includes(f) && r.at.last && r.at.last.field === f) throwsSeen.push({ who, f, out: r.at.last.restOut, how: r.at.last.how, hurt: r.at.hurt, hitsSam: (r.at.hits.sam || 0) - (b.hits.sam || 0), kept: r.at.refused });
     if (f === 'weapon') { guns.push({ who, shots: r.at.shots - b.shots, hurt: r.at.hurt }); if (r.at.shots > b.shots) burstOf = `${whoSaid} gun (${r.at.shots - b.shots} round(s))`; }
     return r; };
@@ -292,8 +345,8 @@ async function one(browser, L) {
   // NO LOOSE PROP THE PLAN HIDES STILL STANDS (host/kitView.ts dropProps: in place(), and again after mend()'s reset of the props)
   row(a.props.up === 0 && mended.every(m => m.up === 0) && z.props.up === 0, `${w}: no loose prop the plan hides still stands — as the page came up, after a gun burst's mend, at the end`,
     `${a.props.hid} prop(s) hidden by the plan${a.props.hid ? '' : ' (true of nothing: this way hides no prop)'} · standing as the page came up: ${a.props.up} · ${mended.length ? mended.map(m => `after the mend that followed ${m.after}: ${m.up}`).join(' · ') : 'NO BURST WAS FOLLOWED BY ANOTHER ROW: the mend was not read'} · at the end: ${z.props.up}`);
-  row(z.alarm.reports.length === 0 && z.alarm.level === 0 && !z.alarm.placed && !z.alarm.sensing && z.alarm.frames > 0, `${w}: the picture raised no alarm over the whole run — no device reported, the floor never went up (latched on every display frame, across every restage)`,
-    `the level's devices ${z.alarm.sensing ? 'ARE SENSING' : 'sense nothing (host/kitView.ts kitViewInert)'} · ${z.alarm.reports.length ? 'REPORTED: ' + z.alarm.reports.slice(0, 4).join(', ') : 'no report in the devices\' log'} · the floor never over ${z.alarm.level}${z.alarm.placed ? ' · AN ALARM PLACED' : ''} · ${z.alarm.frames} frame(s) latched, ${z.restarts} restart(s)`);
+  row(z.alarm.reports.length === 0 && z.alarm.level === 0 && !z.alarm.placed && !z.alarm.sensing && z.alarm.frames > 0 && !!z.alarm.roused && z.alarm.roused.men === 0 && z.alarm.roused.alarms === 0, `${w}: the picture raised no alarm over the whole run — no device reported, the floor never went up (latched on every display frame, across every restage), and its park never had a man of the level's to calm or an alarm's mark to drop`,
+    `the level's devices ${z.alarm.sensing ? 'ARE SENSING' : 'sense nothing (host/kitView.ts kitViewInert)'} · ${z.alarm.reports.length ? 'REPORTED: ' + z.alarm.reports.slice(0, 4).join(', ') : 'no report in the devices\' log'} · the floor never over ${z.alarm.level}${z.alarm.placed ? ' · AN ALARM PLACED' : ''} · the park put right ${z.alarm.roused ? `${z.alarm.roused.men} man-park(s) roused, ${z.alarm.roused.alarms} alarm mark(s)${z.alarm.roused.men || z.alarm.roused.alarms ? ' — A MAN OF THE LEVEL\'S WAS STIRRED BY THE PICTURE (the park calmed him before any frame could show it)' : ''}` : 'NOT SAID by the page (`__kitview.roused`)'} · ${z.alarm.frames} frame(s) latched, ${z.restarts} restart(s)`);
   row(z.pins === 0, `${w}: the game's own men never had to be held (pins 0)`, `${z.pins} man-frames pinned · ${z.restarts} restart(s), ${z.cuts} cut(s) in all`);
   row(errors === 0, `${w}: the console said nothing`, errs.slice(0, 4).join(' | ') || 'no error');
   console.log(`  [${((Date.now() - T0) / 1000).toFixed(0)}s] ${w}: ${((Date.now() - t0) / 1000).toFixed(0)} s`);

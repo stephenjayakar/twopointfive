@@ -76,7 +76,7 @@ import type { KitViewLamp, KitViewLight, KitViewWay } from '../scene/scenarios';
 import type { Box } from '../scene/boxes';
 import type { Vec3 } from '../math/vec';
 import type { KitPlanLevel, KitViewPlanned } from './kitViewPlan';
-import { kitViewPlanChild, kitPlanGeometry, kitPlanWayBuilt, kitPlanAct4, KIT_PLAN } from './kitViewPlan';   // (pure: plain level data in, a plan out — no game module, no DOM)
+import { kitViewPlanChild, kitPlanGeometry, kitPlanWayBuilt, kitPlanAct4, kitPlanPorchLit, kitPlanOwnLamps, kitPlanDayOut, KIT_PLAN } from './kitViewPlan';   // (pure: plain level data in, a plan out — no game module, no DOM)
 import { OWNCHARGE } from '../game/owncharge';   // (a leaf: read inside a row's start only)
 import { samBigSpot } from '../game/bigkit';   // (asked inside a row's start only: where the game stands Sam for the big slot's tool)
 import { BIG_ORDER } from '../game/doortools';   // (a name, read inside a row only)
@@ -235,6 +235,9 @@ export interface KitViewDeps {
   doorSide(d: Door, p: Vec3): 1 | -1;
   /** a glowing box for a lamp's fixture (main.ts: scene/boxes.ts makeBox, emissive, its emission carried by the lamp) — not yet in the world */
   glowBox(c: Vec3, h: Vec3, yaw: number, glow: Vec3): Box;
+  /** the hour has the level's outside lamps OUT (main.ts: game/hours.ts — an hour whose HourDef.lamps is false; never at night): the picture's porch lamp
+   *  is on the same photocell (host/kitViewPlan.ts kitPlanPorchLit) */
+  lampsOut(): boolean;
   /** the level's own FILE records as this stand loaded them (main.ts: scene/levelLoad.ts levelFileOf — the boxes index for index the level's, with the ids,
    *  groups and flags a runtime box does not carry; its doors and lamps): what the way's PLAN is measured from (host/kitViewPlan.ts). null: none kept */
   file(): KitPlanLevel | null;
@@ -266,6 +269,16 @@ export interface KitView {
   /** the beat under way · the thing asked for and not yet begun · encounters restarted since the page opened (only what cannot be written live restarts
    *  one) · blown doors hung again · beats cut short by a pick */
   readonly beat: KitViewBeat | null; readonly queue: string[]; restarts: number; rehangs: number; cuts: number;
+  /** THE DIRECTOR'S OWN WORD FOR A WAIT (a check reads it; it never guesses): the last time a PICK was not begun on the frame it could have been — `n`
+   *  the number the beat got when it did begin (the next beat's, while it still waits), `field` what was asked and `i` the member whose card was open
+   *  (0 = Sam), `why` each rule that held it, in the order met ('mend': what the last row broke is hung / staged again under the dissolve first — and a
+   *  restage a card's change asked for · 'arrive': a card switch's walk · 'home': a row of Sam's waits for the men to walk home, homing() ·
+   *  'sam' | 'leaf': waits() — Sam on his half step home under Game.puppet, the leaf not yet to), `by` on how many of the director's frames EACH rule
+   *  held it, `frames` on how many a rule held it at all (a frame two rules held counts once here, once under each in `by`; a frame the director did not
+   *  begin the row on and named no rule for is in neither — a check counts those against the row), `s` the game's clock from the pick's HEARING to the
+   *  row's begin (while it still waits: to the last frame held). A NEW PICK DROPS THE WORD of one that never began: a word is its own pick's alone.
+   *  null: no pick has waited yet */
+  readonly held: { n: number; field: string; i: number; why: string[]; by: Record<string, number>; s: number; frames: number } | null;
   /** the switch a check turns off: a pick waits out the running beat and its rest, as the picture did before 10-14 */
   preempt: boolean;
   /** the switch a check turns off: HOME (KIT_VIEW_LOOP.homeM … farM) — off, a restage keeps each man where he stood, `settled` is within 0.3 m, and a row
@@ -277,6 +290,10 @@ export interface KitView {
   /** THE HOLD through Sam's frag (after()): man-frames it had to put a teammate back on his place or back on his knee — 0 while the game's own men do
    *  nothing about the grenade; anything else says the game moved one and the hold overrode it */
   pins: number;
+  /** WHAT THE PARK HAD TO PUT RIGHT since the page opened, never reset (kitViewPark, every park but a staging's own): the level's men found roused
+   *  (man-parks: a man found so at two parks counts twice) · the alarm's marks dropped (the episode, the placed alarm). 0 and 0: nobody of the level's
+   *  was ever stirred by the picture — a check holds every row to it, since the park leaves nothing else for it to read */
+  roused: { men: number; alarms: number };
   /** the dissolve: how many copies were laid over the picture, where one is (`''`: none up), and how often no copy could be had (the work done as it stood) */
   readonly dissolve: { n: number; phase: string; cuts: number };
   /** idle life: each man (Sam first, then the file) — his gun is wandering, and how far off his rest aim the director asks it (deg) · where his gun IS off it (deg) */
@@ -347,6 +364,34 @@ let dead: (() => void) | null = null;
  *  alone), written from the host with every park(): before the posing step and round every step of the loop. This window's game only, and nothing of it is
  *  stored (the Sandbox's own save is the panel's; ?kitview's storage is read-only). The picture is the same: the lens pans, its lamp glows. */
 export function kitViewInert(game: { tune: { devices: boolean; lasers: boolean } }): void { game.tune.devices = false; game.tune.lasers = false; }
+/** THE LEVEL'S OWN MEN RAISE NOTHING IN A PICTURE — park(), whole: everybody who is not the team far off, dark and held, CALM (his state, awareness and fix
+ *  as a man who heard nothing), the devices inert (kitViewInert) — and DEAF. A row's blast is made INSIDE the game's step (the door tools' tick, a wall
+ *  charge's, the director's own trigger said after park()), so "what is in the air is numbered and behind him" came a step too late: the staff parked 69 to
+ *  77 m from the relay station's west gate (a charge carries 80) heard Sam's charge in the very step that made it, went to `alert` with a fix, the game's
+ *  own bookkeeping (guards.ts updateEscalation) placed the alarm on that fix and opened an episode, park() calmed them — and the next step read the episode
+ *  as over and raised the floor (0 → 1; the wall charge after it, 1 → 2; the partner called "compromised"). So his ears are closed — `heardUpTo`,
+ *  the guards' and the civilians' own "heard as far as" mark (guards.ts hearingCheck skips every event numbered at or under it), set past any number an
+ *  event can get: UNTIL THE GAME WRITES THE MARK AGAIN (a man it stands up mid-step is given the count as it then is — qrf.ts, guards.ts spawnUnit),
+ *  and every park renews it — and, for whatever makes a man alert by another road, the episode that would raise the floor is dropped with the fix it
+ *  placed, ONLY while the floor is at 0 (a floor already up keeps its marks). This window's game only: a restage's fresh men get it with the next park(). `ears` (the plan check's control alone): the park as it
+ *  was, a man deaf only to what was in the air before the step.
+ *  AND IT SAYS WHAT IT HAD TO PUT RIGHT (the review, 10-16: with the men calmed and the marks dropped before any reader ran, a check's "an alarm placed"
+ *  and "a man alert" could no longer be true of anything — the park hid what it mended): `men` = the level's men it found ROUSED, by the game's own
+ *  names for it (`suspicious`, `alert`, `search`: game.ts GuardState less `patrol` and `dead`) · `alarms` = the marks it dropped (the episode, the
+ *  placed alarm: one each). The child adds them up on `__kitview.roused` for every park but a staging's own (fresh men, as the mission stood them up,
+ *  are nobody roused): 0 for good is what a check holds the picture to. */
+export const KIT_VIEW_DEAF = Number.MAX_SAFE_INTEGER;
+type Parked = { team: string; state: string; char: { pos: Vec3 }; flashlight: { enabled: boolean }; hold: boolean; pinned: boolean; heardUpTo: number; awareness: number; lastKnown: Vec3 | null };
+export function kitViewPark(game: { tune: { devices: boolean; lasers: boolean }; events: { id?: number }[]; eventSeq: number; guards: readonly Parked[]; civilians: readonly Parked[];
+  escalation: number; alarm: { episode: boolean; placed: boolean } }, ears = false): { men: number; alarms: number } {
+  kitViewInert(game);   // (…and the level's own cameras and tripwires report nothing: no call to control, no man sent, no alarm)
+  for (const e of game.events) if (e.id === undefined) e.id = ++game.eventSeq;
+  let k = 0, men = 0, alarms = 0; for (const g of [...game.guards, ...game.civilians]) { if (g.team === 'operative') continue;
+    g.char.pos = [-40 - k++ * 3, 0, -40]; g.flashlight.enabled = false; g.hold = true; g.pinned = true;
+    g.heardUpTo = ears ? game.eventSeq : KIT_VIEW_DEAF; g.awareness = 0; g.lastKnown = null; if (g.state !== 'dead') { if (g.state !== 'patrol') men++; g.state = 'patrol'; } }
+  if (!ears && game.escalation === 0) { if (game.alarm.episode) alarms++; if (game.alarm.placed) alarms++; game.alarm.episode = false; game.alarm.placed = false; }
+  return { men, alarms };
+}
 
 export function kitViewStart(d: KitViewDeps): KitView {
   const { game, engine, cam, input, view, loop } = d, K = KIT_VIEW_LOOP;
@@ -407,7 +452,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   let veil: HTMLCanvasElement | null = null;
   const pacer = kitViewPacer(); let paceLoad = '';   // (… · the render scale and tier the pacer last saw: the quality ladder's hand on the load)
   let samCone: { inner: number; outer: number; vol: number } | null = null;   // Sam's weapon light as the game has it (the staging dims it; his light beat puts it back)
-  const lamps: { porch: RtLight | null; fill: RtLight | null } = { porch: null, fill: null }; let fixture: Box | null = null, sky: { zenith: Vec3; horizon: Vec3 } | null = null;
+  const lamps: { porch: RtLight | null; fill: RtLight | null } = { porch: null, fill: null }; let dayOut: string[] = []; let fixture: Box | null = null, sky: { zenith: Vec3; horizon: Vec3 } | null = null;
   let frameAsk: { cx: number; cy: number; h: number; w: number; man: number; door?: number; left?: number; right?: number; keep?: number } | null = null;
   let look: Vec3 = [0, 1, 0], yaw = 0, pitch = KIT_VIEW_STAGE.pitch, dist = 11;
   let doorway: V2[] = [];   // the door's two jambs: kept inside the window with the five places (the door and its lamp are part of the picture)
@@ -475,7 +520,6 @@ export function kitViewStart(d: KitViewDeps): KitView {
     }
   };
   const ops = () => d.team().filter(g => g.state !== 'dead');
-  const others = () => [...game.guards, ...game.civilians].filter(g => g.team !== 'operative');
   /** the men as they stand, for `__kitview.men` */
   const men = (order: Guard[]): KitViewMan[] => {
     const p = game.player, row = (name: string, c: { pos: Vec3; bodyYaw: number }, gun: string, shield: boolean, light: boolean, slot: number): KitViewMan => ({ name, x: +c.pos[0].toFixed(2), z: +c.pos[2].toFixed(2), yaw: Math.round(c.bodyYaw / R), gun, shield, light, slot });
@@ -565,13 +609,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
   };
 
   /** everybody who is not the team, far off, dark and held (as `__stage` parks) — and CALM: what is in the air is numbered and behind him (guards.ts
-   *  hearingCheck's own rule), his state, awareness and fix as a man who heard nothing (a beat's bang carries 80 m) — and THE DEVICES INERT (kitViewInert) */
-  const park = () => {
-    kitViewInert(game);   // (…and the level's own cameras and tripwires report nothing: no call to control, no man sent, no alarm)
-    for (const e of game.events) if (e.id === undefined) e.id = ++game.eventSeq;
-    others().forEach((g, k) => { g.char.pos = [-40 - k * 3, 0, -40]; g.flashlight.enabled = false; g.hold = true; g.pinned = true;
-      g.heardUpTo = game.eventSeq; g.awareness = 0; g.lastKnown = null; if (g.state !== 'dead') g.state = 'patrol'; });
-  };
+   *  hearingCheck's own rule), his state, awareness and fix as a man who heard nothing (a beat's bang carries 80 m), DEAF to what the step itself makes —
+   *  and THE DEVICES INERT (kitViewInert): kitViewPark, above */
+  const park = (staging = false) => { const r = kitViewPark(game); if (!staging) { V.roused.men += r.men; V.roused.alarms += r.alarms; } };   // (`staging`: place()'s own — the men as the mission or a restart stood them up are nobody roused)
   const none = () => { V.men = []; staged = null; state = 'none'; dz.work.length = 0; veilOff(); post('none'); };
   /** `expect` = the team's size a `kit` message asked for: a team the game did not make that size is not the picture of those tiles · `head` = the
    *  teammate whose card is open (the loop's actor): stood FIRST at the door (ahead of a shield man), since the man on the jamb is the man who works the
@@ -580,7 +620,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  one who had run from a grenade, was staged there again and never came home; `home` off: where he stood, as it was) */
   const stage = (expect?: number, head?: Guard | null, keep?: Keep | null) => { try { place(expect, head, keep); if (kitViewLoop && staged) live(staged); } catch (err) { console.error('kitview: the team could not be staged —', err); none(); } };
   const place = (expect?: number, head?: Guard | null, keep?: Keep | null) => {
-    state = 'staging'; staged = null;
+    state = 'staging'; staged = null; dayOut = [];
     const SW = stagedWay(); if (!SW.active) { V.door = null; plan = null; none(); return; }   // (no scenario started: nothing here is the mission's way in)
     const way = SW.way, KV = game.level.scenarios?.kitView, Y: KitViewWay | undefined = KV?.ways?.[way], team = ops();
     const P = Y ? planFor(Y, KV) : null, A = P?.anchor, door = A && A.door !== null ? game.doors.byName(A.door) ?? null : null;
@@ -592,6 +632,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // 3 m deep — dimmed by the square of that, as a lamp brought nearer is brighter). A way on a SET keeps the set's own lamps lit (`roomLights` 1 unless written)
     const T = KIT_VIEW_LIGHT, O = Y.light ?? {};
     const porch: KitViewLight['porch'] = { ...T.porch, ...(O.porch ?? {}), offset: P.lamps.porch.offset, aim: P.lamps.porch.aim };
+    porch.intensity = kitPlanPorchLit(porch.intensity, porch.day, P.indoors, d.lampsOut());   // (BY DAY the lamp is out with the level's own outside lamps, unless the way writes `light.porch.day`; the glowing box hangs only on a lit lamp, below)
     if (P.lamps.porch.fixture && T.porch.fixture) porch.fixture = { ...T.porch.fixture, ...(O.porch?.fixture ?? {}), at: P.lamps.porch.fixture.at }; else delete porch.fixture;
     const fill: KitViewLamp = { ...T.fill, ...(O.fill ?? {}), offset: P.lamps.fill.offset, aim: P.lamps.fill.aim };
     if (O.fill?.intensity === undefined && P.src['fill.offset'] === 'derived') { const k = (P.lamps.fill.offset[1] - P.wall.face) / KIT_PLAN.fillOut; if (k < 0.999) fill.intensity *= Math.max(0, k) * Math.max(0, k); }
@@ -599,8 +640,14 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const kept = ['exterior', 'player', 'flashlights', 'transient', 'weather', 'kitview', ...P.keepLights];   // (…and the yard's own lamps under the open sky, whatever their group is called: the plan's `keepLights`)
     const own = (l: RtLight) => l.ttl < 0 && l.kind !== 2 && !kept.includes(l.group);   // a light of the building's own rooms
     game.fogOfWar.on = false; game.fogOfWar.viewer = false; game.fogOfWar.reset(); fogUp = false;
-    park();
+    park(true);
     if (lightK.roomLights <= 0) for (const grp of new Set(engine.lights.lights.filter(own).map(l => l.group))) game.setGroup(grp, false);   // (the game's own switch, before the posing step: the lamps and their glowing fixtures go out together)
+    // (BY DAY THE WAY'S OWN LAMPS ARE OUT TOO — its set's lights, its `add.lamps`, less its `dayLights`: kitPlanDayOut. Their groups are in `kept`, and the
+    //  game's photocell opens only the level's `exterior` fixtures: a set's gate lamp burned at noon with its box glowing. Each lamp's OWN switch — by id,
+    //  never its group's: an added lamp may share one with the level's lamps —, the switch the photocell itself opens: the lamp and its fixture's glow go
+    //  out together. Every restage: the encounter's restart puts the level's switches back as authored. Never seen on a GPU)
+    dayOut = kitPlanDayOut(kitPlanOwnLamps(KV, Y), (P.set !== null ? KV?.sets?.[P.set]?.boxes : d.file()?.boxes) ?? [], Y.dayLights, P.indoors, d.lampsOut());   // (the boxes a lamp may stand under: the set's own, or the level's as built — a lamp under a ceiling is a room's and burns)
+    if (dayOut.length) for (const t of game.targets) if (t.kind === 'analytic' && dayOut.includes(t.name)) t.on = false;
     // the slots: a shield man first, then the others as staged
     const file = [...team.filter(g => d.shield(g)), ...team.filter(g => !d.shield(g))], all0 = d.team();
     const keptMen = keep ? keep.perm.map(i => all0[i]).filter(g => g && team.includes(g)) : [];   // (the file as it stood, by team index: a restart makes new men)
@@ -1258,7 +1305,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // drew it: a WebGPU canvas reads back empty after it), the work is done under it on the next frame — every man put back where he stood, the file's order
   // kept — `settle` frames are drawn, and the copy fades out over `dissolveMs`. The camera is pinned, so the picture dissolves onto itself: only what
   // changed is seen changing. The director runs on underneath (a thing asked for begins under it). No copy to be had: the work is done as it stands
-  const dissolve = (work: () => void) => { if (!kitViewLoop || !said || state === 'none') { work(); return; } dz.work.push(work); if (dz.phase !== 'work') dz.phase = 'ask'; };
+  const dissolve = (work: () => void) => { if (!kitViewLoop || !said || state === 'none') { work(); return; } dz.work.push(work); if (dz.phase !== 'work') dz.phase = 'ask'; };   // (a frame that finds it still asked for — asked outside the director's own frame: a card's change — holds a pick under 'mend': before())
 
   /** everything a staging needs before the world is let go: Sam cannot be killed and his belt refills (a sandbox row's flags: this instance files nothing),
    *  no autosave is built, the turn weight set and Sam's yaws governed, each sent to his slot from where he stands, the pools as the cards have them */
@@ -1333,8 +1380,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const B: Beat = { n: beatN + 1, field: f, i: who, t: 0, phase: 'act', marks: [], row: BEATS[f][man ? 'mate' : 'sam']!, man, char: c, home: H.p, yaw: H.yaw, t0: game.time, pt: game.time, markT: NaN, base: 0, post: null, spot: null,
       prelude: false, lit: false, thrown: false, given: false, hand: '', item: null, old: new WeakSet(game.items.items as unknown as object[]), rest: null, peak: 0, flash: 0, drift: 0,
       ch: man ? chan(c.aimYaw) : samCh, legs: [], leg: 0, legT: NaN, quiet: false, turn: false, pitch: null, rose: false, hTo: 1.1, moved: [], loose: false, fire: null, shots: 0, shotT: NaN, via: null };
-    if (S.hole && B.row === wallRow) { dirty = 'world'; asked = f; return; }   // (the wall charge's own tile at a wall already open: the wall stood again under the dissolve first, then its whole row)
-    if (S.hole && shot && holeShots >= K.holeBursts) { dirty = 'world'; asked = f; return; }   // (bursts through a wall left open are not mended live — mend(): after `holeBursts` of them the room is staged again under the dissolve, the wall standing, then this row)
+    if (S.hole && B.row === wallRow) { dirty = 'world'; reask(f); hold('mend'); return; }   // (the wall charge's own tile at a wall already open: the wall stood again under the dissolve first, then its whole row)
+    if (S.hole && shot && holeShots >= K.holeBursts) { dirty = 'world'; reask(f); hold('mend'); return; }   // (bursts through a wall left open are not mended live — mend(): after `holeBursts` of them the room is staged again under the dissolve, the wall standing, then this row)
     if (B.row.opening && walled(S)) { const no = shutWall.get(S.plan);   // (this way's wall would not open on its span: remembered — the gun's row and why, and no charge is spent on it again)
       if (no !== undefined) { V.refused = `${f}: ${no}`; if (!man) game.puppet = null; begin(S, 'weapon'); return; }
       B.row = wallRow; B.prelude = true; B.marks.push('prelude'); }   // (a blank wall, still whole, and a row that needs an opening: the wall charge first — refused, the gun's row and why)
@@ -1342,6 +1389,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     let why: string | null; try { why = B.row.leaf && !S.door ? 'no leaf at this way in' : B.row.start(B, S); } catch (err) { why = String(err); }
     if (why !== null) { V.refused = `${f}: ${why}`; if (!man) game.puppet = null; if (f !== 'weapon') { begin(S, 'weapon'); return; } restUntil = game.time + 1; return; }   // (refused: the gun's beat instead — never a dead cursor — and why is kept for a check)
     beatN++; beat = B; if (f !== 'weapon' || (B.row !== gunRow && B.row !== gunDoor)) V.refused = null;
+    if (held && held.n === beatN) held.s = game.time - askT;   // (the row a pick waited for is up: the word's clock runs from the hearing to this)
   };
   /** between and under the beats: the leaf pulled to when no row has it open, Sam walked the half step home, a door order nobody's beat owns taken down */
   let stuckD = Infinity, stuckT = 0;
@@ -1400,6 +1448,15 @@ export function kitViewStart(d: KitViewDeps): KitView {
     for (const g of S.order) { const W = walk.get(g); if (W && !W.lane && offHome(S, g) > K.homeM && (W.pace < K.swapPace || W.at > game.time)) { W.pace = K.swapPace; W.at = Math.min(W.at, game.time); W.sent = null; } }   // (a row of Sam's is waiting: every man on his way home walks NOW and at the switch's pace, whoever dealt him the walk — a row's natural end staggers them at `pace`)
     if (game.time - homeT >= K.homeSecs) { homeT = NaN; dissolve(() => seat()); }
     return true; };
+  /** `__kitview.held`: a PICK (`asked`) that this frame did not begin, and which rule kept it — said by the director where it turns back, read by a check.
+   *  `askT`: the game's clock as the pick was heard (heard(): every place a pick is taken — a word left by a pick that never began is dropped there, so
+   *  a later pick begun at once is never excused by it; reask(): the row's own second asking, the wall stood again first — a pick's: the same pick, its clock kept; the loop's own turn: from here) */
+  let held: { n: number; field: string; i: number; why: string[]; by: Record<string, number>; s: number; frames: number } | null = null, askT = 0;
+  const heard = (f: string) => { asked = f; askT = game.time; if (held && held.n === beatN + 1) held = null; };
+  let picking = false;   // (direct(): the row being begun is a pick's — `asked` is already taken off)
+  const reask = (f: string) => { if (!picking) askT = game.time; asked = f; };
+  const hold = (...whys: string[]) => { if (asked === null || !whys.length) return; if (!held || held.n !== beatN + 1 || held.field !== asked || held.i !== who) held = { n: beatN + 1, field: asked, i: who, why: [], by: {}, s: 0, frames: 0 };
+    for (const why of whys) { if (!held.why.includes(why)) held.why.push(why); held.by[why] = (held.by[why] ?? 0) + 1; } held.frames++; held.s = game.time - askT; };
   /** the director's own hand, each live frame: a pick's cut, the beat's tick, the tidying, and what begins */
   const direct = (S: Staged) => {
     if (cutNow) { cutNow = false; if (beat) cut(S); }
@@ -1409,12 +1466,12 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (beat || !said) return;
     const now = asked !== null && (V.preempt || game.time >= restUntil);
     if (!now && game.time < restUntil) return;
-    if (dirty) { undo(S); return; }   // (the next frame, under the copy: the leaf hung / the room staged — and the row begins)
-    if (arriving(S) || homing(S)) return;
+    if (dirty) { hold('mend'); undo(S); return; }   // (the next frame, under the copy: the leaf hung / the room staged — and the row begins)
+    if (arriving(S)) { hold('arrive'); return; } if (homing(S)) { hold('home'); return; }
     const f = now ? asked! : nextThing();
-    if (waits(S, f)) return;   // (`asked` is kept: the pick plays when it can)
+    if (waits(S, f)) { hold(...(game.puppet || flat(game.player.char.pos, S.sam) > K.onSlot ? ['sam'] : []), ...(isAjar(S) ? ['leaf'] : [])); return; }   // (`asked` is kept: the pick plays when it can)
     waitT = NaN; if (now) asked = null; else if (hi === null) flip++;
-    begin(S, f);
+    picking = now; begin(S, f);
   };
   /** the aim put out: the actor's aim point on his channel's yaw (a teammate's watch, Sam's scripted aim), the beam's own line, Sam's channel kept on his gun between his beats */
   const aims = (S: Staged) => {
@@ -1488,7 +1545,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
       (x.man.route as { weapon?: string }).weapon = x.id; if (x.shield) d.giveShield(x.man); }
     if (samCardDue && !(beat && !beat.man) && asked !== 'swap') samCard();   // (a swap asked for puts it on him itself, his hands empty; a swap never begun — another pick took its place — leaves it owed here)
     if (beat) beat.t = game.time - beat.t0;
-    if (dz.phase !== 'ask') {
+    if (dz.phase === 'ask') hold('mend');   // (a dissolve asked for between two frames — a card's change that restages: the director does not run under it, and the pick it brought waits for the room)
+    else {
       if (game.player.down || S.order.some(g => g.state === 'dead') || stagedWay().ended) { if (beat) finish(beat, 'down'); if (!dz.work.length) dissolve(() => restage()); }   // (a man down, a 'mission' ended: nothing the picture shows — staged again)
       else direct(S);
     }
@@ -1525,13 +1583,13 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (game.time < ventKill && !(B && B.field === 'smoke')) shutCans();   // (a smoke cut short: its can vents nothing, whenever its fuse runs out)
   };
 
-  const V: KitView & { readonly lamps: { porch: RtLight | null; fill: RtLight | null }; readonly pin: FollowCamera['pin'] } = {
+  const V: KitView & { readonly lamps: { porch: RtLight | null; fill: RtLight | null }; readonly pin: FollowCamera['pin']; /** for the page check (tools/qa/kitview-levels.cjs HOUR): the way's own lamps put out for the hour, by id · the porch lamp's glowing box is among the world's statics */ readonly dayOut: string[]; readonly fixtureUp: boolean } = {
     get state() { return kitViewLoop && paused && said && state !== 'none' ? 'paused' : state; }, drawn: 0, skipped: 0, blocked: 0, men: [], door: null, way: 0,
-    get beat() { return beat ? { n: beat.n, field: beat.field, i: beat.i, t: beat.t, phase: beat.phase, marks: beat.marks, post: beat.post ?? null } : null; }, get queue() { return asked !== null ? [asked] : []; }, restarts: 0, rehangs: 0, cuts: 0, preempt: true, home: true, standClear: true, seats: 0, pins: 0, last: null, refused: null, hits: { sam: 0, team: 0 }, shots: 0, stroke: { n: 0, raw: 0, drawn: 0, cap: 0 },
+    get beat() { return beat ? { n: beat.n, field: beat.field, i: beat.i, t: beat.t, phase: beat.phase, marks: beat.marks, post: beat.post ?? null } : null; }, get queue() { return asked !== null ? [asked] : []; }, get held() { return held ? { ...held, why: held.why.slice(), by: { ...held.by } } : null; }, restarts: 0, rehangs: 0, cuts: 0, preempt: true, home: true, standClear: true, seats: 0, pins: 0, roused: { men: 0, alarms: 0 }, last: null, refused: null, hits: { sam: 0, team: 0 }, shots: 0, stroke: { n: 0, raw: 0, drawn: 0, cap: 0 },
     get dissolve() { return { n: dz.n, phase: dz.phase, cuts: dz.cuts }; },
     get settled() { const S = staged; return !!S && !beat && !game.puppet && dz.phase === '' && !isAjar(S) && S.order.every(g => flat(g.char.pos, homeOf(S, g).p) <= (V.home ? K.homeM : K.onSlot + 0.1)) && flat(game.player.char.pos, S.sam) <= K.onSlot + 0.1; },
     get pace() { return { hz: pacer.hz, every: pacer.every, base: pacer.base, slow: pacer.slow }; }, pacer: kitViewPacer,
-    get lamps() { return lamps; }, get pin() { return cam.pin; },
+    get lamps() { return lamps; }, get pin() { return cam.pin; }, get dayOut() { return dayOut; }, get fixtureUp() { return !!fixture && engine.world.statics.includes(fixture); },
     get plan() { const S = staged; return plan && state !== 'none' ? { ...plan, reachIn: S ? S.reachIn : 0, hole: !!S?.hole, sunk: sunkN } : null; },
     get scan() { const S = staged, row = (name: string, k: object, c: { aimYaw: number }, rest: number) => { const s = scans.get(k); return { name, on: !!s?.on, deg: s ? s.v / R : 0, off: wrap(c.aimYaw - rest) / R }; }; return S ? [row('Sam', game.player, game.player.char, yawTo(game.player.char.pos, S.foot)), ...S.order.map(g => row(g.callsign, g, g.char, homeOf(S, g).yaw))] : []; },
     rest() {
@@ -1546,7 +1604,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const snap = () => JSON.parse(JSON.stringify(d.kit())) as Record<string, unknown>[];
   cards = snap();
   /** a thing asked for NOW (calls 1: a pick cuts whatever is running and its demo starts from where he stands) */
-  const pick = (f: string | null) => { asked = f ?? 'weapon'; waitT = NaN; if (f === null) flip = 1; if (beat && V.preempt) cutNow = true; };   // (no tile: the gun now, the light after it — and the wait is this pick's own: one left running by a pick a card switch replaced had it expired already)
+  const pick = (f: string | null) => { heard(f ?? 'weapon'); waitT = NaN; if (f === null) flip = 1; if (beat && V.preempt) cutNow = true; };   // (no tile: the gun now, the light after it — and the wait is this pick's own: one left running by a pick a card switch replaced had it expired already)
 
   // the parent's messages: the same origin, and from the window that holds this frame (this window itself when the page is opened alone: a check's)
   window.addEventListener('message', e => {
@@ -1575,7 +1633,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
           else if (f === 'suit' || f === 'trim') { const t = d.tints(x.i), v = f === 'suit' ? t.suit ?? issued.suit.get(x.i) : t.trim ?? issued.trim.get(x.i); if (!v) { hard = true; break; }
             if (f === 'suit') g.char.tint = [...v] as Vec3; else g.char.tint2 = [...v] as Vec3; if (x.i === who && play === null) play = 'turn'; }
           else { hard = true; break; } }   // (a shield off, the goggles: no live path in the game)
-        if (hard) { if (beat && staged) cut(staged); if (play !== null) asked = play === 'swap' ? 'weapon' : play; dissolve(() => restage()); return; }
+        if (hard) { if (beat && staged) cut(staged); if (play !== null) heard(play === 'swap' ? 'weapon' : play); dissolve(() => restage()); return; }
         pools(beat?.field);
         if (play !== null) pick(play);   // (a tile just changed on the open card: its thing, now)
       } catch (err) { console.error('kitview: the kit message could not be staged —', err); none(); }
