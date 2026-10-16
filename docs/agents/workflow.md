@@ -55,4 +55,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/publish-public.sh`, and the one-file page generators (`tools/artifact-page.py`, `tools/page-artifact.ts`,
   `tools/sounds-artifact.ts`). They stayed in the old private repo with the history up to 2026-10-16; a pointer to one of them in
   a comment or a bullet is a pointer there.
-- **Playable build** = a one-file page made from `dist/` and published by the lead. Its generators are not in this repo.
+- **Playable build, one file** = `bun run build:one` (`tools/build-one.ts` → `dist/one/twopointsix.html`, about 12.5 MB at 10-16): the game page
+  and everything it asks for at run time in ONE self-contained HTML — `index.html` as it is with its module tag replaced by the module
+  itself (no chunks) and THE PACK, one inert `<script data-pack="<path>">` block of base64 per file (gzipped but for the pictures): the
+  animation library with its `.bin`, both casts, the mission pictures and their list, every level file under `levels/`, and `qa/commit`
+  (left out of a build of uncommitted changes). The game is not told how it is packed: `src/host/onefile.ts` (a classic script the build
+  puts in front of the module; nothing imports it) answers `fetch` and `<img>.src` of a packed path from its block, and takes over a
+  page load of the page's OWN address with another query that the page starts (a mission picked, Deploy, a restart, a showcase link —
+  the Navigation API): the query goes into the history entry's state on the address the page was first served from (a new entry where
+  the load would have made one, so Back still works; Back / Forward between the page's own entries reload as the entry), the page
+  reloads, and the script writes the query back with `history.replaceState` before the game reads `location.search` — so the page plays
+  where its address cannot carry flags (a frame another page owns) and where address + query is not served. NOT taken over: the
+  browser's own reload button and a link opened in a new tab (they ask for address + query, fine wherever that is served). The Team &
+  kit picture's second instance of the page (`ui/kitView.ts`' iframe) gets its query in the frame's `name`; opened from DISK that
+  picture stays the standing man (the two pages post by `location.origin`, which a file: page's windows do not match). The page carries
+  `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 hands its file over as a download), and
+  `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the workbench, the replay viewer, the
+  sounds and music pages, `public/assets/replays`. CHECK: `bun run build:one && node tools/qa/onefile-page.cjs` (a server that knows
+  one address and 404s the same address with a query; `ONEFILE_BREAK=1` = the boot script taken out, must FAIL) — the pack (the `.bin`
+  by digest), the Play page, the picture frame's flags, Team & kit → Deploy into the mission's flags, a reload, Back, Forward, two
+  loads at once, back to the title, nothing else asked of the server. No adapter there. On the software adapter (10-16, once, by
+  hand): the file booted to `__ready` on the title and into a level-file mission with no page error and no request but its one
+  address; its picture has never been seen on a GPU. A NEW FILE THE GAME PAGE FETCHES at run time has to be added to the pack in
+  `tools/build-one.ts`, or the one-file page asks the network for it. How the file is published as a page is not in this repo.

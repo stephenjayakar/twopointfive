@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "bun run tools/serve.ts",
     "build": "bun run tools/build.ts",
+    "build:one": "bun run tools/build-one.ts",
     "typecheck": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json",
     "typecheck:qa": "node vendor/typescript/bin/tsc --noEmit -p tools/qa/tsconfig.json",
     "map:export": "bun run tools/levels/export.ts",
