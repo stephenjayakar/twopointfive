@@ -67,8 +67,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   reloads, and the script writes the query back with `history.replaceState` before the game reads `location.search` — so the page plays
   where its address cannot carry flags (a frame another page owns) and where address + query is not served. NOT taken over: the
   browser's own reload button and a link opened in a new tab (they ask for address + query, fine wherever that is served). The Team &
-  kit picture's second instance of the page (`ui/kitView.ts`' iframe) gets its query in the frame's `name`; opened from DISK that
-  picture stays the standing man (the two pages post by `location.origin`, which a file: page's windows do not match). The page carries
+  kit picture's second instance of the page (`ui/kitView.ts`' iframe) gets its query in the frame's `name`; opened from DISK the
+  page and that picture do post to each other (measured in Chromium without a WebGPU adapter: `tools/qa/kitview-disk.cjs`; the picture
+  itself up on a page from disk is NOT SEEN — the software adapter had not booted the second instance from disk in 150 s; never on a
+  GPU). The page carries
   `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 hands its file over as a download), and
   `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the workbench, the replay viewer, the
   sounds and music pages, `public/assets/replays`. CHECK: `bun run build:one && node tools/qa/onefile-page.cjs` (a server that knows

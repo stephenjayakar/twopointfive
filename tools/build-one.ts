@@ -1,6 +1,8 @@
 // THE ONE-FILE BUILD: the game page and everything it asks for at run time, packed into ONE self-contained HTML file — dist/one/twopointsix.html. Put it
 // on any host that serves a single page, hand it to someone, or open it from disk in a WebGPU browser: there is no folder beside it and no server behind
-// it. (From disk the Team & kit picture stays the standing man: a file: page and its second instance cannot post to each other — ui/kitView.ts.)
+// it. (Opened from disk the page and its Team & kit picture do post to each other — measured in Chromium without a WebGPU adapter,
+// tools/qa/kitview-disk.cjs; the picture itself up on a page from disk has not been seen: the software adapter had not booted the second instance from
+// disk in 150 s, and never on a GPU.)
 //   bun run build:one [out.html]
 // What goes in: index.html as it is; the game's module, bundled with no chunks (shaders are text in it already); src/host/onefile.ts, the
 // small boot script that answers the page's own requests from the pack (how: its header); and THE PACK, one inert block per file —

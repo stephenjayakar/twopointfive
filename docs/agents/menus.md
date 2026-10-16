@@ -454,7 +454,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   33, the relay's quiet row as two 27 of 27 with the first form of this). MEASURED on the one-file build opened from disk, no WebGPU adapter, two
   runs each: before, the page heard nothing and took the frame down at 10.07 s; now it hears the picture's `none` at 0.75 s and the picture hears
   its two `frame` messages. NOT SEEN: the picture itself up on a page from disk (the software adapter had not booted it in 150 s; no GPU here),
-  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there).
+  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there). THE CHECK:
+  `bun run build:one && node tools/qa/kitview-disk.cjs` (the built file opened from disk, no adapter, no server: 6 of 6, two runs; `KITDISK_BREAK=1`
+  = a target of '*' put back to `location.origin`, must exit 1: 4 FAIL, the frame down at 10.08 s).
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +
