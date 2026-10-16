@@ -81,7 +81,7 @@
 // safe, the locker and the lamps are this file's own boxes in the kit's paint. Units: metres. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
-import type { LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
@@ -421,7 +421,39 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the west gate from the track (the first start's side), the west yard's
   // lamp and the generator shed over the wall behind the pair.
-  return { level, scenarios: { quiet: QUIET, kitView: { ways: [{ door: 'gate_w', ref: [1.8, 16.6], side: -1 }] } }, groups: trace.groups, surfaces };
+  // FOR THE PICTURE ONLY (`add`: the mission never loads these): the yard's west lamp lights the near side of the gate and the strip behind the wall was black,
+  // and what makes this a relay (the mast, the dishes) is under the tiles. So the picture gets a work bulb on a pole against the wall and A SPARE SECTION OF
+  // THE MAST stood on a block plinth up the wall from it: the mast's own legs, rungs, panels, dish and red light (`grp('mast')` above), 3.4 m of it. (A
+  // dish alone on a cradle read as a blank white board on the page still: this format's dish is a square plate.) The camera sees the tops of things there,
+  // not the floor. THE BULB STANDS 1.5 m UP THE WALL FROM THE GATE, NOT BY IT: at 0.25 m from the jamb its light falls through a blown gate on Sam's place
+  // (what the AI senses is what the picture shows); from here every line to a place of the pair meets the wall. (The page check's no-alarm row is red on
+  // this gate's charge and wall rows WITH AND WITHOUT these pieces, at build 78cc3abb: not this block's.) THE PLINTH IS 0.64 m TALL because
+  // tools/qa/lived-check.ts walks an added box whose centre is within 0.3 m of the floor as a place a man goes. Never seen on a GPU.
+  const KX = 4.85, KZ = 10.45, kvMast: NonNullable<NonNullable<KitViewData['ways'][number]['add']>['boxes']> = [
+    { id: 'kv_mast_plinth', group: 'kv.mast', c: [KX, 0.32, KZ], h: [0.28, 0.32, 0.28], material: 'block' },
+    ...([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sz], k) => ({ id: `kv_mast_leg${k}`, group: 'kv.mast', c: [KX + sx * 0.18, 2.02, KZ + sz * 0.18] as Vec3, h: [0.025, 1.38, 0.025] as Vec3, material: 'galv' })),
+    ...[1.1, 1.75, 2.4, 3.05].flatMap((y, k) => [
+      { id: `kv_mast_rung${k}n`, group: 'kv.mast', c: [KX, y, KZ - 0.18] as Vec3, h: [0.18, 0.018, 0.018] as Vec3, material: 'galv' },
+      { id: `kv_mast_rung${k}s`, group: 'kv.mast', c: [KX, y, KZ + 0.18] as Vec3, h: [0.18, 0.018, 0.018] as Vec3, material: 'galv' },
+      { id: `kv_mast_rung${k}w`, group: 'kv.mast', c: [KX - 0.18, y, KZ] as Vec3, h: [0.018, 0.018, 0.18] as Vec3, material: 'galv' },
+      { id: `kv_mast_rung${k}e`, group: 'kv.mast', c: [KX + 0.18, y, KZ] as Vec3, h: [0.018, 0.018, 0.18] as Vec3, material: 'galv' }]),
+    { id: 'kv_mast_panel_e', group: 'kv.mast', c: [KX + 0.29, 2.95, KZ], h: [0.05, 0.36, 0.13], material: 'plasticWhite' },
+    { id: 'kv_mast_panel_w', group: 'kv.mast', c: [KX - 0.29, 2.5, KZ], h: [0.05, 0.36, 0.13], material: 'plasticWhite' },
+    { id: 'kv_mast_dish', group: 'kv.mast', c: [KX, 1.75, KZ + 0.26], h: [0.26, 0.26, 0.04], material: 'tin' },
+    { id: 'kv_mast_horn', group: 'kv.mast', c: [KX, 1.75, KZ + 0.42], h: [0.025, 0.025, 0.12], material: 'plasticBlack' },
+    { id: 'kv_mast_light', group: 'kv.mast', c: [KX, 3.44, KZ], h: [0.04, 0.04, 0.04], material: 'plasticBlack', emissive: [6, 0.5, 0.3], flags: ['NoShadow' as const] },
+  ];
+  const kitAdd: NonNullable<KitViewData['ways'][number]['add']> = {
+    boxes: [
+      { id: 'kv_pole', group: 'kv.lamp', c: [4.2, 1.2, 11.8], h: [0.035, 1.2, 0.035], material: 'galv' },
+      { id: 'kv_arm', group: 'kv.lamp', c: [4.47, 2.38, 11.8], h: [0.3, 0.025, 0.025], material: 'galv' },
+      { id: 'kv_fix', group: 'kv.lamp', c: [4.75, 2.3, 11.8], h: [0.06, 0.06, 0.06], material: 'plasticWhite', emissive: [40, 24, 7], flags: ['NoShadow'] },
+      ...kvMast,
+    ],
+    lamps: [{ id: 'kv_bulb', kind: 'point', pos: [4.75, 2.2, 11.8], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 13, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
+  };
+  const kitView: KitViewData = { ways: [{ door: 'gate_w', ref: [1.8, 16.6], side: -1, add: kitAdd }] };
+  return { level, scenarios: { quiet: QUIET, kitView }, groups: trace.groups, surfaces };
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------

@@ -352,7 +352,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `scenarios.kitView` alone). A quiet mission shows `ways[0]` with ITS OWN MEN (Sam alone, or Sam and his partner, in the sneaking suit, on a set too), not
   the standing man; each way writes `ref`, since a quiet mission deals its start. ON A DOOR OF THE LEVEL: bazaar `gate_s`, police-post `gate_n`, the counting
   house (vault) its own `front` door (porch lamp and bike in `hide`, `keepLights ['count']` so the room behind is lit), crossing `gate_s` (pallet and tyres
-  in `hide`), quiet-relay `gate_w`, quiet-yard `gate_w` (one block, both yard rows). Vault and crossing hide by generated box id (their groups hold the whole
+  in `hide`), quiet-relay `gate_w`, quiet-yard `gate_w` (one block, both yard rows). CROSSING AND QUIET-RELAY ADD PIECES FOR THE PICTURE ONLY (`add`, the
+  first on a page): each a work bulb on a pole against the wall behind the gate (point, range 7; crossing 14 past the HESCO column, the relay 13 and 1.5 m up
+  the wall from the gate so no line from it to the pair's places passes the gate) and one thing of the level's own, stood over 1 m because the camera sees
+  tops there, not floor: the crossing a spare boom laid along the HESCO column, banded red (2 m of arm: at 2.9 its end ran under the cards); the relay
+  a spare section of the mast on a block plinth, 3.4 m of its own lattice with two panels, a small dish and the red light (a dish alone, this format's
+  square plate, read as a blank white board on the still). Vault and crossing hide by generated box id (their groups hold the whole
   yard): a change of box order in those generators means reading the ids again. ON A SET: lights-out `shed` (door `lo_gate`: a lean-to on the yard wall with
   the generator, the breaker, the fuel, one work bulb). THE SHELL: `tools/levels/train-ground-kitview.ts yardGateShell(prefix)` is the shared walled yard's
   (`train-ground.ts`) west wall, gate and ground as a set's `ref` / `doors` / `boxes`, its numbers COPIED from the yard as exported (a change to the yard is
@@ -363,8 +368,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   twelve files on both stands (`KITPLAN_BREAK=1` exit 1); kitview-levels `KIND=quiet` on the real page (software adapter) exit 0 on each of the eight rows,
   19 of 19 for a lone Sam (bazaar, police-post, vault, quiet-yard) and 24 of 24 for a pair (crossing, quiet-relay, lights-out, quiet-yard);
   `KITLEVELS_BREAK=1` on a lone Sam (bazaar) exit 1. For a lone Sam `walls` plays the gun's row (nobody to take it), and `cams` does where there is no wall
-  inside to stick one to (police-post, the set). NEVER SEEN ON A GPU; the stills are the software adapter's. KNOWN WEAK: crossing and quiet-relay (what makes
-  them those places is under the tiles and the wedge behind the wall is dark: only `exterior` lamps stay lit, and no light was tuned blind). NOBODY HAS:
+  inside to stick one to (police-post, the set). NEVER SEEN ON A GPU; the stills are the software adapter's. CROSSING AND QUIET-RELAY (the `add` step, on build
+  78cc3abb): kitview-plan 178 PASS on the twelve files on both stands; crossing's page check 27 of 27 with its pieces; QUIET-RELAY'S IS RED, 24 of 27, WITH AND
+  WITHOUT ITS PIECES (run three ways): the charge row and the wall row raise the floor with no device reporting, and the no-alarm row falls with them — the
+  picture's own fault at that gate, not these pieces'. The bulbs' numbers were set from two software-adapter stills each (the crossing's at 30 over a HESCO
+  cell burned its top white: moved and cut to 14; the relay's cut from 18 to 13); no light can be judged there. A reviewer ranked the first round's stills
+  (crossing fine, the relay acceptable for its dish); the second round's, with the mast section and the shorter boom, only their author has looked at. `tools/qa/lived-check.ts` walks an added box whose centre is within 0.3 m
+  of the floor as a place a man goes (it exempts `sets`, not `add`): the relay's mast section stands on a taller plinth for that. NOBODY HAS:
   watched a quiet row's tiles play, seen the counting house's picture on a GPU with `cam_yard` live over its door, run the lessons' rows on the page since
   the seam was merged (before it: 19 of 19, train-silent 23 of 23), or played the 40 mm tile (not among the rows the page check plays).
   SIX ITEMS AFTER THE MERGE (10-16; `host/kitView.ts`, `host/kitViewPlan.ts`, `host/kitViewSet.ts`, `scene/levelData.ts`, the three checks; no switch, no
