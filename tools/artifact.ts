@@ -18,16 +18,30 @@ import { $ } from "bun";
 
 const OUT = "dist/twopointsix.html";              // a whole document — open it from disk, mail it, drop it on any host
 const FRAG = "dist/twopointsix.fragment.html";    // the same page as bare content, for hosts that supply their own <head>/<body>
-const RIG = "public/assets/ual/AnimationLibrary_Godot_Standard";
+
+// What the page asks for by URL, served from memory. Keys are the path tail the shim matches, so they keep their directory
+// (two levels can share a basename with an asset; `levels/office.json` must not answer for `assets/…/office.json`).
+// The rig and the casts are what boot needs (anim/gltf.ts: the mannequin's skeleton and clips, then the look's cast — cast-gwot
+// by default, cast under ?look=plain); levels/ is what the mission list fetches when a card names a file. Menu stills and
+// replays are left out on purpose: under the tps-one-page marker the game never asks for them.
+const PACKED: [key: string, file: string, type: string][] = [
+  ["assets/ual/AnimationLibrary_Godot_Standard.gltf", "public/assets/ual/AnimationLibrary_Godot_Standard.gltf", "application/json"],
+  ["assets/ual/AnimationLibrary_Godot_Standard.bin", "public/assets/ual/AnimationLibrary_Godot_Standard.bin", "application/octet-stream"],
+  ["assets/chars/cast-gwot.gltf", "public/assets/chars/cast-gwot.gltf", "application/json"],
+  ["assets/chars/cast.gltf", "public/assets/chars/cast.gltf", "application/json"],
+  ...[...new Bun.Glob("*.json").scanSync("levels")].sort().map(f => [`levels/${f}`, `levels/${f}`, "application/json"] as [string, string, string]),
+];
 
 await $`bun run tools/build.ts`.quiet();
 
 const b64 = (u8: Uint8Array) => Buffer.from(u8).toString("base64");
 const pack = (bytes: Uint8Array) => b64(Bun.gzipSync(bytes, { level: 9 }));
 
-// The rig's JSON is pretty-printed on disk; re-stringifying drops ~800 KB before it is ever deflated.
-const gltf = new TextEncoder().encode(JSON.stringify(await Bun.file(`${RIG}.gltf`).json()));
-const bin = new Uint8Array(await Bun.file(`${RIG}.bin`).arrayBuffer());
+// JSON is re-stringified before deflating: the rig is pretty-printed on disk, and that alone is ~800 KB.
+const enc = new TextEncoder();
+const bytesOf = async (file: string, type: string) =>
+  type === "application/json" ? enc.encode(JSON.stringify(await Bun.file(file).json())) : new Uint8Array(await Bun.file(file).arrayBuffer());
+const packTable = (await Promise.all(PACKED.map(async ([key, file, type]) => `    ${JSON.stringify(key)}: [${JSON.stringify(type)}, ${JSON.stringify(pack(await bytesOf(file, type)))}],`))).join("\n");
 
 const html = await Bun.file("dist/index.html").text();
 const tag = html.match(/<script type="module"[^>]*src="\.?\/?([^"]+)"[^>]*><\/script>/);
@@ -42,15 +56,11 @@ const boot = `
   const unb64 = (s) => { const raw = atob(s), u8 = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) u8[i] = raw.charCodeAt(i); return u8; };
   const gunzip = (u8) => new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer();
   const PACK = {
-    'AnimationLibrary_Godot_Standard.gltf': ['application/json', ${JSON.stringify(pack(gltf))}],
-    'AnimationLibrary_Godot_Standard.bin': ['application/octet-stream', ${JSON.stringify(pack(bin))}],
+${packTable}
   };
-  // One decode for the page; every fetch of a packed name awaits it and gets its own copy of the bytes.
-  const ready = (async () => {
-    const m = new Map();
-    for (const k of Object.keys(PACK)) m.set(k, { type: PACK[k][0], buf: await gunzip(unb64(PACK[k][1])), });
-    return m;
-  })();
+  // Decoded on first ask, once: boot needs the rig and one cast, and the 50-odd level files only when a card is opened.
+  const decoded = new Map();
+  const bytes = (k) => { let p = decoded.get(k); if (!p) { p = gunzip(unb64(PACK[k][1])); decoded.set(k, p); } return p; };
   // Every fetch is answered from memory: the packed assets with their bytes, anything else with a synthetic
   // failure. Enumerating the dev-server probes (/qa/commit, the shot server) would work until the next one is
   // added, and the promise this page makes — one document, no second request — is not the sort that should
@@ -60,7 +70,7 @@ const boot = `
   window.fetch = async (input, init) => {
     const url = typeof input === 'string' ? input : (input && input.url) || String(input);
     const path = url.split(/[?#]/)[0];
-    for (const [name, a] of await ready) if (path.endsWith(name)) return new Response(a.buf.slice(0), { status: 200, headers: { 'content-type': a.type } });
+    for (const name of Object.keys(PACK)) if (path === name || path.endsWith('/' + name)) return new Response((await bytes(name)).slice(0), { status: 200, headers: { 'content-type': PACK[name][0] } });
     if (!blocked.has(path)) { blocked.add(path); console.warn('[twopointsix] offline build: no request leaves this page —', url); }
     return new Response(null, { status: 504, statusText: 'offline build' });
   };
@@ -102,7 +112,7 @@ const style = `
 // Function replacers, not string ones: the minified bundle contains `$&`, and as a replacement
 // string that re-inserts the very <script src=...> tag we are trying to remove.
 const page = html
-  .replace("</head>", () => `${style}\n</head>`)
+  .replace("</head>", () => `<meta name="tps-one-page" content="1">\n${style}\n</head>`)
   .replace(tag[0], () => `<script>\n${boot}\n</script>\n<script type="module">\n${js}\n</script>`);
 
 if (page.includes(tag[1])) throw new Error(`output still references ${tag[1]} — it would fetch a second file`);
@@ -112,7 +122,7 @@ if (page.includes(tag[1])) throw new Error(`output still references ${tag[1]} �
 // are both valid in body flow, so the page behaves identically.
 const head = page.slice(page.indexOf("<head>") + 6, page.indexOf("</head>"));
 const body = page.slice(page.indexOf("<body>") + 6, page.indexOf("</body>"));
-const fragment = head.replace(/^[ \t]*<(meta|title)\b[^>]*>(?:[^<]*<\/title>)?[ \t]*\n?/gim, "").trim() + "\n" + body.trim() + "\n";
+const fragment = head.replace(/^[ \t]*<(?:meta(?![^>]*tps-one-page)|title)\b[^>]*>(?:[^<]*<\/title>)?[ \t]*\n?/gim, "").trim() + "\n" + body.trim() + "\n";
 
 await Bun.write(OUT, page);
 await Bun.write(FRAG, fragment);
