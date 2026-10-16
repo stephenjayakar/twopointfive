@@ -76,7 +76,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   if it were not there (gwotSkin.ts `bare`), so a look file with the switch off is the old look file too; the exporter refuses a kept thing that names a lived box (fixtures, the
   breaker, beacons) and a lived thing standing IN the dressing; the level editor, its lint and its swing deal load the whole file (`lived: true`), as the probes that hold a file against
   its generator do. QA: `bun run tools/qa/lived-check.ts [level … | path.json] [--sheet] [--base <rev>|none]` (none named = every level that carries a lived thing): the file without its
-  lived things is `513e70b`'s key for key and loads to the same Level; with them every authored point (starts, marks, pods, waypoints, deals) keeps its floor, every mark's aim line
+  lived things is the base's (`BASE_REVS` in the tool) key for key and loads to the same Level; with them every authored point (starts, marks, pods, waypoints, deals) keeps its floor, every mark's aim line
   stays open, nothing solid within 1.1 m of a door's line, no floor cut off from the spawn, no walk between authored points more than 30 % + 1.5 m longer; `--sheet` = what each room got.
 
 <!-- was CLAUDE.md lines 2303–2306 -->
