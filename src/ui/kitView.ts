@@ -92,7 +92,8 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const ways = new Map<string, boolean[] | null>();   // per level file: the ways with a picture (null: asked, not yet answered)
   const failed = new Set<string>();                   // the queries whose instance had nothing to stage, or never came up: the standing man for this page's life
   const narrow = () => { try { return window.matchMedia('(max-width: 720px)').matches; } catch { return false; } };
-  const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, location.origin); } catch { /* */ } };
+  const postTo = () => (location.origin === 'null' ? '*' : location.origin);   // (a page opened from disk: its origin is the word 'null', no target for a message — host/kitView.ts kitViewPostTo)
+  const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, postTo()); } catch { /* */ } };
   const kitNow = (squad: number) => JSON.stringify({ members: KIT.members, squad });
   /** the kit and the size, when they are not what the instance last had */
   const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: KIT.members, squad: squadNow }); };

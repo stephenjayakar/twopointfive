@@ -436,6 +436,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   solo night was 20 of 22 on its tree — the parked men heard the `server` door's charge — which is THE LEVEL'S OWN MEN RAISE NO ALARM above (parked
   men deaf, not parked further: any one spot is in earshot of some door). TAKEN, NOT BUILT: a door authored open as an anchor; lamps off by default
   from `plan.indoors`; a hidden wall's look paint staying up; a worked-out place on a laser tripwire. Never seen on a GPU.
+  A PAGE OPENED FROM DISK (10-16; `host/kitView.ts kitViewPostTo`, one line of `ui/kitView.ts`; no switch): the picture and its page post to each
+  other by `location.origin`; on a `file:` address that is the word 'null', which postMessage refuses as a target, so nothing was said either way
+  and the picture was dropped after its full wait. The target is now anywhere on such a page and the page's own origin everywhere else; each
+  listener still holds a message to the very window it must come from and to the same origin word. BY READING ONLY: nothing here builds a page
+  that opens from disk, so it has not been run from one; on a served page nothing changes.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +

@@ -351,9 +351,13 @@ export function kitViewSlots(door: { hinge: V2; closedDir: number; width: number
   return { slots, blocked, s, n, mid };
 }
 
+/** where a kit picture's messages are posted: this page's own origin — and, for a page opened from disk (a `file:` address: its origin is the word
+ *  'null', which postMessage refuses as a target), anywhere. The listener on either side still holds a message to the very window it must come from
+ *  (`e.source`) and to this same origin word, so nothing else is let in */
+export const kitViewPostTo = (): string => (location.origin === 'null' ? '*' : location.origin);
 /** this page has died (main.ts: fatalOnce — the frame loop threw and stopped, an uncaught error — the GPU device lost, a boot that failed): the parent is
  *  told there is no picture. Safe before kitViewStart and more than once (`none` again is nothing new to the parent) */
-export function kitViewFatal() { try { if (dead) dead(); else if (window.parent !== window) window.parent.postMessage({ kv: 'none' }, location.origin); } catch { /* */ } }
+export function kitViewFatal() { try { if (dead) dead(); else if (window.parent !== window) window.parent.postMessage({ kv: 'none' }, kitViewPostTo()); } catch { /* */ } }
 let dead: (() => void) | null = null;
 
 /** Stand the view up (main.ts, once, after the scenario from the URL has staged and the loop's context exists). */
@@ -395,7 +399,7 @@ export function kitViewPark(game: { tune: { devices: boolean; lasers: boolean };
 
 export function kitViewStart(d: KitViewDeps): KitView {
   const { game, engine, cam, input, view, loop } = d, K = KIT_VIEW_LOOP;
-  const post = (kv: string) => { try { if (window.parent !== window) window.parent.postMessage({ kv }, location.origin); } catch { /* */ } };
+  const post = (kv: string) => { try { if (window.parent !== window) window.parent.postMessage({ kv }, kitViewPostTo()); } catch { /* */ } };
   const warmN = (() => { const n = Number(new URLSearchParams(location.search).get('kitview')); return n >= 1 ? Math.floor(n) : KIT_VIEW_STAGE.warm; })();   // (?kitview=N: the warm window, for a check on a slow adapter)
   let state: Exclude<KitView['state'], 'paused'> = 'staging', left = 0, first = true, said = false;
   /** a staging as the loop needs it: the door, the face the team is on and the leaf's angle shut, its foot, a point by [along the wall toward the stack, out
