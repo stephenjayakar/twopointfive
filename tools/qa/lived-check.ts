@@ -2,8 +2,8 @@
 // LIVED-IN ROOMS' CHECK (src/scene/lived.ts) — `bun run tools/qa/lived-check.ts [levels/x.json | x …] [--sheet] [--base <rev> | --base none] [--quiet]`
 // The furniture that makes a room its own place is REAL (it blocks feet, rounds and sight), so it can break a level the way paint cannot. Per level file:
 //   1. OFF IS THE LEVEL AS IT WAS: the file with its lived things taken out (boxes in group 'lived' / 'lived.<room>', props / lights / switchables whose id
-//      starts 'lived.') equals the file at <rev> key for key, and loads to the same Level with the switch off (default rev 513e70b = the branch before any
-//      level carried one; `--base none` once that rev no longer speaks for the level; a level that rev does not have is not asked);
+//      starts 'lived.') equals the file at <rev> key for key, and loads to the same Level with the switch off (default rev = BASE_REVS below, the last
+//      step that changed a level's own part on purpose; `--base none` once that rev no longer speaks for the level; a level that rev does not have is not asked);
 //   2. EVERY AUTHORED POINT STILL STANDS: each floor point the level's scenarios, routes, plans, mission, chokepoints, civilians and marks name (team starts,
 //      defenders' marks, pods, waypoints, deals, lesson spots) is free in the nav grid if it was, and no lived solid or prop is within a body's width of it;
 //   3. NOBODY'S AIM IS WALLED: a mark's `pos` → `aimAt` line that was open is still open;
@@ -20,10 +20,11 @@ import { resolve, basename } from 'node:path';
 import { spawnSync } from 'node:child_process';
 const ROOT = resolve(import.meta.dir, '../..');
 // The base = the last step that changed a level's own part (everything but its lived things) ON PURPOSE: newest first, and the one this checkout's HEAD descends
-// from is taken (newest: the records office's Team & kit door picture, scenarios.kitView — the LAST picture to take one: the block is exempt below; before it the police post's terminal on the bunk room's footlocker; before it the floodlit shed's roof flagged to be seen through from above; before it real-size doors, then the look levels' floor decals re-layered, then every level's floor laid in tiers, then a door hung outward or a window for every room a wedge could shut) — so the check holds on a branch from before a step and on the join after it.
+// from is taken, else the newest (the one entry now: the commit that brought the work to this repo, where every level stood as the bases before it had left it. Those
+// older bases are commits of the history before the move and are not in a clone of this repo, so they are no longer listed; the last of them was the records office's Team & kit door picture, scenarios.kitView — the LAST picture to take one: the block is exempt below; before it the police post's terminal on the bunk room's footlocker; before it the floodlit shed's roof flagged to be seen through from above; before it real-size doors, then the look levels' floor decals re-layered, then every level's floor laid in tiers, then a door hung outward or a window for every room a wedge could shut) — so the check holds on a branch from before a step and on the join after it.
 // A base may itself carry lived things: its lived things are taken out like today's, and what is held is everything else.
-const BASE_REVS = ['3752969bf', '8fdcc43d7', '8fbe2fca1', '121868252', '016d1a3c7', '1f138c4a8', 'ac740f679', '3231def5e', '586b69e4c', 'b62a298ad', '194d42cb9', '30d6c3d94', '49b4f580c', '084194df9', '48c8fccee', '57f892625', '61ce07b97', '1996590eb', '85052b0b3', '9543837b8', '25a59d028', '36cf72996', '30e1c0502', '2f9103b10', '74ebbfe05', 'ed796e936', '5abaa1667', '823b10196', 'bd0e706f9', 'd0a938389', '61f4bbe04', '0814d62ed', 'bc1fe6bb8', 'd77c82bd4', '40155632e', '4702f2ec4', '055a048dd', '933dd54c6', '8cc269743', '7f8243595', '9887174c9', 'cdb8929ef', 'da7f379a2', '1131c9d17', '430c07294', '3b12996eb', '8da40811e', 'ea1e971f7', '667e9cec1', '2d17a9b0b', 'bd0b44b5c', '0132b76e3'];
-const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[BASE_REVS.length - 1];
+const BASE_REVS = ['b6c0aff16'];
+const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
 /** roomclear.ts propGap, repeated (this tool imports nothing of src/game): the floor distance from a point to a prop's yawed footprint */
 function propGap(p: { home: [number, number, number]; hx: number; hz: number }, at: number[]): number {
   const dx = at[0] - p.home[0], dz = at[2] - p.home[1], c = Math.cos(p.home[2]), s = Math.sin(p.home[2]);
