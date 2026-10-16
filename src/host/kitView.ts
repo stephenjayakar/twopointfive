@@ -351,9 +351,17 @@ export function kitViewSlots(door: { hinge: V2; closedDir: number; width: number
   return { slots, blocked, s, n, mid };
 }
 
+/** a page opened from disk (a `file:` address). Its windows have no origin to name: `location.origin` reads 'file://' (or the word 'null'), a message
+ *  posted to that target is dropped, and one that does arrive carries the origin 'null' */
+export const kitViewOnDisk = (): boolean => location.protocol === 'file:' || location.origin === 'null';
+/** where a kit picture's messages are posted: this page's own origin — anywhere on a page opened from disk. `kitViewFrom` is the listener's half */
+export const kitViewPostTo = (): string => (kitViewOnDisk() ? '*' : location.origin);
+/** a message's origin is this page's own — on a page opened from disk, the 'null' every window there has. Each listener ALSO holds a message to the
+ *  very window it must come from (`e.source`), which is what keeps anything else out on such a page */
+export const kitViewFrom = (origin: string): boolean => origin === location.origin || (kitViewOnDisk() && origin === 'null');
 /** this page has died (main.ts: fatalOnce — the frame loop threw and stopped, an uncaught error — the GPU device lost, a boot that failed): the parent is
  *  told there is no picture. Safe before kitViewStart and more than once (`none` again is nothing new to the parent) */
-export function kitViewFatal() { try { if (dead) dead(); else if (window.parent !== window) window.parent.postMessage({ kv: 'none' }, location.origin); } catch { /* */ } }
+export function kitViewFatal() { try { if (dead) dead(); else if (window.parent !== window) window.parent.postMessage({ kv: 'none' }, kitViewPostTo()); } catch { /* */ } }
 let dead: (() => void) | null = null;
 
 /** Stand the view up (main.ts, once, after the scenario from the URL has staged and the loop's context exists). */
@@ -395,7 +403,7 @@ export function kitViewPark(game: { tune: { devices: boolean; lasers: boolean };
 
 export function kitViewStart(d: KitViewDeps): KitView {
   const { game, engine, cam, input, view, loop } = d, K = KIT_VIEW_LOOP;
-  const post = (kv: string) => { try { if (window.parent !== window) window.parent.postMessage({ kv }, location.origin); } catch { /* */ } };
+  const post = (kv: string) => { try { if (window.parent !== window) window.parent.postMessage({ kv }, kitViewPostTo()); } catch { /* */ } };
   const warmN = (() => { const n = Number(new URLSearchParams(location.search).get('kitview')); return n >= 1 ? Math.floor(n) : KIT_VIEW_STAGE.warm; })();   // (?kitview=N: the warm window, for a check on a slow adapter)
   let state: Exclude<KitView['state'], 'paused'> = 'staging', left = 0, first = true, said = false;
   /** a staging as the loop needs it: the door, the face the team is on and the leaf's angle shut, its foot, a point by [along the wall toward the stack, out
@@ -1608,7 +1616,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
 
   // the parent's messages: the same origin, and from the window that holds this frame (this window itself when the page is opened alone: a check's)
   window.addEventListener('message', e => {
-    if (e.origin !== location.origin || e.source !== window.parent) return;
+    if (!kitViewFrom(e.origin) || e.source !== window.parent) return;
     const m = e.data as { kv?: unknown; members?: unknown; squad?: unknown; who?: unknown; field?: unknown; on?: unknown; cx?: unknown; cy?: unknown; h?: unknown; w?: unknown; man?: unknown; door?: unknown; left?: unknown; right?: unknown; keep?: unknown } | null; if (!m || typeof m !== 'object') return;
     if (m.kv === 'kit') {
       try {

@@ -446,6 +446,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   solo night was 20 of 22 on its tree — the parked men heard the `server` door's charge — which is THE LEVEL'S OWN MEN RAISE NO ALARM above (parked
   men deaf, not parked further: any one spot is in earshot of some door). TAKEN, NOT BUILT: a door authored open as an anchor; lamps off by default
   from `plan.indoors`; a hidden wall's look paint staying up; a worked-out place on a laser tripwire. Never seen on a GPU.
+  A PAGE OPENED FROM DISK (10-16; `host/kitView.ts kitViewOnDisk` / `kitViewPostTo` / `kitViewFrom`, their three lines again in `ui/kitView.ts`; no
+  switch): the picture and its page post to each other by `location.origin`. On a `file:` address Chromium reads that as 'file://', drops a message
+  posted to it (a console warning, no throw), and gives a message that does arrive the origin 'null' — so nothing was said either way and the
+  picture was dropped after its full wait. On such a page the target is now anywhere and a listener takes the origin 'null'; each listener still
+  holds a message to the very window it must come from (`e.source`). A served page is as it was (records 56 of 56, kitview-page's outer half 33 of
+  33, the relay's quiet row as two 27 of 27 with the first form of this). MEASURED on the one-file build opened from disk, no WebGPU adapter, two
+  runs each: before, the page heard nothing and took the frame down at 10.07 s; now it hears the picture's `none` at 0.75 s and the picture hears
+  its two `frame` messages. NOT SEEN: the picture itself up on a page from disk (the software adapter had not booted it in 150 s; no GPU here),
+  any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there).
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +

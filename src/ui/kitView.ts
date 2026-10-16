@@ -92,7 +92,10 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const ways = new Map<string, boolean[] | null>();   // per level file: the ways with a picture (null: asked, not yet answered)
   const failed = new Set<string>();                   // the queries whose instance had nothing to stage, or never came up: the standing man for this page's life
   const narrow = () => { try { return window.matchMedia('(max-width: 720px)').matches; } catch { return false; } };
-  const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, location.origin); } catch { /* */ } };
+  // a page opened from disk has no origin to name: a message goes anywhere and arrives as 'null' (host/kitView.ts kitViewOnDisk, the child's half)
+  const onDisk = () => location.protocol === 'file:' || location.origin === 'null', postTo = () => (onDisk() ? '*' : location.origin);
+  const from = (origin: string) => origin === location.origin || (onDisk() && origin === 'null');
+  const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, postTo()); } catch { /* */ } };
   const kitNow = (squad: number) => JSON.stringify({ members: KIT.members, squad });
   /** the kit and the size, when they are not what the instance last had */
   const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: KIT.members, squad: squadNow }); };
@@ -121,7 +124,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   /** this query's instance is no picture: gone, and not tried again on this page */
   const fail = (k: string) => { if (!k || k !== key) return; failed.add(k); hide(); drop(); again(); };
   const onMsg = (e: MessageEvent) => {
-    if (!frame || e.origin !== location.origin || e.source !== frame.contentWindow) return;   // (this element's own window: a document on its way out with another element is nobody)
+    if (!frame || !from(e.origin) || e.source !== frame.contentWindow) return;   // (this element's own window: a document on its way out with another element is nobody)
     const kv = (e.data as { kv?: unknown } | null)?.kv;
     if (kv === 'none') { fail(key); return; }
     if (kv === 'boot') { up = true; sent = born; selSent = ''; pauseSent = false; place(); if (kitNow(squadNow) !== sent) kit(); says(); return; }   // (its listener is up — on every load of its page: the frame, the kit where the tiles moved since its query, the open card, the pause)
