@@ -39,12 +39,16 @@ const IK = 'Space';   // the game's interact key (src/game/consts.ts INTERACT_KE
 
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { startPicking, startKick, startTakedown, startGrab, RIFLE_EQUIP_SECS } = await import(`${ROOT}/src/game/player.ts`);
+const DESTR_X = process.env.SOAK_DESTR === '1' ? { W: (await import(`${ROOT}/src/game/wallbreak.ts`)).WALL_STATS, B: (await import(`${ROOT}/src/game/breakTable.ts`)).BREAK_STATS } : null;   // SOAK_DESTR=1: the walls' and the break table's counters beside the destruction smells
+const { startPicking, startKick, startTakedown, startGrab, RIFLE_EQUIP_SECS, playerBodyR } = await import(`${ROOT}/src/game/player.ts`);
+const { KITANIM, kitLockMax } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { runningVerb } = await import(`${ROOT}/src/game/interact.ts`);   // (which sustained verb is running: the selector invariants, and the door / grab stimuli that must not step on one)
-const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { HOLD, KIT } = await import(`${ROOT}/src/game/character.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
+const { GUNHOLD, gunHoldStats } = await import(`${ROOT}/src/game/gunhold.ts`);   // (the pistol in a hold: a man on the clean line at Sam's back fires once Sam has — the shield invariant below lets that round go)
 const { AIM_DEBUG } = await import(`${ROOT}/src/game/aim.ts`);   // (--trace also opens the aim model's log for its window)
 const { planClears, escalationOf, nearKnownBody, bodyPos, rollcallState, stillLooking, searchSummary, witnessSummary, LINE_DEBUG } = guardsMod;
+const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);   // (the wall hold's feel pass: the rifle stack and its step-out, for the wall invariants)
 /** the un-stick's QA counters + the stranded-cell test (guards.ts UNSTICK / strandedAt) — absent on a tree from before it: the smells read 0 and the invariant works the stranded test itself */
 const UNSTICK: { legs: number; snaps: number; lastSnapT: number; lastSnapWho: any } = guardsMod.UNSTICK ?? { legs: 0, snaps: 0, lastSnapT: -1, lastSnapWho: null };
 const strandedAt: ((g: any, x: number, z: number) => boolean) | null = guardsMod.strandedAt ?? null;
@@ -53,9 +57,12 @@ const Dlg = await import(`${ROOT}/src/game/dialogue.ts`);
 const { Clearing } = await import(`${ROOT}/src/game/squad.ts`);
 const { Doors } = await import(`${ROOT}/src/game/doors.ts`);
 const { PLAYER_ID, DRIVE_SECS } = await import(`${ROOT}/src/game/consts.ts`);
-const { KNIFE_TAG, SC20K_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { KNIFE_TAG, SC20K_TAG, M4_BOXES } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { GEAR } = await import(`${ROOT}/src/game/gear.ts`);   // (which rifle is drawn: the 2010s carbine is three boxes more)
 const { fireRing, staggerLines, RING } = await import(`${ROOT}/src/game/launcher.ts`);   // (lane R5: the ring airfoil — a stimulus fires one at a man's hips through the API, the stagger lines are their own smell)
-const { LAUNCHER } = await import(`${ROOT}/src/game/weapons.ts`);
+const { LAUNCHER, LAUNCHER40 } = await import(`${ROOT}/src/game/weapons.ts`);
+const { HE40, fireShell } = await import(`${ROOT}/src/game/he40.ts`);
+const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);   // (a blast's fold is longer than a ring's: the stagger bound below)
 const { SUPPRESSION, suppressionLines } = await import(`${ROOT}/src/game/suppression.ts`);
 const { tracerFx } = await import(`${ROOT}/src/game/effects.ts`);
 const { DECAL_CAP, DECAL_LIST_CAP } = await import(`${ROOT}/src/render/decals.ts`);
@@ -68,6 +75,9 @@ let tacMod: any = null; try { tacMod = await import(`${ROOT}/src/game/tactics.ts
 const tacticsRoleOf = (g: any, gd: any): string | null => tacMod ? tacMod.tacticsRoleOf(g, gd) : null;
 const TACTICS_STATS: Record<string, number> = tacMod?.TACTICS_STATS ?? {};   // (Sam's low whistle, V: its knobs, the module's counters, each man's memory of it, its lines — a smell of their own)
 const WHISTLE_POOL: Set<string> = new Set(whistleLines());
+/** the night's opening (game/opening.ts) — absent on a tree from before it, off on the frozen stand (TPS_OPENING=1 or the shipped profile turns it on): a man whose
+ *  first waypoint is on top of the way in is then put down his own beat, on a restart too, and the restore check below expects him there */
+let openMod: any = null; try { openMod = await import(`${ROOT}/src/game/opening.ts`); } catch { openMod = null; }
 /** the needs-driven patrol variation (game/needs.ts) — absent on a tree from before it: no trip ever reads, the counters 0, the invariants below hold vacuously */
 let needsMod: any = null; try { needsMod = await import(`${ROOT}/src/game/needs.ts`); } catch { needsMod = null; }
 const needsTrip = (gd: any): any => needsMod ? needsMod.needsTrip(gd) : null;
@@ -80,8 +90,10 @@ let CIV_POOL: Set<string> = new Set(); try { const D = await import(`${ROOT}/src
 /** the debrief's chronicle caps (game/chronicle.ts) — absent on a tree from before it: the leak invariant then has nothing to hold */
 const chronMod = await import(`${ROOT}/src/game/chronicle.ts`).catch(() => null); const CHRON_MAX = chronMod?.MAX_EVENTS ?? Infinity, CHRON_PATH = chronMod?.PATH_CAP ?? Infinity;
 const WEAPON_TRACER: Set<string> = new Set(Object.values(WEAPONS as Record<string, any>).filter(d => d.tracer).map(d => d.id));   // rows whose rounds may trace (the carbine and its data-only cousins)
-const SUP_POOL: Set<string> = new Set([...suppressionLines(), 'he\'s got us pinned!']); const SUP_RECOVER: Set<string> = new Set(suppressionLines('recover'));   // (lane R3: the suppression barks, counted as a smell; the hard man's 'that all you've got?' is the one line said once it has drained)
+const SUP_POOL: Set<string> = new Set([...suppressionLines(), 'he\'s got us pinned!', 'they\'ve got us pinned!']); const SUP_RECOVER: Set<string> = new Set(suppressionLines('recover'));   // (lane R3: the suppression barks, counted as a smell; the hard man's 'that all you've got?' is the one line said once it has drained)
 const STAGGER_POOL: Set<string> = new Set(staggerLines());   // (lane R5: the yelp of a man a ring airfoil doubled over)
+/** wounds (game/wounds.ts): --wounds on|off */
+const woundMod = await import(`${ROOT}/src/game/wounds.ts`);
 /** glass (E3: rounds star panes, panes never break) — absent on a tree from before it: the stimulus is not dealt and the invariant holds nothing */
 const glassMod2 = await import(`${ROOT}/src/game/glass.ts`).catch(() => null);
 /** checkpoints (game/savestate.ts, STATUS G5) — absent on a tree from before it: no autosave to watch, --checkpoint-at does nothing */
@@ -96,7 +108,7 @@ const argv = process.argv.slice(2);
 // Every flag the soak understands (name → takes a value). Anything else on the command line is refused up front with the list — a mistyped `--seed 5` used to
 // run the default three seeds for twenty minutes and report on a run nobody asked for (review T4.4).
 const FLAGS: Record<string, boolean> = { seeds: true, minutes: true, hz: true, quiet: false, json: true, logdir: true, 'grab-per-min': true, carbines: true, 'sup-per-min': true, 'rifle-per-min': true,
-  trace: true, aim: true, 'whistle-per-min': true, 'loud-at': true, 'doorway-kills-per-min': true, civilians: true, 'civ-rate': true, 'needs-rate': true, 'checkpoint-at': true, chaos: true, tactics: true , 'body-light': true};
+  trace: true, aim: true, 'whistle-per-min': true, 'loud-at': true, 'doorway-kills-per-min': true, civilians: true, 'civ-rate': true, 'needs-rate': true, 'checkpoint-at': true, chaos: true, tactics: true , 'body-light': true, wounds: true };
 { const bad: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
@@ -130,6 +142,7 @@ const CIV_RATE = Math.max(0, Number(arg('civ-rate', '1')) || 0);   // × the civ
 const NEEDS_RATE = arg('needs-rate', '1');   // the needs (needs.ts): × every man's fill rate for the run — '1' = as shipped (a first trip two to four minutes into a quiet stretch), '6' leans on it (a man over his line every minute or so; the send-for-a-need stimulus is dealt too), 'off' = tune.needs false (the A/B: the patrol as it was); the needs invariants below watch either way
 const CHECKPOINT_AT = Number(arg('checkpoint-at', '-1'));   // checkpoints (game/savestate.ts): −1 = nothing of it beyond the autosaves the game writes by itself (watched by the invariants); N = at that sim-minute the encounter is SAVED (forced) and LOADED back into the same game on the spot, thirty seconds on the same file is loaded a second time, and everything after is the loaded world under every invariant — plus the 'load-newest-checkpoint' stimulus (an autosave slot loaded mid-run now and then) is dealt
 const CHAOS_ARG = arg('chaos', '0.5');   // destruction (destruction.ts): tune.chaos for the run — the harness stands the game up at 0 (the game as it was), the SOAK runs the shipped default 0.5 unless told; 'K' 0‥1 (`--loud-at 1 --chaos 1` leans on it: the loud burst + the firefight it draws + the response team's carbines wreck the corridor and the cubicles); the destruction invariants below watch either way
+const WOUNDS_ARG = /^(on|1|true)$/.test(arg('wounds', String(process.env.TPS_WOUNDS ?? '') === '1' ? 'on' : 'off')) ? 'on' : 'off';   // wounds (src/game/wounds.ts WOUND.on): 'off' (as shipped: every round that finds a man kills him) | 'on' (where it lands decides: dead, or down wounded) — the wounded-man invariants below run either way
 const BODY_LIGHT_ARG = arg('body-light', 'on');   // bodies found by the light on them (guards.ts bodyLit, tune.bodyLight — review A6.2): 'on' (as shipped) | 'off' (range / cone / line alone, the old rule) — the same seed both ways is the A/B; the smells count bodies down vs FOUND either way
 const TACTICS_ARG = arg('tactics', 'on');   // pursuit tactics: 'on' (the default: tune.tactics as shipped) | 'off' (pinned off for the run — the A/B: the same seed with and without them)   // pursuit tactics (tactics.ts, the kill-zone doorway): the 'kill-in-doorway' stimulus's rate — a living man stood in a doorway and struck down there, as often as not under a colleague's eyes turned onto him first (`--doorway-kills-per-min 3` leans on the gate: stack, call, summon, slice / bang, cross; 0 = the schedule byte for byte as it was)   // Sam's low whistle (whistle.ts): the 'whistle' stimulus's rate — V pressed at random moments, mostly from a few metres behind a living man, now and then twice running (`--whistle-per-min 6` leans on it; 0 = no whistles and the schedule byte for byte as it was)
 const DT = 1 / HZ;
@@ -179,10 +192,13 @@ async function runSeed(seed: number): Promise<SeedReport> {
   const rngGame = mulberry32(seed * 7919 + 13);      // the game's own dice (reactT jitter, spread, ragdoll twist…)
   const rng = mulberry32(seed * 104729 + 71);       // the schedule's
   Math.random = rngGame;
+  if (process.env.SOAK_DESTR === '1') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = true;   // SOAK_DESTR=1: THE destruction switch as the page has it (walls and cover come apart, charges throw the furniture) — off, the soak as it always ran
+  if (process.env.SOAK_DESTR === '0') (await import(`${ROOT}/src/game/destructionSwitch.ts`)).DESTRUCTION.on = false;   // SOAK_DESTR=0: … and held OFF where the stand raised it (TPS_PROFILE=shipped): the page under ?nodestruction
   const W = await standUp();
   const { game, level, input } = W;
   if (CARBINES !== 'none') game.tune.carbineGuards = CARBINES;
   if (TACTICS_ARG === 'off') game.tune.tactics = false;   // (--tactics off: the chase as it was, for an A/B against the same seed)
+  woundMod.WOUND.on = WOUNDS_ARG === 'on';
   game.tune.bodyLight = BODY_LIGHT_ARG !== 'off';        // (--body-light off: bodies found in the dark as before, for the A/B against the same seed)
   if (NEEDS_RATE === 'off') game.tune.needs = false; else if (needsMod && Number(NEEDS_RATE) > 0) needsMod.NEEDS.rateK = Number(NEEDS_RATE);   // (--needs-rate: off / ×K)
   if (civMod && CIVILIANS_ARG === 'off') civMod.setCivilians(game, false);   // (--civilians off: nobody but the shift)
@@ -243,7 +259,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     barkLog.push({ t: game.time, who, text }); if (!inInterrogation) barkTexts[text] = (barkTexts[text] ?? 0) + 1;
     if (/[{}]/.test(text)) violate('unresolved-token', who, `${who} says "${text}" — a {token} left in (${inInterrogation ? 'interrogation' : 'bark'})`);
     fullLog.push(`${game.time.toFixed(2)}s f${frame}   ${radio ? 'RADIO' : 'SAY'} ${who} (${gd.script ? 'scripted' : gd.state}${gd.bodyDuty ? ' ' + gd.bodyDuty.role + ':' + gd.bodyDuty.stage : ''} @${f2(gd.char.pos[0])},${f2(gd.char.pos[2])}): ${text}`);   // (the per-seed log file gets every line said; the console timeline only the smells)
-    if (gd.state === 'dead') violate('dead-speaks', text, `${who} is dead but says "${text}"`);
+    if (gd.state === 'dead' && !gd.wound) violate('dead-speaks', text, `${who} is dead but says "${text}"`);
     const wasHeld = !!gd.held; const r = origSay(gd, text, radio);
     if (wasHeld && !inInterrogation && gd.bubble && gd.bubble.t === game.time && gd.bubble.text === text) violate('held-speaks', who, `${who} is held in Sam's arm but barked "${text}" (guards.ts say should drop everything but his answers)`);
     if (!inInterrogation && /sound off|radio check|not at his post|check on him|going round his route/.test(text)) { smells.rollcallLines = (smells.rollcallLines ?? 0) + 1; if (game.quietUtility) violate('rollcall-under-tour', who, `${who} says "${text}" while quietUtility is up (the net's radio check must not run under the tour)`); if (!game.aiEnabled) violate('rollcall-ai-off', who, `${who} says "${text}" with the AI off`); }   // (held speech may mention the radio check by design: only barks count as the net's own lines)
@@ -302,17 +318,17 @@ async function runSeed(seed: number): Promise<SeedReport> {
     const bad: string[] = [];
     if (game.guards.length !== level.routes.length || game.guards.some((x: any) => x.unit || x.script || x.held || x.hold || x.pinned)) bad.push(`guards ${game.guards.length}: ${game.guards.map((x: any) => `${x.callsign}${x.unit ? '+unit' : ''}${x.script ? '+script' : ''}${x.held ? '+held' : ''}${x.hold ? '+hold' : ''}`).join('/')}`);
     { const pl = game.player; if (pl.down || pl.holding || pl.dragging || pl.picking || pl.kick || pl.takedown || pl.coding || pl.easing || pl.pendingThrow) bad.push(`player down=${pl.down} holding=${!!pl.holding} drag=${!!pl.dragging} pick=${!!pl.picking} kick=${!!pl.kick}`); }
-    if (game.items.items.some((it: any) => !it.settled) || game.rings.length || game.clearing || game.qrf?.state !== 'idle') bad.push(`air: ${game.items.items.filter((it: any) => !it.settled).length} items, ${game.rings.length} rings, clearing ${!!game.clearing}, qrf ${game.qrf?.state}`);
+    if (game.items.items.some((it: any) => !it.settled) || game.rings.length || game.shells.length || game.clearing || game.qrf?.state !== 'idle') bad.push(`air: ${game.items.items.filter((it: any) => !it.settled).length} items, ${game.rings.length} rings, clearing ${!!game.clearing}, qrf ${game.qrf?.state}`);
     if (game.mission.stage === 'failed' || game.mission.driveT !== -1) bad.push(`mission ${game.mission.stage} driveT ${game.mission.driveT}`);
-    for (const gd of game.guards) { if (gd.state === 'dead' && (!gd.char.ragdoll || !gd.downKind)) bad.push(`${gd.callsign} dead without a ragdoll / downKind`); if (gd.state !== 'dead' && gd.char.ragdoll) bad.push(`${gd.callsign} alive on a ragdoll`); if (gd.leader && !game.guards.includes(gd.leader)) bad.push(`${gd.callsign} follows a stranger`); /* (a leader down but not yet KNOWN down keeps the role by design — guards.ts superviseLockdown) */ if (gd.bodyDuty && !game.guards.includes(gd.bodyDuty.body)) bad.push(`${gd.callsign} on duty over a stranger's body`); if (gd.dropped && !game.items.items.includes(gd.dropped)) bad.push(`${gd.callsign}'s dropped item is not in the list`); }
+    for (const gd of game.guards) { if (gd.state === 'dead' && ((!gd.char.ragdoll && !gd.wound) || !gd.downKind)) bad.push(`${gd.callsign} dead without a ragdoll / downKind`); if (gd.state !== 'dead' && gd.char.ragdoll) bad.push(`${gd.callsign} alive on a ragdoll`); if (gd.leader && !game.guards.includes(gd.leader)) bad.push(`${gd.callsign} follows a stranger`); /* (a leader down but not yet KNOWN down keeps the role by design — guards.ts superviseLockdown) */ if (gd.bodyDuty && !game.guards.includes(gd.bodyDuty.body)) bad.push(`${gd.callsign} on duty over a stranger's body`); if (gd.dropped && !game.items.items.includes(gd.dropped)) bad.push(`${gd.callsign}'s dropped item is not in the list`); }
     for (const gd of game.guards) heldCount.set(gd, gd.witness?.wasHeld ?? 0);   // (the loaded men carry the run's witness records: the harness's per-object grab count starts from what they remember)
     if (bad.length) violate('checkpoint-load', how, bad.slice(0, 5).join(' · '));
   };
   let wander: { until: number; keys: string[] } = { until: 0, keys: [] };
-  let holdF: { until: number; door: any; full: boolean } | null = null;   // a pick / an ease under way that the schedule means to stop early (partial) or see through (full): at `until` a Space tap breaks a partial one off if it is still running
+  let holdF: { until: number; door: any; full: boolean } | null = null as any;   // a pick / an ease under way that the schedule means to stop early (partial) or see through (full): at `until` a Space tap breaks a partial one off if it is still running
   let gunSpaceUntil = -1;   // 'space-on-dropped-gun': Space kept down over a dropped pistol until this game time (−1 = not held by that stimulus)
-  let cursorDoor: { until: number; door: any; verb?: string; pressed: boolean } | null = null;   // the cursor kept on this leaf until `until`; `verb`: tap that row of it once it is on offer (Game.selectVerb + a one-frame Space), else its top row
-  let visUntil = 0; let downSince = -1; let aiOffUntil = -1; let tour: { until: number; saved: any } | null = null; let godFlipAt = rr(60, 240);
+  let cursorDoor: { until: number; door: any; verb?: string; pressed: boolean } | null = null as any;   // the cursor kept on this leaf until `until`; `verb`: tap that row of it once it is on offer (Game.selectVerb + a one-frame Space), else its top row
+  let visUntil = 0; let downSince = -1; let aiOffUntil = -1; let tour: { until: number; saved: any } | null = null as any; let godFlipAt = rr(60, 240);
   let restartCheck: { source: string } | null = null; let missionRef = game.mission; let stageIdx = 0;
   const STAGE_ORDER: Record<string, number> = { infiltrate: 0, drive: 1, exfil: 2, done: 3, failed: 3 };
 
@@ -325,7 +341,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
   function checkRestored(source: string) {
     const bad: string[] = [];
     for (const d of doors.list) {
-      const a0 = Math.max(d.minA, Math.min(d.maxA, d.def.angle ?? 0));
+      const a0 = Math.max(d.minA, Math.min(d.maxA, d.sided(d.def.angle ?? 0)));
       if (Math.abs(d.angle - a0) > 1e-6) bad.push(`${d.def.name} angle ${d.angle.toFixed(3)}≠${a0}`);
       if (d.locked !== !!d.def.locked || d.lockBroken || d.pick !== 0 || d.noticed || d.picking) bad.push(`${d.def.name} lock state locked=${d.locked} broken=${d.lockBroken} pick=${d.pick}`);
       if (d.latched !== (Math.abs(a0) < 1e-3)) bad.push(`${d.def.name} latched=${d.latched}`);
@@ -334,7 +350,9 @@ async function runSeed(seed: number): Promise<SeedReport> {
     game.guards.forEach((gd: any, i: number) => {
       const r0 = level.routes[gd.routeI].points[0];
       if (gd.state !== 'patrol' || gd.script || gd.leader || gd.post || gd.task || gd.hold || gd.pinned || gd.held || gd.standoff || gd.awareness !== 0) bad.push(`guard ${i} state=${gd.state} script=${!!gd.script} leader=${!!gd.leader} post=${!!gd.post} held=${!!gd.held} standoff=${!!gd.standoff} aw=${gd.awareness}`);
-      if (v3.distXZ(gd.char.pos, r0) > 0.01 || gd.wp !== 0) bad.push(`guard ${i} not at route start (${p2(gd.char.pos)} vs ${p2(r0)}, wp ${gd.wp})`);
+      const show = game.quietUtility || (game.touring && !game.director?.handedOver);   // (opening.ts openingStart's own gate: an encounter made under a show's flag — the tour-blip — starts every man on his first waypoint)
+      const o = openMod?.OPENING.on && !show && !gd.unit && gd.team === 'guard' ? openMod.openingSpot(game, gd) : null, at0 = o ? o.pos : r0, wp0 = o ? o.wp : 0;   // (the opening, where the stand has it on: his spot down his beat and the waypoint he walks to)
+      if (v3.distXZ(gd.char.pos, at0) > 0.01 || gd.wp !== wp0) bad.push(`guard ${i} not at ${o ? 'his opening spot' : 'route start'} (${p2(gd.char.pos)} vs ${p2(at0)}, wp ${gd.wp} vs ${wp0})`);
     });
     for (const [t, on] of game.initialOn) if (t.on !== on) bad.push(`light ${t.name} on=${t.on}≠${on}`);
     if (game.targets.some((t: any) => t.broken || t.disabledUntil !== -1)) bad.push('a fixture still broken/disabled');
@@ -385,7 +403,9 @@ async function runSeed(seed: number): Promise<SeedReport> {
       const gd = pick(living()) as any; const p = nearGuardPoint(gd, 0.7, 0.95, false); if (!p) return 'no spot'; teleport(p, `behind ${routeName(gd)}`);
       if (rng() < 0.7 && gd.state !== 'alert') {
         if (rng() < 0.4 && !game.player.holding && !grabJob) { if (rng() < 0.5) { startGrab(game, gd); return 'grab via call (left to whatever ends it)'; } W.cursorAt(v3.add(gd.char.pos, [0, 1.35, 0])); input.pressed.add(IK); return 'grab via a Space tap (left to whatever ends it)'; }
-        if (rng() < 0.5) { startTakedown(game, gd); return 'takedown via call'; }
+        // (hands empty first, as the page has it: game.ts takes the takedown's click only while he is holstered, and the beat poses him with no long gun — called with the rifle up it
+        //  was a state no player reaches, and 'rifle-anim' said so for the length of the lunge. A rifle string under way ends with the sling: its clicks would be takedown clicks now)
+        if (rng() < 0.5) { const pl = game.player, slung = pl.rifleUp; if (rifleJob) { input.buttons &= ~5; rifleJob = null; } if (slung) pl.equipT = RIFLE_EQUIP_SECS; pl.holstered = true; startTakedown(game, gd); return `takedown via call${slung ? ', rifle slung first' : ''}`; }
         game.player.slot = 'pistol'; game.player.holstered = true; input.clicked |= 1; return 'takedown via click, holstered';
       } return null; } },
     { name: 'pick-door', perMin: 0.45, when: () => !game.player.down && !grabJob && !runningVerb(game) && lockedDoors().some((d: any) => d.latched), run: () => {   // (never on top of a running verb: the pick would replace it in the harness's hand, not the player's — the 'verb-overlap' invariant's own rule)
@@ -404,7 +424,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       game.player.crouch = false; const locked = doors.lockedOut(d, game.player.char.pos, game.player.keys); cursorDoor = { until: game.time + 1.0, door: d, verb: keyed ? 'unlock' : locked ? 'kick' : undefined, pressed: false }; return `${d.def.name} via its ${keyed ? "'unlock'" : locked ? "'kick'" : 'top'} row (lockedOut=${locked}${keyed ? ', KEYED' : ''})`;   // (an unlocked leaf: whatever its top row is — push it open / pull it shut)
     } },
     { name: 'door-fiddle', perMin: 0.5, mild: true, run: () => { const d = pick(doors.list) as any; const r = rng(); const from = randomFloorPoint();
-      if (r < 0.25) { doors.kickIn(d, from, PLAYER_ID); return `kickIn ${d.def.name}`; } if (r < 0.6) { doors.use(d, from, rng() < 0.5 ? PLAYER_ID : 10); return `use ${d.def.name}`; }
+      if (r < 0.25) { doors.kickIn(d, from, PLAYER_ID); return `kickIn ${d.def.name}`; } if (r < 0.6) { doors.use(d, from, rng() < 0.5 ? PLAYER_ID : 10); harnessDoorT.set(d, game.time); return `use ${d.def.name}`; }
       if (r < 0.8) { doors.pullTo(d, 10); return `pullTo ${d.def.name}`; } d.latched = false; d.vel = rr(-8, 8); d.lastWho = PLAYER_ID; harnessDoorT.set(d, game.time); return `fling ${d.def.name} ${d.vel.toFixed(1)}`; } },
     { name: 'blackout', perMin: 0.25, run: () => { if (game.blackout.active && rng() < 0.6) { game.endBlackout(); return 'end'; } const r = rng(); game.setBlackout(r < 0.2 ? Infinity : rr(5, 40), r < 0.2 ? 'shot' : r < 0.6 ? 'ocp' : 'debug'); return r < 0.2 ? 'permanent' : 'timed'; } },
     { name: 'restart', perMin: 0.18, when: () => game.time >= qrfHoldOff, run: () => { releaseKeys(); cursorDoor = null; game.restartEncounter(); teleportedThisFrame = true; game.godMode = rng() < 0.4; missionRef = game.mission; stageIdx = 0; checkRestored('restartEncounter()'); return `god=${game.godMode}`; } },
@@ -431,7 +451,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       return `${what} @ ${phase}`;
   }
   const interruptPhases: Record<string, number> = {};
-  let rackJob: { until: number; pressed: boolean } | null = null; const missionSeen: Record<string, number> = {};
+  let rackJob: { until: number; pressed: boolean } | null = null as any; const missionSeen: Record<string, number> = {};
   const moreStims: Stim[] = [
     { name: 'mission-step', perMin: 0.35, mild: true, when: () => !game.player.down && !game.quietUtility && !game.player.picking && !game.player.kick, run: () => {   // walk the mission thread a stage at a time through its real triggers
       const m = game.mission, M = level.mission;
@@ -520,7 +540,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     return `${routeName(gd)} (${near}), then ${end}`;
   } });
   /** the civilian in Sam's arm from the civ-grab stimulus: which end was dealt (comply / choke / questions only), when the next row is tapped, questions put so far */
-  let civGrabJob: { cv: any; end: string; nextAt: number; asked: number } | null = null;
+  let civGrabJob: { cv: any; end: string; nextAt: number; asked: number } | null = null as any;
   let grabJob: { gd: any; via: string; stage: 'grabbing' | 'talk' | 'walk' | 'firing' | 'ending' | 'keep'; t0: number; nextAt: number; presses: number; end: string; spaceUpAt: number; stopAt: number; swapSentAt: number; asked: number; variant: 'arm' | 'gun'; shotsLeft: number; fired: number; lastShotT: number; swapAt: number; swaps: number; pressed: boolean } | null = null;   // (stopAt: game time a second tap stops the choke / whip just chosen — the deal's 'abort'; pressed: the grabbing tap has been dealt)
   const grabEnds: Record<string, number> = {};
   /** ends that MUST put him on the floor (choke / whip, incl. the whip after a checked one) as dealt vs as they actually ended the hold — a dealt end that silently
@@ -561,7 +581,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     // off, and 12 s on the harness cried 'grab-stuck' at player.ts (review #10, about one hold in a few hundred). Our own E's stamp covers the tick it goes in
     // (the game has not seen it yet: H.swapT still reads the old value); H.swapT covers the rest of the window. The deal simply waits — nextAt stays due.
     const lockedOut = (J.swapSentAt >= 0 && t - J.swapSentAt < HOLD.secs.swap + 0.05) || H.swapT < HOLD.secs.swap;
-    const dealEnd = (kind: string) => { input.keys.add(IK); input.pressed.add(IK); J.dealtAt = t; J.noop = false; if (kind === 'choke' || kind === 'whip' || kind === 'whip-after-abort') holdEnds.dealt[kind] = (holdEnds.dealt[kind] ?? 0) + 1; };   // Space goes down for it (an end that must land is booked as dealt: holdEnds)
+    const dealEnd = (kind: string) => { input.keys.add(IK); input.pressed.add(IK); (J as any).dealtAt = t; (J as any).noop = false; if (kind === 'choke' || kind === 'whip' || kind === 'whip-after-abort') holdEnds.dealt[kind] = (holdEnds.dealt[kind] ?? 0) + 1; };   // Space goes down for it (an end that must land is booked as dealt: holdEnds)
     switch (J.stage) {
       case 'grabbing': if (H.phase === 'held') { J.stage = 'talk'; J.variant = H.variant; J.nextAt = Math.max(t + rr(0.3, 2), J.spaceUpAt + 0.1); if (rng() < 0.5) { input.mouseX = rr(200, 1400); input.mouseY = rr(150, 850); } } break;   // (a new cursor spot: the pair comes round to it; the first question waits for the grab's own Space to come up — a finger cannot tap a key it is holding)
       case 'talk':   // his top row tapped: the question in the arm; in the gun hold that row is the whip — chosen by the tap and un-chosen by another the next frame (nothing comes of it), which is what a player poking Space over the gun gets
@@ -634,7 +654,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     if (game.time >= J.until || pl.down || pl.holding || !pl.hasRifle) { input.buttons &= ~5; rifleJob = null; return; }
     const tgt = J.target(); if (!tgt) { input.buttons &= ~5; rifleJob = null; return; }
     W.cursorAt(tgt);
-    if (J.ring) { if (pl.rifleUp && pl.equipT <= 0 && pl.rifle.attachment !== 'ring' && pl.rifle.rings > 0) input.pressed.add('Digit2'); if (pl.rifle.attachment === 'ring' && frame % 20 === 0) { input.clicked |= 4; J.clicks++; } return; }   // (2 with it up: none → RING; a right click lets one go)
+    if (J.ring) { if (pl.rifleUp && pl.equipT <= 0 && pl.rifle.attachment !== 'ring' && pl.rifle.rings > 0) input.pressed.add('Digit2'); if (pl.rifle.attachment === 'ring' && frame % 20 === 0) { input.clicked |= 4; J.clicks++; } return; }   // (2 with it up flips the launcher back to RING; a right click lets one go)
     input.buttons = (input.buttons & ~5) | (J.auto ? 1 : 0);
     if (J.auto ? J.clicks === 0 : frame % 13 === 0) { input.clicked |= 1; J.clicks++; }
   }
@@ -651,6 +671,11 @@ async function runSeed(seed: number): Promise<SeedReport> {
       if (auto !== (pl.rifle.mode === 'auto')) input.pressed.add('KeyZ');
       game.godMode = true; rifleJob = { until: game.time + rr(0.8, 2.5), target: () => gd.state === 'dead' ? null : (gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.2, 0])), auto, ring: false, clicks: 0 };
       return `${auto ? 'AUTO' : 'SEMI'} at ${routeName(gd)} (${gd.script ? 'scripted' : gd.state}) ${v3.distXZ(gd.char.pos, pl.char.pos).toFixed(0)} m off, god on`; } });
+    moreStims.push({ name: 'he40', perMin: RIFLE_PER_MIN * 0.4, when: () => !rifleJob && !grabJob && !rackJob && !holdF && !cursorDoor && !game.player.down && !game.shells.length, run: () => {   // (gear: a 40 mm through the API at a spot on the floor — armed past HE40.armM, a dud nearer; the blast is frag.ts's and judges whoever stands there)
+      const pl = game.player, rf = pl.rifle; if (rf.shells <= 0) { rf.shells = LAUNCHER40.rounds; return 'refilled the 40 mm rounds — next time'; }
+      const p = randomFloorPoint(); const from = v3.add(pl.char.pos, [0, 1.3, 0]); const d = v3.distXZ(p, pl.char.pos);
+      game.godMode = true; fireShell(game, pl.char, from, [p[0], 0.05, p[2]]); rf.shells--;
+      return `API 40 mm at the floor ${d.toFixed(0)} m off, god on · rounds ${rf.shells}`; } });
     moreStims.push({ name: 'ring-guard', perMin: RIFLE_PER_MIN * 0.8, when: () => !rifleJob && !grabJob && !rackJob && !holdF && !cursorDoor && living().some((x: any) => !x.held) && rifleReady(), run: () => {
       const pl = game.player, rf = pl.rifle; const gd = pick(living().filter((x: any) => !x.held)) as any;
       if (rf.rings <= 0) { rf.rings = LAUNCHER.rings; ringBaseline = null; return `refilled the rings (they never come back on their own) — next time`; }   // (the sandbox refill; the rings-rose invariant re-baselines)
@@ -763,7 +788,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
   const supAstray = new Map<any, number>(), supDisplaces = new WeakMap<any, number>();   // suppression (lane R3): frames a man has carried head-down clocks he should not; shifts already counted per Guard object
   let leaderBad = 0, heldRole = 0; let exceptions = 0; let consecutiveExc = 0; let overdueFrames = 0;
   let ammoPl: any = null, ammoTotal = 0;   // the Player object whose rounds were counted last frame, and the count: within one life it may only fall (nothing on the floor tops him up — a dead man's 9 mm magazines do not fit the Five-seveN)
-  const INTERACT_KINDS = new Set(['light', 'door', 'body', 'guard', 'objective', 'held', 'breaker', 'cancel']);   // ('breaker': the mains panel by hand — player.ts buildInteractables; 'cancel': the selector's bottom row while the list is open)
+  const INTERACT_KINDS = new Set(['light', 'door', 'body', 'guard', 'objective', 'held', 'breaker', 'wall', 'cancel']);   // ('breaker': the mains panel by hand — player.ts buildInteractables; 'wall': a partition a charge can go on, wallcharge.ts samRows; 'cancel': the selector's bottom row while the list is open)
   const finiteChar = (c: any) => Number.isFinite(c.pos[0]) && Number.isFinite(c.pos[1]) && Number.isFinite(c.pos[2]) && Number.isFinite(c.bodyYaw) && Number.isFinite(c.aimYaw) && Number.isFinite(c.aimPitch) && Number.isFinite(c.vel[0]) && Number.isFinite(c.vel[2]);
 
   function invariants() {
@@ -778,7 +803,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
         for (const x of game.guards) { if (x.state === 'dead') continue; if (x.state === 'alert' || x.state === 'search') bad.push(`${routeName(x)} ${x.state}`); else if (x.awareness > saveMod2.CKPT.awareMax + 1e-9) bad.push(`${routeName(x)} aw ${x.awareness.toFixed(2)}`); if (x.script) bad.push(`${routeName(x)} scripted`); if (x.unit) bad.push('a unit'); }
         const busy = saveMod2.playerBusy(game); if (busy) bad.push(`Sam ${busy}`); if (game.player.down) bad.push('Sam down');
         if (game.qrf && game.qrf.state !== 'idle') bad.push(`qrf ${game.qrf.state}`); if (game.clearing) bad.push('clearing');
-        if (game.items.items.some((it: any) => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash') && !it.fired)) || game.rings.length) bad.push('a thing in the air / on its fuse');
+        if (game.items.items.some((it: any) => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash') && !it.fired)) || game.rings.length || game.shells.length) bad.push('a thing in the air / on its fuse');
         if (bad.length) violate('autosave-while-compromised', bad[0], `an autosave was written with: ${bad.join(' · ')}`);
       }
       if (S.stats.autosaves !== autoWritten) violate('autosave-count', 'stats', `stats.autosaves ${S.stats.autosaves} ≠ ${autoWritten} handed to onSaved`);
@@ -815,6 +840,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
         if (game.tune.chaos === 0 && Object.values(destrMod2.DESTR_STATS).some((v: any) => v !== 0)) violate('destr-chaos0', 'destruction', `the module counted something at chaos 0: ${JSON.stringify(destrMod2.DESTR_STATS)}`);
         if (game.touring && deb.moving > 0 && !(smells.destrTourMovers)) { smells.destrTourMovers = 1; violate('destr-under-tour', 'destruction', `${deb.moving} chunks moving under the tour (chaosOf must be 0 while touring)`); }
         smells.destrStats = { ...destrMod2.DESTR_STATS }; smells.debrisStats = { ...deb.stats };
+        if (DESTR_X) { smells.wallStats = { ...DESTR_X.W }; smells.breakStats = { ...DESTR_X.B }; }   // (module counters: they run on from seed to seed)
       }
     }
     if (game.player.hitFlash > 1 - 3.5 * DT) lastPlayerHitT = t;   // (set to 1 by a round that reached him, decayed by 3·dt at the end of the same update)
@@ -834,7 +860,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       // — or the round that put Sam down with the man still in his arm (hitPlayer lets the man go inside the step, so holding reads null after it: told by Sam up
       // going in, down coming out, the man alive — nothing but a guard's round downs Sam)
       { const Hn = game.player.holding; const stillHeld = !!Hn && heldGoingIn === Hn.g && Hn.g.state !== 'dead' && !game.player.down; const downedHolding = !!heldGoingIn && heldGoingIn.state !== 'dead' && !downGoingIn && game.player.down;
-        if (game.tune.muzzleDiscipline && (stillHeld || downedHolding)) violate('shield-fired-on', routeName(shooter), `${routeName(shooter)} (${shooter.standoff ? 'standoff' : shooter.state}${shooter.pinned ? ', pinned' : ''}${shooter.script ? ', scripted' : ''}) fired with ${routeName(heldGoingIn)} alive in Sam's arm (${Hn ? Hn.phase : 'and that round put Sam down'}) and muzzle discipline on; shooter at ${p2(shooter.char.pos)}, Sam at ${p2(game.player.char.pos)}, seen ${f2(t - shooter.lastSeenT)} s ago`); }
+        if (game.tune.muzzleDiscipline && (stillHeld || downedHolding) && !(GUNHOLD.on && shooter.standoff && game.time - gunHoldStats(game).freeT < 0.05)) violate('shield-fired-on', routeName(shooter), `${routeName(shooter)} (${shooter.standoff ? 'standoff' : shooter.state}${shooter.pinned ? ', pinned' : ''}${shooter.script ? ', scripted' : ''}) fired with ${routeName(heldGoingIn)} alive in Sam's arm (${Hn ? Hn.phase : 'and that round put Sam down'}) and muzzle discipline on; shooter at ${p2(shooter.char.pos)}, Sam at ${p2(game.player.char.pos)}, seen ${f2(t - shooter.lastSeenT)} s ago`); }
       const heldMan = game.player.holding?.g ?? heldGoingIn;   // (a hold this very round ended — Sam shot down from behind — still had the man on his station when it flew)
       const trunk = game.player.char.bones.spine2 ?? game.player.char.pos;   // the segment the AI fires and checks along (guards.ts: the alert branch aims at Sam's TRUNK where it is — spine2, a crouch or a wall lean carries it a hand or two off his root — and roundPastColleague looks down this frame's muzzle): the muzzle the round LEFT (the event carries it; by the end of the frame the recoil has moved it centimetres) to the trunk point at the aim height
       const from = e.from ?? shooter.char.muzzle; const to: Vec3 = [trunk[0], game.player.char.pos[1] + (game.player.crouch ? 0.8 : 1.25), trunk[2]];
@@ -1100,7 +1126,14 @@ async function runSeed(seed: number): Promise<SeedReport> {
         }
       }
       if (gd.script && gd.state === 'dead') violate('dead-scripted', name, `guard ${name} is dead but still carries a script (goal ${p2(gd.script.goal)}, stance ${gd.script.stance}); clearing=${game.clearingSummary() || 'none'}`);
-      if ((gd.state === 'dead') !== !c.alive) violate('alive-mismatch', name, `state ${gd.state} alive ${c.alive}`);
+      if ((gd.state === 'dead' && !gd.wound) !== !c.alive) violate('alive-mismatch', name, `state ${gd.state} alive ${c.alive}`);
+      // WOUNDS (wounds.ts): a man down wounded is exactly that — down ('dead' to the floor), breathing, posed (never a ragdoll), nothing in his hands, nothing ordering him about;
+      // and nobody carries the kind without the record or the record with the switch never having been on
+      if (gd.wound) {
+        if (gd.state !== 'dead' || gd.downKind !== 'wounded' || c.ragdoll || !c.alive || !c.anim.wound) violate('wounded-bad-state', name, `${name} wounded but state ${gd.state} downKind ${gd.downKind} ragdoll ${!!c.ragdoll} alive ${c.alive} pose ${!!c.anim.wound}`);
+        if (gd.script || gd.held || gd.speed !== 0 || game.time < gd.staggerUntil) violate('wounded-busy', name, `${name} wounded but script ${!!gd.script} held ${!!gd.held} speed ${gd.speed}`);
+        if (WOUNDS_ARG !== 'on') violate('wounded-switch-off', name, `${name} went down wounded with the switch off`);
+      } else if (gd.downKind === 'wounded' || c.anim.wound) violate('wounded-no-record', name, `${name} downKind ${gd.downKind} / a wound pose without the record`);
       if (gd.state !== 'dead' && gd.leader && (gd.leader === gd || (gd.leader.state === 'dead' && (gd.leader.found || game.alarm.episode)) || !game.guards.includes(gd.leader)))   /* a leader nobody knows is dead keeps the role by design (superviseLockdown) */ { leaderBad++; if (leaderBad >= 2) violate('bad-leader', name, `follower ${name}'s leader is ${gd.leader === gd ? 'himself' : gd.leader.state === 'dead' ? 'dead' : 'not in the guard list'} for ${leaderBad} frames (esc ${game.escalation}, quiet ${game.quietUtility})`); }
       if (gd.held && (gd.leader || gd.post) && game.escalation >= 2 && !game.quietUtility) { heldRole++; if (heldRole >= 2) violate('held-role', name, `${name} is in Sam's arm yet still ${gd.leader ? `paired to ${routeName(gd.leader)}${gd.leader.state === 'dead' ? ' (dead)' : ''}` : `holding the ${gd.post.name}`} for ${heldRole} frames — a held man holds no lockdown role (guards.ts superviseLockdown)`); }   // (one frame's grace: a grab dealt by direct call lands after the frame's superviseLockdown)
       if (gd.state === 'dead' && (gd.leader || gd.post)) smells.staleDutyOnCorpse = (smells.staleDutyOnCorpse ?? 0) + DT;   // harmless (everything skips the dead) but note it
@@ -1114,7 +1147,11 @@ async function runSeed(seed: number): Promise<SeedReport> {
         if (!Wt || !Wt.heard) violate('witness-missing', name, `${name} has no witness record`);
         else {
           const byCall = (cs: string) => game.guards.find((x: any) => x.callsign === cs) ?? (game.civilians ?? []).find((x: any) => x.callsign === cs);   // (a body found may be a civilian's: civilians.ts foundDown writes the same records)
-          if (Wt.sawAct) { const v = byCall(Wt.sawAct.victim); if (!v || v.state !== 'dead') violate('witness-sawact-not-down', name, `${name} remembers Sam ${Wt.sawAct.kind} ${Wt.sawAct.victim}, who is ${v ? v.state : 'not on the roster'}`); else if (v.downKind !== Wt.sawAct.kind) violate('witness-sawact-kind', name, `${name} remembers ${Wt.sawAct.victim} ${Wt.sawAct.kind} but he went down ${v.downKind}`); if (v === gd) violate('witness-sawact-self', name, `${name} remembers his own end`); if (Wt.sawAct.t > t + 1e-6) violate('witness-time', name, `sawAct in the future (${Wt.sawAct.t} > ${t})`); }
+          // the knife (player.ts startTakedown's lethal blow and killOut, the knife from the hold): he is dead — downKind 'shot', the model's word for it — and both rewrite a
+          // watcher's 'shot' to 'struck' (he saw a man DROPPED: no noise, no gun). Allowed for exactly that man: the one whose 'kill' row on the chronicle says the knife
+          // (chronicle.ts chronDown) — struck-for-shot of a man who took a round is still the smell
+          const knifed = (v: any) => !!game.chronicle?.events.some((e: any) => e.kind === 'kill' && e.data?.who === v.callsign && e.data?.weapon === 'knife');
+          if (Wt.sawAct) { const v = byCall(Wt.sawAct.victim); if (!v || v.state !== 'dead') violate('witness-sawact-not-down', name, `${name} remembers Sam ${Wt.sawAct.kind} ${Wt.sawAct.victim}, who is ${v ? v.state : 'not on the roster'}`); else if (v.downKind !== Wt.sawAct.kind && !(v.downKind === 'wounded' && Wt.sawAct.kind === 'shot') && !(v.downKind === 'shot' && Wt.sawAct.kind === 'struck' && knifed(v))) violate('witness-sawact-kind', name, `${name} remembers ${Wt.sawAct.victim} ${Wt.sawAct.kind} but he went down ${v.downKind}`); if (v === gd) violate('witness-sawact-self', name, `${name} remembers his own end`); if (Wt.sawAct.t > t + 1e-6) violate('witness-time', name, `sawAct in the future (${Wt.sawAct.t} > ${t})`); }
           for (const k of ['sawBody', 'calledToBody'] as const) { const r = Wt[k]; if (!r) continue; const v = byCall(r.victim); if (!v || v.state !== 'dead' || !v.found) violate(`witness-${k}-bad`, name, `${name}'s ${k} names ${r.victim}: ${v ? `${v.state} found=${v.found}` : 'not on the roster'}`); else if (r.breathing !== isBreathing(v)) violate(`witness-${k}-breathing`, name, `${name}'s ${k} says ${r.victim} breathing=${r.breathing} but isBreathing=${isBreathing(v)} (${v.downKind})`); }
           const H = Wt.heard; if (H.shots < 0 || H.kick < 0 || H.bang < 0 || H.small < 0 || Wt.dazzled < 0 || Wt.wasHeld < 0 || !(Wt.peakAwareness >= 0 && Wt.peakAwareness <= 1 + 1e-6)) violate('witness-range', name, `${name}: ${JSON.stringify({ ...Wt, heard: H })}`);
           if (Wt.alertedBy && !['sight', 'sound', 'radio', 'body', 'held'].includes(Wt.alertedBy)) violate('witness-alertedby', name, `alertedBy ${Wt.alertedBy}`);
@@ -1387,12 +1424,15 @@ async function runSeed(seed: number): Promise<SeedReport> {
     // back to the wall: holding ⇒ a live, free man (nothing else planted), the animator in its wall hold, and his body where the hold says — on the plane within the shove
     // allowance and inside the traced run (else moveOnWall lets go); free ⇒ nothing of the hold left on the animator or the camera
     if (pl.wall) {
-      const w = pl.wall; const p = pl.char.pos; const off = p[0] * w.n[0] + p[2] * w.n[2] - (w.d + 0.45), u = p[0] * w.along[0] + p[2] * w.along[2];
+      const w = pl.wall; const p = pl.char.pos; const off = p[0] * w.n[0] + p[2] * w.n[2] - (w.d + 0.45), u = p[0] * w.along[0] + p[2] * w.along[2] - (w.leanOff ?? 0);   // (u = his STATION: the rifle stack's step-out — wallsnap.ts, WallHold.leanOff — stands him past it on purpose, up to leanAlong beyond the wall's end)
+      const stack = w.kind === 'stack';   // (the rifle stack: shoulder to the wall in stance 'stack', the rifle in his hands — the back hold's two rules below are the other way round for it)
       if (pl.down || pl.picking || pl.kick || pl.takedown || pl.dragging || pl.sprinting) violate('wall-while-busy', 'player', `holding a wall while down ${pl.down} picking ${!!pl.picking} kick ${!!pl.kick} takedown ${!!pl.takedown} drag ${!!pl.dragging} sprint ${pl.sprinting}`);
       if (![w.n[0], w.n[2], w.d, w.lo, w.hi, w.u, w.v, w.off, w.peek].every(Number.isFinite) || Math.abs(Math.hypot(w.n[0], w.n[2]) - 1) > 1e-6 || w.hi - w.lo < 0.84) violate('wall-bad-hold', 'player', `hold ${JSON.stringify(w)}`);
       if (w.settle >= 1 && (off < -0.07 || off > 0.27 ||   /* −0.07: furniture resting on him may press him a few cm toward the wall inside the static push-out's tolerance — the wall itself is asserted by 'in-geometry' at 3 cm */ u < w.lo + 0.42 - 0.27 || u > w.hi - 0.42 + 0.27)) violate('wall-off-plane', 'player', `holding n (${w.n[0].toFixed(2)}, ${w.n[2].toFixed(2)}) face ${w.d.toFixed(2)} run ${w.lo.toFixed(2)}‥${w.hi.toFixed(2)} but standing ${off.toFixed(3)} m off the plane / at station ${u.toFixed(2)} at ${p2(p)} (settle ${w.settle.toFixed(2)}, off ${w.off.toFixed(2)}; nearest guard ${Math.min(...living().map((g: any) => v3.distXZ(g.char.pos, p)), 99).toFixed(2)} m)`);
-      if (pl.char.anim.stance !== 'wall') violate('wall-stance', 'player', `holding a wall in stance '${pl.char.anim.stance}'`);
-      if (!pl.holstered && w.settle >= 1) violate('wall-drawn', 'player', `holding a wall with the ${pl.slot} in his hand (slot ${pl.slot}; the hold holsters it, moveOnWall re-holsters whatever draws it)`);
+      if (pl.char.anim.stance !== (stack ? 'stack' : 'wall')) violate('wall-stance', 'player', `holding a wall${stack ? ' on the rifle stack' : ''} in stance '${pl.char.anim.stance}'`);
+      if (!stack && !pl.holstered && w.settle >= 1) violate('wall-drawn', 'player', `holding a wall with the ${pl.slot} in his hand (slot ${pl.slot}; the hold holsters it, moveOnWall re-holsters whatever draws it)`);
+      if (stack && !pl.rifleUp) violate('wall-stack', 'player', `on the rifle stack without the rifle in his hands (slot ${pl.slot}, holstered ${pl.holstered})`);
+      if (!Number.isFinite(w.leanOff ?? 0) || Math.abs(w.leanOff ?? 0) > WALLSNAP.leanAlong + 0.02) violate('wall-lean', 'player', `stood ${w.leanOff} m out past his station (the step-out is leanAlong ${WALLSNAP.leanAlong} at the most)`);
       if (w.peek > 0 && !w.atEdge && w.peek > wallPeekPrev + 1e-6) violate('wall-peek', 'player', `peek rising (${w.peek.toFixed(2)}) away from an open end (atEdge ${w.atEdge})`);
       wallPeekPrev = w.peek;
     } else { wallPeekPrev = 0; if (!pl.down && !game.quietUtility && (Math.abs(pl.char.anim.lookYawExtra) > 1e-6 || W.cam.peekOffset)) violate('wall-leftover', 'player', `free but neck craned ${pl.char.anim.lookYawExtra.toFixed(2)} / camera peekOffset ${JSON.stringify(W.cam.peekOffset)}`); }
@@ -1451,7 +1491,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       } else {
         holdDeadFrames = 0; variantHandsFrames = 0;
         if (pl.char.anim.holdPose) violate('hold-anim-leftover', 'player', `free but Sam's animator still has holdPose (${pl.char.anim.holdPose.phase})`);
-        { const kn = game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG).length; if (kn) violate('knife-leftover', 'player', `${kn} knife boxes drawn with nobody held`); }
+        { const kn = game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG).length; if (kn && !pl.char.anim.knifeShown && !(KITANIM.on && (pl.char.anim.kitHold === 'knife' || pl.kitWas === 'knife'))) violate('knife-leftover', 'player', `${kn} knife boxes drawn with nobody held`); }   // (kit handling on: the knife rides his hand back to the sheath after a hold · knifeShown: the lethal blow's own blade, out from hilt to hilt — combat.ts handProps draws it on that flag, character.ts strike(kind, true))
       }
       for (const x of game.guards) if (x.state !== 'dead' && !x.held && x.char.anim.heldPose) violate('held-anim-leftover', routeName(x), `${routeName(x)} free but his animator still has heldPose (${x.char.anim.heldPose.phase})`);
       for (const x of game.guards) if (x.state !== 'dead' && !x.held && x.talk.heldSince !== -1 && !inSandboxTalk.has(x)) violate('heldsince-leftover', routeName(x), `${routeName(x)} free but talk.heldSince ${f2(x.talk.heldSince)}`);
@@ -1478,7 +1518,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
       for (const d of doors.list) {
         const was = latchedPrev.get(d); latchedPrev.set(d, d.latched);
         if (!d.def.locked || was !== true || d.latched || !d.locked || d.lockBroken || d.lastWho !== PLAYER_ID || pl.down) continue;
-        if (harnessDoorT.get(d) === t) continue;                                             // the harness flung it itself this frame
+        { const hT = harnessDoorT.get(d); if (hT !== undefined && t - hT < DT * 1.5) continue; }   // the harness flung or used it itself this frame (stamped before the step, read after it)
         if (doors.side(d, prev) !== d.keySide || v3.distXZ(prev, d.frameCentre) > 1.8) continue;   // from the thumb-turn side, or nowhere near it (a fling from across the floor blamed on him)
         const guardOn = game.guards.some((g2: any) => g2.state !== 'dead' && Math.hypot(g2.char.pos[0] - d.def.hinge[0], g2.char.pos[2] - d.def.hinge[1]) < d.def.width + 0.5);
         if (pl.keys.has(d.lockId)) { smells.keyUnlocks = (smells.keyUnlocks ?? 0) + 1; continue; }
@@ -1502,7 +1542,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     if (frame % 10 === 0) {
       for (const gd of game.guards) { if (gd.state === 'dead') continue; const q = v3.copy(gd.char.pos); if (col.collideCircle(q, 0.22, 0.3, 1.4, 1) && v3.distXZ(q, gd.char.pos) > 0.06) violate('in-geometry', routeName(gd), `guard ${routeName(gd)} ${v3.distXZ(q, gd.char.pos).toFixed(2)} m inside static geometry at ${p2(gd.char.pos)} (${gd.script ? 'scripted ' + game.clearingSummary() : gd.state})`); }
     }
-    if (!pl.down) { const q = v3.copy(pl.char.pos); if (col.collideCircle(q, 0.42, 0.2, pl.crouch ? 1.0 : 1.7, 1) && v3.distXZ(q, pl.char.pos) > 0.03) violate('in-geometry', 'player', `player's circle ${v3.distXZ(q, pl.char.pos).toFixed(3)} m into static geometry at frame end at ${p2(pl.char.pos)} (crouch ${pl.crouch} sprint ${pl.sprinting} picking ${!!pl.picking} kick ${!!pl.kick} takedown ${!!pl.takedown} drag ${!!pl.dragging}; nearest guard ${Math.min(...living().map((g: any) => v3.distXZ(g.char.pos, pl.char.pos)), 99).toFixed(2)} m)`); }
+    if (!pl.down) { const q = v3.copy(pl.char.pos); if (col.collideCircle(q, playerBodyR(game, pl.char.pos), 0.2, pl.crouch ? 1.0 : 1.7, 1) && v3.distXZ(q, pl.char.pos) > 0.03) violate('in-geometry', 'player', `player's circle ${v3.distXZ(q, pl.char.pos).toFixed(3)} m into static geometry at frame end at ${p2(pl.char.pos)} (crouch ${pl.crouch} sprint ${pl.sprinting} picking ${!!pl.picking} kick ${!!pl.kick} takedown ${!!pl.takedown} drag ${!!pl.dragging}; nearest guard ${Math.min(...living().map((g: any) => v3.distXZ(g.char.pos, pl.char.pos)), 99).toFixed(2)} m)`); }
     // ---- lane R5 (Sam's FN2000, docs/internal/sc20k-design.md §5 — player.ts / launcher.ts / weapons.ts Rifle): the rifle is drawn in exactly ONE place every frame —
     //      its eleven tagged boxes all off the hand or all across the back (their spread under half a metre), finite, owner-stamped, eleven of them whenever the kit
     //      has it (none only with no rifle, or a downed man whose rifle left his hands); its selector on one of the row's positions, the box and chamber in range,
@@ -1511,8 +1551,9 @@ async function runSeed(seed: number): Promise<SeedReport> {
     //      refill); the rings in the air finite, few, and young; a man a ring put down is out cold and breathing, never shot; Sam's suppression a number
     {
       const rf = pl.rifle; const D = rf.def; const rb = game.dynBoxes.filter((b: any) => b.name === SC20K_TAG);
-      const wantBoxes = pl.hasRifle && !(pl.down && pl.rifleGone) ? 11 : 0;
-      if (rb.length !== wantBoxes) violate('rifle-boxes', 'player', `${rb.length} FN2000 boxes drawn (want ${wantBoxes}: hasRifle ${pl.hasRifle}, down ${pl.down}, gone ${pl.rifleGone}, slot ${pl.slot}, holstered ${pl.holstered})`);
+      const wantBoxes = pl.hasRifle && !(pl.down && pl.rifleGone) ? (GEAR.on ? M4_BOXES : 11) : 0;
+      const kitOn = KITANIM.on, magOut = kitOn && !!pl.char.anim.reloadShow?.out;   // (kitanim.ts: a magazine change shows the magazine OUT of the gun — one tagged box fewer for that long)
+      if (rb.length !== wantBoxes && !(magOut && rb.length === wantBoxes - 1)) violate('rifle-boxes', 'player', `${rb.length} FN2000 boxes drawn (want ${wantBoxes}: hasRifle ${pl.hasRifle}, down ${pl.down}, gone ${pl.rifleGone}, slot ${pl.slot}, holstered ${pl.holstered})`);
       else if (rb.length) {
         if (!rb.every((b: any) => b.owner === (pl.char.id & 0xff) && [...b.c, ...b.h, ...(b.rot ?? [])].every(Number.isFinite))) violate('rifle-box-bad', 'player', 'an FN2000 box un-owned or non-finite');
         const mid = [0, 0, 0]; for (const b of rb) { mid[0] += b.c[0] / rb.length; mid[1] += b.c[1] / rb.length; mid[2] += b.c[2] / rb.length; }
@@ -1520,21 +1561,25 @@ async function runSeed(seed: number): Promise<SeedReport> {
         if (spread > 0.5) violate('rifle-two-places', 'player', `FN2000 boxes ${spread.toFixed(2)} m apart (slot ${pl.slot}, holstered ${pl.holstered}, rifleUp ${pl.rifleUp}, busy ${pl.char.anim.hideHeldItem}, dragging ${!!pl.dragging})`);
         const hand = pl.char.bones.handR, chest = pl.char.bones.chest;
         if (hand && chest && !pl.down) { const atHand = Math.hypot(mid[0] - hand[0], mid[1] - hand[1], mid[2] - hand[2]) < Math.hypot(mid[0] - chest[0] + pl.char.chestDir[0] * 0.2, mid[1] - chest[1], mid[2] - chest[2] + pl.char.chestDir[2] * 0.2); const wantHand = pl.rifleUp && !pl.char.anim.hideHeldItem;
-          rifleWrongPlace = atHand !== wantHand ? rifleWrongPlace + 1 : 0;   // (one frame's grace, as rifleAnimOff below: a grab dealt by direct call — the harness's grab-in-view, or updateDoors — lands AFTER the frame's rig was posed with the rifle up; the sling follows next update)
+          rifleWrongPlace = atHand !== wantHand && !(kitOn && pl.char.anim.kitHold !== undefined) ? rifleWrongPlace + 1 : 0;   // (…nor while a kit errand carries it between the two: kitanim.ts)   // (one frame's grace, as rifleAnimOff below: a grab dealt by direct call — the harness's grab-in-view, or updateDoors — lands AFTER the frame's rig was posed with the rifle up; the sling follows next update)
           if (rifleWrongPlace > 1) violate('rifle-wrong-place', 'player', `FN2000 drawn ${atHand ? 'in the hands' : 'on the back'} but rifleUp ${pl.rifleUp}, hideHeldItem ${pl.char.anim.hideHeldItem} (slot ${pl.slot}, holstered ${pl.holstered}, dragging ${!!pl.dragging}, holding ${!!pl.holding}, picking ${!!pl.picking})`);
           rifleAnimOff = pl.char.anim.longGun !== wantHand && !pl.picking ? rifleAnimOff + 1 : 0;   // (one frame's grace: a drag or a grab begins in updateDoors AFTER updatePlayer armed the animator this frame — the props follow at once, the arms next frame; picking: the hands go to the tools over a few frames and both sides key off hideHeldItem together)
           if (rifleAnimOff > 1) violate('rifle-anim', 'player', `animator longGun ${pl.char.anim.longGun} but the rifle ${wantHand ? 'is' : 'is not'} in the hands for ${rifleAnimOff} frames (slot ${pl.slot}, holstered ${pl.holstered}, dragging ${!!pl.dragging}, kick ${!!pl.kick}, takedown ${!!pl.takedown})`); }
       }
       if (!D.modes.includes(rf.mode)) violate('rifle-mode', 'player', `selector on '${rf.mode}' (row: ${D.modes.join('/')})`);
       if (rf.mag !== null && (rf.mag < 0 || rf.mag > D.magCapacity) || (rf.chamber !== 0 && rf.chamber !== 1) || rf.roundsReady > D.magCapacity + 1 || rf.spare.some((x: number) => x < 0 || x > D.magCapacity) || rf.spare.length > D.spareMags + 1) violate('rifle-mag-range', 'player', `rifle chamber ${rf.chamber} mag ${rf.mag} spare [${rf.spare.join(',')}]`);
-      if (rf.reloadT > D.reload.dur + 1e-6) violate('rifle-reload-overrun', 'player', `rifle reloadT ${rf.reloadT.toFixed(3)} (dur ${D.reload.dur})`);
-      if (!Number.isFinite(pl.equipT) || pl.equipT < 0 || pl.equipT > RIFLE_EQUIP_SECS + 1e-6) violate('rifle-equipT', 'player', `equipT ${pl.equipT}`);
+      if (rf.reloadT > rf.reloadRow.dur + 1e-6) violate('rifle-reload-overrun', 'player', `rifle reloadT ${rf.reloadT.toFixed(3)} (dur ${rf.reloadRow.dur})`);   // (the beat this reload runs on: the row's, or a kit change's own — kitanim.ts)
+      if (!Number.isFinite(pl.equipT) || pl.equipT < 0 || pl.equipT > Math.max(RIFLE_EQUIP_SECS, KITANIM.on ? kitLockMax(KIT) : 0) + 1e-6) violate('rifle-equipT', 'player', `equipT ${pl.equipT}`);   // (with the kit animations on a gun's lock-out is its swap's own length)
       bracedOffFrames = pl.braced !== (pl.rifleUp && !pl.sprinting && !pl.kick) ? bracedOffFrames + 1 : 0; if (bracedOffFrames > 0) violate('braced-rule', 'player', `braced ${pl.braced} with rifleUp ${pl.rifleUp} sprinting ${pl.sprinting} kick ${!!pl.kick} (slot ${pl.slot}, holstered ${pl.holstered}, dragging ${!!pl.dragging})`);
-      if (!Number.isInteger(rf.attIdx) || rf.attIdx < -1 || rf.attIdx >= rf.attachments.length || (rf.attIdx >= 0) !== !!rf.attachment) violate('rifle-attachment', 'player', `attIdx ${rf.attIdx} of [${rf.attachments.join(',')}] → ${rf.attachment}`);
+      if (!Number.isInteger(rf.attIdx) || rf.attIdx < -1 || rf.attIdx >= rf.attachments.length || (rf.attIdx >= 0) !== !!rf.attachment || (rf.attIdx < 0) !== !rf.attachments.length) violate('rifle-attachment', 'player', `attIdx ${rf.attIdx} of [${rf.attachments.join(',')}] → ${rf.attachment}`);
+      if (pl.launchHeld !== null && (pl.launchHeld !== rf.attachment || !pl.hasRifle)) violate('rifle-launch-held', 'player', `launchHeld ${pl.launchHeld}, up ${rf.attachment}, rifle in the kit ${pl.hasRifle}`);
       if (!Number.isInteger(rf.rings) || rf.rings < 0 || rf.rings > LAUNCHER.rings) violate('rings-range', 'player', `rings ${rf.rings}`);
       if (ringBaseline && ringBaseline.pl === pl && rf.rings > ringBaseline.n) violate('rings-rose', 'player', `rings ${ringBaseline.n} → ${rf.rings} within one life (nothing on the floor is a ring you can have back)`);
       ringBaseline = { pl, n: rf.rings };
-      if (!Number.isFinite(rf.ringCd) || rf.ringCd < 0 || rf.ringCd > LAUNCHER.cd + 1e-6) violate('ring-cd', 'player', `ringCd ${rf.ringCd}`);
+      if (!Number.isFinite(rf.ringCd) || rf.ringCd < 0 || rf.ringCd > Math.max(LAUNCHER.cd, LAUNCHER40.cd) + 1e-6) violate('ring-cd', 'player', `ringCd ${rf.ringCd}`);   // (one tube, one clock: the 40 mm's reload is the longer)
+      if (!Number.isInteger(rf.shells) || rf.shells < 0 || rf.shells > LAUNCHER40.rounds + 1) violate('shells-range', 'player', `40 mm rounds ${rf.shells}`);
+      if (game.shells.length > LAUNCHER40.rounds + 1) violate('shells-in-air', 'shells', `${game.shells.length} 40 mm rounds in flight`);
+      for (const r of game.shells) { if (![...r.pos, ...r.vel].every(Number.isFinite) || !Number.isFinite(r.flown)) violate('nan', 'shell', `40 mm ${JSON.stringify({ pos: r.pos, vel: r.vel, flown: r.flown })}`); if (r.age > HE40.life + 2 * DT) violate('shell-old', 'shell', `a 40 mm round ${r.age.toFixed(2)} s in the air (life ${HE40.life})`); }
       const air = game.rings;
       if (air.length > LAUNCHER.rings + 2) violate('rings-in-air', 'rings', `${air.length} rings in flight`);
       for (const r of air) { if (![...r.pos, ...r.vel].every(Number.isFinite)) violate('nan', 'ring', `ring ${JSON.stringify({ pos: r.pos, vel: r.vel })}`); if (r.age > RING.life + 2 * DT) violate('ring-old', 'ring', `a ring ${r.age.toFixed(2)} s in the air (life ${RING.life})`); if (r.pos[1] < -0.5 || r.pos[1] > 12) violate('ring-astray', 'ring', `a ring at height ${r.pos[1].toFixed(1)}`); }
@@ -1544,7 +1589,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
         const byRing = game.messages.some((m: any) => m.t === t && m.text.startsWith('ring to the head') && m.text.includes(gd.callsign));
         if (byRing) { ringKoSeen.add(gd); smells.ringKOs = (smells.ringKOs ?? 0) + 1; if (gd.downKind !== 'struck' || !isBreathing(gd)) violate('ring-lethal', routeName(gd), `${routeName(gd)} put down by a ring is ${gd.downKind} / breathing ${isBreathing(gd)} — a ring is never lethal`); }
       }
-      for (const gd of game.guards) if (gd.state !== 'dead' && gd.staggerUntil > t) { smells.staggerSeconds = Number(((smells.staggerSeconds ?? 0) + DT).toFixed(2)); if (gd.staggerUntil - t > RING.stagger + 1e-6) violate('stagger-long', routeName(gd), `${routeName(gd)} staggered for ${(gd.staggerUntil - t).toFixed(2)} s more (max ${RING.stagger})`); }
+      for (const gd of game.guards) if (gd.state !== 'dead' && gd.staggerUntil > t) { smells.staggerSeconds = Number(((smells.staggerSeconds ?? 0) + DT).toFixed(2)); if (gd.staggerUntil - t > Math.max(RING.stagger, FRAG.stagger[0]) + 1e-6) violate('stagger-long', routeName(gd), `${routeName(gd)} staggered for ${(gd.staggerUntil - t).toFixed(2)} s more (max ${Math.max(RING.stagger, FRAG.stagger[0])})`); }
       if (!Number.isFinite(pl.sup.v)) violate('sup-range', 'player', `Sam's suppression ${pl.sup.v}`);
       for (const e of game.events) if (e.kind === 'shot' && e.time === t && e.weapon === 'fn2000') { smells.rifleRounds = (smells.rifleRounds ?? 0) + 1; if (!pl.rifleUp && !pl.down && !(pl.holding)) { /* a scripted fireWeapon with the row named (the probes) — not the soak's */ } }
       if (pl.slot === 'rifle') smells.rifleSelectedSeconds = Number(((smells.rifleSelectedSeconds ?? 0) + DT).toFixed(2)); if (pl.rifleUp) smells.rifleUpSeconds = Number(((smells.rifleUpSeconds ?? 0) + DT).toFixed(2)); if (pl.braced) smells.bracedSeconds = Number(((smells.bracedSeconds ?? 0) + DT).toFixed(2));

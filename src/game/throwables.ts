@@ -1,11 +1,15 @@
 // Simple rigid bodies for thrown / dropped items (smoke canisters, empty magazines): ballistic flight with
 // swept collision against the static boxes, bounce + friction, settle. Rendered as small dynamic boxes.
-import { Vec3, v3, quat } from '../math/vec';
+import { Vec3, Quat, v3, quat } from '../math/vec';
 import { StaticCollision } from '../scene/collision';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
+import { SNOWBOG } from './snowBog';
 import type { PropSystem, Prop } from './props';
+import type { Team } from './teams';
+import { GEAR } from './gear';   // (a leaf: which rifle a dropped FN2000-row item is DRAWN as)
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
-export type ItemKind = 'smoke' | 'mag' | 'flash' | 'pistol' | 'torch' | 'rifle' | 'ring';   // pistol / torch / rifle: dropped from a dying hand (combat.ts dropFromHand — the rifle is what the long-gun rows let go of, weapons.ts WeaponDef.drop: a rifleman's whole AKS-74U, or with fill 1 Sam's FN2000) — physical like the rest (tumble, bounce, settle, nudge props), and set dressing once down: nobody picks them up (a guard's magazines would not fit the Five-seveN anyway, and nothing on the floor is ammunition); ring: a spent ring airfoil (launcher.ts hands it over the moment its flight ends — off a wall, off a man — to clatter down and lie there: not retrievable either)
+export type ItemKind = 'smoke' | 'mag' | 'flash' | 'frag' | 'pistol' | 'torch' | 'rifle' | 'ring' | 'shell';   // pistol / torch / rifle: dropped from a dying hand (combat.ts dropFromHand — the rifle is what the long-gun rows let go of, weapons.ts WeaponDef.drop: a rifleman's whole AKS-74U, or with fill 1 Sam's FN2000) — physical like the rest (tumble, bounce, settle, nudge props), and set dressing once down: nobody picks them up (a guard's magazines would not fit the Five-seveN anyway, and nothing on the floor is ammunition); ring: a spent ring airfoil (launcher.ts hands it over the moment its flight ends — off a wall, off a man — to clatter down and lie there: not retrievable either)
 
 /** The FN2000 on the floor (a 'rifle' item with fill 1 — combat.ts hitPlayer drops it out of Sam's hands): the bullpup's own silhouette in RIG.sc20k's two albedos —
  *  the long polymer hull with the box straight down BEHIND the grip point, the fore-end and the can ahead, the sight block on top — same contact sphere and dead
@@ -17,9 +21,43 @@ export const SC20K_ITEM = {
   optic: { z: 0.02, y: 0.06, h: [0.017, 0.02, 0.06] as [number, number, number] },
   thick: 0.024,
   polymer: [0.045, 0.05, 0.046] as Vec3, metal: [0.026, 0.026, 0.03] as Vec3,   // rigProps COL.polymer / COL.darkMetal, so the thing on the floor is the thing that was in his hands
+  get foreCol(): Vec3 { return this.metal; },   // (the fore-end + can length is drawn in the metal)
 };
+/** …and the same item as the 2010s issue kit draws it (gear.ts GEAR.on): the M4-pattern carbine of rigProps RIG.m4 — receiver and stock as one dark length, the
+ *  dark earth handguard and the can ahead, the box AHEAD of the grip. Picture only: the item's contact sphere, bounces and rest height are the bullpup's. */
+export const M4_ITEM = {
+  hull: { z: -0.09, h: [0.017, 0.034, 0.2] as [number, number, number] },
+  fore: { z: 0.285, h: [0.023, 0.021, 0.17] as [number, number, number] },   // (as thick as the item's rest height, the bullpup's SC20K_ITEM.thick: it lies ON the floor)
+  mag: { z: 0.085, y: -0.095, h: [0.011, 0.065, 0.028] as [number, number, number] },
+  optic: { z: 0.035, y: 0.052, h: [0.016, 0.02, 0.035] as [number, number, number] },
+  polymer: [0.03, 0.03, 0.033] as Vec3, metal: [0.03, 0.03, 0.033] as Vec3, foreCol: [0.2, 0.155, 0.1] as Vec3,   // rigProps COL.anodised (receiver, box, sight) / COL.fde (the handguard)
+};
+/** A FRAG GRENADE in the air and on the floor (frag.ts: its fuse runs from the hand, and what it does when it runs out): a small heavy ball — a smaller contact
+ *  sphere than a can's, livelier off a hard floor and with less grip, so it skips and ROLLS on where a can would stop (the men it lands among see where it is
+ *  going) — drawn as an olive body with a pale yellow band and the fuse's stub on top. */
+export const FRAG_ITEM = { radius: 0.04, restitution: 0.3, friction: 0.45, half: [0.032, 0.032, 0.038] as [number, number, number], body: [0.13, 0.17, 0.08] as Vec3, band: [0.75, 0.62, 0.1] as Vec3, fuze: [0.3, 0.3, 0.28] as Vec3 };
 /** the spent ring on the floor: a rubber ring 6 cm across drawn as three thin crossed slats (a hexagon's worth of ring at this size), pale so it reads on the lino */
 export const RING_ITEM = { radius: 0.03, restitution: 0.3, friction: 0.6, life: 60, half: [0.03, 0.006, 0.007] as [number, number, number], albedo: [0.42, 0.4, 0.36] as Vec3 };
+
+/** …and the same spent thing as the 2010s issue kit draws it (gear.ts GEAR.on: the ring airfoil is a 40 mm SPONGE ROUND there): the projectile of a 40 × 46 mm
+ *  impact round — a blunt blue foam nose on a dark plastic body with a paler driving band at its base, 44 mm across and 76 mm long (a shade over life size, so
+ *  it reads from the camera's height at least as the ring did). THREE boxes, as the ring's three slats, under the ring's own flags; z = along the round, + toward
+ *  the nose, 0 = its middle. Picture only: the item's contact sphere, bounces, rest and life are RING_ITEM's, and the flight is launcher.ts RING's. */
+export const SPONGE_ITEM = {
+  wide: 0.023,   // (half the widest part — the band: what rests on the floor when it lies on its side)
+  nose: { z: 0.019, h: [0.022, 0.022, 0.019] as [number, number, number], albedo: [0.07, 0.24, 0.62] as Vec3 },    // blue foam
+  body: { z: -0.014, h: [0.021, 0.021, 0.014] as [number, number, number], albedo: [0.05, 0.05, 0.055] as Vec3 },   // black plastic
+  band: { z: -0.033, h: [0.023, 0.023, 0.005] as [number, number, number], albedo: [0.3, 0.3, 0.31] as Vec3 },     // the grey driving band
+};
+/** the sponge round's three boxes about `c`, its length along `rot`'s z (the nose toward +z): in the air off launcher.ts ringBoxes, spent off the item loop below */
+export function spongeBoxes(out: Box[], c: Vec3, rot: Quat, yaw: number) {
+  const S = SPONGE_ITEM;
+  for (const part of [S.body, S.nose, S.band]) out.push(itemBox(v3.add(c, quat.rotate(rot, [0, 0, part.z])), v3.copy(part.h), yaw, rot, v3.copy(part.albedo), BoxFlag.Dynamic | BoxFlag.NoShadow));
+}
+
+/** a 40 mm round that did not go off (he40.ts: it met something short of its arming distance) — a stubby gold-nosed slug of aluminium that lands hard, rolls a
+ *  little and lies there, inert: nobody picks it up and nothing sets it off */
+export const SHELL_ITEM = { radius: 0.035, restitution: 0.22, friction: 0.5, life: 120, half: [0.02, 0.02, 0.05] as [number, number, number], body: [0.42, 0.43, 0.4] as Vec3, nose: [0.72, 0.55, 0.12] as Vec3 };
 
 /** The dropped rifle's body (rifles, docs/internal/sc20k-design.md §3.5): a longer, heavier item than the sidearm — a bigger contact sphere so it does not fall
  *  through the gaps the pistol threads, deader bounces (a slung 2.7 kg carbine lands and skids, it does not hop), more friction, more of its momentum handed to a
@@ -46,6 +84,9 @@ export interface Item {
   who: number;                   // character id that threw / dropped it (blamed for furniture it knocks)
   on: Prop | null; onPose: number;   // the prop it came to rest on, if any, and a key of that prop's pose at the time (it drops off once the prop has moved out from under it)
   serial: number;                // a running number per spawned item (motion identity: Throwables.boxes keys the item's parts off it)
+  /** a stun can: whose side's it is, said by a caller that takes the thrower off the guard list for the bang (doortools.ts bang, DOORTOOLS.ownCan) — combat.ts
+   *  detonateStun reads it ahead of looking the thrower up; unset = looked up, as ever */
+  side?: Team;
   onBounce?: (speed: number, p: Vec3) => void;
 }
 
@@ -53,8 +94,20 @@ export interface ThrowSolution { v0: Vec3; T: number; points: Vec3[]; land: Vec3
 
 export const GRAVITY = 9.81;
 
+/** makeBox's own object for an item's part, key for key (yaw, albedo, emissive, flags, owner, cutHeight, then c, h, rot), without its spread; the arguments are
+ *  evaluated in the order the literal's fields were (c, h, yaw, rot, albedo, flags) */
+function itemBox(c: Vec3, h: Vec3, yaw: number, rot: Quat, albedo: Vec3, flags: number): Box { return { yaw, albedo, emissive: [0, 0, 0], flags, owner: 0, cutHeight: 1e6, c, h, rot }; }
+
+/** A THING MEETS LYING SNOW (snowBog.ts, SNOWBOG.on; `bog` 0‥1 = how boggy the ground it touched is, 0 = a floor): the share of its slide and of its bounce
+ *  it keeps, and how much faster than on a floor it may still be going and stop dead. One place for the pool's step and for frag.ts's forecast of it. */
+export const bogSlide = (bog: number) => 1 - bog * SNOWBOG.grip;
+export const bogBounce = (bog: number) => 1 - bog * SNOWBOG.dead;
+export const bogStick = (bog: number) => bog * SNOWBOG.stick;
+
 export class Throwables {
   items: Item[] = [];
+  /** how boggy the ground is where a thing touched down, 0‥1 (the Game's: snowBog.ts snowBogAt; null = floors everywhere, the bounce as it always was) */
+  bog: ((x: number, y: number, z: number) => number) | null = null;
   /** the next item's serial (Item.serial) */
   private serial = 1;
   /** `props`: loose furniture — items bounce off it and hand over a little momentum */
@@ -68,17 +121,17 @@ export class Throwables {
 
   spawn(kind: ItemKind, pos: Vec3, vel: Vec3, opts: Partial<Item> = {}): Item {
     const can = kind === 'smoke' || kind === 'flash';   // smoke and stun canisters share the body: same arc, same bounces
-    const R = RIFLE_ITEM, rifle = kind === 'rifle', ring = kind === 'ring', G = RING_ITEM;
-    const radius = can ? 0.055 : kind === 'pistol' ? 0.05 : kind === 'torch' ? 0.045 : rifle ? R.radius : ring ? G.radius : 0.03; const restitution = can ? 0.38 : kind === 'mag' ? 0.25 : rifle ? R.restitution : ring ? G.restitution : 0.22;
-    const it: Item = { kind, pos: v3.copy(pos), vel: v3.copy(vel), radius, restitution, friction: kind === 'pistol' || kind === 'torch' ? 0.5 : rifle ? R.friction : ring ? G.friction : 0.35,
-      yaw: Math.random() * Math.PI, spin: (Math.random() - 0.5) * 14, tumble: Math.random() * 6.28, tumbleRate: (Math.random() < 0.5 ? -1 : 1) * (7 + Math.random() * 9), settled: false, age: 0, fuse: 1.3, fired: false, life: kind === 'mag' ? 40 : ring ? G.life : 60, emitT: 0, fill: 0, bounces: 0, heading: v3.yawOf(vel), who: 0, on: null, onPose: 0, serial: this.serial++, ...opts };
+    const R = RIFLE_ITEM, rifle = kind === 'rifle', ring = kind === 'ring', G = RING_ITEM, frag = kind === 'frag', F = FRAG_ITEM, shell = kind === 'shell', S = SHELL_ITEM;
+    const radius = can ? 0.055 : frag ? F.radius : kind === 'pistol' ? 0.05 : kind === 'torch' ? 0.045 : rifle ? R.radius : ring ? G.radius : shell ? S.radius : 0.03; const restitution = can ? 0.38 : frag ? F.restitution : kind === 'mag' ? 0.25 : rifle ? R.restitution : ring ? G.restitution : shell ? S.restitution : 0.22;
+    const it: Item = { kind, pos: v3.copy(pos), vel: v3.copy(vel), radius, restitution, friction: kind === 'pistol' || kind === 'torch' ? 0.5 : rifle ? R.friction : ring ? G.friction : frag ? F.friction : shell ? S.friction : 0.35,
+      yaw: simRandom() * Math.PI, spin: (simRandom() - 0.5) * 14, tumble: simRandom() * 6.28, tumbleRate: (simRandom() < 0.5 ? -1 : 1) * (7 + simRandom() * 9), settled: false, age: 0, fuse: 1.3, fired: false, life: kind === 'mag' ? 40 : ring ? G.life : shell ? S.life : 60, emitT: 0, fill: 0, bounces: 0, heading: v3.yawOf(vel), who: 0, on: null, onPose: 0, serial: this.serial++, ...opts };
     // FIFO cap (applied before the push, so the new item can never evict itself), but never evict a canister whose fuse is still running or that is still venting:
     // dropped mags and guns are items too, and a firefight must not swallow a stun charge already deducted from the player's kit — it would simply never go off —
     // nor take the can out from under a smoke screen still pouring from it (its emitter tracks the item: the smoke would go on from nowhere). Spent things first
     // (magazines, rings, a can that has gone off / finished venting), then the oldest dropped gun or torch; thirty-two LIVE cans (never, in play) evict nothing.
     // (Review B7.5: 'fired' alone read a venting smoke can as spent, and with nothing spent in the list the oldest item went whatever it was — the live can included.)
     if (this.items.length >= 32) {
-      let i = this.items.findIndex(x => x.kind === 'mag' || x.kind === 'ring' || ((x.kind === 'smoke' || x.kind === 'flash') && !liveCan(x)));
+      let i = this.items.findIndex(x => x.kind === 'mag' || x.kind === 'ring' || x.kind === 'shell' || ((x.kind === 'smoke' || x.kind === 'flash' || x.kind === 'frag') && !liveCan(x)));
       if (i < 0) i = this.items.findIndex(x => !liveCan(x));
       if (i >= 0) this.items.splice(i, 1);
     }
@@ -134,22 +187,25 @@ export class Throwables {
           it.pos = v3.mad(it.pos, dir, tHit);
           const n = hit.n; const vn = v3.dot(it.vel, n);
           if (vn < 0) {
-            if (hit.prop) this.props.applyImpulse(hit.prop, it.pos, v3.scale(n, vn * (1 + it.restitution) * (it.kind === 'smoke' ? 0.35 : it.kind === 'rifle' ? RIFLE_ITEM.propShare : 0.1)), it.who);   // the item's lost momentum (canister ≈ 350 g; a rifle far more) goes into the chair / carton it struck
+            if (hit.prop) this.props.applyImpulse(hit.prop, it.pos, v3.scale(n, vn * (1 + it.restitution) * (it.kind === 'smoke' || it.kind === 'frag' ? 0.35 : it.kind === 'rifle' ? RIFLE_ITEM.propShare : 0.1)), it.who);   // the item's lost momentum (canister ≈ 350 g; a rifle far more) goes into the chair / carton it struck
             const vN = v3.scale(n, vn); const vT = v3.sub(it.vel, vN);
             const speed = -vn;
+            const bog = this.bog && n[1] > 0.6 && !hit.prop ? this.bog(it.pos[0], it.pos[1] - it.radius, it.pos[2]) : 0;   // lying snow under it (0 = none, and the lines below are what they were)
             it.vel = v3.add(v3.scale(vT, Math.max(0, 1 - it.friction * (0.5 + 0.5 * Math.abs(n[1])))), v3.scale(vN, -it.restitution));
+            if (bog > 0) { const up = v3.dot(it.vel, n), b = bogBounce(bog), s = bogSlide(bog); it.vel = v3.add(v3.scale(v3.sub(it.vel, v3.scale(n, up)), s), v3.scale(n, up * b)); }   // … it keeps little of its slide and of its bounce
             it.spin *= 0.6; it.tumbleRate *= 0.45; it.bounces++; if (Math.hypot(it.vel[0], it.vel[2]) > 0.3) it.heading = v3.yawOf(it.vel);
             if (speed > 0.6) it.onBounce?.(speed, it.pos);
             // settle when slow on an upward-facing surface
-            if (n[1] > 0.6 && Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35) { it.settled = true; it.on = hit.prop; it.onPose = hit.prop ? poseKey(hit.prop) : 0; it.vel = [0, 0, 0]; it.spin = 0; it.pos[1] = it.pos[1] + 0.001; }
+            if (n[1] > 0.6 && Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0)) { it.settled = true; it.on = hit.prop; it.onPose = hit.prop ? poseKey(hit.prop) : 0; it.vel = [0, 0, 0]; it.spin = 0; it.pos[1] = it.pos[1] + 0.001; }
           }
           it.pos = v3.mad(it.pos, n, 0.002);
         } else {
           it.pos = v3.add(it.pos, move);
         }
         if (it.pos[1] < it.radius) { // safety floor
-          it.pos[1] = it.radius; if (it.vel[1] < 0) { const sp = -it.vel[1]; it.vel[1] *= -it.restitution; it.vel[0] *= 0.7; it.vel[2] *= 0.7; it.bounces++; if (sp > 0.6) it.onBounce?.(sp, it.pos); }
-          if (Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35) { it.settled = true; it.vel = [0, 0, 0]; }
+          const bog = this.bog ? this.bog(it.pos[0], 0, it.pos[2]) : 0;
+          it.pos[1] = it.radius; if (it.vel[1] < 0) { const sp = -it.vel[1]; it.vel[1] *= -it.restitution; it.vel[0] *= 0.7; it.vel[2] *= 0.7; if (bog > 0) { it.vel[1] *= bogBounce(bog); it.vel[0] *= bogSlide(bog); it.vel[2] *= bogSlide(bog); } it.bounces++; if (sp > 0.6) it.onBounce?.(sp, it.pos); }
+          if (Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0)) { it.settled = true; it.vel = [0, 0, 0]; }
         }
         it.yaw += it.spin * h; it.tumble += it.tumbleRate * h;
       }
@@ -169,8 +225,14 @@ export class Throwables {
         // drawn standing whenever settled — a leftover from before cans tumbled — which is why every can landed upright.)
         const c0: Vec3 = standing ? [it.pos[0], it.pos[1] - it.radius + 0.034, it.pos[2]] : v3.copy(it.pos);
           const rot = quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble));
-          out.push(makeBox({ c: v3.copy(c0), h: [0.032, 0.032, 0.07], yaw: it.yaw, rot, albedo: body, flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: v3.add(c0, quat.rotate(rot, [0, 0, 0.045])), h: [0.034, 0.034, 0.012], yaw: it.yaw, rot, albedo: band, flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
+          out.push(itemBox(v3.copy(c0), [0.032, 0.032, 0.07], it.yaw, rot, body, BoxFlag.Dynamic));
+          out.push(itemBox(v3.add(c0, quat.rotate(rot, [0, 0, 0.045])), [0.034, 0.034, 0.012], it.yaw, rot, band, BoxFlag.Dynamic | BoxFlag.NoShadow));
+      } else if (it.kind === 'frag') {   // a frag grenade (FRAG_ITEM): the olive body, its yellow band, the fuze stub — tumbling in the air, rolling on the floor (it never stands)
+        const F = FRAG_ITEM; const c0: Vec3 = it.settled ? [it.pos[0], it.pos[1] - it.radius + F.half[0] + 0.002, it.pos[2]] : v3.copy(it.pos);
+        const rot = quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble));
+        out.push(itemBox(v3.copy(c0), v3.copy(F.half), it.yaw, rot, v3.copy(F.body), BoxFlag.Dynamic));
+        out.push(itemBox(v3.add(c0, quat.rotate(rot, [0, 0, 0.012])), [0.034, 0.034, 0.006], it.yaw, rot, v3.copy(F.band), BoxFlag.Dynamic | BoxFlag.NoShadow));
+        out.push(itemBox(v3.add(c0, quat.rotate(rot, [0, 0, 0.05])), [0.012, 0.012, 0.014], it.yaw, rot, v3.copy(F.fuze), BoxFlag.Dynamic | BoxFlag.NoShadow));
       } else if (it.kind === 'pistol' || it.kind === 'torch' || it.kind === 'rifle') {
         // dropped weapon: lies along its local z; in the air it flips end over end, on the floor it comes to rest on its side (tumble eased flat by update)
         // in the air: flips end over end about the across axis; settled: on its SIDE (a quarter roll about its own length) with that face on the floor
@@ -180,36 +242,44 @@ export class Throwables {
         const c: Vec3 = it.settled ? [it.pos[0], it.pos[1] - it.radius + thick + 0.004, it.pos[2]] : v3.copy(it.pos);   // (the physics sphere rests at radius; the model's side face sits on the floor)
         const at = (off: Vec3): Vec3 => v3.add(c, quat.rotate(rot, off));
         if (it.kind === 'pistol') {   // slide + frame, grip raked back under the rear, suppressor can up front (the game's Five-seveN / the guards' sidearm read the same at this size)
-          out.push(makeBox({ c: at([0, 0, 0]), h: [0.016, 0.026, 0.095], yaw: it.yaw, rot, albedo: [0.05, 0.05, 0.055], flags: BoxFlag.Dynamic }));
+          out.push(itemBox(at([0, 0, 0]), [0.016, 0.026, 0.095], it.yaw, rot, [0.05, 0.05, 0.055], BoxFlag.Dynamic));
           const gripRot = quat.mul(rot, quat.axisAngle([1, 0, 0], 108 * Math.PI / 180));
-          out.push(makeBox({ c: v3.add(at([0, -0.024, -0.045]), quat.rotate(gripRot, [0, 0, 0.047])), h: [0.014, 0.017, 0.047], yaw: it.yaw, rot: gripRot, albedo: [0.05, 0.05, 0.055], flags: BoxFlag.Dynamic }));
-          if (it.fill > 0) out.push(makeBox({ c: at([0, 0, 0.17]), h: [0.019, 0.019, 0.075], yaw: it.yaw, rot, albedo: [0.09, 0.09, 0.09], flags: BoxFlag.Dynamic }));   // fill = 1: suppressed (the player's)
+          out.push(itemBox(v3.add(at([0, -0.024, -0.045]), quat.rotate(gripRot, [0, 0, 0.047])), [0.014, 0.017, 0.047], it.yaw, gripRot, [0.05, 0.05, 0.055], BoxFlag.Dynamic));
+          if (it.fill > 0) out.push(itemBox(at([0, 0, 0.17]), [0.019, 0.019, 0.075], it.yaw, rot, [0.09, 0.09, 0.09], BoxFlag.Dynamic));   // fill = 1: suppressed (the player's)
         } else if (it.kind === 'rifle' && it.fill === 1) {   // Sam's FN2000 (SC20K_ITEM): the polymer hull with its box down behind the grip, fore-end and can ahead, the sight block on the spine
-          const S = SC20K_ITEM;
-          out.push(makeBox({ c: at([0, 0, S.hull.z]), h: v3.copy(S.hull.h), yaw: it.yaw, rot, albedo: v3.copy(S.polymer), flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: at([0, 0, S.fore.z]), h: v3.copy(S.fore.h), yaw: it.yaw, rot, albedo: v3.copy(S.metal), flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: at([0, S.mag.y, S.mag.z]), h: v3.copy(S.mag.h), yaw: it.yaw, rot, albedo: v3.copy(S.metal), flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: at([0, S.optic.y, S.optic.z]), h: v3.copy(S.optic.h), yaw: it.yaw, rot, albedo: v3.copy(S.metal), flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
+          const S = GEAR.on ? M4_ITEM : SC20K_ITEM;   // (the 2010s issue kit's carbine: the same item, drawn as what was in his hands)
+          out.push(itemBox(at([0, 0, S.hull.z]), v3.copy(S.hull.h), it.yaw, rot, v3.copy(S.polymer), BoxFlag.Dynamic));
+          out.push(itemBox(at([0, 0, S.fore.z]), v3.copy(S.fore.h), it.yaw, rot, v3.copy(S.foreCol), BoxFlag.Dynamic));
+          out.push(itemBox(at([0, S.mag.y, S.mag.z]), v3.copy(S.mag.h), it.yaw, rot, v3.copy(S.metal), BoxFlag.Dynamic));
+          out.push(itemBox(at([0, S.optic.y, S.optic.z]), v3.copy(S.optic.h), it.yaw, rot, v3.copy(S.metal), BoxFlag.Dynamic | BoxFlag.NoShadow));
         } else if (it.kind === 'rifle') {   // the carbine that was in his hands (RIFLE_ITEM): receiver, the wood and steel ahead of it, the canted box under it, the skeleton stock behind
           const R = RIFLE_ITEM;   // (copies: makeBox keeps the arrays it is given, and these numbers are shared by every rifle on the floor)
-          out.push(makeBox({ c: at([0, 0, R.receiver.z]), h: v3.copy(R.receiver.h), yaw: it.yaw, rot, albedo: v3.copy(R.steel), flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: at([0, 0, R.fore.z]), h: v3.copy(R.fore.h), yaw: it.yaw, rot, albedo: v3.copy(R.wood), flags: BoxFlag.Dynamic }));
+          out.push(itemBox(at([0, 0, R.receiver.z]), v3.copy(R.receiver.h), it.yaw, rot, v3.copy(R.steel), BoxFlag.Dynamic));
+          out.push(itemBox(at([0, 0, R.fore.z]), v3.copy(R.fore.h), it.yaw, rot, v3.copy(R.wood), BoxFlag.Dynamic));
           const magRot = quat.mul(rot, quat.axisAngle([1, 0, 0], R.mag.cant));
-          out.push(makeBox({ c: at([0, R.mag.y, R.mag.z]), h: v3.copy(R.mag.h), yaw: it.yaw, rot: magRot, albedo: v3.copy(R.wood), flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: at([0, -0.012, R.stock.z]), h: v3.copy(R.stock.h), yaw: it.yaw, rot, albedo: v3.copy(R.steel), flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));   // (the open triangle as one thin slab: raster only, so no ray finds a paddle-shaped shadow caster the stock never was)
+          out.push(itemBox(at([0, R.mag.y, R.mag.z]), v3.copy(R.mag.h), it.yaw, magRot, v3.copy(R.wood), BoxFlag.Dynamic));
+          out.push(itemBox(at([0, -0.012, R.stock.z]), v3.copy(R.stock.h), it.yaw, rot, v3.copy(R.steel), BoxFlag.Dynamic | BoxFlag.NoShadow));   // (the open triangle as one thin slab: raster only, so no ray finds a paddle-shaped shadow caster the stock never was)
         } else {
-          out.push(makeBox({ c: at([0, 0, 0]), h: [0.022, 0.022, 0.09], yaw: it.yaw, rot, albedo: [0.09, 0.09, 0.1], flags: BoxFlag.Dynamic }));
-          out.push(makeBox({ c: at([0, 0, 0.095]), h: [0.026, 0.026, 0.008], yaw: it.yaw, rot, albedo: [0.16, 0.16, 0.15], flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));   // dark lens: the torch died with its owner
+          out.push(itemBox(at([0, 0, 0]), [0.022, 0.022, 0.09], it.yaw, rot, [0.09, 0.09, 0.1], BoxFlag.Dynamic));
+          out.push(itemBox(at([0, 0, 0.095]), [0.026, 0.026, 0.008], it.yaw, rot, [0.16, 0.16, 0.15], BoxFlag.Dynamic | BoxFlag.NoShadow));   // dark lens: the torch died with its owner
         }
+      } else if (it.kind === 'ring' && GEAR.on) {   // the 2010s issue kit's 40 mm sponge round, spent (SPONGE_ITEM): tumbling end over end in the air, lying on its side once down
+        const c: Vec3 = it.settled ? [it.pos[0], it.pos[1] - it.radius + SPONGE_ITEM.wide + 0.002, it.pos[2]] : v3.copy(it.pos);
+        spongeBoxes(out, c, it.settled ? quat.yaw(it.yaw) : quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble)), it.yaw);
       } else if (it.kind === 'ring') {   // a spent ring airfoil: three thin slats crossed at 60° lying flat (or tumbling flat-on in the air) — a small pale ring on the floor
         const G = RING_ITEM; const c: Vec3 = it.settled ? [it.pos[0], it.pos[1] - it.radius + G.half[1] + 0.002, it.pos[2]] : v3.copy(it.pos);
         const base = it.settled ? quat.yaw(it.yaw) : quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble));
-        for (let k = 0; k < 3; k++) { const rot = quat.mul(base, quat.axisAngle([0, 1, 0], k * Math.PI / 3)); out.push(makeBox({ c: v3.copy(c), h: v3.copy(G.half), yaw: it.yaw, rot, albedo: v3.copy(G.albedo), flags: BoxFlag.Dynamic | BoxFlag.NoShadow })); }
+        for (let k = 0; k < 3; k++) { const rot = quat.mul(base, quat.axisAngle([0, 1, 0], k * Math.PI / 3)); out.push(itemBox(v3.copy(c), v3.copy(G.half), it.yaw, rot, v3.copy(G.albedo), BoxFlag.Dynamic | BoxFlag.NoShadow)); }
+      } else if (it.kind === 'shell') {   // a dud 40 mm round (SHELL_ITEM): the pale aluminium body with its gold ogive, tumbling in the air, lying on its side once down
+        const S = SHELL_ITEM; const c0: Vec3 = it.settled ? [it.pos[0], it.pos[1] - it.radius + S.half[0] + 0.002, it.pos[2]] : v3.copy(it.pos);
+        const rot = quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble));
+        out.push(itemBox(v3.copy(c0), v3.copy(S.half), it.yaw, rot, v3.copy(S.body), BoxFlag.Dynamic));
+        out.push(itemBox(v3.add(c0, quat.rotate(rot, [0, 0, S.half[2] * 0.62])), [S.half[0] + 0.001, S.half[1] + 0.001, S.half[2] * 0.4], it.yaw, rot, v3.copy(S.nose), BoxFlag.Dynamic | BoxFlag.NoShadow));
       } else {
         const flat = it.settled; const box30 = it.fill > 1, box20k = it.fill >= 3;   // fill 2: a rifleman's empty 30-round box (guards.ts tickReloadBeat) — longer, and bakelite-coloured like the one on the gun; fill 3: the FN2000's black thirty out of Sam's reload (player.ts); else a pistol magazine (fill 0 empty, 0‥1 part full)
         const col: Vec3 = box20k ? v3.copy(SC20K_ITEM.metal) : box30 ? v3.copy(RIFLE_ITEM.wood) : it.fill > 0 ? [0.09, 0.09, 0.1] : [0.06, 0.06, 0.065]; const hl = box30 ? 0.095 : 0.055, hw = box30 ? 0.014 : 0.018;
         if (flat) out.push(makeBox({ c: [it.pos[0], it.pos[1] + 0.012, it.pos[2]], h: [hw, 0.012, hl], yaw: it.yaw, albedo: col, flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
-        else out.push(makeBox({ c: v3.copy(it.pos), h: [hw, hl, 0.03], yaw: it.yaw, rot: quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble)), albedo: col, flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));   // a dropped magazine tumbles too
+        else out.push(itemBox(v3.copy(it.pos), [hw, hl, 0.03], it.yaw, quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble)), col, BoxFlag.Dynamic | BoxFlag.NoShadow));   // a dropped magazine tumbles too
       }
       for (let k = n0; k < out.length; k++) out[k].mkey = MKEY.item + (it.serial & 8191) * 8 + Math.min(7, k - n0);   // MOTION IDENTITY per part (scene/boxes.ts MKEY): the g-buffer reprojects the flying can through ITS last transform whatever spawned or died around it in the list
     }
@@ -218,4 +288,4 @@ export class Throwables {
 
 const poseKey = (p: Prop) => p.x * 7919 + p.z * 104729 + p.yaw;   // any change of pose changes this (exact float compare; not a hash to trust across different poses, just 'did it move')
 /** a canister that is still SOMETHING: its fuse not yet gone, or (smoke) gone and still venting — never scenery for the item cap to sweep up */
-const liveCan = (x: Item) => (x.kind === 'smoke' || x.kind === 'flash') && (!x.fired || x.emitT > 0);
+const liveCan = (x: Item) => (x.kind === 'smoke' || x.kind === 'flash' || x.kind === 'frag') && (!x.fired || x.emitT > 0);

@@ -26,7 +26,7 @@ const HOSTILE_TINT: Vec3 = [0.17, 0.19, 0.1], HOSTILE_TINT2: Vec3 = [0.03, 0.03,
  *  wall so the west side of the room, where both men move, is laid open and the table hides nobody; the last low from the room's south-west onto the corridor
  *  door and the two men on it. Each is held at least minDur and at most dur seconds, cut early by `until` (a drill cue); every cut is hard but the show's ends. */
 interface ShotDef extends Omit<CameraShotSpec, 'look' | 'title'> { title: string; caption: string; sub?: string; minDur?: number; look: Vec3 | ((q: Query) => Vec3); until?: (drill: DrillRef) => boolean }
-// ================================================================ GAMEPLAY FRAMING (the designer, 08-13: 'our graphics don't really stand up to close-up shots — rework the frames of our demos
+// ================================================================ GAMEPLAY FRAMING (the maintainer, 08-13: 'our graphics don't really stand up to close-up shots — rework the frames of our demos
 // to be closer to regular gameplay'). Every pinned shot of both showcases goes through frameShot(): its yaw and look-at (what it is ABOUT) stay, its height comes up toward the follow
 // camera's own three-quarter view (camera.ts: pitch 55°, distance 21, fov 28°) — pitch into [pitchMin, pitchMax], the eye pulled back ×distK into [distMin, distMax], the look-at dropped
 // to the floor the way play frames it. One table to tune; `on: false` = the authored close framings exactly as they were.
@@ -510,13 +510,17 @@ const loudBeats = (H: { ext: DoorRef }): Record<'two' | 'red1' | 'red2' | 'red3'
 // south (+z), π/2 east, π north, −π/2 west): corridor z 10‥12.2 across the building; north of it the server room (x 14‥22), the manager's office (22‥30) with the
 // KEYPAD side door between them at x 22, the storage room (30‥36) with the BREAKER on its wall; south of it the cubicle farm (x 12‥28, doorways off the corridor at
 // x 15.7 and 22.7) and the break room (28‥36: vending machines in its north-west corner, the counter and its coffee machine along the east wall, the fire exit in
-// the east wall at z 20.6 onto the east lot and its sodium lamp). Every mark was walked headlessly (tools/qa/night-probes.ts) — clear straight lines between
+// the east wall at z 20.75 onto the east lot and its sodium lamp). Every mark was walked headlessly (tools/qa/night-probes.ts) — clear straight lines between
 // consecutive goals, reach of the row each beat taps, out of every leaf's sweep.
 const NIGHT = {
   // ---- Sam's marks
-  lot: [36.85, 0, 19.7] as Vec3, lotYaw: 0.35,          // crouched against the east wall a hand north of the fire exit's frame, in reach of its leaf (it swings INTO the room off him)
+  lot: [36.85, 0, 20.0] as Vec3, lotYaw: 0.35,          // crouched against the east wall a hand north of the fire exit's frame (the real door: hinge z 20.32), in reach of its leaf (it swings INTO the room off him)
+  // … and where the fire exit opens OUTWARD (doors.ts DOORWAY.exitsOut: `swing` −1 on this door) he waits on its HANDLE side instead — the same mark mirrored through the opening's
+  // centre (z 20.75), south of the latch jamb and 1.45 m from the hinge, clear of the leaf's arc out over the lot (r 0.86) — and goes in by the front of the opening once it stands wide
+  lotOut: [36.85, 0, 21.5] as Vec3, lotOutYaw: Math.PI - 0.35, lotOutAim: [36.3, 0.9, 20.9] as Vec3, doorFront: [36.62, 0, 20.72] as Vec3,
+  pullOut: [35.4, 0, 20.72] as Vec3,                      // … and half a metre inside the threshold, turned back: where he draws an outward leaf to behind him (nothing sweeps the room side of the frame)
   inDoor: [35.0, 0, 20.75] as Vec3,                       // a stride and a half inside, square through the opening's latch half
-  pullSpot: [34.7, 0, 21.5] as Vec3,                      // out of the leaf's inward sweep (hinge (36, 20.02), r 1.16), a hand from where its tip comes to: where he pulls it shut from
+  pullSpot: [34.7, 0, 21.5] as Vec3,                      // out of the leaf's inward sweep (hinge (36, 20.32), r 0.86), a hand from where its tip comes to: where he pulls it shut from
   hide: [35.1, 0, 22.35] as Vec3, hideAim: [31.2, 1.2, 13.4] as Vec3,   // the dark south-east corner beyond the fire exit's sweep (its leaf swings in, north of him) — eyes on the north door across the room
   creep: [[34.5, 0, 17.4], [33.7, 0, 15.3]] as Vec3[],   // up past the fridge along the counter's edge and round to the west of the man at the machine (his back)
   dragTo: [34.3, 0, 18.1] as Vec3,                        // backing off south along the counter with him by the ankles: into the fridge's shadow, out of the machines' light
@@ -532,7 +536,7 @@ const NIGHT = {
   backToSide: [[20.9, 0, 8.55], [21.35, 0, 8.6]] as Vec3[],   // back to the side door's room face (a thumb-turn this side)
   officeWait: [24.2, 0, 9.15] as Vec3, officeAim: [26.2, 1.2, 10.6] as Vec3,   // behind the office wall west of its doorway while the torch goes past outside
   toStorage: [[25.72, 0, 9.5], [25.72, 0, 10.75], [31.6, 0, 10.7], [32.45, 0, 10.72]] as Vec3[],   // out, and east along the corridor's north wall to the storage door's keyed face
-  breakerSpot: [30.55, 0, 10.5] as Vec3,                  // hugging the north wall two strides west of that doorway: the middle of the one band of floor with a line through it onto the breaker panel (walked at head heights 1.0‥1.6, tools/qa)
+  breakerSpot: [30.8, 0, 10.6] as Vec3,                   // a stride off the north wall, a stride and a half west of that doorway: the middle of the one band of floor from which his HEAD (crouched and aimed it sits a hand east and north of his feet) has a line through the real 0.9 m doorway, past its open leaf, onto the breaker panel — the band is half a metre wide and runs diagonally (20 cm west per 10 cm north); walked with tools/qa/night-probes.ts NB_DBG=1
   toBreakN: [[30.66, 0, 11.5]] as Vec3[],                 // across to the break room's north door again (its closer has long shut it)
   throughBreak: [[30.72, 0, 13.3], [33.2, 0, 17.3], [35.05, 0, 20.72]] as Vec3[],   // through the dark break room to the fire exit's push side
   outside: [37.5, 0, 20.85] as Vec3, outsideAim: [34.5, 1.2, 20.6] as Vec3,
@@ -717,8 +721,9 @@ const script: LevelScriptFn = D => {
       c.fade(1, 0);
       c.weather({ storm: 0.7, rain: 0.55, seed: 214 });
       c.lights.group(gServer, false);   // the server room by its racks' green wash alone (as the tour's drive stop had it); the rest of the floor as authored (freshEncounter)
-      c.stage('sam', NIGHT.lot, { yaw: NIGHT.lotYaw });
-      c.puppet({ goal: null, aim: [36.3, 0.9, 21.2], crouch: true });
+      const exitOut = c.query.door(fireExit).swing < 0;   // the fire exit opens out over the lot (he pulls it toward him from its handle side) — else into the room off him, as first walked
+      c.stage('sam', exitOut ? NIGHT.lotOut : NIGHT.lot, { yaw: exitOut ? NIGHT.lotOutYaw : NIGHT.lotYaw });
+      c.puppet({ goal: null, aim: exitOut ? NIGHT.lotOutAim : [36.3, 0.9, 21.2], crouch: true });
       c.note('ch:lot'); lower('02:14 · east lot'); shot('lot', 0); c.start('veil');
       c.start('kowalski'); c.start('reyes'); c.start('novak');   // the men's beats arm themselves on their own clocks and cues (below)
       yield* at(c, NT.stroke1); c.weather({ strike: { bearing: 1.75, elevDeg: 34, distKm: 1.1 } }); c.note('stroke1');
@@ -727,12 +732,13 @@ const script: LevelScriptFn = D => {
       // ---------------------------------------------------------------- 1 · THE FIRE EXIT — eased open a hand's width, then through: the sodium wedge fans across the lino and folds shut behind him
       c.note('ch:door'); shot('doorIn', 1);
       if (yield* tap(c, 'door', 'ease', 3)) c.note('door:eased');
-      yield c.until(() => c.query.door(fireExit).angle > 0.5 || !V().easing, 'leaf ajar'); yield c.wait(0.35);
-      yield* walk(c, [NIGHT.inDoor], { crouch: true, walk: 0.8, aim: [33.0, 1.0, 19.6] });   // (walking into the half-open leaf takes it the rest of the way under his hand — game.ts handsOnDoors)
+      yield c.until(() => (exitOut ? c.query.door(fireExit).angle < -1.2 : c.query.door(fireExit).angle > 0.5) || !V().easing, 'leaf ajar'); yield c.wait(0.35);   // (outward: wide enough to pass in front of — he cannot shoulder a leaf that opens toward him)
+      yield* walk(c, exitOut ? [NIGHT.doorFront, NIGHT.pullOut] : [NIGHT.inDoor], { crouch: true, walk: 0.8, aim: [33.0, 1.0, 19.6], ...(exitOut ? { within: 0.15 } : {}) });   // (walking into the half-open leaf takes it the rest of the way under his hand — game.ts handsOnDoors)
       c.note('inside', { t: +c.query.t.toFixed(2) });
-      yield* walk(c, [NIGHT.pullSpot], { crouch: true, walk: 0.9, aim: [36.2, 1.0, 20.5] });   // a step on, out of the leaf's inward sweep, turned back to it …
+      if (exitOut) c.puppet({ goal: null, aim: [36.2, 1.0, 20.6], crouch: true });              // (outward: he stops just inside the threshold and turns back to the leaf standing open over the lot …)
+      else yield* walk(c, [NIGHT.pullSpot], { crouch: true, walk: 0.9, aim: [36.2, 1.0, 20.5] });   // a step on, out of the leaf's inward sweep, turned back to it …
       if (yield* tap(c, 'door', 'pull', 2)) c.note('door:pulled');                              // … his hand goes to it (the row) …
-      // … and it comes to behind him on the pull's own spring (doors.ts pullTo — the designer, 08-13: left to its closer 'it looks like it closes itself'; pulled from inside the sweep it stalls on his own capsule)
+      // … and it comes to behind him on the pull's own spring (doors.ts pullTo — the maintainer, 08-13: left to its closer 'it looks like it closes itself'; pulled from inside the sweep it stalls on his own capsule)
       yield* untilT(c, () => Math.abs(c.query.door(fireExit).angle) < 0.15, 'fire exit shut', 4);
       yield* walk(c, [NIGHT.hide], { crouch: true, walk: 0.8, aim: NIGHT.hideAim });
       c.flag.samHidden = true;
@@ -879,7 +885,7 @@ const script: LevelScriptFn = D => {
       yield c.wait(3.0); c.weather({ strike: { bearing: -2.3, elevDeg: 22, distKm: 3.4 } }); c.note('stroke2');
       yield c.wait(7.5);
 
-      // ---------------------------------------------------------------- THE END — no hand-over (the designer, 08-13: both showcases simply return to the start card): a veil, and the
+      // ---------------------------------------------------------------- THE END — no hand-over (the maintainer, 08-13: both showcases simply return to the start card): a veil, and the
       // Director's showcase finish puts the night back bit for bit; main.ts opens the start card on the program's end
       c.flag.ended = true; c.note('end', { t: +c.query.t.toFixed(2) });
       c.fade(1, NT.endVeil); yield c.wait(NT.endVeil + 0.1);

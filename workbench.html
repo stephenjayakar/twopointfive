@@ -77,12 +77,9 @@
     .pnl .row .rev { flex: 0 0 10px; color: #f0d878; cursor: pointer; font-size: 8px; text-align: center; visibility: hidden; }
     .pnl .row.changed > label { color: #f0d878; }
     /* ---- inspector */
-    #inspector { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; background: #080c0e; border-left: 1px solid #1c2a30; }
     #inspgrip { position: absolute; left: -4px; top: 0; bottom: 0; width: 7px; cursor: col-resize; z-index: 3; } #inspgrip:hover { background: rgba(127,255,204,0.12); }
     .ihead { padding: 4px 8px; color: #5c8f7c; font-size: 10px; letter-spacing: .12em; border-bottom: 1px solid #142026; background: #0a1013; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; flex: 0 0 auto; }
     .ihead #proptitle { color: #7d9791; letter-spacing: 0; text-transform: none; overflow: hidden; text-overflow: ellipsis; }
-    #outliner-level { flex: 0 0 var(--outl-h, 36%); overflow: auto; padding: 4px 4px 6px; min-height: 40px; }
-    #splitter { flex: 0 0 5px; cursor: row-resize; background: #0d1518; border-top: 1px solid #1c2a30; border-bottom: 1px solid #1c2a30; } #splitter:hover { background: #1d3a34; }
     #props { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; border: 0; border-radius: 0; background: transparent; padding: 2px 8px 6px; }
     .olv .n { padding: 1px 4px; cursor: pointer; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #cfe; line-height: 1.35; }
     .olv .n:hover { background: #0f1c22; } .olv .n.sel { background: #f0d878; color: #111; }
@@ -159,6 +156,7 @@
     #rail .rb { display: flex; align-items: center; gap: 7px; text-align: left; background: transparent; color: #9bb; border: 1px solid transparent; border-radius: 4px; padding: 4px 7px; cursor: pointer; white-space: nowrap; }
     #rail .rb:hover { color: #eff; background: #0e1a1f; border-color: #22343b; } #rail .rb.on { color: #b6f5d4; background: #143026; border-color: #7fc; }
     #rail .rb .ic { display: inline-block; width: 18px; text-align: center; font-size: 13px; color: #7fc; } #rail .rb .k { margin-left: auto; color: #587; font-size: 9.5px; }
+    #rail a.rb.back { margin-top: 6px; text-decoration: none; color: #7a9a94; border-top: 1px solid #1c2a30; border-radius: 0 0 4px 4px; padding-top: 6px; }
     #rail .rh { color: #5c8f7c; font-size: 9.5px; letter-spacing: .12em; margin: 2px 2px 3px; }
     #left .lhead { padding: 4px 8px; color: #5c8f7c; font-size: 10px; letter-spacing: .12em; border-bottom: 1px solid #142026; border-top: 1px solid #1c2a30; background: #0a1013; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 0 0 auto; }
     #outliner-level { flex: 1 1 auto; overflow: auto; padding: 4px 4px 6px; min-height: 40px; }
@@ -183,7 +181,7 @@
     <div id="topbar">
       <div id="tb-level" data-modes="level materials"></div>
       <div id="tb-chars" data-modes="chars fx">
-        <div class="tabs"><span class="brand">2.6 workbench</span><span class="scenelabel" id="scenelabel"></span><span id="scenes" class="wbhide"></span><span class="spacer"></span><button id="gearbtn" class="iconbtn" title="stage &amp; camera, renderer, hotkeys, all knobs, copy all changed">⚙</button><button id="inspbtn" class="iconbtn on" title="hide / show the inspector (Tab)">◨</button></div>
+        <div class="tabs"><span class="brand">2.6 workbench</span><span class="scenelabel" id="scenelabel"></span><span id="scenes" class="wbhide"></span><span class="spacer"></span><button id="gearbtn" class="iconbtn" title="stage &amp; camera, renderer, hotkeys, all knobs, copy all changed">⚙</button><button id="inspbtn" class="iconbtn on" title="hide / show the inspector (`)">◨</button></div>
         <div id="variants" class="chips"></div>
         <div id="strip" class="hidden"><span class="k">last 3 s:</span><span id="gaitline">—</span><span class="spacer"></span><label title="gaze off, bounce as authored, no warps / linger, no life layer, no foot lock, the old natural speeds — flip it while he moves"><input type="checkbox" id="alloff"> ALL TWEAKS OFF</label><button id="copygait" title="the paste block for src/game/character.ts (as the gait lab emitted it)">copy gait constants</button></div>
       </div>
@@ -206,7 +204,7 @@
       <div id="outbox" class="hidden"><div class="ohead"><span>constants ·</span><span id="outwhat"></span><button id="outcopy">copy</button><button id="outclose">×</button></div><pre id="rigout"></pre></div>
       <div id="log"></div>
       <div id="help" data-modes="level materials"></div>
-      <div id="help-chars" data-modes="chars fx motion" style="position:absolute;left:10px;bottom:5px;right:10px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;color:#7f948e;text-shadow:0 1px 2px #000"></div>
+      <div id="help-chars" data-modes="chars fx" style="position:absolute;left:10px;bottom:5px;right:10px;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;color:#7f948e;text-shadow:0 1px 2px #000"></div>
       <div id="drop">drop a level .json to load it</div>
       <div id="gear" class="pnl hidden"></div>
       <div id="allknobs" class="pnl hidden"><div class="atop">ALL KNOBS — every group, flat<span class="spacer"></span><button id="allclose" class="iconbtn">×</button></div></div>

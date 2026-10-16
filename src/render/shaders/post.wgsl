@@ -53,7 +53,7 @@ fn agx(cin: vec3f) -> vec3f {
   let dbg = frame.debugView;
   if (dbg == 1u || dbg == 2u || dbg == 6u || dbg == 9u || dbg == 15u) { return vec4f(linearToSrgb(clamp(hdr.rgb, vec3f(0.0), vec3f(1.0))), 1.0); }   // (15 = the material view: data, not radiance — no exposure / tonemap)
   var color = hdr.rgb;
-  // SMOKE DIFFUSION (08-12, the designer: 'the sharp edges of the light not getting filtered at all by the smoke feels very nonphysical'): single scattering only
+  // SMOKE DIFFUSION (08-12, the maintainer: 'the sharp edges of the light not getting filtered at all by the smoke feels very nonphysical'): single scattering only
   // ATTENUATES what stands behind a plume, so a backlit vending front kept its pixel-crisp edges through any smoke short of opaque. Light that reaches the eye
   // through smoke has been forward-scattered off its line by small angles — the thing behind is seen BLURRED in proportion to the smoke looked through. The
   // bloom chain already holds this frame plainly downsampled (no threshold) at a quarter and an eighth of the size: mix toward those by the smoke transmittance
@@ -62,7 +62,7 @@ fn agx(cin: vec3f) -> vec3f {
   if (post.smokeDiffuse > 0.0 && dbg == 0u) {
     let tg = textureGather(1, volTexP, linSamp, v.uv); var Tv = max(max(tg.x, tg.y), max(tg.z, tg.w));   // the MOST transparent of the four half-res texels round the pixel: a man or a jamb standing in front of the plume (his texel T = 1) never takes his neighbours' smoke as a rim of blur, and the plume's edge against clear air stays sharp (review, 08-12)
     if (post.diffuseMode > 0.5) { Tv = textureSampleLevel(volTexP, linSamp, v.uv, 0.0).g; }   // (EXPERIMENT 'bilinear': smooth, a rim on a nearer surface possible)
-    let tau = -log(max(Tv, 1e-3));                       // the smoke's OPTICAL DEPTH on the ray: the blur grows in proportion to the smoke looked through (the designer: 'it really should be proportional to the amount of smoke in the path') —
+    let tau = -log(max(Tv, 1e-3));                       // the smoke's OPTICAL DEPTH on the ray: the blur grows in proportion to the smoke looked through (the maintainer: 'it really should be proportional to the amount of smoke in the path') —
     var w = clamp((tau - post.diffuseTau0) / 3.0, 0.0, 1.0) * post.smokeDiffuse;   // (τ0 0.35 since 08-14 — was 0.15: a plume's thin edge smeared the vending art along its whole outline, 'the edges are a bit weird')   // nothing under τ 0.15 (haze-thin wisps), the full mix only past τ ≈ 3 (T 5 %); the earlier transmittance-keyed ease saturated over most of a 1.6× plume
     if (w > 0.002) {
       let t1 = 0.5 / vec2f(textureDimensions(blur1Tex)); let t2 = 0.5 / vec2f(textureDimensions(blur2Tex));   // four bilinear taps half a texel out = a 3×3 tent on each level: their texel lattices do not show through the mix

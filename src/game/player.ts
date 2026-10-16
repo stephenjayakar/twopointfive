@@ -1,37 +1,71 @@
 // Player controller: movement / crouch / sprint under real or puppet input, back-to-the-wall (Q), the pistol and rail light + its OCP, the FN2000 (kit slot 2: SEMI / AUTO on the left button, its attachment — the ring launcher — on the right, its light), throws, silent takedown and body drag, plus the cursor: what is under it and what Space would do (interactables).
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import type { View } from '../host/hud';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG, smoothstep } from '../math/vec';
 import { Input } from './input';
 import { FollowCamera } from './camera';
-import { Doors, Door } from './doors';
+import { Doors, Door, DOORWAY } from './doors';
 import { RAG } from './ragdoll';
 import { ThrowSolution } from './throwables';
-import * as fx from './effects';
 import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle } from './rigProps';
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
+import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand } from './handwork';
+import type { SamWork } from './handwork';
 import { tread } from './floor';
 import { rackDist, tally } from './mission';
-import { chronKey, chronDoor, chronThrown, chronGrab } from './chronicle';
-import { fireWeapon, killGuard, dropFromHand } from './combat';
+import { quietWords } from './quiet';   // (called inside buildInteractables only)
+import { chronicle, chronKey, chronDoor, chronThrown, chronGrab } from './chronicle';
+import { fireWeapon, killGuard, dropFromHand, flashFuse } from './combat';
+import { FRAG, FRAG_STATS } from './frag';
 import { kickScuff } from './marks';
+import { hammerBlows } from './bigkit';
+import { BIGSLOT } from './kit';
+import { lockPoint } from './shotgun';
+import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop } from './bigkit';
 import { samSpread } from './suppression';
 import { fireRing, ringSolve, ringAimPoint } from './launcher';
-import { LAUNCHER } from './weapons';
-import { samAim, AIM_HOOKS } from './aim';
-import { ocpable } from './lighting';
+import { fireShell, shellSolve, shellAimPoint, shellBodies, arcArmed, HE40 } from './he40';
+import { LAUNCHER, LAUNCHER40 } from './weapons';
+import { STICKY, camAimPoint, camSolve, fireCam, stickyRows } from './stickycam';
+import type { Rifle, RifleAttachment } from './weapons';
+import { GEAR, gearText, ringTag } from './gear';   // (a leaf: the kit's names as issued, applied to the lines that name it)
+import { samAim, AIM, AIM_HOOKS, SNAP_PX } from './aim';
+import { AIMCOST } from './aimcost';
+import { ocpable, lensClear } from './lighting';
+import { breachAim, gunWalled, gunWallPose, gunWallStance } from './gunwall';
+import { friendNoSnap, friendOnRay, samOffFriend } from './friends';
+import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
+import { SPRINTDOOR, SPRINTDOOR_STATS, sprintDoorPace, sprintDoorLean, sprintDoorHead } from './sprintdoor';
+import { tearOff } from './doorblast';
+import { aimWeighBegin, aimWeighTurn, aimWeighShot, aimWeighLaunch, aimWeighLaunchKeep } from './aimweight';
 import { THROW_RELEASE, HOLD } from './character';
+import { WALLSNAP, wsTakeSecs, wsEase, wsHit, wsCornerAngle, wsSeenDeg } from './wallsnap';
 import type { HoldPhase, HoldVariant, LongStance } from './character';
 import type { StaticCollision } from '../scene/collision';
 import type { Game, Guard, Player, ThrowKind, Interactable, Verb } from './game';
 import { isBreathing } from './game';
 import { endGuardScript } from './squad';
-import { resetChase, handCarry, inHand } from './guards';
+import { resetChase, handCarry, inHand, gunBack } from './guards';
 import { whistleKey } from './whistle';
+import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './wand';
+import { wallChargeRows } from './wallcharge';
+import { defuseRows } from './defuse';
+import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
+import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
+import type { CloseKind } from './close';
 import { wetFootfall } from './wet';
+import { HANDS, bodyGripDist, haulBegin, haulPins, haulSlack, haulSetDone, haulSpeed, haulUpright, haulCrouch, haulYaw, handsStep, handsCancel, doorMoveLowers } from './hands';
 import { padState, stopCoding, spell, CODE_SECS, padDoorName } from './devices';
 import { civilianGrabbed, civilianComply, civilianSamLine, civilianBodies, civiliansShown } from './civilians';
 import { promptFor, agitationOf, samLineFor, samRemarkFor, samKeyLineFor, CIV_LINES } from './dialogue';
+import { autoReloadDue, autoReloads } from './autoreload';   // a dry gun starts its own reload (autoreload.ts): the R line below asks it
+import { QUICKTHROW } from './quickthrow';   // the G quick throw's switch (quickthrow.ts): off in the page, G is then a dead key here
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { STEALTHPOSE } from './stealthpose';
+import { stealthFeed } from './stealthfeed';   // Sam's hands-empty crouch poses (stealthpose.ts): what the animator is told each frame
+import { takeBegin, takeFall, takeLower, takeKill, takeBeats, TAKEDOWN } from './takedown';   // a takedown's own move and the fall it leaves (takedown.ts): poses only
 
 /** the player's movement circle: wider than the body so arms / gun don't clip into walls */
 const BODY_R = 0.42;
@@ -74,8 +108,28 @@ export const HOLD_FIRE_CD = 0.7, HOLD_SPREAD = 0.09;
  *  at `t` for `dur` (his bubble); the man's answer follows when it ends (updateHold → answerHeld); null between. after: a remark of Sam's waiting for the
  *  man to finish — his word on the key he has just pocketed (takeKey) — put up the first frame the answer is down and no question is going up, dropped by
  *  whatever kills a pending question (cancelAsk) or by the next question beating it to the air (askHeld); null when none waits. */
-export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: number; since: number; windT: number; swapT: number; remarked: boolean; gunOut: number; fireQueued: boolean; shotT: number; ask: { t: number; dur: number } | null; after: { text: string; id: string } | null; }
+export interface Hold { g: Guard; variant: HoldVariant; phase: HoldPhase; t: number; since: number; windT: number; swapT: number; remarked: boolean; gunOut: number; fireQueued: boolean; shotT: number; ask: { t: number; dur: number } | null; after: { text: string; id: string } | null;
+}
 
+/** IN A DOOR FRAME HE IS AS WIDE AS HIS SHOULDERS. BODY_R is a margin for his arms and his gun, 0.84 m across; a real door (scene/doorSize.ts) leaves 0.83 m
+ *  between its stops. So the circle the statics push on narrows to a man's own (DOOR_R — the men's, guards.ts) as his centre comes onto a doorway's middle line,
+ *  and widens again as he leaves it: whole within `DOOR_FIT.lat[0]` of the middle line and `DOOR_FIT.out[0]` of the frame line, gone by `lat[1]` / `out[1]`,
+ *  eased between (no step in it: nothing shoves him as it changes). Beside the frame, flat on the wall, he is as wide as ever. Every door of the level, standing
+ *  or off its hinges: it is the hole in the wall that is narrow. */
+const DOOR_R = 0.3, DOOR_FIT = { lat: [0.12, 0.5] as const, out: [0.55, 1.0] as const };
+/** his collision circle's radius against the statics with his centre at `p` (the checks' own: tools/qa — a watcher that holds him to BODY_R reads the air a
+ *  door frame gives him as a wall he is inside) */
+export const playerBodyR = (g: Game, p: Vec3): number => bodyR(g, p);
+function bodyR(g: Game, p: Vec3): number {
+  let k = 0;
+  for (const d of g.doors.list) {
+    const dx = p[0] - d.frameCentre[0], dz = p[2] - d.frameCentre[2]; if (dx * dx + dz * dz > 1.3) continue;
+    const c = d.def.closedDir, ux = Math.cos(c), uz = Math.sin(c), lat = Math.abs(dx * ux + dz * uz), out = Math.abs(dz * ux - dx * uz);
+    const kl = 1 - clamp((lat - DOOR_FIT.lat[0]) / (DOOR_FIT.lat[1] - DOOR_FIT.lat[0]), 0, 1), ko = 1 - clamp((out - DOOR_FIT.out[0]) / (DOOR_FIT.out[1] - DOOR_FIT.out[0]), 0, 1);
+    k = Math.max(k, kl * kl * (3 - 2 * kl) * ko * ko * (3 - 2 * ko));
+  }
+  return BODY_R - (BODY_R - DOOR_R) * k;
+}
 /** Longest stride the collision sweep takes in one go: from a settled spot (the circle clear of every face) a stride this short cannot carry the centre past the
  *  middle of the thinnest thing in the level (8 cm cubicle panels: 0.42 + 0.04), so every push-out sends him back the way he came — never out of the far side. */
 const SWEEP_STEP = 0.2;
@@ -89,9 +143,9 @@ function collidePlayer(g: Game, y1: number) {
   const pl = g.player, p = pl.char.pos, col = g.col, s = pl.safe;
   if (s) {
     const dx = p[0] - s[0], dz = p[2] - s[2]; const n = Math.min(32, Math.ceil(Math.hypot(dx, dz) / SWEEP_STEP));
-    if (n > 1) { p[0] = s[0]; p[2] = s[2]; for (let i = 1; i < n; i++) { p[0] += dx / n; p[2] += dz / n; col.collideCircle(p, BODY_R, 0.2, y1, 4); col.clampToWorld(p, BODY_R); } p[0] += dx / n; p[2] += dz / n; }
+    if (n > 1) { p[0] = s[0]; p[2] = s[2]; for (let i = 1; i < n; i++) { p[0] += dx / n; p[2] += dz / n; col.collideCircle(p, bodyR(g, p), 0.2, y1, 4); col.clampToWorld(p, BODY_R); } p[0] += dx / n; p[2] += dz / n; }
   }
-  for (let k = 0; k < 4; k++) { col.collideCircle(p, BODY_R, 0.2, y1, 6); if (!col.clampToWorld(p, BODY_R)) break; }   // (6 passes: three walls and a shelf end meeting in a pocket left him centimetres inside one of them at 3; and where the world edge and a static leave less than his width — the van's corner on the lot's rim — the two are alternated until they agree on the mouth of the wedge instead of each undoing the other)
+  for (let k = 0; k < 4; k++) { col.collideCircle(p, bodyR(g, p), 0.2, y1, 6); if (!col.clampToWorld(p, BODY_R)) break; }   // (6 passes: three walls and a shelf end meeting in a pocket left him centimetres inside one of them at 3; and where the world edge and a static leave less than his width — the van's corner on the lot's rim — the two are alternated until they agree on the mouth of the wedge instead of each undoing the other)
   if (s) { s[0] = p[0]; s[1] = 0; s[2] = p[2]; } else pl.safe = [p[0], 0, p[2]];
 }
 /** May he stand up here? Anything static in the column between crouched head height and standing head height (a counter top's overhang, a shelf, a desk he
@@ -99,7 +153,7 @@ function collidePlayer(g: Game, y1: number) {
  *  (the QA soak's 'popped 0.30 m' under the reception counter's north overhang). Non-destructive: settles a COPY of his spot against that band only. */
 export function canStand(g: Game): boolean {
   const p = g.player.char.pos; const q: Vec3 = [p[0], p[1], p[2]];
-  g.col.collideCircle(q, BODY_R, 1.0, 1.7, 2);
+  g.col.collideCircle(q, bodyR(g, p), 1.0, 1.7, 2);   // (as wide as he is HERE: in a door frame his shoulders are turned — bodyR)
   return Math.hypot(q[0] - p[0], q[2] - p[2]) < 0.01;
 }
 /** Settle the player against the statics NOW (game.ts, after the door leaves and the furniture have had their say this frame): whatever a leaf or a pinned chair
@@ -120,9 +174,11 @@ AIM_HOOKS.playerExternalK = (g: Game) => (g.player.braced ? RIFLE_SPREAD.braceK 
 /** seconds the rifle takes coming off the sling into the hands (or going back, or the pistol coming out in its place): no round and no ring inside it */
 export const RIFLE_EQUIP_SECS = 0.45;
 /** what the selected slot puts in his hand, for the HUD line */
-const itemName = (pl: Player) => pl.slot === 'pistol' ? pl.pistol.def.short : pl.slot === 'smoke' ? 'smoke canister' : pl.slot === 'flash' ? 'stun canister' : rifleName(pl);
-/** 'FN2000 · SEMI' / '· AUTO' (+ ' · RING ×4' while that attachment is selected) — the rifle as the HUD line names it */
-const rifleName = (pl: Player) => `${pl.rifle.def.short} · ${pl.rifle.mode.toUpperCase()}${pl.rifle.attachment === 'ring' ? ` · RING ×${pl.rifle.rings}` : ''}`;
+const itemName = (pl: Player) => pl.slot === 'pistol' ? pl.pistol.def.short : pl.slot === 'smoke' ? 'smoke canister' : pl.slot === 'flash' ? 'stun canister' : pl.slot === 'frag' ? 'frag grenade' : rifleName(pl);
+/** 'FN2000 · SEMI' / '· AUTO' (+ ' · RING ×4' / ' · 40 MM ×3' while that attachment is selected) — the rifle as the HUD line names it */
+/** what 2 pressed again puts on the right button after the load that is up (the launcher's loads in their order: ring, 40 mm and, once issued, the cameras) */
+const nextLoad = (rf: Rifle): string => { const a = rf.attachments[(rf.attIdx + 1) % Math.max(1, rf.attachments.length)]; return a === 'cam' ? 'the sticky cameras' : a === 'he40' ? 'the 40 mm' : 'the ring airfoil'; };
+const rifleName = (pl: Player) => `${pl.rifle.def.short} · ${pl.rifle.mode.toUpperCase()}${pl.rifle.attachment === 'ring' ? ` · ${ringTag()} ×${pl.rifle.rings}` : pl.rifle.attachment === 'he40' ? ` · 40 MM ×${pl.rifle.shells}` : pl.rifle.attachment === 'cam' ? ` · CAM ×${pl.rifle.cams}` : ''}`;
 /** Put the selected item away (E; taking hold of a wall) or draw it again (E; stepping off one): a reload in hand is abandoned on holstering, and unless `quiet`
  *  the HUD line says which and the holster sounds. The rig, the rail light, the takedown click and every path of the pistol read Player.holstered itself; with the
  *  rifle selected 'holstered' is SLUNG — across his back — and drawing it is RIFLE_EQUIP_SECS of no fire (equipT). */
@@ -136,14 +192,31 @@ function setHolstered(g: Game, on: boolean, quiet = false) {
 }
 /** every gun's reload in hand abandoned (the takedown, the grab, the lock, the kick: the hands are wanted) */
 function cancelReloads(pl: Player) { pl.pistol.cancelReload(); pl.rifle.cancelReload(); pl.char.anim.cancelReload(); }
+/** LEVEL AIM (AIM.player.level, the shipped default; 0 = the gun on the world point under the cursor, floor included, as it was): with NOTHING under the reticle —
+ *  no fixture, no man — Sam's gun is not on the patch of floor the cursor's ray happens to end on (two metres out that was the muzzle, the rail light and his whole
+ *  trunk pitched 35° at the ground, and the round into the lino at his feet): it is LEVEL along the cursor's heading, at the height he carries it — a standing man's
+ *  chest, lower on a knee — so the round, the light and the picture all go where a man would be. levelOn = that rule holds this frame: the knob is on and no script
+ *  holds his aim (Game.puppet.aim is an authored POINT — the tour's, a showcase's — and stays one). */
+function levelOn(g: Game): boolean { return AIM.player.level > 0 && !g.puppet?.aim; }
+const LEVEL_REACH = 20;
+/** The point Sam's fire sites send a round at with nothing under the reticle: under levelOn out along the cursor's heading from his own axis (never nearer than
+ *  LEVEL_REACH — a point at the cursor itself, inside the muzzle's reach, would turn the bore sideways) at the muzzle's own height, so the round leaves flat; else
+ *  the world point under the cursor. `keep` = the cursor nearer his feet than this names no bearing and the gun keeps the one it has (0.25 m: the aim easing's own
+ *  rule in updatePlayer; the hold turns the pair only past 0.6 m). */
+function freeAim(g: Game, keep = 0.25): Vec3 {
+  const c = g.player.char, ap = g.aimPoint; if (!levelOn(g)) return [ap[0], ap[1] + 0.03, ap[2]];
+  const dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
+  const yaw = d > keep ? Math.atan2(dx, dz) : c.aimYaw, R = Math.max(d, LEVEL_REACH);
+  return [c.pos[0] + Math.sin(yaw) * R, c.pos[1] + clamp(c.muzzle[1] - c.pos[1], 0.6, 1.6), c.pos[2] + Math.cos(yaw) * R];
+}
 /** The one weapon light Sam owns as a light (Player.light), posed off whichever gun is in the hand and lit by THAT gun's switch: the Five-seveN's rail light, or the
  *  FN2000's fore-end light. Dark while sprinting (gun down), while the hands are on the lock tools or both round a man (hideHeldItem: the gun is on the thigh / the
  *  back), and on a man who is down. Every path that bakes his pose calls this after it (updatePlayer, the hold's tail, the pick, the kick). */
 function poseGunLight(g: Game) {
   const pl = g.player, c = pl.char, L = pl.light;
   const pistolUp = pl.pistolUp, rifleUp = pl.rifleUp;
-  L.enabled = ((pistolUp && pl.pistol.lightOn) || (rifleUp && pl.rifle.lightOn)) && !pl.sprinting && !c.anim.hideHeldItem && !pl.down;
-  if (L.enabled) { const lp = rifleUp ? sc20kLightPose(c) : rigLightPose(c); L.pos = lp.pos; L.dir = lp.dir; }
+  L.enabled = ((pistolUp && pl.pistol.lightOn) || (rifleUp && pl.rifle.lightOn)) && !pl.sprinting && !c.anim.hideHeldItem && !pl.down && kitGunUp(g);   // (kitanim.ts: not from a fist still on its way to the gun)
+  if (L.enabled) { const lp = rifleUp ? sc20kLightPose(c) : rigLightPose(c), sh = c.bones.upperArmR; L.pos = sh ? lensClear(g, sh, lp.pos, L.radius, L) : lp.pos; L.dir = lp.dir; }   // (…from this side of a wall he is pressed to: lighting.ts LIGHTWALL)
 }
 /** Arm (or disarm) the animator's long gun for the FN2000 each frame: in the hands = the R1 solve with the rifle's own grip point and muzzle, steadied against his gait
  *  (longSteady: the gun rides the shoulders, not the hips), the carriage FORCED to what Sam is doing — in his hands at all (standing, walking, crouched) → SHOULDERED,
@@ -151,71 +224,115 @@ function poseGunLight(g: Game) {
  *  the high port; never the guards' calm carry — off = the pistol's numbers back. */
 function armRifle(g: Game, inHands: boolean, carriage: LongStance | null) {
   const pl = g.player, an = pl.char.anim;
-  an.longGun = inHands; an.longStance = inHands ? carriage : null; an.longSteady = 1;
-  if (inHands) { an.longGrip = sc20kGrip(); pl.char.muzzleAhead = sc20kMuzzleAhead(); }
+  an.longGun = inHands; an.longStance = inHands ? carriage : null; an.longSteady = 1; an.reloadBack = !GEAR.on;   /* (the 2010s carbine's magazine is ahead of the grip: the carbine's marks) */ an.reloadMag = !(pl.rifle.def as { pellets?: unknown }).pellets;   // (a pump shotgun in the rifle's slot has no magazine to change)
+  if (inHands) { an.longGrip = sc20kGrip(undefined, KITANIM.on && KITANIM.grips && !g.touring); pl.char.muzzleAhead = sc20kMuzzleAhead(); }   // (kitanim.ts grips: the support hand follows the gun as it is drawn in his hands — rigProps GRIPFIT)
   else pl.char.muzzleAhead = pl.pistol.def.muzzleAhead;
 }
+/** RELOAD THE GUN IN HIS HANDS — the one way a reload starts for the player (the R key calls it; anything else that wants him reloading — a rule that reloads an
+ *  empty gun by itself — calls it too, so there is one beat, one set of sounds and one animation). Which reload it is comes off the gun's own state (a round
+ *  still chambered or not, the magazine dry or not). Returns true when a reload BEGAN; false = nothing happened (no gun up, sprinting, on the wall with the
+ *  pistol, already reloading, magazine full, or no spare — the last one says so on the HUD). `sprinting` = the sprint is held with a direction this frame. */
+export function reloadInHand(g: Game, sprinting = false): boolean {
+  const pl = g.player, c = pl.char, gun = pl.pistol, rifle = pl.rifle;
+  if (c.anim.kitBusy || (KITANIM.on && pl.equipT > 0)) return false;   // (kitanim.ts: the gun is not in his hands yet — or is on its way out of them, or still on his thigh through the swing of the throw that handed the slot to it)
+  if (pl.pistolUp && !sprinting && !pl.wall) {   // (on the wall or holstered the pistol is on his thigh: nothing to reload in the hand)
+    const plan = kitReload(g, gun, false);   // (kitanim.ts: the change this gun's state calls for — empty / dry / tactical — on its own beat; null = the row's, as ever)
+    if (gun.startReload({
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill: 0, who: PLAYER_ID }); it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
+      magIn: () => g.audio.play('magIn', c.pos, 0.8),
+      rack: () => g.audio.play('rack', c.pos, 0.8),
+    }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(); g.msg('reloading'); return true; }
+    if (gun.spare.length === 0) g.msg('no spare magazines');
+    return false;
+  }
+  if (pl.rifleUp && !sprinting && (!pl.wall || pl.wall.kind === 'stack')) {   // the rifle in the hands: the same staged beat off its row (2.4 s: the empty out of the well behind the grip at 0.5 — its black thirty, 'mag' fill 3 — the fullest spare in at 1.5, the charging handle at 2.0)
+    const rackIt = rifle.chamber === 0;   // (the moves' support hand: a round still up the pipe and the handle is left alone — weapons.ts racks only an empty chamber)
+    const plan = kitReload(g, rifle, true);
+    if (rifle.startReload({
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: 3, who: PLAYER_ID }); it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 }); } },
+      magIn: () => g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }),
+      rack: () => g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }),
+    }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
+    if (rifle.spare.length === 0) g.msg(rifle.def.pellets ? `no more shells for the ${rifle.def.short}` : `no spare magazines for the ${rifle.def.short}`);
+    return false;
+  }
+  return false;
+}
+
 export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamera) {
   const pl = g.player; const c = pl.char; const T = g.tune; const gun = pl.pistol;
   cam.peekOffset = null;   // (set again below for the one case that wants it: peeking round the end of a wall)
+  aimWeighBegin(pl);   // (aimweight.ts: nothing has weighed his aim this frame yet — only the plain aim branch below does)
+  const launchWas = pl.launchHeld; pl.launchHeld = null;   // the launcher's button was down last frame (below, with the rifle's fire): handed on only by the frame that still has the rifle up and free — any other state (down, a grab, a kick, the sling, a sprint) lets go of it unsent
   if (input.hit('Enter') && (pl.down || g.mission.stage === 'failed' || input.down('ShiftLeft') || input.down('ShiftRight'))) {   // (failed on his feet — a civilian dead by his hand with tune.civilianKillFails — restarts too)   // Shift+Enter restarts the encounter any time; a bare Enter once down goes back to this run's newest CHECKPOINT if one is stored (game/savestate.ts — the down card's default too), else restarts
     const shift = input.down('ShiftLeft') || input.down('ShiftRight'); const ck = !shift && pl.down ? g.saves.newest(true, g.mission.stats.elapsed) : null;
     if (ck && g.saves.isThisRun(ck)) { const why = g.saves.load(g, ck.key); if (!why) return; g.msg(`checkpoint: ${why}`); }
     g.restartEncounter(); return;
   }
-  if (pl.down) { releaseWall(g); if (pl.holding) freeHeld(g, 'shot'); c.vel = [0, 0, 0]; pl.light.enabled = false; pl.throwPreview = null; c.anim.lockpick = false; c.anim.longGun = false; c.update(dt); g.bodyThud(c); return; }   // (down with a man in his arm — god mode off, hitPlayer has normally let go already: he goes free; the rifle, in the hands or not, is no longer held: it left them or lies under him on its sling)
+  if (STEALTHPOSE.on || c.anim.stealth) stealthFeed(g);
+  samBigTailTick(g, dt);   // (bigkit.ts, BIGSLOT.moves: the tool going back onto him after its beat, his legs his own — or dropped at once when anything else has his hands)
+  if (pl.down) { if (pl.wanding) wandDrop(pl); if (pl.kitWas !== undefined || c.anim.kitBusy) kitTick(g); releaseWall(g); if (pl.holding) freeHeld(g, 'shot'); c.vel = [0, 0, 0]; pl.light.enabled = false; pl.throwPreview = null; c.anim.lockpick = false; c.anim.longGun = false; c.update(dt); g.bodyThud(c); return; }   // (down with a man in his arm — god mode off, hitPlayer has normally let go already: he goes free; the rifle, in the hands or not, is no longer held: it left them or lies under him on its sling)
   const rifle = pl.rifle;
   gun.update(dt); rifle.update(dt); pl.ocp.update(dt); rifle.ringCd = Math.max(0, rifle.ringCd - dt); pl.equipT = Math.max(0, pl.equipT - dt);
   pl.noise *= Math.exp(-2.2 * dt);   // sound meter decay
+  samStunPose(g);                    // a blast's stagger / dazzle on him (samstun.ts): shown and kept true in every state below, cleared when it ends
+  if (pl.holding && samStaggered(g)) freeHeld(g, 'shot');   // folded with a man in his arm: the arm goes slack and the man is loose
   whistleKey(g, input);              // V: a low whistle (whistle.ts) — from the arm lock, the lock, the wall, mid-kick alike: anywhere but down (returned above)
+  gunWallStance(c, false); gunWallPose(g, c);   // (gunwall.ts, for the states below that pose him themselves: the rule's low ready let go of, the low carriage pulled in by the room it has; the gun's own states ask again further down)
+  if (pl.wanding && WAND.on && WAND.nv) nvKey(g, input, dt);   // (the wand: N is his while he looks — a dark room behind the door is what the goggles are for; kitanim.ts makes it a nod, his hands are on the cable)
+  else if ((pl.takedown || pl.kick || pl.picking || pl.wanding || pl.coding) && KITANIM.on && KITANIM.nv) nvKey(g, null, dt);   // (a flip begun a moment before one of these beats took him: the picture still follows the goggles through it — it used to stand where the beat found it)
+  if (pl.takedown || pl.kick || pl.picking || pl.wanding || pl.coding || pl.holding || samWork(g) || samStaggered(g)) pl.kitOwed = -1;   // (kitanim.ts kitClick: a click kept for a draw does not outlive a beat that took his hands)
+  if ((pl.takedown || pl.kick || pl.picking || pl.wanding || pl.coding) && (KITANIM.on || pl.kitWas !== undefined)) kitTick(g);   // (kitanim.ts: something else has his hands — no errand, and nothing left over in the fist)
   if (pl.takedown) { updateTakedown(g, dt); c.anim.speed = 0; c.anim.upper = 'none'; armRifle(g, false, null); c.update(dt); pl.light.enabled = false; return; }   // locked into the takedown beat: no movement / aim / fire until it resolves (the takedown is a hands-empty click: the rifle, if he has one, is on his back)
-  if (pl.holding) { updateHold(g, dt, input, cam); return; }   // a man in his arm: the pair moves, turns and is posed as one; Space / E on his row are read there
+  if (pl.holding) { if (KITANIM.on || pl.kitWas !== undefined) kitTick(g); updateHold(g, dt, input, cam); return; }   // a man in his arm: the pair moves, turns and is posed as one; Space / E on his row are read there
   if (pl.kick) { updateKick(g, dt); return; }              // rooted square to the leaf until the foot is back down (the door goes at KICK_IMPACT)
   if (pl.picking) { updatePicking(g, dt, input); return; }  // planted at the lock, on its own clock (a step / Space / Esc breaks off: interact.ts)
+  if (pl.wanding) { updateWanding(g, dt); return; }         // on his knee at a shut door with the optical wand under it (wand.ts; a step / Space / Esc pulls it out: interact.ts)
+  { const W = samWork(g); if (W && !(input.lmbHit() && samWorkLetGo(g, W))) { updateWorkPlant(g, dt, W); return; } }   // hands at work on a thing (handwork.ts: the breaker's lever, the drive, a wall charge): stood at it and squared to it while the verb runs; the trigger lets go of the drive / the charge and is his to shoot with (the lever's half second is committed)
   if (pl.coding) { updateCodingPlant(g, dt); return; }     // at the keypad, feet still, squared to the plate while the code goes in (devices.ts updateCoding times it; a fresh key / Space / Esc breaks off — interact.ts)
   c.anim.lockpick = false;                                   // (whatever ended a pick, the hands come off the tools)
   // equipment selection / toggles — the digits are KIT_ORDER's (1 pistol · 2 rifle · 3 smoke · 4 stun; there is no other way to change items). Pressed to a wall his
   // hands stay empty (wallSnap holstered whatever was up, releaseWall hands it back): there, E and the digits only choose what he steps off it with (WallHold.drawn)
   // and say so — nothing comes into the hand on the wall
-  const draw = (name: string) => { if (pl.wall) { pl.wall.drawn = true; g.msg(`${name} — in hand once off the wall`); } else { pl.holstered = false; g.msg(name); } g.audio.play('equip', null, 0.5); };
+  // — except the rifle where it stacks (wallStacks): 2, or E with it selected, brings it into his hands and the back hold becomes the stack; any other item
+  // chosen on the stack slings it and he is back on the plaster with that item waiting for the step off
+  const draw = (name: string) => {
+    const w = pl.wall;
+    if (w && !(pl.slot === 'rifle' && wallStacks(w))) { w.drawn = true; g.msg(`${name} — in hand once off the wall`); }   // (on the stack the rifle is still in his hands this frame: moveOnWall sees another item selected, slings it and makes the hold the back hold)
+    else { pl.holstered = false; g.msg(name); }
+    g.audio.play('equip', null, 0.5);
+  };
   const wasIn = pl.gunInHand();
   if (input.hit('Digit1')) { pl.slot = 'pistol'; draw(gun.def.short); }
-  if (input.hit('Digit2')) {   // 2: the rifle — off the sling into the hands (selected but slung, or anything else selected); pressed again with it IN the hands: the attachment the right button works (none → RING → none …, remembered while it is away)
-    if (!pl.hasRifle) g.msg('no FN2000 in this loadout — the start card / pause menu puts it in the kit');
-    else if (pl.rifleUp) {   // (never on the wall: it holstered whatever was up)
-      if (pl.equipT <= 0) {   // not while it is still coming round off the sling: a double-tapped 2 draws it, it does not also put the launcher on the button
+  if (input.hit('Digit2')) {   // 2: the rifle — off the sling into the hands (selected but slung, or anything else selected); pressed again with it IN the hands: the launcher's NEXT load goes on the right button (RING ⇄ 40 MM, and CAM third once sticky cameras are issued — there is no 'nothing' to step through; remembered while it is away)
+    if (!pl.hasRifle) g.msg(gearText('no FN2000 in this loadout — the start card / pause menu puts it in the kit'));
+    else if (pl.rifleUp) {   // (on the wall this is the stack: the back hold has nothing in the hands)
+      if (pl.equipT <= 0) {   // not while it is still coming round off the sling: a double-tapped 2 draws it, it does not also flip the launcher
         const a = rifle.cycleAttachment(); g.audio.play('click', c.muzzle, 0.7);
-        g.msg(a === 'ring' ? (rifle.rings > 0 ? `ring airfoil ×${rifle.rings} on the right button — head = out cold, body = staggered, a wall = a noise they go and look at; 2 again takes it off` : 'the ring launcher — but no ring airfoils left (2 again takes it off)') : `${rifle.def.short} · ${rifle.mode.toUpperCase()} — no attachment on the right button`);
+        g.msg(a === 'ring' ? gearText(rifle.rings > 0 ? `ring airfoil ×${rifle.rings} on the right button — head = out cold, body = staggered, a wall = a noise they go and look at; 2 again for the 40 mm` : 'the ring launcher — but no ring airfoils left (2 again for the 40 mm)')
+          : a === 'he40' ? gearText(rifle.shells > 0 ? `40 mm grenade ×${rifle.shells} on the right button — goes off on what it hits, like a frag; arms ${HE40.armM} m out (nearer: a dud); 2 again for ${nextLoad(rifle)}` : `the 40 mm — but no grenades left for it (2 again for ${nextLoad(rifle)})`)
+          : a === 'cam' ? (rifle.cams > 0 ? `sticky camera ×${rifle.cams} on the right button` : 'no sticky cameras left')
+          : `${rifle.def.short} — nothing goes on its right button`);
       }
     } else { pl.slot = 'rifle'; draw(rifleName(pl)); }
   }
-  if (input.hit('KeyE') && !pl.dragging && !pl.takedown) { if (pl.wall) { pl.wall.drawn = !pl.wall.drawn; g.msg(pl.wall.drawn ? `${itemName(pl)} — in hand once off the wall` : `${pl.rifleSel ? 'slung' : 'holstered'} — and staying so off the wall`); } else setHolstered(g, !pl.holstered); }   // E: put it away / draw it (whatever the slot is; the rifle 'away' is on his back)
+  if (input.hit('KeyE') && !pl.dragging && !pl.takedown) { if (pl.wall && pl.wall.kind !== 'stack' && !(pl.rifleSel && wallStacks(pl.wall))) { pl.wall.drawn = !pl.wall.drawn; g.msg(pl.wall.drawn ? `${itemName(pl)} — in hand once off the wall` : `${pl.rifleSel ? 'slung' : 'holstered'} — and staying so off the wall`); } else setHolstered(g, !pl.holstered); }   // E: put it away / draw it (whatever the slot is; the rifle 'away' is on his back)
   // (the wheel — walking pace down / up — is read in interact.ts wheelPace: while Space is down it scrolls the selector instead)
   if (input.hit('Digit3')) { if (pl.canisters > 0) { pl.slot = 'smoke'; pl.throwKind = 'smoke'; draw(`smoke canister ×${pl.canisters}`); } else g.msg('no smoke canisters left'); }
-  if (input.hit('Digit4')) { if (pl.flashbangs > 0) { pl.slot = 'flash'; pl.throwKind = 'flash'; draw(`stun canister ×${pl.flashbangs} — goes off ${fx.bang.fuse}s after it lands`); } else g.msg('no stun canisters left'); }
+  if (input.hit('Digit5')) { if (!FRAG.on) g.msg('no fragmentation grenades in this kit'); else if (pl.frags > 0) { pl.slot = 'frag'; draw(`frag grenade ×${pl.frags} — click throws it; it goes off ${FRAG.fuse}s after it leaves your hand`); } else g.msg('no frag grenades left'); }   // 5: the fragmentation grenade (frag.ts) — in the fist like a can; G's quick-throw (where it is on) stays smoke / stun
+  if (input.hit('Digit4')) { if (pl.flashbangs > 0) { pl.slot = 'flash'; pl.throwKind = 'flash'; draw(`stun canister ×${pl.flashbangs} — goes off ${flashFuse(g)}s after it lands`); } else g.msg('no stun canisters left'); }
   { const nowIn = pl.gunInHand(); if (nowIn !== wasIn && (nowIn === rifle || wasIn === rifle)) { pl.equipT = RIFLE_EQUIP_SECS; if (wasIn === rifle && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); } if (wasIn === gun && gun.reloading) { gun.cancelReload(); c.anim.cancelReload(); } } }   // the rifle came off the sling or went back on it (a digit / E): the beat with nothing to fire, and a reload in the hand that changed is abandoned
+  if (KITANIM.on || pl.kitWas !== undefined || c.anim.closeK >= 0) kitTick(g);   // (kitanim.ts: the hands' errands when what he carries changed — on the key's own frame — and the close-in mode's distance; let go of once the switch is off)
+  if (KITANIM.on || pl.kitOwed >= 0) kitClick(g, input);   // (kitanim.ts: a click made in the last moments of a draw is kept for the frame the gun is up)
   if (input.hit('KeyL')) { const lit = pl.rifleSel ? rifle : gun; lit.lightOn = !lit.lightOn; g.audio.play('click', c.muzzle, 0.6); }   // the light of the gun the kit has selected (its switch is under the thumb of the hand it is in)
   if (input.hit('KeyZ') && pl.rifleSel) {   // the selector (a property of the rifle: in the hands or slung) — what the LEFT button fires; the attachment on the right is its own thing
     if (rifle.def.modes.length > 1) { const m = rifle.cycleMode(); g.msg(`${rifle.def.short}: ${m.toUpperCase()}${m === 'auto' ? ' — hold the trigger' : ' — one round a click'}`); g.audio.play('click', c.muzzle, 0.7); }
     else g.msg(`${rifle.def.short} is ${rifle.mode.toUpperCase()} only`);
   }
-  if (input.hit('KeyN')) { pl.nv = !pl.nv; g.audio.play(pl.nv ? 'nvOn' : 'nvOff', null, 0.7); g.msg(pl.nv ? 'night vision on' : 'night vision off'); }
-  pl.nvAmount = damp(pl.nvAmount, pl.nv ? 1 : 0, pl.nv ? 5 : 9, dt);
+  nvKey(g, input, dt);
   const sprintKey = (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
-  if (input.hit('KeyR') && pl.pistolUp && !sprintKey && !pl.wall) {   // (on the wall or holstered the pistol is on his thigh: nothing to reload in the hand)
-    if (gun.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(Math.random() - 0.5) * 0.6, -0.2, (Math.random() - 0.5) * 0.6], { fill: 0, who: PLAYER_ID }); it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
-      magIn: () => g.audio.play('magIn', c.pos, 0.8),
-      rack: () => g.audio.play('rack', c.pos, 0.8),
-    })) { c.anim.reload(); g.msg('reloading'); } else if (gun.spare.length === 0) g.msg('no spare magazines');
-  }
-  if (input.hit('KeyR') && pl.rifleUp && !sprintKey && !pl.wall) {   // the rifle in the hands: the same staged beat off its row (2.4 s: the empty out of the well behind the grip at 0.5 — its black thirty, 'mag' fill 3 — the fullest spare in at 1.5, the charging handle at 2.0)
-    if (rifle.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(Math.random() - 0.5) * 0.6, -0.3, (Math.random() - 0.5) * 0.6], { fill: 3, who: PLAYER_ID }); it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 }); } },
-      magIn: () => g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }),
-      rack: () => g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }),
-    })) { c.anim.reload(rifle.def.reload.dur); g.msg('reloading the FN2000'); } else if (rifle.spare.length === 0) g.msg('no spare magazines for the FN2000');
-  }
+  // R, or the gun in his hands run dry with a magazine left (autoreload.ts: asked every frame, so a reload a sprint took out of his hands starts again) — one way in either way
+  if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey);
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)
   const { fwd, right } = cam.planarBasis();
   let mx = 0, mz = 0;
@@ -230,22 +347,30 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (gl) { const dx = gl[0] - c.pos[0], dz = gl[2] - c.pos[2]; const dl = Math.hypot(dx, dz); if (dl > 0.1) { mx = dx / dl; mz = dz / dl; } }
     if (g.puppet.crouch !== undefined && !pl.dragging && (g.puppet.crouch || canStand(g))) pl.crouch = g.puppet.crouch;
   }
+  if (!pl.dragging && (pl.haul || c.anim.haul)) { pl.haul = null; c.anim.haul = null; }   // (a body taken out of his hands by a reset: guards.ts)
+  const stunned = samStaggered(g), rooted = samRooted(g);   // folded by a blast (samstun.ts): rooted, the gun at the low ready, no round — as a man is; blind = the picture's, his feet his own
+  const ownMove = !rooted && (mx !== 0 || mz !== 0);   // (rooted, his keys are no step of his own: a held Shift and a direction is then no sprint that lets go of a body or a door, and the hands' moves are fed no step from him)
+  if (HANDS.on) { const hs = handsStep(g, ownMove && !g.puppet, dt); if (hs) { mx = hs[0]; mz = hs[1]; } }   // a body being taken up / laid down plants his feet (or walks him the step in to it); a door worked by hand steps him clear of its sweep (hands.ts)
+  if (rooted) { mx = 0; mz = 0; }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
   if (input.hit('KeyC') && !pl.dragging) { if (!pl.crouch) pl.crouch = true; else if (canStand(g)) pl.crouch = false; else g.msg('no room to stand'); }   // crouch is C, only (Ctrl is the camera-orbit modifier now); standing needs the headroom
-  const wantSprint = (input.down('ShiftLeft') || input.down('ShiftRight')) && ml > 0;
+  const wantSprint = (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
   // back to the wall (Q): press against the face behind / beside you and sidle along it; Q again, breaking into a run or walking off it steps away (moveOnWall)
-  if (input.hit('KeyQ')) { if (pl.wall) releaseWall(g); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
-  if (pl.wall && wantSprint) releaseWall(g);
+  if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
+  else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
+  else if (WALLSNAP.on) wallSnapPending(g, dt, cam, wantSprint);   // (Q a moment before the face came into reach: taken as it does)
+  if (pl.wall && wantSprint) wallStepOff(g, mx, mz, ml, 'run');
   const onWall = !!pl.wall && moveOnWall(g, dt, cam, mx, mz, ml);   // false: free (or let go this very frame — then he walks on from where he stands, below)
   if (!onWall) {
     if (wantSprint && pl.dragging) g.toggleDrag();          // breaking into a sprint lets go of the body
     if (wantSprint && pl.crouch && canStand(g)) pl.crouch = false;   // (under a counter top Shift just crouch-walks on: no standing into the slab)
-    if (pl.dragging) pl.crouch = true;
+    if (pl.dragging) pl.crouch = haulCrouch(g);   // (hauled along the floor: on his heels; carried on his shoulder: upright once it is half way up — hands.ts)
     pl.sprinting = wantSprint && !pl.crouch;
     if (pl.sprinting && gun.reloading) { gun.cancelReload(); c.anim.cancelReload(); }
     if (pl.sprinting && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); }
-    let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? T.playerCrouch * 0.6 : (pl.crouch ? T.playerCrouch : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
+    let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : (pl.crouch ? T.playerCrouch : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
+    if (pl.sprinting) maxSpeed *= sprintDoorPace(g, pl);   // (sprintdoor.ts: his hand is ripping a door round toward him — the run waits for it; 1 otherwise)
     pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
     if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
     c.pos = v3.mad(c.pos, c.vel, dt);
@@ -261,11 +386,12 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const recentlyFired = g.time - pl.lastFireT < 1.6;
   const gunUp = pl.pistolUp;      // the pistol actually in the hand
   const rifleUp = pl.rifleUp;     // the FN2000 in both hands (selected, off the sling, in the kit, not hauling a body)
-  const aiming = ((gunUp && (recentlyFired || gun.lightOn || pl.aimHeld)) || (rifleUp && pl.braced)) && !pl.sprinting && !pl.dragging;   // light on = weapon up: the rail light is bolted to the gun, so pointing the light at the cursor means pointing the gun there; the rifle is braced in the shoulder whenever it is in the hands (Player.braced) — up, aimed, its arc laid if the ring launcher is selected
-  const cursorPitch = () => {   // gun pitch that points AT the world point under the cursor — floor included — unless a fixture or a guard is targeted
+  const aiming = ((gunUp && (recentlyFired || gun.lightOn || pl.aimHeld)) || (rifleUp && pl.braced)) && !pl.sprinting && !pl.dragging && !doorMoveLowers(g) && !(pl.wall?.kind === 'stack' && !stackUp(g, dt, input));   // light on = weapon up: the rail light is bolted to the gun, so pointing the light at the cursor means pointing the gun there; the rifle is braced in the shoulder whenever it is in the hands (Player.braced) — up, aimed, its arc laid if the ring launcher is selected
+  const cursorPitch = () => {   // gun pitch onto what the reticle has — a fixture, a man — else LEVEL along the cursor's heading (levelOn; with the knob off / a scripted aim: AT the world point under the cursor, floor included)
     let targetY = ap[1] + 0.03;
     if (g.aimTarget) targetY = clamp(g.aimTarget.pos[1], 0.3, 2.95);
-    else if (g.aimGuard) targetY = g.aimGuard.char.pos[1] + 1.2;
+    else if (g.aimGuard) targetY = g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : g.aimGuard.char.pos[1] + 1.2;
+    else if (levelOn(g)) return 0;
     const gunY = c.pos[1] + (pl.crouch ? 0.95 : 1.4);
     return clamp(Math.atan2(targetY - gunY, Math.max(aimDist, 0.5)), -60 * DEG, 70 * DEG);
   };
@@ -277,109 +403,174 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     const body = pl.dragging.char; const rag = body.ragdoll;
     const hips = body.bones.hips ?? body.pos; const dx = hips[0] - c.pos[0], dz = hips[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     if (d > 1e-4) pl.dragYaw = Math.atan2(dx, dz);
-    pl.dragStuckT = rag && rag.strain > 0.2 ? pl.dragStuckT + dt : 0;
+    pl.dragStuckT = rag && (rag.strain > 0.2 || haulSlack(g)) ? pl.dragStuckT + dt : 0;
     if (!rag || d > 2.2 || pl.dragStuckT > 0.25) { const wedged = rag && pl.dragStuckT > 0.25; g.toggleDrag(); if (wedged) g.msg('body dropped — it was wedged'); }
+    else if (haulSetDone(g)) { releaseBody(g, true); g.msg('body set down'); }   // (hands.ts: the 'let go of him' row laid it down first)
     else {
       const DRAG_HANDS = 0.35, f = c.forward(); const hx = c.pos[0] + f[0] * DRAG_HANDS, hz = c.pos[2] + f[2] * DRAG_HANDS;
-      rag.setPin(RAG.ankL, [hx + f[2] * 0.1, 0.42, hz - f[0] * 0.1]); rag.setPin(RAG.ankR, [hx - f[2] * 0.1, 0.42, hz + f[0] * 0.1]);   // an ankle in each hand, 20 cm apart across your facing
-      c.aimYaw = pl.dragYaw; c.aimPitch = damp(c.aimPitch, -0.9, 6, dt);
-      c.bodyYaw = approachAngle(c.bodyYaw, pl.dragYaw, 10 * dt);
-      pl.backpedal = speed > 0.2 && Math.cos(wrapAngle(pl.dragYaw - v3.yawOf(c.vel))) < 0; c.anim.reverse = pl.backpedal;
+      if (!haulPins(g, dt)) { rag.setPin(RAG.ankL, [hx + f[2] * 0.1, 0.42, hz - f[0] * 0.1]); rag.setPin(RAG.ankR, [hx - f[2] * 0.1, 0.42, hz + f[0] * 0.1]); }   // an ankle in each hand, 20 cm apart across your facing (hands.ts, its switch on: taken up from whichever end he is at, by its own beats — the pins are its then)
+      if (haulUpright(g)) {   // carried on his shoulder (hands.ts): he walks with it, facing the way he goes, head up; nothing slides
+        if (speed > 0.2) c.bodyYaw = approachAngle(c.bodyYaw, v3.yawOf(c.vel), HANDS.carryTurn * dt);
+        c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0, 6, dt); pl.backpedal = false; c.anim.reverse = false;
+      } else {
+      const faceYaw = haulYaw(g) ?? pl.dragYaw;   // (lifting it onto his shoulder / laying it down: the facing he began the beat with)
+      c.aimPitch = damp(c.aimPitch, pl.haul ? -0.45 : -0.9, 6, dt);   // (with his hands on it — hands.ts — the bow is the layer's own: the old stoop on top of it hung his head at his chest)
+      if (pl.haul) { const rel = approachAngle(wrapAngle(c.aimYaw - c.bodyYaw), 0, 8 * dt); c.bodyYaw = approachAngle(c.bodyYaw, faceYaw, 10 * dt); c.aimYaw = c.bodyYaw + rel; }   // (his head comes round WITH him: the aim snapped to the new facing whipped it there in one frame, from wherever the cursor had it)
+      else { c.aimYaw = faceYaw; c.bodyYaw = approachAngle(c.bodyYaw, faceYaw, 10 * dt); }
+      pl.backpedal = speed > 0.2 && Math.cos(wrapAngle(faceYaw - v3.yawOf(c.vel))) < 0; c.anim.reverse = pl.backpedal;
+      }
       // it is not silent: a soft periodic scrape while the body is actually sliding (guards close by will come and look)
-      if (speed > 0.3 && !rag.sleeping) { pl.dragNoiseT -= dt; if (pl.dragNoiseT <= 0) { pl.dragNoiseT = 0.55; g.audio.play('propScrape', hips, 0.25, { rate: 0.7 }); g.events.push({ kind: 'prop', pos: [hips[0], 0, hips[2]], time: g.time, loud: false, level: 0.22, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, 0.22); } }
+      if (speed > 0.3 && !rag.sleeping && !pl.haul?.carry) { pl.dragNoiseT -= dt; if (pl.dragNoiseT <= 0) { pl.dragNoiseT = 0.55; g.audio.play('propScrape', hips, 0.25, { rate: 0.7 }); g.events.push({ kind: 'prop', pos: [hips[0], 0, hips[2]], time: g.time, loud: false, level: 0.22, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, 0.22); } }
     }
   } else if (pl.sprinting) {
     // CoD-style sprint: gun down, body follows the run direction, no aiming
-    const moveYaw = v3.yawOf(c.vel);
-    c.bodyYaw = approachAngle(c.bodyYaw, moveYaw, 14 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, -0.3, 6, dt);
+    const moveYaw = v3.yawOf(c.vel); const lean = sprintDoorLean(g, pl);   // (sprintdoor.ts: a shoulder turned into the door he has just run open — null when no such turn is running: the lines as they were)
+    c.bodyYaw = approachAngle(c.bodyYaw, moveYaw + (lean ?? 0), 14 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, -0.3, 6, dt);
+    if (lean !== null) { pl.doorHead = c.anim.lookYawExtra = sprintDoorHead(c.bodyYaw - moveYaw); pl.doorHeadT = g.time; }   // (his head stays on the run while the shoulder goes in, so the fog's cone does not flick sideways; back to 0 with the turn)
     pl.backpedal = false; c.anim.reverse = false;
+  } else if (pl.wall && pl.wall.kind === 'stack') {
+    // WALLSNAP — stacked on the wall with the rifle: he faces ALONG it the way he last went (the wall at his shoulder), turning up to 45° off that line to bring
+    // the rifle onto the cursor while it is up (a click, or stepped out round the end); behind him past 110° for a fifth of a second, he turns about
+    const w = pl.wall; const along = Math.atan2(w.n[0], w.n[2]) - w.side * Math.PI / 2; const moving = Math.abs(w.v) > 0.3;
+    let bodyT = along;
+    if (aiming && aimDist > 0.25) {
+      c.aimYaw += wrapAngle(v3.yawOf(toAim) - c.aimYaw) * (1 - Math.exp(-16 * dt)); c.aimPitch = damp(c.aimPitch, cursorPitch(), 12, dt);
+      const off = wrapAngle(v3.yawOf(toAim) - along);
+      w.flipT = Math.abs(off) > 110 * DEG && !moving && !(w.lean! > 0) ? (w.flipT ?? 0) + dt : 0; if (w.flipT > 0.2) { w.side = -w.side as -1 | 1; w.flipT = 0; }
+      bodyT = along + clamp(wrapAngle(c.aimYaw - along), -0.9, 0.9) * 0.85;
+    } else { c.aimYaw += wrapAngle(along - c.aimYaw) * (1 - Math.exp(-10 * dt)); c.aimPitch = damp(c.aimPitch, 0.05, 6, dt); w.flipT = 0; }
+    if (!wallTakeYaw(pl)) c.bodyYaw = approachAngle(c.bodyYaw, bodyT, 10 * dt);
+    pl.backpedal = false; c.anim.reverse = moving && w.v * w.side < 0;
   } else if (pl.wall) {
     // back to the wall: flat against it when parked — turned toward the way he is going while he sidles (the walk cycle has no sidestep) with the chest twisted
     // back square to the room — eyes coming round toward the open end he is parked at. The pistol is on his thigh for as long as he is on it (wallSnap), so
     // there is no aim here: `aiming` wants the gun in the hand
     const w = pl.wall; const awayYaw = Math.atan2(w.n[0], w.n[2]); const moving = Math.abs(w.v) > 0.3;
     const turnK = smoothstep(0.1, 0.9, Math.abs(w.v) / Math.max(0.3, pl.crouch ? g.tune.playerCrouch : WALL_PACE));   // the legs come round WITH the sidle: nothing at a creep, the full 55° at his sidle pace — no snap from flat to turned the moment he sets off
-    c.bodyYaw = approachAngle(c.bodyYaw, awayYaw - w.side * WALL_TURN * turnK, 10 * dt);   // (the rate stays brisk — squaring up to the wall on taking it is quick; it is the AMOUNT of leg turn that now follows the sidle speed)
+    if (!wallTakeYaw(pl)) c.bodyYaw = approachAngle(c.bodyYaw, awayYaw - w.side * WALL_TURN * turnK, 10 * dt);   // (the rate stays brisk — squaring up to the wall on taking it is quick; it is the AMOUNT of leg turn that now follows the sidle speed)
     const look = awayYaw - w.side * (w.atEdge === w.side ? WALL_LOOK : moving ? 15 * DEG : 8 * DEG);   // (yaw − = to his right; side + = his right)
     c.aimYaw += wrapAngle(look - c.aimYaw) * (1 - Math.exp(-8 * dt)); c.aimPitch = damp(c.aimPitch, 0.05, 6, dt);
     pl.backpedal = false; c.anim.reverse = moving && w.v * w.side < 0;   // (the beat after a change of direction: still coasting the old way with the legs already turned the new one)
   } else {
-    if (aimDist > 0.25) c.aimYaw += wrapAngle(v3.yawOf(toAim) - c.aimYaw) * (1 - Math.exp(-16 * dt));   // eased, not snapped: the arms swing through to a new bearing instead of teleporting
+    if (aimWeighTurn(g, dt)) { /* aimweight.ts: the gun's heading swings to the cursor's bearing at a limited rate, the circle trailing the cursor */ }
+    else if (aimDist > 0.25) c.aimYaw += wrapAngle(v3.yawOf(toAim) - c.aimYaw) * (1 - Math.exp(-16 * dt));   // eased, not snapped: the arms swing through to a new bearing instead of teleporting
     c.aimPitch = damp(c.aimPitch, cursorPitch(), 12, dt);
     // a leaf he is walking open (or about to, or easing by hand: game.ts handsOnDoors feeds anim.doorPush) is taken square on unless the gun is actually up:
     // nobody backs through a door he is pushing, and the free hand only reaches wood in front of him (character.ts doorLayer) — the hips turn INTO the face he
     // pushes (up to 20° off the line of travel), the chest comes round with them (the animator lets the aim twist go while the hand is on), the eyes stay on the aim
-    const dp = c.anim.doorPush; const intoDoor = dp && dp.w >= 1 && !aiming && !dp.holdOnly ? Math.atan2(-dp.n[0], -dp.n[2]) : null;   // (a leaf its closer merely rests on him while he stands scanning the room does not turn him round to it)
+    const dp = c.anim.doorPush; const byHand = !!pl.doorMove && !!dp && dp.w >= 1 && !aiming;   // (hands.ts: a leaf he is working by hand — he faces the spot his hand goes to, wherever his feet are taking him)
+    const intoDoor = byHand ? Math.atan2(dp!.p[0] - c.pos[0], dp!.p[2] - c.pos[2]) : dp && dp.w >= 1 && !aiming && !dp.holdOnly ? Math.atan2(-dp.n[0], -dp.n[2]) : null;   // (a leaf its closer merely rests on him while he stands scanning the room does not turn him round to it)
     if (speed > 0.2) {
       const moveYaw = v3.yawOf(c.vel);
       const d = Math.cos(wrapAngle(c.aimYaw - moveYaw));
-      if (intoDoor !== null) pl.backpedal = false;
+      if (byHand) pl.backpedal = Math.cos(wrapAngle(intoDoor! - moveYaw)) < 0;
+      else if (intoDoor !== null) pl.backpedal = false;
       else if (pl.backpedal ? d > -0.05 : d < -0.35) pl.backpedal = !pl.backpedal;
       // hips follow the legs' travel direction (or its reverse) but yield up to ~45° toward the aim so the spine twist stays natural
       const base = pl.backpedal ? wrapAngle(moveYaw + Math.PI) : moveYaw;
-      const bodyTarget = intoDoor !== null ? base + clamp(wrapAngle(intoDoor - base), -0.35, 0.35) : base + clamp(wrapAngle(c.aimYaw - base), -0.8, 0.8) * (aiming ? 1 : 0.6);   // (square to the leaf, within 20° of his line: it swings as it opens and he is walking through, not round it)
+      const bodyTarget = byHand ? intoDoor! : intoDoor !== null ? base + clamp(wrapAngle(intoDoor - base), -0.35, 0.35) : base + clamp(wrapAngle(c.aimYaw - base), -0.8, 0.8) * (aiming ? 1 : 0.6);   // (square to the leaf, within 20° of his line: it swings as it opens and he is walking through, not round it)
       c.bodyYaw = approachAngle(c.bodyYaw, bodyTarget, (intoDoor !== null ? 12 : 9) * dt);
       c.anim.reverse = pl.backpedal;
     } else {
       pl.backpedal = false; c.anim.reverse = false;
       const off = wrapAngle((intoDoor ?? c.aimYaw) - c.bodyYaw);
-      const limit = intoDoor !== null ? 0.25 : aiming ? 0.6 : 1.2;
-      if (Math.abs(off) > limit) c.bodyYaw = approachAngle(c.bodyYaw, (intoDoor ?? c.aimYaw) - Math.sign(off) * limit * 0.7, 7 * dt);
+      const limit = byHand ? 0.1 : intoDoor !== null ? 0.25 : aiming ? 0.6 : 1.2;
+      if (Math.abs(off) > limit) c.bodyYaw = approachAngle(c.bodyYaw, (intoDoor ?? c.aimYaw) - Math.sign(off) * limit * 0.7, (byHand ? 12 : 7) * dt);
     }
   }
   c.anim.speed = speed; c.anim.crouchTarget = pl.crouch ? 1 : 0;
   if (pl.wall) { c.anim.stance = 'wall'; c.anim.stackSide = pl.wall.side; c.anim.wallPeek = pl.wall.peek; c.anim.wallYaw = wrapAngle(Math.atan2(pl.wall.n[0], pl.wall.n[2]) - c.bodyYaw); }   // back flat to the face whatever the legs do (the animator is told which way the wall faces off his front: square behind when parked, 55° round while the legs are turned to sidle), head / hands / lead foot toward the way he last went, leaning out with the peek (character.ts 'wall'; releaseWall takes it off — the tour's beats own the stance the rest of the time)
   c.anim.upper = pl.sprinting || pl.dragging ? 'none' : aiming ? 'aim' : gunUp ? 'relaxed' : 'none';
   { const dp = c.anim.doorPush; const inHands = rifleUp && !c.anim.hideHeldItem; armRifle(g, inHands, !inHands ? null : pl.sprinting ? 'lowLong' : dp && dp.w >= 1 && !aiming ? 'portLong' : 'shoulder'); }   // the FN2000 in both hands = the R1 long-gun solve, its carriage forced by what he is doing (armRifle: shouldered whenever it is in the hands, the low ready for the sprint, the port for a leaf under the hand); slung / no rifle = the pistol's numbers back. hideHeldItem: the lock tools' / a hold's layer still easing out for a few frames after it ended keeps the hands 'busy' — combat.ts handProps draws the rifle on his back by the same flag, so the arms let go of it for exactly those frames too
+  // a wall, a jamb or a leaf inside the raised gun's reach on the line he aims along (gunwall.ts; nothing with its switch off): the gun comes to the low ready —
+  // the rifle's low carriage, the pistol's stance — and no round leaves it until there is room to bring it up
+  const rifleAim = rifleUp && c.anim.longStance === 'shoulder';
+  const lockAt = rifleAim && pl.rifle.def.pellets ? breachAim(g, c, pl.rifle.def.pellets.breach) : null;   // the breaching shotgun laid on a lock: that muzzle is there on purpose, and a breach shot at a lock always fires
+  const offFriend = samOffFriend(g, c, (rifleAim || gunUp) && !pl.sprinting && !lockAt, dt);   // (friends.ts FRIENDS.lowReady: a teammate in the line of a raised gun with nobody in a fight; false with the switch off)
+  const walled = (stunned && (rifleAim || gunUp)) || (!pl.wall && gunWalled(g, c, rifleAim || gunUp ? 'aim' : null, lockAt, dt, false, !!lockAt)) || offFriend !== false;   // (stunned with a gun up: it comes down as at a wall)   // (the pistol in the hand, aimed or carried: a click is about to bring it up)
+  if (walled) { c.anim.upper = 'none'; if (rifleAim) armRifle(g, true, 'lowLong'); if (input.lmbHit()) g.msg(stunned ? 'stunned — the gun will not come up yet' : offFriend !== false ? `gun down — ${offFriend ? offFriend.callsign : 'a friend'} is in your line` : 'no room to bring the gun up'); }
+  gunWallStance(c, walled && !rifleAim);
   // --- slot actions
+  if (pl.wall && WALLSNAP.on) wallSnapPose(g, dt, aiming);   // (the take's feet, the landing, the stack's stance and carriage: wallsnap.ts)
+  else if (pl.wall && pl.wall.takeT !== undefined) { c.anim.wallTake = -1; c.anim.wallHit = 0; c.anim.stackPress = 0; }   // (the switch thrown off under a hold it took: its channels to rest, the hold goes on as the old one)
   pl.fireCd -= dt;
   if (gunUp && !pl.sprinting && !pl.dragging) {
-    if (input.lmbHit() && pl.fireCd <= 0 && pl.equipT <= 0) {   // (equipT: the pistol only just came out in the rifle's place — X off the FN2000 — and is not up yet; never non-zero in a kit without the rifle)
+    if (input.lmbHit() && !walled && pl.fireCd <= 0 && pl.equipT <= 0) {   // (equipT: the pistol only just came out in the rifle's place — X off the FN2000 — and is not up yet; never non-zero in a kit without the rifle)
       if (gun.fire()) {
         pl.fireCd = gun.def.cd; pl.lastFireT = g.time;   // the row's cadence (the Five-seveN's 0.22 s; no jitter in Sam's hands)
         const pt = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : null;
-        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? v3.add(g.aimGuard.char.pos, [0, 1.25, 0]) : [ap[0], ap[1] + 0.03, ap[2]];   // a fixture under the reticle IS the target (that is what 'click: shoot' promises); else a guard under the cursor; else the world point under the cursor (the same point the gun / rail light pitch to)
-        fireWeapon(g, c, tgt, true, { spread: samSpread(g) + samAim(g) });   // dead-on — unless rounds are going past his own head: then it opens up with his suppression (suppression.ts samSpread: 0 at rest, 0 with the flag off, 0 for the tour's scripted double-taps) — and by the aim model's cone (aim.ts samAim: unsettled, a man crossing, his own feet; 0 with tune.aimModel off / under the puppet)
-        if (gun.roundsReady === 0) g.msg('empty — press R');
-      } else { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!gun.reloading) g.msg(gun.roundsReady === 0 ? 'click — empty (R to reload)' : 'reloading…'); }
+        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : v3.add(g.aimGuard.char.pos, [0, 1.25, 0])) : freeAim(g);   // a fixture under the reticle IS the target (that is what 'click: shoot' promises); else a guard under the cursor; else level along the cursor's heading (freeAim — the same line the gun / rail light are held on)
+        fireWeapon(g, c, aimWeighShot(g, tgt), true, { spread: samSpread(g) + samAim(g) });   // dead-on — unless rounds are going past his own head: then it opens up with his suppression (suppression.ts samSpread: 0 at rest, 0 with the flag off, 0 for the tour's scripted double-taps) — and by the aim model's cone (aim.ts samAim: unsettled, a man crossing, his own feet; 0 with tune.aimModel off / under the puppet)
+        if (gun.roundsReady === 0 && !autoReloads(g, gun)) g.msg('empty — press R');   // (autoreload.ts: with a magazine left the reload starts itself a beat on and says 'reloading')
+      } else { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!gun.reloading) g.msg(gun.roundsReady === 0 ? autoReloads(g, gun) ? 'click — empty' : 'click — empty (R to reload)' : 'reloading…'); }
     }
     // right click with the pistol out: the OCP zaps the LIGHT the reticle has snapped to (aimTarget: the auto-aimed fixture or the breaker; or the lit torch / weapon
     // light of the man the ring sits on — his light is electronics too, g.ocp handles both). On a man with no light burning there is nothing for it to do, and it does
     // nothing: no charge spent, no click, no line (the ring shows no right-button affordance there either — overlay.ts / ocpable)
-    if (input.rmbHit() && (ocpable(g) || (!g.aimTarget && !g.aimGuard))) g.ocp(g.aimTarget);   // (nothing snapped at all: the OCP's own dry click, as it always gave)
+    if (input.rmbHit() && !(KITANIM.on && pl.equipT > 0) && !c.anim.bigTool && (ocpable(g) || (!g.aimTarget && !g.aimGuard))) g.ocp(g.aimTarget);   // (nothing snapped at all: the OCP's own dry click, as it always gave; kitanim.ts: not from a pistol still on its way to his hand)
   }
   // the FN2000 in the hands (docs/internal/sc20k-design.md §5): the LEFT button = a round, always — SEMI one a click, AUTO one every auto.interval while it is held, each
-  // of a held string wider than the last (weapons.ts Firearm.autoSpread); the RIGHT button = the selected ATTACHMENT (2 again cycles it): RING → a ring airfoil along
-  // the arc the overlay is drawing (launcher.ts), none → nothing (the OCP is the pistol's — said once, the first time it is tried over a light); the brace is not a
+  // of a held string wider than the last (weapons.ts Firearm.autoSpread); the RIGHT button = the launcher, whichever load is UP on it (Rifle.attachment — always
+  // one of the two: 2 again flips RING ⇄ 40 MM, above): a ring airfoil (launcher.ts) or a 40 mm grenade (he40.ts) — see the gesture below; the brace is not a
   // button any more (Player.braced: always, in the hands); nothing at all inside the equip beat (equipT: it is still coming off the sling)
   let ringPreview: ThrowSolution | null = null;
   rifle.autoIdle(dt, rifleUp && input.lmb());   // (the AUTO string lapses a quarter second after the trigger comes up — or the moment the rifle is not being fired as a rifle)
   if (rifleUp && !pl.sprinting) {
     const pull = rifle.automatic ? input.lmb() || input.lmbHit() : input.lmbHit();
-    if (pull && pl.fireCd <= 1e-4 && pl.equipT <= 0) {   // (1e-4: 0.1 s is six sixtieths exactly — the float dust of six subtractions must not cost the string a seventh frame; the guards' burst clock does the same)
+    if (pull && !walled && pl.fireCd <= 1e-4 && pl.equipT <= 0) {   // (1e-4: 0.1 s is six sixtieths exactly — the float dust of six subtractions must not cost the string a seventh frame; the guards' burst clock does the same)
       const grow = rifle.autoSpread;   // (this round's share of the string's growth, read before it is booked)
       if (rifle.fire()) {
         pl.fireCd = rifle.automatic ? rifle.def.auto!.interval : rifle.def.cd; pl.lastFireT = g.time; rifle.autoFired();
         const pt = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : null;
-        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? v3.add(g.aimGuard.char.pos, [0, 1.25, 0]) : [ap[0], ap[1] + 0.03, ap[2]];   // as the pistol's: the fixture, the man, or the world point the reticle has
-        fireWeapon(g, c, tgt, true, { weapon: rifle.def, spread: rifleSpread(g, speed) + grow + samSpread(g) + samAim(g) });   // his hands on it (still / moving / crouched, braced), the string's growth, and rounds past his own head — and every one of them feeds everybody else's suppression inside fireWeapon like a pistol round
-        if (rifle.roundsReady === 0) g.msg('FN2000 empty — press R');
-      } else if (input.lmbHit()) { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!rifle.reloading) g.msg(rifle.roundsReady === 0 ? 'click — the FN2000 is empty (R)' : 'reloading…'); }   // (the PRESS clicks dry once; a trigger HELD on auto over an empty or reloading gun is silence, not a metronome — review 08-10 #17)
+        const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : v3.add(g.aimGuard.char.pos, [0, 1.25, 0])) : freeAim(g);   // as the pistol's: the fixture, the man, or level along the cursor's heading
+        fireWeapon(g, c, aimWeighShot(g, tgt), true, { weapon: rifle.def, spread: rifleSpread(g, speed) + grow + samSpread(g) + samAim(g) });   // his hands on it (still / moving / crouched, braced), the string's growth, and rounds past his own head — and every one of them feeds everybody else's suppression inside fireWeapon like a pistol round
+        if (rifle.roundsReady === 0 && !autoReloads(g, rifle)) g.msg(`${rifle.def.short} empty — press R`);
+      } else if (input.lmbHit()) { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!rifle.reloading) g.msg(rifle.roundsReady === 0 ? autoReloads(g, rifle) ? `click — the ${rifle.def.short} is empty` : `click — the ${rifle.def.short} is empty (R)` : 'reloading…'); }   // (the PRESS clicks dry once; a trigger HELD on auto over an empty or reloading gun is silence, not a metronome — review 08-10 #17)
     }
-    if (rifle.attachment === 'ring') {   // the ring launcher on the right button: its arc previewed for as long as it is selected and a ring is left to fly it, one ring per press
-      const from = sc20kLauncherMuzzle(c); const at = ringAimPoint(g, from);
-      if (rifle.rings > 0) ringPreview = ringSolve(g, from, at);   // the arc, live, from the tube to the first thing it would meet (handed to the overlay below as throwPreview: the canisters' polyline)
-      if (input.rmbHit()) {
-        if (pl.equipT > 0) { /* still coming off the sling */ }
-        else if (rifle.rings <= 0) { g.audio.play('dryFire', c.muzzle, 0.4); g.msg('no ring airfoils left — they are not coming back'); }
-        else if (rifle.ringCd > 0) { g.audio.play('dryFire', c.muzzle, 0.4); g.msg('cycling the launcher…'); }
-        else { fireRing(g, c, from, at); if (!g.infiniteAmmo) rifle.rings--; rifle.ringCd = LAUNCHER.cd; pl.fireCd = Math.max(pl.fireCd, 0.3); pl.lastFireT = g.time; c.anim.fire(); if (rifle.rings <= 0) g.msg('that was the last ring airfoil'); }   // (the trigger hand worked the tube: a beat before the next round too)
+    // The launcher: the press BEGINS the gesture, the arc is drawn for as long as the button stays down (the overlay's polyline, as a canister's), and LETTING GO
+    // sends the round along it — a tap is a round at once, a hold is a look at the arc first and is never needed. (The arc used to be on screen for as long as
+    // an attachment was selected; with one always up it would never leave the picture.) Esc lets go of it unsent (Game.escape → launchCancel), and so does
+    // anything that takes the rifle out of the picture: Player.launchHeld is handed on by this block alone, every frame, or it is gone. What goes is the load
+    // that is up on the frame the button comes up: 2 pressed under a held button flips the arc with it. One tube: the two loads share its clock (Rifle.ringCd).
+    const beat = pl.equipT > 0 && !!pl.wall;   // (stacked on a wall the rifle's rise is the stack's own: stackUp holds the click and hands it back — below; off the wall the equip beat only DELAYS the round)
+    const load = rifle.attachment;
+    const owed = walled && !stunned && !!launchWas && aimWeighLaunchKeep(pl, dt);   // (aimweight.ts: a load let go of mid-swing and waiting on the circle is kept through a wall the gun swings past — nothing is sent or drawn while it is down)
+    let held: RifleAttachment | null = launchWas && load && !beat && (!walled || owed) && !stunned && !g.orders.menu && rifle.left(load) > 0 && !input.hit('Escape') && !input.hit('Blur') ? load : null;   // (…and still a round of it to send)
+    const down = input.rmb() || input.rmbHit();   // (rmbHit(): a click that began and ended inside one frame is still a frame of 'down' — its release, next frame, sends the round)
+    if (!held && input.rmbHit() && !beat && !walled && !stunned) {   // (down for a wall — gunwall.ts: a press is nothing. Still coming off the sling: the press BEGINS it — '2, right button' in one breath — and the round waits for the rifle, below. An order menu up has eaten the button already: orders.ts)
+      if (!load) { if (g.aimTarget && !pl.ocpHinted) { pl.ocpHinted = true; g.msg(`the OCP is on the pistol — 1 draws it`); } }   // nothing under this barrel (the shotgun in the rifle's slot): the right button is dead with it up — said once, over a light, then never again
+      else if (rifle.left(load) > 0 && rifle.ringCd <= 0) held = load;
+      else {   // the dry click, and why: nothing left of this load (and where the other is), or the tube still closing
+        g.audio.play('dryFire', c.muzzle, 0.4);
+        g.msg(load === 'cam' ? (rifle.cams > 0 ? 'loading the launcher…' : 'no sticky cameras left')
+          : load === 'ring' ? (rifle.rings > 0 ? 'cycling the launcher…' : gearText(rifle.shells > 0 ? 'no ring airfoils left — they are not coming back (2 again for the 40 mm)' : 'no ring airfoils left — they are not coming back'))
+          : rifle.shells > 0 ? 'loading the launcher…' : gearText(rifle.rings > 0 || rifle.cams > 0 ? `no 40 mm grenades left (2 again for ${nextLoad(rifle)})` : 'no 40 mm grenades left'));
       }
-    } else if (input.rmbHit() && g.aimTarget && !pl.ocpHinted) { pl.ocpHinted = true; g.msg(`the OCP is on the pistol — 1 draws it (2 again puts the ring launcher on this button)`); }   // no attachment: the right button is dead with the rifle up — said once, over a light, then never again
+    }
+    if (held && !owed) {
+      const from = sc20kLauncherMuzzle(c); const at = aimWeighShot(g, held === 'ring' ? ringAimPoint(g, from) : held === 'cam' ? camAimPoint(g, from) : shellAimPoint(g, from));   /* (aimweight.ts: the tube points where the gun does) */
+      ringPreview = held === 'ring' ? ringSolve(g, from, at) : held === 'cam' ? camSolve(g, from, at) : shellSolve(g, from, at, shellBodies(g));   // the arc, live, from the tube to the first thing it would meet (handed to the overlay below as throwPreview: the canisters' polyline)
+      if (aimWeighLaunch(g, dt, !down && pl.equipT <= 0)) {   // the button came up (and the rifle is in the hands — a click inside the equip beat goes as the beat ends): the round goes, along the arc as it stands this frame (aimweight.ts: let go of mid-swing it waits, arc drawn, for the circle to reach the cursor — half a second at most)
+        if (held === 'ring') {
+          fireRing(g, c, from, at); if (!g.infiniteAmmo) rifle.rings--; rifle.ringCd = LAUNCHER.cd; pl.fireCd = Math.max(pl.fireCd, 0.3);   // (the trigger hand worked the tube: a beat before the next round too)
+          if (rifle.rings <= 0) g.msg(gearText('that was the last ring airfoil'));
+        } else if (held === 'cam') {   // a sticky camera (stickycam.ts): flat over the spot, onto the first wall behind it — one more eye for the fog of war
+          fireCam(g, pl, from, at); chronicle(g, 'thrown', { kind: 'cam' });   /* (a row for the debrief, not a thing thrown: the par's clock and the 'thrown' count are for cans and grenades) */ if (!g.infiniteAmmo) rifle.cams--; rifle.ringCd = STICKY.cd; pl.fireCd = Math.max(pl.fireCd, 0.3);
+        } else {
+          const armed = ringPreview ? arcArmed(ringPreview) : true;
+          fireShell(g, c, from, at); chronThrown(g, 'he40'); if (!g.infiniteAmmo) rifle.shells--; rifle.ringCd = LAUNCHER40.cd; pl.fireCd = Math.max(pl.fireCd, 0.4);
+          if (rifle.shells <= 0) g.msg(armed ? 'that was the last 40 mm' : 'that was the last 40 mm — and too close to arm'); else if (!armed) g.msg(`too close: the 40 mm arms ${HE40.armM} m out`);
+        }
+        pl.lastFireT = g.time; c.anim.fire(); held = null; ringPreview = null;   // (gone: its arc with it)
+      }
+    }
+    pl.launchHeld = held;
   }
-  // throwables: preview while a canister slot (3 / 4) is up or G is held; throw on LMB (canister up) or on G release. G throws the throwable selected last
-  // (smoke until 4 is pressed), falling back to the other kind when that one has run out
-  const gHeld = !pl.wall && (input.down('KeyG') || input.hit('KeyG'));   // hit(): a tap that began and ended inside this frame still counts as held for one frame (so its release next frame throws). Not on the wall: the hands are flat on the plaster there (review finding: G still arced and spent a canister)
+  // throwables: preview while a canister slot (3 / 4 / 5) is up; throw on LMB. With the quick throw on (quickthrow.ts: the frozen harness stand, ?quickthrow — the page
+  // plays without it) also previewed while G is held and thrown on G release: the throwable selected last (smoke until 4 is pressed), falling back to the other kind
+  // when that one has run out
+  if (pl.throwEaten && !input.down('KeyG') && !input.hit('KeyG')) pl.throwEaten = false;
+  const gHeld = QUICKTHROW.on && !pl.wall && !pl.throwEaten && (input.down('KeyG') || input.hit('KeyG'));   // hit(): a tap that began and ended inside this frame still counts as held for one frame (so its release next frame throws). Not on the wall: the hands are flat on the plaster there (review finding: G still arced and spent a canister)
   if (gHeld && rifleUp && g.throwCount(pl.throwKind === 'flash' && pl.flashbangs > 0 ? 'flash' : pl.canisters > 0 ? 'smoke' : 'flash') > 0) setHolstered(g, true, true);   // a quick-throw with the rifle in the hands slings it first (the throwing arm is the trigger arm): it stays on his back after — E or 2 brings it round again
   const prevPreview = pl.throwPreview;              // on the release frame G is up, so the arc from the last held frame is the one to throw
   pl.throwPreview = null;
@@ -387,23 +578,27 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   const slotKind: ThrowKind | null = pl.holstered ? null : pl.canisterSel;   // the can in the fist: a canister slot selected AND drawn — the same rule combat.ts handProps draws the fist by (Player.canisterSel), so what is thrown and what is shown cannot disagree
   // a wind-up remembers what it was aimed with: spending the last smoke can on LMB mid-hold flips `throwKind` (and clears the slot) a
   // frame later, and the G release must not then cost a stun charge nobody selected. An explicit 2 / 3 press during the hold still switches it.
-  const kind: ThrowKind = slotKind ?? (pl.throwHeld ? pl.heldKind : pl.throwKind);
+  // (a frag in the fist is the CLICK's alone: G with it up quick-throws the can selected last, as with a gun up — a grenade is never thrown by reflex)
+  const kind: ThrowKind = slotKind === 'frag' && (gHeld || pl.throwHeld) ? (pl.throwHeld && pl.heldKind !== 'frag' ? pl.heldKind : pl.throwKind === 'frag' ? 'smoke' : pl.throwKind) : slotKind ?? (pl.throwHeld ? pl.heldKind : pl.throwKind);
   pl.heldKind = kind;
   if (!pl.sprinting && g.throwCount(kind) > 0 && (slotKind || gHeld)) {
     const tp = g.puppet?.throwAt ?? ap;
     pl.throwPreview = g.items.solve(throwOrigin(g), [tp[0], Math.max(0.05, Math.min(tp[1], 2.6)), tp[2]]);
-    if (slotKind && input.lmbHit() && pl.fireCd <= 0) { doThrow(g, pl.throwPreview, kind); pl.fireCd = 0.6; }
+    if (slotKind && input.lmbHit() && pl.fireCd <= 0 && (c.anim.kitHold === undefined || (c.anim.kitHold === 'can' && pl.kitCan === slotKind))) { doThrow(g, pl.throwPreview, kind); pl.fireCd = 0.6; }   // (kitanim.ts: not a can the hand has not fetched yet — nor the one picked while another kind is still in the fist)
   }
-  if (pl.throwHeld && !gHeld && !pl.sprinting) { const sol = pl.throwPreview ?? prevPreview; if (sol) doThrow(g, sol, kind); }   // quick-throw on G release
+  if (pl.throwHeld && !gHeld && !pl.sprinting && !stunned) { const sol = pl.throwPreview ?? prevPreview; if (sol) doThrow(g, sol, kind); }   // quick-throw on G release
   pl.throwHeld = gHeld && (pl.throwHeld || g.throwCount(kind) > 0);   // a gesture that ran its kind dry stays this kind until G comes up (it just throws nothing)
   if (!pl.throwPreview && ringPreview && !pl.throwHeld) pl.throwPreview = ringPreview;   // the launcher's arc rides the canisters' polyline (overlay.ts) — a canister being aimed has it instead
   if (pl.pendingThrow) { pl.pendingThrow.t -= dt; if (pl.pendingThrow.t <= 0) {
     const { sol, kind: k2 } = pl.pendingThrow;
-    const it = g.items.spawn(k2 === 'flash' ? 'flash' : 'smoke', throwOrigin(g), sol.v0, k2 === 'flash' ? { fuse: fx.bang.fuse, who: PLAYER_ID } : { who: PLAYER_ID });
+    const it = g.items.spawn(k2, throwOrigin(g), sol.v0, k2 === 'flash' ? { fuse: flashFuse(g), who: PLAYER_ID } : k2 === 'frag' ? { fuse: FRAG.fuse, who: PLAYER_ID } : { who: PLAYER_ID });
+    if (k2 === 'frag') { FRAG_STATS.thrown++; g.msg('frag out!'); }
     it.onBounce = (sp, p) => { g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.events.push({ kind: 'shot', pos: v3.copy(p), time: g.time, loud: false }); };
-    chronThrown(g, k2); pl.pendingThrow = null; if (g.infiniteAmmo) { if (k2 === 'flash') pl.flashbangs++; else pl.canisters++; }   // unlimited ammo (the start card's sandbox row): the belt refills as the can leaves the hand
-    if ((pl.slot === 'smoke' && pl.canisters === 0) || (pl.slot === 'flash' && pl.flashbangs === 0)) pl.slot = 'pistol';   // the last can of the selected kind is away: back onto the pistol (drawn — the hand that threw it is free)
+    chronThrown(g, k2); pl.pendingThrow = null; if (g.infiniteAmmo) canBack(pl, k2);   // unlimited ammo (the start card's sandbox row): the belt refills as the can leaves the hand
+    if ((pl.slot === 'smoke' && pl.canisters === 0) || (pl.slot === 'flash' && pl.flashbangs === 0) || (pl.slot === 'frag' && pl.frags === 0)) pl.slot = 'pistol';   // the last can of the selected kind is away: back onto the pistol (drawn — the hand that threw it is free)
   } }
+  if (KITANIM.on || pl.kitWas !== undefined) kitTick(g, true);   // (kitanim.ts: what this frame did to his hands AFTER the keys — off a wall, a sling for a throw, the last can away — starts its errand now, not a frame late with the new thing already shown)
+  gunWallPose(g, c);
   c.update(dt);
   // the weapon light: physically mounted under the barrel / on the fore-end — its position and direction ARE the gun's, aiming or not (rigProps.RIG.pistol.light*, RIG.sc20k light / lens)
   gun.infinite = g.infiniteAmmo; rifle.infinite = g.infiniteAmmo;
@@ -424,7 +619,8 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
  *  and his suppression's share are added at the fire site (they are the row's and suppression.ts's, not his stance's). */
 export function rifleSpread(g: Game, speed: number): number {
   const pl = g.player, S = RIFLE_SPREAD;
-  return (speed > S.moveAt ? S.moving : S.still) * (pl.crouch ? S.crouchK : 1) * (pl.braced ? S.braceK : 1);
+  const feet = AIMCOST.move && !g.touring ? Math.max(speed, pl.aim.moveSm) : speed;   // (aimcost.ts: the feet his hands still remember — a stop on the trigger's own step is not 'still')
+  return (feet > S.moveAt ? S.moving : S.still) * (pl.crouch ? S.crouchK : 1) * (pl.braced ? S.braceK : 1);
 }
 
 /** Living guards are solid to you and never step aside (updateGuard / runGuardScript separate guards from each other only — a man must not be blocked or steered by a
@@ -512,11 +708,19 @@ export interface WallHold {
   /** has his back actually reached the face yet (a read-back found him within the shove allowance of the plane)? Only for the words when he comes off: shoved
    *  off a wall he was on, or never got to it — a carton stack, a chair, a man between him and it that the face trace could not see */
   seated: boolean;
-  /** was the selected item in his hand when he took the wall? On it the hands are always empty (wallSnap holsters it: Chaos Theory's wall hug is a hands-on-
+  /** was the selected item in his hand when he took the wall? On the BACK hold the hands are always empty (wallSnap holsters it: Chaos Theory's wall hug is a hands-on-
    *  the-plaster pose, and nothing is fired from it); the frame he steps off, releaseWall puts it back in his hand if this says so. E on the wall flips it,
-   *  1 / 2 / 3 set it (updatePlayer) — choosing what he comes off with. */
+   *  1 / 2 / 3 set it (updatePlayer) — choosing what he comes off with. (The rifle is the exception under WALLSNAP.stackDraw: it comes into his hands on the wall and the hold becomes the stack.) */
   drawn: boolean;
   atEdge: -1 | 0 | 1; peek: number; peekDir: -1 | 1; crouched: boolean;
+  /** WALLSNAP (wallsnap.ts) — absent, all of them, on a hold taken with the switch off. takeT = the seconds this take runs (the glide and the turn share it: `settle`
+   *  counts through it), yaw0 / yawD = the body's yaw when Q found him and the turn he makes over the take, hitT = seconds since his back landed (the settle). */
+  takeT?: number; yaw0?: number; yawD?: number; hitT?: number;
+  /** …and the STACK: the hold taken with the rifle in his hands keeps it there — shoulder to the wall, facing along it toward `side`, low ready. up = seconds the
+   *  rifle stays in the shoulder (a click, or stepped out), lean = 0‥1 stepped out past the open end `leanDir` (leanWant = where it is going, leanDwell / leanOutT
+   *  its clocks, leanOff = the metres along the wall he actually stands past his station for it this frame — the read-back takes them off), flipT = the
+   *  cursor-behind-him clock, sayT = when the 'wall in the way' line was last said. */
+  kind?: 'stack'; up?: number; lean?: number; leanWant?: boolean; leanDir?: -1 | 1; leanDwell?: number; leanOutT?: number; leanOff?: number; flipT?: number; sayT?: number; rise?: number; owed?: number; camAlong?: number; cam?: FollowCamera;
 }
 
 /** The static face lying in the plane (n, d) at station u along t — if there is one there fit to lean on: from a point 0.3 m out in the room, a knee-height ray
@@ -587,19 +791,22 @@ function clearOfProps(g: Game, q: Vec3, r: number): boolean {
  *  keeps him off it (the words differ). */
 function findWall(g: Game, quick = false, why?: { blocked: boolean }): { n: Vec3; t: Vec3; d: number; lo: number; hi: number; u: number } | null {
   const pl = g.player, p = pl.char.pos, col = g.col; const f = pl.char.forward();
+  const sp = Math.hypot(pl.char.vel[0], pl.char.vel[2]), far = WALLSNAP.on && sp > 0.5;   // WALLSNAP: a face he is walking AT is in reach from further off, and outranks a nearer one he is merely passing
+  const reach = far ? Math.max(WALL_REACH, WALLSNAP.reachMoving) : WALL_REACH;
   const cands: { n: Vec3; d: number; score: number }[] = [];
   for (let k = 0; k < 16; k++) {
     const a = k * Math.PI / 8; const dir: Vec3 = [Math.sin(a), 0, Math.cos(a)];
-    const hit = col.raycast([p[0], KNEE_Y, p[2]], dir, BODY_R + WALL_REACH);
+    const hit = col.raycast([p[0], KNEE_Y, p[2]], dir, BODY_R + reach);
     if (!hit || hit.index >= 1e6 || Math.abs(hit.n[1]) > 0.2) continue;                       // nothing there, or a door leaf
     const n = v3.normalize([hit.n[0], 0, hit.n[2]]);
     if (n[0] * dir[0] + n[2] * dir[2] > -0.35) continue;                                       // a face only glanced side-on: the ray square to it finds it if it faces him at all
     const d = (p[0] + dir[0] * hit.t) * n[0] + (p[2] + dir[2] * hit.t) * n[2];
     const dist = p[0] * n[0] + p[2] * n[2] - d;                                                 // how far his centre stands off that plane
-    if (dist < BODY_R - 0.06 || dist > BODY_R + WALL_REACH) continue;
+    const heading = far ? -(pl.char.vel[0] * n[0] + pl.char.vel[2] * n[2]) / sp : 0, at = heading > WALLSNAP.headingMin;
+    if (dist < BODY_R - 0.06 || dist > BODY_R + (at ? reach : WALL_REACH)) continue;
     const dup = cands.find(c => c.n[0] * n[0] + c.n[2] * n[2] > 0.99 && Math.abs(c.d - d) < 0.02);
     if (dup) { if (d < dup.d) dup.d = d; continue; }                                            // one plane per face — and of two a centimetre apart (a jamb standing proud of its wall, met first by one ray) the deeper is the wall: traced along the jamb's, the wall a centimetre behind fell outside COPLANAR here and there and Q found 'nothing' a hand from where it held
-    cands.push({ n, d, score: dist - 0.12 * Math.max(0, -(f[0] * n[0] + f[2] * n[2])) });     // nearest first; of two much alike (an inside corner), the one he is facing — walking into
+    cands.push({ n, d, score: dist - 0.12 * Math.max(0, -(f[0] * n[0] + f[2] * n[2])) - (at ? WALLSNAP.headingBonus * heading : 0) });     // nearest first; of two much alike (an inside corner), the one he is facing — walking into
   }
   cands.sort((a, b) => a.score - b.score);
   const y1 = pl.crouch ? 1.0 : 1.7;
@@ -626,7 +833,7 @@ function findWall(g: Game, quick = false, why?: { blocked: boolean }): { n: Vec3
  *  short rays and a metre of face traced either side of him.) */
 export function canWallSnap(g: Game): boolean {
   const pl = g.player;
-  return !pl.wall && !pl.down && !pl.dragging && !pl.takedown && !pl.holding && !pl.kick && !pl.picking && !pl.sprinting && !!findWall(g, true);
+  return !pl.wall && !pl.down && !pl.dragging && !pl.takedown && !pl.holding && !pl.kick && !pl.picking && !pl.wanding && !pl.sprinting && !!findWall(g, true);
 }
 
 /** Q: take hold of the wall findWall offers. The hold is set up here; moveOnWall eases him onto it over the next few frames (through his own collision sweep,
@@ -635,7 +842,7 @@ export function canWallSnap(g: Game): boolean {
  *  WallHold.drawn for releaseWall to hand back): on the wall his palms are on the plaster. false = nothing in reach (or his hands / feet are busy). */
 export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean }): boolean {
   const pl = g.player, c = pl.char;
-  if (pl.wall || pl.down || pl.dragging || pl.takedown || pl.holding || pl.kick || pl.picking) return false;
+  if (pl.wall || pl.down || pl.dragging || pl.takedown || pl.holding || pl.kick || pl.picking || pl.wanding) return false;
   const f = findWall(g, false, why); if (!f) return false;
   const { n, t } = f;
   const vt = c.vel[0] * t[0] + c.vel[2] * t[2], ft = Math.sin(c.bodyYaw) * t[0] + Math.cos(c.bodyYaw) * t[2], rt = cam.planarBasis().right;
@@ -643,8 +850,19 @@ export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean })
   const uLo = f.lo + BODY_R, uHi = f.hi - BODY_R;
   pl.wall = { n, along: t, d: f.d, lo: f.lo, hi: f.hi, openLo: endOpen(g.col, n, f.d, t, uLo, -1), openHi: endOpen(g.col, n, f.d, t, uHi, 1),
     u: f.u, v: 0, side, off: 0, awayT: 0, settle: 0, from: v3.copy(c.pos), blockDir: 0, blockT: 0, seated: false, drawn: !pl.holstered, atEdge: 0, peek: 0, peekDir: side, crouched: pl.crouch };
+  const stack = WALLSNAP.on && WALLSNAP.stack && pl.rifleUp;   // the rifle in his hands stays there: he stacks on the wall instead of putting his back to it
+  if (WALLSNAP.on) {
+    const w = pl.wall, awayYaw = Math.atan2(n[0], n[2]), base = f.d + BODY_R + WALL_GAP;
+    let yd = wrapAngle((stack ? awayYaw - side * Math.PI / 2 : awayYaw) - c.bodyYaw);
+    if (!stack && Math.abs(yd) > Math.PI - 0.3) yd = side * Math.abs(yd);   // nose to the plaster: he comes round through the side he will look
+    w.yaw0 = c.bodyYaw; w.yawD = yd; w.hitT = 0;
+    w.takeT = wsTakeSecs(Math.hypot(t[0] * f.u + n[0] * base - c.pos[0], t[2] * f.u + n[2] * base - c.pos[2]), yd);
+    { const b = c.bones, ft = (a?: Vec3, toe?: Vec3) => a && toe ? { p: v3.copy(a), yaw: Math.atan2(toe[0] - a[0], toe[2] - a[2]) } : null, L = ft(b.footL, b.toeL), R = ft(b.footR, b.toeR); c.anim.wallTakeFeet = L && R ? { L, R } : null; }   // (where his soles are drawn this moment: they stay there until each steps)
+    if (stack) { w.kind = 'stack'; w.up = 0; w.lean = 0; w.leanWant = false; w.leanDir = side; w.leanDwell = 0; w.leanOutT = 0; w.leanOff = 0; }
+    wsPend.delete(pl);
+  }
   pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; pl.speedSm = 0; c.vel = [0, 0, 0];
-  setHolstered(g, true);
+  if (!stack) setHolstered(g, true);
   return true;
 }
 
@@ -654,7 +872,144 @@ export function wallSnap(g: Game, cam: FollowCamera, why?: { blocked: boolean })
 export function releaseWall(g: Game) {
   const pl = g.player, w = pl.wall; if (!w) return;
   pl.wall = null; pl.char.anim.stance = 'none'; pl.char.anim.lookYawExtra = 0; pl.char.vel = [0, 0, 0];
+  pl.char.anim.wallTake = -1; pl.char.anim.wallHit = 0; pl.char.anim.stackPress = 0;   // (WALLSNAP's channels at rest: where they stand anyway with the switch off)
+  if (w.cam) w.cam.peekOffset = null;   // (…and the look-at it eased into the room: a takedown, a kick, a teleport lets go after this frame's camera line has run)
   if (w.drawn && !pl.down) setHolstered(g, false);
+}
+
+// ---- WALLSNAP (wallsnap.ts): the hold's feel pass. Everything below is reached only with WALLSNAP.on — except wallStepOff, which with it off IS releaseWall.
+
+/** The player's own ways off the wall (Q, breaking into a run, the stick held away): releaseWall — and, with the switch on, his momentum kept. A direction held
+ *  (unless it is INTO the wall) walks on at the walk's pace from this frame, or the sidle's if that was quicker; Q with nothing held peels him a hand off the
+ *  plaster and leaves him standing in the shadow he chose; the pose lets go quicker than it took hold. */
+function wallStepOff(g: Game, mx: number, mz: number, ml: number, how: 'q' | 'run' | 'away') {
+  const pl = g.player, w = pl.wall; releaseWall(g);
+  if (!w || !WALLSNAP.on || pl.down) return;
+  const c = pl.char, T = g.tune; c.anim.stanceOut = WALLSNAP.outRate;
+  if (ml > 0) { if (-(mx * w.n[0] + mz * w.n[2]) < 0.5) pl.speedSm = Math.max(Math.abs(w.v), 0.8 * (pl.crouch ? T.playerCrouch : T.playerWalk) * pl.pace * (g.puppet?.walk ?? 1)); }
+  else if (how === 'q') c.vel = [w.n[0] * WALLSNAP.offPush, 0, w.n[2] * WALLSNAP.offPush];
+}
+
+/** Q pressed with no face in reach while he is on the move: remembered for WALLSNAP.buffer seconds (the words wait with it). `at` = the game clock the last
+ *  time it was looked at: a frame that went to something else (a takedown, a man in his arm, a kick, a lock, a keypad return before the Q lines) drops it. */
+const wsPend = new WeakMap<Player, { t: number; at: number; blocked: boolean }>();
+function wallSnapLater(g: Game, ml: number, why: { blocked: boolean }): boolean {
+  if (!WALLSNAP.on || ml <= 0 || WALLSNAP.buffer <= 0 || g.player.dragging) return false;
+  wsPend.set(g.player, { t: WALLSNAP.buffer, at: g.time, blocked: why.blocked }); return true;
+}
+function wallSnapPending(g: Game, dt: number, cam: FollowCamera, wantSprint: boolean) {
+  const pl = g.player, P = wsPend.get(pl); if (!P) return;
+  if (pl.wall || wantSprint || g.time - P.at > dt * 1.5) { wsPend.delete(pl); return; }   // (a frame was missed: the key was for the moment before whatever took it, so no late hold and no late words)
+  P.at = g.time; const why = { blocked: false };
+  if (wallSnap(g, cam, why)) return;
+  if ((P.t -= dt) <= 0) { wsPend.delete(pl); g.msg(P.blocked || why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); }
+}
+
+/** Does the rifle, drawn on this hold, stack on it (WALLSNAP.stackDraw; a hold taken under the feel pass: the stack's clocks hang off its take)? */
+function wallStacks(w: WallHold): boolean { return WALLSNAP.on && WALLSNAP.stack && WALLSNAP.stackDraw && w.takeT !== undefined; }
+
+/** The take's turn: while he is being eased onto the wall his body comes round on the take's own clock, a little ahead of the glide (the shoulders turn, then
+ *  the back lands). false = not taking (or the switch was off when he took hold): the caller's own easing turns him. */
+function wallTakeYaw(pl: Player): boolean {
+  const w = pl.wall!; if (w.takeT === undefined || w.settle >= 1) return false;
+  pl.char.bodyYaw = wrapAngle(w.yaw0! + w.yawD! * wsEase(w.settle, WALLSNAP.yawPow)); return true;
+}
+
+/** Esc with the launcher's button down: the gesture is let go of, nothing sent (Game.escape; the button still down afterwards begins nothing — only a fresh press does) */
+export function launchCancel(g: Game): boolean { const pl = g.player; if (!pl.launchHeld) return false; pl.launchHeld = null; pl.throwPreview = null; return true; }
+/** Stacked on the wall: is the rifle UP this frame? A click (or the trigger held; the right button too with an attachment on it) brings it into the shoulder and
+ *  keeps it there WALLSNAP.upSecs; stepped out round the end it is up for as long as he is out. Never while the first WALLSNAP.bore of its line is in a wall
+ *  (pointing through the wall he is stacked on): then it stays low and no round leaves — held off through equipT, the 'still coming into the hands' beat every
+ *  fire site already honours. Nothing leaves the low ready either: for WALLSNAP.upRise after it starts up the click is held (equipT again) and given to the
+ *  fire sites on the frame the rise is over — the first round leaves with the rifle most of the way to the shoulder, a sixth of a second after the click, not level from the thigh. */
+function stackUp(g: Game, dt: number, input: Input): boolean {
+  const pl = g.player, c = pl.char, w = pl.wall!, W = WALLSNAP;
+  const hold = () => { pl.equipT = Math.max(pl.equipT, 1e-3); };
+  if (w.settle < 1) { w.up = 0; hold(); return false; }   // still coming onto the wall
+  if (samStaggered(g)) { w.up = 0; w.rise = 0; w.owed = 0; hold(); return false; }   // folded by a blast (samstun.ts): the rifle stays at the low ready, and a click made meanwhile is not owed a round
+  const ap = g.aimPoint, dx = ap[0] - c.pos[0], dz = ap[2] - c.pos[2], d = Math.hypot(dx, dz);
+  const hit = d > 0.25 ? g.col.raycast([c.pos[0], pl.crouch ? 0.85 : 1.3, c.pos[2]], [dx / d, 0, dz / d], W.bore) : null;
+  const pull = input.lmb() || input.lmbHit() || (pl.rifle.attachment !== null && (input.rmb() || input.rmbHit()));
+  if (hit && hit.index < 1e6) {
+    w.up = 0; w.rise = 0; w.owed = 0; hold();
+    if (input.lmbHit() && g.time - (w.sayT ?? -10) > 1.5) { w.sayT = g.time; g.msg('the wall is in the way — step out past its end, or off it (Q)'); }
+    return false;
+  }
+  const was = w.up! > 0;
+  w.up = pull || (w.leanWant && w.lean! > 0.3) ? W.upSecs : Math.max(0, w.up! - dt);
+  if (w.up <= 0) { w.rise = 0; w.owed = 0; return false; }
+  w.rise = was ? (w.rise ?? 0) + dt : 0;
+  if (w.rise < W.upRise) { w.owed = (w.owed ?? 0) | (input.clicked & 5); hold(); }   // still coming up: the click waits for the shoulder
+  else if (w.owed) { if (!g.orders.menu) input.clicked |= w.owed; w.owed = 0; }   // (an order menu opened meanwhile: the click is the menu's frame, not a round)
+  return true;
+}
+
+/** Stacked at an open end: does he step out round it? When the cursor's point is somewhere the corner hides from where he is parked (further round it than his
+ *  line of sight past the corner reaches, by leanOnDeg to go and leanOffDeg to come back; not nearer the corner than leanMinDist; not so far round — leanMaxDeg —
+ *  that it is behind his own wall), he steps out along the wall past its end, leanAlong, and back when the cursor comes back; dwell clocks both ways, a least
+ *  time out, and no stepping back in the beat after a round. A reload brings him in. Returns the signed metres along the wall to stand past his station. */
+function stackLean(g: Game, dt: number, cam: FollowCamera, w: WallHold, dir: -1 | 0 | 1): number {
+  if (w.lean === undefined) return 0;
+  const W = WALLSNAP, pl = g.player, t = w.along, n = w.n;
+  if (samRooted(g)) return w.leanDir! * W.leanAlong * w.lean * w.lean * (3 - 2 * w.lean);   // rooted by a blast (samstun.ts): he neither steps out nor back in — he stands where it caught him
+  let want = false; const edge = w.atEdge;
+  if (w.kind === 'stack' && w.settle >= 1 && edge !== 0 && dir !== -edge && !pl.rifle.reloading && (w.leanWant || Math.abs(w.v) < 0.05)) {
+    // What he is pointing AT. The cursor's ray lands on whatever the camera sees first, and seen from his side of a wall that is often the wall's own top or
+    // a doorway's lintel, not the floor behind it: a point that high (and not a man the reticle took) is read where the same ray comes down to chest height —
+    // the cursor over the doorway's head means INTO the doorway.
+    let ap = g.aimPoint; const uEnd = edge > 0 ? w.hi : w.lo;
+    if (W.leanOver && ap[1] > W.leanOverY && !g.aimGuard) { const dy = ap[1] - cam.pos[1]; if (dy < -0.5) { const k = (LEAN_CHEST - ap[1]) / dy; ap = [ap[0] + (ap[0] - cam.pos[0]) * k, LEAN_CHEST, ap[2] + (ap[2] - cam.pos[2]) * k]; } }
+    const A = wsCornerAngle((ap[0] * t[0] + ap[2] * t[2] - uEnd) * edge, ap[0] * n[0] + ap[2] * n[2] - w.d);
+    want = A.dist >= W.leanMinDist - (w.leanWant ? W.leanKeepDist : 0) && A.deg < W.leanMaxDeg + (w.leanWant ? W.leanKeepDeg : 0) && A.deg > wsSeenDeg(BODY_R, BODY_R + WALL_GAP) + (w.leanWant ? W.leanOffDeg : W.leanOnDeg);
+    // …and only where stepping out buys a line: from where he would stand, the first stretch toward the point is open (a shut door at the end is a wall carried on)
+    if (want && !w.leanWant && W.leanClearM > 0) {
+      const c = pl.char, h = pl.crouch ? 0.85 : 1.3, k = edge * W.leanAlong - (w.leanOff ?? 0);   // (from his STATION: he may still be on his way back in — by what he really stands past it, which a body in the way can cut short)
+      const a: Vec3 = [c.pos[0] + t[0] * k, h, c.pos[2] + t[2] * k], d = Math.hypot(ap[0] - a[0], ap[2] - a[2]), r = Math.min(1, W.leanClearM / Math.max(d, 1e-3));
+      if (d < 0.2 || g.col.shotBlocked(a, [a[0] + (ap[0] - a[0]) * r, h + (ap[1] - h) * r, a[2] + (ap[2] - a[2]) * r])) want = false;
+    }
+  }
+  if (want !== w.leanWant) {
+    w.leanDwell! += dt;
+    const kept = !want && (w.leanOutT! < W.minOut || g.time - pl.lastFireT < W.afterShot) && w.kind === 'stack' && !pl.rifle.reloading && dir !== -edge;
+    if (w.leanDwell! >= (want ? W.dwellOut : W.dwellBack) && !kept) { w.leanWant = want; w.leanDwell = 0; if (want) { w.leanDir = edge as -1 | 1; w.side = edge as -1 | 1; } }
+  } else w.leanDwell = 0;
+  w.leanOutT = w.leanWant ? w.leanOutT! + dt : 0;
+  w.lean = clamp(w.lean + (w.leanWant ? dt / W.leanOut : -dt / W.leanBack), 0, 1);
+  return w.leanDir! * W.leanAlong * w.lean * w.lean * (3 - 2 * w.lean);
+}
+
+/** One frame of the feel pass's pose, after the hold's own lines have run (updatePlayer): the take's progress and the landing's settle to the animator (and the
+ *  scuff, once, as his back lands — the player's ears only: no event is filed), and on the stack the stance, the shoulder's press toward the wall and the rifle's
+ *  carriage — low ready, in the shoulder while it is up. */
+function wallSnapPose(g: Game, dt: number, aiming: boolean) {
+  const pl = g.player, c = pl.char, w = pl.wall!, an = c.anim, W = WALLSNAP;
+  if (w.takeT === undefined) return;   // (taken with the switch off: the hold as it was)
+  an.wallTake = w.settle < 1 ? w.settle : -1;
+  if (w.settle >= 1 && w.seated) { if (w.hitT === 0 && W.scuff > 0) g.audio.play('footSoft', c.pos, W.scuff, { rate: 0.7 }); w.hitT! += dt; }
+  an.wallHit = w.settle >= 1 && w.seated ? wsHit(w.hitT!) : 0;
+  if (w.kind === 'stack') {
+    an.stance = 'stack'; an.stackSide = w.side;
+    an.stackPress = w.side * STACK_PRESS * (1 - (w.lean ?? 0));   // (signed: the animator eases it, so a change of side walks the hips across instead of jumping them)
+    armRifle(g, true, aiming ? 'shoulder' : 'lowLong');
+  } else an.stackPress = 0;
+}
+/** the height a cursor's point over a wall's top is read at (m) */
+const LEAN_CHEST = 1.2;
+/** how far toward the wall the stacked figure stands off his collision circle's centre (m): the circle keeps the centre 0.45 off the plane, a shoulder is 0.2 wide */
+const STACK_PRESS = 0.12;
+
+/** The camera on the wall: the look-at eased a little into the room and toward the side he looks (the hallway he is watching, not the plaster behind him).
+ *  Added to whatever the peek set; the camera's own smoothing eases it. Not during the take. THROUGH A STACK'S STEP-OUT THE CAMERA HOLDS STILL: the look-at
+ *  gives back the share of the step HE REALLY TOOK (leanOff: a man standing past the corner can cut it short) that it would have followed (1 − aimLead of it) and keeps the side term it had, so the world point under a cursor that is not
+ *  moving does not move either — what he is aiming at stays under the reticle as he steps out, and the step-out's own test (stackLean reads that point) is not
+ *  fed by the step-out. */
+function wallSnapCam(cam: FollowCamera, w: WallHold) {
+  if (w.takeT === undefined || w.settle < 1) return;
+  const W = WALLSNAP, n = w.n, t = w.along, p = cam.peekOffset ?? [0, 0, 0];
+  const out = !!w.lean || !!w.leanWant || !!w.leanOff;
+  if (!out || w.camAlong === undefined) w.camAlong = w.side * W.camSide * (1 - w.peek);
+  const along = w.camAlong - (out ? (w.leanOff ?? 0) * (1 - cam.aimLead) : 0), room = W.camRoom * (w.kind === 'stack' ? 0.5 : 1);
+  cam.peekOffset = [p[0] + n[0] * room + t[0] * along, 0, p[2] + n[2] * room + t[2] * along]; w.cam = cam;
 }
 
 /** One frame on the wall (updatePlayer runs this in place of free movement); false = he has just come off it (walked away, shoved off) and the caller moves him as
@@ -673,17 +1028,23 @@ export function releaseWall(g: Game) {
 function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: number, ml: number): boolean {
   const pl = g.player, c = pl.char, w = pl.wall!; const n = w.n, t = w.along; const y1 = pl.crouch ? 1.0 : 1.7;
   const uLo = w.lo + BODY_R, uHi = w.hi - BODY_R; const base = w.d + BODY_R + WALL_GAP;
-  if (!pl.holstered) { w.drawn = true; setHolstered(g, true, true); }   // (whatever else drew it — a tour beat, the panel — on the wall it goes back on the thigh, and into his hand when he steps off)
+  if (w.kind === 'stack' && (!pl.rifleUp || !WALLSNAP.on)) { w.kind = undefined; w.up = 0; w.drawn = !pl.holstered && !pl.dragging; }   // (WALLSNAP: the rifle left his hands on the stack — E, a digit: it is the back-to-the-wall hold from here, and what is in his hand goes away like on any)
+  if (w.kind !== 'stack' && wallStacks(w) && pl.rifleUp) { w.kind = 'stack'; w.up = 0; w.rise = 0; w.owed = 0; w.drawn = true; if (w.lean === undefined) { w.lean = 0; w.leanWant = false; w.leanDir = w.side; w.leanDwell = 0; w.leanOutT = 0; w.leanOff = 0; } }   // (WALLSNAP: the rifle came into his hands on the back hold — 2, E: he turns his shoulder to the wall and stacks on it, as if he had taken it so. A hold that WAS the stack a moment ago keeps its step-out as it stands — stepped out past a corner, 1 then 2 must not put him 'past the end of the wall': stackLean eases it from where it is)
+  if (!pl.holstered && w.kind !== 'stack') { w.drawn = true; setHolstered(g, true, true); }   // (whatever else drew it — a tour beat, the panel — on the wall it goes back on the thigh, and into his hand when he steps off)
   // the stick: along the face (± his right) or square to it (+ away)
   let dir: -1 | 0 | 1 = 0, away = 0;
-  if (ml > 0) { const a = mx * t[0] + mz * t[2]; away = mx * n[0] + mz * n[2]; if (Math.abs(a) > 0.2 && Math.abs(a) >= Math.abs(away) - 0.05) dir = a > 0 ? 1 : -1; }
+  if (ml > 0) {
+    const a = mx * t[0] + mz * t[2]; away = mx * n[0] + mz * n[2]; const wide = WALLSNAP.on && WALLSNAP.alongDeg > 0;
+    if (wide ? Math.abs(a) >= Math.cos(WALLSNAP.alongDeg * DEG) : Math.abs(a) > 0.2 && Math.abs(a) >= Math.abs(away) - 0.05) dir = a > 0 ? 1 : -1;
+    if (wide && dir && dir !== w.blockDir && (dir > 0 ? w.u < uHi - 0.02 : w.u > uLo + 0.02)) away = 0;   // (WALLSNAP.alongDeg: the stick is the camera's, the wall is wherever it is — a key that sidles him is not a key held away, however the camera is turned. Only while it CAN sidle him: at the end of the run, or against a man, an outward diagonal is the way off round the corner, as it always was)
+  }
   w.awayT = away > 0.5 ? w.awayT + dt : 0;
-  if (w.awayT > WALL_AWAY_SECS) { releaseWall(g); return false; }
+  if (w.awayT > (WALLSNAP.on ? (away > 0.82 ? WALLSNAP.awaySecs : WALLSNAP.awayDiag) : WALL_AWAY_SECS)) { wallStepOff(g, mx, mz, ml, 'away'); return false; }
   if (dir) w.side = dir;
   /** read where he actually is back into the hold: shoved off it or past its end → let go (false). `firm`: held back against the stick by a man → that way shuts
    *  for a beat (else he would tread on the spot pressing into the man's back); not firm (furniture): just take the station — a bin he keeps pushing along, as a walk does */
   const take = (firm: boolean): boolean => {
-    const uReal = c.pos[0] * t[0] + c.pos[2] * t[2], offReal = c.pos[0] * n[0] + c.pos[2] * n[2] - base;
+    const uReal = c.pos[0] * t[0] + c.pos[2] * t[2] - (w.leanOff ?? 0), offReal = c.pos[0] * n[0] + c.pos[2] * n[2] - base;
     if (uReal < uLo - 0.25 || uReal > uHi + 0.25 || offReal > WALL_SHOVE_OFF) { g.msg(w.seated ? 'pushed off the wall' : "can't get to the wall here"); releaseWall(g); return false; }
     w.seated = true;
     if (Math.abs(uReal - w.u) > 0.003) {
@@ -702,8 +1063,9 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
   // his station along the face, the whole body kept on it
   let u = w.u + w.v * dt;
   if (u >= uHi) { u = uHi; if (w.v > 0) w.v = 0; } else if (u <= uLo) { u = uLo; if (w.v < 0) w.v = 0; }
-  const ePrev = w.settle < 1 ? w.settle * w.settle * (3 - 2 * w.settle) : 1;   // the take-hold ease as it stood (smoothstep of settle): this frame's share of the way in is reckoned from it below
-  w.settle = Math.min(1, w.settle + dt / WALL_SETTLE);
+  const ease = (s: number) => s < 1 ? (w.takeT !== undefined ? wsEase(s, WALLSNAP.easePow) : s * s * (3 - 2 * s)) : 1;   // (WALLSNAP: the take eases OUT, on its own clock)
+  const ePrev = ease(w.settle);   // the take-hold ease as it stood (smoothstep of settle): this frame's share of the way in is reckoned from it below
+  w.settle = Math.min(1, w.settle + dt / (w.takeT ?? WALL_SETTLE));
   if (w.off > 0 && w.settle >= 1) {   // whatever held him off the plane is let ease him back — unless settling back would push him along it (squeezed off the corner of the thing) or is simply refused
     const offWant = Math.max(0, w.off - 0.8 * dt); const q: Vec3 = [t[0] * w.u + n[0] * (base + offWant), 0, t[2] * w.u + n[2] * (base + offWant)]; g.col.collideCircle(q, BODY_R, 0.2, y1, 4);
     if (Math.abs(q[0] * t[0] + q[2] * t[2] - w.u) < 1e-3 && q[0] * n[0] + q[2] * n[2] - (base + offWant) < 0.5 * (w.off - offWant)) w.off = offWant;
@@ -723,9 +1085,10 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
   // holds him where they meet, pressed on gently, instead of the ease writing him a stride deeper into the thing every frame regardless — which fired a carton
   // along the wall at metres a second and, the frame it was out of the way, spent the whole saved-up difference at once: 0.4 m in a frame (the soak's
   // 'popped', seed 3 @ 362 s). Still held off the plane when the ease is done, `take` reads it like any shove: let go past WALL_SHOVE_OFF, else `off` eases him in.
-  const tx = t[0] * u + n[0] * stand, tz = t[2] * u + n[2] * stand;
+  const lo = WALLSNAP.on ? stackLean(g, dt, cam, w, dir) : 0;   // (stepped out round the end on the stack: metres past his station)
+  const tx = t[0] * (u + lo) + n[0] * stand, tz = t[2] * (u + lo) + n[2] * stand;
   if (ePrev < 1) {
-    const e0 = w.settle < 1 ? w.settle * w.settle * (3 - 2 * w.settle) : 1;
+    const e0 = ease(w.settle);
     const k = e0 < 1 ? (e0 - ePrev) / (1 - ePrev) : 1;                             // the curve's share of what is LEFT this frame (all of it on the last)
     let sx = (tx - c.pos[0]) * k, sz = (tz - c.pos[2]) * k; const sl = Math.hypot(sx, sz);
     const cap = Math.hypot(tx - w.from[0], tz - w.from[2]) * (e0 - ePrev) + 0.02;   // the unobstructed stride this frame, and a hair
@@ -733,6 +1096,7 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
     c.pos = [c.pos[0] + sx, c.pos[1], c.pos[2] + sz];
   } else c.pos = [tx, c.pos[1], tz];
   collidePlayer(g, y1); keepOffGuards(g, dt, y1);
+  if (lo !== 0 || w.leanOff) { const got = c.pos[0] * t[0] + c.pos[2] * t[2] - w.u; w.leanOff = lo > 0 ? clamp(got, 0, lo) : lo < 0 ? clamp(got, lo, 0) : 0; }   // (what of the step-out he actually got: the read-back below is of his station, not of where he leans)
   if (w.settle >= 1 && !take(true)) return false;
   c.vel = [t[0] * w.v, 0, t[2] * w.v]; pl.speedSm = Math.abs(w.v);
   // the ends, and peeking round an open one
@@ -743,17 +1107,23 @@ function moveOnWall(g: Game, dt: number, cam: FollowCamera, mx: number, mz: numb
   const e = w.peek * w.peek * (3 - 2 * w.peek);
   cam.peekOffset = e > 0 ? [(t[0] * w.peekDir * (BODY_R + 0.6) + n[0] * 0.3) * e, 0, (t[2] * w.peekDir * (BODY_R + 0.6) + n[2] * 0.3) * e] : null;   // look-at out past the corner and a little off the wall
   c.anim.lookYawExtra = -w.peekDir * WALL_PEEK_LOOK * e;   // (+ = to his left; peekDir + = the end on his right)
+  if (WALLSNAP.on) wallSnapCam(cam, w);
   return true;
 }
 
 /** Silent takedown (a left click with the hands empty on the man in reach behind — game.ts updateDoors; the tour and the harness call it too): lock in behind the
  *  guard, throw the cross, he drops with a soft thud only the room hears. */
-export function startTakedown(g: Game, gd: Guard) {
+export function startTakedown(g: Game, gd: Guard, way?: CloseKind, lethal = false) {
   const pl = g.player; if (gd.state === 'dead' || pl.down) return;   // (F + fire in the same frame: the round got there first)
+  // closer than ever (close.ts): the way in the row offered — from a side or the front he strikes from where he stands, a seated man is put out in his chair
+  const kind: CloseKind | undefined = closeLive(g) ? way ?? closeKindOf(closeAt(g, gd, pl.char.pos)) : undefined;
+  const from = kind && kind !== 'behind' ? wrapAngle(Math.atan2(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw) : 0;
   if (pl.wall) pl.wall.drawn = false;   // offered from the wall: he steps off it into the lunge with the empty hands he had on it — and keeps them empty after, as every takedown leaves him
   releaseWall(g);
   if (pl.dragging) g.toggleDrag();
-  pl.takedown = { g: gd, t: 0 }; pl.sprinting = false; pl.char.anim.strike(); cancelReloads(pl);
+  pl.takedown = kind && kind !== 'behind' ? { g: gd, t: 0, kind, from, alert: gd.state === 'alert', at: closeStation(gd, kind, from).pos } : { g: gd, t: 0 }; pl.sprinting = false;
+  if (lethal) { pl.takedown.lethal = true; pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross', true); } else pl.char.anim.strike(kind === 'front' ? 'jab' : 'cross'); takeBegin(g, pl.char, gd, kind, lethal); cancelReloads(pl);   // (lethal: the knife comes out of its sheath in the blow — close.ts CLOSE.lethal, the left click)
+  if (kind) closeTook(g, gd, 'take', kind, from, Math.hypot(pl.char.pos[0] - gd.char.pos[0], pl.char.pos[2] - gd.char.pos[2]));
   pl.throwHeld = false; pl.throwPreview = null; pl.pendingThrow = null;   // a wind-up does not survive the lunge
   gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.reactT = Math.max(gd.reactT, 1.0);   // he freezes for the beat it takes
   g.audio.play('bodyHit', v3.add(gd.char.pos, [0, 1.3, 0]), 0.55, { rate: 0.8 });
@@ -764,14 +1134,26 @@ export function updateTakedown(g: Game, dt: number) {
   const gd = td.g; const c = pl.char;
   if (!g.onFloor(gd)) { pl.takedown = null; return; }   // the shift was reset under the lunge (P for the tour, the panel): nobody there to finish on — and never a corpse, a thud and a dropped torch out of a man who no longer exists
   // hold station 0.55 m behind him, facing his back (until he drops: his pos then rides the falling pelvis, and you stand where you struck) — the statics still apply: squeezed behind a man near a wall you strike from as close as the wall allows
-  const yaw = gd.char.bodyYaw; c.vel = [0, 0, 0];
-  if (gd.state !== 'dead') { const want: Vec3 = [gd.char.pos[0] - Math.sin(yaw) * 0.55, 0, gd.char.pos[2] - Math.cos(yaw) * 0.55]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); }
+  let yaw = gd.char.bodyYaw; c.vel = [0, 0, 0];
+  if (td.kind) {   // (close.ts) from a side, the front, or over a chair: his station is on his own bearing off the man, facing him — and the man goes down away from the blow
+    // (the spot is fixed in the WORLD at the click: a man who turns toward the blow does not drag Sam round him)
+    const at = td.at ?? closeStation(gd, td.kind, td.from ?? 0).pos;
+    if (gd.state !== 'dead') { c.pos = v3.lerp(c.pos, at, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); td.yaw = Math.atan2(gd.char.pos[0] - c.pos[0], gd.char.pos[2] - c.pos[2]); }
+    yaw = td.yaw ?? c.bodyYaw;
+  } else if (gd.state !== 'dead') { const want: Vec3 = [gd.char.pos[0] - Math.sin(yaw) * 0.55, 0, gd.char.pos[2] - Math.cos(yaw) * 0.55]; c.pos = v3.lerp(c.pos, want, 1 - Math.exp(-14 * dt)); collidePlayer(g, pl.crouch ? 1.0 : 1.7); }
   c.bodyYaw = approachAngle(c.bodyYaw, yaw, 14 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0.1, 8, dt);
   td.t += dt;
   if (td.t >= 0.28 && gd.state !== 'dead') {                    // the cross lands
-    killGuard(g, gd, [Math.sin(yaw), 0, Math.cos(yaw)], true);
-    g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: 0.3, who: PLAYER_ID });   // the fall: a thud the room hears, not the floor
-    pl.noise = Math.max(pl.noise, 0.3);
+    const level = td.kind ? closeNoise(td.kind, !!td.alert) : closeLive(g) ? closeNoise('behind', gd.state === 'alert') : 0.3;   // (from behind with the windows on: the table's own number, and his shout if he was onto Sam)
+    if (td.kind && closeSeated(g, gd)) closeUnseat(g, gd);
+    takeFall(g, gd, td.kind, !!td.lethal);   // (takedown.ts: how he goes down, by the blow)
+    if (td.lethal) {
+      killGuard(g, gd, [Math.sin(yaw), 0, Math.cos(yaw)], true, 'shot', 'player', 'knife — dead');
+      for (const o of g.guards) { const W = o.witness.sawAct; if (W && W.kind === 'shot' && W.t === g.time && W.victim === gd.callsign) W.kind = 'struck'; }   // (a man who watched it saw him DROPPED, not shot: 'shot' is the model's word for dead, and the questions asked of a witness to a shooting — the noise, the gun — are not this one's)
+    } else killGuard(g, gd, [Math.sin(yaw), 0, Math.cos(yaw)], true);   // (the knife kills: a kill on the card; the other hand leaves him out cold, as the takedown always did)
+    if (CLOSE.on) closeBlow(!!td.lethal);
+    g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level, who: PLAYER_ID });   // the fall: a thud the room hears, not the floor (from the front he gets a sound out with it: close.ts noise)
+    pl.noise = Math.max(pl.noise, level);
   }
   if (td.t > 0.62) pl.takedown = null;                        // control back as the cross recovers
 }
@@ -787,9 +1169,12 @@ export function grabVariant(g: Game): HoldVariant { return g.player.pistolUp ? '
  *  the spot), off the net, silent but for his answers; a patrolling man's torch is knocked out of his hand and dies on the floor. Which hold it is to begin with
  *  (grabVariant) is decided here; E swaps it later (swapHold). Refused for a man onto you, with your hands already full, or crouched where he cannot stand up
  *  into it (a counter top over his head: the hold stands the pair up and collides them at full height). */
-export function startGrab(g: Game, gd: Guard) {
+export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   const pl = g.player, c = pl.char;
-  if (gd.state === 'dead' || gd.state === 'alert' || gd.held || pl.down || pl.holding || pl.takedown || pl.kick || pl.picking) return;
+  // closer than ever (close.ts): the way in the row offered (behind him, or behind his chair), for the tallies
+  const kind: CloseKind | undefined = closeLive(g) ? way ?? closeKindOf(closeAt(g, gd, c.pos)) : undefined;
+  const b0 = kind ? wrapAngle(Math.atan2(c.pos[0] - gd.char.pos[0], c.pos[2] - gd.char.pos[2]) - gd.char.bodyYaw) : 0, r0 = Math.hypot(c.pos[0] - gd.char.pos[0], c.pos[2] - gd.char.pos[2]);
+  if (gd.state === 'dead' || gd.state === 'alert' || gd.held || pl.down || pl.holding || pl.takedown || pl.kick || pl.picking || pl.wanding) return;
   if (pl.crouch && !canStand(g)) { g.msg('no room to stand up behind him here'); return; }
   if (pl.rifleUp) setHolstered(g, true, true);   // the rifle in his hands goes to the sling as the arm goes round the man (Chaos Theory slings it: both hands are for him — the arm variant, the knife in the fist); it stays there when the hold is over
   const variant = grabVariant(g);
@@ -797,10 +1182,10 @@ export function startGrab(g: Game, gd: Guard) {
   releaseWall(g); if (pl.dragging) g.toggleDrag();
   pl.sprinting = false; pl.crouch = false; pl.speedSm = 0; c.vel = [0, 0, 0]; pl.backpedal = false; c.anim.reverse = false;   // you rise into it
   cancelReloads(pl);
-  if (pl.pendingThrow) { if (pl.pendingThrow.kind === 'flash') pl.flashbangs++; else pl.canisters++; pl.pendingThrow = null; }   // a wind-up does not survive it (the can goes back on the belt)
+  if (pl.pendingThrow) { canBack(pl, pl.pendingThrow.kind); pl.pendingThrow = null; }   // a wind-up does not survive it (the can goes back on the belt)
   pl.throwHeld = false; pl.throwPreview = null; pl.easing = null;
   // him
-  if (gd.bubble && g.time - gd.bubble.t < gd.bubble.dur) { if (g.time - gd.bubble.t < 0.8) g.msg('guard: ' + gd.bubble.text); gd.bubble = null; }   // whatever he was saying is cut off (logged if he had barely begun it, as killGuard does)
+  if (gd.bubble && g.time - gd.bubble.t < gd.bubble.dur) { if (g.time - gd.bubble.t < 0.8) g.msg((WORDS.on && gd.unit ? `${gd.callsign}: ` : 'guard: ') + gd.bubble.text); gd.bubble = null; }   // whatever he was saying is cut off (logged if he had barely begun it, as killGuard does)
   const C = g.clearing;
   if (C && C.stage !== 'done' && (C.a === gd || C.b === gd)) {   // one of the pair clearing rooms: the clear is over — his partner comes off the drill toward where he was, on edge (what he then sees is his own senses' business)
     const other = C.a === gd ? C.b : C.a;
@@ -812,13 +1197,24 @@ export function startGrab(g: Game, gd: Guard) {
   gd.char.anim.lookYawExtra = 0; gd.sweep = 0;
   gd.lightLitAtLoss = gd.flashlight.enabled;   // (the grab: was the torch burning as it left his hand — attachFlashlight's floor sputter shows only what was lit)
   if (inHand(gd) === 'torch') { gd.dropped = dropFromHand(g, gd.char, 'torch', gd.beamDir, [0, 0, 0], false, true); gd.torchLostAt = g.time; }   // the torch is knocked out of his hand as the arm goes round: it clatters down quietly and dies on the floor like a dropped torch does (guards.ts) — his hands come up empty
+  else if (HOLD.dropGun && inHand(gd) === 'weapon') { gd.dropped = dropFromHand(g, gd.char, gd.weapon.def.drop, gd.char.gunDir, [0, 0, 0], gd.weapon.def.suppressed, true); gd.gunLostAt = g.time; }   // (HOLD.dropGun) …and so is the gun, if that is what the hand had: it lies where it fell like any dropped gun, and he is held with empty hands
+  if (kind && !gd.civ && closeSeated(g, gd)) closeUnseat(g, gd);   // (hauled out of the chair: the sitting clip comes off as the arm goes round)
   gd.held = { by: 'player', since: g.time, variant, phase: 'grab', reverse: false };
   if (gd.civ) civilianGrabbed(g, gd);   // (a civilian: whatever she was doing stops, and she cannot scream with a forearm across her throat — civilians.ts)
   if (g.aiEnabled) gd.witness.wasHeld++; gd.talk.heldSince = g.time;   // his own record of it (the dialogue reads both: how long he has been held, whether this is the second time) — nothing is remembered with the AI off, like every other witness write
   pl.holding = { g: gd, variant, phase: 'grab', t: 0, since: g.time, windT: -1, swapT: Infinity, remarked: false, gunOut: 0, fireQueued: false, shotT: -1, ask: null, after: null };
+  if (kind) closeTook(g, gd, 'grab', kind, b0, r0);
   pl.fireCd = Math.max(pl.fireCd, HOLD.secs.grab);   // (no round leaves the gun on its way round him)
   g.audio.play('grabScuffle', v3.add(gd.char.pos, [0, 1.4, 0]), 0.4);   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
   g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: GRAB_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, GRAB_NOISE); chronGrab(g, gd);   // a scuffle the room hears inside a few metres, not the floor
+}
+
+/** N: the goggles' switch, and the tube's picture easing after them. kitanim.ts: with its part on they go down / up by hand, or by a nod with the hands busy,
+ *  and the picture follows them to his eyes; off, the picture follows the switch as ever. `input` null = no key is read this frame, the ease alone. */
+function nvKey(g: Game, input: Input | null, dt: number) {
+  const pl = g.player;
+  if (input?.hit('KeyN')) { pl.nv = !pl.nv; g.audio.play(pl.nv ? 'nvOn' : 'nvOff', null, 0.7); g.msg(pl.nv ? 'night vision on' : 'night vision off'); kitNv(g); }
+  const eye = kitNvEye(g); pl.nvAmount = damp(pl.nvAmount, eye ? 1 : 0, eye ? 5 : 9, dt);
 }
 
 /** One frame with a man in his arm (updatePlayer runs this in place of everything else while Player.holding is set): the beat's clock and its inputs — E (held,
@@ -831,14 +1227,14 @@ export function startGrab(g: Game, gd: Guard) {
  *  questions over a gun; in the gun variant a click fires one round past him at what the reticle has (HOLD_FIRE_CD apart, HOLD_SPREAD wide, never into
  *  him), right click the OCP, and L works the rail light; and for HOLD.secs.swap after an E none of the rows start (the hand is between tools: a choke chosen
  *  under it waits for the hand) — then the pair's movement (camera-relative WASD at HOLD_PACE × the wheel's pace, slower backing up, no sprint / crouch / wall
- *  / kit, feet still while the selector is open; the pair turns toward the cursor at HOLD_TURN), Sam's own collision and the other guards' solidity, the man
+ *  / kit, feet still while the selector is open; the pair turns toward the cursor at HOLD_TURN; with CLOSE.heldClicks the ARM hold has the two buttons too —
+ *  the left click the knife: phase 'kill', a commit nothing eases off, he is dead at its clock (killOut) — the right click the choke, begun as its row begins it), Sam's own collision and the other guards' solidity, the man
  *  placed rigidly HOLD.dist ahead on Sam's facing with the walls winning (placeHeld), and both animators told the phase. Anything that takes the man away from
  *  under the arm (a reset, a round in him from somebody, the tour) just ends it. */
 export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera) {
   const pl = g.player, c = pl.char, H = pl.holding!, gd = H.g, hc = gd.char; let gun = H.variant === 'gun';
-  if (input.hit('KeyN')) { pl.nv = !pl.nv; g.audio.play(pl.nv ? 'nvOn' : 'nvOff', null, 0.7); g.msg(pl.nv ? 'night vision on' : 'night vision off'); }   // (the goggles are a flick of the head; everything else the hands would do waits)
   if (gun && input.hit('KeyL')) { pl.pistol.lightOn = !pl.pistol.lightOn; g.audio.play('click', c.muzzle, 0.6); }                                       // (the light's switch is under the thumb of the hand the gun is in)
-  pl.nvAmount = damp(pl.nvAmount, pl.nv ? 1 : 0, pl.nv ? 5 : 9, dt);
+  nvKey(g, input, dt);   // (with a man in his arm the goggles are a flick of the head — kitanim.ts plays the nod)
   if (!g.onFloor(gd) || gd.state === 'dead' || gd.held?.by !== 'player') { dropHold(g); c.update(dt); return; }   // reset from under the arm (P, the panel), or put down in it by somebody's round: nothing left to hold
   H.t += dt; H.swapT += dt; pl.fireCd -= dt;
   const K = HOLD.secs;
@@ -863,10 +1259,15 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     // ---- his rows, performed this frame (interact.ts → Game.act): the question (arm), the choke (arm) / the whip (gun) — chosen, then run on their own clock.
     //      (No letting him go: once the arm is on, it ends with him on the floor. The tour taps these rows like a player.)
     const act = g.act?.kind === 'held' ? g.act.verb : null;
+    // ---- the two buttons with him in the arm (close.ts CLOSE.heldClicks; the knife's hold only, never a civilian, never under a show, not while the hand is between
+    //      tools or a choke is already chosen): the LEFT click is the knife — committed from this frame — the RIGHT click the choke, chosen as its row chooses it
+    //      (a click an order menu was up for is gone from the frame before this: Game.step runs orders.input first, and it takes the right click's bit out always and the left click's with a man in the arm — the click that shuts the menu is never the knife)
+    const clk = CLOSE.heldClicks && H.phase === 'held' && !gun && !swapping && H.windT < 0 && !gd.civ && !g.touring ? (input.lmbHit() ? (input.rmbHit() ? null : 'kill') : input.rmbHit() ? 'choke' : null) : null;   // (both buttons in one frame choose nothing: the knife cannot be taken back)
+    if (clk === 'kill') startKill(g);
     if (H.phase === 'held') {
       if (act === 'comply' && gd.civ && !swapping) { if (civilianComply(g)) { holdTail(g, dt, 0); return; } }   // 'stay down, stay quiet': a civilian let go into a crouch where she stands, told (civilians.ts) — the one way out of the arm on your feet by his choice, and hers alone
       if (act === 'question' && !swapping) { if (gun) g.msg(`no questions over a gun — E holsters it, then Space asks ${gd.callsign}`); else askHeld(g); }
-      if (!swapping && ((act === 'choke' && !gun) || (act === 'whip' && gun))) H.windT = 0;   // chosen: the arm closes / the pistol comes off his head HOLD.secs.chokeHold from now — the commit beat the held key used to be (the rows are a status line under a swap: nothing is chosen while the hand is between tools)
+      if (!swapping && ((act === 'choke' && !gun) || (act === 'whip' && gun) || clk === 'choke')) H.windT = 0;   // chosen: the arm closes / the pistol comes off his head HOLD.secs.chokeHold from now — the commit beat the held key used to be (the rows are a status line under a swap: nothing is chosen while the hand is between tools)
       if (H.windT >= 0 && !swapping) { H.windT += Math.min(dt, 0.05); if (H.windT >= K.chokeHold) { H.windT = -1; if (gun) startWhip(g); else startChoke(g); } }   // (a frame hitch must not swallow the beat)
     }
     if (H.ask && H.phase === 'held' && g.time + 1e-6 >= H.ask.t + H.ask.dur) { H.ask = null; answerHeld(g); }   // Sam's line has hung its beat: the man answers it (after the row's inputs, so a tap this frame saw Sam still speaking and did nothing)
@@ -874,6 +1275,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     if (H.phase === 'choke' && H.t < K.choke - 0.3 && Math.floor(H.t / CHOKE_GRAIN) > Math.floor((H.t - dt) / CHOKE_GRAIN)) g.audio.play('chokeStrain', v3.add(hc.pos, [0, 1.5, 0]), 0.25);   // the strain of it while the arm is closed: a grain as it goes on (H.t 0) and every CHOKE_GRAIN after, the last one dying as he goes limp; eased off = no more of them, nothing to stop
     if (H.phase === 'choke' && H.t >= K.choke) { chokeOut(g); holdTail(g, dt, 0); return; }
     if (H.phase === 'whip' && H.t >= K.whip) { whipOut(g); holdTail(g, dt, 0); return; }
+    if (holdKilling(H) && H.t >= killSecs()) { holdTail(g, dt, 0); killOut(g); c.anim.holdPose = null; return; }   // (the other way round from the choke's end: the clock's LAST frame of the knife is drawn on Sam — holdTail with the man still in his arm — and the hold lets go after it, so his slow way up off the man starts from the finished move on the next frame)
     // ---- the gun: a click queues one round, the pistol comes off his head (gunOut, a few frames) and it goes — at the fixture / man / point the reticle has, never
     //      the man in the arm; it stays presented while rounds keep coming and settles back on him a moment after the last
     if (gun && H.phase === 'held') {
@@ -888,8 +1290,8 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
         H.fireQueued = false;
         if (pl.pistol.fire()) {
           pl.fireCd = HOLD_FIRE_CD; pl.lastFireT = g.time; H.shotT = g.time;
-          const ap = g.aimPoint; const ag = g.aimGuard && g.aimGuard !== gd && g.aimGuard.state !== 'dead' ? g.aimGuard : null;
-          const tgt: Vec3 = g.aimTarget ? v3.copy(g.aimTarget.pos) : ag ? v3.add(ag.char.pos, [0, 1.25, 0]) : [ap[0], ap[1] + 0.03, ap[2]];
+          const ag = g.aimGuard && g.aimGuard !== gd && g.aimGuard.state !== 'dead' ? g.aimGuard : null;
+          const tgt: Vec3 = g.aimTarget ? v3.copy(g.aimTarget.pos) : ag ? v3.add(ag.char.pos, [0, 1.25, 0]) : freeAim(g, 0.6);   // (0.6: the pair only comes round to a cursor farther off than that — below)
           fireWeapon(g, c, tgt, true, { spread: HOLD_SPREAD + samSpread(g) + samAim(g) });   // (one-handed past the man's jaw — and wider again under fire, suppression.ts, and by the aim model's cone, aim.ts samAim: 0 with it off)
           if (pl.pistol.roundsReady === 0) g.msg('empty — and no hand free to reload');
         }
@@ -900,7 +1302,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     const ap = g.aimPoint; const tx = ap[0] - c.pos[0], tz = ap[2] - c.pos[2]; const ad = Math.hypot(tx, tz);
     if (ad > 0.6) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(tx, tz), HOLD_TURN * dt);
     c.aimYaw = c.bodyYaw;
-    if (gun) { const ty = g.aimTarget ? clamp(g.aimTarget.pos[1], 0.3, 2.95) : g.aimGuard && g.aimGuard !== gd ? g.aimGuard.char.pos[1] + 1.2 : ap[1] + 0.03; c.aimPitch = damp(c.aimPitch, clamp(Math.atan2(ty - (c.pos[1] + 1.5), Math.max(ad, 0.5)), -45 * DEG, 45 * DEG) * H.gunOut, 12, dt); }
+    if (gun) { const ty = g.aimTarget ? clamp(g.aimTarget.pos[1], 0.3, 2.95) : g.aimGuard && g.aimGuard !== gd ? (g.aimGuard.wound && g.aimSnap ? g.aimSnap[1] : g.aimGuard.char.pos[1] + 1.2) : levelOn(g) ? c.pos[1] + 1.5 : ap[1] + 0.03; c.aimPitch = damp(c.aimPitch, clamp(Math.atan2(ty - (c.pos[1] + 1.5), Math.max(ad, 0.5)), -45 * DEG, 45 * DEG) * H.gunOut, 12, dt); }   // (nothing under the reticle: presented level — levelOn)
     else c.aimPitch = damp(c.aimPitch, -0.05, 8, dt);
     // ---- the pair's movement (rooted while the choke / the whip is on: you plant to finish it — a step then is what stops it, interact.ts; feet still while the selector is open)
     let mx = 0, mz = 0;
@@ -935,11 +1337,13 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
 function holdTail(g: Game, dt: number, speed: number) {
   const pl = g.player, c = pl.char, H = pl.holding;
   c.anim.speed = speed; c.anim.crouchTarget = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
-  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch } : null;
+  const low = H ? takeLower(g) : 0;   // (the choke's lowering: both poses or neither)
+  const kill = H ? takeKill(g) : false, beats = H ? takeBeats(g) : false;   // (takedown.ts TAKEDOWN.kill / chokeBeats, fed with the pose as `low` is: the animator reads this frame's, not its module's one-frame-late fallback)
+  c.anim.holdPose = H ? { phase: H.phase, t: H.t, variant: H.variant, gunOut: H.gunOut, gunPitch: c.aimPitch, low, kill, beats } : null;
   if (H) {
     const gd = H.g, hc = gd.char, an = hc.anim;
     an.speed = speed; an.reverse = pl.backpedal; an.crouchTarget = 0; an.upper = 'none'; an.stance = 'none'; an.lookYawExtra = 0; an.deliberate = 0;
-    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon' };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
+    an.heldPose = { phase: H.phase, t: H.t, agitation: agitationOf(g, gd), variant: H.variant, shot: H.shotT >= 0 ? g.time - H.shotT : -1, armed: inHand(gd) === 'weapon', low, kill, beats };   // (armed: the pistol is in his hand — combat.ts handProps draws it for anyone not carrying the torch on a calm patrol — so the raised hand stays a fist round it)
     if (gd.held) gd.held.phase = H.phase;
     // where his torch points: nowhere useful — up over Sam's arm at the ceiling, wandering with the struggle (torchCarryDir reads his aim yaw / pitch; the pistol, if
     // that is what he has out, just rides the raised hand). The yaw share stays small and eased — it is also his chest's twist, and his neck must stay on the arm.
@@ -1028,6 +1432,19 @@ function startWhip(g: Game) {
   setPhase(g, 'whip'); H.gunOut = 0;
   g.audio.play('propScrape', v3.add(pl.char.pos, [0, 1.5, 0]), 0.12, { rate: 2.6 });   // the sleeve going back
 }
+/** the knife's clock in the hold (character.ts HOLD.secs.kill: the move is the takedowns' — holdLayer / heldLayer pose phase 'kill' off it) */
+const killSecs = (): number => HOLD.secs.kill;
+/** s into the knife's clock at which the blade is in: the hold broken from there on (Sam shot down, folded) leaves the man dead all the same — freeHeld */
+const killCut = (): number => HOLD.kill.hit * killSecs();
+/** the knife is going in on the man in his arm (interact.ts: a commit — it is the running verb and nothing in cancelSustained stops it) */
+export function holdKilling(H: Hold): boolean { return H.phase === 'kill'; }
+/** The left click with a man in the arm hold (updateHold, CLOSE.heldClicks): the knife at his throat is used. Committed from this frame — rooted, no row, no E,
+ *  nothing eases it off — and he is dead when its clock runs out (killOut). What the room hears of it begins as the standing knife's does (startTakedown). */
+function startKill(g: Game) {
+  const pl = g.player, H = pl.holding; if (!H) return; const hc = H.g.char;
+  setPhase(g, 'kill');
+  g.audio.play('bodyHit', v3.add(hc.pos, [0, 1.3, 0]), 0.55, { rate: 0.8 });
+}
 /** The man rigid in front: HOLD.dist dead ahead of Sam on his facing — then pushed out of the statics and kept on the slab like anybody, and whatever the walls took
  *  off HIS station Sam gives up too (re-settled himself), a couple of rounds of it; so the pair stops at a wall ahead of the man, slides along one beside him, and
  *  in a squeeze he ends up where the walls let him, a hand off his station, never inside one. Other guards are kept off both circles before this (keepOffGuards /
@@ -1101,7 +1518,7 @@ function answerHeld(g: Game) {
  *  bright clack of the clip coming off his belt, one for the debrief (mission.ts tally, live runs only), a line in the log, the kit column's KEY tag from this
  *  frame (overlay.ts reads Player.keys) — and, with the man in his arm, Sam's word on it (dialogue.ts samKeyLineFor) queued to follow the man's line down
  *  (Hold.after → sayAfter: the two are never up together). From here his door contact and every lock test carry the key (game.ts updateDoors, Doors.lockedOut). */
-export function takeKey(g: Game, gd: Guard, rnd: () => number = Math.random) {
+export function takeKey(g: Game, gd: Guard, rnd: () => number = simRandom) {
   const pl = g.player, H = pl.holding;
   const fresh = [...gd.keys].filter(k => !pl.keys.has(k)); gd.keys.clear();
   if (!fresh.length) return;
@@ -1130,7 +1547,22 @@ function chokeOut(g: Game) {
   const f = pl.char.forward();
   gd.held = null; gd.char.anim.heldPose = null; gd.talk.heldSince = -1;
   g.audio.play('chokeLimp', v3.add(gd.char.pos, [0, 1.4, 0]), 0.35);   // the last of his air and his jacket folding over the arm — the floor's thud is the ragdoll's own (Game.bodyThud)
+  takeFall(g, gd, undefined, false, 'choke');
   killGuard(g, gd, f, true, 'choked', 'player');
+  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: FOLD_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, FOLD_NOISE);
+  pl.holding = null;
+}
+/** The knife run through its clock (killSecs): he is dead in the arm and let fall at Sam's feet — killGuard as the standing knife calls it ('shot' is the model's
+ *  word for dead: a kill on the card, 'knife — dead'; a man who watched saw him DROPPED, not shot), then the hold's end as the choke's is: the last of him over
+ *  the arm, the fold the room hears. */
+function killOut(g: Game) {
+  const pl = g.player, H = pl.holding; if (!H) return; const gd = H.g;
+  const f = pl.char.forward();
+  gd.held = null; gd.char.anim.heldPose = null; gd.talk.heldSince = -1;
+  g.audio.play('chokeLimp', v3.add(gd.char.pos, [0, 1.4, 0]), 0.35);
+  takeFall(g, gd, undefined, true, 'kill');   // (takedown.ts: the kill's own fall, or the old quiet one with TAKEDOWN.kill off)
+  killGuard(g, gd, f, true, 'shot', 'player', 'knife — dead');
+  for (const o of g.guards) { const W = o.witness.sawAct; if (W && W.kind === 'shot' && W.t === g.time && W.victim === gd.callsign) W.kind = 'struck'; }   // (startTakedown's own rewrite for the knife)
   g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: FOLD_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, FOLD_NOISE);
   pl.holding = null;
 }
@@ -1142,6 +1574,7 @@ function whipOut(g: Game) {
   const f = pl.char.forward(); const dir = v3.normalize([f[0] + f[2] * 0.45, 0, f[2] - f[0] * 0.45]);   // forward and to his left (left of forward = (f.z, 0, −f.x))
   const head = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.6, 0]);
   gd.held = null; gd.char.anim.heldPose = null; gd.talk.heldSince = -1;
+  takeFall(g, gd, undefined, false, 'whip');
   killGuard(g, gd, dir, true, 'struck', 'player', 'pistol-whipped — out cold, and that was not quiet');
   g.audio.play('whipThud', head, 0.7);   // steel on bone: the thump of it going through his skull, the frame's click, his collar as the head goes over
   g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: WHIP_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, WHIP_NOISE);
@@ -1155,6 +1588,9 @@ function handBack(g: Game, gd: Guard, stagger: number) {
   gd.held = null; gd.char.anim.heldPose = null; gd.talk.heldSince = -1;
   gd.speed = 0; gd.char.vel = [0, 0, 0]; gd.path = []; gd.pathGoal = null; gd.bodyDuty = null; gd.stallRef = null; gd.char.aimPitch = 0;
   if (gd.state === 'dead') return;
+  if (gd.gunLostAt >= 0) {   // (HOLD.dropGun) loose and on his feet: the gun that was knocked out of his hand at the grab is the first thing he goes for — it is off the floor and in his fist again, at the price of a longer stagger
+    gunBack(g, gd); stagger += HOLD.regrab;
+  }
   const pp = g.player.char.pos;
   gd.awareness = 1; gd.lastKnown = v3.copy(pp); gd.lastSeenT = g.time; gd.sightPos = v3.copy(pp); gd.sightVel = [0, 0, 0]; gd.sightT = g.time; gd.ledT = g.time;   // (ledT: nothing to lead — he was not watching Sam walk out of sight, Sam had him by the throat)
   gd.reactT = Math.max(gd.reactT, stagger); gd.heardUpTo = g.eventSeq;   // (nothing stale in the queue is news to him)
@@ -1163,9 +1599,11 @@ function handBack(g: Game, gd: Guard, stagger: number) {
   gd.char.anim.hit();
 }
 /** Let go at once — Sam shot down with him in the arm, a teleport / the tour taking the hands (cancelActions): the man is handed straight back (handBack), Sam's side
- *  cleared. The one way a held man comes free on his feet: there is no letting him go. */
+ *  cleared. The one way a held man comes free on his feet: there is no letting him go. (Shot down with the knife already in him — phase 'kill' past killCut — he
+ *  does not come free: killOut.) */
 export function freeHeld(g: Game, why: 'shot' | 'cancel') {
   const pl = g.player, H = pl.holding; if (!H) return;
+  if (why === 'shot' && holdKilling(H) && H.t >= killCut()) { killOut(g); pl.char.anim.holdPose = null; return; }   // (CLOSE.heldClicks: Sam put down or folded with the knife already in — past killCut the man dies by it all the same, the kill's own end; before it he is loose as ever. A cancel — the tour, a teleport, a unit taken off the floor — hands him back whenever it comes)
   handBack(g, H.g, why === 'shot' ? 0.6 : 0.3);
   pl.holding = null; pl.char.anim.holdPose = null;
   if (why === 'shot') { g.audio.play('shove', v3.add(H.g.char.pos, [0, 1.3, 0]), 0.3); g.msg(`${H.g.callsign} is loose`); }   // he wrenches free of the slackening arm (quieter than a shove: nobody pushed); a cancel — the tour, a teleport — makes no sound
@@ -1184,7 +1622,7 @@ export function startPicking(g: Game, d: Door) {
   const pl = g.player, c = pl.char; if (pl.down || pl.takedown || pl.kick) return;
   if (d.def.steel) { g.msg('no keyway on this side of the stair door — nothing to pick'); return; }   // (the row is never offered for it; a script asking anyway gets the reason)
   releaseWall(g); if (pl.dragging) g.toggleDrag();
-  cancelReloads(pl); pl.throwHeld = false; pl.throwPreview = null; pl.sprinting = false; pl.easing = null;
+  cancelReloads(pl); pl.throwHeld = false; pl.throwPreview = null; pl.sprinting = false; pl.easing = null; wandDrop(pl);
   pl.picking = d; pl.crouch = true;   // you work a lock on your knee — and stay down there afterwards
   if (d.pick <= 0) g.msg('picking the lock — a step or Space breaks off');
 }
@@ -1218,26 +1656,97 @@ export function updatePicking(g: Game, dt: number, input: Input) {
   poseGunLight(g);   // the light rides the gun: lit only while the gun is still (or again) in the hand — and in the hand at all (he starts holstered now)
 }
 
+// ------------------------------------------------------------ the optical wand: a look under a shut door (wand.ts)
+/** The 'look under it' row of a shut door (Game.updateDoors): whatever the hands were doing is dropped and he goes onto his knee at the middle of the leaf —
+ *  updateWanding runs it from here; a step, Space or Esc pulls it out (interact.ts cancelSustained → stopWand). */
+export function startWand(g: Game, d: Door) {
+  const pl = g.player, c = pl.char; if (pl.down || pl.takedown || pl.kick || pl.holding || pl.wanding) return;
+  if (pl.coding || pl.doorMove || pl.breakerMove || g.mission.driveT >= 0 || samWork(g)) return;   // (hands on another thing: the row is not offered then — buildInteractables' `busy` — and a script asking anyway starts nothing)
+  if (!wandOffered(g, pl, d)) { if (WAND.on && pl.wand) g.msg(wandFits(d) ? 'nothing here the wand would show you' : d.def.steel ? 'no gap under a steel fire door' : 'the wand goes under a shut door'); return; }   // (the row is never offered then; a script asking anyway gets the reason)
+  releaseWall(g); if (pl.dragging) g.toggleDrag();
+  cancelReloads(pl); pl.throwHeld = false; pl.throwPreview = null; pl.sprinting = false; pl.easing = null; pl.picking = null;
+  pl.wanding = { door: d, side: g.doors.side(d, c.pos), t: 0, pan: 0, live: false, off: 0 }; pl.crouch = true;   // (on his knee — and he stays down there afterwards, as at a lock)
+  WAND_STATS.looks++; g.msg('feeding the wand under the door — a step or Space pulls it out');
+}
+/** The wand pulled out (a step, Space, Esc; the door moving; a show): no round for WAND.stowSecs, he stays on his knee. */
+export function stopWand(g: Game, text?: string) {
+  const pl = g.player; if (!pl.wanding) return;
+  wandDrop(pl); pl.speedSm = 0; if (text) g.msg(text);
+}
+/** One frame of the look (Player.wanding): planted on his knee square to the middle of the leaf, both hands at it (the lock work's pose), nothing in the sights;
+ *  once he has been there WAND.feedSecs the lens is live — fogofwar.ts takes wandEye in place of his own — and turns after the frame's aim point. */
+function updateWanding(g: Game, dt: number) {
+  const pl = g.player, c = pl.char, W = pl.wanding!, d = W.door;
+  if (g.puppet || !WAND.on || !g.fogOfWar.active) stopWand(g);
+  else if (!wandFits(d) || g.doors.side(d, c.pos) !== W.side) stopWand(g, 'the door moved — the wand is out');
+  else if (samStaggered(g) || g.time < pl.dazzledUntil) stopWand(g);
+  else {
+    const spot = g.doors.workSpot(d, c.pos, 0.5, d.def.width * 0.5);
+    c.vel = [0, 0, 0]; c.pos = v3.lerp(c.pos, spot.pos, 1 - Math.exp(-10 * dt)); collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);   // (shoved off the spot by a man walking into him: the look waits until he settles back)
+    c.bodyYaw = approachAngle(c.bodyYaw, spot.yaw, 12 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0, 8, dt);
+    pl.crouch = true; pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false;
+    c.anim.lockpick = true; c.anim.speed = 0; c.anim.crouchTarget = 1; c.anim.upper = 'none';
+    const planted = v3.distXZ(c.pos, spot.pos) < 0.12 && c.anim.hideHeldItem;   // there, and both hands on it
+    if (planted) { W.off = 0; W.t += dt; if (!W.live && W.t >= WAND.feedSecs) { W.live = true; WAND_STATS.live++; g.msg('the wand is through'); } }
+    else if (W.live) { stopWand(g, 'shoved off it — the wand is out'); }   // (a man walked into him: the cable came out with him — one line, and the look is his to start again)
+    else if (v3.distXZ(c.pos, spot.pos) >= 0.12 && (W.off += dt) >= WAND.giveUpSecs) stopWand(g, 'no room to kneel at that door');   // (somebody, or something, stands where he must kneel)
+    if (pl.wanding && W.live) wandTurn(W, g.aimPoint, dt);
+  }
+  armRifle(g, pl.rifleUp && !c.anim.hideHeldItem, 'lowLong');
+  c.update(dt);
+  poseGunLight(g);
+}
+
 /** Keying a code in (Player.coding — devices.ts): stood at the pad with the feet still (a guard walking into him shoves him, as at the lock), turned to face
  *  the plate, nothing in the sights, the rifle low; nothing here reads the movement keys or the buttons (interact.ts stops the verb on a fresh key). */
 function updateCodingPlant(g: Game, dt: number) {
   const pl = g.player, c = pl.char; const K = g.devices.padOf(pl.coding!);
-  c.vel = [0, 0, 0]; collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
+  c.vel = [0, 0, 0]; const x0 = c.pos[0], z0 = c.pos[2]; if (K && handworkOn('work')) { if (pl.wall) releaseWall(g); workStand(c, K.def.pos, K.n, dt, samWorkHand(g)); }   // (handwork.ts: the step in to arm's length of the plate)
+  collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
+  const stepV = K && handworkOn('work') && dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the step he is walked: 0 with the switch off)
   if (K) { c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(-K.n[0], -K.n[2]), 10 * dt); c.aimYaw = c.bodyYaw; }
-  c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = 0; c.anim.upper = 'none';
+  c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.upper = 'none';
+  armRifle(g, pl.rifleUp, 'lowLong'); c.update(dt); poseGunLight(g);
+}
+
+/** Hands at work on a thing that is not a lock or a pad (handwork.ts samWork: the mains lever, the drive in its rack, a charge on a wall): the keypad's plant —
+ *  walked the step in to arm's length, feet still, squared to it, nothing in the sights, the rifle low. The verb's own clock and its ways out are its owner's. */
+function updateWorkPlant(g: Game, dt: number, W: SamWork) {
+  const pl = g.player, c = pl.char;
+  if (pl.wall) releaseWall(g);   // (pressed to the wall beside the thing: he comes off it to work — as for a pick or a kick)
+  c.vel = [0, 0, 0]; const x0 = c.pos[0], z0 = c.pos[2]; const yaw = workStand(c, W.p, W.n, dt, samWorkHand(g)); collidePlayer(g, 1.0); keepOffGuards(g, dt, 1.0);
+  if (W.at) { W.at[0] += c.pos[0] - x0; W.at[2] += c.pos[2] - z0; }   // (the spot he must not shift from goes with the step HE IS WALKED here, and only that: anything else that moves him — a shove, a blast — still breaks the work off)
+  const stepV = dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the step he is walked)
+  c.bodyYaw = approachAngle(c.bodyYaw, yaw, 10 * dt); c.aimYaw = c.bodyYaw;
+  c.aimPitch = damp(c.aimPitch, 0, 8, dt); pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false; c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.upper = 'none'; c.anim.lockpick = false;
   armRifle(g, pl.rifleUp, 'lowLong'); c.update(dt); poseGunLight(g);
 }
 
 /** Kick a door in: the 'kick it in' row on a door locked against you, or a sprint straight into one (Game.updateDoors). One committed second: updateKick.
  *  Offered crouched too — it stands him up into it — so not where he cannot stand (canStand: the row is withheld there, and this refuses). */
-export function startKick(g: Game, d: Door) {
+export function startKick(g: Game, d: Door, run = false, tool?: 'shotgun' | 'hammer') {
   const pl = g.player, c = pl.char; if (pl.kick || pl.down || pl.takedown || c.anim.kicking) return;   // (anim.kicking without pl.kick: the leg is still coming down from a kick a teleport broke off — its clock would time this one's impact wrong)
   if (pl.crouch && !canStand(g)) { g.msg('no room to stand for a kick here'); return; }
+  if (tool && BIGSLOT.moves && Math.min(v3.distXZ(d.pos, c.pos), v3.distXZ(d.frameCentre, c.pos)) >= Doors.USE_REACH && !samBigSpot(g, d, c.pos, tool)) return;   // (the row taken from a stack's distance and the place beside the frame gone under it this frame: nothing begins — the opening is not walked into from there)
   releaseWall(g); if (pl.dragging) g.toggleDrag();
-  pl.picking = null; c.anim.lockpick = false; pl.easing = null; pl.sprinting = false; pl.crouch = false; pl.throwHeld = false; pl.throwPreview = null; pl.fHeld = true; pl.speedSm = 0;
+  pl.picking = null; wandDrop(pl); c.anim.lockpick = false; pl.easing = null; pl.sprinting = false; pl.crouch = false; pl.throwHeld = false; pl.throwPreview = null; pl.fHeld = true; pl.speedSm = 0;
   cancelReloads(pl);
-  const spot = g.doors.kickSpot(d, c.pos);   // taken ONCE, off the leaf as it stands now: a man coming through with his key mid-kick swings the leaf, and a spot re-read off the swinging leaf orbited the hinge with it — reeling the planted kicker through the doorway (or at 20 fps through the wall beside it)
-  pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw }; c.anim.kickDoor();
+  pl.doorKickTail = false;
+  const beside = tool ? samBigSpot(g, d, c.pos, tool) : null;
+  const spot = beside ?? (run ? null : sideKickSpot(g, d, c.pos)) ?? g.doors.kickSpot(d, c.pos);   // taken ONCE, off the leaf as it stands now: a man coming through with his key mid-kick swings the leaf, and a spot re-read off the swinging leaf orbited the hinge with it — reeling the planted kicker through the doorway (or at 20 fps through the wall beside it)
+  if (tool) { pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: 0, n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
+    ...(BIGSLOT.moves ? { moves: { arrived: false, at: beside?.at ?? lockPoint(d, bigSide(d, c.pos)), blows: [], end: -1, ...(beside?.via ? { via: beside.via } : {}) } } : {}) } }; return; }   // (bigkit.ts: the big slot's tool on the lock in the boot's place — the same planted beat, no leg thrown)
+  pl.kick = run ? { door: d, spot: spot.pos, yaw: spot.yaw, run: true } : { door: d, spot: spot.pos, yaw: spot.yaw }; c.anim.kickDoor();   // (run — sprintdoor.ts: the boot at a sprint, at the face the leaf opens toward)
+}
+
+/** DOORWAY.sideKick: the spot a kick is thrown from BESIDE the door, for a kicker who already stands beside its latch jamb on that face with floor to stand on
+ *  there and nothing solid between him and it; null = the square kick (in front of the leaf, on the hinge side, no floor, the switch off). */
+export function sideKickSpot(g: Game, d: Door, from: Vec3): { pos: Vec3; yaw: number } | null {
+  if (!DOORWAY.sideKick || d.off) return null;
+  const f = g.doors.frameCoords(d, from); if (f.along < d.def.width - 0.05 || f.along > d.def.width + 1.2 || f.off > 1.3) return null;
+  const s = g.doors.kickSpotSide(d, from);
+  if (g.col.nav.isBlocked(s.pos[0], s.pos[2]) || g.col.solidBlocked([from[0], 0.5, from[2]], [s.pos[0], 0.5, s.pos[2]])) return null;
+  return s;
 }
 
 /** The kick beat (CharacterAnimator.kickDoor, 1.0 s): eased back / up to the kicking distance square to the leaf by the lock (Doors.kickSpot, fixed when the
@@ -1247,38 +1756,50 @@ export function updateKick(g: Game, dt: number) {
   const pl = g.player, c = pl.char, d = pl.kick!.door;
   const spot = pl.kick!;
   c.vel = [0, 0, 0];
-  if (c.anim.kickTime < 0.45) { c.pos = v3.lerp(c.pos, spot.spot, 1 - Math.exp(-12 * dt)); collidePlayer(g, 1.7); }   // set the distance during the chamber; from the strike on, the planted foot stays where it is
+  const walked = !!spot.tool?.moves, x0 = c.pos[0], z0 = c.pos[2]; let yaw = spot.yaw;
+  if (walked) { yaw = samBigWalk(g, dt); collidePlayer(g, 1.7); }   // (bigkit.ts, BIGSLOT.moves: he walks onto his place beside the frame, the tool coming into his hands on the way)
+  else if (c.anim.kickTime < 0.45) { c.pos = v3.lerp(c.pos, spot.spot, 1 - Math.exp(-12 * dt)); collidePlayer(g, 1.7); }   // set the distance during the chamber; from the strike on, the planted foot stays where it is
   keepOffGuards(g, dt, 1.7);
-  c.bodyYaw = approachAngle(c.bodyYaw, spot.yaw, 16 * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0, 8, dt);
+  const stepV = walked && dt > 0 ? Math.hypot(c.pos[0] - x0, c.pos[2] - z0) / dt : 0;   // (his legs take the steps he is walked)
+  c.bodyYaw = approachAngle(c.bodyYaw, yaw, (walked ? 9 : 16) * dt); c.aimYaw = c.bodyYaw; c.aimPitch = damp(c.aimPitch, 0, 8, dt);
   pl.sprinting = false; pl.crouch = false; pl.backpedal = false; c.anim.reverse = false; c.anim.lockpick = false;
-  c.anim.speed = 0; c.anim.crouchTarget = 0; c.anim.upper = pl.pistolUp ? 'relaxed' : 'none';   // (the carry arms only with the gun actually out: holstered — the default now — the kick keeps the hands free instead of pulling an empty high-ready)
+  c.anim.speed = stepV > 0.2 ? Math.min(stepV, 1.7) : 0; c.anim.crouchTarget = 0; c.anim.upper = pl.pistolUp ? 'relaxed' : 'none';   // (the carry arms only with the gun actually out: holstered — the default now — the kick keeps the hands free instead of pulling an empty high-ready)
+  c.anim.bigTool = samBigPose(g);   // (bigkit.ts, BIGSLOT.moves: where the tool's beat stands — the animator's pose is a function of it; null for a boot, and with the moves off)
   armRifle(g, pl.rifleUp, 'portLong');   // the rifle across the chest at the high port for the kick, as the rifleman's is
   c.update(dt);
-  if (c.anim.kickImpact) { g.doors.kickIn(d, c.pos, PLAYER_ID); kickScuff(g, d, c.pos); if (!d.def.steel) { g.msg('kicked it in — the whole floor heard that'); chronDoor(g, 'doorKicked', d); } }   // the boot's scuff by the lock on his face of the leaf, riding it as it flies (marks.ts) — a steel door takes the scuff too, says its own word (game.ts onDoorEvent 'clang') and stays shut: nothing kicked in to chronicle
+  if (spot.tool) { if (samBigTick(g, dt)) { pl.kick = null; samBigEnded(g); } poseGunLight(g); return; }   // (bigkit.ts: the breaching shotgun's shell or the hammer's blows, on their own clock)
+  const home = !spot.run || g.doors.bootHolds(d, c.pos);   // (the boot at a run was thrown at a leaf shut in its frame: one somebody has opened under the wind-up is not there to be kicked — the sole meets nothing)
+  if (c.anim.kickImpact && !d.off && spot.run && home && tearOff(g, d, c.pos, PLAYER_ID, SPRINTDOOR.kickK)) { SPRINTDOOR_STATS.kicks++; chronDoor(g, 'doorKicked', d); }   // the boot at a run (sprintdoor.ts): the leaf goes through its frame and off its hinges — where it cannot come off, the ordinary boot below
+  else if (c.anim.kickImpact && !d.off && home) { const gave = g.doors.kickIn(d, c.pos, PLAYER_ID); kickScuff(g, d, c.pos); if (gave) { g.msg('kicked it in — the whole floor heard that'); chronDoor(g, 'doorKicked', d); } }   // the boot's scuff by the lock on his face of the leaf, riding it as it flies (marks.ts) — a steel door takes the scuff too, says its own word (game.ts onDoorEvent 'clang') and stays shut: nothing kicked in to chronicle
   if (!c.anim.kicking) pl.kick = null;
+  else if (spot.run && c.anim.kickTime >= Math.max(SPRINTDOOR.kickFree, 0.5)) { pl.kick = null; pl.doorKickTail = true; }   // (…and the boot at a run gives him his legs back as the foot comes down, not a fifth of a second after)
   poseGunLight(g);
 }
 
-/** Planar distance from the player to a corpse, wherever the ragdoll left it: the nearer of its ankles (what you take hold of) and its hips. */
-export function bodyDist(g: Game, gd: Guard): number {
+/** Planar distance from the player to a corpse, wherever the ragdoll left it: the nearer of its ankles (what you take hold of) and its hips.
+ *  `within`: the caller only asks 'nearer than this?' (both in-file callers compare against 1.3) — a point already that far off is answered by its plain distance,
+ *  its reach line never walked: blocked it would count 99, clear its distance, and either way not under the bar, so every such comparison comes out as it did. */
+export function bodyDist(g: Game, gd: Guard, within = Infinity): number {
   const p = g.player.char.pos, b = gd.char.bones;
   const a: Vec3 = [p[0], 0.5, p[2]];
-  const reach = (q: Vec3 | undefined) => { if (!q) return 99; const t: Vec3 = [q[0], 0.5, q[2]]; return g.col.solidBlocked(a, t) || g.col.segmentBlockedDynamic(a, t) ? 99 : v3.distXZ(q, p); };   // not through a partition or a shut door
-  return Math.min(reach(b.footL), reach(b.footR), reach(b.hips) + 0.3);   // by the hips still means gathering the legs in first: count it a little further
+  const reach = (q: Vec3 | undefined, add: number) => { if (!q) return 99; const d = v3.distXZ(q, p); if (d + add >= within) return d; const t: Vec3 = [q[0], 0.5, q[2]]; return g.col.solidBlocked(a, t) ? 99 : d; };   // not through a partition or a shut door (solidBlocked asks the leaves itself, first: the segmentBlockedDynamic that used to follow it here could only ever repeat its 'clear')
+  return Math.min(reach(b.footL, 0), reach(b.footR, 0), reach(b.hips, 0.3) + 0.3, bodyGripDist(g, gd, within));   // (hands.ts: the head end too — he takes a body by the end he is at)   // by the hips still means gathering the legs in first: count it a little further
 }
 
 /** Throw origin (right hand-ish) */
 export function throwOrigin(g: Game): Vec3 { const c = g.player.char; const f = c.forward(); return [c.pos[0] + f[0] * 0.32, c.pos[1] + (g.player.crouch ? 1.05 : 1.5), c.pos[2] + f[2] * 0.32]; }
 
 export function doThrow(g: Game, sol: ThrowSolution, kind: ThrowKind) {
-  const pl = g.player; if (g.throwCount(kind) <= 0) { g.msg(kind === 'flash' ? 'no stun canisters left' : 'no smoke canisters left'); return; }
+  const pl = g.player; if (g.throwCount(kind) <= 0) { g.msg(kind === 'frag' ? 'no frag grenades left' : kind === 'flash' ? 'no stun canisters left' : 'no smoke canisters left'); return; }
   if (pl.pendingThrow) return;                                   // one in the air per wind-up (double-tap G would otherwise eat a canister)
-  if (kind === 'flash') pl.flashbangs--; else pl.canisters--;   // (always counted at the wind-up so a cancel's refund stays exact; under unlimited ammo the can comes BACK at release — the pendingThrow branch in update)
+  if (kind === 'frag') pl.frags--; else if (kind === 'flash') pl.flashbangs--; else pl.canisters--;   // (always counted at the wind-up so a cancel's refund stays exact; under unlimited ammo the can comes BACK at release — the pendingThrow branch in update)
   pl.char.anim.throwItem(); pl.pendingThrow = { t: THROW_RELEASE, sol, kind };   // it leaves the hand as the arm comes over the top (character.ts throwLayer), along the arc previewed at the click
   g.audio.play('throw', throwOrigin(g), 0.7);
 }
 
-export function updateAim(g: Game, input: Input, cam: FollowCamera, canvas: HTMLCanvasElement) {
+/** px — the cursor this close to a wounded man's chest puts the reticle on him (a living man snaps from SNAP_PX) */
+const WOUNDED_SNAP_PX = 26;
+export function updateAim(g: Game, input: Input, cam: FollowCamera, canvas: View) {
   if (g.puppet?.aim) {   // scripted aim: put the cursor where the point projects (anywhere in front of the eye, on the view or off it)
     const [sx, sy, front] = cam.project(g.puppet.aim, canvas.clientWidth, canvas.clientHeight, Infinity, 1e-3);
     if (front) { input.mouseX = sx; input.mouseY = sy; }
@@ -1291,30 +1812,56 @@ export function updateAim(g: Game, input: Input, cam: FollowCamera, canvas: HTML
   if (g.puppet?.aim) p = v3.copy(g.puppet.aim);   // a scripted aim IS the point: the cursor above only places the ring / the snap / the hover — the eye's ray to it can meet a leaf or a man standing between a showcase's lens and Sam, and the arm would follow THAT (a set-up behind him had him aim back over his shoulder at the door he came through)
   g.aimPoint = p;
   buildInteractables(g, cam, input.mouseX, input.mouseY, canvas.clientWidth, canvas.clientHeight);
-  // Generous auto-aim (Chaos Theory): the reticle SNAPS to the nearest light or a living guard's centre of mass within SNAP_PX of the cursor —
-  // guards win over lights on a near tie, a light behind the man the tour is shooting at never steals the shot (puppet without .fixtures),
-  // and the ring on the HUD is drawn at the snapped thing so you can see what a click / right click will do; raw aim when nothing is near.
+  // Generous auto-aim (Chaos Theory): the reticle SNAPS to a living guard's centre of mass within SNAP_PX of the cursor, and to a light only with the cursor
+  // ON the light — within AIM.player.lightSnapPx of its dot, or on the fixture's own drawn box (the ceiling panels are never drawn: at the men's 60 px each
+  // of them was an unseen 1.2 m disc that swung his gun up at the ceiling on the way past and took the shot off a man standing under its picture) — guards
+  // win over lights on a near tie, a light behind the man the tour is shooting at never steals the shot (puppet without .fixtures), and the ring on the HUD
+  // is drawn at the snapped thing so you can see what a click / right click will do; raw aim when nothing is near.
   const W = canvas.clientWidth, H = canvas.clientHeight, mx = input.mouseX, my = input.mouseY;
-  let bestPx = SNAP_PX; g.aimTarget = null; g.aimGuard = null; g.aimSnap = null;
+  // A light TAKEN is KEPT while the cursor stays where it took it: the gun going up to the fixture moves the aim point, the camera's lead pans the picture after
+  // it and the dot slides tens of px from under a cursor nobody moved — out to the men's reach, as it always held.
+  const reach = Math.min(SNAP_PX, AIM.player.lightSnapPx), at = lightAt.get(g);
+  const kept = g.aimTarget && at && Math.hypot(mx - at[0], my - at[1]) <= reach ? g.aimTarget : null; let onIt = false;
+  let bestPx = SNAP_PX; g.aimTarget = null; g.aimGuard = null; g.aimSnap = null; g.aimFriend = null;
   if (!(g.puppet && !g.puppet.fixtures)) for (const it of g.interactables) {   // lights (still enumerated by buildInteractables for exactly this)
     if (it.kind !== 'light' || !it.target) continue;
     const [sx, sy, front] = cam.project(it.pos, W, H); if (!front) continue;
-    const d = Math.hypot(sx - mx, sy - my); if (d < bestPx) { bestPx = d; g.aimTarget = it.target; g.aimSnap = v3.copy(it.pos); }
+    const d = Math.hypot(sx - mx, sy - my); if (d >= bestPx) continue;
+    const on = d < reach || (!!hit && it.target.boxes.includes(hit.index));   // on its dot, or the cursor's ray lands on the drawn fixture itself (a screen, a vending front)
+    if (!on && it.target !== kept) continue;
+    bestPx = d; g.aimTarget = it.target; g.aimSnap = v3.copy(it.pos); onIt = on;
   }
   const held = g.player.holding?.g ?? null;   // the man in Sam's arm is nobody to draw a line on (a round past him goes to whatever else the reticle has)
   for (const gd of g.guards) {
-    if (gd.state === 'dead' || gd === held) continue;
+    if (gd.state === 'dead' || gd === held || g.fogOfWar.hidden(gd) || friendNoSnap(gd)) continue;   // (fog of war: no ring on a man who is not in the picture; friends.ts: none on a man of his own side)
     const com: Vec3 = gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.2, 0]);
     const [sx, sy, front] = cam.project(com, W, H); if (!front) continue;
     const d = Math.hypot(sx - mx, sy - my) - 6;   // (a hair of preference for men over fixtures)
     if (d < bestPx && !g.col.segmentBlocked(v3.add(g.player.char.pos, [0, 1.3, 0]), com)) { bestPx = d; g.aimGuard = gd; g.aimTarget = null; g.aimSnap = com; }   // only a man Sam could actually draw a line on
   }
+  // a man down WOUNDED (wounds.ts) is no threat and never takes the snap from a living man (nor from a light the cursor is nearer to) — but with the cursor ON him (WOUNDED_SNAP_PX of his chest, where it is now) the reticle has him: that click is the player's to make
+  if (!g.aimGuard) for (const gd of g.guards) {
+    if (!gd.wound || gd === held || g.fogOfWar.hidden(gd) || friendNoSnap(gd)) continue;
+    const com: Vec3 = gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 0.6, 0]);
+    const [sx, sy, front] = cam.project(com, W, H); if (!front) continue;
+    const d = Math.hypot(sx - mx, sy - my);
+    if (d < Math.min(bestPx, WOUNDED_SNAP_PX) && !g.col.segmentBlocked(v3.add(g.player.char.pos, [0, 1.3, 0]), com)) { bestPx = d; g.aimGuard = gd; g.aimTarget = null; g.aimSnap = com; }
+  }
   // the exact ray still counts when it lands ON a man the loose test missed (a sliver of him showing round cover)
-  if (!g.aimGuard) { let bestT = hit ? hit.t : 1e9; for (const gd of g.guards) { if (gd === held) continue; const t = gd.char.rayHit(ray.ro, ray.rd, bestT + 0.5); if (t >= 0 && t < bestT + 0.5) { g.aimGuard = gd; g.aimTarget = null; g.aimSnap = gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.2, 0]); bestT = t; } } }
+  // (friends.ts, either of its rules on: the NEAREST body on the ray decides. A man of his own side under the cursor is known — `g.aimFriend` — and, under
+  // noSnap, is no snap: the aim stays the cursor's; a hostile BEHIND him on the ray is not ringed through his body, and a friend behind a hostile is nobody's.
+  // A hostile so refused hands back the LIGHT the reticle had before the ray found him: the fixture's dot under the cursor is still the right button's)
+  if (!g.aimGuard) { let bestT = hit ? hit.t : 1e9, friendT = Infinity; const lit = g.aimTarget, litAt = g.aimSnap;
+    for (const gd of g.guards) { if (gd === held || g.fogOfWar.hidden(gd)) continue; const t = gd.char.rayHit(ray.ro, ray.rd, bestT + 0.5); if (!(t >= 0 && t < bestT + 0.5)) continue;
+      if (friendOnRay(gd)) { if (t < friendT) { friendT = t; g.aimFriend = gd; } if (friendNoSnap(gd)) continue; }
+      g.aimGuard = gd; g.aimTarget = null; g.aimSnap = gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.2, 0]); bestT = t; }
+    if (g.aimFriend && g.aimGuard && g.aimGuard !== g.aimFriend) { if (friendT >= bestT) g.aimFriend = null; else if (friendNoSnap(g.aimFriend)) { g.aimGuard = null; g.aimTarget = lit; g.aimSnap = litAt; } } }
+  if (samBlind(g) > 0.5) { g.aimGuard = null; g.aimTarget = null; g.aimSnap = null; }   // blind (samstun.ts): the reticle takes nobody
   if (g.aimSnap && !g.puppet?.aim) g.aimPoint = v3.copy(g.aimSnap);   // the gun follows the snap (rounds already went to aimTarget / aimGuard; this makes the arm and the laser agree with the ring)
+  if (!g.aimTarget) lightAt.delete(g); else if (onIt || !at) lightAt.set(g, [mx, my]);
 }
-/** screen-space reach of the auto-aim, CSS px */
-export const SNAP_PX = 60;
+/** where the cursor last was ON the light the reticle has (CSS px) — updateAim keeps that light while the cursor stays there */
+const lightAt = new WeakMap<Game, [number, number]>();
 
 /** Every marker Space concerns itself with this frame (Game.interactables: one per thing — the dots in the world, the auto-aim's lights) and the ROWS: what Space
  *  can do right now, one verb per row (Game.nearby — the top MAX_NEAR by what matters, the cancel row at the foot while the selector is open), and the highlighted
@@ -1327,6 +1874,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
   const things: { it: Interactable; verbs: Interactable[] }[] = [];
   let rows: Interactable[] = [];
   /** a verb row: the marker's identity, 'Space␠␠<verb>' and any hint lines for the thing's OTHER inputs (overlay.ts parseOpts splits on '  ·  ') */
+  const NO_BOOT = 'kick it — opens toward you: a boot will not shift it';   // (the kick row greyed: doors.ts DOORWAY.frameHolds)
   const row = (base: Interactable, verb: Verb, text: string, hints = '', over: Partial<Interactable> = {}): Interactable => ({ ...base, verb, running: false, progress: undefined, line2: `Space  ${text}${hints ? '  ·  ' + hints : ''}`, ...over });
   /** the one row of a running sustained verb: worded as running, its bar, and how it stops */
   const running = (base: Interactable, verb: Verb, text: string, progress: number): Interactable => ({ ...base, verb, running: true, line2: text, progress: Math.max(0, Math.min(1, progress)), inReach: true });
@@ -1348,10 +1896,11 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     const H = pl.holding, gd = H.g, gun = H.variant === 'gun', K = HOLD.secs;
     const head = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.6, 0]);
     const cv = gd.civ;   // a CIVILIAN in the arm (civilians.ts): her rows — what she knows / 'stay down, stay quiet' (lets her go) / the choke; the whip with the pistol out; every civilian on the floor by his hand costs him
-    const base: Interactable = { kind: 'held', pos: [head[0], head[1] + 0.3, head[2]], line1: cv ? `${gd.callsign} · the ${cv.label} · ${gun ? `your pistol at ${cv.her} head` : 'in your arm'}` : `${gd.callsign} · ${gun ? 'your pistol at his head' : 'in your arm'}`, line2: '', inReach: true, off: false, guard: gd };
+    const base: Interactable = { kind: 'held', pos: [head[0], head[1] + 0.3, head[2]], line1: cv ? `${gd.callsign} · the ${cv.label} · ${gun ? `your pistol at ${WORDS.on && cv.she === 'he' ? 'his' : cv.her} head` : 'in your arm'}` : `${gd.callsign} · ${gun ? 'your pistol at his head' : 'in your arm'}`, line2: '', inReach: true, off: false, guard: gd };
     if (H.phase === 'grab') rows.push(status(base, cv ? `getting hold of ${cv.her}…` : 'getting hold of him…'));
     else if (H.phase === 'held' && H.swapT < K.swap) rows.push(status(base, gun ? 'the pistol coming up to his head…' : 'holstering it — the knife back at his throat…'));   // E's hand-over: nothing starts while the hand is between tools
     else if (H.phase === 'choke' || (H.windT >= 0 && !gun)) rows.push(running(base, 'choke', 'choking him out… — Space or a step and he breathes again', H.phase === 'choke' ? H.t / K.choke : 0));
+    else if (holdKilling(H)) rows.push(status(base, 'the knife…'));   // (close.ts CLOSE.heldClicks, the left click: committed — a status line, nothing stops it)
     else if (H.phase === 'whip' || (H.windT >= 0 && gun)) rows.push(running(base, 'whip', 'pistol-whip… — Space or a step checks it', H.phase === 'whip' ? H.t / K.whip : 0));
     else if (cv && gun) { rows.push(row(base, 'comply', `“stay down, stay quiet” — lets ${cv.her} go, cowering`)); rows.push(row(base, 'whip', `pistol-whip ${cv.her} — out cold. a CIVILIAN: −10 on the card`, `E  holster — to question ${cv.her}`)); }
     else if (cv) {
@@ -1359,24 +1908,25 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       const ask = tk.asking ? `you're asking — ${cv.she} answers in a beat` : tk.samUp ? 'once you have had your say' : !tk.ready ? `${cv.she}'s answering — tap to cut it short` : dry ? `${cv.she}'s told you everything — ask anyway` : gd.talk.stage === 0 ? `ask what ${cv.she} knows — quietly` : `press ${cv.her} — what else`;
       rows.push(row(base, 'question', ask));
       rows.push(row(base, 'comply', `“stay down, stay quiet” — lets ${cv.her} go, cowering; ${cv.she} tells nobody`));
-      rows.push(row(base, 'choke', `choke ${cv.her} out — quiet. a CIVILIAN: −10 on the card`, 'E  draw — gun to her head'));
+      rows.push(row(base, 'choke', `choke ${cv.her} out — quiet. a CIVILIAN: −10 on the card`, `E  draw — gun to ${WORDS.on && cv.she === 'he' ? 'his' : 'her'} head`));   // (Civ.her is the object's 'him': whose head wants 'his')
     }
     else if (gun) rows.push(row(base, 'whip', 'pistol-whip him — quick, a thud', `LMB  ${pl.pistol.roundsReady > 0 ? 'fire past him' : 'fire past him (empty)'}  ·  E  holster — to question him`));
     else {
       const q = promptFor(g, gd), tk = heldTalk(g, H); const verb = q.spent ? "he's said his piece — ask anyway" : `“${q.text}”`;
       const ask = tk.asking ? "you're asking — he answers in a beat" : tk.samUp ? `${verb} — once you've had your say` : !tk.ready ? "he's answering — tap to cut it short" : `${verb}${tk.settled ? '' : ' — cuts in'}`;   // (samUp without asking: a remark of Sam's is in the air — his word on the key he has just pocketed — and he is never cut)
       rows.push(row(base, 'question', ask));
-      rows.push(row(base, 'choke', 'choke him out — quiet', 'E  draw — gun to his head'));
+      rows.push(row(base, 'choke', 'choke him out — quiet', `${CLOSE.heldClicks && !g.touring ? 'LMB  knife — lethal  ·  RMB  choke him out  ·  ' : ''}E  draw — gun to his head`));   // (the two buttons in the arm, close.ts CLOSE.heldClicks: the marks worded as the standing blow's are)
     }
     list.push({ ...base, line2: rows.map(r => r.line2).join('  ·  '), progress: rows[0]?.progress });   // the marker (the ring sits on it; its text = the rows')
     for (const d of g.doors.list) {
-      if (Math.min(v3.distXZ(d.pos, p), v3.distXZ(d.frameCentre, p)) > NEARBY_M) continue;
+      if (d.off || Math.min(v3.distXZ(d.pos, p), v3.distXZ(d.frameCentre, p)) > NEARBY_M) continue;
       const lockedOut = g.doors.lockedOut(d, p);   // (his own pocket aside: it is the man ahead who meets the leaf, and every man on the staff is keyed)
       list.push({ kind: 'door', pos: d.pos, line1: `door · ${lockedOut ? 'locked' : d.isClosed() ? 'shut' : 'open'}`, line2: lockedOut ? 'walk him into it — his key turns the lock' : d.isClosed() ? 'walk him into it — it pushes open' : 'open', inReach: false, off: false, door: d });
     }
   } else if (!pl.down) {
-    const busy = !!(pl.takedown || pl.kick || pl.picking || pl.easing || pl.coding || g.mission.driveT >= 0);   // hands or feet spoken for: no fresh verbs this frame (the running verb's row, or a status, stands alone below)
+    const busy = !!(pl.takedown || pl.kick || pl.picking || pl.wanding || pl.easing || pl.coding || pl.breakerMove || pl.doorMove || pl.charging || g.mission.driveT >= 0);   // hands or feet spoken for: no fresh verbs this frame (the running verb's row, or a status, stands alone below)
     for (const d of g.doors.list) {
+      if (d.off) continue;   // off its hinges (doorblast.ts): a doorway, with no row to its name
       const dp = d.pos; const near = Math.min(v3.distXZ(dp, p), v3.distXZ(d.frameCentre, p)) < Doors.USE_REACH; const reach = near && !pl.sprinting;
       const shut = d.isClosed(); const pct = `${Math.min(99, Math.round(d.pick * 100))}%`;
       const it: Interactable = { kind: 'door', pos: dp, line1: '', line2: reach ? '' : 'step closer', inReach: reach, off: false, door: d };
@@ -1384,20 +1934,22 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       const pad = padState(g, d, p);   // a KEYPAD door against you (devices.ts): no cylinder to pick, no handle to try — the code if you know it (four keys and it swings like a keyed door), the pad refusing you if you do not, or the boot as ever
       if (pad) {
         it.line1 = pl.coding === d ? 'door · keypad · keying it in' : pad.known ? `door · keypad — you know the code (${spell(pad.pad.def.code)})` : 'door · keypad · locked';
-        if (!reach) it.line2 = pl.sprinting && near ? 'run into it  kick it in (LOUD)' : 'step closer';
+        const held = g.doors.bootHolds(d, p);   // (doors.ts DOORWAY.frameHolds: it opens toward him — the frame is behind the leaf, and a boot will not shift it)
+        if (!reach) it.line2 = pl.sprinting && near && !held ? 'run into it  kick it in (LOUD)' : 'step closer';
         else if (!busy) {
           if (pad.known) verbs.push(row(it, 'code', `enter the code — ${spell(pad.pad.def.code)}`)); else verbs.push(row(it, 'nocode', 'keypad — no code', '', { off: true }));
-          if (!pl.dragging && (!pl.crouch || canStand(g))) verbs.push(row(it, 'kick', 'kick it in — LOUD', pl.crouch ? '' : 'or sprint into it'));
+          if (!pl.dragging && (!pl.crouch || canStand(g))) verbs.push(held ? row(it, 'kick', NO_BOOT, '', { off: true }) : row(it, 'kick', 'kick it in — LOUD', pl.crouch ? '' : 'or sprint into it'));
         }
       } else if (g.doors.lockedOut(d, p, pl.keys)) {   // the lock is against you: pick it (quiet, slow) or kick it in (instant, and the whole floor hears) — crouched you can also just try the handle; hauling a body, no kick
         const steel = !!d.def.steel;   // the stair door (game/qrf.ts): bolted from the far side, a blank plate this side — no keyway to work, and a boot only rings off it
         it.line1 = d.rattleT > 0 ? "door · locked — won't budge" : steel ? 'steel fire door · bolted from the stairs' : pl.picking === d ? 'door · locked · picking it' : d.pick > 0 ? `door · locked · ${pct} picked` : 'door · locked';
         it.progress = d.pick > 0 ? d.pick : undefined;
-        if (!reach) it.line2 = pl.sprinting && near ? (steel ? 'run into it  (it will not give)' : 'run into it  kick it in (LOUD)') : 'step closer';
+        const held = !steel && g.doors.bootHolds(d, p);   // (doors.ts DOORWAY.frameHolds: locked on the face it opens toward — the pick still works, the boot does not)
+        if (!reach) it.line2 = pl.sprinting && near && !held ? (steel ? 'run into it  (it will not give)' : 'run into it  kick it in (LOUD)') : 'step closer';
         else if (!busy) {
           if (!steel) verbs.push(row(it, 'pick', d.pick > 0 ? `pick the lock — quiet, ${pct} done` : 'pick the lock — quiet, 4 s'));
           if (pl.crouch || pl.dragging || steel) verbs.push(row(it, 'rattle', steel ? 'try the bar — no keyway this side' : 'try the handle'));
-          if (!pl.dragging && (!pl.crouch || canStand(g))) verbs.push(row(it, 'kick', steel ? 'kick it — LOUD, and steel does not give' : 'kick it in — LOUD', pl.crouch ? '' : 'or sprint into it'));
+          if (!pl.dragging && (!pl.crouch || canStand(g))) verbs.push(held ? row(it, 'kick', NO_BOOT, '', { off: true }) : row(it, 'kick', steel ? 'kick it — LOUD, and steel does not give' : 'kick it in — LOUD', pl.crouch ? '' : 'or sprint into it'));
         }
       } else if (g.doors.keyOpens(d, p, pl.keys)) {   // against you but for the key in your pocket (takeKey): it turns like a guard's — a small clack and it swings, or eased round in silence
         it.line1 = 'door · locked — you have the key';
@@ -1405,14 +1957,27 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       } else {
         it.line1 = `door · ${shut ? 'shut' : 'open'}${d.lockBroken ? ' · lock kicked in' : d.def.locked && !d.locked ? ' · picked' : ''}`;
         if (reach && !busy) {
-          if (shut) verbs.push(row(it, 'push', 'push it open')); else verbs.push(row(it, 'pull', 'pull it shut'));   // (Doors.use: shut → it swings away from you with its creak; anything wider → pulled to)
+          const toward = DOORWAY.oneWay && g.doors.pullFace(d, p);   // (one-way: on the face it opens into the same two rows are worded for the hand — it comes toward him, and goes away to shut)
+          if (shut) verbs.push(row(it, 'push', toward ? 'pull it open' : 'push it open')); else verbs.push(row(it, 'pull', toward ? 'push it shut' : 'pull it shut'));   // (Doors.use: shut → it swings away from you with its creak — one-way, the way it opens; anything wider → pulled to)
           if (Math.abs(d.angle) < EASE_OFFER) verbs.push(row(it, 'ease', 'ease it open — silent'));                  // shut or a hand ajar: inch it round without a sound (game.ts updateDoors runs it on to EASE_MAX)
         }
       }
+      // the big slot's tool (bigkit.ts — nothing with its switch off): the breaching shotgun or the hammer on a lock against him, in the boot's own row
+      { const can = !busy && !pl.dragging && !pl.sprinting && (!pl.crouch || canStand(g)), far = can && !reach && !pl.holding ? samBigFar(g, d, p) : null;   // (BIGSLOT.moves: the row is his from where a stack stands — he walks to a place beside the frame)
+        const tool = far ?? (reach && can ? samBig(g, d, p) : null);
+        if (far) it.inReach = true;
+        if (tool) { const lock = g.doors.lockedOut(d, p, pl.keys);   // (not locked against him — BIGSLOT.shut: its own row under the hand's, listed past the cap like a charge's)
+          const r = tool === 'shotgun' ? row(it, 'breach', lock ? 'shoot the lock off — LOUD' : 'shoot it open — LOUD', '', { past: !lock }) : row(it, 'hammer', 'hammer it open — LOUD', '', { past: !lock }), k = verbs.findIndex(v => v.verb === 'kick'); if (k >= 0) verbs[k] = r; else verbs.push(r); } }
+      // the optical wand (wand.ts): a look under a shut door, where the fog of war hides what is behind it — the last row of whatever the door offers; where the
+      // rows are already MAX_NEAR it takes the place of 'try the handle'
+      if (reach && !busy && wandOffered(g, pl, d)) { if (verbs.length >= MAX_NEAR) { const k = verbs.findIndex(v => v.verb === 'rattle'); if (k >= 0) verbs.splice(k, 1); } verbs.push(row(it, 'wand', 'look under it — the wand, quiet')); }
+      g.doorTools?.samRows(it, d, verbs, reach && !busy && !g.wallCharge?.setting, row);   // a breaching charge on it by his own hands, and a set one said on the door's line (owncharge.ts — nothing with its switch off)
       offer(it, verbs);
     }
     for (const gd of g.guards) {
       if (gd.state === 'dead' || pl.takedown) continue;
+      if (gd.team === 'operative' || g.fogOfWar.hidden(gd)) continue;   // his own side (teams.ts): no grab row, no takedown click on a teammate — and no row on a man the fog of war keeps out of the picture
+      if (closeLive(g)) { closeRows(g, gd, p, busy, row, offer); continue; }   // closer than ever (close.ts): his windows — behind as below, his sides, his front, seated — each with its own rows; off = the one gate below
       // from close behind a guard who has not clocked you (not alert, you in his rear half-space, nothing solid between): the row GRABS him, a LEFT CLICK with the
       // hands empty = the silent takedown (game.ts updateDoors reads both; startGrab / startTakedown) — one gate for the two, so wherever the cross could land the
       // arm can go round him. The row spells out what the hand holds: empty, the click is the takedown; the pistol drawn, the grab puts it to his head and a click
@@ -1431,38 +1996,42 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       }
     }
     for (const gd of civilianBodies(g)) {   // the CIVILIANS (civilians.ts): the same arm from close behind her — from any side once she is crouched in a corner — and the same click with the hands empty puts her down quiet (a civilian: it costs). Never one running (you would have to catch her first) or already talking to a guard two metres off.
-      if (pl.takedown) continue; const cv = gd.civ!;
+      if (pl.takedown || g.fogOfWar.hidden(gd)) continue; const cv = gd.civ!;
+      if (g.rescue?.isHostage(gd)) continue;   // a hostage of the rescue playtest (rescue.ts): nobody to grab — she stays down where she is
       const gp = gd.char.pos; const dx = p[0] - gp[0], dz = p[2] - gp[2]; const dd = Math.hypot(dx, dz);
       if (dd >= 2.4) continue;
-      const behind = cv.state === 'cower' || Math.cos(wrapAngle(Math.atan2(dx, dz) - gd.char.bodyYaw)) < -0.25;
+      const cg = closeLive(g) ? closeCivGate(g, gd, p) : null;   // (close.ts: her own rule, but for the wider rear of one sat at a desk)
+      const behind = cg ? cg.behind : cv.state === 'cower' || Math.cos(wrapAngle(Math.atan2(dx, dz) - gd.char.bodyYaw)) < -0.25;
       const catchable = cv.state !== 'flee' && cv.state !== 'evacuate' && cv.state !== 'report';
-      const could = dd < 1.05 && behind && catchable && !pl.sprinting && !g.col.solidBlocked([p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]]) && !g.col.segmentBlockedDynamic([p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]]);
+      const could = (cg ? cg.near : dd < 1.05) && behind && catchable && !pl.sprinting && !g.col.solidBlocked([p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]]) && !g.col.segmentBlockedDynamic([p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]]);
       const can = could && (!pl.crouch || canStand(g));
       const it: Interactable = { kind: 'guard', pos: v3.add(gp, [0, 1.35, 0]), line1: `${cv.name} · the ${cv.label}${cv.state === 'cower' ? ' · cowering' : cv.state === 'work' ? '' : ` · ${cv.state}`}`, line2: !catchable ? `not while ${cv.she} is ${cv.state === 'report' ? 'with a guard' : 'running'}` : !behind ? `get behind ${cv.her}` : pl.sprinting ? 'stop sprinting' : !could ? 'get closer' : `no room to stand up behind ${cv.her} here`, inReach: can, off: false, guard: gd };
       const verbs: Interactable[] = [];
+      if (cg) { it.close = cg.kind; if (can && !busy) closeCivOffer(g, gd, p); }
       if (can && !busy) verbs.push(pl.holstered ? row(it, 'grab', `grab ${cv.her} — a hand over the mouth`, `LMB  takedown — quiet, and −10`) : grabVariant(g) === 'gun' ? row(it, 'grab', `grab ${cv.her} — pistol to ${cv.her} head`, 'E  holster for the LMB takedown') : row(it, 'grab', `grab ${cv.her}`, 'E  holster for the LMB takedown'));
       offer(it, verbs);
     }
     // (a dead man's sidearm / torch lies where it fell — items, combat.ts dropFromHand — and is nobody's to pick up: his 9 mm magazines do not fit the Five-seveN, so
     // there is no row for it and Space beside it does nothing)
     for (const gd of [...g.guards, ...civiliansShown(g)]) {   // (a civilian on the floor is a body like any: hauled by the ankles, found by the men)
-      if (gd.state !== 'dead') continue;
+      if (gd.state !== 'dead' || g.fogOfWar.hidden(gd)) continue;
       const hips = gd.char.bones.hips ?? gd.char.pos; const mid: Vec3 = [hips[0], hips[1] + 0.12, hips[2]];   // on the pelvis, wherever the ragdoll left it (over a desk, half through a doorway)
-      const dragging = pl.dragging === gd; const reach = dragging || bodyDist(g, gd) < 1.3;
+      const dragging = pl.dragging === gd; const reach = dragging || bodyDist(g, gd, 1.3) < 1.3;
       const nm = gd.civ ? `${gd.callsign} (the ${gd.civ.label})` : gd.callsign;
-      const it: Interactable = { kind: 'body', pos: mid, line1: isBreathing(gd) ? `body · ${nm}, out cold — breathing` : `body · ${nm}, dead`, line2: reach ? '' : 'step closer', inReach: reach, off: false, guard: gd };   // what the panel says over him: a man you struck / choked / ringed is asleep, a man you shot is dead (the floor treats both as a body)
+      const it: Interactable = { kind: 'body', pos: mid, line1: gd.wound ? `${nm}, wounded — out of the fight` : isBreathing(gd) ? `body · ${nm}, out cold — breathing` : `body · ${nm}, dead`, line2: reach ? '' : 'step closer', inReach: reach, off: false, guard: gd };   // what the panel says over him: a man you struck / choked / ringed is asleep, a man you shot is dead (the floor treats both as a body)
       const verbs: Interactable[] = [];
-      if (reach && !busy) { if (dragging) verbs.push(row(it, 'drop', 'let go of him', 'sprinting drops him')); else if (!pl.dragging) verbs.push(row(it, 'drag', 'drag him off')); }
+      if (reach && !busy) { const lift = HANDS.on && HANDS.body && HANDS.carry && !g.puppet; if (dragging) verbs.push(row(it, 'drop', pl.haul?.carry ? 'put him down' : 'let go of him', 'sprinting drops him')); else if (!pl.dragging && !gd.wound) verbs.push(row(it, 'drag', lift ? 'pick him up' : 'drag him off')); }
       offer(it, verbs);
     }
     // the mission's rack while the drive is still in it: reach = close enough to lay hands on its face, hands free (updateMission runs the pull off Game.act)
     const m = g.mission, M = g.level.mission;
     if (m.stage === 'drive' && (!g.quietUtility || g.missionInTour)) {
       const reach = rackDist(g, p) < DRIVE_REACH && !pl.dragging && !pl.sprinting && !pl.takedown;
-      const it: Interactable = { kind: 'objective', pos: M.rack.front, line1: `rack ${M.rack.index + 1} · the drive`, line2: reach ? '' : pl.dragging ? 'hands full' : 'step closer', inReach: reach, off: false, progress: m.driveT >= 0 ? Math.min(1, m.driveT / DRIVE_SECS) : undefined };
+      const QW = quietWords(g);   // (a quiet mission's own words for its holder and its thing — quiet.ts; null on the plain night)
+      const it: Interactable = { kind: 'objective', pos: M.rack.front, line1: QW ? `${QW.holder} · ${QW.thing}` : `rack ${M.rack.index + 1} · the drive`, line2: reach ? '' : pl.dragging ? 'hands full' : 'step closer', inReach: reach, off: false, progress: m.driveT >= 0 ? Math.min(1, m.driveT / DRIVE_SECS) : undefined };
       const verbs: Interactable[] = [];
-      if (m.driveT >= 0) it.line2 = `pulling… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%  ·  stay on it`;
-      else if (reach && !busy) verbs.push(row(it, 'drive', 'pull the drive — stay on it'));
+      if (m.driveT >= 0) it.line2 = `${QW ? 'taking' : 'pulling'}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%  ·  stay on it`;
+      else if (reach && !busy) verbs.push(row(it, 'drive', QW ? `take ${QW.thing} — stay on it` : 'pull the drive — stay on it'));
       offer(it, verbs);
     }
     { // the mains breaker panel, by hand (the pistol's OCP trips it from range; this is standing at it): reach = within arm's length of its face, hands free
@@ -1478,14 +2047,35 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
         offer(it, verbs);
       }
     }
+    wallChargeRows(g, p, busy, row, offer);   // a breaching charge on a partition, by hand (wallcharge.ts — nothing unless its switch and the destruction's are up)
+    defuseRows(g, p, busy || !!g.wallCharge?.setting, row, offer);   // a defuse mission's live charges (defuse.ts — nothing on a level without the block)
+    stickyRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a stuck sticky camera of his own, taken back (stickycam.ts — nothing unless STICKY.take is up)
     // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
     const marker = (d: Door) => list.find(x => x.door === d) ?? { kind: 'door' as const, pos: d.pos, line1: 'door', line2: '', inReach: true, off: false, door: d };
     if (pl.picking) { const d = pl.picking; rows = [running(marker(d), 'pick', `picking… ${Math.min(99, Math.round(d.pick * 100))}%  ·  Space or a step breaks off (the lock keeps it a moment)`, d.pick)]; }
+    else if (pl.wanding) { const W = pl.wanding; rows = [running(marker(W.door), 'wand', W.live ? 'looking under it — the cursor turns the lens  ·  Space or a step pulls it out' : 'feeding the wand under…  ·  Space or a step pulls it out', W.live ? 1 : W.t / Math.max(0.01, WAND.feedSecs))]; }
     else if (pl.coding) { const d = pl.coding; rows = [running(marker(d), 'code', `keying the ${g.devices.padOf(d) ? padDoorName(g.devices.padOf(d)!) : 'door'} code… — Space or a step breaks off`, pl.codeT / CODE_SECS)]; }
-    else if (pl.kick) rows = [status(marker(pl.kick.door), 'kicking it in…')];
+    else if (pl.kick) rows = [status(marker(pl.kick.door), pl.kick.tool ? (pl.kick.tool.kind === 'hammer' ? 'hammering it…' : 'on the lock…') : 'kicking it in…')];
     else if (pl.easing) { const d = pl.easing; rows = [running(marker(d), 'ease', 'easing it open… — Space or a step stops it where it is', Math.abs(d.angle) / EASE_MAX)]; }
     else if (m.driveT >= 0) { const it = list.find(x => x.kind === 'objective'); if (it) rows = [running(it, 'drive', `pulling… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}% — stay on it (Space or a step lets go)`, m.driveT / DRIVE_SECS)]; }
-    else if (!pl.takedown) { things.sort((a, b) => interactOrder(p)(a.it, b.it)); rows = things.flatMap(t => t.verbs).slice(0, MAX_NEAR); }
+    else if (pl.charging) rows = [running(marker(pl.charging.door), 'charge', 'setting the charge… — Space or a step breaks it off', g.doorTools.samProgress)];
+    else if (g.wallCharge?.setting) rows = [g.wallCharge.runningRow(running)];
+    else if (g.defuse?.working) rows = [g.defuse.runningRow(running)];
+    else if (!pl.takedown) {
+      things.sort((a, b) => interactOrder(p)(a.it, b.it)); const flat0 = things.flatMap(t => t.verbs);
+      // (wand.ts: the look under a door is the one row that GIVES WAY — it is listed after every other thing's rows, so it never takes one of the MAX_NEAR from a
+      // body, a wall charge or a second door that had it before the wand existed; alone at a door it is that door's third row)
+      const flat = flat0.some(r => r.verb === 'wand') ? [...flat0.filter(r => r.verb !== 'wand'), ...flat0.filter(r => r.verb === 'wand')] : flat0;
+      // (close.ts: a man's strike-only line has no verb — Space does nothing on it — so it sits UNDER the rows Space can do and never takes the default highlight from a door)
+      const hint = closeLive(g) ? flat.filter(r => !r.verb).slice(0, 1) : [];
+      // (owncharge.ts: a door charge by hand is ONE row past the MAX_NEAR — the nearest door's, under the rows Space had before it: it takes no row from
+      // anything that had one and is never the row a bare tap gives unless it is the only one. The close-in hint, which no key gives, stays at the foot)
+      // (bigkit.ts: the big slot's tool on a door that is NOT locked is one more such row — the nearest door's, last)
+      // (stickycam.ts: a stuck camera's 'take it back' is one more such row, last of all)
+      const isOwn = (r: Interactable) => r.kind === 'cam' || (r.kind === 'door' && (r.verb === 'charge' || !!r.past));
+      const own = [...flat.filter(r => r.kind === 'door' && r.verb === 'charge').slice(0, 1), ...flat.filter(r => r.kind === 'door' && r.past).slice(0, 1), ...flat.filter(r => r.kind === 'cam').slice(0, 1)], rest = own.length ? flat.filter(r => !isOwn(r)) : flat;
+      rows = hint.length ? [...rest.filter(r => r.verb).slice(0, MAX_NEAR - 1), ...own, ...hint] : [...rest.slice(0, MAX_NEAR), ...own];
+    }
   }
   if (pl.sel.open && rows.some(r => r.verb && !r.running)) rows.push(cancelRow(g));   // the selector is open (Space held past a tap) over something to choose: its way out sits at the foot (interact.ts shuts it if nothing is left to choose)
   g.interactables = list;
@@ -1496,6 +2086,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
   const key = rows.map(rowKey).join('|');
   if (key !== pl.nearKey) { pl.nearKey = key; const hv = g.hover; const keep = hv && !hv.running ? rows.findIndex(r => rowKey(r) === rowKey(hv)) : -1; pl.nearSel = keep >= 0 ? keep : 0; }
   g.nearby = rows; pickHover(g);
+  if (CLOSE.on || pl.char.anim.ready || pl.char.anim.creep) closeTick(g);   // (close.ts: the mode and the knife — and let go of once the switch is off)
 }
 /** identity of a row: the thing and the verb (its wording may change under the highlight — the question row does with the talk — without being another row) */
 export function rowKey(r: Interactable): string { return `${r.kind}:${r.door?.def.name ?? r.guard?.callsign ?? ''}:${r.verb ?? '~' + r.line2}`; }
@@ -1512,7 +2103,7 @@ export function cancelRow(g: Game): Interactable { const p = g.player.char.pos; 
  *  in reach before out of reach, then by what MATTERS (a man you could grab is perishable and decisive; a door will still be there), then nearest.
  *  Lower = higher up the list. Within one thing its verbs keep the order buildInteractables gave them; MAX_NEAR rows in all, so a man to grab beside a shut
  *  door reads [grab · push · ease] and the door's third verb (if it had one) would be the row that falls off. */
-export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, cancel: 10 };
+export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch)
 export function interactOrder(p: Vec3): (a: Interactable, b: Interactable) => number {
   const dd = (it: Interactable) => { let d = v3.distXZ(it.pos, p); if (it.door) d = Math.min(d, v3.distXZ(it.door.frameCentre, p)); return d; };
   return (a, b) => (a.inReach !== b.inReach ? (a.inReach ? -1 : 1) : (INTERACT_PRIORITY[a.kind] - INTERACT_PRIORITY[b.kind]) || dd(a) - dd(b));
@@ -1526,7 +2117,9 @@ export const MAX_NEAR = 3;
  *  leaf may already stand and still offer the row (shut, or a hand ajar). */
 export const EASE_RATE = 0.55, EASE_MAX = 1.45, EASE_OFFER = 0.62;
 
-export function throwCount(g: Game, kind: ThrowKind) { return kind === 'flash' ? g.player.flashbangs : g.player.canisters; }
+export function throwCount(g: Game, kind: ThrowKind) { return kind === 'frag' ? g.player.frags : kind === 'flash' ? g.player.flashbangs : g.player.canisters; }
+/** a thrown thing not yet out of the hand (or, under unlimited ammo, just out of it) goes back on the belt */
+function canBack(pl: Player, kind: ThrowKind) { if (kind === 'frag') pl.frags++; else if (kind === 'flash') pl.flashbangs++; else pl.canisters++; }
 
 /** F: let go of the body you are dragging (its ankles fall where they are), or take hold of the nearest one within reach. */
 export function toggleDrag(g: Game, which?: Guard) {
@@ -1534,17 +2127,17 @@ export function toggleDrag(g: Game, which?: Guard) {
   if (pl.dragging) { releaseBody(g); g.msg('body dropped'); return; }
   if (pl.down || pl.sprinting) return;
   let best: Guard | null = which && which.state === 'dead' ? which : null;
-  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead') continue; const d = bodyDist(g, gd); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
+  if (!best) { let bd = 1.3; for (const gd of [...g.guards, ...civiliansShown(g)]) { if (gd.state !== 'dead' || gd.wound) continue; const d = bodyDist(g, gd, 1.3); if (d < bd) { bd = d; best = gd; } } }   // (a civilian on the floor is a body to haul like any)
   if (!best || !best.char.ragdoll) { g.msg('no body within reach'); return; }
   releaseWall(g);   // (you take hold of a body off the wall, crouched to it)
-  pl.dragging = best; pl.crouch = true; pl.dragNoiseT = 0.3; pl.dragStuckT = 0; best.char.ragdoll.wake(); g.msg('dragging the body — F to let go, sprint drops it');
+  pl.dragging = best; pl.crouch = true; pl.dragNoiseT = 0.3; pl.dragStuckT = 0; best.char.ragdoll.wake(); haulBegin(g, best); g.msg(pl.haul?.carry ? 'picking him up — Space puts him down, sprint drops him' : pl.haul?.end === 'head' ? 'got him under the arms — Space lets go, sprint drops him' : 'dragging the body — Space lets go, sprint drops it');
 }
 
 /** Let go of the body in tow: the ankle pins come off and its feet fall where they are (the soft thud of that; the HUD line is the caller's). */
-function releaseBody(g: Game) {
+function releaseBody(g: Game, laid = false) {
   const pl = g.player; if (!pl.dragging) return;
-  const b = pl.dragging.char; b.ragdoll?.clearPins(); pl.dragging = null;
-  g.audio.play('bodyFall', b.bones.footL ?? b.pos, 0.3);
+  const b = pl.dragging.char; b.ragdoll?.clearPins(); pl.dragging = null; pl.haul = null; pl.char.anim.haul = null;
+  g.audio.play('bodyFall', b.bones.footL ?? b.pos, laid ? 0.12 : 0.3);   // (laid: hands.ts lowered it to the floor first — only the last inch is a fall)
 }
 
 /** Break off whatever the hands and feet are in the middle of that belongs to the SPOT, and stand ready: the kick (its door stays as it is), the pick (its progress
@@ -1558,10 +2151,10 @@ export function cancelActions(g: Game) {
   if (pl.dragging) releaseBody(g);
   if (pl.holding) freeHeld(g, 'cancel');                      // the man in his arm stays where he is — free, and knowing everything
   pl.takedown = null;                                         // (a takedown that has not landed: he was only frozen for the beat — he carries on)
-  if (pl.kick || pl.picking || pl.easing || pl.coding || pl.sel.downT >= 0) pl.fHeld = true;   // a Space still down from what he was doing (or a press half made) is spent: it must come up before it arms again where he arrives (interact.ts clears this the first frame it is up)
-  pl.kick = null; pl.picking = null; c.anim.lockpick = false; if (pl.coding) stopCoding(g);
-  pl.easing = null; pl.sel.downT = -1; pl.sel.open = false; pl.sel.moved = false; c.anim.doorPush = null;   // (the door hand: game.ts drops the record itself once he is carried out of the leaf's reach)
-  if (pl.pendingThrow) { if (pl.pendingThrow.kind === 'flash') pl.flashbangs++; else pl.canisters++; pl.pendingThrow = null; }   // not yet out of the hand: keep it
+  if (pl.kick || pl.picking || pl.wanding || pl.easing || pl.coding || pl.sel.downT >= 0) pl.fHeld = true;   // a Space still down from what he was doing (or a press half made) is spent: it must come up before it arms again where he arrives (interact.ts clears this the first frame it is up)
+  pl.kick = null; pl.picking = null; wandDrop(pl); c.anim.lockpick = false; if (pl.coding) stopCoding(g); samBigDrop(g);   // (bigkit.ts: the big slot's tool, in its beat or on its way back, is on him again)
+  pl.easing = null; handsCancel(g); pl.sel.downT = -1; pl.sel.open = false; pl.sel.moved = false; c.anim.doorPush = null;   // (the door hand: game.ts drops the record itself once he is carried out of the leaf's reach)
+  if (pl.pendingThrow) { canBack(pl, pl.pendingThrow.kind); pl.pendingThrow = null; }   // not yet out of the hand: keep it
   pl.throwHeld = false; pl.throwPreview = null;
   pl.sprinting = false; pl.speedSm = 0; c.vel = [0, 0, 0];
 }
@@ -1573,7 +2166,7 @@ export function teleportPlayer(g: Game, p: Vec3) {
   if (!Number.isFinite(p[0]) || !Number.isFinite(p[2])) return;   // a bad target from a debug hook must not poison the position (NaN reaches the audio listener and throws)
   cancelActions(g);
   let q: Vec3 = [p[0], 0, p[2]];
-  const settle = () => { g.col.clampToWorld(q, BODY_R); g.col.collideCircle(q, BODY_R, 0.05, 2.2, 6); const t = v3.copy(q); return !g.col.collideCircle(t, BODY_R, 0.05, 2.2, 1) || v3.distXZ(t, q) < 0.005; };   // pushed out of whatever is there — and did that converge (false: a gap the body cannot fit, the pushes just trade him back and forth)
+  const settle = () => { g.col.clampToWorld(q, BODY_R); g.col.collideCircle(q, bodyR(g, q), 0.05, 2.2, 6); const t = v3.copy(q); return !g.col.collideCircle(t, bodyR(g, t), 0.05, 2.2, 1) || v3.distXZ(t, q) < 0.005; };   // pushed out of whatever is there — and did that converge (false: a gap the body cannot fit, the pushes just trade him back and forth)
   if (!settle() || g.col.nav.isBlocked(q[0], q[2])) {   // inside something big, in a gap too narrow for him, off the walkable floor: stand him on the nearest walkable cell instead
     const c = g.col.nav.nearestFreePoint(q[0], q[2]); if (c) { q = c; settle(); }
   }

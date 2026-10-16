@@ -42,7 +42,7 @@ await (async () => {   // (top-level await: `await import('/qa/glassbreak-scenes
   }
   function end() { const g = G(); D().chaos = S.chaos0; g.tune.glassBreak = S.on0; C().pin = null; if (window.__smoke?.params) window.__smoke.params.enabled = S.smoke0; if (S.lit0) for (const [gr, ons] of S.lit0) g.targets.filter(t => t.group === gr).forEach((t, i) => { if (ons[i] !== undefined && t.on !== ons[i]) g.toggleTarget(t); }); }
   const stage = (view, player) => window.__stage({ ...VIEWS[view] }, { park: true, player: { pos: [PX + 0.9, 0, 11.55], yaw: Math.PI, holstered: false, ...player } });
-  /** n FN2000 rounds from Sam's muzzle at p, `every` frames apart (destruction's own burst helper: fireWeapon with the player — raycast → glassHit → glassbreak.hit) */
+  /** n FN2000 rounds from Sam's muzzle at p, `every` frames apart (destruction's own burst helper: fireWeapon with the player — raycast → glass.ts glassImpact → glassbreak.impact) */
   function shoot(p, n = 1, every = 7) { return D().burst(p, n, every); }
   const paneRec = () => B().panes().find(p => p.bi === PANE) ?? null;
 
@@ -73,8 +73,8 @@ await (async () => {   // (top-level await: `await import('/qa/glassbreak-scenes
     S.log.push(res); end(); return res;
   }
   /** hole three panes (109 · 110 · 111) with three rounds each in one spot, for the cost take / the validation sweep */
-  function holeThree() { for (const x of [6.4, 7.6, 8.9]) { shoot([x, 1.3, PZ + 0.006], 3, 2); } run(30); return B().panes().filter(p => p.dropped).length; }
-  /** serialized per-pass medians over `frames` renders of the pinned 'wide' view (the dev notes protocol: onSubmittedWorkDone + a task yield after every frame) */
+  function holeThree() { for (const x of [6.4, 7.6, 8.9]) { shoot([x, 1.3, PZ + 0.006], 3, 2); } run(30); return B().panes().filter(p => p.open > 0).length; }
+  /** serialized per-pass medians over `frames` renders of the pinned 'wide' view (CLAUDE.md protocol: onSubmittedWorkDone + a task yield after every frame) */
   async function take(frames, warm = 8) {
     const T = E().timer; const per = {}; const uni = [];
     for (let f = 0; f < warm + frames; f++) {

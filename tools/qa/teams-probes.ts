@@ -101,7 +101,7 @@ const EXPECT_IDENTITY = {"digest":"6934142b","frames":2700,"shotFrames":[18,79,1
 
 // ================================================================ shared staging for the behaviour probes
 const teamsMod = await import(`${ROOT}/src/game/teams.ts`);
-const { spawnUnit, despawnUnit, despawnUnits, units, engage, engagementOf, lightEstimateAt, canSeeChar } = guardsMod;
+const { spawnUnit, despawnUnit, despawnUnits, units, engage, lightEstimateAt, canSeeChar } = guardsMod;
 const chestOf = (c: any): Vec3 => c.bones.chest ?? v3.add(c.pos, [0, 1.1, 0]);
 const eyeOf = (c: any): Vec3 => c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]);
 /** the three staff parked on the lot east of the building — held, pinned, blind and deaf (standoff-probes' parking): out of every unit's sight and hearing */
@@ -325,7 +325,7 @@ export async function teamsDespawn() {
   let err = ''; try { spawnUnit(game, { team: 'hostile', pos: [20, 0, 18] }); } catch (e: any) { err = String(e?.message ?? e); }
   allPass = verdict(/budget/.test(err) && game.guards.length === g0 + 4, 'a ninth character is refused with the budget named, nothing half-spawned', err ? `"${err.slice(0, 110)}…"` : 'no error thrown') && allPass;
   let errP = ''; try { spawnUnit(game, { team: 'player', pos: [20, 0, 18] }); } catch (e: any) { errP = String(e?.message ?? e); }
-  allPass = verdict(/Sam alone/.test(errP), "the 'player' side cannot be spawned", errP ? `"${errP.slice(0, 80)}…"` : 'no error thrown') && allPass;
+  allPass = verdict(/the player alone/.test(errP), "the 'player' side cannot be spawned", errP ? `"${errP.slice(0, 80)}…"` : 'no error thrown') && allPass;
   { const was = game.tune.teams; game.tune.teams = false; let errT = ''; try { spawnUnit(game, { team: 'hostile', pos: [20, 0, 18] }); } catch (e: any) { errT = String(e?.message ?? e); } game.tune.teams = was;
     allPass = verdict(/switched off/.test(errT) && was === true, 'the kill switch: tune.teams is on by default, and off it refuses any spawn', errT ? `default ${was} · "${errT.slice(0, 70)}…"` : 'no error thrown') && allPass; }
   const E = engage(game, ops, hos, { timeout: 20 });

@@ -17,14 +17,12 @@
 //   weather-daylight    day (setDaylight, the breach's variant) holds the storm: a stroke in progress is taken out, none fire by day, and the breach-daylight round
 //                       trip (light list / sky / switches bit for bit) still holds with the weather on; night again → strokes resume
 import { standUp, ROOT } from './headless.ts';
-import type { Vec3 } from './headless.ts';
-const { Weather, strokeMean } = await import(`${ROOT}/src/game/weather.ts`);
+const { strokeMean } = await import(`${ROOT}/src/game/weather.ts`);
 const { setDaylight, isDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
 const DT = 1 / 60;
-const VERBOSE = process.argv.includes('--verbose');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -210,6 +208,10 @@ export async function weatherDaylight() {
   const F = family('weather-daylight: day holds the storm and the daylight round trip still closes bit for bit with it on (weather.ts suspended × lighting.ts setDaylight)');
   Math.random = seeded(3);
   const W = await standUp(); quiet(W); const { game, engine } = W;
+  // (the round trip is asked of the PLACE's lights. A calm patrol's hand torch — calmtorch.ts, on on the shipped stand — keeps its state between its two readings by
+  //  design, so a man whose spot reads 'between' at night and lit by day comes back with his torch off: the rule's own hysteresis, calmtorch-check's to hold, not a
+  //  light the day forgot to put back. Every patrol torch burns for this probe, as on the frozen stand; the stand's own setting goes back at the end.)
+  const { TORCH } = await import(`${ROOT}/src/game/calmtorch.ts`); const calmWas = TORCH.calmOff; TORCH.calmOff = false;
   const wx = game.weather; wx.storm = 1;
   for (let i = 0; i < 10; i++) W.step(DT);
   game.setBlackout(30, 'debug'); for (let i = 0; i < 5; i++) W.step(DT); game.endBlackout(); for (let i = 0; i < 6 / DT; i++) W.step(DT);
@@ -233,5 +235,6 @@ export async function weatherDaylight() {
     if (S1 !== S0) g.push(`sky ${S0} → ${S1}`); if (sw1 !== sw0) g.push('switches differ');
     const n1 = wx.stats.flashes; for (let i = 0; i < 45 / DT; i++) W.step(DT); if (wx.stats.flashes <= n1) g.push('no stroke in 45 s of night after the day');
     F.verdict(g.length === 0, 'night again: light list (between strokes), sky / haze and switches exactly as before the round trip, and the storm strikes again within 45 s', g.join('; ') || `${L0.split('|').length} lights; ${wx.stats.flashes - n1} strokes after`); }
+  TORCH.calmOff = calmWas;
   return F.done();
 }

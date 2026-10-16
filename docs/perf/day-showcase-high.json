@@ -1,0 +1,432 @@
+{
+ "what": "the day showcase's loud half — GPU union of the compute passes per window (serialized frames: runFrames(1) + onSubmittedWorkDone + 2 MessageChannel yields; unionMs excluding composite/post/fxaa/gbuffer/pdraw/present)",
+ "machine": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.280 Electron/42.7.0 Safari/537.36",
+ "adapter": null,
+ "preset": "high",
+ "res": [
+  1368,
+  770,
+  1777,
+  1000
+ ],
+ "takenAt": "2026-08-13T21:26:45.426Z",
+ "windows": [
+  {
+   "label": "night: the calm floor at the spawn (baseline)",
+   "showT": 0,
+   "union": {
+    "n": 90,
+    "mean": 10.39,
+    "p50": 10.29,
+    "p95": 10.68,
+    "max": 10.81
+   },
+   "sum": {
+    "n": 90,
+    "mean": 10.44,
+    "p50": 10.29,
+    "p95": 10.68,
+    "max": 15.14
+   },
+   "missed": 0,
+   "smoke": {
+    "n": 90,
+    "mean": 0,
+    "p50": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "slots": {
+    "n": 90,
+    "mean": 3296.78,
+    "p50": 3540,
+    "p95": 4248,
+    "max": 4261
+   },
+   "lights": {
+    "n": 90,
+    "mean": 37,
+    "p50": 37,
+    "p95": 37,
+    "max": 37
+   },
+   "res": [
+    1368,
+    770,
+    1777,
+    1000
+   ],
+   "preset": "high",
+   "passMeans": {
+    "mesh": 0.24,
+    "rc c3": 0.27,
+    "rc c2": 0.38,
+    "rc c1": 0.26,
+    "rc c0": 0.16,
+    "rc dice": 0.01,
+    "particles": 0.19,
+    "direct": 3.81,
+    "softblur": 0.99,
+    "gather": 1.14,
+    "temporal": 0.21,
+    "reflect": 0.25,
+    "rdenoise": 0.13,
+    "volumetrics": 0.38,
+    "sharpU": 0.77,
+    "compS": 0.6,
+    "gbaa": 0.05,
+    "taau": 0.27,
+    "bloom": 0.12,
+    "probe": 0.19
+   }
+  },
+  {
+   "label": "day: the drill's approach (sunlit floor, nothing in the air)",
+   "showT": 5,
+   "union": {
+    "n": 120,
+    "mean": 15.58,
+    "p50": 15.73,
+    "p95": 16.06,
+    "max": 16.19
+   },
+   "sum": {
+    "n": 120,
+    "mean": 15.58,
+    "p50": 15.73,
+    "p95": 16.06,
+    "max": 16.19
+   },
+   "missed": 0,
+   "smoke": {
+    "n": 120,
+    "mean": 0,
+    "p50": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "slots": {
+    "n": 120,
+    "mean": 0,
+    "p50": 0,
+    "p95": 0,
+    "max": 0
+   },
+   "lights": {
+    "n": 120,
+    "mean": 45,
+    "p50": 45,
+    "p95": 45,
+    "max": 45
+   },
+   "res": [
+    1368,
+    770,
+    1777,
+    1000
+   ],
+   "preset": "high",
+   "passMeans": {
+    "mesh": 0.25,
+    "rc c3": 0.39,
+    "rc c2": 0.6,
+    "rc c1": 0.46,
+    "rc c0": 0.29,
+    "rc dice": 0.01,
+    "direct": 5.64,
+    "softblur": 1.17,
+    "gather": 2.02,
+    "temporal": 0.26,
+    "reflect": 0.22,
+    "rdenoise": 0.1,
+    "volumetrics": 0.71,
+    "sharpU": 1.38,
+    "compS": 0.74,
+    "gbaa": 0.06,
+    "taau": 0.27,
+    "bloom": 0.12,
+    "probe": 0.9
+   }
+  },
+  {
+   "label": "THE EXCHANGE: aisle trading, both sides firing (L25-30)",
+   "showT": 58,
+   "union": {
+    "n": 300,
+    "mean": 22.88,
+    "p50": 20.25,
+    "p95": 30.34,
+    "max": 41.88
+   },
+   "sum": {
+    "n": 300,
+    "mean": 22.89,
+    "p50": 20.25,
+    "p95": 30.34,
+    "max": 41.88
+   },
+   "missed": 0,
+   "smoke": {
+    "n": 300,
+    "mean": 8,
+    "p50": 8,
+    "p95": 8,
+    "max": 8
+   },
+   "slots": {
+    "n": 300,
+    "mean": 2601.13,
+    "p50": 2477,
+    "p95": 2935,
+    "max": 3001
+   },
+   "lights": {
+    "n": 300,
+    "mean": 44.89,
+    "p50": 44,
+    "p95": 48,
+    "max": 49
+   },
+   "res": [
+    1368,
+    770,
+    1777,
+    1000
+   ],
+   "preset": "high",
+   "passMeans": {
+    "smoke": 2.92,
+    "mesh": 0.12,
+    "rc c3": 0.36,
+    "rc c2": 0.59,
+    "rc c1": 0.51,
+    "rc c0": 0.34,
+    "rc dice": 0.01,
+    "particles": 0.19,
+    "direct": 6.21,
+    "softblur": 1.07,
+    "gather": 2.16,
+    "temporal": 0.24,
+    "reflect": 0.25,
+    "rdenoise": 0.09,
+    "volumetrics": 4.1,
+    "sharpU": 1.25,
+    "compS": 0.7,
+    "gbaa": 0.06,
+    "taau": 0.27,
+    "bloom": 0.12,
+    "probe": 1.35
+   }
+  },
+  {
+   "label": "the charge's aftermath + the south aisle (L49-53)",
+   "showT": 81.2,
+   "union": {
+    "n": 240,
+    "mean": 22.71,
+    "p50": 21.36,
+    "p95": 30.34,
+    "max": 34.08
+   },
+   "sum": {
+    "n": 240,
+    "mean": 22.76,
+    "p50": 21.36,
+    "p95": 30.41,
+    "max": 36.31
+   },
+   "missed": 0,
+   "smoke": {
+    "n": 240,
+    "mean": 7.05,
+    "p50": 8,
+    "p95": 8,
+    "max": 8
+   },
+   "slots": {
+    "n": 240,
+    "mean": 4393.58,
+    "p50": 4446,
+    "p95": 4561,
+    "max": 4617
+   },
+   "lights": {
+    "n": 240,
+    "mean": 44.5,
+    "p50": 44,
+    "p95": 46,
+    "max": 49
+   },
+   "res": [
+    1368,
+    770,
+    1777,
+    1000
+   ],
+   "preset": "high",
+   "passMeans": {
+    "smoke": 2.59,
+    "mesh": 0.11,
+    "rc c3": 0.36,
+    "rc c2": 0.56,
+    "rc c1": 0.49,
+    "rc c0": 0.32,
+    "rc dice": 0.01,
+    "particles": 0.17,
+    "direct": 6.47,
+    "softblur": 1.22,
+    "gather": 2.14,
+    "temporal": 0.26,
+    "reflect": 0.18,
+    "rdenoise": 0.09,
+    "volumetrics": 4.1,
+    "sharpU": 1.39,
+    "compS": 0.76,
+    "gbaa": 0.06,
+    "taau": 0.28,
+    "bloom": 0.12,
+    "probe": 1.06
+   }
+  },
+  {
+   "label": "smoke in the shafts (L80-84)",
+   "showT": 112,
+   "union": {
+    "n": 240,
+    "mean": 17.38,
+    "p50": 17.37,
+    "p95": 17.83,
+    "max": 18.42
+   },
+   "sum": {
+    "n": 240,
+    "mean": 17.41,
+    "p50": 17.37,
+    "p95": 17.83,
+    "max": 26.48
+   },
+   "missed": 0,
+   "smoke": {
+    "n": 240,
+    "mean": 3.11,
+    "p50": 3,
+    "p95": 4,
+    "max": 5
+   },
+   "slots": {
+    "n": 240,
+    "mean": 2526.68,
+    "p50": 2411,
+    "p95": 2870,
+    "max": 2934
+   },
+   "lights": {
+    "n": 240,
+    "mean": 44,
+    "p50": 44,
+    "p95": 44,
+    "max": 44
+   },
+   "res": [
+    1368,
+    770,
+    1777,
+    1000
+   ],
+   "preset": "high",
+   "passMeans": {
+    "smoke": 1.23,
+    "mesh": 0.12,
+    "rc c3": 0.36,
+    "rc c2": 0.6,
+    "rc c1": 0.55,
+    "rc c0": 0.37,
+    "rc dice": 0.02,
+    "particles": 0.11,
+    "direct": 4.78,
+    "softblur": 1.14,
+    "gather": 1.83,
+    "temporal": 0.25,
+    "reflect": 0.39,
+    "rdenoise": 0.1,
+    "volumetrics": 2.29,
+    "sharpU": 1.26,
+    "compS": 0.73,
+    "gbaa": 0.06,
+    "taau": 0.27,
+    "bloom": 0.12,
+    "probe": 0.84
+   }
+  },
+  {
+   "label": "outside: the lot, smoke out of the door (L93-97)",
+   "showT": 124.3,
+   "union": {
+    "n": 200,
+    "mean": 13.49,
+    "p50": 13.63,
+    "p95": 13.96,
+    "max": 14.16
+   },
+   "sum": {
+    "n": 200,
+    "mean": 13.5,
+    "p50": 13.63,
+    "p95": 13.96,
+    "max": 14.16
+   },
+   "missed": 0,
+   "smoke": {
+    "n": 200,
+    "mean": 2,
+    "p50": 2,
+    "p95": 2,
+    "max": 3
+   },
+   "slots": {
+    "n": 200,
+    "mean": 1571.51,
+    "p50": 1601,
+    "p95": 1719,
+    "max": 1719
+   },
+   "lights": {
+    "n": 200,
+    "mean": 44,
+    "p50": 44,
+    "p95": 44,
+    "max": 44
+   },
+   "res": [
+    1368,
+    770,
+    1777,
+    1000
+   ],
+   "preset": "high",
+   "passMeans": {
+    "smoke": 0.8,
+    "mesh": 0.12,
+    "rc c3": 0.34,
+    "rc c2": 0.52,
+    "rc c1": 0.37,
+    "rc c0": 0.24,
+    "rc dice": 0.01,
+    "particles": 0.08,
+    "direct": 3.2,
+    "softblur": 0.82,
+    "gather": 1.63,
+    "temporal": 0.25,
+    "reflect": 0.18,
+    "rdenoise": 0.1,
+    "volumetrics": 2.15,
+    "sharpU": 1.01,
+    "compS": 0.77,
+    "gbaa": 0.06,
+    "taau": 0.27,
+    "bloom": 0.12,
+    "probe": 0.46
+   }
+  }
+ ]
+}

@@ -9,6 +9,7 @@
 import { BoxFlag } from '../scene/boxes';
 import { Vec3, v3 } from '../math/vec';
 import { OFFICE_DATA } from '../scene/level';
+import { gwotSimOf } from '../scene/gwotPalette';
 import type { Particles, EmitOpts } from '../render/particles';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -16,6 +17,7 @@ import type { Door } from './doors';
 import type { Prop } from './props';
 import type { WeaponDef, WeaponId } from './weapons';
 import * as fx from './effects';
+import { blastSparks } from './blastLook';
 
 /** the live GPU particle system, or null → the caller keeps to the CPU path (read straight off the engine so the harness's engine stand-in — no `particles`
  *  field at all — is simply 'off') */
@@ -25,7 +27,7 @@ export function gpuFx(g: Game): Particles | null {
 }
 
 // ------------------------------------------------------------------ DUST PUFFS: every `dust` emit goes through emitDust(), so the whole family — impact puffs, the destruction lane's
-// gypsum / wood / concrete bursts, the stun charge's ring and column, a kicked door's threshold dust, a dropped tile's powder — is tuned from ONE table (the designer, 08-11:
+// gypsum / wood / concrete bursts, the stun charge's ring and column, a kicked door's threshold dust, a dropped tile's powder — is tuned from ONE table (the maintainer, 08-11:
 // "the dust puffs on destruction (gpu particles, not the real smoke sim) also look kinda lame. make sure they're configurable"). EMIT side = multipliers on what each site
 // asks for; LOOK side = the kind's numbers the kernels read (render/particles.ts params.dust: opacity, growth, and — in the slots a puff never used for physics — the fade-in,
 // the edge softness, the scatter toward the eye, the ambient share). Kept per machine (localStorage twopointsix.dust); all 1 / the shipped look = the game as it was.
@@ -33,7 +35,7 @@ export const DUST = { count: 1, size: 1, life: 1, speed: 1, rise: 1, spread: 1 }
 /** the LOOK, mirrored onto Particles.params.dust by applyDustLook: opacity = peak opacity at the centre (brightOrOpacity), growth = × radius over its life (shutterOrGrowth), fadeIn = s to
  *  full opacity (sleepV slot), soft = × the depth-softening / edge feather (holdOrFade slot), wrap = the share of a crossing beam scattered toward the eye (restitution slot), ambient = × the
  *  cache's ambient on it (keep slot) */
-export const DUST_LOOK = { opacity: 0.3, growth: 0.6, fadeIn: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 };   // (08-12, the designer: the puffs 'radially expanding outwards look pretty fake' — was opacity 0.4 / growth 2.2: discs blooming to 3× while flying out; now a puff blooms a little where it was raised and hangs)
+export const DUST_LOOK = { opacity: 0.3, growth: 0.6, fadeIn: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 };   // (08-12, the maintainer: the puffs 'radially expanding outwards look pretty fake' — was opacity 0.4 / growth 2.2: discs blooming to 3× while flying out; now a puff blooms a little where it was raised and hangs)
 export const DUST_DEFAULTS = { emit: { ...DUST }, look: { ...DUST_LOOK } };
 const DUST_LS = 'twopointsix.dust.v2';   // (v2: the 08-12 look defaults; a table saved under the first key would put the blooming discs back)
 export function loadDust() {
@@ -73,13 +75,23 @@ const MAT_SURF: Record<string, Surf> = {
 let matByAlbedo: Map<string, string> | null = null;
 export function paletteName(albedo: Vec3): string | undefined {
   if (!matByAlbedo) { matByAlbedo = new Map(); for (const [k, m] of Object.entries(OFFICE_DATA.materials ?? {})) { const key = (m.albedo as number[]).join(','); if (!matByAlbedo.has(key)) matByAlbedo.set(key, k); } }
-  return matByAlbedo.get(albedo.join(','));
+  const key = albedo.join(','), hit = matByAlbedo.get(key); if (hit !== undefined) return hit;
+  const look = gwotSimOf(albedo, key); return look !== undefined && look[0] !== '~' ? look : undefined;   // (a paint of the default look says which office paint it stands for: scene/gwotPalette.ts)
 }
 /** what a surface of this albedo is, by palette name when it has one, else by how bright it is (pale = plaster, dark = metal / plastic, between = concrete) */
 export function surfOf(albedo: Vec3): Surf {
   const name = paletteName(albedo); if (name && MAT_SURF[name]) return MAT_SURF[name];
+  if (!name) { const look = gwotSimOf(albedo); if (look !== undefined && look[0] === '~') return look === '~steel' ? 'concrete' : look === '~steelPale' ? 'drywall' : look.slice(1) as Surf; }
   const lum = 0.2126 * albedo[0] + 0.7152 * albedo[1] + 0.0722 * albedo[2];
   return lum > 0.5 ? 'drywall' : lum < 0.1 ? 'metal' : 'concrete';
+}
+/** the colour a rule that reads the PAINT ITSELF should read (how grey a steel cabinet is): the box's own — but for a paint of the default look, the office
+ *  paint it stands for (scene/gwotPalette.ts), so a locker in olive drab is the steel locker it was */
+export function paintStandsFor(albedo: Vec3): Vec3 {
+  const look = gwotSimOf(albedo); if (look === undefined) return albedo;
+  if (look === '~steel' || look === '~steelPale') return look === '~steel' ? [0.36, 0.36, 0.36] : [0.58, 0.58, 0.58];
+  if (look[0] === '~') return albedo;
+  return (OFFICE_DATA.materials?.[look]?.albedo as Vec3 | undefined) ?? albedo;
 }
 const PROP_SURF: Record<string, Surf> = { chair: 'fabric', cardboard: 'cardboard', bin: 'metal', plant: 'foliage' };
 
@@ -153,7 +165,7 @@ export function muzzleSparksFx(g: Game, muzzle: Vec3, dir: Vec3, shooter: Charac
 export function bangFx(g: Game, at: Vec3) {
   const P = gpuFx(g); if (!P) return;
   const S = fx.sparks;
-  P.emit('spark', at, [0, 1, 0], PFX.bangSparks, { shape: 'burst', spread: S.spread, lift: S.lift, speed: S.speed, speedJit: 0.55, life: S.life, lifeJit: 0.35, size: PFX.bangSparkSize });
+  if (!blastSparks(g, P, at)) P.emit('spark', at, [0, 1, 0], PFX.bangSparks, { shape: 'burst', spread: S.spread, lift: S.lift, speed: S.speed, speedJit: 0.55, life: S.life, lifeJit: 0.35, size: PFX.bangSparkSize });   // (blastLook.ts, under the destruction switch: a wall charge's fragments go out of the wall's two faces, a stun charge's the way its can lies)
   emitDust(P, [at[0], 0.1, at[2]], [0, 1, 0], PFX.bangRing, { shape: 'ring', radius: PFX.bangRingRadius, speed: PFX.bangRingSpeed, speedJit: 0.4, lift: 0.12, spread: 0.3, life: PFX.bangRingLife, lifeJit: 0.3, size: PFX.bangRingSize, sizeJit: 0.3, color: [0.7, 0.68, 0.64] });
   emitDust(P, v3.add(at, [0, 0.15, 0]), [0, 1, 0], PFX.bangPuff, { shape: 'puff', speed: 1.2, speedJit: 0.5, lift: 0.4, life: 2.0, lifeJit: 0.3, size: 0.22, sizeJit: 0.3, posJit: 0.1, color: [0.62, 0.6, 0.57] });
 }
@@ -181,7 +193,7 @@ export function fixtureShatterFx(g: Game, t: { pos: Vec3; kind: string; boxes: n
   const away = v3.normalize([at[0] - from[0], 0, at[2] - from[2]]);
   P.emit('debris', at, [away[0] * 0.25, -1, away[2] * 0.25], t.kind === 'emissive' ? PFX.tubeShards : PFX.bulbShards, { speed: 1.6, speedJit: 0.8, spread: 1.2, life: 25, lifeJit: 0.3, size: 0.006, sizeJit: 0.7, aspect: 1.8, posJit: spread, color: [0.9, 0.92, 0.88] });   // glass + phosphor: pale slivers
   emitDust(P, v3.add(at, [0, -0.05, 0]), [0, -1, 0], 6, { shape: 'puff', speed: 0.5, speedJit: 0.5, lift: -0.4, life: 2.4, lifeJit: 0.3, size: 0.16, sizeJit: 0.35, posJit: spread * 0.7, color: [0.92, 0.92, 0.9] });   // the tube's powder, sinking
-  P.emit('spark', v3.add(at, [0, 0.02, 0]), [away[0] * 0.3, -0.6, away[2] * 0.3], PFX.tubeSparks, { speed: 3.2, speedJit: 0.7, spread: 1.1, life: 0.5, lifeJit: 0.5, size: 0.0026 });   // the ballast arcing over
+  P.emit('spark', v3.add(at, [0, 0.02, 0]), v3.normalize([away[0] * 0.8, -0.55, away[2] * 0.8]), PFX.tubeSparks, { speed: 5.5, speedJit: 0.65, spread: 1.15, life: 0.4, lifeJit: 0.5, size: 0.002 });   // the ballast arcing over — fast, thin and thrown out past the fixture (fixtureBreak.ts FIXLOOK.spark has why: at 3.2 m/s straight down they were fat dots from the play camera)
 }
 /** The BREAKER shot (a permanent blackout): a hard burst of sparks out of the panel's face and a cough of black smoke-dust — the box arcs as it dies. */
 export function breakerSparkFx(g: Game, at: Vec3, from: Vec3) {

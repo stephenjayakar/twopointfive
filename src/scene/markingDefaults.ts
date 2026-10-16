@@ -144,7 +144,7 @@ export function whiteboardMarks(h: Vec3, face: MarkFace, t = T): MarkingDef[] {
     markFromRect(face, 'base', [-hu * 0.55, -(hv - 0.1), Math.min(hu * 0.1, -hu * 0.55 + 0.78), -hv * 0.15], [{ albedo: MK.markerGreen }], c => GEN.scribble(c, 13, 1), t),
   ]);
 }
-/** THE RULE for EMISSIVE markings (the designer's, 08-10, refined 08-12 at the workbench when the blue machine's albedo-only red wedge read black): a backlit
+/** THE RULE for EMISSIVE markings (the maintainer's, 08-10, refined 08-12 at the workbench when the blue machine's albedo-only red wedge read black): a backlit
  *  front is ONE LAMP behind a printed film — every cell transmits it, so every entry MAY emit and cells may differ in chroma (a red wedge on a blue field), but the
  *  DOMINANT hue should carry most of the flux and redistribute LUMINANCE (the dominant hue, its light tint / white, a dark, at most a small accent), because game.ts
  *  registers ONE rectangular light per marking whose colour is the pattern's FLUX-WEIGHTED MEAN chroma (markStats): exact in the far field, a small lie only within a

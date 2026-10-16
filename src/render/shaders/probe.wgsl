@@ -24,7 +24,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let tb = isectBounds(q.pos, invRd, sd.origin, sd.origin + sd.voxel * vec3f(sd.dims));
         if (tb.x <= tb.y && tb.y > 0.0 && tb.x < dist) { tEnter = min(tEnter, max(tb.x, 0.0)); tExit = max(tExit, min(tb.y, dist)); }
       }
-      if (tExit > tEnter) { let stp = (tExit - tEnter) / 24.0; var od = 0.0; for (var sI = 0.5; sI < 24.0; sI += 1.0) { od += smokeDensityAt(q.pos + rd * (tEnter + sI * stp)); } tr = exp(-od * stp * 6.0); }
+      if (tExit > tEnter) { tr = exp(-smokeOpticalDepth(q.pos, rd, tEnter, tExit, 0.11) * 6.0); }
     }
     results[i] = vec4f(tr, 0.0, 0.0, 2.0);
     return;
@@ -37,7 +37,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     if ((frame.flags & FLAG_DIRECT) != 0u) {
       for (var li = 0u; li < frame.numLights; li++) {
         let L = lights[li];
-        let ev = evalLight(L, q.pos, N);
+        let ev = evalLightTrue(L, q.pos, N);   // the light as it is, not as the fog of war's picture has it (common.wgsl): the game's readings are the same whatever the team sees
         if (!ev.ok) { continue; }
         if (max(ev.E.x, max(ev.E.y, ev.E.z)) < 0.002) { continue; }
         let tmax = ev.dist.x - L.radius - 0.02;

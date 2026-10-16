@@ -34,7 +34,7 @@
       volQuarter: !!S.volQuarter, gatherThird: !!S.gatherThird, volDiv: P.volDiv ?? P.divVol ?? null, froxel: !!S.froxelVol, froxelTopRays: S.froxelTopRays, froxelGrid: window.__froxel?.grid ?? null,
       taau: !!S.taau, sharp: !!S.sharpDirect, sharpOn: !!E().sharpOn, decouple: !!S.sharpDecouple, gbaa: !!S.gbaa, taauMotionAlpha: S.taauMotionAlpha, taauAlpha: S.taauAlpha, motionCalm: S.restirSpatialAll && S.restirPenRays,
       volLightCap: S.volLightCap, volEvery: S.volShadowEvery, volStep: S.volStepVoxels, volSteps: S.volSteps, smokeShadowSteps: S.smokeShadowSteps,
-      calm: sm?.params?.calmCells, fullRate: sm?.params?.fullRateDomains, frozen: !!sm?.params?.frozen, domains: (sm?.domains ?? []).filter(d => d.live).map(d => ({ i: d.index, origin: d.origin, voxel: d.voxel, period: d.period, mass: d.mass })),
+      calm: sm?.params?.calmCells, frozen: !!sm?.params?.frozen, bricks: sm?.stats?.pool ?? 0, stepped: sm?.stats?.stepped ?? 0,
       frameIdx: E().frameIdx, time: G().time };
   }
   function parkAll(g) {
@@ -54,7 +54,7 @@
     return { shotT: window.__demo.shotT, cam: camInfo(), ...brief() };
   }
   function camInfo() { const c = window.__cam; return { target: Array.from(c.target).map(v => +v.toFixed(2)), yaw: +(c.yaw / DEG).toFixed(1), pitch: +(c.pitch / DEG).toFixed(1), dist: +c.distance.toFixed(2) }; }
-  function brief() { const s = state(); return { internal: s.internal, output: s.output, scale: s.scale, volQuarter: s.volQuarter, calm: s.calm, domains: s.domains.length, frameIdx: s.frameIdx }; }
+  function brief() { const s = state(); return { internal: s.internal, output: s.output, scale: s.scale, volQuarter: s.volQuarter, calm: s.calm, bricks: s.bricks, frameIdx: s.frameIdx }; }
   /** the doorway plume under a PINNED camera: no puppet, no torches, the two rooms' panels on, the leaf at the tour's 1.35 rad, a can on the sill, `dev` seconds of growth, then frozen (unless live) */
   async function door(opts = {}) {
     const g = G(); const dist = opts.dist ?? 15, yaw = opts.yaw ?? -15, pitch = opts.pitch ?? 55, dev = opts.dev ?? 7;

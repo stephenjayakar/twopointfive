@@ -5,12 +5,12 @@ import type { Vec3 } from '../math/vec';
 import { Panel } from '../ui/panel';
 import type { BoxData, LightData, DoorData, RouteData, VolumeData, SwitchableData, PropData, FloorData, DeviceData, CameraData, KeypadData, LaserData } from '../scene/levelData';
 import { AUTHORED_FLAGS, DEVICE_DEFAULTS } from '../scene/levelData';
-import { Editor, parseRef, Ref, keypadPlacement } from './editor';
+import { Editor, parseRef, Ref, keypadPlacement, scenarioLines } from './editor';
 import type { Tools } from './tools';
 import { FACE_NAMES } from './geom';
 
 const DEGf = 180 / Math.PI;
-const WEAPONS = ['', 'guard9mm', 'aks74u', 'ak74m', 'akms', 'fn2000', 'fiveseven'];
+const WEAPONS = ['', 'guard9mm', 'aks74u', 'ak74m', 'akms', 'fn2000', 'fiveseven', 'm870'];   // (game/weapons.ts WeaponId, every row)
 
 export interface SheetHost { ed: Editor; tools: Tools; frame: () => void; rebuild: () => void }
 
@@ -45,10 +45,15 @@ export function buildSheet(p: Panel, H: SheetHost) {
 function levelSheet(p: Panel, H: SheetHost) {
   const { ed } = H; const d = () => ed.data;
   const s = p.section('Level', true);
-  textRow(p, s, 'name', () => d().name, v => ed.setName(v), { title: 'the level\'s name — also the file name for save / download' });
+  textRow(p, s, 'name', () => d().name, v => ed.setName(v), { title: 'the level\'s name (data.name): the file name of a DOWNLOAD, and of a save to the server only for a document that was not loaded from a server file — ⌘/Ctrl S writes the file the document was loaded from (shown below), whatever the name says' });
+  p.text(s, () => { const g = d().meta.generator; return `file: ${ed.file ? `levels/${ed.file}.json (⌘/Ctrl S saves here)` : `not from the server — a save goes to levels/${d().name}.json`}${g ? `\nGENERATED — ${g}\na re-export overwrites edits saved to this file, and tools/levels/export.ts ${ed.file ?? d().name} --check fails until then: lasting changes go in the generator` : ''}`; });
   textRow(p, s, 'notes', () => d().meta.notes ?? '', v => ed.setMeta({ notes: v || undefined }));
   p.number(s, 'grid (snap) m', () => d().meta.grid ?? ed.settings.snapStep, v => { ed.setMeta({ grid: v > 0 ? v : undefined }); if (v > 0) ed.set('snapStep', v); }, { step: 0.05, min: 0.01, max: 4, title: 'meta.grid: the level\'s remembered snap step (X toggles snapping)' });
-  p.text(s, () => { const c = d(); return `${c.boxes.length} boxes · ${c.props.length} props · ${c.lights.length} lights · ${c.switchables.length} switchables · ${c.doors.length} doors · ${c.routes.length} routes · ${c.volumes.length} volumes · ${Object.keys(c.materials).length} materials\ndigest ${ed.doc.digest()}${ed.doc.dirty ? ' (unsaved changes)' : ''}`; });
+  p.text(s, () => `${ed.counts()}\ndigest ${ed.doc.digest()}${ed.doc.dirty ? ' (unsaved changes)' : ''}`);
+  if (d().scenarios) {   // READ-ONLY: what the missions are played from (scene/scenarios.ts). No tool edits it — rename follows its doors and routes, delete refuses one it names, a move leaves its marks
+    const sc = p.section('Scenarios (read-only)', true);
+    p.text(sc, () => scenarioLines(d().scenarios).join('\n') + '\n(the missions\' own data: edited in the level\'s generator or its file, not here. Renaming a door or a route follows it in here; deleting one it names is refused; moving boxes does NOT move its marks. ▶ play starts one of these)');
+  }
   const sky = p.section('Sky', false);
   vecRow(p, sky, 'zenith', () => d().sky.zenith, v => ed.setSky('zenith', v, { coalesce: 'skyz' }), { step: 0.005, names: ['r', 'g', 'b'], min: 0 });
   vecRow(p, sky, 'horizon', () => d().sky.horizon, v => ed.setSky('horizon', v, { coalesce: 'skyh' }), { step: 0.005, names: ['r', 'g', 'b'], min: 0 });
@@ -157,9 +162,11 @@ function single(p: Panel, H: SheetHost, r: Ref) {
       p.numbers(s, 'limits °', 2, i => ((i ? g().maxAngle : g().minAngle) ?? (i ? 1.92 : -1.92)) * DEGf, (i, v) => ed.updateDoor(r.id, i ? { maxAngle: +(v / DEGf).toFixed(4) } : { minAngle: +(v / DEGf).toFixed(4) }), { step: 5, names: ['min', 'max'] });
       p.toggleBox(s, 'exterior', () => !!g().exterior, v => ed.updateDoor(r.id, { exterior: v || undefined }), 'opens onto the lot: 24 cm frame, guards leave it alone in a lockdown');
       p.toggleBox(s, 'closer', () => g().closer !== false, v => ed.updateDoor(r.id, { closer: v ? undefined : false }), 'hydraulic closer (off = stays where it was left)');
-      p.toggleBox(s, 'locked', () => !!g().locked, v => ed.updateDoor(r.id, { locked: v || undefined }), 'keyed on the keySide face; guards carry keys, Sam picks / kicks / takes a key');
+      p.toggleBox(s, 'locked', () => !!g().locked, v => ed.updateDoor(r.id, { locked: v || undefined }), 'keyed on the keySide face; guards carry keys, the player picks / kicks / takes a key');
       textRow(p, s, 'lock id', () => g().lock ?? '', v => ed.updateDoor(r.id, { lock: v || undefined }), { title: 'which key turns it (absent = the floor key)' });
       pickRow(p, s, 'key side', ['+1', '-1'], () => (g().keySide ?? 1) === 1 ? '+1' : '-1', v => ed.updateDoor(r.id, { keySide: v === '+1' ? undefined : -1 }), '+1 = the CCW side of the closed leaf carries the cylinder');
+      pickRow(p, s, 'opens into', ['dealt', '+1', '-1'], () => g().swing === 1 ? '+1' : g().swing === -1 ? '-1' : 'dealt', v => ed.updateDoor(r.id, { swing: v === '+1' ? 1 : v === '-1' ? -1 : undefined }), 'a door opens ONE way. dealt = the game picks the side when the level starts (into a room rather than a corridor, away from a lock\'s cylinder, toward the smaller floor …); +1 / -1 = authored: the CCW / CW side of the closed leaf. Its stop on that side must leave it an opening (limits)');
+      p.text(s, () => { const w = ed.doorSwing(r.id); return w ? `opens ${w.swing > 0 ? '+1 (CCW)' : '-1 (CW)'} · ${w.why}${w.into ? ` · ${w.into}` : ''}` : 'opens: not dealt (the document does not load — see lint)'; });
       p.text(s, () => `frame boxes: ${ed.data.boxes.filter(b => b.group === `doorframe.${r.id}`).length} (group doorframe.${r.id})`);
       p.buttons(s, '', [{ text: 'cut opening', title: 'split the wall slabs the doorway crosses into runs + lintel', run: () => { const c = ed.cutOpening(r.id); ed.msg(`cut: ${c.removed.length} slab(s) → ${c.added.length} pieces`); } }, { text: 'make frame', title: 'jambs + head + stops as the generator built them (replaces an existing frame)', run: () => { const n = ed.makeFrame(r.id).length; ed.msg(`${n} frame boxes`); } }, { text: 'select frame', run: () => ed.select(ed.data.boxes.filter(b => b.group === `doorframe.${r.id}`).map(b => `box:${b.id}`)) }, { text: 'delete', run: () => { try { ed.delete([`door:${r.id}`]); } catch (e) { ed.msg(String((e as Error).message)); } } }]);
       break;
@@ -246,11 +253,11 @@ function single(p: Panel, H: SheetHost, r: Ref) {
         if (c().sweep) { p.numbers(s, 'sweep ° from / to', 2, i => (c().sweep?.[i] ?? 0) * DEGf, (i, v) => { const sw: [number, number] = [c().sweep![0], c().sweep![1]]; sw[i] = +(v / DEGf).toFixed(6); upd({ sweep: sw }, { coalesce: `dsw:${r.id}` }); }, { step: 5, names: ['from', 'to'] }); p.number(s, 'sweep period s', () => c().sweepPeriod ?? 9, v => upd({ sweepPeriod: Math.max(1, v) }, { coalesce: `dsp:${r.id}` }), { step: 0.5, min: 1, title: 'seconds for one there-and-back' }); }
         textRow(p, s, 'group', () => c().group ?? DEVICE_DEFAULTS.group, v => upd({ group: v && v !== DEVICE_DEFAULTS.group ? v : undefined }), { title: 'light-target group (the Lights panel switches it; \'security\' by default)' });
         p.toggleBox(s, 'mains (dies in a blackout)', () => c().mains !== false, v => upd({ mains: v ? undefined : false }), 'off = UPS-fed: the breaker does not take it down');
-        p.text(s, () => 'sees Sam through the guards\' own eye test + HIS light meter: control radios at 0.8 lit-seconds (a man is sent), the floor goes up at 2. OCP blinds it, a round kills it.');
+        p.text(s, () => 'sees the player through the guards\' own eye test + HIS light meter: control radios at 0.8 lit-seconds (a man is sent), the floor goes up at 2. OCP blinds it, a round kills it.');
       } else if (kind === 'keypad') {
         const k = () => g() as KeypadData; const doors = ed.data.doors.map(d => d.id);
         pickRow(p, s, 'door', doors, () => k().door, v => { try { upd({ door: v }); H.rebuild(); } catch (e) { ed.msg(String((e as Error).message)); } }, 'the door it opens — that door is locked on THIS pad\'s lock (re-linking moves the lock: the old door keeps its bolt but goes back on the floor key, as when the pad is deleted)');
-        textRow(p, s, 'code (4 digits)', () => k().code, v => { if (!DEVICE_DEFAULTS.codeRe.test(v.trim())) throw new Error('four digits'); upd({ code: v.trim() }); }, { title: 'what Sam keys in once a man has given it up or two of them have said it in his hearing', width: '6em' });
+        textRow(p, s, 'code (4 digits)', () => k().code, v => { if (!DEVICE_DEFAULTS.codeRe.test(v.trim())) throw new Error('four digits'); upd({ code: v.trim() }); }, { title: 'what the player keys in once a man has given it up or two of them have said it in his hearing', width: '6em' });
         vecRow(p, s, 'pos (plate)', () => k().pos, v => upd({ pos: v }, { coalesce: `dp:${r.id}` }), { step: 0.02, title: 'on the key-side face of the wall beside the latch jamb, chest height' });
         p.number(s, 'facing °', () => k().yaw * DEGf, v => upd({ yaw: +(v / DEGf).toFixed(6) }, { coalesce: `dy:${r.id}` }), { step: 90, title: 'out of the wall (0 = +z, 90 = +x)' });
         p.buttons(s, '', [{ text: 'snap beside the latch jamb', title: 'the default spot: a quarter metre past the latch end of the leaf on the door\'s key side, 1.4 m up, facing out', run: () => { const d = ed.doc.get<DoorData>('doors', k().door); if (!d) return; const pl = keypadPlacement(d, d.keySide ?? 1, ed.floor().y, ed.data.boxes); upd({ pos: pl.pos, yaw: pl.yaw }); } }, { text: 'select its door', run: () => ed.select(`door:${k().door}`) }]);
@@ -263,7 +270,7 @@ function single(p: Panel, H: SheetHost, r: Ref) {
         pickRow(p, s, 'breaking it raises', ['suspicion', 'alarm'], () => l().alarm ?? DEVICE_DEFAULTS.alarm, v => upd({ alarm: v === 'suspicion' ? undefined : (v as 'alarm') }), 'suspicion = control radios and the nearest calm man comes to look · alarm = the floor goes up a step at once');
         textRow(p, s, 'group', () => l().group ?? DEVICE_DEFAULTS.group, v => upd({ group: v && v !== DEVICE_DEFAULTS.group ? v : undefined }));
         p.toggleBox(s, 'mains (dies in a blackout)', () => l().mains !== false, v => upd({ mains: v ? undefined : false }), 'off = battery-backed: the breaker is no answer to it (make sure there is another — a way round, or room to crouch)');
-        p.text(s, () => { const L2 = Math.hypot(l().to[0] - l().from[0], l().to[1] - l().from[1], l().to[2] - l().from[2]); return `${L2.toFixed(2)} m · Sam's body, a hauled body or a thrown canister breaks it; staff, leaves and furniture do not`; });
+        p.text(s, () => { const L2 = Math.hypot(l().to[0] - l().from[0], l().to[1] - l().from[1], l().to[2] - l().from[2]); return `${L2.toFixed(2)} m · the player's body, a hauled body or a thrown canister breaks it; staff, leaves and furniture do not`; });
       }
       p.buttons(s, '', [{ text: 'duplicate', run: () => ed.duplicate([`device:${r.id}`]) }, { text: 'delete', run: () => { try { ed.delete([`device:${r.id}`]); } catch (e) { ed.msg(String((e as Error).message)); } } }, { text: 'frame', run: () => H.frame() }]);
       break;

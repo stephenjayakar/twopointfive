@@ -64,7 +64,7 @@
 //                ever), the denoiser's jump yardstick U.a counts them (a torch sweeping onto the pixel IS a light change there), the believed-visible hue does not. Why: a
 //                carried light MOVES every frame — its target at a pixel changes as the cone sweeps and the man walks, the confidence cut lets the history go, the shadow
 //                client's light-motion cue drops its ratio history, and the pool was shaded from one or two fresh rays a pixel: noisy pools, ragged cone edges, rims where
-//                the cone crossed thin geometry ("the flashlight direct lighting seems like a huge regression now. very noisy and lots of rims" — the designer, at high;
+//                the cone crossed thin geometry ("the flashlight direct lighting seems like a huge regression now. very noisy and lots of rims" — the maintainer, at high;
 //                ?norestir "looks great"). Static lights (owner 0: panels, lamps, vending fronts, the moon) keep ReSTIR unchanged. Bounded by construction: only the pixels
 //                a held light reaches, ≤ 2K + 2 rays there.
 //     MOTION     (lane fix/direct-motion, docs/internal/direct-motion.md; compiled in only under the prepended `const RESTIR_MOTION = true` — passes.ts builds the module twice and takes
@@ -329,6 +329,16 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
 
   let raysCfg = ru.cfg.x & 255u; let kSpatial = ru.cfg.y & select(0xffffffffu, 255u, RESTIR_MOTION); let mCap = f32(max(ru.cfg.z & 255u, 1u));   // (the MOTION program keeps a tap count for moving pixels in cfg.y bits 8‥11 — lever c; the host packs it only for that program)
   let heldK = (ru.cfg.x >> 8u) & 15u; let hybrid = heldK > 0u;   // HELD (header): K stratified rays for each of the two carried leaders at the pixel; 0 = the hybrid off — main's transient stratum, statement for statement
+  // TRADES (the lighting-cost rows; compiled in only under the prepended `const RESTIR_TRADE = true` — passes.ts builds that twin on FIRST USE, and packs ru.cfg.x bits 12‥23 only while a row is on:
+  // all rows off = the estimator's program and uniform exactly as they were). Each gives up a little accuracy for shadow rays:
+  //   bit 12 HELD ADAPTIVE — a carried leader's first two strata that AGREE (both lit, both blocked, the same transmittance) stand for all K: the cone's interior and the far side of a wall
+  //          stop at 2 rays, where they differ the K are traced as ever. BIASED where the light's penumbra is wide: stopping on agreement pulls a pixel toward lit / dark (true
+  //          visibility 0.9 reads ≈ 0.94; the worst case is ±0.05 of that light), so a carried light's penumbra hardens a little and grains more;
+  //   bit 13 STABLE RE-TRACE — a history sample that is fully lit, at ¾ of its memory or more, with no penumbra remembered at the pixel, is re-traced on its class's frame only (every other
+  //          frame; the frame between reads last frame's visibility, as the 2-ray tier does) — the fresh candidates still look every frame. The hint is last frame's own
+  //          measurement, so the lit side of an ARRIVING shadow qualifies: its leading edge can show a frame late at part weight;
+  //   bits 16‥23 DIM CLASS (percent) — a class holding less than this share of the pixel's live unshadowed light takes ONE ray a frame (re-trace / fresh on alternate frames) and no second fresh ray.
+  let heldAdapt = RESTIR_TRADE && (ru.cfg.x & 4096u) != 0u && heldK > 2u; let stableRe = RESTIR_TRADE && (ru.cfg.x & 8192u) != 0u; let dimShare = f32((ru.cfg.x >> 16u) & 255u) * 0.01;
   // D (image-quality program, the dim multi-light penumbra grain): ru.cfg.z bits 8‥15 = an M cap that applies INSIDE PENUMBRAE only (a pixel whose inherited texel carries a blocker-distance hint in
   // either class: a ray from here was blocked toward a lit-tile light within the last two frames) — shorter memory there = the reservoir's random walk turned into noise the ratio filter and the
   // TAA can average (0 = off); bit 16 = a SECOND fresh candidate + ray in those pixels whatever the tier's ray count (the rays-6 path, per pixel: an auditing tile's penumbra lanes give up their audit slot)
@@ -358,6 +368,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   var pickT = array<u32, 2>(255u, 255u); var Wt = array<f32, 2>(0.0, 0.0); var Ut = array<vec3f, 2>(vec3f(0.0), vec3f(0.0)); var VTr = array<f32, 2>(-1.0, -1.0);   // the TRANSIENT stratum per class: the picked transient (∝ w among the transients reaching here), their unshadowed luminance / irradiance sums, the ray's visibility — under the hybrid: pickT / Wt / VTr are the held TAIL per class (the carried lights past the two leaders), Ut every carried light's irradiance
   var hS = vec2u(255u, 255u); var hW = vec2f(0.0); var hV = vec2f(0.0);       // HELD: the two strongest carried lights at this pixel (slot, unshadowed luminance, Σ visibility over their K strata)
   var hE0 = vec3f(0.0); var hE1 = vec3f(0.0);                                // … and their exact irradiance here (parked in wgHeld across the trace loop)
+  var hN = vec2f(f32(heldK)); var hFirst = vec2f(0.0); var hStop = vec2u(0u);   // TRADE (held adaptive): the strata each leader's Σ visibility is over, its first stratum's answer, 'stop after two'
   var curT = array<u32, 2>(255u, 255u); var pT = array<f32, 2>(0.0, 0.0);     // temporal sample's light: this frame's slot (255 = none / gone), its target here now
   var tw = vec4u(0u);                    // last frame's texel (x,y class 0 · z,w class 1); a class's word B is zeroed when it is let go
   var nRays = 0u; var nTaps = 0u; var nNb = 0u;   // diagnostic counters (debug view 12)
@@ -480,14 +491,17 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         }
         else { Mt[c] = min(rM(twA), mCapPix); pPT[c] = pT[c]; }
       }
-      let planT = raysCfg >= 3u || alt == c;
-      let planF = raysCfg >= 4u || (raysCfg == 3u && alt == c) || (raysCfg <= 2u && alt != c);
+      var raysC = raysCfg; var dimC = false;
+      if (RESTIR_TRADE && dimShare > 0.0 && Wl[c] < dimShare * (Wl[0] + Wl[1] + luminance(Ut[0] + Ut[1]))) { raysC = min(raysCfg, 2u); dimC = true; }   // TRADE (dim class): this class is a sliver of the light here — the 2-ray tier's alternation for it alone
+      var planT = raysC >= 3u || alt == c;
+      if (stableRe && planT && alt != c && valid && rV(twA) >= 1.0 && rM(twA) >= 0.75 * mCap && rHint(tw.x) <= 0.0 && rHint(tw.z) <= 0.0) { planT = false; }   // TRADE (stable re-trace): lit, confident, no penumbra at the pixel — off its own frame it reads last frame's visibility
+      let planF = raysC >= 4u || (raysC == 3u && alt == c) || (raysC <= 2u && alt != c);
       let darkT = valid && rW(twB) <= 0.0;                          // a zero-weight history ('looked, was dark'): nothing to re-trace — its planned ray goes to a fresh draw instead (budget-neutral, and it is
       if ((planF || !valid || (darkT && planT)) && pickF[c] != 255u) {   // exactly where climbing back out of a dark memory wants the sample); no history at all: a fresh sample regardless of the plan
         let iu = u32(lu * 16.0) & 15u; let iv = u32(lv * 16.0) & 15u; uvF[c] = iu | (iv << 4u);
         rqSlot[c * 3u] = pickF[c]; rqUv[c * 3u] = uvF[c];
       }
-      if (fresh2Pix && pickG[c] != 255u) {
+      if (fresh2Pix && pickG[c] != 255u && !dimC) {
         let iu = u32(rnd() * 16.0) & 15u; let iv = u32(rnd() * 16.0) & 15u; uvG[c] = iu | (iv << 4u);
         rqSlot[c * 3u + 1u] = pickG[c]; rqUv[c * 3u + 1u] = uvG[c];
       } else if (c == auditC && pickD[c] != 255u) {
@@ -507,13 +521,14 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     // HELD: queue positions 8‥ = the two leaders' K strata each, leader-interleaved (8 + 2k + h) — the same ONE call site; a lane no carried light reaches walks 8 positions as it always did
     let nq = select(8u, 8u + 2u * heldK, hybrid && (hS.x != 255u || hS.y != 255u));
     for (var q = 0u; q < nq; q++) {
-      var slot: u32; var iu: u32; var iv: u32; var c = 0u; var kind = 3u; var hh = 0u;
+      var slot: u32; var iu: u32; var iv: u32; var c = 0u; var kind = 3u; var hh = 0u; var hk = 0u;
       if (q < 8u) {
         slot = rqSlot[q]; if (slot == 255u) { continue; }
         c = q / 3u; kind = q - c * 3u; if (q >= 6u) { c = q - 6u; kind = 3u; }   // (kind 3 = the transient ray / the held tail's)
         iu = rqUv[q] & 15u; iv = rqUv[q] >> 4u;
       } else {   // HELD leader hh, stratum k: shadowSample's own golden-ratio disk sequence off the leader's lattice offset, snapped to the lattice (every prefix well spread over the disk)
         hh = (q - 8u) & 1u; let k = (q - 8u) >> 1u; slot = hS[hh]; if (slot == 255u) { continue; }
+        if (heldAdapt) { if (k >= 2u && hStop[hh] != 0u) { continue; } hk = k; }   // TRADE (held adaptive): its first two strata agreed
         kind = 4u; c = select(0u, 1u, lightBroad(wgLights[slot]));
         let uv0 = latticeUV(hUv[hh] & 15u, hUv[hh] >> 4u); iu = u32(fract(uv0.x + f32(k) * 0.618034) * 16.0) & 15u; iv = u32(fract(uv0.y + f32(k) * 0.7548777) * 16.0) & 15u;
       }
@@ -521,6 +536,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       atomicOr(&wgSeen[(slot >> 5u) + select(2u, 0u, vs.x > 0.0)], 1u << (slot & 31u));   // the tile's vote on this light: seen (any transmittance) / blocked
       var share = pT[c];
       if (kind == 0u) { VF[c] = vs.x; share = pF[c]; } else if (kind == 1u) { if (fresh2Pix) { VG[c] = vs.x; share = pG[c]; } } else if (kind == 2u) { VT[c] = vs.x; } else if (kind == 3u) { VTr[c] = vs.x; share = Wt[c]; } else { hV[hh] += vs.x; share = hW[hh]; }   // (kind 1 without fresh2 = the audit ray: its vote above is all it is for; kind 3 = the transient stratum's / the held tail's; 4 = a held leader's stratum)
+      if (heldAdapt && kind == 4u) { if (hk == 0u) { hFirst[hh] = vs.x; } else if (hk == 1u && abs(vs.x - hFirst[hh]) < 0.02) { hStop[hh] = 1u; hN[hh] = 2.0; } }   // TRADE (held adaptive): two strata, one answer — they stand for the K
       if (vs.y >= 0.0 && !tileDark(bel, slot)) { blurPx[c] = max(blurPx[c], hintPx(vs.y, pxPerMetre, share / W[c])); }   // a blocked ray is a penumbra measurement — unless the whole tile found that light dark last frame (a lamp behind the wall measures nothing here; the audit ray never hints)
       if (vs.y == SOFT_CLEAR_Y && q < 6u && !tileDark(bel, slot)) { softC[c] = true; }   // (gated like the hint: never off an audit ray, and never off the transient stratum's ray (slots 6, 7) — a muzzle flash past a man must not drop the class's history in his flash-shadow)
     }
@@ -742,7 +758,8 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       if (Wl[c] <= 0.0) { aOut[c] = -clamp(min(blurPx[c], frame.directCfg.z) / MAX_BLUR_PX, 0.0, 1.0); }
       if (hV[h] <= 0.0) { continue; }
       var tt = vec3f(1.0); let gm = wgGlass[hS[h]]; if (gm != 0u) { tt = glassVis(li, gm, P); }
-      S[c] += select(hE1, hE0, h == 0u) * tt * (hV[h] / f32(heldK));
+      var hDiv = f32(heldK); if (heldAdapt) { hDiv = hN[h]; }   // (TRADE held adaptive: the mean is over the strata actually traced)
+      S[c] += select(hE1, hE0, h == 0u) * tt * (hV[h] / hDiv);
     }
   }
   // ---- store: reservoirs (temporal stage) with the depth signature and the pixel's darkSlot, the two S textures (U went out after scoring) ----

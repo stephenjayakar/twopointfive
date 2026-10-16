@@ -1,0 +1,155 @@
+{
+ "lane": "feat/glassbreak",
+ "machine": "M4 Max (shared)",
+ "tier": "high",
+ "internal": [
+  1230,
+  582
+ ],
+ "output": [
+  1600,
+  757
+ ],
+ "method": "tools/qa/glassbreak-scenes.js __gbs.cost: the 'wide' view (conference panes 109-111 on screen), interleaved rounds x3 of A = every pane whole vs B = three panes holed (a cell or more out of each, shards settled), 50 serialized frames each (onSubmittedWorkDone + task yield per frame), medians; render-pass stamps (post/fxaa/gbuffer) span the drawable wait - ignore",
+ "inBoot_wholeVsHoled": {
+  "passes": {
+   "union": [
+    9.287,
+    9.159
+   ],
+   "mesh": [
+    0.143,
+    0.137
+   ],
+   "gbuffer": [
+    0.107,
+    0.113
+   ],
+   "rc c3": [
+    0.327,
+    0.317
+   ],
+   "rc c2": [
+    0.497,
+    0.491
+   ],
+   "rc c1": [
+    0.333,
+    0.329
+   ],
+   "rc c0": [
+    0.228,
+    0.224
+   ],
+   "rc dice": [
+    0.013,
+    0.01
+   ],
+   "direct": [
+    2.754,
+    2.57
+   ],
+   "softblur": [
+    0.599,
+    0.495
+   ],
+   "gather": [
+    1.383,
+    1.357
+   ],
+   "temporal": [
+    0.211,
+    0.196
+   ],
+   "reflect": [
+    0.251,
+    0.249
+   ],
+   "rdenoise": [
+    0.089,
+    0.074
+   ],
+   "volFroxel": [
+    0.512,
+    0.504
+   ],
+   "volumetrics": [
+    0.029,
+    0.028
+   ],
+   "sharpU": [
+    0.795,
+    0.792
+   ],
+   "compS": [
+    0.545,
+    0.548
+   ],
+   "gbaa": [
+    0.042,
+    0.041
+   ],
+   "taau": [
+    0.17,
+    0.177
+   ],
+   "bloom": [
+    0.057,
+    0.053
+   ],
+   "post": [
+    8.974,
+    4.764
+   ],
+   "fxaa": [
+    8.98,
+    4.742
+   ],
+   "probe": [
+    0.293,
+    0.294
+   ],
+   "particles": [
+    null,
+    0.096
+   ]
+  },
+  "holedPanes": [
+   3,
+   3,
+   3
+  ],
+  "frames": [
+   [
+    50,
+    50,
+    50
+   ],
+   [
+    50,
+    50,
+    50
+   ]
+  ]
+ },
+ "crossBoot_constOffVsOn_wholePanes": {
+  "note": "one ?glassbreak=0 boot vs one ?glassbreak boot, same staging, 3 x 50 serialized frames, median of the three takes; gpu-quiet.sh before each",
+  "constOff": {
+   "union": 9.033,
+   "direct": 2.599,
+   "compS": 0.542,
+   "sharpU": 0.788,
+   "gather": 1.31,
+   "reflect": 0.25
+  },
+  "constOn": {
+   "union": 9.095,
+   "direct": 2.653,
+   "compS": 0.543,
+   "sharpU": 0.791,
+   "gather": 1.319,
+   "reflect": 0.249
+  }
+ },
+ "read": "three holed panes on screen: union 9.287 -> 9.159 (-0.13, noise), compS 0.545 -> 0.548 (+0.003), direct 2.754 -> 2.57 (noise), particles 0.096 (the resting chips) - nothing measurable; the const itself with whole panes: +0.06 union / +0.05 direct across boots (inside cross-boot noise); const false = main's programs (identity) = 0 by construction"
+}

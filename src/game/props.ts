@@ -12,15 +12,24 @@ import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { StaticCollision } from '../scene/collision';
 import { PropDef, PropKind } from '../scene/level';
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A character as the prop solver sees it: a kinematic-ish circle whose position may be corrected (held back) in place, like doors do. */
 export interface PropContact { pos: Vec3; vel: Vec3; radius: number; who: number; mass: number; quiet: boolean; }
-export interface PropEvent { prop: Prop; sound: 'scrape' | 'thud'; pos: Vec3; who: number; level: number; speed: number; }
+export interface PropEvent { prop: Prop; sound: 'scrape' | 'thud' | 'roll'; pos: Vec3; who: number; level: number; speed: number;
+  /** only on sound 'roll' (a castor chair coasting, CASTOR below): 'start' as its speed passes CASTOR.startV, 'stop' as it falls under CASTOR.stopV. level is 0: nobody's ears. */
+  roll?: 'start' | 'stop'; }
 
 export interface KindTune { decel: number; visc: number; rest: number; scrapeRate: number; thudRate: number; }
 /** decel: Coulomb ground friction as a deceleration (m/s²) — casters roll on, a carton on carpet stops almost at once; visc: extra viscous damping (1/s);
  *  rest: restitution against walls / other props; scrapeRate / thudRate: playback rate of the shared scrape / knock one-shots (a steel bin rings
  *  bright, a carton knocks dull). Angular friction is derived from decel and the footprint size. */
+/** AN OFFICE CHAIR ROLLS ON ITS CASTORS (the maintainer: "i'd also expect the chair to have wheels and roll"). on: off in the module and on the frozen stand
+ *  (TPS_CHAIRROLL=1), on in the page (?chairroll=0 = the chair as it was). With it on a prop of kind 'chair' coasts on rolling resistance `decel` (m/s²) and
+ *  `visc` (1/s) in place of KIND.chair's 1.6 / 0.5 — pushed at a walk it rolls on about a metre and a half over two seconds where it stopped in half a metre —
+ *  its spin dies at `spin` / radius (rad/s²), and while it coasts the system raises PropEvent sound 'roll' (start above `startV`, stop under `stopV` m/s).
+ *  Every other kind, and every contact, wall and door rule, is untouched. First-pass numbers, never played. */
+export const CASTOR = { on: false, decel: 0.4, visc: 0.45, spin: 1.2, startV: 0.3, stopV: 0.1 };
 const KIND: Record<PropKind, KindTune> = {
   chair: { decel: 1.6, visc: 0.5, rest: 0.25, scrapeRate: 1.35, thudRate: 1.15 },
   cardboard: { decel: 3.2, visc: 0.8, rest: 0.12, scrapeRate: 1.0, thudRate: 0.8 },
@@ -29,6 +38,7 @@ const KIND: Record<PropKind, KindTune> = {
 };
 const MAX_V = 5, MAX_W = 9;              // speed caps: with 1/60 s substeps a prop moves ≤ 8 cm per step, far below footprint + thinnest static panel → no tunnelling
 const SLEEP_V = 0.04, SLEEP_W = 0.06, SLEEP_T = 0.3;
+const DOOR_GUIDE = 1.2;                    // m/s a shoved prop is slid along the wall toward the middle of a door frame it fits through (PropSystem.doorways)
 const Y_MIN = 0.04;                       // static boxes entirely below this are floor finishes, not obstacles
 
 export class Prop {
@@ -37,6 +47,7 @@ export class Prop {
   readonly mass: number; readonly invMass: number; readonly invI: number; readonly tune: KindTune;
   home: [number, number, number];         // settled rest pose for reset()
   asleep = true; idle = 0; dirty = true;
+  rolling = false;   // coasting on its castors (CASTOR): between the 'roll' start and stop events; not saved — a load finds it again inside a step
   lastWho = 0; noiseT = -10; pushT = -10;   // who moved it last (blamed for its noise), last event time (rate limit), last time a character / leaf was pushing it
   /** world-space part boxes, mutated in place by place() — these are what gets rendered / traced / ray tested */
   readonly boxes: Box[];
@@ -100,6 +111,8 @@ function support(cx: number, cz: number, cs: number, sn: number, hx: number, hz:
 
 export class PropSystem {
   props: Prop[];
+  /** every prop the level was built with, in construction order (index = Prop.id): `props` is this list minus what a blast broke apart (remove()) until reset() */
+  readonly all: Prop[];
   enabled = true;            // off: props freeze where they are (still solid to characters)
   frictionScale = 1;
   time = 0;
@@ -107,9 +120,16 @@ export class PropSystem {
   private near = new Int32Array(256);
   private byBox = new Map<Box, Prop>();
   private muted = true;      // no events while settling / resetting
+  /** THE DOOR FRAMES (Game hands them over once its doors stand: the frame's middle, the unit vector along the closed leaf, half the air between its stops).
+   *  A REAL DOOR GUIDES FURNITURE THROUGH: between the stops of a real door (scene/doorSize.ts) there are 0.83 m, a chair is half a metre across and a man 0.6 —
+   *  a chair shoved at the frame a hand's width off its middle caught a corner on the jamb's face and stood there, and nobody gets past a chair in a real
+   *  doorway. So a prop somebody is shoving, standing at a frame it fits through but off the middle by more than the frame leaves it, is slid along the wall
+   *  toward the middle (step 4b): it glances off the jamb and goes through, as a shoved chair does. A prop wider than the door, one nobody is pushing, and one
+   *  whose middle is not before the opening are left alone. Level data only: no state of its own. */
+  doorways: { cx: number; cz: number; ux: number; uz: number; half: number }[] = [];
 
   constructor(defs: PropDef[], private col: StaticCollision, private emit: (e: PropEvent) => void) {
-    this.props = defs.map((d, i) => new Prop(d, i));
+    this.all = defs.map((d, i) => new Prop(d, i)); this.props = this.all.slice();
     for (const p of this.props) for (const b of p.boxes) this.byBox.set(b, p);
     this.settle();
   }
@@ -118,13 +138,16 @@ export class PropSystem {
   propOf(b: Box): Prop | null { return this.byBox.get(b) ?? null; }
   boxes(out: Box[]) { for (const p of this.props) for (const b of p.boxes) out.push(b); }
 
+  /** A prop leaves the level (game/furnblast.ts: it came apart beside a charge — its parts fly on as debris): no longer drawn, solid, pushed or stepped until reset(). */
+  remove(p: Prop) { const i = this.props.indexOf(p); if (i >= 0) this.props.splice(i, 1); }
   /** Everything back to its rest pose, asleep. */
   reset() {
-    for (const p of this.props) { p.x = p.home[0]; p.z = p.home[1]; p.yaw = p.home[2]; p.vx = p.vz = p.w = 0; p.asleep = true; p.idle = 0; p.noiseT = p.pushT = -10; p.lastWho = 0; p.dirty = true; p.place(); }
+    if (this.props.length !== this.all.length) { this.props.length = 0; for (const p of this.all) this.props.push(p); }
+    for (const p of this.props) { p.x = p.home[0]; p.z = p.home[1]; p.yaw = p.home[2]; p.vx = p.vz = p.w = 0; p.asleep = true; p.idle = 0; p.noiseT = p.pushT = -10; p.lastWho = 0; p.rolling = false; p.dirty = true; p.place(); }
   }
   /** Debug: give every prop a random shove (panel button — lets you watch the solver without walking into things). */
   scatter(strength = 1.5) {
-    for (const p of this.props) { const a = Math.random() * Math.PI * 2, s = strength * (0.5 + Math.random()); p.vx += Math.cos(a) * s; p.vz += Math.sin(a) * s; p.w += (Math.random() - 0.5) * 6 * strength; p.wake(); }
+    for (const p of this.props) { const a = simRandom() * Math.PI * 2, s = strength * (0.5 + simRandom()); p.vx += Math.cos(a) * s; p.vz += Math.sin(a) * s; p.w += (simRandom() - 0.5) * 6 * strength; p.wake(); }
   }
   /** Authoring overlaps (a chair tucked 5 cm under a table edge, a bin grazing a desk corner) are resolved once, silently; the settled pose becomes home. */
   private settle() {
@@ -160,6 +183,12 @@ export class PropSystem {
     const s = Math.hypot(p.vx, p.vz); if (s > MAX_V) { p.vx *= MAX_V / s; p.vz *= MAX_V / s; }
     if (p.w > MAX_W) p.w = MAX_W; else if (p.w < -MAX_W) p.w = -MAX_W;
   }
+  /** A castor chair's coast, as something a sound can follow (CASTOR): one 'roll' event with roll 'start' when its speed passes startV, one with 'stop' when it
+   *  falls under stopV (or the switch goes off under it). Nothing is filed for anybody's ears: level 0, and Game.onPropEvent passes the kind over. */
+  private rollNote(p: Prop, speed: number) {
+    if (!p.rolling && speed > CASTOR.startV && !this.muted) { p.rolling = true; this.emit({ prop: p, sound: 'roll', roll: 'start', pos: [p.x, 0.05, p.z], who: p.lastWho, level: 0, speed }); }
+    else if (p.rolling && speed < CASTOR.stopV) { p.rolling = false; this.emit({ prop: p, sound: 'roll', roll: 'stop', pos: [p.x, 0.05, p.z], who: p.lastWho, level: 0, speed }); }
+  }
   private noise(p: Prop, sound: 'scrape' | 'thud', speed: number, who: number, level: number) {
     if (this.muted || this.time - p.noiseT < (sound === 'thud' ? 0.35 : 0.8)) return;   // per-prop rate limit: a chair rolled along a wall is one scrape and the odd knock, not a machine gun
     p.noiseT = this.time;
@@ -185,9 +214,11 @@ export class PropSystem {
       for (const p of props) {
         if (p.asleep) continue;
         p.x += p.vx * h; p.z += p.vz * h; p.yaw += p.w * h; p.dirty = true;
-        const fs = this.frictionScale; const sp = Math.hypot(p.vx, p.vz);
-        if (sp > 0) { const ns = Math.max(0, sp - p.tune.decel * fs * h) * Math.exp(-p.tune.visc * fs * h); p.vx *= ns / sp; p.vz *= ns / sp; }
-        const aw = Math.abs(p.w); if (aw > 0) { const na = Math.max(0, aw - 1.5 * p.tune.decel * fs / p.radius * h) * Math.exp(-p.tune.visc * fs * h); p.w *= na / aw; }
+        const fs = this.frictionScale; const cas = CASTOR.on && p.def.kind === 'chair';
+        const dec = cas ? CASTOR.decel : p.tune.decel, vis = cas ? CASTOR.visc : p.tune.visc, spin = cas ? CASTOR.spin : 1.5 * p.tune.decel; const sp = Math.hypot(p.vx, p.vz);
+        if (sp > 0) { const ns = Math.max(0, sp - dec * fs * h) * Math.exp(-vis * fs * h); p.vx *= ns / sp; p.vz *= ns / sp; }
+        const aw = Math.abs(p.w); if (aw > 0) { const na = Math.max(0, aw - spin * fs / p.radius * h) * Math.exp(-vis * fs * h); p.w *= na / aw; }
+        if (cas || p.rolling) this.rollNote(p, cas ? Math.hypot(p.vx, p.vz) : 0);
         if (sp < SLEEP_V && aw < SLEEP_W) { p.idle += h; if (p.idle > SLEEP_T) { p.asleep = true; p.vx = p.vz = p.w = 0; } } else p.idle = 0;
         if (p.yaw > Math.PI * 4 || p.yaw < -Math.PI * 4) p.yaw %= Math.PI * 2;
       }
@@ -229,6 +260,17 @@ export class PropSystem {
           const vn = p.vx * sat.nx + p.vz * sat.nz; const want = Math.min(2, sat.depth / h * 0.5);   // carried along at about the leaf's speed (from how far it intruded this substep), never launched
           if (vn < want) { p.vx += (want - vn) * sat.nx; p.vz += (want - vn) * sat.nz; }
         }
+      }
+      // 4b. a door frame guides a shoved prop through (doorways, above)
+      for (const F of this.doorways) for (const p of props) {
+        if (p.asleep || this.time - p.pushT > 0.12 || p.lastWho === 0) continue;   // (… by a body: a leaf's sweep stamps the same clock, and guiding that back at the leaf would be a motor)
+        const dx = p.x - F.cx, dz = p.z - F.cz; if (dx * dx + dz * dz > (F.half + p.radius + 0.4) * (F.half + p.radius + 0.4)) continue;
+        const cs = p.cs, sn = p.sn, along = dx * F.ux + dz * F.uz, off = -dx * F.uz + dz * F.ux;
+        const eu = p.hx * Math.abs(cs * F.ux - sn * F.uz) + p.hz * Math.abs(sn * F.ux + cs * F.uz), en = p.hx * Math.abs(-cs * F.uz - sn * F.ux) + p.hz * Math.abs(-sn * F.uz + cs * F.ux);   // its footprint's reach along the wall and across it
+        const lim = F.half - eu - 0.01; if (lim < 0 || Math.abs(along) > F.half + 0.05 || Math.abs(off) > en + 0.15) continue;   // (wider than the door · its middle not before the opening · not at the frame yet)
+        const over = Math.abs(along) - lim; if (over <= 0) continue;
+        if (Math.abs(-p.vx * F.uz + p.vz * F.ux) < 0.5 * Math.abs(p.vx * F.ux + p.vz * F.uz)) continue;   // (shoved ALONG the wall, past the door: not on its way through)
+        const k = Math.min(over, DOOR_GUIDE * h) * (along > 0 ? -1 : 1); p.x += F.ux * k; p.z += F.uz * k; p.dirty = true;
       }
       // 5. prop ↔ static scene (last of the prop movers, so nothing ends a substep inside a wall)
       for (const p of props) if (!p.asleep || p.dirty) this.solveStatics(p, true);

@@ -3,7 +3,10 @@
 // crouchTarget / upper / stance / holdPose …), emits its props with rigBoxes() and feeds the Engine the way main.ts + Game.update do (world statics,
 // dynamic prop boxes, capsule shadow proxies, skinned instance, LightSet, SmokeSystem, FollowCamera). No Game / AI / audio. Everything the UI shows or
 // sets is either the plain state object (state.ts) or an action method here; the UI never touches the engine.
-import { initGpu, Gpu } from '../gpu/device';
+import { CHAR_MAT_FLOATS, TINTS_AS_IS, charSlots, meshAuthored, placeholderTints, proxyAlbedos, writeCharPalette, type CharSide } from '../render/charMaterials';
+import { GEAR, gearText } from '../game/gear';
+import { QRF_TINT, QRF_TINT2 } from '../game/consts';
+import { Gpu } from '../gpu/device';
 import { Engine } from '../engine';
 import { buildStage, Stage } from '../scene/stage';
 import { lightFromDef, RtLight } from '../render/lights';
@@ -11,11 +14,11 @@ import { FollowCamera } from '../game/camera';
 import { Input } from '../game/input';
 import { Vec3, v3, DEG, clamp, wrapAngle, approachAngle } from '../math/vec';
 import { StaticCollision } from '../scene/collision';
-import { loadGltfCharacter, GltfCharacter } from '../anim/gltf';
+import { loadCharacterSet, castUrlFor, castSide, castGoggles, GltfCharacter } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig } from '../render/sdfrig';
-import { Character, SignalKind, Stance, UpperMode, KICK_IMPACT, THROW_RELEASE, HOLD, LONG_STANCES, LongStance, defaultAnimParams } from '../game/character';
+import { Character, SignalKind, Stance, UpperMode, THROW_RELEASE, HOLD, LONG_STANCES, LongStance, defaultAnimParams } from '../game/character';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
@@ -37,9 +40,13 @@ export type FrameKind = 'body' | 'back' | 'head' | 'hand' | 'feet' | 'profile' |
 export interface RuntimeHost { input?: Input; cam?: FollowCamera; hosted?: boolean }
 export type TossKind = 'pistol' | 'torch' | 'smoke' | 'flash' | 'mag' | 'rifle' | 'ring';
 const CIRCLE_R = 2, LEG = 2.5;
-const holdDur = (ph: string) => ph === 'grab' ? HOLD.secs.grab : ph === 'choke' ? HOLD.secs.choke : ph === 'whip' ? HOLD.secs.whip + 0.5 : 4;   // (a beat past the whip's end so the way out shows; 'held' just runs)
+/** the two tints an outfit of each side is tried on in (`wear` names a variant): Sam's, the shift's, the response element's, and for a civilian a pale shirt over dark trousers
+ *  (a level's civilians each bring their own two: levels/office.json has Owen in this pair) */
+const WEAR_TINT: Record<CharSide, { tint: Vec3; tint2: Vec3 }> = { operator: PLAYER_TINT, defender: GUARD_TINT, responder: { tint: [...QRF_TINT], tint2: [...QRF_TINT2] }, civilian: { tint: [0.5, 0.56, 0.7], tint2: [0.11, 0.11, 0.13] } };
+const holdDur = (ph: string) => ph === 'grab' ? HOLD.secs.grab : ph === 'choke' ? HOLD.secs.choke : ph === 'whip' ? HOLD.secs.whip + 0.5 : ph === 'kill' ? HOLD.secs.kill + 0.8 : 4;   // (a beat past the whip's / the kill's end so the way out shows; 'held' just runs)
 
 export class Runtime {
+  private matPal = new Float32Array(CHAR_MAT_FLOATS);   // the staged figure's material rows (character materials)
   st: ViewerState = makeState();
   char!: Character;
   readonly cam: FollowCamera;
@@ -75,22 +82,18 @@ export class Runtime {
   /** shot emitter anchors as gizmo nodes: the Adj's `off` IS the live fxm.shot vector, so dragging an arrow edits the effect directly (rot accepted and ignored) */
   private emitterAdjs = new Map<string, { off: Vec3; rot: Vec3 }>(); private emitterRootAdj = { off: [0, 0, 0] as Vec3, rot: [0, 0, 0] as Vec3 };
 
-  static async create(canvas: HTMLCanvasElement, loading: HTMLElement): Promise<Runtime> {
-    const gpu = await initGpu(canvas);
-    loading.textContent = 'compiling shaders · loading character rig…';
-    const engine = new Engine(gpu);
-    const [ch] = await Promise.all([loadGltfCharacter(new URL('assets/ual/AnimationLibrary_Godot_Standard.gltf', document.baseURI).href), engine.init({ sharp: true, gbaa: true })]);   // (the glTF alongside the kernels — all through the async path, engine.ts init; the stage's presets may switch sharp direct / GBAA on)
-    const rt = new Runtime(canvas, gpu, engine, ch);
-    await Promise.all([rt.smoke.init(), rt.meshShadowsRt.init(), engine.gbuffer.prepareSkin(rt.chars.jointsFormat)]);   // the stage's own GPU modules (smoke solver, mesh-shadow skin / refit, the skinned raster for this joint format) before the first frame
-    return rt;
-  }
   private meshShadowsRt: MeshShadows;
+  /** THE CAST (anim/gltf.ts loadGltfCast; absent under ?mannequin): the variant the figure wears, by name — '' = the first operator, or the first defender with the guard kit on */
+  wear = '';
+  /** the side of the outfit the staged figure wears (a cast variant's own; with the mannequin, the scene's: the guard kit = a defender, else an operator) — his material table */
+  wornSide: CharSide = 'operator';
+  private rigFits = new Map<number, { r0: Float32Array; r1: Float32Array }>();
   /** the runtime on an Engine (and Input / camera) a HOST page made — the workbench: it composes the frame itself round simulate() */
   static async attach(canvas: HTMLCanvasElement, gpu: Gpu, engine: Engine, loading: HTMLElement | null, host: RuntimeHost): Promise<Runtime> {
     if (loading) loading.textContent = 'loading character rig…';
-    const ch = await loadGltfCharacter(new URL('assets/ual/AnimationLibrary_Godot_Standard.gltf', document.baseURI).href);
+    const ch = await loadCharacterSet(new URL('assets/ual/AnimationLibrary_Godot_Standard.gltf', document.baseURI).href, castUrlFor(location.search, document.baseURI));
     const rt = new Runtime(canvas, gpu, engine, ch, buildStage(), host);
-    await Promise.all([rt.smoke.init(), rt.meshShadowsRt.init(), engine.gbuffer.prepareSkin(rt.chars.jointsFormat)]);   // (async-boot: the stage's own GPU modules through the async path, as create() does — the host has already run engine.init())
+    await Promise.all([rt.smoke.init(), rt.meshShadowsRt.init(), engine.gbuffer.prepareSkin(rt.chars.jointsFormat)]);   // (async-boot: the stage's own GPU modules through the async path — the host has already run engine.init())
     return rt;
   }
   private constructor(readonly canvas: HTMLCanvasElement, readonly gpu: Gpu, readonly engine: Engine, readonly ch: GltfCharacter, readonly stage: Stage = buildStage(), host: RuntimeHost = {}) {
@@ -106,8 +109,8 @@ export class Runtime {
     this.tracers = new Tracers(engine.lights, this.sparks);   // the game's tracer streaks (their head lights in this engine's LightSet, their embers in these sparks)
     this.smoke = new SmokeSystem(engine); engine.setSmoke(this.smoke.binding); engine.afterSubmit.push(() => this.smoke.afterSubmit());   // same attachments as main.ts (gun smoke on 'shoot')
     this.chars = new CharacterRenderer(engine.device, ch); engine.skin = this.chars;
-    engine.setMeshShadows(this.meshShadowsRt = new MeshShadows(engine.device, ch, this.chars.jointMats));   // the mesh-shadow experiment is available on the stage too (settings.meshShadows / ?meshShadows): the close-ups are where a limb's silhouette shows
-    try { engine.setRigFit(fitRig(ch)); } catch (e) { console.warn('SDF rig: the round-cone fit failed, characters keep their hand capsules (traced untapered)', e); engine.setRigFit(null); }   // + the SDF character rig's radius fit (render/sdfrig.ts): the stage's proxies are the fitted round cones like the game's — the close-ups are where a limb's taper shows
+    engine.setMeshShadows(this.meshShadowsRt = new MeshShadows(engine.device, ch, this.chars.jointMats, this.chars.charInsts));   // the mesh-shadow experiment is available on the stage too (settings.meshShadows / ?meshShadows): the close-ups are where a limb's silhouette shows
+    try { const fit = fitRig(ch); engine.setRigFit(ch.cast ? { ...fit, byOwner: this.rigFits } : fit); } catch (e) { console.warn('SDF rig: the round-cone fit failed, characters keep their hand capsules (traced untapered)', e); engine.setRigFit(null); }   // + the SDF character rig's radius fit (render/sdfrig.ts): the stage's proxies are the fitted round cones like the game's — the close-ups are where a limb's taper shows
     this.clipNames = [...ch.clips.keys()].sort((a, b) => a.localeCompare(b));
     // the two hand lights from the same definitions game.ts uses (its tune defaults: playerLight 60 · flashIntensity 70, inner 7°, outer 19°)
     this.railLight = engine.lights.add(railLightDef(CHAR_ID, 60));
@@ -123,6 +126,7 @@ export class Runtime {
     this.gizmo = new RigGizmo(canvas, cam, this.input);
     this.quality = new Quality(engine, this.smoke);
     { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { this.quality.auto = false; this.quality.apply(qp as QualityName); } }
+    { const q = new URLSearchParams(location.search); if ((meshAuthored(ch.mesh) || q.has('charmats')) && !q.has('nocharmats')) engine.settings.charMats = true; }   // character materials: as on the game page (main.ts) — on for a mesh with slot-named materials, ?charmats dresses the mannequin, ?nocharmats holds the two tints
     if (new URLSearchParams(location.search).has('meshShadows')) engine.settings.meshShadows = true;   // (AFTER the Quality construction and the ?quality pin: every preset writes settings.meshShadows — ultra on, the rest off — so set earlier it was dead; review 08-10 #23)
     // compat: __viewer.drive = i (a DRIVES index) writes speed / crouch / reverse off the natural clip speeds × speedMul
     Object.defineProperty(this.st, 'drive', { enumerable: false, configurable: true, get: () => this.driveIdx, set: (i: number) => { const D = DRIVES[i]; if (!D) return; this.driveIdx = i; this.st.speed = D.speed(defaultAnimParams) * this.st.speedMul; this.st.crouch = D.crouch; this.st.reverse = D.reverse; } });
@@ -217,12 +221,13 @@ export class Runtime {
       case 1: case 2: case 3: an.signal((['hold', 'go', 'rally'] as SignalKind[])[i - 1]); break;
       case 4: an.flinch(); break;
       case 5: an.throwItem(); break;
-      case 6: an.reload(); break;
+      case 6: { const R = this.samRifle() ? WEAPONS.fn2000.reload : st.guard && st.carbine ? WEAPONS.aks74u.reload : null; if (R) an.reload(this.samRifle() ? R.dur : undefined, R); else an.reload(); break; }   // (a long gun: the weapon's own beat for the moves' support hand, as the game deals it)
       case 7: this.shoot(); break;
       case 8: an.strike(); break;
       case 9: if (st.hold.on) { st.hold.variant = st.hold.variant ? 0 : 1; if (st.hold.variant === 1 && st.hold.who === 0) st.slot = 1; this.msg(`hold: E → ${HOLD_VARIANTS[st.hold.variant]} (the layers hand the tools over, HOLD.secs.swap ${HOLD.secs.swap} s)`); } break;
       case 10: st.hold.on = !st.hold.on; st.hold.t = 0; if (st.hold.on) { st.hold.phase = 0; st.hold.chain = true; } this.msg(st.hold.on ? 'hold: taken again (the reach, then held)' : 'hold: let go (the layers ease out)'); break;
       case 11: st.doorHand.w = st.doorHand.w > 0.5 ? 0 : 1; this.msg(st.doorHand.w ? 'door hand: pushing (w 1)' : 'door hand: off the leaf (w 0, easing out)'); break;
+      case 12: an.signal('squeeze'); break;   // (the stack's 'set': appended, the three older signals keep 1‥3)
     }
   }
   /** Pose the figure at an exact instant of a one-shot for a still: pauses the character clock, pushes the state into the animator, runs out anything still
@@ -234,7 +239,7 @@ export class Runtime {
     this.armLong(false);
     for (let i = 0; i < 400 && (an.kicking || an.signalling || an.inThrow); i++) char.update(1 / 60);
     for (let i = 0; i < 48; i++) char.update(1 / 60);
-    if (shot) this.fireTac(shot === 'kick' ? 0 : shot === 'flinch' ? 4 : shot === 'throw' ? 5 : ['hold', 'go', 'rally'].indexOf(shot) + 1);
+    if (shot) this.fireTac(shot === 'kick' ? 0 : shot === 'flinch' ? 4 : shot === 'throw' ? 5 : shot === 'squeeze' ? 12 : ['hold', 'go', 'rally'].indexOf(shot) + 1);   // (squeeze sits at the END of TAC_SHOTS: indexOf's −1 used to make it the door kick)
     for (let i = 0, n = Math.max(0, Math.round(t * 120)); i < n; i++) char.update(1 / 120);
     return `${shot ?? 'settled'} @ ${t.toFixed(3)} s${an.kicking ? ` (kick t=${an.kickTime.toFixed(3)})` : ''}${an.inThrow ? ` (throw t=${an.throwTime.toFixed(3)}${an.throwTime >= THROW_RELEASE ? ', released' : ', can in hand'})` : ''} — viewer paused`;
   }
@@ -249,7 +254,7 @@ export class Runtime {
   armLong(busy: boolean) {
     const st = this.st, c = this.char, an = c.anim; const raw = !!an.rawClip;
     const guardLong = st.guard && st.carbine && !raw, samLong = this.samRifle() && !busy && c.alive;
-    an.longGun = guardLong || samLong; an.longStance = an.longGun && st.longStance ? LONG_STANCES[st.longStance - 1] : null;
+    an.longGun = guardLong || samLong; an.reloadBack = samLong && !GEAR.on; an.longStance = an.longGun && st.longStance ? LONG_STANCES[st.longStance - 1] : null;
     an.longSteady = st.longSteady === 1 ? 0 : st.longSteady === 2 ? 1 : samLong ? 1 : 0;   // steadied against the gait as the game has it (player.ts armRifle: Sam 1; the guards' riflemen 0), or forced either way for the A/B
     if (samLong) { an.longGrip = sc20kGrip(RIG); c.muzzleAhead = sc20kMuzzleAhead(RIG); }
     else if (guardLong) { an.longGrip = carbineGrip(RIG); c.muzzleAhead = carbineMuzzleAhead(RIG); }
@@ -267,7 +272,7 @@ export class Runtime {
     const char = this.char; const h = char.bones.handR ?? v3.add(char.pos, [0, 1.1, 0]); const f = char.forward();
     const it = this.stageItems.spawn(kind as ItemKind, [h[0], Math.max(0.3, h[1]), h[2]], [f[0] * 1.4 + (Math.random() - 0.5) * 0.5, 1.0, f[2] * 1.4 + (Math.random() - 0.5) * 0.5], { fill: suppressed ? 1 : 0, fuse: 1e9, life: 600 });
     if (kind === 'rifle') { it.tumbleRate *= 0.55; it.spin *= 0.5; }   // (as combat.ts dropFromHand: 0.7 m of it turns over, it does not flick round)
-    this.msg(`tossed: ${kind === 'rifle' ? (suppressed ? 'FN2000' : 'AKS-74U') : kind}${suppressed && kind === 'pistol' ? ' (suppressed)' : ''}`);
+    this.msg(`tossed: ${kind === 'rifle' ? (suppressed ? gearText('FN2000') : 'AKS-74U') : kind}${suppressed && kind === 'pistol' ? ' (suppressed)' : ''}`);
   }
   /** the floor mark 1.6 m ahead of the figure where the canisters go off */
   dropPoint(): Vec3 { const c = this.char, f = c.forward(); return [c.pos[0] + f[0] * 1.6, 0.05, c.pos[2] + f[2] * 1.6]; }
@@ -334,9 +339,9 @@ export class Runtime {
           if (Hs.auto) { Hs.t += cdt; if (ph !== 'held' && Hs.t > holdDur(ph)) { Hs.t = 0; if (ph === 'grab' && Hs.chain) Hs.phase = 1; } }   // (the one-shots loop; a chained grab runs on into the hold)
           if (Hs.shotT >= 0) { Hs.shotT += cdt; if (Hs.shotT > 1.5) Hs.shotT = -1; }
           c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.lookYawExtra = 0;
-          const live = ph === 'held' || Hs.t <= holdDur(ph) - (ph === 'whip' ? 0.5 : 0);   // past the whip's end the controller has let go: show the layer's own way out
-          c.anim.holdPose = Hs.who === 0 && live ? { phase: ph, t: Hs.t, variant, gunOut: Hs.gunOut, gunPitch: Hs.gunPitchDeg * DEG } : null;
-          c.anim.heldPose = Hs.who === 1 && live ? { phase: ph, t: Hs.t, agitation: Hs.agitation, variant, shot: Hs.shotT, armed: !st.guardTorch } : null;   // (armed: the guard kit's drawn pistol stays in the raised fist, as a man grabbed with it out keeps his)
+          const live = ph === 'held' || Hs.t <= holdDur(ph) - (ph === 'whip' ? 0.5 : ph === 'kill' ? 0.8 : 0);   // past the whip's / the kill's end the controller has let go: show the layer's own way out
+          c.anim.holdPose = Hs.who === 0 && live ? { phase: ph, t: Hs.t, variant, gunOut: Hs.gunOut, gunPitch: Hs.gunPitchDeg * DEG, kill: true, beats: true } : null;   // (kill / beats: takedown.ts's two hold halves shown — no Game here to switch them)
+          c.anim.heldPose = Hs.who === 1 && live ? { phase: ph, t: Hs.t, agitation: Hs.agitation, variant, shot: Hs.shotT, armed: !st.guardTorch, kill: true, beats: true } : null;   // (armed: the guard kit's drawn pistol stays in the raised fist, as a man grabbed with it out keeps his)
         } else { c.anim.holdPose = null; c.anim.heldPose = null; }
       }
       if (st.tacLoop && !st.paused) { this.tacT -= cdt; if (this.tacT <= 0) { this.tacT = st.tacEvery; this.fireTac(); } }
@@ -376,7 +381,14 @@ export class Runtime {
           : 0.55 + 0.25 * Math.sin(time * 1.3 + 2) + 0.1 * Math.sin(time * 3.1);                                                              // (the held man's torch wanders over the ceiling: player.ts holdTail)
       }
       c.anim.speed = speed;
-      const T = st.guard ? GUARD_TINT : PLAYER_TINT; c.tint = T.tint; c.tint2 = T.tint2;
+      let T = st.guard ? GUARD_TINT : PLAYER_TINT; this.wornSide = st.guard ? 'defender' : 'operator';
+      if (this.ch.cast) {   // THE CAST: what he wears — `wear` (a variant by name: __vrt.wear = 'defender_2') or, unset, the first defender as the guard kit / the first operator as Sam; + that kit's own proxy fit
+        const cast = this.ch.cast; const named = cast.variants.find(x => x.name === this.wear); const v = named ?? castSide(cast, st.guard ? 'defender' : 'operator')[0];
+        if (named) { this.wornSide = named.side; T = WEAR_TINT[named.side]; }   // an outfit put on BY NAME: its own side's table and tints, whatever the scene (unnamed, the scene's kit keeps the scene's side, as the game dresses a man by his team)
+        const mask = castGoggles(cast, v.mask, !st.guard && st.showProps && st.goggles);   // (the rig's box goggles drawn on him: no mesh pair as well — the game's rule, game/cast.ts)
+        if (c.parts !== mask) { c.parts = mask; try { this.rigFits.set(c.id & 0xff, fitRig(this.ch, mask)); } catch { this.rigFits.delete(c.id & 0xff); } }   // (solved when what he wears changes; a fit that throws leaves him the shared one)
+      }
+      c.tint = T.tint; c.tint2 = T.tint2;
       this.armLong(c.anim.hideHeldItem);   // rifles: the carbine in the guard kit's hands or the FN2000 in Sam's — the animator's long-gun solve, its support-hand grip point off RIG (live: the rows / gizmo move the hand), the muzzle out where the prop's is (game.ts / player.ts do the same per frame; last frame's hideHeldItem, as player.ts reads it)
       { // a hand on the door leaf (game.ts handsOnDoors feeds exactly this): the palm's spot on the marker leaf's face in front of that shoulder at chest height, the face's normal back at him
         const D = st.doorHand;
@@ -446,8 +458,12 @@ export class Runtime {
       for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; dyn.push(f.box); f.ttl -= dt; if (f.ttl <= 0) this.fx.splice(i, 1); }
       engine.world.dynamics = dyn;
       // ---- skin instance + capsule shadow proxies (Game.update's per-character block)
-      this.chars.setInstance(0, c.skel.jointData, c.tint, c.tint2, c.id); this.chars.finish(1);
-      engine.world.resetCapsules(); { const { caps, bound } = c.capsules(); engine.world.addCharacterCapsules(c.id, v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3), caps, bound); }
+      const mats = engine.settings.charMats;   // CHARACTER MATERIALS (render/charMaterials.ts): the staged figure in his side's table — the side of the outfit he wears (the guard scenes' default the defenders', the rest the operators')
+      const side = this.wornSide;   // (the outfit's own side: a defender's or a civilian's clothes tried on in Sam's scene shade from THEIR table)
+      if (mats) writeCharPalette(this.matPal, 0, side, c.tint, c.tint2, c.id, !charSlots(this.ch).authored);
+      const po = c.parts ? placeholderTints(side) : TINTS_AS_IS;   // (game.ts: the placeholder's two colours, by the side's table)
+      this.chars.setInstance(0, c.skel.jointData, po & 1 ? c.tint2 : c.tint, po & 2 ? c.tint2 : c.tint, c.id, undefined, c.parts); this.chars.setMaterials(0, mats ? (f, o) => f.set(this.matPal, o) : undefined); this.chars.finish(1);
+      engine.world.resetCapsules(); { const { caps, bound } = c.capsules(); engine.world.addCharacterCapsules(c.id, mats ? proxyAlbedos(charSlots(this.ch), this.matPal, 0, 1, (engine.settings.rtMeshHits && engine.meshShadowsOn) || engine.settings.sdfRigSmooth, (c as typeof c & { parts?: number }).parts ?? 0) : v3.lerp(c.tint, [0.5, 0.5, 0.5], 0.3), caps, bound); }
 
       // ---- the camera's tracked focus + the studio round it
       if (st.track === 1) this.focus = v3.add(c.pos, [0, 1, 0]);
@@ -494,7 +510,7 @@ export class Runtime {
     const r = char.anim.rawClip;
     const animLine = r ? `raw clip ${r.clip.name} (${r.clip.duration.toFixed(2)} s) t=${(((r.time % r.clip.duration) + r.clip.duration) % r.clip.duration).toFixed(2)}` : `graph: ${st.speed.toFixed(2)} m/s${st.crouch ? ' crouched' : ''}${st.reverse ? ' backpedal' : ''}${st.path ? ` (${['', 'circle', 'back & forth', 'turn on spot'][st.path]})` : ''}${st.deliberate > 0 ? ` · deliberate ${st.deliberate.toFixed(2)}` : ''} · upper ${char.anim.upper} · phase ${char.anim.phase.toFixed(2)}`;
     lines.push(`${animLine} · stance ${STANCES[st.stance]}${st.lockpick ? ' · lockpick' : ''}${st.hold.on ? ` · ${st.hold.who ? 'held' : 'hold'} ${HOLD_VARIANTS[st.hold.variant]} ${HOLD_PHASES[st.hold.phase]}` : ''}${this.kickFlashT > 0 ? ' · ▮▮ KICK IMPACT ▮▮' : ''}${this.relFlashT > 0 ? ' · ▮▮ THROW RELEASE ▮▮' : char.anim.inThrow ? ` · throw ${char.anim.throwTime.toFixed(2)}s` : ''} · aim pitch ${st.aimPitchDeg}° · body yaw ${Math.round(wrapAngle(char.bodyYaw) / DEG)}°${st.allOff ? ' · ALL TWEAKS OFF' : ''}${st.paused ? ' · PAUSED' : ''}`);
-    lines.push(`kit: ${st.guard ? `guard, ${st.carbine ? `carbine (${char.anim.longShown ?? '—'})` : st.guardTorch ? 'torch' : 'pistol drawn'}` : `player, ${st.rifle === 2 ? `FN2000 in the hands (${char.anim.longShown ?? '—'})` : (['holstered', 'slot 1', 'slot 2 (can)'][st.slot] ?? `slot ${st.slot}`) + (st.rifle === 1 ? ' + FN2000 slung' : '')}, goggles ${st.goggles ? (st.nv ? 'down (NV on)' : 'up') : 'off'}`} · light ${st.lightOn ? 'on' : 'off'} · props ${this.dyn.length} boxes · lights ${engine.lights.activeCount} · cam yaw ${Math.round(wrapAngle(cam.yaw) / DEG)}° pitch ${Math.round(cam.pitch / DEG)}° dist ${cam.distance.toFixed(2)} m · view ${S.debugView} · exp ${S.exposure.toFixed(2)}`);
+    lines.push(`kit: ${st.guard ? `guard, ${st.carbine ? `carbine (${char.anim.longShown ?? '—'})` : st.guardTorch ? 'torch' : 'pistol drawn'}` : `player, ${st.rifle === 2 ? `${gearText('FN2000')} in the hands (${char.anim.longShown ?? '—'})` : (['holstered', 'slot 1', 'slot 2 (can)'][st.slot] ?? `slot ${st.slot}`) + (st.rifle === 1 ? ` + ${gearText('FN2000')} slung` : '')}, goggles ${st.goggles ? (st.nv ? 'down (NV on)' : 'up') : 'off'}`} · light ${st.lightOn ? 'on' : 'off'} · props ${this.dyn.length} boxes · lights ${engine.lights.activeCount} · cam yaw ${Math.round(wrapAngle(cam.yaw) / DEG)}° pitch ${Math.round(cam.pitch / DEG)}° dist ${cam.distance.toFixed(2)} m · view ${S.debugView} · exp ${S.exposure.toFixed(2)}`);
     return lines;
   }
 }

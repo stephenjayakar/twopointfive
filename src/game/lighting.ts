@@ -2,11 +2,70 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import { Vec3, v3 } from '../math/vec';
+import { leverHands } from './handwork';
 import { missionLive } from './mission';
 import { chronBlackout, chronOcp, fixtureName } from './chronicle';
 import type { Game, Guard, LightTarget } from './game';
 import { lightFromDef } from '../render/lights';
 import type { RtLight } from '../render/lights';
+import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
+import { isHostile } from './teams';
+import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+
+/** A WEAPON LIGHT STOPS AT A WALL. A man's light is a light AT ITS LENS — on the carbine's handguard, under the pistol's rail, at the hand torch's glass — and a man
+ *  pressed to a wall (stacked on a door, crossing its frame, backed into a corner) has the reach to carry that lens into the wall or out through its far face: a
+ *  shadow ray stops a few centimetres short of the emitter it is cast at, so a light that close to the far face lit the room beyond, and to the CPU's light
+ *  estimate the men in it. Rounds have their own rule for the pressed muzzle (combat.ts armThrough); this is the light's, and it asks more: any leaf and an
+ *  intact pane stop the LENS too (the light then shines through the pane from this side, as light does).
+ *  `gap` = how far short of the surface the EDGE of the emitter (lens + its radius) is kept, metres. Off = the light at its lens wherever that is, as it was —
+ *  the table's own value, so a host that never says otherwise is unchanged. The page turns it on (src/host/profile.ts pageSwitches; ?nolightwall = off) and so
+ *  does the harness's shipped stand; its frozen stand holds it off (src/host/standup.ts; TPS_LIGHTWALL=1 turns it on there). */
+export const LIGHTWALL = { on: false, gap: 0.03 };
+/** QA: how many wall tests the rule made, how many pulled a light back, and the furthest one was pulled (m) — tools/qa/lightwall-watch.ts reads it; nothing in the game does */
+export const LENS_STATS = { asked: 0, pulled: 0, maxBack: 0 };
+const LENS_FROM = new WeakMap<RtLight, Vec3>();   // a carried light → what its lens hung off when it was last placed (lensRecheck asks again from there)
+const LENS_SLANT = 0.3;   // the least |cos| between the line and the surface's normal the pull-back divides by (a grazing line is not chased back to the shoulder)
+/** Where a carried light is, given where its lens is drawn: `lens` itself unless a wall or a door leaf stands between `from` (the gun shoulder; a dropped
+ *  torch's own body) and the emitter — then pulled back along that line until the whole emitter (`radius`) is `gap` short of the surface, never behind `from`.
+ *  One collision ray over the statics and the leaves (collision.ts raycast; loose furniture is not asked, as for rounds), cast far enough past the lens that
+ *  the pull-back begins at nothing and grows as he closes on a slanted wall — it never jumps. The beam's direction is the caller's and is left alone.
+ *  `light`: remembered with its `from` for lensRecheck. */
+export function lensClear(g: Game, from: Vec3, lens: Vec3, radius: number, light?: RtLight): Vec3 {
+  if (!LIGHTWALL.on) return lens;
+  if (light) LENS_FROM.set(light, from);
+  const d = v3.sub(lens, from); const L = v3.len(d); if (L < 1e-3) return lens;
+  const rd = v3.scale(d, 1 / L), keep = Math.max(0, radius) + LIGHTWALL.gap;
+  LENS_STATS.asked++;
+  const h = g.col.raycast(from, rd, L + keep / LENS_SLANT); if (!h) return lens;
+  const t = h.t - keep / Math.max(LENS_SLANT, Math.abs(v3.dot(rd, h.n)));   // (the emitter's edge `gap` off the surface along its normal)
+  if (t >= L - 1e-6) return lens;
+  LENS_STATS.pulled++; LENS_STATS.maxBack = Math.max(LENS_STATS.maxBack, L - Math.max(0, t));
+  return v3.mad(from, rd, Math.max(0, t));
+}
+/** …and once more after the doors have moved (game.ts, right after updateDoors): the men were placed against last frame's leaves, and a leaf that swung onto
+ *  the line this frame would have the light beyond it for that frame. Only burning carried lights, from where each was placed; nothing with the rule off. */
+export function lensRecheck(g: Game): void {
+  if (!LIGHTWALL.on) return;
+  const one = (L: RtLight) => { const from = LENS_FROM.get(L); if (from && L.enabled) L.pos = lensClear(g, from, L.pos, L.radius); };
+  for (const gd of g.guards) one(gd.flashlight);
+  one(g.player.light);
+}
+
+/** words.ts: the mains are the business of the side whose building it is — one of Sam's own teammates neither walks off to the breaker Sam threw nor puts it back in and
+ *  says so on the net (the switch off: any living man, as it was) */
+const theirMains = (gd: Guard) => !WORDS.on || isHostile(gd.team, 'player');
+/** THE re-arm's gate for one man: the mains out by a trip he can undo, a few seconds old, and he — alive, not in Sam's arm (a man walked past the panel in
+ *  it resets nothing — review finding) — within its reach of the panel's front. Read by the reset below and by handwork.ts (his step up to the lever). */
+export function breakerResetNear(g: Game, gd: Guard): boolean {
+  const bo = g.blackout, bp = g.level.breaker.pos;
+  if (!(bo.active && !bo.permanent && g.time - bo.since > 3 && gd.state !== 'dead' && !gd.held)) return false;
+  const E = breakerErrand(g), p = gd.char.pos;   // (workthings.ts: the reach in front of the panel's own face, and nothing solid between him and it — the fixed offset below reached through the wall a panel hangs on wherever it does not face the way the office's does)
+  // (within a stride of the errand's own spot counts too: a walk ends on a nav cell's centre, which can be a step short of it)
+  if (E) return (Math.hypot(p[0] - E.mid[0], p[2] - E.mid[2]) < 1.3 || Math.hypot(p[0] - E.goal[0], p[2] - E.goal[2]) < 0.7) && !g.col.solidBlocked([p[0], 1.0, p[2]], E.at);
+  return Math.hypot(gd.char.pos[0] - bp[0], gd.char.pos[2] - (bp[2] - 0.6)) < 1.3;
+}
 
 export function updateTargets(g: Game, dt: number) {
   const time = g.time;
@@ -14,9 +73,10 @@ export function updateTargets(g: Game, dt: number) {
   if (bo.active && !bo.permanent && time >= bo.until) g.endBlackout();   // (the OCP's timed trip running out; a hand-thrown breaker is given a day — below — so in practice only a guard's reset or Sam's own re-arm ends it)
   // a guard who reaches the (intact) panel resets it after fumbling for a moment
   if (bo.active && !bo.permanent && time - bo.since > 3) {
-    const bp = g.level.breaker.pos; let near: Guard | null = null;
-    for (const gd of g.guards) if (gd.state !== 'dead' && !gd.held && Math.hypot(gd.char.pos[0] - bp[0], gd.char.pos[2] - (bp[2] - 0.6)) < 1.3) near = gd;   // (a man in Sam's arm walked past the panel resets nothing — review finding)
+    let near: Guard | null = null;
+    for (const gd of g.guards) if (breakerResetNear(g, gd) && theirMains(gd) && !workNotHis(gd)) near = gd;   // (words.ts: the mains are their side's business; workthings.ts: not a teammate sent to the breaker — both gates at the loop, not inside breakerResetNear, which handwork.ts reads too)
     g.breakerFixT = near ? g.breakerFixT + dt : 0;
+    if (near) leverHands(g, near.char, g.breakerFixT, 2.2);   // (handwork.ts: his hand on the lever while he fumbles with it)
     if (g.breakerFixT > 2.2 && near) { g.say(near, "breaker's back in", true); g.endBlackout(); }
   }
   // emergency beacons: spin up ~0.8 s after the trip, keep turning for a second after power returns; each is slaved to its dome fixture
@@ -57,11 +117,11 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   let best: Guard | null = null, bd = 1e9;
   for (const gd of g.guards) {
     if (gd.state === 'dead') continue;
-    if (gd.state === 'patrol') { gd.awareness = Math.max(gd.awareness, 0.34); gd.reactT = 1.0 + Math.random(); }
-    const d = v3.dist(gd.char.pos, g.level.breaker.pos); if (d < bd && gd.state !== 'alert' && !gd.held) { bd = d; best = gd; }   // (nor is the errand handed to the man Sam is holding)
+    if (gd.state === 'patrol') { gd.awareness = Math.max(gd.awareness, 0.34); gd.reactT = 1.0 + simRandom(); }
+    const d = v3.dist(gd.char.pos, g.level.breaker.pos); if (d < bd && gd.state !== 'alert' && !gd.held && theirMains(gd) && !workNotHis(gd) && !workStaysPut(g, gd)) { bd = d; best = gd; }   // (nor is the errand handed to the man Sam is holding, nor — workthings.ts — to one who cannot leave his post: he would say he was going and stand there)
   }
   if (best && !best.task) {
-    const goal: Vec3 = [g.level.breaker.pos[0] - 0.4, 0, g.level.breaker.pos[2] - 0.9];
+    const E = breakerErrand(g), goal: Vec3 = E ? v3.copy(E.goal) : [g.level.breaker.pos[0] - 0.4, 0, g.level.breaker.pos[2] - 0.9];   // (workthings.ts: floor at the panel's own face where the fixed spot is in a wall or behind one)
     best.task = { kind: 'breaker', pos: goal }; best.lastKnown = v3.copy(goal); best.awareness = Math.max(best.awareness, 0.42);
     if (best.state === 'patrol') { best.state = 'suspicious'; best.reactT = 1.2; best.searchT = 0; }
     g.say(best, "power's out — checking the breaker", true); g.audio.play('radio', best.char.pos, 0.6);
@@ -122,11 +182,10 @@ export function setGroup(g: Game, group: string, on: boolean) { for (const t of 
 // ------------------------------------------------------------ daylight (the breach showcase's variant: level.ts DaylightDef)
 /** What setDaylight(true) found and must put back: every target's switch, the level lights it disabled, the sky, the haze, a PERMANENT blackout it lifted for the
  *  show (the breaker SHOT is mains gone for good, not until ten in the morning: review A6.8 — a timed trip it lifted stays lifted) — and the sun it added. */
-interface DayState { targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
+interface DayState { hour: HourId; hourSunK: number; hourSunGiven: boolean; targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
 const dayStates = new WeakMap<Game, DayState>();
 /** Is the daytime variant in (setDaylight)? */
 export function isDaylight(g: Game): boolean { return dayStates.has(g); }
-export function sunOf(g: Game): RtLight | null { return dayStates.get(g)?.sun ?? null; }   // (the wind lane's moths ask which lamp heads are lit at night; the tools lane had removed it as unused the same night)
 /** Swap the level's daytime variant in (on) or back out (off): level.daylight — a directional sun added to the light set, the sky lifted, the listed fixture groups
  *  lit and the street lighting / moon out, the haze raised, the exposure opened up; the mains restored first if they were down (a blackout at ten in the morning
  *  is another show). Off restores exactly what On recorded — every switch as it stood (not as authored: a fixture the player shot stays shot, one he switched off
@@ -137,9 +196,10 @@ export function setDaylight(g: Game, on: boolean) {
   const cur = dayStates.get(g);
   if (on) {
     if (cur || !D) return;
+    const hour = hourOf(g), hourSunK = sunStrength(g), hourSunGiven = sunGiven(g); if (hour !== 'night') applyHour(g, 'night');   // a level started at another hour (hours.ts): the show's day is laid over the level's own night, and that hour comes back with it below
     const bo = g.blackout; const blackout = bo.active && bo.permanent ? { active: true, permanent: true, until: bo.until, since: bo.since } : null;   // (recorded BEFORE it is lifted, and only the PERMANENT one — the breaker shot to scrap: nothing the show does can mend that, so Off puts it back; a timed trip lifted here is simply over, as if the man sent to the panel had got there — tools/qa breach-daylight holds that half)
     if (bo.active) { g.endBlackout(); bo.restoredAt = -100; for (const t of g.targets) t.disabledUntil = -1; }   // (an INSTANT restore for the show: no staggered restrike, no beacons sweeping the 'every fluorescent on' establishing shot — review 08-10 #8)
-    const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout };
+    const st: DayState = { targets: new Map(), lightsOff: [], sky: { zenith: v3.copy(S.skyZenith), horizon: v3.copy(S.skyHorizon) }, haze: S.hazeDensity, exposure: S.exposure, sun: L.add(lightFromDef(D.sun)), blackout, hour, hourSunK, hourSunGiven };
     g.buildDirReach(st.sun);   // the sun's directional reach mask (which indoor cells see the sky its way): the ReSTIR estimator's candidate domain
     for (const t of g.targets) st.targets.set(t, t.on);
     for (const grp of D.groupsOn) setGroup(g, grp, true);
@@ -157,6 +217,7 @@ export function setDaylight(g: Game, on: boolean) {
     const B = cur.blackout;
     if (B && !g.blackout.active) { const bo = g.blackout; bo.active = true; bo.permanent = true; bo.until = B.until; bo.since = B.since; g.breakerFixT = 0; }   // a destroyed breaker is still destroyed: the blackout back quietly (no second power-down thump, no man sent again — the round that did that already happened); a restart straight after (the breach's restore, a checkpoint load) mends it as a restart always did
     dayStates.delete(g);
+    if (cur.hour !== 'night') { applyHour(g, cur.hour); setSunStrength(g, cur.hourSunK, cur.hourSunGiven); }
     g.engine.invalidateWorldCache?.();   // (as above, the other way: no grid — live or parked — carries the day's field into the night)
   }
 }

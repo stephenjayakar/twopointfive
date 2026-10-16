@@ -41,7 +41,7 @@ export class FollowCamera {
     return this.pin;
   }
   update(dt: number, follow: Vec3, aimPoint: Vec3 | null) {
-    m4.copy(this.prevViewProj, this.viewProj);   // once per frame (rebuild() may run again later in the frame)
+    m4.copy(this.prevViewProj, this.kickDrawn ?? this.viewProj); this.kickDrawn = null;   // once per frame (rebuild() may run again later in the frame); a kicked frame's 'previous' is the matrix that frame was DRAWN with
     if (this.pin) { const P = this.pin; this.desired = v3.copy(P.look); this.target = v3.copy(P.look); this.yaw = P.yaw; this.pitch = P.pitch; this.distance = this.desiredDistance = P.dist; this.rebuild(); return; }
     let d: Vec3 = v3.copy(follow);
     if (aimPoint) d = v3.lerp(follow, aimPoint, this.aimLead);
@@ -51,6 +51,17 @@ export class FollowCamera {
     this.distance = damp(this.distance, this.desiredDistance, 6, dt);
     this.rebuild();
   }
+
+  /** A PICTURE-ONLY KICK (game/blastFeel.ts writes it once a frame; null = none): metres added to the look-at for the frame's render and nothing else. The loop
+   *  (host/loop.ts) calls kickIn() right before the render and kickOut() after the HUD has drawn against the same picture, so whatever reads the camera inside
+   *  Game.update — the aim ray, WASD's basis, the on-screen tests, the session journal — reads it as it was without the kick, to the bit (rebuild() from the same
+   *  look-at, angles and distance gives the same matrices). */
+  kick: Vec3 | null = null;
+  private kickHeld: Vec3 | null = null; private kickDrawn: Float32Array | null = null; private kickVP = m4.create();
+  /** the look-at WITHOUT the kick, whenever asked — what the renderer hands on to things that feed back into play (engine.viewFocus → the wind, the smoke solver's schedule) */
+  get focus(): Vec3 { return this.kickHeld ?? this.target; }
+  kickIn() { const k = this.kick; if (!k || this.kickHeld) return; this.kickHeld = this.target; this.target = v3.add(this.target, k); this.rebuild(); }
+  kickOut() { const t = this.kickHeld; if (!t) return; m4.copy(this.kickVP, this.viewProj); this.kickDrawn = this.kickVP; this.kickHeld = null; this.target = t; this.rebuild(); }
 
   rebuild() {
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch), cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);

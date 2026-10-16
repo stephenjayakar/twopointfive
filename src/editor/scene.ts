@@ -55,7 +55,8 @@ export class Scene {
     if (!this.geoDirty && !this.lightDirty) { this.setDynamics(); return; }
     const t0 = typeof performance !== 'undefined' ? performance.now() : Date.now();
     let level: Level;
-    try { level = loadLevel(this.ed.data, { validate: false }); this.error = null; }
+    // (the editor shows the WHOLE document — the 'dressing' group and the lived-in rooms' furniture too, whatever their switches: data.boxes[i] ≡ level.boxes[i] is what a click resolves by)
+    try { level = loadLevel(this.ed.data, { validate: false, dressing: true, lived: true }); this.error = null; }
     catch (e) { this.error = String((e as Error).message ?? e); this.setDynamics(); return; }   // keep the last good scene up
     this.level = level;
     this.buildGeometry(level);   // (both, always: the lights write emissive / AreaLit onto the level's boxes, which must be the ones the world holds — ~4 ms for the office)

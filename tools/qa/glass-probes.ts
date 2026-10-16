@@ -13,6 +13,8 @@ const G = await import(`${ROOT}/src/game/glass.ts`);
 const { GLASS, glassState, glassPanes, isPane, glassHit, hitSeed, crackCount } = G;
 const { fireWeapon, armThrough } = await import(`${ROOT}/src/game/combat.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
+const { GLASSPEN } = await import(`${ROOT}/src/game/glasspen.ts`);
+const { GUNWALL } = await import(`${ROOT}/src/game/gunwall.ts`);
 const { fake } = await import('./headless.ts');
 
 type Vec3 = [number, number, number];
@@ -31,9 +33,19 @@ function placeGuard(gd: any, p: Vec3, face: Vec3, hold = true) {
   gd.state = 'patrol'; gd.awareness = 0; gd.lastKnown = null; gd.reactT = 0; gd.searchT = 0; gd.task = null; gd.bodyDuty = null; gd.path = []; gd.pathGoal = null; gd.hold = hold; gd.pinned = false; gd.dazzledUntil = -1; gd.heardUpTo = 0;
   gd.char.update(0); gd.char.update(DT);
 }
+/** The glass parts the probe in hand holds OFF for itself, put down after EVERY stand-up in floor() (a pin made before one is the stand-up's to undo); null = whatever the stand has.
+ *  'pen' = rounds stop in glass (glasspen.ts GLASSPEN.on off: the page under ?glasspen=0); 'base' = that and the pane a starred wall that never comes apart
+ *  (tune.glassBreak and tune.glassShards off too). They are the three things the frozen stand-up puts off (src/host/standup.ts), so a plain frozen run is the same
+ *  with or without the hold; a frozen run that raises the parts (GLASSFX=on, GLASSPARTS=on, GLASSPEN=on) has them put off again here, like the shipped stand. */
+let PARTS_OFF: 'pen' | 'base' | null = null;
+async function held<T>(what: 'pen' | 'base', fn: () => Promise<T>): Promise<T> {
+  const pen = GLASSPEN.on, gw = GUNWALL.on, was = PARTS_OFF; PARTS_OFF = what;
+  try { return await fn(); } finally { PARTS_OFF = was; GLASSPEN.on = pen; GUNWALL.on = gw; }   // (tune.* is the Game's own: it goes with the Game. GUNWALL: glass-shot's last line puts it off)
+}
 async function floor(seed: number, sam: Vec3) {
   Math.random = seeded(seed);
   const W = await standUp(); const { game } = W;
+  if (PARTS_OFF) { GLASSPEN.on = false; if (PARTS_OFF === 'base') { game.tune.glassBreak = false; game.tune.glassShards = false; } }
   game.godMode = true; game.aiEnabled = true; game.playerInvisible = false; game.infiniteAmmo = true;
   game.teleportPlayer(v3.copy(sam)); game.player.visibility = 0; game.player.crouch = false;
   for (let i = 0; i < 10; i++) W.step(DT);
@@ -139,8 +151,13 @@ export async function glassSound(): Promise<boolean> {
 }
 
 // ================================================================ (d) a round: it stops in the pane and stars it — every time; the floor hears it; the restart wipes the stars
-export async function glassShot(): Promise<boolean> {
+/** glass-shot is the BASE rule — a pane is a starred wall: every round stops in it, N rounds leave N stars, it never comes apart — so it is asked with the glass
+ *  parts off on EVERY stand (the frozen one has them off; on the shipped one that is the page under ?glassfx=0). What rounds and panes do with the parts on is
+ *  glasspen-*'s, glassbreak-*'s and glasstune-*'s. */
+export async function glassShot(): Promise<boolean> { return held('base', glassShotHeld); }
+async function glassShotHeld(): Promise<boolean> {
   console.log('\n=== glass-shot: Sam in the corridor fires north at the conference glass — every round STOPS in the pane and stars it (a glassHit decal seeded off the hit, the crack heard, a \'glass\' event), the pane holds; a man 20 m off hears it; N rounds → N stars; restart wipes them ===');
+  console.log('  (the BASE rule, asked with the glass parts OFF on every stand — rounds through glass, the fracture model and the shards put off after the stand-up; with them on, a round goes through and the pane comes apart: glasspen-*, glassbreak-*, glasstune-*)');
   const { verdict, all } = mkVerdict();
   const W = await floor(917, [7.5, 0, 11.4]); const { game, audioCounts } = W;
   parkFrom(game, 1); const gd = game.guards[0];
@@ -169,11 +186,19 @@ export async function glassShot(): Promise<boolean> {
   const ev1 = game.events.length; fireWeapon(game, pc, target, true);
   const shot2 = game.events.slice(ev1).find((e: any) => e.kind === 'shot'); const glass2 = game.events.slice(ev1).find((e: any) => e.kind === 'glass');
   verdict(!!shot2 && Math.abs(shot2.to[2] - 10) < 0.05 && !!glass2 && cracks().length === dec0 + 2, 'round 2 on the same line: stopped in the pane again (z 10), a second \'glass\' event, a second star (2 rounds → 2 decals)', `stopped at (${shot2 ? shot2.to.map(f2) : '?'}) · stars ${cracks().length}`);
-  // a burst: N more rounds → N more decals, all on conference panes, distinct seeds unless two rounds share a millimetre
-  const before = cracks().length; const N = 5;
-  for (let k = 0; k < N; k++) { for (let i = 0; i < 14; i++) W.step(DT); fireWeapon(game, pc, [6.9 + 0.35 * k, 1.1 + 0.12 * k, 5.0], true); }
+  // a burst: N more rounds → N more decals, all on conference panes, distinct seeds unless two rounds share a millimetre.
+  // (Each round is aimed THROUGH a point on the pane round 1 met — five across its middle, 12 cm apart, climbing — from wherever the muzzle is: a fan aimed at fixed
+  //  points past the glass crossed the partition where the stand's carriage of the gun put it, 2 cm from the frame post on the frozen stand and INTO the post on the
+  //  shipped one, where that round rightly left no star.)
+  const before = cracks().length; const N = 5; const fb = game.level.boxes[paneHit ?? panes[1]]; const stops: Vec3[] = [];
+  for (let k = 0; k < N; k++) {
+    for (let i = 0; i < 14; i++) W.step(DT);
+    const mz = pc.muzzle, on: Vec3 = [fb.c[0] + (k - 2) * 0.12, 1.1 + 0.12 * k, fb.c[2]]; const e0 = game.events.length;
+    fireWeapon(game, pc, [mz[0] + (on[0] - mz[0]) * 4, mz[1] + (on[1] - mz[1]) * 4, mz[2] + (on[2] - mz[2]) * 4], true);
+    const sh = game.events.slice(e0).find((e: any) => e.kind === 'shot'); if (sh) stops.push(v3.copy(sh.to));
+  }
   const cs = cracks(); const fresh = cs.slice(before);
-  verdict(cs.length === before + N && fresh.every((d: any) => panes.includes(d.pane)) && new Set(fresh.map((d: any) => d.seed)).size >= N - 1, `${N} rounds fanned across the west run → ${N} more stars, each on a conference pane, their seeds distinct`, `stars ${before} → ${cs.length} · panes [${fresh.map((d: any) => d.pane).join(', ')}] · seeds [${fresh.map((d: any) => d.seed).join(', ')}]`);
+  verdict(cs.length === before + N && fresh.every((d: any) => panes.includes(d.pane)) && new Set(fresh.map((d: any) => d.seed)).size >= N - 1, `${N} rounds fanned across the west run → ${N} more stars, each on a conference pane, their seeds distinct`, `stars ${before} → ${cs.length} · panes [${fresh.map((d: any) => d.pane).join(', ')}] · seeds [${fresh.map((d: any) => d.seed).join(', ')}] · stopped ${stops.map((p) => `(${f2(p[0])}, ${f2(p[1])}, ${f2(p[2])})`).join(' ')}`);
   // a guard's round stars glass too: put the man square to the east run and have him fire at the far wall through it
   placeGuard(gd, [11.0, 0, 11.3], [11.0, 0, 5]); for (let i = 0; i < 3; i++) W.step(DT);
   const g0 = cracks().length, evg = game.events.length;
@@ -187,6 +212,9 @@ export async function glassShot(): Promise<boolean> {
   const pr = game.col.sound.propagate([7.5, 1, 8.5], [7.5, 1.5, 11.4]);
   verdict(!pr.direct, 'and sound across the partition is walled off as ever', `direct ${pr.direct} · pathLen ${f2(pr.pathLen)} · carry ${f2(pr.carry)}`);
   // pressed right up to the glazing (the muzzle already through the sheet: armThrough's panel rule would swallow the round — the pane between shoulder and muzzle takes it instead)
+  // The gun-at-a-wall rule (src/game/gunwall.ts: on on the shipped stand) brings a gun pressed to the sheet down on his own side of it and lets no round off while it is
+  // down, so the muzzle-through premise is staged with that rule OFF — the page under ?nogunwall, as lightwall-probes.ts and wallbreak-probes.ts stage theirs. held() puts it back.
+  GUNWALL.on = false;
   game.teleportPlayer([7.5, 0, 10.62]); game.player.holstered = false; game.player.slot = 'pistol'; game.player.char.bodyYaw = game.player.char.aimYaw = Math.PI;   // facing north, square at the pane
   W.cursorAt([7.5, 1.3, 5.0]); for (let i = 0; i < 30; i++) { game.player.char.bodyYaw = game.player.char.aimYaw = Math.PI; W.step(DT); }
   const pcz = game.player.char.pos[2]; const p0 = cracks().length;
@@ -285,8 +313,14 @@ function armAlert(gd: any, game: any, fix: Vec3, resetChase: (gd: any) => void) 
 }
 /** the pane is the ONLY thing between a and b: the sight line passes (segmentBlocked false), the shot line does not (shotBlocked true) */
 function glassOnly(game: any, a: Vec3, b: Vec3): boolean { return !game.col.segmentBlocked(a, b) && game.col.shotBlocked(a, b); }
-export async function glassLines(): Promise<boolean> {
+/** These lines are the rule for a pane that STOPS a round (a sight line through glass is no shot line), so they are asked with rounds stopping in glass on EVERY stand:
+ *  the frozen stand has that already; on the shipped one — where a defender's round passes a pane and he fires through it from where he stands, which is
+ *  glasspen-probes.ts's to hold (glasspen-ai: this very staging, the row on and off) — it is the page under ?glasspen=0. Without the hold line (1) is red there
+ *  for no fault: the man is doing what the shipped rule says. */
+export async function glassLines(): Promise<boolean> { return held('pen', glassLinesHeld); }
+async function glassLinesHeld(): Promise<boolean> {
   console.log('\n=== glass-lines: an alert man whose only line on a lit Sam runs through the conference glass does not plant on it and shoot the pane — he goes round for a real line; beside the pane, through the doorway, he plants and fires as ever; and the lone man never takes a corner that only SEES the fix through glass ===');
+  console.log('  (asked with rounds STOPPING in glass on every stand — GLASSPEN.on put off after each stand-up; what a man does where his round PASSES a pane is glasspen-ai\'s)');
   const { verdict, all } = mkVerdict();
   const { resetChase, clearShot, shotOrigin } = await import(`${ROOT}/src/game/guards.ts`);
   const { loneRecord } = await import(`${ROOT}/src/game/tactics.ts`);

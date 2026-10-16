@@ -3,7 +3,7 @@
 // gaitlab.html (written here) → the workbench's Characters ▸ Sam ▸ walk.
 import { $ } from "bun";
 await $`rm -rf dist`;
-const res = await Bun.build({ entrypoints: ["./index.html", "./workbench.html", "./viewer.html", "./editor.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" } });
+const res = await Bun.build({ entrypoints: ["./index.html", "./workbench.html", "./viewer.html", "./editor.html", "./replay.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" } });
 if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1); }
 await $`cp -R public/. dist/`;
 await Bun.write("dist/gaitlab.html", `<!doctype html><meta charset="utf-8"><title>twopointsix — gait lab → workbench</title>

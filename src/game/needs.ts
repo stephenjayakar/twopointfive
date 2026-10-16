@@ -1,4 +1,4 @@
-// Needs-driven patrol variation, TELEGRAPHED (STATUS E12 (c) — the designer: "i actually really like the needs driven patrol variation, especially if it's
+// Needs-driven patrol variation, TELEGRAPHED (STATUS E12 (c) — the maintainer: "i actually really like the needs driven patrol variation, especially if it's
 // telegraphed like fear!"). Every man on the night staff carries two or three slow needs — a coffee at the break-room counter, a smoke outside the fire exit,
 // water at the cooler, a stretch round the lobby — dealt him for the night off his callsign (which needs, how fast each fills, how far along it starts: the
 // same man every run, so a probe and a player see the same Kowalski). A need's level rises only while he is CALM on his route and stands still under everything
@@ -22,6 +22,9 @@ import { goTo, followPath, escalationOf, notGettingAnywhere } from './guards';
 import { hashStr, NEEDS_LINES } from './dialogue';
 import { isDaylight } from './lighting';
 import { chronicle } from './chronicle';
+import { hearPath } from './weather';
+import { dozeAsleep } from './doze';
+import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
 
 // ================================================================ the kinds and their places (TODO(LevelData): NEED_SPOTS belongs in the level file beside routes / chokepoints — like qrf.ts
 // QRF_MARKS it is checked headlessly against levels/office.json: free nav cells, reachable from every route, the loop's legs walkable, out of every leaf's sweep)
@@ -36,6 +39,16 @@ export const NEED_SPOTS: Record<NeedKind, NeedSpot> = {
   water: { kind: 'water', name: 'the water cooler', pos: [26.9, 0, 22.8], face: Math.PI / 4 },                    // the cooler in the cubicle farm's south-east corner (27.5, 23.4): a step short of it, facing it
   stretch: { kind: 'stretch', name: 'the lobby', pos: [8.4, 0, 17.0], face: 0, loop: [[10.8, 0, 18.6], [9.6, 0, 21.4], [7.4, 0, 22.8], [5.4, 0, 18.4], [8.4, 0, 17.0]] },   // in under the arch to the open floor before reception, once round the seating, back
 };
+
+/** WHERE A NEED IS ANSWERED ON THIS LEVEL: a level that carries its own places (its file's scenarios.quiet.needs — scene/scenarios.ts QuietData; any level with a
+ *  quiet mission says which errands its floor has, a kind it leaves out is not dealt there) reads them; every other level reads the office's table above, as
+ *  it always has. null: no such place on this floor. */
+export function needSpot(g: Game, kind: NeedKind): NeedSpot | null {
+  const Q = g.level.scenarios?.quiet; if (!Q) return NEED_SPOTS[kind] ?? null;
+  const s = Q.needs?.[kind]; return s ? ownSpot(s, kind) : null;
+}
+const owned = new WeakMap<object, NeedSpot>();
+function ownSpot(s: { name: string; pos: Vec3; face: number; loop?: Vec3[] }, kind: NeedKind): NeedSpot { let o = owned.get(s); if (!o) owned.set(s, o = { kind, name: s.name, pos: s.pos, face: s.face, ...(s.loop ? { loop: s.loop } : {}) }); return o; }
 
 // ================================================================ numbers (Tab ▸ Sandbox ▸ needs rows; the kept ones persist per machine — loadNeeds / saveNeeds)
 export const NEEDS = {
@@ -134,7 +147,8 @@ function deal(g: Game, gd: Guard, M: NeedMem) {
   const want = 2 + (hashStr(`${cs}:count`) % 2);
   for (const k of ranked) {
     if (M.needs.length >= want) break;
-    const dp = departurePoint(g, gd, NEED_SPOTS[k]);
+    const sp = needSpot(g, k); if (!sp) continue;   // (this floor has no such place)
+    const dp = departurePoint(g, gd, sp);
     if (dp.wp < 0 || !Number.isFinite(dp.m) || dp.m < NEEDS.minTripM) continue;
     const [lo, hi] = FILL_MIN[k];
     M.needs.push({ kind: k, level: LEVEL0[0] + frac(`${cs}:${k}:level0`) * (LEVEL0[1] - LEVEL0[0]), fillMin: lo + frac(`${cs}:${k}:fill`) * (hi - lo), wp: dp.wp, tripM: dp.m });
@@ -201,7 +215,8 @@ export function needsTick(g: Game, dt: number) {
 // ================================================================ a trip: scheduled → (telegraph) → going → dwell → returning → back
 /** Put this man on a trip of `kind` from where he stands, the telegraph starting now (the watch check this frame). False if the place cannot be reached from here. */
 function scheduleTrip(g: Game, gd: Guard, M: NeedMem, kind: NeedKind, forced: boolean): boolean {
-  const spot = NEED_SPOTS[kind]; const c = gd.char;
+  const spot = needSpot(g, kind); const c = gd.char;
+  if (!spot) { const n = M.needs.find(x => x.kind === kind); if (n) n.level = 0; log(g, gd, `${kind}: this floor has no place for it — dropped`); return false; }
   const path = g.col.nav.findPath(c.pos, spot.pos, 6000);
   if (!path || !path.length) { const n = M.needs.find(x => x.kind === kind); if (n) n.level = 0; log(g, gd, `${kind}: no way to ${spot.name} from here — dropped`); return false; }
   // the way OUT: the bearing of the path's first stretch (a few metres along it, so a first node at his feet does not point him at the floor)
@@ -235,7 +250,7 @@ function partnerFor(g: Game, gd: Guard): Guard | null {
   for (const o of g.guards) {
     if (o === gd || o.state === 'dead' || o.held || o.team !== 'guard' || o.unit) continue;
     if (v3.dist(o.char.pos, gd.char.pos) > NEEDS.partnerM + 2) continue;   // (straight-line pre-filter: the propagation is the dear part)
-    const pr = g.col.sound.propagate(mouth, o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0]));
+    const pr = hearPath(g, mouth, o.char.bones.head ?? v3.add(o.char.pos, [0, 1.6, 0]));
     if (pr.pathLen < NEEDS.partnerM * pr.carry && pr.pathLen < bd) { bd = pr.pathLen; best = o; }
   }
   return best;
@@ -245,11 +260,11 @@ function announce(g: Game, gd: Guard, T: Trip) {
   T.told = true; NEEDS_STATS.told++;
   const P = partnerFor(g, gd);
   if (P) {
-    T.partner = P; T.replyAt = g.time + NEEDS.replyAfter; T.line = pickLine(NEEDS_LINES.announce[T.kind] ?? NEEDS_LINES.announce.coffee, gd, 'announce');
+    T.partner = P; T.replyAt = g.time + NEEDS.replyAfter; T.line = pickLine((g.level.scenarios?.quiet ? NEEDS_LINES.announceOwn[T.kind] : undefined) ?? NEEDS_LINES.announce[T.kind] ?? NEEDS_LINES.announce.coffee, gd, 'announce');   // (a level with places of its own — quiet.ts — hears no 'fire door', no 'lobby')
     g.say(gd, T.line);
     log(g, gd, `tells ${P.callsign} (${v3.distXZ(P.char.pos, gd.char.pos).toFixed(1)} m): "${T.line}"`);
   } else {
-    T.radio = true; NEEDS_STATS.radioed++; T.line = NEEDS_LINES.radio.replace('{who}', gd.callsign).replace('{short}', NEEDS_LINES.short[T.kind] ?? T.kind);
+    T.radio = true; NEEDS_STATS.radioed++; T.line = NEEDS_LINES.radio.replace('{who}', gd.callsign).replace('{short}', (WORDS.on && g.level.scenarios?.quiet ? NEEDS_LINES.shortOwn[T.kind] : undefined) ?? NEEDS_LINES.short[T.kind] ?? T.kind);   // (the net hears no 'fire door' either on a level with places of its own)
     g.say(gd, T.line, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.4, { rate: 1.05 });
     log(g, gd, `radios it: "${T.line}"`);
   }
@@ -257,9 +272,10 @@ function announce(g: Game, gd: Guard, T: Trip) {
 /** the partner's grumble, if he is still one to give it (alive, free, calm-ish, not mid-line himself) */
 function partnerReply(g: Game, gd: Guard, T: Trip) {
   T.replied = true; const P = T.partner; if (!P) return;
-  if (P.state === 'dead' || P.held || (P.state !== 'patrol' && P.state !== 'suspicious') || P.awareness >= 0.45 || !g.guards.includes(P) || (P.bubble && g.time - P.bubble.t < P.bubble.dur)) { log(g, gd, `${P.callsign} says nothing back (${P.state}, aw ${P.awareness.toFixed(2)})`); return; }
+  if (P.state === 'dead' || P.held || (P.state !== 'patrol' && P.state !== 'suspicious') || P.awareness >= 0.45 || !g.guards.includes(P) || (P.bubble && g.time - P.bubble.t < P.bubble.dur) || dozeAsleep(P)) {   // (doze.ts: a man asleep in his chair grumbles at nobody)
+    log(g, gd, `${P.callsign} says nothing back (${P.state}, aw ${P.awareness.toFixed(2)})`); return; }
   const third = g.guards.find(x => x !== gd && x !== P && x.team === 'guard' && !x.unit && x.state !== 'dead') ?? null;
-  const pool = third && (hashStr(`${P.callsign}|${mem(gd).trips}|other`) % 3 === 0) ? NEEDS_LINES.replyOther.map(s => s.replace(/\{other\}/g, third.callsign)) : NEEDS_LINES.reply;
+  const pool = third && (hashStr(`${P.callsign}|${mem(gd).trips}|other`) % 3 === 0) ? NEEDS_LINES.replyOther.map(s => s.replace(/\{other\}/g, third.callsign)) : w(T.kind === 'stretch' ? NEEDS_LINES.reply.filter(s => s !== 'Bring me one.') : NEEDS_LINES.reply, NEEDS_LINES.reply);   // (words.ts: there is nothing to bring back from a stretch of the legs)
   const line = pool[hashStr(`${P.callsign}|${gd.callsign}|${mem(gd).trips}|reply`) % pool.length];
   g.say(P, line); NEEDS_STATS.replies++;
   log(g, gd, `${P.callsign} answers: "${line}"`);
@@ -289,7 +305,7 @@ export function needsPatrol(g: Game, gd: Guard, dt: number, walk: number): boole
       if (toGo <= 0) {                                                                                         // T: off he goes
         T.phase = 'going'; T.leftAt = now; T.loopI = -1; floor(g).lastDepartAt = Math.max(floor(g).lastDepartAt, now); NEEDS_STATS.departed++;
         gd.stallRef = null; goTo(g, gd, T.spot.pos, true);
-        chronicle(g, 'needBreak', { who: gd.callsign, kind: T.kind, what: 'left', to: T.spot.name }, c.pos);
+        chronicle(g, 'needBreak', { who: gd.callsign, kind: T.kind, what: 'left', to: T.spot.name, ...(g.level.scenarios?.quiet ? { own: 1 } : {}) }, c.pos);
         log(g, gd, `walks (${T.kind})`);
       }
       return true;
@@ -346,13 +362,13 @@ export function needsSend(g: Game, gd: Guard | null | undefined, kind: NeedKind 
   if (!g.tune.needs) return 'needs are switched off';
   if (gd.state === 'dead') return `${gd.callsign} is down`;
   if (gd.team !== 'guard' || gd.unit) return `${gd.callsign} is not on the night staff`;
-  if (!needsLive(g)) return 'not now (the tour / daylight / the response team / the AI off / Sam down)';
+  if (!needsLive(g)) return 'not now (the tour / daylight / the response team / the AI off / the player down)';
   if (!floorCalm(g)) return 'not now — the floor is up (or in the dark)';
   const why = manCalm(g, gd, CALM_AWARENESS) ? null : interruptOf(g, gd) ?? 'busy';
   if (why) return `${gd.callsign} would not go now: ${why}`;
   const M = mem(gd); if (!M.dealt) deal(g, gd, M);
   if (M.trip) return `${gd.callsign} is already ${M.trip.phase === 'telegraph' ? 'about to go' : 'away'} (${M.trip.kind})`;
-  if (!scheduleTrip(g, gd, M, kind, true)) return `${gd.callsign} cannot get to ${NEED_SPOTS[kind].name} from where he stands`;
+  if (!scheduleTrip(g, gd, M, kind, true)) return `${gd.callsign} cannot get to ${needSpot(g, kind)?.name ?? `a place for ${kind} (this floor has none)`} from where he stands`;
   return `${gd.callsign}: ${kind} — watch him (walks in ${NEEDS.announceLead} s)`;
 }
 /** the probes: put a man's need at a level (deals him first); false if he does not carry that kind */
@@ -408,7 +424,7 @@ export function needsRestore(g: Game, s: NeedsSnap | null | undefined) {
     M.needs = (S.needs ?? []).filter(n => NEED_KINDS.includes(n.kind)).map(n => ({ kind: n.kind, level: clamp(Number(n.level) || 0, 0, LEVEL_CAP), fillMin: Math.max(0.1, Number(n.fillMin) || 1), wp: n.wp | 0, tripM: Number(n.tripM) || 0 }));
     M.lastBackAt = Number.isFinite(S.lastBackAt) ? S.lastBackAt : -1e9; M.trips = S.trips | 0; M.cancels = S.cancels | 0; M.shaken = !!S.shaken; M.dealt = !!S.dealt;
     const T = S.trip;
-    M.trip = T && NEED_SPOTS[T.kind] && gd.state !== 'dead' ? { kind: T.kind, spot: NEED_SPOTS[T.kind], phase: T.phase, forced: !!T.forced, t0: T.t0, departAt: T.departAt, leftAt: T.leftAt, arrivedAt: T.arrivedAt, dwellUntil: T.dwellUntil, backAt: T.backAt, wp: T.wp | 0, outYaw: T.outYaw,
+    M.trip = T && needSpot(g, T.kind) && gd.state !== 'dead' ? { kind: T.kind, spot: needSpot(g, T.kind)!, phase: T.phase, forced: !!T.forced, t0: T.t0, departAt: T.departAt, leftAt: T.leftAt, arrivedAt: T.arrivedAt, dwellUntil: T.dwellUntil, backAt: T.backAt, wp: T.wp | 0, outYaw: T.outYaw,
       watched: !!T.watched, told: !!T.told, partner: T.partner >= 0 ? g.guards[T.partner] ?? null : null, radio: !!T.radio, replyAt: T.replyAt, replied: !!T.replied, necked: !!T.necked, loopI: T.loopI | 0, line: T.line ?? '', gapBefore: T.gapBefore } : null;
   });
 }

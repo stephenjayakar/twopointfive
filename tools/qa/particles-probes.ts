@@ -12,7 +12,7 @@
 //   (off)          settings.gpuParticles = false with the same events: zero GPU emits, no casingTink, and the CPU pool holds what it always held (20 powder sparks
 //                  a shot, 72 fragments a bang) — today's game exactly;
 //   (determinism)  the same scripted minute twice → the identical emit stream (kinds, counts, positions, seeds), so a ?paused capture repeats.
-// The WGSL itself is compile-checked through the page (__wgsl with the scene prelude — the dev notes), not here.
+// The WGSL itself is compile-checked through the page (__wgsl with the scene prelude — CLAUDE.md), not here.
 import { standUp, ROOT, fake } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { Particles, RINGS, MAX_EMITS, MAX_NEW_PER_FRAME, KIND_RING, MAX_QUEUE, BLOCK_HDR_BYTES, REC_BYTES } = await import(`${ROOT}/src/render/particles.ts`);

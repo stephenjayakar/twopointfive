@@ -31,15 +31,21 @@
 //   token went null mid-hold, a synthetic context nothing fits. lintDialogue() holds every speaker to the same rules: ≤ MAX_CHARS (aim ≤ AIM_CHARS) after the
 //   longest token expansion, Sam ≤ SAM_MAX_CHARS, tokens only from TOKENS, needs only from NEEDS, and not one phrase off the ORIGINALITY_BLOCKLIST.
 // ============================================================================================================================================================
-import { v3, wrapAngle, approachAngle } from '../math/vec';
+import { v3, approachAngle } from '../math/vec';
 import type { Vec3 } from '../math/vec';
 import type { Level } from '../scene/level';
 import type { Door } from './doors';
 import type { Game, Guard, Temperament, Talk } from './game';
 import type { HoldVariant } from './character';
 import { TEMPERAMENT, isBreathing } from './game';
-import { rollcallState, escalationOf } from './guards';
+import { rollcallState, escalationOf, bubbleSecs } from './guards';
 import { needsBusy } from './needs';
+import { CUES } from './cues';
+import { simRandom, hashStr } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { defenderWords } from './teams';
+import { takeTold } from './takecheck';   // (a leaf: was anybody told the thing is gone)
+import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { shakenOf } from './morale';   // (read inside agitationTerms only)
 
 // ---------------------------------------------------------------- axes
 export type Knowledge = 'none' | 'heard' | 'glimpsed' | 'saw' | 'sawHurt';
@@ -128,15 +134,19 @@ function agitationTerms(g: Game, gd: Guard): { a: number; why: string[] } {
   if (talk.abortT >= 0 && (gd.held || g.time - talk.abortT < ABORT_RATTLE_SECS)) add(0.2, 'aborted');
   if (talk.presses > 3) add(Math.min(0.15, 0.03 * (talk.presses - 3)), 'pressed');
   add(t === 'nervy' ? 0.15 : t === 'hard' ? -0.1 : 0, 'bias');
+  add(Math.max(0, shakenOf(gd) - Math.max(0, a)), 'dread');   // (morale.ts: a man with a blast's shock still on him is at least as agitated as he is afraid — his words and his body agree; 0 with its switch off)
   return { a: Math.max(0, Math.min(1, a)), why };
 }
-export function temperamentOf(gd: Guard): Temperament { return TEMPERAMENT[gd.callsign] ?? 'steady'; }
+/** by callsign — and (WORDS) a spawned unit, whatever it is called, is a fighting man, not somebody on nights: hard */
+export function temperamentOf(gd: Guard): Temperament { return WORDS.on && gd.unit ? 'hard' : TEMPERAMENT[gd.callsign] ?? 'steady'; }
 /** the stages at which this temperament GIVES the useful thing: steady plainly at 3; nervy early, at 2, and whatever else he has at 3; hard only once rattled */
 export function givesAt(t: Temperament, band: Band): StageKey[] { return t === 'nervy' ? [2, 3] : t === 'hard' ? (band === 'low' ? [] : [3]) : [3]; }
 
 // ---------------------------------------------------------------- needs (fact predicates by name) and tokens
-/** Fact predicates a line may require (all must hold). Evaluated once per exchange into DialogueCtx.facts. */
-export const NEEDS = ['floorUp', 'lockdown', 'episode', 'heardSmall', 'heardShots', 'heardBang', 'bodyFound', 'bodyCalled', 'bodyKnown', 'missingKnown', 'blackout', 'heldLong', 'rollcallLive', 'dazzled', 'sawShot', 'sawDrop', 'alertNow', 'drewOnYou', 'partnerKnown'] as const;
+/** Fact predicates a line may require (all must hold). Evaluated once per exchange into DialogueCtx.facts. The last two say WHO is talking (both simply true with
+ *  WORDS off): 'shift' = one of the level's own staff on a beat (not a spawned unit: he walks no route, signs no sheet, knows no routine to give up), 'office' =
+ *  that, on the office — the lines about reception, the vending machine, audits and hi-vis are that building's and nobody else's. */
+export const NEEDS = ['floorUp', 'lockdown', 'episode', 'heardSmall', 'heardShots', 'heardBang', 'bodyFound', 'bodyCalled', 'bodyKnown', 'missingKnown', 'blackout', 'heldLong', 'rollcallLive', 'dazzled', 'sawShot', 'sawDrop', 'alertNow', 'drewOnYou', 'partnerKnown', 'shift', 'office'] as const;
 export type Need = typeof NEEDS[number];
 /** Template tokens, resolved at pick time (a line whose token comes back null is simply not eligible). Written {name} in a line; {Name} capitalises the value.
  *    partner      his pair in a lockdown (leader / follower), else the nearest colleague he does not know to be down — by callsign
@@ -170,6 +180,9 @@ const TOKEN_WORST: Record<Token, string> = {
   route: 'the lobby loop', partnerRoute: 'the lobby loop', post: 'the cubicle door', door: 'the server room door',
   checkEta: 'in a couple of minutes', minutes: 'fifteen', n: 'three', up: 'three', badge: '4471', code: '7391', padDoor: 'the office side door',
 };
+/** …and with WORDS on, where the other levels' doors have names of their own (DOOR_NAMES_NOW): the longest of those (ROUTE_NAMES_NOW stays within 'the lobby loop': the 'routes' fact carries two) */
+const TOKEN_WORST_NOW: Partial<Record<Token, string>> = { door: 'the phone shop back door' };
+const tokenWorst = (): Record<Token, string> => w({ ...TOKEN_WORST, ...TOKEN_WORST_NOW }, TOKEN_WORST);
 /** tokens that always resolve for a living man in a level (coverage lint counts only lines whose tokens are in here or guaranteed by the cell's K) */
 const TOKENS_ALWAYS: Token[] = ['room', 'route', 'post', 'breakerRoom', 'checkEta', 'n', 'up', 'badge'];
 /** …and the ones a knowledge level guarantees: a glimpse leaves sightPos, a sighting at least the fix or his own feet (gather's fallback); sawHurt names a victim (but may never have had Sam himself in view) */
@@ -183,7 +196,12 @@ export interface Line {
   t?: Temperament;             // temperament (omitted = any)
   s: StageKey;                 // 1 reaction · 2 pressure · 3 nothing-left / refusal (INTEL takes the giving stages first) · 'x' exhausted
   text: string; needs?: Need[]; w?: number;
+  only?: 'shift' | 'office';   // (WORDS) said only by a man that fact holds for — a gate beside `needs`, not in it: it is no colour and must not weigh like one
+  now?: string; away?: string; // (WORDS) the line as it is said now · as it is said by anybody but the office's own staff (saidText)
+  bare?: string;               // (WORDS) …and by a man who names nobody (DialogueCtx.nameless): the row without its {victim}
 }
+/** the words of a row as they are said to THIS man / by him: `text` with WORDS off; on, `bare` from a man who names nobody, `away` off the office's own staff, else `now`, else `text` */
+function saidText(l: { text: string; now?: string; away?: string; bare?: string }, ctx: DialogueCtx): string { return !WORDS.on ? l.text : (ctx.nameless && l.bare) || (!ctx.facts.office && l.away) || l.now || l.text; }
 export const LINES: Line[] = [
   // ---- none: never knew you were there — startled, knows nothing (anchor case 1)
   { id: 'n1s', k: 'none', t: 'steady', s: 1, text: "Easy— easy. I'm not moving. Hands are where you can see them." },
@@ -191,28 +209,28 @@ export const LINES: Line[] = [
   { id: 'n1h', k: 'none', t: 'hard', s: 1, text: "…That's a bad idea, friend. Mostly for you." },
   { id: 'n1a', k: 'none', s: 1, text: 'Where did you— there was nobody there. I checked. There was nobody.' },
   { id: 'n1f', k: 'none', a: 'mid+', s: 1, needs: ['floorUp'], text: "So it's real. They said weapons out and I thought someone sat on his radio." },
-  { id: 'n2s', k: 'none', t: 'steady', s: 2, text: "I don't know you. I walk {route} and I sign the sheet. That's the whole job." },
+  { id: 'n2s', k: 'none', t: 'steady', s: 2, only: 'shift', text: "I don't know you. I walk {route} and I sign the sheet. That's the whole job." },
   { id: 'n2n', k: 'none', t: 'nervy', s: 2, text: "I haven't seen your face. I don't want to. I'm looking at the floor— see?" },
-  { id: 'n2h', k: 'none', t: 'hard', s: 2, text: 'You want the tour, reception opens at eight.' },
-  { id: 'n2a', k: 'none', s: 2, text: "Whatever you're here for, it isn't me. I'm nights. I'm nobody." },
-  { id: 'n3a', k: 'none', s: 3, text: "That's it. That's all there is. I do nights and I go home." },
-  { id: 'n3n', k: 'none', t: 'nervy', s: 3, text: "I don't KNOW anything— I fill the machine and I walk. That's me. That's all of me." },
+  { id: 'n2h', k: 'none', t: 'hard', s: 2, text: 'You want the tour, reception opens at eight.', away: 'You want the tour, buy a ticket.' },
+  { id: 'n2a', k: 'none', s: 2, only: 'shift', text: "Whatever you're here for, it isn't me. I'm nights. I'm nobody." },
+  { id: 'n3a', k: 'none', s: 3, only: 'shift', text: "That's it. That's all there is. I do nights and I go home." },
+  { id: 'n3n', k: 'none', t: 'nervy', s: 3, only: 'office', text: "I don't KNOW anything— I fill the machine and I walk. That's me. That's all of me." },
   { id: 'n3h', k: 'none', t: 'hard', a: 'low', s: 3, w: 2, text: 'Nothing. You get nothing, and you knew that when you grabbed me.' },
-  { id: 'nxa', k: 'none', s: 'x', text: 'I told you. I just do nights.' },
+  { id: 'nxa', k: 'none', s: 'x', only: 'shift', text: 'I told you. I just do nights.' },
   { id: 'nxb', k: 'none', s: 'x', text: "Same as before. I don't know. I still don't know." },
   { id: 'nxn', k: 'none', t: 'nervy', s: 'x', text: 'Please. My arm. I answered you.' },
   { id: 'nxh', k: 'none', t: 'hard', s: 'x', text: 'Ask again. Same answer.' },
   // ---- heard: knows someone is in the building, never saw who
-  { id: 'h1s', k: 'heard', t: 'steady', s: 1, needs: ['heardSmall'], text: 'So that was you, by {heardWhere}. I wrote it off as the building settling.' },
+  { id: 'h1s', k: 'heard', t: 'steady', s: 1, needs: ['heardSmall'], text: 'So that was you, by {heardWhere}. I wrote it off as the building settling.', now: 'So that was you, by {heardWhere}. I wrote it off as nothing.' },
   { id: 'h1n', k: 'heard', t: 'nervy', s: 1, text: 'I knew it. I KNEW I heard something. Nobody ever believes me.' },
   { id: 'h1h', k: 'heard', t: 'hard', s: 1, text: "Should've trusted my ears and come looking for you." },
-  { id: 'h1a', k: 'heard', s: 1, text: "Something's been off all night. So it's a someone. Fine." },
+  { id: 'h1a', k: 'heard', s: 1, only: 'shift', text: "Something's been off all night. So it's a someone. Fine." },
   { id: 'h1g', k: 'heard', s: 1, needs: ['heardShots'], w: 2, text: "Those were shots. That was you? …Who's down. Tell me who's down." },
   { id: 'h1b', k: 'heard', s: 1, needs: ['bodyKnown'], w: 2, text: "They found {body}. That was you. And now it's my turn, is it." },
-  { id: 'h2s', k: 'heard', t: 'steady', s: 2, needs: ['partnerKnown'], text: '{Partner} is going to love this. I told him it was the vending machine.' },
+  { id: 'h2s', k: 'heard', t: 'steady', s: 2, needs: ['partnerKnown'], only: 'office', text: '{Partner} is going to love this. I told him it was the vending machine.' },
   { id: 'h2n', k: 'heard', t: 'nervy', s: 2, text: "I called it in as nothing. I SAID nothing. They'll put that on me." },
   { id: 'h2h', k: 'heard', t: 'hard', s: 2, text: "You're loud, whoever you are. Loud gets found." },
-  { id: 'h2a', k: 'heard', s: 2, text: "I never saw you. Noises, that's all — and I'm not paid to chase noises." },
+  { id: 'h2a', k: 'heard', s: 2, only: 'shift', text: "I never saw you. Noises, that's all — and I'm not paid to chase noises." },
   { id: 'h3a', k: 'heard', s: 3, text: "I heard things. I didn't see things. That's the truth and it's all of it." },
   { id: 'h3h', k: 'heard', t: 'hard', a: 'low', s: 3, w: 2, text: "You've had your answer. It was no." },
   { id: 'hxa', k: 'heard', s: 'x', text: 'Noises. All I ever had was noises.' },
@@ -220,9 +238,9 @@ export const LINES: Line[] = [
   // ---- glimpsed: a shape in the dark
   { id: 'g1s', k: 'glimpsed', t: 'steady', s: 1, text: 'Something moved, over in {sawWhere}. I told myself it was the light.' },
   { id: 'g1n', k: 'glimpsed', t: 'nervy', s: 1, text: 'You were right there. I looked RIGHT at you. Oh no. No no no.' },
-  { id: 'g1h', k: 'glimpsed', t: 'hard', s: 1, text: 'Next time the torch stays on you.' },
+  { id: 'g1h', k: 'glimpsed', t: 'hard', s: 1, text: 'Next time the torch stays on you.', now: 'Next time the light stays on you.' },
   { id: 'g1a', k: 'glimpsed', s: 1, text: "I saw— I don't know what I saw. You, I suppose. In {sawWhere}." },
-  { id: 'g2a', k: 'glimpsed', s: 2, text: "A shape. That's what goes in the book. A shape, about your size." },
+  { id: 'g2a', k: 'glimpsed', s: 2, only: 'shift', text: "A shape. That's what goes in the book. A shape, about your size." },
   { id: 'g2n', k: 'glimpsed', t: 'nervy', a: 'mid+', s: 2, text: 'I nearly called it. Thumb on the button. I nearly— why didn\'t I.' },
   { id: 'g2h', k: 'glimpsed', t: 'hard', s: 2, text: 'Half a second sooner with the light and we\'d be talking the other way round.' },
   { id: 'g3a', k: 'glimpsed', s: 3, text: "Half a second of you in the dark. That's everything I've got." },
@@ -230,10 +248,10 @@ export const LINES: Line[] = [
   { id: 'gxa', k: 'glimpsed', s: 'x', text: 'A shape. I keep telling you. A shape.' },
   { id: 'gxb', k: 'glimpsed', s: 'x', text: "That's twice you've asked and twice it's the same." },
   // ---- saw: had you plainly / hunted you
-  { id: 's1s', k: 'saw', t: 'steady', s: 1, text: 'Everyone on this floor is looking for you. You do know that.' },
+  { id: 's1s', k: 'saw', t: 'steady', s: 1, text: 'Everyone on this floor is looking for you. You do know that.', now: 'Every man here is looking for you. You do know that.' },
   { id: 's1n', k: 'saw', t: 'nervy', s: 1, text: "It's you. From {sawWhere}. Okay. Okay— I'm not doing anything. Look. Nothing." },
   { id: 's1p', k: 'saw', t: 'nervy', a: 'high', s: 1, w: 2, text: "They're coming— all of them— you heard the radio same as me—" },
-  { id: 's1h', k: 'saw', t: 'hard', s: 1, text: "You. From {sawWhere}. You don't walk out of this building." },
+  { id: 's1h', k: 'saw', t: 'hard', s: 1, text: "You. From {sawWhere}. You don't walk out of this building.", now: "You. From {sawWhere}. You don't walk out of here." },
   { id: 's1a', k: 'saw', s: 1, text: 'I had you. In {sawWhere}. I had you and I lost you.' },
   { id: 's1d', k: 'saw', s: 1, needs: ['drewOnYou'], w: 2, text: 'I put rounds your way and you still got behind me. …Fine. Fine.' },
   { id: 's2s', k: 'saw', t: 'steady', s: 2, text: 'Let go now and I count to sixty before I touch the radio. That offer is real.' },
@@ -247,20 +265,20 @@ export const LINES: Line[] = [
   // ---- sawHurt: watched you shoot / drop a colleague — agitated, hostile, names it (anchor case 2)
   { id: 'k1s', k: 'sawHurt', t: 'steady', s: 1, needs: ['sawShot'], text: "You shot {victim}. I watched you do it. Don't talk to me like we're talking." },
   { id: 'k1n', k: 'sawHurt', t: 'nervy', s: 1, needs: ['sawShot'], text: "{Victim}— is he— you didn't have to— he'd have let you walk past—" },
-  { id: 'k1h', k: 'sawHurt', t: 'hard', s: 1, needs: ['sawShot'], text: '{Victim} had a name. Remember it. Somebody is going to ask you for it.' },
-  { id: 'k1a', k: 'sawHurt', s: 1, needs: ['sawShot'], text: 'I saw you shoot {victim}. I saw it. Whatever you say next, I saw it.' },
-  { id: 'k1d', k: 'sawHurt', s: 1, needs: ['sawDrop'], text: "Is {victim} breathing? …Tell me he's breathing." },
-  { id: 'k1e', k: 'sawHurt', t: 'hard', s: 1, needs: ['sawDrop'], text: 'I saw what you did to {victim}. Try it from the front some time.' },
-  { id: 'k1g', k: 'sawHurt', s: 1, w: 0.6, text: 'I saw what you did to {victim}. Get your arm off me.' },   // (the one s1 line that names no particular deed: covers the reserved 'grab' / sawHeld kinds; weighted under the specific ones)
+  { id: 'k1h', k: 'sawHurt', t: 'hard', s: 1, needs: ['sawShot'], text: '{Victim} had a name. Remember it. Somebody is going to ask you for it.', bare: 'He had a name. Somebody is going to make you learn it.' },
+  { id: 'k1a', k: 'sawHurt', s: 1, needs: ['sawShot'], text: 'I saw you shoot {victim}. I saw it. Whatever you say next, I saw it.', bare: 'I saw you shoot him. I saw it. Whatever you say next, I saw it.' },
+  { id: 'k1d', k: 'sawHurt', s: 1, needs: ['sawDrop'], text: "Is {victim} breathing? …Tell me he's breathing.", bare: "Is he breathing? …Tell me he's breathing." },
+  { id: 'k1e', k: 'sawHurt', t: 'hard', s: 1, needs: ['sawDrop'], text: 'I saw what you did to {victim}. Try it from the front some time.', bare: 'I saw what you did to him. Try it from the front some time.' },
+  { id: 'k1g', k: 'sawHurt', s: 1, w: 0.6, text: 'I saw what you did to {victim}. Get your arm off me.', bare: 'I saw what you did to him. Get your arm off me.' },   // (the one s1 line that names no particular deed: covers the reserved 'grab' / sawHeld kinds; weighted under the specific ones)
   { id: 'k2s', k: 'sawHurt', t: 'steady', s: 2, text: "What do you want from me? You've shown me what you are." },
   { id: 'k2n', k: 'sawHurt', t: 'nervy', s: 2, text: 'Okay! Okay. Anything. Just— not like {victim}. Please. Not like that.' },
-  { id: 'k2h', k: 'sawHurt', t: 'hard', s: 2, needs: ['sawShot'], text: "Every man on this floor heard that. They're not coming to talk." },
-  { id: 'k2i', k: 'sawHurt', t: 'hard', s: 2, text: 'You put {victim} down in front of me and now you want a chat. No.' },
-  { id: 'k2a', k: 'sawHurt', s: 2, text: '{Victim} first, then me — that the plan? Then get on with it.' },
-  { id: 'k3a', k: 'sawHurt', s: 3, text: "You've had all I've got. The rest you took off {victim}." },
+  { id: 'k2h', k: 'sawHurt', t: 'hard', s: 2, needs: ['sawShot'], text: "Every man on this floor heard that. They're not coming to talk.", now: "Every man here heard that. They're not coming to talk." },
+  { id: 'k2i', k: 'sawHurt', t: 'hard', s: 2, text: 'You put {victim} down in front of me and now you want a chat. No.', bare: 'You put him down in front of me and now you want a chat. No.' },
+  { id: 'k2a', k: 'sawHurt', s: 2, text: '{Victim} first, then me — that the plan? Then get on with it.', bare: 'Him first, then me — that the plan? Then get on with it.' },
+  { id: 'k3a', k: 'sawHurt', s: 3, text: "You've had all I've got. The rest you took off {victim}.", bare: "You've had all I've got. The rest you took off him." },
   { id: 'k3h', k: 'sawHurt', t: 'hard', s: 3, w: 2, text: 'No.' },
   { id: 'kxa', k: 'sawHurt', t: 'nervy', s: 'x', text: 'Please. I answered. Please.' },
-  { id: 'kxb', k: 'sawHurt', s: 'x', text: "Nothing else. There's nothing else. Ask {victim}— oh. Right." },
+  { id: 'kxb', k: 'sawHurt', s: 'x', text: "Nothing else. There's nothing else. Ask {victim}— oh. Right.", bare: "Nothing else. There's nothing else. Ask him— oh. Right." },
   { id: 'kxs', k: 'sawHurt', s: 'x', text: "I've nothing left to tell you and no reason left to lie to you." },
   { id: 'kxh', k: 'sawHurt', t: 'hard', s: 'x', text: 'Still no.' },
   // ---- floor colour: any knowledge, the needs do the gating
@@ -272,7 +290,7 @@ export const LINES: Line[] = [
   { id: 'f2f', k: '*', s: 2, needs: ['bodyFound'], text: 'I stood over {body} not long ago. I know exactly what you are.' },
   { id: 'f2o', k: '*', s: 2, needs: ['blackout'], text: 'The lights too? …Course it was you.' },
   { id: 'f2d', k: '*', t: 'nervy', s: 2, needs: ['dazzled'], text: "I still can't see straight. That flash— that was you too, wasn't it—" },
-  { id: 'f2r', k: '*', s: 2, needs: ['rollcallLive'], w: 2, text: "That's the check going now. I don't answer it, they come down {route}." },
+  { id: 'f2r', k: '*', s: 2, needs: ['rollcallLive'], only: 'shift', w: 2, text: "That's the check going now. I don't answer it, they come down {route}." },
   { id: 'fxl', k: '*', t: 'steady', s: 'x', needs: ['heldLong'], text: "My arm's gone dead. Whatever this is, finish it." },
   { id: 'fxn', k: '*', t: 'nervy', s: 'x', needs: ['heldLong'], text: "I can't feel my hand. Please. I've been good. I've answered everything." },
   { id: 'fxe', k: '*', a: 'high', s: 'x', text: "You're running out of floor. You know that. I can hear it in you." },
@@ -314,8 +332,13 @@ const INTEL_TEXT: Record<IntelKind, Partial<Record<IntelKey, string>>> = {
   missing:       { '*': 'Nobody can raise {missing}. His route turns up empty, this all locks down.', hard: '{Missing} is off the air. His route comes up empty, we lock down.' },
   drive:         { '*': "Your rack dropped off the board. Somebody's already been sent to look at it.", hard: 'Your rack went dark on the board. A man is on his way to it.' },
 };
+/** (WORDS) the variants reworded, by the same keys, laid over INTEL_TEXT's while the switch is on (a man alone on a level has no 'all of us') */
+const INTEL_NOW: Partial<Record<IntelKind, Partial<Record<IntelKey, string>>>> = { code: { '*': '{PadDoor} is on a pad — {code}. Same four digits every night.' } };
+const intelTable = (kind: IntelKind): Partial<Record<IntelKey, string>> => w({ ...INTEL_TEXT[kind], ...INTEL_NOW[kind] }, INTEL_TEXT[kind]);
+/** (WORDS) 'drive' off the office: what was taken there is no rack and hangs on no board (gather swaps it in) */
+const DRIVE_AWAY: Partial<Record<Temperament | '*', string>> = { '*': "It's been missed already. Somebody's been sent to look.", hard: "It's been missed. A man is on his way to look." };
 /** the text a man of temperament t and knowledge k gives for `kind` (the most specific variant written) — the plain fact, no shape */
-export function intelText(kind: IntelKind, t: Temperament, k: Knowledge): string { const T = INTEL_TEXT[kind]; return T[`${t}:${k}`] ?? T[t] ?? T[`*:${k}`] ?? T['*'] ?? ''; }
+export function intelText(kind: IntelKind, t: Temperament, k: Knowledge): string { const T = intelTable(kind); return T[`${t}:${k}`] ?? T[t] ?? T[`*:${k}`] ?? T['*'] ?? ''; }
 /** the script's own / the shape-voiced variant of `kind` for a hold playing script `sc`, or null when none is written (then the plain fact is said, with the shape's / the man's lead) */
 export function shapedIntelText(kind: IntelKind, sc: { id: string; shape: ShapeKey }, t: Temperament): string | null { const T = INTEL_TEXT[kind]; return T[`sc:${sc.id}`] ?? T[`${sc.shape}:${t}`] ?? T[sc.shape] ?? null; }
 /** the checker's own words when HE is the man walking the silent colleague's route (gather swaps it in) */
@@ -325,40 +348,133 @@ const CHECKON_SELF = "I was sent round {checked}'s route — he'd gone quiet. No
 export function intelLead(t: Temperament, k: Knowledge): string { return t === 'hard' ? '…Fine. ' : t === 'steady' && (k === 'saw' || k === 'sawHurt') ? '…All right. ' : ''; }
 /** …and in front of a PLAIN fact said inside a script of this shape (a shape with no entry takes intelLead's): the fan's aside, the audit's 'sir' */
 const SHAPE_LEAD: Partial<Record<ShapeKey, string>> = { fan: 'Oh— and ', con: 'Sir: ', ramble: '—okay— ', folder: '' };
+/** (WORDS) a fact behind a lead that runs on into it ('Oh— and ', '—okay— ') starts in lower case, unless it starts with 'I' or a man's name */
+const runOn = (lead: string, fact: string) => WORDS.on && /[a-z—] $/.test(lead) ? fact.replace(/^(?!I\b|\{(?:Checker|Checked|Missing|Partner|Victim|Caller|Body)\})(\{?)([A-Z])/, (_m, b: string, c: string) => b + c.toLowerCase()) : fact;
 /** four digits off a callsign — a badge number that is the same every night for the same man (the con reads it back to him) */
 export function badgeOf(callsign: string): string { return String(1000 + hashStr('badge:' + callsign) % 9000); }
-/** a small stable string hash (FNV-1a, 32 bit) — the scripts are DEALT, never rolled: the same man draws the same shape, probes replay to the letter */
-export function hashStr(s: string): number { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
+/** a small stable string hash (FNV-1a, 32 bit; math/dice.ts has it) — the scripts are DEALT, never rolled: the same man draws the same shape, probes replay to the letter */
+export { hashStr };
 
 // ---------------------------------------------------------------- names: rooms, routes, doors, numbers
 type Rect = { name: string; x0: number; x1: number; z0: number; z1: number };
-const roomRects = new WeakMap<Level, { rooms: Rect[]; building: Rect }>();
-/** the office level's open areas, which no clear plan bounds (level.ts: corridor z 10‥12.2, lobby x 4‥12, cubicle farm x 12‥28, break room x 28‥36, all z 12.2‥24; walls x 4‥36, z 4‥24) — used only when the level IS that office (its three route names); any other level gets its clear-plan rooms plus inside / outside */
+const roomRects = new WeakMap<Level, { rooms: Rect[]; building: Rect; office: boolean }>();
+/** the office level's open areas, which no clear plan bounds (level.ts: corridor z 10‥12.2, lobby x 4‥12, cubicle farm x 12‥28, break room x 28‥36, all z 12.2‥24; walls x 4‥36, z 4‥24) — used only when the level IS that office (its three route names); any other level is named by its own data (levelRects) */
 const OFFICE_AREAS: Rect[] = [{ name: 'the corridor', x0: 4, x1: 36, z0: 10, z1: 12.2 }, { name: 'the lobby', x0: 4, x1: 12, z0: 12.2, z1: 24 }, { name: 'the cubicles', x0: 12, x1: 28, z0: 12.2, z1: 24 }, { name: 'the break room', x0: 28, x1: 36, z0: 12.2, z1: 24 }];
+/** WHERE, for a line on the net ('— the mess', 'from outside the store': NOT a noun to put after 'in' — roomName below is that, and every dialogue template
+ *  keeps it). A floor with NAMES OF ITS OWN (levelRects: the structure's rooms — the block, the depot, the warehouse… — and the level's `scenarios.places`) has
+ *  no car park and no back offices: there a point is in one of the level's own rooms or places, or 'outside' the nearest of them (cues.ts — a line that names
+ *  a place names a real one). The office, a level that names nothing, or the cues off: roomName. */
+export function placeName(level: Level, p: Vec3): string { return (CUES.on ? ownName(level, p) : null) ?? roomName(level, p); }
+/** a named rectangle of floor: `name` as a line says it ('the front hall'), `id` = the structure room's id (null: a place nobody holds, or one of the office's areas) */
+export interface PlaceRect extends Rect { id: string | null }
+/** the level the game was written on (its three patrol routes): the one floor the office's own room tables below, and chronicle.ts's, are true of */
+export const isOffice = (level: Level) => ['corridor', 'cubicles', 'lobby_break'].every(n => level.routes.some(r => r.name === n));
+const withThe = (n: string) => /^the |\d$/.test(n) ? n : `the ${n}`;
+const ownRects = new WeakMap<Level, PlaceRect[] | null>();
+/** THE LEVEL'S OWN NAMES for its floor, first match wins: its structure's rooms (scenarios.roomClear), its clear plans' rooms, then the places nobody holds
+ *  (scenarios.places — scene/scenarios.ts PlacesData). null on the office (its names are roomName's tables: the level the game was written on) and on a level
+ *  that names nothing. */
+export function levelRects(level: Level): PlaceRect[] | null {
+  let R = ownRects.get(level);
+  if (R === undefined) {
+    R = null;
+    if (!isOffice(level)) {
+      const out: PlaceRect[] = [], add = (name: string, b: { x0: number; x1: number; z0: number; z1: number }, id: string | null) => { out.push({ name: withThe(name), id, x0: b.x0, x1: b.x1, z0: b.z0, z1: b.z1 }); };
+      for (const r of level.scenarios?.roomClear?.rooms ?? []) add(r.name, r.bounds, r.id);
+      for (const cp of level.clearPlans ?? []) if (cp.bounds && cp.room && !out.some(r => r.name === withThe(cp.room!))) add(cp.room, cp.bounds, null);
+      for (const a of level.scenarios?.places?.areas ?? []) add(a.name, a.bounds, null);
+      for (const P of level.scenarios?.quiet?.spots ?? []) if (!out.some(r => r.name === withThe(P.place))) add(P.place, P.area, null);   // (a quiet mission's rooms by the names its block gives them — scene/scenarios.ts QuietData)
+      if (out.length) R = out;
+    }
+    ownRects.set(level, R);
+  }
+  return R;
+}
+const rectDist = (r: Rect, p: Vec3) => Math.hypot(Math.max(r.x0 - p[0], 0, p[0] - r.x1), Math.max(r.z0 - p[2], 0, p[2] - r.z1));
+/** a man this close to a named rectangle's edge is IN it for a line (metres): the rectangles are the floor inside the walls, so a man in a doorway — a wall's
+ *  thickness — stands in none of them, and 'outside the hall' of a man on its threshold is the line being wrong, not the man */
+export const PLACE_EDGE = 0.35;
+/** … and the one a point is in, or the nearest (`d` metres off its edge; 0 = inside, or within PLACE_EDGE of it and inside no other) — null where levelRects is */
+export function ownPlace(level: Level, p: Vec3): { rect: PlaceRect; d: number } | null {
+  const R = levelRects(level); if (!R) return null;
+  let best = R[0], bd = Infinity;
+  for (const r of R) { const d = rectDist(r, p); if (d === 0) return { rect: r, d: 0 }; if (d < bd - 0.02) { bd = d; best = r; } }   // (a doorway between two of them: the first listed — a room of the structure before a place, indoors before a yard)
+  return { rect: best, d: bd <= PLACE_EDGE ? 0 : bd };
+}
+/** (WORDS) a squad row's word for floor a man WATCHES from `from`: the level's own name for the floor at `p` where that is not the floor he stands on ('the
+ *  hall', 'the yard') — null for his own floor or floor nobody named, where the row says what it is instead. The rows said a compass bearing ('watching
+ *  south'), and the HUD has no compass. */
+export function watchedPlace(level: Level, from: Vec3, p: Vec3): string | null {
+  if (isOffice(level)) { const a = roomName(level, p); return a !== roomName(level, from) ? a : null; }
+  const a = ownPlace(level, p); if (!a || a.d > 0) return null;
+  const b = ownPlace(level, from); return b && b.d === 0 && b.rect === a.rect ? null : a.rect.name;
+}
+function ownName(level: Level, p: Vec3): string | null { const w = ownPlace(level, p); return !w ? null : w.d === 0 ? w.rect.name : `outside ${w.rect.name}`; }
+/** WHERE A MAN STANDS, for a line that has to be true of the spot ('still up — in the front hall'; laststand.ts): the named rectangle he is INSIDE — one of
+ *  the level's own (levelRects), on the office one of roomName's — or null (open ground the level has no word for: the caller says 'outside the …') */
+export function placeIn(level: Level, p: Vec3): PlaceRect | null {
+  const w = ownPlace(level, p); if (w) return w.d === 0 ? w.rect : null;
+  if (!isOffice(level)) return null;
+  roomName(level, p); for (const r of roomRects.get(level)!.rooms) if (p[0] >= r.x0 && p[0] <= r.x1 && p[2] >= r.z0 && p[2] <= r.z1) return { ...r, id: null };
+  return null;
+}
+/** THE WAY A WALK COMES BY, for a line on the net ('coming to you through the north gallery'): the last of the level's own rooms or places the plain nav
+ *  path from `a` to `b` crosses before the one it ends in — 'through the …' — or 'from the …' when that is the place the walk starts in (he walks straight in
+ *  from where he stands). `into` = the name of the room the walk is bound for, when the caller knows it (b may lie on its threshold). null with the cues off,
+ *  on the office and on a level that names none of its floor (levelRects), with no path, or when the walk crosses no named floor on its way. WORDS ONLY: the
+ *  search is asked and thrown away — the man's own route is the fight AI's, which on plain floor is this same search (guards.ts goTo). */
+export function wayName(level: Level, nav: { findPath(a: Vec3, b: Vec3, maxIter?: number): Vec3[] | null }, a: Vec3, b: Vec3, into: string | null = null): string | null {
+  if (!CUES.on || !levelRects(level)) return null;
+  const at = (p: Vec3) => { const w = ownPlace(level, p); return w && w.d === 0 ? w.rect.name : null; };
+  const room = into ? withThe(into) : null, end = at(b), from = at(a), path = nav.findPath(a, b, 6000); if (!path) return null;
+  if (from && (from === room || from === end)) return null;   // (he is already where he is called to: no way to name)
+  let way: string | null = from, prev = a;
+  walk: for (const q of path) {   // (the walk ends at the room he is called to or at the named floor the fix lies on, whichever it meets first — a fix out on a gallery is never the way to itself)
+    const n = Math.max(1, Math.ceil(v3.dist(prev, q) / 0.5));
+    for (let i = 1; i <= n; i++) { const r = at(v3.lerp(prev, q, i / n)); if (r && (r === room || r === end)) break walk; if (r) way = r; }
+    prev = q;
+  }
+  return !way ? null : way === from ? `from ${way}` : `through ${way}`;
+}
+/** every rectangle placeIn answers by: the level's own (levelRects), on the office roomName's tables (no ids) — for a reader of the lines (the QA commander) */
+export function placeRects(level: Level): PlaceRect[] {
+  const R = levelRects(level); if (R) return R; if (!isOffice(level)) return [];
+  roomName(level, [0, 0, 0]); return roomRects.get(level)!.rooms.map(r => ({ ...r, id: null }));
+}
 const OFFICE_WALLS: Rect = { name: 'inside', x0: 4, x1: 36, z0: 4, z1: 24 };
-/** The room a floor point is in, as the men would say it: the clear plans' rooms (level.ts bounds) and the mission's server room, then — on the office level — the
- *  corridor, the lobby, the cubicle floor, the break room; anywhere else inside the walls 'the back offices', outside them 'the car park'. (The design's roomName
- *  helper, kept here rather than in level.ts, which this slice does not touch; another level gets its own clear-plan rooms and a footprint from its routes.) */
+/** what a level that names none of its floor is called in a line ('in the building', 'by the building'): never a room of the office's */
+const NAMELESS = 'the building';
+/** The room a floor point is in, as the men would say it. ON THE OFFICE (its three route names): the clear plans' rooms (level.ts bounds) and the mission's
+ *  server room, then the corridor, the lobby, the cubicle floor, the break room; anywhere else inside the walls 'the back offices', outside them 'the car
+ *  park'. ON ANY OTHER LEVEL those words are not its own (the registry's captor 'holding the server room' — its mission's reach area — on a floor with no
+ *  server room): there it is the level's own name for the spot (levelRects: its structure's rooms and its `scenarios.places`), 'outside' the nearest of them,
+ *  or — a level that names nothing — 'this floor'. */
 export function roomName(level: Level, p: Vec3): string {
   let R = roomRects.get(level);
   if (!R) {
-    const rooms: Rect[] = [];
+    const rooms: Rect[] = [], office = isOffice(level);
     for (const cp of level.clearPlans ?? []) if (cp.bounds && cp.room && !rooms.some(r => r.name.endsWith(cp.room!))) rooms.push({ name: /^the /.test(cp.room) ? cp.room : `the ${cp.room}`, ...cp.bounds });
-    const S = level.mission.serverRoom; if (!rooms.some(r => /server/.test(r.name))) rooms.push({ name: 'the server room', ...S });
-    const office = ['corridor', 'cubicles', 'lobby_break'].every(n => level.routes.some(r => r.name === n));
+    const QS = level.scenarios?.quiet?.spots;   // (a quiet mission's places by their own names — scene/scenarios.ts QuietData: its `mission` is one of them, and no 'server room')
+    if (QS) { for (const P of QS) if (!rooms.some(r => r.name === P.place)) rooms.push({ name: P.place, ...P.area }); }
+    else { const S = level.mission.serverRoom; if (!rooms.some(r => /server/.test(r.name))) rooms.push({ name: 'the server room', ...S }); }
     let building = OFFICE_WALLS;
     if (office) rooms.push(...OFFICE_AREAS);
-    else { building = { name: 'inside', x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity }; for (const r of level.routes) for (const q of r.points) { building.x0 = Math.min(building.x0, q[0] - 3); building.x1 = Math.max(building.x1, q[0] + 3); building.z0 = Math.min(building.z0, q[2] - 3); building.z1 = Math.max(building.z1, q[2] + 3); } }   // (the men patrol indoors: their routes' extent, padded, stands in for the walls)
-    R = { rooms, building }; roomRects.set(level, R);
+    else { building = { name: 'inside', x0: Infinity, x1: -Infinity, z0: Infinity, z1: -Infinity }; for (const r of level.routes) for (const q of r.points) { building.x0 = Math.min(building.x0, q[0] - 3); building.x1 = Math.max(building.x1, q[0] + 3); building.z0 = Math.min(building.z0, q[2] - 3); building.z1 = Math.max(building.z1, q[2] + 3); } }   // (the cues off: another level by the office's table, as it was — its clear-plan rooms, its mission's 'server room', and a footprint from its routes)
+    R = { rooms, building, office }; roomRects.set(level, R);
   }
+  if (!R.office && CUES.on) { const w = ownPlace(level, p); return w ? w.rect.name : NAMELESS; }   // (a noun, for 'in …': the place he is in, else the nearest the level names — never 'outside …' here)
   for (const r of R.rooms) if (p[0] >= r.x0 && p[0] <= r.x1 && p[2] >= r.z0 && p[2] <= r.z1) return r.name;
   const B = R.building; if (p[0] >= B.x0 && p[0] <= B.x1 && p[2] >= B.z0 && p[2] <= B.z1) return 'the back offices';   // inside the walls but in no named rectangle (a partition's thickness): near enough
   return 'the car park';
 }
 const ROUTE_NAMES: Record<string, string> = { corridor: 'the corridor', cubicles: 'the cubicles', lobby_break: 'the lobby loop' };
-export function routeName(level: Level, routeI: number): string { const n = level.routes[routeI]?.name ?? 'route'; return ROUTE_NAMES[n] ?? `the ${n.replace(/_/g, ' ')}`; }
+/** (WORDS) the other levels' route ids as a man would say where he walks ('the laneW', 'the sentry a' is the file's word, not his) */
+const ROUTE_NAMES_NOW: Record<string, string> = { laneW: 'the west lane', laneE: 'the east lane', clerk: 'the office', north: 'the north side', south: 'the south side', east: 'the east side', sentry_a: 'the west post', sentry_b: 'the east post', ops: 'the ops room', walker: 'the block', fuel: 'the east gate', mast: 'the mast yard', bunk: 'the bunks', teahouse: 'the tea house', watchman: 'the street end', counting: 'the counting room', counting_b: 'the counting room', yard_round: 'the yard', yard_round_b: 'the yard', south_b: 'the south side', north_b: 'the north side', east_b: 'the east side', cook: 'the cook fire', cook_b: 'the cook fire', roundW: 'the west round', roundE: 'the east round' };
+export function routeName(level: Level, routeI: number): string { const n = level.routes[routeI]?.name ?? 'route'; return ROUTE_NAMES[n] ?? (WORDS.on ? ROUTE_NAMES_NOW[n] : undefined) ?? `the ${n.replace(/_/g, ' ')}`; }
 const DOOR_NAMES: Record<string, string> = { server: 'the server room door', manager: "the manager's door", storage: 'the storage door', conference: 'the conference door', breakroom_n: 'the break room door', breakroom_w: 'the break room side door', breakroom_ext: 'the outside door', fire_exit: 'the fire exit', server_manager: 'the office side door' };   // (the keypad door — {padDoor})
-function doorName(n: string): string { return DOOR_NAMES[n] ?? `the ${n.replace(/_/g, ' ')} door`; }
+/** (WORDS) …and their door ids ('the pharm back door', 'the fence e door') */
+const DOOR_NAMES_NOW: Record<string, string> = { pharm_back: 'the pharmacy back door', pharm_front: 'the pharmacy front door', phone_back: 'the phone shop back door', fence_e: 'the east fence gate', office_garage: 'the garage side door', armoury_radio: 'the armoury side door' };
+function doorName(n: string): string { return DOOR_NAMES[n] ?? (WORDS.on ? DOOR_NAMES_NOW[n] : undefined) ?? `the ${n.replace(/_/g, ' ')} door`; }
 const NUM_WORDS = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen'];
 function numWord(n: number): string { return NUM_WORDS[n] ?? String(n); }
 /** metres within which a keyed door's frame counts as ON a route's line (server / manager / storage stand ~1.1 m off the corridor line; the cubicle loop never comes within 3 m of one) */
@@ -390,6 +506,8 @@ export interface DialogueCtx {
   why: string[];                                   // the agitation terms, for the panel / probes
   facts: Partial<Record<Need, boolean>>;
   tokens: Partial<Record<Token, string | null>>;
+  /** {room} is a name of the level's own, not the office's (ROOM_MENACE is the office's furniture: no entry applies) */ ownRooms?: boolean;
+  /** (WORDS) he names nobody: a defender's mates go by the TEAM's labels ('Tango 2'), which are not his words — {partner} {victim} {body} {missing} are null and a row says its `bare` */ nameless?: boolean;
   intel: IntelItem[];                              // in INTEL_KINDS order, known / live evaluated
   time: number;
   recent: Map<string, number> | null;              // line id → game time anybody last said it (floor-wide staleness), null for synthetic contexts
@@ -414,9 +532,10 @@ function staffCount(g: Game): number { let n = 0; for (const x of g.guards) if (
 function partnerOf(g: Game, gd: Guard): Guard | null {
   const down = knownDown(g, gd);   // dead or alive to the world, a man he does not KNOW to be down is, as far as he is concerned, still on his route — and one he watched drop is nobody's partner any more
   if (gd.leader && gd.leader !== gd && !down.has(gd.leader.callsign)) return gd.leader;
-  const follower = g.guards.find(x => x !== gd && x.leader === gd && !down.has(x.callsign)); if (follower) return follower;
+  const mate = (x: Guard) => !WORDS.on || (x.team === gd.team && !x.unit === !gd.unit);   // (his own side and his own kind: a staff man's colleague is no spawned unit, a unit's no man of the shift, and nobody's is one of Sam's)
+  const follower = g.guards.find(x => x !== gd && x.leader === gd && !down.has(x.callsign) && mate(x)); if (follower) return follower;
   let best: Guard | null = null, bd = Infinity;
-  for (const x of g.guards) { if (x === gd || down.has(x.callsign)) continue; const d = v3.distXZ(x.char.pos, gd.char.pos); if (d < bd) { bd = d; best = x; } }
+  for (const x of g.guards) { if (x === gd || down.has(x.callsign) || !mate(x)) continue; const d = v3.distXZ(x.char.pos, gd.char.pos); if (d < bd) { bd = d; best = x; } }
   return best;
 }
 /** since when this man counts as HELD for the engine's purposes: the hold's own clock while Sam has him (Guard.held.since — the grab owns it, presses never move it),
@@ -429,7 +548,7 @@ export function heldSinceOf(g: Game, gd: Guard): number {
 
 /** Read the game into a DialogueCtx for this man (the only function past the axes that touches Game). */
 export function gather(g: Game, gd: Guard): DialogueCtx {
-  const W = gd.witness, H = W.heard, talk = gd.talk, L = g.level, R = rollcallState(g), lvl = escalationOf(g);
+  const W = gd.witness, H = W.heard, L = g.level, R = rollcallState(g), lvl = escalationOf(g);
   const k = knowledgeOf(g, gd); const { a, why } = agitationTerms(g, gd); const band = bandOf(a); const t = temperamentOf(gd);
   const hs = heldSinceOf(g, gd); const held = hs >= 0 ? g.time - hs : 0;
   // tokens
@@ -466,7 +585,9 @@ export function gather(g: Game, gd: Guard): DialogueCtx {
     code: pad?.def.code ?? null,
     padDoor: pad ? doorName(pad.door.def.name) : null,
   };
+  const nameless = defenderWords(gd); if (nameless) tokens.partner = tokens.victim = tokens.body = tokens.missing = null;
   // facts
+  const shift = gd.team === 'guard' && !gd.unit;
   const facts: Partial<Record<Need, boolean>> = {
     floorUp: lvl >= 1, lockdown: lvl >= 2, episode: g.alarm.episode && !g.quietUtility,
     heardSmall: H.small > 0 && !!H.smallWhere, heardShots: H.shots > 0, heardBang: H.kick + H.bang > 0,
@@ -475,6 +596,7 @@ export function gather(g: Game, gd: Guard): DialogueCtx {
     rollcallLive: R.stage !== 'idle', dazzled: W.dazzled > 0,
     sawShot: W.sawAct?.kind === 'shot', sawDrop: !!W.sawAct && W.sawAct.kind !== 'shot' && W.sawAct.kind !== 'grab',
     alertNow: gd.state === 'alert', drewOnYou: gd.weapon.spent > 0, partnerKnown: !!partner,
+    shift: !WORDS.on || shift, office: !WORDS.on || (shift && isOffice(L)),
   };
   // intel: live = true of the world now; known = he could plausibly know it (routine, or it went over the net while he was free to listen)
   const txt = (kind: IntelKind) => intelText(kind, t, k);
@@ -485,14 +607,15 @@ export function gather(g: Game, gd: Guard): DialogueCtx {
     { kind: 'blackout', text: txt('blackout'), live: g.blackout.active, known: true },
     { kind: 'door', text: txt('door'), live: !!keyed && gd.keys.has(keyed.lockId), known: true },   // (its key on his belt — 'mine's on my belt', and Sam takes it: player.ts takeKey empties Guard.keys, so it is never true of him twice, nor of a man whose route carries no key to it)
     { kind: 'code', text: txt('code'), live: !!pad && !g.player.codes.has(pad.def.name), known: true },   // (every man on nights knows the pad; once Sam has the code it is no longer a useful thing — nobody gives it twice)
-    { kind: 'rollcall', text: txt('rollcall'), live: !g.quietUtility && g.aiEnabled, known: true },   // (no checks run under the tour or with the AI off: then it is not true that one is due)
+    { kind: 'rollcall', text: txt('rollcall'), live: !g.quietUtility && g.aiEnabled && (!WORDS.on || !!partner), known: true },   // (no checks run under the tour or with the AI off: then it is not true that one is due — nor, WORDS, of a man with nobody left to call one or be sent)
     { kind: 'lockdownPosts', text: txt('lockdownPosts'), live: lvl >= 2 && !!postMan, known: heardOnNet(hs, g.alarm.raisedAt) || postMan === gd },
     { kind: 'routes', text: txt('routes'), live: !!partner, known: true },
     { kind: 'missing', text: txt('missing'), live: !!missingMan && lvl < 2, known: !!missingMan },
-    { kind: 'drive', text: txt('drive'), live: g.mission.pulled && g.mission.sweepAt < 0, known: true },   // (the rack check went out over the radio — mission.ts sendRackCheck — but Mission keeps no time for it, so this one net fact is not hold-gated: flavour, last in line; a Mission.sweptAt would gate it like the errand)
+    { kind: 'drive', text: facts.office ? txt('drive') : DRIVE_AWAY[t] ?? DRIVE_AWAY['*']!, live: g.mission.pulled && g.mission.sweepAt < 0 && takeTold(g), known: true },   // (the rack check went out over the radio — mission.ts sendRackCheck — but Mission keeps no time for it, so this one net fact is not hold-gated: flavour, last in line; a Mission.sweptAt would gate it like the errand)
   ];
+  if (!facts.shift) for (const it of intel) it.live = false;   // (WORDS: the routine is the shift's to know — a spawned unit has none of it to give)
   let recent = recentByGame.get(g); if (!recent) { recent = new Map(); recentByGame.set(g, recent); }
-  return { who: gd.callsign, k, a, band, t, why, facts, tokens, intel, time: g.time, recent };
+  return { who: gd.callsign, k, a, band, t, why, facts, tokens, ownRooms: CUES.on && !isOffice(L), nameless, intel, time: g.time, recent };
 }
 
 // ---------------------------------------------------------------- the picker (pure over a DialogueCtx + the man's Talk state)
@@ -529,7 +652,7 @@ function lineMatches(l: Line, k: Knowledge, band: Band, t: Temperament, s: Stage
   if (useA && l.a) { if (l.a === 'mid+') { if (band === 'low') return false; } else if (l.a !== band) return false; }
   return true;
 }
-function needsHold(l: Line, facts: Partial<Record<Need, boolean>>): boolean { return !l.needs || l.needs.every(n => !!facts[n]); }
+function needsHold(l: Line, facts: Partial<Record<Need, boolean>>): boolean { return (!WORDS.on || !l.only || !!facts[l.only]) && (!l.needs || l.needs.every(n => !!facts[n])); }
 /** The pending useful things: true now, known to him, not yet given, in the order he would give them — the script's pinned kind first (the self-own is BUILT
  *  round the keyed door), then INTEL_KINDS' — each with the text he would say: the shape's own wording where one is written (no lead: it carries its manner),
  *  else the plain fact behind the shape's / the man's lead-in. Items whose tokens do not resolve are simply not pending. */
@@ -541,7 +664,7 @@ export function pendingIntel(ctx: DialogueCtx, talk: Talk, sc: Script | null = n
     const own = kind === 'checkOn' && it.text === CHECKON_SELF;   // (the checker's own words stay his own whatever the shape)
     const shaped = sc && !own ? shapedIntelText(kind, sc, ctx.t) : null;
     const lead = shaped ? '' : sc && SHAPE_LEAD[sc.shape] !== undefined && !(ctx.t === 'hard') ? SHAPE_LEAD[sc.shape]! : intelLead(ctx.t, ctx.k);   // (a hard man's '…Fine. ' survives any shape: he never volunteers)
-    const text = expand(lead + (shaped ?? it.text), ctx.tokens); if (!text) continue;
+    const text = expand(lead + runOn(lead, shaped ?? it.text), ctx.tokens); if (!text) continue;
     out.push({ kind, text });
   }
   return out;
@@ -584,7 +707,7 @@ export function pickLine(ctx: DialogueCtx, talk: Talk, rnd: () => number): Dialo
     for (const l of LINES) {
       if (!lineMatches(l, ctx.k, ctx.band, ctx.t, s, useT, useA) || !needsHold(l, ctx.facts)) continue;
       if (!allowSaid && talk.said.has(l.id)) continue;
-      const text = expand(l.text, ctx.tokens); if (!text) continue;
+      const text = expand(saidText(l, ctx), ctx.tokens); if (!text) continue;
       let w = (l.w ?? 1) * (l.needs?.length ? 1.6 : 1) * (l.t === ctx.t ? 1.5 : 1) * (l.a ? 1.3 : 1) * (l.k !== '*' ? 1.15 : 1);   // specific beats generic
       const rt = ctx.recent?.get(l.id); if (rt !== undefined && ctx.time - rt < RECENT_SECS) w *= RECENT_W;
       if (allowSaid) w /= 1 + (talk.saidN.get(l.id) ?? 0) * 3;
@@ -622,7 +745,7 @@ export function pickLine(ctx: DialogueCtx, talk: Talk, rnd: () => number): Dialo
  *  past the man's own Talk: Sam's rejoinder to THIS answer (the beat's `after` / `take`), queued on the hold to go up when the man's line is down (player.ts
  *  Hold.after → sayAfter — the key remark takes its place when the answer gave the keyed door: game.ts interrogate → takeKey runs after this) and put in Sam's
  *  memory under '<pick id>+' so the probes can name it; only for the man actually in his arm (the sandbox's bare exchange has no Sam side). */
-export function interrogate(g: Game, gd: Guard, rnd: () => number = Math.random): DialoguePick | null {
+export function interrogate(g: Game, gd: Guard, rnd: () => number = simRandom): DialoguePick | null {
   if (gd.state === 'dead' || !g.guards.includes(gd)) return null;
   const talk = gd.talk;
   if (!gd.held && (talk.heldSince < 0 || (talk.lastT >= 0 && g.time - talk.lastT > HOLD_LAPSE_SECS))) talk.heldSince = g.time;
@@ -673,6 +796,7 @@ export interface SamLine {
   t?: Temperament;             // the held man's temperament (omitted = any)
   k?: Knowledge;               // what the man knows of Sam (omitted = any) — an opener for the one who watched a colleague drop, or who was hunting him
   needs?: SamNeed[]; text: string; w?: number;
+  now?: string; away?: string; // (WORDS) as on Line: the line as he says it now · to anybody but the office's own staff (saidText)
 }
 /** Sam's lines. Original text in the game's own voice: dry, low, economical; a threat is stated once and flatly. Tokens as in LINES ({victim} only where k
  *  guarantees it). Every category keeps ≥ 5 lines that need nothing, so any hold has a pool; the variant / floor / man lines colour it (lintDialogue checks). */
@@ -728,20 +852,20 @@ export const SAM_LINES: SamLine[] = [
   { id: 'Sps1', s: 'press', t: 'steady', text: "You're calm. Good. Calm men remember details." },
   { id: 'Spx1', s: 'press', needs: ['alarm'], text: "They're hunting me. You're what's slowing me down." },
   { id: 'Spb1', s: 'press', needs: ['blackout'], text: 'Lights are out. Nobody finds you by accident now.' },
-  { id: 'Spl1', s: 'press', needs: ['lockdown'], text: "Your floor's sealed. So is this conversation." },
+  { id: 'Spl1', s: 'press', needs: ['lockdown'], text: "Your floor's sealed. So is this conversation.", now: "You're sealed in. So is this conversation." },
   // ---- ask: the useful thing (stage 3, or whenever he is about to give — his fact, his admission he has none, or his refusal answers it)
   { id: 'Sa1', s: 'ask', text: 'Tell me something useful and you sleep it off.' },
-  { id: 'Sa2', s: 'ask', text: "What's on this floor I should worry about?" },
+  { id: 'Sa2', s: 'ask', text: "What's on this floor I should worry about?", now: "What's around here I should worry about?" },
   { id: 'Sa3', s: 'ask', text: 'Last useful thing you know. Make it count.' },
   { id: 'Sa4', s: 'ask', text: "What don't I know yet? Quickly." },
   { id: 'Sa5', s: 'ask', text: "Make yourself useful. It's a short interview." },
-  { id: 'Sa6', s: 'ask', text: 'What would ruin my night up here? Besides you.' },
+  { id: 'Sa6', s: 'ask', text: 'What would ruin my night up here? Besides you.', now: 'What would ruin my night here? Besides you.' },
   { id: 'Sah1', s: 'ask', t: 'hard', text: "Here's where you decide how tomorrow feels." },
   { id: 'San1', s: 'ask', t: 'nervy', text: 'Small words. One useful thing. Go.' },
   { id: 'Sag1', s: 'ask', needs: ['gun'], text: "The gun's listening too. Impress us both." },
   { id: 'Saa1', s: 'ask', needs: ['arm'], text: 'One good answer buys you a lot of air.' },
   // ---- q: the question written for the thing he is about to give (peekGive) — preferred over the plain asks when it fits
-  { id: 'Sqd1', s: 'q', q: 'door', text: 'The locked doors up here. Who carries keys?' },
+  { id: 'Sqd1', s: 'q', q: 'door', text: 'The locked doors up here. Who carries keys?', now: 'The locked doors here. Who carries keys?' },
   { id: 'Sqd2', s: 'q', q: 'door', text: 'That keyed door on your round. How does it open?' },
   { id: 'Sqr1', s: 'q', q: 'rollcall', text: 'How long before somebody misses you?' },
   { id: 'Sqr2', s: 'q', q: 'rollcall', text: "When's your next radio check? Don't round down." },
@@ -749,13 +873,13 @@ export const SAM_LINES: SamLine[] = [
   { id: 'Sqv2', s: 'q', q: 'rollcallLive', text: "They're calling names. What if yours stays quiet?" },
   { id: 'Sqn1', s: 'q', q: 'routes', text: 'How many of you tonight, and who walks where?' },
   { id: 'Sqn2', s: 'q', q: 'routes', text: "Head count. Routes. Don't leave yourself out." },
-  { id: 'Sqb1', s: 'q', q: 'blackout', text: "Lights die up here — what's the drill?" },
+  { id: 'Sqb1', s: 'q', q: 'blackout', text: "Lights die up here — what's the drill?", now: "Lights die — what's the drill?" },
   { id: 'Sqb2', s: 'q', q: 'blackout', text: 'Power drops. Who comes running, and how armed?' },
   { id: 'Sqc1', s: 'q', q: 'checkOn', text: "Someone's off the air. Who goes looking for him?" },
   { id: 'Sqm1', s: 'q', q: 'missing', text: "Your net's a man short. What happens next?" },
   { id: 'Sql1', s: 'q', q: 'lockdownPosts', text: "You've locked down. Where does everyone dig in?" },
   { id: 'Sql2', s: 'q', q: 'clearing', text: "They're sweeping rooms. Which one's first?" },
-  { id: 'Sqk1', s: 'q', q: 'drive', text: 'The server room. Anybody watching those racks?' },
+  { id: 'Sqk1', s: 'q', q: 'drive', text: 'The server room. Anybody watching those racks?', away: "What I took. Anybody noticed it's gone?" },
   // ---- key: the man has just given the keyed door up — and the key on his belt with it (player.ts takeKey): Sam's word as he pockets it, over Sam once the
   //      man's line is down; nobody answers it and no stage moves. Terse: the clack of the key and the kit column's tag have already said the rest.
   { id: 'Sk1', s: 'key', text: "I'll hold on to this." },
@@ -827,7 +951,7 @@ function chooseSamLine(tiers: SamLine[][], ctx: DialogueCtx, facts: Record<SamNe
     for (const l of lines) {
       if (!samLineFits(l, ctx, facts)) continue;
       if (freshOnly && mem) { const at = mem.said.get(l.id); if (at !== undefined && ctx.time - at < SAM_RECENT_SECS) continue; }
-      const text = expand(l.text, ctx.tokens); if (!text) continue;
+      const text = expand(saidText(l, ctx), ctx.tokens); if (!text) continue;
       out.push({ l, text, w: (l.w ?? 1) * (l.needs?.length ? 1.6 : 1) * (l.t ? 1.5 : 1) * (l.k ? 2.5 : 1) });   // the variant / floor / man lines beat the neutral ones
     }
     return out;
@@ -859,11 +983,11 @@ export function pickSamLine(ctx: DialogueCtx, talk: Talk, variant: HoldVariant, 
   return c ? { text: c.text, id: c.l.id, s: cat, q, stage: s, fresh: c.fresh, script: null } : { text: '…', id: '-', s: cat, q, stage: s, fresh: false, script: null };
 }
 /** Sam's line for the next exchange with a real man in his arm (gather → pickSamLine, remembered on the Game). Says nothing itself: player.ts askHeld puts it up. */
-export function samLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () => number = Math.random): SamPick { return pickSamLine(gather(g, gd), gd.talk, variant, samMemoryOf(g), rnd); }
+export function samLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () => number = simRandom): SamPick { return pickSamLine(gather(g, gd), gd.talk, variant, samMemoryOf(g), rnd); }
 /** Sam's word as he pockets the key a man has just given up with the keyed door (player.ts takeKey): the 'key' lines, narrowed by the man and the floor like
  *  any other, fresh ones first, remembered like the rest — a remark, not an exchange: nobody answers and no stage moves. null if nothing fits (never, for the
  *  shipped table: lintDialogue keeps SAM_KEY_MIN of them free of conditions). */
-export function samKeyLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () => number = Math.random): { text: string; id: string } | null {
+export function samKeyLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () => number = simRandom): { text: string; id: string } | null {
   const ctx = gather(g, gd);
   const c = chooseSamLine([SAM_LINES.filter(l => l.s === 'key')], ctx, samFacts(ctx, variant), samMemoryOf(g), rnd);
   return c ? { text: c.text, id: c.l.id } : null;
@@ -872,7 +996,7 @@ export function samKeyLineFor(g: Game, gd: Guard, variant: HoldVariant, rnd: () 
  *  first words with the muzzle at the man's temple, which is what that moment is — narrowed by the man and the floor like any line, fresh ones first,
  *  remembered like the rest. Nobody answers it and no stage moves. Questions are put with the arm on him now, so this is where the [gun] lines are still
  *  heard (the pool keeps them in every category against the day the pistol hold questions again). null if nothing fits (never, for the shipped table). */
-export function samRemarkFor(g: Game, gd: Guard, rnd: () => number = Math.random): { text: string; id: string } | null {
+export function samRemarkFor(g: Game, gd: Guard, rnd: () => number = simRandom): { text: string; id: string } | null {
   const ctx = gather(g, gd);
   const c = chooseSamLine([SAM_LINES.filter(l => l.s === 'open' && !!l.needs?.includes('gun'))], ctx, samFacts(ctx, 'gun'), samMemoryOf(g), rnd);
   return c ? { text: c.text, id: c.l.id } : null;
@@ -885,7 +1009,7 @@ export function synthCtx(k: Knowledge, band: Band, t: Temperament, over: { facts
   const a = band === 'high' ? 0.75 : band === 'mid' ? 0.45 : 0.1;
   const who = over.who ?? 'synthetic';
   const tokens: Partial<Record<Token, string | null>> = { partner: 'Novak', victim: k === 'sawHurt' ? 'Kowalski' : null, body: null, missing: null, room: 'the corridor', sawWhere: k === 'glimpsed' || k === 'saw' || k === 'sawHurt' ? 'the server room' : null, heardWhere: k === 'heard' ? 'the cubicles' : null, route: 'the corridor', partnerRoute: 'the cubicles', post: 'the east end', door: 'the server room door', caller: 'Reyes', checker: null, checked: null, clearRoom: null, breakerRoom: 'the storage room', checkEta: 'in a minute or so', minutes: null, n: 'three', up: 'three', badge: badgeOf(who), code: '7391', padDoor: 'the office side door', ...over.tokens };
-  const facts: Partial<Record<Need, boolean>> = { heardSmall: k === 'heard', sawShot: k === 'sawHurt', partnerKnown: !!tokens.partner, ...over.facts };
+  const facts: Partial<Record<Need, boolean>> = { heardSmall: k === 'heard', sawShot: k === 'sawHurt', partnerKnown: !!tokens.partner, shift: true, office: true, ...over.facts };
   const live = new Set<IntelKind>(over.intelLive ?? ['door', 'rollcall', 'routes']);
   const intel: IntelItem[] = INTEL_KINDS.map(kind => ({ kind, text: intelText(kind, t, k), live: live.has(kind), known: true }));
   return { who, k, a, band, t, why: [], facts, tokens, intel, time: 0, recent: null };
@@ -921,7 +1045,7 @@ export const SCRIPT_VARIANTS_MIN = 3;
 export function lintDialogue(): string[] {
   const problems: string[] = [];
   const ids = new Set<string>(), texts = new Set<string>();
-  const worst = (text: string) => expand(text, TOKEN_WORST) ?? text;
+  const worst = (text: string) => expand(text, tokenWorst()) ?? text;
   const orig = (where: string, text: string) => { const b = blockedPhrase(text); if (b) problems.push(`${where}: "${text}" carries the blocklisted '${b}' — write it fresh`); };
   const dup = (where: string, text: string) => { const key = text.trim().toLowerCase(); if (texts.has(key)) problems.push(`duplicate text (${where}): "${text}"`); texts.add(key); };
   for (const l of SAM_LINES) {
@@ -930,7 +1054,7 @@ export function lintDialogue(): string[] {
     dup(l.id, l.text); orig(l.id, l.text);
     if (!l.text.trim()) problems.push(`${l.id}: empty`);
     const sure = new Set<string>([...TOKENS_ALWAYS, ...(l.k ? TOKENS_BY_K[l.k] : [])]);
-    for (const tk of tokensIn(l.text)) { if (!(TOKENS as readonly string[]).includes(tk)) problems.push(`${l.id}: unknown token {${tk}}`); else if (!sure.has(tk)) problems.push(`${l.id}: token {${tk}} is not guaranteed for ${l.k ? `k '${l.k}'` : 'any k'} (Sam's lines must always resolve)`); }
+    for (const tk of tokensIn(l.text)) { if (!(TOKENS as readonly string[]).includes(tk)) problems.push(`${l.id}: unknown token {${tk}}`); else if (!sure.has(tk)) problems.push(`${l.id}: token {${tk}} is not guaranteed for ${l.k ? `k '${l.k}'` : 'any k'} (the player's lines must always resolve)`); }
     for (const n of l.needs ?? []) if (!(SAM_NEEDS as readonly string[]).includes(n)) problems.push(`${l.id}: unknown need '${n}'`);
     const N = new Set(l.needs ?? []); if ((N.has('gun') && (N.has('arm') || N.has('knife'))) || (N.has('alarm') && N.has('calm')) || (N.has('calm') && N.has('lockdown'))) problems.push(`${l.id}: contradictory needs [${[...N].join(', ')}] — the line can never come up`);
     const len = worst(l.text).length; if (len > SAM_MAX_CHARS) problems.push(`${l.id}: ${len} chars after expansion (> ${SAM_MAX_CHARS}): "${worst(l.text)}"`);
@@ -941,9 +1065,15 @@ export function lintDialogue(): string[] {
     if (l.t && !TEMPERAMENTS.includes(l.t)) problems.push(`${l.id}: bad t ${l.t}`);
     if (l.k && !KNOWLEDGE.includes(l.k)) problems.push(`${l.id}: bad k ${l.k}`);
   }
-  for (const s of SAM_STAGES) { const n = SAM_LINES.filter(l => l.s === s && !l.t && !l.k && !l.needs?.length).length; if (n < SAM_POOL_MIN) problems.push(`Sam '${s}': only ${n} lines that need nothing (want ≥ ${SAM_POOL_MIN} — a hold with no colour on would run dry)`); }
-  { const n = SAM_LINES.filter(l => l.s === 'key' && !l.t && !l.k && !l.needs?.length).length; if (n < SAM_KEY_MIN) problems.push(`Sam 'key': only ${n} remarks that need nothing (want ≥ ${SAM_KEY_MIN} — a key handed over must always get a word)`); }
-  for (const v of ['gun', 'arm'] as const) for (const s of SAM_STAGES) { if (s === 'ask') continue; if (!SAM_LINES.some(l => l.s === s && l.needs?.includes(v))) problems.push(`Sam '${s}': no line for the '${v}' hold`); }
+  // the reworded rows (now / away): the same tokens as the row they stand in for, so only what a new wording can break — length, the blocklist, a twin
+  for (const [T, max] of [[SAM_LINES, SAM_MAX_CHARS], [LINES, MAX_CHARS]] as const) for (const l of T) for (const [key, text] of [['now', l.now], ['away', l.away], ['bare', (l as Line).bare]] as const) {
+    if (text === undefined) continue; const W = `${l.id} ${key}`; dup(W, text); orig(W, text);
+    if (worst(text).length > max) problems.push(`${W}: ${worst(text).length} chars after expansion (> ${max}): "${worst(text)}"`);
+    if (tokensIn(text).some(tk => !tokensIn(l.text).includes(tk))) problems.push(`${W}: a token its row's own text does not carry`);
+  }
+  for (const s of SAM_STAGES) { const n = SAM_LINES.filter(l => l.s === s && !l.t && !l.k && !l.needs?.length).length; if (n < SAM_POOL_MIN) problems.push(`Player '${s}': only ${n} lines that need nothing (want ≥ ${SAM_POOL_MIN} — a hold with no colour on would run dry)`); }
+  { const n = SAM_LINES.filter(l => l.s === 'key' && !l.t && !l.k && !l.needs?.length).length; if (n < SAM_KEY_MIN) problems.push(`Player 'key': only ${n} remarks that need nothing (want ≥ ${SAM_KEY_MIN} — a key handed over must always get a word)`); }
+  for (const v of ['gun', 'arm'] as const) for (const s of SAM_STAGES) { if (s === 'ask') continue; if (!SAM_LINES.some(l => l.s === s && l.needs?.includes(v))) problems.push(`Player '${s}': no line for the '${v}' hold`); }
   for (const l of LINES) {
     if (ids.has(l.id)) problems.push(`duplicate id ${l.id}`); ids.add(l.id);
     dup(l.id, l.text); orig(l.id, l.text);
@@ -959,7 +1089,7 @@ export function lintDialogue(): string[] {
   const shapeTs = new Map<ShapeKey, Set<Temperament>>(); for (const sc of SCRIPTS) { let S = shapeTs.get(sc.shape); if (!S) { S = new Set(); shapeTs.set(sc.shape, S); } S.add(sc.t); }
   const leadWorstT = (t: Temperament, ks: Knowledge[]) => { let m = Math.max(...ks.map(k => intelLead(t, k).length)); if (t !== 'hard') for (const [sh, S] of shapeTs) if (S.has(t) && SHAPE_LEAD[sh] !== undefined) m = Math.max(m, SHAPE_LEAD[sh]!.length); return m; };
   const leadWorst = (ts: Temperament[], ks: Knowledge[]) => ts.reduce((m, t) => Math.max(m, leadWorstT(t, ks)), 0);
-  for (const kind of INTEL_KINDS) for (const [tk, text] of [...Object.entries(INTEL_TEXT[kind]), ...(kind === 'checkOn' ? [['self', CHECKON_SELF]] : [])] as [string, string][]) {
+  for (const kind of INTEL_KINDS) for (const [tk, text] of [...Object.entries(intelTable(kind)), ...(kind === 'checkOn' ? [['self', CHECKON_SELF]] : [])] as [string, string][]) {
     if (!text) continue;
     orig(`intel ${kind}/${tk}`, text); dup(`intel ${kind}/${tk}`, text);
     for (const t2 of tokensIn(text)) if (!(TOKENS as readonly string[]).includes(t2)) problems.push(`intel ${kind}/${tk}: unknown token {${t2}}`);
@@ -967,7 +1097,7 @@ export function lintDialogue(): string[] {
     const isScript = aPart === 'sc', isShape = isScript || (SHAPES as string[]).includes(aPart);
     if (aPart !== '*' && aPart !== 'self' && !isShape && !(TEMPERAMENTS as string[]).includes(aPart)) problems.push(`intel ${kind}: bad key '${tk}'`);
     if (isScript ? !SCRIPTS.some(sc => sc.id === bPart) : bPart !== undefined && !(isShape ? (TEMPERAMENTS as string[]).includes(bPart) : (KNOWLEDGE as string[]).includes(bPart))) problems.push(`intel ${kind}: bad second part in key '${tk}'`);
-    if (kind === 'door' && !/belt|mine|pocket|clip/i.test(text)) problems.push(`intel door/${tk}: "${text}" never puts the key on his person — Sam takes it off him as this is said`);
+    if (kind === 'door' && !/belt|mine|pocket|clip/i.test(text)) problems.push(`intel door/${tk}: "${text}" never puts the key on his person — the player takes it off him as this is said`);
     let len: number;
     if (isShape) len = worst(text).length;   // (its own manner: no lead)
     else {
@@ -977,15 +1107,21 @@ export function lintDialogue(): string[] {
     }
     if (len > MAX_CHARS) problems.push(`intel ${kind}/${tk}: ${len} chars after expansion with the lead-in (> ${MAX_CHARS}): "${worst(text)}"`);
   }
-  // coverage of the pools: reachable without needs and with only the guaranteed tokens
+  for (const [tk, text] of Object.entries(DRIVE_AWAY)) { const W = `intel drive/away ${tk}`; orig(W, text); dup(W, text); const len = text.length + leadWorst(tk === '*' ? TEMPERAMENTS.filter(t => !DRIVE_AWAY[t]) : [tk as Temperament], KNOWLEDGE); if (tokensIn(text).length || len > MAX_CHARS) problems.push(`${W}: a token, or ${len} chars with the lead-in (> ${MAX_CHARS})`); }
+  // coverage of the pools: reachable without needs (nor `only`: a unit, a man of another level has the cell too) and with only the guaranteed tokens
   for (const k of KNOWLEDGE) for (const band of BANDS) for (const t of TEMPERAMENTS) for (const s of STAGES) {
     const sure = new Set<string>([...TOKENS_ALWAYS, ...TOKENS_BY_K[k]]);
-    const reach = (own: boolean) => LINES.some(l => lineMatches(l, k, band, t, s, false, false) && !l.needs?.length && tokensIn(l.text).every(x => sure.has(x)) && (!own || l.k === k));
+    const reach = (own: boolean) => LINES.some(l => lineMatches(l, k, band, t, s, false, false) && !l.needs?.length && !l.only && tokensIn(l.text).every(x => sure.has(x)) && (!own || l.k === k));
     if (!reach(false)) problems.push(`cell ${k}·${band}·${t} stage ${String(s)}: no line always reachable`);
     else if ((s === 1 || s === 2) && !reach(true)) problems.push(`cell ${k}·${band}·${t} stage ${String(s)}: only floor-colour lines, none written for '${k}'`);
   }
+  // …and a spawned unit's own cells (always hard, no `only` row, no man's name: K's own token only where it is a place) in a hard man's or anybody's voice
+  for (const k of KNOWLEDGE) for (const band of BANDS) for (const s of STAGES) {
+    const sure = new Set<string>([...TOKENS_ALWAYS, ...TOKENS_BY_K[k].filter(x => x !== 'victim')]);
+    if (!LINES.some(l => lineMatches(l, k, band, 'hard', s, true, false) && !l.needs?.length && !l.only && tokensIn(l.bare ?? l.text).every(x => sure.has(x)))) problems.push(`cell ${k}·${band}·unit stage ${String(s)}: no line a unit can always reach`);
+  }
   // the scripts
-  const samLen = (where: string, text: string | undefined) => { if (text === undefined) return; orig(where, text); const w = worst(text); if (w.length > SAM_MAX_CHARS) problems.push(`${where}: Sam's "${w}" is ${w.length} chars (> ${SAM_MAX_CHARS})`); if (!text.trim() || text.trim() === '…') problems.push(`${where}: Sam says nothing ("${text}")`); };
+  const samLen = (where: string, text: string | undefined) => { if (text === undefined) return; orig(where, text); const w = worst(text); if (w.length > SAM_MAX_CHARS) problems.push(`${where}: the player's "${w}" is ${w.length} chars (> ${SAM_MAX_CHARS})`); if (!text.trim() || text.trim() === '…') problems.push(`${where}: the player says nothing ("${text}")`); };
   const himLen = (where: string, text: string) => { orig(where, text); dup(where, text); const w = worst(text); if (w.length > MAX_CHARS) problems.push(`${where}: "${w}" is ${w.length} chars (> ${MAX_CHARS})`); if (!text.trim() || text.trim() === '…') problems.push(`${where}: he says nothing ("${text}")`); };
   const himStrings = (h: Him): [string, string][] => typeof h === 'string' ? [['*', h]] : Object.entries(h);
   const perShapeT = new Map<string, number>();
@@ -995,7 +1131,7 @@ export function lintDialogue(): string[] {
     if (!SHAPES.includes(sc.shape)) problems.push(`${W}: unknown shape '${sc.shape}'`);
     if (!TEMPERAMENTS.includes(sc.t)) problems.push(`${W}: bad t '${sc.t}'`);
     if (!sc.k.length || sc.k.some(k => !KNOWLEDGE.includes(k))) problems.push(`${W}: bad k list [${sc.k.join(', ')}]`);
-    if (sc.k.includes('sawHurt')) problems.push(`${W}: written for sawHurt — a man who watched Sam hurt somebody is frightened, never funny (the pools have him)`);
+    if (sc.k.includes('sawHurt')) problems.push(`${W}: written for sawHurt — a man who watched the player hurt somebody is frightened, never funny (the pools have him)`);
     if (sc.band && (!sc.band.length || sc.band.some(b => !BANDS.includes(b)))) problems.push(`${W}: bad band list`);
     for (const n of [...(sc.needs ?? []), ...(sc.not ?? [])]) if (!(NEEDS as readonly string[]).includes(n)) problems.push(`${W}: unknown need '${n}'`);
     if (sc.pin && !(INTEL_KINDS as readonly string[]).includes(sc.pin)) problems.push(`${W}: pin '${sc.pin}' is no useful thing`);
@@ -1006,7 +1142,7 @@ export function lintDialogue(): string[] {
       const b = sc.beats[s]; const B = `${W} beat ${String(s)}`;
       if (!b) { problems.push(`${W}: no beat ${String(s)}`); continue; }
       samLen(`${B} sam`, b.sam);
-      if (s === 1 && tokensIn(b.sam).length) problems.push(`${B}: the opener "${b.sam}" carries a token — openers stay literal (other probes match Sam's first line verbatim)`);
+      if (s === 1 && tokensIn(b.sam).length) problems.push(`${B}: the opener "${b.sam}" carries a token — openers stay literal (other probes match the player's first line verbatim)`);
       for (const tk of tokensIn(b.sam)) if (!wide.has(tk)) problems.push(`${B} sam: token {${tk}} is not guaranteed`);
       for (const [key, text] of himStrings(b.him)) {
         himLen(`${B} him/${key}`, text);
@@ -1034,12 +1170,12 @@ export function lintDialogue(): string[] {
   // the rooms (a room with no entry gets the menace script's own generic beat)
   for (const [room, list] of Object.entries(ROOM_MENACE)) {
     if (list.length < 2) problems.push(`room '${room}': only ${list.length} variant (want ≥ 2)`);
-    list.forEach((r, i) => { const W = `room '${room}' #${i}`; samLen(`${W} sam`, r.sam); if (tokensIn(r.sam).length) problems.push(`${W}: token in Sam's threat (rooms stay literal)`); for (const [key, text] of himStrings(r.him)) { himLen(`${W} him/${key}`, text); if (tokensIn(text).some(tk => !TOKENS_ALWAYS.includes(tk as Token))) problems.push(`${W} him/${key}: token not always resolvable`); if (key !== '*' && !(TEMPERAMENTS as string[]).includes(key)) problems.push(`${W} him: bad key '${key}' (rooms vary by temperament only)`); } if (typeof r.him !== 'string' && r.him['*'] === undefined) problems.push(`${W}: no '*' reply`); samLen(`${W} after`, r.after); });
+    list.forEach((r, i) => { const W = `room '${room}' #${i}`; samLen(`${W} sam`, r.sam); if (tokensIn(r.sam).length) problems.push(`${W}: token in the player's threat (rooms stay literal)`); for (const [key, text] of himStrings(r.him)) { himLen(`${W} him/${key}`, text); if (tokensIn(text).some(tk => !TOKENS_ALWAYS.includes(tk as Token))) problems.push(`${W} him/${key}: token not always resolvable`); if (key !== '*' && !(TEMPERAMENTS as string[]).includes(key)) problems.push(`${W} him: bad key '${key}' (rooms vary by temperament only)`); } if (typeof r.him !== 'string' && r.him['*'] === undefined) problems.push(`${W}: no '*' reply`); samLen(`${W} after`, r.after); });
   }
   // the handler
   for (const beat of HANDLER_BEATS) {
     const list = HANDLER_LINES[beat]; if (!list || list.length < 2) { problems.push(`handler '${beat}': ${list?.length ?? 0} exchanges (want ≥ 2)`); continue; }
-    list.forEach((x, i) => { const W = `handler '${beat}' #${i}`; for (const [who, text] of [['handler', x.h], ['sam', x.s]] as const) { orig(`${W} ${who}`, text); dup(`${W} ${who}`, text); const w = text.replace(/\{rack\}/g, '12'); if (w.length > SAM_MAX_CHARS) problems.push(`${W} ${who}: "${w}" is ${w.length} chars (> ${SAM_MAX_CHARS} — the radio strip and Sam's bubble are one line)`); if (/\{(?!rack\})/.test(text)) problems.push(`${W} ${who}: only {rack} resolves on the radio`); } });
+    list.forEach((x, i) => { const W = `handler '${beat}' #${i}`; for (const [who, text] of [['handler', x.h], ['sam', x.s]] as const) { orig(`${W} ${who}`, text); dup(`${W} ${who}`, text); const w = text.replace(/\{rack\}/g, '12'); if (w.length > SAM_MAX_CHARS) problems.push(`${W} ${who}: "${w}" is ${w.length} chars (> ${SAM_MAX_CHARS} — the radio strip and the player's bubble are one line)`); if (/\{(?!rack\})/.test(text)) problems.push(`${W} ${who}: only {rack} resolves on the radio`); } });
   }
   // the pairs
   if (AMBIENT_PAIRS.length < 6) problems.push(`pairs: only ${AMBIENT_PAIRS.length} conversations (want ≥ 6)`);
@@ -1078,11 +1214,11 @@ export function scriptCoverage(): { shape: ShapeKey; byT: Partial<Record<Tempera
 /** Every line each speaker can say, worst-case expanded, for the length report: the men (pools, scripts' answers, useful things with their worst lead, rooms'
  *  replies, the pairs) and Sam (pools, scripts, rooms, the radio). The probe prints the share at or under AIM_CHARS and the longest few. */
 export function lineLengthReport(): { men: { where: string; text: string }[]; sam: { where: string; text: string }[] } {
-  const worst = (text: string) => expand(text, TOKEN_WORST) ?? text;
+  const worst = (text: string) => expand(text, tokenWorst()) ?? text;
   const men: { where: string; text: string }[] = [], sam: { where: string; text: string }[] = [];
-  for (const l of LINES) men.push({ where: `pool ${l.id}`, text: worst(l.text) });
-  for (const l of SAM_LINES) if (l.s !== 'script') sam.push({ where: `pool ${l.id}`, text: worst(l.text) });
-  for (const kind of INTEL_KINDS) for (const [tk, text] of Object.entries(INTEL_TEXT[kind])) if (text) men.push({ where: `intel ${kind}/${tk}`, text: ((SHAPES as string[]).includes(tk.split(':')[0]) || tk.startsWith('sc:') ? '' : '…All right. ') + worst(text) });
+  for (const l of LINES) for (const text of w([l.now ?? l.text, l.away, l.bare], [l.text])) if (text) men.push({ where: `pool ${l.id}`, text: worst(text) });
+  for (const l of SAM_LINES) if (l.s !== 'script') for (const text of w([l.now ?? l.text, l.away], [l.text])) if (text) sam.push({ where: `pool ${l.id}`, text: worst(text) });
+  for (const kind of INTEL_KINDS) for (const [tk, text] of Object.entries(intelTable(kind))) if (text) men.push({ where: `intel ${kind}/${tk}`, text: ((SHAPES as string[]).includes(tk.split(':')[0]) || tk.startsWith('sc:') ? '' : '…All right. ') + worst(text) });
   for (const sc of SCRIPTS) for (const s of STAGES) { const b = sc.beats[s]; if (!b) continue; if (!b.room) { sam.push({ where: `${sc.id}:${String(s)} sam`, text: worst(b.sam) }); for (const [key, text] of (typeof b.him === 'string' ? [['*', b.him]] : Object.entries(b.him))) men.push({ where: `${sc.id}:${String(s)} him/${key}`, text: worst(text) }); } if (b.ask) sam.push({ where: `${sc.id}:${String(s)} ask`, text: worst(b.ask) }); if (b.after) sam.push({ where: `${sc.id}:${String(s)} after`, text: worst(b.after) }); if (b.take) sam.push({ where: `${sc.id}:${String(s)} take`, text: worst(b.take) }); if (b.mild) men.push({ where: `${sc.id}:${String(s)} mild`, text: worst(b.mild) }); }
   for (const [room, list] of Object.entries(ROOM_MENACE)) list.forEach((r, i) => { sam.push({ where: `room ${room} #${i}`, text: r.sam }); for (const [key, text] of (typeof r.him === 'string' ? [['*', r.him]] : Object.entries(r.him))) men.push({ where: `room ${room} #${i} him/${key}`, text: worst(text) }); if (r.after) sam.push({ where: `room ${room} #${i} after`, text: r.after }); });
   for (const beat of HANDLER_BEATS) (HANDLER_LINES[beat] ?? []).forEach((x, i) => { sam.push({ where: `radio ${beat} #${i} sam`, text: x.s.replace(/\{rack\}/g, '12') }); sam.push({ where: `radio ${beat} #${i} handler`, text: x.h.replace(/\{rack\}/g, '12') }); });
@@ -1093,7 +1229,7 @@ export function lineLengthReport(): { men: { where: string; text: string }[]; sa
 // ================================================================================================================================================================
 // SCRIPTS — the shapes (G7). Everything above picks from pools; everything below is the authored exchanges the pools now stand behind.
 // ================================================================================================================================================================
-/** Taste constants, one line each (the designer's to turn):
+/** Taste constants, one line each (the maintainer's to turn):
  *    RAMBLE_SWALLOWS  1 = the rambler's stream eats his first giving press when exactly one thing is pending (it lands a press later, never lost); 0 = never
  *    STOIC_BITE       1 = the stoic's (and anyone's) last word is the insult as written; 0 = the `mild` line where a beat carries one
  *    SCRIPT_ROTATE    true = a shape / script already played this session ranks behind the unplayed for the next man; false = the pure hash of his callsign
@@ -1163,7 +1299,7 @@ export function scriptLive(sc: Script, ctx: DialogueCtx): boolean { return sc.k.
 /** the beat for stage s — a `room` beat swapped for the room's own menace where the table has the room (variant dealt off his callsign) */
 export function beatFor(sc: Script, s: StageKey, ctx: DialogueCtx): Beat {
   const b = sc.beats[s]; if (!b.room) return b;
-  const list = ROOM_MENACE[ctx.tokens.room ?? '']; if (!list?.length) return b;
+  const list = ctx.ownRooms ? undefined : ROOM_MENACE[ctx.tokens.room ?? '']; if (!list?.length) return b;   // (the table is the office's furniture: a corridor of another level has no copier)
   const r = list[hashStr(`${ctx.who}|room|${sc.id}`) % list.length];
   return { ...b, sam: r.sam, him: r.him, after: r.after ?? b.after };
 }
@@ -1243,33 +1379,33 @@ const KN: Knowledge[] = ['none', 'heard', 'glimpsed'], KS: Knowledge[] = ['none'
 export const SCRIPTS: Script[] = [
   // ================================================================ STEADY
   // ---- count pedantry: asked how many, he wants the arithmetic defined; the definition becomes the threat; the number is exact ({up})
-  { id: 'pedant-s1', shape: 'pedant', t: 'steady', k: KN, band: ['low', 'mid'], beats: {
+  { id: 'pedant-s1', shape: 'pedant', t: 'steady', k: KN, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: 'How many of you on tonight? Whisper it.', him: 'On tonight, or on this floor? Those are different lists.' },
     2: { sam: 'The list that gets shorter if you stall.', him: '…Floor. You mean floor. {Up}, counting me. Sorry— nerves.' },
     3: { sam: 'Good. Now something I cannot count myself.', him: "That's the lot. I count things. It's most of the job." },
     x: { sam: 'Still {up}?', him: "Unless you've been busy. …Please don't answer that." } } },
-  { id: 'pedant-s2', shape: 'pedant', t: 'steady', k: KN, band: ['low', 'mid'], beats: {
+  { id: 'pedant-s2', shape: 'pedant', t: 'steady', k: KN, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: 'Head count. This floor. Now.', him: 'Counting how — bodies present, or badged in? They drift.' },
     2: { sam: "Count the ones who'd miss you.", him: "…That's a smaller number. {Up} present. Me included." },
     3: { sam: 'See, you round beautifully. Next fact.', him: "There isn't a next fact. I peaked at counting." },
     x: { sam: 'Any advance on {up}?', him: "It's not an auction. …{Up}. Final answer. Please stop bidding." } } },
-  { id: 'pedant-s3', shape: 'pedant', t: 'steady', k: KN, band: ['low', 'mid'], beats: {
+  { id: 'pedant-s3', shape: 'pedant', t: 'steady', k: KN, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: 'Numbers. How many walking this floor?', him: 'Walking right now, or rostered? Two of them sit down a lot.' },
     2: { sam: "The arm doesn't take footnotes.", him: "{Up}. Call it {up}. Including the one you're wearing." },
     3: { sam: 'Now where the other feet go.', him: 'I only do my stretch— {route}. The rest is rumour and biscuits.' },
     x: { sam: "You've gone quiet. Recounting?", him: 'Checking my working. Still {up}. Still including me, ideally.' } } },
   // ---- the self-own: Sam doubts he even works here; he proves it with the keyed door and hears himself do it (pin: door → the key comes off his belt at 3)
-  { id: 'selfown-s1', shape: 'selfown', t: 'steady', k: KS, pin: 'door', beats: {
+  { id: 'selfown-s1', shape: 'selfown', t: 'steady', k: KS, pin: 'door', needs: ['office'], beats: {
     1: { sam: "You're not staff. Staff would have heard me.", him: { '*': "I am staff. Eleven years. There's a photo on the lanyard. Look.", saw: 'Staff enough to chase you round {sawWhere}. Eleven years.' } },
     2: { sam: 'Anyone can print a lanyard. Staff know the doors.', him: "I know the doors. {Door}'s keyed and mine's on my— …no." },
     3: { sam: 'Finish the sentence. Then I finish with the arm.', him: 'There is no end to that sentence. It just stops there. Forever.' },
     x: { sam: "Anything else you'd like to prove?", him: "No. I'm done proving things. Clearly not my strength." } } },
-  { id: 'selfown-s2', shape: 'selfown', t: 'steady', k: KS, pin: 'door', beats: {
+  { id: 'selfown-s2', shape: 'selfown', t: 'steady', k: KS, pin: 'door', needs: ['office'], beats: {
     1: { sam: "Contract badge. You don't know this floor.", him: { '*': 'Better than the day lot. Try me. …On reflection, do not try me.', saw: 'I knew it well enough to spot you in it. Briefly.' } },
     2: { sam: "Bet you can't even open {door}.", him: "Course I can, it's only the key off my— I see what you did there." },
     3: { sam: 'So finish it. Slowly. Hands still.', him: 'Nothing to finish. I trail off professionally. Years of practice.' },
     x: { sam: "You've gone shy.", him: "I'm reviewing everything I've ever said out loud. It's a long list." } } },
-  { id: 'selfown-s3', shape: 'selfown', t: 'steady', k: KS, pin: 'door', beats: {
+  { id: 'selfown-s3', shape: 'selfown', t: 'steady', k: KS, pin: 'door', needs: ['office'], beats: {
     1: { sam: "You're the temp. Temps know nothing.", him: { '*': "Permanent nights, thank you. I've a drawer with my name on it.", saw: 'The temp nearly had you in {sawWhere}. Permanent, actually.' } },
     2: { sam: 'A drawer. Not a key, though.', him: 'Keys, plural. One for {door}, on my— …that was the whole trick, was it.' },
     3: { sam: 'It was. Where.', him: 'Nowhere. I own a drawer and no keys. Write that down.' },
@@ -1285,23 +1421,23 @@ export const SCRIPTS: Script[] = [
     2: { sam: 'You should be more worried.', him: "Oh, I'm terrified. Do you lot get dental? Genuine question." },
     3: { sam: 'Question for question. Mine first.', him: "I've nothing worth trading. Nights, mate. They give us a torch.", take: 'Good. And no. No dental.' },
     x: { sam: 'Forget my face.', him: 'Never saw it. Felt the forearm, though. Textbook. Shutting up.' } } },
-  { id: 'fan-s3', shape: 'fan', t: 'steady', k: KN, band: ['low'], beats: {
+  { id: 'fan-s3', shape: 'fan', t: 'steady', k: KN, band: ['low'], needs: ['office'], beats: {
     1: { sam: 'Shh.', him: "Twenty years reading about this stuff and it happens on MY floor." },
     2: { sam: "Focus. You're being held.", him: 'I know! Properly, too. Is there a course? Evening classes?' },
     3: { sam: "Tell me something and I'll say there's a course.", him: "I've got nothing. Ask me anything, though. Love a quiz.", take: "There's no course." },
     x: { sam: 'Not a word to anyone.', him: "Who'd believe me? …I'll know, though. Quietly. For years." } } },
   // ---- the con: an unannounced audit / pen test / drill assessment; he is proud to comply; the penny drops on the last press (calm floors, calm men only)
-  { id: 'con-s1', shape: 'con', t: 'steady', k: ['none', 'heard'], band: ['low', 'mid'], not: ['heardShots', 'bodyKnown', 'floorUp', 'heardBang'], beats: {
+  { id: 'con-s1', shape: 'con', t: 'steady', k: ['none', 'heard'], band: ['low', 'mid'], not: ['heardShots', 'bodyKnown', 'floorUp', 'heardBang'], needs: ['office'], beats: {
     1: { sam: 'Security audit. Unannounced. Badge number.', him: 'Oh— {badge}. Is this the fire-door thing? I flagged that. Twice.' },
     2: { sam: "I ask, you answer. That's the audit.", him: "Sorry. Yes. It's just— nobody audits nights. Ever. Carry on." },
     3: { sam: 'Item three. Staffing and access. Go.', him: "Staffing's thin and access is a joke. Quote me. Please quote me.", take: 'Very thorough. Head office will be thrilled.' },
     x: { sam: 'That concludes the audit.', him: "…Auditors don't usually do the arm, do they. Thinking about it." } } },
-  { id: 'con-s2', shape: 'con', t: 'steady', k: ['none', 'heard'], band: ['low', 'mid'], not: ['heardShots', 'bodyKnown', 'floorUp', 'heardBang'], beats: {
+  { id: 'con-s2', shape: 'con', t: 'steady', k: ['none', 'heard'], band: ['low', 'mid'], not: ['heardShots', 'bodyKnown', 'floorUp', 'heardBang'], needs: ['office'], beats: {
     1: { sam: "Penetration test. You're doing well so far.", him: 'Am I? Brilliant. Do I get a— is there a certificate at the end?' },
     2: { sam: 'Depends on the next answers.', him: 'Right. Focused. This is my certificate face.' },
     3: { sam: "Walk me through tonight's cover.", him: "Cover's me, a torch and optimism. Put 'optimism'. It sounds funded.", take: "Textbook. I'll mention you by badge." },
     x: { sam: 'Test complete.', him: "You're not writing any of this dow— oh. Oh, I see. Oh no." } } },
-  { id: 'con-s3', shape: 'con', t: 'steady', k: ['none', 'heard'], band: ['low', 'mid'], not: ['heardShots', 'bodyKnown', 'floorUp', 'heardBang'], beats: {
+  { id: 'con-s3', shape: 'con', t: 'steady', k: ['none', 'heard'], band: ['low', 'mid'], not: ['heardShots', 'bodyKnown', 'floorUp', 'heardBang'], needs: ['office'], beats: {
     1: { sam: "Fire drill assessment. Don't turn round.", him: "Finally. I've said for years the night drill is a work of fiction." },
     2: { sam: "Assessors don't chat. Badge.", him: "{Badge}. Sorry. It's just nice to be assessed for once." },
     3: { sam: "Muster procedure. Who's where.", him: "Muster's the car park. It's always the car park. Rain or rain.", take: 'Exemplary. Gold star.' },
@@ -1312,7 +1448,7 @@ export const SCRIPTS: Script[] = [
     2: { sam: 'Rule two. Count down from seven. Slowly.', him: 'Seven. Six. Why seven— five. Four.' },
     3: { sam: 'Hold at four. Now something useful.', him: "Useful. Er. Three? No— that's counting again. Sorry. Four.", take: 'Good. Stay at four.' },
     x: { sam: 'You may finish.', him: 'Three, two, one. So basic— NO. Nearly. So nearly.' } } },
-  { id: 'game-s2', shape: 'game', t: 'steady', k: KS, beats: {
+  { id: 'game-s2', shape: 'game', t: 'steady', k: KS, needs: ['office'], beats: {
     1: { sam: "Blink twice if you've ever validated parking.", him: { '*': "That's— twice. There. What have I just admitted to?", saw: 'Hunted you all night and you open with PARKING. …Twice. There.' } },
     2: { sam: 'Everything. Now hum. One note. Low.', him: 'Mmmm— this is the strangest thing that has ever— mmmm.' },
     3: { sam: 'Stop humming. Talk.', him: "About what? You've had blinking AND humming. I'm out of face.", take: 'Better than the humming.' },
@@ -1323,17 +1459,17 @@ export const SCRIPTS: Script[] = [
     3: { sam: 'Respectfully, tell me something.', him: "Respectfully, I've got nothing. With the greatest respect. Nothing.", take: "You dropped the 'respectfully'. I'll allow it." },
     x: { sam: 'Dismissed.', him: "Respectfully— can I stop now? It's stuck in my mouth. Respectfully." } } },
   // ---- environmental menace: the threat is the room (beat 2 from ROOM_MENACE; the beat's own pair where the room is unnamed)
-  { id: 'menace-s1', shape: 'menace', t: 'steady', k: KS, beats: {
+  { id: 'menace-s1', shape: 'menace', t: 'steady', k: KS, needs: ['office'], beats: {
     1: { sam: 'Look around. Tell me where we are.', him: { '*': '{Room}. …Why, where did you think you were?', saw: '{Room}. Same floor I chased you round. Smaller, now.' } },
     2: { sam: 'Quiet corner. Nobody walks past for hours.', him: "I walk past. That's the job. …I see the flaw in that now.", room: true },
     3: { sam: 'So. Something useful, or the tour continues.', him: "Nothing useful. Continue the tour. I've had worse shifts. Just." },
     x: { sam: 'Enjoy {room}.', him: 'I used to.' } } },
-  { id: 'menace-s2', shape: 'menace', t: 'steady', k: KS, beats: {
+  { id: 'menace-s2', shape: 'menace', t: 'steady', k: KS, needs: ['office'], beats: {
     1: { sam: 'You know this floor. Every room.', him: { '*': "Every bin, every squeaky tile. Small life, but it's indexed.", saw: 'Well enough to nearly corner you in it. Nearly is the word.' } },
     2: { sam: 'Then you know what in here would hurt.', him: 'The chairs, long term. Short term— you, I assume.', room: true },
     3: { sam: 'Or you tell me what I need.', him: 'You need a different hostage. Said with respect. And urgency.' },
     x: { sam: "We'll stay here a while.", him: "Fine. It's warmer than {route}." } } },
-  { id: 'menace-s3', shape: 'menace', t: 'steady', k: KS, beats: {
+  { id: 'menace-s3', shape: 'menace', t: 'steady', k: KS, needs: ['office'], beats: {
     1: { sam: 'Nice spot you picked to stand in.', him: { '*': "I didn't pick it. There's a rota. The rota picked it.", saw: 'I was standing in it looking for YOU. The rota will hear of this.' } },
     2: { sam: "Rota didn't mention the sharp edges in here.", him: 'Health and safety did. Laminated sign. Nobody reads laminate.', room: true },
     3: { sam: 'Talk, and we both leave {room}.', him: "I've nothing. We live here now. I'll show you where the kettle is." },
@@ -1345,55 +1481,55 @@ export const SCRIPTS: Script[] = [
     2: { sam: 'Including anyone with a radio. Go.', him: '{Up}! {Up}. Including me. Not you. Unless— no. {Up}.', take: 'And breathe. In through the number.' },
     3: { sam: 'You never actually said the number.', ask: "Keep going. You're on a roll.", him: '{Up}! Sorry! {Up}. I panicked about the rounding.' },
     x: { sam: 'Final count?', him: "{Up}. Wait— still {up}? You'd tell me. You wouldn't tell me." } } },
-  { id: 'pedant-n2', shape: 'pedant', t: 'nervy', k: KN, band: ['low', 'mid'], beats: {
+  { id: 'pedant-n2', shape: 'pedant', t: 'nervy', k: KN, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: 'Staff on this floor. A number.', him: 'A number or THE number? They come apart after midnight—' },
     2: { sam: "The one that's true right now.", him: '{Up}. True right now. Ask again in a minute and I— sorry. {Up}.', take: 'See. True things. More of those.' },
     3: { sam: 'What else is true right now?', ask: 'What else is true right now?', him: "My arm's asleep and there's {up} of us. That's everything true." },
     x: { sam: 'Recount.', him: "{Up}. …You're not writing any of this down, are you. Nobody does." } } },
-  { id: 'pedant-n3', shape: 'pedant', t: 'nervy', k: KN, band: ['low', 'mid'], beats: {
+  { id: 'pedant-n3', shape: 'pedant', t: 'nervy', k: KN, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: 'How many on shift?', him: 'Shift or floor? Payroll says one thing, the floor says—' },
     2: { sam: 'Say the floor thing.', him: "{Up}. Floor says {up}. Payroll's a liar anyway.", take: 'The floor thing. Good. Stay on the floor.' },
     3: { sam: 'More floor things.', ask: 'More floor things.', him: "That's all the floor says. The floor's not chatty. I am. Sorry." },
     x: { sam: 'Last count.', him: "{Up}, and I'd like to stay in it. The count. Keep me in the count." } } },
   // ---- the self-own, sprung at once: he proves he works here with the keyed door before Sam has finished doubting it (pin: door → given at 2)
-  { id: 'selfown-n1', shape: 'selfown', t: 'nervy', k: KS, pin: 'door', beats: {
+  { id: 'selfown-n1', shape: 'selfown', t: 'nervy', k: KS, pin: 'door', needs: ['office'], beats: {
     1: { sam: "You don't work here. Where's your badge?", him: { '*': "I DO— badge, radio, key to {door}, all here on my— oh no.", saw: 'I DO— I CHASED you— key to {door} right here on my— oh no.' } },
     2: { sam: "You've gone pale. Finish the thought.", ask: 'Go on. You were doing so well.', him: "There's no thought. Thought's gone. I'm mostly lanyard now." },
     3: { sam: 'Anything else on that belt?', ask: 'What else is on you? Keep declaring.', him: 'I walked straight into that. My sister says I do that. At weddings.' },
     x: { sam: 'Anything else to declare?', him: "A packed lunch and poor judgement. That's the lot. That's me." } } },
-  { id: 'selfown-n2', shape: 'selfown', t: 'nervy', k: KS, pin: 'door', beats: {
+  { id: 'selfown-n2', shape: 'selfown', t: 'nervy', k: KS, pin: 'door', needs: ['office'], beats: {
     1: { sam: "Agency cover? You've never seen this floor.", him: { '*': 'Three years! I know every door— {door} sticks, you jiggle it—', saw: 'Three years! I nearly HAD you— and {door} sticks, you jiggle—' }, after: 'Do you.' },
     2: { sam: 'Which key.', ask: 'Which key would that be.', him: 'No key. Figure of speech. We jiggle… morale. Nothing else.' },
     3: { sam: 'Noted. Anything further?', ask: 'Noted. Keep being helpful.', him: "I'd like it noted I was helpful BEFORE I was stupid. In that order." },
     x: { sam: 'Noted.', him: 'Is it? Is there a form? There is always, always a form.' } } },
-  { id: 'selfown-n3', shape: 'selfown', t: 'nervy', k: KS, pin: 'door', beats: {
+  { id: 'selfown-n3', shape: 'selfown', t: 'nervy', k: KS, pin: 'door', needs: ['office'], beats: {
     1: { sam: "You're lost. Visitors sign in downstairs.", him: { '*': 'VISITOR? I lock up! {Door}, nightly, with my own—', saw: 'VISITOR? I nearly CAUGHT you! I lock {door} with my own—' }, after: 'Own what.' },
     2: { sam: "Say it. You'll feel better.", ask: "Say 'key'. You'll feel better.", him: '…breath. My own breath. I lock up by breathing on it. Firmly.' },
     3: { sam: 'Anything else you lock up?', ask: 'Anything else you lock up?', him: "My bike. Badly, it turns out. It's been a year of this." },
     x: { sam: 'Deep breaths.', him: "That's what the wellness app says. The app has never met you." } } },
   // ---- the over-cooperator: folds before the question ends; Sam is thrown; pressed again he volunteers something useless and very specific
-  { id: 'folder-n1', shape: 'folder', t: 'nervy', k: KS, band: ['low', 'mid'], beats: {
+  { id: 'folder-n1', shape: 'folder', t: 'nervy', k: KS, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: "Right. Here's how this goes—", him: { '*': 'Yes. Anything. Everything. You choose where I start. I trust you.', saw: "Yes! It's you— fine— anything. Everything. You pick where I start." }, after: "…I hadn't finished the threat." },
     2: { sam: 'One useful thing. Just one.', him: "I don't HAVE a useful thing— I've a locker code— it's four ones—", after: 'Keep it.', take: 'Huh. I had a whole second half planned.' },
     3: { sam: "Since you're in the mood. What else.", ask: "Since you're in the mood. What else.", him: "Wifi's Synergy-something, capital S. Unchanged since the merger.", after: '…Thank you?' },
     x: { sam: "We're done.", him: 'Good biscuits are behind the decaf. Nobody looks behind the decaf.', after: "I'll treasure that." } } },
-  { id: 'folder-n2', shape: 'folder', t: 'nervy', k: KS, band: ['low', 'mid'], beats: {
+  { id: 'folder-n2', shape: 'folder', t: 'nervy', k: KS, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: 'Listen carefully—', him: { '*': "Listening. Agreeing. Whatever it is, I've agreed. Backdate it.", saw: "Listening! I saw what you— agreed. Whatever it is. Backdate it." }, after: "That's… efficient." },
     2: { sam: 'Then tell me the thing I want.', him: "I want to! I've got nothing! I've got a parking code! It's expired!", after: 'Tempting.', take: "You didn't even haggle." },
     3: { sam: 'More.', ask: 'More.', him: "Locker forty. Code's my birthday. It's on the group chat. With cake." },
     x: { sam: 'Stop helping.', him: "The printer on three jams if you look at it. That's my last one." } } },
-  { id: 'folder-n3', shape: 'folder', t: 'nervy', k: KS, band: ['low', 'mid'], beats: {
+  { id: 'folder-n3', shape: 'folder', t: 'nervy', k: KS, band: ['low', 'mid'], needs: ['office'], beats: {
     1: { sam: "You're going to answer some—", him: { '*': 'Yes. Yes to the questions. Yes to the tone. All of it. Pre-yes.', saw: "Yes— I know who you— yes to all of it. The tone. Pre-yes." }, after: 'I usually get to finish.' },
     2: { sam: 'Fine. What should I know?', him: "That I'm cooperating? Very hard? Can that go somewhere? On a file?", after: "There's no file.", take: '…People normally make me work for that.' },
     3: { sam: 'And?', ask: 'And?', him: 'And the coffee machine takes exact change and holds grudges.' },
     x: { sam: 'Enough.', him: "Fridge cake marked 'Dave' isn't Dave's. There is no Dave. Never was.", after: 'Noted. No Dave.' } } },
   // ---- the rambler: panic as an unstoppable stream; Sam cannot get a word in and gives up — a DUD when nothing is pending (Sam's rejoinder says so), one press late when one thing is (RAMBLE_SWALLOWS)
-  { id: 'ramble-n1', shape: 'ramble', t: 'nervy', k: KS, band: ['mid', 'high'], beats: {
+  { id: 'ramble-n1', shape: 'ramble', t: 'nervy', k: KS, band: ['mid', 'high'], needs: ['office'], beats: {
     1: { sam: 'Not a sound. Nod if—', him: { '*': "—sorry, I talk when I'm scared, my podcast's actually ABOUT that—", saw: "—it's you— sorry— I talk when I'm scared, my podcast's ABOUT that—" }, after: 'Your what.' },
     2: { sam: 'One fact. Small. Go.', him: "—forty listeners, it's on focus, ironically, and breathing, and—", after: "That's not intel. That's a trailer.", take: '…Was that in there the whole time?' },
     3: { sam: 'Another. Smaller.', ask: 'Another. Smaller.', him: '—and HR said the chair thing was MY posture— MINE— in writing—', after: "I'm putting you down as 'no'." },
     x: { sam: 'Are you done?', him: '—day ninety of the streak and THIS is what my heart rate gets—' } } },
-  { id: 'ramble-n2', shape: 'ramble', t: 'nervy', k: KS, band: ['mid', 'high'], beats: {
+  { id: 'ramble-n2', shape: 'ramble', t: 'nervy', k: KS, band: ['mid', 'high'], needs: ['office'], beats: {
     1: { sam: "Quiet. I'll ask, you'll—", him: { '*': '—is this the parking? Because I appealed the parking, formally—', saw: "—you're the— is this the parking? I APPEALED the parking, formally—" }, after: "It's not about the parking." },
     2: { sam: "Focus. What's on this floor?", him: '—forty a month to park at my own JOB, and the ramp floods, and—', after: 'Still not the parking.', take: 'A fact. In among the parking. Fine.' },
     3: { sam: 'Last try. Something useful.', ask: 'Last try. Something useful.', him: "—I've photos of the ramp. Timestamped. I'll forward you the—", after: "He'll forward me the ramp." },
@@ -1420,17 +1556,17 @@ export const SCRIPTS: Script[] = [
     3: { sam: "I'll extend your credit. Talk.", ask: "I'll extend your credit. Talk.", him: 'Can unused words roll over? Asking for a— no. Wasted four.' },
     x: { sam: "Budget's closed.", him: "Mm. Mm-mm. …That's humming, not words. Loophole. —Six. Damn." } } },
   // ---- environmental menace, opened with (nervy men give at 2, so the room is the opener)
-  { id: 'menace-n1', shape: 'menace', t: 'nervy', k: KS, beats: {
+  { id: 'menace-n1', shape: 'menace', t: 'nervy', k: KS, needs: ['office'], beats: {
     1: { sam: 'Bad room to be caught in. Look at it.', him: { '*': "It's a bad room to be EMPLOYED in! I've said! There's a survey!", saw: "YOU'RE the bad thing in it! Sorry. Sorry. Also the room, yes." }, room: true },
     2: { sam: "Or you talk. Talking's warmer.", him: "I'd talk! I've nothing to talk WITH! Threaten me near a plant!", take: 'See. Warmer already.' },
     3: { sam: 'Keep talking.', ask: 'Keep talking.', him: "Can we do this in the lobby? There's a ficus. It calms me." },
     x: { sam: "We're staying.", him: "Then I'm naming things. That vent's Gary. Hi Gary. Help me, Gary." } } },
-  { id: 'menace-n2', shape: 'menace', t: 'nervy', k: KS, beats: {
+  { id: 'menace-n2', shape: 'menace', t: 'nervy', k: KS, needs: ['office'], beats: {
     1: { sam: 'You know what happens in rooms like this.', him: { '*': 'Meetings? Oh— you mean— oh, worse than meetings. Right.', saw: "You do! You happen! I've SEEN you happen! …Sorry. Go on." }, room: true },
     2: { sam: "Unless you've something better to offer.", him: "Better than THAT? I've got a bus pass and regrets! Take both!", take: 'Better. Marginally.' },
     3: { sam: 'Go on.', ask: 'Go on.', him: 'Never liked {room}. Now it is mutual. I feel that.' },
     x: { sam: 'Settle in.', him: "I'm telling facilities about you. Anonymously. SO anonymously." } } },
-  { id: 'menace-n3', shape: 'menace', t: 'nervy', k: KS, beats: {
+  { id: 'menace-n3', shape: 'menace', t: 'nervy', k: KS, needs: ['office'], beats: {
     1: { sam: 'Look where we are. Take your time.', him: { '*': "{Room}. I know. I KNOW. I've had the induction. Twice.", saw: '{Room}— with YOU— which is the worst version of {room} so far.' }, room: true },
     2: { sam: 'Talk and I lose interest in the furniture.', him: "Lose it anyway! Please! It's dreadful furniture! Nobody'd blame you!", take: 'Interest lost.' },
     3: { sam: 'And?', ask: 'What else.', him: "I'm going to have such SPECIFIC nightmares. With an inventory." },
@@ -1447,7 +1583,7 @@ export const SCRIPTS: Script[] = [
     2: { sam: "You're calm, for a man in an arm.", him: 'Not my first arm.' },
     3: { sam: 'One thing, and you keep your evening.', him: "This was my evening. You've had it." },
     x: { sam: 'Nothing else?', him: 'You grunt when you crouch. Get that looked at.', mild: 'Nothing. Same as before, only later.' } } },
-  { id: 'stoic-h3', shape: 'stoic', t: 'hard', k: KS, beats: {
+  { id: 'stoic-h3', shape: 'stoic', t: 'hard', k: KS, needs: ['shift'], beats: {
     1: { sam: 'Easy.', him: { '*': 'For you, apparently.', saw: 'It was, nearly. For me.' } },
     2: { sam: 'I can wait.', him: "So can I. I'm paid to. Badly, but hourly." },
     3: { sam: "One fact. Then I'm a rumour.", him: "You're already a rumour. Short one." },
@@ -1474,17 +1610,17 @@ export const SCRIPTS: Script[] = [
     3: { sam: "Now one thing I don't know.", him: 'How this ends for you. Nor do I. Fun.', take: 'You lose gracefully.' },
     x: { sam: 'Rematch?', him: 'Bring a longer arm.', mild: 'Not tonight.' } } },
   // ---- environmental menace, met with a shrug
-  { id: 'menace-h1', shape: 'menace', t: 'hard', k: KS, beats: {
+  { id: 'menace-h1', shape: 'menace', t: 'hard', k: KS, needs: ['office'], beats: {
     1: { sam: 'Know where you are?', him: { '*': 'Work.', saw: 'Behind on my paperwork. About you.' } },
     2: { sam: 'Rooms like this keep secrets.', him: 'This one keeps a draught.', room: true },
     3: { sam: 'Or one useful sentence.', him: "Do the room thing. I'm curious now." },
     x: { sam: 'Thoughts?', him: 'You rehearse these. It shows.', mild: 'None for you.' } } },
-  { id: 'menace-h2', shape: 'menace', t: 'hard', k: KS, beats: {
+  { id: 'menace-h2', shape: 'menace', t: 'hard', k: KS, needs: ['office'], beats: {
     1: { sam: 'Look around you.', him: { '*': 'Seen it. Nightly.', saw: 'Saw it. Saw you in it. Preferred it empty.' } },
     2: { sam: 'Plenty in here to regret.', him: 'The carpet, mainly.', room: true },
     3: { sam: 'Talk instead.', him: 'No. Go on. Redecorate.' },
     x: { sam: 'Anything?', him: "You'd never get the deposit back.", mild: 'Nothing.' } } },
-  { id: 'menace-h3', shape: 'menace', t: 'hard', k: KS, beats: {
+  { id: 'menace-h3', shape: 'menace', t: 'hard', k: KS, needs: ['office'], beats: {
     1: { sam: 'Cosy in here.', him: { '*': "Isn't.", saw: 'Was. Then you.' } },
     2: { sam: 'Lot of hard surfaces.', him: "I mop them. I'd know.", room: true },
     3: { sam: 'Or you give me something.', him: "I'll take the surfaces." },
@@ -1518,8 +1654,9 @@ export const RADIO_REPLY_SECS = 1.7;
 export const RADIO_EDGE_DELAY = 2.6;
 export const HANDLER_BEATS = ['server', 'drive', 'rack', 'alarm', 'lockdown', 'blackout', 'bodyKo', 'bodyDead'] as const;
 export type HandlerBeat = typeof HANDLER_BEATS[number];
-/** her line (h), his answer (s). {rack} = the mission rack's number. Dry; the joke is usually his age, her hours, or the building. A man found dead is not a joke beat. */
-export const HANDLER_LINES: Record<HandlerBeat, { h: string; s: string }[]> = {
+/** her line (h), his answer (s). {rack} = the mission rack's number. Dry; the joke is usually his age, her hours, or the building. A man found dead is not a joke beat.
+ *  hOwn / sOwn (words.ts): the same half of the exchange on a level that is not the office — no 'floor', no corridor; read in handlerBeat. */
+export const HANDLER_LINES: Record<HandlerBeat, { h: string; s: string; hOwn?: string; sOwn?: string }[]> = {
   server: [
     { h: "That's you in. Rack {rack}, east bank. Gently.", s: "Gently is all I've got left at this hour." },
     { h: 'Server room. Try not to lean on anything load-bearing.', s: 'At my age everything I lean on is load-bearing.' },
@@ -1536,15 +1673,15 @@ export const HANDLER_LINES: Record<HandlerBeat, { h: string; s: string }[]> = {
   ],
   alarm: [
     { h: 'That sounded expensive. You in one piece?', s: "Define piece. I'm upright." },
-    { h: "Floor's awake now. So am I, thanks for that.", s: 'You were asleep?' },
-    { h: 'Overtime just kicked in, if that helps.', s: 'Helps the invoice. Not the corridor.' },
+    { h: "Floor's awake now. So am I, thanks for that.", s: 'You were asleep?', hOwn: "They're awake now. So am I, thanks for that." },
+    { h: 'Overtime just kicked in, if that helps.', s: 'Helps the invoice. Not the corridor.', sOwn: 'Helps the invoice. Not me.' },
   ],
   lockdown: [
     { h: "They've paired up and locked down. Old school.", s: 'Old school I can do. I am old school.' },
     { h: 'Lockdown. Doors, pairs, the lot. Your doing?', s: 'Allegedly.' },
   ],
   blackout: [
-    { h: "Board says you killed the floor's lights. Subtle.", s: 'Subtle was twenty years ago. This is efficient.' },
+    { h: "Board says you killed the floor's lights. Subtle.", s: 'Subtle was twenty years ago. This is efficient.', hOwn: 'Board says you killed their lights. Subtle.' },
     { h: "Blackout. Someone's walking to a breaker, armed and annoyed.", s: 'Annoyed I can work with.' },
   ],
   bodyKo: [
@@ -1563,8 +1700,9 @@ function radioState(g: Game): RadioState {
   if (R.run !== g.mission) { R.run = g.mission; R.done.clear(); R.queue.length = 0; R.reply = null; R.lastAt = -100; R.esc = escalationOf(g); R.blackout = g.blackout.active; R.found = g.guards.filter(x => x.found).length; }   // a fresh run (restartEncounter makes a new Mission): every beat may sound again, and the edges start from where the floor stands
   return R;
 }
-/** the run is really the player's and still going (mission.ts missionLive's test, without the import cycle), and Sam is on his feet */
-function radioLive(g: Game): boolean { const s = g.mission.stage; return !g.quietUtility && !g.puppet && !g.touring && g.aiEnabled && s !== 'done' && s !== 'failed' && !g.player.down; }
+/** the run is really the player's and still going (mission.ts missionLive's test, without the import cycle), and Sam is on his feet — and (words.ts) it is the night
+ *  she talks him through: with a squad's scenario up (a night breach, a room clear, a rescue) her dry asides about his knees are not that fight's */
+function radioLive(g: Game): boolean { const s = g.mission.stage; return !g.quietUtility && !g.puppet && !g.touring && g.aiEnabled && s !== 'done' && s !== 'failed' && !g.player.down && !(WORDS.on && (g.nightBreach?.active || g.rescue?.active)); }
 /** nobody is fighting, and Sam's mouth and hands are free */
 function radioClear(g: Game): boolean { return !g.guards.some(x => x.state === 'alert') && !g.player.holding && !g.player.takedown; }
 /** Sound a beat now (delay 0) or queue it `delay` seconds out (re-checked when it comes due). False if it will never sound: said already this run, the run is
@@ -1578,9 +1716,10 @@ export function handlerBeat(g: Game, beat: HandlerBeat, delay = 0): boolean {
   const pool = HANDLER_LINES[beat]; if (!pool?.length) return false;
   const L = pool[hashStr(`${beat}|${Math.round(g.mission.t0 * 10)}`) % pool.length];
   const rack = String(g.level.mission.rack.index + 1);
+  const own = WORDS.on && !isOffice(g.level), h = own ? L.hOwn ?? L.h : L.h, s = own ? L.sOwn ?? L.s : L.s;
   R.done.add(beat); R.lastAt = g.time;
-  g.msg(`radio: ${HANDLER_TAG} ▸ ${L.h.replace(/\{rack\}/g, rack)}`); g.audio.play('radio', null, 0.3, { rate: 1.12 });
-  R.reply = { at: g.time + RADIO_REPLY_SECS, text: L.s.replace(/\{rack\}/g, rack) };
+  g.msg(`radio: ${HANDLER_TAG} ▸ ${h.replace(/\{rack\}/g, rack)}`); g.audio.play('radio', null, 0.3, { rate: 1.12 });
+  R.reply = { at: g.time + RADIO_REPLY_SECS, text: s.replace(/\{rack\}/g, rack) };
   return true;
 }
 /** Once a frame (updateAmbient): the edges she reacts to on her own — the floor going up a level, the lights dying, a body found (breathing or not) — queued a
@@ -1608,18 +1747,18 @@ function tickRadio(g: Game) {
 export const AMBIENT = { pairM: 4.5, cooldown: 70, firstAfter: 20, gap: 0.45, faceRate: 2.5 };
 /** a pair line with its tokens at their longest ({other} a callsign, {code} four digits, {padDoor} the side door's name) — the lint's length check and the length report */
 export function pairWorst(text: string): string { return text.replace(/\{other\}/gi, 'Lindqvist').replace(/\{code\}/gi, TOKEN_WORST.code).replace(/\{padDoor\}/g, TOKEN_WORST.padDoor).replace(/\{PadDoor\}/g, TOKEN_WORST.padDoor[0].toUpperCase() + TOKEN_WORST.padDoor.slice(1)); }
-export interface PairTalk { id: string; lines: { who: 0 | 1; text: string }[]; note?: string; }
+export interface PairTalk { id: string; lines: { who: 0 | 1; text: string; /** the line on a level that is not the office (words.ts) */ own?: string }[]; note?: string; /** about the office building itself — its gents, lifts, vending machine, badges, town halls: dealt only there (words.ts) */ office?: true; }
 /** {other} = a third man's callsign (a conversation that names one waits for a night with three men up). who 0 opens; 1 answers. ≤ AIM_CHARS a line. */
 export const AMBIENT_PAIRS: PairTalk[] = [
-  { id: 'sensor', lines: [{ who: 0, text: "They've put a sensor in the gents. Little red eye." }, { who: 1, text: "That's the air freshener." }, { who: 0, text: 'It clicked at me.' }, { who: 1, text: "It does that. It's judging, not recording." }] },
-  { id: 'thunk', lines: [{ who: 0, text: 'Hear that? Sort of a thunk.' }, { who: 1, text: 'Vending machine. Drops one at midnight.' }, { who: 0, text: 'Drops one what?' }, { who: 1, text: "Nobody's ever gone to look." }] },
+  { id: 'sensor', office: true, lines: [{ who: 0, text: "They've put a sensor in the gents. Little red eye." }, { who: 1, text: "That's the air freshener." }, { who: 0, text: 'It clicked at me.' }, { who: 1, text: "It does that. It's judging, not recording." }] },
+  { id: 'thunk', office: true, lines: [{ who: 0, text: 'Hear that? Sort of a thunk.' }, { who: 1, text: 'Vending machine. Drops one at midnight.' }, { who: 0, text: 'Drops one what?' }, { who: 1, text: "Nobody's ever gone to look." }] },
   { id: 'pencil', lines: [{ who: 0, text: '{Other} did the sheet in pencil again.' }, { who: 1, text: 'So?' }, { who: 0, text: 'So Thursday never officially happened.' }, { who: 1, text: 'Lucky Thursday.' }] },
-  { id: 'pin', note: "the keypad's real digits, said aloud (devices.ts overhear: Sam learns them iff the line CARRIES to him — col.sound, the guards' own ears the other way round); {code} / {padDoor} resolve off the pad nearest the pair, and a level with no pad never deals this one", lines: [{ who: 0, text: 'They redid the pad on {padDoor}. {Code} now.' }, { who: 1, text: 'Out loud. In a corridor. Lovely.' }, { who: 0, text: "It's on a sticky ON the pad. I wrote it big." }, { who: 1, text: 'You ARE security. Somehow.' }] },
-  { id: 'overtime', lines: [{ who: 0, text: "Overtime sheet's gone digital." }, { who: 1, text: 'Meaning?' }, { who: 0, text: 'Meaning it rounds down on its own now.' }, { who: 1, text: 'Progress.' }] },
-  { id: 'poster', lines: [{ who: 0, text: "New poster by the lifts. 'Own the outcome.'" }, { who: 1, text: 'Which outcome?' }, { who: 0, text: "Doesn't say. Eagle, though. Big eagle." }, { who: 1, text: "I'll own the eagle." }] },
+  { id: 'pin', note: "the keypad's real digits, said aloud (devices.ts overhear: the player learns them iff the line CARRIES to him — col.sound, the guards' own ears the other way round); {code} / {padDoor} resolve off the pad nearest the pair, and a level with no pad never deals this one", lines: [{ who: 0, text: 'They redid the pad on {padDoor}. {Code} now.' }, { who: 1, text: 'Out loud. In a corridor. Lovely.', own: 'Out loud. Lovely.' }, { who: 0, text: "It's on a sticky ON the pad. I wrote it big." }, { who: 1, text: 'You ARE security. Somehow.', own: 'And you GUARD the thing. Somehow.' }] },
+  { id: 'overtime', office: true, lines: [{ who: 0, text: "Overtime sheet's gone digital." }, { who: 1, text: 'Meaning?' }, { who: 0, text: 'Meaning it rounds down on its own now.' }, { who: 1, text: 'Progress.' }] },
+  { id: 'poster', office: true, lines: [{ who: 0, text: "New poster by the lifts. 'Own the outcome.'" }, { who: 1, text: 'Which outcome?' }, { who: 0, text: "Doesn't say. Eagle, though. Big eagle." }, { who: 1, text: "I'll own the eagle." }] },
   { id: 'jug', lines: [{ who: 0, text: "Who made the six o'clock jug?" }, { who: 1, text: 'Day shift. As a warning.' }, { who: 0, text: 'I drank it.' }, { who: 1, text: "Then you've been warned." }] },
-  { id: 'photos', lines: [{ who: 0, text: "They're redoing badge photos Monday." }, { who: 1, text: "Mine's from nine kilos ago." }, { who: 0, text: 'Mine blinks. In a photo. Somehow.' }] },
-  { id: 'costcentre', lines: [{ who: 0, text: "Town hall called us 'a cost centre'." }, { who: 1, text: "We're a corridor." }, { who: 0, text: 'A cost corridor.' }, { who: 1, text: 'Walk it, then. Cheaply.' }] },
+  { id: 'photos', office: true, lines: [{ who: 0, text: "They're redoing badge photos Monday." }, { who: 1, text: "Mine's from nine kilos ago." }, { who: 0, text: 'Mine blinks. In a photo. Somehow.' }] },
+  { id: 'costcentre', office: true, lines: [{ who: 0, text: "Town hall called us 'a cost centre'." }, { who: 1, text: "We're a corridor." }, { who: 0, text: 'A cost corridor.' }, { who: 1, text: 'Walk it, then. Cheaply.' }] },
 ];
 interface AmbientRun { a: Guard; b: Guard; talk: PairTalk; i: number; at: number; other: string | null; /** the keypad the pair's {code} / {padDoor} mean, resolved when the talk was dealt (null: none on this level) */ pad: { code: string; door: string; lockId: string } | null; held: [boolean, boolean]; }
 // ---------------------------------------------------------------- NEEDS — what a man says stepping off his route for a coffee / a smoke / water / a stretch (game/needs.ts):
@@ -1632,18 +1771,27 @@ export const NEEDS_LINES = {
     water: ['Getting some water. One minute.', "Throat's gone. Water — one minute.", 'Cooler run. Back in a sec.'],
     stretch: ['Stretching my legs — lobby and back.', 'Legs have seized. Quick lap of the lobby.', 'Walking the lobby loop. Back in a minute.'],
   } as Record<string, string[]>,
+  /** the same, for a level whose places are its own (needs.ts: one with a `scenarios.quiet` block): nothing of the office's fire door, cooler or lobby in them */
+  announceOwn: {
+    coffee: ['Two minutes — grabbing a coffee.', 'Coffee. Back in two.'],
+    smoke: ['Going out for a smoke.', 'Quick smoke. Back in five.'],
+    water: ['Getting some water. One minute.', "Throat's gone. Water — one minute."],
+    stretch: ['Stretching my legs. Back in a minute.', 'Legs have seized. Quick lap.'],
+  } as Record<string, string[]>,
   reply: ['Go on then.', 'Again?', 'Bring me one.', "Don't be long.", "Clock's running.", "I'll hold the fort. Such as it is."],
   replyOther: ["Don't be long — {other} wanders enough for two.", 'Fine. If {other} asks, I never saw you.'],
   /** {who} = his own callsign, {short} = SHORT[kind] */
   radio: '{who} — two minutes, {short}.',
   short: { coffee: 'coffee', smoke: 'smoke, fire door', water: 'water', stretch: 'stretching my legs' } as Record<string, string>,
+  /** the same on a level whose places are its own (announceOwn's rule; words.ts): no fire door */
+  shortOwn: { smoke: 'smoke' } as Record<string, string>,
   back: ['Right. Where was I.', 'Okay. Back on it.', 'As I was.', '…and back to the glamour.'],
 };
 /** every line of it (the QA soak's pool: a needs line only ever from a man on a trip, his partner, or a man just back), radio lines expanded per callsign given */
 export function needsLines(callsigns: string[] = []): string[] {
-  const L = NEEDS_LINES; const out = [...Object.values(L.announce).flat(), ...L.reply, ...L.back];
+  const L = NEEDS_LINES; const out = [...Object.values(L.announce).flat(), ...Object.values(L.announceOwn).flat(), ...L.reply, ...L.back];
   for (const o of callsigns) for (const r of L.replyOther) out.push(r.replace(/\{other\}/g, o));
-  for (const w of callsigns) for (const s of Object.values(L.short)) out.push(L.radio.replace('{who}', w).replace('{short}', s));
+  for (const w of callsigns) for (const s of [...Object.values(L.short), ...Object.values(L.shortOwn)]) out.push(L.radio.replace('{who}', w).replace('{short}', s));
   return out;
 }
 
@@ -1733,12 +1881,80 @@ export const CIV_LINES = {
   /** the response team is coming: control clears the floor, she goes */
   qrf: 'control to all — response team inbound. get the cleaning staff OFF that floor. now',
   evac: ["Going — I'm GOING —", 'Out — yes — out —', "— I'm going, I'm going —"],
+  /** words.ts — the same moments on a level that is NOT the office (civilians.ts `away`): no fourth floor, no 'up here', no building security on the other end, no
+   *  sticky note, nobody named. What she knows there: the digits of the level's keypad if it has one (`intelPad`, {code} spelt out — Sam learns them as off the office's
+   *  sticky), then how many men walk the place tonight ({n}, a word: CIV_COUNT), then `dry`. */
+  own: {
+    phone: "It's {name} — listen — there's a MAN in here — {room} —", phoneArmed: "It's {name} — a man with a GUN — {room} —",
+    control: {
+      someone: 'all callsigns, control — {name} just rang in a prowler, {room}. somebody walk it. eyes open',
+      armed: 'all callsigns, control — {name} rang it in: ARMED intruder, {room}. weapons out, get there',
+      outside: 'all callsigns, control — {name} just came out at a run. says there is a man in there, {room}. treat it as real',
+    } as Record<string, string>,
+    heldFear: 'Please — I just WORK here —',
+    intelPad: "The door with the pad — I've seen them do it. {code}.",
+    intel: ['{n} of them tonight. Walking round. All night.'],
+    samAsk: 'Quietly. Who else is here tonight?',
+    foundCold: "control, {cs} — it's {name}, the {label} — {she}'s DOWN. out cold, breathing. someone's about",
+  },
+  /** words.ts — reworded on every level: not every spot she reaches a man at has a desk, and the late worker is no cleaning staff */
+  now: { guardAck: 'Okay. Get down somewhere and stay put.', qrf: 'control to all — response team inbound. get the civilians OFF that floor. now' },
 };
+/** {n} in CIV_LINES.own.intel, by the count (past the end: the last) */
+export const CIV_COUNT = ['None', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'A lot'];
 /** every civilian line and every line said about one (the QA soak's pool: only ever from a civilian's mouth, the guard beside one, or control) */
 export function civilianLines(): string[] {
   const L = CIV_LINES; const out: string[] = [...L.glimpse, ...L.shrug, ...Object.values(L.gasp).flat(), ...L.flee, ...Object.values(L.report).flat(), ...L.guardAck.someone, ...L.guardAck.armed, ...Object.values(L.guardRadio), ...L.phone, ...L.phoneArmed, ...Object.values(L.control), ...L.cower, ...L.heldFear, ...L.heldFearWorker, ...Object.values(L.intel).flat(), ...L.dry, ...L.comply.sam, ...L.comply.civ, ...L.samAsk, ...L.found, L.foundDown.cold, L.foundDown.dead, L.outrage, ...L.greet.civ, ...L.greet.guard, ...L.settle, L.qrf, ...L.evac];
+  const O = L.own; out.push(O.phone, O.phoneArmed, ...Object.values(O.control), O.heldFear, O.intelPad, ...O.intel.flatMap(t => CIV_COUNT.map(n => t.replace('{n}', n))), O.samAsk, O.foundCold, L.now.guardAck, L.now.qrf);   // (words.ts: the variants)
   return out;
 }
+
+// ---------------------------------------------------------------- HOSTAGES (game/rescue.ts names the moment, civilians.ts hostageSay says it; words.ts WORDS.on).
+// A hostage is a civilian's record put down and bound, and until the dialogue pass she whimpered the office cleaner's corner lines ("I didn't see anything —")
+// at men who had taken her at gunpoint. These are hers: said to the captor, to the one bound beside her, to whoever comes through the door. The civilians'
+// register (frightened, broken off, the odd word in capitals), ≤ AIM_CHARS a line; {other} = another hostage's name (a line that needs one is left out when
+// there is none). `team` is the one line the other way: a teammate's word to them once the room is his, in the squad's own lower case.
+export const HOSTAGE_LINES = {
+  /** held, a man of theirs standing over them, nothing happening yet: low, to him or to nobody */
+  wait: ['Please — just let us go —', "We'll do what you say — please —", 'Please. Please.', "I can't feel my hands —", '— breathe. Just breathe. —', 'I want to go home —', "We haven't seen your faces — we haven't —"],
+  /** he is shouting at the door and counting */
+  threat: ["Please — don't — we've done NOTHING —", 'He means it — oh god, he MEANS it —', "Don't — please, please don't —", 'Somebody — PLEASE —'],
+  /** his gun is on her */
+  aimed: ['No — no, PLEASE —', "Don't — I'm begging you —", 'Wait — WAIT —'],
+  /** he has shot the one beside her */
+  shot: ['NO —!', '{other}! — oh god — {other} —', 'He SHOT {other} — he —', '— no no no no —'],
+  /** the team's first loud thing at the room: a boot, a charge, rounds through the door */
+  entry: ['— what was THAT —', "They're shooting — oh god —", "In HERE — we're in HERE —", '{other} — stay DOWN — stay down —'],
+  /** nobody of theirs left in the room, and nobody of the team in it yet */
+  alone: ['Hello? — is somebody there —?', "We're in here — HELP —", 'In here — please —'],
+  /** the room is the team's */
+  secured: ["Don't shoot — please — we're hostages —", 'Oh thank god — thank god —', 'Is it over? — is it OVER —?', 'Are they — are they gone —?'],
+  /** a teammate to them, a beat after */
+  team: ["stay down. you're safe — we've got you.", "you're all right. stay where you are.", 'friendlies. stay down till we say.'],
+};
+export type HostageMoment = Exclude<keyof typeof HOSTAGE_LINES, 'team'>;
+/** every hostage line and the team's word to them (dialogue-probes: lengths, the blocklist, nothing of the office's civilians in it) */
+export function hostageLines(): string[] { return Object.values(HOSTAGE_LINES).flat(); }
+
+// ---------------------------------------------------------------- THE MAN A SNATCH IS FOR (game/snatch.ts `voice`, said through civilians.ts civSay / civilianAnswer).
+// He is a civilian's record too, and until these he spoke the office's late worker ("I do the ACCOUNTS —", "…get a grip, {name}."): wrong for the man the team
+// came for. Calm he says nothing; frightened, what he says is by what he is doing. The team is 'they' / 'you' to him; nothing of the office's in it.
+export const SNATCH_LINES = {
+  /** the first loud thing has reached him and he is running for a way out */
+  running: ["They're here — they're HERE —", 'Not me — not ME —', 'Out — get me OUT —'],
+  /** gone to ground with no way out left, hands not up */
+  cornered: ['Stay back — stay BACK —', "I've nothing for you — nothing —", '— no, no, no —'],
+  /** his hands on his head, a man of the team on him or just gone */
+  handsUp: ["don't shoot! don't shoot!", "All right — all RIGHT — they're up —", "I'm not armed — look — nothing —"],
+  /** tied where he gave up */
+  tied: ["You've the wrong man —", "I'm not fighting you — easy —", 'They will come for me. You know that.'],
+  /** in Sam's arm, the first press */
+  held: ["All right — I'm not fighting — all right —", 'Easy — I have no gun — nothing —'],
+  /** and every press after: he gives nothing */
+  dry: ['I say nothing to you.', 'Ask whoever sent you.'],
+};
+/** every line of his (the say sites pass one of these through as it is) */
+export function snatchLines(): string[] { return Object.values(SNATCH_LINES).flat(); }
 
 interface AmbientState { next: number; run: AmbientRun | null; played: Map<string, number>; count: number; }
 const ambientByGame = new WeakMap<object, AmbientState>();
@@ -1749,6 +1965,14 @@ function chatty(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.un
 /** still fit to keep talking (the hold flag is ours by now) */
 function stillChatty(g: Game, x: Guard): boolean { return x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && x.awareness < 0.3 && g.guards.includes(x); }
 function endAmbient(g: Game, S: AmbientState) { const r = S.run; if (!r) return; if (!r.held[0]) r.a.hold = false; if (!r.held[1]) r.b.hold = false; S.run = null; S.next = g.time + AMBIENT.cooldown; }
+/** A RESTART (game.ts restartEncounter): the pairs' clock starts over, as on a floor just stood up — the first chat is AMBIENT.firstAfter from the restart, and a
+ *  conversation under way went with the old shift (left to the per-frame hook it would end a frame later and set the cooldown against the new one). It used to
+ *  keep the `next` of the page's first frame: after twenty calm seconds and a restart the first pair to meet stopped to talk at once, where a freshly stood-up
+ *  floor's walk on (tools/qa/restart-probes.ts). The played ledger stays on the office (and everywhere with words.ts off): each conversation once before any repeats, across
+ *  restarts too. Off the office, under the dialogue pass, a pair is heard once a RUN, so there a restart clears it. */
+export function ambientRestart(g: Game) { const S = ambientByGame.get(g); if (!S) return; S.run = null; S.next = -1; if (WORDS.on && !isOffice(g.level)) S.played.clear(); }   // (words.ts: off the office a chat is heard once a RUN, so there the ledger is the run's — a load puts the file's back after this)
+/** the line of a pair as it will be said: its `own` wording off the office (words.ts), else its text */
+const pairSaid = (l: PairTalk['lines'][number], own: boolean) => own ? l.own ?? l.text : l.text;
 /** The one per-frame hook (guards.ts updateEscalation): the handler's radio, then the pairs — advance a conversation under way (or drop it the frame either
  *  man stops being a calm patrol), else look for two chatty men within AMBIENT.pairM with a clear line between them and start the least-played conversation. */
 export function updateAmbient(g: Game, dt: number) {
@@ -1757,15 +1981,16 @@ export function updateAmbient(g: Game, dt: number) {
   if (S.run) {
     const r = S.run;
     if (!ambientLive(g) || !stillChatty(g, r.a) || !stillChatty(g, r.b)) { endAmbient(g, S); return; }
-    for (const [me, him] of [[r.a, r.b], [r.b, r.a]] as const) { const c = me.char; c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(him.char.pos[0] - c.pos[0], him.char.pos[2] - c.pos[2]), AMBIENT.faceRate * dt); }   // half turned to each other while it lasts (the patrol's hold branch keeps their feet)
+    for (const [me, him] of [[r.a, r.b], [r.b, r.a]] as const) { const c = me.char; c.bodyYaw = approachAngle(c.wantBody, Math.atan2(him.char.pos[0] - c.pos[0], him.char.pos[2] - c.pos[2]), AMBIENT.faceRate * dt); }   // half turned to each other while it lasts (the patrol's hold branch keeps their feet)
     if (g.time < r.at) return;
     if (r.i >= r.talk.lines.length) { endAmbient(g, S); return; }
     const L = r.talk.lines[r.i++]; const who = L.who === 0 ? r.a : r.b;
     const pad = r.pad;
-    const text = L.text.replace(/\{Other\}/g, r.other ?? '').replace(/\{other\}/g, r.other ?? '').replace(/\{Code\}|\{code\}/g, pad?.code ?? '').replace(/\{PadDoor\}/g, pad ? pad.door[0].toUpperCase() + pad.door.slice(1) : '').replace(/\{padDoor\}/g, pad?.door ?? '');
+    const raw = pairSaid(L, WORDS.on && !isOffice(g.level));
+    const text = raw.replace(/\{Other\}/g, r.other ?? '').replace(/\{other\}/g, r.other ?? '').replace(/\{Code\}|\{code\}/g, pad?.code ?? '').replace(/\{PadDoor\}/g, pad ? pad.door[0].toUpperCase() + pad.door.slice(1) : '').replace(/\{padDoor\}/g, pad?.door ?? '');
     g.say(who, text);
-    if (pad && /\{code\}/i.test(L.text)) g.devices?.overhearSaid(g, who, pad.lockId);   // the digits are in the air: Sam has them if they carried to him (devices.ts overhear — the propagation, not a radius)
-    r.at = g.time + Math.min(4, Math.max(2, 1.5 + text.length * 0.055)) + AMBIENT.gap;   // (say's own bubble length, then a breath)
+    if (pad && /\{code\}/i.test(raw)) g.devices?.overhearSaid(g, who, pad.lockId);   // the digits are in the air: Sam has them if they carried to him (devices.ts overhear — the propagation, not a radius)
+    r.at = g.time + bubbleSecs(text) + AMBIENT.gap;   // (say's own bubble length, then a breath)
     return;
   }
   if (!ambientLive(g)) { S.next = -1; return; }
@@ -1779,7 +2004,8 @@ export function updateAmbient(g: Game, dt: number) {
     if (g.col.solidBlocked([a.char.pos[0], 1.4, a.char.pos[2]], [b.char.pos[0], 1.4, b.char.pos[2]])) continue;
     const third = g.guards.find(x => x !== a && x !== b && !x.unit && x.state !== 'dead' && !knownDown(g, a).has(x.callsign)) ?? null;
     const K = g.devices?.padNear(a.char.pos) ?? null; const pad = K ? { code: K.def.code, door: doorName(K.door.def.name), lockId: K.def.name } : null;   // the pad they would mean (a level with none: no sticky-note talk)
-    const fits = AMBIENT_PAIRS.filter(p => (third || !p.lines.some(l => /\{other\}/i.test(l.text))) && (pad || !p.lines.some(l => /\{code\}|\{padDoor\}/i.test(l.text))));
+    const own = WORDS.on && !isOffice(g.level);   // (words.ts, off the office: the building's own chats are out, the tokens are asked of the line that will be SAID, and — three chats left — each is heard once a run: silence after them, not a loop)
+    const fits = AMBIENT_PAIRS.filter(p => (third || !p.lines.some(l => /\{other\}/i.test(pairSaid(l, own)))) && (pad || !p.lines.some(l => /\{code\}|\{padDoor\}/i.test(pairSaid(l, own)))) && !(own && (p.office || (S.played.get(p.id) ?? 0) >= 1)));
     if (!fits.length) return;
     fits.sort((p, q) => ((S.played.get(p.id) ?? 0) - (S.played.get(q.id) ?? 0)) || (hashStr(`${a.callsign}|${b.callsign}|${S.count}|${p.id}`) - hashStr(`${a.callsign}|${b.callsign}|${S.count}|${q.id}`)));
     const talk = fits[0]; S.played.set(talk.id, (S.played.get(talk.id) ?? 0) + 1); S.count++;

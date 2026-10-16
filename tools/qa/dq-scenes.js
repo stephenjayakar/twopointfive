@@ -1,4 +1,4 @@
-// DIRECT-QUALITY bench (lane v3/direct-quality, docs/internal/direct-quality.md): the designer's 08-12 notes at HIGH — "odd glowing at contact points … the light from
+// DIRECT-QUALITY bench (lane v3/direct-quality, docs/internal/direct-quality.md): the maintainer's 08-12 notes at HIGH — "odd glowing at contact points … the light from
 // muzzle flashes looks pretty noisy … weird light leaking in door frame … weird red wall leaking on sam … noise in flashing light in cubicle" — as five deterministic scenes,
 // plus the sharp path's SLIVER census / paint and the readbacks that attribute them. Dev only: on a `?paused&quality=<p>&mute` boot of THIS lane's server,
 //     await import('/qa/dq-scenes.js'); await __dq.boot(); await __dq.stage('S1'); await __dq.cap('tag')  …  __dq.res

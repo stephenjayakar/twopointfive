@@ -1,8 +1,9 @@
 // Small geometry helpers the editor's tools share (pure): box corners / faces in world space, point tests, snapping, yaw frames, and the two
-// ports from the legacy generator the format note asked for — 'frame this door' (jambs, head, stops: officeGen.ts's frame loop verbatim in
-// its numbers) and 'cut an opening' (split the wall slabs a doorway crosses into left / right / lintel pieces, as wallX / wallZ laid them).
+// editor verbs that lay boxes the way the level kits do — 'frame this door' (jambs, head, stops, in scene/doorSize.ts's sizes) and 'cut an opening' (split the
+// wall slabs a doorway crosses into left / right / lintel pieces).
 import type { Vec3 } from '../math/vec';
 import type { BoxData, DoorData, LevelData } from '../scene/levelData';
+import { DOOR_HEAD, JAMB_FACE, LEAF_H } from '../scene/doorSize';
 
 export const snapTo = (v: number, step: number) => step > 0 ? Math.round(v / step) * step : v;
 export const snapVec = (p: Vec3, step: number, y = false): Vec3 => [snapTo(p[0], step), y ? snapTo(p[1], step) : p[1], snapTo(p[2], step)];
@@ -36,33 +37,35 @@ export function pushFace(c: Vec3, h: Vec3, yaw: number, f: Face, delta: number, 
 
 // ---------------------------------------------------------------- doors: frame + opening (ported from officeGen.ts)
 /** The frame the generator built round every leaf: two jambs and a head slightly proud of the wall, and the two stops in the leaf's plane that close
- *  the knuckle slot and the latch seam (numbers verbatim from officeGen.ts). Wall thickness t: 0.12 interior / 0.24 exterior unless given. Returns
+ *  the knuckle slot and the latch seam (officeGen.ts doorFrame's numbers; the jamb face is scene/doorSize.ts JAMB_FACE). Wall thickness t: 0.12 interior / 0.24 exterior unless given. Returns
  *  BoxData WITHOUT ids (the caller names them) in group `doorframe.<door id>`. */
 export function doorFrameBoxes(d: DoorData, opts: { t?: number; floor?: string; albedo?: Vec3 } = {}): Omit<BoxData, 'id'>[] {
-  const t = opts.t ?? (d.exterior ? 0.24 : 0.12); const gap = d.width + 0.04; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
+  const t = opts.t ?? (d.exterior ? 0.24 : 0.12); const gap = d.width + 2 * JAMB_FACE; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
   const sgn = alongX ? Math.sign(Math.cos(d.closedDir)) || 1 : Math.sign(Math.sin(d.closedDir)) || 1;   // (the generator's doors all run +x / +z; a leaf authored the other way runs its gap backwards from the hinge)
   const hu = alongX ? d.hinge[0] : d.hinge[1]; const w = alongX ? d.hinge[1] : d.hinge[0];               // along-wall coordinate of the hinge, wall line coordinate
-  const a = sgn > 0 ? hu - 0.02 : hu - gap + 0.02;                                                          // gap start along the wall (lower coordinate)
+  const a = sgn > 0 ? hu - JAMB_FACE : hu - gap + JAMB_FACE;                                                // gap start along the wall (lower coordinate)
   const albedo: Vec3 = opts.albedo ?? (d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17]);
   const group = `doorframe.${d.id}`; const floor = opts.floor;
   const out: Omit<BoxData, 'id'>[] = [];
   const mk = (c: Vec3, h: Vec3) => out.push({ ...(floor ? { floor } : {}), group, c: roundVec(c), h: roundVec(h), albedo: [...albedo] as Vec3 });
-  const jamb = (u: number) => alongX ? mk([u, 1.1, w], [0.03, 1.1, t / 2 + 0.012]) : mk([w, 1.1, u], [t / 2 + 0.012, 1.1, 0.03]);
+  const hy = DOOR_HEAD / 2;   // (the frame the kits build: scene/doorSize.ts)
+  const jamb = (u: number) => alongX ? mk([u, hy, w], [0.03, hy, t / 2 + 0.012]) : mk([w, hy, u], [t / 2 + 0.012, hy, 0.03]);
   jamb(a - 0.01); jamb(a + gap + 0.01);
-  if (alongX) mk([a + gap / 2, 2.23, w], [gap / 2 + 0.04, 0.035, t / 2 + 0.012]); else mk([w, 2.23, a + gap / 2], [t / 2 + 0.012, 0.035, gap / 2 + 0.04]);
-  const stop = (u0: number, u1: number) => { const m = (u0 + u1) / 2 * sgn, hw = (u1 - u0) / 2; if (alongX) mk([d.hinge[0] + m, 1.1, w], [hw, 1.1, 0.02]); else mk([w, 1.1, d.hinge[1] + m], [0.02, 1.1, hw]); };   // (u along the closed leaf from the hinge line)
+  const hb = LEAF_H + 0.005, hc = (hb + DOOR_HEAD + 0.065) / 2, hh = (DOOR_HEAD + 0.065 - hb) / 2;   // (as the kits' frames: the head comes down past the top of the shut leaf, no slot over it)
+  if (alongX) mk([a + gap / 2, hc, w], [gap / 2 + 0.04, hh, t / 2 + 0.012]); else mk([w, hc, a + gap / 2], [t / 2 + 0.012, hh, gap / 2 + 0.04]);
+  const stop = (u0: number, u1: number) => { const m = (u0 + u1) / 2 * sgn, hw = (u1 - u0) / 2; if (alongX) mk([d.hinge[0] + m, hy, w], [hw, hy, 0.02]); else mk([w, hy, d.hinge[1] + m], [0.02, hy, hw]); };   // (u along the closed leaf from the hinge line)
   stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
   return out;
 }
 
 /** Cut the doorway `d` needs through whatever axis-aligned wall slabs cross its gap: each such box is replaced by up to three (the run either side of
- *  the gap, and the lintel from y1 = 2.2 up to the slab's top — what wallX / wallZ emit for an opening { a, b } with y0 0, y1 2.2). Returns the plan:
+ *  the gap, and the lintel from y1 = a door's height (scene/doorSize.ts DOOR_HEAD) up to the slab's top — what wallX / wallZ emit for a door's opening). Returns the plan:
  *  boxes to remove (ids) and boxes to add (no ids). Yawed / tilted boxes and boxes that do not span the gap's height band are left alone. */
 export function cutOpeningPlan(data: LevelData, d: DoorData, opts: { y1?: number } = {}): { remove: string[]; add: Omit<BoxData, 'id'>[] } {
-  const y1 = opts.y1 ?? 2.2; const gap = d.width + 0.04; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
+  const y1 = opts.y1 ?? DOOR_HEAD; const gap = d.width + 2 * JAMB_FACE; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
   const sgn = alongX ? Math.sign(Math.cos(d.closedDir)) || 1 : Math.sign(Math.sin(d.closedDir)) || 1;
   const hu = alongX ? d.hinge[0] : d.hinge[1]; const w = alongX ? d.hinge[1] : d.hinge[0];
-  const a = sgn > 0 ? hu - 0.02 : hu - gap + 0.02, b = a + gap;
+  const a = sgn > 0 ? hu - JAMB_FACE : hu - gap + JAMB_FACE, b = a + gap;
   const remove: string[] = []; const add: Omit<BoxData, 'id'>[] = [];
   for (const bx of data.boxes) {
     if (bx.rot || Math.abs(Math.sin(bx.yaw ?? 0)) > 1e-6 || (bx.flags ?? []).includes('NoShadow')) continue;
@@ -117,3 +120,9 @@ export const LIGHT_PRESETS: LightPreset[] = [
   { key: 'sodium', label: 'street lamp', title: 'sodium street lamp head (spot, broad class, street supply — mains false): 5 m up', def: { kind: 'spot', color: [1, 0.62, 0.22], intensity: 260, range: 22, innerDeg: 35, outerDeg: 65, volumetric: 0.12, radius: 0.18, broad: true }, height: 5.05 },
 ];
 export const VOLUME_KINDS = ['hide', 'utility', 'trigger'] as const;
+/** what reads each kind today (the palette's tooltips): only `trigger` has a reader — a level script's onEnter, by the volume's name (game/director.ts) */
+export const VOLUME_READ: Record<typeof VOLUME_KINDS[number], string> = {
+  hide: 'hide volume — NOTHING READS THIS KIND YET: it is kept in the file and drawn here, and the game ignores it',
+  utility: 'utility volume — NOTHING READS THIS KIND YET: it is kept in the file and drawn here, and the game ignores it',
+  trigger: 'trigger volume — read by a level script\'s onEnter, by the volume\'s name (game/director.ts); no shipped level has one',
+};

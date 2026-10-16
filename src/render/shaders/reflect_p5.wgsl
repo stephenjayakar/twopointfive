@@ -209,7 +209,8 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
       let mref = lightMarkRef(li);                                        // a MARKING's light (the vending windows): texture the uniform analytic image with the window's own pattern at the mirror point (markings.wgsl)
       if (mref >= 0 && frame.markCfg.w > 0.0) { pat = markPatternAtMirror(u32(mref), li, Po, N, V, ax); }
     }
-    let E = li.color * pat * (att * NdotL);
+    let fogK = lightFogK(li, P, N); if (fogK <= 0.002) { continue; }   // the fog of war's light classes (common.wgsl): a torch's highlight is not on floor nobody sees
+    let E = li.color * pat * (att * NdotL * fogK);
     let hw = Ld + V; if (dot(hw, hw) < 1e-8) { continue; }
     let Hw = hw * inverseSqrt(dot(hw, hw));
     let H = vec3f(dot(Hw, T), dot(Hw, B), dot(Hw, N));
@@ -238,6 +239,51 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
   }
   let lg = luminance(G);
   return vec4f(select(G, G * (RT_GLINT_MAX / lg), lg > RT_GLINT_MAX), select(0.0, max(g0.dist, 0.05), g0.i >= 0));
+}
+
+// ---- LASERS / TRACERS IN THE REFLECTION (render/passes.ts setBeams; settings.beamReflect). A weapon laser's beam and a tracer's streak are NoShadow boxes: no
+// ray can meet one, so traceClosest never returns them. The host hands the nearest 8 as line segments and their mirror image is added ANALYTICALLY: where the
+// pixel's mirror ray passes a segment, the share of the lobe's footprint there that the hair-thin line fills (footprint = the pixel's cone + the finish's lobe, so a polish shows a line and a rough wet patch a faint smear), one occlusion ray to that point, the finish's Fresnel. Stable frame to frame
+// (no sampling), like the analytic highlights. Picture only. beams.n == 0 → never called: the pass's arithmetic as it was. KEEP IN STEP: reflect.wgsl ≡ reflect_p5.wgsl.
+struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };   // a = from xyz + the drawn half-width (m) · b = to xyz · e = emitted radiance rgb (already dimmed for that width)
+struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8> };   // p0: bit 0 = mirror images on, bit 1 = the lasers are light in the air (composite.wgsl beamAir); seg.e.w = that beam's share of air (0 = a box)
+@group(1) @binding(11) var<uniform> beams: Beams;
+const BEAM_REFL_AIR: f32 = 0.25;     // … and of a squad laser drawn as light in the air (settings.beamAir): a quarter of the line AS IT IS DRAWN (× its air share below), so the image is always well
+                                     // under the beam (the maintainer: "a bit bright given the brightness of the IR beam"); the wet film's own share is 0.12. TASTE, never seen on a GPU
+const BEAM_REFL_MIN: f32 = 0.35;     // the least share of the beam a finish mirrors (TASTE, first pass, never seen on a GPU). Physically a water film returns 4 % from above and a
+                                     // 4 mm line at 4 % is invisible — but the beam itself is a drawn convention (no laser shows from the side in clear air), so its image is too: 0 = Fresnel alone
+fn beamImage(Po: vec3f, N: vec3f, V: vec3f, ax: f32, ay: f32, F0: vec3f, cpix: f32, owner: u32, wetF: f32) -> vec3f {
+  let R = reflect(-V, N);
+  var L = vec3f(0.0);
+  let Fr = F0 + (vec3f(1.0) - F0) * pow5(1.0 - clamp(dot(N, V), 0.0, 1.0));
+  let wBox = max(Fr, vec3f(BEAM_REFL_MIN)) * 1.5;                                  // a glowing box (a tracer; a laser with the air look off): as it was
+  let wAir = max(min(Fr * wetF, vec3f(1.0)), vec3f(BEAM_REFL_AIR));                // light in the air: the finish's own share (the wet film's on the wet lot)
+  let nb = min(beams.n, 8u);
+  for (var i = 0u; i < nb; i++) {
+    let s = beams.seg[i];
+    let dv = s.b.xyz - s.a.xyz; let len = length(dv);
+    if (len < 1e-3) { continue; }
+    let u = dv / len;
+    // closest approach of the mirror ray Po + R t to the segment a + u q, q in 0‥len
+    let w0 = Po - s.a.xyz; let ru = dot(R, u); let rw = dot(R, w0); let uw = dot(u, w0);
+    let den = 1.0 - ru * ru;
+    var q = 0.0;
+    if (den > 1e-5) { q = clamp((uw - ru * rw) / den, 0.0, len); }
+    let t = ru * q - rw;
+    if (t < 0.03) { continue; }                                            // behind the surface point (or on it)
+    q = clamp(uw + ru * t, 0.0, len);
+    let Q = s.a.xyz + u * q;
+    let off = Q - (Po + R * t); let dist = length(off);
+    let wd = t * (2.0 * cpix + 2.0 * min(ax, ay)) + 2.0 * s.a.w;           // the footprint's width there (m): the lobe's TIGHT axis whichever way the line runs — smeared along the view's
+                                                                           // long axis as a lamp's streak is, a beam across the view came out as a row of pale blobs, not a line (a drawn convention, like the beam)
+    let x = 2.0 * dist / wd;
+    if (x >= 1.0) { continue; }
+    let toQ = Q - Po; let dq = length(toQ);
+    if (occluded(Po, toQ / dq, dq - 0.02, owner)) { continue; }
+    let air = (beams.p0 & 2u) != 0u && s.e.w > 0.0;                                  // a beam drawn as light in the air mirrors as faint as it is drawn
+    L += s.e.xyz * select(wBox, wAir * min(1.0, s.e.w), air) * ((1.0 - x * x) * (2.0 * s.a.w / wd));             // (the kernel integrates to the line's share of the footprint)
+  }
+  return L;
 }
 
 @compute @workgroup_size(8, 8)
@@ -284,11 +330,20 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   let alpha = max(rough * rough, 0.0009);                                  // (α floored at 0.03²: a perfect mirror has no lobe to integrate and no use for the sampler)
   { let cpix = 2.0 * frame.post.w * frame.invScreen.y * f32(rdiv); mkConeFp0 = z * cpix; mkConePix = cpix; mkConeK = markConeK() * alpha; }   // the markings' ray cone at reflection hits (markings.wgsl markReflHit): this pixel's footprint, its growth per metre, + a small share of the lobe
   var ax = alpha; var ay = alpha;
-  let an = frame.rtCfg.z;
+  let an = frame.rtCfg.z - 2.0 * floor(frame.rtCfg.z * 0.5);              // (.z also carries the wet ground's break-up as 2 × tenths, read by the g-buffer: with none this is .z itself)
   if (aniso && an > 0.0) { ax = alpha * (1.0 - 0.6 * an); ay = min(alpha * (1.0 + 5.0 * an), 1.0); }   // wet ground: tight across the view, long along it
   let Ve = vec3f(dot(V, T), dot(V, B), dot(V, N));
   let base = textureLoad(gAlbedo, full, 0).xyz;                            // base colour (a metal's F0; brighter on a worn edge — the detail layer)
   let F0 = mix(vec3f(0.04), base, metalness);
+  // THE WET FILM'S SHARE (settings.wetMirror → beams.k.y; 0 = off: wetF stays 1 and the lines below multiply by exactly what they did). The older gloss path (fgather.wgsl
+  // glossReflection: what low / verylow draw in a storm) strengthens the film's Fresnel by the ground's wetness; this pass never did, so on the wet lot a traced image came
+  // out a third as strong here as there — a lit man's too faint to read, beside a laser's image that had a floor of its own. Traced hits only: the lamps' glints are as they were.
+  var wetF = 1.0;
+  if (aniso && beams.k.y > 0.0) {
+    let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
+    if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }
+    wetF = 1.0 + beams.k.y * wetOut;
+  }
   let Po = P + N * 0.02;
   let rays = min(u32(frame.rtCfg.y), 4u);
   let lamV = smithLambda(Ve, ax, ay);
@@ -351,7 +406,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     }
     let Fr = F0 + (vec3f(1.0) - F0) * pow5(1.0 - clamp(dot(Ve, H), 0.0, 1.0));
     let wG = (1.0 + lamV) / (1.0 + lamV + smithLambda(Ls, ax, ay));      // G2 / G1(v), height-correlated: the VNDF estimator's remaining weight
-    Lsum += Li * Fr * wG;
+    Lsum += Li * min(Fr * wetF, vec3f(1.0)) * wG;
   }
   if (reuse) { textureStore(hitOut, gid.xy, outRec); }
   var Lspec = Lsum / f32(max(rays, 1u));
@@ -360,5 +415,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
     Lspec += g.xyz * frame.matCfg.x;
     if (rays == 0u) { hitT0 = select(RT_TMAX, g.w, g.w > 0.0); }          // highlights only: the strongest one's distance places the image for the denoiser
   }
+  if (beams.n > 0u && (beams.p0 & 1u) != 0u) { Lspec += beamImage(Po, N, V, ax, ay, F0, 2.0 * frame.post.w * frame.invScreen.y * f32(rdiv), owner, wetF); }   // lasers / tracers (no ray meets them): their analytic image
   textureStore(outRefl, gid.xy, vec4f(Lspec, hitT0));
 }

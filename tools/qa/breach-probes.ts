@@ -116,7 +116,7 @@ export async function breachDaylight() {
     const L1 = lightList(engine), S1 = skyOf(engine), W1 = switches(game);
     if (L1 !== L0) { const a = L0.split('|'), b = L1.split('|'); const i = a.findIndex((x, k) => x !== b[k]); f.push(`light list differs (first at #${i}: '${a[i]}' vs '${b[i]}'; ${a.length} vs ${b.length} lights)`); }
     if (S1 !== S0) f.push(`sky ${S0} → ${S1}`);
-    if (W1 !== W0) { const a = W0.split('|'), b = W1.split('|'); f.push(`switches differ: ${a.filter((x, k) => x !== b[k]).slice(0, 6).join(', ')}`); }
+    if (W1 !== W0) { const a = W0.split('|'), b = W1.split('|'); f.push(`switches differ: ${a.filter((x: any, k: any) => x !== b[k]).slice(0, 6).join(', ')}`); }
     setDaylight(game, false); if (lightList(engine) !== L1) f.push('a second setDaylight(false) changed the list');
     F.verdict(f.length === 0, 'night again: light list, sky, haze and every switch exactly as before the round trip; idempotent', f.join('; ') || `${L0.split('|').length} lights, ${engine.lights.activeCount} uploaded by night, sky ${S0}`); }
   return F.done();
@@ -170,7 +170,7 @@ export async function breachRun() {
       let sep = Math.abs(angA - angB) * 180 / Math.PI; if (sep > 180) sep = 360 - sep;
       if (sep < 65 || sep > 115) f.push(`the L: ${f2(sep)}° between the two men about the room's centre (want 90 ± 25)`);
       const dc = N ? v3.distXZ(H.b, N.frameCentre) : Infinity; if (dc > 2.5) f.push(`#2 holds ${f2(dc)} m off the next door (want ≤ 2.5)`);
-      // 08-13 (the designer on the Clear shot): #1 — the LEFT man — points at the next door across the middle of the room; #2 — the RIGHT man — has his BACK to the wall, facing into the room
+      // 08-13 (the maintainer on the Clear shot): #1 — the LEFT man — points at the next door across the middle of the room; #2 — the RIGHT man — has his BACK to the wall, facing into the room
       const wantA = N ? Math.atan2(N.frameCentre[0] - H.a[0], N.frameCentre[2] - H.a[2]) : 0; const offA = Math.abs(Math.atan2(Math.sin(H.yawA - wantA), Math.cos(H.yawA - wantA))) * 180 / Math.PI;
       if (offA > 30) f.push(`#1 faces ${f2(offA)}° off the next door (want ≤ 30: he holds it across the middle)`);
       const inward = Math.atan2(cx - H.b[0], cz - H.b[2]); let off = Math.abs(Math.atan2(Math.sin(H.yawB - inward), Math.cos(H.yawB - inward))) * 180 / Math.PI;

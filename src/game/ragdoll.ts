@@ -10,6 +10,7 @@
 // The stepping code does not allocate: flat Float64Arrays indexed by particle, scratch members for everything else.
 import { Vec3, Quat } from '../math/vec';
 import type { Box } from '../scene/boxes';
+import { hyp2, hyp3, hyp4 } from '../math/vec';
 
 /** What the ragdoll needs from the collision layer (StaticCollision satisfies it; null = a bare floor at y = 0). */
 export interface RagdollWorld {
@@ -56,6 +57,7 @@ export class Ragdoll {
   readonly x = new Float64Array(N * 3); readonly px = new Float64Array(N * 3);
   private readonly w = new Float64Array(N);           // effective inverse masses (0 while pinned)
   private readonly pinT = new Float64Array(N * 3); private readonly pinned = new Uint8Array(N); private anyPin = false;
+  private readonly rideV = new Float64Array(5); private rideOwed = false;   // a carrier's motion owed to the free particles (ride): about x, z · step x, z · turn
   private readonly pen = new Float64Array(N); private readonly cn = new Float64Array(N * 3);   // per substep: deepest contact + summed contact normal per particle
   private readonly stickLen = new Float64Array(STICKS.length);
   // trunk cluster: rest offsets from the bind centroid (world axes at bind), the running rotation estimate bind → now (also what the mesh is posed
@@ -67,6 +69,8 @@ export class Ragdoll {
   // statics / door leaves near the body this substep (indices, with their yaw cos/sin cached)
   private readonly near = new Int32Array(384); private readonly nearCS = new Float64Array(384 * 2); private nNear = 0;
   private readonly dyn = new Int32Array(32); private readonly dynCS = new Float64Array(32 * 2); private nDyn = 0;
+  // …and their centres and half-sizes, copied flat per substep (6 a box: c then h — the same doubles, read by sphereBox in place of the Box objects 16 particles × 8 iterations over)
+  private readonly nearB = new Float64Array(384 * 6); private readonly dynB = new Float64Array(32 * 6);
   private readonly exitL = new Float64Array(3); private readonly exitP = new Float64Array(3);   // sphereBox scratch (centre-inside case)
   private readonly snap = new Float64Array(N * 3); private snapT = 0;                          // positions SLEEP_WINDOW ago (sleep test)
   sleeping = false; private awake = 0; private acc = 0;
@@ -86,9 +90,9 @@ export class Ragdoll {
     TRUNK.forEach((i, k) => { this.r0[k * 3] = x[i * 3] - cx; this.r0[k * 3 + 1] = x[i * 3 + 1] - cy; this.r0[k * 3 + 2] = x[i * 3 + 2] - cz; });
     // anatomical frame: left = hips + shoulders line, up = pelvis → neck (made orthogonal), forward = left × up (model +X is the figure's left, +Z its front)
     const lx = (x[30] - x[33]) + (x[12] - x[15]), ly = (x[31] - x[34]) + (x[13] - x[16]), lz = (x[32] - x[35]) + (x[14] - x[17]);
-    const ll = Math.hypot(lx, ly, lz) || 1; const sx = lx / ll, sy = ly / ll, sz = lz / ll;
+    const ll = hyp3(lx, ly, lz) || 1; const sx = lx / ll, sy = ly / ll, sz = lz / ll;
     let ux = x[6] - x[0], uy = x[7] - x[1], uz = x[8] - x[2]; const d = ux * sx + uy * sy + uz * sz; ux -= sx * d; uy -= sy * d; uz -= sz * d;
-    const ul = Math.hypot(ux, uy, uz) || 1; ux /= ul; uy /= ul; uz /= ul;
+    const ul = hyp3(ux, uy, uz) || 1; ux /= ul; uy /= ul; uz /= ul;
     this.up0 = [ux, uy, uz]; this.fwd0 = [sy * uz - sz * uy, sz * ux - sx * uz, sx * uy - sy * ux];
     const ca = Math.cos(47.5 * Math.PI / 180), sa = Math.sin(47.5 * Math.PI / 180);
     this.hipAxis0 = [-ux * ca + this.fwd0[0] * sa, -uy * ca + this.fwd0[1] * sa, -uz * ca + this.fwd0[2] * sa];
@@ -96,7 +100,7 @@ export class Ragdoll {
     // otherwise its first push-out could pick the far face and leave the arm hooked through the wall
     this.gatherNear();
     for (let i = 1; i < N; i++) for (let k = 0; k < 12 && this.buried(i); k++) {
-      const dx = x[0] - x[i * 3], dy = x[1] - x[i * 3 + 1], dz = x[2] - x[i * 3 + 2]; const l = Math.hypot(dx, dy, dz) || 1;
+      const dx = x[0] - x[i * 3], dy = x[1] - x[i * 3 + 1], dz = x[2] - x[i * 3 + 2]; const l = hyp3(dx, dy, dz) || 1;
       x[i * 3] += dx / l * 0.03; x[i * 3 + 1] += dy / l * 0.03; x[i * 3 + 2] += dz / l * 0.03;
     }
     for (let i = 0; i < N * 3; i++) px[i] = x[i];
@@ -104,7 +108,7 @@ export class Ragdoll {
     this.snap.set(x);
   }
 
-  private dist(i: number, j: number) { const x = this.x; return Math.hypot(x[j * 3] - x[i * 3], x[j * 3 + 1] - x[i * 3 + 1], x[j * 3 + 2] - x[i * 3 + 2]); }
+  private dist(i: number, j: number) { const x = this.x; return hyp3(x[j * 3] - x[i * 3], x[j * 3 + 1] - x[i * 3 + 1], x[j * 3 + 2] - x[i * 3 + 2]); }
   /** World position of particle i (into `out`). */
   point(i: number, out: Vec3 = [0, 0, 0]): Vec3 { out[0] = this.x[i * 3]; out[1] = this.x[i * 3 + 1]; out[2] = this.x[i * 3 + 2]; return out; }
   radius(i: number) { return RADIUS[i]; }
@@ -131,7 +135,37 @@ export class Ragdoll {
     if (!this.pinned[i]) { this.pinned[i] = 1; this.w[i] = 0; this.anyPin = true; }
     this.wake();
   }
-  clearPins() { if (!this.anyPin) return; for (let i = 0; i < N; i++) { this.pinned[i] = 0; this.w[i] = 1 / MASS[i]; } this.anyPin = false; this.strain = 0; }
+  /** let ONE pinned particle go (a fall's guide lets go of the neck; whoever else holds pins keeps them) */
+  unpin(i: number) {
+    if (!this.pinned[i]) return;
+    this.pinned[i] = 0; this.w[i] = 1 / MASS[i];
+    let any = false; for (let k = 0; k < N; k++) if (this.pinned[k]) { any = true; break; }
+    if (!any) { this.anyPin = false; this.strain = 0; this.rideOwed = false; }
+    this.wake();
+  }
+  /** is this particle pinned */
+  isPinned(i: number) { return this.pinned[i] !== 0; }
+  clearPins() { if (!this.anyPin) return; for (let i = 0; i < N; i++) { this.pinned[i] = 0; this.w[i] = 1 / MASS[i]; } this.anyPin = false; this.strain = 0; this.rideOwed = false; }
+  /** A CARRIED body rides its carrier (hands.ts, a body over the shoulder): over the next step() every free particle — and where it was a substep ago, so its
+   *  velocity turns with it — is taken through the carrier's own step (dx, dz) and turn (dyaw, about the vertical through `about` = where he stood) since the
+   *  last frame, a share each substep so no limb moves further at once than a collision can answer. The pinned-body damping then acts on a limb's motion
+   *  AGAINST HIM, not over the floor: without it every free limb streamed out behind each stride and turn like a flag (40–75° off the hang at a walk).
+   *  Never called = the body exactly as it was. */
+  ride(about: Vec3, dx: number, dz: number, dyaw: number) {
+    if (this.rideOwed) { const r = this.rideV; this.rideBy(Math.min(1, MAX_STEP / Math.max(1e-9, Math.hypot(r[2], r[3]) + Math.abs(r[4])))); this.rideOwed = false; }   // (a frame with no substep in it left one owed: taken ahead of this one, to the same bound as a share)
+    const r = this.rideV; r[0] = about[0]; r[1] = about[2]; r[2] = dx; r[3] = dz; r[4] = dyaw; this.rideOwed = true;
+  }
+  /** take the free particles through share `k` of what is owed, about where the carrier stands by now */
+  private rideBy(k: number) {
+    const r = this.rideV, x = this.x, px = this.px, ax = r[0], az = r[1], sx = r[2] * k, sz = r[3] * k, co = Math.cos(r[4] * k), si = Math.sin(r[4] * k);
+    for (let i = 0; i < N; i++) {
+      if (this.pinned[i]) continue;
+      const o = i * 3;
+      let ux = x[o] - ax, uz = x[o + 2] - az; x[o] = ax + ux * co + uz * si + sx; x[o + 2] = az - ux * si + uz * co + sz;
+      ux = px[o] - ax; uz = px[o + 2] - az; px[o] = ax + ux * co + uz * si + sx; px[o + 2] = az - ux * si + uz * co + sz;
+    }
+    r[0] += sx; r[1] += sz;
+  }
   /** Checkpoint restore (game/savestate.ts): lay the body straight into a settled pose — every particle where the file has it, at rest, unpinned, asleep — with
    *  the trunk cluster's rotation re-fitted to those particles (warm-started from the file's `rot`, or from where it stands): a corpse comes back where and how
    *  it lay without being simulated there again. The trunk is snapped rigid to THIS body's bind shape, so its members may move a centimetre off the file. */
@@ -139,7 +173,7 @@ export class Ragdoll {
     const x = this.x, px = this.px;
     for (let i = 0; i < N * 3; i++) { const v = Number(xs[i]); x[i] = Number.isFinite(v) ? v : x[i]; }
     for (let i = 0; i < N; i++) x[i * 3 + 1] = Math.max(x[i * 3 + 1], RADIUS[i]);
-    if (rot && Number.isFinite(rot[0] + rot[1] + rot[2] + rot[3])) { const l = Math.hypot(rot[0], rot[1], rot[2], rot[3]) || 1; this.rot[0] = rot[0] / l; this.rot[1] = rot[1] / l; this.rot[2] = rot[2] / l; this.rot[3] = rot[3] / l; }
+    if (rot && Number.isFinite(rot[0] + rot[1] + rot[2] + rot[3])) { const l = hyp4(rot[0], rot[1], rot[2], rot[3]) || 1; this.rot[0] = rot[0] / l; this.rot[1] = rot[1] / l; this.rot[2] = rot[2] / l; this.rot[3] = rot[3] / l; }
     this.clearPins();
     for (let k = 0; k < 8; k++) this.shapeMatch();   // (each pass = 10 extraction iterations warm-started from the last: converged well past a plain lie-down's quarter turn)
     for (let i = 0; i < N * 3; i++) px[i] = x[i];
@@ -155,24 +189,29 @@ export class Ragdoll {
     this.sinceImpact += dt;
     if (this.sleeping) return;
     this.acc = Math.min(this.acc + dt, H * MAX_SUBSTEPS);
-    while (this.acc >= H - 1e-9) { this.acc -= H; this.substep(); if (this.sleeping) { this.acc = 0; break; } }
+    // the carrier's step and turn this frame, shared over the substeps it gets; a share never carries a limb's end (a metre off him) further than MAX_STEP — on a
+    // long frame what is over that is let go, and the limbs trail for it as they always did
+    let n = this.rideOwed ? Math.floor((this.acc + 1e-9) / H) : 0;
+    const r = this.rideV, share = n ? Math.min(1 / n, MAX_STEP / Math.max(1e-9, Math.hypot(r[2], r[3]) + Math.abs(r[4]))) : 0;
+    while (this.acc >= H - 1e-9) { this.acc -= H; if (n > 0) { this.rideBy(share); n--; } this.substep(); if (this.sleeping) { this.acc = 0; break; } }
+    if (share) this.rideOwed = false;
   }
 
   private substep() {
     const x = this.x, px = this.px, pinned = this.pinned, pinT = this.pinT;
     // 1. integrate (Verlet: velocity is x − px), gravity, damping, per-step travel cap; pinned particles travel toward their target instead, carrying no inertia
-    const c = this.centre, pc = this.prevCentre; const trunkV = Math.hypot(c[0] - pc[0], c[1] - pc[1], c[2] - pc[2]) / H; pc[0] = c[0]; pc[1] = c[1]; pc[2] = c[2];
+    const c = this.centre, pc = this.prevCentre; const trunkV = hyp3(c[0] - pc[0], c[1] - pc[1], c[2] - pc[2]) / H; pc[0] = c[0]; pc[1] = c[1]; pc[2] = c[2];
     const damp = this.anyPin ? DAMP_PINNED : DAMP, dampLimb = this.anyPin ? DAMP_PINNED : trunkV < SETTLE_V ? DAMP_SETTLE : DAMP; const g = GRAV * H * H;
     for (let i = 0; i < N; i++) {
       const o = i * 3;
       if (pinned[i]) {
-        let dx = pinT[o] - x[o], dy = pinT[o + 1] - x[o + 1], dz = pinT[o + 2] - x[o + 2]; const l = Math.hypot(dx, dy, dz);
+        let dx = pinT[o] - x[o], dy = pinT[o + 1] - x[o + 1], dz = pinT[o + 2] - x[o + 2]; const l = hyp3(dx, dy, dz);
         if (l > PIN_STEP) { const s = PIN_STEP / l; dx *= s; dy *= s; dz *= s; }
         x[o] += dx; x[o + 1] += dy; x[o + 2] += dz; px[o] = x[o]; px[o + 1] = x[o + 1]; px[o + 2] = x[o + 2]; continue;
       }
       const d = TRUNK_SET[i] ? damp : dampLimb;
       let vx = (x[o] - px[o]) * d, vy = (x[o + 1] - px[o + 1]) * d - g, vz = (x[o + 2] - px[o + 2]) * d;
-      const l = Math.hypot(vx, vy, vz); if (l > MAX_STEP) { const s = MAX_STEP / l; vx *= s; vy *= s; vz *= s; }
+      const l = hyp3(vx, vy, vz); if (l > MAX_STEP) { const s = MAX_STEP / l; vx *= s; vy *= s; vz *= s; }
       px[o] = x[o]; px[o + 1] = x[o + 1]; px[o + 2] = x[o + 2]; x[o] += vx; x[o + 1] += vy; x[o + 2] += vz;
     }
     // 2. what is around the body this substep
@@ -192,12 +231,12 @@ export class Ragdoll {
     for (let i = 0; i < N; i++) {
       const pen = this.pen[i]; if (pinned[i] || pen <= 0) continue;
       const o = i * 3; let vx = x[o] - px[o], vy = x[o + 1] - px[o + 1], vz = x[o + 2] - px[o + 2];
-      let nx = this.cn[o], ny = this.cn[o + 1], nz = this.cn[o + 2]; const nl = Math.hypot(nx, ny, nz); if (nl < 1e-9) continue;
+      let nx = this.cn[o], ny = this.cn[o + 1], nz = this.cn[o + 2]; const nl = hyp3(nx, ny, nz); if (nl < 1e-9) continue;
       nx /= nl; ny /= nl; nz /= nl;
       let vn = vx * nx + vy * ny + vz * nz;
       if (i <= 3) { const hit = Math.max(-vn, 0) / H; if (hit > this.impactV) this.impactV = hit; }   // only what was still falling into the surface counts as a landing — contact depth from a shove / un-bury is a correction, not a thud
       if (vn < 0) { vx -= nx * vn; vy -= ny * vn; vz -= nz * vn; vn = 0; }
-      const tx = vx - nx * vn, ty = vy - ny * vn, tz = vz - nz * vn; const tl = Math.hypot(tx, ty, tz);
+      const tx = vx - nx * vn, ty = vy - ny * vn, tz = vz - nz * vn; const tl = hyp3(tx, ty, tz);
       if (tl > 1e-12) { const keep = Math.max(0, 1 - MU * pen / tl); vx = nx * vn + tx * keep; vy = ny * vn + ty * keep; vz = nz * vn + tz * keep; }
       px[o] = x[o] - vx; px[o + 1] = x[o + 1] - vy; px[o + 2] = x[o + 2] - vz;
     }
@@ -219,7 +258,7 @@ export class Ragdoll {
   /** Clamp |xj − xi| into [lo, hi], corrections split by inverse mass. */
   private distance(i: number, j: number, lo: number, hi: number) {
     const x = this.x; const a = i * 3, b = j * 3;
-    const dx = x[b] - x[a], dy = x[b + 1] - x[a + 1], dz = x[b + 2] - x[a + 2]; const l = Math.hypot(dx, dy, dz); if (l < 1e-9) return;
+    const dx = x[b] - x[a], dy = x[b + 1] - x[a + 1], dz = x[b + 2] - x[a + 2]; const l = hyp3(dx, dy, dz); if (l < 1e-9) return;
     const target = l < lo ? lo : l > hi ? hi : l; if (target === l) return;
     const wi = this.w[i], wj = this.w[j]; const ws = wi + wj; if (ws <= 0) return;
     const k = (l - target) / (l * ws);
@@ -229,7 +268,7 @@ export class Ragdoll {
    *  the chest comes to rest instead of creeping off it for seconds (the constraint alone is frictionless). */
   private apart(i: number, j: number, lo: number) {
     const x = this.x; const a = i * 3, b = j * 3;
-    const dx = x[a] - x[b], dy = x[a + 1] - x[b + 1], dz = x[a + 2] - x[b + 2]; const l = Math.hypot(dx, dy, dz); if (l >= lo || l < 1e-9) return;
+    const dx = x[a] - x[b], dy = x[a + 1] - x[b + 1], dz = x[a + 2] - x[b + 2]; const l = hyp3(dx, dy, dz); if (l >= lo || l < 1e-9) return;
     const wi = this.w[i], wj = this.w[j]; const ws = wi + wj; if (ws <= 0) return;
     const k = (lo - l) / (l * ws);
     x[a] += dx * k * wi; x[a + 1] += dy * k * wi; x[a + 2] += dz * k * wi; x[b] -= dx * k * wj; x[b + 1] -= dy * k * wj; x[b + 2] -= dz * k * wj;
@@ -239,9 +278,9 @@ export class Ragdoll {
   private cone(i: number, j: number, axis0: Vec3, cosMax: number) {
     const x = this.x, R = this.R; const a = i * 3, b = j * 3;
     const ax = R[0] * axis0[0] + R[1] * axis0[1] + R[2] * axis0[2], ay = R[3] * axis0[0] + R[4] * axis0[1] + R[5] * axis0[2], az = R[6] * axis0[0] + R[7] * axis0[1] + R[8] * axis0[2];
-    const dx = x[b] - x[a], dy = x[b + 1] - x[a + 1], dz = x[b + 2] - x[a + 2]; const l = Math.hypot(dx, dy, dz); if (l < 1e-6) return;
+    const dx = x[b] - x[a], dy = x[b + 1] - x[a + 1], dz = x[b + 2] - x[a + 2]; const l = hyp3(dx, dy, dz); if (l < 1e-6) return;
     const ux = dx / l, uy = dy / l, uz = dz / l; const c = ux * ax + uy * ay + uz * az; if (c >= cosMax) return;
-    let qx = ux - ax * c, qy = uy - ay * c, qz = uz - az * c; const ql = Math.hypot(qx, qy, qz); if (ql < 1e-6) return;
+    let qx = ux - ax * c, qy = uy - ay * c, qz = uz - az * c; const ql = hyp3(qx, qy, qz); if (ql < 1e-6) return;
     const sinMax = Math.sqrt(1 - cosMax * cosMax); qx *= sinMax / ql; qy *= sinMax / ql; qz *= sinMax / ql;
     // nearest direction on the cone, same length; move j there (and i back) by inverse mass
     const ex = (ax * cosMax + qx) * l - dx, ey = (ay * cosMax + qy) * l - dy, ez = (az * cosMax + qz) * l - dz;
@@ -292,14 +331,16 @@ export class Ragdoll {
       const b = wd.boxes[this.near[k]]; const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
       const ex = Math.abs(c) * b.h[0] + Math.abs(s) * b.h[2], ez = Math.abs(s) * b.h[0] + Math.abs(c) * b.h[2];
       if (b.c[0] + ex < x0 || b.c[0] - ex > x1 || b.c[2] + ez < z0 || b.c[2] - ez > z1 || b.c[1] - b.h[1] > y1) continue;
-      this.near[m] = this.near[k]; this.nearCS[m * 2] = c; this.nearCS[m * 2 + 1] = s; m++;
+      this.near[m] = this.near[k]; this.nearCS[m * 2] = c; this.nearCS[m * 2 + 1] = s;
+      const B = this.nearB, o = m * 6; B[o] = b.c[0]; B[o + 1] = b.c[1]; B[o + 2] = b.c[2]; B[o + 3] = b.h[0]; B[o + 4] = b.h[1]; B[o + 5] = b.h[2]; m++;
     }
     this.nNear = m;
     const dbs = wd.dynamicBoxes;
     for (let j = 0; j < dbs.length && this.nDyn < this.dyn.length; j++) {
-      const b = dbs[j]; const reach = Math.hypot(b.h[0], b.h[2]);
+      const b = dbs[j]; const reach = hyp2(b.h[0], b.h[2]);
       if (b.c[0] + reach < x0 || b.c[0] - reach > x1 || b.c[2] + reach < z0 || b.c[2] - reach > z1) continue;
-      this.dyn[this.nDyn] = j; this.dynCS[this.nDyn * 2] = Math.cos(b.yaw); this.dynCS[this.nDyn * 2 + 1] = Math.sin(b.yaw); this.nDyn++;
+      this.dyn[this.nDyn] = j; this.dynCS[this.nDyn * 2] = Math.cos(b.yaw); this.dynCS[this.nDyn * 2 + 1] = Math.sin(b.yaw);
+      const B = this.dynB, o = this.nDyn * 6; B[o] = b.c[0]; B[o + 1] = b.c[1]; B[o + 2] = b.c[2]; B[o + 3] = b.h[0]; B[o + 4] = b.h[1]; B[o + 5] = b.h[2]; this.nDyn++;
     }
   }
   /** True if particle i's centre is inside one of the gathered statics (bind-time check only). */
@@ -317,8 +358,8 @@ export class Ragdoll {
     const x = this.x; const o = i * 3; const r = RADIUS[i];
     if (x[o + 1] < r) { this.contact(i, 0, 1, 0, r - x[o + 1]); x[o + 1] = r; }
     const wd = this.world; if (!wd) return;
-    for (let k = 0; k < this.nNear; k++) this.sphereBox(i, r, wd.boxes[this.near[k]], this.nearCS[k * 2], this.nearCS[k * 2 + 1]);
-    for (let k = 0; k < this.nDyn; k++) this.sphereBox(i, r, wd.dynamicBoxes[this.dyn[k]], this.dynCS[k * 2], this.dynCS[k * 2 + 1]);
+    for (let k = 0; k < this.nNear; k++) this.sphereBox(i, r, this.nearB, k * 6, this.nearCS[k * 2], this.nearCS[k * 2 + 1]);
+    for (let k = 0; k < this.nDyn; k++) this.sphereBox(i, r, this.dynB, k * 6, this.dynCS[k * 2], this.dynCS[k * 2 + 1]);
   }
   private contact(i: number, nx: number, ny: number, nz: number, pen: number) {
     if (pen > this.pen[i]) this.pen[i] = pen; const o = i * 3; this.cn[o] += nx * pen; this.cn[o + 1] += ny * pen; this.cn[o + 2] += nz * pen;
@@ -326,23 +367,23 @@ export class Ragdoll {
   /** Sphere (particle i, radius r) against a yawed box (yaw cos/sin passed in; the level's convention: local x = c·dx − s·dz, local z = s·dx + c·dz). Outside:
    *  pushed off the closest point. Centre inside (only ever at bind, under a pin, or when a leaf swept over it): out through a face the previous position
    *  was outside of, else the nearest face. */
-  private sphereBox(i: number, r: number, b: Box, c: number, s: number) {
-    const x = this.x; const o = i * 3; const h = b.h;
-    const dx = x[o] - b.c[0], dy = x[o + 1] - b.c[1], dz = x[o + 2] - b.c[2];
+  private sphereBox(i: number, r: number, B: Float64Array, q: number, c: number, s: number) {   // (B[q‥q+5] = the box's centre and half-sizes: gatherNear's flat copy)
+    const x = this.x; const o = i * 3; const h0 = B[q + 3], h1 = B[q + 4], h2 = B[q + 5];
+    const dx = x[o] - B[q], dy = x[o + 1] - B[q + 1], dz = x[o + 2] - B[q + 2];
     const lx = c * dx - s * dz, ly = dy, lz = s * dx + c * dz;
-    if (Math.abs(lx) > h[0] + r || Math.abs(ly) > h[1] + r || Math.abs(lz) > h[2] + r) return;
-    const qx = lx < -h[0] ? -h[0] : lx > h[0] ? h[0] : lx, qy = ly < -h[1] ? -h[1] : ly > h[1] ? h[1] : ly, qz = lz < -h[2] ? -h[2] : lz > h[2] ? h[2] : lz;
+    if (Math.abs(lx) > h0 + r || Math.abs(ly) > h1 + r || Math.abs(lz) > h2 + r) return;
+    const qx = lx < -h0 ? -h0 : lx > h0 ? h0 : lx, qy = ly < -h1 ? -h1 : ly > h1 ? h1 : ly, qz = lz < -h2 ? -h2 : lz > h2 ? h2 : lz;
     const ddx = lx - qx, ddy = ly - qy, ddz = lz - qz; const d2 = ddx * ddx + ddy * ddy + ddz * ddz;
     if (d2 >= r * r) return;
     let nlx: number, nly: number, nlz: number, pen: number;
     if (d2 > 1e-12) { const d = Math.sqrt(d2); nlx = ddx / d; nly = ddy / d; nlz = ddz / d; pen = r - d; }
     else {
-      const px = this.px; const pdx = px[o] - b.c[0], pdy = px[o + 1] - b.c[1], pdz = px[o + 2] - b.c[2];
+      const px = this.px; const pdx = px[o] - B[q], pdy = px[o + 1] - B[q + 1], pdz = px[o + 2] - B[q + 2];
       const el = this.exitL; el[0] = lx; el[1] = ly; el[2] = lz; const ep = this.exitP; ep[0] = c * pdx - s * pdz; ep[1] = pdy; ep[2] = s * pdx + c * pdz;
       let bestA = -1, bestS = 1, best = 1e9;
       for (let pass = 0; pass < 2 && bestA < 0; pass++) for (let a = 0; a < 3; a++) for (let sg = -1; sg <= 1; sg += 2) {
-        if (pass === 0 && sg * ep[a] < h[a] - 1e-9) continue;   // first pass: only faces the previous position was beyond
-        const fd = h[a] - sg * el[a]; if (fd < best) { best = fd; bestA = a; bestS = sg; }
+        if (pass === 0 && sg * ep[a] < B[q + 3 + a] - 1e-9) continue;   // first pass: only faces the previous position was beyond
+        const fd = B[q + 3 + a] - sg * el[a]; if (fd < best) { best = fd; bestA = a; bestS = sg; }
       }
       nlx = bestA === 0 ? bestS : 0; nly = bestA === 1 ? bestS : 0; nlz = bestA === 2 ? bestS : 0; pen = best + r;
     }
@@ -365,11 +406,11 @@ function extractRotation(A: Float64Array, q: Quat, iters: number) {
       ox += ry * az - rz * ay; oy += rz * ax - rx * az; oz += rx * ay - ry * ax; dot += rx * ax + ry * ay + rz * az;
     }
     const inv = 1 / (Math.abs(dot) + 1e-9); ox *= inv; oy *= inv; oz *= inv;
-    const wl = Math.hypot(ox, oy, oz); if (wl < 1e-9) break;
+    const wl = hyp3(ox, oy, oz); if (wl < 1e-9) break;
     const ha = wl * 0.5, sn = Math.sin(ha) / wl, cw = Math.cos(ha); const bx = ox * sn, by = oy * sn, bz = oz * sn;   // q ← axisAngle(ω/|ω|, |ω|) · q
     const ax = q[0], ay = q[1], az = q[2], aw = q[3];
     const nx = cw * ax + bx * aw + by * az - bz * ay, ny = cw * ay - bx * az + by * aw + bz * ax, nz = cw * az + bx * ay - by * ax + bz * aw, nw = cw * aw - bx * ax - by * ay - bz * az;
-    const l = Math.hypot(nx, ny, nz, nw) || 1; q[0] = nx / l; q[1] = ny / l; q[2] = nz / l; q[3] = nw / l;
+    const l = hyp4(nx, ny, nz, nw) || 1; q[0] = nx / l; q[1] = ny / l; q[2] = nz / l; q[3] = nw / l;
   }
 }
 /** Row-major 3×3 rotation matrix of unit quaternion q into out (out·v = quat.rotate(q, v)). */

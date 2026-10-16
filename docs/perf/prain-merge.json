@@ -1,0 +1,118 @@
+{
+ "what": "particle rain v2 merge prep (exp/particle-rain, 08-12 night): identity of the OFF path against main served beside, gates, cost",
+ "identity": {
+  "method": "tools/qa/prain-harness.js __pr.identity(): ONE CONFIG PER FRESH BOOT \u2014 main = git archive of main 85bba7aeb65b served on :5210 (the main checkout had another lane's uncommitted edits), lane = ec772d7 on :5208 with ?norain2; ?paused&quality=<p>&mute, seeded restartEncounter, per view: __stage pin, storm forced (seed 4242, rate 0.55, wind 1.1/0.45, no strokes, gusts off), particles cleared, a debris test burst beside the look-at (the gameplay rings live), 6 + 60 frames, render at frame.time 100, FNV-1a of the readback (alpha skipped); same pane 1280x720 css",
+  "high": {
+   "res": [
+    1777,
+    1000
+   ],
+   "main": {
+    "lot": "1c59de44",
+    "exit": "020f6036",
+    "glass": "92bb22e6"
+   },
+   "lane_norain2": {
+    "lot": "1c59de44",
+    "exit": "020f6036",
+    "glass": "92bb22e6"
+   },
+   "identical": true
+  },
+  "medium": {
+   "res": [
+    1600,
+    900
+   ],
+   "main": {
+    "lot": "cc0040f2",
+    "exit": "7d91f80e",
+    "glass": "0613b71e"
+   },
+   "lane_norain2": {
+    "lot": "cc0040f2",
+    "exit": "7d91f80e",
+    "glass": "0613b71e"
+   },
+   "identical": true
+  }
+ },
+ "validate": {
+  "page": "lane ec772d7 ?paused&quality=high&mute (rain ON by default), one boot",
+  "sweep": "presets ultra\u2192verylow applied live; per preset: lot view storm 1 + a 0.5 km stroke, debug views 1/2/9/0, the glass view; device error scope (validation) + uncapturederror listener + console",
+  "pipelines": {
+   "done": 103,
+   "failed": 0
+  },
+  "validationErrors": 0,
+  "uncaptured": 0,
+  "consoleErrors": 0,
+  "ringByPreset": {
+   "ultra": 1453,
+   "high": 1453,
+   "medium": 1453,
+   "low": 1440,
+   "verylow": 1174
+  },
+  "note": "verylow's target capped at 800 alive by Caps.rain as designed; sizes 1920x1080\u21922133x1200 \u2026 533x300\u21921066x600"
+ },
+ "cost": {
+  "machine": "M4 Max, Chrome/Metal, high 1368x770\u21921777x1000, serialized frames (onSubmittedWorkDone + yield), interleaved lattice-only / v2 blocks \u00d73 of 30 frames after 40 warm; the GPU is SHARED tonight (gpu-quiet saw ~65 % from other lanes just before; blocks agree within 0.4 ms, quote as lightly contended)",
+  "lot": {
+   "view": "lot (V1: the south lot from the follow camera, ~2500 drops alive, 3600 ring slots)",
+   "latticeOnly": {
+    "union": 10.666,
+    "p95": 10.792,
+    "blocks": [
+     10.628,
+     10.717,
+     10.652
+    ]
+   },
+   "v2": {
+    "union": 10.963,
+    "p95": 10.988,
+    "blocks": [
+     10.827,
+     10.848,
+     11.215
+    ],
+    "particlesPass": 0.172,
+    "volumetrics": 0.151
+   },
+   "delta_ms": 0.3
+  },
+  "indoor": {
+   "view": "cubicles from the follow camera while it storms (disc reaches the north / south strips: ~370 alive, next to none on screen)",
+   "latticeOnly": {
+    "union": 12.5,
+    "p95": 12.648,
+    "blocks": [
+     12.53,
+     12.458,
+     12.513
+    ]
+   },
+   "v2": {
+    "union": 12.597,
+    "p95": 12.714,
+    "blocks": [
+     12.535,
+     12.653,
+     12.603
+    ],
+    "particlesPass": 0.134
+   },
+   "delta_ms": 0.1
+  },
+  "memory": "+1.25 MB pool (the rain ring); the scene copy is GBAA's own hdrCopy at every preset (no extra texture); refraction reads it a frame late (free)"
+ },
+ "gates": {
+  "typecheck": "clean",
+  "build": "ok",
+  "gate.sh particles weather wind perf destruction": "all green (11/12/22/24/25 PASS lines, exit 0) \u2014 destruction-impulses needed its EmitBlock-tail line taught the rain tail (3df3e98)",
+  "journal-fixtures": "2/2 replay identically with rain ON by default (pane-smoke-test 300 f, selftest 5400 f) \u2014 rain is presentation-only",
+  "frame-layout": "832 B, weatherE @800 / weatherF @816, ALL PASS",
+  "panel-inventory": "0 missing of 571 \u00b7 606 live (35 added under Weather & wind \u25b8 Rain \u2014 particles) \u2014 re-freeze the fixture after the merge if the added rows should join the reference"
+ }
+}

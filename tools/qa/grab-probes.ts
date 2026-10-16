@@ -9,7 +9,7 @@
 // FAIL. All of it with the pistol HOLSTERED first (armStandUp): the grab takes the arm variant — the one this family is about; the pistol-to-the-head variant a
 // drawn gun would make of the same press has its own family (gunhold-probes.ts).
 import { standUp, ROOT } from './headless.ts';
-import { tapVerb, holdRelease, endThenStop, endFor } from './verbs.ts';
+import { holdRelease, endThenStop, endFor } from './verbs.ts';
 const IK = 'Space';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
@@ -28,7 +28,22 @@ const Dlg = await import(`${ROOT}/src/game/dialogue.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 /** the game stood up with Sam's pistol holstered (E), so a grab is the ARM variant (player.ts grabVariant: drawn → 'gun', holstered / canister → 'arm') */
-async function armStandUp() { const W = await standUp(); W.game.player.holstered = true; return W; }
+async function armStandUp() {
+  const W = await standUp(); W.game.player.holstered = true;
+  if (oneButton && CLOSE.on) { CLOSE.on = false; if (!heldOff) console.log('  (the close-in mode is held OFF for this probe: it reads the one-button rows — the mode\'s own are family close)'); heldOff = true; }
+  return W;
+}
+/** THE ONE-BUTTON ROWS. grab-gate, grab-release and controls-behind were written before the close-in mode (close.ts CLOSE.on: the knife / knockout pair of
+ *  clicks, the take from in front, the alert man still in reach of a blow) and read the rows of the build without it. They hold it OFF, on either stand — on
+ *  the shipped stand that is the `?noclose` page, which has to stay the build as it was. The mode's own rows and takes are family `close`. armStandUp lays
+ *  the hold after the stand's own switches (every stand-up lays those afresh), says so once, and the mode is put back on when the probe is done. */
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
+let oneButton = false, heldOff = false;
+async function oneButtonRows(probe: () => Promise<boolean>): Promise<boolean> {
+  oneButton = true; heldOff = false;
+  try { return await probe(); }
+  finally { oneButton = false; if (heldOff) CLOSE.on = true; }
+}
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 /** parked out on the lot east of the building, held (the scripted flag), facing east — deaf too unless said otherwise */
@@ -76,7 +91,8 @@ function grabViaHold(S: any, secs = PRESS_SECS): number {
 function untilHeld(S: any): boolean { const { W, game } = S; for (let i = 0; i < 120; i++) { if (game.player.holding?.phase === 'held') return true; W.step(DT); } return game.player.holding?.phase === 'held'; }
 
 // ================================================================ (1) the gate: wherever the takedown is offered the grab is, and nowhere else — never through a wall or a leaf, never from the front, never on an alert man
-export async function grabGate() {
+export async function grabGate() { return oneButtonRows(grabGateRows); }
+async function grabGateRows() {
   console.log('\n=== grab-gate: the grab row is offered (and a Space hold-and-release grabs) exactly where a hands-empty click would take him down — from behind, in reach, nothing solid between, not alert ===');
   let allPass = true;
   const cases: { note: string; guard: Vec3; yaw: number; player: Vec3; state?: string; expect: boolean }[] = [
@@ -188,7 +204,7 @@ export async function grabWalk() {
       const d = v3.distXZ(p, gp); const dev = Math.abs(d - HOLD.dist);
       if (dev > maxDev) { maxDev = dev; maxDevAt = `${f2(game.time)}s at ${posS(gp)} (door ${f2(door.angle)})`; }
       const sp = Math.hypot(game.player.char.vel[0], game.player.char.vel[2]); maxSpeed = Math.max(maxSpeed, sp, v3.distXZ(p, prevP) / dt);
-      maxPenP = Math.max(maxPenP, penetration(col, p, 0.42, 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(col, gp, 0.3, 0.2, 1.5));
+      maxPenP = Math.max(maxPenP, penetration(col, p, playerMod.playerBodyR(game, p), 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(col, gp, 0.3, 0.2, 1.5));
       if (v3.distXZ(p, prevP) > 1e-3 && col.segmentBlocked([prevP[0], 0.45, prevP[2]], [p[0], 0.45, p[2]], 0) && !col.segmentBlockedDynamic([prevP[0], 0.45, prevP[2]], [p[0], 0.45, p[2]])) crossedP = true;
       if (v3.distXZ(gp, prevG) > 1e-3 && col.segmentBlocked([prevG[0], 0.45, prevG[2]], [gp[0], 0.45, gp[2]], 0) && !col.segmentBlockedDynamic([prevG[0], 0.45, prevG[2]], [gp[0], 0.45, gp[2]])) crossedG = true;
       maxStep = Math.max(maxStep, v3.distXZ(gp, prevG));
@@ -225,11 +241,11 @@ export async function grabWalk() {
     startGrab(game, A); for (let i = 0; i < 40; i++) W.step(DT);
     game.puppet = { goal: [20, 0, 8.0], aim: [20, 1.0, 4.0] };   // straight into the wall
     let maxDev = 0, maxPenP = 0, maxPenG = 0;
-    for (let f = 0; f < 60 * 3; f++) { W.step(DT); const p = game.player.char.pos, gp = A.char.pos; maxDev = Math.max(maxDev, Math.abs(v3.distXZ(p, gp) - HOLD.dist)); maxPenP = Math.max(maxPenP, penetration(game.col, p, 0.42, 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(game.col, gp, 0.3, 0.2, 1.5)); }
+    for (let f = 0; f < 60 * 3; f++) { W.step(DT); const p = game.player.char.pos, gp = A.char.pos; maxDev = Math.max(maxDev, Math.abs(v3.distXZ(p, gp) - HOLD.dist)); maxPenP = Math.max(maxPenP, penetration(game.col, p, playerMod.playerBodyR(game, p), 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(game.col, gp, 0.3, 0.2, 1.5)); }
     const stopZ = A.char.pos[2];
     game.puppet = { goal: [26, 0, 10.4], aim: [20, 1.0, 4.0] };   // now sideways along it, still facing it
     let slid = 0; const x0 = A.char.pos[0];
-    for (let f = 0; f < 60 * 3; f++) { W.step(DT); const p = game.player.char.pos, gp = A.char.pos; maxDev = Math.max(maxDev, Math.abs(v3.distXZ(p, gp) - HOLD.dist)); maxPenP = Math.max(maxPenP, penetration(game.col, p, 0.42, 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(game.col, gp, 0.3, 0.2, 1.5)); }
+    for (let f = 0; f < 60 * 3; f++) { W.step(DT); const p = game.player.char.pos, gp = A.char.pos; maxDev = Math.max(maxDev, Math.abs(v3.distXZ(p, gp) - HOLD.dist)); maxPenP = Math.max(maxPenP, penetration(game.col, p, playerMod.playerBodyR(game, p), 0.2, 1.7)); maxPenG = Math.max(maxPenG, penetration(game.col, gp, 0.3, 0.2, 1.5)); }
     slid = A.char.pos[0] - x0; game.puppet = null;
     const fails: string[] = [];
     if (stopZ < 10.29 || stopZ > 10.45) fails.push(`the held man stopped at z ${f2(stopZ)} against the z=10 wall (want his 0.3 m circle resting on it: ≈ 10.3–10.4)`);
@@ -462,7 +478,8 @@ export async function grabChoke() {
 }
 
 // ================================================================ (6) coming free: there is no release verb (E draws on him instead) — torn loose when Sam goes down (freeHeld 'shot') he is alert on Sam within a frame, wasHeld, nothing of the hold left anywhere; and no re-grab of an alert man
-export async function grabRelease() {
+export async function grabRelease() { return oneButtonRows(grabReleaseRows); }
+async function grabReleaseRows() {
   console.log('\n=== grab-release: E on his row draws (still held); freeHeld — instant witness (alert on Sam, wasHeld 1), no stumble, nothing residual; the alert man cannot be grabbed again ===');
   let allPass = true;
   const S = await stage(61); const { W, game, A, lines } = S; const { cam, canvas } = W;
@@ -576,11 +593,12 @@ export async function grabAuto() {
   return allPass;
 }
 
-// ================================================================ (8) the controls behind a man (the designer's note: "the only option behind a guard should be grabbing him, not instant takedown. if you want to do that,
+// ================================================================ (8) the controls behind a man (the maintainer's note: "the only option behind a guard should be grabbing him, not instant takedown. if you want to do that,
 //                                                                    you need to holster and primary click"): the one row is the grab — a Space TAP takes him on its frame, Space HELD opens the list on it and takes him on
 //                                                                    the release — in the variant the hand decides; the takedown's one input is a click with the hands empty; drawn, a click is a round; a canister up, a
 //                                                                    throw; and none of it from in front or out of reach
-export async function controlsBehind() {
+export async function controlsBehind() { return oneButtonRows(controlsBehindRows); }
+async function controlsBehindRows() {
   console.log('\n=== controls-behind: the grab row (tap: at once; hold: on letting go), arm / gun by the hand; holstered + LMB = the silent takedown; drawn + LMB = a round; nothing from in front / out of reach ===');
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   /** the shared staging with the hand set: holstered (hands empty) or the Five-seveN drawn; A rooted on the scripted hold so nothing walks off mid-check; one settled frame (hover, rows) */

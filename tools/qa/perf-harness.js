@@ -2,7 +2,7 @@
 // console (or hand it to the Browser pane's javascript tool) on a `?paused&quality=<preset>&mute` boot once the hooks exist and #view has a size;
 // everything then hangs off window.__perf. Nothing here is bundled or shipped.
 //
-// The protocols it encodes (the dev notes "GPU timing — known traps" / "Judging renderer output"):
+// The protocols it encodes (CLAUDE.md "GPU timing — known traps" / "Judging renderer output"):
 //  * timing: every frame is followed by `await device.queue.onSubmittedWorkDone()` + a MessageChannel yield, so frames never overlap on the GPU and each
 //    frame's timestamp readback resolves before the next is encoded; per-pass numbers are the UNSMOOTHED per-frame values (GpuTimer.lastFrame) averaged
 //    over n frames after `warm` discarded ones. Two baselines taken this way must agree to ~0.05 ms before any delta is believed; interleave A/B/A/B.

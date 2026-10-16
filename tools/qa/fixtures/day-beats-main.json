@@ -1,8 +1,8 @@
 {
  "what": "the DAY showcase's beat log (Breach.log = show notes + camera set-ups + BreachDrill.beats + 'restore' — the drill AND the loud half) per seed, t in seconds and rounded to the frame (f = round(t·60))",
  "provenance": {
-  "commit": "bd6601d1",
-  "takenAt": "2026-08-13T21:46:30.541Z",
+  "commit": "3a24d48f",
+  "takenAt": "2026-10-10T20:26:43.816Z",
   "tree": "feat/day-loud: the breach extended past its cut by the loud half (docs/internal/day-showcase.md); its first half held frame-identical to breach-beats-main.json @0b51b27 by the same probe",
   "recipe": "tools/qa/director-probes.ts breachBeats(seed): Math.random = mulberry(seed); standUp(); 30 × step(1/60); new Breach(game, cam, smoke, input).start(); { breach.update(1/60); step(1/60, look); lights.upload } until it stops itself",
   "seeds": [
@@ -13,7 +13,7 @@
  },
  "runs": {
   "11": {
-   "frames": 7927,
+   "frames": 7929,
    "finished": true,
    "timedOut": false,
    "beats": [
@@ -314,13 +314,13 @@
     },
     {
      "what": "restore",
-     "f": 7927,
-     "t": 132.1167
+     "f": 7929,
+     "t": 132.15
     }
    ]
   },
   "12": {
-   "frames": 7927,
+   "frames": 7929,
    "finished": true,
    "timedOut": false,
    "beats": [
@@ -621,8 +621,8 @@
     },
     {
      "what": "restore",
-     "f": 7927,
-     "t": 132.1167
+     "f": 7929,
+     "t": 132.15
     }
    ]
   }

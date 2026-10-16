@@ -130,14 +130,14 @@ export async function tacticsIdentity() {
 // probe-restaging lane (docs/internal/probe-restage.md) to 8e0cb169 after a first-parent BISECTION: bc835744 reproduces on every commit through cb0d87b and first moves at
 // 7fb3061 "The aim ray stops on glass" (BoxWorld.raycast's default no longer skips Glass; its ONLY default-flags caller is player.ts's cursor aim ray) — restoring the old skip
 // flags on that one call at HEAD gives bc835744 back exactly, so the whole drift is Sam's cursor aim point landing on a pane in this staging (his facing → the men's per-frame
-// sight / aim numbers by a hair; the states every 5 s are unchanged): an INTENDED player-side change (the designer, 08-11: "pointing at glass should target that point in
+// sight / aim numbers by a hair; the states every 5 s are unchanged): an INTENDED player-side change (the maintainer, 08-11: "pointing at glass should target that point in
 // the glass"), tactics on or off alike — not the alert chase. What the digest holds is unchanged: tune.tactics OFF on today's tree, frame by frame. `tactics-identity --print`
 // regenerates it; re-freeze ONLY with a bisected, named cause like this one.
 const EXPECT_IDENTITY = {"digest":"8e0cb169","frames":3600,"states":"aap aap aap aap aap aad sad sad aad aad aad aad "};
 
 // ================================================================ shared staging for the behaviour probes (tactics.ts imported here, not at the top: the identity run above must load on a tree without it)
 const tac = await import(`${ROOT}/src/game/tactics.ts`);
-const { tacticsRoleOf, roleRecord, loneRecord, gateRecord, plansOf, dangerDoors, dangerAt, giveStuns, TACTICS_DEBUG, TACTICS_STATS, doorNear } = tac;
+const { tacticsRoleOf, roleRecord, loneRecord, gateRecord, plansOf, dangerDoors, dangerAt, giveStuns, TACTICS_DEBUG } = tac;
 /** the level up off `seed`, god mode, Sam's meter pinned dark by the caller each frame; TACTICS_DEBUG lines collected (printed under --verbose) */
 async function stage(seed: number) {
   Math.random = seeded(seed);
@@ -400,7 +400,7 @@ export async function tacticsRounds() {
     for (let f = 0; f < 60 * 16; f++) {
       pl.visibility = 0.02; W.step(DT);
       if (!firstPath && B.state === 'alert' && B.path.length > 1 && B.reactT <= 0) {
-        firstPath = B.path.map((p: Vec3) => v3.copy(p)); let q: Vec3 = B.char.pos;
+        firstPath = B.path.map((p: Vec3) => v3.copy(p)) as Vec3[]; let q: Vec3 = B.char.pos;
         for (const w of firstPath) { const L = v3.distXZ(q, w); pathLen += L; const n = Math.ceil(L / 0.2); for (let k = 0; k <= n; k++) { const x = q[0] + (w[0] - q[0]) * k / n, z = q[2] + (w[2] - q[2]) * k / n; const idx = nav.idx(Math.floor(x / nav.cell), Math.floor(z / nav.cell)); if (gapW.has(idx)) viaW++; if (gapN.has(idx)) viaN++; } q = w; }
         via.push(...firstPath.map((p: Vec3) => posS(p)));
       }

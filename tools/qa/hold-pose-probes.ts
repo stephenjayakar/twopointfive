@@ -11,13 +11,14 @@ const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { startGrab, freeHeld } = await import(`${ROOT}/src/game/player.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { KNIFE_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3), mm = (x: number) => (x * 1000).toFixed(1);
+const f2 = (x: number) => x.toFixed(2), mm = (x: number) => (x * 1000).toFixed(1);
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; place(gd, [37.5, 0, 6 + i * 1.5], Math.PI / 2); }
 /** the corridor man (A) planted at (14, 11.2) facing east, calm; B and C parked deaf on the lot; Sam crouched 0.8 m behind him with the pistol HOLSTERED (→ the arm
@@ -36,6 +37,31 @@ async function stage(seed: number, gun = false, drawn = false) {
   return { W, game, A, B, C };
 }
 const knives = (game: any): any[] => game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG);
+// With kit handling live (kitanim.ts: KITANIM.on and .equip — the page, the shipped stand, TPS_KITANIM=1) the knife is not gone the frame a hold ends: it stays in
+// Sam's fist while the hold's pose lets go of the arm and is then SHEATHED BY HAND. So after a hold the rule there is 'in his fist at first, put away within
+// SHEATHE_SECS, not seen again'; with the switch off it is the older 'gone that frame'.
+const SHEATHE_SECS = 1.2;
+const kitLive = (): boolean => KITANIM.on && KITANIM.equip;
+/** steps `n` frames after a hold ended → first: boxes on the first of them · last: the last frame (1-based, 0 = never) a knife box was drawn · peak · back: one was
+ *  drawn again after a frame without any · foreign: boxes owned by somebody other than Sam */
+const sheathe = (W: any, game: any, n: number) => {
+  let first = 0, last = 0, peak = 0, back = false, gap = false, foreign = 0;
+  for (let i = 1; i <= n; i++) {
+    W.step(DT); const ks = knives(game), k = ks.length; if (i === 1) first = k; peak = Math.max(peak, k); foreign += ks.filter((b: any) => b.owner !== PLAYER_ID).length;
+    if (k) { if (gap) back = true; last = i; } else gap = true;
+  }
+  return { first, last, peak, back, foreign };
+};
+/** what is wrong with a `sheathe()` reading, by the stand's rule */
+const sheatheFaults = (r: ReturnType<typeof sheathe>, what: string): string[] => {
+  if (!kitLive()) return r.peak ? [`knife boxes after ${what}: next frame ${r.first}, later ${r.peak}`] : [];
+  const f: string[] = [];
+  if (!r.first) f.push(`kit handling live: no knife in his fist the frame after ${what} (want it kept, then sheathed by hand)`);
+  if (r.last * DT > SHEATHE_SECS) f.push(`the knife was still drawn ${f2(r.last * DT)} s after ${what} (want sheathed within ${SHEATHE_SECS} s)`);
+  if (r.back) f.push(`the knife came back after it was put away (${what})`);
+  if (r.foreign) f.push(`${r.foreign} knife boxes not Sam's after ${what}`);
+  return f;
+};
 /** the cursor 6 m dead ahead of Sam at chest height: updateHold turns the pair toward the cursor, so this keeps it facing where it faces (his row is THE row while
  *  he holds somebody, wherever the cursor is — Space still lands on it) */
 function ahead(W: any, game: any) { const c = game.player.char; W.cursorAt([c.pos[0] + Math.sin(c.bodyYaw) * 6, 1.0, c.pos[2] + Math.cos(c.bodyYaw) * 6]); }
@@ -94,7 +120,7 @@ export async function holdKnife() {
       const alive = stepCheck();
       if (!alive || A.state === 'dead') { deadAt = game.time - t0; if (knives(game).length) goneSameFrame = false; break; }
     }
-    let after = 0; for (let i = 0; i < 120; i++) { W.step(DT); after = Math.max(after, knives(game).length); }
+    const away = sheathe(W, game, 120), after = away.peak;
     if (variant !== 'arm') fails.push(`hold variant ${variant} (staging: the pistol should be holstered → arm)`);
     if (grabFrames < 5) fails.push(`only ${grabFrames} frames of the grab observed`);
     if (missing) fails.push(`${missing} of ${frames} holding frames drew no knife`);
@@ -103,10 +129,10 @@ export async function holdKnife() {
     if (bladeSteep) fails.push(`the blade was steeper than 17° on ${bladeSteep} settled frames`);
     if (deadAt < 0 || Math.abs(deadAt - (HOLD.secs.chokeHold + HOLD.secs.choke)) > 0.07) fails.push(`the choke put him down at +${f2(deadAt)} s of Space (want ${f2(HOLD.secs.chokeHold + HOLD.secs.choke)})`);
     if (A.downKind !== 'choked') fails.push(`A ${A.state}/${A.downKind} (want choked)`);
-    if (!goneSameFrame) fails.push('knife boxes still drawn on the frame the hold ended');
-    if (after) fails.push(`knife boxes after the hold (${after})`);
+    if (!kitLive() && !goneSameFrame) fails.push('knife boxes still drawn on the frame the hold ended');
+    fails.push(...sheatheFaults(away, 'the hold'));
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (a) arm hold → choke: variant ${variant}; ${frames} holding frames (${grabFrames} of the reach), knife missing on ${missing}; settled blade ${f2(minNeck)}‥${f2(maxNeck)} m off his neck axis, level; down at +${f2(deadAt)} s as ${A.downKind}; gone the frame it ended: ${goneSameFrame}; boxes in the 2 s after: ${after}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (a) arm hold → choke: variant ${variant}; ${frames} holding frames (${grabFrames} of the reach), knife missing on ${missing}; settled blade ${f2(minNeck)}‥${f2(maxNeck)} m off his neck axis, level; down at +${f2(deadAt)} s as ${A.downKind}; gone the frame it ended: ${goneSameFrame}; boxes in the 2 s after: ${after}, last drawn +${f2(away.last * DT)} s${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ---- (b) the pistol hold: no knife at any point (grab, held, a whip to the end)
   {
@@ -136,14 +162,13 @@ export async function holdKnife() {
     const foreign = game.dynBoxes.filter((b: any) => b.name === KNIFE_TAG && b.owner !== PLAYER_ID).length;
     const armed = A.char.anim.heldPose?.armed;
     freeHeld(game, why);
-    W.step(DT); const after1 = knives(game).length;
-    let after = 0; for (let i = 0; i < 90; i++) { W.step(DT); after = Math.max(after, knives(game).length); }
+    const away = sheathe(W, game, 91), after1 = away.first, after = away.peak;
     if (during !== 4 || faults.length) fails.push(`while holding: ${during} boxes, faults ${faults.join(', ') || 'none'}`);
     if (foreign) fails.push(`${foreign} knife boxes owned by somebody other than Sam`);
     if (!armed) fails.push(`the drawn man's heldPose.armed = ${armed} (want true: his pistol stays in the raised fist)`);
-    if (after1 || after) fails.push(`knife boxes after freeHeld('${why}'): next frame ${after1}, later ${after}`);
+    fails.push(...sheatheFaults(away, `freeHeld('${why}')`));
     const ok = fails.length === 0; allPass &&= ok;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (c) freeHeld('${why}') on a drawn man: ${during} boxes while holding (armed ${armed}), ${after1} the frame after, ${after} later${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — (c) freeHeld('${why}') on a drawn man: ${during} boxes while holding (armed ${armed}), ${after1} the frame after, ${after} later, last drawn +${f2(away.last * DT)} s${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== hold-knife: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;

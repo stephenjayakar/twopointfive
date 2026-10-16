@@ -15,9 +15,14 @@
 //   aim-player  ten clicked rounds at the corridor wall 12 m off straight after a sprint stop vs after 1.5 s still: scatter ratio ≥ 1.8; the terms behind it.
 //   aim-off     tune.aimModel = false: tracks rest at 0, the gate is open, guardRound hands { spread } untouched (no steady), samAim 0, no braking, no ◎ —
 //               and weapons-identity (run in the same families) stays green.
+//   aim-snap    what the reticle TAKES (player.ts updateAim): a light only with the cursor on its dot (AIM.player.lightSnapPx) — every aimable light in the lobby
+//               view swept on rings from the dot out to 58 px, against the same sweep at 60 (the reach it had, and what the harness stands at); a man standing
+//               under a ceiling panel's picture with the cursor beside him, nearer the panel's dot than his chest: the reticle is on HIM and the clicked round
+//               drops him — at 60 the panel takes it and the round goes into the ceiling; a light taken is kept while the camera's lead slides its dot from
+//               under a cursor left where it was, the right button then OCPs it, and moving the cursor off lets go; a drawn fixture is taken anywhere on its box.
 import { standUp, ROOT } from './headless.ts';
 const { v3, DEG, wrapAngle, lerp } = await import(`${ROOT}/src/math/vec.ts`);
-const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
+const { updateAim } = await import(`${ROOT}/src/game/player.ts`);
 const { resetChase, playerGroundVel } = await import(`${ROOT}/src/game/guards.ts`);
 const Aim = await import(`${ROOT}/src/game/aim.ts`);
 const { AIM, trackGuard, trackPlayer, aimReady, guardRound, handsCone, aimBrake, playerAim, samAim, guardAcquired, noteBore, boreFouled, AIM_DEBUG } = Aim;
@@ -442,3 +447,93 @@ export async function aimOff() {
   console.log(`=== aim-off: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }
+
+// ================================================================ (g) what the reticle takes: a light only on its dot, a man beside one
+export async function aimSnap() {
+  console.log('\n=== aim-snap: the reticle takes a light only with the cursor on it (its dot ± lightSnapPx, or its own drawn box) — swept over every aimable light in view, against the reach it had (60 px); a man under a ceiling panel\'s picture, the cursor beside him and nearer the panel\'s dot: he is taken and the round drops him; a light taken is kept while the camera settles ===');
+  const L0: number = Aim.AIM_DEFAULTS.player.lightSnapPx, SNAP: number = Aim.SNAP_PX; let allPass = true;   // (the SHIPPED reach: the harness itself stands at SNAP — src/host/standup.ts)
+  const stage = async (seed: number, at: Vec3, reach: number) => {
+    Math.random = seeded(seed); const W = await standUp(); const { game, input, cam, canvas } = W; AIM.player.lightSnapPx = reach;
+    game.godMode = true; game.player.visibility = 0; for (let i = 0; i < 5; i++) W.step(DT);
+    game.guards.forEach((gd: any, i: number) => park(gd, i));
+    const pl = game.player; game.teleportPlayer(at); pl.slot = 'pistol'; pl.holstered = false; pl.crouch = false;
+    input.mouseX = 800; input.mouseY = 500; for (let i = 0; i < 90; i++) W.step(DT);   // the camera settled on him
+    const px = (p: Vec3) => cam.project(p, canvas.clientWidth, canvas.clientHeight);
+    /** the reticle's answer for the cursor at (x, y) with the camera where it stands and nothing kept from the frame before */
+    const takes = (x: number, y: number) => { input.mouseX = x; input.mouseY = y; game.aimTarget = null; updateAim(game, input, cam, canvas); return game.aimTarget; };
+    return { W, game, input, cam, canvas, pl, px, takes };
+  };
+  try {
+    { // ---- the sweep: the camera still, the cursor on rings round each light's dot
+      const { game, input, px, takes } = await stage(941, [8.4, 0, 21.2], L0); const fails: string[] = [];
+      const lights = game.targets.filter((t: any) => t.interactive && !t.broken).map((t: any) => ({ t, at: px(t.pos) })).filter((x: any) => x.at[2] && x.at[0] > 80 && x.at[0] < 1520 && x.at[1] > 80 && x.at[1] < 920);
+      const radii = [0, L0 - 2, L0 + 2, Math.round((L0 + SNAP) / 2), SNAP - 2];
+      const sweep = (reach: number) => {
+        AIM.player.lightSnapPx = reach; const took = radii.map(() => 0), any = radii.map(() => 0), tried = radii.map(() => 0); let ceiling = 0;
+        for (const { t, at } of lights) radii.forEach((r, k) => { for (let a = 0; a < (r ? 8 : 1); a++) {
+          const got = takes(at[0] + r * Math.cos(a * Math.PI / 4), at[1] + r * Math.sin(a * Math.PI / 4)); tried[k]++;
+          if (got === t) took[k]++; if (got) any[k]++; if (got && game.aimPoint[1] > 2.5) ceiling++;
+          if (got) { const q = px(got.pos), d = Math.hypot(q[0] - input.mouseX, q[1] - input.mouseY); if (d >= reach + 1e-6) fails.push(`reach ${reach}: took ${got.name} from ${f1(d)} px off its dot`); }
+          else if (r < reach - 1e-6 && !game.aimGuard) fails.push(`reach ${reach}: nothing taken ${r} px off ${t.name}'s dot`);
+        } });
+        return { took, any, tried, ceiling };
+      };
+      const now = sweep(L0), was = sweep(SNAP);
+      const row = (R: ReturnType<typeof sweep>) => radii.map((r, k) => `${r} px ${R.took[k]}/${R.tried[k]}${R.any[k] > R.took[k] ? ` (+${R.any[k] - R.took[k]} a neighbour's nearer dot)` : ''}`).join(' · ');
+      if (lights.length < 3) fails.push(`staging: only ${lights.length} aimable lights in the lobby view`);
+      if (now.any[0] !== now.tried[0] || now.any[1] !== now.tried[1]) fails.push('on / just inside the dot a light was not taken'); if (now.took[2] + now.took[3] + now.took[4] !== 0) fails.push('a light taken from outside lightSnapPx');
+      if (was.any[3] !== was.tried[3]) fails.push(`the knob at ${SNAP} does not give the old reach back (${radii[3]} px: a light taken ${was.any[3]}/${was.tried[3]})`);
+      allPass = verdict(!fails.length, `${lights.length} aimable lights in the lobby view (none of them drawn: ceiling panels, a beacon), the cursor on rings round each dot: taken on the dot and at ${radii[1]} px, never at ${radii[2]} / ${radii[3]} / ${radii[4]} px — and the knob back at ${SNAP} takes them from there as it did`, fails.slice(0, 4).join('; ') || `lightSnapPx ${L0}: ${row(now)} (the gun at the ceiling on ${now.ceiling} of ${now.tried.reduce((a, b) => a + b, 0)} cursor spots) · at ${SNAP}: ${row(was)} (${was.ceiling})`) && allPass;
+    }
+    // ---- the man under a panel's picture: his chest L0 + 42 px to the side of the panel's dot, the cursor between them L0 + 8 px from the dot (beside him, not on him)
+    const man = async (reach: number) => {
+      const { W, game, input, cam, canvas, pl, px } = await stage(942, [8.6, 0, 23.3], reach); const A = game.guards[0]; const dDot = L0 + 8;
+      const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
+      const chest = (): Vec3 => A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0]);
+      const spot = (): Vec3 => { const q = px(panel.pos); const r = cam.ray((q[0] - (L0 + 42)) / canvas.clientWidth, q[1] / canvas.clientHeight); const t = (1.2 - r.ro[1]) / r.rd[1]; return [r.ro[0] + r.rd[0] * t, 0, r.ro[2] + r.rd[2] * t]; };
+      for (let k = 0; k < 4; k++) { const want = spot(), c = chest(); place(A, [A.char.pos[0] + want[0] - (k ? c[0] : A.char.pos[0]), 0, A.char.pos[2] + want[2] - (k ? c[2] : A.char.pos[2])], Math.PI); park2(A); W.step(DT); }   // (his chest bone, not his feet, onto the spot)
+      let onHim = 0, onPanel = 0, onBody = 0, n = 0, dChest = 0;
+      const frame = (click: boolean, count = true) => { const q = px(panel.pos), c = px(chest()); input.mouseX = q[0] - dDot; input.mouseY = q[1];
+        const r = cam.ray(input.mouseX / canvas.clientWidth, input.mouseY / canvas.clientHeight);
+        if (count) { dChest = Math.hypot(c[0] - input.mouseX, c[1] - input.mouseY); if (A.char.rayHit(r.ro, r.rd, 1e9) >= 0) onBody++; }
+        if (click) input.clicked |= 1; W.step(DT); if (count) { n++; if (game.aimGuard === A) onHim++; if (game.aimTarget === panel) onPanel++; } };
+      for (let i = 0; i < 60; i++) frame(false);   // (a second for his hands to settle on what the reticle has)
+      const t0 = game.time; let shot: any = null; const seen = () => { shot ??= game.events.find((e: any) => e.kind === 'shot' && e.who === pl.char.id && e.time >= t0); };
+      frame(true); seen(); for (let i = 0; i < 20; i++) { frame(false, false); seen(); }   // (the round away; what the reticle does over a body afterwards is not counted)
+      return { panel: panel.name, onHim, onPanel, onBody, n, dDot, dChest, clear: !game.col.segmentBlocked(v3.add(pl.char.pos, [0, 1.3, 0]), chest()), dead: A.state === 'dead', toY: shot?.to ? shot.to[1] : NaN, fired: !!shot, range: v3.distXZ(pl.char.pos, A.char.pos) };
+    };
+    { const now = await man(L0), was = await man(SNAP); const fails: string[] = [];
+      if (!now.clear || now.onBody || now.dChest < now.dDot + 8 || now.dChest > SNAP - 8) fails.push(`staging: line clear ${now.clear}, cursor on his body ${now.onBody} frames, ${f1(now.dChest)} px off his chest / ${now.dDot} off the dot`);
+      if (now.onHim !== now.n || now.onPanel) fails.push(`the reticle on him ${now.onHim}/${now.n} frames, on the panel ${now.onPanel}`); if (!now.fired || !now.dead) fails.push(`fired ${now.fired}, he is ${now.dead ? 'down' : 'standing'} (the round ended at y ${f2(now.toY)})`);
+      if (was.onPanel !== was.n || was.dead || !(was.toY > 2.5)) fails.push(`the control at ${SNAP} px: the panel had the reticle ${was.onPanel}/${was.n} frames, he is ${was.dead ? 'down' : 'standing'}, the round ended at y ${f2(was.toY)} (want the old miss into the ceiling)`);
+      allPass = verdict(!fails.length, `a man ${f1(now.range)} m off under ${now.panel}'s picture, the cursor beside him — ${f1(now.dChest)} px from his chest, ${now.dDot} from the panel's dot: the reticle is on him every frame and the round drops him; with the reach back at ${SNAP} the panel takes it and the round goes into the ceiling`, fails.join('; ') || `lightSnapPx ${L0}: on him ${now.onHim}/${now.n}, down ${now.dead} (round to y ${f2(now.toY)}) · at ${SNAP}: on the panel ${was.onPanel}/${was.n}, down ${was.dead} (round to y ${f2(was.toY)})`) && allPass;
+    }
+    { // ---- kept while the camera settles: the cursor flicked onto a panel's dot and LEFT there — the aim point going up to the panel pans the picture under it
+      const { W, game, input, pl, px } = await stage(943, [8.6, 0, 23.3], L0); const fails: string[] = [];
+      const panel = game.targets.filter((t: any) => t.interactive && /^panel_/.test(t.name)).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos))[0];
+      panel.on = true; W.step(DT);   // (the lobby's panels are switched off at night: lit, so the OCP below has something to put out)
+      const q0 = px(panel.pos); input.mouseX = q0[0]; input.mouseY = q0[1]; let had = 0, drift = 0; const N = 90;
+      const off = () => { const q = px(panel.pos); return Math.hypot(q[0] - input.mouseX, q[1] - input.mouseY); };
+      for (let i = 0; i < N; i++) { W.step(DT); if (game.aimTarget === panel) had++; drift = Math.max(drift, off()); }
+      pl.ocp.charge = 1; input.clicked |= 4; W.step(DT); const zapped = panel.disabledUntil > game.time;   // the right button a second and a half after landing on it
+      const q = px(panel.pos), d = off() || 1; input.mouseX += (input.mouseX - q[0]) / d * (L0 + 6); input.mouseY += (input.mouseY - q[1]) / d * (L0 + 6); W.step(DT); const let_go = game.aimTarget !== panel;   // the cursor moved off, away from the dot
+      if (had !== N) fails.push(`the panel had the reticle ${had}/${N} frames with the cursor left on the spot`); if (!zapped) fails.push('the right button then did not OCP it'); if (!let_go) fails.push(`the cursor moved ${L0 + 6} px further off and the panel still has the reticle`);
+      if (drift >= SNAP) fails.push(`staging: the dot slid ${f1(drift)} px — past the men's reach, nothing holds that`);
+      allPass = verdict(!fails.length, `the cursor put on ${panel.name}'s dot and left there: the camera's lead slides the dot ${f1(drift)} px from under it (reach ${L0}) and the panel keeps the reticle all ${N} frames, the right button OCPs it; the cursor moved ${L0 + 6} px further off lets it go at once`, fails.join('; ') || `kept ${had}/${N} · drift ${f1(drift)} px · OCP ${zapped} · let go ${let_go}`) && allPass;
+    }
+    { // ---- a DRAWN fixture is taken by pointing at it anywhere: the vending front, well off its dot
+      const { game, input, px, takes } = await stage(944, [29.4, 0, 16.2], L0); const fails: string[] = [];
+      const v = game.targets.find((t: any) => t.name === 'vending'), b = W0(game).statics[v.boxes[0]];
+      const on: Vec3 = [b.c[0] + b.h[0] * 0.6, b.c[1] + b.h[1], b.c[2] + b.h[2] * 0.6], q = px(on), dot = px(v.pos); const dOn = Math.hypot(q[0] - dot[0], q[1] - dot[1]);
+      const got = takes(q[0], q[1]); const beside = takes(dot[0], dot[1] - (dOn + 40));   // on its top face; then the same distance and more off the dot, past the box
+      if (!q[2] || dOn <= L0 + 2 || dOn >= SNAP) fails.push(`staging: the point on its top is ${f1(dOn)} px off the dot`); if (got !== v) fails.push(`the cursor on the machine ${f1(dOn)} px off its dot took ${got?.name ?? 'nothing'}`); if (beside === v) fails.push('taken from off the box');
+      void input;
+      allPass = verdict(!fails.length, `the cursor ON the vending machine ${f1(dOn)} px off its dot takes it (it is drawn: pointing at it is pointing at it); off the box it does not`, fails.join('; ') || `on it: ${got?.name} · off it: ${beside?.name ?? 'nothing'}`) && allPass;
+    }
+  } finally { AIM.player.lightSnapPx = L0; }
+  console.log(`=== aim-snap: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
+  return allPass;
+}
+const W0 = (game: any) => game.engine.world;
+/** held where he stands, deaf and blind (park() without the move to the lot) */
+function park2(gd: any) { gd.hold = true; gd.pinned = true; gd.heardUpTo = 1e12; gd.dazzledUntil = 1e9; gd.state = 'patrol'; gd.awareness = 0; }

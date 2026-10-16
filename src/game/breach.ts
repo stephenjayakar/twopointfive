@@ -9,12 +9,11 @@
 //
 // SINCE THE DIRECTOR (game/director.ts, docs/internal/director.md): the SHOW — cast, daylight, camera programme, captions, the cut and the restore — is the office's
 // level script (levels/office.script.ts, program 'breach', showcase: true) run by Game.director; what stays here is the DRILL it drives (BreachDrill: the one piece of
-// choreography with fourteen clocks, kept statement for statement), the BREACH_STAGING seam, and `Breach` as a FACADE over the Director with the surface main.ts, the
+// choreography with fourteen clocks, kept statement for statement) and `Breach` as a FACADE over the Director with the surface main.ts, the
 // __breach hook and tools/qa/breach-probes.ts always had (start / stop / update / active / t / drill / log / cast / chapters / onStop) — the probes stay byte-identical
 // and now exercise the Director's path. The cast are spawned UNITS (guards.ts spawnUnit, ids 20‥24: an operative's round finds a hostile through the ordinary
 // fireWeapon and he goes down to the hit; the drill only aims and pulls the trigger on cue, and drops a man itself only if both rounds of his pair found furniture —
 // `guaranteeDowns`, logged when it fires); the shift is benched (Game.guards holds the cast alone, torches out) and comes back with restartEncounter under the veil.
-// BREACH_STAGING.engage is the seam a live engagement fills to own the fight outright — see its contract below; it is NOT wired (an ownership decision, not an adapter).
 import { Vec3, v3, quat, damp, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { FollowCamera } from './camera';
@@ -27,6 +26,9 @@ import { order, endGuardScript, Sweep, inBounds } from './squad';
 import { KICK_IMPACT } from './character';
 import { fireWeapon, killGuard, detonateStun } from './combat';
 import { kickDustFx } from './particleFx';
+import { shotEnergy } from './glasspen';
+import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
+import { runnerFled } from './runner';   // (asked inside the ending check only: false with its switch off)
 
 /** the approach: a run with the rifles at the LOW ready — both hands on the gun, muzzle down (the runner's stance 'lowReady' → the long gun's 'lowLong'
  *  carriage) — begun HOLD_OPEN seconds in: the establishing shot opens on the empty sunlit floor and they come into it (guards walk their routes at 1.15, chase at 2.7) */
@@ -41,7 +43,7 @@ const CHOP_LEAD = 0.4;
 /** the entry: #1 goes this long after the bang, #2 this long after #1 */
 const GO_AFTER_BANG = 0.4, TWO_AFTER_ONE = 0.5;
 /** the centre check: seconds the muzzle takes across the room's middle before he may turn to his corner (a man standing in it cuts it short: he is engaged) */
-const CENTRE_SECS = 0.32;   // (since 08-13 only the centre SWEEP's length: nobody stands in the middle any more — the designer: 'they should be continuously flowing through the room until they've cleared it')
+const CENTRE_SECS = 0.32;   // (since 08-13 only the centre SWEEP's length: nobody stands in the middle any more — the maintainer: 'they should be continuously flowing through the room until they've cleared it')
 /** the staged exchange: seconds a man's muzzle rests on his target before the first round, between the two rounds of the controlled pair, and before he takes the next man */
 const SETTLE = 0.14, PAIR = 0.16, SHIFT = 0.3;   // (SETTLE 0.34 → 0.14, SHIFT 0.4 → 0.3, 08-13: 'take the shot immediately when passing through the door … no lingering in the threshold with the laser on the enemy')
 /** how far inside the room's bounds a man must be before his first round may go (the frame itself is nobody's firing point; a stride in, it is) */
@@ -50,35 +52,22 @@ const FIRE_INSIDE_M = 0.3;
 const NEXT_AFTER_CLEAR = 2.2, RESTACK_HOLD = 1.5, RESTACK_CAP = 7.5;
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
-// ================================================================ the seam for the teams lane
-/** What BREACH_STAGING.engage is handed every frame. */
-export interface BreachEngageCtx {
-  g: Game; drill: BreachDrill;
-  /** #1 (kicked, entered first, turns right to his corner) and #2 (banged, on his heels, turns left to his): scripted — order() them; #1's entry leg is already ordered when this is first called */
-  ops: [Guard, Guard];
-  /** the men inside, in plan order (plan.hostiles), dead or alive: scripted dummies today — endGuardScript(h, 'alert') hands one to the AI */
-  hostiles: Guard[];
-  /** seconds since #1 started through the door, and this frame's dt */
-  te: number; dt: number;
-}
-/** The seam the teams lane's engagement fills. `engage`, when set, REPLACES the drill's flows and staged exchange (BreachDrill.flows / stagedExchange): it is called
- *  once a frame from the frame #1 starts through the door (phase 'enter': his entry leg is ordered, #2 follows TWO_AFTER_ONE later unless the hook re-routes him,
- *  and both scripts carry `hot`) until it returns true, meaning "room clear": the drill then runs the clear beat (the calls, the word for the next door, the stack
- *  on it) and the show ends as it does today. While it runs it owns the operatives' aim and trigger (order(op, { aimAt, upper }), op.weapon.fire() + fireWeapon(g,
- *  op.char, at, false, …)) and may re-route them; it owns the hostiles outright (hand them to the AI, let them shoot back — the operatives are ordinary Guards and
- *  die like anyone: the drill copes with a dead operative by ending the show early). It must return true within ~20 s or the drill calls the room itself. Default
- *  null = the staged version. Wiring the teams lane's guards.ts BREACH_HOOKS.engage(g, operatives, hostiles, opts) → { done, result, promise } into it is one
- *  closure — start theirs on the first call, answer with its `done` every call after:
- *    let live: { done: boolean } | null = null;
- *    BREACH_STAGING.engage = ({ g, ops, hostiles }) => (live ??= TEAMS.engage(g, ops, hostiles, { timeout: 20, surprise: 1 })).done;
- *  (and BREACH_STAGING.engage = null; live = null on Breach.stop — restore() below clears the seam's per-run state if it is given a `reset`). Not wired today: see
- *  the note at the top of the file. */
-export const BREACH_STAGING: { engage: ((ctx: BreachEngageCtx) => boolean) | null; reset: (() => void) | null } = { engage: null, reset: null };
-
 // ================================================================ the drill
 type Phase = 'wait' | 'approach' | 'stack' | 'breach' | 'kick' | 'bang' | 'enter' | 'clear' | 'restack' | 'done';
 /** one operative's way through the room (BreachFlow runs on this): waiting for his go, through the funnel, the centre check, on to his corner, holding his sector */
 type FlowSt = 'wait' | 'into' | 'centre' | 'corner' | 'hold';
+/** What a LIVE drill reads every frame (BreachDrill.live; game/nightbreach.ts owns the object and writes it): how many orders Sam has given (1 = stack up, 2 = go),
+ *  whether the pair's weapon lights come on as they enter, whether the boot is heard by the men inside (a 'kick' hearing event at the leaf), and whether #2 has a
+ *  stun charge to put in (false = boot and go: no can, no bang, #1 starts through the door on the beat the charge would have left the hand). */
+export interface BreachLive { orders: number; lights: boolean; loudBoot: boolean; stun: boolean;
+  /** seconds the stack stands set before the point man may step out on 'go' (absent = SET_HOLD, the show's beat; game/rescue.ts shortens it once the clock is running) */
+  setHold?: number; }
+/** live play: what the pair says where the show's line would state what the drill does not know (a body count: Sam's rounds count too) … */
+const LIVE_LINES: Record<string, string> = { clear1: 'right side — clear.', clear2: 'left clear. i have the door.', roomClear1: 'room clear.' };
+/** … said by the man it is true of (words.ts): #1's hold is the gun on the room's north door (plan.flow[0].hold), #2's is the far corner */
+const LIVE_NOW: Record<string, string> = { clear1: 'right side — clear. i have the door.', clear2: 'left clear.' };
+/** … or promise a charge nobody is carrying */
+const LIVE_NO_CHARGE: Record<string, string> = { stack1: 'stack on me — side door. on my boot.', stack2: 'set.' };
 interface OpFlow {
   st: FlowSt; t0: number; wps: Vec3[]; sweep: Sweep; aim: Vec3;
   /** the staged exchange: hostile indices still to engage in this leg, the one his muzzle is on (−1 none) and since when, rounds of the pair fired, earliest next trigger / pick-up */
@@ -104,20 +93,35 @@ export class BreachDrill {
   /** guaranteeDowns (default true = the show as it always ran): a hostile still standing after both rounds of his pair, or after 14 s of entry, is put down by hand so the
    *  calls are true — logged as 'guaranteed:k' when it fires (it never has: the rounds find their men); false = only real rounds drop anybody */
   readonly guaranteeDowns: boolean;
-  constructor(private g: Game, readonly plan: BreachPlan, readonly a: Guard, readonly b: Guard, readonly hostiles: Guard[], opts: { guaranteeDowns?: boolean } = {}) {
+  /** LIVE PLAY (game/nightbreach.ts — null = the show's drill, statement for statement as it was): the pair wait on the approach marks for `orders` ≥ 1 ('stack up')
+   *  and on the stack for `orders` ≥ 2 ('go') instead of the show's clocks; the men inside are NOT the drill's to script (start and bang leave them alone: they are
+   *  pinned AI men who shoot back); a man down ends nothing while the other can go on (he finishes his flow with every living man inside on his list); the staged
+   *  exchange asks for a line before every pick AND every round; the boot is heard (a 'kick' event); the room is called only when everybody inside is down — no 14 s
+   *  fallback — and the drill ends there, on the hold, with no restack. */
+  readonly live: BreachLive | null;
+  /** live: the drill clock when order one came (the approach's cap counts from it, as the show's does from HOLD_OPEN) */
+  tRun = NaN;
+  constructor(private g: Game, readonly plan: BreachPlan, readonly a: Guard, readonly b: Guard, readonly hostiles: Guard[], opts: { guaranteeDowns?: boolean; live?: BreachLive } = {}) {
     this.aimA = v3.copy(plan.stackAim[0]); this.aimB = v3.copy(plan.stackAim[1]);
     const mk = (aim: Vec3): OpFlow => ({ st: 'wait', t0: 0, wps: [], sweep: new Sweep(), aim, q: [], on: -1, since: 0, n: 0, next: 0, said: false, inAt: NaN, cornerAt: NaN, holdAt: NaN });
     this.flows = [mk(this.aimA), mk(this.aimB)];
     this.downLogged = hostiles.map(() => false);
     this.guaranteeDowns = opts.guaranteeDowns ?? true;
+    this.live = opts.live ?? null;
   }
   get door() { return this.g.doors.byName(this.plan.door); }
   get nextDoor() { return this.g.doors.byName(this.plan.next.door); }
   private beat(what: string) { this.beats.push({ t: this.t, what }); }
   private once(key: string): boolean { if (this.done.has(key)) return false; this.done.add(key); return true; }
-  private say(gd: Guard, key: string, text: string, radio = false) { if (text && this.once('say:' + key) && gd.state !== 'dead') this.g.say(gd, text, radio); }
+  /** is there a stun charge in this entry: always in the show; live, only with the knob on and #2 alive to carry it (a dead man chops nothing and throws nothing) */
+  private get charge(): boolean { return !this.live || (this.live.stun && this.b.state !== 'dead'); }
+  private say(gd: Guard, key: string, text: string, radio = false) {
+    if (this.live) text = (this.charge ? undefined : LIVE_NO_CHARGE[key]) ?? (WORDS.on ? LIVE_NOW[key] : undefined) ?? LIVE_LINES[key] ?? text;
+    if (text && this.once('say:' + key) && gd.state !== 'dead') this.g.say(gd, text, radio);
+  }
   private route(gd: Guard, wps: Vec3[], pts: readonly Vec3[], patch: Parameters<typeof order>[1] = {}) { wps.length = 0; for (const p of pts) wps.push(v3.copy(p)); order(gd, { ...patch, goal: wps[0] ?? null }); }
   private advance(gd: Guard, wps: Vec3[], pass = 0.7): boolean {
+    if (gd.state === 'dead') return true;   // (live play only — the show ends on a man down: nobody orders a corpse about, and nothing waits on him)
     while (wps.length > 1 && flat(gd.char.pos, wps[0]) < pass) { wps.shift(); order(gd, { goal: wps[0] }); }
     return wps.length <= 1 && !!gd.script?.arrived;
   }
@@ -140,7 +144,7 @@ export class BreachDrill {
       gd.weapon.rearm(); c.update(0);
       order(gd, { goal: null, face: c.bodyYaw, stance: 'lowReady', upper: 'none', aimAt: null, light: false, crouch: false });   // stood at the low ready facing the way they will go, until the word (tick: 'wait')
     });
-    P.hostiles.forEach((h, i) => { const gd = this.hostiles[i]; if (!gd) return; const c = gd.char; c.pos = v3.copy(h.pos); c.vel = [0, 0, 0]; c.bodyYaw = c.aimYaw = h.yaw; gd.state = 'patrol'; gd.awareness = 0; c.update(0);
+    if (!this.live) P.hostiles.forEach((h, i) => { const gd = this.hostiles[i]; if (!gd) return; const c = gd.char; c.pos = v3.copy(h.pos); c.vel = [0, 0, 0]; c.bodyYaw = c.aimYaw = h.yaw; gd.state = 'patrol'; gd.awareness = 0; c.update(0);
       order(gd, { goal: null, face: h.yaw, aimAt: v3.copy(h.aimAt), stance: 'none', upper: 'aim', crouch: !!h.crouch, light: false }); });
     const d = this.door; if (d) { d.reset(); d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; }
     const dn = this.nextDoor; if (dn) { dn.reset(); dn.angle = 0; dn.vel = 0; dn.latched = true; dn.closing = false; }   // the next threshold shut too: a door to stack on, not a hole in the wall
@@ -167,22 +171,23 @@ export class BreachDrill {
     const g = this.g, P = this.plan, a = this.a, b = this.b, d = this.door;
     this.t += dt; const t = this.t;
     if (!d) return;
-    if (a.state === 'dead' || b.state === 'dead') { if (this.phase !== 'done') { this.phase = 'done'; this.tDone = t; this.beat('abort'); } return; }   // (a live exchange, one day: a man down ends the show where it stands)
+    if (this.live) { if (this.casualties(t)) return; }
+    else if (a.state === 'dead' || b.state === 'dead') { if (this.phase !== 'done') { this.phase = 'done'; this.tDone = t; this.beat('abort'); } return; }   // (a live exchange, one day: a man down ends the show where it stands)
     if (this.phase === 'done') return;   // done is done: the Director's loud half walks these two men past the restack's marks, and advance() below would take a man within reach of a leftover waypoint back in hand
     let aIn = this.advance(a, this.wpA), bIn = this.advance(b, this.wpB);
     this.hostiles.forEach((h, k) => { if (!this.downLogged[k] && h.state === 'dead') { this.downLogged[k] = true; this.beat(`down:${k}`); } });   // whoever's round it was (or the fallback): logged the frame he goes
-    if (!isNaN(this.tSet) && !this.chopped) this.canInHand();
+    if (!isNaN(this.tSet) && !this.chopped && this.charge) this.canInHand();
     switch (this.phase) {
       case 'wait': {   // the establishing shot opens on the empty floor; on the word they go — a run at the low ready, #2 a stride behind and a hair slower so the file holds
-        if (t >= HOLD_OPEN) {
-          this.phase = 'approach'; this.beat('go');
+        if (this.live ? this.live.orders >= 1 : t >= HOLD_OPEN) {
+          this.phase = 'approach'; this.beat('go'); this.tRun = t;
           this.route(a, this.wpA, [P.stack[0]], { speed: RUN, face: null, stance: 'lowReady', upper: 'none', aimAt: null, light: false, crouch: false }); aIn = false;
           this.route(b, this.wpB, [P.stack[1]], { speed: RUN * 0.965, face: null, stance: 'lowReady', upper: 'none', aimAt: null, light: false, crouch: false }); bIn = false;
         }
         break;
       }
       case 'approach': {   // the run down the aisle; three metres short of his mark #1 comes down to a walk and blades to the wall, #2 closing up behind him at the high port
-        if (flat(a.char.pos, P.stack[0]) < 3.2 || t > HOLD_OPEN + 16) {
+        if (flat(a.char.pos, P.stack[0]) < 3.2 || t > (this.live ? this.tRun : HOLD_OPEN) + 16) {
           this.phase = 'stack'; this.tStack = t; this.beat('approach-done');
           order(a, { speed: 1.7, face: P.stackFace[0], stance: 'stack', stackSide: P.stackSide, upper: 'none', aimAt: this.aimA });
           order(b, { speed: 1.75, face: P.stackFace[1], stance: 'highReady', upper: 'none', aimAt: this.aimB });
@@ -192,9 +197,10 @@ export class BreachDrill {
       case 'stack': {   // set once both are planted (capped): #2's fist comes up beside his head with the charge in it — 'set, bang's up' — and SET_HOLD later #1 says the word and steps out square to the leaf while #2 slides up the wall into the jamb he leaves
         const ts = t - this.tStack;
         if (ts > 0.5) this.say(a, 'stack1', P.lines.stack1);
-        if (isNaN(this.tSet) && ((aIn && bIn) || ts > 7)) { this.tSet = t; this.beat(aIn && bIn ? 'stacked' : 'stacked-late'); if (bIn) b.char.anim.signal('hold'); }
+        if (isNaN(this.tSet) && ((aIn && bIn) || ts > 7)) { this.tSet = t; this.beat(aIn && bIn ? 'stacked' : 'stacked-late'); if (bIn) b.char.anim.signal('squeeze'); }
         if (!isNaN(this.tSet) && t > this.tSet + 0.3) this.say(b, 'stack2', P.lines.stack2);
-        if (!isNaN(this.tSet) && t >= this.tSet + SET_HOLD && (!b.char.anim.signalling || t > this.tSet + SET_HOLD + 0.6)) {
+        const setHold = this.live?.setHold ?? SET_HOLD;
+        if (!isNaN(this.tSet) && t >= this.tSet + setHold && (!b.char.anim.signalling || t > this.tSet + setHold + 0.6) && (!this.live || this.live.orders >= 2)) {
           this.say(a, 'breach1', P.breachLines.breach1);
           this.tGo = t; this.phase = 'breach'; this.beat('squeeze');
           this.route(a, this.wpA, [P.kickFrom], { speed: 1.3, face: P.kickFace, stance: 'highReady', upper: 'none', strafe: false, aimAt: null }); aIn = false;
@@ -209,20 +215,26 @@ export class BreachDrill {
       }
       case 'kick': {   // #2's chop starts ahead of the impact so the can comes over the top just after it; the sole meets the leaf at KICK_IMPACT: unlatched and flung off the boot into the room (the door model bangs it off its stop) — and on that frame #1 steps BACK, chest on the doorway, to his mark behind and outside #2: never across the opening
         const an = a.char.anim, c = a.char;
-        if (!this.chopped && t >= this.tKick + KICK_IMPACT + TOSS_AFTER_IMPACT - CHOP_LEAD) { this.chopped = true; b.char.anim.signal('go'); this.say(b, 'bang2', P.breachLines.bang2); }
-        if (this.chopped) this.canInHand();   // (still in the fist through the chop, until it flies below)
+        if (!this.chopped && t >= this.tKick + KICK_IMPACT + TOSS_AFTER_IMPACT - CHOP_LEAD) { this.chopped = true; if (b.state !== 'dead') b.char.anim.tossItem(CHOP_LEAD); if (this.charge) this.say(b, 'bang2', P.breachLines.bang2); }
+        if (this.chopped && this.charge) this.canInHand();   // (still in the fist through the chop, until it flies below)
         if (isNaN(this.tFlung) && (an.kickImpact || an.kickTime >= KICK_IMPACT || !an.kicking)) {
           this.tFlung = t;
           const onIt = flat(c.pos, P.kickFrom) < 0.4 && Math.abs(wrapAngle(c.bodyYaw - P.kickFace)) < 0.35;
           if (Math.abs(d.angle) < 1.4) { d.latched = false; d.closing = false; d.vel = onIt ? P.fling : P.fling * 0.32; d.sinceBash = onIt ? 0 : d.sinceBash; d.quietT = -0.5; d.creakArmed = false; }
           d.lastWho = c.id;
-          if (onIt) { g.audio.play('doorBash', d.pos, 1.0, { rate: 0.9 }); kickDustFx(g, d, c.pos); }   // (+ the plaster and splinters off the jamb: GPU particles, nothing with them off)
+          if (onIt && !d.off) { g.audio.play('doorBash', d.pos, 1.0, { rate: 0.9 }); kickDustFx(g, d, c.pos); }   // (+ the plaster and splinters off the jamb: GPU particles, nothing with them off)
+          if (this.live?.loudBoot && !d.off) g.events.push({ kind: 'kick', pos: [d.pos[0], 0, d.pos[2]], time: g.time, loud: true, level: 1.0, who: c.id });   // live: the men inside HEAR the door go in (doors.ts kickIn's event; the show's boot never raised one — its men were puppets)
           this.say(a, 'in1', P.lines.in1); this.beat(onIt ? 'door-flung' : 'door-pushed');
-          this.route(a, this.wpA, [P.retreat.mark], { speed: 1.9, face: P.retreat.face, strafe: true, stance: 'highReady', upper: 'none', aimAt: [d.frameCentre[0] + 1.2, 1.1, d.frameCentre[2]] }); aIn = false;   // (the runner moves a kicking man too: the planted foot is the animator's, the root steps back under it)
+          this.route(a, this.wpA, [P.retreat.mark], { speed: 1.9, face: P.retreat.face, strafe: true, stance: 'highReady', upper: 'none', aimAt: this.inside(1.2, 1.1) }); aIn = false;   // (the runner moves a kicking man too: the planted foot is the animator's, the root steps back under it)
           this.beat('retreat');
         }
+        if (!this.charge && !isNaN(this.tFlung) && t >= this.tFlung + TOSS_AFTER_IMPACT) {   // live, no charge: muzzles onto the opening and in (the 'enter' beat's own GO_AFTER_BANG is all the pause there is)
+          this.tBang = t; this.beat('nobang');
+          this.muzzlesOnDoor();
+          this.phase = 'enter'; break;
+        }
         if (!isNaN(this.tFlung) && !this.can && t >= this.tFlung + TOSS_AFTER_IMPACT) {   // the leaf's latch edge is a hand clear: the can leaves the support hand round the jamb for the open floor north of the table
-          const hand = b.char.bones.handL ?? v3.add(b.char.pos, [0, 1.3, 0]);
+          const hand = b.char.jointUnder('handL') ?? v3.add(b.char.pos, [0, 1.3, 0]);
           const from: Vec3 = [hand[0], Math.max(1.0, hand[1]), hand[2]];
           const sol = g.items.solve(from, P.toss.land, 9);
           const it = this.can = g.items.spawn('flash', from, sol.v0, { fuse: 99, who: b.char.id, heading: v3.yawOf(sol.v0) });   // (fuse 99: it goes off on OUR cue below, not the item's — see bang)
@@ -245,31 +257,25 @@ export class BreachDrill {
         if ((!isNaN(this.tLand) && t >= this.tLand + FUSE_AFTER_LAND) || t > this.tToss + 2.0) {
           it.fired = true; this.tBang = t;
           const all = g.guards; g.guards = this.hostiles.filter(h => h.state !== 'dead');
-          try { detonateStun(g, it); } finally { g.guards = all; }
+          try { detonateStun(g, it, false, { side: 'operative' }); } finally { g.guards = all; }   // (the thrower is off the list: the can is the team's own to the player — samstun.ts)
           this.beat('bang');
           // the men inside reel: muzzles drop to the floor at their feet, the middle one gives half a step (they are dazed for seconds — long after it matters)
-          this.hostiles.forEach((h, i) => { if (h.state === 'dead') return; const c = h.char, f = c.forward(); order(h, { aimAt: [c.pos[0] + f[0] * 1.2, 0.1, c.pos[2] + f[2] * 1.2], upper: 'aim', stance: 'none' }); if (i === 0) order(h, { goal: [c.pos[0] + 0.35, 0, c.pos[2] - 0.3], strafe: true, face: c.bodyYaw, speed: 0.9 }); });
-          // heads back on the door: #1's muzzle up on the opening he is about to take, #2's over him
-          const setV = (o: Vec3, x: number, y: number, z: number) => { o[0] = x; o[1] = y; o[2] = z; };
-          setV(this.aimA, d.frameCentre[0] + 1.5, 1.1, d.frameCentre[2]); order(a, { aimAt: this.aimA });
-          setV(this.aimB, d.frameCentre[0] + 1.0, 1.5, d.frameCentre[2] - 0.3); order(b, { aimAt: this.aimB });
+          if (!this.live) this.hostiles.forEach((h, i) => { if (h.state === 'dead') return; const c = h.char, f = c.forward(); order(h, { aimAt: [c.pos[0] + f[0] * 1.2, 0.1, c.pos[2] + f[2] * 1.2], upper: 'aim', stance: 'none' }); if (i === 0) order(h, { goal: [c.pos[0] + 0.35, 0, c.pos[2] - 0.3], strafe: true, face: c.bodyYaw, speed: 0.9 }); });
+          this.muzzlesOnDoor();
           this.phase = 'enter';
         }
         break;
       }
-      case 'enter': {   // GO_AFTER_BANG later #1 goes, TWO_AFTER_ONE after him #2 (each man's flow below); the exchange is staged on top of the flows unless the seam has an engagement
+      case 'enter': {   // GO_AFTER_BANG later #1 goes, TWO_AFTER_ONE after him #2 (each man's flow below); the exchange is staged on top of the flows
         if (isNaN(this.tEnter)) {
           if (t < this.tBang + GO_AFTER_BANG) break;
-          this.tEnter = t; a.state = 'search'; b.state = 'search';   // (hunting now: lasers on, cutting the room's haze)
+          this.tEnter = t; if (a.state !== 'dead') a.state = 'search'; if (b.state !== 'dead') b.state = 'search';   // (hunting now: lasers on, cutting the room's haze)
           this.say(a, 'going1', P.breachLines.going1); this.beat('enter1');
-          this.startFlow(0);
+          if (a.state !== 'dead') this.startFlow(0);
         }
         const te = t - this.tEnter;
-        if (this.flows[1].st === 'wait' && te >= TWO_AFTER_ONE && (inBounds(a.char.pos, P.bounds) || te > 2.5)) { this.beat('enter2'); this.startFlow(1); }   // on his heels — but never treading on them: #1 is through the frame (inside the room's bounds) before #2 starts for it
-        const hook = BREACH_STAGING.engage;
-        let clear: boolean;
-        if (hook) clear = hook({ g, drill: this, ops: [a, b], hostiles: this.hostiles, te, dt }) || te > 20;
-        else { this.tickFlow(0, dt); this.tickFlow(1, dt); clear = this.roomClear(te); }
+        if (this.flows[1].st === 'wait' && b.state !== 'dead' && te >= TWO_AFTER_ONE && (inBounds(a.char.pos, P.bounds) || te > 2.5 || a.state === 'dead')) { this.beat('enter2'); this.startFlow(1); }   // on his heels — but never treading on them: #1 is through the frame (inside the room's bounds) before #2 starts for it
+        this.tickFlow(0, dt); this.tickFlow(1, dt); const clear = this.roomClear(te);
         aIn = bIn = false;   // (the flows route the men themselves)
         if (clear) { this.phase = 'clear'; this.tClear = t; this.beat('clear'); }
         break;
@@ -277,7 +283,8 @@ export class BreachDrill {
       case 'clear': {   // #1 calls the room; a beat, then the word for the next door and both close on it — #2 (nearest, and holding it already) onto the jamb as the new point, #1 tucking in behind — guns at the high port on the shut leaf
         const tc = t - this.tClear;
         this.tickHold(0, dt); this.tickHold(1, dt);
-        if (tc > 0.3) this.say(a, 'roomClear1', P.breachLines.roomClear1);
+        if (tc > 0.3) this.say(a.state !== 'dead' ? a : b, 'roomClear1', P.breachLines.roomClear1);
+        if (this.live) { if (tc >= 1.0) { this.tDone = t; this.phase = 'done'; this.beat('done'); } break; }   // live: the room is theirs and they hold it where they stand — the next door is Sam's to call (no restack, no cut)
         if (tc >= NEXT_AFTER_CLEAR && isNaN(this.tNext)) {
           this.tNext = t; this.beat('next'); this.say(a, 'next1', P.breachLines.next1);
           const N = P.next;
@@ -292,12 +299,42 @@ export class BreachDrill {
         const tn = t - this.tNext;
         for (const F of this.flows) if (F.sweep.active) F.sweep.at(t, F.aim);
         if (tn > 1.6) this.say(a, 'radio1', P.breachLines.radio1, true);
-        if (isNaN(this.tStacked2) && ((aIn && bIn) || tn > RESTACK_CAP)) { this.tStacked2 = t; this.beat(aIn && bIn ? 'stack2' : 'stack2-late'); if (bIn) b.char.anim.signal('hold'); }
+        if (isNaN(this.tStacked2) && ((aIn && bIn) || tn > RESTACK_CAP)) { this.tStacked2 = t; this.beat(aIn && bIn ? 'stack2' : 'stack2-late'); if (bIn) b.char.anim.signal('squeeze'); }
         if (!isNaN(this.tStacked2) && t >= this.tStacked2 + RESTACK_HOLD && isNaN(this.tDone)) { this.tDone = t; this.phase = 'done'; this.beat('cut'); this.beat('done'); }
         break;
       }
       // ('done' returned above)
     }
+  }
+  /** LIVE: what a man down means, asked every frame before anything else. Both down = the breach has failed where it stands ('wiped'); the point man down with the
+   *  leaf still shut = nobody is left to open it ('abort', #2 holds the stack); anything else = the drill goes on with whoever is up — true when it has ended. */
+  private casualties(t: number): boolean {
+    if (this.phase === 'done') return false;
+    const aDown = this.a.state === 'dead', bDown = this.b.state === 'dead';
+    if (!aDown && !bDown) return false;
+    for (const [gd, key] of [[this.a, 'a'], [this.b, 'b']] as const) if (gd.state === 'dead' && this.once('opdown:' + key)) this.beat(`opdown:${key === 'a' ? 1 : 2}`);
+    const why = aDown && bDown ? 'wiped' : aDown && isNaN(this.tFlung) ? 'abort' : null;
+    if (why) {
+      this.phase = 'done'; this.tDone = t; this.beat(why);
+      // a stun can already out of #2's hand flies on the long fuse this drill fires it from ('bang' above) — and the drill has just ended: left alone it would lie
+      // live for a minute and a half. It goes back to an ordinary can's short fuse from where it lands (combat.ts updateItems), on whoever is looking at it.
+      if (this.can && !this.can.fired) { this.can.fuse = Math.min(this.can.fuse, FUSE_AFTER_LAND); this.beat('can:short-fuse'); }
+      return true;
+    }
+    return false;
+  }
+  /** heads back on the door: #1's muzzle up on the opening he is about to take, #2's over him (after the bang — or, live with no charge, straight off the boot) */
+  private muzzlesOnDoor() {
+    const setV = (o: Vec3, x: number, y: number, z: number) => { o[0] = x; o[1] = y; o[2] = z; };
+    const pa = this.inside(1.5, 1.1), pb = this.inside(1.0, 1.5, 0.3);
+    setV(this.aimA, pa[0], pa[1], pa[2]); if (this.a.state !== 'dead') order(this.a, { aimAt: this.aimA });
+    setV(this.aimB, pb[0], pb[1], pb[2]); if (this.b.state !== 'dead') order(this.b, { aimAt: this.aimB });
+  }
+  /** a point `d` metres through the doorway into the room at height `y`, `s` along the wall (the plan's inward normal; absent = +x — the break room's west door,
+   *  for which these are the numbers the three call sites always wrote out) */
+  private inside(d: number, y: number, s = 0): Vec3 {
+    const fc = this.door!.frameCentre, n = this.plan.inward ?? [1, 0];
+    return [fc[0] + n[0] * d + n[1] * s, y, fc[2] + n[1] * d - n[0] * s];
   }
   /** waypoints from where a man stands to a mark across the room: straight there if the leg is clear at shin and chest height (statics and leaves), else through
    *  as many of the plan's `next.via` points — a lane authored clear of the furniture — as it takes until the rest of the way is clear */
@@ -319,11 +356,13 @@ export class BreachDrill {
     const F = this.flows[i], fl = this.flowOf(i), gd = i === 0 ? this.a : this.b, wps = i === 0 ? this.wpA : this.wpB;
     F.st = 'into'; F.t0 = this.t; F.q = [...this.plan.targets[i].centre]; F.on = -1; F.n = 0; F.next = 0;
     this.route(gd, wps, fl.into, { speed: 2.9, face: v3.yawTo(fl.into[Math.max(0, fl.into.length - 2)], fl.into[fl.into.length - 1]), strafe: false, stance: 'none', upper: 'aim', aimAt: F.aim, hot: true, crouch: false });
+    if (this.live?.lights) order(gd, { light: true });   // live: weapon lights on as he takes the frame (the show's pair run dark in daylight)
     F.sweep.start(F.aim, [fl.centre[0]], this.t, 0.9);   // the muzzle comes round onto the near end of the centre check as he takes the frame
   }
   private tickFlow(i: 0 | 1, dt: number) {
     const F = this.flows[i]; if (F.st === 'wait') return;
     const fl = this.flowOf(i), gd = i === 0 ? this.a : this.b, wps = i === 0 ? this.wpA : this.wpB, t = this.t;
+    if (gd.state === 'dead') return;   // (live play only: a man down has no flow)
     const arrived = this.advance(gd, wps, 0.8);
     const engaged = this.stagedExchange(i, dt);   // muzzle on a man (or picking one up): the sweep waits
     if (!engaged && F.sweep.active) F.sweep.at(t, F.aim);
@@ -365,43 +404,56 @@ export class BreachDrill {
   private tickHold(i: 0 | 1, dt: number) { const F = this.flows[i]; if (!this.stagedExchange(i, dt) && F.sweep.active) F.sweep.at(this.t, F.aim); }
   /** both men holding their sectors and every hostile down (a beat after the last of those) — or 14 s of entry, when whoever is somehow still standing is put down so the calls are true */
   private roomClear(te: number): boolean {
-    const H = this.hostiles, allDown = H.every(h => h.state === 'dead');
-    const holding = this.flows[0].st === 'hold' && this.flows[1].st === 'hold';
+    const own = !!this.live && this.g.fight.on;   // (the room fight: a defender who has got OUT of the room is not in it — the room is called on the men left inside)
+    const H = this.hostiles, allDown = H.every(h => h.state === 'dead' || runnerFled(h) || (own && !this.insideRoom(h.char.pos, -0.3)));
+    const up = (i: 0 | 1) => (i === 0 ? this.a : this.b).state !== 'dead';
+    const holding = this.live ? (!up(0) || this.flows[0].st === 'hold') && (!up(1) || this.flows[1].st === 'hold') : this.flows[0].st === 'hold' && this.flows[1].st === 'hold';
     if (holding && allDown) { if (isNaN(this.tAllDone)) this.tAllDone = this.t; return this.t > this.tAllDone + 0.5; }
-    if (te > 14) { H.forEach((h, k) => { if (h.state !== 'dead' && this.guaranteeDowns) { this.beat(`guaranteed:${k}`); killGuard(this.g, h, [1, 0, 0], false, 'shot', 'guard', 'hostile down'); } }); return true; }
+    if (this.live) return false;   // live: nobody calls a room with a man still up in it, whatever the clock says
+    if (te > 14) { H.forEach((h, k) => { if (h.state !== 'dead' && this.guaranteeDowns && !runnerFled(h)) { this.beat(`guaranteed:${k}`); killGuard(this.g, h, [1, 0, 0], false, 'shot', 'guard', 'hostile down'); } }); return true; }
     return false;
   }
   private tAllDone = NaN;
   /** is the front of man i's list a living man he has a line to (eye to chest, statics and leaves)? — dead men are dropped off the front as a side effect */
   private pickable(i: 0 | 1): boolean {
+    if (this.live && this.g.fight.on) return this.g.fight.contact(i === 0 ? this.a : this.b);   // live, the room fight on: what HE has in his sight (light, smoke, cone — roomfight.ts), not a list
     const F = this.flows[i], H = this.hostiles, c = (i === 0 ? this.a : this.b).char;
-    while (F.q.length && H[F.q[0]]?.state === 'dead') F.q.shift();
+    while (F.q.length && (H[F.q[0]]?.state === 'dead' || (!!H[F.q[0]] && runnerFled(H[F.q[0]])))) F.q.shift();
+    const eye = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
+    if (this.live) {   // live: any living man inside he has a line to is his to take — his own list's first, then anybody (his mate may be down, the plan's lists were written for puppets): the one found goes to the front
+      const seen = (k: number) => { const hk = H[k]; return !!hk && hk.state !== 'dead' && !runnerFled(hk) && !this.g.col.shotBlocked(eye, hk.char.bones.chest ?? v3.add(hk.char.pos, [0, 1.1, 0]), 0.02, shotEnergy(this.g, c)); };
+      const k = [...F.q, ...H.map((_, j) => j).filter(j => !F.q.includes(j))].find(seen);
+      if (k === undefined) return false;
+      F.q = [k, ...F.q.filter(j => j !== k)]; return true;
+    }
     if (!F.q.length) return false;
-    const h = H[F.q[0]]; const eye = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]); const chest = h.char.bones.chest ?? v3.add(h.char.pos, [0, 1.1, 0]);
+    const h = H[F.q[0]]; const chest = h.char.bones.chest ?? v3.add(h.char.pos, [0, 1.1, 0]);
     return !this.g.col.segmentBlocked(eye, chest);
   }
 
-  /** The exchange as staged (BREACH_STAGING.engage replaces it): man i works through his list for this leg of his flow — the first living man on it he has a line
+  /** The exchange as staged: man i works through his list for this leg of his flow — the first living man on it he has a line
    *  to gets the muzzle (his sweep waits), SETTLE later the first round of a controlled pair, PAIR later the second. The rounds fly true at the chest and, the cast
    *  having sides, FIND him (combat.ts fireWeapon → killGuard by the operative's hand): he goes down to the hit, his rifle leaving his hands. Should both rounds
    *  of the pair have found furniture instead he is dropped on the second regardless (killGuard, on nobody's card) so the beat holds. SHIFT later the next man.
    *  Returns true while his muzzle is on somebody. */
   private stagedExchange(i: 0 | 1, dt: number): boolean {
     const g = this.g, H = this.hostiles, F = this.flows[i], op = i === 0 ? this.a : this.b, c = op.char, t = this.t;
-    if (F.st === 'wait') return false;
+    if (this.live && g.fight.on) return g.fight.engaged(op);   // live, the room fight on (roomfight.ts): nothing is staged — each man shoots at what he sees when he has it, and this only tells the sweep to wait
+    if (F.st === 'wait' || op.state === 'dead') return false;
     if (F.st === 'into' && !this.insideRoom(c.pos, FIRE_INSIDE_M)) return false;   // through the frame first — then the first man on his list who stands in his line gets the pair AS HE MOVES (08-13: no stop in the middle, no beat with the laser resting on a living man)
-    if (F.on >= 0 && F.n === 0 && H[F.on].state === 'dead') { F.on = -1; F.next = t + SHIFT; }   // his man went before he fired (his mate's round across the room): the next one — but a pair begun is a pair finished, into the man as he falls
+    if (F.on >= 0 && F.n === 0 && (H[F.on].state === 'dead' || runnerFled(H[F.on]))) { F.on = -1; F.next = t + SHIFT; }   // his man went before he fired (his mate's round across the room): the next one — but a pair begun is a pair finished, into the man as he falls
     if (F.on < 0 && t >= F.next && this.pickable(i)) { F.on = F.q[0]; F.since = t; F.n = 0; this.beat(`eyes${i + 1}:${F.on}`); }
     if (F.on < 0) return false;
     const h = H[F.on]; const chest = h.char.bones.chest ?? v3.add(h.char.pos, [0, 1.1, 0]);
     F.aim[0] = damp(F.aim[0], chest[0], 16, dt); F.aim[1] = damp(F.aim[1], chest[1], 16, dt); F.aim[2] = damp(F.aim[2], chest[2], 16, dt);   // the muzzle snaps onto him (the script's aimAt IS this vector)
     const due = F.n === 0 ? F.since + SETTLE : F.next;
+    if (this.live && t >= due && this.g.col.shotBlocked(c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]), chest, 0.02, shotEnergy(this.g, c, op.weapon.def))) { F.on = -1; F.next = t + 0.1; return false; }   // live: no round at a man he has lost his line to (he, or the man, moved behind something since the pick) — the muzzle comes off him and the next look is a tenth on
     if (t >= due && !op.weapon.reloading) {
       if (op.weapon.fire()) {
         const dir = v3.normalize(v3.sub(chest, c.muzzle));
         fireWeapon(g, c, chest, false, { steady: true, spread: 0.01 });
         F.n++; this.rounds[i]++; this.beat(`shot${i + 1}`);
-        if (F.n >= 2) { if (h.state !== 'dead' && this.guaranteeDowns) { this.beat(`guaranteed:${F.on}`); killGuard(g, h, dir, false, 'shot', 'guard', 'hostile down'); } F.q = F.q.filter(k => k !== F.on); F.on = -1; F.next = t + SHIFT; }
+        if (F.n >= 2) { if (h.state !== 'dead' && this.guaranteeDowns && !runnerFled(h)) { this.beat(`guaranteed:${F.on}`); killGuard(g, h, dir, false, 'shot', 'guard', 'hostile down'); } F.q = F.q.filter(k => k !== F.on); F.on = -1; F.next = t + SHIFT; }
         else F.next = t + PAIR;
       } else op.weapon.rearm();   // (cannot happen inside thirty rounds; a dry gun would stall the beat, so it is simply full again)
     }

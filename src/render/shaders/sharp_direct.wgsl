@@ -23,6 +23,11 @@
 // (0 = the 2×2 had on-surface taps, 1 = only the outer ring had, 2 = sliver, +4 = its rays were traced, +8 = a class read 'unshadowed' for want of any tap holding its light, +16 / +32 =
 // the ray found dark / lit what the neighbours would have lent the other way by over a quarter of the pixel's live U — the census of leaks the old rule drew) — composite
 // reads .rgb only. sharpCfgC.z >> 4 & 3 = diagnostic PAINT: 1 = slivers magenta / ring pixels yellow in the direct term, 2 = only the slivers whose ray overturned the borrowed ratio.
+// HIDDEN LIGHT (frame.sharpCfgC.z bit 15 = settings.dnShadowOccl, the shadow denoiser's occluded-light reading carried up to the output raster; off = the pass as it was): U counts a carried
+// light the surface does not see (a guard's torch beyond a wall), so across the outer edge of ITS cone the taps' ratio S ∕ U falls a hundredfold while their S stands still — and
+// U_out × Σw·S ∕ Σw·U draws that edge as a thin line on the far side of the wall (the taps' mean U is not this pixel's U where the cone's onset curves between them). The taps
+// themselves tell the two cases apart: the slope of ln S against ln U over them is 1 where the ratio stands (a visible light's falloff or cone edge) and 0 where S stands; the
+// class's value is the mix, by that slope, of the upsampled-ratio value and the taps' own mean S. Taps alike in U (nearly everywhere) leave the ratio value untouched.
 // Group 0 is the OUTPUT frame block (frame.screen = the output size, worldFromDepth takes output pixels); the internal size is textureDimensions(iDepth).
 // (direct_common.wgsl is prepended: lightReachesBox for the tile cull, shadowSample for the edge / sliver rays. `EDGE_RAYS` is a const passes.ts prepends: the pass is compiled twice so the
 //  default pipeline carries no tracer at all — the traced one is dispatched while settings.sharpEdgeRays or settings.sharpSliver asks for rays; the edge MASK is read only while
@@ -66,6 +71,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   // ---- SLIVER config (frame.sharpCfgC.z: rule | paint << 4 | per-tile ray cap << 8 — an exact small integer) ----
   let cfgZ = u32(frame.sharpCfgC.z + 0.5);
   let sliverRule = cfgZ & 3u; let sliverPaint = (cfgZ >> 4u) & 3u; let sliverCap = (cfgZ >> 8u) & 127u;
+  let occlFit = ((cfgZ >> 15u) & 1u) != 0u;                    // HIDDEN LIGHT (header; settings.dnShadowOccl)
   if (lidx < 2u) { atomicStore(&wgSliver[lidx], 0u); }   // (ordered before any lane's vote by the light-list barriers below)
   // ---- the tile's light list: direct.wgsl's lossless cull, statement for statement (a light off the list scores !ok at every live pixel of the tile) ----
   let tileCull = (frame.flags & FLAG_TILECULL) != 0u;
@@ -120,6 +126,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     let sIn = pix * frame.sharpCfg.xy / frame.sharpCfg.zw + frame.sharpCfgC.xy - 0.5;   // this pixel's position on the internal texel lattice (texel i's centre sits at i; + the DECOUPLED jitter the internal raster carries, 0 without it)
     let base = vec2i(floor(sIn)); let fr = sIn - vec2f(base);
     var accS0 = vec3f(0.0); var accU0 = vec3f(0.0); var accS1 = vec3f(0.0); var accU1 = vec3f(0.0); var ws = 0.0;   // (the ratio is Σw·S ∕ Σw·U per class; ws normalises the sums for the ratio's guards, which compare them against this pixel's own U)
+    var fit0 = Fit(vec4f(0.0), 0.0); var fit1 = Fit(vec4f(0.0), 0.0);   // HIDDEN LIGHT (header): how far the taps' S follows their U, per class
     var edgeBits = 0u;                                        // hard-edge mask bits of the 2×2's on-surface taps (edge rays)
     var nGood = 0u;                                           // taps that lie on THIS surface (plane × orientation above 0.1): the outer ring is searched only if the 2×2 has none, the nearest-texel fallback only if neither has
     let edgeMask = EDGE_RAYS && frame.sharpCfgB.x > 0.0;      // (the mask kernel ran this frame — else iEdge is stale and never read)
@@ -138,9 +145,11 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
           var w = geo;
           if (ring == 0u) { w *= max(select(fr.x, 1.0 - fr.x, dx == 0), 0.02) * max(select(fr.y, 1.0 - fr.y, dy == 0), 0.02); }   // × bilinear (floored so a lone valid corner still has a weight to carry it with)
           else { w *= 0.25; }
-          accS0 += textureLoad(iS0, t, 0).rgb * w; accU0 += textureLoad(iU0, t, 0).rgb * w;
-          accS1 += textureLoad(iS1, t, 0).rgb * w; accU1 += textureLoad(iU1, t, 0).rgb * w;
+          let tS0 = textureLoad(iS0, t, 0).rgb; let tU0 = textureLoad(iU0, t, 0).rgb; let tS1 = textureLoad(iS1, t, 0).rgb; let tU1 = textureLoad(iU1, t, 0).rgb;
+          accS0 += tS0 * w; accU0 += tU0 * w;
+          accS1 += tS1 * w; accU1 += tU1 * w;
           ws += w; nGood += 1u;
+          if (occlFit) { fit0 = fitAdd(fit0, luminance(tS0), luminance(tU0), w); fit1 = fitAdd(fit1, luminance(tS1), luminance(tU1), w); }
           if (edgeMask && ring == 0u) { edgeBits |= textureLoad(iEdge, t, 0).x; }   // every on-surface tap of the 2×2 votes, whatever its bilinear share (else the verdict would follow the pixel's phase in the cell)
         }
       }
@@ -167,6 +176,10 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     } else {
       let sr0 = sharpRatio(accS0 * iw, accU0 * iw, U0); let sr1 = sharpRatio(accS1 * iw, accU1 * iw, U1);
       E0 = U0 * sr0.xyz; E1 = U1 * sr1.xyz;
+      if (occlFit) {   // HIDDEN LIGHT: where the taps' U differs and their S does not follow it, what differs is light the surface does not see — S is carried across, not the ratio
+        let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
+        E0 = mix(min(accS0 * iw, U0 * hiR), E0, fitSlope(fit0)); E1 = mix(min(accS1 * iw, U1 * hiR), E1, fitSlope(fit1));
+      }
       if (sr0.w > 0.0 || sr1.w > 0.0) { code |= 8u; }         // (a class read 'unshadowed' for want of any tap holding its light — counted, not changed)
       // ---- edge rays: a hard shadow edge of a class between the taps → its strongest emitter decided by ONE centre ray from this output pixel ----
       if (EDGE_RAYS && edgeBits != 0u) {
@@ -225,6 +238,22 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
   }
 }
 
+/** HIDDEN LIGHT: one tap into a class's log–log fit of S against U over the taps (m = Σw·(x, y, x², x·y) with x = ln U, y = ln S; n = Σw). A tap that holds none of the class's light, or no S of it, stays out. */
+struct Fit { m: vec4f, n: f32 };
+fn fitAdd(f: Fit, s: f32, u: f32, w: f32) -> Fit {
+  if (u < 1e-5 || s < 1e-6) { return f; }
+  let x = log(u); let y = log(s);
+  return Fit(f.m + vec4f(x, y, x * x, x * y) * w, f.n + w);
+}
+/** … and its slope 0‥1: 1 = the taps' S follows their U (the ratio stands: a visible light's falloff or cone edge — and wherever their U is alike within a few per cent, where there is
+ *  nothing to tell and nothing to correct), 0 = their S stands whatever their U does (the light that differs is one the surface does not see). */
+fn fitSlope(f: Fit) -> f32 {
+  if (f.n <= 0.0) { return 1.0; }
+  let mx = f.m.x / f.n; let my = f.m.y / f.n;
+  let vx = f.m.z / f.n - mx * mx;
+  let b = clamp((f.m.w / f.n - mx * my) / max(vx, 1e-8), 0.0, 1.0);
+  return mix(1.0, b, smoothstep(4e-4, 4e-3, vx));
+}
 /** r̂ per channel for one class: Σw·S ∕ Σw·U over the taps, clamped like the denoiser's ratio (≤ 1, or ≤ 4 under the per-light hues of ReSTIR / the chroma-exact tail). A channel this pixel
  *  is lit in (Uo) but the taps hold next to none of (a coloured light's footprint finer than the internal raster) takes the taps' LUMINANCE ratio instead of a 0∕0; taps that hold no light
  *  of the class at all (the class reaches this pixel and none of them) read unshadowed — nothing nearer knows better (.w = 1 when that default fired, for the diagnostic count). */

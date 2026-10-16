@@ -6,17 +6,18 @@ import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { hudExpireBubbles } from '../game/journal';
+import type { BubblesLike } from '../host/hud';
 
 type Bubble = { text: string; t: number; dur: number; radio: boolean };
 
-/** the HUD cards a bubble must never sit under (the designer's rule): the tour caption and the interaction panel while they are up ('on'), and the kit column,
+/** the HUD cards a bubble must never sit under (the maintainer's rule): the tour caption and the interaction panel while they are up ('on'), and the kit column,
  *  the meters, the objective line and the radio strip whenever they show anything (review U9.12) */
 const BLOCKER_IDS_ON = ['caption', 'interact'], BLOCKER_IDS = ['equip', 'meters', 'objective', 'log'];
 /** the blockers' rects are MEASURED only when what they show changes (or the view's size does), and at most every so often besides — not three forced layouts a
  *  frame on the heels of the overlay's writes (review U9.4) */
 const BLOCKER_RECHECK_MS = 1000;
 
-export class Bubbles {
+export class Bubbles implements BubblesLike {
   private els: HTMLElement[] = [];
   private samEl: HTMLElement | null = null;
   /** the cached blocker rects (canvas-relative), the key they were measured under, and when */
@@ -72,8 +73,8 @@ export class Bubbles {
     const speakers = game.civilians.length ? [...game.guards, ...game.civilians] : game.guards;   // (the cleaner / the late worker talk too — civilians.ts: their record's bubble, in the calm tone until they are frightened)
     while (this.els.length < speakers.length) this.els.push(this.make());
     for (let i = 0; i < this.els.length; i++) {
-      const el = this.els[i]; const g = speakers[i]; const b = g?.bubble;
-      if (!g || !b || g.state === 'dead' || (g.civ && g.civ.state === 'gone')) { el.style.display = 'none'; continue; }
+      const el = this.els[i]; const g = speakers[i]; const b = g ? game.cues.bubbleOf(g) : null;   // (his line, or a cue's — cues.ts)
+      if (!g || !b || (g.state === 'dead' && !g.wound) || (g.civ && g.civ.state === 'gone') || game.fogOfWar.hidden(g)) { el.style.display = 'none'; continue; }   // (fog of war: no bubble over a man nobody on the team sees — his line is still heard; never true while it is off)
       if (game.time - b.t > b.dur) { g.bubble = null; el.style.display = 'none'; continue; }
       const tone = g.civ ? (g.civ.state === 'work' || g.civ.state === 'held' ? 'calm' : g.civ.state === 'startled' || g.civ.state === 'cower' ? 'sus' : 'alert') : g.state === 'alert' ? 'alert' : g.state === 'suspicious' || g.state === 'search' ? 'sus' : 'calm';
       if (!place(el, b, g.char.bones.head ?? g.char.pos, tone)) el.style.display = 'none';

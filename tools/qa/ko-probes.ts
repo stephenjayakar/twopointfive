@@ -11,7 +11,7 @@ const { startTakedown } = await import(`${ROOT}/src/game/player.ts`);
 const { isBreathing, newWitness, missionRating, TEMPERAMENT, CALLSIGNS } = await import(`${ROOT}/src/game/game.ts`);
 const { debriefRows } = await import(`${ROOT}/src/game/mission.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
-const { rollcallState, witnessSummary, pointInView } = guardsMod;
+const { witnessSummary, pointInView } = guardsMod;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -106,7 +106,7 @@ export async function koKinds() {
     if (st.kills !== 1 || st.knockouts !== 0 || st.shots !== 1) fails.push(`stats kills ${st.kills} ko ${st.knockouts} shots ${st.shots} (want 1 / 0 / 1)`);
     if (!koRow || koRow[1] !== '0 · 1') fails.push(`debrief row ${JSON.stringify(koRow)} (want '0 · 1')`);
     // the log line over a SHOT man says so since the KO-vs-dead wording pass (7ecfb42, 08-09: 'guard down' → 'guard down — dead', beside 'takedown — out cold,
-    // breathing (a knockout, not a kill)' and 'choked out — he'll keep, breathing' — the dev notes: "out cold — breathing … in the log"): the exact line, not a prefix
+    // breathing (a knockout, not a kill)' and 'choked out — he'll keep, breathing' — CLAUDE.md: "out cold — breathing … in the log"): the exact line, not a prefix
     if (!msgs.some(m => m.text === 'guard down — dead')) fails.push(`log line: ${msgs.map(m => m.text).join(' | ')} (want 'guard down — dead')`);
     if (msgs.some(m => /breathing|out cold/.test(m.text))) fails.push(`a breathing / out-cold line over a SHOT man: ${msgs.map(m => m.text).filter(t => /breathing|out cold/.test(t)).join(' | ')}`);
     const foundAt = findWith(S);
@@ -181,9 +181,9 @@ export async function koRollcall() {
     // round the route, HIS find. Since the civilians merged (d7c3289) the late worker's loop brings him on the body behind the reception desk ≈ 16 s after the man
     // is sent and before the walk gets there (measured 08-12, seed 201: Owen '→ alarmed [body, armed]' at +113.5 s, runs to Novak, tells him at +119.6, control puts
     // the floor up on cause 'civilian' — "somebody's on the floor who shouldn't be" — at +122.4); the run ends on that escalation with the body never found by the
-    // shift's walk — a different, possibly legitimate outcome the designer has not ruled on. Nobody but the shift here: exactly the floor the probe was written
+    // shift's walk — a different, possibly legitimate outcome the maintainer has not ruled on. Nobody but the shift here: exactly the floor the probe was written
     // against (the devices / teams probes pin them off the same way).
-    // TODO(civilians-on variant, awaiting the designer): is "a civilian called it in first" a third legitimate outcome of the missing-man staging? If yes, add
+    // TODO(civilians-on variant, awaiting the maintainer): is "a civilian called it in first" a third legitimate outcome of the missing-man staging? If yes, add
     // koRollcallCivilians: same seed with them on, expecting the floor up on 'civilian' before the walk finds him, and the finder's words checked when he does.
     game.tune.civilians = false; game.civilians.length = 0;
     game.playerInvisible = true; game.godMode = true; game.teleportPlayer([37.5, 0, 26.5]);

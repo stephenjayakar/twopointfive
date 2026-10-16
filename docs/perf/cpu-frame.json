@@ -1,0 +1,235 @@
+{
+ "lane": {
+  "commit": "acac421d",
+  "seeds": {
+   "1": {
+    "tag": "lane",
+    "seed": 1,
+    "frames": 1200,
+    "warm": 300,
+    "when": "2026-08-16T07:32:20.642Z",
+    "commit": "acac421d",
+    "update": {
+     "p50": 0.25808299999994233,
+     "p90": 0.31816700000001674,
+     "p99": 0.5931659999998828,
+     "max": 2.685124999999971,
+     "mean": 0.28058688416666616
+    },
+    "upload": {
+     "p50": 0.21183400000006714,
+     "p90": 0.23508300000003146,
+     "p99": 0.33295899999984613,
+     "max": 1.418374999999969,
+     "mean": 0.22350531250000102
+    },
+    "step": {
+     "p50": 0.4753329999999778,
+     "p90": 0.5550000000000637,
+     "p99": 1.0159999999999627,
+     "max": 2.956709000000046,
+     "mean": 0.5047140658333359
+    },
+    "allocKB": {
+     "p50": 0,
+     "p90": 0,
+     "p99": 320,
+     "max": 352,
+     "mean": 20.243333333333332
+    },
+    "gcFrames": 30,
+    "allocKBPerFrame": {
+     "mean": 57.44000000000001,
+     "min": 49.6,
+     "max": 60.8,
+     "windows": 30,
+     "frames": 10
+    },
+    "boxes": {
+     "statics": 782,
+     "all": 1097
+    },
+    "guards": 3,
+    "heap": {
+     "objects": 212326,
+     "size": 30933761
+    }
+   },
+   "2": {
+    "tag": "lane",
+    "seed": 2,
+    "frames": 1200,
+    "warm": 300,
+    "when": "2026-08-16T07:32:22.226Z",
+    "commit": "acac421d",
+    "update": {
+     "p50": 0.265041999999994,
+     "p90": 0.3444160000000238,
+     "p99": 0.6164590000000771,
+     "max": 2.7592080000001715,
+     "mean": 0.2923889533333322
+    },
+    "upload": {
+     "p50": 0.2097080000000915,
+     "p90": 0.23966700000005403,
+     "p99": 0.33112500000004275,
+     "max": 1.6577910000000884,
+     "mean": 0.2205157600000006
+    },
+    "step": {
+     "p50": 0.48120799999992414,
+     "p90": 0.5915840000000117,
+     "p99": 0.9336249999998927,
+     "max": 3.0410410000001775,
+     "mean": 0.5135578916666673
+    },
+    "allocKB": {
+     "p50": 0,
+     "p90": 0,
+     "p99": 304,
+     "max": 384,
+     "mean": 20.133333333333333
+    },
+    "gcFrames": 30,
+    "allocKBPerFrame": {
+     "mean": 55.73333333333333,
+     "min": 51.2,
+     "max": 59.2,
+     "windows": 30,
+     "frames": 10
+    },
+    "boxes": {
+     "statics": 782,
+     "all": 1097
+    },
+    "guards": 3,
+    "heap": {
+     "objects": 212063,
+     "size": 30755471
+    }
+   }
+  }
+ },
+ "machine": "M4 Max, bun, headless (tools/qa/headless.ts stand-up), 1200 timed frames after 300 warm, the bench key script (walk / sprint / crouch, cursor moved every 97 frames, lasers + guards + civilians live)",
+ "bench": "tools/cpu-frame/bench.ts",
+ "units": "ms per frame; alloc KB per frame (heapTotal growth over 10-frame windows after a full GC, 30 windows)",
+ "base": {
+  "commit": "a41c308e",
+  "seeds": {
+   "1": {
+    "tag": "base",
+    "seed": 1,
+    "frames": 1200,
+    "warm": 300,
+    "when": "2026-08-16T07:27:47.304Z",
+    "commit": "a41c308e",
+    "update": {
+     "p50": 0.4066250000000764,
+     "p90": 0.5279170000000022,
+     "p99": 1.3917919999998958,
+     "max": 2.641166999999996,
+     "mean": 0.4529898966666629
+    },
+    "upload": {
+     "p50": 0.36587500000018736,
+     "p90": 0.38362500000005184,
+     "p99": 0.42962499999998727,
+     "max": 3.069291000000021,
+     "mean": 0.374629410833332
+    },
+    "step": {
+     "p50": 0.7734170000001086,
+     "p90": 0.9074170000000095,
+     "p99": 1.7962079999999787,
+     "max": 3.698750000000018,
+     "mean": 0.8283190333333295
+    },
+    "allocKB": {
+     "p50": 0,
+     "p90": 0,
+     "p99": 544,
+     "max": 1920,
+     "mean": 23.196666666666665
+    },
+    "gcFrames": 30,
+    "allocKBPerFrame": {
+     "mean": 720.1533333333334,
+     "min": 568,
+     "max": 752.1,
+     "windows": 30,
+     "frames": 10
+    },
+    "boxes": {
+     "statics": 782,
+     "all": 1097
+    },
+    "guards": 3,
+    "heap": {
+     "objects": 211452,
+     "size": 49520366
+    }
+   },
+   "2": {
+    "tag": "base",
+    "seed": 2,
+    "frames": 1200,
+    "warm": 300,
+    "when": "2026-08-16T07:27:51.146Z",
+    "commit": "a41c308e",
+    "update": {
+     "p50": 0.4269160000000056,
+     "p90": 0.5662499999998545,
+     "p99": 1.6066670000000158,
+     "max": 3.4202499999998963,
+     "mean": 0.4811550633333306
+    },
+    "upload": {
+     "p50": 0.3709169999999631,
+     "p90": 0.3889169999999922,
+     "p99": 0.438541999999984,
+     "max": 1.1920829999999114,
+     "mean": 0.3761103158333348
+    },
+    "step": {
+     "p50": 0.8002079999999978,
+     "p90": 0.9477920000000495,
+     "p99": 2.037458000000015,
+     "max": 3.8554169999999885,
+     "mean": 0.8579994525000025
+    },
+    "allocKB": {
+     "p50": 0,
+     "p90": 0,
+     "p99": 528,
+     "max": 1888,
+     "mean": 22.839166666666667
+    },
+    "gcFrames": 30,
+    "allocKBPerFrame": {
+     "mean": 577.7733333333334,
+     "min": 502.4,
+     "max": 761.6,
+     "windows": 30,
+     "frames": 10
+    },
+    "boxes": {
+     "statics": 782,
+     "all": 1097
+    },
+    "guards": 3,
+    "heap": {
+     "objects": 210400,
+     "size": 29403478
+    }
+   }
+  }
+ },
+ "identity": {
+  "tables": "tools/cpu-frame/tables-hash.ts --check docs/perf/cpu-frame-tables.json (recorded at 353f32f4 = the pre-change upload): identical after every upload commit",
+  "poses": "tools/cpu-frame/pose-hash.ts --check docs/perf/cpu-frame-pose.json (recorded on a41c308e): identical, + seeds 2/3 \u00d7 2400 frames vs the base worktree",
+  "raycast": "tools/cpu-frame/raycast-diff.ts: 100000 rays seed 1 + 400000 rays seed 2, grid \u2261 brute force (index, t, normal); + 500 000 single-box tests rayBox \u2261 its pre-lane array form",
+  "gait": "tools/qa/gait.ts --json byte-identical to the base worktree",
+  "probes": "journal-fixtures (3 sessions), needs-identity, civilians-identity, tactics-identity, player (21 probes), tour --runs 1, soak --seeds 1 --minutes 3: all PASS",
+  "browser": "rig-identity __idrun at high (1777\u00d71000): corr3 958b39a5 \u00b7 lobby4 741f24e4 \u00b7 cub2 ced41bc9 \u00b7 cubicles b60e3876 on both a41c308e (:5262) and the lane (:5261) and again at acac421d"
+ }
+}

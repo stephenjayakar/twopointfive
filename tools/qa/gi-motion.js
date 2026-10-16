@@ -1,4 +1,4 @@
-// GI-IN-MOTION lane (docs/internal/gi-motion.md): the pane-side instrument that reproduces the two shots of the designer's 08-10 recording — 'still a bit too much
+// GI-IN-MOTION lane (docs/internal/gi-motion.md): the pane-side instrument that reproduces the two shots of the maintainer's 08-10 recording — 'still a bit too much
 // noise in motion', analysed frame by frame as the INDIRECT term re-converging under camera / actor motion — and puts numbers on it. Dev only:
 //   `await import('/qa/gi-motion.js'); await __gim.boot()` on a `?paused&quality=<tier>&mute` boot of THIS lane's server (it pulls in perf-harness / perf-frames / sharp-harness).
 //
@@ -14,7 +14,7 @@
 // BOIL = mean over points of (max − min); BLOTCH SIZE = the half-width (output px) of the autocorrelation of each frame's residual (frame − sequence mean), mean over frames;
 // + ×3 nearest crops of three consecutive frames round each tile and the max−min boil map, posted to this lane's shot sink; + the same under debug view 4 (indirect only)
 // and 3 (direct only) for attribution. Everything under whatever engine.settings hold (variants = settings bundles, __gim.apply).
-//   __gim.boot({ framing })        framing 'ref' = 1280×720 CSS at dpr 2 (high: 1368×770 → 1777×1000, every lane's reference) | 'maint' = the designer's window (high: 788×770 → 1024×1000)
+//   __gim.boot({ framing })        framing 'ref' = 1280×720 CSS at dpr 2 (high: 1368×770 → 1777×1000, every lane's reference) | 'maint' = the maintainer's window (high: 788×770 → 1024×1000)
 //   __gim.apply(name | {…})        settings bundle over the boot defaults ('main', 'old', 'B', 'C', 'BC', … VARIANTS)
 //   __gim.s1(opts) / s2(opts)      run a scene → Seq (kept in __gim.seqs[key]); opts.view = 0 | 4 | 3 (composite / indirect only / direct only)
 //   __gim.metrics(seq)             per-tile numbers; __gim.crops(seq, tag) posts crops + boil maps + one annotated frame
@@ -62,7 +62,7 @@
   const VARIANTS = {
     main: {}, old: OLD,
     // B = the diffuse GI denoised at INTERNAL res (settings.giFullRes; B2 / B3 = fewer internal-res à-trous iterations, the cost tiers), C = young-history gather rays (×3 ultra / high, ×2 medium),
-    // A = what the headroom-aware climb settles on for an M4 Max at the designer's window (scale, then the gather's divisor — §A of the doc says which rung), and the unions
+    // A = what the headroom-aware climb settles on for an M4 Max at the maintainer's window (scale, then the gather's divisor — §A of the doc says which rung), and the unions
     B: { giFullRes: true }, B3: { giFullRes: true, giFullIters: 3 }, B2: { giFullRes: true, giFullIters: 2 }, B1: { giFullRes: true, giFullIters: 1 },
     C: { giYoungRays: 3 }, C2: { giYoungRays: 2 }, C4: { giYoungRays: 4 },
     BC: { giFullRes: true, giYoungRays: 3 }, BC2: { giFullRes: true, giYoungRays: 2 }, B2C: { giFullRes: true, giFullIters: 2, giYoungRays: 3 }, B2C2: { giFullRes: true, giFullIters: 2, giYoungRays: 2 },
@@ -364,12 +364,12 @@
   function climbSim(curve, opts = {}) {
     const { secs = 90, fps = 60, slack = 0.5 } = opts; const q = window.__quality, s = S();
     const unionOf = () => { const r = curve.find(c => Math.abs(c.scale - s.renderScale) < 0.01 && c.g3 === s.gatherThird && c.v4 === s.volQuarter) ?? curve.filter(c => c.g3 === s.gatherThird && c.v4 === s.volQuarter).sort((a, b) => Math.abs(a.scale - s.renderScale) - Math.abs(b.scale - s.renderScale))[0] ?? curve[curve.length - 1]; return r.union + slack; };
-    const wasAuto = q.auto, wasAdaptive = q.adaptive, wasAllowed = q.climbAllowed; q.auto = false; q.adaptive = true; q.climbAllowed = true; q.calib && (q.calib.done = true);   // (the harness boots under ?quality=, which holds the climb off for the visit — main.ts; the simulation is of a menu-pinned / auto machine, so allow it here and put the flag back)
+    const wasAuto = q.auto, wasAdaptive = q.adaptive, wasAllowed = q.climbAllowed, wasAim = s.ladderAim; q.auto = false; q.adaptive = true; q.climbAllowed = true; s.ladderAim = 0;   /* (the recorded climb curves are the as-now ladder's: ?aim=asnow; the page's default is hold 60 since 10-10) */ q.calib && (q.calib.done = true);   // (the harness boots under ?quality=, which holds the climb off for the visit — main.ts; the simulation is of a menu-pinned / auto machine, so allow it here and put the flag back)
     apply('main'); q.apply(q.current);
     const log = []; let last = '';
     for (let w = 0; w < secs; w++) { const u = unionOf(); for (let i = 0; i < fps; i++) q.sample(1 / fps, u); const now = `${s.renderScale.toFixed(2)} g3 ${s.gatherThird} v4 ${s.volQuarter} maxH ${s.maxInternalHeight}`; if (now !== last) { log.push({ t: w + 1, state: now, union: u, note: q.lastChange }); last = now; } }
     const settled = { scale: s.renderScale, gatherThird: s.gatherThird, volQuarter: s.volQuarter, maxH: s.maxInternalHeight, union: unionOf(), climb: q.climbState };
-    q.auto = wasAuto; q.adaptive = wasAdaptive; q.climbAllowed = wasAllowed; apply('main'); q.apply(q.current);
+    q.auto = wasAuto; q.adaptive = wasAdaptive; q.climbAllowed = wasAllowed; s.ladderAim = wasAim; apply('main'); q.apply(q.current);
     return { settled, log };
   }
   async function save(name, obj) { const port = Number(window.__shotPort) || 5174; const r = await fetch(`http://localhost:${port}/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body: JSON.stringify(obj), headers: { 'Content-Type': 'application/json' } }); return r.status; }

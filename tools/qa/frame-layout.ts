@@ -79,7 +79,7 @@ const writers: [string, RegExp][] = [
 console.log('\n=== frame-layout: FrameFlags (frame.ts) vs FLAG_* (common.wgsl) ===');
 const isPow2 = (v: number) => v > 0 && (v & (v - 1)) === 0 && v <= 0x80000000;
 const norm = (s: string) => s.toLowerCase().replace(/_/g, '');
-const ALIAS: Record<string, string> = { smokerskip: 'smokerenderskip' };   // FLAG_SMOKE_RSKIP ↔ SmokeRenderSkip: the one pair whose names differ
+const ALIAS: Record<string, string> = {};   // a pair whose two names differ goes here, WGSL's → the host's, both as norm() spells them (none today)
 /** A WGSL u32 literal as the shader tables spell it — decimal `64u`, hex `0x40u`, or a shift `(1u << 6u)`; NaN for anything else (reported as a FAIL by the callers, never skipped). */
 const lit = (t: string): number => { t = t.trim().replace(/u\b/g, ''); let m: RegExpMatchArray | null; if (/^\d+$/.test(t)) return +t; if (/^0x[0-9a-fA-F]+$/.test(t)) return parseInt(t, 16); if ((m = t.match(/^\(?\s*(\d+)\s*<<\s*(\d+)\s*\)?$/))) return (+m[1] * 2 ** +m[2]) >>> 0; return NaN; };
 { const host = Object.entries(FrameFlags as Record<string, number>);

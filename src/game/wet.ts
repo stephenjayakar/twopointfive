@@ -13,7 +13,7 @@
 // Two small marks of it in the world, both Sam's and both for the PLAYER's eyes only (nobody reacts to them — a follow-up for the guards' side of the one
 // model: a searcher noticing wet prints): a soaked man come indoors DRIPS for a few seconds (GPU water-drop particles off his hands and hem, particleFx's
 // 'debris' kind — nothing with the particles off) and leaves WET FOOTPRINTS, a 'wetprint' decal per step for his next WET.prints steps, fainter each step,
-// each fading out over WET.printFadeSecs (decals.wgsl wetPrint; nothing with the decals off).
+// each fading out over WET.printFadeSecs (decals.wgsl wetPrintMark; nothing with the decals off).
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -57,7 +57,8 @@ const printsOf = (g: Game) => { let p = prints.get(g); if (!p) { p = { list: [],
 export const WET_STATS = { skyTests: 0, prints: 0, drips: 0 };
 
 /** inside the building's footprint or the roofed stair tower — the rectangles the rain is drawn by (weather.ts / volumetrics.wgsl weatherC / weatherD) */
-export function underRoofRect(p: Vec3): boolean {
+export function underRoofRect(p: Vec3, g?: Game): boolean {
+  if (g?.weather) return g.weather.underRoof(p[0], p[2]);   // (the footprints in force: these two on the office and in its shell; the level's own roofs under a picked weather or its own storm — Weather.levelRoofs)
   const inR = (r: [number, number, number, number]) => p[0] >= r[0] && p[2] >= r[1] && p[0] <= r[2] && p[2] <= r[3];
   return inR(INTERIOR) || inR(ANNEX);
 }
@@ -69,7 +70,7 @@ const WET_SKY_SECS = 0.25, SKY_TOP = 9, SKY_RING = 0.35;
 const SKY_OFFSETS: [number, number][] = [[0, 0], [SKY_RING, 0], [-SKY_RING, 0], [0, SKY_RING], [0, -SKY_RING]];
 export function openSky(g: Game, c: Character): boolean {
   const p = c.pos;
-  if (underRoofRect(p)) return false;
+  if (underRoofRect(p, g)) return false;
   const m = memOf(c);
   if (g.time - m.skyT >= WET_SKY_SECS || m.skyT < 0 || g.time < m.skyT) {
     m.skyT = g.time;
@@ -203,8 +204,8 @@ export function dryAll(g: Game) { for (const c of everyCharacter(g)) { c.wet = 0
 /** 'wet ▸ Sam 0.82 coat / 0.40 beads (indoors, dry air) · Kowalski 0.00 …' */
 export function wetSummary(g: Game): string {
   const rain = rainNow(g);
-  const one = (name: string, c: Character) => `${name} ${c.wet.toFixed(2)}/${c.beads.toFixed(2)}${rain > 0.001 && openSky(g, c) ? ' RAIN' : underRoofRect(c.pos) ? '' : ' out'}`;
-  return `wet ▸ rain ${rain.toFixed(2)} · ${one('Sam', g.player.char)} · ${g.guards.map(gd => one(gd.callsign ?? String(gd.char.id), gd.char)).join(' · ')} · prints ${printsOf(g).list.length} live / ${WET_STATS.prints} · drips ${WET_STATS.drips}`;
+  const one = (name: string, c: Character) => `${name} ${c.wet.toFixed(2)}/${c.beads.toFixed(2)}${rain > 0.001 && openSky(g, c) ? ' RAIN' : underRoofRect(c.pos, g) ? '' : ' out'}`;
+  return `wet ▸ rain ${rain.toFixed(2)} · ${one('Player', g.player.char)} · ${g.guards.map(gd => one(gd.callsign ?? String(gd.char.id), gd.char)).join(' · ')} · prints ${printsOf(g).list.length} live / ${WET_STATS.prints} · drips ${WET_STATS.drips}`;
 }
 
 // ---------------------------------------------------------------- persistence (one key per machine, the whistle's pattern)

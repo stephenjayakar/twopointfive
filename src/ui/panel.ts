@@ -1,4 +1,4 @@
-// Tweak panel (Tab): sliders / toggles / buttons / read-outs bound to live settings. The game builds ONE of these on #panel (bindings.ts) as a TWO-LEVEL panel —
+// Tweak panel = the debugger (backtick; Tab is the game's): sliders / toggles / buttons / read-outs bound to live settings. The game builds ONE of these on #panel (bindings.ts) as a TWO-LEVEL panel —
 // SYSTEMS down a left rail (Frame · Direct · Indirect · …), and inside the selected system collapsible SECTIONS with a live one-line summary and, where a
 // shipped-defaults table exists, a '↺' reset — with a status strip (preset · fps · gpu ∪) and a search box that searches EVERY system at once (hits listed under
 // their 'System ▸ Section' path; Enter jumps to the first). The viewer / editor build several flat ones (property sheets, the gear menu, the 'all knobs' list) on
@@ -54,6 +54,8 @@ const TIP_DELAY_MS = 350;   // a cold tip waits this long (sweeping the pointer 
 const TIP_WARM_MS = 300;    // … and for this long after one hid (the pixel between two rows, a pass over a section header)
 /** an Element test that survives hosts without the DOM classes (the headless probes' fake document defines no HTMLElement) */
 const isEl = (x: unknown): x is HTMLElement => !!x && typeof x === 'object' && (x as Node).nodeType === 1 && typeof (x as HTMLElement).matches === 'function';
+/** a control that keeps its own keys from Input (game/input.ts typingTarget: the same test) */
+const isField = (t: EventTarget | null) => t instanceof HTMLInputElement || t instanceof HTMLSelectElement || t instanceof HTMLTextAreaElement || (t instanceof HTMLElement && t.isContentEditable);
 
 export class Panel {
   root: HTMLElement;
@@ -102,6 +104,9 @@ export class Panel {
       this.rail = document.createElement('div'); this.rail.className = 'prail'; main.append(this.rail, this.body); this.root.appendChild(main);
       this.body.addEventListener('scroll', () => { if (!this.activeSys || this.searching) return; (this.state.scroll ??= {})[this.activeSys.name] = Math.round(this.body.scrollTop); this.saveSoon(); }, { passive: true } as AddEventListenerOptions);
       this.root.addEventListener('mouseenter', () => { this.hovered = true; }); this.root.addEventListener('mouseleave', () => { this.hovered = false; this.hideTip(); });
+      // backtick opens and shuts the panel (main.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
+      // Input, so the hotkey never sees the press: shut it from here, before the field types the character. Anywhere else the press reaches Input once and the hotkey toggles.
+      this.root.addEventListener('keydown', e => { if (e.code !== 'Backquote' || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
       this.installTips();
     } else this.root.appendChild(this.body);
     setInterval(() => { if (this.visible) this.refresh(); }, opts.refreshMs ?? 400);
@@ -207,7 +212,7 @@ export class Panel {
   /** 'System ▸ Section' of a section body handed out by section() (the inventory probe and the search results word rows by it) */
   pathOf(sec: HTMLElement): string { const s = this.secOfBody.get(sec); return !s ? '' : s.sys ? `${s.sys.name} ▸ ${s.name}` : s.name; }
   /** The keyboard, offered by main.ts through Input's veto BEFORE the game reads a key: with the panel up and the pointer over it (or a control in it focused) ← / → and [ / ]
-   *  walk the rail and a typed character opens the search with it; returns true when the key was the panel's (the game then never sees it). Tab / Esc stay main.ts's. */
+   *  walk the rail and a typed character opens the search with it; returns true when the key was the panel's (the game then never sees it). Backtick / Esc stay main.ts's. */
   onKey(e: KeyboardEvent): boolean {
     if (!this.visible || !this.game) return false;
     const inPanel = e.target instanceof Node && this.root.contains(e.target); if (!this.hovered && !inPanel) return false;
@@ -215,6 +220,7 @@ export class Panel {
     const t = e.target; const typingIn = (t instanceof HTMLInputElement && (t.type === 'text' || t.type === 'search')) || t instanceof HTMLSelectElement;   // (a field being typed in / a list being picked keeps its own keys)
     const nav = NAV_KEYS[e.code];
     if (nav && !typingIn && !(t instanceof HTMLInputElement && t.type === 'range')) { this.step(nav); e.preventDefault(); return true; }   // (← / → on a focused slider still nudge it)
+    if (e.code === 'Backquote') return false;   // (the panel's own key: main.ts's hotkey shuts it — never a character for the search)
     if (e.key.length === 1 && !typingIn && this.search && e.code !== 'Space') { this.search.focus(); this.search.value += e.key; this.applyFilter(); e.preventDefault(); return true; }   // (Space stays the game's one action key even over the panel)
     return false;
   }

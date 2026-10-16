@@ -166,6 +166,14 @@ fn upsampleRefl(pixf: vec2f) -> vec3f {
   return textureSampleLevel(reflTex, linSamp, t / dims, 0.0).xyz;
 }
 
+/** the weather's air as the volumetric target's alpha carries it (volumetrics.wgsl wxAirMarch), ESTIMATED for the pixel's ray to its surface from the open air's own
+ *  profile under the layer's top — what is left of that alpha ÷ this is the smoke's. 1 with no weather. Set by main before the upsample. */
+var<private> wxAirT: f32 = 1.0;
+fn wxAirTEst(pixf: vec2f, z: f32) -> f32 {
+  let ro = frame.camPos; let rd = normalize(worldFromDepth(pixf, 0.5) - ro); let top = CEIL_Y + WX_TOP;
+  var t0 = 0.0; if (ro.y > top && rd.y < -1e-4) { t0 = (top - ro.y) / rd.y; }
+  return clamp(exp(-wxFogTau(wxFog(), ro + rd * t0, rd, max(z - t0, 0.0))), 0.05, 1.0);
+}
 fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   let hdims = vec2i(textureDimensions(volTex));
   let vdiv = i32(frame.lossyCfg.y);                             // volumetric divisor: 2, or 4 with the lossy option
@@ -175,7 +183,7 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
   // EXPERIMENT (settings.smokeUpsampleRelax, volCfg.w bit 20): the depth guide assumes the volumetric term follows the SURFACE — true of haze up to it, false of a plume in
   // front of it: guiding by depth carves the plume's soft edge along every depth edge BEHIND it. Where the centre texel is mostly smoke (T < ½) the depth term lets go.
   var depthK = 1.0;
-  if (((frame.volCfg.w >> 20u) & 1u) != 0u) { let Tc = textureLoad(volTex, clamp(base, vec2i(0), hdims - 1), 0).a; depthK = smoothstep(0.35, 0.75, Tc); }
+  if (((frame.volCfg.w >> 20u) & 1u) != 0u) { var Tc = textureLoad(volTex, clamp(base, vec2i(0), hdims - 1), 0).a; if (wxAirT < 1.0) { Tc = min(Tc / wxAirT, 1.0); } depthK = smoothstep(0.35, 0.75, Tc); }   // (÷ the weather's air in the texel's alpha — wxAirT, 1 with none: fog FOLLOWS the surface, only a plume lets go of the guide)
   for (var dy = -1; dy <= 1; dy++) {
     for (var dx = -1; dx <= 1; dx++) {
       let h = clamp(base + vec2i(dx, dy), vec2i(0), hdims - 1);
@@ -207,52 +215,94 @@ fn froxelVol(pixf: vec2f, pix: vec2i, pin: vec2f, dist: f32) -> vec4f {
 // included (a muzzle flash sets the web alight for its frame — nothing here has a history), evaluated without the receiver cosine but with the pane's own
 // projected area; the STRONGEST is shadow-tested from the face it is on (+ smoke), the rest credited at half, unshadowed (dim by construction) — the dust
 // glow's recipe in fgather.wgsl glassShade, one ray instead of two. Plus the cached bounce arriving on both faces.
-// GLASS BREAKING (game/glassbreak.ts; only called under GLASS_BREAK): the crack picture of pane slot k at world point X on it, footprint fp (m per px) — .x = crack line coverage
-// (the VORONOI EDGES between the impact sites = where each blow's cracks met the last one's, once the pane has taken two; long RADIALS out of each impact ∝ its energy;
-// the raw rim of an intact cell that borders a fallen one), .y = frost (crushed glass along the heavier lines). Antialiased over the footprint like the stars.
+// GLASS BREAKING (game/glassbreak.ts; only called under GLASS_BREAK): the crack picture of pane slot k at world point X on it, footprint fp (m per px) — .x = crack line coverage,
+// .y = frost (crushed glass). The lines are the cuts of game/glassPattern.ts themselves (gpCrackAt is this function's CPU reference): the two RADIALS of the sector the point is
+// in — part of the way into the sheet until the pane has run, to the frame after — the CHORDS either side of its piece (the concentric cracks), past the rings of a run pane
+// the sector's branch crack and its dagger's snap, the territory line where two blows' cracks met, a laminated pane's tight web, the crushed crater of a blow too soft to punch
+// it, and the bright chipped RIM of any piece that borders a hole. A tempered pane letting go is crazed through into dice wherever it still stands. Antialiased over the footprint like the stars.
+fn gbLine(d: f32, w: f32, wt: f32) -> f32 { return (1.0 - smoothstep(w * 0.6, w * 1.6, d)) * wt; }
+/** distance to the nearest edge of the dice (glassPattern.ts gpDiceEdge: F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
+fn gbDice(uv: vec2f, grain: f32, seed: u32) -> f32 {
+  let p = uv / grain; let ip = vec2i(floor(p));
+  var f1 = 1e9; var f2 = 1e9;
+  for (var j = -1; j <= 1; j++) { for (var i = -1; i <= 1; i++) {
+    let c = ip + vec2i(i, j); let cu = bitcast<u32>(c.x) & 0xffffu; let cv = bitcast<u32>(c.y) & 0xffffu;
+    let q = vec2f(c) + 0.15 + 0.7 * vec2f(gpJit(seed, cu, cv), gpJit(seed ^ 0x5bd1e9u, cu, cv));
+    let dd = distance(q, p); if (dd < f1) { f2 = f1; f1 = dd; } else if (dd < f2) { f2 = dd; }
+  } }
+  return (f2 - f1) * 0.5 * grain;
+}
+/** one crack LINE (through P, unit normal N) into the running (coverage, rim distance): its antialiased coverage at weight wt, and — when the glass just across it has
+ *  fallen out — the distance to it as a rim */
+fn gbEdge(k: u32, fl: u32, n: u32, uv: vec2f, P: vec2f, N: vec2f, w: f32, wt: f32, acc: vec2f) -> vec2f {
+  let sd = dot(uv - P, N); let dd = abs(sd);
+  var o = vec2f(max(acc.x, gbLine(dd, w, wt)), acc.y);
+  if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv - N * (sd + select(-0.004, 0.004, sd >= 0.0)))) { o.y = min(o.y, dd); }
+  return o;
+}
+fn gbChordEdge(k: u32, fl: u32, n: u32, uv: vec2f, S: GbSite, s: i32, cb: u32, w: f32, wt: f32, acc: vec2f) -> vec2f {
+  let A = gpChordPt(S, s, cb); let e = gpChordPt(S, s + 1, cb) - A; let L = max(1e-6, length(e));
+  return gbEdge(k, fl, n, uv, A, vec2f(-e.y, e.x) / L, w, wt, acc);
+}
 fn gbCracks(k: u32, X: vec3f, fp: f32) -> vec2f {
-  let h = gbHeader(k); let n = min(u32(h.x + 0.5), 16u);
-  if (n == 0u) { return vec2f(0.0); }
+  let h = gbHeader(k); let fl = u32(h.y + 0.5); let n = min(u32(h.x + 0.5), 8u);
   let uv = gbUV(k, gbLocal(k, X));
-  let c = gbCell(k, uv);
-  var crack = 0.0; var frost = 0.0;
   let w = max(fp, 0.0006);
-  if (n >= 2u) {   // the network: hairlines on every bisector (wobbled a few mm so they run like cracks, not rulers), heavier as the pane's damage climbs; the edge of a HOLE reads as a bright chipped rim
-    let dmg = clamp(h.w, 0.15, 1.0);
-    let wob = (hash13(vec3f(floor(uv * 23.0), f32(k))) - 0.5) * 0.010 + (hash13(vec3f(floor(uv * 61.0) + 7.0, 3.0)) - 0.5) * 0.004;
-    let e = abs(c.edge + wob);
-    let line = 1.0 - smoothstep(w * (0.5 + 0.6 * dmg), w * (1.4 + 1.2 * dmg), e);
-    crack = max(crack, line * (0.4 + 0.4 * dmg));
-    // is the cell across the nearest edge gone? (re-find the second site: the one whose bisector c.edge measured)
-    var d2 = 1e9; var j2 = 0u;
-    for (var j = 0u; j < n; j++) { if (i32(j) == c.idx) { continue; } let d = distance(uv, gbSite(k, j)); if (d < d2) { d2 = d; j2 = j; } }
-    let mask = u32(h.y + 0.5);
-    if (((mask >> j2) & 1u) == 1u) { let rim = 1.0 - smoothstep(0.004, 0.012 + 2.0 * w, c.edge); crack = max(crack, rim); frost = max(frost, rim * 0.8); }
+  if ((fl & 4u) != 0u) {   // a tempered pane on its way out: what still stands is dice — drawn while a die is a few pixels across, a milky sheet beyond that; brightest at the wave's edge
+    let dw = gbRow(k, 2u); let grain = max(dw.w, 1e-3);
+    let res = clamp(grain / (5.0 * w) - 0.2, 0.0, 1.0);
+    let front = 1.0 - smoothstep(0.0, 0.12, gbClumpKey(k, uv) - dw.z);
+    return vec2f(max(mix(0.5, gbLine(gbDice(uv, grain, u32(gbRow(k, 3u).z)), w, 0.9), res), front), 0.45 + 0.4 * front);
   }
-  // radials: from the two nearest impacts, 5‥8 spokes each at hashed angles, reaching ∝ energy, tapering
-  for (var ps = 0u; ps < min(n, 2u); ps++) {
-    var bi = 0u; var bd = 1e9;
-    for (var j = 0u; j < n; j++) { let d = distance(uv, gbSite(k, j)); let skip = ps == 1u && i32(j) == c.idx; if (!skip && d < bd) { bd = d; bi = j; } }
-    if (ps == 1u && i32(bi) == c.idx) { break; }
-    let site = gbSite(k, bi); let e = gbEnergy(k, bi);
-    if (e <= 0.0) { continue; }                            // a crack-TIP site (glassbreak.ts localise: seeded round a blow so its piece falls local) — never hit: no radials of its own
-    let R = 0.18 + 0.32 * clamp(e, 0.0, 3.0);
-    let d = uv - site; let r = length(d);
-    if (r > R || r < 0.004) { continue; }
-    let ang = atan2(d.y, d.x);
-    let seed = u32(abs(site.x * 4099.0 + site.y * 7919.0 + f32(k) * 13.0)) * 2654435761u;
-    let spokes = 5u + (seed >> 29u);
-    for (var s2 = 0u; s2 < spokes; s2++) {
-      let hs = f32((seed ^ (s2 * 40503u)) & 65535u) / 65535.0;
-      let a0 = (f32(s2) + hs * 0.7) / f32(spokes) * 6.2831853 - 3.14159265;
-      var da = abs(ang - a0); da = min(da, 6.2831853 - da);
-      let perp = da * r;                                   // arc distance to the spoke line
-      let taper = 1.0 - smoothstep(R * 0.55, R, r);
-      let line = (1.0 - smoothstep(w * 0.7, w * 1.9, perp)) * taper;
-      crack = max(crack, line * (0.5 + 0.4 * clamp(e - 1.0, 0.0, 1.0)));
+  if (n == 0u) { return vec2f(0.0); }
+  let web = (fl & 16u) != 0u; let full = (fl & 2u) != 0u && !web;
+  let me = gbNearest(k, n, uv); let S = gbSiteLoad(k, me); let st = gpSector(S, uv); let sb = gpSectorBand(S, uv); let s = i32(sb.x); let b = sb.y;
+  let d = uv - S.c; let r = length(d);
+  let heavy = 0.55 + 0.35 * clamp(h.w, 0.15, 1.0);   // the lines thicken a little as the pane's damage climbs
+  var acc = vec2f(0.0, 1e9); var frost = 0.0;   // (coverage, distance to the nearest hole's rim)
+  for (var q = 0; q < 2; q++) {   // the radials either side: perpendicular distance, while the crack has run this far (tapering over its last third)
+    let kk = s + q; let a = gpAngle(S, kk); let dir = vec2f(cos(a), sin(a)); let N = vec2f(-dir.y, dir.x);
+    if (full) { acc = gbEdge(k, fl, n, uv, S.c, N, w, heavy, acc); continue; }
+    let along = dot(d, dir); let perp = abs(dot(d, N));
+    let reach = gpRho(S, kk, 2u) * (1.25 + 2.0 * gpJit(S.seed, gpWrap(kk, S.n), 9u)) * min(1.6, 0.6 + 0.4 * S.e);
+    if (along <= reach) { acc = gbEdge(k, fl, n, uv, S.c, N, w, min(1.0, (reach - along) / (0.33 * reach) + 0.25) * heavy, acc); }
+    else { acc.x = max(acc.x, gbLine(length(vec2f(along - reach, perp)), w, 0.25 * heavy)); }
+  }
+  if (web) {   // laminated: the three chords, an outer ring in most sectors, a sub-chord inside each band — a tight web that never opens
+    var wb = 0u; for (; wb < 4u; wb++) { if (!gpBeyond(S, s, wb, uv)) { break; } }
+    for (var cb = u32(max(0, i32(wb) - 1)); cb <= min(2u, wb); cb++) { acc = gbChordEdge(k, 0u, n, uv, S, s, cb, w, select(0.8, 1.0, cb == 0u) * heavy, acc); }
+    if (wb >= 3u && gpJit(S.seed, sb.x, 33u) < GP_WEB_RING) { acc = gbChordEdge(k, 0u, n, uv, S, s, 3u, w, 0.6 * heavy, acc); }
+    if (wb >= 1u && wb <= 3u && gpJit(S.seed, sb.x, 11u + wb) > 0.35) {
+      let f0 = 0.3 + 0.4 * gpJit(S.seed, sb.x, 15u + wb); let f1 = 0.3 + 0.4 * gpJit(S.seed, gpWrap(s + 1, S.n), 15u + wb);
+      let A = mix(gpChordPt(S, s, wb - 1u), gpChordPt(S, s, wb), f0); let B = mix(gpChordPt(S, s + 1, wb - 1u), gpChordPt(S, s + 1, wb), f1); let e = B - A;
+      acc.x = max(acc.x, gbLine(abs(e.x * (uv.y - A.y) - e.y * (uv.x - A.x)) / max(1e-6, length(e)), w, 0.55 * heavy));
     }
+    frost = max(frost, 0.55 * (1.0 - smoothstep(S.rho.x, S.rho.y * 1.3, r)));   // the middle of the web is powder held by the interlayer
+  } else {   // annealed: the chords either side of the point's own piece (chord 2 only in a share of the sectors until the pane runs — a rim either way)
+    let merged = gpMerged(S, sb.x);
+    let inner = select(select(select(0, 1, b == 2u), 2, b >= 3u), -1, b == 0u);
+    let outer = select(select(select(-1, 2, b == 2u), select(1, 2, merged), b == 1u), 0, b == 0u);
+    let c2 = select(0.0, 0.8, full || gpJit(S.seed, sb.x, 31u) < GP_C2_DRAWN);
+    if (inner >= 0) { acc = gbChordEdge(k, fl, n, uv, S, s, u32(inner), w, select(select(0.8, c2, inner == 2), 1.0, inner == 0) * heavy, acc); }
+    if (outer >= 0) { acc = gbChordEdge(k, fl, n, uv, S, s, u32(outer), w, select(select(0.8, c2, outer == 2), 1.0, outer == 0) * heavy, acc); }
+    if (b == 0u) { acc.x = max(acc.x, 0.5); frost = max(frost, 0.75); }   // a crater still in (a blow too soft to punch it): crushed white
   }
-  return vec2f(crack, frost);
+  if (full && b >= 3u) {   // past the rings of a run pane: the sector's branch crack and this half's snap
+    let sp = gpSplit(S, s); let asp = S.rot + GP_TAU * sp / f32(S.n);
+    acc = gbEdge(k, fl, n, uv, S.c, vec2f(-sin(asp), cos(asp)), w, 0.9 * heavy, acc);
+    let c = gpCut(S, s, select(0u, 1u, st.y >= sp));
+    if (c.on) { acc = gbEdge(k, fl, n, uv, c.p, c.n, w, 0.8 * heavy, acc); }
+  }
+  if (full && n >= 2u) {   // where this blow's cracks met the next one's
+    var j2 = 0u; var d2 = 1e30; let d1 = dot(d, d) - S.rz * S.rz;
+    for (var j = 0u; j < n; j++) { if (j == me) { continue; } let a = gbRow(k, GB_HDR + j * 4u); let qv = uv - a.xy; let dq = dot(qv, qv) - a.w * a.w; if (dq < d2) { d2 = dq; j2 = j; } }
+    let cj = gbRow(k, GB_HDR + j2 * 4u).xy; let sep = max(1e-6, distance(cj, S.c));
+    let dd = (d2 - d1) / (2.0 * sep);
+    acc.x = max(acc.x, gbLine(dd, w, 0.8 * heavy));
+    if ((fl & 1u) != 0u && dd < 0.012 + 2.0 * w && gbOpenUV(k, fl, n, uv + (cj - S.c) / sep * (dd + 0.004))) { acc.y = min(acc.y, dd); }
+  }
+  let rim = 1.0 - smoothstep(0.003, 0.010 + 2.0 * w, acc.y);   // the raw edge beside a hole
+  return vec2f(max(acc.x, rim), max(frost, 0.8 * rim));
 }
 fn paneLight(X: vec3f, n: vec3f) -> vec3f {
   var best = vec3f(0.0); var bestW = 0.0; var bestL = vec3f(0.0); var bestD = 0.0; var bestI = -1; var rest = vec3f(0.0);
@@ -293,7 +343,10 @@ const WET_F0: f32 = 0.02;            // water at normal incidence
 const WET_TILT: f32 = 0.9;           // a bead's rim tilts the normal this far (tan): a flattened cap, not a hemisphere
 const WET_SPEC_MAX: f32 = 30.0;      // luminance bound on the direct lobes (scene-referred: white long before this after the tonemap — a bound on sparkle outliers, not a look)
 const WET_SHEEN: f32 = 0.6;          // × the ambient sheen
-fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, Ed: vec3f, Ei: vec3f) -> vec3f {
+// The lobes are shadowed PER EMITTER CLASS (EdS = the sharp class's shadowed direct here, EdB = the broad class's: the two targets the direct chain keeps apart): each class's
+// lobes × that class's own shadowed ∕ unshadowed ratio. One ratio over both drew the highlight of a light that is wholly hidden — the sodium street lamp behind the outer
+// wall, broad, orange, the brightest unshadowed term in the rooms beside it — on every upturned pouch and boot the moment a torch (sharp) put any light on the man.
+fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: vec3f) -> vec3f {
   let gain = f32((id >> 5u) & 31u) * (2.0 / 31.0);
   if (gain <= 0.0) { return vec3f(0.0); }
   let rough = 0.03 + f32(id & 31u) * (0.62 / 31.0);
@@ -304,7 +357,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, Ed: vec3f, Ei: vec3f) -> vec
   let V = (frame.camPos - P) / max(z, 1e-4);
   let NdotV = clamp(dot(Ns, V), 0.05, 1.0);
   let a = rough * rough;
-  var sum = vec3f(0.0); var Ud = vec3f(0.0);
+  var sumS = vec3f(0.0); var sumB = vec3f(0.0); var UdS = vec3f(0.0); var UdB = vec3f(0.0);
   for (var i = 0u; i < frame.numLights; i++) {
     if (!lightReaches(i, P)) { continue; }
     let li = lights[i];
@@ -312,7 +365,8 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, Ed: vec3f, Ei: vec3f) -> vec
     if (!ev.ok) { continue; }
     let NdotL = dot(N, ev.L);
     if (NdotL <= 0.0) { continue; }
-    Ud += ev.E * NdotL;                                    // what the direct pass scored here for it, unshadowed
+    let broad = lightBroad(li);
+    if (broad) { UdB += ev.E * NdotL; } else { UdS += ev.E * NdotL; }   // what the direct pass scored here for it, unshadowed, in its class
     let NsL = dot(Ns, ev.L);
     if (NsL <= 0.0) { continue; }
     let hv = ev.L + V;
@@ -326,10 +380,12 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, Ed: vec3f, Ei: vec3f) -> vec
     let D = a2 / (3.14159265 * dn * dn) * ((a * a) / a2);   // GGX at the widened width × (a/a')²: the lobe's energy, spread over the disc
     let Vis = 0.5 / (NsL * (NdotV * (1.0 - ap) + ap) + NdotV * (NsL * (1.0 - ap) + ap) + 1e-4);   // height-correlated Smith, the usual approximation
     let uf = 1.0 - VdotH; let F = WET_F0 + (1.0 - WET_F0) * uf * uf * uf * uf * uf;   // Schlick (the base clamped above: pow of a negative ulp is NaN on some backends)
-    sum += ev.E * (D * Vis * F * NsL);
+    let lobe = ev.E * (D * Vis * F * NsL);
+    if (broad) { sumB += lobe; } else { sumS += lobe; }
   }
-  let vis = clamp(luminance(Ed) / max(luminance(Ud), 1e-4), 0.0, 1.0);
-  var L = sum * vis;
+  let visS = clamp(luminance(EdS) / max(luminance(UdS), 1e-4), 0.0, 1.0);
+  let visB = clamp(luminance(EdB) / max(luminance(UdB), 1e-4), 0.0, 1.0);
+  var L = sumS * visS + sumB * visB;
   let lum = luminance(L);
   L = select(L, L * (WET_SPEC_MAX / lum), lum > WET_SPEC_MAX);
   // the sheen: what the coat mirrors of the room / the sky. The mirror direction's hemisphere off the radiance cache (three fetches — the floor's lit pool below a
@@ -344,10 +400,135 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, Ed: vec3f, Ei: vec3f) -> vec
   return L * gain;
 }
 
-fn acesFilm(x: vec3f) -> vec3f {
-  let a = 2.51; let b = 0.03; let c = 2.43; let d = 0.59; let e = 0.14;
-  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), vec3f(0.0), vec3f(1.0));
+// ---- SNOW GLOW (const SNOW_GLOW in the scene prelude: render/frame.ts snowLookConfig.glow ← game/weatherKinds.ts SNOW_LOOK.glow; false = every statement of it is dead code) ----
+// The look of light INSIDE lying snow, as an approximation (no scattering is computed): on a snow pixel a lamp's light does not stop at the terminator. It wraps a
+// little past it, what comes through has lost the lamp's own hue and most of its red, and shade on snow leans to blue. PICTURE ONLY, by where it stands: this module
+// is the last word on a primary hit's colour and nothing reads its output back into the lighting (the meter and the probes are probe.wgsl, the bounce is
+// lighting_common.wgsl hitRadiance → common.wgsl directIrradiance; neither is touched, and evalLight is called here as the wet coat above calls it, unchanged).
+// A snow pixel is one whose normal target's alpha is under 1 (gbuffer.wgsl fsBox after snowBox, snow.wgsl fsSnow: 1∕3 = snow, 2∕3 = thin snow at its edge).
+// PER LIGHT that reaches the cell, scored square-on (no receiver cosine) as the wet coat scores it: with c = N·L,
+//   past the terminator (−WRAP < c < 0)  GAIN · ((c + WRAP) ∕ WRAP)²          the wrap: nothing at −WRAP, GAIN at the terminator
+//   on the lit side (c ≥ 0)              GAIN · (1 − c)⁴                       it dies toward the lamp: snow square under a lamp is as bright as it was
+// in a colour that is the lamp's, WHITEN of the way to its own grey (many scatterings later the hue is washed out), × TINT from the terminator on (white by c = WRAP).
+// NO RAY: the term is × the direct pass's OWN shadowing per emitter class, as the wet coat's lobes are — but a pixel past the terminator of its one lamp has no
+// shadowed light of its own to take a ratio of, so the ratio is taken over the pixel and four neighbours REACH metres off on the screen (the same surface: within
+// 3 × REACH of its distance), Σ shadowed ∕ Σ unshadowed with each neighbour's own normal. So: a lamp wholly hidden from that hand's width of snow adds nothing
+// (shadowed light stays shadowed); a penumbra or a shadow's edge bleeds REACH into the dark; and snow that turns away from the lamp over more than REACH (the
+// whole back of a big drift) gets none — the stencil's mean cosine under CONF fades the term out rather than guess. Where two lamps of one class light the spot
+// the ratio is the brighter one's (the wet coat's note). The fog of war draws AFTER this module (passes.ts: FogPass over hdr): a pixel the team does not see
+// shows none of it, like the rest of the live frame.
+const SNOW_GLOW_WRAP: f32 = 0.4;                          // how far past the terminator a lamp's light comes through, as −N·L (0.4 ≈ 24°)
+const SNOW_GLOW_GAIN: f32 = 0.15;                         // the term AT the terminator, as a share of the lamp's square-on light
+const SNOW_GLOW_TINT: vec3f = vec3f(0.45, 0.74, 1.0);     // what comes through: ice takes the red first
+const SNOW_GLOW_WHITEN: f32 = 0.6;                        // how far the lamp's hue is washed toward its own grey before the tint
+const SNOW_GLOW_REACH: f32 = 0.12;                        // metres: the stencil's arm (1 ‥ 14 px)
+const SNOW_GLOW_CONF: f32 = 0.03;                         // the stencil's mean N·L (per class) under which the term fades out
+const SNOW_GLOW_SHADE: vec3f = vec3f(0.93, 1.0, 1.11);    // × the bounce and the sky's light on snow in full shade (luminance kept): never dead grey
+fn snowGlowAmt(a: f32) -> f32 { return clamp((1.0 - a) * 1.5, 0.0, 1.0); }
+fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> vec3f {
+  var fac = vec4f(0.0); var kS = vec3f(0.0); var kB = vec3f(0.0); let V = (frame.camPos - P) / max(z, 1e-4);   // SNOW SPARKLE (below): this pixel's facet, what it flashes per class
+  if (SNOW_SPARKLE) { snowSparkleL = vec3f(0.0); fac = snowSparkleFacet(P, N, z); if (!SNOW_GLOW && fac.w <= 0.0) { return vec3f(0.0); } }   // (the sparkle alone, and no facet here: nothing to do)
+  let r = i32(clamp(SNOW_GLOW_REACH / max(z * 2.0 * frame.post.w * frame.invScreen.y, 1e-5), 1.0, 14.0) + 0.5);
+  let hi = vec2i(textureDimensions(gDepth)) - 1;
+  var Nk: array<vec3f, 4>; var S = vec2f(luminance(EdS), luminance(EdB)); var pts = 1.0;
+  for (var k = 0; k < 4; k++) {
+    Nk[k] = vec3f(0.0);
+    let q = sPix + select(vec2i(select(-r, r, k == 1), 0), vec2i(0, select(-r, r, k == 3)), k >= 2);   // (x∓r, y), (x, y∓r)
+    if (any(q < vec2i(0)) || any(q > hi)) { continue; }
+    let d = textureLoad(gDepth, q, 0);
+    if (d >= 1.0 || abs(linearDepth(d, vec2f(q) + 0.5) - z) > 3.0 * SNOW_GLOW_REACH) { continue; }   // another surface (a wall's top, the lorry's bed): not this snow's light
+    Nk[k] = normalize(textureLoad(gNormal, q, 0).xyz * 2.0 - 1.0);
+    S += vec2f(luminance(textureLoad(directTex, q, 0).rgb), luminance(textureLoad(softTex, q, 0).rgb)); pts += 1.0;
+  }
+  if (S.x <= 0.0 && S.y <= 0.0) { return vec3f(0.0); }   // no light of either class reaches the stencil (deep shade, under a roof): vis below is exactly 0 — the loop is not walked
+  var U = vec2f(0.0); var Q = vec2f(0.0); var gS = vec3f(0.0); var gB = vec3f(0.0);
+  for (var i = 0u; i < min(frame.numLights, 64u); i++) {
+    if (!lightReaches(i, P)) { continue; }
+    let li = lights[i];
+    let ev = evalLight(li, P, vec3f(0.0));                 // square-on irradiance (no receiver cosine)
+    if (!ev.ok) { continue; }
+    let w = luminance(ev.E); let c = dot(N, ev.L);
+    let u = w * (max(c, 0.0) + max(dot(Nk[0], ev.L), 0.0) + max(dot(Nk[1], ev.L), 0.0) + max(dot(Nk[2], ev.L), 0.0) + max(dot(Nk[3], ev.L), 0.0));   // what the direct pass scored for it over the stencil, unshadowed
+    let broad = lightBroad(li);
+    if (broad) { U.y += u; Q.y += w; } else { U.x += u; Q.x += w; }
+    if (SNOW_SPARKLE) { if (fac.w > 0.0 && c > 0.0) { let k = mix(ev.E, vec3f(w), SNOW_SPARKLE_WHITEN) * (snowSparkleLobe(fac.xyz, ev.L, V) * smoothstep(0.0, SNOW_SPARKLE_EDGE, c)); if (broad) { kB += k * SNOW_SPARKLE_BROAD; } else { kS += k; } } }
+    if (!SNOW_GLOW) { continue; }   // (the sparkle alone walks this loop: none of the glow's terms below)
+    if (c <= -SNOW_GLOW_WRAP) { continue; }
+    if (select(S.x, S.y, broad) <= 0.0) { continue; }   // (its class is wholly shadowed over the stencil: its share is × 0 below)
+    let t = (c + SNOW_GLOW_WRAP) / SNOW_GLOW_WRAP; let l = 1.0 - min(c, 1.0); let l2 = l * l;
+    let g = mix(ev.E, vec3f(w), SNOW_GLOW_WHITEN) * mix(vec3f(1.0), SNOW_GLOW_TINT, clamp(1.0 - c / SNOW_GLOW_WRAP, 0.0, 1.0)) * (SNOW_GLOW_GAIN * select(l2 * l2, t * t, c < 0.0));
+    if (broad) { gB += g; } else { gS += g; }
+  }
+  // per class: the stencil's shadowed ∕ unshadowed light (the direct pass's own rays, penumbra filter and smoke), × how sure the stencil is (its mean cosine ∕ CONF)
+  let vis = clamp(S / max(U, vec2f(1e-4)), vec2f(0.0), vec2f(1.0)) * clamp(U / max(Q * (pts * SNOW_GLOW_CONF), vec2f(1e-6)), vec2f(0.0), vec2f(1.0));
+  if (SNOW_SPARKLE) { snowSparkleL = (kS * vis.x + kB * vis.y) * (fac.w * SNOW_SPARKLE_GAIN); }
+  return gS * vis.x + gB * vis.y;
 }
+
+// ---- SNOW SPARKLE (const SNOW_SPARKLE in the scene prelude: render/frame.ts snowLookConfig.sparkle ← game/weatherKinds.ts SNOW_LOOK.sparkle; false = every statement of it is dead code) ----
+// The maintainer, 10-14, with a still of Red Dead Redemption 2's snow by day: 'rdr2 has some nice "sparkle" on the snow on the ground' (and, of the whole snow
+// look, "overall this should be subtle"). Ice crystals lie in fresh snow with flat faces every way up, and a face is a tiny mirror: it shows the lamp, as a point
+// far brighter than the snow round it, only while its normal is the half vector between the lamp and the eye. PICTURE ONLY, by where it stands (the glow's
+// header above: this module's output is read by no lighting pass, the meter and the probes are another program).
+// THE GRAINS: the snow's plan cut into square cells GRAIN m wide, doubled until a cell is no finer than PX pixels (in octaves of distance, as snow.wgsl's glints:
+// a grain is the same grain until the view has doubled its distance). SHARE of the cells hold a facet: a POINT somewhere in the cell by its own hash, with a
+// normal of its own leant off the surface's by up to atan(SPREAD), any way round, and a brightness of its own (most are dim, few are full). The point is drawn
+// a PIXEL wide whatever the cell: full within CORE pixels of its place, falling to nothing one pixel further out — so wherever this frame's sub-pixel jitter
+// puts the samples, the nearest one is within 0.71 px of it and takes over half of it (a dot finer than the raster would come and go with the jitter, and TAAU's
+// clip would take it for a firefly: the first build's points did not survive it). A pixel asks the nine cells round it and shows the point it is nearest.
+// THE FLASH, per light that reaches the cell (the glow's own loop above: lightReaches + evalLight as they stand, so the fog of war's light classes hold), on the
+// lit side only (N·L > 0, eased in over EDGE): the lamp's square-on light, WHITEN of the way to its grey, × the facet's cosine to the lamp × a lobe that is 1
+// while the facet is within acos(COS1) of the half vector and 0 past acos(COS0) — a few degrees, so walking a metre (the follow camera translates with the
+// player: V turns at every point) or sweeping a torch puts one set of points out and lights another — × GAIN; a broad emitter's flash is × BROAD (a mirror
+// shows a wide source dimmer). NO RAY: × the glow's shadow ratio per emitter class (the direct pass's own shadows over the stencil): nothing in shade.
+// ONLY FRESH SNOW: × the snow mark (thin snow at its edge takes less) and × a band round fresh snow's finish in the material target — snow.wgsl snowShade
+// sets a boot print's and a fallen man's dent matt (roughness → 1) and a trodden path's tighter (−0.14); neither is in the band, so neither sparkles.
+// The points are added as light (never × the albedo), into `spec` (debug view 10 shows them alone), through a pane like the rest of the pixel.
+const SNOW_SPARKLE_GRAIN: f32 = 0.006;                    // metres: the finest grain cell
+const SNOW_SPARKLE_PX: f32 = 1.5;                         // … and no cell finer than this many pixels
+const SNOW_SPARKLE_SHARE: f32 = 0.5;                      // the share of cells that hold a facet
+const SNOW_SPARKLE_CORE: f32 = 0.25;                      // pixels: a point is full within this of its place, and gone one pixel further out
+const SNOW_SPARKLE_SPREAD: f32 = 1.0;                     // how far a facet leans off the surface, as a tangent (1.0 = 45°: a low lamp seen from the far side still finds facets)
+const SNOW_SPARKLE_COS0: f32 = 0.996917;                  // the lobe's foot: cos 4.5° between the facet and the half vector
+const SNOW_SPARKLE_COS1: f32 = 0.999391;                  // … and its top: cos 2°
+const SNOW_SPARKLE_GAIN: f32 = 2.0;                       // a full facet square on its mirror line, as radiance per unit of the lamp's square-on light
+const SNOW_SPARKLE_WHITEN: f32 = 0.5;                     // how far the lamp's hue is washed toward its own grey (a point that bright reads white)
+const SNOW_SPARKLE_BROAD: f32 = 0.5;                      // × a broad emitter's flash
+const SNOW_SPARKLE_EDGE: f32 = 0.15;                      // N·L under which the flash fades out toward the terminator
+const SNOW_SPARKLE_FAR: vec2f = vec2f(22.0, 40.0);        // metres from the eye: full to here, none past there (a far field of snow lies still)
+const SNOW_SPARKLE_ROUGH: vec4f = vec4f(0.80, 0.88, 0.94, 0.99);   // the material target's roughness: in over .xy, out over .zw (fresh snow is 0.92: snowField.ts SNOW_SURF.rough)
+var<private> snowSparkleL: vec3f;                         // what snowGlow's loop found for this pixel (written only under SNOW_SPARKLE)
+fn snowSparkleHash(p: vec2i, salt: u32) -> f32 { var h = (u32(p.x + 32768) * 73856093u) ^ (u32(p.y + 32768) * 19349663u) ^ (salt * 0x9E3779B9u); h = h * 747796405u + 2891336453u; h = ((h >> ((h >> 28u) + 4u)) ^ h) * 277803737u; return f32(((h >> 22u) ^ h) & 0xffffu) * (1.0 / 65536.0); }
+/** this pixel's facet: xyz = its normal, w = how much of a facet the pixel shows (0 = none: most of the snow) */
+fn snowSparkleFacet(P: vec3f, N: vec3f, z: f32) -> vec4f {
+  let far = 1.0 - smoothstep(SNOW_SPARKLE_FAR.x, SNOW_SPARKLE_FAR.y, z);
+  if (far <= 0.0) { return vec4f(0.0); }
+  let fp = z * 2.0 * frame.post.w * frame.invScreen.y;   // metres a pixel here
+  let oct = ceil(log2(max(SNOW_SPARKLE_PX * fp, SNOW_SPARKLE_GRAIN) / SNOW_SPARKLE_GRAIN));
+  let g = SNOW_SPARKLE_GRAIN * exp2(oct); let q = P.xz / g; let c0 = vec2i(floor(q)); let salt = 41u + u32(oct + 0.5);
+  var ci = c0; var dot1 = 0.0;
+  for (var j = 0; j < 9; j++) {   // the nine cells round the pixel: the point nearest it
+    let cj = c0 + vec2i(j % 3, j / 3) - 1;
+    if (snowSparkleHash(cj, salt) >= SNOW_SPARKLE_SHARE) { continue; }
+    let w = clamp(SNOW_SPARKLE_CORE + 1.0 - length(q - (vec2f(cj) + vec2f(snowSparkleHash(cj, salt + 7u), snowSparkleHash(cj, salt + 13u)))) * (g / max(fp, 1e-6)), 0.0, 1.0);
+    if (w > dot1) { dot1 = w; ci = cj; }
+  }
+  if (dot1 <= 0.0) { return vec4f(0.0); }
+  let h = vec2f(snowSparkleHash(ci, salt + 19u), snowSparkleHash(ci, salt + 29u));
+  let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(N.y) > 0.9);
+  let T = normalize(cross(up, N)); let B = cross(N, T);
+  let a = 6.2831853 * h.x; let lean = SNOW_SPARKLE_SPREAD * sqrt(h.y);   // (even over the disc of leans)
+  let bright = snowSparkleHash(ci, salt + 37u);
+  return vec4f(normalize(N + (T * cos(a) + B * sin(a)) * lean), dot1 * mix(0.25, 1.0, bright * bright) * far);
+}
+/** how much of lamp L a facet of normal Nf mirrors to the eye along V: its cosine to the lamp × the lobe round the half vector */
+fn snowSparkleLobe(Nf: vec3f, L: vec3f, V: vec3f) -> f32 {
+  let hv = L + V; let h2 = dot(hv, hv);
+  if (h2 < 1e-8) { return 0.0; }
+  return smoothstep(SNOW_SPARKLE_COS0, SNOW_SPARKLE_COS1, dot(Nf, hv * inverseSqrt(h2))) * max(dot(Nf, L), 0.0);
+}
+fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x, SNOW_SPARKLE_ROUGH.y, rough) * (1.0 - smoothstep(SNOW_SPARKLE_ROUGH.z, SNOW_SPARKLE_ROUGH.w, rough)); }
+
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
 }
@@ -413,6 +594,65 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 }
 
 /** the composite at pixel centre `pixf` of the raster this module runs at → scene-referred colour; post.wgsl takes it from here (debug views 1/2/6/9 are passed through untouched there) */
+// THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR (settings.beamAir; `?nobeamair` = the opaque boxes exactly as they were). passes.ts setBeams hands the laser
+// lines over as segments (the reflection pass's own buffer) and keeps their boxes out of the raster; here each is ADDED to the pixel as what a beam is: a thin
+// line of scattered light whose brightness is the air's (seg.e.w: haze; more in rain, with drops flashing as they cross it; more inside smoke), brighter looked
+// along than across, with the DOT where it lands (seg.b.w) and a glint at the device. Picture only: nothing the game reads. a = start + drawn half-width,
+// b = end + dot, e = the box's (dimmed) emissive + the air's share.
+struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
+struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8> };
+@group(1) @binding(15) var<uniform> beams: Beams;
+const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
+fn beamOutdoors(p: vec2f) -> bool {
+  if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
+  let I = frame.weatherC; let A = frame.weatherD;
+  return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w);
+}
+fn beamSpot(ro: vec3f, D: vec3f, tMax: f32, P: vec3f, cpix: f32, r: f32, haloK: f32) -> f32 {
+  let w = P - ro; let t = dot(w, D);
+  if (t <= 0.0 || t > tMax + 0.06) { return 0.0; }
+  let d2 = dot(w, w) - t * t;
+  let sg = max(r, 0.6 * cpix * t); let sh = 4.0 * sg;
+  if (d2 > 9.0 * sh * sh) { return 0.0; }
+  let peak = min(1.0, (r * r) / (sg * sg));       // a spot smaller than a pixel keeps its light, not its radiance
+  return peak * (exp(-0.5 * d2 / (sg * sg)) + haloK * exp(-0.5 * d2 / (sh * sh)));
+}
+fn beamPix() -> f32 { return 2.0 * frame.post.w * frame.invScreen.y; }   // metres across a pixel per metre of distance (this program's own frame block: the output's under SHARP)
+fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
+  var L = vec3f(0.0);
+  let nb = min(beams.n, 8u);
+  let rain = frame.weatherA.x;
+  for (var i = 0u; i < nb; i++) {
+    let s = beams.seg[i];
+    if (s.e.w <= 0.0) { continue; }
+    let dv = s.b.xyz - s.a.xyz; let len = length(dv);
+    if (len < 1e-3) { continue; }
+    let u = dv / len;
+    let E0 = s.e.xyz * (s.a.w / BEAM_R0);         // the beam's own radiance, the pixel floor's dimming taken back out
+    if (s.b.w > 0.0) { L += E0 * (3.5 * beamSpot(ro, D, tMax, s.b.xyz, cpix, 0.009, 0.07)); }
+    L += E0 * (1.8 * beamSpot(ro, D, tMax, s.a.xyz, cpix, 0.009, 0.05));
+    let w0 = ro - s.a.xyz; let ru = dot(D, u); let rw = dot(D, w0); let uw = dot(u, w0);
+    let den = max(1.0 - ru * ru, 1e-4);
+    var q = clamp((uw - ru * rw) / den, 0.0, len);
+    let t = clamp(ru * q - rw, 0.0, tMax);
+    q = clamp(uw + ru * t, 0.0, len);
+    let Q = s.a.xyz + u * q;
+    let dq = Q - (ro + D * t);
+    let d2 = dot(dq, dq);
+    let sg = max(BEAM_R0, 0.55 * cpix * t); let sh = 3.0 * sg + 0.004;
+    if (d2 > 9.0 * sh * sh) { continue; }
+    var A = s.e.w;
+    if (rain > 0.0) { if (beamOutdoors(Q.xz)) {
+      let cq = q / 0.04; let fq = fract(cq);
+      let h = hash13(vec3f(floor(cq) + 37.0 * f32(i), floor(frame.time * 24.0), 3.7));
+      A += 0.25 * rain + select(0.0, 3.0 * (1.0 - abs(2.0 * fq - 1.0)) * fract(h * 53.0), h > 1.0 - 0.22 * rain);
+    } }
+    if (frame.numSmoke > 0u) { A += min(3.0, 1.2 * smokeDensityAt(Q)); }
+    let I = 2.0 * BEAM_R0 * A * min(inverseSqrt(den), 4.0);   // light scattered per metre of line toward the eye; more of it in the pixel looked along the beam
+    L += E0 * (I * 0.399 * (exp(-0.5 * d2 / (sg * sg)) / sg + 0.15 * exp(-0.5 * d2 / (sh * sh)) / sh));
+  }
+  return L;
+}
 fn compositePixel(pixf: vec2f) -> vec3f {
   let pix = vec2i(pixf);
   var pin = pixf; if (SHARP) { pin = pixf * inOverOut() + frame.sharpCfgC.xy; }   // this pixel on the INTERNAL raster (the stochastic terms' texel maps; + the decoupled jitter that raster carries, 0 without it)
@@ -423,6 +663,7 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     // background: sky through the view ray
     let Pfar = worldFromDepth(pixf, 1.0);
     color = skyRadiance(normalize(Pfar - frame.camPos));
+    if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(Pfar - frame.camPos), 1e4, beamPix()); }
     if (dbg == 0u || dbg == 5u) {
       if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, 1e4); color = color * vol.a + vol.rgb; }   // (view 5 keeps the sky under the volumetrics here, as the old path always did)
       else {
@@ -430,6 +671,7 @@ fn compositePixel(pixf: vec2f) -> vec3f {
       color = color * vol.a + vol.rgb;
       }
     }
+    if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) { color = wxFogApply(color, normalize(Pfar - frame.camPos), 0.0, true); } }   // WEATHER FOG (a kind picked, game/weatherKinds.ts): over the void past the lot as over the ground beside it
   } else {
     // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (GLASS_REFRACT: passes.ts compiles this module a second time with it true, taken while
     // settings.glassRefract; false = every statement below exactly as it was, the frame hash for hash), where the ray the glass bent comes out behind it. So the glass test runs FIRST there:
@@ -462,12 +704,12 @@ fn compositePixel(pixf: vec2f) -> vec3f {
           } else {   // (the setting off while this module is live — a frame at most: the old rule)
             glassT = pow(max(gh.trans, vec3f(1e-3)), vec3f(frame.glassCfg.y / max(cosI, 0.35))) * (1.0 - F);
           }
-          if ((frame.flags & FLAG_DECALS) != 0u) {   // the crack stars ON the pane where the pixel's ray crosses it (the block below, word for word — the marks sit on the glass, nothing bends them)
+          if ((frame.flags & FLAG_DECALS) != 0u || GLASS_BREAK) {   // the crack stars ON the pane where the pixel's ray crosses it (the block below, word for word — the marks sit on the glass, nothing bends them)
             let X = frame.camPos + V * gh.t;
             let paneBox = u32(scene.glass[u32(gh.idx) * 3u + 2u].w + 0.5);
             let fpG = gh.t * 2.0 * frame.post.w * frame.invScreen.y;
-            var gm = glassMarks(X, gh.n, paneBox, fpG);
-            if (GLASS_BREAK) { let vc = gbCracks(u32(gh.idx), X, fpG); gm.crack = max(gm.crack, vc.x); gm.frost = max(gm.frost, vc.y); }   // GLASS BREAKING: the Voronoi crack network between the impacts + their long radials + the bright rim of a cell beside a hole
+            var gm: GlassMarks; gm.crack = 0.0; gm.frost = 0.0; gm.core = 0.0; if ((frame.flags & FLAG_DECALS) != 0u) { gm = glassMarks(X, gh.n, paneBox, fpG); }
+            if (GLASS_BREAK) { let vc = gbCracks(u32(gh.idx), X, fpG); gm.crack = max(gm.crack, vc.x); gm.frost = max(gm.frost, vc.y); }   // GLASS BREAKING: the radial and concentric cracks of every blow + the bright rim of a piece beside a hole (a fractured pane draws them from its own record — hence the block runs under GLASS_BREAK with no mark anywhere)
             let scat = 0.6 * gm.frost + 0.4 * gm.crack;
             if (scat + gm.core > 0.004) {
               glassT *= (1.0 - 0.62 * gm.crack) * (1.0 - 0.9 * gm.frost) * (1.0 - gm.core);
@@ -485,7 +727,8 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     let boxIdx = id & 0xFFFFFu;
     let P = worldFromDepth(sPixf, sDepth);
     let z = distance(P, frame.camPos);
-    let Ed = textureLoad(directTex, sPix, 0).rgb + textureLoad(softTex, sPix, 0).rgb;
+    let EdS = textureLoad(directTex, sPix, 0).rgb; let EdB = textureLoad(softTex, sPix, 0).rgb;   // the shadowed direct per emitter class (sharp, broad)
+    let Ed = EdS + EdB;
     let Ei = upsampleIndirect(sPix, sPin, z, N);
     var emissive = vec3f(0.0);
     var glossPix = false;                       // this pixel is the polished top of a BOX_GLOSS floor box (world geometry, never a character)
@@ -521,11 +764,11 @@ fn compositePixel(pixf: vec2f) -> vec3f {
         // glass where the view ray crosses it. Cracked glass and pulverised glass are diffusers: they cut what comes THROUGH (darker against the lit room), mirror
         // more along the crack faces, and light up with whatever falls ON the pane from either side (a torch on the glazing sets the star alight; in the dark it is
         // a dark web against the room behind). The hole itself is just dark. Only under FLAG_DECALS (up while any mark exists), only for pixels on a pane.
-        if ((frame.flags & FLAG_DECALS) != 0u) {
+        if ((frame.flags & FLAG_DECALS) != 0u || GLASS_BREAK) {
           let X = frame.camPos + V * gh.t;
           let paneBox = u32(scene.glass[u32(gh.idx) * 3u + 2u].w + 0.5);
           let fpG = gh.t * 2.0 * frame.post.w * frame.invScreen.y;          // the pixel's footprint on the pane (m), as gbuffer.wgsl sizes it for the other marks
-          var gm = glassMarks(X, gh.n, paneBox, fpG);
+          var gm: GlassMarks; gm.crack = 0.0; gm.frost = 0.0; gm.core = 0.0; if ((frame.flags & FLAG_DECALS) != 0u) { gm = glassMarks(X, gh.n, paneBox, fpG); }
           if (GLASS_BREAK) { let vc = gbCracks(u32(gh.idx), X, fpG); gm.crack = max(gm.crack, vc.x); gm.frost = max(gm.frost, vc.y); }   // (GLASS BREAKING: as in the refracting path above)
           let scat = 0.6 * gm.frost + 0.4 * gm.crack;
           if (scat + gm.core > 0.004) {
@@ -539,6 +782,15 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     var zg = z; var Ng = N;                     // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless GLASS_REFRACT moved the read)
     if (GLASS_REFRACT) { zg = z0; Ng = select(N, N0, moved); }
     var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
+    var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
+    if (SNOW_GLOW || SNOW_SPARKLE) {   // SNOW GLOW (snowGlow above): on a snow pixel, the light that wrapped its terminator, and shade that leans to blue — never a man's pixel or a section cap's (one walk of the lights for the glow and the sparkle)
+      let sa = snowGlowAmt(textureLoad(gNormal, sPix, 0).a);
+      if (sa > 0.0 && ((id >> 28u) & 3u) == 0u) {
+        let glow = snowGlow(sPix, P, N, z, EdS, EdB);
+        if (SNOW_GLOW) { let lE = luminance(Ed); let lI = luminance(Ei); dif += albedo * (glow + Ei * (SNOW_GLOW_SHADE - vec3f(1.0)) * (lI / max(lE + lI, 1e-5))) * (sa / PI); }
+        if (SNOW_SPARKLE) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
+      }
+    }
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched
@@ -546,7 +798,8 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     if (reflK > 0.0) { refl = upsampleRefl(sPixf) * (reflK * albedo4.a); color += refl * glassT; }
     if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
     else if (glassPix) { spec = upsampleSpecAny(pix, pin, zg, Ng) * specK; color += spec; }
-    if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(id, P, N, z, Ed, Ei); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
+    if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(id, P, N, z, EdS, EdB, Ei); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
+    if (SNOW_SPARKLE) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)
     else if (dbg == 2u) { color = N * 0.5 + 0.5; }
@@ -563,13 +816,21 @@ fn compositePixel(pixf: vec2f) -> vec3f {
     else if (dbg == 13u) { color = textureLoad(directTex, pix, 0).rgb; }   // the v3 denoiser's shadow-client state, written raw into the sharp class's texture by its last iteration (denoise.wgsl DN_DEBUG_VIEW): r/g = σ per class, b = history length
     else if (dbg == 16u) { color = Ei; }                            // phase 5: the resampling gather's reservoir state (fgather.wgsl mainGi writes it into the indirect, through the diffuse denoiser): r = confidence M ÷ cap, g = temporal history taken, b = spatial taps accepted ÷ k — the plain indirect with resampling off
     else if (dbg == 17u) { color = select(vec3f(0.0), upsampleRefl(pixf), frame.rtCfg.w >= 1.0); }   // phase 5: the reflection pass's raw output as the composite fetches it (no cutoff fade / gloss-keep) — the mesh hits and the hit-lighting reuse are judged here
+    if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(worldFromDepth(pixf, 0.5) - frame.camPos), zg, beamPix()); }
     if (dbg == 0u || dbg == 5u) {
+      if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { wxAirT = wxAirTEst(pixf, zg); } } }
       if ((frame.flags & FLAG_FROXEL_VOL) != 0u) { let vol = froxelVol(pixf, pix, pin, zg); color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u); }   // (the fog along the PIXEL's ray to its own surface — zg — whatever a bend read)
       else {
       let vol = upsampleVol(pix, pin, zg);
       color = select(color * vol.a + vol.rgb, vol.rgb, dbg == 5u);
       }
     }
+    if (WX_KINDS && !WX_VOL) { if (frame.cardCfg.w != 0u && dbg == 0u) {   // (the flat veil — under WX_VOL the weather's air is a volume the volumetric pass marched: it is in `vol` above)
+      if (WX_EDGE) {   // (the veil at the building's shell — common.wgsl wxFogApplySurf: an outside wall's face is asked where its normal points; a man's pixel and a box he carries — bit 28 / the owner byte of the PIXEL's own id — where he stands)
+        var idg = id; if (GLASS_REFRACT) { if (moved) { idg = textureLoad(gId, pix, 0).x; } }
+        color = wxFogApplySurf(color, normalize(worldFromDepth(pixf, depth) - frame.camPos), zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
+      } else { color = wxFogApply(color, normalize(worldFromDepth(pixf, depth) - frame.camPos), zg, false); }
+    } }   // WEATHER FOG along the pixel's ray to its surface: the field the men's eyes are cut by (weather.ts airTrans)
   }
   return max(color, vec3f(0.0));
 }

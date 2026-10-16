@@ -3,5 +3,13 @@ dist/
 vendor/typescript/
 vendor/*.tgz
 .DS_Store
+.claude/scheduled_tasks.lock
+.claude/scheduled_tasks.json
 
+# nested git worktrees for parallel work
+.worktrees/
 docs/shots/ab/
+__pycache__/
+
+# logs a tool left at the top of the checkout (the perf logs filed under docs/ are kept on purpose)
+/*.log

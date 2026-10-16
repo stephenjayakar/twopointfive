@@ -12,10 +12,11 @@
 // pips); game.ts (who carries which row, Character.muzzleAhead).
 import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
+import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
 
-export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000';
+export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870';
 export type FireMode = 'semi' | 'auto' | 'burst';
-export type WeaponClass = 'pistol' | 'carbine' | 'rifle';
+export type WeaponClass = 'pistol' | 'carbine' | 'rifle' | 'shotgun';
 /** what leaves a dying (or downed) hand that held it: a throwables.ts ItemKind (combat.ts dropFromHand) — 'rifle' has no body of its own until R2 gives it one */
 export type DropKind = 'pistol' | 'rifle';
 /** A GUARD's hands on it (combat.ts fireWeapon): ± half of ( base + min(moveCap, Sam's ground speed · moveK) + max(0, range − rangeFrom) · rangeK ) per axis on the unit
@@ -31,7 +32,7 @@ export interface BurstSpec { min: number; max: number; interval: number; gapMin:
  *  the standoff, was grabbed — is over: no round of it leaks out later), and `off`: the world offset laid on the aim point for the whole burst when it is the
  *  deliberately wide opening burst (suppressFirst) — null for an aimed one. */
 export interface BurstState { left: number; n: number; nextT: number; idx: number; t: number; off: Vec3 | null; }
-/** Automatic fire under a HELD trigger (the FN2000's AUTO, docs/internal/sc20k-design.md §5 + the designer's Z note: "we'll want a way for even the SC20K to be
+/** Automatic fire under a HELD trigger (the FN2000's AUTO, docs/internal/sc20k-design.md §5 + the maintainer's Z note: "we'll want a way for even the SC20K to be
  *  full auto for suppression" — player.ts reads it for Sam; an operative or a guard handed an fn2000-pattern row may read the same numbers): seconds between rounds
  *  while the trigger stays down (0.1 = 600 rpm, one round every 6th frame at 60 Hz), how much wider each successive round of one held string is drawn
  *  (+ spreadPerRound per round already gone, capped at spreadCap — the guards' burst cone, in the player's hands), and how long after the trigger comes up the
@@ -39,6 +40,14 @@ export interface BurstState { left: number; n: number; nextT: number; idx: numbe
 export interface AutoSpec { interval: number; spreadPerRound: number; spreadCap: number; resetAfter: number; }
 /** Streaks (R6 reads it; null = none): every Nth round and the last N of a magazine, in this colour */
 export interface TracerSpec { every: number; lastN: number; color: Vec3; }
+/** A SHELL OF SHOT (shotgun.ts fireShell; absent on every other row = one round a pull, the fire path exactly as it was): `n` pellets a pull, each a real round
+ *  through combat.ts fireWeapon — the first down the bore as the hands hold it, the rest drawn evenly over a disc `cone` (tan of its half angle) round that. What
+ *  a pellet does to a man is by the PATTERN, never by a count kept on him: inside `dropM` any one pellet of it puts him down (the whole charge is still a fist
+ *  wide); past it he goes down only to `need` or more pellets of ONE shell, and a man caught by fewer is peppered — doubled over a second and a half, alert, on
+ *  his feet (launcher.ts staggerGuard). Nothing is remembered from one shell to the next.
+ *  `breach`: what the same shell does to a door's lock — `need` or more pellets into a latched leaf within `latchM` of its latch edge, from a muzzle within
+ *  `reachM` of where they land, and the keep is gone and the leaf goes in (doors.ts kickIn: a steel door rings and holds, as it does under a boot). */
+export interface PelletSpec { n: number; cone: number; dropM: number; need: number; breach: { reachM: number; latchM: number; need: number }; }
 
 export interface WeaponDef {
   id: WeaponId;
@@ -82,10 +91,15 @@ export interface WeaponDef {
   /** the rigProps group that draws it in the hand: 'pistol' = RIG.pistol (slide, grip, can, rail light), 'guardPistol' = RIG.guardPistol (slide, grip, weapon-light
    *  lens); the long guns' groups arrive with R1 ('carbine') and R5 ('sc20k' — the FN2000's; the rig group keeps the name it was authored under) */
   rig: 'pistol' | 'guardPistol' | 'carbine' | 'sc20k';
+  /** HANDLING — how readily it comes round in the hands, 1 = a pistol, lower = longer / heavier (the turn weight: character.ts TURN scales the top rate and the
+   *  acceleration of a man's muzzle by it, and half of it his body's). Optional: a row without one takes its class's (handlingOf, below). Never a damage number. */
+  handling?: number;
   /** where its light rides: the rail under the Five-seveN / a guard's weapon light in the lens slot, the carbine's on the handguard, none */
   light: 'rail' | 'handguard' | 'none';
   drop: DropKind;
   tracer: TracerSpec | null;
+  /** a shotgun: every pull is a shell of this many pellets (PelletSpec) — absent: a single round */
+  pellets?: PelletSpec;
 }
 
 /** The service-pistol spread every guard's hands have had since the first firefight (combat.ts fireWeapon's old literal line): 0.05 + min(0.06, v·0.014) + max(0, range − 8)·0.006. */
@@ -96,8 +110,11 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   // at 0.38 / 1.02 / 1.38), player.ts (0.22 s between rounds), combat.ts fireWeapon (the small dim flash card, the light at × suppressedGain, 'pistolSuppressed',
   // a 'shot' event at level 1, 4 N·s into a carton), hitPlayer (the gun leaves his hand drawn with its can), Character (muzzle 0.26 ahead of the wrist).
   fiveseven: {
-    id: 'fiveseven', enabled: true, name: 'FN Five-seveN (suppressed)', short: 'Five-seveN', calibre: '5.7×28 mm', cls: 'pistol',
-    magCapacity: 10, spareMags: 3, topUp: true, reload: { dur: 1.6, out: 0.38, in_: 1.02, rack: 1.38 },
+    id: 'fiveseven', enabled: true, cls: 'pistol',
+    // (gear.ts: the 2010s issue kit renames Sam's two rows where they are READ — every number below is the row's, whichever name it wears, but the magazine's size)
+    get name() { return GEAR.on ? GEAR_NAMES.pistolLong : 'FN Five-seveN (suppressed)'; }, get short() { return GEAR.on ? GEAR_NAMES.pistol : 'Five-seveN'; }, get calibre() { return GEAR.on ? GEAR_NAMES.pistolCalibre : '5.7×28 mm'; },
+    get magCapacity() { return GEAR.on ? GEAR_MAG.pistol : 10; },   // (the issue kit's Glock holds fifteen, in the gun and in each spare: the maintainer's balance call, the one number the kit changes — read when a gun is loaded, reloaded or drawn on the HUD)
+    spareMags: 3, topUp: true, reload: { dur: 1.6, out: 0.38, in_: 1.02, rack: 1.38 },
     modes: ['semi'], cd: 0.22, cdJitter: 0, burst: null, auto: null,
     report: { level: 0.6, loud: false, voice: 'pistolSuppressed' }, suppressed: true, muzzleFx: 'pistolSuppressed', propImpulse: 4,   // (level < 1: an odd noise nearby — a look, suspicion — never 'that was a shot' (guards.ts hearingCheck); the FN2000 keeps level 1: a 5.56, suppressed or not, is unmistakable. Tab ▸ Sandbox has the sliders)
     aiSpread: AI_PISTOL_SPREAD, damage: 'oneShot', muzzleAhead: 0.26, rig: 'pistol', light: 'rail', drop: 'pistol', tracer: null,
@@ -117,7 +134,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   // 0.9–1.6 s apart (guards.ts burstTrigger), the cone opening +0.03 a round; a shouldered long gun beats a pistol at arm's length (base 0.035); thirty to a box
   // and 2.6 s standing there changing it, the empty clattering down at 0.7 s (guards.ts tickReloadBeat → a 'mag' item drawn as the long bakelite box); the report
   // is 'carbineReport' (sfx.ts: pistolLoud's recipe, harder and an octave lower, a longer slap) at level 1 like every gun (finding 1: louder has nowhere to go, and
-  // the designer said fine); the flame and the light are effects.ts muzzleFx.carbine (twice the bare pistol's card, × 1.7 the light over 10 m — UNTUNED, viewer
+  // the maintainer said fine); the flame and the light are effects.ts muzzleFx.carbine (twice the bare pistol's card, × 1.7 the light over 10 m — UNTUNED, viewer
   // pass); a dying hand lets the whole rifle go (throwables 'rifle'). RIG.carbine and the long-gun poses are R1's; tracers are R6's to read.
   aks74u: {
     id: 'aks74u', enabled: true, name: 'AKS-74U carbine', short: 'AKS-74U', calibre: '5.45×39 mm', cls: 'carbine',
@@ -127,7 +144,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle',
     tracer: { every: 3, lastN: 3, color: [1.0, 0.42, 0.12] },
   },
-  // Sam's FN2000 (5.56 bullpup, integrally suppressed — "okay if it's not materially louder than the pistol", per the designer and per canon; docs/internal/
+  // Sam's FN2000 (5.56 bullpup, integrally suppressed — "okay if it's not materially louder than the pistol", per the maintainer and per canon; docs/internal/
   // sc20k-design.md §5, lane R5): 30+1 topped up like the Five-seveN and two spare thirties he manages the same way (the empty clatters down out of the well behind
   // the grip at 0.5 s of the 2.4 s reload, player.ts); the selector SEMI (one round a click, 0.2 s dead after it) or AUTO on Z (600 rpm under a held trigger, each
   // round of a held string 0.012 rad wider than the last up to 0.08 — thirty rounds in three seconds, and every one of them puts a man's head down like a pistol
@@ -138,11 +155,28 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
   // base); the muzzle 0.52 out along the bore off the drawn prop (rigProps.sc20kMuzzleAhead agrees); its own weapon light on the fore-end (L); down with it in
   // his hands the whole rifle leaves them (throwables 'rifle' with fill 1: the bullpup's own item body). RIG.sc20k draws it in the hands and slung across his back.
   fn2000: {
-    id: 'fn2000', enabled: true, name: 'FN2000 (suppressed)', short: 'FN2000', calibre: '5.56×45 mm', cls: 'rifle',
+    id: 'fn2000', enabled: true, get name() { return GEAR.on ? GEAR_NAMES.rifleLong : 'FN2000 (suppressed)'; }, get short() { return GEAR.on ? GEAR_NAMES.rifle : 'FN2000'; }, calibre: '5.56×45 mm', cls: 'rifle',
     magCapacity: 30, spareMags: 2, topUp: true, reload: { dur: 2.4, out: 0.5, in_: 1.5, rack: 2.0 },
     modes: ['semi', 'auto'], cd: 0.2, cdJitter: 0, burst: null, auto: { interval: 0.1, spreadPerRound: 0.012, spreadCap: 0.08, resetAfter: 0.25 },
     report: { level: 1, loud: true, voice: 'rifleSuppressed' }, suppressed: true, muzzleFx: 'sc20k', propImpulse: 5,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.52, rig: 'sc20k', light: 'handguard', drop: 'rifle', tracer: null,
+    handling: 0.8,   // (a bullpup: a rifle's weight held in close — it comes round nearly like the carbine)
+  },
+  // The squad's breaching shotgun (gear, 10-08: a Remington 870-pattern pump, short barrel, stand-off muzzle device) — a row a teammate's loadout card hands him
+  // in place of his rifle (kit.ts 'shotgun') and that you may bring in place of the FN2000 (kit slot 2, the same keys). Six in the tube and one up the pipe, a
+  // pump's 0.9 s between shells (roomfight.ts keeps an operative's controlled pairs to it), 3.2 s thumbing a tube full back in (one beat: nothing drops out of a
+  // tube gun); bare and LOUD — level 1 like every long gun; nine pellets a shell over a wide disc (PelletSpec: tan 0.06 — a metre across at eight metres, wider than
+  // a real cylinder bore throws so the fall-off happens inside this floor's rooms and corridors: UNTUNED, a call left on the gear page), any pellet a man's end
+  // inside 8 m, four of one shell past it, two metres' reach on a lock. It is carried and drawn as the carbine (rig 'carbine': the long-gun carriage, its light on
+  // the handguard — NOT YET A MODEL OF ITS OWN: a teammate's looks like the carbine, yours like the FN2000) and speaks with the carbine's report until somebody with ears gives it
+  // its own. Nothing carries one unless a card says so.
+  m870: {
+    id: 'm870', enabled: true, name: 'M870 breaching shotgun', short: 'M870', calibre: '12 gauge', cls: 'shotgun',
+    magCapacity: 6, spareMags: 3, topUp: true, reload: { dur: 3.2, out: 0.4, in_: 2.5, rack: 2.9 },
+    modes: ['semi'], cd: 0.9, cdJitter: 0.2, burst: null, auto: null,
+    report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 2,
+    aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle', tracer: null,
+    pellets: { n: 9, cone: 0.06, dropM: 8, need: 4, breach: { reachM: 2, latchM: 0.5, need: 4 } },
   },
   // ---- switched off: rows from the design (§2 / §3), nothing constructs them. Each names what its lane still owes it. ----
   // AK-74M-pattern rifle (415 mm barrel, brake): tighter, a smaller flash than the shorty (doc: light gain 1.1 — its own muzzleFx block when a setting wants it).
@@ -168,6 +202,15 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
  *  anything), and the seconds the launcher takes to hand-cycle between two rings. The rest of the ring — its speed, its arc, what a head or a hip does with it —
  *  lives with its flight in launcher.ts RING. */
 export const LAUNCHER = { rings: 5, cd: 0.9 };
+/** The 40 mm high-explosive round out of the same tube (he40.ts flies it and sets it off through frag.ts's blast): how many he brings (spent for good), and the
+ *  seconds it takes to break the tube, seat the next round and close it — the ring's hand-cycle clock (Rifle.ringCd: there is one tube) set to this after a round. */
+export const LAUNCHER40 = { rounds: 3, cd: 2.6 };
+/** a row's handling (WeaponDef.handling), or its class's: a pistol 1, a short carbine 0.82, a full rifle 0.7 */
+export const HANDLING_BY_CLASS: Record<WeaponClass, number> = { pistol: 1, carbine: 0.82, rifle: 0.7, shotgun: 0.75 };
+/** THE one place the turn weight reads what a man carries (game.ts deals it to `Character.turn.h` every frame): the row's own `handling`, else its class's, else a
+ *  carbine's (a row cast into a class this table has not met: a new WeaponClass must add its row here, tsc says so); × `kit` for what else is in his hands (a shield
+ *  held up: pass its factor; 1, or anything that is not a positive number, = nothing). Never NaN: the turn's step would carry it into his yaws. */
+export function handlingOf(def: WeaponDef, kit = 1): number { return (def.handling ?? HANDLING_BY_CLASS[def.cls] ?? HANDLING_BY_CLASS.carbine) * (kit > 0 && Number.isFinite(kit) ? kit : 1); }
 
 /** Callbacks for the beats of the staged reload (player.ts plays the foley and drops the empty on them). */
 export interface ReloadEvents { magOut?(rounds: number, dropped: boolean): void; magIn?(rounds: number): void; rack?(): void; done?(): void; }
@@ -181,6 +224,11 @@ export class Firearm {
   reloadT = -1;                      // seconds into the reload, -1 = idle
   private stage = 0;                 // 0 nothing done, 1 mag out, 2 mag in, 3 racked
   private ev: ReloadEvents = {};
+  /** this reload's own beat, when whoever started it handed one (startReload's `beat`: a tactical change keeps the old magazine and takes longer over it, an
+   *  empty gun's is the quick one — game/kitanim.ts); null = the row's, as ever */
+  private beat: WeaponDef['reload'] | null = null;
+  /** the beat the reload under way (or the next plain one) runs on */
+  get reloadRow(): WeaponDef['reload'] { return this.beat ?? this.def.reload; }
   shotsFired = 0;
   /** a guard's burst in progress (guards.ts burstTrigger; only ever non-null on a row with a BurstSpec) — see BurstState */
   burst: BurstState | null = null;
@@ -231,23 +279,26 @@ export class Firearm {
    *  while a round is chambered on a row that racks its chambered round OUT of the magazine (a guard's twelve all told, never thirteen) */
   get magRoom() { return this.def.magCapacity - (this.def.topUp ? 0 : this.chamber); }
   /** Begin a reload if it makes sense (have a spare that improves things). Returns false if refused. */
-  startReload(ev: ReloadEvents = {}): boolean {
+  startReload(ev: ReloadEvents = {}, beat?: WeaponDef['reload']): boolean {
     if (this.reloading) return false;
     if (this.spare.length === 0 && !this.bottomless) return false;
     const best = Math.min(this.spare.length ? Math.max(...this.spare) : this.def.magCapacity, this.magRoom);
     if (this.mag !== null && this.mag >= best && this.chamber === 1) return false;   // nothing to gain
-    this.reloadT = 0; this.stage = 0; this.ev = ev;
+    this.reloadT = 0; this.stage = 0; this.ev = ev; this.beat = beat ?? null;
     return true;
   }
-  cancelReload() { this.reloadT = -1; this.stage = 0; }
+  cancelReload() { this.reloadT = -1; this.stage = 0; this.beat = null; }
   /** A full magazine seated and a round chambered (the row's way: topped up or racked out of it), any reload or burst forgotten — how a guard's reload beat ends
    *  (guards.ts) and how the QA probes stand a man up with a fresh gun. */
   rearm() { this.cancelReload(); this.burst = null; this.autoIdx = 0; this.chamber = 1; this.mag = this.def.magCapacity - (this.def.topUp ? 0 : 1); }
+  /** no magazine holding more than the row's magazine does NOW — for a row whose size is read off a switch (gear.ts: Sam's pistol, 15 under the issue kit, 10
+   *  without): thrown off on a running game, the rounds over are put away. Nothing where everything fits, so a row whose size never moves is never touched. */
+  fit() { const cap = this.def.magCapacity; if (this.mag !== null && this.mag > this.magRoom) this.mag = this.magRoom; for (let i = 0; i < this.spare.length; i++) if (this.spare[i] > cap) this.spare[i] = cap; }
 
   update(dt: number) {
     if (!this.reloading) return;
     this.reloadT += dt;
-    const t = this.reloadT, R = this.def.reload;
+    const t = this.reloadT, R = this.beat ?? this.def.reload;
     if (this.stage < 1 && t >= (R.out ?? R.dur)) {
       // magazine out: empties are dropped on the floor, partials go back to storage (nothing to do if the well is already empty,
       // e.g. a reload that was cancelled by sprinting after the old magazine came out)
@@ -273,7 +324,7 @@ export class Firearm {
       if (this.chamber === 0 && this.mag !== null && this.mag > 0) { this.mag--; this.chamber = 1; this.ev.rack?.(); }
       this.stage = 3;
     }
-    if (t >= R.dur) { this.reloadT = -1; this.stage = 0; this.ev.done?.(); }
+    if (t >= R.dur) { this.reloadT = -1; this.stage = 0; this.beat = null; this.ev.done?.(); }
   }
 }
 
@@ -283,23 +334,31 @@ export class Pistol extends Firearm {
   constructor() { super(WEAPONS.fiveseven); }
 }
 
-/** What can ride under the FN2000's fore-end for the RIGHT button to work (the left always fires rounds): today the ring-airfoil launcher; the list leaves room for
- *  the rest of Chaos Theory's launcher menu (sticky camera, sticky shocker, gas) without another flag apiece. */
-export type RifleAttachment = 'ring';
+/** What rides under the FN2000's fore-end for the RIGHT button to fire (the left always fires rounds): the launcher's loads — the ring airfoil and the 40 mm
+ *  grenade; the list leaves room for the rest of Chaos Theory's launcher menu (sticky camera, sticky shocker, gas) without another flag apiece. */
+export type RifleAttachment = 'ring' | 'he40' | 'cam';   // ('cam': a sticky camera out of the same tube — stickycam.ts; on a rifle's list only once a card or a mission has issued him one)
 /** Sam's FN2000 (game.ts Player.rifle, kit slot 2): the fn2000 row being carried, its fore-end light's switch (L with it in the hands), and its attachments —
- *  `attachments` = what this rifle has bolted on (in the order its slot digit cycles them), `attIdx` = the one SELECTED for the right button (−1 = none: the
- *  right button does nothing with the rifle up), `rings` left of the LAUNCHER.rings he brought (spent, not retrievable), `ringCd` the seconds the launcher takes
- *  to hand-cycle before the next may go. The selector (Z: SEMI / AUTO) is the Firearm's own `mode`; rounds are always on the left button whatever is selected. */
+ *  `attachments` = what this rifle has bolted on (in the order its slot digit steps them), `attIdx` = the one UP on the right button: ALWAYS one of them on a
+ *  rifle that has any — there is no 'nothing' to step through in a fight, the digit pressed again flips to the next and round again (−1 only with nothing under
+ *  the barrel: the shotgun) —, `rings` left of the LAUNCHER.rings he brought (spent, not retrievable), `ringCd` the seconds the launcher takes
+ *  to hand-cycle before the next may go. The selector (Z: SEMI / AUTO) is the Firearm's own `mode`; rounds are always on the left button whatever is up. */
 export class Rifle extends Firearm {
   lightOn = false;
-  readonly attachments: RifleAttachment[] = ['ring'];
-  attIdx = -1;
+  readonly attachments: RifleAttachment[] = ['ring', 'he40'];
+  attIdx = 0;
   rings = LAUNCHER.rings; ringCd = 0;
-  constructor(def: WeaponDef = WEAPONS.fn2000) { super(def); }
-  /** the attachment the right button works now, or null (none selected) */
+  /** 40 mm high-explosive rounds left of the LAUNCHER40.rounds he brought (the 'he40' attachment: he40.ts) */
+  shells = LAUNCHER40.rounds;
+  /** sticky cameras left for the tube (stickycam.ts: 0 on every rifle until stickyIssue hands him some — and then 'cam' is the third load 2 steps to) */
+  cams = 0;
+  constructor(def: WeaponDef = WEAPONS.fn2000) { super(def); if (def.pellets) { this.attachments.length = 0; this.attIdx = -1; this.rings = 0; this.shells = 0; } }   // (the breaching shotgun in the rifle's slot — kit.ts: no launcher under its barrel)
+  /** the attachment the right button fires now (null: nothing under this barrel) */
   get attachment(): RifleAttachment | null { return this.attIdx >= 0 ? this.attachments[this.attIdx] ?? null : null; }
-  /** its slot digit pressed again with it in the hands (player.ts): none → the first attachment → … → the last → none. Returns the new selection. */
-  cycleAttachment(): RifleAttachment | null { this.attIdx = this.attIdx + 1 < this.attachments.length ? this.attIdx + 1 : -1; return this.attachment; }
+  /** rounds left of an attachment */
+  left(a: RifleAttachment): number { return a === 'ring' ? this.rings : a === 'cam' ? this.cams : this.shells; }
+  /** its slot digit pressed again with it in the hands (player.ts): the next attachment goes on the right button, the last back to the first — ring ⇄ 40 mm.
+   *  Returns what is up now. */
+  cycleAttachment(): RifleAttachment | null { const n = this.attachments.length; this.attIdx = n ? (this.attIdx + 1) % n : -1; return this.attachment; }
 }
 
 /** OCP: pistol-mounted emitter that knocks out electronics briefly; recharges. */

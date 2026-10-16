@@ -1,15 +1,32 @@
 // Audio engine: synthesized SFX with HRTF spatialization, ray-cast occlusion (low-pass + attenuation through the
 // same box scene the renderer traces), a reverb send sized by the traced free path around the listener, ambience
 // emitters, and the generative score. Starts on the first user gesture (browser autoplay policy).
+// Since the native-engine seams the GRAPH lives behind an AudioBackend (src/audio/backend.ts): WebAudioBackend (src/audio/webaudio.ts) is
+// today's node graph, node for node; a native host hands another. What stays HERE is the game's half — the voice budget, the propagation through the walls, the ambience emitters'
+// placement and levels, the reverb sized by the traced free path, the footstep material — exactly as it was.
 import { Vec3, v3 } from '../math/vec';
 import { StaticCollision } from '../scene/collision';
 import { GameAudioLike } from '../game/audio_iface';
 import { FLOOR, FloorMat, floorAt } from '../game/floor';
-import { buildSfx, SfxName } from './sfx';
-import { Music } from './music';
+import { buildSfx, ROLL_LOOP, SfxName } from './sfx';
+import { buildSfxWas, wasInGame } from './sfxWas';
+import { Music, WebAudioMusicBackend } from './music';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
+import type { AudioBackend, BackendVoice, SfxBuffer, SfxContext } from './backend';
+import { WebAudioBackend, noiseBuffer } from './webaudio';
+import { AMBIENCE_DISTANCE, AMBIENCE_OFFICE, AmbienceKind, HISS, ambienceLoop } from './loops';
+import { MAX_DIST, REF_DIST, ROLLOFF, VOLUME_DEFAULTS, cutoffOf, distanceGain, hrtfFor, occludedGain, sendOf } from './mixlaw';
 
-interface Voice { src: AudioBufferSourceNode; panner?: PannerNode; filter?: BiquadFilterNode; gain: GainNode; pos?: Vec3; end: number; loop?: boolean; /** estimated level at the listener when it started (positional one-shots): what the voice cap steals by */ level?: number; /** stolen: fading out over a few ms, no longer counted against the budget */ dying?: boolean; }
+interface Voice { v: BackendVoice; positional: boolean; /** made by `again()`: the lanes' re-listen, faded apart from the tape's own voices */ again?: boolean; pos?: Vec3; end: number; loop?: boolean; /** estimated level at the listener when it started (positional one-shots): what the voice cap steals by */ level?: number; /** stolen: fading out over a few ms, no longer counted against the budget */ dying?: boolean;
+  /** a voice that FOLLOWS a thing for as long as that thing makes its sound (`follow()`): asked every update where it is and how hard it goes */ follow?: Follow; }
+/** What a followed voice is asked each update: where the thing is, how hard it goes (0‥1: level and pitch ride it) and the game's own clock (a clock that stands still —
+ *  a pause, a frozen card — is a thing that makes no sound). null = it has stopped, or is gone: the voice fades out and is let go. */
+export type FollowSrc = () => { pos: Vec3; k: number; t: number } | null;
+interface Follow { src: FollowSrc; name: string; gain: number; rate: number; occ: number; lastT: number; /** the mixer's clock when the game's last moved */ seen: number; }
+/** the stretch of a followed voice's buffer that repeats while it is held (seconds; a take shorter than the stretch loops whole) */
+const FOLLOW_LOOPS: Record<string, { start: number; end: number }> = { chairRoll: ROLL_LOOP };
+const MAX_FOLLOW = 4, FOLLOW_SECS = 45, FOLLOW_FADE_MS = 140;   // followed voices at once · the longest one is held · its fade when the thing stops
+
 
 /** THE VOICE BUDGET (W8.6). The loud minute — four QRF carbines, the shift's pistols, Sam's rifle, impacts, brass, doors — asked for 40–80 positional voices alive at
  *  once, every one an HRTF panner (a pair of convolutions) behind a propagate() through the walls, most of them 30 m and three rooms away at −50 dB under the compressor.
@@ -17,66 +34,107 @@ interface Voice { src: AudioBufferSourceNode; panner?: PannerNode; filter?: Biqu
  *  all; at most MAX_POSITIONAL positional one-shots live at once (a newcomer louder than the quietest steals its place, a quieter one is dropped); and only the near or
  *  loud ones get the HRTF model — the far and faint are panned 'equalpower', which costs next to nothing and, that far down, sounds the same. Loops (a canister's hiss)
  *  and non-positional sounds (stings, thunder, UI) are outside all three. */
+/** a followed voice by how hard its thing goes (k 0‥1): quieter and lower as it slows, so a chair coasting to rest winds down instead of cutting off */
+const followGain = (k: number) => { const c = Math.min(1, Math.max(0, k)); return Math.min(1, c / 0.08) * (0.3 + 0.7 * c); },   // (nothing at rest: a thing that is not moving makes no sound, whatever its owner says)
+  followRate = (k: number) => 0.8 + 0.3 * Math.min(1, Math.max(0, k));
 const MAX_POSITIONAL = 24;
 const CULL_LEVEL = 0.0056;                    // ≈ −45 dB re a gain-1 sound at the reference distance
-const HRTF_NEAR_M = 12, HRTF_LOUD_LEVEL = 0.05; // travelled under 12 m, or louder than −26 dB at the ear: worth the HRTF panner
-const REF_DIST = 1.6, ROLLOFF = 1.1;          // the positional panners' distance law (inverse) — one place, so the level estimate above matches what the graph does
+
+export { VOLUME_DEFAULTS };   // (audio/mixlaw.ts: the levels a fresh page has, and the law for one positional voice — the listening page reads the same)
+
+/** which table of effects the mixer loads, read once when the audio starts. As shipped: the redone table (audio/sfx.ts) with the voices the maintainer picked as
+ *  BETTER BEFORE laid over it from the old one (audio/sfxWas.ts `WAS_IN_GAME`: his votes of 10-12 — the redone ones stay in sfx.ts, on the listening page, as 'after').
+ *  `was` = all of the old table (the page's `?oldsounds`), `redone` = all of the redone one (`?newsounds`) — for hearing either whole in play. The mixer's ears
+ *  only: nothing the game hears with reads it. */
+export const SFX_TABLE = { was: false, redone: false };
+/** the table the game plays (a voice added since the old table was frozen keeps its own) */
+export function gameSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
+  const t = buildSfx(ctx);
+  return SFX_TABLE.was ? { ...t, ...buildSfxWas(ctx) } : SFX_TABLE.redone ? t : { ...t, ...wasInGame(ctx) };
+}
+
+/** one sound as the game asked the mixer for it: `dur` = seconds as played (the buffer's length over its rate), `heard` 2 = played, 1 = asked and culled (inaudible, or under a full
+ *  budget), 0 = the mixer was off (a muted page, a replay's undrawn seek) */
+export interface SoundAsk { name: string; gain: number; dur: number; heard: 0 | 1 | 2; mix?: SoundMix }
+/** how one voice was mixed, BEFORE the page's trim (`trims`) — kept by the lanes so `again()` can play that moment once more under whatever is picked now. `rel` = where
+ *  it seemed to come from, in the listener's own frame (right, up, ahead; absent = a sound with no place), `gain` after occlusion, `cut` the low-pass in Hz. */
+export interface SoundMix { rel?: [number, number, number]; gain: number; rate: number; cut?: number; send?: number; hrtf?: boolean; pan?: number }
+/** what the page lays over ONE sound for the mixer's ears: another loaded buffer (`loadTake`), pitch, level, a low-pass in Hz. The game hears with none of it. */
+export interface SoundTrim { take?: string; rate?: number; gain?: number; tone?: number }
 
 export class AudioEngine implements GameAudioLike {
-  ctx: AudioContext | null = null;
-  private sfx!: Record<SfxName, AudioBuffer>;
-  private master!: GainNode; private sfxBus!: GainNode; private revSend!: GainNode; private reverb!: ConvolverNode; private revOut!: GainNode; private ambBus!: GainNode;
+  /** the graph (null until start()): the Web Audio one on the page, another host's otherwise */
+  backend: AudioBackend | null = null;
+  /** the Web Audio context while the backend is the browser's (what the page's hooks / tests looked at) */
+  get ctx(): AudioContext | null { return this.backend?.webAudio?.ctx ?? null; }
   music: Music | null = null;
+  /** the main menu is up (main.ts says so every frame, from before the first gesture makes the score): the score plays the theme alone there (music.ts `menu`) */
+  get scoreMenu() { return this.menuUp; }
+  set scoreMenu(v: boolean) { this.menuUp = v; if (this.music) this.music.menu = v; }
+  private menuUp = false;
+  /** the level's own music, as PIECE_NAMES indices (audio/setlist.ts; main.ts says it once at boot, before the first gesture makes the score): music.ts `setlist` */
+  get scoreSet() { return this.levelSet; }
+  set scoreSet(v: readonly number[] | null) { this.levelSet = v; if (this.music) this.music.setlist = v; }
+  private levelSet: readonly number[] | null = null;
   private voices: Voice[] = [];
   private listener: Vec3 = [0, 1.6, 0]; private camFwd: Vec3 = [0, 0, -1];
   private lastEnvT = 0;   // when the reverb environment was last re-probed
-  volume = { master: 0.8, sfx: 1.0, music: 0.55, ambience: 0.6 };
+  volume = { ...VOLUME_DEFAULTS };
   started = false; enabled = true;
-  private ambience: { pos: Vec3; node: AudioBufferSourceNode; gain: GainNode; panner: PannerNode; filter: BiquadFilterNode; base: number; radius: number; f0: number }[] = [];   // f0 = the source's own low-pass (its timbre), the ceiling for the occlusion filter
+  /** told of every sound asked for (the replay's sound lanes: src/replay/soundlanes.ts); null = nobody listens, nothing is built */
+  tap: ((a: SoundAsk) => void) | null = null;
+  /** per sound name, what plays in its place / how (the replay page's picks); empty = the table as loaded */
+  trims = new Map<string, SoundTrim>();
+  private ambience: { pos: Vec3; v: BackendVoice; base: number; radius: number; f0: number }[] = [];   // f0 = the source's own low-pass (its timbre), the ceiling for the occlusion filter
   /** voices = alive now · maxVoices = the most alive at once since start · culled = positional one-shots not played (inaudible, or quieter than a full budget) · stolen = quietest
    *  voices stopped to make room · hrtf / equalpower = positional one-shots by the panner they got · occluded / routed = propagation outcomes · wet = the reverb send now */
   stats = { voices: 0, maxVoices: 0, culled: 0, stolen: 0, hrtf: 0, equalpower: 0, occluded: 0, routed: 0, wet: 0 };
 
-  constructor(private col: StaticCollision) {}   // col.sound (propagation), col.raycast (reverb sizing) see walls, props and door leaves
+  /** col.sound (propagation), col.raycast (reverb sizing) see walls, props and door leaves; `makeBackend` = the host's graph (default: Web Audio off the page's AudioContext) */
+  constructor(private col: StaticCollision, private makeBackend: (volume: { master: number; sfx: number; ambience: number }) => AudioBackend | null = v => WebAudioBackend.create(v)) {}
 
   /** Must be called from a user-gesture handler. */
   start() {
-    if (this.started) { if (this.ctx && this.ctx.state === 'suspended') void this.ctx.resume(); return; }   // a context created without a qualifying gesture starts suspended: retry on the next gesture
-    const AC = (window as any).AudioContext ?? (window as any).webkitAudioContext; if (!AC) return;
-    const ctx: AudioContext = new AC({ latencyHint: 'interactive' });
-    this.ctx = ctx; this.started = true;
-    this.master = ctx.createGain(); this.master.gain.value = this.volume.master;
-    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 4; comp.attack.value = 0.004; comp.release.value = 0.2;
-    this.master.connect(comp).connect(ctx.destination);
-    this.sfxBus = ctx.createGain(); this.sfxBus.gain.value = this.volume.sfx; this.sfxBus.connect(this.master);
-    this.ambBus = ctx.createGain(); this.ambBus.gain.value = this.volume.ambience; this.ambBus.connect(this.master);
-    // reverb: synthetic IR (decaying filtered noise, slightly different L/R)
-    this.reverb = ctx.createConvolver(); this.reverb.buffer = makeIR(ctx, 1.9, 2.8);
-    this.revSend = ctx.createGain(); this.revSend.gain.value = 0.3;
-    this.revOut = ctx.createGain(); this.revOut.gain.value = 0.8;
-    this.revSend.connect(this.reverb).connect(this.revOut).connect(this.master);
-    this.sfx = buildSfx(ctx);
-    this.music = new Music(ctx, this.master); this.music.setVolume(this.volume.music);
+    if (this.started) { (this.backend as { resume?: () => void } | null)?.resume?.(); return; }   // a context created without a qualifying gesture starts suspended: retry on the next gesture
+    const b = this.makeBackend(this.volume); if (!b) return;
+    this.backend = b; this.started = true;
+    // a hidden tab draws no frame, so nobody would turn a followed voice down as its thing comes to rest: it is silent until the page is back
+    if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.hidden) for (const v of this.voices) if (v.follow && !v.dying) b.setVoice(v.v, { gain: 0 }, 0.05); });
+    const sfx = gameSfx(b.sfxContext);
+    for (const n of Object.keys(sfx) as SfxName[]) b.loadBuffer(n, sfx[n]);
+    { const mb = b.webAudio ? new WebAudioMusicBackend(b.webAudio.ctx, b.webAudio.master) : b.music?.() ?? null; if (mb) { this.music = new Music(mb); this.music.menu = this.menuUp; this.music.setlist = this.levelSet; this.music.setVolume(this.volume.music); } }   // the score: its sequencer over the page's Web Audio voices, or the backend's own MusicBackend (the native synth) — silent on a host with neither
     this.setupAmbience();
+  }
+
+  /** another take of `name` under an id of its own (`name@take`), for a trim to point at; '' before the mixer has started */
+  loadTake(name: string, take: string, buf: SfxBuffer): string {
+    const b = this.backend; if (!b) return '';
+    const id = `${name}@${take}`; b.loadBuffer(id, buf); return id;
   }
 
   setListener(pos: Vec3, camForward: Vec3) {
     this.listener = v3.copy(pos); this.camFwd = v3.normalize([camForward[0], 0, camForward[2]]);
-    const ctx = this.ctx; if (!ctx) return;
-    const L = ctx.listener; const t = ctx.currentTime;
-    if (L.positionX) { L.positionX.setTargetAtTime(pos[0], t, 0.05); L.positionY.setTargetAtTime(pos[1], t, 0.05); L.positionZ.setTargetAtTime(pos[2], t, 0.05);
-      L.forwardX.setTargetAtTime(this.camFwd[0], t, 0.05); L.forwardY.setTargetAtTime(0, t, 0.05); L.forwardZ.setTargetAtTime(this.camFwd[2], t, 0.05); L.upX.value = 0; L.upY.value = 1; L.upZ.value = 0; }
-    else { L.setPosition(pos[0], pos[1], pos[2]); L.setOrientation(this.camFwd[0], 0, this.camFwd[2], 0, 1, 0); }
+    this.backend?.setListener(pos, this.camFwd);
   }
 
-  private static cutoff(muffle: number) { return 20000 * Math.pow(0.045, muffle); }   // 20 kHz clear → ~900 Hz through solid mass
-
   play(name: string, pos: Vec3 | null, gain = 1, opts: Record<string, unknown> = {}) {
-    const ctx = this.ctx; if (!ctx || !this.enabled) return;
-    if (name === 'smokeHiss') { this.hiss(pos ?? this.listener, (opts.duration as number) ?? 15); return; }   // a synthesized loop, not a table entry — must be checked before the lookup below
-    const buf = this.sfx[name as SfxName]; if (!buf) return;
-    const t = ctx.currentTime;
-    const rate = (opts.rate as number) ?? (0.96 + sysRandom() * 0.08);   // (drawn before any cull below, so a sound culled or not leaves Math.random where it always did)
+    const b = this.backend, tap = this.tap;
+    if (!b || !this.enabled) {   // (the mixer is off: the lanes are still told what was asked for — of a name the table holds, where there is a table to ask, as below)
+      if (tap) { const dur = name === 'smokeHiss' ? (opts.duration as number) ?? 15 : b ? b.duration(name) : 0; if (!b || dur) tap({ name, gain, dur, heard: 0 }); }
+      return;
+    }
+    if (name === 'smokeHiss') { const secs = (opts.duration as number) ?? 15; this.hiss(pos ?? this.listener, secs); tap?.({ name, gain, dur: secs, heard: 2 }); return; }   // a synthesized loop, not a table entry — must be checked before the lookup below
+    if (typeof opts.follow === 'function') { this.follow(name, pos ?? this.listener, gain, opts.follow as FollowSrc, opts.rate as number | undefined); return; }
+    const trim = this.trims.size ? this.trims.get(name) : undefined;
+    const buffer = trim?.take && b.duration(trim.take) ? trim.take : name;
+    const dur = b.duration(buffer); if (!dur) return;
+    const t = b.now();
+    let rate = (opts.rate as number) ?? (0.96 + sysRandom() * 0.08);   // (drawn before any cull below, so a sound culled or not leaves Math.random where it always did)
+    const filter = trim?.tone ? { type: 'lowpass' as const, freq: trim.tone } : undefined;
+    const gain0 = gain, rate0 = rate;   // (as asked, before the page's trim: what `SoundAsk.mix` carries)
+    if (trim) { rate *= trim.rate ?? 1; gain *= trim.gain ?? 1; }
+    const ask: SoundAsk | null = tap ? { name, gain, dur: dur / rate, heard: 1 } : null;
+    const told = (heard: 0 | 1 | 2) => { if (ask) { ask.heard = heard; tap!(ask); } };
     let v: Voice;
     if (pos) {
       // propagation FIRST — straight through air (partial occlusion from side rays softens doorway edges), or, when walled off, around the corners along the walkable
@@ -84,71 +142,62 @@ export class AudioEngine implements GameAudioLike {
       // through the mass — because what it says decides whether the sound is worth a voice at all (the budget above)
       const prop = this.col.sound.propagate(pos, this.listener); const at = prop.apparent, occ = prop.muffle;
       const d = v3.dist(at, this.listener);
-      const level = gain * (1 - 0.55 * occ) * (REF_DIST / (REF_DIST + ROLLOFF * (Math.max(d, REF_DIST) - REF_DIST)));   // what reaches the ear: the gain the graph applies × the panner's inverse-distance law at the apparent position
-      if (level < CULL_LEVEL) { this.stats.culled++; return; }                                                             // inaudible under the mix: no voice
+      const level = occludedGain(gain, occ) * distanceGain(d);   // what reaches the ear: the gain the graph applies × the panner's inverse-distance law at the apparent position
+      if ((trim ? occludedGain(gain0, occ) * distanceGain(d) : level) < CULL_LEVEL) { this.stats.culled++; told(1); return; }   // (judged as ASKED: a level dial turned down on a replay page still leaves the lanes a voice to hear again)                                                             // inaudible under the mix: no voice
       let alive = 0, quiet: Voice | null = null;
-      for (const w of this.voices) if (w.panner && !w.loop && !w.dying && t <= w.end) { alive++; if (!quiet || (w.level ?? 1) < (quiet.level ?? 1)) quiet = w; }
+      for (const w of this.voices) if (w.positional && !w.loop && !w.dying && t <= w.end) { alive++; if (!quiet || (w.level ?? 1) < (quiet.level ?? 1)) quiet = w; }
       if (alive >= MAX_POSITIONAL) {
-        if (!quiet || (quiet.level ?? 1) >= level) { this.stats.culled++; return; }                                          // the budget is full of louder sounds: this one would not be missed
-        try { quiet.gain.gain.setTargetAtTime(0, t, 0.012); quiet.src.stop(t + 0.06); } catch { /* already ended */ } quiet.end = t + 0.08; quiet.dying = true; this.stats.stolen++;   // else the quietest goes — a 12 ms fade, not a click; out of the budget this instant, retired by update() once stopped — and this one plays
+        if (!quiet || (quiet.level ?? 1) >= level) { this.stats.culled++; told(1); return; }                                          // the budget is full of louder sounds: this one would not be missed
+        b.stop(quiet.v, 12); quiet.end = t + 0.08; quiet.dying = true; this.stats.stolen++;   // else the quietest goes — a 12 ms fade, not a click; out of the budget this instant, retired by update() once stopped — and this one plays
       }
       if (prop.routed) this.stats.routed++; if (occ > 0.5) this.stats.occluded++;
-      const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
-      const g = ctx.createGain();
-      v = { src, gain: g, end: t + buf.duration / rate + 0.1, level };
-      const near = prop.pathLen < HRTF_NEAR_M || level > HRTF_LOUD_LEVEL;
-      const p = ctx.createPanner(); p.panningModel = near ? 'HRTF' : 'equalpower'; p.distanceModel = 'inverse'; p.refDistance = REF_DIST; p.rolloffFactor = ROLLOFF; p.maxDistance = 80;   // HRTF where it can be heard AS a place — near, or loud; the far and faint take the cheap panner
+      const near = hrtfFor(prop.pathLen, level);   // HRTF where it can be heard AS a place — near, or loud; the far and faint take the cheap panner
       if (near) this.stats.hrtf++; else this.stats.equalpower++;
-      p.positionX.value = at[0]; p.positionY.value = at[1]; p.positionZ.value = at[2];
-      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = AudioEngine.cutoff(occ);
-      g.gain.value = gain * (1 - 0.55 * occ);
-      src.connect(f).connect(p).connect(g);
-      g.connect(this.sfxBus);
-      // reverb send: more when muffled / routed (you hear the room, not the source) and with distance travelled
-      const send = ctx.createGain(); send.gain.value = Math.min(1, 0.25 + 0.5 * occ + prop.pathLen * 0.02);   // revSend's own gain already carries how live the room is
-      g.connect(send).connect(this.revSend);
-      v.panner = p; v.filter = f; v.pos = v3.copy(pos);
+      // the graph: [occlusion low-pass] → panner at the APPARENT position → gain → the sfx bus, + a reverb send: more when muffled / routed (you hear the room, not the source) and with distance travelled
+      const bv = b.play({ buffer, pos: at, gain: occludedGain(gain, occ), rate, bus: 'sfx', filter, hrtf: near, distance: { ref: REF_DIST, rolloff: ROLLOFF, max: MAX_DIST }, cutoffHz: cutoffOf(occ), send: sendOf(occ, prop.pathLen) });   // (revSend's own gain already carries how live the room is)
+      if (!bv) { told(1); return; }
+      v = { v: bv, positional: true, pos: v3.copy(pos), end: t + dur / rate + 0.1, level };
+      if (ask) { const L = this.listener, f = this.camFwd, dx = at[0] - L[0], dz = at[2] - L[2];
+        ask.mix = { rel: [dz * f[0] - dx * f[2], at[1] - L[1], dx * f[0] + dz * f[2]], gain: occludedGain(gain0, occ), rate: rate0, cut: cutoffOf(occ), send: sendOf(occ, prop.pathLen), hrtf: near }; }
     } else {
-      const src = ctx.createBufferSource(); src.buffer = buf; src.playbackRate.value = rate;
-      const g = ctx.createGain(); g.gain.value = gain;
-      v = { src, gain: g, end: t + buf.duration / rate + 0.1 };
       // non-positional (stings, UI, thunder): optionally low-passed (opts.lowpass, Hz — thunder dulls with distance), leaned to a side (opts.pan −1‥1 — toward
       // the storm cell's bearing) and given some room (opts.wet 0‥1); with none of them it is the plain src → gain → bus it always was
-      let node: AudioNode = src;
-      if (typeof opts.lowpass === 'number') { const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = opts.lowpass; f.Q.value = 0.5; node.connect(f); node = f; v.filter = f; }
-      if (typeof opts.pan === 'number' && typeof ctx.createStereoPanner === 'function') { const sp = ctx.createStereoPanner(); sp.pan.value = Math.max(-1, Math.min(1, opts.pan)); node.connect(sp); node = sp; }
-      node.connect(g).connect(this.sfxBus);
-      if (typeof opts.wet === 'number' && opts.wet > 0) { const send = ctx.createGain(); send.gain.value = Math.min(1, opts.wet); g.connect(send).connect(this.revSend); }
+      const bv = b.play({ buffer, pos: null, gain, rate, bus: 'sfx', filter, cutoffHz: typeof opts.lowpass === 'number' ? opts.lowpass : undefined, cutoffQ: typeof opts.lowpass === 'number' ? 0.5 : undefined,
+        pan: typeof opts.pan === 'number' ? opts.pan : undefined, send: typeof opts.wet === 'number' && opts.wet > 0 ? opts.wet : undefined });
+      if (!bv) { told(1); return; }
+      v = { v: bv, positional: false, end: t + dur / rate + 0.1 };
+      if (ask) ask.mix = { gain: gain0, rate: rate0, cut: typeof opts.lowpass === 'number' ? opts.lowpass : undefined, pan: typeof opts.pan === 'number' ? opts.pan : undefined, send: typeof opts.wet === 'number' && opts.wet > 0 ? opts.wet : undefined };
     }
-    v.src.start(t);
     this.voices.push(v);
     if (this.voices.length > this.stats.maxVoices) this.stats.maxVoices = this.voices.length;
+    told(2);
   }
 
-  /** The rain bed (weather.ts calls this every frame with the level it wants, 0 = off): a loop of noise shaped into the hiss of rain on asphalt (a broad band
-   *  round 1.4 kHz) over the drum of it on the roof and the cars (a low-passed layer), built on first use, its gain eased toward `level` × its own ceiling on the
-   *  ambience bus. Nothing exists until the weather first asks; level 0 fades it out and leaves the nodes running silent (cheap) for the next shower. */
-  rain(level: number) {
-    const ctx = this.ctx; if (!ctx) return;
-    if (!this.rainBed) {
-      if (level <= 0) return;
-      const src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, 5); src.loop = true;
-      const hiss = ctx.createBiquadFilter(); hiss.type = 'bandpass'; hiss.frequency.value = 1400; hiss.Q.value = 0.45;
-      const drum = ctx.createBiquadFilter(); drum.type = 'lowpass'; drum.frequency.value = 320; drum.Q.value = 0.7;
-      const gh = ctx.createGain(); gh.gain.value = 0.55; const gd = ctx.createGain(); gd.gain.value = 0.9;
-      const out = ctx.createGain(); out.gain.value = 0;
-      src.connect(hiss).connect(gh).connect(out); src.connect(drum).connect(gd).connect(out); out.connect(this.ambBus);
-      // a slow wobble on the hiss band so the loop never sits still (gusts)
-      const l = ctx.createOscillator(); l.frequency.value = 0.07; const lg = ctx.createGain(); lg.gain.value = 350; l.connect(lg).connect(hiss.frequency); l.start();
-      src.start();
-      this.rainBed = { out, level: -1 };
-    }
-    const lv = Math.max(0, Math.min(1, level));
-    if (Math.abs(lv - this.rainBed.level) < 0.004) return;
-    this.rainBed.level = lv;
-    this.rainBed.out.gain.setTargetAtTime(lv * 0.42, ctx.currentTime, lv > 0 ? 0.8 : 1.5);
+  /** One voice the lanes kept (`SoundAsk.mix`), played once more as it was mixed then — the same place from the listener, as muffled, as far — under what the page
+   *  lays over that sound NOW (`trims`: the take, pitch, tone, level). The replay page's "hear that again": it asks nothing of the level, tells no tap, draws no die,
+   *  takes no place in the positional budget, and plays whether the mixer is switched on or not (`enabled`). False = nothing was played. */
+  again(name: string, m: SoundMix): boolean {
+    const b = this.backend; if (!b) return false;
+    const trim = this.trims.get(name);
+    const buffer = trim?.take && b.duration(trim.take) ? trim.take : name;
+    const dur = b.duration(buffer); if (!dur) return false;
+    const rate = m.rate * (trim?.rate ?? 1), gain = m.gain * (trim?.gain ?? 1);
+    const filter = trim?.tone ? { type: 'lowpass' as const, freq: trim.tone } : undefined;
+    let bv: BackendVoice | null;
+    if (m.rel) { const L = this.listener, f = this.camFwd, [r, u, a] = m.rel;
+      bv = b.play({ buffer, pos: [L[0] - f[2] * r + f[0] * a, L[1] + u, L[2] + f[0] * r + f[2] * a], gain, rate, bus: 'sfx', filter, hrtf: m.hrtf, distance: { ref: REF_DIST, rolloff: ROLLOFF, max: MAX_DIST }, cutoffHz: m.cut, send: m.send });
+    } else bv = b.play({ buffer, pos: null, gain, rate, bus: 'sfx', filter, cutoffHz: m.cut, cutoffQ: m.cut !== undefined ? 0.5 : undefined, pan: m.pan, send: m.send });
+    if (!bv) return false;
+    this.voices.push({ v: bv, positional: false, again: true, end: b.now() + dur / rate + 0.1 });   // (not `positional`: never counted in play()'s budget nor stolen by it)
+    return true;
   }
-  private rainBed: { out: GainNode; level: number } | null = null;
+  /** every voice that is not a loop, faded out now (the lanes' re-listen starting over or being called off); `again` = only the voices `again()` made (the tape
+   *  plays on under a stretch still ringing: its own new voices stay). A voice is let go only once the fade has run out: the backend's stop is a time constant. */
+  hush(ms = 30, again = false) { const b = this.backend; if (!b) return; const t = b.now(); for (const v of this.voices) if (!v.loop && !v.dying && t <= v.end && (!again || v.again)) { b.stop(v.v, ms); v.end = t + 5 * ms / 1000 + 0.02; v.dying = true; } }
+
+  /** The rain bed (weather.ts calls this every frame with the level it wants, 0 = off): a loop of noise shaped into the hiss of rain on asphalt over the drum of it on
+   *  the roof and the cars, built by the backend on first use, its gain eased toward `level` × its own ceiling on the ambience bus (src/audio/webaudio.ts rainLevel). */
+  rain(level: number) { this.backend?.rainLevel(level); }
 
   /** One footfall. The floor it lands on comes from the shared material map (game/floor.ts — the same map the guards' ears and the SOUND meter read; `mat` arrives
    *  resolved by the caller, floor.ts tread, so the mixer cannot disagree with them): hard finishes get the heel click, carpet and grass the soft scuff, and the
@@ -158,88 +207,97 @@ export class AudioEngine implements GameAudioLike {
     this.play(f.hard ? 'footHard' : 'footSoft', pos, (isPlayer ? 0.55 : 0.7) * loudness, { rate: (0.9 + sysRandom() * 0.25) * f.rate });
   }
 
+  /** A followed voice let go: faded out, kept in the list (and in the cap's count) until the fade is done. */
+  private unfollow(v: Voice, t: number) { this.backend!.stop(v.v, FOLLOW_FADE_MS); v.dying = true; v.end = Math.min(v.end, t + 6 * FOLLOW_FADE_MS / 1000); }
+  /** A sound that lasts as long as its thing does (a chair rolling on its castors: game.ts rollTick): ONE looping voice, started at the buffer's head and then held on
+   *  the buffer's loop stretch. `update()` asks `src` every frame for the thing's place and how hard it goes: level and pitch follow per frame, the panner and the
+   *  low-pass with the other loops' (four times a second; its reverb send is the start's), and it is faded out when `src` answers null. Outside the one-shots' budget:
+   *  at most MAX_FOLLOW alive (a nearer newcomer takes the farthest one's place, any other is not voiced) and two more still fading. It cannot run on: stopped when
+   *  its time is up, silent while the page is hidden, and its source carries a hard end of its own. Told to the tap ONCE, at its start, with the mix it started
+   *  under — so a lane's 'again' plays the buffer through once, which is why the buffer comes up and dies away at its ends. */
+  private follow(name: string, pos: Vec3, gain: number, src: FollowSrc, rate0?: number) {
+    const b = this.backend!, tap = this.tap, t = b.now();
+    const trim = this.trims.size ? this.trims.get(name) : undefined;
+    const buffer = trim?.take && b.duration(trim.take) ? trim.take : name;
+    const dur = b.duration(buffer); if (!dur) return;
+    const rate = rate0 ?? (0.96 + sysRandom() * 0.08);
+    // the cap counts the voices still fading out too (a churn of starts and ends is bounded), and a full house gives its FARTHEST voice to a nearer newcomer
+    let alive = 0, all = 0, far: Voice | null = null, farD = -1;
+    for (const w of this.voices) if (w.follow) { all++; if (!w.dying) { alive++; const d = v3.dist(w.pos!, this.listener); if (d > farD) { farD = d; far = w; } } }
+    const s = src(), full = alive >= MAX_FOLLOW;
+    if (full && far && all < MAX_FOLLOW + 2 && s && v3.dist(pos, this.listener) < farD) this.unfollow(far, t);
+    else if (full || all >= MAX_FOLLOW + 2 || !s) { this.stats.culled++; tap?.({ name, gain, dur: dur / rate, heard: 1 }); return; }
+    const prop = this.col.sound.propagate(pos, this.listener), at = prop.apparent, occ = prop.muffle;
+    const lp = FOLLOW_LOOPS[name], near = hrtfFor(prop.pathLen, occludedGain(gain, occ) * distanceGain(v3.dist(at, this.listener)));
+    const bv = b.play({ buffer, pos: at, gain: 0, rate: rate * (trim?.rate ?? 1) * followRate(s.k), loop: true, loopAt: lp && dur >= lp.end ? lp : undefined, maxSecs: FOLLOW_SECS + 2, bus: 'sfx', hrtf: near,
+      filter: trim?.tone ? { type: 'lowpass', freq: trim.tone } : undefined, distance: { ref: REF_DIST, rolloff: ROLLOFF, max: MAX_DIST }, cutoffHz: cutoffOf(occ), send: sendOf(occ, prop.pathLen) });
+    if (!bv) { tap?.({ name, gain, dur: dur / rate, heard: 1 }); return; }
+    this.voices.push({ v: bv, positional: true, pos: v3.copy(pos), end: t + FOLLOW_SECS, loop: true, follow: { src, name, gain, rate, occ, lastT: s.t, seen: t } });
+    if (this.voices.length > this.stats.maxVoices) this.stats.maxVoices = this.voices.length;
+    if (tap) { const L = this.listener, f = this.camFwd, dx = at[0] - L[0], dz = at[2] - L[2];
+      tap({ name, gain, dur: dur / rate, heard: 2, mix: { rel: [dz * f[0] - dx * f[2], at[1] - L[1], dx * f[0] + dz * f[2]], gain: occludedGain(gain, occ), rate, cut: cutoffOf(occ), send: sendOf(occ, prop.pathLen), hrtf: near } }); }
+  }
+
   private hiss(pos: Vec3, duration: number) {
-    const ctx = this.ctx!; const t = ctx.currentTime;
-    const src = ctx.createBufferSource(); src.buffer = noiseBuffer(ctx, 2); src.loop = true;
-    const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 0.8;
-    const occF = ctx.createBiquadFilter(); occF.type = 'lowpass'; occF.frequency.value = 20000;
-    const p = ctx.createPanner(); p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = 1.2; p.rolloffFactor = 1.3; p.positionX.value = pos[0]; p.positionY.value = pos[1] + 0.1; p.positionZ.value = pos[2];
-    const g = ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.5, t + 0.3); g.gain.setValueAtTime(0.5, t + Math.max(0.5, duration - 2)); g.gain.linearRampToValueAtTime(0, t + duration);
-    src.connect(f).connect(occF).connect(p).connect(g).connect(this.sfxBus);
-    src.start(t); src.stop(t + duration + 0.1);
-    this.play('smokePop', pos, 0.9);
-    this.voices.push({ src, panner: p, filter: occF, gain: g, pos: v3.copy(pos), end: t + duration + 0.2, loop: true });
+    const b = this.backend!; const t = b.now();
+    b.loadBuffer('smokeHissNoise', noiseBuffer(b.sfxContext, HISS.seconds));   // (a fresh 2 s noise loop per hiss, as ever)
+    const bv = b.play({ buffer: 'smokeHissNoise', pos: [pos[0], pos[1] + 0.1, pos[2]], gain: 0, rate: 1, loop: true, bus: 'sfx', distance: HISS.distance,
+      filter: HISS.filter, cutoffHz: 20000, envelope: { peak: HISS.peak, rise: HISS.rise, hold: Math.max(0.5, duration - HISS.tail), end: duration } });   // band → occlusion low-pass (retuned in update) → HRTF panner → the envelope
+    this.play('smokePop', pos, HISS.pop);
+    if (bv) this.voices.push({ v: bv, positional: true, pos: v3.copy(pos), end: t + duration + 0.2, loop: true });
   }
 
   private setupAmbience() {
-    const ctx = this.ctx!;
-    const mk = (pos: Vec3, kind: 'hum' | 'servers' | 'wind' | 'buzz', base: number, radius: number) => {
-      const src = ctx.createBufferSource(); const g = ctx.createGain(); g.gain.value = 0; const f = ctx.createBiquadFilter();
-      const p = ctx.createPanner(); p.panningModel = 'HRTF'; p.distanceModel = 'inverse'; p.refDistance = 2; p.rolloffFactor = 1; p.positionX.value = pos[0]; p.positionY.value = pos[1]; p.positionZ.value = pos[2];
-      if (kind === 'servers') { src.buffer = toneNoise(ctx, 3, [118, 236, 355], 0.5); f.type = 'lowpass'; f.frequency.value = 1800; }
-      else if (kind === 'hum') { src.buffer = toneNoise(ctx, 3, [50, 100, 150], 0.15); f.type = 'lowpass'; f.frequency.value = 600; }
-      else if (kind === 'buzz') { src.buffer = toneNoise(ctx, 2, [100, 200, 300, 400], 0.05); f.type = 'bandpass'; f.frequency.value = 240; f.Q.value = 2; }
-      else { src.buffer = noiseBuffer(ctx, 4); f.type = 'lowpass'; f.frequency.value = 500; f.Q.value = 0.5; const l = ctx.createOscillator(); l.frequency.value = 0.11; const lg = ctx.createGain(); lg.gain.value = 250; l.connect(lg).connect(f.frequency); l.start(); }
-      src.loop = true; src.connect(f).connect(p).connect(g).connect(this.ambBus); src.start();
-      this.ambience.push({ pos, node: src, gain: g, panner: p, filter: f, base, radius, f0: f.frequency.value });
+    const b = this.backend!; const sc = b.sfxContext;
+    const mk = (pos: Vec3, kind: AmbienceKind, base: number, radius: number) => {
+      const id = `amb:${kind}:${this.ambience.length}`;
+      const { buffer, filter, wobble } = ambienceLoop(sc, kind);   // (audio/loops.ts: what each hum is made of — the listening page plays the same)
+      b.loadBuffer(id, buffer);
+      const v = b.play({ buffer: id, pos, gain: 0, rate: 1, loop: true, bus: 'ambience', distance: AMBIENCE_DISTANCE, filter, wobble });
+      if (v) this.ambience.push({ pos, v, base, radius, f0: filter.freq });
     };
-    mk([18, 1.2, 7], 'servers', 0.5, 12);        // server room
-    mk([29.5, 1.2, 13.2], 'buzz', 0.35, 7);       // vending machines
-    mk([16.5, 2.8, 20.6], 'buzz', 0.15, 6);       // flickering panel ballast
-    mk([8, 2.6, 18], 'hum', 0.25, 14);            // HVAC over the lobby
-    mk([16, 3, 27], 'wind', 0.5, 18);             // outside, south
-    mk([1.5, 3, 20], 'wind', 0.4, 14);            // outside, west
+    for (const e of AMBIENCE_OFFICE) mk(e.pos, e.kind, e.base, e.radius);
   }
 
   /** Per-frame housekeeping: retire voices, refresh occlusion on loops/ambience, size the reverb by tracing around the listener. */
   update(dt: number, time: number) {
-    const ctx = this.ctx; if (!ctx) return;
-    const t = ctx.currentTime;
-    this.voices = this.voices.filter(v => { if (t > v.end) { try { v.src.disconnect(); v.gain.disconnect(); } catch { /* already gone */ } return false; } return true; });
+    const b = this.backend; if (!b) return;
+    const t = b.now();
+    this.voices = this.voices.filter(v => { if (t > v.end) { if (v.follow && !v.dying) b.stop(v.v, 20); b.release(v.v); return false; } return true; });   // (a followed loop that outlives its time — a tab hidden for a minute — is STOPPED, not just let go of: a looping source runs on)
     this.stats.voices = this.voices.length;
+    // followed voices (a rolling chair), every frame: where the thing is now and how hard it goes → the voice's level and pitch; stopped, gone, or held too long → faded
+    // out and let go; the game's clock standing still (a pause) → silent until it runs again. (Its panner and low-pass are re-aimed with the other loops', below.)
+    for (const v of this.voices) { const f = v.follow; if (!f || v.dying) continue;
+      const s = t > v.end - 1 ? null : f.src();
+      if (!s) { this.unfollow(v, t); continue; }
+      if (s.t !== f.lastT) { f.lastT = s.t; f.seen = t; }
+      const vp = v.pos!; vp[0] = s.pos[0]; vp[1] = s.pos[1]; vp[2] = s.pos[2];
+      const trim = this.trims.size ? this.trims.get(f.name) : undefined;
+      b.setVoice(v.v, { gain: t - f.seen > 0.2 ? 0 : occludedGain(f.gain * (trim?.gain ?? 1), f.occ) * followGain(s.k), rate: f.rate * (trim?.rate ?? 1) * followRate(s.k) }, 0.07);
+    }
     // environment probe (4×/s): mean free path around the listener → reverb amount; outdoor → less
     if (time - this.lastEnvT > 0.25 || this.lastEnvT === 0) {
       let sum = 0; const N = 10;
       for (let i = 0; i < N; i++) { const a = (i / N) * Math.PI * 2; const hit = this.col.raycast(this.listener, [Math.cos(a), 0, Math.sin(a)], 16); sum += hit ? hit.t : 16; }
       const mfp = sum / N; const outdoors = this.listener[0] < 4 || this.listener[0] > 36 || this.listener[2] < 4 || this.listener[2] > 24;
       const wet = outdoors ? 0.08 : Math.min(0.55, 0.12 + mfp * 0.045);
-      this.revSend.gain.setTargetAtTime(wet, t, 0.3); this.stats.wet = wet;
+      b.setReverb(wet, 0.3); this.stats.wet = wet;
       this.lastEnvT = time || 1e-3;
       // loops (canister hiss) + ambience go through the same propagation as one-shots: re-aim the panner at the apparent position, retune the low-pass
-      const move = (p: PannerNode, at: Vec3, k: number) => { p.positionX.setTargetAtTime(at[0], t, k); p.positionY.setTargetAtTime(at[1], t, k); p.positionZ.setTargetAtTime(at[2], t, k); };
-      for (const v of this.voices) if (v.loop && v.pos && v.filter && v.panner) { const pr = this.col.sound.propagate(v.pos, this.listener); move(v.panner, pr.apparent, 0.25); v.filter.frequency.setTargetAtTime(AudioEngine.cutoff(pr.muffle), t, 0.2); }
+      for (const v of this.voices) if (v.loop && v.pos && v.positional && !v.dying) { const pr = this.col.sound.propagate(v.pos, this.listener); b.setVoice(v.v, { pos: pr.apparent }, 0.25); b.setVoice(v.v, { cutoffHz: cutoffOf(pr.muffle) }, 0.2); if (v.follow) v.follow.occ = pr.muffle; }
       for (const a of this.ambience) {
         const d = v3.dist(a.pos, this.listener); let g = a.base * Math.max(0, 1 - d / a.radius);
-        if (g > 0.01) { const pr = this.col.sound.propagate(a.pos, this.listener); g *= 1 - 0.6 * pr.muffle; move(a.panner, pr.apparent, 0.4); a.filter.frequency.setTargetAtTime(Math.min(a.f0, 300 + AudioEngine.cutoff(pr.muffle)), t, 0.4); }   // (BiquadFilter.frequency.defaultValue is the spec's 350 Hz, not what we set — clamp against the authored f0)
-        a.gain.gain.setTargetAtTime(g, t, 0.5);
+        if (g > 0.01) { const pr = this.col.sound.propagate(a.pos, this.listener); g *= 1 - 0.6 * pr.muffle; b.setVoice(a.v, { pos: pr.apparent, cutoffHz: Math.min(a.f0, 300 + cutoffOf(pr.muffle)) }, 0.4); }   // (BiquadFilter.frequency.defaultValue is the spec's 350 Hz, not what we set — clamp against the authored f0)
+        b.setVoice(a.v, { gain: g }, 0.5);
       }
     }
     void dt;
   }
 
   setVolumes() {
-    if (!this.ctx) return; const t = this.ctx.currentTime;
-    this.master.gain.setTargetAtTime(this.enabled ? this.volume.master : 0, t, 0.1);
-    this.sfxBus.gain.setTargetAtTime(this.volume.sfx, t, 0.1); this.ambBus.gain.setTargetAtTime(this.volume.ambience, t, 0.1);
+    const b = this.backend; if (!b) return;
+    b.setBus('master', this.enabled ? this.volume.master : 0, 0.1);
+    b.setBus('sfx', this.volume.sfx, 0.1); b.setBus('ambience', this.volume.ambience, 0.1);
     this.music?.setVolume(this.volume.music);
   }
-}
-
-// ---- buffer helpers ----
-function noiseBuffer(ctx: BaseAudioContext, seconds: number): AudioBuffer {
-  const b = ctx.createBuffer(1, Math.floor(ctx.sampleRate * seconds), ctx.sampleRate); const d = b.getChannelData(0);
-  for (let i = 0; i < d.length; i++) d[i] = sysRandom() * 2 - 1; return b;
-}
-function toneNoise(ctx: BaseAudioContext, seconds: number, freqs: number[], noiseAmt: number): AudioBuffer {
-  const n = Math.floor(ctx.sampleRate * seconds); const b = ctx.createBuffer(1, n, ctx.sampleRate); const d = b.getChannelData(0);
-  // make it loop seamlessly: integer cycles over the buffer
-  const fs = freqs.map(f => Math.round(f * seconds) / seconds);
-  let lpv = 0;
-  for (let i = 0; i < n; i++) { const t = i / ctx.sampleRate; let v = 0; fs.forEach((f, k) => { v += Math.sin(2 * Math.PI * f * t + k) / (k + 1); }); lpv += 0.05 * ((sysRandom() * 2 - 1) - lpv); d[i] = v * 0.3 + lpv * noiseAmt; }
-  return b;
-}
-function makeIR(ctx: BaseAudioContext, seconds: number, decay: number): AudioBuffer {
-  const n = Math.floor(ctx.sampleRate * seconds); const b = ctx.createBuffer(2, n, ctx.sampleRate);
-  for (let c = 0; c < 2; c++) { const d = b.getChannelData(c); let lpv = 0; for (let i = 0; i < n; i++) { const t = i / n; lpv += 0.4 * ((sysRandom() * 2 - 1) - lpv); d[i] = lpv * Math.pow(1 - t, decay) * (i < 200 ? i / 200 : 1); } }
-  return b;
 }

@@ -1,0 +1,6661 @@
+{
+ "tool": "framecost",
+ "v": 1,
+ "commit": "dee9595",
+ "dirty": false,
+ "when": "2026-10-08T17:14:49.615Z",
+ "runtime": "bun 1.4.2",
+ "cpu": "4 × Intel(R) Xeon(R) Processor @ 2.10GHz",
+ "jobs": 1,
+ "seeds": [
+  1
+ ],
+ "cap": 300,
+ "minutes": 2,
+ "deep": true,
+ "gpu": true,
+ "warm": 60,
+ "arms": {
+  "nodestr": "shipped, but destruction off (the page under ?nodestruction)"
+ },
+ "missions": [
+  {
+   "id": "night-breach",
+   "arm": "nodestr",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 22.5,
+     "digest": "6081d8c1",
+     "frames": 1352
+    }
+   ],
+   "frames": 1292,
+   "page": {
+    "mean": 3.199,
+    "p50": 2.776,
+    "p95": 4.929,
+    "p99": 8.141,
+    "max": 20.095
+   },
+   "update": {
+    "mean": 2.18,
+    "p50": 1.909,
+    "p95": 3.239,
+    "p99": 6.737,
+    "max": 14.241
+   },
+   "stepped": {
+    "mean": 3.199,
+    "p50": 2.776,
+    "p95": 4.929,
+    "p99": 8.141,
+    "max": 20.095
+   },
+   "uploadPerCall": 0.594,
+   "warmMax": 281.237,
+   "buckets": {
+    "update: head (journal, clocks)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.021,
+     "max": 0.077
+    },
+    "player (aim, interact, move, fire)": {
+     "mean": 0.108,
+     "p50": 0.099,
+     "p95": 0.162,
+     "p99": 0.237,
+     "max": 1.368
+    },
+    "squad: order menu + orders": {
+     "mean": 0.07,
+     "p50": 0.062,
+     "p95": 0.13,
+     "p99": 0.221,
+     "max": 0.643
+    },
+    "squad: door tools": {
+     "mean": 0.037,
+     "p50": 0.011,
+     "p95": 0.083,
+     "p99": 0.143,
+     "max": 5.808
+    },
+    "suppression": {
+     "mean": 0.006,
+     "p50": 0.005,
+     "p95": 0.008,
+     "p99": 0.039,
+     "max": 0.317
+    },
+    "gear: rings, 40 mm, frags": {
+     "mean": 0.006,
+     "p50": 0.006,
+     "p95": 0.009,
+     "p99": 0.02,
+     "max": 0.062
+    },
+    "guards: weapons dealt, anim flags": {
+     "mean": 0.008,
+     "p50": 0.007,
+     "p95": 0.013,
+     "p99": 0.041,
+     "max": 0.28
+    },
+    "scenario (director, breach, room clear, rescue)": {
+     "mean": 0.013,
+     "p50": 0.011,
+     "p95": 0.022,
+     "p99": 0.056,
+     "max": 0.149
+    },
+    "pair (two person stealth)": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.005,
+     "p99": 0.03,
+     "max": 0.111
+    },
+    "squad: entry points, cleared rooms, cover": {
+     "mean": 0.032,
+     "p50": 0.011,
+     "p95": 0.165,
+     "p99": 0.345,
+     "max": 3.17
+    },
+    "room fight (both sides: watch, fear, shoot)": {
+     "mean": 0.065,
+     "p50": 0.046,
+     "p95": 0.112,
+     "p99": 0.231,
+     "max": 5.672
+    },
+    "tactics (flank, lone corner, doorways)": {
+     "mean": 0.011,
+     "p50": 0.009,
+     "p95": 0.016,
+     "p99": 0.052,
+     "max": 0.113
+    },
+    "needs (patrol variation)": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.004,
+     "p99": 0.017,
+     "max": 0.057
+    },
+    "guards: updateGuard (senses, state, feet)": {
+     "mean": 0.139,
+     "p50": 0.118,
+     "p95": 0.245,
+     "p99": 0.41,
+     "max": 1.516
+    },
+    "civilians": {
+     "mean": 0.001,
+     "p50": 0,
+     "p95": 0.001,
+     "p99": 0.002,
+     "max": 0.067
+    },
+    "escalation + QRF": {
+     "mean": 0.012,
+     "p50": 0.011,
+     "p95": 0.02,
+     "p99": 0.049,
+     "max": 0.167
+    },
+    "doors": {
+     "mean": 0.041,
+     "p50": 0.036,
+     "p95": 0.078,
+     "p99": 0.153,
+     "max": 0.572
+    },
+    "mission": {
+     "mean": 0.005,
+     "p50": 0.004,
+     "p95": 0.008,
+     "p99": 0.03,
+     "max": 0.215
+    },
+    "props (furniture)": {
+     "mean": 0.036,
+     "p50": 0.026,
+     "p95": 0.08,
+     "p99": 0.146,
+     "max": 0.999
+    },
+    "destruction (heat, debris)": {
+     "mean": 0.006,
+     "p50": 0.002,
+     "p95": 0.022,
+     "p99": 0.059,
+     "max": 0.529
+    },
+    "destruction: wall charge, fire at cover": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.005,
+     "p99": 0.012,
+     "max": 0.117
+    },
+    "destruction: both sides react to a break": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.004,
+     "p99": 0.015,
+     "max": 0.064
+    },
+    "fixtures + devices": {
+     "mean": 0.036,
+     "p50": 0.032,
+     "p95": 0.066,
+     "p99": 0.094,
+     "max": 0.995
+    },
+    "weather, wet, wind, moths, rain fx (game half)": {
+     "mean": 0.122,
+     "p50": 0.105,
+     "p95": 0.201,
+     "p99": 0.304,
+     "max": 1.164
+    },
+    "items (throwables, drops)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.009,
+     "p99": 0.049,
+     "max": 0.269
+    },
+    "glass (stars, breaking, shards)": {
+     "mean": 0.006,
+     "p50": 0.005,
+     "p95": 0.008,
+     "p99": 0.042,
+     "max": 0.702
+    },
+    "fog of war": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.003,
+     "p99": 0.006,
+     "max": 0.08
+    },
+    "dynamic boxes (leaves, props, debris, rig props, fx)": {
+     "mean": 0.235,
+     "p50": 0.185,
+     "p95": 0.307,
+     "p99": 0.904,
+     "max": 11.438
+    },
+    "tracers + sparks": {
+     "mean": 0.005,
+     "p50": 0.003,
+     "p95": 0.013,
+     "p99": 0.05,
+     "max": 0.165
+    },
+    "smoke pushes": {
+     "mean": 0.005,
+     "p50": 0.004,
+     "p95": 0.009,
+     "p99": 0.036,
+     "max": 0.171
+    },
+    "characters → skin instances + shadow proxies": {
+     "mean": 0.055,
+     "p50": 0.046,
+     "p95": 0.081,
+     "p99": 0.125,
+     "max": 3.546
+    },
+    "sensors (meter + smoke line asks)": {
+     "mean": 0.007,
+     "p50": 0.006,
+     "p95": 0.011,
+     "p99": 0.039,
+     "max": 0.069
+    },
+    "update: tail (cues, checkpoints, journal)": {
+     "mean": 0.014,
+     "p50": 0.011,
+     "p95": 0.021,
+     "p99": 0.055,
+     "max": 0.296
+    },
+    "step: camera": {
+     "mean": 0.006,
+     "p50": 0.005,
+     "p95": 0.007,
+     "p99": 0.023,
+     "max": 1.198
+    },
+    "step: lights.update": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.021,
+     "max": 0.094
+    },
+    "step: box list pack + trace grid (world.upload)": {
+     "mean": 0.569,
+     "p50": 0.498,
+     "p95": 0.839,
+     "p99": 1.303,
+     "max": 11.785
+    },
+    "step: smoke solver update (CPU half)": {
+     "mean": 0.011,
+     "p50": 0.005,
+     "p95": 0.034,
+     "p99": 0.077,
+     "max": 2.852
+    },
+    "render: frame uniforms, probe, submit (the rest of Engine.render)": {
+     "mean": 0.103,
+     "p50": 0.069,
+     "p95": 0.199,
+     "p99": 0.297,
+     "max": 7.174
+    },
+    "render: light list + reach / glass masks upload": {
+     "mean": 0.154,
+     "p50": 0.09,
+     "p95": 0.471,
+     "p99": 0.684,
+     "max": 1.318
+    },
+    "render: decal list": {
+     "mean": 0.01,
+     "p50": 0.001,
+     "p95": 0.072,
+     "p99": 0.122,
+     "max": 0.278
+    },
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": {
+     "mean": 0.024,
+     "p50": 0.015,
+     "p95": 0.05,
+     "p99": 0.085,
+     "max": 0.354
+    },
+    "render: smoke solver encode": {
+     "mean": 0.019,
+     "p50": 0.003,
+     "p95": 0.129,
+     "p99": 0.225,
+     "max": 1.886
+    },
+    "render: g-buffer + mesh shadows encode, motion snapshot": {
+     "mean": 0.017,
+     "p50": 0.01,
+     "p95": 0.03,
+     "p99": 0.075,
+     "max": 3.718
+    },
+    "render: cascades encode": {
+     "mean": 0.011,
+     "p50": 0.008,
+     "p95": 0.02,
+     "p99": 0.046,
+     "max": 0.331
+    },
+    "render: lighting passes encode": {
+     "mean": 0.093,
+     "p50": 0.074,
+     "p95": 0.147,
+     "p99": 0.206,
+     "max": 11.992
+    },
+    "svc: animation + skeleton (Character.update)": {
+     "mean": 0.8,
+     "p50": 0.712,
+     "p95": 1.209,
+     "p99": 1.891,
+     "max": 8.975
+    },
+    "svc: nav paths (A*, walkable, nearest free)": {
+     "mean": 0.003,
+     "p50": 0,
+     "p95": 0.006,
+     "p99": 0.054,
+     "max": 0.151
+    },
+    "svc: sound propagation": {
+     "mean": 0.009,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.369,
+     "max": 1.421
+    },
+    "svc: static line tests (sight, fire, reach)": {
+     "mean": 0.125,
+     "p50": 0.051,
+     "p95": 0.53,
+     "p99": 1.095,
+     "max": 4.649
+    },
+    "svc: circle collide (feet vs walls)": {
+     "mean": 0.015,
+     "p50": 0.01,
+     "p95": 0.037,
+     "p99": 0.067,
+     "max": 0.272
+    },
+    "svc: box world raycast (cursor, lasers, rounds)": {
+     "mean": 0.125,
+     "p50": 0.114,
+     "p95": 0.182,
+     "p99": 0.234,
+     "max": 0.321
+    },
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "headless only: CPU light estimate standing in for the GPU light probe": {
+     "mean": 0.544,
+     "p50": 0.501,
+     "p95": 0.774,
+     "p99": 1.252,
+     "max": 5.42
+    }
+   },
+   "groups": {
+    "(probe stand-in)": {
+     "mean": 0.544,
+     "p50": 0.501,
+     "p95": 0.774,
+     "p99": 1.252,
+     "max": 5.42
+    },
+    "animation": {
+     "mean": 0.8,
+     "p50": 0.712,
+     "p95": 1.209,
+     "p99": 1.891,
+     "max": 8.975
+    },
+    "line tests": {
+     "mean": 0.251,
+     "p50": 0.177,
+     "p95": 0.646,
+     "p99": 1.256,
+     "max": 4.823
+    },
+    "nav paths": {
+     "mean": 0.003,
+     "p50": 0,
+     "p95": 0.006,
+     "p99": 0.054,
+     "max": 0.151
+    },
+    "sound": {
+     "mean": 0.009,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.369,
+     "max": 1.421
+    },
+    "guards AI": {
+     "mean": 0.169,
+     "p50": 0.145,
+     "p95": 0.285,
+     "p99": 0.461,
+     "max": 1.543
+    },
+    "room fight": {
+     "mean": 0.065,
+     "p50": 0.046,
+     "p95": 0.112,
+     "p99": 0.231,
+     "max": 5.672
+    },
+    "squad": {
+     "mean": 0.152,
+     "p50": 0.114,
+     "p95": 0.319,
+     "p99": 0.646,
+     "max": 5.996
+    },
+    "tactics": {
+     "mean": 0.011,
+     "p50": 0.009,
+     "p95": 0.016,
+     "p99": 0.052,
+     "max": 0.113
+    },
+    "player": {
+     "mean": 0.108,
+     "p50": 0.099,
+     "p95": 0.162,
+     "p99": 0.237,
+     "max": 1.368
+    },
+    "feet vs walls": {
+     "mean": 0.015,
+     "p50": 0.01,
+     "p95": 0.037,
+     "p99": 0.067,
+     "max": 0.272
+    },
+    "doors, props": {
+     "mean": 0.077,
+     "p50": 0.066,
+     "p95": 0.14,
+     "p99": 0.234,
+     "max": 1.026
+    },
+    "destruction": {
+     "mean": 0.012,
+     "p50": 0.009,
+     "p95": 0.03,
+     "p99": 0.07,
+     "max": 0.534
+    },
+    "glass": {
+     "mean": 0.006,
+     "p50": 0.005,
+     "p95": 0.008,
+     "p99": 0.042,
+     "max": 0.702
+    },
+    "gear": {
+     "mean": 0.014,
+     "p50": 0.011,
+     "p95": 0.039,
+     "p99": 0.082,
+     "max": 0.289
+    },
+    "weather": {
+     "mean": 0.122,
+     "p50": 0.105,
+     "p95": 0.201,
+     "p99": 0.304,
+     "max": 1.164
+    },
+    "pair": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.005,
+     "p99": 0.03,
+     "max": 0.111
+    },
+    "fog of war": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.003,
+     "p99": 0.006,
+     "max": 0.08
+    },
+    "chars to GPU": {
+     "mean": 0.055,
+     "p50": 0.046,
+     "p95": 0.081,
+     "p99": 0.125,
+     "max": 3.546
+    },
+    "dyn boxes": {
+     "mean": 0.24,
+     "p50": 0.19,
+     "p95": 0.314,
+     "p99": 0.912,
+     "max": 11.447
+    },
+    "box upload": {
+     "mean": 0.569,
+     "p50": 0.498,
+     "p95": 0.839,
+     "p99": 1.303,
+     "max": 11.785
+    },
+    "smoke CPU": {
+     "mean": 0.011,
+     "p50": 0.005,
+     "p95": 0.034,
+     "p99": 0.077,
+     "max": 2.852
+    },
+    "render CPU": {
+     "mean": 0.432,
+     "p50": 0.296,
+     "p95": 0.961,
+     "p99": 1.423,
+     "max": 13.746
+    },
+    "other": {
+     "mean": 0.073,
+     "p50": 0.065,
+     "p95": 0.119,
+     "p99": 0.193,
+     "max": 1.25
+    }
+   },
+   "calls": {
+    "step: box list pack + trace grid (world.upload)": [
+     1,
+     1
+    ],
+    "render: light list + reach / glass masks upload": [
+     2,
+     2
+    ],
+    "render: decal list": [
+     1,
+     1
+    ],
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": [
+     3,
+     2
+    ],
+    "render: smoke solver encode": [
+     1,
+     1
+    ],
+    "render: g-buffer + mesh shadows encode, motion snapshot": [
+     4,
+     4
+    ],
+    "render: cascades encode": [
+     1,
+     1
+    ],
+    "render: lighting passes encode": [
+     1,
+     1
+    ],
+    "svc: animation + skeleton (Character.update)": [
+     6,
+     6
+    ],
+    "svc: nav paths (A*, walkable, nearest free)": [
+     2.7,
+     0.6
+    ],
+    "svc: sound propagation": [
+     0.1,
+     0.1
+    ],
+    "svc: static line tests (sight, fire, reach)": [
+     203.7,
+     31.4
+    ],
+    "svc: circle collide (feet vs walls)": [
+     6,
+     6
+    ],
+    "svc: box world raycast (cursor, lasers, rounds)": [
+     3,
+     3
+    ],
+    "headless only: CPU light estimate standing in for the GPU light probe": [
+     4.9,
+     4.9
+    ]
+   },
+   "lineBy": {
+    "player (aim, interact, move, fire)": 0.002,
+    "squad: order menu + orders": 0.024,
+    "squad: door tools": 0.056,
+    "squad: entry points, cleared rooms, cover": 0.017,
+    "room fight (both sides: watch, fear, shoot)": 0.017,
+    "guards: updateGuard (senses, state, feet)": 0.015,
+    "destruction (heat, debris)": 0.001,
+    "weather, wet, wind, moths, rain fx (game half)": 0.014,
+    "items (throwables, drops)": 0.001,
+    "tracers + sparks": 0.001
+   },
+   "worst": [
+    {
+     "ms": 20.095,
+     "seed": 1,
+     "t": 5.58,
+     "top": [
+      [
+       "dynamic boxes (leaves, props, debris, rig props, fx)",
+       9.299
+      ],
+      [
+       "render: frame uniforms, probe, submit (the rest of Engine.render)",
+       7.174
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.063
+      ]
+     ]
+    },
+    {
+     "ms": 19.409,
+     "seed": 1,
+     "t": 20.6,
+     "top": [
+      [
+       "render: lighting passes encode",
+       11.992
+      ],
+      [
+       "step: box list pack + trace grid (world.upload)",
+       1.755
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.233
+      ]
+     ]
+    },
+    {
+     "ms": 19.132,
+     "seed": 1,
+     "t": 1.55,
+     "top": [
+      [
+       "step: box list pack + trace grid (world.upload)",
+       11.785
+      ],
+      [
+       "dynamic boxes (leaves, props, debris, rig props, fx)",
+       2.267
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       0.904
+      ]
+     ]
+    }
+   ],
+   "missing": [],
+   "gpu": {
+    "view": {
+     "cssW": 1728,
+     "cssH": 1000,
+     "dpr": 2,
+     "quality": "high"
+    },
+    "frames": 1292,
+    "chars": {
+     "model": "cast",
+     "vertices": 22208,
+     "triangles": 27164,
+     "joints": 53,
+     "parts": 31
+    },
+    "perFrame": {
+     "writeBytes": 207397.3653250774,
+     "writeCalls": 29.360681114551085,
+     "encoders": 1,
+     "computePasses": 20.101393188854487,
+     "dispatches": 55.086687306501545,
+     "threads": 19255113.411764707,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 183663.75541795665,
+     "copyTexTexels": 1759360,
+     "readbackBuffersCreated": 2.1671826625387,
+     "copyBufBytes": 177613.0773993808,
+     "submits": 1,
+     "bindGroupsCreated": 0.017027863777089782
+    },
+    "perFrameMax": {
+     "writeBytes": 257328,
+     "writeCalls": 37,
+     "encoders": 1,
+     "computePasses": 21,
+     "dispatches": 169,
+     "threads": 43183072,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 190233,
+     "copyTexTexels": 1759360,
+     "readbackBuffersCreated": 3,
+     "copyBufBytes": 179344,
+     "submits": 1,
+     "bindGroupsCreated": 14
+    },
+    "scene": {
+     "boxesStatic": 782,
+     "boxesDynamic": 378.1137770897833,
+     "lights": 34.190402476780186,
+     "lightsAll": 59.06346749226006,
+     "characters": 6,
+     "particlesLive": 3773.6950464396286,
+     "decals": 0.2724458204334365,
+     "smokeDomains": 0.21052631578947367,
+     "smokeEmitters": 0.49613003095975233,
+     "glassPanes": 22,
+     "glassPanesBroken": 0,
+     "debris": 0.10139318885448917,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.7699999999999877
+    },
+    "sceneMax": {
+     "boxesStatic": 782,
+     "boxesDynamic": 393,
+     "lights": 39,
+     "lightsAll": 62,
+     "characters": 6,
+     "particlesLive": 7059,
+     "decals": 4,
+     "smokeDomains": 6,
+     "smokeEmitters": 22,
+     "glassPanes": 22,
+     "glassPanesBroken": 0,
+     "debris": 1,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.77
+    },
+    "passes": {
+     "meshShadows": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 490752,
+      "threadsMax": 490752,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gbuffer": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 176113.3653250774,
+      "draws": 2
+     },
+     "gdown": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1024100,
+      "tris": 1,
+      "draws": 1
+     },
+     "rc c3": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 40960,
+      "threadsMax": 40960,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c2": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 35840,
+      "threadsMax": 35840,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c1": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c0": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc dice": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 4480,
+      "threadsMax": 4480,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particles": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 3874.7244582043345,
+      "threadsMax": 7232,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "direct": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1036736,
+      "threadsMax": 1036736,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "softblur": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 5201152,
+      "threadsMax": 5201152,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gather": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 118280.4705882353,
+      "threadsMax": 118400,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "temporal": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 827904,
+      "threadsMax": 827904,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "reflect": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rdenoise": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1053696,
+      "threadsMax": 1053696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "volumetrics": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "sharpU": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "compS": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particlesDraw": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 7547.390092879257,
+      "draws": 1
+     },
+     "gbaa": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "taau": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "bloom": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 2013696,
+      "threadsMax": 2013696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "post": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "fxaa": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "probe": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 32,
+      "threadsMax": 32,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "smoke": {
+      "kind": "compute",
+      "perFrame": 0.10139318885448917,
+      "threads": 845502.2167182663,
+      "threadsMax": 24773376,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     }
+    },
+    "kernels": {
+     "meshShadows · meshSkin": {
+      "perFrame": 1,
+      "threads": 489216
+     },
+     "meshShadows · meshRefit": {
+      "perFrame": 1,
+      "threads": 1536
+     },
+     "rc c3 · rcUpper": {
+      "perFrame": 1,
+      "threads": 40960
+     },
+     "rc c2 · rcUpper": {
+      "perFrame": 1,
+      "threads": 35840
+     },
+     "rc c1 · rcUpper": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc c0 · rcC0": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc dice · rcDice": {
+      "perFrame": 1,
+      "threads": 4480
+     },
+     "particles · particlesEmit": {
+      "perFrame": 1,
+      "threads": 68.06191950464397
+     },
+     "particles · particlesUpdate": {
+      "perFrame": 1,
+      "threads": 3806.6625386996902
+     },
+     "direct · restir": {
+      "perFrame": 0.4001547987616099,
+      "threads": 414854.8854489164
+     },
+     "softblur · dnPack": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · softtileDist2": {
+      "perFrame": 1,
+      "threads": 17472
+     },
+     "softblur · dnShTemporal": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous1/0/1": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous4/1/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "gather · fgatherS": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnGiTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous4/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous8/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "reflect": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous2/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous4/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "volumetrics · vol": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "sharpU · sharpUE": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "compS · compositeSR": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "gbaa": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "taau · taauS": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "bloom · bloomDown": {
+      "perFrame": 7,
+      "threads": 720896
+     },
+     "bloom · diffBlurH": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · diffBlurV": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · bloomDown0": {
+      "perFrame": 1,
+      "threads": 435456
+     },
+     "bloom · bloomUp": {
+      "perFrame": 4,
+      "threads": 580864
+     },
+     "probe": {
+      "perFrame": 1,
+      "threads": 32
+     },
+     "direct · restirM": {
+      "perFrame": 0.5998452012383901,
+      "threads": 621881.1145510835
+     },
+     "smoke · smoke_clearAll": {
+      "perFrame": 0.009287925696594427,
+      "threads": 2434.7739938080495
+     },
+     "smoke · smoke_bake": {
+      "perFrame": 0.0046439628482972135,
+      "threads": 1217.3869969040247
+     },
+     "smoke · smoke_advectVel": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_curl": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_forces": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_divergence": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_rbgsR": {
+      "perFrame": 0.8421052631578947,
+      "threads": 220752.84210526315
+     },
+     "smoke · smoke_rbgsB": {
+      "perFrame": 0.8421052631578947,
+      "threads": 220752.84210526315
+     },
+     "smoke · smoke_project": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_occupancy": {
+      "perFrame": 0.21052631578947367,
+      "threads": 6898.526315789473
+     },
+     "smoke · smoke_dilate": {
+      "perFrame": 0.21052631578947367,
+      "threads": 13.473684210526315
+     },
+     "smoke · smoke_advectScalars": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_injectDecay": {
+      "perFrame": 0.21052631578947367,
+      "threads": 55188.21052631579
+     },
+     "smoke · smoke_renderOccRegions": {
+      "perFrame": 0.21052631578947367,
+      "threads": 6898.526315789473
+     },
+     "smoke · smoke_renderOccPack": {
+      "perFrame": 0.21052631578947367,
+      "threads": 13.473684210526315
+     },
+     "smoke · smoke_reduceMass": {
+      "perFrame": 0.0007739938080495357,
+      "threads": 202.89783281733747
+     },
+     "gather · cards": {
+      "perFrame": 0.07198142414860681,
+      "threads": 8.470588235294118
+     }
+    },
+    "writes": {
+     "boxGeo": {
+      "bytes": 37123.640866873066,
+      "calls": 1,
+      "max": 37600
+     },
+     "boxMat": {
+      "bytes": 74247.28173374613,
+      "calls": 1,
+      "max": 75200
+     },
+     "visibleBoxes": {
+      "bytes": 4376.455108359133,
+      "calls": 1,
+      "max": 4436
+     },
+     "capsules": {
+      "bytes": 2880,
+      "calls": 1,
+      "max": 2880
+     },
+     "sceneInfo": {
+      "bytes": 2432,
+      "calls": 1,
+      "max": 2432
+     },
+     "gridCells": {
+      "bytes": 13444,
+      "calls": 1,
+      "max": 13444
+     },
+     "gridItems": {
+      "bytes": 22870.544891640868,
+      "calls": 1,
+      "max": 23000
+     },
+     "lights": {
+      "bytes": 2188.185758513932,
+      "calls": 1,
+      "max": 2496
+     },
+     "lightReach": {
+      "bytes": 9573.312693498452,
+      "calls": 1,
+      "max": 10920
+     },
+     "particleEmits": {
+      "bytes": 1112.0743034055727,
+      "calls": 3,
+      "max": 1680
+     },
+     "particles": {
+      "bytes": 8,
+      "calls": 1,
+      "max": 8
+     },
+     "frame": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "frameOut": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "taauParams": {
+      "bytes": 144,
+      "calls": 1,
+      "max": 144
+     },
+     "rcParams": {
+      "bytes": 64,
+      "calls": 4,
+      "max": 64
+     },
+     "restirU": {
+      "bytes": 4288,
+      "calls": 1,
+      "max": 4288
+     },
+     "dnParams": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "dnParamsRefl": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "postParams": {
+      "bytes": 32,
+      "calls": 1,
+      "max": 32
+     },
+     "fxaaParams": {
+      "bytes": 33.43653250773994,
+      "calls": 1.0448916408668731,
+      "max": 64
+     },
+     "probeQueries": {
+      "bytes": 661.9195046439628,
+      "calls": 1,
+      "max": 736
+     },
+     "probeParams": {
+      "bytes": 16,
+      "calls": 1,
+      "max": 16
+     },
+     "jointMats": {
+      "bytes": 24556.978328173376,
+      "calls": 0.9992260061919505,
+      "max": 24576
+     },
+     "charInsts": {
+      "bytes": 575.5541795665634,
+      "calls": 0.9992260061919505,
+      "max": 576
+     },
+     "smokeDomainsUbo": {
+      "bytes": 2.3777089783281733,
+      "calls": 0.0046439628482972135,
+      "max": 1024
+     },
+     "smokeDomParams": {
+      "bytes": 9.510835913312693,
+      "calls": 0.0046439628482972135,
+      "max": 4096
+     },
+     "decals": {
+      "bytes": 4608.92879256966,
+      "calls": 0.10139318885448917,
+      "max": 45456
+     },
+     "smokeSimParams": {
+      "bytes": 215.76470588235293,
+      "calls": 0.10139318885448917,
+      "max": 2128
+     },
+     "smokeWind": {
+      "bytes": 11.356037151702786,
+      "calls": 0.10139318885448917,
+      "max": 112
+     },
+     "smokeSealers": {
+      "bytes": 2.043343653250774,
+      "calls": 0.003869969040247678,
+      "max": 528
+     }
+    },
+    "textures": {
+     "liveBytes": 462249264,
+     "peakBytes": 462249264,
+     "count": 112,
+     "top": [
+      {
+       "label": "smokeVelA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeVelB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeCurl",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "taaHist0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "taaHist1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "smokePA",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokePB",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeDiv",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeObst",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "directS0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directS1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH00",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH01",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH10",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH11",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "gAlbedoO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      },
+      {
+       "label": "gNormalO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgb10a2unorm"
+      },
+      {
+       "label": "gIdO",
+       "bytes": 6912000,
+       "desc": "1728×1000 r32uint"
+      },
+      {
+       "label": "gDepthO",
+       "bytes": 6912000,
+       "desc": "1728×1000 depth32float"
+      },
+      {
+       "label": "gVelO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rg16float"
+      },
+      {
+       "label": "ldr",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      },
+      {
+       "label": "gAlbedo",
+       "bytes": 4096400,
+       "desc": "1330×770 rgba8unorm"
+      },
+      {
+       "label": "gNormal",
+       "bytes": 4096400,
+       "desc": "1330×770 rgb10a2unorm"
+      },
+      {
+       "label": "gId",
+       "bytes": 4096400,
+       "desc": "1330×770 r32uint"
+      },
+      {
+       "label": "gDepth",
+       "bytes": 4096400,
+       "desc": "1330×770 depth32float"
+      },
+      {
+       "label": "gVel",
+       "bytes": 4096400,
+       "desc": "1330×770 rg16float"
+      }
+     ]
+    },
+    "buffers": {
+     "liveBytes": 57527152,
+     "peakBytes": 57527152
+    },
+    "cpu": {
+     "renderMs": 1.0944086160990796,
+     "smokeMs": 0.010962495356035218
+    },
+    "notes": []
+   }
+  },
+  {
+   "id": "block-four",
+   "arm": "nodestr",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 21.2,
+     "digest": "dc164814",
+     "frames": 1271
+    }
+   ],
+   "frames": 1211,
+   "page": {
+    "mean": 4.506,
+    "p50": 4.071,
+    "p95": 7.006,
+    "p99": 13.282,
+    "max": 25.345
+   },
+   "update": {
+    "mean": 3.694,
+    "p50": 3.311,
+    "p95": 5.592,
+    "p99": 10.321,
+    "max": 23.935
+   },
+   "stepped": {
+    "mean": 4.506,
+    "p50": 4.071,
+    "p95": 7.006,
+    "p99": 13.282,
+    "max": 25.345
+   },
+   "uploadPerCall": 0.364,
+   "warmMax": 273.689,
+   "buckets": {
+    "update: head (journal, clocks)": {
+     "mean": 0.004,
+     "p50": 0.004,
+     "p95": 0.006,
+     "p99": 0.025,
+     "max": 0.278
+    },
+    "player (aim, interact, move, fire)": {
+     "mean": 0.116,
+     "p50": 0.102,
+     "p95": 0.168,
+     "p99": 0.212,
+     "max": 3.674
+    },
+    "squad: order menu + orders": {
+     "mean": 0.069,
+     "p50": 0.059,
+     "p95": 0.136,
+     "p99": 0.231,
+     "max": 0.72
+    },
+    "squad: door tools": {
+     "mean": 0.061,
+     "p50": 0.034,
+     "p95": 0.135,
+     "p99": 0.27,
+     "max": 5.66
+    },
+    "suppression": {
+     "mean": 0.006,
+     "p50": 0.006,
+     "p95": 0.01,
+     "p99": 0.026,
+     "max": 0.059
+    },
+    "gear: rings, 40 mm, frags": {
+     "mean": 0.017,
+     "p50": 0.013,
+     "p95": 0.043,
+     "p99": 0.075,
+     "max": 0.745
+    },
+    "guards: weapons dealt, anim flags": {
+     "mean": 0.01,
+     "p50": 0.009,
+     "p95": 0.016,
+     "p99": 0.044,
+     "max": 0.072
+    },
+    "scenario (director, breach, room clear, rescue)": {
+     "mean": 0.015,
+     "p50": 0.012,
+     "p95": 0.024,
+     "p99": 0.063,
+     "max": 0.244
+    },
+    "pair (two person stealth)": {
+     "mean": 0.004,
+     "p50": 0.003,
+     "p95": 0.006,
+     "p99": 0.036,
+     "max": 0.301
+    },
+    "squad: entry points, cleared rooms, cover": {
+     "mean": 0.02,
+     "p50": 0.009,
+     "p95": 0.045,
+     "p99": 0.282,
+     "max": 0.443
+    },
+    "room fight (both sides: watch, fear, shoot)": {
+     "mean": 0.108,
+     "p50": 0.094,
+     "p95": 0.186,
+     "p99": 0.384,
+     "max": 1.471
+    },
+    "tactics (flank, lone corner, doorways)": {
+     "mean": 0.022,
+     "p50": 0.014,
+     "p95": 0.042,
+     "p99": 0.09,
+     "max": 2.889
+    },
+    "needs (patrol variation)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.014,
+     "max": 0.056
+    },
+    "guards: updateGuard (senses, state, feet)": {
+     "mean": 0.318,
+     "p50": 0.274,
+     "p95": 0.534,
+     "p99": 0.982,
+     "max": 6.852
+    },
+    "civilians": {
+     "mean": 0.001,
+     "p50": 0.001,
+     "p95": 0.001,
+     "p99": 0.003,
+     "max": 0.119
+    },
+    "escalation + QRF": {
+     "mean": 0.014,
+     "p50": 0.012,
+     "p95": 0.024,
+     "p99": 0.054,
+     "max": 0.214
+    },
+    "doors": {
+     "mean": 0.09,
+     "p50": 0.086,
+     "p95": 0.159,
+     "p99": 0.234,
+     "max": 1.477
+    },
+    "mission": {
+     "mean": 0.005,
+     "p50": 0.004,
+     "p95": 0.009,
+     "p99": 0.036,
+     "max": 0.089
+    },
+    "props (furniture)": {
+     "mean": 0.026,
+     "p50": 0.017,
+     "p95": 0.067,
+     "p99": 0.132,
+     "max": 0.703
+    },
+    "destruction (heat, debris)": {
+     "mean": 0.008,
+     "p50": 0.004,
+     "p95": 0.028,
+     "p99": 0.064,
+     "max": 0.611
+    },
+    "destruction: wall charge, fire at cover": {
+     "mean": 0.004,
+     "p50": 0.003,
+     "p95": 0.005,
+     "p99": 0.014,
+     "max": 0.1
+    },
+    "destruction: both sides react to a break": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.005,
+     "p99": 0.009,
+     "max": 0.091
+    },
+    "fixtures + devices": {
+     "mean": 0.017,
+     "p50": 0.014,
+     "p95": 0.03,
+     "p99": 0.057,
+     "max": 0.137
+    },
+    "weather, wet, wind, moths, rain fx (game half)": {
+     "mean": 0.11,
+     "p50": 0.098,
+     "p95": 0.177,
+     "p99": 0.258,
+     "max": 0.675
+    },
+    "items (throwables, drops)": {
+     "mean": 0.006,
+     "p50": 0.002,
+     "p95": 0.015,
+     "p99": 0.062,
+     "max": 0.243
+    },
+    "glass (stars, breaking, shards)": {
+     "mean": 0.007,
+     "p50": 0.006,
+     "p95": 0.01,
+     "p99": 0.044,
+     "max": 0.714
+    },
+    "fog of war": {
+     "mean": 0.063,
+     "p50": 0.056,
+     "p95": 0.102,
+     "p99": 0.163,
+     "max": 1.22
+    },
+    "dynamic boxes (leaves, props, debris, rig props, fx)": {
+     "mean": 0.207,
+     "p50": 0.175,
+     "p95": 0.285,
+     "p99": 0.509,
+     "max": 5.805
+    },
+    "tracers + sparks": {
+     "mean": 0.006,
+     "p50": 0.004,
+     "p95": 0.012,
+     "p99": 0.043,
+     "max": 0.263
+    },
+    "smoke pushes": {
+     "mean": 0.014,
+     "p50": 0.008,
+     "p95": 0.018,
+     "p99": 0.054,
+     "max": 4.496
+    },
+    "characters → skin instances + shadow proxies": {
+     "mean": 0.122,
+     "p50": 0.054,
+     "p95": 0.102,
+     "p99": 0.156,
+     "max": 19.969
+    },
+    "sensors (meter + smoke line asks)": {
+     "mean": 0.009,
+     "p50": 0.008,
+     "p95": 0.017,
+     "p99": 0.046,
+     "max": 0.138
+    },
+    "update: tail (cues, checkpoints, journal)": {
+     "mean": 0.018,
+     "p50": 0.015,
+     "p95": 0.034,
+     "p99": 0.085,
+     "max": 1
+    },
+    "step: camera": {
+     "mean": 0.006,
+     "p50": 0.006,
+     "p95": 0.009,
+     "p99": 0.019,
+     "max": 0.333
+    },
+    "step: lights.update": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.021,
+     "max": 0.081
+    },
+    "step: box list pack + trace grid (world.upload)": {
+     "mean": 0.35,
+     "p50": 0.295,
+     "p95": 0.456,
+     "p99": 0.692,
+     "max": 14.964
+    },
+    "step: smoke solver update (CPU half)": {
+     "mean": 0.019,
+     "p50": 0.015,
+     "p95": 0.052,
+     "p99": 0.096,
+     "max": 0.226
+    },
+    "render: frame uniforms, probe, submit (the rest of Engine.render)": {
+     "mean": 0.138,
+     "p50": 0.121,
+     "p95": 0.219,
+     "p99": 0.281,
+     "max": 4.497
+    },
+    "render: light list + reach / glass masks upload": {
+     "mean": 0.044,
+     "p50": 0.036,
+     "p95": 0.098,
+     "p99": 0.142,
+     "max": 0.326
+    },
+    "render: decal list": {
+     "mean": 0.035,
+     "p50": 0.004,
+     "p95": 0.103,
+     "p99": 0.15,
+     "max": 0.25
+    },
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": {
+     "mean": 0.032,
+     "p50": 0.033,
+     "p95": 0.058,
+     "p99": 0.085,
+     "max": 0.25
+    },
+    "render: smoke solver encode": {
+     "mean": 0.052,
+     "p50": 0.038,
+     "p95": 0.148,
+     "p99": 0.211,
+     "max": 1.921
+    },
+    "render: g-buffer + mesh shadows encode, motion snapshot": {
+     "mean": 0.019,
+     "p50": 0.01,
+     "p95": 0.03,
+     "p99": 0.057,
+     "max": 4.584
+    },
+    "render: cascades encode": {
+     "mean": 0.01,
+     "p50": 0.008,
+     "p95": 0.021,
+     "p99": 0.047,
+     "max": 0.091
+    },
+    "render: lighting passes encode": {
+     "mean": 0.104,
+     "p50": 0.084,
+     "p95": 0.159,
+     "p99": 0.215,
+     "max": 5.887
+    },
+    "svc: animation + skeleton (Character.update)": {
+     "mean": 1.555,
+     "p50": 1.444,
+     "p95": 2.282,
+     "p99": 3.017,
+     "max": 17.2
+    },
+    "svc: nav paths (A*, walkable, nearest free)": {
+     "mean": 0.012,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.212,
+     "max": 4.521
+    },
+    "svc: sound propagation": {
+     "mean": 0.059,
+     "p50": 0,
+     "p95": 0.425,
+     "p99": 1.198,
+     "max": 3.364
+    },
+    "svc: static line tests (sight, fire, reach)": {
+     "mean": 0.512,
+     "p50": 0.421,
+     "p95": 1.126,
+     "p99": 1.892,
+     "max": 7.886
+    },
+    "svc: circle collide (feet vs walls)": {
+     "mean": 0.018,
+     "p50": 0.014,
+     "p95": 0.04,
+     "p99": 0.078,
+     "max": 0.138
+    },
+    "svc: box world raycast (cursor, lasers, rounds)": {
+     "mean": 0.036,
+     "p50": 0.033,
+     "p95": 0.064,
+     "p99": 0.086,
+     "max": 0.168
+    },
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "headless only: CPU light estimate standing in for the GPU light probe": {
+     "mean": 0.491,
+     "p50": 0.436,
+     "p95": 0.665,
+     "p99": 0.978,
+     "max": 12.481
+    }
+   },
+   "groups": {
+    "(probe stand-in)": {
+     "mean": 0.491,
+     "p50": 0.436,
+     "p95": 0.665,
+     "p99": 0.978,
+     "max": 12.481
+    },
+    "animation": {
+     "mean": 1.555,
+     "p50": 1.444,
+     "p95": 2.282,
+     "p99": 3.017,
+     "max": 17.2
+    },
+    "line tests": {
+     "mean": 0.548,
+     "p50": 0.455,
+     "p95": 1.167,
+     "p99": 1.984,
+     "max": 7.931
+    },
+    "nav paths": {
+     "mean": 0.012,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.212,
+     "max": 4.521
+    },
+    "sound": {
+     "mean": 0.059,
+     "p50": 0,
+     "p95": 0.425,
+     "p99": 1.198,
+     "max": 3.364
+    },
+    "guards AI": {
+     "mean": 0.352,
+     "p50": 0.307,
+     "p95": 0.586,
+     "p99": 1.022,
+     "max": 6.895
+    },
+    "room fight": {
+     "mean": 0.108,
+     "p50": 0.094,
+     "p95": 0.186,
+     "p99": 0.384,
+     "max": 1.471
+    },
+    "squad": {
+     "mean": 0.164,
+     "p50": 0.137,
+     "p95": 0.308,
+     "p99": 0.602,
+     "max": 5.774
+    },
+    "tactics": {
+     "mean": 0.022,
+     "p50": 0.014,
+     "p95": 0.042,
+     "p99": 0.09,
+     "max": 2.889
+    },
+    "player": {
+     "mean": 0.116,
+     "p50": 0.102,
+     "p95": 0.168,
+     "p99": 0.212,
+     "max": 3.674
+    },
+    "feet vs walls": {
+     "mean": 0.018,
+     "p50": 0.014,
+     "p95": 0.04,
+     "p99": 0.078,
+     "max": 0.138
+    },
+    "doors, props": {
+     "mean": 0.117,
+     "p50": 0.105,
+     "p95": 0.209,
+     "p99": 0.297,
+     "max": 1.493
+    },
+    "destruction": {
+     "mean": 0.015,
+     "p50": 0.011,
+     "p95": 0.038,
+     "p99": 0.081,
+     "max": 0.617
+    },
+    "glass": {
+     "mean": 0.007,
+     "p50": 0.006,
+     "p95": 0.01,
+     "p99": 0.044,
+     "max": 0.714
+    },
+    "gear": {
+     "mean": 0.028,
+     "p50": 0.021,
+     "p95": 0.067,
+     "p99": 0.11,
+     "max": 0.756
+    },
+    "weather": {
+     "mean": 0.11,
+     "p50": 0.098,
+     "p95": 0.177,
+     "p99": 0.258,
+     "max": 0.675
+    },
+    "pair": {
+     "mean": 0.004,
+     "p50": 0.003,
+     "p95": 0.006,
+     "p99": 0.036,
+     "max": 0.301
+    },
+    "fog of war": {
+     "mean": 0.063,
+     "p50": 0.056,
+     "p95": 0.102,
+     "p99": 0.163,
+     "max": 1.22
+    },
+    "chars to GPU": {
+     "mean": 0.122,
+     "p50": 0.054,
+     "p95": 0.102,
+     "p99": 0.156,
+     "max": 19.969
+    },
+    "dyn boxes": {
+     "mean": 0.221,
+     "p50": 0.185,
+     "p95": 0.297,
+     "p99": 0.614,
+     "max": 6.075
+    },
+    "box upload": {
+     "mean": 0.35,
+     "p50": 0.295,
+     "p95": 0.456,
+     "p99": 0.692,
+     "max": 14.964
+    },
+    "smoke CPU": {
+     "mean": 0.019,
+     "p50": 0.015,
+     "p95": 0.052,
+     "p99": 0.096,
+     "max": 0.226
+    },
+    "render CPU": {
+     "mean": 0.434,
+     "p50": 0.404,
+     "p95": 0.624,
+     "p99": 1.052,
+     "max": 6.097
+    },
+    "other": {
+     "mean": 0.062,
+     "p50": 0.054,
+     "p95": 0.102,
+     "p99": 0.184,
+     "max": 1.041
+    }
+   },
+   "calls": {
+    "step: box list pack + trace grid (world.upload)": [
+     1,
+     1
+    ],
+    "render: light list + reach / glass masks upload": [
+     2,
+     2
+    ],
+    "render: decal list": [
+     1,
+     1
+    ],
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": [
+     3,
+     2
+    ],
+    "render: smoke solver encode": [
+     1,
+     1
+    ],
+    "render: g-buffer + mesh shadows encode, motion snapshot": [
+     4,
+     4
+    ],
+    "render: cascades encode": [
+     1,
+     1
+    ],
+    "render: lighting passes encode": [
+     1,
+     1
+    ],
+    "svc: animation + skeleton (Character.update)": [
+     13,
+     13
+    ],
+    "svc: nav paths (A*, walkable, nearest free)": [
+     21.7,
+     0.1
+    ],
+    "svc: sound propagation": [
+     0.5,
+     0.5
+    ],
+    "svc: static line tests (sight, fire, reach)": [
+     500.5,
+     142.6
+    ],
+    "svc: circle collide (feet vs walls)": [
+     11.3,
+     11.3
+    ],
+    "svc: box world raycast (cursor, lasers, rounds)": [
+     1,
+     1
+    ],
+    "headless only: CPU light estimate standing in for the GPU light probe": [
+     10.3,
+     10.3
+    ]
+   },
+   "lineBy": {
+    "player (aim, interact, move, fire)": 0.018,
+    "squad: order menu + orders": 0.024,
+    "squad: door tools": 0.093,
+    "gear: rings, 40 mm, frags": 0.007,
+    "squad: entry points, cleared rooms, cover": 0.003,
+    "room fight (both sides: watch, fear, shoot)": 0.08,
+    "tactics (flank, lone corner, doorways)": 0.002,
+    "guards: updateGuard (senses, state, feet)": 0.073,
+    "destruction (heat, debris)": 0.001,
+    "weather, wet, wind, moths, rain fx (game half)": 0.01,
+    "items (throwables, drops)": 0.003,
+    "fog of war": 0.237,
+    "tracers + sparks": 0.001
+   },
+   "worst": [
+    {
+     "ms": 25.345,
+     "seed": 1,
+     "t": 10.55,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       19.685
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.431
+      ],
+      [
+       "guards: updateGuard (senses, state, feet)",
+       0.538
+      ]
+     ]
+    },
+    {
+     "ms": 24.956,
+     "seed": 1,
+     "t": 13.52,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       19.969
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.586
+      ],
+      [
+       "step: box list pack + trace grid (world.upload)",
+       0.521
+      ]
+     ]
+    },
+    {
+     "ms": 21.728,
+     "seed": 1,
+     "t": 14.85,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       16.104
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.93
+      ],
+      [
+       "guards: updateGuard (senses, state, feet)",
+       0.669
+      ]
+     ]
+    }
+   ],
+   "missing": [],
+   "gpu": {
+    "view": {
+     "cssW": 1728,
+     "cssH": 1000,
+     "dpr": 2,
+     "quality": "high"
+    },
+    "frames": 1211,
+    "chars": {
+     "model": "cast",
+     "vertices": 22208,
+     "triangles": 27164,
+     "joints": 53,
+     "parts": 31
+    },
+    "perFrame": {
+     "writeBytes": 139596.48885218828,
+     "writeCalls": 31.439306358381504,
+     "encoders": 1,
+     "computePasses": 21.614368290668867,
+     "dispatches": 76.11312964492156,
+     "threads": 25086629.86622626,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 187491.0231213873,
+     "copyTexTexels": 3487360,
+     "readbackBuffersCreated": 2.166804293971924,
+     "copyBufBytes": 112338.70850536747,
+     "submits": 1,
+     "bindGroupsCreated": 0.018166804293971925
+    },
+    "perFrameMax": {
+     "writeBytes": 196996,
+     "writeCalls": 39,
+     "encoders": 1,
+     "computePasses": 22,
+     "dispatches": 154,
+     "threads": 41781184,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 309975,
+     "copyTexTexels": 3487360,
+     "readbackBuffersCreated": 3,
+     "copyBufBytes": 115920,
+     "submits": 1,
+     "bindGroupsCreated": 14
+    },
+    "scene": {
+     "boxesStatic": 254,
+     "boxesDynamic": 223.33691164327,
+     "lights": 15.460776218001651,
+     "lightsAll": 37.07184145334434,
+     "characters": 6.465730800990917,
+     "particlesLive": 3236.4343517753923,
+     "decals": 1.2287365813377373,
+     "smokeDomains": 2.2766308835672997,
+     "smokeEmitters": 1.0123864574731627,
+     "glassPanes": 4,
+     "glassPanesBroken": 0,
+     "debris": 0.6143682906688687,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.7699999999999881
+    },
+    "sceneMax": {
+     "boxesStatic": 254,
+     "boxesDynamic": 261,
+     "lights": 20,
+     "lightsAll": 39,
+     "characters": 11,
+     "particlesLive": 3529,
+     "decals": 2,
+     "smokeDomains": 7,
+     "smokeEmitters": 22,
+     "glassPanes": 4,
+     "glassPanesBroken": 0,
+     "debris": 1,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.77
+    },
+    "passes": {
+     "meshShadows": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 504125.09331131296,
+      "threadsMax": 654336,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gbuffer": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 181015.1544178365,
+      "draws": 2
+     },
+     "gdown": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1024100,
+      "tris": 1,
+      "draws": 1
+     },
+     "rc c3": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 40960,
+      "threadsMax": 40960,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c2": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 35840,
+      "threadsMax": 35840,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c1": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c0": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc dice": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 4480,
+      "threadsMax": 4480,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particles": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 3332.7035507844757,
+      "threadsMax": 3776,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "direct": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1036736,
+      "threadsMax": 1036736,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "softblur": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 5201152,
+      "threadsMax": 5201152,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gather": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 118361.2617671346,
+      "threadsMax": 118528,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "temporal": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 827904,
+      "threadsMax": 827904,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "reflect": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rdenoise": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1053696,
+      "threadsMax": 1053696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "volumetrics": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "sharpU": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "compS": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particlesDraw": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 6472.868703550785,
+      "draws": 1
+     },
+     "gbaa": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "fogofwar": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "taau": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "bloom": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 2013696,
+      "threadsMax": 2013696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "post": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "fxaa": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "probe": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 54.19653179190752,
+      "threadsMax": 64,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "smoke": {
+      "kind": "compute",
+      "perFrame": 0.6143682906688687,
+      "threads": 4936084.611065235,
+      "threadsMax": 21561984,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     }
+    },
+    "kernels": {
+     "meshShadows · meshSkin": {
+      "perFrame": 1,
+      "threads": 502547.23699421965
+     },
+     "meshShadows · meshRefit": {
+      "perFrame": 1,
+      "threads": 1577.8563170933114
+     },
+     "rc c3 · rcUpper": {
+      "perFrame": 1,
+      "threads": 40960
+     },
+     "rc c2 · rcUpper": {
+      "perFrame": 1,
+      "threads": 35840
+     },
+     "rc c1 · rcUpper": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc c0 · rcC0": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc dice · rcDice": {
+      "perFrame": 1,
+      "threads": 4480
+     },
+     "particles · particlesEmit": {
+      "perFrame": 1,
+      "threads": 64.21139554087532
+     },
+     "particles · particlesUpdate": {
+      "perFrame": 1,
+      "threads": 3268.4921552436003
+     },
+     "direct · restir": {
+      "perFrame": 0.7654830718414534,
+      "threads": 793603.857968621
+     },
+     "softblur · dnPack": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · softtileDist2": {
+      "perFrame": 1,
+      "threads": 17472
+     },
+     "softblur · dnShTemporal": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous1/0/1": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous4/1/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "gather · fgatherS": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnGiTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous4/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous8/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "reflect": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous2/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous4/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "volumetrics · vol": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "sharpU · sharpUE": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "compS · compositeSR": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "gbaa": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "fogofwar": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "taau · taauS": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "bloom · bloomDown": {
+      "perFrame": 7,
+      "threads": 720896
+     },
+     "bloom · diffBlurH": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · diffBlurV": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · bloomDown0": {
+      "perFrame": 1,
+      "threads": 435456
+     },
+     "bloom · bloomUp": {
+      "perFrame": 4,
+      "threads": 580864
+     },
+     "probe": {
+      "perFrame": 1,
+      "threads": 54.19653179190752
+     },
+     "direct · restirM": {
+      "perFrame": 0.23451692815854666,
+      "threads": 243132.14203137901
+     },
+     "gather · cards": {
+      "perFrame": 0.6639141205615194,
+      "threads": 89.26176713459951
+     },
+     "smoke · smoke_clearAll": {
+      "perFrame": 0.016515276630883566,
+      "threads": 4329.380677126342
+     },
+     "smoke · smoke_bake": {
+      "perFrame": 0.023121387283236993,
+      "threads": 6061.132947976878
+     },
+     "smoke · smoke_advectVel": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_curl": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_forces": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_divergence": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_rbgsR": {
+      "perFrame": 4.928158546655657,
+      "threads": 1291887.1940545004
+     },
+     "smoke · smoke_rbgsB": {
+      "perFrame": 4.928158546655657,
+      "threads": 1291887.1940545004
+     },
+     "smoke · smoke_project": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_occupancy": {
+      "perFrame": 1.2320396366639141,
+      "threads": 40371.47481420314
+     },
+     "smoke · smoke_dilate": {
+      "perFrame": 1.2320396366639141,
+      "threads": 78.8505367464905
+     },
+     "smoke · smoke_advectScalars": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_injectDecay": {
+      "perFrame": 1.2320396366639141,
+      "threads": 322971.7985136251
+     },
+     "smoke · smoke_renderOccRegions": {
+      "perFrame": 1.2320396366639141,
+      "threads": 40371.47481420314
+     },
+     "smoke · smoke_renderOccPack": {
+      "perFrame": 1.2320396366639141,
+      "threads": 78.8505367464905
+     },
+     "smoke · smoke_reduceMass": {
+      "perFrame": 0.0008257638315441783,
+      "threads": 216.46903385631708
+     }
+    },
+    "writes": {
+     "boxGeo": {
+      "bytes": 15274.78117258464,
+      "calls": 1,
+      "max": 16480
+     },
+     "boxMat": {
+      "bytes": 30549.56234516928,
+      "calls": 1,
+      "max": 32960
+     },
+     "visibleBoxes": {
+      "bytes": 1793.34764657308,
+      "calls": 1,
+      "max": 1944
+     },
+     "capsules": {
+      "bytes": 2958.480594549959,
+      "calls": 1,
+      "max": 3840
+     },
+     "sceneInfo": {
+      "bytes": 2432,
+      "calls": 1,
+      "max": 2432
+     },
+     "gridCells": {
+      "bytes": 13444,
+      "calls": 1,
+      "max": 13444
+     },
+     "gridItems": {
+      "bytes": 9892.987613542527,
+      "calls": 1,
+      "max": 10280
+     },
+     "lights": {
+      "bytes": 989.4896779521057,
+      "calls": 1,
+      "max": 1280
+     },
+     "lightReach": {
+      "bytes": 4329.017341040462,
+      "calls": 1,
+      "max": 5600
+     },
+     "particleEmits": {
+      "bytes": 781.7274979355905,
+      "calls": 3,
+      "max": 1408
+     },
+     "particles": {
+      "bytes": 8,
+      "calls": 1,
+      "max": 8
+     },
+     "frame": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "frameOut": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "taauParams": {
+      "bytes": 144,
+      "calls": 1,
+      "max": 144
+     },
+     "rcParams": {
+      "bytes": 64,
+      "calls": 4,
+      "max": 64
+     },
+     "restirU": {
+      "bytes": 4288,
+      "calls": 1,
+      "max": 4288
+     },
+     "dnParams": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "dnParamsRefl": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "fogofwar": {
+      "bytes": 176,
+      "calls": 1,
+      "max": 176
+     },
+     "postParams": {
+      "bytes": 32,
+      "calls": 1,
+      "max": 32
+     },
+     "fxaaParams": {
+      "bytes": 32.766308835672994,
+      "calls": 1.023947151114781,
+      "max": 64
+     },
+     "probeQueries": {
+      "bytes": 1157.9190751445087,
+      "calls": 1,
+      "max": 1312
+     },
+     "probeParams": {
+      "bytes": 16,
+      "calls": 1,
+      "max": 16
+     },
+     "jointMats": {
+      "bytes": 26466.72171758877,
+      "calls": 0.9991742361684558,
+      "max": 45056
+     },
+     "charInsts": {
+      "bytes": 620.3137902559868,
+      "calls": 0.9991742361684558,
+      "max": 1056
+     },
+     "smokeDomainsUbo": {
+      "bytes": 7.187448389760529,
+      "calls": 0.014037985136251032,
+      "max": 1024
+     },
+     "smokeDomParams": {
+      "bytes": 28.749793559042114,
+      "calls": 0.014037985136251032,
+      "max": 4096
+     },
+     "decals": {
+      "bytes": 20156.789430222958,
+      "calls": 0.4434351775392238,
+      "max": 45456
+     },
+     "smokeSimParams": {
+      "bytes": 1971.606936416185,
+      "calls": 0.9265070189925682,
+      "max": 8512
+     },
+     "smokeSealers": {
+      "bytes": 5.232039636663914,
+      "calls": 0.00990916597853014,
+      "max": 528
+     },
+     "charMats": {
+      "bytes": 55.80842279108175,
+      "calls": 0.009083402146985962,
+      "max": 6144
+     }
+    },
+    "textures": {
+     "liveBytes": 537193664,
+     "peakBytes": 537193664,
+     "count": 119,
+     "top": [
+      {
+       "label": "smokeVelA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeVelB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeCurl",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "taaHist0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "taaHist1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "fogCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "smokePA",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokePB",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeDiv",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeObst",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "directS0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directS1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH00",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH01",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH10",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH11",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "gAlbedoO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      },
+      {
+       "label": "gNormalO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgb10a2unorm"
+      },
+      {
+       "label": "gIdO",
+       "bytes": 6912000,
+       "desc": "1728×1000 r32uint"
+      },
+      {
+       "label": "gDepthO",
+       "bytes": 6912000,
+       "desc": "1728×1000 depth32float"
+      },
+      {
+       "label": "gVelO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rg16float"
+      },
+      {
+       "label": "ldr",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      }
+     ]
+    },
+    "buffers": {
+     "liveBytes": 57527152,
+     "peakBytes": 57527152
+    },
+    "cpu": {
+     "renderMs": 0.8442721750619252,
+     "smokeMs": 0.019641473162673638
+    },
+    "notes": []
+   }
+  },
+  {
+   "id": "hostage-rescue",
+   "arm": "nodestr",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "rescued",
+     "t": 34.7,
+     "digest": "c8ac2c00",
+     "frames": 2081
+    }
+   ],
+   "frames": 2021,
+   "page": {
+    "mean": 3.858,
+    "p50": 3.495,
+    "p95": 6.622,
+    "p99": 10.611,
+    "max": 33.12
+   },
+   "update": {
+    "mean": 2.69,
+    "p50": 2.386,
+    "p95": 4.783,
+    "p99": 8.818,
+    "max": 31.259
+   },
+   "stepped": {
+    "mean": 3.858,
+    "p50": 3.495,
+    "p95": 6.622,
+    "p99": 10.611,
+    "max": 33.12
+   },
+   "uploadPerCall": 0.672,
+   "warmMax": 309.03,
+   "buckets": {
+    "update: head (journal, clocks)": {
+     "mean": 0.004,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.013,
+     "max": 2.027
+    },
+    "player (aim, interact, move, fire)": {
+     "mean": 0.105,
+     "p50": 0.097,
+     "p95": 0.176,
+     "p99": 0.238,
+     "max": 0.718
+    },
+    "squad: order menu + orders": {
+     "mean": 0.069,
+     "p50": 0.053,
+     "p95": 0.136,
+     "p99": 0.241,
+     "max": 5.826
+    },
+    "squad: door tools": {
+     "mean": 0.043,
+     "p50": 0.014,
+     "p95": 0.1,
+     "p99": 0.191,
+     "max": 7.017
+    },
+    "suppression": {
+     "mean": 0.005,
+     "p50": 0.006,
+     "p95": 0.01,
+     "p99": 0.026,
+     "max": 0.12
+    },
+    "gear: rings, 40 mm, frags": {
+     "mean": 0.009,
+     "p50": 0.007,
+     "p95": 0.02,
+     "p99": 0.055,
+     "max": 0.411
+    },
+    "guards: weapons dealt, anim flags": {
+     "mean": 0.009,
+     "p50": 0.005,
+     "p95": 0.013,
+     "p99": 0.046,
+     "max": 3.376
+    },
+    "scenario (director, breach, room clear, rescue)": {
+     "mean": 0.066,
+     "p50": 0.049,
+     "p95": 0.147,
+     "p99": 0.239,
+     "max": 5.525
+    },
+    "pair (two person stealth)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.006,
+     "p99": 0.014,
+     "max": 0.102
+    },
+    "squad: entry points, cleared rooms, cover": {
+     "mean": 0.021,
+     "p50": 0.009,
+     "p95": 0.058,
+     "p99": 0.32,
+     "max": 1.178
+    },
+    "room fight (both sides: watch, fear, shoot)": {
+     "mean": 0.061,
+     "p50": 0.045,
+     "p95": 0.127,
+     "p99": 0.214,
+     "max": 10.331
+    },
+    "tactics (flank, lone corner, doorways)": {
+     "mean": 0.01,
+     "p50": 0.009,
+     "p95": 0.018,
+     "p99": 0.049,
+     "max": 0.581
+    },
+    "needs (patrol variation)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.004,
+     "p99": 0.008,
+     "max": 0.197
+    },
+    "guards: updateGuard (senses, state, feet)": {
+     "mean": 0.118,
+     "p50": 0.095,
+     "p95": 0.261,
+     "p99": 0.471,
+     "max": 3.367
+    },
+    "civilians": {
+     "mean": 0.031,
+     "p50": 0.025,
+     "p95": 0.067,
+     "p99": 0.112,
+     "max": 0.869
+    },
+    "escalation + QRF": {
+     "mean": 0.012,
+     "p50": 0.01,
+     "p95": 0.022,
+     "p99": 0.059,
+     "max": 0.25
+    },
+    "doors": {
+     "mean": 0.062,
+     "p50": 0.05,
+     "p95": 0.121,
+     "p99": 0.177,
+     "max": 4.14
+    },
+    "mission": {
+     "mean": 0.004,
+     "p50": 0.004,
+     "p95": 0.008,
+     "p99": 0.03,
+     "max": 0.107
+    },
+    "props (furniture)": {
+     "mean": 0.042,
+     "p50": 0.032,
+     "p95": 0.104,
+     "p99": 0.162,
+     "max": 0.388
+    },
+    "destruction (heat, debris)": {
+     "mean": 0.007,
+     "p50": 0.004,
+     "p95": 0.014,
+     "p99": 0.051,
+     "max": 0.989
+    },
+    "destruction: wall charge, fire at cover": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.011,
+     "max": 0.086
+    },
+    "destruction: both sides react to a break": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.005,
+     "p99": 0.01,
+     "max": 0.096
+    },
+    "fixtures + devices": {
+     "mean": 0.041,
+     "p50": 0.032,
+     "p95": 0.077,
+     "p99": 0.115,
+     "max": 4.398
+    },
+    "weather, wet, wind, moths, rain fx (game half)": {
+     "mean": 0.127,
+     "p50": 0.105,
+     "p95": 0.222,
+     "p99": 0.336,
+     "max": 6.36
+    },
+    "items (throwables, drops)": {
+     "mean": 0.004,
+     "p50": 0.002,
+     "p95": 0.012,
+     "p99": 0.045,
+     "max": 0.414
+    },
+    "glass (stars, breaking, shards)": {
+     "mean": 0.01,
+     "p50": 0.006,
+     "p95": 0.011,
+     "p99": 0.042,
+     "max": 5.404
+    },
+    "fog of war": {
+     "mean": 0.056,
+     "p50": 0.048,
+     "p95": 0.094,
+     "p99": 0.132,
+     "max": 1.183
+    },
+    "dynamic boxes (leaves, props, debris, rig props, fx)": {
+     "mean": 0.185,
+     "p50": 0.169,
+     "p95": 0.291,
+     "p99": 0.371,
+     "max": 2.274
+    },
+    "tracers + sparks": {
+     "mean": 0.006,
+     "p50": 0.003,
+     "p95": 0.01,
+     "p99": 0.06,
+     "max": 0.33
+    },
+    "smoke pushes": {
+     "mean": 0.005,
+     "p50": 0.004,
+     "p95": 0.01,
+     "p99": 0.022,
+     "max": 0.247
+    },
+    "characters → skin instances + shadow proxies": {
+     "mean": 0.091,
+     "p50": 0.051,
+     "p95": 0.098,
+     "p99": 0.142,
+     "max": 27.856
+    },
+    "sensors (meter + smoke line asks)": {
+     "mean": 0.006,
+     "p50": 0.005,
+     "p95": 0.012,
+     "p99": 0.029,
+     "max": 0.111
+    },
+    "update: tail (cues, checkpoints, journal)": {
+     "mean": 0.013,
+     "p50": 0.012,
+     "p95": 0.023,
+     "p99": 0.06,
+     "max": 1.042
+    },
+    "step: camera": {
+     "mean": 0.005,
+     "p50": 0.005,
+     "p95": 0.008,
+     "p99": 0.031,
+     "max": 0.072
+    },
+    "step: lights.update": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.003,
+     "p99": 0.013,
+     "max": 0.084
+    },
+    "step: box list pack + trace grid (world.upload)": {
+     "mean": 0.654,
+     "p50": 0.568,
+     "p95": 1.07,
+     "p99": 1.361,
+     "max": 9.252
+    },
+    "step: smoke solver update (CPU half)": {
+     "mean": 0.017,
+     "p50": 0.012,
+     "p95": 0.05,
+     "p99": 0.1,
+     "max": 0.27
+    },
+    "render: frame uniforms, probe, submit (the rest of Engine.render)": {
+     "mean": 0.122,
+     "p50": 0.107,
+     "p95": 0.227,
+     "p99": 0.333,
+     "max": 5.727
+    },
+    "render: light list + reach / glass masks upload": {
+     "mean": 0.161,
+     "p50": 0.114,
+     "p95": 0.456,
+     "p99": 0.648,
+     "max": 3.383
+    },
+    "render: decal list": {
+     "mean": 0.027,
+     "p50": 0.003,
+     "p95": 0.146,
+     "p99": 0.216,
+     "max": 1.568
+    },
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": {
+     "mean": 0.022,
+     "p50": 0.015,
+     "p95": 0.053,
+     "p99": 0.092,
+     "max": 0.356
+    },
+    "render: smoke solver encode": {
+     "mean": 0.047,
+     "p50": 0.034,
+     "p95": 0.133,
+     "p99": 0.22,
+     "max": 7.648
+    },
+    "render: g-buffer + mesh shadows encode, motion snapshot": {
+     "mean": 0.015,
+     "p50": 0.01,
+     "p95": 0.034,
+     "p99": 0.06,
+     "max": 2.243
+    },
+    "render: cascades encode": {
+     "mean": 0.01,
+     "p50": 0.008,
+     "p95": 0.022,
+     "p99": 0.05,
+     "max": 0.119
+    },
+    "render: lighting passes encode": {
+     "mean": 0.086,
+     "p50": 0.066,
+     "p95": 0.158,
+     "p99": 0.217,
+     "max": 5.257
+    },
+    "svc: animation + skeleton (Character.update)": {
+     "mean": 0.861,
+     "p50": 0.778,
+     "p95": 1.533,
+     "p99": 2.299,
+     "max": 16.578
+    },
+    "svc: nav paths (A*, walkable, nearest free)": {
+     "mean": 0.003,
+     "p50": 0,
+     "p95": 0.005,
+     "p99": 0.04,
+     "max": 0.416
+    },
+    "svc: sound propagation": {
+     "mean": 0.007,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.208,
+     "max": 2.276
+    },
+    "svc: static line tests (sight, fire, reach)": {
+     "mean": 0.423,
+     "p50": 0.268,
+     "p95": 1.357,
+     "p99": 2.386,
+     "max": 13.79
+    },
+    "svc: circle collide (feet vs walls)": {
+     "mean": 0.02,
+     "p50": 0.016,
+     "p95": 0.05,
+     "p99": 0.077,
+     "max": 0.211
+    },
+    "svc: box world raycast (cursor, lasers, rounds)": {
+     "mean": 0.142,
+     "p50": 0.128,
+     "p95": 0.212,
+     "p99": 0.272,
+     "max": 0.329
+    },
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "headless only: CPU light estimate standing in for the GPU light probe": {
+     "mean": 0.343,
+     "p50": 0.374,
+     "p95": 0.686,
+     "p99": 0.914,
+     "max": 4.627
+    }
+   },
+   "groups": {
+    "(probe stand-in)": {
+     "mean": 0.343,
+     "p50": 0.374,
+     "p95": 0.686,
+     "p99": 0.914,
+     "max": 4.627
+    },
+    "animation": {
+     "mean": 0.861,
+     "p50": 0.778,
+     "p95": 1.533,
+     "p99": 2.299,
+     "max": 16.578
+    },
+    "line tests": {
+     "mean": 0.565,
+     "p50": 0.417,
+     "p95": 1.491,
+     "p99": 2.57,
+     "max": 13.941
+    },
+    "nav paths": {
+     "mean": 0.003,
+     "p50": 0,
+     "p95": 0.005,
+     "p99": 0.04,
+     "max": 0.416
+    },
+    "sound": {
+     "mean": 0.007,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.208,
+     "max": 2.276
+    },
+    "guards AI": {
+     "mean": 0.177,
+     "p50": 0.148,
+     "p95": 0.355,
+     "p99": 0.636,
+     "max": 3.543
+    },
+    "room fight": {
+     "mean": 0.061,
+     "p50": 0.045,
+     "p95": 0.127,
+     "p99": 0.214,
+     "max": 10.331
+    },
+    "squad": {
+     "mean": 0.199,
+     "p50": 0.155,
+     "p95": 0.386,
+     "p99": 0.75,
+     "max": 8.663
+    },
+    "tactics": {
+     "mean": 0.01,
+     "p50": 0.009,
+     "p95": 0.018,
+     "p99": 0.049,
+     "max": 0.581
+    },
+    "player": {
+     "mean": 0.105,
+     "p50": 0.097,
+     "p95": 0.176,
+     "p99": 0.238,
+     "max": 0.718
+    },
+    "feet vs walls": {
+     "mean": 0.02,
+     "p50": 0.016,
+     "p95": 0.05,
+     "p99": 0.077,
+     "max": 0.211
+    },
+    "doors, props": {
+     "mean": 0.104,
+     "p50": 0.086,
+     "p95": 0.193,
+     "p99": 0.257,
+     "max": 4.189
+    },
+    "destruction": {
+     "mean": 0.013,
+     "p50": 0.009,
+     "p95": 0.037,
+     "p99": 0.076,
+     "max": 0.995
+    },
+    "glass": {
+     "mean": 0.01,
+     "p50": 0.006,
+     "p95": 0.011,
+     "p99": 0.042,
+     "max": 5.404
+    },
+    "gear": {
+     "mean": 0.019,
+     "p50": 0.014,
+     "p95": 0.053,
+     "p99": 0.116,
+     "max": 0.433
+    },
+    "weather": {
+     "mean": 0.127,
+     "p50": 0.105,
+     "p95": 0.222,
+     "p99": 0.336,
+     "max": 6.36
+    },
+    "pair": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.006,
+     "p99": 0.014,
+     "max": 0.102
+    },
+    "fog of war": {
+     "mean": 0.056,
+     "p50": 0.048,
+     "p95": 0.094,
+     "p99": 0.132,
+     "max": 1.183
+    },
+    "chars to GPU": {
+     "mean": 0.091,
+     "p50": 0.051,
+     "p95": 0.098,
+     "p99": 0.142,
+     "max": 27.856
+    },
+    "dyn boxes": {
+     "mean": 0.19,
+     "p50": 0.174,
+     "p95": 0.299,
+     "p99": 0.392,
+     "max": 2.282
+    },
+    "box upload": {
+     "mean": 0.654,
+     "p50": 0.568,
+     "p95": 1.07,
+     "p99": 1.361,
+     "max": 9.252
+    },
+    "smoke CPU": {
+     "mean": 0.017,
+     "p50": 0.012,
+     "p95": 0.05,
+     "p99": 0.1,
+     "max": 0.27
+    },
+    "render CPU": {
+     "mean": 0.49,
+     "p50": 0.412,
+     "p95": 0.901,
+     "p99": 1.385,
+     "max": 8.61
+    },
+    "other": {
+     "mean": 0.075,
+     "p50": 0.063,
+     "p95": 0.132,
+     "p99": 0.205,
+     "max": 4.44
+    }
+   },
+   "calls": {
+    "step: box list pack + trace grid (world.upload)": [
+     1,
+     1
+    ],
+    "render: light list + reach / glass masks upload": [
+     2,
+     2
+    ],
+    "render: decal list": [
+     1,
+     1
+    ],
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": [
+     3,
+     2
+    ],
+    "render: smoke solver encode": [
+     1,
+     1
+    ],
+    "render: g-buffer + mesh shadows encode, motion snapshot": [
+     4,
+     4
+    ],
+    "render: cascades encode": [
+     1,
+     1
+    ],
+    "render: lighting passes encode": [
+     1,
+     1
+    ],
+    "svc: animation + skeleton (Character.update)": [
+     8,
+     8
+    ],
+    "svc: nav paths (A*, walkable, nearest free)": [
+     2.6,
+     0.3
+    ],
+    "svc: sound propagation": [
+     0.1,
+     0.1
+    ],
+    "svc: static line tests (sight, fire, reach)": [
+     273.8,
+     86.3
+    ],
+    "svc: circle collide (feet vs walls)": [
+     6.1,
+     6.1
+    ],
+    "svc: box world raycast (cursor, lasers, rounds)": [
+     3,
+     3
+    ],
+    "headless only: CPU light estimate standing in for the GPU light probe": [
+     3.1,
+     3.1
+    ]
+   },
+   "lineBy": {
+    "player (aim, interact, move, fire)": 0.035,
+    "squad: order menu + orders": 0.021,
+    "squad: door tools": 0.061,
+    "gear: rings, 40 mm, frags": 0.002,
+    "scenario (director, breach, room clear, rescue)": 0.111,
+    "squad: entry points, cleared rooms, cover": 0.009,
+    "room fight (both sides: watch, fear, shoot)": 0.045,
+    "guards: updateGuard (senses, state, feet)": 0.03,
+    "destruction (heat, debris)": 0,
+    "weather, wet, wind, moths, rain fx (game half)": 0.008,
+    "items (throwables, drops)": 0.002,
+    "fog of war": 0.122,
+    "tracers + sparks": 0.001
+   },
+   "worst": [
+    {
+     "ms": 33.12,
+     "seed": 1,
+     "t": 2.63,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       27.856
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.12
+      ],
+      [
+       "step: box list pack + trace grid (world.upload)",
+       0.924
+      ]
+     ]
+    },
+    {
+     "ms": 29.097,
+     "seed": 1,
+     "t": 3.5,
+     "top": [
+      [
+       "room fight (both sides: watch, fear, shoot)",
+       10.331
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       4.775
+      ],
+      [
+       "guards: updateGuard (senses, state, feet)",
+       2.342
+      ]
+     ]
+    },
+    {
+     "ms": 20.598,
+     "seed": 1,
+     "t": 18.05,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       15.222
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       1.399
+      ],
+      [
+       "step: box list pack + trace grid (world.upload)",
+       0.883
+      ]
+     ]
+    }
+   ],
+   "missing": [],
+   "gpu": {
+    "view": {
+     "cssW": 1728,
+     "cssH": 1000,
+     "dpr": 2,
+     "quality": "high"
+    },
+    "frames": 2021,
+    "chars": {
+     "model": "cast",
+     "vertices": 22208,
+     "triangles": 27164,
+     "joints": 53,
+     "parts": 31
+    },
+    "perFrame": {
+     "writeBytes": 231816.94606630382,
+     "writeCalls": 32.19247897080653,
+     "encoders": 1,
+     "computePasses": 21.62691736763978,
+     "dispatches": 68.38545274616527,
+     "threads": 23481195.083621968,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 193544.14497773378,
+     "copyTexTexels": 3487360,
+     "readbackBuffersCreated": 2.1667491340920337,
+     "copyBufBytes": 176098.5175655616,
+     "submits": 1,
+     "bindGroupsCreated": 0.010885700148441365
+    },
+    "perFrameMax": {
+     "writeBytes": 286200,
+     "writeCalls": 39,
+     "encoders": 1,
+     "computePasses": 22,
+     "dispatches": 148,
+     "threads": 40288288,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 239303,
+     "copyTexTexels": 3487360,
+     "readbackBuffersCreated": 3,
+     "copyBufBytes": 178096,
+     "submits": 1,
+     "bindGroupsCreated": 14
+    },
+    "scene": {
+     "boxesStatic": 782,
+     "boxesDynamic": 362.6833250865908,
+     "lights": 35.28698664027709,
+     "lightsAll": 59.07125185551707,
+     "characters": 6.423057892132608,
+     "particlesLive": 3066.3132112815438,
+     "decals": 5.476001979218209,
+     "smokeDomains": 1.5220188025729837,
+     "smokeEmitters": 0.7862444334487877,
+     "glassPanes": 22,
+     "glassPanesBroken": 1.4106877783275606,
+     "debris": 0.4844136566056408,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.7699999999999856
+    },
+    "sceneMax": {
+     "boxesStatic": 782,
+     "boxesDynamic": 383,
+     "lights": 39,
+     "lightsAll": 62,
+     "characters": 8,
+     "particlesLive": 4887,
+     "decals": 9,
+     "smokeDomains": 5,
+     "smokeEmitters": 22,
+     "glassPanes": 22,
+     "glassPanesBroken": 2,
+     "debris": 1,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.77
+    },
+    "passes": {
+     "meshShadows": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 525354.7511133102,
+      "threadsMax": 654336,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gbuffer": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 187408.5185551707,
+      "draws": 2
+     },
+     "gdown": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1024100,
+      "tris": 1,
+      "draws": 1
+     },
+     "rc c3": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 40960,
+      "threadsMax": 40960,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c2": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 35840,
+      "threadsMax": 35840,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c1": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c0": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc dice": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 4480,
+      "threadsMax": 4480,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particles": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 3160.9223156853045,
+      "threadsMax": 4992,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "direct": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1036736,
+      "threadsMax": 1036736,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "softblur": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 5201152,
+      "threadsMax": 5201152,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gather": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 118350.21870361207,
+      "threadsMax": 118400,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "temporal": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 827904,
+      "threadsMax": 827904,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "reflect": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rdenoise": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1053696,
+      "threadsMax": 1053696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "volumetrics": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "sharpU": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "compS": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particlesDraw": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 6132.6264225630875,
+      "draws": 1
+     },
+     "gbaa": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "fogofwar": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "taau": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "bloom": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 2013696,
+      "threadsMax": 2013696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "post": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "fxaa": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "probe": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 32,
+      "threadsMax": 32,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "smoke": {
+      "kind": "compute",
+      "perFrame": 0.6269173676397823,
+      "threads": 3309625.1914893617,
+      "threadsMax": 19989120,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     }
+    },
+    "kernels": {
+     "meshShadows · meshSkin": {
+      "perFrame": 1,
+      "threads": 523710.44829292427
+     },
+     "meshShadows · meshRefit": {
+      "perFrame": 1,
+      "threads": 1644.3028203859476
+     },
+     "rc c3 · rcUpper": {
+      "perFrame": 1,
+      "threads": 40960
+     },
+     "rc c2 · rcUpper": {
+      "perFrame": 1,
+      "threads": 35840
+     },
+     "rc c1 · rcUpper": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc c0 · rcC0": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc dice · rcDice": {
+      "perFrame": 1,
+      "threads": 4480
+     },
+     "particles · particlesEmit": {
+      "perFrame": 1,
+      "threads": 64.3166749134092
+     },
+     "particles · particlesUpdate": {
+      "perFrame": 1,
+      "threads": 3096.605640771895
+     },
+     "direct · restirM": {
+      "perFrame": 0.6209797130133597,
+      "threads": 643792.0237506184
+     },
+     "softblur · dnPack": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · softtileDist2": {
+      "perFrame": 1,
+      "threads": 17472
+     },
+     "softblur · dnShTemporal": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous1/0/1": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous4/1/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "gather · fgatherS": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnGiTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous4/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous8/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "reflect": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous2/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous4/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "volumetrics · vol": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "sharpU · sharpUE": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "compS · compositeSR": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "gbaa": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "fogofwar": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "taau · taauS": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "bloom · bloomDown": {
+      "perFrame": 7,
+      "threads": 720896
+     },
+     "bloom · diffBlurH": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · diffBlurV": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · bloomDown0": {
+      "perFrame": 1,
+      "threads": 435456
+     },
+     "bloom · bloomUp": {
+      "perFrame": 4,
+      "threads": 580864
+     },
+     "probe": {
+      "perFrame": 1,
+      "threads": 32
+     },
+     "smoke · smoke_clearAll": {
+      "perFrame": 0.009896091044037604,
+      "threads": 2594.2008906481938
+     },
+     "smoke · smoke_bake": {
+      "perFrame": 0.004948045522018802,
+      "threads": 1297.1004453240969
+     },
+     "smoke · smoke_advectVel": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_curl": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_forces": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_divergence": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_rbgsR": {
+      "perFrame": 3.3072736269173677,
+      "threads": 866981.9376546264
+     },
+     "smoke · smoke_rbgsB": {
+      "perFrame": 3.3072736269173677,
+      "threads": 866981.9376546264
+     },
+     "smoke · smoke_project": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_occupancy": {
+      "perFrame": 0.8268184067293419,
+      "threads": 27093.185551707076
+     },
+     "smoke · smoke_dilate": {
+      "perFrame": 0.8268184067293419,
+      "threads": 52.91637803067788
+     },
+     "smoke · smoke_advectScalars": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_injectDecay": {
+      "perFrame": 0.8268184067293419,
+      "threads": 216745.4844136566
+     },
+     "smoke · smoke_renderOccRegions": {
+      "perFrame": 0.8268184067293419,
+      "threads": 27093.185551707076
+     },
+     "smoke · smoke_renderOccPack": {
+      "perFrame": 0.8268184067293419,
+      "threads": 52.91637803067788
+     },
+     "gather · cards": {
+      "perFrame": 0.6600692726373083,
+      "threads": 78.21870361207323
+     },
+     "smoke · smoke_reduceMass": {
+      "perFrame": 0.0009896091044037606,
+      "threads": 259.4200890648194
+     },
+     "direct · restir": {
+      "perFrame": 0.37902028698664025,
+      "threads": 392943.9762493815
+     }
+    },
+    "writes": {
+     "boxGeo": {
+      "bytes": 36629.8664027709,
+      "calls": 1,
+      "max": 37280
+     },
+     "boxMat": {
+      "bytes": 90332.81741712024,
+      "calls": 1.92627412172192,
+      "max": 92992
+     },
+     "visibleBoxes": {
+      "bytes": 4310.857991093518,
+      "calls": 1,
+      "max": 4388
+     },
+     "capsules": {
+      "bytes": 3083.067788223652,
+      "calls": 1,
+      "max": 3840
+     },
+     "sceneInfo": {
+      "bytes": 2432,
+      "calls": 1,
+      "max": 2432
+     },
+     "gridCells": {
+      "bytes": 13444,
+      "calls": 1,
+      "max": 13444
+     },
+     "gridItems": {
+      "bytes": 22721.151904997525,
+      "calls": 1,
+      "max": 22952
+     },
+     "lights": {
+      "bytes": 2258.367144977734,
+      "calls": 1,
+      "max": 2496
+     },
+     "lightReach": {
+      "bytes": 9880.356259277585,
+      "calls": 1,
+      "max": 10920
+     },
+     "particleEmits": {
+      "bytes": 1089.4725383473528,
+      "calls": 3,
+      "max": 2064
+     },
+     "particles": {
+      "bytes": 8,
+      "calls": 1,
+      "max": 8
+     },
+     "frame": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "frameOut": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "taauParams": {
+      "bytes": 144,
+      "calls": 1,
+      "max": 144
+     },
+     "rcParams": {
+      "bytes": 64,
+      "calls": 4,
+      "max": 64
+     },
+     "restirU": {
+      "bytes": 4288,
+      "calls": 1,
+      "max": 4288
+     },
+     "dnParams": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "dnParamsRefl": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "fogofwar": {
+      "bytes": 176,
+      "calls": 1,
+      "max": 176
+     },
+     "postParams": {
+      "bytes": 32,
+      "calls": 1,
+      "max": 32
+     },
+     "fxaaParams": {
+      "bytes": 33.282533399307276,
+      "calls": 1.0400791687283524,
+      "max": 64
+     },
+     "probeQueries": {
+      "bytes": 546.8184067293419,
+      "calls": 1,
+      "max": 768
+     },
+     "probeParams": {
+      "bytes": 16,
+      "calls": 1,
+      "max": 16
+     },
+     "jointMats": {
+      "bytes": 26300.738248391885,
+      "calls": 0.9995051954477981,
+      "max": 32768
+     },
+     "charInsts": {
+      "bytes": 616.4235526966849,
+      "calls": 0.9995051954477981,
+      "max": 768
+     },
+     "charMats": {
+      "bytes": 18.240475012370112,
+      "calls": 0.0029688273132112814,
+      "max": 6144
+     },
+     "smokeDomainsUbo": {
+      "bytes": 5.066798614547253,
+      "calls": 0.009896091044037604,
+      "max": 1024
+     },
+     "smokeDomParams": {
+      "bytes": 20.267194458189014,
+      "calls": 0.009896091044037604,
+      "max": 4096
+     },
+     "smokeSimParams": {
+      "bytes": 1825.8050470064325,
+      "calls": 0.8579910935180604,
+      "max": 4256
+     },
+     "smokeSealers": {
+      "bytes": 1.5675408213755566,
+      "calls": 0.0029688273132112814,
+      "max": 528
+     },
+     "decals": {
+      "bytes": 9604.013854527462,
+      "calls": 0.21128154379020286,
+      "max": 45456
+     },
+     "smokeWind": {
+      "bytes": 14.764967837704107,
+      "calls": 0.13211281543790204,
+      "max": 112
+     }
+    },
+    "textures": {
+     "liveBytes": 537193664,
+     "peakBytes": 537193664,
+     "count": 119,
+     "top": [
+      {
+       "label": "smokeVelA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeVelB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeCurl",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "taaHist0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "taaHist1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "fogCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "smokePA",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokePB",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeDiv",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeObst",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "directS0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directS1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH00",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH01",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH10",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH11",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "gAlbedoO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      },
+      {
+       "label": "gNormalO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgb10a2unorm"
+      },
+      {
+       "label": "gIdO",
+       "bytes": 6912000,
+       "desc": "1728×1000 r32uint"
+      },
+      {
+       "label": "gDepthO",
+       "bytes": 6912000,
+       "desc": "1728×1000 depth32float"
+      },
+      {
+       "label": "gVelO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rg16float"
+      },
+      {
+       "label": "ldr",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      }
+     ]
+    },
+    "buffers": {
+     "liveBytes": 57527152,
+     "peakBytes": 57527152
+    },
+    "cpu": {
+     "renderMs": 1.2106510445324195,
+     "smokeMs": 0.01684790895598118
+    },
+    "notes": []
+   }
+  },
+  {
+   "id": "warehouse-four",
+   "arm": "nodestr",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 213.8,
+     "digest": "63b83eb5",
+     "frames": 12826
+    }
+   ],
+   "frames": 12766,
+   "page": {
+    "mean": 3.603,
+    "p50": 3.42,
+    "p95": 5.589,
+    "p99": 8.17,
+    "max": 44.322
+   },
+   "update": {
+    "mean": 2.951,
+    "p50": 2.82,
+    "p95": 4.701,
+    "p99": 7.068,
+    "max": 43.047
+   },
+   "stepped": {
+    "mean": 3.603,
+    "p50": 3.42,
+    "p95": 5.589,
+    "p99": 8.17,
+    "max": 44.322
+   },
+   "uploadPerCall": 0.382,
+   "warmMax": 275.366,
+   "buckets": {
+    "update: head (journal, clocks)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.004,
+     "p99": 0.005,
+     "max": 0.258
+    },
+    "player (aim, interact, move, fire)": {
+     "mean": 0.083,
+     "p50": 0.072,
+     "p95": 0.135,
+     "p99": 0.177,
+     "max": 3.52
+    },
+    "squad: order menu + orders": {
+     "mean": 0.056,
+     "p50": 0.046,
+     "p95": 0.111,
+     "p99": 0.164,
+     "max": 3.205
+    },
+    "squad: door tools": {
+     "mean": 0.024,
+     "p50": 0.008,
+     "p95": 0.075,
+     "p99": 0.115,
+     "max": 6.165
+    },
+    "suppression": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.007,
+     "p99": 0.011,
+     "max": 0.131
+    },
+    "gear: rings, 40 mm, frags": {
+     "mean": 0.006,
+     "p50": 0.004,
+     "p95": 0.014,
+     "p99": 0.039,
+     "max": 0.672
+    },
+    "guards: weapons dealt, anim flags": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.011,
+     "p99": 0.038,
+     "max": 0.22
+    },
+    "scenario (director, breach, room clear, rescue)": {
+     "mean": 0.021,
+     "p50": 0.016,
+     "p95": 0.038,
+     "p99": 0.07,
+     "max": 5.508
+    },
+    "pair (two person stealth)": {
+     "mean": 0.001,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.005,
+     "max": 0.139
+    },
+    "squad: entry points, cleared rooms, cover": {
+     "mean": 0.018,
+     "p50": 0.008,
+     "p95": 0.06,
+     "p99": 0.203,
+     "max": 2.259
+    },
+    "room fight (both sides: watch, fear, shoot)": {
+     "mean": 0.084,
+     "p50": 0.074,
+     "p95": 0.16,
+     "p99": 0.248,
+     "max": 6.206
+    },
+    "tactics (flank, lone corner, doorways)": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.016,
+     "p99": 0.038,
+     "max": 3.295
+    },
+    "needs (patrol variation)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.005,
+     "max": 2.954
+    },
+    "guards: updateGuard (senses, state, feet)": {
+     "mean": 0.158,
+     "p50": 0.133,
+     "p95": 0.321,
+     "p99": 0.493,
+     "max": 12.129
+    },
+    "civilians": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0.001,
+     "p99": 0.001,
+     "max": 0.13
+    },
+    "escalation + QRF": {
+     "mean": 0.007,
+     "p50": 0.006,
+     "p95": 0.013,
+     "p99": 0.035,
+     "max": 4.677
+    },
+    "doors": {
+     "mean": 0.068,
+     "p50": 0.055,
+     "p95": 0.131,
+     "p99": 0.192,
+     "max": 4.4
+    },
+    "mission": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.009,
+     "max": 0.307
+    },
+    "props (furniture)": {
+     "mean": 0.018,
+     "p50": 0.014,
+     "p95": 0.036,
+     "p99": 0.073,
+     "max": 3.279
+    },
+    "destruction (heat, debris)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.029,
+     "max": 0.633
+    },
+    "destruction: wall charge, fire at cover": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.006,
+     "max": 0.093
+    },
+    "destruction: both sides react to a break": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.003,
+     "p99": 0.004,
+     "max": 0.071
+    },
+    "fixtures + devices": {
+     "mean": 0.009,
+     "p50": 0.007,
+     "p95": 0.015,
+     "p99": 0.04,
+     "max": 0.14
+    },
+    "weather, wet, wind, moths, rain fx (game half)": {
+     "mean": 0.079,
+     "p50": 0.068,
+     "p95": 0.125,
+     "p99": 0.186,
+     "max": 3.565
+    },
+    "items (throwables, drops)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.006,
+     "p99": 0.015,
+     "max": 0.365
+    },
+    "glass (stars, breaking, shards)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.01,
+     "max": 0.693
+    },
+    "fog of war": {
+     "mean": 0.054,
+     "p50": 0.052,
+     "p95": 0.098,
+     "p99": 0.128,
+     "max": 4.102
+    },
+    "dynamic boxes (leaves, props, debris, rig props, fx)": {
+     "mean": 0.189,
+     "p50": 0.171,
+     "p95": 0.258,
+     "p99": 0.33,
+     "max": 15.135
+    },
+    "tracers + sparks": {
+     "mean": 0.003,
+     "p50": 0.003,
+     "p95": 0.004,
+     "p99": 0.016,
+     "max": 0.273
+    },
+    "smoke pushes": {
+     "mean": 0.005,
+     "p50": 0.004,
+     "p95": 0.011,
+     "p99": 0.023,
+     "max": 0.257
+    },
+    "characters → skin instances + shadow proxies": {
+     "mean": 0.087,
+     "p50": 0.074,
+     "p95": 0.119,
+     "p99": 0.164,
+     "max": 19.337
+    },
+    "sensors (meter + smoke line asks)": {
+     "mean": 0.007,
+     "p50": 0.006,
+     "p95": 0.012,
+     "p99": 0.029,
+     "max": 0.165
+    },
+    "update: tail (cues, checkpoints, journal)": {
+     "mean": 0.01,
+     "p50": 0.006,
+     "p95": 0.021,
+     "p99": 0.048,
+     "max": 0.744
+    },
+    "step: camera": {
+     "mean": 0.004,
+     "p50": 0.004,
+     "p95": 0.006,
+     "p99": 0.013,
+     "max": 3.136
+    },
+    "step: lights.update": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.002,
+     "p99": 0.011,
+     "max": 0.104
+    },
+    "step: box list pack + trace grid (world.upload)": {
+     "mean": 0.38,
+     "p50": 0.355,
+     "p95": 0.52,
+     "p99": 0.664,
+     "max": 6.721
+    },
+    "step: smoke solver update (CPU half)": {
+     "mean": 0.007,
+     "p50": 0.003,
+     "p95": 0.021,
+     "p99": 0.044,
+     "max": 0.379
+    },
+    "render: frame uniforms, probe, submit (the rest of Engine.render)": {
+     "mean": 0.069,
+     "p50": 0.056,
+     "p95": 0.14,
+     "p99": 0.205,
+     "max": 2.594
+    },
+    "render: light list + reach / glass masks upload": {
+     "mean": 0.028,
+     "p50": 0.022,
+     "p95": 0.055,
+     "p99": 0.092,
+     "max": 3.034
+    },
+    "render: decal list": {
+     "mean": 0.039,
+     "p50": 0.005,
+     "p95": 0.101,
+     "p99": 0.14,
+     "max": 2.69
+    },
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": {
+     "mean": 0.017,
+     "p50": 0.014,
+     "p95": 0.038,
+     "p99": 0.056,
+     "max": 1.017
+    },
+    "render: smoke solver encode": {
+     "mean": 0.014,
+     "p50": 0.002,
+     "p95": 0.064,
+     "p99": 0.111,
+     "max": 3.088
+    },
+    "render: g-buffer + mesh shadows encode, motion snapshot": {
+     "mean": 0.012,
+     "p50": 0.01,
+     "p95": 0.019,
+     "p99": 0.045,
+     "max": 1.939
+    },
+    "render: cascades encode": {
+     "mean": 0.009,
+     "p50": 0.008,
+     "p95": 0.015,
+     "p99": 0.04,
+     "max": 2.495
+    },
+    "render: lighting passes encode": {
+     "mean": 0.072,
+     "p50": 0.06,
+     "p95": 0.116,
+     "p99": 0.163,
+     "max": 12.166
+    },
+    "svc: animation + skeleton (Character.update)": {
+     "mean": 0.99,
+     "p50": 0.856,
+     "p95": 1.804,
+     "p99": 2.48,
+     "max": 20.892
+    },
+    "svc: nav paths (A*, walkable, nearest free)": {
+     "mean": 0.008,
+     "p50": 0,
+     "p95": 0.022,
+     "p99": 0.054,
+     "max": 12.969
+    },
+    "svc: sound propagation": {
+     "mean": 0.016,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.663,
+     "max": 3.584
+    },
+    "svc: static line tests (sight, fire, reach)": {
+     "mean": 0.87,
+     "p50": 0.764,
+     "p95": 1.664,
+     "p99": 2.408,
+     "max": 16.527
+    },
+    "svc: circle collide (feet vs walls)": {
+     "mean": 0.013,
+     "p50": 0.011,
+     "p95": 0.025,
+     "p99": 0.05,
+     "max": 0.116
+    },
+    "svc: box world raycast (cursor, lasers, rounds)": {
+     "mean": 0.03,
+     "p50": 0.027,
+     "p95": 0.048,
+     "p99": 0.08,
+     "max": 0.239
+    },
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "headless only: CPU light estimate standing in for the GPU light probe": {
+     "mean": 0.55,
+     "p50": 0.411,
+     "p95": 1.082,
+     "p99": 1.429,
+     "max": 15.724
+    }
+   },
+   "groups": {
+    "(probe stand-in)": {
+     "mean": 0.55,
+     "p50": 0.411,
+     "p95": 1.082,
+     "p99": 1.429,
+     "max": 15.724
+    },
+    "animation": {
+     "mean": 0.99,
+     "p50": 0.856,
+     "p95": 1.804,
+     "p99": 2.48,
+     "max": 20.892
+    },
+    "line tests": {
+     "mean": 0.9,
+     "p50": 0.796,
+     "p95": 1.693,
+     "p99": 2.429,
+     "max": 16.616
+    },
+    "nav paths": {
+     "mean": 0.008,
+     "p50": 0,
+     "p95": 0.022,
+     "p99": 0.054,
+     "max": 12.969
+    },
+    "sound": {
+     "mean": 0.016,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.663,
+     "max": 3.584
+    },
+    "guards AI": {
+     "mean": 0.177,
+     "p50": 0.149,
+     "p95": 0.351,
+     "p99": 0.529,
+     "max": 12.154
+    },
+    "room fight": {
+     "mean": 0.084,
+     "p50": 0.074,
+     "p95": 0.16,
+     "p99": 0.248,
+     "max": 6.206
+    },
+    "squad": {
+     "mean": 0.118,
+     "p50": 0.099,
+     "p95": 0.224,
+     "p99": 0.375,
+     "max": 6.364
+    },
+    "tactics": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.016,
+     "p99": 0.038,
+     "max": 3.295
+    },
+    "player": {
+     "mean": 0.083,
+     "p50": 0.072,
+     "p95": 0.135,
+     "p99": 0.177,
+     "max": 3.52
+    },
+    "feet vs walls": {
+     "mean": 0.013,
+     "p50": 0.011,
+     "p95": 0.025,
+     "p99": 0.05,
+     "max": 0.116
+    },
+    "doors, props": {
+     "mean": 0.086,
+     "p50": 0.07,
+     "p95": 0.157,
+     "p99": 0.234,
+     "max": 4.434
+    },
+    "destruction": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.012,
+     "p99": 0.041,
+     "max": 0.639
+    },
+    "glass": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.01,
+     "max": 0.693
+    },
+    "gear": {
+     "mean": 0.013,
+     "p50": 0.01,
+     "p95": 0.025,
+     "p99": 0.058,
+     "max": 0.716
+    },
+    "weather": {
+     "mean": 0.079,
+     "p50": 0.068,
+     "p95": 0.125,
+     "p99": 0.186,
+     "max": 3.565
+    },
+    "pair": {
+     "mean": 0.001,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.005,
+     "max": 0.139
+    },
+    "fog of war": {
+     "mean": 0.054,
+     "p50": 0.052,
+     "p95": 0.098,
+     "p99": 0.128,
+     "max": 4.102
+    },
+    "chars to GPU": {
+     "mean": 0.087,
+     "p50": 0.074,
+     "p95": 0.119,
+     "p99": 0.164,
+     "max": 19.337
+    },
+    "dyn boxes": {
+     "mean": 0.194,
+     "p50": 0.176,
+     "p95": 0.265,
+     "p99": 0.338,
+     "max": 15.139
+    },
+    "box upload": {
+     "mean": 0.38,
+     "p50": 0.355,
+     "p95": 0.52,
+     "p99": 0.664,
+     "max": 6.721
+    },
+    "smoke CPU": {
+     "mean": 0.007,
+     "p50": 0.003,
+     "p95": 0.021,
+     "p99": 0.044,
+     "max": 0.379
+    },
+    "render CPU": {
+     "mean": 0.258,
+     "p50": 0.232,
+     "p95": 0.424,
+     "p99": 0.626,
+     "max": 14.575
+    },
+    "other": {
+     "mean": 0.035,
+     "p50": 0.029,
+     "p95": 0.064,
+     "p99": 0.102,
+     "max": 3.205
+    }
+   },
+   "calls": {
+    "step: box list pack + trace grid (world.upload)": [
+     1,
+     1
+    ],
+    "render: light list + reach / glass masks upload": [
+     2,
+     2
+    ],
+    "render: decal list": [
+     1,
+     1
+    ],
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": [
+     3,
+     2
+    ],
+    "render: smoke solver encode": [
+     1,
+     1
+    ],
+    "render: g-buffer + mesh shadows encode, motion snapshot": [
+     4,
+     4
+    ],
+    "render: cascades encode": [
+     1,
+     1
+    ],
+    "render: lighting passes encode": [
+     1,
+     1
+    ],
+    "svc: animation + skeleton (Character.update)": [
+     16,
+     16
+    ],
+    "svc: nav paths (A*, walkable, nearest free)": [
+     13.2,
+     0.8
+    ],
+    "svc: sound propagation": [
+     0.1,
+     0.1
+    ],
+    "svc: static line tests (sight, fire, reach)": [
+     642,
+     208.8
+    ],
+    "svc: circle collide (feet vs walls)": [
+     8.7,
+     8.7
+    ],
+    "svc: box world raycast (cursor, lasers, rounds)": [
+     1,
+     1
+    ],
+    "headless only: CPU light estimate standing in for the GPU light probe": [
+     7.7,
+     7.7
+    ]
+   },
+   "lineBy": {
+    "player (aim, interact, move, fire)": 0.099,
+    "squad: order menu + orders": 0.041,
+    "squad: door tools": 0.084,
+    "gear: rings, 40 mm, frags": 0.002,
+    "scenario (director, breach, room clear, rescue)": 0,
+    "squad: entry points, cleared rooms, cover": 0.009,
+    "room fight (both sides: watch, fear, shoot)": 0.084,
+    "tactics (flank, lone corner, doorways)": 0,
+    "guards: updateGuard (senses, state, feet)": 0.044,
+    "destruction (heat, debris)": 0,
+    "weather, wet, wind, moths, rain fx (game half)": 0.003,
+    "items (throwables, drops)": 0.001,
+    "fog of war": 0.506,
+    "tracers + sparks": 0
+   },
+   "worst": [
+    {
+     "ms": 44.322,
+     "seed": 1,
+     "t": 27.2,
+     "top": [
+      [
+       "svc: static line tests (sight, fire, reach)",
+       16.527
+      ],
+      [
+       "svc: nav paths (A*, walkable, nearest free)",
+       12.969
+      ],
+      [
+       "scenario (director, breach, room clear, rescue)",
+       5.508
+      ]
+     ]
+    },
+    {
+     "ms": 29.006,
+     "seed": 1,
+     "t": 23.3,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       19.337
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       2.095
+      ],
+      [
+       "svc: static line tests (sight, fire, reach)",
+       1.718
+      ]
+     ]
+    },
+    {
+     "ms": 25.099,
+     "seed": 1,
+     "t": 23.28,
+     "top": [
+      [
+       "squad: door tools",
+       6.165
+      ],
+      [
+       "render: smoke solver encode",
+       2.738
+      ],
+      [
+       "guards: updateGuard (senses, state, feet)",
+       2.421
+      ]
+     ]
+    }
+   ],
+   "missing": [],
+   "gpu": {
+    "view": {
+     "cssW": 1728,
+     "cssH": 1000,
+     "dpr": 2,
+     "quality": "high"
+    },
+    "frames": 12766,
+    "chars": {
+     "model": "cast",
+     "vertices": 22208,
+     "triangles": 27164,
+     "joints": 53,
+     "parts": 31
+    },
+    "perFrame": {
+     "writeBytes": 192569.62650791163,
+     "writeCalls": 30.94407018643271,
+     "encoders": 1,
+     "computePasses": 21.271345762180793,
+     "dispatches": 59.20390098699671,
+     "threads": 21723403.04684318,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 341723.30596898013,
+     "copyTexTexels": 3487360,
+     "readbackBuffersCreated": 2.166692777690741,
+     "copyBufBytes": 132446.55491148363,
+     "submits": 1,
+     "bindGroupsCreated": 0.001723327588908037
+    },
+    "perFrameMax": {
+     "writeBytes": 246724,
+     "writeCalls": 38,
+     "encoders": 1,
+     "computePasses": 22,
+     "dispatches": 151,
+     "threads": 41077440,
+     "renderPasses": 5,
+     "rasterTexels": 7936100,
+     "draws": 6,
+     "tris": 455231,
+     "copyTexTexels": 3487360,
+     "readbackBuffersCreated": 3,
+     "copyBufBytes": 134848,
+     "submits": 1,
+     "bindGroupsCreated": 14
+    },
+    "scene": {
+     "boxesStatic": 426,
+     "boxesDynamic": 262.5634497885007,
+     "lights": 19.959580134732885,
+     "lightsAll": 47.04707817640608,
+     "characters": 11.926210245965846,
+     "particlesLive": 4960.452373492089,
+     "decals": 7.1796960676797745,
+     "smokeDomains": 0.6441328528904904,
+     "smokeEmitters": 0.27322575591414694,
+     "glassPanes": 3,
+     "glassPanesBroken": 0,
+     "debris": 1.9609901300328998,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.7700000000002476
+    },
+    "sceneMax": {
+     "boxesStatic": 426,
+     "boxesDynamic": 289,
+     "lights": 26,
+     "lightsAll": 51,
+     "characters": 16,
+     "particlesLive": 7398,
+     "decals": 10,
+     "smokeDomains": 6,
+     "smokeEmitters": 22,
+     "glassPanes": 3,
+     "glassPanesBroken": 0,
+     "debris": 3,
+     "internalW": 1330,
+     "internalH": 770,
+     "outW": 1728,
+     "outH": 1000,
+     "renderScale": 0.77
+    },
+    "passes": {
+     "meshShadows": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 627375.2655491148,
+      "threadsMax": 654336,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gbuffer": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 331799.40122199594,
+      "draws": 2
+     },
+     "gdown": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1024100,
+      "tris": 1,
+      "draws": 1
+     },
+     "rc c3": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 40960,
+      "threadsMax": 40960,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c2": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 35840,
+      "threadsMax": 35840,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c1": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc c0": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 71680,
+      "threadsMax": 71680,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rc dice": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 4480,
+      "threadsMax": 4480,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particles": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 5070.83440388532,
+      "threadsMax": 7552,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "direct": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1036736,
+      "threadsMax": 1036736,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "softblur": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 5201152,
+      "threadsMax": 5201152,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "gather": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 118330.83127056243,
+      "threadsMax": 118528,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "temporal": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 827904,
+      "threadsMax": 827904,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "reflect": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "rdenoise": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1053696,
+      "threadsMax": 1053696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "volumetrics": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 263424,
+      "threadsMax": 263424,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "sharpU": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "compS": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "particlesDraw": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 9920.904746984177,
+      "draws": 1
+     },
+     "gbaa": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "fogofwar": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "taau": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 1728000,
+      "threadsMax": 1728000,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "bloom": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 2013696,
+      "threadsMax": 2013696,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "post": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "fxaa": {
+      "kind": "render",
+      "perFrame": 1,
+      "threads": 0,
+      "threadsMax": 0,
+      "texels": 1728000,
+      "tris": 1,
+      "draws": 1
+     },
+     "probe": {
+      "kind": "compute",
+      "perFrame": 1,
+      "threads": 42.75105749647501,
+      "threadsMax": 64,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     },
+     "smoke": {
+      "kind": "compute",
+      "perFrame": 0.2713457621807927,
+      "threads": 1447911.3645621182,
+      "threadsMax": 20775552,
+      "texels": 0,
+      "tris": 0,
+      "draws": 0
+     }
+    },
+    "kernels": {
+     "meshShadows · meshSkin": {
+      "perFrame": 1,
+      "threads": 625411.6496945011
+     },
+     "meshShadows · meshRefit": {
+      "perFrame": 1,
+      "threads": 1963.6158546138179
+     },
+     "rc c3 · rcUpper": {
+      "perFrame": 1,
+      "threads": 40960
+     },
+     "rc c2 · rcUpper": {
+      "perFrame": 1,
+      "threads": 35840
+     },
+     "rc c1 · rcUpper": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc c0 · rcC0": {
+      "perFrame": 1,
+      "threads": 71680
+     },
+     "rc dice · rcDice": {
+      "perFrame": 1,
+      "threads": 4480
+     },
+     "particles · particlesEmit": {
+      "perFrame": 1,
+      "threads": 80.20805263982453
+     },
+     "particles · particlesUpdate": {
+      "perFrame": 1,
+      "threads": 4990.626351245496
+     },
+     "direct · restir": {
+      "perFrame": 0.30690897697007674,
+      "threads": 318183.5851480495
+     },
+     "softblur · dnPack": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · softtileDist2": {
+      "perFrame": 1,
+      "threads": 17472
+     },
+     "softblur · dnShTemporal": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous1/0/1": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "softblur · dnShAtrous4/1/0": {
+      "perFrame": 1,
+      "threads": 1036736
+     },
+     "gather · fgatherS": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnGiTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous2/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous4/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous8/0/0": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "temporal · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 118272
+     },
+     "reflect": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnSpecTemporal": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous1/1/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous2/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "rdenoise · dnRadAtrous4/0/1": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "volumetrics · vol": {
+      "perFrame": 1,
+      "threads": 263424
+     },
+     "sharpU · sharpUE": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "compS · compositeSR": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "gbaa": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "fogofwar": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "taau · taauS": {
+      "perFrame": 1,
+      "threads": 1728000
+     },
+     "bloom · bloomDown": {
+      "perFrame": 7,
+      "threads": 720896
+     },
+     "bloom · diffBlurH": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · diffBlurV": {
+      "perFrame": 2,
+      "threads": 138240
+     },
+     "bloom · bloomDown0": {
+      "perFrame": 1,
+      "threads": 435456
+     },
+     "bloom · bloomUp": {
+      "perFrame": 4,
+      "threads": 580864
+     },
+     "probe": {
+      "perFrame": 1,
+      "threads": 42.75105749647501
+     },
+     "direct · restirM": {
+      "perFrame": 0.6930910230299232,
+      "threads": 718552.4148519505
+     },
+     "smoke · smoke_clearAll": {
+      "perFrame": 0.004386652044493185,
+      "threads": 1149.9345135516214
+     },
+     "smoke · smoke_bake": {
+      "perFrame": 0.005718314272285759,
+      "threads": 1499.0217765940781
+     },
+     "smoke · smoke_advectVel": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_curl": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_forces": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_divergence": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_rbgsR": {
+      "perFrame": 1.4460285132382893,
+      "threads": 379067.6985743381
+     },
+     "smoke · smoke_rbgsB": {
+      "perFrame": 1.4460285132382893,
+      "threads": 379067.6985743381
+     },
+     "smoke · smoke_project": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_occupancy": {
+      "perFrame": 0.3615071283095723,
+      "threads": 11845.865580448066
+     },
+     "smoke · smoke_dilate": {
+      "perFrame": 0.3615071283095723,
+      "threads": 23.13645621181263
+     },
+     "smoke · smoke_advectScalars": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_injectDecay": {
+      "perFrame": 0.3615071283095723,
+      "threads": 94766.92464358453
+     },
+     "smoke · smoke_renderOccRegions": {
+      "perFrame": 0.3615071283095723,
+      "threads": 11845.865580448066
+     },
+     "smoke · smoke_renderOccPack": {
+      "perFrame": 0.3615071283095723,
+      "threads": 23.13645621181263
+     },
+     "gather · cards": {
+      "perFrame": 0.32508224972583427,
+      "threads": 58.831270562431456
+     },
+     "smoke · smoke_reduceMass": {
+      "perFrame": 0.00007833307222309259,
+      "threads": 20.534544884850384
+     }
+    },
+    "writes": {
+     "boxGeo": {
+      "bytes": 22034.030393232024,
+      "calls": 1,
+      "max": 22880
+     },
+     "boxMat": {
+      "bytes": 44068.06078646405,
+      "calls": 1,
+      "max": 45760
+     },
+     "visibleBoxes": {
+      "bytes": 2611.942033526555,
+      "calls": 1,
+      "max": 2712
+     },
+     "capsules": {
+      "bytes": 3681.7797274009085,
+      "calls": 1,
+      "max": 3840
+     },
+     "sceneInfo": {
+      "bytes": 2432,
+      "calls": 1,
+      "max": 2432
+     },
+     "gridCells": {
+      "bytes": 13444,
+      "calls": 1,
+      "max": 13444
+     },
+     "gridItems": {
+      "bytes": 16217.0803697321,
+      "calls": 1,
+      "max": 16656
+     },
+     "lights": {
+      "bytes": 1277.4131286229047,
+      "calls": 1,
+      "max": 1664
+     },
+     "lightReach": {
+      "bytes": 5588.682437725208,
+      "calls": 1,
+      "max": 7280
+     },
+     "particleEmits": {
+      "bytes": 755.1558828137239,
+      "calls": 3,
+      "max": 1856
+     },
+     "particles": {
+      "bytes": 8,
+      "calls": 1,
+      "max": 8
+     },
+     "frame": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "frameOut": {
+      "bytes": 832,
+      "calls": 1,
+      "max": 832
+     },
+     "taauParams": {
+      "bytes": 144,
+      "calls": 1,
+      "max": 144
+     },
+     "rcParams": {
+      "bytes": 64,
+      "calls": 4,
+      "max": 64
+     },
+     "restirU": {
+      "bytes": 4288,
+      "calls": 1,
+      "max": 4288
+     },
+     "dnParams": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "dnParamsRefl": {
+      "bytes": 128,
+      "calls": 1,
+      "max": 128
+     },
+     "fogofwar": {
+      "bytes": 176,
+      "calls": 1,
+      "max": 176
+     },
+     "postParams": {
+      "bytes": 32,
+      "calls": 1,
+      "max": 32
+     },
+     "fxaaParams": {
+      "bytes": 33.43380855397149,
+      "calls": 1.044806517311609,
+      "max": 64
+     },
+     "probeQueries": {
+      "bytes": 829.5309415635281,
+      "calls": 1,
+      "max": 1632
+     },
+     "probeParams": {
+      "bytes": 16,
+      "calls": 1,
+      "max": 16
+     },
+     "jointMats": {
+      "bytes": 48848.15290615698,
+      "calls": 0.999921666927777,
+      "max": 65536
+     },
+     "charInsts": {
+      "bytes": 1144.8785837380542,
+      "calls": 0.999921666927777,
+      "max": 1536
+     },
+     "decals": {
+      "bytes": 22151.16528278239,
+      "calls": 0.487310042299859,
+      "max": 45456
+     },
+     "charMats": {
+      "bytes": 13.475795080683064,
+      "calls": 0.0021933260222465924,
+      "max": 6144
+     },
+     "smokeDomainsUbo": {
+      "bytes": 2.165752780824064,
+      "calls": 0.004229985900047,
+      "max": 1024
+     },
+     "smokeDomParams": {
+      "bytes": 8.663011123296256,
+      "calls": 0.004229985900047,
+      "max": 4096
+     },
+     "smokeSimParams": {
+      "bytes": 774.6213379288736,
+      "calls": 0.36401378662071127,
+      "max": 8512
+     },
+     "smokeWind": {
+      "bytes": 3.864013786620711,
+      "calls": 0.03454488485038383,
+      "max": 112
+     },
+     "smokeSealers": {
+      "bytes": 1.5303148989503368,
+      "calls": 0.0028983236722544257,
+      "max": 528
+     }
+    },
+    "textures": {
+     "liveBytes": 537193664,
+     "peakBytes": 537193664,
+     "count": 119,
+     "top": [
+      {
+       "label": "smokeVelA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeVelB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensA",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeDensB",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "smokeCurl",
+       "bytes": 16777216,
+       "desc": "64×64×512 rgba16float"
+      },
+      {
+       "label": "taaHist0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "taaHist1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdr",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "hdrCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE0",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "sharpE1",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "fogCopy",
+       "bytes": 13824000,
+       "desc": "1728×1000 rgba16float"
+      },
+      {
+       "label": "smokePA",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokePB",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeDiv",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "smokeObst",
+       "bytes": 8388608,
+       "desc": "64×64×512 r32float"
+      },
+      {
+       "label": "directS0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directS1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directU1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directP1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH00",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH01",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH10",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "directH11",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnShared1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm0",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "dnHm1",
+       "bytes": 8192800,
+       "desc": "1330×770 rgba16float"
+      },
+      {
+       "label": "gAlbedoO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      },
+      {
+       "label": "gNormalO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgb10a2unorm"
+      },
+      {
+       "label": "gIdO",
+       "bytes": 6912000,
+       "desc": "1728×1000 r32uint"
+      },
+      {
+       "label": "gDepthO",
+       "bytes": 6912000,
+       "desc": "1728×1000 depth32float"
+      },
+      {
+       "label": "gVelO",
+       "bytes": 6912000,
+       "desc": "1728×1000 rg16float"
+      },
+      {
+       "label": "ldr",
+       "bytes": 6912000,
+       "desc": "1728×1000 rgba8unorm"
+      }
+     ]
+    },
+    "buffers": {
+     "liveBytes": 57527152,
+     "peakBytes": 57527152
+    },
+    "cpu": {
+     "renderMs": 0.6383981923076762,
+     "smokeMs": 0.006609716904272202
+    },
+    "notes": []
+   }
+  }
+ ]
+}

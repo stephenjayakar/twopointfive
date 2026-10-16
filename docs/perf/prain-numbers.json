@@ -1,0 +1,378 @@
+{
+ "meta": {
+  "line": "exp/particle-rain @ WORKTREE .worktrees/prain \u00b7 captures at ?paused&quality=high&mute, storm forced (seed 4242, no strokes unless said, rain 0.55, wind 1.1 / 0.45), everyone parked, animation phases zeroed, Math.random + the recycler seeded \u2014 the same frame count for both variants of every pair \u00b7 M4 Max, Chrome/Metal \u00b7 2026-08-11"
+ },
+ "viewOrder": [
+  "lot",
+  "exit",
+  "car",
+  "glass",
+  "sam",
+  "strike"
+ ],
+ "views": {
+  "lot": {
+   "title": "V1 \u00b7 the south lot from the follow camera",
+   "sub": "Sam by the red car facing the sodium lamp; the follow camera's own framing (21 m, 55\u00b0). What to look for: parallax (near streaks longer and faster than far ones), the lit cone (streaks glow inside it and go quiet outside \u2014 the particles are lit by the three strongest SHADOW-TESTED lights, the lattice by every reaching light unshadowed), the splash rings.",
+   "crops": [
+    [
+     760,
+     330,
+     400,
+     300,
+     "the lamp's pool"
+    ],
+    [
+     230,
+     470,
+     400,
+     300,
+     "the red car and Sam, out of the cone"
+    ]
+   ],
+   "read": "Counts match (the recycler aims at the lattice's 17.3 drops per m\u00b2 of ground at rate 0.55 and the pool's readback says 1 590\u20131 780 alive against a 1 471 target + splashes) but the two do not READ alike: the lattice draws each drop as a 4-internal-px flat-topped dab from the half-res pass, the particles as a 1.5-px antialiased streak carrying the same energy \u2014 crisper, more like filmed rain, and visibly quieter. In the cone the streaks glow and the crowns glitter; by the red car, out of the cone and in the building's shadow of the lamp, the shadow-tested streaks all but disappear where the lattice's unshadowed ones still show grey. Physically right; whether it is the look you want at play distance is the call."
+  },
+  "exit": {
+   "title": "V2 \u00b7 the east strip by the fire exit, low over the lot",
+   "sub": "Collision: drops END on the pallet stack, the bulkhead housing and the wall's foot instead of passing through; rings where they land (on the pallet's deck too); drips off the roof's rim along the top of the frame and off the housing; the east lamp's cone.",
+   "crops": [
+    [
+     620,
+     25,
+     400,
+     300,
+     "the wall, the housing, the roof rim"
+    ],
+    [
+     1080,
+     470,
+     400,
+     300,
+     "the pallet stack"
+    ],
+    [
+     250,
+     560,
+     400,
+     300,
+     "the ground under the lamp"
+    ]
+   ],
+   "read": "The pallet's deck takes rings (drops end ON it), the wall's foot collects them, and nothing crowns on the wall face itself any more (drops drifting into it on the wind die quietly \u2014 the first cut printed rings on the plaster). Drips off the roof rim are there but subtle from here: fat 2-cm drops leaving at 0.35 m/s read as short bright dashes sliding down the facade's top metre; the housing sheds its own. The lattice frame beside it has more ground rings \u2014 its splash lattice lands ~4\u00d7 more rings than it has drops (decorative), the particles exactly one per landing."
+  },
+  "car": {
+   "title": "V2b \u00b7 close on the red car",
+   "sub": "Drops end ON the roof and the bonnet (rings there), drips run off the roof's and the body's edges, streaks pass behind the body and are hidden by it.",
+   "crops": [
+    [
+     900,
+     40,
+     400,
+     300,
+     "the roof"
+    ],
+    [
+     880,
+     400,
+     400,
+     300,
+     "the boot, the wheel arch, the asphalt"
+    ]
+   ],
+   "read": "What the lattice cannot do: streaks pass BEHIND the body and are hidden by it, drops stop on the roof and the bonnet and ring there, a drip runs off the roof's edge now and then. What it costs in look: over the dark side of the car (out of the cone) the particle rain is nearly invisible; the lattice paints its dabs over the body regardless of what is in front of what."
+  },
+  "glass": {
+   "title": "V3 \u00b7 out through the lobby frontage from indoors",
+   "sub": "The west lamp switched on for the view. Rain only OUTSIDE (both layers keep the rooms dry to the eye: a pixel whose surface is indoors draws no rain), streaks behind the panes, tinted and reflected over by the glass like anything else out there.",
+   "crops": [
+    [
+     60,
+     20,
+     400,
+     300,
+     "the left panes"
+    ],
+    [
+     560,
+     20,
+     400,
+     300,
+     "the centre panes"
+    ]
+   ],
+   "read": "Equivalent to the eye: both keep the lobby dry and rain beyond the panes; the particle streaks are longer and thinner and take the west lamp's light with a shadow test (the mullions stripe them \u2014 the left panes' crop), the lattice's are lit flat. One difference under the hood: the splat runs AFTER the composite, so a streak seen through a pane is not tinted by it nor counted in its reflection, while the lattice's in-scatter goes through the composite with the surface behind the pane. Invisible at this tint; a follow-up if it ships (rainFragment can walk the pane list the composite walks)."
+  },
+  "sam": {
+   "title": "V5 \u00b7 Sam standing in the rain, close",
+   "sub": "In the lamp's cone at 5 m. Drops that meet his capsules end there as a splash (his head and shoulders take about three a second \u2014 one frame rarely shows one; the filmstrip below does); the wet coat and the beads are the wet-characters system, the same in both.",
+   "crops": [
+    [
+     700,
+     20,
+     400,
+     300,
+     "head and shoulders"
+    ],
+    [
+     700,
+     560,
+     400,
+     300,
+     "feet, shadow, ground"
+    ]
+   ],
+   "read": "At 5 m the streaks have real length and parallax against him; a drop within two metres of the lens is faded out as defocus rather than drawn as a 400-px bar (the first cut did that). Shoulder / head splashes exist (capsule hits \u2014 the filmstrip's third frame) but at ~3 landings a second on a man they are an occasional glint, which is about right. The lattice frame is busier on the ground for the decorative-rings reason above."
+  },
+  "strike": {
+   "title": "V4 \u00b7 a lightning stroke over the lot",
+   "sub": "The same stroke (bearing 3.7 rad, 42\u00b0, 0.5 km, peak 22) fired on the same frame in both: the transient directional light + the lit-sky term reach the particles through the same light loop as the chips (and the lattice through rainLight) \u2014 flash-lit streaks over the flash-lit ground.",
+   "crops": [
+    [
+     760,
+     330,
+     400,
+     300,
+     "the lamp's pool under the stroke"
+    ],
+    [
+     1250,
+     120,
+     400,
+     300,
+     "the van and the facade"
+    ]
+   ],
+   "read": "Both flash: the stroke's transient light is in the light buffer the drops score (kind 2, reach-masked outdoors) and its lit-sky radiance is added to every drop and to the lattice alike, so the near and far layers brighten together and drop back together over the stroke's 60 ms."
+  }
+ },
+ "strips": [
+  {
+   "tag": "fs-lot-hybrid",
+   "n": 6,
+   "box": [
+    760,
+    330,
+    400,
+    300
+   ],
+   "title": "V1 hybrid \u2014 the lamp's pool, six consecutive frames at 60 Hz (2 frames apart)",
+   "sub": "Each streak moves its own length a frame (9 m/s \u00d7 1/30 s shutter = 0.3 m drawn, 0.15 m fallen per frame); rings come and go in five frames."
+  },
+  {
+   "tag": "fs-lot-today",
+   "n": 6,
+   "box": [
+    760,
+    330,
+    400,
+    300
+   ],
+   "title": "V1 today \u2014 the same, the lattice alone",
+   "sub": "The lattice's drops slide down fixed columns; the pattern is frame.time alone."
+  },
+  {
+   "tag": "fs-exit-hybrid",
+   "n": 6,
+   "box": [
+    1080,
+    470,
+    400,
+    300
+   ],
+   "title": "V2 hybrid \u2014 the pallet stack",
+   "sub": "Drops ending on the deck and beside it."
+  },
+  {
+   "tag": "fs-sam-hybrid",
+   "n": 6,
+   "box": [
+    700,
+    20,
+    400,
+    300
+   ],
+   "title": "V5 hybrid \u2014 Sam's head and shoulders, 3 frames apart, rain rate 0.8",
+   "sub": "Splashes where drops meet his head / shoulder capsules."
+  }
+ ],
+ "smear": {
+  "box": [
+   760,
+   300,
+   400,
+   300
+  ],
+  "text": "The splat has no history to reproject, so under TAAU a streak with no reactivity surfaces at a tenth of its brightness and trails for ten frames. The rain fragment writes its display-referred luminance \u00d7 <code>particleRainReact</code> (6) into the particles' reactive mask (the max-blended r8 target the resolve already dilates and reads). The take: V1's lamp pool, static camera, 8 consecutive lossless frames after 150 settled ones, reactive as shipped vs forced to 0; the map is the per-pixel max \u2212 min of luma over the 8 frames (\u00d73). With the mask, a streak is all there on its frame and all gone the next (high max \u2212 min where streaks passed); without it the same streaks are ghosts a third as bright with three-frame tails and the crowns all but vanish."
+ },
+ "tiers": {
+  "caption": "Cost per tier \u2014 V1 (the lot, 1 470\u20131 780 drops alive at rain 0.55), serialized frames, today / hybrid INTERLEAVED in 4 blocks of 20 frames each after 40 warm; union of the compute passes (render passes excluded), median of the block means \u00b7 median block p95, ms. The GPU was shared (ioreg read 52\u201371 % utilisation from other clients before and during the take), so read the deltas against the block spread: high's blocks were tight (9.19 / 9.22 / 9.19 / 9.79 vs 9.38 / 9.38 / 9.37 / 15.3), ultra's and low's were not.",
+  "rows": [
+   {
+    "preset": "ultra",
+    "size": "1920\u00d71080 \u2192 2133\u00d71200",
+    "uT": 18.843,
+    "p95T": 22.184,
+    "uH": 17.768,
+    "p95H": 22.544,
+    "partH": 0.144,
+    "volT": 0.231,
+    "volH": 0.19,
+    "wallT": 30.2,
+    "wallH": 31.3,
+    "alive": 1775,
+    "births": "34",
+    "cap": "6000 \u00b7 512"
+   },
+   {
+    "preset": "high",
+    "size": "1368\u00d7770 \u2192 1777\u00d71000",
+    "uT": 9.206,
+    "p95T": 9.306,
+    "uH": 9.38,
+    "p95H": 9.47,
+    "partH": 0.145,
+    "volT": 0.141,
+    "volH": 0.138,
+    "wallT": 18.4,
+    "wallH": 19.3,
+    "alive": 1751,
+    "births": "34",
+    "cap": "4000 \u00b7 384"
+   },
+   {
+    "preset": "medium",
+    "size": "1072\u00d7603 \u2192 1600\u00d7900",
+    "uT": 7.354,
+    "p95T": 9.699,
+    "uH": 7.181,
+    "p95H": 8.52,
+    "partH": 0.162,
+    "volT": 0.163,
+    "volH": 0.153,
+    "wallT": 17.4,
+    "wallH": 16.9,
+    "alive": 1776,
+    "births": "34",
+    "cap": "2500 \u00b7 256"
+   },
+   {
+    "preset": "low",
+    "size": "768\u00d7432 \u2192 1280\u00d7720",
+    "uT": 4.499,
+    "p95T": 6.914,
+    "uH": 5.869,
+    "p95H": 9.502,
+    "partH": 0.183,
+    "volT": 0.191,
+    "volH": 0.205,
+    "wallT": 14.5,
+    "wallH": 17.1,
+    "alive": 1775,
+    "births": "34",
+    "cap": "1500 \u00b7 192"
+   },
+   {
+    "preset": "verylow",
+    "size": "533\u00d7300 \u2192 1066\u00d7600",
+    "uT": 6.665,
+    "p95T": 11.01,
+    "uH": 6.689,
+    "p95H": 9.011,
+    "partH": 0.323,
+    "volT": 0.517,
+    "volH": 0.484,
+    "wallT": 15.5,
+    "wallH": 16.8,
+    "alive": 964,
+    "births": "19",
+    "cap": "800 \u00b7 128 (capped: lattice keeps 46 %)"
+   }
+  ],
+  "note": "The one number that is the feature's own and reliable at every tier is the <b>particles</b> compute pass (its own timestamps: births + the step + the collision trace + the light loop with three shadow rays a drop): 0.14\u20130.18 ms for ~1 750 drops, 0.32 at verylow's 533\u00d7300 where the down-clocked GPU inflates every small dispatch. The union delta at high, the one clean take, is <b>+0.17 ms</b>; ultra's \u22121.1, medium's \u22120.2 and low's +1.4 are inside their own block spread on the shared GPU (retake in a quiet window before quoting them). The splat is a render pass (unstampable on Metal); its cost is inside the union / wall deltas. Volumetrics does not get cheaper by design (the lattice loop still runs, \u00d7 its kept share). Memory: +1.25 MB for the rain ring's 16 384 slots in the one pool, +16 B of emit uniform, +16 B of Frame \u2014 no textures, nothing per tier."
+ },
+ "burst": {
+  "caption": "A 2-second FN2000 burst in the rain at high (20 rounds into the red car from 2 m: concrete recipe \u2014 5 sparks + 10 chips + 5 dust a round \u00d7 1.4, brass out of the tube, muzzle powder, the destruction lane's extras at chaos 0.5), 150 frames, particleRain OFF (today) vs ON (hybrid) vs OFF again, destruction reset before each",
+  "runs": {
+   "today (off)": {
+    "gameplayBorn": 1897,
+    "shotBorn": [
+     46,
+     60,
+     69,
+     78,
+     86,
+     93,
+     100,
+     105
+    ],
+    "pendingPeak": 0,
+    "droppedBirths": 0,
+    "shedSparks": 0,
+    "droppedRecs": 0,
+    "live0Peak": 766,
+    "live1Peak": 80,
+    "recsPeak": 5,
+    "rainBorn": 0,
+    "rLivePeak": 0,
+    "rainDroppedBirths": 0,
+    "rainDroppedRecs": 0
+   },
+   "hybrid (on)": {
+    "gameplayBorn": 1897,
+    "shotBorn": [
+     46,
+     60,
+     69,
+     78,
+     86,
+     93,
+     100,
+     105
+    ],
+    "pendingPeak": 0,
+    "droppedBirths": 0,
+    "shedSparks": 0,
+    "droppedRecs": 0,
+    "live0Peak": 766,
+    "live1Peak": 80,
+    "recsPeak": 7,
+    "rainBorn": 5177,
+    "rLivePeak": 3626,
+    "rainDroppedBirths": 0,
+    "rainDroppedRecs": 0
+   },
+   "today again": {
+    "gameplayBorn": 1897,
+    "shotBorn": [
+     46,
+     60,
+     69,
+     78,
+     86,
+     93,
+     100,
+     105
+    ],
+    "pendingPeak": 0,
+    "droppedBirths": 0,
+    "shedSparks": 0,
+    "droppedRecs": 0,
+    "live0Peak": 766,
+    "live1Peak": 80,
+    "recsPeak": 5,
+    "rainBorn": 0,
+    "rLivePeak": 0,
+    "rainDroppedBirths": 0,
+    "rainDroppedRecs": 0
+   }
+  },
+  "note": "Frame for frame the gameplay births are the same with the layer on or off (1 897 over the 150 frames; 46 \u00b7 60 \u00b7 69 \u2026 105 on the shot frames as the destruction escalation climbs), nothing waits, nothing is shed or refused, and the SHORT / LONG windows peak at the same 766 / 80 slots \u2014 while the rain ring takes 5 177 births of its own beside them. This is structural, not luck: rain has its OWN ring (16 384 slots past the two gameplay rings, so it can never lap resting brass, chips or paper), its OWN small queue (it never enters the gameplay queue, so MAX_QUEUE and the sparks-first ordering never see it), its OWN birth budget (640 a frame, apart from the tier's particleBirths), and its records are dealt strictly AFTER every gameplay record into whatever of the frame's 128 record slots are left \u2014 what does not fit is not born, never queued. The gameplay effects' seeds are untouched too (the recycler hands its records their own seeds, so the serial the effects hash never moves): with the layer on, a case, a chip and a spark are born on the same frame, in the same slot, from the same seed as without it."
+ },
+ "misc": "<ul>\n<li><b>Identity, layer OFF</b> \u2014 <code>__png</code> of V1 on this build with <code>particleRain</code> off vs the SAME frame captured from the base commit (9d2bab1, a detached worktree served beside): <b>bit-identical</b> (0 of 1 777 000 pixels differ), storm on and the lattice raining, and again with chips + brass + dust + paper + sparks alive from staged test bursts (identical to the last bit, and the pool's readback counters agree: 107 alive / 87 asleep / 386 contacts both sides). The first cut of the lattice fade (an if / else round the streak statement) moved 2 pixels by one 8-bit step \u2014 Metal fused the accumulate differently \u2014 so it ships as <code>\u00d7 keep</code> with keep exactly 1.0 off, which is exact. Headless: <code>gate.sh perf particles weather wet</code> + <code>materials</code> all green (particles-queue's hard-coded block offsets included: the rain window rides in the emit block's TAIL, the header / records / gameplay windows never moved).</li>\n<li><b>Indoors</b> \u2014 the disc is thrown round the look-at point whatever is under it, and the office is 32 \u00d7 20 m inside a 4 m ring of lot: from the middle of the cubicles R 12.6 m still reaches 11 m\u00b2 of the south and north strips (198 drops, particles pass 0.09 ms), from the server room 75 m\u00b2 (0.08 ms), the lobby 101 m\u00b2 (0.16 ms), the east corridor 81 m\u00b2 (0.09 ms) \u2014 all of it off screen. So 'idle indoors' is not literally zero: it is a tenth of a millisecond of drops nobody sees. A view-frustum cull of the eligible cells (CPU and GPU both have the matrices) would make it zero at the price of a 0.7 s dry wedge after a Q / E swing \u2014 not done; the disc is rotation-proof on purpose.</li>\n<li><b>Determinism</b> \u2014 the recycler has its own mulberry (<code>__rain.seed(n)</code>), the GPU hashes (record seed, index) as ever, the drip picks come off the same dice; a <code>?paused</code> capture repeats to the pixel (every pair on this page is two boots' worth of identical staging).</li>\n<li><b>Ring capacity</b> \u2014 a drop holds its slot for the life it was filed with + the FIFO's slack (\u2248 1.23 s; a drip off a lamp head \u2248 1.8 s, and the FIFO retires in order, so a drip's slot holds the tail for its own life) while it is in the air 0.73 s, so N alive need 1.7\u20132.5 N slots; the recycler clamps its target to what the 16 384 slots carry \u2014 ~5 900 with the drips on, ~8 900 without \u2014 whatever the slider says, and a sky drop's slot is never recycled under it either way (CAP \u00f7 births/s > its life).</li>\n<li><b>Fill</b> \u2014 the lattice's near share follows the drops actually in the air under the disc (the births of the last 0.73 s with the oldest frame prorated, cut by the overlap when the disc jumps, dropped with a cleared ring): from a cold start it ramps 2 % \u2192 100 % over ~40 frames and then holds at exactly 1 (no 43 / 44-frame flicker); after a follow-camera jump it dips to ~0.6 while the eased disc slides and is back at 1 inside a second; a re-rendered still (dt 0) births nothing and recomputes the disc for the camera it shows, so the start card after an attract stop gets its lattice straight back under an emptied ring \u2014 all exercised headless (a Particles on the harness engine) as well as in the pane.</li>\n</ul>",
+ "viewsNote": "Every pair is the same boot-equivalent staging twice (layer off, layer on), the same seed, the same frame count; the whole frames are downscaled to 860 px here \u2014 judge from the \u00d73 nearest-neighbour crops under each (400 \u00d7 300 px of the 1777 \u00d7 1000 frame).",
+ "tldr": "<p><b>What it is.</b> Behind <code>settings.particleRain</code> (off by default; <code>?prain</code>, Tab \u25b8 Weather \u25b8 p-rain rows) the storm's near field becomes real GPU rain: a 'rain' particle kind in its own ring, recycled by a camera-local spawner over the outdoor ground inside a disc round the view (R = 0.6 \u00d7 the camera distance \u2248 12.6 m at the follow camera), aiming at the LATTICE's own drop density at the current rain rate so near and far are the same rain; drops fall at 9 m/s with the wind, END on what they meet \u2014 the roof, a bonnet, the pallet stack, Sam's shoulder \u2014 and become their splash crown there; they are lit like the chips by the three strongest SHADOW-TESTED lights + a stroke's lit sky; drips come off roof / car / housing edges; the lattice stands back by the particles' share under the disc and is untouched beyond it. Off is today to the last bit (proven against the base commit's frame, storm on, gameplay particles alive).</p>\n<p><b>What it costs.</b> 0.14\u20130.18 ms of compute for ~1 750 drops at rain 0.55 (its own pass, every tier), +0.17 ms of union at high in the one clean interleaved take (the other tiers' deltas are inside the shared GPU's noise), +1.25 MB of pool, zero effect on gameplay bursts (a 2-s FN2000 burst is born frame for frame as without it \u2014 the ring, queue and budget are separate by construction).</p>\n<p><b>What I think.</b> Up close the particles are the better rain \u2014 parallax, streaks that pass behind the car and stop on its roof, rings where drops really land, a cone that glows and a shadow that cuts \u2014 and the lattice is the better far field (flat cost at any density, nothing to fill in after a cut, soft enough to never alias). The hybrid is worth shipping if you like the CRISP streak: the one honest caveat is that thin lit streaks read <i>sparser</i> than the lattice's fat soft dabs at the same count (the counts ARE matched \u2014 see V1's crops), and out of the lamp's cone shadow-tested streaks nearly vanish against dark asphalt where the lattice's unshadowed ones still show. Both are one-constant calls (streak width, gain, density \u00d7) listed at the end.</p>",
+ "built": "<ul>\n<li><b>The kind and its ring</b> \u2014 <code>render/particles.ts</code>: PKind 'rain' (id 5, the spare kind slot: the emit block's kp table already had room), KIND_RING 2 = a THIRD ring of 16 384 slots past the two gameplay rings (P_CAP untouched; the pool buffer grows by 1.25 MB), its Window carried in the emit uniform's TAIL (<code>EmitBlock.rainWin</code>) so the header, the 128 records and both gameplay windows keep their byte layout (particles-queue's hard-coded offsets pass untouched); its own 12-record queue, own head / tail / FIFO, own 640-births-a-frame budget; <code>prepare()</code> deals rain records strictly AFTER the gameplay loop into the record slots left, never queues them, and reports them apart (<code>rainStats</code>); <code>EmitOpts.seed</code> lets the recycler hand records their own seeds so the gameplay serial never moves. WGSL: <code>slotOf3()</code> (two rings, then the rain window) at the top of <code>update</code> and <code>vs</code>; emit shape 4 'rainDisc' = born on the slab's top over the OUTDOOR part of the disc by rejection against <code>frame.weatherC / D</code> (the lattice's own rectangles) with a rim taper; <code>rainStep()</code> = gravity + drag toward the wind's velocity (terminal = the lattice's 9 m/s + its lean \u2014 the lattice's drops drift toward \u2212wind, so do these), the swept segment through <code>traceClosest</code> (statics AND character capsules), a hit on anything visible and up-facing = the drop becomes its splash in place (PB_ASLEEP, the normal in <code>ori</code>, life cut to the crown's 0.2 s), a hit on the NoPrimary roof / a wall at a graze / a drift into the dry column = gone unseen; <code>rainShade()</code> = <code>particleLight</code> isotropic (three strongest shadow-rayed, the rest at the chips' untraced credit) + <code>weatherB</code>'s lit sky, \u00d7 a gain calibrated on the lattice's per-metre streak energy. The splat: <code>rainVertex</code> (a velocity-aligned capsule, shutter 1/30 s, 8 mm \u00d7 0.5\u20131.5, the thin-line widen-and-dim rule, fade-in over the first 90 ms and a defocus fade within 2 m of the lens; the crown = ONE surface-aligned quad) and <code>rainFragment</code> (additive; the ring running out at 0.3 m/s + four droplets a few cm out, procedurally from the seed; depth-softened, fogged, discarded over indoor surfaces \u2014 the lattice's readability rule kept; reactivity = display luminance \u00d7 6 into the particles' r8 mask).</li>\n<li><b>The recycler</b> \u2014 <code>game/rainFx.ts</code> (new, ~200 lines), called once a frame after the weather: outdoor area inside the disc by 1 m cells \u00d7 the rim taper \u2192 target = min(tier cap, ring capacity, lattice drops-per-m\u00b2 \u00d7 area \u00d7 density knob) \u2192 births/s = target \u00f7 mean fall, ONE 'rainDisc' record a frame; drips = the top edges of every static that is outdoors, gets rained on (open sky over the surface) and stands over \u2265 0.35 m of drop, sampled every 30 cm once (977 points in the office: 336 on the roof's rim, the rest on walls' tops, the cars, the van, the dumpster, the AC units, the lamp heads), a Poisson trickle \u221d rain rate from the ones inside the disc, \u2264 4 records a frame; <code>frame.weatherE</code> = (centre xz, R, the lattice share dropped \u00d7 how full the layer is) \u2014 the fill follows the last 0.73 s of births, cut on a camera cut, zeroed with a cleared ring; a re-rendered still (dt 0) holds; own mulberry + record serial (<code>__rain.seed</code>).</li>\n<li><b>The lattice's side</b> \u2014 <code>volumetrics.wgsl</code>: <code>rainNearKeep(p)</code> = 1 \u2212 weatherE.w \u00d7 (1 \u2212 smoothstep(0.7, 1, r/R)), multiplied into the streak and the splash-ring statements as <code>\u00d7 keep</code> (exactly 1.0 with the layer off \u2014 an if/else version moved two pixels by one step and was dropped). <code>frame.ts / common.wgsl</code>: <code>weatherE</code> vec4 @752, FRAME_BYTES 752 \u2192 768 (frame-layout.ts + the materials probe told).</li>\n<li><b>Plumbing</b> \u2014 settings <code>particleRain / Count / Radius / Density / Bright / Drips / Lattice / React</code> (engine.ts), <code>Caps.rain</code> per tier 6000 / 4000 / 2500 / 1500 / 800 (quality.ts), eight Tab \u25b8 Weather rows + the summary line, <code>?prain</code>, <code>window.__rain</code> {on, knobs(), set({}), stats, ring, fx, drips(), seed(n), summary()}, <code>tools/qa/prain-harness.js</code> (<code>__pr</code>: the views, stage / settle / pair / strip / smear / cost / costAB / tiers), <code>tools/qa/prain-page.py</code> (this page).</li>\n</ul>",
+ "verdict": "<div><h4 class=\"good\">Where the particles win</h4><ul>\n<li><b>Placement is real.</b> Streaks have parallax of their own, pass behind the car / the pallets / Sam and are hidden by them, and END on the first thing under them \u2014 roof, bonnet, deck, awning-top, a shoulder \u2014 with the ring exactly there. The lattice is a function of the view ray: it paints through everything and lands rings on a fixed ground lattice.</li>\n<li><b>Lighting is the scene's.</b> Three strongest lights shadow-tested per drop: the cone glows, the building's shadow of the lamp cuts the rain, the mullions stripe it behind the glass, a stroke flashes it. The lattice is lit by every reaching light unshadowed (by design: once per streak per ray).</li>\n<li><b>Drips and true splash counts</b> come for free from the same drop; the lattice's rings are decorative (4\u00d7 its own landings).</li>\n<li><b>The streak is a real shutter</b> (velocity \u00d7 1/30 s, 1.5-px AA line, per-drop size) instead of a half-res dab; motion reads as rain rather than sleet (the filmstrips).</li>\n<li>Cost is small and flat in pixels: 0.15 ms of compute for 1 750 drops at any tier, and gameplay bursts provably never notice it.</li></ul></div>\n<div><h4 class=\"warn\">Where the lattice still wins</h4><ul>\n<li><b>Density at distance for nothing.</b> Its cost is per outdoor pixel whatever the rate; the particles need N \u221d area \u00d7 rate and a ring to hold 1.7 N \u2014 fine for a 12 m disc (1 500 at rate 0.55, 2 700 in a downpour), silly for the whole lot at every distance where a streak is under a pixel anyway.</li>\n<li><b>No state, no transients.</b> The lattice is frame.time alone: a camera cut, a checkpoint load, a teleport show full rain on the first frame; the particle layer takes 0.7 s to fall in (the lattice now covers that ramp, but it is a ramp).</li>\n<li><b>Legibility.</b> Fat unshadowed dabs show rain everywhere there is rain, including out of every cone against dark asphalt; the physically-lit thin streaks go quiet there and read sparser at the same count. If 'it is raining' must read at a glance from the follow camera in the dark corners of the lot, the lattice says it louder.</li>\n<li>Zero pool pressure and zero interaction with the particle system's caps by not being in it.</li></ul></div>\n<div><h4>Neutral / notes</h4><ul>\n<li>The readability rule (no rain drawn over a pixel whose surface is indoors, even for outdoor drops the ray meets over the roof line) is kept for the particles, so the rooms look exactly as dry as today.</li>\n<li>Weather.wind's sign is the lattice's convention (streak TOPS lean toward +wind, drops drift toward \u2212wind); the particles follow it so the layers lean alike. Worth a comment in weather.ts if it ships, or flip both.</li>\n<li>The froxel haze is untouched by either layer (rain was never injected into it); streaks are fogged by the froxel fetch at their own depth like every splat.</li>\n<li>Not done: streaks are not tinted / reflected by a glass pane between them and the eye (the splat runs after the composite's glass); a frustum cull of the recycler's cells (0.1 ms indoors \u2192 0, at the price of a dry wedge after Q / E); gusts (per-drop speed jitter only \u2014 a gust would need the lattice to lean with it).</li></ul></div>",
+ "recommend": "<ul>\n<li><b>Ship the hybrid, not particles-only</b>: keep the lattice as the far field (beyond ~13 m a streak is under a pixel and the lattice's cost is flat) and let the particles own the disc. R = 0.6 \u00d7 camera distance (auto) is right for the follow camera \u2014 the view's corners; do not tie it to the frustum (rotation-proof matters more than the 0.1 ms indoors).</li>\n<li><b>N per tier</b>: the recycler only ever asks for what the lattice would show \u2014 ~1 500 at rate 0.55, ~2 700 at rate 1 from the follow camera \u2014 so the caps are ceilings, not spend: <b>ultra 6000 \u00b7 high 4000 \u00b7 medium 2500 \u00b7 low 1500 \u00b7 verylow 800</b> as coded (verylow is the one that binds at 0.55: it keeps 46 % of the lattice under the disc, which is the right degradation). If the thin streaks read too sparse for you, the honest knob is <code>particleRainDensity</code> (1.5 \u00d7 still costs ~0.25 ms) or a wider streak (<code>RAIN_FX.size</code> 8 \u2192 12 mm), not more lattice.</li>\n<li><b>Before it merges</b>: (1) decide the streak look \u2014 width <code>RAIN_FX.size = 0.008</code>, gain <code>RAIN_P_GAIN = 0.045</code>, shutter <code>1/30</code>, min drawn width 1.5 px; (2) decide the crown \u2014 <code>RAIN_SPLASH_DROPLETS = 4</code>, ring 60\u219280 ms \u00d7 1.6, droplets 22\u201355 cm/s for 80\u2013170 ms, crown radius <code>keep = 0.06</code>; (3) drips \u2014 <code>dripPerPointSec = 0.35</code>, <code>dripSize = 2.6</code>, <code>dripSpeed = 0.35</code>; (4) fold the duplicated record-packing statements in <code>prepare()</code> into one helper (kept apart here so the shared loop stayed untouched while two other lanes edit the file); (5) tint / reflect streaks behind a pane; (6) a <code>probes.ts prain</code> family (recycler determinism, ring never laps at the caps, births identity with the layer on, the drip-edge count) \u2014 the harness on this page is the start of it.</li>\n<li>One-line taste constants, all in <code>game/rainFx.ts RAIN_FX</code> / <code>particles_common.wgsl</code>: <code>size 0.008 \u00b7 sizeJit 0.5 \u00b7 topJit 0.9 \u00b7 speedJit 0.06 \u00b7 splashSecs 0.2 \u00b7 dripPerPointSec 0.35 \u00b7 dripSize 2.6 \u00b7 dripSpeed 0.35 \u00b7 radiusK 0.6 \u00b7 RAIN_P_GAIN 0.045 \u00b7 RAIN_SPLASH_DROPLETS 4 \u00b7 particleRainReact 6</code>.</li>\n</ul>",
+ "howto": "<p><b>Live</b>: the branch's dev server is left running \u2014 <code>http://localhost:5208/?prain</code> (add <code>&quality=high</code>); walk out of the fire exit or round to the south lot; Tab \u25b8 Weather has the storm's rows and, under them, <b>EXP: particle rain</b> + the p-rain sliders (max drops, radius, density \u00d7, brightness, lattice kept inside (\u22121 auto \u00b7 0 particles only \u00b7 1 both = doubled), TAA reactivity \u00d7, drips) and the recycler's summary line; <code>__rain.summary()</code> / <code>__rain.set({density: 1.5})</code> / <code>__rain.drips().length</code> in the console; <code>__weather.strike()</code> for V4. Toggle the row off and on to A/B against the lattice in place (the layer drains in a second, the lattice comes back under it as it does).</p>\n<p><b>Files</b> (branch exp/particle-rain, two commits on main @ 9d2bab1): <code>src/game/rainFx.ts</code> (new) \u00b7 <code>src/render/particles.ts</code> (kind + third ring + tail window + rain queue / deal / stats + EmitOpts.seed) \u00b7 <code>src/render/shaders/particles_common.wgsl</code> (P_RAIN, EmitBlock.rainWin, slotOf3, rainOutdoors, the rain constants) \u00b7 <code>particles.wgsl</code> (emit shape 4 + ring 2, the update hook, rainStep / rainShade) \u00b7 <code>particles_draw.wgsl</code> (vs / fs hooks, rainVertex / rainFragment) \u00b7 <code>volumetrics.wgsl</code> (rainNearKeep \u00d7 the streak and splash statements) \u00b7 <code>frame.ts / common.wgsl</code> (weatherE, FRAME_BYTES 768) \u00b7 <code>engine.ts</code> (settings) \u00b7 <code>ui/quality.ts</code> (Caps.rain) \u00b7 <code>ui/bindings.ts</code> (rows) \u00b7 <code>game/game.ts</code> (one call + summary) \u00b7 <code>main.ts</code> (?prain, __rain) \u00b7 <code>tools/qa/frame-layout.ts</code>, <code>materials-probes.ts</code> (the Frame grew) \u00b7 <code>tools/qa/prain-harness.js</code>, <code>prain-page.py</code>, <code>docs/perf/prain-numbers.json</code>, this page.</p>"
+}

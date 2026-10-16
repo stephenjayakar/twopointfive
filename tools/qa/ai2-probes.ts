@@ -5,6 +5,7 @@
 import { standUp, ROOT } from './headless.ts';
 const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const G = await import(`${ROOT}/src/game/guards.ts`);
+const { MAX_QUERIES } = await import(`${ROOT}/src/render/probe.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -141,8 +142,8 @@ export async function darkness() {
       }
     } catch (e: any) { threw = String(e?.stack ?? e); }
     game.say = origSay;
-    const ok = !threw && neutral && looks >= 2 && tSusp >= 12 && tSusp <= 27 && tPatrol > tSusp && tPatrol < 40 && maxN >= 1 && maxN <= 8 && game.probe.pending.length <= 32;
-    verdict(ok, '(D) no light provider (headless GPU): neutral plan, completes, exits by the old clocks', `${threw ? 'EXCEPTION ' + threw.slice(0, 200) + ' · ' : ''}spots looked into ${looks} (want ≥ 2); every reading neutral throughout: ${neutral}; search → suspicious +${tSusp.toFixed(1)} s (want 12‥27) → patrol +${tPatrol.toFixed(1)} s; light queries a frame ≤ ${maxN} (still asked of the probe: its pending list holds ${game.probe.pending.length}/32); his lines: ${lines.join(' | ')}`);
+    const ok = !threw && neutral && looks >= 2 && tSusp >= 12 && tSusp <= 27 && tPatrol > tSusp && tPatrol < 40 && maxN >= 1 && maxN <= 8 && game.probe.pending.length <= MAX_QUERIES;
+    verdict(ok, '(D) no light provider (headless GPU): neutral plan, completes, exits by the old clocks', `${threw ? 'EXCEPTION ' + threw.slice(0, 200) + ' · ' : ''}spots looked into ${looks} (want ≥ 2); every reading neutral throughout: ${neutral}; search → suspicious +${tSusp.toFixed(1)} s (want 12‥27) → patrol +${tPatrol.toFixed(1)} s; light queries a frame ≤ ${maxN} (still asked of the probe: its pending list holds ${game.probe.pending.length}/${MAX_QUERIES}); his lines: ${lines.join(' | ')}`);
   }
   console.log(`=== darkness: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;

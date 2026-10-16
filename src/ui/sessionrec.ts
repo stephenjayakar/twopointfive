@@ -17,7 +17,7 @@ export class SessionRec {
   /** F10: idle → ask for a recording; pending → give up; recording → stop (deferred to the end of this frame's update; a second press will not wait) */
   toggle(): string {
     const J = this.game.journal;
-    if (J.state === 'idle') { J.request({ commit: this.commit, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined, hud: true }); const s = J.why ? `REC waits — ${J.why}` : 'REC — F10 stops; hands off the Tab panel while it runs'; this.note(s); return s; }
+    if (J.state === 'idle') { J.request({ commit: this.commit, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined, hud: true }); const s = J.why ? `REC waits — ${J.why}` : 'REC — F10 stops; hands off the debugger (`) while it runs'; this.note(s); return s; }
     if (J.state === 'pending') { J.stop('cancelled'); this.note('REC cancelled'); return 'cancelled'; }
     if (J.stopping) { J.stop('stopped (forced)', true); return 'forced'; }
     J.stop('stopped'); return 'stopping';

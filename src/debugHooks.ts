@@ -1,5 +1,5 @@
 // The automation / debugging hooks the two pages hang on `window` (the game's in main.ts, the workbench's — level editor + viewer — in
-// workbench/main.ts; the dev notes and VIEWER.md list them), declared once so both assign them typed instead of through `(window as any)`. Types
+// workbench/main.ts; CLAUDE.md and VIEWER.md list them), declared once so both assign them typed instead of through `(window as any)`. Types
 // only: nothing here runs, nothing imports it — tsc picks the file up through tsconfig's include glob and merges the block into the global
 // Window. Every hook is optional because it only exists once its page has installed it (and the automation-set ones only when a script sets
 // them). The many knob-panel hooks (`__wet`, `__glass`, `__froxel` …) share the KnobHook shape: `summary()`, usually `knobs()` / `set({})`, plus
@@ -9,7 +9,7 @@ import type { Game } from './game/game';
 import type { FollowCamera } from './game/camera';
 import type { Demo } from './game/demo';
 import type { Input } from './game/input';
-import type { Character, Stance, SignalKind } from './game/character';
+import type { Character, Stance, SignalKind, LongStance } from './game/character';
 import type { Rig } from './game/rigProps';
 import type { SmokeSystem } from './smoke/smoke';
 import type { Menu } from './ui/menu';
@@ -32,7 +32,7 @@ import type { Ui as ViewerUi } from './viewer/ui';
 /** One WGSL compiler message as __wgsl reports it (line numbers relative to the submitted source, prelude subtracted). */
 export interface WgslLintMessage { type: GPUCompilationMessageType; line: number; col: number; msg: string; src: string; }
 /** The shape the knob-panel hooks share (`__wet`, `__glass`, `__froxel`, `__rt`, `__gi`, `__dn`, `__taa`, `__sharp`, `__sdfrig`, `__mark`, `__destr` …): a one-line summary,
- *  usually the knob table and a setter taking a partial of it, plus the module's own verbs and read-outs (indexed loosely — each is documented in the dev notes's bullet). */
+ *  usually the knob table and a setter taking a partial of it, plus the module's own verbs and read-outs (indexed loosely — each is documented in CLAUDE.md's bullet). */
 export interface KnobHook { summary(): string; knobs?(): Record<string, unknown>; set?(patch: Record<string, unknown>): unknown; [verb: string]: unknown; }
 /** a shader hot-swap hook: recompile the pass from `src` (or the file the dev server serves under /qa/shader/) into the live page — resolves to the compiler's verdict */
 export type HotSwapHook = (src?: string) => Promise<unknown>;
@@ -87,10 +87,13 @@ declare global {
     __director?: Director;
     /** the F9 perf recorder (ui/perfrec.ts) */
     __perfrec?: PerfRecorder;
+    __perfsweep?: import('./ui/perfsweep').PerfSweep;
+    /** THE list of knob tables (game/knobs.ts): `registry()` every switch table by name (the live objects), `copy()` a deep copy, `back(copy)` puts one back */
+    __knobs?: { registry(): Record<string, object>; copy(names?: readonly string[]): Record<string, Record<string, unknown>>; back(copy: Record<string, Record<string, unknown>>): void };
     /** the session journal (game/journal.ts, F10): start / stop / re-download the last file, its state and counters */
     __journal?: { start(opts?: { seed?: number; note?: string }): string; stop(immediate?: boolean): unknown; toggle(): string; save(): string; readonly state: string; readonly file: unknown; readonly stats: Record<string, unknown>; check(f?: unknown): string; summary(): string; [k: string]: unknown };
     /** staging: drop guard i as if shot / struck (killGuard through the real path); false if he is already down */
-    __killGuard?: (i: number, how?: 'shot' | 'struck') => boolean;
+    __killGuard?: (i: number, how?: 'shot' | 'struck' | 'wounded', zone?: 'side' | 'leg', dir?: [number, number, number]) => boolean;
     /** the animation's life-layer / foot-lock constant tables (character.ts LIFE, FEET) — noise measurements zero their `on` */
     __anim?: { LIFE: Record<string, unknown>; FEET: Record<string, unknown> };
     /** warm the smoke + particle pipelines behind the start card once (false when it already ran) */
@@ -99,6 +102,11 @@ declare global {
     __qrf?: { request(why?: string): unknown; perimeter(why?: string): unknown; standDown(): void; readonly state: unknown };
     /** the civilians by hand: list, panic(i, 'panic' | 'phone'), set(on), knobs, stats, log, spots, check, summary */
     __civ?: KnobHook & { panic(i?: number, what?: 'panic' | 'phone'): unknown; set(on: boolean): unknown };
+    /** wounds (game/wounds.ts, ?wounds): on, knobs, stats, men() */
+    __wounds?: { on: boolean; [k: string]: unknown };
+    __wallsnap?: { on: boolean; [k: string]: unknown };
+    /** the 2010s issue kit (game/gear.ts, ?oldgear = off): the switch, live */
+    __gear?: { on: boolean };
     /** the needs by hand: send(i, kind) / trip(i) / log */
     __needs?: { send(i?: number, kind?: string): unknown; trip(i?: number): unknown; [k: string]: unknown };
     /** checkpoints by hand (game/savestate.ts via main.ts): save / load / slots / newest / export / import / clear / auto / summary / canSave / snapshot */
@@ -107,7 +115,7 @@ declare global {
     __destr?: KnobHook;
     /** the SDF character rig's ray queries on the live scene group vs a disc integral (render/rigDebug.ts) */
     __rigTrace?: (rays: number[][]) => Promise<unknown>;
-    /** knob panels of the renderer's systems and the game's presentation modules — see KnobHook and each system's dev-notes bullet */
+    /** knob panels of the renderer's systems and the game's presentation modules — see KnobHook and each system's CLAUDE.md bullet */
     __wet?: KnobHook; __weather?: KnobHook; __glass?: KnobHook; __froxel?: KnobHook; __particles?: KnobHook; __taa?: KnobHook; __sharp?: KnobHook; __sdfrig?: KnobHook; __mark?: KnobHook; __dn?: KnobHook; __gi?: KnobHook;
     /** the RT-reflection + material knobs (renderer v3 phase 4) on the GAME page — the workbench's viewer Runtime is __vrt, not this */
     __rt?: KnobHook;
@@ -148,9 +156,10 @@ declare global {
     __vtime?: number;
     /** scripted stills of the procedural tactical layer: __tac.stance('stack', -1); __tac.kick(); __tac.at(0.38, 'kick') … */
     __tac?: {
-      stance(name: Stance, side?: -1 | 1): void; kick(): void; signal(kind: SignalKind): void; flinch(): void;
+      stance(name: Stance, side?: -1 | 1): void; peek(v: number): void; kick(): void; signal(kind: SignalKind): void; flinch(): void; throw(): void;
       lockpick(on: boolean): void; loop(on: boolean, shot?: number, every?: number): void;
-      at(t: number, shot?: 'kick' | SignalKind | 'flinch'): string; resume(): void;
+      at(t: number, shot?: 'kick' | SignalKind | 'flinch' | 'throw'): string; resume(): void;
+      long(on: boolean, name?: LongStance | null): void;
     };
     /** the viewer's grab / hold section (holder or held man alone, arm or gun variant): __hold.set({ on: true, who: 0, variant: 1, phase: 3, auto: false, t: 0.6 }) */
     __hold?: { set(o: Record<string, unknown>): unknown; HOLD: unknown };

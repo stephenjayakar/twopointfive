@@ -25,11 +25,13 @@ import type { Character } from './character';
 import type { Door } from './doors';
 import { Doors } from './doors';
 import { PLAYER_ID } from './consts';
+import { handworkOn, padHands } from './handwork';
 import { eyeContact, raiseEscalation, escalationOf } from './guards';
 import type { Eye } from './guards';
 import { beamBoxes } from './combat';
 import { chronicle, chronicleN, roomOf } from './chronicle';
 import { civilianBodies } from './civilians';
+import { hearPath, airTrans } from './weather';
 
 type CameraDef = Extract<DeviceDef, { kind: 'camera' }>;
 type KeypadDef = Extract<DeviceDef, { kind: 'keypad' }>;
@@ -80,6 +82,8 @@ export interface LaserRt {
   dir: Vec3; len: number;
   /** drawn length this frame (a leaf, a body, a chair in the beam cuts the picture of it short) */
   cut: number;
+  /** how far the SENSOR's beam reaches this frame: the drawn reach — but, while the fog of war is up, the floor as it stands (below) */
+  sense: number;
   lastTripAt: number; trips: number; deadCalled: boolean;
   /** something is breaking it right now (the trip fires on the edge: a man standing in a beam is one report, not one every cooldown) */
   held: boolean;
@@ -112,7 +116,7 @@ export class Devices {
         const target: LightTarget = { name: d.name, group: d.group ?? DEVICE_DEFAULTS.group, kind: 'device', pos: v3.copy(d.from), boxes: [], baseEmissive: [0, 0, 0], baseIntensity: 0, on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: d.mains !== false, interactive: true, stagger: 1.1 + 0.3 * li };
         g.targets.push(target);
         const seg = v3.sub(d.to, d.from); const len = v3.len(seg);
-        this.lasers.push({ def: d, index: ++li, target, dir: v3.scale(seg, 1 / Math.max(len, 1e-6)), len, cut: len, lastTripAt: -100, trips: 0, deadCalled: false, held: false });
+        this.lasers.push({ def: d, index: ++li, target, dir: v3.scale(seg, 1 / Math.max(len, 1e-6)), len, cut: len, sense: len, lastTripAt: -100, trips: 0, deadCalled: false, held: false });
       } else {
         const door = g.doors.byName(d.door);
         if (!door) throw new Error(`keypad '${d.name}': no door '${d.door}'`);   // (the validator has already refused a file where this could happen)
@@ -157,7 +161,7 @@ export class Devices {
 /** powered, unbroken, not knocked out: the device works this frame (lighting.ts updateTargets has folded on / broken / the OCP / the mains into factor) */
 export function alive(t: LightTarget): boolean { return t.factor > 0.05 && !t.broken; }
 /** live play: devices SENSE (they are always drawn) — the AI on, not the tour's plumbing, the panel's switch */
-function sensing(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.touring && g.tune.devices; }   // (touring as well as quietUtility: the tour's hold stop drops quietUtility with Sam lit on the lobby camera's marks — review, qrf.ts live() gates the same way; NOT the puppet — outside the tour a puppet is the QA harness walking him through a beam on purpose)
+function sensing(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.touring && g.tune.devices && !g.nightBreach?.active && !g.rescue?.active; }   // (touring as well as quietUtility: the tour's hold stop drops quietUtility with Sam lit on the lobby camera's marks — review, qrf.ts live() gates the same way; NOT the puppet — outside the tour a puppet is the QA harness walking him through a beam on purpose)
 
 // ---------------------------------------------------------------- the lens's exposure: sightGain's light × distance × crouch × smoke, nothing human
 /** Lit-seconds per second a camera's integrator fills at: the light on Sam through HIS meter (visibility^1.5, sightGain's own curve — dark is dark), the range
@@ -198,10 +202,11 @@ function updateCamera(g: Game, c: CameraRt, dt: number, live: boolean) {
   const pc = g.player.char; const range = d.range ?? DEVICE_DEFAULTS.range; const half = (d.fovDeg ?? DEVICE_DEFAULTS.fovDeg) / 2;
   const E: Eye = { pos: d.pos, look, range, halfDeg: half, nearM: 0, nearDeg: half, vHalfDeg: half };
   const tr = g.sensors.read(c.smokeKey); if (tr !== undefined) c.smokeTrans = tr;   // (sensors.ts — last answer for the lens → chest segment; headless it never answers and stays what it was — 1, or what a probe set)
-  const vis = eyeContact(g, E, pc, true, false, c.smokeTrans);
+  const air = c.smokeTrans * airTrans(g, d.pos, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]));   // (+ a picked weather's fog along the same line: weather.ts — × 1 exactly with none)
+  const vis = eyeContact(g, E, pc, true, false, air);
   if (vis.inCone) g.sensors.askSegment(c.smokeKey, d.pos, pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]));   // asked only while the cone has him: the probe's 32 slots a frame are Sam's own meter's too (a level of many cameras must not starve it)
   if (vis.visible) {
-    const gain = lensGain(g, vis.dist, range, c.smokeTrans);
+    const gain = lensGain(g, vis.dist, range, air);
     if (gain > 0.02) { c.seen = Math.min(g.tune.cameraAlarmSecs + 1, c.seen + gain * dt); c.lastSeen = v3.copy(pc.pos); c.sawThisFrame = true; }
     else c.seen = Math.max(0, c.seen - CAMERA_DECAY * dt);
   } else c.seen = Math.max(0, c.seen - CAMERA_DECAY * dt);
@@ -212,14 +217,14 @@ function updateCamera(g: Game, c: CameraRt, dt: number, live: boolean) {
 }
 function cameraSuspect(g: Game, c: CameraRt) {
   c.state = 'suspect'; c.reportedAt = g.time;
-  const where = roomOf(c.lastSeen!); const sent = sendToLook(g, c.lastSeen!, `camera ${c.index}`);
+  const where = roomOf(c.lastSeen!, g.level); const sent = sendToLook(g, c.lastSeen!, `camera ${c.index}`);
   control(g, `camera ${c.index} has movement in the ${where}${sent ? ` — ${sent.callsign}, go and look` : ''}`);
   chronDevice(g, 'cameraSpotted', { camera: c.def.name, n: c.index, sent: sent?.callsign }, c.lastSeen!);
   g.devices.note(g, { device: c.def.name, what: 'suspicion', where, sent: sent?.callsign ?? null });
 }
 function cameraAlarm(g: Game, c: CameraRt) {
   c.state = 'alarm'; c.reportedAt = g.time;
-  const p = c.lastSeen!; const where = roomOf(p);
+  const p = c.lastSeen!; const where = roomOf(p, g.level);
   control(g, `camera ${c.index}: that's him — the ${where}. all posts, the ${where}`);
   g.alarm.pos[0] = p[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = p[2]; g.alarm.placed = true;   // the floor's fix is the picture's (the spokesman nearest it answers, the lockdown posts by it)
   for (const gd of g.guards) if (gd.state !== 'dead' && !gd.held && !gd.unit) { gd.lastKnown = v3.copy(p); gd.awareness = Math.max(gd.awareness, 0.5); if (gd.state === 'patrol') { gd.state = 'suspicious'; gd.reactT = 0.8; gd.searchT = 0; gd.path = []; gd.pathGoal = null; } }   // everybody on the net has the fix and comes up sharp; nobody is 'alert' off a monitor (no eyes of their own on him yet)
@@ -230,20 +235,29 @@ function cameraAlarm(g: Game, c: CameraRt) {
 
 function updateLaser(g: Game, l: LaserRt, dt: number, live: boolean) {
   const d = l.def; const ok = alive(l.target);
-  if (l.target.broken && !l.deadCalled) { l.deadCalled = true; if (sensing(g)) deviceDown(g, d.name, `the ${roomOf(d.from)} beam`, d.from); }
+  if (l.target.broken && !l.deadCalled) { l.deadCalled = true; if (sensing(g)) deviceDown(g, d.name, `the ${roomOf(d.from, g.level)} beam`, d.from); }
   else if (!l.target.broken) l.deadCalled = false;
-  if (!ok) { l.cut = 0; l.held = false; return; }
+  if (!ok) { l.cut = 0; l.sense = 0; l.held = false; return; }
   // where the beam actually ENDS this frame: the first solid thing in it — a static, a leaf swung through it, a chair shoved into it (none of which are intruders).
   // Beyond that point there is no beam: nothing past it can break it and nothing past it is drawn (one model — the picture and the sensor agree).
   let reach = l.len; const wh = g.engine.world.raycast(v3.mad(d.from, l.dir, 0.03), l.dir, reach, BoxFlag.NoShadow); if (wh) reach = Math.min(reach, wh.t + 0.03);
   const ph = g.props.raycast(d.from, l.dir, reach); if (ph) reach = Math.min(reach, ph.t);
-  const end: Vec3 = v3.mad(d.from, l.dir, reach);
+  // UNDER THE FOG OF WAR THE SENSOR ASKS THE FLOOR, NOT THE PICTURE (the fog thread's read, 10-11: a quiet mission under the fog is the first place the fog
+  // runs while devices sense). `world.raycast` walks the dynamics as handed to the picture, and the fog rewrites that list — a leaf or a chair that moved out of
+  // the team's sight is still where it was last seen there — so the alarm would have read the fog. The sensor's reach is taken off the statics and the leaves
+  // where they STAND (the collision's own ray) and the props; the drawn beam is left as it was. (Not asked there: loose debris and a
+  // dropped item, which the collision does not hold.) No fog = one reach, as it was.
+  let sense = reach;
+  if (live && g.fogOfWar.active) { sense = l.len; const sh = g.col.raycast(v3.mad(d.from, l.dir, 0.03), l.dir, sense); if (sh) sense = Math.min(sense, sh.t + 0.03);
+    const sp = g.props.raycast(d.from, l.dir, sense); if (sp) sense = Math.min(sense, sp.t); }
+  l.sense = sense;
+  const end: Vec3 = v3.mad(d.from, l.dir, sense);
   // what breaks it: Sam's body (any capsule — a shin beam meets his shins, a chest beam his chest unless he is under it), the body he is hauling, a canister he has
   // thrown still in the air. Staff walk through their own beams (the system knows the shift); a dying man's gun clattering through it is nobody breaking in.
   const pl = g.player; let who: string | null = null; let at: Vec3 | null = null; let cut = reach;
   if (!pl.down && !g.playerInvisible) { at = bodyBreaks(pl.char, d.from, end); if (at) who = 'player'; }
   if (!who && pl.dragging) { at = bodyBreaks(pl.dragging.char, d.from, end); if (at) who = 'body'; }
-  if (!who) { const back = Math.max(dt, 1 / 60); for (const it of g.items.items) { if (it.settled || (it.kind !== 'smoke' && it.kind !== 'flash')) continue; const prev: Vec3 = [it.pos[0] - it.vel[0] * back, it.pos[1] - it.vel[1] * back, it.pos[2] - it.vel[2] * back]; const q = segSegClosest(prev, it.pos, d.from, end); if (q.dist < it.radius + BEAM_MARGIN) { who = it.kind; at = q.onB; break; } } }   // (its flight over this frame, back-projected off its velocity: throwables.ts keeps no previous position; at least a 60 Hz stride so a paused-and-stepped frame still has a segment)
+  if (!who) { const back = Math.max(dt, 1 / 60); for (const it of g.items.items) { if (it.settled || (it.kind !== 'smoke' && it.kind !== 'flash' && it.kind !== 'frag')) continue; const prev: Vec3 = [it.pos[0] - it.vel[0] * back, it.pos[1] - it.vel[1] * back, it.pos[2] - it.vel[2] * back]; const q = segSegClosest(prev, it.pos, d.from, end); if (q.dist < it.radius + BEAM_MARGIN) { who = it.kind; at = q.onB; break; } } }   // (its flight over this frame, back-projected off its velocity: throwables.ts keeps no previous position; at least a 60 Hz stride so a paused-and-stepped frame still has a segment)
   if (at) cut = Math.min(cut, v3.dist(d.from, at));
   for (const o of g.guards) { if (o.state === 'dead') continue; const t = o.char.rayHit(d.from, l.dir, cut); if (t >= 0) cut = Math.min(cut, t); }   // (a man standing in it cuts the picture of it, without a word)
   for (const o of civilianBodies(g)) { const t = o.char.rayHit(d.from, l.dir, cut); if (t >= 0) cut = Math.min(cut, t); }                             // (…and so does the cleaner crossing it: staff, to the system — no trip, but no beam drawn through her either; review G3.6)
@@ -262,7 +276,7 @@ export function bodyBreaks(c: Character, a: Vec3, b: Vec3): Vec3 | null {
 }
 function laserTrip(g: Game, l: LaserRt, who: string, at: Vec3) {
   l.lastTripAt = g.time; l.trips++;
-  const d = l.def; const where = roomOf(at); const level = d.alarm ?? DEVICE_DEFAULTS.alarm;
+  const d = l.def; const where = roomOf(at, g.level); const level = d.alarm ?? DEVICE_DEFAULTS.alarm;
   g.audio.play('alarmChirp', d.from, 0.7);
   if (who === 'player') g.player.noise = Math.max(g.player.noise, 0.3);   // (the meter shows him he did something — the chirp at the emitter is small, the radio is the noise that matters)
   let sent: Guard | null = null;
@@ -287,7 +301,7 @@ function deviceDown(g: Game, name: string, spoken: string, pos: Vec3) {
   const sent = sendToLook(g, floor, spoken);
   control(g, `${spoken} just went dark${sent ? ` — ${sent.callsign}, get eyes on it` : ' — somebody get eyes on it'}`);
   chronDevice(g, 'deviceDown', { device: name, sent: sent?.callsign }, floor);
-  g.devices.note(g, { device: name, what: 'dead', where: roomOf(floor), sent: sent?.callsign ?? null });
+  g.devices.note(g, { device: name, what: 'dead', where: roomOf(floor, g.level), sent: sent?.callsign ?? null });
 }
 /** The nearest calm, free staff man is sent to `pos` on control's word: the rack errand's mechanism (mission.ts sendRackCheck) — a task that survives the suspicion
  *  decay, so he actually gets there, looks round for a few seconds and, finding nothing, goes back to his route. Null if everybody is busy with something louder. */
@@ -318,7 +332,7 @@ export function learnCode(g: Game, lockId: string, how: 'told' | 'overheard', fr
   pl.codes.add(lockId);
   g.msg(`${how === 'told' ? `${from?.callsign ?? 'he'} gave up` : 'overheard'} the ${padDoorName(K)} code — ${spell(K.def.code)}`);
   chronDevice(g, 'codeLearned', { door: K.door.def.name, how, from: from?.callsign }, from?.char.pos);
-  g.devices.note(g, { device: lockId, what: how === 'told' ? 'code' : 'overheard', where: roomOf(pl.char.pos), sent: from?.callsign ?? null });
+  g.devices.note(g, { device: lockId, what: how === 'told' ? 'code' : 'overheard', where: roomOf(pl.char.pos, g.level), sent: from?.callsign ?? null });
   return true;
 }
 /** dialogue.ts ambient pairs: a man at `mouth` has just said the code of `lockId` out loud — Sam learns it iff it CARRIED to him: the propagation the mixer and the
@@ -327,7 +341,7 @@ export function learnCode(g: Game, lockId: string, how: 'told' | 'overheard', fr
 export function overhear(g: Game, speaker: Guard, lockId: string): boolean {
   const pl = g.player; if (pl.down || pl.codes.has(lockId)) return pl.codes.has(lockId);
   const mouth = speaker.char.bones.head ?? v3.add(speaker.char.pos, [0, 1.6, 0]); const ear = pl.char.bones.head ?? v3.add(pl.char.pos, [0, pl.crouch ? 1.0 : 1.6, 0]);
-  const prop = g.col.sound.propagate(mouth, ear);
+  const prop = hearPath(g, mouth, ear);
   if (prop.pathLen > OVERHEAR.pathM || prop.carry < OVERHEAR.carry) return false;
   return learnCode(g, lockId, 'overheard', speaker) || pl.codes.has(lockId);
 }
@@ -348,8 +362,8 @@ export function padState(g: Game, d: Door, from: Vec3): { pad: KeypadRt; known: 
 export function startCoding(g: Game, d: Door): boolean {
   const pl = g.player; const st = padState(g, d, pl.char.pos);
   if (!st || !st.known || pl.coding || pl.down) return false;
-  pl.coding = d; pl.codeT = 0; pl.fHeld = true;
-  g.audio.play('padBeep', st.pad.def.pos, 0.5);   // the first key as his hand lands on it
+  pl.coding = d; pl.codeT = 0; pl.fHeld = true; pl.handWait = 0;
+  if (!handworkOn('work')) g.audio.play('padBeep', st.pad.def.pos, 0.5);   // the first key as his hand lands on it (handwork.ts: with hands at work on, every key beeps under his finger — padHands)
   return true;
 }
 /** the 'nocode' row: the pad tried without the code — a deny tone at the plate, a hair on the meters, a word */
@@ -358,7 +372,7 @@ export function denyPad(g: Game, d: Door) {
   g.audio.play('deny', K.def.pos, 0.45);
   g.events.push({ kind: 'door', pos: [K.def.pos[0], 0, K.def.pos[2]], time: g.time, loud: false, level: DENY_LEVEL, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, DENY_LEVEL);
   g.msg(`the ${padDoorName(K)} pad wants a code you don't have — somebody on this floor knows it`);
-  g.devices.note(g, { device: K.def.name, what: 'deny', where: roomOf(g.player.char.pos), sent: null });
+  g.devices.note(g, { device: K.def.name, what: 'deny', where: roomOf(g.player.char.pos, g.level), sent: null });
 }
 export function stopCoding(g: Game) { const pl = g.player; if (!pl.coding) return; pl.coding = null; pl.codeT = 0; }
 /** once a frame: the code going in — a key a quarter of the way each, the accept chirp and the door on the last; broken off if he steps out of reach of the pad's door,
@@ -369,8 +383,9 @@ function updateCoding(g: Game, dt: number) {
   const inReach = Math.min(v3.distXZ(d.pos, p), v3.distXZ(d.frameCentre, p)) < PAD_REACH + 0.25;
   if (!K || pl.down || !inReach || pl.holding || pl.takedown) { stopCoding(g); return; }
   if (!g.doors.lockedOut(d, p)) { stopCoding(g); return; }   // no longer against him: nothing to key
-  const before = pl.codeT; pl.codeT += dt;
-  for (let k = 1; k < 4; k++) { const at = CODE_SECS * k / 4; if (before < at && pl.codeT >= at) g.audio.play('padBeep', K.def.pos, 0.5, { rate: 1 + 0.03 * k }); }
+  if (handworkOn('work')) pl.codeT += padHands(g, K, dt, CODE_SECS);   // (handwork.ts: his finger on the pad's own keys — the clock waits for the hand, each key beeps on its press)
+  else { const before = pl.codeT; pl.codeT += dt;
+    for (let k = 1; k < 4; k++) { const at = CODE_SECS * k / 4; if (before < at && pl.codeT >= at) g.audio.play('padBeep', K.def.pos, 0.5, { rate: 1 + 0.03 * k }); } }
   if (pl.codeT < CODE_SECS) return;
   // accepted
   pl.coding = null; pl.codeT = 0;
@@ -378,7 +393,7 @@ function updateCoding(g: Game, dt: number) {
   g.doors.use(d, p, PLAYER_ID, new Set([d.lockId]));   // the code IS his key for this one turn: unlock clack (KEY_LEVEL) + the creak, and it swings away from him
   g.msg(`${spell(K.def.code)} — the ${padDoorName(K)} takes it`);
   chronDevice(g, 'codeEntered', { door: d.def.name }, d.frameCentre);
-  g.devices.note(g, { device: K.def.name, what: 'code', where: roomOf(p), sent: null });
+  g.devices.note(g, { device: K.def.name, what: 'code', where: roomOf(p, g.level), sent: null });
 }
 
 // ---------------------------------------------------------------- drawing (into Game.dynBoxes, after the doors and props)
@@ -424,7 +439,7 @@ function deviceBoxesRaw(g: Game, out: Box[]) {
 
 // ---------------------------------------------------------------- persistence of the panel's knobs (like qrf.ts / whistle.ts: per machine)
 const LS_KEY = 'twopointsix.devices';
-export const DEVICE_TUNE_DEFAULTS = { devices: true, lasers: true, cameraSuspicionSecs: 0.8, cameraAlarmSecs: 2.0, deviceCones: true };   // (lit-seconds to a report / to the alarm; Tab ▸ Sandbox ▸ Devices carries both — the designer, 08-12: 'keep cameras as they are' — structured hiding places for bodies come later as a system)
+export const DEVICE_TUNE_DEFAULTS = { devices: true, lasers: true, cameraSuspicionSecs: 0.8, cameraAlarmSecs: 2.0, deviceCones: true };   // (lit-seconds to a report / to the alarm; Tab ▸ Sandbox ▸ Devices carries both — the maintainer, 08-12: 'keep cameras as they are' — structured hiding places for bodies come later as a system)
 export function loadDeviceTune(g: Game) {
   try {
     const raw = localStorage.getItem(LS_KEY); if (!raw) return; const o = JSON.parse(raw); const T = g.tune;

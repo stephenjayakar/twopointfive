@@ -146,15 +146,27 @@ fn cubeNormal(vi: u32) -> vec3f {
   let dlx = dpdx(v.lc); let dly = dpdy(v.lc);                             // … and the box-local position's, for the GBAA edge distance (boxEdgeOffset)
   // the material (renderer v3 phase 4): the box's finish — a section cap (id bit 29) is a diagram, not a surface: matte
   let bi = v.id & 0xFFFFFu; let cap = ((v.id >> 29u) & 1u) != 0u;
-  var rough = 1.0; var metal = 0.0;
-  if (!cap) { let fin = boxFinish(bi); rough = fin.rough; metal = select(0.0, 1.0, fin.metal); }
+  var rough = 1.0; var metal = 0.0; var wetG = false;
+  if (!cap) { let fin = boxFinish(bi); rough = fin.rough; metal = select(0.0, 1.0, fin.metal); wetG = fin.aniso; }
   if (frame.matCfg.w > 0.0 && !cap) {                                    // the DETAIL layer (detailSurface below): wear you can explain, at the primary hit only — 0 = nothing here runs, the pixel exactly as it was
     let dt = detailSurface(v.wp, n, bi, albedo, rough, metal, frame.matCfg.w);
     albedo = dt.albedo; rough = dt.rough; metal = dt.metal;
   }
+  let wetK = floor(frame.rtCfg.z * 0.5) * 0.1;                           // WET GROUND (detail.wgsl wetGround; settings.wetBreakup rides rtCfg.z as 2 × tenths — 0 = nothing here runs)
+  if (wetK > 0.0 && wetG && n.y > 0.9) { rough = wetGround(v.wp, rough, wetK); }
   if (v.mark != 0u && !cap) {                                             // MARKINGS (markings.wgsl): the pixel-art signifiers on this box's faces — albedo + roughness only, after the wear, before the encounter's marks
     let mk = markSurfaceGB(v.mark, bi, v.wp, n, dwx, dwy, albedo, rough);
     albedo = mk.albedo; rough = mk.rough;
+  }
+  if (SNOW_SURF && !cap && snowCfg.p[1].z > 0.5 && f32(bi) < snowCfg.p[1].w) {   // THE SNOW'S SURFACE (snow.wgsl; a snow level with its look on — dead code on every other page): the ground and every snow-painted box of the level file are shaded off the level's snow field, after the markings, before the encounter's marks
+    let snowPaint = snowIsPaint(v.albedo);
+    let snowGround = n.y > 0.9 && v.wp.y < 0.03 && v.wp.y > -0.01 && (boxGeo[bi].flags & BOX_EMISSIVE) == 0u;
+    if (snowGround || snowPaint || (v.hf.y < 0.016 && v.wp.y < 0.035)) {
+      let sb = snowBox(v.wp, n, bi, v.lc, v.hf, snowGround, snowPaint, snowIsLay(v.albedo), albedo, rough, distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y);
+      if (sb.gone) { discard; }
+      albedo = sb.albedo; n = sb.n; rough = sb.rough; metal = metal * (1.0 - sb.amt);
+      if (SNOW_GLOW || SNOW_SPARKLE) { o.normal.a = sb.amt * 0.6667; }   // SNOW GLOW, SNOW SPARKLE (composite.wgsl snowGlow): how much of this pixel is snow, held in `o` (zero until here) for the output line below
+    }
   }
   if ((frame.flags & FLAG_DECALS) != 0u) {                              // decals (experiment E1, decals.wgsl): the marks registered in this pixel's 1 m cell edit what is stored — so every light that reads the g-buffer answers to them
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;   // this pixel's footprint on the surface (m): edges are softened over it, sub-pixel texture fades under it
@@ -163,7 +175,7 @@ fn cubeNormal(vi: u32) -> vec3f {
     albedo = d.albedo; n = d.n; keep = d.keep;
   }
   o.albedo = vec4f(albedo, keep);
-  o.normal = vec4f(n * 0.5 + 0.5, 1.0);
+  o.normal = vec4f(n * 0.5 + 0.5, select(1.0, 1.0 - o.normal.a, SNOW_GLOW || SNOW_SPARKLE));   // (.a: 1 = not snow, as every writer of this target stores it; SNOW GLOW or SNOW SPARKLE: 2∕3 = thin snow, 1∕3 = snow — the target's two spare bits, read by composite.wgsl snowGlowAmt alone)
   o.id = v.id;
   o.vel = motionOf(v.wp, v.wpPrev);
   o.mat = vec2f(rough, metal);
@@ -175,9 +187,14 @@ fn cubeNormal(vi: u32) -> vec3f {
 // The rows past the tints are the WET look (game/wet.ts → anim/characters.ts setInstance; all zero for a dry man or with settings.wetChars off — fsSkin then
 // stores exactly what it always stored): wet = (coat 0‥1, beads 0‥1, the rain rate the drops were fed at, a per-man clock offset in s), wetK = (bead density,
 // bead radius m, run / trail length m, coat roughness soaked), wetK2 = (coat roughness dry, darken exponent, darken multiplier, specular gain).
-struct CharInst { tint: vec3f, jointOffset: u32, tint2: vec3f, owner: u32, wet: vec4f, wetK: vec4f, wetK2: vec4f, wetK3: vec4f };   // wetK3 = (waterline: bind-pose m above the sole the coat reaches, the wicking band above it, 0, 0) — game/wet.ts wetLineRow
+struct CharInst { tint: vec3f, jointOffset: u32, tint2: vec3f, owner: u32, wet: vec4f, wetK: vec4f, wetK2: vec4f, wetK3: vec2f, parts: u32, pad: u32 };   // wetK3 = (waterline: bind-pose m above the sole the coat reaches, the wicking band above it, 0, 0) — game/wet.ts wetLineRow
 @group(1) @binding(1) var<storage, read> jointMats: array<mat4x4f>;
 @group(1) @binding(2) var<storage, read> chars: array<CharInst>;
+// CHARACTER MATERIALS (render/charMaterials.ts → anim/characters.ts setMaterials): CHAR_MAT_ROWS vec4 rows per instance. Row 0 = (on, grime height, grime band, crease
+// darkening) · row 1 = (grime rgb, ridge lightening) · then per material slot (albedo rgb, lobe roughness) · (lobe gain, soak, grime, wear). Row 0 `.x` 0 — every instance
+// unless settings.charMats is up — and vsSkin hands fsSkin the two tints and a zero finish: the pixel is stored exactly as it always was.
+const CHAR_MAT_ROWS: u32 = 24u;
+@group(1) @binding(7) var<storage, read> charMats: array<vec4f>;
 @group(1) @binding(5) var<storage, read> prevJoints: array<mat4x4f>;   // last frame's palette (render/gbuffer.ts snapshotPrev), same layout / offsets — the skinned motion vectors
 
 struct SkinVOut {
@@ -192,10 +209,36 @@ struct SkinVOut {
   @location(7) @interpolate(flat) wetK2: vec4f,
   @location(8) wpPrev: vec3f,                          // this vertex skinned with LAST frame's palette
   @location(9) @interpolate(flat) wetK3: vec4f,      // (waterline, band) — read only when he is wet
+  @location(10) @interpolate(flat) fin: vec4f,        // CHARACTER MATERIALS: the slot's (lobe roughness, lobe gain, soak, 1) — w 0 = no slots: the two tints, a matte dry man
+  @location(11) @interpolate(flat) mvar: vec4f,       // … its (grime, wear) and the man's (crease darkening, ridge lightening)
+  @location(12) @interpolate(flat) grime: vec4f,      // … the ground's dust on him: rgb, and in w the height (bind-pose m above the sole) it stands at full strength
+  @location(13) geo: vec2f,                           // … (cavity −1 ridge ‥ +1 crease baked from the mesh, the grime band's height) — interpolated
 };
 
+// THE CAST'S MATERIAL SLOTS (anim/gltf.ts SLOT_NAMES — the ids are that table's order): the flat colour of a slot on one man. PLACEHOLDER SHADING, the models part's stand-in: one
+// colour per slot, the man's two instance colours where the game already tells men apart by them (tint = the uniform / the loadout's suit, tint2 = the pair colour / trim). The
+// characters' materials (finish per slot, cloth, skin tones, wear) replace this function and what fsSkin writes for the slot.
+const SLOT_SKIN: u32 = 0u; const SLOT_CLOTH_UNIFORM: u32 = 1u; const SLOT_CLOTH_PLAIN: u32 = 2u; const SLOT_WEBBING: u32 = 3u; const SLOT_BOOT: u32 = 4u;
+const SLOT_HELMET: u32 = 5u; const SLOT_METAL_DARK: u32 = 6u; const SLOT_RUBBER: u32 = 7u; const SLOT_LENS: u32 = 8u;
+fn slotAlbedo(slot: u32, tint: vec3f, tint2: vec3f) -> vec3f {
+  switch (slot) {
+    case 0u: { return vec3f(0.42, 0.27, 0.19); }                                  // skin
+    case 1u: { return tint; }                                                     // cloth_uniform: the uniform (operators) / the trousers (defenders)
+    case 2u: { return tint2; }                                                    // cloth_plain: plain cloth — the shirt (defenders, civilians)
+    case 3u: { return mix(tint, vec3f(0.16, 0.15, 0.09), 0.75); }                 // webbing: olive-drab, a little of the uniform in it
+    case 4u: { return vec3f(0.035, 0.03, 0.028); }                                // boot
+    case 5u: { return mix(tint, vec3f(0.10, 0.11, 0.08), 0.6); }                  // helmet / headgear
+    case 6u: { return vec3f(0.03, 0.03, 0.035); }                                 // metal_dark
+    case 7u: { return vec3f(0.025, 0.022, 0.02); }                                // rubber (hair, gloves, pads)
+    case 8u: { return vec3f(0.05, 0.16, 0.10); }                                  // lens
+    case 9u: { return tint2; }                                                    // accent: the member's marking colour (helmet band, brassards)
+    case 10u: { return vec3f(0.46, 0.445, 0.42); }                                  // eye: the whites of the eyes (a fixed off-white on every side)
+    default: { return tint; }
+  }
+}
+
 @vertex fn vsSkin(@location(0) position: vec3f, @location(1) normal: vec3f, @location(2) joints: vec4u, @location(3) weights: vec4f,
-                  @builtin(instance_index) ii: u32, @location(4) matSel: f32) -> SkinVOut {
+                  @builtin(instance_index) ii: u32, @location(4) matSel: f32, @location(5) slotGeo: vec2f) -> SkinVOut {
   let ch = chars[ii];
   let base = ch.jointOffset;
   let m = jointMats[base + joints.x] * weights.x + jointMats[base + joints.y] * weights.y + jointMats[base + joints.z] * weights.z + jointMats[base + joints.w] * weights.w;
@@ -205,9 +248,24 @@ struct SkinVOut {
   o.pos = frame.viewProj * vec4f(wp.xyz, 1.0);
   o.normal = wn;
   o.albedo = select(ch.tint, ch.tint2, matSel > 0.5);
+  // THE CAST (anim/gltf.ts loadGltfCast): the mesh is a set of PARTS and this man wears the ones in his mask (CharInst.parts); matSel = slot + 16 × part. A part he does
+  // not wear collapses outside the clip volume (its triangles are whole parts, so all three corners go) and the slot picks the colour. Mask 0 = the mannequin: the lines above, as ever.
+  let parts = ch.parts;
+  if (parts != 0u) {
+    let ms = u32(matSel + 0.5);
+    if (((parts >> (ms >> 4u)) & 1u) == 0u) { o.pos = vec4f(0.0, 0.0, -2.0, 1.0); }
+    o.albedo = slotAlbedo(ms & 15u, ch.tint, ch.tint2);
+  }
+  o.fin = vec4f(0.0); o.mvar = vec4f(0.0); o.grime = vec4f(0.0); o.geo = vec2f(0.0);
+  let mb = ii * CHAR_MAT_ROWS; let H0 = charMats[mb];
+  if (H0.x > 0.5) {   // this man is shaded per material slot
+    let sr = mb + 2u + 2u * min(u32(slotGeo.x + 0.5), 10u);
+    let A = charMats[sr]; let B = charMats[sr + 1u]; let H1 = charMats[mb + 1u];
+    o.albedo = A.xyz; o.fin = vec4f(A.w, B.x, B.y, 1.0); o.mvar = vec4f(B.z, B.w, H0.w, H1.w); o.grime = vec4f(H1.xyz, H0.y); o.geo = vec2f(slotGeo.y, H0.z);
+  }
   o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);
   o.mp = position; o.wp = wp.xyz;
-  o.wet = ch.wet; o.wetK = ch.wetK; o.wetK2 = ch.wetK2; o.wetK3 = ch.wetK3;
+  o.wet = ch.wet; o.wetK = ch.wetK; o.wetK2 = ch.wetK2; o.wetK3 = vec4f(ch.wetK3, 0.0, 0.0);
   let mp = prevJoints[base + joints.x] * weights.x + prevJoints[base + joints.y] * weights.y + prevJoints[base + joints.z] * weights.z + prevJoints[base + joints.w] * weights.w;
   o.wpPrev = (mp * vec4f(position, 1.0)).xyz;
   return o;
@@ -334,6 +392,22 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
   // pixel in three along it and crawl as he moves (Tokuyoshi & Kaplanyan's kernel: alpha² += ½·Var(n), capped)
   let dnx = dpdx(v.normal); let dny = dpdy(v.normal);
   let nKr2 = min(0.5 * (dot(dnx, dnx) + dot(dny, dny)), 0.18);
+  // CHARACTER MATERIALS: the slot's colour arrives in v.albedo; here the variation the MESH gives it — creases darker and duller, ridges worn lighter, the ground's
+  // dust climbing from the sole — and the finish its highlight takes (the wet coat's lobe: packWet below → composite.wgsl wetCoatSpec). v.fin.w 0 = none of this.
+  let slotted = v.fin.w > 0.5;
+  var dRough = 0.65; var dGain = 0.0;   // (dRough: before the specular anti-aliasing — the wet branch below widens its own)
+  if (slotted) {
+    let crease = max(v.geo.x, 0.0) * v.mvar.y; let ridge = max(-v.geo.x, 0.0) * v.mvar.y;
+    albedo = albedo * (1.0 - v.mvar.z * crease);
+    albedo = mix(albedo, albedo * 1.5 + vec3f(0.012), v.mvar.w * ridge);
+    let dust = v.mvar.x * (1.0 - smoothstep(v.grime.w, v.grime.w + v.geo.y, v.mp.y)) * (0.75 + 0.25 * crease);
+    albedo = mix(albedo, v.grime.xyz, clamp(dust, 0.0, 1.0) * 0.6);
+    dRough = mix(v.fin.x, 0.65, clamp(dust + 0.5 * crease - 0.25 * ridge, 0.0, 1.0));           // dust and creases dull it, a rubbed ridge is a touch shinier
+    dGain = v.fin.y * (1.0 - 0.7 * clamp(dust, 0.0, 1.0)) * (1.0 - 0.5 * crease);
+    let aaRough = pow(clamp(pow(dRough, 4.0) + nKr2, 0.0, 1.0), 0.25);                            // the wet coat's specular anti-aliasing (below), for the same reason
+    id = (v.id & 0xFFF00000u) | packWet(aaRough, dGain, vec2f(0.0)) | (1u << 30u);
+  }
+  let soak = select(1.0, v.fin.z, slotted);   // how much of the rain's darkening this material takes (1 with no slots: every factor below is then the one it always was)
   let W = v.wet;
   // the WATERLINE (wetK3, game/wet.ts wetLineRow): the coat — and any drops — only below it, easing to nothing across the wicking band above; the rain's line sits far over
   // his head (all of him, exactly as before there was one), a wading depth wets him to there and leaves the rest of him the dry man he was
@@ -348,12 +422,12 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
     // wet fabric / webbing / plastic: the water fills the weave that scattered white — darker in LUMINANCE (lum^(darken·coat), so dark cloth drops hardest, as
     // soaked cloth does) × (1 − darkenMul·coat), and a touch more saturated about that grey (a per-channel power would turn a blue-black suit teal)
     let lum0 = max(dot(albedo, vec3f(0.2126, 0.7152, 0.0722)), 1e-4);
-    let kd = pow(lum0, K2.y * coat) * (1.0 - K2.z * coat);
+    let kd = pow(lum0, K2.y * (coat * soak)) * (1.0 - K2.z * (coat * soak));
     let L = lum0 * kd;
     // the albedo target is 8 bits a channel: below ~0.03 a hue cannot survive quantisation (a blue-black suit taken to 0.002 stores as (0, 1, 1)/255 — teal), so
     // the chroma fades out toward that floor and a soaked black suit goes to a neutral near-black instead
     let keepChroma = smoothstep(0.006, 0.03, L);
-    albedo = mix(vec3f(max(L, 0.004)), max(mix(vec3f(L), albedo * kd, 1.0 + 0.25 * coat), vec3f(0.0)), keepChroma);
+    albedo = mix(vec3f(max(L, 0.004)), max(mix(vec3f(L), albedo * kd, 1.0 + 0.25 * (coat * soak)), vec3f(0.0)), keepChroma);
     let F3 = wetFilm(S, coat, rain, fp) * expo; let film = F3.x;
     var dr: DropOut; dr.bead = 0.0; dr.trail = 0.0; dr.tilt = vec2f(0.0); dr.rb = K.y;
     if (W.y > 0.0) { dr = wetDrops(S, W, K, fp); dr.bead *= below; dr.trail *= below; dr.tilt *= below; }   // (drops stand on him only where he is wet — the band's are half there)
@@ -362,7 +436,8 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
     // for composite's clear coat: damp cloth is a wide, dim lobe; the film a tight bright one whose rivulet edges tilt the normal; a bead is water, its normals
     // fanning right across it (widened by the pixel's footprint so the whole drop answers a lamp, not one lucky pixel of it); the gain follows the coat — and a
     // bead or a fresh trail glints even on cloth that has half dried
-    var rough = mix(K2.x, mix(K2.x, K.w, 0.3), clamp(coat, 0.0, 1.0));    // damp cloth
+    let dryR = select(K2.x, dRough, slotted);                              // (a slotted material dries back to ITS finish, not to the one dry-cloth number)
+    var rough = mix(dryR, mix(dryR, K.w, 0.3), clamp(coat, 0.0, 1.0));    // damp cloth
     rough = mix(rough, K.w, soaked);                                        // film / trail
     rough = mix(rough, WET_BEAD_ROUGH, dr.bead);                            // standing water
     var tilt = clamp(F3.yz, vec2f(-0.7), vec2f(0.7)) * (1.0 - dr.bead) + dr.tilt;   // the rivulets' shoulders and waves, then the bead's own cap over them
@@ -372,7 +447,8 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
     var kr2 = nKr2;
     kr2 += dr.bead * pow(clamp(0.8 * fp / max(dr.rb, 1e-4), 0.0, 0.6), 2.0);
     rough = pow(clamp(pow(rough, 4.0) + kr2, 0.0, 1.0), 0.25);
-    let gain = K2.w * clamp(max(max(0.15 * coat, soaked * (0.35 + 0.65 * coat)), dr.bead * 1.8), 0.0, 2.0);
+    var gain = K2.w * clamp(max(max(0.15 * coat, soaked * (0.35 + 0.65 * coat)), dr.bead * 1.8), 0.0, 2.0);
+    if (slotted) { gain = max(gain, dGain); }   // a helmet in the rain keeps the highlight it had dry
     id = (v.id & 0xFFF00000u) | packWet(rough, gain, tilt) | (1u << 30u);
   }
   o.albedo = vec4f(albedo, 1.0);

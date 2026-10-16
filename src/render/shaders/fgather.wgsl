@@ -166,7 +166,8 @@ fn glossReflection(P: vec3f, owner: u32) -> vec3f {
   // the wet lot (game/weather.ts: frame.weatherA.w = wetness, weatherC = the interior footprint): standing water outdoors mirrors far more than a polish —
   // up to 3.5× the coat's Fresnel at full wet, capped at a full mirror (a grazing spectate camera would otherwise reflect more than arrives), nothing indoors
   // or dry (w = 0: min(F, 1) = F, so this line multiplies by exactly what it always did)
-  let Wc = frame.weatherC; let wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
+  let Wc = frame.weatherC; var wetOut = select(0.0, frame.weatherA.w, P.x < Wc.x || P.z < Wc.y || P.x > Wc.z || P.z > Wc.w);
+  if (WX_KINDS) { if (frame.cardCfg.y != 0u && wxRoofed(P.xz)) { wetOut = 0.0; } }   // (weather kinds: every roof of the level keeps its floor dry, not the first alone)
   return L * (min(F * (1.0 + 2.5 * wetOut), 1.0) * GLOSS_STRENGTH);
 }
 

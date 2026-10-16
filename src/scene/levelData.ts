@@ -6,7 +6,7 @@
 //   scene/levelLoad.ts  the two conversions: loadLevel(LevelData) → Level (what the game boots from) and levelToData(Level, opts) → LevelData (the exporter's
 //                       direction: tools/level-export.ts runs the legacy procedural generator once and writes levels/office.json)
 //
-// Design rules (the in-browser editor — lane G1b — and later lanes G2 floors / G4 devices build on this, and the designer hand-edits the JSON):
+// Design rules (the in-browser editor — lane G1b — and later lanes G2 floors / G4 devices build on this, and the maintainer hand-edits the JSON):
 //   - every entity carries a stable string `id`, unique within its array; cross references are ALWAYS by id (a light's fixture box, a switchable's boxes,
 //     the breaker's two boxes, a beacon's dome, a plan's door, an objective's door), never by array index — the loader resolves ids to the indices the
 //     runtime wants. Array ORDER is still preserved by the loader (boxes[i] of the file is world.statics[i]), so a file diff is an entity diff.
@@ -22,6 +22,8 @@
 import type { Vec3, Quat } from '../math/vec';
 import type { WeaponId } from '../game/weapons';   // type only (erased): what a route may hand its man
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
+import type { LevelScenarios } from './scenarios';
+import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
 import { CIVILIAN_TASKS } from './level';
 import { BoxFlag } from './boxes';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from './markings';
@@ -52,7 +54,7 @@ export type Rect = { x0: number; x1: number; z0: number; z1: number };
 /** One storey. v1 has exactly one (y 0, ceiling 3); lane G2 adds a mezzanine: boxes / doors / props / volumes name the floor they belong to. */
 export interface FloorData { id: string; name?: string; /** world Y of the walkable surface */ y: number; /** ceiling height above y (WORLD.ceilingY today) */ ceiling: number; }
 /** A named paint: linear diffuse albedo. Boxes and prop parts reference materials by key OR carry an inline albedo (one-offs). `rough` / `metal` = the FINISH the
- *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/exp-rtreflect.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
+ *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before. */
 export interface MaterialData { albedo: Vec3; rough?: number; metal?: boolean; notes?: string; }
 /** What is underfoot for everyone who listens to a footstep (game/floor.ts: the mixer, the guards' ears and the SOUND meter read ONE map). Zones are floor
@@ -119,7 +121,7 @@ export interface LightData {
 /** Emissive fixtures the OCP / panel / blackout can switch: the boxes glow `baseEmissive` when on. */
 export interface SwitchableData { id: string; boxes: string[]; group: string; on: boolean; baseEmissive: Vec3; flicker?: boolean; /** absent = true */ mains?: boolean; }
 /** A hinged leaf in a doorway gap (game/doors.ts DoorDef minus the runtime albedo). The FRAME (jambs, head, stops) is ordinary boxes, group 'doorframe.<id>'. */
-export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (doors.ts DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }
+export interface DoorData { id: string; floor?: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; /** which key turns it; absent = the floor key */ lock?: string; keySide?: 1 | -1; /** the side the leaf opens into, +1 = the CCW side of the closed leaf (doors.ts DoorDef.swing); absent = dealt from the level: into the room it serves (game/doorswing.ts) */ swing?: 1 | -1; /** a steel fire door: a boot only rings off it, no pick opens it (doors.ts DoorDef.steel — the QRF's west stair door) */ steel?: boolean; }
 /** One man's beat (scene/level.ts PatrolRoute). `id` doubles as the route name the radio uses unless `name` says otherwise. */
 export interface RouteData { id: string; name?: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
 export interface ChokepointData { id: string; name?: string; floor?: string; pos: Vec3; yaw: number; }
@@ -165,7 +167,7 @@ export type ConnectorData =
 export type ObjectiveData =
   | { id: string; kind: 'reach'; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
   | { id: string; kind: 'drive'; /** rack n → switchables rack<n>_leds / rack<n>_glow go dark */ rackIndex: number; /** marker point on its LED face */ front: Vec3; halfW: number }
-  | { id: string; kind: 'exfil'; door: string; /** past this x you are out */ x: number; z: number };
+  | { id: string; kind: 'exfil'; door: string; /** past this x you are out */ x: number; z: number; /** the way out through it, a unit (dx, dz); absent = east: past x */ out?: [number, number] };
 export interface MissionData { playerSpawn: Vec3; objectives: ObjectiveData[]; }
 
 export interface SkyData { zenith: Vec3; horizon: Vec3; }
@@ -208,6 +210,9 @@ export interface LevelData {
   sky: SkyData;
   daylight?: DaylightData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
+  /** what the playtest scenarios take from this level (scene/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
+   *  a level without the block stages none of them (the office's lives beside its file, levels/office.scenarios.ts) */
+  scenarios?: LevelScenarios;
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ key registry
@@ -215,7 +220,7 @@ export interface LevelData {
  *  hand-edit typo like "emmisive" must fail loudly, not vanish on the next save) and canonicalLevelData (which keeps exactly these). Adding a field to the
  *  format = add it to its interface above, to this list, and to both directions in levelLoad.ts. The drill plans are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -224,20 +229,25 @@ export const KEYS = {
   marking: ['face', 'res', 'at', 'size', 'pal', 'cells'], markpal: ['albedo', 'mul', 'rough', 'emit'],   // (scene/markings.ts marking() / palEntry() write exactly these, in this order)
   light: ['id', 'kind', 'pos', 'dir', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'group', 'enabled', 'volumetric', 'radius', 'mains', 'broad', 'fixture'],
   switchable: ['id', 'boxes', 'group', 'on', 'baseEmissive', 'flicker', 'mains'],
-  door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel'],
+  door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'],
   route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
   vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
   connector: ['id', 'kind', 'from', 'to', 'cost', 'mat', 'notes'], connEnd: ['floor', 'c', 'h'],
-  mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z'],
+  mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ validation
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 const isVec = (v: unknown, n = 3): boolean => Array.isArray(v) && v.length === n && v.every(isNum);
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
+/** a unit vector on the floor, [dx, dz] */
+const isUnit2 = (v: unknown): boolean => Array.isArray(v) && v.length === 2 && isNum(v[0]) && isNum(v[1]) && Math.abs(Math.hypot(v[0], v[1]) - 1) < 1e-3;
+/** the keys of a squad record and of its `arrive` (scene/scenarios.ts SquadData — the rest of a scenario block is carried as written; a squad's refs are checked) */
+const SQUAD_KEYS = ['id', 'name', 'rooms', 'rally', 'barricade', 'mayLeave', 'training', 'arrive'] as const, SQUAD_ARRIVE_KEYS = ['door', 'spawn', 'men'] as const;
 const isRect = (r: any): boolean => !!r && isNum(r.x0) && isNum(r.x1) && isNum(r.z0) && isNum(r.z1) && r.x0 <= r.x1 && r.z0 <= r.z1;
 
 /** Every structural / referential / range problem in `d`, one line each ('' = valid). Cheap enough to run at every boot (loadLevel does). It checks the
@@ -304,8 +314,8 @@ export function validateLevelData(d: LevelData): string[] {
   // boxes
   const boxes = recs('boxes', d.boxes);
   const boxIds = uniq('boxes', boxes.map(b => (b as any)?.id));
-  boxes.forEach((b, i) => {
-    if (!isObj(b)) return; const w = `boxes[${i}] '${show(b.id)}'`;
+  // (ONE BOX'S RULE — the level's own boxes, and the boxes a Team & kit way adds for its picture: scenarios.kitView below)
+  const boxRule = (w: string, b: (typeof boxes)[number]) => {
     known(w, b, KEYS.box); floorOk(w, b.floor);
     if (!isVec(b.c)) err(w, 'c must be Vec3'); if (!(isVec(b.h) && b.h.every(x => x >= 0))) err(w, 'h must be Vec3 ≥ 0');
     if (b.yaw !== undefined && !isNum(b.yaw)) err(w, 'yaw must be a number');
@@ -316,8 +326,9 @@ export function validateLevelData(d: LevelData): string[] {
     if (b.cutHeight !== undefined && !isNum(b.cutHeight)) err(w, 'cutHeight must be a number');
     if (b.name !== undefined && !isStr(b.name)) err(w, 'name must be a non-empty string'); if (b.group !== undefined && !isStr(b.group)) err(w, 'group must be a non-empty string');
     marksOk(w, b.markings, b.h, b.rot !== undefined);
-  });
-  const boxOk = (where: string, id: unknown) => { if (!isStr(id) || !boxIds.has(id)) err(where, `unknown box '${show(id)}'`); };
+  };
+  boxes.forEach((b, i) => { if (isObj(b)) boxRule(`boxes[${i}] '${show(b.id)}'`, b); });
+  const boxOk = (where: string, id: unknown, more?: ReadonlySet<string>) => { if (!isStr(id) || !(boxIds.has(id) || more?.has(id))) err(where, `unknown box '${show(id)}'`); };
   // props
   const props = recs('props', d.props); uniq('props', props.map(p => (p as any)?.id));
   props.forEach((p, i) => {
@@ -329,7 +340,7 @@ export function validateLevelData(d: LevelData): string[] {
     parts.forEach((q, j) => { if (!isObj(q)) return; const wq = `${w}.parts[${j}]`; known(wq, q, KEYS.part); if (!isVec(q.off)) err(wq, 'off Vec3'); if (!(isVec(q.h) && q.h.every(x => x >= 0))) err(wq, 'h Vec3 ≥ 0'); if (q.yaw !== undefined && !isNum(q.yaw)) err(wq, 'yaw number'); paintOk(wq, q); marksOk(wq, q.markings, q.h, false); });
   });
   // lights
-  const lightOk = (w: string, l: LightData) => {
+  const lightOk = (w: string, l: LightData, moreBoxes?: ReadonlySet<string>) => {   // (`moreBoxes`: ids a fixture may also name — the boxes a Team & kit way adds beside its lamps)
     if (!isObj(l)) { err(w, 'must be an object'); return; }
     known(w, l, KEYS.light);
     if (!['point', 'spot', 'dir'].includes(l.kind)) err(w, `kind '${show(l.kind)}'`);
@@ -339,7 +350,7 @@ export function validateLevelData(d: LevelData): string[] {
     if (!isStr(l.group)) err(w, 'group'); if (typeof l.enabled !== 'boolean') err(w, 'enabled boolean');
     if (l.radius !== undefined && !(isNum(l.radius) && l.radius >= 0)) err(w, 'radius ≥ 0');
     for (const k of ['mains', 'broad'] as const) if (l[k] !== undefined && typeof l[k] !== 'boolean') err(w, `${k} boolean`);
-    if (l.fixture !== undefined) boxOk(`${w}.fixture`, l.fixture);
+    if (l.fixture !== undefined) boxOk(`${w}.fixture`, l.fixture, moreBoxes);
   };
   const lights = arr('lights', d.lights); const lightIds = uniq('lights', lights.map(l => (l as any)?.id));
   lights.forEach((l, i) => lightOk(`lights[${i}] '${show((l as any)?.id)}'`, l));
@@ -359,6 +370,8 @@ export function validateLevelData(d: LevelData): string[] {
     if (!isObj(o)) return; const w = `doors[${i}] '${show(o.id)}'`; known(w, o, KEYS.door); floorOk(w, o.floor);
     if (!isVec(o.hinge, 2)) err(w, 'hinge [x, z]'); if (!isNum(o.closedDir)) err(w, 'closedDir'); if (!(isNum(o.width) && o.width > 0)) err(w, 'width > 0');
     for (const k of ['angle', 'minAngle', 'maxAngle'] as const) if (o[k] !== undefined && !isNum(o[k])) err(w, `${k} number`);
+    if (o.swing !== undefined && o.swing !== 1 && o.swing !== -1) err(w, 'swing 1 | -1');
+    else if (o.swing !== undefined && (o.swing > 0 ? o.maxAngle ?? 1.92 : -(o.minAngle ?? -1.92)) <= 0) err(w, 'swing: its stop on that side leaves it no opening');
     for (const k of ['exterior', 'closer', 'locked'] as const) if (o[k] !== undefined && typeof o[k] !== 'boolean') err(w, `${k} boolean`);
     if (o.lock !== undefined && !isStr(o.lock)) err(w, 'lock string'); if (o.keySide !== undefined && o.keySide !== 1 && o.keySide !== -1) err(w, 'keySide ±1'); if (o.steel !== undefined && typeof o.steel !== 'boolean') err(w, 'steel boolean');
   });
@@ -451,7 +464,7 @@ export function validateLevelData(d: LevelData): string[] {
       if (!isObj(o)) return; const w = `mission.objectives[${i}] '${show(o.id)}'`;
       if (o.kind === 'reach') { count.reach++; known(w, o, KEYS.reach); if (!isRect(o.area)) err(w, 'area rect'); else known(`${w}.area`, o.area, KEYS.rect); doorOk(`${w}.door`, o.door); }
       else if (o.kind === 'drive') { count.drive++; known(w, o, KEYS.drive); if (!(Number.isInteger(o.rackIndex) && o.rackIndex >= 0)) err(w, 'rackIndex integer ≥ 0'); if (!isVec(o.front)) err(w, 'front Vec3'); if (!(isNum(o.halfW) && o.halfW >= 0)) err(w, 'halfW ≥ 0'); }
-      else if (o.kind === 'exfil') { count.exfil++; known(w, o, KEYS.exfil); doorOk(`${w}.door`, o.door); if (!isNum(o.x) || !isNum(o.z)) err(w, 'x/z numbers'); }
+      else if (o.kind === 'exfil') { count.exfil++; known(w, o, KEYS.exfil); doorOk(`${w}.door`, o.door); if (!isNum(o.x) || !isNum(o.z)) err(w, 'x/z numbers'); if (o.out !== undefined && !isUnit2(o.out)) err(w, 'out: a unit vector [dx, dz]'); }
       else err(w, `kind '${show((o as any).kind)}'`);
     });
     for (const k of ['reach', 'drive', 'exfil'] as const) if (count[k] !== 1) err('mission.objectives', `v${LEVEL_DATA_VERSION} wants exactly one '${k}' objective (found ${count[k]})`);
@@ -513,6 +526,316 @@ export function validateLevelData(d: LevelData): string[] {
       }
     }
   }
+  // scenarios: the container's keys, every leaf a finite number / string / boolean / null, every door named is a door of this level, and the handful of shapes
+  // the scenarios index without asking (the rest — marks on free floor, lines to what they watch, garrisons — is checked against the built level: roomclear.ts
+  // checkStructure, rescue.ts checkRescue, rescueflow.ts check)
+  if (d.scenarios !== undefined) {
+    const S = d.scenarios as any;
+    if (!isObj(S)) err('scenarios', 'must be an object');
+    else {
+      known('scenarios', S, KEYS.scenarios);
+      const leafOk = (w: string, v: unknown, depth = 0): void => {
+        if (v === null || typeof v === 'string' || typeof v === 'boolean') return;
+        if (depth > 12) { err(w, 'nested too deep'); return; }
+        if (typeof v === 'number') { if (!Number.isFinite(v)) err(w, `non-finite number ${v}`); return; }
+        if (Array.isArray(v)) { v.forEach((x, i) => leafOk(`${w}[${i}]`, x, depth + 1)); return; }
+        if (isObj(v)) { for (const k of Object.keys(v as object)) if ((v as any)[k] !== undefined) leafOk(`${w}.${k}`, (v as any)[k], depth + 1); return; }
+        err(w, `unexpected ${typeof v}`);
+      };
+      leafOk('scenarios', S);
+      const teamOk = (w: string, T: any, ops: number) => {
+        if (!isObj(T) || !isVec(T.sam) || !isNum(T.samYaw)) { err(w, 'team: { sam Vec3, samYaw }'); return; }
+        if (T.ops !== undefined && !(Array.isArray(T.ops) && T.ops.every((x: unknown) => isVec(x)))) err(w, 'team.ops Vec3[]');
+        if (ops && !(Array.isArray(T.ops) && T.ops.length >= ops)) err(w, `team.ops: at least ${ops} marks`);
+        if (T.opsYaw !== undefined && !isNum(T.opsYaw)) err(w, 'team.opsYaw');
+      };
+      const markOk = (w: string, m: any) => { if (!isObj(m) || !isVec(m.pos) || !isVec(m.aimAt)) err(w, 'pos / aimAt Vec3'); };
+      const lightGroups = new Set<unknown>([...(Array.isArray(d.lights) ? d.lights : []), ...(Array.isArray(d.switchables) ? d.switchables : [])].map((x: any) => x?.group));
+      const wordsOk = (w: string, o: any, keys: string[]) => { for (const k of keys) if (o[k] !== undefined && !isStr(o[k])) err(`${w}.${k}`, 'a non-empty string'); if (isStr(o.lights) && !lightGroups.has(o.lights)) err(`${w}.lights`, `no light or switchable is in group '${o.lights}'`); };
+      if (S.nightBreach !== undefined) { if (!isObj(S.nightBreach)) err('scenarios.nightBreach', 'must be an object'); else { teamOk('scenarios.nightBreach', S.nightBreach.team, 0); wordsOk('scenarios.nightBreach', S.nightBreach, ['room', 'lights']); if (!d.plans?.breach) err('scenarios.nightBreach', 'needs plans.breach (the drill it stages)'); } }
+      if (S.roomClear !== undefined) {
+        const R = S.roomClear, w = 'scenarios.roomClear';
+        if (!isObj(R) || !isStr(R.name)) err(w, 'name');
+        else {
+          if (R.team !== undefined) teamOk(w, R.team, d.plans?.breach ? 0 : 2); else if (!d.plans?.breach) err(w, 'team: a level without plans.breach must say where the team starts (sam, samYaw, ops)'); else if (!isObj(S.nightBreach)) err(w, 'team: with no scenarios.nightBreach block to take the start from, the room clear must say where the team starts');
+          if (R.starts !== undefined) { if (!Array.isArray(R.starts) || R.team === undefined) err(`${w}.starts`, 'a list of other team starts, beside a team start of its own'); else R.starts.forEach((t: unknown, i: number) => teamOk(`${w}.starts[${i}]`, t, 2)); }
+          const rooms = recs(`${w}.rooms`, R.rooms); if (!rooms.length) err(w, 'rooms: at least one'); uniq(`${w}.rooms`, rooms.map((r: any) => r?.id));
+          rooms.forEach((r: any, i) => {
+            const rw = `${w}.rooms[${i}] '${show(r?.id)}'`; if (!isObj(r)) return;
+            if (!isStr(r.name) || !isRect(r.bounds) || !Number.isInteger(r.garrison) || r.garrison < 1) err(rw, 'name, bounds rect, garrison (a whole number of men, at least one)');
+            const ds = recs(`${rw}.doors`, r.doors); ds.forEach((x: any, j) => { doorOk(`${rw}.doors[${j}]`, x?.id); if (!isStr(x?.from)) err(`${rw}.doors[${j}]`, 'from'); });
+            recs(`${rw}.marks`, r.marks).forEach((m: any, j) => { markOk(`${rw}.marks[${j}]`, m); if (!ds.some((x: any) => x?.id === m?.watch)) err(`${rw}.marks[${j}]`, `watches '${show(m?.watch)}', no door of this room`); });
+          });
+          // squads (scene/scenarios.ts SquadData; the page's rules as far as the file alone can say them — standable floor and the way on foot are checkStructure's)
+          if (R.maxMen !== undefined && !(Number.isInteger(R.maxMen) && R.maxMen >= 1 && R.maxMen <= SQUAD_MAX_MEN)) err(w, `maxMen: a whole number of men, at most ${SQUAD_MAX_MEN}`);
+          if (R.wallCharges !== undefined && !(Number.isInteger(R.wallCharges) && R.wallCharges >= 1 && R.wallCharges <= 9)) err(w, 'wallCharges: a whole number of wall charges, 1 to 9');
+          if (R.squads !== undefined) {
+            const sq = recs(`${w}.squads`, R.squads); uniq(`${w}.squads`, sq.map((q: any) => q?.id));
+            const roomOf = new Map<string, any>(rooms.filter((r: any) => isObj(r) && isStr(r.id)).map((r: any) => [r.id, r]));
+            const inRect = (p: any, b: any) => isRect(b) && p[0] >= b.x0 && p[0] <= b.x1 && p[2] >= b.z0 && p[2] <= b.z1;
+            const owner = new Map<string, string>();
+            sq.forEach((q: any, i) => {
+              const qw = `${w}.squads[${i}] '${show(q?.id)}'`; if (!isObj(q)) return;
+              known(qw, q, SQUAD_KEYS);
+              if (q.name !== undefined && !isStr(q.name)) err(qw, 'name: a non-empty string');
+              if (q.mayLeave !== undefined && typeof q.mayLeave !== 'boolean') err(qw, 'mayLeave: true or false');
+              if (q.training !== undefined && !['green', 'mixed', 'trained'].includes(q.training)) err(qw, "training: 'green', 'mixed' or 'trained'");
+              const mine: string[] = q.rooms === undefined ? [] : Array.isArray(q.rooms) ? q.rooms : (err(qw, 'rooms: an array of room ids'), []);
+              mine.forEach((id: any, j) => {
+                if (!isStr(id) || !roomOf.has(id)) err(`${qw}.rooms[${j}]`, `unknown room '${show(id)}'`);
+                else if (owner.has(id)) err(`${qw}.rooms[${j}]`, `room '${id}' is already squad '${owner.get(id)}'s`);
+                else owner.set(id, String(q.id));
+              });
+              const A = q.arrive;
+              if (A !== undefined) {
+                if (mine.length) err(qw, 'a squad with `arrive` comes in late: it holds no rooms');
+                if (!isObj(A)) err(`${qw}.arrive`, '{ door, spawn, men }');
+                else {
+                  known(`${qw}.arrive`, A, SQUAD_ARRIVE_KEYS); doorOk(`${qw}.arrive.door`, A.door);
+                  if (!Number.isInteger(A.men) || A.men < 1) err(`${qw}.arrive.men`, 'a whole number of men, at least one');
+                  if (!Array.isArray(A.spawn) || !A.spawn.every((x: unknown) => isVec(x))) err(`${qw}.arrive.spawn`, 'Vec3[]');
+                  else {
+                    if (Number.isInteger(A.men) && A.spawn.length < A.men) err(`${qw}.arrive.spawn`, `${A.spawn.length} points for ${A.men} men`);
+                    A.spawn.forEach((p: any, j: number) => { const r = rooms.find((r: any) => inRect(p, r?.bounds)) as any; if (r) err(`${qw}.arrive.spawn[${j}]`, `inside room '${show(r.id)}' — a late squad starts outside every room`); });
+                  }
+                }
+              } else if (!mine.length) err(qw, 'rooms: at least one (only a squad with `arrive` holds none)');
+              if (q.rally !== undefined) {
+                if (!isVec(q.rally) || q.rally[1] !== 0) err(`${qw}.rally`, 'a floor point [x, 0, z]');
+                else if (A === undefined && !mine.some(id => inRect(q.rally, roomOf.get(id)?.bounds))) err(`${qw}.rally`, 'not inside any of the squad\'s rooms');
+              }
+              if (q.barricade !== undefined) {
+                if (!Array.isArray(q.barricade)) err(`${qw}.barricade`, 'an array of door ids');
+                else q.barricade.forEach((id: any, j: number) => { if (!mine.some(rid => (roomOf.get(rid)?.doors ?? []).some((x: any) => x?.id === id))) err(`${qw}.barricade[${j}]`, `'${show(id)}' is no door of the squad's rooms`); });
+              }
+            });
+            if (sq.length) {
+              for (const r of rooms as any[]) if (isObj(r) && isStr(r.id) && !owner.has(r.id)) err(`${w}.squads`, `room '${r.id}' is in no squad (with a squads block every room is in exactly one)`);
+              const men = (rooms as any[]).reduce((n, r) => n + (Number.isInteger(r?.garrison) ? r.garrison : 0), 0), cap = R.maxMen ?? 5;
+              if (men > cap) err(`${w}.squads`, `${men} men in the rooms' garrisons, maxMen ${R.maxMen === undefined ? 'absent (five)' : cap}`);
+              sq.forEach((q: any, i) => { if (isObj(q?.arrive) && Number.isInteger(q.arrive.men) && q.arrive.men > cap) err(`${w}.squads[${i}] '${show(q?.id)}'.arrive.men`, `${q.arrive.men} men can never fit maxMen ${cap}`); });
+            }
+          }
+        }
+      }
+      if (S.quiet !== undefined) {   // (scene/scenarios.ts QuietData: what the file alone can say — free floor, the ways on foot and first sight are game/quiet.ts checkQuiet's)
+        const Q = S.quiet, w = 'scenarios.quiet';
+        if (!isObj(Q)) err(w, 'must be an object');
+        else {
+          known(w, Q, ['thing', 'starts', 'spots', 'exits', 'patrols', 'needs', 'phones', 'wayouts', 'radioCheck']);
+          if (Q.thing !== undefined && !isStr(Q.thing)) err(`${w}.thing`, 'a non-empty string');
+          if (Q.radioCheck !== undefined && typeof Q.radioCheck !== 'boolean') err(`${w}.radioCheck`, 'true or false');
+          const starts = recs(`${w}.starts`, Q.starts); if (!starts.length) err(w, 'starts: at least one');
+          starts.forEach((t: any, i) => { const tw = `${w}.starts[${i}]`; if (!isObj(t)) return; known(tw, t, ['sam', 'samYaw', 'mate', 'name']); if (!isVec(t.sam) || !isNum(t.samYaw)) err(tw, 'sam Vec3, samYaw'); if (t.mate !== undefined && !isVec(t.mate)) err(`${tw}.mate`, 'Vec3'); if (t.name !== undefined && !isStr(t.name)) err(`${tw}.name`, 'a non-empty string'); });
+          const spots = recs(`${w}.spots`, Q.spots); if (!spots.length) err(w, 'spots: at least one');
+          spots.forEach((p: any, i) => { const pw = `${w}.spots[${i}]`; if (!isObj(p)) return; known(pw, p, ['place', 'area', 'door', 'holder', 'rackIndex', 'front', 'halfW', 'wired']); if (p.wired !== undefined && typeof p.wired !== 'boolean') err(pw, 'wired boolean');
+            if (!isStr(p.place) || !isStr(p.holder)) err(pw, 'place, holder: non-empty strings'); if (!isRect(p.area)) err(`${pw}.area`, 'rect'); doorOk(`${pw}.door`, p.door);
+            if (!(Number.isInteger(p.rackIndex) && p.rackIndex >= 0)) err(pw, 'rackIndex integer ≥ 0'); if (!isVec(p.front)) err(pw, 'front Vec3'); if (!(isNum(p.halfW) && p.halfW >= 0)) err(pw, 'halfW ≥ 0'); });
+          const exits = recs(`${w}.exits`, Q.exits); if (!exits.length) err(w, 'exits: at least one');
+          exits.forEach((x: any, i) => { const xw = `${w}.exits[${i}]`; if (!isObj(x)) return; known(xw, x, ['name', 'door', 'x', 'z', 'out', 'halfW']);
+            if (!isStr(x.name)) err(`${xw}.name`, 'a non-empty string'); doorOk(`${xw}.door`, x.door); if (!isNum(x.x) || !isNum(x.z)) err(xw, 'x/z numbers'); if (!isUnit2(x.out)) err(xw, 'out: a unit vector [dx, dz]'); if (x.halfW !== undefined && !(isNum(x.halfW) && x.halfW > 0)) err(xw, 'halfW > 0'); });
+          if (Q.patrols !== undefined) {
+            const names = new Set<unknown>((Array.isArray(d.routes) ? d.routes : []).map((r: any) => r?.name ?? r?.id));   // (the name the game knows a route by — levelLoad.ts: its `name`, else its id — which is what a run's roster is matched on)
+            if (!Array.isArray(Q.patrols) || !Q.patrols.length) err(`${w}.patrols`, 'a non-empty list of route-name lists');
+            else Q.patrols.forEach((set: any, i: number) => { const sw = `${w}.patrols[${i}]`;
+              if (!Array.isArray(set) || !set.length) { err(sw, 'a non-empty list of route names'); return; }
+              for (const n of set) if (!names.has(n)) err(sw, `unknown route '${show(n)}'`);
+              if (new Set(set).size !== set.length) err(sw, 'a route named twice'); if (set.length > QUIET_MAX_ROUTES) err(sw, `${set.length} routes: at most ${QUIET_MAX_ROUTES} are manned at once`); });
+          } else if ((Array.isArray(d.routes) ? d.routes.length : 0) > QUIET_MAX_ROUTES) err(`${w}.patrols`, `the level has ${(d.routes as unknown[]).length} routes and at most ${QUIET_MAX_ROUTES} are manned at once: say which, in patrol sets`);
+          const standOk = (sw: string, o: any, loop: boolean) => { if (!isObj(o) || !isStr(o.name) || !isVec(o.pos) || !isNum(o.face)) { err(sw, 'name, pos Vec3, face'); return; } known(sw, o, loop ? ['name', 'pos', 'face', 'loop'] : ['name', 'pos', 'face']); if (o.loop !== undefined && !(Array.isArray(o.loop) && o.loop.length && o.loop.every((x: unknown) => isVec(x)))) err(`${sw}.loop`, 'Vec3[]'); };
+          if (Q.needs !== undefined) { if (!isObj(Q.needs)) err(`${w}.needs`, 'must be an object'); else { known(`${w}.needs`, Q.needs, ['coffee', 'smoke', 'water', 'stretch']); for (const k of Object.keys(Q.needs)) if (Q.needs[k] !== undefined) standOk(`${w}.needs.${k}`, Q.needs[k], true); if (Q.needs.stretch !== undefined && !Array.isArray(Q.needs.stretch?.loop)) err(`${w}.needs.stretch`, 'loop: the lap he walks'); } }
+          for (const k of ['phones', 'wayouts'] as const) if (Q[k] !== undefined) recs(`${w}.${k}`, Q[k]).forEach((o, i) => standOk(`${w}.${k}[${i}]`, o, false));
+        }
+      }
+      if (S.lesson !== undefined) {   // (scene/scenarios.ts LessonData: the shapes only — what each test kind wants and whether its doors, lights and areas exist is game/lesson.ts checkLesson's, against the built floor)
+        const L = S.lesson, w = 'scenarios.lesson';
+        if (!isObj(L)) err(w, 'must be an object');
+        else {
+          known(w, L, ['title', 'steps']);
+          if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
+          const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
+          const ids = new Set<unknown>();
+          steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'done', 'hold', 'at']);
+            if (!isStr(t.id) || !isStr(t.line)) err(tw, 'id, line: non-empty strings'); else if (ids.has(t.id)) err(tw, `id '${show(t.id)}' used twice`); ids.add(t.id);
+            if (!isObj(t.done) || !isStr(t.done.is)) err(`${tw}.done`, "a test record { is: '<kind>', … }");
+            if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });
+        }
+      }
+      if (S.par !== undefined) {   // (scene/scenarios.ts ParData: a room clear against a clock — game/par.ts)
+        const P = S.par, w = 'scenarios.par';
+        if (!isObj(P)) err(w, 'must be an object');
+        else {
+          known(w, P, ['gold', 'silver', 'bronze', 'lossSecs']);
+          if (!(isNum(P.gold) && isNum(P.silver) && isNum(P.bronze) && P.gold > 0 && P.gold < P.silver && P.silver < P.bronze)) err(w, 'gold < silver < bronze, seconds > 0');
+          if (!(isNum(P.lossSecs) && P.lossSecs >= 0)) err(`${w}.lossSecs`, 'seconds ≥ 0');
+          if (S.roomClear === undefined) err(w, 'a par stands over a room clear: the level has no scenarios.roomClear');
+        }
+      }
+      if (S.issue !== undefined) {   // (scene/scenarios.ts IssueData: kit this level hands the squad — game/kit.ts kitIssue)
+        const I = S.issue, w = 'scenarios.issue', BOOLS = ['suppressed', 'light', 'nvg', 'shield'], NUMS = ['bangs', 'charges', 'smoke', 'frags', 'walls', 'shells'];
+        if (!isObj(I) || !isObj(I.members)) err(w, 'must be an object { members: { <place>: { … } } }');
+        else {
+          known(w, I, ['members']);
+          for (const [k, c] of Object.entries(I.members as Record<string, any>)) { const cw = `${w}.members.${k}`;
+            if (!/^[0-4]$/.test(k)) err(cw, "a place on the roster: '0' (you) to '4'");
+            if (!isObj(c)) { err(cw, 'must be an object'); continue; }
+            known(cw, c, ['weapon', ...BOOLS, ...NUMS]);
+            for (const f of k === '0' ? ['shield', 'charges', 'walls'] : ['shells']) if (c[f] !== undefined) err(`${cw}.${f}`, k === '0' ? 'a teammate\'s alone: it does nothing on your own card' : 'yours alone: a teammate carries no 40 mm');
+            if (c.weapon !== undefined && !['rifle', 'pistol', 'shotgun'].includes(c.weapon)) err(`${cw}.weapon`, "'rifle' | 'pistol' | 'shotgun'");
+            for (const b of BOOLS) if (c[b] !== undefined && typeof c[b] !== 'boolean') err(`${cw}.${b}`, 'true | false');
+            for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }
+        }
+      }
+      if (S.kitView !== undefined) {   // (scene/scenarios.ts KitViewData: the start page's picture of the team at the way-in door — src/host/kitView.ts; whether a slot is free floor is asked of the built level by tools/qa/kitview-page.cjs)
+        const K = S.kitView, w = 'scenarios.kitView', nWays = isObj(S.roomClear) && S.roomClear.team !== undefined ? 1 + (Array.isArray(S.roomClear.starts) ? S.roomClear.starts.length : 0) : 1;
+        if (!isObj(K)) err(w, 'must be an object');
+        else {
+          known(w, K, ['ways', 'sets']);
+          // (A PICTURE'S BOX — a set's, a way's `add`: the level format's own record. LOOK TWINS: one block serves the plain file and its look file — the box's
+          //  `material` may be alternatives 'a|b', the first the file's palette holds: src/host/kitViewSet.ts kitSetPaint)
+          const kvPaint = (b: any) => { const alt = isStr(b.material) && b.material.includes('|') ? b.material.split('|').find((m: string) => Object.prototype.hasOwnProperty.call(mats, m)) : undefined; return alt !== undefined ? { ...b, material: alt } : b; };
+          const kvBox = (bw: string, b: any) => { if (!isObj(b) || !isStr(b.id) || !isVec(b.c) || !isVec(b.h)) { err(bw, 'a box: id, c, h'); return; } known(bw, b, KEYS.box); paintOk(bw, kvPaint(b)); };
+          // (BESPOKE SETS — scenarios.ts KitViewSet: the shapes only; what stands where is src/host/kitViewPlan.ts's to measure, tools/qa/kitview-plan.ts)
+          const sets: Record<string, any> = isObj(K.sets) ? K.sets : {}; if (K.sets !== undefined && !isObj(K.sets)) err(`${w}.sets`, 'must be an object of sets by name');
+          for (const [name, T] of Object.entries(sets)) { const tw = `${w}.sets.${name}`; if (!isObj(T)) { err(tw, 'must be an object'); continue; }
+            known(tw, T, ['boxes', 'doors', 'lights', 'ref']); if (!isVec(T.ref, 2)) err(`${tw}.ref`, '[x, z]: a point on the team\'s side of the anchor');
+            if (!Array.isArray(T.boxes) || !T.boxes.length) err(`${tw}.boxes`, 'at least one box'); else T.boxes.forEach((b: any, i: number) => kvBox(`${tw}.boxes[${i}]`, b));
+            for (const k of ['doors', 'lights']) if (T[k] !== undefined && !(Array.isArray(T[k]) && T[k].every((o: any) => isObj(o) && isStr(o.id)))) err(`${tw}.${k}`, `a list of the level format's own ${k}`);
+            (Array.isArray(T.doors) ? T.doors : []).forEach((o: any, i: number) => { if (isObj(o) && !(isVec(o.hinge, 2) && isNum(o.closedDir) && isNum(o.width) && o.width > 0)) err(`${tw}.doors[${i}]`, 'hinge [x, z], closedDir, width'); }); }
+          const ways = recs(`${w}.ways`, K.ways); if (!ways.length) err(w, 'ways: at least one');
+          if (ways.length > nWays) err(`${w}.ways`, `${ways.length} ways for ${nWays} team start${nWays === 1 ? '' : 's'} (one per way in: the level's own, then each of scenarios.roomClear.starts)`);
+          ways.forEach((y: any, i) => { const yw = `${w}.ways[${i}]`; if (!isObj(y)) return;
+            known(yw, y, ['door', 'side', 'pin', 'slots', 'light', 'hide', 'hidePaint', 'roomLights', 'span', 'kind', 'set', 'ref', 'hand', 'slotGap', 'wall', 'lane', 'out', 'inside', 'pane', 'show', 'indoors', 'keepLights', 'litInside', 'add']);
+            // (A PIECE OR A LAMP MORE on a level's own way — scenarios.ts KitViewWay.add: the shapes, and ids new to THE LEVEL'S OWN records — two ways may write
+            //  the same id, for one way alone is ever laid in (src/host/kitViewSet.ts kitViewAddLevel), and what a way that says `laid` laid in is not the
+            //  level's own. Then, where the shapes hold and the records are not laid in (those are the level's by then, judged above), EACH RECORD GETS THE
+            //  LEVEL FORMAT'S OWN RULE — a box's, a light's, the one loadLevel refuses a level by: a lamp with no kind / dir / color / range, a box with a
+            //  flag nobody knows or a yaw that is no number is said HERE, under this block's name, and never first at the picture's boot)
+            if (y.add !== undefined) { const aw = `${yw}.add`, n0 = errs.length; if (!isObj(y.add)) err(aw, 'must be an object: { boxes?, lamps? }'); else { known(aw, y.add, ['boxes', 'lamps', 'laid']); if (y.add.laid !== undefined && typeof y.add.laid !== 'boolean') err(`${aw}.laid`, 'true or false (the loader\'s word: the records are in the level already)');
+              if (y.set !== undefined) err(aw, 'a way on a set adds nothing: the set is the place for its boxes and lamps');
+              const laidIn = (k: 'boxes' | 'lamps') => new Set<string>(ways.flatMap((z: any) => isObj(z) && isObj(z.add) && z.add.laid === true && Array.isArray(z.add[k]) ? z.add[k].map((o: any) => o?.id) : []));
+              for (const [k, own] of [['boxes', d.boxes], ['lamps', d.lights]] as const) { const list = y.add[k]; if (list === undefined) continue;
+                if (!Array.isArray(list)) { err(`${aw}.${k}`, `a list of the level format's own ${k === 'boxes' ? 'boxes' : 'lights'}`); continue; }
+                const laid = y.add.laid === true, others = laid ? null : laidIn(k), ids = new Set<string>((Array.isArray(own) ? own : []).map((o: any) => o?.id).filter((id: any) => !others?.has(id)));
+                list.forEach((o: any, j: number) => { const ow = `${aw}.${k}[${j}]`; if (k === 'boxes') { if (!isObj(o) || !isStr(o.id) || !isVec(o.c) || !isVec(o.h)) { err(ow, 'a box: id, c, h'); return; } } else if (!isObj(o) || !isStr(o.id) || !isVec(o.pos) || !isStr(o.group)) { err(ow, 'a lamp: the level format\'s light (id, kind, pos, group, …)'); return; }
+                  if (laid ? !ids.has(o.id) : ids.has(o.id)) err(`${ow}.id`, laid ? `'${o.id}' is said to be laid in and is no ${k === 'boxes' ? 'box' : 'light'} of the level` : `'${o.id}' is already ${k === 'boxes' ? 'a box' : 'a light'} of the level or of this \`add\``); if (!laid) ids.add(o.id); }); }
+              if (errs.length === n0 && y.add.laid !== true) { const mine = new Set<string>((y.add.boxes ?? []).map((o: any) => o.id));
+                (y.add.boxes ?? []).forEach((o: any, j: number) => boxRule(`${aw}.boxes[${j}] '${show(o.id)}'`, kvPaint(o)));
+                (y.add.lamps ?? []).forEach((o: any, j: number) => lightOk(`${aw}.lamps[${j}] '${show(o.id)}'`, o, mine)); } } }
+            // (the anchor: a door of the level — of the way's set, where it names one — or a span, never both)
+            if (y.set !== undefined && !(isStr(y.set) && isObj(sets[y.set]))) err(`${yw}.set`, `no set '${show(y.set)}' in ${w}.sets`);
+            const doorsOf: any[] = y.set !== undefined ? (Array.isArray(sets[y.set]?.doors) ? sets[y.set].doors : []) : (Array.isArray(d.doors) ? d.doors : []);
+            if (y.span !== undefined) { if (!(Array.isArray(y.span) && y.span.length === 2 && y.span.every((p: unknown) => isVec(p, 2)))) err(`${yw}.span`, '[[x, z], [x, z]]: two points on a wall, or the two posts of a gap'); if (y.door !== undefined) err(`${yw}.door`, 'a way is anchored on a door or on a span, not both'); }
+            else if (!isStr(y.door) || !doorsOf.some((o: any) => o?.id === y.door)) err(`${yw}.door`, `no door '${show(y.door)}' in the ${y.set !== undefined ? 'set' : 'level'}`);
+            if (y.kind !== undefined && !(y.span !== undefined ? ['wall', 'gap'] : ['door']).includes(y.kind)) err(`${yw}.kind`, y.span !== undefined ? "'wall' or 'gap'" : "'door'");
+            if (y.ref !== undefined && !isVec(y.ref, 2)) err(`${yw}.ref`, '[x, z]');
+            if (y.hand !== undefined && y.hand !== 'left' && y.hand !== 'right') err(`${yw}.hand`, "'left' or 'right'");
+            for (const k of ['slotGap', 'lane', 'out', 'inside']) if (y[k] !== undefined && !(isNum(y[k]) && y[k] >= 0)) err(`${yw}.${k}`, 'a number, 0 or more');
+            if (y.wall !== undefined) { if (!isObj(y.wall)) err(`${yw}.wall`, 'must be an object'); else { known(`${yw}.wall`, y.wall, ['face', 'thickness', 'top']); for (const k of ['face', 'thickness', 'top']) if (y.wall[k] !== undefined && !isNum(y.wall[k])) err(`${yw}.wall.${k}`, 'a number'); } }
+            if (y.pane !== undefined && y.pane !== false && !(isObj(y.pane) && isStr(y.pane.box) && (y.pane.stand === undefined || isVec(y.pane.stand)))) err(`${yw}.pane`, '{ box, stand? [x, z, yaw in degrees] } or false');
+            for (const k of ['indoors', 'litInside']) if (y[k] !== undefined && typeof y[k] !== 'boolean') err(`${yw}.${k}`, 'true or false');
+            for (const k of ['show', 'keepLights']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of names');
+            if (y.side !== undefined && y.side !== 1 && y.side !== -1) err(`${yw}.side`, '1 or -1');
+            if (y.pin !== undefined) { if (!isObj(y.pin) || !isNum(y.pin.yaw) || !isNum(y.pin.pitch) || (y.pin.dist !== undefined && !(isNum(y.pin.dist) && y.pin.dist > 1))) err(`${yw}.pin`, '{ yaw, pitch, dist? } in radians and metres'); else known(`${yw}.pin`, y.pin, ['yaw', 'pitch', 'dist']); }
+            if (y.slots !== undefined && !(Array.isArray(y.slots) && y.slots.length <= 5 && y.slots.every((p: unknown) => p === null || isVec(p)))) err(`${yw}.slots`, 'up to five [x, z, yaw in degrees]: the player, then the teammates from the door outward (null = a place left to the plan)');
+            if (y.light !== undefined) { if (!isObj(y.light)) err(`${yw}.light`, 'must be an object'); else { const L = y.light, num = (w2: string, o: any, keys: string[]) => { for (const k of keys) if (o[k] !== undefined && !(isNum(o[k]) && o[k] >= 0)) err(`${w2}.${k}`, 'a number, 0 or more'); };
+              known(`${yw}.light`, L, ['porch', 'fill', 'roomLights', 'moonScale', 'skyScale', 'sam']); num(`${yw}.light`, L, ['roomLights', 'moonScale', 'skyScale']);
+              for (const who of ['porch', 'fill']) { const P = L[who], pw = `${yw}.light.${who}`; if (P === undefined) continue; if (!isObj(P)) { err(pw, 'must be an object'); continue; }
+                known(pw, P, ['kind', 'offset', 'aim', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'radius', 'volumetric', 'broad', ...(who === 'porch' ? ['fixture'] : [])]);
+                if (P.kind !== undefined && ![0, 1, 3].includes(P.kind)) err(`${pw}.kind`, '0 (point), 1 (spot) or 3 (area disk)');
+                for (const k of ['offset', 'aim', 'color']) if (P[k] !== undefined && !isVec(P[k])) err(`${pw}.${k}`, 'Vec3');
+                num(pw, P, ['intensity', 'range', 'innerDeg', 'outerDeg', 'radius', 'volumetric']);
+                if (P.broad !== undefined && typeof P.broad !== 'boolean') err(`${pw}.broad`, 'true or false');
+                if (who === 'porch' && P.fixture !== undefined && !(isObj(P.fixture) && isVec(P.fixture.at) && isVec(P.fixture.half) && isNum(P.fixture.glow))) err(`${pw}.fixture`, '{ at Vec3, half Vec3, glow }'); }
+              if (L.sam !== undefined) { if (!isObj(L.sam)) err(`${yw}.light.sam`, 'must be an object'); else { known(`${yw}.light.sam`, L.sam, ['on', 'intensity', 'innerDeg', 'outerDeg', 'volumetric', 'aim']); num(`${yw}.light.sam`, L.sam, ['intensity', 'innerDeg', 'outerDeg', 'volumetric']);
+                if (L.sam.on !== undefined && typeof L.sam.on !== 'boolean') err(`${yw}.light.sam.on`, 'true or false'); if (L.sam.aim !== undefined && !isVec(L.sam.aim)) err(`${yw}.light.sam.aim`, 'Vec3'); } } } }
+            for (const k of ['hide', 'hidePaint']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of box ids / box groups');
+            if (y.roomLights !== undefined && !(isNum(y.roomLights) && y.roomLights >= 0)) err(`${yw}.roomLights`, 'a number, 0 or more'); });
+        }
+      }
+      if (S.snatch !== undefined) {   // (scene/scenarios.ts SnatchData: the shapes only — whether he and his ways out stand on floor a man can walk is game/snatch.ts checkSnatch's, against the built floor)
+        const N = S.snatch, w = 'scenarios.snatch';
+        if (!isObj(N)) err(w, 'must be an object');
+        else {
+          known(w, N, ['man', 'exits']);
+          if (S.roomClear === undefined) err(w, 'a snatch runs over a room clear: the level needs scenarios.roomClear');
+          const m = N.man;
+          if (!isObj(m) || !isStr(m.name) || !isVec(m.pos) || !isNum(m.face) || !isVec(m.tint)) err(`${w}.man`, 'name, pos Vec3, face, tint Vec3');
+          else {
+            known(`${w}.man`, m, ['name', 'pos', 'face', 'tint', 'tint2', 'points', 'wait']);
+            if (m.tint2 !== undefined && !isVec(m.tint2)) err(`${w}.man.tint2`, 'Vec3');
+            if (m.points !== undefined && !(Array.isArray(m.points) && m.points.length && m.points.every((p: unknown) => isVec(p)))) err(`${w}.man.points`, 'a non-empty list of Vec3');
+            if (m.wait !== undefined && !(Array.isArray(m.wait) && m.wait.every((x: unknown) => isNum(x) && (x as number) >= 0) && m.wait.length === (m.points?.length ?? 1))) err(`${w}.man.wait`, 'seconds ≥ 0, one per point');
+          }
+          const ex = recs(`${w}.exits`, N.exits); if (!ex.length) err(w, 'exits: at least one');
+          ex.forEach((e: any, i) => { if (!isObj(e)) return; known(`${w}.exits[${i}]`, e, ['name', 'pos']); if (!isStr(e.name) || !isVec(e.pos)) err(`${w}.exits[${i}]`, 'name, pos Vec3'); });
+        }
+      }
+      if (S.defuse !== undefined) {   // (scene/scenarios.ts DefuseData: the shapes and the face's normal — whether a man can stand at a charge to work it is asked of the built floor by tools/qa/defuse-check.ts)
+        const D = S.defuse, w = 'scenarios.defuse';
+        if (!isObj(D)) err(w, 'must be an object');
+        else {
+          known(w, D, ['secs', 'workSecs', 'devices', 'blast']);
+          if (!(isNum(D.secs) && D.secs > 0)) err(`${w}.secs`, 'seconds > 0'); if (D.workSecs !== undefined && !(isNum(D.workSecs) && D.workSecs > 0)) err(`${w}.workSecs`, 'seconds > 0');
+          if (D.blast !== undefined) { if (!isObj(D.blast)) err(`${w}.blast`, 'must be an object'); else { known(`${w}.blast`, D.blast, ['lethalM', 'woundM', 'radius', 'power']); for (const k of Object.keys(D.blast)) if (!isNum(D.blast[k])) err(`${w}.blast.${k}`, 'a number'); } }
+          const devs = recs(`${w}.devices`, D.devices); if (!devs.length) err(w, 'devices: at least one');
+          const ids = new Set<unknown>();
+          devs.forEach((d: any, i) => { const dw = `${w}.devices[${i}]`; if (!isObj(d)) return; known(dw, d, ['id', 'name', 'pos', 'n']);
+            if (!isStr(d.id) || !isStr(d.name)) err(dw, 'id, name: non-empty strings'); else if (ids.has(d.id)) err(dw, `id '${show(d.id)}' used twice`); ids.add(d.id);
+            if (!isVec(d.pos)) err(`${dw}.pos`, 'Vec3'); if (!(Array.isArray(d.n) && d.n.length === 2 && d.n.every((x: unknown) => isNum(x)))) err(`${dw}.n`, '[x, z]'); else if (Math.abs(Math.hypot(d.n[0], d.n[1]) - 1) > 0.01) err(`${dw}.n`, 'a unit normal out of the face a man works'); });
+        }
+      }
+      if (S.places !== undefined) {   // (scene/scenarios.ts PlacesData: the floor nobody holds, by name — words only)
+        if (!isObj(S.places)) err('scenarios.places', 'must be an object');
+        else recs('scenarios.places.areas', S.places.areas).forEach((a: any, i) => { if (!isStr(a?.name)) err(`scenarios.places.areas[${i}].name`, 'a non-empty string'); if (!isRect(a?.bounds)) err(`scenarios.places.areas[${i}].bounds`, 'rect'); });
+      }
+      if (S.rescue !== undefined) {
+        const R = S.rescue, w = 'scenarios.rescue';
+        if (!isObj(R)) err(w, 'must be an object');
+        else {
+          teamOk(w, R.team, 2);
+          if (!isObj(R.room) || !isStr(R.room.name) || !isVec(R.room.doorAim)) err(`${w}.room`, 'name, door, doorAim Vec3');
+          else {
+            doorOk(`${w}.room.door`, R.room.door); wordsOk(`${w}.room`, R.room, ['where', 'lights']);
+            if (R.room.bounds !== undefined ? !isRect(R.room.bounds) : !(d.plans?.roomClear ?? []).some(p => (p as any)?.door === R.room.door && isRect((p as any).bounds))) err(`${w}.room`, 'bounds rect (or a plans.roomClear entry with bounds for its door)');
+            for (const k of ['outside', 'hold'] as const) if (R.room[k] !== undefined && !isVec(R.room[k])) err(`${w}.room.${k}`, 'Vec3');
+          }
+          if (R.side !== undefined) {
+            if (!isObj(R.side) || !isVec(R.side.hold)) err(`${w}.side`, 'door, hold Vec3');
+            else { doorOk(`${w}.side.door`, R.side.door); if (isObj(R.room) && R.side.door === R.room.door) err(`${w}.side.door`, "the room's main door: the side door is another one");
+              if (R.side.from !== undefined) { doorOk(`${w}.side.from.door`, R.side.from?.door);
+                if (R.side.from?.bounds !== undefined ? !isRect(R.side.from.bounds) : !(d.plans?.roomClear ?? []).some(p => (p as any)?.door === R.side.from?.door && isRect((p as any).bounds))) err(`${w}.side.from`, 'bounds rect (or a plans.roomClear entry with bounds for its door)'); }
+              if (R.side.pair !== undefined && typeof R.side.pair !== 'boolean') err(`${w}.side.pair`, 'boolean');
+              for (const k of ['stack', 'standoff'] as const) if (R.side[k] !== undefined && !(Array.isArray(R.side[k]) && R.side[k].every((x: unknown) => isVec(x)))) err(`${w}.side.${k}`, 'Vec3[]'); }
+          }
+          const hs = recs(`${w}.hostages`, R.hostages); if (!hs.length) err(w, 'hostages: at least one'); hs.forEach((h: any, i) => { if (!isVec(h?.pos) || !isNum(h?.face)) err(`${w}.hostages[${i}]`, 'pos Vec3, face'); });
+          markOk(`${w}.captor`, R.captor); if (!isObj(R.doorMan)) err(`${w}.doorMan`, '{ inside, outside }'); else { markOk(`${w}.doorMan.inside`, R.doorMan.inside); markOk(`${w}.doorMan.outside`, R.doorMan.outside); }
+          recs(`${w}.roamers`, R.roamers).forEach((m, i) => markOk(`${w}.roamers[${i}]`, m));
+          if (R.guards !== undefined) recs(`${w}.guards`, R.guards).forEach((m, i) => markOk(`${w}.guards[${i}]`, m));
+          if (R.cast !== undefined && !(isObj(R.cast) && Number.isInteger(R.cast.roamers) && R.cast.roamers >= 0 && R.cast.roamers <= (Array.isArray(R.roamers) ? R.roamers.length : 0))) err(`${w}.cast`, '{ roamers: a whole number, at most the roamer marks }');
+          {   // the level's own cast fits: eleven defenders at most, and Sam, the four, the hostages and them inside the sixteen the skinning holds
+            const own = 2 + (Array.isArray(R.guards) ? R.guards.length : 0) + (isObj(R.cast) && Number.isInteger(R.cast.roamers) ? R.cast.roamers : 0), held = Array.isArray(R.hostages) ? R.hostages.length : 0;
+            if ((R.guards !== undefined || R.cast !== undefined) && (own > 11 || 5 + held + own > 16)) err(`${w}.cast`, `${own} defenders and ${held} hostages: at most 11 defenders, and 16 characters with the player and four teammates`);
+          }
+          if (R.flow !== undefined) {
+            const F = R.flow, fw = `${w}.flow`;
+            if (!isObj(F) || !isRect(F.corridor) || !isObj(F.hold) || !isNum(F.hold.ahead) || !isNum(F.hold.xMax) || !isNum(F.hold.z)) err(fw, 'corridor rect, hold { ahead, xMax, z }');
+            else {
+              const regs = recs(`${fw}.regions`, F.regions); const regIds = uniq(`${fw}.regions`, regs.map((r: any) => r?.id));
+              regs.forEach((r: any, i) => { if (!isRect(r?.rect)) err(`${fw}.regions[${i}]`, 'rect'); if (r?.door !== null) doorOk(`${fw}.regions[${i}].door`, r?.door); });
+              const route = recs(`${fw}.route`, F.route); uniq(`${fw}.route`, route.map((o: any) => o?.id));
+              route.forEach((o: any, i) => {
+                const ow = `${fw}.route[${i}] '${show(o?.id)}'`; if (!isObj(o)) return;
+                if (!regIds.has(o.region)) err(ow, `unknown region '${show(o.region)}'`); if (o.door !== null) doorOk(`${ow}.door`, o.door);
+                if (!['glass', 'doorway', 'door'].includes(o.kind) || !isVec(o.at) || !isVec(o.mark) || !isVec(o.watch) || !isNum(o.half) || typeof o.north !== 'boolean' || !isNum(o.look)) err(ow, 'kind, at / mark / watch Vec3, half, north, look');
+                if (!isStr(o.name) || !isStr(o.short) || !isStr(o.call) || (o.side !== 'left' && o.side !== 'right')) err(ow, "name, short, call, side 'left' | 'right'");
+              });
+            }
+          }
+        }
+      }
+    }
+  }
   return errs;
 }
 
@@ -532,9 +855,15 @@ export function floorUsers(d: LevelData, floorId: string): FloorUser[] {
   return out;
 }
 
-/** JSON.parse + validate; throws with every problem listed. */
-export function parseLevelData(text: string): LevelData {
-  const d = JSON.parse(text) as LevelData; const errs = validateLevelData(d);
+/** JSON.parse + validate; throws with every problem listed.
+ *  `kitView: 'drop'` (the page loading a level TO PLAY: main.ts bootLevel without ?kitview) — the Team & kit picture's block (`scenarios.kitView`: its ways, its
+ *  bespoke sets) is no part of the mission, so a mistake in it does not refuse the level: the block is left out of what is returned, said once on the console.
+ *  Every tool and the `?kitview` page itself parse without it: there a bad block is an error like any other. */
+export function parseLevelData(text: string, opts: { kitView?: 'drop' } = {}): LevelData {
+  const d = JSON.parse(text) as LevelData; let errs = validateLevelData(d);
+  if (opts.kitView === 'drop') { const kv = errs.filter(e => e.startsWith('scenarios.kitView'));
+    if (kv.length) { errs = errs.filter(e => !kv.includes(e)); if ((d as any)?.scenarios && typeof (d as any).scenarios === 'object') delete (d as any).scenarios.kitView;
+      console.warn(`level '${(d as any)?.name ?? '?'}': its Team & kit picture's block is left out — ${kv.length} error(s) in scenarios.kitView (the mission plays without it)\n  ${kv.slice(0, 6).join('\n  ')}`); } }
   if (errs.length) throw new Error(`level '${(d as any)?.name ?? '?'}': ${errs.length} error(s)\n  ${errs.slice(0, 20).join('\n  ')}${errs.length > 20 ? `\n  … ${errs.length - 20} more` : ''}`);
   return d;
 }
@@ -608,6 +937,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     sky: pick(d.sky, KEYS.sky),
     ...(d.daylight ? { daylight: { ...pick(d.daylight, KEYS.daylight), sun: canonLight(d.daylight.sun), sky: pick(d.daylight.sky, KEYS.sky) } } : {}),
     plans: { roomClear: d.plans.roomClear.map(canonPlan), ...(d.plans.breach ? { breach: canonPlan(d.plans.breach) } : {}) },
+    ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — scene/scenarios.ts is their shape)
   };
 }
 
@@ -638,6 +968,21 @@ export function serializeLevelData(data: LevelData): string {
         const e = o[x]; const l2 = i === oks.length - 1 ? '' : ',';
         if (Array.isArray(e) && e.length && e.every(y => y && typeof y === 'object' && !Array.isArray(y))) { lines.push(`    ${JSON.stringify(x)}: [`); e.forEach((y, j) => lines.push(`      ${compact(y)}${j === e.length - 1 ? '' : ','}`)); lines.push(`    ]${l2}`); }
         else lines.push(`    ${JSON.stringify(x)}: ${compact(e)}${l2}`);
+      });
+      lines.push(`  }${last}`);
+    } else if (v && typeof v === 'object' && k === 'scenarios') {
+      // one scenario per block, one field per line, a list of records (rooms, hostages, roamers) one record per line
+      const o = v as Record<string, Record<string, unknown>>; const oks = Object.keys(o);
+      lines.push(`  ${JSON.stringify(k)}: {`);
+      oks.forEach((x, i) => {
+        const sc = o[x], fs = Object.keys(sc).filter(f => sc[f] !== undefined);
+        lines.push(`    ${JSON.stringify(x)}: {`);
+        fs.forEach((f, j) => {
+          const e = sc[f], l3 = j === fs.length - 1 ? '' : ',';
+          if (Array.isArray(e) && e.length && e.every(y => y && typeof y === 'object' && !Array.isArray(y))) { lines.push(`      ${JSON.stringify(f)}: [`); e.forEach((y, n) => lines.push(`        ${compact(y)}${n === e.length - 1 ? '' : ','}`)); lines.push(`      ]${l3}`); }
+          else lines.push(`      ${JSON.stringify(f)}: ${compact(e)}${l3}`);
+        });
+        lines.push(`    }${i === oks.length - 1 ? '' : ','}`);
       });
       lines.push(`  }${last}`);
     } else lines.push(`  ${JSON.stringify(k)}: ${compact(v)}${last}`);

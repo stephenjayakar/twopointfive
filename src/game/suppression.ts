@@ -11,7 +11,11 @@ import type { Game, Guard } from './game';
 import { TEMPERAMENT } from './game';
 import type { Character } from './character';
 import { PLAYER_ID } from './consts';
+import { temperamentOf } from './dialogue';
 import { isHostile, teamOfChar, teamOfId, type Team } from './teams';
+import { WORDS } from './words';
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { PICTURE, PICTURE_STATS, ideasOf, exposedAt } from './picture';
 
 /** Every number of the model and of the guards' reactions, in one place (panel-tunable; the QA probes read them rather than copy them). */
 export const SUPPRESSION = {
@@ -95,11 +99,6 @@ export const SUPPRESSION_DEBUG: { log: ((s: string) => void) | null } = { log: n
 export interface SamPass { from: Vec3; to: Vec3; closest: Vec3; travelled: number; dNear: number; dHit: number; add: number; shooterId: number; }
 export const SUPPRESSION_FX: { onSamPass: ((g: Game, p: SamPass) => void) | null; fxRange: number } = { onSamPass: null, fxRange: 4 };
 
-/** the Sup record of a Character in this game (Sam's or that guard's), or null for a stray */
-export function supOf(g: Game, c: Character): Sup | null {
-  if (c === g.player.char) return g.player.sup;
-  return g.guards.find(x => x.char === c)?.sup ?? null;
-}
 function keenOf(g: Game, c: Character): number {
   if (c === g.player.char) return 1;
   const gd = g.guards.find(x => x.char === c); const t = gd ? TEMPERAMENT[gd.callsign] : undefined;
@@ -140,7 +139,7 @@ export function forgetSuppressionClocks(g: Game) { floorLineT.delete(g); floorBa
 export type SupMoment = 'flinch' | 'friendly' | 'pinned' | 'displace' | 'recover';
 /** which held-back line outranks which (the worse news waits, the milder is dropped for it) */
 const RANK: Record<SupMoment, number> = { recover: 0, friendly: 1, flinch: 1, pinned: 2, displace: 3 };
-/** Placeholder lines (the writing pass is the designer's), by moment and temperament ('*' for anybody). */
+/** Placeholder lines (the writing pass is the maintainer's), by moment and temperament ('*' for anybody). */
 const SUP_LINES: Record<SupMoment, Partial<Record<string, string[]>>> = {
   flinch: { '*': ['taking fire!', 'rounds coming in!', 'he\'s shooting — get down!', 'that was close—'], nervy: ['christ— CHRIST—', 'he\'s shooting at me!'], hard: ['he\'s found his nerve.', 'incoming. stay on him.'] },
   friendly: { '*': ['watch your fire!', 'check fire — that\'s past MY head!', 'easy! I\'m in front of you!'], nervy: ['stop— stop shooting past me!'] },
@@ -155,8 +154,10 @@ function supBark(g: Game, gd: Guard, moment: SupMoment, force = false): boolean 
   const S = SUPPRESSION, sup = gd.sup, now = g.time;
   const held = (!force && (now - sup.barkT < S.barkSecs || now - (floorBarkT.get(g) ?? -100) < S.floorBarkSecs)) || (!!gd.bubble?.radio && now - gd.bubble.t < 2.5);
   if (held) { if (moment !== 'recover' && RANK[moment] > (sup.pending ? RANK[sup.pending] : -1)) { sup.pending = moment; sup.pendingT = now; } return false; }   // (a worse moment replaces a milder one waiting — its two seconds run from the moment itself, not from the retries; 'that all you've got' is now or never)
-  const M = SUP_LINES[moment]; const pool = [...(M[TEMPERAMENT[gd.callsign] ?? 'steady'] ?? []), ...(M['*'] ?? [])]; if (!pool.length) return false;
-  let i = Math.floor(Math.random() * pool.length) % pool.length; if (pool.length > 1 && pool[i] === lastLine.get(gd)) i = (i + 1) % pool.length;
+  const M = SUP_LINES[moment]; let pool = [...(M[temperamentOf(gd)] ?? []), ...(M['*'] ?? [])];
+  if (WORDS.on && gd.team !== 'guard') pool = pool.filter(l => !/\b(he|he's|him|his)\b/.test(l));   // (words.ts: 'he' is the night staff's one intruder — a scenario's two sides are under a TEAM's fire)
+  if (!pool.length) return false;
+  let i = Math.floor(simRandom() * pool.length) % pool.length; if (pool.length > 1 && pool[i] === lastLine.get(gd)) i = (i + 1) % pool.length;
   lastLine.set(gd, pool[i]); sup.barkT = now; sup.barkWas = moment; sup.pending = null; floorBarkT.set(g, now);
   g.say(gd, pool[i]);
   return true;
@@ -182,18 +183,18 @@ export function updateSuppression(g: Game, dt: number) {
     // his band, with hysteresis (pinned holds down to `release`, flinch to a hair under its line): a scalar hovering about a line under a steady volley is ONE
     // episode — one start, one line — not an edge every other round
     const v = sup.v; const band = v >= S.pinned || (sup.band === 2 && v >= S.release) ? 2 : v >= S.flinch || (sup.band >= 1 && v >= S.flinch - 0.05) ? 1 : 0;
-    if (band > sup.band && sup.band < 1 && !reacts(g, gd) && gd.script?.flinch && g.tune.suppression) gd.char.anim.flinch();   // a CHOREOGRAPHED man ordered to (GuardScript.flinch — the day showcase's firefight): the start alone on the rising edge, none of the AI's reactions below; nothing for any other scripted man, as ever
+    if (band > sup.band && sup.band < 1 && !reacts(g, gd) && gd.script?.flinch && g.tune.suppression) gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null);   // a CHOREOGRAPHED man ordered to (GuardScript.flinch — the day showcase's firefight): the start alone on the rising edge, none of the AI's reactions below; nothing for any other scripted man, as ever
     if (band > sup.band && reacts(g, gd)) {
       const friendly = sup.srcId !== PLAYER_ID && sup.srcId >= 0 && !isHostile(gd.team, teamOfId(g, sup.srcId));   // a colleague's rounds past his head: he says so to HIM, not 'taking fire' (teams: an enemy unit's rounds are fire taken, whatever his id)
       if (sup.band < 1) {   // over the flinch line: the start, the next round a beat late, a word (unless the head is going down this same frame: that line instead)
-        sup.flinchAt = g.time; gd.char.anim.flinch(); gd.fireCd = Math.max(gd.fireCd, S.flinchDelay);
+        sup.flinchAt = g.time; gd.char.anim.flinchFrom(sup.src ? v3.sub(sup.src, gd.char.pos) : null); gd.fireCd = Math.max(gd.fireCd, S.flinchDelay);
         if (band < 2) supBark(g, gd, friendly ? 'friendly' : 'flinch');
-        SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} FLINCH at ${sup.v.toFixed(2)} (${friendly ? 'a colleague\'s round' : 'Sam\'s'})`);
+        SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} FLINCH at ${sup.v.toFixed(2)} (${friendly ? 'a colleague\'s round' : 'the player\'s'})`);
       }
       if (band === 2) {   // over the pinned line: the line (past his own clock if his flinch line was a couple of seconds back) — and a second man pinned within pairSecs of another makes it the floor's
         sup.pinnedAt = g.time; sup.wasPinned = true;
-        const other = g.guards.find(o => o !== gd && o.state !== 'dead' && g.time - o.sup.pinnedAt < S.pairSecs);
-        if (other && g.time - (floorLineT.get(g) ?? -100) > S.floorLineSecs) { floorLineT.set(g, g.time); sup.barkT = g.time; sup.barkWas = 'pinned'; floorBarkT.set(g, g.time); g.say(gd, 'he\'s got us pinned!', true); }
+        const other = g.guards.find(o => o !== gd && o.state !== 'dead' && g.time - o.sup.pinnedAt < S.pairSecs && (!WORDS.on || o.team === gd.team));   // ('us' is two men of ONE side: words.ts)
+        if (other && g.time - (floorLineT.get(g) ?? -100) > S.floorLineSecs) { floorLineT.set(g, g.time); sup.barkT = g.time; sup.barkWas = 'pinned'; floorBarkT.set(g, g.time); g.say(gd, WORDS.on && gd.team !== 'guard' ? 'they\'ve got us pinned!' : 'he\'s got us pinned!', true); }
         else supBark(g, gd, friendly ? 'friendly' : 'pinned', sup.barkWas === 'flinch' && g.time - sup.barkT > 1.5);   // (over his own clock only to top a 'taking fire' of a moment ago with the worse news — never pinned on pinned)
         SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} PINNED at ${sup.v.toFixed(2)}`);
       }
@@ -217,7 +218,7 @@ export function headDown(g: Game, gd: Guard, dt: number): 'none' | 'down' | 'dis
   if (!reacts(g, gd)) { sup.clearReactions(); return 'none'; }
   if (sup.cover) return 'displace';
   if (sup.v < S.flinch) sup.pinnedT = 0;
-  if (sup.v >= S.pinned) { if (!sup.latched && sup.downT <= 0) { sup.downT = S.headDown[0] + Math.random() * (S.headDown[1] - S.headDown[0]); SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} head DOWN for ${sup.downT.toFixed(2)} s (s ${sup.v.toFixed(2)})`); } sup.latched = true; }
+  if (sup.v >= S.pinned) { if (!sup.latched && sup.downT <= 0) { sup.downT = S.headDown[0] + simRandom() * (S.headDown[1] - S.headDown[0]); SUPPRESSION_DEBUG.log?.(`#${gd.char.id} ${gd.callsign} head DOWN for ${sup.downT.toFixed(2)} s (s ${sup.v.toFixed(2)})`); } sup.latched = true; }
   else if (sup.v < S.release) sup.latched = false;
   const down = sup.downT > 0 || sup.latched;
   if (!down) { if (sup.downT <= 0 && sup.pinnedT > 0 && sup.v < S.release) sup.pinnedT = Math.max(0, sup.pinnedT - dt); return 'none'; }   // (up again: the displace clock unwinds rather than banks half-seconds across separate volleys under the flinch line — reset outright once s < flinch, above)
@@ -244,6 +245,9 @@ export function holdingCover(g: Game, gd: Guard): boolean { return g.tune.suppre
  *  toward — that he can walk to without a tour of the floor or a leg toward the shooter, where a crouched chest is hidden from the shooter's by something solid,
  *  and that no colleague stands on or is heading for. Preference order, first fit (coverSpot's pattern); a dozen path plans at most. null = nothing: he stays down. */
 export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
+  // (picture.ts PICTURE.cover: the man whose rounds came in is one of several he knows of — the first fit hidden from EVERY one of them is taken; the first
+  // fit of all, the place as it was dealt, is kept meanwhile and is his if there is no such place. One pass, the same dozen plans.)
+  const all = PICTURE.on && PICTURE.cover && ideasOf(g, gd).length > 1; let asWas: Vec3 | null = null;
   const S = SUPPRESSION, nav = g.col.nav, c = gd.char, from = c.pos; const dbg = SUPPRESSION_DEBUG.log;
   const T: Vec3 = [threat[0], 1.15, threat[2]]; const d0 = v3.distXZ(from, threat);
   const away = Math.atan2(from[0] - threat[0], from[2] - threat[2]);   // bearing shooter → him: 0 = straight on back, ±π/2 = square off the line
@@ -253,18 +257,21 @@ export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
     if (nav.isBlocked(p[0], p[2])) continue;
     if (v3.distXZ(p, threat) < Math.max(d0 - 1.5, S.minTravel + 0.5)) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): toward him`); continue; }   // (a stride and a half nearer at most — diving for the near end of a partition is fine, walking up his line of fire is not — and never to inside point-blank of him)
     if (!g.col.segmentBlocked(T, [p[0], 0.9, p[2]])) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): open to him crouched`); continue; }   // not cover: a crouched chest there is in the open from where the rounds come
+    const open = all && exposedAt(g, gd, p, true) > 0.15; if (open && asWas) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): in another known enemy's line`); continue; }
     let taken = false; for (const o of g.guards) if (o !== gd && o.state !== 'dead' && (v3.distXZ(o.char.pos, p) < 0.9 || (o.sup.cover && v3.distXZ(o.sup.cover, p) < 1.2))) { taken = true; break; }
     if (taken) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): a colleague's`); continue; }
-    if (++plans > 12) { dbg?.('  cover: out of path plans'); return null; }
+    if (++plans > 12) { dbg?.('  cover: out of path plans'); return asWas; }
     const path = nav.findPath(from, p); if (!path?.length) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): no path`); continue; }
     let L = 0, q: Vec3 = from, toward = false; for (const w of path) { L += v3.distXZ(q, w); q = w; if (v3.distXZ(w, threat) < d0 - 1.5) toward = true; }
     if (L > 2.5 * r + 2 || toward) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): ${toward ? 'the way there runs at him' : `path ${L.toFixed(1)} m for ${r} m`}`); continue; }
     const end = path[path.length - 1]; if (v3.distXZ(end, p) > 0.6) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): path stops ${v3.distXZ(end, p).toFixed(2)} m short`); continue; }
+    if (open) { asWas = [end[0], 0, end[2]]; dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): kept, in another known enemy's line`); continue; }
     dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): TAKEN (${(da * 57.3).toFixed(0)}° off straight-back, ${r} m, path ${L.toFixed(1)} m)`);
+    if (asWas) PICTURE_STATS.moved++;
     return [end[0], 0, end[2]];
   }
-  dbg?.('  cover: no candidate survives');
-  return null;
+  if (!asWas) dbg?.('  cover: no candidate survives');
+  return asWas;
 }
 
 /** What suppression does to a guard's NEXT round (the two fire sites read it, flag off = nothing): extra cone on top of his row's spread, and × the cadence he draws after it. */
@@ -280,7 +287,7 @@ export function samSpread(g: Game): number { return g.tune.suppression && !g.pup
 /** Panel / QA: 'suppression ▸ Sam 0.00 · Reyes 0.71 head-down 0.6 s (pinned 2.1 s) · …' — Sam, then every living man with anything on him (or the nearest, at rest). */
 export function suppressionSummary(g: Game): string {
   const f2 = (x: number) => x.toFixed(2), f1 = (x: number) => x.toFixed(1);
-  const parts = [`Sam ${f2(g.player.sup.v)}${g.player.sup.kick > 0.01 ? ` (kick ${f2(g.player.sup.kick)})` : ''}`];
+  const parts = [`Player ${f2(g.player.sup.v)}${g.player.sup.kick > 0.01 ? ` (kick ${f2(g.player.sup.kick)})` : ''}`];
   const men = g.guards.filter(x => x.state !== 'dead');
   let shown = men.filter(x => x.sup.v >= 0.005 || x.sup.cover || x.sup.downT > 0 || g.time < x.sup.coverUntil);
   if (!shown.length) { const n = g.nearestLivingGuard(); if (n) shown = [n]; }

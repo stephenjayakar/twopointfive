@@ -19,7 +19,7 @@
   "path": "Frame ▸ Quality & resolution",
   "kind": "select",
   "label": "quality preset",
-  "title": "resolution cap / scale, beam steps, cache probe density, smoke solver iterations (also ?quality=low|medium|high|ultra)",
+  "title": "resolution cap / scale, beam steps, cache probe density, smoke solver iterations (also ?quality=verylow|low|medium|high|ultra)",
   "def": false,
   "extra": "auto / ultra / high / medium / low / verylow"
  },
@@ -42,8 +42,8 @@
  {
   "path": "Frame ▸ Quality & resolution",
   "kind": "toggle",
-  "label": "MOTION-CALM rows (proposed, judge by eye)",
-  "title": "GI-in-motion lane (docs/internal/gi-motion.md §5, docs/review/gi-motion.html): the noise the picture shows IN MOTION is the direct chain's — ReSTIR's temporal reuse under a moving camera + the resolve's motion terms — and these are the rows of those two that measurably calm it: restir spatialAll + penRays, resolve motion α 0.4 → 0.25 and motion sharpen 0.3 → 0.15. Measured at high: −14 … −51 % of the pan flow per tile, the STILL tiles −28 … −55 % (spatial reuse halves ReSTIR's static crawl too), the daylight breach wall +7 %, ≈ +0.6 ms; the trades to look at: contact-shadow softness (spatial reuse everywhere) and motion sharpness (α 0.25). Also ?motioncalm. Off = every row as the preset / defaults have it; re-applied after preset changes while on",
+  "label": "motion-calm rows (shipped on)",
+  "title": "GI-in-motion lane (docs/internal/gi-motion.md §5, docs/review/gi-motion.html): the noise the picture shows IN MOTION is the direct chain's — ReSTIR's temporal reuse under a moving camera + the resolve's motion terms — and these are the rows of those two that measurably calm it: restir spatialAll + penRays, resolve motion α 0.4 → 0.25 and motion sharpen 0.3 → 0.15. Measured at high: −14 … −51 % of the pan flow per tile, the STILL tiles −28 … −55 % (spatial reuse halves ReSTIR's static crawl too), the daylight breach wall +7 %, ≈ +0.6 ms; the trades to look at: contact-shadow softness (spatial reuse everywhere) and motion sharpness (α 0.25). On by default (?nomotioncalm boots without it). Off = every row as the preset / defaults have it; re-applied after preset changes while on",
   "def": false,
   "extra": ""
  },
@@ -51,7 +51,7 @@
   "path": "Frame ▸ Quality & resolution",
   "kind": "toggle",
   "label": "ladder: climb on GPU headroom",
-  "title": "with adaptive resolution on: over 1-s windows in which the frame rate held the display rate AND the compute passes' GPU UNION stayed under 60 % of a 60-fps budget, three windows running, the ladder takes ONE step up — the render scale by 0.05 past the tier's start up to 1.0, then (union under 65 %) the gather ⅓ → ½ res, then the volumetrics ¼ → ½ — at most one climb per 4 s; a window over 80 % of the budget or under 55 fps with a climb standing undoes the newest step at once and holds that rung off for a minute. Under auto a cheaper preset goes up a PRESET first; the climb spends what is left at the top. Needs GPU timestamp queries (it never acts without). Off = the ladder exactly as it was",
+  "title": "with adaptive resolution on: over 1-s windows in which the frame rate held the display rate AND the compute passes' GPU UNION stayed under 60 % of a 60-fps budget, three windows running, the ladder takes ONE step up — the render scale by 0.05 past the tier's start up to 0.95 (1.0 with sharp direct off), then (union under 65 %) the gather ⅓ → ½ res, then the volumetrics ¼ → ½ — at most one climb per 4 s; a window over 80 % of the budget or under 55 fps with a climb standing undoes the newest step at once and holds that rung off for a minute. Under auto a cheaper preset goes up a PRESET first; the climb spends what is left at the top. Needs GPU timestamp queries (it never acts without). Off = the ladder exactly as it was",
   "def": false,
   "extra": ""
  },
@@ -59,7 +59,7 @@
   "path": "Frame ▸ Quality & resolution",
   "kind": "toggle",
   "label": "ladder: … and climb the output cap",
-  "title": "past scale 1.0 and both divisors, the climb also raises the max internal height toward the WINDOW's device rows in 100-row steps (each costs the per-OUTPUT-pixel kernels: the resolve, sharp direct's U + composite, GBAA, post). Off by default",
+  "title": "past the top scale (0.95; 1.0 with sharp direct off) and both divisors, the climb also raises the max internal height toward the WINDOW's device rows in 100-row steps (each costs the per-OUTPUT-pixel kernels: the resolve, sharp direct's U + composite, GBAA, post). Off by default",
   "def": false,
   "extra": ""
  },
@@ -115,13 +115,13 @@
   "label": "histories",
   "title": "",
   "def": false,
-  "extra": "[restart screen histories — zero the direct-light / indirect / specular temporal histories: the next frame accumulates from raw estimates as after a cold boot — the A/B for what carrying them buys (watch a soft shadow or the bounce light for the frame after)]"
+  "extra": "[restart screen histories — zero every screen-space history (direct light, indirect, specular, the resolve, the reservoirs): the next frame accumulates from raw estimates as after a cold boot — the A/B for what carrying them buys (watch a soft shadow or the bounce light for the frame after)]"
  },
  {
   "path": "Frame ▸ Debug view & output",
   "kind": "select",
-  "label": "debug view (`)",
-  "title": "16 = the gather's resampling reservoirs (ultra, phase 5): red = confidence M ÷ cap, green = the temporal history was found and taken, blue = spatial taps accepted ÷ k — the plain indirect with resampling off; 17 = the reflection pass's output as composite fetches it, before the cutoff fade (mesh hits / hit-lighting reuse are judged here). 14 = the ray-traced reflections' term by itself (renderer v3 phase 4; black with the pass off); 15 = the g-buffer's material: red = roughness (bright = matte), green = metalness — the finish table plus the detail layer's wear. 11 / 12 = the ReSTIR estimator per pixel: history M ÷ cap per class (r / g) + tile gradient resets (b), then rays ÷ 6 (r) / spatial taps (g) / classes shaded from a neighbour (b). 13 = the v3 shadow client per pixel: red / green = σ of the sharp / broad class (the filtered sample variance — lit only in penumbrae), blue = the sharp class's history length (dark = fresh / moving light, bright = long still history). specular = the glossy-floor reflection term and / or what the glass panes add (mirror + glints + dust), alone — whichever of the two experiments is on; black elsewhere. The albedo view washes pixels behind glass faintly teal so the panes can be found",
+  "label": "debug view",
+  "title": "the renderer's buffers, one at a time, in place of the final picture (this list is the only way to them: no key steps through them). 16 = the gather's resampling reservoirs (ultra, phase 5): red = confidence M ÷ cap, green = the temporal history was found and taken, blue = spatial taps accepted ÷ k — the plain indirect with resampling off; 17 = the reflection pass's output as composite fetches it, before the cutoff fade (mesh hits / hit-lighting reuse are judged here). 14 = the ray-traced reflections' term by itself (renderer v3 phase 4; black with the pass off); 15 = the g-buffer's material: red = roughness (bright = matte), green = metalness — the finish table plus the detail layer's wear. 11 / 12 = the ReSTIR estimator per pixel: history M ÷ cap per class (r / g) + tile gradient resets (b), then rays ÷ 6 (r) / spatial taps (g) / classes shaded from a neighbour (b). 13 = the v3 shadow client per pixel: red / green = σ of the sharp / broad class (the filtered sample variance — lit only in penumbrae), blue = the sharp class's history length (dark = fresh / moving light, bright = long still history). specular = the glossy-floor reflection term and / or what the glass panes add (mirror + glints + dust), alone — whichever is on; black elsewhere. The albedo view washes pixels behind glass faintly teal so the panes can be found",
   "def": false,
   "extra": "final / albedo / normals / direct light / indirect light / volumetrics / depth / cache irradiance (dice) / lighting only / denoiser blur hints / specular (gloss + glass + RT) / restir: history / gradient / restir: rays / taps / denoiser state (v3 shadow client) / RT reflections alone / material (rough / metal) / gi reservoirs (phase 5) / RT raw (phase 5)"
  },
@@ -145,7 +145,7 @@
   "path": "Frame ▸ TAAU (temporal AA + upsampling)",
   "kind": "toggle",
   "label": "TAAU (temporal AA + upsampling)",
-  "title": "render at the internal size under a sub-pixel jitter and resolve every frame into an OUTPUT-resolution history (the cap's rows) that the bloom / tonemap / a sharpen then read: antialiased edges, the stochastic lighting noise averaged down, and fewer pixels rendered for the same canvas. Off = no jitter, canvas = internal size, FXAA (?notaau at boot). The render scale is left where it is — a preset applies its own (ultra 1.0 · high 0.77 · medium 0.67 · low 0.6 · verylow 0.5 with TAAU, 1.0 without)",
+  "title": "render at the internal size under a sub-pixel jitter and resolve every frame into an OUTPUT-resolution history (the cap's rows) that the bloom / tonemap / a sharpen then read: antialiased edges, the stochastic lighting noise averaged down, and fewer pixels rendered for the same canvas. Off = no jitter, canvas = internal size, FXAA (?notaau at boot). The render scale is left where it is — a preset applies its own (ultra 0.9 · high 0.77 · medium 0.67 · low 0.6 · verylow 0.5 with TAAU, 1.0 without)",
   "def": false,
   "extra": ""
  },
@@ -222,7 +222,7 @@
   "min": 0,
   "max": 0.8,
   "step": 0.05,
-  "title": "motion sharpness (docs/internal/tjank.md §vi): a pixel that reprojected half an output pixel or more this frame (camera or object; ramping in from an eighth) takes the new frame at this weight instead of α — the history is resampled at ANY fractional offset, so the softening does not wait for fast motion — a resampled history is a blur in motion, and noise in motion reads far less than blur. 0.4 default; 0 = the old rule (0.25 at 24 px / frame)",
+  "title": "motion sharpness (docs/internal/tjank.md §vi): a pixel that reprojected half an output pixel or more this frame (camera or object; ramping in from an eighth) takes the new frame at this weight instead of α — the history is resampled at ANY fractional offset, so the softening does not wait for fast motion — a resampled history is a blur in motion, and noise in motion reads far less than blur. 0.25 shipped (the motion-calm rows; 0.4 with them off); 0 = the old rule (0.25 at 24 px / frame)",
   "def": false,
   "extra": ""
  },
@@ -244,7 +244,7 @@
   "min": 0,
   "max": 0.6,
   "step": 0.05,
-  "title": "what the final blit's contrast-adaptive sharpen gains while the CAMERA moves (the largest screen motion of five points round its look-at, full at half an output pixel a frame): sharpen + this. 0.3 default; 0 = off",
+  "title": "what the final blit's contrast-adaptive sharpen gains while the CAMERA moves (the largest screen motion of five points round its look-at, full at half an output pixel a frame): sharpen + this. 0.15 shipped (0.3 with the motion-calm rows off); 0 = off",
   "def": false,
   "extra": ""
  },
@@ -579,7 +579,7 @@
   "min": 0,
   "max": 8,
   "step": 1,
-  "title": "THE HYBRID ESTIMATOR: every light a character CARRIES (owner byte ≠ 0: the guards' torches, Sam's rail / gun light, muzzle flashes, tracer heads) bypasses the reservoirs at the pixels it reaches and gets the old leader treatment every frame — the two strongest at the pixel take K stratified emitter samples each, shaded exactly, any further ones one tail ray a class; static lights (owner 0) keep ReSTIR. A carried light moves every frame, so its reservoir history and the shadow client's ratio history are let go wherever the cone sweeps and the pool was shaded from one or two fresh rays: noisy pools, ragged edges, rims. The presets tier K (ultra 8 · high 6 · medium 4 · low 3 · verylow 2); 0 = off, the transient stratum exactly as it was (docs/internal/direct-quality.md)",
+  "title": "THE HYBRID ESTIMATOR: every light a character CARRIES (owner byte ≠ 0: the guards' torches, the player's rail / gun light, muzzle flashes, tracer heads) bypasses the reservoirs at the pixels it reaches and gets the old leader treatment every frame — the two strongest at the pixel take K stratified emitter samples each, shaded exactly, any further ones one tail ray a class; static lights (owner 0) keep ReSTIR. A carried light moves every frame, so its reservoir history and the shadow client's ratio history are let go wherever the cone sweeps and the pool was shaded from one or two fresh rays: noisy pools, ragged edges, rims. The presets tier K (ultra 8 · high 4 · medium 4 · low 3 · verylow 2); 0 = off, the transient stratum exactly as it was (docs/internal/direct-quality.md)",
   "def": false,
   "extra": ""
  },
@@ -590,7 +590,7 @@
   "min": 2,
   "max": 6,
   "step": 1,
-  "title": "2 = each class alternates re-tracing its history sample and tracing a fresh candidate (flipping checkerboard) · 3 = both classes re-trace, one fresh candidate alternates · 4 = re-trace + fresh for both classes · 5 = + a final visibility ray when spatial reuse picks a neighbour's sample (spatial reuse then runs everywhere) · 6 = + a second fresh candidate per class. Presets: ultra 4 · high 4 · medium 4 · low 3 · verylow 2 (5 and 6 measured dearer than they are worth: the Tab slider keeps them for A/B)",
+  "title": "2 = each class alternates re-tracing its history sample and tracing a fresh candidate (flipping checkerboard) · 3 = both classes re-trace, one fresh candidate alternates · 4 = re-trace + fresh for both classes · 5 = + a final visibility ray when spatial reuse picks a neighbour's sample (spatial reuse then runs everywhere) · 6 = + a second fresh candidate per class. Presets: ultra 4 · high 4 · medium 4 · low 3 · verylow 2 (5 and 6 measured dearer than they are worth: this slider keeps them for A/B)",
   "def": false,
   "extra": ""
  },
@@ -707,7 +707,7 @@
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
   "label": "restir: D1 second fresh ray inside penumbrae",
-  "title": "a second fresh candidate + shadow ray per class in penumbra pixels whatever the tier's ray count (+1 ray where the estimate is uncertain; an auditing tile's penumbra lanes give up their audit slot that frame)",
+  "title": "a second fresh candidate + shadow ray per class in penumbra pixels whatever the tier's ray count (+1 ray where the estimate is uncertain; an auditing tile's penumbra lanes give up their audit slot that frame). On by default through the motion-calm rows",
   "def": false,
   "extra": ""
  },
@@ -738,8 +738,8 @@
  {
   "path": "Direct light ▸ Estimator — ReSTIR DI",
   "kind": "toggle",
-  "label": "restir: A/B spatial everywhere (biased)",
-  "title": "spatial reuse at every pixel even without the final visibility ray — for judging what the bias looks like (contact shadows soften by up to the radius)",
+  "label": "restir: spatial everywhere (biased)",
+  "title": "spatial reuse at every pixel even without the final visibility ray: contact shadows soften by up to the radius. ON by default through Frame ▸ Quality & resolution ▸ motion-calm rows; off = only where the visibility ray runs",
   "def": false,
   "extra": ""
  },
@@ -842,7 +842,7 @@
   "min": 1,
   "max": 8,
   "step": 1,
-  "title": "stratified emitter samples per pixel for each class's strongest light (noise ~ 1/sqrt(n); cost ~ n)",
+  "title": "stratified emitter samples per pixel for each class's strongest light (noise ~ 1/sqrt(n); cost ~ n). Leader / tail estimator only: nothing while ReSTIR is on (?norestir)",
   "def": false,
   "extra": ""
  },
@@ -853,7 +853,7 @@
   "min": 1,
   "max": 4,
   "step": 1,
-  "title": "samples for the 2nd (and, broad class, 3rd) strongest light",
+  "title": "samples for the 2nd (and, broad class, 3rd) strongest light. Leader / tail estimator only: nothing while ReSTIR is on",
   "def": false,
   "extra": ""
  },
@@ -872,7 +872,7 @@
   "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "toggle",
   "label": "A/B: hold the sampling pattern 2 frames",
-  "title": "torch-shadow boil study knob: with temporal reuse on, the per-pixel emitter-sampling pattern normally advances every frame (so the history integrates different samples); on = it advances every other frame. Default off (frame flag 67108864; docs/internal/perf-2026-08-10.md)",
+  "title": "torch-shadow boil study knob: with temporal reuse on, the per-pixel emitter-sampling pattern normally advances every frame (so the history integrates different samples); on = it advances every other frame. Default off (frame flag 67108864; docs/internal/perf-2026-08-10.md). Leader / tail estimator only: nothing while ReSTIR is on",
   "def": false,
   "extra": ""
  },
@@ -883,7 +883,7 @@
   "min": 0,
   "max": 6,
   "step": 1,
-  "title": "à-trous passes of the ratio (visibility) filter per class: strides 1,2,4,8,16,1 — fewer = sharper/grainier",
+  "title": "à-trous passes of the ratio (visibility) filter per class: strides 1,2,4,8,16,1 — fewer = sharper/grainier. Legacy denoiser only (?legacydenoise)",
   "def": false,
   "extra": ""
  },
@@ -905,7 +905,7 @@
   "min": 2,
   "max": 4,
   "step": 1,
-  "title": "stop sampling a light after this many stratified samples all came back lit (or all blocked); the full ray budget is only spent where they disagree, i.e. in penumbrae. 2 = cheapest, 4 = safest",
+  "title": "stop sampling a light after this many stratified samples all came back lit (or all blocked); the full ray budget is only spent where they disagree, i.e. in penumbrae. 2 = cheapest, 4 = safest. Leader / tail estimator only: nothing while ReSTIR is on",
   "def": false,
   "extra": ""
  },
@@ -924,7 +924,7 @@
   "path": "Direct light ▸ Shadow rays & penumbra filter",
   "kind": "toggle",
   "label": "tail: chroma-exact (experimental)",
-  "title": "direct-light tail estimator: off = luminance-unbiased, bounded (the tail keeps its aggregate hue); on = per-channel unbiased E_pick·V/p (two differently coloured lights cast two coloured shadows) at the price of chroma noise where hues mix — the filter's ratio clamp opens to 4× for it",
+  "title": "direct-light tail estimator: off = luminance-unbiased, bounded (the tail keeps its aggregate hue); on = per-channel unbiased E_pick·V/p (two differently coloured lights cast two coloured shadows) at the price of chroma noise where hues mix — the filter's ratio clamp opens to 4× for it. Leader / tail estimator only (?norestir): under ReSTIR the clamp is already 4× and the flag moves nothing",
   "def": false,
   "extra": ""
  },
@@ -951,7 +951,7 @@
   "path": "Direct light ▸ Character shadows (mesh)",
   "kind": "toggle",
   "label": "mesh-traced character shadows (ultra: every ray · high: near receivers)",
-  "title": "every shadow / occlusion ray (this pass, the gather's hit shading, cascade hits, beams, the light probes) tests characters against their SKINNED TRIANGLE MESH — per character a BVH over the shared mannequin topology, re-skinned and refit bottom-up in two small compute dispatches a frame (\"mesh\" in the read-out) and walked stacklessly per ray after the bounding-sphere cull — instead of the 15 fitted round-cone proxies: arms, hands, shins, feet and the head cast their real silhouettes, and the rays the proxies block that the body does not (~17 % for the old capsules, tools/qa/mesh-shadow-ref.ts; about half that for the fitted cones) come through. Primary visibility and closest-hit shading of characters are untouched (self-shadow: the SDF character rig section's row). Measured (M4 Max, 2133×1200 ultra, four men, a torch point-blank on a crouched Sam): skin+refit 0.13 ms, direct / gather / volumetrics level or slightly cheaper than the proxy path. Off = the round-cone proxies, every other preset's path (frame flag 8388608; also ?meshShadows)",
+  "title": "every shadow / occlusion ray (this pass, the gather's hit shading, cascade hits, beams, the light probes) tests characters against their SKINNED TRIANGLE MESH — per character a BVH over the shared mannequin topology, re-skinned and refit bottom-up in two small compute dispatches a frame (\"mesh\" in the read-out) and walked stacklessly per ray after the bounding-sphere cull — instead of the 15 fitted round-cone proxies: arms, hands, shins, feet and the head cast their real silhouettes, and the rays the proxies block that the body does not (~17 % for the old capsules, tools/qa/mesh-shadow-ref.ts; about half that for the fitted cones) come through. Primary visibility and closest-hit shading of characters are untouched (self-shadow: the SDF character rig section's row). Measured (M4 Max, 2133×1200 ultra, four men, a torch point-blank on a crouched player): skin+refit 0.13 ms, direct / gather / volumetrics level or slightly cheaper than the proxy path. Off = the round-cone proxies, every other preset's path (frame flag 8388608; also ?meshShadows)",
   "def": false,
   "extra": ""
  },
@@ -1039,7 +1039,7 @@
   "path": "Direct light ▸ LOSSY trade-offs",
   "kind": "toggle",
   "label": "LOSSY: checkerboard shadow rays",
-  "title": "only the checkerboard half of the pixels with (x + y + frame) even trace shadow rays; the other half keeps its exact unshadowed light U and takes S = U × the visibility ratio S/U of its traced 4-neighbours in the tile (weighted by same plane / same normal / lit alike, hint = the widest in reach). Pixels on a hard shadow edge (neighbour ratios > 0.35 apart under < 2 px hints) or without a usable neighbour trace anyway, after the exchange. Lanes are dealt so whole SIMD groups skip the ray phase. Off = untouched path (frame flag 65536)",
+  "title": "only the checkerboard half of the pixels with (x + y + frame) even trace shadow rays; the other half keeps its exact unshadowed light U and takes S = U × the visibility ratio S/U of its traced 4-neighbours in the tile (weighted by same plane / same normal / lit alike, hint = the widest in reach). Pixels on a hard shadow edge (neighbour ratios > 0.35 apart under < 2 px hints) or without a usable neighbour trace anyway, after the exchange. Lanes are dealt so whole SIMD groups skip the ray phase. Off = untouched path (frame flag 65536). Read only by the leader / tail estimator: nothing while ReSTIR is on (?norestir)",
   "def": false,
   "extra": ""
  },
@@ -1047,7 +1047,7 @@
   "path": "Direct light ▸ LOSSY trade-offs",
   "kind": "toggle",
   "label": "LOSSY: 1 ray per leader in near-black",
-  "title": "luminance-adaptive shadow rays: a pixel whose total UNshadowed irradiance (both classes, exact) is under the threshold below takes one stratified emitter sample per leader instead of the strongest/other budgets — its penumbrae come out grainier, but at that level the AgX curve puts the whole pixel within a few 8-bit steps of black. Off = untouched (frame.lossyCfg.z = 0)",
+  "title": "luminance-adaptive shadow rays: a pixel whose total UNshadowed irradiance (both classes, exact) is under the threshold below takes one stratified emitter sample per leader instead of the strongest/other budgets — its penumbrae come out grainier, but at that level the AgX curve puts the whole pixel within a few 8-bit steps of black. Off = untouched (frame.lossyCfg.z = 0). Read only by the leader / tail estimator: nothing while ReSTIR is on (?norestir)",
   "def": false,
   "extra": ""
  },
@@ -1189,29 +1189,29 @@
   "min": 0,
   "max": 4,
   "step": 0.05,
-  "title": "",
+  "title": "the level's moon. At a day hour (Frame ▸ Hour) the moon is out and the sun stands in its place: the slider then only sets what the moon comes back at",
   "def": false,
   "extra": ""
  },
  {
   "path": "Direct light ▸ Lights (level)",
   "kind": "slider",
-  "label": "guard flashlight intensity",
+  "label": "torch / unit light intensity",
   "min": 0,
   "max": 300,
   "step": 5,
-  "title": "",
+  "title": "every carried torch and every spawned unit's weapon light (teammates, scenario defenders, the response team)",
   "def": false,
   "extra": ""
  },
  {
   "path": "Direct light ▸ Lights (level)",
   "kind": "slider",
-  "label": "pistol light intensity",
+  "label": "your light intensity",
   "min": 0,
   "max": 300,
   "step": 5,
-  "title": "",
+  "title": "your own rail light, on whichever gun is in your hands",
   "def": false,
   "extra": ""
  },
@@ -1255,7 +1255,7 @@
   "min": 0,
   "max": 5,
   "step": 0.05,
-  "title": "",
+  "title": "× the sky as the hour and the weather last set it. When either changes the sky (Frame ▸ Hour, a weather's cloud) this reads 1 again and the next move scales the new sky",
   "def": false,
   "extra": ""
  },
@@ -1271,7 +1271,7 @@
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
   "label": "torch bounce cards (analytic torch bounce)",
-  "title": "every carried spot light (the guards' torches and weapon lights, Sam's rail light) gets its FOOTPRINT on the surface its beam hits rebuilt each frame as a one-sided analytic emitter — a tiny compute pass traces the axis and 64 cone samples: claim disc, flux-weighted centroid and radius, radiance × area from the flux that really landed there × the paint it landed on — and the final gather takes that patch's bounce analytically with one shadow ray instead of hoping its four cosine rays find a 30 cm hotspot; rays that do land in the footprint drop that light's direct term there, so nothing counts twice. The boiling bounce round a torch near a wall goes by construction (and the firefly bound above stops eating that bounce). Off = no card pass, nothing sampled or excluded: bit-identical (frame flag 33554432; docs/internal/perf-2026-08-10.md)",
+  "title": "every carried spot light (the guards' torches and weapon lights, the player's rail light) gets its FOOTPRINT on the surface its beam hits rebuilt each frame as a one-sided analytic emitter — a tiny compute pass traces the axis and 64 cone samples: claim disc, flux-weighted centroid and radius, radiance × area from the flux that really landed there × the paint it landed on — and the final gather takes that patch's bounce analytically with one shadow ray instead of hoping its four cosine rays find a 30 cm hotspot; rays that do land in the footprint drop that light's direct term there, so nothing counts twice. The boiling bounce round a torch near a wall goes by construction (and the firefly bound below stops eating that bounce). Off = no card pass, nothing sampled or excluded: bit-identical (frame flag 33554432; docs/internal/perf-2026-08-10.md)",
   "def": false,
   "extra": ""
  },
@@ -1298,7 +1298,7 @@
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
   "label": "temporal accumulation",
-  "title": "reprojected, depth-validated, variance-clipped history on the half-res indirect only (also drives the cache jitter/EMA); direct light has its own temporal-reuse knob above; beams never use history",
+  "title": "reprojected, depth-validated, variance-clipped history on the half-res indirect only (also drives the cache jitter/EMA); direct light has its own knob (Direct light ▸ Shadow rays & penumbra filter ▸ temporal reuse); beams never use history",
   "def": false,
   "extra": ""
  },
@@ -1314,15 +1314,15 @@
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
   "label": "LOSSY: variance-guided history",
-  "title": "the indirect's temporal pass normally clips the reprojected history to this frame's 3×3 neighbourhood (mean ± σ) and blends it at a fixed 0.86. On: the history is weighed by how CONSISTENT it is with that neighbourhood — within its spread (+5 %) it is kept unclipped at 0.93 (≈ 14 frames: smoother wherever nothing changes, and no energy shaved off the estimate), well outside it is clipped as before and blended at 0.7 (≈ 3 frames: a moved torch or a switched panel converges faster than today). Off = untouched (frame flag 134217728; docs/internal/perf-2026-08-10.md)",
+  "title": "the indirect's temporal pass normally clips the reprojected history to this frame's 3×3 neighbourhood (mean ± σ) and blends it at a fixed 0.86. On: the history is weighed by how CONSISTENT it is with that neighbourhood — within its spread (+5 %) it is kept unclipped at 0.93 (≈ 14 frames: smoother wherever nothing changes, and no energy shaved off the estimate), well outside it is clipped as before and blended at 0.7 (≈ 3 frames: a moved torch or a switched panel converges faster than today). Off = untouched (frame flag 134217728; docs/internal/perf-2026-08-10.md). Legacy denoiser only (?legacydenoise): the v3 denoiser never reads it",
   "def": false,
   "extra": ""
  },
  {
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
-  "label": "EXP: stratified gather directions (−13 % gather)",
-  "title": "the final gather's k-th ray of four drawn from STRATUM (k + frame) mod 4 of the cosine hemisphere — (azimuth half) × (cos²θ half), each pixel jittering inside it with its own two random numbers as before — instead of independently (the resampling gather's two fresh rays: a Latin square over the same four cells). Every pixel still covers all four strata every frame, so it is plain stratified sampling: the same expectation, temporal noise equal or lower; but the k-th rays of a whole 8×8 tile now share a quarter of direction space and walk the trace grid coherently — the gather pass −13‥16 % at high, −0.8 ms at ultra (exp/trace-perf E8, docs/internal/trace-perf.md §2.10). A different sample pattern, so NOT hash-identical to off; off (the default) = the gather module exactly as it was. A second pipeline pair compiled at boot; flips live (?gatherStrata, __gs.on)",
+  "label": "stratified gather directions (−13 % gather)",
+  "title": "the final gather's k-th ray of four drawn from STRATUM (k + frame) mod 4 of the cosine hemisphere — (azimuth half) × (cos²θ half), each pixel jittering inside it with its own two random numbers as before — instead of independently (the resampling gather's two fresh rays: a Latin square over the same four cells). Every pixel still covers all four strata every frame, so it is plain stratified sampling: the same expectation, temporal noise equal or lower; but the k-th rays of a whole 8×8 tile now share a quarter of direction space and walk the trace grid coherently — the gather pass −13‥16 % at high, −0.8 ms at ultra (exp/trace-perf E8, docs/internal/trace-perf.md §2.10). A different sample pattern, so NOT hash-identical to off. ON by default; off (?nogatherstrata, __gs.on = false) = the gather module exactly as it was. A second pipeline pair compiled at boot; flips live",
   "def": false,
   "extra": ""
  },
@@ -1345,8 +1345,8 @@
  {
   "path": "Indirect light ▸ Final gather",
   "kind": "toggle",
-  "label": "LOSSY/EXP: glossy floors",
-  "title": "traced glossy reflections on the polished floors (lobby stone, corridor + break-room lino — BoxFlag.Gloss): the final gather spends ONE extra mirror ray per gloss texel (view direction reflected about the floor, jittered over a 2.5° cone), shades what it hits like a gather hit plus the fixture's own glow (lit panels, screens, beacon domes, windows onto the sky, a torch spot on the wall), weights it by Schlick Fresnel on the view angle (F0 0.04 → ~0.045 from up here) × 0.85, runs it through its own half-res history + one blur pass and adds it in composite AFTER the diffuse terms (never × albedo). Costs about one trace + one shadow ray per gloss texel at gather res (shows in \"gather\") and two half-res filter dispatches (in \"temporal\"). Off = nothing stored, filtered or read: bit-identical (frame flag 2097152; debug view \"specular\" shows the term alone)",
+  "label": "glossy floors (RT reflections off)",
+  "title": "Does nothing while Materials ▸ RT reflections is on (ultra / high / medium): that pass replaces it. Traced glossy reflections on the polished floors (lobby stone, corridor + break-room lino — BoxFlag.Gloss): the final gather spends ONE extra mirror ray per gloss texel (view direction reflected about the floor, jittered over a 2.5° cone), shades what it hits like a gather hit plus the fixture's own glow (lit panels, screens, beacon domes, windows onto the sky, a torch spot on the wall), weights it by Schlick Fresnel on the view angle (F0 0.04 → ~0.045 from up here) × 0.85, runs it through its own half-res history + one blur pass and adds it in composite AFTER the diffuse terms (never × albedo). Costs about one trace + one shadow ray per gloss texel at gather res (shows in \"gather\") and two half-res filter dispatches (in \"temporal\"). Off = nothing stored, filtered or read: bit-identical (frame flag 2097152; debug view \"specular\" shows the term alone)",
   "def": false,
   "extra": ""
  },
@@ -1376,7 +1376,7 @@
   "min": 1,
   "max": 4,
   "step": 1,
-  "title": "GI in motion (C): a gather texel whose point had no usable diffuse history last frame — off the screen (a pan's incoming edge), on another surface (what a walking man or Sam uncovers), or a history the denoiser calls young — traces this many TIMES the rays for the frames it stays young, so the frames the temporal filter can only show the raw estimate in get a better one; a settled texel costs two loads. First come first served past the cap below; a camera cut stands it down (everything is young then). 1 = off: the gather byte for byte as it was",
+  "title": "GI in motion (C): a gather texel whose point had no usable diffuse history last frame — off the screen (a pan's incoming edge), on another surface (what a walking man or the player uncovers), or a history the denoiser calls young — traces this many TIMES the rays for the frames it stays young, so the frames the temporal filter can only show the raw estimate in get a better one; a settled texel costs two loads. First come first served past the cap below; a camera cut stands it down (everything is young then). 1 = off: the gather byte for byte as it was",
   "def": false,
   "extra": ""
  },
@@ -1841,11 +1841,11 @@
  {
   "path": "Volumetrics ▸ Smoke solver",
   "kind": "slider",
-  "label": "CALM domains: voxels per visible step (0 = off)",
+  "label": "CALM bricks: voxels per visible step",
   "min": 0,
   "max": 1.5,
   "step": 0.25,
-  "title": "perf/smoke-scale (docs/internal/smoke-perf.md §3.1): a live domain nothing is emitting or pushing into — a plume whose canister ran out, hanging dust — steps every p-th frame, p = clamp(⌊this ÷ the cells its fastest VISIBLE parcel crosses a frame⌋, 1, 4), with the dt it sat out added on: between two steps you see, its smoke never moves more than this many voxels (½ = 2.7 cm on the canister lattice). Three hanging plumes: the sim pass 1.25 → 0.79 ms at ½, 0.46 at 1. Nothing changes while a source runs. Default ½; 0 = every domain scheduled exactly as before (the CAP row above alone)",
+  "title": "a brick whose air is slow steps every p-th frame (1, 2 or 4: the Smoke pool section's \"calm: wait\" row is the longest) with the dt it sat out added on: between two steps you see, its smoke never moves more than this many voxels. A source wakes what it reaches, and a brick never waits longer than any of its 26 neighbours. 0 = every brick in view every frame (out of view the \"calm: far, cells\" row still holds; \"calm: wait\" 1 = nothing ever waits)",
   "def": false,
   "extra": ""
  },
@@ -1867,7 +1867,7 @@
   "min": 3,
   "max": 12,
   "step": 1,
-  "title": "samples a SHADOW ray takes through the smoke boxes it crosses (the direct pass, gather / reflection / probe-meter hits) — 8 = the estimator as it always was; 6 saves ~0.2 ms of the direct pass with three plumes up, 4 ~0.4 but blotches the plume's shadow on the floor (docs/internal/smoke-perf.md §4). The plume you look at (the volumetric march) and the guards' sight lines never read this",
+  "title": "samples a SHADOW ray takes through 3.5 m of smoke (the direct pass, gather / reflection / probe-meter hits) — 8 = the estimator as it always was; 6 saves ~0.2 ms of the direct pass with three plumes up, 4 ~0.4 but blotches the plume's shadow on the floor (docs/internal/smoke-perf.md §4). The plume you look at (the volumetric march) and the guards' sight lines never read this",
   "def": false,
   "extra": ""
  },
@@ -1881,49 +1881,11 @@
  },
  {
   "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "CAP: domains stepped every frame",
-  "min": 0,
-  "max": 8,
-  "step": 1,
-  "title": "renderer v3 Phase 0 cap: the N live domains nearest the view's look-at point step every frame; the rest step on alternate frames with the dt they missed added on (their density still renders every frame from the last step, and the guards' sight lines read the density — nothing on the AI side changes). 8 = every domain every frame, the solver as it was. Set by the quality preset (ultra 8 · high 6 · medium 4 · low 3 · verylow 2)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "toggle",
-  "label": "skip empty bricks (lossless)",
-  "title": "the scalar passes (advection + inject/decay) early-out in 8³ bricks that provably hold nothing this step; velocity / pressure stay full-domain (pressure is global). Occupancy below.",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "toggle",
-  "label": "render: skip empty bricks (lossless)",
-  "title": "every smoke read the renderer and the AI make (volumetric march + self-shadow taps, smoke on shadow rays / haze beams / probe sight lines) first tests one bit per 8³ brick that the solver packs at the end of each step from the very density texture this frame samples: set = the brick or the one-cell shell around it holds density. A trilinear fetch only ever touches the sample's cell ±1, so a clear bit means the fetch returns exactly 0 and it is skipped — bit-identical image, the empty part of every domain stops costing fetches (\"render N\" below = bricks still fetched). Off = always fetch (A/B, frame flag 32768)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
   "kind": "text",
   "label": "",
   "title": "",
   "def": false,
   "extra": "bricks active 0/0 · scalar 0 · vel 0 · render 0 · vmax 0 m/s"
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "flush ε (density)",
-  "min": 0,
-  "max": 0.0002,
-  "step": 0.00001,
-  "title": "density / temperature at or below this store as exactly 0 (default 2⁻¹⁴ ≈ 6e-5: below the half-float normal range decay stalls and cells never empty; 6 m of it moves an 8-bit pixel by less than half a step). 0 = never flush.",
-  "def": false,
-  "extra": ""
  },
  {
   "path": "Volumetrics ▸ Smoke solver",
@@ -2023,10 +1985,13 @@
  },
  {
   "path": "Volumetrics ▸ Smoke solver",
-  "kind": "toggle",
-  "label": "LOSSY: pressure at half res",
-  "title": "the pressure Poisson solve runs on a 32³ grid per domain instead of 64³: the fine flux balances are summed over 2×2×2 blocks face by face (a coarse face carries how many of its 4 fine face pairs are open, so the coarse system is sealed exactly where the fine grid is — partitions, desk tops — while one-cell fluid layers along walls and the ceiling keep their equations), the same rb pairs / omega sweep the blocks (warm-started; zeroed on placement and on every switch-on), the result is interpolated back trilinearly along open connections only, and the unchanged projection subtracts its gradient. Advection, curl, buoyancy, injection stay 64³. One ordinary full-res rb pair then runs on the result (params.pressureHalfSmooth, default 1: without it the grid-scale divergence of the plume skin, invisible to a 2×2×2 block, piles up — a CPU soak measured 5× the residual and +40 % mass — with it the residual sits at or under the full-res path's). Costs divergence under two cells wide: softer billow at the canister mouth, slightly puffier plumes. stats.pressure / stats.perStep say which solve ran and its dispatches per domain step (fine 19 at 4 pairs, half 23 = 21 + the pair). Off = the untouched full-res path; the option's shaders only compile on first switch-on (stats.halfStatus)",
-  "def": false,
+  "kind": "slider",
+  "label": "render density × (gun smoke / dust)",
+  "min": 0.2,
+  "max": 3,
+  "step": 0.05,
+  "title": "the render density every reader takes for what is NOT canister smoke — muzzle gas, impact puffs, destruction dust; kept per cell, so it acts on smoke already in the air (the row below is the plumes' own ×; 1.0 = as those effects were tuned)",
+  "def": true,
   "extra": ""
  },
  {
@@ -2036,8 +2001,49 @@
   "min": 0.1,
   "max": 4,
   "step": 0.05,
-  "title": "the density every reader sees — the march, the shadow rays and the guards' sight-line probe alike (1.6 since 08-12: the designer's pick for an opaque plume)",
+  "title": "CANISTER PLUMES: the density every reader sees — the march, the shadow rays and the guards' sight-line probe alike (1.3 since 08-14: the blind-pairs winner in motion — 1.6 was the pick in stills, 1.0 the old renderer's)",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke solver",
+  "kind": "slider",
+  "label": "multiple scattering (glow through the plume)",
+  "min": 0,
+  "max": 1.5,
+  "step": 0.05,
+  "title": "the march's second scattering octave (vol_common.wgsl smokeMsGain): the lit side's coloured glow carried THROUGH an opaque plume with half the extinction and a rounder phase — structure inside a thick plume. 0 = single scattering (the 08-14 ship set: off beat on in the blind pairs)",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke solver",
+  "kind": "toggle",
+  "label": "upsample: let go of the depth guide inside smoke",
+  "title": "composite's depth-guided upsample of the half-res volumetrics drops its depth term where the texel is mostly SMOKE — a plume in front of a cabinet and of the floor beside it is the same smoke; guiding by the surface behind carved its edge along every depth edge (blind pairs: on beat off)",
   "def": false,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke solver",
+  "kind": "slider",
+  "label": "TAAU: smoke pixels reactive ×",
+  "min": 0,
+  "max": 1,
+  "step": 0.05,
+  "title": "a plume has no motion vectors — by (1 − its transmittance) × this the resolve leans on the fresh march instead of a stale plume clamped into place (0.3 default; higher = crisper billows in motion but the march's own dither shows, 0 = the smoothest and laggiest)",
+  "def": true,
+  "extra": ""
+ },
+ {
+  "path": "Volumetrics ▸ Smoke solver",
+  "kind": "slider",
+  "label": "diffusion: starts at optical depth",
+  "min": 0,
+  "max": 1.5,
+  "step": 0.05,
+  "title": "under this optical depth the smoke diffusion leaves what is behind the plume alone — a plume's thin edge keeps the vending art crisp (0.35; the 08-12 build used 0.15 and smeared the art along the whole outline)",
+  "def": true,
   "extra": ""
  },
  {
@@ -2137,32 +2143,10 @@
   "extra": "[+4 canisters]"
  },
  {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "fine voxel (cm)",
-  "min": 1.5,
-  "max": 4,
-  "step": 0.1,
-  "title": "gun smoke domains (applies to newly placed domains)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Volumetrics ▸ Smoke solver",
-  "kind": "slider",
-  "label": "coarse voxel (cm)",
-  "min": 3,
-  "max": 9,
-  "step": 0.1,
-  "title": "canister domains (applies to newly placed domains)",
-  "def": false,
-  "extra": ""
- },
- {
   "path": "Materials ▸ RT reflections",
   "kind": "toggle",
   "label": "RT reflections (replaces glossy floors)",
-  "title": "ray-traced reflections on every surface whose finish is smooth enough (Box.rough per material in levels/office.json — lobby stone 0.15, lino 0.22, screens 0.08, brushed metal 0.28, the wet lot 0.22 anisotropic …; docs/internal/p4-materials.md): reflect.wgsl samples a GGX visible normal per pixel (Heitz 2018) at the g-buffer's per-pixel roughness, traces the reflected ray through the box grid + the character proxies like a gather ray, shades the hit (lit panels / signs / screens return their own radiance — the crisp shapes in the floor; anything else shadow-rayed direct + the cache's bounce; the sky on a miss), adds the analytic GGX highlight of every torch / lamp lens and rough-receiver panel through the same lobe, then the shared denoiser's SPECULAR client (per-pixel roughness: mirror-image reprojection, roughness-scaled clamp / cap, a lobe-footprint à-trous = contact hardening) settles it and composite adds it × the cutoff fade. REPLACES the glossy-floors row while on. Presets: ultra ÷2 · 2 rays · ≤ 0.55, high ÷2 · 1 · ≤ 0.45, medium ÷3 · 1 · ≤ 0.35, low / verylow off. Costs \"reflect\" + \"rdenoise\" in the HUD. Off = no dispatch, nothing read: bit-identical (frame.rtCfg.w = 0; ?nortreflect)",
+  "title": "ray-traced reflections on every surface whose finish is smooth enough (Box.rough per material in the level file — the office: lobby stone 0.15, lino 0.22, screens 0.08, brushed metal 0.28, the wet lot 0.22 anisotropic …; docs/internal/p4-materials.md): reflect.wgsl samples a GGX visible normal per pixel (Heitz 2018) at the g-buffer's per-pixel roughness, traces the reflected ray through the box grid + the character proxies like a gather ray, shades the hit (lit panels / signs / screens return their own radiance — the crisp shapes in the floor; anything else shadow-rayed direct + the cache's bounce; the sky on a miss), adds the analytic GGX highlight of every torch / lamp lens and rough-receiver panel through the same lobe, then the shared denoiser's SPECULAR client (per-pixel roughness: mirror-image reprojection, roughness-scaled clamp / cap, a lobe-footprint à-trous = contact hardening) settles it and composite adds it × the cutoff fade. REPLACES the glossy-floors row while on. Presets: ultra ÷2 · 2 rays · ≤ 0.55, high ÷2 · 1 · ≤ 0.45, medium ÷3 · 1 · ≤ 0.35, low / verylow off. Costs \"reflect\" + \"rdenoise\" in the debug read-out. Off = no dispatch, nothing read: bit-identical (frame.rtCfg.w = 0; ?nortreflect)",
   "def": false,
   "extra": ""
  },
@@ -2290,7 +2274,7 @@
   "path": "Denoiser ▸ Core",
   "kind": "toggle",
   "label": "v3 shared denoiser (off = the three legacy chains)",
-  "title": "ONE core — reprojection with the g-buffer's motion vectors + per-tap depth validation, luminance moments → variance, history length, neighbourhood clamp, variance-guided edge-stopped à-trous — behind the direct pass's shadow ratio (per emitter class, full res), the gather's diffuse irradiance and its specular field. Off = dtemporal + softblur, temporal + giblur and the gloss chain exactly as they were (?legacydenoise). Under v3 the Direct light section's \"temporal reuse\" is the shadow client's temporal switch (0 = none) and \"penumbra filter cap\" its width cap; \"spatial passes\" is legacy only",
+  "title": "ONE core — reprojection with the g-buffer's motion vectors + per-tap depth validation, luminance moments → variance, history length, neighbourhood clamp, variance-guided edge-stopped à-trous — behind the direct pass's shadow ratio (per emitter class, full res), the gather's diffuse irradiance and its specular field. Off = dtemporal + softblur, temporal + giblur and the gloss chain exactly as they were (?legacydenoise). Under v3 Direct light ▸ Shadow rays & penumbra filter ▸ \"temporal reuse\" is the shadow client's temporal switch (0 = none) and \"penumbra filter cap\" its width cap; \"spatial passes\" is legacy only",
   "def": false,
   "extra": ""
  },
@@ -2316,7 +2300,7 @@
   "label": "histories",
   "title": "",
   "def": false,
-  "extra": "[restart — zero every screen-space history (both denoisers' + the TAAU resolve's): the next frame starts from raw estimates]"
+  "extra": "[restart — zero every screen-space history (both denoisers', the reflection chain's, the TAAU resolve's, the ReSTIR reservoirs): the next frame starts from raw estimates (the same button as Frame ▸ Quality & resolution ▸ histories)]"
  },
  {
   "path": "Denoiser ▸ Shadow client",
@@ -2429,7 +2413,7 @@
   "min": 0,
   "max": 64,
   "step": 1,
-  "title": "the bounce accumulates at α = 1/n up to this (preset: 32 / 24 / 16 / 12 / 8); Frame ▸ \"temporal\" flag off = none",
+  "title": "the bounce accumulates at α = 1/n up to this (preset: 32 / 24 / 16 / 12 / 8); Indirect light ▸ Final gather ▸ \"temporal accumulation\" off = none",
   "def": false,
   "extra": ""
  },
@@ -2533,13 +2517,13 @@
   "extra": ""
  },
  {
-  "path": "Denoiser ▸ Specular client",
+  "path": "Denoiser ▸ Specular client (glass / gloss field)",
   "kind": "slider",
   "label": "spec: roughness stand-in",
   "min": 0,
   "max": 1,
   "step": 0.01,
-  "title": "until a per-pixel roughness exists (phase 4): 0 = mirror (reprojection by the virtual hit point, tight clamp, no blur) … 1 = rough (surface motion, wide)",
+  "title": "the gather-grid specular field has no per-pixel roughness (the RT reflection chain does: its rows are Materials ▸ RT reflections): 0 = mirror (reprojection by the virtual hit point, tight clamp, no blur) … 1 = rough (surface motion, wide)",
   "def": false,
   "extra": ""
  },
@@ -2566,10 +2550,10 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Glass",
+  "path": "Renderer fx ▸ Glass (the picture)",
   "kind": "toggle",
   "label": "glass panes",
-  "title": "the level's glazing (conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane's tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Guards see through it and do not hear through it. The glazing is LAMINATED: a round stops in a pane and stars it (a hole, a frosted collar, cracks — the floor hears the crack), a stun charge beside it stars the panes near it, a kicked door does nothing to it, and no pane ever breaks. OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)",
+  "title": "the level's glazing (in the office: conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane's tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Men see through it and do not hear through it. What a round or a blast does to a pane is not this switch: Destruction ▸ Glass breaking (the cracks, the pieces, rounds passing through). OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)",
   "def": false,
   "extra": ""
  },
@@ -2642,20 +2626,20 @@
   "extra": "glass ▸ 22 panes (laminated: rounds stop, glass stays) · 0 c"
  },
  {
-  "path": "Renderer fx ▸ Decals (EXP)",
+  "path": "Renderer fx ▸ Decals",
   "kind": "toggle",
   "label": "decals",
-  "title": "EXPERIMENT E1: the marks the encounter leaves — bullet holes where rounds stop, the stun charge's scorch (and its splashes up the walls), boot scuffs on kicked leaves, the chip a ring knocks out of the plaster — kept in a 512-entry ring on the CPU (render/decals.ts), bucketed per 1 m cell, and drawn by the g-buffer's fragment stage into the albedo / normal it stores (decals.wgsl), so direct light, the bounce and the glossy floors all answer to them. Marks on doors and furniture ride the box. Off = nothing recorded or uploaded and frame flag 4194304 down: the g-buffer exactly as it was (?nodecals)",
+  "title": "The marks the encounter leaves — bullet holes where rounds stop, the stun charge's scorch (and its splashes up the walls), boot scuffs on kicked leaves, the chip a ring knocks out of the plaster — kept in a 512-entry ring on the CPU (render/decals.ts), bucketed per 1 m cell, and drawn by the g-buffer's fragment stage into the albedo / normal it stores (decals.wgsl), so direct light, the bounce and the glossy floors all answer to them. Marks on doors and furniture ride the box. Off = nothing recorded or uploaded and frame flag 4194304 down: the g-buffer exactly as it was (?nodecals)",
   "def": false,
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Decals (EXP)",
+  "path": "Renderer fx ▸ Decals",
   "kind": "buttons",
   "label": "decals",
   "title": "",
   "def": false,
-  "extra": "[spray test pattern — every kind the shader draws, on what Sam is facing / standing on right now] [+100 random — a realistic mix (holes, chips, the odd scorch) shot from random points inside the building at random walls — for the cost measurement] [clear decals]"
+  "extra": "[spray test pattern — every kind the shader draws, on what the player is facing / standing on right now] [+100 random — a realistic mix (holes, chips, the odd scorch) shot from random points inside the building at random walls — for the cost measurement] [clear decals]"
  },
  {
   "path": "Renderer fx ▸ Decals (EXP)",
@@ -2925,24 +2909,24 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "dust: growth ×",
   "min": 0,
   "max": 6,
   "step": 0.1,
-  "title": "radius grows by this factor over its life",
+  "title": "radius grows by this factor over its life (the same value as Effects ▸ Dust puffs ▸ dust: growth ×, which also keeps it: an edit here is not saved)",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "dust: opacity",
   "min": 0,
   "max": 1,
   "step": 0.02,
-  "title": "peak opacity of a puff at its centre",
+  "title": "peak opacity of a puff at its centre (the same value as Effects ▸ Dust puffs ▸ dust: opacity, which also keeps it: an edit here is not saved)",
   "def": true,
   "extra": ""
  },
@@ -3035,35 +3019,35 @@
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
   "label": "sheet: drag /s",
   "min": 0,
   "max": 8,
   "step": 0.05,
-  "title": "",
+  "title": "drag along the sheet (its skin), 1/s",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
-  "label": "sheet: restitution",
+  "label": "sheet: drag through /s",
   "min": 0,
-  "max": 0.9,
-  "step": 0.01,
-  "title": "normal speed kept on a bounce",
+  "max": 6,
+  "step": 0.05,
+  "title": "drag through the sheet, the linear part (1/s): a leaf of paper has no bounce, it reads this slot as its face-on drag",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Renderer fx ▸ Particles (EXP)",
+  "path": "Renderer fx ▸ Particles",
   "kind": "slider",
-  "label": "sheet: tangential keep",
+  "label": "sheet: drag × airspeed /m",
   "min": 0,
-  "max": 1,
-  "step": 0.01,
-  "title": "sliding speed kept on a bounce",
+  "max": 30,
+  "step": 0.5,
+  "title": "drag through the sheet that grows with airspeed (1/m): face-down it falls at about √(g ÷ this), 9 ≈ 1 m/s",
   "def": true,
   "extra": ""
  },
@@ -3359,10 +3343,10 @@
   "extra": "fit: 0 (cm; rms 0 mm over 0 vertices)"
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "toggle",
   "label": "storm",
-  "title": "the whole weather system: rain drawn in the outdoor air (volumetrics.wgsl), lightning as a transient directional light through the ordinary direct pass, thunder after distance ÷ 343 s, the wet glossy lot. Off puts everything it touched back (also ?noweather at boot)",
+  "title": "the level's own weather, the whole system: rain drawn in the outdoor air (volumetrics.wgsl), lightning as a transient directional light through the ordinary direct pass, thunder after distance ÷ 343 s, the wet glossy lot. Off puts everything it touched back (also ?noweather at boot). A weather picked for the mission (?weather=, the buttons below) cannot be switched off here: the men see and hear under it",
   "def": false,
   "extra": ""
  },
@@ -3411,10 +3395,10 @@
   "extra": ""
  },
  {
-  "path": "Weather & wind ▸ Storm",
+  "path": "Weather & wind ▸ Weather",
   "kind": "toggle",
-  "label": "wet lot → glossy floors on",
-  "title": "while the asphalt is wet it carries BoxFlag.Gloss; with this on the storm also switches the glossy-floor experiment (Indirect light ▸ EXP: glossy floors) on for its duration so the lamps, the bollards and the lit facade mirror in it (not the strokes: transient lights stay out of the gloss term) — and the polished floors indoors reflect too, at the gloss pass's cost. Takes effect at the next dry → wet flip (toggle the storm)",
+  "label": "wet lot → gloss (RT reflections off)",
+  "title": "while the asphalt is wet it carries BoxFlag.Gloss; with this on the storm also switches Indirect light ▸ Final gather ▸ glossy floors on for its duration so the lamps, the bollards and the lit facade mirror in it (not the strokes: transient lights stay out of the gloss term) — and the polished floors indoors reflect too, at the gloss pass's cost. No effect on a tier with RT reflections on (ultra / high / medium): they already mirror the wet lot. Takes effect at the next dry → wet flip (toggle the storm)",
   "def": false,
   "extra": ""
  },
@@ -3655,7 +3639,7 @@
   "min": 0.02,
   "max": 5,
   "step": 0.02,
-  "title": "a tap landing on something this much NEARER the eye than the drop (Sam's head beside the streak) is not behind it: the centre sample stands in (default 0.3)",
+  "title": "a tap landing on something this much NEARER the eye than the drop (the player's head beside the streak) is not behind it: the centre sample stands in (default 0.3)",
   "def": false,
   "extra": ""
  },
@@ -3797,7 +3781,7 @@
   "label": "p-rain look",
   "title": "",
   "def": false,
-  "extra": "[v1 look] [v2 defaults]"
+  "extra": "[v1 look] [v2 defaults — the same as this section's ↺]"
  },
  {
   "path": "Weather & wind ▸ Rain — particles",
@@ -3922,7 +3906,7 @@
   "label": "wind",
   "title": "",
   "def": false,
-  "extra": "[still air (0)] [full (1)] [put me under a vent ▸] [log sources] [air at cursor] [reset wind knobs]"
+  "extra": "[still air (0)] [full (1)] [put me under a vent ▸] [log sources] [air at cursor] [reset wind knobs — the same as this section's ↺]"
  },
  {
   "path": "Weather & wind ▸ Wind",
@@ -4022,7 +4006,7 @@
   "path": "Weather & wind ▸ Wet characters",
   "kind": "toggle",
   "label": "wet characters",
-  "title": "whoever stands under the open sky in the rain soaks (Character.wet: darker saturated cloth under a glossy film that streams and glints, drops beading and running down him — gbuffer.wgsl fsSkin + composite.wgsl wetCoatSpec) and dries indoors; a soaked Sam come in drips and leaves wet prints. This is the RENDERER's switch: off = every character shades bit for bit as before (the model underneath keeps running)",
+  "title": "whoever stands under the open sky in the rain soaks (Character.wet: darker saturated cloth under a glossy film that streams and glints, drops beading and running down him — gbuffer.wgsl fsSkin + composite.wgsl wetCoatSpec) and dries indoors; a soaked player come in drips and leaves wet prints. This is the RENDERER's switch: off = every character shades bit for bit as before (the model underneath keeps running)",
   "def": false,
   "extra": ""
  },
@@ -4154,7 +4138,7 @@
   "min": 0,
   "max": 30,
   "step": 1,
-  "title": "wet footprints Sam leaves after coming in soaked, fainter each step (decals; the player sees them, nobody reacts yet) (default 10)",
+  "title": "wet footprints the player leaves after coming in soaked, fainter each step (decals; the player sees them, nobody reacts yet) (default 10)",
   "def": false,
   "extra": ""
  },
@@ -4186,7 +4170,7 @@
   "label": "wet",
   "title": "",
   "def": false,
-  "extra": "[soak Sam now] [soak everyone] [Sam wet to the knee — the waterline: coat 1 below 0.55 m of his bind pose, nothing above the wicking band, no beads (they are the rain's) — what the water lane writes from its own depth] [… to the waist] [dry all] [reset wet knobs]"
+  "extra": "[soak the player now] [soak everyone] [the player wet to the knee — the waterline: coat 1 below 0.55 m of his bind pose, nothing above the wicking band, no beads (they are the rain's) — what the water lane writes from its own depth] [… to the waist] [dry all] [reset wet knobs — the same as this section's ↺]"
  },
  {
   "path": "Weather & wind ▸ Wet characters",
@@ -4210,7 +4194,7 @@
   "label": "at cursor",
   "title": "",
   "def": false,
-  "extra": "[stun can] [smoke can (vent)] [+2 stun / +4 smoke]"
+  "extra": "[stun can] [smoke can] [+2 stun / +4 smoke]"
  },
  {
   "path": "Effects ▸ Dust puffs",
@@ -4219,7 +4203,7 @@
   "min": 0,
   "max": 4,
   "step": 0.05,
-  "title": "how many puffs each site emits, × what it asks for (a drywall hit asks for 6, a stun charge's column 10, a kicked door 9…); 0 = no GPU dust at all (the smoke solver's real dust puffs on destruction are a different thing: Tab ▸ Destruction)",
+  "title": "how many puffs each site emits, × what it asks for (a drywall hit asks for 6, a stun charge's column 10, a kicked door 9…); 0 = no GPU dust at all (the smoke solver's real dust puffs on destruction are a different thing: the Destruction page)",
   "def": true,
   "extra": ""
  },
@@ -4350,7 +4334,7 @@
   "label": "test at cursor",
   "title": "",
   "def": false,
-  "extra": "[puff] [drywall burst ×3 — the destruction lane's escalated gypsum burst (chips + puffs) three times across the cursor, as sustained fire into a partition makes it] [stun dust — the stun charge's effects at the cursor: the spark shower, the dust RING along the floor and the column over it] [defaults]"
+  "extra": "[puff] [drywall burst ×3 — the destruction lane's escalated gypsum burst (chips + puffs) three times across the cursor, as sustained fire into a partition makes it] [stun dust — the stun charge's effects at the cursor: the spark shower, the dust RING along the floor and the column over it] [defaults — the same as this section's ↺]"
  },
  {
   "path": "Effects ▸ Dust puffs",
@@ -4367,7 +4351,7 @@
   "min": 0,
   "max": 400,
   "step": 5,
-  "title": "peak intensity of the warm muzzle light (guards ×1, the suppressed Five-seveN × suppressedGain)",
+  "title": "peak intensity of the warm muzzle light (× the weapon's own muzzleFx.lightGain, × suppressedGain for a suppressed gun)",
   "def": false,
   "extra": ""
  },
@@ -4595,7 +4579,7 @@
   "min": 0,
   "max": 96,
   "step": 1,
-  "title": "",
+  "title": "the CPU box sparks. With GPU particles on only the first 'stun smoke trails' of them fly (they carry the smoke); the fragments you see are Renderer fx ▸ Particles ▸ bang sparks",
   "def": false,
   "extra": ""
  },
@@ -4617,7 +4601,7 @@
   "min": 0.2,
   "max": 4,
   "step": 0.1,
-  "title": "from first contact with the floor / a prop",
+  "title": "from first contact with the floor / a prop. Outside a squad mission's room fight only (the night game); in one: Squad ▸ Kit ▸ bang ▸ your fuse s",
   "def": false,
   "extra": ""
  },
@@ -4639,7 +4623,7 @@
   "min": 0,
   "max": 10,
   "step": 0.25,
-  "title": "",
+  "title": "the night game's dazzle. In a squad mission's room fight the flashbang is Squad ▸ Kit ▸ flashbang ▸ blinds and folds a room and its rows",
   "def": false,
   "extra": ""
  },
@@ -4658,7 +4642,7 @@
   "min": 0,
   "max": 8,
   "step": 0.1,
-  "title": "× 25 HDR at white heat; the bloom does the glow",
+  "title": "× 25 HDR at white heat; the bloom does the glow (the same value as Effects ▸ CPU sparks ▸ spark brightness ×)",
   "def": false,
   "extra": ""
  },
@@ -4669,7 +4653,7 @@
   "min": 0.3,
   "max": 4,
   "step": 0.1,
-  "title": "",
+  "title": "(the same value as Effects ▸ CPU sparks ▸ spark streak thickness mm)",
   "def": false,
   "extra": ""
  },
@@ -4680,7 +4664,7 @@
   "min": 0,
   "max": 40,
   "step": 0.5,
-  "title": "",
+  "title": "(the same value as Effects ▸ CPU sparks ▸ spark gravity)",
   "def": false,
   "extra": ""
  },
@@ -4691,7 +4675,7 @@
   "min": 0,
   "max": 8,
   "step": 0.05,
-  "title": "",
+  "title": "(the same value as Effects ▸ CPU sparks ▸ spark drag /s)",
   "def": false,
   "extra": ""
  },
@@ -4803,10 +4787,10 @@
   "extra": ""
  },
  {
-  "path": "Effects ▸ Vent canister & solver sources",
+  "path": "Effects ▸ Smoke can: floor vent (A/B) & solver sources",
   "kind": "toggle",
-  "label": "slot-2 can = floor vent",
-  "title": "ON: the ported cold directional jet along the throw (effects.ts `vent`). OFF: the old upward canister jet driven by the Smoke section sliders (T key always uses that one)",
+  "label": "smoke can = floor vent (A/B)",
+  "title": "ON: the cold directional jet along the throw (effects.ts `vent`: the three sliders below). OFF (shipped): the upward canister jet + plume, driven by Volumetrics ▸ Smoke solver ▸ the canister rows. The Sandbox page's 'smoke at cursor' button always uses the upward one",
   "def": false,
   "extra": ""
  },
@@ -4857,7 +4841,7 @@
   "label": "sandbox",
   "title": "",
   "def": false,
-  "extra": "[trip / restore mains — blackout: everything on the breaker goes dark for 30 s, beacons spin up (again = restore)] [smoke at cursor] [clear smoke] [teleport to cursor] [spectate next — cycle the camera through the guards and back to the player]"
+  "extra": "[trip / restore mains — blackout: everything on the breaker goes dark for 30 s, beacons spin up (again = restore)] [smoke at cursor] [clear smoke] [teleport to cursor] [spectate next — cycle the camera through every man on the floor (teammates included) and back to the player]"
  },
  {
   "path": "Sandbox ▸ Sandbox",
@@ -4887,7 +4871,7 @@
   "path": "Sandbox ▸ Sandbox",
   "kind": "toggle",
   "label": "unlimited ammo",
-  "title": "bottomless magazine: rounds still cycle (cadence, reload animation if you press R) but the count never drops",
+  "title": "bottomless magazine: rounds still cycle (cadence, reload animation if you press R) but the count never drops; cans, ring airfoils and wall charges do not run out either",
   "def": false,
   "extra": ""
  },
@@ -4903,7 +4887,7 @@
   "path": "Sandbox ▸ Sandbox",
   "kind": "toggle",
   "label": "show AI debug labels",
-  "title": "state / awareness tags over the guards (was the H key)",
+  "title": "state / awareness tags over the guards",
   "def": false,
   "extra": ""
  },
@@ -5039,12 +5023,12 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Detection & movement",
+  "path": "Stealth ▸ Detection & movement",
   "kind": "buttons",
   "label": "guards",
   "title": "",
   "def": false,
-  "extra": "[reset] [alert all] [calm all]"
+  "extra": "[reset] [alert all — every living man hostile to you knows where you stand (teammates are left alone)] [calm all — every living man hostile to you back to calm (teammates are left alone)]"
  },
  {
   "path": "Sandbox ▸ Bodies by light",
@@ -5104,10 +5088,10 @@
   "extra": "bodies by light ▸ on · bar 0.22 from 5 m (any light inside 2"
  },
  {
-  "path": "Sandbox ▸ Weapons & rifles",
+  "path": "Player & weapons ▸ Weapons & rifles",
   "kind": "select",
-  "label": "rifles (guards' carbine)",
-  "title": "who carries the AKS-74U-style carbine instead of torch + sidearm — its weapon light on the handguard is his torch (the light is where the muzzle points), calm he carries it low across the front, hunting he shoulders it, and seen he fires it in short bursts: 2–4 rounds at 600 rpm, the first aimed like a pistol round and each after it wider, 0.9–1.6 s between bursts, thirty to a box and 2.6 s changing it (the empty hits the floor); one round still drops you, like his. Dying, the whole rifle tumbles out of his hands, its light dying on the floor. none = the floor as it was; re-dealt live",
+  "label": "patrol guards' rifles",
+  "title": "who carries the AKS-74U-style carbine instead of torch + sidearm — its weapon light on the handguard is his torch (the light is where the muzzle points), calm he carries it low across the front, hunting he shoulders it, and seen he fires it in short bursts: 2–4 rounds at 600 rpm, the first aimed like a pistol round and each after it wider, 0.9–1.6 s between bursts, thirty to a box and 2.6 s changing it (the empty hits the floor); one round still drops you, like his. Dying, the whole rifle tumbles out of his hands, its light dying on the floor. none = the floor as it was; re-dealt live. Only the level's own patrolling staff (the night shift, a quiet mission's guards; 'Reyes' = the man of that callsign): a squad mission's defenders carry what they were staged with",
   "def": false,
   "extra": "none / Reyes / all"
  },
@@ -5171,7 +5155,7 @@
   "label": "FN2000",
   "title": "",
   "def": false,
-  "extra": "[refill rings + magazines — sandbox: five rings again and 30+1 with two spare thirties (rings are otherwise spent for good — nothing on the floor comes back)] [attachment (2 again) — what the right button works with the rifle up: none → RING (the airfoil launcher) → none — the rifle's own slot digit pressed again does the same]"
+  "extra": "[refill rings + magazines — sandbox: five rings again and 30+1 with two spare thirties (rings are otherwise spent for good — nothing on the floor comes back)] [attachment (2 again) — what the right button fires with the rifle up: RING (the airfoil) ⇄ 40 MM (the grenade) — the rifle's own slot digit pressed again does the same]"
  },
  {
   "path": "Sandbox ▸ Weapons & rifles",
@@ -5182,10 +5166,10 @@
   "extra": "rings ▸ 5 left · attachment none (2 again with the rifle up;"
  },
  {
-  "path": "Sandbox ▸ Weapons & rifles",
+  "path": "Player & weapons ▸ Weapons & rifles",
   "kind": "toggle",
   "label": "suppression (rounds past a man)",
-  "title": "one scalar per man, Sam included, raised by every round that passes within ~2 m of his chest or strikes within ~2.5 m of it (off the segment the round actually flew — no line of sight asked, nothing inferred from anybody's state) and halving every 1.1 s. Guards: ≥ 0.3 he flinches, says so, fires wider and later and stops sprinting into it; ≥ 0.6 his head goes down — crouched behind what he stands at, gun low, no round — for a second or so and until it eases; 4 s of that and he shifts to cover off your line. Two rounds into the jamb beside a man ≈ pinned. Sam: his own rounds open up (± ~2° at full). Off = the number is still worked out and shown below, nobody reacts to it (A/B)",
+  "title": "one scalar per man, the player included, raised by every round that passes within ~2 m of his chest or strikes within ~2.5 m of it (off the segment the round actually flew — no line of sight asked, nothing inferred from anybody's state) and halving every 1.1 s. Guards: ≥ 0.3 he flinches, says so, fires wider and later and stops sprinting into it; ≥ 0.6 his head goes down — crouched behind what he stands at, gun low, no round — for a second or so and until it eases; 4 s of that and he shifts to cover off your line. Two rounds into the jamb beside a man ≈ pinned. The player: his own rounds open up (± ~2° at full). Off = the number is still worked out and shown below, nobody reacts to it (A/B)",
   "def": false,
   "extra": ""
  },
@@ -5501,45 +5485,45 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
+  "path": "Stealth ▸ Needs (breaks off the route)",
   "kind": "slider",
   "label": "needs ▸ coffee dwell s",
   "min": 5,
   "max": 90,
   "step": 1,
-  "title": "seconds stood at the break-room counter (the walk there and back is his route's own: ~8 s each way from the corridor's east end, ~12 from the cubicles' south-east corner, ~6 from the break room)",
+  "title": "seconds stood at the level's coffee place — in the office the break-room counter (the walk there and back is his route's own: ~8 s each way from the corridor's east end, ~12 from the cubicles' south-east corner, ~6 from the break room)",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
+  "path": "Stealth ▸ Needs (breaks off the route)",
   "kind": "slider",
   "label": "needs ▸ smoke dwell s",
   "min": 5,
   "max": 120,
   "step": 1,
-  "title": "seconds stood outside the fire exit, the leaf sprung shut behind him (~15 s each way from the corridor's east end or the cubicles' corner)",
+  "title": "seconds stood at the level's smoking place — in the office outside the fire exit, the leaf sprung shut behind him (~15 s each way from the corridor's east end or the cubicles' corner)",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
+  "path": "Stealth ▸ Needs (breaks off the route)",
   "kind": "slider",
   "label": "needs ▸ water dwell s",
   "min": 3,
   "max": 60,
   "step": 1,
-  "title": "seconds at the cooler in the cubicle farm's south-east corner (~14 s each way from the corridor's east end, ~12 from the break room)",
+  "title": "seconds at the level's water place — in the office the cooler in the cubicle farm's south-east corner (~14 s each way from the corridor's east end, ~12 from the break room)",
   "def": true,
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Needs (breaks off the route)",
+  "path": "Stealth ▸ Needs (breaks off the route)",
   "kind": "buttons",
   "label": "needs",
   "title": "",
   "def": false,
-  "extra": "[send Kowalski for a coffee — test: Kowalski gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the break-room counter, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [send Novak for a coffee — test: Novak gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the break-room counter, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [send Reyes for a coffee — test: Reyes gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the break-room counter, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [nearest → his fullest need — test: the living man nearest you is sent on whichever of HIS needs is fullest (a smoker out the fire door, a stretch round the lobby…)] [defaults — the switch back on, rate / men away / telegraph / dwells back to the shipped values, and the copy kept on this machine dropped]"
+  "extra": "[send staff man 1 for a coffee — test: the level's patrolling staff man 1 (the office: Kowalski) gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the level's coffee place, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [send staff man 2 for a coffee — test: the level's patrolling staff man 2 (the office: Novak) gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the level's coffee place, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [send staff man 3 for a coffee — test: the level's patrolling staff man 3 (the office: Reyes) gets the full telegraph from wherever he stands right now — watch check + glance, the word to whoever is in earshot (or the net) at twelve seconds, neck rub + turn at five — then walks to the level's coffee place, stands his dwell, walks back to the waypoint he was on. Only a calm man on a calm floor goes (the note says why not)] [nearest → his fullest need — test: the living man nearest you is sent on whichever of HIS needs is fullest (a smoker out the fire door, a stretch round the lobby…)] [defaults — the switch back on, rate / men away / telegraph / dwells back to the shipped values, and the copy kept on this machine dropped]"
  },
  {
   "path": "Sandbox ▸ Needs (breaks off the route)",
@@ -5550,10 +5534,10 @@
   "extra": "needs ▸ nobody dealt yet · slot 0/1"
  },
  {
-  "path": "Sandbox ▸ Civilians",
+  "path": "Stealth ▸ Civilians",
   "kind": "toggle",
-  "label": "civilians (the cleaner, the late worker)",
-  "title": "the building's own night people on the floor: Marta cleans the cubicles and the corridor's south side (wiping, emptying the bins), Owen works late at a lit desk in the farm (sits typing, fetches his printing, stands at the south windows). They see you with the guards' own eye test and YOUR light meter (less keen, and narrower with their heads down over a desk or a bin), hear what the guards hear the way they hear it. A glimpse: she stops and looks. Seen plainly / a body / your gun out / a shot or a charge or a scream in earshot: a frozen beat, a scream the floor can hear, and she RUNS — to the nearest living calm guard, else a phone (reception, the break-room wall set), else out of the building — and TELLS: the man takes it as a fix (walks it; searches it weapon out and radios it for an armed man or a body, the floor a step up), the phone puts control on the net and sends the nearest calm man. Then she cowers in a corner. From behind you can grab one like a guard: ask what she knows, tell her to stay down and quiet (lets her go; she tells nobody unless a guard walks onto her), or put her out — a civilian on the floor costs you dear on the card. Off = nobody but the shift (today's floor byte for byte). Kept per machine.",
+  "label": "civilians (the level's own night people)",
+  "title": "the level's own civilians on the floor (the bazaar and the quiet yard have one each, most levels none). In the office: Marta cleans the cubicles and the corridor's south side (wiping, emptying the bins), Owen works late at a lit desk in the farm (sits typing, fetches his printing, stands at the south windows). They see you with the guards' own eye test and YOUR light meter (less keen, and narrower with their heads down over a desk or a bin), hear what the guards hear the way they hear it. A glimpse: she stops and looks. Seen plainly / a body / your gun out / a shot or a charge or a scream in earshot: a frozen beat, a scream the floor can hear, and she RUNS — to the nearest living calm guard, else a phone (reception, the break-room wall set), else out of the building — and TELLS: the man takes it as a fix (walks it; searches it weapon out and radios it for an armed man or a body, the floor a step up), the phone puts control on the net and sends the nearest calm man. Then she cowers in a corner. From behind you can grab one like a guard: ask what she knows, tell her to stay down and quiet (lets her go; she tells nobody unless a guard walks onto her), or put her out — a civilian on the floor costs you dear on the card. Off = nobody but the shift (today's floor byte for byte). Kept per machine.",
   "def": false,
   "extra": ""
  },
@@ -5574,12 +5558,12 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Civilians",
+  "path": "Stealth ▸ Civilians",
   "kind": "buttons",
   "label": "civilians",
   "title": "",
   "def": false,
-  "extra": "[panic Marta now — test: the cleaner is frightened where she stands as if she had seen you where YOU stand — the frozen beat, the scream (the men in earshot turn toward you), the run to the nearest guard / phone / door, the telling, the cowering] [send Marta to a phone — test: the cleaner runs for the nearest phone (reception, or the break-room wall set) and rings you in from where you stand — six seconds on the line, then control puts it out to all callsigns and sends the nearest calm man] [panic Owen now — test: the late worker, likewise] [off / on (fresh) — both back on their first marks, calm, whatever state they were in (a knocked-out one gets up: it is a reset, not a wake)]"
+  "extra": "[panic civilian 1 now — test: the level's first civilian (the office: Marta, the cleaner) is frightened where she stands as if she had seen you where YOU stand — the frozen beat, the scream (the men in earshot turn toward you), the run to the nearest guard / phone / door, the telling, the cowering] [send civilian 1 to a phone — test: the first civilian runs for the nearest phone (the office: reception, or the break-room wall set) and rings you in from where you stand — six seconds on the line, then control puts it out to all callsigns and sends the nearest calm man] [panic civilian 2 now — test: the level's second civilian (the office: Owen, the late worker), likewise] [off / on (fresh) — both back on their first marks, calm, whatever state they were in (a knocked-out one gets up: it is a reset, not a wake)]"
  },
  {
   "path": "Sandbox ▸ Civilians",
@@ -5590,12 +5574,12 @@
   "extra": "civilians ▸ Marta WORK wipe @wp0 (10 s) aw 0.00 | Owen WORK "
  },
  {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
+  "path": "Stealth ▸ Dialogue, alarm & clearing",
   "kind": "buttons",
   "label": "dialogue",
   "title": "",
   "def": false,
-  "extra": "[interrogate nearest guard — one exchange with the living man nearest you (within 2 m — walk up behind one): he answers from his own state — what he personally saw / heard of you, how rattled he is, his temperament — one stage per press (reaction → pressure → the one useful thing he could know, or his refusal → nothing left). The grab that will hold him for this does not exist yet; the line below is the engine's read of him (src/game/dialogue.ts — every line a draft placeholder)]"
+  "extra": "[interrogate nearest guard — test: one exchange with the living guard nearest you (within 2 m, never a teammate), without the grab: he answers from his own state — what he personally saw / heard of you, how rattled he is, his temperament — one stage per press (reaction → pressure → the one useful thing he could know, or his refusal → nothing left). In play this is the held man's 'question' row; the line below is the engine's read of him (src/game/dialogue.ts — every line a draft placeholder)]"
  },
  {
   "path": "Sandbox ▸ Dialogue, alarm & clearing",
@@ -5630,21 +5614,21 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
+  "path": "Stealth ▸ Dialogue, alarm & clearing",
   "kind": "buttons",
   "label": "room clearing",
   "title": "",
   "def": false,
-  "extra": "[clear nearest room now — test: puts the alarm fix where the player stands and locks the floor down (or re-plans the running lockdown) — the pair walks over, stacks on that room's door, opens it hard, hooks in to their corners, sweeps, calls it and moves to the next nearest; a shot, a sighting, a bump or a creak breaks it off into the normal alert AI]"
+  "extra": "[clear nearest room now — test (a level with clear plans: the office family): puts the alarm fix where the player stands and locks the floor down (or re-plans the running lockdown) — the pair walks over, stacks on that room's door, opens it hard, hooks in to their corners, sweeps, calls it and moves to the next nearest; a shot, a sighting, a bump or a creak breaks it off into the normal alert AI]"
  },
  {
-  "path": "Sandbox ▸ Dialogue, alarm & clearing",
+  "path": "Stealth ▸ Dialogue, alarm & clearing",
   "kind": "slider",
   "label": "rooms per clear (0 = auto)",
   "min": 0,
   "max": 5,
   "step": 1,
-  "title": "0 = by what raised the lockdown: a body found → the 3 rooms nearest him, an alarm that came to nothing → the 2 nearest the last fix; 1‥5 = exactly that many. Kicked-in / picked doors' rooms jump the queue; a room called clear in the last minute of the same lockdown is skipped unless the new fix is inside it (applies to the next clear)",
+  "title": "0 = by what raised the lockdown: a body found → the 3 rooms nearest him, an alarm that came to nothing → the 2 nearest the last fix; 1‥5 = exactly that many. Kicked-in / picked doors' rooms jump the queue; a room called clear in the last minute of the same lockdown is skipped unless the new fix is inside it (applies to the next clear). Only on a level with clear plans (the office family)",
   "def": false,
   "extra": ""
  },
@@ -5676,13 +5660,13 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ QRF (going loud)",
+  "path": "Stealth ▸ QRF (office night: the response to gunfire)",
   "kind": "slider",
   "label": "QRF ▸ men",
   "min": 2,
   "max": 4,
   "step": 1,
-  "title": "men in the element (capped by the renderer's eight-character shadow budget: Sam + the three staff + four is exactly it)",
+  "title": "men in the element (capped by the renderer's eight-character shadow budget: the player + the three staff + four is exactly it)",
   "def": false,
   "extra": ""
  },
@@ -5779,12 +5763,12 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
+  "path": "Stealth ▸ Devices (cameras · keypads · lasers)",
   "kind": "buttons",
   "label": "devices",
   "title": "",
   "def": false,
-  "extra": "[all codes — sandbox: Sam knows every keypad's code (as if every man had talked)] [forget codes — sandbox: back to knowing none] [defaults — the device knobs back to the shipped values, and the copy kept on this machine dropped]"
+  "extra": "[all codes — sandbox: you know every keypad's code (as if every man had talked)] [forget codes — sandbox: back to knowing none] [defaults — the device knobs back to the shipped values, and the copy kept on this machine dropped (the same as this section's ↺)]"
  },
  {
   "path": "Sandbox ▸ Devices (cameras · keypads · lasers)",
@@ -5795,7 +5779,7 @@
   "extra": "devices ▸ cam_corridor idle 0.00s · cam_server idle 0.00s · "
  },
  {
-  "path": "Sandbox ▸ Player, doors & props",
+  "path": "Player & weapons ▸ Player, doors & props",
   "kind": "buttons",
   "label": "player",
   "title": "",
@@ -5803,12 +5787,12 @@
   "extra": "[teleport to cursor] [refill ammo]"
  },
  {
-  "path": "Sandbox ▸ Player, doors & props",
+  "path": "Player & weapons ▸ Player, doors & props",
   "kind": "buttons",
   "label": "door locks",
   "title": "",
   "def": false,
-  "extra": "[relock (as authored) — server / storage / manager locked again on the corridor face, kicked keeps mended, pick progress gone (leaves stay where they are)] [unlock all]"
+  "extra": "[relock (as authored) — every door the level authored locked is locked again on its key face, kicked keeps mended, pick progress gone (leaves stay where they are)] [unlock all]"
  },
  {
   "path": "Sandbox ▸ Player, doors & props",
@@ -5868,7 +5852,7 @@
   "min": 0,
   "max": 1,
   "step": 0.05,
-  "title": "ONE knob for what a burst does to the room beyond the hole and the puff it always left: rounds pour heat into a 2 m grid (2 s memory) and a hit's escalation = heat × 2 × this. 0 = the game exactly as it was. 0.5 (default): the first round dents metal / shreds fabric / cracks a screen and scatters a paper stack it passes; the second in two seconds raises dust the guards' eyes and the torch beams really see (the smoke solver) and bigger splinters / gypsum / fluff; three-plus a second sweep mugs, phones and binders off the desk (a monitor off its stand on a direct hit) as rigid debris the floor HEARS land; held for two seconds — or one stun charge — a ceiling tile lets go overhead. 1 = twice as readily, knock-offs thrown harder (the kinetic-mode seed). Every path is capped whatever this says (rows below); nothing of it runs under the tour",
+  "title": "ONE knob for what a burst does to the room beyond the hole and the puff it always left: rounds pour heat into a 2 m grid (2 s memory) and a hit's escalation = heat × 2 × this. 0 = the game exactly as it was. 0.5 (default): the first round dents metal / shreds fabric / cracks a screen and scatters a paper stack it passes; the second in two seconds raises dust the guards' eyes and the torch beams really see (the smoke solver) and bigger splinters / gypsum / fluff; three-plus a second sweep mugs, phones and binders off the desk (a monitor off its stand on a direct hit) as rigid debris the floor HEARS land; held for two seconds — or one stun charge — a ceiling tile lets go overhead. 1 = twice as readily, knock-offs thrown harder (the kinetic-mode seed). Every path is capped whatever this says (rows below); nothing of it runs under the tour. 0 also makes wall breaking, wall charges and glass breaking inert (their sections say so)",
   "def": true,
   "extra": ""
  },
@@ -5996,7 +5980,7 @@
   "label": "chaos",
   "title": "",
   "def": false,
-  "extra": "[bang at cursor — test: a stun charge's worth of destruction where the cursor is (no flash, no dazzle) — the desk cleared, papers up in a ring, the tile above down, dust off the ceiling, the litter about it thrown up again] [kick litter at cursor — test: the charge's IMPULSE alone where the cursor is — no heat, nothing converted or knocked off: only what already lies about goes up] [reset destruction — every scattered stack / knocked-off thing / dead screen back as authored, debris and heat gone (a restart does the same)] [defaults — the knob and the caps back to the shipped values, and the copy kept on this machine dropped]"
+  "extra": "[bang at cursor — test: a stun charge's worth of destruction where the cursor is (no flash, no dazzle) — the desk cleared, papers up in a ring, the tile above down, dust off the ceiling, the litter about it thrown up again] [kick litter at cursor — test: the charge's IMPULSE alone where the cursor is — no heat, nothing converted or knocked off: only what already lies about goes up] [reset destruction — every scattered stack / knocked-off thing / dead screen back as authored, debris and heat gone (a restart does the same)] [defaults — the knob and the caps back to the shipped values, and the copy kept on this machine dropped (the same as the ↺ on Destruction ▸ Chaos)]"
  },
  {
   "path": "Destruction ▸ Tests",
@@ -6005,66 +5989,6 @@
   "title": "",
   "def": false,
   "extra": "chaos 0.00 (impulses off) · heat max 0.0 · debris 0/64 (0 mo"
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "toggle",
-  "label": "glass ▸ panes come apart into shards",
-  "title": "OFF (default) = a pane is what it always was: a round stars it and stops in it, for ever. ON: every round files an impact on the pane (a Voronoi site); the interior partitions (annealed) shed the cell a round lands in from the Nth hit on — or a spot hit twice — and any tongue left hanging a beat later; the exterior glazing (tempered) holds to its count then dices whole into chips and a few crumbs; the narrow sidelight and the clerestory strips (laminated) crack and never open. Fallen cells are rigid shards in the debris pool (its cap / eviction shared with the knock-offs and tiles) plus glass chips; the hole is real to view / light / mirror rays, rounds, sound, and — once every cell below 1.9 m is gone — to feet. Nothing at chaos 0 or under the tour. Kept per machine. THE RENDERER'S HALF IS COMPILED AT BOOT: after flipping this, reload the page for the holes and the crack lines to show (the shards fall either way)",
-  "def": false,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "slider",
-  "label": "glass ▸ annealed: hits before cells fall",
-  "min": 1,
-  "max": 12,
-  "step": 1,
-  "title": "the interior partitions (the conference glazing): nothing falls before this many rounds have gone into one pane; from then on every round drops the cell it lands in (and the same spot hit twice goes through regardless)",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "slider",
-  "label": "glass ▸ tempered: hits before it dices",
-  "min": 1,
-  "max": 16,
-  "step": 1,
-  "title": "the exterior glazing (frontage, windows): holds whole to this many rounds, then the entire pane goes at once — mostly chips, a few rigid crumbs",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "slider",
-  "label": "glass ▸ support under which a cell falls",
-  "min": 0,
-  "max": 0.8,
-  "step": 0.02,
-  "title": "a cell is held by the frame sides it touches (bottom 1.3, sides 1.0, top 0.9 × its perimeter share) and by its intact neighbours (0.9 × theirs × the shared edge); under this it follows a beat later — higher = tongues between shot-out cells give sooner, 0 = only cells actually hit ever fall",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "slider",
-  "label": "glass ▸ blast reach (m)",
-  "min": 0,
-  "max": 6,
-  "step": 0.1,
-  "title": "a stun charge within this of a pane's nearest point seeds five impacts on it (the first two where its crack stars sit) and drops the annealed cells it reaches / dices a tempered pane close enough; 0 = charges only star glass, as before",
-  "def": true,
-  "extra": ""
- },
- {
-  "path": "Destruction ▸ Glass",
-  "kind": "buttons",
-  "label": "glass",
-  "title": "",
-  "def": false,
-  "extra": "[break test — star AND hole the pane on the line from Sam's chest to the cursor: three hits in one spot through the same path a round takes (glass.ts glassHit → glassbreak hit) — with the switch on the cell under the point drops as shards a quarter second later] [reset glass — impact lists, dropped cells and gust sources cleared — a restart does the same (and takes the shards with the debris)]"
  },
  {
   "path": "Destruction ▸ Glass",
@@ -6123,7 +6047,7 @@
  {
   "path": "Audio ▸ Mixer",
   "kind": "slider",
-  "label": "music",
+  "label": "music volume",
   "min": 0,
   "max": 1,
   "step": 0.01,
@@ -6157,7 +6081,7 @@
   "path": "Checkpoints ▸ Checkpoints",
   "kind": "toggle",
   "label": "autosave",
-  "title": "written by itself on: the mission stage advancing, the first entry into a room region, a hauled body let go of ≥ 1.5 m away, every 90 s of undetected play — never while anybody is alert / searching / over awareness 0.4, never mid-action, 2 s debounce, ≥ 10 s apart, a request unmet for 25 s lapses; 3 rotating slots in localStorage (kept per machine with this switch)",
+  "title": "Solo runs only: any run with teammates or scenario defenders on the floor (rescue, room clear, night breach, the pair) refuses every save, forced or not. Written by itself on: the mission stage advancing, the first entry into a room region, a hauled body let go of ≥ 1.5 m away, every 90 s of undetected play — never while anybody is alert / searching / over awareness 0.4, never mid-action, 2 s debounce, ≥ 10 s apart, a request unmet for 25 s lapses; 3 rotating slots in localStorage (kept per machine with this switch)",
   "def": false,
   "extra": ""
  },
@@ -6167,7 +6091,7 @@
   "label": "save",
   "title": "",
   "def": false,
-  "extra": "[save now — the manual slot (one, apart from the three autosaves) — refused with the reason under a show / daylight / the QRF / a unit / Sam down / a man scripted / Sam mid-action / a thing on its fuse] [save (force) — accepts Sam mid-action and scripted men: the FILE lets go of them (a held man free, a pick abandoned, the pair off their drill) — the running game is not touched] [why not?]"
+  "extra": "[save now — the manual slot (one, apart from the three autosaves) — refused with the reason under a show / daylight / the QRF / a unit / the player down / a man scripted / the player mid-action / a thing on its fuse] [save (force) — accepts you mid-action and scripted men (not a squad run: units on the floor still refuse): the FILE lets go of them (a held man free, a pick abandoned, the pair off their drill) — the running game is not touched] [why not?]"
  },
  {
   "path": "Checkpoints ▸ Checkpoints",

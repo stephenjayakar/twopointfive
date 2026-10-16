@@ -1,0 +1,1 @@
+{"tier":"high","res":[1368,770,1777,1000],"K":4,"scale":0.77,"cost":{"K0":{"direct":3.3,"directP95":4.65,"softblur":2.28,"union":16.79,"unionP95":18.42},"K4":{"direct":3.49,"directP95":4.59,"softblur":2.8,"union":18.23,"unionP95":18.61},"K8":{"direct":3.57,"directP95":3.67,"softblur":2.36,"union":16.33,"unionP95":18.81}}}

@@ -13,7 +13,6 @@ const IK = 'Space';
 const { v3, wrapAngle, DEG } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { startGrab } = await import(`${ROOT}/src/game/player.ts`);
-const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
 const { pairOf, flankShot, standoffSummary, escalationOf, colleagueInLine, STANDOFF_DEBUG } = guardsMod;
 const VERBOSE = process.argv.includes('--verbose');
@@ -77,7 +76,7 @@ export async function stageHold(seed: number, victimI: number, at: Vec3, yaw: nu
   for (let i = 0; i < 60 && game.player.holding?.phase !== 'held'; i++) { if (!freeze) W.cursorAt([at[0] + Math.sin(yaw) * 3, 0, at[2] + Math.cos(yaw) * 3]); W.step(DT); }
   // the man is HELD: from here the scenario these probes mean is 'colleagues confront a hostage-taker they can SEE' — the pair stands in ordinary corridor light (0.6).
   // (Since 08-11 a watcher acquires the pair through the light meter like anything else: pinned at the sneak-up 0.02 nobody beyond arm's reach would ever enter
-  // the standoff — the designer's 'seen holding a man completely in the dark' bug was this file's old premise.) The headless world has no GPU meter, so hold it there each frame.
+  // the standoff — the maintainer's 'seen holding a man completely in the dark' bug was this file's old premise.) The headless world has no GPU meter, so hold it there each frame.
   game.player.visibility = STANDOFF_LIT; { const step1 = W.step.bind(W); W.step = (dt: number, follow?: Vec3 | null) => { if (game.player.holding) game.player.visibility = (game as any).__probeVis ?? STANDOFF_LIT; step1(dt, follow); }; }
   for (let i = 0; i < 10; i++) { if (!freeze) W.cursorAt([at[0] + Math.sin(yaw) * 3, 0, at[2] + Math.cos(yaw) * 3]); W.step(DT); }
   const P = pairOf(game); const faceDeg = P ? P.facing / DEG : yaw / DEG;
@@ -319,8 +318,8 @@ export async function standoffEnd() {
         if (endT >= 0 && firstShotT < 0) for (const e of game.events) if (e.kind === 'guardShot' && e.time === t && v3.distXZ(e.pos, A.char.pos) < 0.05) firstShotT = t;
         if (foundT < 0 && victim.found) foundT = t;
         if (standoffGoneT < 0 && endT >= 0 && !A.standoff) standoffGoneT = t;
-        if (how === 'release' && victim.state === 'dead') freedDead = true;
-        if (how === 'release' && victimAlertT < 0 && !victim.held && victim.state === 'alert') victimAlertT = t;
+        if ((how as string) === 'release' && victim.state === 'dead') freedDead = true;
+        if ((how as string) === 'release' && victimAlertT < 0 && !victim.held && victim.state === 'alert') victimAlertT = t;
         if (f % 30 === 0) log.push(`${f2(t - t0)}s Kowalski ${A.state}${A.standoff ? '/standoff' : ''} ${f1(v3.distXZ(A.char.pos, game.player.char.pos))} m from Sam spd ${f2(A.speed)} fireCd ${f2(A.fireCd)} seen ${f2(t - A.lastSeenT)} s ago ${A.muzzleDown ? 'muzzleDown' : ''} · Novak ${victim.state}${victim.held ? '/held:' + victim.held.phase : ''} · hold ${game.player.holding?.phase ?? '—'}`);
         if (endT >= 0 && t - endT > 4.5) break;
       }

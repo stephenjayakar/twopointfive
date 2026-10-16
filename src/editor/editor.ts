@@ -8,8 +8,11 @@ import type { Vec3 } from '../math/vec';
 import { FlagName, AUTHORED_FLAGS, LevelData, BoxData, LightData, DoorData, RouteData, VolumeData, SwitchableData, PropData, ObjectiveData, FloorData, MaterialData, DeviceData, CameraData, KeypadData, LaserData, DEVICE_DEFAULTS, parseLevelData, parseLevelDataLenient, floorUsers, serializeLevelData, structuralDiff, canonicalLevelData, LEVEL_DATA_VERSION } from '../scene/levelData';
 import { Doc, Collection, clonePlain } from './doc';
 import { lintLevel, idsInMessage, LintOpts, LintReport } from './lint';
+import { dealtSwings } from './swing';
+import type { SwingDeal } from '../game/doorswing';
 import { BOX_PRESETS, LIGHT_PRESETS, BoxPreset, doorFrameBoxes, cutOpeningPlan, pushFace, Face, roundVec, round6, snapTo } from './geom';
 import { materialSet, materialCreate, materialRemove, markTexelOf, faceLattice, clampToFace, fitRows } from './paint';
+import { LEAF_W } from '../scene/doorSize';
 
 export type RefKind = 'box' | 'prop' | 'light' | 'sw' | 'door' | 'route' | 'volume' | 'chokepoint' | 'device' | 'floor' | 'mark';
 export interface Ref { kind: RefKind; id: string; sub?: number }
@@ -21,6 +24,63 @@ export function parseRef(r: string): Ref {
 }
 export const refStr = (r: Ref) => `${r.kind}:${r.id}${r.sub !== undefined ? `#${r.sub}` : ''}`;
 const KIND_COLL: Partial<Record<RefKind, Collection>> = { box: 'boxes', prop: 'props', light: 'lights', sw: 'switchables', door: 'doors', route: 'routes', volume: 'volumes', chokepoint: 'chokepoints', device: 'devices', floor: 'floors' };
+
+/** WHERE THE `scenarios` BLOCK NAMES A DOOR OR A ROUTE (scene/scenarios.ts is its shape; levelData.ts validateLevelData checks the same slots): a door by its id —
+ *  a room's doors and the door each mark watches, a squad's barricade doors and the door a late squad comes by, the rescue's room / side / from doors and its
+ *  flow's regions and openings, a quiet spot's and exit's door, a lesson test's `door` (and `on`, beside an 'order:' deed) — and a route by the name the game
+ *  knows it by (its `name`, else its id): the quiet mission's patrol sets. ONLY these slots: a string elsewhere that happens to equal an id (a room's own id, a
+ *  place as a line says it) is the player's words and is never touched. Each row is the holder + key (rename writes through it on a CLONE of the block) and a
+ *  few words naming the user (delete's refusal). No editor tool edits the block; rename and delete keep it true to the document. */
+export function scenarioRefs(S: unknown, kind: 'door' | 'route'): { o: any; k: string | number; where: string }[] {
+  const out: { o: any; k: string | number; where: string }[] = []; const B = S as any; if (!B || typeof B !== 'object') return out;
+  const arr = (x: unknown): any[] => Array.isArray(x) ? x : [];
+  const at = (o: any, k: string | number, where: string) => { if (o && typeof o === 'object' && typeof o[k] === 'string') out.push({ o, k, where }); };
+  if (kind === 'route') { arr(B.quiet?.patrols).forEach((set, i) => arr(set).forEach((_n, j) => at(set, j, `scenarios.quiet patrol set ${i}`))); return out; }
+  for (const r of arr(B.roomClear?.rooms)) { for (const x of arr(r?.doors)) at(x, 'id', `scenarios.roomClear room '${r?.id}'`); for (const m of arr(r?.marks)) at(m, 'watch', `scenarios.roomClear room '${r?.id}' (a defender's mark watches it)`); }
+  for (const q of arr(B.roomClear?.squads)) { arr(q?.barricade).forEach((_n, j) => at(q.barricade, j, `scenarios.roomClear squad '${q?.id}' (barricade)`)); at(q?.arrive, 'door', `scenarios.roomClear squad '${q?.id}' (comes in by it)`); }
+  const R = B.rescue; at(R?.room, 'door', 'scenarios.rescue (the hostage room\'s door)'); at(R?.side, 'door', 'scenarios.rescue (the side door)'); at(R?.side?.from, 'door', 'scenarios.rescue (the room the side door is taken from)');
+  for (const g of arr(R?.flow?.regions)) at(g, 'door', `scenarios.rescue flow region '${g?.id}'`); for (const o of arr(R?.flow?.route)) at(o, 'door', `scenarios.rescue flow opening '${o?.id}'`);
+  for (const p of arr(B.quiet?.spots)) at(p, 'door', `scenarios.quiet spot '${p?.place}'`); for (const x of arr(B.quiet?.exits)) at(x, 'door', `scenarios.quiet exit '${x?.name}'`);
+  const test = (t: any, where: string, depth = 0): void => {   // a lesson's done-test, and the tests inside an `all` / `any`
+    if (!t || typeof t !== 'object' || depth > 8) return; if (Array.isArray(t)) { for (const x of t) test(x, where, depth + 1); return; }
+    at(t, 'door', where); if (typeof t.what === 'string' && t.what.startsWith('order:')) at(t, 'on', where);
+    for (const v of Object.values(t)) if (v && typeof v === 'object') test(v, where, depth + 1);
+  };
+  for (const t of arr(B.lesson?.steps)) test(t?.done, `scenarios.lesson step '${t?.id}'`);
+  return out;
+}
+/** one line per part of a `scenarios` block (the level sheet's read-only section and its count line: no editor tool edits the block) */
+export function scenarioLines(S: unknown): string[] {
+  const B = S as any; const L: string[] = []; if (!B || typeof B !== 'object') return L;
+  const arr = (x: unknown): any[] => Array.isArray(x) ? x : [];
+  const pt = (p: any) => Array.isArray(p) ? `(${Number(p[0]).toFixed(1)}, ${Number(p[2]).toFixed(1)})` : '(?)';
+  const team = (T: any) => T ? `team start ${pt(T.sam)}${arr(T.ops).length ? ` + ${arr(T.ops).length} teammate mark(s)` : ''}` : 'team start: the breach plan\'s';
+  if (B.nightBreach) L.push(`night breach · ${team(B.nightBreach.team)}${B.nightBreach.room ? ` · room '${B.nightBreach.room}'` : ''}`);
+  if (B.roomClear) { const R = B.roomClear, rooms = arr(R.rooms), sq = arr(R.squads);
+    L.push(`room clear '${R.name}' · ${team(R.team)} · ${rooms.length} room(s), ${rooms.reduce((n, r) => n + (r?.garrison | 0), 0)} defenders${R.maxMen ? ` (at most ${R.maxMen} at once)` : ''}`);
+    for (const r of rooms) L.push(`  room ${r?.id} "${r?.name}" × ${r?.garrison} · doors ${arr(r?.doors).map(x => x?.id).join(' ')} · ${arr(r?.marks).length} mark(s)`);
+    for (const q of sq) L.push(`  squad ${q?.name ?? q?.id}: ${q?.arrive ? `${q.arrive.men} men, late, by door ${q.arrive.door}` : `rooms ${arr(q?.rooms).join(' ')}`}${q?.mayLeave === false ? ' · stays home' : ''}`); }
+  if (B.rescue) { const R = B.rescue;
+    L.push(`rescue · ${team(R.team)} · room "${R.room?.name}" by door ${R.room?.door}${R.side ? ` + side door ${R.side.door}` : ''}`);
+    L.push(`  ${arr(R.hostages).length} hostage(s) · captor · door man · ${R.cast ? `${R.cast.roamers} of ` : ''}${arr(R.roamers).length} roamer mark(s)${arr(R.guards).length ? ` · ${arr(R.guards).length} more gun(s) in the room` : ''}${R.flow ? ` · flow: ${arr(R.flow.route).length} opening(s)` : ' · no flow'}`); }
+  if (B.quiet) { const Q = B.quiet;
+    L.push(`quiet · takes ${Q.thing ?? 'the drive'} · ${arr(Q.starts).length} start(s) · ${arr(Q.spots).length} spot(s) · ${arr(Q.exits).length} exit(s)`);
+    L.push(`  patrols: ${Q.patrols ? arr(Q.patrols).map((s: any) => `[${arr(s).join(' ')}]`).join(' ') : 'every route, every run'}`);
+    L.push(`  exits by door: ${arr(Q.exits).map((x: any) => x?.door).join(' ')} · spots by door: ${arr(Q.spots).map((x: any) => x?.door).join(' ')}`); }
+  if (B.lesson) L.push(`lesson "${B.lesson.title}" · ${arr(B.lesson.steps).length} step(s), laid over ${B.roomClear ? 'the room clear' : B.quiet ? 'the quiet mission' : 'the level\'s mission'}`);
+  if (B.places) L.push(`places · ${arr(B.places.areas).length} named area(s)`);
+  return L;
+}
+/** the block in a few words ('room clear (4 rooms, 3 squads) · places'); '' with no block */
+export function scenarioWords(S: unknown): string {
+  const B = S as any; if (!B || typeof B !== 'object') return ''; const n = (x: unknown) => Array.isArray(x) ? x.length : 0; const w: string[] = [];
+  if (B.nightBreach) w.push('night breach');
+  if (B.roomClear) w.push(`room clear (${n(B.roomClear.rooms)} rooms${n(B.roomClear.squads) ? `, ${n(B.roomClear.squads)} squads` : ''})`);
+  if (B.rescue) w.push(`rescue (${n(B.rescue.hostages)} hostages)`);
+  if (B.quiet) w.push(`quiet (${n(B.quiet.starts)} starts, ${n(B.quiet.spots)} spots, ${n(B.quiet.exits)} exits)`);
+  if (B.lesson) w.push(`lesson (${n(B.lesson.steps)} steps)`); if (B.places) w.push('places');
+  return w.join(' · ');
+}
 
 export interface EditorSettings {
   snap: boolean; snapStep: number; grid: boolean; gridStep: number;
@@ -41,16 +101,20 @@ export class Editor {
   /** the floor being edited (new things are created on it; the grid is drawn at its y) */
   floorId: string;
   lintOpts: LintOpts = {};
+  /** the dev server's file this document was LOADED FROM, by stem ('office-t20' — levels/office-t20.json), which is where ⌘/Ctrl S writes it back; null = a
+   *  document from nowhere on the server (a picked or dropped file, a blank level, an autosave slot that did not say): saving then goes by the level's name */
+  file: string | null = null;
   /** UI hooks: something to say (status line), selection changed */
   onMsg: (text: string) => void = () => {};
   onSelect: (() => void)[] = [];
   onSettings: (() => void)[] = [];
 
-  constructor(data: LevelData, opts: { lintAllow?: LintOpts['allow'] } = {}) {
+  constructor(data: LevelData, opts: { lintAllow?: LintOpts['allow']; file?: string | null } = {}) {
     this.doc = new Doc(data);
     this.floorId = this.doc.data.floors[0]?.id ?? 'f0';
     if (this.doc.data.meta.grid && this.doc.data.meta.grid > 0) this.settings.snapStep = this.doc.data.meta.grid;   // the level remembers its snap (meta.grid; the Level sheet edits it)
     if (opts.lintAllow) this.lintOpts.allow = opts.lintAllow;
+    this.file = opts.file ?? null;
     this.doc.onChange((_c, why) => { if (why === 'load') { this.floorId = this.doc.data.floors[0]?.id ?? 'f0'; this.setSelection([]); } else this.pruneSelection(); });
   }
   get data(): LevelData { return this.doc.data; }
@@ -139,7 +203,13 @@ export class Editor {
         }
       }
     }, co);
+    {   // most of the building moved: say what did NOT come (no ref reaches them, so no move does) — once a gesture, not once a frame of a drag
+      const d = this.data, n = refs.filter(x => parseRef(x).kind === 'box').length, left = [d.scenarios ? 'the scenarios block\'s marks (team start, rooms, defenders, hostages, exits)' : '', d.civilians?.length ? `${d.civilians.length} civilian(s)` : '', d.vents?.length ? `${d.vents.length} vent(s)` : '', d.plans.roomClear.length || d.plans.breach ? 'the drill plans' : '', d.surfaces ? 'the footstep map' : ''].filter(Boolean);
+      const key = co ?? `${refs.length}:${refs[0]}`;
+      if (n >= 20 && n * 2 >= d.boxes.length && (dv[0] || dv[2]) && left.length && key !== this.movedSaid) { this.movedSaid = key; this.msg(`moved ${n} of ${d.boxes.length} boxes — NOT moved with them (they stay where the building was; nothing in the editor moves them): ${left.join(' · ')}`); }
+    }
   }
+  private movedSaid = '';
   /** Rotate boxes / volumes / props / doors / lights (their aim) by dyaw radians about +Y, each about its own centre (or about `pivot` if given, moving them). */
   rotate(refs: string[], dyaw: number, opts: { coalesce?: string; pivot?: Vec3; snapDeg?: number } = {}) {
     if (!refs.length || !dyaw) return;
@@ -182,7 +252,13 @@ export class Editor {
     for (const id of boxIds) { if (d.breaker.panel === id || d.breaker.led === id) throw new Error(`${id} is the breaker's ${d.breaker.panel === id ? 'panel' : 'LED'} — point the breaker at another box first`); }
     for (const id of doors) {
       const users = [...d.mission.objectives.filter(o => (o.kind === 'reach' || o.kind === 'exfil') && o.door === id).map(o => `objective '${o.id}'`), ...d.plans.roomClear.filter(p => p.door === id).map(p => `clear plan '${p.id}'`), ...(d.plans.breach?.door === id || d.plans.breach?.next?.door === id ? [`the breach plan`] : []), ...d.devices.filter(v => v.kind === 'keypad' && v.door === id && !devices.includes(v.id)).map(v => `keypad '${v.id}'`)];   // (a pad going in the same call is no user)
-      if (users.length) throw new Error(`door '${id}' is used by ${users.join(', ')} — repoint them first`);
+      const sc = this.scenarioUsers('door', id);   // (the missions' own block: a room's door, a squad's, the rescue's, a quiet spot's or exit's, a lesson's)
+      if (users.length || sc.length) throw new Error(`door '${id}' is used by ${[...users, ...sc].join(', ')} — repoint them first${sc.length ? ' (the scenarios block has no editor tool: it is edited in the level\'s generator or its file)' : ''}`);
+    }
+    for (const id of [...routes, ...[...points].filter(([rid, is]) => !routes.includes(rid) && (this.doc.get<RouteData>('routes', rid)?.points.length ?? 0) - new Set(is).size < 1).map(([rid]) => rid)]) {   // (a route whose last point goes, goes)
+      const t = this.doc.get<RouteData>('routes', id); if (!t) continue; const known = t.name ?? t.id;
+      const sc = d.routes.some(x => x.id !== id && (x.name ?? x.id) === known) ? [] : this.scenarioUsers('route', known);
+      if (sc.length) throw new Error(`route '${id}' is manned by ${sc.join(', ')} — take it out of the patrol sets first (the scenarios block has no editor tool: it is edited in the level's generator or its file)`);
     }
     for (const id of floors) { if (d.floors.length - floors.length < 1) throw new Error('the last floor cannot go'); const users = floorUsers(d, id).filter(u => !refs.includes(u.ref)); if (users.length) throw new Error(`floor '${id}' still has ${users.length} thing(s) on it (${users.slice(0, 4).map(u => u.ref).join(' ')}${users.length > 4 ? ' …' : ''}) — delete or move them first`); }   // (FLOOR_USERS: the one table delete, rename and lint share)
     doc.transact(`delete ${refs.length === 1 ? refs[0] : `${refs.length} things`}`, () => {
@@ -237,7 +313,15 @@ export class Editor {
     return out;
   }
   uniqueId(coll: Collection, want: string): string { const arr = (this.data as any)[coll] as { id: string }[]; let id = want.replace(/[^A-Za-z0-9_.-]/g, '_') || 'x'; if (!arr.some(e => e.id === id)) return id; let k = 2; while (arr.some(e => e.id === `${id}_${k}`)) k++; return `${id}_${k}`; }
-  /** Rename an entity id and rewrite every reference to it (boxes: switchables / fixtures / breaker / beacons; doors: objectives / plans / keypads; lights: daylight.lightsOff; floors: everything on it). */
+  /** who in the `scenarios` block names this door id / this route (by the name the game knows it by), in words, each once */
+  scenarioUsers(kind: 'door' | 'route', id: string): string[] { return [...new Set(scenarioRefs(this.data.scenarios, kind).filter(u => u.o[u.k] === id).map(u => u.where))]; }
+  /** rewrite a door id / a route's known name wherever the `scenarios` block names it (scenarioRefs' slots only); call inside a transact. Returns how many slots changed. */
+  private scenarioRewrite(kind: 'door' | 'route', from: string, to: string): number {
+    if (!this.data.scenarios) return 0; const S = clonePlain(this.data.scenarios); let n = 0;
+    for (const u of scenarioRefs(S, kind)) if (u.o[u.k] === from) { u.o[u.k] = to; n++; }
+    if (n) this.doc.setPath(['scenarios'], S); return n;
+  }
+  /** Rename an entity id and rewrite every reference to it (boxes: switchables / fixtures / breaker / beacons; doors: objectives / plans / keypads / the scenarios block; routes: the quiet mission's patrol sets; lights: daylight.lightsOff; floors: everything on it). */
   rename(ref: string, newId: string) {
     const r = parseRef(ref); const coll = KIND_COLL[r.kind]; if (!coll) throw new Error(`rename: not for ${r.kind}`);
     if (!/^[A-Za-z0-9_.-]{1,64}$/.test(newId)) throw new Error('ids: letters, digits, _ . - (1–64)');
@@ -257,7 +341,9 @@ export class Editor {
         if (d.plans.breach?.door === r.id) doc.setPath(['plans', 'breach', 'door'], newId); if (d.plans.breach?.next?.door === r.id) doc.setPath(['plans', 'breach', 'next', 'door'], newId);
         for (const v of d.devices) if (v.kind === 'keypad' && v.door === r.id) doc.update<any>('devices', v.id, { door: newId });
         for (const b of d.boxes) if (b.group === `doorframe.${r.id}`) doc.update<BoxData>('boxes', b.id, { group: `doorframe.${newId}` });
-      } else if (r.kind === 'light') { if (d.daylight?.lightsOff.includes(r.id)) doc.setPath(['daylight', 'lightsOff'], d.daylight.lightsOff.map(x => x === r.id ? newId : x)); }
+        this.scenarioRewrite('door', r.id, newId);
+      } else if (r.kind === 'route') { const t = this.doc.get<RouteData>('routes', newId); if (t && t.name === undefined && !d.routes.some(x => x.id !== newId && (x.name ?? x.id) === r.id)) this.scenarioRewrite('route', r.id, newId); }   // (the game knows a route by its name, else its id — a named route's patrol sets do not see its id)
+      else if (r.kind === 'light') { if (d.daylight?.lightsOff.includes(r.id)) doc.setPath(['daylight', 'lightsOff'], d.daylight.lightsOff.map(x => x === r.id ? newId : x)); }
       else if (r.kind === 'device') { for (const o of d.doors) if (o.lock === r.id) doc.update<DoorData>('doors', o.id, { lock: newId }); }   // a keypad's id IS its door's lock id (validateLevelData holds the two together): the door follows the pad's new name
       else if (r.kind === 'floor') {
         for (const u of floorUsers(d, r.id)) {   // (FLOOR_USERS: the one table delete, rename and lint share — civilians and connector ends included)
@@ -388,13 +474,22 @@ export class Editor {
   // ---------------------------------------------------------------- doors
   addDoor(spec: Partial<DoorData> = {}, opts: { select?: boolean; frame?: boolean; cut?: boolean } = {}): string {
     const id = this.uniqueId('doors', spec.id ?? `door_${this.data.doors.length}`);
-    const d: DoorData = { id, floor: this.floor().id, hinge: spec.hinge ? [round6(spec.hinge[0]), round6(spec.hinge[1])] : [20, 14], closedDir: round6(spec.closedDir ?? 0), width: round6(spec.width ?? 1.16) };
-    for (const k of ['angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide'] as const) if (spec[k] !== undefined) (d as any)[k] = spec[k];
+    const d: DoorData = { id, floor: this.floor().id, hinge: spec.hinge ? [round6(spec.hinge[0]), round6(spec.hinge[1])] : [20.32, 14], closedDir: round6(spec.closedDir ?? 0), width: round6(spec.width ?? LEAF_W) };
+    for (const k of ['angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'swing'] as const) if (spec[k] !== undefined) (d as any)[k] = spec[k];
     this.doc.transact(`add door ${id}`, () => { this.doc.insert('doors', d); if (opts.cut) this.cutOpening(id); if (opts.frame) this.makeFrame(id); });
     if (opts.select !== false) this.setSelection([`door:${id}`]);
     return id;
   }
   updateDoor(id: string, patch: Partial<DoorData> | ((d: DoorData) => DoorData), opts: { coalesce?: string; label?: string } = {}) { this.doc.update<DoorData>('doors', id, patch, opts); }
+  /** the side a door opens into (doors open one way: ±1 on the sign of game/doors.ts Doors.side), and why: `swing` in the file, else the
+   *  deal the game makes when the level starts, run on the document (swing.ts). Kept per document revision; while edits are streaming in
+   *  (a drag) the last deal is shown and re-dealt at most four times a second. null = the document does not load, or no such door. */
+  doorSwing(id: string, now = false): SwingDeal | null {
+    const t = typeof performance !== 'undefined' ? performance.now() : Date.now();
+    if (!this.swings || (this.swings.rev !== this.doc.rev && (now || t - this.swings.at > 250))) this.swings = { rev: this.doc.rev, at: t, deal: dealtSwings(this.data) };
+    return this.swings.deal?.get(id) ?? null;
+  }
+  private swings: { rev: number; at: number; deal: Map<string, SwingDeal> | null } | null = null;
   /** (re)build the frame boxes for a door: removes any existing group doorframe.<id> boxes first; returns the new box ids */
   makeFrame(doorId: string, opts: { t?: number } = {}): string[] {
     const d = this.doc.get<DoorData>('doors', doorId); if (!d) throw new Error(`no door '${doorId}'`);
@@ -448,7 +543,11 @@ export class Editor {
     return id;
   }
   updateRoute(id: string, patch: Partial<RouteData> | ((r: RouteData) => RouteData), opts: { coalesce?: string; label?: string } = {}) {
-    this.doc.update<RouteData>('routes', id, r => { const n = typeof patch === 'function' ? patch(r) : { ...r, ...patch }; if (n.wait.length !== n.points.length) n.wait = n.points.map((_, i) => n.wait[i] ?? 0); return n; }, opts);
+    const next = (r: RouteData) => { const n = typeof patch === 'function' ? patch(r) : { ...r, ...patch }; if (n.wait.length !== n.points.length) n.wait = n.points.map((_, i) => n.wait[i] ?? 0); return n; };
+    // (the name the game knows him by — `name`, else the id — is what the quiet mission's patrol sets hold: a new name is followed there in the same undo step)
+    const was = this.doc.get<RouteData>('routes', id), k0 = was ? was.name ?? was.id : '', k1 = was ? (n => n.name ?? n.id)(next(clonePlain(was))) : '';
+    if (was && k1 !== k0 && !this.data.routes.some(x => x.id !== id && (x.name ?? x.id) === k0) && this.scenarioUsers('route', k0).length) this.doc.transact(opts.label ?? `rename route ${id}'s man`, () => { this.doc.update<RouteData>('routes', id, next); this.scenarioRewrite('route', k0, k1); });
+    else this.doc.update<RouteData>('routes', id, next, opts);
   }
   movePoint(id: string, i: number, pos: Vec3, opts: { coalesce?: string } = {}) { this.updateRoute(id, r => ({ ...r, points: r.points.map((p, k) => k === i ? roundVec([pos[0], 0, pos[2]]) : p) }), { coalesce: opts.coalesce, label: `move ${id}#${i}` }); }
   insertPoint(id: string, i: number, pos: Vec3, wait = 0) { this.updateRoute(id, r => ({ ...r, points: [...r.points.slice(0, i), roundVec([pos[0], 0, pos[2]]), ...r.points.slice(i)], wait: [...r.wait.slice(0, i), wait, ...r.wait.slice(i)] }), { label: `insert ${id}#${i}` }); }
@@ -564,17 +663,25 @@ export class Editor {
    *  `lenient` (the RESTORE paths: the autosave slot, a session's own text) opens a parseable document even when it does not validate — its problems land in
    *  `loadErrors` / onLoadErrors for the problems panel — and refuses only text that is not a level at all (levelData.ts parseLevelDataLenient): a session must
    *  never be silently replaced by another level and then autosaved over (review T4.1). Returns the errors it was opened with. */
-  load(src: string | LevelData, opts: { keepSaved?: boolean; lintAllow?: LintOpts['allow']; lenient?: boolean } = {}): string[] {
+  load(src: string | LevelData, opts: { keepSaved?: boolean; lintAllow?: LintOpts['allow']; lenient?: boolean; file?: string | null } = {}): string[] {
     const text = typeof src === 'string' ? src : JSON.stringify(src);
     let data: LevelData, errors: string[] = [];
     if (opts.lenient) ({ data, errors } = parseLevelDataLenient(text)); else data = parseLevelData(text);
     this.doc.load(data, { keepSaved: opts.keepSaved });
-    if (opts.lintAllow !== undefined) this.lintOpts.allow = opts.lintAllow;
+    this.lintOpts.allow = opts.lintAllow;   // (absent = none: a sidecar's allowances are its own level's — the office's used to stay on over whatever was opened next)
+    this.file = opts.file ?? null;
     if (data.meta?.grid && data.meta.grid > 0) this.settings.snapStep = data.meta.grid;
     this.loadErrors = errors; this.loadProblems = errors.map(e => ({ text: `SCHEMA ${e}`, sev: 'error' as const, ids: idsInMessage(e, data) }));
     if (errors.length) this.report(this.loadProblems, `opened '${data.name}' WITH ${errors.length} PROBLEM(S) — listed in the problems panel; the game cannot load it until they are fixed: ${errors[0]}`);
-    else this.msg(`loaded '${data.name}': ${data.boxes.length} boxes · ${data.lights.length} lights · ${data.doors.length} doors · ${data.routes.length} routes`);
+    else this.msg(`loaded '${data.name}': ${this.counts(false)}${data.meta?.generator ? ` — GENERATED (${data.meta.generator.split(' ')[0]}): a re-export overwrites edits saved to it` : ''}`);
     return errors;
+  }
+  /** what the document holds, in one line: the long form is the level sheet's, the short one the load message's */
+  counts(long = true): string {
+    const c = this.data, sc = scenarioWords(c.scenarios), n = (x: unknown) => Array.isArray(x) ? x.length : 0;
+    const head = long ? `${c.boxes.length} boxes · ${c.props.length} props · ${c.lights.length} lights · ${c.switchables.length} switchables · ${c.doors.length} doors · ${c.routes.length} routes · ${c.volumes.length} volumes · ${Object.keys(c.materials).length} materials`
+      : `${c.boxes.length} boxes · ${c.lights.length} lights · ${c.doors.length} doors · ${c.routes.length} routes`;
+    return `${head}${long ? '\n' : ' · '}${c.devices.length} devices · ${n(c.civilians)} civilians · ${n(c.vents)} vents · scenarios: ${sc || (c.name === 'office' || c.name.startsWith('office-') ? 'none in the file (the office\'s are levels/office.scenarios.ts)' : 'none')}`;
   }
   /** a structural self-check: serialize → parse → diff against the live document (0 = the file says exactly what the editor holds) */
   roundTripDiffs(): { n: number; first: string[] } { const out: string[] = []; const n = structuralDiff(canonicalLevelData(this.data), canonicalLevelData(parseLevelData(this.serialize())), out, 10); return { n, first: out }; }
@@ -588,7 +695,7 @@ export class Editor {
       boxes: [{ id: 'ground', floor: 'f0', group: 'ground', c: [20, -0.125, 14], h: [20, 0.125, 14], material: 'asphalt' in materials ? 'asphalt' : Object.keys(materials)[0] },
               { id: 'breaker_panel', floor: 'f0', group: 'breaker', c: [4.3, 1.4, 4.3], h: [0.02, 0.3, 0.2], albedo: [0.3, 0.31, 0.33] }, { id: 'breaker_led', floor: 'f0', group: 'breaker', c: [4.33, 1.55, 4.3], h: [0.005, 0.01, 0.01], albedo: [0.04, 0.04, 0.045], emissive: [0.3, 4, 0.6], flags: ['NoShadow'] }],
       props: [], lights: [{ id: 'moon', kind: 'dir', pos: [0, 0, 0], dir: [0.45, -0.5, -0.74], color: [0.55, 0.7, 1], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false }],
-      switchables: [], doors: [{ id: 'door_0', floor: 'f0', hinge: [10, 10], closedDir: 0, width: 1.16 }], routes: [], chokepoints: [], volumes: [], devices: [], connectors: [],
+      switchables: [], doors: [{ id: 'door_0', floor: 'f0', hinge: [10, 10], closedDir: 0, width: LEAF_W }], routes: [], chokepoints: [], volumes: [], devices: [], connectors: [],
       mission: { playerSpawn: [6, 0, 6], objectives: [{ id: 'reach_room', kind: 'reach', area: { x0: 14, x1: 22, z0: 4, z1: 10 }, door: 'door_0' }, { id: 'pull_drive', kind: 'drive', rackIndex: 0, front: [18, 1.1, 7], halfW: 0.33 }, { id: 'exfil', kind: 'exfil', door: 'door_0', x: 36.5, z: 20 }] },
       breaker: { pos: [4.4, 1.4, 4.3], panel: 'breaker_panel', led: 'breaker_led' }, beacons: [],
       sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] }, plans: { roomClear: [] },

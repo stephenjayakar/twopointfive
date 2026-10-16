@@ -1,4 +1,4 @@
-// Temporal-jank bench (lane v3/temporal-jank): the four deterministic scenes behind the designer's 08-11 report — "the temporal reuse looks jank
+// Temporal-jank bench (lane v3/temporal-jank): the four deterministic scenes behind the maintainer's 08-11 report — "the temporal reuse looks jank
 // with the flickering light in the cubicle room, the lightning, and the flashlights … boiling due to the rain near the window" — measured per
 // v3 system. Dev only: on a `?paused&quality=<p>&mute` boot with #view visible and this lane's shot sink up (window.__shotPort),
 //     await import('/qa/tjank-scenes.js'); await __tj.boot(); r = await __tj.run('A', 'v3'); … or __tj.go('A') = every variant → __tj.res.A

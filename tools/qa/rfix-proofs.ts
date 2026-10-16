@@ -5,6 +5,7 @@
 //   bun run tools/qa/rfix-proofs.ts validate [base]                     — every preset booted with an error scope + uncapturederror over ~120 frames incl. a hop and a resize
 // Sandbox OFF (Chrome + loopback). Numbers print as JSON lines; nothing is written unless a subcommand says so.
 import { Cdp } from './cdp';
+import { officePane } from './office-pane.ts';
 
 const cmd = process.argv[2] ?? 'r101';
 const base = process.argv[3] ?? 'http://localhost:5246';
@@ -116,10 +117,12 @@ async function pool() {
  *  'marks' = the conference glass with a crack star per pane + a scorch + 80 seeded bullet marks on the floor / walls (decals.wgsl through the g-buffer AND the composite's glass path),
  *  'lot' = the lit car park from above (froxel beams, rain off), 'lobby' = the polished lobby floor (RT reflections + markings). Same call sequence on two builds → same hashes. */
 const DEG = Math.PI / 180;
+/** the conference partition's three east sheets (c.x 10.75, 11.85, 12.95 on z = 10), BY WHERE THEY STAND: they were boxes 112‥114 until the door-size export of 10-10 moved them one along */
+const CONF_EAST = [officePane(10.75, 10), officePane(11.85, 10), officePane(12.95, 10)];
 const VIEWS: Record<string, { q: string; js: string; midAt?: number; mid?: string }> = {
   marks: { q: 'quality=high', js: `calm({ look: [15, 0, 11.1], yaw: 90 * ${DEG}, pitch: 30 * ${DEG}, dist: 6 }, { pos: [14.5, 0, 11.0], yaw: 0, holstered: true });
     __marks.test();                                   // 23 rounds' marks on the corridor's south wall dead ahead of him (chest height, by the lit panel)
-    for (const bi of [112, 113, 114]) __glass.hit(bi, [__game.level.boxes[bi].c[0] + 0.12, 1.3 + 0.15 * (bi - 112), 10.0], [0.2, -0.05, -1]);   // stars on the conference panes (the corridor's north side)
+    for (const bi of [${CONF_EAST}]) __glass.hit(bi, [__game.level.boxes[bi].c[0] + 0.12, 1.3 + 0.15 * (bi - ${CONF_EAST[0]}), 10.0], [0.2, -0.05, -1]);   // stars on the conference panes (the corridor's north side)
     __marks.bang([13.6, 0, 11.1]); __marks.bang([15.2, 0, 11.4]); __marks.bang([16.8, 0, 10.8]); __marks.random(60, 3);
     __game.teleportPlayer([30, 0, 20]);` },           // (and out of the frame)
   lot: { q: 'quality=high', js: `calm({ look: [20, 0, 31], yaw: 180 * ${DEG}, pitch: 50 * ${DEG}, dist: 14 }, { pos: [30, 0, 20], yaw: 0, invisible: true });` },
@@ -194,7 +197,7 @@ async function validate() {
         dev.addEventListener('uncapturederror', (e) => errs.push('uncaptured: ' + (e.error && e.error.message || e)));
         dev.pushErrorScope('validation'); dev.pushErrorScope('out-of-memory');
         seed(5); calm({ look: [15, 0, 11.1], yaw: ${90 * DEG}, pitch: ${30 * DEG}, dist: 6 }, { pos: [14.5, 0, 11.0], yaw: 0 });
-        __marks.test(); __marks.bang([13.6, 0, 11.1]); __glass.hit(113, [12.0, 1.4, 10.0], [0.2, 0, -1]);
+        __marks.test(); __marks.bang([13.6, 0, 11.1]); __glass.hit(${CONF_EAST[1]}, [12.0, 1.4, 10.0], [0.2, 0, -1]);
         await step(20);
         const other = '${tier}' === 'low' ? 'high' : 'low'; __quality.pin(other); await step(15); __quality.pin('${tier}'); await step(15);   // a hop across cascade grids and back (R10.1's re-prime + boost, R1.1's set)
         __engine.settings.renderScale = Math.max(0.5, __engine.settings.renderScale - 0.15); await step(10);                          // a resize

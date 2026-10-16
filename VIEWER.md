@@ -21,8 +21,11 @@ bun run build    →  dist/workbench.html (+ dist/viewer.html / dist/gaitlab.htm
 ```
 
 `?quality=verylow|low|medium|high|ultra` pins a preset as in the game. Needs the same WebGPU browser. The page is silent (no audio system).
+The staged figure wears what the game page ships: the 2010s issue kit (`?oldgear` = the older kit's parts — many rows and chips below still say FN2000 / Five-seveN
+whichever is drawn; with the 2010s kit the carbine's receiver, stock, magazine, handguard, rail and sight are `RIG.m4`'s) and the default look's cast
+(`?look=plain` = as before); an outfit by name is console-only for now: `__vrt.wear = 'defender_2'`.
 
-Source: `src/viewer/` — `runtime.ts` (the stage runtime: `Runtime.create` for a page of its own, `Runtime.attach(canvas, gpu, engine, …, {input,
+Source: `src/viewer/` — `runtime.ts` (the stage runtime: `Runtime.attach(canvas, gpu, engine, …, {input,
 cam, hosted})` on a host's engine; the frame split `orbitFromInput · simulate · present` so the workbench composes its own; the figure stands on
 `home`), `state.ts` (the one state object = `window.__viewer`, + the staging fields world / home / legYawDeg / legM), `scenes.ts` (the table below),
 `sheet.ts` (property groups), `gait.ts` (the gait lab's knobs / meter / paste block), `ui.ts` (chrome; takes its containers, can leave the URL hash to
@@ -36,7 +39,7 @@ kind, gear + all knobs, every button / toggle / select poked, the scrub field's 
 
 * **Top bar** — SCENE tabs, under them the VARIANT chips of the current scene; for locomotion variants a third strip with the live gait
   numbers (planted-foot slip · cadence · stance share · pelvis bob · eye line, over the last 3 s, measured as `tools/qa/gait.ts`
-  measures), the **ALL TWEAKS OFF** flip and *copy gait constants*. Right: **⚙** (gear menu) and **◨** (hide / show the inspector, `Tab`).
+  measures), the **ALL TWEAKS OFF** flip and *copy gait constants*. Right: **⚙** (gear menu) and **◨** (hide / show the inspector, `` ` `` — the backtick, in every mode; `Tab` does nothing here).
 * **Stage** — the studio floor with 1 m marks, back wall (drops to a lip when you orbit behind it), 0.5 m cube, 1.8 m post, key /
   fill / rim lights. HUD top-left, log bottom-centre, the **constants box** bottom-left when something was copied.
 * **Inspector** (right, resizable by its left edge, width and split remembered) — **OUTLINER** on top, **PROPERTIES** below.
@@ -44,7 +47,7 @@ kind, gear + all knobs, every button / toggle / select poked, the scrub field's 
   *copy ALL changed constants* (every table with a value off its shipped default, each in its paste format), constants box / copy RIG /
   shot → docs/shots, **Stage & camera** (frame body / back / head / hand / feet / profile / ¾ / front / game cam, track, distance,
   pitch, yaw, fov, back wall, floor marks, key / fill / rim, sky), **Renderer** (GPU pass times, quality preset, adaptive, scale,
-  exposure, debug view, haze, bloom, emissive scale, fxaa), the hotkey list.
+  exposure, debug view — the only way to the renderer's buffers: no key steps them —, haze, bloom, emissive scale, fxaa (only with `?notaau`)), the hotkey list.
 
 ## Scenes ▸ variants
 
@@ -61,8 +64,6 @@ the animator / the old pages already had.
 | | kick door | `anim.kickDoor` every 2.2 s + the door marker at 0.78 m: the leaf is flung on the `kickImpact` frame (KICK_IMPACT 0.38 s) |
 | | signals · flinch / hit · reload | loop `signal('go')` 1.6 s (pick hold / go / rally in Tactical) · `flinch()` 1.5 s · `reload()` 2.6 s |
 | | throw (canister) | slot 2, `throwItem()` every 2.5 s; a real smoke can (dead fuse) is put in the air at THROW_RELEASE with a throw's velocity (toggle in Tactical) |
-| | rifle: calm carry · low ready · shouldered · port | the FN2000 in both hands (`rifle` 2, the pistol on the thigh): `longStance` forced patrolLong / lowLong (crouched) / shoulder (+ upper aim, the fore-end light lit) / portLong — the R1 solve with RIG.sc20k's foregrip point; groups Long gun + RIG.sc20k |
-| | rifle: slung · rifle: fire (K) | `rifle` 1: across the back off the chest joint (RIG.sc20k.slung rows / the group node's gizmo), framed from behind · shouldered + upper *shoot*: effects.ts `muzzleFx.sc20k` every 0.6 s for grading |
 | | rifle: shouldered · crouch-walk · shouldered, crouched · low ready, crouched · sprint (low ready) · port · calm carry (guards') | the FN2000 in both hands (`rifle` 2, the pistol on the thigh), `longStance` forced as player.ts forces it: shoulder = whenever it is in his hands (bore on aimDir, over the aim clip's trunk, the fore-end light lit; crouch-walk / crouched = the same crouched — the CROUCHED table on show) · lowLong at the sprint's 4.7 (and crouched: a rifleman ducking under fire) · portLong (the kick, a leaf) · patrolLong = the guards' / operatives' calm carry, never the player's — the R1 solve with RIG.sc20k's foregrip point, per posture (groups *Long gun carriage, standing (LONG)* and *…crouched (LONG_CROUCH)*: the same rows, L· / C·, blended by the crouch shown), steadied against the gait (standing group ▸ *steady against the gait* as-the-game / off / on, `steady` per carriage, `LONG_STEADY.tau / runYaw`); + RIG.sc20k |
 | | rifle: slung · rifle: fire (K) | `rifle` 1: flat across the back in the back's own frame off the mid-back joint (RIG.sc20k.slung off / bore / roll / follow rows, or the group node's gizmo), framed from behind and above (⚙ ▸ *over the back*) · shouldered + upper *shoot*: effects.ts `muzzleFx.sc20k` every 0.6 s for grading |
 | **Guard** (tan kit) | patrol walk | torch carry (`upper` torch), 1.15 m/s, torch lit — strip + Locomotion + Kit + RIG.torch |
@@ -81,7 +82,7 @@ the animator / the old pages already had.
 | | dropped items | tosses a pistol on apply; the group has pistol / Five-seveN (can) / torch / AKS-74U / FN2000 / ring airfoil / smoke can / stun can / magazine + clear (no knife item exists in throwables.ts) |
 | | muzzle flash / sparks (K) · night vision (N) · rail light (L) | upper *shoot* (a round every 0.6 s; emitter anchors are gizmo nodes) — Effects group · NV on — RIG.goggles · light on + upper aim — RIG.pistol |
 
-Left out (no backing code in the viewer / animator today): the interrogation exchange with bubbles, body drag, the two-man stack &
+Left out (no backing code in the viewer / animator today): the interrogation exchange with bubbles, body drag (the animator has it now — `anim.haul`, src/game/hands.ts — but the viewer has no scene for it), the two-man stack &
 clear drill, the knife as a droppable item, the ring airfoil's flight (the game's launcher.ts needs a Game).
 
 ## Outliner
@@ -121,7 +122,7 @@ feet, Crouch walk) · Tactical (stance, side, wall peek, lockpick, one-shot butt
 status line) · Long gun carriage, standing / crouched (`LONG` / `LONG_CROUCH.<carriage on show>` rows, steady rows, copy LONG tables) · Wall hold pose (`WALL_POSE` tree) · Hold (pose on,
 figure, variant, phase, t, auto, gun out / pitch, agitation, fire past him, swap, let go, knife regardless, partner marker) · Hold contact
 constants (`HOLD` tree) · Kit · Dropped items · Canisters · Effects: the shot · Smoke solver · RIG.goggles / pistol / torch / guardPistol /
-knife / carbine / sc20k · Door marker · timings · Stage & camera · Renderer.
+knife / can / holster / carbine / sc20k / m4 · Door marker · timings · Stage & camera · Renderer.
 
 ## Copy formats (paste-back)
 
@@ -141,16 +142,16 @@ knife / carbine / sc20k · Door marker · timings · Stage & camera · Renderer.
 
 | | |
 |---|---|
-| mouse | **drag** orbit · **shift-drag / right-drag** pan (frees the focus) · **wheel** zoom · **click a prop** select |
+| mouse | **right-drag** orbit · **middle-drag / Space + drag** pan (frees the focus) · **wheel** zoom to the cursor · **click a prop** select (left-drag is the rig gizmo's alone) |
 | `F` `H` | frame the body · head close-up |
-| `T` `P` | turntable · pause the character |
+| `T` `Y` `P` | plan view · turntable · pause the character |
 | `K` `X` | shoot · die (ragdoll, shot from the camera; again = respawn + die) |
 | `N` `L` | night vision · rail light / torch |
 | `G` `C` | guard kit · carbine (turns the guard kit on) |
 | `0` `1` `2` · `4` | holstered · pistol · canister · the FN2000: not carried → slung → in the hands |
 | `E` | with a hold posed: swap knife ↔ pistol |
 | `U` `Esc` | select the parent node · deselect (Esc first closes the gear / all-knobs overlay) |
-| `Tab` `` ` `` `[` `]` | inspector · debug views · exposure |
+| `` ` `` `[` `]` | hide / show the inspector (the right-hand panel) · exposure. No key steps the renderer's debug views: they are ⚙ ▸ Renderer ▸ *debug view* here, and the *view* list in the top bar's second row in the Level / Materials modes |
 
 ## Automation hooks
 
@@ -158,13 +159,13 @@ knife / carbine / sc20k · Door marker · timings · Stage & camera · Renderer.
 `lockpick`, `tacShot / tacLoop / tacEvery`, `hold.{on,who,variant,phase,t,auto,…}`, `doorHand`, `door`, `nv`, `lightOn`, `paused`, … — set a
 field and the next frame follows; `__viewer.drive = i` still takes the old DRIVES index) plus **`__viewer.scene('guard', 'carbine-shoulder')`**
 (switch like the top bar; throws with the valid names) and `__viewer.select('rig:carbine.gripL' | 'light:key' | 'bone:head' | null)`.
-Scene ids: `sam guard hold takedown door fx`; `__scenes` lists every variant id. The URL hash mirrors it: `#guard/carbine-shoulder&sel=rig:carbine.gripL`.
+Scene ids: `sam guard hold takedown door fx staging`; `__scenes` lists every variant id. The URL hash mirrors it: `#guard/carbine-shoulder&sel=rig:carbine.gripL`.
 
 Unchanged: `__char` (getter: respawn replaces the Character), `__rig` (live RIG), `__rigSource()`, `__gizmo`, `__engine`, `__cam`, `__step(n)`,
 `__toss(kind, suppressed?)`, `__cans.{smokeCan,stunCan}`, `__vtime`, `__shot(name)` (readback → capture sink on :5174), `__tac.{stance,peek,kick,
 signal,flinch,throw,lockpick,loop,at,resume,long}` (stills: `__tac.at(0.38, 'kick')` pauses the clock, settles, fires, steps to t),
 `__hold.set({...})` / `__hold.HOLD`, `__long.{LONG,source}`. New: `__M` (the gait meter: `slip cadence stance bob gaze gazeBob`, `line()`), `__lab`
-(= `__viewer`), `__ui`, `__vui` (the viewer's chrome), `__vrt` (the viewer `Runtime` itself — it was `__rt`, which on the GAME page means the RT-reflection knobs;
+(= `__viewer`), `__vui` (the viewer's chrome — `__ui` in the workbench is the LEVEL EDITOR's chrome, not the viewer's), `__vrt` (the viewer `Runtime` itself — it was `__rt`, which on the GAME page means the RT-reflection knobs;
 one name, one meaning).
 
 ## Workflow
@@ -174,11 +175,10 @@ one name, one meaning).
 2. `#fx/raillight` ▸ frame *hand*, sweep *aim pitch*: slide, can, rail body and lit lens stay rigid on the hand and the hot spot on the wall sits
    on the bore line; repeat with *relaxed* and a sprint.
 3. *copy constants* (or ⚙ ▸ copy ALL changed), paste over the block(s), `bun run typecheck`, look at it in the game.
-   The FN2000: `#sam/rifle-slung` from behind (⚙ ▸ back) for the sling's off / bore / roll or the group node's arrows; `#sam/rifle-calm` … `rifle-port` for the
-   carriages with the bullpup (drag `sc20k.gripL` to move the left fist on the foregrip; the LONG rows are shared with the carbine); `#sam/rifle-fire` + K
-   for the muzzle card (effects.ts `muzzleFx.sc20k`, UNTUNED).
    The FN2000: `#sam/rifle-slung` from behind and above (⚙ ▸ over the back) for the sling's off / bore / roll / follow or the group node's arrows — walk / crouch /
    kick him and it should stay flat on the back; `#sam/rifle-shoulder` (walk him), `rifle-crouch`, `rifle-low` (the sprint) for how he HOLDS it: LONG.shoulder /
    lowLong rows (`sway`, `steady`, hand offsets) + `LONG_STEADY.tau / runYaw`, with *steady against the gait ▸ off* for the before; `rifle-port` / `rifle-calm` the
+   other two carriages (drag `sc20k.gripL` to move the left fist on the foregrip; the LONG rows are shared with the carbine); `#sam/rifle-fire` + K
+   to look at the muzzle card (effects.ts `muzzleFx.sc20k`, UNTUNED).
 4. Locomotion: `#sam/jog`, path *circle* with floor marks, watch the strip's slip / cadence while scrubbing *stance linger* / *jog stride ×*; flip
    ALL TWEAKS OFF for the before / after; *copy gait constants*.

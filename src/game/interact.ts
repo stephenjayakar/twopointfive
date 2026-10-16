@@ -9,9 +9,10 @@
 import type { Game, Interactable } from './game';
 import { Input } from './input';
 import { INTERACT_KEY } from './consts';
-import { wheelPace, pickHover, cancelRow, easeOffHold, stopPicking } from './player';
+import { wheelPace, pickHover, cancelRow, easeOffHold, holdKilling, stopPicking, stopWand } from './player';
 import { cancelDrive } from './mission';
 import { stopCoding } from './devices';
+import { samStaggered } from './samstun';
 
 /** a press up again inside this (without having scrolled the list) is a tap; held past it the list opens */
 export const TAP_SECS = 0.25;
@@ -27,9 +28,14 @@ export function runningVerb(g: Game): string {
   const pl = g.player, H = pl.holding;
   if (pl.easing) return `ease:${pl.easing.def.name}`;
   if (pl.picking) return `pick:${pl.picking.def.name}`;
+  if (pl.wanding) return `wand:${pl.wanding.door.def.name}`;   // the optical wand under a door (wand.ts)
   if (pl.coding) return `code:${pl.coding.def.name}`;   // a keypad's code going in (devices.ts updateCoding)
-  if (H && (H.windT >= 0 || H.phase === 'choke' || H.phase === 'whip')) return `hold:${H.g.callsign}`;
+  if (H && (H.windT >= 0 || H.phase === 'choke' || H.phase === 'whip' || holdKilling(H))) return `hold:${H.g.callsign}`;   // (the knife in the hold — close.ts CLOSE.heldClicks — is the running verb too: no row is on offer under it)
   if (g.mission.driveT >= 0) return 'drive';
+  if (pl.breakerMove) return 'breaker';   // his hand on the mains lever (handwork.ts) — a half second COMMITTED like a kick: nothing in cancelSustained stops it, and no other row is on offer under it
+  if (pl.charging) return `charge:${pl.charging.door.def.name}`;   // a breaching charge going on a door by hand (doortools.ts samTick)
+  if (g.wallCharge?.setting) return 'charge:wall';   // a breaching charge going on a wall by hand (wallcharge.ts)
+  if (g.defuse?.working) return 'defuse';   // a hand on a defuse mission's charge (defuse.ts)
   return '';
 }
 /** Stop the running sustained verb where it is — what letting go of the held key used to do, now on a Space press, Esc, or a step: the leaf stays where it got
@@ -39,9 +45,14 @@ export function cancelSustained(g: Game): boolean {
   const pl = g.player, H = pl.holding;
   if (pl.easing) { pl.easing = null; return true; }
   if (pl.picking) { stopPicking(g); return true; }
+  if (pl.wanding) { stopWand(g); return true; }
   if (pl.coding) { stopCoding(g); return true; }
+  if (H && holdKilling(H)) return false;   // the knife in the hold is COMMITTED, like the hand on the breaker's lever: no tap, step or Esc takes a blade back (player.ts killOut ends it)
   if (H && (H.windT >= 0 || H.phase === 'choke' || H.phase === 'whip')) { easeOffHold(g); return true; }
   if (g.mission.driveT >= 0) { cancelDrive(g); return true; }
+  if (g.doorTools?.cancelSam()) return true;
+  if (g.wallCharge?.cancel()) return true;
+  if (g.defuse?.cancel()) return true;
   return false;
 }
 /** Esc, ahead of the pause menu (main.ts asks this first; the headless harness's Escape lands in updateInteract): the open selector backs out — that press is
@@ -112,5 +123,5 @@ export function updateInteract(g: Game, dt: number, input: Input) {
   // ---- released this frame (or begun and ended inside it): the highlighted row is what Space does
   const rowNow = g.hover;
   closeSelector(g, false);
-  if (rowNow && rowNow.kind !== 'cancel' && rowNow.inReach && rowNow.verb && !rowNow.running) g.act = rowNow;
+  if (rowNow && rowNow.kind !== 'cancel' && rowNow.inReach && rowNow.verb && !rowNow.running && !samStaggered(g)) g.act = rowNow;   // (samstun.ts: folded by a blast, his hands do nothing)
 }

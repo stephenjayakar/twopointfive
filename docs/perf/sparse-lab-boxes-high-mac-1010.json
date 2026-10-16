@@ -1,0 +1,358 @@
+{
+ "solver": "boxes",
+ "preset": "high",
+ "size": [
+  734,
+  770
+ ],
+ "out": [
+  953,
+  1000
+ ],
+ "adapter": "apple metal-3",
+ "when": "2026-10-10T06:52:31.375Z",
+ "lead": 8,
+ "take": 90,
+ "knobs": null,
+ "rows": [
+  {
+   "cans": 0,
+   "placed": 0,
+   "solverMs": 0,
+   "solverMean": 0,
+   "solverP95": 0,
+   "solverTimed": 0,
+   "unionMs": 7.08,
+   "unionMean": 7.06,
+   "unionP95": 7.27,
+   "domains": 0,
+   "bricksOfBoxes": 0,
+   "withSmoke": 0,
+   "refused": 0,
+   "evicted": 0,
+   "passes": {
+    "mesh": 0.46,
+    "rc c3": 0.33,
+    "rc c2": 2.56,
+    "rc c1": 0.33,
+    "rc c0": 0.26,
+    "rc dice": 0.07,
+    "particles": 0.13,
+    "direct": 2.82,
+    "softblur": 0.79,
+    "gather": 0.98,
+    "temporal": 0.2,
+    "reflect": 0.13,
+    "rdenoise": 0.66,
+    "volumetrics": 0.26,
+    "sharpU": 0.66,
+    "compS": 0.46,
+    "gbaa": 0,
+    "taau": 0.13,
+    "bloom": 0.07,
+    "probe": 0.13
+   }
+  },
+  {
+   "cans": 1,
+   "placed": 1,
+   "solverMs": 0.46,
+   "solverMean": 0.46,
+   "solverP95": 0.52,
+   "solverTimed": 90,
+   "unionMs": 8.13,
+   "unionMean": 8.12,
+   "unionP95": 8.45,
+   "domains": 1,
+   "bricksOfBoxes": 512,
+   "withSmoke": 305,
+   "refused": 0,
+   "evicted": 0,
+   "passes": {
+    "smoke": 0.46,
+    "mesh": 0.52,
+    "rc c3": 0.26,
+    "rc c2": 0.39,
+    "rc c1": 0.26,
+    "rc c0": 0.2,
+    "rc dice": 0,
+    "particles": 0.13,
+    "direct": 2.69,
+    "softblur": 0.59,
+    "gather": 1.18,
+    "temporal": 0.59,
+    "reflect": 0.2,
+    "rdenoise": 0.72,
+    "volumetrics": 0.92,
+    "sharpU": 0.66,
+    "compS": 0.46,
+    "gbaa": 0.07,
+    "taau": 0.13,
+    "bloom": 0.07,
+    "probe": 0.2
+   }
+  },
+  {
+   "cans": 4,
+   "placed": 4,
+   "solverMs": 1.64,
+   "solverMean": 1.68,
+   "solverP95": 1.9,
+   "solverTimed": 90,
+   "unionMs": 9.63,
+   "unionMean": 9.65,
+   "unionP95": 9.96,
+   "domains": 4,
+   "bricksOfBoxes": 2048,
+   "withSmoke": 1448,
+   "refused": 0,
+   "evicted": 0,
+   "passes": {
+    "smoke": 1.64,
+    "mesh": 0.59,
+    "rc c3": 0.26,
+    "rc c2": 0.39,
+    "rc c1": 0.26,
+    "rc c0": 0.26,
+    "rc dice": 0,
+    "particles": 0.07,
+    "direct": 2.88,
+    "softblur": 0.59,
+    "gather": 1.7,
+    "temporal": 0.59,
+    "reflect": 0.2,
+    "rdenoise": 0.33,
+    "volumetrics": 1.18,
+    "sharpU": 0.66,
+    "compS": 0.46,
+    "gbaa": 0.07,
+    "taau": 0.13,
+    "bloom": 0.07,
+    "probe": 0.2
+   }
+  },
+  {
+   "cans": 8,
+   "placed": 8,
+   "solverMs": 2.75,
+   "solverMean": 2.83,
+   "solverP95": 3.15,
+   "solverTimed": 90,
+   "unionMs": 10.75,
+   "unionMean": 10.74,
+   "unionP95": 11.21,
+   "domains": 8,
+   "bricksOfBoxes": 4096,
+   "withSmoke": 2215,
+   "refused": 0,
+   "evicted": 0,
+   "passes": {
+    "smoke": 2.75,
+    "mesh": 0.59,
+    "rc c3": 0.26,
+    "rc c2": 0.39,
+    "rc c1": 0.26,
+    "rc c0": 0.2,
+    "rc dice": 0,
+    "particles": 0.07,
+    "direct": 2.95,
+    "softblur": 0.59,
+    "gather": 1.38,
+    "temporal": 0.52,
+    "reflect": 0.2,
+    "rdenoise": 0.72,
+    "volumetrics": 1.05,
+    "sharpU": 0.66,
+    "compS": 0.46,
+    "gbaa": 0.07,
+    "taau": 0.13,
+    "bloom": 0.07,
+    "probe": 0.2
+   }
+  },
+  {
+   "cans": 12,
+   "placed": 12,
+   "solverMs": 2.82,
+   "solverMean": 2.84,
+   "solverP95": 3.01,
+   "solverTimed": 90,
+   "unionMs": 10.62,
+   "unionMean": 10.64,
+   "unionP95": 10.94,
+   "domains": 8,
+   "bricksOfBoxes": 4096,
+   "withSmoke": 2590,
+   "refused": 4,
+   "evicted": 0,
+   "passes": {
+    "smoke": 2.82,
+    "mesh": 0.59,
+    "rc c3": 0.26,
+    "rc c2": 0.39,
+    "rc c1": 0.26,
+    "rc c0": 0.2,
+    "rc dice": 0,
+    "particles": 0.13,
+    "direct": 2.82,
+    "softblur": 0.59,
+    "gather": 1.25,
+    "temporal": 0.85,
+    "reflect": 0.2,
+    "rdenoise": 0.72,
+    "volumetrics": 1.18,
+    "sharpU": 0.66,
+    "compS": 0.46,
+    "gbaa": 0.07,
+    "taau": 0.13,
+    "bloom": 0.07,
+    "probe": 0.2
+   }
+  }
+ ],
+ "life": [
+  {
+   "t": 2,
+   "solverMs": 0.46,
+   "unionMs": 7.73,
+   "withSmoke": 94,
+   "domains": 1
+  },
+  {
+   "t": 4,
+   "solverMs": 0.46,
+   "unionMs": 8.06,
+   "withSmoke": 214,
+   "domains": 1
+  },
+  {
+   "t": 6,
+   "solverMs": 0.46,
+   "unionMs": 8.19,
+   "withSmoke": 270,
+   "domains": 1
+  },
+  {
+   "t": 8,
+   "solverMs": 0.46,
+   "unionMs": 8.32,
+   "withSmoke": 314,
+   "domains": 1
+  },
+  {
+   "t": 10,
+   "solverMs": 0.46,
+   "unionMs": 8.32,
+   "withSmoke": 343,
+   "domains": 1
+  },
+  {
+   "t": 12,
+   "solverMs": 0.46,
+   "unionMs": 8.32,
+   "withSmoke": 370,
+   "domains": 1
+  },
+  {
+   "t": 14,
+   "solverMs": 0.46,
+   "unionMs": 8.45,
+   "withSmoke": 387,
+   "domains": 1
+  },
+  {
+   "t": 16,
+   "solverMs": 0.46,
+   "unionMs": 8.39,
+   "withSmoke": 401,
+   "domains": 1
+  },
+  {
+   "t": 18,
+   "solverMs": 0.46,
+   "unionMs": 8.39,
+   "withSmoke": 409,
+   "domains": 1
+  },
+  {
+   "t": 20,
+   "solverMs": 0.46,
+   "unionMs": 8.45,
+   "withSmoke": 417,
+   "domains": 1
+  },
+  {
+   "t": 22,
+   "solverMs": 0.46,
+   "unionMs": 8.45,
+   "withSmoke": 426,
+   "domains": 1
+  },
+  {
+   "t": 24,
+   "solverMs": 0.46,
+   "unionMs": 8.45,
+   "withSmoke": 428,
+   "domains": 1
+  },
+  {
+   "t": 26,
+   "solverMs": 0.46,
+   "unionMs": 8.39,
+   "withSmoke": 428,
+   "domains": 1
+  },
+  {
+   "t": 28,
+   "solverMs": 0.46,
+   "unionMs": 8.39,
+   "withSmoke": 430,
+   "domains": 1
+  },
+  {
+   "t": 30,
+   "solverMs": 0.46,
+   "unionMs": 8.39,
+   "withSmoke": 430,
+   "domains": 1
+  },
+  {
+   "t": 32,
+   "solverMs": 0.46,
+   "unionMs": 8.45,
+   "withSmoke": 431,
+   "domains": 1
+  },
+  {
+   "t": 34,
+   "solverMs": 0.46,
+   "unionMs": 8.52,
+   "withSmoke": 430,
+   "domains": 1
+  },
+  {
+   "t": 36,
+   "solverMs": 0.46,
+   "unionMs": 8.52,
+   "withSmoke": 431,
+   "domains": 1
+  },
+  {
+   "t": 38,
+   "solverMs": 0.46,
+   "unionMs": 8.52,
+   "withSmoke": 430,
+   "domains": 1
+  },
+  {
+   "t": 40,
+   "solverMs": 0.46,
+   "unionMs": 8.98,
+   "withSmoke": 428,
+   "domains": 1
+  }
+ ],
+ "extras": [],
+ "failed": [],
+ "gpuErrors": []
+}

@@ -1,0 +1,126 @@
+{
+ "commit": "e6188f6",
+ "note": "tools/qa/playthrough.ts at the one build, PT_DIGEST=1, before the destruction switch existed; loudchaos-base compares PT_DESTR=0 runs with these",
+ "runs": {
+  "barracks-four:1": {
+   "digest": "47d4c4eb",
+   "end": "taken",
+   "t": 194.7
+  },
+  "barracks-four:2": {
+   "digest": "442fffbc",
+   "end": "taken",
+   "t": 179.5
+  },
+  "barracks-four:3": {
+   "digest": "773b4c03",
+   "end": "taken",
+   "t": 158.3
+  },
+  "block-four:1": {
+   "digest": "dd8b209d",
+   "end": "wiped",
+   "t": 30.3
+  },
+  "block-four:2": {
+   "digest": "81f6aba0",
+   "end": "taken",
+   "t": 102.2
+  },
+  "block-four:3": {
+   "digest": "56526bd9",
+   "end": "wiped",
+   "t": 24.1
+  },
+  "block-squads:1": {
+   "digest": "3d4d1ddd",
+   "end": "wiped",
+   "t": 77.9
+  },
+  "block-squads:2": {
+   "digest": "41921d85",
+   "end": "wiped",
+   "t": 119.6
+  },
+  "block-squads:3": {
+   "digest": "41dbf20a",
+   "end": "wiped",
+   "t": 21.6
+  },
+  "compound-four:1": {
+   "digest": "69b1d4e",
+   "end": "wiped",
+   "t": 28.9
+  },
+  "compound-four:2": {
+   "digest": "fa970ef2",
+   "end": "taken",
+   "t": 150.2
+  },
+  "compound-four:3": {
+   "digest": "a0edaec0",
+   "end": "taken",
+   "t": 98.2
+  },
+  "depot-four:1": {
+   "digest": "26096729",
+   "end": "taken",
+   "t": 77
+  },
+  "depot-four:2": {
+   "digest": "8fe569d5",
+   "end": "taken",
+   "t": 83.9
+  },
+  "depot-four:3": {
+   "digest": "84a43bbd",
+   "end": "taken",
+   "t": 85.3
+  },
+  "records-pair:1": {
+   "digest": "5516d83f",
+   "end": "taken",
+   "t": 43.5
+  },
+  "records-pair:2": {
+   "digest": "1e343ed5",
+   "end": "taken",
+   "t": 57.8
+  },
+  "records-pair:3": {
+   "digest": "9fad49aa",
+   "end": "wiped",
+   "t": 52.3
+  },
+  "rescue-registry:1": {
+   "digest": "7d0f7517",
+   "end": "lost",
+   "t": 49.7
+  },
+  "rescue-registry:2": {
+   "digest": "67252be9",
+   "end": "lost",
+   "t": 51.4
+  },
+  "rescue-registry:3": {
+   "digest": "37a9a10a",
+   "end": "rescued",
+   "t": 40.9
+  },
+  "warehouse-four:1": {
+   "digest": "e7c4d465",
+   "end": "taken",
+   "t": 215.3
+  },
+  "warehouse-four:2": {
+   "digest": "dab75283",
+   "end": "taken",
+   "t": 209.4
+  },
+  "warehouse-four:3": {
+   "digest": "3cfe6afa",
+   "end": "wiped",
+   "t": 221.6
+  }
+ }
+}

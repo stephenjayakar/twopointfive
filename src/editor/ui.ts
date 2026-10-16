@@ -4,6 +4,7 @@
 // drag-and-drop + file picker loading, the autosave timer. DOM is rebuilt on selection / document changes only; text nodes every 10 frames.
 import { Panel } from '../ui/panel';
 import { QUALITY_NAMES } from '../ui/quality';
+import { DEBUG_VIEWS } from '../viewer/state';
 import { Editor, parseRef } from './editor';
 import { Tools, ToolName } from './tools';
 import { View } from './view';
@@ -11,7 +12,7 @@ import { Scene } from './scene';
 import { buildSheet } from './sheet';
 import { PaintUi } from './paintui';
 import type { Overlay } from './overlay';
-import { BOX_PRESETS, LIGHT_PRESETS, VOLUME_KINDS } from './geom';
+import { BOX_PRESETS, LIGHT_PRESETS, VOLUME_KINDS, VOLUME_READ } from './geom';
 import { formatLint, Finding } from './lint';
 import * as persist from './persist';
 import { swatchCss } from './paint';
@@ -21,7 +22,10 @@ export interface UiHost {
   /** the 2D overlay + the view canvas (the Markings tab outlines its face on the one and picks faces by clicks on the other); absent headless */
   overlay?: Overlay | null; viewEl?: HTMLElement | null;
   quality?: (name?: string) => string;
-  play: () => void;
+  /** the renderer's debug view (engine.settings.debugView): set when given a number, always returns the one showing */
+  debugView?: (v?: number) => number;
+  /** hand the document to the game: `as` = a persist.ts playChoices id (absent = the mission the document carries) */
+  play: (as?: string) => void;
   hudLine: () => string;
   /** dev server present (GET /levels/ answered): enables save-to-server + the server list */
   server: { available: boolean; list: persist.ServerEntry[] };
@@ -58,7 +62,7 @@ export class Ui {
     H.tools.onToolChange.push(() => this.paintTools());
     this.buildTopbar(); this.buildPalette(); this.wireFiles(); this.wireInspector();
     this.paintUi = new PaintUi({ ed, tools: H.tools, view: H.view, scene: H.scene, overlay: H.overlay ?? null, viewEl: H.viewEl ?? null, msg: t => this.msg(t) }, { head: this.$.insphead, props: this.$.props, mat: this.$.matpane, mark: this.$.markpane, title: this.$.proptitle });
-    this.$.help.textContent = 'LMB select (shift = toggle, drag = marquee) · drag = move (Alt up/down) · G/S/R move/resize/rotate · B box · V volume · L light · D door · P route · C camera · K keypad (markings when a box is selected) · J laser · M materials · RMB orbit · MMB / Space-drag pan · wheel zoom · T plan · F frame · X snap · O grid · H hidden · N day · Del · ⌘/Ctrl Z / ⇧Z / D / S · arrows nudge (⇧ fine, Alt vertical) · Esc';
+    this.$.help.textContent = 'LMB select (shift = toggle, drag = marquee) · drag = move (Alt up/down) · G/S/R move/resize/rotate · B box · V volume · L light · D door · P route · C camera · K keypad (markings when a box is selected) · J laser · M materials · RMB orbit · MMB / Space-drag pan · wheel zoom · T plan · F frame · X snap · O grid · H hidden · N day · Del · route: Enter ends it, Backspace drops the last point · ⌘/Ctrl Z / ⇧Z or Y / D / S / A (all boxes on the floor) · arrows nudge (⇧ fine, Alt / PgUp / PgDn vertical) · [ ] exposure · ` panel · 1‥5 modes · Esc';
     this.rebuildSheet(); this.rebuildOutliner();
     if (ed.loadProblems.length) { this.findings = ed.loadProblems.map(x => ({ ...x })); this.showProblems(true); this.msg(`'${ed.data.name}' was opened WITH ${ed.loadErrors.length} PROBLEM(S) — the game cannot load it until they are fixed (listed below)`); }   // (a boot-time restore reported before this panel existed)
   }
@@ -70,7 +74,7 @@ export class Ui {
     const row1 = el('div', 'tabs'); const row2 = el('div', 'tabs'); t.append(row1, row2);
     row1.append(el('span', 'brand', this.H.brand ?? '2.6 editor'));
     // file
-    row1.append(btn('load ▾', 'load a level: file picker · drop a .json on the view · the autosave slot · the dev server\'s levels/', () => this.toggleMenu('loadmenu')), btn('save ▾', 'save: download · to the dev server (levels/<name>.json) · autosave now', () => this.toggleMenu('savemenu')));
+    row1.append(btn('load ▾', 'load a level: file picker · drop a .json on the view · the autosave slot · the dev server\'s levels/', () => this.toggleMenu('loadmenu')), btn('save ▾', 'save: download · to the dev server (the file the document was loaded from) · autosave now', () => this.toggleMenu('savemenu')));
     row1.append(btn('↶', 'undo (⌘/Ctrl Z)', () => ed.undo()), btn('↷', 'redo (⌘/Ctrl ⇧Z)', () => ed.redo()));
     row1.append(el('span', 'sep', '│'));
     for (const [k, label, title] of [['select', '⬚ select', 'select / move (Esc)'], ['box', '▭ box B', 'draw a box footprint (preset from the palette)'], ['volume', '▧ vol V', 'draw a volume footprint'], ['light', '✺ light L', 'place a light'], ['door', '⌐ door D', 'place a door: press at the hinge, drag along the leaf'], ['route', '⤳ route P', 'draw a patrol route: click waypoints, Enter']] as [ToolName, string, string][]) { const b = btn(label, title, () => tools.setTool(k), 'tb tool'); this.toolBtns.set(k, b); row1.append(b); }
@@ -93,8 +97,20 @@ export class Ui {
     tog('door cut+frame', 'placing a door cuts the wall it lands in and builds its frame', () => this.H.tools.doorAuto, v => { this.H.tools.doorAuto = v; });
     row2.append(el('span', 'k', 'quality'));
     const qSel = el('select', 'tbsel') as HTMLSelectElement; qSel.title = 'renderer preset (the game\'s Quality presets; the editor never touches the game\'s remembered pick)'; for (const n of QUALITY_NAMES) { const o = el('option', '', n) as HTMLOptionElement; o.value = n; qSel.append(o); } qSel.onchange = () => { this.H.quality?.(qSel.value); qSel.blur(); }; this.toggles.push(() => { if (this.H.quality) qSel.value = this.H.quality(); }); row2.append(qSel);
+    if (this.H.debugView) { row2.append(el('span', 'k', 'view')); const dvSel = el('select', 'tbsel') as HTMLSelectElement; dvSel.title = 'debug view: one of the renderer\'s buffers in place of the final picture (the list is the only way to them: no key steps through them)'; DEBUG_VIEWS.forEach((n, i) => { const o = el('option', '', n) as HTMLOptionElement; o.value = String(i); dvSel.append(o); }); dvSel.onchange = () => { this.H.debugView?.(+dvSel.value); dvSel.blur(); }; this.toggles.push(() => { dvSel.value = String(this.H.debugView?.() ?? 0); }); row2.append(dvSel); }
     row2.append(el('span', 'sep', '│'));
-    row2.append(btn('validate', 'run the schema validator (validateLevelData) → the problems panel', () => this.runChecks(false)), btn('lint', 'validate + level lint (reachability, sealing, overlaps, budgets…) → the problems panel', () => this.runChecks(true)), btn('▶ play from here', 'hand the current document to the game (?level=local) in a new tab', () => this.H.play(), 'tb play'));
+    row2.append(btn('validate', 'run the schema validator (validateLevelData) → the problems panel', () => this.runChecks(false)), btn('lint', 'validate + level lint (reachability, sealing, overlaps, budgets…) → the problems panel', () => this.runChecks(true)));
+    // ▶ play: the document goes to the game (?level=local) WITH the keys of the mission it carries — the list holds only what this document can start
+    const playSel = el('select', 'tbsel') as HTMLSelectElement; playSel.onchange = () => { this.playAs = playSel.value; playSel.blur(); paintPlay(); };
+    const playBtn = btn('▶ play from here', '', () => this.H.play(playSel.value), 'tb play'); let playSig = '';
+    const paintPlay = () => {
+      const C = persist.playChoices(ed.data, ed.file), def = persist.playDefault(ed.data, ed.file), sig = `${ed.file}|${ed.data.name}|${C.map(c => c.id + c.query).join(',')}|${def.id}`;
+      if (sig !== playSig) { playSig = sig; if (!C.some(c => c.id === this.playAs)) this.playAs = ''; playSel.textContent = ''; for (const c of C) { const o = el('option', '', c.label + (c.id === def.id ? ' ●' : '')) as HTMLOptionElement; o.value = c.id; playSel.append(o); } }
+      const cur = C.find(c => c.id === this.playAs) ?? def; playSel.value = cur.id;
+      playSel.title = `what ▶ starts on this document — only what it can start: the plain night, and each mission its scenarios block carries. ● = the default: the mission list's first row for this file${def.row ? ` ('${def.row.title}')` : ', else the first mission in the block, else the plain night'}`;
+      playBtn.title = `hand the current document to the game in a new tab and start: ${cur.label}${cur.row ? ` (the list's '${cur.row.title}')` : ''} — ?level=local${cur.query ? '&' + cur.query : ' (no mission key: the start card over the plain night)'}`;
+    };
+    paintPlay(); this.toggles.push(paintPlay); row2.append(playSel, playBtn);
     row2.append(el('span', 'spacer')); const fps = el('span', 'fps', ''); fps.id = 'fps'; row2.append(fps); this.$.fps = fps;
     // menus
     const loadMenu = el('div', 'menu hidden'); loadMenu.id = 'loadmenu'; const saveMenu = el('div', 'menu hidden'); saveMenu.id = 'savemenu'; t.append(loadMenu, saveMenu); this.$.loadmenu = loadMenu; this.$.savemenu = saveMenu;
@@ -106,14 +122,16 @@ export class Ui {
     m.textContent = ''; const { ed } = this.H; const S = this.H.server;
     if (id === 'loadmenu') {
       m.append(btn('open file…', 'pick a .json level file', () => { this.$.filepick.click(); this.closeMenus(); }, 'mi'));
-      const a = persist.readAutosave(); m.append(btn(a ? `autosave: ${a.name} · ${new Date(a.t).toLocaleString()}` : 'autosave: (empty)', 'restore the localStorage autosave slot', () => { if (a) { try { const errs = ed.load(a.text, { keepSaved: true, lenient: true }); this.msg(errs.length ? `restored autosave of '${a.name}' — with ${errs.length} problem(s), listed` : `restored autosave of '${a.name}'`); } catch (e) { this.msg(String((e as Error).message)); } } this.closeMenus(); }, 'mi'));
+      const a = persist.readAutosave(); m.append(btn(a ? `autosave: ${a.name} · ${new Date(a.t).toLocaleString()}` : 'autosave: (empty)', 'restore the localStorage autosave slot', () => { if (a) { try { const errs = ed.load(a.text, { keepSaved: true, lenient: true, file: a.file ?? null }); this.msg(errs.length ? `restored autosave of '${a.name}' — with ${errs.length} problem(s), listed` : `restored autosave of '${a.name}'`); } catch (e) { this.msg(String((e as Error).message)); } } this.closeMenus(); }, 'mi'));
       m.append(btn('new blank level', 'an empty level with the current palette, one floor, a ground slab and the mission marks', () => { if (!ed.doc.dirty || confirm('discard unsaved changes?')) { ed.load(Editor.blank('untitled', ed.data.materials)); this.msg('blank level'); } this.closeMenus(); }, 'mi'));
       m.append(btn('the bundled office', 'reload levels/office.json as built into this page', () => { if (!ed.doc.dirty || confirm('discard unsaved changes?')) (window as any).__edLoadBundled?.(); this.closeMenus(); }, 'mi'));
       m.append(el('div', 'mh', S.available ? 'dev server · levels/' : 'dev server: not available (static page)'));
-      if (S.available) { void persist.serverList().then(list => { if (list) S.list = list; for (const f of S.list) m.append(btn(`${f.name}.json · ${(f.bytes / 1024).toFixed(0)} KB`, new Date(f.mtime).toLocaleString(), () => { void (window as any).__ed.save.serverLoad(f.name).then(() => this.msg(`loaded ${f.name}.json from the server`), (e: Error) => this.msg(String(e.message))); this.closeMenus(); }, 'mi')); }); }
+      if (S.available) { void persist.serverList().then(list => { if (list) S.list = list; for (const f of S.list) m.append(btn(`${f.name}.json · ${(f.bytes / 1024).toFixed(0)} KB${persist.lookNote(f.name)}`, `${new Date(f.mtime).toLocaleString()}${persist.lookNote(f.name) ? ' — a level in the default look is two files (scene/look.ts LOOK_LEVELS): the game loads the -gwot one unless the URL says ?look=plain' : ''}`, () => { void (window as any).__ed.save.serverLoad(f.name).then(() => this.msg(`loaded ${f.name}.json from the server`), (e: Error) => this.msg(String(e.message))); this.closeMenus(); }, 'mi')); }); }
     } else {
       m.append(btn(`download ${ed.data.name}.json`, 'save as a file (canonical one-entity-per-line JSON)', () => { persist.download(ed.data.name, ed.serialize()); ed.doc.markSaved(); this.msg(`downloaded ${ed.data.name}.json`); this.closeMenus(); }, 'mi'));
-      m.append(btn(S.available ? `save to server: levels/${ed.data.name}.json  (⌘/Ctrl S)` : 'save to server: (no dev server)', 'POST to tools/serve.ts — writes the repo file', () => { void this.saveServer(); this.closeMenus(); }, 'mi'));
+      const to = this.saveTarget(), gen = ed.data.meta.generator;
+      m.append(btn(S.available ? `save to server: levels/${to}.json  (⌘/Ctrl S)${gen ? ' — GENERATED file' : ''}` : 'save to server: (no dev server)', `POST to tools/serve.ts — writes the repo file ${ed.file ? 'the document was loaded from' : '(the document was not loaded from the server: named after the level)'}${gen ? ` — GENERATED by ${gen.split(' ')[0]}: a re-export overwrites this save and tools/levels/export.ts ${to} --check fails until then` : ''}`, () => { void this.saveServer(); this.closeMenus(); }, 'mi'));
+      if (S.available && ed.file && ed.data.name !== ed.file) m.append(btn(`save a copy to server: levels/${ed.data.name}.json`, 'write the document under the level\'s NAME instead of the file it was loaded from (asks before replacing a file that exists); the copy is the document\'s file from then on', () => { void this.saveServer(ed.data.name); this.closeMenus(); }, 'mi'));
       m.append(btn('autosave now', `write the localStorage slot (${persist.LS.autosave}) — also every 30 s and on unload`, () => { const s = persist.autosave(ed); this.msg(s ? `autosaved ${(s.text.length / 1024).toFixed(0)} KB` : 'autosave failed (storage full / unavailable)'); this.closeMenus(); }, 'mi'));
       m.append(btn('copy JSON to clipboard', '', () => { void navigator.clipboard?.writeText(ed.serialize()).then(() => this.msg('copied'), () => this.msg('clipboard blocked')); this.closeMenus(); }, 'mi'));
     }
@@ -121,9 +139,19 @@ export class Ui {
   closeMenus() { for (const id of ['loadmenu', 'savemenu']) (document.getElementById(id) ?? (id === 'loadmenu' ? this.$.loadmenu : this.$.savemenu))?.classList.add('hidden'); }
   /** the top bar's fps read-out (the page writes it from its loop) */
   setFps(text: string) { if (this.$.fps) this.$.fps.textContent = text; }
-  async saveServer() {
+  /** which play choice the list is on ('' = the document's default) */
+  private playAs = '';
+  /** where ⌘/Ctrl S writes: the server file the document was LOADED FROM (three of the office's variants are all named 'office': saving by name put a variant over the bundled level); a document from nowhere goes by its name */
+  saveTarget(): string { const { ed } = this.H; return ed.file ?? ed.data.name; }
+  async saveServer(as?: string) {
     const { ed } = this.H; if (!this.H.server.available) { persist.download(ed.data.name, ed.serialize()); ed.doc.markSaved(); this.msg('no dev server — downloaded instead'); return; }
-    try { const r = await persist.serverSave(ed.data.name, ed.serialize()); ed.doc.markSaved(); this.msg(`saved levels/${r.name}.json (${(r.bytes / 1024).toFixed(1)} KB) — the repo file changed`); } catch (e) { this.msg(String((e as Error).message)); }
+    const to = as ?? this.saveTarget();
+    if (to !== ed.file) {   // not the file it came from: never over a file that is already there without a yes
+      const list = (await persist.serverList()) ?? this.H.server.list; this.H.server.list = list;
+      if (list.some(f => f.name === to) && !(typeof confirm === 'function' && confirm(`levels/${to}.json already exists and this document was not loaded from it${ed.file ? ` (it came from levels/${ed.file}.json)` : ''} — replace it?`))) { this.msg(`not saved: levels/${to}.json exists and is not the file this document was loaded from`); return; }
+    }
+    const gen = ed.data.meta.generator;
+    try { const r = await persist.serverSave(to, ed.serialize()); ed.doc.markSaved(); ed.file = r.name ?? to; this.msg(`saved levels/${r.name}.json (${(r.bytes / 1024).toFixed(1)} KB) — the repo file changed${gen ? ` · a GENERATED file (${gen.split(' ')[0]}): a re-export overwrites this, and tools/levels/export.ts ${to} --check fails until then` : ''}`); } catch (e) { this.msg(String((e as Error).message)); }
   }
   private paintTools() { const T = this.H.tools; for (const [k, b] of this.toolBtns) b.classList.toggle('on', T.tool === k); for (const [k, b] of this.modeBtns) b.classList.toggle('on', T.mode === k); }
   refreshToggles() { for (const f of this.toggles) f(); }
@@ -136,7 +164,7 @@ export class Ui {
     P.append(el('div', 'ph', 'LIGHTS (L, click)'));
     for (const pr of LIGHT_PRESETS) { const b = btn(pr.label, pr.title, () => { tools.lightPreset = pr.key; tools.setTool('light'); this.paintPalette(); }, 'pi light'); b.dataset.key = pr.key; P.append(b); }
     P.append(el('div', 'ph', 'VOLUMES (V, drag)'));
-    for (const k of VOLUME_KINDS) { const b = btn(k, `${k} volume`, () => { tools.volumeKind = k; tools.setTool('volume'); this.paintPalette(); }, 'pi vol'); b.dataset.key = k; P.append(b); }
+    for (const k of VOLUME_KINDS) { const b = btn(k, VOLUME_READ[k], () => { tools.volumeKind = k; tools.setTool('volume'); this.paintPalette(); }, 'pi vol'); b.dataset.key = k; P.append(b); }
     P.append(el('div', 'ph', 'OTHER'));
     P.append(btn('door (D)', 'press at the hinge, drag along the leaf', () => tools.setTool('door'), 'pi'), btn('route (P)', 'click waypoints, Enter', () => tools.setTool('route'), 'pi'), btn('post', 'a lockdown chokepoint at the view centre', () => { ed.addChokepoint({ pos: [this.H.view.focus[0], 0, this.H.view.focus[2]] }); }, 'pi'));
     P.append(el('div', 'ph', 'DEVICES (C / K / J)'));
@@ -230,7 +258,7 @@ export class Ui {
     this.paintUi.tick();
     if (frame % 10 === 0) {
       this.$.hud.textContent = this.H.hudLine();
-      if (this.$.status) { this.$.status.textContent = `${ed.data.name} · ${ed.doc.dirty ? '● unsaved' : 'saved'} · undo ${ed.doc.undoStack.length}${this.lastAutosave ? ` · autosaved ${Math.round((Date.now() - this.lastAutosave) / 1000)} s ago` : ''}`; this.$.status.classList.toggle('dirty', ed.doc.dirty); }
+      if (this.$.status) { this.$.status.textContent = `${ed.data.name}${ed.file && ed.file !== ed.data.name ? ` (levels/${ed.file}.json)` : ''} · ${ed.doc.dirty ? '● unsaved' : 'saved'} · undo ${ed.doc.undoStack.length}${this.lastAutosave ? ` · autosaved ${Math.round((Date.now() - this.lastAutosave) / 1000)} s ago` : ''}`; this.$.status.classList.toggle('dirty', ed.doc.dirty); }
       const nowS = performance.now() / 1000; this.$.log.textContent = this.messages.filter(m => nowS - m.t < 8).map(m => m.text).join('\n');
     }
   }

@@ -13,6 +13,7 @@
 // The table is the whole rule: isHostile(a, b). It is symmetric today; nothing relies on that.
 import type { Game, Guard } from './game';
 import type { Character } from './character';
+import { WORDS } from './words';   // (a leaf: nothing of the game behind it)
 
 export type Team = 'guard' | 'operative' | 'hostile' | 'player' | 'civilian';
 export const TEAMS: Team[] = ['guard', 'operative', 'hostile', 'player', 'civilian'];
@@ -26,6 +27,20 @@ export const HOSTILE: Record<Team, Record<Team, boolean>> = {
   civilian:  { guard: false, operative: false, hostile: false, player: false, civilian: false },
 };
 export function isHostile(a: Team, b: Team): boolean { return HOSTILE[a][b]; }
+/** A SCENARIO'S DEFENDER, for the words of a line both sides' AI says (words.ts; false with the switch off): a spawned hostile is up against a TEAM — 'find them',
+ *  not the night staff's 'find him' — and the callsign he carries ('Tango 2', 'Door man') is the PLAYER's label for him, no name his own side would say. */
+export const defenderWords = (gd: Guard): boolean => WORDS.on && !!gd.unit && gd.team === 'hostile';
+/** the name a man's own side calls him by in a line — null for a defender (above): the caller says 'one of ours', or leaves the name out */
+export const spokenName = (o: Guard): string | null => defenderWords(o) ? null : o.callsign;
+/** THE QUIET MISSION WITH A PARTNER (quiet.ts): the one floor where the night staff and an operative meet. On for that run, the staff take him as they take
+ *  Sam — seen by the same eye, a foe, shot at — and he them (his takedowns and his rounds land); off (every other run, and always when no such run is up) the
+ *  two are NEUTRAL, as the table above is written. Counted — though only ONE Game's run has it at a time: quiet.ts hands the module switches to whichever Game is running (`current()`), so the count is 0 or 1
+ *  and two Games in one process (the tools) each get it for their own frames. */
+let staffOps = 0;
+export function staffVsOperatives(on: boolean) {
+  staffOps = Math.max(0, staffOps + (on ? 1 : -1));
+  HOSTILE.guard.operative = HOSTILE.operative.guard = staffOps > 0;
+}
 
 /** the side a Character is on: Sam's, or that of the Guard whose body it is ('guard' for a stray the game does not know) */
 export function teamOfChar(g: Game, c: Character): Team {

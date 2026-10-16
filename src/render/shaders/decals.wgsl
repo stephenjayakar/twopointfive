@@ -193,7 +193,7 @@ fn wetPrintMark(o: ptr<function, DecalOut>, q: vec2f, k: f32, seed: u32, fp: f32
   (*o).albedo = alb;
 }
 
-// The destruction lane's marks (game/destruction.ts damageMark): ONE kind, three looks off floor(param) — 0 a DENT punched into sheet metal (a rack front, a
+// The destruction lane's marks (game/destruction.ts damageDecal): ONE kind, three looks off floor(param) — 0 a DENT punched into sheet metal (a rack front, a
 // cabinet): a shallow round dimple, its bowl tilted in the normal so one side catches the light, the paint crazed pale round a dark centre; 1 a SHRED in a
 // fabric-covered partition or a chair back: a ragged dark tear with the pale wadding showing through and loose fibres round it; 2 a CRACK in a dark screen:
 // a black impact blotch, a spider of hairlines out of it and a bruise of dead panel round them. s = fract(param) = strength 0‥1.
@@ -224,6 +224,53 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     alb = mix(alb, alb * 0.18 + vec3f(0.01), tear * s);
     alb = mix(alb, vec3f(0.78, 0.76, 0.7), wad * 0.55 * s);
     alb = mix(alb, alb * 1.35 + vec3f(0.06), fray * 0.5 * s);
+  } else if (look == 6u) {   // FILM: the dust and grit a blast's pall leaves on a floor or a desk top once it has settled (game/floormess.ts); the seed's top bit = the burst's own heart, which alone carries the soot
+    let edge = 0.74 + 0.26 * dkAngNoise(theta, 9.0, seed);
+    let x = rho / (R * edge); if (x >= 1.0) { return; }
+    let body = 1.0 - smoothstep(0.3, 1.0, x);                                            // thick over the inner third, feathering out to nothing
+    let drift = 0.45 + 0.55 * dkNoise2(q * 2.6, seed + 3u);                              // it lies in banks a couple of hands across
+    let fine = mix(1.0, 0.7 + 0.6 * dkNoise2(q * 17.0, seed + 5u), dkTexFade(0.06, fp)); // and mottled inside them
+    let rays = dkAngNoise(theta, 17.0, seed + 7u) * dkAngNoise(theta, 41.0, seed + 8u);  // blown outward: two beats round the circle, no regular teeth
+    let streak = mix(1.0, 0.45 + 1.6 * rays, smoothstep(0.25, 0.8, x));
+    let k = clamp(body * drift * fine * streak, 0.0, 1.0) * s;
+    var soot = 0.0;
+    if ((seed & 0x800u) != 0u) { soot = smoothstep(0.03, 0.14, x) * (1.0 - smoothstep(0.1, 0.5, x)) * smoothstep(0.3, 0.65, dkAngNoise(theta, 11.0, seed + 13u)) * s; }   // rayed out of the middle, not meeting in it
+    // grit: a speck in some squares of a 5 cm lattice — more of them toward the middle (asked of the square, so no speck is cut by the falloff) — pale plaster
+    // or dark, most under 2 cm across; under a pixel coarser than the specks they fade out rather than swell
+    let gp = q * 20.0; let gi = floor(gp); let gc = u32(i32(gi.x) + 4096) * 257u + u32(i32(gi.y) + 4096);
+    let go = vec2f(dkRand(gc, seed + 17u), dkRand(gc, seed + 19u)) * 0.4 + 0.3;
+    let gr = 0.07 + 0.23 * dkRand(gc, seed + 23u) * dkRand(gc, seed + 24u);   // (most of them small)
+    let aaC = clamp(fp * 20.0, 0.02, 0.1);
+    let gBody = 1.0 - smoothstep(0.3, 1.0, length(gi + vec2f(0.5)) / (20.0 * R * 0.87));
+    let speck = step(1.0 - 0.38 * gBody * s, dkRand(gc, seed + 11u)) * (1.0 - smoothstep(gr - aaC, gr + aaC, length(gp - gi - go))) * dkTexFade(0.02, fp);
+    alb = mix(alb, vec3f(0.68, 0.66, 0.61), k * 0.7);                                      // plaster pale: it lifts a dark floor and greys a warm one
+    alb = mix(alb, alb * vec3f(0.16, 0.15, 0.14), soot * 0.7 * (1.0 - 0.5 * k));
+    alb = mix(alb, mix(vec3f(0.15, 0.14, 0.125), vec3f(0.7, 0.68, 0.63), step(0.55, dkRand(gc, seed + 29u))), speck * (0.5 + 0.35 * dkRand(gc, seed + 30u)));
+    (*o).keep *= 1.0 - 0.9 * max(max(k, soot), speck);                                    // matte where it lies
+  } else if (look == 7u || look == 8u) {   // RUBBLE: what a chunk the debris pool took leaves where it lay (game/floormess.ts) — 7 crushed plaster / masonry, 8 splinters and shreds; long along t
+    let fibre = look == 8u;
+    let edge = 0.6 + 0.4 * dkAngNoise(theta, 7.0, seed);
+    let x = length(vec2f(q.x, q.y * 1.5)) / (R * edge); if (x >= 1.0) { return; }
+    let smear = (1.0 - smoothstep(0.2, 1.0, x)) * (0.5 + 0.5 * dkNoise2(q * 30.0, seed + 3u)) * s;
+    // the fragments: one in most squares of a lattice a third of the reach across, fewer outward (asked of the square: no piece is cut by the falloff) — each a
+    // small slab at its own angle (splinters lie near t)
+    let cs = max(R * 0.3, 0.02); let gp = q / cs; let gi = floor(gp); let gc = u32(i32(gi.x) + 4096) * 257u + u32(i32(gi.y) + 4096);
+    let go = vec2f(dkRand(gc, seed + 17u), dkRand(gc, seed + 19u)) * 0.3 + 0.35;
+    let ga = (dkRand(gc, seed + 23u) - 0.5) * select(3.14159, 0.7, fibre);
+    let dv = gp - gi - go; let cA = cos(ga); let sA = sin(ga);
+    let lv = vec2f(cA * dv.x + sA * dv.y, -sA * dv.x + cA * dv.y);
+    let r1 = dkRand(gc, seed + 37u); let r2 = dkRand(gc, seed + 41u);
+    let hs = select(vec2f(0.12 + 0.18 * r1, 0.08 + 0.14 * r2), vec2f(0.18 + 0.14 * r1, 0.025 + 0.04 * r2), fibre);
+    let bd = max(abs(lv.x) - hs.x, abs(lv.y) - hs.y);
+    let aaC = clamp(fp / cs, 0.02, 0.12);
+    let gq = (gi + vec2f(0.5)) * cs; let gx = length(vec2f(gq.x, gq.y * 1.5)) / (R * 0.8);
+    let frag = step(0.25 + 0.6 * gx, dkRand(gc, seed + 11u)) * step(gx, 0.95) * (1.0 - smoothstep(-aaC, aaC, bd)) * dkTexFade(cs * 0.3, fp) * s;
+    let tone = select(vec3f(0.6, 0.58, 0.53), vec3f(0.3, 0.2, 0.12), fibre) * (0.8 + 0.4 * dkRand(gc, seed + 31u));
+    alb = mix(alb, select(vec3f(0.62, 0.6, 0.55), vec3f(0.36, 0.3, 0.23), fibre), smear * 0.6);
+    alb = mix(alb, tone, frag);
+    let dl = length(dv);
+    if (dl > 1e-4) { (*o).n = normalize((*o).n + (dv.x * t + dv.y * b) * (0.35 * frag * smoothstep(-0.08, 0.0, bd) / dl)); }   // each piece's rim leans out: it catches the light as a thing lying there
+    (*o).keep *= 1.0 - 0.85 * max(smear, frag);
   } else {   // crack (a dark screen)
     let core = (1.0 - smoothstep(R * 0.16, R * 0.3 + aa, rho * (0.8 + 0.4 * dkAngNoise(theta, 7.0, seed)))) * s;
     var crack = 0.0;
@@ -244,6 +291,73 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
   (*o).albedo = alb;
 }
 
+// WALL WEAR (game/wallwear.ts; kind 'damage', param ≥ WEAR_LOOK — render/decals.ts WEAR_MARK is the contract): what a breakable shows while rounds are counted
+// into it, before it gives. ONE record per round; on a thin partition it sits on the wall's mid-plane and is drawn on BOTH faces. R = the mark's reach on this
+// face (m), s = strength 0‥1 (how far gone the cell is), mat = 0 plaster · 1 wood · 2 cardboard / cloth. ENTRY face: a pock (a chip out round a pin of dark)
+// that grows into a small hole — a near-black core in a ring of exposed material, the bed sloping into it — with cracks running out to the reach. EXIT face:
+// a blow-out from the first round — a dark core in a ragged patch wider than the entry's, torn back at its edge — that widens, with longer cracks. Wood splits with its grain (the record's tangent); board and cloth tear, darker, with two or three short
+// rips. Paint only: the hole is albedo, nothing passes it. The cracks are dealt ONCE over a full fan and revealed in a fixed order, so one never moves as its
+// mark grows.
+fn wearMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, s: f32, mat: u32, seed: u32, fp: f32, t: vec3f, b: vec3f, exitFace: bool) {
+  let rho = length(q); if (rho > R + fp) { return; }
+  let theta = atan2(q.y, q.x);
+  let aa = max(fp, 0.001);
+  let wood = mat == 1u; let soft = mat == 2u;
+  let nLow = dkAngNoise(theta, 9.0, seed);
+  let nChip = 0.6 * nLow + 0.4 * dkAngNoise(theta, 23.0, seed + 3u);
+  let wide = select(1.0, 1.45, exitFace);
+  // the dark core, sized to READ from the play camera (13 m up: ~1 cm a pixel) rather than to the round: on the entry face 1.4 cm of radius that opens to
+  // ~5 cm; on the far face the round's blow-out from the first — ~2.4 cm, ~7 cm at the end (what reads from across a dim room is the dark, not the pale)
+  let rCore = select(0.014 + 0.034 * s, 0.024 + 0.046 * s, exitFace) * (0.8 + 0.4 * dkAngNoise(theta, 6.0, seed + 17u));
+  // the patch of exposed material round it (wood: long with the grain)
+  let rhoC = select(rho, length(vec2f(q.x * 0.62, q.y * 1.5)), wood);
+  let patchK = (0.36 + 0.26 * s) * wide * select(1.0, 0.7, wood);
+  let rChip = max(min(R * patchK * (0.55 + 0.75 * nChip), 0.95 * R), rCore * 1.3);
+  let core = (1.0 - smoothstep(rCore - 0.5 * aa, rCore + 0.5 * aa, rho)) * clamp(2.6 * rCore / aa, 0.0, 1.0);
+  let chip = max((1.0 - smoothstep(rChip - 0.7 * aa, rChip + 0.3 * aa, rhoC)) * clamp(2.4 * rChip / aa, 0.0, 1.0) - core, 0.0);
+  var alb = (*o).albedo;
+  let lum = dot(alb, vec3f(0.2126, 0.7152, 0.0722));
+  var raw = min(mix(vec3f(lum), alb, 0.5) * 1.25 + vec3f(0.2), vec3f(0.92));          // plaster: exposed gypsum, lighter and greyer than the finish
+  var torn = mix(alb, vec3f(0.42, 0.36, 0.28), 0.55);                                   // …and the board's paper face torn back round a blow-out
+  if (wood) { raw = mix(alb, vec3f(0.74, 0.62, 0.44), 0.65); torn = raw * 0.7; }        // raw wood under the finish, splintered darker at the rim
+  if (soft) { raw = alb * vec3f(0.74, 0.70, 0.64); torn = alb * 0.55; }                 // torn board / cloth: its own colour, in its own shadow
+  let grain = 1.0 + (dkNoise2(q * 240.0, seed + 5u) - 0.5) * 0.3 * dkTexFade(0.004, fp);
+  let bed = mix(0.36, 1.0, smoothstep(rCore, rCore + 0.6 * (rChip - rCore) + 1e-4, rhoC));   // the bed slopes into the hole: darker toward it
+  if (exitFace) {
+    let edge = smoothstep(0.62 * rChip, 0.95 * rChip, rhoC);
+    alb = mix(alb, mix(raw * grain * bed, torn * (0.8 + 0.3 * dkAngNoise(theta, 17.0, seed + 29u)), edge * 0.8), chip * mix(0.55, 0.9, s));
+  } else {
+    alb = mix(alb, raw * grain * bed, chip * 0.8);
+  }
+  // cracks out of the patch to the reach: 2 at first, 6–7 when the cell is nearly through; a floor under their coverage so they read at room distance
+  var crack = 0.0;
+  var nCr = 2u + u32(floor(4.5 * s)) + select(0u, 1u, exitFace);
+  if (soft) { nCr = min(nCr, 3u); }
+  let wCr = (0.0014 + 0.0056 * s) * wide * select(1.0, 1.6, soft);
+  for (var i = 0u; i < nCr; i++) {
+    let slot = (i * 3u) % 7u;                                             // (0 3 6 2 5 1 4: the first few spread round the fan)
+    var a0 = dkRadialAng(slot, 7u, seed + 7u);
+    if (wood) { let k = round(a0 / 3.14159265); a0 = (k + (a0 / 3.14159265 - k) * 0.22) * 3.14159265; }   // splits run with the grain
+    let dv = vec2f(cos(a0), sin(a0));
+    let along = dot(q, dv); let lenI = R * (0.6 + 0.4 * dkRand(120u + slot, seed)) * select(1.0, 0.6, soft);
+    if (along <= rCore || along > lenI) { continue; }
+    let across = (q.x * dv.y - q.y * dv.x) - (dkLineNoise(along * 45.0, seed + 31u * slot) - 0.5) * 0.3 * along;
+    let wI = wCr * (1.0 - 0.75 * along / lenI);
+    crack = max(crack, dkCrackCov(across, wI, aa) * (1.0 - smoothstep(0.85 * lenI, lenI, along)) * smoothstep(0.08, 0.3, s + select(0.0, 0.1, exitFace)));
+  }
+  alb *= 1.0 - 0.72 * crack * (1.0 - core);
+  alb = mix(alb, vec3f(0.010, 0.009, 0.008), core * 0.97);
+  (*o).albedo = alb;
+  (*o).keep *= 1.0 - max(core, max(chip * 0.8, crack * 0.6));
+  // the crater's bed tilts toward the hole on the entry face (light from one side catches the far rim); the far face bulges OUT round a blow-out
+  let rBed = max(min(R * patchK * (0.55 + 0.75 * nLow), 0.95 * R), rCore * 1.3);
+  let slope = (1.0 - smoothstep(rBed - aa, rBed, rhoC)) * (1.0 - core) * clamp(2.0 * rBed / aa, 0.0, 1.0);
+  if (rho > 1e-5 && slope > 0.01) {
+    let dir = q / rho;
+    (*o).n = normalize((*o).n + (dir.x * t + dir.y * b) * (select(-0.42, 0.3, exitFace) * select(1.0, 0.5, soft) * slope));
+  }
+}
+
 /** Every decal registered in the 1 m cell under P that faces like this pixel's surface, lies in its plane and (if attached) belongs to its box, applied oldest →
  *  newest to (albedo, n, keep). fp: the pixel's footprint on the surface in metres (edge softening / coverage fade). */
 fn decalSurface(P: vec3f, faceN: vec3f, boxIdx: u32, albedo: vec3f, fp: f32) -> DecalOut {
@@ -262,9 +376,23 @@ fn decalSurface(P: vec3f, faceN: vec3f, boxIdx: u32, albedo: vec3f, fp: f32) -> 
     if (dot(v, v) > reach * reach) { continue; }                     // outside the bounding sphere (one load for almost every reject)
     let d1 = bitcast<vec4f>(decalBuf[DECAL_REC0 + di * 3u + 1u]);
     let n = d1.xyz;
-    if (dot(faceN, n) < DECAL_FACING) { continue; }                    // the back of the wall, the floor under a wall hole, the jamb beside the leaf
-    let h = dot(v, n);
-    if (abs(h) > DECAL_PLANE_TOL) { continue; }                        // a desk top above a floor scorch, the far face of a thin partition
+    let fd = dot(faceN, n); let h = dot(v, n);
+    // a WALL-WEAR mark (kind damage, param ≥ WEAR_LOOK — which no other kind's param reaches, and the kind is read to be sure): hw = the half thickness of the
+    // partition whose mid-plane it sits on, recovered from its radius and its strength's reach (0 = a mark on the face it was hit on: an ordinary decal)
+    var hw = 0.0; var wearReach = R;
+    let isWear = d1.w >= WEAR_LOOK && d1.w < WEAR_LOOK + WEAR_LOOKS && (decalBuf[DECAL_REC0 + di * 3u + 2u].w & 7u) == DK_DAMAGE;
+    if (isWear) {
+      let rs = WEAR_REACH0 + WEAR_REACH1 * fract(d1.w);
+      let hh = sqrt(max(R * R - rs * rs, 0.0));
+      if (hh >= WEAR_MIN_HALF) { hw = hh; wearReach = rs; }
+    }
+    if (hw > 0.0) {
+      // through mark: only the wall's own two faces take it (each on its side of the plane, facing out) — not the leaf of a door shut in the same plane
+      if (abs(fd) < DECAL_FACING || fd * h <= 0.0 || abs(abs(h) - hw) > WEAR_FACE_TOL) { continue; }
+    } else {
+      if (fd < DECAL_FACING) { continue; }                             // the back of the wall, the floor under a wall hole, the jamb beside the leaf
+      if (abs(h) > DECAL_PLANE_TOL) { continue; }                      // a desk top above a floor scorch, the far face of a thin partition
+    }
     let d2u = decalBuf[DECAL_REC0 + di * 3u + 2u];
     let bits = d2u.w; let d2 = bitcast<vec3f>(d2u.xyz);   // (row 2 = tangent xyz as f32 bits + the record's bits word, read as the u32 it is — review R2.1 / R10.3)
     if ((bits & 8u) != 0u && (bits >> 16u) != boxIdx) { continue; }   // attached: its own box only (the leaf's scuff never prints on the frame it shuts against)
@@ -277,7 +405,7 @@ fn decalSurface(P: vec3f, faceN: vec3f, boxIdx: u32, albedo: vec3f, fp: f32) -> 
     else if (kind == DK_SCUFF) { scuffMark(&o, q, d1.w, seed, fp); }
     else if (kind == DK_CHIP) { chipMark(&o, q, R, seed, fp); }
     else if (kind == DK_WETPRINT) { wetPrintMark(&o, q, d1.w, seed, fp); }
-    else if (kind == DK_DAMAGE) { damageMark(&o, q, R, d1.w, seed, fp, t, b); }
+    else if (kind == DK_DAMAGE) { if (isWear) { wearMark(&o, q, wearReach, fract(d1.w), u32(d1.w - WEAR_LOOK), seed, fp, t, b, fd < 0.0); } else { damageMark(&o, q, R, d1.w, seed, fp, t, b); } }
   }
   return o;
 }

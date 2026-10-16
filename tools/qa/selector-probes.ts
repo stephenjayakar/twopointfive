@@ -12,11 +12,12 @@ const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
 const { EASE_RATE, EASE_MAX, MAX_NEAR, PACE_STEP } = playerMod;
-const { TAP_SECS, runningVerb } = await import(`${ROOT}/src/game/interact.ts`);
+const { TAP_SECS } = await import(`${ROOT}/src/game/interact.ts`);
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
-const { Doors } = await import(`${ROOT}/src/game/doors.ts`);
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { DRIVE_SECS, PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
+const { HANDS } = await import(`${ROOT}/src/game/hands.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -27,7 +28,6 @@ function park(gd: any, i: number) { gd.hold = true; gd.heardUpTo = 1e12; place(g
 const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
 /** the rows on offer right now as 'kind:verb' (a running verb starred, the cancel row as 'cancel') */
 const verbsOf = (game: any): string[] => game.nearby.map((r: any) => r.kind === 'cancel' ? 'cancel' : `${r.kind}:${r.verb ?? '—'}${r.running ? '*' : ''}`);
-const rowsS = (game: any) => game.nearby.map((r: any, i: number) => `${i === game.player.nearSel ? '▸' : ' '}${r.kind}${r.verb ? ':' + r.verb : ''}${r.running ? '*' : ''} "${r.line1} / ${r.line2}"`).join(' | ') || 'none';
 /** a one-frame tap (the press edge with the key already up: performed inside that step) */
 function tap(W: any) { W.input.pressed.add(IK); W.step(DT); }
 /** put the highlight on the row of `kind` / `verb` and tap it; false if no such row */
@@ -48,11 +48,13 @@ function sameEvents(got: any[], want: { kind: string; level: number; loud?: bool
 /** the crack: nothing for 0.233 s of the hold (doorHold > 0.22), then 0.55 rad/s a frame at a time (0.00917), standing at 0.605 (0.6 + the step that crossed it) however long the key stayed down */
 const OLD_CRACK = { delay: 0.233, perFrame: 0.55 / 60, cap: 0.605 };
 /** what the floor heard of each verb, from the frame the key acted (a tap: its own frame; the pick: the frame the plant began, 0.233 s into the hold) */
+/** a door worked by hand (hands.ts, on as the page ships it): the row's noise is the same one, filed as the hand unlatches the leaf — HANDS.doorReach after the tap */
+const useT = () => HANDS.on && HANDS.door ? HANDS.doorReach + 0.01 : 0.02;
 const OLD_EVENTS = {
-  push: [{ kind: 'door', level: 0.20, t: 0.02 }],                                            // the creak as it swings away
+  get push() { return [{ kind: 'door', level: 0.20, t: useT() }]; },                          // the creak as it swings away
   pull: [] as { kind: string; level: number; t: number }[],                                   // pulled to: nothing until the latch, seconds later
   rattle: [{ kind: 'door', level: 0.12, t: 0.02 }],                                          // the handle tried
-  unlock: [{ kind: 'door', level: 0.12, t: 0.02 }, { kind: 'door', level: 0.20, t: 0.02 }],   // the key's clack + the creak, one frame
+  get unlock() { return [{ kind: 'door', level: 0.12, t: useT() }, { kind: 'door', level: 0.20, t: useT() }]; },   // the key's clack + the creak, one frame
   ease: [] as { kind: string; level: number; t: number }[],                                   // silent, keyed or not
   kick: [{ kind: 'kick', level: 1.0, loud: true, t: 0.40 }, { kind: 'door', level: 0.60, loud: true, t: 0.67 }],   // the boot at KICK_IMPACT, the leaf banging off its stop
   pick: [{ kind: 'door', level: 0.16, t: 0.417 }, { kind: 'door', level: 0.16, t: 1.167 }, { kind: 'door', level: 0.16, t: 1.80 }, { kind: 'door', level: 0.16, t: 2.617 }, { kind: 'door', level: 0.16, t: 3.317 }, { kind: 'door', level: 0.16, t: 3.90 }, { kind: 'door', level: 0.30, t: 4.317 }],   // six clicks and the cylinder going over — re-based to the frame the plant began (the old +0.65 … +4.55 less the 0.233 s hold threshold)
@@ -151,7 +153,7 @@ export async function selectorRows() {
       for (let i = 0; i < 60; i++) W.step(DT);
       notes.push(`arm: ${want(game, ['held:question', 'held:choke'], fails, 'held (arm)').join('/')}`);
       const q = game.nearby[0], c = game.nearby[1];
-      if (!/^Space {2}“make him talk”$/.test(q?.line2 ?? '')) fails.push(`question row "${q?.line2}"`); if (!/^Space {2}choke him out — quiet {2}· {2}E {2}draw — gun to his head$/.test(c?.line2 ?? '')) fails.push(`choke row "${c?.line2}"`);
+      if (!/^Space {2}“make him talk”$/.test(q?.line2 ?? '')) fails.push(`question row "${q?.line2}"`); if (!(CLOSE.heldClicks ? /^Space {2}choke him out — quiet {2}· {2}LMB {2}knife — lethal {2}· {2}RMB {2}choke him out {2}· {2}E {2}draw — gun to his head$/ : /^Space {2}choke him out — quiet {2}· {2}E {2}draw — gun to his head$/).test(c?.line2 ?? '')) fails.push(`choke row "${c?.line2}"`);   // (close.ts CLOSE.heldClicks on: the two buttons are worded on the choke row ahead of E)
       if (game.hover?.verb !== 'question') fails.push(`highlight on ${game.hover?.verb} (want the question: a tap talks)`);
       tapVerb(W, 'held', 'choke'); const chosen = verbsOf(game); W.step(DT); const chosen2 = verbsOf(game);
       if (chosen2.join() !== 'held:choke*') fails.push(`after choosing the choke: [${chosen2.join(', ')}] (want the running row alone)`); notes.push(`choke chosen → [${chosen.join(',')}] → [${chosen2.join(',')}] "${game.nearby[0]?.line2}"`); }
@@ -387,12 +389,11 @@ export async function selectorNoise() {
   { const { W, game, d } = await atLockedDoor(405, false, true); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'ease'); W.input.pressed.add(IK); collect(W, 120, ev, t0);
     check('keyed ease', mine(ev), OLD_EVENTS.ease); if (Math.abs(d.angle) < 0.5 || game.player.picking) fails.push(`keyed ease: angle ${f2(d.angle)} picking ${!!game.player.picking}`); }
   { const { W, game, d } = await atShutDoor(406); d.angle = 1.2; d.latched = false; d.place(); W.step(DT); const ev: any[] = []; const t0 = game.time; game.selectVerb('door', 'pull'); W.input.pressed.add(IK); collect(W, 120, ev, t0);
-    check('pull', mine(ev), OLD_EVENTS.pull); if (Math.abs(d.angle) > 0.5) fails.push(`pull: angle ${f2(d.angle)} after 2 s`); }
+    { const got = mine(ev), latch = HANDS.on && HANDS.door && got.length === 1 && got[0].kind === 'door' && Math.abs(got[0].level - 0.16) < 0.006 && !got[0].loud;   // (by hand the leaf is brought home inside the second where the page's doors stay put: the door's own latch click — the one it always made, seconds later — may fall in this window, and nothing else may)
+      check('pull', latch ? [] : got, OLD_EVENTS.pull); if (latch) notes.push(`pull by hand: the latch [${evS(got)}]`); } if (Math.abs(d.angle) > 0.5) fails.push(`pull: angle ${f2(d.angle)} after 2 s`); }
   { const W = await world(407); const { game, level } = W; game.guards.forEach((o: any, i: number) => park(o, i)); const bp = level.breaker.pos; game.teleportPlayer([bp[0], 0, bp[2] - 0.7]); W.step(DT); W.step(DT);
     const ev: any[] = []; const t0 = game.time; W.input.pressed.add(IK); collect(W, 60, ev, t0); check('breaker', mine(ev), OLD_EVENTS.breaker); if (!game.blackout.active) fails.push('breaker: no blackout'); }
   verdict(fails.length === 0, 'grab 0.12 · question silent · kick 1.0! + the bang · rattle 0.12 · unlock 0.12 + 0.20 · keyed ease silent · pull silent · breaker silent — all as before', notes.join(' · '), fails);
   console.log(`=== selector-noise: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
 }
-
-export async function selectorAll() { const a = await selectorRows(); const b = await selectorInput(); const c = await selectorSustained(); const d = await selectorNoise(); return a && b && c && d; }

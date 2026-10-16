@@ -1,6 +1,6 @@
 // The property groups the inspector's sheet is composed from (and the flat 'all knobs' list is made of): each is a title, a builder that adds rows to a
 // Panel section over LIVE objects (the state, RIG, LONG, HOLD, WALL_POSE, the effects numbers, the gait constants), and — where the numbers are authored data
-// the designer pastes back — reset-to-shipped and COPY in the paste-back format: RIG → rigSource() (the `export const RIG` statement), LONG → the LONG
+// the maintainer pastes back — reset-to-shipped and COPY in the paste-back format: RIG → rigSource() (the `export const RIG` statement), LONG → the LONG
 // table, the gait constants → the gait lab's block (all byte-for-byte what the old pages emitted); the groups that never had a paste format (HOLD,
 // WALL_POSE, effects) copy a 'changed values' list to apply by hand. Which groups show is the variant's list (scenes.ts) plus the outliner selection (ui.ts).
 import { Panel, NumOpts } from '../ui/panel';
@@ -12,6 +12,7 @@ import type { Runtime } from './runtime';
 import { UPPERS, STANCE_NAMES, STANCES, TAC_SHOTS, PATHS, PRESETS, DRIVES, TRACK, DEBUG_VIEWS, RIFLE_NAMES } from './state';
 import { ALL_GAIT_GROUPS, GAIT_GROUPS, SOFT_KNEE_GROUP, DEFAULTS, KnobGroup, gaitSource, softKneeSource, gaitGroupChanged, gaitChanged, resetGaitGroup, setAllOff } from './gait';
 import { QUALITY_NAMES } from '../ui/quality';
+import { gearText } from '../game/gear';
 
 export interface SheetCtx {
   rt: Runtime;
@@ -79,7 +80,7 @@ const rigRange = (group: string): RangeFn => (path) => {
   if (/thick|tall|half/i.test(path)) o = { min: 0.002, max: 0.12, step: 0.001 };
   if (/glow/i.test(path)) o = /lensGlow/.test(path) ? { min: 0, max: 100, step: 1 } : { min: 0, max: 40, step: 0.1, title: 'screen glow + bloom only: the lit lens boxes are raster-only, no ray sees them, so this never lights the face or the wall' };
   if (/follow/i.test(path)) o = { min: 0, max: 1, step: 1, slider: true, title: '0: offsets in a yaw-only head frame · 1 (shipped): offsets ride the skull\'s full rotation (crouch / aim-down / death keep them on the face); boxes still only yaw' };
-  if (/^l[01]$|\.l[01]$/.test(path) && (group === 'carbine' || group === 'sc20k')) o = { min: -0.4, max: 0.5, step: 0.001 };
+  if (/^l[01]$|\.l[01]$/.test(path) && (group === 'carbine' || group === 'sc20k' || group === 'm4')) o = { min: -0.4, max: 0.5, step: 0.001 };
   if (/lightAhead|lightUnder/.test(path)) o = { min: -0.1, max: 0.5, step: 0.001, title: 'where the actual spot light sits relative to the hand / lens (m)' };
   if (/fingers|back/i.test(path) && (group === 'carbine' || group === 'sc20k')) o = { min: -1, max: 1, step: 0.01, title: 'support hand on the handguard / round the foregrip post: the direction its fingers point / the back of the hand faces, in the gun\'s axes (x = the figure\'s left, y = up out of the receiver, z = toward the muzzle) — normalized on use' };
   if (/^slung\.off/.test(path)) o = { min: -0.5, max: 0.5, step: 0.005, title: 'the slung rifle\'s bore-above-trigger point off the MID-BACK joint (spine2) in the back\'s frame (m): left · up the spine line (hips → between the shoulders) · ahead (− = behind the spine: the hull is 2.4 cm each side of the bore, the torso capsules ~16 cm)', names: ['left', 'up spine', 'ahead'] };
@@ -124,7 +125,7 @@ export const rigChanged = () => rigSource(RIG) !== rigSource(RIG_DEFAULTS);
 export function shippedAdj(path: string): Adj {
   const Z: Adj = { off: [0, 0, 0], rot: [0, 0, 0] }; const s = path.split('.'); const D = RIG_DEFAULTS as unknown as Record<string, Tree>;
   if (s[0] === 'emitters') return s[1] && EMITTER0[s[1]] ? { off: EMITTER0[s[1]] as Vec3, rot: [0, 0, 0] } : Z;
-  if (s[0] === 'goggles') { const G = RIG_DEFAULTS.goggles; const a = s.length === 2 ? (s[1] === 'on' ? G.onAdj : G.offAdj) : s[2] === 'housing' ? G.housingAdj : G.lensAdj; return a ?? Z; }
+  if (s[0] === 'goggles') { const G = RIG_DEFAULTS.goggles; const a = s.length === 2 ? (s[1] === 'on' ? G.onAdj : G.offAdj) : s[2] === 'housing' || s[2] === 'bridge' ? G.housingAdj : G.lensAdj; return a ?? Z; }
   const grp = D[s[0]]; if (!grp) return Z;
   if (s.length === 1) return (grp.adj as Adj | undefined) ?? Z;
   if (s[1] === 'gripL') return { off: ((grp.gripL as Tree | undefined)?.off as Vec3 | undefined) ?? Z.off, rot: [0, 0, 0] };   // (the carbine's handguard point / the FN2000's foregrip point: whichever group the path names)
@@ -139,6 +140,7 @@ export function rigObjectFor(path: string): { obj: Tree; snap: Tree | undefined;
   if (s[0] === 'goggles') {
     if (s.length <= 2) return { obj: R.goggles, snap: D.goggles, group: 'goggles', base: 'goggles' };
     if (s[2] === 'housing') return { obj: R.goggles.housing as Tree, snap: D.goggles.housing as Tree, group: 'goggles', base: 'goggles.housing' };
+    if (s[2] === 'bridge' || s[2] === 'tubes') return { obj: R.goggles.tubes as Tree, snap: D.goggles.tubes as Tree, group: 'goggles', base: 'goggles.tubes' };   // (the 2010s two-tube set: its own numbers)
     return { obj: R.goggles, snap: D.goggles, group: 'goggles', base: 'goggles', skip: k => !/^lens/.test(k) };
   }
   const grp = R[s[0]]; if (!grp) return null;
@@ -157,27 +159,27 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
 
   // ---- always on top: the figure
   add({ id: 'figure', title: 'Figure', open: true, build: (p, sec) => {
-    p.number(sec, 'body yaw °', () => st.bodyYawDeg, v => rt.setBodyYaw(Math.round(wrapAngle(v * DEG) / DEG)), { step: 1, title: '0 = facing the default camera (turntable: Playback ▸ T)' });
+    p.number(sec, 'body yaw °', () => st.bodyYawDeg, v => rt.setBodyYaw(Math.round(wrapAngle(v * DEG) / DEG)), { step: 1, title: '0 = facing the default camera (turntable: Playback ▸ Y)' });
     p.number(sec, 'speed m/s', () => st.speed, v => { st.speed = v; }, { step: 0.05, min: 0, max: 6, title: 'ground speed as the GAME drives it (Locomotion ▸ presets); the gait blend picks the clips' });
     p.toggleBox(sec, 'crouched', () => !!st.crouch, v => { st.crouch = v ? 1 : 0; });
     p.select(sec, 'upper body', UPPERS.map(u => u.name), () => st.upper, v => { st.upper = v; }, 'the upper-body layer: none = arms follow the legs, relaxed = the two-hand pistol carry (as player.ts: only with the pistol actually in the hand — holstered or a can up it comes to none), aim = the aim clips by pitch, shoot = aim + a round every 0.6 s, torch = Idle_Torch_Loop');
     p.slider(sec, 'aim pitch °', -60, 70, 1, () => st.aimPitchDeg, v => { st.aimPitchDeg = v; }, 'blends Pistol_Aim_Down/Neutral/Up + spine twist; also tilts the guard torch / the shouldered carbine', 0);
     p.slider(sec, 'aim yaw offset °', -100, 100, 1, () => st.aimYawDeg, v => { st.aimYawDeg = v; }, 'chest twist toward the aim relative to the hips', 0);
     p.slider(sec, 'look yaw °', -80, 80, 1, () => st.lookYawDeg, v => { st.lookYawDeg = v; }, 'extra neck/head yaw (guards looking around) — the goggles must follow', 0);
-    p.select(sec, 'right hand', ['0 · holstered (hands free)', '1 · Five-seveN drawn', '2 · canister in the fist'], () => Math.min(2, st.slot), v => { st.slot = v; }, 'Sam\'s slot (1 / 2 / 0 keys): holstered = the sidearm on the thigh, arms swing (with the FN2000 in his hands the pistol rides the thigh whatever this says)');
-    p.select(sec, 'FN2000 (4)', RIFLE_NAMES, () => st.rifle, v => { st.rifle = v; if (v === 2) { st.guard = false; st.carbine = false; } }, 'Sam\'s rifle (RIG.sc20k): slung across his back off the chest joint, or in both hands — the long-gun solve with its foregrip point (turns the guard kit off); carriages: Sam ▸ rifle variants / the Long gun group; 4 cycles it');
+    p.select(sec, 'right hand', ['0 · holstered (hands free)', gearText('1 · Five-seveN drawn'), '2 · canister in the fist'], () => Math.min(2, st.slot), v => { st.slot = v; }, gearText('The player\'s slot (1 / 2 / 0 keys): holstered = the sidearm on the thigh, arms swing (with the FN2000 in his hands the pistol rides the thigh whatever this says)'));
+    p.select(sec, gearText('FN2000 (4)'), RIFLE_NAMES, () => st.rifle, v => { st.rifle = v; if (v === 2) { st.guard = false; st.carbine = false; } }, 'The player\'s rifle (RIG.sc20k): slung across his back off the mid-back joint, or in both hands — the long-gun solve with its foregrip point (turns the guard kit off); carriages: the player ▸ rifle variants / the Long gun group; 4 cycles it');
     p.toggleBox(sec, 'guard kit (G)', () => st.guard, v => { st.guard = v; if (!v) st.carbine = false; else if (st.rifle === 2) st.rifle = 0; }, 'guard tint + guard kit: hand torch (patrol carry) or drawn pistol with weapon light');
     p.select(sec, 'guard carry', ['torch (patrol)', 'pistol drawn'], () => st.guardTorch ? 0 : 1, v => { st.guardTorch = v === 0; }, 'the sidearm kit (ignored while the carbine is in his hands)');
     p.toggleBox(sec, 'carbine (C)', () => st.carbine, v => { st.carbine = v; if (v) { st.guard = true; if (st.rifle === 2) st.rifle = 0; } }, 'the guard kit\'s AKS-74U-style carbine in both hands (turns the guard kit on); carriages: Guard ▸ carbine variants / the Long gun group');
     p.toggleBox(sec, 'goggles worn', () => st.goggles, v => { st.goggles = v; });
-    p.toggleBox(sec, 'night vision (N)', () => st.nv, v => { st.nv = v; }, 'on: lenses down over the eyes, blazing · off: parked on the forehead, dim');
-    p.toggleBox(sec, 'light on (L)', () => st.lightOn, v => { st.lightOn = v; }, 'rail light (Sam, slot 1) / torch or weapon light (guard)');
+    p.toggleBox(sec, 'night vision (N)', () => st.nv, v => { st.nv = v; }, 'on: tubes down over the eyes · off: flipped up (the lenses glow only with ?oldgear: down and blazing / parked on the forehead, dim)');
+    p.toggleBox(sec, 'light on (L)', () => st.lightOn, v => { st.lightOn = v; }, 'rail light (the player, slot 1) / torch or weapon light (guard)');
     p.buttons(sec, '', [{ text: 'die: shot (X)', run: () => rt.die('shot'), title: 'the game\'s ragdoll, shoved along the camera\'s view like a round' }, { text: 'die: takedown', run: () => rt.die('takedown'), title: 'folds forward quietly' }, { text: 'respawn', run: () => rt.spawn() }]);
   } });
   add({ id: 'playback', title: 'Playback · clips', open: false, build: (p, sec) => {
     p.toggleBox(sec, 'paused (P)', () => st.paused, v => { st.paused = v; });
     p.slider(sec, 'playback rate', 0, 2, 0.05, () => st.rate, v => { st.rate = v; }, 'time scale for the character only', 1);
-    p.toggleBox(sec, 'turntable (T)', () => st.turntable, v => { st.turntable = v; });
+    p.toggleBox(sec, 'turntable (Y)', () => st.turntable, v => { st.turntable = v; });
     p.number(sec, 'turntable °/s', () => st.turnRate, v => { st.turnRate = v; }, { step: 5, min: -180, max: 180 });
     p.select(sec, 'raw clip', ['— (game graph)', ...rt.clipNames], () => st.clip, v => { st.clip = v; }, 'bypass the graph and loop one library clip over the rest pose (props stay attached)');
     p.slider(sec, 'scrub', 0, 1, 0.005, () => { const r = rt.char.anim.rawClip; return r ? ((r.time % r.clip.duration) + r.clip.duration) % r.clip.duration / r.clip.duration : rt.char.anim.phase; }, v => { const r = rt.char.anim.rawClip; if (r) r.time = v * r.clip.duration; else rt.char.anim.phase = v; }, 'normalized clip time (raw clip) / locomotion phase (graph) — pause first');
@@ -195,7 +197,7 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
     p.toggleBox(sec, 'crouched', () => !!st.crouch, v => { st.crouch = v ? 1 : 0; });
     p.toggleBox(sec, 'backpedal', () => st.reverse, v => { st.reverse = v; }, 'play the locomotion backwards (the circle then faces against the travel)');
     p.select(sec, 'path', PATHS, () => st.path, v => rt.setPath(v), 'root motion: in place, an analytic circle (foot planting against the marks), starts / stops / turns, turning on the spot (the foot lock steps him round)');
-    p.slider(sec, 'deliberate', 0, 1, 0.01, () => st.deliberate, v => { st.deliberate = v; }, 'anim.deliberate — what the game raises inside ~7 m of a living guard who has not clocked Sam: crouch walk = cadence × 0.78 with the stride warped longer to match, a linger over each plant, pelvis −4 cm, torso further over, arms in; walk = arms in + softer knees only', 0);
+    p.slider(sec, 'deliberate', 0, 1, 0.01, () => st.deliberate, v => { st.deliberate = v; }, 'anim.deliberate — what the game raises inside ~7 m of a living guard who has not clocked the player: crouch walk = cadence × 0.78 with the stride warped longer to match, a linger over each plant, pelvis −4 cm, torso further over, arms in; walk = arms in + softer knees only', 0);
     p.toggleBox(sec, 'floor marks (25 cm)', () => st.marks, v => { st.marks = v; }, 'thin strips across the walking direction to judge a planted foot against');
     p.toggleBox(sec, 'ALL TWEAKS OFF', () => st.allOff, v => { st.allOff = v; setAllOff(v); }, 'gaze off, bounce as authored, no stride warps, no stance linger or stance-foot pin, no soft knee, no life layer, no foot lock, the old natural speeds (only the walk clip\'s phase alignment to the jog stays) — flip it while he moves');
     p.buttons(sec, '', [{ text: 'reset all gait constants', run: () => { if (st.allOff) { st.allOff = false; setAllOff(false); } for (const g of ALL_GAIT_GROUPS) resetGaitGroup(g); } }, { text: 'copy gait constants', run: () => ctx.emit(gaitSource(), 'gait constants — paste over the matching lines in src/game/character.ts') }]);
@@ -225,13 +227,13 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
   const longGroup = (id: string, T: Record<LongStance, LongShape>, T0: Record<LongStance, LongShape>, crouched: boolean) => add({ id, title: crouched ? 'Long gun carriage, crouched (LONG_CROUCH)' : 'Long gun carriage, standing (LONG)', open: true, build: (p, sec) => {
     const tname = crouched ? 'LONG_CROUCH' : 'LONG';
     if (!crouched) {
-      p.select(sec, 'carriage', ['derived (upper / stance / kick)', 'patrolLong (calm carry, low across the front)', 'lowLong (long-gun low ready)', 'shoulder (aiming: bore on aimDir)', 'portLong (high port: doors, the kick)'], () => st.longStance, v => { st.longStance = v; if (v && !st.carbine && st.rifle !== 2) { if (st.guard) st.carbine = true; else st.rifle = 2; } }, 'anim.longStance — needs a long gun in the hands (puts one there: the carbine on the guard kit, the FN2000 on Sam). Derived = what the pistol man\'s upper / stance / kick come to (none → patrolLong, aim → shoulder, low ready → lowLong, high ready / stack / kick → portLong) — the guards\'. player.ts forces Sam\'s: in the hands at all → shoulder (over the aim clip\'s trunk, whatever "upper body" says), the sprint → lowLong, a kick / a leaf under the hand → portLong');
-      p.select(sec, 'steady against the gait', ['as the game (Sam on · guards off)', 'off', 'on'], () => st.longSteady, v => { st.longSteady = v; }, 'anim.longSteady × the carriage\'s "steady": the trunk\'s side-to-side rock once a stride is kept out of the trigger hand (the arms take it up — LONG_STEADY.tau below), and at a run un-aimed the shoulder line is held to the weapon instead of pumping with the run clip (LONG_STEADY.runYaw). Walk / crouch-walk / sprint him (Figure ▸ speed) and flip this for the before / after');
+      p.select(sec, 'carriage', ['derived (upper / stance / kick)', 'patrolLong (calm carry, low across the front)', 'lowLong (long-gun low ready)', 'shoulder (aiming: bore on aimDir)', 'portLong (high port: doors, the kick)'], () => st.longStance, v => { st.longStance = v; if (v && !st.carbine && st.rifle !== 2) { if (st.guard) st.carbine = true; else st.rifle = 2; } }, 'anim.longStance — needs a long gun in the hands (puts one there: the carbine on the guard kit, the FN2000 on the player). Derived = what the pistol man\'s upper / stance / kick come to (none → patrolLong, aim → shoulder, low ready → lowLong, high ready / stack / kick → portLong) — the guards\'. player.ts forces the player\'s: in the hands at all → shoulder (over the aim clip\'s trunk, whatever "upper body" says), the sprint → lowLong, a kick / a leaf under the hand → portLong');
+      p.select(sec, 'steady against the gait', ['as the game (the player on · guards off)', 'off', 'on'], () => st.longSteady, v => { st.longSteady = v; }, 'anim.longSteady × the carriage\'s "steady": the trunk\'s side-to-side rock once a stride is kept out of the trigger hand (the arms take it up — LONG_STEADY.tau below), and at a run un-aimed the shoulder line is held to the weapon instead of pumping with the run clip (LONG_STEADY.runYaw). Walk / crouch-walk / sprint him (Figure ▸ speed) and flip this for the before / after');
     } else p.toggleBox(sec, 'crouched (Figure)', () => st.crouch >= 0.5, v => { st.crouch = v ? 1 : 0; }, 'the same switch as Figure ▸ crouched: this table only shows fully crouched (the solve lerps LONG → LONG_CROUCH by the crouch weight, ahead of the carriage springs — a crouch mid-aim eases like a change of carriage)');
     // getters, setters and shipped defaults all go through cur()
     const curName = (): LongStance => (rt.char.anim.longShown ?? (st.longStance ? LONG_STANCES[st.longStance - 1] : 'patrolLong')) as LongStance;
     const s = () => T[curName()], d = () => T0[curName()];
-    p.text(sec, () => `editing ${tname}.${curName()}${rt.char.anim.longShown ? '' : ' (no long gun in the hands: nothing to see)'}${crouched && st.crouch < 0.5 ? ' — he is STANDING: these numbers are not on show (tick crouched)' : !crouched && st.crouch >= 0.5 ? ' — he is CROUCHED: the crouched table below is what shows' : ''} — one table for the carbine and the FN2000${crouched ? ', shipped as a copy of the standing one' : ''}: the trigger hand's wrist off the chest joint (or the gun shoulder: anchor), the bore's own pitch / yaw, the trunk's blade / lean, the head on the stock, the elbows, the idle sway, the steadying`);
+    p.text(sec, () => `editing ${tname}.${curName()}${rt.char.anim.longShown ? '' : ' (no long gun in the hands: nothing to see)'}${crouched && st.crouch < 0.5 ? ' — he is STANDING: these numbers are not on show (tick crouched)' : !crouched && st.crouch >= 0.5 ? ' — he is CROUCHED: the crouched table below is what shows' : ''} — one table for the carbine and the ${gearText('FN2000')}${crouched ? ', shipped as a copy of the standing one' : ''}: the trigger hand's wrist off the chest joint (or the gun shoulder: anchor), the bore's own pitch / yaw, the trunk's blade / lean, the head on the stock, the elbows, the idle sway, the steadying`);
     const numr = (label: string, key: keyof LongShape, step: number, min: number, max: number, title?: string) => p.number(sec, label, () => s()[key] as number, v => { (s()[key] as number) = v; }, { step, min, max, title, def: () => d()[key] as number });
     const sld = (label: string, key: keyof LongShape, min: number, max: number, step: number, title?: string) => p.slider(sec, label, min, max, step, () => s()[key] as number, v => { (s()[key] as number) = v; }, title, () => d()[key] as number);
     const L = crouched ? 'C· ' : 'L· ';
@@ -243,7 +245,7 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
     (['elbowR', 'elbowL'] as const).forEach(k => p.numbers(sec, `${L}${k} [left+ up+ fwd+]`, 3, i => s()[k][i], (i, v) => { s()[k][i] = v; }, { step: 0.05, min: -1, max: 1, defs: () => d()[k], title: 'model-space direction the elbow is swivelled toward' }));
     sld(L + 'elbow hold', 'poleW', 0, 1, 0.05, 'how hard the elbows are held at those directions (0 = the IK\'s own plane)');
     sld(L + 'sway ×', 'sway', 0, 2, 0.05, 'the carry\'s idle figure-of-eight: bore ±0.6° yaw / ±0.8° pitch and the hand ±4 mm at 1 (shoulder 0.1, lowLong 0.25 shipped)');
-    sld(L + 'steady (lateral, × longSteady)', 'steady', 0, 1, 0.05, 'how much of the trunk\'s side-to-side rock in the gait is kept OUT of the trigger hand\'s point for a figure that steadies its gun (Sam; standing group ▸ steady against the gait): 1 = the gun rides the shoulders\' mean line, the arms take the rock; 0 = it goes with the chest joint as the guards\' does');
+    sld(L + 'steady (lateral, × longSteady)', 'steady', 0, 1, 0.05, 'how much of the trunk\'s side-to-side rock in the gait is kept OUT of the trigger hand\'s point for a figure that steadies its gun (the player; standing group ▸ steady against the gait): 1 = the gun rides the shoulders\' mean line, the arms take the rock; 0 = it goes with the chest joint as the guards\' does');
     if (!crouched) {
       p.number(sec, 'LONG_STEADY.tau s (all carriages)', () => LONG_STEADY.tau, v => { LONG_STEADY.tau = v; }, { step: 0.05, min: 0.05, max: 3, def: LONG_STEADY0.tau, title: 'time constant of the two-pole low-pass the steadied hand follows the trunk\'s side-to-side through: longer = deader against the stride (crouch-walk muzzle p-p ≈ 12 cm at 0, 1.7 at 0.5, 0.7 at 0.8) but slower to follow the weight settling onto one foot at rest' });
       p.number(sec, 'LONG_STEADY.runYaw (all carriages)', () => LONG_STEADY.runYaw, v => { LONG_STEADY.runYaw = v; }, { step: 0.05, min: 0, max: 1, def: LONG_STEADY0.runYaw, title: 'at a run un-aimed (the sprint\'s low ready), this share of the shoulder line\'s pumping (±25° in the run clips) is taken back out down the spine so the shoulders stay on the weapon: 0.85 leaves a walk\'s worth (±5°)' });
@@ -261,10 +263,10 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
   // ---- the hold: driving rows, then the contact constants
   add({ id: 'hold', title: 'Hold (grab / human shield)', open: true, build: (p, sec) => {
     const H = () => st.hold;
-    p.toggleBox(sec, 'pose the hold', () => H().on, v => { H().on = v; H().t = 0; if (v) { st.stance = 0; st.lockpick = false; if (H().who === 0) { st.guard = false; if (H().variant === 1) st.slot = 1; } else st.guard = true; } }, 'drives anim.holdPose (the holder: Sam) or anim.heldPose (the held man) on this one mannequin — the layer eases itself in and out; upper body / stance are forced off while it is on, the legs keep whatever locomotion is set (walk it: the hands must stay put)');
-    p.select(sec, 'figure', ['holder (Sam)', 'held man (guard kit)'], () => H().who, v => { H().who = v; H().t = 0; if (v === 1) st.guard = true; else { st.guard = false; st.carbine = false; if (H().variant === 1) st.slot = 1; } });
-    p.select(sec, 'variant', ['arm (both hands on him, knife in the fist, pistol on the thigh)', 'gun (Five-seveN up beside his head)'], () => H().variant, v => { H().variant = v; H().t = 0; if (v === 1 && H().who === 0) st.slot = 1; }, 'fixed at the grab in the game by what is in the hand (drawn → gun, holstered / canister → arm) and swapped by E mid-hold — flip it here with the hold on and the layers hand the tools over (HOLD.secs.swap)');
-    p.select(sec, 'phase', ['grab (the reach, 0.45 s)', 'held', `choke (arm: ${HOLD.secs.choke} s)`, `whip (gun: lands at ${HOLD.secs.whip} s)`], () => H().phase, v => { H().phase = v; H().t = 0; });
+    p.toggleBox(sec, 'pose the hold', () => H().on, v => { H().on = v; H().t = 0; if (v) { st.stance = 0; st.lockpick = false; if (H().who === 0) { st.guard = false; if (H().variant === 1) st.slot = 1; } else st.guard = true; } }, 'drives anim.holdPose (the holder: the player) or anim.heldPose (the held man) on this one mannequin — the layer eases itself in and out; upper body / stance are forced off while it is on, the legs keep whatever locomotion is set (walk it: the hands must stay put)');
+    p.select(sec, 'figure', ['holder (player)', 'held man (guard kit)'], () => H().who, v => { H().who = v; H().t = 0; if (v === 1) st.guard = true; else { st.guard = false; st.carbine = false; if (H().variant === 1) st.slot = 1; } });
+    p.select(sec, 'variant', ['arm (both hands on him, knife in the fist, pistol on the thigh)', gearText('gun (Five-seveN up beside his head)')], () => H().variant, v => { H().variant = v; H().t = 0; if (v === 1 && H().who === 0) st.slot = 1; }, 'fixed at the grab in the game by what is in the hand (drawn → gun, holstered / canister → arm) and swapped by E mid-hold — flip it here with the hold on and the layers hand the tools over (HOLD.secs.swap)');
+    p.select(sec, 'phase', ['grab (the reach, 0.45 s)', 'held', `choke (arm: ${HOLD.secs.choke} s)`, `whip (gun: lands at ${HOLD.secs.whip} s)`, `kill (arm: ${HOLD.secs.kill} s)`], () => H().phase, v => { H().phase = v; H().t = 0; });
     p.slider(sec, 't (s into the phase)', 0, 4, 0.01, () => H().t, v => { H().t = v; }, 'scrub with auto off (or paused)');
     p.toggleBox(sec, 'auto-advance t (loops the one-shots)', () => H().auto, v => { H().auto = v; });
     p.slider(sec, 'gun out (holder, gun)', 0, 1, 0.01, () => H().gunOut, v => { H().gunOut = v; }, 'HoldPose.gunOut: 0 = the can along his temple, 1 = presented dead ahead to fire past him (the game eases it up in a few frames on a click and back ~1 s after the last round)', 0);
@@ -276,16 +278,16 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
     p.text(sec, () => { const an = rt.char.anim; const P = H().who === 0 ? an.holdPose : an.heldPose; return `${H().on ? (H().who === 0 ? 'holdPose' : 'heldPose') : 'off'} ${P ? `${P.variant ?? 'arm'} · ${P.phase} t ${P.t.toFixed(2)}` : '—'}${an.hideHeldItem ? ' · held item hidden' : ''}${an.holdGunSide ? ' · gun side' : ''} · HOLD.dist ${HOLD.dist} · secs ${JSON.stringify(HOLD.secs)}`; });
   } });
   add({ id: 'holdConsts', title: 'Hold contact constants (HOLD)', open: false, build: (p, sec) => {
-    p.text(sec, () => 'character.ts HOLD, live: points in each figure\'s own model space [left, up, ahead of its root] (the man\'s root sits HOLD.dist ahead of Sam\'s), angles in degrees, secs = the controller\'s timings');
+    p.text(sec, () => 'character.ts HOLD, live: points in each figure\'s own model space [left, up, ahead of its root] (the man\'s root sits HOLD.dist ahead of the player\'s), angles in degrees, secs = the controller\'s timings');
     treeRows(p, sec, HOLD as unknown as Tree, HOLD0 as unknown as Tree, holdRange, () => {});
   }, copy: () => [changedHeader('HOLD', 'src/game/character.ts'), ...diffLines('HOLD', HOLD, HOLD0)].join('\n'), changed: () => anyDiff(HOLD, HOLD0), reset: () => deepAssign(HOLD as unknown as Tree, HOLD0 as unknown as Tree) });
 
   // ---- kit + hand lights
   add({ id: 'kit', title: 'Kit', open: true, build: (p, sec) => {
     p.toggleBox(sec, 'goggles worn', () => st.goggles, v => { st.goggles = v; });
-    p.toggleBox(sec, 'night vision on (N)', () => st.nv, v => { st.nv = v; }, 'on: lenses down over the eyes, blazing · off: parked on the forehead, dim');
-    p.select(sec, 'right hand', ['0 · holstered (hands free)', '1 · Five-seveN drawn', '2 · canister in the fist'], () => Math.min(2, st.slot), v => { st.slot = v; });
-    p.select(sec, 'FN2000 (4)', RIFLE_NAMES, () => st.rifle, v => { st.rifle = v; if (v === 2) { st.guard = false; st.carbine = false; } }, 'Sam\'s rifle: off · slung across his back (RIG.sc20k.slung) · in both hands (its foregrip point, its muzzle, its light — L)');
+    p.toggleBox(sec, 'night vision on (N)', () => st.nv, v => { st.nv = v; }, 'on: tubes down over the eyes · off: flipped up (the lenses glow only with ?oldgear: down and blazing / parked on the forehead, dim)');
+    p.select(sec, 'right hand', ['0 · holstered (hands free)', gearText('1 · Five-seveN drawn'), '2 · canister in the fist'], () => Math.min(2, st.slot), v => { st.slot = v; });
+    p.select(sec, gearText('FN2000 (4)'), RIFLE_NAMES, () => st.rifle, v => { st.rifle = v; if (v === 2) { st.guard = false; st.carbine = false; } }, 'The player\'s rifle: off · slung across his back (RIG.sc20k.slung) · in both hands (its foregrip point, its muzzle, its light — L)');
     p.toggleBox(sec, 'rail light / torch on (L)', () => st.lightOn, v => { st.lightOn = v; });
     p.toggleBox(sec, 'show as guard (G)', () => st.guard, v => { st.guard = v; if (!v) st.carbine = false; else if (st.rifle === 2) st.rifle = 0; }, 'guard tint + guard kit: hand torch (patrol carry) or drawn pistol with weapon light');
     p.select(sec, 'guard carry', ['torch (patrol)', 'pistol drawn'], () => st.guardTorch ? 0 : 1, v => { st.guardTorch = v === 0; }, 'the sidearm kit (ignored while the carbine is in his hands)');
@@ -295,8 +297,8 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
   } });
   // ---- dropped items
   add({ id: 'dropped', title: 'Dropped items (tossed from the hand)', open: true, build: (p, sec) => {
-    p.buttons(sec, 'toss', [{ text: 'pistol', run: () => rt.toss('pistol') }, { text: 'Five-seveN (can)', run: () => rt.toss('pistol', true) }, { text: 'torch', run: () => rt.toss('torch') }]);
-    p.buttons(sec, '', [{ text: 'AKS-74U', run: () => rt.toss('rifle'), title: 'RIFLE_ITEM: what a rifleman\'s dying hand lets go of' }, { text: 'FN2000', run: () => rt.toss('rifle', true), title: 'SC20K_ITEM (a rifle item with fill 1): what leaves Sam\'s hands when he goes down with it' }, { text: 'ring airfoil', run: () => rt.toss('ring'), title: 'RING_ITEM: a spent ring — three crossed slats' }]);
+    p.buttons(sec, 'toss', [{ text: 'pistol', run: () => rt.toss('pistol') }, { text: gearText('Five-seveN (can)'), run: () => rt.toss('pistol', true) }, { text: 'torch', run: () => rt.toss('torch') }]);
+    p.buttons(sec, '', [{ text: 'AKS-74U', run: () => rt.toss('rifle'), title: 'RIFLE_ITEM: what a rifleman\'s dying hand lets go of' }, { text: gearText('FN2000'), run: () => rt.toss('rifle', true), title: 'SC20K_ITEM (a rifle item with fill 1): what leaves the player\'s hands when he goes down with it' }, { text: gearText('ring airfoil'), run: () => rt.toss('ring'), title: 'RING_ITEM: a spent ring — three crossed slats' }]);
     p.buttons(sec, '', [{ text: 'smoke can', run: () => rt.toss('smoke') }, { text: 'stun can', run: () => rt.toss('flash') }, { text: 'magazine', run: () => rt.toss('mag') }, { text: 'clear items', run: () => { rt.stageItems.items.length = 0; } }]);
     p.text(sec, () => `${rt.stageItems.items.length} item(s) · models live in throwables.ts boxes() (pistol: slide + raked grip + can; torch: body + dark lens; the two rifles; the ring). No knife item exists.`);
   } });
@@ -372,7 +374,7 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
     p.number(sec, 'tracer light range m', () => TR.lightRange, v => { TR.lightRange = v; }, { step: 0.5, min: 0.5, max: 12, def: FX0.tracerFx.lightRange });
     p.number(sec, 'tracer ember glow', () => TR.emberIntensity, v => { TR.emberIntensity = v; }, { step: 0.5, min: 0, max: 30, def: FX0.tracerFx.emberIntensity, title: 'the 60 ms glow where it stops in the wall' });
     p.number(sec, 'tracer ember sparks', () => TR.emberSparks, v => { TR.emberSparks = Math.round(v); }, { step: 1, min: 0, max: 12, def: FX0.tracerFx.emberSparks });
-    p.text(sec, () => `sparks live ${sparks.live} · smoke domains ${smoke.stats.live} emitters ${smoke.stats.emitters} — numbers are shared with the game's Effects / Smoke panels`);
+    p.text(sec, () => `sparks live ${sparks.live} · smoke bricks ${smoke.stats.pool} emitters ${smoke.stats.emitters} — numbers are shared with the game's Effects / Smoke panels`);
   }, copy: () => [changedHeader('shot numbers', 'src/game/effects.ts'), ...diffLines('shot', fxm.shot, FX0.shot), ...diffLines('sparks', fxm.sparks, FX0.sparks), ...diffLines('flags', fxm.flags, FX0.flags), ...diffLines('tracerFx', fxm.tracerFx, FX0.tracerFx)].join('\n'),
      changed: () => anyDiff(fxm.shot, FX0.shot) || anyDiff(fxm.flags, FX0.flags) || anyDiff(fxm.tracerFx, FX0.tracerFx), reset: () => { deepAssign(fxm.shot as unknown as Tree, FX0.shot as unknown as Tree); deepAssign(fxm.flags as unknown as Tree, FX0.flags as unknown as Tree); deepAssign(fxm.tracerFx as unknown as Tree, FX0.tracerFx as unknown as Tree); } });
   add({ id: 'effects.smoke', title: 'Smoke solver', open: false, build: (p, sec) => {
@@ -387,9 +389,13 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
   }, copy: () => [changedHeader('smoke solver', 'src/smoke/smoke.ts defaultSmokeParams'), ...diffLines('smoke.params', pick(smoke.params, SOLVER_KEYS), pick(SMOKE0, SOLVER_KEYS))].join('\n'), changed: () => anyDiff(pick(smoke.params, SOLVER_KEYS), pick(SMOKE0, SOLVER_KEYS)), reset: () => { for (const k of SOLVER_KEYS) (smoke.params as unknown as Record<string, number>)[k] = (SMOKE0 as unknown as Record<string, number>)[k]; } });
 
   // ---- RIG groups (rigProps.RIG): one per group, sharing the whole-RIG copy / reset
-  for (const g of ['goggles', 'pistol', 'torch', 'guardPistol', 'knife', 'can', 'holster', 'carbine', 'sc20k'] as (keyof Rig)[]) {
+  const RIG_NOTE: Partial<Record<keyof Rig, string>> = {   // (what the 2010s kit — game/gear.ts, on unless ?oldgear — takes out of a group's hands)
+    sc20k: ' With the 2010s kit the receiver, stock, magazine, handguard, rail and sight are RIG.m4\'s: those rows here move nothing (grip, foregrip, suppressor, light, sling and the group frame stay this group\'s).',
+    goggles: ' With the 2010s kit the goggles are the two tubes (the `tubes` rows): the single housing\'s lens and glow rows draw only with ?oldgear.',
+  };
+  for (const g of ['goggles', 'pistol', 'torch', 'guardPistol', 'knife', 'sheath', 'can', 'holster', 'carbine', 'sc20k', 'm4'] as (keyof Rig)[]) {
     add({ id: `rig.${g}`, title: `RIG.${g}`, open: true, build: (p, sec) => {
-      p.text(sec, () => `rigProps.RIG.${g}: metres along / across the bone axes (drag a number to scrub, 1 mm a step). Free adjustments (adj) are the gizmo's: pick the part in the outliner or the view. 'copy' emits the whole export const RIG statement.`);
+      p.text(sec, () => `rigProps.RIG.${g}: metres along / across the bone axes (drag a number to scrub, 1 mm a step). Free adjustments (adj) are the gizmo's: pick the part in the outliner or the view. 'copy' emits the whole export const RIG statement.${RIG_NOTE[g] ?? ''}`);
       treeRows(p, sec, RIG[g] as unknown as Tree, RIG_DEFAULTS[g] as unknown as Tree, rigRange(g), rigDirty, '', k => /adj$/i.test(k));
     }, copy: () => rigSource(), changed: () => rigSource({ [g]: RIG[g] } as unknown as Rig) !== rigSource({ [g]: RIG_DEFAULTS[g] } as unknown as Rig), reset: () => { clearAdjs({ [g]: RIG[g] } as unknown as Rig); assignRig({ [g]: RIG[g] } as unknown as Rig, { [g]: RIG_DEFAULTS[g] } as unknown as Rig); } });
   }
@@ -412,7 +418,7 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
     const cam = rt.cam;
     p.buttons(sec, 'frame', [{ text: 'body', run: () => rt.frame('body'), title: 'F' }, { text: 'back', run: () => rt.frame('back') }, { text: 'head', run: () => rt.frame('head'), title: 'H' }, { text: 'hand', run: () => rt.frame('hand') }, { text: 'feet', run: () => rt.frame('feet') }]);
     p.buttons(sec, '', [{ text: 'profile', run: () => rt.frame('profile') }, { text: '¾', run: () => rt.frame('threeq') }, { text: 'front', run: () => rt.frame('front') }, { text: 'game cam', run: () => rt.frame('top') }, { text: 'over the back', run: () => rt.frame('backTop'), title: 'behind and 50° above: the slung rifle\'s flatness and its top-down silhouette at once' }]);
-    p.select(sec, 'track', TRACK, () => st.track, v => { st.track = v; }, 'what the orbit centre follows (right-drag pans and frees it; "a bone" = the one picked in the outliner)');
+    p.select(sec, 'track', TRACK, () => st.track, v => { st.track = v; }, 'what the orbit centre follows (middle-drag or Space+drag pans and frees it; "a bone" = the one picked in the outliner)');
     p.number(sec, 'distance m', () => cam.desiredDistance, v => { cam.desiredDistance = v; }, { step: 0.05, min: 0.5, max: 12 });
     p.slider(sec, 'pitch °', -8, 85, 1, () => cam.pitch / DEG, v => { cam.pitch = v * DEG; });
     p.slider(sec, 'yaw °', -180, 180, 1, () => wrapAngle(cam.yaw) / DEG, v => { cam.yaw = v * DEG; });
@@ -429,11 +435,11 @@ export function makeGroups(ctx: SheetCtx): { get(id: string): GroupDef | null; i
     p.toggleBox(sec, 'adaptive resolution', () => q.adaptive, v => { q.adaptive = v; });
     p.slider(sec, 'resolution scale', 0.3, 1, 0.05, () => S.renderScale, v => { S.renderScale = v; });
     p.number(sec, 'exposure', () => S.exposure, v => { S.exposure = v; }, { step: 0.05, min: 0.1, max: 10, def: 1.4, title: '[ / ] step it' });
-    p.select(sec, 'debug view (`)', DEBUG_VIEWS, () => S.debugView, v => { S.debugView = v; });
+    p.select(sec, 'debug view', DEBUG_VIEWS, () => S.debugView, v => { S.debugView = v; });
     p.number(sec, 'haze density', () => S.hazeDensity, v => { S.hazeDensity = v; }, { step: 0.002, min: 0, max: 0.3, def: 0.006, title: 'makes the rail light / torch beam visible' });
     p.number(sec, 'bloom', () => engine.passes.bloom, v => { engine.passes.bloom = v; }, { step: 0.005, min: 0, max: 0.5 });
     p.number(sec, 'emissive scale', () => S.emissiveScale, v => { S.emissiveScale = v; }, { step: 0.05, min: 0, max: 6, title: 'global multiplier on emissive surfaces (for the lit lenses that is purely their on-screen glow)' });
-    p.toggleBox(sec, 'fxaa', () => engine.passes.fxaaEnabled, v => engine.passes.setFxaa(v));
+    p.toggleBox(sec, 'fxaa (only with ?notaau)', () => engine.passes.fxaaEnabled, v => engine.passes.setFxaa(v));
   } });
 
   return { get: id => G.get(id) ?? null, ids: [...G.keys()] };

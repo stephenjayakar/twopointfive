@@ -7,6 +7,10 @@
     "dev": "bun run tools/serve.ts",
     "build": "bun run tools/build.ts",
     "typecheck": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json",
-    "qa": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json && bun run tools/qa/tour.ts --runs 3 --quiet && bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet"
+    "typecheck:qa": "node vendor/typescript/bin/tsc --noEmit -p tools/qa/tsconfig.json",
+    "map:export": "bun run tools/levels/export.ts",
+    "map:check": "bun run tools/qa/map-check.ts",
+    "map:plan": "bun run tools/qa/map-plan.ts",
+    "qa": "node vendor/typescript/bin/tsc --noEmit -p tsconfig.json && bun run tools/qa/missions-gate.ts && bun run tools/qa/tour.ts --runs 3 --quiet && bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet"
   }
 }

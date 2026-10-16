@@ -74,6 +74,7 @@ fn cull(@builtin(global_invocation_id) gid: vec3u) {
       if (all(bmin <= hi) && all(bmax >= lo)) { smOn |= 1u << i; }
       if (all(bmin - vec3f(0.75) <= hi) && all(bmax + vec3f(0.75) >= lo)) { smNear |= 1u << i; }
     }
+    if (smNear != 0u && !smokeAnyIn(lo - vec3f(0.75), hi + vec3f(0.75))) { smOn = 0u; smNear = 0u; }
   }
   let hazeOn = (frame.flags & FLAG_VOLUMETRICS) != 0u && frame.hazeDensity > 0.0;
   var mlo = 0u; var mhi = 0u;
@@ -134,7 +135,8 @@ fn evalLightFroxel(li: Light, dir: vec3f, d0: f32, d1: f32, jz: f32) -> VolEval 
   if (kind == 1u) { att *= smoothstep(li.cosOuter, li.cosInner, max(dot(-r.L, li.dir), li.cosOuter)); }
   else if (kind == 3u) { att *= max(dot(-r.L, li.dir), 0.0); }
   if (att <= 0.0) { return r; }
-  r.E = li.color * att; r.ok = true;
+  let fogK = lightFogK(li, X, vec3f(0.0)); if (fogK <= 0.002) { return r; }   // the fog of war's light classes (common.wgsl): no beam in the air over floor nobody sees from a light the team has no look at
+  r.E = li.color * (att * fogK); r.ok = true;
   return r;
 }
 
@@ -163,7 +165,10 @@ fn hazeShadowed(li: Light, kind: u32, sd: vec3f, d0: f32, d1: f32, jz: f32, smok
   let ev = evalLightFroxel(li, sd, d0, d1, jz);                          // this sample's point inside the lit chord, its direction to the light
   let Xs = frame.camPos + sd * ev.t;
   var vis: bool;
-  if (kind == 2u) { vis = Xs.y < CEIL_Y && occluded(Xs, vec3f(0.0, 1.0, 0.0), CEIL_Y + 0.5 - Xs.y, 0u) && !occluded(Xs, ev.L, 80.0, 0u); }
+  if (kind == 2u) {
+    if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { return vec4f(0.0); } } }   // (a weather is in: the sun in the air — the building's haze with it — is the 2D pass's, volumetrics.wgsl wxAirMarch)
+    vis = Xs.y < CEIL_Y && occluded(Xs, vec3f(0.0, 1.0, 0.0), CEIL_Y + 0.5 - Xs.y, 0u) && !occluded(Xs, ev.L, 80.0, 0u);
+  }
   else { vis = !occluded(Xs, ev.L, ev.dist - li.radius - 0.02, (li.owner & 0xffu) << 8u); }
   if (!vis) { return vec4f(0.0); }
   var st = 1.0;                                                           // smoke between here and the light (the beam dims beyond a plume): the masked few-tap estimate over the live domains the segment crosses (1 at once when it crosses none)
@@ -200,6 +205,7 @@ fn inject(@builtin(global_invocation_id) gid: vec3u) {
         if (i >= frame.numLights) { continue; }
         let li = lights[i];
         if (li.volumetric <= 0.0 || lightTransient(li) || !lightReaches(i, X)) { continue; }   // no beam from this one / a transient (injectJ draws those outside the history) / walled off from this cell (reach.ts)
+        if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u && lightKind(li) == 2u) { continue; } } }   // (… or the sun under a weather: the 2D pass's — it takes no slot of the K kept here)
         let fe = evalLightSub(li, dirs, d0, d1, j.z, pick);
         if (!fe.ok) { continue; }
         let mc = max3(fe.E);

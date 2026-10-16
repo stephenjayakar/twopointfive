@@ -13,7 +13,7 @@
 //             beside it), a Poisson-ish trickle ∝ the rain rate from the ones inside the disc.
 //   OFF       (settings.particleRain false — ?norain2 / the panel; it is ON by default since the merge — or no Particles, or no rain drawn this frame): nothing is filed, the rain ring drains inside a second,
 //             frame.weatherE / weatherF are zero and the lattice is exactly what it was.
-//   v2 (08-12, the designer: 'looks good but kinda flat … arkham city rain reacting to lighting, specular / refracting … wind outside and the rain respond to it'):
+//   v2 (08-12, the maintainer: 'looks good but kinda flat … arkham city rain reacting to lighting, specular / refracting … wind outside and the rain respond to it'):
 //   LOOK      each streak is shaded as a WATER DROP smeared over its shutter, not a grey scatterer: the update kernel scores the three strongest shadow-tested lights through a
 //             drop's phase function (an isotropic floor + a forward lobe: a streak between the eye and a lamp flares, one lit from the eye's side is dim) + a strand glint (the
 //             water cylinder along the streak mirrors a light where the half vector stands square to it, widened by the emitter's angular size = its energy bound), keeps LAST
@@ -28,12 +28,14 @@ import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
 import type { WeatherFrame } from '../render/frame';
-import type { Particles, RainLook } from '../render/particles';
+import type { Particles } from '../render/particles';
 import { RAIN_MAX_BIRTHS, RAIN_CAP } from '../render/particles';
 import { INTERIOR, ANNEX } from './weather';
 import { gpuFx } from './particleFx';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
+import { BLAST_PACE } from './destructionSwitch';
+import { snowing, updateSnowFx } from './snowFx';
 
 /** v2's LOOK + WIND knobs (Tab ▸ Weather ▸ p-rain rows; kept per machine: localStorage twopointsix.prain; `__rain.look`). Every one rides to the GPU each frame in the emit block's
  *  tail (render/particles.ts RainLook → particles_common.wgsl EmitBlock.rainCfg‥rainCfgD) or the Frame (weatherF: the phase the LATTICE shares), so every row is live. */
@@ -53,6 +55,7 @@ export const PRAIN = {
   refractTaps: 3,     // taps ACROSS the cylinder (2 = ±0.55 of its radius · 3 = −0.7 / 0 / +0.7 · 4 = ±0.3, ±0.8), averaged: the pixel spans the whole width
   refractClamp: 6,    // each tap's display-referred luminance is held under this (× display white) — an emitter's face behind a streak must not become a white needle
   refractDepth: 0.3,  // m: a tap landing on something this much NEARER the eye than the drop (Sam's head beside the streak) is not behind it — the centre sample stands in
+  refractPaint: 0,    // 0‥1: how much of the PICTURE a refraction read taken BESIDE the streak keeps. A tap is one fixed offset per streak, so with all of it (1 = as it was) a streak whose side tap landed on a red stripe was red from end to end and its neighbour cream: the rain beside The block's striped tent was a displaced picture of the tent (the maintainer, 10-12). 0 = that read hands over its light only (rainRefractTap: no colour of its own — the colour of what is straight behind the streak, else of the light on the drop —, its luminance half way to the pixel's own, its offset's length scattered per pixel and frame); a tap that lands straight BEHIND the streak (the 3-tap set's middle one) is untouched either way
   // ---- the population's spread (particles_draw.wgsl rainVertex, hashed off each drop's seed)
   lenJit: 0.45,       // streak length × (1 ± this) per drop (shutter spread: they do not all fall at one speed to the eye)
   brightJit: 0.7,     // 0 = every drop alike; 1 = a few fat bright ones and many fine (0.5 + 1.5 h², mean 1 — the lattice's `big`)
@@ -75,7 +78,7 @@ export const PRAIN_V1_LOOK: Readonly<Partial<Record<keyof typeof PRAIN, number>>
 const PRAIN_LS = 'twopointsix.prain';
 const PRAIN_RANGE: Record<keyof typeof PRAIN, [number, number]> = {
   iso: [0, 1], fwdK: [0, 2], fwdG: [0, 0.95], glintK: [0, 8], glintRough: [0.02, 0.5], glintCap: [0, 100], gain: [0.1, 8], tailKeep: [0, 1],
-  refract: [0, 1], refractReachM: [0.25, 40], refractTaps: [2, 4], refractClamp: [0.5, 40], refractDepth: [0.02, 5], lenJit: [0, 0.9], brightJit: [0, 1], minPx: [0.5, 2], maxPx: [0.5, 64], boostCap: [1, 8], nearFadeM: [0.5, 8], beadAmp: [0, 1],
+  refract: [0, 1], refractReachM: [0.25, 40], refractTaps: [2, 4], refractClamp: [0.5, 40], refractDepth: [0.02, 5], refractPaint: [0, 1], lenJit: [0, 0.9], brightJit: [0, 1], minPx: [0.5, 2], maxPx: [0.5, 64], boostCap: [1, 8], nearFadeM: [0.5, 8], beadAmp: [0, 1],
   windK: [0, 2], latticeLean: [0, 1.5], sheetAmp: [0, 0.95], sheetLen: [1.5, 30], sheetDrift: [0, 3],
 };
 export function loadPrain() { try { const raw = localStorage.getItem(PRAIN_LS); if (!raw) return; const o = JSON.parse(raw); for (const k of Object.keys(PRAIN) as (keyof typeof PRAIN)[]) { const v = o[k]; if (typeof v === 'number' && Number.isFinite(v)) PRAIN[k] = clamp(v, PRAIN_RANGE[k][0], PRAIN_RANGE[k][1]); } } catch { /* no storage (bun) / junk */ } }
@@ -105,8 +108,10 @@ export const RAIN_FX = {
 };
 
 interface DripPoint { pos: Vec3; fall: number; box: number; }
+/** the drip lines being found again in shares (BLAST_PACE): the walk where it stopped, the statics it is over, the samples left of this frame's share */
+interface DripJob { walk: Generator<void, DripPoint[]>; boxes: number; serial: number; left: number; hold: number; }
 interface RainState {
-  seed: number; birthAcc: number; dripAcc: number; wasActive: boolean; edges: DripPoint[] | null; edgeBoxes: number;
+  seed: number; birthAcc: number; dripAcc: number; wasActive: boolean; edges: DripPoint[] | null; edgeBoxes: number; job: DripJob | null; kind?: string | null;
   stats: RainStatsCpu; serial: number;
   /** the drops in the air UNDER THE CURRENT DISC, estimated: the births of the last meanFall seconds (popLog: game time, count — a sky drop lands that long after its birth), each cut by
    *  the overlap when the disc jumps, all dropped when the ring is cleared — the lattice's near share follows their sum ÷ target, so no hole opens while a fresh disc fills */
@@ -120,7 +125,7 @@ export interface RainStatsCpu { active: boolean; why: string; radius: number; ce
 const states = new WeakMap<Game, RainState>();
 function stateOf(g: Game): RainState {
   let s = states.get(g);
-  if (!s) { s = { seed: 0x5eed1e5, birthAcc: 0, dripAcc: 0, wasActive: false, edges: null, edgeBoxes: 0, serial: 1, pop: 0, popLog: [], clock: 0, lastC: null, dripLifeMax: 0, shear: [0, 0], bandOff: [0, 0], air: [0, 0], shearInit: false, stats: { active: false, why: 'off', radius: 0, centre: [0, 0], areaOut: 0, latticePerM2: 0, target: 0, capped: false, keep: 1, fill: 0, birthsPerSec: 0, births: 0, drips: 0, edgesActive: 0, edgesTotal: 0, frames: 0, totalBirths: 0, totalDrips: 0 } }; states.set(g, s); }
+  if (!s) { s = { seed: 0x5eed1e5, birthAcc: 0, dripAcc: 0, wasActive: false, edges: null, edgeBoxes: 0, job: null, serial: 1, pop: 0, popLog: [], clock: 0, lastC: null, dripLifeMax: 0, shear: [0, 0], bandOff: [0, 0], air: [0, 0], shearInit: false, stats: { active: false, why: 'off', radius: 0, centre: [0, 0], areaOut: 0, latticePerM2: 0, target: 0, capped: false, keep: 1, fill: 0, birthsPerSec: 0, births: 0, drips: 0, edgesActive: 0, edgesTotal: 0, frames: 0, totalBirths: 0, totalDrips: 0 } }; states.set(g, s); }
   return s;
 }
 /** mulberry32 step on the state's own word (never Math.random: the harness seeds that one for the game, and rain must not shift it) */
@@ -130,22 +135,27 @@ function nextSeed(s: RainState): number { let x = (s.serial++ * 2654435761) >>> 
 export function seedRain(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.serial = 1; s.birthAcc = 0; s.dripAcc = 0; s.pop = 0; s.popLog.length = 0; s.lastC = null; s.bandOff[0] = 0; s.bandOff[1] = 0; s.shearInit = false; }
 
 const inRect = (r: readonly [number, number, number, number], x: number, z: number) => x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3];
-const outdoors = (x: number, z: number) => !inRect(INTERIOR, x, z) && !inRect(ANNEX, x, z) && x > WORLD.min[0] + 0.25 && z > WORLD.min[2] + 0.25 && x < WORLD.max[0] - 0.25 && z < WORLD.max[2] - 0.25;
+let roofW: { underRoof(x: number, z: number): boolean } | null = null;   // the Weather whose footprints are in force for the call being made (a weather kind picked: the level's own roofs) — set on entry by updateRainFx / buildDripEdges, never read between calls
+const outdoors = (x: number, z: number) => !(roofW ? roofW.underRoof(x, z) : inRect(INTERIOR, x, z) || inRect(ANNEX, x, z)) && x > WORLD.min[0] + 0.25 && z > WORLD.min[2] + 0.25 && x < WORLD.max[0] - 0.25 && z < WORLD.max[2] - 0.25;
 const ZERO4 = Object.freeze([0, 0, 0, 0]) as unknown as [number, number, number, number];   // (shared: never written through — every writer below checks for it first)
 const rimTaper = (r01: number) => { const t = clamp((r01 - 0.7) / 0.3, 0, 1); return 1 - t * t * (3 - 2 * t); };   // = the emit kernel's 1 − smoothstep(0.7, 1, r) acceptance and volumetrics.wgsl rainNearKeep's ease
 
 /** Once a frame (game.ts, after the weather has written this frame's rain and before render): the recycler + the drips + frame.weatherE. */
 export function updateRainFx(g: Game, dt: number, cam: FollowCamera) {
+  if (snowing(g)) { updateSnowFx(g, dt, cam); return; }   // a level built for snow (snowFx.ts): the ring holds flakes — no rain is drawn there, so nothing below has anything to do
   const st = stateOf(g); const S = st.stats;
+  { const W = g.weather; const k = W?.levelRoofs ? W.kind ?? 'own' : null; roofW = k ? W : null; if (k !== (st.kind ?? null)) { st.kind = k; st.edges = null; st.job = null; } }   // (a weather kind's roofs are the level's own: the drip edges are found again under them)
   const e = g.engine as unknown as { settings: Record<string, unknown>; weather?: WeatherFrame; particles?: Particles | null };   // (the QA harness's engine stand-in has settings but may lack the rest)
   const wf = e.weather; const set = e.settings;
   const P = gpuFx(g);
   const on = set.particleRain === true;
-  if (on && (!st.edges || st.edgeBoxes !== g.engine.world.statics.length)) buildDripEdges(g, st);   // the drip lines once, on the first frame the switch is on (a few thousand CPU ray tests: at boot with ?prain, never mid-storm)
   // (a still re-rendered with dt 0 — the start card after an attract stop, the pause card — runs the whole path: nothing is born at dt 0, and the disc + the lattice's share are recomputed for
   // the camera the still shows, over whatever the ring holds then — an encounter restart has just emptied it, so the lattice comes straight back under a fresh disc)
   const rain = Math.max(0, wf?.rain ?? 0);
   const why = !on ? 'off' : !P ? 'no GPU particles' : !wf ? 'no weather frame' : rain <= 0.001 ? 'no rain drawn (storm off / held by day / rate 0)' : '';
+  // the drip lines once, on the first frame the switch is on (a few thousand CPU ray tests: at boot with ?prain) — and again when the statics change (a wall blown: its
+  // pieces are new boxes). BLAST_PACE: that second time in shares over the frames after, the old lines dripping meanwhile; a first time nobody can see yet likewise
+  if (on && (st.job || !st.edges || st.edgeBoxes !== g.engine.world.statics.length)) { if (BLAST_PACE.on) paceDripEdges(g, st, !why && !st.edges); else buildDripEdges(g, st); }
   if (why) {
     if (wf && (!wf.nearFade || wf.nearFade[3] !== 0)) wf.nearFade = ZERO4;
     if (wf && (!wf.phase || wf.phase[3] !== 0)) wf.phase = ZERO4;   // (v2: the lattice's phase function off = its isotropic sum exactly as it was)
@@ -160,7 +170,7 @@ export function updateRainFx(g: Game, dt: number, cam: FollowCamera) {
   // ---- v2: the LOOK block (every PRAIN row, live) …
   const K = PRAIN; const L = Pp.rainLook;
   L.iso = K.iso; L.fwdK = K.fwdK; L.fwdG = K.fwdG; L.glintK = K.glintK; L.glintRough = K.glintRough; L.glintCap = K.glintCap; L.gain = K.gain; L.tailKeep = K.tailKeep;
-  L.refract = K.refract; L.refractReachM = K.refractReachM; L.refractTaps = K.refractTaps; L.refractClamp = K.refractClamp; L.refractDepth = K.refractDepth; L.lenJit = K.lenJit; L.brightJit = K.brightJit; L.minPx = K.minPx; L.maxPx = K.maxPx; L.boostCap = K.boostCap; L.nearFadeM = K.nearFadeM; L.beadAmp = K.beadAmp;
+  L.refract = K.refract; L.refractReachM = K.refractReachM; L.refractTaps = K.refractTaps; L.refractClamp = K.refractClamp; L.refractDepth = K.refractDepth; L.refractPaint = K.refractPaint; L.lenJit = K.lenJit; L.brightJit = K.brightJit; L.minPx = K.minPx; L.maxPx = K.maxPx; L.boostCap = K.boostCap; L.nearFadeM = K.nearFadeM; L.beadAmp = K.beadAmp;
   L.windK = K.windK; L.sheetAmp = K.sheetAmp; L.sheetLen = K.sheetLen;
   { const ph = (w.phase && w.phase !== ZERO4) ? w.phase : (w.phase = [0, 0, 0, 0]); ph[0] = K.iso; ph[1] = K.fwdK; ph[2] = K.fwdG; ph[3] = K.gain; }   // … the LATTICE takes the same phase (volumetrics.wgsl rainLight under weatherF.w > 0), so the two layers flare and dim alike
   // ---- v2: WIND. The drops themselves ride the wind records on the GPU (born with the air, dragged toward it); here the LATTICE far field is handed the same air — the storm source's
@@ -250,14 +260,35 @@ const num = (v: unknown, d: number) => typeof v === 'number' && Number.isFinite(
  *  (a solid at least edgeMinFall below the point just outside the edge) — sampled every edgeStep along each edge, 3.5 cm proud of the face and a hair under the top.
  *  Roof rims (the NoPrimary slab included: invisible, but where the water comes off), car roofs / bonnets, the van, the dumpster's lid, the AC units, the lamp heads. */
 function buildDripEdges(g: Game, st: RainState) {
+  const walk = dripWalk(g, { left: Infinity }); let r = walk.next(); while (!r.done) r = walk.next();
+  setDripEdges(st, r.value, g.engine.world.statics.length);
+}
+function setDripEdges(st: RainState, out: DripPoint[], boxes: number) {
+  st.edges = out; st.edgeBoxes = boxes; st.job = null;
+  st.dripLifeMax = out.reduce((m, d) => Math.max(m, dripLife(d.fall)), 0);
+}
+/** BLAST_PACE: the same lines, `BLAST_PACE.dripSamples` edge samples a frame (`now` = all of it this frame: rain is drawn and there are no lines to drip off yet),
+ *  begun once the statics have stood still `dripHold` frames where there are lines to go on with. Statics changed again part way: the walk starts over. The lines
+ *  in use are swapped whole when the walk ends. */
+function paceDripEdges(g: Game, st: RainState, now: boolean) {
+  const n = g.engine.world.statics.length;
+  const serial = g.engine.world.geomSerial;   // (a wall rebuilt in its own slots mid-walk: the count stands, the serial moves — the walk starts over)
+  if (!st.job || st.job.boxes !== n || st.job.serial !== serial) { const job: DripJob = { walk: null!, boxes: n, serial, left: 0, hold: st.edges ? BLAST_PACE.dripHold : 0 }; job.walk = dripWalk(g, job); st.job = job; }
+  const job = st.job; if (!now && job.hold-- > 0) return;
+  job.left = now ? Infinity : BLAST_PACE.dripSamples;
+  const r = job.walk.next(); if (r.done) setDripEdges(st, r.value, n);
+}
+/** the walk itself: it stops (yields) whenever `share.left` samples are used up — a sample that gets as far as its ray tests is one, sixteen turned away before them another */
+function* dripWalk(g: Game, share: { left: number }): Generator<void, DripPoint[]> {
+  roofW = g.weather?.levelRoofs ? g.weather : null;
   const statics = g.engine.world.statics; const col = g.col;
   const out: DripPoint[] = []; const cand = new Int32Array(24);
   const F = RAIN_FX;
-  statics.forEach((b, bi) => {
-    if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) return;
-    if (b.rot) return;                                                    // (fully rotated dressing — the bike's tubes: no ledge worth a drip)
+  for (let bi = 0; bi < statics.length; bi++) { const b = statics[bi];
+    if (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic)) continue;
+    if (b.rot) continue;                                                  // (fully rotated dressing — the bike's tubes: no ledge worth a drip)
     const top = b.c[1] + b.h[1];
-    if (top < F.edgeMinTop || top > F.edgeMaxTop || 4 * b.h[0] * b.h[2] < F.edgeMinArea) return;
+    if (top < F.edgeMinTop || top > F.edgeMaxTop || 4 * b.h[0] * b.h[2] < F.edgeMinArea) continue;
     const c = Math.cos(b.yaw), s = Math.sin(b.yaw);
     const toWorld = (lx: number, lz: number): [number, number] => [b.c[0] + c * lx + s * lz, b.c[2] - s * lx + c * lz];   // local (x, z) → world (the boxes' yaw convention: rayBox's inverse)
     // four edges: (axis along, the fixed local coord on the other axis, outward normal in local)
@@ -271,7 +302,9 @@ function buildDripEdges(g: Game, st: RainState) {
         const lx = alongX ? u : fixed, lz = alongX ? fixed : u;
         const [qx, qz] = toWorld(lx + nx * 0.035, lz + nz * 0.035);          // just outside the edge …
         const [ix, iz] = toWorld(lx - nx * 0.06, lz - nz * 0.06);            // … and just inside it, on the top face
-        if (!outdoors(qx, qz)) continue;
+        const out0 = outdoors(qx, qz);
+        if ((share.left -= out0 ? 1 : 1 / 16) < 0) yield;
+        if (!out0) continue;
         // nothing solid AT the drip point (a ledge tucked into a bigger box: no)
         let inside = false;
         const nc = col.gather(qx - 0.01, qz - 0.01, qx + 0.01, qz + 0.01, top - 0.05, top - 0.005, cand);
@@ -285,13 +318,14 @@ function buildDripEdges(g: Game, st: RainState) {
         out.push({ pos: [qx, top - 0.012, qz], fall: hit.t, box: bi });
       }
     }
-  });
-  st.edges = out; st.edgeBoxes = statics.length;
-  st.dripLifeMax = out.reduce((m, d) => Math.max(m, dripLife(d.fall)), 0);
+  }
+  return out;
 }
 
 /** the drip points (QA / a debug draw) */
-export function rainDripPoints(g: Game): readonly DripPoint[] { const st = stateOf(g); if (!st.edges) buildDripEdges(g, st); return st.edges!; }
+export function rainDripPoints(g: Game): readonly DripPoint[] { const st = stateOf(g); if (!st.edges || st.job) buildDripEdges(g, st); return st.edges!; }
+/** BLAST_PACE: the drip lines are being found again in shares (QA: rainDripPoints would finish the walk whole) */
+export function rainDripPending(g: Game): boolean { return !!stateOf(g).job; }
 export function rainStats(g: Game): RainStatsCpu { return stateOf(g).stats; }
 /** one line for the panel / the probes */
 export function rainSummary(g: Game): string {

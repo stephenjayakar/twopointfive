@@ -11,7 +11,11 @@ import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard, GameEvent, LightTarget, MissionStats, DownKind } from './game';
 import type { Door } from './doors';
 import { PLAYER_ID } from './consts';
+import { BUILDING } from './floor';   // (a leaf: the office building's footprint — everything outside it is the grounds: the car park south and east, the verge north and west)
+import { gearText, plainShort } from './gear';   // (a leaf: the kit's names as issued, where a row is worded)
 import { missionLive } from './mission';
+import type { Level } from '../scene/level';
+import { isOffice, levelRects, ownPlace } from './dialogue';
 
 // ------------------------------------------------------------ rooms
 /** The floor's rooms as the debrief names them: nominal partition lines of the one office level (scene/level.ts — the corridor z 10‥12.2 across the building,
@@ -27,11 +31,17 @@ export const ROOMS: { name: string; x0: number; x1: number; z0: number; z1: numb
   { name: 'cubicles', x0: 12, x1: 28, z0: 12.2, z1: 24 },
   { name: 'break room', x0: 28, x1: 36, z0: 12.2, z1: 24 },
 ];
-/** the building's footprint (everything outside it is the grounds: the car park south and east, the verge north and west) */
-export const BUILDING = { x0: 4, x1: 36, z0: 4, z1: 24 };
+/** … and the rooms of the level a run is on, for the debrief's map: the office's table above, or another level's own names (none: no labels) */
+export function roomsOf(level: Level): { name: string; x0: number; x1: number; z0: number; z1: number }[] {
+  return isOffice(level) ? ROOMS : (levelRects(level) ?? []).map(r => ({ name: r.name.replace(/^the /, ''), x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }));
+}
 /** The room a floor point is in, by name; outside the building the side of it ('south lot' — the car park along the facade — 'east side' with the fire exit and
- *  the dumpster, 'north side', 'west side'). */
-export function roomOf(p: Vec3): string {
+ *  the dumpster, 'north side', 'west side'). `level` = the level the point is on: off the office it is named by that level's own data ('front hall'; the nearest
+ *  named place for a point in none; 'building' on a level that names nothing) — without it, the office's table (the autosave's regions, which only need a partition). */
+export function roomOf(p: Vec3, level?: Level): string {
+  if (level && !isOffice(level)) {   // another level: ITS rooms and places (dialogue.ts levelRects), never this table's
+    const w = ownPlace(level, p); return w ? w.rect.name.replace(/^the /, '') : 'building';   // (a noun for 'the … camera', 'in the …': the place he is in, else the nearest the level names)
+  }
   const x = p[0], z = p[2];
   if (x >= BUILDING.x0 && x < BUILDING.x1 && z >= BUILDING.z0 && z < BUILDING.z1) { for (const r of ROOMS) if (x >= r.x0 && x < r.x1 && z >= r.z0 && z < r.z1) return r.name; return 'corridor'; }
   if (z >= BUILDING.z1) return 'south lot';
@@ -117,11 +127,11 @@ export class Chronicle {
   /** hearing-model events that were COUNTED (counts.heard) but could not make a row (the caps): the next man hearing the same noise must not count it again */
   private heardNoRow = new WeakSet<object>();
 
-  /** the core append: null when refused (caps). `pos` is copied. */
-  add(t: number, kind: ChronKind, pos: Vec3, data: ChronData): ChronEvent | null {
+  /** the core append: null when refused (caps). `pos` is copied; `level` = the level the run is on (the row's room is in ITS words). */
+  add(t: number, kind: ChronKind, pos: Vec3, data: ChronData, level?: Level): ChronEvent | null {
     const n = this.events.length;
     if (n >= MAX_EVENTS || (n >= SOFT_EVENTS && isChatter(kind, data))) { this.dropped++; return null; }
-    const e: ChronEvent = { t, kind, room: roomOf(pos), pos: [pos[0], 0, pos[2]], data };
+    const e: ChronEvent = { t, kind, room: roomOf(pos, level), pos: [pos[0], 0, pos[2]], data };
     this.events.push(e); return e;
   }
   /** the latest row of `kind` whose data[keyName] === key within `win` seconds of `t`, looking back no further than a handful of rows (O(1)) */
@@ -151,14 +161,14 @@ const posOf = (g: Game): Vec3 => g.player.char.pos;
 /** the generic entry: `kind` at `pos` (Sam's feet by default) with `data` — what a lane with a new verb calls (and what the named helpers below come down to) */
 export function chronicle(g: Game, kind: ChronKind, data: ChronData = {}, pos?: Vec3): ChronEvent | null {
   if (!missionLive(g)) return null;
-  return g.chronicle.add(nowOf(g), kind, pos ?? posOf(g), data);
+  return g.chronicle.add(nowOf(g), kind, pos ?? posOf(g), data, g.level);
 }
 /** the generic entry AND one of the counters, by name: the counter moves whenever the run is live — whether or not the capped timeline still takes the ROW (a
  *  three-hour run whose timeline filled long ago is still priced for the lockdown it then raises; review U9.2). What the civilians / devices lanes call. */
 export function chronicleN(g: Game, kind: ChronKind, count: ChronCountKey, data: ChronData = {}, pos?: Vec3): ChronEvent | null {
   if (!missionLive(g)) return null;
   g.chronicle.counts[count]++;
-  return g.chronicle.add(nowOf(g), kind, pos ?? posOf(g), data);
+  return g.chronicle.add(nowOf(g), kind, pos ?? posOf(g), data, g.level);
 }
 
 /** Once a frame from mission.ts updateMission (inside its live gate, after the clock moved): the path sample when it is due. */
@@ -195,7 +205,7 @@ export function chronHeard(g: Game, gd: Guard, ev: GameEvent, where?: Vec3) {
     const what = heardWhat(ev);
     row = C.recent('heard', 'what', what, t, HEARD_MERGE_SECS) ?? undefined;
     if (row) row.data.n = (Number(row.data.n) || 1) + 1;
-    else { C.counts.heard++; row = C.add(t, 'heard', where ?? ev.pos, { what, by: gd.callsign, k: 1, n: 1, react }) ?? undefined; if (!row) C.markHeardCounted(ev); }
+    else { C.counts.heard++; row = C.add(t, 'heard', where ?? ev.pos, { what, by: gd.callsign, k: 1, n: 1, react }, g.level) ?? undefined; if (!row) C.markHeardCounted(ev); }
     if (!row) return null;
     C.bindHeard(ev, row);
   }
@@ -211,7 +221,7 @@ export function heardWhat(e: GameEvent): string {
     case 'shot': return (e.level ?? 0) >= 1 ? 'gunfire' : e.weapon ? 'a muffled shot' : 'a canister';   // (a canister's pop / skitter goes in as a quiet 'shot' with no weapon row)
     case 'guardShot': return 'gunfire';
     case 'kick': return 'a door kicked in';
-    case 'bang': return 'a stun charge';
+    case 'bang': return e.frag ? 'a grenade' : 'a stun charge';
     case 'door': return (e.level ?? 0) >= 0.6 ? 'a door slammed' : 'a door';
     case 'prop': return e.who === 0 ? 'a clatter' : (e.level ?? 0) >= 0.5 ? 'a crash of furniture' : 'a scrape';
     case 'step': return 'footsteps';
@@ -235,7 +245,7 @@ export function chronAlarm(g: Game, stage: number, up: boolean, cause = '') {
 
 /** guards.ts say, when the line goes over the net (radio) — except the routine radio check, which is nobody's news. */
 export function chronRadio(g: Game, gd: Guard, text: string) {
-  if (/^radio check/.test(text)) return null;
+  if (/^(\w+: )?radio check — sound off$|^radio check/.test(text)) return null;   // (the staff's, and a defender squad's own: "Bravo: radio check — sound off")
   return chronicleN(g, 'radio', 'radio', { who: gd.callsign, text: text.length > 96 ? text.slice(0, 94) + '…' : text }, gd.char.pos);
 }
 
@@ -251,7 +261,7 @@ export function chronShot(g: Game, weapon: string, hitGuard: Guard | null, hitP:
   const into = near ? `past ${nearest}` : 'geometry';
   const prev = C.recent('shot', 'into', into, t, SHOT_MERGE_SECS);
   if (prev && prev.data.weapon === weapon) { prev.data.n = (Number(prev.data.n) || 1) + 1; return prev; }
-  return C.add(t, 'shot', posOf(g), { weapon, into, near, n: 1 });
+  return C.add(t, 'shot', posOf(g), { weapon, into, near, n: 1 }, g.level);
 }
 /** combat.ts fireWeapon's light pass: a fixture shot out. */
 export function chronLightShot(g: Game, tg: LightTarget) { return chronicleN(g, 'lightShot', 'lightsShot', { name: fixtureName(tg) }, tg.pos); }
@@ -285,14 +295,14 @@ export function chronKey(g: Game, gd: Guard) { return chronicle(g, 'keyTaken', {
 /** combat.ts killGuard, by the player's hand: shot dead ('kill', with what) or out cold ('ko': the takedown's cross, the choke, the pistol-whip, a ring to the head —
  *  told apart the way killGuard's own log line is: `how` + the caller's line). */
 export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) {
-  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: g.player.gunInHand()?.def.short ?? 'a round' }, gd.char.pos);
-  const method = how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : 'takedown';
+  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
+  const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : 'takedown';
   return chronicle(g, 'ko', { who: gd.callsign, method }, gd.char.pos);
 }
 /** guards.ts: a body discovered — walked onto (bodyInView) or watched going down (the standoff's end): whose, by whom, and found breathing or not. */
 export function chronBodyFound(g: Game, body: Guard, by: Guard) {
   const h = body.char.bones.hips ?? body.char.pos;
-  return chronicle(g, 'bodyFound', { who: body.callsign, by: by.callsign, breathing: body.downKind !== null && body.downKind !== 'shot' }, [h[0], 0, h[2]]);
+  return chronicle(g, 'bodyFound', { who: body.callsign, by: by.callsign, breathing: body.downKind !== null && body.downKind !== 'shot', ...(body.wound ? { wounded: true } : null) }, [h[0], 0, h[2]]);
 }
 /** combat.ts fireWeapon → hitPlayer (god mode off): a round found Sam — 'down' the once, 'hit' while the vest still has something left. `by`: whose round. */
 export function chronHit(g: Game, by?: string) {
@@ -399,7 +409,7 @@ export function badgesOf(c: RunCounts): Badge[] {
     { id: 'pacifist', name: 'pacifist', on: c.shotsNearMen === 0 && c.kills === 0, hint: `not one round into or within ${SHOT_NEAR_M} m of a man` },
     { id: 'lightsout', name: 'lights out', on: c.lightsShot >= BADGE.lightsOutN, hint: `${BADGE.lightsOutN}+ fixtures shot out` },
     { id: 'talkative', name: 'talkative', on: c.roster > 0 && c.questioned >= c.roster, hint: 'every man on the floor questioned' },
-    { id: 'unseenStaff', name: 'unseen by staff', on: c.civSeen === 0 && c.civKO === 0 && c.civKilled === 0, hint: 'no cleaner or late worker ever laid eyes on you (or a hand of yours on them)' },
+    { id: 'unseenStaff', name: 'unseen by civilians', on: c.civSeen === 0 && c.civKO === 0 && c.civKilled === 0, hint: 'no cleaner or late worker ever laid eyes on you (or a hand of yours on them)' },
     { id: 'locksmith', name: 'locksmith', on: c.picked >= 1 && c.kicked === 0, hint: 'a lock picked and none kicked in' },
     { id: 'speedrun', name: 'speedrun', on: c.done && c.elapsed < BADGE.speedrunSecs, hint: `out inside ${fmtMMSS(BADGE.speedrunSecs)}` },
   ];
@@ -433,6 +443,8 @@ const CAUSE: Record<string, string> = { sight: 'eyes on you', sound: 'heard it',
 const CIV_CAUSE: Record<string, string> = { sam: 'saw you', gun: 'saw you, gun in hand', body: 'found a body', gunfire: 'heard the shooting', shot: 'heard a muffled shot', bang: 'heard a stun charge', scream: 'heard the screaming', noise: 'a crash beside her', grabbed: 'you had her by the throat', panel: 'panicked' };
 /** the needs' kinds in the timeline's words (needs.ts NEED_SPOTS names the places; the row names the errand) */
 const NEED_WORDS: Record<string, string> = { coffee: 'a coffee at the break-room counter', smoke: 'a smoke outside the fire exit', water: 'water at the cooler', stretch: 'a stretch round the lobby' };
+/** …and on a level whose places are its own (the row carries `own` and the stand's name — needs.ts) */
+const NEED_SHORT: Record<string, string> = { coffee: 'a coffee', smoke: 'a smoke', water: 'water', stretch: 'a stretch' };
 export function eventText(e: ChronEvent): string {
   const d = e.data; const n = Number(d.n) || 1;
   switch (e.kind) {
@@ -444,27 +456,27 @@ export function eventText(e: ChronEvent): string {
     case 'calm': return `${d.who} gives up the search`;
     case 'alarm': return d.up ? `ALARM ▲ ${STAGE_NAME[Number(d.stage)] ?? d.stage}${d.cause ? ` — ${CAUSE[String(d.cause)] ?? d.cause}` : ''}` : `alarm ▼ ${STAGE_NAME[Number(d.stage)] ?? d.stage}`;
     case 'radio': return `${d.who} (radio): “${d.text}”`;
-    case 'shot': return `fired${n > 1 ? ` ×${n}` : ''} (${d.weapon}) — ${d.into === 'geometry' ? 'into the scenery' : /^past /.test(String(d.into)) ? String(d.into) : `into ${d.into}`}`;
+    case 'shot': return `fired${n > 1 ? ` ×${n}` : ''} (${gearText(String(d.weapon))}) — ${d.into === 'geometry' ? 'into the scenery' : /^past /.test(String(d.into)) ? String(d.into) : `into ${d.into}`}`;
     case 'lightShot': return `shot out ${d.name}`;
     case 'ocp': return `OCP → ${d.what}`;
     case 'blackout': return d.cause === 'shot' ? 'shot the breaker — mains gone for good' : d.cause === 'hand' ? 'threw the breaker by hand' : 'OCP → the breaker: mains tripped';
-    case 'thrown': return `threw a ${d.kind === 'flash' ? 'stun' : 'smoke'} canister`;
+    case 'thrown': return d.kind === 'cam' ? 'placed a sticky camera' : d.kind === 'he40' ? 'fired a 40 mm grenade' : d.kind === 'frag' ? 'threw a frag grenade' : `threw a ${d.kind === 'flash' ? 'stun' : 'smoke'} canister`;
     case 'grab': return `grabbed ${d.who} from behind`;
     case 'interrogated': return d.civilian ? `questioned ${d.who} — ${d.gave ? `${d.she ?? 'she'} gave up ${INTEL[String(d.gave)] ?? d.gave}` : `nothing more in ${d.her ?? 'her'}`}` : `questioned ${d.who} — ${d.gave ? `he gave up ${INTEL[String(d.gave)] ?? d.gave}` : Number(d.stage) >= 4 ? 'nothing left in him' : 'nothing useful yet'}`;
     case 'keyTaken': return `took ${d.who}'s key`;
-    case 'ko': return `${d.who} out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? 'a ring to the head' : 'the takedown'}`;
-    case 'kill': return `${d.who} shot dead (${d.weapon})`;
-    case 'bodyFound': return `${d.by} found ${d.who} ${d.breathing ? 'out cold' : 'dead'}${d.civilian ? ' — the floor goes up hard' : ''}`;
+    case 'ko': return d.method === 'wounded' ? `${d.who} shot — down wounded, out of the fight` : `${d.who} out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : 'the takedown'}`;
+    case 'kill': return d.weapon === 'knife' ? `${d.who} killed — the knife` : `${d.who} shot dead (${gearText(String(d.weapon))})`;
+    case 'bodyFound': return `${d.by} found ${d.who} ${d.wounded ? 'shot and breathing' : d.breathing ? 'out cold' : 'dead'}${d.civilian ? ' — the floor goes up hard' : ''}`;
     case 'doorKicked': return `kicked in the ${d.door} door`;
     case 'lockPicked': return `picked the ${d.door} door's lock`;
     case 'hit': return `hit${d.by ? ` — ${d.by}'s round` : ''}`;
     case 'down': return `DOWN${d.by ? ` — ${d.by}'s round` : ''}`;
-    case 'needBreak': return d.what === 'left' ? `${d.who} left his route — ${NEED_WORDS[String(d.kind)] ?? d.kind}` : d.what === 'back' ? `${d.who} back on his route (${d.away} s away)` : `${d.who}'s ${d.kind} break broken off (${d.why})`;
+    case 'needBreak': return d.what === 'left' ? `${d.who} left his route — ${d.own ? `${NEED_SHORT[String(d.kind)] ?? d.kind} (${d.to})` : NEED_WORDS[String(d.kind)] ?? d.kind}` : d.what === 'back' ? `${d.who} back on his route (${d.away} s away)` : `${d.who}'s ${d.kind} break broken off (${d.why})`;
     case 'civilianSpotted': return `${d.who} ${CIV_CAUSE[String(d.cause)] ?? 'saw you'}`;
     case 'civilianReported': return d.how === 'phone' ? `${d.who} rang it in — ${CIV_CAUSE[String(d.cause)] ?? d.cause}${d.sent ? ` — ${d.sent} sent` : ''}` : d.how === 'outside' ? `${d.who} got out and control rang the floor${d.sent ? ` — ${d.sent} sent` : ''}` : `${d.who} told ${d.to} — ${CIV_CAUSE[String(d.cause)] ?? d.cause}${d.how === 'found' ? ' (he found her hiding)' : ''}`;
     case 'civilianComplied': return `told ${d.who} to stay down — and let her go`;
-    case 'civilianKO': return `${d.who} (the ${d.label}) out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? 'a ring to the head' : 'the takedown'} — a CIVILIAN`;
-    case 'civilianKilled': return `${d.who} (the ${d.label}) KILLED (${d.weapon}) — a civilian`;
+    case 'civilianKO': return `${d.who} (the ${d.label}) out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : 'the takedown'} — a CIVILIAN`;
+    case 'civilianKilled': return `${d.who} (the ${d.label}) KILLED (${gearText(String(d.weapon))}) — a civilian`;
     case 'cameraSpotted': return `camera ${d.n} called you in${d.sent ? ` — ${d.sent} sent to look` : ''}`;
     case 'cameraAlarm': return `camera ${d.n} had you long enough — the floor goes up`;
     case 'laserTripped': return `${d.by === 'player' ? 'broke' : d.by === 'body' ? 'the body you hauled broke' : `a thrown ${d.by === 'flash' ? 'stun' : d.by} broke`} the ${e.room} beam${d.sent ? ` — ${d.sent} sent` : ''}`;

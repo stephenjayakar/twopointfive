@@ -1,0 +1,79 @@
+{
+ "sight": {
+  "before": 1,
+  "during": [
+   1,
+   1,
+   0.997,
+   0.714,
+   0.498,
+   0.563
+  ],
+  "after": [
+   0.58,
+   0.37,
+   0.418,
+   0.511,
+   0.596,
+   0.665
+  ],
+  "minDuring": 0.498,
+  "puffs": 10,
+  "smoke": 4
+ },
+ "validation": [
+  {
+   "tier": "verylow",
+   "res": [
+    533,
+    300
+   ],
+   "nErr": 0,
+   "note": "papers 2 \u00b7 puffs 2 \u00b7 knocks 1 \u00b7 tiles 1 \u00b7 screens 3 \u00b7 debris 2"
+  },
+  {
+   "tier": "low",
+   "res": [
+    768,
+    432
+   ],
+   "nErr": 0,
+   "note": "same burst, same outcome"
+  },
+  {
+   "tier": "medium",
+   "res": [
+    1072,
+    603
+   ],
+   "nErr": 0,
+   "note": "same"
+  },
+  {
+   "tier": "high",
+   "res": [
+    1368,
+    770
+   ],
+   "nErr": 0,
+   "note": "the look rigs' tier; also the sight and tile scenes"
+  },
+  {
+   "tier": "ultra",
+   "res": [
+    1920,
+    1080
+   ],
+   "nErr": 0,
+   "note": "mesh shadows on; captured for the crop above"
+  }
+ ],
+ "soak": "35 + 17 rounds into statics, 33 puffs, 4 tiles, debris peak 2 across the two seeds; 0 violations, 0 exceptions",
+ "gates": [
+  "tools/qa/gate.sh perf player weapons decals particles glass breach qrf \u2192 376 PASS / 0 FAIL check lines (perf 24 \u00b7 player 166 \u00b7 weapons 67 \u00b7 decals 15 \u00b7 particles 11 \u00b7 glass 39 \u00b7 breach 13 \u00b7 qrf 41); after the review fixes weapons / particles / decals / destruction again \u2192 67 \u00b7 11 \u00b7 15 \u00b7 15 PASS, 0 FAIL",
+  "probes.ts destruction: sheet \u00b7 caps \u00b7 dust \u00b7 screen \u00b7 hearing \u00b7 reset \u00b7 identity \u00b7 determinism \u00b7 bounds \u2014 15 PASS / 0 FAIL",
+  "tour.ts --runs 1: PASS (10 803 frames, laps ended by themselves, 0 failures / warnings) \u2014 chaos is 0 under the tour by construction",
+  "soak.ts --seeds 1,2 --minutes 6 --loud-at 1 --chaos 1: 0 violations either seed",
+  "typecheck clean; bun run build (below)"
+ ]
+}

@@ -10,6 +10,7 @@
 // Two stages once it starts: the OPENING (`active`, not yet `live`) only raises the veil over the card's own still view — the world stays frozen and untouched
 // under it (main.ts keys its freeze on `live`) — and only once the veil has been fully black for a presented frame does it go LIVE: the flags up, Sam away, the
 // world let go and the first cut, all unseen. A poke during the opening therefore has nothing to put back but the veil.
+import { openingStart } from './opening';
 import { Vec3, v3, DEG, smoothstep } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
@@ -106,6 +107,7 @@ export class Attract {
     g.restartEncounter();   // still under the flag: its note stays out of the log — the men back on their marks, doors / props / switches as authored, Sam at the insertion point
     if (sv) { g.quietUtility = sv.quiet; g.playerInvisible = sv.invisible; g.touring = sv.touring; cam.yaw = sv.yaw; cam.pitch = sv.pitch; cam.distance = cam.desiredDistance = sv.dist; }
     const p = g.followPos(); cam.target = v3.copy(p); cam.desired = v3.copy(p);   // snapped, not flown: the card's own view is simply back
+    openingStart(g);        // (opening.ts: the fresh shift was made under the flag — the card's still view shows the player's night)
     this.onStop?.();        // (main.ts: the fresh encounter onto the GPU and the temporal history re-seeded from this view before the next picture — a frozen card does neither by itself)
   }
 

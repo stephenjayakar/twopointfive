@@ -25,6 +25,7 @@ for fam in "$@"; do
     echo "  $fam · *** ERROR: unknown probe family '$fam' (probes.ts exit 2 — nothing ran) ***"; printf '%s\n' "$out" | grep -E "^error:" | head -2 | cut -c1-260 | sed 's/^/      /'
     [ $rc -eq 0 ] && rc=2; continue
   fi
+  printf '%s\n' "$out" | grep -E "^  the reds against the list|^    (EXPECTED RED|NEW RED|GREEN AGAIN) " | cut -c1-240 | sed "s/^/  $fam ·/"   # (probes.ts's table of this run's reds against tools/qa/expected-red.ts: old and explained / NEW / green again — for the reader; red stays red)
   if [ $st -eq 124 ] || [ $st -eq 142 ]; then echo "  $fam · *** ERROR: the family hit the ${cap} s time cap (exit $st) ***"; fi
   [ $st -ne 0 ] && nf=$((nf+1))
   if [ -z "$ver" ] && [ "$np" -eq 0 ]; then nf=$((nf+1)); echo "  $fam · *** ERROR: no verdict line and no counted check — nothing here says PASS ***"; fi

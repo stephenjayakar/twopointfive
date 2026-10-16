@@ -1,71 +1,98 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG, quat } from '../math/vec';
-import { Engine } from '../engine';
-import { Level, PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
-import { StaticCollision } from '../scene/collision';
-import { GltfCharacter } from '../anim/gltf';
-import { CharacterRenderer } from '../anim/characters';
-import { Character, LONG } from './character';
+import { openingStart } from './opening';
+import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
+import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
+import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
-import { Input } from './input';
-import { FollowCamera } from './camera';
-import { RtLight } from '../render/lights';
-import { IrradianceProbe } from '../render/probe';
-import { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
-import { Box, BoxFlag, makeBox, rayBox } from '../scene/boxes';
-import { Pistol, Ocp } from './weapons';
-import { Doors, Door, DoorEvent, DoorContact } from './doors';
-import { RAG } from './ragdoll';
-import { Throwables, ThrowSolution, Item } from './throwables';
-import { PropSystem, PropEvent, PropContact } from './props';
-import { GameAudioLike, nullAudio } from './audio_iface';
-import * as fx from './effects';
-import { Sparks } from './sparks';
-import { rigBoxes, rigLightPose, rigTorchPos, torchCarryDir, railLightDef, torchLightDef, holsterBoxes, RIG, sc20kLightPose } from './rigProps';
-import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
+import { BoxFlag, rayBox } from '../scene/boxes';
+import { Door } from './doors';
+import { rigLightPose, rigTorchPos, torchCarryDir, torchLightDef, RIG, sc20kLightPose } from './rigProps';
+import { PLAYER_ID } from './consts';
+import { leverStand, radioHand, swapHeld } from './handwork';
 import { tread } from './floor';
-import { missionLive, tally, rackDist, updateMission, drivePulled, sendRackCheck } from './mission';
-import { objectivePos, objectiveText } from './mission';
+import { tally } from './mission';
 import { chronHeard, chronContact, chronLost, chronCalm, chronAlarm, chronRadio, chronBodyFound } from './chronicle';
-import { fireWeapon, killGuard, dropFromHand, hitPlayer, handProps, laserBoxes, updateItems, smokeParams, startCanister, detonateStun, armThrough } from './combat';
-import { dropThrowable } from './combat';
-import type { Game, Player, DownKind, DownBy, Temperament, Foe } from './game';
+import { fireWeapon, armThrough } from './combat';
+import { lensClear } from './lighting';
+import { gunWallCheck, gunWallPose } from './gunwall';
+import type { Game, GameEvent, DownKind, DownBy, Temperament, Foe, PairId } from './game';
 import { Guard, isBreathing, TEMPERAMENT } from './game';
 import { runGuardScript, Clearing, inBounds, endGuardScript } from './squad';
-import { roomName, updateAmbient } from './dialogue';
+import { fragFlee, ownBang, ownNoise } from './frag';
+import { moraleScript } from './morale';
+import { runnerScript, runnerFled } from './runner';
+import { DARKDOOR, darkDoorGate, darkDoorLook } from './darkdoor';
+import { netQuietAsked, netQuietBody, netQuietPose } from './netquiet';
+import { pairSmoke, fightLive, lampGlare, closeLane, ROOMFIGHT } from './roomfight';
+import { roomName, updateAmbient, isOffice, temperamentOf } from './dialogue';
+import { WORDS, w } from './words';
+import { CUES } from './cues';
 import { SUPPRESSION, headDown, endDisplace, holdingCover, guardFireMods, flinching } from './suppression';
-import { trackGuard, aimReady, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
-import { isHostile, teamOfId, hostileTo, foeChar, foeDown, foeCrouched } from './teams';
+import { trackGuard, aimReady, feetSettled, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
+import { SHIELD, SHIELD_STATS, shieldAny, shieldAim, shieldLow, shieldBlocks, shieldScreens } from './shield';
+import { isHostile, teamOfId, hostileTo, foeChar, foeDown, foeCrouched, HOSTILE, spokenName, defenderWords } from './teams';
 import type { Team } from './teams';
 import type { WeaponId } from './weapons';
+import { nvgSight, nvgDark } from './nvg';
+import { silentPace, silentStep, silentDark, silentHush } from './silent';
+import { pairGripped, pairGripBody } from './pairorders';
+import { PICTURE, PICTURE_STATS, ideaOf, pictureTell } from './picture';   // (asked inside colleagueFirePos only: src/game is one import cycle)
 import { MAX_LIGHTS } from '../render/lights';
+import { closeNearK } from './close';
+import { calmTorchDark } from './calmtorch';
+import { darkFoeLit } from './darkfoe';
 import { hearWhistle, whistleSoft, whistlePatrolTick, glanceToward, WHISTLE, WHISTLE_SOFT_UPPER } from './whistle';
-/** what a calm man mutters when a light before him dims out under the OCP and he puts it down to the wiring (guards.ts hearingCheck; the writing pass is the designer's) */
+import { hearPath, airTrans, loudLen, strokeLight } from './weather';
+import { ATTENTION, attentionHeard, attentionTick, attentionSideK, attentionAside, attentionEarK, attentionNoiseK, attentionStep, attentionWalk, attentionDwell, attentionTold, attentionAgain } from './attention';
+/** what a calm man mutters when a light before him dims out under the OCP and he puts it down to the wiring (guards.ts hearingCheck; the writing pass is the maintainer's) */
 const OCP_MUTTER = ["light's on the blink again", 'hm — bulb\'s going', 'power dip?', 'these fittings…', 'that light again'];
 import { tacticsAlert, doorGate, tacticsPenalty, tacticsLook, tacticsBodyFound, bodyDutyBlocked } from './tactics';
+import { LANES, lanePenalty, laneGate } from './lanes';
+import { DOORMANNERS, doorwayGate, offThreshold } from './doorway';
 import { needsPatrol } from './needs';
+import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
+import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
+import { shotEnergy } from './glasspen';
+import { kitPistol } from './kit';
+import { hourLight } from './hours';
+import { handleGate } from './handleside';
+import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
  *  gain, the search that deals hide spots and reads the renderer's light (off: the old sweep-and-wander), threshold discipline at doorways (off: straight through). */
 export const AI_TUNE = { motionAcuity: true, darkSearch: true, pieing: true };
 
 // ------------------------------------------------------------ guards
-export function hearingCheck(g: Game, gd: Guard) {
-  const keen = escalationOf(g) >= 1 ? KEEN : 1;   // an alarmed floor listens harder: the small noises (a creak, a scrape, a footfall) count for a quarter more
+/** HOW A 'glass' EVENT REACHES AN EAR (hearingCheck below, civilians.ts): the usual propagation from the event's own point — and, where the event carries the
+ *  pane's two faces (glass.ts glassEvent under GLASS.bothFaces), from each of those too, the one that arrives best standing (the glass rule's own weight: reach × carry inside GLASS.hearM; the event's own
+ *  point wins a tie, so nobody hears a pane worse for the rule). No `ears` = hearPath of the point, exactly as before. */
+export function glassHeard(g: Game, e: GameEvent, ear: Vec3): ReturnType<typeof hearPath> {
+  let best = hearPath(g, [e.pos[0], e.pos[1] + 1, e.pos[2]], ear);
+  if (!e.ears || best.direct) return best;   // (a clear run from the point itself: a face a hand's width nearer adds nothing, and the search is not paid for)
+  const score = (p: typeof best): number => p.pathLen < GLASS.hearM ? Math.min(1, Math.max(0.15, 1 - p.pathLen / GLASS.hearM)) * p.carry : 0;
+  let s = score(best);
+  for (const q of e.ears) { const p = hearPath(g, [q[0], q[1] + 1, q[2]], ear); const k = score(p); if (k > s) { s = k; best = p; } }
+  return best;
+}
+export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ear) {   // (doze.ts — `ear`: a man asleep in his chair, or at his screen with headphones on, hears the small noises at a share of this, and a footfall at `foot`; `eyes` false: asleep, he sees no light go out)
+  const keen = escalationOf(g) >= 1 ? KEEN : 1, dull = keen * ear;   // an alarmed floor listens harder: the small noises (a creak, a scrape, a footfall) count for a quarter more
   const H = gd.witness.heard;   // what reached him and counted goes in his memory too (Witness): the same gates as the awareness it raises, nothing more
-  const small = (where: Vec3) => { H.small++; H.smallWhere = v3.copy(where); H.lastT = g.time; };
+  let cur: GameEvent | null = null;   // (the event being weighed: attention.ts is told which small thing it was)
+  const small = (where: Vec3) => { H.small++; H.smallWhere = v3.copy(where); H.lastT = g.time; if (cur) attentionHeard(g, gd, cur, where); };   // (attention.ts — a return on its first line with its switch off: a small thing that makes a calm man look takes his attention to where he puts it)
   for (const e of g.events) {
+    cur = e;
     if (e.id === undefined) e.id = ++g.eventSeq;          // sequence ids: events raised by guards later in the update order are still heard next frame
     if (e.id <= gd.heardUpTo) continue;
     gd.heardUpTo = Math.max(gd.heardUpTo, e.id);
     const dStraight = v3.dist(e.pos, gd.char.pos);
     if (e.kind === 'lightOut') {
-      if (dStraight < 10 && gd.awareness < 0.4 && lightOutSeen(g, gd, e)) {
+      if (eyes && dStraight < 10 && gd.awareness < 0.4 && lightOutSeen(g, gd, e)) {
         if (e.cause === 'ocp' && gd.awareness < 0.3 && g.tune.ocpNotice === 'glance') {
-          // THE OCP'S SPELL (the designer, 08-12: 'it should be possible to turn off lights … without alerting everyone'): the light dims out and will be back — a calm man who
+          // THE OCP'S SPELL (the maintainer, 08-12: 'it should be possible to turn off lights … without alerting everyone'): the light dims out and will be back — a calm man who
           // has it (or its pool) before his eyes shrugs at the wiring: his head cranes to it, a mutter, a little more awake, and that is all. Nobody walks over, nobody radios.
           // With his back to it he misses it unless it was the light he stands in (< 3 m). A man ALREADY suspicious, or a fixture SHOT dark (the pop, for good), takes it as below.
           const src: Vec3 = e.from ?? [e.pos[0], 2.4, e.pos[2]];
@@ -85,12 +112,12 @@ export function hearingCheck(g: Game, gd: Guard) {
     if (dStraight > (e.kind === 'bang' || gunfire ? 80 : kick ? 40 : e.kind === 'glass' ? GLASS.hearM : 22)) continue;   // gunfire and stun charges: the whole floor (and the lot); everything else has a horizon (a pane going: GLASS.hearM)
     // sound reaches the guard the way it reaches the player's ears: straight through air, or around corners along the
     // walkable space (longer, a bit muffled — a lot if a closed door is across the doorway), or barely through the mass
-    const prop = g.col.sound.propagate(v3.add(e.pos, [0, 1, 0]), v3.add(gd.char.pos, [0, 1.5, 0]));
+    const prop = e.kind === 'glass' ? glassHeard(g, e, v3.add(gd.char.pos, [0, 1.5, 0])) : hearPath(g, v3.add(e.pos, [0, 1, 0]), v3.add(gd.char.pos, [0, 1.5, 0]));   // (a pane's crash: from whichever face of it reaches him best — glass.ts glassHeard, hearPath itself for an event without the faces) (weather.ts: propagate(), the path stretched by a picked weather's noise at his ears — rain, a thunderclap; no kind picked = propagate() itself)
     const d = prop.pathLen, carry = prop.carry;                                  // routed & open ≈ 0.72, through a closed door ≈ 0.32, sealed 0.25
     const heardAt: Vec3 = [prop.via[0], 0, prop.via[2]];                       // where to go and look: the source if heard directly, else the doorway / corner it came through
     // a report below the gunshot line (level < 1: the suppressed pistol — playtest 08-09 — or a canister's pop / skitter): an odd noise worth a look, heard
     // out to ~7 m of open air per unit level along the same propagation (through a shut door far less), suspicion toward it, no radio, no 'shots fired'
-    if (e.kind === 'shot' && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) + 0.5) {
+    if (e.kind === 'shot' && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
       gd.awareness = Math.max(gd.awareness, 0.5);
       const at = prop.direct ? v3.copy(e.pos) : heardAt;   // where he places it: the source through open air, the doorway / corner it came round otherwise — as every other noise below is placed (review A6.7: the routed pop used to hand him the shooter's exact feet through the wall)
       if (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0) gd.lastKnown = at;   // (a man fighting trusts his own eyes over an echo, as the gunfire branch below)
@@ -106,7 +133,8 @@ export function hearingCheck(g: Game, gd: Guard) {
       // ear as ever), or a side his has nothing to do with (a neutral's fight is not his: the staff do not answer the showcase's gunfire, three walls off or not).
       // For the staff every 'guardShot' is a colleague's and every 'shot' is Sam's — the game as it was; the stun charge and the door are anybody's.
       const rel = gunfire ? shotRelation(g, gd, e) : 'threat';
-      if (rel === 'none') continue;
+      if (rel === 'none' || ownBang(g, gd, e)) continue;   // (… and a grenade his own side threw was called as it left the hand: frag.ts)
+      const dLoud = loudLen(g, d, v3.add(gd.char.pos, [0, 1.5, 0]));   // (weather.ts: rain drowns small sounds — a shot is placed off the path as it is in the air; = d with no weather picked)
       if (gunfire) { H.shots++; H.lastShotT = g.time; } else if (kick) H.kick++; else H.bang++;   // (a colleague's rounds are gunfire heard too: 'shots' is what reached his ears, whoever fired)
       H.lastT = g.time;
       const wasCalm = gd.state === 'patrol' || gd.state === 'suspicious';
@@ -114,42 +142,55 @@ export function hearingCheck(g: Game, gd: Guard) {
       // where to converge: a colleague's shots always say where the intruder IS (even to men already moving on an older fix); your shot: exact if
       // the path was open, otherwise the right area — placed more loosely the further and more walled-off it was — and an alert guard only
       // re-targets on it if he has not had eyes on you for a second (he trusts his own sighting over an echo)
-      if (rel === 'own') gd.lastKnown = v3.copy(colleagueFirePos(g, e));
+      if (rel === 'own') { const at = colleagueFirePos(g, gd, e); if (at) gd.lastKnown = v3.copy(at); }   // (null: PICTURE.shot, and his own word on the man is the newer)
       else if (gd.state !== 'alert' || !gd.lastKnown || prop.direct || g.time - gd.lastSeenT > 1.0) {
-        const err = prop.direct ? 0 : Math.min(4, 0.6 + d * 0.08) * (1.3 - 0.3 * carry); const a = Math.random() * Math.PI * 2; const cand: Vec3 = [e.pos[0] + Math.cos(a) * err, 0, e.pos[2] + Math.sin(a) * err];
+        const err = prop.direct ? 0 : Math.min(4, 0.6 + dLoud * 0.08) * (1.3 - 0.3 * carry); const a = simRandom() * Math.PI * 2; const cand: Vec3 = [e.pos[0] + Math.cos(a) * err, 0, e.pos[2] + Math.sin(a) * err];
         const reachable = !g.col.nav.isBlocked(cand[0], cand[2]) && !!g.col.nav.findPath(gd.char.pos, cand);   // a free-but-unreachable pocket would have him grind a wall forever
         gd.lastKnown = reachable ? cand : v3.copy(e.pos);
       }
-      if (wasCalm) gd.reactT = Math.max(gd.reactT, 0.25 + Math.min(1.2, d / 25) + Math.random() * 0.4);   // the far end of the floor takes a moment to place it (once: a colleague's continuing fire must not keep re-rooting men already on the move)
-      if (wasCalm && !e.announced) { e.announced = true; g.say(gd, e.kind === 'bang' ? 'flashbang! go, go!' : kick ? 'that was a door going in — someone\'s inside!' : rel === 'own' ? 'shots fired! on me!' : 'that was a shot — find him!', e.kind !== 'bang'); }
+      if (wasCalm) gd.reactT = Math.max(gd.reactT, 0.25 + Math.min(1.2, dLoud / 25) + simRandom() * 0.4);   // the far end of the floor takes a moment to place it (once: a colleague's continuing fire must not keep re-rooting men already on the move)
+      if (wasCalm && !e.announced && !(WORDS.on && kick && ownNoise(g, gd, e.who))) { e.announced = true; g.say(gd, e.kind === 'bang' ? (e.frag ? 'grenade! that was a grenade!' : WORDS.on && e.charge ? (defenderWords(gd) ? 'that was a charge — they\'re breaching!' : 'that was a charge!') : WORDS.on && (gd.hold || gd.pinned) ? 'flashbang!' : 'flashbang! go, go!') : kick ? 'that was a door going in — someone\'s inside!' : rel === 'own' ? 'shots fired! on me!' : defenderWords(gd) ? 'that was a shot — find them!' : 'that was a shot — find him!', e.kind !== 'bang'); }   // (words.ts: a man posted on a mark goes nowhere; a defender is after a team; a door or wall CHARGE is no flashbang — GameEvent.charge; and a door his OWN side's blast or boot took — doorblast.ts files the frame letting go as a 'kick' under the thrower's id — is nobody 'inside': no line)
     }
     if ((e.kind === 'door' || e.kind === 'prop') && d < 12 && e.who !== gd.char.id) {
       // doors / furniture: a creak, latch or scraping chair nearby that no guard caused is worth a look; a slam, kicked door or a chair sent flying alerts the floor
-      const byGuard = (e.who ?? -1) >= 10;
-      const a = (e.level ?? 0.2) * clamp(1 - d / 12, 0, 1) * (byGuard ? 0.0 : 1.0) * carry * keen;
+      const byGuard = (e.who ?? -1) >= 10 && !(fightLive(g) && stepIsThreat(g, gd, e));   // (the room fight: an ENEMY unit at a door is a noise like Sam at it — a man holding a room hears his door tried)
+      const a = (e.level ?? 0.2) * clamp(1 - d / 12, 0, 1) * (byGuard ? 0.0 : 1.0) * carry * dull * attentionNoiseK(g, gd);   // (attention.ts: 1 — but for a man whose attention another file holds with his ears covered)
       if (a > 0.08) { gd.awareness = Math.min(1, Math.max(gd.awareness, Math.min(e.loud ? 0.75 : 0.45, gd.awareness + a))); if (!gd.lastKnown || gd.state !== 'alert') gd.lastKnown = heardAt; if (gd.state === 'patrol') gd.reactT = 0.6; small(heardAt); chronHeard(g, gd, e); }
     }
     if (e.kind === 'glass' && d < GLASS.hearM) {
       // a pane of glass going (glass.ts): a crash nobody takes for the building settling — whoever it reaches (the usual propagation: round through the door if the
       // pane was the wall between, far less through a shut leaf) goes well into suspicion toward where it came from and turns to look; calm men say so, once.
       // Whoever broke it: a colleague's round through a window is still a window gone.
-      const a = (e.level ?? GLASS.hearLevel) * clamp(1 - d / GLASS.hearM, 0.15, 1) * carry * keen;
+      const a = (e.level ?? GLASS.hearLevel) * clamp(1 - d / GLASS.hearM, 0.15, 1) * carry * dull;
       if (a > 0.06) {
         const wasCalm = gd.state === 'patrol' || gd.state === 'suspicious';
         gd.awareness = Math.min(1, Math.max(gd.awareness, Math.min(0.85, 0.4 + a)));
         if (!gd.lastKnown || gd.state !== 'alert') gd.lastKnown = heardAt;
         if (wasCalm) gd.reactT = Math.max(gd.reactT, 0.5);
         small(heardAt); chronHeard(g, gd, e);
-        if (wasCalm && !e.announced) { e.announced = true; g.say(gd, d < 10 ? 'glass! — that was right here' : 'that was a window going — someone\'s breaking in', false); }
+        if (wasCalm && !e.announced) { e.announced = true; g.say(gd, d < 10 ? 'glass! — that was right here' : w('that was glass going — somebody\'s out there', 'that was a window going — someone\'s breaking in'), false); }
       }
     }
     if (e.kind === 'step' && d < 9 && !(g.playerInvisible && (e.who ?? PLAYER_ID) === PLAYER_ID) && stepIsThreat(g, gd, e)) {   // (teams: an ENEMY's footfall — Sam's to the staff, as ever; a hostile unit's to an operative; his own side's and a neutral's are nothing)
-      const a = (e.level ?? 0.3) * clamp(1 - d / 9, 0, 1) * carry * keen;
-      if (a > 0.12) { gd.awareness = Math.min(1, Math.max(gd.awareness, Math.min(0.6, gd.awareness + a * 0.5))); if (!gd.lastKnown || gd.state === 'patrol') gd.lastKnown = heardAt; small(heardAt); chronHeard(g, gd, e); }
+      const a = (e.level ?? 0.3) * clamp(1 - d / 9, 0, 1) * carry * keen * foot * attentionEarK(g, gd);   // (attention.ts: 1 — a man whose attention is on a thing has half an ear for a footfall)
+      if (a > 0.12) { gd.awareness = Math.min(1, Math.max(gd.awareness, Math.min(0.6, gd.awareness + a * 0.5))); if (!gd.lastKnown || gd.state === 'patrol') gd.lastKnown = heardAt; small(heardAt); chronHeard(g, gd, e); attentionStep(g, gd, heardAt); }   // (… and one that does reach him is a man, not a thing: the hold breaks and he turns to it)
     }
   }
 }
 // ------------------------------------------------------------ sides (teams.ts) in the hearing model
+/** gunfire filed and not through this man's ears yet that hearingCheck will count as heard (Witness.heard.lastShotT) when it next runs for him — its gates,
+ *  nothing more. enemysquads.ts asks on the frame a man drops: the player's round is filed before the squads' tick in a frame, the men's hearing runs after it.
+ *  `bangs`: a stun charge or a door blown counts as well (hearingCheck's own gate for one: the floor, 80 m) */
+export function gunfireDue(g: Game, gd: Guard, bangs = false): boolean {
+  for (const e of g.events) {
+    if (e.id !== undefined && e.id <= gd.heardUpTo) continue;
+    if (bangs && e.kind === 'bang') { if (v3.dist(e.pos, gd.char.pos) <= 80) return true; continue; }
+    if (!((e.kind === 'shot' || e.kind === 'guardShot') && (e.level ?? 0) >= 1)) continue;
+    const d = v3.dist(e.pos, gd.char.pos); if (d > 80 || (e.kind === 'guardShot' && d < 0.1)) continue;
+    if (shotRelation(g, gd, e) !== 'none') return true;
+  }
+  return false;
+}
 /** Whose gunfire this is to `gd`: 'own' = a man of his side fired it (kind 'guardShot' whose `who` is on his side — every staff man's, to the staff, which is all
  *  the game ever had; a legacy event without `who` counts as staff), 'threat' = an enemy's (Sam's 'shot' to anybody hostile to Sam; a hostile unit's report to
  *  an operative and the other way about), 'none' = a side his neither fights nor serves with (neutral), or a friend who is not AI-led firing at he knows not
@@ -161,8 +202,25 @@ function shotRelation(g: Game, gd: Guard, e: { kind: string; who?: number }): 'o
 }
 /** Where a colleague's shots say the enemy IS: the position of the man that colleague is firing at — Sam's, for the staff (the expression it always was); the
  *  shooter's foe's for a unit; failing that (a report without a shooter the game knows) where the round stopped, else where it was fired from. */
-function colleagueFirePos(g: Game, e: { who?: number; pos: Vec3; to?: Vec3 }): Vec3 {
+function colleagueFirePos(g: Game, gd: Guard, e: { who?: number; pos: Vec3; to?: Vec3; blind?: boolean }): Vec3 | null {
+  if (e.blind) { const p = e.to ?? e.pos; return [p[0], 0, p[2]]; }   // a round fired blind (FireOpts.blind) tells nobody where anybody is: the place to look is where it went (on the floor, as every fix is)
   const sh = e.who === undefined ? null : g.guards.find(x => x.char.id === e.who) ?? null;
+  // (picture.ts PICTURE.shot: what a colleague's fire tells is where HE believes his man to be and how old that word is — his own idea of him, a fifth of a
+  //  second old while he has eyes on him, older when he is firing at where the man was — never the man's true place through a wall. The hearer takes it as a
+  //  call (the idea at its own age, the fix stamped with it: no stale word comes out fresh), and keeps what he has when his own word is the newer or the
+  //  shooter has seen the place empty. No picture kept (a show), or a shooter with no idea of his man: as it was.)
+  if (sh && PICTURE.on && PICTURE.shot && !g.touring) {
+    const who = sh.foe ?? (sh.team === 'guard' ? 'player' : null), I = who ? ideaOf(g, sh, who) : null;
+    if (who && I) { const tr = who === 'player' ? g.player.char.pos : who.char.pos, mine = ideaOf(g, gd, who);
+      PICTURE_STATS.shotPlaced++; if (Math.hypot(I.at[0] - tr[0], I.at[2] - tr[2]) >= 1) PICTURE_STATS.shotOff++;
+      const own = !!mine && mine.t >= I.t;
+      if (gd.lastKnown && (I.lost || own || gd.fixT >= I.t)) { PICTURE_STATS.shotKept++; return null; }
+      // (no fix to work from: his own newer word of the man is the place — it is not written over by an older one; a word the shooter has since seen
+      //  empty is a place to go and nothing for his picture)
+      const W = own ? mine! : I; if (own) PICTURE_STATS.shotKept++; else if (!I.lost) pictureTell(g, gd, who, I.at, g.time - I.t);
+      gd.fixRef = [W.at[0], 0, W.at[2]]; gd.fixT = W.t;
+      return [W.at[0], 0, W.at[2]]; }
+  }
   if (!sh || sh.team === 'guard') return g.player.char.pos;
   return foeChar(g, sh)?.pos ?? e.to ?? e.pos;
 }
@@ -220,10 +278,11 @@ function motionCore(gd: Guard, pp: Vec3, v: Vec3, lit: number, dist: number): nu
  *  between them, the alarmed floor's keenness — point-blank is certain — and a man already hunting is twice as quick on the uptake. One formula for updateGuard
  *  and for the scripted men's senses (squad.ts perceive). Above 0.05 it moves his fix; above 0.25 it is a real sighting (the licence to shoot). */
 export function sightGain(g: Game, gd: Guard, dist: number): number {
-  const T = g.tune; const light = g.player.visibility; const distF = clamp(1 - (dist - 3) / 13, 0.2, 1);
+  const T = g.tune; const light = g.player.visibility; const distF = distTerm(dist);
   const moving = AI_TUNE.motionAcuity ? motionFactor(g, gd, dist) : (Math.hypot(g.player.char.vel[0], g.player.char.vel[2]) > 2 ? 1.5 : 1);   // (the switch is the QA table's before / after; play runs the acuity)
   let rate = T.detectRate * Math.pow(light, 1.5) * distF * (g.player.crouch ? 0.75 : 1) * moving * clamp((gd.smokeTrans - 0.3) / 0.5, 0, 1) * (escalationOf(g) >= 1 ? KEEN : 1);   // (an alarmed floor is actually looking: a quarter quicker on the uptake)
-  if (dist < 1.8) rate = Math.max(rate, 3.5);
+  rate *= attentionSideK(g, gd, g.player.char.pos);   // (attention.ts: 1 — but for a man whose attention is on a thing, of somebody outside what he is looking at; the point-blank floor below stands whole)
+  if (dist < 1.8) rate = Math.max(rate, 3.5 * closeNearK(g, gd, dist));   // (close.ts: 1 unless its switch is on — then a shape at his elbow in the DARK is not seen for being near)
   if (gd.state === 'alert' || gd.state === 'search') rate *= 2.2;
   return rate;
 }
@@ -232,10 +291,12 @@ export function sightGain(g: Game, gd: Guard, dist: number): number {
  *  motion across this man's view, the alarmed floor's keenness and the hunting man's ×2.2. Two things it cannot have: the smoke between two AI men is not marched
  *  (the probe's per-guard segment runs to Sam's chest only — the daytime showcase has no smoke; a v1 limit, named), and Sam's sandbox invisibility is his alone. */
 export function sightGainOn(g: Game, gd: Guard, o: Guard, dist: number): number {
-  const T = g.tune; const light = o.visibility; const distF = clamp(1 - (dist - 3) / 13, 0.2, 1);
+  const T = g.tune; const light = Math.max(o.visibility, lampGlare(g, gd.char, o), nvgSight(g, gd, o)); const distF = distTerm(dist);   // (the light ON him — or, in a room fight, his own lit weapon light pointed at this eye: roomfight.ts lampGlare, 0 elsewhere — or what this eye's goggles make of it: nvg.ts, 0 with none down)
   const v = o.char.vel;
   const moving = AI_TUNE.motionAcuity ? motionCore(gd, o.char.pos, v, light, dist) : (Math.hypot(v[0], v[2]) > 2 ? 1.5 : 1);
-  let rate = T.detectRate * Math.pow(light, 1.5) * distF * (o.char.anim.crouch > 0.5 ? 0.75 : 1) * moving * (escalationOf(g) >= 1 ? KEEN : 1);
+  const smoke = pairSmoke(g, gd.char, o.char);   // the smoke between them thins the sight of him as it does of Sam, in the same place in the formula (roomfight.ts marches the pair; 1 = clear / not marched)
+  let rate = T.detectRate * Math.pow(light, 1.5) * distF * (o.char.anim.crouch > 0.5 ? 0.75 : 1) * moving * (smoke < 1 ? clamp((smoke - 0.3) / 0.5, 0, 1) : 1) * (escalationOf(g) >= 1 ? KEEN : 1);
+  rate *= attentionSideK(g, gd, o.char.pos);   // (attention.ts, as for Sam: the partner beside him in a quiet two is seen by the same held eye)
   if (dist < 1.8) rate = Math.max(rate, 3.5);
   if (gd.state === 'alert' || gd.state === 'search') rate *= 2.2;
   return rate;
@@ -245,17 +306,26 @@ export function sightGainOn(g: Game, gd: Guard, o: Guard, dist: number): number 
  *  the default) light enough on the body to make it out, no plume between thick enough to hide it (bodyLit below). (updateGuard raises the alarm on it; the
  *  scripted men's senses in squad.ts / qrf.ts only need to know to break off toward it — updateGuard does the rest the frame after.) */
 export function bodyInView(g: Game, gd: Guard): Guard | null {
-  const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]); const look = gd.char.chestDir;
   for (const o of g.guards) {
     if (o === gd || o.state !== 'dead' || o.found || o.team !== gd.team) continue;   // (a body somebody has already called in is known: it startles nobody a second time; a body of another SIDE startles nobody on this one — teams: the operative shot him)
-    const body = o.char.bones.hips ?? o.char.pos;
-    const to = v3.sub(body, eye); const dist = v3.len(to); if (dist > 12) continue;
-    if (v3.dot([look[0], 0, look[2]], v3.normalize([to[0], 0, to[2]])) < Math.cos(60 * DEG)) continue;
-    if (g.col.segmentBlocked(eye, v3.add(body, [0, 0.3, 0]))) continue;
-    if (g.tune.bodyLight && !bodyLit(g, gd, o, eye, dist)) continue;   // in his open view but not yet SEEN: a shape on the floor of a dark room six metres off is nothing until a light finds it (review A6.2)
-    return o;
+    if (bodySeen(g, gd, o)) return o;
   }
   return null;
+}
+/** bodyInView's test of ONE body, whoever asks (enemysquads.ts asks it of a squad's men for a man of theirs who went quiet): within 12 m of his eyes, inside
+ *  60° of where his chest points, nothing solid between, and light enough on it to make out. `around`: a man who has walked to the spot to look
+ *  and looks about him — no cone; a number = also how far round his FEET (m, flat) a body is at his feet in any light, as the
+ *  2 m rule below has it for a man who walks onto one (enemysquads.ts's lookers stop short of the post, and a body thrown by a round lies a metre off it) */
+export function bodySeen(g: Game, gd: Guard, o: Guard, around: boolean | number = false): boolean {
+  if (pairGripBody(g, gd) || dozeAsleep(gd)) return false;   // (pairorders.ts PAIR.gripBody: a man with a teammate's hands on him finds no body — here, so every finder's road takes it; doze.ts: nor does a man asleep)
+  const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]); const look = gd.char.chestDir;
+  const body = o.char.bones.hips ?? o.char.pos;
+  const to = v3.sub(body, eye); const dist = v3.len(to); if (dist > 12) return false;
+  if (!around && v3.dot([look[0], 0, look[2]], v3.normalize([to[0], 0, to[2]])) < Math.cos(60 * DEG)) return false;
+  if (g.col.segmentBlocked(eye, v3.add(body, [0, 0.3, 0]))) return false;
+  const atFeet = typeof around === 'number' && Math.hypot(body[0] - gd.char.pos[0], body[2] - gd.char.pos[2]) <= around;
+  if (g.tune.bodyLight && !bodyLit(g, gd, o, eye, atFeet ? Math.min(dist, BODY_LIGHT.nearM) : dist)) return false;   // in his open view but not yet SEEN: a shape on the floor of a dark room six metres off is nothing until a light finds it (review A6.2)
+  return true;
 }
 
 // ------------------------------------------------------------ bodies are found by the light on them (tune.bodyLight — review A6.2, Chaos Theory's rule)
@@ -296,7 +366,8 @@ function bodyLit(g: Game, gd: Guard, o: Guard, eye: Vec3, dist: number): boolean
   const B = BODY_LIGHT;
   // the plume between them: one probe segment per finder ↔ body pair while it is a candidate (rare — it has passed range, cone and line), read as clear until answered
   const sk = `bodyS${gd.char.id}_${o.char.id}`; const hp = o.char.bones.hips ?? o.char.pos;
-  const trans = g.sensors.segment(sk, eye, [hp[0], hp[1] + 0.25, hp[2]], bodyProbeSlot(g)) ?? 1;   // (sensors.ts: asked only inside the frame's body budget, read either way)
+  const at: Vec3 = [hp[0], hp[1] + 0.25, hp[2]];
+  const trans = (g.sensors.segment(sk, eye, at, bodyProbeSlot(g)) ?? 1) * airTrans(g, eye, at);   // (sensors.ts: asked only inside the frame's body budget, read either way; × the weather's fog along the same line — weather.ts, exactly 1 with no kind picked)
   if (trans < B.smoke) return false;
   const vis = bodyVisibility(g, o) * clamp((trans - B.smoke) / 0.5 + 0.4, 0.4, 1);   // (a thinner veil dims what he makes of it, as it dims Sam to him — never below the near rule's reach)
   const bar = dist <= B.nearM ? -1 : lerp(B.litNear, B.lit, clamp((dist - B.nearM) / Math.max(0.1, B.farM - B.nearM), 0, 1));   // (−1: at his feet it is found in no light at all)
@@ -323,6 +394,7 @@ export function bodyLightSummary(g: Game): string {
 /** A world point in this man's open view: within `range` of his eyes, inside `halfDeg` of where his chest points (flat), nothing solid between — bodyInView's test
  *  against any point. Lighting is deliberately not asked (the things it is used for carry their own light: a colleague with a torch going down). */
 export function pointInView(g: Game, gd: Guard, p: Vec3, range = 12, halfDeg = 60): boolean {
+  if (dozeAsleep(gd)) return false;   // (doze.ts: eyes shut — every reader of a man's view takes it here)
   const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]); const look = gd.char.chestDir;
   const to = v3.sub(p, eye); const L = v3.len(to); if (L > range) return false; if (Math.hypot(to[0], to[2]) < 0.3) return true;   // (on top of it: his)
   if (v3.dot([look[0], 0, look[2]], v3.normalize([to[0], 0, to[2]])) < Math.cos(halfDeg * DEG)) return false;
@@ -349,8 +421,8 @@ export function witnessKill(g: Game, victim: Guard, how: DownKind, by: DownBy) {
   if (!g.aiEnabled || by !== 'player') return;
   const at = victim.char.bones.chest ?? v3.add(victim.char.pos, [0, 1.1, 0]);
   for (const o of g.guards) {
-    if (o === victim || o.state === 'dead' || g.time < o.dazzledUntil) continue;
-    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how, victim: victim.callsign, t: g.time };
+    if (o === victim || o.state === 'dead' || g.time < o.dazzledUntil || dozeAsleep(o)) continue;   // (doze.ts: a man asleep saw nothing)
+    if ((!g.playerInvisible && pointInView(g, o, at)) || o.sawPlayerThisFrame) o.witness.sawAct = { kind: how === 'wounded' ? 'shot' : how, victim: victim.callsign, t: g.time };   // (a man shot down WOUNDED was seen shot: the questions asked of the witness are the shooting's)
   }
 }
 /** What took a man over the alert line just now (updateGuard's transition): eyes on Sam (a real sighting this frame or a beat ago, or glimpses that added up
@@ -370,7 +442,7 @@ export function witnessSummary(g: Game, gd: Guard): string {
   if (W.alertedBy) parts.push(`alert by ${W.alertedBy} ${ago(W.alertT)}`);
   const heard = [H.shots ? `${H.shots} shot${H.shots > 1 ? 's' : ''}` : '', H.kick ? `${H.kick} kick${H.kick > 1 ? 's' : ''}` : '', H.bang ? `${H.bang} bang${H.bang > 1 ? 's' : ''}` : '', H.small ? `${H.small} small${H.smallWhere ? ` (last @${H.smallWhere[0].toFixed(0)},${H.smallWhere[2].toFixed(0)})` : ''}` : ''].filter(Boolean);
   if (heard.length) parts.push(`heard ${heard.join(', ')}`);
-  if (W.sawAct) parts.push(`SAW Sam ${W.sawAct.kind === 'shot' ? 'shoot' : W.sawAct.kind === 'struck' ? 'drop' : W.sawAct.kind === 'choked' ? 'choke out' : 'grab'} ${W.sawAct.victim} ${ago(W.sawAct.t)}`);
+  if (W.sawAct) parts.push(`SAW the player ${W.sawAct.kind === 'shot' ? 'shoot' : W.sawAct.kind === 'struck' ? 'drop' : W.sawAct.kind === 'choked' ? 'choke out' : 'grab'} ${W.sawAct.victim} ${ago(W.sawAct.t)}`);
   if (W.sawBody) parts.push(`found ${W.sawBody.victim} ${W.sawBody.breathing ? 'out cold' : 'dead'} ${ago(W.sawBody.t)}`);
   if (W.calledToBody) parts.push(`heard ${W.calledToBody.victim} called in ${W.calledToBody.breathing ? 'out cold' : 'dead'}`);
   if (W.sawHeld) parts.push(`saw ${W.sawHeld.who} held`);
@@ -474,7 +546,7 @@ function bodyAftermath(g: Game, gd: Guard, dt: number): { move: number; aim: Vec
         D.t = 0; gd.path = []; gd.pathGoal = null;
         if ((arrived && dB < 3.5) || seeBody) {   // actually at him (not merely at the end of a path that could not reach him)
           B.bodyVisits++; B.bodyVisitT = g.time; D.stage = 'cover';
-          if (D.role !== 'finder' && !B.bodyRemarked && !(gd.bubble?.radio && g.time - gd.bubble.t < 5)) { B.bodyRemarked = true; g.say(gd, isBreathing(B) ? "…he's out cold. someone did this by hand. — stay sharp" : '…christ. — stay sharp'); }   // (not on top of his own radio call — with two men left, the one beside the finder is also the one who gave the order)
+          if (D.role !== 'finder' && !B.bodyRemarked && !(gd.bubble?.radio && g.time - gd.bubble.t < 5)) { B.bodyRemarked = true; g.say(gd, B.wound ? "…he's shot. still breathing. — stay sharp" : isBreathing(B) ? "…he's out cold. someone did this by hand. — stay sharp" : '…christ. — stay sharp'); }   // (not on top of his own radio call — with two men left, the one beside the finder is also the one who gave the order)
         } else { D.stage = 'fan'; D.spot = fanSpot(g, gd, B, bp); gd.stallRef = null; gd.searchT = 0; if (D.spot) gd.lastKnown = v3.copy(D.spot); }
       }
       break;
@@ -533,7 +605,7 @@ export function leadFix(g: Game, from: Vec3, vel: Vec3): Vec3 {
 export function shotOrigin(c: Character): Vec3 {
   // The pistol at arm's length: the gun shoulder — fixed to the body, so the answer does not swing with a muzzle still coming round (once it is on,
   // shoulder → target is the round's line give or take the arm). A shouldered LONG gun: the trigger-hand wrist itself, which IS on the bore wherever the
-  // designer's carriage puts it (anchor between chest and shoulder, held inboard) — re-deriving that geometry from outside drifted 9–11 cm off the real
+  // maintainer's carriage puts it (anchor between chest and shoulder, held inboard) — re-deriving that geometry from outside drifted 9–11 cm off the real
   // bore; and the swing concern is the aim model's now (aim.ts gates the round on a settled track), not this line's.
   if (c.anim.longGun && c.bones.handR) return v3.copy(c.bones.handR);
   return c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]);
@@ -541,7 +613,18 @@ export function shotOrigin(c: Character): Vec3 {
 export function clearShot(g: Game, c: Character, to: Vec3): boolean {
   const from = shotOrigin(c);   // (see shotOrigin: the gun shoulder for the pistol, the trigger-hand wrist on the bore for a long gun)
   const d = v3.sub(to, from); const L = v3.len(d); if (L < 0.35) return true;   // (pressed against him: nothing can be in between)
-  return !g.col.shotBlocked(from, v3.mad(from, d, (L - 0.3) / L));            // 0.3: the body's own breadth round the aim point — anything nearer than that is him, not cover   // (shotBlocked, not segmentBlocked: a pane between them is no shot — see above)
+  return !g.col.shotBlocked(from, v3.mad(from, d, (L - 0.3) / L), 0.02, shotEnergy(g, c));   // (GLASS PENETRATION, glasspen.ts: with rounds going through glass the panes across the line are judged by what HIS gun's round has for them — off: undefined, the solid walk)   // 0.3: the body's own breadth round the aim point — anything nearer than that is him, not cover   // (shotBlocked, not segmentBlocked: a pane between them is no shot — see above)
+}
+/** A PINNED man is never asked clearShot (the alert branch: he fires from where he was put, cover or no cover) — bar this one line: his side's rounds have
+ *  nothing for a standing pane (?glassfoes=0 with rounds through glass live: shotEnergy 0) and STANDING GLASS is the first thing between his gun and `to`
+ *  (a round's own walk, col.raycast: a hole is passed, a leaf or a desk nearer than the pane is not glass). That round he is asked about like any other man,
+ *  and holds: the row says his side does not shoot through glass, and fireWeapon would put it through. False at every other time (the default, his side
+ *  shooting through glass, included): a pinned man is then exactly the man he was. */
+function paneFirst(g: Game, c: Character, to: Vec3): boolean {
+  if (shotEnergy(g, c) !== 0) return false;
+  const from = shotOrigin(c); const d = v3.sub(to, from); const L = v3.len(d); if (L < 0.35) return false;
+  const h = g.col.raycast(from, v3.scale(d, 1 / L), L - 0.3);
+  return !!h && h.index < 1e6 && ((g.level.boxes[h.index]?.flags ?? 0) & BoxFlag.Glass) !== 0;
 }
 
 // ------------------------------------------------------------ muzzle discipline: nobody points a pistol at a colleague — it goes to the low ready until the line is clear
@@ -586,10 +669,10 @@ function lineGeom(from: Vec3, to: Vec3, o: Guard): { t: number; e: number; d: nu
 export function colleagueInLine(g: Game, gd: Guard, to: Vec3, except: Guard | null = null): Guard | null {
   const c = gd.char; const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]);
   const L = Math.hypot(to[0] - from[0], to[2] - from[2]); if (L < 0.01) return null; const tMax = 1 + MUZZLE_PAST_M / L;
-  let best: Guard | null = null, bt = Infinity;
+  let best: Guard | null = null, bt = Infinity; const near = gd.team === 'operative' && !!gd.unit && fightLive(g);   // (the team in a room fight: roomfight.ts ROOMFIGHT.closeLane)
   for (const o of g.guards) {
     if (o === gd || o === except || o.state === 'dead' || !o.char.alive || isHostile(gd.team, o.team)) continue;   // (teams: an ENEMY in the line is no reason to lower the gun — he is what it is up for; his own side and neutrals are colleagues)
-    const G = lineGeom(from, to, o); if (!G || G.t < 0 || G.t > tMax || G.t >= bt || G.d > G.clear) continue;   // behind his shoulder, further off than the point (and its margin), or simply clear of it
+    const G = lineGeom(from, to, o); if (!G || G.t < 0 || G.t > tMax || G.t >= bt || G.d > (near ? closeLane(G.clear, G.t, L) : G.clear)) continue;   // behind his shoulder, further off than the point (and its margin), or simply clear of it
     bt = G.t; best = o;
   }
   return best;
@@ -769,12 +852,13 @@ export function forgetGuardClocks(g: Game) { floorBarkT.delete(g); }
  *  (the colleague is plain, and lit by his own torch), but smoke thick enough to hide Sam hides them both, magnesium in the eyes hides everything, and a Sam the
  *  sandbox has made invisible is holding nobody anyone can name. */
 function pairInView(g: Game, gd: Guard, P: Pair): boolean {
-  if (g.playerInvisible || g.time < gd.dazzledUntil || gd.smokeTrans < 0.3) return false;
+  if (g.playerInvisible || g.time < gd.dazzledUntil || gd.smokeTrans < 0.3 || pairGripped(g, gd) || dozeAsleep(gd)) return false;
   const c = gd.char; const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]);
   const look = v3.lerp(c.chestDir, c.headDir(), 0.5); const ll = Math.hypot(look[0], look[2]) || 1; const lx = look[0] / ll, lz = look[2] / ll;
   const pc = g.player.char, hc = P.held.char;
+  const viewM = GUARD_EYE.far ? Math.max(STANDOFF_VIEW_M, eyeReach(g, Math.max(g.player.visibility, heldVisibility(g, P)))) : STANDOFF_VIEW_M;   // (the pair standing in light is seen as far as a lit man is: GUARD_EYE.far)
   for (const p of [hc.bones.chest ?? v3.add(hc.pos, [0, 1.1, 0]), hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]), pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]), pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])]) {
-    const tx = p[0] - eye[0], ty = p[1] - eye[1], tz = p[2] - eye[2]; if (Math.hypot(tx, ty, tz) > STANDOFF_VIEW_M) continue;
+    const tx = p[0] - eye[0], ty = p[1] - eye[1], tz = p[2] - eye[2]; if (Math.hypot(tx, ty, tz) > viewM) continue;
     const fl = Math.hypot(tx, tz); if (fl > 0.3 && (tx * lx + tz * lz) / fl < Math.cos((fl < 3.5 ? 100 : STANDOFF_VIEW_DEG) * DEG)) continue;
     if (!g.col.segmentBlocked(eye, p)) return true;
   }
@@ -790,24 +874,26 @@ function pairInView(g: Game, gd: Guard, P: Pair): boolean {
 export const PAIR_LEGIBLE = 3;
 function pairSightRate(g: Game, gd: Guard, P: Pair, dist: number): number {
   const light = Math.max(g.player.visibility, heldVisibility(g, P));
-  const distF = clamp(1 - (dist - 3) / 13, 0.2, 1);
+  const distF = distTerm(dist);
   let rate = g.tune.detectRate * Math.pow(light, 1.5) * distF * clamp((gd.smokeTrans - 0.3) / 0.5, 0, 1) * (escalationOf(g) >= 1 ? KEEN : 1) * PAIR_LEGIBLE;   // (two men struggling upright, one of them in uniform, are a far easier read than one dark figure keeping still)
   if (dist < 1.8) rate = Math.max(rate, 3.5);
   if (gd.state === 'alert' || gd.state === 'search') rate *= 2.2;
   return rate;
 }
 /** the held man's own light meter while he is held (staff carry none otherwise): two probe queries at his chest and head like a unit's, the CPU estimate of the same
- *  direct light until the GPU answers; damped like everyone's. Kept per pair. */
-const heldMeters = new WeakMap<Guard, { vis: number; t: number }>();
+ *  direct light until the GPU answers; damped like everyone's. Kept per HOLD (the hold object is the key), and STARTED OVER — the probe's last answer under his keys
+ *  forgotten, the damp begun again from the reading as it stands — for a new hold and for a pair nobody has metered for `HELD_METER.gapSecs` that has moved
+ *  `HELD_METER.movedM` since: the probe keeps a key's last answer for ever and ids are dealt again, so the last hold's light (or this hold's, a room ago) was read
+ *  as this one's until the probe answered afresh, and the damp then carried it on for a third of a second. A pair re-met where it stood keeps its answer. */
+export const HELD_METER = { gapSecs: 0.5, movedM: 1 };
+const heldMeters = new WeakMap<object, { vis: number; t: number; at: Vec3 }>();
+function forgetHeldMeter(g: Game, gd: Guard) { const id = gd.char.id; g.lightForget(`heldC${id}`); g.lightForget(`heldH${id}`); }
 function heldVisibility(g: Game, P: Pair): number {
-  const hd = P.held; let m = heldMeters.get(hd); const now = g.time;
+  const hd = P.held; let m = heldMeters.get(P.key); const now = g.time; if (!m || (now - m.t > HELD_METER.gapSecs && Math.hypot(m.at[0] - hd.char.pos[0], m.at[2] - hd.char.pos[2]) > HELD_METER.movedM)) { m = undefined; forgetHeldMeter(g, hd); }
   if (m && m.t === now) return m.vis;
-  const c = hd.char, id = c.id; const pc = c.bones.chest ?? v3.add(c.pos, [0, 1.2, 0]), ph = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
-  const kc = `heldC${id}`, kh = `heldH${id}`; g.lightQuery(kc, pc, id); g.lightQuery(kh, ph, id);
-  const r1 = g.lightAt(kc), r2 = g.lightAt(kh);
-  const E = r1 !== undefined && r2 !== undefined && Number.isFinite(r1) && Number.isFinite(r2) ? Math.max(r1, r2) : Math.max(lightEstimateAt(g, pc), lightEstimateAt(g, ph));
+  const E = meterOf(g, hd.char, 'held');
   const dt = m ? Math.min(0.1, Math.max(0, now - m.t)) : 0.1; const vis = damp(m ? m.vis : g.visibilityOf(E), g.visibilityOf(E), 6, dt);
-  m = { vis, t: now }; heldMeters.set(hd, m); hd.visibility = vis; return vis;
+  m = { vis, t: now, at: v3.copy(hd.char.pos) }; heldMeters.set(P.key, m); hd.visibility = vis; return vis;
 }
 export function standoffPerceive(g: Game, gd: Guard, dt = 1 / 60): boolean {
   if (g.quietUtility || gd.hold || gd.pinned) return false;   // (the tour's men stay on their marks; upkeep drops a record made before the flag went up)
@@ -822,7 +908,7 @@ export function standoffPerceive(g: Game, gd: Guard, dt = 1 / 60): boolean {
     // not yet in the standoff: acquire the pair the way he acquires Sam alone — a faint glimpse tells him where to look, awareness fills at the sight rate, and he is
     // IN it (the record, the call, the floor answering) once it is as good as full; nothing at all in the dark beyond arm's reach
     if (rate <= 0.05) return false;
-    gd.awareness = clamp(gd.awareness + rate * dt, 0, 1); gd.lastKnown = v3.copy(pp);
+    const was = gd.awareness; gd.awareness = clamp(gd.awareness + rate * dt, 0, 1); if (!farFaint(gd, dist, was)) gd.lastKnown = v3.copy(pp);
     if (gd.awareness < 0.8) return rate > 0.25;   // (a sighting building, counted as eyes-on like sightGain's own 'seen' line — updateGuard raises him through suspicious → alert off the awareness as ever)
   } else if (rate <= 0.05) return false;          // in it already but they have gone dark on him: he keeps the record and his last fix (standoff's own clocks run on), he does not have eyes on them
   if (!S || S.pair !== P.held) {
@@ -831,7 +917,7 @@ export function standoffPerceive(g: Game, gd: Guard, dt = 1 / 60): boolean {
     gd.fireCd = Math.max(gd.fireCd, 0.8); gd.path = []; gd.pathGoal = null; gd.stallRef = null; gd.pieing = null; gd.searchPlan = null;   // (whatever walk he was on ends here; the first round waits for the gun to come round properly)
     if (!holdsCalled.has(P.key)) { holdsCalled.add(P.key); hostageCall(g, gd, P); } else standoffBark(g, gd, 'enter', true);
   }
-  S!.seenT = now;
+  S!.seenT = now; gunHoldSee(g, gd, P);   // (gunhold.ts: what his side knows of the hold — where, which way, the pistol in it)
   gd.awareness = 1; gd.lastKnown = v3.copy(pp); gd.lastSeenT = now; gd.sightPos = v3.copy(pp); gd.sightVel = v3.copy(P.vel); gd.sightT = now; gd.ledT = now;   // (ledT: nothing to lead — he is looking straight at them)
   gd.alertBest = 1e9; gd.alertStallT = 0; gd.alertRef = null; gd.chaseT = 0;
   return true;
@@ -842,13 +928,13 @@ export function standoffPerceive(g: Game, gd: Guard, dt = 1 / 60): boolean {
 function hostageCall(g: Game, gd: Guard, P: Pair) {
   const c = gd.char; const where = roomName(g.level, P.sam);
   const civ = P.held.civ;   // (a civilian in the arm — civilians.ts Civ: 'the cleaner', 'the late worker' — is called in as what she is, not by a callsign the net does not have)
-  g.say(gd, civ ? `he's got ${civ.name}, the ${civ.label} — ${where}! hold your fire — civilian in his arm, nobody push him` : `he's got ${P.held.callsign} — ${where}! hold your fire, nobody push him`, true); g.audio.play('radio', c.bones.head ?? c.pos, 0.9);
+  g.say(gd, civ ? `he's got ${civ.name}, the ${civ.label} — ${where}! hold your fire — civilian in his arm, nobody push him` : `he's got ${spokenName(P.held) ?? 'one of ours'} — ${where}! hold your fire, nobody push him`, true); g.audio.play('radio', c.bones.head ?? c.pos, 0.9);
   if (g.time - g.lastStingT > 8) { g.audio.play('alertSting', null, 0.75); g.lastStingT = g.time; }
   for (const o of g.guards) {
     if (o === gd || o === P.held || o.state === 'dead' || o.held || o.team !== gd.team) continue;   // (teams: his own side answers the call — all of them staff, in the game as it was)
     const wasCalm = o.state === 'patrol' || o.state === 'suspicious';
     o.awareness = Math.max(o.awareness, 0.92); o.lastKnown = v3.copy(P.sam);
-    if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, v3.dist(o.char.pos, P.sam) / 25) + Math.random() * 0.4);   // (the far end of the floor takes a moment to place it, as for a shot)
+    if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, v3.dist(o.char.pos, P.sam) / 25) + simRandom() * 0.4);   // (the far end of the floor takes a moment to place it, as for a shot)
   }
   if (gd.team !== 'guard') return;   // (the building's alarm and its lockdown are the STAFF's: a unit's call reaches his own side and no further)
   g.alarm.pos[0] = P.sam[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = P.sam[2]; g.alarm.placed = true;
@@ -885,18 +971,21 @@ export function flankShot(g: Game, gd: Guard, P: Pair): { ok: boolean; rear: num
   const ok = rear < STANDOFF_REAR_DEG * DEG && clear >= STANDOFF_CLEAR_M && dist <= STANDOFF_FIRE_MAX_M && dist >= STANDOFF_MIN_M - 0.6 && clearShot(g, c, to);
   return { ok, rear, clear, dist };
 }
-/** Placeholder lines (a proper writing pass comes later), by moment and temperament ('*' for anybody); {held} = the man in the arm. */
+/** Placeholder lines (a proper writing pass comes later), by moment and temperament ('*' for anybody); {held} = the man in the arm, {him} / {he} = the same man where a line
+ *  does not name him (a woman in the arm is 'her': standoffBark fills them — 'him' written out is Sam). */
 type StandoffMoment = 'enter' | 'noShot' | 'line' | 'cornered' | 'dropped' | 'freed' | 'lost' | 'hitHim';
 const STANDOFF_LINES: Record<StandoffMoment, Partial<Record<Temperament | '*', string[]>>> = {
-  enter: { steady: ['{held}, hold still — we\'ve got you', 'easy. easy. nobody has to get hurt here'], nervy: ['{held}! —jesus— okay, okay, nobody shoot!', 'oh god— he\'s got {held}—'], hard: ['let him go. now.', 'you. hands off him.'] },
-  noShot: { '*': ['let him go!', 'drop him — NOW', '{held}, don\'t move', 'I don\'t have a shot', 'no shot — {held}\'s square in front of him'], steady: ['let him go and we talk about it', '{held}, stay loose — I\'m coming round'], nervy: ['{held}! —I can\'t— I haven\'t got a line—', 'don\'t you hurt him— don\'t—'], hard: ['you\'ve got nowhere to take him', 'the second he slips, you\'re done'] },
+  enter: { steady: ['{held}, hold still — we\'ve got you', 'easy. easy. nobody has to get hurt here'], nervy: ['{held}! —jesus— okay, okay, nobody shoot!', 'oh god— he\'s got {held}—'], hard: ['let {him} go. now.', 'you. hands off {him}.'] },
+  noShot: { '*': ['let {him} go!', 'drop {him} — NOW', '{held}, don\'t move', 'I don\'t have a shot', 'no shot — {held}\'s square in front of him'], steady: ['let {him} go and we talk about it', '{held}, stay loose — I\'m coming round'], nervy: ['{held}! —I can\'t— I haven\'t got a line—', 'don\'t you hurt {him}— don\'t—'], hard: ['you\'ve got nowhere to take {him}', 'the second {he} slips, you\'re done'] },
   line: { '*': ['I have him.', 'got a line —'], nervy: ['I— I think I have him—'], hard: ['there you are.'] },
-  cornered: { '*': ['can\'t get round him — hold what you\'ve got', 'no way round. {held}, hang on', 'nowhere for either of us to go — let him walk and this ends quiet'], nervy: ['just— just let him go, please—'], hard: ['one way out of this for you. through us.'] },
+  cornered: { '*': ['can\'t get round him — hold what you\'ve got', 'no way round. {held}, hang on', 'nowhere for either of us to go — let {him} walk and this ends quiet'], nervy: ['just— just let {him} go, please—'], hard: ['one way out of this for you. through us.'] },
   dropped: { '*': ['he\'s dropped {held} — TAKE HIM', '{held}\'s down — light him up!'], nervy: ['{held}! —he\'s— shoot, SHOOT—'] },
   freed: { '*': ['{held}, DOWN — get clear!', 'he\'s loose — {held}, out of the way!'] },
-  lost: { '*': ['lost them — where\'d he take him?', 'I\'ve lost sight — moving up'], nervy: ['where— where did they go—'] },
-  hitHim: { '*': ['…christ— I hit him. I hit {held}—'], nervy: ['no— no no no— {held}—'], hard: ['…{held}\'s hit. that\'s on him. keep on him—'] },
+  lost: { '*': ['lost them — where\'d he take {him}?', 'I\'ve lost sight — moving up'], nervy: ['where— where did they go—'] },
+  hitHim: { '*': ['…christ— I hit {him}. I hit {held}—'], nervy: ['no— no no no— {held}—'], hard: ['…{held}\'s hit. that\'s on him. keep on him—'] },
 };
+/** … and the moments whose every line names him, for a man in the arm whose own side has no name to say (teams.ts spokenName: a scenario's defender) */
+const STANDOFF_NAMELESS: Partial<Record<StandoffMoment, string>> = { dropped: 'he\'s dropped {him} — TAKE HIM', freed: 'he\'s loose — get clear!', hitHim: '…christ— I hit {him}—' };
 /** One standoff line from this man if the clocks allow (his own BARK_SECS, the floor's FLOOR_SECS, and never over his own radio call) — `force` skips the two
  *  clocks (the edges: entering, the line opening, the man dropping), 'always' the radio courtesy too (his own round in the man: that gets said); never the line
  *  he said last. */
@@ -904,15 +993,17 @@ function standoffBark(g: Game, gd: Guard, moment: StandoffMoment, force: boolean
   const S = gd.standoff, now = g.time;
   if (!force && ((S && now - S.lastBarkT < STANDOFF_BARK_SECS) || now - (floorBarkT.get(g) ?? -100) < STANDOFF_BARK_FLOOR_SECS)) return;
   if (force !== 'always' && gd.bubble?.radio && now - gd.bubble.t < 3) return;
-  const M = STANDOFF_LINES[moment]; const pool = [...(M[TEMPERAMENT[gd.callsign] ?? 'steady'] ?? []), ...(M['*'] ?? [])]; if (!pool.length) return;
-  let i = Math.floor(Math.random() * pool.length) % pool.length; if (pool.length > 1 && pool[i] === lastBark.get(gd)) i = (i + 1) % pool.length;
-  const text = pool[i].replace(/\{held\}/g, held?.callsign ?? 'him');
+  const M = STANDOFF_LINES[moment]; let pool = [...(M[temperamentOf(gd)] ?? []), ...(M['*'] ?? [])];   // (temperamentOf: a staff man's own, a unit's the hard man's under the dialogue pass — the same voice the hold gives him)
+  if (held && spokenName(held) === null) { pool = pool.filter(l => !l.includes('{held}')); const l = STANDOFF_NAMELESS[moment]; if (!pool.length && l) pool = [l]; }   // (never with the words switch off)
+  if (!pool.length) return;
+  let i = Math.floor(simRandom() * pool.length) % pool.length; if (pool.length > 1 && pool[i] === lastBark.get(gd)) i = (i + 1) % pool.length;
+  const text = pool[i].replace(/\{held\}/g, held?.callsign ?? 'him').replace(/\{him\}/g, w(held?.civ?.her, undefined) ?? 'him').replace(/\{he\}/g, w(held?.civ?.she, undefined) ?? 'he');
   lastBark.set(gd, pool[i]); if (S) S.lastBarkT = now; floorBarkT.set(g, now);
   g.say(gd, text);
 }
 /** Side-step / back-pedal along the current nav path (followPath's tolerances and easing, but the body is not turned to it — the standoff keeps his chest to the
  *  pair — and no stuck side-step of its own: notGettingAnywhere watches the leg). True once the path is consumed. */
-function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean {
+export function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean {
   const c = gd.char;
   if (unstickFirst(g, gd, dt)) return false;   // (a side-step off a stranded cell first, as followPath: un-stick)
   while (gd.pathI < gd.path.length) {
@@ -1012,26 +1103,30 @@ function retreatGoal(g: Game, gd: Guard, P: Pair): Vec3 | null {
  *  Gun: aimed at the base of Sam's neck; muzzle discipline exactly as everywhere (the held man lowers it) except that with the flank line open the held man no
  *  longer counts — then it is up on Sam and, under tune.muzzleDiscipline (the default), silent for as long as the man is in the arm; with that off, single
  *  rounds, SHOT_SECS apart, squarely aimed. Mouth: the line for the moment. Returns his move speed and the point he looks / aims at. */
-function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number; aim: Vec3 } {
+function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number; aim: Vec3; crouch: number } {
   const S = gd.standoff!, c = gd.char, T = g.tune;
   const aim = P.aim; const dist = v3.distXZ(c.pos, P.centre);
   const fs = flankShot(g, gd, P);
-  muzzleCheck(g, gd, aim, dt, fs.ok ? P.held : null);
+  muzzleCheck(g, gd, aim, dt, fs.ok || gunHoldPhase(g, gd) === 'line' ? P.held : null);   // (gunhold.ts: a man PLANTED on the line keeps his gun up through a blink of it — the round itself still waits on fs.ok)
   if (fs.ok && !S.lineOpen) standoffBark(g, gd, 'line', g.time - S.lastBarkT > 2.5);   // (the edge is worth saying — not every other second while Sam swings the man to and fro)
   S.lineOpen = fs.ok;
   // --- feet ---
   let move = 0; const far = dist > STANDOFF_MAX_M; const before0 = c.pos[0], before2 = c.pos[2];
   S.replanT -= dt; S.restT = Math.max(0, S.restT - dt);
   const setGoal = (p: Vec3 | null) => { if (!p) { if (S.orbitGoal) { gd.path = []; gd.pathGoal = null; } S.orbitGoal = null; return; } if (!S.orbitGoal || v3.distXZ(S.orbitGoal, p) > 0.3) gd.stallRef = null; S.orbitGoal = p; };
-  const backing = dist < STANDOFF_MIN_M - 0.3;   // (a hand inside the ring's edge is standing on it, not inside it: no see-saw between backing off and coming in)
+  // The pistol known in the hold (gunhold.ts): no ring in his line of fire — cover, the way round out of his line, the line at his back. null = the ring below.
+  const GH = gunHoldFeet(g, gd, dt, P, S, fs);
+  const backing = !GH && dist < STANDOFF_MIN_M - 0.3;   // (a hand inside the ring's edge is standing on it, not inside it: no see-saw between backing off and coming in)
   const pace = (far || backing ? T.guardInvestigate : T.guardWalk) * (flinching(g, gd) ? SUPPRESSION.standoffPaceK : 1);   // the jog over from across the floor, and off a man walking his hostage at him (Sam hauls the pair at a slow walk: a walk backwards would never open the gap); the ring itself he walks — all of it at half pace with Sam's rounds going past his head (suppression.ts: rattled; pinned, he is not in here at all but head down, updateGuard)
-  if (backing) { if (S.replanT <= 0 || !S.orbitGoal || !S.backing) { S.replanT = 0.5; setGoal(retreatGoal(g, gd, P)); } }   // too close: back off to the ring (or as far as the walls let him), facing them — looked at again twice a second while it lasts
+  if (GH) { /* his feet are gunhold.ts's */ }
+  else if (backing) { if (S.replanT <= 0 || !S.orbitGoal || !S.backing) { S.replanT = 0.5; setGoal(retreatGoal(g, gd, P)); } }   // too close: back off to the ring (or as far as the walls let him), facing them — looked at again twice a second while it lasts
   else if (fs.ok && (!S.orbitGoal || fs.rear < (STANDOFF_REAR_DEG - 15) * DEG)) setGoal(null);            // his line: plant and use it (the leg he is on he finishes first, unless he is already well inside — a line found on the sector's very edge goes again with a sway of Sam's)
   else if (S.restT > 0) setGoal(null);                                                                      // a leg just went nowhere: stand a beat
   else if (S.replanT <= 0 || !S.orbitGoal) { S.replanT = STANDOFF_REPLAN_SECS; setGoal(unstickBegin(g, gd) === 'leg' ? v3.copy(unstickLegs.get(gd)!.to) : orbitGoalFor(g, gd, S, P)); }   // (stood on a stranded cell every ring point would come back 'no path' and he would hold there, cornered, for the length of the hold: the side-step off it first — un-stick)
   S.backing = backing;
   let jogging = false; let lookAt = aim;   // on the jog over from across the floor: the legs have the body, and where his eyes and gun go (the pair if the run keeps them anywhere ahead of him, else up his path)
-  if (S.orbitGoal) {
+  if (GH) { move = GH.move; jogging = GH.run; if (GH.look) lookAt = GH.look; }
+  else if (S.orbitGoal) {
     if (backing) { if (gd.pathGoal !== S.orbitGoal) { gd.path = [S.orbitGoal]; gd.pathI = 0; gd.pathGoal = S.orbitGoal; } }   // (the back-off is a straight step over floor retreatGoal has checked, not a planned walk)
     else goTo(g, gd, S.orbitGoal);
     const done = far ? followPath(g, gd, dt, pace) : stepAlongPath(g, gd, dt, pace); move = gd.speed;   // from across the floor he simply comes over; inside the ring's reach he side-steps with his chest to them
@@ -1050,24 +1145,26 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
     }
   } else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; gd.stallRef = null; }
   S.orbitM += Math.hypot(c.pos[0] - before0, c.pos[2] - before2);
-  if (!jogging) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(aim[0] - c.pos[0], aim[2] - c.pos[2]), 4 * dt);   // chest to them, always: the legs side-step and back-pedal under it — bar the jog over from across the floor (above)
+  if (!jogging) c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(lookAt[0] - c.pos[0], lookAt[2] - c.pos[2]), 4 * dt);   // chest to them, always: the legs side-step and back-pedal under it — bar the jog over from across the floor (above)
   // --- the round: with muzzle discipline (the default) there is none while the shield stands — the flank line found, he plants on it with the pistol up on the
   //     back of Sam's neck and it stays silent; and a beat is kept in hand for when the shield goes (fireCd floored every frame of the standoff, so whichever way
   //     the hold ends, and whether or not he happened to be looking that instant, nothing leaves inside BEAT_MIN of his last frame in it). Discipline off = the
   //     rule before: single aimed shots, slow, at Sam only, only down the flank line ---
   gd.fireCd -= dt;
-  const facingErr = Math.abs(wrapAngle(Math.atan2(aim[0] - c.pos[0], aim[2] - c.pos[2]) - c.aimYaw));
+  const facingErr = Math.abs(wrapAngle(Math.atan2(aim[0] - c.pos[0], aim[2] - c.pos[2]) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
   gd.weapon.burst = null;   // (rifles: a deliberate round past a colleague's head is never a burst — a rifleman here fires single rounds on the standoff's cadence like anybody, and one begun before he walked in on the hold is over)
+  const held = T.muzzleDiscipline && !(GH && gunHoldPhase(g, gd) === 'line' && gunHoldFree(g, P));   // (gunhold.ts: Sam has fired from behind the man — the line at his back, found, is used)
   if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
-  else if (!T.muzzleDiscipline && fs.ok && !backing && gd.fireCd <= 0 && facingErr < 0.12 && !gd.muzzleDown && !armThrough(g, c) && !roundPastColleague(g, gd, aim, P.held) && aimReady(g, gd) && gd.weapon.fire()) {   // (not on the jog backwards off them: an aimed round is a planted or side-stepping man's; aimReady: lined up on Sam — aim.ts, always true with the model off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
-    const M = guardFireMods(g, gd); gd.fireCd = (STANDOFF_SHOT_SECS + Math.random() * 0.6) * M.gap; fireWeapon(g, c, aim, false, guardRound(g, gd, M.spread)); S.shots++;   // (the standoff's own slow cadence, not the weapon's — slower again and wider with rounds going past his own head, suppression.ts guardFireMods: ×1 / +0 at rest; the cone through the aim model, aim.ts guardRound: { spread: M.spread } exactly with it off)
+  else if (!held && fs.ok && !backing && gd.fireCd <= 0 && facingErr < 0.12 && !gd.muzzleDown && !armThrough(g, c) && !roundPastColleague(g, gd, aim, P.held) && aimReady(g, gd) && feetSettled(g, gd) && gd.weapon.fire()) {   // (feetSettled, aimcost.ts: under the moving rule the round past his own man waits for his feet to be still; not on the jog backwards off them: an aimed round is a planted or side-stepping man's; aimReady: lined up on Sam — aim.ts, always true with the model off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
+    const M = guardFireMods(g, gd); gd.fireCd = (STANDOFF_SHOT_SECS + simRandom() * 0.6) * M.gap; fireWeapon(g, c, aim, false, guardRound(g, gd, M.spread)); S.shots++;   // (the standoff's own slow cadence, not the weapon's — slower again and wider with rounds going past his own head, suppression.ts guardFireMods: ×1 / +0 at rest; the cone through the aim model, aim.ts guardRound: { spread: M.spread } exactly with it off)
     if (gd.weapon.roundsReady === 0) startReloadBeat(g, gd);
   }
-  if (T.muzzleDiscipline) gd.fireCd = Math.max(gd.fireCd, SHIELD_RELEASE_BEAT_MIN + dt);   // (+dt: the hold ends in updatePlayer, ahead of the guards, on some LATER frame — this floor is from his last shielded frame, and the beat is measured from the frame the man leaves the arm)
+  if (held) gd.fireCd = Math.max(gd.fireCd, SHIELD_RELEASE_BEAT_MIN + dt);   // (+dt: the hold ends in updatePlayer, ahead of the guards, on some LATER frame — this floor is from his last shielded frame, and the beat is measured from the frame the man leaves the arm)
   // --- the talking (the line held open and unused is still worth a word now and then, on the slow clocks: 'I have him' is the pressure) ---
-  if (!fs.ok) standoffBark(g, gd, S.cornered && !S.orbitGoal ? 'cornered' : 'noShot');
-  else if (T.muzzleDiscipline) standoffBark(g, gd, 'line');
-  return { move, aim: lookAt };
+  if (GH?.quiet) { /* on his way round, or running: nothing to say to Sam */ }
+  else if (!fs.ok) standoffBark(g, gd, S.cornered && !S.orbitGoal ? 'cornered' : 'noShot');
+  else if (held) standoffBark(g, gd, 'line');
+  return { move, aim: lookAt, crouch: GH ? GH.crouch : 0 };
 }
 /** Every frame for a man carrying a standoff record (updateGuard, after the transitions, AI on or off): is it still one? Dropped when the tour flag / a scripted
  *  hold has come up or the AI has been switched off (nobody home to play it: taken up afresh when it comes back on), when he is somehow no longer alert, when the hold has ended — the man dead in or from the arm (with this one watching: found there and then,
@@ -1077,7 +1174,7 @@ function standoffAlert(g: Game, gd: Guard, dt: number, P: Pair): { move: number;
 function standoffUpkeep(g: Game, gd: Guard): Pair | null {
   const S = gd.standoff; if (!S) return null;
   const P = pairOf(g);
-  const why = g.quietUtility || gd.hold || gd.pinned || !g.aiEnabled ? 'off' : gd.state !== 'alert' ? 'state' : !P || P.held !== S.pair ? (S.pair.state === 'dead' ? 'dead' : g.player.down ? 'samDown' : 'free') : g.time - S.seenT > STANDOFF_LOSE_SECS ? 'lost' : null;   // (samDown: the hold ended because Sam went down with the man in his arm — nothing to shout to a colleague already stumbling clear of a body; the alert branch covers the rest)
+  const why = g.quietUtility || gd.hold || gd.pinned || !g.aiEnabled ? 'off' : gd.state !== 'alert' ? 'state' : !P || P.held !== S.pair ? (S.pair.state === 'dead' ? 'dead' : g.player.down ? 'samDown' : 'free') : g.time - S.seenT > STANDOFF_LOSE_SECS && !gunHoldKeeps(g, gd) ? 'lost' : null;   // (samDown: the hold ended because Sam went down with the man in his arm — nothing to shout to a colleague already stumbling clear of a body; the alert branch covers the rest)
   if (!why) return P;
   gd.standoff = null; gd.path = []; gd.pathGoal = null; gd.stallRef = null; resetChase(gd);
   const watched = g.time - S.seenT < 0.6;
@@ -1090,8 +1187,8 @@ function standoffUpkeep(g: Game, gd: Guard): Pair | null {
       }
       if (B.downBy !== 'guard') standoffBark(g, gd, 'dropped', true, B);   // (their own round: the man who fired it has said so)
     }
-    gd.fireCd = g.tune.muzzleDiscipline ? SHIELD_RELEASE_BEAT_MIN + Math.random() * SHIELD_RELEASE_BEAT_JITTER   // the shield is gone: a start at the man dropping, then the rounds (not two men on one frame) —
-      : Math.min(gd.fireCd, 0.15 + Math.random() * 0.3);                                                          // or, without the discipline, as fast as the gun comes round
+    gd.fireCd = g.tune.muzzleDiscipline ? SHIELD_RELEASE_BEAT_MIN + simRandom() * SHIELD_RELEASE_BEAT_JITTER   // the shield is gone: a start at the man dropping, then the rounds (not two men on one frame) —
+      : Math.min(gd.fireCd, 0.15 + simRandom() * 0.3);                                                          // or, without the discipline, as fast as the gun comes round
   } else if (why === 'free' && watched) { standoffBark(g, gd, 'freed', true, S.pair); gd.fireCd = Math.max(gd.fireCd, 0.4); }
   else if (why === 'lost') { standoffBark(g, gd, 'lost', true, S.pair); gd.lastSeenT = Math.min(gd.lastSeenT, S.seenT); }
   return null;
@@ -1112,14 +1209,70 @@ export function standoffSummary(g: Game): string {
 export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { return canSeeChar(g, gd, g.player.char, true); }
 /** canSee against any man `pc` — Sam (`isPlayer`: his sandbox invisibility, his down flag, the smoke marched between this man's eye and HIS chest) or an AI man of a
  *  side hostile to this one (teams: alive; the same cone, near field, range and line of sight off the same bones; no smoke term — the probe's segment is to Sam
- *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam. */
+ *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam — but for one thing, in a room
+ *  fight only: a man with his long gun in the shoulder ALSO sees an AI man through the same eye laid along his aim, its cone ROOMFIGHT.sightsDeg (roomfight.ts
+ *  ROOMFIGHT.sights for the teammates, on; sightsFoe for every other side, off). Sam is never read through it. */
 export function canSeeChar(g: Game, gd: Guard, pc: Character, isPlayer: boolean): { visible: boolean; dist: number; inCone: boolean } {
   const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]);
-  const look = v3.normalize(v3.lerp(gd.char.chestDir, gd.char.headDir(), 0.5));
-  return eyeContact(g, { pos: eye, look, range: GUARD_EYE.range, halfDeg: GUARD_EYE.halfDeg, nearM: GUARD_EYE.nearM, nearDeg: GUARD_EYE.nearDeg }, pc, isPlayer, g.time < gd.dazzledUntil, gd.smokeTrans);   // dazzled: eyes full of magnesium
+  const look = v3.normalize(v3.lerp(gd.char.chestDir, gd.char.headDir(), 0.5)), E: Eye = { pos: eye, look, range: reachFor(g, gd, pc, isPlayer, eye), halfDeg: GUARD_EYE.halfDeg, nearM: GUARD_EYE.nearM, nearDeg: GUARD_EYE.nearDeg };   // (reachFor: a man standing in light is seen from past `range`; `range` itself otherwise)
+  let r = eyeContact(g, E, pc, isPlayer, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans);   // dazzled: eyes full of magnesium (pairorders.ts: or a teammate's hands on him; doze.ts: or asleep in his chair)
+  if (!r.inCone && r.dist < E.range && !isPlayer && (gd.team === 'operative' ? ROOMFIGHT.sights : ROOMFIGHT.sightsFoe) && fightLive(g)) {   // (roomfight.ts ROOMFIGHT.sights: a long gun in the shoulder and level along his aim — he ALSO sees what is along his sights, the same eye laid on the aim)
+    const c = gd.char, ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw);   // (gunYaw: aimYaw — or, turning under weight, where the gun has got to)
+    let lv = c.gunDir[0] * ax + c.gunDir[2] * az;   // how level along his aim the bore lies, in plan
+    const lift = c.anim.sightsLift; if (lift > 0) { const gh = Math.hypot(c.gunDir[0], c.gunDir[2]); if (gh > 1e-6) lv *= Math.cos(lift) - c.gunDir[1] / gh * Math.sin(lift); }   // (character.ts MOVES.entryEyes: the entry dip's own pitch put back — the question asked of his gun line as if it were not down past a friend; 0 unless that switch is on and he is dipped)
+    if (c.anim.longShown === 'shoulder' && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans); }
+  }
+  if (!isPlayer && r.visible && pairSmoke(g, gd.char, pc) < 0.3) r.visible = false;   // an AI man lost in a plume, by the same line as Sam (roomfight.ts marches the pair's segment; 1 = clear wherever it does not)
+  return r;
 }
 /** a man's eye: 16 m of reach, 58° either side of where chest and head point between them, and inside 3.5 m a near field of 100° (a shape at his elbow is seen) */
-export const GUARD_EYE = { range: 16, halfDeg: 58, nearM: 3.5, nearDeg: 100 };
+export const GUARD_EYE = { range: 16, halfDeg: 58, nearM: 3.5, nearDeg: 100,
+  /** A LIT MAN IS SEEN FROM FURTHER (eyeReach below): on in the page (?nofarsight), off here and on the frozen harness stand (TPS_FARSIGHT=1) = every eye stops
+   *  at `range` whatever the light, as it was. One rule for every man's eye on every man: a guard's on Sam, a defender's on a teammate, a teammate's on a defender */
+  far: false,
+  /** A FAR GLIMPSE IS NOT YET A PLACE TO WALK TO (farFaint below; nothing without `far`): on in the page (?nofarcalm), off here and on the frozen harness stand
+   *  (TPS_FARCALM=1) = every glimpse past `range` writes his fix the frame it lands, as `far` first shipped */
+  farCalm: false,
+  /** …the awareness from which a WARY man's glimpse from past `range` is his fix (under it he has not watched long enough to know where) */
+  farFixAt: 0.5,
+  /** …how far the eye reaches for a man in full light (m); the light on him (his meter, 0‥1) under which the reach is `range` and nothing changes, and from which it is whole */
+  farRange: 26, farLo: 0.4, farHi: 0.8,
+  /** …and how slowly the notice builds out there: sightGain's distance term runs on from its 0.2 at `range` down to this at `farRange` */
+  farK: 0.1 };
+/** How far a man's eye reaches for a man with `lit` (his light meter, 0‥1) on him: `range` in the dark — under `farLo` nothing is easier to see than it was — easing
+ *  out to `farRange` for a man standing in light (`farHi` and over). `range` with the switch off and under a show. */
+export function eyeReach(g: Game, lit: number): number {
+  if (!GUARD_EYE.far || g.touring) return GUARD_EYE.range;
+  return GUARD_EYE.range + Math.max(0, GUARD_EYE.farRange - GUARD_EYE.range) * smoothstep(GUARD_EYE.farLo, GUARD_EYE.farHi, lit);
+}
+/** …for the man `pc` in this man's view: Sam by his meter; an AI man by his own (Guard.visibility) or by his lit weapon light pointed at this eye (roomfight.ts
+ *  lampGlare) — the light sightGainOn reads, less the goggles' (a tube makes a dark man out, it does not carry further). Nobody is looked up inside the old reach. */
+function reachFor(g: Game, gd: Guard, pc: Character, isPlayer: boolean, eye: Vec3): number {
+  if (!GUARD_EYE.far || g.touring) return GUARD_EYE.range;
+  if (isPlayer) return eyeReach(g, g.player.visibility);
+  const t = pc.bones.chest ?? pc.pos; if (Math.hypot(t[0] - eye[0], t[2] - eye[2]) < GUARD_EYE.range - 1) return GUARD_EYE.range;
+  const o = g.guards.find(x => x.char === pc); return o ? eyeReach(g, Math.max(o.visibility, lampGlare(g, gd.char, o))) : GUARD_EYE.range;
+}
+/** A FAR GLIMPSE IS NOT YET A PLACE TO WALK TO (GUARD_EYE.farCalm; false at once with it or `far` off, and for every glimpse inside `range`): true = this
+ *  glimpse feeds his awareness and writes NO fix. The fault it shuts: a lit man glimpsed from 20 m, far too faintly to turn a head, still left `lastKnown` on a
+ *  calm man — and the first thing to make him wary for a reason of its OWN (the mains going: lighting.ts setBlackout) walked him off his post to it, in the dark
+ *  the far reach was never to change. So past `range` a CALM man gets his fix on the frame the sight itself tips him (`was` under the 'huh?' line, now on it);
+ *  a WARY man once he has watched the man long enough to be `farFixAt` aware (the mains going leave him at 0.34: half a second of a man in full light at 20 m
+ *  from there — he turns to him and goes, he does not stand till CONTACT), every glimpse from then on; a man hunting (alert, search) takes every glimpse, as ever. */
+function farFaint(gd: Guard, dist: number, was: number): boolean {
+  if (!GUARD_EYE.farCalm || !GUARD_EYE.far || dist <= GUARD_EYE.range) return false;
+  if (gd.state === 'patrol') return !(was < 0.3 && gd.awareness >= 0.3);
+  if (gd.state === 'suspicious') return gd.awareness < GUARD_EYE.farFixAt;
+  return false;
+}
+/** the distance term of a sighting's rate: 1 inside 3 m down to 0.2 from 13.4 m — and (GUARD_EYE.far) past the old reach on down to `farK` at `farRange`: a man
+ *  is seen out there only standing in light, and the further out, the slower the notice builds. Inside `range` the term is what it always was. */
+function distTerm(dist: number): number {
+  if (dist > GUARD_EYE.range && GUARD_EYE.far) return lerp(0.2, GUARD_EYE.farK, clamp((dist - GUARD_EYE.range) / Math.max(1e-3, GUARD_EYE.farRange - GUARD_EYE.range), 0, 1));
+  return clamp(1 - (dist - 3) / 13, 0.2, 1);
+}
+/** cos 30°: how level along his aim (in plan, the bore's own pitch counted) a shouldered long gun must lie for its owner's eyes to be on its sights */
+const SIGHTS_COS = 0.866;
 /** An eye — a man's (canSeeChar fills it off his bones) or a device's (devices.ts: a camera's lens): where it is, the unit direction it looks along, how far it
  *  reaches, its half-angle in plan (and the wider near-field one inside `nearM`), and — a lens only — the half-angle in ELEVATION about the look direction's
  *  own pitch (`vHalfDeg`; a man's cone is a flat wedge, floor to ceiling, and leaves it undefined). */
@@ -1128,7 +1281,8 @@ export interface Eye { pos: Vec3; look: Vec3; range: number; halfDeg: number; ne
  *  nothing solid — statics or a leaf — between the eye and his chest AND his head, and (Sam only) the smoke marched between them not yet opaque (`smokeTrans`, the
  *  probe's transmittance along eye → chest: under 0.3 he is a shape lost in the plume). `blind` = the eye itself is out (magnesium in it; a device says false and
  *  gates on its power instead). Sam's sandbox invisibility and his lying downed hide him from every eye; an AI target only has to be alive. Returns the distance and
- *  whether he was in the cone at all, seen or not, as canSee always did. */
+ *  whether he was in the cone at all, seen or not, as canSee always did. (fogofwar.ts lineToMan repeats this function's two lines for the team's eyes — his chest,
+ *  then his head behind a blocked chest: change the two together.) */
 export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number): { visible: boolean; dist: number; inCone: boolean } {
   const eye = E.pos;
   const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
@@ -1276,7 +1430,7 @@ export function goTo(g: Game, gd: Guard, goal: Vec3, force = false) {
   // clear to a thin ray: a ray threads the hand-wide slot between the server racks that his shoulders (just) squeeze through and the nav bake rightly calls shut,
   // and a man bee-lined through it after a noise was marooned in the strip behind the racks for the rest of the night, no route back to anything — otherwise
   // an empty path, which followPath reports as 'arrived' so the state machine moves on (search here) instead of grinding a partition for the rest of the encounter
-  const pen = tacticsPenalty(g, gd, goal);   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
+  const pen = lanePenalty(g, gd, tacticsPenalty(g, gd, goal));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
   const plan = (): Vec3[] | null => { const from = gd.char.pos; const p = g.col.nav.findPath(from, goal, 6000, pen); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
   let p = plan();
   if (!p) {   // …unless there is no route because no plan can leave the cell he stands on (un-stick, above): side-step off it first — or, snapped clear of it just now, plan from there
@@ -1288,10 +1442,142 @@ export function goTo(g: Game, gd: Guard, goal: Vec3, force = false) {
   gd.lineSide = 0;   // (whatever this path is, it is not the fight's side-step round a colleague — lineStep knows its own by that)
 }
 
+/** HOW THE TEAM CARRIES ITSELF. A teammate (an operative unit, while the room fight is live — a scenario, never a showcase's cast) is a man with a rifle and a
+ *  plate carrier: `max` is the most his legs are ever asked for, whoever asks (an order's leg, a drill's flow, the fight AI's chase, a step off a doorway) — a
+ *  purposeful walk with some jog in it, none of the sprint clip (character.ts BLEND: the walk carries to 1.6 m/s, the sprint starts past 2.7) — and he LEANS INTO a
+ *  move: his speed rises by no more than `accel` m/s² (he stops as crisply as ever: a man arriving on a mark is on it). And his GUN TRAVELS: the runner
+ *  (squad.ts) put a scripted man's muzzle on its aim point the frame the point changed — an order given, a corner checked, the fight's own read taking over
+ *  from behind his shoulder: a rifle, a head and a weapon light's cone through 60‥150° in one frame, a few times a minute per man (tools/qa/playthrough.ts
+ *  counted them) — now it comes round to a point an ORDER (or the unasked cover) gives it at `turn` rad/s at most (0 = on the point at once, as it was): 8 is
+ *  the operatives' own body turn (roomfight.ts FIGHT_SKILL.operative.turn) — a quarter turn in a fifth of a second. A point his own EYES have given him
+ *  (GuardScript.over: the room fight's read, which eases itself — roomfight.ts point()) is not slowed: throttled too, the pair lost three more rooms in six.
+ *  What that point may not do is TELEPORT: when it passes behind his back the waist's twist clamp flips from one shoulder to the other, 150° and more in a
+ *  frame — that crossing is swung through his front at `swing` rad/s (0 = the flip, as it was; 30 is a half turn in a tenth of a second).
+ *  `on` false = everybody as they were. */
+export const PACE = { on: true, max: 2.2, accel: 2.6, turn: 8, swing: 30 };
+/** LIGHT DISCIPLINE (the maintainer, 10-05, off the merged build: "friendlies also need to have flashlight discipline"): a teammate under one of Sam's orders in
+ *  a live room fight burns his weapon light only while it helps — while he SEARCHES (the order sent him into a room or has him slicing one from outside, and
+ *  he has not yet stood on his mark with nothing new to look at for `afterSecs`), while his own eyes have his gun (roomfight's read: a man seen, a look at a
+ *  shot or a call), while the fight AI has him, and for `hotSecs` after a shot, a charge or a boot last reached his ears (never that last while he is posted
+ *  on a door he has not gone through: light under a door is the knock), for `stepSecs` after an ENEMY's footfall reached them along open air (roomfight's
+ *  Op.stepT — a man holding a room in the dark, or stacked with his back to a corridor, hears the man coming and lights him), and while he WALKS SOMEWHERE ON HIS OWN — to a mark an order gave him, more than
+ *  `onM` from it yet, or back to Sam from more than `aloneM` away: a man's eyes are what his light is on (sightGainOn), and a pair sent down a dark corridor
+ *  to a door with their lights off walked up to the man standing in it and were shot at the stack (rescue-probes, seed 14). In file behind Sam, on his mark,
+ *  stacked on a door, holding a corridor: dark (it was: on from the first entry and never off again — on the next door's stack, in every file after).
+ *  `tail` keeps it from flickering. Off (`on` false): the light as the order's flag and the unit's switch have it, as it was. Men a drill or the rescue's flow
+ *  moves (no order of Sam's on them) are not ruled: their lights are the drill's. */
+export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail: 0.6, onM: 0.8, aloneM: 7,
+  /** a man on his mark with his gun up who stands LIT himself (his own meter ≥ lookLit) and looks into the DARK (the floor along his gun, out to lookM or the
+   *  first wall, under lookDark with the team's own lights left out) burns his light: the dark hides only the other side. Off = dark on every hold, as it was —
+   *  four men holding a lit room were shot from a dark doorway eight metres off by a man none of them could see. SHIPS OFF, a row to try: it keeps a man
+   *  holding a taken room lit for as long as he holds (the hold is meant to be dark, and a lit man is seen), it reads the floor by the CPU's direct-light
+   *  estimate (no bounce, no moon) where everything else a man does by light goes by the meter, and two lit mates can keep each other's lights on */
+  lookDark: false, lookLit: 0.25, lookBelow: 0.12, lookM: 10,
+  /** THE PLACE DECIDES (the footage: lights off in lit halls and rooms whatever the men are doing, on in the dark): a man who stands on lit floor with lit
+   *  floor all along his gun — every metre out to `litM` (his light's reach) or the first wall, and every third metre down both edges of its cone — whose man,
+   *  if his eyes have one, stands lit, and whose mark, if he is within `litMarkM` of one he is walking to, is lit: every sample at `litAt` or brighter on the
+   *  meter's scale, nothing anybody carries counted. He keeps his light off for every reason above: it shows him nothing the room's lights do not, and pointed
+   *  at an enemy's eyes it shows the enemy him (roomfight.ts lampGlare). One dark sample — a doorway onto a dark room, the corner a metre inside it, the pod an
+   *  entry is sending him to — and the rule above has it again. `litAt` 0.5 is where a standing man is a sighting to cold eyes at nine metres by the room's
+   *  light alone (sightGainOn); under it the weapon light is what shows him. Read off the CPU's direct-light estimate (no bounce: it errs dark, so toward
+   *  the light on). false = lit or dark, the same rule, as it was */
+  litOff: true, litAt: 0.5, litM: 15, litMarkM: 6,
+  /** DARK ON A LIT MAN (one switch, two halves — each measured to cost men without the other, so there is no row for either alone): while his eyes have a
+   *  man who stands lit by the place itself (`litAt` or brighter; nothing anybody carries and no flash, tracer, lightning or turning beacon counted) and he himself stands in the dark (under
+   *  `litAt` the same way), (1) his weapon light stays off: the man is plain to see without it, and from the dark the lens is the one thing that would show
+   *  the man where he is (roomfight.ts lampGlare); and (2) if he is WALKING on an order with Sam in his line to that man — his gun down for it — his feet wait
+   *  where he is, in the dark, until the line is clear (roomfight.ts holdShort, ROOMFIGHT.holdShortSecs at most a hold; only a walk that CLOSES on the man —
+   *  an order that takes him away from him is walked) instead of carrying him, gun lowered, up into the man's light. The rule above (`litOff`) wants his own floor lit too; this is the other side of it: a man in a dark room with an enemy under a
+   *  lamp outside the door shoots from the dark. Asked four times a second per man with a man in his eyes (or, for the light alone, out of them for under a
+   *  second and a half: the blink roomfight.ts keeps his aim through — the walk is held only with the man in his eyes); the light is the other
+   *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon: it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
+   *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
+  litMan: true };
+const litSeen = new WeakMap<Guard, { t: number; lit: boolean; A: unknown; tgt: unknown }>();
+/** is where he stands, what his gun is on, the man he has and the mark he is nearly at lit by the place itself (LIGHTS.litOff; asked twice a second per man,
+ *  and again at once on a new order or a new man) */
+function litPlace(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>, tgt: Guard | null, pt: Vec3 | null): boolean {
+  if (!LIGHTS.litOff) return false;
+  const key = tgt ?? (pt ? 'pt' : null), was = litSeen.get(gd); if (was && was.A === A && was.tgt === key && g.time - was.t >= 0 && g.time - was.t < 0.5) return was.lit;
+  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]];
+  const carried = () => true;   // (the place's own lights only: nothing anybody carries)
+  const dark = (x: number, z: number) => g.visibilityOf(lightEstimateAt(g, [x, 1.2, z], carried)) < LIGHTS.litAt;
+  let lit = !dark(c.pos[0], c.pos[2]);
+  if (lit && tgt) lit = !dark(tgt.char.pos[0], tgt.char.pos[2]);
+  if (lit && pt) lit = !dark(pt[0], pt[2]);
+  if (lit && A?.post && !A.arrived && v3.distXZ(c.pos, A.post) < LIGHTS.litMarkM) lit = !dark(A.post[0], A.post[2]);
+  for (const [off, step] of [[0, 1], [-0.2, 3], [0.2, 3]]) { if (!lit) break; const fx = Math.sin(c.aimYaw + off), fz = Math.cos(c.aimYaw + off);
+    for (let r = step; r <= LIGHTS.litM + 1e-6; r += step) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break;
+      if (dark(P[0], P[2])) { lit = false; break; } } }
+  litSeen.set(gd, { t: g.time, lit, A, tgt: key }); return lit;
+}
+const darkSeen = new WeakMap<Guard, { t: number; dark: boolean }>();
+/** is what his gun is on dark, him lit (LIGHTS.lookDark; asked twice a second per man) */
+function looksIntoDark(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>): boolean {
+  if (!LIGHTS.lookDark || !A || !A.arrived || !A.post || gd.muzzleDown || A.low || gd.visibility < LIGHTS.lookLit) return false;
+  if (!(A.search || A.order === 'hold' || A.order === 'cover') || gd.script?.upper === 'none') return false;   // (men an entry left in a room, men Sam posted: never a stack, never the file)
+  const was = darkSeen.get(gd); if (was && g.time - was.t >= 0 && g.time - was.t < 0.5) return was.dark;
+  const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw); let dark = false;
+  const ours = (owner: number) => g.guards.some(x => x.char.id === owner && x.team === 'operative') || owner === g.player.char.id;
+  for (let r = 4; r <= LIGHTS.lookM + 1e-6; r += 3) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break;
+    if (g.visibilityOf(lightEstimateAt(g, P, ours)) < LIGHTS.lookBelow) { dark = true; break; } }
+  darkSeen.set(gd, { t: g.time, dark }); return dark;
+}
+/** what the rule itself last made of his place, while that reading is fresh (QA: the probes judge a dark light by it) */
+export function placeLitSeen(g: Game, gd: Guard): boolean { const s = litSeen.get(gd); return LIGHTS.litOff && !!s && g.time - s.t >= 0 && g.time - s.t < 0.5 + 1e-6 && s.lit; }
+const litUntil = new WeakMap<Guard, number>();
+/** is this man's weapon light this rule's to decide */
+export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!g.orders.of(gd); }
+const litManSeen = new WeakMap<Guard, { t: number; tgt: Guard; v: boolean }>();
+/** LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark */
+function darkOnLitMan(g: Game, gd: Guard, tgt: Guard): boolean {
+  const was = litManSeen.get(gd); if (was && was.tgt === tgt && g.time - was.t >= 0 && g.time - was.t < 0.25) return was.v;
+  const carried = () => true, lit = (p: Vec3) => g.visibilityOf(lightEstimateAt(g, [p[0], 1.2, p[2]], carried, true)) >= LIGHTS.litAt;   // (steady lights only: the flash of a round landing by him — nobody's light, a twentieth of a second — lit him 'by the place', and the team's lights went dark on a man standing in the dark)
+  const v = lit(tgt.char.pos) && !lit(gd.char.pos);
+  litManSeen.set(gd, { t: g.time, tgt, v }); return v;
+}
+/** LIGHTS.litMan, asked of a teammate the light rule has: is he, this frame, in the dark on a man who stands lit (the man he is on, or was until a blink ago:
+ *  roomfight.ts keeps his aim through that — a jamb passed, a leaf swung — and his light does not come back in it, unless something else has turned him) */
+export function onLitMan(g: Game, gd: Guard): boolean {
+  if (!LIGHTS.litMan || !lightRuled(g, gd)) return false;
+  const O = g.fight.opOf(gd), t = g.time; if (!O) return false;
+  const man = O.tgt ?? (!O.turn && gd.script && O.kept && O.kept.h.state !== 'dead' && t - O.kept.t >= 0 && t - O.kept.t < 1.5 ? O.kept.h : null);   // (not while a cue has him turning to somebody else, nor once the fight is the alert AI's: the light is the other rules' then)
+  return !!man && darkOnLitMan(g, gd, man);
+}
+/** does it burn this frame (asked only of a man the rule has: lightRuled) */
+export function teamLit(g: Game, gd: Guard): boolean {
+  if (onLitMan(g, gd)) return false;
+  const t = g.time, A = g.orders.of(gd), O = g.fight.opOf(gd);
+  const want = (!gd.script && (gd.state === 'alert' || gd.state === 'search')) || !!gd.script?.over || (!!O && (!!O.tgt || !!O.turn || (t - O.hotT < LIGHTS.hotSecs && !(A && A.door && !A.search))))
+    || (!!A && !!A.search && !(A.arrived && t - Math.max(A.arrT, A.searchT ?? -Infinity) > LIGHTS.afterSecs))
+    || (!!O && t - O.stepT < LIGHTS.stepSecs)
+    || (!!A && (A.post ? v3.distXZ(gd.char.pos, A.post) > LIGHTS.onM : v3.distXZ(gd.char.pos, g.player.char.pos) > LIGHTS.aloneM))
+    || looksIntoDark(g, gd, A);
+  if (want && !litPlace(g, gd, A, O?.tgt ?? null, O?.turn?.pt ?? null)) litUntil.set(gd, t + LIGHTS.tail);
+  const u = litUntil.get(gd); return u !== undefined && t < u && u - t <= LIGHTS.tail + 1e-6;   // (a stamp from a clock since put back is no reason)
+}
+/** is this man one of the team whose pace PACE governs right now */
+export function teamPaced(g: Game, gd: Guard): boolean { return PACE.on && gd.team === 'operative' && !!gd.unit && fightLive(g); }
+/** the speed his legs may be asked for (PACE.max for the team; anybody else: as asked) */
+export function teamPace(g: Game, gd: Guard, speed: number): number { return silentPace(g, gd, teamPaced(g, gd) ? Math.min(speed, PACE.max) : speed); }   // (… and a SILENT squad's walk under that: silent.ts)
+/** where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, and round his FRONT (eased against the body's own yaw, inside the
+ *  runner's twist limit: the short way to a point behind him lies across his back, where the limit would hold the gun on the wrong shoulder); anybody else's is on it */
+export function teamTurn(g: Game, gd: Guard, to: number, dt: number): number {
+  const c = gd.char; if (!(PACE.turn > 0) || !teamPaced(g, gd)) return to;
+  const rel = wrapAngle(c.aimYaw - c.bodyYaw), want = clamp(wrapAngle(to - c.bodyYaw), -1.5, 1.5), step = PACE.turn * dt;
+  return c.bodyYaw + (Math.abs(want - rel) <= step ? want : rel + Math.sign(want - rel) * step);
+}
+/** his speed this frame, having been `was` last frame: the team picks pace up at PACE.accel at most */
+export function teamLean(g: Game, gd: Guard, was: number, dt: number) { if (gd.speed > was && teamPaced(g, gd)) gd.speed = Math.min(gd.speed, was + PACE.accel * dt); }
+
 export function followPath(g: Game, gd: Guard, dt: number, speed: number): boolean { // returns true when arrived
-  const c = gd.char;
+  const c = gd.char; speed = teamPace(g, gd, speed);
   if (unstickFirst(g, gd, dt)) return false;   // a side-step off a stranded cell comes first (un-stick, above); the frame it ends the goal is planned afresh and walked from here on
-  if (g.tune.tactics && doorGate(g, gd, dt, speed)) return false;   // pursuit tactics (tactics.ts): a kill-zone doorway ahead on this path — he stacks on the jamb, calls it, waits for a second man and they take it as a drill; the gate has his feet meanwhile (false at once for everybody else)
+  if (g.tune.tactics && !runnerFled(gd) && doorGate(g, gd, dt, speed)) return false;   // pursuit tactics (tactics.ts): a kill-zone doorway ahead on this path — he stacks on the jamb, calls it, waits for a second man and they take it as a drill; the gate has his feet meanwhile (false at once for everybody else)
+  if (LANES.on && !runnerFled(gd) && laneGate(g, gd)) return false;   // a lane that cost them (lanes.ts): his way lies down floor his side knows a gun covers — re-planned at the lane's price, and with no way round he is stopped short of it (false at once for everybody but a room fight's defenders with a lane known)
+  if (handleGate(g, gd, dt, speed)) return false;   // the handle side (handleside.ts): a leaf in his way that opens toward him — he goes to its latch jamb, clear of its swing, and pulls it from there; the gate has his feet meanwhile (false at once with HANDLE.on off, and with the one-way doors off)
+  if (DOORMANNERS.on && !runnerFled(gd)) { const sp = doorwayGate(g, gd, dt, speed); if (sp === null) return false; speed = sp; }   // doorway manners (doorway.ts): one of his side in the frame ahead, or just in front of him by a door — he follows at a gap, or waits off a jamb; null = the wait has his feet
+  if (DARKDOOR.on && !runnerFled(gd)) { const sp = darkDoorGate(g, gd, dt, speed); if (sp === null) return false; speed = sp; }   // not in there alone (darkdoor.ts): a green man, alarmed and alone, at the doorway of a dark room — he stops beside the frame and waits for a mate; null = the wait has his feet (his pace back at once for everybody else, and with morale off)
   // progress watchdog: if we wanted to move but barely did (wedged on a prop corner / door edge), sidestep, then repath
   const moved = Math.hypot(c.pos[0] - gd.lastPos[0], c.pos[2] - gd.lastPos[2]); gd.lastPos = v3.copy(c.pos);
   if (gd.speed > 0.3 && moved < gd.speed * dt * 0.25) gd.stuckT += dt; else gd.stuckT = Math.max(0, gd.stuckT - dt * 2);
@@ -1311,7 +1597,7 @@ export function followPath(g: Game, gd: Guard, dt: number, speed: number): boole
     const yawTo = Math.atan2(dir[0], dir[2]); const facing = Math.cos(wrapAngle(yawTo - c.bodyYaw));
     const remaining = d + (gd.path.length - 1 - gd.pathI) * 1.0;
     const tgtSpeed = speed * clamp(facing * 1.5, 0.15, 1) * clamp(remaining / 0.8, 0.35, 1);
-    gd.speed = damp(gd.speed, tgtSpeed, 4, dt);
+    const was = gd.speed; gd.speed = damp(gd.speed, tgtSpeed, 4, dt); teamLean(g, gd, was, dt);
     c.bodyYaw = approachAngle(c.bodyYaw, yawTo, 5.5 * dt);
     c.vel = [Math.sin(c.bodyYaw) * gd.speed, 0, Math.cos(c.bodyYaw) * gd.speed];
     c.pos = v3.mad(c.pos, c.vel, dt);
@@ -1439,7 +1725,7 @@ function dealSpots(g: Game, gd: Guard, P: SearchPlan) {
   // open leaves: the cells close along a leaf standing well open, off the doorway itself — behind the door
   const leafN = new Uint8Array(N);
   for (const d of g.doors.list) {
-    if (Math.abs(d.angle) < 0.7) continue;
+    if (Math.abs(d.angle) < 0.7 || d.off) continue;   // (off its hinges: there is no 'behind the door')
     const [hx, hz] = d.def.hinge, u = d.dir(), fc = d.frameCentre;
     for (let a = 0.2; a <= d.def.width; a += 0.25) for (const s of [-0.55, 0.55]) {
       const x = hx + u[0] * a - u[1] * s, z = hz + u[1] * a + u[0] * s;
@@ -1543,7 +1829,7 @@ function pickNextSpot(g: Game, gd: Guard, P: SearchPlan) {
   P.current = best; P.phase = best >= 0 ? 'walk' : 'done'; P.phaseT = 0;
   gd.path = []; gd.pathGoal = null; gd.stallRef = null;
   if (best >= 0 && !P.said && !(gd.bubble && g.time - gd.bubble.t < 2.5) && !g.guards.some(o => o !== gd && o.state === 'search' && o.searchPlan?.said && g.time - o.searchPlan.builtAt < 30)) {   // (one man says it for a search, not each of them a second apart)
-    P.said = true; g.say(gd, P.spots[best].dark > 0.6 ? "he'll have gone somewhere dark — check the corners" : P.spots.some(s => s.kind === 'prop') ? 'check the corners — under the desks, behind the chairs' : 'check the corners');
+    P.said = true; g.say(gd, P.spots[best].dark > 0.6 ? (defenderWords(gd) ? "they'll have gone somewhere dark — check the corners" : "he'll have gone somewhere dark — check the corners") : P.spots.some(s => s.kind === 'prop') ? (WORDS.on && !isOffice(g.level) ? `check the corners — low, behind anything ${defenderWords(gd) ? 'they' : 'he'} could get behind` : 'check the corners — under the desks, behind the chairs') : 'check the corners');
   }
 }
 /** One line for the panel / debugging: phase, the spot he is on, how many looked into, the top few by score with their readings. */
@@ -1678,12 +1964,13 @@ export function chaseFix(g: Game, gd: Guard, dt: number, pace: number): { move: 
   if (dFix < gd.alertBest - 0.5) { gd.alertBest = dFix; gd.alertStallT = 0; } else if ((gd.alertStallT += dt) > 5) arrived = true;
   if (!arrived && notGettingAnywhere(gd, dt, 4)) arrived = true;
   if (!arrived && (gd.chaseT += dt) > 25) arrived = true;
-  if (arrived) dropToSearch(g, gd, 'where did he go?');
+  if (arrived) dropToSearch(g, gd, defenderWords(gd) ? 'where did they go?' : 'where did he go?');
   return { move, aim, pied: true, crouch: 0 };
 }
 
 export function updateGuard(g: Game, gd: Guard, dt: number) {
   const c = gd.char; const T = g.tune; const route = gd.route;   // (his level route, or a spawned unit's one-point stand: game.ts Guard.route)
+  c.turnBegin();   // (turn weight, character.ts TURN: his yaws read back as this update left them last frame — nothing with it off)
   playerGroundVel(g);   // (sampled once a frame whoever sees him or not, so the frame somebody does the difference is one frame's worth)
   if (gd.state === 'dead') {
     gd.muzzleDown = false; gd.pieing = null; gd.searchPlan = null; gd.held = null; gd.standoff = null; gd.speed = 0; c.vel = [0, 0, 0]; c.anim.speed = 0; gd.aim.clear(); c.update(dt); g.bodyThud(c); attachFlashlight(g, gd, dt); return;   // (update = the ragdoll; free once it sleeps; aim: a corpse lines nobody up)
@@ -1699,17 +1986,22 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
     gd.lastPos = v3.copy(c.pos); heldLastFrame.add(gd);
     return;
   }
+  if (gd.gunLostAt >= 0) gunBack(g, gd);   // (HOLD.dropGun: on his own feet with his hands still empty — no hold handed him back; he has it again before anything below asks what is in his hand)
   if (heldLastFrame.delete(gd)) { unstickLegs.delete(gd); unstickBegin(g, gd); }   // the first frame back on his own feet out of Sam's arm: a side-step from before it is stale (the pair walked him about since), and if the hold ended with him stood on a stranded cell — the pair's capsules fit where no plan can start — the step off it is dealt now and walked the moment anything moves him (un-stick, at goTo)
   const staff = gd.team === 'guard';   // SIDES (teams.ts): a man of the level's night staff — the game as it was — or a spawned unit of the showcase's (operative / hostile)
   if (!staff) unitLightMeter(g, gd, dt);   // a man some AI side can be hostile to carries his own light meter (what their eyes read for him where they read Sam's for Sam) — fed choreographed or free, so a scripted operative on the door is as visible to the room as a free one
-  if (gd.script) { gd.pieing = null; gd.searchPlan = null; gd.standoff = null; gd.aim.clear(); gd.drawn = (gd.script.upper ?? 'aim') === 'aim'; runGuardScript(g, gd, dt); return; }   // choreographed (tour beat / squad drill): squad.ts owns him this frame — and what is in his hand follows the ordered pose ('aim' = the pistol), not the AI state; the drill has its own threshold work and its own search; handed back to the AI he lines Sam up from nothing (aim.ts)
+  { const fs = fragFlee(g, gd); if (fs) { const own = gd.script; gd.script = fs; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // a live fragmentation grenade he knows of has a line to him (frag.ts): this frame his legs get him off it — his own orders, state and fix stand exactly as they were and take over again the frame it is gone
+  { const rs = runnerScript(g, gd); if (rs) { const own = gd.script; gd.script = rs; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // drops it and runs (runner.ts; null on its first line with the switch off): from his shout on his body is that file's — he senses nothing and fights nobody
+  { const ms = moraleScript(g, gd); if (ms) { const own = gd.script; gd.script = ms; gd.pieing = null; gd.aim.clear(); runGuardScript(g, gd, dt); gd.script = own; return; } }   // shaken (morale.ts; null on its first line with the switch off): a blast has him ducked, or broken and scrabbling off the hole — this frame his body is that file's, his own orders, state and fix exactly as they were
+  if (gd.script) { gd.pieing = null; gd.searchPlan = null; gd.standoff = null; gd.aim.clear(); gd.drawn = !!gd.script.over || (gd.script.upper ?? 'aim') === 'aim'; runGuardScript(g, gd, dt); return; }   // choreographed (tour beat / squad drill): squad.ts owns him this frame — and what is in his hand follows the ordered pose ('aim' = the pistol), not the AI state; the drill has its own threshold work and its own search; handed back to the AI he lines Sam up from nothing (aim.ts)
   const lvl = escalationOf(g);   // the floor's alarm level (0 calm · 1 heightened · 2 lockdown; always 0 under the tour): how he carries himself while calm
   gd.drawn = lvl >= 1 || !staff; // heightened: the sidearm is out even on patrol — weapon light instead of the hand torch (handProps / attachFlashlight / killGuard); a unit is a combatant: his weapon is out whatever the staff's alarm says
   // --- perception ---
   let seen = false; let dist = 99;
-  if (g.aiEnabled) {
-    hearingCheck(g, gd);
-    if (!staff) acquireFoe(g, gd);   // teams: which hostile man in his sight (or Sam, for a side hostile to Sam) his senses and gun are on this frame — the staff's is Sam, always, and this never runs for them
+  if (g.aiEnabled && !dozeDeaf(g, gd)) {   // (doze.ts: a man asleep in his chair has his eyes shut and his ears dull: his hearing is run for him there — false on its first line with its switch off)
+    const ear = dozeEar(gd); hearingCheck(g, gd, ear[0], true, ear[1]);
+    if (staff && HOSTILE.guard.operative) { acquireFoe(g, gd); if (!gd.foe) gd.foe = 'player'; }   // A QUIET MISSION WITH A PARTNER (quiet.ts → teams.ts staffVsOperatives; false on every other run: the line below, as it was): the staff see the operative beside Sam with the eye they see Sam with — whichever of the two shows best is the man they are on; with neither in sight they are on Sam, as ever
+    else if (!staff) acquireFoe(g, gd);   // teams: which hostile man in his sight (or Sam, for a side hostile to Sam) his senses and gun are on this frame — the staff's is Sam, always, and this never runs for them
     const F = gd.foe; const fc = foeChar(g, gd);
     const vis = F === 'player' ? canSee(g, gd) : F && fc ? canSeeChar(g, gd, fc, false) : NO_SIGHT; dist = vis.dist;
     if (vis.visible && fc) {
@@ -1717,7 +2009,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       if (rate > 0.05) {   // a faint glimpse updates where to look — and which way he is actually going: displacement over the last sighting, not the pace he is asking of his legs (held by a leaf or a desk he 'sprints' on the spot) — only a real sighting refreshes the licence to shoot
         const pp = fc.pos; const since = g.time - gd.sightT;
         gd.sightVel = since > 1e-4 && since < 0.1 ? [(pp[0] - gd.sightPos[0]) / since, 0, (pp[2] - gd.sightPos[2]) / since] : [0, 0, 0];
-        gd.awareness = clamp(gd.awareness + rate * dt, 0, 1); gd.lastKnown = v3.copy(pp); gd.sightPos = v3.copy(pp); gd.sightT = g.time; seen = rate > 0.25; if (seen) gd.lastSeenT = g.time;
+        const was = gd.awareness; gd.awareness = clamp(gd.awareness + rate * dt, 0, 1); if (!farFaint(gd, dist, was) && !attentionAside(g, gd, pp, gd.awareness - was)) gd.lastKnown = v3.copy(pp); gd.sightPos = v3.copy(pp); gd.sightT = g.time; seen = rate > 0.25; if (seen) gd.lastSeenT = g.time;   // (farFaint: a glimpse from past the old reach is no place to walk to until it is what has him looking)
         gd.alertBest = 1e9; gd.alertStallT = 0; gd.alertRef = null; gd.chaseT = 0;   // (eyes on him: whatever chase follows starts its no-progress clocks from here, not from a stale count)
       }
     }
@@ -1746,12 +2038,15 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         const body = bodyPos(o); const eye = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.65, 0]);
         gd.sawBodyT = g.time; gd.awareness = Math.max(gd.awareness, 0.7); gd.lastKnown = v3.copy(body); gd.reactT = 1.2;
         gd.witness.sawBody = { victim: o.callsign, t: g.time, breathing: isBreathing(o) };   // he found him, and found him breathing or not
+        netQuietBody(g, gd, g.guards);   // (netquiet.ts — a return on its first line with its switch off: a body found shakes the finder, and less the men of his side he tells)
         const before = g.guards.filter(x => x.state === 'dead' && x.found).length;   // (bodies already called in earlier: the order's wording, raiseEscalation)
-        let n = 0, cold = 0; for (const x of g.guards) if (x.state === 'dead' && !x.found && (x === o || (v3.distXZ(bodyPos(x), body) < 3 && !g.col.segmentBlocked(eye, v3.add(bodyPos(x), [0, 0.3, 0]))))) { x.found = true; tally(g, 'bodies'); chronBodyFound(g, x, gd); tacticsBodyFound(g, gd, x); n++; if (isBreathing(x)) cold++; }   // (tacticsBodyFound: one lying in a doorway makes it a kill zone for his side, tactics.ts)   // a body counts once, however many find it — and men lying together in his sight are found together (one call, one script, not a second 'man down' the moment the first one's ends; one hidden through the wall stays hidden)
+        let n = 0, cold = 0, hurt = 0; for (const x of g.guards) if (x.state === 'dead' && !x.found && (x === o || (v3.distXZ(bodyPos(x), body) < 3 && !g.col.segmentBlocked(eye, v3.add(bodyPos(x), [0, 0.3, 0]))))) { x.found = true; tally(g, 'bodies'); chronBodyFound(g, x, gd); tacticsBodyFound(g, gd, x); n++; if (isBreathing(x)) cold++; if (x.wound) hurt++; }   // (tacticsBodyFound: one lying in a doorway makes it a kill zone for his side, tactics.ts)   // a body counts once, however many find it — and men lying together in his sight are found together (one call, one script, not a second 'man down' the moment the first one's ends; one hidden through the wall stays hidden)
         if (gd.state === 'patrol' || gd.state === 'search') { gd.state = 'suspicious'; gd.searchT = 0; gd.path = []; gd.pathGoal = null; }   // (a searcher too: he has something concrete to stand over now)
         // what he calls in says what he found: a man shot dead, or one put out cold and left breathing (isBreathing: the takedown) — the floor treats both alike, the words do not
-        g.say(gd, n > 1 ? (cold === n ? `${n} men down — out cold, ${n > 2 ? 'all' : 'both'} breathing. someone's in here — radioing it in` : `${n} men down! — radioing it in`)
-          : cold ? `it's ${o.callsign} — he's down, out cold but breathing. someone dropped him — radioing it in` : 'man down! — radioing it in', true); g.audio.play('radio', eye, 0.9);
+        const inHere = WORDS.on && !isOffice(g.level) ? "someone's about" : "someone's in here", who = spokenName(o) ?? 'one of ours';   // (words.ts: a yard, a street, a crossing is no 'in here')
+        g.say(gd, hurt ? (n > 1 ? `${n} men down — ${hurt === n ? 'shot, still breathing' : 'one\'s shot and breathing'}. ${inHere} — radioing it in` : `it's ${who} — he's shot, still breathing. ${inHere} — radioing it in`)
+          : n > 1 ? (cold === n ? `${n} men down — out cold, ${n > 2 ? 'all' : 'both'} breathing. ${inHere} — radioing it in` : `${n} men down! — radioing it in`)
+          : cold ? `it's ${who} — he's down, out cold but breathing. someone dropped him — radioing it in` : 'man down! — radioing it in', true); g.audio.play('radio', eye, 0.9);
         if (!g.quietUtility) {   // (the tour's staged bodies get the call and nothing more: its guards stay on their marks)
           g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
           raiseEscalation(g, lvl >= 1 || g.alarm.episode ? 2 : 1, gd, 'body', before > 0);   // a body is as real as an alarm gets: a calm floor goes to heightened on it, an alarmed one (or one still hunting somebody) to lockdown, held around where he lies, its pair sent round the rooms nearest him (somebody else gives the order so the finder's own line stays up) — first, so a pair it pulls off a clear hears the call below as fresh men
@@ -1780,10 +2075,10 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       if (!d.lockBroken || d.noticed) continue;
       const f = d.frameCentre; const dx = f[0] - c.pos[0], dz = f[2] - c.pos[2]; const dd = Math.hypot(dx, dz); if (dd > 2.2 || dd < 1e-3) continue;
       const look = c.chestDir; if ((look[0] * dx + look[2] * dz) / dd < Math.cos(75 * DEG)) continue;
-      const spot = g.doors.workSpot(d, c.pos, 0.45, d.def.width * 0.5).pos;   // just his side of the doorway's middle (short of the leaf, so the leaf itself never hides 'the door')
+      const spot: Vec3 = d.off ? [f[0] - dx / dd * 0.45, 0, f[2] - dz / dd * 0.45] : g.doors.workSpot(d, c.pos, 0.45, d.def.width * 0.5).pos;   // just his side of the doorway's middle (short of the leaf, so the leaf itself never hides 'the door')
       const eye = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); if (g.col.segmentBlocked(eye, [spot[0], 1.0, spot[2]])) continue;
       d.noticed = true; d.noticedT = g.time; gd.state = 'suspicious'; gd.awareness = Math.max(gd.awareness, 0.45); gd.reactT = 1.1; gd.searchT = 0; gd.lastKnown = spot; gd.path = []; gd.pathGoal = null;
-      g.say(gd, 'this lock\'s been kicked in…'); g.audio.play('radio', eye, 0.4, { rate: 1.1 });
+      g.say(gd, d.off ? 'this door\'s off its hinges…' : 'this lock\'s been kicked in…'); g.audio.play('radio', eye, 0.4, { rate: 1.1 });
       break;
     }
     if (!seen) gd.awareness = Math.max(0, gd.awareness - dt * (gd.state === 'alert' ? 0.03 : gd.state === 'patrol' ? 0.1 : 0.06));
@@ -1792,17 +2087,18 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   // --- state transitions ---
   const prev = gd.state;
   if (gd.awareness >= 0.85 && gd.state !== 'alert') {
-    resetChase(gd); gd.state = 'alert'; gd.reactT = Math.max(gd.reactT, 0.35); gd.fireCd = 0.6 + Math.random() * 0.4; if (!gd.standoff && !(gd.bubble?.radio && g.time - gd.bubble.t < 1.0)) g.say(gd, 'CONTACT!'); g.audio.play('radio', c.bones.head ?? c.pos, 0.8); if (g.time - g.lastStingT > 8) { g.audio.play('alertSting', null, 0.75); g.lastStingT = g.time; }   // (a man walking in on the hold has said what he saw — the call, or his first line to Sam — not 'contact'; nor does the man giving the order this second shout it over his own radio line)
+    resetChase(gd); gd.state = 'alert'; gd.reactT = Math.max(gd.reactT, 0.35); gd.fireCd = 0.6 + simRandom() * 0.4; if (!gd.standoff && !(gd.bubble?.radio && g.time - gd.bubble.t < 1.0)) g.say(gd, 'CONTACT!', false, false, !w(g.messages.some(m => g.time >= m.t && g.time - m.t < 1 && m.text.endsWith(': CONTACT!')), false)); g.audio.play('radio', c.bones.head ?? c.pos, 0.8); if (g.time - g.lastStingT > 8) { g.audio.play('alertSting', null, 0.75); g.lastStingT = g.time; }   // (a man walking in on the hold has said what he saw — the call, or his first line to Sam — not 'contact'; nor does the man giving the order this second shout it over his own radio line; every man shouts it — his bubble, the bark clocks — but the LOG takes one row a second of it: five men roused by one shot filled all five rows with the same word)
     if (g.aiEnabled) { gd.witness.alertedBy = alertCause(g, gd, seen); gd.witness.alertT = g.time; }   // and he remembers what it was that did it (nothing is remembered with the AI off: a sandbox poke is nobody's perception)
     chronContact(g, gd);   // the debrief's row: who went to alert, and off what
   }
   if (g.aiEnabled && gd.awareness > gd.witness.peakAwareness) gd.witness.peakAwareness = gd.awareness;   // (his own record of how close he came — stands ALONE: it was chained in front of the branch below and ate the 'huh?' on every frame that set a new peak, so a man with steady sight of Sam went patrol → CONTACT with no suspicion in between)
   if (gd.awareness >= 0.3 && gd.state === 'patrol') {   // (the alert branch above has already moved him off 'patrol' when it fired this frame)
     gd.state = 'suspicious'; gd.searchT = 0;
-    if (gd.bodyDuty) gd.reactT = 0.5 + Math.random() * 0.5;   // called to a body over the net: no 'huh?' — a beat to take it in, then over to him (bodyAftermath)
-    else { gd.reactT = 0.9; g.say(gd, 'huh?'); g.audio.play('radio', c.bones.head ?? c.pos, 0.45, { rate: 1.15 }); }
+    if (gd.bodyDuty) gd.reactT = 0.5 + simRandom() * 0.5;   // called to a body over the net: no 'huh?' — a beat to take it in, then over to him (bodyAftermath)
+    else { gd.reactT = 0.9; if ((!WORDS.on || gd.team !== 'operative') && !attentionAgain(g, gd)) g.say(gd, 'huh?'); g.audio.play('radio', c.bones.head ?? c.pos, 0.45, { rate: 1.15 }); }
   }
   if (prev !== gd.state) { gd.path = []; gd.pathGoal = null; gd.stallRef = null; if (gd.state !== 'suspicious') gd.bodyDuty = null; }   // (the body script lives inside 'suspicious': contact or calm ends it)
+  attentionTick(g, gd);   // (attention.ts — a return on its first line with its switch off: a small thing that made him look takes his attention; one that no longer stands is let go)
   if (gd.state !== 'search') gd.searchPlan = null;   // (the plan lives inside 'search': whatever ends the search — contact, a body, calm, a script — drops it, and the next search deals afresh)
   const pair = standoffUpkeep(g, gd);   // the standoff he is in, if it still is one (the hold on, this pair, seen lately, he alert and free): the alert branch plays it out; else the record went just now
   gd.trackFix(g.time);   // when the fix he works from was placed (the search asks how far Sam can have got since)
@@ -1833,6 +2129,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       else if (lvl >= 2 && gd.leader) { partnerWatch(g, gd); if (followLeader(g, gd, dt, walk)) moveSpeed = gd.speed; }   // (a leader taken down quietly is still 'his leader' until somebody knows — superviseLockdown — so he closes up to his station behind the body, and finds him; one who has simply vanished from his sight for good gets called, and reported: partnerWatch)
       else if (lvl >= 2 && gd.post) { if (holdPost(g, gd, dt, walk)) moveSpeed = gd.speed; }
       else if (T.needs && needsPatrol(g, gd, dt, walk)) moveSpeed = gd.speed;   // needs (needs.ts): a man telegraphing / walking off on / taking / coming back from his coffee, smoke, water or stretch has his feet run there — his wait clock standing still, so the route resumes where it was; false at once for everybody else, and always with tune.needs off
+      else if (dozePatrol(g, gd, dt, walk)) moveSpeed = gd.speed;   // dozing (doze.ts): a man come to a long wait in a dark place walks to the chair there — his wait clock running, so the timetable stands; false at once for everybody else, and always with its switch off
       else if (gd.wait > 0) {
         gd.wait -= dt; gd.sweep = Math.sin(gd.lookPhase * 0.9) * 0.7; c.anim.lookYawExtra = Math.sin(gd.lookPhase * 1.3) * 0.5;
         if (gd.wait <= 0) { gd.wp = (gd.wp + 1) % route.points.length; }
@@ -1845,11 +2142,12 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         moveSpeed = gd.speed;
       }
       c.aimYaw = c.bodyYaw + gd.sweep; c.aimPitch = damp(c.aimPitch, gd.drawn ? -0.26 : -0.35, 3, dt);   // drawn: muzzle (and its light) at a low ready, pooling on the floor five metres out
-      if (lvl >= 2 && !gd.hold && staff) lockdownDoors(g, gd);
+      if ((lvl >= 2 || g.doors.stay) && !gd.hold && staff) lockdownDoors(g, gd, lvl < 2);   // (DOORSTAY: no closer does it for him any more — below a lockdown he pulls his keyed doors and the doors to the outside to behind him, and only those)
       whistlePatrolTick(g, gd);   // (whistle.ts: a head still turned toward a whistle somebody nearer answered; a whistle's suspicion is over once he is back on his route)
       break;
     }
     case 'suspicious': {
+      let lever: ReturnType<typeof leverStand> = null;
       upper = handCarry(gd) === 'torch' ? WHISTLE_SOFT_UPPER : 'aim';   // (the torch only ever stays in a suspicious hand for a whistle he is answering — whistle.ts whistleSoft; everything else has the gun up as it always did)
       if (gd.task?.kind === 'checkOn') checkOnTick(g, gd);   // walking a silent colleague's route: on to his next waypoint after a look round each — or over (found since, reset, walked it all: 'not at his post')
       if (gd.task) { // errand (e.g. go and look at the breaker): don't talk yourself out of it halfway down the corridor
@@ -1861,14 +2159,17 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       if (duty) { moveSpeed = duty.move; aimAt = duty.aim; }
       else if (gd.reactT > 0) { gd.reactT -= dt; gd.speed = damp(gd.speed, 0, 8, dt); if (gd.lastKnown) aimAt = v3.add(gd.lastKnown, [0, 1.0, 0]); }
       else if (gd.lastKnown && gd.hold) { gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; aimAt = v3.add(gd.lastKnown, [0, 1.0, 0]); gd.searchT += dt; if (gd.searchT > 6) gd.awareness = Math.min(gd.awareness, 0.1); }   // scripted hold: watch it from where you stand, then let it go
+      else if (gd.task?.kind === 'breaker' && (lever = leverStand(g, gd, dt))) { upper = 'none'; moveSpeed = gd.speed = lever.speed; c.vel = [0, 0, 0]; aimAt = null; c.aimYaw = lever.yaw; c.anim.lookYawExtra = 0; gd.stallRef = null; }   // at the panel (handwork.ts): the step up to it, squared to it, his hand on the lever — nothing with the switch off
       else if (gd.lastKnown) {
         goTo(g, gd, gd.lastKnown);
         const arrived = followPath(g, gd, dt, T.guardInvestigate); moveSpeed = gd.speed;
         aimAt = v3.add(gd.lastKnown, [0, 0.9, 0]);
-        if (arrived) { gd.stallRef = null; gd.searchT += dt; gd.sweep = Math.sin(gd.lookPhase * 1.1) * 1.1; c.anim.lookYawExtra = Math.sin(gd.lookPhase * 1.9) * 0.4; aimAt = null; c.aimYaw = c.bodyYaw + gd.sweep; if (gd.searchT > 5) { gd.awareness = Math.min(gd.awareness, 0.2); } }
+        if (arrived && attentionDwell(g, gd)) { gd.stallRef = null; gd.sweep = Math.sin(gd.lookPhase * 1.1) * ATTENTION.dwellSweep; aimAt = null; c.aimYaw = c.bodyYaw + gd.sweep; }   // (attention.ts: his attention is ON the thing — he looks at it, not round the room, for the time the floor shows; false for every man with the switch off)
+        else if (arrived) { gd.stallRef = null; gd.searchT += dt; gd.sweep = Math.sin(gd.lookPhase * 1.1) * 1.1; c.anim.lookYawExtra = Math.sin(gd.lookPhase * 1.9) * 0.4; aimAt = null; c.aimYaw = c.bodyYaw + gd.sweep; if (gd.searchT > 5) { gd.awareness = Math.min(gd.awareness, 0.2); } }
         else {
           gd.searchT = 0;   // still on the way (possibly to a NEW noise): the look-around clock starts on arrival, a stale one must not cut the search short
-          if (whistleSoft(gd)) gd.awareness = Math.max(gd.awareness, WHISTLE.walkFloor);   // a whistle he chose to answer does not drain away under him two strides short of the spot: it holds while he walks, and the look round on arrival wears it off (whistle.ts)
+          if (whistleSoft(gd)) gd.awareness = Math.max(gd.awareness, WHISTLE.walkFloor);
+          attentionWalk(g, gd);   // (attention.ts: the same floor under any thing that has his attention)   // a whistle he chose to answer does not drain away under him two strides short of the spot: it holds while he walks, and the look round on arrival wears it off (whistle.ts)
           // …but four seconds of getting nowhere (a leaf somebody is holding against him, a colleague planted on the spot, a fix just inside a wall): he looks about from
           // where he stands instead of grinding at it until the suspicion wears off — his fix becomes the spot he is on (the alert state has its own such escape)
           if ((!gd.task || gd.task.kind === 'checkOn') && notGettingAnywhere(gd, dt, 4)) {   // (the breaker / rack errands are worth grinding toward, and their block above puts the fix straight back)
@@ -1880,10 +2181,10 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       if (gd.awareness < 0.12) {   // talked himself calm. The line depends on what it was: over a found body one man closes it for everybody, and nobody within a few metres of a
         const D = gd.bodyDuty;     // body the floor knows about ever calls it 'nothing' / 'clear' (that read as the men cycling platitudes over a dead colleague); once alarmed, nothing is 'nothing'
         gd.state = 'patrol'; gd.path = []; gd.pathGoal = null; gd.bodyDuty = null;
-        if (gd.foe === 'player' && g.player.down) { if (!g.stoodDown) { g.stoodDown = true; g.say(gd, 'back to your posts', true); } }
+        if (gd.foe === 'player' && g.player.down) { if (!g.stoodDown) { g.stoodDown = true; g.say(gd, gd.unit && CUES.on ? "he's down — hold where you are" : 'back to your posts', true); } }   // (a scenario's defenders go back nowhere: they hold where the fight left them — cues.ts)
         else if (D) { if (!D.body.bodyClosed && D.body.bodyVisits > 0 && v3.distXZ(c.pos, bodyPos(D.body)) < 12) { D.body.bodyClosed = true; g.say(gd, isBreathing(D.body) ? `no sign of him. ${D.body.callsign} is breathing, he'll keep — whoever dropped him is still close` : "no sign of him — eyes open, he's close"); } }   // (once, by a man thereabouts, and only if anybody got to the body at all — a called man giving up two rooms off says nothing; over a man out cold it says so)
         else if (!staff) { /* a unit calms without the staff's platitudes (his 'clear.' was said when the fight ended, teams) */ }
-        else if (!nearKnownBody(g, c.pos, 4) && !(gd.bubble?.radio && g.time - gd.bubble.t < 4)) g.say(gd, lvl >= 1 ? 'clear here — staying on it' : 'must have been nothing');   // (and not on top of his own radio line of a moment ago — 'not at his post', 'checking the breaker': that said it)
+        else if (!nearKnownBody(g, c.pos, 4) && !(gd.bubble?.radio && g.time - gd.bubble.t < 4) && !attentionTold(g, gd)) g.say(gd, lvl >= 1 ? 'clear here — staying on it' : 'must have been nothing');   // (and not on top of his own radio line of a moment ago — 'not at his post', 'checking the breaker': that said it)
       }
       c.aimPitch = damp(c.aimPitch, -0.12, 3, dt);
       break;
@@ -1895,7 +2196,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       const canShoot = !!pc && !down && !dazzled && !staggered && (g.time - gd.lastSeenT < 0.5);   // half a second of grace after a real sighting; a dazzled guard cannot shoot at all, nor a man doubled over a ring
       if (gd.reactT > 0 || !canShoot) { gd.shotBlockedT = 0; gd.lineInT = 0; }   // (the blocked-line clocks belong to one engagement: a fresh sighting at another doorway starts by holding the round again, not on the last one's count)
       if (gd.reactT > 0 || down || gd.pinned) { gd.stallRef = null; gd.chaseT = 0; }   // (seconds spent covering, reacting or holding a post are not seconds of getting nowhere; eyes on him resets the clocks in the perception above — unless his line is blocked and there is nowhere to step, below, when they must run)
-      const supNow = T.suppression ? headDown(g, gd, dt) : 'none';   // suppression (suppression.ts, docs/internal/sc20k-design.md §4.2): rounds close enough, often enough, and his head is down — or he is shifting to cover — ahead of everything else the fight does (the flinch below that is the plain fight's: wider, later, no sprint into it)
+      const supNow = T.suppression && !gunHoldRuns(g, gd) ? headDown(g, gd, dt) : 'none';   // suppression (suppression.ts, docs/internal/sc20k-design.md §4.2): rounds close enough, often enough, and his head is down — or he is shifting to cover — ahead of everything else the fight does (the flinch below that is the plain fight's: wider, later, no sprint into it)
       if (supNow !== 'none') {
         // Head down: crouched behind whatever he stands at, the gun lowered, feet still, not a round (fireCd floored: the first one after coming up is a beat late,
         // not on the frame) — turned toward where it is coming from (the muzzle the last close round left, else his fix). His eye drops with him (canSee reads the
@@ -1915,7 +2216,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         }
       }
       else if (gd.reactT > 0) { gd.reactT -= dt; aimAt = (dazzled || g.time - gd.lastSeenT > 0.5) && gd.lastKnown ? v3.add(gd.lastKnown, [0, 1.1, 0]) : pc ? v3.add(pc.pos, [0, 1.2, 0]) : null; gd.speed = damp(gd.speed, 0, 8, dt); }   // heard, not seen: he covers where he thinks it came from, not your true position through three walls   // a dazzled guard covers where he last knew you were, not where you are   // (nobody and nothing to go on: the gun stays where it is)
-      else if (gd.standoff && pair) { const r = standoffAlert(g, gd, dt, pair); moveSpeed = r.move; aimAt = r.aim; gd.shotBlockedT = 0; gd.lineInT = 0; }   // a colleague in Sam's arm, in his view: the ring, the flank, the slow aimed round, the talking — never the push (standoffAlert)
+      else if (gd.standoff && pair) { const r = standoffAlert(g, gd, dt, pair); moveSpeed = r.move; aimAt = r.aim; crouch = r.crouch; gd.shotBlockedT = 0; gd.lineInT = 0; }   // a colleague in Sam's arm, in his view: the ring, the flank, the slow aimed round, the talking — never the push (standoffAlert)
       else if (canShoot && pc) {
         // Where the rounds go: the chest (lower when crouched) — or, when something a round stops in stands between his GUN and it that his eye clears (canSee said
         // yes: the jamb on his gun-hand side, a leaf standing between them, a mullion, the desk or partition Sam is hull-down behind, a glass pane — sight passes the
@@ -1930,13 +2231,16 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         const crouched = foeCrouched(g, gd);   // (Sam's crouch; a hostile AI man's head-down / a drill's knee — teams)
         { const trunk = pc.bones.spine2 ?? pc.bones.hips; aimAt = [trunk ? trunk[0] : pc.pos[0], pc.pos[1] + (crouched ? 0.8 : 1.25), trunk ? trunk[2] : pc.pos[2]]; }
         let blocked = false;
-        if (!gd.pinned && !clearShot(g, c, aimAt)) {
+        if ((!gd.pinned || paneFirst(g, c, aimAt)) && !clearShot(g, c, aimAt)) {   // (paneFirst: the one line a pinned man is asked about — ?glassfoes=0 and standing glass first in it)
           const head = pc.bones.head ?? v3.add(pc.pos, [0, crouched ? 1.05 : 1.6, 0]);
           if (clearShot(g, c, head)) aimAt = head; else blocked = true;
         }
+        if (!blocked && shieldAny()) { const from = shotOrigin(c), low = shieldAim(g, gd, gd.foe, from, aimAt); if (low && clearShot(g, c, low)) { shieldLow(g, gd, gd.foe, from, aimAt); aimAt = low; } }   // THE SHIELD (shield.ts): his own rounds have been dying in the plate that man carries and it is on his line still — he comes down under it at the shins, where that line is open (null, and the chest as ever, with no shield on the floor / from the flank / before he has learned it)
         if (!blocked && !gd.pinned && boreFouled(g, gd)) blocked = true;   // two of his rounds running went into the frame from this spot — a hand off the muzzle, or anything on his own half of the line (aim.ts noteBore): the shoulder's line clears the jamb, the bore does not — no line from here, he closes / steps for a real one (model off: never)
-        const facingErr = Math.abs(wrapAngle(Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]) - c.aimYaw));
-        const poked = !gd.pinned && armThrough(g, c);   // his pistol out through the far face of the leaf he is pressed to, or into the jamb (fireWeapon puts that round into the wood): never fired, and once his aim has settled it counts as no line from here — he steps clear
+        if (blocked && coverSeen(g, gd, gd.foe, aimAt)) blocked = false;   // (coverfire.ts: what stands in the line is breakable and he knows the man is behind it — the rounds go into it, by every gate below)
+        const facingErr = Math.abs(wrapAngle(Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
+        const walled = !gd.pinned && gunWallCheck(g, gd, 'aim', aimAt, dt, true);   // (gunwall.ts: a wall, a jamb or a leaf inside the raised gun's reach on this line — it is at the low ready, and that is no line from here either)
+        const poked = !gd.pinned && (armThrough(g, c) || walled);   // his pistol out through the far face of the leaf he is pressed to, or into the jamb (fireWeapon puts that round into the wood): never fired, and once his aim has settled it counts as no line from here — he steps clear
         if (poked && facingErr < 0.3) blocked = true;
         gd.shotBlockedT = blocked ? gd.shotBlockedT + dt : 0;
         const inLine = muzzleCheck(g, gd, aimAt, dt);   // a colleague between his gun and Sam (or just beyond him): the pistol goes to the low ready and stays there while he is in the line — worked out here, before the round, on the line he means to fire
@@ -1964,9 +2268,10 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
           else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; }
           dbg?.(gd, `ALERT line (dist ${dist.toFixed(2)} inLine ${inLine ? g.level.routes[inLine.routeI]?.name : '-'} crossing ${crossingMan} lineInT ${gd.lineInT.toFixed(2)}) → ${st}${st === 'none' ? (dist > LINE_PUSH_MIN_M ? ' → push up the path ' + gd.pathI + '/' + gd.path.length : ' → wait') : ''} pos ${c.pos[0].toFixed(3)},${c.pos[2].toFixed(3)}`);
         }
+        else if (DOORMANNERS.on && offThreshold(g, gd, aimAt, dt, true)) moveSpeed = gd.speed;   // planted in an open doorway (doorway.ts): through it and off the opening, to a spot with the shot
         else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; dbg?.(gd, `ALERT hold+fire (dist ${dist.toFixed(2)} muzzleDown ${gd.muzzleDown} inLine ${inLine ? g.level.routes[inLine.routeI]?.name : '-'} crossing ${crossingMan} lineInT ${gd.lineInT.toFixed(2)} fireCd ${gd.fireCd.toFixed(2)}) pos ${c.pos[0].toFixed(3)},${c.pos[2].toFixed(3)}`); }
         if (!(blocked && !closing)) { if (!stepping) gd.stallRef = null; gd.chaseT = 0; }   // (the side-step keeps its own no-headway watch on stallRef)
-        else if (gd.shotBlockedT > 4) { dropToSearch(g, gd, 'no shot — lost him'); gd.awareness = Math.min(gd.awareness, 0.5); break; }
+        else if (gd.shotBlockedT > 4 && !gd.pinned) { dropToSearch(g, gd, 'no shot — lost him'); gd.awareness = Math.min(gd.awareness, 0.5); break; }
         gd.fireCd -= dt;
         const twisted = moveSpeed > 0.3 && Math.abs(wrapAngle(c.bodyYaw - c.aimYaw)) > 0.9;   // legs following a path that has turned away from Sam (back through a doorway to come at him): he keeps moving and holds the round rather than fire across his own back
         // The shield, for a man with eyes on Sam (canShoot) but no standoff record this frame — the frame the record comes or goes, or a sight of Sam that somehow is
@@ -1977,7 +2282,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
         else if (gd.weapon.def.burst) burstTrigger(g, gd, dt, aimAt, !shield && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && aimReady(g, gd), !shield && !twisted && !poked && !gd.muzzleDown);   // the carbine: short bursts through the same gates — all of them to begin one (aimReady among them: a burst is gated on the track at its START, not round by round — aim.ts), the per-round ones (the shield, a colleague in the line, poked, twisted) to let each round of it go (rifles, burstTrigger)
         else if (!shield && gd.fireCd <= 0 && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && !roundPastColleague(g, gd, aimAt) && aimReady(g, gd) && gd.weapon.fire()) {   // (muzzleDown: the pistol is not even up — a colleague is, or a beat ago was, in the line; roundPastColleague: the bore's own line this frame, the last look in a scrum; aimReady: lined up on him — the aim model's first-shot gate, aim.ts, always true with it off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
-          const W = gd.weapon.def, M = guardFireMods(g, gd); gd.fireCd = (W.cd + Math.random() * W.cdJitter) * M.gap; fireWeapon(g, c, aimAt, false, guardRound(g, gd, M.spread)); noteBore(g, gd, aimAt);   // the weapon's cadence: its floor plus the drawn jitter (the 9 mm's 0.55–1.05 s) — stretched, and the round wider, by the rounds going past his own head (suppression.ts guardFireMods: ×1 / +0 at rest, so a quiet fight is the fight it was); the cone through the aim model (aim.ts guardRound: settle × his row + Sam crossing + his own feet — { spread: M.spread } exactly with it off; noteBore: a round into the frame a hand off the muzzle is remembered against this spot)
+          const W = gd.weapon.def, M = guardFireMods(g, gd); gd.fireCd = (W.cd + simRandom() * W.cdJitter) * M.gap; fireWeapon(g, c, aimAt, false, guardRound(g, gd, M.spread)); noteBore(g, gd, aimAt);   // the weapon's cadence: its floor plus the drawn jitter (the 9 mm's 0.55–1.05 s) — stretched, and the round wider, by the rounds going past his own head (suppression.ts guardFireMods: ×1 / +0 at rest, so a quiet fight is the fight it was); the cone through the aim model (aim.ts guardRound: settle × his row + Sam crossing + his own feet — { spread: M.spread } exactly with it off; noteBore: a round into the frame a hand off the muzzle is remembered against this spot)
           if (gd.weapon.roundsReady === 0) startReloadBeat(g, gd);
         }
       } else if (down && pc) {
@@ -1985,10 +2290,13 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         const body = pc.pos; const dB = Math.hypot(body[0] - c.pos[0], body[2] - c.pos[2]);
         if (dB > 2.2) { goTo(g, gd, body); followPath(g, gd, dt, T.guardInvestigate); moveSpeed = gd.speed; } else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; }
         aimAt = v3.add(body, [0, 0.3, 0]); gd.searchT += dt;
-        if (gd.searchT > 4 && !g.calledIn && staff) { g.calledIn = true; g.say(gd, 'target is down. send someone up.', true); g.audio.play('radio', c.bones.head ?? c.pos, 0.5, { rate: 0.95 }); }   // (the staff's net: a unit covers his man and says nothing up any chain)
+        if (gd.searchT > 4 && !g.calledIn && staff) { g.calledIn = true; g.say(gd, WORDS.on && !isOffice(g.level) ? 'target is down. send someone over.' : 'target is down. send someone up.', true); g.audio.play('radio', c.bones.head ?? c.pos, 0.5, { rate: 0.95 }); }   // (the staff's net: a unit covers his man and says nothing up any chain)
         if (gd.searchT > 14) { gd.state = 'suspicious'; gd.awareness = 0.3; gd.searchT = 0; gd.reactT = 0; gd.lastKnown = v3.copy(body); }   // eventually they lower their weapons and mill about the body
+      } else if ((aimAt = coverBlind(g, gd, dt))) { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0];   // (coverfire.ts: the man went behind something breakable a moment ago — stood still, his aimed rounds go into it; null = nothing of the kind, the branches below as ever)
       } else if (gd.lastKnown && gd.pinned) {   // scripted: hold the position, cover where he was last seen
-        gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; aimAt = v3.add(gd.lastKnown, [0, 1.1, 0]);
+        aimAt = v3.add(gd.lastKnown, [0, 1.1, 0]);
+        if (DOORMANNERS.on && offThreshold(g, gd, aimAt, dt, false)) moveSpeed = gd.speed;   // (doorway.ts: pinned where he stopped, and that is an open doorway — a step off it first)
+        else { gd.speed = damp(gd.speed, 0, 6, dt); c.vel = [0, 0, 0]; }
       } else if (gd.lastKnown) {
         // a fix, no eyes on him: the pursuit tactics first (tactics.ts — a role in a flanking approach, or the lone man's angle on an armed intruder; null =
         // none of it applies, and always null with tune.tactics off), else the chase it always was (chaseFix, the very lines that stood here)
@@ -2008,7 +2316,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
       if (!P) {
         // wander to a couple of nearby points (not while dazzled: a blind man does not go for a walk)
         if (!dazzled && gd.searchT > 3 && gd.lastKnown && (!gd.path.length || gd.pathI >= gd.path.length)) {
-          const a = Math.random() * Math.PI * 2; const cand: Vec3 = [gd.lastKnown[0] + Math.cos(a) * 3, 0, gd.lastKnown[2] + Math.sin(a) * 3];
+          const a = simRandom() * Math.PI * 2; const cand: Vec3 = [gd.lastKnown[0] + Math.cos(a) * 3, 0, gd.lastKnown[2] + Math.sin(a) * 3];
           if (!g.col.nav.isBlocked(cand[0], cand[2])) { goTo(g, gd, cand, true); gd.stallRef = null; }
         }
         if (!dazzled && gd.path.length && gd.pathI < gd.path.length) {
@@ -2045,7 +2353,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         over = gd.searchT > SEARCH_MIN_SECS && (P.phase === 'done' || gd.searchT > SEARCH_CAP_SECS);
         if (over) gd.lastKnown = v3.copy(c.pos);   // the look round that follows ('suspicious' for a couple of seconds) happens where the search ended, not back at a fix he has just combed round
       }
-      if (over) { gd.state = 'suspicious'; gd.awareness = 0.25; gd.searchT = 0; gd.reactT = 0; gd.searchPlan = null; g.say(gd, staff ? 'returning to patrol' : 'lost him.'); chronCalm(g, gd); }
+      if (over) { gd.state = 'suspicious'; gd.awareness = 0.25; gd.searchT = 0; gd.reactT = 0; gd.searchPlan = null; g.say(gd, staff ? 'returning to patrol' : defenderWords(gd) ? 'lost them.' : 'lost him.'); chronCalm(g, gd); }
       if (!aimAt) { c.aimYaw = c.bodyYaw + gd.sweep * sweepK; c.aimPitch = damp(c.aimPitch, -0.1, 3, dt); }   // (a point to hold goes through the aim easing below instead — the sweep written over it every frame would have the torch waving past the spot he means to look into)
       break;
     }
@@ -2053,6 +2361,8 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   if (!pied || (gd.state !== 'alert' && gd.state !== 'search')) gd.pieing = null;   // (only a hunting walk pies a doorway; anything else this frame — contact, a body, calm, orders, the search ending under it — leaves none half done)
   const eyesOnFoe = gd.state === 'alert' && !!aimAt && g.time - gd.lastSeenT < 0.5;   // (a man who SEES the man he is fighting keeps his muzzle on him: the drill's stations are for a doorway nobody is standing in — soak seed 2, 08-12: two QRF men at their own danger-marked door aimed at the opening and put every round into the frame beside Sam 0.7 m off)
   if (T.tactics && !eyesOnFoe) { const tl = tacticsLook(g, gd); if (tl) { aimAt = tl.aim; crouch = Math.max(crouch, tl.crouch); } }   // a man on a kill-zone doorway's drill (tactics.ts doorGate): his eyes and muzzle on the opening / the slice's stations / the floor while the charge goes, and how low he is
+  if (DARKDOOR.on && !eyesOnFoe) { const dl = darkDoorLook(g, gd); if (dl) aimAt = dl; }   // stopped at a dark doorway (darkdoor.ts): his aim, and his light with it, sweeps the opening from the frame (null for everybody else)
+  { const nq = netQuietPose(g, gd, dt, eyesOnFoe); if (nq) { if (nq.aim) aimAt = nq.aim; crouch = Math.max(crouch, nq.crouch); } }   // netquiet.ts (null on its first line with its switch off): the last man low on his spot, a jumpy man's gun and lamp onto the noise he has just heard
   if (aimAt) {
     const yawTo = Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]);
     if (AIM_DEBUG.log && gd.state === 'alert') AIM_DEBUG.log(`g${c.id} aim block: yawTo ${yawTo.toFixed(2)} aimYaw ${c.aimYaw.toFixed(2)} → aimAt (${aimAt[0].toFixed(2)}, ${aimAt[1].toFixed(2)}, ${aimAt[2].toFixed(2)}) bodyYaw ${c.bodyYaw.toFixed(2)} speed ${moveSpeed.toFixed(2)}`);   // (soak --trace: chasing a chest that settles off its man)
@@ -2070,14 +2380,16 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   // muzzle discipline: with the pistol up (every armed state — the heightened patrol's low carry, a fix being covered, the search's sweep), a living colleague in
   // the line he means it along puts it to the low ready until he is out of it (the alert branch has already asked, on the line of the shot itself)
   if (gd.muzzleEvalT !== g.time) muzzleCheck(g, gd, upper === 'aim' ? (aimAt ?? aimAhead(c)) : null, dt);
+  if (!gd.pinned) gunWallCheck(g, gd, upper === 'aim' ? 'aim' : null, aimAt, dt, gd.state === 'alert');   // …and a wall inside the raised gun's reach does the same (gunwall.ts; nothing with its switch off)
   const lowered = gd.muzzleDown || duck || staggered;   // the gun down: for a colleague in the line, with his own head down under fire (suppression), or doubled over a ring airfoil — the same low ready ('lowLong' on the carbine, the animator's mapping)
   c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
+  gunWallPose(g, c);
   c.anim.reverse = moveSpeed > 0.2 && c.vel[0] * Math.sin(c.bodyYaw) + c.vel[2] * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (the standoff's back-off and side-step round the ring keep his chest to the pair): the cycle plays backwards, as the player's back-pedal does — and worked out afresh every frame, so nothing (a hold that ended mid-haul) leaves it stuck on him
   c.update(dt);
   attachFlashlight(g, gd, dt);
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
   if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) {
-    const loud = tread(g, c.pos, moveSpeed > 2 ? 0.8 : 0.33, false);   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
+    const loud = tread(g, c.pos, moveSpeed > 2 ? 0.8 : silentStep(g, gd) ?? 0.33, false);   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
     if (!staff) g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud, who: c.id });   // …but a UNIT's footfall is a sound in the world for the side that hunts him (teams: hearingCheck stepIsThreat) — the staff's stay presentation, as ever
   }
 }
@@ -2152,12 +2464,13 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  the glazing, and unshadowed it would light everybody), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
  *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter never
  *  touches it. ~one segment test per light in range: a few dozen per target per frame. */
-export function lightEstimateAt(g: Game, P: Vec3): number {
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false): number {
   const acc = [0, 0, 0, 0, 0, 0];
   const lights = g.engine.lights.lights;
   for (let i = 0; i < lights.length; i++) {
     const l = lights[i];
-    if (!l.enabled || l.intensity <= 0 || l.kind === 2) continue;
+    if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
+    if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;   // (LIGHTS.litMan asks what the PLACE lights: a round's impact flash, a tracer's lamp, a stun charge, a stroke of lightning, a blackout beacon sweeping past are nobody's lamp)
     const dx = l.pos[0] - P[0], dy = l.pos[1] - P[1], dz = l.pos[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
     const Lx = dx / dist, Ly = dy / dist, Lz = dz / dist;
@@ -2179,19 +2492,25 @@ export function lightEstimateAt(g: Game, P: Vec3): number {
     if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
     for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
   }
+  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
+  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
   return Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
+}
+/** The chest + head light-meter pair of one character (a held man's 'held', a unit's 'unit', a civilian's 'civ'): two probe queries under `${prefix}C${id}` /
+ *  `${prefix}H${id}` with his own proxies skipped, asked chest then head through g.lightQuery and read back through g.lightAt (the hooks the harness swaps); the
+ *  larger of the two when both have finite answers, else the CPU estimate of the same direct light at the same two points. Returns the irradiance, unmapped. */
+export function meterOf(g: Game, c: Character, prefix: string): number {
+  const id = c.id; const pc = c.bones.chest ?? v3.add(c.pos, [0, 1.2, 0]), ph = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
+  const kc = `${prefix}C${id}`, kh = `${prefix}H${id}`; g.lightQuery(kc, pc, id); g.lightQuery(kh, ph, id);
+  const r1 = g.lightAt(kc), r2 = g.lightAt(kh);
+  return r1 !== undefined && r2 !== undefined && Number.isFinite(r1) && Number.isFinite(r2) ? Math.max(r1, r2) : Math.max(lightEstimateAt(g, pc), lightEstimateAt(g, ph));
 }
 /** The light meter of a man some AI side can be hostile to (a unit — never the staff: no AI side is hostile to them, and the game as it was asks nothing new of the
  *  probe): the renderer's irradiance at his chest and head, asked of the probe every frame under his own keys with his own capsules skipped — exactly as Sam's
  *  'playerChest' / 'playerHead' are — and, until an answer exists (headless: never; the browser: a frame or two), the CPU estimate of the same light
  *  (lightEstimateAt). Mapped through the meter's curve and eased at Sam's rate, into Guard.visibility / irradiance: what sightGainOn reads for him. */
 function unitLightMeter(g: Game, gd: Guard, dt: number) {
-  const c = gd.char, id = c.id;
-  const pc = c.bones.chest ?? v3.add(c.pos, [0, 1.2, 0]), ph = c.bones.head ?? v3.add(c.pos, [0, 1.6, 0]);
-  const kc = `unitC${id}`, kh = `unitH${id}`;
-  g.lightQuery(kc, pc, id); g.lightQuery(kh, ph, id);
-  const r1 = g.lightAt(kc), r2 = g.lightAt(kh);
-  const E = r1 !== undefined && r2 !== undefined && Number.isFinite(r1) && Number.isFinite(r2) ? Math.max(r1, r2) : Math.max(lightEstimateAt(g, pc), lightEstimateAt(g, ph));
+  const E = meterOf(g, gd.char, 'unit');
   gd.irradiance = E; gd.visibility = damp(gd.visibility, g.visibilityOf(E), 6, dt);
 }
 /** A unit's foe this frame (never the staff's — theirs is Sam from birth): drop a man who is dead or gone (and the fix that was on him, unless a noise has since
@@ -2202,30 +2521,40 @@ function unitLightMeter(g: Game, gd: Guard, dt: number) {
  *  and a man whose foe has just DIED with no other enemy in sight comes off the alert (below): the fight his eyes know of is over. The killer says so. */
 function acquireFoe(g: Game, gd: Guard) {
   const cur = gd.foe; let lostMan = false, mine = false;
-  if (cur && cur !== 'player' && (cur.state === 'dead' || !g.guards.includes(cur))) {   // his man is down (or despawned under him): off him — Sam down is handled where it always was (the alert branch covers the body)
+  if (cur && cur !== 'player' && (cur.state === 'dead' || !g.guards.includes(cur) || runnerFled(cur))) {   // his man is down (or despawned under him): off him — Sam down is handled where it always was (the alert branch covers the body)
     if (gd.lastKnown && v3.distXZ(gd.lastKnown, cur.char.pos) < 1.5) gd.lastKnown = null;   // (a fix that IS the dead man is no place to run to; one a noise put somewhere else stands)
     mine = cur.state === 'dead' && cur.killerId === gd.char.id && gd.state === 'alert';   // (his round did it: he is the one who says so, below; the others saw it and say nothing)
     gd.foe = null; gd.aim.clear(); lostMan = true;
   }
   let best: Foe = null, bestRate = 0.05, curVisible = false;
+  const eye = shieldAny() && SHIELD.retarget ? shotOrigin(gd.char) : null, shy = eye && gd.foe && gd.foe !== 'player' && shieldBlocks(g, gd, gd.foe, eye) ? gd.foe : null;   // THE SHIELD (shield.ts): the man he is on carries a plate his rounds have been dying in, and it stands between them now — another enemy in his sight is the better man to be on (null with no shield on the floor: the lines below then read as they always did)
   const consider = (f: 'player' | Guard, ch: Character) => {
     const vis = f === 'player' ? canSee(g, gd) : canSeeChar(g, gd, ch, false); if (!vis.visible) return;
     const rate = f === 'player' ? sightGain(g, gd, vis.dist) : sightGainOn(g, gd, f, vis.dist);
     if (f === gd.foe && rate > 0.05) curVisible = true;
-    if (rate > bestRate) { bestRate = rate; best = f; }
+    if (rate > bestRate && !(shy && eye && (f === shy || shieldScreens(shy, eye, ch)))) { bestRate = rate; best = f; }   // (not the shield man, nor a man stood behind his plate)
   };
   if (isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) consider('player', g.player.char);
-  for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.char.alive && isHostile(gd.team, o.team)) consider(o, o.char);
+  for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.char.alive && isHostile(gd.team, o.team) && !runnerFled(o)) consider(o, o.char);
   const op = gd.team === 'operative';
-  if (curVisible) return;
+  if (curVisible && !(shy && best)) return;
+  if (shy && best) SHIELD_STATS.retargets++;
   if (best && best !== gd.foe) { gd.foe = best; gd.aim.clear(); if (mine) g.say(gd, op ? 'he\'s down — next.' : 'got him!'); return; }   // a new man: he lines him up from nothing (aim.ts keys the track by foe too)
-  if (lostMan && !best && (gd.state === 'alert' || gd.state === 'search')) {
+  if (lostMan && !best && !gd.unit && gd.team === 'guard' && !g.player.down) {
+    // A STAFF MAN (here only on a quiet mission with a partner: the call site): the man he dropped is one of TWO intruders, and the other is still on his floor.
+    // He is on Sam again and his state stands — alert with no fix left drops to a search where he stands (the alert branch's own rule), a search goes on —
+    // and nobody says 'that's all of them' over a floor Sam is still on.
+    // The sighting his licence to shoot rests on was of the MAN WHO FELL: it is no sighting of Sam (lastSeenT put past the half second the fire gate reads, a
+    // burst in hand ended) — he aims at and runs to nothing he has not seen.
+    gd.foe = 'player'; gd.lastSeenT = Math.min(gd.lastSeenT, g.time - 0.5); gd.weapon.burst = null; if (mine) g.say(gd, 'got him!');
+  } else if (lostMan && !best && (gd.state === 'alert' || gd.state === 'search')) {
     // the man he was fighting is down and no other enemy is in his sight: the fight, as far as his own eyes have it, is over — not a man lost sight of. He comes
     // off the alert to a wary look round (toward whatever fix a noise has left him, else where he stands), one man a side says so, and in his own time he goes
     // back to his mark; no chase of a dead man's fix, no search dealt round a room he has just won. An enemy he has NOT seen puts him straight back up the way
     // any enemy does — a report, a footfall, a shape in his cone (his senses run on in every state).
     gd.state = 'suspicious'; gd.awareness = 0.45; gd.reactT = 1.2; gd.searchT = 0; gd.path = []; gd.pathGoal = null; gd.searchPlan = null; gd.pieing = null;
-    const said = g.guards.some(o => o !== gd && o.team === gd.team && o.bubble && g.time - o.bubble.t < 3 && /clear\.|all of them/.test(o.bubble.text));
+    const left = WORDS.on && (g.guards.some(o => o.state !== 'dead' && isHostile(gd.team, o.team)) || (isHostile(gd.team, 'player') && !g.player.down));   // (words.ts: nobody calls a floor clear with an enemy still up on it — his own man is down, and that is all he says)
+    const said = left || g.guards.some(o => o !== gd && o.team === gd.team && o.bubble && g.time - o.bubble.t < 3 && /clear\.|all of them/.test(o.bubble.text));
     if (mine) g.say(gd, op ? (said ? 'he\'s down.' : 'he\'s down — clear.') : (said ? 'got him!' : 'got him — that\'s all of them.'));
     else if (!said) g.say(gd, op ? 'clear.' : 'that\'s all of them.');
   } else if (mine) g.say(gd, op ? 'he\'s down.' : 'got him!');
@@ -2246,22 +2575,31 @@ export function longRigOf(gd: Guard): 'carbine' | 'sc20k' | null { const r = rig
  *  answering (whistle.ts whistleSoft: suspicious, on a calm floor, and nothing but the whistle has reached him since) keeps the torch — a whistle is not worth
  *  the pistol until a footfall, a glimpse or a second whistle makes it so. The one rule handProps, attachFlashlight, killGuard, the grab and the hold used to
  *  spell out each for itself. */
-export function handCarry(gd: Guard): 'torch' | 'weapon' { return (gd.state === 'patrol' || (gd.state === 'suspicious' && whistleSoft(gd))) && !gd.drawn && rigOf(gd) === 'pistol' ? 'torch' : 'weapon'; }
+export function handCarry(gd: Guard): 'torch' | 'weapon' { return (gd.state === 'patrol' || (gd.state === 'suspicious' && whistleSoft(gd))) && !gd.drawn && rigOf(gd) === 'pistol' && !kitPistol(gd) ? 'torch' : 'weapon'; }   // (kit.ts: a teammate whose card hands him a pistol carries no hand torch)
 /** What is physically in the hand: what he carries — unless it has left it: he is down (it lies on the floor as gd.dropped), or the torch was knocked out of it at
  *  the grab (dropped while he still carries 'torch': his hands are empty until the floor has him draw). */
+/** (HOLD.dropGun) A living man on his own feet has the gun that was knocked out of his hand at the grab again: it is off the floor and in his fist. Called where
+ *  a hold hands him back (player.ts handBack) and, for any other road out of an arm with his hands empty (a checkpoint saved in a hold loads him free: the hold
+ *  itself is not filed), on his first update of his own. */
+export function gunBack(g: Game, gd: Guard) {
+  const i = gd.dropped && gd.dropped.kind !== 'torch' ? g.items.items.indexOf(gd.dropped) : -1; if (i >= 0) { g.items.items.splice(i, 1); gd.dropped = null; }
+  gd.gunLostAt = -1;
+}
 export function inHand(gd: Guard): 'torch' | 'weapon' | null {
+  if (runnerFled(gd)) return null;   // (runner.ts, false with its switch off: he dropped it and ran — his hands are empty for good, and nothing more falls from them)
+  if (gd.gunLostAt >= 0) return null;   // (HOLD.dropGun, player.ts startGrab: his gun was knocked out of his hand as the arm went round — empty hands until he is loose and has it again)
   if (gd.state === 'dead' || gd.civ) return null;   // (a civilian's hands are empty: nothing to knock out of them at a grab, nothing to fall from them — civilians.ts)
   const k = handCarry(gd);
-  return k === 'torch' && gd.dropped ? null : k;
+  return k === 'torch' && (gd.dropped || (HOLD.dropGun && gd.torchLostAt >= 0)) ? null : k;   // (…|| torchLostAt, HOLD.dropGun: the floor gun of a later grab took `dropped`'s place and went back to his hand — the torch still lies where the first grab left it)
 }
 /** The magazine is empty: he stands there changing it for the row's reload.dur (the beat the fire sites count down — no round leaves meanwhile), says so, and the
  *  slide-back clack plays at him. */
-function startReloadBeat(g: Game, gd: Guard) { const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
+export function startReloadBeat(g: Game, gd: Guard) { const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
 /** …counted down each frame he could otherwise fire; the frame it runs out the gun is simply full again (his spares are bottomless) and the NEXT frame may fire.
  *  A row that stages its reload (reload.out — the long guns; the sidearm's beat is one undivided 1.7 s and drops nothing) lets the empty go the frame the beat
  *  crosses `out`: a rifleman's thirty-round box clatters down out of the receiver (a 'mag' item with fill 2: throwables draws the long bakelite box) — physical,
  *  heard at arm's length like any magazine hitting the floor, and no more ammunition to anybody than the rest of what lies about. */
-function tickReloadBeat(g: Game, gd: Guard, dt: number) {
+export function tickReloadBeat(g: Game, gd: Guard, dt: number) {
   const w = gd.weapon, R = w.def.reload; const before = R.dur - gd.reloadT;
   gd.reloadT -= dt;
   if (R.out !== undefined && before < R.out && R.dur - gd.reloadT >= R.out) {
@@ -2298,7 +2636,7 @@ export function burstTrigger(g: Game, gd: Guard, dt: number, aimAt: Vec3, startO
   if (w.burst && g.time - w.burst.t > dt * 1.5 + 1e-6) end(BURST_BROKEN_CD);   // stale: nobody pulled this trigger last frame (he lost the licence a moment, reacted, was scripted) — that burst ended when he stopped, whatever was left of it, and the next waits the broken-burst beat out from then: no fresh burst on the heels of the old one's last round
   if (!w.burst) {
     if (!startOk || gd.fireCd > 0 || roundPastColleague(g, gd, aimAt, except)) return;
-    const n = clamp(B.min + Math.floor(Math.random() * (B.max - B.min + 1)), B.min, B.max);
+    const n = clamp(B.min + Math.floor(simRandom() * (B.max - B.min + 1)), B.min, B.max);
     let off: Vec3 | null = null;
     const opening = w.bursts === 0 || g.time - w.lastBurstT > SUPPRESS_FIRST_LAPSE;
     if (g.tune.suppressFirst && opening && v3.distXZ(c.pos, (foeChar(g, gd) ?? g.player.char).pos) >= SUPPRESS_FIRST_MIN_M) {   // (teams: off the man he is firing at — Sam, for the staff)
@@ -2306,8 +2644,8 @@ export function burstTrigger(g: Game, gd: Guard, dt: number, aimAt: Vec3, startO
       const px = -dz / L, pz = dx / L;   // unit, square off the line (his left as he looks at Sam)
       const chestP: Vec3 = [aimAt[0], aimAt[1], aimAt[2]];
       const l = g.col.raycast(chestP, [px, 0, pz], SUPPRESS_FIRST_COVER_M), r = g.col.raycast(chestP, [-px, 0, -pz], SUPPRESS_FIRST_COVER_M);
-      const side = l && r ? (l.t <= r.t ? 1 : -1) : l ? 1 : r ? -1 : (Math.random() < 0.5 ? 1 : -1);   // toward the cover he is using; in the open, either
-      const m = SUPPRESS_FIRST_OFF_M + Math.random() * SUPPRESS_FIRST_JITTER_M;
+      const side = l && r ? (l.t <= r.t ? 1 : -1) : l ? 1 : r ? -1 : (simRandom() < 0.5 ? 1 : -1);   // toward the cover he is using; in the open, either
+      const m = SUPPRESS_FIRST_OFF_M + simRandom() * SUPPRESS_FIRST_JITTER_M;
       off = [px * side * m, SUPPRESS_FIRST_UP_M, pz * side * m];
     }
     w.burst = { left: n, n, nextT: 0, idx: 0, t: g.time, off };
@@ -2325,7 +2663,7 @@ export function burstTrigger(g: Game, gd: Guard, dt: number, aimAt: Vec3, startO
   fireWeapon(g, c, aim, false, b.off ? { spread: 0, steady: true } : guardRound(g, gd, grow + M.spread, b.idx === 0)); if (!b.off) noteBore(g, gd, aim);   // (an aimed round's cone through the aim model — aim.ts guardRound, { spread: grow + M.spread } exactly with it off; the wide opening burst is laid where he means it, model or none — and, laid into the wall on purpose, is never a fouled bore)
   b.idx++; b.left--; b.nextT = B.interval;
   if (b.left <= 0 || w.roundsReady === 0) {
-    end((B.gapMin + Math.random() * (B.gapMax - B.gapMin)) * M.gap);   // (× the suppression's cadence stretch: a man taking rounds waits longer between bursts)
+    end((B.gapMin + simRandom() * (B.gapMax - B.gapMin)) * M.gap);   // (× the suppression's cadence stretch: a man taking rounds waits longer between bursts)
     if (w.roundsReady === 0) startReloadBeat(g, gd);
   }
 }
@@ -2341,6 +2679,11 @@ export function burstSummary(g: Game): string {
 }
 
 export function attachFlashlight(g: Game, gd: Guard, dt = 1 / 60) {   // (dt: the relaxed carry's easing is per second — rigProps.ts torchCarryDir; callers outside the frame loop, savestate / squad, take the sixtieth)
+  const held = poseFlashlight(g, gd, dt), fl = gd.flashlight;
+  if (held && fl.enabled) fl.pos = lensClear(g, held, fl.pos, g.engine.settings.flashlightRadius, fl);   // a burning lens carried through the wall he is pressed to lights from this side of it (lighting.ts LIGHTWALL; a dark light asks nothing)
+}
+/** the light at its lens, its beam and whether it burns; returns what the lens hangs off — his gun shoulder, or the dropped torch's own body (nothing before he has a pose) */
+function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   const c = gd.char; const fl = gd.flashlight; const T = g.tune;
   if (!c.bones.handR) return;   // no pose yet
   let dir = c.gunDir;
@@ -2348,24 +2691,29 @@ export function attachFlashlight(g: Game, gd: Guard, dt = 1 / 60) {   // (dt: th
   const torch = handCarry(gd) === 'torch';   // the hand torch on a calm patrol; the weapon light whenever the pistol is out (drawn on an alarmed floor, or any other state) — or on the carbine, always (handCarry never says torch for a rifleman)
   if (torch && c.alive) { gd.beamDir = torchCarryDir(c, gd.beamDir, dt); dir = gd.beamDir; }   // relaxed carry: beam follows the chest/aim heading, smoothed so the arm swing only bobs the origin
   else { gd.beamDir = v3.copy(dir); }
-  fl.pos = rk === 'sc20k' ? sc20kLightPose(c).pos : rigTorchPos(c, dir, torch, RIG, carbine ? 'carbine' : 'pistol'); fl.dir = dir;   // at the torch lens on patrol, at the weapon-light slot when drawn, at the lens on the carbine's handguard (or the bullpup's fore-end): the light is where the muzzle points
-  if ((gd.state === 'dead' || (torch && gd.torchLostAt >= 0)) && gd.dropped) { const it = gd.dropped; const hd: Vec3 = [Math.sin(it.yaw) * Math.cos(it.tumble), -Math.sin(it.tumble), Math.cos(it.yaw) * Math.cos(it.tumble)]; fl.pos = v3.mad(it.pos, hd, 0.1); fl.dir = hd; }   // the beam spins with the tumbling torch / pistol until it dies
-  if (gd.state !== 'dead' && torch && gd.torchLostAt >= 0) {   // knocked out of a living hand (the grab): the same sputter-and-die on the floor; drawn later (alert), the weapon light is his light again
-    if (!gd.lightLitAtLoss) { fl.enabled = false; return; }   // (it was dark when it fell: it stays dark)
-    const t = g.time - gd.torchLostAt; fl.enabled = t < 0.9 && (t < 0.35 || Math.sin(t * 60) > 0.3); fl.intensity = fl.peakIntensity * clamp(1 - t / 0.9, 0, 1); return;
+  fl.pos = rk === 'sc20k' ? sc20kLightPose(c).pos : kitPistol(gd) && gd.weapon.def.rig === 'pistol' ? rigLightPose(c).pos : rigTorchPos(c, dir, torch ? swapHeld(gd, 'torch') === 'torch' : swapHeld(gd, 'weapon') === 'torch', RIG, carbine ? 'carbine' : 'pistol'); fl.dir = dir;   // at the torch lens on patrol, at the weapon-light slot when drawn, at the lens on the carbine's handguard (or the bullpup's fore-end): the light is where the muzzle points
+  if (runnerFled(gd)) { fl.enabled = false; return c.bones.upperArmR; }   // (runner.ts, false with its switch off: his light went with the gun he dropped — dark in Sam's arm, off a grenade, and on the floor after him)
+  let held: Vec3 | undefined = c.bones.upperArmR;   // (what the lens hangs off, for the wall rule below: his gun shoulder — or the dropped torch's own body)
+  const lostLive = torch && gd.torchLostAt >= 0 ? gd.torchLostAt : gd.gunLostAt;   // when what carried his light left a LIVING hand (the torch at a grab on patrol · the gun at any grab, HOLD.dropGun), −1 if it has not
+  if ((gd.state === 'dead' || lostLive >= 0) && gd.dropped) { const it = gd.dropped; const hd: Vec3 = [Math.sin(it.yaw) * Math.cos(it.tumble), -Math.sin(it.tumble), Math.cos(it.yaw) * Math.cos(it.tumble)]; fl.pos = v3.mad(it.pos, hd, 0.1); fl.dir = hd; held = it.pos; }   // the beam spins with the tumbling torch / pistol until it dies
+  if (gd.state !== 'dead' && lostLive >= 0) {   // knocked out of a living hand (the grab): the same sputter-and-die on the floor; drawn later (alert), the weapon light is his light again
+    if (!gd.lightLitAtLoss) { fl.enabled = false; return held; }   // (it was dark when it fell: it stays dark)
+    const t = g.time - lostLive; fl.enabled = t < 0.9 && (t < 0.35 || Math.sin(t * 60) > 0.3); fl.intensity = fl.peakIntensity * clamp(1 - t / 0.9, 0, 1); return held;
   }
   if (gd.state === 'dead' && g.time >= gd.lightDeadUntil) {   // a dropped torch dies with its owner: a couple of sputters as it hits the floor, then dark (a light lying IN smoke at floor level is also the worst case for the volumetric estimate)
     // …unless it already died: a man grabbed on patrol lost his torch to the floor at torchLostAt and it went dark there; when he goes down later (choked, whipped,
     // shot in the arm) nothing leaves his hand and gd.dropped is still THAT torch — keying the sputter to diedAt flashed it back on at full power wherever it lay
     // (review finding, reproduced: 70/70 for 0.9 s, 5 m from the body). The sputter runs from whichever loss came first.
-    if (!gd.lightLitAtLoss) { fl.enabled = false; return; }   // (a light that was never burning — a breach hostile's, a unit spawned light:false — does not switch ON to sputter as the gun tumbles; review 08-10 #7)
-    const lostAt = gd.torchLostAt >= 0 ? Math.min(gd.torchLostAt, gd.diedAt) : gd.diedAt;
-    const t = g.time - lostAt; fl.enabled = t < 0.9 && (t < 0.35 || Math.sin(t * 60) > 0.3); fl.intensity = fl.peakIntensity * clamp(1 - t / 0.9, 0, 1); return;
+    if (!gd.lightLitAtLoss) { fl.enabled = false; return held; }   // (a light that was never burning — a breach hostile's, a unit spawned light:false — does not switch ON to sputter as the gun tumbles; review 08-10 #7)
+    const lostAt = Math.min(gd.torchLostAt >= 0 ? gd.torchLostAt : Infinity, gd.gunLostAt >= 0 ? gd.gunLostAt : Infinity, gd.diedAt);
+    const t = g.time - lostAt; fl.enabled = t < 0.9 && (t < 0.35 || Math.sin(t * 60) > 0.3); fl.intensity = fl.peakIntensity * clamp(1 - t / 0.9, 0, 1); return held;
   }
   if (g.time < gd.lightDeadUntil) { fl.enabled = false; }
   else if (gd.lightDeadUntil > 0 && g.time < gd.lightDeadUntil + 1.0) { fl.enabled = Math.sin(g.time * 50) > 0.2; }   // sputters back
-  else fl.enabled = !gd.unit || gd.unit.light;   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit)
+  else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
+  if (fl.enabled && dozeDark(gd)) fl.enabled = false;   // (doze.ts: a man sat down to doze has put his torch out — false with its switch off)
   fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = g.engine.settings.flashlightRadius;
+  return held;
 }
 
 export function onScreen(g: Game, p: Vec3): boolean {
@@ -2375,14 +2723,19 @@ export function onScreen(g: Game, p: Vec3): boolean {
   return x > -0.92 && x < 0.92 && y > -0.9 && y < 0.9;
 }
 
+/** how long a line stands over a man's head, by its length */
+export const bubbleSecs = (text: string) => Math.min(4, Math.max(2, 1.5 + text.length * 0.055));
 /** A guard says something: a bubble over his head if he is on screen, otherwise (or if it went out over the radio) a line in the log. A man held in Sam's arm has
  *  no voice of his own — whatever the floor's logic would have him bark or radio is dropped (the callers that matter pick somebody else: spokesman, radioCaller,
  *  pickChecker skip him) — except his answers to Sam, which come `force`d (Game.interrogate) and go to the log under his name. */
-export function say(g: Game, gd: Guard, text: string, radio = false, force = false) {
+export function say(g: Game, gd: Guard, text: string, radio = false, force = false, row = true) {   // (`row` false = the bubble alone: no log row even out of sight)
   if (gd.held && !force) return;
-  gd.bubble = { text, t: g.time, dur: Math.min(4, Math.max(2, 1.5 + text.length * 0.055)), radio };
+  const net = radio || silentHush(g, gd);   // (a SILENT teammate calls nothing out: his line goes over the net — silent.ts)
+  gd.bubble = { text, t: g.time, dur: bubbleSecs(text), radio: net };
+  if (net) radioHand(gd, gd.bubble.dur);   // (handwork.ts: a line on the net lifts his hand to the handset — picture only)
+  if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
-  if (radio || !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]))) g.msg((radio ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
+  if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0])))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
 }
 
 /** Fresh guards at the start of their routes (keeps their flashlight lights and tints). Spawned units (teams: the showcase's operatives and hostiles) are not the
@@ -2393,6 +2746,7 @@ export function resetGuards(g: Game) {
   endEngagement(g, 'reset');
   g.guards = g.guards.filter(gd => !gd.unit).map(gd => new Guard(g.ch, gd.char.id, gd.route, gd.routeI, gd.flashlight, gd.char.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
+  openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
   g.breakerFixT = 0; g.aimGuard = null;
   g.escalation = 0; g.escalationT = -1; g.alarm.episode = false; g.alarm.placed = false; g.alarm.apartT = 0;   // fresh men have no memory of an alarm: calm floor, torches out (the pairing / posts lived on the old Guard objects)
   g.clearing = null; g.clearedAt.clear();   // (so did the scripts of a pair that was clearing rooms, and their ledger of rooms done)
@@ -2410,7 +2764,7 @@ export function resetGuards(g: Game) {
  *  that window (or a body found while heightened), and the shorter heightened spell a lapsed lockdown relaxes through on its way back to calm */
 const HEIGHTENED_SECS = 75, LOCKDOWN_SECS = 120, STEPDOWN_SECS = 45;
 /** how much harder an alarmed floor looks and listens: × the visual detection rate and the small-noise awareness gains (so 'huh?' comes that much sooner) */
-const KEEN = 1.25;
+export const KEEN = 1.25;
 
 /** The alarm level the guards act on: the game's, except under the showcase tour (quietUtility) whose staged firefights are nobody's memory (it is 0 there anyway —
  *  resetGuards zeroes it as the tour starts — this just makes the picture independent of that ordering). */
@@ -2437,7 +2791,7 @@ export function clearingSummary(g: Game): string { return g.clearing?.summary() 
 function spokesman(g: Game, pos: Vec3 | null, except: Guard | null = null): Guard | null {
   let best: Guard | null = null, bd = Infinity;
   for (let pass = 0; pass < 2 && !best; pass++) for (const gd of g.guards) {
-    if (offNet(gd) || gd === except || (pass === 0 && gd.state === 'alert') || gd.team !== 'guard' || gd.unit) continue;   // (a man with a forearm across his throat radios nothing; a unit is not on the staff's net — teams — and a staff-side unit, the response team of qrf.ts, gives the shift no orders: it has its own voice)
+    if (offNet(gd) || gd === except || (pass === 0 && (gd.state === 'alert' || dozeAsleep(gd))) || gd.team !== 'guard' || gd.unit) continue;   // (a man with a forearm across his throat radios nothing; a unit is not on the staff's net — teams — and a staff-side unit, the response team of qrf.ts, gives the shift no orders: it has its own voice)
     const d = pos ? v3.dist(gd.char.pos, pos) : 0; if (d < bd) { bd = d; best = gd; }
   }
   return best;
@@ -2455,9 +2809,9 @@ export function raiseEscalation(g: Game, to: 1 | 2, except: Guard | null = null,
   const again = g.time - g.alarm.raisedAt < 1.5; g.alarm.raisedAt = g.time;
   if (again && lvl <= prev && cause !== 'body') return;   // just raised (a searcher finding a body ends his hunt, and with it the episode, in the very frame the body raised the floor): the clock is re-armed, nothing else is new — no 'still nothing' on top of 'man down', no re-deal (a body always re-plans: the rooms round HIM)
   const sp = spokesman(g, g.alarm.placed ? g.alarm.pos : null, except);
-  const line = lvl <= prev ? (cause === 'body' ? `${another ? 'another man down' : 'man down confirmed'} — stay locked down, clear everything round him` : cause === 'missing' ? "and a man we can't raise — it stays locked down, find him" : cause === 'hostage' ? 'copy — he has one of ours. it stays locked down: get round him, nobody fires till he has him clean' : cause === 'device' ? 'copy, control — it stays locked down, get to it' : cause === 'civilian' ? 'copy — another one saw him. stay on it, get to where she says' : 'still nothing — it stays locked down')
+  const line = lvl <= prev ? (cause === 'body' ? `${another ? 'another man down' : 'man down confirmed'} — stay locked down, clear everything round him` : cause === 'missing' ? "and a man we can't raise — it stays locked down, find him" : cause === 'hostage' ? 'copy — he has one of ours. it stays locked down: get round him, nobody fires till he has him clean' : cause === 'device' ? 'copy, control — it stays locked down, get to it' : cause === 'civilian' ? w('copy — another one saw him. stay on it, get over there', 'copy — another one saw him. stay on it, get to where she says') : 'still nothing — it stays locked down')
     : lvl >= 2 ? (cause === 'hostage' ? 'he has one of ours — lock it down: weapons out, everyone to him, box him in and hold your fire' : `${cause === 'body' ? (another ? 'another man down — ' : 'man down — ') : cause === 'missing' ? "a man missing on top of it — " : cause === 'device' ? 'copy, control — ' : cause === 'civilian' ? "copy — that's a witness. " : ''}lock it down: pairs, weapons out, nobody wanders`)
-    : cause === 'body' ? 'we have a man down — weapons out, everyone sharp' : cause === 'missing' ? "a man off the net and not on his route — weapons out, eyes open for him, treat it as real" : cause === 'device' ? 'copy, control — weapons out, everyone sharp, somebody get eyes on it' : cause === 'civilian' ? "copy — somebody's on the floor who shouldn't be. weapons out, treat it as real" : 'nothing here — stay sharp, check your corners';
+    : cause === 'body' ? 'we have a man down — weapons out, everyone sharp' : cause === 'missing' ? "a man off the net and not on his route — weapons out, eyes open for him, treat it as real" : cause === 'device' ? 'copy, control — weapons out, everyone sharp, somebody get eyes on it' : cause === 'civilian' ? (WORDS.on && !isOffice(g.level) ? "copy — somebody's here who shouldn't be. weapons out, treat it as real" : "copy — somebody's on the floor who shouldn't be. weapons out, treat it as real") : 'nothing here — stay sharp, check your corners';
   if (sp) { g.say(sp, line, true); g.audio.play('radio', sp.char.bones.head ?? sp.char.pos, 0.7); }
   if (lvl >= 2) { assignLockdown(g, prev >= 2, except); if (cause !== 'hostage') planClears(g, false, cause === 'device' || cause === 'civilian' ? 'search' : cause); }   // (re-dealt on a re-arm too: they have just converged on a new fix, so pair whoever is together now and post the spare man by IT) — and the pair clears the rooms nearest that fix (more of them, and whatever they were on dropped, for a body)
 }
@@ -2494,13 +2848,13 @@ export function rollcallState(g: Game): Rollcall {
   let R = rollcalls.get(g); if (!R) { R = { nextAt: -1, stage: 'idle', t0: 0, caller: null, missing: null, answered: false, checks: 0 }; rollcalls.set(g, R); }
   return R;
 }
-function rollcallInterval(g: Game): number { return (escalationOf(g) >= 1 ? ROLLCALL_ALARMED_SECS : ROLLCALL_CALM_SECS) * (1 + (Math.random() * 2 - 1) * ROLLCALL_JITTER); }
+function rollcallInterval(g: Game): number { return (escalationOf(g) >= 1 ? ROLLCALL_ALARMED_SECS : ROLLCALL_CALM_SECS) * (1 + (simRandom() * 2 - 1) * ROLLCALL_JITTER); }
 /** who calls the check / asks after the silent man: a living man with his hands free for the radio — not mid-fight, not choreographed (the pair on a door), not
  *  walking up to or standing over a body — one on his route for choice, else whoever is left; null = nobody can just now */
 function radioCaller(g: Game): Guard | null {
   let best: Guard | null = null, br = -1;
   for (const x of g.guards) {
-    if (offNet(x) || x.state === 'alert' || x.script || (x.bodyDuty && x.bodyDuty.stage !== 'fan') || x.team !== 'guard') continue;   // (teams: the radio check is the staff's)
+    if (offNet(x) || x.state === 'alert' || x.script || (x.bodyDuty && x.bodyDuty.stage !== 'fan') || x.team !== 'guard' || dozeAsleep(x)) continue;   // (teams: the radio check is the staff's; doze.ts: a man asleep calls nobody — he does count in, eyes shut)
     const r = x.state === 'patrol' ? 2 : 1; if (r > br) { br = r; best = x; }
   }
   return best;
@@ -2565,6 +2919,7 @@ function checkOnDone(g: Game, gd: Guard, M: Guard, capped: boolean) {
 export function updateRollcall(g: Game, dt: number) {
   const R = rollcallState(g);
   if (g.quietUtility || !g.aiEnabled) { R.stage = 'idle'; R.nextAt = -1; return; }   // (the tour's minutes are nobody's silence; resetGuards zeroes it too)
+  if (g.level.scenarios?.quiet?.radioCheck === false) { R.stage = 'idle'; R.nextAt = -1; return; }   // (a level whose shift keeps no check — scenarios.ts QuietData.radioCheck; absent on every level but the two lessons that say so)
   if (R.nextAt < 0) R.nextAt = g.time + rollcallInterval(g);
   const staff = g.guards.filter(x => x.team === 'guard');   // (teams: the net is the STAFF's — a unit neither calls, answers, nor is asked after; with none spawned this is the roster it always was)
   const living = staff.filter(x => x.state !== 'dead');
@@ -2600,6 +2955,7 @@ export function updateRollcall(g: Game, dt: number) {
           R.stage = 'idle'; R.nextAt = g.time + rollcallInterval(g); return;
         }
         if (R.caller) { g.say(R.caller, `${M.callsign}? … ${M.callsign}, sound off`, true); g.audio.play('radio', R.caller.char.bones.head ?? R.caller.char.pos, 0.55); }
+        netQuietAsked(g, R.caller, M, staff);   // (netquiet.ts — a return on its first line with its switch off: a man who does not answer the roll call shakes the one who asked and the men on the net)
         if (M.missedAt < 0) M.missedAt = g.time;   // from here on the others count him missing (superviseLockdown stops dealing his corpse a role)
         R.stage = 'asked';
       }
@@ -2837,12 +3193,15 @@ function holdPost(g: Game, gd: Guard, dt: number, walk: number): boolean {
 /** Lockdown housekeeping on a calm pass, one door a frame: a leaf standing open (or left a hand ajar, unlatched) within a couple of metres gets pulled to — only one
  *  beside or behind him (never the one he is about to walk through), not one anybody is handling right now, only from where the closing leaf cannot sweep him,
  *  and not while a colleague is at the doorway (last man through shuts it) — and a keyed door somebody left unlocked gets its bolt thrown again as he passes (a
- *  kicked-in keep cannot be relocked: that he remarks on instead, the notice in updateGuard). Exterior doors are left alone; any one door at most every 12 s. */
-function lockdownDoors(g: Game, gd: Guard) {
+ *  kicked-in keep cannot be relocked: that he remarks on instead, the notice in updateGuard). Exterior doors are left alone — their closers shut them — unless
+ *  DOORSTAY has taken the closers away: then the ones the level gave a closer are his to shut too; any one door at most every 12 s.
+ *  `calm` (a floor below lockdown, under DOORSTAY — no closer does it for him any more): only his keyed doors and the doors to the outside, and only those the level
+ *  gave a closer (one authored to stand open stays), pulled to behind him — the lock bites again as the latch catches; nothing relocked, nothing said. */
+function lockdownDoors(g: Game, gd: Guard, calm = false) {
   const c = gd.char, f = c.forward();
   for (const d of g.doors.list) {
-    if (d.def.exterior || g.time - d.guardT < 12 || d.quietT < 0.6) continue;   // (quietT: somebody's hands or shoulder are on that leaf right now — his own included, pushing through it)
-    const open = !d.latched && Math.abs(d.angle) > 0.03, relock = !!d.def.locked && !d.locked && !d.lockBroken;
+    if (d.off || (calm ? !(d.def.locked || d.def.exterior) || d.def.closer === false : d.def.exterior && !(g.doors.stay && d.def.closer !== false)) || g.time - d.guardT < 12 || d.quietT < 0.6) continue;   // (quietT: somebody's hands or shoulder are on that leaf right now — his own included, pushing through it)
+    const open = !d.latched && (calm || Math.abs(d.angle) > 0.03), relock = !calm && !!d.def.locked && !d.locked && !d.lockBroken;   // (calm: a keyed leaf resting a hair off its latch is a lock that does not bite — to as well)
     if (!open && !relock) continue;
     const fc = d.frameCentre; const dx = fc[0] - c.pos[0], dz = fc[2] - c.pos[2]; const dd = Math.hypot(dx, dz);
     if (dd > 2.0 || dd < 0.9 || (dx * f[0] + dz * f[2]) / dd > 0.55) continue;   // out of reach, standing in the doorway (that is a man passing through, not tidying), or ahead of him
@@ -2872,8 +3231,9 @@ export function tension(g: Game): number {
   return x;
 }
 
-// ================================================================ SIDES: spawned units, and the engagement seam the 'Breach' stage drives (teams.ts has the table)
-// THE CONTRACT (for the stage lane — demo.ts / a breach.ts — which calls this and nothing deeper):
+// ================================================================ SIDES: spawned units, and the engagement seam (teams.ts has the table of sides; the functions are here)
+// THE CONTRACT (for whoever stages men and calls this and nothing deeper — spawnUnit / despawnUnit: director.ts, qrf.ts, nightbreach.ts, rescue.ts, quiet.ts, stress.ts;
+// engage(): the Director's drill.exchange alone in the game, and the probes under tools/qa directly):
 //   spawnUnit(g, { team, pos, yaw?, weapon?, tint?, tint2?, carbineRig?, name?, light? }) → Guard
 //       Stands an AI man of side `team` ('operative' | 'hostile' — or 'guard': extra staff off no route) at `pos` facing `yaw`, carrying `weapon` (default: an
 //       operative Sam's FN2000 row, a hostile the AKS-74U carbine, staff the 9 mm; `carbineRig: true` = the AKS-74U whatever `weapon` says — in this codebase the
@@ -2898,9 +3258,17 @@ export function tension(g: Game): number {
 //       Game. Nothing here touches the staff's alarm, radio net or lockdown: those are gated to team 'guard' throughout guards.ts.
 //   BREACH_HOOKS bundles the same functions for a caller that wants one import.
 /** What spawnUnit takes (see the contract above). */
-export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: WeaponId; tint?: Vec3; tint2?: Vec3; carbineRig?: boolean; name?: string; light?: boolean; }
+export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: WeaponId; tint?: Vec3; tint2?: Vec3; carbineRig?: boolean; name?: string; light?: boolean;
+  /** the pair a teammate is dealt into (UnitInfo.pair) */
+  pair?: PairId;
+  /** a caller that has decided to stand more men than cast shadows (the four-man squad, nightbreach.ts): the character count this spawn may reach, up to the
+   *  skinning's MAX_SKINNED — the men past the eighth DRAWN are skinned, lit and shot at like anybody but have no shadow / reflection / bounce proxies
+   *  (BoxWorld.addCharacterCapsules stops at eight; game.ts draws the living first once there are more). Absent = the eight, as ever. */
+  budget?: number; }
 /** the character budget: BoxWorld uploads shadow capsules for at most 8 characters (scene/boxes.ts addCharacterCapsules), Sam included */
 const MAX_CHARACTERS = 8;
+/** … and the skinning holds this many (anim/characters.ts MAX_CHARS): the most a caller's own `budget` can ask for */
+const MAX_SKINNED = 16;
 /** ids handed to units: clear of Sam's 1 and the staff's 10‥15, inside the owner byte */
 const UNIT_ID0 = 20, UNIT_ID1 = 250;
 let unitSerial = 0;
@@ -2908,10 +3276,12 @@ const TEAM_TINT: Record<Team, Vec3> = { guard: [0.42, 0.36, 0.25], operative: [0
 const TEAM_TINT2: Record<Team, Vec3> = { guard: [0.02, 0.02, 0.025], operative: [0.05, 0.07, 0.06], hostile: [0.09, 0.08, 0.05], player: [0.1, 0.32, 0.18], civilian: [0.05, 0.06, 0.1] };
 export function spawnUnit(g: Game, o: UnitOpts): Guard {
   if (!g.tune.teams) throw new Error('spawnUnit: sides are switched off (Game.tune.teams) — no unit may be spawned');
-  if (o.team === 'player') throw new Error("spawnUnit: the 'player' side is Sam alone — spawn an 'operative' for a man on his side");
+  if (o.team === 'player') throw new Error("spawnUnit: the 'player' side is the player alone — spawn an 'operative' for a man on his side");
   if (o.team === 'civilian') throw new Error("spawnUnit: civilians are not units — civilians.ts stands them up from the level's civilians block (Game.civilians)");
   const chars = 1 + g.guards.length;
-  if (chars + 1 > MAX_CHARACTERS) throw new Error(`spawnUnit: ${chars} characters already stand (Sam + ${g.guards.length} guards/units) and the shadow-capsule budget is ${MAX_CHARACTERS} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first`);
+  const cap = Math.max(MAX_CHARACTERS, Math.min(o.budget ?? 0, MAX_SKINNED));
+  if (chars + 1 > cap) throw new Error(cap > MAX_CHARACTERS ? `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and this caller's budget is ${cap} — despawn a unit or reset the guards first`
+    : `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and the shadow-capsule budget is ${MAX_CHARACTERS} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first`);
   const steady = g.engine.lights.lights.filter(l => l.ttl < 0).length;
   if (steady + 1 > MAX_LIGHTS) throw new Error(`spawnUnit: ${steady} steady lights already exist and the light buffer holds ${MAX_LIGHTS} (render/lights.ts) — his weapon light would never upload; despawn a unit first`);
   const used = new Set<number>([g.player.char.id, ...g.guards.map(x => x.char.id)]);
@@ -2922,7 +3292,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard {
   const route: PatrolRoute = { name, points: [[o.pos[0], 0, o.pos[2]]], wait: [0], weapon, keys: [] };   // his one-point stand: nothing to walk, nothing on his belt
   const T = g.tune; const fl = g.engine.lights.add(torchLightDef(`unitlight${id}`, id, T.flashIntensity, T.flashInner, T.flashOuter));
   const gd = new Guard(g.ch, id, route, -1, fl, o.tint ?? TEAM_TINT[o.team], { tint2: o.tint2 ?? TEAM_TINT2[o.team], yaw: o.yaw ?? 0, name, team: o.team });
-  gd.unit = { name, spawnedAt: g.time, light: o.light !== false }; gd.hold = true;
+  gd.unit = { name, spawnedAt: g.time, light: o.light !== false }; if (o.pair) gd.unit.pair = o.pair; gd.hold = true;
   gd.heardUpTo = g.eventSeq;   // (deaf to what was in the air before he existed; the ids run on from here)
   gd.char.update(0);           // a pose — bones — before anybody's sight test or the frame's capsule upload reads him
   g.guards.push(gd);
@@ -2970,7 +3340,7 @@ function armForFight(g: Game, gd: Guard, foes: Guard[], pin: boolean, delay = 0)
   if (gd.state === 'dead') return;
   if (gd.script) endGuardScript(gd, 'alert');
   gd.hold = false; gd.pinned = pin; gd.state = 'alert'; gd.awareness = 1; gd.searchT = 0; gd.bodyDuty = null; gd.searchPlan = null; gd.standoff = null;
-  gd.reactT = 0.15 + Math.random() * 0.35 + delay; gd.fireCd = 0.4 + Math.random() * 0.4; gd.reloadT = -1; resetChase(gd);
+  gd.reactT = 0.15 + simRandom() * 0.35 + delay; gd.fireCd = 0.4 + simRandom() * 0.4; gd.reloadT = -1; resetChase(gd);
   gd.witness.alertedBy = 'radio'; gd.witness.alertT = g.time;   // (an order put him there)
   // his man: the enemy he sees best from where he stands, else the nearest living one — fixed, and licensed at once if actually in sight
   let best: Guard | null = null, bestRate = -1, seen = false;
@@ -2994,11 +3364,11 @@ export function engage(g: Game, operatives: Guard[], hostiles: Guard[], opts: { 
   return E;
 }
 /** name of the character with this id, for the record: Sam, a man's callsign, or the bare id */
-function nameOfId(g: Game, id: number): string { if (id === g.player.char.id) return 'Sam'; return g.guards.find(x => x.char.id === id)?.callsign ?? (id < 0 ? '—' : `#${id}`); }
+function nameOfId(g: Game, id: number): string { if (id === g.player.char.id) return 'Player'; return g.guards.find(x => x.char.id === id)?.callsign ?? (id < 0 ? '—' : `#${id}`); }
 /** Close the running engagement with `outcome` (no-op when none is running or it is already done). */
 function endEngagement(g: Game, outcome: EngageResult['outcome']) {
   const E = engagements.get(g); if (!E || E.done) return;
-  const living = (xs: Guard[]) => xs.filter(x => x.state !== 'dead' && g.guards.includes(x)).length;
+  const living = (xs: Guard[]) => xs.filter(x => x.state !== 'dead' && g.guards.includes(x) && !runnerFled(x)).length;   // (runner.ts: a man who dropped it and ran is nobody's living hostile)
   E.done = true; E.result = { outcome, secs: g.time - E.t0, kills: E.kills.slice(), rounds: { ...E.rounds }, operativesLeft: living(E.operatives), hostilesLeft: living(E.hostiles) };
   E.resolve(E.result);
 }
@@ -3011,7 +3381,7 @@ function tickEngagement(g: Game) {
     if (!g.guards.includes(x)) { gone = true; E.alive.delete(x); continue; }
     if (x.state === 'dead') { E.alive.delete(x); E.kills.push({ victim: x.callsign, team: x.team, by: x.killerId >= 0 ? nameOfId(g, x.killerId) : x.downBy ?? '—', t: g.time - E.t0 }); }
   }
-  const living = (xs: Guard[]) => xs.some(x => x.state !== 'dead' && g.guards.includes(x));
+  const living = (xs: Guard[]) => xs.some(x => x.state !== 'dead' && g.guards.includes(x) && !runnerFled(x));   // (runner.ts: a man who dropped it and ran is nobody's living hostile)
   if (gone) endEngagement(g, 'reset');
   else if (!living(E.hostiles)) endEngagement(g, 'cleared');
   else if (!living(E.operatives)) endEngagement(g, 'wiped');

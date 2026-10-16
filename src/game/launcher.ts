@@ -7,17 +7,20 @@
 // (player.ts: the RING attachment selected with the rifle's slot digit, let go on the right button), an operative handed the same rifle later. Rings in flight live on Game.rings; game.ts steps them right after the player and
 // draws them with the items.
 import { Vec3, v3, quat } from '../math/vec';
+import { GEAR, gearText } from './gear';
 import { BoxFlag, makeBox, Box } from '../scene/boxes';
 import type { Character } from './character';
 import type { Game, Guard } from './game';
 import type { ThrowSolution } from './throwables';
-import { RING_ITEM } from './throwables';
+import { RING_ITEM, spongeBoxes } from './throwables';
 import { killGuard, bodyHit } from './combat';
 import { civilianBodies, toAlarmed } from './civilians';
 import { endGuardScript } from './squad';
 import { PLAYER_ID } from './consts';
 import { chipMark, staticSurface } from './marks';
 import { clackFx } from './particleFx';
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** Every number of the ring's flight and of what it does (panel-tunable; the QA probes read them rather than copy them). */
 export const RING = {
@@ -40,15 +43,17 @@ export const RING = {
   /** aim: lead the man under the reticle by his ground velocity (one iteration), and solve the launch elevation so the arc passes through the aim point (two) */
   lead: true, solveIters: 2,
 };
-/** the yelp of a man a ring has just doubled over (placeholder lines — the writing pass is the designer's) */
+/** the yelp of a man a ring has just doubled over (placeholder lines — the writing pass is the maintainer's) */
 const STAGGER_LINES = ['agh — what the—', 'AH! son of a—', 'ow! what— who\'s there?!', 'nngh— something hit me!', 'jesus— my ribs—'];
 
 /** One ring in the air: where, how fast, how long, whose (the Character that fired it: never hit by it, blamed for the noise, credited with the knockout), its roll about the line of flight (for the picture) */
 export interface Ring { pos: Vec3; vel: Vec3; age: number; shooter: Character; spin: number; }
 
+/** What a thing out of the launcher's tube flies by (the ring's RING; the 40 mm round's table in he40.ts): launchVel and arcSolve read only these. */
+export interface Ballistics { speed: number; gravity: number; drag: number; radius: number; life: number; substeps: number; solveIters: number; }
 /** the launch velocity for a ring from `from` to pass through `target`: dead at it, raised by however far a simulated ring falls short over that distance (twice) */
-function launchVel(from: Vec3, target: Vec3): Vec3 {
-  const R = RING; const d = v3.sub(target, from); const L = v3.len(d); if (L < 1e-3) return [0, 0, R.speed];
+export function launchVel(from: Vec3, target: Vec3, R: Ballistics = RING): Vec3 {
+  const d = v3.sub(target, from); const L = v3.len(d); if (L < 1e-3) return [0, 0, R.speed];
   let aim = v3.copy(target);
   let v0: Vec3 = v3.scale(v3.normalize(d), R.speed);
   for (let it = 0; it < R.solveIters; it++) {
@@ -71,8 +76,10 @@ function launchVel(from: Vec3, target: Vec3): Vec3 {
 /** Where a ring fired now from `from` at `target` would go: the launch velocity, and the polyline of its flight until it first meets a static, a leaf, a prop or the
  *  floor (or its life runs out) — the shape the canisters' preview draws (ThrowSolution: player.ts hands it to the overlay as throwPreview). Men are not in it: the
  *  line shows the arc, the reticle shows the man. */
-export function ringSolve(g: Game, from: Vec3, target: Vec3): ThrowSolution {
-  const R = RING; const v0 = launchVel(from, target);
+export function ringSolve(g: Game, from: Vec3, target: Vec3): ThrowSolution { return arcSolve(g, from, target, RING); }
+/** ringSolve for anything the tube throws (the ring; he40.ts's round): the same stepping as the live flight, by that thing's own table */
+export function arcSolve(g: Game, from: Vec3, target: Vec3, R: Ballistics): ThrowSolution {
+  const v0 = launchVel(from, target, R);
   // stepped exactly as updateRings steps a live ring at 60 Hz (dt / substeps), so the polyline is the flight to the centimetre; a point every substeps-th step
   const points: Vec3[] = []; let p = v3.copy(from), v = v3.copy(v0); let land = v3.copy(target); const h = 1 / 60 / R.substeps; let T = 0;
   for (let i = 0; i * h < R.life; i++) {
@@ -87,7 +94,8 @@ export function ringSolve(g: Game, from: Vec3, target: Vec3): ThrowSolution {
 }
 
 /** The point to send a ring at for what the reticle has: the HEAD of the man under it (that is where it does its work), led by his ground velocity over the ring's
- *  time of flight when `lead`; else the fixture / world point the cursor names, as a round would go. */
+ *  time of flight when `lead`; else the fixture / world point the cursor names (a ring is LOBBED at a spot — the clack is the tool — so it keeps the cursor's point where a round with nothing under
+ *  the reticle now goes level: player.ts freeAim). */
 export function ringAimPoint(g: Game, from: Vec3): Vec3 {
   const gd = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : g.aimGuard;
   if (gd) {
@@ -103,7 +111,7 @@ export function ringAimPoint(g: Game, from: Vec3): Vec3 {
 /** Let one ring go from `from` at `target` off `shooter`'s launcher: it is in the air from this frame (Game.rings), the launcher's whoosh-thunk plays at the tube, and
  *  the room inside nine metres or so hears it go (a 'prop' event at the shooter, RING.launchNoise — not gunfire: nobody eighty metres off learns a thing). */
 export function fireRing(g: Game, shooter: Character, from: Vec3, target: Vec3): Ring {
-  const ring: Ring = { pos: v3.copy(from), vel: launchVel(from, target), age: 0, shooter, spin: Math.random() * Math.PI };
+  const ring: Ring = { pos: v3.copy(from), vel: launchVel(from, target), age: 0, shooter, spin: simRandom() * Math.PI };
   g.rings.push(ring);
   g.audio.play('launcher', from, 0.8);
   g.events.push({ kind: 'prop', pos: v3.copy(shooter.pos), time: g.time, loud: false, level: RING.launchNoise, who: shooter.id });
@@ -132,7 +140,7 @@ export function updateRings(g: Game, dt: number) {
       let best = Infinity; let hitC: Character | null = null; let hitG: Guard | null = null;
       const inside = (c: Character) => r.pos[1] < (c.bones.headTop?.[1] ?? c.pos[1] + 1.75) + R.radius;
       const tryChar = (c: Character, gd: Guard | null) => { if (c === r.shooter || !c.alive) return; const t = bodyHit(c, r.pos, dir, reach, inside); if (t >= 0 && t < best) { best = t; hitC = c; hitG = gd; } };
-      for (const gd of g.guards) if (gd.state !== 'dead') tryChar(gd.char, gd);
+      for (const gd of g.guards) if (gd.state !== 'dead' && gd.team !== 'operative') tryChar(gd.char, gd);   // (his own side: a ring passes a teammate as his rounds do — combat.ts)
       for (const cv of civilianBodies(g)) tryChar(cv.char, cv);
       if (!g.player.down) tryChar(g.player.char, null);
       const st = g.col.raycast(r.pos, dir, reach); const ph = g.props.raycast(r.pos, dir, reach);
@@ -162,7 +170,7 @@ function spend(g: Game, r: Ring, at: Vec3, vel: Vec3) {
 function clack(g: Game, at: Vec3, k = 1) {
   g.audio.play('canisterBounce', at, 0.55 * k, { rate: 1.5 });
   clackFx(g, at);   // a few sparks off it (GPU particles; nothing with them off)
-  g.events.push({ kind: 'prop', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: RING.clackNoise * k, who: 0 });
+  g.events.push({ kind: 'prop', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: RING.clackNoise * k, who: 0, lure: true });
 }
 
 /** A ring has found a man at `at` along `dir`. Head-high or higher (RING.koBelowNeck under his neck joint and up): out cold — killGuard's quiet 'struck' path by the
@@ -173,7 +181,7 @@ function ringHitsCharacter(g: Game, r: Ring, c: Character, gd: Guard | null, dir
   const neck = c.bones.neck ?? v3.add(c.pos, [0, 1.42, 0]);
   const high = at[1] >= neck[1] - R.koBelowNeck;
   if (!gd) {   // Sam (an operative's ring, one day; his own can never reach him)
-    c.anim.hit(); g.audio.play('bodyHit', at, 0.5, { rate: 1.1 }); g.msg(high ? 'a ring airfoil off the side of your head — from a friend, luckily' : 'a ring airfoil in the ribs');
+    c.anim.hit(); g.audio.play('bodyHit', at, 0.5, { rate: 1.1 }); g.msg(gearText(high ? 'a ring airfoil off the side of your head — from a friend, luckily' : 'a ring airfoil in the ribs'));
   } else if (gd.civ && !high) {   // a CIVILIAN low in the body: no stagger drill and no guard's yelp — the thump, the flinch, and she is frightened where she stands (civilians.ts toAlarmed 'noise', placed back up the ring's line: something struck her out of the dark), then runs for a guard or a phone like from any fright
     c.anim.hit(); g.audio.play('bodyHit', v3.add(c.pos, [0, 1.1, 0]), 0.55, { rate: 1.05 });
     if (!gd.held) toAlarmed(g, gd, 'noise', [c.pos[0] - dir[0] * R.staggerBack, 0, c.pos[2] - dir[2] * R.staggerBack], false);
@@ -186,7 +194,7 @@ function ringHitsCharacter(g: Game, r: Ring, c: Character, gd: Guard | null, dir
     g.events.push({ kind: 'prop', pos: v3.copy(c.pos), time: g.time, loud: false, level: R.koNoise, who: r.shooter.id });
     if (byPlayer) g.player.noise = Math.max(g.player.noise, R.koNoise);
   } else staggerGuard(g, gd, dir, r.shooter);
-  spend(g, r, v3.mad(at, dir, -0.05), [-dir[0] * 1.5 + (Math.random() - 0.5), 1 + Math.random(), -dir[2] * 1.5 + (Math.random() - 0.5)]);   // it drops off him, back the way it came a little
+  spend(g, r, v3.mad(at, dir, -0.05), [-dir[0] * 1.5 + (simRandom() - 0.5), 1 + simRandom(), -dir[2] * 1.5 + (simRandom() - 0.5)]);   // it drops off him, back the way it came a little
 }
 
 /** A ring in the body (below the knockout line): he doubles over — rooted RING.stagger seconds the way the dazzle roots a man (Guard.staggerUntil → reactT; guards.ts
@@ -209,7 +217,7 @@ export function staggerGuard(g: Game, gd: Guard, dir: Vec3, shooter: Character) 
   }
   gd.awareness = Math.max(gd.awareness, R.staggerAware);
   if (g.aiEnabled) gd.witness.heard.small++;   // (his record: something got him — counted with the small things; the alert it tips him into books itself next frame)
-  g.say(gd, STAGGER_LINES[Math.floor(Math.random() * STAGGER_LINES.length) % STAGGER_LINES.length]);
+  { const pool = w(gd.state === 'alert' ? STAGGER_LINES.filter(t => !/who's there/.test(t)) : STAGGER_LINES, STAGGER_LINES); g.say(gd, pool[Math.floor(simRandom() * pool.length) % pool.length]); }   // (words.ts: a man already fighting Sam knows who is there; one roll either way)
   g.events.push({ kind: 'prop', pos: v3.copy(c.pos), time: g.time, loud: false, level: R.hitNoise, who: shooter.id });
   if (shooter.id === PLAYER_ID) g.player.noise = Math.max(g.player.noise, R.hitNoise);
 }
@@ -217,12 +225,17 @@ export function staggerGuard(g: Game, gd: Guard, dir: Vec3, shooter: Character) 
 export function staggerLines(): string[] { return [...STAGGER_LINES]; }
 
 /** Rings in flight as boxes: three thin slats crossed at 60° in the plane square to its flight, rolling about it — a small pale blur of a ring going away from you.
- *  Raster-only (NoShadow): nothing traces a 6 cm rubber ring. */
+ *  Raster-only (NoShadow): nothing traces a 6 cm rubber ring. Under the 2010s issue kit (gear.ts GEAR.on) the same thing in the air is drawn as what it is
+ *  worded there, a 40 mm sponge round: throwables.ts spongeBoxes, three boxes under the same flags — the picture alone; the flight above reads neither. */
 export function ringBoxes(g: Game, out: Box[]) {
   const H = RING_ITEM.half, col = RING_ITEM.albedo;
   for (const r of g.rings) {
     const sp = v3.len(r.vel); if (sp < 1e-3) continue; const z = v3.scale(r.vel, 1 / sp);
     const up: Vec3 = Math.abs(z[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0]; const x0 = v3.normalize(v3.cross(up, z)); const y0 = v3.cross(z, x0);
+    if (GEAR.on) {   // the 2010s issue kit's 40 mm sponge round (throwables.ts SPONGE_ITEM): the slug nose first along its flight, rolling about it — the same three boxes it lies as once spent
+      const ca = Math.cos(r.spin), sa = Math.sin(r.spin);
+      spongeBoxes(out, v3.copy(r.pos), quat.fromBasis(v3.mad(v3.scale(x0, ca), y0, sa), v3.mad(v3.scale(x0, -sa), y0, ca), z), v3.yawOf(z)); continue;
+    }
     for (let k = 0; k < 3; k++) {
       const a = r.spin + k * Math.PI / 3; const ca = Math.cos(a), sa = Math.sin(a);
       const x: Vec3 = v3.mad(v3.scale(x0, ca), y0, sa), y: Vec3 = v3.mad(v3.scale(x0, -sa), y0, ca);
@@ -234,5 +247,5 @@ export function ringBoxes(g: Game, out: Box[]) {
 /** Panel / QA: 'rings ▸ 4 left · attachment RING · 1 in the air · 2 on the floor' */
 export function ringSummary(g: Game): string {
   const rf = g.player.rifle;
-  return `rings ▸ ${g.player.hasRifle ? `${rf.rings} left · attachment ${rf.attachment ? rf.attachment.toUpperCase() : 'none'} (2 again with the rifle up; RMB fires it)` : 'no FN2000 in the kit'} · ${g.rings.length} in the air · ${g.items.items.filter(x => x.kind === 'ring').length} on the floor`;
+  return `rings ▸ ${g.player.hasRifle ? `${rf.rings} left · attachment ${rf.attachment ? rf.attachment.toUpperCase() : 'none'} (2 again with the rifle up; RMB fires it)` : gearText('no FN2000 in the kit')} · ${g.rings.length} in the air · ${g.items.items.filter(x => x.kind === 'ring').length} on the floor`;
 }

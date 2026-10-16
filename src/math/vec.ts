@@ -1,4 +1,6 @@
 // Minimal vector / matrix / quaternion helpers. Column-major mat4 (WebGPU/glTF convention).
+import { hyp2, hyp3, hyp4 } from './hyp';
+export { hyp2, hyp3, hyp4 };   // (Math.hypot's own bits without its call: see hyp.ts)
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number]; // x y z w
 export type Mat4 = Float32Array; // 16, column-major
@@ -23,15 +25,15 @@ export const v3 = {
   mul: (a: Vec3, b: Vec3): Vec3 => [a[0] * b[0], a[1] * b[1], a[2] * b[2]],
   dot: (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
   cross: (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
-  len: (a: Vec3) => Math.hypot(a[0], a[1], a[2]),
-  dist: (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]),
+  len: (a: Vec3) => hyp3(a[0], a[1], a[2]),
+  dist: (a: Vec3, b: Vec3) => hyp3(a[0] - b[0], a[1] - b[1], a[2] - b[2]),
   /** planar (XZ) distance — what 'how far apart on the floor' means everywhere in the game layer */
-  distXZ: (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]),
+  distXZ: (a: Vec3, b: Vec3) => hyp2(a[0] - b[0], a[2] - b[2]),
   /** yaw of a direction: the angle whose forward [sin, 0, cos] points along d (Character.bodyYaw / aimYaw convention; y ignored) */
   yawOf: (d: Vec3) => Math.atan2(d[0], d[2]),
   /** yaw from one point toward another (same convention) */
   yawTo: (from: Vec3, to: Vec3) => Math.atan2(to[0] - from[0], to[2] - from[2]),
-  normalize: (a: Vec3): Vec3 => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+  normalize: (a: Vec3): Vec3 => { const l = hyp3(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
   lerp: (a: Vec3, b: Vec3, t: number): Vec3 => [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)],
   min: (a: Vec3, b: Vec3): Vec3 => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.min(a[2], b[2])],
   max: (a: Vec3, b: Vec3): Vec3 => [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.max(a[2], b[2])],
@@ -46,7 +48,7 @@ export const quat = {
     return [aw * bx + ax * bw + ay * bz - az * by, aw * by - ax * bz + ay * bw + az * bx, aw * bz + ax * by - ay * bx + az * bw, aw * bw - ax * bx - ay * by - az * bz];
   },
   conj: (a: Quat): Quat => [-a[0], -a[1], -a[2], a[3]],
-  normalize: (a: Quat): Quat => { const l = Math.hypot(a[0], a[1], a[2], a[3]) || 1; return [a[0] / l, a[1] / l, a[2] / l, a[3] / l]; },
+  normalize: (a: Quat): Quat => { const l = hyp4(a[0], a[1], a[2], a[3]) || 1; return [a[0] / l, a[1] / l, a[2] / l, a[3] / l]; },
   dot: (a: Quat, b: Quat) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3],
   /** Normalized lerp along shortest arc (fine for animation blending). */
   nlerp: (a: Quat, b: Quat, t: number): Quat => {
@@ -72,7 +74,7 @@ export const quat = {
   /** Shortest-arc rotation taking unit vector a onto unit vector b. */
   fromTo: (a: Vec3, b: Vec3): Quat => {
     const d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-    if (d < -0.9999) { const ax: Vec3 = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]; const c: Vec3 = [a[1] * ax[2] - a[2] * ax[1], a[2] * ax[0] - a[0] * ax[2], a[0] * ax[1] - a[1] * ax[0]]; const l = Math.hypot(c[0], c[1], c[2]) || 1; return [c[0] / l, c[1] / l, c[2] / l, 0]; }
+    if (d < -0.9999) { const ax: Vec3 = Math.abs(a[0]) < 0.9 ? [1, 0, 0] : [0, 1, 0]; const c: Vec3 = [a[1] * ax[2] - a[2] * ax[1], a[2] * ax[0] - a[0] * ax[2], a[0] * ax[1] - a[1] * ax[0]]; const l = hyp3(c[0], c[1], c[2]) || 1; return [c[0] / l, c[1] / l, c[2] / l, 0]; }
     const c: Vec3 = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
     return quat.normalize([c[0], c[1], c[2], 1 + d]);
   },
@@ -100,13 +102,14 @@ export const m4 = {
     }
     return out;
   },
-  fromTRS: (out: Mat4, t: Vec3, q: Quat, s: Vec3) => {
-    const x = q[0], y = q[1], z = q[2], w = q[3];
+  fromTRS: (out: Mat4, t: Vec3, q: Quat, s: Vec3) => m4.fromTRSs(out, t[0], t[1], t[2], q[0], q[1], q[2], q[3], s[0], s[1], s[2]),
+  /** fromTRS over scalars (the same expressions, operand for operand — bit-identical results; the skeleton's hot loop, which has them in a flat array, needs no temporaries) */
+  fromTRSs: (out: Mat4, tx: number, ty: number, tz: number, x: number, y: number, z: number, w: number, s0: number, s1: number, s2: number) => {
     const x2 = x + x, y2 = y + y, z2 = z + z, xx = x * x2, xy = x * y2, xz = x * z2, yy = y * y2, yz = y * z2, zz = z * z2, wx = w * x2, wy = w * y2, wz = w * z2;
-    out[0] = (1 - (yy + zz)) * s[0]; out[1] = (xy + wz) * s[0]; out[2] = (xz - wy) * s[0]; out[3] = 0;
-    out[4] = (xy - wz) * s[1]; out[5] = (1 - (xx + zz)) * s[1]; out[6] = (yz + wx) * s[1]; out[7] = 0;
-    out[8] = (xz + wy) * s[2]; out[9] = (yz - wx) * s[2]; out[10] = (1 - (xx + yy)) * s[2]; out[11] = 0;
-    out[12] = t[0]; out[13] = t[1]; out[14] = t[2]; out[15] = 1;
+    out[0] = (1 - (yy + zz)) * s0; out[1] = (xy + wz) * s0; out[2] = (xz - wy) * s0; out[3] = 0;
+    out[4] = (xy - wz) * s1; out[5] = (1 - (xx + zz)) * s1; out[6] = (yz + wx) * s1; out[7] = 0;
+    out[8] = (xz + wy) * s2; out[9] = (yz - wx) * s2; out[10] = (1 - (xx + yy)) * s2; out[11] = 0;
+    out[12] = tx; out[13] = ty; out[14] = tz; out[15] = 1;
     return out;
   },
   transformPoint: (m: Mat4, p: Vec3): Vec3 => {
@@ -121,7 +124,7 @@ export const m4 = {
   getTranslation: (m: Mat4): Vec3 => [m[12], m[13], m[14]],
   /** Extract rotation as quaternion (assumes no shear; handles uniform-ish scale by normalizing columns). */
   getRotation: (m: Mat4): Quat => {
-    const sx = Math.hypot(m[0], m[1], m[2]) || 1, sy = Math.hypot(m[4], m[5], m[6]) || 1, sz = Math.hypot(m[8], m[9], m[10]) || 1;
+    const sx = hyp3(m[0], m[1], m[2]) || 1, sy = hyp3(m[4], m[5], m[6]) || 1, sz = hyp3(m[8], m[9], m[10]) || 1;
     const r00 = m[0] / sx, r01 = m[4] / sy, r02 = m[8] / sz, r10 = m[1] / sx, r11 = m[5] / sy, r12 = m[9] / sz, r20 = m[2] / sx, r21 = m[6] / sy, r22 = m[10] / sz;
     const tr = r00 + r11 + r22; let q: Quat;
     if (tr > 0) { const s = Math.sqrt(tr + 1) * 2; q = [(r21 - r12) / s, (r02 - r20) / s, (r10 - r01) / s, 0.25 * s]; }

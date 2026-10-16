@@ -17,10 +17,11 @@
     /* interaction panel (overlay.ts setInteractions): what Space can do round here — one block per VERB (a shut door is 'push it open' and 'ease it open';
        the man in the arm 'question him' and 'choke him out'), a thin bar for a lock being picked / the drive coming out / a leaf easing round; the highlighted row
        (a tap does it; Space held opens the list to choose another) is lit. Same thin green mono as the meters / objective line, the kit slots' translucent backing. */
-    #interact { display: none; width: 260px; margin: 46px 0 0 8px; font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.1em; color: #79d69a; text-shadow: 0 1px 2px #000; opacity: 0.95; }
+    #interact { display: none; width: 290px; margin: 46px 0 0 8px; font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.1em; color: #79d69a; text-shadow: 0 1px 2px #000; opacity: 0.95; }
     #interact.on { display: block; }
     #hud:not(:empty) + #interact { margin-left: 0; }
     #interact .it { position: relative; margin-bottom: 4px; padding: 4px 8px 5px 10px; background: rgba(4,10,12,0.55); border: 1px solid rgba(120,170,160,0.22); border-radius: 3px; }
+    @media (max-height: 620px) { #interact { margin-top: 30px; } #interact .it { margin-bottom: 2px; padding: 2px 8px 3px 10px; } }   /* a short window: the open order menu clears the kit column under it */
     #interact .it.primary { border-color: rgba(143,240,180,0.6); box-shadow: 0 0 8px rgba(60,160,120,0.22); background: rgba(4,12,10,0.66); }
     #interact .it.primary::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 2px; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.55); border-radius: 2px 0 0 2px; }
     #interact .what { display: flex; justify-content: space-between; gap: 8px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #a8f0c0; white-space: nowrap; }
@@ -28,9 +29,13 @@
     #interact .what em { flex: none; font-style: normal; letter-spacing: 0.08em; text-transform: none; color: #8a9c96; }
     #interact .it.k-door .what { color: #b4d8ff; } #interact .it.k-body .what { color: #f0b8a8; } #interact .it.k-guard .what { color: #ff9a8a; } #interact .it.k-objective .what { color: #b4ffd0; } #interact .it.k-breaker .what { color: #ffd08a; }
     #interact .it.off .what { color: #f0b888; }
-    #interact .opt, #interact .hint { margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+    /* the squad's elements (orders.ts Tone): gold = the whole squad, red / blue = a pair or a man of it — the row's header, or one line of it */
+    #interact .it.t-gold .what, #interact .t-gold.opt, #interact .t-gold.hint { color: #f2cf6b; } #interact .it.t-red .what, #interact .t-red.opt, #interact .t-red.hint { color: #ff9a8a; } #interact .it.t-blue .what, #interact .t-blue.opt, #interact .t-blue.hint { color: #9cc8ff; }
+    #interact .opt, #interact .hint { margin-top: 3px; white-space: normal; overflow-wrap: anywhere; letter-spacing: 0.04em; }   /* a long row WRAPS (it was cut with an ellipsis: 'cover this door — no line fro…' lost the one thing a greyed order has to say) */
+    #interact .opt:has(kbd) { display: flex; align-items: baseline; } #interact .opt kbd { flex: none; }   /* … and hangs under its own words, not under its key (whatever the key cap's width: 1, SPACE, LMB) */
     #interact .opt { font-size: 11px; color: #dff; }
     #interact .hint { color: #8fb0a2; }
+    #interact .hint.lost s { opacity: 0.6; } #interact .hint.lost b { display: inline-block; color: rgb(240,145,46); margin-left: 7px; font-weight: 700; } #interact .hint.lost b.n { animation: lostin 0.5s ease-out; } @keyframes lostin { from { scale: 2.2; opacity: 0; } }   /* a squad man lost: his line struck, the way it came from */
     #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: #79d69a; color: #041008; font: 700 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
     #interact .it.far .opt { color: #8a9c96; } #interact .it.far kbd { background: #4b665a; color: #0a1410; }
     /* the selector (interact.ts): every row is one verb — SPACE lit only on the highlighted one (a tap does it), the others' key dimmed until the highlight reaches
@@ -140,19 +145,26 @@
     #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
     .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
     .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: #8aa39a; font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: #8ba; font-weight: 400; font-size: 10px; }
+    .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* frag.ts fragMarks: a defender's live grenade Sam has been cued on, with the seconds left */
+    .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(240,145,46,0.35), rgb(240,145,46)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
+    .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid rgb(240,145,46); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+    .marker.lastseen { color: #cbb98a; font-weight: 400; font-size: 12px; letter-spacing: 0.08em; }   /* fogofwar.ts lastSeen: '(?)' where an enemy was last seen, fading — thin and bracketed, never a live man's bold '?' */
     .marker.civ { font-style: italic; opacity: 0.9; } .marker.civ.alert { color: #f96; } .marker.civ.sus { color: #fe9; }   /* the civilians' (civilians.ts): the same glyphs, softer and slanted — a frightened cleaner is not a man onto you */
     /* the ring on the marker F acts on (what it offers is spelled out in the interaction panel, #interact); dimmer while the thing is out of reach */
     .reticle { position: absolute; width: 22px; height: 22px; border: 1.5px solid #7fe; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 6px #3aa; }
     .reticle.far { opacity: 0.55; }
     .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
     .reticle.aim.k-free { border-color: rgba(150,235,225,0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
+    .reticle.aim.trail { opacity: 0.55; }   /* aimweight.ts: the circle is where the gun points — quieter while it is still swinging onto the cursor */
+    .aimwish { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: #ffe9a8; opacity: 0.85; pointer-events: none; }   /* …and a dot on what the reticle snapped to (a light, a man) until it gets there */
+    .aimwish.k-guard { background: #ff8070; }
+    .aimwish.gun { width: 12px; height: 12px; background: none; border: 1px solid rgba(150,235,225,0.85); opacity: 0.55; }   /* …or the circle itself, small, while the ring is busy on something Space acts on */
     .reticle.off { border-color: #f96; box-shadow: 0 0 6px #a53; }
     .reticle.k-door { border-color: #9cd0ff; box-shadow: 0 0 6px #38a; } .reticle.k-body { border-color: #f0a090; box-shadow: 0 0 6px #a54; } .reticle.k-guard { border-color: #ff8070; box-shadow: 0 0 7px #b43; } .reticle.k-objective { border-color: #8ff0b4; box-shadow: 0 0 7px #3c8; } .reticle.k-breaker { border-color: #ffd08a; box-shadow: 0 0 7px #a83; }
     /* progress ring round the reticle (a lock being picked, the drive coming out): a conic sweep masked to a 3 px annulus just outside the ring */
     .reticle b { display: none; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#bfe6ff var(--p, 0%), rgba(160,210,255,0.14) 0); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); filter: drop-shadow(0 0 3px #38a); }
     .reticle.k-objective b { background: conic-gradient(#b4ffd0 var(--p, 0%), rgba(150,240,190,0.14) 0); }
-    /* the right button's word beside the ring — 'RMB  OCP' (the pistol out, on a light or a man's burning torch) / 'RMB  RING' (the rifle up, its launcher selected):
-       only there when the button would do something to what the ring is on (overlay.ts) */
+    /* the one word beside the ring: the 40 mm's '40 MM · TOO CLOSE TO ARM' (overlay.ts HE40_SHORT; the plain 'RMB  OCP' / 'RMB  RING' words are gone) */
     .reticle i { display: none; position: absolute; left: 100%; top: 100%; margin: 1px 0 0 5px; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; letter-spacing: 0.12em; white-space: pre; color: #9ff3c9; text-shadow: 0 1px 2px #000, 0 0 5px rgba(60,220,160,0.35); pointer-events: none; }
     .reticle.k-light i { color: #ffe9a8; text-shadow: 0 1px 2px #000, 0 0 5px rgba(255,220,120,0.35); }
     /* light / sound meters, bottom-left: two thin monochrome bars (Chaos-Theory-ish, minimal) */
@@ -192,93 +204,265 @@
     .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid #8ff0b4; transform: rotate(45deg); box-shadow: 0 0 6px rgba(120,240,170,0.45); }
     .objmark span { display: block; margin-top: 6px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; color: #a8f0c0; text-shadow: 0 1px 2px #000; white-space: nowrap; }
     .objmark.edge i { border-color: #79d69a; box-shadow: none; }
-    #menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 55%, rgba(2,6,8,0.25), rgba(2,6,8,0.78) 70%); z-index: 20; }
+    /* the squad's order menu (orders.ts mark()): a dashed ring on what it is frozen on, a word under it, in the addressed element's colour */
+    .ordermark { position: absolute; transform: translate(-50%, -11px); pointer-events: none; text-align: center; color: #8ff0b4; }
+    .ordermark i { display: block; width: 20px; height: 20px; margin: 0 auto; border: 1.5px dashed currentColor; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.6); }
+    .ordermark span { display: block; margin-top: 5px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+    .ordermark.t-gold { color: #f2cf6b; } .ordermark.t-red { color: #ff9a8a; } .ordermark.t-blue { color: #9cc8ff; }
+    body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .aimwish, body.attract .idot, body.attract .lostfrom { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
+    /* THE MENUS (ui/menu.ts): the title screen, the pause card, the debrief. Colours and type are ui/theme.ts's tokens (--m-…), shared with the starting page, the loadout and the options screen */
+    #menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb),0.4), rgba(var(--m-base-rgb),0.88) 70%); z-index: 20; color: var(--m-text); font: 13px/1.45 var(--m-font); }
     #menu.on { display: flex; }
-    body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .idot { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
-    body.attract #menu { background: radial-gradient(ellipse at 50% 55%, rgba(2,6,8,0.08), rgba(2,6,8,0.45) 75%); }   /* attract mode is running behind the start card (main.ts): a lighter vignette so the rooms round the card can be seen; the card's own look is untouched */
-    #menu .card { width: min(560px, calc(100% - 40px)); max-height: calc(100% - 60px); overflow: auto; padding: 26px 30px 18px; background: rgba(6,12,10,0.86); border: 1px solid rgba(121,214,154,0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4); border-radius: 6px; color: #cfe6da; font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
-    #menu .t1 { font: 300 44px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.08em; color: #eef6f2; text-shadow: 0 0 24px rgba(120,220,190,0.25); }
-    #menu .t1 b { font-weight: 600; color: #9ff3c9; }
-    #menu .t2 { margin-top: 8px; color: #9db8ad; letter-spacing: 0.03em; }
-    #menu .actions { display: flex; gap: 10px; margin: 20px 0 6px; flex-wrap: wrap; }
-    #menu .btn { font: inherit; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; background: rgba(20,40,32,0.7); color: #bfeed2; border: 1px solid rgba(121,214,154,0.45); border-radius: 3px; cursor: pointer; }
-    #menu .btn:hover, #menu .btn:focus { background: rgba(40,80,62,0.8); outline: none; border-color: #8ff0b4; }
-    #menu .btn.primary { background: #79d69a; color: #041008; border-color: #79d69a; font-weight: 600; }
-    #menu .btn.primary:hover, #menu .btn.primary:focus { background: #9ff3c9; }
-    #menu .btn:disabled, #menu .btn:disabled:hover { opacity: 0.4; cursor: progress; background: rgba(20,40,32,0.7); border-color: rgba(121,214,154,0.45); }   /* the boot card (menu.ts bootCard): the start card's buttons wait for the renderer's kernels */
-    #menu .btn.primary:disabled, #menu .btn.primary:disabled:hover { background: #79d69a; border-color: #79d69a; }
-    #menu .note.bootstatus { color: #bfeed2; letter-spacing: 0.04em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
-    #menu .sandbox { display: flex; gap: 18px; margin: 10px 2px 2px; font-size: 11px; letter-spacing: 0.06em; color: #9bb; text-transform: uppercase; }
-    #menu .sandbox label { display: flex; align-items: center; gap: 5px; cursor: pointer; } #menu .sandbox input { margin: 0; accent-color: #79d69a; }
-    #menu .tabs { display: flex; gap: 4px; margin: 14px 0 4px; border-bottom: 1px solid rgba(121,214,154,0.25); }
-    #menu .btn.tab { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 6px 10px; color: #8fb0a2; }
-    #menu .btn.tab.on { color: #dfffea; border-bottom-color: #79d69a; }
+    body.attract #menu { background: radial-gradient(ellipse at 50% 55%, rgba(var(--m-base-rgb),0.08), rgba(var(--m-base-rgb),0.45) 75%); }   /* attract mode is running behind the start card (main.ts): a lighter vignette so the rooms round the card can be seen */
+    #menu .card { box-sizing: border-box; width: min(560px, calc(100% - 40px)); max-height: calc(100% - 48px); overflow: auto; padding: 24px 28px 16px; background: rgba(var(--m-panel-rgb),0.95); border: 1px solid rgba(var(--m-edge),0.24); border-top: 3px solid var(--m-accent); box-shadow: 0 18px 60px rgba(0,0,0,0.6); border-radius: 2px; }
+    #menu .t1 { font: 700 44px/0.9 var(--m-head); letter-spacing: 0.02em; text-transform: uppercase; color: var(--m-bright); }
+    #menu .t1 b { font-weight: 700; color: var(--m-accent); }
+    #menu .t2 { margin-top: 8px; color: var(--m-soft); letter-spacing: 0.03em; }
+    #menu .actions { display: flex; gap: 8px; margin: 18px 0 6px; flex-wrap: wrap; }
+    #menu .btn { font: 600 13px/1 var(--m-head); letter-spacing: 0.14em; text-transform: uppercase; padding: 10px 16px 9px; background: rgba(var(--m-btn-rgb),0.8); color: var(--m-btn-text); border: 1px solid rgba(var(--m-edge),0.3); border-radius: 2px; cursor: pointer; }
+    #menu .btn:hover, #menu .btn:focus { background: rgba(var(--m-hover-rgb),0.9); outline: none; border-color: var(--m-accent); color: var(--m-bright); }
+    #menu .btn.primary { background: var(--m-accent); color: var(--m-on-accent); border-color: var(--m-accent); font-weight: 700; }
+    #menu .btn.primary:hover, #menu .btn.primary:focus { background: var(--m-accent-hi); border-color: var(--m-bright); color: var(--m-on-accent); }
+    #menu .btn.on { border-color: var(--m-accent); color: var(--m-accent-hi); }
+    #menu .btn:disabled, #menu .btn:disabled:hover { opacity: 0.4; cursor: progress; background: rgba(var(--m-btn-rgb),0.8); border-color: rgba(var(--m-edge),0.3); }   /* the boot card (menu.ts bootCard): buttons that wait for the renderer's kernels */
+    #menu .btn.primary:disabled, #menu .btn.primary:disabled:hover { background: var(--m-accent); border-color: var(--m-accent); }
+    #menu .note.bootstatus { color: var(--m-btn-text); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+    #menu .bootstatus .bbar { display: block; height: 2px; margin-top: 6px; background: rgba(var(--m-edge),0.18); }
+    #menu .bootstatus .bbar i { display: block; height: 100%; width: 0; background: var(--m-accent); transition: width 0.2s; }
+    #menu .sandbox { display: flex; gap: 18px; margin: 10px 2px 2px; font-size: 11px; letter-spacing: 0.06em; color: var(--m-dim); text-transform: uppercase; }
+    #menu .sandbox label { display: flex; align-items: center; gap: 5px; cursor: pointer; } #menu .sandbox input { margin: 0; accent-color: var(--m-accent); }
+    #menu .refused { margin: 0 0 6px; padding: 6px 10px; font-size: 12px; color: #f0c27a; border-left: 3px solid #e8b46a; background: rgba(232,180,106,0.08); }   /* the URL named a scenario and its start said no (ui/menu.ts) */
+    /* THE TITLE SCREEN (#menu.title: the start card while the one starting page is the way in): the wordmark and the main menu down the left, the floor — and the attract reel — showing through on the right */
+    #menu.title { align-items: stretch; justify-content: flex-start; background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.97) 0, rgba(var(--m-base-rgb),0.9) 24%, rgba(var(--m-base-rgb),0.4) 56%, rgba(var(--m-base-rgb),0.06) 100%); }
+    body.attract #menu.title { background: linear-gradient(90deg, rgba(var(--m-base-rgb),0.95) 0, rgba(var(--m-base-rgb),0.84) 22%, rgba(var(--m-base-rgb),0.2) 52%, rgba(var(--m-base-rgb),0) 100%); }
+    #menu.title .card { width: min(920px, 100%); height: 100%; max-height: none; overflow: hidden auto; display: flex; flex-direction: column; padding: clamp(28px, 10vh, 110px) 24px 22px clamp(24px, 6.5vw, 110px); background: none; border: 0; box-shadow: none; border-radius: 0; }
+    #menu.title .t1 { font-size: clamp(40px, 6.6vw, 100px); line-height: 0.9; letter-spacing: 0; white-space: nowrap; text-shadow: 0 2px 30px rgba(0,0,0,0.6); }
+    #menu.title .t2 { margin-top: 16px; max-width: 36ch; font-size: 14px; line-height: 1.4; letter-spacing: 0.04em; }
+    #menu.title .head::after { content: ''; display: block; width: 72px; height: 4px; margin-top: 22px; background: var(--m-accent); }
+    #menu.title .actions { flex-direction: column; flex-wrap: nowrap; align-items: flex-start; gap: 4px; margin: clamp(20px, 6vh, 60px) 0 0; }
+    #menu.title .actions .btn { box-sizing: border-box; width: min(360px, 100%); text-align: left; font-size: 24px; letter-spacing: 0.12em; padding: 13px 18px 11px; background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; transition: padding-left 0.12s, background 0.12s; }
+    #menu.title .actions .btn:hover, #menu.title .actions .btn:focus { padding-left: 28px; background: rgba(var(--m-hover-rgb),0.7); border-left-color: var(--m-accent); }
+    #menu.title .actions .btn.primary { font-size: 34px; padding: 14px 18px 11px; margin-bottom: 8px; background: var(--m-accent); border-left-color: var(--m-accent-hi); }
+    #menu.title .actions .btn.primary:hover, #menu.title .actions .btn.primary:focus { padding-left: 28px; background: var(--m-accent-hi); border-left-color: var(--m-bright); }
+    /* the title's EXTRAS page (ui/menu.ts EXTRAS): the showcases and the tool pages, a link each, under two small heads */
+    #menu.title .actions .xhead { margin: 14px 0 4px 4px; font: 600 11px/1.2 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
+    #menu.title .actions .xhead:first-child { margin-top: 0; }
+    #menu.title .actions .btn.xrow { display: block; width: min(520px, 100%); font-size: 20px; padding: 10px 18px 9px; text-decoration: none; color: var(--m-btn-text); }
+    #menu.title .actions .btn.xrow b { display: block; font-weight: inherit; }
+    #menu.title .actions .btn.xrow small { display: block; margin-top: 3px; font: 11px/1.3 var(--m-mono); letter-spacing: 0; text-transform: none; color: var(--m-soft); }
+    #menu.title .actions .btn.xrow:hover, #menu.title .actions .btn.xrow:focus { padding-left: 28px; outline: none; }
+    #menu.title .actions .btn.xback { margin-top: 14px; font-size: 18px; color: var(--m-soft); }
+    /* a short window (960 x 540): the Extras list and its way back stay above the fold */
+    @media (max-height: 640px) { #menu.title .head::after { margin-top: 12px; } #menu.title .actions.extras { gap: 3px; margin-top: 12px; }
+      #menu.title .actions.extras .xhead { margin: 7px 0 2px 4px; } #menu.title .actions.extras .btn.xrow { font-size: 15px; padding: 5px 18px 4px; }
+      #menu.title .actions.extras .btn.xrow small { margin-top: 1px; font-size: 10px; } #menu.title .actions.extras .btn.xback { margin-top: 6px; font-size: 14px; padding: 5px 18px 4px; } }
+    #menu.title .tfill { flex: 1 1 auto; min-height: 16px; }
+    #menu.title .note.bootstatus { width: min(360px, 100%); margin: 0 0 10px; font: 11px var(--m-mono); color: var(--m-soft); }
+    #menu.title .cheats { align-self: flex-start; margin: 0 0 10px; padding: 4px 9px; font: 600 11px/1.2 var(--m-head); letter-spacing: 0.14em; text-transform: uppercase; color: #f0c27a; background: rgba(232,180,106,0.08); border: 1px dashed rgba(232,180,106,0.5); border-radius: 2px; cursor: pointer; }
+    #menu.title .cheats:hover, #menu.title .cheats:focus { border-style: solid; outline: none; }
+    #menu.title .foot { margin-top: 0; }
+    /* THE PAUSE CARD (#menu.paused): the run's name, the menu down the left; 'Run so far' opens the debrief beside it */
+    #menu.paused .card { width: min(380px, calc(100% - 40px)); }
+    #menu.paused .card.wide { width: min(1240px, calc(100% - 40px)); display: grid; grid-template-columns: 300px minmax(0, 1fr); column-gap: 28px; align-items: start; }
+    #menu.paused .t1 { font-size: 13px; line-height: 1; letter-spacing: 0.3em; color: var(--m-dim); } #menu.paused .t1 b { color: var(--m-dim); }
+    #menu.paused .t2 { margin-top: 12px; font: 700 26px/1.08 var(--m-head); letter-spacing: 0.05em; text-transform: uppercase; color: var(--m-bright); }
+    #menu.paused .side { min-width: 0; }
+    #menu.paused .actions { flex-direction: column; flex-wrap: nowrap; gap: 6px; }
+    #menu.paused .actions .btn { width: 100%; text-align: left; font-size: 15px; padding: 12px 14px 10px; }
+    #menu.paused .actions .btn.primary { font-size: 20px; padding: 13px 14px 11px; }
+    #menu.paused .actions .gap { height: 8px; }
+    #menu.paused .card.wide .body { margin-top: 0; min-width: 0; }
+    @media (max-width: 820px) { #menu.paused .card.wide { display: block; } }
+    /* THE MISSION LIST (ui/missions.ts): its own layer over #menu — the list down the left, the highlighted mission's sheet on the right */
+    #missions { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(var(--m-base-rgb),0.86); z-index: 21; outline: none; }
+    #missions.on { display: flex; }
+    #missions .mcard { width: min(980px, calc(100% - 40px)); height: min(780px, calc(100% - 40px)); display: flex; flex-direction: column; background: rgba(var(--m-panel-rgb),0.95); border: 1px solid rgba(var(--m-edge),0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4); border-radius: 6px; color: var(--m-text); font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #missions .btn { font: inherit; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; background: rgba(var(--m-btn-rgb),0.7); color: var(--m-btn-text); border: 1px solid rgba(var(--m-edge),0.45); border-radius: 3px; cursor: pointer; }
+    #missions .btn:hover, #missions .btn:focus { background: rgba(var(--m-hover-rgb),0.8); outline: none; border-color: var(--m-accent-hi); }
+    #missions .btn.primary { background: var(--m-accent); color: var(--m-on-accent); border-color: var(--m-accent); font-weight: 600; }
+    #missions .btn.primary:hover, #missions .btn.primary:focus { background: var(--m-accent-hi); }
+    #missions .mhead { display: flex; align-items: center; gap: 18px; padding: 14px 22px 12px; border-bottom: 1px solid rgba(var(--m-edge),0.22); }
+    #missions .mback { padding: 5px 10px; font-size: 11px; }
+    #missions .mt { font: 300 24px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.26em; text-transform: uppercase; color: var(--m-bright); text-shadow: 0 0 24px rgba(var(--m-accent-rgb),0.25); }
+    #missions .mcount { margin-left: auto; font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
+    #missions .mbody { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(230px, 310px) minmax(0, 1fr); }
+    #missions .mlist { overflow: auto; padding: 8px 0; border-right: 1px solid rgba(var(--m-edge),0.22); }
+    #missions .msec { padding: 12px 15px 4px; font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--m-accent); }
+    #missions .msec.rest { margin-top: 6px; border-top: 1px solid rgba(var(--m-edge),0.14); }
+    #missions .mrow { display: flex; align-items: baseline; gap: 10px; padding: 8px 14px 8px 15px; text-decoration: none; color: var(--m-soft); border-left: 3px solid transparent; cursor: pointer; }
+    #missions .mrow:focus { outline: none; }
+    #missions .mrow:hover { background: rgba(var(--m-hover-rgb),0.35); color: var(--m-bright); }
+    #missions .mrow.sel { background: rgba(var(--m-edge),0.16); border-left-color: var(--m-accent); color: var(--m-bright); }
+    #missions .mrow.unplayed:not(.sel):not(:hover) > * { opacity: 0.5; }   /* (THE UNPLAYED ROWS, ui/missions.ts unplayedClass: drawn quieter, back to full under the cursor; ?unplayed=0 = no row wears the class) */
+    #missions .mlist:not(.tiles) .mrow.unplayed.first { position: relative; margin-top: 15px; }   /* (and a rule over the first of a group's, in the room above it and outside the row's own box, so its highlight is the size of any row's: they stand apart, with no word for it) */
+    #missions .mlist:not(.tiles) .mrow.unplayed.first::before { content: ''; position: absolute; left: 0; right: 0; top: -8px; border-top: 1px solid rgba(var(--m-edge),0.14); opacity: 1; pointer-events: none; }
+    #missions .mn { font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); }
+    #missions .mrow.sel .mn { color: var(--m-accent-hi); }
+    #missions .mtitle { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; letter-spacing: 0.03em; }
+    #missions .tag { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; padding: 1px 6px; border-radius: 2px; border: 1px solid rgba(var(--m-edge),0.45); color: var(--m-btn-text); white-space: nowrap; }
+    #missions .tag.team.four { border-color: rgba(240,196,110,0.7); color: #f3d79a; }
+    #missions .tag.team.solo { border-color: rgba(150,190,240,0.55); color: #b9d2f3; }
+    #missions .tag.untuned { border-style: dashed; border-color: rgba(200,200,200,0.4); color: var(--m-soft); }
+    #missions .mlean { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 50%; align-self: center; }   /* the row's lean: blue quiet, red loud, both = the player's choice */
+    #missions .mlean.quiet { background: #6fb7ff; } #missions .mlean.loud { background: #ff9c84; } #missions .mlean.either { background: linear-gradient(90deg, #6fb7ff 50%, #ff9c84 50%); }
+    #missions .msheet { overflow: auto; padding: 18px 24px 16px; display: flex; flex-direction: column; gap: 10px; }
+    #missions .mplan { display: block; flex: 0 0 auto; height: clamp(72px, calc(min(780px, 100vh - 40px) - 603px), 300px); max-width: 100%; aspect-ratio: 40 / 28; align-self: center; background: rgba(var(--m-base-rgb),0.5); border: 1px solid rgba(var(--m-edge),0.18); border-radius: 3px; }
+    #missions .msheet:has(.mway:not(.na)) .mplan { height: clamp(72px, calc(min(780px, 100vh - 40px) - 661px), 300px); }   /* a mission with a Way in row: the plan gives up that row's two lines + the gap (48 + 10 px) */
+    @media (max-height: 772px) { #missions .msheet:has(.mway:not(.na)) .mplan { display: none; } }   /* (…and where that would take it under its 72 px floor, the plan goes) */
+    #missions .mtop { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+    #missions .mst { font: 300 28px/1.1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.06em; color: var(--m-bright); }
+    #missions .mplace { font: 11px ui-monospace, Menlo, monospace; letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-accent); }
+    #missions .mblurb { font-size: 14px; color: var(--m-text); max-width: 62ch; }
+    #missions .mfacts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+    #missions .mfact { padding: 6px 9px 7px; background: rgba(var(--m-base-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.22); border-radius: 3px; min-width: 0; }
+    #missions .mfact i { display: block; font-style: normal; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-dim); }
+    #missions .mfact b { display: block; margin-top: 1px; font-size: 13px; font-weight: 600; color: var(--m-bright); }
+    #missions .mdiff { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 11px; letter-spacing: 0.06em; color: var(--m-dim); }   /* Standard | Hard (game/difficulty.ts) */
+    #missions .mdiff .dl { text-transform: uppercase; letter-spacing: 0.14em; }
+    #missions .mdiff .dbtn { font: inherit; text-transform: uppercase; letter-spacing: 0.14em; padding: 3px 10px; border-radius: 2px; cursor: pointer; color: var(--m-btn-text); background: rgba(var(--m-btn-rgb),0.55); border: 1px solid rgba(var(--m-edge),0.3); }
+    #missions .mdiff .dbtn.on { color: var(--m-on-accent); background: var(--m-accent-hi); border-color: var(--m-accent-hi); }
+    #missions .mdiff .dn { flex: 1 1 240px; color: var(--m-soft); letter-spacing: 0.02em; }
+    #missions .mdiff.na .dbtn, #missions .mdiff.na .dl { opacity: 0.45; }
+    #missions .mdiff.mwx .dbtn { padding: 3px 7px; letter-spacing: 0.08em; }   /* the Weather row (game/weatherKinds.ts): seven buttons on the difficulty row's look */
+    #missions .mhour .dbtn, #missions .mway .dbtn { padding: 3px 8px; }   /* the hour (game/hours.ts) and the way in: buttons on the difficulty row's style */
+    #missions .mlever { margin-top: -7px; }   /* the levers under Standard | Hard (ui/levers.ts): fog of war, enemy AI, enemy kit — one tight block with the switch */
+    #missions .mlever .dl { flex: 0 0 auto; min-width: 84px; white-space: nowrap; letter-spacing: 0.1em; color: var(--m-dim); }
+    #missions .mlever .dbtn { padding: 2px 8px; letter-spacing: 0.1em; }
+    #missions .mlever.moved .dl { color: #f3d79a; }   /* a lever moved off its level's rung by hand */
+    #missions .mlever.na .dn { display: none; }
+    #missions .mdiff > .dn { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }   /* two lines of a row's words on the sheet; all of them in its title (hover) */
+    #missions .mgo { align-self: flex-start; margin-top: 4px; padding: 10px 24px; font-size: 13px; text-decoration: none; position: sticky; bottom: 0; z-index: 1; box-shadow: 0 0 0 8px rgba(var(--m-panel-rgb),0.95); }   /* (stays in sight at the sheet's foot when the rows above run long: Hard's words, a lever moved, a short window) */
+    #missions .mfoot { padding: 9px 22px; border-top: 1px solid rgba(var(--m-edge),0.22); font: 11px ui-monospace, Menlo, monospace; color: var(--m-faint); letter-spacing: 0.06em; }
+    @media (max-width: 720px) { #missions .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(110px, 26%) minmax(0, 1fr); } #missions .mlist { border-right: none; border-bottom: 1px solid rgba(var(--m-edge),0.22); } #missions .mfacts { grid-template-columns: repeat(2, minmax(0, 1fr)); } #missions .mplan { display: none !important; } #missions .mhour .dn, #missions .mwx .dn, #missions .mway .dn, #missions .mlever .dn { display: none; } }   /* (a narrow window: the plan and the hour's and the weather's lines of words go, and the list gives up rows, so the start button stays on the sheet) */
+    #menu .btn.quit { border-color: rgba(240,196,110,0.55); color: #f3d79a; }
     #menu .body { margin-top: 10px; }
     #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    #menu .controls .k { flex: 0 0 128px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9ff3c9; letter-spacing: 0.04em; }
-    #menu .controls .v { flex: 1; color: #c9dbd3; }
-    #menu .group { margin: 8px 0 14px; }
-    #menu .gtitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: #79d69a; margin-bottom: 6px; }
-    #menu .srow { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
-    #menu .srow label { flex: 0 0 190px; color: #c9dbd3; }
-    #menu .srow input[type=range] { flex: 1; accent-color: #79d69a; }
-    #menu .srow .val { flex: 0 0 44px; text-align: right; font: 12px ui-monospace, Menlo, monospace; color: #dfffea; }
-    #menu .srow select { font: inherit; background: #10201a; color: #dfffea; border: 1px solid rgba(121,214,154,0.4); border-radius: 3px; padding: 2px 6px; }
-    #menu .srow input[type=checkbox] { accent-color: #79d69a; width: 16px; height: 16px; }
-    #menu .note { font-size: 11px; color: #8a9890; margin: -2px 0 6px 2px; }
-    #menu .foot { margin-top: 12px; font: 11px ui-monospace, Menlo, monospace; color: #6f8a7e; letter-spacing: 0.06em; }
-    #menu .t2 b { color: #9ff3c9; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
+    #menu .controls .k { flex: 0 0 128px; font: 12px/1.4 var(--m-mono); color: var(--m-accent-hi); letter-spacing: 0.04em; }
+    #menu .controls .v { flex: 1; color: var(--m-text); }
+    #menu .note { font-size: 11px; color: var(--m-dim); margin: -2px 0 6px 2px; }
+    #menu .foot { margin-top: 12px; font: 11px var(--m-mono); color: var(--m-faint); letter-spacing: 0.06em; }
+    #menu .t2 b { color: var(--m-accent-hi); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
     /* the debrief (ui/debrief.ts): the end card, the down card, the pause card's 'Run so far' tab. A wider card in two columns — numbers / badges / timeline on the
        left, the floor map and its legend on the right — in the HUD's thin green mono; one column when the window is narrow. */
     #menu .card.wide { width: min(900px, calc(100% - 40px)); }
-    #menu .db { font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfe6da; }
+    #menu .db { font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--m-text); }
     #menu .db-head { display: flex; align-items: center; gap: 22px; }
-    #menu .db-rating { display: flex; align-items: baseline; gap: 12px; padding: 4px 14px 6px 0; border-right: 1px solid rgba(121,214,154,0.25); cursor: help; white-space: nowrap; }
-    #menu .db-rating b { font: 300 40px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.14em; color: #eef6f2; text-shadow: 0 0 22px rgba(120,220,190,0.3); }
-    #menu .db-rating.r-ghost b { color: #b8ffd8; } #menu .db-rating.r-shadow b { color: #9ff3c9; } #menu .db-rating.r-operative b { color: #f3d78a; text-shadow: 0 0 22px rgba(240,200,110,0.25); } #menu .db-rating.r-assault b { color: #ff9c84; text-shadow: 0 0 22px rgba(255,120,90,0.25); }
-    #menu .db-score { font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: #79d69a; letter-spacing: 0.04em; }
-    #menu .db-score::after { content: '/100'; font-size: 11px; font-weight: 400; color: #6f8a7e; margin-left: 3px; letter-spacing: 0.08em; }
+    #menu .db-rating { display: flex; align-items: baseline; gap: 12px; padding: 4px 14px 6px 0; border-right: 1px solid rgba(var(--m-edge),0.25); cursor: help; white-space: nowrap; }
+    #menu .db-rating b { font: 700 46px/1 var(--m-head); letter-spacing: 0.08em; color: var(--m-bright); text-shadow: 0 0 22px rgba(var(--m-accent-rgb),0.3); }
+    #menu .db-rating.r-ghost b { color: var(--m-accent-hi); } #menu .db-rating.r-shadow b { color: var(--m-accent-hi); } #menu .db-rating.r-operative b { color: #f3d78a; text-shadow: 0 0 22px rgba(240,200,110,0.25); } #menu .db-rating.r-assault b { color: #ff9c84; text-shadow: 0 0 22px rgba(255,120,90,0.25); }
+    #menu .db-score { font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--m-accent); letter-spacing: 0.04em; }
+    #menu .db-score::after { content: '/100'; font-size: 11px; font-weight: 400; color: var(--m-faint); margin-left: 3px; letter-spacing: 0.08em; }
     #menu .db-what { min-width: 0; }
-    #menu .db-t1 { font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.24em; text-transform: uppercase; color: #9ff3c9; }
-    #menu .db-t2 { margin-top: 5px; color: #9db8ad; letter-spacing: 0.03em; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
-    #menu .db-t3 { margin-top: 4px; color: #7f968c; font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .db-t1 { font: 700 15px/1.2 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-accent-hi); }
+    #menu .db-t2 { margin-top: 5px; color: var(--m-soft); letter-spacing: 0.03em; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #menu .db-t3 { margin-top: 4px; color: var(--m-faint); font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #menu .db-actions { margin: 14px 0 4px; }
-    #menu .db-copytext { display: none; margin: 2px 0 6px; padding: 5px 8px; font-size: 10px; color: #dfffea; background: rgba(0,10,4,0.5); border: 1px dashed rgba(121,214,154,0.4); user-select: all; word-break: break-word; }
+    #menu .db-copytext { display: none; margin: 2px 0 6px; padding: 5px 8px; font-size: 10px; color: var(--m-bright); background: rgba(var(--m-base-rgb),0.5); border: 1px dashed rgba(var(--m-edge),0.4); user-select: all; word-break: break-word; }
     #menu .db-copytext.show { display: block; }
     #menu .db-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 420px); gap: 18px; margin-top: 10px; }
     @media (max-width: 820px) { #menu .db-grid { grid-template-columns: minmax(0, 1fr); } }
     #menu .db-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
-    #menu .db-stats .st { padding: 4px 7px 5px; background: rgba(4,10,12,0.55); border: 1px solid rgba(120,170,160,0.22); border-radius: 3px; min-width: 0; }
-    #menu .db-stats .st i { display: block; font-style: normal; font-size: 8.5px; letter-spacing: 0.18em; text-transform: uppercase; color: #8fb0a2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #menu .db-stats .st b { display: block; margin-top: 1px; font-size: 14px; font-weight: 600; color: #dfffea; letter-spacing: 0.04em; }
-    #menu .db-stats .st.good b { color: #9ff3c9; } #menu .db-stats .st.warn b { color: #f3d78a; } #menu .db-stats .st.bad b { color: #ff9c84; }
+    #menu .db-stats .st { padding: 5px 8px 6px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-top: 2px solid rgba(var(--m-edge),0.35); min-width: 0; }
+    #menu .db-stats .st i { display: block; font: 600 10px/1.2 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .db-stats .st b { display: block; margin-top: 2px; font: 700 17px/1.1 var(--m-head); color: var(--m-bright); letter-spacing: 0.04em; }
+    #menu .db-stats .st.good b { color: var(--m-accent-hi); } #menu .db-stats .st.warn b { color: #f3d78a; } #menu .db-stats .st.bad b { color: #ff9c84; }
     #menu .db-badges { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 2px; }
-    #menu .db-badges .chip { padding: 2px 7px 3px; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; border: 1px solid rgba(120,170,160,0.28); border-radius: 10px; color: #5f756c; cursor: help; }
-    #menu .db-badges .chip.on { color: #dfffea; border-color: rgba(159,243,201,0.7); background: rgba(40,90,70,0.35); box-shadow: 0 0 8px rgba(90,220,160,0.25); text-shadow: 0 0 5px rgba(60,220,160,0.5); }
-    #menu .db-tlhead { margin: 12px 0 4px; }
-    #menu .db-timeline { max-height: min(30vh, 260px); overflow: auto; padding: 2px 4px 2px 0; border-top: 1px solid rgba(121,214,154,0.18); border-bottom: 1px solid rgba(121,214,154,0.18); }
+    #menu .db-badges .chip { padding: 2px 7px 3px; font-size: 9.5px; letter-spacing: 0.16em; text-transform: uppercase; border: 1px solid rgba(var(--m-edge),0.28); border-radius: 10px; color: var(--m-faint); cursor: help; }
+    #menu .db-badges .chip.on { color: var(--m-bright); border-color: rgba(var(--m-accent-rgb),0.7); background: rgba(var(--m-sel-rgb),0.35); box-shadow: 0 0 8px rgba(var(--m-accent-rgb),0.25); text-shadow: 0 0 5px rgba(var(--m-accent-rgb),0.5); }
+    #menu .db-tlhead { margin: 14px 0 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(var(--m-edge),0.2); font: 600 12px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-accent); }
+    #menu .db-timeline { max-height: min(30vh, 260px); overflow: auto; padding: 2px 4px 2px 0; border-top: 1px solid rgba(var(--m-edge),0.18); border-bottom: 1px solid rgba(var(--m-edge),0.18); }
     #menu .db-timeline .ev { display: flex; gap: 8px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.04); align-items: baseline; }
-    #menu .db-timeline .ev i { flex: 0 0 38px; font-style: normal; color: #79d69a; letter-spacing: 0.06em; }
-    #menu .db-timeline .ev u { flex: 0 0 104px; text-decoration: none; color: #8fb0a2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
-    #menu .db-timeline .ev span { flex: 1; min-width: 0; color: #d5e8df; }
+    #menu .db-timeline .ev i { flex: 0 0 38px; font-style: normal; color: var(--m-accent); letter-spacing: 0.06em; }
+    #menu .db-timeline .ev u { flex: 0 0 104px; text-decoration: none; color: var(--m-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+    #menu .db-timeline .ev span { flex: 1; min-width: 0; color: var(--m-text); }
     #menu .db-timeline .ev.k-spotted span, #menu .db-timeline .ev.k-down span, #menu .db-timeline .ev.k-kill span { color: #ffb0a0; }
     #menu .db-timeline .ev.k-alarm span, #menu .db-timeline .ev.k-contact span, #menu .db-timeline .ev.k-bodyFound span { color: #f3d78a; }
-    #menu .db-timeline .ev.k-alarm.down span, #menu .db-timeline .ev.k-calm span, #menu .db-timeline .ev.k-lost span { color: #a8c8ba; }
-    #menu .db-timeline .ev.k-objective span { color: #9ff3c9; letter-spacing: 0.06em; }
-    #menu .db-timeline .ev.k-radio span { color: #b9d6c8; font-style: italic; }
-    #menu .db-timeline .ev.k-heard span { color: #c9dbd3; }
-    #menu .db-timeline .ev.empty { color: #6f8a7e; font-style: italic; border: none; }
-    #menu .db-map { position: relative; width: 100%; border: 1px solid rgba(121,214,154,0.3); background: #050b09; line-height: 0; }
+    #menu .db-timeline .ev.k-alarm.down span, #menu .db-timeline .ev.k-calm span, #menu .db-timeline .ev.k-lost span { color: var(--m-soft); }
+    #menu .db-timeline .ev.k-objective span { color: var(--m-accent-hi); letter-spacing: 0.06em; }
+    #menu .db-timeline .ev.k-radio span { color: var(--m-soft); font-style: italic; }
+    #menu .db-timeline .ev.k-heard span { color: var(--m-text); }
+    #menu .db-timeline .ev.empty { color: var(--m-faint); font-style: italic; border: none; }
+    #menu .db-recap { width: 100%; margin-bottom: 10px; border: 1px solid rgba(var(--m-edge),0.3); background: var(--m-base); }
+    #menu .db-recap-cv { display: block; width: 100%; height: auto; }
+    #menu .db-recap-cap { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 6px 9px 7px; border-top: 1px solid rgba(var(--m-edge),0.18); font: 11px/1.2 var(--m-mono); letter-spacing: 0.06em; color: var(--m-soft); }
+    #menu .db-recap-cap b { font: 700 13px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-accent); }
+    #menu .db-recap-who { display: flex; flex-wrap: wrap; gap: 5px; padding: 0 9px 8px; }
+    #menu .db-recap-chip { font: 10px/1 var(--m-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-dim); background: none; border: 1px solid rgba(var(--m-edge),0.22); padding: 4px 7px; cursor: pointer; }
+    #menu .db-recap-chip:hover { color: var(--m-bright); }
+    #menu .db-recap-chip.on { color: var(--m-bright); border-color: rgba(var(--m-edge),0.6); }
+    #menu .db-map { position: relative; width: 100%; border: 1px solid rgba(var(--m-edge),0.3); background: var(--m-base); line-height: 0; }
     #menu .db-canvas { display: block; width: 100%; height: auto; image-rendering: pixelated; }
     #menu .db-map .pin, #menu .db-map .mark { position: absolute; transform: translate(-50%, -50%); font: 700 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; text-shadow: 0 0 3px #000, 0 0 6px #000; cursor: help; pointer-events: auto; line-height: 1; }
-    #menu .db-map .mark { font-size: 12px; color: #dfffea; text-shadow: 0 0 4px #000, 0 0 8px rgba(120,240,170,0.6); }
-    #menu .db-map .mark.rack { color: #8ff0b4; } #menu .db-map .mark.exit { color: #b4d8ff; font-size: 14px; }
+    #menu .db-map .mark { font-size: 12px; color: var(--m-bright); text-shadow: 0 0 4px #000, 0 0 8px rgba(var(--m-accent-rgb),0.6); }
+    #menu .db-map .mark.rack { color: var(--m-accent-hi); } #menu .db-map .mark.exit { color: #b4d8ff; font-size: 14px; }
     #menu .db-map .pin.seen { color: #ff8070; font-size: 12px; } #menu .db-map .pin.alarm { color: #f3c86a; font-size: 13px; } #menu .db-map .pin.kill { color: #ff5040; } #menu .db-map .pin.ko { color: #9fd8c6; font-size: 12px; }
     #menu .db-map .pin.light { color: #ffe9a0; } #menu .db-map .pin.body { color: #f0b8a8; } #menu .db-map .pin.down { color: #ff4030; font-size: 14px; } #menu .db-map .pin.door { color: #9cd0ff; font-size: 9px; }
-    #menu .db-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 7px; font-size: 9.5px; letter-spacing: 0.08em; color: #8fb0a2; line-height: 1.5; }
+    #menu .db-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; margin-top: 7px; font-size: 9.5px; letter-spacing: 0.08em; color: var(--m-dim); line-height: 1.5; }
     #menu .db-legend .lg i { font-style: normal; font-weight: 700; margin-right: 2px; }
-    #menu .db-legend .lg.seen i { color: #ff8070; } #menu .db-legend .lg.alarm i { color: #f3c86a; } #menu .db-legend .lg.kill i { color: #ff5040; } #menu .db-legend .lg.ko i { color: #9fd8c6; } #menu .db-legend .lg.light i { color: #ffe9a0; } #menu .db-legend .lg.body i { color: #f0b8a8; } #menu .db-legend .lg.down i { color: #ff4030; } #menu .db-legend .lg.door i { color: #9cd0ff; } #menu .db-legend .lg.mark i { color: #dfffea; }
+    #menu .db-legend .lg.seen i { color: #ff8070; } #menu .db-legend .lg.alarm i { color: #f3c86a; } #menu .db-legend .lg.kill i { color: #ff5040; } #menu .db-legend .lg.ko i { color: #9fd8c6; } #menu .db-legend .lg.light i { color: #ffe9a0; } #menu .db-legend .lg.body i { color: #f0b8a8; } #menu .db-legend .lg.down i { color: #ff4030; } #menu .db-legend .lg.door i { color: #9cd0ff; } #menu .db-legend .lg.mark i { color: var(--m-bright); }
     #menu .db-legend .lg.path i { background: linear-gradient(90deg, hsl(170,78%,52%), hsl(105,78%,57%), hsl(40,78%,62%)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    /* the run's verdict on the end card (ui/verdictCard.ts over game/verdict.ts): one word, the clock, the ways won, a tick per try; then a row per man. On a
+       squad's mission (.vd-squad) the stealth game's rating, numbers, badges, timeline and pins are not drawn: the men and their paths stand there. */
+    #menu .vd { margin: 0 0 12px; }
+    #menu .vd-top { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    #menu .vd-word { font: 700 46px/1 var(--m-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--m-bright); white-space: nowrap; }
+    #menu .vd.lost .vd-word { color: #ff9c84; }
+    #menu .vd-time { font: 600 26px/1 ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--m-text); letter-spacing: 0.04em; cursor: help; }
+    #menu .vd-medal, #menu .vd-void { padding: 3px 8px 4px; font: 700 12px/1 var(--m-head); letter-spacing: 0.18em; text-transform: uppercase; border: 1px solid currentColor; cursor: help; }
+    #menu .vd-medal.m-gold { color: #e8c15a; } #menu .vd-medal.m-silver { color: #c9ccd2; } #menu .vd-medal.m-bronze { color: #c98a5b; }
+    #menu .vd-void { color: #ff9c84; border-style: dashed; }
+    #menu .vd-gap { flex: 1; }
+    #menu .vd-tries { display: inline-flex; align-items: center; gap: 3px; cursor: help; }
+    #menu .vd-tries .try { display: block; width: 9px; height: 9px; border: 1px solid rgba(var(--m-edge),0.55); box-sizing: border-box; }
+    #menu .vd-tries .try.last { border-color: #ff9c84; }
+    #menu .vd-tries .try.win { border-color: var(--m-bright); background: var(--m-bright); }
+    #menu .vd-tries .more { font: 10px/1 var(--m-mono); font-style: normal; color: var(--m-dim); margin-right: 2px; }
+    #menu .vd-why { margin-top: 6px; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--m-soft); letter-spacing: 0.03em; }
+    #menu .vd-men { display: grid; gap: 5px; margin: 0 0 12px; }
+    #menu .vd-man { display: grid; grid-template-columns: 92px minmax(0, 1fr) 40px; align-items: center; gap: 10px; --tone: #b7a98a; }
+    #menu .vd-man.t-you { --tone: var(--m-bright); } #menu .vd-man.t-red { --tone: #c9655b; } #menu .vd-man.t-blue { --tone: #5b8fc9; }
+    #menu .vd-man .nm { font: 700 13px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--tone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #menu .vd-man:not(.s-up):not(.vd-count) .nm { text-decoration: line-through; text-decoration-color: #ff9c84; }
+    #menu .vd-man .bar { position: relative; display: block; height: 12px; background: rgba(var(--m-edge),0.08); border-left: 1px solid rgba(var(--m-edge),0.4); }
+    #menu .vd-man .bar .fill { position: absolute; left: 0; top: 4px; height: 4px; background: var(--tone); opacity: 0.75; }
+    #menu .vd-man .bar .drop { position: absolute; top: 0; width: 2px; height: 12px; margin-left: -1px; background: var(--m-bright); cursor: help; }
+    #menu .vd-man .bar .fell { position: absolute; top: 50%; transform: translate(-50%, -50%); font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; color: #ff9c84; text-shadow: 0 0 3px #000; cursor: help; }
+    #menu .vd-man .n { font: 700 15px/1 var(--m-head); color: var(--m-bright); text-align: right; letter-spacing: 0.04em; cursor: help; }
+    #menu .vd-man .n.none { color: var(--m-faint); }
+    #menu .vd-count { margin-top: 4px; cursor: help; } #menu .vd-count .nm { color: var(--m-dim); font-weight: 600; }
+    #menu .vd-count .sq { display: flex; gap: 3px; flex-wrap: wrap; }
+    #menu .vd-count .sq i { display: block; width: 9px; height: 9px; box-sizing: border-box; border: 1px solid rgba(255,156,132,0.6); }
+    #menu .vd-count .sq i.on { background: #ff9c84; }
+    #menu .vd-count.host .sq i { border-color: rgba(var(--m-edge),0.6); } #menu .vd-count.host .sq i.on { background: var(--m-bright); border-color: var(--m-bright); }
+    #menu .vd-count .n { font-size: 12px; color: var(--m-soft); }
+    #menu .db-map .vfell { position: absolute; transform: translate(-50%, -50%); font: 700 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; color: #b7a98a; text-shadow: 0 0 3px #000, 0 0 6px #000; cursor: help; }
+    #menu .db-map .vfell.t-you { color: var(--m-bright); } #menu .db-map .vfell.t-red { color: #c9655b; } #menu .db-map .vfell.t-blue { color: #5b8fc9; }
+    #menu .db.vd-on .db-t1 { display: none; }
+    #menu .db.vd-solo .vd-time { display: none; }   /* (the stealth card has its own clock, the mission's: one clock a card) */
+    #menu .db.vd-squad .db-head, #menu .db.vd-squad .db-stats, #menu .db.vd-squad .db-badges, #menu .db.vd-squad .db-tlhead, #menu .db.vd-squad .db-timeline, #menu .db.vd-squad .db-legend,
+    #menu .db.vd-squad .db-map .pin, #menu .db.vd-squad .db-map .mark.rack, #menu .db.vd-squad .db-map .mark.exit { display: none; }
+    #menu .db.vd-squad .db-actions { margin-top: 4px; }
+    /* the four ways a mission can be won (ui/verdictPips.ts: the end card's head, a mission's card): won = lit, the rest dim, two won = the gold frame; under a
+       lit mark a '1' = at the first try, a bar = nobody lost */
+    .vpips { display: inline-flex; align-items: flex-start; gap: 6px; padding: 3px 5px; border: 1px solid transparent; vertical-align: middle; }
+    .vpips.gold { border-color: #e8c15a; }
+    .vpip { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; color: rgba(214,200,170,0.22); cursor: help; }
+    .vpip .vico { display: block; width: 20px; height: 20px; font-style: normal; } .vpip .vico svg { display: block; width: 100%; height: 100%; }
+    .vpip.won { color: #d2c9b5; } .vpip.now { color: #f0e9d9; } .vpip.now .vico { outline: 1px solid #f0e9d9; outline-offset: 2px; }
+    .vpip .vmarks { display: flex; align-items: center; gap: 2px; height: 7px; }
+    .vpip .v1 { font: 700 8px/7px ui-monospace, SFMono-Regular, Menlo, monospace; visibility: hidden; } .vpip .v1.on { visibility: visible; }
+    .vpip .vall { display: block; width: 9px; height: 2px; background: currentColor; text-decoration: none; visibility: hidden; } .vpip .vall.on { visibility: visible; }
+    /* the same pips on a mission's card on the start page (ui/verdictRows.ts): at the right of the card's last line, small; four dim marks until a way is won */
+    /* (on a mission's CARD: the foot line the menus keep empty for it — column 3 of row 3, 17 px tall. The strip is 17 px with its frame — an 11 px mark over 4 px
+       of ticks — so a card is the height it was; it is no link and takes no pointer, the card under it is; colours are the menu's own tokens, the gold
+       frame a pale sand that is not the selection's orange. Text rows — ?nogroups, the older card's list — show none.) */
+    #missions .mrow > .vpips { display: none; }
+    #missions.one .mgrid .mrow > .vpips { display: inline-flex; grid-column: 3; grid-row: 3; justify-self: end; align-self: center; margin: 0 5px 0 auto; padding: 0 3px; gap: 4px; pointer-events: none; }
+    #missions .mrow > .vpips .vpip { gap: 0; cursor: default; color: rgba(147,139,118,0.38); }
+    #missions .mrow > .vpips .vpip.won { color: var(--m-text, #d2c9b5); }
+    #missions .mrow > .vpips .vico { width: 11px; height: 11px; }
+    #missions .mrow > .vpips .vmarks { height: 4px; gap: 1px; } #missions .mrow > .vpips .v1 { font-size: 6px; line-height: 4px; } #missions .mrow > .vpips .vall { width: 6px; height: 1px; }
+    #missions .mrow > .vpips.none { opacity: 0.6; }
     #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(4,10,8,0.62), rgba(4,10,8,0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(140,220,180,0.25); }
     #caption.on { opacity: 1; }
     /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
@@ -295,6 +479,8 @@
     #timeline .seg:hover { color: #fff; border-top-color: rgba(143,240,180,0.9); }
     body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
     #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
+    body.blinded #bubbles, body.blinded .bubble, body.blinded .marker, body.blinded .lostfrom { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
+    #blind { position: absolute; inset: 0; background: #f4f6f2; opacity: 0; pointer-events: none; z-index: 4; }   /* a stun canister in the player's eyes (game/samstun.ts, overlay.ts): the picture whites out and clears */
     .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
     .bar.top { top: 0; } .bar.bot { bottom: 0; }
     body.touring .bar { height: 7.5%; }
@@ -310,8 +496,42 @@
     body.breaching #caption .cap { font: 600 15px/1.35 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.02em; color: #eef3ef; text-shadow: 0 1px 4px #000; }
     body.breaching #caption .sub { display: none; }
     body.breaching #log { bottom: calc(7.5% + 50px); }   /* radio lines ride above the lower third, not through it */
-    body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .objmark { display: none !important; }
+    body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .aimwish, body.breaching .objmark, body.breaching .ordermark, body.breaching .lostfrom { display: none !important; }
+    /* ?kitview (src/host/kitView.ts): the page as a picture in the start page's iframe — the canvas and nothing else */
+    body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
+    body.kitview { cursor: none; }
+    body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */
     #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    /* the squad's plan on the floor (game/floorplan.ts → ui/planfloor.ts): a man's dotted way, the ring he will stand in, the fan he watches, a hair line to
+       the point he is on — in his pair's colour (green for a squad with no pairs); rings at the feet of the men an open order menu goes to */
+    .plan { color: #8ff0b4; } .plan .t-gold { color: #f2cf6b; } .plan .t-red { color: #ff9a8a; } .plan .t-blue { color: #9cc8ff; }
+    .plan .pp { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.1 8; }
+    .plan .pm { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-dasharray: 3 3; } .plan .pm.there { fill: currentColor; fill-opacity: 0.08; stroke-dasharray: none; }
+    .plan .pf { fill: currentColor; fill-opacity: 0.05; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1; stroke-dasharray: 2 3; stroke-linejoin: round; } .plan .pf.there { fill-opacity: 0.13; stroke-dasharray: none; }
+    .plan .pl { stroke: currentColor; stroke-opacity: 0.4; stroke-width: 1; stroke-dasharray: 1 5; }
+    .plan polygon { stroke-linejoin: round; }
+    .plan .pw, .plan .py { fill: none; stroke: currentColor; stroke-width: 1.5; }   /* (the order mark's own weight: `.ordermark i`) */
+    .plan .pw.thr { fill: currentColor; fill-opacity: 0.14; stroke-width: 2; }
+    .plan .pa { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 6; }
+    .plan .pe { fill: currentColor; fill-opacity: 0.2; stroke: currentColor; stroke-width: 1.5; }
+    .plan .pr { fill: currentColor; fill-opacity: 0.04; stroke: currentColor; stroke-opacity: 0.55; stroke-width: 1; stroke-dasharray: 2 7; }
+    .plan .pt { font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: currentColor; paint-order: stroke; stroke: rgba(6,10,12,0.72); stroke-width: 3px; stroke-linejoin: round; } .plan .pt.there { fill-opacity: 0.8; }
+    .plan > g { transition: opacity 0.25s linear; }
+    /* waiting on the key: a quiet dashed bar; the one the key would send now is solid with the key on it — a charge's key is filled (it is the loud one) */
+    .plan .pd { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.6; stroke-dasharray: 2 5; } .plan .now .pd { stroke-width: 4; stroke-opacity: 1; stroke-dasharray: none; }
+    .plan .pk { fill: rgba(6,10,12,0.82); stroke: currentColor; stroke-width: 1.2; } .plan .pkt { font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: currentColor; }
+    .plan .w-charge .pk, .plan .w-wall .pk { fill: currentColor; } .plan .w-charge .pkt, .plan .w-wall .pkt { fill: #0a0e10; }
+    .plan .laid .pp { stroke-width: 2.5; stroke-dasharray: 0.1 13; } .plan .laid .pd { stroke-width: 3; stroke-opacity: 0.9; stroke-dasharray: 5 5; } .plan .laid .pw { stroke-dasharray: 2 3; }   /* (a plan laid for the word, game/planlay.ts: nobody moving yet — wider gaps than a way being walked) */
+    body.breaching .plan, body.attract .plan, body.blinded .plan { display: none; }
+    /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
+       filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
+    .closewin path { fill: rgba(150,240,220,0.06); stroke: rgba(150,240,220,0.55); stroke-width: 1.2; stroke-linejoin: round; }
+    .closewin path.cw-in { fill: rgba(150,240,220,0.24); stroke: rgba(200,255,240,0.98); stroke-width: 2; }
+    .closewin path.cw-shut { fill: none; stroke: rgba(255,190,120,0.5); stroke-dasharray: 3 4; }
+    .closewin text { font: 500 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; fill: rgba(170,245,228,0.9); paint-order: stroke; stroke: rgba(6,10,12,0.72); stroke-width: 3px; stroke-linejoin: round; }
+    .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: rgba(225,255,246,1); }
+    .closewin text.cw-shut { fill: rgba(255,200,140,0.85); }
+    body.breaching .closewin { display: none; }
     /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
        pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
        3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */
@@ -335,7 +555,10 @@
     #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(121,214,154,0.5); } #equip .pace .ticks i.on { background: #8ff0b4; box-shadow: 0 0 4px rgba(120,240,170,0.4); }
     #equip .key { color: #7a9; font-weight: 700; }
     #equip .name { letter-spacing: 0.06em; text-transform: uppercase; color: #dff; }
-    #equip .rounds { display: flex; gap: 2px; align-items: flex-end; }
+    /* the magazine's pips: a line of their own UNDER each gun's row, selected or not (so the column keeps its height when the selection changes). Out of the
+       row's flow, so the row is as short as its name, count, spares and tags; `left` = the row's padding + the key digit + the gap: under the name */
+    #equip .rounds { display: flex; gap: 2px; align-items: flex-end; position: absolute; left: calc(15px + 1ch); bottom: 4px; }
+    #equip .slot:has(.rounds) { position: relative; padding-bottom: 19px; }
     #equip .rounds i { display: block; width: 3px; height: 9px; background: #cfe; opacity: 0.9; }
     #equip .rounds i.spent { background: transparent; border: 1px solid rgba(200,255,240,0.3); width: 1px; height: 7px; }
     #equip .rounds i.chamber { height: 11px; background: #ffd27a; }
@@ -348,6 +571,7 @@
     #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: #7fe0d0; }
     #equip .cans { display: flex; gap: 3px; } #equip .cans i { display: block; width: 6px; height: 11px; background: #7d8f74; border-top: 2px solid #b23; }
     #equip .cans.bangs i { background: #3e4346; border-top: 2px solid #e8e6dc; }
+    #equip .cans.frags i { background: #4b5a2c; border-top: 2px solid #d9b21e; }
     #equip .cond { display: flex; gap: 8px; align-items: center; padding: 1px 1px 4px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
     #equip .cond .pips { display: flex; gap: 3px; } #equip .cond .pips i { display: block; width: 14px; height: 6px; background: #9fd8c6; box-shadow: 0 0 5px rgba(80,220,180,0.35); }
     #equip .cond .pips i.lost { background: transparent; border: 1px solid rgba(220,120,110,0.6); box-shadow: none; }
@@ -381,10 +605,11 @@
     <div id="journal"></div>
     <div id="caption"></div>
       <div id="timeline"></div>
-    <div class="bar top"></div><div class="bar bot"></div><div id="veil"></div>
+    <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>
     <div id="panel" class="hidden"></div>
     <div id="loading">loading…</div>
     <div id="menu"></div>
+    <div id="missions"></div>
     <div id="fatal"></div>
   </div>
   <script type="module" src="./src/main.ts"></script>

@@ -1,0 +1,2106 @@
+{
+ "when": "2026-10-08T23:59:47.270Z",
+ "base": "http://localhost:5198",
+ "quality": "high",
+ "css": [
+  640,
+  360
+ ],
+ "rounds": 2,
+ "n": 5,
+ "warm": 1,
+ "A": {
+  "on": true,
+  "adapter": "google swiftshader",
+  "internal": [
+   0,
+   0
+  ],
+  "out": [
+   0,
+   0
+  ],
+  "timer": true,
+  "pipelines": {
+   "total": 107,
+   "done": 107,
+   "failed": 0
+  },
+  "preset": "high",
+  "emit": [
+   "blast",
+   "glass"
+  ]
+ },
+ "B": {
+  "on": false,
+  "adapter": "google swiftshader",
+  "internal": [
+   0,
+   0
+  ],
+  "out": [
+   0,
+   0
+  ],
+  "timer": true,
+  "pipelines": {
+   "total": 106,
+   "done": 106,
+   "failed": 0
+  },
+  "preset": "high",
+  "emit": [
+   "blast",
+   "glass"
+  ]
+ },
+ "cases": {
+  "blast": {
+   "countsOn": {
+    "on": true,
+    "boxes": 1179,
+    "statics": 800,
+    "dynamics": 379,
+    "cutStatics": 13,
+    "cutDynamics": 56,
+    "planes": 152,
+    "planesHist": "17 26 21 5 0 0 0 0",
+    "drawnPlain": 1028,
+    "drawnCut": 68,
+    "vertices": 42720,
+    "verticesIfPlain": 39456,
+    "cutBytesPerFrame": 8192,
+    "debris": 64,
+    "debrisCap": 64
+   },
+   "countsOff": {
+    "on": false,
+    "boxes": 1175,
+    "statics": 796,
+    "dynamics": 379,
+    "cutStatics": 0,
+    "cutDynamics": 0,
+    "planes": 0,
+    "planesHist": "0 0 0 0 0 0 0 0",
+    "drawnPlain": 1092,
+    "drawnCut": 0,
+    "vertices": 39312,
+    "verticesIfPlain": 39312,
+    "cutBytesPerFrame": 0,
+    "debris": 64,
+    "debrisCap": 64
+   },
+   "stagedOn": {
+    "case": "blast",
+    "frames": 455,
+    "settleFrames": 0,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 15
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 26
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 36
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 49
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 18,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "stagedOff": {
+    "case": "blast",
+    "frames": 549,
+    "settleFrames": 4,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 13
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 25
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 35
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 47
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 62
+     },
+     {
+      "at": [
+       21.4,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 35,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "census": {
+    "cutBoxes": 68,
+    "cutDrawn": 68,
+    "lights": 34,
+    "pixels": 6420,
+    "showCutShare": 0.3511,
+    "primary": {
+     "rays": 6420,
+     "share": 0.3799,
+     "testsPerRay": 0.3903,
+     "planesPerRay": 0.9894
+    },
+    "shadow": {
+     "rays": 143745,
+     "share": 0.1373,
+     "testsPerRay": 0.1452,
+     "planesPerRay": 0.3819
+    },
+    "gather": {
+     "rays": 25680,
+     "share": 0.1324,
+     "testsPerRay": 0.1378,
+     "planesPerRay": 0.3705
+    }
+   },
+   "summary": {
+    "on": {
+     "n": 10,
+     "wall": 14660.100000000093,
+     "wallLo": 14120.600000000093,
+     "wallHi": 14879.299999999814,
+     "union": 2806.6392619999992,
+     "unionLo": 2629.0256289999984,
+     "unionHi": 2835.355975000002,
+     "sum": 2806.6392620000006,
+     "passes": {
+      "mesh": 72.448134,
+      "gbuffer": 628.846797,
+      "rc c3": 383.413376,
+      "rc c2": 889.192494,
+      "rc c0": 528.560731,
+      "rc dice": 1.345003,
+      "particles": 33.996845,
+      "softblur": 323.011412,
+      "temporal": 39.098054,
+      "reflect": 415.385372,
+      "rdenoise": 47.720013,
+      "gbaa": 10.9717,
+      "taau": 69.515839,
+      "bloom": 16.399658,
+      "post": 19.354144,
+      "fxaa": 17.12171,
+      "gather": 0,
+      "rc c1": 0
+     }
+    },
+    "off": {
+     "n": 10,
+     "wall": 12969.30000000028,
+     "wallLo": 12680.700000000186,
+     "wallHi": 13299.799999999814,
+     "union": 3498.970835000001,
+     "unionLo": 3118.636096999999,
+     "unionHi": 4099.8938659999985,
+     "sum": 3498.9708349999996,
+     "passes": {
+      "mesh": 72.921021,
+      "gbuffer": 561.163225,
+      "rc c3": 323.687178,
+      "rc c2": 637.891063,
+      "rc c0": 488.825076,
+      "rc dice": 1.284104,
+      "particles": 18.242573,
+      "softblur": 302.159568,
+      "temporal": 45.972918,
+      "reflect": 417.63233,
+      "rdenoise": 48.424805,
+      "gbaa": 11.687485,
+      "taau": 67.523885,
+      "bloom": 16.224986,
+      "post": 19.35608,
+      "fxaa": 16.884798,
+      "gather": 935.478253,
+      "rc c1": 878.377313
+     }
+    },
+    "onPlain": {
+     "n": 10,
+     "wall": 14776.600000000093,
+     "wallLo": 14072.100000000093,
+     "wallHi": 15051,
+     "union": 2648.4254229999997,
+     "unionLo": 2524.0688510000027,
+     "unionHi": 2776.2301409999995,
+     "sum": 2648.425423,
+     "passes": {
+      "mesh": 70.880559,
+      "gbuffer": 611.661415,
+      "rc c3": 362.518829,
+      "rc c2": 762.052569,
+      "rc c0": 512.454664,
+      "rc dice": 1.15112,
+      "particles": 34.682219,
+      "softblur": 309.172654,
+      "temporal": 42.593347,
+      "reflect": 358.262675,
+      "rdenoise": 49.850888,
+      "gbaa": 10.849945,
+      "taau": 65.3903,
+      "bloom": 16.952635,
+      "post": 19.383952,
+      "fxaa": 17.050853,
+      "gather": 0,
+      "rc c1": 0
+     }
+    }
+   },
+   "raw": {
+    "on": [
+     {
+      "wall": 14207.5,
+      "union": 2861.624853000002,
+      "sum": 2861.6248530000003,
+      "passes": {
+       "mesh": 71.133554,
+       "gbuffer": 623.488703,
+       "rc c3": 381.309122,
+       "rc c2": 957.581531,
+       "rc c0": 498.157019,
+       "rc dice": 1.383156,
+       "particles": 33.052191,
+       "softblur": 318.678564,
+       "temporal": 49.410223,
+       "reflect": 415.385372,
+       "rdenoise": 44.069234,
+       "gbaa": 10.778748,
+       "taau": 64.580262,
+       "bloom": 16.105877,
+       "post": 18.94926,
+       "fxaa": 17.494609
+      }
+     },
+     {
+      "wall": 14961.600000000093,
+      "union": 3005.7881269999993,
+      "sum": 3005.7881270000003,
+      "passes": {
+       "mesh": 68.234577,
+       "gbuffer": 615.991774,
+       "rc c3": 384.428868,
+       "rc c2": 952.625188,
+       "rc c0": 563.471301,
+       "rc dice": 1.343809,
+       "particles": 32.736479,
+       "softblur": 326.637873,
+       "temporal": 43.464264,
+       "reflect": 492.035034,
+       "rdenoise": 50.636308,
+       "gbaa": 10.628284,
+       "taau": 63.742294,
+       "bloom": 15.803848,
+       "post": 18.968152,
+       "fxaa": 16.339753
+      }
+     },
+     {
+      "wall": 14787.399999999907,
+      "union": 2806.6392619999992,
+      "sum": 2806.6392620000006,
+      "passes": {
+       "mesh": 75.475673,
+       "gbuffer": 631.057984,
+       "rc c3": 370.621468,
+       "rc c2": 889.192494,
+       "rc c0": 576.393164,
+       "rc dice": 1.345003,
+       "particles": 34.562105,
+       "softblur": 334.047218,
+       "temporal": 37.762178,
+       "reflect": 348.456766,
+       "rdenoise": 41.68445,
+       "gbaa": 10.728302,
+       "taau": 69.912417,
+       "bloom": 16.458024,
+       "post": 20.013258,
+       "fxaa": 17.9017
+      }
+     },
+     {
+      "wall": 14879.299999999814,
+      "union": 2629.0256289999984,
+      "sum": 2629.025629,
+      "passes": {
+       "mesh": 77.142722,
+       "gbuffer": 613.83534,
+       "rc c3": 300.36963,
+       "rc c2": 724.481913,
+       "rc c0": 535.225138,
+       "rc dice": 1.113803,
+       "particles": 37.018446,
+       "softblur": 323.011412,
+       "temporal": 37.4965,
+       "reflect": 441.924241,
+       "rdenoise": 47.720013,
+       "gbaa": 12.869643,
+       "taau": 74.920047,
+       "bloom": 15.732121,
+       "post": 18.744672,
+       "fxaa": 16.916589
+      }
+     },
+     {
+      "wall": 13976.299999999814,
+      "union": 2598.0471519999987,
+      "sum": 2598.047152,
+      "passes": {
+       "mesh": 79.037813,
+       "gbuffer": 648.254433,
+       "rc c3": 410.646755,
+       "rc c2": 733.055628,
+       "rc c0": 492.281215,
+       "rc dice": 0.995478,
+       "particles": 32.345141,
+       "softblur": 324.523297,
+       "temporal": 39.098054,
+       "reflect": 338.048854,
+       "rdenoise": 41.594561,
+       "gbaa": 10.9717,
+       "taau": 75.356128,
+       "bloom": 20.092528,
+       "post": 20.076712,
+       "fxaa": 16.887469
+      }
+     },
+     {
+      "wall": 14029,
+      "union": 2835.355975000002,
+      "sum": 2835.3559749999995,
+      "passes": {
+       "mesh": 71.032506,
+       "gbuffer": 628.846797,
+       "rc c3": 433.175373,
+       "rc c2": 808.378101,
+       "rc c0": 624.491234,
+       "rc dice": 1.669141,
+       "particles": 35.568317,
+       "softblur": 317.259741,
+       "temporal": 36.590041,
+       "reflect": 364.317983,
+       "rdenoise": 53.172538,
+       "gbaa": 10.664246,
+       "taau": 63.176336,
+       "bloom": 15.860418,
+       "post": 18.356812,
+       "fxaa": 16.90944
+      }
+     },
+     {
+      "wall": 14660.100000000093,
+      "union": 2723.297308999999,
+      "sum": 2723.2973089999996,
+      "passes": {
+       "mesh": 67.271547,
+       "gbuffer": 614.323255,
+       "rc c3": 464.684513,
+       "rc c2": 746.102853,
+       "rc c0": 528.560731,
+       "rc dice": 1.307571,
+       "particles": 32.716095,
+       "softblur": 277.382041,
+       "temporal": 41.817845,
+       "reflect": 417.684043,
+       "rdenoise": 47.873632,
+       "gbaa": 11.980941,
+       "taau": 69.515839,
+       "bloom": 16.399658,
+       "post": 18.563136,
+       "fxaa": 18.640871
+      }
+     },
+     {
+      "wall": 15027.5,
+      "union": 2716.648029000002,
+      "sum": 2716.648029,
+      "passes": {
+       "mesh": 74.2514,
+       "gbuffer": 650.560469,
+       "rc c3": 383.413376,
+       "rc c2": 903.61195,
+       "rc c0": 501.28339,
+       "rc dice": 1.370076,
+       "particles": 35.5494,
+       "softblur": 292.588161,
+       "temporal": 38.795743,
+       "reflect": 345.875083,
+       "rdenoise": 44.340963,
+       "gbaa": 11.657472,
+       "taau": 67.333276,
+       "bloom": 16.577739,
+       "post": 19.452184,
+       "fxaa": 17.429168
+      }
+     },
+     {
+      "wall": 14529.200000000186,
+      "union": 2829.8863890000016,
+      "sum": 2829.8863889999993,
+      "passes": {
+       "mesh": 72.448134,
+       "gbuffer": 618.516935,
+       "rc c3": 375.231477,
+       "rc c2": 909.575854,
+       "rc c0": 523.36126,
+       "rc dice": 0.95286,
+       "particles": 33.996845,
+       "softblur": 360.401562,
+       "temporal": 35.721847,
+       "reflect": 373.390591,
+       "rdenoise": 44.288527,
+       "gbaa": 11.243823,
+       "taau": 70.992687,
+       "bloom": 18.280922,
+       "post": 20.492858,
+       "fxaa": 16.440726
+      }
+     },
+     {
+      "wall": 14120.600000000093,
+      "union": 2612.4218,
+      "sum": 2612.4218,
+      "passes": {
+       "mesh": 68.892068,
+       "gbuffer": 632.542501,
+       "rc c3": 304.940831,
+       "rc c2": 777.387031,
+       "rc c0": 484.985734,
+       "rc dice": 1.436465,
+       "particles": 33.153649,
+       "softblur": 307.793318,
+       "temporal": 58.933891,
+       "reflect": 424.969783,
+       "rdenoise": 60.684892,
+       "gbaa": 10.329795,
+       "taau": 62.781529,
+       "bloom": 16.132814,
+       "post": 19.354144,
+       "fxaa": 17.12171
+      }
+     }
+    ],
+    "off": [
+     {
+      "wall": 12736.200000000186,
+      "union": 3311.676328,
+      "sum": 3311.6763280000005,
+      "passes": {
+       "mesh": 73.359814,
+       "gbuffer": 557.088613,
+       "rc c3": 265.04981,
+       "rc c2": 615.059648,
+       "rc c0": 489.25647,
+       "rc dice": 1.256523,
+       "particles": 23.50006,
+       "softblur": 279.639116,
+       "gather": 965.231495,
+       "temporal": 37.835793,
+       "reflect": 427.659127,
+       "rdenoise": 43.97708,
+       "gbaa": 10.642744,
+       "taau": 63.603292,
+       "bloom": 15.605356,
+       "post": 19.023858,
+       "fxaa": 16.584519
+      }
+     },
+     {
+      "wall": 12969.30000000028,
+      "union": 4467.864872000001,
+      "sum": 4467.864872,
+      "passes": {
+       "mesh": 67.859646,
+       "gbuffer": 545.969482,
+       "rc c3": 320.309422,
+       "rc c2": 762.569946,
+       "rc c1": 889.895529,
+       "rc c0": 488.825076,
+       "rc dice": 1.384579,
+       "particles": 16.148591,
+       "softblur": 306.441662,
+       "gather": 988.389228,
+       "temporal": 45.972918,
+       "reflect": 417.63233,
+       "rdenoise": 64.561718,
+       "gbaa": 14.125356,
+       "taau": 67.523885,
+       "bloom": 16.224986,
+       "post": 19.350416,
+       "fxaa": 18.566084
+      }
+     },
+     {
+      "wall": 13609.400000000373,
+      "union": 4099.8938659999985,
+      "sum": 4099.893866,
+      "passes": {
+       "mesh": 78.548936,
+       "gbuffer": 550.130358,
+       "rc c3": 256.677358,
+       "rc c2": 634.908055,
+       "rc c1": 878.377313,
+       "rc c0": 461.365995,
+       "rc dice": 1.359235,
+       "particles": 15.23171,
+       "softblur": 266.065872,
+       "gather": 935.478253,
+       "temporal": 48.362324,
+       "reflect": 373.126836,
+       "rdenoise": 44.158873,
+       "gbaa": 14.860106,
+       "taau": 75.640641,
+       "bloom": 15.732359,
+       "post": 19.293603,
+       "fxaa": 16.884798
+      }
+     },
+     {
+      "wall": 12544.30000000028,
+      "union": 3118.636096999999,
+      "sum": 3118.636097,
+      "passes": {
+       "mesh": 69.420372,
+       "gbuffer": 561.163225,
+       "rc c3": 261.915113,
+       "rc c2": 594.535523,
+       "rc c1": 831.700062,
+       "rc c0": 497.086068,
+       "rc dice": 1.344671,
+       "particles": 18.242573,
+       "softblur": 333.176223,
+       "temporal": 40.028365,
+       "reflect": 334.260955,
+       "rdenoise": 42.848464,
+       "gbaa": 11.629394,
+       "taau": 66.683055,
+       "bloom": 15.765259,
+       "post": 19.35608,
+       "fxaa": 16.643649
+      }
+     },
+     {
+      "wall": 13959.600000000093,
+      "union": 2623.626448,
+      "sum": 2623.6264480000004,
+      "passes": {
+       "mesh": 72.131989,
+       "gbuffer": 562.775708,
+       "rc c3": 379.352144,
+       "rc c2": 742.799666,
+       "rc c0": 524.737088,
+       "rc dice": 1.253963,
+       "particles": 20.005084,
+       "softblur": 302.159568,
+       "temporal": 57.650274,
+       "reflect": 378.470313,
+       "rdenoise": 48.424805,
+       "gbaa": 10.780185,
+       "taau": 68.753236,
+       "bloom": 17.108133,
+       "post": 18.607628,
+       "fxaa": 18.844327
+      }
+     },
+     {
+      "wall": 12680.700000000186,
+      "union": 2293.682912000002,
+      "sum": 2293.6829119999998,
+      "passes": {
+       "mesh": 75.275654,
+       "gbuffer": 587.529147,
+       "rc c3": 327.091724,
+       "rc c2": 625.8728,
+       "rc c0": 420.209745,
+       "rc dice": 1.066842,
+       "particles": 16.694628,
+       "softblur": 272.08992,
+       "temporal": 40.579375,
+       "reflect": 368.740455,
+       "rdenoise": 49.739655,
+       "gbaa": 11.687485,
+       "taau": 67.524331,
+       "bloom": 17.110298,
+       "post": 18.529962,
+       "fxaa": 16.804884
+      }
+     },
+     {
+      "wall": 13120.19999999972,
+      "union": 3498.970835000001,
+      "sum": 3498.9708349999996,
+      "passes": {
+       "mesh": 67.866511,
+       "gbuffer": 581.840003,
+       "rc c3": 323.687178,
+       "rc c2": 660.883167,
+       "rc c1": 931.458722,
+       "rc c0": 509.269108,
+       "rc dice": 1.000787,
+       "particles": 18.481149,
+       "softblur": 334.59861,
+       "temporal": 60.828861,
+       "reflect": 434.737452,
+       "rdenoise": 52.088594,
+       "gbaa": 14.055872,
+       "taau": 73.91966,
+       "bloom": 16.095164,
+       "post": 19.81888,
+       "fxaa": 17.071222
+      }
+     },
+     {
+      "wall": 12653,
+      "union": 4430.462412,
+      "sum": 4430.462412000001,
+      "passes": {
+       "mesh": 79.454765,
+       "gbuffer": 620.888791,
+       "rc c3": 345.512221,
+       "rc c2": 750.289491,
+       "rc c1": 899.823824,
+       "rc c0": 455.72167,
+       "rc dice": 1.355645,
+       "particles": 15.087936,
+       "softblur": 299.555125,
+       "gather": 964.423737,
+       "temporal": 51.221345,
+       "reflect": 432.325255,
+       "rdenoise": 44.485158,
+       "gbaa": 10.433313,
+       "taau": 65.193272,
+       "bloom": 15.579655,
+       "post": 19.619293,
+       "fxaa": 16.712061
+      }
+     },
+     {
+      "wall": 12896.299999999814,
+      "union": 4030.4256319999986,
+      "sum": 4030.4256319999995,
+      "passes": {
+       "mesh": 70.408392,
+       "gbuffer": 545.89544,
+       "rc c3": 315.437305,
+       "rc c2": 592.245732,
+       "rc c1": 900.139601,
+       "rc c0": 402.736602,
+       "rc dice": 1.284104,
+       "particles": 18.918927,
+       "softblur": 282.726014,
+       "gather": 939.459997,
+       "temporal": 37.386221,
+       "reflect": 333.262781,
+       "rdenoise": 42.093077,
+       "gbaa": 10.778229,
+       "taau": 66.783772,
+       "bloom": 16.764878,
+       "post": 20.427233,
+       "fxaa": 16.744043
+      }
+     },
+     {
+      "wall": 13299.799999999814,
+      "union": 3307.656712999999,
+      "sum": 3307.6567130000008,
+      "passes": {
+       "mesh": 72.921021,
+       "gbuffer": 560.095583,
+       "rc c3": 324.323367,
+       "rc c2": 637.891063,
+       "rc c1": 857.918779,
+       "rc c0": 414.595437,
+       "rc dice": 1.002757,
+       "particles": 16.106383,
+       "softblur": 314.910001,
+       "temporal": 39.80825,
+       "reflect": 474.818212,
+       "rdenoise": 58.98608,
+       "gbaa": 12.679907,
+       "taau": 64.929033,
+       "bloom": 16.766423,
+       "post": 19.694358,
+       "fxaa": 19.192644
+      }
+     }
+    ],
+    "onPlain": [
+     {
+      "wall": 14791.30000000028,
+      "union": 2524.0688510000027,
+      "sum": 2524.068851,
+      "passes": {
+       "mesh": 69.415927,
+       "gbuffer": 611.661415,
+       "rc c3": 331.108436,
+       "rc c2": 757.087012,
+       "rc c0": 479.403926,
+       "rc dice": 1.423062,
+       "particles": 31.534258,
+       "softblur": 346.356303,
+       "temporal": 37.33591,
+       "reflect": 330.235236,
+       "rdenoise": 49.850888,
+       "gbaa": 11.353783,
+       "taau": 63.536324,
+       "bloom": 15.427786,
+       "post": 18.450697,
+       "fxaa": 16.778242
+      }
+     },
+     {
+      "wall": 14288.600000000093,
+      "union": 2853.961721999999,
+      "sum": 2853.961722000001,
+      "passes": {
+       "mesh": 68.427028,
+       "gbuffer": 592.736103,
+       "rc c3": 467.437199,
+       "rc c2": 926.14074,
+       "rc c0": 511.729192,
+       "rc dice": 1.043062,
+       "particles": 32.069531,
+       "softblur": 281.871099,
+       "temporal": 45.889825,
+       "reflect": 368.547034,
+       "rdenoise": 42.768433,
+       "gbaa": 10.80793,
+       "taau": 79.870124,
+       "bloom": 17.360525,
+       "post": 20.318011,
+       "fxaa": 18.445422
+      }
+     },
+     {
+      "wall": 15296.600000000093,
+      "union": 2648.4254229999997,
+      "sum": 2648.425423,
+      "passes": {
+       "mesh": 87.768453,
+       "gbuffer": 624.599293,
+       "rc c3": 407.590647,
+       "rc c2": 765.975153,
+       "rc c0": 524.294629,
+       "rc dice": 1.426071,
+       "particles": 36.666599,
+       "softblur": 305.763358,
+       "temporal": 38.902212,
+       "reflect": 329.723618,
+       "rdenoise": 50.59989,
+       "gbaa": 10.643843,
+       "taau": 73.264572,
+       "bloom": 15.806378,
+       "post": 21.925673,
+       "fxaa": 17.050853
+      }
+     },
+     {
+      "wall": 13634.200000000186,
+      "union": 2546.443223,
+      "sum": 2546.443223,
+      "passes": {
+       "mesh": 72.046957,
+       "gbuffer": 599.839815,
+       "rc c3": 328.331298,
+       "rc c2": 736.891981,
+       "rc c0": 483.873511,
+       "rc dice": 0.983491,
+       "particles": 32.515127,
+       "softblur": 326.160424,
+       "temporal": 55.431957,
+       "reflect": 371.388302,
+       "rdenoise": 47.987841,
+       "gbaa": 10.812469,
+       "taau": 63.660601,
+       "bloom": 16.359264,
+       "post": 18.469302,
+       "fxaa": 16.863155
+      }
+     },
+     {
+      "wall": 13991.700000000186,
+      "union": 2776.2301409999995,
+      "sum": 2776.2301410000005,
+      "passes": {
+       "mesh": 68.386204,
+       "gbuffer": 592.581059,
+       "rc c3": 362.518829,
+       "rc c2": 762.052569,
+       "rc c0": 590.29758,
+       "rc dice": 1.173769,
+       "particles": 38.155182,
+       "softblur": 327.270734,
+       "temporal": 49.355011,
+       "reflect": 431.833341,
+       "rdenoise": 52.182787,
+       "gbaa": 10.749286,
+       "taau": 65.003977,
+       "bloom": 17.250872,
+       "post": 18.418383,
+       "fxaa": 17.686752
+      }
+     },
+     {
+      "wall": 14776.600000000093,
+      "union": 2468.446895,
+      "sum": 2468.4468949999996,
+      "passes": {
+       "mesh": 72.562425,
+       "gbuffer": 626.847096,
+       "rc c3": 301.879618,
+       "rc c2": 770.635798,
+       "rc c0": 441.061088,
+       "rc dice": 1.004964,
+       "particles": 33.281618,
+       "softblur": 282.752392,
+       "temporal": 42.593347,
+       "reflect": 358.262675,
+       "rdenoise": 67.434834,
+       "gbaa": 10.849945,
+       "taau": 68.661607,
+       "bloom": 17.466584,
+       "post": 19.607131,
+       "fxaa": 16.591227
+      }
+     },
+     {
+      "wall": 14072.100000000093,
+      "union": 2708.8313610000014,
+      "sum": 2708.8313610000005,
+      "passes": {
+       "mesh": 70.880559,
+       "gbuffer": 605.468015,
+       "rc c3": 395.980406,
+       "rc c2": 737.964829,
+       "rc c0": 592.999753,
+       "rc dice": 1.052971,
+       "particles": 34.682219,
+       "softblur": 281.080256,
+       "temporal": 40.718841,
+       "reflect": 404.349286,
+       "rdenoise": 47.256968,
+       "gbaa": 11.111397,
+       "taau": 72.871976,
+       "bloom": 17.8819,
+       "post": 20.714517,
+       "fxaa": 19.85513
+      }
+     },
+     {
+      "wall": 15051,
+      "union": 2889.677423000002,
+      "sum": 2889.677423,
+      "passes": {
+       "mesh": 80.997193,
+       "gbuffer": 598.236681,
+       "rc c3": 398.246407,
+       "rc c2": 959.969967,
+       "rc c0": 596.237278,
+       "rc dice": 1.636362,
+       "particles": 40.98974,
+       "softblur": 270.434175,
+       "temporal": 56.036156,
+       "reflect": 350.661544,
+       "rdenoise": 42.615024,
+       "gbaa": 10.911467,
+       "taau": 64.163187,
+       "bloom": 16.778923,
+       "post": 18.603695,
+       "fxaa": 16.846742
+      }
+     },
+     {
+      "wall": 15121.600000000093,
+      "union": 2537.443595999999,
+      "sum": 2537.4435959999996,
+      "passes": {
+       "mesh": 68.329215,
+       "gbuffer": 620.418071,
+       "rc c3": 327.278421,
+       "rc c2": 750.846314,
+       "rc c0": 486.533129,
+       "rc dice": 0.992491,
+       "particles": 34.008824,
+       "softblur": 347.372452,
+       "temporal": 40.470583,
+       "reflect": 337.918952,
+       "rdenoise": 48.980898,
+       "gbaa": 12.369382,
+       "taau": 65.3903,
+       "bloom": 16.952635,
+       "post": 19.383952,
+       "fxaa": 18.332424
+      }
+     },
+     {
+      "wall": 14157.69999999972,
+      "union": 2523.4828899999993,
+      "sum": 2523.4828899999998,
+      "passes": {
+       "mesh": 68.139807,
+       "gbuffer": 617.083388,
+       "rc c3": 320.116748,
+       "rc c2": 761.90657,
+       "rc c0": 512.454664,
+       "rc dice": 1.15112,
+       "particles": 35.058505,
+       "softblur": 309.172654,
+       "temporal": 35.760782,
+       "reflect": 333.03634,
+       "rdenoise": 56.498289,
+       "gbaa": 10.577243,
+       "taau": 63.899325,
+       "bloom": 15.710843,
+       "post": 18.760906,
+       "fxaa": 16.493239
+      }
+     }
+    ]
+   }
+  },
+  "glass": {
+   "countsOn": {
+    "on": true,
+    "boxes": 1134,
+    "statics": 782,
+    "dynamics": 352,
+    "cutStatics": 0,
+    "cutDynamics": 37,
+    "planes": 154,
+    "planesHist": "0 0 3 27 5 2 0 0",
+    "drawnPlain": 1031,
+    "drawnCut": 37,
+    "vertices": 40224,
+    "verticesIfPlain": 38448,
+    "cutBytesPerFrame": 4736,
+    "debris": 37,
+    "debrisCap": 64
+   },
+   "countsOff": {
+    "on": false,
+    "boxes": 1133,
+    "statics": 782,
+    "dynamics": 351,
+    "cutStatics": 0,
+    "cutDynamics": 0,
+    "planes": 0,
+    "planesHist": "0 0 0 0 0 0 0 0",
+    "drawnPlain": 1067,
+    "drawnCut": 0,
+    "vertices": 38412,
+    "verticesIfPlain": 38412,
+    "cutBytesPerFrame": 0,
+    "debris": 36,
+    "debrisCap": 64
+   },
+   "stagedOn": {
+    "case": "glass",
+    "frames": 541,
+    "settleFrames": 62,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 37,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 37
+    },
+    "piecesCut": 37,
+    "piecePlanes": 154,
+    "glassPlates": 37,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 352,
+    "dynCut": 37,
+    "dynPlanes": 154,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 37,
+    "planes": 154,
+    "planesHist": {
+     "3": 3,
+     "4": 27,
+     "5": 5,
+     "6": 2
+    },
+    "cutRowsDynRange": 37,
+    "cutBytesPerFrame": 4736,
+    "debrisStats": {
+     "spawned": 216,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 183,
+     "peakLive": 64,
+     "peakMoving": 38,
+     "kicked": 29
+    }
+   },
+   "stagedOff": {
+    "case": "glass",
+    "frames": 524,
+    "settleFrames": 45,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 36,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 36
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 36,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 351,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 232,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 231,
+     "peakLive": 64,
+     "peakMoving": 38,
+     "kicked": 41
+    }
+   },
+   "census": {
+    "cutBoxes": 0,
+    "cutDrawn": 37,
+    "lights": 34,
+    "pixels": 6420,
+    "showCutShare": 0.0019,
+    "primary": {
+     "rays": 6420,
+     "share": 0.0026,
+     "testsPerRay": 0.0026,
+     "planesPerRay": 0.0106
+    },
+    "shadow": {
+     "rays": 99122,
+     "share": 0,
+     "testsPerRay": 0,
+     "planesPerRay": 0
+    },
+    "gather": {
+     "rays": 25680,
+     "share": 0,
+     "testsPerRay": 0,
+     "planesPerRay": 0
+    }
+   },
+   "summary": {
+    "on": {
+     "n": 10,
+     "wall": 14226.899999999907,
+     "wallLo": 14018.599999999627,
+     "wallHi": 14760.100000000093,
+     "union": 2659.2627550000007,
+     "unionLo": 2600.1105210000005,
+     "unionHi": 2696.598064,
+     "sum": 2659.2627549999997,
+     "passes": {
+      "mesh": 73.833081,
+      "gbuffer": 634.091478,
+      "rc c3": 382.279825,
+      "rc c2": 818.183596,
+      "rc c0": 550.219384,
+      "rc dice": 1.42346,
+      "particles": 85.424108,
+      "softblur": 301.9919,
+      "temporal": 41.463169,
+      "reflect": 235.51205,
+      "rdenoise": 44.023454,
+      "gbaa": 14.351393,
+      "taau": 74.552008,
+      "bloom": 16.519814,
+      "post": 19.622597,
+      "fxaa": 17.375298,
+      "rc c1": 0,
+      "gather": 0
+     }
+    },
+    "off": {
+     "n": 10,
+     "wall": 12568.19999999972,
+     "wallLo": 12164.200000000186,
+     "wallHi": 12954,
+     "union": 3292.6497709999994,
+     "unionLo": 2315.700308000001,
+     "unionHi": 3908.8034350000003,
+     "sum": 3292.6497710000003,
+     "passes": {
+      "mesh": 72.475708,
+      "gbuffer": 610.829133,
+      "rc c3": 314.134925,
+      "rc c2": 632.884274,
+      "rc c0": 462.148412,
+      "rc dice": 1.111161,
+      "particles": 58.239252,
+      "softblur": 315.679377,
+      "temporal": 43.979282,
+      "reflect": 201.859555,
+      "rdenoise": 44.104846,
+      "gbaa": 12.187713,
+      "taau": 72.240404,
+      "bloom": 16.535772,
+      "post": 19.318201,
+      "fxaa": 17.790391,
+      "rc c1": 819.99178,
+      "gather": 945.35002
+     }
+    },
+    "onPlain": {
+     "n": 10,
+     "wall": 14352.599999999627,
+     "wallLo": 14122.200000000186,
+     "wallHi": 14743.100000000093,
+     "union": 2698.561493000003,
+     "unionLo": 2497.2254900000003,
+     "unionHi": 2837.228264,
+     "sum": 2698.561493,
+     "passes": {
+      "mesh": 71.717388,
+      "gbuffer": 609.748857,
+      "rc c3": 375.306975,
+      "rc c2": 882.670333,
+      "rc c0": 543.995784,
+      "rc dice": 1.24717,
+      "particles": 85.064454,
+      "softblur": 316.338754,
+      "temporal": 41.463701,
+      "reflect": 240.847083,
+      "rdenoise": 46.931561,
+      "gbaa": 11.732909,
+      "taau": 74.468489,
+      "bloom": 17.146337,
+      "post": 20.733006,
+      "fxaa": 17.628552,
+      "rc c1": 0,
+      "gather": 0
+     }
+    }
+   },
+   "raw": {
+    "on": [
+     {
+      "wall": 14037.299999999814,
+      "union": 2696.598064,
+      "sum": 2696.598064,
+      "passes": {
+       "mesh": 89.457464,
+       "gbuffer": 691.453925,
+       "rc c3": 401.541704,
+       "rc c2": 876.283459,
+       "rc c0": 512.993548,
+       "rc dice": 1.166614,
+       "particles": 27.530604,
+       "softblur": 378.925608,
+       "temporal": 41.267349,
+       "reflect": 211.774535,
+       "rdenoise": 41.523841,
+       "gbaa": 14.541265,
+       "taau": 80.688932,
+       "bloom": 18.903141,
+       "post": 22.079278,
+       "fxaa": 20.545356
+      }
+     },
+     {
+      "wall": 14769.799999999814,
+      "union": 2701.1116880000036,
+      "sum": 2701.111688,
+      "passes": {
+       "mesh": 74.45477,
+       "gbuffer": 618.264511,
+       "rc c3": 334.372125,
+       "rc c2": 818.183596,
+       "rc c0": 675.93435,
+       "rc dice": 1.42346,
+       "particles": 45.311096,
+       "softblur": 297.414571,
+       "temporal": 57.88951,
+       "reflect": 235.476903,
+       "rdenoise": 40.993974,
+       "gbaa": 15.343045,
+       "taau": 88.233313,
+       "bloom": 16.080975,
+       "post": 18.359301,
+       "fxaa": 16.907227
+      }
+     },
+     {
+      "wall": 14226.899999999907,
+      "union": 2659.2627550000007,
+      "sum": 2659.2627549999997,
+      "passes": {
+       "mesh": 69.562539,
+       "gbuffer": 608.489198,
+       "rc c3": 364.771974,
+       "rc c2": 816.792974,
+       "rc c0": 550.219384,
+       "rc dice": 1.202746,
+       "particles": 47.189419,
+       "softblur": 350.181439,
+       "temporal": 41.262508,
+       "reflect": 281.183999,
+       "rdenoise": 41.659786,
+       "gbaa": 12.112976,
+       "taau": 67.814156,
+       "bloom": 15.308855,
+       "post": 19.493654,
+       "fxaa": 17.24222
+      }
+     },
+     {
+      "wall": 14018.599999999627,
+      "union": 2655.523756000001,
+      "sum": 2655.5237559999996,
+      "passes": {
+       "mesh": 70.570037,
+       "gbuffer": 628.554626,
+       "rc c3": 308.110094,
+       "rc c2": 874.260502,
+       "rc c0": 640.364834,
+       "rc dice": 1.09249,
+       "particles": 53.353966,
+       "softblur": 301.568867,
+       "temporal": 38.654677,
+       "reflect": 235.51205,
+       "rdenoise": 40.485367,
+       "gbaa": 10.770832,
+       "taau": 65.209548,
+       "bloom": 15.570492,
+       "post": 18.732205,
+       "fxaa": 16.494606
+      }
+     },
+     {
+      "wall": 13972.899999999907,
+      "union": 2896.240700000002,
+      "sum": 2896.2407,
+      "passes": {
+       "mesh": 73.833081,
+       "gbuffer": 590.149839,
+       "rc c3": 467.716514,
+       "rc c2": 916.534158,
+       "rc c0": 644.87575,
+       "rc dice": 1.582597,
+       "particles": 71.763918,
+       "softblur": 301.9919,
+       "temporal": 41.463169,
+       "reflect": 235.541155,
+       "rdenoise": 50.008942,
+       "gbaa": 10.53842,
+       "taau": 65.228118,
+       "bloom": 15.162978,
+       "post": 18.348894,
+       "fxaa": 16.653728
+      }
+     },
+     {
+      "wall": 13901.600000000093,
+      "union": 2622.8388580000023,
+      "sum": 2622.8388579999996,
+      "passes": {
+       "mesh": 72.762743,
+       "gbuffer": 634.091478,
+       "rc c3": 395.857628,
+       "rc c2": 757.497503,
+       "rc c0": 557.595859,
+       "rc dice": 1.476719,
+       "particles": 98.095347,
+       "softblur": 280.819331,
+       "temporal": 39.100681,
+       "reflect": 268.925789,
+       "rdenoise": 44.023454,
+       "gbaa": 14.369022,
+       "taau": 74.087309,
+       "bloom": 18.227473,
+       "post": 20.643875,
+       "fxaa": 16.809508
+      }
+     },
+     {
+      "wall": 15160.5,
+      "union": 2600.1105210000005,
+      "sum": 2600.1105210000005,
+      "passes": {
+       "mesh": 82.82981,
+       "gbuffer": 637.285309,
+       "rc c3": 382.279825,
+       "rc c2": 798.150515,
+       "rc c0": 505.894708,
+       "rc dice": 1.051846,
+       "particles": 89.482031,
+       "softblur": 311.236115,
+       "temporal": 37.785857,
+       "reflect": 235.182237,
+       "rdenoise": 44.367118,
+       "gbaa": 14.351393,
+       "taau": 80.979252,
+       "bloom": 16.519814,
+       "post": 21.319588,
+       "fxaa": 17.882976
+      }
+     },
+     {
+      "wall": 14760.100000000093,
+      "union": 2594.1266630000005,
+      "sum": 2594.126663,
+      "passes": {
+       "mesh": 79.234293,
+       "gbuffer": 620.158435,
+       "rc c3": 379.380873,
+       "rc c2": 765.18236,
+       "rc c0": 538.919536,
+       "rc dice": 1.439868,
+       "particles": 94.204054,
+       "softblur": 291.870587,
+       "temporal": 53.687383,
+       "reflect": 222.144205,
+       "rdenoise": 56.714404,
+       "gbaa": 10.795602,
+       "taau": 84.340155,
+       "bloom": 16.213343,
+       "post": 19.622597,
+       "fxaa": 17.539923
+      }
+     },
+     {
+      "wall": 14182.200000000186,
+      "union": 2554.859819999998,
+      "sum": 2554.8598199999997,
+      "passes": {
+       "mesh": 73.373452,
+       "gbuffer": 684.182895,
+       "rc c3": 390.530917,
+       "rc c2": 760.054641,
+       "rc c0": 524.17521,
+       "rc dice": 1.377626,
+       "particles": 85.424108,
+       "softblur": 297.974705,
+       "temporal": 50.9982,
+       "reflect": 235.788614,
+       "rdenoise": 39.52558,
+       "gbaa": 10.918308,
+       "taau": 67.621093,
+       "bloom": 17.097366,
+       "post": 18.33513,
+       "fxaa": 17.375298
+      }
+     },
+     {
+      "wall": 14546.299999999814,
+      "union": 2682.334974000003,
+      "sum": 2682.334974,
+      "passes": {
+       "mesh": 71.912236,
+       "gbuffer": 634.979272,
+       "rc c3": 377.155145,
+       "rc c2": 899.498873,
+       "rc c0": 515.900643,
+       "rc dice": 1.516445,
+       "particles": 90.717929,
+       "softblur": 311.381191,
+       "temporal": 44.847755,
+       "reflect": 205.362039,
+       "rdenoise": 56.256493,
+       "gbaa": 16.489437,
+       "taau": 74.552008,
+       "bloom": 16.74478,
+       "post": 21.233431,
+       "fxaa": 19.07079
+      }
+     }
+    ],
+    "off": [
+     {
+      "wall": 12164.200000000186,
+      "union": 2911.809410999999,
+      "sum": 2911.8094109999997,
+      "passes": {
+       "mesh": 68.152177,
+       "gbuffer": 591.919453,
+       "rc c3": 304.316591,
+       "rc c2": 564.021264,
+       "rc c1": 843.173101,
+       "rc c0": 392.938161,
+       "rc dice": 0.994219,
+       "particles": 21.458851,
+       "softblur": 306.442956,
+       "temporal": 44.571342,
+       "reflect": 216.340316,
+       "rdenoise": 43.633231,
+       "gbaa": 14.1048,
+       "taau": 75.374859,
+       "bloom": 16.287543,
+       "post": 18.851047,
+       "fxaa": 17.281912
+      }
+     },
+     {
+      "wall": 12506.700000000186,
+      "union": 3877.690588000001,
+      "sum": 3877.6905879999995,
+      "passes": {
+       "mesh": 72.192845,
+       "gbuffer": 593.22699,
+       "rc c3": 251.977742,
+       "rc c2": 632.884274,
+       "rc c1": 819.99178,
+       "rc c0": 399.034799,
+       "rc dice": 1.111161,
+       "particles": 32.389297,
+       "softblur": 315.679377,
+       "gather": 974.469925,
+       "temporal": 42.266196,
+       "reflect": 194.001419,
+       "rdenoise": 40.343305,
+       "gbaa": 10.667337,
+       "taau": 75.096704,
+       "bloom": 15.584427,
+       "post": 19.241663,
+       "fxaa": 16.909851
+      }
+     },
+     {
+      "wall": 13032.30000000028,
+      "union": 2315.700308000001,
+      "sum": 2315.7003079999995,
+      "passes": {
+       "mesh": 75.202725,
+       "gbuffer": 612.502559,
+       "rc c3": 320.70257,
+       "rc c2": 715.975105,
+       "rc c0": 462.148412,
+       "rc dice": 1.547135,
+       "particles": 36.144612,
+       "softblur": 308.455387,
+       "temporal": 43.979282,
+       "reflect": 198.856158,
+       "rdenoise": 45.132851,
+       "gbaa": 14.800695,
+       "taau": 75.437658,
+       "bloom": 17.317718,
+       "post": 20.312785,
+       "fxaa": 18.061461
+      }
+     },
+     {
+      "wall": 12932.30000000028,
+      "union": 2176.4153910000005,
+      "sum": 2176.415391,
+      "passes": {
+       "mesh": 76.143453,
+       "gbuffer": 643.417305,
+       "rc c3": 314.561368,
+       "rc c2": 594.628556,
+       "rc c0": 521.562914,
+       "rc dice": 1.269587,
+       "particles": 39.370205,
+       "softblur": 299.001642,
+       "temporal": 39.176399,
+       "reflect": 160.163881,
+       "rdenoise": 40.279955,
+       "gbaa": 10.489559,
+       "taau": 64.074245,
+       "bloom": 15.693627,
+       "post": 18.73044,
+       "fxaa": 17.882704
+      }
+     },
+     {
+      "wall": 12151.600000000093,
+      "union": 4048.242252999999,
+      "sum": 4048.242253,
+      "passes": {
+       "mesh": 72.475708,
+       "gbuffer": 610.178634,
+       "rc c3": 307.919182,
+       "rc c2": 581.883589,
+       "rc c1": 840.804098,
+       "rc c0": 477.94846,
+       "rc dice": 1.076665,
+       "particles": 44.290647,
+       "softblur": 347.998393,
+       "gather": 989.040563,
+       "temporal": 38.222951,
+       "reflect": 201.859555,
+       "rdenoise": 51.836389,
+       "gbaa": 12.372421,
+       "taau": 64.824268,
+       "bloom": 15.689364,
+       "post": 18.977467,
+       "fxaa": 17.285034
+      }
+     },
+     {
+      "wall": 13547.299999999814,
+      "union": 3292.6497709999994,
+      "sum": 3292.6497710000003,
+      "passes": {
+       "mesh": 79.993091,
+       "gbuffer": 677.633032,
+       "rc c3": 344.055768,
+       "rc c2": 700.274074,
+       "rc c0": 401.976557,
+       "rc dice": 0.97358,
+       "particles": 58.239252,
+       "softblur": 352.595805,
+       "gather": 973.128623,
+       "temporal": 51.446381,
+       "reflect": 184.55171,
+       "rdenoise": 44.24775,
+       "gbaa": 11.018818,
+       "taau": 72.240404,
+       "bloom": 17.907958,
+       "post": 19.318201,
+       "fxaa": 17.790391
+      }
+     },
+     {
+      "wall": 12568.19999999972,
+      "union": 3267.0602849999987,
+      "sum": 3267.060285,
+      "passes": {
+       "mesh": 76.648703,
+       "gbuffer": 610.829133,
+       "rc c3": 314.134925,
+       "rc c2": 763.384482,
+       "rc c0": 417.569257,
+       "rc dice": 0.992705,
+       "particles": 64.840548,
+       "softblur": 295.600053,
+       "gather": 945.35002,
+       "temporal": 44.219293,
+       "reflect": 209.508313,
+       "rdenoise": 41.263569,
+       "gbaa": 12.187713,
+       "taau": 65.717173,
+       "bloom": 15.643531,
+       "post": 18.430427,
+       "fxaa": 16.857701
+      }
+     },
+     {
+      "wall": 12519.600000000093,
+      "union": 2233.5656980000003,
+      "sum": 2233.5656980000003,
+      "passes": {
+       "mesh": 68.959761,
+       "gbuffer": 590.509223,
+       "rc c3": 310.695171,
+       "rc c2": 568.545465,
+       "rc c0": 481.396951,
+       "rc dice": 1.340869,
+       "particles": 59.604581,
+       "softblur": 343.248427,
+       "temporal": 43.187987,
+       "reflect": 201.865036,
+       "rdenoise": 44.104846,
+       "gbaa": 13.95818,
+       "taau": 78.952367,
+       "bloom": 17.706057,
+       "post": 19.824553,
+       "fxaa": 18.266907
+      }
+     },
+     {
+      "wall": 11918,
+      "union": 3908.8034350000003,
+      "sum": 3908.8034350000003,
+      "passes": {
+       "mesh": 72.400434,
+       "gbuffer": 587.416941,
+       "rc c3": 266.624637,
+       "rc c2": 575.861395,
+       "rc c1": 871.592499,
+       "rc c0": 392.29655,
+       "rc dice": 0.992549,
+       "particles": 69.042866,
+       "softblur": 320.106222,
+       "gather": 983.269891,
+       "temporal": 41.366455,
+       "reflect": 169.888682,
+       "rdenoise": 46.901726,
+       "gbaa": 11.807196,
+       "taau": 70.116561,
+       "bloom": 16.535772,
+       "post": 20.326679,
+       "fxaa": 16.704656
+      }
+     },
+     {
+      "wall": 12954,
+      "union": 4429.359797,
+      "sum": 4429.359797,
+      "passes": {
+       "mesh": 72.440889,
+       "gbuffer": 623.190301,
+       "rc c3": 382.153793,
+       "rc c2": 812.413414,
+       "rc c1": 902.422152,
+       "rc c0": 556.705972,
+       "rc dice": 1.358294,
+       "particles": 74.432477,
+       "softblur": 263.735535,
+       "gather": 935.568348,
+       "temporal": 46.811244,
+       "reflect": 243.309931,
+       "rdenoise": 42.829203,
+       "gbaa": 10.986553,
+       "taau": 66.798909,
+       "bloom": 17.393083,
+       "post": 19.439041,
+       "fxaa": 18.842912
+      }
+     }
+    ],
+    "onPlain": [
+     {
+      "wall": 14159.100000000093,
+      "union": 2464.543682000003,
+      "sum": 2464.5436819999995,
+      "passes": {
+       "mesh": 74.603541,
+       "gbuffer": 586.78247,
+       "rc c3": 417.993344,
+       "rc c2": 711.231128,
+       "rc c0": 480.679567,
+       "rc dice": 1.104906,
+       "particles": 77.396292,
+       "softblur": 281.824474,
+       "temporal": 39.551019,
+       "reflect": 241.215651,
+       "rdenoise": 46.440425,
+       "gbaa": 11.084231,
+       "taau": 64.33087,
+       "bloom": 17.088234,
+       "post": 19.280813,
+       "fxaa": 16.859471
+      }
+     },
+     {
+      "wall": 15099.900000000373,
+      "union": 2698.561493000003,
+      "sum": 2698.561493,
+      "passes": {
+       "mesh": 81.161219,
+       "gbuffer": 623.087477,
+       "rc c3": 375.306975,
+       "rc c2": 893.461547,
+       "rc c0": 479.132476,
+       "rc dice": 0.991652,
+       "particles": 85.064454,
+       "softblur": 341.666969,
+       "temporal": 43.057908,
+       "reflect": 247.809782,
+       "rdenoise": 47.254064,
+       "gbaa": 10.670612,
+       "taau": 72.539354,
+       "bloom": 20.444481,
+       "post": 21.221589,
+       "fxaa": 18.506474
+      }
+     },
+     {
+      "wall": 14140.200000000186,
+      "union": 2439.8380439999996,
+      "sum": 2439.8380440000005,
+      "passes": {
+       "mesh": 71.156014,
+       "gbuffer": 624.956166,
+       "rc c3": 358.637126,
+       "rc c2": 736.152974,
+       "rc c0": 441.574703,
+       "rc dice": 1.578918,
+       "particles": 85.773615,
+       "softblur": 312.785174,
+       "temporal": 40.554696,
+       "reflect": 238.70562,
+       "rdenoise": 49.587284,
+       "gbaa": 11.717094,
+       "taau": 74.468489,
+       "bloom": 17.146337,
+       "post": 22.306465,
+       "fxaa": 18.662149
+      }
+     },
+     {
+      "wall": 13635.899999999907,
+      "union": 2497.2254900000003,
+      "sum": 2497.22549,
+      "passes": {
+       "mesh": 78.546661,
+       "gbuffer": 605.883909,
+       "rc c3": 364.085795,
+       "rc c2": 739.662031,
+       "rc c0": 497.48442,
+       "rc dice": 1.077298,
+       "particles": 81.621433,
+       "softblur": 330.267582,
+       "temporal": 41.185552,
+       "reflect": 207.737793,
+       "rdenoise": 50.381343,
+       "gbaa": 11.732909,
+       "taau": 76.315852,
+       "bloom": 17.126821,
+       "post": 20.733006,
+       "fxaa": 17.864812
+      }
+     },
+     {
+      "wall": 14937.899999999907,
+      "union": 2861.115000000001,
+      "sum": 2861.1149999999993,
+      "passes": {
+       "mesh": 79.824123,
+       "gbuffer": 591.224428,
+       "rc c3": 437.459044,
+       "rc c2": 867.915002,
+       "rc c0": 606.556252,
+       "rc dice": 1.24717,
+       "particles": 84.072585,
+       "softblur": 330.614036,
+       "temporal": 37.437117,
+       "reflect": 251.965206,
+       "rdenoise": 46.63956,
+       "gbaa": 12.422549,
+       "taau": 86.966455,
+       "bloom": 17.995901,
+       "post": 19.154525,
+       "fxaa": 17.023546
+      }
+     },
+     {
+      "wall": 14081.100000000093,
+      "union": 2836.144033999999,
+      "sum": 2836.1440340000004,
+      "passes": {
+       "mesh": 67.507224,
+       "gbuffer": 645.52252,
+       "rc c3": 404.271658,
+       "rc c2": 932.850611,
+       "rc c0": 589.719832,
+       "rc dice": 1.460235,
+       "particles": 81.356351,
+       "softblur": 309.636628,
+       "temporal": 55.861649,
+       "reflect": 240.847083,
+       "rdenoise": 50.087764,
+       "gbaa": 10.499342,
+       "taau": 74.510728,
+       "bloom": 17.534929,
+       "post": 18.708788,
+       "fxaa": 17.426113
+      }
+     },
+     {
+      "wall": 14599.100000000093,
+      "union": 2524.9303689999983,
+      "sum": 2524.9303689999997,
+      "passes": {
+       "mesh": 67.447181,
+       "gbuffer": 609.748857,
+       "rc c3": 320.194696,
+       "rc c2": 882.670333,
+       "rc c0": 498.811877,
+       "rc dice": 1.047999,
+       "particles": 90.433199,
+       "softblur": 280.68476,
+       "temporal": 45.666323,
+       "reflect": 204.971618,
+       "rdenoise": 40.494832,
+       "gbaa": 11.046438,
+       "taau": 65.464547,
+       "bloom": 15.996566,
+       "post": 21.583761,
+       "fxaa": 17.628552
+      }
+     },
+     {
+      "wall": 14743.100000000093,
+      "union": 2837.228264,
+      "sum": 2837.2282640000003,
+      "passes": {
+       "mesh": 69.464403,
+       "gbuffer": 608.801542,
+       "rc c3": 370.968404,
+       "rc c2": 957.986874,
+       "rc c0": 630.745299,
+       "rc dice": 1.152771,
+       "particles": 97.355426,
+       "softblur": 288.570477,
+       "temporal": 41.463701,
+       "reflect": 237.186079,
+       "rdenoise": 46.931561,
+       "gbaa": 13.745413,
+       "taau": 66.122901,
+       "bloom": 15.534955,
+       "post": 18.512309,
+       "fxaa": 16.81028
+      }
+     },
+     {
+      "wall": 14352.599999999627,
+      "union": 2600.7788259999984,
+      "sum": 2600.7788260000007,
+      "passes": {
+       "mesh": 71.717388,
+       "gbuffer": 590.990757,
+       "rc c3": 364.434244,
+       "rc c2": 768.866662,
+       "rc c0": 543.995784,
+       "rc dice": 1.41748,
+       "particles": 93.974702,
+       "softblur": 316.338754,
+       "temporal": 47.367622,
+       "reflect": 251.483358,
+       "rdenoise": 43.233218,
+       "gbaa": 13.077877,
+       "taau": 68.784649,
+       "bloom": 16.087088,
+       "post": 19.647349,
+       "fxaa": 17.375816
+      }
+     },
+     {
+      "wall": 14122.200000000186,
+      "union": 2868.872550999998,
+      "sum": 2868.8725509999995,
+      "passes": {
+       "mesh": 70.361995,
+       "gbuffer": 612.328341,
+       "rc c3": 391.7121,
+       "rc c2": 992.650912,
+       "rc c0": 593.081612,
+       "rc dice": 1.34894,
+       "particles": 81.42301,
+       "softblur": 317.507127,
+       "temporal": 41.199442,
+       "reflect": 231.103455,
+       "rdenoise": 43.173386,
+       "gbaa": 12.559167,
+       "taau": 74.735277,
+       "bloom": 18.016128,
+       "post": 21.419971,
+       "fxaa": 19.860323
+      }
+     }
+    ]
+   }
+  }
+ },
+ "A(on) errors": {
+  "gpu": [],
+  "console": []
+ },
+ "B(off) errors": {
+  "gpu": [],
+  "console": []
+ }
+}

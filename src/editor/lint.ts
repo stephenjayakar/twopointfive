@@ -69,7 +69,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
   const verrs = validateLevelData(data);
   if (verrs.length) { for (const e of verrs.slice(0, 50)) add('error', 'schema', e, idsInMessage(e, data)); return done({ schema: verrs.length }); }
   let level: Level;
-  try { level = loadLevel(data, { validate: false }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
+  try { level = loadLevel(data, { validate: false, dressing: true, lived: true }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
   const boxes = level.boxes; const boxId = (i: number) => data.boxes[i]?.id ?? `box#${i}`;
   const col = new StaticCollision(boxes); const nav = col.nav;
 
@@ -237,7 +237,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
           if (v.pos[1] < 0.9 || v.pos[1] > 1.8) add('info', 'keypad-height', `keypad '${v.id}' at y ${v.pos[1].toFixed(2)} — pads sit at hand height (1.4)`, [ref]);
         }
         const reachable = data.routes.some(r => r.points.some(q => nearestPad(q) === v.id));
-        if (!reachable) add('warn', 'keypad-orphan', `keypad '${v.id}': no patrol route has a point whose nearest pad is this one — no man will ever give ITS code up (nor the pair say it); Sam can only kick '${v.door}'${data.routes.length ? '' : ' (the level has no routes at all)'}`, [ref]);
+        if (!reachable) add('warn', 'keypad-orphan', `keypad '${v.id}': no patrol route has a point whose nearest pad is this one — no man will ever give ITS code up (nor the pair say it); the player can only kick '${v.door}'${data.routes.length ? '' : ' (the level has no routes at all)'}`, [ref]);
       }
     } }
   // 9b. floors: what stands on each (levelData.ts FLOOR_USERS — the table delete / rename share); a floor nobody names is worth a line (an orphan of a deleted wing)

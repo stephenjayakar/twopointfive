@@ -4,10 +4,13 @@
 import { Vec3, v3 } from '../math/vec';
 import { Input } from './input';
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
+import { driveHands } from './handwork';
 import type { Game, Guard, MissionStats } from './game';
-import { fmtClock, missionRating } from './game';
+import { fmtClock } from './game';
 import { chronSpotted, chronObjective, tickChronicle, debriefOf } from './chronicle';
 import { handlerBeat } from './dialogue';
+import { takeTold } from './takecheck';
+import { quietOf, quietWords, outThrough, exitTaken, nearestExit, exitPoint, holderStand } from './quiet';   // (called inside functions only: src/game is one import cycle)
 
 // ------------------------------------------------------------ mission
 /** Live = a run is on and it really is the player playing. The showcase tour drives the player through these very rooms and flips switches, none of
@@ -37,7 +40,20 @@ export function debriefRows(s: MissionStats): [string, string][] {
 }
 
 /** Planar distance from a floor point to the mission rack's LED face (anywhere across its width counts: you can get at the caddy from either side). */
-export function rackDist(g: Game, p: Vec3): number { const r = g.level.mission.rack; return Math.hypot(Math.max(0, Math.abs(p[0] - r.front[0]) - r.halfW), p[2] - r.front[2]); }
+export function rackDist(g: Game, p: Vec3): number { const r = g.level.mission.rack;
+  if (quietOf(g)) { const d = Math.hypot(p[0] - r.front[0], p[2] - r.front[2]);   // (a quiet mission's holder faces any way: its width is a reach round the point on its face — quiet.ts — and never through a wall: a clear line from him to a hand's width short of the face)
+    if (d > 0.3 && g.col.solidBlocked([p[0], 1.0, p[2]], [r.front[0] + (p[0] - r.front[0]) / d * 0.2, 1.0, r.front[2] + (p[2] - r.front[2]) / d * 0.2])) return Infinity;
+    return Math.max(0, d - r.halfW); }
+  return Math.hypot(Math.max(0, Math.abs(p[0] - r.front[0]) - r.halfW), p[2] - r.front[2]); }
+
+/** Out through the mission's exit: the office's fire exit faces east — past its x, inside its frame; an exit that says which way is out (Level.mission.exfilOut)
+ *  is past its point going that way; a quiet mission (quiet.ts) is out through ANY of its exits. */
+function outNow(g: Game, p: Vec3): boolean {
+  const Q = quietOf(g); if (Q) return Q.exits.some(x => outThrough(x, p));
+  const M = g.level.mission;
+  if (M.exfilOut) return (p[0] - M.exfilX) * M.exfilOut[0] + (p[2] - M.exfilZ) * M.exfilOut[1] > 0 && Math.abs((p[0] - M.exfilX) * M.exfilOut[1] - (p[2] - M.exfilZ) * M.exfilOut[0]) < 1.8;
+  return p[0] > M.exfilX && Math.abs(p[2] - M.exfilZ) < 1.8;
+}
 
 /** seconds after Sam goes down before the down card comes up over the (frozen) picture: long enough for the body to land and the round's echo to play */
 export const DOWN_CARD_SECS = 2.6;
@@ -58,18 +74,23 @@ export function updateMission(g: Game, dt: number, input: Input) {
   m.alarmOn = anyAlert;
   // fully detected = an alert guard with eyes on you (the same sighting that licenses him to shoot), counted in episodes — a fresh one after 4 s unseen — not frames
   { const by = g.guards.find(gd => gd.state === 'alert' && gd.sawPlayerThisFrame); if (by) { if (g.time - m.spottedT > 4) { m.stats.spotted++; chronSpotted(g, by); } m.spottedT = g.time; } }
-  if (m.stage === 'infiltrate') {
+  if (g.roomClear?.active || g.rescue?.active) { /* the room clear (roomclear.ts) / the hostage rescue (rescue.ts): the server room and the fire exit are its floor's — no stage of the stealth mission moves under it (Sam going down, above, still does) */ }
+  else if (m.stage === 'infiltrate') {
     const R = M.serverRoom;
-    if (p[0] > R.x0 && p[0] < R.x1 && p[2] > R.z0 && p[2] < R.z1) { chronObjective(g, 'reached the server room'); m.stage = 'drive'; g.msg(`server room — the drive is in rack ${M.rack.index + 1}, the marked one in the east bank`); handlerBeat(g, 'server', 1.2); }   // (and a word from the handler a beat behind the objective line — dialogue.ts HANDLER_LINES; she waits out a fight or a man in his arm)
+    if (p[0] > R.x0 && p[0] < R.x1 && p[2] > R.z0 && p[2] < R.z1) {
+      const W = quietWords(g);   // (a quiet mission: the level's own words — quiet.ts; null on the plain night)
+      if (W) { chronObjective(g, `reached ${W.place}`); m.stage = 'drive'; g.msg(`${W.place} — ${W.thing} is in ${W.holder}`); }
+      else { chronObjective(g, 'reached the server room'); m.stage = 'drive'; g.msg(`server room — the drive is in rack ${M.rack.index + 1}, the marked one in the east bank`); handlerBeat(g, 'server', 1.2); } }   // (and a word from the handler a beat behind the objective line — dialogue.ts HANDLER_LINES; she waits out a fight or a man in his arm)
   } else if (m.stage === 'drive') {
     const rf = M.rack.front; const inReach = rackDist(g, p) < DRIVE_REACH;
     if (m.driveT < 0) {   // the rack's 'pull the drive' row (buildInteractables decides reach; interact.ts → Game.act): start pulling — it runs on its own from here, you just have to stay on it (a step, Space or Esc lets go: interact.ts cancelSustained → cancelDrive)
-      if (g.act?.kind === 'objective' && g.act.verb === 'drive') { m.driveT = 0; g.audio.play('click', rf, 0.8); g.audio.play('magOut', rf, 0.4, { rate: 0.55 }); g.msg('pulling the drive — stay on it'); if (!m.handsOn) { m.handsOn = true; chronObjective(g, 'hands on the drive', rf); } }
+      if (g.act?.kind === 'objective' && g.act.verb === 'drive') { m.driveT = 0; g.audio.play('click', rf, 0.8); g.audio.play('magOut', rf, 0.4, { rate: 0.55 }); const W = quietWords(g); g.msg(W ? `taking ${W.thing} — stay on it` : 'pulling the drive — stay on it'); if (!m.handsOn) { m.handsOn = true; chronObjective(g, W ? `hands on ${W.thing}` : 'hands on the drive', rf); } }
     } else if (!inReach || pl.dragging || pl.takedown || pl.holding || pl.sprinting) cancelDrive(g);
-    else { m.driveT += dt; if (m.driveT >= DRIVE_SECS) drivePulled(g); }
+    else { m.driveT += dt; if (m.driveT >= DRIVE_SECS) drivePulled(g); else driveHands(g, DRIVE_SECS, false); }   // (handwork.ts: both hands in the rack while it comes out)
   } else if (m.stage === 'exfil') {
-    if (p[0] > M.exfilX && Math.abs(p[2] - M.exfilZ) < 1.8) {   // out THROUGH the fire exit (its frame), not round the building
-      chronObjective(g, 'out through the fire exit — mission complete');   // (written before the stage flips: a done run writes nothing more)
+    if (outNow(g, p)) {   // out THROUGH the fire exit (its frame), not round the building
+      const X = exitTaken(g, p);
+      chronObjective(g, X ? `out through ${X.name} — mission complete` : 'out through the fire exit — mission complete');   // (written before the stage flips: a done run writes nothing more)
       m.stage = 'done'; m.debrief = true;
       const D = debriefOf(g); g.msg(`exfiltrated — ${fmtClock(m.stats.elapsed)} · ${D.rating} ${D.score}`);
     }
@@ -77,18 +98,21 @@ export function updateMission(g: Game, dt: number, input: Input) {
 }
 
 /** hands off the drive before it is out (out of reach, hands or feet busy — updateMission; a step, Space or Esc — interact.ts): the pull starts over next time */
-export function cancelDrive(g: Game) { const m = g.mission; if (m.driveT < 0) return; m.driveT = -1; g.msg('let go of the drive'); }
+export function cancelDrive(g: Game) { const m = g.mission; if (m.driveT < 0) return; m.driveT = -1; const W = quietWords(g); g.msg(W ? `let go of ${W.thing}` : 'let go of the drive'); }
 
 /** The caddy comes free: the rack drops off its UPS feed — its LEDs and the green wash they threw on the floor go dark, which is all the renderer needs to
  *  show it — the clunk goes into the hearing model as a modest noise (a man in the corridor may come and look), and a few seconds later somebody is
- *  sent to look at the rack that just dropped off the network (sendRackCheck). */
+ *  sent to look at the rack that just dropped off the network (sendRackCheck) — where anything tells them it is gone (takecheck.ts takeTold). */
 export function drivePulled(g: Game) {
   const m = g.mission, M = g.level.mission, rf = M.rack.front;
-  chronObjective(g, `the drive is out — rack ${M.rack.index + 1} goes dark`, rf);
-  m.driveT = -1; m.pulled = true; m.stage = 'exfil'; m.sweepAt = g.time + 7;
+  const W = quietWords(g);
+  chronObjective(g, W ? `${W.thing} is out of ${W.holder}` : `the drive is out — rack ${M.rack.index + 1} goes dark`, rf);
+  driveHands(g, DRIVE_SECS, true);   // (handwork.ts: …and it goes away at his hip)
+  m.driveT = -1; m.pulled = true; m.stage = 'exfil'; m.sweepAt = takeTold(g) ? g.time + 7 : -1;   // (takecheck.ts: on a quiet mission a man is sent only to a holder the level says is wired)
   for (const t of g.rackTargets) t.on = false;
   g.audio.play('rack', rf, 0.5, { rate: 0.7 }); g.audio.play('lightOff', rf, 0.7);
   g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
+  if (W) { g.msg(`${W.bare} out. leave by ${W.outs}`); return; }
   g.msg(`drive out — rack ${M.rack.index + 1} is dark. leave by the fire exit`);
   handlerBeat(g, 'drive', 1.5);   // 'drive shows dark on my board' — his knees answer
 }
@@ -97,12 +121,13 @@ export function drivePulled(g: Game) {
  *  suspicion decay), so he walks in, looks round the rack for a few seconds and, finding nobody, returns to his route. */
 export function sendRackCheck(g: Game) {
   if (g.player.down) return;
-  const M = g.level.mission; const goal: Vec3 = [M.rack.front[0], 0, M.rack.front[2] + 1.1];   // a step off its face
+  const M = g.level.mission, W = quietWords(g); const goal: Vec3 = W ? holderStand(g, M.rack.front, M.serverRoom).pos ?? [M.rack.front[0], 0, M.rack.front[2]] : [M.rack.front[0], 0, M.rack.front[2] + 1.1];   // a step off its face (a quiet mission's holder faces any way: the floor at its face, on its own side of every solid and in its room — quiet.ts holderStand, the cell the level's check validated)
   let best: Guard | null = null, bd = 1e9;
   for (const gd of g.guards) { if (gd.state !== 'patrol' || gd.hold || gd.held || gd.script || gd.unit || gd.team !== 'guard' || gd.task) continue; const d = v3.dist(gd.char.pos, goal); if (d < bd) { bd = d; best = gd; } }   // (a calm STAFF man free to go: not the one in Sam's arm — his state stands 'patrol' through the hold, and the errand used to flip him suspicious with the pistol popping into his pinned fist (review A6.5) — nor a choreographed one, nor a unit off the shift's net)
   if (!best) return;   // everyone is already busy with something louder
   best.task = { kind: 'rack', pos: goal }; best.lastKnown = v3.copy(goal); best.awareness = Math.max(best.awareness, 0.42);
   best.state = 'suspicious'; best.reactT = 1.2; best.searchT = 0; best.path = []; best.pathGoal = null;
+  if (W) { g.say(best, `something's tripped in ${W.place} — going to take a look`, true); g.audio.play('radio', best.char.pos, 0.6); return; }
   g.say(best, `rack ${M.rack.index + 1} just dropped off the network — going to take a look`, true); g.audio.play('radio', best.char.pos, 0.6);
   handlerBeat(g, 'rack', 2.6);   // she heard that on their net too: a line behind his
 }
@@ -111,7 +136,14 @@ export function sendRackCheck(g: Game) {
 export function objectivePos(g: Game): Vec3 | null {
   if ((g.quietUtility || g.touring) && !g.missionInTour) return null;
   { const o = g.director?.objective; if (o) return o.pos; }   // a level-script program's own objective (director.ts c.objective) stands over the stage machine's while it runs
+  { const o = g.lesson?.objective(); if (o) return o.pos; }   // a training lesson's step (lesson.ts) stands over its scenario's own objective until the last one is done
+  { const o = g.snatch?.objective(); if (o) return o.pos; }   // a snatch level's man (snatch.ts) while he is loose
+  { const o = g.defuse?.objective(); if (o) return o.pos; }   // a defuse mission's charges (defuse.ts) stand over the room clear's own objective while one is live
+  { const o = g.roomClear?.objective(); if (o) return o.pos; }   // … and the room clear's: the first room still held
+  { const o = g.rescue?.objective(); if (o) return o.pos; }   // … and the hostage rescue's: the hostage room
+  { const o = g.nightBreach?.objective(); if (o) return o.pos; }   // … and the night breach's by itself: the held room's door
   const M = g.level.mission; const s = g.mission.stage;
+  if (s === 'exfil') { const X = nearestExit(g, g.player.char.pos); if (X) return g.doors.byName(X.door)?.frameCentre ?? exitPoint(X, 0); }   // (a quiet mission: the nearest of its ways out — quiet.ts)
   return s === 'infiltrate' ? (g.doors.byName(M.entryDoor)?.frameCentre ?? null) : s === 'drive' ? M.rack.front : s === 'exfil' ? (g.doors.byName(M.exfilDoor)?.frameCentre ?? null) : null;
 }
 
@@ -119,7 +151,17 @@ export function objectivePos(g: Game): Vec3 | null {
 export function objectiveText(g: Game): string {
   if ((g.quietUtility || g.touring) && !g.missionInTour) return '';
   { const o = g.director?.objective; if (o) return 'objective ▸ ' + o.text; }
+  { const o = g.lesson?.objective(); if (o) return o.text; }
+  { const o = g.defuse?.objective(); if (o) return o.text; }
+  { const o = g.snatch?.objective(); if (o) return o.text; }
+  { const o = g.roomClear?.objective(); if (o) return g.par ? g.par.objective(o.text) : o.text; }   // the room clear (roomclear.ts) while it is up: its rooms, ticked off
+  { const o = g.rescue?.objective(); if (o) return o.text; }   // the hostage rescue (rescue.ts) while it is up: the hostages, and how far the captor's clock has got
+  { const o = g.nightBreach?.objective(); if (o) return o.text; }   // the night breach by itself (nightbreach.ts): the room to take
   const m = g.mission; const s = m.stage; const n = g.level.mission.rack.index + 1;
+  const W = quietWords(g);
+  if (W && s === 'infiltrate') return `objective ▸ reach ${W.place}`;
+  if (W && s === 'drive') return m.driveT >= 0 ? `objective ▸ taking ${W.thing}… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ take ${W.thing} from ${W.holder} (Space at its face, then stay on it)`;
+  if (W && s === 'exfil') return `objective ▸ get out by ${W.outs}`;
   if (s === 'infiltrate') return 'objective ▸ reach the server room';
   if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (Space at its face, then stay on it)`;
   if (s === 'exfil') return 'objective ▸ get out through the fire exit';

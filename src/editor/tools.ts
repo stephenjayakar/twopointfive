@@ -11,6 +11,7 @@ import { Scene } from './scene';
 import { View } from './view';
 import { Face, faceCentre, snapTo, snapVec, roundVec, BOX_PRESETS, LIGHT_PRESETS, VOLUME_KINDS } from './geom';
 import { makeBox, BoxFlag } from '../scene/boxes';
+import { LEAF_W, LEAF_H, hingeOnCell } from '../scene/doorSize';
 
 /** what Tools reads off the page's Input (game/input.ts satisfies it; the probes hand in a plain object) */
 export interface Pointer { mouseX: number; mouseY: number; buttons: number; clicked: number; wheel: number; wheelCtrl: number; keys: Set<string>; pressed: Set<string> }
@@ -74,7 +75,7 @@ export class Tools {
 
   // ---------------------------------------------------------------- per frame
   update(p: Pointer, dt: number) {
-    const ed = this.ed, view = this.view; void dt;
+    const view = this.view; void dt;
     const mx = p.mouseX, my = p.mouseY; const dmx = mx - this.lastMX, dmy = my - this.lastMY; this.lastMX = mx; this.lastMY = my;
     const lmb = (p.buttons & 1) !== 0, mmb = (p.buttons & 2) !== 0, rmb = (p.buttons & 4) !== 0;
     const lHit = (p.clicked & 1) !== 0; const released = this.wasDown && !lmb; this.wasDown = lmb;
@@ -249,9 +250,8 @@ export class Tools {
         this.setTool('select'); break;
       }
       case 'doorPlace': {
-        const g = this.view.groundAt(mx, my, this.floorY()); const h = d.hinge; let ang = 0, w = 1.16;
-        if (g) { const dx = g[0] - h[0], dz = g[2] - h[2]; const L = Math.hypot(dx, dz); if (L > 0.3) { ang = Math.atan2(dz, dx); if (!this.mod(p, 'alt')) ang = snapTo(ang, Math.PI / 2); w = Math.max(0.6, Math.min(2.4, this.snapD(L) || 1.16)); } }
-        const id = ed.addDoor({ hinge: [h[0], h[2]], closedDir: +ang.toFixed(6), width: +w.toFixed(6) }, { cut: this.doorAuto, frame: this.doorAuto });
+        const g = this.view.groundAt(mx, my, this.floorY()); const { hinge: hg, ang, w } = this.doorDrag(d.hinge, g, this.mod(p, 'alt')), h = [hg[0], 0, hg[1]];
+        const id = ed.addDoor({ hinge: hg, closedDir: +ang.toFixed(6), width: +w.toFixed(6) }, { cut: this.doorAuto, frame: this.doorAuto });
         const nf = ed.data.boxes.filter(b => b.group === `doorframe.${id}`).length;
         ed.msg(`door ${id}: hinge (${h[0].toFixed(2)}, ${h[2].toFixed(2)}), ${(ang * 180 / Math.PI).toFixed(0)}°, ${w.toFixed(2)} m${this.doorAuto ? ` — opening cut, ${nf} frame boxes` : ''}`);
         this.setTool('select'); break;
@@ -343,10 +343,17 @@ export class Tools {
     for (const v of ed.data.devices) { if ((v.floor ?? F0) !== F) continue; if (v.kind === 'laser') push(`device:${v.id}`, [(v.from[0] + v.to[0]) / 2, (v.from[1] + v.to[1]) / 2, (v.from[2] + v.to[2]) / 2], 'laser'); else push(`device:${v.id}`, v.pos as Vec3, v.kind); }
   }
 
+  /** THE DOOR A DRAG DRAWS, hinge → cursor: along an axis unless `free` (alt); a drag about a door long is a real door (doorSize.ts LEAF_W), any other length the
+   *  grid's; and a real door on an axis has its hinge slid along its own line so its middle stands on a walk-grid cell centre — the only place a path goes through it */
+  private doorDrag(h: ArrayLike<number>, g: ArrayLike<number> | null, free: boolean): { hinge: [number, number]; ang: number; w: number } {
+    let ang = 0, w = LEAF_W;
+    if (g) { const dx = g[0] - h[0], dz = g[2] - h[2], L = Math.hypot(dx, dz); if (L > 0.3) { ang = Math.atan2(dz, dx); if (!free) ang = snapTo(ang, Math.PI / 2); w = Math.abs(L - LEAF_W) < 0.25 ? LEAF_W : Math.max(0.6, Math.min(2.4, this.snapD(L) || LEAF_W)); } }
+    return { hinge: w === LEAF_W ? hingeOnCell([h[0], h[2]], ang, w) : [h[0], h[2]], ang, w };
+  }
   /** preview boxes for the scene this frame: a light's stand-in bulb while placing, the door being placed */
   previews(): ReturnType<typeof makeBox>[] {
     const out: ReturnType<typeof makeBox>[] = [];
-    if (this.drag?.kind === 'doorPlace' && this.cursor3) { const h = this.drag.hinge; const g = this.cursor3; let ang = Math.atan2(g[2] - h[2], g[0] - h[0]); ang = snapTo(ang, Math.PI / 2); const w = Math.max(0.6, Math.min(2.4, Math.hypot(g[0] - h[0], g[2] - h[2]) || 1.16)); out.push(makeBox({ c: [h[0] + Math.cos(ang) * w / 2, this.floorY() + 1.08, h[2] + Math.sin(ang) * w / 2], h: [w / 2, 1.08, 0.025], yaw: -ang, albedo: [0.42, 0.3, 0.19], emissive: [0.3, 0.2, 0.1], flags: BoxFlag.Dynamic | BoxFlag.NoShadow })); }
+    if (this.drag?.kind === 'doorPlace' && this.cursor3) { const { hinge: h, ang, w } = this.doorDrag(this.drag.hinge, this.cursor3, false); out.push(makeBox({ c: [h[0] + Math.cos(ang) * w / 2, this.floorY() + LEAF_H / 2, h[1] + Math.sin(ang) * w / 2], h: [w / 2, LEAF_H / 2, 0.025], yaw: -ang, albedo: [0.42, 0.3, 0.19], emissive: [0.3, 0.2, 0.1], flags: BoxFlag.Dynamic | BoxFlag.NoShadow })); }
     if (this.tool === 'light' && this.cursor3) { const P = LIGHT_PRESETS.find(x => x.key === this.lightPreset) ?? LIGHT_PRESETS[0]; out.push(makeBox({ c: [this.cursor3[0], this.floorY() + P.height, this.cursor3[2]], h: [0.06, 0.06, 0.06], albedo: [1, 1, 1], emissive: v3.scale(P.def.color, 6), flags: BoxFlag.Dynamic | BoxFlag.NoShadow })); }
     return out;
   }

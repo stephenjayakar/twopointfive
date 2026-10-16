@@ -1,0 +1,113 @@
+// LESSON-CHECK: a Training level's `scenarios.lesson` block (game/lesson.ts) against its file, its built floor and the missions list.
+//   bun run tools/qa/lesson-check.ts <name>[.json] …        (no name: every row of scene/scenarioList.ts TRAINING_MISSIONS)
+// PASS / FAIL lines: the file validates · the block against the floor (game/lesson.ts checkLesson: every test's kind and fields, its doors, lights and areas) ·
+// a row of TRAINING_MISSIONS names the level under the Training group · that row's own query starts its mission with the lesson live on step 1 · with the
+// switch off the same start has no lesson and the scenario's own objective · a checkpoint carries the step that is up (a quiet run alone) · a restart puts the
+// lesson back on step 1.
+// exit 0 = all pass · 1 = a FAIL · 2 = no such level
+import { readFileSync, existsSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { standUp } from './headless';
+const ROOT = resolve(import.meta.dir, '../..');
+const { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { TRAINING_MISSIONS, ALL_MISSIONS, entryOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const { kitAsIssued } = await import(`${ROOT}/src/game/loadout.ts`);
+const { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`);
+const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+const { LESSON, checkLesson } = await import(`${ROOT}/src/game/lesson.ts`);
+const names = process.argv.slice(2).filter(a => !a.startsWith('--')).map(a => a.replace(/\.json$/, ''));
+const list: string[] = names.length ? names : [...new Set((TRAINING_MISSIONS as any[]).map(e => String(e.level).replace(/\.json$/, '')))];
+let fails = 0, checks = 0;
+const verdict = (ok: boolean, what: string, detail = '') => { checks++; if (!ok) fails++; console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}${detail ? ` — ${detail}` : ''}`); };
+const log = console.log, warn = console.warn, err = console.error;
+async function quiet<T>(f: () => Promise<T> | T): Promise<T> { console.log = console.warn = console.error = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; console.error = err; } }
+for (const name of list) {
+  console.log(`\n=== lesson-check ${name}.json ===`);
+  const file = resolve(ROOT, 'levels', `${name}.json`);
+  if (!existsSync(file)) { console.log(`  no levels/${name}.json`); process.exit(2); }
+  const data = parseLevelData(readFileSync(file, 'utf8')), errs: string[] = validateLevelData(data).filter((e: any) => (e.severity ?? 'error') === 'error').map((e: any) => `${e.path ?? ''} ${e.message ?? e}`);
+  const L = data.scenarios?.lesson;
+  verdict(!errs.length && !!L, `the file validates and carries a lesson${L ? `: '${L.title}', ${L.steps.length} steps` : ''}`, errs.slice(0, 3).join(' · '));
+  if (!L) continue;
+  const stand = async () => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(file, 'utf8'))), seed: 1 })); return W; };
+  const rows = (TRAINING_MISSIONS as any[]).filter(e => e.level === `${name}.json`);
+  verdict(rows.length > 0 && rows.every(e => e.group === 'training'), `the missions list has it under Training (${rows.map(e => `'${e.title}'`).join(', ') || 'no row'})`);
+  verdict(rows.every(e => kitAsIssued(e)) && !kitAsIssued((ALL_MISSIONS as any[]).find(e => e.group !== 'training')) && !kitAsIssued(null), 'its row is played with the kit as issued (every staging on its level\'s page puts the issue cards on — kit.ts kitIssuedPage —, the loadout screen shows no card: game/loadout.ts kitAsIssued), and no other row is');
+  { const W = await stand(), faults: string[] = checkLesson(W.game); verdict(!faults.length, 'the block against the built floor: every test names a kind, a door, a light and an area this floor has', faults.join(' · ')); }
+  for (const e of rows) {
+    const q: string = scenarioQuery(e);
+    verdict(entryOfQuery(q)?.id === e.id, `'${e.title}': its link reads back to its own row`, q);
+    LESSON.on = true;
+    { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
+      const o = g.lesson.objective(), line = g.objectiveText();
+      verdict(!r.why && !!r.spec && !!o && g.lesson.i === 0 && line === o.text && line.includes(L.steps[0].line), `'${e.title}': starts, and the objective row is the lesson's first step`, r.why ?? line);
+      if (e.squad === 0 && e.kind === 'quiet') {   // (a quiet run alone saves checkpoints: the lesson's place among its steps rides in the file)
+        const k = Math.min(2, L.steps.length - 1); g.lesson.i = k;   // (the check's own hand on the step counter: the scripted run is lesson-run's)
+        let why = ''; try { const snap = W.snapshot('lesson-check', true); g.lesson.i = 0; await quiet(() => { W.restore(snap); for (let i = 0; i < 3; i++) W.step(1 / 60); }); } catch (x) { why = String((x as Error).message); }
+        verdict(!why && g.lesson.i >= k && !!g.lesson.objective()?.text.includes(`${g.lesson.i + 1}/${L.steps.length}`), `'${e.title}': a checkpoint carries the step that is up (saved on step ${k + 1}, loaded on step ${g.lesson.i + 1})`, why); }
+      g.lesson.i = Math.min(1, L.steps.length - 1);   // (the check's own hand again: every row is restarted from a step that is NOT the first)
+      // a restart BETWEEN FRAMES: before the lesson's next tick the step it still holds is the last run's — neither a checkpoint nor the row may carry it
+      { let snapI = -1, row = ''; await quiet(() => { g.restartEncounter(); if (!g.lesson.data) startFromQuery(g, q); snapI = g.lesson.data ? g.lesson.snapshot().i : -2; row = g.lesson.objective()?.text ?? ''; });
+        verdict(snapI === 0 && row.includes(L.steps[0].line) && !g.lesson.finished, `'${e.title}': straight after a restart, before any frame, a checkpoint would file step 1 and the row reads step 1 (not the last run's step)`, `snapshot step ${snapI + 1} · row "${row}"`); }
+      await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
+      verdict(g.lesson.i === 0 && !!g.lesson.objective()?.text.includes(L.steps[0].line), `'${e.title}': a restart puts the lesson back on its first step`, g.lesson.summary()); }
+    LESSON.on = false;
+    { const W = await stand(), g = W.game; const r = await quiet(() => startFromQuery(g, q)); await quiet(() => { for (let i = 0; i < 30; i++) W.step(1 / 60); });
+      const line = g.objectiveText();
+      verdict(!r.why && !g.lesson.objective() && !g.lesson.data && !!line && !line.startsWith('training'), `'${e.title}': with the switch off it is its mission alone`, line); }
+    LESSON.on = true;
+  }
+}
+// A LESSON'S PAGE AND THE KEPT KIT (kit.ts kitIssuedPage): on the page of a Training level every staging puts the ISSUE cards on the men, and the table and
+// its store stay this machine's — so the loadout screen opened there for another mission (the boot card's button, or the card with no scenario up) shows the
+// kept cards and keeps a change, and a start or restart of the lesson under that screen still stages the issue kit. Run once (with the first lesson, or all).
+if (!names.length || names.includes('train-move')) { console.log('\n=== lesson-check: a lesson\'s page and the kit this machine keeps ===');
+  const { El, withDom } = await import('./scenario-picker-probes.ts');
+  const K = await import(`${ROOT}/src/game/kit.ts`), UI = await import(`${ROOT}/src/ui/loadout.ts`);
+  const m = new Map<string, string>(), st = { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v); } };
+  const kept = (i = 0) => JSON.parse(m.get(K.KIT_LS) ?? '{}').members?.[i] ?? {};
+  const rowOf = (id: string) => (TRAINING_MISSIONS as any[]).find(e => e.id === id), other = (ALL_MISSIONS as any[]).find(e => e.group !== 'training' && e.kind !== 'solo' && e.kind !== 'quiet');
+  const standRow = async (e: any) => { const W: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', e.level), 'utf8'))), seed: 1 })); const r = await quiet(() => startFromQuery(W.game, scenarioQuery(e))); if (e.kind === 'quiet' && !e.squad) K.kitSolo(W.game);   // (main.ts: a mission played alone wears Sam's card through kitSolo, and every fresh Player after a restart through kitFresh)
+    return { W, g: W.game, why: r.why as string | undefined }; };
+  const team = (g: any) => g.guards.filter((x: any) => x.unit && x.team === 'operative');
+  const lessonOn = LESSON.on; LESSON.on = true;
+  try {
+    await withDom('', async () => {
+      K.kitLoad(st, ''); const set = K.kitSet(0, 'weapon', 'pistol') && K.kitSet(1, 'light', false); const st0 = m.get(K.KIT_LS);   // (this machine keeps a card with no rifle — the card that left a lesson's 'press 2' unpassable — and a teammate with no weapon light)
+      const alone = rowOf('train-move'), pair = rowOf('train-orders');
+      // the plant is real: off a lesson's page that start wears the kept card
+      const P = await standRow(alone); const plainRifle = P.g.player.hasRifle;
+      K.kitIssuedPage(true);   // (main.ts on a Training level's load)
+      const A = await standRow(alone), tableA = K.KIT.members[0].weapon;
+      verdict(set && !P.why && !A.why && plainRifle === false && A.g.player.hasRifle === true && tableA === 'pistol' && m.get(K.KIT_LS) === st0, `'${alone.title}' on its page is staged with the issue kit whatever this machine keeps, and the table and the store are left as the machine keeps them`,
+        `kept: no rifle, member 1 no light (set ${set}) · the same start off a lesson's page has the rifle: ${plainRifle} · on its page: ${A.g.player.hasRifle} · the table after staging '${tableA}' · the store ${m.get(K.KIT_LS) === st0 ? 'unchanged' : 'CHANGED'}`);
+      // … and your four counts in a lesson are what a Player is built with, not the one of each the pouches rule issues (kit.ts kitIssuedPage: train-kit has
+      // you throw a smoke can, then G another can, then a stun can); off a lesson's page the same start carries the kept card's
+      { const held = (g: any) => `${g.player.canisters}/${g.player.flashbangs}/${g.player.frags}/${g.player.rifle.shells}`, kitRow = rowOf('train-kit'), Kt = kitRow ? await standRow(kitRow) : null;
+        verdict(K.SLOTS.on && held(A.g) === '4/2/2/3' && held(P.g) === '1/1/1/0' && (!Kt || (!Kt.why && held(Kt.g) === '4/2/2/3')), 'under the pouches rule a lesson\'s player carries what a Player is built with (4 smoke, 2 stun, 2 frags, 3 rounds of 40 mm: the kit lesson throws more than one can), while the same start off a lesson\'s page carries the kept card\'s counts',
+          `smoke/stun/frag/40 mm — on its page ${held(A.g)}${Kt ? ` · '${kitRow.title}' ${held(Kt.g)}` : ''} · off a lesson's page (the kept card: no rifle, one of each) ${held(P.g)}`); }
+      // another mission's loadout over the lesson: the kept cards, a change kept — and the lesson restarted under it is still the issue kit
+      const S = UI.openLoadout(other, { host: new El('BODY') as any, deploy: () => { } });
+      const shown = K.KIT.members[0].weapon, cards = !!S.card, stepped = K.kitTry(0, 'suit', 1).ok, suit = K.KIT.members[0].suit, written = kept().weapon === 'pistol' && kept().suit === suit && suit !== 'issued';
+      const tint0 = JSON.stringify(A.g.player.char.tint);
+      await quiet(() => { A.g.restartEncounter(); if (!A.g.lesson.data) startFromQuery(A.g, scenarioQuery(alone)); for (let i = 0; i < 3; i++) A.W.step(1 / 60); });
+      const under = A.g.player.hasRifle, tint1 = JSON.stringify(A.g.player.char.tint), still = K.KIT.members[0];
+      verdict(shown === 'pistol' && cards && stepped && written && under === true && tint1 === tint0 && still.weapon === 'pistol' && still.suit === suit, `the loadout of another mission ('${other.title}') opened from the lesson's page shows the kept cards and keeps a change; the lesson restarted UNDER that screen is still the issue kit, and the screen's table is not touched by it`,
+        `on the screen '${shown}', cards ${cards} · a suit stepped ${stepped} → ${suit}, in the store ${written} · restarted under it: rifle ${under}, his suit as issued ${tint1 === tint0} · the table after '${still.weapon}' / ${still.suit}`);
+      S.back(); const stored1 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim;
+      verdict(K.KIT.members[0].weapon === 'pistol' && K.KIT.members[0].suit === suit && kept().suit === suit && stored1, 'when that screen goes the table is still the kept one, and a change after a staging is still written (the store was put back)', `table ${K.KIT.members[0].weapon} / ${K.KIT.members[0].suit} · store ${kept().weapon} / ${kept().suit} · a later change written ${stored1}`);
+      // a lesson with teammates: each man the issue card, though member 1's kept card has no light
+      const T = await standRow(pair), ops = team(T.g), c1 = ops[0] ? K.kitOf(ops[0]) : null;
+      K.kitIssuedPage(false); const U = await standRow(pair), uops = team(U.g), u1 = uops[0] ? K.kitOf(uops[0]) : null; K.kitIssuedPage(true);
+      verdict(!T.why && ops.length === pair.squad && c1?.light === true && ops[0].lightDeadUntil !== Infinity && T.g.player.hasRifle === true && u1?.light === false && K.KIT.members[1].light === false && kept(1).light === false, `'${pair.title}' on its page: every teammate is staged with his issue card (off a lesson's page the same start gives member 1 the kept card), the kept cards untouched`,
+        `${ops.length} teammate(s) · member 1 staged with a light ${c1?.light} (off a lesson's page ${u1?.light}) · Sam's rifle ${T.g.player.hasRifle} · the table's member 1 light ${K.KIT.members[1].light} · the store's ${kept(1).light}`);
+      // a staging that throws leaves the table, the store and the switch as they were
+      let threw = false; try { K.kitStage({} as any, [{} as any]); } catch { threw = true; }
+      const after = K.KIT.members[0].weapon, stored2 = K.kitTry(0, 'trim', 1).ok && kept().trim === K.KIT.members[0].trim; const B = await standRow(alone);
+      verdict(threw && after === 'pistol' && stored2 && B.g.player.hasRifle === true, 'a staging that throws leaves the kept table and its store in place, and the next lesson start is still the issue kit', `threw ${threw} · table '${after}' · a change written ${stored2} · next start's rifle ${B.g.player.hasRifle}`);
+    });
+  } finally { UI.loadoutOpen()?.close(); K.kitIssuedPage(false); K.KIT_SOLO.on = false; K.kitLoad(null, ''); LESSON.on = lessonOn; }
+}
+console.log(fails ? `\n=== lesson-check: ${fails} FAIL of ${checks} ===` : `\n=== lesson-check: ALL PASS (${checks} checks) ===`);
+process.exit(fails ? 1 : 0);

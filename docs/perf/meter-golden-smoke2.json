@@ -1,0 +1,287 @@
+{
+ "v": 1,
+ "kind": "meter-golden",
+ "tag": "smoke2",
+ "terms": "both",
+ "recordedAt": "2026-08-16T12:03:04.362Z",
+ "commit": "fd3431154769",
+ "host": "webgpu",
+ "quality": "high",
+ "scale": 0.77,
+ "res": [
+  1368,
+  770
+ ],
+ "seed": 4242,
+ "frames": {
+  "warm": 14,
+  "sample": 8
+ },
+ "visMap": {
+  "slope": 0.2,
+  "floor": 0.03
+ },
+ "tolerance": {
+  "vis": 0.05,
+  "irradianceRel": 0.15,
+  "smoke": 0.05
+ },
+ "settings": {
+  "restir": true,
+  "taau": true,
+  "sharp": true,
+  "mesh": true,
+  "rt": true,
+  "gatherStrata": true,
+  "froxel": false,
+  "indirectScale": 0.35
+ },
+ "pins": {
+  "smoke_can": {
+   "note": "stop 7 Smoke as the tour stages it: a can at LAND, guard 0 across the plume from Sam, guard 1 clear",
+   "stage": {
+    "note": "stop 7 Smoke as the tour stages it: a can at LAND, guard 0 across the plume from Sam, guard 1 clear",
+    "pin": {
+     "look": [
+      27.6,
+      0,
+      18.4
+     ],
+     "yaw": -0.5934119456780721,
+     "pitch": 0.6981317007977318,
+     "dist": 12
+    },
+    "player": {
+     "pos": [
+      26.6,
+      0,
+      19.7
+     ],
+     "yaw": 2.5132741228718345,
+     "crouch": true,
+     "holstered": true,
+     "invisible": true
+    },
+    "guards": [
+     {
+      "i": 0,
+      "pos": [
+       29.1,
+       0,
+       16.4
+      ],
+      "yaw": -2.5,
+      "torch": false
+     },
+     {
+      "i": 1,
+      "pos": [
+       24.5,
+       0,
+       21.5
+      ],
+      "yaw": 0.6,
+      "torch": false
+     }
+    ],
+    "smoke": {
+     "pos": [
+      27.6,
+      0.15,
+      18.4
+     ],
+     "dir": [
+      0,
+      1,
+      0
+     ],
+     "speed": 1.9,
+     "radius": 0.2,
+     "density": 95,
+     "temperature": 1.6,
+     "ttl": 32,
+     "age": 0,
+     "kind": "canister"
+    },
+    "warm": 210
+   },
+   "chest": 0.058477620128542185,
+   "head": 0.05209048092365265,
+   "E": 0.058477620128542185,
+   "vis": 0.1334893474949839,
+   "visDamped": 0.14354819108427405,
+   "spread": {
+    "chest": {
+     "mean": 0.058477620128542185,
+     "min": 0.056164566427469254,
+     "max": 0.06163603812456131,
+     "spread": 0.09356522521034505
+    },
+    "head": {
+     "mean": 0.05209048092365265,
+     "min": 0.04826662689447403,
+     "max": 0.05547944828867912,
+     "spread": 0.13846716840216344
+    }
+   },
+   "smoke": [
+    7.395936307830198e-9,
+    1,
+    0.9999953657388687
+   ],
+   "samples": 8,
+   "extra": {
+    "chest": [
+     0.056164566427469254,
+     0.03017095848917961,
+     0.03725643828511238
+    ],
+    "head": [
+     0.04826662689447403,
+     0.027485165745019913,
+     0.03288675844669342
+    ]
+   },
+   "player": {
+    "pos": [
+     26.6,
+     0,
+     19.7
+    ],
+    "chestAt": [
+     26.439448274946027,
+     0.8117961287498474,
+     19.6979119614883
+    ],
+    "headAt": [
+     26.37309870739582,
+     0.8681718111038208,
+     19.457810093131783
+    ]
+   }
+  },
+  "smoke_can2": {
+   "note": "the same can 3.5 s in, guard 0 nearer the plume (1.2 m past it), guard 1 across the room",
+   "stage": {
+    "note": "the same can 3.5 s in, guard 0 nearer the plume (1.2 m past it), guard 1 across the room",
+    "pin": {
+     "look": [
+      27.6,
+      0,
+      18.4
+     ],
+     "yaw": -0.5934119456780721,
+     "pitch": 0.6981317007977318,
+     "dist": 12
+    },
+    "player": {
+     "pos": [
+      26.6,
+      0,
+      19.7
+     ],
+     "yaw": 2.5132741228718345,
+     "crouch": true,
+     "holstered": true,
+     "invisible": true
+    },
+    "guards": [
+     {
+      "i": 0,
+      "pos": [
+       28.4,
+       0,
+       17.4
+      ],
+      "yaw": -2.5,
+      "torch": false
+     },
+     {
+      "i": 1,
+      "pos": [
+       30.5,
+       0,
+       21
+      ],
+      "yaw": -1.2,
+      "torch": false
+     }
+    ],
+    "smoke": {
+     "pos": [
+      27.6,
+      0.15,
+      18.4
+     ],
+     "dir": [
+      0,
+      1,
+      0
+     ],
+     "speed": 1.9,
+     "radius": 0.2,
+     "density": 95,
+     "temperature": 1.6,
+     "ttl": 32,
+     "age": 0,
+     "kind": "canister"
+    },
+    "warm": 210
+   },
+   "chest": 0.02082721283659339,
+   "head": 0.03845479292795062,
+   "E": 0.03845479292795062,
+   "vis": 0.04965719200873316,
+   "visDamped": 0.040826869715532246,
+   "spread": {
+    "chest": {
+     "mean": 0.02082721283659339,
+     "min": 0.019517332315444946,
+     "max": 0.021687643602490425,
+     "spread": 0.10420555568684853
+    },
+    "head": {
+     "mean": 0.03845479292795062,
+     "min": 0.03726964443922043,
+     "max": 0.039403900504112244,
+     "spread": 0.0555003915608279
+    }
+   },
+   "smoke": [
+    8.892520408939808e-36,
+    0.0031345761963166296,
+    0.4748920723795891
+   ],
+   "samples": 8,
+   "extra": {
+    "chest": [
+     0.021607531234622,
+     0.016723131760954857,
+     0.019273143261671066
+    ],
+    "head": [
+     0.03939027711749077,
+     0.02462616376578808,
+     0.028811469674110413
+    ]
+   },
+   "player": {
+    "pos": [
+     26.6,
+     0,
+     19.7
+    ],
+    "chestAt": [
+     26.439273071019635,
+     0.8117071390151978,
+     19.697541659315945
+    ],
+    "headAt": [
+     26.37263276320246,
+     0.8643543720245361,
+     19.456750384081595
+    ]
+   }
+  }
+ }
+}

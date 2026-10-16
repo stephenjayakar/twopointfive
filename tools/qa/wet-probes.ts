@@ -17,7 +17,7 @@
 import { standUp, ROOT } from './headless.ts';
 import type { Vec3 } from './headless.ts';
 const wet = await import(`${ROOT}/src/game/wet.ts`);
-const { WET, WET_DEFAULTS, WET_STATS, WET_LINE_ALL, updateWetness, openSky, inRain, rainNow, soak, dryAll, wetPrints, wetInstance, everyCharacter, underRoofRect } = wet;
+const { WET, WET_DEFAULTS, WET_STATS, WET_LINE_ALL, openSky, inRain, rainNow, soak, dryAll, wetPrints, wetInstance, everyCharacter, underRoofRect } = wet;
 const { CHAR_INST_BYTES } = await import(`${ROOT}/src/anim/characters.ts`);
 const { setDaylight } = await import(`${ROOT}/src/game/lighting.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
@@ -25,7 +25,6 @@ const { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { INTERIOR, ANNEX } = await import(`${ROOT}/src/game/weather.ts`);
 
 const DT = 1 / 60;
-const VERBOSE = process.argv.includes('--verbose');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 type Verdict = (ok: boolean, label: string, detail: string) => void;

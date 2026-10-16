@@ -74,6 +74,9 @@ export function runNight(W: any, opts: { abortAt?: number; maxSecs?: number; see
       if (r.kind === 'note' && r.what === 'code:entered') R.codeBeforePad = game.player.codes.has('pad_side') && R.notes.has('code') && (R.notes.get('code')! < r.t);
     }
     const since = (n: string) => R.notes.has(n) ? t - R.notes.get(n)! : -1;
+    if (process.env.NB_DBG && since('ocp:breaker') >= 0 && since('ocp:breaker') < 0.02) { const h = game.player.char.bones.head, p = game.player.char.pos, T = [34.3, 1.35, 9.62], sd = game.doors.byName('storage');
+      console.log('NBDBG', JSON.stringify(R.noteData.get('ocp:breaker')), 'feet', p.map((v: number) => +v.toFixed(2)), 'head', h.map((v: number) => +v.toFixed(2)), 'door', +sd.angle.toFixed(2), 'blocked', game.col.segmentBlocked(h, T), 'ocpReady', game.player.ocp.ready?.());
+      for (let dz = -0.3; dz <= 0.61; dz += 0.1) { let row = 'dz ' + dz.toFixed(1).padStart(5) + ' '; for (let dx = -1.0; dx <= 1.01; dx += 0.1) row += game.col.segmentBlocked([h[0] + dx, h[1], h[2] + dz], T) ? '.' : '#'; console.log(row); } }
     if (R.fixtureOutAfterOcp === null && since('ocp:panel') > 1.0) R.fixtureOutAfterOcp = !!panel && panel.factor < 0.05;
     if (R.mainsDownAfterBreaker === null && since('ocp:breaker') > 1.5) R.mainsDownAfterBreaker = game.blackout.active;
     if (R.mainsBackAfter === null && since('mains:back') > 7) R.mainsBackAfter = !game.blackout.active && game.targets.filter((x: any) => x.mains && x.on && !x.broken).every((x: any) => x.factor > 0.5 || x.fluorescentFlicker);
@@ -168,7 +171,7 @@ function restoredCheck(W: any, label: string, walkedSecs = 2): string[] {
   if (game.player.codes.size || game.player.keys.size) f.push(`${label}: Sam kept codes ${[...game.player.codes]} keys ${[...game.player.keys]}`);
   const authored = new Map<string, boolean>(); for (const sw of level.switchables) authored.set(sw.name, sw.on); for (const l of level.lights) authored.set(l.name, l.enabled);
   const wrong = game.targets.filter((t: any) => authored.has(t.name) && authored.get(t.name) !== t.on).map((t: any) => t.name); if (wrong.length) f.push(`${label}: switches not as authored: ${wrong.slice(0, 5).join(', ')}`);
-  for (const d of game.doors.list) { const a0 = d.def.angle ?? 0; if (Math.abs(d.angle - a0) > 0.05 || d.locked !== !!d.def.locked || d.lockBroken) f.push(`${label}: door ${d.def.name} angle ${f2(d.angle)} (authored ${a0}) locked ${d.locked} broken ${d.lockBroken}`); }
+  for (const d of game.doors.list) { const a0 = d.sided(d.def.angle ?? 0); if (Math.abs(d.angle - a0) > 0.05 || d.locked !== !!d.def.locked || d.lockBroken) f.push(`${label}: door ${d.def.name} angle ${f2(d.angle)} (authored ${a0}) locked ${d.locked} broken ${d.lockBroken}`); }
   const wx = game.weather; if (wx && (Math.abs(wx.storm - 0.4) > 1e-9 || Math.abs(wx.rainRate - 0.3) > 1e-9)) f.push(`${label}: storm ${wx.storm} rain ${wx.rainRate} (set 0.4 / 0.3 before the show)`);
   if (W.cam?.pin) f.push(`${label}: the camera is still pinned`); if (W.input?.lockExcept) f.push(`${label}: input still locked`);
   if (game.playerInvisible || game.quietUtility || game.puppet || game.missionInTour) f.push(`${label}: a show flag still up (invisible ${game.playerInvisible} quiet ${game.quietUtility} puppet ${!!game.puppet} missionInTour ${game.missionInTour})`);

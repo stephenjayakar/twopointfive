@@ -39,7 +39,7 @@ export async function muzzle() {
   console.log('\n=== muzzle: low ready rather than a pistol pointed at a colleague — the stack, a pair in file, a man crossing the line in a fight ===');
   const { RoomClear } = await import(`${ROOT}/src/game/squad.ts`);
   const { CONFERENCE_CLEAR } = await import(`${ROOT}/src/game/demo.ts`);
-  const { laserBoxes } = await import(`${ROOT}/src/game/combat.ts`);
+  const { laserBoxes, LASER } = await import(`${ROOT}/src/game/combat.ts`);
   const { colleagueInLine, aimAhead } = guardsMod;
   let allPass = true; const verdict = (ok: boolean, label: string, detail: string) => { allPass &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   // ---- (1) the stack
@@ -58,7 +58,7 @@ export async function muzzle() {
       if (both) {
         planted++; if (b.muzzleDown) { bDown++; pitchSum += b.char.gunDir[1]; } if (a.muzzleDown) aDown++;
         if (planted === 30) {   // half a second into the formed stack: where no. 2's beam actually lands
-          const out: any[] = []; laserBoxes(game, b, out);
+          const out: any[] = []; LASER.enemy = true; try { laserBoxes(game, b, out); } finally { LASER.enemy = false; }   // (the guards' lasers on, as before combat.ts LASER: out[0] is read as his beam)
           if (out.length) { const beam = out[0]; laserLen = beam.h[2] * 2; const from = v3.mad(b.char.muzzle, b.char.gunDir, 0.02); const end = v3.mad(from, b.char.gunDir, laserLen); laserEndY = end[1]; const A = axisOf(a); laserToA = segToAxis(from, end, A.x, A.z, A.y0, A.y1); }
         }
       }
@@ -177,9 +177,9 @@ export async function missing() {
     // measurement): the premise here is that the death becomes known through the SHIFT's radio check and the man it sends — but since the civilians merged (d7c3289)
     // the late worker's loop brings him on the body behind the reception desk ≈ 16 s after the man is sent (seed 201: Owen alarmed at +113.5 s, tells Novak at +119.6,
     // control puts the floor up on cause 'civilian' at +122.4), the run ends on that escalation and the walk never reaches the desk: neither 'found' nor 'not at his
-    // post'. Whether "a civilian called it in first" is a legitimate THIRD outcome of this staging is the designer's call, not the probe's — until then the floor is
+    // post'. Whether "a civilian called it in first" is a legitimate THIRD outcome of this staging is the maintainer's call, not the probe's — until then the floor is
     // the shift alone, exactly what the probe was written against. (D) and (C) below keep the civilians ON: their bodies lie where no civilian goes, and that they
-    // leak nothing there is worth holding.  TODO(civilians-on variant, awaiting the designer): a case 'A2' with them on, expecting cause 'civilian' before the walk.
+    // leak nothing there is worth holding.  TODO(civilians-on variant, awaiting the maintainer): a case 'A2' with them on, expecting cause 'civilian' before the walk.
     game.tune.civilians = false; game.civilians.length = 0;
     game.playerInvisible = true; game.godMode = true; game.teleportPlayer([37.5, 0, 26.5]);   // Sam out of it in the far corner of the lot
     const name = (gd: any) => `${gd.callsign}(${game.level.routes[gd.routeI].name})`;

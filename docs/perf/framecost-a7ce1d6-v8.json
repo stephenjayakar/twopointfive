@@ -1,0 +1,1257 @@
+{
+ "tool": "framecost",
+ "v": 1,
+ "commit": "48e12e8",
+ "dirty": false,
+ "when": "2026-10-08T16:21:06.048Z",
+ "runtime": "node v22.22.0 (V8 12.4.254.21-node.33)",
+ "cpu": "4 × Intel(R) Xeon(R) Processor @ 2.10GHz",
+ "jobs": 1,
+ "seeds": [
+  1
+ ],
+ "cap": 300,
+ "minutes": 2,
+ "deep": true,
+ "gpu": false,
+ "warm": 60,
+ "arms": {
+  "shipped": "as the page opens: cast, motion pass, turn weight, glass, defenders' frags"
+ },
+ "missions": [
+  {
+   "id": "solo-night",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "soak",
+     "t": 120,
+     "frames": 7200
+    }
+   ],
+   "frames": 7140,
+   "page": {
+    "mean": 2.102,
+    "p50": 1.85,
+    "p95": 3.497,
+    "p99": 6.175,
+    "max": 56.075
+   },
+   "update": {
+    "mean": 1.477,
+    "p50": 1.255,
+    "p95": 2.763,
+    "p99": 5.419,
+    "max": 55.297
+   },
+   "stepped": {
+    "mean": 2.102,
+    "p50": 1.85,
+    "p95": 3.497,
+    "p99": 6.175,
+    "max": 56.075
+   },
+   "uploadPerCall": 0,
+   "warmMax": 266.878,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 119,
+    "gc": {
+     "minor": {
+      "n": 410,
+      "perMin": 206.7,
+      "mean": 1.795,
+      "max": 12.97,
+      "total": 735.76
+     },
+     "major": {
+      "n": 6,
+      "perMin": 3,
+      "mean": 19.048,
+      "max": 48.11,
+      "total": 114.29
+     }
+    },
+    "gcShare": 0.0566,
+    "framesOver": {
+     "4": 227,
+     "8": 41,
+     "16.6": 4
+    },
+    "framesOverWithGc": {
+     "4": 64,
+     "8": 16,
+     "16.6": 3
+    },
+    "allocMBps": 58,
+    "allocKBperFrame": 991,
+    "outsideFrames": 24,
+    "standInMs": 0.034,
+    "worst": [
+     {
+      "ms": 56.075,
+      "seed": 1,
+      "gc": 5.43
+     },
+     {
+      "ms": 22.816,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 22.556,
+      "seed": 1,
+      "gc": 1.74
+     }
+    ]
+   }
+  },
+  {
+   "id": "night-breach",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 22.7,
+     "digest": "ee760401",
+     "frames": 1362
+    }
+   ],
+   "frames": 1302,
+   "page": {
+    "mean": 2.884,
+    "p50": 2.412,
+    "p95": 5.769,
+    "p99": 9.033,
+    "max": 30.615
+   },
+   "update": {
+    "mean": 2.67,
+    "p50": 2.213,
+    "p95": 5.312,
+    "p99": 8.573,
+    "max": 30.506
+   },
+   "stepped": {
+    "mean": 2.884,
+    "p50": 2.412,
+    "p95": 5.769,
+    "p99": 9.033,
+    "max": 30.615
+   },
+   "uploadPerCall": 0,
+   "warmMax": 230.097,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 21.7,
+    "gc": {
+     "minor": {
+      "n": 131,
+      "perMin": 362.2,
+      "mean": 1.798,
+      "max": 11.85,
+      "total": 235.52
+     },
+     "major": {
+      "n": 2,
+      "perMin": 5.5,
+      "mean": 4.035,
+      "max": 5,
+      "total": 8.07
+     }
+    },
+    "gcShare": 0.0649,
+    "framesOver": {
+     "4": 152,
+     "8": 25,
+     "16.6": 3
+    },
+    "framesOverWithGc": {
+     "4": 31,
+     "8": 7,
+     "16.6": 1
+    },
+    "allocMBps": 96.8,
+    "allocKBperFrame": 1652,
+    "outsideFrames": 4,
+    "standInMs": 0.577,
+    "worst": [
+     {
+      "ms": 30.615,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 24.787,
+      "seed": 1,
+      "gc": 3.71
+     },
+     {
+      "ms": 17.566,
+      "seed": 1,
+      "gc": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "room-clear-pair",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 34.2,
+     "digest": "84c15bb",
+     "frames": 2053
+    }
+   ],
+   "frames": 1993,
+   "page": {
+    "mean": 3.507,
+    "p50": 3.017,
+    "p95": 6.12,
+    "p99": 11.191,
+    "max": 47.275
+   },
+   "update": {
+    "mean": 3.31,
+    "p50": 2.825,
+    "p95": 5.673,
+    "p99": 10.616,
+    "max": 46.619
+   },
+   "stepped": {
+    "mean": 3.507,
+    "p50": 3.017,
+    "p95": 6.12,
+    "p99": 11.191,
+    "max": 47.275
+   },
+   "uploadPerCall": 0,
+   "warmMax": 233.907,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 33.2,
+    "gc": {
+     "minor": {
+      "n": 257,
+      "perMin": 464.2,
+      "mean": 1.465,
+      "max": 7.2,
+      "total": 376.47
+     },
+     "major": {
+      "n": 4,
+      "perMin": 7.2,
+      "mean": 12.248,
+      "max": 24.49,
+      "total": 48.99
+     }
+    },
+    "gcShare": 0.0609,
+    "framesOver": {
+     "4": 358,
+     "8": 45,
+     "16.6": 7
+    },
+    "framesOverWithGc": {
+     "4": 75,
+     "8": 18,
+     "16.6": 6
+    },
+    "allocMBps": 129.9,
+    "allocKBperFrame": 2217,
+    "outsideFrames": 3,
+    "standInMs": 0.711,
+    "worst": [
+     {
+      "ms": 47.275,
+      "seed": 1,
+      "gc": 1.98
+     },
+     {
+      "ms": 40.04,
+      "seed": 1,
+      "gc": 3
+     },
+     {
+      "ms": 36.588,
+      "seed": 1,
+      "gc": 2.26
+     }
+    ]
+   }
+  },
+  {
+   "id": "room-clear-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 41.2,
+     "digest": "ea8c61a",
+     "frames": 2474
+    }
+   ],
+   "frames": 2414,
+   "page": {
+    "mean": 5.323,
+    "p50": 4.195,
+    "p95": 11.123,
+    "p99": 19.357,
+    "max": 81.531
+   },
+   "update": {
+    "mean": 5.094,
+    "p50": 3.903,
+    "p95": 10.795,
+    "p99": 19.34,
+    "max": 80.717
+   },
+   "stepped": {
+    "mean": 5.323,
+    "p50": 4.195,
+    "p95": 11.123,
+    "p99": 19.357,
+    "max": 81.531
+   },
+   "uploadPerCall": 0,
+   "warmMax": 268.571,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 40.2,
+    "gc": {
+     "minor": {
+      "n": 431,
+      "perMin": 642.8,
+      "mean": 2.078,
+      "max": 21.47,
+      "total": 895.51
+     },
+     "major": {
+      "n": 5,
+      "perMin": 7.5,
+      "mean": 10.69,
+      "max": 17.7,
+      "total": 53.45
+     }
+    },
+    "gcShare": 0.0738,
+    "framesOver": {
+     "4": 1357,
+     "8": 275,
+     "16.6": 40
+    },
+    "framesOverWithGc": {
+     "4": 248,
+     "8": 78,
+     "16.6": 17
+    },
+    "allocMBps": 180.3,
+    "allocKBperFrame": 3078,
+    "outsideFrames": 5,
+    "standInMs": 1.211,
+    "worst": [
+     {
+      "ms": 81.531,
+      "seed": 1,
+      "gc": 7.22
+     },
+     {
+      "ms": 76.437,
+      "seed": 1,
+      "gc": 4.26
+     },
+     {
+      "ms": 45.159,
+      "seed": 1,
+      "gc": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "hostage-rescue",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "rescued",
+     "t": 35.1,
+     "digest": "377cf3a6",
+     "frames": 2107
+    }
+   ],
+   "frames": 2047,
+   "page": {
+    "mean": 3.596,
+    "p50": 2.758,
+    "p95": 7.823,
+    "p99": 14.573,
+    "max": 92.86
+   },
+   "update": {
+    "mean": 3.377,
+    "p50": 2.6,
+    "p95": 7.318,
+    "p99": 14.491,
+    "max": 92.831
+   },
+   "stepped": {
+    "mean": 3.596,
+    "p50": 2.758,
+    "p95": 7.823,
+    "p99": 14.573,
+    "max": 92.86
+   },
+   "uploadPerCall": 0,
+   "warmMax": 266.68,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 34.1,
+    "gc": {
+     "minor": {
+      "n": 203,
+      "perMin": 357,
+      "mean": 2.052,
+      "max": 8.41,
+      "total": 416.53
+     },
+     "major": {
+      "n": 4,
+      "perMin": 7,
+      "mean": 10.745,
+      "max": 18.58,
+      "total": 42.98
+     }
+    },
+    "gcShare": 0.0624,
+    "framesOver": {
+     "4": 489,
+     "8": 97,
+     "16.6": 17
+    },
+    "framesOverWithGc": {
+     "4": 95,
+     "8": 33,
+     "16.6": 7
+    },
+    "allocMBps": 100.8,
+    "allocKBperFrame": 1721,
+    "outsideFrames": 8,
+    "standInMs": 0.36,
+    "worst": [
+     {
+      "ms": 92.86,
+      "seed": 1,
+      "gc": 4.21
+     },
+     {
+      "ms": 42.524,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 38.142,
+      "seed": 1,
+      "gc": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "records-pair",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 42.4,
+     "digest": "ec534428",
+     "frames": 2547
+    }
+   ],
+   "frames": 2487,
+   "page": {
+    "mean": 3.307,
+    "p50": 2.812,
+    "p95": 5.825,
+    "p99": 10.2,
+    "max": 74.25
+   },
+   "update": {
+    "mean": 3.197,
+    "p50": 2.691,
+    "p95": 5.556,
+    "p99": 10.074,
+    "max": 74.221
+   },
+   "stepped": {
+    "mean": 3.307,
+    "p50": 2.812,
+    "p95": 5.825,
+    "p99": 10.2,
+    "max": 74.25
+   },
+   "uploadPerCall": 0,
+   "warmMax": 154.068,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 41.5,
+    "gc": {
+     "minor": {
+      "n": 280,
+      "perMin": 405.3,
+      "mean": 1.734,
+      "max": 15.12,
+      "total": 485.6
+     },
+     "major": {
+      "n": 4,
+      "perMin": 5.8,
+      "mean": 10.545,
+      "max": 15.43,
+      "total": 42.18
+     }
+    },
+    "gcShare": 0.0642,
+    "framesOver": {
+     "4": 405,
+     "8": 50,
+     "16.6": 10
+    },
+    "framesOverWithGc": {
+     "4": 71,
+     "8": 23,
+     "16.6": 9
+    },
+    "allocMBps": 112.5,
+    "allocKBperFrame": 1919,
+    "outsideFrames": 7,
+    "standInMs": 0.498,
+    "worst": [
+     {
+      "ms": 74.25,
+      "seed": 1,
+      "gc": 7.18
+     },
+     {
+      "ms": 50.368,
+      "seed": 1,
+      "gc": 4.3
+     },
+     {
+      "ms": 40.979,
+      "seed": 1,
+      "gc": 1.08
+     }
+    ]
+   }
+  },
+  {
+   "id": "depot-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 27.3,
+     "digest": "3ad7f581",
+     "frames": 1639
+    }
+   ],
+   "frames": 1579,
+   "page": {
+    "mean": 3.92,
+    "p50": 3.316,
+    "p95": 7.242,
+    "p99": 13.463,
+    "max": 47.119
+   },
+   "update": {
+    "mean": 3.795,
+    "p50": 3.174,
+    "p95": 7.025,
+    "p99": 12.667,
+    "max": 46.568
+   },
+   "stepped": {
+    "mean": 3.92,
+    "p50": 3.316,
+    "p95": 7.242,
+    "p99": 13.463,
+    "max": 47.119
+   },
+   "uploadPerCall": 0,
+   "warmMax": 236.922,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 26.3,
+    "gc": {
+     "minor": {
+      "n": 221,
+      "perMin": 503.9,
+      "mean": 1.715,
+      "max": 12.21,
+      "total": 378.97
+     },
+     "major": {
+      "n": 3,
+      "perMin": 6.8,
+      "mean": 12.5,
+      "max": 24.25,
+      "total": 37.5
+     }
+    },
+    "gcShare": 0.0673,
+    "framesOver": {
+     "4": 469,
+     "8": 49,
+     "16.6": 7
+    },
+    "framesOverWithGc": {
+     "4": 85,
+     "8": 21,
+     "16.6": 5
+    },
+    "allocMBps": 143.5,
+    "allocKBperFrame": 2450,
+    "outsideFrames": 5,
+    "standInMs": 0.37,
+    "worst": [
+     {
+      "ms": 47.119,
+      "seed": 1,
+      "gc": 2.61
+     },
+     {
+      "ms": 39.781,
+      "seed": 1,
+      "gc": 3.29
+     },
+     {
+      "ms": 23.087,
+      "seed": 1,
+      "gc": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "block-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 53.8,
+     "digest": "2a5598f3",
+     "frames": 3229
+    }
+   ],
+   "frames": 3169,
+   "page": {
+    "mean": 4.083,
+    "p50": 3.581,
+    "p95": 7.386,
+    "p99": 12.551,
+    "max": 64.281
+   },
+   "update": {
+    "mean": 3.94,
+    "p50": 3.438,
+    "p95": 7.107,
+    "p99": 12.522,
+    "max": 63.81
+   },
+   "stepped": {
+    "mean": 4.083,
+    "p50": 3.581,
+    "p95": 7.386,
+    "p99": 12.551,
+    "max": 64.281
+   },
+   "uploadPerCall": 0,
+   "warmMax": 201.135,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 52.8,
+    "gc": {
+     "minor": {
+      "n": 470,
+      "perMin": 533.9,
+      "mean": 1.729,
+      "max": 11.64,
+      "total": 812.67
+     },
+     "major": {
+      "n": 4,
+      "perMin": 4.5,
+      "mean": 18.098,
+      "max": 30.42,
+      "total": 72.39
+     }
+    },
+    "gcShare": 0.0684,
+    "framesOver": {
+     "4": 1115,
+     "8": 107,
+     "16.6": 8
+    },
+    "framesOverWithGc": {
+     "4": 207,
+     "8": 40,
+     "16.6": 6
+    },
+    "allocMBps": 145.9,
+    "allocKBperFrame": 2490,
+    "outsideFrames": 4,
+    "standInMs": 0.427,
+    "worst": [
+     {
+      "ms": 64.281,
+      "seed": 1,
+      "gc": 1.75
+     },
+     {
+      "ms": 44.255,
+      "seed": 1,
+      "gc": 1.38
+     },
+     {
+      "ms": 32.081,
+      "seed": 1,
+      "gc": 11.64
+     }
+    ]
+   }
+  },
+  {
+   "id": "block-squads",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 16.1,
+     "digest": "ec0d6bf2",
+     "frames": 963
+    }
+   ],
+   "frames": 903,
+   "page": {
+    "mean": 6.182,
+    "p50": 5.298,
+    "p95": 10.358,
+    "p99": 18.241,
+    "max": 120.58
+   },
+   "update": {
+    "mean": 6.024,
+    "p50": 5.175,
+    "p95": 10.295,
+    "p99": 18.214,
+    "max": 120.555
+   },
+   "stepped": {
+    "mean": 6.182,
+    "p50": 5.298,
+    "p95": 10.358,
+    "p99": 18.241,
+    "max": 120.58
+   },
+   "uploadPerCall": 0,
+   "warmMax": 209.447,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 15.1,
+    "gc": {
+     "minor": {
+      "n": 199,
+      "perMin": 793.4,
+      "mean": 1.502,
+      "max": 7.36,
+      "total": 298.86
+     },
+     "major": {
+      "n": 2,
+      "perMin": 8,
+      "mean": 8.21,
+      "max": 12.51,
+      "total": 16.42
+     }
+    },
+    "gcShare": 0.0565,
+    "framesOver": {
+     "4": 753,
+     "8": 146,
+     "16.6": 12
+    },
+    "framesOverWithGc": {
+     "4": 166,
+     "8": 52,
+     "16.6": 9
+    },
+    "allocMBps": 217.3,
+    "allocKBperFrame": 3709,
+    "outsideFrames": 2,
+    "standInMs": 0.757,
+    "worst": [
+     {
+      "ms": 120.58,
+      "seed": 1,
+      "gc": 5.17
+     },
+     {
+      "ms": 48.702,
+      "seed": 1,
+      "gc": 6.34
+     },
+     {
+      "ms": 45.278,
+      "seed": 1,
+      "gc": 2.4
+     }
+    ]
+   }
+  },
+  {
+   "id": "warehouse-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 210.5,
+     "digest": "e271a393",
+     "frames": 12627
+    }
+   ],
+   "frames": 12567,
+   "page": {
+    "mean": 3.181,
+    "p50": 2.812,
+    "p95": 5.499,
+    "p99": 8.668,
+    "max": 61.955
+   },
+   "update": {
+    "mean": 3.057,
+    "p50": 2.696,
+    "p95": 5.299,
+    "p99": 8.493,
+    "max": 61.936
+   },
+   "stepped": {
+    "mean": 3.181,
+    "p50": 2.812,
+    "p95": 5.499,
+    "p99": 8.668,
+    "max": 61.955
+   },
+   "uploadPerCall": 0,
+   "warmMax": 249.94,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 209.4,
+    "gc": {
+     "minor": {
+      "n": 1804,
+      "perMin": 516.8,
+      "mean": 1.451,
+      "max": 22.89,
+      "total": 2617.42
+     },
+     "major": {
+      "n": 12,
+      "perMin": 3.4,
+      "mean": 6.292,
+      "max": 11.41,
+      "total": 75.5
+     }
+    },
+    "gcShare": 0.0674,
+    "framesOver": {
+     "4": 2384,
+     "8": 162,
+     "16.6": 20
+    },
+    "framesOverWithGc": {
+     "4": 714,
+     "8": 71,
+     "16.6": 14
+    },
+    "allocMBps": 138.5,
+    "allocKBperFrame": 2363,
+    "outsideFrames": 3,
+    "standInMs": 0.508,
+    "worst": [
+     {
+      "ms": 61.955,
+      "seed": 1,
+      "gc": 2.56
+     },
+     {
+      "ms": 55.881,
+      "seed": 1,
+      "gc": 3.83
+     },
+     {
+      "ms": 47.194,
+      "seed": 1,
+      "gc": 2.68
+     }
+    ]
+   }
+  },
+  {
+   "id": "compound-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 97,
+     "digest": "17fe21a8",
+     "frames": 5820
+    }
+   ],
+   "frames": 5760,
+   "page": {
+    "mean": 4.062,
+    "p50": 3.522,
+    "p95": 7.181,
+    "p99": 10.905,
+    "max": 56.039
+   },
+   "update": {
+    "mean": 3.926,
+    "p50": 3.379,
+    "p95": 6.94,
+    "p99": 10.875,
+    "max": 56.02
+   },
+   "stepped": {
+    "mean": 4.062,
+    "p50": 3.522,
+    "p95": 7.181,
+    "p99": 10.905,
+    "max": 56.039
+   },
+   "uploadPerCall": 0,
+   "warmMax": 222.551,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 96,
+    "gc": {
+     "minor": {
+      "n": 1060,
+      "perMin": 662.5,
+      "mean": 1.455,
+      "max": 39.39,
+      "total": 1542.17
+     },
+     "major": {
+      "n": 7,
+      "perMin": 4.4,
+      "mean": 6.504,
+      "max": 19.64,
+      "total": 45.53
+     }
+    },
+    "gcShare": 0.0679,
+    "framesOver": {
+     "4": 2336,
+     "8": 180,
+     "16.6": 19
+    },
+    "framesOverWithGc": {
+     "4": 552,
+     "8": 89,
+     "16.6": 17
+    },
+    "allocMBps": 178.6,
+    "allocKBperFrame": 3049,
+    "outsideFrames": 3,
+    "standInMs": 0.62,
+    "worst": [
+     {
+      "ms": 56.039,
+      "seed": 1,
+      "gc": 2.27
+     },
+     {
+      "ms": 55.265,
+      "seed": 1,
+      "gc": 7.15
+     },
+     {
+      "ms": 42.174,
+      "seed": 1,
+      "gc": 8.33
+     }
+    ]
+   }
+  },
+  {
+   "id": "barracks-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 180.1,
+     "digest": "7a6b3d38",
+     "frames": 10808
+    }
+   ],
+   "frames": 10748,
+   "page": {
+    "mean": 3.994,
+    "p50": 3.473,
+    "p95": 7.066,
+    "p99": 10.254,
+    "max": 66.276
+   },
+   "update": {
+    "mean": 3.847,
+    "p50": 3.319,
+    "p95": 6.858,
+    "p99": 10.074,
+    "max": 66.245
+   },
+   "stepped": {
+    "mean": 3.994,
+    "p50": 3.473,
+    "p95": 7.066,
+    "p99": 10.254,
+    "max": 66.276
+   },
+   "uploadPerCall": 0,
+   "warmMax": 312.46,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 179.1,
+    "gc": {
+     "minor": {
+      "n": 1954,
+      "perMin": 654.5,
+      "mean": 1.509,
+      "max": 10.98,
+      "total": 2948.56
+     },
+     "major": {
+      "n": 12,
+      "perMin": 4,
+      "mean": 6.271,
+      "max": 18.88,
+      "total": 75.25
+     }
+    },
+    "gcShare": 0.0704,
+    "framesOver": {
+     "4": 3957,
+     "8": 271,
+     "16.6": 19
+    },
+    "framesOverWithGc": {
+     "4": 1062,
+     "8": 126,
+     "16.6": 14
+    },
+    "allocMBps": 174.1,
+    "allocKBperFrame": 2971,
+    "outsideFrames": 10,
+    "standInMs": 0.687,
+    "worst": [
+     {
+      "ms": 66.276,
+      "seed": 1,
+      "gc": 6.38
+     },
+     {
+      "ms": 53.566,
+      "seed": 1,
+      "gc": 6.5
+     },
+     {
+      "ms": 47.137,
+      "seed": 1,
+      "gc": 2.24
+     }
+    ]
+   }
+  },
+  {
+   "id": "rescue-registry",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "rescued",
+     "t": 39,
+     "digest": "9e943a7a",
+     "frames": 2341
+    }
+   ],
+   "frames": 2281,
+   "page": {
+    "mean": 2.513,
+    "p50": 2.175,
+    "p95": 4.808,
+    "p99": 8.614,
+    "max": 44.845
+   },
+   "update": {
+    "mean": 2.409,
+    "p50": 2.093,
+    "p95": 4.704,
+    "p99": 8.48,
+    "max": 44.503
+   },
+   "stepped": {
+    "mean": 2.513,
+    "p50": 2.175,
+    "p95": 4.808,
+    "p99": 8.614,
+    "max": 44.845
+   },
+   "uploadPerCall": 0,
+   "warmMax": 204.473,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 38,
+    "gc": {
+     "minor": {
+      "n": 185,
+      "perMin": 292,
+      "mean": 1.873,
+      "max": 11.87,
+      "total": 346.44
+     },
+     "major": {
+      "n": 2,
+      "perMin": 3.2,
+      "mean": 6.21,
+      "max": 8.77,
+      "total": 12.42
+     }
+    },
+    "gcShare": 0.0626,
+    "framesOver": {
+     "4": 205,
+     "8": 27,
+     "16.6": 4
+    },
+    "framesOverWithGc": {
+     "4": 43,
+     "8": 13,
+     "16.6": 3
+    },
+    "allocMBps": 77,
+    "allocKBperFrame": 1314,
+    "outsideFrames": 23,
+    "standInMs": 0.158,
+    "worst": [
+     {
+      "ms": 44.845,
+      "seed": 1,
+      "gc": 6.03
+     },
+     {
+      "ms": 41.697,
+      "seed": 1,
+      "gc": 3.44
+     },
+     {
+      "ms": 40.227,
+      "seed": 1,
+      "gc": 2.15
+     }
+    ]
+   }
+  }
+ ]
+}

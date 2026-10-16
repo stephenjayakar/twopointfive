@@ -30,9 +30,6 @@ const { debriefOf } = await import(`${ROOT}/src/game/chronicle.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 export function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const f2 = (x: number) => (Number.isFinite(x) ? Number(x.toFixed(2)) : x);
-const f3 = (x: number) => (Number.isFinite(x) ? Number(x.toFixed(3)) : x);
-const p3 = (p: Vec3 | null | undefined) => p ? [f3(p[0]), f3(p[1]), f3(p[2])] : null;
 const steps = (W: any, secs: number, until?: () => boolean) => { const n = Math.round(secs / DT); for (let i = 0; i < n; i++) { W.step(DT); if (until?.()) return true; } return !until; };
 function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 const verdictLine = (ok: boolean, label: string, detail: string, fails: string[]) => console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
@@ -130,6 +127,7 @@ export async function stageRich(seed = 4471): Promise<{ W: any; notes: string[] 
   // 5. calm again: everybody deaf no more, on patrol, Sam dark in the cubicles' SW corner; a couple of seconds to settle
   for (const gd of game.guards) { if (gd.state === 'dead') continue; gd.heardUpTo = game.eventSeq; gd.awareness = 0; gd.state = 'patrol'; gd.lastKnown = null; gd.task = null; gd.hold = false; }
   game.events.length = 0;
+  if (game.clearing) { game.clearing.cancel(); game.clearing = null; for (const gd of game.guards) if (gd.state !== 'dead') { gd.state = 'patrol'; gd.awareness = 0; gd.lastKnown = null; } }   // (a pair the staging's alarm had clearing rooms is let go of like every other errand above: which second the body was found in is the level's walls' business, not this state's)
   game.teleportPlayer([16.5, 0, 22.5]); game.player.crouch = true; steps(W, DT); game.player.visibility = 0.02;
   steps(W, 2.0);
   notes.push(`t ${game.time.toFixed(1)} s: ${game.guards.map((x: any) => `${x.callsign} ${x.state} ${x.awareness.toFixed(2)}`).join(', ')}; chronicle ${game.chronicle.events.length} rows; canSave: ${canSave(game) ?? 'yes'}`);

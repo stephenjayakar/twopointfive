@@ -1,6 +1,6 @@
 // Screen-space lighting passes: direct (full res), indirect gather (half — a third with the lossy option), volumetrics (half — a quarter likewise), composite, then EITHER the TAAU resolve
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
-import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync } from '../gpu/device';
+import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync, writeWordsIfChanged } from '../gpu/device';
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
 import taauSrc from './shaders/taau.wgsl' with { type: 'text' };
@@ -14,6 +14,9 @@ import directCommonSrc from './shaders/direct_common.wgsl' with { type: 'text' }
 import restirSrc from './shaders/restir.wgsl' with { type: 'text' };
 import { LightSet, MAX_LIGHTS } from './lights';
 import volSrc from './shaders/volumetrics.wgsl' with { type: 'text' };
+import dustLookSrc from './shaders/dust_look.wgsl' with { type: 'text' };
+import { dustLookVol } from './dustLookVol';
+import { DUST_DRAW } from '../smoke/dustTint';
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
 import compositeSrc from './shaders/composite.wgsl' with { type: 'text' };
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
@@ -38,6 +41,10 @@ import { decalWgslConsts } from './decals';
 import { TexturePool, TargetOps, texBytes } from './texpool';
 import { Froxels } from './froxels';
 import { Denoiser, dnTravel } from './denoise';
+import type { Box } from '../scene/boxes';
+import { cutSwap, ProgramSet, type CutSwappable } from './cutSwap';   // CUT BOXES: the tracing pipelines exist twice under the switch — the boot's (no cut rule) and a second set behind it, swapped per frame
+import { tuned } from './shaderTune';   // the scene tweak panel's constant overrides (empty map = compositeSrc itself)
+import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (game/fogofwar.ts): one in-place pass over the composite while its switch is on — nothing while off
 
 const CS = GPUShaderStage.COMPUTE, FS = GPUShaderStage.FRAGMENT;
 
@@ -87,10 +94,14 @@ export interface TaauFrame { prevViewProjU: Mat4; jitter: [number, number]; bypa
 }
 const TAAU_PARAM_BYTES = 144;   // struct TaauParams in taau.wgsl: mat4 (64) + 3 vec2 + 11 scalars → 132, rounded to the struct's 16-byte alignment
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
+/** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
+const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_BYTES = BEAM_HEAD + BEAM_MAX * 48;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams`)
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
+/** composite.wgsl as bundled (the scene tweak panel lists its constants off it: render/shaderTune.ts shaderConsts) */
+export function compositeText(): string { return compositeSrc; }
 
-export class LightingPasses {
+export class LightingPasses implements CutSwappable {
   width = 0; height = 0;
   /** OUTPUT size (the canvas): = width / height with TAAU off; the cap's rows with it on (engine.ts resize). ldr, the bloom pyramid and the resolve's history pair live at this size. */
   ow = 0; oh = 0;
@@ -102,6 +113,12 @@ export class LightingPasses {
    *  shadowed direct pair `sharpE` (U(out) × the internal S∕U per class), composite.wgsl's compute twin (SHARP = true) reads it with the output-size g-buffer, taau.wgsl resolves 1 : 1. Off: cw × ch =
    *  the internal size and the fragment composite / the upsampling resolve exactly as they were. Needs TAAU (the output-size history) — the engine only raises it then. */
   sharpOn = false; cw = 0; ch = 0;
+  /** FOG OF WAR (render/fogofwar.ts; engine mirrors the game's FogFrame.on before resize — setFog): after GBAA and before the resolve, pixels none of the team's eyes see are dimmed in place
+   *  (hdr is a storage texture that can be copied from then, as under GBAA). Off = no texture, no pass, hdr as it was. */
+  fogOn = false; fogFrame: FogFrame | null = null; private fogPass: FogPass | null = null;
+  setFog(on: boolean) { if (on !== this.fogOn) { const was = this.hdrUsage(); this.fogOn = on; if (this.hdrUsage() !== was) this.compStale = true; if (!on) this.fogPass?.release(); } }   // (the composite's set is re-made only when the fog changes what hdr must be: with GBAA on — every tier's default — hdr is already a storage texture that can be copied from, and re-making the set made a second hdr / hdrCopy / sharpE pair of the same description, 53 MB at high, beside the first one parked for a minute and a half)
+  /** what the composite's hdr target must be able to do, by the switches that read or rewrite it (reallocComp makes it so; a switch that does not change this needs no new target) */
+  private hdrUsage(): GPUTextureUsageFlags { const copyOn = this.gbaaOn || this.sceneCopyOn; return RT() | (this.sharpOn || this.gbaaOn || this.fogOn ? GPUTextureUsage.STORAGE_BINDING : 0) | (copyOn || this.fogOn ? GPUTextureUsage.COPY_SRC : 0); }
   /** GBAA (gbaa.wgsl; engine mirrors settings.gbaa before resize — setGbaa): after the composite (+ the particles' splat) and before the resolve, every composite pixel an analytic box edge crosses is
    *  blended with its neighbour across that edge by the far side's exact coverage — hdr is copied to hdrCopy and rewritten in place (so hdr is a storage texture then). Off = no copy, no pass. */
   gbaaOn = false; private hdrCopy: GPUTexture | null = null; private hdrCopyView: GPUTextureView | null = null;
@@ -162,6 +179,25 @@ export class LightingPasses {
   restirOn = true; restirRays = 4; restirSpatial = 3; restirHistory = 20; restirRadius = 16; restirGradient = true; restirGradK = 3.5; restirYoung = 8; restirSpatialAll = false; restirCoherent = false; restirSampleHue = false; restirRatioRaw = false; restirAudit = 0.25; restirKnownDark = true; restirPermute = false; restirPenCap = 0; restirPenRays = false;
   /** the HYBRID estimator (direct-quality lane, docs/internal/direct-quality.md): K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
   heldRays = 6; restirHueSplit = true;   // (+ the hue split: ru.cfg.w & 128 — restir.wgsl HUE SPLIT; false = the belief hue as it was)
+  /** THE LIGHTING TRADES (restir.wgsl TRADES; engine mirrors settings.heldAdaptive / restirStableRetrace / restirDimClass — all off by default = the estimator's program and uniform
+   *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE (every prelude ×
+   *  motion variant the page can take, together) — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
+  heldAdaptive = false; restirStableRetrace = false; restirDimClass = 0;
+  private restirTrade = new Map<string, GPUComputePipeline | null>();   // 'b' | 'bm' | 'c' | 'cm' (boot / cut prelude, + the motion twin) → the pipeline; null = compiling, or it failed (the plain program stays)
+  private restirTradeHot = false;   // a hot-swapped restir (hotSwapDirect: __hotRestir / __hotCommon) has no trade twin — the hot program is what runs, the rows stay without effect until a reload
+  private restirTradePipe(motion: boolean): GPUComputePipeline | null {
+    if (this.restirTradeHot) return null;
+    const cut = this.cutLive;
+    for (const c of cutSwap.enabled ? [cut, !cut] : [cut]) for (const m of [motion, !motion]) {   // (both motion twins — and, under the cut switch, both preludes — asked for together: the first camera move, or the first cut piece, after a row goes on does not start a compile of its own)
+      const key = (c ? 'c' : 'b') + (m ? 'm' : '');
+      if (this.restirTrade.has(key)) continue;
+      this.restirTrade.set(key, null);
+      const code = (c ? scenePrelude(true) : scenePrelude()) + directCommonSrc + `const RESTIR_MOTION: bool = ${m};\nconst RESTIR_TRADE: bool = true;\n` + restirSrc;
+      this.device.createComputePipelineAsync({ label: 'restirT' + (m ? 'M' : ''), layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT' + (m ? 'M' : '')), entryPoint: 'main' } })
+        .then(p => { if (!this.restirTradeHot) this.restirTrade.set(key, p); }, e => console.error('[restir] the trade twin did not compile — the rows stay without effect', e));
+    }
+    return this.restirTrade.get((cut ? 'c' : 'b') + (motion ? 'm' : '')) ?? null;
+  }
   /** MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
    *  4 = spatial reuse wherever the pixel moves; 0 = the estimator's program exactly as it was (the RESTIR_MOTION = false pipeline). V = the screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target like restirRadius)
    *  under which the history keeps full confidence — the cut ramps to Min (fraction of the M cap) by 1.6 × V, Px = the motion (px a frame at 1000 rows, scaled alike) past which (4) opens the spatial pass. Engine mirrors settings.restirMotion*. */
@@ -271,6 +307,10 @@ export class LightingPasses {
   bloom = 0.06; saturation = 1.15; grain = 0.022; nvPhosphor = 0.09;
   /** how strongly smoke blurs what stands behind it in the final blit (post.wgsl SMOKE DIFFUSION; set by the Tab row / ?nosmokediffuse; 0 = the blit as it was, the chain not dispatched) */
   smokeDiffuse = 1.0;
+  /** how many of the smoke's bounds this frame's shaders walk (frame.numSmoke, mirrored by the engine). 0 = the volumetric pass writes a smoke transmittance of exactly 1 into every
+   *  texel of volReact.g (its three smoke marches are all behind `frame.numSmoke > 0u`), post.wgsl's diffusion weight is then 0 at every pixel and it never samples the two blurred
+   *  levels — so the chain that makes them is not dispatched */
+  smokeSlots = 0;
   /** EXPERIMENT (settings.smokeDiffuseWeight === 'bilinear', mirrored by the engine): the diffusion weight from a plain bilinear of the smoke transmittance instead of the four-texel max */
   smokeDiffuseBilinear = false;
   /** the optical depth under which the diffusion leaves what is behind the smoke alone (post.wgsl diffuseTau0; engine mirrors settings.smokeDiffuseStart) */
@@ -279,6 +319,38 @@ export class LightingPasses {
   /** what consumers bind as 'direct' (sharp class, denoised) and 'soft' (broad class, denoised): the chain always ends in S */
   get directView(): GPUTextureView { return this.dSView[0]; }
   get softView(): GPUTextureView { return this.dSView[1]; }
+  /** LASERS / TRACERS IN THE REFLECTIONS: those boxes are NoShadow (no ray meets one), so the reflection pass is handed the nearest BEAM_MAX of them as line segments
+   *  (reflect.wgsl / reflect_p5.wgsl `beams`, group 1 binding 11: count, then per segment from + half-width · to · emitted rgb) and adds their mirror image analytically.
+   *  Picture only: read off the list the picture is drawn from (what the fog of war hid or an infrared beam nobody's tube shows is not in it). Count 0 = the pass as it was. */
+  private beamBuf!: GPUBuffer; private beamData = new Float32Array(BEAM_BYTES / 4); private beamN = -1;
+  /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (thinline.ts thinAirOf → its bead or null) is handed over
+   *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
+   *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
+   *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), 0, 0). Nothing here writes a box. */
+  private beamHide = new Set<Box>();
+  setBeams(list: Box[] | null, is: (b: Box) => boolean, focus: ArrayLike<number>, opts: { reflect: boolean; air: ((b: Box) => Box | null | undefined) | null; A: number; rain: number; wet: number }): Set<Box> | null {
+    const F = this.beamData, U = new Uint32Array(F.buffer); let n = 0; const hide = this.beamHide; hide.clear();
+    if (list) {
+      const found: { b: Box; d: number; bead: Box | null | undefined }[] = [];
+      for (const b of list) if (is(b)) { const bead = opts.air ? opts.air(b) : undefined; if (bead === undefined && !opts.reflect) continue;
+        const dx = b.c[0] - focus[0], dy = b.c[1] - focus[1], dz = b.c[2] - focus[2]; found.push({ b, d: dx * dx + dy * dy + dz * dz, bead }); }
+      if (found.length > BEAM_MAX || opts.air) found.sort((p, q) => (p.bead === undefined ? 1 : 0) - (q.bead === undefined ? 1 : 0) || p.d - q.d);
+      for (const { b, bead } of found) { if (n >= BEAM_MAX) break;
+        let zx: number, zy: number, zz: number;
+        if (b.rot) { const [x, y, z, w] = b.rot; zx = 2 * (x * z + w * y); zy = 2 * (y * z - w * x); zz = 1 - 2 * (x * x + y * y); } else { zx = Math.sin(b.yaw); zy = 0; zz = Math.cos(b.yaw); }
+        const L = b.h[2], e = b.emissive ?? [0, 0, 0], o = BEAM_HEAD / 4 + n * 12, air = bead !== undefined;
+        F[o] = b.c[0] - zx * L; F[o + 1] = b.c[1] - zy * L; F[o + 2] = b.c[2] - zz * L; F[o + 3] = b.h[0];
+        F[o + 4] = b.c[0] + zx * L; F[o + 5] = b.c[1] + zy * L; F[o + 6] = b.c[2] + zz * L; F[o + 7] = air && bead ? 1 : 0;
+        // a laser aimed at open ground: the game's reach does not meet the yard's floor, so the line ran on under it with no dot. In the air look it ends AT the ground, with its dot
+        if (air && F[o + 5] < 0 && F[o + 1] > 0) { const t = F[o + 1] / (F[o + 1] - F[o + 5]); F[o + 4] = F[o] + (F[o + 4] - F[o]) * t; F[o + 6] = F[o + 2] + (F[o + 6] - F[o + 2]) * t; F[o + 5] = 0; F[o + 7] = 1; }
+        F[o + 8] = e[0]; F[o + 9] = e[1]; F[o + 10] = e[2]; F[o + 11] = air ? opts.A : 0; n++;
+        if (air) { hide.add(b); if (bead) hide.add(bead); } }
+    }
+    if (n === 0 && this.beamN === 0 && F[5] === opts.wet) return null;
+    U[0] = n; U[1] = (opts.reflect ? 1 : 0) | (opts.air ? 2 : 0); F[4] = opts.rain; F[5] = opts.wet; F[6] = 0; F[7] = 0;
+    this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
+    return hide.size ? hide : null;
+  }
   private lRefl: GPUBindGroupLayout; private pRefl!: GPUComputePipeline; private bgRefl: GPUBindGroup | null = null;   // main's reflection pass, untouched (every tier with the phase-5 bits down)
   private lReflP5: GPUBindGroupLayout; private pReflP5!: GPUComputePipeline; private bgReflP5: (GPUBindGroup | null)[] = [null, null];   // phase 5's variant (reflect_p5.wgsl): + the hit records, per parity (reads reflHit[1−p], writes reflHit[p]); dispatched instead while frame.p5Cfg.z ≠ 0 (`rtP5`, engine.render mirrors it)
   rtP5 = false;
@@ -310,10 +382,12 @@ export class LightingPasses {
   private pTaauS: GPUComputePipeline | null = null; private bgTaauS: (GPUBindGroup | null)[] = [null, null];
   /** the sharp-direct pipelines are compiled on FIRST use (a tier that never turns the feature on never pays for the composite's compute twin, sharp_direct ×2 and the 1 : 1 resolve): built by
    *  the constructor's closure, `edge` = the edge-ray variants too */
-  private buildSharp!: (edge: boolean) => void;
-  private ensureSharp(edge: boolean) { if (!this.pCompS || (edge && !this.pEdge)) this.buildSharp(edge); }
+  private buildSharp!: (edge: boolean, mask: boolean) => void;
+  private ensureSharp(edge: boolean, mask = false) { if (!this.pCompS || (edge && !this.pSharpUE) || (mask && !this.pEdge)) this.buildSharp(edge, mask); }   // (mask: the edge rays' own mask kernel — compiled the first frame THEY are on, not the first frame the slivers' traced kernel is)
   private fxaaParams: GPUBuffer;
   fxaaEnabled = true;
+  /** LOOK ONLY: some of the live smoke is destruction dust this frame (the engine mirrors SmokeBinding.dusty) → the volumetric pass runs its dust twin; false = pVol, the pass as ever */
+  dustLook = false; private pVolDust: GPUComputePipeline | null = null;
   /** FROXEL VOLUMETRICS (renderer v3 Phase 2b, render/froxels.ts): dispatched inside the 'volumetrics' pass, ahead of the 2D pass, while FrameFlags.FroxelVol is up (the engine configures the
    *  grid and raises the flag; the 2D pass then marches only the smoke — lit from the froxels' J volume — and the rain), timed as 'volFroxel' beside the 2D pass's 'volumetrics';
    *  `froxelSplitTiming` = time cull+inject / temporal / integrate as separate passes ('volInject' 'volTemporal' 'volInteg') for measurement */
@@ -413,7 +487,9 @@ export class LightingPasses {
       { binding: 5, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },
       { binding: 6, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
       { binding: 7, visibility: CS, texture: tex2d('float') }, { binding: 8, visibility: CS, texture: tex2d('float') },
+      { binding: 11, visibility: CS, buffer: { type: 'uniform' } },   // the BEAMS (setBeams): lasers / tracers as line segments — a uniform, not a storage buffer (the scene group sits at the adapter's storage limit); 9 / 10 are phase 5's
     ];
+    this.beamBuf = device.createBuffer({ label: 'reflBeams', size: BEAM_BYTES, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST });
     this.lRefl = device.createBindGroupLayout({ label: 'reflect', entries: reflEntries });   // (main's layout, entry for entry)
     this.lReflP5 = device.createBindGroupLayout({ label: 'reflectP5', entries: [ ...reflEntries,   // + phase 5's hit records: last frame's read, this frame's written
       { binding: 9, visibility: CS, texture: tex2d('uint') }, { binding: 10, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba32uint', viewDimension: '2d' } },
@@ -459,6 +535,7 @@ export class LightingPasses {
       { binding: 11, visibility: FS, texture: { sampleType: 'float', viewDimension: '3d' } },   // the integrated froxel volume (render/froxels.ts; read only under FrameFlags.FroxelVol — a 1×1×1 'clear air' dummy while no grid exists)
       { binding: 12, visibility: FS, texture: tex2d('float') },                // the ray-traced reflections (refl, rgba16f — sampled bilinearly; read only while frame.rtCfg.w > 0)
       { binding: 13, visibility: FS, texture: tex2d('float') },                // the g-buffer's material target (roughness, metalness): the reflections' cutoff fade + the metal step-back
+      { binding: 15, visibility: FS, buffer: { type: 'uniform' } },             // the squad's weapon lasers as segments (setBeams — the reflection pass's own buffer): drawn as light in the air (composite.wgsl beamAir, settings.beamAir)
     ];   // (14 of the 16 sampled textures a fragment stage may bind by default: 13 here + the smoke atlas in group 0 — the next one wants a merge, not a new binding)
     this.lComp = device.createBindGroupLayout({ label: 'composite', entries: compEntries });
     // SHARP DIRECT: the same bindings in the COMPUTE stage + the output-size HDR target as a storage texture (composite.wgsl cs / hdrOut @14)
@@ -491,32 +568,35 @@ export class LightingPasses {
       { binding: 2, visibility: CS, buffer: { type: 'uniform' } },
     ] });
     this.restirU = makeBuffer(device, this.restirUData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'restirU');
-    const compText = this.compText = (sharp: boolean, refr = false) => pre + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + compositeSrc;   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
+    this.compText = (sharp: boolean, refr = false, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
     this.buildGbaa = () => { this.pGbaa = device.createComputePipeline(this.gbaaDesc()); };   // (on first use, unless init({ gbaa }) prepared it)
-    this.buildSharp = (edge: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (EDGE_RAYS false — no tracer compiled in — and, only once the edge rays are asked for, true + the mask kernel), the 1 : 1 resolve
+    this.buildSharp = (edge: boolean, mask: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (EDGE_RAYS false — no tracer compiled in — and, only once a ray user asks for it, true; the mask kernel only once the edge rays themselves are on), the 1 : 1 resolve
+      const hadS = !!this.pCompS, hadUE = !!this.pSharpUE;
       if (!this.pCompS) {
         const D = this.sharpDescs();
         this.pCompS = device.createComputePipeline(D.compS); this.pCompSR = device.createComputePipeline(D.compSR); this.pSharpU = device.createComputePipeline(D.sharpU); this.pTaauS = device.createComputePipeline(D.taauS);
       }
       if (edge && !this.pSharpUE) this.pSharpUE = device.createComputePipeline(this.sharpTracedDesc());
-      if (edge && !this.pEdge) this.pEdge = device.createComputePipeline({ label: 'sharpEdge', layout: device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lEdge] }), compute: { module: makeShader(device, pre + sharpEdgeSrc, 'sharpEdge'), entryPoint: 'main' } });
+      if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pCompS || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => console.error('[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
+      if (mask && !this.pEdge) this.pEdge = device.createComputePipeline({ label: 'sharpEdge', layout: device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lEdge] }), compute: { module: makeShader(device, pre + sharpEdgeSrc, 'sharpEdge'), entryPoint: 'main' } });
     };
     this.postParams = makeBuffer(device, 32, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'postParams');   // (+ the OUTPUT size's reciprocal: post runs at the output resolution under TAAU, where frame.invScreen is the internal one)
     this.taauParams = makeBuffer(device, TAAU_PARAM_BYTES, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'taauParams');
     this.fxaaParams = makeBuffer(device, 32, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'fxaaParams');
     this.den = new Denoiser(device, sceneLayout);
+    cutSwap.add(this);
   }
-  private compText: (sharp: boolean, refr?: boolean) => string;
+  private compText: (sharp: boolean, refr?: boolean, pre?: string) => string;
   /** the GBAA kernel's descriptor (init({ gbaa }) ahead of time, or buildGbaa on first use — the same object either way) */
   private gbaaDesc(): GPUComputePipelineDescriptor { const d = this.device; return { label: 'gbaa', layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lGbaa] }), compute: { module: makeShader(d, scenePrelude() + gbaaSrc, 'gbaa'), entryPoint: 'main' } }; }
   /** the sharp kernel WITH the tracer compiled in (EDGE_RAYS true: the edge-ray experiment and the sliver rays share it — init({ sharp }) prepares it with the trio since the sliver rule defaults on) */
-  private sharpTracedDesc(): GPUComputePipelineDescriptor { const d = this.device; return { label: 'sharpUE', layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lSharpU] }), compute: { module: makeShader(d, scenePrelude() + directCommonSrc + 'const EDGE_RAYS: bool = true;\n' + sharpSrc, 'sharpUE'), entryPoint: 'main' } }; }
+  private sharpTracedDesc(pre: string = scenePrelude()): GPUComputePipelineDescriptor { const d = this.device; return { label: 'sharpUE', layout: d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lSharpU] }), compute: { module: makeShader(d, pre + directCommonSrc + 'const EDGE_RAYS: bool = true;\n' + sharpSrc, 'sharpUE'), entryPoint: 'main' } }; }
   /** SHARP DIRECT's three first-use descriptors: the composite's compute twin, sharpU without the edge tracer, the 1 : 1 resolve */
-  private sharpDescs(): { compS: GPUComputePipelineDescriptor; compSR: GPUComputePipelineDescriptor; sharpU: GPUComputePipelineDescriptor; taauS: GPUComputePipelineDescriptor } {
-    const d = this.device, pre = scenePrelude(), sceneLayout = this.sceneLayout;
+  private sharpDescs(pre: string = scenePrelude()): { compS: GPUComputePipelineDescriptor; compSR: GPUComputePipelineDescriptor; sharpU: GPUComputePipelineDescriptor; taauS: GPUComputePipelineDescriptor } {
+    const d = this.device, sceneLayout = this.sceneLayout;
     return {
-      compS: { label: 'compositeS', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true), 'compositeS'), entryPoint: 'cs' } },
-      compSR: { label: 'compositeSR', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true, true), 'compositeSR'), entryPoint: 'cs' } },   // (its glass-refraction twin: GLASS_REFRACT true)
+      compS: { label: 'compositeS', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true, false, pre), 'compositeS'), entryPoint: 'cs' } },
+      compSR: { label: 'compositeSR', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lCompS] }), compute: { module: makeShader(d, this.compText(true, true, pre), 'compositeSR'), entryPoint: 'cs' } },   // (its glass-refraction twin: GLASS_REFRACT true)
       sharpU: { label: 'sharpU', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lSharpU] }), compute: { module: makeShader(d, pre + directCommonSrc + 'const EDGE_RAYS: bool = false;\n' + sharpSrc, 'sharpU'), entryPoint: 'main' } },
       taauS: { label: 'taauS', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lTaau] }), compute: { module: makeShader(d, pre + 'const SHARP: bool = true;\n' + taauSrc, 'taauS'), entryPoint: 'main' } },
     };
@@ -529,16 +609,13 @@ export class LightingPasses {
    *  passes true unless the URL vetoes the feature; the edge-ray experiment's two stay first-use). Engine.init awaits it; nothing may encode before it resolves. */
   async init(opts: { sharp?: boolean; gbaa?: boolean; onGroup?: (name: string) => void } = {}): Promise<void> {
     const device = this.device, sceneLayout = this.sceneLayout, pre = scenePrelude();
-    const mk = (src: string, label: string) => makeShader(device, pre + lightingCommon + src, label);
     const cp = (desc: GPUComputePipelineDescriptor) => computePipelineAsync(device, desc);
     const lay = (...ls: GPUBindGroupLayout[]) => device.createPipelineLayout({ bindGroupLayouts: ls });
     const done = (name: string) => () => opts.onGroup?.(name);   // (boot timeline: when each group's last pipeline resolved)
     const subs: Promise<unknown>[] = [this.froxels.init().then(done('froxels')), this.den.init().then(done('denoiser')), this.ops.init().then(done('targetOps'))];
     const jobs: Promise<unknown>[] = [];
     const set = <T,>(p: Promise<T>, f: (v: T) => void) => jobs.push(p.then(f));
-    set(cp({ label: 'direct', layout: lay(sceneLayout, this.lDirect), compute: { module: makeShader(device, pre + directCommonSrc + directSrc, 'direct'), entryPoint: 'main' } }), p => { this.pDirect = p; });
-    set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { this.pRestir = p; });   // (RESTIR_MOTION false = the estimator's text const-folded back to itself; the twin below carries the direct-motion lane's three levers — settings.restirMotion picks it)
-    set(cp({ label: 'restirM', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = true;\n' + restirSrc, 'restirM'), entryPoint: 'main' } }), p => { this.pRestirM = p; });
+    this.traceJobs(pre, this as unknown as Record<string, unknown>, jobs);   // the pipelines that trace boxes: direct, restir ×2, the gathers, the reflections, the cards, the march + its dust twin, the composite pair (CUT BOXES builds the same list a second time: buildCut)
     set(cp({ label: 'temporal', layout: lay(sceneLayout, this.lTemp), compute: { module: makeShader(device, pre + temporalSrc, 'temporal'), entryPoint: 'main' } }), p => { this.pTemp = p; });
     { const mod = makeShader(device, pre + softblurSrc, 'softblur'); const l = lay(sceneLayout, this.lSoft);
       set(Promise.all(STRIDES.map((stride, pass) => cp({ label: `denoise${pass}s${stride}`, layout: l, compute: { module: mod, entryPoint: 'main', constants: { STRIDE: stride } } }))), ps => { this.pDen = ps; }); }   // (only STRIDE is an override in the shader: an unused override constant fails pipeline creation on WebKit)
@@ -550,22 +627,8 @@ export class LightingPasses {
       set(cp({ label: 'softtileFlags', layout: layF, compute: { module: mods[0], entryPoint: 'markTiles' } }), p => { this.pTileFlags = p; });   // (markTiles is the same in every module)
       ALL_SKIP_T.forEach((T, i) => set(cp({ label: `softtileDist${T}`, layout: layD, compute: { module: mods[i], entryPoint: 'tileDistances' } }), p => { this.pTileDist.set(T, p); })); }
     set(cp({ label: 'dtemporal', layout: lay(sceneLayout, this.lDTemp), compute: { module: makeShader(device, pre + dtemporalSrc, 'dtemporal'), entryPoint: 'main' } }), p => { this.pDTemp = [p]; });
-    { const fgMod = mk(gatherCommonSrc + 'const GATHER_STRATA: bool = false;\n' + fgatherSrc, 'fgather');   // one module, two entry points: `main` (the gather as it was, its own layout) and `mainGi` (phase 5's resampling gather: + the reservoir bindings)
-      set(cp({ label: 'fgather', layout: lay(sceneLayout, this.lFG), compute: { module: fgMod, entryPoint: 'main' } }), p => { this.pFG = p; });
-      set(cp({ label: 'fgatherGi', layout: lay(sceneLayout, this.lFGR), compute: { module: fgMod, entryPoint: 'mainGi' } }), p => { this.pFGR = p; });
-      const fgModS = mk(gatherCommonSrc + 'const GATHER_STRATA: bool = true;\n' + fgatherSrc, 'fgatherS');   // settings.gatherStrata: the same two entry points with tile-coherent STRATIFIED directions (fgather.wgsl cosineDirK) — the pFGs / pFGRs pair the encode takes while gatherStrata
-      set(cp({ label: 'fgatherS', layout: lay(sceneLayout, this.lFG), compute: { module: fgModS, entryPoint: 'main' } }), p => { this.pFGs = p; });
-      set(cp({ label: 'fgatherGiS', layout: lay(sceneLayout, this.lFGR), compute: { module: fgModS, entryPoint: 'mainGi' } }), p => { this.pFGRs = p; }); }
-    set(cp({ label: 'reflect', layout: lay(sceneLayout, this.lRefl), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectSrc, 'reflect'), entryPoint: 'main' } }), p => { this.pRefl = p; });   // (lighting_common + gather_common + markings ahead of it, as the gather)
-    set(cp({ label: 'reflectP5', layout: lay(sceneLayout, this.lReflP5), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectP5Src, 'reflectP5'), entryPoint: 'main' } }), p => { this.pReflP5 = p; });   // (phase 5's variant, its own module)
-    set(cp({ label: 'cards', layout: lay(sceneLayout, this.lCards), compute: { module: makeShader(device, pre + cardsSrc, 'cards'), entryPoint: 'main' } }), p => { this.pCards = p; });
     { const mod = makeShader(device, pre + giblurSrc, 'giblur'); const l = lay(sceneLayout, this.lGiBlur);
       set(Promise.all([1, 2, 4].map(stride => cp({ label: `giblur${stride}`, layout: l, compute: { module: mod, entryPoint: 'main', constants: { STRIDE: stride } } }))), ps => { this.pGiBlur = ps; }); }
-    set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetrics'), entryPoint: 'main' } }), p => { this.pVol = p; });   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
-    for (const refr of [false, true]) {   // the fragment composite as it was, and its glass-refraction twin (GLASS_REFRACT — the encode takes pCompR while glassRefract)
-      const compMod = makeShader(device, this.compText(false, refr), refr ? 'compositeR' : 'composite');
-      set(renderPipelineAsync(device, { label: refr ? 'compositeR' : 'composite', layout: lay(sceneLayout, this.lComp),
-        vertex: { module: compMod, entryPoint: 'vs' }, fragment: { module: compMod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }), p => { if (refr) this.pCompR = p; else this.pComp = p; }); }
     if (opts.gbaa) set(cp(this.gbaaDesc()), p => { this.pGbaa ??= p; });
     if (opts.sharp) { const D = this.sharpDescs(); set(Promise.all([cp(D.compS), cp(D.sharpU), cp(D.taauS), cp(this.sharpTracedDesc()), cp(D.compSR)]), ([c, u, t, ue, cr]) => { if (!this.pCompS) { this.pCompS = c; this.pSharpU = u; this.pTaauS = t; } this.pSharpUE ??= ue; this.pCompSR ??= cr; }); }   // (+ the traced variant: the sliver rule defaults on, so it is a boot pipeline, not a first-use one)
     { const mod = makeShader(device, pre + bloomSrc, 'bloom'); const l = lay(sceneLayout, this.lBloom);
@@ -585,20 +648,113 @@ export class LightingPasses {
     await Promise.all([...subs, Promise.all(jobs).then(done('passes'))]);
   }
 
+  /** THE PIPELINES THAT TRACE BOXES, as init() makes them, compiled behind `pre` into `T` (field name → pipeline): init() hands the boot prelude and itself; CUT BOXES
+   *  (render/cutSwap.ts) calls it a second time with the cut prelude and a plain object — the set the frame takes while a cut piece is alive. Same modules, labels,
+   *  layouts and constants either way. (The sharp-direct trio's traced members are init({ sharp })'s / buildSharp's — buildCut mirrors those it finds built.) */
+  private traceJobs(pre: string, T: Record<string, unknown>, jobs: Promise<unknown>[]): void {
+    const device = this.device, sceneLayout = this.sceneLayout;
+    const mk = (src: string, label: string) => makeShader(device, pre + lightingCommon + src, label);
+    const cp = (desc: GPUComputePipelineDescriptor) => computePipelineAsync(device, desc);
+    const lay = (...ls: GPUBindGroupLayout[]) => device.createPipelineLayout({ bindGroupLayouts: ls });
+    const set = <V,>(p: Promise<V>, f: (v: V) => void) => jobs.push(p.then(f));
+    set(cp({ label: 'direct', layout: lay(sceneLayout, this.lDirect), compute: { module: makeShader(device, pre + directCommonSrc + directSrc, 'direct'), entryPoint: 'main' } }), p => { T.pDirect = p; });
+    set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = false;\nconst RESTIR_TRADE: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { T.pRestir = p; });   // (RESTIR_MOTION false = the estimator's text const-folded back to itself; the twin below carries the direct-motion lane's three levers — settings.restirMotion picks it)
+    set(cp({ label: 'restirM', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = true;\nconst RESTIR_TRADE: bool = false;\n' + restirSrc, 'restirM'), entryPoint: 'main' } }), p => { T.pRestirM = p; });
+    { const fgMod = mk(gatherCommonSrc + 'const GATHER_STRATA: bool = false;\n' + fgatherSrc, 'fgather');   // one module, two entry points: `main` (the gather as it was, its own layout) and `mainGi` (phase 5's resampling gather: + the reservoir bindings)
+      set(cp({ label: 'fgather', layout: lay(sceneLayout, this.lFG), compute: { module: fgMod, entryPoint: 'main' } }), p => { T.pFG = p; });
+      set(cp({ label: 'fgatherGi', layout: lay(sceneLayout, this.lFGR), compute: { module: fgMod, entryPoint: 'mainGi' } }), p => { T.pFGR = p; });
+      const fgModS = mk(gatherCommonSrc + 'const GATHER_STRATA: bool = true;\n' + fgatherSrc, 'fgatherS');   // settings.gatherStrata: the same two entry points with tile-coherent STRATIFIED directions (fgather.wgsl cosineDirK) — the pFGs / pFGRs pair the encode takes while gatherStrata
+      set(cp({ label: 'fgatherS', layout: lay(sceneLayout, this.lFG), compute: { module: fgModS, entryPoint: 'main' } }), p => { T.pFGs = p; });
+      set(cp({ label: 'fgatherGiS', layout: lay(sceneLayout, this.lFGR), compute: { module: fgModS, entryPoint: 'mainGi' } }), p => { T.pFGRs = p; }); }
+    set(cp({ label: 'reflect', layout: lay(sceneLayout, this.lRefl), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectSrc, 'reflect'), entryPoint: 'main' } }), p => { T.pRefl = p; });   // (lighting_common + gather_common + markings ahead of it, as the gather)
+    set(cp({ label: 'reflectP5', layout: lay(sceneLayout, this.lReflP5), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectP5Src, 'reflectP5'), entryPoint: 'main' } }), p => { T.pReflP5 = p; });   // (phase 5's variant, its own module)
+    set(cp({ label: 'cards', layout: lay(sceneLayout, this.lCards), compute: { module: makeShader(device, pre + cardsSrc, 'cards'), entryPoint: 'main' } }), p => { T.pCards = p; });
+    set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
+    set(this.dustTwin(volSrc, pre), p => { T.pVolDust = p; });   // (look only: the march's twin for frames with destruction dust alive — render/dustLookVol.ts)
+    for (const refr of [false, true]) {   // the fragment composite as it was, and its glass-refraction twin (GLASS_REFRACT — the encode takes pCompR while glassRefract)
+      const compMod = makeShader(device, this.compText(false, refr, pre), refr ? 'compositeR' : 'composite');
+      set(renderPipelineAsync(device, { label: refr ? 'compositeR' : 'composite', layout: lay(sceneLayout, this.lComp),
+        vertex: { module: compMod, entryPoint: 'vs' }, fragment: { module: compMod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } }), p => { if (refr) T.pCompR = p; else T.pComp = p; }); }
+  }
+  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the second set of the tracing pipelines, behind the cut prelude
+  private cutSet = new ProgramSet();
+  /** are the cut programs the ones this object dispatches right now */
+  get cutLive(): boolean { return this.cutSet.live; }
+  private cutBuilding: Promise<void> = Promise.resolve();
+  /** one build at a time: a second call (the sharp path's kernels arriving late) waits for the first, so the newer set is always the one installed */
+  buildCut(): Promise<void> { return this.cutBuilding = this.cutBuilding.catch(() => { /* its caller has it */ }).then(() => this.buildCutNow()); }
+  private async buildCutNow(): Promise<void> {
+    const pre = scenePrelude(true), T: Record<string, unknown> = {}, jobs: Promise<unknown>[] = [];
+    this.traceJobs(pre, T, jobs);
+    const cp = (desc: GPUComputePipelineDescriptor) => computePipelineAsync(this.device, desc);
+    const wantS = !!this.pCompS || (this.cutSet.live && !!this.cutSet.cut?.pCompS), wantUE = !!this.pSharpUE || (this.cutSet.live && !!this.cutSet.cut?.pSharpUE);   // (the sharp path's tracing members, where this page has built them: the composite's compute twins and the traced sharp kernel)
+    if (wantS) { const D = this.sharpDescs(pre); jobs.push(cp(D.compS).then(p => { T.pCompS = p; }), cp(D.compSR).then(p => { T.pCompSR = p; })); }
+    if (wantUE) jobs.push(cp(this.sharpTracedDesc(pre)).then(p => { T.pSharpUE = p; }));
+    await Promise.all(jobs);
+    this.cutSet.set(this, T);
+  }
+  useCut(on: boolean) { this.cutSet.use(this, on); }
+  /** SCENE TWEAK PANEL (ui/sceneTweak.ts over render/shaderTune.ts): rebuild the composite's programs from its text as SHADER_TUNE has it now — the fragment pair, the compute twins
+   *  where this page has built them, and their cut twins where the second set exists — and write them into BOTH sets (no cutSwap.hot(): cut pieces stay cut). All or nothing: every
+   *  live pipeline stays on an error. Takes its turn behind a cut build under way (and behind an earlier retune), so the newest text is the one left installed. */
+  retuneComposite(): Promise<{ ok: boolean; messages: string[] }> {
+    const run = this.cutBuilding.catch(() => { /* its caller has it */ }).then(() => this.retuneCompositeNow());
+    this.cutBuilding = run.then(() => { /* the queue carries no value */ }, () => { /* its caller has it */ });
+    return run;
+  }
+  private compTunedAs = compositeSrc;   // the composite text the installed programs were built from (a retune skips a text that already runs; a set built later reads the same text)
+  private async retuneCompositeNow(): Promise<{ ok: boolean; messages: string[] }> {
+    const d = this.device, hasCut = !!this.cutSet.cut, body = tuned(compositeSrc), bodyLines = body.split('\n').length;
+    if (body === this.compTunedAs) return { ok: true, messages: [] };
+    const wantS = !!this.pCompS || (this.cutSet.live && !!this.cutSet.cut?.pCompS);   // (as buildCutNow: the compute twins only where this page has them)
+    const mods: { key: string; label: string; cut: boolean; sharp: boolean; mod: GPUShaderModule; off: number }[] = [];
+    for (const cut of hasCut ? [false, true] : [false]) for (const sharp of wantS ? [false, true] : [false]) for (const refr of [false, true]) {
+      const code = this.compText(sharp, refr, cut ? scenePrelude(true) : scenePrelude()), label = `composite${sharp ? 'S' : ''}${refr ? 'R' : ''}`;
+      mods.push({ key: `pComp${sharp ? 'S' : ''}${refr ? 'R' : ''}`, label, cut, sharp, mod: d.createShaderModule({ code, label }), off: code.split('\n').length - bodyLines });
+    }
+    const infos = await Promise.all(mods.map(m => m.mod.getCompilationInfo()));
+    const messages = infos.flatMap((info, i) => info.messages.map(m => `${mods[i].label}${mods[i].cut ? ' (cut)' : ''} ${m.type} ${m.lineNum - mods[i].off}:${m.linePos} ${m.message}`));   // (line numbers are composite.wgsl's own)
+    if (infos.some(info => info.messages.some(m => m.type === 'error'))) return { ok: false, messages };
+    const layF = d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lComp] }), layS = d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lCompS] });
+    let ps: (GPUComputePipeline | GPURenderPipeline)[];
+    try {
+      ps = await Promise.all(mods.map(({ label, sharp, mod }): Promise<GPUComputePipeline | GPURenderPipeline> => sharp
+        ? d.createComputePipelineAsync({ label, layout: layS, compute: { module: mod, entryPoint: 'cs' } })
+        : d.createRenderPipelineAsync({ label, layout: layF, vertex: { module: mod, entryPoint: 'vs' }, fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float' }] }, primitive: { topology: 'triangle-list' } })));
+    } catch (e) { return { ok: false, messages: [...messages, `pipeline: ${(e as Error)?.message ?? e}`] }; }
+    const base: Record<string, unknown> = {}, twins: Record<string, unknown> = {};
+    mods.forEach((m, i) => { (m.cut ? twins : base)[m.key] = ps[i]; });
+    this.cutSet.patch(this, base, hasCut ? twins : null); this.compTunedAs = body;
+    return { ok: true, messages };
+  }
+
+  /** LOOK ONLY: the volumetric pass's dust twin from a volumetrics.wgsl text (render/dustLookVol.ts + shaders/dust_look.wgsl) — null (dust drawn as plain smoke, one console
+   *  error) when the march no longer has the statements the twin swaps or the twin does not compile; never an invalid pipeline */
+  private async dustTwin(vol: string, pre: string = scenePrelude()): Promise<GPUComputePipeline | null> {
+    const twin = DUST_DRAW.on ? dustLookVol(vol) : null; if (!twin) return null;
+    const mod = this.device.createShaderModule({ code: pre + lightingCommon + volCommon + dustLookSrc + twin, label: 'volumetricsDust' });
+    const info = await mod.getCompilationInfo();
+    if (info.messages.some(m => m.type === 'error')) { console.error('dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
+    try { return await this.device.createComputePipelineAsync({ label: 'volDust', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } }); }
+    catch (e) { console.error('dust look: the volumetric dust twin pipeline failed — dust is drawn as plain smoke', e); return null; }
+  }
   /** Dev / measurement hook (main.ts __hotVol): rebuild the volumetric pipeline from `src` (a volumetrics.wgsl variant; the same prelude is prepended) so an
    *  edited march can be A/B'd against a staged scene without a reboot. Resolves to the compiler's messages; the old pipeline stays if there is an error. */
   async hotSwapVol(src: string): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const mod = this.device.createShaderModule({ code: scenePrelude() + lightingCommon + volCommon + src, label: 'volumetrics-hot' });
     const info = await mod.getCompilationInfo();
     const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
     if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
     this.pVol = await this.device.createComputePipelineAsync({ label: 'vol-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } });
+    this.pVolDust = await this.dustTwin(src);   // (the dust twin is built from the same text: an edited march reaches both)
     return { ok: true, messages };
   }
 
   /** Dev / measurement hook (main.ts __hotReflect): rebuild a reflection pipeline from `src` (prelude + lighting_common + gather_common are prepended) — the phase-5 variant if the source
    *  declares the hit-record bindings (reflect_p5.wgsl), else main's (reflect.wgsl). */
   async hotSwapReflect(src: string): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const p5 = /@binding\(9\)\s*var\s+hitPrev/.test(src);
     const pre = scenePrelude() + lightingCommon + gatherCommonSrc + markingsSrc; const off = pre.split('\n').length - 1;
     const mod = this.device.createShaderModule({ code: pre + src, label: 'reflect-hot' });
@@ -633,6 +789,7 @@ export class LightingPasses {
   /** Dev / measurement hook (main.ts __hotGather): rebuild BOTH gather pipeline pairs (main + mainGi, × GATHER_STRATA false / true) from an fgather.wgsl variant (prelude + lighting_common +
    *  gather_common prepended, the const line between them as init() builds it). All four or none: a variant that fails to compile, or lacks either entry point, leaves the live pairs as they were. */
   async hotSwapGather(src: string, common: string = gatherCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const pre = scenePrelude() + lightingCommon + common; const off = pre.split('\n').length;   // (+ the one const line below)
     const declares = /^const GATHER_STRATA\b/m.test(src);   // (a variant that declares the const itself compiles once, into both pairs)
     const build = async (strata: boolean): Promise<{ ok: boolean; messages: string[]; pipes?: [GPUComputePipeline, GPUComputePipeline] }> => {
@@ -745,11 +902,15 @@ export class LightingPasses {
   /** The same for the direct-light pass (main.ts __hotDirect / __hotRestir): a direct.wgsl or restir.wgsl variant against the staged scene — scene prelude AND
    *  direct_common.wgsl prepended (pass `common` to swap that too), the pipeline of that path replaced. */
   async hotSwapDirect(src: string, which: 'direct' | 'restir' = 'direct', common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
+    if (which === 'restir') { this.restirTradeHot = true; this.restirTrade.clear(); }   // (… nor a lighting-trade twin: built from the bundled text and prelude, it would shadow the hot program)
     // restir.wgsl compiles TWICE (RESTIR_MOTION false / true — the direct-motion lane's twin); a variant that declares the const itself compiles once, into both slots
     const variants: [string, boolean | null][] = which === 'restir' && !/^const RESTIR_MOTION\b/m.test(src) ? [['const RESTIR_MOTION: bool = false;\n', false], ['const RESTIR_MOTION: bool = true;\n', true]] : [['', null]];
     const layouts = which === 'restir' ? [this.sceneLayout, this.lDirect, this.lRestir] : [this.sceneLayout, this.lDirect];
+    const trade = which === 'restir' && !/^const RESTIR_TRADE\b/m.test(src) ? 'const RESTIR_TRADE: bool = false;\n' : '';   // (the lighting trades' const: a hot text is the plain program unless it says otherwise)
     let messages: string[] = [];
-    for (const [decl, motion] of variants) {
+    for (const [decl0, motion] of variants) {
+      const decl = decl0 + trade;
       const mod = this.device.createShaderModule({ code: scenePrelude() + common + decl + src, label: which + (motion ? 'M' : '') + '-hot' });
       const info = await mod.getCompilationInfo();
       const off = (scenePrelude() + common + decl).split('\n').length - 1;
@@ -765,6 +926,7 @@ export class LightingPasses {
 
   /** direct-quality lane (main.ts __hotSharp): a sharp_direct.wgsl variant against the staged scene — BOTH pipelines (tracer-free + traced) rebuilt from it, direct_common.wgsl prepended as passes builds them */
   async hotSwapSharp(src: string, common: string = directCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const out: string[] = []; const ps: GPUComputePipeline[] = [];
     for (const traced of [false, true]) {
       const head = scenePrelude() + common + `const EDGE_RAYS: bool = ${traced};\n`;
@@ -803,6 +965,7 @@ export class LightingPasses {
     const u = this.restirU32, f = this.restirF32, b8 = this.restirU8;
     const rays = Math.max(2, Math.min(6, Math.round(this.restirRays))), k = Math.max(0, Math.min(8, Math.round(this.restirSpatial))), cap = Math.max(1, Math.min(30, Math.round(this.restirHistory)));
     u[0] = rays | ((Math.max(0, Math.min(8, Math.round(this.heldRays))) & 15) << 8);   // cfg.x: rays | heldRays << 8 (restir.wgsl HELD — the hybrid estimator's K; 0 = off: the transient stratum exactly as it was)
+    u[0] |= (this.heldAdaptive ? 1 << 12 : 0) | (this.restirStableRetrace ? 1 << 13 : 0) | ((Math.max(0, Math.min(100, Math.round(this.restirDimClass * 100))) & 255) << 16);   // the lighting TRADES (restir.wgsl; read only by the RESTIR_TRADE twin; all off = 0 = the word as it was)
     const mot = this.restirMotionLive ? Math.max(0, Math.min(7, Math.round(this.restirMotion))) : 0;   // MOTION (restir.wgsl header): its three parts as cfg.w bits 256 / 512 / 1024 — read only by the RESTIR_MOTION pipeline the encode takes while mot ≠ 0
     u[1] = k | (mot ? (Math.max(0, Math.min(8, Math.round(this.restirMotionTaps))) & 15) << 8 : 0); u[2] = cap | ((Math.max(0, Math.min(30, Math.round(this.restirPenCap))) & 255) << 8) | (this.restirPenRays ? 1 << 16 : 0); u[3] = (this.restirGradient ? 1 : 0) | (this.restirSpatialAll ? 2 : 0) | (this.restirCoherent ? 4 : 0) | (this.restirSampleHue ? 8 : 0) | (this.restirKnownDark ? 0 : 16) | (this.restirRatioRaw ? 32 : 0) | (this.restirPermute ? 64 : 0) | (this.restirHueSplit ? 128 : 0) | (mot << 8);
     f[4] = Math.max(0, this.restirRadius) * (this.height / 1000); f[5] = Math.max(0.05, this.restirGradK); f[6] = Math.max(0, this.restirYoung); f[7] = Math.max(0, Math.min(1, this.restirAudit));
@@ -935,7 +1098,7 @@ export class LightingPasses {
   private reallocComp(R: Realloc, cw: number, ch: number) {
     for (const t of [this.hdr, this.react, ...this.sharpE, this.hdrCopy]) this.drop(R, t);
     const copyOn = this.gbaaOn || this.sceneCopyOn;   // (GBAA reads a copy of hdr; the particle-rain experiment's refraction reads the same copy — either keeps it)
-    this.hdr = this.take(R, 'hdr', cw, ch, 'rgba16float', RT() | (this.sharpOn || this.gbaaOn ? GPUTextureUsage.STORAGE_BINDING : 0) | (copyOn ? GPUTextureUsage.COPY_SRC : 0)); this.hdrView = this.hdr.createView();   // (a storage texture under sharp direct — its compute composite stores it — and under GBAA, which rewrites it in place from a copy)
+    this.hdr = this.take(R, 'hdr', cw, ch, 'rgba16float', this.hdrUsage()); this.hdrView = this.hdr.createView();   // (a storage texture under sharp direct — its compute composite stores it — and under GBAA, which rewrites it in place from a copy)
     this.hdrCopy = copyOn ? this.take(R, 'hdrCopy', cw, ch, 'rgba16float', GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST) : null; this.hdrCopyView = this.hdrCopy ? this.hdrCopy.createView() : null; this.bgGbaa = null;
     this.react = this.take(R, 'react', cw, ch, 'r8unorm', RT()); this.reactView = this.react.createView();   // (a render attachment: cleared + drawn by the particles' splat on the frames it runs, read by the resolve only on those)
     this.sharpE = []; this.sharpEView = [];
@@ -1072,7 +1235,7 @@ export class LightingPasses {
   resetClocks() { this.grainSeed = 0; }
   private grainSeed = 0;
   /** the final blit's numbers: the OUTPUT texel size, its mode (0 plain · 1 FXAA · 2 the RCAS sharpen TAAU ends with — FXAA after a temporal resolve would only blur it), grain, seed, sharpen strength */
-  private fxaaData = new Float32Array(8); private postData = new Float32Array(8);   // (rewritten every frame in place — review R1.4)
+  private fxaaData = new Float32Array(8); private postData = new Float32Array(8); private postBits = new Uint32Array(this.postData.buffer); private postSent = new Uint32Array(8);   // (rewritten every frame in place — review R1.4)
   private writeFxaaParams() { const ow = this.ow || this.width, oh = this.oh || this.height; const d = this.fxaaData; d[0] = 1 / ow; d[1] = 1 / oh; d[2] = this.taauOn ? 2 : this.fxaaEnabled ? 1 : 0; d[3] = this.grain; d[4] = this.grainSeed; d[5] = this.taauSharpen; d[6] = 0; d[7] = 0; this.device.queue.writeBuffer(this.fxaaParams, 0, d); }
   /** Per frame from engine.render (TAAU on): pack the resolve's uniform (struct TaauParams in taau.wgsl). The reset flag raised since the last frame is consumed here. */
   setTaauFrame(f: TaauFrame) {
@@ -1123,7 +1286,7 @@ export class LightingPasses {
     // RT reflections: the trace reads the g-buffer (+ its albedo / material targets), the denoised direct pair and the dice, writes refl; the phase-5 variant per hit-record parity p also reads reflHit[1−p] and writes reflHit[p]
     { const reflRes: GPUBindGroupEntry[] = [
         { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
-        { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.reflView }, { binding: 7, resource: g.albedoView }, { binding: 8, resource: g.matView } ];
+        { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.reflView }, { binding: 7, resource: g.albedoView }, { binding: 8, resource: g.matView }, { binding: 11, resource: { buffer: this.beamBuf } } ];
       this.bgRefl = d.createBindGroup({ layout: this.lRefl, entries: reflRes });
       for (let pz = 0; pz < 2; pz++) this.bgReflP5[pz] = d.createBindGroup({ layout: this.lReflP5, entries: [ ...reflRes, { binding: 9, resource: this.reflHitView[1 - pz] }, { binding: 10, resource: this.reflHitView[pz] } ] }); }
     this.bgFGR = [null, null];   // (the resampling gather's groups are built on demand — ensureGiBG — since its reservoirs exist only once it has been asked for)
@@ -1239,7 +1402,7 @@ export class LightingPasses {
         { binding: 0, resource: g.albedoOView }, { binding: 1, resource: g.normalOView }, { binding: 2, resource: g.depthOView }, { binding: 3, resource: g.idOView },
         { binding: 4, resource: this.sharpEView[0] }, { binding: 5, resource: ind }, { binding: 6, resource: this.volView }, { binding: 7, resource: rc.diceView }, { binding: 8, resource: this.sharpEView[1] },
         { binding: 9, resource: this.specView }, { binding: 10, resource: { buffer: this.decalBuf ?? this.decalDummy } }, { binding: 11, resource: this.froxels.view },
-        { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matOView }, { binding: 14, resource: this.hdrView } ] });
+        { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matOView }, { binding: 14, resource: this.hdrView }, { binding: 15, resource: { buffer: this.beamBuf } } ] });
       this.bgCompFG = null;   // (rebuilt below with the same decal buffer / froxel view, so the two stay in step)
     }
     if (this.bgCompFG && this.compFroxView === this.froxels.view) return;
@@ -1248,7 +1411,7 @@ export class LightingPasses {
       { binding: 0, resource: g.albedoView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.depthView }, { binding: 3, resource: g.idView },
       { binding: 4, resource: this.directView }, { binding: 5, resource: ind }, { binding: 6, resource: this.volView }, { binding: 7, resource: rc.diceView }, { binding: 8, resource: this.softView },
       { binding: 9, resource: this.specView }, { binding: 10, resource: { buffer: this.decalBuf ?? this.decalDummy } }, { binding: 11, resource: this.froxels.view },
-      { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matView },
+      { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matView }, { binding: 15, resource: { buffer: this.beamBuf } },
     ] });
     this.compDecalBuf = this.decalBuf ?? this.decalDummy; this.compFroxView = this.froxels.view;
   }
@@ -1262,7 +1425,8 @@ export class LightingPasses {
     this.restirRanLast = this.restirOn; this.restirBeliefsStale = false;
     {
       const p = enc.beginComputePass({ label: 'direct', timestampWrites: ts('direct') });   // (one timing name for either estimator: the HUD / recorder / cost model compare like with like)
-      if (this.restirOn) { this.rParity ^= 1; p.setPipeline(this.restirMotionLive ? this.pRestirM : this.pRestir); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgDirect!); p.setBindGroup(2, this.ensureRestirBG()); }   // (restirMotionLive: the RESTIR_MOTION twin on frames the camera moved — same layouts, same buffers, the reservoirs are program-agnostic)
+      if (this.restirOn) { this.rParity ^= 1; const pt = this.heldAdaptive || this.restirStableRetrace || this.restirDimClass > 0 ? this.restirTradePipe(this.restirMotionLive) : null;   // (the lighting trades' twin, once it exists)
+        p.setPipeline(pt ?? (this.restirMotionLive ? this.pRestirM : this.pRestir)); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgDirect!); p.setBindGroup(2, this.ensureRestirBG()); }   // (restirMotionLive: the RESTIR_MOTION twin on frames the camera moved — same layouts, same buffers, the reservoirs are program-agnostic)
       else { p.setPipeline(this.pDirect); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgDirect!); }
       p.dispatchWorkgroups(Math.ceil(this.width / 8), Math.ceil(this.height / 8)); p.end();
     }
@@ -1397,7 +1561,7 @@ export class LightingPasses {
     { // volumetrics: under FrameFlags.FroxelVol the froxel kernels (cull → inject → temporal → integrate, render/froxels.ts) and then the 2D pass (the smoke march lit from their J volume +
       // the rain); flag down = the per-pixel march as it always was. One timed pass either way ('volumetrics' = everything volumetric), or split per stage for measurement.
       const froxOn = (frameFlags & FrameFlags.FroxelVol) !== 0 && this.froxels.allocated;
-      const vol2D = (p: GPUComputePassEncoder) => { p.setPipeline(this.pVol); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgVol!); p.dispatchWorkgroups(Math.ceil(this.vw / 8), Math.ceil(this.vh / 8)); };
+      const vol2D = (p: GPUComputePassEncoder) => { p.setPipeline(this.dustLook && this.pVolDust ? this.pVolDust : this.pVol); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgVol!); p.dispatchWorkgroups(Math.ceil(this.vw / 8), Math.ceil(this.vh / 8)); };
       if (froxOn && this.froxelSplitTiming) {
         let p = enc.beginComputePass({ label: 'volInject', timestampWrites: ts('volInject') });
         this.froxels.encode(p, sceneBG, rc.diceView, stage => { if (stage === 'inject') return p; p.end(); p = enc.beginComputePass({ label: stage, timestampWrites: ts(stage === 'temporal' ? 'volTemporal' : 'volInteg') }); return p; });
@@ -1415,7 +1579,7 @@ export class LightingPasses {
       // SHARP DIRECT: the hard-edge mask over the denoised direct pair (internal size, sharp_edge.wgsl — edge rays only, its own timing), then U re-scored per OUTPUT pixel × the internal visibility ratio →
       // sharpE (sharp_direct.wgsl), then the composite's compute twin per output pixel → hdr. The two output-size kernels bind the OUTPUT frame block.
       const traced = this.edgeRays || this.sliverRays;
-      this.ensureSharp(traced);   // (the pipelines are compiled the first frame the path is live — and the traced kernel + the mask kernel the first frame either ray user is on, unless init prepared them)
+      this.ensureSharp(traced, this.edgeRays);   // (the pipelines are compiled the first frame the path is live — the traced kernel the first frame either ray user is on, the mask kernel the first frame the edge rays are, unless init prepared them)
       const wx = Math.ceil(this.cw / 8), wy = Math.ceil(this.ch / 8);
       if (this.edgeRays) { const p = enc.beginComputePass({ label: 'sharpEdge', timestampWrites: ts('sharpEdge') }); p.setPipeline(this.pEdge!); p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgEdge); p.dispatchWorkgroups(Math.ceil(this.width / 8), Math.ceil(this.height / 8)); p.end(); }   // (internal size, its own timing; skipped with the edge rays off — the default pipeline never reads the mask)
       { const p = enc.beginComputePass({ label: 'sharpU', timestampWrites: ts('sharpU') }); p.setPipeline(traced ? this.pSharpUE! : this.pSharpU!); p.setBindGroup(0, this.sceneBGOut); p.setBindGroup(1, this.bgSharpU); p.dispatchWorkgroups(wx, wy); p.end(); }
@@ -1431,6 +1595,7 @@ export class LightingPasses {
       enc.copyTextureToTexture({ texture: this.hdr }, { texture: this.hdrCopy }, [this.cw, this.ch]);
       const p = enc.beginComputePass({ label: 'gbaa', timestampWrites: ts('gbaa') }); p.setPipeline(this.pGbaa!); p.setBindGroup(0, this.sharpOn && this.sceneBGOut ? this.sceneBGOut : sceneBG); p.setBindGroup(1, this.bgGbaa); p.dispatchWorkgroups(Math.ceil(this.cw / 8), Math.ceil(this.ch / 8)); p.end();
     }
+    if (this.fogOn && this.fogFrame) (this.fogPass ??= new FogPass(this.device, this.sceneLayout)).encode(enc, this.fogFrame, this.sharpOn && this.sceneBGOut ? this.sceneBGOut : sceneBG, this.hdr, this.hdrView, this.cw, this.ch, g.depthOView, g.normalOView, g.albedoOView, () => ts('fogofwar'));   // FOG OF WAR: hdr → its copy, then every pixel no eye of the team sees pushed down in place (fogofwar.wgsl) — only while the game's switch is on
     let src = 0;   // which bloom-down0 / post bind group: the history parity under TAAU, the lone hdr group without it
     if (this.taauOn) {   // the TAAU resolve: hdr (internal, jittered) + depth + last output → this frame's output = taaHist[p] at the OUTPUT size; everything below reads that
       this.taaParity ^= 1; src = this.taaParity; this.taaStats.frames++;
@@ -1441,11 +1606,11 @@ export class LightingPasses {
       p.dispatchWorkgroups(Math.ceil(this.ow / 8), Math.ceil(this.oh / 8)); p.end();
     }
     {
-      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; this.device.queue.writeBuffer(this.postParams, 0, d); }
+      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
       this.grainSeed = (this.grainSeed + 1) % 4096; this.writeFxaaParams();   // grain animates per frame and is applied after FXAA / the sharpen
       const p = enc.beginComputePass({ label: 'bloom', timestampWrites: ts('bloom') });
       p.setBindGroup(0, sceneBG);
-      if (this.smokeDiffuse > 0) {   // the smoke diffusion's own plain chain: src → W/2 → W/4 → W/8, three 4-tap box dispatches (~1/3 Mpx in all at high)
+      if (this.smokeDiffuse > 0 && (this.smokeSlots > 0 || this.smokeDiffuseTau0 < 0)) {   // the smoke diffusion's own plain chain: src → W/2 → W/4 → W/8, three 4-tap box dispatches (~1/3 Mpx in all at high)
         const wg = (t: GPUTexture) => [Math.ceil(t.width / 8), Math.ceil(t.height / 8)] as const;
         for (let i = 0; i < 3; i++) {
           const t = this.diffDown[i]; p.setPipeline(this.pBloomDown); p.setBindGroup(1, i === 0 ? this.bgDiffDown0[src] : this.bgDiffDown[i]); p.dispatchWorkgroups(...wg(t));

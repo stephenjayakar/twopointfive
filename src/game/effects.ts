@@ -174,7 +174,7 @@ type Track = () => { pos: Vec3; dir: Vec3 } | null;
 
 /**
  * A shot from `muzzle` down unit `dir`: bore jet, side ports, the wisp (riding `track` — the live barrel — if given), powder sparks.
- * Returns the light to fire. Everything lands on one fine domain centred AHEAD of the muzzle (`anchor`), since that is where the gas goes.
+ * Returns the light to fire. Everything lands on the fine lattice.
  */
 /** Muzzle frame for the emitter offsets: z = bore direction, y = up-ish, x = right (same construction as rigProps.frameFrom). */
 export function muzzleFrame(o: Vec3, d: Vec3): { o: Vec3; x: Vec3; y: Vec3; z: Vec3 } {
@@ -183,10 +183,8 @@ export function muzzleFrame(o: Vec3, d: Vec3): { o: Vec3; x: Vec3; y: Vec3; z: V
 }
 export function spawnShot(smoke: SmokeSystemLike, sp: Sparks | null, muzzle: Vec3, dir: Vec3, o: { seed: number; lightGain?: number; lightRange?: number; track?: Track; eject?: Track }): FxLight[] {
   const S = shot; const d = v3.normalize(dir); const F = muzzleFrame(muzzle, d); const at3 = (off: Vec3): Vec3 => v3.mad(v3.mad(v3.mad(muzzle, F.x, off[0]), F.y, off[1]), F.z, off[2]);
-  // one domain for the whole shot. A fine domain only accepts EMITTERS within (half-size − 0.1 m) of its centre per axis — 0.60 m now that a
-  // domain is 64 × 2.2 cm — and the ejection port sits 0.20 m BEHIND the muzzle (muzzle = handR + 0.26·gunDir), so the anchor can sit
-  // ~0.38 m ahead: the port wisp still fits behind and the bore gas gets about a metre of lattice in front to carry into.
-  const at = at3(S.jetOff); const anchor = v3.mad(muzzle, d, 0.38);   // domain centred well ahead of the muzzle: with a 0.70 m half-size (64 × 2.2 cm) the ejection port 0.2 m behind still fits, and the bore gas gets ~1 m of room to travel
+  // (`anchor`: where the old box solver centred the shot's one 1.4 m box, ahead of the muzzle. The page's solver has no boxes and reads nothing of it; the retired native host's port does)
+  const at = at3(S.jetOff); const anchor = v3.mad(muzzle, d, 0.38);
   const jv: Vec3 = [d[0] * S.jetSpeed, d[1] * S.jetSpeed + S.jetRise, d[2] * S.jetSpeed];
   // the bore: `push` drags the medium down the barrel (a jet, not a ball that happens to be off-centre); `expand` makes it open as it goes
   smoke.emit({ pos: at, dir: jv, speed: v3.len(jv), radius: S.jetRadius, density: S.jetDensity, temperature: S.jetTemp, ttl: S.jetLife, age: 0, kind: 'jet', push: S.jetPush, expand: S.jetExpand, attack: S.jetAttack, jitter: S.jitter, lattice: 'fine', anchor, confined: true });

@@ -15,7 +15,7 @@
 // tree (the walk terminates on any slot, whatever the frame's character count).
 import { makeBuffer, makeBufferWithData, makeShader, computePipelineAsync } from '../gpu/device';
 import { GltfCharacter, MeshData } from '../anim/gltf';
-import { JOINT_STRIDE } from '../anim/characters';
+import { JOINT_STRIDE, CHAR_INST_BYTES } from '../anim/characters';
 import { MeshBvh, buildMeshBvh, topologyDigest, LEAF_MAX, LEAF_PAD, MESH_MAX_CHARS } from './meshbvh';
 import { scenePrelude } from './frame';
 
@@ -38,7 +38,9 @@ const NODE_BASE: u32 = ${NODE_BASE}u; const TRI_BASE: u32 = ${TRI_BASE}u; const 
 const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD};
 @group(0) @binding(0) var<storage, read_write> mbuf: array<vec4u>;
 @group(0) @binding(1) var<storage, read> rest: array<vec4u>;         // 2 per vertex: (rest pos.xyz bits, joints j0 | j1<<8 | j2<<16 | j3<<24), (weights.xyzw bits)
-@group(0) @binding(2) var<storage, read> cornerVert: array<u32>;     // 3T: vertex of corner c (triangles in tree order)
+@group(0) @binding(2) var<storage, read> cornerVert: array<u32>;     // 3T: vertex of corner c (triangles in tree order) in the low 24 bits, the vertex's cast PART above (0 on the mannequin)
+@group(0) @binding(6) var<storage, read> charInsts: array<vec4u>;    // CharacterRenderer.charInsts as rows of raw words: instance k's part mask = row k·INST_ROWS + 5, .z (0 = the mannequin: everything) — read as u32, never through a float
+const INST_ROWS: u32 = ${CHAR_INST_BYTES / 16}u;
 @group(0) @binding(3) var<storage, read> jointMats: array<mat4x4f>;  // CharacterRenderer.jointMats: instance k's skinning matrices at k·JOINT_STRIDE (what vsSkin rasterises with)
 @group(0) @binding(4) var<storage, read> topo: array<vec4u>;         // N: (skip, triStart, triCount, right child)
 @group(0) @binding(5) var<storage, read> levels: array<u32>;         // [0, LEVELS]: offsets into the node list at LEVEL_HDR.., deepest level first
@@ -47,7 +49,11 @@ const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD};
 @compute @workgroup_size(64) fn skin(@builtin(global_invocation_id) gid: vec3u) {
   let c = gid.x; let k = gid.y;
   if (c >= 3u * T) { return; }
-  let vi = cornerVert[c];
+  let cv = cornerVert[c]; let vi = cv & 0xffffffu;
+  // THE CAST: a part this man does not wear is not there to cast a shadow — its corners go to one far point (a zero-area triangle no ray hits: meshTri's det test) flagged in .w, and
+  // refit leaves flagged corners out of the boxes. Mask 0 (the mannequin) hides nothing.
+  let parts = charInsts[k * INST_ROWS + 5u].z;
+  if (parts != 0u && ((parts >> (cv >> 24u)) & 1u) == 0u) { mbuf[TRI_BASE + k * T * 3u + c] = vec4u(bitcast<vec3u>(vec3f(1e18)), 1u); return; }
   let r0 = rest[vi * 2u]; let r1 = rest[vi * 2u + 1u];
   let p = vec4f(bitcast<vec3f>(r0.xyz), 1.0); let w = bitcast<vec4f>(r1); let j = r0.w;
   let base = k * JOINT_STRIDE;
@@ -68,13 +74,14 @@ const JOINT_STRIDE: u32 = ${JOINT_STRIDE}u; const LEAF_PAD: f32 = ${LEAF_PAD};
       let tp = topo[ni];
       var mn: vec3f; var mx: vec3f;
       if (tp.z > 0u) {
-        mn = vec3f(1e30); mx = vec3f(-1e30);
-        for (var c = tp.y * 3u; c < (tp.y + tp.z) * 3u; c++) { let v = bitcast<vec3f>(mbuf[tb + c].xyz); mn = min(mn, v); mx = max(mx, v); }
-        mn -= vec3f(LEAF_PAD); mx += vec3f(LEAF_PAD);
+        mn = vec3f(1e30); mx = vec3f(-1e30); var worn = false;
+        for (var c = tp.y * 3u; c < (tp.y + tp.z) * 3u; c++) { let e = mbuf[tb + c]; if (e.w != 0u) { continue; } let v = bitcast<vec3f>(e.xyz); mn = min(mn, v); mx = max(mx, v); worn = true; }   // (e.w: a corner of a cast part this man does not wear — skin, above)
+        if (worn) { mn -= vec3f(LEAF_PAD); mx += vec3f(LEAF_PAD); } else { mn = vec3f(1e18); mx = vec3f(1e18); }   // (a leaf of nothing but unworn parts: ONE FAR POINT — the walk's slab test (common.wgsl: min / max of the two planes) rejects it at once, where an inside-out box would be un-inverted and entered by every ray; a parent's union passes over it below)
       } else {
         let l = nb + (ni + 1u) * 2u; let r = nb + tp.w * 2u;
-        mn = min(bitcast<vec3f>(mbuf[l].xyz), bitcast<vec3f>(mbuf[r].xyz));
-        mx = max(bitcast<vec3f>(mbuf[l + 1u].xyz), bitcast<vec3f>(mbuf[r + 1u].xyz));
+        let lmn = bitcast<vec3f>(mbuf[l].xyz); let rmn = bitcast<vec3f>(mbuf[r].xyz); let lmx = bitcast<vec3f>(mbuf[l + 1u].xyz); let rmx = bitcast<vec3f>(mbuf[r + 1u].xyz);
+        let le = lmn.x > 1e17; let re = rmn.x > 1e17;   // (an empty child — the far point above — is left out of the union; two empty children make an empty node)
+        if (le) { mn = rmn; mx = rmx; } else if (re) { mn = lmn; mx = lmx; } else { mn = min(lmn, rmn); mx = max(lmx, rmx); }
       }
       mbuf[nb + ni * 2u] = vec4u(bitcast<vec3u>(mn), tp.x);
       mbuf[nb + ni * 2u + 1u] = vec4u(bitcast<vec3u>(mx), tp.y | (tp.z << 24u));
@@ -113,7 +120,8 @@ export class MeshShadows {
   /** characters skinned + refit by the last encode() (the HUD / panel read it) */
   lastChars = 0;
 
-  constructor(private device: GPUDevice, ch: GltfCharacter, private jointMats: GPUBuffer) {
+  /** `charInsts`: CharacterRenderer.charInsts (the cast's part mask per instance is read out of it — a mannequin's is 0) */
+  constructor(private device: GPUDevice, ch: GltfCharacter, private jointMats: GPUBuffer, charInsts: GPUBuffer) {
     const mesh = ch.mesh; const bvh = this.bvh = meshBvhFor(mesh); this.digest = topologyDigest(bvh);
     const N = bvh.numNodes, T = bvh.numTris, V = mesh.vertexCount, LEVELS = bvh.maxDepth + 1;
     if (LEVELS + 1 > LEVEL_HDR) throw new Error(`mesh shadows: ${LEVELS} tree levels do not fit the ${LEVEL_HDR}-word level header`);
@@ -138,18 +146,22 @@ export class MeshShadows {
       for (let v = 0; v < V; v++) { f[v * 8] = mesh.positions[v * 3]; f[v * 8 + 1] = mesh.positions[v * 3 + 1]; f[v * 8 + 2] = mesh.positions[v * 3 + 2]; rest[v * 8 + 3] = (jn[v * 4] | (jn[v * 4 + 1] << 8) | (jn[v * 4 + 2] << 16) | (jn[v * 4 + 3] << 24)) >>> 0; f.set(mesh.weights.subarray(v * 4, v * 4 + 4), v * 8 + 4); } }
     const topo = new Uint32Array(N * 4); for (let i = 0; i < N; i++) { topo[i * 4] = bvh.skip[i]; topo[i * 4 + 1] = bvh.triStart[i]; topo[i * 4 + 2] = bvh.triCount[i]; topo[i * 4 + 3] = Math.max(0, bvh.right[i]); }
     const levels = new Uint32Array(LEVEL_HDR + N); levels.set(bvh.levelOff, 0); levels.set(bvh.levelNodes, LEVEL_HDR);
-    const restBuf = makeBufferWithData(device, rest, S, 'meshRest'), cornerBuf = makeBufferWithData(device, bvh.corners, S, 'meshCorners'), topoBuf = makeBufferWithData(device, topo, S, 'meshTopo'), levelBuf = makeBufferWithData(device, levels, S, 'meshLevels');
+    let corners = bvh.corners;   // (+ each corner's cast part in the top byte: the skin kernel's test against the man's mask; the mannequin has no parts and uploads the list as it is)
+    if (mesh.part) { if (V >= 1 << 24) throw new Error('mesh shadows: vertex | part << 24 packing'); corners = new Uint32Array(bvh.corners.length); for (let c = 0; c < corners.length; c++) { const vi = bvh.corners[c]; corners[c] = (vi | (mesh.part[vi] << 24)) >>> 0; } }
+    const restBuf = makeBufferWithData(device, rest, S, 'meshRest'), cornerBuf = makeBufferWithData(device, corners, S, 'meshCorners'), topoBuf = makeBufferWithData(device, topo, S, 'meshTopo'), levelBuf = makeBufferWithData(device, levels, S, 'meshLevels');
     const CS = GPUShaderStage.COMPUTE;
     const layout = device.createBindGroupLayout({ label: 'meshShadows', entries: [
       { binding: 0, visibility: CS, buffer: { type: 'storage' } },
       { binding: 1, visibility: CS, buffer: { type: 'read-only-storage' } }, { binding: 2, visibility: CS, buffer: { type: 'read-only-storage' } }, { binding: 3, visibility: CS, buffer: { type: 'read-only-storage' } },
       { binding: 4, visibility: CS, buffer: { type: 'read-only-storage' } }, { binding: 5, visibility: CS, buffer: { type: 'read-only-storage' } },
+      { binding: 6, visibility: CS, buffer: { type: 'read-only-storage' } },
     ] });
     this.mod = makeShader(device, skinRefitSrc(N, T, LEVELS, this.triBase), 'meshShadows');
     this.pl = device.createPipelineLayout({ bindGroupLayouts: [layout] });   // (skin + refit: init(), awaited by main.ts / the viewer before the first frame)
     this.bg = device.createBindGroup({ label: 'meshShadowsBG', layout, entries: [
       { binding: 0, resource: { buffer: this.buf } }, { binding: 1, resource: { buffer: restBuf } }, { binding: 2, resource: { buffer: cornerBuf } },
       { binding: 3, resource: { buffer: jointMats } }, { binding: 4, resource: { buffer: topoBuf } }, { binding: 5, resource: { buffer: levelBuf } },
+      { binding: 6, resource: { buffer: charInsts } },
     ] });
   }
 

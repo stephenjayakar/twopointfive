@@ -54,6 +54,12 @@ fn markFaceOf(ln: vec3f) -> u32 {
   if (a.y >= a.z) { return select(3u, 2u, ln.y >= 0.0); }
   return select(5u, 4u, ln.z >= 0.0);
 }
+/** CUT BOXES (scene/cut.ts; called only inside `if (CUT_BOXES)` blocks — dead code without the switch): markings live on a box's own six faces, so a point on a CUT
+ *  face — off the plane of the box face its normal leans to — has none (the g-buffer's cut pass draws its cut faces bare the same way). */
+fn markOffFace(g: BoxGeo, lp: vec3f, face: u32) -> bool {
+  let a = face >> 1u;
+  return (g.flags & GEO_CUT) != 0u && abs(abs(lp[a]) - g.h[a]) > 2e-3;
+}
 fn markUV(face: u32, lp: vec3f) -> vec2f { return vec2f(dot(lp, MK_FACE_U[face]), dot(lp, MK_FACE_V[face])); }
 
 /** Coverage weights of palette entries 1‥3 at continuous cell position (x, y) (bitmap origin = its bottom-left) for a pixel footprint wT cells wide per axis:
@@ -155,6 +161,7 @@ fn markEmissiveAt(slot: u32, bi: u32, wp: vec3f, n: vec3f, V: vec3f, fp: f32) ->
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - g.c); let ln = quatRotate(qi, n);
   let face = markFaceOf(ln);
+  if (CUT_BOXES) { if (markOffFace(g, lp, face)) { return L; } }
   for (var k = 0u; k < 4u; k++) {
     var m = first; if (k > 0u) { m = markLoad(row); }
     if (m.face == face && m.emask != 0u) {
@@ -180,6 +187,7 @@ fn markHit(slot: u32, bi: u32, wp: vec3f, n: vec3f, V: vec3f, fp: f32, kEmit: f3
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);
   let lp = quatRotate(qi, wp - g.c); let ln = quatRotate(qi, n);
   let face = markFaceOf(ln);
+  if (CUT_BOXES) { if (markOffFace(g, lp, face)) { return o; } }
   let gain = boxMarkGain(bi) * frame.emissiveScale * frame.markCfg.z;
   var row = slot - 1u;
   for (var k = 0u; k < 4u; k++) {

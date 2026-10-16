@@ -1,0 +1,262 @@
+<title>Destruction research — glass that gives, furniture that fails, walls that leak</title>
+<style>
+:root{--ground:#eceef0;--panel:#f7f8f9;--ink:#1c232b;--muted:#5d6773;--rule:#cfd5db;--accent:#a35f14;--accent-soft:#e9dcc9;--good:#2f7d4f;--warn:#a35f14;--bad:#a8322a;--code:#e3e7eb;--glass:#3f7f8f;--glass-soft:#d5e6ea;--shadow:0 1px 0 rgba(0,0,0,.04)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--ground:#0f1216;--panel:#161b21;--ink:#d7dce2;--muted:#8b95a1;--rule:#2a323b;--accent:#d99a3e;--accent-soft:#3a2c17;--good:#6fbf8e;--warn:#d99a3e;--bad:#e07a70;--code:#1d242c;--glass:#7cc3d4;--glass-soft:#18333a;--shadow:none}}
+:root[data-theme="dark"]{--ground:#0f1216;--panel:#161b21;--ink:#d7dce2;--muted:#8b95a1;--rule:#2a323b;--accent:#d99a3e;--accent-soft:#3a2c17;--good:#6fbf8e;--warn:#d99a3e;--bad:#e07a70;--code:#1d242c;--glass:#7cc3d4;--glass-soft:#18333a;--shadow:none}
+:root[data-theme="light"]{--ground:#eceef0;--panel:#f7f8f9;--ink:#1c232b;--muted:#5d6773;--rule:#cfd5db;--accent:#a35f14;--accent-soft:#e9dcc9;--good:#2f7d4f;--warn:#a35f14;--bad:#a8322a;--code:#e3e7eb;--glass:#3f7f8f;--glass-soft:#d5e6ea;--shadow:0 1px 0 rgba(0,0,0,.04)}
+*{box-sizing:border-box}html{background:var(--ground)}body{margin:0;background:var(--ground);color:var(--ink);font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+main{max-width:1140px;margin:0 auto;padding:40px 28px 96px;display:flex;flex-direction:column;gap:52px}
+h1{font-size:30px;line-height:1.15;letter-spacing:-.01em;margin:0 0 10px;font-weight:700;text-wrap:balance}
+h2{font-size:20px;line-height:1.25;margin:0;font-weight:700;letter-spacing:-.005em;text-wrap:balance}
+h3{font-size:15px;margin:0;font-weight:700}
+p{margin:0}a{color:var(--accent)}
+.eyebrow{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:block}
+.lede{font-size:16px;color:var(--ink);max-width:76ch}
+blockquote{margin:0;padding:10px 14px;border-left:3px solid var(--accent);background:var(--panel);color:var(--ink);max-width:82ch;font-size:14.5px}
+blockquote + blockquote{margin-top:8px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:16px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+section.block{display:grid;grid-template-columns:150px 1fr;gap:18px 28px;align-items:start}
+section.block>.label{font:600 11px/1.3 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding-top:5px;border-top:2px solid var(--accent)}
+section.block>.body{display:flex;flex-direction:column;gap:16px;min-width:0}
+.body>p,.body li{max-width:80ch}
+ul,ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+code,kbd{font:12.5px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--code);padding:1px 5px;border-radius:3px}
+.scroll{overflow-x:auto;border:1px solid var(--rule);background:var(--panel);box-shadow:var(--shadow)}
+table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+caption{caption-side:top;text-align:left;padding:10px 12px;color:var(--muted);font-size:12.5px;border-bottom:1px solid var(--rule)}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--rule);vertical-align:top}
+thead th{font:600 11px/1.2 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--ground);white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+td.k{font-weight:700;white-space:nowrap}
+td.n{white-space:nowrap}
+.wide td{min-width:150px}.wide td.k,.wide td.n{min-width:0}
+.muted{color:var(--muted)}
+.tag{display:inline-block;font:600 10.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:3px;border:1px solid var(--rule);color:var(--muted);white-space:nowrap}
+.tag.go{color:var(--good);border-color:var(--good)}.tag.warn{color:var(--warn);border-color:var(--warn)}.tag.no{color:var(--bad);border-color:var(--bad)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.card{background:var(--panel);border:1px solid var(--rule);padding:14px 16px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.card h3{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.card h3 span{font:600 10.5px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.card p,.card li{font-size:13.5px}
+.card .take{border-top:1px dashed var(--rule);padding-top:8px;color:var(--ink)}
+.card .take b{color:var(--accent)}
+.trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.trio .card{border-top:3px solid var(--accent)}
+.trio .card .ms{font:600 12px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--good)}
+figure.dia{margin:0;background:var(--panel);border:1px solid var(--rule);padding:14px;display:flex;flex-direction:column;gap:8px}
+figure.dia svg{width:100%;height:auto;max-width:980px;display:block;margin:0 auto}
+figcaption{font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);max-width:110ch}figcaption b{color:var(--ink);font-weight:600}
+.set{display:grid;grid-template-columns:34px 1fr;gap:4px 12px;padding:12px 14px;background:var(--panel);border:1px solid var(--rule)}
+.set .num{font:700 18px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--accent);padding-top:2px}
+.set h3{margin-bottom:2px}.set p{font-size:14px;max-width:96ch}.set .cost{font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:var(--muted);margin-top:4px}
+ol.qs li{max-width:100ch}
+ol.src{font-size:13px}ol.src li{max-width:none;overflow-wrap:anywhere}
+@media (max-width:760px){section.block{grid-template-columns:1fr}main{padding:28px 16px 72px}}
+</style>
+<main>
+
+<header>
+  <span class="eyebrow">research · destruction · 2026-08-11</span>
+  <h1>Glass that gives, furniture that fails, walls that leak — how shipped games break things, priced against this renderer</h1>
+  <p class="lede">A survey of Control, Rainbow Six Siege, Source's window glass, impact-placed fracture research and real glass forensics, mapped item by item onto a box-only ray-traced office where destruction is already bounded and hash-deterministic and the guards see and hear through the player's own light, smoke, sound and floors. Ends in a staged plan, five crossfire set-pieces for the "Seoul" framing, and ten one-line decisions.</p>
+  <blockquote>"can you kick off some research on how destruction works in games like control? both for glass (i'd like it to be procedurally generated where it only shatters into pieces after a few bullets, and then breaks up based on where the bullet points are), furniture (we already do this a little bit in chaos mode), etc. curious what fits into our frame budget, has some cool gameplay elements, wow factor (like the gpu particle effects), and fits into our art style"</blockquote>
+  <blockquote>"stuff like the seoul mission works really well too, where we're the quiet one sneaking around when there are two loud teams going at it — keep that in mind for chaos and destruction! i think we'd want the beats to be pretty heavily scripted but the actual destruction, etc., should be dynamic"</blockquote>
+  <div class="meta"><span><b>budget</b> high ≤ 14 ms union p95 loud minute · calm 8–11 ms</span><span><b>a tumbling caster</b> ≈ 0.03 ms</span><span><b>a hanging dust plume</b> +2 ms</span><span><b>particles / decals</b> ≈ free, capped</span><span><b>boxes</b> ~1 100 of 4 096</span><span><b>panes</b> 23 of 32</span><span><b>full report</b> docs/research/destruction-survey.md</span></div>
+</header>
+
+<section class="block">
+  <div class="label">The three that pay</div>
+  <div class="body">
+    <p>Most wow per millisecond in <em>this</em> renderer, where every photon is dynamic and moving light is the thing it does that nothing baked can:</p>
+    <div class="trio">
+      <div class="card"><h3>A fixture shot loose, swinging <span>F2</span></h3><p>One end of a corridor panel (or the storage bulb) drops out and hangs by its flex, still lit and stuttering: penumbrae sweep the floor, the froxel beam swings through the gypsum dust, the gloss lino mirrors it. The light <em>meter</em> swings with it, so Sam crosses in the dark half of the period and the guards' sight of him breathes in and out through the same meter.</p><p class="ms">≈ 0 ms · one moving light; ReSTIR is flat in light count</p></div>
+      <div class="card"><h3>Panes coming apart cell by cell <span>G1–G3</span></h3><p>Each round stars the pane; the stars link into a hairline Voronoi network of the impacts; on the third or fourth the cell round a cluster drops out as tinted specular shard quads that flash through the torch beam and tinkle onto the lino — and the hole is a new path for rounds, sound and the storm, both ways.</p><p class="ms">≈ 0 ms persistent · shards at the timer quantum, births-capped</p></div>
+      <div class="card"><h3>Light through fresh holes in drywall <span>W1</span></h3><p>Sustained fire opens lattice-aligned holes between box studs; the lit corridor stabs into the dark storage room through a ragged row of them, beams standing in the dust. Sight, fire, sound and light all leak through real geometry — murder holes for everybody, walkable for nobody.</p><p class="ms">a few boxes · GI settles through the hole in ~0.5 s</p></div>
+    </div>
+    <p class="muted">The one recurring cost to police is smoke-solver density (gypsum dust, a CO₂ cloud): +2 ms per hanging plume at high, already gated by <code>smoke.budget()</code> and <code>puffDomains</code>. Everything else on this page is particles, decals, a handful of boxes, or a light that moves.</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">What shipped games do</div>
+  <div class="body">
+    <div class="cards">
+      <div class="card"><h3>Control · Northlight <span>GDC 2020 [1][2][3][4]</span></h3>
+        <p>"Granularity": nature as "a continuum from very big objects down to dust and very thin veils of smoke", drawn in three overlapping layers — rigid bodies ("chunks and parts of props and environments — all of that is RBDs"), a middle layer of "mesh particles, rigid body hierarchies, and material decals", and sprites for "embers, sparks, smoke, fire, splinters, gravel, sand".</p>
+        <p>Reactions authored <b>per material, not per object</b> ("concrete breaks into smaller concrete bits and then spawns dust; shoot a metal pipe and it spawns water") by a Houdini pipeline tagging props with material metadata; props are part hierarchies on breakable joints, "so if you break a table in half the parts fall and collapse realistically". Reported budget: ~200 live dynamic objects, overflow chunks demoted to sprites, collision throttled a few frames after a blast (second-hand numbers [4]).</p>
+        <p class="take"><b>Take:</b> the layering and the cap-with-demotion are already the shape of <code>destruction.ts</code> (pool 64/32 → refusal → chip burst). What we lack is Control's middle layer for <em>furniture</em>: parts on joints.</p></div>
+      <div class="card"><h3>Rainbow Six Siege · RealBlast <span>GDC 2016 slides [5][6]</span></h3>
+        <p>Surface destruction is <b>planar</b>: "3D → 2D projection", "arbitrary cutting polygons cut a planar surface", the cut pattern from "impact position in local space + inputs and material parameters (cutter)", Weiler–Atherton clipping, ear-clipping triangulation, extruded back to 3D. Cutter classes: perimeter (ellipse, spline), inner fragments (<b>Voronoi</b>), both — "<b>Glass</b>, Texture". Under it a "connection-based leaf graph".</p>
+        <p>Their performance calls: "<b>no procedurally cut dynamic fragments</b> — well-placed replacements, instanced, recycled aggressively; fragments don't collide together; vaporize on explosion; collision <b>always boxes</b>"; ~6 ms budget for a wall, a bullet hole 0.33 ms PC / 1.1 ms PS4; async + time-sliced. Determinism: "seed a RNG … based on impact position". Systems made dynamic: navlinks, "sound (& propagation)", "AI visibility through partially broken walls".</p>
+        <p class="take"><b>Take:</b> the closest engineering match to the ask — and <code>glass.ts hitSeed(bi, point)</code> is their determinism rule verbatim. Our panes are already 2D analytic surfaces; we do the cut in the shader, not in a mesh.</p></div>
+      <div class="card"><h3>Source <code>func_breakable_surf</code> <span>shipped code [7]</span></h3>
+        <p>A window = a grid of ≤ 16 × 16 panels of 12 units. A bullet shatters the hit panel, the neighbour if within 0.2 of an edge, "occasionally" the one or two above; blasts take a radius. Then <code>BreakThink</code> recomputes <b>support</b> per intact panel as a weighted sum of neighbours (frame = full support: bottom 1.25, sides/top 1.0, lower diagonals 1.0, upper 0.25, ÷ 6.75), iterating; anything under 0.20 × fragility drops as a falling pane or shatters in place — the tongue between two hit clusters follows a beat later. Each survivor is drawn with an edge style from the bitmask of broken neighbours.</p>
+        <p class="take"><b>Take:</b> the fondly remembered precedent for "shatters after a few bullets, based on where they landed". Crude, deterministic, free — the bar to clear, and its support pass ports directly onto Voronoi cells.</p></div>
+      <div class="card"><h3>Fracture placed at the impact <span>[8][9][10][11][12]</span></h3>
+        <p>Müller–Chentanez–Kim 2013: pre-authored fracture patterns <b>applied at the impact location</b> at run time (plain pre-fracture's flaw: "the pattern does not align with the impact location"), partial fracture at several places. Blast/APEX productise the model: chunk hierarchy, <b>support graph</b> of bonds with health, "damage shaders" (radial, shear), islands when bonds break, optional stress solver — and "no physics … no graphics representation". Chaos: Voronoi uniform / clustered / <b>radial</b>, cluster levels, thresholds, anchor fields. FEM (DMM) is the serious end.</p>
+        <p class="take"><b>Take:</b> keep the <em>data model</em> (bonds, health, islands, radial damage) for furniture; drop the geometry libraries — we have no meshes to cut.</p></div>
+      <div class="card"><h3>Real glass <span>SWGMAT [13] · glass types [14]</span></h3>
+        <p>Radial cracks first, from the impact (initiating on the far, tensioned face); concentric second, "usually in straight segments that terminate in an existing radial crack"; a fast projectile leaves a <b>cone/crater</b> wider on the exit side; and "the sequence of multiple impacts can be deduced when the cracks caused by a subsequent impact terminate at previously formed cracks" — several bullets partition a pane into cells bounded by each other's cracks.</p>
+        <p><b>Annealed</b> breaks progressively into large sharp shards; <b>tempered</b> holds, then <b>dices all at once</b> into cubes once its skin is breached; <b>laminated</b> spider-webs and stays in the frame. Three behaviours from one parameter.</p>
+        <p class="take"><b>Take:</b> a Voronoi-of-impacts crack network is physically defensible, and glass <em>type</em> is the authored knob that makes the lobby frontage, the conference partition and the manager's sidelight behave differently.</p></div>
+      <div class="card"><h3>Contrast, not candidates <span>[15]–[19]</span></h3>
+        <p>Teardown: voxels with an 8-bit material palette, bodies split by connectivity, multiplayer as "a stream of deterministic commands — 'cut hole in this shape at voxel coord x,y,z'" in fixed point. Red Faction: Guerrilla: a stress walk over supports across frames, chain-reacting. Frostbite: "remove a piece of the geometry → detail meshes → destruction mask (albedo + normal via a distance field, drawn as a deferred decal) → particles and mesh debris". The Finals: the whole sim server-side. Noita: every pixel, 64² chunks.</p>
+        <p class="take"><b>Take:</b> determinism-by-command and decal masking we already have; voxels, stress solvers and server authority solve problems a 1 m grid of ≤ 4 096 boxes does not have. <span class="tag no">skip</span></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">The glass model</div>
+  <div class="body">
+    <p>One analytic pane, an impact list, and the Voronoi diagram of the impacts doing three jobs: the crack network you see, the cells that fail, and the hole test every ray, round, footstep-sound and gust asks.</p>
+    <figure class="dia">
+      <svg viewBox="0 0 980 300" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Three stages of a pane: starred, cracked network, cells dropped">
+        <defs>
+          <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><line x1="0" y1="0" x2="0" y2="6" stroke="var(--muted)" stroke-width="1" opacity=".35"/></pattern>
+        </defs>
+        <g font-family="ui-monospace,SFMono-Regular,Menlo,monospace" font-size="11" fill="var(--muted)">
+          <!-- pane 1: two stars -->
+          <rect x="20" y="20" width="280" height="220" fill="var(--glass-soft)" stroke="var(--ink)" stroke-width="3"/>
+          <g stroke="var(--glass)" stroke-width="1.2" fill="none">
+            <circle cx="120" cy="110" r="4" fill="var(--panel)"/><circle cx="120" cy="110" r="11" opacity=".5"/>
+            <line x1="120" y1="110" x2="150" y2="96"/><line x1="120" y1="110" x2="98" y2="86"/><line x1="120" y1="110" x2="112" y2="140"/><line x1="120" y1="110" x2="146" y2="128"/><line x1="120" y1="110" x2="92" y2="118"/>
+            <circle cx="205" cy="160" r="4" fill="var(--panel)"/><circle cx="205" cy="160" r="9" opacity=".5"/>
+            <line x1="205" y1="160" x2="232" y2="150"/><line x1="205" y1="160" x2="186" y2="138"/><line x1="205" y1="160" x2="196" y2="186"/><line x1="205" y1="160" x2="228" y2="180"/>
+          </g>
+          <text x="20" y="262">1 · today: each hit = a star decal,</text><text x="20" y="276">'glass' event 0.85, the round stops in it</text>
+          <!-- pane 2: voronoi network of 4 impacts + long radials -->
+          <rect x="350" y="20" width="280" height="220" fill="var(--glass-soft)" stroke="var(--ink)" stroke-width="3"/>
+          <g stroke="var(--glass)" stroke-width="1.6" fill="none">
+            <!-- impacts at (430,90) (520,120) (450,180) (560,200) : approximate voronoi edges -->
+            <path d="M350 138 L472 132 L500 62 L505 20"/><path d="M472 132 L498 158 L520 240"/><path d="M498 158 L560 152 L630 128"/><path d="M472 132 L458 134"/>
+          </g>
+          <g stroke="var(--glass)" stroke-width="1" fill="none" opacity=".7">
+            <line x1="430" y1="90" x2="350" y2="60"/><line x1="430" y1="90" x2="470" y2="20"/><line x1="520" y1="120" x2="630" y2="70"/><line x1="450" y1="180" x2="350" y2="215"/><line x1="560" y1="200" x2="630" y2="235"/>
+          </g>
+          <g fill="var(--panel)" stroke="var(--glass)" stroke-width="1.2"><circle cx="430" cy="90" r="4"/><circle cx="520" cy="120" r="4"/><circle cx="450" cy="180" r="4"/><circle cx="560" cy="200" r="4"/></g>
+          <text x="350" y="262">2 · stage 1a: the impacts' Voronoi edges as</text><text x="350" y="276">hairlines + radials growing to the frame</text>
+          <!-- pane 3: two cells dropped -->
+          <rect x="680" y="20" width="280" height="220" fill="var(--glass-soft)" stroke="var(--ink)" stroke-width="3"/>
+          <path d="M680 138 L802 132 L830 62 L835 20 L680 20 Z" fill="var(--ground)" stroke="var(--glass)" stroke-width="2"/>
+          <path d="M802 132 L828 158 L850 240 L680 240 L680 138 Z" fill="url(#hatch)" stroke="var(--glass)" stroke-width="2" stroke-dasharray="5 4"/>
+          <g stroke="var(--glass)" stroke-width="1.6" fill="none"><path d="M828 158 L890 152 L960 128"/></g>
+          <g fill="var(--panel)" stroke="var(--glass)" stroke-width="1.2"><circle cx="850" cy="120" r="4"/><circle cx="890" cy="200" r="4"/></g>
+          <g fill="var(--glass)" opacity=".9"><rect x="700" y="150" width="9" height="3" transform="rotate(20 704 151)"/><rect x="730" y="175" width="7" height="3" transform="rotate(-30 733 176)"/><rect x="716" y="205" width="10" height="3" transform="rotate(50 721 206)"/><rect x="752" y="196" width="6" height="3"/><rect x="742" y="222" width="8" height="3" transform="rotate(-15 746 223)"/></g>
+          <text x="688" y="40" fill="var(--ink)">open: view, light, rounds,</text><text x="688" y="54" fill="var(--ink)">sound, gust pass</text>
+          <text x="688" y="232" fill="var(--ink)">unsupported → drops next think</text>
+          <text x="680" y="262">3 · stage 1b: a cell fails on its 3rd hit,</text><text x="680" y="276">falls as shard quads; the tongue goes next</text>
+        </g>
+      </svg>
+      <figcaption><b>Per pane:</b> <code>impacts[≤16] {u, v, energy, seed}</code>, <code>damage</code>, a 16-bit <code>dropped</code> mask and <code>glassType</code> ride in the pane's uniform record (+4–5 vec4). Composite evaluates the Worley edge distance over the impacts for crack lines and asks "nearest impact dropped?" for the hole; <code>collision.ts</code> asks the same <code>paneOpenAt(bi, p)</code> for sight tint, rounds (re-cast past the hole), <code>solidBlocked</code> (sound) and the wind's gust source. Support = Source's rule over the Delaunay neighbours with frame contact as support. Tempered panes skip all of it and dice whole on the Nth hit; laminated ones crack forever and never open.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">Mapped onto this engine</div>
+  <div class="body">
+    <p>Priced against: a tumbling shadow-casting box ≈ 0.03 ms at high (P6: 8 → 64 boxes = 8.5 → 9.9 ms union), a hanging dust domain +2 ms high / +2.5–4 ultra, particles at the 65 µs quantum with births capped 384/frame, decals free (512 ring), 782 statics + ~300 dynamics of <code>MAX_BOXES</code> 4 096 repacked per frame, 23 of <code>MAX_GLASS</code> 32 panes at ~22 slab tests per glass pixel, and <code>StaticCollision</code> skipping <code>NoShadow</code> statics at query time — hiding a static un-blocks sight, sound, rounds and shins in one flag write.</p>
+    <div class="scroll"><table class="wide">
+      <thead><tr><th>#</th><th>technique (source)</th><th>looks like here</th><th>implementation sketch</th><th>cost</th><th>bounded / determ.</th><th>wow</th><th>stealth hooks</th><th>risk</th><th>verdict</th></tr></thead>
+      <tbody>
+        <tr><td class="k">G1</td><td>Impact-list crack growth (SWGMAT; Siege glass cutter; Source panels)</td><td>stars stay; a hairline Voronoi network of the impacts links them; long radials run to the frame as damage rises</td><td><code>glass.ts</code> impacts + damage; <code>packGlass</code> +4–5 vec4/pane; <code>composite/decals.wgsl glassMarks</code> Worley edge + spokes, AA analytic like the markings</td><td class="n">&lt; 0.05 ms; +2.5 KB uniform</td><td>≤ 16 impacts/pane (17th merges); <code>hitSeed</code></td><td>medium; high as the tell</td><td>every hit already a <code>'glass'</code> 0.85 event; "one more and it goes" is readable</td><td>stylised, not fracture-exact — on brand</td><td><span class="tag go">stage 1a</span></td></tr>
+        <tr><td class="k">G2</td><td>Cell drop-out = Voronoi cells of the impacts (Source support pass; impact-aligned patterns)</td><td>the polygon round a hit cluster vanishes; bright rims on the survivors; the tongue below follows a beat later; frame-huggers hang</td><td>16-bit <code>dropped</code> mask in the pane record; <code>glassTrace</code>/composite hole test; CPU <code>paneOpenAt</code> in <code>segmentBlocked / raycast / shotBlocked</code>; support over Delaunay neighbours on hit + 0.3 s think; <code>'glassBreak'</code> 1.0 / 40 m; <code>smoke.obstaclesChanged</code> at ≥ ½ open</td><td class="n">0 persistent GPU</td><td>cells ≤ 16/pane; drops hashed</td><td><b>high</b></td><td>new ROUND path both ways (<code>clearShot</code>), straight SOUND path, exterior hole = storm GUST in (smoke leans, papers lift, spray)</td><td><code>direct.wgsl</code> tint per shadow ray — take "damaged pane = untinted" (GI/vol already ignore tint)</td><td><span class="tag go">stage 1b</span></td></tr>
+        <tr><td class="k">G3</td><td>Shard particles (Control's particle layer; Siege "always boxes, recycled")</td><td>20–60 thin tinted glass quads per cell with a GGX glint off the 3 shadow-tested lights + bloom — they flash through a beam; tempered panes dice into 200–400 3 cm cubes at once</td><td>7th kind <code>shard</code> (sheet state rows; KN_Q≈1, no lift, restitution 0.3, sleep flat) + spec splat branch; CPU-scheduled <code>glassTinkle</code> like <code>casingTink</code></td><td class="n">births-capped; splat ≈ quantum</td><td>LONG ring; system serial</td><td><b>very high / ms</b></td><td>landing tinkles = <code>'prop'</code> 0.3 blamed on the shooter → a calm man looks; glass as a lure</td><td>no shard shadows (as sheets); transmissive alpha approximated premultiplied</td><td><span class="tag go">stage 1b</span></td></tr>
+        <tr><td class="k">G4</td><td>Shards underfoot (one model: floors change what guards hear)</td><td>a glitter patch under the pane</td><td><code>floor.ts</code> runtime <code>patches[]</code> before the static map; <code>FLOOR.shards</code> loud 1.5 + <code>glassCrunch</code>; cleared on reset</td><td class="n">0</td><td>≤ 1 patch/pane</td><td>low visual, high systemic</td><td>Sam, guards, civilians all CRUNCH at ×1.5 through the same <code>footfall</code>; the QRF announce themselves on their own breakage</td><td>none</td><td><span class="tag go">stage 1c</span></td></tr>
+        <tr><td class="k">G5</td><td>Tempered / annealed / laminated as one authored param</td><td>frontage dices whole; partitions shard cell by cell; the sidelight spider-webs and holds</td><td><code>materials.glass.type</code> in LevelData (KEYS + validator + both directions) → <code>Box.glassType</code></td><td class="n">0</td><td>—</td><td>high (variety = physical)</td><td>tempered = loud one-shot opening + weather in; laminated = safe cover, never a path</td><td>level-format plumbing</td><td><span class="tag go">stage 1b</span></td></tr>
+        <tr><td class="k">F1</td><td>Jointed box furniture (Control prop hierarchies; Blast bonds)</td><td>a pedestal shot through: the desktop hinges down about its surviving edge, spilling clutter and paper; a shelf plank drops one end and its binders slide; chairs topple</td><td><code>index</code> gains assemblies by shape; <code>Debris 'slab'</code> = 1-DOF hinge (θ¨ = 3g/2L·cos θ, free-edge raycast contact) then free / sleep; supports → chunks; <code>'prop'</code> 0.5</td><td class="n">1–3 casters × 0.03 ms while moving; pool-counted</td><td>pool + <code>knocksPerSec</code>; hashed</td><td>medium-high</td><td>new low cover; loud landings blamed on shooters</td><td>hidden static's cell stays in NAV and <code>collideCircle</code> skips it → register the fallen slab as a prop-like obstacle</td><td><span class="tag go">stage 2a</span></td></tr>
+        <tr><td class="k">F2</td><td>Dangling fixture (the house taste: light that really moves)</td><td>a panel / the storage bulb hangs by its flex and swings, lit and stuttering; penumbrae sweep, the beam swings in dust, gloss mirrors it</td><td><code>lighting.ts</code> fixture <code>hang {pivot, θ, ω}</code> spherical pendulum, impulse-kickable; emissive box + <code>RtLight</code> rewritten per frame (identity maps keep ReSTIR history); restrike envelope as flicker; <code>creak</code></td><td class="n">≈ 0</td><td>≤ 2 hanging; ODE</td><td><b>highest / ms</b></td><td>the METER swings → cross in the dark half; guard sight oscillates through the same meter</td><td>hard moving shadow trails 1–2 frames (§4) — cap tip speed ≤ 1 m/s, inside P0/P4's envelope</td><td><span class="tag go">stage 2b</span></td></tr>
+        <tr><td class="k">F3</td><td>Extinguisher / CO₂ into the smoke solver ("shoot a pipe, it spawns water")</td><td>the corridor extinguisher (16.42, 1.0, 10.12) holed: a white jet, then a cold plume that sinks and rolls along the floor in the panel light</td><td><code>index</code> kind <code>'extinguisher'</code>; <code>smoke.emit({kind:'jet', temperature −0.4, density 6, ttl 8})</code>; hiss loop; <code>'prop'</code> 0.6; one per encounter</td><td class="n"><b>+1–2 ms ~10 s</b> (one domain, a smoke can's price)</td><td>1 emitter; solver caps</td><td>high</td><td>self-made concealment for one suppressed round, at a hiss the floor hears; strays can do it for him</td><td>domain contention with muzzle gas (<code>smoke.budget()</code> gate exists)</td><td><span class="tag go">stage 2c</span></td></tr>
+        <tr><td class="k">F4</td><td>Water: cooler bottle / pipe → puddle</td><td>streaks + a dark Gloss puddle slab that mirrors the swinging lamp; wet prints walking out</td><td>pooled thin <code>Dynamic</code> box (rough 0.1) 1 mm over the floor; <code>wet.ts</code> soaks feet in its AABB → <code>'wetprint'</code>; <code>floor.ts</code> patch <code>'wet'</code></td><td class="n">+0.1–0.3 ms while in view (RT reflections)</td><td>≤ 2</td><td>high on gloss</td><td>splashing steps heard; prints as evidence (guards ignoring them is an existing residual)</td><td>view-dependent cost</td><td><span class="tag warn">2d optional</span></td></tr>
+        <tr><td class="k">F5</td><td>Vending front · server racks (material rules)</td><td>the emissive field cracks and stutters out; cans roll clattering; racks shower sparks, LED bitmaps die by blocks, a wisp of smoke</td><td>rules keyed on switchable kind / rack markings; cans = <code>'clutter'</code> chunks; <code>markGain</code> → 0; <code>breakerSparkFx</code></td><td class="n">≈ 0 (+≤ 6 chunks)</td><td>as clutter</td><td>medium</td><td>3 s of rolling cans pulls a calm man; darker break room</td><td>boxy rolling (it is boxes)</td><td><span class="tag warn">2e garnish</span></td></tr>
+        <tr><td class="k">W1</td><td>Drywall punch-through between box studs (Siege soft walls; Frostbite remove + detail + mask)</td><td>studs every 0.6 m stay; lattice-aligned rectangular holes grow to a stud bay with chipped rims; light stabs through the dust into the dark side</td><td><code>BoxData.wall:'drywall'</code> (KEYS + validator + officeGen); sheet hidden, ≤ 4 remainder boxes from a 64 pool per hole, merged as it grows; <code>reach.ts</code> masks re-dirtied in range; <code>smoke.obstaclesChanged</code>; gypsum</td><td class="n">+3 boxes/hole ≈ unmeasurable; GI ~0.5 s to settle</td><td>≤ 4/wall, ≤ 16/encounter; hashed</td><td><b>very high</b></td><td>murder holes: <code>segmentBlocked</code>, <code>shotBlocked</code>, <code>solidBlocked</code>, LIGHT raising Sam's meter where he thought he was dark; never walkable → NAV untouched</td><td>biggest surgery: format, generator, reach invalidation, tactics corners seeing through holes; holes are rectangles by construction</td><td><span class="tag warn">stage 3</span></td></tr>
+        <tr><td class="k">X</td><td>Voxels · stress graphs · FEM · mesh-fracture libs · server-side sim</td><td>—</td><td>—</td><td class="n">representation mismatch</td><td>—</td><td>—</td><td>—</td><td>—</td><td><span class="tag no">skip</span></td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">Destruction in a scripted crossfire</div>
+  <div class="body">
+    <p><b>Beats scripted, breakage dynamic.</b> Who breaches which door when, where the fight sets up, when the mains go: <code>squad.ts order()</code> / <code>Guard.script</code> / <code>BreachDrill</code> / <code>qrf.ts</code> / <code>setBlackout</code> on a timeline. What breaks is only ever <code>fireWeapon → destr.round / glassHit</code> and <code>detonateStun → destr.bang / crackNear</code> from real rounds the sides (<code>operative</code> / <code>hostile</code> / <code>guard</code>) fire at each other — so a pane fails where their bursts actually landed, two runs of one beat break different things, and a seeded capture still repeats. Every item above was also judged on <em>does it read from across the room while Sam watches</em> and <em>does it hand him an opportunity</em>.</p>
+    <div class="set"><div class="num">1</div><div><h3>Conference-room siege</h3><p>Hostiles hold the conference room; operatives stack on its corridor door (the breach drill verbatim) while a second pair suppresses from the corridor's east end. Their rounds star the six partition panes, cells drop between the mullions, shards shower onto the lino under the panels and leave a crunching patch across Sam's obvious east–west route; the holes make the partition a two-way firing line (both AIs' <code>clearShot</code> now pass) and carry corridor footsteps into the room. Sam needs the manager's office beyond: cross behind the stack during the bang, or go round through the cubicles.</p><p class="cost">glass 1a–1c · suppression · BreachDrill · tactics doorGate — worst case 6 panes × 16 impacts, ≤ 6 failures × ~50 shards spread over frames; persistent GPU ≈ 0; the muzzle gas and flashes are the real cost and already in the loud minute</p></div></div>
+    <div class="set"><div class="num">2</div><div><h3>Cubicle bay push</h3><p>The QRF element comes through the west stair door and pushes east through the cubicles at hostiles falling back on the break room. Tracers shred partitions, paper storms lift and re-lift under each bang, monitors die screen by screen so <b>the bay gets darker as the fight goes on</b> (Sam's concealment improves through the meter), gypsum dust off the corridor wall hangs in the torch cones (the sight-line probe honours it — measured: detection through it drops to a seventh–two fifths for seconds), a tile lets go; with stage 2 a pedestal gives and a desktop tilts its binders onto the floor, landings blamed on the shooters so Sam's debrief stays clean.</p><p class="cost">destruction as built + impulses + F1 — the measured +2–3.5 ms at high while dust hangs; debris ≤ 64; the decal ring turns bullet holes over after ~40 s of sustained fire (oldest first)</p></div></div>
+    <div class="set"><div class="num">3</div><div><h3>Lobby, lights out, one lamp swinging</h3><p>Scripted: operatives cut the mains at T+40 s (beacons). Dynamic: a hostile burst had already shot a lobby fixture loose, so one lit panel swings on its flex over the reception stone, its pool sliding back and forth in the gloss; a stray burst takes a tempered frontage pane whole — 300 cubes glittering under the sodium lamps — and the storm gusts in through the opening (papers, spray, the moths scatter), wet prints following whoever uses it. Sam crosses in the dark half of each swing.</p><p class="cost">F2 · G5 · blackout · wind/weather · motes — ≈ 0 GPU beyond the blackout itself; one wind source</p></div></div>
+    <div class="set"><div class="num">4</div><div><h3>Server-room lift under someone else's breach</h3><p>Sam wants the drive; operatives breach the manager's office next door with a stun (panes star, papers fly, the tile above drops), hostiles answer down the corridor; a stray round holes the corridor extinguisher and a cold white cloud rolls along the floor past the server-room door — eight seconds of concealment Sam did not have to make (or he makes it himself with one suppressed round and eats the hiss).</p><p class="cost">F3 · destruction bang path · devices (pad_side) — one smoke domain, +1–2 ms for ~10 s</p></div></div>
+    <div class="set"><div class="num">5</div><div><h3>Break-room garnish</h3><p>The vending front cracks and stutters dark, cans roll out clattering and pull the one calm guard left on the floor off the fire exit; the cooler bottle finally lets go into a puddle that mirrors the muzzle flashes.</p><p class="cost">F5 · F4 — ≈ 0 / +0.1–0.3 ms while the puddle is in view; optional, cheap, funny</p></div></div>
+    <p class="muted">Bounded when two squads empty magazines for a minute (≈ 15 rounds/s sustained): heat saturates by construction; decals 12/s + holes turn the 512 ring over in ~40 s; puffs ≤ 8/s inside <code>puffDomains</code> 6; knock-offs 4/s; debris ≤ 64/32 with eviction; glass ≤ 16 impacts × 32 panes, shards through the births cap and the LONG ring; tiles ≤ 8; drywall holes ≤ 16; hanging fixtures ≤ 2; extinguisher 1. Nothing allocates; everything hashes a serial.</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">Staged plan</div>
+  <div class="body">
+    <div class="scroll"><table class="wide">
+      <thead><tr><th>stage</th><th>ships</th><th>touches</th><th>cost (high, union)</th><th>risk</th><th>wow</th><th>stealth gameplay</th><th>QA gate</th></tr></thead>
+      <tbody>
+        <tr><td class="k">1a · glass tells</td><td>impact list, Worley crack network + spokes, damage scalar, panel line</td><td>glass.ts · boxes.ts packGlass · common.wgsl pane record · composite/decals.wgsl · glass-probes</td><td class="n">&lt; 0.05 ms</td><td>low</td><td>medium</td><td>readable "about to go"; every hit heard</td><td>glass family + identity: 0 impacts = today's hash</td></tr>
+        <tr><td class="k">1b · glass gives</td><td>Voronoi-cell drop-out with support, <code>glassType</code> (annealed / tempered dice / laminated hold), <code>shard</code> kind + tinkles, <code>'glassBreak'</code>, holes pass rounds / tint / sound / wind, smoke obstacle refresh</td><td>+ collision.ts · combat.ts re-cast · particles.ts/wgsl · wind.ts · levelData KEYS · sfx</td><td class="n">≈ 0 persistent; births-capped transients</td><td>medium (tint loop shortcut)</td><td><b>high</b></td><td>new fire / sound / wind paths both ways; lure by shooting glass; tempered = loud one-shot opening</td><td>glass family re-frozen; soak <code>shoot-glass</code>; mask ⊆ impacts ≤ 16; <code>__png</code> identity with no hits</td></tr>
+        <tr><td class="k">1c · shards underfoot</td><td>floor patches, <code>'shards'</code> + <code>glassCrunch</code>, everyone crunches</td><td>floor.ts · sfx · glass.ts</td><td class="n">0</td><td>low</td><td>low</td><td>one model under every broken pane</td><td>glass-sound: Sam on shards heard ×1.5</td></tr>
+        <tr><td class="k">2a · furniture joints</td><td>assemblies by shape, <code>Debris 'slab'</code> hinge-then-free, clutter/paper spill, chair topple</td><td>destruction.ts · debris.ts · props.ts (fallen slab as obstacle)</td><td class="n">≤ 3 casters × 0.03 ms per failure</td><td>medium (nav / contact of fallen slabs)</td><td>medium-high</td><td>new low cover; landings blamed on shooters</td><td>destruction family + <code>player</code> wall-clip brute force with fallen slabs</td></tr>
+        <tr><td class="k">2b · dangling fixture</td><td><code>hang</code> state, pendulum + flicker, light + box moved per frame, impulse-kickable</td><td>lighting.ts · sfx creak · destruction.ts rule</td><td class="n">≈ 0</td><td>low-medium (cap ω)</td><td><b>highest</b></td><td>meter swings → timing beat; oscillating guard sight</td><td>chaos-scenes P-swing: lag / residue vs P0; lighting probes</td></tr>
+        <tr><td class="k">2c · extinguisher</td><td><code>'jet'</code> cold emitter, hiss, one per encounter</td><td>destruction.ts · smoke/types.ts · sfx</td><td class="n">+1–2 ms ~10 s</td><td>low</td><td>high</td><td>self-made concealment at a noise price</td><td>transmittance probe like <code>__ds.sight()</code>; smoke budget invariant</td></tr>
+        <tr><td class="k">2d/2e</td><td>puddle + prints; vending cans; rack sparks</td><td>wet.ts · floor.ts · destruction.ts</td><td class="n">+0.1–0.3 ms view-dep. / ≈ 0</td><td>low</td><td>medium</td><td>splash steps; can lure</td><td>—</td></tr>
+        <tr><td class="k">3 · drywall</td><td><code>Drywall</code> walls as studs + sheets, remainder-box hole pool, reach invalidation, smoke obstacles, gypsum</td><td>levelData / levelLoad / officeGen / office.json · destruction.ts · reach.ts · boxes.ts · tactics.ts review</td><td class="n">boxes ≈ 0; GI settles ~0.5 s</td><td><b>high</b></td><td><b>very high</b></td><td>murder holes: sight, fire, sound, LIGHT both ways; never nav</td><td>level family (identity goes stale — say so), reach probes, through-hole trap sweep, soak <code>--holes</code></td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">Skip outright: voxelisation, stress solvers, FEM, mesh-fracture libraries, and per-bullet geometric pinholes in 10 cm walls (sub-cell geometry for a 1 cm hole is the wrong trade — W1's lattice holes after sustained fire are the box-native version).</p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">Decisions (one line each)</div>
+  <div class="body">
+    <ol class="qs">
+      <li><code>GLASS_FAIL_HITS</code> — interior annealed: first cell drops on the <b>3rd</b> hit within 0.5 m (else the 4th anywhere)? tempered exterior dices on the <b>5th</b>? laminated (sidelight, clerestory) never opens?</li>
+      <li>Reverse the 08-09 call explicitly: panes MAY open again — as cells, never the old whole-pane pop — yes / no.</li>
+      <li>Do guards read wreckage as evidence (a shattered pane / fallen desk in a calm room → suspicious, like an open door), or stay ears-only as today?</li>
+      <li>Shards underfoot louder for EVERYONE (guards announce themselves on their own breakage) — confirm the one-model reading even when it helps Sam.</li>
+      <li>Dangling fixture: may a second burst cut it down (light dies, fixture becomes debris), or does it always keep swinging lit?</li>
+      <li>Extinguisher cloud: one per encounter, 8–10 s, priced like a smoke can — fine inside the loud minute's domain budget, or only when <code>smoke.budget() ≥ 6</code>?</li>
+      <li>Stage 3 changes the level format and makes <code>level-identity</code> stale until the generator retires — green-light now, or park W1 behind 1b / 2b?</li>
+      <li>Crossfire set-pieces: a third showcase first (<code>?crossfire</code>, like <code>?breach</code>) on the timeline runner, or straight into the mission as a tier above the QRF?</li>
+      <li>Bullet-hole turnover under a minute of two squads (512 ring ≈ 40 s): acceptable, or raise the ring to 1 024 (buffer ×2, same single binding)?</li>
+      <li>Tempered dice count per pane — 200 / 300 / 400 cubes: sodium-lamp glitter vs the LONG ring's turnover.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="block">
+  <div class="label">Sources</div>
+  <div class="body">
+    <ol class="src">
+      <li>Richter, J. (Remedy). <i>Destructible Environments in Control: Lessons in Procedural Destruction</i>, GDC Summer 2020 — <a href="https://gdcvault.com/play/1030643/">gdcvault.com/play/1030643</a> · video <a href="https://www.youtube.com/watch?v=kODJsQGXanU">youtube.com/watch?v=kODJsQGXanU</a></li>
+      <li>Game Developer, "Using procedural destruction to unleash chaos in Control" — <a href="https://www.gamedeveloper.com/production/using-procedural-destruction-to-unleash-chaos-in-i-control-i-">gamedeveloper.com</a></li>
+      <li>Brown, M. (GMTK), "How Games Do Destruction" — <a href="https://gmtk.substack.com/p/how-games-do-destruction">gmtk.substack.com/p/how-games-do-destruction</a></li>
+      <li>Kreonit, "How Destruction Works in Control" (secondary: ~200-object cap, sprite demotion) — <a href="https://kreonit.com/programming-and-games-development/how-destrustion-works-in-control/">kreonit.com</a></li>
+      <li>L'Heureux, J. (Ubisoft Montréal). <i>The Art of Destruction in Rainbow Six: Siege</i>, GDC 2016 slides — <a href="https://media.gdcvault.com/gdc2016/Presentations/LHeureux_Julien_Art_Of_Destruction.pdf">media.gdcvault.com/…/LHeureux_Julien_Art_Of_Destruction.pdf</a> · <a href="https://www.gdcvault.com/play/1023307/">vault</a></li>
+      <li>Rainbow Six Wiki, "Destruction" — <a href="https://rainbowsix.fandom.com/wiki/Destruction">rainbowsix.fandom.com/wiki/Destruction</a> · Ubisoft interview with J. L'Heureux — <a href="https://news.ubisoft.com/en-us/article/4GHX2yepSaKkflLjLAlpwO/">news.ubisoft.com</a></li>
+      <li>Valve, Source SDK 2013, <code>game/server/func_breakablesurf.cpp/.h</code> — <a href="https://github.com/ValveSoftware/source-sdk-2013">github.com/ValveSoftware/source-sdk-2013</a> · <a href="https://developer.valvesoftware.com/wiki/Func_breakable_surf">developer.valvesoftware.com/wiki/Func_breakable_surf</a></li>
+      <li>Müller, Chentanez, Kim, "Real Time Dynamic Fracture with Volumetric Approximate Convex Decompositions", ACM TOG 32(4) 2013 — <a href="https://matthias-research.github.io/pages/publications/fractureSG2013.pdf">matthias-research.github.io/…/fractureSG2013.pdf</a></li>
+      <li>NVIDIA Blast SDK docs — <a href="https://nvidia-omniverse.github.io/PhysX/blast/index.html">nvidia-omniverse.github.io/PhysX/blast</a> · <a href="https://github.com/NVIDIAGameWorks/Blast">github.com/NVIDIAGameWorks/Blast</a></li>
+      <li>NVIDIA APEX Destruction FractureTool — <a href="https://archive.docs.nvidia.com/gameworks/content/gameworkslibrary/physx/apexsdk/APEX_Destruction/FractureTool.html">archive.docs.nvidia.com/…/FractureTool.html</a></li>
+      <li>Epic, Chaos Destruction overview / Fracturing Geometry Collections — <a href="https://dev.epicgames.com/documentation/en-us/unreal-engine/chaos-destruction-overview">dev.epicgames.com/…/chaos-destruction-overview</a> · <a href="https://dev.epicgames.com/documentation/unreal-engine/fracturing-geometry-collections-user-guide">fracturing-geometry-collections-user-guide</a></li>
+      <li>Parker, O'Brien, "Real-Time Deformation and Fracture in a Game Environment", SCA 2009 — <a href="http://graphics.berkeley.edu/papers/Parker-RTD-2009-08/">graphics.berkeley.edu/papers/Parker-RTD-2009-08</a></li>
+      <li>SWGMAT, <i>Glass Fractures</i> (2004) — <a href="https://www.asteetrace.org/static/images/pdf/02%20Glass%20Fractures.pdf">asteetrace.org/…/02 Glass Fractures.pdf</a></li>
+      <li>Glass Technology Services, "6 glass breakage patterns" — <a href="https://www.glass-ts.com/news/6-glass-breakage-patterns-and-how-to-identify-them/">glass-ts.com</a> · ToughGlaze, "How glass breaks" — <a href="https://www.toughglaze.com/how-glass-breaks-and-why-it-matters">toughglaze.com</a></li>
+      <li>Gustafsson, D., Voxagon blog — <a href="https://blog.voxagon.se/2026/03/13/teardown-multiplayer.html">Teardown multiplayer</a> · <a href="https://blog.voxagon.se/2020/11/05/teardown-design-notes.html">design notes</a> · 80.lv interview — <a href="https://80.lv/articles/teardown-developer-breaks-down-multiplayer-and-voxel-destruction-tech">80.lv</a></li>
+      <li>The Ringer, "The Destruction (and Reconstruction) of Destructible Environments" — <a href="https://www.theringer.com/2024/02/02/video-games/destruction-video-games-battlefield-bad-company-red-faction-battlebit-teardown-the-finals">theringer.com</a> · Red Faction Wiki, Geo-Mod 2.0 — <a href="https://www.redfactionwiki.com/wiki/Geo-Mod_2.0">redfactionwiki.com</a></li>
+      <li>Kihl, R. (DICE), "Destruction Masking in Frostbite 2 using Volume Distance Fields", SIGGRAPH 2010 — <a href="https://advances.realtimerendering.com/s2010/Kihl-Destruction%20in%20Frostbite(SIGGRAPH%202010%20Advanced%20RealTime%20Rendering%20Course).pdf">advances.realtimerendering.com/s2010</a></li>
+      <li>Embark, <i>Engineering Mayhem: Environmental Destruction in THE FINALS</i>, GDC 2024 — <a href="https://gdcvault.com/play/1034307/">gdcvault.com/play/1034307</a> · Digital Trends preview — <a href="https://www.digitaltrends.com/gaming/the-finals-preview-destruction-will-make-developers-panic/">digitaltrends.com</a></li>
+      <li>Purho, P., <i>Exploring the Tech and Design of Noita</i>, GDC 2019 (notes) — <a href="https://braindump.jethro.dev/posts/gdc_vault_exploring_the_tech_and_design_of_noita/">braindump.jethro.dev</a></li>
+      <li>Hypesio, "Destruction in video games" — <a href="https://hypesio.fr/en/destruction-in-video-games/">hypesio.fr</a> · Game Developer, "Why real-time destruction is the core of Rainbow Six: Siege" — <a href="https://www.gamedeveloper.com/design/video-why-real-time-destruction-is-the-core-of-i-rainbow-six-siege-i-">gamedeveloper.com</a></li>
+      <li>Splinter Cell Wiki, "Seoul" (Chaos Theory mission 8) — <a href="https://splintercell.fandom.com/wiki/Seoul">splintercell.fandom.com/wiki/Seoul</a></li>
+    </ol>
+    <p class="muted">Engine-side: docs/internal/destruction.md · docs/internal/exp-glass.md · docs/internal/image-quality.md §4 · src/game/glass.ts · destruction.ts · debris.ts · sheetModel.ts · src/render/particles.ts · src/scene/boxes.ts · collision.ts · src/game/floor.ts. Full report with the same table in prose: docs/research/destruction-survey.md.</p>
+  </div>
+</section>
+
+</main>

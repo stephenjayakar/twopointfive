@@ -10,6 +10,7 @@
 // streak alive update() is a compare and a return. Game.tune.tracers off = fireWeapon never calls in here at all.
 import { Vec3, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
+import { thinNote } from './thinline';
 import type { LightSet, RtLight } from '../render/lights';
 import type { Sparks } from './sparks';
 import type { Firearm, WeaponDef } from './weapons';
@@ -138,6 +139,7 @@ export class Tracers {
       b.c[0] = t.from[0] + t.dir[0] * mid; b.c[1] = t.from[1] + t.dir[1] * mid; b.c[2] = t.from[2] + t.dir[2] * mid;
       b.h[0] = hw; b.h[1] = hw; b.h[2] = len * 0.5;
       b.emissive[0] = t.color[0] * gain; b.emissive[1] = t.color[1] * gain; b.emissive[2] = t.color[2] * gain;
+      thinNote(b, P.thickness * 0.5, 0.6, t.color[0] * P.emissive, t.color[1] * P.emissive, t.color[2] * P.emissive);   // (thinline.ts: re-sized by a picture drawn from another view)
       t.frames++;
       out.push(b);
     }

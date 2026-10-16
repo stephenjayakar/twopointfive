@@ -1,6 +1,6 @@
 // ReSTIR DI lane bench (renderer v3 Phase 2a): `await import('/qa/restir-bench.js')` on a `?paused&quality=<p>&mute` boot → window.__rb.
 //   __rb.stage(view)            close the card, pin one of the named views (cubicles / corridor / lobby / lot / breakroom), guards left as they are
-//   await __rb.measure(n)       n serialized frames → mean/sd of direct, softblur, union (the dev notes protocol: onSubmittedWorkDone + MessageChannel yields per frame)
+//   await __rb.measure(n)       n serialized frames → mean/sd of direct, softblur, union (CLAUDE.md protocol: onSubmittedWorkDone + MessageChannel yields per frame)
 //   await __rb.ab(fnA, fnB, r)  interleaved A/B (r rounds of A,B,B,A) → { A, B } means
 //   await __rb.diag(view)       debug view 11 / 12 read back from the raw S0 texture over a region → histograms (history M, gradient resets, rays / pixel, taps)
 //   await __rb.hot(edit)        hot-swap restir.wgsl with edit(src) applied (string → string); __rb.hot() restores the file as on disk

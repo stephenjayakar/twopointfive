@@ -1,13 +1,14 @@
 // CPU-side spatial helpers over the static boxes: circle push-out, line-of-sight, nav grid + A*.
-import { Vec3, v3, quat } from '../math/vec';
+import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
 import { Box, BoxFlag, rayBox } from './boxes';
+import { cutConfig, cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
 
 /** The parameter interval [t0, t1] over which the LINE a + t·rd (rd unit) lies inside box b — t0 may be negative, behind a — or null if the line misses it; and `depth`:
  *  how far INSIDE the box the origin a sits (its least distance to a face plane; ≤ 0 = on the surface or outside). This is the whole slab picture segmentBlocked judges
  *  a static by, where rayBox() only ever reports an ENTRY ahead of the origin and answers null from inside (boxes.ts: the rule the cursor's pick and every emitter
  *  embedded in its own fixture lean on) — which let a segment born ON a wall's face, or a hair inside it, run clean through that wall (W8.3). */
-function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; depth: number } | null {
+export function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; depth: number } | null {
   let ox: number, oy: number, oz: number, dx: number, dy: number, dz: number;
   if (b.rot) { const qi = quat.conj(b.rot); const o = quat.rotate(qi, v3.sub(a, b.c)); const d = quat.rotate(qi, rd); ox = o[0]; oy = o[1]; oz = o[2]; dx = d[0]; dy = d[1]; dz = d[2]; }
   else {
@@ -23,9 +24,49 @@ function lineBox(a: Vec3, rd: Vec3, b: Box): { t0: number; t1: number; depth: nu
     if (ta > t0) t0 = ta; if (tb < t1) t1 = tb;
     if (t0 > t1) return null;
   }
-  return { t0, t1, depth: Math.min(h[0] - Math.abs(ox), h[1] - Math.abs(oy), h[2] - Math.abs(oz)) };
+  let depth = Math.min(h[0] - Math.abs(ox), h[1] - Math.abs(oy), h[2] - Math.abs(oz));
+  if (b.cut !== undefined && cutConfig.on && b.cut.length > 0) {   // CUT BOXES (scene/cut.ts): the interval inside the CUT solid, and the origin's depth under its nearest face — a cut plane included
+    if (!cutClip(b.cut, ox, oy, oz, dx, dy, dz, t0, t1)) return null;
+    t0 = CUT_CLIP.t0; t1 = CUT_CLIP.t1;
+    for (let k = 0; k < b.cut.length && k < MAX_CUT_PLANES; k++) { const c = b.cut[k]; if (c.n[0] === 0 && c.n[1] === 0 && c.n[2] === 0) break; depth = Math.min(depth, c.d - (c.n[0] * ox + c.n[1] * oy + c.n[2] * oz)); }   // (the planes cutClip read: ≤ MAX_CUT_PLANES, ended by a zero normal)
+  }
+  return { t0, t1, depth };
 }
 
+/** How far past a box's own bounds the early rejects still count it as near (m). The bounds themselves are exact to a float's last bits (~1e-14 m at these sizes);
+ *  what the pad has to cover is the slab test's own slack ALONG the line when the direction is within a hair of a box axis: a slab parameter is a difference good to
+ *  ~3e-14 over a direction component the test accepts down to 1e-12, so an interval's end can sit up to ~0.03 m from the geometry's. */
+const SEG_PAD = 0.05;
+/** Can the segment from (a0, a1, a2) along the UNIT direction (r0, r1, r2) for `len` metres be said, without the slab test, to come nowhere near box b? True only
+ *  when it provably stays clear of the box grown by `pad` — outside its height span (a yawed box's, exact), or outside the sphere round its centre that holds it
+ *  whatever its yaw or tilt (|h0| + |h1| + |h2| ≥ its half diagonal). Both slab tests answer 'no' for such a box (rayBox: no entry within the length; lineBox: no
+ *  interval reaching the segment, even one let run `shrink` past an end — the caller folds a negative shrink into the pad), so skipping them changes no answer.
+ *  NaN anywhere makes every comparison false: not clear, the slab test decides as it always did. */
+function segClear(a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, len: number, b: Box, pad: number): boolean {
+  const c = b.c, h = b.h; const hy = h[1] < 0 ? -h[1] : h[1];
+  const m1 = c[1] - a1;
+  if (!b.rot) { const e1 = r1 * len; if (e1 > 0 ? (m1 - hy > e1 + pad || m1 + hy < -pad) : (m1 - hy > pad || m1 + hy < e1 - pad)) return true; }
+  const R = (h[0] < 0 ? -h[0] : h[0]) + hy + (h[2] < 0 ? -h[2] : h[2]) + pad;
+  const m0 = c[0] - a0, m2 = c[2] - a2; const s = m0 * r0 + m1 * r1 + m2 * r2;
+  if (s < -R || s > len + R) return true;
+  return m0 * m0 + m1 * m1 + m2 * m2 - s * s > R * R;
+}
+/** rayBox's answer to 'does the ray enter this yawed box within tmax' (hit !== null — its t is > 0 whenever there is one): rayBox's own statements over the same
+ *  scalars, stopping where it would start building the normal. For segmentBlockedDynamic, which only ever asked that. */
+function rayBoxHits(a0: number, a1: number, a2: number, r0: number, r1: number, r2: number, b: Box, tmax: number): boolean {
+  const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw);
+  const px = a0 - b.c[0], py = a1 - b.c[1], pz = a2 - b.c[2];
+  const lx = cs * px - sn * pz, lz = sn * px + cs * pz, ly = py;
+  const dx = cs * r0 - sn * r2, dz = sn * r0 + cs * r2, dy = r1;
+  const ix = 1 / (dx || 1e-20), iy = 1 / (dy || 1e-20), iz = 1 / (dz || 1e-20);
+  const h = b.h; let t0 = 0, t1 = tmax; let entered = false;
+  { let ta = (-h[0] - lx) * ix, tb = (h[0] - lx) * ix; if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; } if (ta > t0) { t0 = ta; entered = true; } if (tb < t1) t1 = tb; if (t0 > t1) return false; }
+  { let ta = (-h[1] - ly) * iy, tb = (h[1] - ly) * iy; if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; } if (ta > t0) { t0 = ta; entered = true; } if (tb < t1) t1 = tb; if (t0 > t1) return false; }
+  { let ta = (-h[2] - lz) * iz, tb = (h[2] - lz) * iz; if (ta > tb) { const tmp = ta; ta = tb; tb = tmp; } if (ta > t0) { t0 = ta; entered = true; } if (tb < t1) t1 = tb; if (t0 > t1) return false; }
+  return entered;
+}
+
+const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (the panes one line of fire crosses)
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -42,9 +83,32 @@ export class StaticCollision {
       const x0 = Math.max(0, Math.floor((b.c[0] - ex) / this.cs)), x1 = Math.min(this.W - 1, Math.floor((b.c[0] + ex) / this.cs));
       const z0 = Math.max(0, Math.floor((b.c[2] - ez) / this.cs)), z1 = Math.min(this.H - 1, Math.floor((b.c[2] + ez) / this.cs));
       for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.cells[z * this.W + x].push(i);
+      if (b.rot && x0 <= x1 && z0 <= z1) this.tiltedAt.push(i, x0, x1, z0, z1);
     });
     this.stamp = new Int32Array(boxes.length);
+    this.trigYaw = new Float64Array(boxes.length).fill(NaN); this.trigCos = new Float64Array(boxes.length); this.trigSin = new Float64Array(boxes.length);
     this.nav = new NavGrid(this); this.sound = new SoundPaths(this);
+  }
+
+  /** WALL BREAKING (game/wallbreak.ts): a static appended at RUNTIME — a piece standing in for a holed wall or a chewed crate. It joins `boxes` (the level's own
+   *  list: every index a raycast reports stays an index into it) and is registered in the cells of `footprint`'s XZ extent (default: its own; the wall breaker
+   *  hands the AUTHORED box, so a piece slot re-shaped inside that footprint later needs no re-registration — every query re-tests the box itself). Returns its
+   *  index. The nav grid is NOT touched here: the caller rebakes the cells it changed (NavGrid.rebake). */
+  addStatic(b: Box, footprint: Box = b): number {
+    const i = this.boxes.length; this.boxes.push(b);
+    if (this.stamp.length <= i) { const s = new Int32Array(Math.max(i + 1, this.stamp.length * 2)); s.set(this.stamp); this.stamp = s; }
+    const f = footprint; const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
+    const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
+    const x0 = Math.max(0, Math.floor((f.c[0] - ex) / this.cs)), x1 = Math.min(this.W - 1, Math.floor((f.c[0] + ex) / this.cs));
+    const z0 = Math.max(0, Math.floor((f.c[2] - ez) / this.cs)), z1 = Math.min(this.H - 1, Math.floor((f.c[2] + ez) / this.cs));
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) this.cells[z * this.W + x].push(i);
+    return i;
+  }
+  /** …and the level's list cut back to its first `n` statics (the authored ones: a restart): every later index leaves the cells. */
+  truncateStatics(n: number) {
+    if (this.boxes.length <= n) return;
+    for (const cell of this.cells) { let w = 0; for (let k = 0; k < cell.length; k++) if (cell[k] < n) cell[w++] = cell[k]; cell.length = w; }
+    this.boxes.length = n;
   }
 
   /** De-duplication of box indices met in more than one grid cell during ONE query (gather / collideCircle / segmentBlocked / raycast): a box counts as seen when
@@ -52,6 +116,13 @@ export class StaticCollision {
    *  every prop substep). The queries never nest (none calls another that stamps), so one counter serves them all; only indices baked into `cells` are ever stamped,
    *  and those are < the length the array was sized with. */
   private stamp: Int32Array; private stampId = 0;
+  /** segmentBlocked's own: a grid cell already scanned (or passed as nowhere near) by this query (the stamp's id), and each static's cos / sin beside the exact yaw they were taken at */
+  /** statics appended after the bake (a wall's standing pieces) get trig slots too; a slot is keyed by the yaw it was filled for, so a re-used index is never stale */
+  private growTrig() {
+    const n = Math.max(this.boxes.length, this.trigYaw.length * 2); const y = new Float64Array(n).fill(NaN), c = new Float64Array(n), s = new Float64Array(n);
+    y.set(this.trigYaw); c.set(this.trigCos); s.set(this.trigSin); this.trigYaw = y; this.trigCos = c; this.trigSin = s;
+  }
+  private cellStamp = new Int32Array(WORLD.gridW * WORLD.gridH); private segCells = new Int32Array(WORLD.gridW * WORLD.gridH); private tiltedAt: number[] = []; private trigYaw!: Float64Array; private trigCos!: Float64Array; private trigSin!: Float64Array;
   /** Indices of the movement-relevant static boxes whose grid cells overlap the XZ rectangle [x0,x1]×[z0,z1] and whose vertical span overlaps
    *  [y0, y1], written once each into `out` (no allocation — the prop solver calls this per body per substep). Returns the count (capped at out.length). */
   gather(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, out: Int32Array): number {
@@ -70,6 +141,18 @@ export class StaticCollision {
     return n;
   }
 
+  /** The statics a circle of radius r at (x, z) TOUCHES between heights y0 and y1 — collideCircle's own test (the same boxes skipped: runtime-hidden ones,
+   *  walked-through glass), asked without moving anything. Indices into `out`; returns the count, or -1 if `out` was too short to hold them all. */
+  circleTouches(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
+    const n = this.gather(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
+    let k = 0;
+    for (let j = 0; j < n; j++) {
+      const b = this.boxes[out[j]]; const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2];
+      const lx = c * dx - s * dz, lz = s * dx + c * dz, ex = lx - Math.max(-b.h[0], Math.min(b.h[0], lx)), ez = lz - Math.max(-b.h[2], Math.min(b.h[2], lz));
+      if (ex * ex + ez * ez < r * r) out[k++] = out[j];
+    }
+    return k;
+  }
   /** Push a circle (XZ) of radius r out of static boxes overlapping the vertical span [y0, y1]. Mutates p. */
   collideCircle(p: Vec3, r: number, y0: number, y1: number, iterations = 3): boolean {
     let touched = false;
@@ -127,8 +210,25 @@ export class StaticCollision {
 
   /** True if the segment a→b crosses one of the dynamic occluders (door leaves) — statics ignored. With `needFlags`, only occluders carrying those flag bits count. */
   segmentBlockedDynamic(a: Vec3, b: Vec3, needFlags = 0): boolean {
-    const d = v3.sub(b, a); const len = v3.len(d); if (len < 1e-4) return false; const rd = v3.scale(d, 1 / len);
-    for (const db of this.dynamicBoxes) { if ((db.flags & needFlags) !== needFlags) continue; const hit = rayBox(a, rd, db, len); if (hit && hit.t >= 0) return true; }
+    const d0 = b[0] - a[0], d1 = b[1] - a[1], d2 = b[2] - a[2]; const len = hyp3(d0, d1, d2); if (len < 1e-4) return false; const il = 1 / len;
+    return this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags);
+  }
+  /** segmentBlockedDynamic's loop over the leaves for a segment already reduced to origin + unit direction (r0, r1, r2) + length — the same floats the array form
+   *  made (d · (1 / len)), so segmentBlocked hands its own down instead of deriving them twice. A leaf the segment provably cannot touch (segClear) is passed
+   *  without the slab test; the rest get rayBox's own arithmetic (rayBoxHits) with no result object. */
+  private dynamicHit(a: Vec3, r0: number, r1: number, r2: number, len: number, needFlags: number): boolean {
+    const dyn = this.dynamicBoxes; const a0 = a[0], a1 = a[1], a2 = a[2];
+    const uu = r0 * r0 + r2 * r2, su = Math.sqrt(uu), lu = len * uu;   // (the segment on the floor plan: a + t · (r0, r2), t in [0, len])
+    for (let i = 0; i < dyn.length; i++) {
+      const db = dyn[i]; if ((db.flags & needFlags) !== needFlags) continue;
+      if (db.rot || (db.cut !== undefined && cutConfig.on && db.cut.length > 0)) { if (segClear(a0, a1, a2, r0, r1, r2, len, db, SEG_PAD)) continue; const hit = rayBox(a, [r0, r1, r2], db, len); if (hit && hit.t >= 0) return true; continue; }
+      // an upright leaf stands inside the cylinder of radius |h0| + |h2| round its centre: a segment whose floor-plan line passes further off than that (the cross
+      // product, no division), or whose stretch of it ends before / starts after it, cannot enter the leaf — rayBox would say no
+      const c = db.c, h = db.h; const R = (h[0] < 0 ? -h[0] : h[0]) + (h[2] < 0 ? -h[2] : h[2]) + SEG_PAD;
+      const m0 = c[0] - a0, m2 = c[2] - a2; const cr = m0 * r2 - m2 * r0; if (cr * cr > R * R * uu) continue;
+      const s = m0 * r0 + m2 * r2, e = R * su; if (s < -e || s > lu + e) continue;
+      if (rayBoxHits(a0, a1, a2, r0, r1, r2, db, len)) return true;
+    }
     return false;
   }
 
@@ -144,24 +244,112 @@ export class StaticCollision {
    *  b→a disagree for every one of them. The one exemption kept from that rule, on purpose: a box the ORIGIN is embedded in deeper than `shrink` is skipped — a light
    *  inside its fixture's housing, a fixture box asked from its own centre which side is open (game.ts area lights) — it is not in the way of what it emits. (The
    *  END has no such exemption: a target buried in a box is behind that box's face, as it always was — the one asymmetry left, and only for endpoints inside solids.) */
-  segmentBlocked(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass): boolean {
-    const d = v3.sub(b, a); const len = v3.len(d); if (len < 1e-4) return false;
-    const rd = v3.scale(d, 1 / len);
-    if (this.segmentBlockedDynamic(a, b)) return true;
+  segmentBlocked(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass, panes: { bi: number; t: number }[] | null = null): boolean {
+    // (the CPU-frame lane, second pass: the same walk, the same boxes in the same order and lineBox's own statements over scalars — so every answer, every pane noted
+    //  and every glassOpen asked is what it was — minus the work that could not change them: the direction and length derived once for the leaves and the statics,
+    //  a grid cell scanned once per query (cellStamp: everything in a cell seen before is already stamped), a static's cos / sin kept by its exact yaw, and a box the
+    //  segment provably cannot touch passed before the slab test (segClear). tools/qa/segment-ident.ts holds the old code beside this one over random segments.)
+    const a0 = a[0], a1 = a[1], a2 = a[2]; const d0 = b[0] - a0, d1 = b[1] - a1, d2 = b[2] - a2;
+    const len = hyp3(d0, d1, d2); if (len < 1e-4) return false;
+    const il = 1 / len; const r0 = d0 * il, r1 = d1 * il, r2 = d2 * il;
+    if (this.dynamicHit(a, r0, r1, r2, len, 0)) return true;
     // walk grid cells along the segment (coarse: sample every 0.5 m, collect candidate boxes)
     const id = ++this.stampId; const steps = Math.ceil(len / 0.5) + 1;
-    for (let i = 0; i <= steps; i++) {
-      const t = (i / steps) * len; const x = Math.floor((a[0] + rd[0] * t) / this.cs), z = Math.floor((a[2] + rd[2] * t) / this.cs);
-      for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
-        const cx = x + dx, cz = z + dz; if (cx < 0 || cz < 0 || cx >= this.W || cz >= this.H) continue;
-        const cell = this.cells[cz * this.W + cx];
+    if (this.boxes.length > this.trigYaw.length) this.growTrig();
+    const cs = this.cs, W = this.W, H = this.H, cells = this.cells, stamp = this.stamp, boxes = this.boxes, tYaw = this.trigYaw, tCos = this.trigCos, tSin = this.trigSin;
+    const skip = through | BoxFlag.NoShadow;   // (+ NoShadow: a static hidden at runtime by the destruction lane is nothing to sight or sound either)
+    const pad = SEG_PAD + (shrink < 0 ? -shrink : 0); let rdv: Vec3 | null = null;
+    const uu = r0 * r0 + r2 * r2, su = Math.sqrt(uu), lu = len * uu, e1 = r1 * len;   // (the segment on the floor plan, a + t · (r0, r2) for t in [0, len], and its rise)
+    // WHICH CELLS: the old walk sampled the segment every half metre and scanned the nine cells round each sample — a generous net. A box in the way has a point on
+    // the segment (or within a negative shrink of its ends), and that point's own cell holds the box (the cells were filled from its footprint), so the cells that
+    // matter are the ones within `pad` of the segment on the floor plan; the rest of the net adds candidates but never an answer. For a segment wholly inside the
+    // grid (past its edge a box is filed in the clamped border cells, away from where it is) those are found directly: column by column along its longer floor axis,
+    // the rows its stretch across that column (widened by q > pad both ways) covers — a superset of every cell within pad of it, a fraction of the net. Off when the
+    // panes are being listed (their order in the list is the scan's) and when the segment is upright or leaves the grid: those take the old walk, cell for cell in
+    // its order. With the direct cells a pane's glassOpen question may be asked in another order or not at all (a wall found first) — it is a question
+    // (glassbreak.ts openAt reads, writes nothing). A TILTED static is filed by its yawed footprint alone, so it can be in the way from a cell it is not filed in:
+    // the few a level has are asked first, each exactly when the old walk would have met it (one of its half-metre samples within a cell of the box's filed cells).
+    const lxz = Math.sqrt(d0 * d0 + d2 * d2), b0 = b[0], b2 = b[2], gx = W * cs - pad - 0.25, gz = H * cs - pad - 0.25, g0 = pad + 0.25;
+    const near = panes === null && lxz > 1e-6 && pad < 0.5 && a0 > g0 && a0 < gx && b0 > g0 && b0 < gx && a2 > g0 && a2 < gz && b2 > g0 && b2 < gz;
+    const list = this.segCells; let n = 0;
+    if (near) {
+      const tl = this.tiltedAt;
+      for (let k = 0; k < tl.length; k += 5) {
+        const bi = tl[k]; stamp[bi] = id;
+        const bx = boxes[bi]; if (bx.flags & skip) continue;
+        if (segClear(a0, a1, a2, r0, r1, r2, len, bx, pad)) continue;
+        const x0 = tl[k + 1] - 1, x1 = tl[k + 2] + 1, z0 = tl[k + 3] - 1, z1 = tl[k + 4] + 1; let met = false;
+        for (let i = 0; i <= steps; i++) {
+          const t = (i / steps) * len; const x = Math.floor((a0 + r0 * t) / cs), z = Math.floor((a2 + r2 * t) / cs);
+          if (x >= x0 && x <= x1 && z >= z0 && z <= z1) { met = true; break; }
+        }
+        if (!met) continue;
+        const s = lineBox(a, rdv ??= [r0, r1, r2], bx); if (!s || s.depth > shrink) continue;
+        if (s.t1 > shrink && s.t0 < len - shrink) {
+          if (this.glassOpen && (bx.flags & BoxFlag.Glass)) { const te = Math.max(0, s.t0); if (this.glassOpen(bi, [a0 + r0 * te, a1 + r1 * te, a2 + r2 * te])) continue; }
+          return true;
+        }
+      }
+      const q = pad + 1e-3; const xMajor = (d0 < 0 ? -d0 : d0) >= (d2 < 0 ? -d2 : d2);
+      const am = xMajor ? a0 : a2, bm = xMajor ? b0 : b2, an = xMajor ? a2 : a0, slope = xMajor ? d2 / d0 : d0 / d2;
+      const lo = am < bm ? am : bm, hi = am < bm ? bm : am, M = xMajor ? W : H, N = xMajor ? H : W;
+      let c0 = Math.floor((lo - q) / cs), c1 = Math.floor((hi + q) / cs); if (c0 < 0) c0 = 0; if (c1 > M - 1) c1 = M - 1;
+      const fwd = bm >= am;   // (from a's end: a blocked line usually meets its wall early)
+      for (let j = c0; j <= c1; j++) {
+        const c = fwd ? j : c1 - (j - c0);
+        let s0 = c * cs - q, s1 = (c + 1) * cs + q; if (s0 < lo) s0 = lo; if (s1 > hi) s1 = hi;
+        const n0 = an + (s0 - am) * slope, n1 = an + (s1 - am) * slope;
+        let q0 = Math.floor(((n0 < n1 ? n0 : n1) - q) / cs), q1 = Math.floor(((n0 < n1 ? n1 : n0) + q) / cs); if (q0 < 0) q0 = 0; if (q1 > N - 1) q1 = N - 1;
+        if (xMajor) for (let r = q0; r <= q1; r++) list[n++] = r * W + c; else for (let r = q0; r <= q1; r++) list[n++] = c * W + r;
+      }
+    } else {
+      const cstamp = this.cellStamp; let lx = NaN, lz = NaN;
+      for (let i = 0; i <= steps; i++) {
+        const t = (i / steps) * len; const x = Math.floor((a0 + r0 * t) / cs), z = Math.floor((a2 + r2 * t) / cs);
+        if (x === lx && z === lz) continue; lx = x; lz = z;   // (the same cell as the last sample: its nine were scanned then)
+        for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
+          const cx = x + dx, cz = z + dz; if (cx < 0 || cz < 0 || cx >= W || cz >= H) continue;
+          const ci = cz * W + cx; if (cstamp[ci] === id) continue; cstamp[ci] = id;   // (a cell scanned once per query: everything in it is stamped the first time)
+          list[n++] = ci;
+        }
+      }
+    }
+    for (let j = 0; j < n; j++) {
+      const cell = cells[list[j]];
+      {
         for (let k = 0; k < cell.length; k++) {
-          const bi = cell[k]; if (this.stamp[bi] === id) continue; this.stamp[bi] = id;
-          if (this.boxes[bi].flags & (through | BoxFlag.NoShadow)) continue;   // (+ NoShadow: a static hidden at runtime by the destruction lane is nothing to sight or sound either)
-          const s = lineBox(a, rd, this.boxes[bi]); if (!s) continue;
-          if (s.depth > shrink) continue;                        // the origin is EMBEDDED in this box: not an occluder of its own contents (see above)
-          if (s.t1 > shrink && s.t0 < len - shrink) {              // inside it past the first `shrink`, entered before the last: in the way …
-            if (this.glassOpen && (this.boxes[bi].flags & BoxFlag.Glass) && this.glassOpen(bi, v3.mad(a, rd, Math.max(0, s.t0)))) continue;   // … unless it is a pane crossed where a cell has fallen out (GLASS BREAKING: sound, a step, a line of fire through the hole)
+          const bi = cell[k]; if (stamp[bi] === id) continue; stamp[bi] = id;
+          const bx = boxes[bi]; if (bx.flags & skip) continue;
+          let t0 = -Infinity, t1 = Infinity, depth: number;
+          if (bx.rot || (bx.cut !== undefined && cutConfig.on && bx.cut.length > 0)) {   // (CUT BOXES: a cut static takes lineBox, which holds the cut rule — the scalar copy below is the whole box's)
+            if (segClear(a0, a1, a2, r0, r1, r2, len, bx, pad)) continue; const s = lineBox(a, rdv ??= [r0, r1, r2], bx); if (!s) continue; t0 = s.t0; t1 = s.t1; depth = s.depth; }
+          else {
+            // nowhere near the segment — outside the box's height span, or its floor-plan line / stretch clear of the cylinder (|h0| + |h2|) that holds the box at any
+            // yaw: lineBox would miss it or put its interval off both ends (a negative shrink is in the pad)
+            const c = bx.c, h = bx.h; const hy = h[1] < 0 ? -h[1] : h[1], m1 = c[1] - a1;
+            if (e1 > 0 ? (m1 - hy > e1 + pad || m1 + hy < -pad) : (m1 - hy > pad || m1 + hy < e1 - pad)) continue;
+            const R = (h[0] < 0 ? -h[0] : h[0]) + (h[2] < 0 ? -h[2] : h[2]) + pad;
+            const m0 = c[0] - a0, m2 = c[2] - a2; const cr = m0 * r2 - m2 * r0; if (cr * cr > R * R * uu) continue;
+            const sa = m0 * r0 + m2 * r2, ea = R * su; if (sa < -ea || sa > lu + ea) continue;
+            // lineBox over scalars: its statements in its order
+            const yaw = bx.yaw; let co: number, sn: number;
+            if (tYaw[bi] === yaw) { co = tCos[bi]; sn = tSin[bi]; } else { co = Math.cos(yaw); sn = Math.sin(yaw); tYaw[bi] = yaw; tCos[bi] = co; tSin[bi] = sn; }
+            const qx = a0 - c[0], qz = a2 - c[2];
+            const ox = co * qx - sn * qz, oy = a1 - c[1], oz = sn * qx + co * qz;
+            const ex = co * r0 - sn * r2, ez = sn * r0 + co * r2;
+            const h0 = h[0], h1 = h[1], h2 = h[2];
+            if (Math.abs(ex) < 1e-12) { if (Math.abs(ox) > h0) continue; }
+            else { let ta = (-h0 - ox) / ex, tb = (h0 - ox) / ex; if (ta > tb) { const tt = ta; ta = tb; tb = tt; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) continue; }
+            if (Math.abs(r1) < 1e-12) { if (Math.abs(oy) > h1) continue; }
+            else { let ta = (-h1 - oy) / r1, tb = (h1 - oy) / r1; if (ta > tb) { const tt = ta; ta = tb; tb = tt; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) continue; }
+            if (Math.abs(ez) < 1e-12) { if (Math.abs(oz) > h2) continue; }
+            else { let ta = (-h2 - oz) / ez, tb = (h2 - oz) / ez; if (ta > tb) { const tt = ta; ta = tb; tb = tt; } if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; if (t0 > t1) continue; }
+            depth = Math.min(h0 - Math.abs(ox), h1 - Math.abs(oy), h2 - Math.abs(oz));
+          }
+          if (depth > shrink) continue;                        // the origin is EMBEDDED in this box: not an occluder of its own contents (see above)
+          if (t1 > shrink && t0 < len - shrink) {              // inside it past the first `shrink`, entered before the last: in the way …
+            if (this.glassOpen && (bx.flags & BoxFlag.Glass)) { const te = Math.max(0, t0); if (this.glassOpen(bi, [a0 + r0 * te, a1 + r1 * te, a2 + r2 * te])) continue; }   // … unless it is a pane crossed where a cell has fallen out (GLASS BREAKING: sound, a step, a line of fire through the hole)
+            if (panes && (bx.flags & BoxFlag.Glass)) { panes.push({ bi, t: Math.max(0, t0) }); continue; }   // (shotBlocked, GLASS PENETRATION: a pane in the way is noted — where the line enters it — and judged afterwards; everything else still ends the walk)
             return true;
           }
         }
@@ -176,7 +364,20 @@ export class StaticCollision {
    *  Today that is exactly the solid walk; it is named apart because it is a different QUESTION from a step or a sound's straight run — the guards' 'can I hit
    *  him from here' (guards.ts clearShot, the tactics' cover points) must never again be answered by the line of SIGHT, which passes glass: a man who sees Sam
    *  through the conference glazing planted on that line and put round after round into the pane. */
-  shotBlocked(a: Vec3, b: Vec3, shrink = 0.02): boolean { return this.segmentBlocked(a, b, shrink, 0); }
+  shotBlocked(a: Vec3, b: Vec3, shrink = 0.02, energy?: number): boolean {
+    const P = this.glassPen; if (!P || !P.live()) return this.segmentBlocked(a, b, shrink, 0);   // (the switch off: the solid walk, as it was)
+    // GLASS PENETRATION (game/glasspen.ts): the same walk, but the panes across the line are collected instead of ending it, and — nothing else being in the way —
+    // the question becomes the ROUND's: has a round of `energy` (the asker's gun; the model's cautious default without one) enough for every pane in turn? One
+    // rule with combat.ts fireWeapon, so a man shoots through a window exactly when his round would get through it.
+    const panes = shotPanes; panes.length = 0;
+    if (this.segmentBlocked(a, b, shrink, 0, panes)) return true;
+    if (!panes.length) return false;
+    panes.sort((x, y) => x.t - y.t);
+    const d = v3.sub(b, a); return !P.passes(a, v3.scale(d, 1 / v3.len(d)), panes, energy);
+  }
+  /** GLASS PENETRATION (game/glasspen.ts installs it; null = rounds stop in glass, the game as it was): `live` = the switch as of now, `passes` = would a round of
+   *  `energy` leaving `a` along unit `rd` get through these panes (static index + metres along the line to where it enters each, nearest first). */
+  glassPen: { live(): boolean; passes(a: Vec3, rd: Vec3, panes: { bi: number; t: number }[], energy?: number): boolean } | null = null;
 
   /** Closest static hit along a ray (t, box index) or null. Solid: an intact glass pane IS hit (a round, a canister, a spark, a shin all meet it); a broken one is not. */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
@@ -219,6 +420,8 @@ export class SoundPaths {
   private cache = new Map<string, { t: number; r: Propagation }>(); private now = 0;
   constructor(private col: StaticCollision) {}
   tick(time: number) { this.now = time; if (this.cache.size > 512) this.cache.clear(); }
+  /** the level changed under the cached routes (a wall holed, cover gone — game/wallbreak.ts): every answer is asked afresh */
+  invalidate() { this.cache.clear(); }
   propagate(src: Vec3, dst: Vec3): Propagation {
     const a: Vec3 = [src[0], Math.max(src[1], 0.9), src[2]], b: Vec3 = [dst[0], Math.max(dst[1], 0.9), dst[2]];
     const straight = v3.dist(a, b);
@@ -267,6 +470,8 @@ export class SoundPaths {
 /** 2D navigation grid (0.5 m) over the level for guard path finding. */
 export class NavGrid {
   cell = 0.5; W: number; H: number; blocked: Uint8Array;
+  /** findPath's tables, blank between searches (see there) */
+  private scratch: NavScratch | null = null;
   constructor(private col: StaticCollision) {
     this.W = Math.round(WORLD.gridW * WORLD.gridCell / this.cell); this.H = Math.round(WORLD.gridH * WORLD.gridCell / this.cell);
     this.blocked = new Uint8Array(this.W * this.H);
@@ -279,7 +484,25 @@ export class NavGrid {
       if (col.collideCircle(q, 0.34, 0.25, 1.5, 1)) { const moved = v3.distXZ(q, p); if (moved > 0.005) this.blocked[z * this.W + x] = 1; }
     }
   }
+  /** WALL BREAKING (game/wallbreak.ts): the level changed inside the world rectangle [x0, x1] × [z0, z1] — re-ask the bake's own question (the constructor's
+   *  statement, cell for cell) of every nav cell whose centre lies within the agent's clearance of it. Returns the cells that changed as [index, nowBlocked]
+   *  pairs flattened (opened = 0, closed = 1), so the caller can tell the AI which floor appeared. */
+  rebake(x0: number, z0: number, x1: number, z1: number): number[] {
+    const pad = 0.34 + this.cell; const changed: number[] = []; const p: Vec3 = [0, 0, 0];
+    const cx0 = clampi(Math.floor((x0 - pad) / this.cell), 0, this.W - 1), cx1 = clampi(Math.floor((x1 + pad) / this.cell), 0, this.W - 1);
+    const cz0 = clampi(Math.floor((z0 - pad) / this.cell), 0, this.H - 1), cz1 = clampi(Math.floor((z1 + pad) / this.cell), 0, this.H - 1);
+    for (let z = cz0; z <= cz1; z++) for (let x = cx0; x <= cx1; x++) {
+      p[0] = (x + 0.5) * this.cell; p[1] = 0; p[2] = (z + 0.5) * this.cell;
+      const q: Vec3 = [p[0], 0, p[2]];
+      const b = this.col.collideCircle(q, 0.34, 0.25, 1.5, 1) && v3.distXZ(q, p) > 0.005 ? 1 : 0;
+      const i = z * this.W + x; if (this.blocked[i] !== b) { this.blocked[i] = b; changed.push(i, b); }
+    }
+    return changed;
+  }
   idx(x: number, z: number) { return z * this.W + x; }
+  /** WHAT SHUTS A CELL: the statics the bake's own question meets at the cell (wx, wz) lies in — the constructor's circle and heights, to the letter (keep the
+   *  three numbers with its line). Count into `out`, -1 = `out` too short. A caller asks it to judge a cell as it WOULD be with some of them gone. */
+  cellBlockers(wx: number, wz: number, out: Int32Array): number { const x = Math.floor(wx / this.cell), z = Math.floor(wz / this.cell); if (x < 0 || z < 0 || x >= this.W || z >= this.H) return 0; return this.col.circleTouches((Math.floor(wx / this.cell) + 0.5) * this.cell, (Math.floor(wz / this.cell) + 0.5) * this.cell, 0.34, 0.25, 1.5, out); }
   isBlocked(wx: number, wz: number) { const x = Math.floor(wx / this.cell), z = Math.floor(wz / this.cell); if (x < 0 || z < 0 || x >= this.W || z >= this.H) return true; return this.blocked[this.idx(x, z)] === 1; }
 
   /** A* from a to b (world coords). Returns world-space waypoints (cell centers), smoothed by greedy line-of-walk.
@@ -296,44 +519,55 @@ export class NavGrid {
     if (this.blocked[this.idx(gx, gz)]) { const alt = this.nearestFree(gx, gz, b[0], b[2]); if (!alt) return null; gx = alt[0]; gz = alt[1]; }   // (a goal by a wall resolves to ITS side of the wall — see nearestFree)
     const start = this.idx(sx, sz), goal = this.idx(gx, gz);
     if (start === goal) return [[(gx + 0.5) * this.cell, 0, (gz + 0.5) * this.cell]];
-    const gScore = new Float32Array(W * H).fill(Infinity); const came = new Int32Array(W * H).fill(-1); const closed = new Uint8Array(W * H);
-    const open: number[] = []; const f = new Float32Array(W * H).fill(Infinity);
-    const hfun = (i: number) => { const x = i % W, z = (i / W) | 0; const dx = Math.abs(x - gx), dz = Math.abs(z - gz); return (dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz); };
-    gScore[start] = 0; f[start] = hfun(start); open.push(start);
+    // (the search's four per-cell tables are the grid's own, kept between calls in their blank state — every cell a search wrote is listed in `seen` and put
+    // back as it ends — and the open list is a typed array with its own count: the same values read and written in the same order as when each call made and
+    // filled five fresh arrays the size of the level, so the same pops, the same ties, the same path. A search inside a search (a penalty that asks for a
+    // path) or one after a penalty threw takes fresh tables, as it always did.)
+    let S = this.scratch; if (!S || S.busy || S.g.length !== W * H) { const fresh = navScratch(W * H); if (!S || !S.busy) this.scratch = fresh; S = fresh; }   // (nothing of the LEVEL is kept: `blocked` is read afresh by every search, and a grid of another size takes new tables)
+    S.busy = true;
+    const gScore = S.g, came = S.came, closed = S.closed, f = S.f, blocked = this.blocked; let open = S.open, seen = S.seen, nOpen = 0, nSeen = 0;
+    { const x = start % W, z = (start / W) | 0; const dx = Math.abs(x - gx), dz = Math.abs(z - gz); gScore[start] = 0; f[start] = (dx + dz) + (Math.SQRT2 - 2) * Math.min(dx, dz); }
+    open[nOpen++] = start; seen[nSeen++] = start;
     let iter = 0;
-    while (open.length && iter++ < maxIter) {
+    while (nOpen && iter++ < maxIter) {
       // pop min f (linear scan; grids are small)
-      let mi = 0; for (let i = 1; i < open.length; i++) if (f[open[i]] < f[open[mi]]) mi = i;
-      const cur = open[mi]; open[mi] = open[open.length - 1]; open.pop();
+      let mi = 0, mf = f[open[0]]; for (let i = 1; i < nOpen; i++) { const fi = f[open[i]]; if (fi < mf) { mi = i; mf = fi; } }
+      const cur = open[mi]; open[mi] = open[--nOpen];
       if (cur === goal) break;
       if (closed[cur]) continue; closed[cur] = 1;
       const cx = cur % W, cz = (cur / W) | 0;
+      if (nOpen + 8 > open.length) { const o = new Int32Array(open.length * 2); o.set(open); open = S.open = o; }
+      if (nSeen + 8 > seen.length) { const o = new Int32Array(seen.length * 2); o.set(seen); seen = S.seen = o; }
       for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dz) continue; const nx = cx + dx, nz = cz + dz;
         if (nx < 0 || nz < 0 || nx >= W || nz >= H) continue;
-        const ni = this.idx(nx, nz); if (this.blocked[ni] || closed[ni]) continue;
-        if (dx && dz && (this.blocked[this.idx(cx + dx, cz)] || this.blocked[this.idx(cx, cz + dz)])) continue; // no corner cutting
+        const ni = nz * W + nx; if (blocked[ni] || closed[ni]) continue;
+        if (dx && dz && (blocked[cz * W + cx + dx] || blocked[(cz + dz) * W + cx])) continue; // no corner cutting
         const step = dx && dz ? Math.SQRT2 : 1;
         const ng = gScore[cur] + (penalty ? step * Math.max(1, penalty(nx, nz)) : step);
-        if (ng < gScore[ni]) { gScore[ni] = ng; came[ni] = cur; f[ni] = ng + hfun(ni); open.push(ni); }
+        if (ng < gScore[ni]) { const hx = Math.abs(nx - gx), hz = Math.abs(nz - gz); gScore[ni] = ng; came[ni] = cur; f[ni] = ng + ((hx + hz) + (Math.SQRT2 - 2) * Math.min(hx, hz)); open[nOpen++] = ni; seen[nSeen++] = ni; }
       }
     }
-    if (came[goal] < 0) return null;
-    const cells: number[] = []; for (let c = goal; c >= 0 && c !== start; c = came[c]) cells.push(c); cells.reverse();
-    const pts: Vec3[] = cells.map(c => [((c % W) + 0.5) * this.cell, 0, (((c / W) | 0) + 0.5) * this.cell]);
-    // greedy smoothing
+    const cells: number[] = []; const found = came[goal] >= 0; if (found) for (let c = goal; c >= 0 && c !== start; c = came[c]) cells.push(c);
+    for (let i = 0; i < nSeen; i++) { const c = seen[i]; gScore[c] = Infinity; f[c] = Infinity; came[c] = -1; closed[c] = 0; }
+    S.busy = false;
+    if (!found) return null;
+    cells.reverse();
+    // greedy smoothing (a raw cell's centre is made when it is asked for: the test point in one array of the call's own, a Vec3 of its own only for a waypoint kept)
+    const n = cells.length, q: Vec3 = [0, 0, 0];
     const dear = penalty ? cells.map(c => penalty(c % W, (c / W) | 0) > 1) : null;   // (with a penalty: which raw cells the search paid extra for — a merged leg may not cross more dear cells than the ones it stands in for)
     const out: Vec3[] = []; let anchor: Vec3 = [a[0], 0, a[2]]; let i = 0;
-    while (i < pts.length) {
-      let j = pts.length - 1;
-      for (; j > i; j--) if (this.walkable(anchor, pts[j]) && (!dear || this.dearAlong(anchor, pts[j], penalty!) <= countTrue(dear, i, j))) break;
-      out.push(pts[j]); anchor = pts[j]; i = j + 1;
+    while (i < n) {
+      let j = n - 1;
+      for (; j > i; j--) { const c = cells[j]; q[0] = ((c % W) + 0.5) * this.cell; q[2] = (((c / W) | 0) + 0.5) * this.cell; if (this.walkable(anchor, q) && (!dear || this.dearAlong(anchor, q, penalty!) <= countTrue(dear, i, j))) break; }
+      const c = cells[j], p: Vec3 = [((c % W) + 0.5) * this.cell, 0, (((c / W) | 0) + 0.5) * this.cell];
+      out.push(p); anchor = p; i = j + 1;
     }
     return out;
   }
   /** distinct cells along the straight leg a → b (sampled at half a cell) whose penalty is above plain floor — the smoothing's guard against cutting back across them */
   private dearAlong(a: Vec3, b: Vec3, penalty: (ix: number, iz: number) => number): number {
-    const dx = b[0] - a[0], dz = b[2] - a[2]; const n = Math.ceil(Math.hypot(dx, dz) / (this.cell * 0.5)) + 1;
+    const dx = b[0] - a[0], dz = b[2] - a[2]; const n = Math.ceil(hyp2(dx, dz) / (this.cell * 0.5)) + 1;
     let last = -1, count = 0;
     for (let k = 0; k <= n; k++) {
       const t = k / n; const ix = Math.floor((a[0] + dx * t) / this.cell), iz = Math.floor((a[2] + dz * t) / this.cell); const i = this.idx(ix, iz);
@@ -374,7 +608,7 @@ export class NavGrid {
 
   /** Conservative straight-line walkability (samples cells along the segment with the agent radius). */
   walkable(a: Vec3, b: Vec3): boolean {
-    const dx = b[0] - a[0], dz = b[2] - a[2]; const len = Math.hypot(dx, dz); const n = Math.ceil(len / (this.cell * 0.5)) + 1;
+    const dx = b[0] - a[0], dz = b[2] - a[2]; const len = hyp2(dx, dz); const n = Math.ceil(len / (this.cell * 0.5)) + 1;
     const px = -dz / (len || 1) * 0.22, pz = dx / (len || 1) * 0.22;
     for (let i = 0; i <= n; i++) {
       const t = i / n; const x = a[0] + dx * t, z = a[2] + dz * t;
@@ -385,5 +619,7 @@ export class NavGrid {
 }
 
 function clampi(x: number, a: number, b: number) { return x < a ? a : x > b ? b : x; }
+interface NavScratch { busy: boolean; g: Float32Array; f: Float32Array; came: Int32Array; closed: Uint8Array; open: Int32Array; seen: Int32Array }
+function navScratch(n: number): NavScratch { return { busy: false, g: new Float32Array(n).fill(Infinity), f: new Float32Array(n).fill(Infinity), came: new Int32Array(n).fill(-1), closed: new Uint8Array(n), open: new Int32Array(1024), seen: new Int32Array(1024) }; }
 /** how many of flags[i‥j] are set (findPath's smoothing: the dear raw cells a merged leg would replace) */
 function countTrue(flags: boolean[], i: number, j: number): number { let n = 0; for (let k = i; k <= j; k++) if (flags[k]) n++; return n; }

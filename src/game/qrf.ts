@@ -1,4 +1,4 @@
-// The response to going loud (STATUS E12(0) — the designer: "right now it's just too easy to just go lethal and clear the area … add QRF"). One model, no magic:
+// The response to going loud (STATUS E12(0) — the maintainer: "right now it's just too easy to just go lethal and clear the area … add QRF"). One model, no magic:
 // the trigger is what the floor's own alarm and ears already know (a locked-down floor that has HEARD Sam's gunfire — the hearing model's own 80 m gate for a
 // report at level ≥ 1, so the suppressed pistol's odd noise never counts and the FN2000's crack always does — or has walked onto two of its men down), the
 // telegraph is radio traffic on the net the HUD already shows (the request, control's ETA, thirty seconds, ten seconds — and boots on the stairs through the
@@ -15,21 +15,37 @@
 // and jogs out through the doors to them), pinned there covering the doors from outside: leaving by the fire exit is now a walk into their arcs.
 // State on Game.qrf; knobs on Game.tune (qrf / qrfEta / qrfSize / perimeter / perimeterEta / perimeterSize, Tab ▸ Sandbox, kept per machine); reset with the
 // guards (Game.resetGuards → resetQrf; the men are units, resetGuards despawns them). Never under the tour, the breach's daylight, or with the AI off.
-// QA: tools/qa/qrf-probes.ts (`probes.ts qrf`), soak.ts --loud-at.
+// THE ROOM IS TAKEN BY THE SQUAD'S OWN CODE (tune.qrfSquad — the page ships it on; off = the element's own drill below on the level's authored marks, as it
+// was): at the door the four are handed, as a second cast (squadcast.ts), to the very classes Sam's squad runs — doortools.ts's stack on the jambs worked out
+// from the door, the hand on the leaf, the can, who goes first, each man's corners, the search that flows them on through the room until none of its floor
+// is unseen; orders.ts's walk onto a mark and pose on it. A room that holds the fix is banged and entered; any other is worked from the threshold first
+// (sliced from the jambs, its blind pocket banged) and then stepped into. What the squad's code learns, they have with no second edit. Everything else is
+// still theirs: when, where to, the file down the corridor, their senses, and the fight on contact (startDrill / phaseDrill).
+// QA: tools/qa/qrf-probes.ts (`probes.ts qrf`), soak.ts --loud-at; tools/qa/qrf-squad-check.ts (the squad's drill).
+import { QRF_TINT, QRF_TINT2 } from './consts';
 import { Vec3, v3, clamp, wrapAngle } from '../math/vec';
+import { TOSS_QUICK } from './character';
+import { toolSpot } from './handleside';
 import type { Game, Guard } from './game';
 import type { RoomClearPlan } from '../scene/level';
 import type { Door } from './doors';
 import type { Item } from './throwables';
-import { spawnUnit, despawnUnit, escalationOf, hearingCheck, canSee, sightGain, bodyInView, pointInView, standoffPerceive, resetChase, bodyPos } from './guards';
+import { radioHand } from './handwork';
+import { spawnUnit, despawnUnit, escalationOf, hearingCheck, canSee, sightGain, bodyInView, pointInView, standoffPerceive, resetChase, bodyPos, bubbleSecs } from './guards';
 import { order, endGuardScript, inBounds } from './squad';
+import { sideOf } from './orders';
+import type { DoorOp } from './doortools';
+import { squadCast, EVERY_KEY, type SquadCast } from './squadcast';
 import { detonateStun } from './combat';
 import { isDaylight, setGroup } from './lighting';
 import { roomName } from './dialogue';
+import { doorLabel } from './tactics';
+import { WORDS, w } from './words';
 import { TRAINED } from './aim';
 import { tally, missionLive } from './mission';
 import { isBreathing } from './game';
-import { chronRadio } from './chronicle';
+import { chronRadio, chronicle } from './chronicle';
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 // ================================================================ authored marks (TODO(level-format lane): these belong in LevelData beside routes / chokepoints / clearPlans)
 /** Everything the response needs from THIS level: the door it comes through, where the men stand on the landing behind it (in element order: #1 at the bar), the
@@ -41,7 +57,7 @@ export const QRF_MARKS = {
   /** the landing (level.ts: inner floor x 1.34‥3.88, z 9.57‥12.63; the doorway's walkable column is z 11.25) */
   landing: [[3.1, 0, 11.25], [2.25, 0, 11.25], [3.1, 0, 10.3], [2.25, 0, 10.3]] as Vec3[],
   /** just inside: point man a few strides up the corridor facing east, two and three either side of him quartering the conference glass / the lobby arch, four
-   *  last through holding the door end (the leaf swings in along the NORTH side of this end, hinge at z 10.52: everybody south or east of its 1.16 m sweep) */
+   *  last through holding the door end (the leaf swings in along the NORTH side of this end, everybody south or east of its sweep) */
   entry: [[6.7, 0, 11.2], [5.9, 0, 10.55], [5.9, 0, 11.8], [5.4, 0, 11.25]] as Vec3[],
   entryFace: [Math.PI / 2, 2.4, 0.75, Math.PI / 2],
   /** outside posts, in the order they are manned: the fire exit (the way out the mission names) from the lot's east strip, the break room's outside door from the
@@ -62,6 +78,9 @@ export const QRF_MARKS = {
 const CHAR_BUDGET = 8;
 /** how long a heard report of Sam's stays 'gunfire confirmed' for the trigger (long enough to span the alarm episode it started and the lockdown that follows it) */
 const LOUD_MEMORY_SECS = 180;
+/** THE SILENT NET (tune.qrfSilent): seconds from the last man of the shift leaving the net — after Sam's gunfire was heard on it — to control's radio check,
+ *  and to control sending the response team on the silence alone */
+const SILENT_CHECK_SECS = 6, SILENT_GO_SECS = 14;
 /** the telegraph: control answers the request after ANSWER s; the door goes ETA s after the request (tune.qrfEta); called again at T−30 and T−10 (the men exist on
  *  the landing from T−10: their lights under the door, their boots on the stairs) */
 const ANSWER_SECS = 1.6, CALL30 = 30, CALL10 = 10;
@@ -75,6 +94,9 @@ const RETARGET_M = 4, RETARGET_SECS = 20, RECLEAR_SECS = 90;
 /** the room: seconds the stack may take before they go anyway, the bang's landing depth into the room and its fuse after first contact, the beat between men
  *  flowing in, how long the flow may take before it is called, the hold all round after the call */
 const STACK_CAP = 5.5, BANG_DEPTH = 2.3, BANG_FUSE = 0.7, FLOW_GAP = 0.42, FLOW_CAP = 6.5, HOLD360_SECS = 1.6;
+/** tune.qrfSquad: the longest one room may take by the squad's drill before the element gives it up. The net under doortools.ts's own caps (a minute to
+ *  stack, the threshold's, the search's), so longer than those in a row: it is not what ends an entry that is going */
+const DRILL_CAP = 120;
 /** the fight: contact older than this (nobody's eyes on him, no report of his) and the element re-forms; awareness the scripted men are held at (hunting, not alarmed anew every frame) */
 const REGROUP_SECS = 8, HUNT_AWARENESS = 0.7;
 /** the perimeter tier's own trigger past deployment: this many level-1 reports (anybody's) inside the window = a running gunfight — counted from SETTLE_IN s after the
@@ -86,8 +108,8 @@ const WALKOUT_ENGAGE_M = 6;
 const POST_SPEED = 2.6, SWEEP_SECS = 5;
 
 export type QrfState = 'idle' | 'requested' | 'inbound' | 'arriving' | 'deployed';
-export type QrfReason = 'gunfire' | 'bodies' | 'panel';
-type Phase = 'landing' | 'file' | 'fan' | 'move' | 'stack' | 'breach' | 'bang' | 'flow' | 'called' | 'hold' | 'fight' | 'regroup';
+export type QrfReason = 'gunfire' | 'bodies' | 'panel' | 'silent';
+type Phase = 'landing' | 'file' | 'fan' | 'move' | 'stack' | 'breach' | 'bang' | 'flow' | 'drill' | 'called' | 'hold' | 'fight' | 'regroup';
 interface Target { kind: 'room' | 'point'; plan: RoomClearPlan | null; room: string; pos: Vec3; }
 /** the perimeter tier: called (control's line, men picked and moving) → set (posts taken, or the ETA and ten seconds gone) */
 interface Perimeter { state: 'called' | 'set'; calledAt: number; etaAt: number; setAt: number; men: { gd: Guard; post: typeof QRF_MARKS.posts[number]; arrivedAt: number; fighting: boolean }[]; spawned: number; peeled: number; }
@@ -109,6 +131,9 @@ export class Qrf {
   /** the trigger's memory: when a living staff man last had a report of SAM's at gunfire level in his ears (the hearing model's 80 m gate), and the level-1
    *  reports of anybody's since deployment (the perimeter tier's 'running gunfight') */
   loudT = -1e9; shotsSince: number[] = []; heardEvents = new WeakSet<object>();
+  /** the silent net (tune.qrfSilent — see `silentNet`): when the whole shift was first off the net with Sam's gunfire in its memory (−1 = it is not), whether
+   *  control's radio check has been said, and whether the request it led to was made or refused (once a night either way) */
+  silentAt = -1; silentSaid = false; silentSpent = false;
   /** what happened when, in order (probes / the panel's line): request, control, thirty, ten, door, in:N, target:…, stack, bang, flow, clear:…, contact, regroup, man-down:…, perimeter:… */
   log: { t: number; what: string }[] = [];
   // ---- the element's script
@@ -118,9 +143,16 @@ export class Qrf {
   // ---- the script's plumbing (module-internal; public only so the plain functions below can reach it)
   wps = new Map<Guard, Vec3[]>();
   trail: Vec3[] = []; stationT = 0; pointId = -1; moveSpeed = MOVE_SPEED;   // pointId: char id of the man walking the target leg (a new #1 after a death takes it up afresh)
+  /** DOORSTAY: the stair door has been pulled to behind the element (or there was nothing to pull) */
+  doorPulled = false;
   filed = 0; flowed = 0; can: Item | null = null; canLandT = NaN; stackMarks: Vec3[] = []; shovedAt = NaN;
   seenIds = new Set<number>();   // element / perimeter men already reported down
   aimPts = new Map<Guard, Vec3>(); stations = new Map<Guard, Vec3>();
+  /** tune.qrfSquad: the element as a second cast of the squad's orders and door tools (built at its first door) · the entry it is on (phase 'drill') · how
+   *  many of that entry's beats are in `log` · rooms begun this way, and taken */
+  cast: SquadCast | null = null; op: DoorOp | null = null; opBeat = 0; drills = 0; drillsIn = 0;
+  /** tune.qrfSquad: the room the squad's drill last took (or gave up on) and the fix they went there on — that fix is used up there (pickTarget) */
+  spent: { room: string; fixT: number } | null = null;
   /** does this man belong to the response (element or perimeter)? — the QA soak's script invariant asks */
   owns(gd: Guard): boolean { return this.men.includes(gd) || !!this.perim?.men.some(m => m.gd === gd); }
   /** one line for the panel / probes */
@@ -134,30 +166,41 @@ export class Qrf {
 
 // ================================================================ knobs kept per machine
 const TUNE_KEY = 'twopointsix.qrf';
+/** `?qrfsquad=0` on the page's address: the element's own drill for this visit — over the machine's memory of the row, and never written into it */
+function ownDrillAsked(): boolean { try { const q = (globalThis as { location?: { search?: string } }).location?.search; return !!q && /[?&]qrfsquad=(0|off|false)\b/i.test(q); } catch { return false; } }
+function storedTune(): Record<string, unknown> | null { try { const raw = localStorage.getItem(TUNE_KEY); return raw ? JSON.parse(raw) : null; } catch { return null; } }   // (null: no storage (the harness), nothing kept, or junk in it)
 export function loadQrfTune(g: Game) {
-  try {
-    const raw = localStorage.getItem(TUNE_KEY); if (!raw) return; const o = JSON.parse(raw); const T = g.tune;
-    if (typeof o.qrf === 'boolean') T.qrf = o.qrf; if (typeof o.perimeter === 'boolean') T.perimeter = o.perimeter;
+  const o = storedTune() as { [k: string]: any } | null, T = g.tune;
+  if (o) {
+    if (typeof o.qrf === 'boolean') T.qrf = o.qrf; if (typeof o.perimeter === 'boolean') T.perimeter = o.perimeter; if (typeof o.qrfSilent === 'boolean') T.qrfSilent = o.qrfSilent; if (typeof o.qrfSquad === 'boolean') T.qrfSquad = o.qrfSquad;
     if (Number.isFinite(o.qrfEta)) T.qrfEta = clamp(o.qrfEta, 15, 240); if (Number.isFinite(o.perimeterEta)) T.perimeterEta = clamp(o.perimeterEta, 10, 180);
     if (Number.isFinite(o.qrfSize)) T.qrfSize = clamp(Math.round(o.qrfSize), 2, 4); if (Number.isFinite(o.perimeterSize)) T.perimeterSize = clamp(Math.round(o.perimeterSize), 2, 4);
-  } catch { /* no storage (the harness), or junk in it */ }
+  }
+  if (ownDrillAsked()) T.qrfSquad = false;
 }
-export function saveQrfTune(g: Game) { const T = g.tune; try { localStorage.setItem(TUNE_KEY, JSON.stringify({ qrf: T.qrf, qrfEta: T.qrfEta, qrfSize: T.qrfSize, perimeter: T.perimeter, perimeterEta: T.perimeterEta, perimeterSize: T.perimeterSize })); } catch { /* */ } }
-/** the six knobs back to what game.ts's tune ships (its literal — keep the two in step) and the machine's memory of them dropped, like every other module's 'defaults' (whistle / needs / tactics …);
+export function saveQrfTune(g: Game) {
+  const T = g.tune, kept = storedTune()?.qrfSquad, qrfSquad = ownDrillAsked() ? (typeof kept === 'boolean' ? kept : QRF_TUNE_DEFAULTS.qrfSquad) : T.qrfSquad;   // (under the address's word the row's memory stays as it was)
+  try { localStorage.setItem(TUNE_KEY, JSON.stringify({ qrf: T.qrf, qrfEta: T.qrfEta, qrfSize: T.qrfSize, perimeter: T.perimeter, perimeterEta: T.perimeterEta, perimeterSize: T.perimeterSize, qrfSilent: T.qrfSilent, qrfSquad })); } catch { /* */ }
+}
+/** the knobs back to what game.ts's tune ships (its literal — keep the two in step) and the machine's memory of them dropped, like every other module's 'defaults' (whistle / needs / tactics …);
  *  for a Tab ▸ Sandbox 'QRF ▸ defaults' button and the console */
-export const QRF_TUNE_DEFAULTS = { qrf: true, qrfEta: 75, qrfSize: 4, perimeter: true, perimeterEta: 45, perimeterSize: 2 } as const;
-export function resetQrfTune(g: Game) { Object.assign(g.tune, QRF_TUNE_DEFAULTS); try { localStorage.removeItem(TUNE_KEY); } catch { /* none */ } }
+export const QRF_TUNE_DEFAULTS = { qrf: true, qrfEta: 75, qrfSize: 4, perimeter: true, perimeterEta: 45, perimeterSize: 2, qrfSilent: true, qrfSquad: true } as const;
+export function resetQrfTune(g: Game) { Object.assign(g.tune, QRF_TUNE_DEFAULTS); if (ownDrillAsked()) g.tune.qrfSquad = false; try { localStorage.removeItem(TUNE_KEY); } catch { /* none */ } }
 
 // ================================================================ small shared helpers
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 function note(Q: Qrf, g: Game, what: string) { Q.log.push({ t: g.time, what }); if (Q.log.length > 200) Q.log.splice(0, 50); }
 /** control's voice: a line on the net with nobody in the building saying it (the HUD draws 'radio: …' lines — ui/overlay.ts) */
 function control(g: Game, text: string) { g.msg('radio: CONTROL — ' + text); g.audio.play('radio', null, 0.55); }
+/** … and with a row in the run's timeline (the silent net's two lines: with nobody of the shift left to say why the team came, the debrief would not know) */
+function controlRow(g: Game, text: string) { control(g, text); chronicle(g, 'radio', { who: 'CONTROL', text: text.length > 96 ? text.slice(0, 94) + '…' : text }); }
+/** a plan's door as the element says it: the shift's own words for it (tactics.ts doorLabel: 'break room west', not 'breakroom w') — the bare id with the words switch off */
+function doorSaid(g: Game, name: string): string { const d = WORDS.on ? g.doors.byName(name) : undefined; return d ? doorLabel(d) : name.replace(/_/g, ' '); }
 /** a response man's radio line: his bubble if he is on screen, and the net's log line under his callsign (guards.ts say would file a unit's radio under his name
  *  without the 'radio:' the HUD keys on — these men ARE on the shift's net) */
 function radio(g: Game, gd: Guard | null | undefined, text: string) {
   if (!gd || gd.state === 'dead') { control(g, text); return; }
-  gd.bubble = { text, t: g.time, dur: Math.min(4, Math.max(2, 1.5 + text.length * 0.055)), radio: true };
+  gd.bubble = { text, t: g.time, dur: bubbleSecs(text), radio: true }; radioHand(gd, gd.bubble.dur);   // (handwork.ts: his hand to the handset while it is on the net — picture only)
   g.msg(`radio: ${gd.callsign} — ${text}`); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.7);
   chronRadio(g, gd, text);   // (the run's timeline keeps what went over the net — chronicle.ts, as guards.ts say does for the shift)
 }
@@ -169,7 +212,11 @@ function staffVoice(g: Game): Guard | null {
 }
 function bodiesFound(g: Game): number { let n = 0; for (const x of g.guards) if (!x.unit && x.state === 'dead' && x.found) n++; return n; }
 /** the run is Sam's to answer for (not the tour, not the breach's daylight, somebody home in the guards' heads, Sam on his feet) */
-function live(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.touring && !isDaylight(g) && !g.player.down; }
+function live(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.touring && !isDaylight(g) && !g.player.down && !g.nightBreach?.active && !g.rescue?.active && hasResponse(g); }
+/** THIS LEVEL HAS A RESPONSE TEAM: the marks above are the office's stairwell. A level that carries its own places (a quiet mission: its file's scenarios.quiet
+ *  — scene/scenarios.ts) has the team only if it has the team's door (a floor built round the office's west stair, landing and all); without it there is nobody
+ *  to send — no request, no radio promise, no men stood on another building's coordinates. Every other level: as it always was. */
+export function hasResponse(g: Game): boolean { return !g.level.scenarios?.quiet || !!g.doors.byName(QRF_MARKS.door); }
 function alive(Q: Qrf, g: Game): Guard[] { return Q.men.filter(m => m.state !== 'dead' && g.guards.includes(m)); }
 /** the floor's freshest fix on Sam: the man (staff or response) who had eyes on him last and still holds a fix, else the alarm's own place */
 function bestFix(g: Game): { pos: Vec3; t: number } | null {
@@ -183,6 +230,7 @@ function bestFix(g: Game): { pos: Vec3; t: number } | null {
 // ================================================================ the trigger and the telegraph
 export function resetQrf(g: Game) {
   const Q = g.qrf; if (!Q) return;
+  dropDrill(Q);
   for (const m of [...Q.men, ...(Q.perim?.men.map(p => p.gd) ?? [])]) if (m.script && g.guards.includes(m)) endGuardScript(m, 'patrol');   // (resetGuards despawns them next; a bare resetQrf from the panel leaves ordinary alert-able men, then despawns them itself — qrfStandDown)
   const fresh = new Qrf(); Object.assign(Q, fresh);   // (keep the object main.ts / the panel hold; every field back to a fresh response's)
 }
@@ -199,14 +247,35 @@ export function requestQrf(g: Game, reason: QrfReason): boolean {
   }
   if (!g.tune.qrf && reason !== 'panel') return false;
   if (!live(g) && reason !== 'panel') return false;
+  if (!hasResponse(g)) { note(Q, g, 'no-team:this level has no stairwell for one'); return false; }
   const size = Math.min(clamp(Math.round(g.tune.qrfSize), 2, 4), CHAR_BUDGET - 1 - g.guards.length);
   if (size < 2) { note(Q, g, `no-room:${CHAR_BUDGET - 1 - g.guards.length}`); return false; }   // (the renderer's character budget has no room for even a pair: nothing is promised on the radio that cannot come)
   Q.state = 'requested'; Q.reason = reason; Q.requestedAt = g.time; Q.arriveAt = g.time + Math.max(12, g.tune.qrfEta); Q.answered = Q.said30 = Q.said10 = false;
   const sp = staffVoice(g); const n = bodiesFound(g);
-  const line = reason === 'bodies' ? `control, ${sp?.callsign ?? 'two-six'} — ${n >= 2 ? `${n} men down` : 'men down'} on two-six and whoever did it is still up here. we need the response team` : reason === 'gunfire' ? `control, ${sp?.callsign ?? 'two-six'} — shots fired on two-six, automatic fire. this is past us — get the response team up here` : `control, ${sp?.callsign ?? 'two-six'} — send the response team up to two-six. now`;
-  if (sp) radio(g, sp, line); else control(g, 'two-six has gone quiet with an alarm up — response team, go');
+  const line = reason === 'bodies' ? `control, ${sp?.callsign ?? 'two-six'} — ${n >= 2 ? `${n} men down` : 'men down'} on two-six and whoever did it is still up here. we need the response team` : reason === 'gunfire' ? `control, ${sp?.callsign ?? 'two-six'} — shots fired on two-six${w('', ', automatic fire')}. this is past us — get the response team up here` : `control, ${sp?.callsign ?? 'two-six'} — send the response team up to two-six. now`;
+  if (sp) radio(g, sp, line); else if (reason === 'silent') controlRow(g, 'all stations, control — shots reported on two-six and nobody up there is answering. response team, go'); else control(g, 'two-six has gone quiet with an alarm up — response team, go');
   note(Q, g, `request:${reason}`);
   return true;
+}
+
+/** THE SILENT NET (tune.qrfSilent; off = the trigger exactly as it was). The trigger below wants a locked-down floor, and only a living man of the shift locks
+ *  it down — so a player who shot the whole shift met nobody: three bodies, a minute in an empty building, control silent with gunfire in its ears (the missions
+ *  goal's fault S2: the response came in 2 of 24 loud runs). The rule: Sam's gunfire was heard on the net (`loudT`, inside its memory) and now EVERY man of the
+ *  shift is off it (down, out cold, or in Sam's arm) — control hears a net that reported shots go quiet. After SILENT_CHECK_SECS it asks for a radio check, aloud
+ *  (the cue: the player hears that somebody is listening); nobody answering by SILENT_GO_SECS, it sends the response team on the silence alone, with the same
+ *  telegraph any request gets (the ETA, thirty seconds, ten, boots on the stairs). A man back on the net before then (let go of) cancels it. Quiet work never
+ *  starts it: loudT is gunfire-level reports of Sam's only. Only where the level has the team's door. Returns whether the team was asked for now. */
+function silentNet(g: Game, Q: Qrf): boolean {
+  if (Q.silentSpent) return false;
+  let roster = 0, on = 0;
+  for (const x of g.guards) { if (x.unit || x.team !== 'guard') continue; roster++; if (x.state !== 'dead' && !x.held) on++; }
+  if (!roster || on || (Q.silentAt < 0 && g.time - Q.loudT >= LOUD_MEMORY_SECS) || !g.doors.byName(QRF_MARKS.door)) { Q.silentAt = -1; Q.silentSaid = false; return false; }
+  if (Q.silentAt < 0) { Q.silentAt = g.time; note(Q, g, 'silent'); }
+  const t = g.time - Q.silentAt;
+  if (!Q.silentSaid && t >= SILENT_CHECK_SECS) { Q.silentSaid = true; controlRow(g, 'two-six, control — radio check. shots reported on your floor and nothing since. any station on two-six, respond'); note(Q, g, 'radio-check'); }
+  if (t < SILENT_GO_SECS) return false;
+  Q.silentSpent = true;   // (asked for, or refused for want of room in the character budget: either way once)
+  return requestQrf(g, 'silent');
 }
 
 /** Once a frame from game.ts (after the guards and the alarm). */
@@ -221,7 +290,10 @@ export function updateQrf(g: Game, dt: number) {
   }
   while (Q.shotsSince.length && g.time - Q.shotsSince[0] > GUNFIGHT_WINDOW) Q.shotsSince.shift();
   if (Q.state === 'idle') {
-    if (!g.tune.qrf || !live(g) || escalationOf(g) < 2) return;
+    if (!g.tune.qrf || !live(g) || !g.tune.qrfSilent) { Q.silentAt = -1; Q.silentSaid = false; }   // (the silent net's clock runs only while the rule could act: a run not live for a stretch starts it afresh, cue first)
+    if (!g.tune.qrf || !live(g)) return;
+    if (g.tune.qrfSilent && silentNet(g, Q)) return;
+    if (escalationOf(g) < 2) return;
     if (g.time - Q.loudT < LOUD_MEMORY_SECS) requestQrf(g, 'gunfire');
     else if (bodiesFound(g) >= 2) requestQrf(g, 'bodies');
     return;
@@ -230,10 +302,11 @@ export function updateQrf(g: Game, dt: number) {
   const quiet = g.quietUtility || g.touring;
   if (Q.state === 'requested' && g.time - Q.requestedAt >= ANSWER_SECS) {
     Q.state = 'inbound'; Q.answered = true;
-    if (!quiet) control(g, `copy two-six. QRF is rolling — ${Math.min(4, clamp(Math.round(g.tune.qrfSize), 2, 4))} men, west stairwell, ${Math.round(Q.arriveAt - g.time)} seconds. lock down and hold what you've got`);
+    if (!quiet) control(g, Q.reason === 'silent' ? `all stations — QRF is rolling to two-six: ${Math.min(4, clamp(Math.round(g.tune.qrfSize), 2, 4))} men, west stairwell, ${Math.round(Q.arriveAt - g.time)} seconds`   // (nobody on two-six is left to be told to hold)
+      : `copy two-six. QRF is rolling — ${Math.min(4, clamp(Math.round(g.tune.qrfSize), 2, 4))} men, west stairwell, ${Math.round(Q.arriveAt - g.time)} seconds. lock down and hold what you've got`);
     note(Q, g, 'control');
   }
-  if ((Q.state === 'inbound' || Q.state === 'requested') && !Q.said30 && Q.arriveAt - g.time <= CALL30) { Q.said30 = true; if (Q.arriveAt - Q.requestedAt > CALL30 + 5 && !quiet) { control(g, 'two-six, QRF is thirty seconds out — coming up the west stairs. check your fire that end'); note(Q, g, 'thirty'); } }
+  if ((Q.state === 'inbound' || Q.state === 'requested') && !Q.said30 && Q.arriveAt - g.time <= CALL30) { Q.said30 = true; if (Q.arriveAt - Q.requestedAt > CALL30 + 5 && !quiet) { control(g, Q.reason === 'silent' ? 'all stations — QRF is thirty seconds out from two-six, coming up the west stairs' : 'two-six, QRF is thirty seconds out — coming up the west stairs. check your fire that end'); note(Q, g, 'thirty'); } }
   if ((Q.state === 'inbound' || Q.state === 'requested') && Q.arriveAt - g.time <= CALL10) arriving(g, Q, quiet);
   if (Q.state === 'arriving' && g.time >= Q.arriveAt) deploy(g, Q, quiet);
   if (Q.state === 'deployed' && !Q.everyoneSaid && g.time - Q.deployedAt > 4.5) { Q.everyoneSaid = true; if (!quiet && Q.men.length) control(g, "all stations — that's the response team on your floor, and that's everyone we've got tonight. make it count"); }   // (said once: there is no second wave, and they know it)
@@ -247,7 +320,8 @@ function arriving(g: Game, Q: Qrf, quiet: boolean) {
   const door = g.doors.byName(QRF_MARKS.door); const yaw = Math.PI / 2;
   for (let i = 0; i < n; i++) {
     let gd: Guard;
-    try { gd = spawnUnit(g, { team: 'guard', pos: QRF_MARKS.landing[i], yaw, weapon: 'aks74u', name: `QRF-${i + 1}`, light: true, tint: [0.1, 0.11, 0.13], tint2: [0.05, 0.055, 0.06] }); }
+    const at = i === 0 && door ? toolSpot(g, door, g.doors.side(door, QRF_MARKS.landing[0]), QRF_MARKS.landing[0])?.pos ?? QRF_MARKS.landing[0] : QRF_MARKS.landing[i];   // (handleside.ts: #1 is the man on the bar — at the handle of a leaf that opens toward the landing, clear of its swing)
+    try { gd = spawnUnit(g, { team: 'guard', pos: at, yaw, weapon: 'aks74u', name: `QRF-${i + 1}`, light: true, tint: [...QRF_TINT], tint2: [...QRF_TINT2] }); }
     catch (e) { note(Q, g, `spawn-failed:${i}:${String((e as Error)?.message ?? e).slice(0, 40)}`); break; }
     gd.trained = true; gd.hold = false; gd.state = 'search'; gd.awareness = HUNT_AWARENESS; gd.foe = 'player';
     gd.heardUpTo = g.eventSeq;
@@ -277,7 +351,7 @@ function deploy(g: Game, Q: Qrf, quiet: boolean) {
 /** throw a shut (or nearly shut) leaf open away from `by` at a kick's pace without breaking anything: unlatched from the side that always opens */
 function flingOpen(g: Game, d: Door, by: Guard) {
   if (Math.abs(d.angle) > 1.0) return;
-  const side = g.doors.side(d, by.char.pos);   // (this is the crash-bar side: the bolt is only ever against the corridor face, and stays thrown — the closer latches it locked again behind them)
+  const side = g.doors.side(d, by.char.pos);   // (this is the crash-bar side: the bolt is only ever against the corridor face, and stays thrown — the closer — or, where doors stay, the last man's hand (tickMen) — latches it locked again behind them)
   d.latched = false; d.closing = false; d.vel = -side * 7.5; d.sinceBash = 0; d.quietT = -0.5; d.creakArmed = false; d.lastWho = by.char.id;
   g.audio.play('doorBash', d.pos, 0.9, { rate: 0.85 });
 }
@@ -297,8 +371,17 @@ function tickMen(g: Game, Q: Qrf, dt: number) {
     if (!m.script && (m.state === 'patrol' || m.state === 'suspicious')) { m.state = 'search'; m.awareness = Math.max(m.awareness, HUNT_AWARENESS); m.searchT = 0; }
     m.bodyDuty = null; m.task = null;   // (the shift's found-body script and its errands are dealt to any scripted colleague on the net — guards.ts — and are not theirs: a body called in moves the alarm's place, which is the fix they clear toward anyway)
   }
+  // DOORSTAY: no closer latches the stair door behind them any more (flingOpen) — the last man through pulls it to once they are all on the floor and clear of
+  // it, and the bolt bites again as the latch catches. With the closers on (the switch off, a showcase) the door does it itself, as it always did.
+  if (Q.state === 'deployed' && !Q.doorPulled && g.doors.stay && g.time - Q.deployedAt > 1.5) {
+    const d = g.doors.byName(QRF_MARKS.door), up = alive(Q, g);
+    if (!d || d.off || d.latched || d.def.closer === false || !up.length) Q.doorPulled = true;
+    else { const land = g.doors.pullFace(d, QRF_MARKS.landing[0]); let last: Guard | null = null, ld = Infinity, through = true;   // (pullFace: which side of the FRAME — Doors.side is the leaf's, and the leaf stands open)
+      for (const m of up) { const dd = flat(m.char.pos, d.frameCentre); if (g.doors.pullFace(d, m.char.pos) === land || dd < 1.5) through = false; if (dd < ld) { ld = dd; last = m; } }
+      if (through && last) { Q.doorPulled = true; if (ld < 6) { g.doors.pullTo(d, last.char.id); note(Q, g, 'door-to'); } } }
+  }
   if (Q.perim) tickPerimeter(g, Q, dt); else if (Q.state === 'deployed') maybePerimeter(g, Q);
-  if (!el.length) { if (Q.phase !== 'fight') { Q.phase = 'fight'; note(Q, g, 'wiped'); } return; }
+  if (!el.length) { if (Q.phase !== 'fight') { dropDrill(Q); Q.phase = 'fight'; note(Q, g, 'wiped'); } return; }   // (dropDrill: a can of theirs still in a dead hand goes on its own short fuse, not never)
   if (Q.state === 'arriving') { for (const m of el) perceiveScripted(g, Q, m, dt); return; }   // on the landing: ears open (deaf to before they existed), nothing else
   switch (Q.phase) {
     case 'file': phaseFile(g, Q, el); break;
@@ -308,6 +391,7 @@ function tickMen(g: Game, Q: Qrf, dt: number) {
     case 'breach': phaseBreach(g, Q, el); break;
     case 'bang': phaseBang(g, Q, el); break;
     case 'flow': phaseFlow(g, Q, el); break;
+    case 'drill': phaseDrill(g, Q, el); break;
     case 'called': if (Q.phaseT > 1.2) { hold360(g, Q, el); } break;
     case 'hold': if (Q.phaseT > HOLD360_SECS) pickTarget(g, Q, el, false); break;
     case 'fight': phaseFight(g, Q, el); return;   // the AI has them: no script senses to run
@@ -357,7 +441,7 @@ function perceiveScripted(g: Game, Q: Qrf, m: Guard, dt: number): boolean {
       m.sawBodyT = g.time; m.witness.sawBody = { victim: o.callsign, t: g.time, breathing: isBreathing(o) };
       let n = 0; const eye = m.char.bones.head ?? v3.add(m.char.pos, [0, 1.65, 0]); const bp = bodyPos(o);
       for (const x of g.guards) if (x.state === 'dead' && !x.found && x.team === m.team && (x === o || (flat(bodyPos(x), bp) < 3 && !g.col.segmentBlocked(eye, v3.add(bodyPos(x), [0, 0.3, 0]))))) { x.found = true; tally(g, 'bodies'); n++; }
-      if (n) radio(g, m, `${o.callsign} down in the ${roomName(g.level, bp)}${n > 1 ? ` — ${n} of them` : ''}, ${isBreathing(o) ? 'out cold, breathing' : 'dead'}. pushing on`);
+      if (n) radio(g, m, `${o.callsign} down in ${w('', 'the ')}${roomName(g.level, bp)}${n > 1 ? ` — ${n} of them` : ''}, ${o.wound ? 'hit, breathing' : isBreathing(o) ? 'out cold, breathing' : 'dead'}. pushing on`);
       note(Q, g, `found:${o.callsign}`);
     }
   }
@@ -411,7 +495,9 @@ function pickTarget(g: Game, Q: Qrf, el: Guard[], fresh: boolean) {
   const inside = (ps: RoomClearPlan[]) => ps.some(p => p.bounds && inBounds(fix, p.bounds));
   let best: { k: string; ps: RoomClearPlan[]; d: number } | null = null;
   for (const [k, ps] of rooms) {
-    const isIn = inside(ps); if (recent(k) && !isIn) continue;
+    // (tune.qrfSquad: a room the squad's drill has been through on this very fix has used it up — 'clear, negative contact' is not followed by the same
+    // room again on the same word; a newer fix in it is a new word. The element's own drill, as it was: the room that holds the fix, again and again)
+    const isIn = inside(ps) && !(g.tune.qrfSquad && Q.spent?.room === k && Q.spent.fixT >= Q.fixT); if (recent(k) && !isIn) continue;
     let d = Infinity; for (const p of ps) { const dc = g.doors.byName(p.door)?.frameCentre; if (dc) d = Math.min(d, pathLen(g, fix, [dc[0], 0, dc[2]])); }
     if (isIn) d = -1;
     if (!best || d < best.d) best = { k, ps, d };
@@ -434,7 +520,7 @@ function pickTarget(g: Game, Q: Qrf, el: Guard[], fresh: boolean) {
   Q.target = next;
   startMove(g, Q, el);
   const lead = el[0];
-  radio(g, lead, next.kind === 'room' ? `element moving — ${next.room}, by the ${next.plan!.door.replace(/_/g, ' ')} door` : `element moving — ${next.room}, on the last fix`);
+  radio(g, lead, next.kind === 'room' ? `element moving — ${next.room}, by the ${doorSaid(g, next.plan!.door)} door` : `element moving — ${next.room}, on the last fix`);
   note(Q, g, `target:${next.kind}:${next.room}`);
 }
 function pathLen(g: Game, a: Vec3, b: Vec3): number { const p = g.col.nav.findPath(a, b); if (!p) return Infinity; let L = 0, q = a; for (const r of p) { L += flat(q, r); q = r; } return L; }
@@ -499,7 +585,7 @@ function phaseMove(g: Game, Q: Qrf, el: Guard[], dt: number) {
   const arrived = !!lead.script?.arrived || (flat(lp, lead.script?.goal ?? lp) < 1.0 && lead.speed < 0.2 && Q.phaseT > 2);
   const eta = 60;
   if (arrived || Q.phaseT > eta) {
-    if (T.kind === 'room' && flat(lp, T.plan!.stack[0]) < 4) startStack(g, Q, el);
+    if (T.kind === 'room' && flat(lp, T.plan!.stack[0]) < 4) { if (!(g.tune.qrfSquad && startDrill(g, Q, el))) startStack(g, Q, el); }
     else if (T.kind === 'room') { radio(g, lead, `can't get onto the ${T.room} from here — next`); Q.cleared.set(T.room, g.time - RECLEAR_SECS + 30); hold360(g, Q, el); }
     else hold360(g, Q, el);
   }
@@ -536,7 +622,7 @@ function stackMarksFor(g: Game, P: RoomClearPlan, n: number): Vec3[] {
 function startStack(g: Game, Q: Qrf, el: Guard[]) {
   const P = Q.target!.plan!; Q.phase = 'stack'; Q.phaseT = 0; Q.stackMarks = stackMarksFor(g, P, el.length); Q.shovedAt = NaN; Q.can = null;
   el.forEach((m, i) => route(Q, m, [Q.stackMarks[i]], { speed: 1.7 - i * 0.08, face: P.stackFace[Math.min(i, 1)], stance: i === 0 ? 'stack' : 'highReady', stackSide: P.stackSide, upper: 'none', aimAt: v3.copy(P.stackAim[Math.min(i, 1)]), crouch: false, strafe: false }));
-  radio(g, el[0], `stack on the ${P.door.replace(/_/g, ' ')} door — ${Q.target!.room}`); note(Q, g, `stack:${Q.target!.room}`);
+  radio(g, el[0], `stack on the ${doorSaid(g, P.door)} door — ${Q.target!.room}`); note(Q, g, `stack:${Q.target!.room}`);
 }
 function phaseStack(g: Game, Q: Qrf, el: Guard[]) {
   for (const m of el) advance(Q, m);
@@ -556,7 +642,7 @@ function phaseBreach(g: Game, Q: Qrf, el: Guard[]) {
     const shut = !!d && d.isClosed();
     const planted = !shut || (!!lead.script?.arrived && flat(lead.char.pos, P.kickFrom) < 0.15 && Math.abs(wrapAngle(lead.char.bodyYaw - P.kickFace)) < 0.15);
     if (!((planted && Q.phaseT > 0.45) || Q.phaseT > 1.8)) return;
-    if (d && d.angle * s < 1.0) {   // the keyed shove (squad.ts RoomClear's 'open' breach): the bolt stays as it was, the leaf unlatched and thrown hard into the room off its real hinge
+    if (d && !d.off && g.doors.openFor(d, s) < 1.0) {   // the keyed shove (squad.ts RoomClear's 'open' breach): the bolt stays as it was, the leaf unlatched and thrown hard into the room off its real hinge
       d.latched = false; d.closing = false; d.vel = s * Math.max(Math.abs(d.vel), Math.abs(P.fling)); d.quietT = -1.0; d.creakArmed = false; d.lastWho = lead.char.id; g.audio.play('doorBash', d.pos, 0.6, { rate: 1.1 });
       g.say(lead, 'door!');
     }
@@ -573,16 +659,23 @@ function phaseBreach(g: Game, Q: Qrf, el: Guard[]) {
     const inRoom = B ? inBounds(probe, B) : flat(probe, P.entry[0][P.entry[0].length - 1]) < flat([fc[0] - n[0], 0, fc[2] - n[2]], P.entry[0][P.entry[0].length - 1]);
     if (!inRoom) n = [-n[0], 0, -n[2]];
     const land: Vec3 = [fc[0] + n[0] * BANG_DEPTH, 0.05, fc[2] + n[2] * BANG_DEPTH];
-    const hand = lead.char.bones.handL ?? v3.add(lead.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(0.9, hand[1]), hand[2]];
+    const hand = lead.char.jointUnder('handL') ?? v3.add(lead.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(0.9, hand[1]), hand[2]];
     const sol = g.items.solve(from, land, 9);
     const it = Q.can = g.items.spawn('flash', from, sol.v0, { fuse: 99, who: lead.char.id, heading: v3.yawOf(sol.v0) });   // (fuse 99: it goes on OUR count below)
     it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
-    g.audio.play('throw', from, 0.7); lead.char.anim.signal('go'); Q.bangs--; Q.canLandT = NaN;
+    g.audio.play('throw', from, 0.7); lead.char.anim.tossItem(TOSS_QUICK); Q.bangs--; Q.canLandT = NaN;
     g.say(lead, 'bang out!'); note(Q, g, 'bang-out');
     // everybody's head off the doorway while it cooks
     el.forEach((m, i) => { const away: Vec3 = [m.char.pos[0] - n[0] * 3 + (i - 1.5) * n[2], 0.6, m.char.pos[2] - n[2] * 3 - (i - 1.5) * n[0]]; order(m, { aimAt: away }); });
     Q.phase = 'bang'; Q.phaseT = 0;
   } else { g.say(lead, 'no bang — going dry. go!'); startFlow(g, Q, el); }
+}
+/** a can of the element's that went off this tick: the floor-wide 'bang' report detonateStun filed is re-filed as THEIRS — a slam's worth of noise carrying
+ *  their man's id (phaseBang's note on why) */
+function theirBang(g: Game, Q: Qrf, at: Vec3, who: Guard) {
+  for (let i = g.events.length - 1; i >= 0; i--) { const e = g.events[i]; if (e.kind === 'bang' && e.time === g.time && flat(e.pos, at) < 1) { g.events.splice(i, 1); break; } }
+  g.events.push({ kind: 'door', pos: [at[0], 0, at[2]], time: g.time, loud: true, level: 1.0, who: who.char.id });
+  note(Q, g, 'bang');
 }
 function phaseBang(g: Game, Q: Qrf, el: Guard[]) {
   const it = Q.can; if (!it) { startFlow(g, Q, el); return; }
@@ -595,9 +688,7 @@ function phaseBang(g: Game, Q: Qrf, el: Guard[]) {
     // charge with 'flashbang! go, go!' — the hearing model's standing rule for a noise a colleague made
     const all = g.guards; g.guards = all.filter(x => !Q.men.includes(x));
     try { detonateStun(g, it); } finally { g.guards = all; }
-    for (let i = g.events.length - 1; i >= 0; i--) { const e = g.events[i]; if (e.kind === 'bang' && e.time === g.time && flat(e.pos, it.pos) < 1) { g.events.splice(i, 1); break; } }
-    g.events.push({ kind: 'door', pos: [it.pos[0], 0, it.pos[2]], time: g.time, loud: true, level: 1.0, who: el[0].char.id });
-    note(Q, g, 'bang');
+    theirBang(g, Q, it.pos, el[0]);
     startFlow(g, Q, el);
   }
 }
@@ -634,15 +725,72 @@ function phaseFlow(g: Game, Q: Qrf, el: Guard[]) {
   }
 }
 
+// ---------------------------------------------------------------- the room by the squad's own drill (tune.qrfSquad)
+/** At the door: the element handed to the squad's door tools as a second cast (squadcast.ts) — the men of the response and nobody else, on the guards' side,
+ *  with the building's keys (a locked door is opened, never booted: the shift's own), their own count of cans and no charges. The order is one the squad's
+ *  menu gives: BANG AND CLEAR on a room the fix is in (open and clear with no can left), else THE THRESHOLD — the room sliced from the jambs, its blind pocket
+ *  banged if a can is left, then stepped into. On the face of the door the level's plan stacks on. False (and nothing begun) when the tools refuse it — no
+ *  floor at the jambs, the door gone: the element's own drill takes the room, as with the switch off. */
+function startDrill(g: Game, Q: Qrf, el: Guard[]): boolean {
+  const T = Q.target!, P = T.plan!, d = g.doors.byName(P.door); if (!d) return false;
+  const C = Q.cast ??= squadCast(g, { mine: gd => Q.men.includes(gd), team: 'guard', ring: EVERY_KEY });
+  C.tools.sync(); C.tools.bangs = Q.bangs; C.tools.charges = 0; C.tools.frags = 0; C.tools.lights = true;   // (sync first: a roster that has changed — a man peeled off to the perimeter — starts the tools afresh, counts and all)
+  const inside = !!Q.fix && !!P.bounds && inBounds(Q.fix, P.bounds);
+  const kind = !inside ? 'threshold' : Q.bangs > 0 ? 'bangClear' : 'openClear';
+  const op = C.tools.order(kind, el, d, sideOf(d, P.stack[0]));
+  if (typeof op === 'string') { Q.bangs = C.tools.bangs; note(Q, g, `drill-no:${op}`); return false; }
+  Q.op = op; Q.opBeat = 0; Q.drills++; Q.phase = 'drill'; Q.phaseT = 0; Q.can = null; Q.canLandT = NaN;
+  radio(g, el[0], `stack on the ${doorSaid(g, P.door)} door — ${T.room}`); note(Q, g, `stack:${T.room}`); note(Q, g, `drill:${kind}`);
+  return true;
+}
+/** the entry let go of (contact, a reset, its end): every man off the cast's orders where he stands, the tools emptied — a can they had not yet thrown back in the element's pool */
+function dropDrill(Q: Qrf) {
+  const C = Q.cast, op = Q.op; Q.op = null; if (!C) return;
+  if (op && C.tools.ops.includes(op)) Q.bangs = C.tools.bangs + (op.bangHeld ? 1 : 0);   // let go of while it ran: the can in a hand comes back
+  else if (op && 'ended' in op) Q.bangs = C.tools.bangs;   // ended by the tools: their count is the count (end() gave an unthrown can back)
+  // (neither: the tools started afresh under it and their count is a new bag's — the element's own, as last read, stands)
+  C.orders.clear(); C.tools.reset(); C.tools.charges = 0; C.tools.frags = 0;
+}
+/** Once a frame while the entry runs: the squad's two ticks in the order Game.update gives its own (the tools hand out each stage, the orders walk and pose the
+ *  men), the entry's beats copied into the response's log, its can made THEIRS to the shift's ears (phaseBang's rule), and its end read: 'in' = the room is
+ *  taken and called; anything else = they could not get onto it, said, and the next room. */
+function phaseDrill(g: Game, Q: Qrf, el: Guard[]) {
+  const C = Q.cast, op = Q.op, T = Q.target; if (!C || !op || !T) { dropDrill(Q); hold360(g, Q, el); return; }
+  // a fresher fix somewhere else while nobody is through the door yet: the entry is let go of and they go to it (phaseMove's two rules — a report on the
+  // net, or a shot they heard themselves). One inside this room changes nothing: they are on their way in
+  if (op.crossed.size === 0 && g.time - Q.targetAt > 3) {
+    const P = T.plan, here = (p: Vec3) => !!P?.bounds && inBounds(p, P.bounds), bf = bestFix(g);
+    const net = !!bf && bf.t > Q.fixT + 0.5 && flat(bf.pos, Q.fix ?? bf.pos) > RETARGET_M && !here(bf.pos);
+    const own = !net && !!Q.fix && Q.fixT > Q.targetAt && Q.cueRush && flat(Q.fix, T.pos) > RETARGET_M && !here(Q.fix);
+    if (net || own) { if (net) { Q.fix = bf!.pos; Q.fixT = bf!.t; } dropDrill(Q); note(Q, g, 'drill-end:re-target'); pickTarget(g, Q, el, false); return; }
+  }
+  for (const m of el) if (m.held && C.orders.has(m)) C.orders.clear([m]);   // (in Sam's arm: off the entry — the orders would walk him out of it)
+  C.tools.tick(); C.orders.tick();
+  for (; Q.opBeat < op.beats.length; Q.opBeat++) note(Q, g, `drill:${op.beats[Q.opBeat].what}`);
+  if (op.can && !op.can.fired) { Q.can = op.can; Q.canLandT = g.time; }   // (perceiveScripted: the charge they put in is not a noise to them)
+  if (op.bangT === g.time && op.bangAt) theirBang(g, Q, op.bangAt, op.threw ?? op.lead);   // (it went off this tick: the shift were told on the net what is going in)
+  if (C.tools.ops.includes(op) && Q.phaseT <= DRILL_CAP) { Q.bangs = C.tools.bangs + (op.bangHeld ? 1 : 0); return; }
+  const why = C.tools.ops.includes(op) ? 'too long' : (op as DoorOp & { ended?: string }).ended ?? 'gone';
+  dropDrill(Q); note(Q, g, `drill-end:${why}`);
+  if (why !== 'gone') Q.spent = { room: T.room, fixT: Q.fixT };
+  if (why === 'gone') { hold360(g, Q, el); return; }   // (the tools started afresh under it: they re-form where they stand, and the next pick is the room again if it is still the one)
+  if (why === 'in') {
+    Q.drillsIn++; Q.phase = 'called'; Q.phaseT = 0; Q.cleared.set(T.room, g.time); g.clearedAt.set(T.room, g.time);   // (the shift's pair reads the same ledger — phaseFlow)
+    radio(g, el[0], `${T.room} clear — negative contact. ${Q.bangs > 0 ? 'moving on' : 'no bangs left, moving on'}`);
+    note(Q, g, `clear:${T.room}`);
+  } else { radio(g, el[0], why === 'too long' ? `${T.room} is taking too long — leave it, next` : `can't get onto the ${T.room} from here — next`); Q.cleared.set(T.room, g.time - RECLEAR_SECS + 30); hold360(g, Q, el); }
+}
+
 // ---------------------------------------------------------------- contact: the fight is the AI's; the element re-forms when it goes cold
 function toFight(g: Game, Q: Qrf, el: Guard[], seer: Guard) {
   const fix = seer.lastKnown ? v3.copy(seer.lastKnown) : v3.copy(g.player.char.pos);
   for (const m of el) {
     if (m.script) endGuardScript(m, 'alert');
     m.hold = false; m.pinned = false; m.state = 'alert'; m.awareness = Math.max(m.awareness, m === seer ? 1 : 0.95); m.lastKnown = v3.copy(m === seer && m.lastKnown ? m.lastKnown : fix);
-    m.reactT = m === seer ? 0.12 : 0.2 + Math.random() * 0.25; m.fireCd = Math.max(m.fireCd, 0.35); m.searchT = 0; m.foe = 'player'; resetChase(m);
+    m.reactT = m === seer ? 0.12 : 0.2 + simRandom() * 0.25; m.fireCd = Math.max(m.fireCd, 0.35); m.searchT = 0; m.foe = 'player'; resetChase(m);
     m.witness.alertedBy = m === seer ? 'sight' : 'radio'; m.witness.alertT = g.time;
   }
+  dropDrill(Q);   // (tune.qrfSquad: the entry they were on is let go of — a can already in the air still goes off, on its own short fuse)
   Q.fix = fix; Q.fixT = g.time; Q.phase = 'fight'; Q.phaseT = 0; Q.can = null;
   g.say(seer, 'CONTACT!'); radio(g, el.find(m => m !== seer) ?? seer, `QRF — contact, ${roomName(g.level, fix)}! push him`);
   g.audio.play('radio', seer.char.bones.head ?? seer.char.pos, 0.8); if (g.time - g.lastStingT > 8) { g.audio.play('alertSting', null, 0.75); g.lastStingT = g.time; }
@@ -669,7 +817,7 @@ function phaseFight(g: Game, Q: Qrf, el: Guard[]) {
     if (k === 0) order(m, { goal: null, face: f, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: sectorPoint(m.char.pos, f) });
     else { const st: Vec3 = [lead.char.pos[0] - Math.sin(f) * k * 1.1 + Math.cos(f) * (k === 1 ? 0.5 : k === 2 ? -0.5 : 0), 0, lead.char.pos[2] - Math.cos(f) * k * 1.1 - Math.sin(f) * (k === 1 ? 0.5 : k === 2 ? -0.5 : 0)]; route(Q, m, [nearestFree(g, st) ?? st], { speed: 2.2, face: yaw, strafe: false, stance: 'none', upper: 'aim', crouch: false, aimAt: sectorPoint(st, yaw) }); }
   });
-  radio(g, lead, `lost him. on me — re-form, we clear toward the ${roomName(g.level, bestFix(g)?.pos ?? lead.char.pos)}`);
+  radio(g, lead, `lost him. on me — re-form, we clear toward ${w('', 'the ')}${roomName(g.level, bestFix(g)?.pos ?? lead.char.pos)}`);
   note(Q, g, 'regroup');
 }
 
@@ -689,6 +837,7 @@ function maybePerimeter(g: Game, Q: Qrf) {
 export function callPerimeter(g: Game, why = 'panel'): boolean {
   const Q = g.qrf; if (Q.perim) return false;
   if (Q.state !== 'deployed' && why !== 'panel') return false;
+  if (!hasResponse(g)) return false;   // (the posts are the office's lot)
   const want = clamp(Math.round(g.tune.perimeterSize), 2, 4);
   const P: Perimeter = { state: 'called', calledAt: g.time, etaAt: g.time + Math.max(5, g.tune.perimeterEta), setAt: -1, men: [], spawned: 0, peeled: 0 };
   Q.perim = P;
@@ -699,13 +848,14 @@ export function callPerimeter(g: Game, why = 'panel'): boolean {
   const room = CHAR_BUDGET - 1 - g.guards.length; const nSpawn = Math.min(want, Math.max(0, room));
   for (let i = 0; i < nSpawn; i++) {
     try {
-      const gd = spawnUnit(g, { team: 'guard', pos: QRF_MARKS.outsideSpawn[i], yaw: Math.PI, weapon: 'aks74u', name: `GATE-${i + 1}`, light: true, tint: [0.1, 0.11, 0.13], tint2: [0.05, 0.055, 0.06] });
+      const gd = spawnUnit(g, { team: 'guard', pos: QRF_MARKS.outsideSpawn[i], yaw: Math.PI, weapon: 'aks74u', name: `GATE-${i + 1}`, light: true, tint: [...QRF_TINT], tint2: [...QRF_TINT2] });
       gd.trained = true; gd.hold = false; gd.state = 'search'; gd.awareness = HUNT_AWARENESS; gd.heardUpTo = g.eventSeq;
       P.men.push({ gd, post: QRF_MARKS.posts[P.men.length], arrivedAt: -1, fighting: false }); P.spawned++;
     } catch (e) { note(Q, g, `perim-spawn-failed:${String((e as Error)?.message ?? e).slice(0, 40)}`); break; }
   }
   const el = alive(Q, g); const spare = Math.max(0, el.length - 2);
   const nPeel = Math.min(want - P.men.length, spare);
+  const onDrill = nPeel > 0 && !!Q.op; if (onDrill) { dropDrill(Q); note(Q, g, 'drill-end:peel'); }   // (tune.qrfSquad: men leave the element under an entry — it is let go of whole, and who is left re-forms)
   for (let i = 0; i < nPeel; i++) {
     const gd = el[el.length - 1 - i];   // the rear men go out
     if (gd.script) endGuardScript(gd, 'search'); gd.state = 'search'; gd.standoff = null; gd.pieing = null; gd.searchPlan = null;
@@ -714,6 +864,7 @@ export function callPerimeter(g: Game, why = 'panel'): boolean {
   Q.men = Q.men.filter(m => !P.men.some(p => p.gd === m));   // (peeled men leave the element's order; they stay 'owned' through perim)
   for (const m of P.men.map(p => p.gd)) { Q.wps.delete(m); Q.stations.delete(m); }
   for (const p of P.men) toPost(g, p);
+  if (onDrill) hold360(g, Q, alive(Q, g));
   const names = P.men.map(p => p.gd.callsign);
   if (P.men.length) radio(g, P.men[0].gd, `${names.join(', ')} — going outside. ${P.men.map(p => p.post.name).join(' and ')}, from the outside, lights on the doors`);
   else control(g, 'no outside team to be had — the lamps are all you get. watch the exits from inside');

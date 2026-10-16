@@ -17,7 +17,7 @@
 //                         row is chatter past the soft cap (a LOAD row is kept), a coffee-break row likewise; the counters move regardless.
 //   rb-rain-annex         (U9.9) the rain bed's gain: full out in the lot, a third inside the building AND inside the roofed stair tower (ANNEX).
 //   rb-glass-reset        (U9.10) a pane starred, then restartEncounter: the glass's hit count / log go with the crack decals.
-//   rb-nocivilians        (coordinator) ?nocivilians on a FRESH profile (no stored record): nobody but the shift — the URL flag is read whatever storage holds.
+//   rb-nocivilians        (lead) ?nocivilians on a FRESH profile (no stored record): nobody but the shift — the URL flag is read whatever storage holds.
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const SS = await import(`${ROOT}/src/game/savestate.ts`);

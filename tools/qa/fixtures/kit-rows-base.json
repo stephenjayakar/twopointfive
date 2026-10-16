@@ -1,0 +1,1054 @@
+{
+ "from": "a7ce1d6 (the one build before the pouches rule)",
+ "members": [
+  {
+   "rows": [
+    {
+     "field": "weapon",
+     "label": "Guns",
+     "values": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "words": [
+      "FN2000 + Five-seveN",
+      "Five-seveN only",
+      "M870 shotgun + Five-seveN"
+     ],
+     "note": "the rifle is heard as gunfire; the pistol is not"
+    },
+    {
+     "field": "cans",
+     "label": "Cans",
+     "values": [
+      "issued",
+      "smoke",
+      "even",
+      "stun"
+     ],
+     "words": [
+      "4 smoke, 2 stun",
+      "6 smoke, no stun",
+      "3 smoke, 3 stun",
+      "2 smoke, 4 stun"
+     ],
+     "note": "six pouches: smoke to hide in, stun to blind a room"
+    },
+    {
+     "field": "frags",
+     "label": "Frag grenades",
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "words": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "note": "on 5, then a click: kills what it has a line to — you included"
+    },
+    {
+     "field": "shells",
+     "label": "40 mm grenades",
+     "values": [
+      0,
+      1,
+      2,
+      3,
+      4
+     ],
+     "words": [
+      "0",
+      "1",
+      "2",
+      "3",
+      "4"
+     ],
+     "note": "2 again with the rifle up, then the right button: a frag's blast where it lands, past 8 m"
+    },
+    {
+     "field": "suit",
+     "label": "Suit",
+     "values": [
+      "issued",
+      "black",
+      "grey",
+      "navy",
+      "olive",
+      "jungle",
+      "khaki",
+      "desert"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "urban grey",
+      "navy",
+      "olive drab",
+      "jungle green",
+      "khaki",
+      "desert tan"
+     ],
+     "note": "looks only: nobody sees a colour"
+    },
+    {
+     "field": "trim",
+     "label": "Trim",
+     "values": [
+      "issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "note": "your own green joints"
+    }
+   ],
+   "sets": [
+    {
+     "id": "issued",
+     "words": "FN2000 + Five-seveN · 4 smoke, 2 stun",
+     "rows": [
+      "rifle",
+      "issued",
+      2,
+      3,
+      "issued",
+      "issued"
+     ]
+    },
+    {
+     "id": "quiet",
+     "words": "Five-seveN only · 6 smoke, no stun · black, black trim",
+     "rows": [
+      "pistol",
+      "smoke",
+      2,
+      3,
+      "black",
+      "black"
+     ]
+    },
+    {
+     "id": "loud",
+     "words": "FN2000 + Five-seveN · 2 smoke, 4 stun · olive drab, amber trim",
+     "rows": [
+      "rifle",
+      "stun",
+      2,
+      3,
+      "olive",
+      "amber"
+     ]
+    }
+   ]
+  },
+  {
+   "rows": [
+    {
+     "field": "weapon",
+     "label": "Weapon",
+     "values": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "words": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "note": "FN2000 (suppressed)"
+    },
+    {
+     "field": "suppressed",
+     "label": "Suppressor",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "on",
+      "off"
+     ],
+     "note": "FN2000: small flash, but every 5.56 is heard as gunfire"
+    },
+    {
+     "field": "light",
+     "label": "Weapon light",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "fitted",
+      "none"
+     ],
+     "note": "burns when the light rule or the fight wants it"
+    },
+    {
+     "field": "nvg",
+     "label": "Night vision",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "goggles",
+      "none"
+     ],
+     "note": "goes dark with you, sees through the tube"
+    },
+    {
+     "field": "bangs",
+     "label": "Stun canisters",
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "words": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "charges",
+     "label": "Door charges",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "frags",
+     "label": "Frag grenades",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count: frag and clear, on the door tools"
+    },
+    {
+     "field": "shield",
+     "label": "Shield",
+     "values": [
+      false,
+      true
+     ],
+     "words": [
+      "none",
+      "ballistic shield"
+     ],
+     "note": "no shield: his weapon in both hands"
+    },
+    {
+     "field": "suit",
+     "label": "Suit",
+     "values": [
+      "issued",
+      "black",
+      "grey",
+      "navy",
+      "olive",
+      "jungle",
+      "khaki",
+      "desert"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "urban grey",
+      "navy",
+      "olive drab",
+      "jungle green",
+      "khaki",
+      "desert tan"
+     ],
+     "note": "looks only: nobody sees a colour"
+    },
+    {
+     "field": "trim",
+     "label": "Trim",
+     "values": [
+      "issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "note": "the pair colour on a four (red, blue)"
+    }
+   ],
+   "sets": [
+    {
+     "id": "issued",
+     "words": "FN2000 · light · goggles · 2 stun, 1 charge",
+     "rows": [
+      "rifle",
+      true,
+      true,
+      true,
+      2,
+      1,
+      1,
+      false,
+      "issued",
+      "issued"
+     ]
+    },
+    {
+     "id": "quiet",
+     "words": "Five-seveN · no light · goggles · 2 stun, 1 charge · black, black trim",
+     "rows": [
+      "pistol",
+      true,
+      false,
+      true,
+      2,
+      1,
+      1,
+      false,
+      "black",
+      "black"
+     ]
+    },
+    {
+     "id": "loud",
+     "words": "AKS-74U · light · goggles · 3 stun, 1 charge · olive drab, amber trim",
+     "rows": [
+      "rifle",
+      false,
+      true,
+      true,
+      3,
+      1,
+      1,
+      false,
+      "olive",
+      "amber"
+     ]
+    }
+   ]
+  },
+  {
+   "rows": [
+    {
+     "field": "weapon",
+     "label": "Weapon",
+     "values": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "words": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "note": "FN2000 (suppressed)"
+    },
+    {
+     "field": "suppressed",
+     "label": "Suppressor",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "on",
+      "off"
+     ],
+     "note": "FN2000: small flash, but every 5.56 is heard as gunfire"
+    },
+    {
+     "field": "light",
+     "label": "Weapon light",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "fitted",
+      "none"
+     ],
+     "note": "burns when the light rule or the fight wants it"
+    },
+    {
+     "field": "nvg",
+     "label": "Night vision",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "goggles",
+      "none"
+     ],
+     "note": "goes dark with you, sees through the tube"
+    },
+    {
+     "field": "bangs",
+     "label": "Stun canisters",
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "words": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "charges",
+     "label": "Door charges",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "frags",
+     "label": "Frag grenades",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count: frag and clear, on the door tools"
+    },
+    {
+     "field": "shield",
+     "label": "Shield",
+     "values": [
+      false,
+      true
+     ],
+     "words": [
+      "none",
+      "ballistic shield"
+     ],
+     "note": "no shield: his weapon in both hands"
+    },
+    {
+     "field": "suit",
+     "label": "Suit",
+     "values": [
+      "issued",
+      "black",
+      "grey",
+      "navy",
+      "olive",
+      "jungle",
+      "khaki",
+      "desert"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "urban grey",
+      "navy",
+      "olive drab",
+      "jungle green",
+      "khaki",
+      "desert tan"
+     ],
+     "note": "looks only: nobody sees a colour"
+    },
+    {
+     "field": "trim",
+     "label": "Trim",
+     "values": [
+      "issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "note": "the pair colour on a four (red, blue)"
+    }
+   ],
+   "sets": [
+    {
+     "id": "issued",
+     "words": "FN2000 · light · goggles · 1 stun, 1 charge",
+     "rows": [
+      "rifle",
+      true,
+      true,
+      true,
+      1,
+      1,
+      1,
+      false,
+      "issued",
+      "issued"
+     ]
+    },
+    {
+     "id": "quiet",
+     "words": "Five-seveN · no light · goggles · 1 stun, 1 charge · black, black trim",
+     "rows": [
+      "pistol",
+      true,
+      false,
+      true,
+      1,
+      1,
+      1,
+      false,
+      "black",
+      "black"
+     ]
+    },
+    {
+     "id": "loud",
+     "words": "AKS-74U · light · goggles · 2 stun, 1 charge · olive drab, amber trim",
+     "rows": [
+      "rifle",
+      false,
+      true,
+      true,
+      2,
+      1,
+      1,
+      false,
+      "olive",
+      "amber"
+     ]
+    }
+   ]
+  },
+  {
+   "rows": [
+    {
+     "field": "weapon",
+     "label": "Weapon",
+     "values": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "words": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "note": "FN2000 (suppressed)"
+    },
+    {
+     "field": "suppressed",
+     "label": "Suppressor",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "on",
+      "off"
+     ],
+     "note": "FN2000: small flash, but every 5.56 is heard as gunfire"
+    },
+    {
+     "field": "light",
+     "label": "Weapon light",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "fitted",
+      "none"
+     ],
+     "note": "burns when the light rule or the fight wants it"
+    },
+    {
+     "field": "nvg",
+     "label": "Night vision",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "goggles",
+      "none"
+     ],
+     "note": "goes dark with you, sees through the tube"
+    },
+    {
+     "field": "bangs",
+     "label": "Stun canisters",
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "words": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "charges",
+     "label": "Door charges",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "frags",
+     "label": "Frag grenades",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count: frag and clear, on the door tools"
+    },
+    {
+     "field": "shield",
+     "label": "Shield",
+     "values": [
+      false,
+      true
+     ],
+     "words": [
+      "none",
+      "ballistic shield"
+     ],
+     "note": "no shield: his weapon in both hands"
+    },
+    {
+     "field": "suit",
+     "label": "Suit",
+     "values": [
+      "issued",
+      "black",
+      "grey",
+      "navy",
+      "olive",
+      "jungle",
+      "khaki",
+      "desert"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "urban grey",
+      "navy",
+      "olive drab",
+      "jungle green",
+      "khaki",
+      "desert tan"
+     ],
+     "note": "looks only: nobody sees a colour"
+    },
+    {
+     "field": "trim",
+     "label": "Trim",
+     "values": [
+      "issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "note": "the pair colour on a four (red, blue)"
+    }
+   ],
+   "sets": [
+    {
+     "id": "issued",
+     "words": "FN2000 · light · goggles · 0 stun, 0 charges",
+     "rows": [
+      "rifle",
+      true,
+      true,
+      true,
+      0,
+      0,
+      0,
+      false,
+      "issued",
+      "issued"
+     ]
+    },
+    {
+     "id": "quiet",
+     "words": "Five-seveN · no light · goggles · 0 stun, 0 charges · black, black trim",
+     "rows": [
+      "pistol",
+      true,
+      false,
+      true,
+      0,
+      0,
+      0,
+      false,
+      "black",
+      "black"
+     ]
+    },
+    {
+     "id": "loud",
+     "words": "AKS-74U · light · goggles · 1 stun, 0 charges · olive drab, amber trim",
+     "rows": [
+      "rifle",
+      false,
+      true,
+      true,
+      1,
+      0,
+      0,
+      false,
+      "olive",
+      "amber"
+     ]
+    }
+   ]
+  },
+  {
+   "rows": [
+    {
+     "field": "weapon",
+     "label": "Weapon",
+     "values": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "words": [
+      "rifle",
+      "pistol",
+      "shotgun"
+     ],
+     "note": "FN2000 (suppressed)"
+    },
+    {
+     "field": "suppressed",
+     "label": "Suppressor",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "on",
+      "off"
+     ],
+     "note": "FN2000: small flash, but every 5.56 is heard as gunfire"
+    },
+    {
+     "field": "light",
+     "label": "Weapon light",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "fitted",
+      "none"
+     ],
+     "note": "burns when the light rule or the fight wants it"
+    },
+    {
+     "field": "nvg",
+     "label": "Night vision",
+     "values": [
+      true,
+      false
+     ],
+     "words": [
+      "goggles",
+      "none"
+     ],
+     "note": "goes dark with you, sees through the tube"
+    },
+    {
+     "field": "bangs",
+     "label": "Stun canisters",
+     "values": [
+      0,
+      1,
+      2,
+      3
+     ],
+     "words": [
+      "0",
+      "1",
+      "2",
+      "3"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "charges",
+     "label": "Door charges",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count the door tools spend"
+    },
+    {
+     "field": "frags",
+     "label": "Frag grenades",
+     "values": [
+      0,
+      1,
+      2
+     ],
+     "words": [
+      "0",
+      "1",
+      "2"
+     ],
+     "note": "added to the squad count: frag and clear, on the door tools"
+    },
+    {
+     "field": "shield",
+     "label": "Shield",
+     "values": [
+      false,
+      true
+     ],
+     "words": [
+      "none",
+      "ballistic shield"
+     ],
+     "note": "no shield: his weapon in both hands"
+    },
+    {
+     "field": "suit",
+     "label": "Suit",
+     "values": [
+      "issued",
+      "black",
+      "grey",
+      "navy",
+      "olive",
+      "jungle",
+      "khaki",
+      "desert"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "urban grey",
+      "navy",
+      "olive drab",
+      "jungle green",
+      "khaki",
+      "desert tan"
+     ],
+     "note": "looks only: nobody sees a colour"
+    },
+    {
+     "field": "trim",
+     "label": "Trim",
+     "values": [
+      "issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "words": [
+      "as issued",
+      "black",
+      "red",
+      "blue",
+      "green",
+      "amber",
+      "white"
+     ],
+     "note": "the pair colour on a four (red, blue)"
+    }
+   ],
+   "sets": [
+    {
+     "id": "issued",
+     "words": "FN2000 · light · goggles · 0 stun, 0 charges",
+     "rows": [
+      "rifle",
+      true,
+      true,
+      true,
+      0,
+      0,
+      0,
+      false,
+      "issued",
+      "issued"
+     ]
+    },
+    {
+     "id": "quiet",
+     "words": "Five-seveN · no light · goggles · 0 stun, 0 charges · black, black trim",
+     "rows": [
+      "pistol",
+      true,
+      false,
+      true,
+      0,
+      0,
+      0,
+      false,
+      "black",
+      "black"
+     ]
+    },
+    {
+     "id": "loud",
+     "words": "AKS-74U · light · goggles · 1 stun, 0 charges · olive drab, amber trim",
+     "rows": [
+      "rifle",
+      false,
+      true,
+      true,
+      1,
+      0,
+      0,
+      false,
+      "olive",
+      "amber"
+     ]
+    }
+   ]
+  }
+ ],
+ "pool": [
+  {
+   "bangs": 0,
+   "charges": 0,
+   "frags": 0
+  },
+  {
+   "bangs": 2,
+   "charges": 1,
+   "frags": 1
+  },
+  {
+   "bangs": 3,
+   "charges": 2,
+   "frags": 2
+  },
+  {
+   "bangs": 3,
+   "charges": 2,
+   "frags": 2
+  },
+  {
+   "bangs": 3,
+   "charges": 2,
+   "frags": 2
+  }
+ ]
+}

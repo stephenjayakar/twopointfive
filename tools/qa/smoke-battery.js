@@ -10,7 +10,7 @@
 //   await __sb.battery(['S1','S2'], VARIANTS)   every scene × variant in this boot (variants that need a reload say so and are skipped here)
 //   __sb.VARIANTS                               the live-switchable variant table {name: {apply, teardown, note}}
 //
-// Scenes (the designer, 08-12: 'a few settings so we're not overfitting to the vending machine one … gently orbiting'):
+// Scenes (the maintainer, 08-12: 'a few settings so we're not overfitting to the vending machine one … gently orbiting'):
 //   S1 vending   a thrown can 1.5 m in front of the two backlit vending fronts (emissive pixel art BEHIND smoke)
 //   S2 doorway   the tour's Smoke stop: a can on the break room's west sill, two parked torches through the plume (beams, shafts, self-shadow)
 //   S3 lamp      a can under the east sodium lamp on the lot at night in the rain (one strong overhead light, silhouettes on wet asphalt)
@@ -31,7 +31,7 @@
   const SCENES = {
     S1: { title: 'vending', look: [29.1, 0.9, 13.9], yaw: 20, pitch: 50, dist: 6.5, orbit: 14,
           can: { pos: [29.6, 1.0, 15.6], vel: [-0.8, 0.5, -2.2] },
-          pre: g => {} },   // the level as it boots: break-room panels dark, the two fronts lit — what the designer plays it in (the 'breakroom' group would take the machines down with the panels)
+          pre: g => {} },   // the level as it boots: break-room panels dark, the two fronts lit — what the maintainer plays it in (the 'breakroom' group would take the machines down with the panels)
     S2: { title: 'doorway + torches', look: [28.4, 0.7, 17.5], yaw: -18, pitch: 50, dist: 9.5, orbit: 14,
           can: { pos: [28.75, 0.45, 17.65], vel: [-1.7, 0.1, -0.05] },   // comes to rest about the sill of breakroom_w (hinge (28, 17.02), the tour's spot)
           guards: [{ i: 0, pos: [30.6, 0, 17.1], yaw: -Math.PI / 2, torch: true, aimPitch: -0.16 }, { i: 1, pos: [31.9, 0, 18.4], yaw: -1.75, torch: true, aimPitch: -0.14 }],   // two torches into the doorway from the break room side
@@ -84,7 +84,7 @@
     if (sc.act) await sc.act(g, E());                                  // (a scene may stage its own event instead of the can — the glass deck fires a burst at a pane)
     else it = g.items.spawn('smoke', [...sc.can.pos], [...sc.can.vel], { who: 1 });
     const grow = Math.round((opts.grow ?? sc.grow ?? GROW_SECS) * 60); window.__runFrames(grow);
-    return { scene: name, item: it && it.pos.map(v => +v.toFixed(2)), domains: g.smoke.domains.filter(d => d.live).length, t: g.time };
+    return { scene: name, item: it && it.pos.map(v => +v.toFixed(2)), bricks: g.smoke.stats.pool, t: g.time };
   }
   async function post(path, name, blob) { const r = await fetch(`http://localhost:${PORT()}/${path}?name=${encodeURIComponent(name)}`, { method: 'POST', body: blob }); return r.text(); }
   /** one JPEG of the staged scene at orbit position u (default the middle) → docs/shots/sb_<scene>_<tag>.jpg */
@@ -125,8 +125,8 @@
   // ---- the live-switchable variants (each returns its teardown). Reload-level variants (vol full-res, composite-side diffusion) are separate builds/flags.
   const VARIANTS = {
     base:      { note: 'as shipped: density 1.6 · MS 1.0 · diffusion 1.0 (post, τ-linear, bilinear weight, Gaussian levels) · classic march K4/every2 · vol ÷2', apply: () => () => {} },
-    dens10:    { note: 'render density 1.0 (Aug-9 value)', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.0; g.smoke.writeDomainUbo?.(); return () => { g.smoke.params.densityScale = d; g.smoke.writeDomainUbo?.(); }; } },
-    dens13:    { note: 'render density 1.3', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.3; g.smoke.writeDomainUbo?.(); return () => { g.smoke.params.densityScale = d; g.smoke.writeDomainUbo?.(); }; } },
+    dens10:    { note: 'render density 1.0 (Aug-9 value)', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.0; g.smoke.refreshDomains(); return () => { g.smoke.params.densityScale = d; g.smoke.refreshDomains(); }; } },
+    dens13:    { note: 'render density 1.3', apply: (s, g) => { const d = g.smoke.params.densityScale; g.smoke.params.densityScale = 1.3; g.smoke.refreshDomains(); return () => { g.smoke.params.densityScale = d; g.smoke.refreshDomains(); }; } },
     ms0:       { note: 'multiple scattering off (single scattering)', apply: s => { const v = s.smokeMultiScatter; s.smokeMultiScatter = 0; return () => { s.smokeMultiScatter = v; }; } },
     ms15:      { note: 'multiple scattering 1.5', apply: s => { const v = s.smokeMultiScatter; s.smokeMultiScatter = 1.5; return () => { s.smokeMultiScatter = v; }; } },
     nodiff:    { note: 'diffusion off (attenuation only)', apply: (s, g, e) => { const v = e.passes.smokeDiffuse; e.passes.smokeDiffuse = 0; return () => { e.passes.smokeDiffuse = v; }; } },
@@ -138,7 +138,7 @@
     taareact:  { note: 'TAAU treats smoke pixels as reactive × 0.6 (fresh march over a stale clamped plume)', apply: s => { const v = s.smokeTaaReact; s.smokeTaaReact = 0.6; return () => { s.smokeTaaReact = v; }; } },
     volfull:   { note: 'the volumetric pass at FULL internal resolution (÷1 instead of ÷2)', apply: (s, g, e) => { const gd = e.passes.gatherDiv, vd = e.passes.volDiv; e.passes.setDivisors(gd, 1); return () => { e.passes.setDivisors(gd, vd); }; } },
     fixpack:   { note: 'upsample relax + TAAU smoke-reactive 0.6 + vol at full res together', apply: (s, g, e) => { const b = s.smokeUpsampleRelax, c = s.smokeTaaReact, gd = e.passes.gatherDiv, vd = e.passes.volDiv; s.smokeUpsampleRelax = true; s.smokeTaaReact = 0.6; e.passes.setDivisors(gd, 1); return () => { s.smokeUpsampleRelax = b; s.smokeTaaReact = c; e.passes.setDivisors(gd, vd); }; } },
-    d13ms12nd: { note: 'density 1.3 · MS 1.2 · diffusion off', apply: (s, g, e) => { const d = g.smoke.params.densityScale, m = s.smokeMultiScatter, f = e.passes.smokeDiffuse; g.smoke.params.densityScale = 1.3; g.smoke.writeDomainUbo?.(); s.smokeMultiScatter = 1.2; e.passes.smokeDiffuse = 0; return () => { g.smoke.params.densityScale = d; g.smoke.writeDomainUbo?.(); s.smokeMultiScatter = m; e.passes.smokeDiffuse = f; }; } },
+    d13ms12nd: { note: 'density 1.3 · MS 1.2 · diffusion off', apply: (s, g, e) => { const d = g.smoke.params.densityScale, m = s.smokeMultiScatter, f = e.passes.smokeDiffuse; g.smoke.params.densityScale = 1.3; g.smoke.refreshDomains(); s.smokeMultiScatter = 1.2; e.passes.smokeDiffuse = 0; return () => { g.smoke.params.densityScale = d; g.smoke.refreshDomains(); s.smokeMultiScatter = m; e.passes.smokeDiffuse = f; }; } },
   };
   async function battery(scenes = Object.keys(SCENES), variants = Object.keys(VARIANTS), opts = {}) {
     const out = []; I.busy = { at: 'start' };

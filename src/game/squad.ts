@@ -13,8 +13,12 @@ import type { RoomClearPlan } from '../scene/level';
 import { KICK_IMPACT } from './character';
 import { tread } from './floor';
 import { kickDustFx } from './particleFx';
-import { goTo, followPath, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
+import { goTo, followPath, teamPace, teamLean, teamTurn, teamPaced, PACE, lightRuled, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
+import { gunWallCheck, gunWallPose } from './gunwall';
 import { kickScuff } from './marks';
+import { DOORMANNERS, doorwayGate } from './doorway';
+import { silentStep } from './silent';
+import { handleGate } from './handleside';
 
 /** Within this of the goal the nav path is dropped and he settles straight onto the exact spot (paths end on half-metre cell centres, and a
  *  choreographer's marks — a kicking distance off a door, a shoulder on a jamb — are not on cell centres). */
@@ -27,15 +31,20 @@ const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** settle watchdog per guard: the goal being settled onto, the closest he has got to it, and how long since that last improved — a mark he cannot
  *  actually reach (authored inside furniture, or someone standing on it) makes him stop short and stand rather than tread on the spot forever */
 const settleWatch = new WeakMap<Guard, { goal: Vec3; best: number; t: number }>();
+/** a man the room fight walks on with his chest to a threat (GuardScript.over.walk) strafes his path, and a strafe has no stuck watchdog: where he was last
+ *  seen to get somewhere, and when — wedged for over a second he walks his path the plain way (followPath's own side-step and re-path) for a while */
+const walkWatch = new WeakMap<Guard, { x: number; z: number; t: number }>();
 
 /** Side-step / back-pedal along the current nav path: followPath's waypoint tolerances and easing, but the body is not turned to the path (the
  *  runner holds it on `face`) and there is no stuck watchdog. Returns true once the path is consumed. */
-function strafeAlongPath(gd: Guard, dt: number, speed: number): boolean {
+function strafeAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean {
   const c = gd.char;
+  if (handleGate(g, gd, dt, speed, true)) return false;   // the handle side (handleside.ts): a leaf in his way opens toward him — pulled from its latch jamb, his body left to the script
+  if (DOORMANNERS.on) { const sp = doorwayGate(g, gd, dt, speed); if (sp === null) return false; speed = sp; }   // (doorway.ts: as followPath asks)
   while (gd.pathI < gd.path.length) {
     const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
     if (d < (gd.pathI === gd.path.length - 1 ? 0.25 : 0.45)) { gd.pathI++; continue; }
-    gd.speed = damp(gd.speed, speed * clamp((d + (gd.path.length - 1 - gd.pathI)) / 0.8, 0.35, 1), 4, dt);
+    const was = gd.speed; gd.speed = damp(gd.speed, speed * clamp((d + (gd.path.length - 1 - gd.pathI)) / 0.8, 0.35, 1), 4, dt); teamLean(g, gd, was, dt);
     c.vel = [dx / d * gd.speed, 0, dz / d * gd.speed]; c.pos = v3.mad(c.pos, c.vel, dt);
     return false;
   }
@@ -45,8 +54,12 @@ function strafeAlongPath(gd: Guard, dt: number, speed: number): boolean {
 
 export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const s = gd.script!; const c = gd.char;
-  const speed = s.speed ?? g.tune.guardWalk;
-  const strafing = !!s.strafe && s.face !== undefined && s.face !== null;
+  const speed = teamPace(g, gd, s.speed ?? g.tune.guardWalk);   // (a teammate's legs: guards.ts PACE — never more than a purposeful walk, whatever the order or the drill asks)
+  let fightFace = s.over && s.over.walk && s.over.face !== null ? s.over.face : null;
+  if (fightFace !== null) { const w = walkWatch.get(gd), t = g.time;
+    if (!w || t < w.t || t - w.t > 3 || Math.hypot(c.pos[0] - w.x, c.pos[2] - w.z) > 0.25) walkWatch.set(gd, { x: c.pos[0], z: c.pos[2], t });
+    else if (t - w.t > 1.2) fightFace = null; }   // (the room fight has turned him ON THE MOVE to a man he has seen: he walks on with his chest to him)
+  const strafing = fightFace !== null || (!!s.strafe && s.face !== undefined && s.face !== null);
   let moveSpeed = 0; let arrived = true; let settling = true; let farLeg: number | null = null;   // farLeg: heading of a settle with more than FACE_WITHIN still to go (a leg the nav bake found no path under — walked facing the way he goes, squared up over its last metre)
   if (s.goal) {
     const dx = s.goal[0] - c.pos[0], dz = s.goal[2] - c.pos[2]; const planar = Math.hypot(dx, dz);
@@ -54,29 +67,37 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
     if (!home) {
       goTo(g, gd, s.goal);
       if (gd.pathI >= gd.path.length) home = true;   // the path (kept by goTo while the goal stands) has already run out short of the spot — its last point is a cell centre, and a goal in a blocked cell resolves to the nearest free one: finish straight, on foot
-      else { const done = strafing ? strafeAlongPath(gd, dt, speed) : followPath(g, gd, dt, speed); moveSpeed = gd.speed; home = done && gd.pathI >= gd.path.length; }
+      else { const done = strafing ? strafeAlongPath(g, gd, dt, speed) : followPath(g, gd, dt, speed); moveSpeed = gd.speed; home = done && gd.pathI >= gd.path.length; }
     }
     if (home) {
       let w = settleWatch.get(gd); if (!w || w.goal !== s.goal) { w = { goal: s.goal, best: planar, t: 0 }; settleWatch.set(gd, w); }
       if (planar < w.best - 0.01) { w.best = planar; w.t = 0; } else if ((w.t += dt) > 3.6) { w.best = planar; w.t = 0; }   // (stuck: stand — and give it another short go every few seconds in case whatever was in the way has moved)
       if (planar > 0.04 && w.t < 0.6) {   // the last half metre: ease straight onto the mark without turning to it (a settle / side-step, feet still cycling), slowing into it
-        gd.speed = damp(gd.speed, Math.min(speed, Math.max(0.35, planar * 2.2)), 6, dt);
+        const was = gd.speed; gd.speed = damp(gd.speed, Math.min(speed, Math.max(0.35, planar * 2.2)), 6, dt); teamLean(g, gd, was, dt);
         const step = Math.min(planar, gd.speed * dt); c.pos[0] += dx / planar * step; c.pos[2] += dz / planar * step;
         c.vel = [dx / planar * gd.speed, 0, dz / planar * gd.speed]; moveSpeed = gd.speed;
         if (planar > FACE_WITHIN && !strafing) farLeg = Math.atan2(dx, dz);
       } else { gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0]; }   // there (or as close as the world lets him get): stand
       arrived = planar <= 0.3;
     } else { arrived = false; settling = false; }
-    if (!settling && strafing) c.bodyYaw = approachAngle(c.bodyYaw, s.face!, 6 * dt);   // side-step / back-pedal keeping the facing all the way
+    if (!settling && strafing) c.bodyYaw = approachAngle(c.bodyYaw, fightFace ?? s.face!, 6 * dt);   // side-step / back-pedal keeping the facing all the way
   } else { gd.speed = damp(gd.speed, 0, 8, dt); c.vel = [0, 0, 0]; }
   if (farLeg !== null) c.bodyYaw = approachAngle(c.bodyYaw, farLeg, 6 * dt);   // metres of straight leg with no path under it (a room's marks between the furniture): he walks them facing the way he goes — the man entering a room has his corner AHEAD of him, not over his shoulder — and squares up to the ordered facing over the last metre, below
+  else if (settling && s.over && s.over.face !== null) c.bodyYaw = approachAngle(c.bodyYaw, s.over.face, 5 * dt);   // (his own read has turned him — GuardScript.over, roomfight.ts)
   else if (settling && s.face !== undefined && s.face !== null) c.bodyYaw = approachAngle(c.bodyYaw, s.face, 5 * dt);   // squaring up to the ordered facing starts as he settles in, not after
   c.anim.reverse = moveSpeed > 0.2 && c.vel[0] * Math.sin(c.bodyYaw) + c.vel[2] * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (a strafe or a settle backwards): play the cycle backwards, as the player's back-pedal does
   // where the muzzle / torch / head go: an explicit point, else straight ahead
-  const aim = s.aimAt ?? null;
-  if (aim) { const to = v3.sub(aim, c.pos); c.aimYaw = Math.atan2(to[0], to[2]); c.aimPitch = damp(c.aimPitch, Math.atan2(aim[1] - (1.45 - 0.45 * c.anim.crouch), Math.hypot(to[0], to[2])), 6, dt); }   // (pitched from where the gun is: lower on a knee)
+  // (an ORDER's point is travelled to — guards.ts teamTurn; what his own eyes have put him on, the fight's read, eased by the fight itself, is his at once:
+  //  the 8 rad/s of an ordered gun is never put on it. The one thing kept off it too is a TELEPORT — PACE.swing, below)
+  const aim = s.over ? s.over.aimAt : s.aimAt ?? null;   // (GuardScript.over: his muzzle is on what HE has seen; the order's aim point waits under it)
+  const aim0 = c.aimYaw;
+  if (aim) { const to = v3.sub(aim, c.pos); const yaw = Math.atan2(to[0], to[2]); c.aimYaw = s.over ? yaw : teamTurn(g, gd, yaw, dt); c.aimPitch = damp(c.aimPitch, Math.atan2(aim[1] - (1.45 - 0.45 * c.anim.crouch), Math.hypot(to[0], to[2])), 6, dt); }   // (pitched from where the gun is: lower on a knee)
   else { c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 4 * dt); c.aimPitch = damp(c.aimPitch, -0.1, 3, dt); }
   const off = wrapAngle(c.aimYaw - c.bodyYaw); if (Math.abs(off) > 1.5) c.aimYaw = c.bodyYaw + Math.sign(off) * 1.5;   // same twist clamp as the AI
+  if (s.over && PACE.swing > 0 && teamPaced(g, gd)) {   // (the fight's point is his at once — but a muzzle does not TELEPORT: a point passing behind his back flips the clamp from one shoulder to the other, and that crossing is swung through his front, fast)
+    const r0 = clamp(wrapAngle(aim0 - c.bodyYaw), -1.5, 1.5), r1 = wrapAngle(c.aimYaw - c.bodyYaw), step = PACE.swing * dt;
+    if (Math.abs(r1 - r0) > step) c.aimYaw = c.bodyYaw + r0 + Math.sign(r1 - r0) * step;
+  }
   gd.beamDir = v3.normalize([Math.sin(c.aimYaw) * Math.cos(c.aimPitch), Math.sin(c.aimPitch), Math.cos(c.aimYaw) * Math.cos(c.aimPitch)]);
   // collisions exactly as the AI does them
   g.col.collideCircle(c.pos, c.radius, 0.2, 1.5);
@@ -84,16 +105,18 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   // muzzle discipline, as the AI keeps it (guards.ts muzzleCheck): whatever the orders, a pistol that is up in any fashion — the aim, the high ready, the stack's
   // compressed carry — with a living colleague in the line it is held along (the ordered aim point, else straight ahead) goes to the low ready until he is out
   // of it: the no. 2 tucked in behind his no. 1 on the door, either of them as the other crosses his sector inside. Ordered low already, there is nothing to lower.
-  const upper = s.upper ?? 'aim', stance = s.stance ?? 'none';
+  const upper = s.over ? 'aim' : s.upper ?? 'aim', stance = s.over ? 'none' : s.stance ?? 'none';
   const up = upper === 'aim' || stance === 'highReady' || stance === 'stack';
   muzzleCheck(g, gd, up && !s.hot ? (aim ?? aimAhead(c)) : null, dt);   // (hot: weapons free on the men in front of him — the breach's operatives on the room they take, until the guards have sides: game.ts GuardScript.hot)
+  gunWallCheck(g, gd, upper === 'aim' ? 'aim' : up ? 'port' : null, aim ?? null, dt, !!s.over);   // …and so does a wall, a jamb or a leaf inside the raised gun's reach (gunwall.ts; weapons free or not, and with a man in his sights — `over` — only a gun that is IN it; nothing with its switch off)
   c.anim.speed = moveSpeed; c.anim.upper = gd.muzzleDown ? 'none' : upper; c.anim.crouchTarget = s.crouch ? 1 : 0;
   c.anim.stance = gd.muzzleDown ? 'lowReady' : stance; c.anim.stackSide = s.stackSide ?? 1; c.anim.lookYawExtra = 0;   // (the AI's leader-glance / wait-sweep neck twist must not freeze on him for the length of the script)
+  gunWallPose(g, c);
   c.update(dt);
   attachFlashlight(g, gd);
-  if (s.light === false) gd.flashlight.enabled = false;   // (after attachFlashlight, which decides the light for a live man and would switch it straight back on)
+  if (s.light === false && !lightRuled(g, gd)) gd.flashlight.enabled = false;   // (after attachFlashlight, which decides the light for a live man and would switch it straight back on)
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
-  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, moveSpeed > 2 ? 0.8 : 0.45, false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
+  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, moveSpeed > 2 ? 0.8 : silentStep(g, gd) ?? 0.45, false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
   s.arrived = arrived;
 }
 
@@ -238,7 +261,7 @@ export class RoomClear {
    *  flows straight in behind it. A leaf already standing well open into the room is left alone: 'door's open', and in. */
   private shove(t: number) {
     const d = this.door!, P = this.plan, c = this.a.char; const s = Math.sign(P.fling) || -1;
-    if (d.angle * s < 1.0) {
+    if (!d.off && this.g.doors.openFor(d, s) < 1.0) {
       d.latched = false; d.closing = false; d.vel = s * Math.max(Math.abs(d.vel), Math.abs(P.fling)); d.quietT = -1.0; d.creakArmed = false;
       d.lastWho = c.id;   // the bang off the stop is a guard's doing: his colleagues do not come running
       this.g.audio.play('doorBash', d.pos, 0.5, { rate: 1.15 });
@@ -260,11 +283,11 @@ export class RoomClear {
         if (t > 0.6) this.say('stack1', a);
         let squeeze = false;
         if (!this.live) {   // staged: on the shot clock (they were stood two metres off the marks)
-          if (b && t > 1.2 && t < 1.6 && bIn && this.once('#hold')) b.char.anim.signal('hold');   // fist up beside his head as he tucks in: set (skipped if he is late — the arm must be down again for the squeeze)
+          if (b && t > 1.2 && t < 1.6 && bIn && this.once('#hold')) b.char.anim.signal('squeeze');   // fist up beside his head as he tucks in: set (skipped if he is late — the arm must be down again for the squeeze)
           if (b && t > 1.6) this.say('stack2', b);
           squeeze = t >= 2.5 && (!b || !b.char.anim.signalling || t > 2.9);
         } else {            // live: as they actually close up — set once both are planted (or STACK_CAP in: a man who cannot make his mark delays it, never stalls it), the squeeze a second after
-          if (isNaN(this.tSet) && ((aIn && bIn) || t > STACK_CAP)) { this.tSet = t; if (b && bIn && this.once('#hold')) b.char.anim.signal('hold'); }
+          if (isNaN(this.tSet) && ((aIn && bIn) || t > STACK_CAP)) { this.tSet = t; if (b && bIn && this.once('#hold')) b.char.anim.signal('squeeze'); }
           if (b && (bIn || t > 2.2) && t > 1.0) this.say('stack2', b);
           squeeze = !isNaN(this.tSet) && t >= Math.max(2.5, this.tSet + 1.0) && (!b || !b.char.anim.signalling || t > this.tSet + 1.5);
         }
@@ -293,7 +316,7 @@ export class RoomClear {
           const onIt = flat(c.pos, P.kickFrom) < 0.4 && Math.abs(wrapAngle(c.bodyYaw - P.kickFace)) < 0.35;   // (had he not made his mark in time, the boot cannot have met the leaf: it just comes unlatched with a push's worth, so the beat goes on without telekinesis)
           if (Math.abs(d.angle) < 1.4) { d.latched = false; d.closing = false; d.vel = onIt ? P.fling : P.fling * 0.32; d.sinceBash = onIt ? 0 : d.sinceBash; d.quietT = -0.5; d.creakArmed = false; }
           d.lastWho = c.id;   // whatever the leaf does next (the bang off the stop) is a guard's doing: his colleagues do not come running
-          if (onIt) { g.audio.play('doorBash', d.pos, 1.0, { rate: 0.9 }); kickScuff(g, d, c.pos); kickDustFx(g, d, c.pos); }   // his boot's scuff on the leaf, as the player's kick leaves (marks.ts) + the plaster and splinters off the jamb (GPU particles, nothing with them off)
+          if (onIt && !d.off) { g.audio.play('doorBash', d.pos, 1.0, { rate: 0.9 }); kickScuff(g, d, c.pos); kickDustFx(g, d, c.pos); }   // his boot's scuff on the leaf, as the player's kick leaves (marks.ts) + the plaster and splinters off the jamb (GPU particles, nothing with them off)
           this.say('in1', a);
           // off the funnel while the leaf swings and the foot comes back under him: a step back toward his own stack mark (his side of the frame), chest kept on the doorway
           const k = Math.min(1, KICK_BACK / Math.max(1e-3, flat(P.kickFrom, P.stack[0])));

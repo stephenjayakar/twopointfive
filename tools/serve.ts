@@ -4,6 +4,9 @@
 import index from "../index.html";
 import viewer from "../viewer.html";   // a FORWARD into /workbench#mode=chars (the character / prop viewer is its Characters mode) — see VIEWER.md
 import editor from "../editor.html";   // a FORWARD into /workbench#mode=level (the level editor is its Level mode) — see docs/level-format.md 'Editor'
+import replay from "../replay.html";   // the REPLAY VIEWER (src/replay/viewer.ts): a replay saved with F7 as a map with a scrubber and notes
+import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, through the game's own mixer graph
+import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import workbench from "../workbench.html";   // the WORKBENCH: editor + viewer in one shell (src/workbench.ts → src/workbench/, src/editor/, src/viewer/)
 import { handleLevels } from "./levels-api.ts";
 
@@ -14,7 +17,7 @@ const server = Bun.serve({
   port, hostname,
   development: { hmr: false, console: true },
   routes: {
-    "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench,
+    "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
     "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {
@@ -24,6 +27,9 @@ const server = Bun.serve({
     if (path === "/index.html") return Response.redirect("/" + url.search + url.hash, 302);   // the game is '/', but a built page's neighbour link (the editor's ▶ play: 'index.html?level=local') must open here too
     if (path === "/viewer.html" || path === "/viewer/") return Response.redirect("/viewer" + url.search, 302);   // one canonical URL per route (keep ?quality=…); /viewer and /editor themselves forward into /workbench in the page
     if (path === "/editor.html" || path === "/editor/") return Response.redirect("/editor" + url.search + url.hash, 302);
+    if (path === "/replay.html" || path === "/replay/") return Response.redirect("/replay" + url.search, 302);
+    if (path === "/sounds.html" || path === "/sounds/") return Response.redirect("/sounds" + url.search, 302);
+    if (path === "/music.html" || path === "/music/") return Response.redirect("/music" + url.search, 302);
     if (path === "/workbench.html" || path === "/workbench/") return Response.redirect("/workbench" + url.search + url.hash, 302);
     if (path === "/gaitlab.html" || path === "/gait/") return Response.redirect("/workbench" + url.search + "#mode=chars&scene=sam/walk", 302);
     const lv = await handleLevels(req); if (lv) return lv;

@@ -7,7 +7,6 @@ export interface Gpu {
   format: GPUTextureFormat;
   hasTimestamps: boolean;
   linearSampler: GPUSampler;
-  nearestSampler: GPUSampler;
 }
 
 export async function initGpu(canvas: HTMLCanvasElement): Promise<Gpu> {
@@ -41,7 +40,6 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<Gpu> {
     adapterInfo: `${info.vendor} ${info.architecture} ${info.description}`.trim(),
     hasTimestamps: feats.includes('timestamp-query'),
     linearSampler: device.createSampler({ magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'nearest', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', addressModeW: 'clamp-to-edge' }),
-    nearestSampler: device.createSampler({ magFilter: 'nearest', minFilter: 'nearest' }),
   };
 }
 
@@ -57,9 +55,19 @@ export function makeBufferWithData(device: GPUDevice, data: ArrayBufferView, usa
   device.queue.writeBuffer(buf, 0, data.buffer, data.byteOffset, data.byteLength);
   return buf;
 }
+/** queue.writeBuffer(buf, offset, now's first `words` words) — unless `sent`, the caller's own record of what that range of the buffer holds word for word, already says so
+ *  (then nothing is issued; true = it wrote). Only for a range NOTHING else writes, the GPU included, on a buffer that is never re-made under the record: a fresh buffer is all
+ *  zeros and so is a fresh record. Words are compared as bits (a float's NaN or −0 is just a pattern). */
+export function writeWordsIfChanged(device: GPUDevice, buf: GPUBuffer, offset: number, now: Uint32Array, sent: Uint32Array, words = now.length): boolean {
+  let w = 0; while (w < words && now[w] === sent[w]) w++;
+  if (w === words) return false;
+  device.queue.writeBuffer(buf, offset, now.buffer, now.byteOffset, words * 4);
+  for (; w < words; w++) sent[w] = now[w];
+  return true;
+}
 // ---- ASYNC PIPELINE CREATION (the boot path). A synchronous createComputePipeline() returns at once on the page's thread, but Chrome's GPU process then
 // compiles the kernel (WGSL → MSL → the Metal compiler) on ITS main thread the moment the first submit needs it — the thread that also composites the
-// browser's own UI. Ninety-odd kernels with the whole scene prelude on a cold shader cache froze all of Chrome for seconds on first load (the designer's
+// browser's own UI. Ninety-odd kernels with the whole scene prelude on a cold shader cache froze all of Chrome for seconds on first load (the maintainer's
 // 'big hang when loading the page for the first time'). The …Async() forms compile on the GPU process's worker threads and resolve when the pipeline is
 // READY, so nothing that reaches a submit ever waits on a compiler and the browser stays live while the start card counts them in. Every module keeps its
 // layouts / buffers / bind-group layouts in its (cheap, synchronous) constructor and creates its pipelines in an `async init()` through these two helpers.
@@ -84,6 +92,12 @@ export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipeline
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
   return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }));
+}
+
+/** createRenderPipelineAsync for a pipeline the caller can do WITHOUT: counted like the others, but a rejection hands back null (never the invalid synchronous pipeline) so the
+ *  caller can tell that THIS one failed and fall back — `orElse` words the fallback on the one console line */
+export function renderPipelineOrNull(device: GPUDevice, desc: GPURenderPipelineDescriptor, orElse = 'left out'): Promise<GPURenderPipeline | null> {
+  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }));
 }
 
 /** Compile a WGSL module; logs compile messages with line context. */

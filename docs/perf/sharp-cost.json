@@ -1,0 +1,15 @@
+{
+  "note": "M4 Max, Chrome/Metal dpr 2, serialized frames (CLAUDE.md protocol), sharp direct OFF (A) vs ON (B) interleaved ABBA; the maintainer's game and other lanes' tabs shared the GPU throughout (contention inflates, never deflates; read medians / p50). union = GpuTimer.unionMs over compute passes (render passes excluded: gbuffer / gdown / the OFF path's fragment composite are in NEITHER side — B's compute composite 'compS' IS counted, so the comparison over-charges B by the old composite's cost). wall = JS render call → queue drained, per frame.",
+  "still": {
+    "scene": "V3 cubicles still, 4 rounds × 20 frames per side after 8 warm, per preset pinned in-page",
+    "high":    { "res": "1368×770 → 1777×1000", "outMpx": 1.777, "A": { "union": 7.54, "p95": 7.80, "wall": 15.2 }, "B": { "union": 9.44, "p95": 9.77, "wall": 16.8, "sharpU": 1.05, "compS": 0.79, "taau": 0.26 }, "dUnion": 1.90, "dWall": 1.6, "memMB": 78 },
+    "medium":  { "res": "1072×603 → 1600×900",  "outMpx": 1.44,  "A": { "union": 6.29, "p95": 7.80, "wall": 12.2 }, "B": { "union": 6.68, "p95": 7.01, "wall": 12.1, "sharpU": 0.85, "compS": 0.66, "taau": 0.20 }, "dUnion": 0.39, "dWall": -0.1, "memMB": 65 },
+    "low":     { "res": "768×432 → 1280×720",   "outMpx": 0.92,  "A": { "union": 6.16, "p95": 10.81, "wall": 12.5 }, "B": { "union": 6.88, "p95": 8.13, "wall": 12.8, "sharpU": 0.92, "compS": 0.66, "taau": 0.26 }, "dUnion": 0.72, "dWall": 0.3, "memMB": 42 },
+    "verylow": { "res": "533×300 → 1066×600",   "outMpx": 0.64,  "A": { "union": 4.33, "p95": 8.65, "wall": 11.7 }, "B": { "union": 6.29, "p95": 8.13, "wall": 12.2, "sharpU": 0.92, "compS": 0.66, "taau": 0.26 }, "dUnion": 1.96, "dWall": 0.5, "memMB": 29 },
+    "ultra":   { "res": "2133×1200 (scale 1.0: sharp idle)", "outMpx": 2.56, "A": { "union": 19.27, "p95": 19.66, "wall": 26.2 }, "B": { "union": 19.27, "p95": 19.73, "wall": 26.0, "sharpU": 0, "compS": 0, "taau": 0.33 }, "dUnion": 0.0, "dWall": -0.2, "memMB": 0 }
+  },
+  "stress": {
+    "scene": "tools/qa/stress-scene.js setup({fight:false}) at high: QRF deployed with weapon lights, rain 0.55, two canisters, 0.6°/frame orbit; 41 lights, 2 smoke domains live; __sh.stressAB 4 blocks × 80 frames per side ABBA",
+    "high": { "res": "1368×770 → 1777×1000", "A": { "unionMean": 10.57, "p50": 10.49, "p95": 10.88, "max": 21.17, "direct": 3.22, "softblur": 1.08, "gather": 2.05, "volFroxel": 0.72, "taau": 0.24, "smoke": 0.75, "wallP50": 24.3 }, "B": { "unionMean": 12.55, "p50": 12.65, "p95": 13.04, "max": 13.17, "direct": 3.34, "softblur": 1.13, "gather": 2.02, "volFroxel": 0.70, "sharpU": 1.02, "compS": 0.82, "taau": 0.25, "smoke": 0.77, "wallP50": 25.5 }, "bar": "high stress union p95 ≤ 14 (main 11.7)" }
+  }
+}

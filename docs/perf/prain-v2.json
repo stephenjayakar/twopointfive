@@ -1,0 +1,344 @@
+{
+ "meta": {
+  "line": "exp/particle-rain @ WORKTREE .worktrees/prain, main merged in (9fd970e) · captures at ?paused&amp;quality=high&amp;mute&amp;prain (1368×770 → 1777×1000), storm forced (seed 4242, no strokes, rain 0.55, wind 1.1 / 0.45 unless said, the wind's gusting OFF for stills), everyone parked, phases zeroed, Math.random + the recycler seeded, one warm-up stage — the SAME frame count for both looks of every pair; 'v1' = the v1 LOOK on this build (grey isotropic scatter, additive, no spread, plumb fall, the weather's raw shear) so the drops are the same drops · M4 Max, Chrome/Metal · 2026-08-12"
+ },
+ "tldr": "<p><b>The ask.</b> 'Particle rain looks good but kinda flat. Arkham City had really good looking rain (reacting to lighting, specular / refracting) … also curious if we could have some wind outside and the rain respond to it.'</p><p><b>What v2 does.</b> A streak is shaded as WATER smeared over the shutter instead of a grey scatterer: each of the three shadow-tested lights goes through a drop's <b>phase function</b> (an isotropic floor + a 4π-normalised forward lobe — a streak between the eye and a lamp flares 8–11×, one lit from behind the eye reads ~0.8 of v1 — plus a strand glint bounded by the emitter's angular size), the streak's <b>tail keeps last frame's shade</b>, and the splat <b>refracts the composite behind the streak</b> through the solid-glass lane's refraction module, copied verbatim (a thin water cylinder: Snell in and out of its section, the exit ray followed to the scene's depth and projected back for the fetch, both Fresnel transmissions) laid 'over' the background by the streak's coverage — a drop over an even field vanishes into it, beside the pool it carries the pool out over the dark asphalt, over the red car it goes pink; per-drop length / brightness spread, <b>beads</b> along the streak (a big drop oscillates), a width ceiling (thin bright lines instead of 8-px bars up close). And the drops ride main's <b>wind field</b>: born with the air, dragged toward it over ~0.9 s, so the streaks slant with the storm and swing with its gusts; the lattice far field is handed the same air (and the sign that makes both layers drift WITH the wind — main's lattice drifts against it); births thinned into drifting sheets.</p><p><b>What it costs.</b> Nothing over v1 at high: union median 10.13 ms v2 vs 10.16 v1 vs 10.02 with particle rain off in the interleaved serialized take (5 × 30 frames each); the particles compute pass 0.192 vs 0.184 ms with 30 % more drops alive under a passing sheet; the refraction reads GBAA's copy of the composite (a frame stale, free) and the explicit copy on the GBAA-off path measured inside the noise. The particle budget is untouched.</p><p><b>Everything is a knob</b> (27 PRAIN rows on Tab ▸ Weather, kept per machine; 'v1 look' / 'v2 defaults' buttons) — the taste calls are listed at the bottom.</p>",
+ "built": "<ul><li><b>Phase per light, after its shadow ray</b> (particles.wgsl <code>rainShadeV</code> / <code>rainPhase</code>): <code>iso + fwdK·HG(μ; fwdG)</code> with μ the cosine of the scattering angle (defaults 0.25 / 0.75 / 0.55, × gain 1.9), + the strand glint of the water cylinder along the streak (a normalised 1-D lobe in T·H of width <code>glintRough</code> + the emitter's angular half-size — Karis' widening is the energy bound — × Schlick for water, capped per light). The lattice's <code>rainLight</code> takes the same phase through <code>frame.weatherF</code> so near and far agree.</li><li><b>Tail = last frame's shade</b> (kept as f16 × 3 in the particle's unused angular-velocity words; the vertex hands it to the tail corners).</li><li><b>Refraction through <code>refract_common.wgsl</code></b> — the solid-glass lane's binding-free module <b>copied verbatim</b> (<code>fresnelSchlick</code> / <code>fresnelF0</code>, <code>refractDir</code> → (dir, 1) or (mirrored, 0) past the critical angle, <code>slabExit</code>, <code>beerLambert</code>, <code>refractProbeDist</code>, <code>screenRefractPx</code>, <code>clampRefractOffset</code>). <code>rainRefractTap</code>: per tap across the width (−0.7 / 0 / +0.7) the eye ray refracts in through the cylinder's visible normal (η 1/1.333), leaves where the section's outward normal is the entry normal mirrored about the internal ray (a circle holds no ray past the critical angle), refracts out (η 1.333), follows the exit ray to the g-buffer's depth behind the drop (capped at <code>refractReachM</code> 6 m; the module's plane probe wants a normal the splat does not bind), projects onto the splat's own raster with that raster's matrix (<code>screenRefractPx</code>) and takes the module's screen guards (<code>clampRefractOffset</code>, 0.12 × the frame's height like the glass), for the fetch of <code>passes.hdrCopy</code> (GBAA's copy: LAST frame's composite at overlay time, free; GBAA off: hdr copied just before the splat), × the two Fresnel transmissions (F0 0.02), the module's two refusals kept the caller's as it asks (a read nearer the eye than the drop, or on the sky, keeps the pixel's own) and a luminance clamp; premultiplied 'over' by the streak's coverage, the scatter additive on top; reactivity = what actually changed on screen.</li><li><b>Spread / beads / width</b>: length × (1 ± 0.45), brightness 0.5 + 1.5 h² (mean 1), beads × (1 ± 0.4) with 3–6 beats a streak, half-width ceiling 1.1 px with the light kept up to × 2.5, near fade to 2.6 m.</li><li><b>Wind</b>: <code>WIND_KINDS_DEFAULT</code> gains the rain kind; the emit kernel adds <code>windAir(pos)</code> at birth, <code>rainStep</code> drags toward the air; rainFx.ts hands the lattice <code>shear = −air × 0.92 ÷ 9</code> low-passed by the drops' drag (v1 / main: the weather's raw +wind ÷ 9, which leans the lattice AGAINST the wind field), and integrates the sheets' offset; sheets = births thinned by a value noise carried downwind, the CPU filing (1 + amp) × as many.</li><li>Plumbing: <code>PRAIN</code> (game/rainFx.ts) → <code>Particles.rainLook</code> → six vec4 rows behind the rain window in the emit block's tail (<code>rainCfg‥F</code>); <code>passes.setSceneCopy</code> / <code>sceneCopy</code>; the splat's bindings 5 / 6 (the copy + a sampler, a 1×1 stand-in when off); <code>__rain.look / setLook / resetLook / wind / sceneCopy</code>, <code>__hotRain()</code>; harness views <code>torch</code> / <code>lamplow</code>, <code>look()</code>, <code>abLook()</code>, <code>costLook()</code>, gusts off in <code>stage()</code>.</li></ul>",
+ "viewsNote": "Each pair is one staged frame under the v1 LOOK and under v2's defaults — the drops fall where they fall in both (the wind and the sheets are part of v2, so v2's drops slant and cluster; the birth seeds are the same). Whole frames first (860 wide), then ×3 nearest crops of the regions that decide it. Judge the crops.",
+ "viewOrder": [
+  "lot",
+  "torch",
+  "lamplow",
+  "glass"
+ ],
+ "views": {
+  "lot": {
+   "title": "V1 · the night lot under the sodium lamp (the follow camera)",
+   "sub": "Sam by the red car facing the lamp; the storm's default wind (1.1, 0.45 m/s → 1.2 m/s of air after the lee)",
+   "crops": [
+    [
+     700,
+     380,
+     300,
+     240,
+     "the lamp's pool"
+    ],
+    [
+     480,
+     470,
+     300,
+     240,
+     "Sam by the red car"
+    ],
+    [
+     1000,
+     300,
+     300,
+     240,
+     "toward the building's shadow"
+    ]
+   ],
+   "read": "From the follow camera the drops are lit from the eye's own side, under the forward lobe — the phase alone would make them ~0.8 of v1 here, and the gain puts them back. What changes at this angle is everything else: the streaks slant with the air, no two are alike (length, brightness, the beads), the fat cream bars are thin lines, and over the pool a streak is glassy — some darker than the asphalt where the cylinder shows the unlit ground beyond the pool's edge, one over by the car pink with the car. Whether the beads read as 'photographic' or as 'dashed' from up here is the first taste call (beadAmp)."
+  },
+  "torch": {
+   "title": "V6 · a hand torch down the east strip by the fire exit, from low over the lot",
+   "sub": "a fixed kind-1 light with the guards' torch numbers at (39.4, 1.35, 26.0) aimed down the strip toward the lens and the ground; the east lamp overhead; camera at 15° pitch, 5.5 m off",
+   "crops": [
+    [
+     520,
+     120,
+     300,
+     260,
+     "round the torch and its beam"
+    ],
+    [
+     950,
+     480,
+     300,
+     260,
+     "the ground strip beyond the beam"
+    ],
+    [
+     60,
+     200,
+     300,
+     260,
+     "against the dark east wall"
+    ]
+   ],
+   "read": "The low camera is where the phase shows: streaks between the lens and the torch / the lamp head brighten, the ones against the dark wall keep only what the lamp overhead gives them. The width ceiling is the other visible change — v1's near drops were 4–8-px bars from down here. The strand glint fires for the few drops level with both the torch and the eye and measures next to nothing over the frame (see the caveats): physically placed, rarely met."
+  },
+  "lamplow": {
+   "title": "V7 · the sodium lamp from head height across the lot, looking toward it",
+   "sub": "camera 14° pitch, 9.5 m off, Sam under the lamp; the far field over the building is the LATTICE (beyond the disc), phased alike through weatherF",
+   "crops": [
+    [
+     950,
+     320,
+     330,
+     280,
+     "the wall under the lamp"
+    ],
+    [
+     1250,
+     0,
+     330,
+     300,
+     "up toward the lamp head — mostly lattice"
+    ]
+   ],
+   "read": "Looking toward the lamp the near streaks come up (55–70° off the light: 1.5–2.5× by the phase) and the wet wall behind them shows through the glassy ones. The top crop is nearly all lattice far field: it takes the same phase, so it neither jumps in brightness at the disc's edge nor stays grey while the near field flares — and its blockiness at grazing distance is main's, not this lane's."
+  },
+  "glass": {
+   "title": "V3 · out through the lobby frontage from indoors (the west lamp on)",
+   "sub": "rain only outside; the streaks behind the panes and their mullion shadows",
+   "crops": [
+    [
+     500,
+     60,
+     320,
+     260,
+     "through the panes onto the west lot"
+    ]
+   ],
+   "read": "Behind the glass the change is the population's spread and the thin lines; the panes' own tint and reflection sit on top of the streaks as before (the splat runs before the composite's glass? — no: the glass is analytic in the composite and the splat lands after it, so a streak seen through a pane is not tinted by it; pre-existing, noted)."
+  }
+ },
+ "windText": "<p>The drops ride the wind field main merged on the 12th (game/wind.ts → the particles' wind records; <code>windAir</code>): each is born moving with the air where it enters the slab — the storm's vector eased in over the metre and a half off the facade, × its gust — and dragged toward the air as it falls with the drop's own drag constant (g ÷ 9 m/s ≈ 1.1 /s: a real 2-mm drop answers a gust over about a second, and so do these). So the streaks SLANT by air ÷ fall (7.5° at the storm's default 1.2 m/s of air, 30° in the 5 m/s gust below), swing as the gusts come and go, and fall straighter in the facade's lee. The LATTICE far field is handed the same air every frame as its shear (× 0.92, the mean of the height profile a drop falls through, low-passed by the same constant), so near and far lean alike and swing together. Births are thinned into SHEETS on a value noise carried downwind (amplitude 0.5, 7 m): denser curtains cross the lot at the air's speed, and the population under the disc swings ±30 % round its target as they pass. Door gusts: main's door source is a jet INWARD from an open exterior door, where there is no rain to move — the rain's visible wind is the storm's.</p>",
+ "strips": [
+  {
+   "title": "A gust across the lot — v2, six frames 0.4 s apart",
+   "sub": "wind (2.6, 0.7) m/s with the storm's gusting ON (± 35 % on a 2.5-s noise): the slant and the sheets over two seconds, ×2",
+   "tag": "fs2-gust",
+   "n": 6,
+   "box": [
+    640,
+    330,
+    360,
+    300
+   ]
+  },
+  {
+   "title": "The same two seconds under the v1 look",
+   "sub": "plumb, uniform, the lattice's raw shear — for contrast",
+   "tag": "fs2-gust-v1",
+   "n": 6,
+   "box": [
+    640,
+    330,
+    360,
+    300
+   ]
+  }
+ ],
+ "wind": {
+  "capA": "v2 with BOTH layers everywhere (particleRainLattice 1) under a 3 m/s +x wind: the sharp particle streaks and the soft lattice streaks lean the same diagonal",
+  "capB": "the LATTICE ALONE with main's shear sign (particle rain off) under the same wind: it leans the other diagonal",
+  "box": [
+   700,
+   300,
+   420,
+   340
+  ],
+  "read": "The particles drift with <code>windAir</code> = +wind (checked against <code>__cam.project</code>: a +x drift puts a streak's head right of and below its tail on this screen, which is what the strong-wind still shows). The lattice's columns lean toward +shear at the top and its drops slide toward −shear, so with weather.ts's <code>shear = +wind ÷ 9</code> the lattice rain drifts AGAINST the storm that pushes main's smoke, paper and motes. v2 hands it <code>−air ÷ 9</code> under the switch; the one-line candidate for main is the sign in weather.ts (frame.shearX / Z = −wind ÷ RAIN_V) — main has no second rain layer to disagree with, but its plumes and its rain currently blow opposite ways."
+ },
+ "smear": {
+  "box": [
+   700,
+   380,
+   300,
+   240
+  ],
+  "text": "The v1 page's measure again: eight consecutive lossless frames of the settled lot view, per-pixel max − min of luma (×3). v2's streaks are partly an 'over' of a refracted fetch and mark themselves reactive by what they actually change (the scatter's display luminance + the refracted share's difference from what was there) instead of by luminance alone; the question is whether anything now trails. Read the two maps side by side: streak-shaped maxima only where streaks were, no comet tails behind them, and v2's numbers against v1's."
+ },
+ "cost": {
+  "caption": "Cost at HIGH (1368×770 → 1777×1000), the lot view, rain 0.55, storm wind (1.1, 0.45), serialized frames (runFrames → onSubmittedWorkDone → yield), THREE variants interleaved in 5 blocks of 30 frames after 45 warm each — today (particle rain off: the lattice alone), the v1 look, the v2 look; union of the compute passes (render passes excluded: the splat is a render pass and unstampable on Metal, so its cost is in the union / wall only). Two of today's five blocks caught another GPU client (16.0 / 17.8 ms with volumetrics × 3): medians are quoted and every block is listed.",
+  "rows": [
+   {
+    "variant": "today — particle rain OFF (the lattice alone)",
+    "union": 12.73,
+    "unionMed": 10.023,
+    "p95": 15.139,
+    "dUnion": 0.0,
+    "particles": 0,
+    "alive": "—",
+    "blocks": "10.02 · 9.94 · 9.88 · 16.04 · 17.77"
+   },
+   {
+    "variant": "v1 look (isotropic, additive, plumb)",
+    "union": 10.187,
+    "unionMed": 10.162,
+    "p95": 10.25,
+    "dUnion": 0.139,
+    "particles": 0.184,
+    "alive": 1878,
+    "blocks": "10.16 · 10.10 · 10.40 · 10.17 · 10.10"
+   },
+   {
+    "variant": "v2 look (phase + glint, refraction ×3 taps through the module, spread / beads, wind + sheets)",
+    "union": 10.265,
+    "unionMed": 10.13,
+    "p95": 10.25,
+    "dUnion": 0.107,
+    "particles": 0.192,
+    "alive": 2464,
+    "blocks": "10.13 · 10.12 · 10.42 · 10.58 · 10.07"
+   }
+  ],
+  "note": "By medians v2 is <b>+0.11 ms</b> over today and <b>−0.03 ms against v1</b> — the same, inside the block spread (v1's blocks 10.10–10.41, v2's 10.07–10.58). The one number that is the feature's own, the <b>particles compute pass</b>, reads 0.184 → 0.192 ms with 1 880 → 2 460 drops alive (a sheet was over the disc: v2's population swings ±30 % round the same target), i.e. the phase / glint / tail work is inside a hundredth of a millisecond per frame. An earlier interleaved take the same afternoon (4 × 30, before the refraction moved to the module's three Snell taps and the beads) read today 10.16 · v1 10.41 · v2 10.31 by medians — the same verdict. The refraction's fetches live in the splat (a render pass): priced only through the union, which does not move. GBAA off (<code>?nosharp</code> / <code>?noiq</code>): the explicit hdr → copy before the splat, refraction on vs off, 10.266 vs 10.255 ms union (3 × 30) — inside the noise. Memory: nothing new with GBAA on (its hdrCopy is reused); +one rgba16f composite-size texture with it off (14 MB at high). The particle budget (births, the ring, the tier caps) is untouched."
+ },
+ "knobs": [
+  {
+   "k": "iso",
+   "def": "0.25",
+   "v1": "1",
+   "what": "isotropic floor of the drop's phase (1 = v1's grey scatterer)"
+  },
+  {
+   "k": "fwdK",
+   "def": "0.75",
+   "v1": "0",
+   "what": "forward-lobe weight (4π-normalised HG: iso + fwdK = 1 keeps v1's all-angle mean)"
+  },
+  {
+   "k": "fwdG",
+   "def": "0.55",
+   "v1": "—",
+   "what": "the lobe's g: ×7.8 straight into a light, ×1.3 at 55°, ×0.19 with the light behind the eye"
+  },
+  {
+   "k": "glintK",
+   "def": "1.0",
+   "v1": "0",
+   "what": "strand glint of the water cylinder (H ⟂ streak), × Schlick; rarely met in this game's geometry"
+  },
+  {
+   "k": "glintRough",
+   "def": "0.08",
+   "v1": "—",
+   "what": "its lobe width, + each emitter's angular half-size (the energy bound)"
+  },
+  {
+   "k": "glintCap",
+   "def": "12",
+   "v1": "—",
+   "what": "hard cap per light × E × gain"
+  },
+  {
+   "k": "gain",
+   "def": "1.9",
+   "v1": "1",
+   "what": "× everything a drop scatters (0.8 of v1 from the follow camera, 11× looking into a lamp)"
+  },
+  {
+   "k": "tailKeep",
+   "def": "1.0",
+   "v1": "0",
+   "what": "the tail shows last frame's shade (a streak entering a beam brightens along its length); measured small"
+  },
+  {
+   "k": "refract",
+   "def": "1.0",
+   "v1": "0",
+   "what": "the refracted composite laid 'over' the background by the streak's coverage (0 = additive scatter only)"
+  },
+  {
+   "k": "refractReachM",
+   "def": "6",
+   "v1": "—",
+   "what": "how far behind the drop the exit ray is followed at most (m; the true depth behind, capped)"
+  },
+  {
+   "k": "refractTaps",
+   "def": "3",
+   "v1": "—",
+   "what": "taps across the cylinder (2 / 3 / 4), each two Snell steps + a projection + a depth load + a fetch per streak pixel"
+  },
+  {
+   "k": "refractClamp",
+   "def": "6",
+   "v1": "—",
+   "what": "each fetch's display luminance ceiling (× white)"
+  },
+  {
+   "k": "refractDepth",
+   "def": "0.3",
+   "v1": "—",
+   "what": "a fetch this much nearer the eye than the drop is not behind it (m)"
+  },
+  {
+   "k": "lenJit",
+   "def": "0.45",
+   "v1": "0",
+   "what": "streak length × (1 ± this) per drop"
+  },
+  {
+   "k": "brightJit",
+   "def": "0.7",
+   "v1": "0",
+   "what": "brightness spread 0.5 + 1.5 h² (mean 1; the lattice's own 'big')"
+  },
+  {
+   "k": "beadAmp",
+   "def": "0.4",
+   "v1": "0",
+   "what": "beads: × (1 ± this) along the streak, 3–6 beats (drop oscillation)"
+  },
+  {
+   "k": "minPx",
+   "def": "0.75",
+   "v1": "0.75",
+   "what": "half-width floor px (thinner = widened + dimmed)"
+  },
+  {
+   "k": "maxPx",
+   "def": "1.1",
+   "v1": "none",
+   "what": "half-width CEILING px (wider = narrowed + brightened …)"
+  },
+  {
+   "k": "boostCap",
+   "def": "2.5",
+   "v1": "1",
+   "what": "… by at most this"
+  },
+  {
+   "k": "nearFadeM",
+   "def": "2.6",
+   "v1": "2.0",
+   "what": "the near fade's reach (nothing under 0.35 × this)"
+  },
+  {
+   "k": "windK",
+   "def": "1.0",
+   "v1": "0",
+   "what": "× the wind field's air on a drop"
+  },
+  {
+   "k": "latticeLean",
+   "def": "0.92",
+   "v1": "0 (raw shear, opposite sign)",
+   "what": "the lattice's shear = −air × this ÷ 9, low-passed"
+  },
+  {
+   "k": "sheetAmp",
+   "def": "0.5",
+   "v1": "0",
+   "what": "sheets: births × (1 + amp·noise) ÷ (1 + amp) on a noise carried downwind"
+  },
+  {
+   "k": "sheetLen",
+   "def": "7",
+   "v1": "—",
+   "what": "their scale (m)"
+  },
+  {
+   "k": "sheetDrift",
+   "def": "1.0",
+   "v1": "—",
+   "what": "× the air's speed"
+  }
+ ],
+ "caveats": "<ul><li><b>What the refraction samples.</b> <code>passes.hdrCopy</code>. With GBAA on (every preset) that copy is refreshed AFTER the overlay, so at splat time it is LAST frame's composite (post-splat, pre-GBAA): a frame stale — under a fast pan the fetched background lags the streak by a frame (not visible at these fetch offsets in anything I captured, but it is there), the first frame after a resize fetches an unfilled copy (one dark flicker on the streaks), and rain refracting last frame's rain is a feedback whose ratio is the streaks' ~1 % pixel share. GBAA off pays an explicit copy (inside the noise) and is current.</li><li><b>TAAU on the streaks.</b> The reactive weight is now the change actually made (scatter luminance + the refracted share's difference), so glassy streaks over an even field ask nothing of the resolve and bright ones still take the frame's value; the smear maps above are the check. Under camera motion the 'over' share reprojects with the background it replaced, which is what one wants.</li><li><b>Still flat where physics says so.</b> From the follow camera every drop under the lamp is lit from the eye's side at much the same angle: the phase cannot vary what the geometry does not — the variety there is the spread, the beads, the refraction and the wind. The strand glint's condition (the half vector square to a near-vertical streak) needs the light and the eye level with the drop: a street-level view with a torch, hardly ever the follow camera — it measured ≈ 0 over the torch frame (0.02 % of pixels moved by more than 8 levels, glint 0 vs 4) and stays because it is placed right and costs nothing. The tail term likewise measured small (0.04 %).</li><li><b>Sheets and counts.</b> Over the 4-m strips of lot round the office a 7-m noise is a handful of values, so the alive count under the disc swings ±30 % round the target as sheets pass; the long mean is the target and the ring / birth budgets account for the (1 + amp) filing. Cost tables quote alive counts for this reason.</li><li><b>refract_common.wgsl is the glass lane's file byte for byte</b> (copied from its worktree before either branch merged — the two copies should be identical at merge). The glass does not read hdrCopy (it re-shades the G-buffer at the displaced pixel inside the composite); a splat drawn after the composite has to read the composite's copy, hence <code>passes.setSceneCopy</code>. Limits inherited: screen space only — what the bent ray sees must already be on screen behind the drop; off screen / behind the eye / nearer than the drop / sky → the pixel's own read, seamlessly.</li><li><b>Determinism for captures</b>: the wind's gusting is a noise of the game clock (a stage does not rewind it) — the harness switches it off for stills; and the first TWO stages after a boot differ from every later one (warm two up before an identity pair). With that, repeated stages match to the TAA's own floor (mean 0.3 / 255).</li><li><b>Not done</b>: door gusts do not touch rain (main's door source blows inward, where no rain is); no rainbow / glory lobes; a streak seen through a pane is not tinted by the pane (the glass is analytic in the composite, the splat lands after it — pre-existing); the far lattice's blockiness at grazing distance is main's.</li><li><b>Main's lattice leans against its own wind field</b> (the wind-proof pair): candidate one-liner for main, weather.ts frame.shearX / Z = −wind ÷ RAIN_V.</li></ul>",
+ "howto": "<p><b>Live</b>: <code>http://localhost:5208/?prain</code> (add <code>&amp;quality=high</code>) — walk out of the fire exit or round to the south lot; <b>Tab ▸ Weather</b> has the storm's rows (wind x / z: turn them up to 3–4 m/s to see the slant swing), then <b>EXP: particle rain</b> + v1's rows, then the 27 <b>p-rain</b> look / wind rows of this pass with 'v1 look' / 'v2 defaults' buttons; <code>__rain.look</code>, <code>__rain.setLook({ beadAmp: 0, refract: 0 })</code>, <code>__rain.resetLook()</code>, <code>__rain.wind</code>, <code>__rain.sceneCopy</code> in the console; <code>__hotRain()</code> recompiles the three particle pipelines from the shader files on disk.</p><p><b>Files</b> (branch exp/particle-rain, commits 9fd970e merge · c9b4199 · 888fe45 · the page): src/game/rainFx.ts (PRAIN, the wind coupling, the sheets' offset, the look push), src/render/particles.ts (RainLook, the tail rows, bindings 5 / 6, the scene copy in encodeDraw, hotSwapAll), src/render/shaders/particles.wgsl (rainBand, rainPhase, rainShadeV, rainStep), particles_draw.wgsl (rainVertex spread / axis, rainRefractTap, rainFragment), particles_common.wgsl (rainCfg‥F), <b>refract_common.wgsl</b> (the solid-glass lane's module, verbatim), volumetrics.wgsl (rainLight phased under weatherF), frame.ts / common.wgsl (weatherF @816, FRAME_BYTES 832), passes.ts (setSceneCopy / sceneCopy, hdr COPY_SRC + hdrCopy when either wants it), engine.ts (the copy handed to the splat), ui/bindings.ts (rows), main.ts (__rain additions, __hotRain, loadPrain), tools/qa/prain-harness.js (torch / lamplow views, look / abLook / costLook, gusts off), tools/qa/prain2-page.py (this page), docs/internal/prain.md (the notebook), docs/perf/prain-v2.json (these numbers).</p><p>v1's page, with the placement / drips / burst-test record: <a href=\"particle-rain.html\">particle-rain.html</a>.</p>"
+}

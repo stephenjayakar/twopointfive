@@ -1,4 +1,4 @@
-// The falling SHEET's dynamics — the CPU reference of what render/shaders/particles.wgsl `sheetStep` integrates for the P_SHEET particle kind (a leaf of
+// The falling SHEET's dynamics — the CPU reference of what render/shaders/particles.wgsl `sheetAir` integrates for the P_SHEET particle kind (a leaf of
 // office paper knocked off a desk by a burst: destruction.ts). One model, written twice: the shader flies the thousands you see, this file flies the same
 // equations for the QA probes (settle time, no NaN, the flutter looks like flutter — tools/qa probes 'destruction') and is the place the numbers are argued.
 // Keep the two in step: SHEET below = particles.ts KIND_DEFAULTS.sheet's slots (gravity · drag = KT · restitution = KN_LIN · keep = KN_Q · sleepV · fade · FLUT ·

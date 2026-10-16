@@ -7,7 +7,7 @@
 //   capStatic(tag, view)        go + 40 settled renders → PNG  sh_<tag>_<view>_static
 //   capMotion(tag, view)        go, then a 20-frame 0.3°/frame orbit ENDING at the view's own yaw (so the static edge definitions apply) → PNG of the last MOVING frame  sh_<tag>_<view>_motion
 //   capAll(tag)                 the three views × static + motion (fire-and-forget through __pf.run; poll __pf.res.capAll)
-//   frame1() / cost(n)          serialized offscreen renders → per-pass ms + union (the dev notes protocol)
+//   frame1() / cost(n)          serialized offscreen renders → per-pass ms + union (CLAUDE.md protocol)
 (async () => {
   // (ports: this file is shared by lanes — window.__shPort overrides the shot sink; default = the serving port + 1)
   if (!window.__perf) await import('/qa/perf-harness.js');

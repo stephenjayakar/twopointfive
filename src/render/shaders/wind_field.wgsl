@@ -9,7 +9,10 @@
 // over the last 30 % of dMax and outside 2.6 σ (a bounded support: a solver cell or a leaf outside it does exactly nothing); a jet blowing DOWN at a floor turns
 // to run out along it below WIND_DEFLECT_H over it (the impinging jet's wall jet — what slides a leaf lying under a diffuser instead of pinning it) and is nothing
 // under that floor. `floorY` ≤ −100 = no floor. The STORM: the weather's wind vector everywhere OUTDOORS (outside the two roofed footprints, under
-// WIND_STORM_TOP), easing in over the first metre and a half off the facade (the wall's lee) and slower along the ground.
+// WIND_STORM_TOP), easing in over the first metre and a half off the facade (the wall's lee) and slower along the ground. ROOF BY ROOF (windStormRoofs; game/wind.ts
+// WX_OWN.wind): a level of three or four roofs of its own used to hand windStorm their BOUNDING BOX as its one footprint — on a level built round a yard that box is
+// the yard, and nothing outdoors there had any wind. With that rule on the storm record of such a level carries all four footprints and the storm blows wherever
+// none of them is overhead, easing in off whichever is nearest; a level of one or two roofs still calls windStorm, with the rectangles it always had.
 const WIND_DEFLECT_H: f32 = 0.55;    // m over its floor below which a down-jet turns outward (game/wind.ts WIND_FIELD.deflectH)
 const WIND_DEFLECT_LOSS: f32 = 0.35; // share of the speed the turn costs at the floor itself (WIND_FIELD.deflectLoss)
 const WIND_SUPPORT_SIG: f32 = 2.6;   // radial cut-off in σ (e^−6.76 ≈ 0.001 of the axis speed) (WIND_FIELD.supportSigma)
@@ -44,6 +47,21 @@ fn windInRect(p: vec2f, R: vec4f) -> bool { return p.x > R.x && p.y > R.y && p.x
 fn windStorm(windV: vec3f, interior: vec4f, annex: vec4f, p: vec3f) -> vec3f {
   if (p.y > WIND_STORM_TOP || p.y < 0.0 || windInRect(p.xz, interior) || windInRect(p.xz, annex)) { return vec3f(0.0); }
   let dOut = max(max(interior.x - p.x, p.x - interior.z), max(interior.y - p.z, p.z - interior.w));   // metres outside the interior rectangle along its nearer axis (> 0 out here)
+  let lee = smoothstep(0.0, WIND_STORM_LEE, dOut);
+  let hgt = 0.55 + 0.45 * clamp(p.y / 2.5, 0.0, 1.0);
+  return windV * (lee * hgt);
+}
+/** metres ground point p stands outside roof R along its nearer axis (> 0 in the open, ≤ 0 under it) — a footprint with no width is no roof at all: far away */
+fn windRoofOut(p: vec2f, R: vec4f) -> f32 {
+  if (R.z <= R.x || R.w <= R.y) { return 1e6; }
+  return max(max(R.x - p.x, p.x - R.z), max(R.y - p.y, p.y - R.w));
+}
+/** … and the storm's air at p under up to FOUR roofs (x0 z0 x1 z1 each; an empty one = none): `windV` wherever no roof is overhead, nothing under one, above
+ *  WIND_STORM_TOP or under the ground — windStorm's rule roof by roof, the lee taken off the NEAREST roof (windStorm eases in off its first rectangle alone) */
+fn windStormRoofs(windV: vec3f, r0: vec4f, r1: vec4f, r2: vec4f, r3: vec4f, p: vec3f) -> vec3f {
+  if (p.y > WIND_STORM_TOP || p.y < 0.0) { return vec3f(0.0); }
+  let dOut = min(min(windRoofOut(p.xz, r0), windRoofOut(p.xz, r1)), min(windRoofOut(p.xz, r2), windRoofOut(p.xz, r3)));
+  if (dOut <= 0.0) { return vec3f(0.0); }
   let lee = smoothstep(0.0, WIND_STORM_LEE, dOut);
   let hgt = 0.55 + 0.45 * clamp(p.y / 2.5, 0.0, 1.0);
   return windV * (lee * hgt);

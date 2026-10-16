@@ -55,7 +55,7 @@ G.navigator = { clipboard: { writeText: async () => {} } };
 const winDispatch = (t: string, e: any) => { for (const f of [...(winListeners.get(t) ?? [])]) f({ preventDefault() {}, stopPropagation() {}, ...e }); };
 
 // ---------------------------------------------------------------- stand-in runtime: real Character, lights, camera, stage, gait meter; the engine a settings bag
-const { Character, defaultAnimParams } = await import(`${ROOT}/src/game/character.ts`);
+const { Character } = await import(`${ROOT}/src/game/character.ts`);
 const { LightSet, lightFromDef } = await import(`${ROOT}/src/render/lights.ts`);
 const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
 const { buildStage } = await import(`${ROOT}/src/scene/stage.ts`);

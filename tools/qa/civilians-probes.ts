@@ -25,7 +25,7 @@
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const CV = await import(`${ROOT}/src/game/civilians.ts`);
-const { CIV, CIV_STATS, CIV_LOG, CIV_DEBUG, CIV_SPOTS, checkCivSpots, civiliansSummary, civPanic } = CV;
+const { CIV, CIV_STATS, CIV_DEBUG, CIV_SPOTS, checkCivSpots, civiliansSummary, civPanic } = CV;
 const { CIV_LINES, civilianLines } = await import(`${ROOT}/src/game/dialogue.ts`);
 const { startGrab, startTakedown } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);

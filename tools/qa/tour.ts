@@ -37,6 +37,9 @@ const { Demo } = await import(`${ROOT}/src/game/demo.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, killGuard, hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
+// TOUR_DIGEST=1 (env): every run prints `digest <word> · <n> half seconds` — game/digest.ts's digest of the whole game every 30 frames of the laps, folded into one word
+// (two builds, or the two sides of a switch, that play the tour the same agree on it) — and how many pieces the debris pool was ever handed. A bystander.
+const DIG = process.env.TOUR_DIGEST === '1' ? { ...(await import(`${ROOT}/src/game/digest.ts`)), hashStr: (await import(`${ROOT}/src/game/dialogue.ts`)).hashStr, word: '', n: 0, f: 0, pool: 0 } : null;
 
 // ---------------------------------------------------------------- args
 const argv = process.argv.slice(2);
@@ -417,7 +420,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
         if (d.locked !== r.locked || d.lockBroken || d.pick !== 0) fail(`${label}-door-lock-${d.def.name}`, `abort in stop ${abortedIn} hands back door ${d.def.name} locked=${d.locked} (authored ${r.locked}) broken=${d.lockBroken} pick=${d.pick}`);
         if (Math.abs(d.angle - r.angle) > 1e-3 || d.latched !== r.latched) {
           const why = `door ${d.def.name} at ${d.angle.toFixed(2)} (authored ${r.angle.toFixed(2)}) latched=${d.latched} lastWho=${d.lastWho}`;
-          if (d.def.closer !== false) warn(`abort in stop ${abortedIn}: ${why} — has a closer, on its way shut`); else fail(`${label}-door-angle-${d.def.name}`, `abort in stop ${abortedIn} hands back ${why} — no closer: it stays there`);
+          if (game.doors.hasCloser(d)) warn(`abort in stop ${abortedIn}: ${why} — has a closer, on its way shut`); else fail(`${label}-door-angle-${d.def.name}`, `abort in stop ${abortedIn} hands back ${why} — no closer: it stays there`);
         }
       }
       for (const s of levelDiff({ doorAngles: false }).filter(x => !x.startsWith('door'))) fail(`${label}-level:${s.split(' ').slice(0, 3).join(' ')}`, `abort in stop ${abortedIn} hands back: ${s}`);
@@ -451,6 +454,7 @@ async function runOnce(seed: number, runIdx: number): Promise<RunReport> {
       }
       try { W.step(dt, demoPos); }
       catch (e: any) { exceptions++; fail(`exception-step-${String(e?.message ?? e).slice(0, 60)}`, `game step threw: ${e?.stack ?? e}`); if (exceptions > 30) { fail('abort-run', 'too many exceptions'); break; } }
+      if (DIG && ++DIG.f % 30 === 0) { DIG.word = DIG.hashStr(DIG.word + DIG.hashDigest(DIG.digestGame(W.game, true))).toString(16); DIG.n++; DIG.pool = W.game.destr?.debris?.stats?.spawned ?? 0; }
       try { perFrame(dt); } catch (e: any) { exceptions++; fail('exception-harness', `perFrame threw: ${e?.stack ?? e}`); }
       if (!demo.active) { ended = abortedIn < 0; frame++; break; }
     }
@@ -487,6 +491,7 @@ for (let r = 0; r < RUNS; r++) {
     console.log(`${LAPS > 1 ? String(s.lap).padStart(3) + ' ' : ''}${String(s.i).padStart(3)}   ${s.tDemo.toFixed(2).padStart(12)}  ${s.tGame.toFixed(2).padStart(13)}  ${s.simDur.toFixed(2).padStart(6)}  ${String(s.dur).padStart(8)}  ${String(s.frames).padStart(6)}  ${String(s.hits).padStart(4)}  ${String(s.says).padStart(5)}  ${s.caption.slice(0, 52)}${s.caption.length > 52 ? '…' : ''}`);
     for (const n of s.notes) console.log(`${' '.repeat(LAPS > 1 ? 82 : 78)}↳ ${n}`);
   }
+  if (DIG) { console.log(`digest ${DIG.word} · ${DIG.n} half seconds · ${DIG.pool} pieces into the debris pool (run ${r + 1}, seed ${seed})`); DIG.word = ''; DIG.n = 0; DIG.f = 0; }
   console.log(`--- run ${r + 1}: ${rep.pass ? 'PASS' : 'FAIL'} · ${rep.frames} frames (${rep.simSeconds.toFixed(1)} s sim) in ${rep.wallSeconds.toFixed(2)} s wall · laps ended by themselves: ${rep.lapsEnded}/${LAPS}${ABORT ? ' (last lap aborted on purpose)' : ''} · ${rep.failures.length} failure(s), ${rep.warnings.length} warning(s)`);
   for (const f of rep.failures) console.log(`  FAIL ${f.split('\n')[0].slice(0, 400)}`);
   for (const w of rep.warnings) console.log(`  warn ${w}`);

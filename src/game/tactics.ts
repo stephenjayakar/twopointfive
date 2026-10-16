@@ -1,4 +1,4 @@
-// Pursuit tactics (STATUS E12 (a) + (b), the designer's words: "they all just run straight at sam. instead they should coordinate flanking maneuvers" and
+// Pursuit tactics (STATUS E12 (a) + (b), the maintainer's words: "they all just run straight at sam. instead they should coordinate flanking maneuvers" and
 // "if they notice their buddies dead by a door, they shouldn't just blindly charge in past them!"). Three things, all for HUNTING men — a fix but no eyes on
 // their man; the fight inside six metres, the standoff and the shot are untouched — all of them off with Game.tune.tactics (then not one call below does
 // anything and guards.ts runs the chase it always ran: tools/qa tactics-identity holds that to the byte) and none of them under the tour (quietUtility):
@@ -34,16 +34,26 @@
 // combat.ts killGuard → tacticsManDown. The radio lines go through Game.say like everybody's (so the debrief's chronicle has them). Everything readable from
 // above is the point: the presser kneeling at his corner, the flanker jogging the long way round, the pair on the jamb slicing the opening before they cross.
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
-import type { Game, Guard, GameEvent } from './game';
+import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { Item } from './throwables';
 import type { Team } from './teams';
+import { wallReactReplan } from './wallreact';
 import type { RoomClearPlan } from '../scene/level';
 import { goTo, followPath, pieDoorway, PIE_EYES_SECS, dropToSearch, resetChase, pointInView, bodyPos, doorCells, crossesDoor, frameOf, notGettingAnywhere, chaseFix } from './guards';
-import { isHostile, teamOfId, foeDown } from './teams';
+import { laneCovers, laneDoor } from './lanes';
+import { isHostile, teamOfId, foeDown, spokenName, defenderWords } from './teams';
+import { sideShotEnergy } from './glasspen';
 import { detonateStun } from './combat';
-import { roomName } from './dialogue';
+import { placeName, isOffice, ownPlace } from './dialogue';
+import { WORDS } from './words';
+import { doorSaidName, shorthandId } from './doornames';
+import { doorWords } from './orders';
 import { SUPPRESSION } from './suppression';
+import { lookSince } from './pressure';
+import { squadLookSince } from './enemysquads';
+import { toolSpot, toolStep, latchFirst } from './handleside';
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 // ---------------------------------------------------------------- knobs (Game.tune carries them; these are the shipped values and the per-machine copy)
 type TacticsTune = { tactics: boolean; flankWait: number; loneWait: number; doorDanger: number; doorWait: number };
@@ -107,7 +117,7 @@ export interface Plan {
   firstArriveT: number; lastRadioT: number; contact: boolean;
 }
 export interface Lone { fix: Vec3; holdAt: Vec3 | null; los: boolean; t0: number; holdT: number; called: boolean; released: boolean; releasedWhy: string; }
-export type DangerWhy = 'drop' | 'body' | 'rounds';
+export type DangerWhy = 'drop' | 'body' | 'rounds' | 'press';
 export interface DangerRec { door: Door; team: Team; until: number; t0: number; why: DangerWhy; victim: string | null; banged: boolean; entered: boolean; called: boolean; summoned: Guard | null; }
 type GatePhase = 'stack' | 'open' | 'wait' | 'stacked' | 'toss' | 'bang' | 'slice' | 'cross' | 'done';
 export interface Gate {
@@ -121,6 +131,7 @@ export interface Gate {
   path: Vec3[] | null; pathI: number; pathFor: Vec3 | null; stallRef: Vec3 | null; stallT: number;
   can: Item | null; tossT: number; landT: number; bangT: number;
   goalNear: boolean; opened: boolean; crossed: boolean;
+  hs?: { pos: Vec3; yaw: number } | null;   // (handleside.ts) the place at the handle the lead steps to before he works a shut leaf — null once dealt with
   /** what the wait resolved to (the charge if anybody stacked has one, else the slice) and who throws it */
   action: 'toss' | 'slice'; thrower: Guard | null;
 }
@@ -204,12 +215,12 @@ function entryBearing(T: Vec3, from: Vec3, path: Vec3[], R: number): number {
  *  a glass pane, which a round stops in) — the same question the fight asks before a round (guards.ts clearShot). Not the line of sight: eyes pass the conference
  *  glazing, so by sight a man 'has' a fix inside that room from anywhere on the corridor and would take his corner, or hold his angle, on the wrong side of a
  *  pane he can neither fire through nor be fired at through — cover it is (both ways), a position on the fix it is not. Behind brick the two are one line. */
-function losOpen(g: Game, p: Vec3, T: Vec3): boolean { return !g.col.shotBlocked([p[0], 1.15, p[2]], [T[0], 1.0, T[2]]); }
+function losOpen(g: Game, p: Vec3, T: Vec3, team: Team): boolean { return !g.col.shotBlocked([p[0], 1.15, p[2]], [T[0], 1.0, T[2]], 0.02, sideShotEnergy(g, team)); }   // (glasspen.ts: a side told not to shoot through glass takes no corner behind a pane)
 /** The last point along from → path that is still COVERED from T before the line opens for good on the way in (the last blocked → open transition), at least
  *  `minFromT` off T; null when the whole way is open (or never opens). Where a presser stops short; where a flanker is 'set'. (Along a glazed wall the line
  *  stays shut the length of the glass and opens at the door: the jamb is the corner, not a mullion half way along the panes.) */
-function lastCoverPoint(g: Game, from: Vec3, path: Vec3[], T: Vec3, minFromT: number): Vec3 | null {
-  const s = samplePath(from, path, 0.3); const los = s.map(p => losOpen(g, p, T));
+function lastCoverPoint(g: Game, from: Vec3, path: Vec3[], T: Vec3, minFromT: number, team: Team): Vec3 | null {
+  const s = samplePath(from, path, 0.3); const los = s.map(p => losOpen(g, p, T, team));
   for (let i = s.length - 2; i >= 0; i--) if (!los[i] && los[i + 1] && flat(s[i], T) >= minFromT) return s[Math.max(0, i - 1)];   // (a foot further back than the very edge: his shoulder, not his nose, at the corner)
   return null;
 }
@@ -363,12 +374,26 @@ export function plansOf(g: Game): Plan[] { return states.get(g)?.plans ?? []; }
 /** Deal roles to `men` (two or more free alert men of one side) over the nav grid toward `target` — see the block comment (A). Registers the plan and its roles
  *  (replacing any these men held) and returns it; null if fewer than two of them have any route at all. `why` names what dealt it (formed / the fix moved /
  *  a man dropped out / the presser pinned) for the log; `prefer` (a swap): this man presses if he has a route. */
+/** THE FLANKER'S CALL. 'coming at him / them' says there is somebody to come at. A plan whose every man is out on a LOOK — a pair sent to where the team
+ *  was last put after `sweepSecs` of nothing (pressure.ts PRESSURE.sweep, enemysquads.ts drillLook) — with no eye of their side on the team since that look
+ *  was called has nobody: he says where he comes in from and no more. Words only (the dialogue pass: `WORDS.on` off = the line as it was); no rule reads it. */
+function flankCall(g: Game, plan: Plan, m: Guard, place: string): string {
+  const who = defenderWords(m) ? 'them' : 'him';
+  if (!WORDS.on) return `moving round — coming at ${who} from ${place}`;
+  let since = Infinity;
+  for (const o of plan.members) { const t = lookSince(g, o) ?? squadLookSince(g, o); if (t === null) return `moving round — coming at ${who} from ${place}`; since = Math.min(since, t); }
+  const seen = g.guards.some(o => o.team === plan.team && o.lastSeenT > since);
+  return seen ? `moving round — coming at ${who} from ${place}` : `moving round — coming in from ${place}`;
+}
 export function planApproach(g: Game, men: Guard[], target: Vec3, why = 'formed', prefer: Guard | null = null): Plan | null {
   const st = S(g); const nav = g.col.nav; const team = men[0].team;
   const T: Vec3 = [target[0], 0, target[2]];
   // any old plan these men were in goes (its other members are re-dealt below if they are in `men`, else fall back to the chase)
   for (const m of men) { const old = st.roles.get(m)?.plan; if (old && old.phase !== 'done') endPlan(g, old, `re-dealt (${why})`, false); }
-  const dangerOnly = (m: Guard) => { const r = st.roles.get(m); st.roles.delete(m); const p = tacticsPenalty(g, m, T); if (r) st.roles.set(m, r); return p; };   // (his side's dangerous doorways priced in, no avoid-set: the direct route)
+  // (asked twice for every man who is not the presser — his direct route, then the base of his flank's price — and the answer is the same both times: nothing it
+  // reads moves inside this deal, and with a dangerous doorway on his side it costs a whole path search. Made once a man; the roster's own delete / set kept as it was.)
+  const pens = new Map<Guard, ReturnType<typeof tacticsPenalty>>();
+  const dangerOnly = (m: Guard) => { const r = st.roles.get(m); st.roles.delete(m); let p = pens.get(m); if (!pens.has(m)) { p = tacticsPenalty(g, m, T); pens.set(m, p); } if (r) st.roles.set(m, r); return p; };   // (his side's dangerous doorways priced in, no avoid-set: the direct route)
   const routes = men.map(m => { const path = nav.findPath(m.char.pos, T, 6000, dangerOnly(m)); return { gd: m, path, len: path ? pathLen(m.char.pos, path) : Infinity }; }).filter(r => r.path && Number.isFinite(r.len));
   if (routes.length < 2) { st.dealFailT = g.time; TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s PLAN not dealt (${why}): ${routes.length} of ${men.length} men have a route to (${T[0].toFixed(1)}, ${T[2].toFixed(1)})`); return null; }
   routes.sort((a, b) => a.len - b.len);
@@ -381,7 +406,7 @@ export function planApproach(g: Game, men: Guard[], target: Vec3, why = 'formed'
   const plan: Plan = { id: ++st.planSerial, team, target: T, t0: g.time, replannedAt: g.time, replans: 0, members: routes.map(r => r.gd), roles: new Map(), phase: 'approach', goT: -1, why, presserBearing: pBear, presserLen: P0.len, corridor, firstArriveT: -1, lastRadioT: -100, contact: false };
   const mk = (kind: RoleKind, holdAt: Vec3 | null, route: Vec3[], len: number, bearing: number, av: Set<number> | null): Role => ({ kind, plan, holdAt, route, len, bearing, avoid: av, set: false, holding: false, holdT: 0, arrived: false, saidMoving: false, saidSet: false, t0: g.time });
   // the presser: up the short route to the last corner that still hides him (else the disc's edge)
-  const pHold = lastCoverPoint(g, P0.gd.char.pos, P0.path!, T, 1.0) ?? pointShortOfEnd(P0.gd.char.pos, P0.path!, DISC_M);
+  const pHold = lastCoverPoint(g, P0.gd.char.pos, P0.path!, T, 1.0, P0.gd.team) ?? pointShortOfEnd(P0.gd.char.pos, P0.path!, DISC_M);
   plan.roles.set(P0.gd, mk('presser', pHold, P0.path!, P0.len, pBear, null));
   // the others: a flank if the dear-corridor search finds a way in from the other side inside the ratio, else a second presser
   const W = nav.W;
@@ -391,7 +416,7 @@ export function planApproach(g: Game, men: Guard[], target: Vec3, why = 'formed'
     const flen = fp ? pathLen(r.gd.char.pos, fp) : Infinity; const fBear = fp ? entryBearing(T, r.gd.char.pos, fp, DISC_M) : pBear;
     const apart = degApart(fBear, pBear);
     if (fp && flen <= FLANK_MAX_RATIO * Math.max(P0.len, r.len) && apart >= FLANK_MIN_DEG - 0.5) {
-      const setAt = lastCoverPoint(g, r.gd.char.pos, fp, T, 1.0) ?? pointShortOfEnd(r.gd.char.pos, fp, DISC_M + 0.5);
+      const setAt = lastCoverPoint(g, r.gd.char.pos, fp, T, 1.0, r.gd.team) ?? pointShortOfEnd(r.gd.char.pos, fp, DISC_M + 0.5);
       plan.roles.set(r.gd, mk('flanker', setAt, fp, flen, fBear, avoid)); TACTICS_STATS.flankers++;
       TACTICS_DEBUG.log?.(`  ${r.gd.callsign}: FLANKER — ${flen.toFixed(1)} m (direct ${r.len.toFixed(1)}, presser ${P0.len.toFixed(1)}), comes in at ${Math.round(fBear / DEG)}° = ${Math.round(apart)}° round from the presser, set at (${setAt[0].toFixed(1)}, ${setAt[2].toFixed(1)})`);
     } else {
@@ -403,7 +428,7 @@ export function planApproach(g: Game, men: Guard[], target: Vec3, why = 'formed'
   st.plans.push(plan); TACTICS_STATS.plans++; if (why !== 'formed') TACTICS_STATS.replans++;
   TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s PLAN #${plan.id} (${why}) on (${T[0].toFixed(1)}, ${T[2].toFixed(1)}): presser ${P0.gd.callsign} ${P0.len.toFixed(1)} m in at ${Math.round(pBear / DEG)}°, holds at (${pHold[0].toFixed(1)}, ${pHold[2].toFixed(1)}); ` + [...plan.roles].filter(([, r]) => r.kind !== 'presser').map(([m, r]) => `${m.callsign} ${r.kind}`).join(', '));
   // the flanker says so (radio: the debrief hears it); a re-deal only if the roles are news
-  for (const [m, role] of plan.roles) if (role.kind === 'flanker' && !role.saidMoving) { role.saidMoving = true; g.say(m, `moving round — coming at him from ${roomName(g.level, role.holdAt ?? T)}`, true); plan.lastRadioT = g.time; }
+  for (const [m, role] of plan.roles) if (role.kind === 'flanker' && !role.saidMoving) { role.saidMoving = true; g.say(m, flankCall(g, plan, m, placeName(g.level, role.holdAt ?? T)), true); plan.lastRadioT = g.time; }
   return plan;
 }
 /** Dissolve a plan: its roles come off the roster (the men chase / search as they always did from where they stand, chase clocks fresh). */
@@ -432,13 +457,14 @@ function tickPlans(g: Game) {
     const fix = fresh.lastKnown!;
     if (flat(fix, plan.target) > REPLAN_M && now - plan.replannedAt > REPLAN_GAP_SECS) {
       for (const m of live) if (m !== fresh) { m.lastKnown = v3.copy(fix); }
-      if (now - plan.lastRadioT > 4) { g.say(fresh, `he's moved — ${roomName(g.level, fix)}`, true); plan.lastRadioT = now; }
+      if (now - plan.lastRadioT > 4) { g.say(fresh, `${defenderWords(fresh) ? "they've" : "he's"} moved — ${placeName(g.level, fix)}`, true); plan.lastRadioT = now; }
       const far = live.filter(m => flat(m.char.pos, fix) > JOIN_M && !inContact(g, m));
       endPlan(g, plan, 'the fix moved');
       if (far.length >= 2) planApproach(g, far, fix, 'the fix moved');
       continue;
     }
     if (plan.phase !== 'approach') continue;
+    if (now - plan.replannedAt > REPLAN_GAP_SECS && wallReactReplan(g, plan.team, plan.replannedAt, live)) { const rest = live.filter(m => !inContact(g, m)); endPlan(g, plan, 'a wall opened'); if (rest.length >= 2) planApproach(g, rest, fix, 'a wall opened'); continue; }   // wallreact.ts: one of them has learned of a hole a man fits through since the roles were dealt — the routes are dealt again over the floor as it now is (false on its first line with nothing broken)
     const presser = live.find(m => plan.roles.get(m)?.kind === 'presser') ?? null;
     if (!presser) { const rest = live.filter(m => !inContact(g, m)); endPlan(g, plan, 'the presser dropped out'); if (rest.length >= 2) planApproach(g, rest, fix, 'the presser dropped out'); continue; }
     // the presser pinned by fire, a flanker steadier: the flanker presses from where he is, the pinned man falls in behind when he can
@@ -583,7 +609,7 @@ function loneCorner(g: Game, gd: Guard, fix: Vec3): { p: Vec3; los: boolean } {
   const path = nav.findPath(from, fix, 6000, tacticsPenalty(g, gd, fix)) ?? [];
   const s = samplePath(from, path, 0.3);
   let cand: Vec3 | null = null;
-  for (const p of s) { if (flat(p, fix) < LONE_HOLD_MIN_M) break; if (losOpen(g, p, fix)) { cand = p; break; } }
+  for (const p of s) { if (flat(p, fix) < LONE_HOLD_MIN_M) break; if (losOpen(g, p, fix, gd.team)) { cand = p; break; } }
   TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s ${gd.callsign} LONE corner search from (${from[0].toFixed(2)}, ${from[2].toFixed(2)}) to (${fix[0].toFixed(1)}, ${fix[2].toFixed(1)}): path ${path.length} pts / ${s.length} samples, first sight ${cand ? `(${cand[0].toFixed(1)}, ${cand[2].toFixed(1)}) ${flat(cand, fix).toFixed(1)} m off it` : 'none short of the limit'}`);
   if (!cand) return { p: pointShortOfEnd(from, path, LONE_HOLD_MIN_M + 0.5), los: false };   // (no sight of it short of the limit: he holds six metres up his own route and covers the way in)
   // onto a wall: the free cell within LONE_COVER_R of it with the most statics about it that still sees the fix and is no nearer it than the limit
@@ -594,7 +620,7 @@ function loneCorner(g: Game, gd: Guard, fix: Vec3): { p: Vec3; los: boolean } {
     const q: Vec3 = [(x + 0.5) * cs, 0, (z + 0.5) * cs]; const d = flat(q, cand); if (d > LONE_COVER_R || flat(q, fix) < LONE_HOLD_MIN_M) continue;
     const w = wallsAbout(g, q); if (w < 2) continue;
     if (!(w > bw || (w === bw && best !== cand && d < bd))) continue;   // more wall about it wins; as much, the nearer
-    if (!(nav.walkable(cand, q) || !g.col.solidBlocked([cand[0], 0.5, cand[2]], [q[0], 0.5, q[2]])) || !losOpen(g, q, fix)) continue;   // (a step he can take — the grid's walkable is shy of the very wall he wants his shoulder on, so a clear line at shin height does too: the SOLID question — and the fix still in his line from there: the line of FIRE, losOpen; a pane blocks both)
+    if (!(nav.walkable(cand, q) || !g.col.solidBlocked([cand[0], 0.5, cand[2]], [q[0], 0.5, q[2]])) || !losOpen(g, q, fix, gd.team)) continue;   // (a step he can take — the grid's walkable is shy of the very wall he wants his shoulder on, so a clear line at shin height does too: the SOLID question — and the fix still in his line from there: the line of FIRE, losOpen; a pane blocks both)
     best = q; bw = w; bd = d;
   }
   return { p: best, los: true };
@@ -602,15 +628,15 @@ function loneCorner(g: Game, gd: Guard, fix: Vec3): { p: Vec3; los: boolean } {
 /** The call: over the net, once per hold — and his side comes (calm men take it as they take a colleague's shots: alert on the fix, the far end a beat later). */
 function loneCall(g: Game, gd: Guard, L: Lone) {
   L.called = true; TACTICS_STATS.loneCalls++; S(g).lastLoneCallT = g.time;
-  const where = roomName(g.level, L.fix);
-  g.say(gd, gd.foe === 'player' ? `he's armed — ${where}. holding my corner, get a second man to me` : `armed contact, ${where} — holding here, need another gun on it`, true);
+  const where = placeName(g.level, L.fix);
+  g.say(gd, gd.foe === 'player' && !(WORDS.on && gd.unit) ? `he's armed — ${where}. holding my corner, get a second man to me` : `armed contact, ${where} — holding here, need another gun on it`, true);
   g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.7);
   for (const o of g.guards) {
     if (o === gd || o.state === 'dead' || o.held || o.hold || o.pinned || o.team !== gd.team || o.script) continue;   // (his own side, free to come: not the man in Sam's arm, not one on choreographed marks)
     const wasCalm = o.state === 'patrol' || o.state === 'suspicious' || o.state === 'search';
     o.awareness = Math.max(o.awareness, 0.92);
     if (wasCalm || !o.lastKnown) o.lastKnown = v3.copy(L.fix);
-    if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, flat(o.char.pos, gd.char.pos) / 25) + Math.random() * 0.4);
+    if (wasCalm) o.reactT = Math.max(o.reactT, 0.25 + Math.min(1.2, flat(o.char.pos, gd.char.pos) / 25) + simRandom() * 0.4);
     if (o.foe === null && gd.foe && gd.foe !== 'player') o.foe = gd.foe;   // (a unit with nobody yet takes his colleague's man)
   }
 }
@@ -755,9 +781,15 @@ function gateMate(g: Game, G: Gate, role: 'lead' | 'second', except: Guard): { g
 function gateCall(g: Game, gd: Guard, G: Gate) {
   const rec = G.rec; if (rec.called) return;
   rec.called = true;
-  const dn = doorLabel(G.door);
-  const line = rec.why === 'rounds' ? `taking rounds through the ${dn} door — nobody through it, on the wall with me`
-    : rec.victim ? `${rec.victim}'s down in the ${dn} doorway — hold short of it, stack on me` : `man down at the ${dn} door — hold, don't go through`;
+  // (words.ts: doorLabel reads the OFFICE's door ids; another level's are its author's own shorthand, so there the door is its room's — 'the mess door' — or
+  // 'this door' of one no named floor is beside; and a defender's callsign is the player's label for him, no name for the net: teams.ts spokenName)
+  const dn = doorLabel(G.door), own = WORDS.on && !isOffice(g.level), at = own ? ownPlace(g.level, G.door.frameCentre) : null;
+  const said = own ? doorSaidName(G.door) ?? (shorthandId(G.door.def.name) ? null : doorWords(G.door)) : null;   // (ONE name a door: the squad's own words for it where its id reads as words or doornames.ts names it — the room nearest its frame is only the fallback, and was the wrong room's name for a door between two)
+  const door = !own ? `the ${dn} door` : said ? `the ${said}` : at && at.d < 1.5 ? `${at.rect.name} door` : 'this door';
+  const vm = rec.victim ? g.guards.find(o => o.callsign === rec.victim) : null, victim = vm ? spokenName(vm) : rec.victim;
+  const line = rec.why === 'rounds' ? `taking rounds through ${door} — nobody through it, on the wall with me`
+    : rec.why === 'press' ? `they're in there — ${own ? door : `${dn} door`}, stack on me, charge first`
+    : victim ? `${victim}'s down in ${door}way — hold short of it, stack on me` : `man down at ${door} — hold, don't go through`;
   g.say(gd, line, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.7);
   // the summons
   let best: Guard | null = null, bd = SUMMON_M;
@@ -770,10 +802,10 @@ function gateCall(g: Game, gd: Guard, G: Gate) {
   const spot = stackSpot(g, G.door, G.side, G.nearA, 1, planFor(g, G.door, G.side, G.nearA)).pos;
   best.lastKnown = v3.copy(spot); best.awareness = Math.max(best.awareness, 0.5); best.searchT = 0; best.path = []; best.pathGoal = null; best.stallRef = null; best.bodyDuty = null; best.searchPlan = null; best.task = null;
   if (best.state === 'patrol') { best.state = 'suspicious'; best.reactT = 0.5; }
-  else if (best.state === 'search') { best.state = 'suspicious'; best.reactT = 0.3; }
+  else if (best.state === 'search') { best.state = 'suspicious'; best.reactT = 0.3; best.pieing = null; }   // (called off his search from inside ANOTHER man's update: his own may already have run this frame, so the doorway he was slicing is let go of here)
   else best.reactT = Math.max(best.reactT, 0.3);
   rec.summoned = best; TACTICS_STATS.summons++;
-  g.say(best, `copy — coming to you, ${gd.callsign}`);
+  g.say(best, spokenName(gd) ? `copy — coming to you, ${gd.callsign}` : 'copy — coming to you');
   TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s GATE ${G.door.def.name}: ${gd.callsign} calls it, ${best.callsign} summoned from ${bd.toFixed(1)} m to (${spot[0].toFixed(1)}, ${spot[2].toFixed(1)})`);
 }
 /** Does this man's way take him through (or up to) a doorway dangerous to his side that he has not yet taken as a drill — then the gate has him: built here. */
@@ -795,12 +827,13 @@ function tryEngage(g: Game, gd: Guard, recs: DangerRec[]): Gate | null {
     if (!side && rec.summoned === gd && flat(c.pos, d.frameCentre) < GATE_DETECT_M + 2.5) { side = sideOf(d, c.pos); goalNear = true; }
     if (!side) continue;
     const sg = side as 1 | -1;
-    const a = alongOf(d, c.pos); const nearA = a < d.def.width / 2 ? 0 : d.def.width;
+    const a = alongOf(d, c.pos); const nearA = a < d.def.width / 2 && !latchFirst(g, d, doorPt(d, d.def.width + STACK_ALONG_M, STACK_OFF_M, sg)) ? 0 : d.def.width;   // (handleside.ts: a SHUT leaf is taken from its latch jamb — the handle is there, and crossing a shut door to it shows him to nobody)
     const plan = planFor(g, d, sg, nearA);
     const lead = [...S(g).gates].find(([o, H]) => o !== gd && H.door === d && H.rec.team === gd.team && H.role === 'lead' && o.state !== 'dead' && H.phase !== 'cross' && H.phase !== 'done' && H.side === sideOf(d, c.pos));   // (a lead on the FAR side of it is no man to stack behind: reaching him means walking the funnel — this man leads his own side)
     const role: 'lead' | 'second' = lead ? 'second' : 'lead';
     const useSide = lead ? lead[1].side : sg, useNear = lead ? lead[1].nearA : nearA, usePlan = lead ? planFor(g, d, useSide, useNear) : plan;
     const ss = stackSpot(g, d, useSide, useNear, role === 'lead' ? 0 : 1, usePlan);
+    if (laneCovers(g, gd, ss.pos) || laneDoor(g, gd, doorPt(d, d.def.width / 2, 1.2, -useSide as 1 | -1), d.frameCentre, stunsOf(gd) > 0)) continue;   // (lanes.ts: that jamb — or the floor beyond the doorway — is in the line of guns his side knows of: he is stopped short by that rule instead)
     const G: Gate = { door: d, rec, phase: 'stack', t: 0, t0: g.time, side: useSide, nearA: useNear, spot: ss.pos, face: ss.face, role, lead: lead ? lead[0] : null,
       slicePts: [], sliceLook: [], sliceI: 0, sliceT: 0, legs: [], legI: 0, crossAt: -1, look: null, crouch: 0, path: null, pathI: 0, pathFor: null, stallRef: null, stallT: 0,
       can: null, tossT: -1, landT: -1, bangT: -1, goalNear, opened: false, crossed: false, action: 'slice', thrower: null };
@@ -822,8 +855,11 @@ export function doorGate(g: Game, gd: Guard, dt: number, speed: number): boolean
   void speed;
   return runGate(g, gd, G, dt);
 }
+/** a charge in the air or on the floor when its thrower leaves the drill (eyes on his man, shot, out of time): it goes off on its own short fuse — the can
+ *  was thrown on a fuse nobody but his gate ran, and would have lain there a minute and a half */
+function looseCan(G: Gate) { if (G.can && !G.can.fired) G.can.fuse = Math.min(G.can.fuse, TOSS_FUSE); }
 function releaseGate(g: Game, gd: Guard, G: Gate, why: string) {
-  const st = S(g); st.gates.delete(gd);
+  const st = S(g); st.gates.delete(gd); looseCan(G);
   if (G.phase !== 'stack') setCleared(g, gd, G.door, Math.max(G.rec.until, g.time) + 1);
   if (G.role === 'lead' && !G.crossed && (G.phase === 'slice' || G.phase === 'done')) {   // looked into and not taken: the man stacked behind him has seen it sliced from a metre away — he is not made to wait and slice it all over again
     const mate = gateMate(g, G, 'second', gd);
@@ -871,6 +907,10 @@ function runGate(g: Game, gd: Guard, G: Gate, dt: number): boolean {
       return true;
     }
     case 'open': {   // a shut leaf: his hand round the jamb on the lever, shoved into the room (keyed, as staff open their own doors) and the closer held off; then the charge or the slice
+      if (!G.opened && G.hs !== null && d.isClosed()) {   // (handleside.ts) the lever is worked from the handle's own place: a lead stacked out of reach of it, or on the hinge jamb, steps there first — and the rest of the drill is taken from that jamb
+        if (G.hs === undefined) { const h = g.doors.pullFace(d, c.pos) ? toolSpot(g, d, G.side, c.pos) : null; G.hs = h && !h.far ? h : null; }   // (the face it opens into only, and only beside its jamb: on the other the stack's own jamb is the handle's — nobody steps in front of a marked doorway for a lever)
+        if (G.hs && !(stepGate(g, gd, G, dt, G.hs.pos, T.guardInvestigate, G.hs.yaw) && toolStep(g, gd, G.hs.pos)) && G.t < 3) { G.look = inside; G.crouch = 0.4; return true; }
+        if (G.hs) { G.nearA = d.def.width; G.spot = G.hs.pos; G.face = G.hs.yaw; G.t = 0; } G.hs = null; }
       standGate(gd, dt, G.face); G.look = inside; G.crouch = 0.4;
       if (!G.opened) { G.opened = true; if (d.isClosed()) { g.doors.use(d, c.pos, c.id, gd.keys); d.quietT = Math.min(d.quietT, -6); G.t = 0; TACTICS_DEBUG.log?.(`${now.toFixed(2)}s GATE ${d.def.name}: ${gd.callsign} shoves the leaf`); } else G.t = 1; }
       if (G.t >= 0.8) { G.t = 0; if (G.action === 'toss' && G.thrower && G.thrower.state !== 'dead' && !d.isClosed()) beginToss(g, gd, G, G.thrower); else beginSlice(g, gd, G); }
@@ -959,7 +999,7 @@ function beginToss(g: Game, gd: Guard, G: Gate, thrower: Guard) {
 /** keep the gates honest once a frame (a man reset out of the list, a corpse) — the phases themselves run from followPath */
 function tickGates(g: Game) {
   const st = S(g);
-  for (const [m, G] of [...st.gates]) if (!g.guards.includes(m) || m.state === 'dead' || m.held) { st.gates.delete(m); TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s GATE ${G.door.def.name} drops ${m.callsign} (${m.state}${m.held ? ', held' : ''})`); }
+  for (const [m, G] of [...st.gates]) if (!g.guards.includes(m) || m.state === 'dead' || m.held) { st.gates.delete(m); looseCan(G); TACTICS_DEBUG.log?.(`${g.time.toFixed(2)}s GATE ${G.door.def.name} drops ${m.callsign} (${m.state}${m.held ? ', held' : ''})`); }
 }
 /** guards.ts, just before the aim is eased on: a gated man's eyes and muzzle (the opening, the slice's stations, the floor while the charge goes) and how low he
  *  is — null for everybody else. */

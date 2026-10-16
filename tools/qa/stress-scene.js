@@ -1,7 +1,7 @@
 // THE renderer stress scenario (docs/internal/renderer-v3.md §2, Phase 0 gate): the loud minute the field recordings found the worst frames in — the QRF
 // deployed with lit weapon lights, the shift alerted with torches up, rain 0.55 on the lot, two smoke canisters at the corridor junction, GPU particles from
 // the firefight, and the camera orbiting the middle of the floor so every room, the lot and the smoke cross the frame — measured with the serialized-frame
-// protocol (the dev notes "GPU timing"): every frame is followed by queue.onSubmittedWorkDone() + a MessageChannel yield, so the per-pass timestamps are the
+// protocol (CLAUDE.md "GPU timing"): every frame is followed by queue.onSubmittedWorkDone() + a MessageChannel yield, so the per-pass timestamps are the
 // frame's own and frames never overlap on the GPU.
 //
 // Plain JS, nothing bundled. On a `?paused&quality=<preset>&mute` boot, once the hooks exist and #view has a size:
@@ -29,7 +29,7 @@
     ff(frames, chunk = 30) { for (let i = 0; i < frames; i += chunk) window.__runFrames(Math.min(chunk, frames - i), 1 / 60); },
     /** Stage the loud minute. opts: { eta = 15 (s, QRF door), after = 6 (s stepped past deployment), smokeLead = 4 (s the canisters have been going when setup returns),
      *  rain = 0.55, fight = true }. fight = true is the TORTURE take: the shift alerted onto Sam with torches up and Sam standing in the open in god mode, so all
-     *  seven men converge and shoot for the whole take (gun smoke keeps 8 domains live, muzzle flashes, tracers, impacts) — about 3× the field recordings' load.
+     *  seven men converge and shoot for the whole take (gun smoke in the air throughout, muzzle flashes, tracers, impacts) — about 3× the field recordings' load.
      *  fight = false is the gate as the lead wrote it: the QRF deployed and searching with weapon lights lit, the shift as it was, Sam invisible (nobody fires),
      *  rain, the two canisters, the orbit — the field's loud minute without a firefight parked under the camera. */
     async setup(opts = {}) {
@@ -98,12 +98,12 @@
       const st1 = S.state();
       return { frames: got, missed, preset: st1.preset, res: st1.res, sum: stat(sums), passes, ctx: { lights: stat(ctx.lights), smoke: stat(ctx.smoke), pslots: stat(ctx.pslots) }, start: st0, end: st1 };
     },
-    /** the Phase 0 caps off (= the renderer before them: volLightCap 0 is the old volumetric pass bit for bit, 6144 births = the old ceiling, 8 = every smoke
-     *  domain every frame) or as the pinned preset sets them (re-applies the whole preset) */
+    /** the Phase 0 caps off (= the renderer before them: volLightCap 0 is the old volumetric pass bit for bit, 6144 births = the old ceiling; the third cap, smoke domains stepped
+     *  every frame, went with the box solver) or as the pinned preset sets them (re-applies the whole preset) */
     caps(on) {
       const St = E().settings;
-      if (on) { window.__quality.apply(window.__quality.current); return `caps on: K ${St.volLightCap} every ${St.volShadowEvery} step ${St.volStepVoxels} · births ${St.particleBirths} · smoke full ${window.__smoke.params.fullRateDomains}`; }
-      St.volLightCap = 0; St.particleBirths = 6144; window.__smoke.params.fullRateDomains = 8; return 'caps off';
+      if (on) { window.__quality.apply(window.__quality.current); return `caps on: K ${St.volLightCap} every ${St.volShadowEvery} step ${St.volStepVoxels} · births ${St.particleBirths}`; }
+      St.volLightCap = 0; St.particleBirths = 6144; return 'caps off';
     },
     /** Interleaved A/B over the SAME evolving scene: `blocks` × (`per` frames under A, `per` frames under B), the orbit running throughout; applyA / applyB flip
      *  the settings. → { A: stats, B: stats } shaped like record()'s result (so table() prints either). The scene thins and moves over a minute, so one long take

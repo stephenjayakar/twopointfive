@@ -1,0 +1,7 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "dev", "runtimeExecutable": "bun", "runtimeArgs": ["run", "tools/serve.ts"], "port": 5173 },
+    { "name": "lead", "runtimeExecutable": "sh", "runtimeArgs": ["-c", "PORT=5199 exec bun run tools/serve.ts"], "port": 5199 }
+  ]
+}

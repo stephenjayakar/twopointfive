@@ -23,7 +23,12 @@ export class Input {
    *  key is preventDefault-ed, so nothing is ever typed into it (and macOS never shows its press-and-hold accent picker over the game). */
   private sink: HTMLTextAreaElement | null = null;
 
-  constructor(private el: HTMLElement) {
+  /** an Input with EVERY field initialised and NO listeners — the headless harness's, the session replayer's and a native host's: they write keys / pressed / mouse /
+   *  buttons themselves (tools/qa/headless.ts used to Object.create(Input.prototype) and forgot orbitDX / wheelCtrl / keyVeto). `el` is null: focusGame() is a no-op. */
+  static detached(): Input { return new Input(null); }
+
+  constructor(private el: HTMLElement | null) {
+    if (!el) return;   // detached (above): no DOM, no listeners — the state fields above are the whole object
     const framed = (() => { try { return window.top !== window.self; } catch { return true; } })();
     if (framed) {
       const t = document.createElement('textarea'); t.setAttribute('aria-label', 'game input'); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
@@ -36,9 +41,9 @@ export class Input {
     window.addEventListener('keydown', e => {
       if (typingTarget(e)) return;
       if (this.keyVeto?.(e)) { e.stopPropagation(); return; }   // (a UI surface — the tweak panel — took it: not a game key this time)
-      const inMenu = e.target instanceof HTMLElement && !!e.target.closest('#menu');
+      const inMenu = e.target instanceof HTMLElement && !!e.target.closest('#menu, #missions');   // (#missions: the mission list — ui/missions.ts — is a card like the menu's)
       const modifier = ['Meta', 'Control', 'Shift', 'Alt'].includes(e.key);
-      const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: a solo tap doubles as crouch; F-keys stay the browser's)
+      const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); }
       if (this.lockExcept && !this.lockExcept.has(e.code)) { if (!inMenu && !e.repeat && e.code !== 'Escape' && !modifier && !e.metaKey && !e.ctrlKey) this.onLockedInput?.(); return; }   // hands off during the tour (menu keyboard nav still works)
       if (e.repeat) return;   // OS auto-repeat is never a fresh press (holding P must not strobe the tour on and off)
@@ -46,7 +51,7 @@ export class Input {
       this.keys.add(e.code);
     }, { capture: true });
     window.addEventListener('keyup', e => { this.keys.delete(e.code); if (!typingTarget(e) && e.code !== 'Escape' && !e.metaKey) e.stopPropagation(); if (this.sink && e.target === this.sink) this.sink.value = ''; }, { capture: true });
-    window.addEventListener('blur', () => { this.keys.clear(); this.buttons = 0; });
+    window.addEventListener('blur', () => { this.keys.clear(); this.buttons = 0; this.pressed.add('Blur'); });   // ('Blur': a one-frame code for whoever must tell keys dropped from keys released — the squad's order menu)
     el.addEventListener('mousemove', e => { const r = el.getBoundingClientRect(); this.mouseX = e.clientX - r.left; this.mouseY = e.clientY - r.top; if (e.ctrlKey && !this.lockExcept) this.orbitDX += e.movementX; });   // (the cursor is tracked through a lock — the tour writes its own aim over it every frame it has one — so the reticle is where the mouse IS the moment the lock lifts; only the orbit is hands-off: review U9.11)
     el.addEventListener('mousedown', e => { e.preventDefault(); this.focusGame(); if (this.lockExcept) { this.onLockedInput?.(); return; } if (this.suppressClick) { this.suppressClick = false; return; } this.buttons |= 1 << e.button; this.clicked |= 1 << e.button; });
     window.addEventListener('mouseup', e => { if (this.lockExcept) return; this.buttons &= ~(1 << e.button); });
@@ -54,7 +59,7 @@ export class Input {
     el.addEventListener('wheel', e => { e.preventDefault(); if (this.lockExcept) return; if (e.ctrlKey) this.wheelCtrl += e.deltaY; else this.wheel += e.deltaY; }, { passive: false });   // (a trackpad pinch also arrives as ctrl+wheel: it zooms, which is what a pinch should do)
   }
   /** Give keyboard focus back to the game (the sink when embedded, else just drop focus from whatever button / field had it). */
-  focusGame() { if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }
+  focusGame() { if (!this.el) return; if (this.sink) { if (document.activeElement !== this.sink) this.sink.focus({ preventScroll: true }); } else if (document.activeElement instanceof HTMLElement && document.activeElement !== document.body && !document.activeElement.closest('#panel')) document.activeElement.blur(); }
   down(code: string) { return this.keys.has(code); }
   hit(code: string) { return this.pressed.has(code); }
   lmb() { return (this.buttons & 1) !== 0; }
@@ -64,4 +69,6 @@ export class Input {
   mmb() { return (this.buttons & 2) !== 0; }
   mmbHit() { return (this.clicked & 2) !== 0; }
   endFrame() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; this.wheelCtrl = 0; this.orbitDX = 0; }
+  /** between two game ticks of one drawn frame (host/loop.ts, the fixed step): the one-frame edges were the first tick's — what is held stays held */
+  endTick() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; }
 }

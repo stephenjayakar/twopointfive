@@ -40,6 +40,7 @@
 // c.doors.kickSpot(door, by) reads where that kick is thrown from; c.order(u, { aimAt: unit }) now TRACKS that man (his chest re-read every tick into the ordered aim
 // point until the next aim order — a muzzle that stays on a moving man), and { flinch: true } lets a choreographed man start at rounds past him (game.ts GuardScript.flinch,
 // suppression.ts: the anim alone). Bursts already were real rounds (stimulus.burst); the firefight is those, ordered.
+import { openingStart } from './opening';
 import { Vec3, v3, DEG, damp, wrapAngle, smoothstep } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard, GuardScript, GameEvent, GuardState, Interactable, Verb } from './game';
@@ -52,16 +53,19 @@ import { KICK_IMPACT } from './character';
 import { kickScuff } from './marks';
 import type { Level, BreachPlan, RoomClearPlan } from '../scene/level';
 import type { Door } from './doors';
+import { DOORWAY } from './doors';
 import { WEAPONS } from './weapons';
 import { order as squadOrder, endGuardScript, RoomClear } from './squad';
-import { spawnUnit, despawnUnit, engage, say as guardSay } from './guards';
+import { spawnUnit, despawnUnit, engage, say as guardSay, bubbleSecs } from './guards';
 import type { Engagement } from './guards';
-import { BreachDrill, BREACH_STAGING } from './breach';
+import { BreachDrill } from './breach';
 import { setDaylight, isDaylight, setGroup } from './lighting';
 import { cancelActions, teleportPlayer } from './player';
 import { fireWeapon } from './combat';
 import { learnCode as devicesLearnCode } from './devices';
 import { chronicle, chronRadio, chronObjective, roomOf } from './chronicle';
+import { radioHand } from './handwork';
+import { runnerFled } from './runner';   // (asked inside the drill's ending check only: false with its switch off)
 
 // ================================================================================================================================ types a script sees
 export type Json = null | boolean | number | string | Json[] | { [k: string]: Json };
@@ -113,7 +117,8 @@ export interface Query {
   alive(u: UnitRef): boolean; arrived(u: UnitRef): boolean; state(u: UnitRef): GuardState | null; room(u: UnitRef | 'sam'): string;
   /** where a unit stands (a place resolved); Sam's own position only in a showcase program */
   pos(u: UnitRef | 'sam' | Place): Vec3;
-  door(d: DoorRef): { angle: number; open: boolean; latched: boolean; locked: boolean; broken: boolean };
+  /** `swing`: the face the leaf opens onto, in the door's own ± (what a level's `swing` key means); 0 = double-acting (it opens off whoever works it) */
+  door(d: DoorRef): { angle: number; open: boolean; latched: boolean; locked: boolean; broken: boolean; swing: 1 | -1 | 0 };
   groupOn(g: GroupRef): boolean; inside(v: VolumeRef, who: UnitRef | 'sam'): boolean;
   /** the authored plan data behind a handle (marks, doors, lines) — data, not AI state */
   plan(p: PlanRef<'breach'>): Readonly<BreachPlan>; plan(p: PlanRef<'roomClear'>): Readonly<RoomClearPlan>; plan(p: PlanRef): Readonly<BreachPlan | RoomClearPlan>;
@@ -656,6 +661,7 @@ export class Director {
     g.clearAftermath(); g.smoke.clearAll?.(); g.restartEncounter();   // (aftermath first: the fresh shift must not hear the room being taken)
     if (cam) cam.pin = null;
     g.aiEnabled = sv.ai; g.godMode = sv.god; g.playerInvisible = sv.invisible; g.quietUtility = sv.quiet; g.touring = sv.touring;
+    openingStart(g);   // (opening.ts: the fresh shift was made under the show's flags — now that they are down it is the player's night, and the card's still view should already show it)
     if (cam && sv.cam) { cam.yaw = sv.cam.yaw; cam.pitch = sv.cam.pitch; cam.distance = cam.desiredDistance = sv.cam.dist; }
     if (cam) { const p = g.followPos(); cam.target = v3.copy(p); cam.desired = v3.copy(p); }
     if (S.puppet) g.puppet = null;
@@ -704,7 +710,7 @@ export class Director {
     if (I.kind === 'breach') {   // (ticked past its own 'done' too, as the show always ticked it: its clock runs on for since('done'), its men keep settling on the stack)
       I.d.tick(dt); D.t = I.d.t; D.phase = I.d.phase;
       for (; I.forwarded < I.d.beats.length; I.forwarded++) { const b = I.d.beats[I.forwarded]; if (!D.times.has(b.what)) D.times.set(b.what, b.t); this.push({ t: b.t, beat: D.owner, kind: 'drill', what: b.what }); if (b.what === 'abort') D.aborted = true; }
-      if (I.d.phase === 'done' && !D.done) { D.done = true; D.cleared = !D.aborted && I.d.hostiles.every(h => h.state === 'dead'); }
+      if (I.d.phase === 'done' && !D.done) { D.done = true; D.cleared = !D.aborted && I.d.hostiles.every(h => h.state === 'dead' || runnerFled(h)); }
       return;
     }
     if (D.done) return;
@@ -721,7 +727,7 @@ export class Director {
   }
   private endDrill(R: Run, D: DrillRun) {
     const I = D.impl;
-    if (I.kind === 'breach') { I.d.end(); BREACH_STAGING.reset?.(); }
+    if (I.kind === 'breach') I.d.end();
     else if (I.kind === 'clear') I.d.end(R.show ? 'patrol' : 'search');
     else if (I.kind === 'hold') { for (const m of D.men) if (m.script && m.state !== 'dead') endGuardScript(m, R.show ? 'patrol' : m.team === 'guard' ? 'search' : 'alert'); }
     D.done = true;
@@ -792,9 +798,9 @@ export class Director {
       alive: u => { const rec = R.units.get(u.id) ?? null; const gd = rec?.gd ?? g.guards.find(x => x.char.id === u.id); return !!gd && gd.state !== 'dead'; },
       arrived: u => !!self.guardOf(R, u).script?.arrived,
       state: u => { try { return self.guardOf(R, u).state; } catch { return null; } },
-      room: u => roomOf(u === 'sam' ? g.player.char.pos : self.guardOf(R, u).char.pos),
+      room: u => roomOf(u === 'sam' ? g.player.char.pos : self.guardOf(R, u).char.pos, g.level),
       pos: u => { if (u === 'sam') { if (!R.show) throw new BeatFailure(`query.pos('sam') is showcase-only`); return v3.copy(g.player.char.pos); } if ('kind' in u && u.kind === 'unit') return v3.copy(self.guardOf(R, u).char.pos); return v3.copy(self.placeOf(u as Place)); },
-      door: d => { const D = self.doorOf(d); return { angle: D.angle, open: !D.isClosed(), latched: D.latched, locked: D.locked, broken: D.lockBroken }; },
+      door: d => { const D = self.doorOf(d); return { angle: D.angle, open: !D.isClosed(), latched: D.latched, locked: D.locked, broken: D.lockBroken, swing: DOORWAY.oneWay ? D.swing : 0 }; },
       groupOn: gr => g.targets.some(t => t.group === gr.id && t.on),
       inside: (v, who) => self.insideVolume(R, v.id, who),
       plan: ((p: PlanRef) => self.planOf(p)) as Query['plan'],
@@ -805,7 +811,7 @@ export class Director {
   // ---------------------------------------------------------------- the context a beat is handed
   private ctxOf(R: Run, b: LiveBeat): BeatCtx {
     const g = this.g, self = this;
-    const showOnly = (verb: string): ShowState => { if (!R.show) throw new BeatFailure(`c.${verb}(…) is showcase-only — declare the program { showcase: true } (decision 4: a play program never frames a shot or touches Sam)`); return R.show; };
+    const showOnly = (verb: string): ShowState => { if (!R.show) throw new BeatFailure(`c.${verb}(…) is showcase-only — declare the program { showcase: true } (decision 4: a play program never frames a shot or touches the player)`); return R.show; };
     const unitRefOf = (gd: Guard): UnitRef => ({ kind: 'unit', id: gd.char.id, callsign: gd.callsign });
     const touch = (u: UnitRef) => { b.touched.add(u.id); };
     const orderNow = (u: UnitRef, o: OrderPatch) => {
@@ -893,7 +899,7 @@ export class Director {
         if (u === 'sam') {   // a line over Sam (his bubble, the murmur of it, the log's 'you ▸' like his questions) — showcase-only: a play program never speaks for the player
           showOnly('say(sam)'); if (!line || g.player.down) return;
           g.player.bubble = { text: line, t: g.time, dur: Math.min(4, Math.max(1.6, 0.9 + line.length * 0.05)), radio: !!o.radio };
-          g.audio.play('murmur', v3.add(g.player.char.pos, [0, 1.6, 0]), 0.2); g.note(`you ▸ ${line}`); this.push({ beat: b.name, kind: 'radio', what: `SAM: ${line}` }); return;
+          g.audio.play('murmur', v3.add(g.player.char.pos, [0, 1.6, 0]), 0.2); g.note(`you ▸ ${line}`); this.push({ beat: b.name, kind: 'radio', what: `PLAYER: ${line}` }); return;
         }
         const gd = this.guardOf(R, u); if (line && gd.state !== 'dead') { guardSay(g, gd, line, !!o.radio, true); this.push({ beat: b.name, kind: 'radio', what: `${gd.callsign}${o.radio ? '' : ' (says)'}: ${line}` }); }   // (forced: a scripted line is deliberate — the man in Sam's arm answers with it too, where guards.ts say drops a held man's every other word)
       },
@@ -906,7 +912,7 @@ export class Director {
       },
       radio: (callsign, line) => {   // a line on the net under a name, said by that man if he stands in the world (his bubble on screen), else by the voice alone — the HUD's strip keys on 'radio: '
         const gd = g.guards.find(x => x.callsign === callsign && x.state !== 'dead');
-        if (gd) { gd.bubble = { text: line, t: g.time, dur: Math.min(4, Math.max(2, 1.5 + line.length * 0.055)), radio: true }; chronRadio(g, gd, line); }
+        if (gd) { gd.bubble = { text: line, t: g.time, dur: bubbleSecs(line), radio: true }; radioHand(gd, gd.bubble.dur); chronRadio(g, gd, line); }
         g.msg(`radio: ${callsign} — ${line}`); g.audio.play('radio', gd ? (gd.char.bones.head ?? gd.char.pos) : null, gd ? 0.7 : 0.55);
         this.push({ beat: b.name, kind: 'radio', what: `${callsign}: ${line}` });
       },
@@ -934,7 +940,7 @@ export class Director {
       },
       stimulus: {
         charge: (at, o) => {   // a CAUSE, never a result: the item's own fuse detonates it (combat.ts detonateStun / a plume) — the daze, the flash, the bang the floor hears, the heat destruction reads
-          const gd = this.guardOf(R, o.by); const hand = gd.char.bones.handL ?? v3.add(gd.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(1.0, hand[1]), hand[2]];
+          const gd = this.guardOf(R, o.by); const hand = gd.char.jointUnder('handL') ?? v3.add(gd.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(1.0, hand[1]), hand[2]];
           const to = this.placeOf(at); const sol = g.items.solve(from, [to[0], 0, to[2]], 9);
           const it = g.items.spawn(o.kind ?? 'flash', from, sol.v0, { fuse: o.fuse ?? 1.2, who: gd.char.id, heading: v3.yawOf(sol.v0) });
           it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);

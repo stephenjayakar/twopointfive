@@ -100,9 +100,9 @@ for (const k of [3.5, 4.5, 5.5]) {
   const row = (label: string, name: QualityName, scale: number) => { const ms = trueMs(name, scale, m); return `${label} ${f1(ms)} ms ${ms <= BUDGET ? 'fits' : 'MISSES'}`; };
   console.log(`  ${k.toFixed(1)}×:  ${row('low ×1.0 (720 rows):', 'low', 1)}   ${row(`low ×${SCALE_FLOOR} (${Math.round(720 * SCALE_FLOOR)} rows):`, 'low', SCALE_FLOOR)}   ${row('verylow ×1.0 (600 rows):', 'verylow', 1)}   ${row(`verylow ×${SCALE_FLOOR} (${Math.round(600 * SCALE_FLOOR)} rows):`, 'verylow', SCALE_FLOOR)}   ${row('medium ×1.0 (900 rows):', 'medium', 1)}`);
 }
-console.log(`  (an M1 base GPU is taken as ~4.5× the M4 Max per unit of ray work; the designer's brother saw ~20 fps on low there, i.e. ≥ 40 ms — nearer the 5.5× row if his build already had the trade-offs folded in, the 4.5× row if it predated them. Before 08-11 adaptive could not go under verylow's 600 rows on that window at all — the window-relative floor 0.35 = 630 rows sat above the cap; now the floor is 300 rows)`);
+console.log(`  (an M1 base GPU is taken as ~4.5× the M4 Max per unit of ray work; the maintainer's brother saw ~20 fps on low there, i.e. ≥ 40 ms — nearer the 5.5× row if his build already had the trade-offs folded in, the 4.5× row if it predated them. Before 08-11 adaptive could not go under verylow's 600 rows on that window at all — the window-relative floor 0.35 = 630 rows sat above the cap; now the floor is 300 rows)`);
 
-// ---------------------------------------------------------------- 4. sanity: the runtime console example in the dev notes terms ----------------------------------------------------------------
+// ---------------------------------------------------------------- 4. sanity: the runtime console example in CLAUDE.md terms ----------------------------------------------------------------
 const ex: [number, number, QualityName, number, number, number][] = [[58, 9, 'high', 1, 1000, 1], [30, 4, 'high', 1, 1000, 1], [17, 3.2, 'high', 1, 1000, 1], [140, 14, 'high', 1, 1000, 1], [40, 3, 'low', 0.35, 900, 2]];
 console.log(`\nplan() on the bare synthetic pairs the calibration commit quoted (gpuMs, fixedMs at preset ×eff, cssH@dpr → pick):`);
 for (const [g, fx, cur, e, h, d] of ex) { const r = plan(g, fx, cur, e, h, d, BUDGET), o = capPlan(g, fx, cur, e, h, d, BUDGET); console.log(`  ${String(g).padStart(4)} ms (fixed ${String(fx).padStart(3)}) at ${cur} ×${e} ${h}@${d} → ${r.preset} ×${f2(r.scale)} pred ${f1(r.predicted)} (${r.note})   [before 08-11: ${o.preset} ×${f2(o.scale)} pred ${f1(o.predicted)} (${o.note})]`); }
@@ -151,8 +151,11 @@ let stateFails = 0;
   const { defaultRcConfig } = await import('../../src/render/rc.ts');
   const defaults = (await import('../../src/engine.ts')).defaultSettings as unknown as () => Record<string, any>;
   /** a machine `k`× the reference on a 1440×900 @2 window: its timer reports what the cost model says the CURRENT preset costs at the effective scale */
+  /** the ladder's aim a stub engine starts on: null = the shipped default (settings.ladderAim 60 = hold 60, the maintainer's pick of 10-10); sections (D) and (E) are the AS-NOW ladder's own
+   *  checks (the rules ?aim=asnow keeps: cut under 45, restore over 58, starve by the union's floor) and pin 0; hold 60's own rules are held by tools/qa/ladder-replay.ts --selftest */
+  let aimPin: number | null = null;
   const mkEngine = (k: number) => {
-    const E: any = { settings: defaults(), rc: { cfg: { ...defaultRcConfig } }, rebuildRc(cfg: any) { this.rc.cfg = cfg; }, gpu: { canvas: { clientHeight: 900 } }, q: null as any,
+    const E: any = { settings: aimPin === null ? defaults() : { ...defaults(), ladderAim: aimPin }, rc: { cfg: { ...defaultRcConfig } }, rebuildRc(cfg: any) { this.rc.cfg = cfg; }, gpu: { canvas: { clientHeight: 900 } }, q: null as any,
       get capScale() { const name = this.q?.current ?? 'high'; return Math.min(1, PRESETS[name as QualityName].maxH / (900 * 2)); },   // engine.ts resize: what render scale 1.0 gets under the current preset's cap on this window …
       get effectiveScale() { return this.capScale * Math.min(1, this.settings.renderScale); },                                            // … × the render scale = the true internal / CSS×dpr ratio
       timer: { enabled: true, results: new Map<string, number>(), total(excl: string[]) { let s = 0; for (const [n, v] of this.results) if (!excl.includes(n)) s += v; return s; } } };
@@ -203,6 +206,15 @@ let stateFails = 0;
     q.setAuto(); check(q.current === settledAt && q.calibrating, `setAuto on the fast machine: from its remembered ${q.current} (auto settled at ${settledAt} on the first visit), calibrating`);
     const dd = pump(E, q, 100); check(dd === 1 && q.current === settledAt && Math.abs(E.settings.renderScale - PRESETS[settledAt].scale) < 1e-6, `settles once: ${q.current} ×${E.settings.renderScale.toFixed(2)} (${settledAt} at its own starting scale ×${PRESETS[settledAt].scale})`);
   }
+  // (D0) the shipped default is HOLD 60, and it cuts in pixels too when frames are slow (no flag, no pin)
+  {
+    store.clear();
+    const E = mkEngine(1); const q = new Q2(E as never, { params: { rbIters: 4 } } as never); E.q = q;
+    q.auto = false; q.apply('high'); (q as any).adaptive = true; (q as any).calib = { ...(q as any).calib, done: true };
+    const eff0 = E.effectiveScale, sc0 = E.settings.renderScale; for (let i = 0; i < 8 * 40; i++) q.sample(1 / 40);   // (no union handed over: the rate alone, as on a browser without GPU timings)
+    check(E.settings.ladderAim === 60 && q.aimState.hold && q.aimState.target === 60 && E.settings.renderScale < sc0 - 0.04 && E.effectiveScale < eff0 - 0.01 && /hold 60 ↓ scale 0\./.test(q.lastChange), `the default holds 60 (settings.ladderAim ${E.settings.ladderAim}): 8 s of 40 fps cuts in pixels (render scale ${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)}; “${q.lastChange}”)`);
+  }
+  aimPin = 0;   // (D), (E) — every stub engine from here to the end of the file: the as-now ladder (?aim=asnow)
   // (D) the runtime ladder must actually CUT when frames are slow — and every cut must be a real cut in pixels (08-10 field dumps: eff sat pinned at the cap for
   //     whole sessions at 33–54 fps while lastChange announced 'adaptive ↓ scale 1.00' — a trailing comment had swallowed the renderScale assignment; and before
   //     08-11 the top of the scale's travel was dead under a HiDPI cap anyway). Also: steps ≥ SCALE_STEP, on the grid, never closer than LADDER.stepCooldown,

@@ -9,7 +9,7 @@
 // rattles him. Each stands the full game up headless (headless.ts), stages one situation, drives it through the REAL input path (input.keys / pressed /
 // clicked, the rows — verbs.ts), prints what happened, PASS / FAIL.
 import { standUp, ROOT } from './headless.ts';
-import { tapVerb, holdRelease, endThenStop, endFor } from './verbs.ts';
+import { holdRelease, endThenStop, endFor } from './verbs.ts';
 const IK = 'Space';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
@@ -19,9 +19,11 @@ const { startGrab, buildInteractables, HOLD_FIRE_CD } = playerMod;
  *  the hold-and-let-go path instead (the grab then lands on the release — and the staged man is free and walking, so keep it short or he is out of reach). */
 const PRESS_SECS = 0;
 const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
+const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { handProps, fireWeapon, bodyHit } = await import(`${ROOT}/src/game/combat.ts`);
 const { KNIFE_TAG, SC20K_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const Dlg = await import(`${ROOT}/src/game/dialogue.ts`);
 
 type Vec3 = [number, number, number];
@@ -35,8 +37,6 @@ function tap(game: any) {
   const origMsg = game.msg.bind(game); game.msg = (text: string) => { msgs.push({ t: game.time, text }); return origMsg(text); };
   return { msgs };
 }
-/** hold `code` down for `secs` of frames (keys + the press edge on the first), then let it up; returns frames stepped */
-function holdKey(W: any, code: string, secs: number, each?: () => void): number { const n = Math.max(1, Math.round(secs / DT)); W.input.keys.add(code); W.input.pressed.add(code); for (let i = 0; i < n; i++) { W.step(DT); each?.(); } W.input.keys.delete(code); return n; }
 function tapKey(W: any, code: string) { W.input.pressed.add(code); }
 function click(W: any) { W.input.clicked |= 1; }
 const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
@@ -142,7 +142,7 @@ export async function gunholdVariant() {
     grabViaHold(S); const heldOk = untilHeld(S); for (let i = 0; i < 60; i++) W.step(DT);
     const H = game.player.holding, c = game.player.char; const props = pistolBoxesNearHand(game); const row = game.nearby.map((r: any) => r.line2).join('  ·  ');   // both rows: the question (highlighted) and the choke with its E hint
     const lightOn = game.player.light.enabled;
-    click(W); W.step(DT); const shots = game.mission.stats.shots;
+    if (!CLOSE.heldClicks) click(W); W.step(DT); const shots = game.mission.stats.shots;   // (close.ts CLOSE.heldClicks: with the two buttons on, a left click in the arm is the knife — heldclicks-check.ts asks that; here the click is only made where it must fire nothing)
     let phaseDuring: string | undefined; endThenStop(W, 1.0, () => { if (A.held?.phase === 'choke') phaseDuring = 'choke'; }); W.step(DT); W.step(DT); const phaseAfter = game.player.holding?.phase;
     const fails: string[] = [];
     if (!heldOk) fails.push('staging: never held');
@@ -153,7 +153,7 @@ export async function gunholdVariant() {
     if (props.knife !== 4) fails.push(`${props.knife} knife boxes in the fist of the arm hold (want 4: hold-pose-probes.ts has the rest of that)`);
     if (lightOn) fails.push('rail light lit in the arm hold');
     if (shots > 0) fails.push('a click fired in the arm hold');
-    if (!/^Space\s+“/.test(row) || !/Space\s+choke him out/.test(row) || !/E\s+draw — gun to his head/.test(row) || /pistol-whip|LMB/.test(row)) fails.push(`held rows: "${row}" (want the question, the choke and E to draw)`);
+    if (!/^Space\s+“/.test(row) || !/Space\s+choke him out/.test(row) || !(CLOSE.heldClicks ? /LMB\s+knife — lethal\s+·\s+RMB\s+choke him out\s+·\s+E\s+draw — gun to his head/ : /E\s+draw — gun to his head/).test(row) || (CLOSE.heldClicks ? /pistol-whip/ : /pistol-whip|LMB/).test(row)) fails.push(`held rows: "${row}" (want the question, the choke and E to draw)`);   // (close.ts CLOSE.heldClicks on: the arm hold's two buttons are worded on the choke row, LMB the knife and RMB the choke, ahead of E; off: no LMB on it)
     if (phaseDuring !== 'choke' || phaseAfter !== 'held' || A.state === 'dead') fails.push(`the choke chosen, stopped at 1 s: ${phaseDuring} → ${phaseAfter}, A ${A.state} (want choke → held, alive)`);
     const ok = fails.length === 0; allPass &&= ok;
     console.log(`- ${ok ? 'PASS' : 'FAIL'} — (b) HOLSTERED: variant ${H?.variant}/${A.held?.variant}; guard row before: "${rowBefore}"; held rows "${row.split('  ·  ').slice(1).join(' · ')}"; pistol boxes up ${props.n} (knife ${props.knife}), hideHeldItem ${c.anim.hideHeldItem}, light ${lightOn}, click → shots ${shots}; the choke stopped at 1 s: ${phaseDuring} → ${phaseAfter}\n    log: ${msgs.map(m => m.text).join(' | ')}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
@@ -537,7 +537,12 @@ export async function holdDraw() {
     for (let i = 0; i < 60; i++) W.step(DT);
     let deadAt = -1; const tK = game.time; endFor(W, HOLD.secs.chokeHold + HOLD.secs.choke + 0.15, () => { if (deadAt < 0 && A.state === 'dead') deadAt = game.time - tK; });
     if (A.downKind !== 'choked' || Math.abs(deadAt - (HOLD.secs.chokeHold + HOLD.secs.choke)) > 0.07) fails.push(`the choke after all that: A ${A.state}/${A.downKind} at +${f2(deadAt)} s (want choked at ${f2(HOLD.secs.chokeHold + HOLD.secs.choke)})`);
-    if (knivesNow(game)) fails.push('knife boxes after the hold ended');
+    // (with kit handling live — kitanim.ts, on as shipped — the knife is not gone the frame the hold ends: it stays in his fist while the hold's pose lets go of
+    //  the arm and is then sheathed by hand; there the rule is 'put away within 1.2 s and not seen again', as hold-pose-probes.ts hold-knife has it)
+    if (KITANIM.on && KITANIM.equip) {
+      let last = 0, back = false, gap = !knivesNow(game); for (let i = 1; i <= 120; i++) { W.step(DT); if (knivesNow(game)) { if (gap) back = true; last = i; } else gap = true; }
+      if (last * DT > 1.2 || back) fails.push(`the knife after the hold ended: last drawn +${f2(last * DT)} s, back after being put away ${back} (want sheathed by hand within 1.2 s, once)`);
+    } else if (knivesNow(game)) fails.push('knife boxes after the hold ended');
     verdict(fails.length === 0, '(a) arm → E → gun → E → arm: the hands, the props half way, the lockout, a round past him, no question over the gun, a question after, the choke',
       `draw: pistol at +${f2(tr.firstPistol)} s (side flip +${f2(tr.sideFlipAt)}), knife last +${tr.lastKnife < 0 ? '—' : f2(tr.lastKnife)}, empty ${f2(tr.neither)} s, hand step ≤ ${f3(tr.maxStep)} m, roots ${f3(tr.rootP)}/${f3(tr.rootG)}; lockout: ${shotsLock} rounds, whip ${whipSeen}; remark "${remark ?? '—'}"; round at +${f2(firedAt)} s of the click, ${f2(muzzleOff)} m off his head, A ${A.state === 'dead' ? A.downKind : 'alive then'}; gun tap → stage ${gunTap.stage}, hint ${gunTap.hint}\n    holster: knife at +${f2(tb.firstKnife)} s, pistol last +${tb.lastPistol < 0 ? '—' : f2(tb.lastPistol)}, empty ${f2(tb.neither)} s, hand step ≤ ${f3(tb.maxStep)}; arm tap → "${q1}", answer +${f2(ansAt)} s; choke → ${A.downKind} +${f2(deadAt)} s\n    log: ${msgs.filter(m => !/^teleported/.test(m.text)).map(m => m.text).join(' | ')}`, fails);
   }

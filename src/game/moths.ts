@@ -1,5 +1,5 @@
 // MOTHS round the LIT sodium lamps at NIGHT (approved with the wind lane as "dust motes, sodium light moths"; the MOTES half — a particle kind topped up inside the
-// torch cones — was cut 08-11, the designer: 'they look weird … it's obvious that they spawn when your flashlight shows up somewhere, not ambiently always present').
+// torch cones — was cut 08-11, the maintainer: 'they look weird … it's obvious that they spawn when your flashlight shows up somewhere, not ambiently always present').
 // A dozen at most, CPU boxes (a moth must orbit a point, which a particle cannot) — one small NoShadow box each, drawn through the g-buffer like anything (so the lamp
 // lights it, the wet lot mirrors it, its motion vector rides its key), on a noisy analytic orbit under the cobra head with a bob, a wobble, a dart at the lens now and
 // then, wings a-flutter as a fast roll of the box; they gather over a couple of seconds when a lamp comes on and scatter when it goes out (shot, the daylight), in a
@@ -51,7 +51,7 @@ export class Moths {
   update(dt: number) {
     const g = this.g; if (!this.lamps.length) return;
     const on = (g.tune as { moths?: boolean }).moths !== false && !isDaylight(g);
-    const rain = g.weather?.enabled ? g.weather.rainRate : 0;
+    const rain = g.weather?.enabled ? (g.weather.snowRate > 0 ? 1 : g.weather.rainRate) : 0;   // (no moths at a lamp in falling snow)
     const wv: Vec3 = [0, 0, 0];
     for (const L of this.lamps) {   // each lamp's pull on its moths: lit × night × calm enough × not a downpour, eased so they gather and scatter over seconds
       let a = on && L.target.factor > 0.05 && !L.target.broken && L.light.enabled ? 1 : 0;

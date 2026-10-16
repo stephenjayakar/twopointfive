@@ -41,7 +41,6 @@ export class PaintUi {
   private tabBtns = new Map<InspTab, HTMLElement>();
   private painter: { canvas: HTMLCanvasElement; cell: number; W: number; H: number; paintNow: () => void } | null = null;
   private stroke: { key: string; entry: number; last: [number, number] | null; rect: [number, number] | null; cur: [number, number] | null } | null = null;
-  private asciiArea: HTMLTextAreaElement | null = null;
   private newName = '';
 
   constructor(readonly H: PaintUiHost, readonly els: { head: HTMLElement; props: HTMLElement; mat: HTMLElement; mark: HTMLElement; title: HTMLElement }) {
@@ -217,7 +216,7 @@ export class PaintUi {
   private box(): BoxData | null { return this.mk.boxId ? this.H.ed.doc.get<BoxData>('boxes', this.mk.boxId) : null; }
   private cur(): MarkingDef | null { const b = this.box(); return (b?.markings ?? [])[this.mk.i] ?? null; }
   private buildMarkings() {
-    const p = this.mark; const ed = this.H.ed; p.clear(); this.painter = null; this.asciiArea = null;
+    const p = this.mark; const ed = this.H.ed; p.clear(); this.painter = null;
     const b = this.box();
     if (!b) { const s = p.section('Markings', true); p.text(s, () => 'select a box (click one in the view, or K over it): its faces carry up to 4 pixel-art markings — key caps, tape, seams, LEDs, glyphs — each a ≤ 32 × 32 bitmap of ≤ 3 MATERIAL entries on a world texel lattice'); p.refresh(); return; }
     const ms = b.markings ?? []; const id = b.id; const texel = P.markTexelOf(ed);
@@ -415,7 +414,7 @@ export class PaintUi {
     const ed = this.H.ed; const id = b.id; const i = this.mk.i;
     const g = () => this.cur() ?? m0;
     const s = p.section(`Marking ${i} — ASCII ('.abc' rows, top first)`, false);
-    const ta = el('textarea', 'ascii') as HTMLTextAreaElement; ta.spellcheck = false; ta.setAttribute('rows', String(Math.min(14, g().size[1] + 1))); ta.setAttribute('wrap', 'off'); ta.value = g().cells.join('\n'); this.asciiArea = ta;
+    const ta = el('textarea', 'ascii') as HTMLTextAreaElement; ta.spellcheck = false; ta.setAttribute('rows', String(Math.min(14, g().size[1] + 1))); ta.setAttribute('wrap', 'off'); ta.value = g().cells.join('\n');
     ta.addEventListener('keydown', (e: KeyboardEvent) => e.stopPropagation());
     s.append(ta);
     const rf = () => { if (document.activeElement !== ta) ta.value = g().cells.join('\n'); }; p.keep(rf, ta);

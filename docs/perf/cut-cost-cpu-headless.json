@@ -1,0 +1,3946 @@
+{
+ "rows": [
+  {
+   "case": "blast",
+   "cut": true,
+   "n": 3,
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "recipe": {
+    "case": "blast",
+    "frames": 455,
+    "settleFrames": 0,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 15
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 26
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 36
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 49
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 18,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 48,
+     "plain": 0,
+     "refused": 0,
+     "again": 5,
+     "mayhem": 0,
+     "china": 1,
+     "crumbled": 1,
+     "heap": 23,
+     "ragged": 21,
+     "planes": 118,
+     "dropped": 0,
+     "chips": 898,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 5,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 5,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 33,
+     "chunksDemoted": 0,
+     "navOpened": 18
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "particles": {
+    "records": 1784,
+    "count": 43899,
+    "byKind": {
+     "rain": 42647,
+     "debris": 952,
+     "dust": 300
+    }
+   },
+   "updCalm": 1.109331500000053,
+   "updMed": 1.2537470000002031,
+   "updP95": 8.637480999999752,
+   "updMax": 46.842755000000125,
+   "updTotal": 1214.614058999999,
+   "frames": 455,
+   "updRest": 0.9561684999998761,
+   "upMed": 0.3780099999999038,
+   "upP95": 0.6454549999998562,
+   "boxes": 1179,
+   "bytes": 152016,
+   "cutBytes": 8192,
+   "rays": {
+    "worldRaycast": {
+     "ms": 572.8619239999998,
+     "hits": 18254
+    },
+    "worldRaycastAll": {
+     "ms": 674.7356120000004,
+     "hits": 19864
+    },
+    "colRaycast": {
+     "ms": 149.17081999999937,
+     "hits": 19687
+    },
+    "segmentBlocked": {
+     "ms": 124.2958609999987,
+     "hits": 8534
+    },
+    "solidBlocked": {
+     "ms": 120.92591199999879,
+     "hits": 8556
+    }
+   }
+  },
+  {
+   "case": "blast",
+   "cut": false,
+   "n": 3,
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "recipe": {
+    "case": "blast",
+    "frames": 549,
+    "settleFrames": 4,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 13
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 25
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 35
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 47
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 62
+     },
+     {
+      "at": [
+       21.4,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 35,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 6,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 6,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 68,
+     "chunksDemoted": 0,
+     "navOpened": 21
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "particles": {
+    "records": 1865,
+    "count": 47831,
+    "byKind": {
+     "rain": 47229,
+     "debris": 562,
+     "dust": 40
+    }
+   },
+   "updCalm": 1.159276499999919,
+   "updMed": 1.3620209999999133,
+   "updP95": 6.529084000000239,
+   "updMax": 40.02512200000001,
+   "updTotal": 1321.5766180000048,
+   "frames": 549,
+   "updRest": 0.9079395000001114,
+   "upMed": 0.3297170000000733,
+   "upP95": 0.7226929999997083,
+   "boxes": 1175,
+   "bytes": 143176,
+   "cutBytes": 0,
+   "rays": {
+    "worldRaycast": {
+     "ms": 545.4724310000001,
+     "hits": 18034
+    },
+    "worldRaycastAll": {
+     "ms": 642.643478,
+     "hits": 19863
+    },
+    "colRaycast": {
+     "ms": 142.52883699999984,
+     "hits": 19630
+    },
+    "segmentBlocked": {
+     "ms": 116.65428400000019,
+     "hits": 7215
+    },
+    "solidBlocked": {
+     "ms": 112.50262599999951,
+     "hits": 7237
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": true,
+   "n": 3,
+   "counts": {
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "recipe": {
+    "case": "glass",
+    "frames": 534,
+    "settleFrames": 55,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 137,
+     "platesRefused": 81,
+     "cutPlates": 137,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 38,
+     "breaks": 61,
+     "emits": 897,
+     "born": 4666,
+     "trimmed": 2551,
+     "recsDeferred": 0,
+     "sounds": 69,
+     "soundsMerged": 186,
+     "spalls": 0,
+     "events": 16,
+     "crunches": 0,
+     "peakLive": 4666,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "particles": {
+    "records": 2677,
+    "count": 51164,
+    "byKind": {
+     "rain": 46498,
+     "shard": 4666
+    }
+   },
+   "updCalm": 1.2671265000000176,
+   "updMed": 1.198032000000012,
+   "updP95": 2.6365670000000136,
+   "updMax": 20.67373099999986,
+   "updTotal": 800.7779599999913,
+   "frames": 534,
+   "updRest": 0.9931005000000823,
+   "upMed": 0.3524175000000014,
+   "upP95": 0.5785650000002533,
+   "boxes": 1135,
+   "bytes": 161772,
+   "cutBytes": 23296,
+   "rays": {
+    "worldRaycast": {
+     "ms": 457.9023109999998,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 583.923726,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 125.27586800000063,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 90.114857999999,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 89.91496600000028,
+     "hits": 7815
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": false,
+   "n": 3,
+   "counts": {
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "recipe": {
+    "case": "glass",
+    "frames": 523,
+    "settleFrames": 44,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 147,
+     "platesRefused": 134,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 65,
+     "breaks": 47,
+     "emits": 909,
+     "born": 4686,
+     "trimmed": 1934,
+     "recsDeferred": 0,
+     "sounds": 66,
+     "soundsMerged": 201,
+     "spalls": 0,
+     "events": 15,
+     "crunches": 0,
+     "peakLive": 4686,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "particles": {
+    "records": 2668,
+    "count": 50648,
+    "byKind": {
+     "rain": 45962,
+     "shard": 4686
+    }
+   },
+   "updCalm": 1.1412564999999404,
+   "updMed": 1.088430000000244,
+   "updP95": 1.8925560000000132,
+   "updMax": 7.6897539999999935,
+   "updTotal": 662.0407119999945,
+   "frames": 523,
+   "updRest": 0.8290199999999004,
+   "upMed": 0.2880710000001727,
+   "upP95": 0.3924549999996998,
+   "boxes": 1132,
+   "bytes": 156616,
+   "cutBytes": 0,
+   "rays": {
+    "worldRaycast": {
+     "ms": 435.49951100000044,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 585.9480839999997,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 117.49230100000023,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 85.57275000000027,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 89.05911900000046,
+     "hits": 7815
+    }
+   }
+  }
+ ],
+ "takes": [
+  {
+   "case": "blast",
+   "cut": true,
+   "recipe": {
+    "case": "blast",
+    "frames": 455,
+    "settleFrames": 0,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 15
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 26
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 36
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 49
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 18,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "update": {
+    "calmMed": 1.109331500000053,
+    "eventFrames": 455,
+    "eventMed": 1.2997310000000653,
+    "eventP95": 9.085306999999375,
+    "eventMax": 71.97109900000032,
+    "eventTotal": 1379.709240000001,
+    "restMed": 0.9487379999995937,
+    "restP95": 1.3188149999996313
+   },
+   "upload": {
+    "med": 0.5379634999999325,
+    "p95": 0.821657999999843,
+    "boxes": 1179,
+    "writes": 8,
+    "bytes": 152016,
+    "cutBytes": 8192,
+    "visibleCut": 68
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 578.2851209999999,
+     "hits": 18254
+    },
+    "worldRaycastAll": {
+     "ms": 641.587094999999,
+     "hits": 19864
+    },
+    "colRaycast": {
+     "ms": 147.6872089999997,
+     "hits": 19687
+    },
+    "segmentBlocked": {
+     "ms": 124.2958609999987,
+     "hits": 8534
+    },
+    "solidBlocked": {
+     "ms": 131.22573600000032,
+     "hits": 8556
+    }
+   },
+   "particles": {
+    "records": 1784,
+    "count": 43899,
+    "byKind": {
+     "rain": 42647,
+     "debris": 952,
+     "dust": 300
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 48,
+     "plain": 0,
+     "refused": 0,
+     "again": 5,
+     "mayhem": 0,
+     "china": 1,
+     "crumbled": 1,
+     "heap": 23,
+     "ragged": 21,
+     "planes": 118,
+     "dropped": 0,
+     "chips": 898,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 5,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 5,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 33,
+     "chunksDemoted": 0,
+     "navOpened": 18
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   }
+  },
+  {
+   "case": "blast",
+   "cut": false,
+   "recipe": {
+    "case": "blast",
+    "frames": 549,
+    "settleFrames": 4,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 13
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 25
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 35
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 47
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 62
+     },
+     {
+      "at": [
+       21.4,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 35,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "update": {
+    "calmMed": 1.2774914999999964,
+    "eventFrames": 549,
+    "eventMed": 1.5148019999996905,
+    "eventP95": 10.017329000000245,
+    "eventMax": 48.643285000000105,
+    "eventTotal": 1730.5375480000025,
+    "restMed": 0.9685795000000326,
+    "restP95": 2.222179000000324
+   },
+   "upload": {
+    "med": 0.3333099999999831,
+    "p95": 0.7755729999998948,
+    "boxes": 1175,
+    "writes": 7,
+    "bytes": 143176,
+    "cutBytes": 0,
+    "visibleCut": 0
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 569.9185319999997,
+     "hits": 18034
+    },
+    "worldRaycastAll": {
+     "ms": 642.643478,
+     "hits": 19863
+    },
+    "colRaycast": {
+     "ms": 139.8786110000001,
+     "hits": 19630
+    },
+    "segmentBlocked": {
+     "ms": 116.65428400000019,
+     "hits": 7215
+    },
+    "solidBlocked": {
+     "ms": 112.50262599999951,
+     "hits": 7237
+    }
+   },
+   "particles": {
+    "records": 1865,
+    "count": 47831,
+    "byKind": {
+     "rain": 47229,
+     "debris": 562,
+     "dust": 40
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 6,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 6,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 68,
+     "chunksDemoted": 0,
+     "navOpened": 21
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   }
+  },
+  {
+   "case": "blast",
+   "cut": false,
+   "recipe": {
+    "case": "blast",
+    "frames": 549,
+    "settleFrames": 4,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 13
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 25
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 35
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 47
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 62
+     },
+     {
+      "at": [
+       21.4,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 35,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "update": {
+    "calmMed": 1.159276499999919,
+    "eventFrames": 549,
+    "eventMed": 1.3620209999999133,
+    "eventP95": 6.497891999999865,
+    "eventMax": 21.171074999999973,
+    "eventTotal": 1321.5766180000048,
+    "restMed": 0.9000989999999547,
+    "restP95": 1.1299730000000636
+   },
+   "upload": {
+    "med": 0.3297170000000733,
+    "p95": 0.5320919999999205,
+    "boxes": 1175,
+    "writes": 7,
+    "bytes": 143176,
+    "cutBytes": 0,
+    "visibleCut": 0
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 542.9774900000002,
+     "hits": 18034
+    },
+    "worldRaycastAll": {
+     "ms": 686.7041540000009,
+     "hits": 19863
+    },
+    "colRaycast": {
+     "ms": 165.61710400000084,
+     "hits": 19630
+    },
+    "segmentBlocked": {
+     "ms": 121.16090799999984,
+     "hits": 7215
+    },
+    "solidBlocked": {
+     "ms": 118.76789599999938,
+     "hits": 7237
+    }
+   },
+   "particles": {
+    "records": 1865,
+    "count": 47831,
+    "byKind": {
+     "rain": 47229,
+     "debris": 562,
+     "dust": 40
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 6,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 6,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 68,
+     "chunksDemoted": 0,
+     "navOpened": 21
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   }
+  },
+  {
+   "case": "blast",
+   "cut": true,
+   "recipe": {
+    "case": "blast",
+    "frames": 455,
+    "settleFrames": 0,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 15
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 26
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 36
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 49
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 18,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "update": {
+    "calmMed": 1.0922014999998737,
+    "eventFrames": 455,
+    "eventMed": 1.2537470000002031,
+    "eventP95": 8.637480999999752,
+    "eventMax": 46.842755000000125,
+    "eventTotal": 1214.614058999999,
+    "restMed": 1.0130730000000767,
+    "restP95": 3.339415999999801
+   },
+   "upload": {
+    "med": 0.3780099999999038,
+    "p95": 0.6454549999998562,
+    "boxes": 1179,
+    "writes": 8,
+    "bytes": 152016,
+    "cutBytes": 8192,
+    "visibleCut": 68
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 563.4355930000002,
+     "hits": 18254
+    },
+    "worldRaycastAll": {
+     "ms": 674.7356120000004,
+     "hits": 19864
+    },
+    "colRaycast": {
+     "ms": 149.17081999999937,
+     "hits": 19687
+    },
+    "segmentBlocked": {
+     "ms": 129.10951999999997,
+     "hits": 8534
+    },
+    "solidBlocked": {
+     "ms": 120.92591199999879,
+     "hits": 8556
+    }
+   },
+   "particles": {
+    "records": 1784,
+    "count": 43899,
+    "byKind": {
+     "rain": 42647,
+     "debris": 952,
+     "dust": 300
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 48,
+     "plain": 0,
+     "refused": 0,
+     "again": 5,
+     "mayhem": 0,
+     "china": 1,
+     "crumbled": 1,
+     "heap": 23,
+     "ragged": 21,
+     "planes": 118,
+     "dropped": 0,
+     "chips": 898,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 5,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 5,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 33,
+     "chunksDemoted": 0,
+     "navOpened": 18
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   }
+  },
+  {
+   "case": "blast",
+   "cut": true,
+   "recipe": {
+    "case": "blast",
+    "frames": 455,
+    "settleFrames": 0,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 15
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 26
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 36
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 49
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 18,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "update": {
+    "calmMed": 1.2855279999999993,
+    "eventFrames": 455,
+    "eventMed": 1.2481830000001537,
+    "eventP95": 6.966601999999966,
+    "eventMax": 23.216369000000213,
+    "eventTotal": 1066.6936539999997,
+    "restMed": 0.9561684999998761,
+    "restP95": 1.1662129999999706
+   },
+   "upload": {
+    "med": 0.35052599999994527,
+    "p95": 0.6214030000001003,
+    "boxes": 1179,
+    "writes": 8,
+    "bytes": 152016,
+    "cutBytes": 8192,
+    "visibleCut": 68
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 572.8619239999998,
+     "hits": 18254
+    },
+    "worldRaycastAll": {
+     "ms": 695.4404619999996,
+     "hits": 19864
+    },
+    "colRaycast": {
+     "ms": 165.3646600000011,
+     "hits": 19687
+    },
+    "segmentBlocked": {
+     "ms": 119.96079800000007,
+     "hits": 8534
+    },
+    "solidBlocked": {
+     "ms": 113.29461699999956,
+     "hits": 8556
+    }
+   },
+   "particles": {
+    "records": 1784,
+    "count": 43899,
+    "byKind": {
+     "rain": 42647,
+     "debris": 952,
+     "dust": 300
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 48,
+     "plain": 0,
+     "refused": 0,
+     "again": 5,
+     "mayhem": 0,
+     "china": 1,
+     "crumbled": 1,
+     "heap": 23,
+     "ragged": 21,
+     "planes": 118,
+     "dropped": 0,
+     "chips": 898,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 5,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 5,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 33,
+     "chunksDemoted": 0,
+     "navOpened": 18
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   }
+  },
+  {
+   "case": "blast",
+   "cut": false,
+   "recipe": {
+    "case": "blast",
+    "frames": 549,
+    "settleFrames": 4,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 13
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 25
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 35
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 47
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 62
+     },
+     {
+      "at": [
+       21.4,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 35,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "counts": {
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 59,
+     "tile": 4,
+     "clutter": 1
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 0,
+    "statics": 796,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 379,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   },
+   "update": {
+    "calmMed": 1.1251545000000078,
+    "eventFrames": 549,
+    "eventMed": 1.345948999999564,
+    "eventP95": 6.529084000000239,
+    "eventMax": 40.02512200000001,
+    "eventTotal": 1310.0501719999947,
+    "restMed": 0.9079395000001114,
+    "restP95": 1.4775429999999687
+   },
+   "upload": {
+    "med": 0.3225720000000365,
+    "p95": 0.7226929999997083,
+    "boxes": 1175,
+    "writes": 7,
+    "bytes": 143176,
+    "cutBytes": 0,
+    "visibleCut": 0
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 545.4724310000001,
+     "hits": 18034
+    },
+    "worldRaycastAll": {
+     "ms": 610.242628,
+     "hits": 19863
+    },
+    "colRaycast": {
+     "ms": 142.52883699999984,
+     "hits": 19630
+    },
+    "segmentBlocked": {
+     "ms": 106.6538500000006,
+     "hits": 7215
+    },
+    "solidBlocked": {
+     "ms": 110.38961800000106,
+     "hits": 7237
+    }
+   },
+   "particles": {
+    "records": 1865,
+    "count": 47831,
+    "byKind": {
+     "rain": 47229,
+     "debris": 562,
+     "dust": 40
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 1,
+     "holes": 6,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 6,
+     "refused": 0,
+     "falls": 9,
+     "floating": 0,
+     "chunks": 68,
+     "chunksDemoted": 0,
+     "navOpened": 21
+    },
+    "SHARD": {
+     "fragments": 0,
+     "crossings": 0,
+     "plates": 0,
+     "platesRefused": 0,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 0,
+     "breaks": 0,
+     "emits": 0,
+     "born": 0,
+     "trimmed": 0,
+     "recsDeferred": 0,
+     "sounds": 0,
+     "soundsMerged": 0,
+     "spalls": 0,
+     "events": 0,
+     "crunches": 0,
+     "peakLive": 0,
+     "peakPlates": 0
+    },
+    "GB": {
+     "panes": 0,
+     "impacts": 0,
+     "sites": 0,
+     "runs": 0,
+     "dropped": 0,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 0,
+     "hooked": 0,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 73,
+     "refused": 0,
+     "evicted": 9,
+     "landed": 73,
+     "peakLive": 64,
+     "peakMoving": 35,
+     "kicked": 41
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": true,
+   "recipe": {
+    "case": "glass",
+    "frames": 534,
+    "settleFrames": 55,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "counts": {
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "update": {
+    "calmMed": 1.2671265000000176,
+    "eventFrames": 534,
+    "eventMed": 1.198032000000012,
+    "eventP95": 2.5462029999998776,
+    "eventMax": 10.835108000000218,
+    "eventTotal": 751.9790730000027,
+    "restMed": 0.9931005000000823,
+    "restP95": 1.309270999999626
+   },
+   "upload": {
+    "med": 0.3524175000000014,
+    "p95": 0.5785650000002533,
+    "boxes": 1135,
+    "writes": 9,
+    "bytes": 161772,
+    "cutBytes": 23296,
+    "visibleCut": 38
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 470.86491000000024,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 619.9120249999996,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 130.0456810000005,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 99.54297700000097,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 95.25660500000049,
+     "hits": 7815
+    }
+   },
+   "particles": {
+    "records": 2677,
+    "count": 51164,
+    "byKind": {
+     "rain": 46498,
+     "shard": 4666
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 137,
+     "platesRefused": 81,
+     "cutPlates": 137,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 38,
+     "breaks": 61,
+     "emits": 897,
+     "born": 4666,
+     "trimmed": 2551,
+     "recsDeferred": 0,
+     "sounds": 69,
+     "soundsMerged": 186,
+     "spalls": 0,
+     "events": 16,
+     "crunches": 0,
+     "peakLive": 4666,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": false,
+   "recipe": {
+    "case": "glass",
+    "frames": 523,
+    "settleFrames": 44,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "counts": {
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "update": {
+    "calmMed": 1.1412564999999404,
+    "eventFrames": 523,
+    "eventMed": 1.088430000000244,
+    "eventP95": 1.7445239999997284,
+    "eventMax": 7.6897539999999935,
+    "eventTotal": 630.4148830000006,
+    "restMed": 0.8228209999999763,
+    "restP95": 1.1238069999999425
+   },
+   "upload": {
+    "med": 0.29561100000023544,
+    "p95": 0.4637979999997697,
+    "boxes": 1132,
+    "writes": 8,
+    "bytes": 156616,
+    "cutBytes": 0,
+    "visibleCut": 0
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 452.829256,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 596.9519359999995,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 122.5814819999996,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 83.13489600000048,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 86.71865799999978,
+     "hits": 7815
+    }
+   },
+   "particles": {
+    "records": 2668,
+    "count": 50648,
+    "byKind": {
+     "rain": 45962,
+     "shard": 4686
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 147,
+     "platesRefused": 134,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 65,
+     "breaks": 47,
+     "emits": 909,
+     "born": 4686,
+     "trimmed": 1934,
+     "recsDeferred": 0,
+     "sounds": 66,
+     "soundsMerged": 201,
+     "spalls": 0,
+     "events": 15,
+     "crunches": 0,
+     "peakLive": 4686,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": false,
+   "recipe": {
+    "case": "glass",
+    "frames": 523,
+    "settleFrames": 44,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "counts": {
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "update": {
+    "calmMed": 1.189224500000023,
+    "eventFrames": 523,
+    "eventMed": 1.156833000000006,
+    "eventP95": 1.8925560000000132,
+    "eventMax": 5.125905999999759,
+    "eventTotal": 662.0407119999945,
+    "restMed": 0.9042730000001029,
+    "restP95": 1.1716980000001058
+   },
+   "upload": {
+    "med": 0.2880710000001727,
+    "p95": 0.3924549999996998,
+    "boxes": 1132,
+    "writes": 8,
+    "bytes": 156616,
+    "cutBytes": 0,
+    "visibleCut": 0
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 435.49951100000044,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 585.9480839999997,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 117.49230100000023,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 92.66509099999985,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 94.20986300000004,
+     "hits": 7815
+    }
+   },
+   "particles": {
+    "records": 2668,
+    "count": 50648,
+    "byKind": {
+     "rain": 45962,
+     "shard": 4686
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 147,
+     "platesRefused": 134,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 65,
+     "breaks": 47,
+     "emits": 909,
+     "born": 4686,
+     "trimmed": 1934,
+     "recsDeferred": 0,
+     "sounds": 66,
+     "soundsMerged": 201,
+     "spalls": 0,
+     "events": 15,
+     "crunches": 0,
+     "peakLive": 4686,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": true,
+   "recipe": {
+    "case": "glass",
+    "frames": 534,
+    "settleFrames": 55,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "counts": {
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "update": {
+    "calmMed": 1.2246079999998756,
+    "eventFrames": 534,
+    "eventMed": 1.1095234999997956,
+    "eventP95": 3.254668000000038,
+    "eventMax": 20.67373099999986,
+    "eventTotal": 800.7779599999913,
+    "restMed": 0.8890535000000455,
+    "restP95": 4.9417020000000775
+   },
+   "upload": {
+    "med": 0.3073490000001584,
+    "p95": 0.48107900000013615,
+    "boxes": 1135,
+    "writes": 9,
+    "bytes": 161772,
+    "cutBytes": 23296,
+    "visibleCut": 38
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 429.05514799999946,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 563.8178159999998,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 113.08585799999946,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 90.114857999999,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 88.16228899999987,
+     "hits": 7815
+    }
+   },
+   "particles": {
+    "records": 2677,
+    "count": 51164,
+    "byKind": {
+     "rain": 46498,
+     "shard": 4666
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 137,
+     "platesRefused": 81,
+     "cutPlates": 137,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 38,
+     "breaks": 61,
+     "emits": 897,
+     "born": 4666,
+     "trimmed": 2551,
+     "recsDeferred": 0,
+     "sounds": 69,
+     "soundsMerged": 186,
+     "spalls": 0,
+     "events": 16,
+     "crunches": 0,
+     "peakLive": 4666,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": true,
+   "recipe": {
+    "case": "glass",
+    "frames": 534,
+    "settleFrames": 55,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "counts": {
+    "pieces": 38,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 38
+    },
+    "piecesCut": 38,
+    "piecePlanes": 161,
+    "glassPlates": 38,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 353,
+    "dynCut": 38,
+    "dynPlanes": 161,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 38,
+    "planes": 161,
+    "planesHist": {
+     "3": 4,
+     "4": 22,
+     "5": 11,
+     "6": 1
+    },
+    "cutRowsDynRange": 38,
+    "cutBytesPerFrame": 4864,
+    "debrisStats": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "update": {
+    "calmMed": 1.359185000000025,
+    "eventFrames": 534,
+    "eventMed": 1.2412429999999404,
+    "eventP95": 2.6365670000000136,
+    "eventMax": 41.68318099999988,
+    "eventTotal": 829.809044999997,
+    "restMed": 1.030416999999943,
+    "restP95": 1.505235999999968
+   },
+   "upload": {
+    "med": 0.39762199999995573,
+    "p95": 4.4866289999999935,
+    "boxes": 1135,
+    "writes": 9,
+    "bytes": 161772,
+    "cutBytes": 23296,
+    "visibleCut": 38
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 457.9023109999998,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 583.923726,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 125.27586800000063,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 80.53595599999971,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 89.91496600000028,
+     "hits": 7815
+    }
+   },
+   "particles": {
+    "records": 2677,
+    "count": 51164,
+    "byKind": {
+     "rain": 46498,
+     "shard": 4666
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 137,
+     "platesRefused": 81,
+     "cutPlates": 137,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 38,
+     "breaks": 61,
+     "emits": 897,
+     "born": 4666,
+     "trimmed": 2551,
+     "recsDeferred": 0,
+     "sounds": 69,
+     "soundsMerged": 186,
+     "spalls": 0,
+     "events": 16,
+     "crunches": 0,
+     "peakLive": 4666,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 137,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 136,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   }
+  },
+  {
+   "case": "glass",
+   "cut": false,
+   "recipe": {
+    "case": "glass",
+    "frames": 523,
+    "settleFrames": 44,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "counts": {
+    "pieces": 35,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 35
+    },
+    "piecesCut": 0,
+    "piecePlanes": 0,
+    "glassPlates": 35,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 350,
+    "dynCut": 0,
+    "dynPlanes": 0,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 0,
+    "planes": 0,
+    "planesHist": {},
+    "cutRowsDynRange": 0,
+    "cutBytesPerFrame": 0,
+    "debrisStats": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   },
+   "update": {
+    "calmMed": 1.1260519999999588,
+    "eventFrames": 523,
+    "eventMed": 1.0789209999998093,
+    "eventP95": 1.9166619999996328,
+    "eventMax": 10.60151599999972,
+    "eventTotal": 663.6342680000012,
+    "restMed": 0.8290199999999004,
+    "restP95": 1.1069580000003043
+   },
+   "upload": {
+    "med": 0.2876009999999951,
+    "p95": 0.32511799999974755,
+    "boxes": 1132,
+    "writes": 8,
+    "bytes": 156616,
+    "cutBytes": 0,
+    "visibleCut": 0
+   },
+   "rays": {
+    "worldRaycast": {
+     "ms": 415.77932299999975,
+     "hits": 19073
+    },
+    "worldRaycastAll": {
+     "ms": 560.9926020000003,
+     "hits": 19871
+    },
+    "colRaycast": {
+     "ms": 113.56054200000017,
+     "hits": 19867
+    },
+    "segmentBlocked": {
+     "ms": 85.57275000000027,
+     "hits": 6234
+    },
+    "solidBlocked": {
+     "ms": 89.05911900000046,
+     "hits": 7815
+    }
+   },
+   "particles": {
+    "records": 2668,
+    "count": 50648,
+    "byKind": {
+     "rain": 45962,
+     "shard": 4686
+    }
+   },
+   "stats": {
+    "BREAK": {
+     "shaped": 0,
+     "plain": 0,
+     "refused": 0,
+     "again": 0,
+     "mayhem": 0,
+     "china": 0,
+     "crumbled": 0,
+     "heap": 0,
+     "ragged": 0,
+     "planes": 0,
+     "dropped": 0,
+     "chips": 0,
+     "dressed": 0,
+     "kinked": 0,
+     "loose": 0
+    },
+    "WALL": {
+     "rounds": 0,
+     "ports": 0,
+     "holes": 0,
+     "coverCells": 0,
+     "coverDead": 0,
+     "blasts": 0,
+     "refused": 0,
+     "falls": 0,
+     "floating": 0,
+     "chunks": 0,
+     "chunksDemoted": 0,
+     "navOpened": 0
+    },
+    "SHARD": {
+     "fragments": 258,
+     "crossings": 0,
+     "plates": 147,
+     "platesRefused": 134,
+     "cutPlates": 0,
+     "cutSplit": 0,
+     "cutDropped": 0,
+     "crumbled": 65,
+     "breaks": 47,
+     "emits": 909,
+     "born": 4686,
+     "trimmed": 1934,
+     "recsDeferred": 0,
+     "sounds": 66,
+     "soundsMerged": 201,
+     "spalls": 0,
+     "events": 15,
+     "crunches": 0,
+     "peakLive": 4686,
+     "peakPlates": 38
+    },
+    "GB": {
+     "panes": 4,
+     "impacts": 36,
+     "sites": 12,
+     "runs": 4,
+     "dropped": 258,
+     "shards": 0,
+     "chips": 0,
+     "refused": 0,
+     "diced": 0,
+     "clumps": 0,
+     "sheets": 0,
+     "blasts": 0,
+     "thinks": 44,
+     "hooked": 258,
+     "raked": 0
+    },
+    "debris": {
+     "spawned": 147,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 147,
+     "peakLive": 38,
+     "peakMoving": 38,
+     "kicked": 0
+    }
+   }
+  }
+ ]
+}

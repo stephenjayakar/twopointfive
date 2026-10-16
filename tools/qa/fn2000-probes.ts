@@ -13,15 +13,16 @@
 //   rifle-slot         4 / X / X / E / E / the wall (Q on, Q off) / a click / the grab (Space) / E in the hold: what is in the hands, what the animator holds, the
 //                      carriage per state (shoulder in the hands — standing, crouched, on a shot — lowLong at a sprint), and EVERY frame of it the rifle's
 //                      eleven boxes in exactly one place — off the hand or across the back — finite, owner-stamped
-//   rifle-carry        how it is HELD (the designer's four notes): the muzzle's side-to-side per stride under a bound crouch-walking / walking / running with it
+//   rifle-carry        how it is HELD (the maintainer's four notes): the muzzle's side-to-side per stride under a bound crouch-walking / walking / running with it
 //                      shouldered and sprinting with it low, the support hand on the foregrip every frame of a sprint → stop → walk → crouch run and of a wall hug
 //                      let go (the one-hand regression), the carriage never the calm carry / never nothing while it is drawn in the hand; and SLUNG: flat on the
 //                      back against the skinned mesh (on the shoulder blade, bridging the small of the back, rolled side-flat), no part's middle over 20 cm off
 //                      the spine line, standing / walking / crouched / running / kicking; and PER POSTURE: the crouched table (LONG_CROUCH) moves a crouched
 //                      man's carriage and not a standing one's, both hands stay on crouched and through crouch toggles
 //   rifle-suppression  Sam's rifle rounds past a man raise his suppression like his pistol rounds do (same segment rule); a ring past him raises nothing
-//   airfoil-head       a ring on a calm man's head at 8 m through 2 (RING) + the reticle + a RIGHT click: 'struck', breathing, by the player, his torch laid down, a thud-level
-//                      noise, no 'shot' event, rings 5 → 4, one 'ring' item, a knockout on the card and no kill
+//   airfoil-head       a ring on a calm man's head at 8 m through 2 (the rifle drawn: the RING is the load up on a fresh one) + the reticle + a RIGHT click — the press
+//                      frame shows the arc and sends nothing, the next frame (the button up) sends it: 'struck', breathing, by the player, his torch laid down, a
+//                      thud-level noise, no 'shot' event, rings 5 → 4, one 'ring' item, a knockout on the card and no kill
 //   airfoil-torso      a ring in the hips (fireRing at them): alive, staggered 1.5 s (rooted, gun down, no round though he has Sam lit in front of him), a yelp
 //                      from the pool, then ALERT with his fix on the shooter's side; no damage ever
 //   airfoil-miss       a ring into the wall 4 m from a calm man: the clack is a 'prop' 0.3 nobody made — he turns to look at IT (awareness up, his fix by the
@@ -32,35 +33,50 @@
 import { standUp, loadCharacter, ROOT } from './headless.ts';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, handProps } = await import(`${ROOT}/src/game/combat.ts`);
-const { SC20K_TAG, KNIFE_TAG, RIG, sc20kBoxes, sc20kGrip, sc20kMuzzleAhead } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { SC20K_TAG, KNIFE_TAG, RIG, M4_BOXES, rifleM4, sc20kBoxes, sc20kGrip, sc20kMuzzleAhead } = await import(`${ROOT}/src/game/rigProps.ts`);
+const { GEAR, gearText, ringTag, shellTag } = await import(`${ROOT}/src/game/gear.ts`);   // (which rifle is drawn: the 2010s carbine is three boxes more than the bullpup's eleven — and the kit's words as issued: a line this family reads on the HUD or in the log is asked for through gearText / ringTag / shellTag, so it is the old kit's on the frozen stand and the issue kit's under TPS_GEAR=1)
 const { Character, LONG_STEADY } = await import(`${ROOT}/src/game/character.ts`);
+const { castSuit } = await import(`${ROOT}/src/anim/gltf.ts`);   // (rifle-carry (3): the skin a back-slung rifle lies on, on the cast)
 const { rifleSpread, RIFLE_SPREAD, RIFLE_EQUIP_SECS } = await import(`${ROOT}/src/game/player.ts`);
 const { RING, fireRing, ringSolve, staggerLines } = await import(`${ROOT}/src/game/launcher.ts`);
-const { WEAPONS, LAUNCHER } = await import(`${ROOT}/src/game/weapons.ts`);
+const { WEAPONS, LAUNCHER, LAUNCHER40 } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SUPPRESSION } = await import(`${ROOT}/src/game/suppression.ts`);
 const { isBreathing } = await import(`${ROOT}/src/game/game.ts`);
 const { ocpable } = await import(`${ROOT}/src/game/lighting.ts`);
 const fxm = await import(`${ROOT}/src/game/effects.ts`);
 const { Overlay } = await import(`${ROOT}/src/ui/overlay.ts`);
+const { closeLethal } = await import(`${ROOT}/src/game/close.ts`);   // (kit-slots (e): where the blow is the player's choice the knockout is the RIGHT click and the row says so)
+const { TORCH } = await import(`${ROOT}/src/game/calmtorch.ts`);   // (kit-slots (d): a calm man in a lit corridor has his torch out under the calm torch rule — held off while the line stages a man with it lit)
+const { KIT: CARDS, KIT_SOLO } = await import(`${ROOT}/src/game/kit.ts`);
+const { KITANIM, KITANIM_LOG, kitReload } = await import(`${ROOT}/src/game/kitanim.ts`);
+const { WALLSNAP } = await import(`${ROOT}/src/game/wallsnap.ts`);   // (rifle-slot / rifle-carry at the wall: where the wall's feel pass is live, Q with the rifle in hand STACKS on it — the rifle stays in his hands at the low ready, not on the sling)
+const { RELOAD } = await import(`${ROOT}/src/game/autoreload.ts`);   // (rifle-reload (b): a dry gun reloads by itself where that rule is live — the line presses R on the frame the gun goes dry there)   // (kit-slots: with kit handling live a kit change is carried by hand and takes its own time — the probe waits a change out instead of counting on the old beat)
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
+const kitOn = (): boolean => KITANIM.on && KITANIM.equip;
+/** kit handling live (kitanim.ts) and his hands in the middle of a kit change: for these frames where the gun is drawn and what the animator holds are the
+ *  errand's own (probes.ts kitanim asks about them). Never true with the switch off. */
+const kitMid = (pl: any): boolean => kitOn() && (pl.char.anim.kitBusy || pl.char.anim.kitHold !== undefined);
+/** …or the change's lock-out still running: what a wait for the kit AT REST waits on (the lock-out alone is not his hands at work: a wall stack and the plain
+ *  beat hold it too, so no check is skipped on it) */
+const kitWait = (pl: any): boolean => kitMid(pl) || (kitOn() && pl.equipT > 0);
 const VERBOSE = process.argv.includes('--verbose');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const f2 = (x: number) => x.toFixed(2), f3 = (x: number) => x.toFixed(3);
-function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
+export function place(gd: any, p: Vec3, yaw: number) { gd.char.pos = v3.copy(p); gd.char.vel = [0, 0, 0]; gd.speed = 0; gd.char.bodyYaw = gd.char.aimYaw = yaw; gd.char.aimPitch = 0; gd.path = []; gd.pathGoal = null; gd.char.update(0); gd.char.update(DT); }
 /** parked out on the lot east of the building, held and pinned, facing east, deaf */
 function park(gd: any, i: number) { gd.hold = true; gd.pinned = true; place(gd, [37.5, 0, 6 + i * 1.5], Math.PI / 2); gd.heardUpTo = 1e12; }
 const kit = (r: any) => `chamber ${r.chamber} mag ${r.mag} spare [${r.spare.join(',')}]${r.reloading ? ' RELOADING' : ''}`;
 type Verdict = (ok: boolean, label: string, detail: string) => void;
-function family(title: string): { verdict: Verdict; done: () => boolean } {
+export function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 
 /** Sam alone in the corridor, everyone parked deaf on the lot, god mode; the rifle brought round with the 2 key and the equip beat waited out (or not: `draw` false
  *  leaves him as spawned — pistol selected, holstered, the rifle slung). Facing east down the corridor. */
-async function stage(seed: number, draw = true, at: Vec3 = [21.5, 0, 11.5]) {
+export async function stage(seed: number, draw = true, at: Vec3 = [21.5, 0, 11.5]) {
   Math.random = seeded(seed);
   const W = await standUp(); const { game, input } = W;
   game.godMode = true; game.player.visibility = 0.02;
@@ -68,11 +84,11 @@ async function stage(seed: number, draw = true, at: Vec3 = [21.5, 0, 11.5]) {
   game.guards.forEach((gd: any, i: number) => park(gd, i));
   game.teleportPlayer(at); game.player.crouch = false; game.player.char.bodyYaw = Math.PI / 2; game.player.char.aimYaw = Math.PI / 2;
   W.cam.yaw = 0; W.cam.rebuild?.(); W.step(DT);
-  if (draw) { input.pressed.add('Digit2'); W.step(DT); for (let i = 0; i < 40; i++) { W.cursorAt([at[0] + 6, 1.2, at[2]]); W.step(DT); } }
+  if (draw) { input.pressed.add('Digit2'); W.step(DT); for (let i = 0; i < 40 || (i < 160 && kitWait(game.player)); i++) { W.cursorAt([at[0] + 6, 1.2, at[2]]); W.step(DT); } if (kitWait(game.player)) throw new Error('stage: the rifle was still on its way into his hands 160 frames after the 2 key'); }   // (…and, carried by hand, until it IS in his hands)
   return W;
 }
 /** the audio log from here on */
-function listen(W: any): any[] { const a: any[] = []; W.audioLog = a; return a; }
+export function listen(W: any): any[] { const a: any[] = []; W.audioLog = a; return a; }
 /** the rifle's boxes among Sam's hand props this frame (combat.ts handProps → rigProps SC20K_TAG), and where they sit: 'hand' if their middle is nearer his right
  *  wrist than a point a hand behind his chest, else 'back'; spread = the largest distance of any of them from their middle (one rifle: under 0.45) */
 function rifleBoxes(game: any): { n: number; where: 'hand' | 'back' | 'none'; spread: number; finite: boolean; owned: boolean; knife: number; total: number } {
@@ -92,7 +108,7 @@ function longLine(game: any, p: Vec3, want: number): { dir: Vec3; dist: number; 
   return null;
 }
 /** the kit column off the real overlay code on a stand-in DOM (weapons-probes.ts hudText, trimmed to the text) */
-function hudText(game: any): string {
+export function hudText(game: any): string {
   type El = { tag: string; className: string; kids: El[]; text: string; style: Record<string, string>; title: string; appendChild(c: El): El; textContent: string };
   const mkEl = (tag: string): El => { const el: any = { tag, className: '', kids: [] as El[], text: '', style: {}, title: '', appendChild(c: El) { el.kids.push(c); return c; } }; Object.defineProperty(el, 'textContent', { get() { return el.text + el.kids.map((k: El) => k.textContent).join(''); }, set(v: string) { el.text = v ?? ''; el.kids = []; } }); return el as El; };
   const ser = (el: El): string => `${el.tag}${el.className.trim() ? '.' + el.className.trim().split(/\s+/).join('.') : ''}${el.text ? `{${el.text}}` : ''}${el.kids.length ? `(${el.kids.map(ser).join(' ')})` : ''}`;
@@ -101,7 +117,15 @@ function hudText(game: any): string {
   finally { if (had) G.document = prev; else delete G.document; }
 }
 /** collect gunfire / prop hearing events raised since the last call (by identity — game.events is re-filtered every frame) */
-function eventTap(game: any) { const seen = new Set<any>(); const evs: any[] = []; return { pump() { for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); evs.push({ kind: e.kind, level: e.level, weapon: e.weapon, who: e.who, pos: e.pos && v3.copy(e.pos), from: e.from && v3.copy(e.from), to: e.to && v3.copy(e.to), t: e.time }); } }, evs }; }
+export function eventTap(game: any) { const seen = new Set<any>(); const evs: any[] = []; return { pump() { for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); evs.push({ kind: e.kind, level: e.level, weapon: e.weapon, who: e.who, pos: e.pos && v3.copy(e.pos), from: e.from && v3.copy(e.from), to: e.to && v3.copy(e.to), t: e.time }); } }, evs }; }
+
+/** the launcher's button (the right one) as a one-frame click: the PRESS frame begins the gesture (the arc up, Player.launchHeld = the load, nothing sent), the NEXT
+ *  frame — the button up — sends the round. `at()` is asked again for the cursor on both frames; `onPress` reads the press frame before the release. */
+export function rmbTap(W: any, at: () => Vec3, onPress?: () => void) { W.cursorAt(at()); W.input.clicked |= 4; W.step(DT); onPress?.(); W.cursorAt(at()); W.step(DT); }
+/** the right button held down for `n` frames (pressed on the first), `each` read after every one of them; the button is left DOWN — `rmbUp` lets go */
+export function rmbHold(W: any, at: () => Vec3, n: number, each?: (f: number) => void) { for (let f = 0; f < n; f++) { W.cursorAt(at()); W.input.buttons |= 4; if (f === 0) W.input.clicked |= 4; W.step(DT); each?.(f); } }
+/** … and let go of: the first frame with the button up */
+export function rmbUp(W: any, at: () => Vec3) { W.input.buttons &= ~4; W.cursorAt(at()); W.step(DT); }
 
 // ================================================================================================ the rifle
 export async function rifleCadence() {
@@ -162,19 +186,32 @@ export async function rifleCadence() {
     // the equip beat: 1 to the pistol and 2 back — no round for RIFLE_EQUIP_SECS
     for (let f = 0; f < 20; f++) W.step(DT);
     input.pressed.add('Digit1'); W.step(DT); input.pressed.add('Digit2'); W.step(DT); const eq0 = pl.equipT;
-    const i1 = audio.length; for (let f = 0; f < 20; f++) { W.cursorAt(WALLPT); input.clicked |= 1; W.step(DT); } const during = roundsBetween(i1).length;
+    const kitLive = kitOn(); let inside = 0; const errand = kitLive ? KITANIM_LOG.at(-1) : null;   // (kit handling: the beat is the errand's own length — a rifle hardly out of his hands is back at once — and a click in its last moments is kept for the frame it ends: no round while the lock-out runs is the rule there)
+    const i1 = audio.length; for (let f = 0; f < 20 || (kitLive && f < 150 && pl.equipT > 0); f++) { const eqB = pl.equipT, n0 = rf.shotsFired; W.cursorAt(WALLPT); input.clicked |= 1; W.step(DT); if (rf.shotsFired > n0 && eqB - DT > 1e-6) inside++; } const during = kitLive ? inside : roundsBetween(i1).length;   // (clicked right through the lock-out, however long the errand)
     for (let f = 0; f < 15; f++) W.step(DT); const i2 = audio.length; W.cursorAt(WALLPT); input.clicked |= 1; W.step(DT); const after = roundsBetween(i2).length;
     const fails: string[] = [];
     if (!voice || voice.name !== 'rifleSuppressed') fails.push(`report voice ${voice?.name}`);
     if (!card || card.h[2] !== M.cardHalf[2] || card.emissive[0] !== M.cardEmissive[0]) fails.push(`flash card ${JSON.stringify(card)} (want muzzleFx.sc20k ${JSON.stringify({ h: M.cardHalf, e: M.cardEmissive })})`);
-    if (Math.abs(eq0 - RIFLE_EQUIP_SECS) > DT + 1e-6 || during !== 0 || after !== 1) fails.push(`equip beat ${f2(eq0)} s: ${during} rounds inside it, ${after} on the click after it (want ${RIFLE_EQUIP_SECS}, 0, 1)`);
-    F.verdict(!fails.length, '(e) a round is the row\'s: \'rifleSuppressed\', muzzleFx.sc20k\'s card; and 1 away / 2 back costs the equip beat — clicks inside it fire nothing, the first after it does', fails.join('; ') || `voice ${voice?.name} · card ${JSON.stringify(card)} · equip ${f2(eq0)} s → ${during}/${after}`); }
+    const beatWant = kitLive ? (errand?.what === 'swap' && errand.to === 'rifle' ? Math.max(0, errand.secs - KITANIM.early) : NaN) : RIFLE_EQUIP_SECS;   // (kit handling: the lock-out is the errand's own length less the early moment — kitanim.ts kitTick)
+    if (!(eq0 > 0) || !(Math.abs(eq0 - beatWant) <= DT + 1e-6) || during !== 0 || after !== 1) fails.push(`equip beat ${f2(eq0)} s: ${during} rounds inside it, ${after} on the click after it (want ${f2(beatWant)}, 0, 1)`);
+    F.verdict(!fails.length, '(e) a round is the row\'s: \'rifleSuppressed\', muzzleFx.sc20k\'s card; and 1 away / 2 back costs the equip beat — clicks inside it fire nothing (kit handling on: one in its last moments is kept for the frame it ends), the first after it does', fails.join('; ') || `voice ${voice?.name} · card ${JSON.stringify(card)} · equip ${f2(eq0)} s → ${during}/${after}`); }
   return F.done();
 }
 
 export async function rifleReload() {
   const F = family('rifle-reload: 30+1 and two thirties managed like the Five-seveN — the staged 2.4 s beat, the partial to storage, the empty on the floor as his black box');
   const W = await stage(2002); const { game, input } = W; const pl = game.player, rf = pl.rifle; const audio = listen(W); const WALLPT: Vec3 = [27.5, 1.2, 10.0];
+  /** the foley's frames against a plan: the weapon row's own beat pinned to the frame (`old`), or — kit handling's magazine change live for the gun's state
+   *  (kitanim.ts kitReload: tactical / empty / dry, each its own length) — that plan's kind and its times, each within a frame */
+  const beatFaults = (beat: string[], doneAt: number, plan: any, kind: string, old: string[], oldWords: string): string[] => {
+    if (!plan) return [...(JSON.stringify(beat) !== JSON.stringify(old) ? [`beat ${JSON.stringify(beat)} (${oldWords})`] : []), ...(doneAt !== 145 ? [`done at f${doneAt} (want f145: 2.4 s + the same frame)`] : [])];
+    const want: [string, number][] = [['magOut', plan.row.out], ['magIn', plan.row.in_], ...(plan.row.rack !== undefined ? [['rack', plan.row.rack] as [string, number]] : [])];
+    const near = (f: number, t: number) => Math.abs(f - (t * 60 + 0.5)) <= 1.01; const said = `kit handling's ${plan.kind} change: ${want.map(([n, t]) => `${n} ${f2(t)} s`).join(', ')}, done ${f2(plan.row.dur)} s`;
+    const f: string[] = []; if (plan.kind !== kind) f.push(`kit handling read this as a ${plan.kind} change (want ${kind})`);
+    if (beat.length !== want.length || beat.some((b, i) => b.split(':f')[0] !== want[i][0] || !near(+b.split(':f')[1], want[i][1]))) f.push(`beat ${JSON.stringify(beat)} (want ${said})`);
+    if (!near(doneAt, plan.row.dur)) f.push(`done at f${doneAt} (want ${said})`);
+    return f;
+  };
   /** press R and step `n` frames: the beat's foley stamped with the frame index it played on (0 = the frame of the press), and the frame the Firearm was done */
   const reloadBeat = (n: number, each?: (f: number) => void): { beat: string[]; doneAt: number } => {
     const beat: string[] = []; let doneAt = -1; let idx = audio.length; input.pressed.add('KeyR');
@@ -186,29 +223,29 @@ export async function rifleReload() {
     for (let f = 0; f < 60; f++) { W.cursorAt(WALLPT); if (f % 12 === 0) input.clicked |= 1; W.step(DT); } for (let f = 0; f < 10; f++) W.step(DT);
     const before = kit(rf); const items0 = new Set(game.items.items);
     let animAt0 = false, hudMid = '';
+    const plan = kitReload(game, rf, true);
     const { beat, doneAt } = reloadBeat(170, f => { if (f === 0) animAt0 = pl.char.anim.reloading; if (f === 40) hudMid = hudText(game); });
     const after = kit(rf); const newItems = game.items.items.filter((it: any) => !items0.has(it));
     const fails: string[] = [];
     if (fresh !== 'chamber 1 mag 30 spare [30,30]') fails.push(`fresh kit "${fresh}" (want 30+1 [30,30])`);
     if (D.magCapacity !== 30 || D.spareMags !== 2 || !D.topUp || D.reload.dur !== 2.4) fails.push(`row: box ${D.magCapacity} spares ${D.spareMags} topUp ${D.topUp} dur ${D.reload.dur}`);
     if (before !== 'chamber 1 mag 25 spare [30,30]') fails.push(`after five rounds "${before}"`);
-    if (JSON.stringify(beat) !== JSON.stringify(['magOut:f31', 'magIn:f91'])) fails.push(`beat ${JSON.stringify(beat)} (want magOut f31, magIn f91, no rack — one was up the pipe; 0.5 / 1.5 s land a frame late on the float dust of summed sixtieths, exactly as the pistol's 1.6 s reads f97 in weapons-identity)`);
-    if (doneAt !== 145) fails.push(`done at f${doneAt} (want f145: 2.4 s + the same frame)`);
+    fails.push(...beatFaults(beat, doneAt, plan, 'tactical', ['magOut:f31', 'magIn:f91'], 'want magOut f31, magIn f91, no rack — one was up the pipe; 0.5 / 1.5 s land a frame late on the float dust of summed sixtieths, exactly as the pistol\'s 1.6 s reads f97 in weapons-identity'));
     if (after !== 'chamber 1 mag 30 spare [30,25]') fails.push(`after "${after}" (want the fullest in, the 25 to storage)`);
     if (newItems.length) fails.push(`${newItems.length} item(s) dropped on a partial reload`);
     if (!animAt0) fails.push('no reload one-shot on the animator');
-    if (!/FN2000 · reloading/.test(hudMid)) fails.push(`kit row mid-reload lacks "FN2000 · reloading": ${hudMid.slice(-260)}`);
-    F.verdict(!fails.length, '(a) five rounds then R: mag out at 0.5 s (the 25 back to storage), the fullest thirty in at 1.5, no rack, done 2.4 — 30+1 [30,25]; the row says reloading', fails.join('; ') || `${fresh} → ${before} → ${JSON.stringify(beat)} done f${doneAt} → ${after}`); }
+    if (!hudMid.includes(gearText('FN2000 · reloading'))) fails.push(`kit row mid-reload lacks "${gearText('FN2000 · reloading')}": ${hudMid.slice(-260)}`);
+    F.verdict(!fails.length, '(a) five rounds then R: mag out at 0.5 s (the 25 back to storage), the fullest thirty in at 1.5, no rack, done 2.4 (kit handling\'s magazine change live: its tactical change\'s own times) — 30+1 [30,25]; the row says reloading', fails.join('; ') || `${fresh} → ${before} → ${JSON.stringify(beat)} done f${doneAt} → ${after}`); }
   // (b) empty: the box drops (fill 3, his), the rack at 2.0
-  { rf.mag = 0; rf.chamber = 0; W.step(DT); const items0 = new Set(game.items.items);
+  { rf.mag = 0; rf.chamber = 0; if (!RELOAD.auto) W.step(DT); const items0 = new Set(game.items.items);
+    const plan = kitReload(game, rf, true);
     const { beat, doneAt } = reloadBeat(170);
     const box = game.items.items.filter((it: any) => !items0.has(it));
     const fails: string[] = [];
-    if (JSON.stringify(beat) !== JSON.stringify(['magOut:f31', 'magIn:f91', 'rack:f121'])) fails.push(`beat ${JSON.stringify(beat)} (want out f31 / in f91 / rack f121)`);
+    fails.push(...beatFaults(beat, doneAt, plan, 'empty', ['magOut:f31', 'magIn:f91', 'rack:f121'], 'want out f31 / in f91 / rack f121'));
     if (box.length !== 1 || box[0].kind !== 'mag' || box[0].fill !== 3 || box[0].who !== 1) fails.push(`dropped ${JSON.stringify(box.map((b: any) => `${b.kind}/fill${b.fill}/who${b.who}`))} (want one mag fill 3 who 1)`);
     if (kit(rf) !== 'chamber 1 mag 29 spare [25]') fails.push(`after "${kit(rf)}" (want 29+1 [25]: the thirty in, one racked off it)`);
-    if (doneAt !== 145) fails.push(`done at f${doneAt} (want f145)`);
-    F.verdict(!fails.length, '(b) dry, then R: the empty thirty hits the floor at 0.5 s as HIS box (a mag item, fill 3), the fullest spare in, the charging handle at 2.0 s, 29+1 [25]', fails.join('; ') || `${JSON.stringify(beat)} · ${JSON.stringify(box.map((b: any) => `${b.kind}/fill${b.fill}`))} · ${kit(rf)}`); }
+    F.verdict(!fails.length, '(b) dry, then R: the empty thirty hits the floor at 0.5 s as HIS box (a mag item, fill 3), the fullest spare in, the charging handle at 2.0 s (kit handling\'s magazine change live: its empty change\'s own times), 29+1 [25]', fails.join('; ') || `${JSON.stringify(beat)} · ${JSON.stringify(box.map((b: any) => `${b.kind}/fill${b.fill}`))} · ${kit(rf)}`); }
   // (c) refused when full; broken off by a sprint; nothing left → the line
   { const msgs: string[] = []; const orig = game.msg.bind(game); game.msg = (t: string) => { msgs.push(t); return orig(t); };
     rf.mag = 30; rf.chamber = 1; rf.spare = [30]; input.pressed.add('KeyR'); W.step(DT); const refused = !rf.reloading;   // (a full spare to hand: with only the 25 in storage a 29-round box is rightly not worth changing either)
@@ -216,7 +253,7 @@ export async function rifleReload() {
     input.pressed.add('KeyR'); for (let f = 0; f < 10; f++) W.step(DT); const mid = rf.reloading && pl.char.anim.reloading;
     input.keys.add('ShiftLeft'); input.keys.add('KeyW'); for (let f = 0; f < 5; f++) W.step(DT); input.keys.delete('ShiftLeft'); input.keys.delete('KeyW'); for (let f = 0; f < 20; f++) W.step(DT);
     const broke = !rf.reloading && !pl.char.anim.reloading;
-    rf.spare = []; rf.mag = 3; msgs.length = 0; input.pressed.add('KeyR'); W.step(DT); const none = !rf.reloading && msgs.some(m => /no spare magazines for the FN2000/.test(m));
+    rf.spare = []; rf.mag = 3; msgs.length = 0; input.pressed.add('KeyR'); W.step(DT); const none = !rf.reloading && msgs.some(m => m.includes(gearText('no spare magazines for the FN2000')));
     game.msg = orig;
     const fails: string[] = [];
     if (!refused) fails.push('R with 30+1 started a reload'); if (!mid) fails.push('R after a round did not start one'); if (!broke) fails.push('a sprint did not break it off'); if (!none) fails.push(`no spares: reloading ${rf.reloading}, log ${JSON.stringify(msgs)}`);
@@ -290,15 +327,17 @@ export async function rifleSlot() {
   const trace: string[] = []; const bad: string[] = []; let frames = 0;
   /** step n frames asserting the per-frame invariants: eleven rifle boxes, finite, owner-stamped, together (spread < 0.45), and where `want` says (or anywhere) */
   const run = (n: number, want: 'hand' | 'back' | 'either', tag: string, each?: (f: number) => void) => {
-    for (let f = 0; f < n; f++) {
+    for (let f = 0; f < n || (f < n + 120 && kitMid(pl)); f++) {   // (a kit change carried by hand is run to its end: the next step starts from the kit at rest)
       each?.(f); W.step(DT); frames++;
-      const rb = rifleBoxes(game);
+      const rb = rifleBoxes(game); const mid = kitMid(pl);   // (mid-change the rifle is where his hands have it — still ONE place, finite, his)
       const bonesOk = Object.values(pl.char.bones).every((p: any) => p.every(Number.isFinite));
-      if (rb.n !== 11) bad.push(`${tag} f${f}: ${rb.n} rifle boxes (want 11)`);
-      else { if (!rb.finite || !rb.owned) bad.push(`${tag} f${f}: non-finite ${!rb.finite} / un-owned ${!rb.owned} rifle box`); if (rb.spread > 0.45) bad.push(`${tag} f${f}: rifle boxes ${f2(rb.spread)} m apart (two places?)`); if (want !== 'either' && rb.where !== want) bad.push(`${tag} f${f}: rifle drawn at the ${rb.where} (want ${want})`); }
+      const wantN = GEAR.on ? M4_BOXES : 11;
+      if (rb.n !== wantN) bad.push(`${tag} f${f}: ${rb.n} rifle boxes (want ${wantN})`);
+      else { if (!rb.finite || !rb.owned) bad.push(`${tag} f${f}: non-finite ${!rb.finite} / un-owned ${!rb.owned} rifle box`); if (rb.spread > 0.45) bad.push(`${tag} f${f}: rifle boxes ${f2(rb.spread)} m apart (two places?)`); if (want !== 'either' && rb.where !== want && !mid) bad.push(`${tag} f${f}: rifle drawn at the ${rb.where} (want ${want})`); }
       if (!bonesOk) bad.push(`${tag} f${f}: NaN bone`);
-      if (an.longGun !== (rifleBoxes(game).where === 'hand') && f > 1) bad.push(`${tag} f${f}: animator longGun ${an.longGun} but the rifle is drawn at the ${rb.where}`);
+      if (an.longGun !== (rb.where === 'hand') && f > 1 && !mid) bad.push(`${tag} f${f}: animator longGun ${an.longGun} but the rifle is drawn at the ${rb.where}`);
     }
+    if (kitMid(pl)) bad.push(`${tag}: a kit change still running ${n + 120} frames on`);
   };
   const state = () => `slot ${pl.slot}${pl.holstered ? ' holstered/slung' : ''} · inHand ${pl.gunInHand()?.def.short ?? '—'} · rifle ${rifleBoxes(game).where} · longGun ${an.longGun} ${an.longShown ?? '—'} · muzzleAhead ${f2(pl.char.muzzleAhead)}`;
   const expect = (label: string, cond: boolean) => { trace.push(`${label}: ${state()}`); if (!cond) bad.push(`${label}: ${state()}`); };
@@ -319,7 +358,8 @@ export async function rifleSlot() {
   // the wall: north wall of the corridor at z ≈ 10 — sidle spot
   game.teleportPlayer([21.5, 0, 10.7]); pl.char.bodyYaw = pl.char.aimYaw = 0; run(10, 'hand', 'tp2');
   input.pressed.add('KeyQ'); run(40, 'either', 'Q');
-  expect('Q (back to the wall: slung for it)', !!pl.wall && pl.holstered && !an.longGun && rifleBoxes(game).where === 'back');
+  if (WALLSNAP.on) expect('Q (stacked on the wall: the rifle kept in his hands, low)', !!pl.wall && !pl.holstered && an.longGun && an.longShown === 'lowLong' && rifleBoxes(game).where === 'hand');
+  else expect('Q (back to the wall: slung for it)', !!pl.wall && pl.holstered && !an.longGun && rifleBoxes(game).where === 'back');
   input.pressed.add('KeyQ'); run(40, 'either', 'Qoff'); expect('Q again (off it: back in the hands)', !pl.wall && !pl.holstered && an.longGun && rifleBoxes(game).where === 'hand');
   // the grab: a calm man ahead facing away; Space on his row
   const A = game.guards[0]; A.hold = true; A.pinned = false; A.state = 'patrol'; A.awareness = 0; A.heardUpTo = 1e12;
@@ -369,33 +409,41 @@ function fistOf(game: any): { rifle: 'hand' | 'back' | 'none'; can: 'smoke' | 'f
   return { rifle: rifleBoxes(game).where, can, pistolInHand };
 }
 export async function kitSlots() {
-  const F = family('kit-slots: 1 pistol · 2 FN2000 (2 again = its attachment) · 3 smoke · 4 stun — the digits, the fist per slot (never a can beside the rifle), the kit column with the OCP on row 1, the right button\'s matrix, the loadout off, X and B dead');
+  const F = family('kit-slots: 1 pistol · 2 FN2000 (2 again = the launcher\'s other load, RING ⇄ 40 MM) · 3 smoke · 4 stun — the digits, the fist per slot (never a can beside the rifle), the kit column with the OCP on row 1, the right button\'s matrix and its press-then-release gesture, the loadout off, X and B dead');
   const W = await stage(2201, false, [21.5, 0, 11.5]); const { game, input } = W; const pl = game.player, rf = pl.rifle, an = pl.char.anim;
   const AHEAD: Vec3 = [27.5, 1.2, 11.5];
-  const settle = (n = 36) => { for (let f = 0; f < n; f++) { W.cursorAt(AHEAD); W.step(DT); } };
+  let stuck = 0;   // (kit changes still running two seconds on: a FAIL of its own at the end)
+  const settle = (n = 36) => { for (let f = 0; f < n; f++) { W.cursorAt(AHEAD); W.step(DT); } let f = 0; for (; f < 120 && kitWait(pl); f++) { W.cursorAt(AHEAD); W.step(DT); } if (f >= 120) stuck++; };   // (…and, kit handling live, until his hands have finished the change: a key or a click inside it is kept or refused by kit handling's own rules — probes.ts kitanim — and is not this family's question)
   const press = (code: string, n = 36) => { input.pressed.add(code); settle(n); };
   const msgs: string[] = []; const origMsg = game.msg.bind(game); game.msg = (t: string) => { msgs.push(t); return origMsg(t); };
   const audio = listen(W);
-  // (a) the digits and what they select; 2 again cycles the attachment; the selection remembered while the rifle is away; X and B do nothing
+  const SH = rf.shells;   // (the 40 mm rounds as issued on this stand: three on the rifle as built, the kit card's own count where a card is dealt)
+  // (a) the digits and what they select; 2 again flips the launcher's load (RING ⇄ 40 MM — one of the two is ALWAYS up: there is no 'nothing'); the load remembered while the rifle is away; X and B do nothing
   { const fails: string[] = []; const tr: string[] = [];
     const st = () => `${pl.slot}${pl.holstered ? '/away' : ''} att ${rf.attachment ?? 'none'}`;
     if (pl.slot !== 'pistol' || !pl.holstered) fails.push(`fresh: ${st()} (want pistol, holstered)`);
-    press('Digit2'); tr.push(`2 → ${st()}`); if (pl.slot !== 'rifle' || pl.holstered || !pl.rifleUp || rf.attachment !== null) fails.push(`2: ${st()} rifleUp ${pl.rifleUp} (want rifle up, no attachment)`);
-    msgs.length = 0; press('Digit2'); tr.push(`2 again → ${st()}`); if (pl.slot !== 'rifle' || !pl.rifleUp || rf.attachment !== 'ring' || !msgs.some(m => /ring airfoil ×5 on the right button/.test(m))) fails.push(`2 again: ${st()} "${msgs.at(-1)}" (want RING, said so)`);
+    { const want = KIT_SOLO.on ? CARDS.members[0].shells : LAUNCHER40.rounds;   // (the plain night wears his card where the stand asks it — kit.ts kitSoloStand; else the rifle as built)
+      if (SH !== want) fails.push(`fresh: ${SH} 40 mm rounds on the rifle (want ${want}: ${KIT_SOLO.on ? 'his card\'s' : 'the rifle as built'})`); }
+    if (rf.attachment !== 'ring' || rf.attIdx !== 0) fails.push(`fresh: the load up is ${rf.attachment} (attIdx ${rf.attIdx}) — want the RING, never nothing`);
+    msgs.length = 0; press('Digit2'); tr.push(`2 → ${st()}`); if (pl.slot !== 'rifle' || pl.holstered || !pl.rifleUp || rf.attachment !== 'ring') fails.push(`2: ${st()} rifleUp ${pl.rifleUp} (want rifle up, the RING on its button)`);
+    if (!msgs.some(m => m === gearText('FN2000 · SEMI · RING ×5'))) fails.push(`2: the draw said ${JSON.stringify(msgs)} (want "FN2000 · SEMI · RING ×5": the load named with the rifle)`);
+    msgs.length = 0; press('Digit2'); tr.push(`2 again → ${st()}`); if (pl.slot !== 'rifle' || !pl.rifleUp || rf.attachment !== 'he40' || !msgs.some(m => m.includes(`40 mm grenade ×${SH} on the right button`) && m.includes(gearText('2 again for the ring airfoil')))) fails.push(`2 again: ${st()} "${msgs.at(-1)}" (want the 40 mm, said so, and the way back)`);
     press('KeyX'); tr.push(`X → ${st()}`); if (pl.slot !== 'rifle' || !pl.rifleUp) fails.push(`X changed something: ${st()}`);
-    press('KeyB'); tr.push(`B → ${st()}`); if (rf.attachment !== 'ring') fails.push(`B changed the attachment: ${st()}`);
-    press('KeyE'); tr.push(`E → ${st()}`); if (!pl.holstered || rf.attachment !== 'ring') fails.push(`E: ${st()} (want slung, RING kept)`);
-    press('Digit2'); tr.push(`2 slung → ${st()}`); if (!pl.rifleUp || rf.attachment !== 'ring') fails.push(`2 with it slung: ${st()} (want it drawn, RING still selected — not cycled)`);
-    press('Digit2'); tr.push(`2 again → ${st()}`); if (rf.attachment !== null) fails.push(`2 again off RING: ${st()} (want none)`);
+    press('KeyB'); tr.push(`B → ${st()}`); if (rf.attachment !== 'he40') fails.push(`B changed the load: ${st()}`);
+    press('KeyE'); tr.push(`E → ${st()}`); if (!pl.holstered || rf.attachment !== 'he40') fails.push(`E: ${st()} (want slung, the 40 mm kept)`);
+    msgs.length = 0; press('Digit2'); tr.push(`2 slung → ${st()}`); if (!pl.rifleUp || rf.attachment !== 'he40') fails.push(`2 with it slung: ${st()} (want it drawn, the 40 mm still up — not flipped)`);
+    if (!msgs.some(m => m === gearText(`FN2000 · SEMI · 40 MM ×${SH}`))) fails.push(`2 with it slung: the draw said ${JSON.stringify(msgs)} (want "${gearText(`FN2000 · SEMI · 40 MM ×${SH}`)}")`);
+    msgs.length = 0; press('Digit2'); tr.push(`2 again → ${st()}`); if (rf.attachment !== 'ring' || !msgs.some(m => m.includes(gearText('ring airfoil ×5 on the right button')) && m.includes(gearText('2 again for the 40 mm')))) fails.push(`2 again off the 40 mm: ${st()} "${msgs.at(-1)}" (want RING, said so, and the way back)`);
+    for (const want of ['he40', 'ring', 'he40', 'ring'] as const) { press('Digit2'); tr.push(`2 again → ${st()}`); if (rf.attachment !== want) fails.push(`2 again: ${st()} (want ${want} — round and round the two, never nothing)`); }
     press('Digit3'); tr.push(`3 → ${st()}`); if (pl.slot !== 'smoke' || pl.holstered || pl.throwKind !== 'smoke') fails.push(`3: ${st()} throwKind ${pl.throwKind}`);
     press('Digit4'); tr.push(`4 → ${st()}`); if (pl.slot !== 'flash' || pl.holstered || pl.throwKind !== 'flash') fails.push(`4: ${st()} throwKind ${pl.throwKind}`);
     press('Digit1'); tr.push(`1 → ${st()}`); if (pl.slot !== 'pistol' || pl.holstered || pl.gunInHand() !== pl.pistol) fails.push(`1: ${st()}`);
     press('KeyX'); if (pl.slot !== 'pistol') fails.push(`X off the pistol went to ${st()}`);
-    // a double-tapped 2 off the pistol: the first draws it, the second lands inside the equip beat and must NOT put the launcher on the button
+    // a double-tapped 2 off the pistol: the first draws it, the second lands inside the equip beat and must NOT flip the launcher's load
     input.pressed.add('Digit2'); W.step(DT); input.pressed.add('Digit2'); W.step(DT); const dbl = st(); settle(30); tr.push(`2,2 quick → ${dbl}`);
-    if (pl.slot !== 'rifle' || rf.attachment !== null) fails.push(`2 twice inside the equip beat: ${dbl} (want the rifle drawn, no attachment)`);
+    if (pl.slot !== 'rifle' || rf.attachment !== 'ring') fails.push(`2 twice inside the equip beat: ${dbl} (want the rifle drawn, the RING still up — not flipped)`);
     press('Digit1');
-    F.verdict(!fails.length, '(a) 2 = the rifle into the hands, 2 again = its attachment none → RING → none (said, and kept while it is slung: 2 off the sling draws, does not cycle; a double tap inside the draw does not cycle either), 3 smoke, 4 stun, 1 the pistol; X and B are dead keys', fails.join('; ') || tr.join(' · ')); }
+    F.verdict(!fails.length, '(a) 2 = the rifle into the hands with the RING on its button (the draw names the load), 2 again = the launcher\'s other load, RING ⇄ 40 MM and round again — never nothing (said, and kept while it is slung: 2 off the sling draws, does not flip; a double tap inside the draw does not flip either), 3 smoke, 4 stun, 1 the pistol; X and B are dead keys', fails.join('; ') || tr.join(' · ')); }
   // (b) the fist per slot × drawn / put away — the boxes handProps actually emits
   { const fails: string[] = []; const tr: string[] = [];
     for (const k of ['pistol', 'rifle', 'smoke', 'flash'] as const) for (const away of [false, true]) {
@@ -413,30 +461,34 @@ export async function kitSlots() {
     pl.slot = 'rifle'; pl.holstered = false; pl.throwKind = 'smoke'; settle(40); const f2k = fistOf(game);
     if (f2k.can) fails.push(`the rifle in the hands and a ${f2k.can} can in the fist — the 08-08 bug`);
     F.verdict(!fails.length, '(b) the fist shows the SELECTED item and nothing else: the pistol in it only on the pistol\'s slot drawn, a can only on a canister slot drawn, the rifle in the hands only on its slot drawn (else across the back) — never a can beside the rifle', (fails.length ? '✗ ' + fails.join('\n    ✗ ') + '\n    ' : '') + tr.join(' | ')); }
-  // (c) the kit column: rows 1‥4 in the digits' order, the OCP tag closing row 1, nothing about the right button in the strip, RING lit only while selected; the loadout off
+  // (c) the kit column: rows 1‥4 in the digits' order, the OCP tag closing row 1, nothing about the right button in the strip, the load that is UP lit (RING on a fresh kit, the 40MM dim; after 2 again the other way round); the loadout off
   { const fails: string[] = [];
-    pl.slot = 'pistol'; pl.holstered = false; rf.attIdx = -1; settle(10); const h0 = hudText(game);
+    pl.slot = 'pistol'; pl.holstered = false; rf.attIdx = 0; settle(10); const h0 = hudText(game);   // (the RING up, as on a fresh kit)
     const order = [...h0.matchAll(/span\.key\{(\d)\} span\.name\{([^}]*)\}/g)].map(m => `${m[1]}:${m[2]}`).join(',');
-    if (order !== '1:Five-seveN,2:FN2000,3:smoke,4:stun') fails.push(`rows ${order}`);
+    if (order !== gearText('1:Five-seveN,2:FN2000,3:smoke,4:stun,5:frag')) fails.push(`rows ${order}`);   // (5: the frag part's row)
     if (!/div\.slot\.sel\(span\.key\{1\}[^|]*span\.tag\.ocp\.on\{OCP\}\(span\.ocpbar/.test(h0)) fails.push(`row 1 lacks the lit OCP tag + meter: ${h0.split(' | ')[2]}`);
     if (/RMB/.test(h0.split(' | ')[0]) || /BRACE/.test(h0)) fails.push(`the strip still names the right button / a brace: ${h0.split(' | ')[0]}`);
-    if (!/span\.tag\.rings\{RING ×5\}/.test(h0) || /tag\.rings\.on/.test(h0)) fails.push('RING tag missing or lit with no attachment selected');
+    if (!h0.includes(`span.tag.rings.on{${ringTag()} ×5} span.tag.rings.shells{${shellTag()} ×${SH}}`) || /tag\.rings\.shells\.on/.test(h0)) fails.push(`the RING up: want its tag lit and the 40MM's dim beside it: ${h0.split(' | ').find(x => /key\{2\}/.test(x))}`);
     pl.ocp.charge = 0.4; settle(1); const hLow = hudText(game); pl.ocp.charge = 1;
     if (!/span\.tag\.ocp\{OCP\}\(span\.ocpbar\(b\)\)/.test(hLow)) fails.push(`OCP at 40 %: ${(hLow.match(/span\.tag\.ocp[^)]*\)\)/) ?? ['?'])[0]} (want the tag dim — not .on — while it recharges)`);   // (this file's hudText drops inline widths; weapons-identity's card keeps the meter's %)
-    pl.slot = 'rifle'; settle(40); input.pressed.add('Digit2'); settle(2); const hRing = hudText(game);
-    if (!/div\.slot\.slung\.sel\(span\.key\{2\}[^|]*span\.tag\.on\{SEMI\}[^|]*span\.tag\.rings\.on\{RING ×5\}/.test(hRing)) fails.push(`row 2 with RING selected: ${hRing.split(' | ').find(x => /key\{2\}/.test(x))}`);
-    input.pressed.add('Digit2'); settle(2);
+    pl.slot = 'rifle'; settle(40); const hRing = hudText(game);
+    if (!new RegExp(`div\\.slot\\.slung\\.sel\\(span\\.key\\{2\\}[^|]*span\\.tag\\.on\\{SEMI\\}[^|]*span\\.tag\\.rings\\.on\\{${ringTag()} ×5\\} span\\.tag\\.rings\\.shells\\{${shellTag()} ×${SH}\\}`).test(hRing)) fails.push(`row 2 with the rifle up and the RING on its button: ${hRing.split(' | ').find(x => /key\{2\}/.test(x))}`);
+    input.pressed.add('Digit2'); settle(2); const h40 = hudText(game);   // (RING → 40 MM)
+    if (!new RegExp(`div\\.slot\\.slung\\.sel\\(span\\.key\\{2\\}[^|]*span\\.tag\\.on\\{SEMI\\}[^|]*span\\.tag\\.rings\\{${ringTag()} ×5\\} span\\.tag\\.rings\\.shells\\.on\\{${shellTag()} ×${SH}\\}`).test(h40)) fails.push(`row 2 after 2 again (the 40 mm up): ${h40.split(' | ').find(x => /key\{2\}/.test(x))}`);
+    input.pressed.add('Digit2'); settle(2);   // (40 MM → RING)
+    if (rf.attachment !== 'ring' || !hudText(game).includes(`span.tag.rings.on{${ringTag()} ×5} span.tag.rings.shells{${shellTag()} ×${SH}}`)) fails.push(`2 again a second time: the load up is ${rf.attachment}, row 2 ${hudText(game).split(' | ').find(x => /key\{2\}/.test(x))}`);
     // the loadout off: row 2 greyed and named, 3 / 4 keep their numbers, 2 says so and selects nothing, 3 still throws smoke
     game.setLoadout(false); settle(4); const hOff = hudText(game); msgs.length = 0;
-    if (!/div\.slot\.absent\(span\.key\{2\} span\.name\{FN2000\} span\{not in this kit\}\)/.test(hOff)) fails.push(`loadout off, row 2: ${hOff.split(' | ').find(x => /key\{2\}/.test(x))}`);
+    if (!hOff.includes(gearText('div.slot.absent(span.key{2} span.name{FN2000} span{not in this kit})'))) fails.push(`loadout off, row 2: ${hOff.split(' | ').find(x => /key\{2\}/.test(x))}`);
     if (pl.slot !== 'pistol') fails.push(`loadout off with the rifle selected left slot ${pl.slot}`);
-    input.pressed.add('Digit2'); settle(2); if (pl.slot !== 'pistol' || !msgs.some(m => /no FN2000 in this loadout/.test(m))) fails.push(`2 with no rifle: slot ${pl.slot}, "${msgs.at(-1)}"`);
+    input.pressed.add('Digit2'); settle(2); if (pl.slot !== 'pistol' || !msgs.some(m => m.includes(gearText('no FN2000 in this loadout')))) fails.push(`2 with no rifle: slot ${pl.slot}, "${msgs.at(-1)}"`);
     input.pressed.add('Digit3'); settle(2); if (pl.slot !== 'smoke') fails.push(`3 with no rifle: slot ${pl.slot} (want smoke — the numbers do not close up)`);
     if (fistOf(game).rifle !== 'none') fails.push('rifle boxes drawn with the loadout off');
     game.setLoadout(true); pl.slot = 'pistol'; pl.holstered = false; settle(10);
-    F.verdict(!fails.length, '(c) the column reads 1 Five-seveN · 2 FN2000 · 3 smoke · 4 stun; the OCP\'s charge is a tagged meter closing row 1 (lit when ready); the strip says nothing of the right button or a brace; RING lights only while selected; without the rifle row 2 stays, greyed "not in this kit", 2 says so, 3 is still smoke', fails.join('; ') || `fresh: ${h0.split(' | ').slice(2).join(' | ').slice(0, 330)}…`); }
+    F.verdict(!fails.length, '(c) the column reads 1 Five-seveN · 2 FN2000 · 3 smoke · 4 stun · 5 frag; the OCP\'s charge is a tagged meter closing row 1 (lit when ready); the strip says nothing of the right button or a brace; the launcher\'s load that is up is the lit tag (RING from the start, the 40MM after 2 again, RING after another); without the rifle row 2 stays, greyed "not in this kit", 2 says so, 3 is still smoke', fails.join('; ') || `fresh: ${h0.split(' | ').slice(2).join(' | ').slice(0, 330)}…`); }
   // (d) the right button's matrix — pistol + light = OCP; pistol + a man whose torch is out = nothing; pistol + a man with it lit = his torch (electronics too);
-  //     rifle + no attachment = nothing (the one-time word over a light); rifle + RING = a ring, 5 → 4; the pace no slower with the rifle up
+  //     rifle (the RING up — there is always a load up) over a light = the ring's gesture begins like anywhere else: no OCP, no word about it; Esc drops it unsent;
+  //     rifle + RING on a man = the press frame holds the arc and sends nothing, the next frame sends one ring; the pace no slower with the rifle up
   { const fails: string[] = []; const tr: string[] = [];
     const light = game.targets.filter((t: any) => t.interactive && t.kind !== 'breaker' && t.factor > 0 && !t.broken).sort((a: any, b: any) => v3.distXZ(a.pos, pl.char.pos) - v3.distXZ(b.pos, pl.char.pos)).find((t: any) => { W.cursorAt(t.pos); W.step(DT); return game.aimTarget === t; });
     if (!light) fails.push('staging: no fixture near the corridor spot the reticle would snap to');
@@ -447,13 +499,24 @@ export async function kitSlots() {
       tr.push(`pistol+light: ocpable ${able}, charge ${f2(pl.ocp.charge)}, "${msgs.at(-1) ?? ''}"`);
       if (!able || pl.ocp.charge > 0.05 || !(light.disabledUntil > game.time) || !msgs.some(m => /^OCP → /.test(m))) fails.push(`pistol + light: ocpable ${able}, charge ${f2(pl.ocp.charge)}, disabledUntil ${f2(light.disabledUntil)}, "${msgs.at(-1)}"`);
       pl.ocp.charge = 1; light.disabledUntil = -1;
-      // rifle + no attachment over the same light: nothing but the word, once
-      pl.slot = 'rifle'; rf.attIdx = -1; settle(40); msgs.length = 0; const rounds0 = rf.spent, rings0 = rf.rings;
-      W.cursorAt(light.pos); W.step(DT); const ableR = ocpable(game);   // (true — the light IS ocp-able; the overlay words the ring by what is in the hand, player.ts keeps the button dead)
-      W.cursorAt(light.pos); input.clicked |= 4; W.step(DT); W.cursorAt(light.pos); input.clicked |= 4; W.step(DT); settle(5);
+      // the rifle up over the same light (the RING on its button — a rifle with a launcher always has a load up): the OCP stays the pistol's and nothing is said
+      // of it any more; the press begins the ring's gesture as it would anywhere, held it sends nothing, and Esc drops it unsent — the button still down begins nothing
+      pl.slot = 'rifle'; rf.attIdx = 0; pl.ocpHinted = false; settle(40); msgs.length = 0; const rounds0 = rf.spent, rings0 = rf.rings;
+      W.cursorAt(light.pos); W.step(DT); const ableR = ocpable(game);   // (true — the light IS ocp-able; the overlay words the button by what is in the hand)
+      const snappedL = game.aimTarget === light; const restArc = pl.throwPreview, restHeld = pl.launchHeld;
+      let heldAll = true, arcAll = true; rmbHold(W, () => light.pos, 6, () => { heldAll &&= pl.launchHeld === 'ring'; arcAll &&= (pl.throwPreview?.points.length ?? 0) >= 2; });
+      const sentHeld = rings0 - rf.rings + game.rings.length;
+      const esc = game.escape(); const afterEsc = pl.launchHeld, arcEsc = pl.throwPreview;
+      let begunAfter = false; for (let f = 0; f < 4; f++) { W.cursorAt(light.pos); input.buttons |= 4; W.step(DT); begunAfter ||= pl.launchHeld !== null || !!pl.throwPreview; }
+      rmbUp(W, () => light.pos); settle(5);
       const words = msgs.filter(m => /the OCP is on the pistol/.test(m)).length;
-      tr.push(`rifle+none+light: charge ${f2(pl.ocp.charge)}, rings ${rf.rings}, words ${words}`);
-      if (pl.ocp.charge < 0.99 || rf.rings !== rings0 || rf.spent !== rounds0 || game.rings.length || words !== 1 || light.disabledUntil > 0) fails.push(`rifle + no attachment + RMB×2 over the light: charge ${f2(pl.ocp.charge)}, rings ${rings0}→${rf.rings}, rounds ${rounds0}→${rf.spent}, in the air ${game.rings.length}, the word ×${words} (want nothing at all but the word once)`);
+      tr.push(`rifle+RING+light: snapped ${snappedL}, charge ${f2(pl.ocp.charge)}, held ${heldAll} arc ${arcAll}, Esc ${esc}, rings ${rings0}→${rf.rings}, words ${words}`);
+      if (!snappedL) fails.push('staging: the reticle left the light with the rifle up');
+      if (restArc || restHeld !== null) fails.push(`the rifle up at rest, the RING on its button: an arc ${restArc ? 'is drawn' : 'is not drawn'}, launchHeld ${restHeld} (want no arc and nothing held until the button goes down)`);
+      if (!heldAll || !arcAll || sentHeld) fails.push(`the right button held 6 frames over the light: launchHeld 'ring' throughout ${heldAll}, the arc up throughout ${arcAll}, ${sentHeld} sent (want the gesture begun, its arc drawn, nothing sent)`);
+      if (!esc || afterEsc !== null || arcEsc) fails.push(`Esc with the button down: used ${esc}, launchHeld ${afterEsc}, arc ${arcEsc ? 'still up' : 'gone'} (want it taken, the gesture and its arc dropped)`);
+      if (begunAfter) fails.push('the button still down after Esc began a gesture again (only a fresh press may)');
+      if (pl.ocp.charge < 0.99 || rf.rings !== rings0 || rf.spent !== rounds0 || game.rings.length || words !== 0 || pl.ocpHinted || light.disabledUntil > 0) fails.push(`rifle + RMB over the light, dropped with Esc: charge ${f2(pl.ocp.charge)}, rings ${rings0}→${rf.rings}, rounds ${rounds0}→${rf.spent}, in the air ${game.rings.length}, the OCP word ×${words} (hinted ${pl.ocpHinted}), the light ${light.disabledUntil > 0 ? 'out' : 'on'} (want nothing at all: no OCP, no word of it, no ring, no round)`);
       void ableR;
     }
     // a calm man 7 m ahead: torch out → nothing; torch lit → fried
@@ -468,81 +531,120 @@ export async function kitSlots() {
     tr.push(`pistol+man(torch out): snapped ${snapped}, ocpable ${ableOff}, charge ${f2(pl.ocp.charge)}, sounds ${JSON.stringify(noise)}, msgs ${msgs.length}`);
     if (!snapped) fails.push('staging: the reticle did not snap to the man');
     if (ableOff || pl.ocp.charge < 0.99 || noise.length || msgs.length || A.lightDeadUntil > 0) fails.push(`pistol + a man with no light: ocpable ${ableOff}, charge ${f2(pl.ocp.charge)}, sounds ${JSON.stringify(noise)}, "${msgs.at(-1) ?? ''}" (want no affordance and NOTHING happening)`);
-    A.torchLostAt = -1; for (let f = 0; f < 3; f++) { W.cursorAt(chestA()); W.step(DT); }   // the torch back in his hand and lit
+    const calm0 = TORCH.calmOff; TORCH.calmOff = false;   // (this line stages a man with his torch LIT: the calm torch rule puts a calm man's out in a lit corridor like this one — its own check's question, calmtorch-check.ts — so it is held off while the torch comes back on)
+    A.torchLostAt = -1; for (let f = 0; f < 3 || (calm0 && f < 90 && !A.flashlight.enabled); f++) { W.cursorAt(chestA()); W.step(DT); }   // the torch back in his hand and lit
     const ableOn = ocpable(game); msgs.length = 0; W.cursorAt(chestA()); input.clicked |= 4; W.step(DT);
     tr.push(`pistol+man(torch lit): ocpable ${ableOn}, charge ${f2(pl.ocp.charge)}, "${msgs.at(-1) ?? ''}"`);
     if (!ableOn || pl.ocp.charge > 0.05 || !(A.lightDeadUntil > game.time) || !msgs.some(m => /flashlight fried/.test(m))) fails.push(`pistol + a man with his torch lit: ocpable ${ableOn}, charge ${f2(pl.ocp.charge)}, lightDeadUntil ${f2(A.lightDeadUntil)}, "${msgs.at(-1) ?? ''}" (want his torch knocked out — it is a light)`);
-    pl.ocp.charge = 1; A.lightDeadUntil = -1;
-    // rifle + RING on him: a ring away on the right button, a round on the left
-    pl.slot = 'rifle'; pl.holstered = false; rf.attIdx = -1; settle(40); input.pressed.add('Digit2'); W.step(DT);
+    pl.ocp.charge = 1; A.lightDeadUntil = -1; TORCH.calmOff = calm0;
+    // rifle + RING on him: the press frame holds the arc and sends nothing, the next frame (the button up) sends one ring; a round on the left
+    pl.slot = 'rifle'; pl.holstered = false; rf.attIdx = 0; settle(40);
     const headA = () => A.char.bones.head; for (let f = 0; f < 3; f++) { W.cursorAt(headA()); W.step(DT); }
-    const preview = pl.throwPreview?.points.length ?? 0; const rings0 = rf.rings, spent0 = rf.spent;
-    W.cursorAt(headA()); input.clicked |= 4; W.step(DT); const inAir = game.rings.length; const rings1 = rf.rings;
+    const restPts = pl.throwPreview?.points.length ?? 0; const rings0 = rf.rings, spent0 = rf.spent;
+    let preview = 0, heldP: any = null, airP = -1, ringsP = -1;
+    rmbTap(W, headA, () => { preview = pl.throwPreview?.points.length ?? 0; heldP = pl.launchHeld; airP = game.rings.length; ringsP = rf.rings; });
+    const inAir = game.rings.length; const rings1 = rf.rings; const heldSent = pl.launchHeld;
+    W.cursorAt(headA()); W.step(DT); const lingers = pl.throwPreview?.points.length ?? 0;
     for (let f = 0; f < 40; f++) { W.cursorAt(headA()); W.step(DT); }
-    tr.push(`rifle+RING+RMB: preview ${preview} pts, rings ${rings0}→${rings1}, in the air ${inAir}, him ${A.state}/${A.downKind ?? '—'}`);
-    if (preview < 2 || rings1 !== rings0 - 1 || inAir !== 1 || rf.spent !== spent0) fails.push(`rifle + RING + a right click: preview ${preview}, rings ${rings0}→${rings1}, in the air ${inAir}, rounds ${spent0}→${rf.spent} (want the arc, one ring away, no round)`);
+    tr.push(`rifle+RING+RMB: at rest ${restPts} pts; press frame ${preview} pts, held ${heldP}, rings ${rings0}→${ringsP}, in the air ${airP}; next frame rings →${rings1}, in the air ${inAir}; him ${A.state}/${A.downKind ?? '—'}`);
+    if (restPts) fails.push(`an arc of ${restPts} points drawn with the rifle merely up on him (want none until the button goes down)`);
+    if (preview < 2 || heldP !== 'ring' || airP !== 0 || ringsP !== rings0) fails.push(`the press frame: preview ${preview}, launchHeld ${heldP}, in the air ${airP}, rings ${rings0}→${ringsP} (want the arc up, 'ring' held, nothing sent)`);
+    if (rings1 !== rings0 - 1 || inAir !== 1 || rf.spent !== spent0 || heldSent !== null) fails.push(`the frame after the click: rings ${rings0}→${rings1}, in the air ${inAir}, rounds ${spent0}→${rf.spent}, launchHeld ${heldSent} (want one ring away, no round, nothing held)`);
+    if (lingers) fails.push(`the arc still drawn (${lingers} points) the frame after the ring left`);
+    if (rf.rings !== rings0 - 1) fails.push(`rings ${rings0}→${rf.rings} 40 frames on (want one click = one ring)`);
     if (A.state !== 'dead' || A.downKind !== 'struck' || !isBreathing(A)) fails.push(`the ring on his head left him ${A.state}/${A.downKind} (want out cold)`);
-    // the left button with RING still selected: a round, not a ring
+    // the left button with the RING up: a round, not a ring
     const WALLPT: Vec3 = [pl.char.pos[0] + 6, 1.2, pl.char.pos[2] - 1.5]; game.infiniteAmmo = true;
     for (let f = 0; f < 60; f++) { W.cursorAt(WALLPT); W.step(DT); }   // (the launcher's own 0.9 s to cycle, and the trigger's beat after a ring)
     const rings2 = rf.rings, shots1 = rf.shotsFired; W.cursorAt(WALLPT); input.clicked |= 1; W.step(DT); settle(6);
     tr.push(`rifle+RING+LMB: rounds fired ${shots1}→${rf.shotsFired}, rings ${rings2}→${rf.rings}`);
-    if (rf.shotsFired !== shots1 + 1 || rf.rings !== rings2) fails.push(`a LEFT click with RING selected: rounds fired ${shots1}→${rf.shotsFired}, rings ${rings2}→${rf.rings} (want a round, no ring)`);
+    if (rf.shotsFired !== shots1 + 1 || rf.rings !== rings2) fails.push(`a LEFT click with the RING up: rounds fired ${shots1}→${rf.shotsFired}, rings ${rings2}→${rf.rings} (want a round, no ring)`);
     game.infiniteAmmo = false;
     // the pace: the rifle up walks at the pistol's walk (no brace cap any more), braced the whole way
     const walk = (k: 'pistol' | 'rifle') => { pl.slot = k; pl.holstered = false; game.teleportPlayer([18.0, 0, 11.5]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI / 2; settle(40); let v = 0, bracedAll = true; input.keys.add('KeyD'); for (let f = 0; f < 50; f++) { W.cursorAt([30, 1.2, 11.5]); W.step(DT); v = Math.hypot(pl.char.vel[0], pl.char.vel[2]); if (k === 'rifle' && !pl.braced) bracedAll = false; } input.keys.delete('KeyD'); settle(20); return { v, bracedAll }; };
     const wp = walk('pistol'), wr = walk('rifle');
     tr.push(`walk: pistol ${f2(wp.v)} m/s · rifle ${f2(wr.v)} m/s braced throughout ${wr.bracedAll}`);
     if (Math.abs(wr.v - wp.v) > 0.05 || Math.abs(wp.v - game.tune.playerWalk) > 0.1 || !wr.bracedAll) fails.push(`walking east 50 frames: pistol ${f2(wp.v)} m/s, rifle ${f2(wr.v)} m/s (want both the walk's ${game.tune.playerWalk}), braced throughout ${wr.bracedAll}`);
-    F.verdict(!fails.length, '(d) RMB: the pistol out on a light → the OCP fires (charge spent, the fixture out); on a man whose torch is out → no affordance and nothing at all happens; on a man with it lit → his torch goes (it is a light); the rifle up with no attachment → nothing, bar the one word over a light; with RING → one ring per press (5 → 4, the arc previewed, the man out cold) while the LEFT button still fires rounds; and the rifle costs no pace, braced the whole way',
+    // the gesture's other shapes, on the wall down the corridor: held = the arc up and nothing gone, letting go sends ONE; a press inside the equip beat ('2, right
+    // click' in one breath) begins it and the one ring goes as the beat ends; and at rest with the rifle up no arc is drawn
+    { const WALL2 = (): Vec3 => [pl.char.pos[0] + 6, 1.2, pl.char.pos[2] - 1.5];
+      pl.slot = 'rifle'; pl.holstered = false; rf.attIdx = 0; rf.ringCd = 0; settle(40);
+      const restArc = !!pl.throwPreview || pl.launchHeld !== null; const r0 = rf.rings;
+      let heldAll = true, arcAll = true, goneHeld = 0; rmbHold(W, WALL2, 10, () => { heldAll &&= pl.launchHeld === 'ring'; arcAll &&= (pl.throwPreview?.points.length ?? 0) >= 2; goneHeld = Math.max(goneHeld, r0 - rf.rings); });
+      rmbUp(W, WALL2); const goneUp = r0 - rf.rings; const heldUp = pl.launchHeld; W.cursorAt(WALL2()); W.step(DT); const arcUp = !!pl.throwPreview; settle(60);
+      tr.push(`held 10 frames: launchHeld ring ${heldAll}, arc ${arcAll}, gone ${goneHeld}; released: gone ${goneUp}; 60 frames on: ${r0 - rf.rings}`);
+      if (restArc) fails.push('at rest with the rifle up: an arc drawn / a gesture held with the button never pressed');
+      if (!heldAll || !arcAll || goneHeld) fails.push(`the right button held 10 frames: launchHeld 'ring' throughout ${heldAll}, the arc up throughout ${arcAll}, ${goneHeld} ring(s) gone (want the arc and nothing gone)`);
+      if (goneUp !== 1 || heldUp !== null || arcUp || r0 - rf.rings !== 1) fails.push(`letting go: ${goneUp} ring(s) gone on the release frame, launchHeld ${heldUp}, arc ${arcUp ? 'still up' : 'gone'} the frame after, ${r0 - rf.rings} gone a second on (want exactly one, nothing held, no arc)`);
+      // inside the equip beat: 1 away, 2 back, the right click on the very next frame
+      input.pressed.add('Digit1'); settle(30); rf.ringCd = 0; const r1 = rf.rings;
+      input.pressed.add('Digit2'); W.cursorAt(WALL2()); W.step(DT); const eq0 = pl.equipT;
+      W.cursorAt(WALL2()); input.clicked |= 4; W.step(DT); const heldBeat = pl.launchHeld, eqPress = pl.equipT, gonePress = r1 - rf.rings;
+      let goneInBeat = 0, wentAt = -1, eqAtSend = NaN, n = 0;
+      for (; n < 60 + Math.ceil(eq0 / DT) && wentAt < 0; n++) { const eqBefore = pl.equipT; W.cursorAt(WALL2()); W.step(DT); if (r1 - rf.rings > 0) { wentAt = n; eqAtSend = pl.equipT; if (eqBefore - DT > 1e-6) goneInBeat++; } }
+      settle(60); const goneBeat = r1 - rf.rings;
+      tr.push(`2 then a right click inside the beat (${f2(eq0)} s): press frame held ${heldBeat}, equipT ${f2(eqPress)}, gone ${gonePress}; the ring went ${wentAt + 1} frames later at equipT ${f2(eqAtSend)}; in all ${goneBeat}`);
+      if (!(eq0 > 0) || !(eqPress > 0)) fails.push(`staging: the click did not land inside the equip beat (equipT ${f2(eq0)} → ${f2(eqPress)})`);
+      if (heldBeat !== 'ring' || gonePress) fails.push(`a right click inside the equip beat: launchHeld ${heldBeat}, ${gonePress} gone on the press frame (want the gesture begun, nothing sent yet)`);
+      if (wentAt < 0 || goneInBeat || !(eqAtSend <= 0) || Math.abs((wentAt + 2) * DT - eq0) > 2 * DT + 1e-6) fails.push(`the ring of a click inside the beat went ${wentAt < 0 ? 'never' : `${wentAt + 1} frames after the press`} at equipT ${f2(eqAtSend)} (want it as the ${f2(eq0)} s beat ends — not before, not later)`);
+      if (goneBeat !== 1) fails.push(`${goneBeat} ring(s) for one click inside the equip beat (want exactly one)`);
+    }
+    F.verdict(!fails.length, '(d) RMB: the pistol out on a light → the OCP fires (charge spent, the fixture out); on a man whose torch is out → no affordance and nothing at all happens; on a man with it lit → his torch goes (it is a light); the rifle up over a light → the ring\'s gesture like anywhere (no OCP, no word of it), held it sends nothing and Esc drops it unsent; no arc at rest; on a man → the press frame holds the arc and fires nothing, the next frame sends one ring (the man out cold) while the LEFT button still fires rounds; held 10 frames nothing goes and letting go sends one; a click inside the equip beat sends one as the beat ends; and the rifle costs no pace, braced the whole way',
       (fails.length ? '✗ ' + fails.join('\n    ✗ ') + '\n    ' : '') + tr.join('\n    ')); }
   // (e) the takedown's words: holstered, a click behind a calm man — out cold, breathing, said so in the log, on the body's row and on the card
   { const fails: string[] = [];
     game.clearAftermath(); game.resetGuards(); for (let f = 0; f < 3; f++) W.step(DT); game.guards.forEach((gd: any, i: number) => { if (i > 0) park(gd, i); });
     const B = game.guards[0]; B.hold = true; B.pinned = false; B.state = 'patrol'; B.awareness = 0; B.heardUpTo = 1e12;
-    game.teleportPlayer([24.0, 0, 11.3]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI / 2; pl.slot = 'pistol'; pl.holstered = true; place(B, [24.75, 0, 11.3], Math.PI / 2);
+    game.teleportPlayer([24.0, 0, 11.3]); pl.char.bodyYaw = pl.char.aimYaw = Math.PI / 2; pl.slot = 'pistol'; pl.holstered = true; settle(0); place(B, [24.75, 0, 11.3], Math.PI / 2);   // (kit handling live: the rifle of line (d) is on his back before the blow)
     const stats0 = { ...game.mission.stats }; msgs.length = 0;
     for (let f = 0; f < 10; f++) { W.cursorAt(v3.add(B.char.pos, [0, 1.4, 0])); W.step(DT); }
     const row = game.hover?.kind === 'guard' ? game.hover.line2 : '(no guard row)';
-    W.cursorAt(v3.add(B.char.pos, [0, 1.4, 0])); input.clicked |= 1; for (let f = 0; f < 60; f++) W.step(DT);
+    const two = closeLethal(game);   // (the blow is the player's choice: the left click is the knife and the RIGHT click the knockout this line is about — close.ts)
+    W.cursorAt(v3.add(B.char.pos, [0, 1.4, 0])); input.clicked |= two ? 4 : 1; for (let f = 0; f < 60; f++) W.step(DT);
     for (let f = 0; f < 5; f++) { W.cursorAt(v3.add(B.char.bones.hips ?? B.char.pos, [0, 0.2, 0])); W.step(DT); }
     const bodyRow = game.interactables.find((it: any) => it.kind === 'body' && it.guard === B)?.line1 ?? '(no body marker)';
     const s1 = game.mission.stats;
-    if (!/LMB {2}takedown — silent/.test(row)) fails.push(`guard row holstered: "${row}"`);
+    if (!(two ? /RMB {2}knock him out/ : /LMB {2}takedown — silent/).test(row)) fails.push(`guard row holstered: "${row}"`);
     if (B.state !== 'dead' || B.downKind !== 'struck' || !isBreathing(B)) fails.push(`him: ${B.state}/${B.downKind} breathing ${isBreathing(B)}`);
     if (!msgs.some(m => /takedown — out cold, breathing/.test(m))) fails.push(`log: ${JSON.stringify(msgs.slice(-3))}`);
     if (!/out cold — breathing/.test(bodyRow)) fails.push(`body row: "${bodyRow}"`);
     if (s1.knockouts !== stats0.knockouts + 1 || s1.kills !== stats0.kills) fails.push(`card: knockouts ${stats0.knockouts}→${s1.knockouts}, kills ${stats0.kills}→${s1.kills}`);
-    F.verdict(!fails.length, '(e) holstered + a click behind him: the row promised "LMB takedown — silent", he is \'struck\' and breathing, the log says "takedown — out cold, breathing (a knockout, not a kill)", his body\'s row says out cold — breathing, the card counts a knockout and no kill', fails.join('; ') || `row "${row}" · body "${bodyRow}" · "${msgs.find(m => /takedown/.test(m))}"`); }
+    F.verdict(!fails.length, '(e) holstered + a click behind him (the right click where the left is the knife): the row promised "LMB takedown — silent" (or "RMB knock him out"), he is \'struck\' and breathing, the log says "takedown — out cold, breathing (a knockout, not a kill)", his body\'s row says out cold — breathing, the card counts a knockout and no kill', fails.join('; ') || `row "${row}" · body "${bodyRow}" · "${msgs.find(m => /takedown/.test(m))}"`); }
   game.msg = origMsg;
+  if (stuck) F.verdict(false, 'every kit change the probe waited on ended', `${stuck} still running 120 frames on (kitBusy ${an.kitBusy}, kitHold ${an.kitHold}, equipT ${f2(pl.equipT)})`);
   return F.done();
 }
 
 // ================================================================================================ the ring airfoil
 /** a calm man `d` metres east of Sam in the corridor, facing `yaw`, hearing normally (`deaf` false) or not */
-async function stageRing(seed: number, d = 8, yaw = Math.PI / 2, deaf = true) {
+export async function stageRing(seed: number, d = 8, yaw = Math.PI / 2, deaf = true) {
   const W = await stage(seed, true, [16.0, 0, 11.4]); const { game } = W;
   const A = game.guards[0]; A.hold = true; A.pinned = false; A.state = 'patrol'; A.awareness = 0; A.reactT = 0; if (deaf) A.heardUpTo = 1e12; else A.heardUpTo = game.eventSeq;
   place(A, [16.0 + d, 0, 11.4], yaw); W.step(DT);
   return { W, A };
 }
 export async function airfoilHead() {
-  const F = family('airfoil-head: 2 again (RING), the reticle on a calm man 8 m off, a RIGHT click — the ring takes him in the head: out cold, breathing, quietly, and the ring is spent (a left click would have been a round)');
+  const F = family('airfoil-head: the rifle drawn (the RING is up on a fresh one), the reticle on a calm man 8 m off, a RIGHT click — the press shows the arc, the release sends it — the ring takes him in the head: out cold, breathing, quietly, and the ring is spent (a left click would have been a round)');
   const { W, A } = await stageRing(2101, 8, Math.PI / 2); const { game, input } = W; const pl = game.player, rf = pl.rifle;
   const audio = listen(W); const tap = eventTap(game); const stats0 = { ...game.mission.stats };
-  input.pressed.add('Digit2'); W.step(DT); const modeMsg = game.messages.at(-1)?.text ?? '';   // the rifle is up (stage): its digit again = the attachment, none → RING
+  const modeMsg = game.messages.map((m: any) => m.text).filter((t: string) => t.startsWith(gearText('FN2000 · '))).at(-1) ?? '';   // the rifle is up (stage drew it with 2): a fresh one has the RING on its button and the draw's line says so — no second press (that would flip to the 40 mm)
   const head = () => A.char.bones.head;
   for (let f = 0; f < 3; f++) { W.cursorAt(head()); W.step(DT); }
-  const snapped = game.aimGuard === A; const preview = pl.throwPreview ? pl.throwPreview.points.length : 0;
+  const snapped = game.aimGuard === A; const restPts = pl.throwPreview ? pl.throwPreview.points.length : 0;
   const items0 = new Set(game.items.items);
-  W.cursorAt(head()); input.clicked |= 4; W.step(DT); tap.pump(); const inAir = game.rings.length; const ringsAfter = rf.rings;
+  let preview = 0, heldP: any = null, airP = -1, ringsP = -1;
+  rmbTap(W, head, () => { tap.pump(); preview = pl.throwPreview ? pl.throwPreview.points.length : 0; heldP = pl.launchHeld; airP = game.rings.length; ringsP = rf.rings; });
+  tap.pump(); const inAir = game.rings.length; const ringsAfter = rf.rings; const heldSent = pl.launchHeld;
   let resolvedAt = -1; for (let f = 0; f < 90; f++) { W.cursorAt(head()); W.step(DT); tap.pump(); if (resolvedAt < 0 && !game.rings.length) resolvedAt = f; }
   const newItems = game.items.items.filter((it: any) => !items0.has(it)).map((it: any) => it.kind);
   const props = tap.evs.filter(e => e.kind === 'prop'); const shots = tap.evs.filter(e => e.kind === 'shot' || e.kind === 'guardShot');
   const fails: string[] = [];
-  if (rf.attachment !== 'ring' || !/ring airfoil/.test(modeMsg)) fails.push(`2 again: attachment ${rf.attachment}, "${modeMsg}"`);
-  if (!snapped) fails.push('the reticle did not snap to him'); if (preview < 2) fails.push(`no arc previewed (${preview} points)`);
-  if (inAir !== 1 || ringsAfter !== LAUNCHER.rings - 1) fails.push(`after the click: ${inAir} in the air, rings ${ringsAfter} (want 1, ${LAUNCHER.rings - 1})`);
+  if (rf.attachment !== 'ring' || !modeMsg.includes(`${ringTag()} ×5`)) fails.push(`the rifle drawn: the load up is ${rf.attachment}, the draw said "${modeMsg}" (want the RING, named with its count)`);
+  if (!snapped) fails.push('the reticle did not snap to him');
+  if (restPts) fails.push(`an arc (${restPts} points) drawn before the button went down`);
+  if (preview < 2 || heldP !== 'ring') fails.push(`the press frame: ${preview} arc points, launchHeld ${heldP} (want the arc up and 'ring' held)`);
+  if (airP !== 0 || ringsP !== LAUNCHER.rings) fails.push(`the press frame: ${airP} in the air, rings ${ringsP} (want nothing sent yet: 0, ${LAUNCHER.rings})`);
+  if (inAir !== 1 || ringsAfter !== LAUNCHER.rings - 1 || heldSent !== null) fails.push(`the frame after the click: ${inAir} in the air, rings ${ringsAfter}, launchHeld ${heldSent} (want 1, ${LAUNCHER.rings - 1}, nothing held)`);
   if (A.state !== 'dead' || A.downKind !== 'struck' || A.downBy !== 'player' || !isBreathing(A) || A.char.alive) fails.push(`him: ${A.state} ${A.downKind}/${A.downBy} breathing ${isBreathing(A)} alive ${A.char.alive}`);
   if (!newItems.includes('ring')) fails.push(`no spent ring on the floor (${JSON.stringify(newItems)})`);
   if (!newItems.includes('torch')) fails.push(`his torch was not laid down (${JSON.stringify(newItems)})`);
@@ -553,7 +655,7 @@ export async function airfoilHead() {
   if (!audio.some(a => a.name === 'launcher')) fails.push('no launcher voice'); if (audio.some(a => a.name === 'rifleSuppressed')) fails.push('a rifle report played for a ring');
   { const s = game.mission.stats; if (s.knockouts !== stats0.knockouts + 1 || s.kills !== stats0.kills || s.shots !== stats0.shots) fails.push(`card: knockouts ${stats0.knockouts}→${s.knockouts}, kills ${stats0.kills}→${s.kills}, shots ${stats0.shots}→${s.shots} (want +1 / +0 / +0)`); }
   if (resolvedAt < 0 || resolvedAt > 30) fails.push(`the ring took ${resolvedAt} frames to arrive over 8 m (want ≤ 30 at 30 m/s)`);
-  F.verdict(!fails.length, 'RING selected, snapped, previewed, one ring away on the right button (5 → 4): he folds \'struck\' by the player — breathing, his torch on the floor, dark — a 0.45 launch and a 0.3 fold at Sam and nothing louder, no gunfire event, a knockout not a kill, the ring lying there',
+  F.verdict(!fails.length, 'the RING up from the draw, snapped, no arc until the press, the arc on the press frame and one ring away on the next (5 → 4): he folds \'struck\' by the player — breathing, his torch on the floor, dark — a 0.45 launch and a 0.3 fold at Sam and nothing louder, no gunfire event, a knockout not a kill, the ring lying there',
     fails.join('; ') || `resolved in ${resolvedAt} f · items ${JSON.stringify(newItems)} · props ${JSON.stringify(props.map(e => `${e.level}@${e.who}`))} · "${game.messages.at(-1)?.text}"`);
   return F.done();
 }
@@ -638,7 +740,7 @@ export async function airfoilPreview() {
   F.verdict(!fails.length, 'three arcs (level, lobbed low, up at the ceiling): the ring flies the line the overlay drew', (fails.length ? '✗ ' + fails.join('\n    ✗ ') + '\n    ' : '') + results.join('\n    '));
   return F.done();
 }
-function distToSeg(p: Vec3, a: Vec3, b: Vec3): number { const ab = v3.sub(b, a); const L2 = v3.dot(ab, ab); if (L2 < 1e-9) return v3.dist(p, a); const t = Math.max(0, Math.min(1, v3.dot(v3.sub(p, a), ab) / L2)); return v3.dist(p, v3.mad(a, ab, t)); }
+export function distToSeg(p: Vec3, a: Vec3, b: Vec3): number { const ab = v3.sub(b, a); const L2 = v3.dot(ab, ab); if (L2 < 1e-9) return v3.dist(p, a); const t = Math.max(0, Math.min(1, v3.dot(v3.sub(p, a), ab) / L2)); return v3.dist(p, v3.mad(a, ab, t)); }
 export async function airfoilHostage() {
   const F = family('airfoil-hostage: a ring fired at the pair from in front strikes whoever it meets first — the held man: he goes down \'struck\' by that hand, the hold ends, Sam is untouched');
   const W = await stage(2105, false, [16.0, 0, 11.4]); const { game, input } = W; const pl = game.player;
@@ -672,7 +774,7 @@ export async function airfoilHostage() {
 /** the support hand's grip point in the world off the POSED trigger hand: the real right wrist + RIG.sc20k's foregrip point through the gun frame rigProps draws the
  *  weapon in (z = wrist → middle finger, y = up ⊥ it) — carbine-probes' gripPointL with the bullpup's numbers */
 function sc20kGripPoint(c: any): Vec3 {
-  const d = v3.normalize(v3.sub(c.bones.fingerR, c.bones.handR)); const yW = v3.normalize(v3.mad([0, 1, 0], d, -d[1])); const xW = v3.cross(yW, d); const G = sc20kGrip().wrist;
+  const d = v3.normalize(v3.sub(c.bones.fingerR, c.bones.handR)); const yW = v3.normalize(v3.mad([0, 1, 0], d, -d[1])); const xW = v3.cross(yW, d); const G = sc20kGrip(undefined, KITANIM.on && KITANIM.grips).wrist;   // (the grip his hands are fitted to where kit handling draws it in them — player.ts armRifle's own)
   return v3.add(c.bones.handR, v3.mad(v3.mad(v3.scale(xW, G[0]), yW, G[1]), d, G[2]));
 }
 const bonesFinite = (c: any) => Object.values(c.bones).every((p: any) => p.every(Number.isFinite));
@@ -724,13 +826,14 @@ export async function rifleCarry() {
   {
     const W = await stage(2011, true, [21.5, 0, 11.5]); const { game, input } = W; const pl = game.player, an = pl.char.anim, c = pl.char;
     const AHEAD: Vec3 = [27.5, 1.2, 11.5];
-    const fails: string[] = [], notes: string[] = []; let frames = 0, worstGap = 0, worstAt = '', graceLeft = 0, lastWhere = 'hand', lastSprint = false, oneHandFrames = 0;
+    const fails: string[] = [], notes: string[] = []; let frames = 0, worstGap = 0, worstAt = '', graceLeft = 0, lastWhere = 'hand', lastSprint = false, oneHandFrames = 0, midRun = 0;
     const shownSeen = new Set<string>();
     const tick = (tag: string, each?: () => void) => {
       each?.(); W.cursorAt(AHEAD); W.step(DT); frames++;
       const where = rifleBoxes(game).where; if (where !== lastWhere || pl.sprinting !== lastSprint) graceLeft = 3; lastWhere = where; lastSprint = pl.sprinting;
       if (where !== 'hand') { graceLeft = Math.max(0, graceLeft - 1); return; }
       if (!bonesFinite(c)) fails.push(`${tag} f${frames}: NaN bone`);
+      if (kitMid(pl)) { if (++midRun === 121) fails.push(`${tag} f${frames}: a kit change still running 120 frames on`); graceLeft = 3; return; } midRun = 0;   // (on its way to or from the sling in his hand: the carriage is the errand's until it ends)
       if (!an.longGun) fails.push(`${tag} f${frames}: rifle drawn in the hand but the animator has no long gun`);
       shownSeen.add(String(an.longShown));
       if (an.longShown !== 'shoulder' && an.longShown !== 'lowLong' && an.longShown !== 'portLong') fails.push(`${tag} f${frames}: carriage ${an.longShown} with the rifle in the hands`);
@@ -750,7 +853,7 @@ export async function rifleCarry() {
     // wall hold's stale share switched the long-gun solve off for good here and the rifle hung from one hand in every un-aimed state
     game.teleportPlayer([21.5, 0, 10.7]); c.bodyYaw = c.aimYaw = 0; phase('at the wall', 10);
     input.pressed.add('KeyQ'); phase('Q: on the wall (slung)', 50);
-    if (!pl.wall || !pl.holstered || rifleBoxes(game).where !== 'back') fails.push(`the wall hug did not take / did not sling it (wall ${!!pl.wall}, holstered ${pl.holstered}, rifle at the ${rifleBoxes(game).where})`);
+    if (WALLSNAP.on ? !pl.wall || pl.holstered || rifleBoxes(game).where !== 'hand' : !pl.wall || !pl.holstered || rifleBoxes(game).where !== 'back') fails.push(`the wall hug did not take / did not ${WALLSNAP.on ? 'keep it in his hands (the stack)' : 'sling it'} (wall ${!!pl.wall}, holstered ${pl.holstered}, rifle at the ${rifleBoxes(game).where})`);
     input.pressed.add('KeyQ'); phase('Q: off the wall (in the hands)', 60);
     if (pl.wall || pl.holstered || rifleBoxes(game).where !== 'hand') fails.push(`coming off the wall did not put it back in the hands (wall ${!!pl.wall}, holstered ${pl.holstered}, rifle at the ${rifleBoxes(game).where})`);
     game.teleportPlayer([21.5, 0, 11.5]); c.bodyYaw = c.aimYaw = Math.PI / 2; phase('after the wall, still', 60);
@@ -771,11 +874,21 @@ export async function rifleCarry() {
   //          (the torso's own left: hip and shoulder lines averaged); ROLLED flat — the hull's across axis within 8° of the hips-shoulders plane's normal taken square to
   //          the bore (20° sprinting: that clip wrings the trunk) — and the bore within 16° of that plane (22° sprinting); clear of the head capsule
   {
-    const B = await import(`${ROOT}/src/render/meshbvh.ts`); const mesh = ch.mesh; const bvh = B.buildMeshBvh(mesh.positions, mesh.indices);
+    const B = await import(`${ROOT}/src/render/meshbvh.ts`); const mesh = ch.mesh;
+    // THE SKIN IS THE MAN WHO CARRIES IT THERE. On the cast (the shipped stand: every outfit's parts in one mesh, each man drawn with his variant's — anim/gltf.ts loadGltfCast) the
+    // whole mesh is everybody's helmets, radios and packs at once, and a rifle measured against that reads as lying in somebody's pack. The rifle is across the back only on a man
+    // in the SNEAKING SUIT — the back kit off (game/cast.ts sneakSuit: Sam with no loud mission on); in the issue dress it hangs in front on its sling (kitanim.ts kitSlingFront).
+    // So each operator outfit is measured as its suit (castSuit), by itself, and the worst of them is held to the bound. The mannequin is one skin, as ever
+    const wears = (mask: number): Uint32Array => { const ix = mesh.indices, out: number[] = []; for (let i = 0; i < ix.length; i += 3) if ((mask >>> mesh.part[ix[i]]) & 1) out.push(ix[i], ix[i + 1], ix[i + 2]); return new Uint32Array(out); };
+    const skins: { name: string; bvh: any }[] = ch.cast ? ch.cast.variants.filter((v: any) => v.side === 'operator').map((v: any) => ({ name: v.name + ', suit', bvh: B.buildMeshBvh(mesh.positions, wears(castSuit(ch.cast, v.mask))) }))
+      : [{ name: '', bvh: B.buildMeshBvh(mesh.positions, mesh.indices) }];
     const segDist = (p: Vec3, a: Vec3, b: Vec3) => { const ab = v3.sub(b, a), ap = v3.sub(p, a); const t = Math.max(0, Math.min(1, v3.dot(ap, ab) / Math.max(1e-9, v3.dot(ab, ab)))); return v3.dist(p, v3.mad(a, ab, t)); };
     const NAMES = ['hull', 'butt', 'mag', 'grip', 'fore', 'supp', 'rail', 'optic', 'foregrip', 'light', 'lens'];
     const ZS = [-0.16, -0.09, -0.02, 0.05, 0.12, 0.19, 0.26];   // along the bore from the group origin: from over the right shoulder blade (above that — the hull's top 13 cm and the butt — stands off behind the shoulder, where there is no back) down to the fore-end over the waist (the can beyond runs off past the hip)
-    const halfAt = (z: number) => z < 0.12 ? RIG.sc20k.hull.thick : RIG.sc20k.fore.thick;
+    // (the inner face is the DRAWN rifle's: the bullpup's one hull then its fore-end; the 2010s carbine's buffer tube, receiver, handguard — its box 0 is the receiver alone,
+    //  so the group origin is found from ITS span. Measured with the bullpup's table the carbine read 10.5 cm down the bore from where it lies and 0.7 cm fatter than it is)
+    const m4 = rifleM4(RIG), hullOf = m4 ? m4.hull : RIG.sc20k.hull;
+    const halfAt = (z: number) => m4 ? (z < m4.hull.l0 ? m4.tube.thick : z < m4.hull.l1 ? m4.hull.thick : m4.fore.thick) : z < 0.12 ? RIG.sc20k.hull.thick : RIG.sc20k.fore.thick;
     const poses: { name: string; speed: number; crouch: number; upper: string; kick?: boolean; pitch?: number; lo: number; hi?: number; roll: number; tilt?: number; frames: number[] }[] = [
       { name: 'idle', speed: 0, crouch: 0, upper: 'none', lo: 0.5, roll: 8, frames: [30] }, { name: 'pistol drawn', speed: 0, crouch: 0, upper: 'relaxed', lo: 0.3, roll: 8, frames: [30] },
       { name: 'walk 1.55', speed: 1.55, crouch: 0, upper: 'relaxed', lo: 0.3, roll: 8, frames: [20, 45, 70] }, { name: 'crouched', speed: 0, crouch: 1, upper: 'relaxed', lo: 0.5, roll: 8, frames: [30] },
@@ -789,37 +902,38 @@ export async function rifleCarry() {
       an.phase = 0; an.speed = P.speed; an.crouchTarget = P.crouch; an.upper = P.upper; c.aimPitch = P.pitch ?? 0;
       const fwd = c.forward(); const adv = () => { c.pos = v3.mad(c.pos, fwd, P.speed * DT); c.update(DT); };
       for (let i = 0; i < 90; i++) adv(); if (P.kick) an.kickDoor();
-      let lo = 9, hi = -9, lat = 0, latWhat = '', rollOff = 0, tilt = 0, head = -9, finite = true, f = 0;
+      let lo = 9, hi = -9, lat = 0, latWhat = '', rollOff = 0, tilt = 0, head = -9, finite = true, f = 0, loOn = '';
       for (const stopAt of P.frames) {
         while (f < stopAt) { adv(); f++; }
-        const out: any[] = []; sc20kBoxes(c, out, RIG.sc20k, 'slung');
-        if (out.length !== 11 || !out.every((bx: any) => [...bx.c, ...bx.h, ...(bx.rot ?? [])].every(Number.isFinite))) { finite = false; break; }
+        const out: any[] = []; sc20kBoxes(c, out, RIG.sc20k, 'slung', [0, 0, 0], undefined, rifleM4(RIG));   // (the rifle as it is drawn: the 2010s carbine under its switch)
+        if (out.length !== (GEAR.on ? M4_BOXES : 11) || !out.every((bx: any) => [...bx.c, ...bx.h, ...(bx.rot ?? [])].every(Number.isFinite))) { finite = false; break; }
         const b = c.bones; const shMid = v3.lerp(b.upperArmL, b.upperArmR, 0.5); const upS = v3.normalize(v3.sub(shMid, b.hips));
         let left = v3.lerp(v3.normalize(v3.sub(b.thighL, b.thighR)), v3.normalize(v3.sub(b.upperArmL, b.upperArmR)), 0.5); left = v3.normalize(v3.mad(left, upS, -v3.dot(left, upS)));
         const planeN = v3.normalize(v3.cross(v3.sub(b.upperArmL, b.hips), v3.sub(b.upperArmR, b.hips)));
         const headA = b.neck, headB = v3.mad(b.head, quat.rotate(c.headRot(), [0, 1, 0]), 0.13);
         // sideways spread, roll flatness, bore tilt, the head
         out.forEach((bx: any, i: number) => {
-          const d = v3.sub(bx.c, b.hips); const on = v3.mad(b.hips, upS, v3.dot(d, upS)); const l = Math.abs(v3.dot(v3.sub(bx.c, on), left)); if (l > lat) { lat = l; latWhat = NAMES[i]; }
+          const d = v3.sub(bx.c, b.hips); const on = v3.mad(b.hips, upS, v3.dot(d, upS)); const l = Math.abs(v3.dot(v3.sub(bx.c, on), left)); if (l > lat) { lat = l; latWhat = NAMES[i] ?? ['buffer tube', 'laser box', '40 mm tube'][i - 11]; }
           for (const s of [-1, 0, 1]) head = Math.max(head, 0.105 - segDist(v3.mad(bx.c, quat.rotate(bx.rot, [0, 0, 1]), s * bx.h[2]), headA, headB));
         });
         const hull = out[0]; const gx = quat.rotate(hull.rot, [1, 0, 0]), gz = quat.rotate(hull.rot, [0, 0, 1]);
         const nSq = v3.mad(planeN, gz, -v3.dot(planeN, gz)); rollOff = Math.max(rollOff, Math.acos(Math.min(1, Math.abs(v3.dot(gx, v3.normalize(nSq))))) * R2D);
         tilt = Math.max(tilt, Math.asin(Math.min(1, Math.abs(v3.dot(gz, planeN)))) * R2D);
         // the gap to the skin along the length
-        const tv = B.skinCorners(bvh, mesh.positions, mesh.joints, mesh.weights, new Float32Array(c.skel.jointData));
-        const origin = v3.mad(hull.c, gz, -(RIG.sc20k.hull.l0 + RIG.sc20k.hull.l1) / 2);
+        const origin = v3.mad(hull.c, gz, -(hullOf.l0 + hullOf.l1) / 2);
         const onSpine = (p: Vec3): Vec3 => { const d = v3.sub(p, b.hips); return v3.mad(b.hips, upS, Math.max(-0.1, Math.min(v3.dist(b.hips, shMid) + 0.1, v3.dot(d, upS)))); };
         const toward = v3.dot(v3.sub(onSpine(origin), origin), gx) > 0 ? 1 : -1;
-        for (const z of ZS) {
-          const p = v3.mad(v3.mad(origin, gz, z), gx, toward * halfAt(z)); const tgt = onSpine(p); const dir = v3.normalize(v3.sub(tgt, p)); const L = v3.dist(p, tgt);
-          const t = B.bruteNearest(bvh, tv, p, dir, L); let gap: number;
-          if (t >= 0) gap = t; else { const t2 = B.bruteNearest(bvh, tv, p, v3.scale(dir, -1), 0.3); gap = t2 >= 0 ? -t2 : NaN; }
-          if (Number.isFinite(gap)) { lo = Math.min(lo, gap); hi = Math.max(hi, gap); }
+        for (const { name, bvh } of skins) { const tv = B.skinCorners(bvh, mesh.positions, mesh.joints, mesh.weights, new Float32Array(c.skel.jointData));
+          for (const z of ZS) {
+            const p = v3.mad(v3.mad(origin, gz, z), gx, toward * halfAt(z)); const tgt = onSpine(p); const dir = v3.normalize(v3.sub(tgt, p)); const L = v3.dist(p, tgt);
+            const t = B.bruteNearest(bvh, tv, p, dir, L); let gap: number;
+            if (t >= 0) gap = t; else { const t2 = B.bruteNearest(bvh, tv, p, v3.scale(dir, -1), 0.3); gap = t2 >= 0 ? -t2 : NaN; }
+            if (Number.isFinite(gap)) { if (gap < lo) { lo = gap; loOn = name; } hi = Math.max(hi, gap); }
+          }
         }
       }
       if (!finite) { fails.push(`${P.name}: a non-finite / missing slung box`); continue; }
-      if (lo * 100 < P.lo) fails.push(`${P.name}: the rifle's inner face comes ${(lo * 100).toFixed(1)} cm ${lo < 0 ? 'INTO' : 'off'} the skin at its nearest (want ≥ ${P.lo})`);
+      if (lo * 100 < P.lo) fails.push(`${P.name}: the rifle's inner face comes ${(lo * 100).toFixed(1)} cm ${lo < 0 ? 'INTO' : 'off'} the skin at its nearest${loOn ? ` (${loOn})` : ''} (want ≥ ${P.lo})`);
       if (lo * 100 > 4.5) fails.push(`${P.name}: nowhere nearer the skin than ${(lo * 100).toFixed(1)} cm (want ≤ 4.5: on the back, not floating off it)`);
       if (hi * 100 > (P.hi ?? 10.5)) fails.push(`${P.name}: ${(hi * 100).toFixed(1)} cm off the skin at its furthest over the torso (want ≤ ${P.hi ?? 10.5})`);
       if (lat > 0.20) fails.push(`${P.name}: the ${latWhat}'s middle ${(lat * 100).toFixed(1)} cm off the spine line sideways (want ≤ 20)`);

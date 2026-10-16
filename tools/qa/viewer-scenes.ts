@@ -3,7 +3,7 @@
 // adj resolvers answer for every node kind.   bun run tools/qa/viewer-scenes.ts   (exit 1 on failure)
 import { SCENES, applyVariant, findVariant } from '../../src/viewer/scenes.ts';
 import { makeState, TAC_SHOTS, UPPERS, STANCES, PATHS } from '../../src/viewer/state.ts';
-import { gaitSource, GAIT_GROUPS, setAllOff, DEFAULTS, GaitMeter } from '../../src/viewer/gait.ts';
+import { gaitSource, setAllOff, DEFAULTS } from '../../src/viewer/gait.ts';
 import { longSource, shippedAdj, rigObjectFor, allChangedSource, rigChanged } from '../../src/viewer/sheet.ts';
 import { LONG_STANCES } from '../../src/game/character.ts';
 

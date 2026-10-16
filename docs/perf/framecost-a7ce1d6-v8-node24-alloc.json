@@ -1,0 +1,1154 @@
+{
+ "tool": "framecost",
+ "v": 1,
+ "commit": "777250b",
+ "dirty": false,
+ "when": "2026-10-08T17:14:26.382Z",
+ "runtime": "node v24.9.0 (V8 13.6.233.10-node.27)",
+ "cpu": "4 × Intel(R) Xeon(R) Processor @ 2.10GHz",
+ "jobs": 1,
+ "seeds": [
+  1
+ ],
+ "cap": 300,
+ "minutes": 2,
+ "deep": true,
+ "gpu": false,
+ "warm": 60,
+ "arms": {
+  "shipped": "as the page opens: cast, motion pass, turn weight, glass, defenders' frags, destruction (where the build has it)"
+ },
+ "missions": [
+  {
+   "id": "block-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "wiped",
+     "t": 53.8,
+     "digest": "2a5598f3",
+     "frames": 3229
+    }
+   ],
+   "frames": 3169,
+   "page": {
+    "mean": 4.894,
+    "p50": 4.555,
+    "p95": 7.685,
+    "p99": 10.695,
+    "max": 81.695
+   },
+   "update": {
+    "mean": 4.745,
+    "p50": 4.394,
+    "p95": 7.472,
+    "p99": 10.648,
+    "max": 81.68
+   },
+   "stepped": {
+    "mean": 4.894,
+    "p50": 4.555,
+    "p95": 7.685,
+    "p99": 10.695,
+    "max": 81.695
+   },
+   "uploadPerCall": 0,
+   "warmMax": 291.415,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 52.8,
+    "gc": {
+     "minor": {
+      "n": 115,
+      "perMin": 130.6,
+      "mean": 3.259,
+      "max": 6.84,
+      "total": 374.77
+     },
+     "major": {
+      "n": 2,
+      "perMin": 2.3,
+      "mean": 8.785,
+      "max": 12.74,
+      "total": 17.57
+     }
+    },
+    "gcShare": 0.0253,
+    "framesOver": {
+     "4": 2277,
+     "8": 134,
+     "16.6": 12
+    },
+    "framesOverWithGc": {
+     "4": 91,
+     "8": 8,
+     "16.6": 2
+    },
+    "allocMBps": 126.9,
+    "allocKBperFrame": 2166,
+    "outsideFrames": 6,
+    "standInMs": 0.538,
+    "alloc": [
+     {
+      "fn": "lineBox",
+      "where": "src/scene/collision.ts:9",
+      "kb": 331.1,
+      "share": 0.1493,
+      "callers": "segmentBlocked 100%, shotThroughGlass 0%"
+     },
+     {
+      "fn": "hypot",
+      "where": ":0",
+      "kb": 190.4,
+      "share": 0.0859,
+      "callers": "sampleClip 20%, blendPose 19%, rotateModel 11%"
+     },
+     {
+      "fn": "rayBox",
+      "where": "src/scene/boxes.ts:1160",
+      "kb": 129.3,
+      "share": 0.0583,
+      "callers": "segmentBlocked 90%, raycast 5%, segmentBlockedDynamic 2%"
+     },
+     {
+      "fn": "applyAdj",
+      "where": "src/game/rigProps.ts:171",
+      "kb": 102.2,
+      "share": 0.0461,
+      "callers": "seg 55%, carbineLightPose 14%, gogglesBoxes 8%"
+     },
+     {
+      "fn": "segmentBlocked",
+      "where": "src/scene/collision.ts:217",
+      "kb": 83.2,
+      "share": 0.0375,
+      "callers": "lightEstimateAt 34%, doorSeen 25%, eyeContact 21%"
+     },
+     {
+      "fn": "next",
+      "where": ":0",
+      "kb": 80.5,
+      "share": 0.0363,
+      "callers": "update 19%, step 9%, tick 7%"
+     },
+     {
+      "fn": "update",
+      "where": "src/anim/skeleton.ts:142",
+      "kb": 54.1,
+      "share": 0.0244,
+      "callers": "update 89%, updateRagdoll 11%"
+     },
+     {
+      "fn": "(anonymous)",
+      "where": "src/render/sdfrig.ts:127",
+      "kb": 52.5,
+      "share": 0.0237,
+      "callers": "forEach 50%, fitRig 50%"
+     },
+     {
+      "fn": "normalize",
+      "where": "src/math/vec.ts:29",
+      "kb": 48.6,
+      "share": 0.0219,
+      "callers": "twoBoneIK 89%, readBones 5%, sc20kFrame 1%"
+     },
+     {
+      "fn": "seg",
+      "where": "src/game/rigProps.ts:191",
+      "kb": 46.8,
+      "share": 0.0211,
+      "callers": "sc20kBoxes 55%, holsterBoxes 33%, carbineBoxes 12%"
+     },
+     {
+      "fn": "substep",
+      "where": "src/game/ragdoll.ts:240",
+      "kb": 43.8,
+      "share": 0.0198,
+      "callers": "step 100%"
+     },
+     {
+      "fn": "sampleClip",
+      "where": "src/anim/skeleton.ts:22",
+      "kb": 37.4,
+      "share": 0.0169,
+      "callers": "update 86%, sampleJog 14%"
+     },
+     {
+      "fn": "blendPose",
+      "where": "src/anim/skeleton.ts:88",
+      "kb": 35.2,
+      "share": 0.0159,
+      "callers": "update 100%, sneakLayer 0%, longArms 0%"
+     },
+     {
+      "fn": "lightEstimateAt",
+      "where": "src/game/guards.ts:3751",
+      "kb": 30.9,
+      "share": 0.0139,
+      "callers": "unitLightMeter 67%, (anonymous) 30%, nvgPlaceLight 2%"
+     },
+     {
+      "fn": "update",
+      "where": "src/game/doors.ts:147",
+      "kb": 29.3,
+      "share": 0.0132,
+      "callers": "updateDoors 100%"
+     },
+     {
+      "fn": "mul",
+      "where": "src/math/vec.ts:38",
+      "kb": 29,
+      "share": 0.0131,
+      "callers": "canSeeChar 19%, update 16%, (anonymous) 14%"
+     },
+     {
+      "fn": "twoBoneIK",
+      "where": "src/anim/skeleton.ts:404",
+      "kb": 28.2,
+      "share": 0.0127,
+      "callers": "solve 43%, lifeLayer 33%, mvHips 13%"
+     },
+     {
+      "fn": "extractRotation",
+      "where": "src/game/ragdoll.ts:687",
+      "kb": 27,
+      "share": 0.0122,
+      "callers": "shapeMatch 100%"
+     },
+     {
+      "fn": "(anonymous)",
+      "where": "src/game/character.ts:1862",
+      "kb": 25.7,
+      "share": 0.0116,
+      "callers": "hand 99%, (anonymous) 1%, forEach 0%"
+     },
+     {
+      "fn": "rotate",
+      "where": "src/math/vec.ts:98",
+      "kb": 24.9,
+      "share": 0.0112,
+      "callers": "applyAdj 24%, gridRegister 17%, canSeeChar 15%"
+     },
+     {
+      "fn": "eyeContact",
+      "where": "src/game/guards.ts:1793",
+      "kb": 23.4,
+      "share": 0.0105,
+      "callers": "canSeeChar 69%, lineToMan 28%, (anonymous) 3%"
+     },
+     {
+      "fn": "rotateModel",
+      "where": "src/anim/skeleton.ts:370",
+      "kb": 21.9,
+      "share": 0.0099,
+      "callers": "turn 56%, twoBoneIK 37%, lifeLayer 4%"
+     },
+     {
+      "fn": "gogglesBoxes",
+      "where": "src/game/rigProps.ts:215",
+      "kb": 19.4,
+      "share": 0.0087,
+      "callers": "rigBoxes 72%, handPropsRaw 28%"
+     },
+     {
+      "fn": "fromBasis",
+      "where": "src/math/vec.ts:64",
+      "kb": 19.2,
+      "share": 0.0087,
+      "callers": "seg 79%, gogglesBoxes 11%, handRot 10%"
+     },
+     {
+      "fn": "axisAngle",
+      "where": "src/math/vec.ts:36",
+      "kb": 18.2,
+      "share": 0.0082,
+      "callers": "twoBoneIK 35%, (anonymous) 24%, boxes 10%"
+     },
+     {
+      "fn": "update",
+      "where": "src/game/character.ts:1081",
+      "kb": 16.8,
+      "share": 0.0076,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "longArms",
+      "where": "src/game/character.ts:2366",
+      "kb": 16.7,
+      "share": 0.0075,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "canSeeChar",
+      "where": "src/game/guards.ts:1768",
+      "kb": 15.7,
+      "share": 0.0071,
+      "callers": "tickOp 40%, consider 37%, canSee 23%"
+     },
+     {
+      "fn": "distance",
+      "where": "src/game/ragdoll.ts:377",
+      "kb": 15.3,
+      "share": 0.0069,
+      "callers": "substep 100%"
+     },
+     {
+      "fn": "handsOnDoors",
+      "where": "src/game/game.ts:1641",
+      "kb": 15,
+      "share": 0.0068,
+      "callers": "updateDoors 100%"
+     },
+     {
+      "fn": "fromTo",
+      "where": "src/math/vec.ts:87",
+      "kb": 14.9,
+      "share": 0.0067,
+      "callers": "twoBoneIK 70%, gripTurn 14%, updateRagdoll 14%"
+     },
+     {
+      "fn": "cap",
+      "where": "src/game/character.ts:3710",
+      "kb": 14.9,
+      "share": 0.0067,
+      "callers": "capsules 88%, sole 12%"
+     },
+     {
+      "fn": "doorSeen",
+      "where": "src/game/fogofwar.ts:371",
+      "kb": 14.6,
+      "share": 0.0066,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "frameFrom",
+      "where": "src/game/rigProps.ts:160",
+      "kb": 13.7,
+      "share": 0.0062,
+      "callers": "holsterBoxes 36%, carbineLightPose 30%, sc20kFrame 22%"
+     },
+     {
+      "fn": "lifeLayer",
+      "where": "src/game/character.ts:2081",
+      "kb": 13.2,
+      "share": 0.006,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "step",
+      "where": "src/game/props.ts:286",
+      "kb": 12.2,
+      "share": 0.0055,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "normalize",
+      "where": "src/math/vec.ts:43",
+      "kb": 11.9,
+      "share": 0.0054,
+      "callers": "(anonymous) 47%, update 34%, fromTo 8%"
+     },
+     {
+      "fn": "cross",
+      "where": "src/math/vec.ts:20",
+      "kb": 11.6,
+      "share": 0.0053,
+      "callers": "twoBoneIK 79%, gripTurn 6%, longArms 6%"
+     },
+     {
+      "fn": "sub",
+      "where": "src/math/vec.ts:15",
+      "kb": 11.6,
+      "share": 0.0052,
+      "callers": "twoBoneIK 76%, runGuardScript 8%, readBones 5%"
+     },
+     {
+      "fn": "footprint",
+      "where": "src/scene/boxes.ts:404",
+      "kb": 11.4,
+      "share": 0.0051,
+      "callers": "gridRegister 96%, buildRayGrid 2%, finishInfo 2%"
+     }
+    ],
+    "worst": [
+     {
+      "ms": 81.695,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 45.191,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 29.442,
+      "seed": 1,
+      "gc": 2.99
+     }
+    ]
+   }
+  },
+  {
+   "id": "hostage-rescue",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "rescued",
+     "t": 35.1,
+     "digest": "377cf3a6",
+     "frames": 2107
+    }
+   ],
+   "frames": 2047,
+   "page": {
+    "mean": 3.622,
+    "p50": 3.159,
+    "p95": 6.641,
+    "p99": 9.286,
+    "max": 43.544
+   },
+   "update": {
+    "mean": 3.406,
+    "p50": 2.99,
+    "p95": 6.048,
+    "p99": 9.08,
+    "max": 42.847
+   },
+   "stepped": {
+    "mean": 3.622,
+    "p50": 3.159,
+    "p95": 6.641,
+    "p99": 9.286,
+    "max": 43.544
+   },
+   "uploadPerCall": 0,
+   "warmMax": 258.03,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 34.1,
+    "gc": {
+     "minor": {
+      "n": 57,
+      "perMin": 100.2,
+      "mean": 3.272,
+      "max": 5.32,
+      "total": 186.53
+     },
+     "major": {
+      "n": 2,
+      "perMin": 3.5,
+      "mean": 6.155,
+      "max": 7.27,
+      "total": 12.31
+     }
+    },
+    "gcShare": 0.0268,
+    "framesOver": {
+     "4": 538,
+     "8": 45,
+     "16.6": 7
+    },
+    "framesOverWithGc": {
+     "4": 24,
+     "8": 6,
+     "16.6": 2
+    },
+    "allocMBps": 89,
+    "allocKBperFrame": 1519,
+    "outsideFrames": 13,
+    "standInMs": 0.43,
+    "alloc": [
+     {
+      "fn": "lineBox",
+      "where": "src/scene/collision.ts:9",
+      "kb": 272.1,
+      "share": 0.1712,
+      "callers": "segmentBlocked 100%, shotThroughGlass 0%"
+     },
+     {
+      "fn": "hypot",
+      "where": ":0",
+      "kb": 104.9,
+      "share": 0.066,
+      "callers": "sampleClip 28%, blendPose 21%, rotateModel 12%"
+     },
+     {
+      "fn": "rayBox",
+      "where": "src/scene/boxes.ts:1160",
+      "kb": 96.4,
+      "share": 0.0607,
+      "callers": "segmentBlocked 59%, raycast 30%, rayTest 7%"
+     },
+     {
+      "fn": "applyAdj",
+      "where": "src/game/rigProps.ts:171",
+      "kb": 68.7,
+      "share": 0.0432,
+      "callers": "seg 61%, carbineLightPose 8%, gogglesBoxes 7%"
+     },
+     {
+      "fn": "next",
+      "where": ":0",
+      "kb": 64.5,
+      "share": 0.0406,
+      "callers": "update 17%, step 13%, tick 6%"
+     },
+     {
+      "fn": "(anonymous)",
+      "where": "src/render/sdfrig.ts:127",
+      "kb": 62.6,
+      "share": 0.0394,
+      "callers": "forEach 64%, fitRig 36%"
+     },
+     {
+      "fn": "segmentBlocked",
+      "where": "src/scene/collision.ts:217",
+      "kb": 41.5,
+      "share": 0.0261,
+      "callers": "lightEstimateAt 40%, sense 22%, eyeContact 14%"
+     },
+     {
+      "fn": "update",
+      "where": "src/anim/skeleton.ts:142",
+      "kb": 38.7,
+      "share": 0.0243,
+      "callers": "update 97%, updateRagdoll 3%"
+     },
+     {
+      "fn": "seg",
+      "where": "src/game/rigProps.ts:191",
+      "kb": 33.5,
+      "share": 0.0211,
+      "callers": "sc20kBoxes 62%, holsterBoxes 27%, carbineBoxes 10%"
+     },
+     {
+      "fn": "normalize",
+      "where": "src/math/vec.ts:29",
+      "kb": 30.2,
+      "share": 0.019,
+      "callers": "twoBoneIK 86%, readBones 5%, gripTurn 1%"
+     },
+     {
+      "fn": "sampleClip",
+      "where": "src/anim/skeleton.ts:22",
+      "kb": 29.6,
+      "share": 0.0186,
+      "callers": "update 96%, sampleJog 4%"
+     },
+     {
+      "fn": "lightEstimateAt",
+      "where": "src/game/guards.ts:3751",
+      "kb": 25.9,
+      "share": 0.0163,
+      "callers": "unitLightMeter 54%, (anonymous) 41%, nvgPlaceLight 3%"
+     },
+     {
+      "fn": "rotate",
+      "where": "src/math/vec.ts:98",
+      "kb": 22.5,
+      "share": 0.0141,
+      "callers": "footprint 23%, gridRegister 22%, applyAdj 18%"
+     },
+     {
+      "fn": "blendPose",
+      "where": "src/anim/skeleton.ts:88",
+      "kb": 21.3,
+      "share": 0.0134,
+      "callers": "update 99%, sneakLayer 1%, longArms 0%"
+     },
+     {
+      "fn": "twoBoneIK",
+      "where": "src/anim/skeleton.ts:404",
+      "kb": 18.9,
+      "share": 0.0119,
+      "callers": "lifeLayer 41%, solve 36%, mvHips 17%"
+     },
+     {
+      "fn": "step",
+      "where": "src/game/props.ts:286",
+      "kb": 17.5,
+      "share": 0.011,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "mul",
+      "where": "src/math/vec.ts:38",
+      "kb": 16.2,
+      "share": 0.0102,
+      "callers": "update 26%, (anonymous) 18%, readBones 7%"
+     },
+     {
+      "fn": "updateTargets",
+      "where": "src/game/lighting.ts:9",
+      "kb": 15.5,
+      "share": 0.0098,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "fromBasis",
+      "where": "src/math/vec.ts:64",
+      "kb": 15.4,
+      "share": 0.0097,
+      "callers": "seg 71%, deviceBoxesRaw 13%, gogglesBoxes 8%"
+     },
+     {
+      "fn": "update",
+      "where": "src/game/doors.ts:147",
+      "kb": 13.9,
+      "share": 0.0087,
+      "callers": "updateDoors 100%"
+     },
+     {
+      "fn": "axisAngle",
+      "where": "src/math/vec.ts:36",
+      "kb": 13.2,
+      "share": 0.0083,
+      "callers": "twoBoneIK 30%, (anonymous) 25%, lifeLayer 13%"
+     },
+     {
+      "fn": "update",
+      "where": "src/game/character.ts:1081",
+      "kb": 12.7,
+      "share": 0.008,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "rotateModel",
+      "where": "src/anim/skeleton.ts:370",
+      "kb": 12.5,
+      "share": 0.0079,
+      "callers": "turn 49%, twoBoneIK 40%, lifeLayer 10%"
+     },
+     {
+      "fn": "upload",
+      "where": "src/scene/boxes.ts:425",
+      "kb": 12.5,
+      "share": 0.0079,
+      "callers": "step 100%"
+     },
+     {
+      "fn": "handsOnDoors",
+      "where": "src/game/game.ts:1641",
+      "kb": 12.4,
+      "share": 0.0078,
+      "callers": "updateDoors 100%"
+     },
+     {
+      "fn": "sdRoundCone",
+      "where": "src/render/sdfrig.ts:24",
+      "kb": 11.6,
+      "share": 0.0073,
+      "callers": "fitRig 91%, (anonymous) 9%"
+     },
+     {
+      "fn": "cap",
+      "where": "src/game/character.ts:3710",
+      "kb": 11.3,
+      "share": 0.0071,
+      "callers": "capsules 84%, sole 16%"
+     },
+     {
+      "fn": "(anonymous)",
+      "where": "src/game/character.ts:1862",
+      "kb": 11.1,
+      "share": 0.007,
+      "callers": "hand 97%, (anonymous) 2%, forEach 1%"
+     },
+     {
+      "fn": "lifeLayer",
+      "where": "src/game/character.ts:2081",
+      "kb": 11,
+      "share": 0.0069,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "gogglesBoxes",
+      "where": "src/game/rigProps.ts:215",
+      "kb": 10.7,
+      "share": 0.0067,
+      "callers": "rigBoxes 100%"
+     },
+     {
+      "fn": "normalize",
+      "where": "src/math/vec.ts:43",
+      "kb": 10.3,
+      "share": 0.0065,
+      "callers": "(anonymous) 45%, update 32%, fromTo 13%"
+     },
+     {
+      "fn": "footprint",
+      "where": "src/scene/boxes.ts:404",
+      "kb": 9.7,
+      "share": 0.0061,
+      "callers": "gridRegister 90%, buildRayGrid 9%, finishInfo 1%"
+     },
+     {
+      "fn": "deviceBoxesRaw",
+      "where": "src/game/devices.ts:562",
+      "kb": 9.6,
+      "share": 0.006,
+      "callers": "update 64%, deviceBoxes 36%"
+     },
+     {
+      "fn": "updateAim",
+      "where": "src/game/player.ts:2288",
+      "kb": 9.5,
+      "share": 0.006,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "buildInteractables",
+      "where": "src/game/player.ts:2384",
+      "kb": 9.4,
+      "share": 0.0059,
+      "callers": "updateAim 100%"
+     },
+     {
+      "fn": "longArms",
+      "where": "src/game/character.ts:2366",
+      "kb": 9.1,
+      "share": 0.0057,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "set",
+      "where": ":0",
+      "kb": 8.7,
+      "share": 0.0055,
+      "callers": "upload 81%, update 18%, roomAt 1%"
+     },
+     {
+      "fn": "raycast",
+      "where": "src/scene/boxes.ts:970",
+      "kb": 8.3,
+      "share": 0.0052,
+      "callers": "updateLaser 97%, updateAim 3%"
+     },
+     {
+      "fn": "cross",
+      "where": "src/math/vec.ts:20",
+      "kb": 8.2,
+      "share": 0.0051,
+      "callers": "twoBoneIK 69%, deviceBoxesRaw 7%, frameFrom 5%"
+     },
+     {
+      "fn": "fromTo",
+      "where": "src/math/vec.ts:87",
+      "kb": 7.9,
+      "share": 0.005,
+      "callers": "twoBoneIK 80%, gripTurn 12%, updateRagdoll 4%"
+     }
+    ],
+    "worst": [
+     {
+      "ms": 43.544,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 39.234,
+      "seed": 1,
+      "gc": 2.69
+     },
+     {
+      "ms": 38.502,
+      "seed": 1,
+      "gc": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "warehouse-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 210.5,
+     "digest": "e271a393",
+     "frames": 12627
+    }
+   ],
+   "frames": 12567,
+   "page": {
+    "mean": 4.405,
+    "p50": 3.922,
+    "p95": 7.526,
+    "p99": 9.751,
+    "max": 320.839
+   },
+   "update": {
+    "mean": 4.252,
+    "p50": 3.751,
+    "p95": 7.318,
+    "p99": 9.581,
+    "max": 320.825
+   },
+   "stepped": {
+    "mean": 4.405,
+    "p50": 3.922,
+    "p95": 7.526,
+    "p99": 9.751,
+    "max": 320.839
+   },
+   "uploadPerCall": 0,
+   "warmMax": 300.323,
+   "buckets": {},
+   "groups": {},
+   "calls": {},
+   "lineBy": {},
+   "worst": [],
+   "missing": [],
+   "v8": {
+    "seconds": 209.4,
+    "gc": {
+     "minor": {
+      "n": 422,
+      "perMin": 120.9,
+      "mean": 3.803,
+      "max": 18.34,
+      "total": 1604.73
+     },
+     "major": {
+      "n": 6,
+      "perMin": 1.7,
+      "mean": 12.518,
+      "max": 18.56,
+      "total": 75.11
+     }
+    },
+    "gcShare": 0.0303,
+    "framesOver": {
+     "4": 6028,
+     "8": 455,
+     "16.6": 25
+    },
+    "framesOverWithGc": {
+     "4": 252,
+     "8": 50,
+     "16.6": 10
+    },
+    "allocMBps": 128.5,
+    "allocKBperFrame": 2194,
+    "outsideFrames": 73,
+    "standInMs": 0.695,
+    "alloc": [
+     {
+      "fn": "lineBox",
+      "where": "src/scene/collision.ts:9",
+      "kb": 376.5,
+      "share": 0.1722,
+      "callers": "segmentBlocked 100%, shotThroughGlass 0%"
+     },
+     {
+      "fn": "rayBox",
+      "where": "src/scene/boxes.ts:1160",
+      "kb": 243.1,
+      "share": 0.1112,
+      "callers": "segmentBlocked 96%, raycast 2%, segmentBlockedDynamic 1%"
+     },
+     {
+      "fn": "hypot",
+      "where": ":0",
+      "kb": 157.2,
+      "share": 0.0719,
+      "callers": "sampleClip 19%, blendPose 19%, rotateModel 12%"
+     },
+     {
+      "fn": "applyAdj",
+      "where": "src/game/rigProps.ts:171",
+      "kb": 106.5,
+      "share": 0.0487,
+      "callers": "seg 49%, carbineLightPose 19%, holsterBoxes 10%"
+     },
+     {
+      "fn": "update",
+      "where": "src/game/doors.ts:147",
+      "kb": 88.2,
+      "share": 0.0403,
+      "callers": "updateDoors 100%"
+     },
+     {
+      "fn": "segmentBlocked",
+      "where": "src/scene/collision.ts:217",
+      "kb": 86.5,
+      "share": 0.0396,
+      "callers": "lightEstimateAt 34%, doorSeen 24%, eyeContact 15%"
+     },
+     {
+      "fn": "next",
+      "where": ":0",
+      "kb": 46.8,
+      "share": 0.0214,
+      "callers": "update 23%, tick 10%, buildInteractables 7%"
+     },
+     {
+      "fn": "update",
+      "where": "src/anim/skeleton.ts:142",
+      "kb": 44.2,
+      "share": 0.0202,
+      "callers": "update 90%, updateRagdoll 10%"
+     },
+     {
+      "fn": "seg",
+      "where": "src/game/rigProps.ts:191",
+      "kb": 43.4,
+      "share": 0.0199,
+      "callers": "sc20kBoxes 53%, holsterBoxes 45%, carbineBoxes 2%"
+     },
+     {
+      "fn": "normalize",
+      "where": "src/math/vec.ts:29",
+      "kb": 42.1,
+      "share": 0.0193,
+      "callers": "twoBoneIK 88%, readBones 4%, longArms 3%"
+     },
+     {
+      "fn": "substep",
+      "where": "src/game/ragdoll.ts:240",
+      "kb": 38,
+      "share": 0.0174,
+      "callers": "step 100%"
+     },
+     {
+      "fn": "lightEstimateAt",
+      "where": "src/game/guards.ts:3751",
+      "kb": 34.8,
+      "share": 0.0159,
+      "callers": "(anonymous) 52%, unitLightMeter 41%, standIn 4%"
+     },
+     {
+      "fn": "sampleClip",
+      "where": "src/anim/skeleton.ts:22",
+      "kb": 29.4,
+      "share": 0.0134,
+      "callers": "update 92%, sampleJog 8%"
+     },
+     {
+      "fn": "blendPose",
+      "where": "src/anim/skeleton.ts:88",
+      "kb": 29.1,
+      "share": 0.0133,
+      "callers": "update 94%, longArms 6%, doorLayer 0%"
+     },
+     {
+      "fn": "rotate",
+      "where": "src/math/vec.ts:98",
+      "kb": 24.7,
+      "share": 0.0113,
+      "callers": "applyAdj 25%, gridRegister 22%, canSeeChar 13%"
+     },
+     {
+      "fn": "(anonymous)",
+      "where": "src/game/character.ts:1862",
+      "kb": 24.2,
+      "share": 0.011,
+      "callers": "hand 99%, (anonymous) 1%, forEach 0%"
+     },
+     {
+      "fn": "boxes",
+      "where": "src/game/throwables.ts:216",
+      "kb": 23.6,
+      "share": 0.0108,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "twoBoneIK",
+      "where": "src/anim/skeleton.ts:404",
+      "kb": 22.2,
+      "share": 0.0102,
+      "callers": "solve 44%, lifeLayer 36%, mvPre 10%"
+     },
+     {
+      "fn": "mul",
+      "where": "src/math/vec.ts:38",
+      "kb": 21.7,
+      "share": 0.0099,
+      "callers": "canSeeChar 20%, update 18%, boxes 9%"
+     },
+     {
+      "fn": "gogglesBoxes",
+      "where": "src/game/rigProps.ts:215",
+      "kb": 21.6,
+      "share": 0.0099,
+      "callers": "rigBoxes 66%, handPropsRaw 34%"
+     },
+     {
+      "fn": "extractRotation",
+      "where": "src/game/ragdoll.ts:687",
+      "kb": 20.5,
+      "share": 0.0094,
+      "callers": "shapeMatch 100%"
+     },
+     {
+      "fn": "handsOnDoors",
+      "where": "src/game/game.ts:1641",
+      "kb": 20.2,
+      "share": 0.0093,
+      "callers": "updateDoors 100%"
+     },
+     {
+      "fn": "rotateModel",
+      "where": "src/anim/skeleton.ts:370",
+      "kb": 18.5,
+      "share": 0.0085,
+      "callers": "turn 60%, twoBoneIK 36%, stanceBody 2%"
+     },
+     {
+      "fn": "fromBasis",
+      "where": "src/math/vec.ts:64",
+      "kb": 18.4,
+      "share": 0.0084,
+      "callers": "seg 79%, gogglesBoxes 12%, handRot 9%"
+     },
+     {
+      "fn": "cap",
+      "where": "src/game/character.ts:3710",
+      "kb": 18,
+      "share": 0.0082,
+      "callers": "capsules 95%, sole 5%"
+     },
+     {
+      "fn": "frameFrom",
+      "where": "src/game/rigProps.ts:160",
+      "kb": 17,
+      "share": 0.0078,
+      "callers": "holsterBoxes 40%, carbineLightPose 36%, sc20kFrame 22%"
+     },
+     {
+      "fn": "eyeContact",
+      "where": "src/game/guards.ts:1793",
+      "kb": 16.4,
+      "share": 0.0075,
+      "callers": "canSeeChar 68%, lineToMan 16%, (anonymous) 16%"
+     },
+     {
+      "fn": "doorSeen",
+      "where": "src/game/fogofwar.ts:371",
+      "kb": 14.9,
+      "share": 0.0068,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "(anonymous)",
+      "where": "src/render/sdfrig.ts:127",
+      "kb": 13.2,
+      "share": 0.006,
+      "callers": "forEach 51%, fitRig 49%"
+     },
+     {
+      "fn": "canSeeChar",
+      "where": "src/game/guards.ts:1768",
+      "kb": 12.9,
+      "share": 0.0059,
+      "callers": "tickOp 38%, acquireFoe 25%, canSee 16%"
+     },
+     {
+      "fn": "holsterBoxes",
+      "where": "src/game/rigProps.ts:323",
+      "kb": 12.7,
+      "share": 0.0058,
+      "callers": "handPropsRaw 69%, rigBoxes 31%"
+     },
+     {
+      "fn": "axisAngle",
+      "where": "src/math/vec.ts:36",
+      "kb": 12.4,
+      "share": 0.0057,
+      "callers": "twoBoneIK 42%, boxes 24%, (anonymous) 13%"
+     },
+     {
+      "fn": "footprint",
+      "where": "src/scene/boxes.ts:404",
+      "kb": 12.4,
+      "share": 0.0057,
+      "callers": "gridRegister 96%, buildRayGrid 3%, finishInfo 1%"
+     },
+     {
+      "fn": "fromTo",
+      "where": "src/math/vec.ts:87",
+      "kb": 12.3,
+      "share": 0.0056,
+      "callers": "twoBoneIK 72%, gripTurn 14%, updateRagdoll 13%"
+     },
+     {
+      "fn": "buildInteractables",
+      "where": "src/game/player.ts:2384",
+      "kb": 11.7,
+      "share": 0.0053,
+      "callers": "updateAim 100%"
+     },
+     {
+      "fn": "distance",
+      "where": "src/game/ragdoll.ts:377",
+      "kb": 11.3,
+      "share": 0.0052,
+      "callers": "substep 100%"
+     },
+     {
+      "fn": "transformPoint",
+      "where": "src/math/vec.ts:142",
+      "kb": 11.2,
+      "share": 0.0051,
+      "callers": "readBones 90%, update 5%, wp 4%"
+     },
+     {
+      "fn": "longArms",
+      "where": "src/game/character.ts:2366",
+      "kb": 10.9,
+      "share": 0.005,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "lifeLayer",
+      "where": "src/game/character.ts:2081",
+      "kb": 10.4,
+      "share": 0.0047,
+      "callers": "update 100%"
+     },
+     {
+      "fn": "hand",
+      "where": "src/game/character.ts:1860",
+      "kb": 10.2,
+      "share": 0.0047,
+      "callers": "longArms 99%, doorLayer 0%, mvPost 0%"
+     }
+    ],
+    "worst": [
+     {
+      "ms": 320.839,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 166.417,
+      "seed": 1,
+      "gc": 0
+     },
+     {
+      "ms": 81.184,
+      "seed": 1,
+      "gc": 3.18
+     }
+    ]
+   }
+  }
+ ]
+}

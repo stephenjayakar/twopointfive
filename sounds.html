@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>twopointsix sounds</title>
+  <link rel="icon" href="data:," />
+  <style>
+    /* THE LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, played through the game's own mixer graph, a redone one before and after with a vote. One column of rows under a sticky bar;
+       the game's HUD dress (replay.html's tokens): thin green mono on near-black, one look on any host. No game code is loaded here. */
+    :root { --bg: #05090a; --panel: #0a1214; --row: #0c1719; --line: rgba(120,170,160,0.22); --ink: #cfeee2; --dim: #7f9a92; --lit: #8ff0b4; --gold: #f2cf6b; --red: #ff7a6a; --on: #041008;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color-scheme: dark; }
+    html { background: var(--bg); }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font: 13px/1.45 var(--mono); }
+    button, select, input { font: inherit; color: var(--ink); }
+    button { background: rgba(120,170,160,0.10); border: 1px solid var(--line); border-radius: 3px; padding: 4px 10px; cursor: pointer; }
+    button:hover { border-color: rgba(143,240,180,0.6); }
+    button:focus-visible, input:focus-visible, .row:focus-visible { outline: 2px solid var(--lit); outline-offset: 1px; }
+    #bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--panel); border-bottom: 1px solid var(--line); }
+    #bar .in, main { max-width: 980px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+    #bar .in { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding-block: 9px; }
+    h1 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--lit); }
+    #back { color: var(--dim); text-decoration: none; } #back:hover { color: var(--ink); }
+    .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+    .seg button[aria-pressed="true"] { background: var(--lit); border-color: var(--lit); color: var(--on); font-weight: 600; }
+    .grow { flex: 1; }
+    #marks { color: var(--gold); }
+    #copy.primary { background: var(--gold); border-color: var(--gold); color: var(--on); font-weight: 600; }
+    main { padding-block: 14px 60px; display: flex; flex-direction: column; gap: 22px; }
+    h2 { margin: 0 0 6px; font-size: 11px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--dim); display: flex; align-items: center; gap: 10px; }
+    h2 button { font-size: 11px; padding: 1px 8px; text-transform: none; letter-spacing: 0; }
+    #list { display: flex; flex-direction: column; gap: 22px; }
+    .rows { display: flex; flex-direction: column; gap: 2px; }
+    .row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 170px 212px; align-items: center; gap: 4px 10px; padding: 5px 8px; background: var(--row); border: 1px solid transparent; border-radius: 3px; }
+    .row.sel { border-color: var(--line); }
+    .row.voted { border-color: rgba(143,240,180,0.4); }
+    .row.toy { border-color: var(--gold); }
+    .row.playing .name { color: var(--lit); }
+    .play { width: 34px; height: 28px; padding: 0; color: var(--lit); font-size: 12px; }
+    .name { min-width: 0; overflow-wrap: anywhere; }
+    .name small { color: var(--dim); margin-left: 8px; font-size: 11px; }
+    .row canvas { width: 170px; height: 28px; display: block; }
+    .marks { display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+    .vote { display: flex; align-items: center; gap: 3px; color: var(--dim); font-size: 11px; }
+    .vote span { margin-right: 3px; }
+    .vote button, .toyb { padding: 3px 7px; font-size: 11px; color: var(--dim); }
+    .vote button[aria-pressed="true"] { background: var(--lit); border-color: var(--lit); color: var(--on); font-weight: 600; }
+    .toyb[aria-pressed="true"] { background: var(--gold); border-color: var(--gold); color: var(--on); font-weight: 600; }
+    .also { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+    .also button { font-size: 11px; padding: 2px 8px; color: var(--dim); }
+    .also button::before { content: '▶ '; color: var(--lit); }
+    .also .wasb { border-style: dashed; }
+    .also .wasb.live { border-style: solid; border-color: var(--gold); color: var(--ink); }
+    .also .inplay { font-size: 11px; padding: 2px 8px; color: var(--dim); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; }
+    .also .inplay::after { content: ' ›'; color: var(--lit); }
+    .also .inplay:hover { color: var(--ink); }
+    .also .wasb::before { color: var(--gold); }
+    .also .altb { border-color: var(--lit); color: var(--ink); }
+    .note { flex: 1 1 150px; min-width: 110px; background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 2px 4px; color: var(--gold); font-size: 12px; }
+    .note::placeholder { color: var(--dim); opacity: 0.7; }
+    .note:focus { border-bottom-color: var(--lit); outline: none; }
+    #marks.bad { color: var(--red); }
+    .loops { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .loops button[aria-pressed="true"] { background: var(--lit); border-color: var(--lit); color: var(--on); font-weight: 600; }
+    .loops label { display: inline-flex; align-items: center; gap: 8px; color: var(--dim); }
+    input[type=range] { accent-color: var(--lit); width: 130px; }
+    #keys { color: var(--dim); font-size: 11px; }
+    kbd { display: inline-block; padding: 0 5px; border-radius: 2px; background: var(--line); color: var(--ink); font: 600 10px/1.6 var(--mono); }
+    #out { width: 100%; box-sizing: border-box; min-height: 70px; background: var(--row); border: 1px solid var(--gold); color: var(--gold); padding: 8px; font: inherit; }
+    @media (max-width: 620px) { .row { grid-template-columns: 34px minmax(0, 1fr); } .row canvas { display: none; } .marks { grid-column: 2; justify-content: flex-start; } #keys { display: none; } }
+  </style>
+</head>
+<body>
+  <div id="bar"><div class="in">
+    <h1>Sounds</h1>
+    <a id="back" href="./" hidden>← game</a>
+    <div class="seg" id="places" role="group" aria-label="Where you hear it from"></div>
+    <span class="grow"></span>
+    <label><input id="vol" type="range" min="0" max="1" step="0.01" value="0.8" aria-label="Volume" /></label>
+    <button id="stop" type="button">■ stop</button>
+    <span id="marks"></span>
+    <button id="copy" type="button">copy marks</button>
+  </div></div>
+  <main>
+    <div id="keys"><kbd>↑</kbd> <kbd>↓</kbd> move · <kbd>Space</kbd> play · <kbd>B</kbd> play it as it was · <kbd>←</kbd> better before · <kbd>→</kbd> better after · <kbd>N</kbd> note · <kbd>T</kbd> it sounds like a toy · <kbd>1</kbd>–<kbd>6</kbd> where you hear it from<span id="redone"></span></div>
+    <textarea id="out" hidden readonly aria-label="Your marks, to paste back"></textarea>
+    <div id="list"></div>
+    <section>
+      <h2>Loops</h2>
+      <div class="loops" id="loops"></div>
+    </section>
+    <section>
+      <h2>Music</h2>
+      <div class="loops" id="music">
+        <button id="musicOn" type="button" aria-pressed="false">the score</button>
+        <label>calm <input id="tension" type="range" min="0" max="1" step="0.01" value="0" aria-label="Tension" /> firefight</label>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./src/sounds/main.ts"></script>
+</body>
+</html>

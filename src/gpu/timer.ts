@@ -36,7 +36,7 @@ export class GpuTimer {
 
   beginFrame() {
     this.names.length = 0; this.idles.length = 0; this.frameNo++;
-    // forget passes that stopped running (retired smoke domains, removed cascades, idle probes)
+    // forget passes that stopped running (a smoke solver gone idle, removed cascades, idle probes)
     for (const [k, f] of this.lastSeen) if (this.frameNo - f > 30) { this.lastSeen.delete(k); this.results.delete(k); }
   }
 

@@ -1,0 +1,908 @@
+{
+ "title": "EXP: ray traversal — profile, twelve measured attempts, one win",
+ "sub": "exp/trace-perf off main @ e3d532b · M4 Max · Chrome 148 / Metal 3 · every number from tools/qa/trace-lab.js (serialized frames, interleaved, medians; micro-bench = the lab's own timestamped kernel over the real g-buffer's receivers) · notebook: docs/internal/trace-perf.md",
+ "tldr": [
+  "<b>Where the time goes (B1 cubicles, high):</b> the tracer is 39 % of the GPU frame — 3.3 ms of any-hit shadow rays (direct 1.3, gather 1.1, cascades 0.65, froxels 0.13) + 1.25 ms of closest hits (gather 0.72, cascades 0.2). The gather spends 87 % of itself inside the tracer.",
+  "<b>The walk is divergence-bound, not work-bound:</b> a shadow ray loads ~1.6 cell headers, ~7.6 item words, slab-tests ~3.8 boxes; that is ~2 % of ALU peak. The same rays traced with all 32 lanes of a SIMD group agreeing run 4–5× faster; merely letting a group aim at the same light gives 3.1×. Every per-ray micro-optimisation therefore measured inside the noise (V1 unroll, V2 storage bounds, V8 sorted lists) or negative (V3 AABB pre-reject −5 %, V5 flattened loop −11 %, H1 blocker guesses +13 % on the direct pass).",
+  "<b>The win is on the consumer side: E8, tile-coherent STRATIFIED gather directions</b> (the k-th gather ray of every texel drawn from stratum (k + frame) mod 4, own jitter inside): gather −13…−16 % in every scene at high (2.10 → 1.77 ms B1, 2.56 → 2.16 B2), −12…−14 % at ultra (−0.8 ms), −10 % in the stress minute; frame −2…−4 %; energy identical, temporal noise equal or lower (it is stratified sampling). Not hash-identical by nature (a different sample pattern), so it ships as <code>settings.gatherStrata</code> (default off, <code>?gatherStrata</code>, <code>__gs.on</code>) for the maintainer to look at and flip.",
+  "<b>One more lever, priced but not pulled (E11):</b> crediting an off-screen gather hit's direct light without its shadow ray when the whole sum is under k × the pixel's cached irradiance takes another −8 % (k = 0.5 %) to −19 % (k = 2 %) off the gather with no measurable change in the denoised indirect here — but it is a bias by construction, so it is left as a folded-away const for the maintainer.",
+  "<b>Exact traversal variants worth keeping as hooks, not wins:</b> V6 (characters registered in the trace grid, tested only where a ray's cells carry their bit — exact for occluded / traceClosest, 0 % in these frames because a man stands in every view, but the right seam for the SDF-characters lane) and V4 (occludedT men-last: boolean-exact, hint-equivalent, +6–12 % on incoherent shadow rays, 0 % in the direct pass whose rays are already coherent).",
+  "<b>Default of the branch = the reference walk</b> (TRACE_VARIANT 0, gatherStrata off): B1 / B3 identity hashes ae9c56db / 674bd13e reproduce boot after boot through the new dispatchers; every 'exact' variant is 0 disagreements over 44 M rays × 12 query/class combos."
+ ],
+ "profile": {
+  "lead": "Two instruments: (1) compile-time variants 97/98/99 that trace every ray TWICE (the second call's tmax made data-dependent on the first so nothing merges away) — pass(2×) − pass(1×) is what a pass spends inside the tracer; (2) the lab kernel with per-ray counters and per-class Mrays/s.",
+  "passes": [
+   [
+    "direct (ReSTIR shadow rays)",
+    "2.75",
+    "1.31 ms (48 %)",
+    "≈ 0",
+    "1.3 ms",
+    1.31
+   ],
+   [
+    "final gather",
+    "2.10",
+    "1.11 ms (53 %)",
+    "0.72 ms (34 %)",
+    "1.83 ms (87 %)",
+    1.83
+   ],
+   [
+    "cascades Σ (c0–c3 + dice)",
+    "1.18",
+    "0.65 ms (55 %)",
+    "0.20 ms (17 %)",
+    "0.85 ms (72 %)",
+    0.85
+   ],
+   [
+    "froxel volumetrics",
+    "0.52",
+    "0.13 ms (25 %)",
+    "0",
+    "0.13 ms",
+    0.13
+   ],
+   [
+    "reflections",
+    "0.13",
+    "0.07 ms",
+    "≈ 0",
+    "0.07 ms",
+    0.07
+   ],
+   [
+    "<b>union (whole GPU frame)</b>",
+    "<b>10.55</b>",
+    "<b>3.3 ms (31 %)</b>",
+    "<b>1.25 ms (12 %)</b>",
+    "<b>≈ 4.1 ms = 39 %</b>",
+    null
+   ]
+  ],
+  "perRay": [
+   [
+    "light (picked ∝ luminance, disk point)",
+    "68",
+    "27 / 40 / 0.2",
+    "3.7",
+    "1.6",
+    "7.6 (3.8)",
+    "3.8 (1.6)",
+    "1.95 / 0.66"
+   ],
+   [
+    "panel (ceiling panels only)",
+    "56",
+    "0 / 56 / 0.3",
+    "5.1",
+    "2.3",
+    "10.5 (5.2)",
+    "5.3 (2.2)",
+    "2.7 / 0.9"
+   ],
+   [
+    "ao (0.3–2 m hemisphere)",
+    "23",
+    "3 / 19 / 0.1",
+    "1.7",
+    "1.1",
+    "6.4 (3.5)",
+    "2.9 (1.3)",
+    "4.6 / 0.7"
+   ],
+   [
+    "moon (kind 2, 80 m)",
+    "99.9",
+    "93 / 7 / 0",
+    "0.3",
+    "0.2",
+    "0.8 (0.4)",
+    "0.4 (0.1)",
+    "0 / 0"
+   ],
+   [
+    "column (straight up)",
+    "100",
+    "100 / 0 / 0",
+    "0",
+    "0",
+    "0",
+    "0",
+    "0 / 0"
+   ],
+   [
+    "random (air, any direction, 30 m)",
+    "82",
+    "69 / 13 / 0",
+    "1.6",
+    "0.4",
+    "1.3 (0.5)",
+    "0.7 (0.1)",
+    "1.1 / 0"
+   ],
+   [
+    "gather CLOSEST (40 m hemisphere; final answer, not first)",
+    "99.5",
+    "56 / 43 / 0",
+    "3.7",
+    "1.9",
+    "12.7 (6.4)",
+    "6.3 (2.5)",
+    "6 / 0.01"
+   ],
+   [
+    "reflect CLOSEST (mirror, 48 m)",
+    "100",
+    "57 / 43 / 0",
+    "2.6",
+    "1.5",
+    "10.3 (4.8)",
+    "5.5 (2.1)",
+    "6 / 0.01"
+   ]
+  ],
+  "perRayRead": "The reference walk is already lean: half the item words are rejected by the 1.5 cm height cull before the 32-byte box fetch, five globals are rejected against the segment's bounds, straight-up rays are answered by the ceiling global in one slab test (the 'column path' of H4 has nothing left to win indoors), and every miss pays the character loop (six bounding spheres). ~450 ALU ops and ~165 bytes per shadow ray at 600–900 Mrays/s is a few percent of what the GPU can issue — the cost is lanes waiting for each other.",
+  "cohLead": "The same light-class shadow rays (B1 receivers, occludedT, reference walk), regrouped across lanes:",
+  "coherence": [
+   [
+    "light — every lane its own receiver + own light pick",
+    802,
+    false
+   ],
+   [
+    "lightC — own receiver, the SIMD group picks ONE light",
+    2502,
+    true
+   ],
+   [
+    "light — 32 lanes trace the identical ray",
+    4157,
+    true
+   ],
+   [
+    "light — receivers scattered (stride 7919)",
+    452,
+    false
+   ],
+   [
+    "gather closest — iid directions",
+    848,
+    false
+   ],
+   [
+    "gatherQ — azimuth quadrant shared per 32 lanes",
+    992,
+    true
+   ],
+   [
+    "gatherH — az half × cosθ half shared per 32 lanes",
+    1032,
+    true
+   ],
+   [
+    "gatherB — azimuth eighth shared per 32 lanes",
+    1153,
+    true
+   ],
+   [
+    "gather — 32 lanes trace the identical ray",
+    3461,
+    true
+   ]
+  ],
+  "cohRead": "Identical work per lane runs 4–5× faster: execution and memory divergence between the lanes of a SIMD group is the limiter. The direct pass's real rays already run near 'lightC' (its tiles mostly aim at one light: ≈ 3000 Mrays/s effective from the pass timing); the gather's rays — scattered secondary origins, iid cosine directions — run at the incoherent figure. That is why the only lever that moved a pass was making the gather's lanes agree on a direction stratum (E8), and why trimming instructions off an already-waiting lane did nothing."
+ },
+ "rankedLead": "Twelve measured attempts (H1–H9 of the brief mapped onto them in the notebook). 'micro' = the lab kernel's PAIRED speed-up (same rays, takes adjacent in time, median of runs) per ray class; 'frame' = the pass median in B1 at high, quiet GPU (A/A within 1 %), where the timer quantum is 0.065 ms ≈ 3 % of the direct or gather pass — anything under that reads 0.0.",
+ "variants": [
+  {
+   "name": "E8 · stratified gather directions",
+   "what": "consumer-side coherence: ray k of every texel from stratum (k + frame) mod 4 (az half × cos²θ half), own jitter; mainGi's K fresh rays likewise (K azimuth sectors)",
+   "exact": "unbiased, different sample pattern (not hash-identical); energy within noise, temporal sd ≤ iid",
+   "micro": [
+    [
+     "gather-class rays",
+     25.0
+    ]
+   ],
+   "frame": [
+    [
+     "gather",
+     -15.7
+    ],
+    [
+     "union",
+     -3.9
+    ]
+   ],
+   "verdict": "win",
+   "cost": "fgather.wgsl cosineDirK + 2 call sites; passes.ts second pipeline pair + switch; engine/main setting — ~40 lines",
+   "barGather": 25.0
+  },
+  {
+   "name": "E11 · skip negligible shadow rays at gather hits (PROBE)",
+   "what": "an off-screen hit whose whole unshadowed direct sum would move the pixel by < k × the cache's irradiance is credited without its ray (bounded bias)",
+   "exact": "biased by construction (≤ k of the pixel's indirect per ray); denoised indirect mean moved ≤ 0.7 % in three tiles",
+   "frame": [
+    [
+     "gather k=0.005",
+     -7.7
+    ],
+    [
+     "gather k=0.02",
+     -19.2
+    ],
+    [
+     "union k=0.02",
+     -3.6
+    ]
+   ],
+   "verdict": "sit",
+   "cost": "kept as const GATHER_DIMSKIP = 0 (folds away); a maintainer's sampling-policy decision",
+   "barGather": 19.2
+  },
+  {
+   "name": "V4 · occludedT men-last",
+   "what": "H6-ish: box walk over the whole segment first, capsules / mesh only over [0, tBox)",
+   "exact": "boolean EXACT; blocker distance differs on 4305 / 1.9 M light rays (hint-equivalent)",
+   "micro": [
+    [
+     "light",
+     6.0
+    ],
+    [
+     "panel",
+     6.9
+    ],
+    [
+     "lightC",
+     0.0
+    ]
+   ],
+   "frame": [
+    [
+     "direct",
+     0.0
+    ]
+   ],
+   "verdict": "sit",
+   "cost": "one function (occludedTV4) — 60 lines, self-contained",
+   "barLight": 6.0
+  },
+  {
+   "name": "V6 · characters through the grid",
+   "what": "H6: per-cell character mask (region C) + distance field counting their cells occupied; walk ORs masks, tests only those men",
+   "exact": "occluded / traceClosest EXACT (44 M rays); occludedT = V4 order",
+   "micro": [
+    [
+     "ao",
+     6.8
+    ],
+    [
+     "panel",
+     5.9
+    ],
+    [
+     "reflect",
+     5.9
+    ],
+    [
+     "light",
+     -0.9
+    ],
+    [
+     "gather",
+     -1.2
+    ]
+   ],
+   "frame": [
+    [
+     "direct",
+     0.0
+    ],
+    [
+     "gather",
+     0.0
+    ],
+    [
+     "direct B2 (4 men in view)",
+     0.0
+    ]
+   ],
+   "verdict": "sit",
+   "cost": "boxes.ts region C (+40 lines), world.ts const, gridCellV6 + 3 masked character loops + 3 walks in common.wgsl",
+   "barLight": -0.9,
+   "barGather": -1.2
+  },
+  {
+   "name": "V1 · item loop unrolled ×2",
+   "what": "H3/H5: both packed item words, then both box records, in flight before either test",
+   "exact": "EXACT (44 M rays, 12 combos)",
+   "micro": [
+    [
+     "light",
+     0.9
+    ],
+    [
+     "panel",
+     3.9
+    ],
+    [
+     "ao",
+     -3.1
+    ],
+    [
+     "gather",
+     0.7
+    ],
+    [
+     "reflect",
+     1.9
+    ]
+   ],
+   "frame": [
+    [
+     "direct",
+     0.0
+    ],
+    [
+     "gather",
+     0.0
+    ]
+   ],
+   "verdict": "nil",
+   "cost": "—",
+   "barLight": 0.9,
+   "barGather": 0.7
+  },
+  {
+   "name": "V2 · character bounds from storage",
+   "what": "H8: the six spheres read from the capsule storage buffer's tail instead of the dynamically indexed uniform",
+   "exact": "EXACT",
+   "micro": [
+    [
+     "light",
+     2.9
+    ],
+    [
+     "panel",
+     -2.7
+    ],
+    [
+     "ao",
+     -1.6
+    ],
+    [
+     "gather",
+     0.0
+    ]
+   ],
+   "verdict": "nil",
+   "cost": "—",
+   "barLight": 2.9,
+   "barGather": 0.0
+  },
+  {
+   "name": "V8 · big-occluder-first cell lists",
+   "what": "H3: statics scattered by descending surface area (data only) + in-cell index tie-break for closest hits",
+   "exact": "EXACT (15 M rays; any-hit order-independent by construction)",
+   "micro": [],
+   "frame": [
+    [
+     "direct",
+     0.0
+    ],
+    [
+     "gather",
+     0.0
+    ],
+    [
+     "union",
+     0.0
+    ]
+   ],
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "E10 · frame-shared light-pick threshold at gather hits",
+   "what": "probe: maximal coherence for the gather's off-screen shadow rays",
+   "exact": "probe only",
+   "frame": [
+    [
+     "gather",
+     0.0
+    ]
+   ],
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "V3 · AABB reject before yawed slabs",
+   "what": "H8: analytic world AABB of a yawed box (÷ det of the f16 rotation, padded) tested with the ray's invRd before the two rotations + three divisions",
+   "exact": "EXACT",
+   "micro": [
+    [
+     "light",
+     -0.9
+    ],
+    [
+     "panel",
+     -5.3
+    ],
+    [
+     "ao",
+     -7.4
+    ],
+    [
+     "gather",
+     -5.1
+    ]
+   ],
+   "frame": [
+    [
+     "direct",
+     2.5
+    ],
+    [
+     "gather",
+     3.2
+    ]
+   ],
+   "verdict": "neg",
+   "cost": "—",
+   "barLight": -0.9,
+   "barGather": -5.1
+  },
+  {
+   "name": "V5 · flattened walk (item-or-step loop)",
+   "what": "H5: one loop, each iteration tests one item or steps a cell — no lane parked behind a long cell",
+   "exact": "EXACT (44 M rays)",
+   "micro": [
+    [
+     "light",
+     -10.9
+    ],
+    [
+     "lightC",
+     -10.5
+    ],
+    [
+     "panel",
+     -6.6
+    ],
+    [
+     "ao",
+     -3.1
+    ],
+    [
+     "gather",
+     -5.0
+    ]
+   ],
+   "frame": [
+    [
+     "direct",
+     7.3
+    ],
+    [
+     "gather",
+     3.2
+    ]
+   ],
+   "verdict": "neg",
+   "cost": "—",
+   "barLight": -10.9,
+   "barGather": -5.0
+  },
+  {
+   "name": "H1 · blocker guesses in the direct pass",
+   "what": "occludedTI names the blocking box; a pixel's later rays test that box first (one slab test) and skip the walk when it blocks (RESTIR_GUESS)",
+   "exact": "boolean EXACT, hint-equivalent",
+   "frame": [
+    [
+     "direct",
+     13.3
+    ]
+   ],
+   "verdict": "neg",
+   "cost": "kept off (const) as the record",
+   "barLight": -13.3
+  },
+  {
+   "name": "H4 · column / short-ray paths",
+   "what": "not built: the profile shows straight-up rays already cost one global slab test (100 % answered by the ceiling) and short rays' setup is < 10 % of a 0.13 ms pass",
+   "exact": "—",
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "H7 · glass / reach bounds",
+   "what": "not built: glassTrace is not in the tracer at all (composite / gather / direct call it explicitly per pixel), and shadow rays already end at their light",
+   "exact": "—",
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "H2 · finer occupancy masks / coarse mip",
+   "what": "not built: the 24-slice cell mask already rejects 1.6 of 3.7 cells before any list load and the Chebyshev skip runs empty stretches for free; a finer mask only trims work off waiting lanes (the trade V1/V3 lost)",
+   "exact": "—",
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "H5 · subgroup ops",
+   "what": "?subgroups requests the feature; unused — uniform exits are what the scheduler already does (V5), cooperative cell processing needs lanes in the same cell",
+   "exact": "—",
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "H8 · box records via texture / f16 packing",
+   "what": "not built: 35 KB hot set, V2 shows address space is not the issue; an exact 16-B record is impossible in f16 and a quantised one makes the core lossy",
+   "exact": "—",
+   "verdict": "nil",
+   "cost": "—"
+  },
+  {
+   "name": "H6 · dynamic boxes",
+   "what": "answered by the code: the ~300 dynamic boxes are re-binned into the same grid every frame — no linear list exists",
+   "exact": "—",
+   "verdict": "nil",
+   "cost": "—"
+  }
+ ],
+ "exactness": {
+  "lead": "The lab's 'exact' kernel runs variant A and variant B on the SAME rays in the same thread and counts disagreements: any-hit boolean; occludedT sign and |Δt| > 1e-4; traceClosest hit/miss, box index, |Δt| > 1e-4, normal. 12 combos per variant (occluded × ao / light / random / column / moon, occludedT × light / panel / moon, traceClosest × gather / reflect / random / light), B1 receivers.",
+  "rows": [
+   [
+    "V1 unroll ×2",
+    "44.2 M",
+    "all 12",
+    "0 · 0 · 0 · 0",
+    "EXACT"
+   ],
+   [
+    "V2 storage bounds",
+    "44.2 M",
+    "all 12",
+    "0",
+    "EXACT"
+   ],
+   [
+    "V3 AABB pre-reject",
+    "44.2 M",
+    "all 12",
+    "0",
+    "EXACT"
+   ],
+   [
+    "V5 flattened",
+    "44.2 M",
+    "all 12",
+    "0",
+    "EXACT"
+   ],
+   [
+    "V6 characters-in-grid",
+    "44.2 M",
+    "occluded ×5, traceClosest ×4: 0 · occludedT: t differs like V4",
+    "0 boolean; occludedT |Δt|>1e-4 on 4305 / 1.9 M light rays, 49 k / 4.1 M moon rays (a capsule nearer than the first box)",
+    "EXACT for occluded / traceClosest; hint-equivalent occludedT"
+   ],
+   [
+    "V4 men-last occludedT",
+    "9.3 M",
+    "occludedT ×3",
+    "boolean 0; t as above",
+    "boolean EXACT, hint-equivalent"
+   ],
+   [
+    "V8 sorted + tie-break (index-ordered data)",
+    "15.4 M",
+    "traceClosest ×4 (occluded / occludedT dispatch to V0)",
+    "0",
+    "EXACT"
+   ]
+  ],
+  "hashes": [
+   [
+    "main's traversal (before any edit), boot 1 / 2 / 3",
+    "ae9c56db",
+    "674bd13e",
+    "reference — the deterministic capture protocol reproduces boot to boot for B1 / B3 (B2 with live men does not: async light-meter readback)"
+   ],
+   [
+    "dispatcher build, TRACE_VARIANT 0",
+    "ae9c56db",
+    "674bd13e",
+    "the const-folded switch is free and identical"
+   ],
+   [
+    "final branch head, ?trace=0, gatherStrata off (default)",
+    "ae9c56db",
+    "674bd13e",
+    "everything added is inert by default: region C data, the second gather pair, dead variants"
+   ]
+  ]
+ },
+ "matrixLead": "Configs are applied by hot-swapping every tracing pipeline (variants) or flipping the live setting (strata); each scene is re-checked for GPU contention first (A/A column: two identical takes' union medians, must agree within 2.5 %). Where another lane's tab woke up mid-take the union's p75 says so (B1 / B3 at high: v6 unions contaminated) and the pass medians are the columns to read. Summary of E8: gather −16 / −15 / −16 / −14 % (B1 / B3 / B2 / B5) at high, −9…−15 % at medium, −14 / −12 % (B1 / B2) at ultra with the Latin-square K = 2 form (the first ultra table used plain azimuth halves: −4…−7 %), −10.5 % in the stress minute (B4); frame −2…−4 %. V6: 0.0 % on direct and gather in every scene.",
+ "e8": {
+  "lead": "Why it works: the gather traces 4 cosine rays per half-res texel. Neighbouring texels' k-th rays used to point anywhere in the hemisphere, so the 32 lanes of a SIMD group walked 32 unrelated cell sequences. Drawing ray k of EVERY texel from the same stratum of the hemisphere — (azimuth half) × (cos²θ half), rotated by the frame index — with each texel's own two random numbers as the jitter inside it keeps every ray cosine-distributed and every texel covering all four strata every frame (a stratified estimator: same expectation, never higher variance than iid), draws the same COUNT of random numbers (so everything downstream is untouched), and puts a whole tile's k-th rays into one quarter of direction space. The lab priced exactly that regrouping at 1.25× on gather rays; the pass came in at −13…−16 %.",
+  "how": "Where: fgather.wgsl <code>cosineDirK(N, k, K)</code> replacing <code>cosineDir(N)</code> at the two ray-drawing sites (main's RAYS loop; mainGi's K fresh candidates as K azimuth sectors — RIS weights stand, each candidate is still cosine-distributed). passes.ts compiles the module twice behind <code>const GATHER_STRATA</code> (pFG/pFGR and pFGs/pFGRs, all async boot pipelines) and the encode picks by <code>gatherStrata</code>, mirrored from <code>settings.gatherStrata</code> — so it A/Bs live. Cost at ultra / medium in the matrix below.",
+  "noise": [
+   [
+    "centre (open floor)",
+    "1",
+    "1.411e-2",
+    "1.406e-2",
+    "0.0027",
+    "0.0026",
+    "0.026 / 0.026"
+   ],
+   [
+    "centre",
+    "2",
+    "1.419e-2",
+    "1.414e-2",
+    "0.0029",
+    "0.0023",
+    "0.025 / 0.025"
+   ],
+   [
+    "floorL (floor between desks)",
+    "1",
+    "1.810e-2",
+    "1.790e-2",
+    "0.0051",
+    "0.0051",
+    "0.022 / 0.021"
+   ],
+   [
+    "floorL",
+    "2",
+    "1.809e-2",
+    "1.794e-2",
+    "0.0062",
+    "0.0058",
+    "0.022 / 0.022"
+   ],
+   [
+    "deskR (desk tops)",
+    "1",
+    "1.216e-2",
+    "1.214e-2",
+    "0.0027",
+    "0.0011",
+    "0.024 / 0.024"
+   ],
+   [
+    "deskR",
+    "2",
+    "1.218e-2",
+    "1.222e-2",
+    "0.0028",
+    "0.0015",
+    "0.024 / 0.021"
+   ],
+   [
+    "top (far cubicles)",
+    "1",
+    "1.052e-2",
+    "1.052e-2",
+    "0.0091",
+    "0.0088",
+    "0.020 / 0.021"
+   ],
+   [
+    "top",
+    "2",
+    "1.054e-2",
+    "1.058e-2",
+    "0.0094",
+    "0.0093",
+    "0.020 / 0.022"
+   ]
+  ],
+  "raw": [
+   [
+    "centre (open floor)",
+    "0.314",
+    "0.312",
+    -0.6
+   ],
+   [
+    "desk (desk tops)",
+    "0.312",
+    "0.298",
+    -4.6
+   ],
+   [
+    "floor (between desks)",
+    "0.388",
+    "0.395",
+    1.6
+   ]
+  ],
+  "crops": [
+   [
+    "e8_desk_iid",
+    "desk + monitor · FINAL · iid"
+   ],
+   [
+    "e8_desk_strata",
+    "desk + monitor · FINAL · strata (mean |Δ| 0.9 / 255, max 10 — the same-setting floor)"
+   ],
+   [
+    "e8indx4_desk_iid",
+    "desk · INDIRECT-ONLY view (×4 gain) · iid"
+   ],
+   [
+    "e8indx4_desk_strata",
+    "desk · INDIRECT-ONLY (×4) · strata"
+   ],
+   [
+    "e8_lamp_iid",
+    "lit desk under the panel · FINAL · iid"
+   ],
+   [
+    "e8_lamp_strata",
+    "lit desk · FINAL · strata (mean |Δ| 0.2)"
+   ],
+   [
+    "e8indx4_lamp_iid",
+    "lit desk · INDIRECT-ONLY (×4) · iid"
+   ],
+   [
+    "e8indx4_lamp_strata",
+    "lit desk · INDIRECT-ONLY (×4) · strata"
+   ],
+   [
+    "e8_box_iid",
+    "the box and its shadow · FINAL · iid"
+   ],
+   [
+    "e8_box_strata",
+    "the box · FINAL · strata (mean |Δ| 0.4)"
+   ],
+   [
+    "e8indx4_box_iid",
+    "the box · INDIRECT-ONLY (×4) · iid"
+   ],
+   [
+    "e8indx4_box_strata",
+    "the box · INDIRECT-ONLY (×4) · strata"
+   ]
+  ]
+ },
+ "lossy": {
+  "lead": "V4 (and V6's occludedT, which takes V4's order) never changes WHETHER a shadow ray is blocked — only, when a man stands on the segment AND a box registered in an earlier cell is hit beyond him while a nearer box sits in a later cell, WHICH blocker's distance feeds the PCSS penumbra hint (V0: the box; V4: the man). occludedT's own contract calls that distance 'roughly where … boxes in DDA order ≈ near-first, not nearest', so both are in spec; the pixel difference can only appear in a character's shadow. Measured on a close view of two torch guards in the lobby (moon through the frontage + their torches), 40 renders per capture, sequence V0 · V6 · V0 · V6 (the torch flicker makes every capture differ, so the same-setting pairs are the floor):",
+  "diff": [
+   [
+    "same-setting floor V0/V0 · direct-only",
+    "65",
+    "0.474",
+    "35 439",
+    "7 927"
+   ],
+   [
+    "same-setting floor V6/V6 · direct-only",
+    "69",
+    "0.468",
+    "35 312",
+    "8 046"
+   ],
+   [
+    "V0 vs V6, take a · direct-only",
+    "63",
+    "0.468",
+    "35 143",
+    "7 769"
+   ],
+   [
+    "V0 vs V6, take b · direct-only",
+    "68",
+    "0.466",
+    "35 610",
+    "8 384"
+   ],
+   [
+    "V0a vs V6b (cross) · direct-only",
+    "70",
+    "0.473",
+    "35 224",
+    "7 818"
+   ],
+   [
+    "same-setting floor V0/V0 · final",
+    "49",
+    "0.327",
+    "32 363",
+    "1 185"
+   ],
+   [
+    "same-setting floor V6/V6 · final",
+    "56",
+    "0.462",
+    "27 964",
+    "941"
+   ],
+   [
+    "V0 vs V6, take a · final",
+    "60",
+    "0.348",
+    "21 347",
+    "465"
+   ],
+   [
+    "V0 vs V6, take b · final",
+    "58",
+    "0.300",
+    "16 193",
+    "554"
+   ],
+   [
+    "V0a vs V6b (cross) · final",
+    "61",
+    "0.374",
+    "34 402",
+    "4 084"
+   ]
+  ],
+  "crops": [
+   [
+    "v6_man_direct_V0a",
+    "guard, direct-only · V0"
+   ],
+   [
+    "v6_man_direct_V6a",
+    "guard, direct-only · V6"
+   ],
+   [
+    "v6_feet_direct_V0a",
+    "his feet + contact shadow, direct-only · V0"
+   ],
+   [
+    "v6_feet_direct_V6a",
+    "feet, direct-only · V6"
+   ],
+   [
+    "v6_man_final_V0a",
+    "guard, final · V0"
+   ],
+   [
+    "v6_man_final_V6a",
+    "guard, final · V6"
+   ]
+  ],
+  "verdict": "Every cross pair sits at the same-setting floor — by the lane's criterion (a real effect cannot vanish in any adjacent cross pair) the changed blocker distance is invisible in this view."
+ },
+ "merge": {
+  "order": [
+   "<b>E8 — gatherStrata.</b> fgather.wgsl: <code>cosineDirK</code> (12 lines) + the two call sites; passes.ts: the second module/pipeline pair in <code>init()</code>, the pick in the gather encode, <code>hotSwapGather</code> building both; engine.ts <code>settings.gatherStrata</code> + the mirror line; main.ts <code>?gatherStrata</code> / <code>__gs</code>. Ship it default ON after an eyes-on look at the indirect-only view in motion (I could only judge stills + temporal statistics); if hash-identity of the default frame matters for other lanes' probes, keep the flag and flip the presets.",
+   "<b>The lab itself</b> (already merged in shape: tools/qa/trace-lab.js + shaders/trace_lab.wgsl + the TRACE_VARIANT dispatch + __hotCommon + rc/particles hot-swap hooks + tools/qa/gpu-quiet.sh). It is how the next traversal idea gets priced in minutes: per-class Mrays/s, A-vs-B disagreement counts over millions of real receivers' rays, coherence probes, identity hashes.",
+   "<b>V6's data structure, for the SDF-characters lane</b> — not for speed today (0 % with a man in every view) but because 'test a character only where the ray's cells carry his bit' is exact, costs 13 KB + one OR per loaded cell, and turns an SDF march per character per ray into one per ray that actually passes him. Hunks: boxes.ts (charBoundsCpu, gridChars/gridDistC, region C write), world.ts GRID_CC, common.wgsl gridCellV6 + the masked character loops + occludedV6 / traceClosestV6.",
+   "<b>V4 only if occludedT's callers grow incoherent</b> (a future pass shooting shadow rays from scattered points through occludedT): +6–12 % there, boolean-exact, one function.",
+   "Do NOT merge V1 / V2 / V3 / V5 / V8 / H1 — measured nil or negative; the notebook keeps their numbers so nobody re-runs them blind."
+  ],
+  "dead": [
+   "<b>Latency hiding (V1)</b> — pairing the item-word and box-record loads changed nothing: occupancy already hides load latency; the lanes are waiting on each other, not on memory.",
+   "<b>Uniform vs storage for loop-indexed reads (V2)</b> — no difference for six vec4s; the reach-mask lane's earlier finding (storage cheaper) was about a 17 KB array, not this.",
+   "<b>ALU trimming on the yawed slab path (V3)</b> — an extra conservative test on the per-item critical path costs every item and rejects few (diagonal partitions have fat AABBs): −5 %.",
+   "<b>Loop flattening (V5)</b> — the textbook divergence fix made it 6–11 % worse: the flattened body carries both halves every iteration and the nested while-while already lets a SIMD group's lanes share cell steps; Apple's scheduler evidently handles the nested exits well.",
+   "<b>Blocker caching (H1)</b> — a receiver in shadow can skip its later rays' walks with one slab test, but the on-screen majority is LIT, a lit ray can never be shortcut (proving 'clear' needs the whole walk), and the guess test + the extra live state cost every ray: +13 % on the direct pass. The temporal (last-frame) version has the same cost structure and was not built.",
+   "<b>Sorted cell lists (V8)</b> — with ~2 boxes slab-tested per loaded cell there is no early-exit order left to exploit: 0.0 %.",
+   "<b>Sharing the light pick at gather hits (E10)</b> — 0.0 %: after E8 the hits of a tile's k-th rays already cluster, and the off-screen shadow rays are not pick-divergence-bound.",
+   "<b>Column / short-ray special cases (H4), glass / reach bounds (H7)</b> — the profile removed the premise: vertical rays cost one slab test, glass is not in the tracer, shadow rays already stop at the light."
+  ],
+  "next": [
+   "<b>Ray binning inside the gather workgroup</b> (the general form of E8): generate the tile's 256 rays, sort by direction cell in workgroup memory, trace in sorted order, scatter results back. The lab prices full 32-cell binning at 1.35–1.76× on gather rays vs E8's 1.25×, i.e. maybe another −0.15…−0.3 ms at high, ~1 ms at ultra — but it needs the shading rng decoupled from the direction rng (today ray k+1's direction depends on ray k's shading draws) and a two-phase kernel; a day's work, and a different noise realisation to re-validate.",
+   "<b>Skip negligible shadow rays at gather hits</b>: directAtPoint spends one shadow ray per off-screen hit however dim its unshadowed light is against the pixel's cached irradiance (the firefly bound's Eref is already computed). Crediting hits below ~1 % of Eref unshadowed is a bounded bias for a share of the gather's 1.1 ms of any-hit rays — a sampling-policy call for the maintainer, half a day with the noise harness.",
+   "<b>The same medicine for the direct pass, smaller dose:</b> its shadow rays already run near the 'same light per SIMD group' figure (≈ 3000 vs 4157 Mrays/s for identical rays), so sorting a tile's queued rays by light slot in workgroup memory before tracing can buy at most ~25 % of its 1.3 ms any-hit share (≈ 0.3 ms at high) — worth doing only together with the gather's binning, since it needs the same trace-then-scatter-back structure.",
+   "<b>A per-cell 'character present' bit is the right shape for whatever replaces capsules</b> (V6): the SDF lane should register rigs into region C and march only flagged rays; with mesh shadows at ultra the same mask gates the per-character BVH walks.",
+   "<b>Not a BVH.</b> With 1079 mostly axis-aligned boxes in 35 KB, a 2D grid + height cull that slab-tests 3.8 boxes per shadow ray, and the limiter being lane divergence rather than node count, a BVH2/4 would trade the grid's O(1) empty-space skipping and stackless walk for similar per-ray test counts and the same divergence. I would not spend the week."
+  ]
+ },
+ "foot": "Reproduce: boot <code>?paused&quality=high&mute</code> on this branch, <code>await import('/qa/trace-lab.js'); await __tlReady; await __tl.boot(); await __tl.scene('B1'); await __tl.points()</code>, then <code>__tl.benchAll()</code>, <code>__tl.exactAll(6)</code>, <code>__tl.abVariants([0,6])</code>, <code>__tl.matrix()</code>, <code>__tl.idHashes()</code> on a fresh boot per <code>?trace=N</code>."
+}

@@ -20,8 +20,8 @@ import type { Vec3 } from '../math/vec';
 export type SensorMode = 'live' | 'record' | 'replay';
 /** what the game holds a probe as (render/probe.ts IrradianceProbe): asked by key, answered a frame or two later by key; `results` is the answer table the harness pokes */
 export interface ProbeLike {
-  query(key: string, pos: Vec3, skipOwner?: number): void;
-  querySegment(key: string, a: Vec3, b: Vec3): void;
+  query(key: string, pos: Vec3, skipOwner?: number, rank?: number): void;
+  querySegment(key: string, a: Vec3, b: Vec3, rank?: number): void;
   get(key: string): ArrayLike<number> | undefined;
   results: Map<string, unknown>;
 }
@@ -35,6 +35,17 @@ export type SensorRec = (number | string | SensorEnc)[];
 export interface SensorJournal { keys: string[]; recs: SensorRec[]; frames: number; }
 export interface SensorDivergence { f: number; kind: 'unjournaled-read' | 'unasked'; key: string; detail: string; }
 export interface SensorStats { reads: number; asks: number; strays: number; frames: number; recs: number; divergences: number; unasked: number; unjournaled: number; }
+
+/** WHO KEEPS A PLACE on a frame that asks the probe for more than its table holds (render/probe.ts put: the lowest ranks stay, the rank that straddles the limit
+ *  takes turns; with everything fitting — every floor but the four-man squad's against a full house — the rank is never looked at):
+ *    0  Sam's own meter — the one reading the whole stealth game hangs on, and the LAST thing asked in a frame
+ *    1  a sight line through smoke: a guard's eye → Sam, the room fight's pairs, a camera's, a civilian's, a finder's to a body (unanswered it reads as clear air:
+ *       smoke that hides nobody)
+ *    2  every other meter: a unit's own, a held man's, a body's, a searcher's spots, a civilian's (each has a CPU estimate or its last answer to stand in)
+ *    3  the fog of war's lines ('fow…': fogofwar.ts asks last, counts the room and forgets what it could not ask) */
+export function askRank(key: string, segment: boolean): number {
+  return segment ? (key.startsWith('fow') ? 3 : 1) : (key === 'playerChest' || key === 'playerHead' ? 0 : 2);
+}
 
 export function encodeValue(v: number | undefined): SensorEnc {
   if (v === undefined) return null;
@@ -73,9 +84,9 @@ export class Sensors {
 
   // ================================================================================================== the queries (every GPU → gameplay read is one of these)
   /** queue an irradiance query at `pos` under `key` (skipOwner: the character whose own proxies must not shadow a reading inside his chest) — dropped in replay */
-  ask(key: string, pos: Vec3, skipOwner = 0): void { this.stats.asks++; if (this.mode !== 'replay') this.probeOf().query(key, pos, skipOwner); }
+  ask(key: string, pos: Vec3, skipOwner = 0): void { this.stats.asks++; if (this.mode !== 'replay') this.probeOf().query(key, pos, skipOwner, askRank(key, false)); }
   /** queue a smoke-transmittance query along a → b under `key` — dropped in replay */
-  askSegment(key: string, a: Vec3, b: Vec3): void { this.stats.asks++; if (this.mode !== 'replay') this.probeOf().querySegment(key, a, b); }
+  askSegment(key: string, a: Vec3, b: Vec3): void { this.stats.asks++; if (this.mode !== 'replay') this.probeOf().querySegment(key, a, b, askRank(key, true)); }
   /** drop a stale answer for `key` (a search plan re-using its keys for new spots): the probe keeps the last value per key for ever otherwise — nothing to do in replay (what was delivered is what is served) */
   forget(key: string): void { if (this.mode !== 'replay') this.probeOf().results.delete(key); }
   /** THE read: the latest answer for `key` (max-axis irradiance in W/m², or a segment's transmittance 0‥1) or undefined while there is none — journaled in record, served in replay */
@@ -101,7 +112,8 @@ export class Sensors {
   /** a sight line's smoke transmittance: ask along a → b (unless `ask` is false — a budgeted site out of slots) and read; undefined = not answered (clear air to the caller) */
   segment(key: string, a: Vec3, b: Vec3, ask = true): number | undefined { if (ask) this.askSegment(key, a, b); return this.read(key); }
   /** a light METER: two queries at a chest and a head under their keys with `id`'s own proxies skipped, read back as the max of the two when both have finite
-   *  answers — Sam's 'playerChest' / 'playerHead', a held man's, a unit's, a civilian's; undefined = no reading yet (the CPU estimate stands in) */
+   *  answers; undefined = no reading yet. NOTHING CALLS IT today: Sam's 'playerChest' / 'playerHead' pair asks and reads this object directly (game.ts), and a
+   *  held man's / a unit's / a civilian's goes through g.lightQuery / g.lightAt (guards.ts meterOf), the hooks the harness swaps, with the CPU estimate standing in */
   meterPair(kc: string, kh: string, pc: Vec3, ph: Vec3, id: number): number | undefined {
     this.ask(kc, pc, id); this.ask(kh, ph, id);
     const r1 = this.read(kc), r2 = this.read(kh);

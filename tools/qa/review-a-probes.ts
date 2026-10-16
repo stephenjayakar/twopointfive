@@ -39,7 +39,6 @@ const { setDaylight, isDaylight } = await import(`${ROOT}/src/game/lighting.ts`)
 const { pairOf, standoffSummary, bodyInView } = await import(`${ROOT}/src/game/guards.ts`);
 const { torchCarryDir } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
-const { Doors } = await import(`${ROOT}/src/game/doors.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -346,7 +345,7 @@ export async function reviewDoorReset() {
   game.doors.use(d, pl.char.pos, PLAYER_ID, pl.keys); for (let i = 0; i < 20; i++) W.step(DT);
   ok = verdict(d.lastWho === PLAYER_ID && !d.latched, 'used by Sam: lastWho is his id, the leaf is off the latch', `lastWho ${d.lastWho}, angle ${f2(d.angle)}`) && ok;
   d.reset();
-  const a0 = Math.max(d.minA, Math.min(d.maxA, d.def.angle ?? 0));
+  const a0 = Math.max(d.minA, Math.min(d.maxA, d.sided(d.def.angle ?? 0)));
   ok = verdict(d.lastWho === -1 && d.latched === (Math.abs(a0) < 1e-3) && d.angle === a0 && d.vel === 0, 'reset: back at its authored angle (latched if that is shut), still, and lastWho back to −1', `lastWho ${d.lastWho}, latched ${d.latched}, angle ${f2(d.angle)} (authored ${f2(a0)})`) && ok;
   return done('review-door-reset', ok);
 }

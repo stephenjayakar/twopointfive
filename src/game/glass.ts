@@ -14,7 +14,8 @@
 import { Vec3, v3, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { PLAYER_ID } from './consts';
-import type { Game } from './game';
+import type { Game, GameEvent } from './game';
+import type { GlassImpact } from './glassbreak';
 
 /** the numbers (Tab ▸ Renderer — glass edits the renderer's three live; these are the game's) */
 export const GLASS = {
@@ -23,20 +24,44 @@ export const GLASS = {
   bangM: 2.5,         // a stun charge within this of a pane's nearest point stars it (overpressure) …
   bangCracks: 2,      // … with this many impact stars per pane, at points seeded off where the charge went off
   rMin: 0.075, rMax: 0.2,   // a hit's crack star reaches 7.5‥20 cm from the hole (15‥40 cm across), drawn off the seed
+  crackGap: 0.045,    // s, ONLY while live: across the whole floor no two hit cracks START closer than this (the hearing event is unaffected); 0 = every one sounds
+  liveGap: 0.2,       // s, ONLY while glass breaking is live: one 'glass' hearing event per pane per SHOOTER per gap (the crack itself still sounds per round, softer inside it); 0 = every hit its own event
+  bothFaces: false,   // A PANE'S CRASH IS HEARD FROM BOTH ITS FACES (glassEvent below, guards.ts glassHeard): ON in the page (?glassears=0), off here and on the frozen stand (TPS_GLASSEARS=1). Off = heard only from where the round met it, i.e. the shooter's side of a sheet that is a wall to sound: a window shot out from the yard reached the men in the room behind it only round by the front door
+  earOff: 0.55,       // m off each face of the pane those two points stand: past one 0.5 m walk-grid cell, because a routed sound is searched — and kept for half a second — per CELL (collision.ts propagate), and a point sharing the struck point's cell would be handed that point's answer
 };
 
+/** THE ONE SWITCH over everything that makes glass more than a starred wall (rebuild/glass/tuning.md): panes that crack and come apart (glassbreak.ts, its own
+ *  switch tune.glassBreak), rounds that go on through a sheet (glasspen.ts, GLASSPEN.on) and the glass that falls (shards.ts, tune.glassShards). ON as shipped;
+ *  off = every one of them answers on its first line and the game is the one before any of it, run digest for run digest — whatever the parts' own switches say
+ *  (they stay for A/B: ?glassbreak=0, ?glasspen=0, their Tab rows). `?glassfx=0|1` for a visit, env GLASSFX=on|off under bun, Tab ▸ Destruction ▸ Glass keeps the
+ *  choice per machine. The QA harness leaves this up and stands the PARTS at off (src/host/standup.ts: every frozen digest was recorded with a pane a starred
+ *  wall) unless the run says GLASSFX=on. The fracture's picture is a boot-time shader const (main.ts reads glassFxBoot()), so a flip SHOWS after a reload. */
+export const GLASS_DEFAULTS = { crackGap: GLASS.crackGap, liveGap: GLASS.liveGap };
+export const GLASSFX = { on: true };
+let fxForced: boolean | null = null;
+const FX_OFF = /^(0|off|false|no)$/i, FX_KEY = 'twopointsix.glassfx';
+try { const q = new URLSearchParams(location.search); if (q.has('glassfx')) GLASSFX.on = fxForced = !FX_OFF.test(q.get('glassfx') ?? ''); } catch { /* no page */ }
+try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GLASSFX; if (e) GLASSFX.on = fxForced = !FX_OFF.test(e); } catch { /* */ }
+/** what a URL / env word said for this run (null: nothing — the stored choice, else on) */
+export function glassFxForced(): boolean | null { return fxForced; }
+/** Game constructor: the choice kept on this machine (a URL / env word wins for the visit) */
+export function loadGlassFx() { if (fxForced !== null) return; try { const raw = localStorage.getItem(FX_KEY); if (raw) { const o = JSON.parse(raw); if (typeof o.on === 'boolean') GLASSFX.on = o.on; if (typeof o.crackGap === 'number' && isFinite(o.crackGap)) GLASS.crackGap = Math.max(0, Math.min(0.2, o.crackGap)); } } catch { /* no storage / bad JSON: the default */ } }
+export function saveGlassFx() { try { localStorage.setItem(FX_KEY, JSON.stringify({ on: GLASSFX.on, crackGap: GLASS.crackGap })); } catch { /* */ } }
+/** main.ts, before a Game or an Engine exists: the switch as this boot will have it */
+export function glassFxBoot(): boolean { loadGlassFx(); return GLASSFX.on; }
+
 /** per-Game glass bookkeeping (a WeakMap, like the whistle's: nothing on Game itself but the hooks) */
-interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; }
+interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; eventAt: Map<number, number>; crackAt: number; }
 const states = new WeakMap<Game, GlassState>();
 export function glassState(g: Game): GlassState {
   let s = states.get(g);
-  if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new WeakSet(), hits: 0, lastHitT: -100, log: [] }; states.set(g, s); }
+  if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new WeakSet(), hits: 0, lastHitT: -100, log: [], eventAt: new Map(), crackAt: -1e9 }; states.set(g, s); }
   return s;
 }
 
 /** Game.resetLevelState, beside decals.clear(): the crack stars have just gone with every other mark, so the encounter's hit count, last-hit clock and log go too
  *  ('N hits this encounter' on the panel meant every encounter since boot — review U9.10). The pane list and the seen-set stand (statics; a WeakSet). */
-export function resetGlass(g: Game) { const s = states.get(g); if (!s) return; s.hits = 0; s.lastHitT = -100; s.log.length = 0; }
+export function resetGlass(g: Game) { const s = states.get(g); if (!s) return; s.hits = 0; s.lastHitT = -100; s.log.length = 0; s.eventAt.clear(); s.crackAt = -1e9; }
 
 /** every static Glass box index of this level: level.boxes[i] ≡ world.statics[i], and nothing gains or loses the Glass bit at runtime */
 export function glassPanes(g: Game): number[] { return glassState(g).panes; }
@@ -50,6 +75,17 @@ export const isSheet = (b: Box | undefined | null): b is Box => isPane(b) && Mat
 function paneNormal(b: Box): Vec3 {
   const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw);
   return b.h[0] < b.h[2] ? [cs, 0, -sn] : [sn, 0, cs];   // local +x → (cos, 0, −sin), local +z → (sin, 0, cos)
+}
+/** FILE A PANE'S CRASH FOR THE FLOOR'S EARS — the one place a 'glass' hearing event is made (glassImpact below, glassbreak.ts emit). With GLASS.bothFaces the event
+ *  also carries `ears`: a point GLASS.earOff off EACH face of the pane, level with where it was struck. A pane rings on both its faces; the point a round met it at
+ *  is on the shooter's side of a sheet that blocks sound (collision.ts propagate), so by itself it puts the crash outside the room the window belongs to. */
+export function glassEvent(g: Game, b: Box, at: Vec3, level: number, who: number): void {
+  const e: GameEvent = { kind: 'glass', pos: [at[0], 0, at[2]], time: g.time, loud: true, level, who };
+  if (GLASS.bothFaces) {
+    const n = paneNormal(b); const off = v3.dot(v3.sub(at, b.c), n); const r = Math.min(b.h[0], b.h[2]) + GLASS.earOff;
+    e.ears = [[at[0] + n[0] * (r - off), 0, at[2] + n[2] * (r - off)], [at[0] - n[0] * (r + off), 0, at[2] - n[2] * (r + off)]];
+  }
+  g.events.push(e);
 }
 /** nearest point of box b (yawed, no rot — panes never tilt) to p, and the distance */
 function nearestOnBox(b: Box, p: Vec3): { q: Vec3; d: number } {
@@ -65,35 +101,70 @@ export function hitSeed(bi: number, p: Vec3): number {
   return Math.imul(h, 0xC2B2AE3D) >>> 0;
 }
 
-/** A round (or anything else that stars glass) met pane `bi` (a level box index) at `hitP` flying `dir`: the crack decal on the face it came at, the crack heard,
- *  the event on the floor's ears. `who` = whose doing (PLAYER_ID, a guard id, 0 = nobody's in particular). Returns false if `bi` is not a pane. The pane stays
- *  exactly what it was to every ray, foot and sound path: laminated glazing holds. `quiet` (a blast's secondary stars): decal only — the bang was the noise. */
-export function glassHit(g: Game, bi: number, hitP: Vec3, dir: Vec3 | null, who: number, cause: 'shot' | 'bang' | 'hand' = 'shot', quiet = false): boolean {
-  const b = g.level.boxes[bi]; if (!isPane(b)) return false;
-  if (Math.min(b.h[0], b.h[2]) > THICK_GLASS_HALF) return true;   // THICK glass (the water-cooler bottle, 08-12): the round stops in it like in a pane, but no star, no crack, no 'glass' event — solid glass does not craze like a sheet
+/** THE IMPACT ENTRY POINT (rebuild/glass/fracture.md): a blow of `energy` met pane `pane` (a level box index) at `point` flying `dir` — the crack decal on the face it
+ *  came at, the fracture filed (glassbreak.ts impact(): inert with tune.glassBreak off / chaos 0 / the tour — then the pane stays exactly what it was to every ray, foot
+ *  and sound path), the crack heard, the event on the floor's ears. `energy` 1 = one pistol round square on (a rifle round 1.6‥2, a buckshot pellet 0.4, a thrown
+ *  thing 0.3; under GLASSBREAK.punchE cracks annealed glass without punching it). `who` = whose doing (PLAYER_ID, a guard id, 0 = nobody's in particular). `quiet` (a
+ *  blast's secondary stars): decal only — the bang was the noise. `opts.through` (optional) = the caller's own verdict on the round when it decided one before calling: true opens the glass where the round passed,
+ *  false keeps it whole there, undefined lets the energy decide (glassbreak.ts impact()). The answer says what the glass did; what the round does next is the caller's. */
+export function glassImpact(g: Game, pane: number, point: Vec3, dir: Vec3 | null, energy: number, who: number, cause: 'shot' | 'bang' | 'hand' = 'shot', quiet = false, opts?: { through?: boolean }): GlassImpact {
+  const b = g.level.boxes[pane];
+  const res: GlassImpact = { pane: isPane(b), live: false, type: 'laminated', thickness: 0, wasOpen: false, punched: false, diced: false, released: 0, cracked: false };
+  if (!res.pane) return res;
+  res.thickness = 2 * Math.min(b.h[0], b.h[2]);
+  if (Math.min(b.h[0], b.h[2]) > THICK_GLASS_HALF) return res;   // THICK glass (the water-cooler bottle, 08-12): the round stops in it like in a pane, but no star, no crack, no 'glass' event — solid glass does not craze like a sheet
+  // GLASS BREAKING first (it files nothing and draws nothing from any dice when it is not live, so with the switch off the order below is the base's): a blow through a
+  // hole stars nothing, a pane that dices takes no star. A blast files its own through GlassBreak.blast(); ?. for fixtures that build a bare Game-like.
+  const gb = g.glassBreak;
+  if (gb) { if (cause !== 'bang') Object.assign(res, gb.impact(pane, point, dir, energy, who, opts?.through)); else res.type = gb.typeOfPane(pane) ?? 'laminated'; }
+  if (res.wasOpen) return res;
   const S = glassState(g);
-  const seed = hitSeed(bi, hitP);
+  const seed = hitSeed(pane, point);
   // the decal: centred where it hit, on the pane's mid-plane (composite finds it from either face), its normal toward the side the blow came from, its reach and
   // its look drawn off the seed; restricted to THIS pane on the GPU (cracks stop at the frame). Nothing when decals are off — the sound and the event still happen.
   let n = paneNormal(b);
-  if (dir ? v3.dot(n, dir) > 0 : v3.dot(n, v3.sub(hitP, b.c)) < 0) n = v3.scale(n, -1);
-  const off = v3.dot(v3.sub(hitP, b.c), n);
-  const pos = v3.mad(hitP, n, -off);                                   // onto the mid-plane
+  if (dir ? v3.dot(n, dir) > 0 : v3.dot(n, v3.sub(point, b.c)) < 0) n = v3.scale(n, -1);
+  if (res.live && cause === 'shot' && !res.diced && res.released === 0) g.shards?.spall?.(point, n, dir, res.thickness, b.albedo, seed, opts?.through !== true);   // the sheet spits even when no piece leaves (a laminated web, a soft hit); nothing unless the falling-glass model is live
+  const off = v3.dot(v3.sub(point, b.c), n);
+  const pos = v3.mad(point, n, -off);                                   // onto the mid-plane
   const u = (seed & 0xffff) / 65535, w = (seed >>> 16) / 65535;
   const radius = GLASS.rMin + (GLASS.rMax - GLASS.rMin) * u;
   const ang = w * Math.PI * 2; const up: Vec3 = [0, 1, 0]; const side = v3.normalize(v3.cross(up, n));
   const tangent: Vec3 = v3.add(v3.scale(side, Math.cos(ang)), v3.scale(up, Math.sin(ang)));   // the star's orientation in the pane's plane
-  g.decals.add('glassHit', pos, n, radius, { tangent, seed: (seed >>> 8) & 0xfff, pane: bi, param: cause === 'bang' ? 0.6 : 1 });
+  if (!res.live || !res.cracked || g.engine.glassFracture !== true) g.decals.add('glassHit', pos, n, radius, { tangent, seed: (seed >>> 8) & 0xfff, pane, param: cause === 'bang' ? 0.6 : 1 });   // (a blow the fracture model filed draws its own cracks from its site — composite gbCracks: a second, unrelated star over them would be a lie; a blow that only fed an old star, toughened glass that has not yet gone, and a page whose shaders were compiled without the cracks keep the star)
   S.hits++; S.lastHitT = g.time;
-  if (cause !== 'bang') g.glassBreak?.hit(bi, hitP, dir, who);   // GLASS BREAKING (glassbreak.ts; inert with tune.glassBreak off / chaos 0 / the tour): the impact filed on the pane's Voronoi — cells may fall (a blast files its own through blast(); ?. for fixtures that build a bare Game-like)
-  S.log.push(`${g.time.toFixed(1)}s pane ${bi} ${cause === 'bang' ? 'starred by a blast' : 'hit'}${who ? ` (who ${who})` : ''} r ${radius.toFixed(2)}`); if (S.log.length > 24) S.log.shift();
-  if (quiet) return true;
-  // the crack: at the hole, on the floor's ears as its own kind
+  S.log.push(`${g.time.toFixed(1)}s pane ${pane} ${cause === 'bang' ? 'starred by a blast' : 'hit'}${who ? ` (who ${who})` : ''} r ${radius.toFixed(2)}`); if (S.log.length > 24) S.log.shift();
+  if (quiet) return res;
+  // (tuning round two) with the fracture model live a pane is hit by BURSTS: the crack still sounds per round, softer inside GLASS.liveGap of the last on this pane, but
+  // the floor's ears get ONE 'glass' event per pane per gap — thirty rounds into a laminated web were thirty propagations a man. Not live = every hit its own, as it was.
+  if (res.live) {
+    // (round three) across the FLOOR no two hit cracks start inside crackGap of each other: two guns on a glazed wall were eight crack voices in a tenth of a second
+    const sinceAny = g.time - S.crackAt; const sound = !(GLASS.crackGap > 0 && sinceAny >= 0 && sinceAny < GLASS.crackGap);
+    if (sound) S.crackAt = g.time;
+    // … and the floor's ears get one event per pane PER SHOOTER per liveGap (a second gun on the same pane is its own noise, under its own id)
+    const key = pane * 1024 + (who & 1023); const last = S.eventAt.get(key); const since = last === undefined ? 1e9 : g.time - last;
+    if (GLASS.liveGap > 0 && since >= 0 && since < GLASS.liveGap) {
+      if (sound) g.audio.play('glassCrack', point, 0.5, { rate: 0.94 + 0.08 * u + 0.3 * w });
+      if (who === PLAYER_ID) g.player.noise = Math.max(g.player.noise, GLASS.hearLevel);
+      return res;
+    }
+    if (GLASS.liveGap > 0) S.eventAt.set(key, g.time);
+    if (!sound) {   // the event is the floor's, the voice is skipped
+      glassEvent(g, b, point, GLASS.hearLevel, who);
+      if (who === PLAYER_ID) g.player.noise = Math.max(g.player.noise, GLASS.hearLevel);
+      return res;
+    }
+  }
+  // the crack: at the hole, on the floor's ears as its own kind (what the blow leaves FALLING afterwards is heard through glassbreak.ts emit)
   const area = 4 * b.h[1] * Math.max(b.h[0], b.h[2]);
-  g.audio.play('glassCrack', hitP, 0.9, { rate: 0.94 + Math.min(0.22, 0.4 / Math.max(0.5, area)) + 0.08 * u });   // small panes ring higher; no two hits quite alike
-  g.events.push({ kind: 'glass', pos: [hitP[0], 0, hitP[2]], time: g.time, loud: true, level: GLASS.hearLevel, who });
+  g.audio.play('glassCrack', point, 0.9, { rate: 0.94 + Math.min(0.22, 0.4 / Math.max(0.5, area)) + 0.08 * u });   // small panes ring higher; no two hits quite alike
+  glassEvent(g, b, point, GLASS.hearLevel, who);
   if (who === PLAYER_ID) g.player.noise = Math.max(g.player.noise, GLASS.hearLevel);
-  return true;
+  return res;
+}
+/** A round (or anything else that stars glass) met pane `bi` at `hitP` flying `dir` = glassImpact at energy 1. Returns false if `bi` is not a pane. */
+export function glassHit(g: Game, bi: number, hitP: Vec3, dir: Vec3 | null, who: number, cause: 'shot' | 'bang' | 'hand' = 'shot', quiet = false): boolean {
+  return glassImpact(g, bi, hitP, dir, 1, who, cause, quiet).pane;
 }
 
 /** Star every pane whose nearest point is within `radius` of `at` (a stun charge's overpressure): GLASS.bangCracks quiet hits each, at points on the pane seeded
@@ -125,7 +196,7 @@ export function updateGlass(g: Game) {
   for (const e of g.events) {
     if (e.kind !== 'bang' || S.seen.has(e)) continue; S.seen.add(e);
     crackNear(g, [e.pos[0], Math.max(0.3, e.pos[1]), e.pos[2]], GLASS.bangM, e.who ?? 0);
-    g.glassBreak?.blast([e.pos[0], Math.max(0.3, e.pos[1]), e.pos[2]], e.who ?? 0);   // GLASS BREAKING: the overpressure takes cells out of the annealed panes it reaches and dices tempered ones (its first two seeded impacts sit on the stars just drawn)
+    g.glassBreak?.bang([e.pos[0], Math.max(0.3, e.pos[1]), e.pos[2]], e.who ?? 0);   // GLASS BREAKING: a stun charge's overpressure at GLASSBREAK.bangPower — a tempered pane beside it dices, an annealed one is starred and loses the pieces nearest it (a real charge comes through destruction's blast entry point → GlassBreak.blast at full power)
   }
 }
 

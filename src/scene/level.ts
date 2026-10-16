@@ -5,13 +5,15 @@
 import { Vec3, DEG } from '../math/vec';
 import type { Box } from './boxes';
 import type { MarkingDef } from './markings';
-import type { LevelData } from './levelData';
+import type { LevelData, SurfacesData } from './levelData';
 import { loadLevel } from './levelLoad';
 import { parseLevelData } from './levelData';
 import officeData from '../../levels/office.json' with { type: 'json' };
 import officeReliefData from '../../levels/office-relief.json' with { type: 'json' };   // the office BEFORE the markings lane's demotion pass: main's boxes exactly (tools/level-export.ts --relief) — ?level=relief boots on it for the ray-cost A/B and the identity hashes
 import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
 import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
+import type { LevelScenarios } from './scenarios';
+import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
 import officeScript from '../../levels/office.script';   // the office's level script (a function importing nothing at run time — game/director.ts injects its API): bundled beside its JSON
 
 export interface LightDef {
@@ -75,6 +77,9 @@ export interface RoomClearPlan {
  *  door), whom each engages on the way, and the next threshold both then stack on. entry / entryAim / searchPath etc. stay authored (entry = the flows' own
  *  legs) so RoomClear can dry-run the same door. */
 export interface BreachPlan extends RoomClearPlan {
+  /** unit XZ pointing through the doorway INTO the room (where the muzzles go once the leaf is off: breach.ts) — absent = +x, the break room's west door, the
+   *  only door the level's own plan takes; a plan built in code for another door (game/rescue.ts: the manager's office, north of the corridor) says its own */
+  inward?: [number, number];
   /** the opposition: pinned on these marks facing `yaw`, muzzle on `aimAt` (the doorway, mostly) — one standing in the room's middle for #1's centre check */
   hostiles: { pos: Vec3; yaw: number; crouch?: boolean; aimAt: Vec3 }[];
   /** #1 the frame his sole meets the leaf: the step back to this mark on his own side of the frame (strafing, chest kept on `face` = the doorway) */
@@ -118,7 +123,7 @@ export interface DaylightDef {
 
 /** locked: a keyed lever set, cylinder on the corridor face (doors.ts DoorDef.locked — guards carry keys; the player picks it or kicks it in, or takes a key off a man he
  *  questions; the room side always opens). lock: which key turns it (doors.ts DoorDef.lock) — absent = the floor key; every keyed door here takes that one. */
-export interface LevelDoorDef { name: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; lock?: string; keySide?: 1 | -1; steel?: boolean; }   // steel: a fire door a boot only rings off and no pick opens (doors.ts DoorDef.steel — the QRF's west stair door, game/qrf.ts)
+export interface LevelDoorDef { name: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; lock?: string; keySide?: 1 | -1; steel?: boolean; /** the side it opens into (doors.ts DoorDef.swing); absent = dealt from the level (game/doorswing.ts) */ swing?: 1 | -1; }   // steel: a fire door a boot only rings off and no pick opens (doors.ts DoorDef.steel — the QRF's west stair door, game/qrf.ts)
 /** The level-design devices as the game runs them (game/devices.ts) — the file's records (levelData.ts DeviceData, every field documented there) with the id as
  *  `name`, the way lights and doors carry theirs. Optional fields keep the file's meaning: absent = the default in levelData.ts DEVICE_DEFAULTS. */
 export type DeviceDef =
@@ -170,6 +175,12 @@ export interface Level {
   marks?: MarkDef[];
   /** this level's SCRIPT (game/director.ts runs it: bespoke set pieces, the breach showcase as program 'breach'); absent = no Director programs, the game exactly as it is */
   script?: LevelScriptFn;
+  /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
+   *  the level file's own `scenarios` block; for the office, levels/office.scenarios.ts attached at load. Absent = no scenario can be staged on this level */
+  scenarios?: LevelScenarios;
+  /** what is underfoot (game/floor.ts: which footstep, how far it carries) — the level file's own `surfaces` block, attached by loadLevel NON-ENUMERABLY (it is
+   *  an annotation of the file, like its ids: nothing that walks a Level as data sees it). Absent = the office's map, as on every level before this field */
+  surfaces?: SurfacesData;
   breaker: { pos: Vec3; boxes: number[] };
   beacons: { pos: Vec3; box: number }[];
   sky: { zenith: Vec3; horizon: Vec3 };
@@ -181,7 +192,9 @@ export interface Level {
   /** The one mission thread's geometry (game.ts Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
    *  gets pulled (its index n names the switchables `rack${n}_leds` / `rack${n}_glow` that go dark; `front` is the marker point on its LED face), the door
    *  to leave by and the x past which you are outside it. */
-  mission: { serverRoom: { x0: number; x1: number; z0: number; z1: number }; entryDoor: string; rack: { index: number; front: Vec3; halfW: number }; exfilDoor: string; exfilX: number; exfilZ: number };
+  mission: { serverRoom: { x0: number; x1: number; z0: number; z1: number }; entryDoor: string; rack: { index: number; front: Vec3; halfW: number }; exfilDoor: string; exfilX: number; exfilZ: number;
+    /** the way OUT through the exit, a unit vector on the floor (dx, dz): past (exfilX, exfilZ) going this way is out. Absent = east, [1, 0] — the office's */
+    exfilOut?: [number, number] };
 }
 
 /** True when THIS boot's level came off the editor's stash (?level=local found one that parsed and validated). The file's validator cannot promise the GAME builds on a
@@ -196,7 +209,7 @@ export function buildLevel(): Level {
   // ?level=local: boot on the level EDITOR's current document (editor ▶ writes it to localStorage 'twopointsix.editorLevel' and opens /?level=local — src/editor)
   bootedLocalLevel = false;
   if (typeof location !== 'undefined' && typeof localStorage !== 'undefined' && new URLSearchParams(location.search).get('level') === 'local') {
-    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const lvl = withOfficeScript(loadLevel(parseLevelData(t))); bootedLocalLevel = true; return lvl; } }   // (the editor's document is the office being edited: its script comes with it — a program whose marks / doors / plans the document lacks is simply not armed, game/director.ts lint)
+    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const data = parseLevelData(t), lvl = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); bootedLocalLevel = true; return lvl; } }   // (the editor's document is the office being edited: its script comes with it — a program whose marks / doors / plans the document lacks is simply not armed, game/director.ts lint)
     catch (e) { console.error('?level=local: falling back to the bundled office —', e); }
   }
   return buildBundledLevel();
@@ -210,10 +223,18 @@ export function buildBundledLevel(): Level {
 /** attach the office's level script to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) — loadLevel itself stays pure data → Level.
  *  The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data (tools/qa level-identity's
  *  generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
-export function withOfficeScript(level: Level): Level { return withScript(level, OFFICE_SCRIPT); }
+export function withOfficeScript(level: Level): Level { return withScenarios(withScript(level, OFFICE_SCRIPT), OFFICE_SCENARIOS); }
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
+/** … and its scenario data likewise (levels/office.scenarios.ts), unless the file carried a `scenarios` block of its own (loadLevel has put that on the Level as
+ *  ordinary data): non-enumerable for the same reason — levels/office.json and everything that walks the office as data stay exactly as they were. */
+export function withScenarios(level: Level, scenarios: LevelScenarios): Level { if (!level.scenarios) Object.defineProperty(level, 'scenarios', { value: scenarios, enumerable: false, writable: true, configurable: true }); return level; }
+/** is this level file one of the OFFICE family (the bundled file, relief, the texel variants, the editor's document of it) — the levels the office's script and
+ *  scenario data belong to? Anything else off the dev server (?levelFile=) is its own level: its scenarios are its file's, and it has no script. */
+export function isOfficeFamily(data: { name?: string }): boolean { return typeof data.name !== 'string' || data.name === 'office' || data.name.startsWith('office-'); }
 /** the office's level script (levels/office.script.ts): program 'breach' today */
 export const OFFICE_SCRIPT: LevelScriptFn = officeScript;
+/** …and its scenario data (levels/office.scenarios.ts), for whoever must read the office's blocks before a Level is built (main.ts: ?kitview's set loader) */
+export { OFFICE_SCENARIOS };
 /** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
 export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;
 /** the office as it was before the markings lane demoted face relief to markings (levels/office-relief.json — regenerated beside office.json; main's boxes exactly, digest-identical to main's file) */

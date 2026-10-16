@@ -103,7 +103,7 @@ export async function windField(): Promise<boolean> {
     if (!/fn windJet\(pos: vec3f, dir: vec3f, speed: f32, reach: f32, tanSpread: f32, r0: f32, dMax: f32, floorY: f32, p: vec3f\) -> vec3f/.test(wg)) fails.push('windJet signature changed (particles.wgsl windAir and smoke/wind_force.wgsl both call it positionally)');
     if (!/fn windStorm\(windV: vec3f, interior: vec4f, annex: vec4f, p: vec3f\) -> vec3f/.test(wg)) fails.push('windStorm signature changed');
     const sm = await Bun.file(`${ROOT}/src/smoke/smoke.ts`).text(), pt = await Bun.file(`${ROOT}/src/render/particles.ts`).text();
-    if (!/windFieldSrc \+ windForceSrc/.test(sm)) fails.push('smoke.ts does not prepend wind_field + wind_force'); if (!/particlesCommon \+ windFieldSrc \+ particlesSrc/.test(pt)) fails.push('particles.ts does not compile wind_field ahead of the kernels');
+    if (!/windFieldSrc \+ (?:'\\n' \+ )?windForceSrc \+ (?:'\\n' \+ )?smokeSrc/.test(sm)) fails.push('smoke.ts does not prepend wind_field + wind_force'); if (!/particlesCommon \+ windFieldSrc \+ particlesSrc/.test(pt)) fails.push('particles.ts does not compile wind_field ahead of the kernels');
     F.verdict(!fails.length, 'render/shaders/wind_field.wgsl carries WIND_FIELD\'s five constants and the two signatures the consumers call, and both the smoke module and the particle module compile that one text', fails.join('; ') || want.map(([k, v]) => `${k} ${v}`).join(' · '));
   }
   return F.done();
@@ -200,7 +200,7 @@ export async function windCaps(): Promise<boolean> {
   await windModule();
   const F = family('wind-caps: the wind records behind the impulses in the particles\' block (render/particles.ts setWind / prepare) and the WGSL that reads them');
   const P: any = await import(`${ROOT}/src/render/particles.ts`);
-  const { Particles, MAX_IMPULSES, IMP_OFFSET, IMP_BYTES, WIND_KINDS_DEFAULT, KIND_ID, P_KINDS, f16pair } = P;
+  const { Particles, MAX_IMPULSES, IMP_OFFSET, IMP_BYTES, WIND_KINDS_DEFAULT, P_KINDS, f16pair } = P;
   const writes: { off: number; size: number }[] = [];
   const dev = new Proxy(fake('device'), { get(t: any, p: PropertyKey) { if (p === 'queue') return { writeBuffer: (_b: any, off: number, _d: any, _doff: number, size: number) => { writes.push({ off, size }); }, onSubmittedWorkDone: () => Promise.resolve() }; return t[p]; } });
   const sys = new Particles(dev, fake('layout'));

@@ -1,4 +1,4 @@
-// FAST-PHYSICS scenes (image-quality program, docs/internal/image-quality.md §1e — the designer's question: twopointfive's fast physics made the direct light
+// FAST-PHYSICS scenes (image-quality program, docs/internal/image-quality.md §1e — the maintainer's question: twopointfive's fast physics made the direct light
 // noisy; how much of that is here?). Six deterministic scenes on a `?paused&quality=<p>&mute` boot, each captured frame by frame under any renderer configuration
 // and graded AGAINST A HISTORY-FREE REFERENCE render of the very same game frames (variant 'ref' below: the pre-v3 chain at scale 1.0 with the direct light's
 // history off and the gather's temporal flag down — every frame stands alone), on the SAME output grid:

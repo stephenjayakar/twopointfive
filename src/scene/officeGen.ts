@@ -11,6 +11,8 @@ import { WORLD } from './world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, markStats } from './markings';
 import * as MD from './markingDefaults';
+import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
+import { fitPropFootprint } from './levelLoad';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
@@ -39,14 +41,14 @@ const C = {
 };
 /** the palette above, by name — the exporter writes these as the level file's `materials` and matches box albedos against them */
 export const OFFICE_PALETTE: Readonly<Record<string, Vec3>> = C;
-/** The FINISH of each palette material (Box.rough / metal — what the ray-traced reflection pass reads; docs/internal/exp-rtreflect.md): GGX roughness 0‥1 and
+/** The FINISH of each palette material (Box.rough / metal — what the ray-traced reflection pass reads; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 and
  *  bare metal. Anything absent here is matte (ROUGH_DEFAULT 1). The exporter writes these into the level file's `materials` next to the albedo, and `add()`
  *  below stamps them on every box painted in that colour — the same albedo → material match the exporter makes — so the generated Level and the loaded one
  *  agree box for box. Numbers over a preset's rtMaxRough (0.45 high / 0.55 ultra) never cost a ray; they are still authored so the panel and the cutoff fade
  *  have something true to read. */
 export const OFFICE_FINISH: Readonly<Record<string, { rough: number; metal?: boolean }>> = {
   stone: { rough: 0.15 },                                  // sealed, polished lobby stone: the frontage, the exit sign and the reception screen mirror with edges (the brief said 0.18; both are in the traced regime, 0.15 keeps a torch beam legible in it)
-  lino: { rough: 0.22 },                                   // waxed corridor / break-room lino: panels and vending fronts as soft-edged RECTANGLES hardening at the contact — the brief's 0.32 is physically a matte sealer: the GGX lobe (median 10°, p90 27° off the mirror) turns a vending front 2 m up into a shapeless glow (docs/internal/exp-rtreflect.md has the crops at 0.20 / 0.24 / 0.28 / 0.32)
+  lino: { rough: 0.22 },                                   // waxed corridor / break-room lino: panels and vending fronts as soft-edged RECTANGLES hardening at the contact — the brief's 0.32 is physically a matte sealer: the GGX lobe (median 10°, p90 27° off the mirror) turns a vending front 2 m up into a shapeless glow (tried at 0.20 / 0.24 / 0.28 / 0.32: docs/internal/p4-materials.md)
   glass: { rough: 0.03 }, glassExt: { rough: 0.03 },        // (panes are never rasterised — composite reflects them analytically — here for the record)
   metal: { rough: 0.28, metal: true },                      // shelving, the UPS, cart frames, lamp posts, bike hoops: brushed steel
   glassFrame: { rough: 0.4, metal: true },                  // anodised mullions
@@ -62,7 +64,13 @@ export const OFFICE_FINISH: Readonly<Record<string, { rough: number; metal?: boo
 const FINISH_BY_ALBEDO = new Map<string, { rough: number; metal?: boolean }>();
 { const seen = new Set<string>(); for (const [name, alb] of Object.entries(C)) { const k = alb.join(','); if (seen.has(k)) continue; seen.add(k); const f = OFFICE_FINISH[name]; if (f) FINISH_BY_ALBEDO.set(k, f); } }   // first palette name per albedo, as the exporter's matByAlbedo
 
-export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
+/** one opening in a wall: a..b along it, y0..y1 up it (doors: 0..2.2 — the default, a door SLOT: the walls cut the real doorway inside it, doorSize.ts; windows: 0.9..2.4); glass: 'bay' = one pane per mullion bay (each breaks on its own), 'whole' = one pane across the opening (the mullions stand through it); tint = its albedo (default C.glassExt on these walls) */
+export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions?: number; glass?: 'bay' | 'whole'; tint?: Vec3 };
+/** THE OFFICE'S LEVEL KIT: the generator's own building blocks (slabs, walls with door / window openings and their glass, door frames, the furniture, the loose
+ *  props, ceiling panels) over one fresh set of lists — what buildOfficeProcedural below lays the office out with, statement for statement as they were inside it,
+ *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
+ *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
+export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   const MARKS = opts.markings ?? true, DEMOTE = opts.demote ?? true, TX = opts.texel ?? MARKING_TEXEL;
   /** the box's markings, if the lane's markings are on (spread into an add() / a prop part) */
   const mk = (ms: MarkingDef[]): { marks?: MarkingDef[] } => MARKS && ms.length ? { marks: ms } : {};
@@ -79,8 +87,6 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   const slab = (x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, albedo: Vec3, extra: Partial<Box> = {}) =>
     add({ c: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, Math.abs(y1 - y0) / 2, Math.abs(z1 - z0) / 2], albedo, ...extra });
 
-  /** glass: 'bay' = one pane per mullion bay (each breaks on its own), 'whole' = one pane across the opening (the mullions stand through it); tint = its albedo (default C.glassExt on these walls) */
-  type Opening = { a: number; b: number; y0?: number; y1?: number; mullions?: number; glass?: 'bay' | 'whole'; tint?: Vec3 };
   // ---- glass (experiment E3) ----
   // A pane is a 12 mm box flagged Glass standing in the wall's centre plane, its albedo the transmission tint. It is authored to fill its hole EXACTLY (sill to
   // head, jamb / wall face to wall face) so no untinted sliver shows at an edge, and it may pass clean through the mullions and door jambs that are thicker than
@@ -96,7 +102,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   };
   /** Wall running along X at fixed z (thickness t), from x0..x1, with openings (doors: y0=0,y1=2.2; windows: y0=0.9,y1=2.4). */
   function wallX(z: number, x0: number, x1: number, t: number, albedo: Vec3, openings: Opening[] = [], extra: Partial<Box> = {}, height = H) {
-    const ops = [...openings].sort((p, q) => p.a - q.a); let cur = x0;
+    const ops = fitOpenings(openings, x0, x1); let cur = x0;
     for (const o of ops) {
       if (o.a > cur) slab(cur, 0, z - t / 2, o.a, height, z + t / 2, albedo, extra);
       const y0 = o.y0 ?? 0, y1 = o.y1 ?? 2.2;
@@ -110,7 +116,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   }
   /** Wall running along Z at fixed x. */
   function wallZ(x: number, z0: number, z1: number, t: number, albedo: Vec3, openings: Opening[] = [], extra: Partial<Box> = {}, height = H) {
-    const ops = [...openings].sort((p, q) => p.a - q.a); let cur = z0;
+    const ops = fitOpenings(openings, z0, z1); let cur = z0;
     for (const o of ops) {
       if (o.a > cur) slab(x - t / 2, 0, cur, x + t / 2, height, o.a, albedo, extra);
       const y0 = o.y0 ?? 0, y1 = o.y1 ?? 2.2;
@@ -133,13 +139,13 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     add({ c: at(w / 2 - 0.03, 0.36, 0), h: [0.025, 0.36, d / 2 - 0.02], yaw, albedo });
     add({ c: at(0, 0.45, -d / 2 + 0.03), h: [w / 2 - 0.05, 0.25, 0.012], yaw, albedo }); // modesty panel
   }
-  function monitor(x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true) {   // baseY = the surface it stands on (desk 0.76, reception counter 1.15); keyboard: false for a second screen
+  function monitor(x: number, z: number, yaw: number, on: boolean, baseY = 0.76, keyboard = true, standby = false) {   // baseY = the surface it stands on (desk 0.76, reception counter 1.15); keyboard: false for a second screen; standby (with `on` false): a working screen switched OFF — a switchable built dark, its picture there for when somebody switches it on
     const at = frameAt(x, z, yaw);
     add({ c: at(0, baseY + 0.03, 0), h: [0.1, 0.03, 0.08], yaw, albedo: C.black });
     add({ c: at(0, baseY + 0.17, 0), h: [0.02, 0.12, 0.02], yaw, albedo: C.black });
     add({ c: at(0, baseY + 0.32, 0), h: [0.27, 0.17, 0.02], yaw, albedo: C.black });
-    const scr = add({ c: at(0, baseY + 0.32, 0.022), h: [0.25, 0.15, 0.004], yaw, albedo: C.screenOff, emissive: on ? [0.9, 1.3, 2.2] : [0, 0, 0], ...mk(MD.monitorMarks([0.25, 0.15, 0.004], on, TX)) });   // (markings: two or three UI bars on a lit screen)
-    if (on) switchables.push({ name: `monitor${switchables.length}`, boxes: [scr], group: 'monitors', on: true, baseEmissive: [0.9, 1.3, 2.2] });
+    const scr = add({ c: at(0, baseY + 0.32, 0.022), h: [0.25, 0.15, 0.004], yaw, albedo: C.screenOff, emissive: on ? [0.9, 1.3, 2.2] : [0, 0, 0], ...mk(MD.monitorMarks([0.25, 0.15, 0.004], on || standby, TX)) });   // (markings: two or three UI bars on a lit screen)
+    if (on || standby) switchables.push({ name: `monitor${switchables.length}`, boxes: [scr], group: 'monitors', on, baseEmissive: [0.9, 1.3, 2.2] });
     if (keyboard) add({ c: at(0, baseY + 0.01, 0.28), h: [0.2, 0.012, 0.07], yaw, albedo: [0.08, 0.08, 0.09], ...mk(MD.keyboardMarks([0.2, 0.012, 0.07], TX)) });   // (markings: THE keyboard — the key grid + space bar)
   }
   // ---- loose props (pushed around by the physics layer) ----
@@ -152,14 +158,9 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   /** Fit the collision footprint (bounding rectangle of the parts in the prop frame) and height, and re-centre the prop origin on that rectangle so the
    *  body turns about — and collides symmetrically around — the middle of the group (matters for a stack whose top carton overhangs the base). */
   const fitProp = (p: PropDef) => {
-    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, height = 0.1;
-    for (const q of p.parts) {
-      const cs = Math.abs(Math.cos(q.yaw)), sn = Math.abs(Math.sin(q.yaw)); const ex = cs * q.h[0] + sn * q.h[2], ez = sn * q.h[0] + cs * q.h[2];
-      x0 = Math.min(x0, q.off[0] - ex); x1 = Math.max(x1, q.off[0] + ex); z0 = Math.min(z0, q.off[2] - ez); z1 = Math.max(z1, q.off[2] + ez); height = Math.max(height, q.off[1] + q.h[1]);
-    }
-    const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+    const fit = fitPropFootprint(p.parts); const mx = fit.mid[0], mz = fit.mid[1];
     if (Math.abs(mx) > 1e-6 || Math.abs(mz) > 1e-6) { const cs = Math.cos(p.yaw), sn = Math.sin(p.yaw); p.x += cs * mx + sn * mz; p.z += -sn * mx + cs * mz; for (const q of p.parts) q.off = [q.off[0] - mx, q.off[1], q.off[2] - mz]; }
-    p.half = [Math.max(0.05, (x1 - x0) / 2), Math.max(0.05, (z1 - z0) / 2)]; p.height = height;
+    p.half = fit.half; p.height = fit.height;
   };
   function prop(kind: PropKind, x: number, z: number, yaw: number, mass: number, parts: PropPart[], half?: [number, number]) {
     const p: PropDef = { kind, name: `${kind}${props.length}`, x, z, yaw, parts, half: [0, 0], height: 0, mass };
@@ -225,6 +226,28 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     switchables.push({ name: `panel_${group}_${switchables.length}`, boxes: [bi], group, on, baseEmissive: radiance, flicker });
     return bi;
   }
+
+  /** the frame round one doorway that gets a leaf: jambs + head slightly proud of the wall, and the frame's stops (the comment at the office's door list says why) */
+  function doorFrame(d: LevelDoorDef) {
+    fitDoorDef(d);   // (doorSize.ts: a leaf drawn for a 1.2 m slot becomes the real door inside it — the same doorway wallX / wallZ cut for that slot)
+    grp('doorframe.' + d.name);
+    const t = d.exterior ? 0.24 : 0.12; const gap = d.width + 2 * JAMB_FACE; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
+    const fwd = (alongX ? Math.cos(d.closedDir) : Math.sin(d.closedDir)) > 0, hl = alongX ? d.hinge[0] : d.hinge[1];
+    const a = fwd ? hl - JAMB_FACE : hl + JAMB_FACE - gap; const w = alongX ? d.hinge[1] : d.hinge[0];   // gap start along the wall, wall line coordinate
+    const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17]; const hy = DOOR_HEAD / 2;
+    const jamb = (u: number) => alongX ? add({ c: [u, hy, w], h: [0.03, hy, t / 2 + 0.012], albedo: frameCol }) : add({ c: [w, hy, u], h: [t / 2 + 0.012, hy, 0.03], albedo: frameCol });
+    jamb(a - 0.01); jamb(a + gap + 0.01);
+    const hb = LEAF_H + 0.005, hc = (hb + DOOR_HEAD + 0.065) / 2, hh = (DOOR_HEAD + 0.065 - hb) / 2;   // the HEAD comes down past the top of the shut leaf (the leaf stands 1 cm off the floor: its top is LEAF_H + 0.01) — no slot over a shut door for light to pass through
+  if (alongX) add({ c: [a + gap / 2, hc, w], h: [gap / 2 + 0.04, hh, t / 2 + 0.012], albedo: frameCol }); else add({ c: [w, hc, a + gap / 2], h: [t / 2 + 0.012, hh, gap / 2 + 0.04], albedo: frameCol });
+    const sg = fwd ? 1 : -1;
+    const stop = (u0: number, u1: number) => { const m = sg * (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, hy, w], h: [hu, hy, 0.02], albedo: frameCol }) : add({ c: [w, hy, d.hinge[1] + m], h: [0.02, hy, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
+    stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
+  }
+  return { MARKS, DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, paneZ, wallX, wallZ, frameAt, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame };
+}
+
+export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpts = {}): Level {
+  const { DEMOTE, TX, mk, boxes, lights, switchables, props, grp, add, slab, paneX, wallX, wallZ, desk, monitor, fitProp, prop, chair, cardboardBox, rug, plant, bin, cabinet, papers, wallArt, bench, car, shelf, ceilingPanel, doorFrame } = officeKit(trace, opts);
 
   // ---------------- ground & structure ----------------
   grp('ground');
@@ -369,7 +392,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   const printerBody = add({ c: [12.5, 0.45, 16.0], h: [0.35, 0.45, 0.45], albedo: C.white, ...mk(DEMOTE ? MD.ledMarks('+x', -0.2, 0.4, [0.2, 6, 0.4], 1, 2, TX) : []) }); add({ c: [12.5, 0.95, 16.0], h: [0.3, 0.06, 0.35], albedo: [0.15, 0.15, 0.16] });   // (the printer's ready LED: a marking on its east face, or the old emissive nub)
   const printerLed = DEMOTE ? printerBody : add({ c: [12.86, 0.85, 16.2], h: [0.005, 0.01, 0.03], albedo: C.black, emissive: [0.2, 6, 0.4], flags: BoxFlag.NoShadow });
   // water cooler
-  add({ c: [27.5, 0.5, 23.4], h: [0.18, 0.5, 0.18], albedo: C.white }); add({ c: [27.5, 1.2, 23.4], h: [0.15, 0.2, 0.15], albedo: [0.3, 0.45, 0.6] });   // (the bottle is a plain box again, 08-12: as refracting solid glass a box read as an ice cube under a torch, and a one-off cylinder for one prop was not worth carrying — the designer's call; game/glass.ts keeps the solid-glass rule for any future thick Glass box)
+  add({ c: [27.5, 0.5, 23.4], h: [0.18, 0.5, 0.18], albedo: C.white }); add({ c: [27.5, 1.2, 23.4], h: [0.15, 0.2, 0.15], albedo: [0.3, 0.45, 0.6] });   // (the bottle is a plain box again, 08-12: as refracting solid glass a box read as an ice cube under a torch, and a one-off cylinder for one prop was not worth carrying — the maintainer's call; game/glass.ts keeps the solid-glass rule for any future thick Glass box)
   cabinet(24.6, 12.62, Math.PI); cabinet(25.12, 12.62, Math.PI); cabinet(27.55, 15.4, Math.PI / 2);   // filing cabinets (drawers into the room)
   papers(15.4, 0.76, 14.5, 0.3); papers(24.1, 0.76, 21.4, -0.2); papers(17.6, 0.76, 21.3, 0.9); papers(22.0, 0.76, 14.4, 0.1);
   bin(14.6, 16.3); bin(21.2, 21.7); bin(25.0, 16.2);
@@ -781,17 +804,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // it always opens from there, which is how the response team comes through it. Sprung shut, and it swings INTO the corridor along the north side of its west end.
     { name: 'stairwell', hinge: [4.0, 10.52], closedDir: Math.PI / 2, width: 1.16, exterior: true, locked: true, lock: 'stairwell', keySide: -1, steel: true },
   ];
-  for (const d of doorDefs) {
-    grp('doorframe.' + d.name);
-    const t = d.exterior ? 0.24 : 0.12; const gap = d.width + 0.04; const alongX = Math.abs(Math.sin(d.closedDir)) < 0.5;
-    const a = alongX ? d.hinge[0] - 0.02 : d.hinge[1] - 0.02; const w = alongX ? d.hinge[1] : d.hinge[0];   // gap start along the wall, wall line coordinate
-    const frameCol: Vec3 = d.exterior ? [0.2, 0.21, 0.23] : [0.3, 0.24, 0.17];
-    const jamb = (u: number) => alongX ? add({ c: [u, 1.1, w], h: [0.03, 1.1, t / 2 + 0.012], albedo: frameCol }) : add({ c: [w, 1.1, u], h: [t / 2 + 0.012, 1.1, 0.03], albedo: frameCol });
-    jamb(a - 0.01); jamb(a + gap + 0.01);
-    if (alongX) add({ c: [a + gap / 2, 2.23, w], h: [gap / 2 + 0.04, 0.035, t / 2 + 0.012], albedo: frameCol }); else add({ c: [w, 2.23, a + gap / 2], h: [t / 2 + 0.012, 0.035, gap / 2 + 0.04], albedo: frameCol });
-    const stop = (u0: number, u1: number) => { const m = (u0 + u1) / 2, hu = (u1 - u0) / 2; return alongX ? add({ c: [d.hinge[0] + m, 1.1, w], h: [hu, 1.1, 0.02], albedo: frameCol }) : add({ c: [w, 1.1, d.hinge[1] + m], h: [0.02, 1.1, hu], albedo: frameCol }); };   // (u along the closed leaf from the hinge line)
-    stop(-0.012, 0.024); stop(d.width - 0.004, d.width + 0.012);
-  }
+  for (const d of doorDefs) doorFrame(d);
 
   // ---------------- HVAC supply vents (game/wind.ts): the building's air, as ONE field the particles and the smoke solver both take ----------------
   // Six ceiling diffusers blowing DOWN: two over cubicle desks that carry paper (the north-west desk of the red cluster, the south desks of the south-east one —
@@ -1031,7 +1044,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
         // man in the south-east, the outside door, the south glass — into the south-west corner by the water-cooler bin, and resting on the outside door he owns
         into: [[27.45, 0, 17.72], [28.55, 0, 17.8], [29.6, 0, 17.92]],
         centre: [[33.4, 1.1, 16.1], [33.2, 1.05, 19.4]],
-        corner: [[29.25, 0, 19.3], [28.95, 0, 20.45]], podFace: 2.94,   // (08-13, the designer: settled, #1 — the LEFT man in the Clear shot — holds the far door across the middle of the room, not the corner behind him)
+        corner: [[29.25, 0, 19.3], [28.95, 0, 20.45]], podFace: 2.94,   // (08-13, the maintainer: settled, #1 — the LEFT man in the Clear shot — holds the far door across the middle of the room, not the corner behind him)
         cornerAim: [[35.0, 1.1, 19.6], [33.4, 1.15, 21.7], [31.6, 1.0, 23.6], [28.7, 0.9, 23.3]],
         hold: [30.6, 1.05, 12.5] },
       { // #2: through on #1's heels half a metre to his left, the centre south-to-north (ending on the north man), then LEFT: round the flung leaf's tip (it lies
@@ -1076,8 +1089,9 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     playerSpawn: [5.1, 0, 15.2],
     routes, chokepoints, clearPlans, civilians,
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] },
-    mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: 20.6 },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
+    mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: exitThrough(doorDefs.find(d => d.name === 'fire_exit')!, 36.5, 20.6)[1] },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
   };
 }
 
-function normalize3(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }
+/** v ÷ its length (the generators under tools/levels import it) */
+export function normalize3(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }

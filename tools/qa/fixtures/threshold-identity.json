@@ -1,0 +1,105 @@
+{
+ "commit": "the real-doors step, with the rescue's two runs taken again once its conference cover mark moved with the door's jamb (every level's walls moved: the af55d89 words can no longer be met; the same switches held at their old values), and the depot's two runs taken again on build 43fea0ae once the motor-pool depot was rebuilt (its walls and posts moved; the frozen stand, the same switches held; the other twelve runs as they were)",
+ "seeds": "1-2",
+ "how": "PT_DIGEST=1 bun run tools/qa/playthrough.ts --seeds 1-2 --jobs 4 --json <file> on a checkout of af55d89 with only the digest hook of playthrough.ts added (the hook reads the game, it changes nothing); run twice, both runs identical",
+ "runs": [
+  {
+   "scn": "night-breach",
+   "seed": 1,
+   "end": "taken",
+   "t": 24.2,
+   "digest": "325a9fd"
+  },
+  {
+   "scn": "night-breach",
+   "seed": 2,
+   "end": "taken",
+   "t": 22.9,
+   "digest": "edfc9619"
+  },
+  {
+   "scn": "room-clear-pair",
+   "seed": 1,
+   "end": "wiped",
+   "t": 24.4,
+   "digest": "eae60fed"
+  },
+  {
+   "scn": "room-clear-pair",
+   "seed": 2,
+   "end": "taken",
+   "t": 40.2,
+   "digest": "e283ce9"
+  },
+  {
+   "scn": "room-clear-four",
+   "seed": 1,
+   "end": "taken",
+   "t": 83.2,
+   "digest": "ea994360"
+  },
+  {
+   "scn": "room-clear-four",
+   "seed": 2,
+   "end": "wiped",
+   "t": 46.9,
+   "digest": "68baeb5e"
+  },
+  {
+   "scn": "hostage-rescue",
+   "seed": 1,
+   "end": "lost",
+   "t": 41.1,
+   "digest": "72c9b2c"
+  },
+  {
+   "scn": "hostage-rescue",
+   "seed": 2,
+   "end": "lost",
+   "t": 51,
+   "digest": "f2d011f8"
+  },
+  {
+   "scn": "records-pair",
+   "seed": 1,
+   "end": "taken",
+   "t": 55.7,
+   "digest": "a49933b1"
+  },
+  {
+   "scn": "records-pair",
+   "seed": 2,
+   "end": "wiped",
+   "t": 32,
+   "digest": "40fd8218"
+  },
+  {
+   "scn": "depot-four",
+   "seed": 1,
+   "end": "taken",
+   "t": 99.5,
+   "digest": "4c004944"
+  },
+  {
+   "scn": "depot-four",
+   "seed": 2,
+   "end": "wiped",
+   "t": 36,
+   "digest": "c45172bf"
+  },
+  {
+   "scn": "rescue-registry",
+   "seed": 1,
+   "end": "rescued",
+   "t": 39.4,
+   "digest": "8aa552a0"
+  },
+  {
+   "scn": "rescue-registry",
+   "seed": 2,
+   "end": "rescued",
+   "t": 39.3,
+   "digest": "eb35758c"
+  }
+ ]
+}

@@ -3,7 +3,7 @@
 // Player.keys gains what Guard.keys held (the floor key every man on nights carries), the clack of it at his hip, one for the debrief, Sam's word on it over Sam
 // as the man's line ends (a 'key' remark: nobody answers, no stage moves, and like every line of his it is never cut) — and from then on the keyed doors treat
 // Sam as they treat the staff: on the corridor face a tap of Space turns the key and pushes it open (a small clack + the creak, nothing loud, no pick, no kick),
-// a hold eases key and leaf round in silence, walking into it pushes it, and the closer springs the bolt again behind him. The control cases: the same door
+// a hold eases key and leaf round in silence, walking into it pushes it, and the closer springs the bolt again behind him (where doors stay where they are left — DOORSTAY, the page — his own hand pulling it to does). The control cases: the same door
 // without the key still demands the pick / the kick / walls him off; a second man 'giving' a key Sam already has changes nothing; the cubicle man (no keyed
 // door on his beat) never offers one, nor does a man whose belt is already empty; a restart empties Sam's pocket and refills theirs; the sandbox's bare
 // exchange (no hold) takes the key too, wordlessly. Staged and driven like grab-probes / dialogue-probes: the full game headless, the real inputs.
@@ -128,7 +128,7 @@ export async function guardKey() {
 
   // ================================================================ (b) with the key, the doors. Kowalski choked out first (the hold ends the only way it can), then Sam alone at each keyed door's corridor face:
   //      the row reads 'locked — you have the key' / 'Space  unlock — his key'; a TAP: the key's clack (a 'door' event at KEY_LEVEL) and the creak, the leaf swings,
-  //      d.locked stays thrown, nothing loud, no pick, no kick, and he walks through; the closer latches it locked behind him. A HOLD on the storage door: it eases
+  //      d.locked stays thrown, nothing loud, no pick, no kick, and he walks through; the closer latches it locked behind him (DOORSTAY on: it stands open, bolt thrown, until he pulls it to — then it is locked again). A HOLD on the storage door: it eases
   //      open with no door event at all. WALKING into the (re-latched) server door with no key pressed: it pushes open ahead of him like any shut door.
   {
     const S = carry; const { W, game, A, msgs, log } = S; const fails: string[] = []; const notes: string[] = [];
@@ -151,7 +151,7 @@ export async function guardKey() {
     if (!row || !/you have the key/.test(row.line1) || !/^Space {2}unlock — his key {2}· {2}Space {2}ease it open — silent$/.test(row.line2) || /pick|kick/i.test(row.line2) || !row.inReach) fails.push(`the marker: "${row?.line1}" / "${row?.line2}" inReach ${row?.inReach} (want 'locked — you have the key' / the unlock and ease rows, no pick / kick)`);
     if (game.hover?.door !== server || game.hover?.verb !== 'unlock') fails.push(`staging: the highlighted row is ${game.hover?.kind}/${game.hover?.door?.def?.name}/${game.hover?.verb} (want the server door's unlock)`);
     notes.push(`row: "${row?.line1}" / "${row?.line2}"`);
-    const tTap = game.time; const ev0 = dev.length; const lockOpen0 = log.filter(c => c.name === 'lockOpen').length;
+    const tTap = game.time; const ev0 = dev.length; const lockOpen0 = log.filter((c: any) => c.name === 'lockOpen').length;
     W.input.pressed.add(IK); W.step(DT);   // a one-frame tap
     let openAt = -1; for (let i = 0; i < 90; i++) { W.step(DT); if (openAt < 0 && !server.latched && Math.abs(server.angle) > 0.3) openAt = game.time - tTap; }
     const evTap = dev.slice(ev0);
@@ -162,7 +162,7 @@ export async function guardKey() {
     const unlockEv = evTap.filter(e => e.kind === 'door' && Math.abs(e.level - Doors.KEY_LEVEL) < 1e-9), creakEv = evTap.filter(e => e.kind === 'door' && Math.abs(e.level - 0.2) < 1e-9);
     if (unlockEv.length !== 1 || creakEv.length !== 1 || evTap.length !== 2) fails.push(`door events on the tap: ${evTap.map(e => `${e.kind} ${e.level}`).join(', ') || 'none'} (want the key's clack at ${Doors.KEY_LEVEL} + the creak at 0.2, nothing else)`);
     if (unlockEv[0] && unlockEv[0].who !== PLAYER_ID) fails.push(`the clack blamed on ${unlockEv[0].who}`);
-    if (log.filter(c => c.name === 'lockOpen').length !== lockOpen0 + 1) fails.push(`lockOpen ×${log.filter(c => c.name === 'lockOpen').length - lockOpen0} (want 1: the key turning)`);
+    if (log.filter((c: any) => c.name === 'lockOpen').length !== lockOpen0 + 1) fails.push(`lockOpen ×${log.filter((c: any) => c.name === 'lockOpen').length - lockOpen0} (want 1: the key turning)`);
     notes.push(`tap → open in ${openAt >= 0 ? f2(openAt) : '—'} s, events [${evTap.map(e => `${e.kind} ${e.level}`).join(', ')}]`);
     // walk through into the server room, then let the closer take it: latched AND still locked behind him
     game.puppet = { goal: [17.6, 0, 7.8], aim: [17.6, 1.0, 5.0] };   // well clear of the leaf's swing on the far side, so the closer has nothing resting on it
@@ -170,21 +170,31 @@ export async function guardKey() {
     game.puppet = null;
     if (inAt < 0) fails.push(`Sam never got through the doorway (at ${posS(game.player.char.pos)}, leaf ${f2(server.angle)})`);
     let relatchAt = -1; for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (relatchAt < 0 && server.latched) relatchAt = game.time - tTap; }
-    if (relatchAt < 0) fails.push('the closer never latched it again behind him');
+    // (doors.ts DOORSTAY — doors stay where they are left, the page's rule: there is no closer. The leaf stands open behind him, its bolt still thrown, and it is
+    //  his own hand that pulls it to; then the lock bites again. With the rule off — the frozen stand — the closer does it, as this check was written)
+    const stay = !!game.doors.stay; let pulledAt = -1;
+    if (!stay) { if (relatchAt < 0) fails.push('the closer never latched it again behind him'); }
+    else {
+      if (relatchAt >= 0) fails.push(`doors stay where they are left, and this one latched by itself at +${f2(relatchAt)} s`);
+      if (!server.locked || server.lockBroken) fails.push(`standing open, its lock changed: locked ${server.locked} broken ${server.lockBroken} (want the bolt still thrown)`);
+      const tPull = game.time; game.doors.use(server, [17.6, 0, 9.6], PLAYER_ID);
+      for (let i = 0; i < 60 * 8; i++) { W.step(DT); if (pulledAt < 0 && server.latched) pulledAt = game.time - tPull; }
+      if (pulledAt < 0) fails.push('pulled to by his own hand from inside, it never latched');
+    }
     if (!server.locked || !game.doors.lockedOut(server, [17.6, 0, 10.75])) fails.push(`behind him the corridor face is ${server.locked ? '' : 'UN'}locked / lockedOut(keyless)=${game.doors.lockedOut(server, [17.6, 0, 10.75])} (want it sprung locked again to anyone without a key)`);
-    notes.push(`through at +${inAt >= 0 ? f2(inAt) : '—'} s, latched again +${relatchAt >= 0 ? f2(relatchAt) : '—'} s (locked ${server.locked})`);
+    notes.push(`through at +${inAt >= 0 ? f2(inAt) : '—'} s, ${stay ? `stood open 8 s (doors stay where left), pulled to by hand → latched +${pulledAt >= 0 ? f2(pulledAt) : '—'} s` : `latched again +${relatchAt >= 0 ? f2(relatchAt) : '—'} s`} (locked ${server.locked})`);
     // ---- the 'ease it open' row, at the storage door: silent, and it goes on round by itself
     game.teleportPlayer([32.6, 0, 10.75]); game.player.crouch = true; game.player.char.bodyYaw = Math.PI; W.step(DT);
     W.cursorAt(storage.pos); W.step(DT);
     if (game.hover?.door !== storage || !game.hover?.inReach) fails.push(`staging: at the storage door the highlighted row is ${game.hover?.kind}/${game.hover?.door?.def?.name} inReach ${game.hover?.inReach}`);
     const ev1 = dev.length; const audio1 = log.length;
     const eased = tapVerb(W, 'door', 'ease'); for (let i = 0; i < Math.round(1.6 / DT); i++) W.step(DT);
-    const evHold = dev.slice(ev1); const doorAudio = log.slice(audio1).filter(c => /^door|^lock/.test(c.name));
+    const evHold = dev.slice(ev1); const doorAudio = log.slice(audio1).filter((c: any) => /^door|^lock/.test(c.name));
     if (!eased) fails.push('no ease row on the keyed storage door');
     if (Math.abs(storage.angle) < 0.3) fails.push(`the ease row took it only to ${f2(storage.angle)} rad in 1.6 s (want it cracked open, ≥ 0.3)`);
     if (game.player.picking || storage.pick > 0) fails.push(`the ease row started a pick (picking ${!!game.player.picking}, pick ${f2(storage.pick)})`);
     if (evHold.length) fails.push(`door events while easing it: ${evHold.map(e => `${e.kind} ${e.level}`).join(', ')} (want none — the key goes round with the handle)`);
-    if (doorAudio.length) fails.push(`door / lock audio while easing it: ${doorAudio.map(c => c.name).join(', ')}`);
+    if (doorAudio.length) fails.push(`door / lock audio while easing it: ${doorAudio.map((c: any) => c.name).join(', ')}`);
     if (!storage.locked) fails.push('easing it unlocked the lock itself');
     notes.push(`ease on storage → ${f2(storage.angle)} rad, events [${evHold.map(e => e.kind).join(',') || 'none'}], picking ${!!game.player.picking}`);
     // ---- walking into the server door again (latched, locked) with nothing pressed: it pushes open ahead of him
@@ -196,8 +206,8 @@ export async function guardKey() {
     if (pushedAt < 0 || throughAt < 0) fails.push(`walking into it: unlatched at ${pushedAt >= 0 ? f2(pushedAt) : 'never'}, through at ${throughAt >= 0 ? f2(throughAt) : 'never'} (Sam at ${posS(game.player.char.pos)}) — the leaf walled him`);
     if (game.player.kick || game.player.picking) fails.push('walking into it started a kick / pick');
     notes.push(`walk-in → unlatched +${pushedAt >= 0 ? f2(pushedAt) : '—'} s, through +${throughAt >= 0 ? f2(throughAt) : '—'} s`);
-    if (msgs.some(m => m.t >= tTap && /kicked it in|picking the lock|locked — pick it/.test(m.text))) fails.push(`a lock line reached the log with the key in his pocket: ${msgs.filter(m => m.t >= tTap).map(m => m.text).join(' | ')}`);
-    verdict(fails.length === 0, '(b) keyed: the server door offers unlock + ease; a tap (unlock highlighted) = the key\'s clack + the creak and it swings (lock still thrown, nothing loud, no pick / kick), through, and it latches locked behind him; the ease row on the storage door takes it round in silence; walked into, the leaf gives',
+    if (msgs.some((m: any) => m.t >= tTap && /kicked it in|picking the lock|locked — pick it/.test(m.text))) fails.push(`a lock line reached the log with the key in his pocket: ${msgs.filter((m: any) => m.t >= tTap).map((m: any) => m.text).join(' | ')}`);
+    verdict(fails.length === 0, '(b) keyed: the server door offers unlock + ease; a tap (unlock highlighted) = the key\'s clack + the creak and it swings (lock still thrown, nothing loud, no pick / kick), through, and it latches locked behind him (the closer — or, where doors stay where they are left, his own hand pulling it to); the ease row on the storage door takes it round in silence; walked into, the leaf gives',
       notes.join(' · '), fails);
   }
 

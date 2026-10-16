@@ -8,7 +8,7 @@
 // scene prelude) has the GPU side: the closed-form ray / round-cone test every proxy loop in common.wgsl runs, plus two switchable extras — (ii) the
 // sphere-traced SMOOTH UNION of a man's cones (polynomial smin, K below per slot) as the reflection pass's closest hit, (iii) the soft-shadow query as
 // the direct estimator's character visibility (an experiment).
-import { GltfCharacter, MeshData } from '../anim/gltf';
+import { GltfCharacter, MeshData, castGoggles, castSuit } from '../anim/gltf';
 import { Mat4, Vec3, m4, v3 } from '../math/vec';
 
 /** = BoxWorld.CAPS_PER_CHAR: the slots of Character.capsules(), in its order */
@@ -44,7 +44,13 @@ export interface RigSlotFit {
   hand: number;
   overridden: boolean;
 }
-export interface RigFit { r0: Float32Array; r1: Float32Array; slots: RigSlotFit[]; verts: number; ms: number }
+export interface RigFit { r0: Float32Array; r1: Float32Array; slots: RigSlotFit[]; verts: number; ms: number;
+  /** THE CAST: men who wear different parts of the cast mesh have different fits — keyed by the character's id (the owner byte of his proxy records), read by BoxWorld.applyRig before the
+   *  fit's own radii (game.ts fills it as men are drawn: fitRig(ch, his part mask)). Absent / no entry = this fit. */
+  byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }>;
+  /** THE CAST: how far (m) the worn mesh reaches outside the union of its own fitted cones in bind pose (a hat brim, an antenna, goggles flipped up) — BoxWorld.applyRig adds it to
+   *  the man's cull sphere, which is also the mesh walk's broad phase, so a ray that grazes only that sliver still meets him. Absent on the mannequin (mask 0): the sphere as it was. */
+  pad?: number; }
 
 type J = Record<string, Vec3>;
 /** exact signed distance from p to the round cone (a, r0) → (b, r1) (iq's sdRoundCone; the CPU twin of shaders/sdfrig.wgsl sdRoundCone) */
@@ -99,11 +105,90 @@ function bindJoints(ch: GltfCharacter): J {
   return out;
 }
 
-const cache = new WeakMap<MeshData, RigFit>();
-/** The rig fit for a loaded character (solved on first use, ~10 ms for the mannequin's 8.5k vertices; cached per mesh — the QA harness builds many Games). */
-export function fitRig(ch: GltfCharacter): RigFit {
-  const hit = cache.get(ch.mesh); if (hit) return hit;
+const cache = new WeakMap<MeshData, Map<number, RigFit>>();
+let padV = new Int32Array(0), padD = new Float64Array(0);   // (fitRig's scratch: the vertices that stand outside their own cone, and by how much)
+/** The rig fit for a loaded character (solved on first use, ~10 ms for the mannequin's 8.5k vertices; cached per mesh — the QA harness builds many Games). `parts`: on a CAST mesh
+ *  (anim/gltf.ts loadGltfCast) fit only the vertices of the parts in this mask — one man's kit; 0 = every vertex (the mannequin; on a cast, the union of all parts). */
+/** the most a cast outfit may add to its cull sphere (RigFit.pad), m */
+export const RIG_PAD_MAX = 0.3;
+export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
+  let perMesh = cache.get(ch.mesh); if (!perMesh) cache.set(ch.mesh, perMesh = new Map());
+  const partOf = parts ? ch.mesh.part : undefined; if (!partOf) parts = 0;
+  const hit = perMesh.get(parts); if (hit) return hit;
   const t0 = performance.now();
+  const mesh = ch.mesh; const V = mesh.vertexCount;
+  const { segs, cand, ends, home } = meshRows(ch);
+  const r0 = new Float32Array(RIG_SLOTS), r1 = new Float32Array(RIG_SLOTS); const slots: RigSlotFit[] = [];
+  let kept = new Int32Array(256);
+  SLOTS.forEach((S, si) => {
+    const [a, b] = segs[si]; const len = Math.sqrt(v3.dot(v3.sub(b, a), v3.sub(b, a)));
+    const prior = (S.after ?? []).map(n => RIG_SLOT_NAMES.indexOf(n));   // (fitted already: SLOTS lists them earlier)
+    // normal equations of ρ_i ≈ r0·A_i + r1·B_i  (A, B) = (1 − u, u) on the flank, (1, 0) / (0, 1) past the ends — over this slot's rows of the mesh (meshRows: every test
+    // that does not depend on the mask is made once per mesh), in vertex order
+    const C = cand[si]; const n0 = C.v.length; if (kept.length < n0) kept = new Int32Array(n0);
+    let sAA = 0, sAB = 0, sBB = 0, sAr = 0, sBr = 0, n = 0;
+    for (let c = 0; c < n0; c++) {
+      const v = C.v[c];
+      if (partOf && !((parts >>> partOf[v]) & 1)) continue;   // (a part this man does not wear)
+      if (prior.length) {
+        const p: Vec3 = [mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]];
+        if (prior.some(k => sdRoundCone(p, segs[k][0], segs[k][1], r0[k], r1[k]) < 0.01)) continue;   // inside (or within a centimetre of) a cone fitted before this one: explained already
+      }
+      const A = C.A[c], B = C.B[c], rho = C.rho[c];
+      sAA += A * A; sAB += A * B; sBB += B * B; sAr += A * rho; sBr += B * rho; kept[n++] = c;
+    }
+    const det = sAA * sBB - sAB * sAB;
+    let f0: number, f1: number;
+    if (n < 8 || Math.abs(det) < 1e-9) { f0 = f1 = HAND_RADII[si]; }   // (nothing to fit to: keep the hand value)
+    else { f0 = (sAr * sBB - sBr * sAB) / det; f1 = (sBr * sAA - sAr * sAB) / det; }
+    if (!(f0 > 0)) f0 = HAND_RADII[si]; if (!(f1 > 0)) f1 = HAND_RADII[si];   // (a NaN out of a malformed mesh keeps the hand value: BoxWorld.applyRig tells a real record from padding by radius > 0)
+    f0 = Math.max(0.01, f0); f1 = Math.max(0.01, f1);
+    const ov = RIG_OVERRIDES[S.name]; const q0 = Math.max(0.005, ov?.r0 ?? f0), q1 = Math.max(0.005, ov?.r1 ?? f1);   // (an override may slim a slot, never zero it — same reason)
+    let se = 0, mx = 0, inside = 0;
+    for (let k = 0; k < n; k++) { const c = kept[k]; const e = C.rho[c] - (q0 * C.A[c] + q1 * C.B[c]); se += e * e; mx = Math.max(mx, Math.abs(e)); if (e <= 0) inside++; }
+    r0[si] = q0; r1[si] = q1;
+    slots.push({ name: S.name, r0: q0, r1: q1, solved: [f0, f1], n, rms: n ? Math.sqrt(se / n) : 0, maxAbs: mx, cover: n ? inside / n : 0, len, hand: HAND_RADII[si], overridden: !!ov });
+  });
+  const fit: RigFit = { r0, r1, slots, verts: V, ms: performance.now() - t0 };
+  if (partOf) {   // the cast: the least-squares cones do not BOUND what he wears — measure how far it stands outside them (capped: one stray vertex must not blow the sphere up)
+    // pad = the greatest, over the worn vertices, of the distance to the NEAREST cone — found without asking every cone of every vertex: a vertex's nearest cone is no
+    // farther than its OWN (the first slot it is a row of, else the one whose line it lies nearest: meshRows), so a vertex whose own-cone distance is inside the pad so far
+    // cannot raise it. The distances asked are sdRoundCone's own values and the pad is one of them: which vertices are asked, and in what order, moves no bit of it.
+    let pad = 0;   // (fingers and toes stand outside the forearm / sole cones on the mannequin too, and its sphere never counted them: what is measured is what the OUTFIT adds)
+    let m = 0; if (padV.length < V) { padV = new Int32Array(V); padD = new Float64Array(V); }
+    for (let v = 0; v < V; v++) {   // (1) each worn vertex's distance to its own cone: at or under 0 (or no number at all) and it can raise nothing
+      if (!((parts >>> partOf[v]) & 1) || ends[v]) continue;
+      const p: Vec3 = [mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]]; const h = home[v];
+      const d = sdRoundCone(p, segs[h][0], segs[h][1], r0[h], r1[h]);
+      if (d > 0) { padV[m] = v; padD[m++] = d; }
+    }
+    const order = Array.from({ length: m }, (_, k) => k).sort((x, y) => padD[y] - padD[x]);
+    for (const k of order) {        // (2) farthest from its own cone first: once that distance is inside the pad, so is everybody's after it
+      let d = padD[k]; if (!(d > pad)) break;
+      const v = padV[k], h = home[v]; const p: Vec3 = [mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]];
+      for (let s = 0; s < RIG_SLOTS && d > pad; s++) if (s !== h) d = Math.min(d, sdRoundCone(p, segs[s][0], segs[s][1], r0[s], r1[s]));
+      if (d > pad && d < Infinity) pad = d;
+    }
+    fit.pad = Math.min(pad, RIG_PAD_MAX); fit.ms = performance.now() - t0;
+  }
+  perMesh.set(parts, fit);
+  return fit;
+}
+/** THE CAST'S FITS AHEAD OF PLAY: every mask a man of this cast can be drawn with — each variant with its mesh goggles up, and with the rig's box goggles in
+ *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; game/cast.ts castParts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
+ *  instead of solving it mid-play. Nothing with the mannequin loaded. A fit that throws is left for its first use to report, as before. */
+export function fitRigCast(ch: GltfCharacter) {
+  const cast = ch.cast; if (!cast) return;
+  for (const v of cast.variants) for (const m of [castGoggles(cast, v.mask, true), castGoggles(cast, v.mask, false), ...(v.side === 'operator' ? [castSuit(cast, v.mask)] : [])]) { try { fitRig(ch, m); } catch { /* its first use says so */ } }
+}
+
+/** What a fit reads off the MESH alone, whatever the mask: the bind-pose segments, per slot the vertices it may be fitted to (dominated by one of its joints, inside its span
+ *  of u and within reach of its line) with their (A, B, ρ) rows in vertex order, per vertex whether its dominant joint is a finger / toe / palm, and its OWN slot for the pad's
+ *  first question (the first slot it is a row of, else the one whose segment it lies nearest). Solved once per mesh; throws what fitRig always threw for a skin without the rig's joints. */
+interface MeshRows { segs: [Vec3, Vec3][]; cand: { v: Int32Array; A: Float64Array; B: Float64Array; rho: Float64Array }[]; ends: Uint8Array; home: Int8Array }
+const rowsCache = new WeakMap<MeshData, MeshRows>();
+function meshRows(ch: GltfCharacter): MeshRows {
+  const had = rowsCache.get(ch.mesh); if (had) return had;
   const joints = bindJoints(ch);
   for (const s of SLOTS) for (const jn of [...s.joints, ...(s.seg.toString().match(/DEF-[\w.]+/g) ?? [])]) if (!joints[jn]) throw new Error(`sdf rig: the skin has no joint '${jn}' (slot ${s.name})`);
   const mesh = ch.mesh; const V = mesh.vertexCount;
@@ -112,18 +197,15 @@ export function fitRig(ch: GltfCharacter): RigFit {
   const dom = new Int32Array(V);
   for (let v = 0; v < V; v++) { let best = 0, bw = -1; for (let c = 0; c < 4; c++) { const w = mesh.weights[v * 4 + c]; if (w > bw) { bw = w; best = mesh.joints[v * 4 + c]; } } dom[v] = best; }
   const byName = new Map<string, number>(); jointName.forEach((n, i) => byName.set(n, i));
-  const r0 = new Float32Array(RIG_SLOTS), r1 = new Float32Array(RIG_SLOTS); const slots: RigSlotFit[] = [];
   const segs = SLOTS.map(S => S.seg(joints));
-  SLOTS.forEach((S, si) => {
-    const [a, b] = segs[si]; const ba = v3.sub(b, a); const len2 = v3.dot(ba, ba), len = Math.sqrt(len2);
+  const home = new Int8Array(V).fill(-1);
+  const cand = SLOTS.map((S, si) => {
+    const [a, b] = segs[si]; const ba = v3.sub(b, a); const len2 = v3.dot(ba, ba);
     const set = new Set(S.joints.map(n => byName.get(n)!));
-    const prior = (S.after ?? []).map(n => RIG_SLOT_NAMES.indexOf(n));   // (fitted already: SLOTS lists them earlier)
-    // normal equations of ρ_i ≈ r0·A_i + r1·B_i  (A, B) = (1 − u, u) on the flank, (1, 0) / (0, 1) past the ends
-    let sAA = 0, sAB = 0, sBB = 0, sAr = 0, sBr = 0; const rows: [number, number, number][] = [];
+    const vs: number[] = [], As: number[] = [], Bs: number[] = [], rhos: number[] = [];
     for (let v = 0; v < V; v++) {
       if (!set.has(dom[v])) continue;
       const p: Vec3 = [mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]];
-      if (prior.some(k => sdRoundCone(p, segs[k][0], segs[k][1], r0[k], r1[k]) < 0.01)) continue;   // inside (or within a centimetre of) a cone fitted before this one: explained already
       const pa = v3.sub(p, a); const u = v3.dot(pa, ba) / len2;
       if (u < S.uRange[0] || u > S.uRange[1]) continue;
       let A: number, B: number, rho: number;
@@ -131,23 +213,20 @@ export function fitRig(ch: GltfCharacter): RigFit {
       else if (u >= 1) { A = 0; B = 1; rho = v3.dist(p, b); }
       else { A = 1 - u; B = u; rho = v3.len(v3.mad(pa, ba, -u)); }
       if (rho > (S.rhoMax ?? 0.35)) continue;   // (a stray vertex the dominance rule mislabels — a cuff vertex weighted to the chest — is nowhere near the segment; the two cross lines only explain what lies within a hand of them)
-      sAA += A * A; sAB += A * B; sBB += B * B; sAr += A * rho; sBr += B * rho; rows.push([A, B, rho]);
+      vs.push(v); As.push(A); Bs.push(B); rhos.push(rho); if (home[v] < 0) home[v] = si;
     }
-    const det = sAA * sBB - sAB * sAB;
-    let f0: number, f1: number;
-    if (rows.length < 8 || Math.abs(det) < 1e-9) { f0 = f1 = HAND_RADII[si]; }   // (nothing to fit to: keep the hand value)
-    else { f0 = (sAr * sBB - sBr * sAB) / det; f1 = (sBr * sAA - sAr * sAB) / det; }
-    if (!(f0 > 0)) f0 = HAND_RADII[si]; if (!(f1 > 0)) f1 = HAND_RADII[si];   // (a NaN out of a malformed mesh keeps the hand value: BoxWorld.applyRig tells a real record from padding by radius > 0)
-    f0 = Math.max(0.01, f0); f1 = Math.max(0.01, f1);
-    const ov = RIG_OVERRIDES[S.name]; const q0 = Math.max(0.005, ov?.r0 ?? f0), q1 = Math.max(0.005, ov?.r1 ?? f1);   // (an override may slim a slot, never zero it — same reason)
-    let se = 0, mx = 0, inside = 0;
-    for (const [A, B, rho] of rows) { const e = rho - (q0 * A + q1 * B); se += e * e; mx = Math.max(mx, Math.abs(e)); if (e <= 0) inside++; }
-    r0[si] = q0; r1[si] = q1;
-    slots.push({ name: S.name, r0: q0, r1: q1, solved: [f0, f1], n: rows.length, rms: rows.length ? Math.sqrt(se / rows.length) : 0, maxAbs: mx, cover: rows.length ? inside / rows.length : 0, len, hand: HAND_RADII[si], overridden: !!ov });
+    return { v: Int32Array.from(vs), A: Float64Array.from(As), B: Float64Array.from(Bs), rho: Float64Array.from(rhos) };
   });
-  const fit: RigFit = { r0, r1, slots, verts: V, ms: performance.now() - t0 };
-  cache.set(ch.mesh, fit);
-  return fit;
+  const endJoint = jointName.map(n => /^DEF-(hand|f_|thumb|palm|toe)/.test(n)); const ends = new Uint8Array(V);
+  for (let v = 0; v < V; v++) ends[v] = endJoint[dom[v]] ? 1 : 0;
+  for (let v = 0; v < V; v++) {   // a vertex that is no slot's row still has an OWN cone for the pad's first question: the slot whose segment it lies nearest
+    if (home[v] >= 0 || ends[v]) continue;
+    const p: Vec3 = [mesh.positions[v * 3], mesh.positions[v * 3 + 1], mesh.positions[v * 3 + 2]]; let best = 0, bd = Infinity;
+    for (let k = 0; k < RIG_SLOTS; k++) { const [a, b] = segs[k]; const ba = v3.sub(b, a), pa = v3.sub(p, a); const u = Math.min(1, Math.max(0, v3.dot(pa, ba) / v3.dot(ba, ba))); const d = v3.len(v3.mad(pa, ba, -u)); if (d < bd) { bd = d; best = k; } }
+    home[v] = best;
+  }
+  const out: MeshRows = { segs, cand, ends, home }; rowsCache.set(ch.mesh, out);
+  return out;
 }
 
 /** the fit as a fixed-width table (console / the doc): slot · hand radius · fitted r0 / r1 · n · rms · max · cover · length */

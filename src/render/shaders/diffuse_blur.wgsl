@@ -1,6 +1,6 @@
 // The smoke diffusion's Gaussian (post.wgsl SMOKE DIFFUSION; passes.ts diffDown / diffBlur): a separable 9-tap blur (σ ≈ 2 texels) run at a quarter and an
 // eighth of the output size over the frame's plain box-downsampled copies. Box downsamples alone keep texel-to-texel steps that a bilinear read at full size
-// shows as blocks along any bright edge seen through thick smoke (the designer, 08-12: 'the boundary with the vending machine does look kinda pixelated');
+// shows as blocks along any bright edge seen through thick smoke (the maintainer, 08-12: 'the boundary with the vending machine does look kinda pixelated');
 // band-limited first, the same read is smooth. Same bind layout as bloom.wgsl (binding 2 unused here).
 @group(1) @binding(0) var src: texture_2d<f32>;
 @group(1) @binding(1) var dst: texture_storage_2d<rgba16float, write>;

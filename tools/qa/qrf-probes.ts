@@ -42,6 +42,7 @@ async function fresh(seed: number, opts: { eta?: number; perimeter?: boolean } =
   Math.random = seeded(seed);
   const W = await standUp(); const { game } = W;
   game.godMode = true; game.aiEnabled = true; game.tune.qrfEta = opts.eta ?? 20; game.tune.perimeter = opts.perimeter ?? false; game.tune.qrf = true; game.tune.qrfSize = 4;
+  game.tune.qrfSquad = false;   // (this family measures the element's OWN drill on the level's marks — on either stand; the squad's code under it is qrf-squad-check.ts)
   step(W, 20, 0.05);
   return W;
 }
@@ -315,7 +316,7 @@ export async function qrfPerimeter() {
   let tSet = NaN;
   for (let f = 0; f < 60 * 70; f++) { W.step(DT); if (isNaN(tSet) && P!.state === 'set') tSet = game.time - tCall; if (!isNaN(tSet) && game.time - tCall > tSet + 2) break; }
   const posts = P!.men.map((p: any) => ({ name: p.post.name, d: v3.distXZ(p.gd.char.pos, p.post.pos), a: Math.abs(wrapAngle(p.gd.char.bodyYaw - p.post.yaw)) * 180 / Math.PI, arrived: p.arrivedAt >= 0 ? p.arrivedAt - tCall : NaN, pinned: p.gd.pinned, id: p.gd.char.id }));
-  F.verdict(!isNaN(tSet) && tSet <= 45 + 10 && posts.every(p => p.d < 1.0 && p.a < 35 && p.pinned) && rx.some(l => /perimeter set/.test(l.text)), 'within ETA+10: both on their posts (< 1 m), facing the door they cover (± 35°), pinned there, and it is said on the net', `set +${f1(tSet)} s · ${posts.map(p => `${p.name}: ${f2(p.d)} m, ${p.a.toFixed(0)}°, arrived +${f1(p.arrived)} s, pinned ${p.pinned}, #${p.id}`).join(' · ')}`);
+  F.verdict(!isNaN(tSet) && tSet <= 45 + 10 && posts.every((p: any) => p.d < 1.0 && p.a < 35 && p.pinned) && rx.some(l => /perimeter set/.test(l.text)), 'within ETA+10: both on their posts (< 1 m), facing the door they cover (± 35°), pinned there, and it is said on the net', `set +${f1(tSet)} s · ${posts.map((p: any) => `${p.name}: ${f2(p.d)} m, ${p.a.toFixed(0)}°, arrived +${f1(p.arrived)} s, pinned ${p.pinned}, #${p.id}`).join(' · ')}`);
   F.verdict(new Set(game.guards.map((x: any) => x.char.id)).size === game.guards.length && 1 + game.guards.length <= 8, 'ids all distinct, characters within the budget', `ids ${game.guards.map((x: any) => x.char.id).join(',')} · chars ${1 + game.guards.length}`);
   // the way out is still the way out: Sam (god mode) at the exfil stage walks out through the fire exit's frame → done; and how long a lit man lasts out there
   game.mission.stage = 'exfil'; game.playerInvisible = false; game.player.crouch = false;

@@ -1,6 +1,7 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
-import { makeShader, makeBuffer, renderPipelineAsync } from '../gpu/device';
-import { scenePrelude } from './frame';
+import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull } from '../gpu/device';
+import { cutSwap } from './cutSwap';
+import { scenePrelude, snowLookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
 import { BoxWorld, GEO_STRIDE, MAT_STRIDE } from '../scene/boxes';
@@ -8,6 +9,10 @@ import gbufSrc from './shaders/gbuffer.wgsl' with { type: 'text' };
 import decalsSrc from './shaders/decals.wgsl' with { type: 'text' };
 import detailSrc from './shaders/detail.wgsl' with { type: 'text' };   // the detail layer (renderer v3 phase 4): fsBox's wear / dust / edge terms + the traffic-map binding
 import markingsSrc from './shaders/markings.wgsl' with { type: 'text' };   // the markings (scene/markings.ts): fsBox's pixel-art signifiers on box faces
+import gbufCutSrc from './shaders/gbuffer_cut.wgsl' with { type: 'text' };   // CUT BOXES (scene/cut.ts): the cut pass's two entry points, appended in a second module only under the switch
+import { cutConfig, CUT_ROWS } from '../scene/cut';
+import snowSrc from './shaders/snow.wgsl' with { type: 'text' };   // THE SNOW'S SURFACE (render/snowField.ts): fsBox's snow + the hills' two entry points — dead code unless the prelude's SNOW_SURF is up
+import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
 
 export interface SkinnedDrawable {
@@ -17,7 +22,12 @@ export interface SkinnedDrawable {
   indexBuf: GPUBuffer; indexCount: number; indexFormat: GPUIndexFormat;
   jointMats: GPUBuffer;      // array<mat4x4f>  (usage must include COPY_SRC: snapshotted into the g-buffer's previous-palette buffer each frame)
   charInsts: GPUBuffer;      // array<CharInst>
+  slotBuf: GPUBuffer;        // CHARACTER MATERIALS (render/charMaterials.ts): f32x2 per vertex = (material slot, cavity) (8 B)
+  charMats: GPUBuffer;       // array<vec4f>: CHAR_MAT_ROWS rows per instance — the per-slot materials; zeros = shade from CharInst's two tints, as ever
   instanceCount: number;
+  /** instance i's index runs as (first index, index count) pairs in index order when only part of the mesh is his (THE CAST: the parts he wears — anim/characters.ts); null or absent =
+   *  the whole mesh */
+  drawRuns?(i: number): Uint32Array | null;
 }
 
 export class GBuffer {
@@ -45,10 +55,11 @@ export class GBuffer {
   private objLayout: GPUBindGroupLayout; private mod: GPUShaderModule; private pipeLayout: GPUPipelineLayout;
   private targets: GPUColorTargetState[]; private depthStencil: GPUDepthStencilState;
   private objBG: GPUBindGroup | null = null; private objBGKey = '';
+  private cutMod: GPUShaderModule | null = null; private cutPipe: GPURenderPipeline | null = null;
 
   constructor(private device: GPUDevice, private sceneLayout: GPUBindGroupLayout, readonly pool: TexturePool = new TexturePool(device), maxBoxes = 4096) {
     this.geoBytes = maxBoxes * GEO_STRIDE * 4;
-    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
+    const mod = makeShader(device, scenePrelude() + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;   // prevBoxes: vec4 index where the mat rows start (after maxBoxes geo rows of 2 vec4 each)\n` + decalWgslConsts(3) + decalsSrc + detailSrc + snowSrc + markingsSrc + gbufSrc, 'gbuffer');   // decals.wgsl: the experiment's per-pixel marks (group 1 binding 3), read by fsBox under FrameFlags.Decals
     this.objLayout = device.createBindGroupLayout({ label: 'gbufObj', entries: [
       { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
@@ -56,19 +67,71 @@ export class GBuffer {
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },   // the decal buffer (render/decals.ts): the fragment stage's 9th storage buffer where the scene group carries 8 (reach rows + mesh trees in storage) — inside the 10 Chrome offers on Metal, and 7 or 8 on adapters where frame.ts already fell back
       { binding: 4, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },   // prevBoxes (last frame's geo + mat rows) — the vertex stage's 6th storage buffer with the scene group's two …
       { binding: 5, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },   // … and prevJoints its 7th (of the WebGPU default 8)
+      { binding: 7, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },   // charMats (character materials: the per-instance slot rows vsSkin reads) — the vertex stage's 8th storage buffer, the WebGPU default's last
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the traffic map the detail layer reads (rg8unorm over the world's XZ; a 1×1 zero until a level hands one over — setWearMap)
+      { binding: 8, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the snow field (render/snowField.ts; rgba16float over the world's XZ — a 1×1 zero on every page but a snow level's) …
+      { binding: 9, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },   // … and its place + the look's numbers (snow.wgsl SnowCfg; all zero = not live)
+      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (game/snowTracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
     ] });
-    const layout = this.pipeLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.objLayout] });
-    const targets: GPUColorTargetState[] = this.targets = [{ format: 'rgba8unorm' }, { format: 'rgb10a2unorm' }, { format: 'r32uint' }, { format: 'rg16float' }, { format: 'rg8unorm' }, { format: 'rg8unorm' }];   // (+ the material and GBAA edge targets: 8 + 8 + 4 + 4 + 2 + 2 = 28 bytes per sample of the 32 the default limits allow, by WebGPU's attachment accounting — rgba8 / rgb10a2 count 8 each)
-    const depthStencil: GPUDepthStencilState = this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
+    this.pipeLayout = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.objLayout] });
+    this.targets = [{ format: 'rgba8unorm' }, { format: 'rgb10a2unorm' }, { format: 'r32uint' }, { format: 'rg16float' }, { format: 'rg8unorm' }, { format: 'rg8unorm' }];   // (+ the material and GBAA edge targets: 8 + 8 + 4 + 4 + 2 + 2 = 28 bytes per sample of the 32 the default limits allow, by WebGPU's attachment accounting — rgba8 / rgb10a2 count 8 each)
+    this.depthStencil = { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'less' };
     this.mod = mod;   // (the box pipeline: init(), awaited by the engine before the first frame)
+    // CUT BOXES: the same text + gbuffer_cut.wgsl as a second module, made only in a build with the switch — the module above and its pipelines are the build's without it
+    if (cutConfig.on) this.cutMod = makeShader(device, scenePrelude(true) + `const PREV_MAT_BASE: u32 = ${maxBoxes * GEO_STRIDE / 4}u;\n` + decalWgslConsts(3) + decalsSrc + detailSrc + snowSrc + markingsSrc + gbufSrc + gbufCutSrc, 'gbufferCut');
     const S = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST;
     this.prevBoxes = makeBuffer(device, maxBoxes * (GEO_STRIDE + MAT_STRIDE) * 4, S, 'prevBoxes');
     this.prevJoints = makeBuffer(device, 256, S, 'prevJointsDummy');   // (replaced by one the size of the skin's palette the first time a skin is drawn)
     this.wearTex = device.createTexture({ label: 'wearNone', size: [1, 1], format: 'rg8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
     device.queue.writeTexture({ texture: this.wearTex }, new Uint8Array([0, 0]), { bytesPerRow: 2 }, [1, 1]);
     this.wearView = this.wearTex.createView();
+    this.snowTex = device.createTexture({ label: 'snowNone', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    device.queue.writeTexture({ texture: this.snowTex }, new Uint16Array(4), { bytesPerRow: 8 }, [1, 1]);
+    this.snowView = this.snowTex.createView();
+    this.trackTex = device.createTexture({ label: 'snowTracksNone', size: [1, 1], format: 'r8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    device.queue.writeTexture({ texture: this.trackTex }, new Uint8Array(4), { bytesPerRow: 4 }, [1, 1]);
+    this.trackView = this.trackTex.createView();
+    this.snowCfg = makeBuffer(device, SNOW_CFG_FLOATS * 4, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'snowCfg');
+    device.queue.writeBuffer(this.snowCfg, 0, new Float32Array(SNOW_CFG_FLOATS));
   }
+  // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
+  private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
+  private snowQuads: GPUBuffer | null = null; private snowQuadCount = 0; private snowPipe: GPURenderPipeline | null = null;
+  /** hand over a level's snow field (null = none: a 1×1 zero and no mesh) with its uniform block (snowField.ts snowCfgRows) */
+  setSnowField(f: { data: Uint16Array; w: number; h: number; quads: Uint32Array } | null, cfg: Float32Array) {
+    this.snowTex.destroy(); this.snowQuads?.destroy(); this.snowQuads = null; this.snowQuadCount = 0;
+    const w = f?.w ?? 1, h = f?.h ?? 1;
+    this.snowTex = this.device.createTexture({ label: f ? 'snowField' : 'snowNone', size: [w, h], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+    this.device.queue.writeTexture({ texture: this.snowTex }, f?.data ?? new Uint16Array(4), { bytesPerRow: w * 8 }, [w, h]);
+    this.snowView = this.snowTex.createView(); this.objBG = null;
+    if (f && f.quads.length > 0) {
+      this.snowQuads = makeBuffer(this.device, f.quads.byteLength, GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST, 'snowQuads');
+      this.device.queue.writeBuffer(this.snowQuads, 0, f.quads); this.snowQuadCount = f.quads.length / 2;
+    }
+    this.setSnowCfg(cfg);
+  }
+  /** … and the texels of it that changed since ([x0, z0, x1, z1], inclusive): a blast dug a hill out (snowField.ts digSnowField). The mesh stays as it was. */
+  setSnowFieldRect(f: { data: Uint16Array; w: number; h: number }, rect: readonly [number, number, number, number]) {
+    if (this.snowTex.width !== f.w || this.snowTex.height !== f.h) return;
+    const x0 = rect[0], z0 = rect[1], rw = rect[2] - rect[0] + 1, rh = rect[3] - rect[1] + 1;
+    this.device.queue.writeTexture({ texture: this.snowTex, origin: [x0, z0] }, f.data, { offset: (z0 * f.w + x0) * 8, bytesPerRow: f.w * 8 }, [rw, rh]);
+  }
+  private trackTex: GPUTexture; private trackView: GPUTextureView; private trackW = 1; private trackH = 1;
+  /** the prints pressed into the snow (game/snowTracks.ts): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
+   *  (a 1×1 zero). The texture is made the first time a size is seen. */
+  setSnowTracks(t: { data: Uint8Array; w: number; h: number } | null, rect?: readonly [number, number, number, number]) {
+    const w = t?.w ?? 1, h = t?.h ?? 1;
+    if (w !== this.trackW || h !== this.trackH) {
+      this.trackTex.destroy(); this.trackW = w; this.trackH = h; rect = undefined;
+      this.trackTex = this.device.createTexture({ label: t ? 'snowTracks' : 'snowTracksNone', size: [w, h], format: 'r8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST });
+      this.trackView = this.trackTex.createView(); this.objBG = null;
+    }
+    if (!t) { this.device.queue.writeTexture({ texture: this.trackTex }, new Uint8Array(4), { bytesPerRow: 4 }, [1, 1]); return; }
+    const x0 = rect ? rect[0] : 0, z0 = rect ? rect[1] : 0, rw = rect ? rect[2] - rect[0] + 1 : w, rh = rect ? rect[3] - rect[1] + 1 : h;
+    this.device.queue.writeTexture({ texture: this.trackTex, origin: [x0, z0] }, t.data, { offset: z0 * w + x0, bytesPerRow: w }, [rw, rh]);
+  }
+  /** the look's numbers alone (the console's `__snow.relook()`) */
+  setSnowCfg(cfg: Float32Array) { this.device.queue.writeBuffer(this.snowCfg, 0, cfg.subarray(0, SNOW_CFG_FLOATS)); }
   /** the traffic map the detail layer reads (render/wear.ts builds it from the level; the viewer never does): r = traffic 0‥255, g = wall proximity 0‥255, one texel per 1/8 m over the world's grid footprint */
   private wearTex: GPUTexture; private wearView: GPUTextureView;
   setWearMap(data: Uint8Array, w: number, h: number) {
@@ -89,6 +152,20 @@ export class GBuffer {
       depthStencil: this.depthStencil,
     }).then(p => { this.boxPipe = p; })];
     if (opts.sharp) jobs.push(this.prepareDown());
+    if (snowLookConfig.surface) jobs.push(renderPipelineOrNull(this.device, {   // THE SNOW'S HILLS (snow.wgsl vsSnow / fsSnow): same targets, same depth rule; drawn before the boxes. One that fails to compile is left null: the level's own snow boxes show, as they are drawn under it anyway
+      label: 'gbufSnow', layout: this.pipeLayout,
+      vertex: { module: this.mod, entryPoint: 'vsSnow', buffers: [{ arrayStride: 8, stepMode: 'instance', attributes: [{ shaderLocation: 0, offset: 0, format: 'uint32x2' }] }] },
+      fragment: { module: this.mod, entryPoint: 'fsSnow', targets: this.targets },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+      depthStencil: this.depthStencil,
+    }, 'the snow\'s drifts are drawn as the level\'s boxes').then(p => { this.snowPipe = p; }));
+    if (this.cutMod) jobs.push(renderPipelineOrNull(this.device, {   // CUT BOXES: the cut solids' pipeline (same targets, same depth rule; its fragment stage discards). One that fails to compile is left null: encode() then draws cut boxes whole, and the rays are held to whole boxes too (cutSwap.rasterFailed)
+      label: 'gbufBoxesCut', layout: this.pipeLayout,
+      vertex: { module: this.cutMod, entryPoint: 'vsBoxCut' },
+      fragment: { module: this.cutMod, entryPoint: 'fsBoxCut', targets: this.targets },
+      primitive: { topology: 'triangle-list', cullMode: 'back' },
+      depthStencil: this.depthStencil,
+    }, 'cut pieces are drawn and traced as whole boxes').then(p => { this.cutPipe = p; if (!p) cutSwap.rasterFailed(); }));
     await Promise.all(jobs);
   }
   /** Compile the skinned-mesh pipeline for this joint-index format ahead of the first frame that draws a skin (main.ts / the viewer, once the glTF says which format) — the same
@@ -109,6 +186,7 @@ export class GBuffer {
           { shaderLocation: 4, offset: 40, format: 'float32' },
         ] },
         { arrayStride: fmt === 'uint8x4' ? 4 : 8, attributes: [{ shaderLocation: 2, offset: 0, format: fmt }] },
+        { arrayStride: 8, attributes: [{ shaderLocation: 5, offset: 0, format: 'float32x2' }] },   // (material slot, cavity) — render/charMaterials.ts
       ] },
       fragment: { module: this.mod, entryPoint: 'fsSkin', targets: this.targets },
       primitive: { topology: 'triangle-list', cullMode: 'back' },
@@ -198,18 +276,20 @@ export class GBuffer {
   }
 
   private objectBindGroup(visibleBuf: GPUBuffer, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer): GPUBindGroup {
-    const jm = skin?.jointMats ?? dummy, ci = skin?.charInsts ?? dummy;
-    const key = `${idOf(visibleBuf)}:${idOf(jm)}:${idOf(ci)}:${idOf(decalBuf)}:${idOf(this.prevJoints)}:${idOf(this.wearTex)}`;
+    const jm = skin?.jointMats ?? dummy, ci = skin?.charInsts ?? dummy, cm = skin?.charMats ?? dummy;
+    const key = `${idOf(visibleBuf)}:${idOf(jm)}:${idOf(ci)}:${idOf(decalBuf)}:${idOf(this.prevJoints)}:${idOf(this.wearTex)}:${idOf(cm)}:${idOf(this.snowTex)}:${idOf(this.trackTex)}`;
     if (this.objBG && this.objBGKey === key) return this.objBG;
     this.objBG = this.device.createBindGroup({ layout: this.objLayout, entries: [
       { binding: 0, resource: { buffer: visibleBuf } }, { binding: 1, resource: { buffer: jm } }, { binding: 2, resource: { buffer: ci } }, { binding: 3, resource: { buffer: decalBuf } },
       { binding: 4, resource: { buffer: this.prevBoxes } }, { binding: 5, resource: { buffer: this.prevJoints } }, { binding: 6, resource: this.wearView },
+      { binding: 7, resource: { buffer: cm } },
+      { binding: 8, resource: this.snowView }, { binding: 9, resource: { buffer: this.snowCfg } }, { binding: 10, resource: this.trackView },
     ] });
     this.objBGKey = key; return this.objBG;
   }
 
   /** decalBuf: the decal buffer (Decals.buf), or any storage buffer while none is attached — it is only read under FrameFlags.Decals, which the engine never raises then */
-  encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, visibleBuf: GPUBuffer, visibleCount: number, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer, ts?: GPURenderPassTimestampWrites) {
+  encode(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, visibleBuf: GPUBuffer, visibleCount: number, skin: SkinnedDrawable | null, dummy: GPUBuffer, decalBuf: GPUBuffer, ts?: GPURenderPassTimestampWrites, cutCount = 0, cutWhole = 0) {
     if (skin && this.prevJointsFor !== skin.jointMats) { this.prevJoints.destroy(); this.prevJoints = makeBuffer(this.device, skin.jointMats.size, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'prevJoints'); this.prevJointsFor = skin.jointMats; }   // (a palette-sized 'previous' the first frame a skin shows up; zeros until the first snapshot — that frame's skinned motion is garbage, and the resolve is reset on a first frame anyway)
     const S = this.sharp;   // SHARP DIRECT: rasterise at the OUTPUT size into the O set (encodeDown then derives the internal view); off = the internal targets, exactly as before
     const pass = enc.beginRenderPass({
@@ -227,13 +307,25 @@ export class GBuffer {
     });
     const obg = this.objectBindGroup(visibleBuf, skin, dummy, decalBuf);
     pass.setBindGroup(0, sceneBG); pass.setBindGroup(1, obg);
+    if (this.snowPipe && this.snowQuads && this.snowQuadCount > 0) { pass.setPipeline(this.snowPipe); pass.setVertexBuffer(0, this.snowQuads); pass.draw(6, this.snowQuadCount); }   // THE SNOW'S HILLS, first: the ground and the boxes under them then fail the depth test instead of being shaded twice
     pass.setPipeline(this.boxPipe);
-    pass.draw(36, visibleCount);
+    if (!this.cutPipe) cutWhole = cutCount;   // (a build whose cut pipeline failed to compile draws the cut boxes WHOLE with this one — wrong at the cut, never missing)
+    pass.draw(36, visibleCount + cutWhole);   // `cutWhole` = the first so-many of the cut list drawn as their whole boxes: the traceable ones, on a frame whose ray programs have no cut rule (render/cutSwap.ts — picture and rays agree)
+    if (cutCount > cutWhole) { pass.setPipeline(this.cutPipe!); pass.draw(36 + 6 * CUT_ROWS, cutCount - cutWhole, 0, visibleCount + cutWhole); }   // CUT BOXES: listed after the plain ones in `visible` (BoxWorld.visibleCutCount); six faces + a quad per plane
     if (skin && skin.instanceCount > 0) {
       pass.setPipeline(this.skinPipe(skin.jointsFormat));
-      pass.setVertexBuffer(0, skin.vertexBuf); pass.setVertexBuffer(1, skin.jointBuf);
+      pass.setVertexBuffer(0, skin.vertexBuf); pass.setVertexBuffer(1, skin.jointBuf); pass.setVertexBuffer(2, skin.slotBuf);
       pass.setIndexBuffer(skin.indexBuf, skin.indexFormat);
-      pass.drawIndexed(skin.indexCount, skin.instanceCount);
+      // THE CAST: a man is drawn as the index runs of the parts he wears (instance_index = his slot through firstInstance, so vsSkin reads the same CharInst). The triangles left out are
+      // exactly the ones vsSkin would have collapsed outside the clip volume, and what is left goes down in the same order — instance by instance, ascending index — so the raster sees
+      // the same triangles in the same sequence. Nobody with runs (the mannequin, mask 0) = the one instanced draw, as it always was.
+      let whole = 0;   // (instances [i − whole, i) still owed as whole-mesh draws)
+      for (let i = 0; i <= skin.instanceCount; i++) {
+        const runs = i < skin.instanceCount ? skin.drawRuns?.(i) ?? null : null;
+        if (i < skin.instanceCount && !runs) { whole++; continue; }
+        if (whole > 0) { pass.drawIndexed(skin.indexCount, whole, 0, 0, i - whole); whole = 0; }
+        if (runs) for (let k = 0; k < runs.length; k += 2) pass.drawIndexed(runs[k + 1], 1, runs[k], 0, i);
+      }
     }
     pass.end();
   }

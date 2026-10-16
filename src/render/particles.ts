@@ -13,10 +13,13 @@
 //               uniform block, the cascade dice (texture) } → 9 storage buffers in the compute stage;
 //   splat       group 0 = the scene group (only `frame` is touched) + group 1 = { pool (read-only storage, VERTEX), the same uniform block, g-buffer depth,
 //               the volumetric texture } → +1 storage buffer in the vertex stage (3 with the scene's two `all`-visible ones), +0 in the fragment stage.
+import { cutSwap, ProgramSet } from './cutSwap';
+import { tuned } from './shaderTune';   // the scene tweak panel's constant overrides (empty map = each text itself)
 import { makeBuffer, makeShader, computePipelineAsync, renderPipelineAsync } from '../gpu/device';
 import { Vec3 } from '../math/vec';
-import { scenePrelude } from './frame';
+import { scenePrelude, glassBreakConfig } from './frame';
 import { SHEET, IMP_RESPONSE, type ImpulseResponse } from '../game/sheetModel';
+import { SHARD, SHARD_IMP } from '../game/shardModel';
 import type { WindGpuSource } from '../smoke/types';
 import { WIND_GPU_MAX } from '../smoke/types';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
@@ -26,12 +29,12 @@ import particlesSrc from './shaders/particles.wgsl' with { type: 'text' };
 import particlesDrawSrc from './shaders/particles_draw.wgsl' with { type: 'text' };
 import refractCommon from './shaders/refract_common.wgsl' with { type: 'text' };   // the SHARED refraction module (feat/solid-glass-refraction's text, verbatim: Snell / Fresnel / Beer–Lambert / the re-projection and its screen guards; the rain streaks refract the composite's copy through it) — binding-free, prepended to the splat
 
-export type PKind = 'spark' | 'debris' | 'dust' | 'casing' | 'sheet' | 'rain';
-export const P_KINDS: readonly PKind[] = ['spark', 'debris', 'dust', 'casing', 'sheet', 'rain'];
-export const KIND_ID: Record<PKind, number> = { spark: 0, debris: 1, dust: 2, casing: 3, sheet: 4, rain: 5 };
+export type PKind = 'spark' | 'debris' | 'dust' | 'casing' | 'sheet' | 'rain' | 'shard';
+export const P_KINDS: readonly PKind[] = ['spark', 'debris', 'dust', 'casing', 'sheet', 'rain', 'shard'];
+export const KIND_ID: Record<PKind, number> = { spark: 0, debris: 1, dust: 2, casing: 3, sheet: 4, rain: 5, shard: 6 };
 /** which ring a kind is dealt from: 0 = SHORT-lived (seconds at most), 1 = LONG (chips, brass and paper that lie there) — a spark storm never evicts resting brass — 2 = RAIN (the particle rain's
  *  own ring past the other two: a downpour's hundred births a frame never lap a dust puff, and rain never waits behind or delays a gameplay record — see prepare()) */
-export const KIND_RING: Record<PKind, 0 | 1 | 2> = { spark: 0, dust: 0, debris: 1, casing: 1, sheet: 1, rain: 2 };
+export const KIND_RING: Record<PKind, 0 | 1 | 2> = { spark: 0, dust: 0, debris: 1, casing: 1, sheet: 1, rain: 2, shard: 1 };
 export const P_CAP = 16384;
 export const RINGS: readonly { start: number; size: number }[] = [{ start: 0, size: 6144 }, { start: 6144, size: 10240 }];
 /** the RAIN ring (EXPERIMENT exp/particle-rain, game/rainFx.ts): slots P_CAP ‥ P_CAP + RAIN_CAP past the two gameplay rings — its window rides in the emit block's TAIL (particles_common.wgsl EmitBlock.rainWin) so the
@@ -63,9 +66,9 @@ const P_BYTES = 80, HDR_BYTES = 64;   // (P_BYTES = struct Particle in particles
 export const REC_BYTES = 112, BLOCK_HDR_BYTES = 48 + P_KINDS.length * 48, KP_FLOAT = 12, KI_FLOAT = 12 + P_KINDS.length * 8, IMP_BYTES = 64, IMP_OFFSET = BLOCK_HDR_BYTES + MAX_EMITS * REC_BYTES, BLOCK_TAIL_AT = IMP_OFFSET + MAX_IMPULSES * IMP_BYTES, BLOCK_TAIL_BYTES = 16 + 6 * 16, BLOCK_BYTES = BLOCK_TAIL_AT + BLOCK_TAIL_BYTES;
 /** PARTICLE RAIN v2 — the LOOK the rain kind's kernels read off the block's tail (game/rainFx.ts PRAIN mirrors into it every frame; particles_common.wgsl rainCfg‥rainCfgF words them).
  *  Shading: iso / fwdK / fwdG (the drop's phase), glintK / glintRough / glintCap (the strand glint and its bound), gain, tailKeep; the splat: refract (0 = off) / refractReachM / refractTaps /
- *  refractClamp / refractDepth, lenJit / brightJit / minPx; the wind: windK (× the air on a drop), sheetAmp / sheetLen + the sheets' running offset bandOffX / Z (m, ∫ air dt). */
-export interface RainLook { iso: number; fwdK: number; fwdG: number; glintK: number; glintRough: number; glintCap: number; gain: number; tailKeep: number; refract: number; refractReachM: number; refractTaps: number; refractClamp: number; refractDepth: number; lenJit: number; brightJit: number; minPx: number; maxPx: number; boostCap: number; nearFadeM: number; beadAmp: number; windK: number; sheetAmp: number; sheetLen: number; bandOffX: number; bandOffZ: number; }
-export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fwdK: 0, fwdG: 0.8, glintK: 0, glintRough: 0.08, glintCap: 12, gain: 1, tailKeep: 0, refract: 0, refractReachM: 6, refractTaps: 3, refractClamp: 6, refractDepth: 0.3, lenJit: 0, brightJit: 0, minPx: 0.75, maxPx: 64, boostCap: 1, nearFadeM: 2, beadAmp: 0, windK: 1, sheetAmp: 0, sheetLen: 7, bandOffX: 0, bandOffZ: 0 });   // (= v1's look until rainFx.ts writes PRAIN over it: iso 1, no lobe, no glint, no refraction, no spread, no width ceiling, the 2 m near fade)
+ *  refractClamp / refractDepth / refractPaint (0‥1: how much of the picture a read taken beside the streak keeps; 1 = all of it, as it was; 0 = its light only), lenJit / brightJit / minPx; the wind: windK (× the air on a drop), sheetAmp / sheetLen + the sheets' running offset bandOffX / Z (m, ∫ air dt). */
+export interface RainLook { iso: number; fwdK: number; fwdG: number; glintK: number; glintRough: number; glintCap: number; gain: number; tailKeep: number; refract: number; refractReachM: number; refractTaps: number; refractClamp: number; refractDepth: number; refractPaint: number; lenJit: number; brightJit: number; minPx: number; maxPx: number; boostCap: number; nearFadeM: number; beadAmp: number; windK: number; sheetAmp: number; sheetLen: number; bandOffX: number; bandOffZ: number; }
+export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fwdK: 0, fwdG: 0.8, glintK: 0, glintRough: 0.08, glintCap: 12, gain: 1, tailKeep: 0, refract: 0, refractReachM: 6, refractTaps: 3, refractClamp: 6, refractDepth: 0.3, refractPaint: 1, lenJit: 0, brightJit: 0, minPx: 0.75, maxPx: 64, boostCap: 1, nearFadeM: 2, beadAmp: 0, windK: 1, sheetAmp: 0, sheetLen: 7, bandOffX: 0, bandOffZ: 0 });   // (= v1's look until rainFx.ts writes PRAIN over it: iso 1, no lobe, no glint, no refraction, no spread, no width ceiling, the 2 m near fade)
 
 /** Per-kind numbers (shaders/particles_common.wgsl k0 / k1), live from the panel. holdOrFade: SPARK = fraction of life held white-hot before the fall to red;
  *  others = seconds of fade-out at the end of life. shutterOrGrowth: streak kinds = seconds of motion one streak shows; DUST = growth factor of the radius over
@@ -84,6 +87,7 @@ export const KIND_DEFAULTS: Record<PKind, KindParams> = {
   casing: { gravity: 9.8, drag: 0.45, restitution: 0.42, keep: 0.72, sleepV: 0.4, holdOrFade: 4.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
   sheet:  { gravity: SHEET.gravity, drag: SHEET.KT, restitution: SHEET.KN_LIN, keep: SHEET.KN_Q, sleepV: SHEET.sleepV, holdOrFade: SHEET.fade, shutterOrGrowth: SHEET.FLUT, brightOrOpacity: SHEET.TRANS },
   rain:   { gravity: 9.8, drag: 9.8 / 9.0, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 },   // (restitution = the reactivity ×, mirrored from settings.particleRainReact by game/rainFx.ts; brightOrOpacity likewise from particleRainBright)
+  shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (game/shards.ts; game/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
 export type EmitShape = 'cone' | 'burst' | 'ring' | 'puff' | 'rainDisc';
@@ -94,15 +98,18 @@ const SHAPE_ID: Record<EmitShape, number> = { cone: 0, burst: 1, ring: 2, puff: 
  *  aspect = length ÷ width (a SHEET's shape — 1.41 A4, 1.29 letter, 1 a post-it — or a splinter's elongation; default 1), tumble = SHEET initial angular rate cap
  *  (rad/s), nrmJit = SHEET normal scatter (0 = born lying flat, 1 = any way up; default 0.35); seed = the record's seed by hand (the rain recycler deals its own, so a downpour
  *  never advances the serial the gameplay effects hash — their births stay byte for byte what they were without it). */
-export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; life: number; size: number; speedJit?: number; lifeJit?: number; sizeJit?: number; lift?: number; radius?: number; posJit?: number; vadd?: Vec3; owner?: number; color?: Vec3; aspect?: number; tumble?: number; nrmJit?: number; seed?: number; }
+export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; life: number; size: number; speedJit?: number; lifeJit?: number; sizeJit?: number; lift?: number; radius?: number; posJit?: number; vadd?: Vec3; owner?: number; color?: Vec3; /** RAIN-KIND records only: the colour word's top byte, 0‥255 (255 unsaid) — a wisp of snow's look (game/snowFx.ts wispLookByte) */ top?: number; aspect?: number; tumble?: number; nrmJit?: number; seed?: number;
+  /** DUST only: STEAM (game/snowBreath.ts) — a puff filed with this (0‥1, under 1) is warm breath: its peak opacity × this, and it rises instead of settling. It rides
+   *  the colour word's top byte, 255 on every other record (shaders: `steamOf`); left out = the puff as it always was */
+  steam?: number; }
 interface EmitRec { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number; /** frames this record has waited in the queue past the one it was queued for (the birth cap) */ waited: number; }
 /** One impulse's numbers (particles_common.wgsl ImpulseRec; game/sheetModel.ts is the reference of what it does): `up` = upward share added to the radial push (default 0),
  *  `bias` = a direction folded in with its weight as its length (default none), `kinds` = which kinds respond (default every kind but sparks), `occlude` + `eye` = gate
  *  each particle further than half a metre by one any-hit ray from `eye` (default the impulse's position) — a wall between a charge and the litter behind it stops it. */
-export interface ImpulseOpts { up?: number; bias?: Vec3; kinds?: readonly PKind[]; occlude?: boolean; eye?: Vec3; }
+export interface ImpulseOpts { up?: number; bias?: Vec3; kinds?: readonly PKind[]; occlude?: boolean; eye?: Vec3; /** the caller's own seed: the impulses' serial is then left where it was (as EmitOpts.seed) */ seed?: number; }
 /** the queued record (a fixed pool of MAX_IMPULSES of these is reused: queuing allocates nothing) */
 interface ImpRec { pos: Vec3; radius: number; strength: number; up: number; bias: Vec3; eye: Vec3; kinds: number; flags: number; seed: number; }
-const KINDS_DEFAULT = (1 << KIND_ID.debris) | (1 << KIND_ID.dust) | (1 << KIND_ID.casing) | (1 << KIND_ID.sheet);
+const KINDS_DEFAULT = (1 << KIND_ID.debris) | (1 << KIND_ID.dust) | (1 << KIND_ID.casing) | (1 << KIND_ID.sheet) | (1 << KIND_ID.shard);
 /** the kinds a WIND record moves unless it says otherwise: everything but sparks and brass (particles.wgsl windCoupling then weighs each) — and the RAIN (its own step reads windAir: born with the air, dragged toward it) */
 export const WIND_KINDS_DEFAULT = (1 << KIND_ID.debris) | (1 << KIND_ID.dust) | (1 << KIND_ID.sheet) | (1 << KIND_ID.rain);
 const NO_OPTS: ImpulseOpts = Object.freeze({}); const ZERO3: Vec3 = [0, 0, 0];
@@ -134,20 +141,30 @@ export interface RainStats { live: number; born: number; records: number; droppe
 const rgba8 = (c: Vec3) => ((Math.round(Math.min(1, Math.max(0, c[0])) * 255)) | (Math.round(Math.min(1, Math.max(0, c[1])) * 255) << 8) | (Math.round(Math.min(1, Math.max(0, c[2])) * 255) << 16) | (255 << 24)) >>> 0;
 /** integer hash for the per-emit seed (the GPU hashes it again with the particle index) */
 function hashU32(x: number): number { x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return x >>> 0; }
+/** the three particle texts as bundled (the scene tweak panel lists their constants off them: render/shaderTune.ts shaderConsts). The page's own programs are built from these as they are — the
+ *  panel is made after them — and only retune() and a second set built later read them through tuned(). */
+export function particleTexts(): { common: string; sim: string; draw: string } { return { common: particlesCommon, sim: particlesSrc, draw: particlesDrawSrc }; }
 
 export class Particles {
   /** live per-kind numbers (the panel edits these; written into the uniform block every frame) */
-  params: Record<PKind, KindParams> = { spark: { ...KIND_DEFAULTS.spark }, debris: { ...KIND_DEFAULTS.debris }, dust: { ...KIND_DEFAULTS.dust }, casing: { ...KIND_DEFAULTS.casing }, sheet: { ...KIND_DEFAULTS.sheet }, rain: { ...KIND_DEFAULTS.rain } };
+  params: Record<PKind, KindParams> = { spark: { ...KIND_DEFAULTS.spark }, debris: { ...KIND_DEFAULTS.debris }, dust: { ...KIND_DEFAULTS.dust }, casing: { ...KIND_DEFAULTS.casing }, sheet: { ...KIND_DEFAULTS.sheet }, rain: { ...KIND_DEFAULTS.rain }, shard: { ...KIND_DEFAULTS.shard } };
   /** the three strongest lights at each lit particle get a shadow ray (else every light counts unshadowed — for measuring what the rays cost) */
   shadowRays = true;
+  /** glass at rest shows (game/shards.ts SHARDS.restFrost; flags bit 8): a resting shard is drawn as the little drift of grains it stands for — wider, frosted — instead of
+   *  one clear face lying flat, which against any floor was nothing. Off = every resting shard as it flies. */
+  shardRestFrost = true;
   /** particles collide with the trace grid's boxes at all (off = ballistic through everything, for measuring) */
   collide = true;
+  /** SPARKS OFF SURFACES (flags bit 24; shaders/particles.wgsl sparkBounce): a spark that meets a wall, the floor, the ceiling or what stands in the room comes back off it
+   *  lively — the spark kind's restitution and keep still set it (× the kernel's SPARK_E_GAIN, keep read as a Coulomb μ), each touch's share and way out hashed — and the
+   *  stretch of its birth frame is swept like every later step, so none starts its life behind a partition. Off = a spark's touch and birth as they were. */
+  sparkBounce = true;
   /** the splat is dimmed by the volumetric transmittance in front of it (and gets the in-scatter back) */
   fog = true;
   /** the splat runs at all (measurement: off = simulate but draw nothing, to price the draw by frame-time A/B — render-pass timestamps are unreliable on Metal) */
   drawEnabled = true;
   /** live per-kind IMPULSE response (game/sheetModel.ts IMP_RESPONSE; the panel edits these, written into the block's ki rows every frame) */
-  impulseResponse: Record<PKind, ImpulseResponse> = { spark: { ...IMP_RESPONSE.spark }, debris: { ...IMP_RESPONSE.debris }, dust: { ...IMP_RESPONSE.dust }, casing: { ...IMP_RESPONSE.casing }, sheet: { ...IMP_RESPONSE.sheet }, rain: { ...IMP_RESPONSE.rain } };
+  impulseResponse: Record<PKind, ImpulseResponse> = { spark: { ...IMP_RESPONSE.spark }, debris: { ...IMP_RESPONSE.debris }, dust: { ...IMP_RESPONSE.dust }, casing: { ...IMP_RESPONSE.casing }, sheet: { ...IMP_RESPONSE.sheet }, rain: { ...IMP_RESPONSE.rain }, shard: { ...SHARD_IMP } };
   /** impulses gate particles further than half a metre by their occlusion ray when the record asks (measurement: off = every record applied unoccluded, to price the rays) */
   impulseOcclusion = true;
   stats: ParticleStats = { alive: 0, asleep: 0, bounces: 0, killedInside: 0, kicked: 0, windWoken: 0, live: [0, 0], born: 0, records: 0, impulses: 0, winds: 0, emitted: 0, perSec: 0, droppedRecs: 0, droppedBirths: 0, impQueued: 0, impMerged: 0, impDropped: 0, impFrames: 0, impIdle: 0, impRefused: 0 };
@@ -178,6 +195,12 @@ export class Particles {
    *  'none' = nothing bound (refraction off, or no copy texture) — the panel's word */
   rainSceneCopy: 'gbaa' | 'copy' | 'none' = 'none';
   private sceneDummy: GPUTexture; private sceneDummyView: GPUTextureView; private sceneSamp: GPUSampler;
+  /** SNOW GRAINS (game/snowFx.ts updateGrains; particles.wgsl grainStep): the air they ride — render/airField.ts's field, handed over by whoever built it (null = the
+   *  1×1 stand-in: still air) — and their eight numbers, written to the GPU when they change: [0] the wind's speed with no gust on it (m/s: what the pick-up is
+   *  measured against), [1] the radius about the view's middle they live in (m), [2] a grain's weight, [3] × the light a flake would show, [4] the small eddies'
+   *  share of the air's speed, [5] × the field's lift, [6] × the field's velocity = the blown snow's speed, [7] 1 = there is a field to read. Nothing here is read by shaders built without SNOW_GRAINS. */
+  readonly grainCfg = new Float32Array(28); private grainSent = new Float32Array(28).fill(NaN); private grainBuf!: GPUBuffer; private airView: GPUTextureView | null = null;
+  setAir(view: GPUTextureView | null) { if (view !== this.airView) { this.airView = view; this.bgSim = null; } }
   private simT = 0; private rateAcc = 0; private rateT = 0;
   /** what prepare() decided for this frame's dispatches / draw */
   private born = 0; private liveTotal = 0; private win: [number, number, number, number][] = [[RINGS[0].start, RINGS[0].size, 0, 0], [RINGS[1].start, RINGS[1].size, 0, 0]];
@@ -200,7 +223,10 @@ export class Particles {
       { binding: 0, visibility: CS, buffer: { type: 'storage' } },
       { binding: 1, visibility: CS, buffer: { type: 'uniform' } },
       { binding: 2, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },
+      { binding: 3, visibility: CS, texture: { sampleType: 'float', viewDimension: '2d' } },   // SNOW GRAINS: the air field's velocity over the level's floor (render/airField.ts; setAir — the 1×1 stand-in when there is none; read only under the prelude's SNOW_GRAINS)
+      { binding: 4, visibility: CS, buffer: { type: 'uniform' } },                             // … and the grains' numbers (grainCfg below)
     ] });
+    this.grainBuf = makeBuffer(device, 112, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'particleGrains');
     this.lDraw = device.createBindGroupLayout({ label: 'particlesDraw', entries: [
       { binding: 0, visibility: VS, buffer: { type: 'read-only-storage' } },
       { binding: 1, visibility: VS | FS, buffer: { type: 'uniform' } },
@@ -232,11 +258,27 @@ export class Particles {
           alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' } } },             // (the HDR target's own alpha stays what the composite wrote)
           { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] },   // the REACTIVE mask for the TAAU resolve (render/passes.ts react): how much of this pixel is a thing with no history — max over everything splatted here
         primitive: { topology: 'triangle-list' } }) ]);
+    cutSwap.add(this);
   }
+  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the two sim kernels (the ones that trace) a second time, behind the cut prelude
+  private cutSet = new ProgramSet();
+  private retuning: Promise<unknown> = Promise.resolve();   // (retune(): one at a time, in the order asked)
+  private cutBuilding: Promise<void> = Promise.resolve();   // (the second set under way: a retune waits for it, so the twins it leaves are never older than the tweak)
+  private tunedAs = particlesCommon + particlesSrc + particlesDrawSrc;   // the texts the installed programs were built from (retune skips a text that already runs)
+  buildCut(): Promise<void> { const run = this.buildCutNow(); this.cutBuilding = run.catch(() => { /* its caller has it */ }); return run; }
+  private async buildCutNow(): Promise<void> {
+    const d = this.device; const mod = makeShader(d, scenePrelude(true) + lightingCommon + tuned(particlesCommon) + windFieldSrc + tuned(particlesSrc), 'particlesCut');
+    const [pEmit, pUpdate] = await Promise.all([
+      computePipelineAsync(d, { label: 'particlesEmitCut', layout: this.simLay, compute: { module: mod, entryPoint: 'emit' } }),
+      computePipelineAsync(d, { label: 'particlesUpdateCut', layout: this.simLay, compute: { module: mod, entryPoint: 'update' } }) ]);
+    this.cutSet.set(this, { pEmit, pUpdate });
+  }
+  useCut(on: boolean) { this.cutSet.use(this, on); }
   /** Dev / measurement hook (tools/qa/trace-lab.js via main.ts __hotCommon): rebuild the two SIM kernels (emit + update — the ones that trace) from the CURRENT scene prelude + the bundled
    *  particle sources exactly as the constructor concatenates them, so a traversal variant under test reaches the particles' collision / lighting rays too. The splat is untouched. Both or
    *  neither: the old pipelines stay on an error. */
   async hotSwapSim(): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const d = this.device; const pre = scenePrelude() + lightingCommon + particlesCommon + windFieldSrc; const off = pre.split('\n').length - 1;
     const mod = d.createShaderModule({ code: pre + particlesSrc, label: 'particles-hot' });
     const info = await mod.getCompilationInfo();
@@ -251,6 +293,7 @@ export class Particles {
   /** Dev hook (main.ts __hotRain): rebuild ALL THREE pipelines from particle sources handed in (particles_common / particles / particles_draw as they are on disk) with the live preludes —
    *  the rain look's kernels and splat swapped under a staged storm without a reboot. All or nothing: the old pipelines stay on any error. */
   async hotSwapAll(commonSrc: string, simSrc: string, drawSrc: string, refractSrc: string = refractCommon): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const d = this.device; const preS = scenePrelude() + lightingCommon + commonSrc + windFieldSrc; const preD = scenePrelude() + commonSrc + refractSrc;
     const offS = preS.split('\n').length - 1, offD = preD.split('\n').length - 1;
     const modS = d.createShaderModule({ code: preS + simSrc, label: 'particles-hot' }); const modD = d.createShaderModule({ code: preD + drawSrc, label: 'particlesDraw-hot' });
@@ -260,10 +303,42 @@ export class Particles {
     const [pE, pU, pD] = await Promise.all([
       d.createComputePipelineAsync({ label: 'particlesEmit-hot', layout: this.simLay, compute: { module: modS, entryPoint: 'emit' } }),
       d.createComputePipelineAsync({ label: 'particlesUpdate-hot', layout: this.simLay, compute: { module: modS, entryPoint: 'update' } }),
-      d.createRenderPipelineAsync({ label: 'particlesDraw-hot', layout: this.drawLay, vertex: { module: modD, entryPoint: 'vs' },
-        fragment: { module: modD, entryPoint: 'fs', targets: [{ format: 'rgba16float', blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' } } },
-          { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] }, primitive: { topology: 'triangle-list' } }) ]);
+      d.createRenderPipelineAsync(this.drawDesc(modD, 'particlesDraw-hot')) ]);
     this.pEmit = pE; this.pUpdate = pU; this.pDraw = pD; this.simMod = modS; this.drawMod = modD;
+    return { ok: true, messages };
+  }
+  /** the splat's descriptor over a rebuilt module (hotSwapAll, retune): init()'s targets and blends */
+  private drawDesc(mod: GPUShaderModule, label: string): GPURenderPipelineDescriptor {
+    return { label, layout: this.drawLay, vertex: { module: mod, entryPoint: 'vs' },
+      fragment: { module: mod, entryPoint: 'fs', targets: [{ format: 'rgba16float', blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' }, alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' } } },
+        { format: 'r8unorm', blend: { color: { srcFactor: 'one', dstFactor: 'one', operation: 'max' }, alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'max' } }, writeMask: GPUColorWrite.RED }] }, primitive: { topology: 'triangle-list' } };
+  }
+  /** SCENE TWEAK PANEL (ui/sceneTweak.ts over render/shaderTune.ts): rebuild all three pipelines from the bundled texts as SHADER_TUNE has them now, with the live preludes, and the
+   *  cut twins of the two sim kernels where the second set exists — written into BOTH sets (no cutSwap.hot(): cut pieces stay cut). All or nothing: the old pipelines stay on any
+   *  error. One at a time, in the order asked, so the newest text is the one left installed. */
+  retune(): Promise<{ ok: boolean; messages: string[] }> {
+    const run = Promise.all([this.retuning, this.cutBuilding]).then(() => this.retuneNow());
+    this.retuning = run.catch(() => { /* its caller has it */ });
+    return run;
+  }
+  private async retuneNow(): Promise<{ ok: boolean; messages: string[] }> {
+    const d = this.device, common = tuned(particlesCommon), hasCut = !!this.cutSet.cut;
+    const preS = scenePrelude() + lightingCommon + common + windFieldSrc, preC = scenePrelude(true) + lightingCommon + common + windFieldSrc, preD = scenePrelude() + common + refractCommon;
+    const sim = tuned(particlesSrc), draw = tuned(particlesDrawSrc), as = common + sim + draw;
+    if (as === this.tunedAs) return { ok: true, messages: [] };
+    const mods = [{ tag: 'sim', mod: d.createShaderModule({ code: preS + sim, label: 'particles' }), off: preS.split('\n').length - 1 }, { tag: 'draw', mod: d.createShaderModule({ code: preD + draw, label: 'particlesDraw' }), off: preD.split('\n').length - 1 }];
+    if (hasCut) mods.push({ tag: 'sim (cut)', mod: d.createShaderModule({ code: preC + sim, label: 'particlesCut' }), off: preC.split('\n').length - 1 });
+    const infos = await Promise.all(mods.map(m => m.mod.getCompilationInfo()));
+    const messages = infos.flatMap((info, i) => info.messages.map(m => `${mods[i].tag} ${m.type} ${m.lineNum - mods[i].off}:${m.linePos} ${m.message}`));
+    if (infos.some(info => info.messages.some(m => m.type === 'error'))) return { ok: false, messages };
+    const modS = mods[0].mod, modD = mods[1].mod, modC = hasCut ? mods[2].mod : null;
+    const cp = (mod: GPUShaderModule, entryPoint: string, label: string) => d.createComputePipelineAsync({ label, layout: this.simLay, compute: { module: mod, entryPoint } });
+    try {
+      const [pEmit, pUpdate, pDraw, twins] = await Promise.all([cp(modS, 'emit', 'particlesEmit'), cp(modS, 'update', 'particlesUpdate'), d.createRenderPipelineAsync(this.drawDesc(modD, 'particlesDraw')),
+        modC ? Promise.all([cp(modC, 'emit', 'particlesEmitCut'), cp(modC, 'update', 'particlesUpdateCut')]) : null]);
+      this.cutSet.patch(this, { pEmit, pUpdate, pDraw }, twins ? { pEmit: twins[0], pUpdate: twins[1] } : null);
+    } catch (e) { return { ok: false, messages: [...messages, `pipeline: ${(e as Error)?.message ?? e}`] }; }
+    this.simMod = modS; this.drawMod = modD; this.tunedAs = as;
     return { ok: true, messages };
   }
 
@@ -297,7 +372,7 @@ export class Particles {
     const b = o.bias ?? ZERO3, e = o.eye ?? pos, up = o.up ?? 0;
     if (!(radius > 0) || !(strength > 0) || !isFinite(radius + strength + pos[0] + pos[1] + pos[2] + b[0] + b[1] + b[2] + e[0] + e[1] + e[2] + up)) { this.stats.impRefused++; return false; }
     this.stats.impQueued++;
-    const kinds = o.kinds ? kindMask(o.kinds) : KINDS_DEFAULT; const flags = o.occlude ? 1 : 0; const seed = hashU32(this.impSerial++ * 2246822519);
+    const kinds = o.kinds ? kindMask(o.kinds) : KINDS_DEFAULT; const flags = o.occlude ? 1 : 0; const seed = o.seed !== undefined ? o.seed >>> 0 : hashU32(this.impSerial++ * 2246822519);
     if (this.impN < MAX_IMPULSES) { this.setImp(this.imps[this.impN++], pos, radius, strength, up, b, e, kinds, flags, seed); return true; }
     // full: merge into the nearest close enough, else drop the weakest (this one included) — the array never grows
     let ni = -1, nd = IMPULSE_MERGE_M;
@@ -324,13 +399,10 @@ export class Particles {
    *  reference until the next call, packed at prepare() behind the impulses; an empty list = still air (nothing packed, nothing uploaded, the kernel's one branch). `knobs` =
    *  (sheet wake m/s, sheet kick ×, debris coupling), riding on every record. Allocates nothing; never wakes or moves anything by itself. */
   setWind(srcs: readonly WindGpuSource[], knobs: readonly [number, number, number]) { this.winds = srcs; this.windKnobs[0] = knobs[0]; this.windKnobs[1] = knobs[1]; this.windKnobs[2] = knobs[2]; }
-  get pendingWinds(): readonly WindGpuSource[] { return this.winds; }
   /** everything gone at once (encounter restart): the windows empty — nothing is simulated or drawn until fresh emits refill them (the slots' stale contents are never read: a window only ever grows over slots just written) */
   clear() { this.queue.length = 0; this.impN = 0; for (let r = 0; r < 2; r++) { this.tailMono[r] = this.headMono[r]; this.fifo[r].length = 0; } this.liveTotal = 0; this.born = 0; this.clearRain(); }
   /** the rain ring alone gone (the recycler switching off / the weather stopping): its window empties, its queue drops */
   clearRain() { this.rainQueue.length = 0; this.rainTail = this.rainHead; this.rainFifo.length = 0; this.rainWin[2] = this.rainTail % RAIN_RING.size; this.rainWin[3] = 0; this.rainStats.live = 0; }
-  /** slots the rain ring will simulate + draw next frame (QA / the panel) */
-  get rainWindow(): readonly [number, number, number, number] { return this.rainWin; }
   /** emits waiting for the next prepare() (QA reads it) */
   get pending(): readonly { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number }[] { return this.queue; }
   /** impulses waiting for the next prepare() (QA / the panel: live records of the fixed pool — read, do not keep) */
@@ -374,11 +446,13 @@ export class Particles {
       const b = (BLOCK_HDR_BYTES + n * REC_BYTES) / 4;
       f[b] = e.pos[0]; f[b + 1] = e.pos[1]; f[b + 2] = e.pos[2]; u[b + 3] = e.count;
       f[b + 4] = e.dir[0]; f[b + 5] = e.dir[1]; f[b + 6] = e.dir[2]; f[b + 7] = o.speed;
-      f[b + 8] = e.kind === 'sheet' ? (o.tumble ?? 6) : (o.radius ?? 0); f[b + 9] = o.aspect ?? 1; f[b + 10] = o.nrmJit ?? 0.35; u[b + 11] = born;   // posB: ring radius | the sheet's tumble cap, aspect (1 = every old emit exactly as it was), the sheet's normal scatter
+      const shardAsChip = e.kind === 'shard' && !glassBreakConfig.on;   // a build compiled without glass breaking has no shard branches (SHARDS_ON false): its glass flies and draws as a tinted chip (same LONG ring)
+      f[b + 8] = e.kind === 'sheet' || (e.kind === 'shard' && !shardAsChip) ? (o.tumble ?? 6) : (o.radius ?? 0); f[b + 9] = o.aspect ?? 1; f[b + 10] = o.nrmJit ?? 0.35; u[b + 11] = born;   // posB: ring radius | the sheet's tumble cap, aspect (1 = every old emit exactly as it was), the sheet's normal scatter
       const va = o.vadd ?? [0, 0, 0]; f[b + 12] = va[0]; f[b + 13] = va[1]; f[b + 14] = va[2]; u[b + 15] = SHAPE_ID[o.shape ?? 'cone'];
       f[b + 16] = o.spread ?? 0.5; f[b + 17] = o.life; f[b + 18] = o.size; f[b + 19] = o.speedJit ?? 0.55;
       f[b + 20] = o.lifeJit ?? 0.35; f[b + 21] = o.lift ?? 0; f[b + 22] = o.sizeJit ?? 0.3; f[b + 23] = o.posJit ?? 0;
-      u[b + 24] = (KIND_ID[e.kind] | (((o.owner ?? 0) & 255) << 8) | (ring << 16)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
+      u[b + 24] = ((shardAsChip ? KIND_ID.debris : KIND_ID[e.kind]) | (((o.owner ?? 0) & 255) << 8) | (ring << 16)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
+      if (e.kind === 'dust' && o.steam !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | (Math.round(Math.min(1, Math.max(0, o.steam)) * 254) << 24)) >>> 0;   // (STEAM: the top byte under 255 — EmitOpts.steam)
       born += e.count; n++; this.stats.emitted += e.count; this.rateAcc += e.count;
     }
     this.queue = waiting;   // (non-sparks first, then sparks, each in arrival order — what the next frame deals from)
@@ -403,6 +477,7 @@ export class Particles {
       f[b + 16] = o.spread ?? 0.5; f[b + 17] = o.life; f[b + 18] = o.size; f[b + 19] = o.speedJit ?? 0.55;
       f[b + 20] = o.lifeJit ?? 0.35; f[b + 21] = o.lift ?? 0; f[b + 22] = o.sizeJit ?? 0.3; f[b + 23] = o.posJit ?? 0;
       u[b + 24] = (KIND_ID[e.kind] | (((o.owner ?? 0) & 255) << 8) | (2 << 16)) >>> 0; u[b + 25] = e.seed >>> 0; u[b + 26] = base >>> 0; u[b + 27] = rgba8(o.color ?? [0.5, 0.5, 0.5]);
+      if (o.top !== undefined) u[b + 27] = ((u[b + 27] & 0xffffff) | ((Math.round(o.top) & 255) << 24)) >>> 0;   // (a rain-kind record's own top byte — EmitOpts.top: how a wisp of snow is drawn)
       born += cnt; rainBorn += cnt; n++; rainRecs++; this.rainStats.emitted += cnt;
     }
     this.rainQueue.length = 0;
@@ -426,7 +501,7 @@ export class Particles {
         tu[0] = this.rainWin[0]; tu[1] = this.rainWin[1]; tu[2] = this.rainWin[2]; tu[3] = lv;
         tf[4] = L.iso; tf[5] = L.fwdK; tf[6] = L.fwdG; tf[7] = L.glintK;                                            // rainCfg  (the phase + the glint's weight)
         tf[8] = L.glintRough; tf[9] = L.glintCap; tf[10] = L.gain; tf[11] = L.tailKeep;                              // rainCfgB (the glint's width / cap, the gain, the tail's share)
-        tf[12] = this.rainSceneCopy === 'none' ? 0 : L.refract; tf[13] = L.refractReachM; tf[14] = L.refractClamp; tf[15] = L.refractDepth;   // rainCfgC (refraction: 0 with nothing to sample; the probe's reach m; the fetch's luminance clamp; the depth guard m)
+        tf[12] = this.rainSceneCopy === 'none' ? 0 : Math.min(1, Math.max(0, L.refract)) + 2 * Math.round(100 * Math.min(1, Math.max(0, L.refractPaint))); tf[13] = L.refractReachM; tf[14] = L.refractClamp; tf[15] = L.refractDepth;   // rainCfgC (refraction: 0 with nothing to sample, + 2 × the paint a displaced read keeps in hundredths; the probe's reach m; the fetch's luminance clamp; the depth guard m)
         tf[16] = L.lenJit; tf[17] = L.brightJit; tf[18] = L.minPx + Math.min(4, Math.max(2, Math.round(L.refractTaps))) * 16; tf[19] = L.windK;      // rainCfgD (spread, the px floor + taps × 16, the wind's ×) …
         tf[20] = L.sheetAmp; tf[21] = Math.max(0.5, L.sheetLen); tf[22] = L.bandOffX; tf[23] = L.bandOffZ;          // rainCfgE (… and the sheets: amplitude, scale, running offset xz)
         tf[24] = Math.max(L.maxPx, L.minPx); tf[25] = Math.max(1, L.boostCap); tf[26] = Math.max(0.2, L.nearFadeM); tf[27] = L.beadAmp;   // rainCfgF (the width ceiling px, its brightness ×-cap, the near fade's reach, the beads' amplitude)
@@ -462,11 +537,14 @@ export class Particles {
         if (!(s.speed > 0)) continue;
         const b = (IMP_OFFSET + (ni + nw) * IMP_BYTES) / 4;
         if (s.kind === 'storm') {
-          const I = s.interior ?? [0, 0, 0, 0], A = s.annex ?? [0, 0, 0, 0];
+          // (ROOF BY ROOF, game/wind.ts WX_OWN.wind: the record's two rectangles are the level's first two roofs and iflags bit 5 sends the kernel to the Frame for the
+          // other two — frame.cardCfg.y / .z, where the rain's own test reads them (game/weather.ts writes the wind's roofs and the Frame's from one list); bit 4 = the
+          // rule is on at all: the wisps read the field. Neither bit: the record as it always was)
+          const R = s.roofs; const I = R ? R[0] : s.interior ?? [0, 0, 0, 0], A = R ? R[1] ?? [0, 0, 0, 0] : s.annex ?? [0, 0, 0, 0];
           f[b] = I[0]; f[b + 1] = I[1]; f[b + 2] = I[2]; f[b + 3] = I[3];
           f[b + 4] = s.dir[0]; f[b + 5] = s.dir[1]; f[b + 6] = s.dir[2]; f[b + 7] = s.speed;
           f[b + 8] = A[0]; f[b + 9] = A[1]; f[b + 10] = A[2]; f[b + 11] = A[3];
-          u[b + 14] = 2 | (1 << 2);
+          u[b + 14] = 2 | (1 << 2) | (s.field ? 16 : 0) | (R ? 32 : 0);
         } else {
           f[b] = s.pos[0]; f[b + 1] = s.pos[1]; f[b + 2] = s.pos[2]; f[b + 3] = s.reach;
           f[b + 4] = s.dir[0]; f[b + 5] = s.dir[1]; f[b + 6] = s.dir[2]; f[b + 7] = s.speed;
@@ -479,7 +557,7 @@ export class Particles {
     }
     if (ni + nw > 0) this.device.queue.writeBuffer(this.emitBuf, IMP_OFFSET, this.block, IMP_OFFSET, (ni + nw) * IMP_BYTES);
     // header: counts, seed, flags (+ the impulse and wind counts), windows, per-kind numbers, per-kind impulse response
-    u[0] = n; u[1] = born; u[2] = hashU32(this.frameNo + 7) ; u[3] = (this.shadowRays ? 1 : 0) | (this.collide ? 2 : 0) | (this.fog ? 4 : 0) | (ni << 8) | (nw << 16);
+    u[0] = n; u[1] = born; u[2] = hashU32(this.frameNo + 7) ; u[3] = (this.shadowRays ? 1 : 0) | (this.collide ? 2 : 0) | (this.fog ? 4 : 0) | (this.shardRestFrost ? 8 : 0) | (ni << 8) | (nw << 16) | (this.sparkBounce ? 0x1000000 : 0);
     for (let r = 0; r < 2; r++) for (let k = 0; k < 4; k++) u[4 + r * 4 + k] = this.win[r][k] >>> 0;
     P_KINDS.forEach((k, i) => { const p = this.params[k]; const o = KP_FLOAT + i * 8; f[o] = p.gravity; f[o + 1] = p.drag; f[o + 2] = p.restitution; f[o + 3] = p.keep; f[o + 4] = p.sleepV; f[o + 5] = p.holdOrFade; f[o + 6] = p.shutterOrGrowth; f[o + 7] = p.brightOrOpacity;
       const q = this.impulseResponse[k]; const oi = KI_FLOAT + i * 4; f[oi] = q.gain; f[oi + 1] = q.upK; f[oi + 2] = q.vMax; f[oi + 3] = q.wake; });
@@ -497,9 +575,12 @@ export class Particles {
   encodeUpdate(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, diceView: GPUTextureView, ts?: GPUComputePassTimestampWrites) {
     if (this.born === 0 && this.liveTotal === 0) return;
     if (!this.bgSim || this.bgSimDice !== diceView) {
-      this.bgSim = this.device.createBindGroup({ layout: this.lSim, entries: [{ binding: 0, resource: { buffer: this.pool } }, { binding: 1, resource: { buffer: this.emitBuf } }, { binding: 2, resource: diceView }] });
+      this.bgSim = this.device.createBindGroup({ layout: this.lSim, entries: [{ binding: 0, resource: { buffer: this.pool } }, { binding: 1, resource: { buffer: this.emitBuf } }, { binding: 2, resource: diceView },
+        { binding: 3, resource: this.airView ?? this.sceneDummyView }, { binding: 4, resource: { buffer: this.grainBuf } }] });
       this.bgSimDice = diceView;
     }
+    { const c = this.grainCfg, was = this.grainSent; let same = true; for (let i = 0; i < c.length; i++) if (c[i] !== was[i]) { same = false; break; }
+      if (!same) { was.set(c); this.device.queue.writeBuffer(this.grainBuf, 0, c); } }
     const p = enc.beginComputePass({ label: 'particles', timestampWrites: ts });
     p.setBindGroup(0, sceneBG); p.setBindGroup(1, this.bgSim);
     if (this.born > 0) { p.setPipeline(this.pEmit); p.dispatchWorkgroups(Math.ceil(this.born / 64)); }

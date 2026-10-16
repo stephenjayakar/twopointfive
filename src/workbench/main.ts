@@ -11,21 +11,21 @@
 // __viewer __char __step __gizmo __rig __rigSource __toss __cans __vtime __tac __hold __long __M __vrt (viewer; __vrt = the viewer Runtime — __rt is the GAME page's
 // RT-reflection knobs), __shot __engine __cam (shared), + __wb.
 import { initGpu, showFatal } from '../gpu/device';
-import { Engine, defaultSettings } from '../engine';
-import { Input } from '../game/input';
+import { Engine } from '../engine';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Vec3, v3, clamp } from '../math/vec';
 import { RIG, rigSource } from '../game/rigProps';
+import { gearFromQuery, gearText } from '../game/gear';
 import { HOLD, LONG, SignalKind, Stance, LongStance } from '../game/character';
 import { createEditorApp, EditorApp } from '../editor/app';
 import * as persist from '../editor/persist';
 import { Runtime } from '../viewer/runtime';
 import { Ui as ViewerUi } from '../viewer/ui';
 import { SCENES, VariantDef, findVariant } from '../viewer/scenes';
-import { DEBUG_VIEWS } from '../viewer/state';
 import { longSource } from '../viewer/sheet';
 import { frameCanvas, postShot } from '../ui/capture';
 import { StaticCollision } from '../scene/collision';
+import { LOOK, lookOfQuery } from '../scene/look';
 
 export type Mode = 'level' | 'materials' | 'chars' | 'fx' | 'motion';
 export const MODES: { id: Mode; n: number; label: string; icon: string; title: string }[] = [
@@ -55,6 +55,8 @@ async function main() {
   // ---------------------------------------------------------------- quality: ONE controller (the runtime's, which has the real smoke) — pinned presets like both pages
   let quality: Quality | null = null;
   let prefs: any = {}; try { prefs = JSON.parse(localStorage.getItem(persist.LS.prefs) ?? '{}'); } catch { /* */ }
+  gearFromQuery(new URLSearchParams(location.search));   // the workbench stages the kit as the page ships it (game/gear.ts; the game page's own line is host/profile.ts pageSwitches): the 2010s carbine and goggles, ?oldgear = the Splinter Cell kit
+  LOOK.on = lookOfQuery(new URLSearchParams(location.search));   // (the default look, as the game page boots it — host/profile.ts pageSwitches: the staged men wear the cast and the material tables the game draws; ?look=plain = the old cast. Set before the runtime fetches the cast)
   const qp = new URLSearchParams(location.search).get('quality');
   let qName: QualityName = (QUALITY_NAMES as string[]).includes(qp ?? '') ? qp as QualityName : (QUALITY_NAMES as string[]).includes(prefs.quality) ? prefs.quality : 'medium';
   const applyQuality = (name?: string): string => { if (name && (QUALITY_NAMES as string[]).includes(name)) { qName = name as QualityName; quality?.apply(qName); prefs.quality = name; try { localStorage.setItem(persist.LS.prefs, JSON.stringify(prefs)); } catch { /* */ } } return quality?.current ?? qName; };
@@ -82,6 +84,9 @@ async function main() {
   /** the staging variant stood in the level (null = the level alone), and the studio scene the figure modes go back to */
   let staged: { scene: string; variant: string } | null = null;
   let studioScene = { scene: 'sam', variant: 'idle' }; let fxScene = { scene: 'fx', variant: 'muzzle' };
+  /** the studio scene the URL named at boot, whichever figure mode it came with (#mode=chars&scene=fx/nv, the old #fx/nv, #mode=fx&scene=sam/walk — what the page itself writes
+   *  when a variant is picked across the two modes): the boot lands ON it, where the mode's remembered scene used to be applied over it */
+  let bootScene: { scene: string; variant: string } | null = null;
   /** is the figure simulated + drawn this frame */
   const actorOn = () => world === 'studio' || staged !== null;
   function useWorld(w: 'level' | 'studio') {
@@ -96,8 +101,7 @@ async function main() {
   // ---------------------------------------------------------------- the viewer's chrome, re-housed: the tree on the left, its outliner + sheet in the right column
   let booting = true;
   const vui = new ViewerUi(rt, {
-    hash: false, staging: true, hostSized: true,
-    help: 'RMB orbit · MMB / Space-drag pan · wheel zoom · click a prop to select (U parent, Esc deselect) · F frame · T plan · Y turntable · P pause · K shoot · X die · N nv · L light · G guard · C carbine · 0/1/2/4 kit · Tab inspector · ⚙ the rest · Ctrl+1‥5 modes',
+    hash: false, staging: true, hostSized: true,   // (the help line under the stage is the chrome's own: viewer/ui.ts HELP — it words THIS file's figureKeys / figureCamera)
     els: { app: app$, scenes: $('scenes'), variants: $('variants'), strip: $('strip'), gaitline: $('gaitline'), alloff: $('alloff'), copygait: $('copygait'), hud: $('hud'), help: $('help-chars'), log: $('log'), outbox: $('outbox'), rigout: $('rigout'), outwhat: $('outwhat'), gear: $('gear'), gearbtn: $('gearbtn'), allknobs: $('allknobs'), inspbtn: $('inspbtn'), inspector: $('inspector'), grip: $('inspgrip'), splitter: $('splitter-chars'), outliner: $('outliner-chars'), props: $('props-chars'), proptitle: $('proptitle-chars'), outclose: $('outclose'), outcopy: $('outcopy'), allclose: $('allclose') },
     onScene: (s, v, def) => onScene(s, v, def),
   });
@@ -127,6 +131,7 @@ async function main() {
 
   // ---------------------------------------------------------------- the scene tree (left column, every mode): scenes ▸ variants + 'the level alone'
   const tree = $('scenetree'); const expanded = new Set<string>(['staging']);
+  app.ed.doc.onChange((_c, why) => { if (why === 'load') paintTree(); });   // (another document: the staging group comes and goes with the office family)
   function paintTree() {
     tree.textContent = '';
     const st = rt.st; const cur = `${st.sceneId}/${st.variantId}`;
@@ -137,11 +142,13 @@ async function main() {
       tree.append(r);
     };
     row(staged ? '○ the level alone (dismiss the figure)' : '● the level alone — no staged figure', 0, { on: false, dim: !staged && isLevelMode(mode), title: 'stand nobody in the level: Level / Materials render the level as ever; Characters / Effects go back to the studio', run: () => unstage() });
+    const officeDoc = (n => n === 'office' || n.startsWith('office-'))(app.ed.data.name);   // (scene/level.ts isOfficeFamily's rule) the staging scenes' marks are the OFFICE's coordinates: on any other document the man would stand wherever those metres fall
     for (const s of vui.scenes()) {
+      if (s.staging && !officeDoc && !staged) continue;
       const open = expanded.has(s.id) || (isFigureMode(mode) && s.id === st.sceneId && actorOn()) || (!!staged && !!s.staging);   // (the level modes keep the studio scenes folded: there the tree is for staging)
-      row(`${s.label}${s.staging ? '  · in the level' : ''}`, 0, { grp: s.id, title: s.title });
+      row(`${s.label}${s.staging ? '  · in the level' : ''}`, 0, { grp: s.id, title: gearText(s.title) });
       if (!open) continue;
-      for (const v of s.variants) { const key = `${s.id}/${v.id}`; row(v.label, 1, { on: key === cur && actorOn(), staged: !!staged && key === `${staged.scene}/${staged.variant}`, title: v.title, run: () => vui.applyScene(s.id, v.id) }); }
+      for (const v of s.variants) { const key = `${s.id}/${v.id}`; row(v.label, 1, { on: key === cur && actorOn(), staged: !!staged && key === `${staged.scene}/${staged.variant}`, title: gearText(v.title), run: () => vui.applyScene(s.id, v.id) }); }
     }
     $('scenelabel').textContent = `${SCENES.find(s => s.id === st.sceneId)?.label ?? st.sceneId} ▸ ${vui.variantDef?.label ?? st.variantId}${staged ? '  (staged in the level)' : ''}`;
   }
@@ -149,7 +156,9 @@ async function main() {
   // ---------------------------------------------------------------- modes
   const rail = $('rail');
   { const h = document.createElement('div'); h.className = 'rh'; h.textContent = 'MODE'; rail.append(h);
-    for (const M of MODES) { const b = document.createElement('button'); b.className = 'rb'; b.dataset.mode = M.id; b.title = `${M.title} — Ctrl+${M.n}${M.n <= 5 ? ` (or ${M.n} in the level modes)` : ''}`; const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = M.icon; const k = document.createElement('span'); k.className = 'k'; k.textContent = String(M.n); b.append(ic, document.createTextNode(M.label), k); b.onclick = () => setMode(M.id); rail.append(b); } }
+    for (const M of MODES) { if (M.id === 'motion') continue;   // (a stub with nothing in it yet: kept off the rail until it has something; Ctrl+5 and #mode=motion still reach it)
+      const b = document.createElement('button'); b.className = 'rb'; b.dataset.mode = M.id; b.title = `${M.title} — Ctrl+${M.n}${M.n <= 5 ? ` (or ${M.n} in the level modes)` : ''}`; const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = M.icon; const k = document.createElement('span'); k.className = 'k'; k.textContent = String(M.n); b.append(ic, document.createTextNode(M.label), k); b.onclick = () => setMode(M.id); rail.append(b); }
+    { const a = document.createElement('a'); a.className = 'rb back'; a.href = 'index.html'; a.title = 'back to the game (its title screen ▸ Extras lists this page)'; const ic = document.createElement('span'); ic.className = 'ic'; ic.textContent = '‹'; a.append(ic, document.createTextNode('Game')); rail.append(a); } }
   function paintChrome() {
     app$.dataset.mode = mode;
     for (const e of Array.from(document.querySelectorAll<HTMLElement>('[data-modes]'))) e.classList.toggle('wbhide', !e.dataset.modes!.split(/\s+/).includes(mode));
@@ -162,7 +171,7 @@ async function main() {
     if (m === 'materials') { const pu = app.ui.paintUi; if (pu.tab === 'props') pu.show('materials'); }
     else if (m === 'level') { /* the tabs stay where the user left them */ }
     if (isFigureMode(m) && !staged) {   // the studio: (re)apply the mode's remembered scene when the current one is not of this mode
-      const want = m === 'fx' ? fxScene : studioScene; const st = rt.st;
+      const want = o.boot && bootScene ? bootScene : m === 'fx' ? fxScene : studioScene; const st = rt.st;
       if (world !== 'studio' || `${st.sceneId}/${st.variantId}` !== `${want.scene}/${want.variant}` || (m === 'fx') !== FX_SCENE(st.sceneId, st.variantId)) { booting = true; try { vui.applyScene(want.scene, want.variant); } finally { booting = false; } }
     }
     settleWorld();
@@ -234,7 +243,8 @@ async function main() {
   window.__cans = { smokeCan: () => rt.smokeCan(), stunCan: () => rt.stunCan() };
   window.__tac = {
     stance: (name: Stance, side?: -1 | 1) => rt.setStance(name, side), peek: (v: number) => { rt.st.peek = clamp(v, 0, 1); },
-    kick: () => rt.fireTac(0), signal: (k: SignalKind) => { const i = ['hold', 'go', 'rally'].indexOf(k); if (i < 0) throw new Error('signal: hold | go | rally'); rt.fireTac(i + 1); }, flinch: () => rt.fireTac(4), throw: () => rt.fireTac(5),
+    kick: () => rt.fireTac(0), signal: (k: SignalKind) => { if (k === 'squeeze') { rt.fireTac(12); return; }   // (the stack's shoulder squeeze: TAC_SHOTS' last entry — the list is append-only, so it is not beside the other three)
+      const i = ['hold', 'go', 'rally'].indexOf(k); if (i < 0) throw new Error('signal: hold | go | rally | squeeze'); rt.fireTac(i + 1); }, flinch: () => rt.fireTac(4), throw: () => rt.fireTac(5),
     lockpick: (on: boolean) => { rt.st.lockpick = on; }, loop: (on: boolean, shot?: number, every?: number) => { rt.st.tacLoop = on; if (shot !== undefined) rt.st.tacShot = shot; if (every) rt.st.tacEvery = every; },
     at: (t: number, shot?: 'kick' | SignalKind | 'flinch' | 'throw') => rt.poseAt(t, shot), resume: () => { rt.st.paused = false; },
     long: (on: boolean, name?: LongStance | null) => rt.setLong(on, name),
@@ -257,12 +267,12 @@ async function main() {
   const hit = (c: string) => input.hit(c);
   function modeKeys() {
     const ctrl = input.down('ControlLeft') || input.down('ControlRight'); const typingFree = isLevelMode(mode) || mode === 'motion';
+    if (hit('Backquote')) toggleInspector();   // backtick = the tool panel on every page (the game's debugger, this page's inspector), in every mode; Tab does nothing here and no key steps the debug views (⚙ ▸ Renderer ▸ debug view in the figure modes, the top bar's 'view' list in the level modes)
     for (const M of MODES) if (hit(`Digit${M.n}`) && (ctrl || (typingFree && !app.ui.paintUi.painterFocus))) { setMode(M.id); return true; }
     return false;
   }
   function figureKeys(dt: number) {
     void dt;
-    if (hit('Tab')) toggleInspector();
     if (hit('Escape')) { if (vui.overlayOpen) vui.closeOverlays(); else vui.select(null); }
     if (hit('KeyP')) rt.st.paused = !rt.st.paused;
     if (hit('KeyU')) rt.gizmo.selectParent();
@@ -278,8 +288,7 @@ async function main() {
     if (hit('KeyF')) { rt.frame('body'); }
     if (hit('KeyH')) { rt.frame('head'); }
     if (hit('Digit0')) rt.st.slot = 0; if (hit('Digit1')) rt.st.slot = 1; if (hit('Digit2')) rt.st.slot = 2;
-    if (hit('Digit4')) { const st = rt.st; st.rifle = (st.rifle + 1) % 3; if (st.rifle === 2) { st.guard = false; st.carbine = false; } msg(['FN2000: not carried', 'FN2000: slung across the back', 'FN2000: in both hands (the long-gun solve, its foregrip point)'][st.rifle]); }
-    if (hit('Backquote')) S.debugView = (S.debugView + (input.down('ShiftLeft') ? DEBUG_VIEWS.length - 1 : 1)) % DEBUG_VIEWS.length;
+    if (hit('Digit4')) { const st = rt.st; st.rifle = (st.rifle + 1) % 3; if (st.rifle === 2) { st.guard = false; st.carbine = false; } msg(gearText(['FN2000: not carried', 'FN2000: slung across the back', 'FN2000: in both hands (the long-gun solve, its foregrip point)'][st.rifle])); }
     if (hit('BracketLeft')) S.exposure /= 1.25;
     if (hit('BracketRight')) S.exposure *= 1.25;
   }
@@ -294,7 +303,7 @@ async function main() {
     const wheel = input.wheel + input.wheelCtrl; if (wheel) view.zoom(wheel, mx, my, 0);
     canvas.style.cursor = rt.gizmo.busy ? 'grabbing' : panning ? 'move' : rmb ? 'grabbing' : '';
   }
-  function toggleInspector() { const hid = !app$.classList.contains('insp-hidden'); app$.classList.toggle('insp-hidden', hid); $('inspbtn').classList.toggle('on', !hid); }
+  function toggleInspector() { const hid = !app$.classList.contains('insp-hidden'); app$.classList.toggle('insp-hidden', hid); $('inspbtn').classList.toggle('on', !hid); if (hid) msg('right-hand panel hidden (` shows it again)'); }
   $('inspbtn').onclick = () => toggleInspector();
   canvas.addEventListener('mousedown', () => { if (!isFigureMode(mode)) return; const ae = document.activeElement; if (ae instanceof HTMLElement && ae.closest('.pnl, #topbar')) ae.blur(); input.focusGame(); });
 
@@ -319,7 +328,7 @@ async function main() {
 
   // ---------------------------------------------------------------- boot: the URL's mode + scene, else Level on the office
   const startScene = url.scene ? (findVariant(url.scene, url.variant ?? '') ?? (SCENES.find(s => s.id === url.scene) ? { scene: SCENES.find(s => s.id === url.scene)!, variant: SCENES.find(s => s.id === url.scene)!.variants[0] } : null)) : null;
-  if (startScene) { const stg = !!startScene.scene.staging; if (!stg && !url.mode) mode = 'chars'; vui.applyScene(startScene.scene.id, startScene.variant.id, url.sel ?? undefined); }
+  if (startScene) { const stg = !!startScene.scene.staging; if (!stg && !url.mode) mode = 'chars'; if (!stg) bootScene = { scene: startScene.scene.id, variant: startScene.variant.id }; vui.applyScene(startScene.scene.id, startScene.variant.id, url.sel ?? undefined); }
   booting = false;
   if (url.paint && Object.hasOwn(ed.data.materials, url.paint)) app.ui.paintUi.paint = url.paint;
   loading.style.display = 'none';

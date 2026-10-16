@@ -1,0 +1,1425 @@
+{
+ "tool": "framecost",
+ "v": 1,
+ "commit": "dee9595",
+ "dirty": false,
+ "when": "2026-10-08T17:27:05.107Z",
+ "runtime": "bun 1.4.2",
+ "cpu": "4 × Intel(R) Xeon(R) Processor @ 2.10GHz",
+ "jobs": 1,
+ "seeds": [
+  1
+ ],
+ "cap": 300,
+ "minutes": 2,
+ "deep": true,
+ "gpu": false,
+ "warm": 60,
+ "arms": {
+  "shipped": "as the page opens: cast, motion pass, turn weight, glass, defenders' frags, destruction (where the build has it)"
+ },
+ "missions": [
+  {
+   "id": "depot-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 96,
+     "digest": "eb6e67b0",
+     "frames": 5759
+    }
+   ],
+   "frames": 5699,
+   "page": {
+    "mean": 2.542,
+    "p50": 2.31,
+    "p95": 3.642,
+    "p99": 6.394,
+    "max": 51.409
+   },
+   "update": {
+    "mean": 2.211,
+    "p50": 1.985,
+    "p95": 3.284,
+    "p99": 6.047,
+    "max": 51.014
+   },
+   "stepped": {
+    "mean": 2.298,
+    "p50": 2.074,
+    "p95": 3.417,
+    "p99": 6.082,
+    "max": 51.084
+   },
+   "uploadPerCall": 0.325,
+   "warmMax": 263.353,
+   "buckets": {
+    "update: head (journal, clocks)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.004,
+     "p99": 0.011,
+     "max": 0.192
+    },
+    "player (aim, interact, move, fire)": {
+     "mean": 0.09,
+     "p50": 0.086,
+     "p95": 0.141,
+     "p99": 0.184,
+     "max": 3.789
+    },
+    "squad: order menu + orders": {
+     "mean": 0.061,
+     "p50": 0.057,
+     "p95": 0.116,
+     "p99": 0.165,
+     "max": 2.572
+    },
+    "squad: door tools": {
+     "mean": 0.03,
+     "p50": 0.013,
+     "p95": 0.087,
+     "p99": 0.123,
+     "max": 7.337
+    },
+    "suppression": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.006,
+     "p99": 0.012,
+     "max": 0.413
+    },
+    "gear: rings, 40 mm, frags": {
+     "mean": 0.01,
+     "p50": 0.007,
+     "p95": 0.021,
+     "p99": 0.061,
+     "max": 0.902
+    },
+    "guards: weapons dealt, anim flags": {
+     "mean": 0.007,
+     "p50": 0.004,
+     "p95": 0.01,
+     "p99": 0.027,
+     "max": 4.608
+    },
+    "scenario (director, breach, room clear, rescue)": {
+     "mean": 0.008,
+     "p50": 0.006,
+     "p95": 0.014,
+     "p99": 0.045,
+     "max": 0.157
+    },
+    "pair (two person stealth)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.006,
+     "max": 0.061
+    },
+    "squad: entry points, cleared rooms, cover": {
+     "mean": 0.015,
+     "p50": 0.007,
+     "p95": 0.044,
+     "p99": 0.189,
+     "max": 0.523
+    },
+    "room fight (both sides: watch, fear, shoot)": {
+     "mean": 0.076,
+     "p50": 0.062,
+     "p95": 0.127,
+     "p99": 0.194,
+     "max": 5.152
+    },
+    "tactics (flank, lone corner, doorways)": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.015,
+     "p99": 0.039,
+     "max": 0.139
+    },
+    "needs (patrol variation)": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.003,
+     "p99": 0.005,
+     "max": 0.054
+    },
+    "guards: updateGuard (senses, state, feet)": {
+     "mean": 0.144,
+     "p50": 0.121,
+     "p95": 0.261,
+     "p99": 0.37,
+     "max": 3.346
+    },
+    "civilians": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0.001,
+     "p99": 0.001,
+     "max": 0.045
+    },
+    "escalation + QRF": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.012,
+     "p99": 0.037,
+     "max": 0.252
+    },
+    "doors": {
+     "mean": 0.047,
+     "p50": 0.043,
+     "p95": 0.08,
+     "p99": 0.113,
+     "max": 2.991
+    },
+    "mission": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.011,
+     "max": 0.129
+    },
+    "props (furniture)": {
+     "mean": 0.009,
+     "p50": 0.007,
+     "p95": 0.015,
+     "p99": 0.041,
+     "max": 0.174
+    },
+    "destruction (heat, debris)": {
+     "mean": 0.006,
+     "p50": 0.004,
+     "p95": 0.013,
+     "p99": 0.064,
+     "max": 0.761
+    },
+    "destruction: wall charge, fire at cover": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.015,
+     "p99": 0.038,
+     "max": 0.231
+    },
+    "destruction: both sides react to a break": {
+     "mean": 0.006,
+     "p50": 0.002,
+     "p95": 0.013,
+     "p99": 0.058,
+     "max": 4.607
+    },
+    "fixtures + devices": {
+     "mean": 0.011,
+     "p50": 0.007,
+     "p95": 0.016,
+     "p99": 0.041,
+     "max": 3.981
+    },
+    "weather, wet, wind, moths, rain fx (game half)": {
+     "mean": 0.032,
+     "p50": 0.025,
+     "p95": 0.059,
+     "p99": 0.091,
+     "max": 3.009
+    },
+    "items (throwables, drops)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.009,
+     "max": 0.254
+    },
+    "glass (stars, breaking, shards)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.01,
+     "max": 0.434
+    },
+    "fog of war": {
+     "mean": 0.033,
+     "p50": 0.028,
+     "p95": 0.061,
+     "p99": 0.09,
+     "max": 0.226
+    },
+    "dynamic boxes (leaves, props, debris, rig props, fx)": {
+     "mean": 0.161,
+     "p50": 0.141,
+     "p95": 0.213,
+     "p99": 0.263,
+     "max": 6.406
+    },
+    "tracers + sparks": {
+     "mean": 0.004,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.053,
+     "max": 0.287
+    },
+    "smoke pushes": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.006,
+     "p99": 0.008,
+     "max": 0.074
+    },
+    "characters → skin instances + shadow proxies": {
+     "mean": 0.077,
+     "p50": 0.056,
+     "p95": 0.095,
+     "p99": 0.115,
+     "max": 17.263
+    },
+    "sensors (meter + smoke line asks)": {
+     "mean": 0.009,
+     "p50": 0.008,
+     "p95": 0.016,
+     "p99": 0.038,
+     "max": 0.157
+    },
+    "update: tail (cues, checkpoints, journal)": {
+     "mean": 0.009,
+     "p50": 0.005,
+     "p95": 0.017,
+     "p99": 0.048,
+     "max": 0.883
+    },
+    "step: camera": {
+     "mean": 0.004,
+     "p50": 0.004,
+     "p95": 0.006,
+     "p99": 0.014,
+     "max": 0.074
+    },
+    "step: lights.update": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.007,
+     "max": 0.261
+    },
+    "step: box list pack + trace grid (world.upload)": {
+     "mean": 0.324,
+     "p50": 0.325,
+     "p95": 0.367,
+     "p99": 0.469,
+     "max": 2.639
+    },
+    "step: smoke solver update (CPU half)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: frame uniforms, probe, submit (the rest of Engine.render)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: light list + reach / glass masks upload": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: decal list": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: smoke solver encode": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: g-buffer + mesh shadows encode, motion snapshot": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: cascades encode": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: lighting passes encode": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "svc: animation + skeleton (Character.update)": {
+     "mean": 0.85,
+     "p50": 0.791,
+     "p95": 1.218,
+     "p99": 1.557,
+     "max": 11.154
+    },
+    "svc: nav paths (A*, walkable, nearest free)": {
+     "mean": 0.003,
+     "p50": 0,
+     "p95": 0.018,
+     "p99": 0.046,
+     "max": 0.783
+    },
+    "svc: sound propagation": {
+     "mean": 0.007,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.222,
+     "max": 2.476
+    },
+    "svc: static line tests (sight, fire, reach)": {
+     "mean": 0.407,
+     "p50": 0.301,
+     "p95": 0.984,
+     "p99": 1.675,
+     "max": 10.646
+    },
+    "svc: circle collide (feet vs walls)": {
+     "mean": 0.01,
+     "p50": 0.008,
+     "p95": 0.019,
+     "p99": 0.045,
+     "max": 0.174
+    },
+    "svc: box world raycast (cursor, lasers, rounds)": {
+     "mean": 0.031,
+     "p50": 0.031,
+     "p95": 0.049,
+     "p99": 0.079,
+     "max": 0.133
+    },
+    "destruction: light reach masks re-decided after a wall breaks (Game.reachTick)": {
+     "mean": 0.019,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 11.497
+    },
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0.088
+    },
+    "headless only: CPU light estimate standing in for the GPU light probe": {
+     "mean": 0.328,
+     "p50": 0.299,
+     "p95": 0.459,
+     "p99": 0.568,
+     "max": 12.565
+    }
+   },
+   "groups": {
+    "(probe stand-in)": {
+     "mean": 0.328,
+     "p50": 0.299,
+     "p95": 0.459,
+     "p99": 0.568,
+     "max": 12.565
+    },
+    "animation": {
+     "mean": 0.85,
+     "p50": 0.791,
+     "p95": 1.218,
+     "p99": 1.557,
+     "max": 11.154
+    },
+    "line tests": {
+     "mean": 0.438,
+     "p50": 0.333,
+     "p95": 1.012,
+     "p99": 1.703,
+     "max": 10.694
+    },
+    "nav paths": {
+     "mean": 0.003,
+     "p50": 0,
+     "p95": 0.018,
+     "p99": 0.046,
+     "max": 0.783
+    },
+    "sound": {
+     "mean": 0.007,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0.222,
+     "max": 2.476
+    },
+    "guards AI": {
+     "mean": 0.164,
+     "p50": 0.137,
+     "p95": 0.293,
+     "p99": 0.412,
+     "max": 4.81
+    },
+    "room fight": {
+     "mean": 0.076,
+     "p50": 0.062,
+     "p95": 0.127,
+     "p99": 0.194,
+     "max": 5.152
+    },
+    "squad": {
+     "mean": 0.114,
+     "p50": 0.098,
+     "p95": 0.219,
+     "p99": 0.348,
+     "max": 7.442
+    },
+    "tactics": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.015,
+     "p99": 0.039,
+     "max": 0.139
+    },
+    "player": {
+     "mean": 0.09,
+     "p50": 0.086,
+     "p95": 0.141,
+     "p99": 0.184,
+     "max": 3.789
+    },
+    "feet vs walls": {
+     "mean": 0.01,
+     "p50": 0.008,
+     "p95": 0.019,
+     "p99": 0.045,
+     "max": 0.174
+    },
+    "doors, props": {
+     "mean": 0.057,
+     "p50": 0.052,
+     "p95": 0.093,
+     "p99": 0.124,
+     "max": 3.004
+    },
+    "destruction": {
+     "mean": 0.039,
+     "p50": 0.012,
+     "p95": 0.05,
+     "p99": 0.13,
+     "max": 17.033
+    },
+    "glass": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.01,
+     "max": 0.434
+    },
+    "gear": {
+     "mean": 0.016,
+     "p50": 0.012,
+     "p95": 0.039,
+     "p99": 0.093,
+     "max": 0.909
+    },
+    "weather": {
+     "mean": 0.032,
+     "p50": 0.025,
+     "p95": 0.059,
+     "p99": 0.091,
+     "max": 3.009
+    },
+    "pair": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.006,
+     "max": 0.061
+    },
+    "fog of war": {
+     "mean": 0.033,
+     "p50": 0.028,
+     "p95": 0.061,
+     "p99": 0.09,
+     "max": 0.226
+    },
+    "chars to GPU": {
+     "mean": 0.077,
+     "p50": 0.056,
+     "p95": 0.095,
+     "p99": 0.115,
+     "max": 17.263
+    },
+    "dyn boxes": {
+     "mean": 0.163,
+     "p50": 0.143,
+     "p95": 0.217,
+     "p99": 0.273,
+     "max": 6.41
+    },
+    "box upload": {
+     "mean": 0.324,
+     "p50": 0.325,
+     "p95": 0.367,
+     "p99": 0.469,
+     "max": 2.639
+    },
+    "smoke CPU": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render CPU": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "other": {
+     "mean": 0.039,
+     "p50": 0.031,
+     "p95": 0.07,
+     "p99": 0.107,
+     "max": 4.019
+    }
+   },
+   "calls": {
+    "svc: animation + skeleton (Character.update)": [
+     10,
+     10
+    ],
+    "svc: nav paths (A*, walkable, nearest free)": [
+     3.1,
+     0.7
+    ],
+    "svc: sound propagation": [
+     0.1,
+     0.1
+    ],
+    "svc: static line tests (sight, fire, reach)": [
+     415.3,
+     123.4
+    ],
+    "svc: circle collide (feet vs walls)": [
+     7.8,
+     7.8
+    ],
+    "svc: box world raycast (cursor, lasers, rounds)": [
+     1,
+     1
+    ],
+    "destruction: light reach masks re-decided after a wall breaks (Game.reachTick)": [
+     0,
+     0
+    ],
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": [
+     0,
+     0
+    ],
+    "headless only: CPU light estimate standing in for the GPU light probe": [
+     6.8,
+     6.8
+    ]
+   },
+   "lineBy": {
+    "player (aim, interact, move, fire)": 0.023,
+    "squad: order menu + orders": 0.037,
+    "squad: door tools": 0.095,
+    "gear: rings, 40 mm, frags": 0.005,
+    "squad: entry points, cleared rooms, cover": 0.007,
+    "room fight (both sides: watch, fear, shoot)": 0.054,
+    "guards: updateGuard (senses, state, feet)": 0.04,
+    "destruction (heat, debris)": 0.002,
+    "weather, wet, wind, moths, rain fx (game half)": 0.005,
+    "items (throwables, drops)": 0,
+    "fog of war": 0.143,
+    "tracers + sparks": 0.002
+   },
+   "worst": [
+    {
+     "ms": 51.409,
+     "seed": 1,
+     "t": 8.17,
+     "top": [
+      [
+       "destruction: light reach masks re-decided after a wall breaks (Game.reachTick)",
+       11.497
+      ],
+      [
+       "svc: static line tests (sight, fire, reach)",
+       10.646
+      ],
+      [
+       "characters → skin instances + shadow proxies",
+       9.94
+      ]
+     ]
+    },
+    {
+     "ms": 20.26,
+     "seed": 1,
+     "t": 15.42,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       17.263
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       0.93
+      ],
+      [
+       "step: box list pack + trace grid (world.upload)",
+       0.43
+      ]
+     ]
+    },
+    {
+     "ms": 17.759,
+     "seed": 1,
+     "t": 24.82,
+     "top": [
+      [
+       "characters → skin instances + shadow proxies",
+       14.273
+      ],
+      [
+       "svc: animation + skeleton (Character.update)",
+       0.955
+      ],
+      [
+       "guards: updateGuard (senses, state, feet)",
+       0.912
+      ]
+     ]
+    }
+   ],
+   "missing": []
+  },
+  {
+   "id": "block-four",
+   "arm": "shipped",
+   "extra": 0,
+   "runs": [
+    {
+     "seed": 1,
+     "end": "taken",
+     "t": 62.1,
+     "digest": "8245513e",
+     "frames": 3726
+    }
+   ],
+   "frames": 3666,
+   "page": {
+    "mean": 3.408,
+    "p50": 3.22,
+    "p95": 5.245,
+    "p99": 9.369,
+    "max": 37.386
+   },
+   "update": {
+    "mean": 2.969,
+    "p50": 2.782,
+    "p95": 4.804,
+    "p99": 8.777,
+    "max": 36.882
+   },
+   "stepped": {
+    "mean": 3.083,
+    "p50": 2.866,
+    "p95": 4.947,
+    "p99": 9.046,
+    "max": 36.952
+   },
+   "uploadPerCall": 0.434,
+   "warmMax": 268.061,
+   "buckets": {
+    "update: head (journal, clocks)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.004,
+     "p99": 0.01,
+     "max": 0.383
+    },
+    "player (aim, interact, move, fire)": {
+     "mean": 0.111,
+     "p50": 0.105,
+     "p95": 0.166,
+     "p99": 0.227,
+     "max": 3.427
+    },
+    "squad: order menu + orders": {
+     "mean": 0.053,
+     "p50": 0.041,
+     "p95": 0.114,
+     "p99": 0.171,
+     "max": 1.186
+    },
+    "squad: door tools": {
+     "mean": 0.027,
+     "p50": 0.013,
+     "p95": 0.085,
+     "p99": 0.125,
+     "max": 1.217
+    },
+    "suppression": {
+     "mean": 0.004,
+     "p50": 0.003,
+     "p95": 0.007,
+     "p99": 0.017,
+     "max": 0.414
+    },
+    "gear: rings, 40 mm, frags": {
+     "mean": 0.01,
+     "p50": 0.007,
+     "p95": 0.024,
+     "p99": 0.07,
+     "max": 0.793
+    },
+    "guards: weapons dealt, anim flags": {
+     "mean": 0.007,
+     "p50": 0.005,
+     "p95": 0.011,
+     "p99": 0.031,
+     "max": 0.11
+    },
+    "scenario (director, breach, room clear, rescue)": {
+     "mean": 0.01,
+     "p50": 0.007,
+     "p95": 0.015,
+     "p99": 0.044,
+     "max": 2.411
+    },
+    "pair (two person stealth)": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.007,
+     "max": 0.093
+    },
+    "squad: entry points, cleared rooms, cover": {
+     "mean": 0.014,
+     "p50": 0.006,
+     "p95": 0.03,
+     "p99": 0.228,
+     "max": 1.62
+    },
+    "room fight (both sides: watch, fear, shoot)": {
+     "mean": 0.087,
+     "p50": 0.073,
+     "p95": 0.185,
+     "p99": 0.355,
+     "max": 3.233
+    },
+    "tactics (flank, lone corner, doorways)": {
+     "mean": 0.015,
+     "p50": 0.009,
+     "p95": 0.025,
+     "p99": 0.064,
+     "max": 4.12
+    },
+    "needs (patrol variation)": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.004,
+     "p99": 0.009,
+     "max": 0.074
+    },
+    "guards: updateGuard (senses, state, feet)": {
+     "mean": 0.217,
+     "p50": 0.169,
+     "p95": 0.463,
+     "p99": 0.762,
+     "max": 6.199
+    },
+    "civilians": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0.001,
+     "p99": 0.001,
+     "max": 0.115
+    },
+    "escalation + QRF": {
+     "mean": 0.009,
+     "p50": 0.006,
+     "p95": 0.015,
+     "p99": 0.041,
+     "max": 0.183
+    },
+    "doors": {
+     "mean": 0.063,
+     "p50": 0.051,
+     "p95": 0.11,
+     "p99": 0.157,
+     "max": 5.001
+    },
+    "mission": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.013,
+     "max": 0.18
+    },
+    "props (furniture)": {
+     "mean": 0.022,
+     "p50": 0.016,
+     "p95": 0.056,
+     "p99": 0.097,
+     "max": 1.29
+    },
+    "destruction (heat, debris)": {
+     "mean": 0.008,
+     "p50": 0.004,
+     "p95": 0.029,
+     "p99": 0.095,
+     "max": 0.753
+    },
+    "destruction: wall charge, fire at cover": {
+     "mean": 0.01,
+     "p50": 0.006,
+     "p95": 0.02,
+     "p99": 0.05,
+     "max": 1.385
+    },
+    "destruction: both sides react to a break": {
+     "mean": 0.008,
+     "p50": 0.002,
+     "p95": 0.018,
+     "p99": 0.07,
+     "max": 3.784
+    },
+    "fixtures + devices": {
+     "mean": 0.014,
+     "p50": 0.012,
+     "p95": 0.022,
+     "p99": 0.048,
+     "max": 0.121
+    },
+    "weather, wet, wind, moths, rain fx (game half)": {
+     "mean": 0.037,
+     "p50": 0.029,
+     "p95": 0.067,
+     "p99": 0.097,
+     "max": 2.087
+    },
+    "items (throwables, drops)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.008,
+     "p99": 0.024,
+     "max": 0.303
+    },
+    "glass (stars, breaking, shards)": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.015,
+     "max": 0.407
+    },
+    "fog of war": {
+     "mean": 0.052,
+     "p50": 0.048,
+     "p95": 0.088,
+     "p99": 0.122,
+     "max": 3
+    },
+    "dynamic boxes (leaves, props, debris, rig props, fx)": {
+     "mean": 0.196,
+     "p50": 0.17,
+     "p95": 0.242,
+     "p99": 0.306,
+     "max": 7.587
+    },
+    "tracers + sparks": {
+     "mean": 0.006,
+     "p50": 0.003,
+     "p95": 0.014,
+     "p99": 0.072,
+     "max": 0.33
+    },
+    "smoke pushes": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.007,
+     "p99": 0.013,
+     "max": 0.078
+    },
+    "characters → skin instances + shadow proxies": {
+     "mean": 0.088,
+     "p50": 0.075,
+     "p95": 0.114,
+     "p99": 0.139,
+     "max": 7.428
+    },
+    "sensors (meter + smoke line asks)": {
+     "mean": 0.012,
+     "p50": 0.011,
+     "p95": 0.019,
+     "p99": 0.043,
+     "max": 0.107
+    },
+    "update: tail (cues, checkpoints, journal)": {
+     "mean": 0.01,
+     "p50": 0.008,
+     "p95": 0.017,
+     "p99": 0.049,
+     "max": 1.029
+    },
+    "step: camera": {
+     "mean": 0.005,
+     "p50": 0.004,
+     "p95": 0.009,
+     "p99": 0.018,
+     "max": 0.093
+    },
+    "step: lights.update": {
+     "mean": 0.002,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.009,
+     "max": 0.094
+    },
+    "step: box list pack + trace grid (world.upload)": {
+     "mean": 0.432,
+     "p50": 0.434,
+     "p95": 0.488,
+     "p99": 0.595,
+     "max": 4.646
+    },
+    "step: smoke solver update (CPU half)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: frame uniforms, probe, submit (the rest of Engine.render)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: light list + reach / glass masks upload": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: decal list": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: particles (births → GPU records, update encode; the splat encode is under the lighting passes)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: smoke solver encode": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: g-buffer + mesh shadows encode, motion snapshot": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: cascades encode": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render: lighting passes encode": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "svc: animation + skeleton (Character.update)": {
+     "mean": 1.084,
+     "p50": 1.096,
+     "p95": 1.686,
+     "p99": 2.165,
+     "max": 16.027
+    },
+    "svc: nav paths (A*, walkable, nearest free)": {
+     "mean": 0.01,
+     "p50": 0,
+     "p95": 0.003,
+     "p99": 0.119,
+     "max": 8.238
+    },
+    "svc: sound propagation": {
+     "mean": 0.044,
+     "p50": 0,
+     "p95": 0.211,
+     "p99": 1.098,
+     "max": 6.809
+    },
+    "svc: static line tests (sight, fire, reach)": {
+     "mean": 0.645,
+     "p50": 0.552,
+     "p95": 1.267,
+     "p99": 2.048,
+     "max": 9.965
+    },
+    "svc: circle collide (feet vs walls)": {
+     "mean": 0.015,
+     "p50": 0.014,
+     "p95": 0.028,
+     "p99": 0.059,
+     "max": 0.104
+    },
+    "svc: box world raycast (cursor, lasers, rounds)": {
+     "mean": 0.039,
+     "p50": 0.039,
+     "p95": 0.067,
+     "p99": 0.092,
+     "max": 0.129
+    },
+    "destruction: light reach masks re-decided after a wall breaks (Game.reachTick)": {
+     "mean": 0.024,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 11.341
+    },
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0.075
+    },
+    "headless only: CPU light estimate standing in for the GPU light probe": {
+     "mean": 0.33,
+     "p50": 0.303,
+     "p95": 0.563,
+     "p99": 0.73,
+     "max": 5.448
+    }
+   },
+   "groups": {
+    "(probe stand-in)": {
+     "mean": 0.33,
+     "p50": 0.303,
+     "p95": 0.563,
+     "p99": 0.73,
+     "max": 5.448
+    },
+    "animation": {
+     "mean": 1.084,
+     "p50": 1.096,
+     "p95": 1.686,
+     "p99": 2.165,
+     "max": 16.027
+    },
+    "line tests": {
+     "mean": 0.684,
+     "p50": 0.592,
+     "p95": 1.316,
+     "p99": 2.1,
+     "max": 10.008
+    },
+    "nav paths": {
+     "mean": 0.01,
+     "p50": 0,
+     "p95": 0.003,
+     "p99": 0.119,
+     "max": 8.238
+    },
+    "sound": {
+     "mean": 0.044,
+     "p50": 0,
+     "p95": 0.211,
+     "p99": 1.098,
+     "max": 6.809
+    },
+    "guards AI": {
+     "mean": 0.239,
+     "p50": 0.199,
+     "p95": 0.493,
+     "p99": 0.792,
+     "max": 6.239
+    },
+    "room fight": {
+     "mean": 0.087,
+     "p50": 0.073,
+     "p95": 0.185,
+     "p99": 0.355,
+     "max": 3.233
+    },
+    "squad": {
+     "mean": 0.104,
+     "p50": 0.088,
+     "p95": 0.216,
+     "p99": 0.395,
+     "max": 2.54
+    },
+    "tactics": {
+     "mean": 0.015,
+     "p50": 0.009,
+     "p95": 0.025,
+     "p99": 0.064,
+     "max": 4.12
+    },
+    "player": {
+     "mean": 0.111,
+     "p50": 0.105,
+     "p95": 0.166,
+     "p99": 0.227,
+     "max": 3.427
+    },
+    "feet vs walls": {
+     "mean": 0.015,
+     "p50": 0.014,
+     "p95": 0.028,
+     "p99": 0.059,
+     "max": 0.104
+    },
+    "doors, props": {
+     "mean": 0.085,
+     "p50": 0.072,
+     "p95": 0.146,
+     "p99": 0.212,
+     "max": 5.018
+    },
+    "destruction": {
+     "mean": 0.049,
+     "p50": 0.016,
+     "p95": 0.066,
+     "p99": 0.476,
+     "max": 14.685
+    },
+    "glass": {
+     "mean": 0.003,
+     "p50": 0.002,
+     "p95": 0.005,
+     "p99": 0.015,
+     "max": 0.407
+    },
+    "gear": {
+     "mean": 0.02,
+     "p50": 0.013,
+     "p95": 0.055,
+     "p99": 0.126,
+     "max": 0.798
+    },
+    "weather": {
+     "mean": 0.037,
+     "p50": 0.029,
+     "p95": 0.067,
+     "p99": 0.097,
+     "max": 2.087
+    },
+    "pair": {
+     "mean": 0.002,
+     "p50": 0.001,
+     "p95": 0.003,
+     "p99": 0.007,
+     "max": 0.093
+    },
+    "fog of war": {
+     "mean": 0.052,
+     "p50": 0.048,
+     "p95": 0.088,
+     "p99": 0.122,
+     "max": 3
+    },
+    "chars to GPU": {
+     "mean": 0.088,
+     "p50": 0.075,
+     "p95": 0.114,
+     "p99": 0.139,
+     "max": 7.428
+    },
+    "dyn boxes": {
+     "mean": 0.199,
+     "p50": 0.173,
+     "p95": 0.246,
+     "p99": 0.311,
+     "max": 7.591
+    },
+    "box upload": {
+     "mean": 0.432,
+     "p50": 0.434,
+     "p95": 0.488,
+     "p99": 0.595,
+     "max": 4.646
+    },
+    "smoke CPU": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "render CPU": {
+     "mean": 0,
+     "p50": 0,
+     "p95": 0,
+     "p99": 0,
+     "max": 0
+    },
+    "other": {
+     "mean": 0.048,
+     "p50": 0.042,
+     "p95": 0.083,
+     "p99": 0.116,
+     "max": 1.115
+    }
+   },
+   "calls": {
+    "svc: animation + skeleton (Character.update)": [
+     13,
+     13
+    ],
+    "svc: nav paths (A*, walkable, nearest free)": [
+     17.8,
+     0.4
+    ],
+    "svc: sound propagation": [
+     0.3,
+     0.3
+    ],
+    "svc: static line tests (sight, fire, reach)": [
+     533.7,
+     200
+    ],
+    "svc: circle collide (feet vs walls)": [
+     7.7,
+     7.7
+    ],
+    "svc: box world raycast (cursor, lasers, rounds)": [
+     1,
+     1
+    ],
+    "destruction: light reach masks re-decided after a wall breaks (Game.reachTick)": [
+     0,
+     0
+    ],
+    "destruction: a wall or cover breaking (rounds and blasts on it: holes, pieces, re-baked paths)": [
+     0,
+     0
+    ],
+    "headless only: CPU light estimate standing in for the GPU light probe": [
+     6.7,
+     6.7
+    ]
+   },
+   "lineBy": {
+    "player (aim, interact, move, fire)": 0.085,
+    "squad: order menu + orders": 0.037,
+    "squad: door tools": 0.073,
+    "gear: rings, 40 mm, frags": 0.004,
+    "squad: entry points, cleared rooms, cover": 0.004,
+    "room fight (both sides: watch, fear, shoot)": 0.052,
+    "tactics (flank, lone corner, doorways)": 0.001,
+    "guards: updateGuard (senses, state, feet)": 0.067,
+    "destruction (heat, debris)": 0.002,
+    "destruction: wall charge, fire at cover": 0,
+    "weather, wet, wind, moths, rain fx (game half)": 0.008,
+    "items (throwables, drops)": 0.001,
+    "fog of war": 0.319,
+    "tracers + sparks": 0.004
+   },
+   "worst": [
+    {
+     "ms": 37.386,
+     "seed": 1,
+     "t": 7.98,
+     "top": [
+      [
+       "destruction: light reach masks re-decided after a wall breaks (Game.reachTick)",
+       10.003
+      ],
+      [
+       "svc: static line tests (sight, fire, reach)",
+       9.965
+      ],
+      [
+       "destruction: both sides react to a break",
+       3.784
+      ]
+     ]
+    },
+    {
+     "ms": 19.927,
+     "seed": 1,
+     "t": 26.18,
+     "top": [
+      [
+       "svc: animation + skeleton (Character.update)",
+       16.027
+      ],
+      [
+       "player (aim, interact, move, fire)",
+       1.032
+      ],
+      [
+       "svc: static line tests (sight, fire, reach)",
+       0.999
+      ]
+     ]
+    },
+    {
+     "ms": 16.697,
+     "seed": 1,
+     "t": 10.73,
+     "top": [
+      [
+       "svc: animation + skeleton (Character.update)",
+       4.603
+      ],
+      [
+       "room fight (both sides: watch, fear, shoot)",
+       3.233
+      ],
+      [
+       "svc: sound propagation",
+       2.544
+      ]
+     ]
+    }
+   ],
+   "missing": []
+  }
+ ]
+}

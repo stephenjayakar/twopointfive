@@ -1,0 +1,51 @@
+{
+ "note": "tools/qa/coop-check.ts --write: the scripted runs on the shipped stand as this machine plays them (bits = a chained hash of the raw float64 state, one word per half second)",
+ "engine": "bun 1.4.2 (JavaScriptCore)",
+ "platform": "linux x64",
+ "runs": [
+  {
+   "scn": "night-breach",
+   "seed": 1,
+   "frames": 1517,
+   "draws": 414,
+   "end": "taken",
+   "team": "2/2",
+   "hostiles": "0/3",
+   "digest": "c72a225",
+   "bits": "1vfmshm,1txqjpv,seplgb,qxyjtc,10zs568,1yjw7o2,xn4klf,ycedsb,3rpvze,of0vxt,1hssg35,1xv8pk1,1al6xky,18r4ldr,1qvgzh8,wvzts1,t5qemr,78dja5,s7ph2t,pceyc5,1r0waeh,19nezx7,wlztz6,9lvgdy,13793pb,9036v,12vi8uw,hl3pju,ix990x,16ujg9k,1l0kbhu,32iuwj,9z3j17,1ey5uww,1fh8xee,34fmcj,yu5w9k,1y29080,1vxbdip,1o2tmg,3prfd2,19176uj,1baivg9,1sp2co2,nswewm,15f37sd,16al2ku,6jk3kr,mz9syz,k0m2nz"
+  },
+  {
+   "scn": "records-pair",
+   "seed": 1,
+   "frames": 2345,
+   "draws": 233,
+   "end": "taken",
+   "team": "2/2",
+   "hostiles": "0/5",
+   "digest": "c44cfa90",
+   "bits": "sd8bw7,evdd5u,1jxdlcf,15i6vs4,1b32lxs,dtpsbv,11ymuhx,1ax8fxj,19k827r,oy79ta,1khfqy0,17ctsmg,4hm0ya,p683fs,1kb2563,1x9nwea,1nkhls5,1n459q7,1k6049a,jqc66i,gpu027,18q40qa,dnqihq,jq2ag3,mimul4,3qexb,1pig7sd,1887cgm,1y29702,9zmmtx,us96eg,wr1433,1qthdw,dahfd0,2wnk2y,1u25e34,15bi672,1oh0glq,1oxe6xh,wnwmrj,1xpy08t,e2qfia,1meltg4,1hgq9wo,19s7nlw,1mrn7hu,jl0rj6,mvh6y7,1mupxi7,1me1it3,17t5x7h,dz26m1,1whc24u,1j6mqaa,zhf19h,j7dudp,5sfaqj,1d7o892,qo78pt,1utsxzd,3qb5c3,1yf3gsm,x6890s,6iyy1l,oadsjr,pp8ben,1ncszwj,1jz4cu8,nj6rca,2r3wut,ruufoi,kpnfui,xzog9p,of8411,1rr43hn,16yhdtn,z7yqg4,1s15221"
+  },
+  {
+   "scn": "hostage-rescue",
+   "seed": 1,
+   "frames": 2120,
+   "draws": 554,
+   "end": "rescued",
+   "team": "2/2",
+   "hostiles": "0/3",
+   "digest": "d950046c",
+   "bits": "gwey77,1j2m14h,gb6z35,7ugxmf,uepngt,146tyi0,1fcijif,xsricz,1yvhon9,lztbxd,xnsmx8,eqwdx9,pbfqdc,1k634et,76hn4u,1gvo2fn,1tymtm0,5ijxt7,1eioqt9,7l306e,wffege,1pgskp3,7e1q6d,1h0f00f,ku1m7z,1m8k2bj,1giz57d,pbrxz5,gxzx74,ii9cex,1w3pa68,gbclky,sdtfli,1syuteb,gi3twr,bong2s,xk3x0g,5npfqi,8y1ern,124260e,1ptmt7t,1ustjq,1j03e7y,10s5n6j,11gkz2j,1vgi2xe,ns9jm7,vvot73,1lr4aj8,lyh1qw,5lctdr,1u4y4jn,1sz8p6j,1eesrxn,11kak6c,1h133xd,fylfsg,ssxvj6,1i6oiiy,1cqxwsj,1lfh5j6,yucq26,1i8yxi2,fgdo1z,1l7r799,nb4q1w,1s63wd6,1ig0tkb,131vq4g,13w0god"
+  },
+  {
+   "scn": "room-clear-four",
+   "seed": 1,
+   "frames": 2970,
+   "draws": 726,
+   "end": "taken",
+   "team": "3/4",
+   "hostiles": "0/5",
+   "digest": "fe0d86f0",
+   "bits": "18s7nsd,bt4acs,cc02t6,aphqyx,q5gk5l,1nftehk,15liiej,1vpuokv,15zc525,1t5sdh2,17e2x0u,ibp5s2,i7b8al,10oik97,1j67u1x,cij2iu,1tgu3ti,1yj6cv7,1thd3dv,ib8nu6,n9stgt,i83bi5,h2cdys,1ma23m3,1htlz8b,1ytm3s3,wt4d0g,1o184oe,11aftdc,15hjuqv,mvzgh9,pek9ca,15ncmy6,1m6rnkg,hpcgw7,1mx27wa,7hwc1i,aakm95,10ipdza,1bbrtoh,f8wxc7,1a1y7i5,k2yv1h,1upgu68,131gmph,11fpeyr,axc7cw,1ehm41t,180qw2n,1xuwi04,1yi94r4,vo9rtp,5jzkh9,f1axww,vmetnd,hqfqzq,1yrvdur,4ys3sv,yvhbc5,176rgod,17sqvja,igalj6,lnt30i,1rvfj4u,14ihzed,jiiru1,1wj1v0q,1d3afgi,1pw04sn,8eof33,lyamzq,1feyxai,aaevb0,p8zems,1ob47tg,3ilu9v,1wsznq7,1cih0c7,9fv359,1624sh1,1ly4e16,jbdvza,13u8f11,1vdls4l,frsop,946ixf,t7irgf,1mldmxr,19gkdkd,jt4ozk,g5tyka,18p52li,13itr8d,8gzte5,urmkas,r8s9ys,gexnny,kbw4d5,j46djq"
+  }
+ ]
+}

@@ -1,0 +1,2011 @@
+{
+ "solver": "sparse",
+ "round": 2,
+ "preset": "high",
+ "size": [
+  789,
+  770
+ ],
+ "out": [
+  1025,
+  1000
+ ],
+ "adapter": "apple metal-3",
+ "when": "2026-10-10T16:26:11.487Z",
+ "knobs": {
+  "keep": 20,
+  "ring": 4,
+  "flushEps": 0.002,
+  "thinDecay": 0,
+  "thinBelow": 0.25,
+  "softLo": 0.6,
+  "softHi": 0.95,
+  "softEps": 0.03,
+  "softDecay": 1.5,
+  "viewBias": 1,
+  "viewR": 10,
+  "indirect": true,
+  "directAt": 0.5,
+  "split": false,
+  "calmMax": 4,
+  "farCells": 1,
+  "readSkip": true,
+  "fresh": 0.15,
+  "fineDecay": 3,
+  "fineShare": 0.25,
+  "fineEps": 0.01,
+  "fineHeat": 0.1,
+  "fineRing": 2,
+  "calmCells": 0.5,
+  "cap": 8192,
+  "memory": {
+   "fields": 188743680,
+   "tables": 5862080,
+   "atlas": 65536000,
+   "page": 7733760,
+   "total": 267875520,
+   "perBrick": 31040
+  }
+ },
+ "order": "[lever as it ships, lever off]",
+ "scenes": [
+  {
+   "scene": "one can, burnt 6 s, hanging at 14 s",
+   "levers": [
+    {
+     "lever": "calmMax",
+     "on": 4,
+     "off": 1,
+     "solver": [
+      0.54,
+      0.92
+     ],
+     "union": [
+      9.41,
+      9.6
+     ],
+     "unionMed": [
+      9.31,
+      9.63
+     ],
+     "stepped": [
+      428,
+      1148
+     ],
+     "bricks": [
+      1156,
+      1148
+     ],
+     "passes": [
+      {
+       "mesh": 0.51,
+       "rc c3": 0.34,
+       "rc c2": 2.73,
+       "rc c1": 0.46,
+       "rc c0": 0.28,
+       "rc dice": 0.04,
+       "particles": 0.34,
+       "direct": 3.58,
+       "softblur": 0.86,
+       "gather": 1.03,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.51,
+       "sharpU": 0.68,
+       "compS": 0.48,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.17
+      },
+      {
+       "mesh": 0.56,
+       "rc c3": 0.3,
+       "rc c2": 1.56,
+       "rc c1": 1.84,
+       "rc c0": 0.31,
+       "rc dice": 0.06,
+       "particles": 0.25,
+       "direct": 3.54,
+       "softblur": 0.79,
+       "gather": 1.03,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.47,
+       "sharpU": 0.7,
+       "compS": 0.48,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.17
+      }
+     ]
+    },
+    {
+     "lever": "calmCells",
+     "on": 0.5,
+     "off": 1,
+     "solver": [
+      0.5,
+      0.45
+     ],
+     "union": [
+      9.2,
+      9.16
+     ],
+     "unionMed": [
+      9.18,
+      9.18
+     ],
+     "stepped": [
+      352,
+      268
+     ],
+     "bricks": [
+      1079,
+      1065
+     ],
+     "passes": [
+      {
+       "mesh": 0.5,
+       "rc c3": 0.35,
+       "rc c2": 2.71,
+       "rc c1": 0.47,
+       "rc c0": 0.27,
+       "rc dice": 0.04,
+       "particles": 0.4,
+       "direct": 3.45,
+       "softblur": 0.88,
+       "gather": 1.02,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.44,
+       "sharpU": 0.69,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.17
+      },
+      {
+       "mesh": 0.49,
+       "rc c3": 0.34,
+       "rc c2": 2.7,
+       "rc c1": 0.47,
+       "rc c0": 0.28,
+       "rc dice": 0.05,
+       "particles": 0.36,
+       "direct": 3.46,
+       "softblur": 0.87,
+       "gather": 1.02,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.43,
+       "sharpU": 0.69,
+       "compS": 0.48,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.17
+      }
+     ]
+    },
+    {
+     "lever": "readSkip",
+     "on": true,
+     "off": false,
+     "solver": [
+      0.46,
+      0.45
+     ],
+     "union": [
+      8.97,
+      8.85
+     ],
+     "unionMed": [
+      8.98,
+      8.85
+     ],
+     "stepped": [
+      267,
+      254
+     ],
+     "bricks": [
+      959,
+      934
+     ],
+     "passes": [
+      {
+       "mesh": 0.5,
+       "rc c3": 0.34,
+       "rc c2": 2.6,
+       "rc c1": 0.45,
+       "rc c0": 0.29,
+       "rc dice": 0.04,
+       "particles": 0.35,
+       "direct": 3.43,
+       "softblur": 0.88,
+       "gather": 1.04,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.23,
+       "sharpU": 0.69,
+       "compS": 0.49,
+       "gbaa": 0.03,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.19
+      },
+      {
+       "mesh": 0.49,
+       "rc c3": 0.34,
+       "rc c2": 2.55,
+       "rc c1": 0.49,
+       "rc c0": 0.33,
+       "rc dice": 0.04,
+       "particles": 0.33,
+       "direct": 3.43,
+       "softblur": 0.86,
+       "gather": 1.05,
+       "temporal": 0.19,
+       "reflect": 0.14,
+       "rdenoise": 0.72,
+       "volumetrics": 1.12,
+       "sharpU": 0.69,
+       "compS": 0.49,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.2
+      }
+     ]
+    },
+    {
+     "lever": "all three",
+     "on": {
+      "calmMax": 4,
+      "farCells": 1,
+      "readSkip": true,
+      "directAt": 0.5
+     },
+     "off": {
+      "calmMax": 1,
+      "farCells": 0,
+      "readSkip": false,
+      "directAt": 2
+     },
+     "solver": [
+      0.42,
+      0.77
+     ],
+     "union": [
+      8.71,
+      8.72
+     ],
+     "unionMed": [
+      8.72,
+      8.72
+     ],
+     "stepped": [
+      210,
+      772
+     ],
+     "bricks": [
+      805,
+      772
+     ],
+     "passes": [
+      {
+       "mesh": 0.48,
+       "rc c3": 0.34,
+       "rc c2": 2.57,
+       "rc c1": 0.48,
+       "rc c0": 0.26,
+       "rc dice": 0.04,
+       "particles": 0.32,
+       "direct": 3.37,
+       "softblur": 0.86,
+       "gather": 1.04,
+       "temporal": 0.17,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.09,
+       "sharpU": 0.7,
+       "compS": 0.48,
+       "gbaa": 0.03,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.19
+      },
+      {
+       "mesh": 0.55,
+       "rc c3": 0.25,
+       "rc c2": 1.84,
+       "rc c1": 1.42,
+       "rc c0": 0.26,
+       "rc dice": 0.04,
+       "particles": 0.26,
+       "direct": 3.26,
+       "softblur": 0.81,
+       "gather": 1.03,
+       "temporal": 0.18,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 0.99,
+       "sharpU": 0.69,
+       "compS": 0.48,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.08,
+       "probe": 0.18
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "scene": "four cans burning, 8 s",
+   "levers": [
+    {
+     "lever": "calmMax",
+     "on": 4,
+     "off": 1,
+     "solver": [
+      1.86,
+      2.07
+     ],
+     "union": [
+      11.15,
+      11.46
+     ],
+     "unionMed": [
+      11.14,
+      11.53
+     ],
+     "stepped": [
+      3193,
+      3918
+     ],
+     "bricks": [
+      3802,
+      3918
+     ],
+     "passes": [
+      {
+       "mesh": 0.66,
+       "rc c3": 0.3,
+       "rc c2": 1.48,
+       "rc c1": 2.1,
+       "rc c0": 0.29,
+       "rc dice": 0.05,
+       "particles": 0.23,
+       "direct": 3.82,
+       "softblur": 0.8,
+       "gather": 1.09,
+       "temporal": 0.18,
+       "reflect": 0.16,
+       "rdenoise": 0.72,
+       "volumetrics": 1.73,
+       "sharpU": 0.68,
+       "compS": 0.48,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.2
+      },
+      {
+       "mesh": 0.7,
+       "rc c3": 0.32,
+       "rc c2": 1.86,
+       "rc c1": 1.86,
+       "rc c0": 0.28,
+       "rc dice": 0.05,
+       "particles": 0.21,
+       "direct": 3.84,
+       "softblur": 0.8,
+       "gather": 1.08,
+       "temporal": 0.19,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 1.82,
+       "sharpU": 0.69,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.19
+      }
+     ]
+    },
+    {
+     "lever": "readSkip",
+     "on": true,
+     "off": false,
+     "solver": [
+      2.05,
+      2.08
+     ],
+     "union": [
+      11.58,
+      11.33
+     ],
+     "unionMed": [
+      11.53,
+      11.34
+     ],
+     "stepped": [
+      3548,
+      3624
+     ],
+     "bricks": [
+      4500,
+      4602
+     ],
+     "passes": [
+      {
+       "mesh": 0.67,
+       "rc c3": 0.3,
+       "rc c2": 2.04,
+       "rc c1": 1.66,
+       "rc c0": 0.26,
+       "rc dice": 0.05,
+       "particles": 0.23,
+       "direct": 3.86,
+       "softblur": 0.8,
+       "gather": 1.08,
+       "temporal": 0.18,
+       "reflect": 0.15,
+       "rdenoise": 0.72,
+       "volumetrics": 1.95,
+       "sharpU": 0.69,
+       "compS": 0.48,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.17
+      },
+      {
+       "mesh": 0.67,
+       "rc c3": 0.31,
+       "rc c2": 1.88,
+       "rc c1": 1.61,
+       "rc c0": 0.27,
+       "rc dice": 0.05,
+       "particles": 0.2,
+       "direct": 3.76,
+       "softblur": 0.81,
+       "gather": 1.1,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.72,
+       "volumetrics": 1.76,
+       "sharpU": 0.69,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.17
+      }
+     ]
+    },
+    {
+     "lever": "directAt",
+     "on": 0.5,
+     "off": 2,
+     "solver": [
+      2.19,
+      2.22
+     ],
+     "union": [
+      11.7,
+      11.7
+     ],
+     "unionMed": [
+      11.73,
+      11.67
+     ],
+     "stepped": [
+      3873,
+      3893
+     ],
+     "bricks": [
+      5036,
+      5107
+     ],
+     "passes": [
+      {
+       "mesh": 0.65,
+       "rc c3": 0.36,
+       "rc c2": 1.91,
+       "rc c1": 1.73,
+       "rc c0": 0.27,
+       "rc dice": 0.05,
+       "particles": 0.21,
+       "direct": 3.84,
+       "softblur": 0.81,
+       "gather": 1.06,
+       "temporal": 0.18,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 1.94,
+       "sharpU": 0.7,
+       "compS": 0.5,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.18
+      },
+      {
+       "mesh": 0.68,
+       "rc c3": 0.35,
+       "rc c2": 1.93,
+       "rc c1": 1.52,
+       "rc c0": 0.27,
+       "rc dice": 0.06,
+       "particles": 0.17,
+       "direct": 3.83,
+       "softblur": 0.81,
+       "gather": 1.08,
+       "temporal": 0.18,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 1.89,
+       "sharpU": 0.69,
+       "compS": 0.5,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.19
+      }
+     ]
+    },
+    {
+     "lever": "all three",
+     "on": {
+      "calmMax": 4,
+      "farCells": 1,
+      "readSkip": true,
+      "directAt": 0.5
+     },
+     "off": {
+      "calmMax": 1,
+      "farCells": 0,
+      "readSkip": false,
+      "directAt": 2
+     },
+     "solver": [
+      2.23,
+      2.83
+     ],
+     "union": [
+      11.82,
+      12.34
+     ],
+     "unionMed": [
+      11.73,
+      12.32
+     ],
+     "stepped": [
+      4111,
+      5387
+     ],
+     "bricks": [
+      5368,
+      5387
+     ],
+     "passes": [
+      {
+       "mesh": 0.67,
+       "rc c3": 0.36,
+       "rc c2": 1.97,
+       "rc c1": 1.48,
+       "rc c0": 0.32,
+       "rc dice": 0.06,
+       "particles": 0.2,
+       "direct": 3.92,
+       "softblur": 0.8,
+       "gather": 1.08,
+       "temporal": 0.18,
+       "reflect": 0.16,
+       "rdenoise": 0.74,
+       "volumetrics": 1.91,
+       "sharpU": 0.7,
+       "compS": 0.5,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.08,
+       "probe": 0.21
+      },
+      {
+       "mesh": 0.65,
+       "rc c3": 0.39,
+       "rc c2": 1.58,
+       "rc c1": 1.64,
+       "rc c0": 0.3,
+       "rc dice": 0.06,
+       "particles": 0.13,
+       "direct": 3.86,
+       "softblur": 0.81,
+       "gather": 1.08,
+       "temporal": 0.19,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 1.89,
+       "sharpU": 0.73,
+       "compS": 0.51,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "scene": "twelve cans, 8 s: the pool full",
+   "levers": [
+    {
+     "lever": "calmMax",
+     "on": 4,
+     "off": 1,
+     "solver": [
+      2.72,
+      2.87
+     ],
+     "union": [
+      11.72,
+      11.81
+     ],
+     "unionMed": [
+      11.67,
+      11.8
+     ],
+     "stepped": [
+      5909,
+      6444
+     ],
+     "bricks": [
+      6451,
+      6444
+     ],
+     "passes": [
+      {
+       "mesh": 0.66,
+       "rc c3": 0.45,
+       "rc c2": 1.58,
+       "rc c1": 1.77,
+       "rc c0": 0.31,
+       "rc dice": 0.07,
+       "particles": 0.17,
+       "direct": 3.81,
+       "softblur": 0.79,
+       "gather": 1.14,
+       "temporal": 0.19,
+       "reflect": 0.15,
+       "rdenoise": 0.74,
+       "volumetrics": 1.41,
+       "sharpU": 0.72,
+       "compS": 0.51,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.23
+      },
+      {
+       "mesh": 0.7,
+       "rc c3": 0.45,
+       "rc c2": 1.83,
+       "rc c1": 1.78,
+       "rc c0": 0.31,
+       "rc dice": 0.08,
+       "particles": 0.21,
+       "direct": 3.81,
+       "softblur": 0.8,
+       "gather": 1.12,
+       "temporal": 0.18,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 1.35,
+       "sharpU": 0.71,
+       "compS": 0.5,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.24
+      }
+     ]
+    },
+    {
+     "lever": "calmCells",
+     "on": 0.5,
+     "off": 1,
+     "solver": [
+      2.72,
+      2.27
+     ],
+     "union": [
+      11.78,
+      11.24
+     ],
+     "unionMed": [
+      11.73,
+      11.21
+     ],
+     "stepped": [
+      5944,
+      4492
+     ],
+     "bricks": [
+      6461,
+      6512
+     ],
+     "passes": [
+      {
+       "mesh": 0.66,
+       "rc c3": 0.46,
+       "rc c2": 2.15,
+       "rc c1": 1.35,
+       "rc c0": 0.3,
+       "rc dice": 0.07,
+       "particles": 0.22,
+       "direct": 3.8,
+       "softblur": 0.81,
+       "gather": 1.14,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.47,
+       "sharpU": 0.72,
+       "compS": 0.5,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.25
+      },
+      {
+       "mesh": 0.72,
+       "rc c3": 0.41,
+       "rc c2": 1.99,
+       "rc c1": 1.4,
+       "rc c0": 0.29,
+       "rc dice": 0.06,
+       "particles": 0.2,
+       "direct": 3.73,
+       "softblur": 0.8,
+       "gather": 1.13,
+       "temporal": 0.19,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.46,
+       "sharpU": 0.73,
+       "compS": 0.49,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.08,
+       "probe": 0.24
+      }
+     ]
+    },
+    {
+     "lever": "readSkip",
+     "on": true,
+     "off": false,
+     "solver": [
+      2.68,
+      2.68
+     ],
+     "union": [
+      11.73,
+      11.64
+     ],
+     "unionMed": [
+      11.73,
+      11.6
+     ],
+     "stepped": [
+      5775,
+      5758
+     ],
+     "bricks": [
+      6399,
+      6382
+     ],
+     "passes": [
+      {
+       "mesh": 0.67,
+       "rc c3": 0.42,
+       "rc c2": 1.76,
+       "rc c1": 1.5,
+       "rc c0": 0.31,
+       "rc dice": 0.07,
+       "particles": 0.21,
+       "direct": 3.76,
+       "softblur": 0.81,
+       "gather": 1.12,
+       "temporal": 0.19,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.51,
+       "sharpU": 0.72,
+       "compS": 0.5,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.22
+      },
+      {
+       "mesh": 0.66,
+       "rc c3": 0.44,
+       "rc c2": 1.76,
+       "rc c1": 1.42,
+       "rc c0": 0.36,
+       "rc dice": 0.07,
+       "particles": 0.16,
+       "direct": 3.84,
+       "softblur": 0.8,
+       "gather": 1.13,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.73,
+       "volumetrics": 1.35,
+       "sharpU": 0.71,
+       "compS": 0.51,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.21
+      }
+     ]
+    },
+    {
+     "lever": "directAt",
+     "on": 0.5,
+     "off": 2,
+     "solver": [
+      2.71,
+      3.1
+     ],
+     "union": [
+      11.61,
+      11.94
+     ],
+     "unionMed": [
+      11.67,
+      11.99
+     ],
+     "stepped": [
+      5904,
+      5929
+     ],
+     "bricks": [
+      6413,
+      6428
+     ],
+     "passes": [
+      {
+       "mesh": 0.66,
+       "rc c3": 0.43,
+       "rc c2": 1.7,
+       "rc c1": 1.66,
+       "rc c0": 0.31,
+       "rc dice": 0.06,
+       "particles": 0.19,
+       "direct": 3.69,
+       "softblur": 0.81,
+       "gather": 1.07,
+       "temporal": 0.18,
+       "reflect": 0.14,
+       "rdenoise": 0.72,
+       "volumetrics": 1.5,
+       "sharpU": 0.69,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.22
+      },
+      {
+       "mesh": 0.58,
+       "rc c3": 0.45,
+       "rc c2": 1.82,
+       "rc c1": 1.68,
+       "rc c0": 0.29,
+       "rc dice": 0.05,
+       "particles": 0.23,
+       "direct": 3.64,
+       "softblur": 0.81,
+       "gather": 1.08,
+       "temporal": 0.18,
+       "reflect": 0.16,
+       "rdenoise": 0.72,
+       "volumetrics": 1.51,
+       "sharpU": 0.68,
+       "compS": 0.48,
+       "gbaa": 0.03,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.22
+      }
+     ]
+    },
+    {
+     "lever": "all three",
+     "on": {
+      "calmMax": 4,
+      "farCells": 1,
+      "readSkip": true,
+      "directAt": 0.5
+     },
+     "off": {
+      "calmMax": 1,
+      "farCells": 0,
+      "readSkip": false,
+      "directAt": 2
+     },
+     "solver": [
+      2.72,
+      3.28
+     ],
+     "union": [
+      11.78,
+      12
+     ],
+     "unionMed": [
+      11.73,
+      11.99
+     ],
+     "stepped": [
+      5932,
+      6425
+     ],
+     "bricks": [
+      6443,
+      6425
+     ],
+     "passes": [
+      {
+       "mesh": 0.66,
+       "rc c3": 0.43,
+       "rc c2": 1.78,
+       "rc c1": 1.69,
+       "rc c0": 0.3,
+       "rc dice": 0.06,
+       "particles": 0.2,
+       "direct": 3.79,
+       "softblur": 0.8,
+       "gather": 1.07,
+       "temporal": 0.19,
+       "reflect": 0.15,
+       "rdenoise": 0.73,
+       "volumetrics": 1.54,
+       "sharpU": 0.7,
+       "compS": 0.48,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.25
+      },
+      {
+       "mesh": 0.61,
+       "rc c3": 0.47,
+       "rc c2": 1.75,
+       "rc c1": 1.8,
+       "rc c0": 0.27,
+       "rc dice": 0.05,
+       "particles": 0.22,
+       "direct": 3.73,
+       "softblur": 0.78,
+       "gather": 1.06,
+       "temporal": 0.19,
+       "reflect": 0.14,
+       "rdenoise": 0.72,
+       "volumetrics": 1.3,
+       "sharpU": 0.69,
+       "compS": 0.48,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.25
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "scene": "four cans 25 m from where the camera looks, 8 s",
+   "levers": [
+    {
+     "lever": "farCells",
+     "on": 1,
+     "off": 0,
+     "solver": [
+      1.35,
+      1.66
+     ],
+     "union": [
+      8.06,
+      8
+     ],
+     "unionMed": [
+      7.73,
+      8
+     ],
+     "stepped": [
+      2016,
+      2794
+     ],
+     "bricks": [
+      3267,
+      3254
+     ],
+     "passes": [
+      {
+       "mesh": 0.61,
+       "rc c3": 0.29,
+       "rc c2": 1.08,
+       "rc c1": 1.57,
+       "rc c0": 0.27,
+       "rc dice": 0.03,
+       "particles": 0.28,
+       "direct": 2.55,
+       "softblur": 0.6,
+       "gather": 0.72,
+       "temporal": 0.18,
+       "reflect": 0.27,
+       "rdenoise": 0.61,
+       "volumetrics": 0.98,
+       "sharpU": 0.53,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.18
+      },
+      {
+       "mesh": 0.64,
+       "rc c3": 0.29,
+       "rc c2": 1.31,
+       "rc c1": 1.15,
+       "rc c0": 0.26,
+       "rc dice": 0.02,
+       "particles": 0.29,
+       "direct": 2.31,
+       "softblur": 0.58,
+       "gather": 0.71,
+       "temporal": 0.19,
+       "reflect": 0.26,
+       "rdenoise": 0.61,
+       "volumetrics": 0.87,
+       "sharpU": 0.52,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.17
+      }
+     ]
+    },
+    {
+     "lever": "calmMax",
+     "on": 4,
+     "off": 1,
+     "solver": [
+      1.38,
+      1.81
+     ],
+     "union": [
+      7.65,
+      8.09
+     ],
+     "unionMed": [
+      7.6,
+      8.06
+     ],
+     "stepped": [
+      2054,
+      3261
+     ],
+     "bricks": [
+      3259,
+      3261
+     ],
+     "passes": [
+      {
+       "mesh": 0.62,
+       "rc c3": 0.29,
+       "rc c2": 1.1,
+       "rc c1": 1.26,
+       "rc c0": 0.27,
+       "rc dice": 0.03,
+       "particles": 0.26,
+       "direct": 2.3,
+       "softblur": 0.58,
+       "gather": 0.71,
+       "temporal": 0.18,
+       "reflect": 0.26,
+       "rdenoise": 0.6,
+       "volumetrics": 0.83,
+       "sharpU": 0.52,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.17
+      },
+      {
+       "mesh": 0.67,
+       "rc c3": 0.29,
+       "rc c2": 1.14,
+       "rc c1": 1.25,
+       "rc c0": 0.28,
+       "rc dice": 0.03,
+       "particles": 0.26,
+       "direct": 2.34,
+       "softblur": 0.57,
+       "gather": 0.71,
+       "temporal": 0.18,
+       "reflect": 0.26,
+       "rdenoise": 0.6,
+       "volumetrics": 0.82,
+       "sharpU": 0.51,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.16
+      }
+     ]
+    },
+    {
+     "lever": "all three",
+     "on": {
+      "calmMax": 4,
+      "farCells": 1,
+      "readSkip": true,
+      "directAt": 0.5
+     },
+     "off": {
+      "calmMax": 1,
+      "farCells": 0,
+      "readSkip": false,
+      "directAt": 2
+     },
+     "solver": [
+      1.35,
+      1.83
+     ],
+     "union": [
+      7.66,
+      8.16
+     ],
+     "unionMed": [
+      7.67,
+      8.13
+     ],
+     "stepped": [
+      2034,
+      3283
+     ],
+     "bricks": [
+      3304,
+      3283
+     ],
+     "passes": [
+      {
+       "mesh": 0.61,
+       "rc c3": 0.29,
+       "rc c2": 0.92,
+       "rc c1": 1.52,
+       "rc c0": 0.28,
+       "rc dice": 0.03,
+       "particles": 0.22,
+       "direct": 2.33,
+       "softblur": 0.57,
+       "gather": 0.71,
+       "temporal": 0.19,
+       "reflect": 0.27,
+       "rdenoise": 0.6,
+       "volumetrics": 0.85,
+       "sharpU": 0.52,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.18
+      },
+      {
+       "mesh": 0.68,
+       "rc c3": 0.3,
+       "rc c2": 1.18,
+       "rc c1": 1.19,
+       "rc c0": 0.26,
+       "rc dice": 0.02,
+       "particles": 0.26,
+       "direct": 2.31,
+       "softblur": 0.58,
+       "gather": 0.72,
+       "temporal": 0.18,
+       "reflect": 0.27,
+       "rdenoise": 0.6,
+       "volumetrics": 0.86,
+       "sharpU": 0.52,
+       "compS": 0.49,
+       "gbaa": 0.04,
+       "taau": 0.16,
+       "bloom": 0.09,
+       "probe": 0.17
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "scene": "one can, 8 s, the camera 5 m off",
+   "levers": [
+    {
+     "lever": "readSkip",
+     "on": true,
+     "off": false,
+     "solver": [
+      0.83,
+      0.84
+     ],
+     "union": [
+      8.38,
+      8.49
+     ],
+     "unionMed": [
+      8.32,
+      8.39
+     ],
+     "stepped": [
+      869,
+      892
+     ],
+     "bricks": [
+      1086,
+      1138
+     ],
+     "passes": [
+      {
+       "mesh": 0.54,
+       "rc c3": 0.26,
+       "rc c2": 1.7,
+       "rc c1": 1.45,
+       "rc c0": 0.3,
+       "rc dice": 0.06,
+       "direct": 3.08,
+       "softblur": 0.75,
+       "gather": 1.46,
+       "temporal": 0.61,
+       "reflect": 0.16,
+       "rdenoise": 0.85,
+       "volumetrics": 1.04,
+       "sharpU": 0.69,
+       "compS": 0.46,
+       "gbaa": 0.03,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.15
+      },
+      {
+       "mesh": 0.55,
+       "rc c3": 0.26,
+       "rc c2": 1.66,
+       "rc c1": 1.54,
+       "rc c0": 0.3,
+       "rc dice": 0.05,
+       "direct": 3.2,
+       "softblur": 0.75,
+       "gather": 1.44,
+       "temporal": 0.85,
+       "reflect": 0.16,
+       "rdenoise": 0.87,
+       "volumetrics": 1.03,
+       "sharpU": 0.69,
+       "compS": 0.46,
+       "gbaa": 0.03,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.15
+      }
+     ]
+    },
+    {
+     "lever": "calmMax",
+     "on": 4,
+     "off": 1,
+     "solver": [
+      0.91,
+      1.06
+     ],
+     "union": [
+      8.57,
+      8.75
+     ],
+     "unionMed": [
+      8.59,
+      8.72
+     ],
+     "stepped": [
+      1057,
+      1424
+     ],
+     "bricks": [
+      1388,
+      1424
+     ],
+     "passes": [
+      {
+       "mesh": 0.56,
+       "rc c3": 0.32,
+       "rc c2": 1.71,
+       "rc c1": 1.29,
+       "rc c0": 0.29,
+       "rc dice": 0.04,
+       "direct": 3.1,
+       "softblur": 0.76,
+       "gather": 1.43,
+       "temporal": 0.65,
+       "reflect": 0.18,
+       "rdenoise": 0.83,
+       "volumetrics": 1.08,
+       "sharpU": 0.68,
+       "compS": 0.46,
+       "gbaa": 0.04,
+       "taau": 0.14,
+       "bloom": 0.09,
+       "probe": 0.18
+      },
+      {
+       "mesh": 0.59,
+       "rc c3": 0.33,
+       "rc c2": 1.77,
+       "rc c1": 1.36,
+       "rc c0": 0.29,
+       "rc dice": 0.05,
+       "direct": 3.15,
+       "softblur": 0.76,
+       "gather": 1.42,
+       "temporal": 0.69,
+       "reflect": 0.16,
+       "rdenoise": 0.85,
+       "volumetrics": 1.12,
+       "sharpU": 0.68,
+       "compS": 0.46,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.17
+      }
+     ]
+    },
+    {
+     "lever": "all three",
+     "on": {
+      "calmMax": 4,
+      "farCells": 1,
+      "readSkip": true,
+      "directAt": 0.5
+     },
+     "off": {
+      "calmMax": 1,
+      "farCells": 0,
+      "readSkip": false,
+      "directAt": 2
+     },
+     "solver": [
+      0.99,
+      1.12
+     ],
+     "union": [
+      8.94,
+      9.11
+     ],
+     "unionMed": [
+      8.91,
+      9.11
+     ],
+     "stepped": [
+      1220,
+      1619
+     ],
+     "bricks": [
+      1598,
+      1619
+     ],
+     "passes": [
+      {
+       "mesh": 0.58,
+       "rc c3": 0.32,
+       "rc c2": 1.7,
+       "rc c1": 1.29,
+       "rc c0": 0.27,
+       "rc dice": 0.05,
+       "direct": 3.13,
+       "softblur": 0.77,
+       "gather": 1.46,
+       "temporal": 1,
+       "reflect": 0.16,
+       "rdenoise": 0.86,
+       "volumetrics": 1.37,
+       "sharpU": 0.68,
+       "compS": 0.46,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.08,
+       "probe": 0.2
+      },
+      {
+       "mesh": 0.59,
+       "rc c3": 0.3,
+       "rc c2": 1.91,
+       "rc c1": 1.21,
+       "rc c0": 0.26,
+       "rc dice": 0.05,
+       "direct": 3.2,
+       "softblur": 0.75,
+       "gather": 1.46,
+       "temporal": 1.1,
+       "reflect": 0.18,
+       "rdenoise": 0.86,
+       "volumetrics": 1.32,
+       "sharpU": 0.69,
+       "compS": 0.46,
+       "gbaa": 0.04,
+       "taau": 0.15,
+       "bloom": 0.09,
+       "probe": 0.18
+      }
+     ]
+    }
+   ]
+  }
+ ],
+ "dry": [
+  {
+   "what": "alone",
+   "fresh": 0.15,
+   "before": {
+    "bricks": 0,
+    "free": 8192,
+    "mass": 0
+   },
+   "after": [
+    {
+     "t": 1,
+     "bricksNear": 97,
+     "smokyNear": 35,
+     "massNear": 2748,
+     "bricks": 97,
+     "free": 8095,
+     "massAll": 2748,
+     "thinUnder": 0.25,
+     "refused": 0
+    },
+    {
+     "t": 2,
+     "bricksNear": 200,
+     "smokyNear": 84,
+     "massNear": 5733,
+     "bricks": 207,
+     "free": 7985,
+     "massAll": 5733,
+     "thinUnder": 0.25,
+     "refused": 0
+    },
+    {
+     "t": 3,
+     "bricksNear": 237,
+     "smokyNear": 140,
+     "massNear": 7711,
+     "bricks": 331,
+     "free": 7861,
+     "massAll": 7714,
+     "thinUnder": 0.25,
+     "refused": 0
+    },
+    {
+     "t": 4,
+     "bricksNear": 267,
+     "smokyNear": 195,
+     "massNear": 9359,
+     "bricks": 446,
+     "free": 7746,
+     "massAll": 9413,
+     "thinUnder": 0.25,
+     "refused": 0
+    },
+    {
+     "t": 6,
+     "bricksNear": 309,
+     "smokyNear": 259,
+     "massNear": 11188,
+     "bricks": 725,
+     "free": 7467,
+     "massAll": 11712,
+     "thinUnder": 0.25,
+     "refused": 0
+    }
+   ]
+  },
+  {
+   "what": "into twelve, fresh smoke first",
+   "fresh": 0.15,
+   "before": {
+    "bricks": 6371,
+    "free": 1821,
+    "mass": 144245
+   },
+   "after": [
+    {
+     "t": 1,
+     "bricksNear": 80,
+     "smokyNear": 30,
+     "massNear": 2703,
+     "bricks": 6399,
+     "free": 1793,
+     "massAll": 147694,
+     "thinUnder": 0.56,
+     "refused": 56
+    },
+    {
+     "t": 2,
+     "bricksNear": 182,
+     "smokyNear": 69,
+     "massNear": 5547,
+     "bricks": 6529,
+     "free": 1663,
+     "massAll": 148433,
+     "thinUnder": 0.85,
+     "refused": 189
+    },
+    {
+     "t": 3,
+     "bricksNear": 230,
+     "smokyNear": 128,
+     "massNear": 7428,
+     "bricks": 6469,
+     "free": 1723,
+     "massAll": 147992,
+     "thinUnder": 0.71,
+     "refused": 997
+    },
+    {
+     "t": 4,
+     "bricksNear": 262,
+     "smokyNear": 174,
+     "massNear": 8680,
+     "bricks": 6490,
+     "free": 1701,
+     "massAll": 148857,
+     "thinUnder": 0.76,
+     "refused": 1560
+    },
+    {
+     "t": 6,
+     "bricksNear": 275,
+     "smokyNear": 217,
+     "massNear": 9202,
+     "bricks": 6493,
+     "free": 1698,
+     "massAll": 144398,
+     "thinUnder": 0.76,
+     "refused": 2967
+    }
+   ]
+  },
+  {
+   "what": "into twelve, first come",
+   "fresh": 0,
+   "before": {
+    "bricks": 6917,
+    "free": 1275,
+    "mass": 156795
+   },
+   "after": [
+    {
+     "t": 1,
+     "bricksNear": 103,
+     "smokyNear": 27,
+     "massNear": 2659,
+     "bricks": 6962,
+     "free": 1230,
+     "massAll": 161683,
+     "thinUnder": 0.25,
+     "refused": 360
+    },
+    {
+     "t": 2,
+     "bricksNear": 184,
+     "smokyNear": 72,
+     "massNear": 5284,
+     "bricks": 7108,
+     "free": 1084,
+     "massAll": 164585,
+     "thinUnder": 0.25,
+     "refused": 2029
+    },
+    {
+     "t": 3,
+     "bricksNear": 227,
+     "smokyNear": 120,
+     "massNear": 7203,
+     "bricks": 7214,
+     "free": 978,
+     "massAll": 165234,
+     "thinUnder": 0.25,
+     "refused": 6539
+    },
+    {
+     "t": 4,
+     "bricksNear": 239,
+     "smokyNear": 159,
+     "massNear": 8339,
+     "bricks": 7210,
+     "free": 982,
+     "massAll": 164367,
+     "thinUnder": 0.25,
+     "refused": 13402
+    },
+    {
+     "t": 6,
+     "bricksNear": 246,
+     "smokyNear": 176,
+     "massNear": 9683,
+     "bricks": 7075,
+     "free": 1116,
+     "massAll": 164179,
+     "thinUnder": 0.25,
+     "refused": 22174
+    }
+   ]
+  }
+ ],
+ "mag": [
+  {
+   "what": "gun gas lets go",
+   "fineDecay": 3,
+   "fineShare": 0.25,
+   "shots": 30,
+   "rows": [
+    {
+     "t": 0.5,
+     "fired": 5,
+     "solverMs": 0.51,
+     "unionMs": 10.39,
+     "bricks": 501,
+     "gunGas": 501,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 1,
+     "fired": 10,
+     "solverMs": 0.67,
+     "unionMs": 10.9,
+     "bricks": 690,
+     "gunGas": 690,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 1.5,
+     "fired": 15,
+     "solverMs": 0.79,
+     "unionMs": 11.28,
+     "bricks": 891,
+     "gunGas": 891,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 2,
+     "fired": 20,
+     "solverMs": 0.87,
+     "unionMs": 11.61,
+     "bricks": 1124,
+     "gunGas": 1124,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 2.5,
+     "fired": 25,
+     "solverMs": 1,
+     "unionMs": 11.89,
+     "bricks": 1348,
+     "gunGas": 1348,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 3,
+     "fired": 30,
+     "solverMs": 1.08,
+     "unionMs": 12.1,
+     "bricks": 1536,
+     "gunGas": 1536,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 3.5,
+     "fired": 30,
+     "solverMs": 1.08,
+     "unionMs": 9.47,
+     "bricks": 1609,
+     "gunGas": 1609,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 4,
+     "fired": 30,
+     "solverMs": 1.08,
+     "unionMs": 9.47,
+     "bricks": 1628,
+     "gunGas": 1628,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 4.5,
+     "fired": 30,
+     "solverMs": 0.95,
+     "unionMs": 9.18,
+     "bricks": 1467,
+     "gunGas": 1467,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 5,
+     "fired": 30,
+     "solverMs": 0.69,
+     "unionMs": 8.58,
+     "bricks": 1138,
+     "gunGas": 1138,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 5.5,
+     "fired": 30,
+     "solverMs": 0.43,
+     "unionMs": 8.21,
+     "bricks": 458,
+     "gunGas": 458,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 6,
+     "fired": 30,
+     "solverMs": 0.39,
+     "unionMs": 8.25,
+     "bricks": 217,
+     "gunGas": 217,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 6.5,
+     "fired": 30,
+     "solverMs": 0.33,
+     "unionMs": 7.98,
+     "bricks": 90,
+     "gunGas": 90,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 7,
+     "fired": 30,
+     "solverMs": 0.16,
+     "unionMs": 7.82,
+     "bricks": 45,
+     "gunGas": 45,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 7.5,
+     "fired": 30,
+     "solverMs": 0,
+     "unionMs": 7.76,
+     "bricks": 0,
+     "gunGas": 0,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 8,
+     "fired": 30,
+     "solverMs": 0,
+     "unionMs": 7.78,
+     "bricks": 0,
+     "gunGas": 0,
+     "refused": 0,
+     "heldToShare": 0
+    }
+   ]
+  },
+  {
+   "what": "gun gas as first benched, the other rules as they stand",
+   "fineDecay": 0,
+   "fineShare": 1,
+   "shots": 30,
+   "rows": [
+    {
+     "t": 0.5,
+     "fired": 5,
+     "solverMs": 0.57,
+     "unionMs": 10.84,
+     "bricks": 668,
+     "gunGas": 668,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 1,
+     "fired": 10,
+     "solverMs": 0.8,
+     "unionMs": 11.44,
+     "bricks": 950,
+     "gunGas": 950,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 1.5,
+     "fired": 15,
+     "solverMs": 0.93,
+     "unionMs": 11.96,
+     "bricks": 1359,
+     "gunGas": 1359,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 2,
+     "fired": 20,
+     "solverMs": 1.09,
+     "unionMs": 12.52,
+     "bricks": 1729,
+     "gunGas": 1729,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 2.5,
+     "fired": 25,
+     "solverMs": 1.26,
+     "unionMs": 12.61,
+     "bricks": 2169,
+     "gunGas": 2169,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 3,
+     "fired": 30,
+     "solverMs": 1.4,
+     "unionMs": 12.91,
+     "bricks": 2467,
+     "gunGas": 2467,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 3.5,
+     "fired": 30,
+     "solverMs": 1.53,
+     "unionMs": 10.22,
+     "bricks": 2846,
+     "gunGas": 2846,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 4,
+     "fired": 30,
+     "solverMs": 1.73,
+     "unionMs": 10.68,
+     "bricks": 3427,
+     "gunGas": 3427,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 4.5,
+     "fired": 30,
+     "solverMs": 1.85,
+     "unionMs": 10.89,
+     "bricks": 3796,
+     "gunGas": 3796,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 5,
+     "fired": 30,
+     "solverMs": 1.96,
+     "unionMs": 11.05,
+     "bricks": 4133,
+     "gunGas": 4133,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 5.5,
+     "fired": 30,
+     "solverMs": 2.01,
+     "unionMs": 11.12,
+     "bricks": 4320,
+     "gunGas": 4320,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 6,
+     "fired": 30,
+     "solverMs": 2.06,
+     "unionMs": 11.16,
+     "bricks": 4466,
+     "gunGas": 4466,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 6.5,
+     "fired": 30,
+     "solverMs": 2.04,
+     "unionMs": 11.1,
+     "bricks": 4564,
+     "gunGas": 4564,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 7,
+     "fired": 30,
+     "solverMs": 1.99,
+     "unionMs": 11.17,
+     "bricks": 4638,
+     "gunGas": 4638,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 7.5,
+     "fired": 30,
+     "solverMs": 1.94,
+     "unionMs": 11.23,
+     "bricks": 4711,
+     "gunGas": 4711,
+     "refused": 0,
+     "heldToShare": 0
+    },
+    {
+     "t": 8,
+     "fired": 30,
+     "solverMs": 1.87,
+     "unionMs": 11.15,
+     "bricks": 4771,
+     "gunGas": 4771,
+     "refused": 0,
+     "heldToShare": 0
+    }
+   ]
+  }
+ ],
+ "failed": [],
+ "gpuErrors": []
+}

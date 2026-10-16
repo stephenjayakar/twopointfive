@@ -6,6 +6,8 @@
 //   bun run tools/qa/panel-inventory.ts                    live panel vs the frozen fixture (also: probes.ts panel-inventory, families 'ui' / 'selector')
 //   bun run tools/qa/panel-inventory.ts --ref <gitref>     live panel vs the panel AT THAT REF (its bindings.ts + panel.ts materialised from git, imports re-pointed)
 //   bun run tools/qa/panel-inventory.ts --write [--ref R]  (re)write the fixture from ref R (default HEAD) — only when a row is renamed ON PURPOSE
+//   --reword [map.json]                                    a row reworded ON PURPOSE: rewrite ONLY the fixture's missing rows, each from the live row of the same kind + label (map.json = { "old label": "new label" }
+//                                                          for a renamed one), every other fixture row left as it is (unlike --write, which re-freezes the lot and so holds rows other lanes added)
 //   --print                                                dump the live inventory grouped by path
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -103,7 +105,7 @@ function instrument(P: any, rows: Row[]) {
   proto.numbers = function (sec: any, label: string, n: number, _g: any, _s: any, opts: any = {}) { rows.push({ path: pathOf(this, sec), kind: 'numbers', label, step: num(opts.step), title: opts.title ?? '', def: opts.defs !== undefined, extra: `×${n}`, adv: advOf(this) }); return o.numbers.apply(this, arguments as any); };
 }
 
-/** the identity of a row for the diff: everything the designer can see or search, nothing about WHERE it sits */
+/** the identity of a row for the diff: everything the maintainer can see or search, nothing about WHERE it sits */
 export function rowKey(r: Row): string { return [r.kind, r.label, r.min ?? '', r.max ?? '', r.step ?? '', r.title, r.def ? 'def' : '', r.kind === 'text' ? '' : r.extra].join('¦'); }
 
 /** materialise src/ui/bindings.ts + panel.ts of a git ref into a scratch dir with their imports pointed at the live tree (panel.ts at the ref's own copy) */
@@ -135,8 +137,6 @@ function group(rows: Row[]): Map<string, Row[]> { const m = new Map<string, Row[
 function multiset(rows: Row[]): Map<string, Row[]> { const m = new Map<string, Row[]>(); for (const r of rows) { const k = rowKey(r); const a = m.get(k) ?? []; a.push(r); m.set(k, a); } return m; }
 const show = (r: Row) => `${r.kind.padEnd(7)} ${r.label || (r.kind === 'text' ? `“${r.extra}”` : '(no label)')}${r.kind === 'slider' ? ` [${r.min}‥${r.max} step ${r.step}]` : ''}${r.kind === 'buttons' ? ` ${r.extra}` : ''}${r.def ? ' ●' : ''}  @ ${r.path}`;
 
-let FAILS = 0;
-export function panelInventoryFailures() { return FAILS; }
 /** the probe: live vs frozen (or vs --ref); prints the table, the moves, the additions, and a '- PASS —' / '- FAIL —' line */
 export async function panelInventory(argv: string[] = process.argv.slice(2)): Promise<boolean> {
   const refI = argv.indexOf('--ref'); const ref = refI >= 0 ? argv[refI + 1] : null; const write = argv.includes('--write'); const print = argv.includes('--print');
@@ -150,7 +150,7 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
       before = await inventoryOf(m.bindings, join(m.dir, 'panel.ts'), W);
       if (write) { writeFileSync(FIXTURE, JSON.stringify(before.map(({ adv: _a, ...r }) => r), null, 1) + '\n'); console.log(`  wrote ${before.length} rows of ${ref ?? 'HEAD'} → ${FIXTURE}`); }
     }
-    if (!before) { if (!existsSync(FIXTURE)) { console.log('- FAIL — no fixture (run with --write --ref main once)'); FAILS++; return false; } before = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Row[]; }
+    if (!before) { if (!existsSync(FIXTURE)) { console.log('- FAIL — no fixture (run with --write --ref main once)'); return false; } before = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Row[]; }
     if (write && !ref) { console.log('  (fixture written from HEAD; nothing compared)'); return true; }
     const live = await inventoryOf(`${ROOT}/src/ui/bindings.ts`, `${ROOT}/src/ui/panel.ts`, W);
     // the table: rows per live path
@@ -166,9 +166,15 @@ export async function panelInventory(argv: string[] = process.argv.slice(2)): Pr
     console.log(`\n  added: ${added.length} row(s) not in the reference`); for (const r of added) console.log('    + ' + show(r));
     // near-misses: for each missing row, the live row with the same kind + label (a range / tooltip / button reworded) — the usual slip
     if (missing.length) { console.log(`\n  MISSING: ${missing.length} reference row(s) with no equal in the live panel`); for (const r of missing) { console.log('    - ' + show(r)); const near = live.find(x => x.kind === r.kind && x.label === r.label && rowKey(x) !== rowKey(r)); if (near) console.log(`        nearest live: ${show(near)}\n        differs in:${near.min !== r.min || near.max !== r.max || near.step !== r.step ? ' range/step' : ''}${near.title !== r.title ? ' tooltip' : ''}${near.extra !== r.extra ? ' buttons/options' : ''}${near.def !== r.def ? ' revert-dot' : ''}`); } }
+    const rwI = argv.indexOf('--reword');
+    if (rwI >= 0 && !ref && missing.length) {
+      const mapPath = argv[rwI + 1] && !argv[rwI + 1].startsWith('--') ? argv[rwI + 1] : null; const ren: Record<string, string> = mapPath ? JSON.parse(readFileSync(mapPath, 'utf8')) : {};
+      const pool = [...added]; let n = 0; const left: Row[] = [];
+      for (const r of missing) { const want = ren[r.label] ?? r.label; const i = pool.findIndex(x => x.kind === r.kind && x.label === want); if (i < 0) { left.push(r); continue; } const [x] = pool.splice(i, 1); const { adv: _a, ...row } = x; before[before.indexOf(r)] = row as Row; n++; console.log(`    reworded in the fixture: ${show(r)}  →  ${x.label}`); }
+      writeFileSync(FIXTURE, JSON.stringify(before, null, 1) + '\n'); console.log(`  --reword: ${n} fixture row(s) rewritten, ${left.length} still missing`); missing.length = 0; missing.push(...left);
+    }
     const ok = missing.length === 0;
     console.log(`\n- ${ok ? 'PASS' : 'FAIL'} — ${missing.length} missing of ${before.length} reference rows · ${live.length} live (${added.length} added, ${moved} moved)`);
-    if (!ok) FAILS++;
     return ok;
   } finally { restore(); try { rmSync(SCRATCH, { recursive: true, force: true }); } catch { /* */ } }
 }

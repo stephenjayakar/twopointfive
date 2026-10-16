@@ -278,7 +278,7 @@ export async function needsInterrupts() {
       const T = needsTrip(A);
       if (T?.phase === 'going' && goAt < 0) goAt = game.time;
       if (goAt >= 0 && shotAt < 0 && game.time - goAt >= 5.5) { shotAt = game.time; game.events.push({ kind: 'shot', pos: [20, 0, 11.2], time: game.time, loud: true, level: 1, who: PLAYER_ID }); }   // Sam's pistol at gunfire level, mid-corridor
-      if (shotAt >= 0 && !T && cancelAt < 0) { cancelAt = game.time; cancelPos = v3.copy(A.char.pos); offRoute = routeDist(cancelPos); stateAfter = A.state; game.teleportPlayer([2.0, 0, 2.0]); game.playerInvisible = true; }
+      if (shotAt >= 0 && !T && cancelAt < 0) { cancelAt = game.time; cancelPos = v3.copy(A.char.pos); offRoute = routeDist(cancelPos!); stateAfter = A.state; game.teleportPlayer([2.0, 0, 2.0]); game.playerInvisible = true; }
       if (cancelAt >= 0) { later = game.time - cancelAt; if (needsTrip(A)) laterTrips++; if (later >= 120) break; }
     }
     console.log(`    walks at ${f2(goAt)} s; shot at +${f1(shotAt - goAt)} s; trip ${cancelAt >= 0 ? `broken off ${f2(cancelAt - shotAt)} s later at ${posS(cancelPos)} — ${f1(offRoute)} m off his route, ${stateAfter}` : 'NOT broken off'}; then ${f1(later)} s watched: ${laterTrips} frames with a trip on him; floor now ${game.escalationSummary()}; departures ${NEEDS_STATS.departed - depBefore}`);

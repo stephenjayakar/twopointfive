@@ -44,7 +44,7 @@
 // Blind pairwise preference over the smoke battery's flipbook clips (tools/qa/smoke-battery.js → the sink's docs/shots/clips/). Pairs are drawn WITHIN a scene,
 // every variant against every other once (order and left/right randomized with a seeded shuffle so a reload resumes the same deck), both flipbooks step on ONE
 // clock (frame i on both sides — the plumes are the same throw), a choice is POSTed to the sink as a JSON line (docs/perf/<name>.jsonl) with the pair, the pick,
-// the seconds taken and the optional 'why'. ?sink=5174 (default) · ?name=smoke-pref (results file) · ?scenes=S1,S2 · ?variants=a,b,c (subset) · ?judge=sujay
+// the seconds taken and the optional 'why'. ?sink=5174 (default) · ?name=smoke-pref (results file) · ?scenes=S1,S2 · ?variants=a,b,c (subset) · ?judge=name
 // ?secs=2.5 (default) loops only that many seconds from the MIDDLE of each clip (the orbit's swing) — ?secs=0 = the whole clip · ?mode=active (default) | roundrobin:
 // ACTIVE = adaptive design for Bradley–Terry: the judgments so far (GET /prefs/<name>, every scene pooled per variant + this session's) keep an online rating
 // μ, σ² per (scene, variant); the next pair shown is the unjudged-or-least-judged pair with the largest expected information p(1−p)·(σa²+σb²) — close calls

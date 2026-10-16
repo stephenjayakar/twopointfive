@@ -1,0 +1,298 @@
+{
+ "preset": "high",
+ "res": [
+  1368,
+  770
+ ],
+ "note": "stress minute (tools/qa/stress-scene.js) + a 3 s FN2000 burst into the tan cluster per take; serialized frames; GPU shared with other sessions on this machine (contention: p95 unreliable, means indicative)",
+ "fightTrue": {
+  "0": {
+   "frames": 240,
+   "res": [
+    1368,
+    770
+   ],
+   "preset": "high",
+   "union": {
+    "mean": 18.51,
+    "p95": 20.58,
+    "max": 29.1
+   },
+   "particles": {
+    "mean": 0.11,
+    "p95": 0.13,
+    "max": 0.2
+   },
+   "smoke": {
+    "mean": 2.93,
+    "p95": 3.08,
+    "max": 11.21
+   },
+   "gbuffer": {
+    "mean": 0.18,
+    "p95": 0.2,
+    "max": 0.79
+   },
+   "direct": {
+    "mean": 4.84,
+    "p95": 5.77,
+    "max": 6.36
+   },
+   "volFroxel": {
+    "mean": 1.28,
+    "p95": 1.57,
+    "max": 1.7
+   },
+   "volumetrics": {
+    "mean": 0.2,
+    "p95": 0.26,
+    "max": 0.26
+   },
+   "peakMoving": 0,
+   "peakLive": 0,
+   "pslots": 758
+  },
+  "1": {
+   "frames": 240,
+   "res": [
+    1368,
+    770
+   ],
+   "preset": "high",
+   "union": {
+    "mean": 22.08,
+    "p95": 25.43,
+    "max": 40.63
+   },
+   "particles": {
+    "mean": 0.22,
+    "p95": 0.26,
+    "max": 0.39
+   },
+   "smoke": {
+    "mean": 2.97,
+    "p95": 3.15,
+    "max": 6.23
+   },
+   "gbuffer": {
+    "mean": 0.19,
+    "p95": 0.26,
+    "max": 1.11
+   },
+   "direct": {
+    "mean": 6.03,
+    "p95": 6.88,
+    "max": 7.47
+   },
+   "volFroxel": {
+    "mean": 1.5,
+    "p95": 2.03,
+    "max": 4.72
+   },
+   "volumetrics": {
+    "mean": 0.23,
+    "p95": 0.33,
+    "max": 0.92
+   },
+   "peakMoving": 5,
+   "peakLive": 5,
+   "pslots": 3961
+  },
+  "0.5": {
+   "frames": 240,
+   "res": [
+    1368,
+    770
+   ],
+   "preset": "high",
+   "union": {
+    "mean": 19.49,
+    "p95": 20.97,
+    "max": 28.05
+   },
+   "particles": {
+    "mean": 0.15,
+    "p95": 0.2,
+    "max": 0.26
+   },
+   "smoke": {
+    "mean": 2.94,
+    "p95": 3.08,
+    "max": 9.57
+   },
+   "gbuffer": {
+    "mean": 0.18,
+    "p95": 0.2,
+    "max": 0.72
+   },
+   "direct": {
+    "mean": 5.25,
+    "p95": 5.96,
+    "max": 6.36
+   },
+   "volFroxel": {
+    "mean": 1.26,
+    "p95": 1.51,
+    "max": 1.7
+   },
+   "volumetrics": {
+    "mean": 0.21,
+    "p95": 0.26,
+    "max": 0.26
+   },
+   "peakMoving": 4,
+   "peakLive": 4,
+   "pslots": 2609
+  }
+ },
+ "fightFalse": {
+  "0": {
+   "frames": 240,
+   "res": [
+    1368,
+    770
+   ],
+   "preset": "high",
+   "union": {
+    "mean": 18.94,
+    "p95": 34.8,
+    "max": 40.44
+   },
+   "particles": {
+    "mean": 0.09,
+    "p95": 0.13,
+    "max": 0.46
+   },
+   "smoke": {
+    "mean": 2.56,
+    "p95": 6.55,
+    "max": 14.42
+   },
+   "gbuffer": {
+    "mean": 0.24,
+    "p95": 0.52,
+    "max": 2.62
+   },
+   "direct": {
+    "mean": 4.36,
+    "p95": 4.78,
+    "max": 5.05
+   },
+   "volFroxel": {
+    "mean": 1.32,
+    "p95": 1.64,
+    "max": 3.87
+   },
+   "volumetrics": {
+    "mean": 0.18,
+    "p95": 0.26,
+    "max": 1.25
+   },
+   "peakMoving": 0,
+   "peakLive": 0,
+   "pslots": 634
+  },
+  "1": {
+   "frames": 240,
+   "res": [
+    1368,
+    770
+   ],
+   "preset": "high",
+   "union": {
+    "mean": 20.9,
+    "p95": 34.47,
+    "max": 43.32
+   },
+   "particles": {
+    "mean": 0.18,
+    "p95": 0.26,
+    "max": 1.38
+   },
+   "smoke": {
+    "mean": 3.29,
+    "p95": 6.75,
+    "max": 14.81
+   },
+   "gbuffer": {
+    "mean": 0.22,
+    "p95": 0.33,
+    "max": 2.16
+   },
+   "direct": {
+    "mean": 5.34,
+    "p95": 6.09,
+    "max": 6.42
+   },
+   "volFroxel": {
+    "mean": 1.23,
+    "p95": 2.16,
+    "max": 6.36
+   },
+   "volumetrics": {
+    "mean": 0.27,
+    "p95": 0.33,
+    "max": 0.46
+   },
+   "peakMoving": 3,
+   "peakLive": 4,
+   "pslots": 3151
+  },
+  "0.5": {
+   "frames": 240,
+   "res": [
+    1368,
+    770
+   ],
+   "preset": "high",
+   "union": {
+    "mean": 20.22,
+    "p95": 34.01,
+    "max": 37.95
+   },
+   "particles": {
+    "mean": 0.11,
+    "p95": 0.13,
+    "max": 0.72
+   },
+   "smoke": {
+    "mean": 3.25,
+    "p95": 6.62,
+    "max": 18.94
+   },
+   "gbuffer": {
+    "mean": 0.2,
+    "p95": 0.33,
+    "max": 1.97
+   },
+   "direct": {
+    "mean": 5.05,
+    "p95": 5.9,
+    "max": 6.68
+   },
+   "volFroxel": {
+    "mean": 1.17,
+    "p95": 1.97,
+    "max": 6.36
+   },
+   "volumetrics": {
+    "mean": 0.26,
+    "p95": 0.33,
+    "max": 2.56
+   },
+   "peakMoving": 4,
+   "peakLive": 4,
+   "pslots": 2368
+  }
+ },
+ "log": [
+  "setup: qrf deployed after 21.0 s · 41 lights (7 lit carried) · smoke 6 dom · particles 62 slots · guards alert,alert,alert,search,search,search,search",
+  "chaos 0: union {\"mean\":18.51,\"p95\":20.58,\"max\":29.1} particles {\"mean\":0.11,\"p95\":0.13,\"max\":0.2} movers 0",
+  "chaos 0.5: union {\"mean\":19.49,\"p95\":20.97,\"max\":28.05} particles {\"mean\":0.15,\"p95\":0.2,\"max\":0.26} movers 4",
+  "chaos 1: union {\"mean\":22.08,\"p95\":25.43,\"max\":40.63} particles {\"mean\":0.22,\"p95\":0.26,\"max\":0.39} movers 5",
+  "setup: qrf deployed after 21.0 s · 41 lights (7 lit carried) · smoke 2 dom · particles 0 slots · guards patrol,patrol,patrol,search,search,search,search",
+  "chaos 0: union {\"mean\":18.94,\"p95\":34.8,\"max\":40.44} particles {\"mean\":0.09,\"p95\":0.13,\"max\":0.46} movers 0",
+  "chaos 0.5: union {\"mean\":20.22,\"p95\":34.01,\"max\":37.95} particles {\"mean\":0.11,\"p95\":0.13,\"max\":0.72} movers 4",
+  "chaos 1: union {\"mean\":20.9,\"p95\":34.47,\"max\":43.32} particles {\"mean\":0.18,\"p95\":0.26,\"max\":1.38} movers 3"
+ ]
+}

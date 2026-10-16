@@ -61,7 +61,7 @@ export async function createEditorApp(H: EditorAppHost): Promise<EditorApp> {
   const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
   const boot = H.boot ?? { file: hash.get('file'), autosave: hash.has('autosave'), blank: hash.has('blank') };
   const officeAllow = (officeLintSidecar as any)?.allow;
-  const ed = new Editor(OFFICE_DATA, { lintAllow: officeAllow });
+  const ed = new Editor(OFFICE_DATA, { lintAllow: officeAllow, file: 'office' });
   const server = { available: false, list: [] as persist.ServerEntry[] };
   { const list = await persist.serverList(); if (list) { server.available = true; server.list = list; } }
   // The autosave slot is only ever OVERWRITTEN by a session that owns it (persist.ts AutosaveSession): a #autosave boot opens the slot leniently — a level WITH
@@ -69,7 +69,7 @@ export async function createEditorApp(H: EditorAppHost): Promise<EditorApp> {
   // closing the tab never replaces the user's level with the stand-in (review T4.1). `session.bootError` words it for the page.
   const session = new persist.AutosaveSession(ed);
   try {
-    if (boot.file && server.available) { ed.load(await persist.serverLoad(boot.file), { lintAllow: (await persist.serverLintAllow(boot.file)) ?? undefined }); }
+    if (boot.file && server.available) { ed.load(await persist.serverLoad(boot.file), { lintAllow: (await persist.serverLintAllow(boot.file)) ?? undefined, file: boot.file }); }
     else if (boot.autosave) session.restore();
     else if (boot.blank) ed.load(Editor.blank('untitled', OFFICE_DATA.materials));
   } catch (e) { console.error(e); session.bootError = `${boot.file ? `levels/${boot.file}.json` : 'the level'} could not be opened (${String((e as Error)?.message ?? e).split('\n')[0]}) — the bundled office is up instead; nothing was changed`; }
@@ -87,15 +87,14 @@ export async function createEditorApp(H: EditorAppHost): Promise<EditorApp> {
 
   const A = { time: 0, frameCount: 0, fpsSm: 60 } as EditorApp;
   const hudLine = () => { const t = engine.timer; const c = view.get(); const cur = tools.cursor3; return `${gpu.adapterInfo} · ${engine.width}×${engine.height} ${H.quality()} ×${engine.effectiveScale.toFixed(2)} · ${A.fpsSm.toFixed(0)} fps · gpu ${t.total(['composite', 'post', 'fxaa', 'gbuffer']).toFixed(1)} ms · boxes ${engine.world.all.length} · lights ${engine.lights.activeCount} · scene ${scene.stats.lastMs.toFixed(1)} ms${scene.error ? ' ⚠ ' + scene.error.slice(0, 60) : ''}\ncam yaw ${(c.yaw * 57.3).toFixed(0)}° pitch ${(c.pitch * 57.3).toFixed(0)}° dist ${c.dist.toFixed(1)} · ${view.plan ? 'PLAN' : 'orbit'} · floor ${ed.floorId} · tool ${tools.tool}/${tools.mode} · snap ${ed.settings.snap ? ed.settings.snapStep : 'off'}${cur ? ` · cursor (${cur[0].toFixed(2)}, ${cur[2].toFixed(2)})` : ''} · sel ${ed.sel.size} · view ${engine.settings.debugView} exp ${engine.settings.exposure.toFixed(2)}`; };
-  const play = () => { try { const url = persist.stashForPlay(ed); window.open(url, '_blank'); ui.msg(`stashed ${ed.data.name} for the game (${persist.LS.play}) → ${url}`); return url; } catch (e) { ui.msg(String((e as Error).message)); return ''; } };
-  const ui = new Ui({ ed, tools, view, scene, overlay, viewEl: canvas, quality: H.quality, play, hudLine, server, els: H.els, brand: H.brand });
+  const play = (as?: string) => { try { const url = persist.stashForPlay(ed, as); window.open(url, '_blank'); ui.msg(`stashed ${ed.data.name} for the game (${persist.LS.play}) → ${url}`); return url; } catch (e) { ui.msg(String((e as Error).message)); return ''; } };
+  const ui = new Ui({ ed, tools, view, scene, overlay, viewEl: canvas, quality: H.quality, debugView: v => { if (v !== undefined) engine.settings.debugView = v; return engine.settings.debugView; }, play, hudLine, server, els: H.els, brand: H.brand });
   keyHook = e => ui.paintUi.key(e);
-  (window as any).__edLoadBundled = () => ed.load(OFFICE_DATA as any, { lintAllow: officeAllow });
+  (window as any).__edLoadBundled = () => ed.load(OFFICE_DATA as any, { lintAllow: officeAllow, file: 'office' });
 
   // ---- the frame, in pieces
   const tickInput = (dt: number) => {
     view.w = canvas.clientWidth || view.w; view.h = canvas.clientHeight || view.h;
-    if (input.hit('Backquote')) engine.settings.debugView = (engine.settings.debugView + (input.down('ShiftLeft') ? 10 : 1)) % 11;
     if (input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
     if (input.hit('BracketRight')) engine.settings.exposure *= 1.25;
     tools.update(input, dt); canvas.style.cursor = tools.cursor;

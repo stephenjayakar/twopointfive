@@ -1,0 +1,151 @@
+{
+ "note": "high 1368\u00d7770 \u2192 1777\u00d71000, the V3 / V1 stills, 30 offscreen still renders per tile after 60 settle, mean per-pixel sd of 8-bit luma [meanSd, p99, mean luma]; sharp OFF vs ON, two takes each (off, on, off2, on2), fresh boot, GPU shared with the maintainer's game",
+ "tiles": [
+  [
+   "v3_penumbra",
+   "V3 broad chair penumbra (150\u00d7130)"
+  ],
+  [
+   "v3_desk",
+   "V3 desk A: monitor + keyboard under a panel (340\u00d7200)"
+  ],
+  [
+   "v3_aisle",
+   "V3 open carpet between the desks (300\u00d7200)"
+  ],
+  [
+   "v1_penumbra",
+   "V1 monitor-foot penumbra under the desk lamp (140\u00d780)"
+  ],
+  [
+   "v1_litDesk",
+   "V1 lit desk: keyboard + papers (300\u00d7200)"
+  ],
+  [
+   "v1_kbShadow",
+   "V1 the keyboard's contact shadow band (160\u00d760)"
+  ]
+ ],
+ "data": {
+  "v3_penumbra_off": [
+   0.052,
+   0.446,
+   34.8
+  ],
+  "v3_desk_off": [
+   0.0597,
+   0.637,
+   86.77
+  ],
+  "v3_aisle_off": [
+   0.0785,
+   0.508,
+   22.29
+  ],
+  "v3_penumbra_on": [
+   0.0598,
+   0.484,
+   34.86
+  ],
+  "v3_desk_on": [
+   0.0606,
+   0.577,
+   86.81
+  ],
+  "v3_aisle_on": [
+   0.0852,
+   0.534,
+   22.33
+  ],
+  "v3_penumbra_off2": [
+   0.0463,
+   0.452,
+   34.75
+  ],
+  "v3_desk_off2": [
+   0.0558,
+   0.522,
+   86.73
+  ],
+  "v3_aisle_off2": [
+   0.0785,
+   0.581,
+   22.28
+  ],
+  "v3_penumbra_on2": [
+   0.0559,
+   0.48,
+   34.78
+  ],
+  "v3_desk_on2": [
+   0.0544,
+   0.514,
+   86.75
+  ],
+  "v3_aisle_on2": [
+   0.0801,
+   0.494,
+   22.33
+  ],
+  "v1_penumbra_off": [
+   0.167,
+   1.059,
+   63.32
+  ],
+  "v1_litDesk_off": [
+   0.0727,
+   0.511,
+   133.33
+  ],
+  "v1_kbShadow_off": [
+   0.0861,
+   0.615,
+   121.09
+  ],
+  "v1_penumbra_on": [
+   0.1601,
+   0.857,
+   63.49
+  ],
+  "v1_litDesk_on": [
+   0.0778,
+   0.488,
+   133.46
+  ],
+  "v1_kbShadow_on": [
+   0.0891,
+   0.551,
+   121.41
+  ],
+  "v1_penumbra_off2": [
+   0.1219,
+   0.711,
+   63.37
+  ],
+  "v1_litDesk_off2": [
+   0.0643,
+   0.455,
+   133.39
+  ],
+  "v1_kbShadow_off2": [
+   0.0721,
+   0.483,
+   121.23
+  ],
+  "v1_penumbra_on2": [
+   0.1628,
+   0.833,
+   63.47
+  ],
+  "v1_litDesk_on2": [
+   0.0833,
+   0.486,
+   133.49
+  ],
+  "v1_kbShadow_on2": [
+   0.0812,
+   0.539,
+   121.34
+  ]
+ }
+}

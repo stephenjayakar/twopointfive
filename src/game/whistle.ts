@@ -20,6 +20,9 @@ import type { Input } from './input';
 import type { UpperMode } from './character';
 import { PLAYER_ID } from './consts';
 import { isHostile } from './teams';
+import { hearPath } from './weather';
+import { w } from './words';   // (a leaf: the dialogue pass's one switch)
+import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** Every number of it (panel-tunable; the QA probes read them rather than copy them). */
 export const WHISTLE = {
@@ -52,11 +55,14 @@ export const WHISTLE_DEFAULTS: WhistleKnobs = { ...WHISTLE };
  *  swung up onto the spot from the hip. The one-line taste switch. Either way the pistol stays on his belt until something more than a whistle reaches him. */
 export const WHISTLE_SOFT_UPPER: UpperMode = 'torch';
 
-/** what the man who goes to look says (placeholder lines — the writing pass is the designer's), and what he says the second time */
+/** what the man who goes to look says (placeholder lines — the writing pass is the maintainer's), and what he says the second time */
 const LOOK_LINES = ['hello?', 'someone there?', '…what was that?', 'who\'s that whistling?', 'somebody down there?'];
 const TWICE_LINES = ['right — who\'s messing about?', 'that\'s twice now. come on out.', 'okay. not funny. where are you?'];
+/** the same two moments from a man who is NOT the night staff (words.ts; team 'hostile': an armed defender holding a place does not call 'hello?' or 'not funny' into the dark) */
+const LOOK_FOE = ['…quiet. listen.', 'you hear that?', "something's there."];
+const TWICE_FOE = ["that's no bird. going to look.", "someone's close. eyes up."];
 /** the whistle's lines, for the QA soak (its own smell, and only ever from a man who has just answered one) */
-export function whistleLines(kind: 'look' | 'twice' | 'all' = 'all'): string[] { return kind === 'look' ? [...LOOK_LINES] : kind === 'twice' ? [...TWICE_LINES] : [...LOOK_LINES, ...TWICE_LINES]; }
+export function whistleLines(kind: 'look' | 'twice' | 'all' = 'all'): string[] { return kind === 'look' ? [...LOOK_LINES, ...LOOK_FOE] : kind === 'twice' ? [...TWICE_LINES, ...TWICE_FOE] : [...LOOK_LINES, ...LOOK_FOE, ...TWICE_LINES, ...TWICE_FOE]; }
 
 // ---------------------------------------------------------------- per-man memory (dies with the Guard object: resetGuards makes fresh men)
 /** 'never' for respondedAt: far enough back that no twiceWindow the panel allows reaches it, still finite for the logs */
@@ -138,7 +144,7 @@ function resolve(g: Game, e: GameEvent, keen: number): Resolution {
     if (gd.state === 'dead') continue;
     if (who === PLAYER_ID && !isHostile(gd.team, 'player')) continue;   // an operative does not turn round for Sam's whistle (teams): it is not for him
     if (v3.dist(e.pos, gd.char.pos) > WHISTLE.horizon) continue;
-    const prop = g.col.sound.propagate(src, v3.add(gd.char.pos, [0, 1.5, 0]));
+    const prop = hearPath(g, src, v3.add(gd.char.pos, [0, 1.5, 0]));
     const reach = WHISTLE.reachK * prop.carry * keen;
     if (prop.pathLen >= reach) continue;
     R.hearers.set(gd, { d: prop.pathLen, at: [prop.via[0], 0, prop.via[2]], direct: prop.direct, carry: prop.carry });
@@ -179,15 +185,15 @@ export function hearWhistle(g: Game, gd: Guard, e: GameEvent, keen: number, smal
   if (twice) {   // the second inside the window: a proper search of the place, gun out, no more 'hello?'
     gd.state = 'search'; gd.searchPlan = null; gd.pieing = null; gd.bodyDuty = null; gd.reactT = 0;
     M.searches++; M.soft = false; WHISTLE_STATS.searched++; if (log && log.t === R.t) log.search = true;
-    g.say(gd, pick(TWICE_LINES, M, 'lastTwice'));
+    g.say(gd, pick(w(gd.team === 'guard' ? TWICE_LINES : TWICE_FOE, TWICE_LINES), M, 'lastTwice'));
   } else {       // the first: over to it for a look, torch in hand
     if (gd.state === 'patrol') gd.state = 'suspicious';
     gd.reactT = WHISTLE.reactT; M.soft = true; M.softAt = now;
-    g.say(gd, pick(LOOK_LINES, M, 'lastLook'));
+    g.say(gd, pick(w(gd.team === 'guard' ? LOOK_LINES : LOOK_FOE, LOOK_LINES), M, 'lastLook'));
   }
 }
 function pick(pool: string[], M: WhistleMem, key: 'lastLook' | 'lastTwice'): string {
-  let i = Math.floor(Math.random() * pool.length) % pool.length;
+  let i = Math.floor(simRandom() * pool.length) % pool.length;
   if (pool.length > 1 && i === M[key]) i = (i + 1) % pool.length;
   M[key] = i; return pool[i];
 }

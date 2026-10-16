@@ -9,7 +9,7 @@
 // soak's essential per-frame invariants over the replayed run (nothing NaN or out of the world, the men's states sane, Sam never through a static between frames nor
 // inside one at a frame's end). --strict stops at the first divergence or mismatch. EXIT: 0 = replayed identically to the end (and no invariant broken),
 // 1 = diverged / mismatched / violated, 2 = a bad or unreadable file. A REFACTOR must exit 0 on every fixture; an intended gameplay change is expected to
-// diverge — re-record (the dev notes 'Session journal').
+// diverge — re-record (CLAUDE.md 'Session journal').
 import { readdirSync, readFileSync, existsSync } from 'node:fs';
 import { resolve, basename } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
@@ -18,6 +18,7 @@ const { loadState, canLoad, levelFingerprint } = await import(`${ROOT}/src/game/
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { simDie } = await import(`${ROOT}/src/math/dice.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
+const { playerBodyR } = await import(`${ROOT}/src/game/player.ts`);
 
 type Vec3 = [number, number, number];
 export interface ReplayOpts { strict?: boolean; invariants?: boolean; until?: number; quiet?: boolean; log?: (s: string) => void; }
@@ -45,6 +46,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   R.frames = F.frames;
   // ---- stand up as recorded: env → settings / particles / canister row; the checkpoint; the knobs; the staggers; the seed
   Math.random = simDie(0x5e55, Math.random);   // (whatever the fresh boot draws before the load: nothing after it depends on it)
+  if (!(F.knobs as any)?.tables?.DOORWAY) (await import(`${ROOT}/src/game/doors.ts`)).DOORWAY.oneWay = false;   // (a recording from before the doors had one side carries no table: it was made on the double-acting leaves, whatever the last file in this process left)
   const W = await standUp({ env: F.env });
   const { game, input, cam, canvas } = W;
   const fp = levelFingerprint(game); if (fp.fp !== F.level?.fp) { R.bad = `another level (file ${F.level?.fp} ${F.level?.boxes} boxes, this build ${fp.fp} ${fp.boxes} boxes) — re-record`; return R; }
@@ -105,7 +107,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
         else if (d > 1e-3 && col.segmentBlocked([prevPl[0], 0.45, prevPl[2]], [cur[0], 0.45, cur[2]], 0) && col.segmentBlocked([prevPl[0], 0.9, prevPl[2]], [cur[0], 0.9, cur[2]], 0) && !col.segmentBlockedDynamic([prevPl[0], 0.45, prevPl[2]], [cur[0], 0.45, cur[2]]) && !col.segmentBlockedDynamic([prevPl[0], 0.9, prevPl[2]], [cur[0], 0.9, cur[2]])) violate(f, 'player-crossed-wall', `player crossed static geometry between frames: ${p2(prevPl)} → ${p2(cur)} (${d.toFixed(3)} m)`);
       }
       prevPl = cur;
-      if (!pl.down) { const q = v3.copy(pc.pos); if (col.collideCircle(q, 0.42, 0.2, pl.crouch ? 1.0 : 1.7, 1) && v3.distXZ(q, pc.pos) > 0.03) violate(f, 'in-geometry', `player's circle ${v3.distXZ(q, pc.pos).toFixed(3)} m into static geometry at frame end at ${p2(pc.pos)}`); }
+      if (!pl.down) { const q = v3.copy(pc.pos); if (col.collideCircle(q, playerBodyR(game, pc.pos), 0.2, pl.crouch ? 1.0 : 1.7, 1) && v3.distXZ(q, pc.pos) > 0.03) violate(f, 'in-geometry', `player's circle ${v3.distXZ(q, pc.pos).toFixed(3)} m into static geometry at frame end at ${p2(pc.pos)}`); }
     }
   }
   const S = game.sensors.stats; R.sensor.divergences = S.divergences; R.sensor.unjournaled = S.unjournaled; R.sensor.unasked = S.unasked; R.sensor.reads = S.reads;

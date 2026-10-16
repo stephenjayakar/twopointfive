@@ -27,7 +27,6 @@ const WRITE = argv.includes('--write'), VERBOSE = argv.includes('--verbose');
 const FIXTURE = resolve(ROOT, 'tools/qa/fixtures/breach-beats-main.json');   // the pre-port / pre-loud log: read only, held as the first half's prefix
 const DAY_FIXTURE = resolve(ROOT, 'tools/qa/fixtures/day-beats-main.json'); // the whole day show's log since the loud half (--write freezes THIS one)
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
   console.log(`\n=== ${title} ===`); let all = true;
@@ -200,7 +199,7 @@ export async function directorScheduler(): Promise<boolean> {
     D.expect.order('main', ['hello', 'walked', 'opened']);
     D.program('main', (P: any) => {
       P.onStart('intro'); P.after(1.5, 'late'); P.onSignal('go', 'mover'); P.onEvent('whistle', 'ears', (e: any) => e.level > 0.2); P.when((q: any) => q.t > 1.25, 'clock', { label: 't>1.25' });
-      P.beat('intro', function* (c: any) { c.note('hello'); const r = yield c.any(c.wait(10), c.frames(3)); c.note('any', { index: r.index }); yield c.all(c.wait(0.5), c.frames(2)); c.flag.count = 1; c.signal('go', { n: 1 }); yield c.done('mover'); c.note('after-mover'); c.start('thrower'); c.start('spinner'); yield c.wait(0.25); c.finish(); });
+      P.beat('intro', function* (c: any): Generator<any, any, any> { c.note('hello'); const r = yield c.any(c.wait(10), c.frames(3)); c.note('any', { index: r.index }); yield c.all(c.wait(0.5), c.frames(2)); c.flag.count = 1; c.signal('go', { n: 1 }); yield c.done('mover'); c.note('after-mover'); c.start('thrower'); c.start('spinner'); yield c.wait(0.25); c.finish(); });
       P.beat('late', function* (c: any) { c.note('late', { t: +c.query.t.toFixed(4) }); });
       P.beat('clock', function* (c: any) { c.note('clock', { t: +c.query.t.toFixed(4) }); });
       P.beat('ears', function* (c: any) { c.note('heard'); });

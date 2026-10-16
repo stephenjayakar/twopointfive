@@ -85,7 +85,7 @@ G.URL.createObjectURL ??= () => 'blob:fake'; G.URL.revokeObjectURL ??= () => {};
 
 // ---------------------------------------------------------------- modules
 const { OFFICE_DATA } = await import(`${ROOT}/src/scene/level.ts`);
-const { BoxWorld, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+const { BoxWorld } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { LightSet } = await import(`${ROOT}/src/render/lights.ts`);
 const { defaultSettings } = await import(`${ROOT}/src/engine.ts`);
 const { Editor } = await import(`${ROOT}/src/editor/editor.ts`);
@@ -95,7 +95,7 @@ const { Tools } = await import(`${ROOT}/src/editor/tools.ts`);
 const { Overlay } = await import(`${ROOT}/src/editor/overlay.ts`);
 const { makeApi } = await import(`${ROOT}/src/editor/api.ts`);
 const { doorFrameBoxes } = await import(`${ROOT}/src/editor/geom.ts`);
-const { levelDataDigest, structuralDiff, canonicalLevelData, parseLevelData, validateLevelData, serializeLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { levelDataDigest, parseLevelData, validateLevelData, serializeLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { lintLevel, formatLint } = await import(`${ROOT}/src/editor/lint.ts`);
 const persist = await import(`${ROOT}/src/editor/persist.ts`);
 const officeAllow = JSON.parse(readFileSync(`${ROOT}/levels/office.lint.json`, 'utf8')).allow;
@@ -175,6 +175,16 @@ export async function editorDoc() {
     const D = api.door.add({ hinge: [12, 20.3], closedDir: Math.PI / 2, width: 1.0 }, { frame: true }); const fb = api.door.frameBoxes(D);
     verdict(fb.length === 5 && api.validate().length === 0 && api.selection()[0] === `door:${D}`, `door.add(+frame) → ${D} with 5 frame boxes in group doorframe.${D}, valid, selected`);
     S.step(1); verdict(scene.doors.some((x: any) => x.id === D) && engine.world.dynamics.length >= (OFFICE_DATA.doors.length + 1), 'its leaf is a dynamic box in the scene (game/doors.ts Door at the authored angle)');
+    // which side it opens into: dealt as the game deals it, or authored on the door (`swing`), validated, serialized, undone
+    { const all = OFFICE_DATA.doors.map((dd: any) => api.door.swing(dd.id)); const why: Record<string, number> = {}; for (const w of all) if (w) why[w.why] = (why[w.why] ?? 0) + 1;
+      verdict(all.every((w: any) => w && (w.swing === 1 || w.swing === -1)), `door.swing(id) → every office door has a side to open into, as the game deals it`, JSON.stringify(why));
+      const w0 = api.door.swing(D), r0 = ed.doc.rev; api.door.update(D, { swing: -w0.swing }); const w1 = api.door.swing(D); const inFile = JSON.parse(api.serialize()).doors.find((x: any) => x.id === D).swing;
+      verdict(w0.why !== 'authored' && w1.swing === -w0.swing && w1.why === 'authored' && inFile === -w0.swing && api.validate().length === 0, `author the other side on ${D} → it opens there ('authored'), the file carries swing ${inFile}, valid`, `dealt ${w0.swing} by '${w0.why}'`);
+      api.door.update(D, w1.swing > 0 ? { maxAngle: 0 } : { minAngle: 0 }); const bad = api.validate(); api.undo();
+      verdict(bad.some((e: string) => /swing/.test(e)) && api.validate().length === 0, 'a stop that leaves the authored side no opening is a validation error; undo → valid', bad[0] ?? 'no error');
+      api.undo(); const w2 = api.door.swing(D);
+      verdict(ed.doc.rev !== r0 && w2.swing === w0.swing && w2.why === w0.why && JSON.parse(api.serialize()).doors.find((x: any) => x.id === D).swing === undefined, 'undo → dealt again, nothing in the file');
+      const D3 = api.door.add({ hinge: [12, 18.3], closedDir: Math.PI / 2, width: 1.0, swing: -1 }); verdict(api.door.get(D3).swing === -1 && api.door.swing(D3).why === 'authored', 'door.add({ swing }) carries it'); api.door.delete(D3); }
     // a door in the corridor's north wall west of the storage door: cutting splits that wall slab
     const D2 = api.door.add({ hinge: [23.4, 10.0], closedDir: 0, width: 1.2 }); /* (a clear stretch of the corridor's north wall; a 1.2 m leaf: its 1.24 m gap is walkable on the 0.5 m nav grid wherever it falls; a 1.0 m one is not — lint says so) */ const plan = api.door.framePlan(D2); const before = api.box.count(); const cut = api.door.cutOpening(D2);
     verdict(plan.cut.remove.length >= 1 && cut.removed.length === plan.cut.remove.length && api.box.count() === before - cut.removed.length + cut.added.length && api.validate().length === 0, `cutOpening on a wall run: ${cut.removed.length} slab(s) → ${cut.added.length} pieces (runs + lintel), valid`, JSON.stringify(cut.removed));

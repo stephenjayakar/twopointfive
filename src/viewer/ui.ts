@@ -9,6 +9,7 @@ import { SCENES, VariantDef, applyVariant, findVariant } from './scenes';
 import { makeGroups, GroupDef, SheetCtx, nodeGroup, lightGroup, boneGroup, itemGroup, allChangedSource } from './sheet';
 import { rigSource } from '../game/rigProps';
 import { setAllOff, gaitSource } from './gait';
+import { gearText } from '../game/gear';
 
 const BONE_GROUPS: [string, string, string[]][] = [
   ['trunk', 'trunk', ['hips', 'spine2', 'chest', 'neck', 'head', 'headTop']],
@@ -16,11 +17,13 @@ const BONE_GROUPS: [string, string, string[]][] = [
   ['legL', 'left leg', ['thighL', 'shinL', 'footL', 'toeL']], ['legR', 'right leg', ['thighR', 'shinR', 'footR', 'toeR']],
 ];
 export const HOTKEYS = [
-  ['drag · shift/right-drag · wheel', 'orbit · pan (frees the focus) · zoom'], ['click a prop', 'select it (arrows move, rings rotate) · U parent · Esc deselect'],
-  ['F · H', 'frame the body · head close-up'], ['T · P', 'turntable · pause the character'], ['K · X', 'shoot · die (ragdoll, shot from the camera)'],
+  ['right-drag · middle-drag / Space+drag · wheel', 'orbit · pan (frees the focus) · zoom to the cursor'], ['click a prop', 'select it (arrows move, rings rotate) · U parent · Esc deselect'],
+  ['F · H', 'frame the body · head close-up'], ['T · Y · P', 'plan view · turntable · pause the character'], ['K · X', 'shoot · die (ragdoll, shot from the camera)'],
   ['N · L', 'night vision · rail light / torch'], ['G · C', 'guard kit · carbine'], ['0 · 1 · 2 · 4', 'holstered · pistol · canister · FN2000 off → slung → in the hands'], ['E', 'hold: swap knife ↔ pistol'],
-  ['Tab', 'hide / show the inspector'], ['` · [ · ]', 'debug views · exposure'], ['⚙ ▸ all knobs', 'the flat searchable list of everything'],
+  ['`', 'hide / show the inspector'], ['[ · ]', 'exposure'], ['⚙ ▸ Renderer', 'debug views (no key steps them)'], ['⚙ ▸ all knobs', 'the flat searchable list of everything'],
 ];
+/** the help line under the stage: the workbench's figure modes (its keys are workbench/main.ts figureKeys / figureCamera — keep the two in step) */
+export const HELP = 'RMB orbit · MMB / Space-drag pan · wheel zoom · click a prop to select (U parent, Esc deselect) · F frame · H head · T plan · Y turntable · P pause · K shoot · X die · N nv · L light · G guard · C carbine · 0/1/2/4 kit · ` inspector · ⚙ the rest · Ctrl+1‥5 modes';
 const LS = { inspW: 'twopointsix.viewer.inspW', inspHidden: 'twopointsix.viewer.inspHidden', outlH: 'twopointsix.viewer.outlH' };
 
 /** every element the chrome hangs on, by role (viewer.html's ids are the defaults; the workbench hands its own) */
@@ -60,7 +63,7 @@ export class Ui {
     this.buildTopbar(); this.buildGear(); this.wireInspector();
     rt.gizmo.onSelect = () => { const p = rt.gizmo.selected; if (p) rt.st.sel = 'rig:' + p; else if (rt.st.sel?.startsWith('rig:')) rt.st.sel = null; this.onSelectionChanged(); };
     rt.gizmo.onChange = () => { this.sheet.refresh(); if (!this.el.outbox.classList.contains('hidden') && this.outKind === 'rig') this.el.rigout.textContent = rigSource(); };
-    this.el.help.textContent = opts.help ?? 'drag orbit · shift/right-drag pan · wheel zoom · click a prop to select (U parent, Esc deselect) · F/H frame · T turntable · P pause · K shoot · X die · N nv · L light · G guard · C carbine · 0/1/2 hand · Tab inspector · ⚙ for the rest';
+    this.el.help.textContent = opts.help ?? HELP;
     if (opts.hash !== false) { window.addEventListener('hashchange', () => this.applyHash()); if (!this.applyHash()) this.applyScene('sam', 'idle'); }
     else this.applyScene('sam', 'idle');
   }
@@ -70,7 +73,7 @@ export class Ui {
   // ---------------------------------------------------------------- scenes / variants
   private buildTopbar() {
     const { scenes } = this.el; scenes.textContent = '';
-    for (const s of this.scenes()) { const b = document.createElement('button'); b.className = 'tab'; b.textContent = s.label; b.title = s.title; b.dataset.id = s.id; b.onclick = () => { if (this.rt.st.sceneId !== s.id) this.applyScene(s.id, s.variants[0].id); }; scenes.appendChild(b); }
+    for (const s of this.scenes()) { const b = document.createElement('button'); b.className = 'tab'; b.textContent = s.label; b.title = gearText(s.title); b.dataset.id = s.id; b.onclick = () => { if (this.rt.st.sceneId !== s.id) this.applyScene(s.id, s.variants[0].id); }; scenes.appendChild(b); }
     this.el.alloff.onchange = () => { this.rt.st.allOff = this.el.alloff.checked; setAllOff(this.el.alloff.checked); this.sheet.refresh(); };
     this.el.copygait.onclick = () => this.emit(gaitSource(), 'gait constants — paste over the matching lines in src/game/character.ts');
     this.el.outclose.onclick = () => this.el.outbox.classList.add('hidden');
@@ -81,7 +84,7 @@ export class Ui {
     for (const b of Array.from(this.el.scenes.children) as HTMLElement[]) b.classList.toggle('on', b.dataset.id === st.sceneId);
     const scene = SCENES.find(s => s.id === st.sceneId) ?? SCENES[0];
     const v = this.el.variants; v.textContent = '';
-    for (const x of scene.variants) { const c = document.createElement('button'); c.className = 'chip'; c.textContent = x.label; c.title = x.title; c.classList.toggle('on', x.id === st.variantId); c.onclick = () => this.applyScene(scene.id, x.id); v.appendChild(c); }
+    for (const x of scene.variants) { const c = document.createElement('button'); c.className = 'chip'; c.textContent = x.label; c.title = gearText(x.title); c.classList.toggle('on', x.id === st.variantId); c.onclick = () => this.applyScene(scene.id, x.id); v.appendChild(c); }
     this.el.strip.classList.toggle('hidden', !this.variantDef?.gait);
   }
   /** switch scene / variant (re-selecting the current one re-applies it: respawn + its extra again) */
@@ -175,14 +178,14 @@ export class Ui {
     node('stage', 'Stage (studio floor, back wall, cube, post)', 0, { title: 'select: stage & camera + renderer in the sheet' });
     if (node('grp:lights', `lights (${rt.stageLights.length + 2})`, 1, { grp: true, kids: true })) {
       for (const L of rt.stageLights) node('light:' + L.name, `${L.name} (${L.enabled ? Math.round(L.intensity) : 'off'})`, 2, { dim: !L.enabled });
-      node('light:' + rt.railLight.name, `rail light / rifle light — Sam (${st.lightOn && !st.guard && (st.slot === 1 || st.rifle === 2) ? 'lit' : 'dark'})`, 2, { dim: st.guard });
+      node('light:' + rt.railLight.name, `rail light / rifle light — the player (${st.lightOn && !st.guard && (st.slot === 1 || st.rifle === 2) ? 'lit' : 'dark'})`, 2, { dim: st.guard });
       node('light:' + rt.torchLight.name, `torch / weapon light — guard (${st.lightOn && st.guard ? 'lit' : 'dark'})`, 2, { dim: !st.guard });
     }
     const items = rt.stageItems.items;
     if (node('grp:items', `loose items (${items.length})`, 1, { grp: true, kids: items.length > 0 })) items.forEach((it, i) => node('item:' + i, `${it.kind}${it.settled ? '' : ' (moving)'}`, 2));
     if (st.door.show) node('door', 'door marker (leaf + jambs)', 1, { title: 'the Door group: distance, hinge side, the hand on the leaf' });
     // Figure ▸ skeleton, props
-    node('figure', `Figure: ${st.guard ? `guard${st.carbine ? ' (carbine)' : st.guardTorch ? ' (torch)' : ' (pistol)'}` : `Sam (${st.rifle === 2 ? 'FN2000 in the hands' : (['holstered', 'pistol', 'canister'][st.slot] ?? 'slot ' + st.slot) + (st.rifle === 1 ? ', FN2000 slung' : '')})`}${rt.char.alive ? '' : ' — ragdoll'}`, 0, { title: 'select: the kit in the sheet' });
+    node('figure', gearText(`Figure: ${st.guard ? `guard${st.carbine ? ' (carbine)' : st.guardTorch ? ' (torch)' : ' (pistol)'}` : `Player (${st.rifle === 2 ? 'FN2000 in the hands' : (['holstered', 'pistol', 'canister'][st.slot] ?? 'slot ' + st.slot) + (st.rifle === 1 ? ', FN2000 slung' : '')})`}${rt.char.alive ? '' : ' — ragdoll'}`), 0, { title: 'select: the kit in the sheet' });
     if (node('grp:skel', 'skeleton (read-only joints)', 1, { grp: true, kids: true })) {
       for (const [gid, label, bones] of BONE_GROUPS) if (node('grp:skel.' + gid, label, 2, { grp: true, kids: true })) for (const b of bones) node('bone:' + b, b, 3, { dim: !rt.char.bones[b] });
     }
@@ -203,7 +206,7 @@ export class Ui {
     p.buttons(top, '', [{ text: 'constants box', run: () => { this.el.outbox.classList.toggle('hidden'); if (!this.el.outbox.classList.contains('hidden') && !this.el.rigout.textContent) { this.el.rigout.textContent = rigSource(); this.outKind = 'rig'; } } }, { text: 'copy RIG', run: () => this.emit(rigSource(), 'RIG — paste over the block in src/game/rigProps.ts', 'rig') }, { text: 'shot → docs/shots', run: () => { void rt.shot(`viewer_${rt.st.sceneId}_${rt.st.variantId}`).then(r => rt.msg(`shot: ${r}`)); }, title: 'needs bun run tools/shot-server.ts' }]);
     for (const id of ['stage', 'renderer']) { const g = this.groups.get(id); if (g) g.build(p, p.section(g.title, true)); }
     const hk = p.section('Hotkeys', false);
-    for (const [k, what] of HOTKEYS) { const r = document.createElement('div'); r.className = 'row hk'; const a = document.createElement('label'); a.textContent = k; const b = document.createElement('span'); b.textContent = what; r.append(a, b); hk.appendChild(r); }
+    for (const [k, what] of HOTKEYS) { const r = document.createElement('div'); r.className = 'row hk'; const a = document.createElement('label'); a.textContent = k; const b = document.createElement('span'); b.textContent = gearText(what); r.append(a, b); hk.appendChild(r); }
     this.el.gearbtn.onclick = () => this.toggleGear();
     this.el.inspbtn.onclick = () => this.toggleInspector();
     this.el.allclose.onclick = () => this.toggleAllKnobs(false);

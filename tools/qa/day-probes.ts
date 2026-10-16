@@ -126,7 +126,7 @@ export function runDay(W: any, opts: { abortAt?: number; maxSecs?: number; trace
 
 // ---------------------------------------------------------------- day-run
 /** the loud half's spine beats, in the script's own D.expect.order (the second 'breach' order list in levels/office.script.ts) */
-function loudOrder(): string[] { const M = manifestOf(buildLevel().script); const lists = M.expects.filter((e: any) => e.kind === 'order' && e.program === 'breach').map((e: any) => e.beats as string[]); return lists.find(l => l[0] === 'loud') ?? []; }
+function loudOrder(): string[] { const M = manifestOf(buildLevel().script); const lists = M.expects.filter((e: any) => e.kind === 'order' && e.program === 'breach').map((e: any) => e.beats as string[]); return lists.find((l: any) => l[0] === 'loud') ?? []; }
 export async function dayRun(): Promise<boolean> {
   const F = family("day-run: the day showcase runs itself to its end — the drill, then it goes loud: the loud half's beats in order, four spawned and four down by real rounds, both operatives out through the south door alive and never touched, budgets held, two seeds alike (levels/office.script.ts 'breach', director.ts)");
   const runs: DayRun[] = [];

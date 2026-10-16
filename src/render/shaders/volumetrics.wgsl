@@ -54,7 +54,7 @@ const RAIN_W: f32 = 0.006;      // physical half-width credited to a streak (its
 const RAIN_GAIN: f32 = 0.11;    // fraction of the irradiance at the streak scattered toward the eye — by eye: a metre under a sodium head streaks glare, at the ground they read against the lit asphalt, under the moon alone they are a faint grain
 const SPLASH_GAIN: f32 = 0.05;  // the same for the crown a drop throws up where it lands (a ring growing over 60 ms on outdoor ground)
 
-fn outdoorsXZ(p: vec2f) -> bool { let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
+fn outdoorsXZ(p: vec2f) -> bool { if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } } let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
 /** PARTICLE RAIN (experiment, game/rainFx.ts): the share of the lattice's streaks / splash rings KEPT at ground point p — 1 outside the particle layer's disc (frame.weatherE: centre xz,
  *  radius, the share it takes), 1 − that share inside its inner 70 %, eased between over the rim the recycler thins its births across (particles.wgsl emit's taper). weatherE.w 0 =
  *  no particle layer anywhere: 1 exactly, and the callers below then multiply by nothing (their untouched statements run). */
@@ -64,7 +64,7 @@ fn rainNearKeep(p: vec2f) -> f32 {
   return 1.0 - Ew.w * (1.0 - smoothstep(0.7, 1.0, r));
 }
 
-// Unshadowed irradiance at X from every light that can reach X's cell (isotropic receiver), plus the storm's lit sky. No shadow rays: rain glinting
+// Irradiance at X from every light that can reach X's cell (isotropic receiver), plus the storm's lit sky. Unshadowed but where the reach mask is not sure (below): rain glinting
 // inside a parked car's shadow is not something anyone can see, and this runs once per streak the ray meets. PARTICLE RAIN v2: under frame.weatherF.w > 0
 // each light is weighted by the drop's PHASE toward the eye at V (isotropic floor weatherF.x + forward lobe weatherF.y × Henyey-Greenstein(weatherF.z), × gain
 // weatherF.w — particles.wgsl rainPhase without the glint), so the far lattice flares looking into a lamp exactly as the near particles do; weatherF.w 0 = the sum as it was.
@@ -73,9 +73,17 @@ fn rainLight(X: vec3f, V: vec3f) -> vec3f {
   var E = frame.weatherB.xyz;
   let PF = frame.weatherF; let phased = PF.w > 0.0; let g = clamp(PF.z, 0.0, 0.98);
   for (var i = 0u; i < frame.numLights; i++) {
-    if (!lightReaches(i, X)) { continue; }   // (reach.ts: an interior fixture lights the rain outside its own windows, not through the wall)
-    let ev = evalLight(lights[i], X, vec3f(0.0));
+    let lv = lightReachLevel(i, X);
+    if (lv == 0u) { continue; }              // (reach.ts: an interior fixture lights the rain outside its own windows, not through the wall)
+    let li = lights[i];
+    let ev = evalLight(li, X, vec3f(0.0));
     if (!ev.ok) { continue; }
+    // WHERE THE MASK IS NOT SURE, A RAY SAYS (RAIN_SHADOW): a mask counts every doorway as open (a leaf moves) and a cell reached only through one, or by a sliver,
+    // is level 1 or 2 — a bulb in a shut room lit the rain in a wedge outside its door; a carried light and a flash have no mask at all (level 3 everywhere) — a
+    // weapon light pointed at a wall from inside lit the rain beyond it. Those ask one shadow ray; a fixed lamp's plainly reached cells (level 3) stay unshadowed,
+    // as do the moon and a stroke of lightning.
+    if (RAIN_SHADOW && lightKind(li) != 2u && (lv < 3u || (li.owner & 0xffu) != 0u || lightTransient(li))
+        && occluded(X, ev.L, ev.dist.x - li.radius - 0.02, (li.owner & 0xffu) << 8u)) { continue; }
     if (phased) { E += ev.E * (PF.x + PF.y * rainHg(-dot(ev.L, V), g)); } else { E += ev.E; }
   }
   return select(E, E * PF.w, phased);
@@ -228,7 +236,8 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
       let t = ta + len * jitter;                                   // the sample, stratified inside the (partial) step
       if ((s % every) == 0u) { validBits = 0u; }                   // (per-step lights: every shadow answer is at most `every` steps old, lit steps or not)
       let X = ro + rd * t;
-      let dens = smokeDensityIn(X, onMask);
+      let dens = fogSmoke(smokeDensityIn(X, onMask), X);
+      if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; continue; } }
       if (dens > 0.002) {
         let sigT = dens * 6.0;
         let sigS = sigT * 0.92;
@@ -268,11 +277,70 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
   return vec4f(inscatter, T);
 }
 
+// ---- (w) THE WEATHER'S AIR (const WX_VOL — render/frame.ts weatherVolConfig; common.wgsl wxAir is the field): a picked weather's dust / fog marched along the
+// pixel's ray through the layer it stands in (the ground to WX_TOP over the ceiling plane), front to back, energy-conserving:
+//   extinction   σ(X) = wxAir — the open air's own density, a room's share of it under a roof, nothing over a roof; × the drifting banks (picture only)
+//   the sky      the radiance cache's mean radiance at X × the fog's tint: the sky's light and what the lit ground and walls throw back, where they reach
+//   sun, moon    every directional light (a stroke of lightning is one) through a shadow ray — a wall, a man, a smoke plume cuts its own shape out of the
+//                lit air — and the phase below: looking up-sun the air glows, down-sun it is quiet
+// Under a roof a directional light that lights the building's thin haze (volumetric > 0: the sun) lights haze AND weather together by the statement the haze march
+// always used for it (hazeAt carries the weather's share: common.wgsl wxHazeK) — that march and the froxels' stand down for directional lights while a weather is
+// in, so the sun in the air has one owner at every tier. The lamps' and torches' cones keep their own march (the same field through hazeAt).
+// → (in-scatter toward the eye, transmittance of the air to the surface).
+const WX_STEP: f32 = 0.75;      // the march's step it aims for (m) …
+fn wxMaxSteps() -> u32 { let n = (frame.volCfg.w >> 24u) & 31u; return select(max(n, 3u), max(frame.volSteps / 2u, 4u), n == 0u); }   // … up to the tier's budget (ultra 12 … verylow 4): longer rays take longer steps (jittered; the resolve averages them)
+fn wxPhase(mu: f32) -> f32 { return 0.6 * phaseHG(mu, 0.45) + 0.4 / (4.0 * PI); }   // mineral dust / droplets: the haze's forward lobe over a broad isotropic floor
+var<private> wxFlash: f32 = 0.0;   // the part of the march's in-scatter a TRANSIENT light put there (a stroke of lightning), as luminance: reactive for the resolve like the lit rain
+fn wxAirMarch(ro: vec3f, rd: vec3f, tSurf: f32, jit: f32) -> vec4f {
+  let top = CEIL_Y + WX_TOP;
+  var ta = 0.0; var tb = tSurf;
+  if (abs(rd.y) > 1e-5) { let t0 = (top - ro.y) / rd.y; let t1 = -ro.y / rd.y; ta = max(ta, min(t0, t1)); tb = min(tb, max(t0, t1)); }
+  else if (ro.y > top || ro.y < 0.0) { return vec4f(0.0, 0.0, 0.0, 1.0); }
+  if (tb <= ta) { return vec4f(0.0, 0.0, 0.0, 1.0); }
+  let F = wxFog();
+  let alb = F.tint;
+  var dl: array<u32, 2>; var nd = 0u;   // the directional lights (the sun or the moon; a stroke)
+  for (var i = 0u; i < frame.numLights && nd < 2u; i++) { if (lightKind(lights[i]) == 2u) { dl[nd] = i; nd++; } }
+  let hazeOn = (frame.flags & FLAG_VOLUMETRICS) != 0u && frame.hazeDensity > 0.0;
+  let n = clamp(u32(ceil((tb - ta) / WX_STEP)), 3u, wxMaxSteps());
+  let dt = (tb - ta) / f32(n);
+  var acc = vec3f(0.0); var T = 1.0;
+  for (var s = 0u; s < n; s++) {
+    let X = ro + rd * (ta + (f32(s) + jit) * dt);
+    let air = wxAir(X);
+    let roofed = air.y > 0.5;
+    let sg = air.x * wxBank(X.xz);
+    let stepT = exp(-sg * dt);
+    var Lw = vec3f(0.0);   // radiance the weather's own scatterers send toward the eye, per unit of their albedo
+    var Lh = vec3f(0.0);   // … and what the building's haze + the weather in it send, per metre (under a roof, the sun's)
+    if (sg > 1e-5) { Lw = diceMeanRadiance(X); if (!roofed) { Lw += frame.weatherB.xyz * 0.5; } }
+    for (var k = 0u; k < nd; k++) {
+      let li = lights[dl[k]];
+      let Ld = -li.dir;
+      if (Ld.y <= 0.0) { continue; }
+      let own = roofed && X.y < CEIL_Y && li.volumetric > 0.0;   // the haze's statement lights this point for this light (the building's air: under the slab, never the air over the roof)
+      if (own && !hazeOn) { continue; }
+      if (!own && sg <= 1e-5) { continue; }
+      if (occluded(X, Ld, min(60.0, (WORLD_MAX.y - X.y) / max(Ld.y, 0.05)), 0u)) { continue; }
+      var st = 1.0;
+      if (frame.numSmoke > 0u) { st = smokeTransmittance(X, Ld, 6.0); }
+      var lit = vec3f(0.0);
+      if (own) { let c = li.color * (st * phaseHG(dot(rd, Ld), 0.45) * frame.hazeDensity * li.volumetric * hazeAt(X)); Lh += c; lit = c * (dt * sqrt(stepT)); }
+      else { let c = li.color * (st * wxPhase(dot(rd, Ld))); Lw += c; lit = alb * c * (1.0 - stepT); }
+      if (lightTransient(li)) { wxFlash += T * luminance(lit); }
+    }
+    acc += T * (alb * Lw * (1.0 - stepT) + Lh * (dt * sqrt(stepT)));
+    T *= stepT;
+  }
+  return vec4f(acc, T);
+}
+
 @compute @workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let odims = textureDimensions(outVol);
   if (gid.x >= odims.x || gid.y >= odims.y) { return; }
-  if ((frame.flags & (FLAG_VOLUMETRICS | FLAG_SMOKE)) == 0u) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }   // (smoke transmittance 1: nothing to blur)
+  var wxAirOn = false; if (WX_VOL) { if (WX_KINDS) { wxAirOn = frame.cardCfg.w != 0u; } }   // (a weather's air is marched whatever the two switches say: the men's eyes are cut by it)
+  if ((frame.flags & (FLAG_VOLUMETRICS | FLAG_SMOKE)) == 0u && !wxAirOn) { textureStore(outVol, gid.xy, vec4f(0.0, 0.0, 0.0, 1.0)); textureStore(outReact, gid.xy, vec4f(0.0, 1.0, 0.0, 0.0)); return; }   // (smoke transmittance 1: nothing to blur)
   let froxel = (frame.flags & FLAG_FROXEL_VOL) != 0u;   // Phase 2b: the haze is the froxel volume's (froxel.wgsl); this pass keeps the smoke march (lit from the froxels' J) and the rain (see the file head)
   let vdiv = u32(frame.lossyCfg.y);   // 2, or 4 (lossy option): each texel marches through one full-res pixel of its vdiv×vdiv block, interleaved by texel parity as before (×1 at vdiv 2)
   let full = min(gid.xy * vdiv + vec2u(gid.y & 1u, gid.x & 1u) * (vdiv / 2u), vec2u(frame.screen) - 1u);
@@ -357,7 +425,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         for (var s = 0u; s < steps; s++) {
           let X = ro + rd * t;
           if ((s % every) == 0u) { validBits = 0u; }                                             // every light's shadow answer is at most `every` steps old, lit steps or not
-          let dens = smokeDensityIn(X, onMask);
+          let dens = fogSmoke(smokeDensityIn(X, onMask), X);
+          if (dens == 0.0 && spgHole) { let hop = u32(clamp((smokeClearRun(X, rd) - 1e-3) / dt, 0.0, 4096.0)); if (hop > 0u) { if ((s % every) + hop >= every) { validBits = 0u; } rayBudget += min(hop, steps - 1u - s); s += hop; t += f32(hop + 1u) * dt; continue; } }
           if (dens > 0.002) {
             let sigT = dens * 6.0;
             let sigS = sigT * 0.92;
@@ -434,7 +503,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       var t = t0 + dt * jitter;
       for (var s = 0u; s < steps; s++) {
         let X = ro + rd * t;
-        let dens = smokeDensityAt(X);
+        let dens = fogSmoke(smokeDensityAt(X), X);
         if (dens > 0.002) {
           let sigT = dens * 6.0;             // extinction (1/m) per unit density (domain densityScale already applied)
           let sigS = sigT * 0.92;
@@ -462,6 +531,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
 
   let Tsmoke = T;   // the smoke was marched first: T here is the SMOKE's transmittance alone — what post.wgsl's diffusion keys on (the haze below must not blur far walls)
+  // ---- (w) the weather's air (wxAirMarch above): its veil over the surface rides in the transmittance this pass hands on (Tsmoke stays the smoke's alone). The
+  // smoke's own light is seen through about half of the air in front of the surface, and the air's through about half of the smoke — from the play camera most of a
+  // ray's air lies ABOVE a plume standing on the ground, so neither is laid wholly behind the other.
+  var Tair = 1.0;
+  if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) {
+    let aw = wxAirMarch(ro, rd, tSurf, jitterS);
+    inscatter = inscatter * mix(1.0, aw.a, 0.5) + aw.rgb * (0.5 + 0.5 * T);
+    Tair = aw.a;
+  } } }
   // ---- (a) haze beams ----
   // (K > 0: everything below is scaled by the smoke's transmittance T in front of it — behind 3 % of it, a beam or a rain streak is under an 8-bit step, so the
   // ray that ended inside a thick plume spends nothing more)
@@ -488,6 +566,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         var s0 = max(-bq - sq, ta); var s1 = min(-bq + sq, tbb);
         if (lightKind(li) == 1u) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); s0 = max(s0, ci.x); s1 = min(s1, ci.y); }
         if (s0 >= s1) { continue; }
+        if ((li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u && max(lightFogK(li, ro + rd * s0, vec3f(0.0)), max(lightFogK(li, ro + rd * (0.5 * (s0 + s1)), vec3f(0.0)), lightFogK(li, ro + rd * s1, vec3f(0.0)))) <= 0.002) { continue; }   // (a beam the fog of war's class cuts along this ray takes none of the K places)
         let delta = dot(li.pos - ro, rd);
         let Dl = max(length(ro + rd * delta - li.pos), max(li.radius, 1e-3));
         let score = max3(li.color) * li.volumetric * (atan((s1 - delta) / Dl) - atan((s0 - delta) / Dl)) / Dl;
@@ -508,6 +587,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       let li = lights[i];
       if (li.volumetric <= 0.0) { continue; }
       if (lightKind(li) == 2u) {
+        if (WX_VOL) { if (WX_KINDS) { if (frame.cardCfg.w != 0u) { continue; } } }   // (a weather is in: the sun in the air — the building's haze with it — is wxAirMarch's)
         // A directional light (the daytime variant's sun — the moon carries volumetric 0): no source to sample toward and no falloff, so a plain jittered
         // march of the view ray with one shadow ray toward the light per step — the same ∫ E·phase·haze dt the equi-angular loop below estimates for a
         // lamp; the forward-scattering phase makes window shafts glow looking up-sun and go quiet down-sun. The haze is the building's dust, not weather:
@@ -570,12 +650,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         acc += ev.E * st * phaseHG(dot(rd, ev.L), 0.45) * invPdf * hazeAt(X);
       }
       acc /= f32(steps);
-      inscatter += acc * sigS * li.volumetric * T;
+      var beam = acc * sigS * li.volumetric * T;
+      if (wxAirOn) { beam *= Tair; }   // (… and through the weather's air above them: beams stand low in the layer, the camera above it — and the froxel tiers' beams take the same factor in composite; no weather = the statement as it was, not a ×1)
+      inscatter += beam;
     }
   }
 
   // ---- (c) weather: rain streaks / splash rings / the sky flash — outdoor air only (rainAlong / splashAt above; game/weather.ts feeds frame.weatherA‥D) ----
   var reactL = 0.0;   // what (c) adds toward the eye, for the TAAU resolve (outReact) — nothing drawn here has a history worth keeping: streaks fall metres a frame. (Beams are deliberately NOT
+  if (wxAirOn) { reactL += wxFlash * (0.5 + 0.5 * T); }   // (the air a stroke lit, as the march above composed it: lit and gone with the stroke, not a history's worth)
                       // in it: a torch beam is a smooth gradient the history serves well, and marking it reactive handed the resolve the raw internal-resolution march instead — measured, reverted.)
   if ((frame.flags & FLAG_VOLUMETRICS) != 0u && !behindSmoke && (frame.weatherA.x > 0.0 || max(frame.weatherB.x, max(frame.weatherB.y, frame.weatherB.z)) > 0.0)) {
     let Pend = ro + rd * tSurf;
@@ -592,6 +675,23 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let I = frame.weatherC;
         let ib = isectBounds(ro, invRd, vec3f(I.x, -100.0, I.y), vec3f(I.z, 100.0, I.w));
         var wx = vec3f(0.0); var outLen = 0.0;
+        if (WX_KINDS && frame.cardCfg.y != 0u) {
+          // WEATHER KINDS (a kind picked: the footprints are the level's own roofs, up to four — the compound, the barracks): the stretch minus EVERY roof's
+          // column, walked front to back — what is left is at most five pieces of open air (the yard between the house and its sheds rains; the rooms stay dry)
+          var col: array<vec2f, 4>;   // each roof's column along the ray (x ≥ y = none: an empty footprint, or the ray misses it)
+          for (var k = 0u; k < 4u; k++) {
+            var R = frame.weatherC; if (k == 1u) { R = frame.weatherD; } else if (k == 2u) { R = wxRect(frame.cardCfg.y); } else if (k == 3u) { R = wxRect(frame.cardCfg.z); }
+            col[k] = vec2f(1.0, 0.0);
+            if (R.z > R.x) { col[k] = isectBounds(ro, invRd, vec3f(R.x, -100.0, R.y), vec3f(R.z, 100.0, R.w)); }
+          }
+          var cur = ta;
+          for (var it = 0u; it < 5u && cur < tb; it++) {
+            var e0 = tb; var e1 = tb;   // the nearest column still ahead of (or around) cur
+            for (var k = 0u; k < 4u; k++) { let cb = col[k]; if (cb.x < cb.y && cb.y > cur && cb.x < e0) { e0 = max(cb.x, cur); e1 = cb.y; } }
+            if (e0 > cur) { wx += rainAlong(ro, rd, cur, e0); outLen += e0 - cur; }
+            cur = max(e1, e0);
+          }
+        } else
         if (ib.x < ib.y && ib.y > ta && ib.x < tb) {
           let a1 = min(tb, ib.x); let b0 = max(ta, ib.y);
           if (a1 > ta) { wx += rainAlong(ro, rd, ta, a1); outLen += a1 - ta; }
@@ -601,11 +701,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         wx += frame.weatherB.xyz * (frame.hazeDensity * 4.0 * outLen);
         // the crown where a drop lands on the lot, lit like a streak there
         if (depth < 1.0) { let sp = splashAt(Pend); if (sp > 0.0) { var keepS = 1.0; if (frame.weatherE.w > 0.0) { keepS = rainNearKeep(Pend.xz); } wx += rainLight(Pend + vec3f(0.0, 0.03, 0.0), -rd) * (SPLASH_GAIN * sp) * keepS; } }   // (particle rain: its drops splash where they land — the lattice's rings there kept by the same share; exactly 1 without it)
-        inscatter += wx * T;
-        reactL += luminance(wx * T);
+        var wxT = wx * T;
+        if (wxAirOn) { wxT *= sqrt(Tair); }   // (no weather = the two statements as they were: a software sqrt(1) is not always 1)
+        inscatter += wxT;
+        reactL += luminance(wxT);
       }
     }
   }
-  textureStore(outVol, gid.xy, vec4f(inscatter, T));
+  var Tout = T; if (wxAirOn) { Tout = T * Tair; }
+  textureStore(outVol, gid.xy, vec4f(inscatter, Tout));
   textureStore(outReact, gid.xy, vec4f(reactL, Tsmoke, 0.0, 0.0));
 }

@@ -76,6 +76,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
         let dOmega = 6.2831853 * (1.0 - li.cosOuter) / f32(NS);
         var flux = li.color * (smoothstep(li.cosOuter, li.cosInner, cosA) * lightWindow(hit.t, li.range) * dOmega);   // colour × I0 × profile × window × ΔΩ  (W per channel through this sample's solid angle)
         if (frame.numSmoke > 0u) { flux *= smokeTransmittance(li.pos, dir, hit.t); }
+        flux *= lightFogK(li, x, hit.n);   // (the fog of war's light class, where the footprint falls: what a hidden torch throws on a wall nobody sees is not in the card, so it bounces nothing; what falls on a wall the team sees bounces as it does)
         let phiL = boxAlbedoSec(u32(hit.idx)) * flux * (1.0 / 3.14159265);   // radiance × area this sample adds to the patch
         let w = luminance(phiL);
         let off = (x - C) - n * dot(x - C, n);

@@ -5,6 +5,7 @@
 // history weight), consumers the integrated volume's view, and the per-pixel smoke march (volumetrics.wgsl) the J view. The grid follows the preset (H, D, k — ui/quality.ts) and the WINDOW aspect (W = H × aspect, engine.ts): a change re-creates the volumes and restarts
 // the history (a preset hop or a window reshape; the render scale never touches it — the grid is not per pixel). settings.froxelVol off = nothing here is
 // dispatched or read (composite / particles / volumetrics.wgsl take their old paths under the frame flag) and, after a while off, the volumes are let go.
+import { cutSwap, ProgramSet } from './cutSwap';
 import { makeShader, computePipelineAsync } from '../gpu/device';
 import { scenePrelude } from './frame';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
@@ -56,7 +57,18 @@ export class Froxels {
   static source(body: string = froxelSrc): string { return scenePrelude() + lightingCommon + volCommon + body; }
   private mod: GPUShaderModule;
   /** the five kernels off the boot module, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — passes.ts init awaits it */
-  async init(): Promise<void> { await this.buildPipelines(this.mod); }
+  async init(): Promise<void> { await this.buildPipelines(this.mod); cutSwap.add(this); }
+  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the two kernels that trace (inject, injectJ) a second time, behind the cut prelude
+  private cutSet = new ProgramSet();
+  async buildCut(): Promise<void> {
+    const d = this.device; const lay = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, l] });
+    const mod = makeShader(d, scenePrelude(true) + lightingCommon + volCommon + froxelSrc, 'froxelCut');
+    const [pInject, pInjectJ] = await Promise.all([
+      computePipelineAsync(d, { label: 'froxelInjectCut', layout: lay(this.lInject), compute: { module: mod, entryPoint: 'inject' } }),
+      computePipelineAsync(d, { label: 'froxelInjectJCut', layout: lay(this.lInjectJ), compute: { module: mod, entryPoint: 'injectJ' } }) ]);
+    this.cutSet.set(this, { pInject, pInjectJ });
+  }
+  useCut(on: boolean) { this.cutSet.use(this, on); }
   private async buildPipelines(mod: GPUShaderModule): Promise<void> {
     const d = this.device; const lay = (l: GPUBindGroupLayout) => d.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, l] });
     [this.pCull, this.pInject, this.pInjectJ, this.pTemp, this.pInteg] = await Promise.all([
@@ -68,6 +80,7 @@ export class Froxels {
   }
   /** Dev / measurement hook (main.ts __hotFroxel): rebuild the five pipelines from a froxel.wgsl variant; the old ones stay on a compile error. */
   async hotSwap(body: string): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const mod = this.device.createShaderModule({ code: Froxels.source(body), label: 'froxel-hot' });
     const info = await mod.getCompilationInfo();
     const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);

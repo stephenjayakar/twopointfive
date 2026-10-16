@@ -12,13 +12,11 @@
 import { standUp, ROOT } from './headless.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
-const { TEMPERAMENT } = await import(`${ROOT}/src/game/game.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
 const { rollcallState, witnessSummary, pointInView } = guardsMod;
 const D = await import(`${ROOT}/src/game/dialogue.ts`);
 const playerMod = await import(`${ROOT}/src/game/player.ts`);
 const { startGrab, heldTalk, samBeat } = playerMod;
-const { HOLD } = await import(`${ROOT}/src/game/character.ts`);
 const { setBlackout } = await import(`${ROOT}/src/game/lighting.ts`);
 const { drivePulled } = await import(`${ROOT}/src/game/mission.ts`);
 
@@ -287,10 +285,10 @@ export async function dialogueLint() {
   { const T = D.scriptCoverage(); console.log(`  scripts (${D.SCRIPTS.length}): shape → steady nervy hard · written for k · bands · pin`); for (const r of T) console.log(`    ${r.shape.padEnd(8)} ${['steady', 'nervy', 'hard'].map(t => String(r.byT[t as 'steady'] ?? '·').padStart(6)).join(' ')}   ${r.k.padEnd(24)} ${r.band.padEnd(13)} ${r.pin}`); }
   { // the blocklist and the length distribution: every speaker, worst-case expansion; the script beats on their own (what the pass wrote) against AIM_CHARS
     const R = D.lineLengthReport(); const dist = (list: { where: string; text: string }[]) => { const n = list.length, le = list.filter(x => x.text.length <= D.AIM_CHARS).length, mx = list.reduce((m, x) => Math.max(m, x.text.length), 0); return { n, le, pct: n ? Math.round(100 * le / n) : 100, mx }; };
-    const scriptMen = R.men.filter(x => /^[a-z]+-[snh]\d:/.test(x.where) || /^room /.test(x.where)), scriptSam = R.sam.filter(x => !/^pool /.test(x.where));
+    const scriptMen = R.men.filter((x: any) => /^[a-z]+-[snh]\d:/.test(x.where) || /^room /.test(x.where)), scriptSam = R.sam.filter((x: any) => !/^pool /.test(x.where));
     const a = dist(R.men), b = dist(scriptMen), c = dist(R.sam), d2 = dist(scriptSam);
     console.log(`  lengths (worst-case tokens): men — all ${a.n} lines ${a.pct} % ≤ ${D.AIM_CHARS} (max ${a.mx}); script answers + rooms ${b.n} lines ${b.pct} % ≤ ${D.AIM_CHARS} (max ${b.mx}) · Sam — all ${c.n} ${c.pct} % ≤ ${D.AIM_CHARS} (max ${c.mx}, hard cap ${D.SAM_MAX_CHARS}); scripts / rooms / radio ${d2.n} ${d2.pct} % (max ${d2.mx})`);
-    const longest = scriptMen.filter(x => x.text.length > D.AIM_CHARS).sort((x, y) => y.text.length - x.text.length).slice(0, 6); if (longest.length) console.log('    longest script answers: ' + longest.map(x => `${x.text.length} ${x.where}`).join(' · '));
+    const longest = scriptMen.filter((x: any) => x.text.length > D.AIM_CHARS).sort((x: any, y: any) => y.text.length - x.text.length).slice(0, 6); if (longest.length) console.log('    longest script answers: ' + longest.map((x: any) => `${x.text.length} ${x.where}`).join(' · '));
     console.log(`  originality blocklist (${D.ORIGINALITY_BLOCKLIST.length} phrases): ${D.ORIGINALITY_BLOCKLIST.join(', ')}`);
   }
   // Sam's own sweep: every K × band × T × variant × stage with the floor facts dealt at random and a different man each session — a line always comes (never '…'),
@@ -503,7 +501,7 @@ export async function dialogueShapes() {
     if (notes.length < 1) fails.push(`no script of shape 'selfown' in SCRIPTS (${D.SCRIPTS.length} scripts) — nothing ran`);   // (the vacuity floor)
     verdict(fails.length === 0, '(d) the self-own in a real hold: he proves he works here with the keyed door, the key comes off his belt at his giving press, Sam\'s word on the key follows', notes.join('\n    '), fails);
   }
-  // ---- (e) twelve sample exchanges — 3 temperaments × 4 shapes — for the designer's red pen (synthetic men on a plain floor; * = the useful thing)
+  // ---- (e) twelve sample exchanges — 3 temperaments × 4 shapes — for the maintainer's red pen (synthetic men on a plain floor; * = the useful thing)
   {
     const plan: [string, string, string, string, string[]?][] = [
       ['steady', 'pedant-s1', 'none', 'low'], ['steady', 'selfown-s2', 'none', 'low'], ['steady', 'con-s1', 'none', 'low'], ['steady', 'fan-s3', 'heard', 'low'],

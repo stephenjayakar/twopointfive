@@ -21,7 +21,7 @@
     corridor: { pin: { look: [15, 0, 11.1], yaw: 90 * DEG, pitch: 30 * DEG, dist: 6 }, tiles: [['linoL', 470, 380, 300, 240], ['linoR', 1000, 420, 300, 240]] },
     // lobby stone (0.15) looking west at the frontage: moonlight through the mullions, the glazing's mirror image at right
     lobby:    { pin: { look: [7, 0, 20.5], yaw: 90 * DEG, pitch: 30 * DEG, dist: 5.5 }, tiles: [['stone', 1300, 320, 320, 240], ['moon', 250, 700, 320, 240]] },
-    // the east lot in the rain: wet asphalt (0.22 anisotropic) under the sodium lamp — the designer's 'mirror disc' case
+    // the east lot in the rain: wet asphalt (0.22 anisotropic) under the sodium lamp — the maintainer's 'mirror disc' case
     lot:      { pin: { look: [38, 0, 23], yaw: 0 * DEG, pitch: 25 * DEG, dist: 7 }, tiles: [['streak', 760, 600, 300, 260], ['pole', 980, 260, 300, 240]] },
     // storage: brushed-steel shelving (metal 0.28) under the bulb, concrete floor (matte)
     storage:  { pin: { look: [31.3, 0, 7], yaw: 90 * DEG, pitch: 28 * DEG, dist: 4 }, tiles: [['shelf', 1100, 40, 320, 240], ['upright', 280, 200, 240, 300]] },

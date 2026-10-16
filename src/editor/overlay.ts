@@ -154,7 +154,9 @@ export class Overlay {
       c.strokeStyle = isSel ? COL.sel : COL.door; c.lineWidth = isSel ? 2 : 1.2;
       c.beginPath(); this.line3(c, h, v3.mad(h, u(o.closedDir), o.width)); c.stroke();   // the closed leaf
       // swing arc between the limits (default ±110°), and the authored angle as a solid leaf line
-      const a0 = o.closedDir + (o.minAngle ?? -1.92), a1 = o.closedDir + (o.maxAngle ?? 1.92);
+      // … on the ONE side it opens into (authored `swing`, else the game's deal run on the document); both sides only while no deal is known
+      const sw = o.swing ?? this.ed.doorSwing(o.id)?.swing ?? 0;
+      const a0 = o.closedDir + (sw > 0 ? 0 : o.minAngle ?? -1.92), a1 = o.closedDir + (sw < 0 ? 0 : o.maxAngle ?? 1.92);
       c.setLineDash([3, 4]); c.beginPath(); let first = true; for (let k = 0; k <= 24; k++) { const a = a0 + (a1 - a0) * k / 24; const [x, y, ok] = this.P(v3.mad(h, u(a), o.width)); if (!ok) { first = true; continue; } if (first) { c.moveTo(x, y); first = false; } else c.lineTo(x, y); } c.stroke(); c.setLineDash([]);
       if (o.angle) { c.beginPath(); this.line3(c, h, v3.mad(h, u(o.closedDir + o.angle), o.width)); c.stroke(); }
       const [x, y, ok] = this.P(h); if (ok) { c.fillStyle = isSel ? COL.sel : COL.door; c.beginPath(); c.arc(x, y, 4.5, 0, Math.PI * 2); c.fill(); if (isSel || this.view.cam.distance < 22) { c.fillText(`${o.id}${o.locked ? ' 🔒' : ''}`, x + 8, y - 6); } }

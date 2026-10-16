@@ -47,7 +47,7 @@ struct DnParams {
   sp2: vec4f,      //          x = depth k, y = normal power, z = virtual-hit reprojection share override (< 0: derived from roughness), w = PER-PIXEL ROUGHNESS mode: > 0 = this chain is the reflection
                    //          pass's (reflect.wgsl) — roughness per texel from the g-buffer's material target (gMatR), texels rougher than this value hold no term (weight 0, history 0), the
                    //          mirror image reprojected through last frame's eye and validated on the pixel's plane, the à-trous reach = the lobe's footprint (contact hardening); 0 = the stand-in above
-  flags: vec4u,    // x: 1 = motion vectors on, 2 = FLAG_TEMPORAL mirror (radiance clients accumulate), 4 = lit-alike weight on, 8 = shadow temporal on, 16 = shadow hint prior on (kernel reach ≤ the PCSS width; off = pure variance guidance), 32 = the light cues read the believed-visible luminance from U.a (ReSTIR on) instead of U;
+  flags: vec4u,    // x: 1 = motion vectors on, 2 = FLAG_TEMPORAL mirror (radiance clients accumulate), 4 = lit-alike weight on, 8 = shadow temporal on, 16 = shadow hint prior on (kernel reach ≤ the PCSS width; off = pure variance guidance), 32 = the light cues read the believed-visible luminance from U.a (ReSTIR on) instead of U, 64 = the OCCLUDED-LIGHT reading (occlScale below, and stats5Sh's unlit texels left out of the temporal statistics; off = the shadow client as it was);
                    // w = the SHADOW client's light-JUMP threshold × 1000 (0 = off): a change of a class's EXACT unshadowed luminance within one frame, measured against the luminance the pixel
                    //     believes reaches it (CUR.a) — a switch, a fluorescent's dropout stroke, a lightning stroke arriving; not a torch drifting — takes that class's VALUE from this frame (capped, leant on its 5×5)
                    //     and carries its sample variance across instead of booking the step as variance (shTemporal 'jump');
@@ -70,7 +70,7 @@ const JUMP_CAP: f32 = 1.0;    // shTemporal, a light-jump frame: the current rat
 const JUMP_LEAN_SHARP: f32 = 0.25;   // … and the value leant this far onto that mean, per class (0 = the capped sample as it is, 1 = the box mean): the SHARP class's shadows are hard-edged (torches, the
 const JUMP_LEAN_BROAD: f32 = 0.75;   // lightning's mullions) and a box mean would soften them for the frame; the BROAD class's are penumbra anyway — 0 / 0.5 / 0.75 measured under the strobing tube 08-11
                                      // (docs/internal/tjank.md §A): per-level noise 2.5 / 2.0 / 2.0 (rug), 4.8 / 3.8 / 3.6 (chair), 6.6 / 4.5 / 3.8 (desk) 8-bit steps, levels within a step of each other
-const DNF_VEL: u32 = 1u; const DNF_TEMPORAL: u32 = 2u; const DNF_LITALIKE: u32 = 4u; const DNF_SH_TEMPORAL: u32 = 8u; const DNF_SH_PRIOR: u32 = 16u; const DNF_CUE_UV: u32 = 32u;   // (CUE_UV: the U textures' alpha carries the BELIEVED-VISIBLE unshadowed luminance per class — restir.wgsl — the yardstick the shadow client's light-JUMP is measured against; the cues' memory is the whole U)
+const DNF_VEL: u32 = 1u; const DNF_TEMPORAL: u32 = 2u; const DNF_LITALIKE: u32 = 4u; const DNF_SH_TEMPORAL: u32 = 8u; const DNF_SH_PRIOR: u32 = 16u; const DNF_CUE_UV: u32 = 32u; const DNF_SH_OCCL: u32 = 64u;   // (CUE_UV: the U textures' alpha carries the BELIEVED-VISIBLE unshadowed luminance per class — restir.wgsl — the yardstick the shadow client's light-JUMP is measured against; the cues' memory is the whole U)
 
 // ============================================================== shared core ==============================================================
 
@@ -157,7 +157,7 @@ fn statsOf(m1: vec3f, m2: vec3f, l1: f32, l2: f32) -> Stats {
   s.lmean = l1 / 25.0; s.lsig = sqrt(max(l2 / 25.0 - s.lmean * s.lmean, 0.0));
   return s;
 }
-/** mean / σ (rgb and luminance) over the 5×5 round local tile position `lp`, from apron array A … */
+/** mean / σ (rgb and luminance) over the 5×5 round local tile position `lp`, from apron array A */
 fn stats5(lp: vec2i) -> Stats {
   var m1 = vec3f(0.0); var m2 = vec3f(0.0); var l1 = 0.0; var l2 = 0.0;
   for (var dy = -2; dy <= 2; dy++) {
@@ -168,19 +168,74 @@ fn stats5(lp: vec2i) -> Stats {
   }
   return statsOf(m1, m2, l1, l2);
 }
-/** … and from B (the shadow client's second class) */
-fn stats5B(lp: vec2i) -> Stats {
+
+// ============================================================== SHADOW client ==============================================================
+var<workgroup> wgU: array<vec2f, 144>;   // the apron's unshadowed luminance per class (SHARED.zw) — loaded only under the occluded-light reading
+/** stats5 for the shadow client, one class at a time (class 0 = apron A, 1 = B). Under the occluded-light reading a texel where the class has NO light (U < 1e-5) holds shPack's prior
+ *  (ratio 1), not a measurement: it stands in as the centre's own sample, so it neither moves the mean nor widens the box (counted as it stood, a face one pixel wide among
+ *  such texels — a door head, a board's edge, with a lamp of the class hidden behind the wall — had a history of 0 clamped up to mean − k·σ ≈ 0.3 and showed the lamp's U as a
+ *  bright line). Flag off = stats5 term for term over the class's own apron (wgU is not loaded then and not read). */
+fn stats5Sh(lp: vec2i, cls: u32) -> Stats {
+  let occl = (dn.flags.x & DNF_SH_OCCL) != 0u; let b = cls == 1u;
+  let ci = u32((lp.y + APR) * AW + (lp.x + APR));
+  var c = wgA[ci].xyz; if (b) { c = wgB[ci].xyz; }
   var m1 = vec3f(0.0); var m2 = vec3f(0.0); var l1 = 0.0; var l2 = 0.0;
   for (var dy = -2; dy <= 2; dy++) {
     for (var dx = -2; dx <= 2; dx++) {
-      let v = wgB[u32((lp.y + APR + dy) * AW + (lp.x + APR + dx))].xyz;
+      let i = u32((lp.y + APR + dy) * AW + (lp.x + APR + dx));
+      var v = wgA[i].xyz; if (b) { v = wgB[i].xyz; }
+      if (occl) { let u = wgU[i]; if (select(u.x, u.y, b) < 1e-5) { v = c; } }
       m1 += v; m2 += v * v; let l = luminance(v); l1 += l; l2 += l * l;
     }
   }
   return statsOf(m1, m2, l1, l2);
 }
-
-// ============================================================== SHADOW client ==============================================================
+/** 5×5 mean of the luminance of S = ratio × U per class (.x class 0, .y class 1) round local tile position `lp`: the neighbourhood read under the OCCLUDED hypothesis */
+fn meanS5(lp: vec2i) -> vec2f {
+  var m = vec2f(0.0);
+  for (var dy = -2; dy <= 2; dy++) {
+    for (var dx = -2; dx <= 2; dx++) {
+      let i = u32((lp.y + APR + dy) * AW + (lp.x + APR + dx));
+      m += vec2f(luminance(wgA[i].xyz), luminance(wgB[i].xyz)) * wgU[i];
+    }
+  }
+  return m / 25.0;
+}
+/** fetchFoot of a value history (ratio_acc, lumU) that also returns, in .us, the unshadowed luminance the fetched RATIO stands under read as hidden light: Σ w·l·U / Σ w·l
+ *  (so that ratio × us is the footprint's interpolated S exactly — the plain interpolated U times the interpolated ratio over-reads it wherever U is steep, every frame again) */
+struct HistU { v: vec4f, us: f32 };
+fn fetchFootU(t: texture_2d<f32>, f: Foot) -> HistU {
+  var acc = vec4f(0.0); var ls = 0.0; var l = 0.0;
+  for (var i = 0; i < 4; i++) {
+    let w = f.w[i]; if (w <= 0.0) { continue; }
+    let v = textureLoad(t, f.base + vec2i(i & 1, i >> 1), 0); let lv = luminance(v.xyz) * w;
+    acc += v * w; l += lv; ls += lv * v.a;
+  }
+  var o: HistU; o.v = acc / max(f.sum, 1e-6); o.us = select(o.v.a, ls / l, l > 1e-7);
+  return o;
+}
+// ---- the OCCLUDED-LIGHT reading (flags bit 64, settings.dnShadowOccl) ----
+// The ratio r = S/U is only smooth where the lights of a class share their visibility. A light that is in U but HIDDEN from the pixel — a guard's torch on the other side of a
+// wall, a few metres off and a hundred times brighter unshadowed than the lamp that does light the floor — puts its whole footprint into the denominator: r = S_rest / (U_rest + T)
+// then carries the torch's cone, falloff and every step it takes, although S has none of it. Averaging such ratios (over taps, or over frames while the torch bobs) and multiplying
+// the exact U back in does not return S: it returns S × (U here now) × mean(1/U) — the beam's shape, faint, on the far side of the wall (a thin bright arc along the cone's edge
+// where another light shows the floor, a pale wedge walking with the guard; the maintainer, 10-10: "very subtle artifacting for flashlights that goes through occluders").
+// Two readings of another sample (a tap q, or the history) of ratio r_q taken under U_q, seen from a pixel under U_c: SAME VISIBILITY (the lights that differ between them are as
+// visible as the rest: r_q stands — the filter as it was) and OCCLUDED (they are hidden: S is what carries over, r_q × U_q/U_c). Both are physical and everything between them is
+// a partly hidden light, so the sample is read as the point of that segment NEAREST the centre's own evidence (the à-trous: its ratio; the history: see shTemporal): where the occluded reading does not bring
+// the sample closer — every visible light: a lit pixel's ratio rises with U, the occluded reading says it falls — nothing changes, and where U is the same on both sides (no
+// carried light near, nothing flickering) the factor is exactly 1. The result never leaves the span between the sample and the evidence, so it adds no value the filter did not
+// already hold.
+// The same bit also governs shTemporal's NEIGHBOURHOOD STATISTICS (stats5Sh): a texel where the class has no light at all carries the prior, not a measurement, and is left out
+// of the 5×5 mean / σ, and the history clamp's box always holds the pixel's own sample.
+/** how to read a sample of ratio luminance `lq` taken under unshadowed luminance `uq`, from a centre under `uc` whose evidence is `lc`: .x = the scale, 1 (same visibility) … uq/uc (occluded); .y = the share 0‥1 of the occluded reading in it */
+fn occlScale(lq: f32, uq: f32, uc: f32, lc: f32) -> vec2f {
+  if (uq < 1e-5 || uc < 1e-5) { return vec2f(1.0, 0.0); }
+  let k = min(uq / uc, 4096.0); let dl = lq * (k - 1.0);
+  if (abs(dl) < 1e-6) { return vec2f(1.0, 0.0); }
+  let t = clamp((lc - lq) / dl, 0.0, 1.0);
+  return vec2f(mix(1.0, k, t), t);
+}
 // ---- pack: S,U → ratio + hint (CUR_c), (hints, lumU) → SHARED, and the per-tile hint flag softtile.wgsl's tileDistances turns into the chain's pass-through mask ----
 @group(1) @binding(10) var pkS0: texture_2d<f32>;
 @group(1) @binding(11) var pkS1: texture_2d<f32>;
@@ -226,7 +281,7 @@ fn shPack(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wid:
 // responsive) while everything under still light keeps the long, smooth one; the JUMP (below) measures the same change against what the pixel BELIEVES reaches it (CUR.a).
 // (Until 08-11 both cues keyed on the believed-visible luminance itself — and ReSTIR's per-pixel dark memory flips in every penumbra of a sized emitter, tile beliefs at
 // their borders: each flip read as a light switching, the history was cut or restarted with the value leant on a 5×5 that straddles the shadow edge, and every silhouette,
-// wall foot and sill line under the sodium lamps wore a bright rim while their penumbrae boiled — the designer's 'direct light … still weird at rims … lots of boiling by
+// wall foot and sill line under the sodium lamps wore a bright rim while their penumbrae boiled — the maintainer's 'direct light … still weird at rims … lots of boiling by
 // the cubicle window … goes away when I turn off the v3 denoiser'. A belief changing is not the light changing: the exact U tells them apart for nothing.)
 // A moving OCCLUDER under still light is the neighbourhood clamp's business, as it always was.
 @group(1) @binding(30) var stCur0: texture_2d<f32>;      // CUR_0 (ratio, believed-visible luminance) this frame
@@ -248,6 +303,7 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   for (var i = li; i < AN; i += 64u) {
     let q = clamp(org + vec2i(i32(i) % AW, i32(i) / AW), vec2i(0), hi);
     wgA[i] = textureLoad(stCur0, q, 0); wgB[i] = textureLoad(stCur1, q, 0);
+    if ((dn.flags.x & DNF_SH_OCCL) != 0u) { wgU[i] = textureLoad(stShared, q, 0).zw; }
   }
   workgroupBarrier();
   if (gid.x >= u32(dims.x) || gid.y >= u32(dims.y)) { return; }
@@ -260,7 +316,7 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   let zNow = (frame.viewProj * vec4f(P, 1.0)).w;
   let nrm = normalize(textureLoad(gNormal, pc, 0).xyz * 2.0 - 1.0);
   let cap = min(dn.sh.y * dn.sh2.z, 31.0);
-  let sA = stats5(lp); let sB = stats5B(lp);
+  let sA = stats5Sh(lp, 0u); let sB = stats5Sh(lp, 1u);   // (unlit texels of a class left out under the occluded-light reading; flag off = stats5 over each class's apron)
   let l0 = luminance(c0.xyz); let l1 = luminance(c1.xyz);
   let hs = textureLoad(stShared, pc, 0); let lu0 = hs.z; let lu1 = hs.w;   // (hint0, hint1, lumU0, lumU1): the classes' EXACT unshadowed luminance here this frame — HV.a keeps it for next frame's comparison
   if (depth >= 1.0 || cap < 1.0 || (dn.flags.x & DNF_SH_TEMPORAL) == 0u) {   // sky / temporal reuse off: this frame's ratio as it is, its variance the neighbourhood's, no history kept
@@ -272,6 +328,7 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   // normal within ~53° of ours ----
   let rp = reproject(P, pc);
   var n0 = 0.0; var n1 = 0.0; var h0 = vec4f(c0.xyz, lu0); var h1 = vec4f(c1.xyz, lu1); var hm = vec4f(0.0); var have = false;
+  let occl = (dn.flags.x & DNF_SH_OCCL) != 0u; var us0 = lu0; var us1 = lu1;   // (us: the history's U as the occluded reading wants it — fetchFootU)
   if (rp.ok) {
     let hp = rp.pxPrev;                                            // same resolution: history texel coords = full-res px
     let uvG = (floor(hp - 0.5) + 1.0) / vec2f(dims);               // the corner shared by the footprint's four texels: gather fetches exactly those
@@ -285,9 +342,33 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
       have = true;
       n0 = dot(vec4f(hgLen0(g.x), hgLen0(g.y), hgLen0(g.z), hgLen0(g.w)), f.w);   // footprint-weighted history lengths (a half-disoccluded footprint counts half)
       n1 = dot(vec4f(hgLen1(g.x), hgLen1(g.y), hgLen1(g.z), hgLen1(g.w)), f.w);
-      if (f.whole) { let uv = hp / vec2f(dims); h0 = textureSampleLevel(stHv0, linSamp, uv, 0.0); h1 = textureSampleLevel(stHv1, linSamp, uv, 0.0); hm = textureSampleLevel(stHm, linSamp, uv, 0.0); }
-      else { h0 = fetchFoot(stHv0, f); h1 = fetchFoot(stHv1, f); hm = fetchFoot(stHm, f); }   // partial footprint: renormalised over the valid taps
+      if (occl) { let a = fetchFootU(stHv0, f); let b = fetchFootU(stHv1, f); h0 = a.v; us0 = a.us; h1 = b.v; us1 = b.us; }   // tap by tap: the occluded reading interpolates S, not the ratio
+      else if (f.whole) { let uv = hp / vec2f(dims); h0 = textureSampleLevel(stHv0, linSamp, uv, 0.0); h1 = textureSampleLevel(stHv1, linSamp, uv, 0.0); }
+      else { h0 = fetchFoot(stHv0, f); h1 = fetchFoot(stHv1, f); }   // partial footprint: renormalised over the valid taps
+      if (f.whole) { hm = textureSampleLevel(stHm, linSamp, hp / vec2f(dims), 0.0); } else { hm = fetchFoot(stHm, f); }
     }
+  }
+  // ---- the OCCLUDED-LIGHT reading of the history (occlScale): where the unshadowed light this class's history was taken under is not this frame's — a carried light moved,
+  // or merely the sub-pixel jitter slid the footprint along a steep stretch of U — and this frame says the ratio moved the way a HIDDEN light's change moves it (S stayed), the
+  // history follows — value, sample mean and variance — and that share (ex) of the change is no light-JUMP below: nothing the pixel can see jumped, and the jump's lean
+  // on the 5×5 mean ratio is the wrong number there. (The light-motion cue is left as it is: a history kept short while a hidden light sweeps costs a little noise, and the
+  // cue stays exactly what a VISIBLE torch's moving shadows were tuned on.) The
+  // evidence is a 5×5 mean of this frame (quiet: 25 samples), read under whichever hypothesis the pixel's own sample sits nearer: the mean RATIO (right where the lights that
+  // vary across the neighbourhood are visible) or the mean S over this pixel's U (right where they are hidden — there the mean ratio straddles the hidden cone's edge, ratios a
+  // hundredfold apart, and a history led to THAT is the beam's edge drawn on the floor). ----
+  var ex0 = 0.0; var ex1 = 0.0;
+  if (have && occl) {
+    let mS = meanS5(lp) / max(vec2f(lu0, lu1), vec2f(1e-5));
+    let lq0 = luminance(h0.xyz); let e0 = select(sA.lmean, mS.x, abs(mS.x - l0) < abs(sA.lmean - l0));
+    let lq1 = luminance(h1.xyz); let e1 = select(sB.lmean, mS.y, abs(mS.y - l1) < abs(sB.lmean - l1));
+    var f0 = occlScale(lq0, us0, lu0, e0); var f1 = occlScale(lq1, us1, lu1, e1);
+    // (the pixel's own sample has the last word AGAINST: a mean is 25 pixels of somewhere else — beside a hard shadow of a visible torch it sits below a lit pixel's ratio and
+    // would lead its history down each frame the torch moves — so a history that already agrees with this pixel's sample better than the led one agrees with the mean stands)
+    if (abs(lq0 - l0) <= abs(lq0 * f0.x - e0)) { f0 = vec2f(1.0, 0.0); }
+    if (abs(lq1 - l1) <= abs(lq1 * f1.x - e1)) { f1 = vec2f(1.0, 0.0); }
+    let rHi = dn.sh2.w;   // (the ratio's own ceiling: a scale of thousands on a firefly's variance is past what the history textures hold)
+    ex0 = f0.y; h0 = vec4f(min(h0.xyz * f0.x, vec3f(rHi)), h0.a); hm.x = min(hm.x * f0.x, rHi); hm.y = min(hm.y * f0.x * f0.x, rHi * rHi);
+    ex1 = f1.y; h1 = vec4f(min(h1.xyz * f1.x, vec3f(rHi)), h1.a); hm.z = min(hm.z * f1.x, rHi); hm.w = min(hm.w * f1.x * f1.x, rHi * rHi);
   }
   // ---- the two motion cues per class → the 'moving' history length. LIGHT: relative change of the exact unshadowed luminance at this surface point since last frame (a torch
   // sweeping, a switch — the only way a still receiver's shadows of the class move under a still occluder). OCCLUDER (a man walking under still panels, a swinging leaf): the
@@ -322,7 +403,7 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   // max(U now, U then) exactly as the cue always was, and a departing stroke is measured against what stood beside it before it went.)
   let jump = f32(dn.flags.w) * 0.001;
   let fq0 = q0 / max(lu0, 1e-4); let fq1 = q1 / max(lu1, 1e-4);
-  let dj0 = abs(lu0 - h0.a) / max(max(max(q0, h0.a * fq0), JUMP_REL_FLOOR * max(lu0, h0.a)), 1e-4); let dj1 = abs(lu1 - h1.a) / max(max(max(q1, h1.a * fq1), JUMP_REL_FLOOR * max(lu1, h1.a)), 1e-4);
+  let dj0 = (1.0 - ex0) * abs(lu0 - h0.a) / max(max(max(q0, h0.a * fq0), JUMP_REL_FLOOR * max(lu0, h0.a)), 1e-4); let dj1 = (1.0 - ex1) * abs(lu1 - h1.a) / max(max(max(q1, h1.a * fq1), JUMP_REL_FLOOR * max(lu1, h1.a)), 1e-4);
   let jmp0 = have && jump > 0.0 && dj0 > jump; let jmp1 = have && jump > 0.0 && dj1 > jump;
   n0 = min(n0 * dn.sh2.z, cap0 - 1.0) + 1.0; n1 = min(n1 * dn.sh2.z, cap1 - 1.0) + 1.0;   // this frame makes n (1 = no history)
   var a0 = select(1.0 / n0, 1.0, jmp0); var a1 = select(1.0 / n1, 1.0, jmp1);
@@ -338,7 +419,10 @@ fn shTemporal(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) 
   var hv0 = h0.xyz; var hv1 = h1.xyz;
   if (have) {
     let e0 = sA.sigma * k + vec3f(0.004); let e1 = sB.sigma * k + vec3f(0.004);
-    hv0 = clamp(hv0, sA.mean - e0, sA.mean + e0); hv1 = clamp(hv1, sB.mean - e1, sB.mean + e1);
+    var lo0 = sA.mean - e0; var hi0 = sA.mean + e0; var lo1 = sB.mean - e1; var hi1 = sB.mean + e1;
+    // (occluded-light reading: the box always holds the pixel's OWN sample — a 1-px face among faces of another ratio is never led off what its own rays say)
+    if (occl) { lo0 = min(lo0, c0.xyz); hi0 = max(hi0, c0.xyz); lo1 = min(lo1, c1.xyz); hi1 = max(hi1, c1.xyz); }
+    hv0 = clamp(hv0, lo0, hi0); hv1 = clamp(hv1, lo1, hi1);
   }
   var o0 = mix(hv0, c0.xyz, a0); var o1 = mix(hv1, c1.xyz, a1);
   // On a jump frame the value is this frame's alone (a 1); its one-sample outliers — a reservoir whose weight has drifted high shows its light several times over for a
@@ -447,6 +531,7 @@ fn shAtrous(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wi
   let sigA = sqrt(max(cA.a, 0.0)); let sigB = sqrt(max(cB.a, 0.0));
   var accA = vec4f(0.0); var wsA = 0.0; var accB = vec4f(0.0); var wsB = 0.0;
   let litAlike = (dn.flags.x & DNF_LITALIKE) != 0u;
+  let occl = (dn.flags.x & DNF_SH_OCCL) != 0u;   // the occluded-light reading of every tap (occlScale): a tap under another amount of HIDDEN light is read as the S it stands for
   for (var t = 0; t < 9; t++) {
     let dx = t % 3 - 1; let dy = t / 3 - 1;
     let q = clamp(pc + vec2i(dx, dy) * STRIDE, vec2i(0), hi);
@@ -461,12 +546,14 @@ fn shAtrous(@builtin(global_invocation_id) gid: vec3u, @builtin(workgroup_id) wi
     if (!skipA && s.z >= 1e-5) {
       var wq = w * select(1.0, min(s.z, sh.z) / max(s.z, sh.z), litAlike);   // lit alike: never mix ratios across a cone edge / between different light footprints
       var a = textureLoad(saIn0, q, 0); if (FIRST) { a.a = mq.y; }
+      if (occl) { let f = occlScale(luminance(a.xyz), s.z, sh.z, lA0).x; a = vec4f(min(a.xyz * f, vec3f(dn.sh2.w)), min(a.a * f * f, dn.sh2.w * dn.sh2.w)); }
       wq *= lumWeight(lA0, luminance(a.xyz), sigA, kl, 0.01);
       accA += vec4f(a.xyz * wq, a.a * wq * wq); wsA += wq;
     }
     if (!skipB && s.w >= 1e-5) {
       var wq = w * select(1.0, min(s.w, sh.w) / max(s.w, sh.w), litAlike);
       var b = textureLoad(saIn1, q, 0); if (FIRST) { b.a = mq.w; }
+      if (occl) { let f = occlScale(luminance(b.xyz), s.w, sh.w, lB0).x; b = vec4f(min(b.xyz * f, vec3f(dn.sh2.w)), min(b.a * f * f, dn.sh2.w * dn.sh2.w)); }
       wq *= lumWeight(lB0, luminance(b.xyz), sigB, kl, 0.01);
       accB += vec4f(b.xyz * wq, b.a * wq * wq); wsB += wq;
     }

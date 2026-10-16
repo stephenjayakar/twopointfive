@@ -16,7 +16,7 @@
   const settle = async () => { await E().device.queue.onSubmittedWorkDone(); await yieldTask(); await yieldTask(); };
   const shot = (name, q = 0.9) => window.__shot('wind/' + name, q);
   const run = (n, dt = 1 / 60) => window.__runFrames(n, dt);
-  /** serialized frames: each followed by a queue drain + a yield, so the timer's readbacks are this frame's (the dev notes 'GPU timing') */
+  /** serialized frames: each followed by a queue drain + a yield, so the timer's readbacks are this frame's (CLAUDE.md 'GPU timing') */
   async function runSerial(n, each) { for (let i = 0; i < n; i++) { run(1); await settle(); if (each) each(i); } }
   let torch = null;
   function torchAt(pos, dir, on = true, intensity = 70, outerDeg = 17) {
@@ -56,7 +56,7 @@
       window.__smoke.spawnCanister([at[0], 0.02, at[2]]);
       const out = []; let f = 0;
       for (const s of secs) { const n = Math.round(s * 60) - f; run(n); f += n; await settle(); out.push(await shot(`plume-${tag}_t${String(s).replace('.', '')}`)); }
-      const res = { shots: out, wind: W().summary(), smoke: { live: window.__smoke.stats.live, windSrcs: window.__smoke.stats.windSrcs, windDomains: window.__smoke.stats.windDomains } };
+      const res = { shots: out, wind: W().summary(), smoke: { live: window.__smoke.stats.live, windSrcs: window.__smoke.stats.windSrcs } };
       window.__smoke.clearAll(); end(); return res;
     },
     /** PAPER: 200 leaves thrown up over the red cluster's north-west desk (under vent_cub_nw at 15.3 / 14.1) in STILL air and left four seconds to settle on the desk, the

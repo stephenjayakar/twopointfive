@@ -22,6 +22,8 @@
 //
 // Kind 'wetprint' (game/wet.ts): a wet shoe print, param = how wet — the one kind whose record is EDITED after the fact (wet.ts agePrints lowers param as it
 // dries and calls touch(); remove() retires it before the ring would).
+// Kind 'damage' with param ≥ WEAR_MARK.look (game/wallwear.ts): a WALL-WEAR mark — a round's own 'bullet' record EDITED in place (kind, pos, radius, param; touch())
+// into what a breakable shows before it gives. See WEAR_MARK below; decals.wgsl wearMark draws it.
 // Kind 'glassHit' (E3 × E1): a round's hole + crack star on a glass pane. Panes are in no raster, so the g-buffer's decalSurface skips the kind outright; it is
 // composite.wgsl that evaluates it (glassMarks in decals.wgsl) at the point the view ray crosses the pane, from the same cell lists, and modulates the pane's
 // transmission / reflection there. Same ring, same lifetime, same buffer — the composite pass binds it too (passes.ts group 1 binding 10).
@@ -45,6 +47,8 @@ export interface Decal {
   pane: number;
   /** the dynamic box it rides (door leaf, prop part) with its placement in that box's local frame — null / null for a world-fixed mark */
   box: Box | null; local: { p: Vec3; n: Vec3; t: Vec3 } | null;
+  /** laid only for the picture (DecalOpts.look) */
+  look?: boolean;
   /** GPU box index the shader restricts it to this frame (DECAL_ANY_BOX for statics; an attached decal's own box, re-resolved per sync) */
   boxIdx: number;
   /** attached box absent from this frame's box list: kept, not drawn */
@@ -56,6 +60,9 @@ export interface DecalOpts {
   tangent?: Vec3;
   /** kind parameter (see Decal.param); defaults per kind */
   param?: number;
+  /** laid only for the picture (game/lookDecals.ts): in a full ring it goes before any mark play laid and never pushes one out — the marks play laid are the same
+   *  marks with it and without it */
+  look?: boolean;
   /** ride this (dynamic) box: pos / normal / tangent are converted into its local frame now and follow it from then on, and only ITS pixels take the mark */
   attach?: Box;
   /** keep the whole mark on the face of this box that was hit: the centre is pulled in from the face's edges by the radius (a face narrower than the mark centres it) and snapped onto the face plane */
@@ -70,7 +77,7 @@ export interface DecalOpts {
 const CELLS = WORLD.gridW * WORLD.gridH;
 const CELLS_V4 = Math.ceil(CELLS / 4);
 export const DECAL_CAP = 512;          // live decals (ring: the oldest goes)
-export const DECAL_LIST_CAP = 4096;    // cell-list entries in all (a decal sits in ≤ 4 cells: radius < 1 m cell)
+export const DECAL_LIST_CAP = 4096;    // cell-list entries in all (most decals sit in ≤ 4 cells; a floor film of settled dust — game/floormess.ts, up to ~1.8 m — in up to 25)
 export const DECAL_MAX_PER_CELL = 48;  // newest-N kept per cell: bounds the per-pixel loop where somebody empties magazines into one square metre
 const LIST_V4 = DECAL_LIST_CAP / 4;
 const CELL0 = 1, LIST0 = CELL0 + CELLS_V4, REC0 = LIST0 + LIST_V4;
@@ -81,8 +88,15 @@ export const DECAL_BYTES = TOTAL_V4 * 16;
  *  timer's noise floor — the reported delta ÷ N is the honest per-fragment figure. 1 = production. */
 export const decalDebug = { repeat: 1 };
 /** WGSL consts for render/shaders/decals.wgsl: the layout above + the caps (prepended by gbuffer.ts next to the scene prelude) */
+/** WALL-WEAR marks (game/wallwear.ts writes them, decals.wgsl decalSurface / wearMark reads them — these numbers are the contract, emitted into the shader by
+ *  decalWgslConsts): kind 'damage', param = look + material (0 plaster · 1 wood · 2 cardboard / fabric) + strength 0‥0.999. A mark's reach on a face (m) =
+ *  reach0 + reach1 × strength. A THROUGH mark (a partition of half thickness minHalf‥maxHalf) sits on the wall's mid-plane with radius hypot(half, reach): the
+ *  shader recovers the half thickness from the two and paints ONLY surfaces lying on the wall's two face planes (± faceTol), entry look on the one toward the
+ *  record's normal, exit look on the other — never a door leaf or a prop that merely stands in the wall's plane. A FACE mark (radius = reach) is an ordinary decal. */
+export const WEAR_MARK = { look: 3, materials: 3, reach0: 0.09, reach1: 0.21, minHalf: 0.035, maxHalf: 0.09, faceTol: 0.015 };
 export function decalWgslConsts(binding = 3): string {
-  return `@group(1) @binding(${binding | 0}) var<storage, read> decalBuf: array<vec4u>;   // render/decals.ts — the g-buffer binds it at 3, the composite pass (glass cracks) at 10. UNSIGNED words: the cell / list regions are small integers (subnormal bit patterns as f32) and a record's bits word can be a NaN pattern — a float-typed view may flush or canonicalise those on load on some hardware; the float rows are bitcast<vec4f> at the read (review R2.1 / R10.3)\nconst DECAL_CELL0: u32 = ${CELL0}u;\nconst DECAL_LIST0: u32 = ${LIST0}u;\nconst DECAL_REC0: u32 = ${REC0}u;\nconst DECAL_CAP: u32 = ${DECAL_CAP}u;\nconst DECAL_LIST_CAP: u32 = ${DECAL_LIST_CAP}u;\nconst DECAL_REPEAT: u32 = ${Math.max(1, decalDebug.repeat | 0)}u;   // measurement only (decalDebug.repeat): 1 in production\n`;
+  return `@group(1) @binding(${binding | 0}) var<storage, read> decalBuf: array<vec4u>;   // render/decals.ts — the g-buffer binds it at 3, the composite pass (glass cracks) at 10. UNSIGNED words: the cell / list regions are small integers (subnormal bit patterns as f32) and a record's bits word can be a NaN pattern — a float-typed view may flush or canonicalise those on load on some hardware; the float rows are bitcast<vec4f> at the read (review R2.1 / R10.3)\nconst DECAL_CELL0: u32 = ${CELL0}u;\nconst DECAL_LIST0: u32 = ${LIST0}u;\nconst DECAL_REC0: u32 = ${REC0}u;\nconst DECAL_CAP: u32 = ${DECAL_CAP}u;\nconst DECAL_LIST_CAP: u32 = ${DECAL_LIST_CAP}u;\nconst DECAL_REPEAT: u32 = ${Math.max(1, decalDebug.repeat | 0)}u;   // measurement only (decalDebug.repeat): 1 in production\n` +
+    `const WEAR_LOOK: f32 = ${WEAR_MARK.look.toFixed(1)}; const WEAR_LOOKS: f32 = ${WEAR_MARK.materials.toFixed(1)}; const WEAR_REACH0: f32 = ${WEAR_MARK.reach0}; const WEAR_REACH1: f32 = ${WEAR_MARK.reach1}; const WEAR_MIN_HALF: f32 = ${(WEAR_MARK.minHalf - 0.005).toFixed(4)}; const WEAR_FACE_TOL: f32 = ${WEAR_MARK.faceTol};   // render/decals.ts WEAR_MARK\n`;
 }
 
 /** default bounding radius / parameter per kind */
@@ -93,7 +107,7 @@ const DEFAULTS: Record<DecalKind, { radius: number; param: number }> = {
   chip: { radius: 0.013, param: 1 },
   glassHit: { radius: 0.12, param: 1 },  // the crack star's reach from the hole (glass.ts draws 0.075‥0.2 off the hit's seed)
   wetprint: { radius: 0.17, param: 1 },  // a wet shoe print (game/wet.ts wetFootfall): the sole fits inside 17 cm of its centre; param = how wet, aged toward 0
-  damage: { radius: 0.05, param: 0.8 },   // the destruction lane's marks (game/destruction.ts): floor(param) = the look — 0 a DENT in sheet metal, 1 a SHRED in fabric, 2 a CRACK in a dark screen — fract(param) = strength
+  damage: { radius: 0.05, param: 0.8 },   // the destruction lane's marks (game/destruction.ts): floor(param) = the look — 0 a DENT in sheet metal, 1 a SHRED in fabric, 2 a CRACK in a dark screen, 6 a FILM of settled dust, 7 / 8 the RUBBLE a chunk leaves (game/floormess.ts; 3‥5 are the wall wear's) — fract(param) = strength
 };
 const SCUFF_HALF_W = 0.016;
 
@@ -129,13 +143,16 @@ export class Decals {
     if (kind === 'scuff') radius = 0.5 * param + SCUFF_HALF_W + 0.06;   // the streak + its echo mark (decals.wgsl scuffMark) inside one bounding circle
     let p = v3.copy(pos);
     if (opts.clampTo) p = clampToFace(opts.clampTo, p, n, kind === 'scuff' ? 0.5 * param : radius);
+    const full = this.list.length >= DECAL_CAP, lookAt = full ? this.list.findIndex(x => x.look) : -1;
+    if (full && opts.look && lookAt < 0) return null;   // (a full ring of play's marks takes no mark laid only for the picture)
     const serial = ++this.serial;
     const seed = opts.seed !== undefined ? opts.seed & 0xfff : (Math.imul(serial, 2654435761) >>> 20) & 0xfff;
     const pane = kind === 'glassHit' ? (opts.pane ?? -1) : -1;
     if (kind === 'glassHit' && (pane < 0 || pane >= DECAL_ANY_BOX)) return null;   // a crack star belongs to one pane or to nothing
     const d: Decal = { kind, pos: p, n, t, radius, param, seed, serial, pane, box: null, local: null, boxIdx: DECAL_ANY_BOX, hidden: false };
     if (opts.attach) { const b = opts.attach; d.box = b; d.local = { p: toLocal(b, p, true), n: toLocal(b, n, false), t: toLocal(b, t, false) }; d.boxIdx = DECAL_ANY_BOX; d.hidden = true; }   // (index unknown until the next sync finds the box in the frame's list; drawn from then)
-    if (this.list.length >= DECAL_CAP) this.list.shift();
+    if (opts.look) d.look = true;
+    if (full) { if (lookAt >= 0) this.list.splice(lookAt, 1); else this.list.shift(); }   // (the oldest goes — a mark laid only for the picture first: play's marks are the last DECAL_CAP it laid, as without the looks)
     this.list.push(d); this.dirty = true;
     return d;
   }

@@ -1,6 +1,6 @@
 // MARKINGS — object legibility from one or two SIGNIFIERS per object class, made of the same thing the world is made of: rectangles, in 2D, ON a box
-// face (docs/review/legibility.html; the designer's ask 08-10: "the monitor looks great but the keyboard doesn't … cardboard boxes are hard to recognize
-// … vending machine"). REPRESENTATION (agreed with the designer: image-style authoring, analytic rendering): a marking is a tiny PALETTE-INDEXED
+// face (docs/review/legibility.html; the maintainer's ask 08-10: "the monitor looks great but the keyboard doesn't … cardboard boxes are hard to recognize
+// … vending machine"). REPRESENTATION (agreed with the maintainer: image-style authoring, analytic rendering): a marking is a tiny PALETTE-INDEXED
 // BITMAP — W × H ≤ 32 × 32 cells, 2 bits a cell (0 = transparent, 1‥3 = palette entries), each palette entry a MATERIAL (albedo — absolute or × the
 // box's own — roughness, emitted radiance), never a shaded colour, so baked lighting is impossible by construction — laid on a world-space texel
 // lattice anchored at the face centre (MARKING_TEXEL 2.5 cm base; `fine` = half, `coarse` = double, all nesting). The g-buffer / composite / the

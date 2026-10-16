@@ -9,30 +9,41 @@
 import type { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT } from './boxes';
 import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, VolumeDef } from './level';
-import { LevelData, LEVEL_DATA_VERSION, BoxData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
+import { LevelData, LEVEL_DATA_VERSION, BoxData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from './markings';
+import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
+import { DESTRUCTION, DRESS_GROUP } from '../game/destructionSwitch';   // (no imports of its own: the one switch + the dressing group's name)
 
 const V = (v: readonly number[]): Vec3 => [v[0], v[1], v[2]];
 const VV = (a: readonly (readonly number[])[]): Vec3[] => a.map(V);
 /** structured deep copy for the plan blobs (plain JSON data: arrays, objects, numbers, strings) */
+/** per loaded level (the runtime object): the FILE's own records as this stand loaded them — the boxes (index for index `level.boxes`: ids, groups and flags
+ *  as written, which a runtime box does not carry), the doors, the lamps and the loose props (index for index `level.props`, with their ids) — and `left`: the NAMES of what this stand left out of the
+ *  file (lived-in rooms or the dressing switched off: each such box's id and group, each such prop's id), so that a name written for them is known for one. What src/host/kitViewPlan.ts measures a way in from (src/host/kitView.ts) */
+export const levelFileOf = new WeakMap<object, { boxes: readonly BoxData[]; doors: readonly DoorData[]; lights: readonly LightData[]; props: readonly PropData[]; left: readonly string[] }>();
 function clone<T>(v: T): T { if (Array.isArray(v)) return v.map(clone) as unknown as T; if (v && typeof v === 'object') { const o: any = {}; for (const k of Object.keys(v)) { const x = (v as any)[k]; if (x !== undefined) o[k] = clone(x); } return o; } return v; }
 
 /** The collision footprint the physics layer wants for a loose prop, fitted from its parts exactly as the generator's fitProp measured it: the bounding
  *  rectangle of the (yawed) parts in the prop frame → half extents (≥ 5 cm), and the tallest part top → height (≥ 10 cm). Parts are expected centred on
- *  the prop origin (the generator re-centred them; the editor's lint checks it). */
-export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: number }[]): { half: [number, number]; height: number } {
+ *  the prop origin (the generator re-centred them; the editor's lint checks it). `mid` = that rectangle's centre in the prop frame, which the generators'
+ *  fitProp re-centres the origin on (officeGen.ts, levelKit.ts). */
+export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: number }[]): { half: [number, number]; height: number; mid: [number, number] } {
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity, height = 0.1;
   for (const q of parts) {
     const yaw = q.yaw ?? 0; const cs = Math.abs(Math.cos(yaw)), sn = Math.abs(Math.sin(yaw)); const ex = cs * q.h[0] + sn * q.h[2], ez = sn * q.h[0] + cs * q.h[2];
     x0 = Math.min(x0, q.off[0] - ex); x1 = Math.max(x1, q.off[0] + ex); z0 = Math.min(z0, q.off[2] - ez); z1 = Math.max(z1, q.off[2] + ez); height = Math.max(height, q.off[1] + q.h[1]);
   }
-  return { half: [Math.max(0.05, (x1 - x0) / 2), Math.max(0.05, (z1 - z0) / 2)], height };
+  return { half: [Math.max(0.05, (x1 - x0) / 2), Math.max(0.05, (z1 - z0) / 2)], height, mid: [(x0 + x1) / 2, (z0 + z1) / 2] };
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ LevelData → Level
+/** the name of the file a loaded level came from (LevelData.name) — beside the Level, not on it: its shape is what generators and round trips compare.
+ *  Asked by game/weather.ts for a level built for snow (game/weatherKinds.ts SNOW_LEVELS). A Level nobody loaded from data (a generator's, a bare stage) has none. */
+const levelNames = new WeakMap<Level, string>();
+export function levelNameOf(level: Level | null | undefined): string | null { return (level && levelNames.get(level)) ?? null; }
 /** Build the runtime Level from level data. Validates first (throws listing every problem) unless told the caller already has. Every vector is copied:
  *  the game mutates its Level (box flags, scratch routes) and two loads must never share state. */
-export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): Level {
+export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?: boolean; lived?: boolean } = {}): Level {
   if (opts.validate !== false) {
     const errs = validateLevelData(data);
     if (errs.length) throw new Error(`level '${data?.name ?? '?'}' (v${(data as any)?.version} vs loader v${LEVEL_DATA_VERSION}): ${errs.length} error(s)\n  ${errs.slice(0, 20).join('\n  ')}${errs.length > 20 ? `\n  … ${errs.length - 20} more` : ''}`);
@@ -44,7 +55,14 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
   };
   // boxes, in file order (index i of the file IS static box i)
   const boxIndex = new Map<string, number>();
-  const boxes: Box[] = data.boxes.map((b, i) => {
+  // (the DRESSING — things a level file carries only to be wrecked, appended last by tools/levels/dress.ts — is left out with the destruction switch off: every other
+  // box keeps its index and the level is the one it was before there was any)
+  // (the LIVED things — what furnishes a room as the office's rooms are furnished, scene/lived.ts: boxes in group 'lived.<room>', props / lights / fixtures whose id
+  // starts 'lived.' — are left out the same way with their switch off: nothing else moves, and nothing that is kept may name one)
+  const lived = opts.lived ?? LIVED.on, dressed = opts.dressing ?? DESTRUCTION.on;
+  const fileBoxes = lived && dressed ? data.boxes : data.boxes.filter(b => (dressed || b.group !== DRESS_GROUP) && (lived || !isLived(b.group)));
+  const fileProps = lived ? data.props : data.props.filter(p => !isLived(p.id)), fileLights = lived ? data.lights : data.lights.filter(l => !isLived(l.id)), fileSwitchables = lived ? data.switchables : data.switchables.filter(s => !isLived(s.id));
+  const boxes: Box[] = fileBoxes.map((b, i) => {
     boxIndex.set(b.id, i);
     const p: Partial<Box> & { c: Vec3; h: Vec3 } = { c: V(b.c), h: V(b.h), yaw: b.yaw ?? 0, albedo: albedoOf(b), emissive: b.emissive ? V(b.emissive) : [0, 0, 0], flags: flagsToBits(b.flags) };
     if (b.rot) p.rot = [b.rot[0], b.rot[1], b.rot[2], b.rot[3]];
@@ -61,7 +79,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
   });
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
   // loose props
-  const props: PropDef[] = data.props.map(p => {
+  const props: PropDef[] = fileProps.map(p => {
     const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; return part; });
     const fit = fitPropFootprint(parts);
     return { kind: p.kind, name: p.name ?? p.id, x: p.x, z: p.z, yaw: p.yaw ?? 0, parts, half: p.half ? [p.half[0], p.half[1]] : fit.half, height: p.height ?? fit.height, mass: p.mass };
@@ -75,8 +93,8 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     if (l.broad !== undefined) d.broad = l.broad;
     return d;
   };
-  const lights = data.lights.map(lightOf);
-  const switchables: Level['switchables'] = data.switchables.map(s => {
+  const lights = fileLights.map(lightOf);
+  const switchables: Level['switchables'] = fileSwitchables.map(s => {
     const o: Level['switchables'][number] = { name: s.id, boxes: s.boxes.map(bx), group: s.group, on: s.on, baseEmissive: V(s.baseEmissive) };
     if (s.flicker !== undefined) o.flicker = s.flicker; if (s.mains !== undefined) o.mains = s.mains;
     return o;
@@ -86,6 +104,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     if (o.angle !== undefined) d.angle = o.angle; if (o.exterior !== undefined) d.exterior = o.exterior; if (o.closer !== undefined) d.closer = o.closer;
     if (o.minAngle !== undefined) d.minAngle = o.minAngle; if (o.maxAngle !== undefined) d.maxAngle = o.maxAngle;
     if (o.locked !== undefined) d.locked = o.locked; if (o.lock !== undefined) d.lock = o.lock; if (o.keySide !== undefined) d.keySide = o.keySide; if (o.steel !== undefined) d.steel = o.steel;
+    if (o.swing !== undefined) d.swing = o.swing;
     return d;
   });
   const routes: PatrolRoute[] = data.routes.map(r => { const o: PatrolRoute = { name: r.name ?? r.id, points: VV(r.points), wait: [...r.wait] }; if (r.weapon !== undefined) o.weapon = r.weapon; if (r.keys !== undefined) o.keys = [...r.keys]; return o; });
@@ -112,11 +131,16 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): L
     ...(civilians ? { civilians } : {}),
     ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (game/director.ts onEnter) — written iff authored, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
-    mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z },
+    mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
+    ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: scene/scenarios.ts)
   };
-  // TODO(G2): data.floors / data.connectors → per-floor nav + stair links; data.surfaces has no runtime slot yet (floor.ts still owns its surface map —
-  // level-probes.ts checks the two agree). data.volumes → Level.volumes above (the Director's onEnter).
+  // TODO(G2): data.floors / data.connectors → per-floor nav + stair links. data.volumes → Level.volumes above (the Director's onEnter).
+  // data.surfaces → Level.surfaces, what game/floor.ts reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
+  // (a file with none: floor.ts's own office map, which level-probes.ts holds equal to the office file's block).
+  if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
+  levelNames.set(level, data.name); const inB = new Set(fileBoxes), inP = new Set(fileProps), left = [...new Set([...data.boxes.filter(b => !inB.has(b)).flatMap(b => b.group !== undefined ? [b.id, b.group] : [b.id]), ...data.props.filter(p => !inP.has(p)).map(p => p.id)])];
+  levelFileOf.set(level, { boxes: fileBoxes, doors: data.doors, lights: fileLights, props: fileProps, left });
   return level;
 }
 /** one device record → its runtime def (id → name, floor / notes dropped like a door's, every vector copied, optional fields written iff present) */
@@ -228,7 +252,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     boxes, props,
     lights: level.lights.map(lightData),
     switchables: level.switchables.map(s => ({ id: s.name, boxes: s.boxes.map(bi => ids[bi]), group: s.group, on: s.on, baseEmissive: V(s.baseEmissive), ...(s.flicker !== undefined ? { flicker: s.flicker } : {}), ...(s.mains !== undefined ? { mains: s.mains } : {}) })),
-    doors: level.doors.map(o => { const d: LevelData['doors'][number] = { id: o.name, hinge: [o.hinge[0], o.hinge[1]], closedDir: o.closedDir, width: o.width }; for (const k of ['angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel'] as const) if (o[k] !== undefined) (d as any)[k] = o[k]; return d; }),
+    doors: level.doors.map(o => { const d: LevelData['doors'][number] = { id: o.name, hinge: [o.hinge[0], o.hinge[1]], closedDir: o.closedDir, width: o.width }; for (const k of ['angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'] as const) if (o[k] !== undefined) (d as any)[k] = o[k]; return d; }),
     routes: uniqIds(level.routes.map(r => slug(r.name))).map((id, i) => { const r = level.routes[i]; return { id, ...(r.name !== id ? { name: r.name } : {}), points: VV(r.points), wait: [...r.wait], ...(r.weapon !== undefined ? { weapon: r.weapon } : {}), ...(r.keys !== undefined ? { keys: [...r.keys] } : {}) }; }),
     chokepoints: uniqIds((level.chokepoints ?? []).map(c => slug(c.name))).map((id, i) => { const c = level.chokepoints![i]; return { id, ...(c.name !== id ? { name: c.name } : {}), pos: V(c.pos), yaw: c.yaw }; }),
     ...(level.civilians ? { civilians: uniqIds(level.civilians.map(c => slug(c.name))).map((id, i): CivilianData => { const c = level.civilians![i]; return { id, ...(c.name !== id ? { name: c.name } : {}), kind: c.kind, tint: V(c.tint), ...(c.tint2 !== undefined ? { tint2: V(c.tint2) } : {}), points: VV(c.points), wait: [...c.wait], ...(c.tasks !== undefined ? { tasks: [...c.tasks] } : {}), ...(c.face !== undefined ? { face: [...c.face] } : {}) }; }) } : {}),
@@ -238,13 +262,14 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     mission: { playerSpawn: V(level.playerSpawn), objectives: [
       { id: 'reach_room', kind: 'reach', area: { x0: M.serverRoom.x0, x1: M.serverRoom.x1, z0: M.serverRoom.z0, z1: M.serverRoom.z1 }, door: M.entryDoor },
       { id: 'pull_drive', kind: 'drive', rackIndex: M.rack.index, front: V(M.rack.front), halfW: M.rack.halfW },
-      { id: 'exfil', kind: 'exfil', door: M.exfilDoor, x: M.exfilX, z: M.exfilZ },
+      { id: 'exfil', kind: 'exfil', door: M.exfilDoor, x: M.exfilX, z: M.exfilZ, ...(M.exfilOut ? { out: [M.exfilOut[0], M.exfilOut[1]] as [number, number] } : {}) },
     ] },
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]] },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
     ...(level.daylight ? { daylight: { sun: lightData(level.daylight.sun), sky: { zenith: V(level.daylight.sky.zenith), horizon: V(level.daylight.sky.horizon) }, groupsOn: [...level.daylight.groupsOn], groupsOff: [...level.daylight.groupsOff], lightsOff: [...level.daylight.lightsOff], haze: level.daylight.haze, exposure: level.daylight.exposure } } : {}),
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
+    ...(level.scenarios && Object.prototype.propertyIsEnumerable.call(level, 'scenarios') ? { scenarios: clone(level.scenarios) } : {}),   // (the level's OWN block only: the office's is attached beside its file, non-enumerable — scene/level.ts withScenarios)
   };
   return data;
 }

@@ -385,6 +385,3 @@ export async function whistleTorch(): Promise<boolean> {
     `answer: ${h0}/${up0} (lens lit ${lightAtLens0}) · +1 s: ${h1}/${up1} · footfall: ${st2} aw ${f2(aw2)} → ${h2}/${up2} · calm: ${st3} ${h3} · fresh whistle: ${st4} ${h4} · contact→suspicious: ${h6}${f.length ? '\n    ✗ ' + f.join('\n    ✗ ') : ''}`);
   return allPass;
 }
-
-/** the whole family */
-export async function whistleFamily(): Promise<boolean> { let ok = true; for (const f of [whistleReach, whistleDoor, whistleNearest, whistleTwice, whistleKeys, whistleAlert, whistleTorch]) ok = (await f()) && ok; return ok; }

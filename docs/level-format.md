@@ -44,18 +44,19 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `name`, `meta` | name; `{ grid?, bounds?{min,max}, generator?, notes? }` | `bounds` = the traceable world (`scene/world.ts`) the level must fit |
 | `floors[]` | `{ id, name?, y, ceiling }` | v1: one (`f0`, y 0, ceiling 3). G2 adds the mezzanine; boxes / doors / props / volumes name their floor (absent = `floors[0]`) |
 | `materials{}` | name → `{ albedo, rough?, metal?, notes? }` | the paint palette (linear rgb) + each paint's FINISH for the one BRDF (renderer v3 phase 4, docs/internal/p4-materials.md): `rough` = GGX roughness 0‥1 (absent = matte: no reflection ray is spent), `metal` = bare conductor (F0 = albedo). Order is the palette's authored order |
-| `surfaces?` | `{ building, grassEdge, inside, outside, verge, zones[] }` | footstep materials (carpet / lino / stone / tile / asphalt / grass). **`game/floor.ts` still owns the behaviour**; this mirrors it and `level-validate` asserts they agree — wiring `floor.ts` to read it is a small follow-up |
+| `surfaces?` | `{ building, grassEdge, inside, outside, verge, zones[] }` | footstep materials (carpet / lino / stone / tile / asphalt / grass). **`game/floor.ts` reads it** (`Level.surfaces`, attached non-enumerably by `loadLevel`): outside `building` the ground (`verge` where x or z < `grassEdge`, else `outside`), inside it the first zone holding the point, else `inside`. A file with none gets the office's map, which floor.ts still carries (`level-validate` asserts it equals the office file's block). A generator returns `surfaces` from `build()` (tools/levels/kit-yard.ts) |
 | `boxes[]` | `{ id, floor?, group?, name?, c, h, yaw?, rot?, material \| albedo, emissive?, rough?, metal?, flags?, cutHeight? }` | static geometry, **in order** (`boxes[i]` is `world.statics[i]`). `flags` by name: `NoPrimary NoShadow Cutaway Gloss` (runtime bits `Emissive AreaLit Rot Dynamic` are never authored — the validator rejects them). `group` is editor grouping only (`lobby`, `walls.interior`, `doorframe.server` …). `name` is a tag the game may look up (`breaker_panel`) |
 | `props[]` | `{ id, kind, name?, floor?, x, z, yaw?, mass, parts[{off,h,yaw?,material\|albedo}], half?, height? }` | loose furniture (chairs, cartons, bins, plants). `half`/`height` are FITTED from the parts unless given (10 of 61 pin them: plants author their footprint, a few fits differ in the last bit) |
 | `lights[]` | `{ id, kind point\|spot\|dir, pos, dir, color, intensity, range, innerDeg, outerDeg, group, enabled, volumetric, radius?, mains?, broad?, fixture? }` | analytic lights; `id` is the name targets / panels key on; `fixture` = the glow-card box id |
 | `switchables[]` | `{ id, boxes[], group, on, baseEmissive, flicker?, mains? }` | emissive fixtures the OCP / panel / blackout switch (panels, screens, signs, rack LEDs, beacon domes). A box belongs to at most one |
-| `doors[]` | `{ id, floor?, hinge[x,z], closedDir, width, angle?, exterior?, closer?, minAngle?, maxAngle?, locked?, lock?, keySide? }` | the LEAF; the frame is ordinary boxes in group `doorframe.<id>` |
+| `doors[]` | `{ id, floor?, hinge[x,z], closedDir, width, angle?, exterior?, closer?, minAngle?, maxAngle?, locked?, lock?, keySide?, swing? }` | the LEAF (`swing` ±1 = the side it opens into, +1 the CCW side of the closed leaf; absent = dealt at load: into the room it serves, an `exterior` door with a roof over one face only OUTWARD, toward the open air — game/doorswing.ts; a `swing` here overrules both — and it is how a room keeps a door no wedge holds: the men at home in a room wedge the doors that open INTO it, so every room a mission posts men in needs a way in that no wedge shuts — a door authored to open OUT of it onto floor the squad reaches (a wedge shuts a door one way: the neighbours' wedge on that door stops only the walk into THEIR room), or a window a man steps through; `bun run tools/qa/second-way-check.ts` is red on a level where some choice of wedges leaves such a room with no walk in from the team's start); the frame is ordinary boxes in group `doorframe.<id>` |
 | `routes[]` | `{ id, name?, points[], wait[], weapon?, keys? }` | one guard per route (game.ts spawns them in order); `wait.length === points.length` |
 | `chokepoints[]` | `{ id, name?, floor?, pos, yaw }` | lockdown posts |
 | `civilians[]` | `{ id, name, kind cleaner\|worker, floor?, tint, tint2, points[], wait[], tasks[], face[], notes? }` | the civilians on the floor (`game/civilians.ts`) — see *Civilians* below; optional block, absent = nobody but the shift |
 | `volumes[]` | `{ id, kind hide\|utility\|trigger, floor?, c, h, yaw?, notes? }` | none yet |
 | `devices[]` | camera / keypad / laser union | the level-design devices (`game/devices.ts`) — see *Devices* below |
 | `vents[]?` | `{ id, floor?, pos, dir, speed, spread, reach, size?, period?, duty?, phase?, mains?, notes? }` | HVAC supply vents (`game/wind.ts`) — see *Vents* below; optional block, absent = still air indoors |
+| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
 | `breaker` | `{ pos, panel, led }` | box ids |
@@ -86,7 +87,7 @@ The office authors (officeGen.ts → office.json): `cam_corridor` (east end over
 outside its sweep), `pad_side` on `server_manager` (the QUIET way into the server room; the front door keeps its key / pick / kick),
 `laser_corridor` (shin height across the corridor at x 14.5 — the straight walk from the lobby arch to the server door breaks it; round
 through the cubicles, the OCP, or the breaker), `laser_storage` (chest height across the storage DOORWAY on its corridor face, battery —
-in on your knees; the breaker is through that door). Knobs: `Game.tune.devices / lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (Tab ▸ Sandbox, persisted
+in on your knees; the breaker is through that door). Knobs: `Game.tune.devices / lasers / cameraSuspicionSecs / cameraAlarmSecs / deviceCones` (debugger ▸ Sandbox — the game page's tweak panel, on the backtick key —, persisted
 `twopointsix.devices`; 'all codes' / 'forget codes' buttons); `game.devices.summary()` / `.log` for the panel and QA; `probes.ts devices`.
 
 ## Civilians (`game/civilians.ts`)
@@ -127,7 +128,183 @@ boxes: move a vent in the editor and move its grille with it. The office authors
 `vent_cub_se` over papered cubicle desks, `vent_aisle` over the middle aisle's north end, `vent_corridor` outside the server door (cycles
 45 s / 0.75), `vent_break` inside the break room's corridor door (50 s / 0.6), `vent_server` over the server room's front aisle (the
 strongest, 2.8 m/s) — all mains, all ≥ 1.7 m off any panel or beacon and on their own ceiling square. Knobs: `tune.wind` (the master, 0‥1)
-+ `WIND` (Tab ▸ Weather ▸ wind rows, persisted `twopointsix.wind`); `__wind.at(p) / sources() / summary()`; `probes.ts wind`.
++ `WIND` (debugger ▸ Weather ▸ wind rows, persisted `twopointsix.wind`); `__wind.at(p) / sources() / summary()`; `probes.ts wind`.
+
+## Scenarios (`scene/scenarios.ts` — `Level.scenarios`)
+
+What the three playtest scenarios need from the level they are played on is DATA that travels with the level: a top-level `scenarios` block (types and field
+comments in `src/scene/scenarios.ts`). `game/roomclear.ts`, `nightbreach.ts`, `rescue.ts` and `rescueflow.ts` read `level.scenarios` and nothing else, so a level
+that carries a block is a level they run on. The OFFICE's file has no block: its data is `levels/office.scenarios.ts` (the tables that used to live in the game
+code, number for number), attached non-enumerably by `withOfficeScript` to any level whose `name` is `office` / `office-*` (`isOfficeFamily`) — so `office.json`,
+its digest and every data walk are unchanged.
+
+- `roomClear` — `{ name, team?, rooms[] }`: each room `{ id, name, bounds, doors[{ id, from }], garrison, marks[{ pos, watch, aimAt }] }` (`doors[].id` and
+  `marks[].watch` are door ids of this file; give more marks than `garrison` so a reseed deals another placement; ≤ 5 defenders in all — or up to `maxMen` (≤ 11: Sam, the four and eleven fill the sixteen skinned characters) where the block gives it; `squads[]` (scene/scenarios.ts SquadData: id, name, rooms, rally, barricade, mayLeave, training ('green' | 'mixed' | 'trained': how its men take a fright — every man green, its first man a steady leader over green men, every man steady; absent = the difficulty's mix, game/morale.ts trainingOf), arrive {door, spawn, men}) groups the garrisons into defender squads — every room in exactly one, refs checked by the validator and against the floor by checkStructure; absent = one pool, as before: the staging then lifts the character budget to fit, `levels/block.json` is the one that does). `wayOut: true` (optional; `levels/records.json`) = under Hard the men a lost room draws hold one door of it from back off it instead of walking in (`game/pressure.ts PRESSURE.wayOut`; nothing at Standard). `team { sam, samYaw,
+  ops[], opsYaw? }` is where the team starts — REQUIRED (with ≥ 2 `ops`) on a level with no `plans.breach`, where the room clear has no F drill: every teammate
+  is the order menu's from the first frame. With four marks the four-man squad stands on them; with two, the second pair is stood a stride behind.
+  `starts[]` (optional, only beside a `team`; each `{ sam, samYaw, ops[≥ 2], opsYaw? }`) = OTHER WAYS IN, the player's pick on the mission sheet's Way in
+  row (`ROOMCLEAR.way` / `?way=N`: 1 = `team`, 2 = `starts[0]` …; `?way=any` = a visit that names no placement seed is dealt one off its die); a plain link, a
+  named seed and every headless tally get `team`. A level that gives one names its ways on its mission row (`ways` in src/scene/scenarioList.ts, `team`'s first). Each is
+  held to the same floor checks as `team` (free floor, a way on foot to every teammate's mark and into every room).
+  `wallCharges` (optional, a count) = wall charges the squad is ISSUED for a room clear of this level whatever its kit cards carry (src/game/issue.ts, asked at
+  every staging right after the kit: the bag is raised to the count, never lowered, nothing kept per machine) — for a level whose route is through its walls
+  (`levels/mousehole.json`: five, four walls on the route and a spare). Absent = the kit's own count, as on every other level.
+  `digIn: false` (optional) = this floor's men never dig in (`game/digin.ts`: no door braced, no move to cover, no gun set on the expected door), at any
+  difficulty and whatever its squads decide — for a level whose words lean on men standing where they were dealt (Training 5 and 6). Absent = the game's rule.
+- `rescue` — `{ team, room { name, where?, door, bounds?, lights?, doorAim, outside?, hold? }, side? { door, hold, from? { door, bounds? }, stack?, standoff? },
+  hostages[{ pos, face }], captor, doorMan { inside, outside }, roamers[], flow? }`. `room.bounds` or a `plans.roomClear` entry for `room.door` must exist.
+  `flow { corridor, regions[{ id, door, rect }], route[], hold }` is the unasked-cover route (`rescueflow.ts`); AS BUILT it reads a corridor along +x walked
+  west → east — a level whose route is another shape leaves `flow` out.
+- `nightBreach` — `{ team, room?, lights? }`: only beside an authored `plans.breach`.
+- `places` — `{ areas[{ name, bounds }] }`: the level's own NAMES for floor nobody holds (a hall, a corridor, a yard — `name` without its article; one name
+  may be several rectangles). WORDS ONLY: nothing in the simulation reads it. It is what a line on their net, a cue and the debrief call a spot that is in no
+  room of `roomClear` (`game/dialogue.ts levelRects`: the structure's rooms first, then these; a spot in none of them is 'outside' the nearest), and what a
+  level WITHOUT a structure (the registry) names its rooms by. A level that carries neither says no place at all — never a room of the office's.
+  `bun run tools/qa/level-names-check.ts` holds it.
+
+The validator checks the block's keys, every door reference, the team marks and the region ids against the same file. Against the FLOOR (marks standable, inside
+their rooms, clear of furniture, with a line to what they cover; the team start joined on foot to every room) the checks are the game's, headless:
+`roomclear.ts checkStructure`, `rescue.ts checkRescue`, `RescueFlow.check`. `bun run tools/qa/scenario-level-probes.ts levels/<name>.json` runs them and then
+stages, walks and finishes each scenario the file carries (pair, four, rescue) under a plain scripted player; `probes.ts scenario-levels` is that on
+`levels/test-rooms.json`.
+
+- `quiet` — a QUIET MISSION on this level (`game/quiet.ts`; the author's page is rebuild/play-style-levels/quiet-missions/contract.md): the level's own night
+  left live (its `routes`, `devices`, `civilians`: nobody posted, nobody benched) with the player alone or with ONE partner under the pair rules, silent from the
+  first frame. `{ thing?, starts[{ sam, samYaw, mate?, name? }], spots[{ place, area, door, holder, rackIndex, front, halfW, wired? }], exits[{ name, door, x, z, out,
+  halfW? }], patrols?: string[][], needs?, phones?, wayouts?, radioCheck? }` (`radioCheck: false` = this shift keeps no radio check: nobody is sent round a silent man's route; absent = the game's) — a run's seed deals ONE start, ONE spot and ONE patrol set (route names; at most six a set);
+  every exit is open on every run and faces any way (`out` = the unit vector pointing out through it). `needs` / `phones` / `wayouts` are the level's own places
+  for the shift's errands and a frightened civilian: on a level that carries this block the office's tables (needs.ts NEED_SPOTS, civilians.ts CIV_SPOTS, the
+  response team's stairwell, the storm's two roofs, the footstep map) are NOT read — the level's own, or that thing off. The file's `mission` stays as the
+  validator wants it (equal to `spots[0]` / `exits[0]`, with `exfil.out`): it is what the plain `&solo` boot reads. `?levelFile=<name>.json&quiet[=pin][&squad=1]`.
+  Checks: `bun run tools/qa/quiet-check.ts <name>.json` (the block against the built floor, every deal started), `tools/qa/solo-night.ts --level <name>.json
+  --quiet [N] [--squad 1]` (the scripted player to the debrief), `probes.ts quiet` on `levels/quiet-yard.json` (generator `tools/levels/quiet-yard.ts` = the
+  worked example). A level that carries only this block passes `map:check`'s structure section with a note (the room clear's sections have nothing to hold).
+
+- `lesson` — a TRAINING LESSON over this level's mission (`game/lesson.ts`; rows in `scenarioList.ts TRAINING_MISSIONS`, `group: 'training'`): `{ title,
+  steps[{ id, line, done, hold?, at? }] }`. A step's `line` is the objective row while it is up ("training 3/11 ▸ <line>": what to do and THE KEY, at most 96
+  characters), `at` the marker, and it moves on when `done` — a test record `{ is: '<kind>', … }` read off the game — is true (for `hold` seconds). Never on a
+  clock. Kinds (`lesson.ts LESSON_TESTS`; a new kind is one row there with its `ok` and its `check`): STATE `in {area}` · `near {at, r?}` · `flag {flag,
+  value?}` (the `FLAGS` table: crouch sprint wall peek nv light holstered gun auto dragging holding picking coding menu silent …) · `slot {slot, drawn?}` ·
+  `pace {below?, above?}` · `meter {which: 'light'|'noise', below?, above?}` · `stage {stage}` · `door {door, state: open|shut|unlocked|broken}` · `target
+  {name, on}` (a light or a device by name) · `men {down}` · `all {of}` / `any {of}`; DEEDS counted from the moment the step came up: `did {what: 'act:<the
+  Space row's verb>' | 'event:<hearing event of the player's>' | 'chron:<chronicle kind>' | 'order:<orders.log id>', n?, on?: '<door name>'}` (`on`: that order given on that door). By family — hands: `downed {how: takedown|choke|whip|ring|knife,
+  n?}`, `body {area}` (a man down lies there, let go of); kit: `reload`, `launcher {on: ring|he40|none, fired?}`, `burst {n?}`, `threw {kind?:
+  smoke|flash|frag|he40, quick?}`; squad: `orderTo {who: all|red|blue}`, `stackOn {who?, door, set?}`, `pairsOn {doors?}`, `word {doors?}`
+  (F, over how many doors), `taken {room}` (a room of `roomClear` stands cleared), `following`; the quiet partner: `mate {area?, at?, r?, by?, away?}`, `pair
+  {what: mark|now|set|go|go:F|go:hands|down, n?}`. A step must never be able to become impossible while the mission can go on (a can or a charge can run
+  out, a door can come open another way): give such a step an `any` with the honest alternative. The lesson only READS the game: the
+  level under it is a real mission of its kind (it needs a `quiet` or `roomClear` block) and the same keys play the same run with `?nolesson`. After the last
+  step the mission's own objective has the row back and ends the run. Generators stand on `tools/levels/train-ground.ts` (`trainGround()`: the compound, `hut`,
+  `lamp`, `finish`); `tools/levels/train-move.ts` is the worked example; the seven are `train-move` · `train-hands` · `train-lights` · `train-kit` (quiet, alone), `train-orders`
+  (a room clear with the pair), `train-pairs` (with the four), `train-silent` (quiet as two). A Training row deploys at ITS OWN size only (`loadout.ts
+  squadChoices`: the Loadout screen greys the others). Checks: `bun run tools/qa/lesson-check.ts <name>` (the block against the file, the
+  floor and the list), `tools/qa/lesson-run.ts <name>` (a scripted player — `tools/qa/lessons/<name>.ts`, input only — through every step to the debrief; a
+  step that moves on with nothing done is a FAIL), `tools/qa/lesson-gate.ts [name …]` (per Training level: the file is its generator's, level-lint, lesson-check, the scripted run, and the on / off digests equal),
+  `tools/qa/light-map.ts <name>` (how lit a man is across the floor).
+- `par` — a PAR CLOCK over this level's room clear (`game/par.ts`; needs a `roomClear` block): `{ gold, silver, bronze, lossSecs }`, seconds, with
+  gold < silver < bronze and `lossSecs` ≥ 0. The run is timed from the first order, Sam's first stride off his start mark or his first round or throw to
+  the room clear's 'taken'; every teammate down at the end adds `lossSecs`; the total, in whole seconds as shown, earns the medal. The clock leads the
+  objective row and the result is said once on the HUD log. It only READS the game: the same keys play the same run with `?nopar` (`PAR.on` false). Set
+  the bars from measured runs (`tools/qa/ships.ts --scn <row> --seeds 1-24 --json f`: each run's `par` = secs, lost, total, medal). Today:
+  `levels/killhouse.json`. Check: `bun run tools/qa/par-check.ts` (`probes.ts par`).
+- `defuse` — TIMED CHARGES on one clock over this level's room clear (`game/defuse.ts`, `Game.defuse`; `levels/defuse.json`, row `defuse-four` 'The two
+  charges', `group: 'clock'`): `{ secs, workSecs?, devices: [{ id, name, pos, n }], blast?: { lethalM?, woundM?, radius?, power? } }`. `secs` = the one
+  clock, counted from the team's first move or first order and shown in the objective row; a device is a small box on a face — `pos` its centre, `n` the unit
+  [x, z] normal out of the face a man works it from, `name` what the row and the order call it ('charge 1': a name the level itself shows, never a compass
+  word — the HUD has none). A charge is made safe by `workSecs` seconds (absent: `DEFUSE.workSecs`) at it — Sam's own Space row 'make it safe', or a teammate
+  sent through the squad's work order (`game/workthings.ts`, thing kind `'device'`: X on it, 1). The clock at zero sets off every charge still live through
+  `frag.ts blast()` with the block's radii (absent: `DEFUSE`'s) — a real blast in that room — and the mission is FAILED, and stays so if the house is taken
+  afterwards; won = every charge safe AND the room clear taken. The level needs a `roomClear` block; a level without `defuse` is the room clear alone
+  (`DEFUSE.on` false = the same on this level, by digest).
+  Checks: `bun run tools/qa/defuse-check.ts` (`probes.ts defuse`; `DEFUSE_BREAK=1` must fail), `TPS_PROFILE=shipped bun run tools/qa/defuse-run.ts
+  [--arm split|whole|split-back|whole-back|sam|both|backs|all] [--seeds 1-24] [--secs 100 --clocks 60,75,90]` (a scripted commander: two pairs at once
+  against the whole squad to one charge then the other, by the wings or by the workshops' back doors, and the player's own hands on one).
+- `issue` — a KIT ISSUED BY THE LEVEL (`game/kit.ts kitIssue`): `{ members: { '<place>': { …card fields } } }`, place `'0'` = the player, `'1'`‥`'4'` the
+  teammates in roster order; each entry lists only the fields that differ from the issue card (`weapon` rifle | pistol | shotgun, `suppressed`, `light`,
+  `nvg`, `shield`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `shield charges walls` are a teammate's alone and `shells`
+  the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count). Every staging on that level wears the issue card with those
+  fields over it, whatever kit the machine keeps, and the kept kit is not written; `?noissue` (`ISSUE.on` false) = the kept kit as on any level. Today:
+  `levels/hall.json` (the first teammate carries the shield: Red One of the four).
+- `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
+  it, and a level without the block shows the menu's standing man as before): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
+  `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked
+  out from that door's frame and the side the team starts on — teammates along the wall 0.7 m off its face and 0.9 m apart from 0.45 m past the jamb away
+  from the hinge (a shield man first), Sam across the door, no nearer its middle than 1.8 m (an authored slot for him should keep that too: a door charge's moment goes off beside him
+  and dazzles within 1.6 m), and turned onto it, a fourth teammate behind him; a place that is not free floor is stepped over.
+  Optional, each laid over the worked-out value: `side` (1 | −1: which side of the door the stack forms on, −1 = the hinge's) · `pin { yaw, pitch, dist? }`
+  (radians / metres; the camera is framed on the way's FIVE places whatever the team's size: one framing per way) · `slots [[x, z, yaw°] …]` (up to five: Sam, then the teammates from the door
+  outward; yaw 0 = +z, 90 = +x; `null` holds a place left to the plan, so one man can be written alone: `[null, null, [x, z, yaw°]]` — and a place the plan had to step over, written alone, is no longer counted in "N places stepped over"; the fifth place, the fourth teammate's, is written BEHIND Sam — further from the anchor along the wall, on his side of it: the card switch walks that man round Sam and never across the anchor, and a place nearer the anchor or on the stack's side is a plan problem) · `light { … }` (any key of `KIT_VIEW_LIGHT`, a lamp's own keys one by one: `porch { }` the key over the door — at a 'gap' span, where nothing stands over the opening, worked out
+  onto the wall or post at the stack's end of it (no box where neither end is 2 m tall) — and
+  `fill { }` the soft panel out in the yard — kind 0 | 1 | 3, `offset` / `aim` as [along the wall toward the stack, out from the wall, up] from the door's
+  middle, colour, intensity (0 = not hung), range, cone, `radius`, `volumetric`, `broad`; the PORCH alone takes `fixture { at, half, glow }`, its glowing
+  box; `roomLights`; `moonScale` / `skyScale` on a night; `sam { on, intensity, innerDeg, outerDeg, volumetric, aim }` his weapon light) ·
+  `roomLights` (0‥1 on the level's interior lights; 0 switches their groups off) · `hide [ … ]` (box ids, or box groups whole, out of THIS picture — WRITTEN, it wins outright: those boxes and nothing else, `[]` = nothing; NOT written, what the plan finds in the camera's way goes, and one that is not a thing — a wall, a box carrying a door or a lamp — is a plan problem. A thing's LOOSE PROPS go with it: a name here is also a prop's id, or the group a prop is OF — its id is the group's name and a dotted tail, `lived.forecourt.stool0` of `lived.forecourt` — and with no `hide` a prop of a sunk box's group within 0.8 m of that box goes too; the plan's `hiddenProps`. A name of something the stand left out of the file — a `lived.*` group under `?lived=0` — is no problem there: it names nothing) ·
+  `hidePaint [ … ]` (box groups of which only the paint on the ground goes: boxes under 1 cm half-height — a look file's floor decals, the painted
+  marks). WHICH LEVELS CARRY A BLOCK is never written down here: `grep -l '"kitView"' levels/*.json` (the bundled office's is
+  `levels/office.scenarios.ts`), or the first line `bun run tools/qa/kitview-plan.ts --quiet` prints. A block is written TWICE where the level has a look twin
+  — `X.json` (the start page reads it) and `X-gwot.json` (the picture's own page loads it), the same block to the byte; that tool FAILS a level whose two
+  files disagree. `PORT=<dev server> node tools/qa/kitview-page.cjs` stages every way and holds the slots
+  to free floor.
+  THE PLAN'S KEYS (`src/host/kitViewPlan.ts`: every value below is MEASURED from the level's own boxes where the way does not write it, and a written one
+  is taken as written; the picture is STAGED FROM THE PLAN — `src/host/kitView.ts place()` takes the places, the wall's face and top, the lamps, the
+  camera, what is sunk out of the picture and the floor behind the anchor from it, on the game's own nav grid). The ANCHOR is `door`, or `span
+  [[x, z], [x, z]]` where there is no door: a stretch of blank wall to breach, or the two posts of an open gate — never both; `kind` ('wall' | 'gap' on a
+  span, 'door' on a door; absent = measured: wall between the span's ends or open floor). Overrides: `ref [x, z]` (a point on the team's side; absent =
+  Sam's start for the way) · `hand` 'left' | 'right' (the side of the anchor the stack falls on screen) · `slotGap` (m: what authored stack slots were laid
+  out at; under 1.1 they are spread to it) · `wall { face?, thickness?, top? }` (m: the wall's face from the anchor's line on the team's side, its
+  thickness, its top over the anchor) · `lane` (m out from the file: the card switch's) · `out` / `inside` (m of free floor in front of the face / behind
+  the anchor) · `pane { box, stand? [x, z, yaw°] }` | `false` (the Glass box a gun is shown through; false = none; absent = the pane the gun row tries first: glass in the anchor's own wall within 6 m along it, the nearest along the wall — the plan says which and how far along, and one far along is a long walk or off the frame: write `false`, or the box. A WRITTEN box is put through the same tests — glass within 0.5 m of the anchor's line, within 6 m along it, its bottom no higher than 1.5 m and its top no lower than 1.2 m: one that fails them is a plan problem, for the gun row would shoot through the doorway instead. `stand` is where a TEAMMATE is stood for the written pane, tried after his own place and before the row's own posts; Sam shoots from his own place or through the doorway. No level writes a box yet: the written pane and its `stand` have never run on a page) · `show [ … ]` (box ids or groups the
+  camera's own occluder test must leave standing; a box that tops out under 0.25 m — a drift, a kerb — is never in the camera's way) · `indoors` (the
+  men are under a roof: no rain or snow on them) · `keepLights [ … ]` (light groups left lit with the room lights out; 'exterior' always is) ·
+  `litInside` true (THE ROOM BEHIND THE ANCHOR STAYS LIT: on a level's own way every room light goes out, so the wedge the picture shows behind the wall is
+  black unless a yard lamp reaches it; with this word the groups of the lamps that stand behind the wall's far face and reach the floor a metre in — within
+  their own range and 6 m — are kept as well as `keepLights`, written or measured. Not the default: a staged door with a lit room behind it would change) ·
+  `add { boxes?[], lamps?[] }` (A PIECE OR A LAMP MORE on a level's OWN way: this format's own box and light records, in LEVEL coordinates, laid in after
+  the level's boxes for the picture only — box i of the level is still box i; the mission never loads them. The plan counts the boxes like any box on the
+  floor and the lamps' groups stay lit. AN ADDED PIECE IS SHOWN: it is never taken out of the picture for standing in the camera's line — where it
+  hides a man, or stands on the line of places, the plan says a problem that names it (`the added 'x' hides the stack: move it`); the way's `show`
+  with its name says it stays in front of him, the way's `hide` with its name takes it. Each record gets this format's whole rule for a box or a
+  light (a lamp needs its kind, dir, color, range …; its `fixture` may be a box added beside it). Ids new to the level's own records — two ways may
+  add a piece under the SAME id (one way is ever laid in); a box's `material` may be look alternatives `'look|plain'` as a set's; never on a way that
+  names a `set`. `add.laid` is the loader's own word, never written in a file).
+  NAMES: a `hide` / `show` / `pane.box` should name a box's `group` or its own `name` (a named box's id IS its name) — a generated `box_NNNN` id is the
+  box's place in the file and points elsewhere when the box order changes; tools/qa/kitview-plan.ts prints a WARNING for one.
+  THE LEVEL'S DEVICES REPORT NOTHING IN A PICTURE: cameras and tripwires are drawn, pan and glow, and call nobody (src/host/kitView.ts kitViewInert).
+  A SPAN HAS NO LEAF: on a 'gap' the gun fires on the opening's middle, the light plays with nothing pushed and what is thrown goes straight in; on a
+  'wall' only the wall charge plays (the wall is stood again under the dissolve after it); every row that works a leaf — a door charge, the wand, a
+  teammate's bang or frag order, the big tool — plays the GUN's there. Throws and the spot a round is put on are held to the floor measured behind the
+  anchor (`inside`). The stack's `hand` mirrors the child's own framing (door / left / right) — a way whose stack falls on the right needs nothing said.
+  ANY KIND of mission may carry a block: a way on a set is always staged as a room clear of the set; a level's own way is staged by the mission's own
+  kind (room clear, rescue, night breach), and a kind with no team at a way in shows the standing man, as a level with no block does.
+  A BESPOKE SET: `sets { <name>: { boxes[], doors?[], lights?[], ref [x, z] } }` in THIS format's own box / door / light records — a small stage of the
+  level's own materials (by name: a look file's set wears the look — a set box's `material` may be ALTERNATIVES, `'look|plain'`: the first name the
+  file's palette holds, so one block text serves a level's plain file and its look file) that the picture loads INSTEAD of the level's geometry; a set's
+  own lamps stay lit (`roomLights` is 1 on a set way unless written; 0 on a level's own way); world metres inside the
+  0‥40 × 0‥28 floor, bringing its own ground; `ref` = a point on the team's side of its anchor. A way names one with `set`; its `door` / `span` /
+  `slots` / `hide` are then the set's, never the level's (the validator holds a set way's door to the set's doors). Under `?kitview` and nowhere else
+  `src/host/kitViewSet.ts kitViewSetLevel` lays the set over the file before `loadLevel`: the set's boxes (index for index), doors and lamps; the level's
+  name, materials, surfaces, sky, daylight and directional lights (the `moon`) kept; everything else of the level gone, with stand-ins for what any level
+  must have (two sunk breaker boxes, the three objectives, a one-room `roomClear` whose team is the plan's five places). A way with no set is the file
+  untouched. `bun run tools/qa/kitview-plan.ts [level …]` checks every block statically (the plan AS THE CHILD MAKES IT — two passes: what stands in the camera's way is sunk before the places are planned — has no problems, five places on free floor, the
+  anchor real, the way in walkable on the nav grid's cells, a set loaded as the page loads it passes this validator) and prints the dry run of every
+  mission's way in; `KITPLAN_BREAK=1` must fail. ON THE PAGE: `PORT=<dev server> node tools/qa/kitview-levels.cjs` (`LEVEL=a,b`, `WAY=n`) runs the same
+  generic rows on every level-way with a block — it knows no level: five men on the plan's places on free floor, every tile's row from pick to everyone
+  home and the world whole, throws beyond the anchor's line, a cut mid-row, `pins` 0, a silent console; `KITLEVELS_BREAK=1` must fail.
+  BLOCKS TODAY: `records` (below), `block` / `block-squads` (the kitchen door off the hall, indoors under the hall's lamps, both ways), `mousehole`
+  (way 1 a set, `ward`: the clinic's street wall on a SPAN of blank wall; way 2 the level's own fire exit) and `pass` (both ways a set, `gate`: the
+  wicket in the truck gate under its lamp), each in the level's look file too.
+
+A NEW LEVEL is a generator, like the office: `tools/levels/<name>.ts` exports `NAME`, `NOTES` and `build() → { level, scenarios, groups }` built with
+`officeGen.ts officeKit()` (the office's own walls / doors / furniture / lights / palette), and `bun run tools/levels/export.ts <name>` writes
+`levels/<name>.json` (refused unless it validates and reloads to the same Level; `--check` = stale test). `tools/levels/test-rooms.ts` is the worked example.
+Play it with `?levelFile=<name>.json&roomclear[=seed][&squad4]` or `&rescue` (the dev server), headless with
+`standUp({ level })`.
+
+**`scenarios.snatch`** (`SnatchData`, read by `src/game/snatch.ts` and by nothing else; a level without it is the room clear as it was): one unarmed man the
+team has to take alive, laid over the level's room clear. `man {name, pos, face, tint, tint2?, points?, wait?}` = who he is and the marks he keeps to while the
+floor is quiet; `exits [{name, pos}]` = the ways off the floor he runs for once it is loud, his NEAREST by walking first (the export's check says so if it is
+not) — on one, he is gone and the mission is failed. At least two, so one can be covered while the team goes in by another. `levels/snatch.json` is the level
+built for it; `bun run tools/qa/snatch-check.ts` holds the rules.
 
 ## For the editor lane (G1b) — the API to build on
 
@@ -182,7 +359,7 @@ tools/levels-api.ts    the dev server's GET /levels/ · GET /levels/<name>.json 
 ```
 
 **Refs**: `box:<id>` `prop:<id>` `light:<id>` `sw:<id>` `door:<id>` `route:<id>` `route:<id>#<i>` (a waypoint) `volume:<id>` `chokepoint:<id>`
-`floor:<id>` `mark:spawn` `mark:<objective id>` (bare ids are boxes). **Mouse**: click selects (shift toggles; double-click = the box's switchable /
+`device:<id>` `floor:<id>` `mark:spawn` `mark:<objective id>` (bare ids are boxes). **Mouse**: click selects (shift toggles; double-click = the box's switchable /
 group) · press-drag ON THE SELECTION moves it on the floor (Alt = vertical), press-drag anywhere else = marquee (the floor is always under the cursor:
 click first, then drag) · RMB orbit · MMB or Space+LMB pan · wheel zooms about the cursor. **Keys**: `G` move · `S` resize (six face handles on the
 selected box) · `R` rotate (a yaw ring; Ctrl = 15° steps) · `B` box footprint (preset from the palette; walls run along the longer drag side at
@@ -190,7 +367,7 @@ their fixed thickness; a click drops the default size) · `V` volume footprint �
 `D` door: press at the hinge, drag along the shut leaf (snaps to 90°, Alt free) — with *cut+frame* on, the wall it lands in is split into runs +
 lintel and the frame (jambs, head, stops) is built · `P` route: click waypoints, Enter / double-click finishes, Backspace drops the last · `T` plan ·
 `F` frame · `X` snap · `O` grid · `H` hidden (NoPrimary) boxes · `N` day/night (data.daylight) · arrows nudge by the snap (Shift fine, Alt / PgUp /
-PgDn vertical) · `Del` delete · `⌘/Ctrl Z` `⇧Z`/`Y` `D` (duplicate) `S` (save to server) `A` (all boxes on the floor) · `` ` `` debug views · `[ ]`
+PgDn vertical) · `Del` delete · `⌘/Ctrl Z` `⇧Z`/`Y` `D` (duplicate) `S` (save to server) `A` (all boxes on the floor) · `` ` `` hides / shows the right-hand panel (no key steps the debug views: they are the *view* list in the top bar's second row) · `[ ]`
 exposure · `M` the Materials tab · `K` (a box selected) its Markings tab · `Esc` cancels the tool / clears. Deleting refuses what is still referenced (a door an objective / plan uses, the breaker's boxes, a
 floor with things on it — boxes, props, doors, volumes, chokepoints, devices, civilians or a connector end, one `FLOOR_USERS` table in levelData.ts for delete / rename / lint —
 the mission marks); a box's switchable forgets it (and goes when emptied), a light's fixture pointing at it is cleared; renaming a keypad takes its door's `lock` with it.
@@ -198,25 +375,19 @@ Every multi-op verb runs in `doc.transact`: an exception half-way rolls the whol
 MARKED box (any write to its `h`: the S handles, the sheet's size row, `__ed.box.resize / size / update`) re-fits its markings into the smaller / larger faces in the same
 command (bitmaps cropped top-left when they must shrink) and drops — with a line in the problems panel — only a marking whose face no longer takes one cell.
 
-**Save / load**: *save ▾* download `<name>.json` · POST to the dev server (`levels/<name>.json` — the repo file changes; ⌘/Ctrl S) · autosave
+**Save / load**: *save ▾* download `<name>.json` · POST to the dev server (⌘/Ctrl S: the file the document was LOADED FROM — `Editor.file`, shown on the level sheet — or, for a document from nowhere, `levels/<data.name>.json`, asking before it replaces a file that exists; the repo file changes, and on a GENERATED level a re-export overwrites it) · autosave
 (localStorage `twopointsix.editor.autosave`, every 30 s while dirty + on unload); *load ▾* file picker · drop a `.json` on the view · the
 autosave slot · a blank level · the bundled office · the server's `levels/`. The RESTORE paths (`#autosave` at boot, *load ▾ autosave*,
 `__ed.save.restoreAutosave()`, `__ed.load(text, {lenient: true})`) open a document that PARSES but does not VALIDATE — its problems listed in the problems
 panel, `ed.loadErrors` — instead of refusing it; a `#autosave` boot whose slot is not a level at all keeps the office up as a stand-in and HOLDS the timer's
 and the unload's writes until the first edit (`persist.ts AutosaveSession`), so a session is never silently replaced and then overwritten. **Play from here**
-writes the document to localStorage `twopointsix.editorLevel` and opens the game with `?level=local` (`/?level=local` from the dev server's `/workbench`,
-`index.html?level=local` from a built page — the dev server forwards `/index.html` to `/`); the game's side of it in `src/scene/level.ts`:
-
-```ts
-import { parseLevelData } from './levelData';
-export function buildLevel(): Level {
-  if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('level') === 'local') {
-    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) return loadLevel(parseLevelData(t)); }
-    catch (e) { console.error('?level=local: falling back to the bundled office —', e); }
-  }
-  return loadLevel(OFFICE_DATA);
-}
-```
+writes the document to localStorage `twopointsix.editorLevel` and opens the game with `?level=local` + the keys of the mission the document carries
+(`persist.ts playChoices / playDefault`: the list beside the button holds the plain night and each mission of the document's `scenarios` block — `&roomclear`
+(+ `&squad4`), `&rescue`, `&quiet` (+ `&squad=1`), `&nightbreach`; the default is the mission list's first row for the file, and for the office the plain
+night). `/?level=local…` from the dev server's `/workbench`, `index.html?level=local…` from a built page (the dev server forwards `/index.html` to `/`). The
+game's side of it is `buildLevel()` in `src/scene/level.ts` (read it there: the stash is parsed and validated, a document of the office family gets the
+office's script and scenarios, anything that fails falls back to the bundled office with a console error — and `main.ts` falls back again if the Game
+cannot be built on it, `bootedLocalLevel`).
 
 **`window.__ed`** (api.ts) — every mutator is one undoable command; getters return copies:
 

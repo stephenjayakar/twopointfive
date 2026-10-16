@@ -20,7 +20,7 @@ export interface ApiHost {
   step: (n: number, dt?: number) => void;
   shot?: (name: string, quality?: number) => Promise<string>;
   quality?: (name?: string) => string;
-  play?: () => string;
+  play?: (as?: string) => string;
   /** the inspector's tabs (the page's Ui; absent headless): show one, read which is up, point the Markings tab at a box / marking / face */
   ui?: { tab: (name?: 'props' | 'materials' | 'markings') => string; paint: (name?: string) => string | null; marking: (boxId?: string, i?: number, face?: string) => unknown; entry: (e?: number) => number };
 }
@@ -108,6 +108,8 @@ export function makeApi(H: ApiHost) {
       makeFrame: (id: string, opts?: { t?: number }) => ed.makeFrame(id, opts),
       cutOpening: (id: string) => ed.cutOpening(id),
       obstructions: (id: string) => ed.doorwayObstructions(id),
+      /** the side it opens into and why: { swing ±1, why, into? } — authored, else the game's deal run on the document now */
+      swing: (id: string) => { const w = ed.doorSwing(id, true); return w ? { ...w } : null; },
       /** what makeFrame / cutOpening WOULD do, without doing it */
       framePlan: (id: string) => { const d = ed.doc.get<any>('doors', id); return d ? { frame: doorFrameBoxes(d), cut: cutOpeningPlan(ed.data, d) } : null; },
       frameBoxes: (id: string) => ed.data.boxes.filter(b => b.group === `doorframe.${id}`).map(b => b.id),
@@ -278,13 +280,15 @@ export function makeApi(H: ApiHost) {
       autosave: () => persist.autosave(ed),
       readAutosave: () => persist.readAutosave(),
       restoreAutosave: () => { const s = persist.readAutosave(); if (!s) return null; const errors = ed.load(s.text, { keepSaved: true, lenient: true }); return { name: s.name, t: s.t, digest: s.digest, errors }; },   // (lenient: a slot with problems opens WITH them listed — never refused and then overwritten)
-      server: async (name?: string) => { const n = name ?? ed.data.name; const r = await persist.serverSave(n, ed.serialize()); ed.doc.markSaved(); return r; },
+      server: async (name?: string) => { const n = name ?? ed.file ?? ed.data.name; const r = await persist.serverSave(n, ed.serialize()); ed.doc.markSaved(); ed.file = n; return r; },   // (no name: the file it was loaded from, else the level's name — and that file is the document's from then on)
       serverList: () => persist.serverList(),
-      serverLoad: async (name: string) => { const t = await persist.serverLoad(name); const allow = await persist.serverLintAllow(name); ed.load(t, { lintAllow: allow ?? undefined }); return { name: ed.data.name, digest: ed.doc.digest() }; },
-      local: () => persist.stashForPlay(ed),
+      serverLoad: async (name: string) => { const t = await persist.serverLoad(name); const allow = await persist.serverLintAllow(name); ed.load(t, { lintAllow: allow ?? undefined, file: name }); return { name: ed.data.name, file: ed.file, digest: ed.doc.digest() }; },
+      local: (as?: string) => persist.stashForPlay(ed, as),
       keys: persist.LS,
     },
-    play: () => H.play ? H.play() : persist.stashForPlay(ed),
+    /** hand the document to the game: `as` = one of playChoices()' ids ('solo', 'roomclear4', 'rescue2', 'quiet0' …); absent = the mission the document carries (persist.ts playDefault) */
+    play: (as?: string) => H.play ? H.play(as) : persist.stashForPlay(ed, as),
+    playChoices: () => persist.playChoices(ed.data, ed.file).map(c => ({ id: c.id, label: c.label, query: c.query, row: c.row?.id ?? null, default: c.id === persist.playDefault(ed.data, ed.file).id })),
     /** validate any LevelData-shaped value without loading it */
     check: (d: unknown) => validateLevelData(d as LevelData),
     digestOf: (d: unknown) => levelDataDigest(d as LevelData),

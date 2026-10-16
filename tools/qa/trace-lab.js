@@ -7,7 +7,7 @@
 // What it does:
 //   * SCENES  __tl.scene('B1'…'B5') stages the notebook's fixed views (B4 pulls in /qa/stress-scene.js, B5 swaps daylight in).
 //   * FRAMES  __tl.frames(n) = n serialized still renders (engine.render of the CURRENT game state, each followed by onSubmittedWorkDone + a MessageChannel yield —
-//             the dev notes 'GPU timing') → per-pass arrays + the compute UNION per frame; __tl.ab(apply, variants) interleaves K variants round-robin (rotating start)
+//             CLAUDE.md 'GPU timing') → per-pass arrays + the compute UNION per frame; __tl.ab(apply, variants) interleaves K variants round-robin (rotating start)
 //             and reports per-pass / union medians; __tl.aa() is the contention check (the same variant twice must agree within ~2 %).
 //   * VARIANTS __hotCommon(src?, variant?) (main.ts) installs an edited common.wgsl and/or TRACE_VARIANT into EVERY tracing pipeline without a reboot; __tl.use(v) is the
 //             short form. The lab's own kernels (src/render/shaders/trace_lab.wgsl, served from disk, never bundled) are compiled behind the same prelude + selector functions

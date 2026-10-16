@@ -39,11 +39,11 @@ const GAME_GAIN: Record<string, number> = {
 /** what each new voice was asked to be: duration window (s) and where its energy should sit */
 const SPEC: Record<string, { dur: [number, number]; note: string }> = {
   grabScuffle: { dur: [0.25, 0.4], note: 'cloth rustle + choked gasp, 120–200 ms of bursts' },
-  chokeStrain: { dur: [0.5, 0.7], note: 'one grain of low throttled strain, slow tremolo; retriggered every 0.4 s' },
+  chokeStrain: { dur: [0.5, 0.7], note: 'one grain of pressed, creaky strain, slow tremolo; retriggered every 0.4 s' },
   chokeLimp: { dur: [0.6, 0.9], note: 'exhale + cloth slump, no floor hit' },
-  whipThud: { dur: [0.25, 0.4], note: 'sine thump 90→50 Hz / 80 ms + click + cloth; the loudest' },
+  whipThud: { dur: [0.25, 0.4], note: 'the blow (low, dead) + a dull knock + the slide answering + cloth; the loudest' },
   shove: { dur: [0.35, 0.5], note: 'cloth burst + foot scuff' },
-  murmur: { dur: [0.2, 0.32], note: "Sam's question: three quiet band-passed syllables, ~250 ms" },
+  murmur: { dur: [0.2, 0.32], note: "Sam's question: three quiet breathy syllables, ~250 ms" },
   heldProtest: { dur: [0.7, 0.9], note: 'muffled syllables, starting 0.3 s in' },
 };
 const NEW = Object.keys(SPEC);
@@ -146,7 +146,7 @@ for (const n of names) {
   let peakMix = 0; for (const x of mixd) peakMix = Math.max(peakMix, Math.abs(x));
   // where the deepest dip sits relative to the grain boundaries (a hole AT every 0.4 s = the windows do not meet)
   const iMin = env.indexOf(mn); const tMin = 0.12 + iMin * 0.02; const toBoundary = Math.min(...Array.from({ length: N_GR }, (_, k) => Math.abs(tMin - k * GRAIN)));
-  console.log(`\nchokeStrain ×${N_GR} grains @ ${GRAIN} s (the full 2.6 s choke), gain ${GAME_GAIN.chokeStrain}: summed peak ${peakMix.toFixed(3)}, 20 ms envelope ${db(mn).toFixed(1)} … ${db(mx).toFixed(1)} dB → spread ${spread.toFixed(1)} dB (tremolo alone ≈ ${db(1 / 0.24).toFixed(1)} dB at 62 % depth); deepest dip at ${tMin.toFixed(2)} s, ${toBoundary.toFixed(2)} s off a grain boundary; grains per second ≤ ${Math.ceil(1 / GRAIN + 1e-9)}`);
+  console.log(`\nchokeStrain ×${N_GR} grains @ ${GRAIN} s (the full 2.6 s choke), gain ${GAME_GAIN.chokeStrain}: summed peak ${peakMix.toFixed(3)}, 20 ms envelope ${db(mn).toFixed(1)} … ${db(mx).toFixed(1)} dB → spread ${spread.toFixed(1)} dB (tremolo alone ≈ ${db(1 / 0.32).toFixed(1)} dB at 52 % depth); deepest dip at ${tMin.toFixed(2)} s, ${toBoundary.toFixed(2)} s off a grain boundary; grains per second ≤ ${Math.ceil(1 / GRAIN + 1e-9)}`);
   if (spread > 16) fails.push(`chokeStrain grains leave holes: envelope spread ${spread.toFixed(1)} dB across the sustained choke (want ≤ 16)`);
   if (peakMix > 0.6) fails.push(`chokeStrain grains pile up to ${peakMix.toFixed(2)} at gain ${GAME_GAIN.chokeStrain} (want ≤ 0.6: it should stay under the thuds)`);
   if (1 / GRAIN > 3) fails.push('more than 3 grains a second');

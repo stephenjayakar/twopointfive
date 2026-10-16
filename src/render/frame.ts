@@ -4,24 +4,29 @@ import commonSrc from './shaders/common.wgsl' with { type: 'text' };
 import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
+import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';
 import { REACH_VEC4S } from './lights';
 import { MESH_MAX_CHARS } from './meshbvh';
 import { MARK_TABLE_ROWS } from '../scene/markings';
+import { cutConfig, CUT_ROWS, CUT_STRIDE } from '../scene/cut';
+import { GB_ROWS } from '../scene/boxes';
+import { smokeGrid, smokeReadConsts } from '../smoke/smokeGrid';
+import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
 
 /** Byte size of the per-frame uniform block = struct Frame in common.wgsl. Layout past the 416 bytes of scalars/vec4s the renderer always had (offsets in BYTES; f[]/u[] index = byte ÷ 4):
- *    416  cardCfg    vec4u              (u[104‥107])  torch bounce cards: x = count this frame
+ *    416  cardCfg    vec4u              (u[104‥107])  torch bounce cards: x = count this frame; y, z = weather kinds' 3rd / 4th roof footprint packed (1 = a kind with no third roof), w = their fog packed (0 0 0 = no kind)
  *    432  cardSlots  array<vec4u, 2>    (u[108‥115])  the 8 light slots the cards are built from
  *    464  weatherA   vec4f              (f[116‥119])  rain rate, shear x, shear z, wetness
  *    480  weatherB   vec4f              (f[120‥123])  flash rgb, rain top
- *    496  weatherC   vec4f              (f[124‥127])  interior footprint x0 z0 x1 z1
+ *    496  weatherC   vec4f              (f[124‥127])  interior footprint x0 z0 x1 z1 = the first roof (the level's own roofs in force: + two packed roofs in cardCfg.yz and, under a kind, the fog in .w @420, u[105‥107])
  *    512  glassCfg   vec4f              (f[128‥131])  glass: reflection ×, tint depth, dust glow ×, refraction's index (0 = off)
- *    528  weatherD   vec4f              (f[132‥135])  a second no-rain footprint (the west stair tower) x0 z0 x1 z1
+ *    528  weatherD   vec4f              (f[132‥135])  a second no-rain footprint (the office's west stair tower; else the level's second roof) x0 z0 x1 z1
  *    544  volCfg     vec4u              (u[136‥139])  volumetric caps: x = lights per march step / per haze ray (0 = off), y = shadow-ray refresh period (steps), z = march step (tenths of a voxel), w = bits 0‥3 the SHADOW rays' smoke sample count (smokeShadowSteps; 0 = 8) | bits 8‥11 the smoke march's lights lit per step (smokeMarchLights K; 0 = J-lit as before)
  *    560  froxelA    vec4f              (f[140‥143])  froxel volumetrics: near, far (m along the pixel ray), slice curve a, history weight this frame
  *    576  froxelB    vec4u              (u[144‥147])  froxel grid W, H, D, k (shadow-rayed lights per froxel) | fetch filter << 8 | (strata − 1) << 9
  *    592  froxelC    vec4f              (f[148‥151])  froxel sample jitter xyz (0‥1), lookup depth bias (slices)
  *    608  prevCam    vec4f              (f[152‥155])  previous frame's camera position, w = last frame's froxel near boundary
- *    624  rtCfg      vec4f              (f[156‥159])  RT reflections: max roughness traced, rays per pixel, wet-ground anisotropy, the reflection target's divisor (0 = the pass is OFF this frame)
+ *    624  rtCfg      vec4f              (f[156‥159])  RT reflections: max roughness traced, rays per pixel, wet-ground anisotropy (+ 2 × the wet ground's break-up in tenths), the reflection target's divisor (0 = the pass is OFF this frame)
  *    640  matCfg     vec4f              (f[160‥163])  materials: analytic-highlight gain, reflection strength, per-ray luminance bound, detail-layer amount (0 = the g-buffer's detail layer off)
  *    656  p5Cfg      vec4u              (u[164‥167])  renderer v3 phase 5 (ultra extras): gather resampling mode, its packed numbers, the reflection pass's mesh / hit-reuse bits (all 0 = the passes as they were); w = the lowest light slot holding a TRANSIENT light this frame (gather_common's subtraction walk starts there; 0 when none is alive — review R2.2)
  *    672  jitter     vec4f              (f[168‥171])  this frame's TAAU jitter (internal px) xy, the previous render's zw
@@ -44,6 +49,9 @@ export const MAX_CARDS = 8;
 export interface WeatherFrame {
   /** rain rate 0‥1: the fraction of the drop-column lattice that is falling (0 = dry: the pass skips the whole block) */
   rain: number;
+  /** SNOWFALL 0‥1 on a level built for snow (game/weather.ts → game/snowFx.ts: how many flakes the particle layer keeps in the air). Read on the CPU only — it is
+   *  not in the Frame; with it > 0 `rain` is 0, so no streak, ring or wet ground is drawn anywhere. Absent / 0 = none. */
+  snow?: number;
   /** wind shear of the falling streaks: metres sideways per metre of height, x and z (wind speed ÷ fall speed) */
   shearX: number; shearZ: number;
   /** ground wetness 0‥1 (splash rings on outdoor ground scale with it; the darkened / glossed asphalt is done on the boxes themselves) */
@@ -56,6 +64,9 @@ export interface WeatherFrame {
   interior: [number, number, number, number];
   /** a second, small roofed footprint outside the main one — the west stair tower the QRF comes up (rays ending in it draw no rain; all zero = none) */
   annex: [number, number, number, number];
+  /** WEATHER KINDS (game/weatherKinds.ts; absent / 0 = none — the frame as it was): a third and a fourth roof footprint packed x0 z0 x1 z1 in 8 bits each of
+   *  0.2 m (packRect), and the fog in the outdoor air in 32 bits (packFog). They ride in the three spare words of cardCfg (.y .z .w): the Frame keeps its size. */
+  roofC?: number; roofD?: number; fog?: number;
   /** PARTICLE RAIN (experiment, game/rainFx.ts): the near-field particle layer's disc — centre x, z, radius (m), and 0‥1 = the share of the LATTICE rain the shader drops
    *  inside it (volumetrics.wgsl rainNearKeep: the streaks / splash rings there are the particles'); all zero = no particle layer, the lattice exactly as it was */
   nearFade: [number, number, number, number];
@@ -66,7 +77,6 @@ export const noWeather = (): WeatherFrame => ({ rain: 0, shearX: 0, shearZ: 0, w
 
 export const FrameFlags = {
   Direct: 1, Indirect: 2, Volumetrics: 4, Smoke: 8, RcVisWeight: 16, ReachMask: 32 /* direct pass + secondary vertices: skip lights whose CPU reach mask (reach.ts) excludes the shading point's cell — set from settings.lightReach */, SmokeShadows: 64, Bounce: 128, Dither: 256, SoftShadow: 512, NightVision: 1024, Temporal: 2048, TileCull: 4096 /* direct pass: lossless per-tile light culling (set from settings.tileCull, not settings.flags) */, SoftTileSkip: 8192 /* penumbra filter: lossless tile-level pass-through (set from settings.softTileSkip) */, TailChroma: 16384,
-  SmokeRenderSkip: 32768 /* smoke samplers skip atlas fetches in bricks the solver's render occupancy proves empty — lossless (set from settings.smokeRenderSkip) */,
   CheckerDirect: 65536 /* LOSSY: shadow rays on half the pixels per frame, checkerboard (set from settings.checkerDirect) */,
   GridSkip: 131072 /* trace grid: DDA runs past provably empty cells without loads — lossless (set from settings.gridSkip) */,
   GridYCull: 262144 /* trace grid: cells / boxes / globals outside the ray's remaining height span are not slab-tested — lossless (set from settings.gridYCull) */,
@@ -107,6 +117,8 @@ export interface FrameParams {
   weather: WeatherFrame;       // rain / splashes / sky flash in the outdoor air (volumetrics.wgsl (c)); noWeather() = nothing drawn
   /** volumetric worst-case caps (volumetrics.wgsl): [K = lights traced per smoke-march step / per haze ray (0 = off, the pass as it was), shadow-ray refresh period in march steps (1‥3), march step in tenths of a voxel (10‥30), 0] */
   volCfg: [number, number, number, number];
+  /** the weather air march's step cap, packed into volCfg.w bits 24‥28 (0 = half the tier's beam steps; volumetrics.wgsl wxMaxSteps) */
+  wxAirSteps?: number;
   /** froxel volumetrics (render/froxels.ts; all zero = no grid, FrameFlags.FroxelVol never up): A = [near m, far m, slice curve a, history weight], B = [W, H, D, k | sharp << 8 | (strata − 1) << 9], C = [jitter x, y, z, lookup bias in slices] */
   froxelA: [number, number, number, number]; froxelB: [number, number, number, number]; froxelC: [number, number, number, number];
   /** the camera position the PREVIOUS frame was rendered from (prevViewProj's eye — the engine snapshots it per render) */
@@ -175,7 +187,8 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   f[124] = w.interior[0]; f[125] = w.interior[1]; f[126] = w.interior[2]; f[127] = w.interior[3];   // weatherC @496
   f[128] = p.glassCfg[0]; f[129] = p.glassCfg[1]; f[130] = p.glassCfg[2]; f[131] = p.glassCfg[3];   // glassCfg @512
   f[132] = w.annex[0]; f[133] = w.annex[1]; f[134] = w.annex[2]; f[135] = w.annex[3];   // weatherD @528
-  u[136] = p.volCfg[0] >>> 0; u[137] = p.volCfg[1] >>> 0; u[138] = p.volCfg[2] >>> 0; u[139] = p.volCfg[3] >>> 0;   // volCfg @544
+  u[105] = (w.roofC ?? 0) >>> 0; u[106] = (w.roofD ?? 0) >>> 0; u[107] = (w.fog ?? 0) >>> 0;   // cardCfg.yzw @420: the weather kinds' extra roofs + fog (0 0 0 = none, as these words always were)
+  u[136] = p.volCfg[0] >>> 0; u[137] = p.volCfg[1] >>> 0; u[138] = p.volCfg[2] >>> 0; u[139] = (p.volCfg[3] | (((p.wxAirSteps ?? 0) & 31) << 24)) >>> 0;   // volCfg @544
   f[140] = p.froxelA[0]; f[141] = p.froxelA[1]; f[142] = p.froxelA[2]; f[143] = p.froxelA[3];   // froxelA @560
   u[144] = p.froxelB[0] >>> 0; u[145] = p.froxelB[1] >>> 0; u[146] = p.froxelB[2] >>> 0; u[147] = p.froxelB[3] >>> 0;   // froxelB @576
   f[148] = p.froxelC[0]; f[149] = p.froxelC[1]; f[150] = p.froxelC[2]; f[151] = p.froxelC[3];   // froxelC @592
@@ -196,6 +209,7 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   const pf = w.phase ?? ZERO4;
   f[204] = pf[0]; f[205] = pf[1]; f[206] = pf[2]; f[207] = pf[3];   // weatherF @816 (particle rain v2: the drop's phase for the lattice; zeros = isotropic as it was)
 }
+
 /** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen (f[56‥59]) replaced by the output size — what the passes that run at the OUTPUT
  *  resolution under sharp direct (the g-buffer raster, the unshadowed-direct + composite kernels, the TAA resolve, the particles' splat) bind as group 0, so `frame.screen`, worldFromDepth and every
  *  pixel-footprint term mean THEIR pixel there with no shader knowing the difference. */
@@ -227,17 +241,53 @@ export const traceConfig = { variant: 0, common: null as string | null };
  *  builds a pipeline; false = every such statement is dead code the compiler drops — the modules as they were (flag-off identity is hash-proven against main). A page
  *  reload applies a change of the switch to the GPU side. */
 export const glassBreakConfig = { on: false };
+/** WEATHER KINDS (game/weatherKinds.ts, game/weather.ts): the compile-time switch for their shader reads — the scene prelude's `const WX_KINDS` (the level's own
+ *  roofs and the fog in the outdoor air: common.wgsl wx*, read by composite / vol_common / volumetrics / fgather / particles_common). main.ts raises it at BOOT
+ *  when the page is opened with ?weather=<kind>, or (WX_OWN.roofs) on a level that is not the office's family — its own storm reads its own roofs; false = every such statement is dead code the compiler drops — the modules as they were. */
+export const weatherKindConfig = { on: false };
+/** SNOW (game/weatherKinds.ts SNOW_LEVELS, game/snowFx.ts): the compile-time switch for the particle shaders' flake half — the scene prelude's `const WX_SNOW`
+ *  (particles.wgsl rainStep: a flake rides the air, flutters, wraps round the view's disc and lands without a splash; particles_draw.wgsl rainFragment: a soft
+ *  round flake, nothing refracted). main.ts raises it at BOOT on a page whose level is one built for snow; false = every such statement is dead code the compiler
+ *  drops — the rain's modules as they were. A page is one level for its whole life, so the two never meet. */
+export const snowConfig = { on: false };
+/** THE SNOW'S LOOK (game/weatherKinds.ts SNOW_LOOK; picture only): two more compile-time words for a page opened on a snow level, raised by main.ts at BOOT with
+ *  snowConfig. `surface` → the prelude's `const SNOW_SURF`: the g-buffer shades the snow paint as one surface off the level's snow field and draws its drifts as a
+ *  mesh (shaders/snow.wgsl, render/snowField.ts). `wisps` → `const SNOW_WISPS`: the particle shaders' half of the wisps the wind runs over the ground
+ *  (game/snowFx.ts). false = dead code the compiler drops: every module as it was. */
+export const snowLookConfig = { surface: false, wisps: false, tracks: false, glow: false, sparkle: false, grains: false };   // (`grains` → `const SNOW_GRAINS`: the particle shaders' half of the fine grains that ride the air field, render/airField.ts; `tracks` → `const SNOW_TRACKS`: snow.wgsl reads the trail texture; `glow` → `const SNOW_GLOW`: the lighting shaders' wrap on snow pixels; `sparkle` → `const SNOW_SPARKLE`: composite.wgsl's facet flashes on lit fresh snow)
+/** THE VEIL AT THE BUILDING'S SHELL (common.wgsl wxFogApplySurf — a picked weather's fog on the outside faces of outside walls, a ramp across a roof's edge): the
+ *  scene prelude's `const WX_EDGE`. On by default; main.ts lowers it at BOOT for ?nowallfog = the fog classed by the surface point alone, the picture as it was
+ *  (composite.wgsl takes wxFogApply, the statement it always had). Read only under WX_KINDS: with no weather picked it is dead code either way. Picture only. */
+export const weatherEdgeConfig = { on: true };
+/** THE WEATHER'S AIR AS A VOLUME (common.wgsl wxAir / wxIndoor, volumetrics.wgsl wxAirMarch; game/airDust.ts): a picked weather's dust / fog is a MEDIUM the
+ *  volumetric pass marches — thicker the more of it a pixel looks through, lit by the sun / moon with shadow rays and by the sky's light, carried into rooms at
+ *  open doors and blown walls — in place of composite.wgsl's flat veil over what counts as outdoors (wxFogApply / wxFogApplySurf). The scene prelude's `const WX_VOL`.
+ *  On by default; main.ts lowers it at BOOT for ?flatfog = the veil exactly as it was. Read only under WX_KINDS: with no weather picked it is dead code either way. */
+export const weatherVolConfig = { on: true };
+/** RAIN IS NOT LIT THROUGH A SHUT DOOR OR A WALL (volumetrics.wgsl rainLight): the rain's streaks and splashes were lit UNSHADOWED by every light whose reach
+ *  mask (render/reach.ts) has their cell — and a mask counts every door as standing open and knows nothing of a light that is carried, so a bulb in a shut room
+ *  lit the rain in a wedge outside its door and a weapon light pointed at a wall from inside lit the rain beyond it. The scene prelude's `const RAIN_SHADOW`:
+ *  one shadow ray where the mask is not sure (a cell reached only through a doorway or by a sliver), for a carried light and for a flash. On by default;
+ *  main.ts lowers it at BOOT for ?norainshadow = the rain lit as it was. Picture only. */
+export const rainShadowConfig = { on: true };
+/** the prelude's consts for it: the switch, and where the air grid (scene/airGrid.ts) sits in boxMat's tail — after the marking and glass tables and BEFORE the cut
+ *  table, so this text is the same with the cut switch on or off (the cut swap's boot programs are the ?nocutboxes text character for character: probes.ts cutboxes-pack) */
+function weatherVolWgsl(): string {
+  return `const WX_VOL: bool = ${weatherVolConfig.on ? 'true' : 'false'}; const WXD_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS + GB_ROWS}u; const WXD_W: i32 = ${AIR_W}; const WXD_H: i32 = ${AIR_H}; const WXD_CELL: f32 = ${AIR_CELL};   // the weather's air as a volume (render/frame.ts weatherVolConfig; scene/airGrid.ts)\n`;
+}
 /** the common.wgsl text the prelude is built from right now (the lab reads it to derive which variants exist) */
 export function commonSource(): string { return traceConfig.common ?? commonSrc; }
-export function scenePrelude(): string {
-  const commonText = `const TRACE_VARIANT: u32 = ${traceConfig.variant | 0}u;   // ray-traversal lab variant (render/frame.ts traceConfig; 0 = the reference walk — unread by the engine's shaders)\nconst GLASS_BREAK: bool = ${glassBreakConfig.on ? 'true' : 'false'}; const GB_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS}u;   // glass breaking (render/frame.ts glassBreakConfig; game/glassbreak.ts): false = the cell-table reads in glassTrace / glassTransmit / composite are dead code; GB_BASE = the cell table's first vec4 row in boxMat (after the marking table: scene/markings.ts MARK_TABLE_ROWS)\n` + commonSource();
+/** `cut`: compile the CUT BOXES rule in (scene/cut.ts). The default is what a module compiled at BOOT gets: the rule only when the switch is on AND the programs are not
+ *  swapped (cutConfig.swap false) — under the swap (render/cutSwap.ts) every boot module is the build's without the rule, and the cut set asks with `true`. */
+export function scenePrelude(cut: boolean = cutConfig.on && !cutConfig.swap): string {
+  const commonText = `const TRACE_VARIANT: u32 = ${traceConfig.variant | 0}u;   // ray-traversal lab variant (render/frame.ts traceConfig; 0 = the reference walk — unread by the engine's shaders)\nconst WX_KINDS: bool = ${weatherKindConfig.on ? 'true' : 'false'};   // weather kinds (render/frame.ts weatherKindConfig): false = the wx* reads below are dead code\nconst WX_SNOW: bool = ${snowConfig.on ? 'true' : 'false'};   // a level built for snow (render/frame.ts snowConfig): the rain ring's particles are FLAKES — false = the wx snow statements are dead code\nconst SNOW_SURF: bool = ${snowLookConfig.surface ? 'true' : 'false'};   // a snow level's lying snow is one surface (render/frame.ts snowLookConfig; shaders/snow.wgsl) — false = dead code\nconst SNOW_WISPS: bool = ${snowLookConfig.wisps ? 'true' : 'false'}; const SNOW_TRACKS: bool = ${snowLookConfig.tracks ? 'true' : 'false'}; const SNOW_GLOW: bool = ${snowLookConfig.glow ? 'true' : 'false'}; const SNOW_SPARKLE: bool = ${snowLookConfig.sparkle ? 'true' : 'false'}; const SNOW_GRAINS: bool = ${snowLookConfig.grains ? 'true' : 'false'};   // … and the wind runs wisps of fine snow over it (game/snowFx.ts) — false = dead code\nconst RAIN_SHADOW: bool = ${rainShadowConfig.on ? 'true' : 'false'};   // rain asks a shadow ray where a light's reach mask is not sure (render/frame.ts rainShadowConfig): false = lit by the mask alone, as it was\nconst WX_EDGE: bool = ${weatherEdgeConfig.on ? 'true' : 'false'};   // the weather's veil at the building's shell (render/frame.ts weatherEdgeConfig): false = composite.wgsl fogs by the surface point alone, as it always did\nconst GLASS_BREAK: bool = ${glassBreakConfig.on ? 'true' : 'false'}; const GB_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS}u;   // glass breaking (render/frame.ts glassBreakConfig; game/glassbreak.ts): false = the cell-table reads in glassTrace / glassTransmit / composite are dead code; GB_BASE = the cell table's first vec4 row in boxMat (after the marking table: scene/markings.ts MARK_TABLE_ROWS)\n` + (cut ? `const CUT_BOXES: bool = true; const CUT_ROWS: u32 = ${CUT_ROWS}u; const CUT_STRIDE: u32 = ${CUT_STRIDE}u; const CUT_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS + GB_ROWS + AIR_ROWS}u;   // cut boxes (scene/cut.ts cutConfig): a box flagged GEO_CUT is clipped by the planes in its CUT_ROWS rows of boxMat from CUT_BASE (after the marking and glass tables and the weather's air grid) — isectBox, boxNormalFromCode, the g-buffer's cut pass\n` : `const CUT_BOXES: bool = false; const CUT_ROWS: u32 = ${CUT_ROWS}u; const CUT_STRIDE: u32 = ${CUT_STRIDE}u; const CUT_BASE: u32 = 0u;   // cut boxes off (scene/cut.ts cutConfig): the cut reads in isectBox / boxNormalFromCode are dead code\n`) + commonSource() + '\n' + smokeReadConsts(smokeGrid()) + smokeReadSrc;   // (+ every smoke read: the lattices' numbers as consts — smoke/smokeGrid.ts — then shaders/smoke_read.wgsl)
   const decl = reachBinding.storage
     ? '@group(0) @binding(12) var<storage, read> lightReachS: array<u32>;\nfn reachWord(w: u32) -> u32 { return lightReachS[w]; }\n'
     : '@group(0) @binding(12) var<uniform> lightReachU: array<vec4u, REACH_VEC4S>;\nfn reachWord(w: u32) -> u32 { return lightReachU[w >> 2u][w & 3u]; }\n';
   const mesh = meshBinding.enabled
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
-  return wgslWorldConsts() + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
+  return wgslWorldConsts() + weatherVolWgsl() + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
     + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's per-slot table as consts + the generated charSdf fold, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call, plus the smooth-union / soft-query extras — compiled only into the modules that name them, and not taken while frame.rigCfg.x is 0
 }
 
@@ -256,17 +306,22 @@ export function createSceneLayout(device: GPUDevice): GPUBindGroupLayout {
       { binding: 8, visibility: cf, texture: { sampleType: 'float', viewDimension: '3d' } },
       { binding: 9, visibility: cf, sampler: { type: 'filtering' } },
       { binding: 10, visibility: cf, buffer: { type: 'read-only-storage' } },
+      { binding: 11, visibility: all, buffer: { type: 'uniform' } },   // the fog of war's sight table (render/fogofwar.ts FogSight; common.wgsl fogSeenAt reads it for a light with a fog bit, the picture's smoke and its particles) — a uniform: no sampled texture is left to a fragment stage
       { binding: 12, visibility: cf, buffer: { type: reachBinding.storage ? 'read-only-storage' : 'uniform' } },   // per-light reach masks (lights.ts reachBuf: REACH_BYTES = 17.5 KB as array<vec4u, REACH_VEC4S>). Uniform for the storage-buffer budget: the group binds 6 storage buffers (1 2 3 4 6 10); the cascade trace and the light probe add 2 each in group 1 = 8 in the compute stage = the WebGPU DEFAULT maxStorageBuffersPerShaderStage, so any core adapter runs it (engine.ts still checks ≥ 8 at boot with a readable message)
-      { binding: 11, visibility: cf, buffer: { type: 'uniform' } },   // smoke render occupancy (512 B written by the smoke solver each step; uniform, like binding 12, to stay inside the base per-stage storage-buffer limit)
   ];
   if (meshBinding.enabled) entries.push({ binding: 13, visibility: cf, buffer: { type: 'read-only-storage' } });   // mesh-shadow trees (meshShadows.ts): the group's 8th storage buffer where the adapter affords 10 per stage (see meshBinding)
+  entries.push({ binding: 14, visibility: cf, texture: { sampleType: 'uint', viewDimension: '3d' } });   // the smoke's page texture (a TEXTURE: the storage-buffer slots are all spoken for)
   return device.createBindGroupLayout({ label: 'sceneLayout', entries });
 }
 
 export interface SceneBuffers {
-  frame: GPUBuffer; boxGeo: GPUBuffer; boxMat: GPUBuffer; gridCells: GPUBuffer; gridItems: GPUBuffer; sceneInfo: GPUBuffer; lights: GPUBuffer; smoke: GPUBuffer; smokeAtlasView: GPUTextureView; smokeOcc: GPUBuffer; lightReach: GPUBuffer; linSamp: GPUSampler; capsules: GPUBuffer;
+  frame: GPUBuffer; boxGeo: GPUBuffer; boxMat: GPUBuffer; gridCells: GPUBuffer; gridItems: GPUBuffer; sceneInfo: GPUBuffer; lights: GPUBuffer; smoke: GPUBuffer; smokeAtlasView: GPUTextureView; lightReach: GPUBuffer; linSamp: GPUSampler; capsules: GPUBuffer;
   /** the mesh-shadow buffer (MeshShadows.buf), or any ≥ 32-byte storage buffer of zeros while none is attached (a zero header is an empty tree); ignored when !meshBinding.enabled */
   mesh: GPUBuffer;
+  /** the smoke's page texture (smoke/smoke.ts; engine.ts has a 1³ stand-in until a solver is attached) */
+  smokePage: GPUTextureView;
+  /** the fog of war's sight table (render/fogofwar.ts FogSight.buf) — or, for the group the table's own pass is bound with, a stand-in as large, all zeros */
+  fogSight: GPUBuffer;
 }
 export function createSceneBindGroup(device: GPUDevice, layout: GPUBindGroupLayout, b: SceneBuffers): GPUBindGroup {
   const entries: GPUBindGroupEntry[] = [
@@ -281,9 +336,10 @@ export function createSceneBindGroup(device: GPUDevice, layout: GPUBindGroupLayo
       { binding: 8, resource: b.smokeAtlasView },
       { binding: 9, resource: b.linSamp },
       { binding: 10, resource: { buffer: b.capsules } },
-      { binding: 11, resource: { buffer: b.smokeOcc } },
+      { binding: 11, resource: { buffer: b.fogSight } },
       { binding: 12, resource: { buffer: b.lightReach } },
   ];
   if (meshBinding.enabled) entries.push({ binding: 13, resource: { buffer: b.mesh } });
+  entries.push({ binding: 14, resource: b.smokePage });
   return device.createBindGroup({ label: 'sceneBG', layout, entries });
 }

@@ -1,4 +1,5 @@
 // Radiance cascades (world-space, 2.5D) — GPU resources, per-cascade params and dispatch.
+import { cutSwap, ProgramSet } from './cutSwap';
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import { GpuTimer } from '../gpu/timer';
 import { WORLD } from '../scene/world';
@@ -118,6 +119,7 @@ export class RadianceCascades {
     ] });
     const plTrace = this.plTrace = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, layoutTrace] });
     const plDice = this.plDice = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, layoutDice] });
+    cutSwap.add(this);   // (CUT BOXES: a late instance — a rebuilt or prewarmed grid — builds its second set at once and follows the frame's choice)
     if (!deferPipelines) {
       this.pipeUpper = device.createComputePipeline({ label: 'rcUpper', layout: plTrace, compute: { module: mod, entryPoint: 'rcUpper' } });
       this.pipeC0 = device.createComputePipeline({ label: 'rcC0', layout: plTrace, compute: { module: mod, entryPoint: 'rcC0' } });
@@ -177,9 +179,21 @@ export class RadianceCascades {
       computePipelineAsync(d, { label: 'rcC0', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
       computePipelineAsync(d, { label: 'rcDice', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
   }
+  // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): this instance's three kernels a second time, behind the cut prelude
+  private cutSet = new ProgramSet();
+  async buildCut(): Promise<void> {
+    const d = this.device; const mod = makeShader(d, scenePrelude(true) + lightingCommon + rcSrc, 'rcCut');
+    const [pipeUpper, pipeC0, pipeDice] = await Promise.all([
+      computePipelineAsync(d, { label: 'rcUpperCut', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcUpper' } }),
+      computePipelineAsync(d, { label: 'rcC0Cut', layout: this.plTrace, compute: { module: mod, entryPoint: 'rcC0' } }),
+      computePipelineAsync(d, { label: 'rcDiceCut', layout: this.plDice, compute: { module: mod, entryPoint: 'rcDice' } }) ]);
+    this.cutSet.set(this, { pipeUpper, pipeC0, pipeDice });
+  }
+  useCut(on: boolean) { this.cutSet.use(this, on); }
   /** Dev / measurement hook (tools/qa/trace-lab.js via main.ts __hotCommon): rebuild the three kernels from the CURRENT scene prelude (an edited common.wgsl / traversal variant under
    *  test) + rc.wgsl as bundled — the trace kernels are common.wgsl's biggest customer after the direct pass. All three or none: the old pipelines stay if the module has an error. */
   async hotSwap(src: string = rcSrc): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const d = this.device; const pre = scenePrelude() + lightingCommon; const off = pre.split('\n').length - 1;
     const mod = d.createShaderModule({ code: pre + src, label: 'rc-hot' });
     const info = await mod.getCompilationInfo();
@@ -296,5 +310,5 @@ export class RadianceCascades {
   }
 
   setDiceBlend(v: number) { if (v !== this.diceBlend) { this.diceBlend = v; this.writeParams(); } }
-  destroy() { for (const b of this.bufs) b.destroy(); this.dice.destroy(); this.dicePrev.destroy(); this.paramsBuf.destroy(); this.dirOmegaBuf.destroy(); this.dummyParent?.destroy(); }
+  destroy() { cutSwap.remove(this); for (const b of this.bufs) b.destroy(); this.dice.destroy(); this.dicePrev.destroy(); this.paramsBuf.destroy(); this.dirOmegaBuf.destroy(); this.dummyParent?.destroy(); }
 }

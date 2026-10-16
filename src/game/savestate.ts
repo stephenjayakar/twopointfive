@@ -6,8 +6,10 @@
 //   - the clock: Game.time itself (every stamp in the game is against it, so it comes back as it was — a load an hour into a page puts g.time BACK to the save's;
 //     nothing outside the Game reads g.time), eventSeq, fxSeed, the OCP cooldown, the last half second of hearing events, the HUD's message lines;
 //   - Sam: position / facing / crouch, the kit (slot, canisters, stun cans, the pistol's and the FN2000's chamber / magazine / spares / light / selector / attachment /
-//     rings, the OCP's charge), holstered, night vision, pace, keys, door codes, hits left, the whistle's breath; NOT the wall hold, a body in tow, a man in his arm,
-//     a lock / pad / leaf / drive under his hands, a wind-up, a reload half done — an autosave never happens mid-action, and a forced save drops them (see canSave);
+//     rings, 40 mm rounds, the OCP's charge), holstered, night vision, pace, keys, door codes, hits left, the whistle's breath; NOT the wall hold, a body in tow, a man in his arm,
+//     a lock / pad / leaf / drive under his hands, a wind-up, the launcher's button held on its arc, a reload half done — an autosave never happens mid-action, and a forced save drops them (see canSave);
+//     a man alone with charges of his own (owncharge.ts): the optional `own` — the door tools' count, the wall charges carried, the door charges that stand set (put back on their
+//     doors) and what his hands took from the bag this run; a WALL charge set and not blown is not saved — it is back in the count;
 //   - every man of the level's roster (units — the response team, the showcase casts — are never in a checkpoint: a save is refused while any exists): state,
 //     position / velocity / facing, awareness, the fix and its clocks, waypoint + wait, path, the errand (breaker / rack / device / check-on), the body script, the
 //     lockdown pair / post, drawn, keys, weapon (row by id, chamber, magazine, bursts), the torch's clocks, dazzle / stagger, witness + interrogation records (sets as
@@ -17,29 +19,42 @@
 //     a SETTLED corpse at exactly those joint positions, asleep (Ragdoll.settleAt), not re-simulated: the frozen local pose under it is a neutral stance's rather
 //     than the death frame's, so a sleeve's twist may sit a few degrees off; anything that disturbs it (a leaf, a drag) simulates on from there as ever;
 //   - items on the floor (dropped guns / torches / magazines / spent cans / rings: kind, pose, who) with the guards' `dropped` links; an item still in the AIR or
-//     on its FUSE is written as lying spent where it was — a checkpoint never re-throws a canister (autosave waits for them to land / go off anyway);
-//   - doors (angle, velocity, latch, lock / broken keep, pick progress, noticed), loose furniture (pose + velocity, asleep or not), every light target (on /
+//     on its FUSE is written as lying spent where it was — a checkpoint never re-throws a canister (autosave waits for them to land / go off anyway); a ring or a
+//     40 mm round in FLIGHT is not an item and is not written (a plain save waits for it, canSave; a forced one files the count already spent and no round);
+//   - doors (angle, velocity, latch, lock / broken keep, pick progress, noticed — and, while doors.ts DOORWAY is on, the pull in hand / press / driven clocks;
+//     an angle saved on the side a door does not open into, a file from before it had one, is stood as wide on the side it does), loose furniture (pose + velocity, asleep or not), every light target (on /
 //     broken / OCP restrike clock), the blackout record, the beacons follow; the devices (camera pan phase + integrator + report state, tripwire counts / clocks,
 //     the log); the mission record whole; the CHRONICLE (timeline, counters, questioned, the path — thinned to ≤ PATH_KEEP points the way the chronicle thins itself
 //     — so the debrief survives a load; a 'checkpoint' row is appended on save and on load); escalation level + clock, the alarm episode, rooms cleared, the radio
 //     check's state, the tactics' kill-zone doorways, the ambient dialogue's ledger + the handler's radio state, the QRF's gunfire memory, the storm (rate, wind,
-//     wetness, the stroke schedule AND its dice), everybody's wet coat, the decal ring (bullet holes, scorch, scuffs, chips, glass stars — the level's memory of the
+//     wetness, the stroke schedule AND its dice; a picked WEATHER KIND and its thunder mask's clock — weather.ts: headless a load puts the file's kind in, in the
+//     page a file made in another weather than the URL's is refused), everybody's wet coat, the decal ring (bullet holes, scorch, scuffs, chips, glass stars — the level's memory of the
 //     run; wet footprints are let go), the autosave controller's own memory (rooms visited, quiet clock, run id);
+//   - what a blast took of the level: the walls' slice (wallbreak.ts) and the furniture's (furnblast.ts `furn`: the statics that broke, the props that came
+//     apart) — each absent when nothing broke, each re-applied silently right after the restart; the PIECES on the floor are not written (no debris is);
 //   - the CIVILIANS (civilians.ts CivSnap): each one's place and gait, her mark and its wait, the walk under way, her ears' marker, what frightened her (what /
 //     where / armed), whom she is running to or has told (men by callsign, phones / doors by name), the corner and the 'stay down' promise, her dice, a downed
 //     one's particles laid down asleep like the men's; the floor's queue of words due (a guard's radio call a beat after her report, control's call after she
 //     got out) as data; one HELD at a forced save is filed held and comes off the vanished arm on the first frame after the load exactly as off a cancelled hold;
+//   - the HOUR the level is being played at and its sun's strength (hours.ts; `hour`, absent for the level's own night): a load lays the file's hour over the
+//     game BEFORE the restart — the light list, the sky, the outside lamps and the storm's switch follow the file, whatever hour the page was opened at;
 //   - NOT SAVED, on purpose: smoke in the air (the solver's fields are GPU-resident and 100+ MB: a screen you were counting on is gone after a load, its can lies
 //     there spent), sparks / tracers / GPU particles / muzzle flashes (transient), the light meter's readings (re-read next frame; visibility restarts at 0),
-//     suppression scalars and aim-settle tracks (rest), speech in the air other than the bubbles' text, the audio mixer, the camera (main.ts snaps it to Sam);
+//     suppression scalars and aim-settle tracks (rest), what each man knew of a man behind breakable cover and the piece he was putting rounds into
+//     (coverfire.ts: forgotten with the roster, re-learnt from his next sighting), speech in the air other than the bubbles' text, the audio mixer, the camera (main.ts snaps it to Sam);
 //     and of the last half second's hearing events a WHISTLE is let go (whistle.ts resolves each event object once for the whole floor and everybody in earshot
 //     heard it the frame it sounded — put back as a fresh object it would be answered a second time).
+//     Nor the animator's own momentum: with the movement pass on (character.ts MOVES — the page; off under the harness) the recoil sums, the glide's spring and
+//     a reaction under way restart on a load, and with the turn weight on (TURN) a man caught mid-turn is filed facing where his weight had let him get to and
+//     starts from rest: poses a few centimetres off for a moment, so 'continue ≡ load' is the harness's statement, not the page's.
 //
-// DETERMINISM: the game draws from Math.random directly (barks, spread, jitter) and a checkpoint cannot capture that stream's position — but everything ELSE
+// DETERMINISM: the game's dice (barks, spread, jitter) come through math/dice.ts simRandom(). A game that OWNS its die (the page: host/standup.ts StandOpts.seed)
+// has the stream's position in the file (`dice`), so the frames after a load roll what the frames after the save rolled. A game on Math.random (the QA harness)
+// cannot have that stream captured — but everything ELSE
 // that decides the next frame is in the file. So: with the QA harness's seeded Math.random re-seeded to the same value right after the save and right after the
 // load, the next ten seconds digest identically (probes.ts checkpoints (a): continue-after-save ≡ load-into-the-same-game ≡ load-into-a-fresh-game, over
-// guards / Sam / doors / mission / chronicle / lights / devices / items / civilians). In the browser the dice differ after a load, so a bark's wording or a round's
-// millimetres may; nothing structural does. Exceptions by construction: a conversation two men were having is cut short (they walk on), a searcher re-deals his
+// guards / Sam / doors / mission / chronicle / lights / devices / items / civilians; tools/qa/dice-check.ts holds the same three ways for a game on its own die,
+// with nothing re-seeded). In a browser page opened with ?seed=off the dice differ after a load, so a bark's wording or a round's millimetres may; nothing structural does. Exceptions by construction: a conversation two men were having is cut short (they walk on), a searcher re-deals his
 // hiding spots, a flanking pair re-deals its roles, a whistle in the air is not answered again — all inside a second of the load.
 //
 // AUTOSAVE (Checkpoints.tick, once a frame at the end of Game.update): a REQUEST is raised by (1) the mission stage advancing, (2) Sam's first entry into a room
@@ -61,11 +76,26 @@
 import { loadSandbox } from './sandbox';
 import { Vec3, v3, quat } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
+import { WAND } from './wand';
+import { quietWand } from './quietfog';   // (called inside saveState / loadState only)
+import { STICKY, stickyFlying, stickyLeft, stickySnapshot, stickyRestore, type StickySnap } from './stickycam';
+import { OWNCHARGE } from './owncharge';
+import { BIGSLOT } from './kit';
+import type { BigKit } from './kit';
+import type { QuietSnap } from './quiet';
+import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
+import type { LessonSnap } from './lesson';
+import type { ParSnap } from './par';
+import type { SnatchSnap } from './snatch';
+import type { DefuseSnap } from './defuse';
+import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
-import { Firearm, WEAPONS } from './weapons';
+import { Firearm, Rifle, WEAPONS } from './weapons';
+import { aimWeightSnapshot, aimWeightRestore } from './aimweight';
 import type { WeaponId, FireMode } from './weapons';
 import type { Item, ItemKind } from './throwables';
-import type { Door } from './doors';
+import { DOORWAY } from './doors';
+import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
 import { Chronicle, chronCheckpoint, roomOf, MAX_EVENTS } from './chronicle';
 import type { ChronEvent, ChronCounts, ChronKind, ChronData } from './chronicle';
@@ -75,19 +105,40 @@ import { forgetSuppressionClocks } from './suppression';
 import { glassState } from './glass';
 import { isDaylight, setDaylight, updateTargets } from './lighting';
 import { needsSnapshot, needsRestore } from './needs';
+import { gunWallSnapshot, gunWallRestore } from './gunwall';
+import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
+import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
+import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
+import { runnerSnapshot, runnerRestore, type RunnerSnap } from './runner';
+import { darkDoorSnapshot, darkDoorRestore, type DarkDoorSnap } from './darkdoor';
+import { netQuietSnapshot, netQuietRestore, type NetQuietSnap } from './netquiet';
+import { attentionSnapshot, attentionRestore, type AttentionSnap } from './attention';
+import { pictureSnapshot, pictureRestore, type PictureSnap } from './picture';
+import { gearText } from './gear';
 import type { NeedsSnap } from './needs';
 import { whistleSnapshot, whistleRestore } from './whistle';
+import { glassPenSnapshot, glassPenRestore, type GlassPenSnap } from './glasspen';
 import type { WhistleSnap } from './whistle';
 import { tacticsSnapshot, tacticsRestore } from './tactics';
+import { lanesSnapshot, lanesRestore, type LanesSave } from './lanes';
 import type { TacticsSnap } from './tactics';
+import type { WallsSave } from './wallbreak';
+import type { FurnSave } from './furnblast';
+import type { LaySnap } from './planlay';
+import { PLANLAY, laySnapshot, layRestore } from './planlay';
 import { dialogueSnapshot, dialogueRestore, peekScript, forceScript, forcedScriptOf, hashStr } from './dialogue';
 import type { DialogueSnap } from './dialogue';
 import { civiliansSnapshot, civiliansRestore, civilianCompromise } from './civilians';
 import type { CivSnap } from './civilians';
 import type { WeatherSnap } from './weather';
+import type { AirDustSnap } from './airDust';
+import { hourOf, hourIdOf, applyHour, setSunStrength, sunStrength, sunGiven, type HourId } from './hours';
 import type { DevicesSnap } from './devices';
 import type { DecalKind } from '../render/decals';
 import type { Box } from '../scene/boxes';
+import { LOOK_DECALS, lookDecal } from './lookDecals';
+import { diceInUse } from '../math/dice';
+import { sprintDoorTurning } from './sprintdoor';
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -97,10 +148,17 @@ type Q4 = [number, number, number, number];
 export interface FirearmSnap { id: WeaponId; chamber: number; mag: number | null; spare: number[]; shotsFired: number; mode: FireMode; bursts: number; lastBurstT: number; }
 export interface PlayerSnap {
   pos: V3; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: boolean; holstered: boolean;
-  slot: SlotKind; throwKind: ThrowKind; canisters: number; flashbangs: number;
-  pistol: FirearmSnap & { lightOn: boolean }; rifle: FirearmSnap & { lightOn: boolean; attIdx: number; rings: number; ringCd: number };
+  slot: SlotKind; throwKind: ThrowKind; canisters: number; flashbangs: number; /** frag grenades (absent in a file from before them: the issue stands) */ frags?: number;
+  /** the optical wand is on him (wand.ts; written only while its switch is on — absent = the file does not say, and a load leaves what the staging put on him) */ wand?: boolean;
+  /** the breaching shotgun or the hammer in his big slot (kit.ts BIGSLOT; written only while its switch is on — absent = the file does not say, as the wand's) */ bigKit?: BigKit;
+  /** HIS OWN CHARGES, a man alone (owncharge.ts; written only while its switch is on and nobody of his is on the floor — a checkpoint is refused with a unit up
+   *  anyway): what the door tools' bag and the wall charge still hold for him, `doors` = the door charges that stand set ([door index, face]: put back on their
+   *  doors by a load), `spent` = what his hands have taken from the bag this run. A WALL charge set and not blown is not saved, so it is back in the counts.
+   *  `walls` null = the run carried no wall charges of its own. Absent = the file does not say: the counts the staging wrote stand */ own?: OwnCharges;
+  pistol: FirearmSnap & { lightOn: boolean }; rifle: FirearmSnap & { lightOn: boolean; attIdx: number; rings: number; ringCd: number; /** the long gun, when it is not the FN2000 (kit.ts 'shotgun') */ gun?: WeaponId ; /** 40 mm rounds (absent in a file from before them: the issue stands) */ shells?: number; /** sticky cameras left for the tube (stickycam.ts; written only while its switch is on: −1 = none were issued, absent = the file does not say and what the staging put on him stands) */ cams?: number };
+  /** his sticky cameras that are out, stuck (stickycam.ts; absent with none) */ cams?: StickySnap[]; /** the last camera id handed out this run (absent = none sent, or a file from before it: the highest id that is out stands) */ camSeq?: number;
   ocpCharge: number; hasRifle: boolean; rifleGone: boolean; ocpHinted: boolean; equipT: number;
-  keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; animPhase: number;
+  ripU?: number; bashAt?: number; bashLean?: number; stagU?: number; dazU?: number; dazAt?: number[]; aw?: number[]; keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; animPhase: number;
   wet: V3;   // coat, beads, rain
   bubble: Bubble | null;
 }
@@ -113,13 +171,14 @@ export interface GuardSnap {
   pos: V3; vel: V3; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: number; animPhase: number;
   wp: number; wait: number; awareness: number; lastKnown: V3 | null; lastSeenT: number;
   found: boolean; downKind: DownKind | null; downBy: DownBy | null; keys: string[];
+  wound?: Wound & { clock?: number };   // (wounds.ts: down wounded — posed, not a ragdoll: `rag` is null for him and the pose is laid again from this; absent on everybody else)
   missedAt: number; missingRaised: boolean;
   muzzleDown: boolean; muzzleClearT: number; muzzleEvalT: number; lineBarkT: number; lineInT: number;
   leaderSeenT: number; leaderSeenPos: V3; leaderStillT: number;
   bodyVisits: number; bodyVisitT: number; bodyRemarked: boolean; bodyClosed: boolean; bodyFan: number;
   bodyDuty: { body: number; role: 'finder' | 'called'; stage: 'to' | 'cover' | 'fan'; t: number; t0: number; spot: V3 | null } | null;
   dropped: number;   // index into SaveState.items, −1 none
-  torchLostAt: number; lightLitAtLoss: boolean; lightDeadUntil: number; flashlightOn: boolean; sweep: number; beamDir: V3;
+  gunLostAt: number; torchLostAt: number; lightLitAtLoss: boolean; lightDeadUntil: number; flashlightOn: boolean; sweep: number; beamDir: V3;
   path: V3[]; pathI: number; repathT: number; pathGoal: V3 | null;
   weapon: FirearmSnap; fireCd: number; reactT: number; searchT: number; lookPhase: number; speed: number; stepPhase: number; heardUpTo: number;
   diedAt: number; dazzledUntil: number; staggerUntil: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
@@ -133,10 +192,12 @@ export interface GuardSnap {
   rag: RagSnap | null;   // the body's particles (dead only)
 }
 export interface ItemSnap { kind: ItemKind; pos: V3; yaw: number; tumble: number; heading: number; fill: number; life: number; age: number; fired: boolean; emitT: number; who: number; on: number; onPose: number; radius: number; restitution: number; friction: number; }
-export interface DoorSnap { name: string; angle: number; vel: number; quietT: number; latched: boolean; lastWho: number; sinceBash: number; closing: boolean; locked: boolean; lockBroken: boolean; noticed: boolean; noticedT: number; pick: number; pickIdle: number; pickClock: number; pickN: number; guardT: number; creakArmed: boolean; }
+export interface DoorSnap { name: string; angle: number; vel: number; quietT: number; latched: boolean; lastWho: number; sinceBash: number; closing: boolean; locked: boolean; lockBroken: boolean; noticed: boolean; noticedT: number; pick: number; pickIdle: number; pickClock: number; pickN: number; guardT: number; creakArmed: boolean; /** doors.ts DOORWAY, written only while it is on: the pull in hand, the press on its pull face, the seconds since it was driven open */ pullT?: number; pressT?: number; openT?: number; /** who is stepping through the leaf right now (Door.passers), written only under DOORWAY / DOORSTAY and only when somebody is: a pulled leaf and an open one stepped through by its edge make it common state */ passers?: number; /** Door.swept (DOORSTAY), written only when set: brought toward its frame by a keyed man's body alone — it rests to, unlatched */ swept?: boolean; off?: SlabSnap; }   // off: lying off its hinges (doorblast.ts) — absent for a hung door
 export interface PropSnap { x: number; z: number; yaw: number; vx: number; vz: number; w: number; asleep: boolean; idle: number; lastWho: number; noiseT: number; pushT: number; }
 export interface TargetSnap { name: string; on: boolean; broken: boolean; disabledUntil: number; }
-export interface DecalSnap { kind: DecalKind; pos: V3; n: V3; t: V3; radius: number; param: number; seed: number; pane?: number; door?: number; prop?: number; part?: number; }   // pane: a glass star's static; door / prop+part: what it rides — all absent for a world-fixed mark (the commonest: kept out of the file)
+// (NOT saved either: wall wear's per-cell lists — wallwear.ts: the marks themselves ride this slice as the kind / radius / param they had; after a load they stop
+//  growing with their cell, new rounds are marked at the strength of the count the file carried.)
+export interface DecalSnap { kind: DecalKind; pos: V3; n: V3; t: V3; radius: number; param: number; seed: number; pane?: number; door?: number; prop?: number; part?: number; look?: 1; }   // pane: a glass star's static; door / prop+part: what it rides — all absent for a world-fixed mark (the commonest: kept out of the file)
 export interface ChronSnap { events: ChronEvent[]; dropped: number; counts: ChronCounts; questioned: string[]; path: number[]; pathN: number; pathEvery: number; pathNext: number; }
 export interface RollcallSnap { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: number; missing: number; answered: boolean; checks: number; }
 export interface AutosaveSnap { runId: string; visited: string[]; quietT: number; lastSaveT: number; bodyFrom: V3 | null; }
@@ -149,12 +210,59 @@ export interface SaveState {
   escalation: 0 | 1 | 2; escalationT: number; alarm: { episode: boolean; pos: V3; placed: boolean; apartT: number; raisedAt: number }; clearedAt: [string, number][]; clearRooms: number;
   blackout: { active: boolean; until: number | null; since: number; permanent: boolean; restoredAt: number };
   flags: { aiEnabled: boolean; godMode: boolean; infiniteAmmo: boolean; playerInvisible: boolean };
+  /** a quiet mission's deal (quiet.ts QuietSnap: which start, spot and patrol set the run was dealt) — absent on the plain night */
+  quiet?: QuietSnap;
+  /** a training lesson's place among its steps (lesson.ts LessonSnap) — absent off a lesson level or with the lesson switched off */
+  lesson?: LessonSnap;
+  /** a par's clock (par.ts ParSnap) — absent off a par level or with the par switched off */
+  par?: ParSnap;
+  /** the plan laid for the word and the one kept for the next try — planlay.ts; absent with its switch off */
+  lay?: LaySnap;
+  /** a snatch level's man: hands up / tied / how it ended (snatch.ts SnatchSnap) — absent off a snatch level */
+  snatch?: SnatchSnap;
+  /** a defuse mission's clock and charges (defuse.ts DefuseSnap) — absent off a level with the block */
+  defuse?: DefuseSnap;
   player: PlayerSnap; guards: GuardSnap[]; items: ItemSnap[]; doors: DoorSnap[]; props: PropSnap[]; propsTime: number; targets: TargetSnap[];
   devices: DevicesSnap | null; mission: Mission; chronicle: ChronSnap; events: GameEvent[]; messages: { text: string; t: number }[];
   rollcall: RollcallSnap; needs: NeedsSnap; whistle: WhistleSnap; tactics: TacticsSnap; dialogue: DialogueSnap; weather: WeatherSnap | null; qrf: { loudT: number };
   /** the cleaner / the late worker (civilians.ts CivSnap) — absent in a file from before the slice: the fresh ones stay on their marks, ears set right */
   civilians?: CivSnap | null;
+  /** WALL BREAKING (wallbreak.ts WallsSave): which cells of which partitions / cover are gone, the damage the rest carry, the leaves' — absent = the level as
+   *  authored (and in every file from before the slice) */
+  walls?: WallsSave;
+  /** the covered lanes a side has learnt (lanes.ts): only present while one is known */
+  lanes?: LanesSave;
+  /** FURNITURE A BLAST BROKE (furnblast.ts FurnSave): the statics it took and the props that came apart — absent = none (every file from before the slice) */
+  furn?: FurnSave;
+  /** the weather's dust in the rooms (airDust.ts): the field where it is off the leak, the openings as last asked — absent: no weather in, the switch off, or a file from before it */
+  air?: AirDustSnap;
   decals: DecalSnap[]; autosave: AutosaveSnap;
+  /** where rounds have gone THROUGH panes (glasspen.ts: a later round by a hole pays a quarter) — absent when there are none, and in every file from before the slice */
+  glassPen?: GlassPenSnap;
+  /** whose gun a wall holds down (character ids) — gunwall.ts; absent with its switch off or nobody at a wall */
+  gunWall?: number[][];
+  /** each roster man's calm-patrol torch: dark, the last reading of his place, the dwell's two counts — calmtorch.ts; absent with its switch off or nobody met */
+  calmTorch?: CalmTorchSnap;
+  /** who sits in which chair, who sleeps, who was woken and by what — doze.ts; absent with its switch off or nobody on a record */
+  doze?: DozeSnap;
+  /** each roster man's dread and the sequence it has him in, and the blasts not yet asked about — morale.ts; absent with its switch off or nobody met */
+  morale?: MoraleSnap;
+  /** each roster man's run — the shout's beat, the weapon gone, where he is going — runner.ts; absent with its switch off or nobody has run */
+  runner?: RunnerSnap;
+  /** each roster man's part in a balk at a dark doorway — stopped, called, going in — and the doors that will not stop him again yet — darkdoor.ts; absent with its switch off or nobody met */
+  darkdoor?: DarkDoorSnap;
+  /** each roster man's count of mates gone quiet, the line he owes, his whip and the last man's act — netquiet.ts; absent with its switch off or nobody met */
+  netQuiet?: NetQuietSnap;
+  /** each roster man's held attention (where, what, how long is left) and his memory of the takings — attention.ts; absent with its switch off or nobody met */
+  attention?: AttentionSnap;
+  /** each roster man's ideas of his enemies (where, how old, how he came by each) and what Sam's eyes have put on the squad's net — picture.ts; absent with its switch off or nothing known */
+  picture?: PictureSnap;
+  /** where the Game's OWN die stands (math/dice.ts) — only in a file written by a game that was rolling one: a load into a game with its own die puts the stream
+   *  back, so the frames after a load roll what the frames after the save rolled. Absent (the harness on a seeded Math.random, a recording's frame 0): nothing to restore */
+  dice?: { s: number; n: number; seed: number };
+  /** the hour the level was being played at and its sun's strength (hours.ts) — ABSENT for the level's own night, so a night's file is the file it always was;
+   *  a load puts the game at the file's hour (the session journal's frame 0 is a checkpoint: a recording made by day replays by day) */
+  hour?: { id: HourId; sun: number; /** the strength was set by hand (?sun=, the slider) — false: left to the weather's cloud, which may move it again; absent (a file from before weather met the hour): set iff it is not 1 */ given?: boolean };
   /** what a forced save had to let go of (documentation in the file itself: 'holding Novak', 'picking storage', 'clearing drill') */
   forced: string[];
 }
@@ -192,10 +300,11 @@ function deepClone<T>(x: T): T { return x === undefined ? x : JSON.parse(JSON.st
  *  renamed, is refused rather than poured over the wrong indices) */
 export function levelFingerprint(g: Game): SaveState['level'] {
   const cached = fpCache.get(g.level); if (cached) return cached;
-  const L = g.level; let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
-  for (const b of L.boxes) for (const v of [b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2]]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
-  const s = `${L.boxes.length}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.length}|${L.props.length}|${geo.toString(16)}`;
-  const fp = { fp: hashStr(s).toString(16), boxes: L.boxes.length, routes: L.routes.length, doors: L.doors.length };
+  const L = g.level; const nBox = g.destr?.walls?.authored ?? L.boxes.length;   // (the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
+  let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
+  for (let i = 0; i < nBox; i++) for (const v of [L.boxes[i].c[0], L.boxes[i].c[1], L.boxes[i].c[2], L.boxes[i].h[0], L.boxes[i].h[1], L.boxes[i].h[2]]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
+  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.length}|${L.props.length}|${geo.toString(16)}`;
+  const fp = { fp: hashStr(s).toString(16), boxes: nBox, routes: L.routes.length, doors: L.doors.length };
   fpCache.set(g.level, fp); return fp;
 }
 const fpCache = new WeakMap<object, SaveState['level']>();
@@ -208,6 +317,9 @@ function firearmApply(w: Firearm, s: FirearmSnap) {
   w.shotsFired = s.shotsFired | 0; if (w.def.modes.includes(s.mode)) w.mode = s.mode; w.bursts = s.bursts | 0; w.lastBurstT = fin(s.lastBurstT, -100);
 }
 
+/** how many men the level's own roster is right now: every route's — or, under a quiet mission, the dealt patrol set's (quiet.ts: the others are off the list for the run) */
+function rosterWanted(g: Game): number { return g.quiet?.active ? g.quiet.patrol.length : g.level.routes.length; }
+
 // ================================================================================================================================ can we save
 /** Why a checkpoint cannot be written right now (null = it can). `force` (the harness / the dev row) accepts what a plain save refuses of Sam's hands and the
  *  guards' scripts — the file then lets go of them (see the head); the shows, daylight, units and a downed Sam are refused regardless. */
@@ -215,20 +327,44 @@ export function canSave(g: Game, force = false): string | null {
   if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
   { const why = g.director?.blocksSave(); if (why) return why; }   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
   if (isDaylight(g)) return 'daylight is in (the breach variant)';
-  if (g.player.down) return 'Sam is down';
+  if (g.player.down) return 'the player is down';
   if (g.mission.stage === 'failed' || g.mission.stage === 'done') return `the run is over (${g.mission.stage}) — nothing to come back to`;   // (a civilian killed under tune.civilianKillFails fails the run with Sam on his feet: that file would have loaded as a live one — review G3.2)
   if (g.qrf && g.qrf.state !== 'idle') return `the response team is ${g.qrf.state} — no checkpoint inside the response`;
+  if (g.qrf && g.qrf.silentAt >= 0 && !g.qrf.silentSpent) return 'control is calling a net gone silent — no checkpoint inside the response';   // (qrf.ts silentNet's fourteen seconds are not in the file: a load would start them, and the radio check, afresh; never true with tune.qrfSilent off)
   if (g.guards.some(x => x.unit)) return 'a spawned unit is on the floor';
-  if (g.guards.length !== g.level.routes.length) return 'the roster is not the level\'s';
+  if (g.guards.length !== rosterWanted(g)) return 'the roster is not the level\'s';
   if (!force) {
     if (g.clearing) return 'the lockdown pair is clearing rooms';
     const sc = g.guards.find(x => x.script && x.state !== 'dead'); if (sc) return `${sc.callsign} is scripted`;
-    const busy = playerBusy(g); if (busy) return `Sam is ${busy}`;
-    if (g.items.items.some(it => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash') && !it.fired))) return 'a thrown thing is still in the air or on its fuse';
-    const falling = g.guards.find(x => x.char.ragdoll && !x.char.ragdoll.sleeping) ?? g.civilians.find(x => x.char.ragdoll && !x.char.ragdoll.sleeping); if (falling) return `${falling.callsign}'s body is still falling`;   // (a body is filed as a SETTLED corpse at its particles: one written mid-fall would hang there — review finding, reproduced)
-    if (g.rings.length) return 'a ring airfoil is in flight';
+    const busy = playerBusy(g); if (busy) return `the player is ${busy}`;
+    if (g.weather?.kind && g.weather.flash) return 'a stroke of lightning is on the floor';   // (under a picked weather the stroke is in the meter's stand-in — weather.ts strokeLight — and a load ends it: the file waits the half second out; with no weather picked, as it was)
+    if (g.items.items.some(it => !it.settled || ((it.kind === 'smoke' || it.kind === 'flash' || it.kind === 'frag') && !it.fired))) return 'a thrown thing is still in the air or on its fuse';
+    const falling = g.guards.find(x => x.char.ragdoll && !x.char.ragdoll.sleeping) ?? g.civilians.find(x => x.char.ragdoll && !x.char.ragdoll.sleeping); if (falling) return `${falling.callsign}'s body is still falling`;
+    const sinking = g.guards.find(x => x.wound && x.char.anim.woundDown < 1); if (sinking) return `${sinking.callsign} is still going down`;   // (a man going down WOUNDED is filed down: wounds.ts)
+      // (a body is filed as a SETTLED corpse at its particles: one written mid-fall would hang there — review finding, reproduced)
+    if (g.rings.length) return gearText('a ring airfoil is in flight');
+    if (g.shells.length) return 'a 40 mm grenade is in flight';
+    if (stickyFlying(g)) return 'a sticky camera is in flight';
   }
   return null;
+}
+
+type OwnCharges = { charges: number; walls: number | null; doors?: [number, 1 | -1][]; spent?: number };
+/** his own charges, alone (PlayerSnap.own): the counts as a load must find them, and the door charges that stand set */
+function ownCharges(g: Game): { own?: OwnCharges } {
+  if (!OWNCHARGE.on || !g.doorTools || !g.wallCharge || g.guards.some(gd => !!gd.unit && gd.team === 'operative')) return {};
+  const W = g.wallCharge, D = g.doorTools; let charges = D.charges, walls = W.carried;
+  for (const c of W.set) if (c.free) continue; else if (c.paid > 0) charges += c.paid; else if (walls !== null) walls++;   // (a wall charge set and not blown is not saved: back in the count it was paid from)
+  const doors = D.set.map(c => [g.doors.list.indexOf(c.door), c.side] as [number, 1 | -1]).filter(r => r[0] >= 0);
+  return { own: { charges, walls, ...(doors.length ? { doors } : {}), ...(D.samSpent ? { spent: D.samSpent } : {}) } };
+}
+function ownChargesBack(g: Game, own: OwnCharges | undefined) {
+  if (!own || !OWNCHARGE.on || !g.doorTools || !g.wallCharge || g.guards.some(gd => !!gd.unit && gd.team === 'operative')) return;
+  // (the wall charge first: its own look at a fresh Player hands back what he spent alone last run, which must not land over the count written after it)
+  if (typeof own.walls === 'number' && g.wallCharge.carried !== null) g.wallCharge.setCarried(Math.max(0, own.walls | 0)); else g.wallCharge.raiseCarried(0);
+  g.doorTools.alone(Math.max(0, own.charges | 0));
+  if (Array.isArray(own.doors)) for (const r of own.doors) { const d = Array.isArray(r) ? g.doors.list[r[0]] : undefined; if (d) g.doorTools.setBack(d, r[1] === -1 ? -1 : 1); }
+  if (typeof own.spent === 'number') g.doorTools.samSpent = Math.max(0, own.spent | 0);
 }
 /** what Sam's hands / feet are in the middle of, in words (null = free): the autosave's mid-action gate and canSave's */
 export function playerBusy(g: Game): string | null {
@@ -237,11 +373,20 @@ export function playerBusy(g: Game): string | null {
   if (pl.takedown) return 'mid-takedown';
   if (pl.dragging) return 'hauling a body';
   if (pl.picking) return 'picking a lock';
+  if (pl.wanding) return 'looking under a door';
   if (pl.coding) return 'at a keypad';
+  if (pl.breakerMove) return 'at the breaker';
   if (pl.easing) return 'easing a door';
-  if (pl.kick) return 'kicking a door';
+  if (pl.doorMove) return 'working a door';
+  if (g.wallCharge?.setting || pl.charging) return 'setting a charge';
+  if (g.defuse?.working) return 'at a charge';
+  if (pl.kick || (pl.doorKickTail && pl.char.anim.kicking)) return 'kicking a door';   // (doorKickTail — sprintdoor.ts: his legs are his own again while the leg of a boot at the run is still coming down, and the animator's kick clock is not in a file)
   if (pl.pendingThrow || pl.throwHeld || pl.char.anim.inThrow) return 'throwing';
+  if (pl.launchHeld) return 'lining up the launcher';   // (the launcher's button down: the gesture is not in the file — a load would drop it and the release then send nothing)
   if (pl.pistol.reloading || pl.rifle.reloading) return 'reloading';
+  if (pl.char.anim.nvBusy) return 'flipping his goggles';   // (the same: the flip is the animator's — his arm at his brow is in his capsules — and a file made a third of a second later has none)
+  if (pl.char.anim.bigTool) return 'putting his tool back';   // (bigkit.ts, BIGSLOT.moves: the hammer or the shotgun on its way back onto him is the animator's too — never set with the switch off)
+  if (pl.char.anim.kitBusy) return 'changing what is in his hands';   // (kitanim.ts: a swap is the animator's, not the file's — never true with the switch off)
   if (g.mission.driveT >= 0) return 'pulling the drive';
   if (pl.sel.open || pl.sel.downT >= 0) return 'choosing an action';
   return null;
@@ -261,17 +406,21 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
   // ---- items first (the guards' `dropped` and nothing else point into them)
   const itemList = g.items.items;
   const items: ItemSnap[] = itemList.map(it => {
-    const live = (it.kind === 'smoke' || it.kind === 'flash') && !it.fired;
+    const live = (it.kind === 'smoke' || it.kind === 'flash' || it.kind === 'frag') && !it.fired;
     let pos = c3(it.pos);
     if (!it.settled) { const hit = g.col.raycast([it.pos[0], it.pos[1] + 0.05, it.pos[2]], [0, -1, 0], 12); pos = [it.pos[0], hit ? it.pos[1] + 0.05 - hit.t + it.radius : it.radius, it.pos[2]]; }   // in the air: it lies on whatever is under it
-    return { kind: it.kind, pos, yaw: it.yaw, tumble: it.settled ? it.tumble : Math.round(it.tumble / Math.PI) * Math.PI, heading: it.heading, fill: it.fill, life: it.life, age: it.age, fired: live ? true : it.fired, emitT: 0, who: it.who, on: it.settled && it.on ? it.on.id : -1, onPose: it.onPose, radius: it.radius, restitution: it.restitution, friction: it.friction };
+    return { kind: it.kind, pos, yaw: it.yaw, tumble: it.settled ? it.tumble : Math.round(it.tumble / Math.PI) * Math.PI, heading: it.heading, fill: it.fill, life: live && it.kind === 'frag' ? 0 : it.life, age: it.age, fired: live ? true : it.fired, emitT: 0, who: it.who, on: it.settled && it.on ? it.on.id : -1, onPose: it.onPose, radius: it.radius, restitution: it.restitution, friction: it.friction };
   });
   // ---- Sam
   const player: PlayerSnap = {
     pos: c3(pc.pos), bodyYaw: pc.bodyYaw, aimYaw: pc.aimYaw, aimPitch: pc.aimPitch, crouch: pl.crouch, holstered: pl.holstered,
-    slot: pl.slot, throwKind: pl.throwKind, canisters: pl.canisters + (pl.pendingThrow?.kind === 'smoke' ? 1 : 0), flashbangs: pl.flashbangs + (pl.pendingThrow?.kind === 'flash' ? 1 : 0),   // (a can not yet out of the hand goes back on the belt, as cancelActions has it)
-    pistol: { ...firearmSnap(pl.pistol), lightOn: pl.pistol.lightOn }, rifle: { ...firearmSnap(pl.rifle), lightOn: pl.rifle.lightOn, attIdx: pl.rifle.attIdx, rings: pl.rifle.rings, ringCd: pl.rifle.ringCd },
+    slot: pl.slot, throwKind: pl.throwKind, canisters: pl.canisters + (pl.pendingThrow?.kind === 'smoke' ? 1 : 0), flashbangs: pl.flashbangs + (pl.pendingThrow?.kind === 'flash' ? 1 : 0), frags: pl.frags + (pl.pendingThrow?.kind === 'frag' ? 1 : 0), ...(WAND.on && !quietWand(g) ? { wand: pl.wand } : {}),   /* (quietfog.ts: a wand the MISSION lent is not the file's to say — a load leaves what the staging put on him) */ ...(BIGSLOT.on ? { bigKit: pl.bigKit } : {}), ...ownCharges(g),   // (a can not yet out of the hand goes back on the belt, as cancelActions has it)
+    pistol: { ...firearmSnap(pl.pistol), lightOn: pl.pistol.lightOn }, rifle: { ...firearmSnap(pl.rifle), lightOn: pl.rifle.lightOn, attIdx: pl.rifle.attIdx, rings: pl.rifle.rings, ringCd: pl.rifle.ringCd, shells: pl.rifle.shells, ...(STICKY.on ? { cams: pl.rifle.attachments.includes('cam') ? stickyLeft(pl) : -1 } : {}), ...(pl.rifle.def.id !== 'fn2000' ? { gun: pl.rifle.def.id } : {}) },
+    ...(STICKY.on && pl.cams.some(c => !c.vel) ? { cams: stickySnapshot(pl) } : {}), ...(STICKY.on && pl.camSeq > 0 ? { camSeq: pl.camSeq } : {}),
     ocpCharge: pl.ocp.charge, hasRifle: pl.hasRifle, rifleGone: pl.rifleGone, ocpHinted: pl.ocpHinted, equipT: pl.equipT,
+    ...(aimWeightSnapshot(pl) ? { aw: aimWeightSnapshot(pl) } : {}),   // (aimweight.ts: only while his gun is mid-swing onto the cursor)
+    ...(pl.doorRipUntil > g.time ? { ripU: pl.doorRipUntil } : {}), ...(sprintDoorTurning(g, pl) ? { bashAt: pl.doorBashAt, bashLean: pl.doorBashLean } : {}),   // (sprintdoor.ts: only while one is running)
+    ...(pl.staggerUntil > g.time ? { stagU: pl.staggerUntil } : {}), ...(pl.dazzledUntil > g.time ? { dazU: pl.dazzledUntil, dazAt: pl.dazzledAt ? [...pl.dazzledAt] : undefined } : {}),   // (samstun.ts: only while one is running)
     keys: [...pl.keys], codes: [...pl.codes], hitsLeft: pl.hitsLeft, nv: pl.nv, pace: pl.pace, lastFireT: pl.lastFireT, fireCd: pl.fireCd, noise: pl.noise, visibility: pl.visibility, stepPhase: pl.stepPhase, animPhase: pc.anim.phase,
     wet: [pc.wet, pc.beads, pc.wetRain], bubble: pl.bubble ? { ...pl.bubble } : null,
   };
@@ -287,14 +436,14 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       id: c.id, routeI: gd.routeI, callsign: gd.callsign, state,
       pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase,
       wp: gd.wp, wait: gd.wait, awareness: gd.awareness, lastKnown: c3n(gd.lastKnown), lastSeenT: gd.lastSeenT,
-      found: gd.found, downKind: gd.downKind, downBy: gd.downBy, keys: [...gd.keys],
+      found: gd.found, downKind: gd.downKind, downBy: gd.downBy, keys: [...gd.keys], ...(gd.wound ? { wound: { ...gd.wound, clock: gd.char.anim.woundClock } } : null),
       missedAt: gd.missedAt, missingRaised: gd.missingRaised,
       muzzleDown: false, muzzleClearT: gd.muzzleClearT, muzzleEvalT: gd.muzzleEvalT, lineBarkT: gd.lineBarkT, lineInT: gd.lineInT,
       leaderSeenT: gd.leaderSeenT, leaderSeenPos: c3(gd.leaderSeenPos), leaderStillT: gd.leaderStillT,
       bodyVisits: gd.bodyVisits, bodyVisitT: gd.bodyVisitT, bodyRemarked: gd.bodyRemarked, bodyClosed: gd.bodyClosed, bodyFan: gd.bodyFan,
       bodyDuty: gd.bodyDuty && !scripted ? { body: gi(gd.bodyDuty.body), role: gd.bodyDuty.role, stage: gd.bodyDuty.stage, t: gd.bodyDuty.t, t0: gd.bodyDuty.t0, spot: c3n(gd.bodyDuty.spot) } : null,
       dropped: gd.dropped ? itemList.indexOf(gd.dropped) : -1,
-      torchLostAt: gd.torchLostAt, lightLitAtLoss: gd.lightLitAtLoss, lightDeadUntil: gd.lightDeadUntil, flashlightOn: gd.flashlight.enabled, sweep: gd.sweep, beamDir: c3(gd.beamDir),
+      gunLostAt: gd.gunLostAt, torchLostAt: gd.torchLostAt, lightLitAtLoss: gd.lightLitAtLoss, lightDeadUntil: gd.lightDeadUntil, flashlightOn: gd.flashlight.enabled, sweep: gd.sweep, beamDir: c3(gd.beamDir),
       path: scripted ? [] : gd.path.map(c3), pathI: scripted ? 0 : gd.pathI, repathT: gd.repathT, pathGoal: scripted ? null : c3n(gd.pathGoal),
       weapon: firearmSnap(gd.weapon), fireCd: gd.fireCd, reactT: gd.reactT, searchT: gd.searchT, lookPhase: gd.lookPhase, speed: scripted ? 0 : gd.speed, stepPhase: gd.stepPhase, heardUpTo: gd.heardUpTo,
       diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
@@ -310,9 +459,10 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     };
   });
   // ---- the level's live state
-  const doors: DoorSnap[] = g.doors.list.map(d => ({ name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed }));
-  const props: PropSnap[] = g.props.props.map(p => ({ x: p.x, z: p.z, yaw: p.yaw, vx: p.vx, vz: p.vz, w: p.w, asleep: p.asleep, idle: p.idle, lastWho: p.lastWho, noiseT: p.noiseT, pushT: p.pushT }));
+  const doors: DoorSnap[] = g.doors.list.map(d => ({ name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}) }));
+  const props: PropSnap[] = g.props.all.map(p => ({ x: p.x, z: p.z, yaw: p.yaw, vx: p.vx, vz: p.vz, w: p.w, asleep: p.asleep, idle: p.idle, lastWho: p.lastWho, noiseT: p.noiseT, pushT: p.pushT }));
   const targets: TargetSnap[] = g.targets.map(t => ({ name: t.name, on: t.on, broken: t.broken, disabledUntil: t.disabledUntil }));
+  g.doors.list.forEach((d, i) => { if (d.swept) doors[i].swept = true; });   // (Door.swept, written only when set: a leaf a keyed man's body brought to its frame, resting to unlatched)
   const C = g.chronicle;
   const chronicle: ChronSnap = (() => {
     // the path: thinned to ≤ pathKeep the way Chronicle.sample thins at its cap (every other point, twice the interval), coordinates to the centimetre, times to the tenth
@@ -336,9 +486,11 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     const p = d.box && d.local ? d.local.p : d.pos, n = d.box && d.local ? d.local.n : d.n, t = d.box && d.local ? d.local.t : d.t;   // (attached: the LOCAL frame — put back through the same box on load, wherever it then stands)
     const D: DecalSnap = { kind: d.kind, pos: r3(p, 1000), n: r3(n, 1000), t: r3(t, 1000), radius: Math.round(d.radius * 1000) / 1000, param: Math.round(d.param * 1000) / 1000, seed: d.seed };   // (a mark to the millimetre, its frame to the milliradian: what the g-buffer can show of it)
     if (d.pane >= 0) D.pane = d.pane; if (door >= 0) D.door = door; if (prop >= 0) { D.prop = prop; D.part = part; }
+    if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout;
+  const bo = g.blackout, gw = gunWallSnapshot(g), ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
     missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: opts.runId || A?.runId || 'run',
@@ -348,12 +500,23 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     flags: { aiEnabled: g.aiEnabled, godMode: g.godMode, infiniteAmmo: g.infiniteAmmo, playerInvisible: g.playerInvisible },
     player, guards, items, doors, props, propsTime: g.props.time, targets,
     devices: g.devices?.snapshot() ?? null, mission: deepClone({ ...g.mission, driveT: -1, debrief: false }), chronicle,
-    events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause })),
+    events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, qrf: { loudT: g.qrf?.loudT ?? -1e9 },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9 },
     civilians: civiliansSnapshot(g),
-    decals,
+    decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
+    ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
+    ...(ct ? { calmTorch: ct } : null),   // (which calm patrol torches are dark, and their dwell — calmtorch.ts; no key with its switch off)
+    ...(mo ? { morale: mo } : null),   // (each man's dread and where his sequence stands — morale.ts; no key with its switch off)
+    ...(ru ? { runner: ru } : null),   // (each man who dropped it and ran, and where his run stands — runner.ts; no key with its switch off)
+    ...(dd ? { darkdoor: dd } : null),   // (who is stopped at which dark doorway, who is coming — darkdoor.ts; no key with its switch off)
+    ...(nq ? { netQuiet: nq } : null),   // (each man's quiet count, owed line, whip and last-man act — netquiet.ts; no key with its switch off)
+    ...(at ? { attention: at } : null),   // (each man's held attention and his memory of the takings — attention.ts; no key with its switch off)
+    ...(pi ? { picture: pi } : null),   // (each man's ideas of his enemies — picture.ts; no key with its switch off)
+    ...(gw ? { gunWall: gw } : null),   // (whose gun a wall holds down — gunwall.ts; no key with its switch off or nobody at a wall)
+    ...(g.dice && diceInUse() === g.dice ? { dice: { s: g.dice.s, n: g.dice.n, seed: g.dice.seed } } : {}),
+    ...(hourOf(g) !== 'night' ? { hour: { id: hourOf(g), sun: sunStrength(g), given: sunGiven(g) } } : {}),
     autosave: { runId: A?.runId || opts.runId || 'run', visited: [...(A?.visited ?? [])], quietT: A?.quietT ?? 0, lastSaveT: A?.lastSaveT ?? -1e9, bodyFrom: c3n(A?.bodyFrom ?? null) },
     forced,
   };
@@ -367,9 +530,20 @@ export function canLoad(g: Game, s: SaveState | null | undefined): string | null
   if (s.v !== SAVE_VERSION) return `checkpoint version ${s.v} (this build reads ${SAVE_VERSION})`;
   const L = levelFingerprint(g);
   if (!s.level || s.level.fp !== L.fp) return `made on another level (${s.level?.boxes ?? '?'} boxes / ${s.level?.doors ?? '?'} doors; this one ${L.boxes} / ${L.doors})`;
-  if (!Array.isArray(s.guards) || s.guards.length !== g.level.routes.length) return `roster of ${s.guards?.length} (the level has ${g.level.routes.length} routes)`;
+  // a QUIET MISSION's file (quiet.ts: its deal rides in it — the start, the spot, the patrol set that was manned) loads into that mission, and only into it
+  if (s.quiet && !g.quiet?.active) return 'made in a quiet mission — open that mission, then load it';
+  if (!s.quiet && g.quiet?.active) return 'made on the plain night — a quiet mission is up on this page';
+  if (s.quiet && (s.quiet.squad ? 1 : 0) !== (g.quiet.squad ? 1 : 0)) return s.quiet.squad ? 'made with a partner — this run is alone' : 'made alone — this run has a partner';
+  { const want = s.quiet ? g.quiet.rosterOf(s.quiet.deal) : g.level.routes.length;
+    if (want < 0) return 'its quiet mission\'s deal is not one this level deals (the level file has changed since)';
+    if (!Array.isArray(s.guards) || s.guards.length !== want) return `roster of ${s.guards?.length} (${s.quiet ? `its patrol set mans ${want}` : `the level has ${g.level.routes.length} routes`})`; }
   if (s.stage === 'failed' || s.stage === 'done' || s.mission?.stage === 'failed' || s.mission?.stage === 'done') return `a finished run (${s.mission?.stage ?? s.stage}) — nothing to come back to`;   // (canSave refuses to write one; a hand-made file is refused too, never poured over a living man as a live run — review G3.2)
+  { const wx = g.weather?.refuses(s.weather); if (wx) return wx; }   // (weather.ts: in the page the weather is the URL's — a file made in another is another run's)
+  { const w = g.destr?.walls?.check(s.walls) ?? null; if (w) return w; }   // (a file whose holed walls are not this level's partitions: refused, never loaded as an intact lie)
+  { const w = g.destr?.furn?.check(s.furn) ?? null; if (w) return w; }   // (…and the furniture a blast took)
   if (g.touring || g.puppet) return 'a show is running — stop it first';
+  if (g.rescue?.active) return 'the hostage rescue is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
+  if (g.nightBreach?.active) return 'the night breach is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
   return null;
 }
 /** Put the encounter back exactly as the file has it: the running encounter is thrown away through the game's own restart path (fresh Player / Guards, units
@@ -384,8 +558,12 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   // ---- the clean slate: night back in if the daytime variant was (a checkpoint is always the night's — daylight is refused at the save), then the encounter that
   //      is running goes the way a restart takes it
   if (isDaylight(g)) setDaylight(g, false);
+  if (applyHour(g, hourIdOf(s.hour?.id)) || s.hour) { const k = fin(s.hour?.sun ?? 1, 1); setSunStrength(g, k, typeof s.hour?.given === 'boolean' ? s.hour.given : k !== 1); }   // the file's hour (none = the level's own night) before the slate is wiped: the restart below re-makes that hour's switches
+  g.quiet?.restoreDeal(s.quiet);   // (a quiet mission: the restart below deals the FILE's start / spot / patrol set, not a fresh one — quiet.ts)
   g.restartEncounter();
-  try { applyState(g, s, prevLoads, prevSaves, opts); }
+  g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
+  g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
@@ -394,7 +572,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   loadSandbox(g, false);   // …then THIS MACHINE's start-card preference wins over the file's three sandbox flags (game/sandbox.ts; headless it is a no-op, so save∘load stays the identity on the file — probes checkpoint-identity)
   g.spectate = -1;
   // ---- items (before the men: their dropped torches point in here)
-  const propsById = g.props.props;
+  const propsById = g.props.all;
   const items: Item[] = s.items.map(is => {
     const it = g.items.spawn(is.kind, is.pos, [0, 0, 0], { yaw: is.yaw, tumble: is.tumble, tumbleRate: 0, spin: 0, heading: is.heading, fill: is.fill, life: is.life, age: is.age, fired: !!is.fired, emitT: 0, who: is.who | 0, settled: true, fuse: 0, bounces: 1, radius: is.radius, restitution: is.restitution, friction: is.friction });
     it.vel = [0, 0, 0]; it.on = is.on >= 0 ? propsById[is.on] ?? null : null; it.onPose = is.onPose;
@@ -407,10 +585,15 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     pc.pos = c3(P.pos); pl.safe = [P.pos[0], 0, P.pos[2]]; pc.vel = [0, 0, 0]; pc.bodyYaw = fin(P.bodyYaw); pc.aimYaw = fin(P.aimYaw); pc.aimPitch = fin(P.aimPitch);
     pl.crouch = !!P.crouch; pc.anim.crouchTarget = pl.crouch ? 1 : 0; pc.anim.phase = fin(P.animPhase);
     pl.holstered = !!P.holstered; pl.slot = (KIT_ORDER as readonly string[]).includes(P.slot) ? P.slot : 'pistol'; if (pl.slot === 'rifle' && !pl.hasRifle) pl.slot = 'pistol';
-    pl.throwKind = P.throwKind === 'flash' ? 'flash' : 'smoke'; pl.canisters = Math.max(0, P.canisters | 0); pl.flashbangs = Math.max(0, P.flashbangs | 0);
+    pl.throwKind = P.throwKind === 'flash' ? 'flash' : 'smoke'; pl.canisters = Math.max(0, P.canisters | 0); pl.flashbangs = Math.max(0, P.flashbangs | 0); if (typeof P.frags === 'number') pl.frags = Math.max(0, P.frags | 0); if (typeof P.wand === 'boolean') pl.wand = WAND.on && (P.wand || quietWand(g));   /* (…and a file that says none never takes the mission's own off him) */ if (P.bigKit !== undefined) pl.bigKit = BIGSLOT.on && (P.bigKit === 'shotgun' || P.bigKit === 'hammer') ? P.bigKit : 'none'; ownChargesBack(g, P.own);   // (a file that says: his, while the switch stands; one from before the wand, or made with it off, says nothing and the card just staged stands)
     firearmApply(pl.pistol, P.pistol); pl.pistol.lightOn = !!P.pistol.lightOn;
-    firearmApply(pl.rifle, P.rifle); pl.rifle.lightOn = !!P.rifle.lightOn; pl.rifle.attIdx = P.rifle.attIdx >= 0 && P.rifle.attIdx < pl.rifle.attachments.length ? P.rifle.attIdx | 0 : -1; pl.rifle.rings = Math.max(0, P.rifle.rings | 0); pl.rifle.ringCd = Math.max(0, fin(P.rifle.ringCd));
+    { const id = P.rifle.gun && WEAPONS[P.rifle.gun] ? P.rifle.gun : 'fn2000'; if (pl.rifle.def.id !== id) pl.rifle = new Rifle(WEAPONS[id]); }   // (the long gun the file was saved with: its tube is not a magazine of thirty)
+    if (typeof P.rifle.cams === 'number') stickyRestore(pl, P.cams, P.rifle.cams >= 0 ? P.rifle.cams : undefined, P.camSeq);   // (before the load's index is read: 'cam' is on the rifle's list only once issued)
+    firearmApply(pl.rifle, P.rifle); pl.rifle.lightOn = !!P.rifle.lightOn; pl.rifle.attIdx = P.rifle.attIdx >= 0 && P.rifle.attIdx < pl.rifle.attachments.length ? P.rifle.attIdx | 0 : pl.rifle.attachments.length ? 0 : -1;   /* (a file from when 'nothing' could be selected carries −1: the first load is up) */ pl.rifle.rings = Math.max(0, P.rifle.rings | 0); pl.rifle.ringCd = Math.max(0, fin(P.rifle.ringCd)); if (typeof P.rifle.shells === 'number') pl.rifle.shells = Math.max(0, P.rifle.shells | 0);
     pl.ocp.charge = Math.max(0, Math.min(1, fin(P.ocpCharge, 1))); pl.rifleGone = false; pl.ocpHinted = !!P.ocpHinted; pl.equipT = Math.max(0, fin(P.equipT));
+    aimWeightRestore(pl, P.aw);
+    pl.doorKickTail = false; pl.doorRipUntil = fin(P.ripU ?? -1, -1); pl.doorBashAt = fin(P.bashAt ?? -10, -10); pl.doorBashLean = P.bashLean === 1 || P.bashLean === -1 ? P.bashLean : 0;
+    pl.staggerUntil = fin(P.stagU ?? -1, -1); pl.dazzledUntil = fin(P.dazU ?? -1, -1); pl.dazzledAt = Array.isArray(P.dazAt) && P.dazAt.length === 3 ? [fin(P.dazAt[0], 0), fin(P.dazAt[1], 0), fin(P.dazAt[2], 0)] : null;
     pl.keys = new Set(P.keys ?? []); pl.codes = new Set(P.codes ?? []); pl.hitsLeft = Math.max(1, Math.min(Player.MAX_HITS, P.hitsLeft | 0)); pl.nv = !!P.nv; pl.nvAmount = pl.nv ? 1 : 0; pl.pace = Math.max(0.2, Math.min(1, fin(P.pace, 1)));
     pl.lastFireT = fin(P.lastFireT, -10); pl.fireCd = fin(P.fireCd); pl.noise = fin(P.noise); pl.visibility = fin(P.visibility); pl.irradiance = 0; pl.stepPhase = fin(P.stepPhase);   // (visibility: the meter as it stood — the probe overwrites it on the first frame that answers; headless it is the script's knob and stays)
     pc.wet = fin(P.wet?.[0]); pc.beads = fin(P.wet?.[1]); pc.wetRain = fin(P.wet?.[2]);
@@ -433,8 +616,9 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     gd.leaderSeenT = fin(S.leaderSeenT, -1); gd.leaderSeenPos = c3(S.leaderSeenPos ?? [0, 0, 0]); gd.leaderStillT = fin(S.leaderStillT);
     gd.bodyVisits = S.bodyVisits | 0; gd.bodyVisitT = fin(S.bodyVisitT, -1); gd.bodyRemarked = !!S.bodyRemarked; gd.bodyClosed = !!S.bodyClosed; gd.bodyFan = S.bodyFan | 0;
     gd.dropped = S.dropped >= 0 ? items[S.dropped] ?? null : null;
-    gd.torchLostAt = fin(S.torchLostAt, -1); gd.lightLitAtLoss = S.lightLitAtLoss !== false; gd.lightDeadUntil = fin(S.lightDeadUntil, -1); gd.flashlight.enabled = !!S.flashlightOn && !dead; gd.sweep = fin(S.sweep); gd.beamDir = c3(S.beamDir ?? [0, -0.3, 1]);
-    gd.path = (S.path ?? []).map(c3); gd.pathI = Math.min(S.pathI | 0, gd.path.length); gd.repathT = fin(S.repathT); gd.pathGoal = c3n(S.pathGoal);
+    gd.gunLostAt = fin(S.gunLostAt, -1); gd.torchLostAt = fin(S.torchLostAt, -1); gd.lightLitAtLoss = S.lightLitAtLoss !== false; gd.lightDeadUntil = fin(S.lightDeadUntil, -1); gd.flashlight.enabled = !!S.flashlightOn && !dead; gd.sweep = fin(S.sweep); gd.beamDir = c3(S.beamDir ?? [0, -0.3, 1]);
+    gd.path = (S.path ?? []).map(c3); gd.pathI = Math.max(0, S.pathI | 0);   // (as saved, not clamped to the path — see civiliansRestore)
+    gd.repathT = fin(S.repathT); gd.pathGoal = c3n(S.pathGoal);
     gd.fireCd = fin(S.fireCd, 1); gd.reloadT = -1; gd.reactT = fin(S.reactT); gd.searchT = fin(S.searchT); gd.lookPhase = fin(S.lookPhase); gd.speed = dead ? 0 : fin(S.speed); gd.stepPhase = fin(S.stepPhase); gd.heardUpTo = fin(S.heardUpTo, -1);
     gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
     gd.alertBest = fin(S.alertBest, 1e9); gd.alertStallT = fin(S.alertStallT); gd.alertRef = c3n(S.alertRef); gd.chaseT = fin(S.chaseT); gd.shotBlockedT = fin(S.shotBlockedT);
@@ -450,7 +634,8 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     if (dead) {
       // the body: a corpse settled at the file's joint positions (see the head) — hand the fresh figure to a ragdoll where it lies, then lay every particle down
       c.update(0);
-      c.ragdollize(g.col, [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)], true);
+      if (S.wound) woundRestore(gd, S.wound);   // (a man down WOUNDED is a posed figure, never a ragdoll: wounds.ts lays him down again, already settled)
+      else c.ragdollize(g.col, [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)], true);
       if (S.rag && S.rag.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(S.rag.x, S.rag.rot); if (S.rag.sleeping === false) c.ragdoll.wake(); }   // (a body the file caught still falling — only a forced / harness save can — falls on from rest where it was)
       c.vel = [0, 0, 0]; gd.speed = 0; c.anim.speed = 0;
       c.update(0);
@@ -463,16 +648,26 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     gd.bodyDuty = S.bodyDuty && G[S.bodyDuty.body] ? { body: G[S.bodyDuty.body], role: S.bodyDuty.role, stage: S.bodyDuty.stage, t: fin(S.bodyDuty.t), t0: fin(S.bodyDuty.t0), spot: c3n(S.bodyDuty.spot) } : null;
     const T = S.task; gd.task = !T ? null : T.kind === 'checkOn' ? (G[T.who] ? { kind: 'checkOn', pos: c3(T.pos), who: G[T.who], wp: T.wp | 0, left: T.left | 0, t0: fin(T.t0) } : null) : { kind: T.kind, pos: c3(T.pos) } as GuardTask;
   });
-  G.forEach((gd, i) => { attachFlashlight(g, gd); const bd = s.guards[i]?.beamDir; if (bd) gd.beamDir = c3(bd); });   // torch lights where the hands (or the floor) now have them — the smoothed carry direction itself stays the file's (attachFlashlight eases it on from there next frame)
+  dozeRestore(g, s.doze);   // (the men back in their chairs, asleep or woken as the file had them — doze.ts; a file without the slice: everybody on his feet)
+  calmTorchRestore(g, s.calmTorch);   // (before the lights are posed, and no dwell counted while they are: a calm man's torch is dark or burning as the file had it — calmtorch.ts)
+  moraleRestore(g, s.morale);   // (each man's dread, rung and sequence as the file had them — morale.ts; a file without the slice: every man met afresh)
+  runnerRestore(g, s.runner);   // (who had dropped it and run, as the file had them — runner.ts; a file without the slice: nobody has)
+  darkDoorRestore(g, s.darkdoor);   // (each man's balk as the file had it — darkdoor.ts; a file without the slice: nobody stopped, every door open to him)
+  netQuietRestore(g, s.netQuiet);   // (…and what the quiet net has done to each of them — netquiet.ts; a file without it: every man met afresh)
+  attentionRestore(g, s.attention);   // (…and whose attention was on what, for how much longer — attention.ts; a file without it: every man's attention his own)
+  pictureRestore(g, s.picture);   // (…and what each man believed of where his enemies were — picture.ts; a file without it: nobody knows of anybody yet)
+  try { G.forEach((gd, i) => { attachFlashlight(g, gd); const bd = s.guards[i]?.beamDir; if (bd) gd.beamDir = c3(bd); }); } finally { calmTorchPosed(); }   // torch lights where the hands (or the floor) now have them — the smoothed carry direction itself stays the file's (attachFlashlight eases it on from there next frame)
   // ---- doors, furniture, fixtures, devices
   for (const D of s.doors) {
     const d = g.doors.byName(D.name); if (!d) continue;
-    d.angle = Math.max(d.minA, Math.min(d.maxA, fin(D.angle))); d.vel = fin(D.vel); d.quietT = fin(D.quietT, 10); d.latched = !!D.latched; d.lastWho = D.lastWho ?? -1; d.sinceBash = fin(D.sinceBash, 10); d.closing = !!D.closing;
-    d.locked = !!D.locked; d.lockBroken = !!D.lockBroken; d.noticed = !!D.noticed; d.noticedT = fin(D.noticedT, -1000); d.pick = Math.max(0, Math.min(1, fin(D.pick))); d.picking = false; d.pickIdle = fin(D.pickIdle); d.pickClock = fin(D.pickClock); d.pickN = D.pickN | 0; d.rattleT = 0; d.guardT = fin(D.guardT, -100); d.passers = 0; d.creakArmed = D.creakArmed !== false;
+    const a = d.sided(fin(D.angle)), turned = a !== fin(D.angle);   // (doors.ts DOORWAY: a file from before the door had one side — or from a page with ?twoway — stands as wide on the side it opens into)
+    d.angle = Math.max(d.minA, Math.min(d.maxA, a)); d.vel = turned ? -fin(D.vel) : fin(D.vel); d.pullT = Math.max(0, fin(D.pullT ?? 0)); d.pressT = Math.max(0, fin(D.pressT ?? 0)); d.openT = fin(D.openT ?? 10, 10); d.quietT = fin(D.quietT, 10); d.latched = !!D.latched; d.lastWho = D.lastWho ?? -1; d.sinceBash = fin(D.sinceBash, 10); d.closing = !!D.closing; d.swept = !!D.swept;
+    d.locked = !!D.locked; d.lockBroken = !!D.lockBroken; d.noticed = !!D.noticed; d.noticedT = fin(D.noticedT, -1000); d.pick = Math.max(0, Math.min(1, fin(D.pick))); d.picking = false; d.pickIdle = fin(D.pickIdle); d.pickClock = fin(D.pickClock); d.pickN = D.pickN | 0; d.rattleT = 0; d.guardT = fin(D.guardT, -100); d.passers = (D.passers ?? 0) | 0; d.creakArmed = D.creakArmed !== false;
+    if (D.off) slabRestore(d, D.off, fin(D.angle));   // off its hinges: the slab where it lay (the reset above hung every leaf)
     d.place();
   }
   g.col.dynamicBoxes = g.doors.leafBoxes();
-  s.props.forEach((P, i) => { const p = g.props.props[i]; if (!p) return; p.x = fin(P.x, p.home[0]); p.z = fin(P.z, p.home[1]); p.yaw = fin(P.yaw, p.home[2]); p.vx = fin(P.vx); p.vz = fin(P.vz); p.w = fin(P.w); p.asleep = !!P.asleep; p.idle = fin(P.idle); p.lastWho = P.lastWho | 0; p.noiseT = fin(P.noiseT, -10); p.pushT = fin(P.pushT, -10); p.dirty = true; p.place(); });
+  s.props.forEach((P, i) => { const p = g.props.all[i]; if (!p) return; p.x = fin(P.x, p.home[0]); p.z = fin(P.z, p.home[1]); p.yaw = fin(P.yaw, p.home[2]); p.vx = fin(P.vx); p.vz = fin(P.vz); p.w = fin(P.w); p.asleep = !!P.asleep; p.idle = fin(P.idle); p.lastWho = P.lastWho | 0; p.noiseT = fin(P.noiseT, -10); p.pushT = fin(P.pushT, -10); p.dirty = true; p.place(); });
   g.props.time = fin(s.propsTime, g.props.time);
   { const byName = new Map(g.targets.map(t => [t.name, t] as [string, LightTarget])); for (const T of s.targets) { const t = byName.get(T.name); if (!t) continue; t.on = !!T.on; t.broken = !!T.broken; t.disabledUntil = fin(T.disabledUntil, -1); } }
   { const B = s.blackout, bo = g.blackout; bo.active = !!B.active; bo.until = infIn(B.until); bo.since = fin(B.since, -1); bo.permanent = !!B.permanent; bo.restoredAt = fin(B.restoredAt, -100); }
@@ -494,27 +689,31 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     const n = Math.min(S.pathN | 0, Math.floor((S.path?.length ?? 0) / 3), C.path.length / 3); for (let i = 0; i < n * 3; i++) C.path[i] = S.path[i]; C.pathN = n; C.pathEvery = fin(S.pathEvery, 0.5) || 0.5; C.pathNext = fin(S.pathNext);
     g.chronicle = C; }
   // ---- what was in the air, on the strip, in the men's heads
-  g.events.length = 0; for (const e of s.events ?? []) { if (e.kind === 'whistle') continue; g.events.push({ kind: e.kind, pos: c3(e.pos), time: fin(e.time), loud: !!e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause === 'ocp' || e.cause === 'shot' ? e.cause : undefined }); }   // (a whistle is resolved ONCE per event object — whistle.ts resolve, a WeakMap — and everybody in earshot heard it the frame it sounded: put back as a fresh object it would be answered a second time; review G3.8)
+  g.events.length = 0; for (const e of s.events ?? []) { if (e.kind === 'whistle') continue; g.events.push({ kind: e.kind, pos: c3(e.pos), time: fin(e.time), loud: !!e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause === 'ocp' || e.cause === 'shot' ? e.cause : undefined, ...(Array.isArray(e.ears) && e.ears.length === 2 ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}) }); }   // (a whistle is resolved ONCE per event object — whistle.ts resolve, a WeakMap — and everybody in earshot heard it the frame it sounded: put back as a fresh object it would be answered a second time; review G3.8)
   { const GS = glassState(g); GS.lastHitT = -100; for (const e of g.events) { GS.seen.add(e); g.qrf?.heardEvents.add(e); } }   // (the last half second's events are back for the men's EARS — heardUpTo says who has heard which; the glass and the QRF's gunfire memory took them when they happened: no second crack star, no re-count)
   forgetGuardClocks(g); forgetSuppressionClocks(g);   // (floor-wide bark / line clocks keyed by the Game would sit in the abandoned future muting everybody: Game.time has gone back)
-  g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) });
-  needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
+  g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) }); g.cues.adopt(g.messages);
+  gunWallRestore(g, s.gunWall);
+  needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); lanesRestore(g, s.lanes); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
   civiliansRestore(g, s.civilians);   // (after the men — she runs to / tells / was found by one of them by callsign — and after eventSeq: the fresh civilians' ears were stamped off the abandoned future's count; a file without the slice keeps them fresh on their marks, ears set right)
   if (s.weather && g.weather) g.weather.restore(s.weather);
   // ---- the marks
   for (const D of s.decals ?? []) {
     let attach = undefined as undefined | Box;
     if (D.door !== undefined && D.door >= 0) { attach = g.doors.list[D.door]?.box; if (!attach) continue; }
-    else if (D.prop !== undefined && D.prop >= 0) { attach = g.props.props[D.prop]?.boxes[D.part ?? 0]; if (!attach) continue; }
+    else if (D.prop !== undefined && D.prop >= 0) { attach = g.props.all[D.prop]?.boxes[D.part ?? 0]; if (!attach) continue; }
     if (attach) {   // the file has the LOCAL frame: through the box as it stands now
       const w = localToWorld(attach, D.pos, true), n = localToWorld(attach, D.n, false), t = localToWorld(attach, D.t, false);
-      g.decals.add(D.kind, w, n, D.kind === 'scuff' ? undefined : D.radius, { tangent: t, param: D.param, seed: D.seed, attach });
-    } else g.decals.add(D.kind, D.pos, D.n, D.kind === 'scuff' ? undefined : D.radius, { tangent: D.t, param: D.param, seed: D.seed, pane: D.pane !== undefined && D.pane >= 0 ? D.pane : undefined });
+      const m = g.decals.add(D.kind, w, n, D.kind === 'scuff' ? undefined : D.radius, { tangent: t, param: D.param, seed: D.seed, attach, look: !!D.look }); if (D.look) lookDecal(m);
+    } else { const m = g.decals.add(D.kind, D.pos, D.n, D.kind === 'scuff' ? undefined : D.radius, { tangent: D.t, param: D.param, seed: D.seed, pane: D.pane !== undefined && D.pane >= 0 ? D.pane : undefined, look: !!D.look }); if (D.look) lookDecal(m); }
   }
+  glassPenRestore(g, s.glassPen);   // (the holes behind the stars just restored)
+  g.airDust?.restore(s.air);   // (airDust.ts — after the weather, the walls, the doors' angles and the glass are the file's; no slice = the field as freshly seeded)
   // ---- the autosave controller's memory, the cursor's, the fixtures' supply baked for the first frame, the row on the timeline
   const A = g.saves; if (A) A.adopt(s.autosave, g);
   g.hover = null; g.interactables = []; g.nearby = []; g.act = null; g.useDoor = null; g.aimGuard = null; g.aimTarget = null; g.aimSnap = null;
   updateTargets(g, 0);   // (every target's factor / light / emissive off the restored switches and blackout NOW: a checkpoint written in the dark loads dark on its first frame, not its second)
+  if (s.dice && g.dice) { g.dice.s = s.dice.s | 0; g.dice.n = fin(s.dice.n); g.dice.seed = fin(s.dice.seed) >>> 0; }   // the game's own die back where the file left it — LAST, after every construction draw the clean slate above made
   if (s.kind !== 'harness') { chronCheckpoint(g, 'load', opts.label ?? s.label); g.messages.push({ text: `checkpoint loaded${s.label ? ` — ${s.label}` : ''}`, t: g.time }); if (g.messages.length > 5) g.messages.shift(); }   // (a harness restore is staging, not a checkpoint the player loaded: no row, no line, no load on the card)
 }
 /** a dynamic box's local point / direction into the world (the inverse of what decals.ts stores for an attached mark: yaw about +Y, then the centre) */
@@ -541,6 +740,10 @@ export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?
 
 // ================================================================================================================================ the controller (Game.saves)
 let runSerial = 0;
+/** the room region a floor point is in, for the autosave's 'first time in a room' trigger and its label: on a quiet mission the LEVEL's own places (chronicle.ts
+ *  roomOf with the level: a bazaar has no 'lobby'); on the plain night the table it always read */
+function roomHere(g: Game, p: Vec3): string { return roomOf(p, g.quiet?.active ? g.level : undefined); }
+
 export class Checkpoints {
   store: SaveStore;
   /** autosave on / off (the pause card / Tab; kept per machine) — manual saves and loads work either way */
@@ -569,7 +772,7 @@ export class Checkpoints {
   private note(g: Game, what: string) { this.log.push({ t: g.time, what }); if (this.log.length > 40) this.log.splice(0, this.log.length - 40); }
   /** a loaded file's controller memory becomes ours (loadState) */
   adopt(a: AutosaveSnap | undefined, g: Game) {
-    this.missionRef = g.mission; this.stageRef = g.mission.stage; this.roomRef = roomOf(g.player.char.pos); this.dragRef = null; this.pending = null;
+    this.missionRef = g.mission; this.stageRef = g.mission.stage; this.roomRef = roomHere(g, g.player.char.pos); this.dragRef = null; this.pending = null;
     this.runId = a?.runId || this.runId || newRunId(); this.visited = new Set(a?.visited ?? []); this.visited.add(this.roomRef); this.quietT = fin(a?.quietT ?? 0); this.bodyFrom = null;
     this.lastSaveT = g.time;   // (a load counts as a save for the gap: no autosave on the heels of coming back)
   }
@@ -592,7 +795,7 @@ export class Checkpoints {
   tick(g: Game, dt: number) {
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
-    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomOf(pl.char.pos)]); this.roomRef = roomOf(pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; }
+    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; }
     // regret: the floor came down on him within regretSecs of the last autosave — that slot is marked, and the cards offer the one before it (checked ahead of the
     // live gate: the frame he drops is not live, and is exactly when it matters)
     if (this.lastAuto) {
@@ -603,9 +806,9 @@ export class Checkpoints {
     if (!missionLive(g)) { this.pending = null; return; }
     if (!this.enabled) this.pending = null;
     // (1) the mission moved on
-    if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') this.request(g, 'stage', m.stage === 'drive' ? 'server room reached' : m.stage === 'exfil' ? 'the drive is out' : m.stage); }
+    if (m.stage !== this.stageRef) { const was = this.stageRef; this.stageRef = m.stage; if (STAGE_RANK[m.stage] > STAGE_RANK[was] && m.stage !== 'done') { const W = quietWords(g); this.request(g, 'stage', m.stage === 'drive' ? (W ? `${W.place} reached` : 'server room reached') : m.stage === 'exfil' ? (W ? `${W.bare} taken` : 'the drive is out') : m.stage); } }   // (a quiet mission: the level's own words for its room and its thing — quiet.ts)
     // (2) a room region entered for the first time this run
-    const room = roomOf(pl.char.pos);
+    const room = roomHere(g, pl.char.pos);
     if (room !== this.roomRef) { this.roomRef = room; if (!this.visited.has(room)) { this.visited.add(room); this.request(g, 'room', room); } }
     // (3) a body hidden: hauled ≥ bodyHideM from where he took hold of it and let go of (not dropped by a sprint into a fight: the gates see to that)
     if (pl.dragging && pl.dragging !== this.dragRef) { this.dragRef = pl.dragging; const b = pl.dragging.char.ragdoll; this.bodyFrom = b ? [b.x[0], 0, b.x[2]] : v3.copy(pl.char.pos); }
@@ -659,6 +862,14 @@ export class Checkpoints {
     const all = this.slots(); if (!preferRun) return all[0] ?? null;
     const mine = all.filter(x => x.runId === this.runId), sound = mine.filter(x => !x.regret);   // (a regretted autosave — the floor came down on him straight after it — only when nothing else of the run is stored)
     return sound.find(x => x.missionT <= beforeT + 0.5) ?? sound[0] ?? mine.find(x => x.missionT <= beforeT + 0.5) ?? mine[0] ?? all[0] ?? null;
+  }
+  /** THE SLOT THE CARDS OFFER ('Restart from checkpoint' on the pause and down cards): `newest`, except that an EARLIER run's slot is offered only if this game
+   *  would load it (canLoad) — the plain night's autosave is no offer under a quiet mission of the same level, nor a quiet mission's on the plain night, nor one
+   *  made alone on a run with a partner: the newest earlier slot that WOULD load, else none (the card then has no such button, instead of one that refuses). */
+  offer(g: Game, beforeT = Infinity): SlotInfo | null {
+    const n = this.newest(true, beforeT); if (!n || this.isThisRun(n)) return n;
+    for (const x of this.slots()) { if (x.runId === this.runId) continue; const s = this.read(x.key); if (s && !canLoad(g, s)) return x; }
+    return null;
   }
   /** is this slot one of THIS run's (the cards word an earlier run's differently and never make it the default) */
   isThisRun(info: SlotInfo): boolean { return !!info && info.runId === this.runId; }

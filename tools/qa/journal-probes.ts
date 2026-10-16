@@ -20,7 +20,6 @@ import { standUp, ROOT } from './headless.ts';
 import { replaySession, reportLines, readSession, isSessionName } from './replay.ts';
 const J = await import(`${ROOT}/src/game/journal.ts`);
 const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
-const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -206,7 +205,7 @@ export async function journalKnob() {
 // ================================================================================================================================ (d) the fixtures
 export async function journalFixtures() {
   console.log('\n=== journal-fixtures: every session in tools/qa/sessions/ replays identically on this build (a refactor\'s gate; an intended gameplay change re-records them) ===');
-  const FIXTURE_FLOOR = 2;   // the two committed fixtures (selftest.json.gz + pane-smoke-test.json.gz); raise when more land
+  const FIXTURE_FLOOR = 1;   // the committed selftest.json.gz (the page take and the Mac app's two were made on the office before its doors were real size: sessions/before-real-doors/README.md says how to put a page take back, then this is 2 again)
   const fails: string[] = []; const notes: string[] = [];
   const files = existsSync(SESSIONS_DIR) ? readdirSync(SESSIONS_DIR).filter(isSessionName).sort() : [];
   if (files.length < FIXTURE_FLOOR) { fails.push(`only ${files.length} fixture(s) in tools/qa/sessions/ (want ≥ ${FIXTURE_FLOOR}: the committed selftest + pane sessions — probes.ts journal --write files the scripted one; a vanished folder must not read as 'every session replays')`); }   // (wave-4 review: 0 fixtures was a vacuous green)

@@ -26,6 +26,27 @@ fn detailNoise(p: vec2f) -> f32 {
   return mix(mix(detailHash(ip), detailHash(ip + vec2i(1, 0)), w.x), mix(detailHash(ip + vec2i(0, 1)), detailHash(ip + vec2i(1, 1)), w.x), w.y);
 }
 
+// ---- WET GROUND (the storm's wet lot: game/weather.ts gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
+// settings.wetBreakup > 0, whatever the detail layer's amount). Ground is never flat: the water STANDS in its low spots and only darkens the aggregate between
+// them. One smooth height field off the world position (the same value noise the wear uses, never under half a metre a cell: unevenness, not texture) — below
+// the water line the film stays nearly as smooth as it was (a little rain-stippled), above it the finish climbs toward the reflection pass's roughness
+// cutoff, where composite fades the term out: a patchy, blurred reflection, bright in the pools, dull on the stone. Roughness only; the paint is not touched.
+// THE NUMBERS (first pass, never seen on a GPU) — the whole look is these six:
+const WET_POOL_M: f32 = 1.9;         // size of a low spot (m)
+const WET_GRAIN_M: f32 = 0.6;        // the smaller unevenness that frays a pool's shore (m)
+const WET_LEVEL: f32 = 0.47;         // the water line on the 0‥1 height: about this share of open ground is pool
+const WET_SHORE: f32 = 0.14;         // ± this much height round the water line is shore: the film thinning out (wide = soft-edged pools)
+const WET_POOL_ROUGH: f32 = 0.04;    // + roughness in a pool (0.22 → 0.26: rain on standing water is not a mirror)
+const WET_DAMP_ROUGH: f32 = 0.15;    // + roughness on the damp aggregate (0.22 → 0.37: a wider, dimmer image; at high the cutoff fade, 0.33‥0.45, keeps about two thirds of it)
+fn wetGround(wp: vec3f, rough: f32, k: f32) -> f32 {
+  // (each octave on its own turned axes — 0.5 and 1.1 rad off the world's — or the pools come out as squares along the level's grid)
+  let a = vec2f(0.8776 * wp.x - 0.4794 * wp.z, 0.4794 * wp.x + 0.8776 * wp.z) * (1.0 / WET_POOL_M);
+  let b = vec2f(0.4536 * wp.x + 0.8912 * wp.z, -0.8912 * wp.x + 0.4536 * wp.z) * (1.0 / WET_GRAIN_M) + vec2f(17.3, 5.1);
+  let h = 0.6 * detailNoise(a) + 0.4 * detailNoise(b);
+  let damp = smoothstep(WET_LEVEL - WET_SHORE, WET_LEVEL + WET_SHORE, h);
+  return min(rough + k * mix(WET_POOL_ROUGH, WET_DAMP_ROUGH, damp), 1.0);
+}
+
 struct DetailOut { albedo: vec3f, rough: f32, metal: f32 };
 fn detailSurface(wp: vec3f, n: vec3f, bi: u32, albedoIn: vec3f, roughIn: f32, metalIn: f32, k: f32) -> DetailOut {
   var o: DetailOut; o.albedo = albedoIn; o.rough = roughIn; o.metal = metalIn;

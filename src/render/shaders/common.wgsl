@@ -19,7 +19,7 @@ struct Frame {
   rcJitter: vec4f,                          // xy = this frame's sub-texel offset for the cascades' octahedral direction set (0.5,0.5 = texel centres); z = direct-light adaptive sampling: stop after this many agreeing samples; w = number of transient lights alive this frame
   directCfg: vec4f,                         // x = emitter samples for the strongest light per class, y = samples for the other leaders, z = penumbra filter cap (px), w = direct-light history weight (0 = none)
   lossyCfg: vec4f,                          // the lossy options' numbers (defaults = the untouched path): x = final-gather resolution divisor (2; 3 with gatherThird), y = volumetrics divisor (2; 4 with volQuarter), z = dimRays threshold on a pixel's total unshadowed luminance below which leaders get one shadow sample (0 = off), w spare  · w = the final gather's relative firefly bound K (each ray ≤ K × the cache's irradiance at the shading point ÷ π; 0 = off)
-  cardCfg: vec4u,                           // x = torch bounce cards this frame (FLAG_BOUNCE_CARDS; 0 = none: cards.wgsl not dispatched, fgather samples / excludes nothing)
+  cardCfg: vec4u,                           // x = torch bounce cards this frame (FLAG_BOUNCE_CARDS; 0 = none: cards.wgsl not dispatched, fgather samples / excludes nothing); y, z = WEATHER KINDS' third / fourth roof footprint (wxRect; 0 = none), w = the fog in the outdoor air (wxFog; 0 = none) — game/weatherKinds.ts
   cardSlots: array<vec4u, 2>,               // the light slot each card k = 0..7 is built from ([k >> 2][k & 3]); cards.wgsl reads it, and writes the slot back into the card rows the gather stages
   weatherA: vec4f,                          // the weather (game/weather.ts → volumetrics.wgsl (c)): x = rain rate 0..1 (0: nothing drawn), y / z = wind shear of the streaks (m sideways per m of height), w = ground wetness 0..1 (splash rings)
   weatherB: vec4f,                          // rgb = radiance a lightning stroke's lit sky adds to outdoor air + rain this frame, w = rain top (m; streaks fade in over the metre below it)
@@ -31,7 +31,7 @@ struct Frame {
   froxelB: vec4u,                           // x, y, z = the froxel grid W × H × D (0 = no grid: the flag is never up then), w = k, shadow-rayed lights per froxel (bits 0‥7) | the fetch's screen filter << 8 (0 = cubic B-spline, 1 = plain trilinear — settings.froxelSharp) | (depth strata for the strongest light − 1) << 9, 2 bits (settings.froxelTopRays)
   froxelC: vec4f,                           // xyz = this frame's sample jitter inside every froxel (0‥1, a Halton triple), w = the lookup's depth bias in slices (toward the eye: what a surface reads never includes scatter from behind it)
   prevCam: vec4f,                           // xyz = the camera position of the PREVIOUS frame (prevViewProj's eye; the froxel history reprojects distances from it), w = the previous frame's froxelA.x (the near boundary follows the camera's height, so the history's slices are laid out on last frame's near)
-  rtCfg: vec4f,                             // ray-traced reflections (renderer v3 phase 4, reflect.wgsl): x = max roughness that gets a ray (composite fades the term out toward it), y = rays per pixel (1|2), z = anisotropy 0..1 on aniso-finished (wet) ground, w = the reflection target's resolution divisor — 0 = the pass is OFF this frame (nothing dispatched, composite reads nothing: the frame as it was)
+  rtCfg: vec4f,                             // ray-traced reflections (renderer v3 phase 4, reflect.wgsl): x = max roughness that gets a ray (composite fades the term out toward it), y = rays per pixel (1|2), z = anisotropy 0..1 on aniso-finished (wet) ground + 2 × the wet ground's break-up in tenths (settings.wetBreakup; read an = z − 2·floor(z/2)), w = the reflection target's resolution divisor — 0 = the pass is OFF this frame (nothing dispatched, composite reads nothing: the frame as it was)
   matCfg: vec4f,                            // materials: x = analytic-highlight gain (the GGX image of point / spot / panel lights on a finish; 1 = physical), y = reflection strength × the whole traced term, z = luminance bound on one reflection ray's radiance (firefly guard), w = the g-buffer's detail-layer amount 0..1 (worn paths, dust on tall tops, scuffed skirting, edge wear on metal — 0 = fsBox exactly as it was)
   p5Cfg: vec4u,                             // renderer v3 phase 5 (ultra-only extras; every field 0 = the pass exactly as it was): x = the final gather's resampling mode (0 off · 1 temporal reservoir reuse · 2 + spatial reuse — fgather.wgsl mainGi), y = its numbers: fresh rays per texel (bits 0‥3) | temporal M cap << 8 (8 bits) | spatial taps << 16 (4 bits) | spatial radius in gather texels << 24, z = the reflection pass's bits: 1 = characters are their skinned MESH at reflection hits (closest-hit walk of the mesh-shadow trees, reflect.wgsl; needs FLAG_MESH_SHADOWS up), 2 = the second reflection ray decorrelated (antithetic azimuth) + the hit's lighting reused from last frame's record when the hit point matches (rtHitReuse); w = the lowest light slot holding a TRANSIENT light this frame (lights.ts firstTransientSlot: they are born at the tail) — gather_common's per-hit subtraction walk starts there instead of at 0, testing each slot it visits as before (0 when none is alive)
   jitter: vec4f,                            // xy = this frame's TAAU sub-pixel jitter in internal pixels (0 without TAAU / under a debug view), zw = the previous render's — a screen-space history keyed on the UNJITTERED pixel (the gather's reservoirs) takes both out of its reprojection
@@ -61,7 +61,6 @@ const FLAG_TEMPORAL: u32 = 2048u;
 const FLAG_TILECULL: u32 = 4096u;    // direct pass: per-8x8-tile light list (lights provably zero across the tile's bounds are not scored per pixel) — lossless; off = walk every light, for A/B
 const FLAG_SOFT_TILESKIP: u32 = 8192u; // penumbra filter: whole 8x8 tiles provably out of reach of every blur hint skip the pass (softtile.wgsl builds the mask) — lossless; off = every pixel decides for itself, for A/B
 const FLAG_TAIL_CHROMA: u32 = 16384u; // experiment: per-channel-unbiased tail (E_pick·V/p) instead of the bounded luminance-unbiased form
-const FLAG_SMOKE_RSKIP: u32 = 32768u; // smoke samplers: skip the atlas fetch wherever the solver's per-brick render occupancy proves the trilinear footprint all zero — lossless; off = always fetch, for A/B
 const FLAG_CHECKER_DIRECT: u32 = 65536u; // lossy option: shadow rays on a checkerboard half of the pixels per frame, the other half borrows its neighbours' visibility (direct.wgsl)
 const FLAG_GRID_SKIP: u32 = 131072u;  // trace grid: run past provably empty cells without touching memory (per-cell Chebyshev distance to the nearest occupied cell) — lossless; off = a load pair per cell as before, for A/B
 const FLAG_GRID_YCULL: u32 = 262144u; // trace grid: skip cells / boxes (and globals) whose height band the rest of the ray cannot reach (per-cell 24-slice occupancy, per-item quantised y extent, per-global extent) — lossless; off = every registered box is slab-tested, for A/B
@@ -86,6 +85,7 @@ const BOX_EMISSIVE: u32 = 16u;
 const BOX_AREALIT: u32 = 32u;     // emission carried by an analytic area light instead (see Light kind 3)
 const BOX_ROT: u32 = 64u;         // fully rotated box: orientation is the quaternion boxRot(i), not the packed yaw (hand props, sparks, tumbling canisters)
 const BOX_GLOSS: u32 = 128u;      // polished floor finish: its on-screen top face gets a traced reflection ray under FLAG_GLOSS (boxes.ts BoxFlag.Gloss)
+const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised in a build compiled with CUT_BOXES): the box is clipped by the planes in its rows of the cut table (boxMat from CUT_BASE)
 const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
 
@@ -101,11 +101,11 @@ struct Light {
   cosInner: f32, volumetric: f32, owner: u32, radius: f32,
 };
 
-struct SmokeDomain {
-  origin: vec3f, voxel: f32,       // world min corner, voxel size (m)
-  atlasOffset: vec3u, live: u32,   // texel offset of this domain inside the atlas
-  dims: vec3u, floorClosed: u32,   // (1 = the domain stands on the ground: its bottom row is solid floor and keeps its smoke; 0 = a raised box whose bottom face is as open as its sides — smokeEdgeFade)
-  densityScale: f32, pad1: f32, pad2: f32, pad3: f32,
+struct SmokeBound {                // a loose box round some of the smoke (smoke.wgsl `boxes`): what a reader clips a ray against before it marches (the marches' and the froxels' comments call one a 'domain', from when it was a solver box). Never storage, never a limit on the smoke
+  origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
+  pad0: vec3u, live: u32,
+  dims: vec3u, pad1: u32,          // its size in voxels
+  pad2: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip)
 };
 
 @group(0) @binding(0) var<uniform> frame: Frame;
@@ -115,16 +115,21 @@ struct SmokeDomain {
 @group(0) @binding(4) var<storage, read> gridItems: array<u32>;   // [0, itemsB): box indices per cell in box order; [itemsB, 2·itemsB): the same items packed index16 | qmin8<<16 | qmax8<<24 (quantised padded height extent)
 @group(0) @binding(5) var<uniform> scene: SceneInfo;
 @group(0) @binding(6) var<storage, read> lights: array<Light>;   // (tried a uniform array: slower for the cascades' hit shading on Apple GPUs)
-@group(0) @binding(7) var<uniform> smoke: array<SmokeDomain, 8>;
-@group(0) @binding(8) var smokeAtlas: texture_3d<f32>;   // rgba16f: density, temperature, -, -
+@group(0) @binding(7) var<uniform> smoke: array<SmokeBound, 8>;   // 0‥3 the coarse lattice's, 4‥7 the fine one's
+@group(0) @binding(8) var smokeAtlas: texture_3d<f32>;   // rgba16f, one 10³-texel block per live brick (smoke_read.wgsl; binding 14, the page texture, is declared there; binding 11 is free)
 @group(0) @binding(9) var linSamp: sampler;
 @group(0) @binding(10) var<storage, read> capsules: array<Capsule>;
+struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.ts FogSight; asked only for a light that carries a fog bit, the picture's smoke and its particles — fogSeenAt below)
+  dist: array<vec4f, 2560>,   // [eye × FOG_SIGHT_BINS + bin], four to a vec4: how far that eye's level ray along the bin's bearing goes before a box (the head-of-frame pass, shaders/fogsight.wgsl)
+  eyes: array<vec4f, 5>,      // FowU's head (shaders/fogofwar.wgsl), field for field: the eye and its man, …
+  looks: array<vec4f, 5>,     // … where he looks, his cone and near field
+  cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
+  soft: vec4f,                // the cone's soft edges, as FowU.soft
+};
+@group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 41 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
 // storage array<u32> (the default: measured cheaper) or a uniform array<vec4u, REACH_VEC4S> (adapters with only 8 storage buffers per stage, or ?reachUniform
 // for A/B), each with a reachWord(w) accessor over the flat word index
-@group(0) @binding(11) var<uniform> smokeOcc: array<vec4u, 34>;   // smoke render occupancy, written by the solver at the end of every domain step (renderOccPack in smoke.wgsl):
-                                                                    // domain i owns u32 words 16i..16i+15 (flat word w lives at [w >> 2][w & 3]); bit b set = 8³-cell brick b, or the one-cell shell round it, holds density;
-                                                                    // then flat words 128‥135 = per domain the box of its SET bricks (smokeSubWord's layout) — the shadow-ray transmittance's per-domain segment reject
 
 fn boxAlbedo(i: u32) -> vec3f { return boxMat[i * 4u].xyz; }
 fn boxCutHeight(i: u32) -> f32 { return boxMat[i * 4u].w; }
@@ -157,6 +162,131 @@ fn skyRadiance(rd: vec3f) -> vec3f {
   return mix(mix(frame.skyHorizon, frame.skyZenith, t), frame.skyHorizon * 0.15, below);
 }
 
+// ---- WEATHER KINDS (game/weatherKinds.ts, game/weather.ts): the level's third / fourth roof footprint and the FOG in the outdoor air, packed in the three spare words
+// of frame.cardCfg (.y .z .w; all 0 = no kind picked; .y is never 0 under a kind — 1 = an empty footprint). Every caller sits behind the scene prelude's
+// `const WX_KINDS` (render/frame.ts weatherKindConfig: true only in a page opened with ?weather=<kind>), so without it these are dead code and the modules are as they were. The fog is ONE field for the picture and for the
+// men's eyes: extinction σ0·e^(−y∕H) per metre in the open (H 0 = uniform), × leak under a roof — weatherKinds.ts unpackFog / fogTau are these functions on the CPU.
+fn wxRect(w: u32) -> vec4f { return vec4f(f32(w & 255u), f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) * 0.2; }
+fn wxInRect(R: vec4f, p: vec2f) -> bool { return p.x >= R.x && p.y >= R.y && p.x <= R.z && p.y <= R.w; }
+/** is ground point p (xz) under one of the roofs the weather is cut by — weatherC, weatherD and (the level's own roofs in force: a kind picked, or its own storm) the two packed ones */
+fn wxRoofed(p: vec2f) -> bool {
+  var r = wxInRect(frame.weatherC, p) || wxInRect(frame.weatherD, p);
+  if (!r && frame.cardCfg.y != 0u) { r = wxInRect(wxRect(frame.cardCfg.y), p); }
+  if (!r && frame.cardCfg.z != 0u) { r = wxInRect(wxRect(frame.cardCfg.z), p); }
+  return r;
+}
+struct WxFog { sigma: f32, H: f32, leak: f32, gain: f32, tint: vec3f };
+fn wxFog() -> WxFog {
+  let w = frame.cardCfg.w;
+  return WxFog(f32(w & 255u) * 0.001, f32((w >> 8u) & 31u) * 0.5, f32((w >> 13u) & 7u) / 7.0, f32(w >> 28u) * 0.25, vec3f(f32((w >> 16u) & 15u), f32((w >> 20u) & 15u), f32((w >> 24u) & 15u)) / 15.0);
+}
+/** optical depth of the fog along ro + rd·[0, L] (rd unit), before any roof */
+fn wxFogTau(F: WxFog, ro: vec3f, rd: vec3f, L: f32) -> f32 {
+  if (L <= 0.0) { return 0.0; }
+  if (F.H <= 0.0) { return F.sigma * L; }
+  let ya = max(ro.y, 0.0) / F.H; let k = (max(ro.y + rd.y * L, 0.0) - max(ro.y, 0.0)) / F.H;
+  var m = 1.0 - 0.5 * k; if (abs(k) >= 1e-3) { m = (1.0 - exp(-k)) / k; }
+  return F.sigma * exp(-ya) * L * m;
+}
+/** how much thicker the haze the lamps and torches light stands at X in that fog (vol_common.wgsl hazeAt): the fog's own scatterers on top of the thin
+ *  haze's, (hazeDensity + σ(X)) ∕ hazeDensity, held to 6× — exactly 1 with no fog */
+fn wxHazeK(X: vec3f) -> f32 {
+  if (frame.cardCfg.w == 0u) { return 1.0; }
+  if (WX_VOL) { return min(1.0 + wxAir(X).x / max(frame.hazeDensity, 1e-3), 6.0); }   // (the air as a volume: the one field below — a room's own share, nothing above a roof)
+  let F = wxFog(); var sg = F.sigma; if (F.H > 0.0) { sg *= exp(-max(X.y, 0.0) / F.H); }
+  if (wxRoofed(X.xz)) { sg *= F.leak; }
+  return min(1.0 + sg / max(frame.hazeDensity, 1e-3), 6.0);
+}
+fn wxHash(p: vec2f) -> f32 { return fract(sin(dot(p, vec2f(127.1, 311.7))) * 43758.5453); }
+/** the fog's BANKS: a slow drifting unevenness over the ground, mean 1 (the picture only — the men's eyes take the mean) */
+fn wxBank(p: vec2f) -> f32 {
+  let q = p * 0.11 + vec2f(frame.time * 0.03, frame.time * 0.012); let i = floor(q); let f = fract(q); let u = f * f * (3.0 - 2.0 * f);
+  let a = mix(mix(wxHash(i), wxHash(i + vec2f(1.0, 0.0)), u.x), mix(wxHash(i + vec2f(0.0, 1.0)), wxHash(i + vec2f(1.0, 1.0)), u.x), u.y);
+  return 0.72 + 0.56 * a;
+}
+/** the fog over a pixel: `color` seen from the camera along unit rd to distance L (sky: to the ground plane, or 200 m) → color·T + A·(1 − T), A = the horizon's
+ *  light in the fog's tint (+ a stroke's lit sky). Call only with frame.cardCfg.w != 0. */
+fn wxFogApply(color: vec3f, rd: vec3f, dist: f32, sky: bool) -> vec3f {
+  let F = wxFog(); var L = dist;
+  if (sky) { L = 200.0; if (rd.y < 0.0) { L = min(200.0, frame.camPos.y / max(-rd.y, 1e-4)); } }
+  var tau = wxFogTau(F, frame.camPos, rd, L);
+  let E = frame.camPos + rd * L;
+  let roofed = !sky && wxRoofed(E.xz);
+  if (roofed) { tau *= F.leak; }
+  let T = exp(-tau * wxBank(E.xz));
+  // (the glow is the SKY's light in the fog: what has leaked in under a roof dims the room as it dims it for the men's eyes, and glows with nothing — a dark room
+  // stays dark, where the horizon's colour over it lifted it to navy and showed whoever stood in it)
+  let A = select(frame.skyHorizon * F.tint * F.gain + frame.weatherB.xyz * 0.5, vec3f(0.0), roofed);
+  return color * T + A * (1.0 - T);
+}
+// ---- THE VEIL AT THE BUILDING'S SHELL (const WX_EDGE, render/frame.ts weatherEdgeConfig; false = wxFogApply above for every pixel, the picture as it was). wxFogApply asks
+// 'roofed?' of the ground point under the pixel's SURFACE, and a roof's footprint is its slab + ROOF_PAD (the packed third / fourth: + up to 0.2 m more) — so the OUTSIDE
+// face of an outside wall, which stands a few centimetres inside that rectangle, was classed as indoors: no veil, no glow, while a man standing at it — outside the
+// rectangle — took the whole of both. From the play camera he showed as a flat shape in the fog's colour laid over a wall the fog had not touched. An outside wall's
+// face is IN the outdoor air: it is asked where its own normal points (wxFogApplySurf), and the roof's edge is a ramp, not a line — from the wall's outer face to about
+// its inner one, so the wall's cut top, a window's reveal and a doorway's threshold grade across the wall's own thickness and the ground at its foot is in the open
+// to the last centimetre. The picture only — the men's eyes (weather.ts airTrans) take the footprints as they are.
+const WX_EDGE_W: f32 = 0.5;      // the box the footprints are averaged over (m)
+const WX_EDGE_IN: f32 = 0.04;    // where the ramp starts, inside the footprint's edge (m): an outside wall's outer face (slab + ROOF_PAD − the wall's 2 cm past its slab); it ends WX_EDGE_W ∕ 2 inside
+const WX_EDGE_OUT: f32 = 0.4;    // how far along its own normal a face is asked again (m): clear of ROOF_PAD + the packed roofs' 0.2 m
+fn wxRoofCover1(R: vec4f, p: vec2f, h: f32) -> f32 { let o = max(min(p + h, R.zw) - max(p - h, R.xy), vec2f(0.0)); return o.x * o.y; }
+/** how far under the roofs wxRoofed asks ground point p (xz) is: 0 in the open and up to WX_EDGE_IN inside a footprint's edge, 1 from WX_EDGE_W ∕ 2 inside it, a ramp
+ *  between (the share of the WX_EDGE_W box round p the footprints cover — two that meet or overlap count once — taken from its value at the ramp's start) */
+fn wxRoofCover(p: vec2f) -> f32 {
+  let h = 0.5 * WX_EDGE_W;
+  var a = wxRoofCover1(frame.weatherC, p, h) + wxRoofCover1(frame.weatherD, p, h);
+  if (frame.cardCfg.y != 0u) { a += wxRoofCover1(wxRect(frame.cardCfg.y), p, h); }
+  if (frame.cardCfg.z != 0u) { a += wxRoofCover1(wxRect(frame.cardCfg.z), p, h); }
+  let c0 = 0.5 + WX_EDGE_IN / WX_EDGE_W;
+  return clamp((min(a / (WX_EDGE_W * WX_EDGE_W), 1.0) - c0) / (1.0 - c0), 0.0, 1.0);
+}
+/** wxFogApply for a SURFACE pixel under WX_EDGE: `nxz` = the horizontal part of the face's normal (0 0 for a man and what he carries: he is where he stands). Under a
+ *  roof by r — the lesser of the point's own cover and the cover where the face looks — the veil is thinned toward the leak and its glow put out by exactly r; r 0 / 1
+ *  are wxFogApply's two cases. */
+fn wxFogApplySurf(color: vec3f, rd: vec3f, dist: f32, nxz: vec2f) -> vec3f {
+  let F = wxFog();
+  let E = frame.camPos + rd * dist;
+  var r = wxRoofCover(E.xz);
+  if (r > 0.0) { r = min(r, wxRoofCover(E.xz + nxz * WX_EDGE_OUT)); }
+  let T = exp(-wxFogTau(F, frame.camPos, rd, dist) * mix(1.0, F.leak, r) * wxBank(E.xz));
+  let A = (frame.skyHorizon * F.tint * F.gain + frame.weatherB.xyz * 0.5) * (1.0 - r);
+  return color * T + A * (1.0 - T);
+}
+
+// ---- THE WEATHER'S AIR AS A VOLUME (const WX_VOL, render/frame.ts weatherVolConfig; false = the veil above, the picture as it was). The fog / dust is a MEDIUM with
+// an extinction at every point, and the volumetric pass marches it (volumetrics.wgsl wxAirMarch): a pixel is veiled by what its own ray crosses, the sun and the
+// moon light it through shadow rays, the sky and the bounce light it through the radiance cache, the lamps' cones stand in it (wxHazeK above takes the same field).
+//   in the open     σ0·e^(−y∕H), eased to nothing between the ceiling plane and WX_TOP above it — the picture is a building with its roof lifted off, and the
+//                   air over the roof went with it; the open air's layer ends a little higher so the yard's lamps still stand in it
+//   under a roof    below the ceiling plane: σ0·e^(−y∕H) × the room's SHARE at that spot of the plan — the air grid (scene/airGrid.ts; game/airDust.ts carries
+//                   the dust in at open doors and blown walls, a shut room keeps the weather's `leak`); nothing at or above the ceiling plane
+// The men's eyes are cut by the same grid (game/weather.ts airTrans). The roofs are the four footprints wxRoofed asks.
+const WX_TOP: f32 = 3.0;   // how far above the ceiling plane the open air's layer runs out (m)
+/** the roof footprint ground point p (xz) stands under — wxRoofed's own four, the first that holds it — or an empty one (z < x) in the open */
+fn wxRoofAt(p: vec2f) -> vec4f {
+  if (wxInRect(frame.weatherC, p)) { return frame.weatherC; }
+  if (wxInRect(frame.weatherD, p)) { return frame.weatherD; }
+  if (frame.cardCfg.y != 0u) { let R = wxRect(frame.cardCfg.y); if (wxInRect(R, p)) { return R; } }
+  if (frame.cardCfg.z != 0u) { let R = wxRect(frame.cardCfg.z); if (wxInRect(R, p)) { return R; } }
+  return vec4f(0.0, 0.0, -1.0, -1.0);
+}
+fn wxGrid(c: vec2i) -> f32 { let k = u32(clamp(c.y, 0, WXD_H - 1) * WXD_W + clamp(c.x, 0, WXD_W - 1)); return boxMat[WXD_BASE + (k >> 2u)][k & 3u]; }
+/** the room's share of the weather's air at p (xz) under footprint R: the air grid, bilinear between the cells whose CENTRES the footprint holds (a cell is the
+ *  room's when its centre is under the roof — game/airDust.ts sorts them the same way), so the open air's 1 never bleeds in through a wall */
+fn wxIndoor(p: vec2f, R: vec4f) -> f32 {
+  let lo = ceil((R.xy - WORLD_MIN.xz) / WXD_CELL - 0.5); let hi = max(lo, floor((R.zw - WORLD_MIN.xz) / WXD_CELL - 0.5));
+  let g = clamp((p - WORLD_MIN.xz) / WXD_CELL - 0.5, lo, hi);
+  let i = floor(g); let f = g - i; let c0 = vec2i(i); let c1 = min(c0 + vec2i(1), vec2i(hi));
+  return mix(mix(wxGrid(c0), wxGrid(vec2i(c1.x, c0.y)), f.x), mix(wxGrid(vec2i(c0.x, c1.y)), wxGrid(c1), f.x), f.y);
+}
+/** the weather's air at X: (extinction per metre, 1 under a roof ∕ 0 in the open). Call only with frame.cardCfg.w != 0. */
+fn wxAir(X: vec3f) -> vec2f {
+  let F = wxFog(); var sg = F.sigma; if (F.H > 0.0) { sg *= exp(-max(X.y, 0.0) / F.H); }
+  let R = wxRoofAt(X.xz);
+  if (R.z > R.x) { if (X.y >= CEIL_Y) { return vec2f(0.0, 1.0); } return vec2f(sg * wxIndoor(X.xz, R), 1.0); }
+  return vec2f(sg * (1.0 - smoothstep(CEIL_Y, CEIL_Y + WX_TOP, X.y)), 0.0);
+}
+
 // Ray vs axis-aligned bounds → (tEnter, tExit)
 fn isectBounds(ro: vec3f, invRd: vec3f, bmin: vec3f, bmax: vec3f) -> vec2f {
   let t0 = (bmin - ro) * invRd; let t1 = (bmax - ro) * invRd;
@@ -173,6 +303,33 @@ fn safeInv(v: vec3f) -> vec3f {
 // local frame IS the world frame — 1·x − 0·z evaluates to x exactly whatever the contraction, so lo = p, ld = rd and inv = invRd bit for bit —
 // which skips two half unpacks, both rotations and the three divisions for two thirds of all items and every global. Lossless; off = always rotate.
 const ROT_IDENTITY: u32 = 0x3C00u;
+// ---- CUT BOXES (scene/cut.ts; called only inside `if (CUT_BOXES)` blocks — the scene prelude's const, false = this is dead code and the module is as it was): a box
+// flagged GEO_CUT keeps only the side n_k · p ≤ d_k of each plane in its CUT_ROWS rows of the cut table (box-local frame; a zero normal ends the record). The solid
+// is convex, so the ray's stay inside it is still ONE interval: the slab interval [tN, tF] cut down plane by plane — a plane the ray crosses INTO the kept side may
+// raise tN (and is then the face it enters by), one it crosses OUT of lowers tF. Codes: a box face keeps isectBox's 0‥5, 7 = origin inside the cut solid, and cut
+// plane k answers −1 − k (negative: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face; boxNormalFromCode decodes it).
+// cut.ts cutClip is this loop on the CPU (rayBox, lineBox).
+fn cutPlaneRow(bi: u32, k: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + k]; }
+/** the row after a box's planes: (the colour its cut faces show, 1), or all zero = they show the box's own (Box.cutCore) */
+fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT_ROWS]; }
+fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi: u32) -> vec2f {
+  var tN = tN0; var tF = tF0; var code = 7.0;
+  for (var k = 0u; k < CUT_ROWS; k++) {
+    let pl = cutPlaneRow(bi, k);
+    if (all(pl.xyz == vec3f(0.0))) { break; }
+    let den = dot(pl.xyz, ld); let num = pl.w - dot(pl.xyz, lo);
+    if (den < 0.0) { let t = num / den; if (t > tN) { tN = t; code = -1.0 - f32(k); } }
+    else if (den > 0.0) { tF = min(tF, num / den); }
+    else if (num < 0.0) { return vec2f(-1.0, 0.0); }
+  }
+  if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
+  if (tN < 0.0) { return vec2f(0.0, 7.0); }
+  if (code < 0.0) { return vec2f(tN, code); }
+  code = 4.0 + select(0.0, 1.0, ld.z > 0.0);
+  if (tN == tmn.x) { code = select(0.0, 1.0, ld.x > 0.0); }
+  else if (tN == tmn.y) { code = 2.0 + select(0.0, 1.0, ld.y > 0.0); }
+  return vec2f(tN, code);
+}
 fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, axisFast: bool) -> vec2f {
   let p = ro - b.c;
   var lo: vec3f; var ld: vec3f; var inv: vec3f;
@@ -184,6 +341,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
   let tN = max(max(tmn.x, tmn.y), tmn.z);
   let tF = min(min(tmx.x, tmx.y), tmx.z);
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
+  if (CUT_BOXES) { if ((b.flags & GEO_CUT) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below); dead code without the switch
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   var code = 4.0 + select(0.0, 1.0, ld.z > 0.0);
   if (tN == tmn.x) { code = select(0.0, 1.0, ld.x > 0.0); }
@@ -192,6 +350,7 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
 }
 
 fn boxNormalFromCode(b: BoxGeo, code: f32, bi: u32) -> vec3f {
+  if (CUT_BOXES) { if (code < 0.0) { return quatRotate(boxRot(bi), cutPlaneRow(bi, u32(-code - 0.5)).xyz); } }   // CUT BOXES: a cut face — plane k's own normal, out of the box's frame (boxRot = the yaw for an ordinary box)
   let c = u32(code);
   let sgn = select(1.0, -1.0, (c & 1u) == 1u);
   let axis = c >> 1u;
@@ -787,118 +946,7 @@ fn occludedTBoxes(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32, tCap: f32) 
   return tCap;
 }
 
-// ---- smoke density at a point: the one sampler behind every smoke read (volumetric march + self-shadow, shadow-ray / beam / probe transmittance) ----
-const SMOKE_BRICK: u32 = 8u;   // cells per occupancy-brick edge = smoke.ts BRICK: a 64³ domain is 8×8×8 bricks = 512 bits = the 16 words per domain in smokeOcc (smoke.ts asserts both)
-// May a trilinear fetch at texel-space coordinate `tex` of domain slot `dom` (cell dims `dims`) return anything but exactly 0? The footprint of a
-// coordinate in cell c = floor(tex) stays within cells c−1..c+1 per axis, and bit(brick(c)) covers brick(c) plus exactly that one-cell shell —
-// the full argument (incl. why the words always describe the atlas as it is this frame) sits above renderOccRegions in smoke.wgsl.
-fn smokeMayHold(dom: u32, tex: vec3f, dims: vec3u) -> bool {
-  let n = dims / SMOKE_BRICK;                                   // bricks per axis
-  let b = min(vec3u(tex), dims - vec3u(1u)) / SMOKE_BRICK;      // brick of the cell holding tex (tex ≥ 0.5, so the truncation is a floor)
-  let bi = (b.z * n.y + b.y) * n.x + b.x;                       // = smoke.wgsl brickIndex within the domain
-  let w = dom * 16u + (bi >> 5u);
-  return ((smokeOcc[w >> 2u][w & 3u] >> (bi & 31u)) & 1u) != 0u;
-}
-/** The box of domain slot i's OCCUPIED bricks — those whose render-occupancy bit is set (the brick or its one-cell shell holds density): every trilinear sample of domain i taken
- *  outside it returns exactly 0 (smokeMayHold's argument once more: the sample's brick has a clear bit), so a shadow segment that misses it takes exactly nothing from domain i and
- *  need not visit it at all. The word — bminx | bminy << 3 | bminz << 6 | bmaxx << 9 | bmaxy << 12 | bmaxz << 15 | 1 << 18 (valid; 0 = never written → the whole box) — is written
- *  by the solver's renderOccPack (smoke.wgsl) straight behind the sixteen occupancy words it sums up, in the same dispatch, so the two never part: flat words 128‥135 of smokeOcc.
- *  A domain with no brick set comes out lo 7 / hi 0 = an inverted box, which smokeSegment reads as 'nothing to take from it'. (perf/smoke-scale, docs/internal/smoke-perf.md §2.1) */
-fn smokeSubWord(i: u32) -> u32 { return smokeOcc[32u + (i >> 2u)][i & 3u]; }
-fn smokeSubLo(i: u32, sd: SmokeDomain) -> vec3f {
-  let w = smokeSubWord(i);
-  if ((w & (1u << 18u)) == 0u) { return sd.origin; }
-  let b = vec3f(f32(w & 7u), f32((w >> 3u) & 7u), f32((w >> 6u) & 7u));
-  return sd.origin + b * (f32(SMOKE_BRICK) * sd.voxel);
-}
-fn smokeSubHi(i: u32, sd: SmokeDomain) -> vec3f {
-  let w = smokeSubWord(i);
-  if ((w & (1u << 18u)) == 0u) { return sd.origin + sd.voxel * vec3f(sd.dims); }
-  let b = vec3f(f32((w >> 9u) & 7u), f32((w >> 12u) & 7u), f32((w >> 15u) & 7u)) + 1.0;
-  return sd.origin + b * (f32(SMOKE_BRICK) * sd.voxel);
-}
-/** The live domains a shadow segment ro + t·rd, 0 < t < tmax can take density from: bit i of .mask = the segment meets domain i's OCCUPIED box (a domain whose full box it crosses but
- *  whose smoke it cannot reach is left out — every sample it would take there is exactly +0, and +0 added to the running sum is the identity); .tEnter / .tExit = the segment's
- *  hull over the FULL boxes it crosses, exactly as smokeTransmittance always laid its sample lattice — the same eight points whether or not a domain drops out of the mask. So the
- *  masked walk below returns the old estimator's value to the bit (0 disagreements in 50 M random segments, docs/internal/smoke-perf.md §2.1b) minus the visits that added +0:
- *  the direct pass 5.8 → 4.7 ms with eight plumes live, and flat in the domain count where it grew 0.27 ms a box. */
-struct SmokeSpan { mask: u32, tEnter: f32, tExit: f32 };
-fn smokeSegment(ro: vec3f, rd: vec3f, tmax: f32) -> SmokeSpan {
-  var sp: SmokeSpan; sp.mask = 0u; sp.tEnter = 1e30; sp.tExit = -1e30;
-  let invRd = safeInv(rd);
-  for (var i = 0u; i < frame.numSmoke; i++) {
-    let sd = smoke[i];
-    if (sd.live == 0u) { continue; }
-    let tb = isectBounds(ro, invRd, sd.origin, sd.origin + sd.voxel * vec3f(sd.dims));
-    if (tb.x <= tb.y && tb.y > 0.0 && tb.x < tmax) {
-      sp.tEnter = min(sp.tEnter, max(tb.x, 0.0)); sp.tExit = max(sp.tExit, min(tb.y, tmax));
-      let sl = smokeSubLo(i, sd); let sh = smokeSubHi(i, sd);
-      let ts = isectBounds(ro, invRd, sl, sh);
-      if (all(sl < sh) && ts.x <= ts.y && ts.y > 0.0 && ts.x < tmax) { sp.mask |= 1u << i; }   // (sl ≥ sh on an axis = no brick of it set: nothing to take)
-    }
-  }
-  return sp;
-}
-/** A domain's four side faces and its top are OPEN: smoke that spreads or rises that far is simply not simulated beyond them, so the field ENDS on those planes — and a
- *  plume driven along the floor (under a desk, by a vent) showed that end as a straight dark edge across the carpet (the designer, 08-12: 'weird artifact when
- *  throwing smoke under table'). Every reader eases the density to nothing over the outer SMOKE_EDGE of the box toward those five faces (the closed floor keeps its
- *  smoke): the plume thins out where the simulation stops instead of being cut. One function for the march, the shadow rays, the froxels and the guards' probe. */
-const SMOKE_EDGE: f32 = 0.11;   // (0.11 of the box a side ≈ 7 voxels: at 0.075 the eased edge of a plume piled against the face still read as a soft straight line)
-fn smokeEdgeFade(l: vec3f, floorClosed: bool) -> f32 {
-  let e = smoothstep(vec3f(0.0), vec3f(SMOKE_EDGE), l) * smoothstep(vec3f(0.0), vec3f(SMOKE_EDGE), vec3f(1.0) - l);
-  return e.x * e.z * smoothstep(0.0, SMOKE_EDGE, 1.0 - l.y) * select(e.y / max(smoothstep(0.0, SMOKE_EDGE, 1.0 - l.y), 1e-4), 1.0, floorClosed);   // (e.y = bottom ease × top ease: ÷ the top ease leaves the bottom's alone)
-}
-fn smokeDensityAt(p: vec3f) -> f32 {
-  var d = 0.0;
-  let skipEmpty = (frame.flags & FLAG_SMOKE_RSKIP) != 0u;
-  for (var i = 0u; i < frame.numSmoke; i++) {
-    let sd = smoke[i];
-    if (sd.live == 0u) { continue; }
-    let l = (p - sd.origin) / (sd.voxel * vec3f(sd.dims));
-    if (any(l <= vec3f(0.0)) || any(l >= vec3f(1.0))) { continue; }
-    let tex = clamp(l * vec3f(sd.dims), vec3f(0.5), vec3f(sd.dims) - 0.5);
-    if (skipEmpty && !smokeMayHold(i, tex, sd.dims)) { continue; }   // every texel the fetch could weight is zero: it would add exactly +0 (lossless skip, flag 32768)
-    let atlasSize = vec3f(textureDimensions(smokeAtlas));
-    let uvw = (vec3f(sd.atlasOffset) + tex) / atlasSize;
-    d += textureSampleLevel(smokeAtlas, linSamp, uvw, 0.0).x * sd.densityScale * smokeEdgeFade(l, sd.floorClosed != 0u);
-  }
-  return d;
-}
-/** Density at p summed over the domains in `mask` only — the exact MASKED form of smokeDensityAt for callers that have proved no other live domain can hold p (smokeSegment above;
- *  the volumetric march's own masks in vol_common.wgsl): the very fetch smokeDensityAt takes, in the same ascending domain order, minus the box tests of domains kilometres of
- *  corridor away — with eight domains live the unmasked loop spent most of a sample testing boxes that could not hold it */
-fn smokeDensityIn(p: vec3f, mask: u32) -> f32 {
-  var d = 0.0;
-  let skipEmpty = (frame.flags & FLAG_SMOKE_RSKIP) != 0u;
-  var m = mask;
-  while (m != 0u) {
-    let i = countTrailingZeros(m); m &= m - 1u;
-    let sd = smoke[i];
-    let l = (p - sd.origin) / (sd.voxel * vec3f(sd.dims));
-    if (any(l <= vec3f(0.0)) || any(l >= vec3f(1.0))) { continue; }
-    let tex = clamp(l * vec3f(sd.dims), vec3f(0.5), vec3f(sd.dims) - 0.5);
-    if (skipEmpty && !smokeMayHold(i, tex, sd.dims)) { continue; }   // (the same lossless brick skip smokeDensityAt takes)
-    let atlasSize = vec3f(textureDimensions(smokeAtlas));
-    d += textureSampleLevel(smokeAtlas, linSamp, (vec3f(sd.atlasOffset) + tex) / atlasSize, 0.0).x * sd.densityScale * smokeEdgeFade(l, sd.floorClosed != 0u);
-  }
-  return d;
-}
-/** the sample count a SHADOW ray takes through the smoke it crosses: frame.volCfg.w = settings.smokeShadowSteps (0 = the eight it always took; docs/internal/smoke-perf.md §4 has what 6 / 4 cost and look like) */
-fn smokeShadowSteps() -> f32 { let n = frame.volCfg.w & 15u; return select(f32(n), 8.0, n == 0u); }
-/** Transmittance of the smoke along ro + t·rd, 0 < t < tmax, with `steps` samples: the domains the segment can take density from (smokeSegment: only those whose OCCUPIED box it meets are
- *  ever visited — a shadow ray across the empty half of a plume's box, or toward a lamp the far side of some other plume's box, samples nothing), then `steps` samples of their summed
- *  density over the hull of the crossed boxes. At 8 steps this is the estimator every consumer always ran, bit for bit, minus the visits that added +0. */
-fn smokeTransmittanceN(ro: vec3f, rd: vec3f, tmax: f32, steps: f32) -> f32 {
-  if (frame.numSmoke == 0u || (frame.flags & FLAG_SMOKE_SHADOWS) == 0u) { return 1.0; }
-  let sp = smokeSegment(ro, rd, tmax);
-  if (sp.tExit <= sp.tEnter || sp.mask == 0u) { return 1.0; }   // (crosses no box, or only boxes whose smoke it cannot reach: every sample would add exactly +0, exp(−0) = 1)
-  let dt = (sp.tExit - sp.tEnter) / steps;
-  var od = 0.0;
-  for (var s = 0.5; s < steps; s += 1.0) { od += smokeDensityIn(ro + rd * (sp.tEnter + s * dt), sp.mask); }   // (a branch-free single-domain form of this loop measured +0.2 ms and last-bit different: docs/internal/smoke-perf.md §2.6)
-  return exp(-od * dt * 6.0);
-}
-/** the shadow-ray transmittance every light consumer asks for (direct pass, gather / reflection / card / probe hits): the frame's sample count */
-fn smokeTransmittance(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmittanceN(ro, rd, tmax, smokeShadowSteps()); }
+// ---- smoke: every read of the density (the volumetric march + self-shadow, shadow-ray / beam / probe transmittance) is shaders/smoke_read.wgsl, which the scene prelude puts behind this file ----
 
 // ---- analytic lights ----
 // Light.kind packs flags above the low byte: bit 8 = transient (muzzle flash etc.: kept out of every accumulated signal), bit 9 = broad emitter class.
@@ -908,6 +956,84 @@ const LIGHT_TRANSIENT: u32 = 256u;
 const LIGHT_BROAD: u32 = 512u;
 const MAX_BLUR_PX: f32 = 32.0;   // encoding scale of the direct-light blur hint (|S.a| = px / MAX_BLUR_PX, clamped to 1); the live cap is frame.directCfg.z
 fn lightKind(li: Light) -> u32 { return li.kind & 255u; }
+// THE FOG OF WAR'S LIGHT CLASSES (game/fogofwar.ts rule 4g, lights.ts RtLight.fog — no bit on any light while the rule is off): a light with LIGHT_FOG_SEEN lights
+// only what the team sees (a torch, a weapon light, a flash in a room nobody watches is not in the picture of that room, and still falls on floor the team does
+// see); one with LIGHT_FOG_UNSEEN lights only what it does not (a lamp put out where nobody looked, still lit in the picture of that room until somebody looks).
+const LIGHT_FOG_SEEN: u32 = 0x2000000u;
+const LIGHT_FOG_UNSEEN: u32 = 0x4000000u;
+// AN INFRARED LIGHT (lights.ts LIGHT_IR; game/irlight.ts: the illuminators on the goggles): a light only the intensifier tube sees by. It is in the list only on a
+// frame whose picture is the tube's, and every pass of the picture takes it as a steady light like any other (evalLight; the engine restarts the screen
+// histories the frame the tube comes off). The game's own readings never do: evalLightTrue gives nothing for it, and directIrradiance (the cascades the light meter reads its bounce from) skips it.
+const LIGHT_IR: u32 = 0x8000000u;
+const FOG_SIGHT_BINS: i32 = 2048;       // render/fogofwar.ts FOG_BINS (change both together)
+var<private> fogSeenKeyP: vec3f = vec3f(3e38); var<private> fogSeenKeyN: vec3f = vec3f(0.0); var<private> fogSeenVal: f32 = 1.0;   // the last spot asked and its answer: one spot is asked once however many lights fall on it
+fn fogSightD(k: i32, j: i32) -> f32 { let i = k * FOG_SIGHT_BINS + j; return fogSight.dist[i >> 2u][i & 3]; }
+/// one eye's say on the spot q (plan): .x = its weight (the cone: 1 inside, 0 outside, between across a soft edge; 2 = at the eye's own feet), .y = how far its
+/// ray must go to reach the spot, .z / .w = 1 where the table's ray on each side of the spot's bearing goes that far.
+fn fogEyeSay(k: i32, e: vec4f, q: vec2f, pad: f32) -> vec4f {
+  let to = q - e.xz; let d = length(to);
+  if (d <= pad + 0.02) { return vec4f(2.0, 0.0, 1.0, 1.0); }
+  let rd = to / d; let L = fogSight.looks[k]; let soft = fogSight.soft;
+  var w = 1.0;
+  if (L.z > -1.5 && d > L.w) {
+    let c = dot(rd, L.xy);
+    if (soft.x > soft.y) { w = smoothstep(soft.y, soft.x, c); } else if (c < L.z) { w = 0.0; }
+    if (soft.z > 0.0) { w = max(w, 1.0 - smoothstep(L.w, L.w + soft.z, d)); }
+  }
+  if (w <= 0.0) { return vec4f(0.0); }
+  let u = (atan2(rd.y, rd.x) / 6.283185307179586 + 0.5) * f32(FOG_SIGHT_BINS) - 0.5;
+  let j = i32(floor(u)); let need = d - pad;
+  return vec4f(w, need, select(0.0, 1.0, fogSightD(k, (j + FOG_SIGHT_BINS) % FOG_SIGHT_BINS) >= need), select(0.0, 1.0, fogSightD(k, (j + 1) % FOG_SIGHT_BINS) >= need));
+}
+/// How far the team sees the spot P (its normal N, or 0 for a point in the air): 1 = seen, 0 = not, between = across a cone's soft edge. THE FOG PASS'S OWN RULE
+/// (shaders/fogofwar.wgsl fowSeen: in plan, at each eye's height, the spot taken a hand off its face, a top face above the eye within topPad) answered from the
+/// sight table: what stands between an eye and a spot depends on the bearing alone, so where the table's rays either side of the spot's bearing AGREE (both go
+/// that far, or neither) that is the answer, and only where they differ — a sight edge, a wall seen along its length — is the fog pass's own ray walked. So the
+/// light a class cuts ends on the line the fog is drawn to. 1 while no table is written (the fog is not drawn either). Compute and fragment stages (the walk
+/// reads the grid); the vertex stage has fogSeenBins.
+fn fogSeenAt(P: vec3f, N: vec3f) -> f32 {
+  if (all(P == fogSeenKeyP) && all(N == fogSeenKeyN)) { return fogSeenVal; }
+  fogSeenKeyP = P; fogSeenKeyN = N; fogSeenVal = 1.0;
+  let cfg = fogSight.cfg;
+  if (cfg.y != 1.0) { return 1.0; }
+  let q = vec2f(P.x + N.x * 0.06, P.z + N.z * 0.06);
+  var best = 0.0;
+  for (var k = 0; k < i32(cfg.x); k++) {
+    let e = fogSight.eyes[k]; if (e.w < 0.5) { continue; }
+    let top = N.y > 0.5 && P.y > e.y - 0.05;
+    let say = fogEyeSay(k, e, q, select(0.06, max(cfg.z, 0.06), top));
+    if (say.x > 1.5) { best = 1.0; break; }
+    if (say.x <= best) { continue; }
+    var clear = say.z > 0.5;
+    if (say.z != say.w) { let to = q - e.xz; clear = occludedTBoxes(e.xyz, vec3f(to.x, 0.0, to.y) / max(length(to), 1e-6), say.y, u32(e.w + 0.5), -1.0) < 0.0; }
+    if (clear) { best = say.x; if (best >= 1.0) { break; } }
+  }
+  fogSeenVal = best;
+  return best;
+}
+/// fogSeenAt for a point in the air, from the table alone (no walk: the vertex stage does not see the grid) — seen where either ray beside its bearing goes that far
+fn fogSeenBins(P: vec3f) -> f32 {
+  let cfg = fogSight.cfg;
+  if (cfg.y != 1.0) { return 1.0; }
+  var best = 0.0;
+  for (var k = 0; k < i32(cfg.x); k++) {
+    let e = fogSight.eyes[k]; if (e.w < 0.5) { continue; }
+    let say = fogEyeSay(k, e, P.xz, 0.06);
+    if (say.x > 1.5) { return 1.0; }
+    if (say.z + say.w > 0.5) { best = max(best, say.x); }
+  }
+  return best;
+}
+/// what is left of light `li` at the spot P under the fog's light classes: 1 for a light with no fog bit (every light while the rule is off)
+// (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this: smoke over floor nobody on the team sees is not in the
+// picture. Shadow rays and the game's readings take the smoke as it is.)
+fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
+fn lightFogK(li: Light, P: vec3f, N: vec3f) -> f32 {
+  let fc = li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN);
+  if (fc == 0u) { return 1.0; }
+  let s = fogSeenAt(P, N);
+  return select(1.0 - s, s, (fc & LIGHT_FOG_SEEN) != 0u);
+}
 fn lightTransient(li: Light) -> bool { return (li.kind & LIGHT_TRANSIENT) != 0u; }
 fn lightBroad(li: Light) -> bool { return (li.kind & LIGHT_BROAD) != 0u; }
 /** the emissive MARKING an area light stands for (lights.ts RtLight.markRef: box index << 2 | ordinal), −1 = an ordinary light */
@@ -936,7 +1062,23 @@ fn lightReaches(slot: u32, P: vec3f) -> bool { return lightReachLevel(slot, P) !
 /** ranking weight for a reach level: a light seen from a sliver of the cell competes for leader slots at a quarter of its score */
 fn reachRankWeight(lv: u32) -> f32 { return select(select(0.25, 0.6, lv == 2u), 1.0, lv >= 3u); }
 
+/// evalLight as the PICTURE takes it: the light's irradiance under the fog's light classes (lightFogK — a torch nobody on the team sees the spot of gives nothing
+/// there). Every pass of the picture asks this one; the game's own readings (probe.wgsl: the light meter, the guards' eyes) ask evalLightTrue.
 fn evalLight(li: Light, P: vec3f, N: vec3f) -> LightEval {
+  var r = evalLightRaw(li, P, N);
+  if (r.ok && (li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u) {
+    let k = lightFogK(li, P, N);
+    if (k <= 0.002) { r.ok = false; r.E = vec3f(0.0); } else { r.E *= k; }
+  }
+  return r;
+}
+/// the light as it IS (the fog's classes not asked): what the game's own readings take. A light that exists only in the fog's picture (LIGHT_FOG_UNSEEN: a lamp
+/// remembered lit) is no light here.
+fn evalLightTrue(li: Light, P: vec3f, N: vec3f) -> LightEval {
+  if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { var r: LightEval; r.ok = false; r.E = vec3f(0.0); return r; }   // (… and an infrared light is no light to a bare eye, a camera or the meter)
+  return evalLightRaw(li, P, N);
+}
+fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
   var r: LightEval; r.ok = false; r.E = vec3f(0.0);
   let kind = lightKind(li);
   if (kind == 2u) {
@@ -972,6 +1114,7 @@ fn directIrradiance(P: vec3f, N: vec3f, skipOwner: u32, minE: f32, includeTransi
   for (var i = 0u; i < frame.numLights; i++) {
     let li = lights[i];
     if (!includeTransient && lightTransient(li)) { continue; }
+    if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { continue; }   // (an infrared light likewise, whatever includeTransient says)   // a lamp that is lit only in the fog's picture (lights.ts RtLight.fogGhost) gives the cascades nothing: the game's light meter reads its bounce from them, and must never read a light that is not there
     if (!lightReaches(i, P)) { continue; }   // walled off from this cell (reach.ts): neither scored nor traced
     let ev = evalLight(li, P, N);
     if (!ev.ok) { continue; }
@@ -997,35 +1140,135 @@ fn onCard(x: vec3f, nx: vec3f, c0: vec4f, c1: vec4f) -> bool {
 // ---- glass panes (FLAG_GLASS): analytic tests against SceneInfo.glass — the panes live in no traced structure, so every traced ray in the frame passes
 // them for free; the three places that care (composite: what the eye sees through / in a pane; fgather: the mirror ray off it; direct: light that crossed
 // one) ask here. A pane is a thin yawed box: (centre, cos yaw), (half, sin yaw), (tint, box index). ≤ MAX_GLASS slab tests on uniform data per call.
-// ---- GLASS BREAKING (game/glassbreak.ts; only ever CALLED inside `if (GLASS_BREAK)` blocks — the prelude const, false = the module as it was): per SceneInfo.glass
-// slot k a record of GB_STRIDE vec4 rows in boxMat's tail after the marking table (GB_BASE, generated into the prelude by render/frame.ts; boxes.ts packGlass ←
-// glassCellFill): row 0 = (impact count n ≤ 16, the DROPPED-cell mask as an exact integer, u axis: 0 = the pane's local x spans it / 1 = local z, damage 0‥1),
-// row 1 = (hu, hv, type, 0), rows 2‥9 = the impact points in pane-local (u, v) metres two a row, rows 10‥13 = their energies four a row. The cells are the VORONOI
-// cells of the impacts: a point on the pane belongs to its nearest impact, and a cell whose bit is set has fallen out — every ray then passes that part of the pane
-// as if no glass were there (view, mirror, light), which is the hole; the CPU's raycast / segment tests ask glassbreak.ts openAt, the same nearest-site rule.
-const GB_STRIDE: u32 = 14u;
-struct GbCell { idx: i32, d1: f32, edge: f32, open: bool, n: u32, p1: vec2f, e1: f32 };   // nearest impact (−1 = a whole pane), distance to it, distance to the nearest Voronoi EDGE (m), whether that cell is out, count, the site, its energy
-fn gbHeader(k: u32) -> vec4f { return boxMat[GB_BASE + k * GB_STRIDE]; }
-fn gbSite(k: u32, i: u32) -> vec2f { let row = boxMat[GB_BASE + k * GB_STRIDE + 2u + (i >> 1u)]; return select(row.xy, row.zw, (i & 1u) == 1u); }
-fn gbEnergy(k: u32, i: u32) -> f32 { return boxMat[GB_BASE + k * GB_STRIDE + 10u + (i >> 2u)][i & 3u]; }
-/** pane-local point (glassTrace's frame: Rᵀ·(X − c)) → the cell table's (u, v) */
+// ---- GLASS BREAKING (game/glassbreak.ts + game/glassPattern.ts; only ever CALLED inside `if (GLASS_BREAK)` blocks — the prelude const, false = the module as it was): per
+// SceneInfo.glass slot k a record of GB_STRIDE vec4 rows in boxMat's tail after the marking table (GB_BASE, generated into the prelude by render/frame.ts; boxes.ts packGlass ←
+// glassbreak.ts fill(), the layout's one writer): row 0 = (site count n ≤ 8, flags: 1 something is open · 2 the pane has RUN · 4 dicing · 8 gone · 16 web, u axis: 0 = the
+// pane's local x spans it / 1 = local z, damage 0‥1), row 1 = (hu, hv, type, 0), row 2 = the dice wave (the blow's u, v, the open threshold on a clump's key, grain), row 3 = (dice cols, rows, seed, 0),
+// then 4 rows per site: (u, v, rot, ring-zone radius) · (radials, 24-bit seed, energy, merge share) · the four rho · the open-piece masks (bands 0 | 1 << 12, 2 | 3 << 12,
+// 4 | 5 << 12, 6). The functions below are glassPattern.ts's statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
+// s+1; band 0 the crater, 1‥2 the ring pieces between the chords, 3‥6 the daggers: near / far of the sector's left and right half), territories are the power diagram of the
+// sites — and a piece whose bit is set has fallen out: every ray then passes that part of the pane as if no glass were there (view, mirror, light), which is the hole; the CPU's
+// raycast / segment tests ask glassbreak.ts openAt, the same rule. A DICING tempered pane (flag 4) opens by clumps instead: the cells of a jittered lattice (gbClumpKey).
+const GB_STRIDE: u32 = 36u;
+const GB_HDR: u32 = 4u;
+const GP_ANG_JIT: f32 = 0.6;
+const GP_RHO_LO: f32 = 0.78;
+const GP_RHO_SPAN: f32 = 0.44;
+const GP_SPLIT_LO: f32 = 0.35;
+const GP_SPLIT_SPAN: f32 = 0.3;
+const GP_CUT_NONE: f32 = 0.45;
+const GP_CUT_LO: f32 = 0.9;
+const GP_CUT_SPAN: f32 = 1.0;
+const GP_CUT_TILT: f32 = 0.9;
+const GP_C2_DRAWN: f32 = 0.45;
+const GP_WEB_RING: f32 = 0.45;
+const GP_DICE_JIT: f32 = 0.6;
+const GP_DICE_DELAY: f32 = 1.4;
+const GP_TAU: f32 = 6.283185307179586;
+struct GbSite { c: vec2f, rot: f32, rz: f32, n: u32, seed: u32, e: f32, merge: f32, rho: vec4f, m: vec4f };
+fn gbRow(k: u32, r: u32) -> vec4f { return boxMat[GB_BASE + k * GB_STRIDE + r]; }
+fn gbHeader(k: u32) -> vec4f { return gbRow(k, 0u); }
+fn gbSiteLoad(k: u32, i: u32) -> GbSite {
+  let o = GB_HDR + i * 4u; let a = gbRow(k, o); let b = gbRow(k, o + 1u);
+  var S: GbSite; S.c = a.xy; S.rot = a.z; S.rz = a.w; S.n = clamp(u32(b.x + 0.5), 3u, 12u); S.seed = u32(b.y); S.e = b.z; S.merge = b.w; S.rho = gbRow(k, o + 2u); S.m = gbRow(k, o + 3u);
+  return S;
+}
+/** glassPattern.ts gpHash: (seed, a, b) → 24 bits */
+fn gpHash(seed: u32, a: u32, b: u32) -> u32 {
+  var h = seed ^ ((a + 1u) * 0x9E3779B1u) ^ ((b + 1u) * 0x85EBCA77u);
+  h = (h ^ (h >> 15u)) * 0x2C1B3C6Du;
+  h = (h ^ (h >> 12u)) * 0x297A2D39u;
+  return (h ^ (h >> 15u)) >> 8u;
+}
+fn gpJit(seed: u32, a: u32, b: u32) -> f32 { return f32(gpHash(seed, a, b)) / 16777216.0; }
+fn gpWrap(k: i32, n: u32) -> u32 { return u32(k + i32(n)) % n; }   // (k in −1 ‥ n)
+/** where radial k sits, in sectors */
+fn gpBound(S: GbSite, k: i32) -> f32 { return f32(k) + GP_ANG_JIT * (gpJit(S.seed, gpWrap(k, S.n), 7u) - 0.5); }
+fn gpAngle(S: GbSite, k: i32) -> f32 { return S.rot + GP_TAU * gpBound(S, k) / f32(S.n); }
+fn gpRho(S: GbSite, k: i32, b: u32) -> f32 { return S.rho[b] * (GP_RHO_LO + GP_RHO_SPAN * gpJit(S.seed, gpWrap(k, S.n), b)); }
+fn gpChordPt(S: GbSite, k: i32, b: u32) -> vec2f { let a = gpAngle(S, k); return S.c + gpRho(S, k, b) * vec2f(cos(a), sin(a)); }
+/** past chord b of sector s (the side away from the site)? */
+fn gpBeyond(S: GbSite, s: i32, b: u32, uv: vec2f) -> bool { let A = gpChordPt(S, s, b); let B = gpChordPt(S, s + 1, b); return (B.x - A.x) * (uv.y - A.y) - (B.y - A.y) * (uv.x - A.x) < 0.0; }
+fn gpMerged(S: GbSite, s: u32) -> bool { return gpJit(S.seed, s, 21u) < S.merge; }
+/** where sector s's branch crack sits, in sectors */
+fn gpSplit(S: GbSite, s: i32) -> f32 { let b0 = gpBound(S, s); let b1 = gpBound(S, s + 1); return b0 + (b1 - b0) * (GP_SPLIT_LO + GP_SPLIT_SPAN * gpJit(S.seed, u32(s), 23u)); }
+/** the snap across half h of sector s: (point, unit normal away from the site); .z of the second = 0 when this dagger runs unbroken */
+struct GpCut { p: vec2f, n: vec2f, on: bool };
+fn gpCut(S: GbSite, s: i32, h: u32) -> GpCut {
+  var c: GpCut; c.on = !(gpJit(S.seed, u32(s), 27u + h) < GP_CUT_NONE); c.p = S.c; c.n = vec2f(1.0, 0.0);
+  if (!c.on) { return c; }
+  let sp = gpSplit(S, s); let mid = select((sp + gpBound(S, s + 1)) * 0.5, (gpBound(S, s) + sp) * 0.5, h == 0u);
+  let am = S.rot + GP_TAU * mid / f32(S.n); let rc = S.rho.w * (GP_CUT_LO + GP_CUT_SPAN * gpJit(S.seed, u32(s), 25u + h));
+  let an = am + (gpJit(S.seed, u32(s), 29u + h) - 0.5) * GP_CUT_TILT;
+  c.p = S.c + rc * vec2f(cos(am), sin(am)); c.n = vec2f(cos(an), sin(an));
+  return c;
+}
+/** the sector (.x) of pane point uv round site S and its position across the fan in sectors (.y) */
+fn gpSector(S: GbSite, uv: vec2f) -> vec2f {
+  let d = uv - S.c; let n = i32(S.n);
+  if (dot(d, d) < 1e-12) { return vec2f(0.0, max(0.0, gpBound(S, 0))); }
+  var t = (atan2(d.y, d.x) - S.rot) / GP_TAU; t = (t - floor(t)) * f32(n);
+  let s0 = min(n - 1, i32(floor(t)));
+  if (t < gpBound(S, s0)) { if (s0 == 0) { return vec2f(f32(n - 1), t + f32(n)); } return vec2f(f32(s0 - 1), t); }
+  if (t >= gpBound(S, s0 + 1)) { if (s0 == n - 1) { return vec2f(0.0, t - f32(n)); } return vec2f(f32(s0 + 1), t); }
+  return vec2f(f32(s0), t);
+}
+/** the sector (.x) and band (.y, 0‥6) of pane point uv round site S */
+fn gpSectorBand(S: GbSite, uv: vec2f) -> vec2u {
+  let st = gpSector(S, uv); let s = i32(st.x + 0.5); let su = u32(s);
+  if (!gpBeyond(S, s, 0u, uv)) { return vec2u(su, 0u); }
+  let merged = gpMerged(S, su);
+  if (!merged && !gpBeyond(S, s, 1u, uv)) { return vec2u(su, 1u); }
+  if (!gpBeyond(S, s, 2u, uv)) { return vec2u(su, select(2u, 1u, merged)); }
+  let h = select(0u, 1u, st.y >= gpSplit(S, s)); let c = gpCut(S, s, h);
+  return vec2u(su, select(3u, 5u, c.on && dot(c.n, uv - c.p) > 0.0) + h);
+}
+/** whose territory uv is in: the least power distance |p − c|² − rz² (n ≥ 1) */
+fn gbNearest(k: u32, n: u32, uv: vec2f) -> u32 {
+  var bi = 0u; var bd = 1e30;
+  for (var i = 0u; i < n; i++) { let a = gbRow(k, GB_HDR + i * 4u); let q = uv - a.xy; let d = dot(q, q) - a.w * a.w; if (d < bd) { bd = d; bi = i; } }
+  return bi;
+}
+/** is piece (sector s, band b) of site S out? */
+fn gbPieceOpen(S: GbSite, s: u32, b: u32) -> bool {
+  let w = u32(S.m[b >> 1u]);   // (packed integers are exact in f32; + 0.5 would round a 24-bit odd word up — markings.wgsl's rule)
+  return ((w >> (s + 12u * (b & 1u))) & 1u) == 1u;
+}
+/** pane-local point (glassTrace's frame: Rᵀ·(X − c)) → the record's (u, v) */
 fn gbUV(k: u32, lp: vec3f) -> vec2f { return select(vec2f(lp.x, lp.y), vec2f(lp.z, lp.y), gbHeader(k).z > 0.5); }
 fn gbLocal(k: u32, X: vec3f) -> vec3f { let p0 = scene.glass[k * 3u]; let p1 = scene.glass[k * 3u + 1u]; let p = X - p0.xyz; return vec3f(p0.w * p.x - p1.w * p.z, p.y, p1.w * p.x + p0.w * p.z); }
-fn gbCell(k: u32, uv: vec2f) -> GbCell {
-  var r: GbCell; r.idx = -1; r.d1 = 1e9; r.edge = 1e9; r.open = false; r.e1 = 0.0;
-  let h = gbHeader(k); let n = min(u32(h.x + 0.5), 16u); r.n = n;
-  if (n == 0u) { return r; }
-  var d2 = 1e9; var p2 = vec2f(0.0);
-  for (var i = 0u; i < n; i++) {
-    let p = gbSite(k, i); let d = distance(uv, p);
-    if (d < r.d1) { d2 = r.d1; p2 = r.p1; r.d1 = d; r.p1 = p; r.idx = i32(i); } else if (d < d2) { d2 = d; p2 = p; }
-  }
-  if (n >= 2u) { r.edge = (d2 * d2 - r.d1 * r.d1) / max(2.0 * distance(r.p1, p2), 1e-4); }   // perpendicular distance to the bisector of the two nearest sites = to this cell's nearest edge
-  let mask = u32(h.y + 0.5); r.open = ((mask >> u32(r.idx)) & 1u) == 1u; r.e1 = gbEnergy(k, u32(r.idx));
-  return r;
+/** the centre of dice clump (c, r) of pane k (glassPattern.ts gpDiceCentre): its lattice cell's centre, jittered */
+fn gbClumpCentre(hh: vec2f, g: vec2f, seed: u32, c: u32, r: u32) -> vec2f {
+  return -hh + (vec2f(f32(c), f32(r)) + 0.5 + GP_DICE_JIT * (vec2f(gpJit(seed, c, r), gpJit(seed ^ 0x5bd1e9u, c, r)) - 0.5)) * 2.0 * hh / g;
 }
-/** has the part of pane k at local point lp fallen out? (a whole pane — no dropped bit — answers in one fetch) */
-fn glassCellOpen(k: u32, lp: vec3f) -> bool { let h = gbHeader(k); if (h.y < 0.5) { return false; } return gbCell(k, gbUV(k, lp)).open; }
+/** the order key of the dice clump holding uv (gpDiceClump + gpDiceKey): the nearest jittered centre among the 3 × 3 cells round uv's own, then metres from the blow to it + its hashed delay */
+fn gbClumpKey(k: u32, uv: vec2f) -> f32 {
+  let hh = gbRow(k, 1u).xy; let d3 = gbRow(k, 3u); let g = max(d3.xy, vec2f(1.0)); let seed = u32(d3.z); let blow = gbRow(k, 2u).xy;
+  let c0 = vec2i(clamp(floor((uv + hh) / (2.0 * hh) * g), vec2f(0.0), g - 1.0)); let gi = vec2i(g + 0.5);
+  var best = vec2u(c0); var bp = vec2f(0.0); var bd = 1e30;
+  for (var r = max(0, c0.y - 1); r <= min(gi.y - 1, c0.y + 1); r++) { for (var c = max(0, c0.x - 1); c <= min(gi.x - 1, c0.x + 1); c++) {
+    let p = gbClumpCentre(hh, g, seed, u32(c), u32(r)); let q = p - uv; let d = dot(q, q);
+    if (d < bd) { bd = d; best = vec2u(u32(c), u32(r)); bp = p; }
+  } }
+  let cell = min(2.0 * hh.x / g.x, 2.0 * hh.y / g.y);
+  return distance(bp, blow) + GP_DICE_DELAY * cell * gpJit(seed ^ 0x3c6ef3u, best.x, best.y);
+}
+/** has the glass of pane k at pane point uv fallen out? (flags = the header's) */
+fn gbOpenUV(k: u32, fl: u32, n: u32, uv: vec2f) -> bool {
+  if ((fl & 1u) == 0u) { return false; }
+  if ((fl & 8u) != 0u) { return true; }
+  if ((fl & 4u) != 0u) { return gbClumpKey(k, uv) < gbRow(k, 2u).z; }   // a tempered pane letting go: the clumps the wave has reached
+  if (n == 0u) { return false; }
+  let S = gbSiteLoad(k, gbNearest(k, n, uv)); let sb = gpSectorBand(S, uv);
+  if (sb.y >= 3u && (fl & 2u) == 0u) { return false; }   // the uncut sheet beyond the rings of a pane that has not run
+  return gbPieceOpen(S, sb.x, sb.y);
+}
+/** has the part of pane k at local point lp fallen out? (a whole pane — nothing open — answers in one fetch) */
+fn glassCellOpen(k: u32, lp: vec3f) -> bool {
+  let h = gbHeader(k); let fl = u32(h.y + 0.5);
+  if ((fl & 1u) == 0u) { return false; }
+  return gbOpenUV(k, fl, min(u32(h.x + 0.5), 8u), gbUV(k, lp));
+}
 struct GlassHit { t: f32, idx: i32, n: vec3f, tint: vec3f, trans: vec3f };   // nearest crossing in (tmin, tmax): distance, pane slot (−1 = none), the entered face's WORLD normal (toward the origin's side), that pane's tint; trans = product of the tints of EVERY pane crossed in range (1 = none) — two panes in line tint twice, reflect once
 fn glassCount() -> u32 { return select(0u, min(scene.glassInfo.x, MAX_GLASS), (frame.flags & FLAG_GLASS) != 0u); }
 fn glassTrace(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> GlassHit {

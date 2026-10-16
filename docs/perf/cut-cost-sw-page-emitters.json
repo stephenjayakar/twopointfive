@@ -1,0 +1,441 @@
+{
+ "when": "2026-10-09T00:19:42.598Z",
+ "on": true,
+ "adapter": "google swiftshader",
+ "preset": "high",
+ "res": "492×277 → 640×360",
+ "timer": true,
+ "rounds": 1,
+ "n": 2,
+ "warm": 1,
+ "cases": {
+  "blast": {
+   "counts": {
+    "on": true,
+    "boxes": 1179,
+    "statics": 800,
+    "dynamics": 379,
+    "cutStatics": 13,
+    "cutDynamics": 56,
+    "planes": 152,
+    "planesHist": "17 26 21 5 0 0 0 0",
+    "drawnPlain": 1028,
+    "drawnCut": 68,
+    "vertices": 42720,
+    "verticesIfPlain": 39456,
+    "cutBytesPerFrame": 8192,
+    "debris": 64,
+    "debrisCap": 64
+   },
+   "staged": {
+    "case": "blast",
+    "frames": 455,
+    "settleFrames": 0,
+    "blasts": [
+     {
+      "at": [
+       19.2,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 15
+     },
+     {
+      "at": [
+       21.6,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 4,
+      "pool": 26
+     },
+     {
+      "at": [
+       16.9,
+       0.3,
+       11.9
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 3,
+      "pool": 36
+     },
+     {
+      "at": [
+       23.6,
+       0.3,
+       10.3
+      ],
+      "walls": 2,
+      "cover": 0,
+      "opened": 6,
+      "pool": 49
+     },
+     {
+      "at": [
+       15.2,
+       0.3,
+       10.3
+      ],
+      "walls": 1,
+      "cover": 0,
+      "opened": 2,
+      "pool": 64
+     }
+    ],
+    "peak": 64,
+    "peakMoving": 18,
+    "full": true,
+    "pieces": 64,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "chunk": 64
+    },
+    "piecesCut": 56,
+    "piecePlanes": 113,
+    "glassPlates": 0,
+    "statics": 800,
+    "staticsCut": 13,
+    "staticPlanes": 39,
+    "dynBoxes": 379,
+    "dynCut": 56,
+    "dynPlanes": 113,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 69,
+    "planes": 152,
+    "planesHist": {
+     "1": 17,
+     "2": 26,
+     "3": 21,
+     "4": 5
+    },
+    "cutRowsDynRange": 64,
+    "cutBytesPerFrame": 8192,
+    "debrisStats": {
+     "spawned": 70,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 37,
+     "peakLive": 64,
+     "peakMoving": 18,
+     "kicked": 29
+    }
+   },
+   "census": {
+    "cutBoxes": 68,
+    "cutDrawn": 68,
+    "lights": 34,
+    "pixels": 3600,
+    "showCutShare": 0.3506,
+    "primary": {
+     "rays": 3600,
+     "share": 0.3767,
+     "testsPerRay": 0.3867,
+     "planesPerRay": 0.9792
+    },
+    "shadow": {
+     "rays": 80783,
+     "share": 0.1378,
+     "testsPerRay": 0.1457,
+     "planesPerRay": 0.3831
+    },
+    "gather": {
+     "rays": 14400,
+     "share": 0.1301,
+     "testsPerRay": 0.1356,
+     "planesPerRay": 0.3682
+    }
+   },
+   "configs": {
+    "cut": {
+     "n": 2,
+     "union": 2622.83,
+     "unionLo": 2518.949,
+     "unionHi": 2622.83,
+     "wall": 14465.5,
+     "wallLo": 13665.4,
+     "wallHi": 14465.5,
+     "sum": 2622.83,
+     "passes": {
+      "mesh": 80.934,
+      "gbuffer": 649.787,
+      "rc c3": 369.343,
+      "rc c2": 754.171,
+      "rc c0": 481.058,
+      "rc dice": 1.209,
+      "particles": 32.225,
+      "softblur": 342.168,
+      "temporal": 56.571,
+      "reflect": 424.964,
+      "rdenoise": 44.026,
+      "gbaa": 12.495,
+      "taau": 69.846,
+      "bloom": 17.059,
+      "post": 20.369,
+      "fxaa": 17.324
+     }
+    },
+    "plain": {
+     "n": 2,
+     "union": 2909.151,
+     "unionLo": 2850.268,
+     "unionHi": 2909.151,
+     "wall": 14456.7,
+     "wallLo": 14385.4,
+     "wallHi": 14456.7,
+     "sum": 2909.151,
+     "passes": {
+      "mesh": 77.718,
+      "gbuffer": 623.785,
+      "rc c3": 479.604,
+      "rc c2": 886.595,
+      "rc c0": 628.308,
+      "rc dice": 1.345,
+      "particles": 40.205,
+      "softblur": 320.522,
+      "temporal": 39.854,
+      "reflect": 397.321,
+      "rdenoise": 46.205,
+      "gbaa": 12.279,
+      "taau": 74.04,
+      "bloom": 16.708,
+      "post": 18.729,
+      "fxaa": 16.687
+     }
+    }
+   }
+  },
+  "glass": {
+   "counts": {
+    "on": true,
+    "boxes": 1134,
+    "statics": 782,
+    "dynamics": 352,
+    "cutStatics": 0,
+    "cutDynamics": 37,
+    "planes": 154,
+    "planesHist": "0 0 3 27 5 2 0 0",
+    "drawnPlain": 1031,
+    "drawnCut": 37,
+    "vertices": 40224,
+    "verticesIfPlain": 38448,
+    "cutBytesPerFrame": 4736,
+    "debris": 37,
+    "debrisCap": 64
+   },
+   "staged": {
+    "case": "glass",
+    "frames": 541,
+    "settleFrames": 62,
+    "rounds": 79,
+    "panes": [
+     109,
+     110,
+     111,
+     112
+    ],
+    "open": {
+     "109": 0.76,
+     "110": 0.7,
+     "111": 0.7,
+     "112": 0.71
+    },
+    "peak": 38,
+    "peakMoving": 38,
+    "pieces": 37,
+    "cap": 64,
+    "moving": 0,
+    "kinds": {
+     "shard": 37
+    },
+    "piecesCut": 37,
+    "piecePlanes": 154,
+    "glassPlates": 37,
+    "statics": 782,
+    "staticsCut": 0,
+    "staticPlanes": 0,
+    "dynBoxes": 352,
+    "dynCut": 37,
+    "dynPlanes": 154,
+    "dynCutNotInPool": 0,
+    "cutBoxes": 37,
+    "planes": 154,
+    "planesHist": {
+     "3": 3,
+     "4": 27,
+     "5": 5,
+     "6": 2
+    },
+    "cutRowsDynRange": 37,
+    "cutBytesPerFrame": 4736,
+    "debrisStats": {
+     "spawned": 216,
+     "refused": 0,
+     "evicted": 0,
+     "landed": 183,
+     "peakLive": 64,
+     "peakMoving": 38,
+     "kicked": 29
+    }
+   },
+   "census": {
+    "cutBoxes": 0,
+    "cutDrawn": 37,
+    "lights": 34,
+    "pixels": 3600,
+    "showCutShare": 0.0022,
+    "primary": {
+     "rays": 3600,
+     "share": 0.0025,
+     "testsPerRay": 0.0025,
+     "planesPerRay": 0.0103
+    },
+    "shadow": {
+     "rays": 55551,
+     "share": 0,
+     "testsPerRay": 0,
+     "planesPerRay": 0
+    },
+    "gather": {
+     "rays": 14400,
+     "share": 0,
+     "testsPerRay": 0,
+     "planesPerRay": 0
+    }
+   },
+   "configs": {
+    "cut": {
+     "n": 2,
+     "union": 2857.825,
+     "unionLo": 2511.755,
+     "unionHi": 2857.825,
+     "wall": 13972.3,
+     "wallLo": 13772.8,
+     "wallHi": 13972.3,
+     "sum": 2857.825,
+     "passes": {
+      "mesh": 71.843,
+      "gbuffer": 610.6,
+      "rc c3": 532.277,
+      "rc c2": 848.99,
+      "rc c0": 624.007,
+      "rc dice": 1.908,
+      "particles": 33.436,
+      "softblur": 350.913,
+      "temporal": 60.764,
+      "reflect": 230.703,
+      "rdenoise": 42.425,
+      "gbaa": 13.936,
+      "taau": 64.08,
+      "bloom": 16.171,
+      "post": 18.883,
+      "fxaa": 16.484
+     }
+    },
+    "plain": {
+     "n": 2,
+     "union": 2560.822,
+     "unionLo": 2515.784,
+     "unionHi": 2560.822,
+     "wall": 13593.3,
+     "wallLo": 13419.3,
+     "wallHi": 13593.3,
+     "sum": 2560.822,
+     "passes": {
+      "mesh": 77.033,
+      "gbuffer": 606.466,
+      "rc c3": 377.428,
+      "rc c2": 896.92,
+      "rc c0": 520.569,
+      "rc dice": 1.41,
+      "particles": 65.55,
+      "softblur": 307.373,
+      "temporal": 49.228,
+      "reflect": 193.086,
+      "rdenoise": 47.311,
+      "gbaa": 10.762,
+      "taau": 67.07,
+      "bloom": 17.711,
+      "post": 20.573,
+      "fxaa": 18.603
+     }
+    }
+   }
+  }
+ },
+ "secs": 199.1,
+ "table": [
+  {
+   "case": "blast",
+   "config": "cut",
+   "cut boxes": 69,
+   "planes": 152,
+   "union ms": "2622.83",
+   "IQR": "2518.95–2622.83",
+   "wall ms": "14465.50",
+   "Δ union vs plain/off": "-286.32 (-9.8 %)",
+   "Δ wall": "+8.80",
+   "direct": "—",
+   "gather": "—",
+   "reflect": "424.96",
+   "rc": "1605.78",
+   "gbuffer": "649.79"
+  },
+  {
+   "case": "blast",
+   "config": "plain",
+   "cut boxes": 0,
+   "planes": 0,
+   "union ms": "2909.15",
+   "IQR": "2850.27–2909.15",
+   "wall ms": "14456.70",
+   "Δ union vs plain/off": "",
+   "Δ wall": "",
+   "direct": "—",
+   "gather": "—",
+   "reflect": "397.32",
+   "rc": "1995.85",
+   "gbuffer": "623.78"
+  },
+  {
+   "case": "glass",
+   "config": "cut",
+   "cut boxes": 37,
+   "planes": 154,
+   "union ms": "2857.82",
+   "IQR": "2511.76–2857.82",
+   "wall ms": "13972.30",
+   "Δ union vs plain/off": "+297.00 (11.6 %)",
+   "Δ wall": "+379.00",
+   "direct": "—",
+   "gather": "—",
+   "reflect": "230.70",
+   "rc": "2007.18",
+   "gbuffer": "610.60"
+  },
+  {
+   "case": "glass",
+   "config": "plain",
+   "cut boxes": 0,
+   "planes": 0,
+   "union ms": "2560.82",
+   "IQR": "2515.78–2560.82",
+   "wall ms": "13593.30",
+   "Δ union vs plain/off": "",
+   "Δ wall": "",
+   "direct": "—",
+   "gather": "—",
+   "reflect": "193.09",
+   "rc": "1796.33",
+   "gbuffer": "606.47"
+  }
+ ],
+ "gpuErrors": [],
+ "consoleErrors": []
+}

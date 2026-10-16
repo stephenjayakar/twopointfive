@@ -1,4 +1,4 @@
-// THE renderer-v3 per-tier gate (the work log ('RENDERER V3 — PROGRAM')): on a `?paused&quality=<p>&mute` boot —
+// THE renderer-v3 per-tier gate (STATUS.md 'RENDERER V3 — OVERNIGHT PROGRAM'): on a `?paused&quality=<p>&mute` boot —
 //   await import('/qa/stress-scene.js'); await import('/qa/v3-gate.js'); JSON.stringify(await __v3gate.run({ fight: false }))
 // (1) stages the stress minute (__stress.setup), (2) a SERIALIZED take: 300 frames orbiting, per frame Σ compute AND the union of the compute passes'
 // GPU intervals (timer.unionMs) → mean/p50/p95/max, (3) a LIVE take: the rAF loop released for `liveSecs` with the orbit driven from a timer and the F9
