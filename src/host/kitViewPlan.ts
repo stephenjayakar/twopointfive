@@ -45,6 +45,8 @@ export const KIT_PLAN = {
   /** KIT_VIEW_STAGE: a wall man off the wall's FACE (its `off` 0.82 less the 12 cm half-wall it was measured on) · between men · the first man past the
    *  jamb · Sam off the face (1.2 less the same) · his turn onto the door · no nearer the anchor's middle than · what the records file's slots were laid at */
   offFace: 0.70, gap: 1.1, jamb: 0.45, samOffFace: 1.08, samTurnDeg: 35, samClear: 1.8, authored: 0.9,
+  /** a leaf's open stop where the door writes none (game/doors.ts: ±1.92 rad) */
+  leafStop: 1.92,
   /** the camera (KIT_VIEW_STAGE.yaw / pitch / dist / distPerM) */
   yaw: 1.206, pitch: 0.96, dist: 8.8, distPerM: 0.85,
   /** a man: the radius he is clear of a box by · no two men nearer than (twice KIT_VIEW_STAGE.body) · his feet, belt and head for the camera's lines */
@@ -59,8 +61,10 @@ export const KIT_PLAN = {
   nav: { cell: 0.5, r: 0.34, moved: 0.005, y0: 0.25, y1: 1.5, W: 80, H: 56, coarse: 1 },
   /** depths are walked this far at most (m), in steps of · a threshold's shut cells (the jambs' circles meet in a doorway) are passed over up to */
   reach: 20, step: 0.25, sill: 1.2,
-  /** a WALL box: no thicker across the anchor's line than · a COVER (a ceiling, a roof): its underside at least this high and its footprint this wide */
-  wallHalf: 0.6, coverY: 1.9, coverHalf: 0.5,
+  /** a WALL box: no thicker across the anchor's line than · a COVER (a ceiling, a roof): its underside at least this high and its footprint this wide ·
+   *  A WALL A MAN STACKS ON comes down to his shoulder at least (its underside below `wallFoot`: a header beam over an open gateway is no wall to stand
+   *  at; a window is one, by its pane or its sill) — or is another door of the level, on the line within `doorOn` across it (a lintel and a leaf: no box below the shoulder) */
+  wallHalf: 0.6, coverY: 1.9, coverHalf: 0.5, wallFoot: 1.5, doorOn: 0.15,
   /** THE LAMPS (KIT_VIEW_LIGHT): the porch lamp off the face, up, and no nearer the wall's top than · its box off the face and under the lamp · the
    *  fill out from the face and up, and no nearer the end of the free floor in front than · AT A GAP (no wall over the opening): the lamp and its box
    *  hang this far past the jamb onto the wall or post beside it (a hand's width: the box's half and a little; half of it where the post is that thin), and
@@ -117,7 +121,8 @@ export interface KitViewPlanned {
   pane: { box: string; index: number; at: Vec3; width: number; n: V2; stand: [number, number, number]; from: number; onWall: boolean; along: number } | null;
   /** boxes that stand between the camera and the men, the anchor or the floor they walk for a beat ('line'), with the rest of the thing each is a piece of
    *  ('part'), worked out — and everything out of the picture as indexes into `level.boxes`: the
-   *  way's `hide` / `hidePaint` — and, where the way writes no `hide`, the occluders less its `show` (an authored `hide` wins outright) */
+   *  way's `hide` / `hidePaint` / `hideMore` — and, where the way writes no `hide`, the occluders less its `show` (an authored `hide` wins outright;
+   *  `hideMore` is added to either) */
   occluders: { id: string; index: number; group: string; why: 'line' | 'part' }[]; hidden: number[];
   /** …and THE LOOSE PROPS that go with them, as indexes into `level.props`: a prop the way's `hide` names (its id, or the group it is of) — and, where the
    *  way writes no `hide`, a prop of a hidden box's group standing within `propNear` of that box (the chairs of a table that goes), less its `show` */
@@ -126,13 +131,19 @@ export interface KitViewPlanned {
    *  lamp and its glowing box (null: no wall to carry one), the fill. Over a door or a stretch of wall the porch lamp hangs at along 0; at a GAP on the
    *  jamb's wall at the stack's end of the opening (else the other end's), and with no wall tall enough at either end the light alone, overhead */
   lamps: { porch: { offset: Vec3; aim: Vec3; pos: Vec3; fixture: { at: Vec3; pos: Vec3 } | null }; fill: { offset: Vec3; aim: Vec3; pos: Vec3 } };
-  /** light groups with a lamp under the open sky: the yard's own, which a picture with the room lights out must leave lit ('exterior' is always left) —
+  /** light groups with a lamp under the open sky: the yard's own, which a picture with the room lights out must leave lit ('exterior' is always left;
+   *  BY DAY the way's own lamps among them are out all the same, lamp by lamp: kitPlanDayOut) —
    *  and, where the way writes `litInside`, the groups of the lamps that light the wedge behind the anchor (kitPlanLitInside); and the groups of
    *  the lamps the way adds (`add.lamps`) */
   keepLights: string[];
   /** the team stands under a roof (no weather on the men) · how many of the five places are */
   indoors: boolean; covered: number;
-  /** the camera's pin before the page's frame is applied */
+  /** THE CAMERA'S PIN, BEFORE THE PAGE'S FRAME — NOT the camera the page ends with: the child (host/kitView.ts aim()) keeps this yaw and pitch and then
+   *  slides the look point along the camera's right and the ground's forward and scales the distance, to seat the five places in the figure column of
+   *  whatever window it has (the parent's `frame` message and the view's aspect: the page's size, which no plan has). Worked through headless for three
+   *  real page sizes the camera ends 5 to 8 m from `pos` and a third further back (never measured on a page). So: `occluders` — and what goes for them —
+   *  is what stands in the PIN's lines to the men, the anchor and the stage's floor; do not ray-test from `pos` what the page shows or hides behind a wall.
+   *  On the ways measured the pin named a few boxes the slid camera's lines did not meet, never the reverse */
   cam: { look: Vec3; yaw: number; pitch: number; dist: number; pos: Vec3 };
   /** per value: written on the way, or measured here */
   src: Record<string, KitPlanSrc>;
@@ -167,6 +178,11 @@ function segBox(b: BoxData, p: Vec3, q: Vec3): boolean {
   return true;
 }
 
+/** UNDER A COVER: a box over the point (x, z) with its underside at `coverY` at least and no lower than `y` (a lamp's own height), `coverHalf` wide both
+ *  ways — a ceiling, a roof. What `keepLights` leaves out as a room's lamp, and what the day's photocell leaves burning (kitPlanDayOut). */
+export function kitPlanCovered(boxes: readonly BoxData[], x: number, z: number, y: number): boolean {
+  const K = KIT_PLAN; return boxes.some(b => b.c[1] - b.h[1] >= Math.max(K.coverY, y - 0.05) && Math.min(b.h[0], b.h[2]) >= K.coverHalf && gapTo(b, x, z) < 0.02);
+}
 /** THE FLOOR of a level's boxes, as the nav grid bakes it (see the head): built once per level, shared by its ways. `out` = boxes (indexes) that do not
  *  stand on it */
 export interface KitPlanFloor { /** the nav grid's answer for the cell (x, z) lies in */ blocked(x: number, z: number): boolean; /** the indexes of the boxes that stand between knee and shoulder */ solid: number[] }
@@ -244,6 +260,24 @@ export function kitPlanLitInside(lights: readonly LightData[], mid: V2, n: V2, b
   return lights.filter(l => l.kind !== 'dir' && dot([l.pos[0] - mid[0], l.pos[2] - mid[1]], n) < back && Math.hypot(l.pos[0] - w[0], l.pos[1] - w[1], l.pos[2] - w[2]) <= Math.min(l.range, K.litReach));
 }
 
+/** THE PORCH LAMP IS ON THE LEVEL'S PHOTOCELL (the child, where it hangs the lamps): how bright it burns. `lampsOut` = the hour has the level's outside
+ *  lamps out (game/hours.ts: an HourDef whose `lamps` is false — midday, the grey day; dawn, dusk and the night burn them). Under the open sky the lamp is
+ *  then at the way's `light.porch.day` — not written: 0, no lamp and no glowing box in full sun (a barracks picked by day opened with its porch lamp lit at
+ *  noon). A way under a roof (`indoors`: the plan's, or the way's own word) is as the game leaves indoors at every hour: `lit`, as written or as the table
+ *  has it. Pure: the hour is the caller's to ask. */
+export function kitPlanPorchLit(lit: number, day: number | undefined, indoors: boolean, lampsOut: boolean): number { return lampsOut && !indoors ? day ?? 0 : lit; }
+/** THE WAY'S OWN LAMPS: the lights of the set it stands on, or — a level's own way — the lamps it adds (`add.lamps`). Never a lamp of the level's. */
+export function kitPlanOwnLamps(block: Pick<KitViewData, 'sets'> | undefined, way: Pick<KitViewWayIn, 'add' | 'set'>): readonly LightData[] { return way.set !== undefined ? block?.sets?.[way.set]?.lights ?? [] : way.add?.lamps ?? []; }
+/** …AND THEY ARE ON THE SAME PHOTOCELL (the child, where it hangs the lamps): the ids of the way's own lamps that are OUT. At an hour with the level's
+ *  outside lamps out, on a way under the open sky: every own lamp that is no sun or moon, not of the group `exterior` (the game's own photocell has
+ *  those — game/hours.ts) and NOT UNDER A COVER (`boxes`: the set's, or the level's as built — a lamp with a ceiling over it is a room's, and the game
+ *  leaves rooms lit at every hour: kitPlanCovered, the test `keepLights` is measured by) — less the ones the way's `dayLights` names, by id or by group. A set's gate lamp was in the plan's `keepLights` (a lamp under
+ *  the open sky stays lit with the room lights out) and nothing took it out at noon: the lamp burned and its fixture box glowed in full sun. BY ID, never
+ *  by group: an added lamp may share a group with the level's own lamps, which the mission leaves as they are. Any other hour, or under a roof: none.
+ *  Pure: the hour is the caller's to ask; putting them out (the lamp and its fixture's glow together: the game's own light switch) is the child's. */
+export function kitPlanDayOut(own: readonly LightData[], boxes: readonly BoxData[], day: readonly string[] | undefined, indoors: boolean, lampsOut: boolean): string[] {
+  return lampsOut && !indoors ? own.filter(l => l.kind !== 'dir' && l.group !== 'exterior' && !kitPlanCovered(boxes, l.pos[0], l.pos[2], l.pos[1]) && !(day ?? []).some(nm => nm === l.id || nm === l.group)).map(l => l.id) : [];
+}
 /** A WAY'S OWN PIECES (its `add`: boxes and lamps in level coordinates, in the picture only) laid in AFTER the level's own — box i of the level is still box
  *  i, the added ones follow in the order written. BY ID, ONCE: the child plans from the records of the level the page BUILT, which carry them already
  *  (src/host/kitViewSet.ts kitViewAddLevel laid them in before the build; the validator holds their ids new to the level) — a record whose id the level
@@ -268,7 +302,13 @@ export function kitPlanGeometry(level: KitPlanLevel, block: Pick<KitViewData, 's
 export function kitViewPlanWay(level: KitPlanLevel, block: Pick<KitViewData, 'sets'> | undefined, way: KitViewWayIn, ref: V2, opts: KitPlanOpts = {}): KitViewPlanned & { set: string | null } {
   const G = kitPlanGeometry(level, block, way, ref);
   if (!G) { const p = kitViewPlan({ boxes: [], doors: [] }, way, ref); return { ...p, set: way.set ?? null, problems: [`no set '${way.set}' in the block's sets`] }; }
-  return { ...kitViewPlan(G.level, way, G.ref, G.set === null && G.level === level ? opts : {}), set: G.set };   // (a set has its own floor, and so has a level with a piece added: the level's is not handed on)
+  // (a set has its own floor, and so has a level with a piece added HERE: the level's `floor` is not handed on — NOR ITS `free`, on a set or under a piece
+  //  laid here: `free` answers before the floor does (kitViewPlan), and one made on the bare level put a man inside the added crate and said nothing —
+  //  the review, 10-16. The child does not come this way: kitPlanGeometry, then kitViewPlanChild with the game's own grid, which has the piece; and a
+  //  level that already carries it (`add.laid`: kitPlanAdd lays nothing) is the caller's own, every option kept. What the caller says of the way's `hide` (`hiddenStand`, `alsoHide`) is the way's, whatever
+  //  it is planned on: it was dropped with the floor)
+  const own = G.set === null && G.level === level, { floor: _f, free: _g, ...said } = opts;
+  return { ...kitViewPlan(G.level, way, G.ref, own ? opts : said), set: G.set };
 }
 
 /** how the problem "an occluder that is no thing was worked out" begins (kitViewPlan; kitViewPlanChild carries the first pass's across by it) */
@@ -295,9 +335,9 @@ export interface KitPlanOpts { floor?: KitPlanFloor; free?: (x: number, z: numbe
  *  wins). */
 export function kitViewPlan(level: KitPlanLevel, way: KitViewWayIn, ref: V2, opts: KitPlanOpts = {}): KitViewPlanned {
   const K = KIT_PLAN, B = level.boxes;
-  // (what the way HIDES is out of the picture, so out of the picture's floor: the records front's parked car. The game's own grid still holds a sunk box
+  // (what the way HIDES — its `hide`, its `hideMore` — is out of the picture, so out of the picture's floor: the records front's parked car. The game's own grid still holds a sunk box
   //  until the child rebakes it — `hiddenStand` plans on the floor as that grid has it)
-  const named = new Set([...(way.hide ?? []), ...(opts.alsoHide ?? [])]), sunk = new Set<number>(); if (!opts.hiddenStand) B.forEach((bx, i) => { if (named.has(bx.id) || (bx.group !== undefined && named.has(bx.group))) sunk.add(i); });
+  const hideMore = new Set(way.hideMore ?? []), named = new Set([...(way.hide ?? []), ...hideMore, ...(opts.alsoHide ?? [])]), sunk = new Set<number>(); if (!opts.hiddenStand) B.forEach((bx, i) => { if (named.has(bx.id) || (bx.group !== undefined && named.has(bx.group))) sunk.add(i); });
   const F = sunk.size ? kitPlanFloor(B, sunk) : opts.floor ?? kitPlanFloor(B), free = opts.free ?? ((x: number, z: number) => !F.blocked(x, z));
   const problems: string[] = [], src: Record<string, KitPlanSrc> = {};
   const say = <T>(key: string, authored: T | undefined, derive: () => T): T => { if (authored !== undefined) { src[key] = 'authored'; return authored; } src[key] = 'derived'; return derive(); };
@@ -305,7 +345,7 @@ export function kitViewPlan(level: KitPlanLevel, way: KitViewWayIn, ref: V2, opt
   const over = (x: number, z: number, list: readonly number[]) => list.filter(i => gapTo(B[i], x, z) < 0.02);
   const all = B.map((_, i) => i);
   const clear = (x: number, z: number, r: number) => F.solid.every(i => gapTo(B[i], x, z) >= r);
-  const covered = (x: number, z: number, y: number) => B.some(b => b.c[1] - b.h[1] >= Math.max(K.coverY, y - 0.05) && Math.min(b.h[0], b.h[2]) >= K.coverHalf && gapTo(b, x, z) < 0.02);
+  const covered = (x: number, z: number, y: number) => kitPlanCovered(B, x, z, y);
 
   // THE ANCHOR: a door's frame, or the span as written
   const D = way.door !== undefined ? level.doors.find(d => d.id === way.door) : undefined;
@@ -370,7 +410,24 @@ export function kitViewPlan(level: KitPlanLevel, way: KitViewWayIn, ref: V2, opt
     if (depth < face + K.man) why.push(depth < back ? 'on the far side of the wall' : 'inside the wall');
     for (let j = 0; j < i; j++) { const d = Math.hypot(p[0] - slots[j][0], p[1] - slots[j][1]), need = i >= 2 && i <= 3 && j === i - 1 ? K.gap - 0.01 : K.apart; if (d < need) why.push(`${r2(d)} m from place ${j} (${r2(need)} m at least)`); }
     if (why.length) problems.push(`place ${i} (${r2(p[0])}, ${r2(p[1])}): ${why.join(', ')}`); else fit++; });
+  const pastAt = problems.length;   // (A STACK MAN STANDS ON THE WALL HE STACKS ON — asked below, once what is out of the picture is known; said HERE, where it always was)
   if (got && stepped) problems.push(`no free floor for five in line: ${stepped} place${stepped === 1 ? '' : 's'} stepped over`);
+  // (A WRITTEN STACK PLACE AND THE DOOR ITSELF: the worked-out line starts `jamb` past the jamb and `offFace` off the wall — outside the leaf's sweep by
+  //  construction; a WRITTEN place is taken as it is, and could be put anywhere down to the leaf. Two things are said of places 1‥3 where the way writes
+  //  them: IN THE OPENING — past the jamb the wrong way, his feet before the doorway the stack stands BESIDE (a door or a gap) — and INSIDE THE LEAF'S
+  //  SWING — on the team's side, nearer the hinge than the leaf is wide and within the leaf's stop ON THAT SIDE of its shut line: the door opens onto
+  //  him. THE STOP IS THE TEAM'S SIDE'S OWN (doors.ts: angles of the sign of `into = n0 × swing`, n0 = the shut line turned a quarter left — `turn`
+  //  here is that sign for the team's side): the door's `maxAngle` where the team stands on the positive side, minus its `minAngle` on the other, else
+  //  doors.ts's 1.92 rad — never the wider of the two: a door that cannot open toward the team (`maxAngle: 0` on their side) or stops at a right angle
+  //  short of the place said "inside the leaf's swing" of a place the leaf never reaches (the review, 10-16). A door whose written `swing` is away
+  //  from the team is not asked; one with none is dealt its side by the game (an outside door toward the open air — toward a team in the yard), so it
+  //  is asked. PAST THE FAR JAMB — further the wrong way than the anchor is wide, on Sam's side of it — is said as that, not as "inside the opening".)
+  if (got && kind !== 'wall') { const near: V2 = side > 0 ? b : a, turn = D ? (n[0] * -t[1] + n[1] * t[0] >= 0 ? 1 : -1) : 0, stop = D ? (turn > 0 ? D.maxAngle ?? K.leafStop : -(D.minAngle ?? -K.leafStop)) : 0;
+    for (let i = 1; i <= 3; i++) { if (slotSrc[i] !== 'authored') continue; const p = slots[i], al = dot([p[0] - near[0], p[1] - near[1]], s), v: V2 = [p[0] - a[0], p[1] - a[1]], dh = Math.hypot(v[0], v[1]), o = dot(v, n);
+      if (al < -width) problems.push(`place ${i} (${r2(p[0])}, ${r2(p[1])}) is written ${r2(-al - width)} m PAST THE FAR JAMB, on Sam's side of the ${kind}: the stack stands on the other side of it, from ${K.jamb} m past its own jamb — move it across, or write the way's \`side\``);
+      else if (al < 0) problems.push(`place ${i} (${r2(p[0])}, ${r2(p[1])}) is written ${r2(-al)} m INSIDE the opening (past the jamb the wrong way): the stack stands beside the ${kind}, from ${K.jamb} m past its jamb — move it along the wall`);
+      else if (kind === 'door' && D && (D.swing === undefined || D.swing === turn) && stop > 0 && o > 0 && dh < width - 0.005 && Math.atan2(o, dot(v, t)) <= stop)
+        problems.push(`place ${i} (${r2(p[0])}, ${r2(p[1])}) is written inside the leaf's swing (${r2(dh)} m from the hinge of a ${r2(width)} m leaf${D.swing === undefined ? ', should it open toward the team' : ''}): the door opens onto him — move it out of the leaf's reach`); } }
   // (THE FOURTH MAN IS BEHIND SAM: the card switch — host/kitView.ts rotate() — walks him round Sam's yard side to his acting place by Sam's jamb and back, and
   //  never across the anchor. The worked-out place is always there; one WRITTEN nearer the anchor than Sam, or on the stack's side, is said)
   { const al = (i: number) => dot([slots[i][0] - mid[0], slots[i][1] - mid[1]], s); if (got && (slotSrc[4] === 'authored' || slotSrc[0] === 'authored') && al(4) > al(0) - 0.01)
@@ -451,28 +508,55 @@ export function kitViewPlan(level: KitPlanLevel, way: KitViewWayIn, ref: V2, opt
   // "nothing goes", and what still stands in the camera's line is the level's to show. NO `hide`: the occluders worked out above go (less `show`) — and one
   // that is NOT A THING is said as a problem, for sinking it takes a piece of the building out of the picture: a wall or a tall or long box (`thingTop`,
   // `thingHalf`), a box that carries a door (a frame, a lintel) or a lamp (its post, its fitting). The way then writes its `hide`, a `pin`, or stands on a set.
+  // `hideMore` IS ADDED, NEVER INSTEAD: the boxes it names go as well — with the worked-out occluders where no `hide` is written (the list is still the plan's:
+  // `src.hide` 'derived'), with the written `hide` where one is. One thing more no longer means copying the plan's list out by hand.
   const hideAuth = way.hide !== undefined; src.hide = hideAuth ? 'authored' : 'derived';
   const ids = named, paint = new Set(way.hidePaint ?? []), hidden: number[] = [];
   B.forEach((bx, i) => { const named = ids.has(bx.id) || (bx.group !== undefined && (ids.has(bx.group) || (paint.has(bx.group) && bx.h[1] < 0.01))); if (named || (!hideAuth && occluders.some(o => o.index === i))) hidden.push(i); });
+  // A STACK MAN STANDS ON THE WALL HE STACKS ON: a worked-out wall place (1 ‥ 3: the line runs `jamb` + k × `gap` out from the jamb whatever the wall's
+  // length — and 4, the fourth man, the same line run the other way behind Sam) past the END of the anchor's wall stands in the open, and every row passed —
+  // a dock door 2.4 m from its wall's corner put the third man 0.2 m past it. Asked where he stands along the wall: something must stand on the anchor's
+  // line there that comes DOWN TO HIS SHOULDER (`wallFoot`: a header beam alone, 2.6 m up over an open 3 m gateway, was a wall to this test and the third
+  // man stood in the gateway without a word; a window passes by its pane or its sill — glass is a wall to stand at —, a ceiling does not) — thin or thick (the wall that turns the corner IS the wall's
+  // end) — or ANOTHER DOOR of the level on the line (a neighbouring door is a lintel and a leaf: wall to the eye, no box below the shoulder). WHAT THE
+  // PLAN ITSELF TAKES OUT OF THE PICTURE IS NO WALL TO STAND AT: `hidden` — the way's `hide` / `hideMore`, the occluders that go, the child's first pass.
+  // NOT TIGHTENED to fit: `gap` is the picture's own (KIT_VIEW_STAGE.gap — at 0.9 two men overlap in the image; the step back and the lane are laid by it).
+  // A place the way WRITES is the author's word, never asked; a GAP's stack stands off a post, not a wall, and is not asked either.
+  if (got && kind !== 'gap' && hits.length) { const gone = new Set(hidden), said: string[] = [];
+    const doorAt = (p: V2) => level.doors.some(dr => { if (dr === D) return false; const u: V2 = [Math.cos(dr.closedDir), Math.sin(dr.closedDir)], v: V2 = [p[0] - dr.hinge[0], p[1] - dr.hinge[1]], along = dot(v, u); return along > -0.05 && along < dr.width + 0.05 && Math.abs(v[1] * u[0] - v[0] * u[1]) < K.doorOn; });
+    const wallAt = (x: number) => { const p = P(x, 0); return doorAt(p) || over(p[0], p[1], all).some(j => !gone.has(j) && !flag(B[j], 'NoPrimary') && B[j].c[1] + B[j].h[1] > 0.3 && B[j].c[1] - B[j].h[1] < K.wallFoot); };
+    for (let i = 1; i <= 4; i++) { if (slotSrc[i] !== 'derived') continue;
+      const al = dot([slots[i][0] - mid[0], slots[i][1] - mid[1]], t); if (wallAt(al)) continue;
+      const lim = Math.max(0.02, Math.abs(al) - width / 2); let past = 0.01; while (past < lim && !wallAt(al - Math.sign(al) * past)) past += 0.01;   // (back toward the anchor, no further than its own jamb)
+      said.push(i < 4 ? `place ${i} (${r2(slots[i][0])}, ${r2(slots[i][1])}) is ${r2(past + 0.02)} m past the end of the wall the stack stands on: write the way's \`side\` (the stack on the other side of the anchor) or his place in \`slots\` (a written place is taken as it is: \`null\` leaves the others to the plan)`
+        : `place 4 (${r2(slots[4][0])}, ${r2(slots[4][1])}) is ${r2(past + 0.02)} m past the end of the wall the fourth man stands at, behind Sam: write the way's \`side\` (Sam and he on the other side of the anchor) or his place in \`slots\` (a written place is taken as it is: \`null\` leaves the others to the plan)`); }
+    problems.splice(pastAt, 0, ...said); }
   if (!hideAuth) { const ends = level.doors.flatMap((dr): V2[] => { const dt: V2 = [Math.cos(dr.closedDir), Math.sin(dr.closedDir)]; return [[dr.hinge[0], dr.hinge[1]], [dr.hinge[0] + dt[0] * dr.width / 2, dr.hinge[1] + dt[1] * dr.width / 2], [dr.hinge[0] + dt[0] * dr.width, dr.hinge[1] + dt[1] * dr.width]]; });
     const why = (bx: BoxData): string | null => !thing(bx) ? (bx.c[1] + bx.h[1] > K.thingTop ? `${r2(bx.c[1] + bx.h[1])} m tall` : `${r2(2 * Math.max(bx.h[0], bx.h[2]))} m long`)
       : ends.some(e => gapTo(bx, e[0], e[1]) < 0.12) ? 'it carries a door'
       : (level.lights ?? []).some(l => l.kind !== 'dir' && gapTo(bx, l.pos[0], l.pos[2]) < 0.2 && l.pos[1] >= bx.c[1] - bx.h[1] - 0.4 && l.pos[1] <= bx.c[1] + bx.h[1] + 0.4) ? 'it carries a lamp' : null;
-    const bad = occluders.filter(o => !named.has(o.id)).map(o => ({ o, y: why(B[o.index]) })).filter(x => x.y !== null);
+    const bad = occluders.filter(o => !named.has(o.id) && !hideMore.has(o.group)).map(o => ({ o, y: why(B[o.index]) })).filter(x => x.y !== null);
     if (bad.length) problems.push(`${KIT_PLAN_IN_WAY}: ${bad.slice(0, 6).map(x => `${x.o.id}${x.o.group ? ` (${x.o.group})` : ''}: ${x.y}`).join(', ')}${bad.length > 6 ? `, … ${bad.length - 6} more` : ''} — write the way's \`hide\` (what goes; [] = nothing), a \`pin\`, or stand it on a set`); }
   // AN ADDED PIECE IN THE MEN'S WAY (authored data wins over what is worked out, and is never dropped without a word): one that still stands — an authored
   // `hide` naming it takes it, as it takes anything — and is met by a line from the camera to a MAN, or stands on a place the line of places passed over for
   // a man it places, is said BY NAME. (A way's `show` with its name is the author's word that it stays in front of him: the first is then not said.)
-  if (got && added.size) { const reach = K.nav.r + K.nav.cell * 0.71, mine: V2[] = []; let k = 0; L.steps.forEach((nSt, i) => { if (slotSrc[i] === 'derived') mine.push(...passed.slice(k, k + nSt)); k += nSt; });
+  // (…only where it IS the thing on the place: a place the floor shuts WITHOUT the added pieces — a wall's, a crate of the level's — is that box's, and an
+  //  added piece that merely stands within a body of it was blamed for it. The floor without them is baked once, and only when a piece is that near.)
+  if (got && added.size) { const reach = K.nav.r + K.nav.cell * 0.71, mine: V2[] = []; let k = 0, F0: KitPlanFloor | null = null;
+    const bare = () => F0 ??= kitPlanFloor(B, new Set([...sunk, ...B.map((bx, i) => added.has(bx.id) ? i : -1).filter(i => i >= 0)])); L.steps.forEach((nSt, i) => { if (slotSrc[i] === 'derived') mine.push(...passed.slice(k, k + nSt)); k += nSt; });
     B.forEach((bx, i) => { if (!added.has(bx.id) || hidden.includes(i)) return;
       if (solidTo(bx) && !shown(bx) && marks.slice(0, nMen).some(m => segBox(bx, cam.pos, m))) problems.push(`the added '${bx.id}' hides the stack: move it (it stands between the camera and a man; the way's \`show\` with its name keeps it there, in front of him)`);
-      const over = F.solid.includes(i) ? mine.filter(p => gapTo(bx, p[0], p[1]) < reach).length : 0;
+      const over = F.solid.includes(i) ? mine.filter(p => gapTo(bx, p[0], p[1]) < reach && !bare().blocked(p[0], p[1])).length : 0;
       if (over) problems.push(`the added '${bx.id}' stands on the line of places (${over} stepped over it): move it, or write the men's \`slots\``); }); }
   // …AND ITS LOOSE PROPS (the file's `props` are no boxes: a `hide` of the scribe's pitch took his table and left his stool standing alone on the pavement)
   const Pr = level.props ?? [], ofName = (id: string, nm: string) => id === nm || id.startsWith(nm + '.'), hiddenProps: number[] = [];
   Pr.forEach((p, i) => { if ([...show].some(nm => ofName(p.id, nm))) return;
     if ([...ids].some(nm => ofName(p.id, nm)) || (!hideAuth && hidden.some(j => B[j].group !== undefined && B[j].c[1] + B[j].h[1] > K.lowTop && ofName(p.id, B[j].group!) && gapTo(B[j], p.x, p.z) <= K.propNear))) hiddenProps.push(i); });
-  for (const id of [...(way.hide ?? []), ...show]) if (!B.some(bx => bx.id === id || bx.group === id) && !Pr.some(p => ofName(p.id, id)) && !(level.left ?? []).some(nm => ofName(nm, id))) problems.push(`hide / show names '${id}': no box, group or prop by that name`);
+  for (const id of [...(way.hide ?? []), ...hideMore, ...show]) if (!B.some(bx => bx.id === id || bx.group === id) && !Pr.some(p => ofName(p.id, id)) && !(level.left ?? []).some(nm => ofName(nm, id))) problems.push(`hide / show names '${id}': no box, group or prop by that name`);
+  // (ONE NAME, BOTH WORDS: a name the way writes in `show` AND in `hide` / `hideMore` split the thing — its boxes went, hidden by name, and its loose props
+  //  stayed, shown by name: a yard's stools on bare ground. Said, never guessed at)
+  { const both = [...new Set([...(way.hide ?? []), ...hideMore])].filter(id => show.has(id));
+    if (both.length) problems.push(`'${both.join("', '")}' ${both.length === 1 ? 'is' : 'are'} written in \`show\` and in \`hide\` / \`hideMore\`: its boxes would go and its loose props stay — write the name in one of the two`); }
 
   // UNDER A COVER, and the lamps: the porch lamp from the wall's top, the fill from the free floor in front
   // (the game's own roofs — game/weather.ts roofsOf: a slab in the ceiling's height band, 0.9 m across both ways, the four largest — are where no rain falls)
@@ -496,6 +580,8 @@ export function kitViewPlan(level: KitPlanLevel, way: KitViewWayIn, ref: V2, opt
   // (…and THE LAMPS THE WAY ADDS — `add.lamps`: hung for the picture, so lit in it, whatever their group)
   const more = [...(way.litInside ? kitPlanLitInside(level.lights ?? [], mid, n, back) : []), ...(way.set === undefined ? way.add?.lamps ?? [] : [])].map(l => l.group).filter(g => g !== 'exterior');
   const keepLights = more.length ? [...new Set([...keep0, ...more])].sort() : keep0;
+  // (`dayLights` names the way's OWN lamps — its set's lights, here the geometry's; the lamps it adds: a name that is none of them keeps nothing burning)
+  { const own = way.set !== undefined ? level.lights ?? [] : way.add?.lamps ?? []; for (const nm of way.dayLights ?? []) if (!own.some(l => l.kind !== 'dir' && (l.id === nm || l.group === nm))) problems.push(`dayLights names '${nm}': no lamp of the way's own (its set's lights, its \`add.lamps\`) by that id or group`); }
 
   const DD = kind === 'door' ? D : undefined;
   return {

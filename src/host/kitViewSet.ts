@@ -28,6 +28,7 @@
 // WHAT THIS CANNOT SEE: the page. That the set is DRAWN, that its doorway can be walked (a doorway is free floor on the nav grid only where its middle
 // falls near a 0.5 m cell's middle), and anything the child still reads off a level's own names are the wiring step's and tools/qa/kitview-plan.ts's rows.
 import type { LevelData, BoxData, DoorData, LightData } from '../scene/levelData';
+import { kitAddLaid } from '../scene/levelData';   // (pure: the mark that lets the validator take this loader's `add.laid`, and nobody else's)
 import type { KitViewWay, KitViewSet, StructureData, TeamStart } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
 import { kitViewPlan, kitPlanFloor, kitPlanAdd, KIT_PLAN, type KitViewPlanned, type V2 } from './kitViewPlan';
@@ -98,10 +99,11 @@ export function kitSetPaint(b: BoxData, materials: LevelData['materials']): BoxD
 export function kitViewAddLevel(data: LevelData, way: number): LevelData {
   const Y = data.scenarios?.kitView?.ways?.[way]; if (!Y) return data;
   const L = kitPlanAdd({ boxes: data.boxes, doors: data.doors, lights: data.lights }, Y); if (L.boxes === data.boxes) return data;   // (nothing to lay, or laid already)
-  // (…and the block that rides on it SAYS so — `add.laid`: the level validator then asks that the records are in the level, where a file's must be new to it)
+  // (…and the block that rides on it SAYS so — `add.laid`: the level validator then asks that the records are in the level, where a file's must be new to it;
+  //  the word is taken from THIS object alone — kitAddLaid — and refused of a file that writes it)
   //  — AND NO OTHER WAY'S `add` RIDES ALONG: one way is laid in a level, ever, so two ways may write a piece under the same id (the same drum at two doors);
   //  left on the block, the other way's records were judged against a level that now held that id, and the picture's loadLevel refused BOTH ways' levels.
-  const K = data.scenarios!.kitView!, ways = K.ways.map((y, i) => { if (i === way) return { ...y, add: { ...y.add, laid: true } }; if (y.add === undefined) return y; const { add: _gone, ...rest } = y; return rest; });
+  const K = data.scenarios!.kitView!, ways = K.ways.map((y, i) => { if (i === way) return { ...y, add: kitAddLaid({ ...y.add, laid: true }) }; if (y.add === undefined) return y; const { add: _gone, ...rest } = y; return rest; });
   return { ...data, boxes: (L.boxes as BoxData[]).map((b, i) => i < data.boxes.length ? b : kitSetPaint(b, data.materials)), lights: [...(L.lights as LightData[])], scenarios: { ...data.scenarios, kitView: { ...K, ways } } };
 }
 

@@ -20,6 +20,9 @@
 //      stood between the camera and the men: it is a PROBLEM (not a thing to sink) in one pass and in the child's two; an authored `hide` wins over it outright.
 //      A THING'S LOOSE PROPS (the file's `props`) go with it: named by a `hide` (the prop's id, or the group it is of), or standing by a box of their group
 //      that was sunk for the camera — `hiddenProps`. A `hide` / `show` naming what the stand left out of the file (lived-in rooms off) is no problem.
+//      `hideMore` is ADDED to the plan's own list (a written `hide` replaces it), in one pass and in the child's two.
+//      THE PORCH LAMP IS ON THE LEVEL'S PHOTOCELL (kitPlanPorchLit): out at an hour whose outside lamps are out unless the way writes `light.porch.day`.
+//      A WORKED-OUT STACK PLACE PAST THE END OF THE ANCHOR'S WALL is a problem that names the place, `side` and `slots`; a written place is not asked.
 //      A GAP'S PORCH LAMP: the set's wall with the leaf and lintel gone — the lamp and its box on the stack end's jamb wall (solid wall under the whole box, that
 //      wall's own top), on the other end's where the stack's is too low, no box where neither is tall enough, and an authored offset / fixture still winning.
 //   F. THE SET LOADER (src/host/kitViewSet.ts kitViewSetLevel — what `?kitview` builds where the way names a set): D's set laid over two real levels' data (a
@@ -29,6 +32,14 @@
 //      start page builds (game/loadout.ts squadSearch over scenarioQuery), never a size written here. THE SET'S MEN ARE THE MISSION'S: every row of the
 //      mission list and the solo night, at every size it deploys with, staged on a set has the teammates its own link stages. And WITHOUT a
 //      set nothing is touched: every level file, every way, comes back the same object and loads to the same Level byte for byte.
+//   H. THE WAY'S OWN LAMPS ARE ON THE PHOTOCELL TOO (kitPlanDayOut: a set's lights, a way's `add.lamps`): out at an hour whose outside lamps are out on a way
+//      under the open sky, less the way's `dayLights` (ids or groups); never the group `exterior` (the game's own photocell's), a sun or moon, or a lamp
+//      under a cover (a room's); a name
+//      that is no own lamp is a plan problem; the validator takes a list of names. And ON THE HEADLESS GAME stood on what `?kitview` builds — a fixture set
+//      with a lamp and its glowing box, a level's own way with an added lamp of a group the level's own lamps share, and every real level-way that has own
+//      lamps — each own lamp is one of the game's light switches BY ITS ID, lit as the level opens; the switch the child opens (place(): `t.on = false`
+//      for the ids kitPlanDayOut names) takes the lamp AND its fixture box's glow out, leaves a `dayLights` lamp burning and no other lamp of the level
+//      touched. (The child's own line and the hour the page hands it are the page's: tools/qa/kitview-levels.cjs HOUR=midday.)
 //   E. THE DRY RUN — never a failure: every squad mission's every way in, WITHOUT a block. The anchor is PROPOSED from the level's own way-in data (the
 //      nearest door to Sam's start within DOOR_M; else a gap in a wall near it; else the wall he faces) and planned. One row per mission-way: the fan-out's
 //      work list, written to a file ONLY where KITPLAN_OUT=<path> names one (a full run). The last column says whether the level's own way in plans cleanly or
@@ -40,6 +51,12 @@
 //      the mission itself does, the rifle across the back; a loud mission's link says nothing.
 //      And NO DEVICE REPORTS IN A PICTURE: Sam held lit under a lens of the fixture's at the door it looks at — the game as it is calls control and raises
 //      the floor; with the child's word said (host/kitView.ts kitViewInert) nothing reports, nothing is raised, no alarm is placed.
+//      And NO MAN OF THE LEVEL'S RAISES THE FLOOR: Sam's charge blown on the fixture's door nearest where the picture parks the staff — parked as it was
+//      (deaf only to what was in the air before the step) they hear it in the step that makes it, an alarm is placed and the floor goes up; parked as the
+//      picture parks (host/kitView.ts kitViewPark: deaf at every park, the episode dropped while the floor is down) nobody is roused, the floor stays
+//      down, no alarm is placed — and a man made `alert` by hand raises nothing either. AND THE PARK SAYS WHAT IT PUT RIGHT (its own count, what the
+//      child adds up on `__kitview.roused` — the page checks' only reading of a man it calmed): nothing under the charge; the man made alert by hand,
+//      and the marks his fix placed, counted.
 //      KITPLAN_FIXTURE=<path>: G's fixture ON THE SET is written there as a level file (the page check's dress row has no level to judge: kitview-levels.cjs).
 //      WARNINGS AND NOTES OF C, never a FAIL: `- WARNING —` where a way's `hide` / `show` / `pane.box` names a box by GENERATED id (`box_NNNN`, its place in
 //      the file: a change of box order points it elsewhere) · `note —` where a written `hide` takes a box that is in no line of the camera's, and what still
@@ -63,7 +80,7 @@
 // same on both (TPS_PROFILE=shipped).
 import { readFileSync, readdirSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
-import { kitViewPlan, kitViewPlanWay, kitViewPlanChild, kitPlanGeometry, kitPlanWayBuilt, kitPlanAdd, kitPlanFloor, kitPlanSlots, kitPlanAct4, kitPlanStands, kitPlanLitInside, KIT_PLAN, KIT_PLAN_IN_WAY, type KitViewPlanned, type KitPlanLevel, type KitPlanFloor, type KitViewWayIn, type V2 } from '../../src/host/kitViewPlan.ts';
+import { kitViewPlan, kitViewPlanWay, kitViewPlanChild, kitPlanGeometry, kitPlanWayBuilt, kitPlanAdd, kitPlanFloor, kitPlanSlots, kitPlanAct4, kitPlanStands, kitPlanLitInside, kitPlanPorchLit, kitPlanOwnLamps, kitPlanDayOut, kitPlanCovered, KIT_PLAN, KIT_PLAN_IN_WAY, type KitViewPlanned, type KitPlanLevel, type KitPlanFloor, type KitViewWayIn, type V2 } from '../../src/host/kitViewPlan.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 /** the dry run's table is written here, and only when this names a file (never by default: a check writes nothing outside its own output) */
@@ -127,7 +144,7 @@ function childPlan(level: KitPlanLevel, way: KitViewWayIn, ref: V2): { P: KitVie
 const GENERATED = /^box_\d{4,}$/;
 function hideNotes(level: KitPlanLevel, Y: Data, P: KitViewPlanned): { warn: string[]; notes: string[] } {
   const B = level.boxes, warn: string[] = [], notes: string[] = [], few = (v: string[]) => v.length > 4 ? `${v.slice(0, 2).join(', ')} … ${v[v.length - 1]}` : v.join(', ');
-  const gen = ([['hide', Y.hide ?? []], ['show', Y.show ?? []], ['pane.box', Y.pane && Y.pane.box ? [Y.pane.box] : []]] as [string, string[]][]).map(([k, v]) => [k, v.filter(nm => GENERATED.test(nm) && !B.some(b => b.group === nm))] as [string, string[]]).filter(x => x[1].length);
+  const gen = ([['hide', Y.hide ?? []], ['hideMore', Y.hideMore ?? []], ['show', Y.show ?? []], ['pane.box', Y.pane && Y.pane.box ? [Y.pane.box] : []]] as [string, string[]][]).map(([k, v]) => [k, v.filter(nm => GENERATED.test(nm) && !B.some(b => b.group === nm))] as [string, string[]]).filter(x => x[1].length);
   if (gen.length) warn.push(`${gen.map(([k, v]) => `\`${k}\` names ${v.length} box${v.length === 1 ? '' : 'es'} by generated id (${few(v)})`).join(', ')}: an id of that kind is the box's place in the file — a box added before it in the level's source and the name is another box's, with nothing red. Give the boxes a \`group\` of their own (or a \`name\`) there and write that`);
   if (Y.hide !== undefined) { const names = new Set<string>(Y.hide), occ = new Set(P.occluders.map(o => o.index)), shown = new Set<string>(Y.show ?? []);
     const idle = P.hidden.filter(i => (names.has(B[i].id) || (B[i].group !== undefined && names.has(B[i].group!))) && !occ.has(i) && B[i].c[1] + B[i].h[1] > KIT_PLAN.lowTop);
@@ -212,6 +229,7 @@ async function parity() {
 // ───────────────────────────────────────────── C. every level with a block ─────────────────────────────────────────────
 async function generic(names: string[]) {
   say('\n=== C. every level with a kitView block');
+  say("  (a way's `cam` and its occluders are the PIN's — before the page's frame slides the look point and backs the camera off: what the page's own camera shows behind a wall is not said here)");
   const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { kitViewSetLevel, kitViewAddLevel } = await import(`${ROOT}/src/host/kitViewSet.ts`);
   let n = 0;
   for (const name of names) { const L = await levelOf(name), S = L.data.scenarios, KB = S?.kitView; if (!KB) continue; n++;
@@ -337,7 +355,57 @@ async function bespoke() {
     const A0 = kitViewPlan(L2, none_, SET.ref), A1 = kitViewPlan(L2, crate, SET.ref), C0 = childPlan(L2, none_, SET.ref), C1 = childPlan(L2, crate, SET.ref);
     const wins = (X: KitViewPlanned, hid: number[]) => X.src.hide === 'authored' && X.occluders.some(o => o.id === 'set_post') && X.hidden.join() === hid.join() && said(X).length === 0;
     row(wins(A0, []) && wins(A1, [iCrate]) && wins(C0.P, []) && C0.sunk.size === 0 && wins(C1.P, [iCrate]) && [...C1.sunk].join() === String(iCrate),
-      `an authored \`hide\` wins over the occluders worked out, in one pass and in the child's two: \`hide: []\` hides ${A0.hidden.length} / sinks ${C0.sunk.size}, \`hide: ['set_crate']\` hides [${A1.hidden.map(i => L2.boxes[i].id).join(', ')}] / sinks [${[...C1.sunk].map(i => L2.boxes[i].id).join(', ')}] — the post still in the camera's line (${A0.occluders.length} occluder(s)) and no problem of it (${said(A0).length + said(A1).length + said(C0.P).length + said(C1.P).length})`); }
+      `an authored \`hide\` wins over the occluders worked out, in one pass and in the child's two: \`hide: []\` hides ${A0.hidden.length} / sinks ${C0.sunk.size}, \`hide: ['set_crate']\` hides [${A1.hidden.map(i => L2.boxes[i].id).join(', ')}] / sinks [${[...C1.sunk].map(i => L2.boxes[i].id).join(', ')}] — the post still in the camera's line (${A0.occluders.length} occluder(s)) and no problem of it (${said(A0).length + said(A1).length + said(C0.P).length + said(C1.P).length})`);
+    // `hideMore` IS ADDED TO THE PLAN'S OWN LIST, NEVER INSTEAD OF IT (a written `hide` replaces the list: one thing more meant copying it out by hand). The
+    // crate named: it goes WITH the post the plan found, the list still the plan's ('derived') and the post still said; the post's own GROUP named: the
+    // author's word that it goes, not said; beside a written `hide`: more of it. The validator takes a list of names and nothing else. (The break: the key unread.)
+    { const mk = (w: Data): KitViewWayIn => { const o: Data = { door: 'set_door', ...w }; if (BREAK) delete o.hideMore; return o; }, ids = (v: readonly number[]) => v.map(i => L2.boxes[i].id).sort().join(', ');
+      const M0 = kitViewPlan(L2, mk({ hideMore: ['set_crate'] }), SET.ref), MC = childPlan(L2, mk({ hideMore: ['set_crate'] }), SET.ref), MG = kitViewPlan(L2, mk({ hideMore: ['set.post'] }), SET.ref), MH = kitViewPlan(L2, mk({ hide: [], hideMore: ['set_crate'] }), SET.ref);
+      const { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), errs = (v: unknown): string[] => { const c = JSON.parse(R.text); c.scenarios.kitView.ways[0] = { ...c.scenarios.kitView.ways[0], hideMore: v }; return validateLevelData(c).filter((e: string) => e.includes('hideMore')); };
+      row(M0.src.hide === 'derived' && ids(M0.hidden) === 'set_crate, set_post' && said(M0).length === 1 && ids([...MC.sunk]) === 'set_crate, set_post' && MC.P.src.hide === 'derived'
+        && MG.hidden.includes(iPost) && said(MG).length === 0 && MH.src.hide === 'authored' && ids(MH.hidden) === 'set_crate' && errs(['lived.yard']).length === 0 && errs('lived.yard').length === 1 && errs(['']).length === 1,
+        `\`hideMore\` is added to the plan's own list, never instead of it: \`hideMore: ['set_crate']\` hides [${ids(M0.hidden)}] with the list still ${M0.src.hide} and the post still said (${said(M0).length}), the child sinks [${ids([...MC.sunk])}]; the post's own group named is the author's word (${said(MG).length} problem of it); beside \`hide: []\` it hides [${ids(MH.hidden)}]; the validator takes a list of names (${errs(['lived.yard']).length} errors) and refuses a bare word (${errs('lived.yard').length}) and an empty name (${errs(['']).length})`); } }
+  // THE PORCH LAMP IS ON THE LEVEL'S PHOTOCELL (kitPlanPorchLit: what the child hangs it at; the hour is the page's to ask — main.ts `lampsOut`, game/hours.ts
+  // HourDef.lamps): the set's way stands under the open sky — at an hour with the outside lamps out its lamp is out, or at the way's `light.porch.day`; at
+  // every other hour, and under a roof at any hour, as lit. The hours table has both kinds (else the rule is never met), and the validator takes `day` on
+  // the porch lamp alone. (The break: the photocell never asked.)
+  { const { HOURS } = await import(`${ROOT}/src/game/hours.ts`), { validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), T = (await import(`${ROOT}/src/host/kitView.ts`)).KIT_VIEW_LIGHT;
+    const outs = Object.values(HOURS as Record<string, { lamps: boolean }>).map(h => BREAK ? false : !h.lamps), lit = T.porch.intensity, at = (o: boolean, day?: number, indoors = P.indoors) => kitPlanPorchLit(lit, day, indoors, o);
+    const errs = (who: string, v: unknown): string[] => { const c = JSON.parse(R.text); c.scenarios.kitView.ways[0] = { ...c.scenarios.kitView.ways[0], light: { [who]: { day: v } } }; return validateLevelData(c).filter((e: string) => e.includes('day')); };
+    row(!P.indoors && outs.includes(true) && outs.includes(false) && outs.every(o => at(o) === (o ? 0 : lit) && at(o, 6) === (o ? 6 : lit) && at(o, undefined, true) === lit) && at(false) === lit && T.porch.day === undefined
+      && errs('porch', 6).length === 0 && errs('porch', -1).length === 1 && errs('fill', 6).length === 1,
+      `the porch lamp is on the level's photocell: over the hours' own table (${outs.filter(o => o).length} with the outside lamps out, ${outs.filter(o => !o).length} with them burning) a way under the open sky hangs it at ${outs.map(o => at(o)).join(' / ')} (the table's ${lit}), at 6 written as \`light.porch.day\` ${outs.map(o => at(o, 6)).join(' / ')}, under a roof ${outs.map(o => at(o, undefined, true)).join(' / ')}; the night ${at(false)}; the validator takes \`day\` on the porch lamp (${errs('porch', 6).length} errors), no negative (${errs('porch', -1).length}), not on the fill (${errs('fill', 6).length})`); }
+  // A STACK MAN STANDS ON THE WALL HE STACKS ON: the set's wall on the stack's side cut 2.07 m from the jamb — the line's third place (0.45 + 2 × 1.1 m out)
+  // is past its end, in the open. Said as a problem that names the place and the two keys that mend it; the first two places are not said; the place
+  // WRITTEN in `slots` is the author's word and is not asked; the wall whole: nothing said. In one pass and in the child's two. (The break: the wall whole.)
+  { const cut: Data[] = SET.boxes.map(b => b.id === 'set_wall_a' && !BREAK ? { ...b, c: [18.535, 1.4, 10], h: [1.035, 1.4, 0.1] } : b), Ls: KitPlanLevel = { boxes: cut as Data, doors: SET.doors as Data, lights: SET.lights as Data }, Lf: KitPlanLevel = { boxes: SET.boxes as Data, doors: SET.doors as Data, lights: SET.lights as Data };
+    const way: KitViewWayIn = { door: 'set_door', side: -1 }, past = (X: KitViewPlanned) => X.problems.filter(p => p.includes('past the end of the wall'));
+    const S1 = kitViewPlan(Ls, way, SET.ref), SC = childPlan(Ls, way, SET.ref).P, W1 = kitViewPlan(Ls, { ...way, slots: [null, null, null, S1.slots[3]] }, SET.ref), F1 = kitViewPlan(Lf, way, SET.ref);
+    row(past(S1).length === 1 && past(S1)[0].startsWith('place 3 ') && /`side`/.test(past(S1)[0]) && /`slots`/.test(past(S1)[0]) && past(SC).length === 1 && past(W1).length === 0 && W1.slotSrc[3] === 'authored' && past(F1).length === 0 && F1.problems.length === 0,
+      `a worked-out stack place past the end of the anchor's wall is a problem: the wall cut 2.07 m from the jamb, the third man at ${pt(S1.slots[3])} — '${(past(S1)[0] ?? 'NOT SAID').slice(0, 96)}…' (the child's two passes: ${past(SC).length}); the same place written in \`slots\` is the author's word (${past(W1).length} said); the wall whole: ${past(F1).length} said`); }
+  // …AND A WALL COMES DOWN TO HIS SHOULDER. A HEADER BEAM ALONE IS NO WALL: the wall's far stretch taken out and a beam left over the opening (2.4 ‥ 2.8 m
+  // up, as over an open gateway) — the third man stands in the gateway and it is SAID (the beam was a wall to the test: any box thin across the line, at
+  // any height). ANOTHER DOOR of the level in that opening is a wall (a lintel and a leaf: no box below the shoulder) — not said. GLASS IS A WALL: the
+  // fourth man's place, behind Sam, is at the set's window — pane and sill, the pane alone: not said; pane and sill gone, the head alone over the hole:
+  // SAID, of place 4 (he was never asked). WHAT THE PLAN TAKES OUT OF THE PICTURE IS NO WALL: the same far stretch standing but named in `hideMore` —
+  // said, in one pass and in the child's two (the second is told it is out by the first). (The break: the beam and the head come down to the ground, the
+  // door is no door of the level, the stretch is not hidden.)
+  { const near: Data = { id: 'set_wall_a', c: [18.535, 1.4, 10], h: [1.035, 1.4, 0.1], material: 'concrete' }, far: Data = { id: 'set_far', group: 'set.far', c: [15.75, 1.4, 10], h: [1.75, 1.4, 0.1], material: 'concrete' };
+    const beam: Data = { id: 'set_beam', c: [15.75, BREAK ? 1.4 : 2.6, 10], h: [1.75, BREAK ? 1.4 : 0.2, 0.1], material: 'concrete' }, gate: Data = { id: 'set_gate', hinge: [15.9, 10], closedDir: 0, width: 1.6 };
+    const mk = (boxes: Data[], doors: Data[] = []): KitPlanLevel => ({ boxes: boxes as Data, doors: [...SET.doors, ...doors] as Data, lights: SET.lights as Data }), rest = SET.boxes.filter(b => b.id !== 'set_wall_a') as Data[];
+    const way: KitViewWayIn = { door: 'set_door', side: -1 }, past = (X: KitViewPlanned) => X.problems.filter(p => p.includes('past the end of the wall')), n = (X: KitViewPlanned) => past(X).map(p => p.slice(0, 7)).join(',') || 'none';
+    const Lb = mk([...rest, near, beam]), Lw = mk([...rest, near, far]), less = (...ids: string[]) => mk([...SET.boxes.filter(b => !ids.includes(b.id)) as Data[], ...(BREAK ? [{ id: 'set_head', c: [22.1, 1.4, 10], h: [0.6, 1.4, 0.1], material: 'concrete' }] : [])]);
+    const Bm = kitViewPlan(Lb, way, SET.ref), Dr = kitViewPlan(mk([...rest, near, beam], BREAK ? [] : [gate]), way, SET.ref), Wh = kitViewPlan(Lw, way, SET.ref);
+    const Hd = kitViewPlan(Lw, { ...way, ...(BREAK ? {} : { hideMore: ['set.far'] }) }, SET.ref), HC = childPlan(Lw, { ...way, ...(BREAK ? {} : { hideMore: ['set.far'] }) }, SET.ref).P;
+    const Gs = kitViewPlan(less('set_sill'), way, SET.ref), Gh = kitViewPlan(less('set_sill', 'set_pane', BREAK ? 'set_head' : ''), way, SET.ref), on4 = Math.abs(Wh.slots[4][0] - 22.1) < 0.6 && Wh.slotSrc[4] === 'derived';
+    row(n(Bm) === 'place 3' && n(Dr) === 'none' && n(Wh) === 'none' && n(Hd) === 'place 3' && n(HC) === 'place 3' && on4 && n(Gs) === 'none' && n(Gh) === 'place 4' && /behind Sam/.test(past(Gh)[0] ?? ''),
+      `a wall a man stacks on comes down to his shoulder (${KIT_PLAN.wallFoot} m): a header beam alone over the third man's place — ${n(Bm)} said; another door of the level under that beam — ${n(Dr)}; the wall whole — ${n(Wh)}; the same stretch named in \`hideMore\` — ${n(Hd)} (the child's two passes: ${n(HC)}); the fourth man at the window (${pt(Wh.slots[4])}): the pane without its sill — ${n(Gs)}, the head alone over the hole — ${n(Gh)}`); }
+  // ONE NAME IN `show` AND IN `hide` / `hideMore` IS SAID: the boxes went (hidden by name) and the loose props stayed (shown by name) — a yard's stools on
+  // bare ground, and no word of it. Each word alone, and two different names: nothing said. (The break: two different names.)
+  { const g = 'set.things', o = BREAK ? 'set_wall_c' : g, both = (X: KitViewPlanned) => X.problems.filter(p => p.includes('`show` and in `hide`')), L: KitPlanLevel = { boxes: SET.boxes as Data, doors: SET.doors as Data, lights: SET.lights as Data };
+    const A = kitViewPlan(L, { door: 'set_door', show: [g], hideMore: [o] }, SET.ref), H = kitViewPlan(L, { door: 'set_door', show: [g], hide: [o] }, SET.ref), S1 = kitViewPlan(L, { door: 'set_door', show: [g] }, SET.ref), M1 = kitViewPlan(L, { door: 'set_door', hideMore: [g] }, SET.ref), X2 = kitViewPlan(L, { door: 'set_door', show: ['set_crate'], hideMore: ['set_wall_c'] }, SET.ref);
+    row(both(A).length === 1 && both(A)[0].includes(`'${g}'`) && both(H).length === 1 && both(S1).length + both(M1).length + both(X2).length === 0,
+      `one name written in \`show\` and in \`hide\` / \`hideMore\` is a problem: with \`hideMore\` ${both(A).length} said ('${(both(A)[0] ?? 'NOT SAID').slice(0, 70)}…'), with \`hide\` ${both(H).length}; \`show\` alone ${both(S1).length}, \`hideMore\` alone ${both(M1).length}, two different names ${both(X2).length}`); }
   // A THING'S LOOSE PROPS GO WITH IT (the file's `props` are no boxes: a `hide` of a group took its table and left its stool standing alone). By NAME: the
   // prop's own id, or the group it is of (`<group>.<tail>`) — less `show`. WORKED OUT (no `hide`): the crate stood on the stage's floor, in the camera's
   // line — the stool of its group beside it goes, the one of its group across the yard and another group's beside it stay. (The break: the level handed
@@ -424,7 +492,42 @@ async function bespoke() {
     const Bd = plan({ door, add: board }), Bs = plan({ door, add: board, show: ['add_board'] }), Bh = plan({ door, add: board, hide: ['add_board'] }), child = BREAK ? null : childPlan(kitPlanGeometry(Ls, undefined, { door, add: board } as Data, SET.ref)!.level, { door, add: board } as Data, SET.ref);
     row(!Bd.hidden.includes(nb) && !Bd.occluders.some(o => o.id === 'add_board') && named(Bd, 'add_board', 'hides the stack: move it') === 1 && Bd.problems.length === 1 && Bd.stepped === 0 && Bd.side === C0.side && Bs.problems.length === 0 && named(Bs, 'add_board', '') === 0 && !Bs.hidden.includes(nb) && Bh.hidden.includes(nb) && named(Bh, 'add_board', '') === 0
       && !!child && !child.sunk.has(nb) && named(child.P, 'add_board', 'hides the stack: move it') === 1,
-      `an added piece is never hidden by what is worked out: a board added between the camera and the men stands (hidden: ${Bd.hidden.includes(nb)}, sunk by the child's two passes: ${child ? child.sunk.has(nb) : '?'}) and the plan says so by name (${Bd.problems.find(p => p.includes("the added 'add_board'"))?.slice(0, 48) ?? 'NOT SAID'}); the way's \`show\` with its name: it stays and nothing is said (${named(Bs, 'add_board', '')}); the way's \`hide\` with its name: it goes (${Bh.hidden.includes(nb)}) — authored wins both ways`); }
+      `an added piece is never hidden by what is worked out: a board added between the camera and the men stands (hidden: ${Bd.hidden.includes(nb)}, sunk by the child's two passes: ${child ? child.sunk.has(nb) : '?'}) and the plan says so by name (${Bd.problems.find(p => p.includes("the added 'add_board'"))?.slice(0, 48) ?? 'NOT SAID'}); the way's \`show\` with its name: it stays and nothing is said (${named(Bs, 'add_board', '')}); the way's \`hide\` with its name: it goes (${Bh.hidden.includes(nb)}) — authored wins both ways`);
+    // THE ADDED PIECE IS NAMED ONLY WHERE IT IS THE THING ON THE PLACE: a crate of the LEVEL's on place 2 and a piece added a body off it (0.65 m from the
+    // place: within the reach the problem asks by) — the place is the level crate's, stepped over, and the added piece is not blamed; with the level's
+    // crate gone the same piece shuts nothing and nothing is said. (The crate ADDED on the place is named: the row above.) (The break: the level's crate
+    // handed over as one of the way's own.)
+    { const crate = add.boxes[0], nn = P.anchor.n, near = { id: 'add_near', group: 'add.things', c: [P.slots[2][0] + nn[0] * 0.95, 0.4, P.slots[2][1] + nn[1] * 0.95], h: [0.3, 0.4, 0.3], material: 'wood' };
+      const Lc = { ...Ls, boxes: [...Ls.boxes, { ...crate, id: 'lvl_crate' }] } as Data as KitPlanLevel, Y: Data = { door, add: { boxes: BREAK ? [near, { ...crate, id: 'lvl_crate2' }] : [near] } };
+      const Q = kitViewPlanWay(BREAK ? Ls : Lc, undefined, Y, SET.ref), Q0 = kitViewPlanWay(Ls, undefined, { door, add: { boxes: [near] } } as Data, SET.ref);
+      row(Q.stepped >= 1 && named(Q, 'add_near', '') === 0 && Q0.stepped === 0 && named(Q0, 'add_near', '') === 0, `an added piece is blamed only for a place it is ON: beside a place a crate of the level's shuts (${Q.stepped} stepped over), 0.65 m off it, the added 'add_near' is ${named(Q, 'add_near', '') ? 'NAMED: ' + Q.problems.find(p => p.includes("'add_near'"))?.slice(0, 60) : 'not named'}; alone there it shuts nothing (${Q0.stepped} stepped over, ${named(Q0, 'add_near', '')} said)`); }
+    // WHAT THE CALLER SAYS OF THE WAY'S `hide` REACHES A WAY WITH AN `add` (kitViewPlanWay handed the level on without ANY option once a piece was laid —
+    // the level's `floor` is rightly not handed on: the row above steps over the crate on a floor baked without it): a box named as already out of the
+    // picture (`alsoHide`) is among `hidden`, as it is on the way without the piece. AND A `free` MADE ON THE BARE LEVEL IS NOT HANDED ON EITHER (it
+    // answers before the floor does: handed on, the place under the added crate read free, nothing was stepped over and nothing said — the review,
+    // 10-16). (The break: nothing said.)
+    { const k = SET.boxes.findIndex((b, i) => i > 0 && !X.hidden.includes(i)), o = BREAK ? {} : { alsoHide: [SET.boxes[k].id], floor: kitPlanFloor(Ls.boxes) }, withAdd = kitViewPlanWay(Ls, undefined, A, SET.ref, o), bare = kitViewPlanWay(Ls, undefined, { door, keepLights: [] } as Data, SET.ref, o);
+      const F0 = kitPlanFloor(Ls.boxes), stale = BREAK ? {} : { free: (x: number, z: number) => !F0.blocked(x, z) }, withFree = kitViewPlanWay(Ls, undefined, A, SET.ref, { ...o, ...stale }), same = JSON.stringify(withFree.slots) === JSON.stringify(withAdd.slots);
+      row(k > 0 && withAdd.hidden.includes(k) && bare.hidden.includes(k) && withAdd.stepped === 1 && withFree.stepped === 1 && same && withFree.hidden.includes(k), `the caller's word on what is already out of the picture reaches a way with an \`add\`: '${SET.boxes[k]?.id}' named as out is among the hidden boxes with the piece laid in (${withAdd.hidden.includes(k)}) as without it (${bare.hidden.includes(k)}); the level's floor, baked without the piece, is still not handed on (${withAdd.stepped} place stepped over the added crate) — nor a \`free\` made on the bare level (${withFree.stepped} stepped over with it passed, the places ${same ? 'the same' : 'MOVED: the stale grid answered for the floor'})`); } }
+  // A WRITTEN STACK PLACE AND THE DOOR ITSELF (the worked-out line is outside both by construction; a written place is taken as it is): place 1 written
+  // 0.2 m past the jamb THE WRONG WAY is said to be inside the opening; written on the hinge's side 0.1 m past the jamb and half a metre off the wall's
+  // line it is inside the leaf's swing (0.51 m from the hinge of a 0.86 m leaf, 101° off its shut line, under the 1.92 rad stop) — said where the door
+  // writes no `swing` or one toward the team, not where it writes one away; the set's own worked-out places say neither. (The break: nothing written.)
+  { const Ls = { boxes: SET.boxes, doors: SET.doors, lights: SET.lights } as Data as KitPlanLevel, A = P.anchor, nearOf = (sd: 1 | -1) => sd > 0 ? A.b : A.a, at = (sd: 1 | -1, al: number, o: number): Data => { const j = nearOf(sd); return [j[0] + A.t[0] * sd * al + A.n[0] * o, j[1] + A.t[1] * sd * al + A.n[1] * o, 0]; };
+    const turn = A.n[0] * -A.t[1] + A.n[1] * A.t[0] >= 0 ? 1 : -1, swung = (sw?: number): KitPlanLevel => ({ ...Ls, doors: (SET.doors as Data[]).map(d => d.id === 'set_door' ? { ...d, swing: sw } : d) }) as Data as KitPlanLevel;
+    const said = (L: KitPlanLevel, Y: Data, what: string) => kitViewPlan(L, Y, SET.ref).problems.filter(p => p.includes(what)).length, IN = 'INSIDE the opening', SW = "inside the leaf's swing";
+    const inOpen = said(Ls, { door: 'set_door', side: P.side, slots: BREAK ? undefined : [null, at(P.side, -0.2, 0.82)] }, IN), inSwing = said(swung(), { door: 'set_door', side: -1, slots: BREAK ? undefined : [null, at(-1, 0.1, 0.5)] }, SW);
+    const toward = said(swung(turn), { door: 'set_door', side: -1, slots: [null, at(-1, 0.1, 0.5)] }, SW), away = said(swung(-turn), { door: 'set_door', side: -1, slots: [null, at(-1, 0.1, 0.5)] }, SW), own = P.problems.filter(p => p.includes(IN) || p.includes(SW)).length;
+    row(inOpen === 1 && inSwing === 1 && toward === 1 && away === 0 && own === 0, `a written stack place is held to the door itself: place 1 written 0.2 m into the opening is said (${inOpen}); written 0.51 m from the hinge of the 0.86 m leaf, inside its sweep, it is said where the door writes no \`swing\` (${inSwing}) or one toward the team (${toward}), not where it opens away (${away}); the worked-out places say neither (${own})`);
+    // THE STOP IS THE TEAM'S SIDE'S OWN (doors.ts: `maxAngle` stops the positive side, `minAngle` the negative; `turn` = the team's sign): the same
+    // place, 101° off the shut line — a door that cannot open toward the team at all (its stop on their side 0) says nothing, nor one that stops at a
+    // right angle there (1.57 rad, with `swing` toward them), whatever the OTHER side's stop is; a stop at 1.8 rad on the team's side (103°) still
+    // says it, the other side shut. AND PAST THE FAR JAMB (further the wrong way than the leaf is wide, on Sam's side) is said as that, once, and not
+    // as "inside the opening". (The break: the stops written for the other side.)
+    { const stops = (mine: number, other: number, sw?: number): KitPlanLevel => { const t = BREAK ? -turn : turn; return ({ ...Ls, doors: (SET.doors as Data[]).map(d => d.id === 'set_door' ? { ...d, swing: sw, [t > 0 ? 'maxAngle' : 'minAngle']: t > 0 ? mine : -mine, [t > 0 ? 'minAngle' : 'maxAngle']: t > 0 ? -other : other } : d) }) as Data as KitPlanLevel; };
+      const Y: Data = { door: 'set_door', side: -1, slots: [null, at(-1, 0.1, 0.5)] }, shut = said(stops(0, 1.92), Y, SW), right = said(stops(1.57, 1.92, turn), Y, SW), wide = said(stops(1.8, 0), Y, SW);
+      const FAR = 'PAST THE FAR JAMB', Yf: Data = { door: 'set_door', side: P.side, slots: [null, at(P.side, -(A.width + 0.6), 0.82)] }, far = said(Ls, Yf, FAR), farIn = said(Ls, Yf, IN), nearFar = said(Ls, { door: 'set_door', side: P.side, slots: [null, at(P.side, -0.2, 0.82)] }, FAR);
+      row(shut === 0 && right === 0 && wide === 1 && far === 1 && farIn === 0 && nearFar === 0, `…and the leaf's stop is the one on the TEAM's side: that place, 101° off the shut line, is not said of a door that cannot open toward the team (${shut}) nor of one that stops at a right angle there (${right}), the other side's stop at 1.92 rad both times; it is said where the team's side stops at 1.8 rad and the other is shut (${wide}); a place written 0.6 m past the FAR jamb is said as past it (${far}), not as inside the opening (${farIn}), and one 0.2 m into the opening is not past it (${nearFar})`); } }
   // …AND WHAT THE PAGE LOADS (src/host/kitViewSet.ts kitViewAddLevel, in a copy of the records office's data): the level's own boxes index for index and then
   // the way's, its look alternative resolved to the file's paint; the level validator and the real loadLevel take it; the child's records (levelFileOf)
   // carry the piece and plan with nothing laid twice; a way without `add` comes back the same object; THE MISSION NEVER HAS IT (parsed to play, loaded: the
@@ -464,6 +567,12 @@ async function bespoke() {
       let took = ''; try { const L2 = loadLevel(kitViewAddLevel(parseLevelData(JSON.stringify(fix)), 0)); took = L2.lights[L2.lights.length - 1].fixtureBox === L2.boxes.length - 1 ? 'loaded, the lamp on its box' : 'LOADED WITH THE FIXTURE LOST'; } catch (e) { took = 'REFUSED: ' + String((e as Error)?.message ?? e).slice(0, 120); }
       row(eLamp.some(e => e.includes("kind 'undefined'")) && eLamp.some(e => e.includes('dir must be')) && eLamp.some(e => e.includes('range must be')) && eBox.some(e => e.includes("flag 'Nope'")) && eBox.some(e => e.includes('yaw must be a number')) && under && eFix.length === 0 && took.startsWith('loaded'),
         `a way's added records get the level's own rule for a box and a light, under the block's name: a lamp of id / pos / group alone is refused (${eLamp.length} errors), a box with an unknown flag and a yaw that is no number is refused (${eBox.length}), a lamp fixed to a box added beside it is taken (${eFix.length} errors; ${took})`); }
+    // `add.laid` IS THE LOADER'S WORD, NEVER A FILE'S: a file whose way says `laid: true` over ids the level HAS (any of its own boxes passed off as an
+    // added piece: shown, never sunk, given no rule) is refused, and so is `laid: false`, and so is a COPY of what the loader made (the word is taken from
+    // the loader's own object: scene/levelData.ts kitAddLaid) — while the loader's own output validates (the row above). (The break: the loader's object.)
+    { const own = { laid: true, boxes: [{ id: copy.boxes[0].id, c: copy.boxes[0].c, h: copy.boxes[0].h }] }, e1 = BREAK ? validateLevelData(out0).filter((e: string) => e.includes('.add.laid')) : kv(withAdd(own)).filter(e => e.includes('.add.laid'));
+      const e0 = kv(withAdd({ ...add, laid: false })).filter(e => e.includes('.add.laid')), e2: string[] = validateLevelData(JSON.parse(JSON.stringify(out0))).filter((e: string) => e.includes('.add.laid')); let parsed = 'parsed'; try { parseLevelData(JSON.stringify(withAdd(own))); } catch { parsed = 'refused'; }
+      row(e1.length === 1 && e0.length === 1 && e2.length === 1 && parsed === 'refused' && validateLevelData(out0).length === 0, `\`add.laid\` written in a file is refused: \`laid: true\` over a box the level has (${e1[0]?.slice(0, 90) ?? 'NOTHING SAID'}), \`laid: false\` (${e0.length}), a copy of the loader's own output (${e2.length}); the file is ${parsed} by parseLevelData; what the loader itself made validates (${validateLevelData(out0).length} errors)`); }
     const warn = console.warn; let play: Data = null, strict = '', lost: Data = null; console.warn = () => { /* the drop's own line */ };
     try { play = parseLevelData(text, { kitView: 'drop' }); const bad = JSON.stringify(withAdd({ boxes: [{ id: 'kv_bad' }] })); try { parseLevelData(bad); } catch (e) { strict = String((e as Error)?.message ?? e); } try { lost = parseLevelData(bad, { kitView: 'drop' }); } catch { lost = null; } } finally { console.warn = warn; }
     const mission = loadLevel(BREAK ? kitViewAddLevel(play, 0) : play), plain = loadLevel(parseLevelData(R.text));
@@ -575,6 +684,50 @@ async function loader(names: string[]) {
 
 // ───────────────────────────────────────────── E. the dry run ─────────────────────────────────────────────
 /** an anchor proposed from the level's own way-in data (see the head): the way to plan, and how it was come by */
+// ───────────────────────────────────────────── H. the way's own lamps by day ─────────────────────────────────────────────
+async function dayLamps(names: string[]) {
+  say('\n=== H. the way\'s own lamps are on the photocell (a set\'s lights, a way\'s add.lamps)');
+  const { HOURS } = await import(`${ROOT}/src/game/hours.ts`), { parseLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel, levelFileOf } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  const { kitViewSetLevel, kitViewAddLevel } = await import(`${ROOT}/src/host/kitViewSet.ts`), { standUp } = await import('./headless.ts');
+  const lamp = (id: string, group: string, pos: number[], more: Data = {}): Data => ({ id, kind: 'spot', pos, dir: [0, -1, 0], color: [1, 0.8, 0.5], intensity: 20, range: 8, innerDeg: 30, outerDeg: 70, group, enabled: true, volumetric: 0, ...more });
+  // PURE, over the hours' own table (the break: the photocell never asked)
+  { const own: Data[] = [lamp('kv_a', 'kv', [0, 2, 0]), lamp('kv_b', 'kv.day', [0, 2, 0]), lamp('kv_x', 'exterior', [0, 2, 0]), lamp('kv_moon', 'kv', [0, 9, 0], { kind: 'dir' }), lamp('kv_room', 'kv', [8, 2.4, 0])], roof: Data[] = [{ id: 'kv_ceiling', c: [8, 2.9, 0], h: [2, 0.1, 2] }, { id: 'kv_shelf', c: [0, 2.4, 0], h: [0.3, 0.02, 0.3] }];   // (a ceiling over the room's lamp; over the others a shelf too narrow to be a cover)
+    const outs = Object.values(HOURS as Record<string, { lamps: boolean }>).map(h => BREAK ? false : !h.lamps), at = (o: boolean, day?: string[], indoors = false) => kitPlanDayOut(own as Data, roof as Data, day, indoors, o).join(), bare = kitPlanDayOut(own as Data, [], undefined, false, !BREAK).join();
+    row(outs.includes(true) && outs.includes(false) && outs.every(o => at(o) === (o ? 'kv_a,kv_b' : '') && at(o, ['kv.day']) === (o ? 'kv_a' : '') && at(o, ['kv_a']) === (o ? 'kv_b' : '') && at(o, ['kv', 'kv.day']) === '' && at(o, undefined, true) === '') && bare === 'kv_a,kv_b,kv_room',
+      `at an hour with the outside lamps out (${outs.filter(o => o).length} of the table's ${outs.length}) a way under the open sky has its own lamps out [${at(true)}] — never the \`exterior\` one (the game's own photocell's) nor the moon, nor the room's lamp under its ceiling (with no ceiling [${bare}]); \`dayLights\` by group leaves [${at(true, ['kv.day'])}] out, by id [${at(true, ['kv_a'])}]; under a roof [${at(true, undefined, true)}]; at a burning hour [${at(false)}]`); }
+  // THE WORD: a list of names to the validator; a name that is no own lamp of the way is the plan's problem (the break: a bare word, a lamp that is there)
+  { const R = await levelOf('records'), errs = (v: unknown): string[] => { const c = JSON.parse(R.text); c.scenarios.kitView.ways[0] = { ...c.scenarios.kitView.ways[0], dayLights: v }; return validateLevelData(c).filter((e: string) => e.includes('dayLights')); };
+    const block: Data = { sets: { porch: SET } }, none: KitPlanLevel = { boxes: [], doors: [] }, said = (day: string[]) => kitViewPlanWay(none, block, { door: 'set_door', set: 'porch', dayLights: day }, [0, 0]).problems.filter(p => p.startsWith('dayLights names'));
+    row(errs(['ps']).length === 0 && errs(BREAK ? ['ps'] : 'ps').length === 1 && errs(BREAK ? ['ps'] : ['']).length === 1 && said(['set']).length === 0 && said(['set_lamp']).length === 0 && said([BREAK ? 'set' : 'set_wall_a']).length === 1,
+      `the validator takes \`dayLights\` as a list of names (${errs(['ps']).length} errors), refuses a bare word (${errs('ps').length}) and an empty name (${errs(['']).length}); the plan takes the set's lamp by group (${said(['set']).length} problems) and by id (${said(['set_lamp']).length}) and says a name that is no own lamp of the way (${said(['set_wall_a']).length}: '${(said(['set_wall_a'])[0] ?? 'NOT SAID').slice(0, 60)}…')`); }
+  // THE HEADLESS GAME on what ?kitview builds (the break: every own lamp named as burning by day — the lamps the rule must take stay lit)
+  const cases: { w: string; data: Data; k: number; made: Data; mate?: string }[] = [];
+  if (files.includes('records')) { const R = await levelOf('records'), base: Data = parseLevelData(R.text);
+    { const box: Data = { id: 'set_lamp_box', c: [19.2, 2.7, 10.2], h: [0.17, 0.045, 0.05], material: 'concrete', emissive: [5, 4, 2], flags: ['NoShadow'] };
+      const T: Data = { ...SET, boxes: [...SET.boxes, box], lights: [lamp('set_lamp', 'set', [19.2, 2.6, 10.4], { fixture: 'set_lamp_box' }), lamp('set_day', 'set.day', [21, 2.6, 10.6])] };
+      const data: Data = { ...base, scenarios: { ...base.scenarios, kitView: { sets: { porch: T }, ways: [base.scenarios.kitView.ways[0], { door: 'set_door', set: 'porch', dayLights: ['set.day'] }] } } };
+      cases.push({ w: 'a fixture set over records (a lamp with its glowing box, a second lamp named in `dayLights`)', data, k: 1, made: kitViewSetLevel(data, 1) }); }
+    { const mate: string | undefined = (base.lights as Data[]).find(l => l.kind !== 'dir' && l.group !== 'exterior' && l.enabled)?.group, Y0: Data = base.scenarios.kitView.ways[0], P0 = kitViewPlanWay(base, base.scenarios.kitView, Y0, refOf(starts(base.scenarios, 'roomclear')[0])), p = P0.lamps.porch.pos;
+      const add: Data = { boxes: [{ id: 'kv_add_box', c: [p[0], p[1] + 0.3, p[2]], h: [0.17, 0.045, 0.05], material: 'concrete', emissive: [5, 4, 2], flags: ['NoShadow'] }], lamps: [lamp('kv_add_lamp', mate ?? 'kv_add', [p[0], p[1] + 0.2, p[2]], { fixture: 'kv_add_box' })] };
+      const data: Data = { ...base, scenarios: { ...base.scenarios, kitView: { ...base.scenarios.kitView, ways: [{ ...Y0, add }, ...base.scenarios.kitView.ways.slice(1)] } } };
+      cases.push({ w: `records' own way with an added lamp of the level's own group '${mate}' (and its glowing box)`, data, k: 0, made: kitViewAddLevel(data, 0), mate }); } }
+  for (const name of names) { if (name.endsWith('-gwot')) continue; const L = await levelOf(name), KB = L.data.scenarios?.kitView; if (!KB) continue;
+    (KB.ways as Data[]).forEach((Y, k) => { if (!kitPlanOwnLamps(KB, Y).some(l => l.kind !== 'dir')) return; const data: Data = name === 'office' ? L.data : parseLevelData(L.text);
+      cases.push({ w: `${name} way ${k} (${Y.set !== undefined ? 'its set ' + Y.set : 'its add'})`, data, k, made: Y.set !== undefined ? kitViewSetLevel(data, k) : kitViewAddLevel(data, k) }); }); }
+  for (const C of cases) { const KB: Data = C.data.scenarios.kitView, Y: Data = KB.ways[C.k], st = starts(C.data.scenarios, 'roomclear').filter(Boolean); if (!st.length) st.push({ sam: C.data.mission.playerSpawn });
+    const P = kitViewPlanWay(C.data, KB, Y, refOf(st[C.k] ?? st[0])), own = kitPlanOwnLamps(KB, Y).filter(l => l.kind !== 'dir') as Data[], bad: string[] = validateLevelData(C.made);
+    try { const level = loadLevel(C.made), fileBoxes: Data[] = levelFileOf.get(level)?.boxes ?? [], H = await standUp({ level, seed: 1 }), g: Data = H.game; for (let i = 0; i < 5; i++) H.step(1 / 60);   // (the file's boxes as the stand loaded them: index for index the world's)
+      const sw = (id: string): Data => g.targets.find((t: Data) => t.kind === 'analytic' && t.name === id), glow = (t: Data) => (t.boxes as number[]).reduce((q, bi) => q + g.engine.world.statics[bi].emissive.reduce((x: number, y: number) => x + y, 0), 0);
+      const lit = () => g.targets.filter((t: Data) => t.kind === 'analytic' && t.light?.enabled).length, lit0 = lit(), was = own.map(l => { const t = sw(l.id); return `${l.id}${!t ? ' NO SWITCH' : `${t.light.enabled ? ' lit' : ' dark'}${l.fixture ? (t.boxes.some((bi: number) => fileBoxes[bi]?.id === l.fixture) && glow(t) > 0 ? ', its box glowing' : ' BOX NOT ITS SWITCH\'S') : ''}`}`; });
+      const day: string[] | undefined = BREAK ? own.map(l => l.group) : Y.dayLights, boxes: Data = Y.set !== undefined ? KB.sets[Y.set].boxes : fileBoxes, out = kitPlanDayOut(kitPlanOwnLamps(KB, Y), boxes, day, P.indoors, true), night = kitPlanDayOut(kitPlanOwnLamps(KB, Y), boxes, day, P.indoors, false);
+      const want = P.indoors ? [] : own.filter(l => l.group !== 'exterior' && !kitPlanCovered(boxes, l.pos[0], l.pos[2], l.pos[1]) && !(Y.dayLights ?? []).some((nm: string) => nm === l.id || nm === l.group)), keep = own.filter(l => !want.includes(l));
+      for (const t of g.targets) if (t.kind === 'analytic' && out.includes(t.name)) t.on = false;   // (the child's own line, host/kitView.ts place())
+      for (let i = 0; i < 5; i++) H.step(1 / 60);
+      const now = (l: Data) => { const t = sw(l.id); return !t ? 'NO SWITCH' : `${t.light.enabled ? 'lit' : 'out'}${l.fixture ? (glow(t) > 0 ? ', box glowing' : ', box dark') : ''}`; };
+      const ok = bad.length === 0 && night.length === 0 && own.every(l => !!sw(l.id) && (!l.fixture || /its box glowing/.test(was[own.indexOf(l)]))) && want.every(l => now(l) === (l.fixture ? 'out, box dark' : 'out')) && keep.every(l => now(l).startsWith(l.enabled ? 'lit' : 'out')) && lit() === lit0 - want.filter(l => l.enabled).length;
+      row(ok, `${C.w}: ${P.indoors ? 'under a roof — on no photocell' : 'under the open sky'}; as built ${was.join(' · ')}; the day's switch puts out [${out.join(', ')}] → ${own.map(l => `${l.id} ${now(l)}`).join(' · ')}; ${lit0} lamps of the level lit before, ${lit()} after (${want.length} taken${C.mate ? `, the level's own of '${C.mate}' left` : ''}); at a burning hour [${night.join(', ')}]${bad.length ? ' — the built level does not validate: ' + bad.slice(0, 2).join(' · ') : ''}`);
+    } catch (e) { row(false, `${C.w}: the headless game could not be stood on it: ${String((e as Error)?.stack ?? e).slice(0, 300)}`); } }
+}
 function propose(L: { data: Data; floor: KitPlanFloor }, st: Data): { way: KitViewWayIn | null; how: string; nearest: string } {
   const B: Data[] = L.data.boxes, ref = refOf(st), F = L.floor;
   const doors = (L.data.doors as Data[]).map(d => ({ d, m: dist([d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2], ref) })).sort((a, b) => a.m - b.m);
@@ -630,6 +783,50 @@ async function inert(base: Data, link: string, standUp: Data, startFromQuery: Da
       return; } }
   row(false, `a device watching the stack reports nothing in a picture: NO LENS of the fixture level's ${cams.length} reported on a lit Sam at a door it looks at — the row has no teeth (the fixture lost its cameras, or the devices sense nothing on this stand)`);
 }
+/** NO MAN OF THE LEVEL'S RAISES THE FLOOR IN A PICTURE (host/kitView.ts kitViewPark — park() whole, said before and after every step as the child says it).
+ *  The fixture level's own staff, parked where the picture parks them; the level's doors tried from the one nearest that lot (a charge carries 80 m): a bare
+ *  way on it, Sam on the plan's place, the game's own charge set on the leaf (the door tools' setBack) and blown AFTER the park and before the step, as the
+ *  director's tick blows one. THE CONTROL — the park as it was (`ears`: deaf only to what was in the air before the step): the staff hear it in the step
+ *  that makes it, an alarm is placed and the floor goes up (else the row has no teeth, and FAILS for that). THE PICTURE — the park as it is: the floor at
+ *  0 through CHARGE_SECS, no alarm placed, no man of the staff ever out of `patrol`. And BY ANOTHER ROAD: a man of the staff put to `alert` with a fix by
+ *  hand before a step (nothing heard) — the control raises the floor when park() calms him, the picture drops the episode with the fix it placed.
+ *  THE PARK'S OWN COUNT (what kitViewPark returns, every park after the first — the staging's — added up as the child adds it on `__kitview.roused`):
+ *  under the charge 0 men and 0 marks; by hand 1 man at least and a mark at least — the park put him right AND said so, or a page check has nothing
+ *  to read him by. (The break: the picture parked as the control is.) */
+const CHARGE_SECS = 6;
+async function quietMen(base: Data, link: string, standUp: Data, startFromQuery: Data, loadLevel: Data) {
+  const { kitViewPark } = await import(`${ROOT}/src/host/kitView.ts`), floor = kitPlanFloor(base.boxes), mid = (d: Data): V2 => [d.hinge[0] + Math.cos(d.closedDir) * d.width / 2, d.hinge[1] + Math.sin(d.closedDir) * d.width / 2];
+  const stood = async () => { const H = await standUp({ level: loadLevel(base), seed: 1 }), g = H.game; startFromQuery(g, new URLSearchParams(link)); return { H, g }; };
+  const staff = (g: Data): Data[] => g.guards.filter((x: Data) => x.team === 'guard' && x.state !== 'dead');
+  const end = (g: Data, up: number, roused: boolean, C: { men: number; alarms: number }, blown = 0) => { const o = { level: Math.max(up, g.escalation as number), placed: !!g.alarm.placed, roused, blown, men: staff(g).length, count: C }; if (g.quiet.active) g.quiet.stop(); return o; };
+  /** the park, counted as the child counts it: the first (the staging's own) not at all */
+  const parks = (g: Data, ears: boolean) => { const C = { men: 0, alarms: 0 }; let n = 0; return { C, park: () => { const r = kitViewPark(g, ears) as { men: number; alarms: number }; if (n++ > 0) { C.men += r.men; C.alarms += r.alarms; } } }; };
+  /** the charge at door `d`: parked `ears` or not through CHARGE_SECS, the leaf blown at 1 s */
+  const charge = async (d: Data, P: KitViewPlanned, ears: boolean) => { const { H, g } = await stood(), door = g.doors.byName(d.id), at: [number, number, number] = [P.slots[0][0], 0, P.slots[0][1]], K = parks(g, ears); let up = 0, roused = false, set = false, base0 = 0;
+    for (let t = 0, n = 0; t < CHARGE_SECS; t += 1 / 60, n++) { K.park(); g.teleportPlayer(at);
+      if (n === 30 && door && !door.off) { g.doorTools.setBack(door, P.side); set = g.doorTools.set.some((c: Data) => c.door === door); base0 = g.doorTools.stats.blown; }
+      if (n === 60 && set) g.doorTools.trigger(g.doorTools.set.find((c: Data) => c.door === door));
+      H.step(1 / 60); if (staff(g).some(x => x.state !== 'patrol')) roused = true; up = Math.max(up, g.escalation); K.park(); }
+    return end(g, up, roused, K.C, g.doorTools.stats.blown - base0); };
+  /** by another road: the first man of the staff put to `alert` with a fix at Sam's place before one step, then 2 s of parked steps */
+  const byHand = async (ears: boolean) => { const { H, g } = await stood(), K = parks(g, ears); let up = 0;
+    for (let n = 0; n < 120; n++) { K.park(); if (n === 30) { const m = staff(g)[0]; if (m) { m.state = 'alert'; m.lastKnown = [...g.player.char.pos]; } }
+      H.step(1 / 60); up = Math.max(up, g.escalation); K.park(); }
+    return end(g, up, false, K.C); };
+  const said = (o: { level: number; placed: boolean; roused: boolean; count: { men: number; alarms: number } }) => `${o.roused ? 'the staff ROUSED' : 'nobody roused'}, the floor at ${o.level}, ${o.placed ? 'AN ALARM PLACED' : 'no alarm placed'}, the park's own count ${o.count.men} man-park(s) roused and ${o.count.alarms} mark(s) dropped`;
+  { const { g } = await stood(); kitViewPark(g); const lot = staff(g)[0]?.char.pos as number[] | undefined, n = staff(g).length; if (g.quiet.active) g.quiet.stop();
+    if (!lot) { row(false, `no man of the level's raises the floor in a picture: THE FIXTURE HAS NO STAFF — the row has no teeth`); return; }
+    let tried = 0, done = false;
+    for (const d of [...base.doors].filter((x: Data) => !x.steel).sort((p: Data, q: Data) => dist(mid(p), [lot[0], lot[2]]) - dist(mid(q), [lot[0], lot[2]])).slice(0, 3)) { tried++;
+      const P = kitViewPlan(base, { door: d.id, ref: [lot[0], lot[2]] }, [lot[0], lot[2]], { floor }), wild = await charge(d, P, true); if (!wild.blown || wild.level === 0) continue;
+      const pic = await charge(d, P, BREAK);
+      row(pic.blown > 0 && pic.level === 0 && !pic.placed && !pic.roused && pic.count.men === 0 && pic.count.alarms === 0 && wild.count.men > 0, `no man of the level's raises the floor in a picture: Sam's charge blown on '${d.id}' (${f2(dist(mid(d), [lot[0], lot[2]]))} m from where the picture parks the first of the staff's ${n}), ${CHARGE_SECS} s of the game's steps — parked as it was (deaf only to what was in the air before the step): ${said(wild)}; parked as the picture parks (kitViewPark): ${pic.blown ? '' : 'NO CHARGE BLOWN · '}${said(pic)}`);
+      done = true; break; }
+    if (!done) row(false, `no man of the level's raises the floor in a picture: NO CHARGE on the ${tried} door(s) of the fixture nearest the parked staff raised the floor with the park as it was — the row has no teeth`); }
+  { const wild = await byHand(true), pic = await byHand(BREAK);
+    row(wild.level > 0 && pic.level === 0 && !pic.placed, `…nor by another road: a man of the staff put to \`alert\` with a fix before a step (nothing heard) — parked as it was: the floor at ${wild.level}${wild.level > 0 ? '' : ' (THE ROW HAS NO TEETH)'}; as the picture parks: the floor at ${pic.level}, ${pic.placed ? 'AN ALARM PLACED' : 'no alarm placed'} (the episode dropped with the fix it placed)`);
+    row(pic.count.men >= 1 && pic.count.alarms >= 1 && pic.level === 0, `…and the park SAYS what it put right (kitViewPark's count, the child's \`__kitview.roused\`): that man found roused and the marks his fix placed dropped — ${pic.count.men} man-park(s), ${pic.count.alarms} mark(s)${pic.count.men >= 1 && pic.count.alarms >= 1 ? '' : ' (THE PARK MENDED IN SILENCE: a page check has nothing to read him by)'}; the floor at ${pic.level}`); }
+}
 // ───────────────────────────────────────────── G. a quiet mission, a lone Sam ─────────────────────────────────────────────
 async function quietAlone() {
   say('\n=== G. a quiet mission, a lone Sam: the counting house given a block on its west gate (a fixture held here, not the level\'s file)');
@@ -675,6 +872,7 @@ async function quietAlone() {
         const loud = kitViewSetDress(new URLSearchParams(await missionQuery('roomclear', 'records', 2))); if (loud !== null) ok = false; out.push(`a room clear's link: ${loud === null ? 'nothing said' : 'A DRESS SAID'}`);
       } finally { LOOK.on = was.on; LOOK.suit = was.suit; KITANIM.on = was.kit; KITANIM.equip = was.equip; setSuitAs(was.as); KITANIM.sling = was.sling; }
       await inert(base, own, standUp, startFromQuery, loadLevel);
+      await quietMen(base, own, standUp, startFromQuery, loadLevel);
       row(ok && suitAs() === was.as && KITANIM.on === was.kit, `a quiet mission's set dresses its men as the mission does — the sneaking suit on the same men, the rifle across the back — and a loud one's says nothing: ${out.join(' · ')}`); }
   } catch (e) { row(false, `vault (quiet, alone): the headless game could not be stood on it: ${String((e as Error)?.stack ?? e).slice(0, 300)}`); }
 }
@@ -770,6 +968,7 @@ await twins(asked.length ? asked : files);
 await acting(withBlock);
 await bespoke();
 await loader(asked.length ? asked : files);
+await dayLamps(withBlock);
 await dryRun(asked);
 if (!asked.length || asked.includes('vault')) await quietAlone();
 if (warnings) console.log(`\n${warnings} WARNING line${warnings === 1 ? '' : 's'} above (names by generated id: said, never failed)`);

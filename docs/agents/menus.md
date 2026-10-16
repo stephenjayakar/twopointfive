@@ -117,7 +117,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that works a leaf (`Row.leaf`) plays the gun's with the reason in `refused`. A frag's restage also stands the wall again (the next throw opens it again).
   Sets: a set way's `roomLights` defaults to 1; a derived fill lamp pulled in on a short floor is dimmed by the square of the pull; boxes under 0.25 m
   (`KIT_PLAN.lowTop`) are never occluders; LOOK TWINS by `material: 'look|plain'` (`kitViewSet.ts kitSetPaint`); the bundled office goes through the loader
-  too (main.ts `bootLevel`). THE OFFICE's block is `KIT_VIEW` in `levels/office.scenarios.ts` (data-only from here: a minimal one on the fire exit, `hide: []`);
+  too (main.ts `bootLevel`). THE OFFICE's block is `KIT_VIEW` in `levels/office.scenarios.ts` (data-only from here: the `server` door from the corridor, indoors — THE GLASSHOUSE, THE OFFICE AND THE BLOCK'S SQUAD ROWS below);
   the parent asks with no `level` (`ui/missions.ts kitViewWays()`), the child builds the office and stages from that block. KINDS: the child stages room clear /
   rescue / night breach teams, and a QUIET or SOLO mission with its own men (`stagedWay … fixed`: Sam alone, or Sam and his partner; a `kit` message does not
   resize it; a quiet mission deals its start, so its way writes `ref`). REVIEW FIXES (10-15): a kept hole and its wall can no longer disagree (`mend()` never
@@ -275,6 +275,61 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run tools/qa/kitview-plan.ts` (commands in the .cjs head). NOT RUN. Tried headless on the part's crossing way (a drum and a lamp behind the wall): validates, plans, no
   problem. OWED ON A PAGE: `node tools/qa/kitview-levels.cjs` (all; then `KIND=quiet` on a level with a camera at its way), a way that writes
   `litInside` and one that writes `add`, each looked at.
+  SIX CLAIMS OF THE BUILDING DOORS' PART (10-16; kitView `host/kitViewPlan.ts`, three lines of `host/kitView.ts`, one of `main.ts`, `scene/scenarios.ts`,
+  `scene/levelData.ts`, the plan check; `src/game` not edited; no switch — picture only, the 19 staged ways' plans the same to the byte. STATIC ONLY:
+  kitview-plan 226 PASS on both stands, 88 FAIL under the break; NOTHING BELOW HAS RUN ON A PAGE, never seen on a GPU.) (3) kitView THE PORCH LAMP IS ON
+  THE LEVEL'S PHOTOCELL: the picture's lamp and its glowing box hung at every hour (group `kitview` is always kept), so a mission opened by day (the short
+  list's `barracks-day`, the one row off night) had a porch lamp lit at noon while the level's own `exterior` lamps were out (`game/hours.ts lampsOut`).
+  `kitPlanPorchLit` (pure) + the child's dep `lampsOut()` (main.ts: `hourOf` / `HOURS[h].lamps` — DAYLIGHT is the game's own word for it: midday and
+  the grey day; dawn, dusk and night burn): under the open sky the lamp is at the way's `light.porch.day`, not written 0 — no lamp, no box; a way under
+  a roof (the plan's `indoors`) burns at every hour. NOT "a written porch key wins": the barracks writes its lamp's intensity and colour for its night,
+  and that rule left the reported picture lit. STAGED WAYS: none changes at the hour its mission opens (all night); at a midday or a grey day PICKED on
+  the sheet the records office's two ways, mousehole's fire exit and the office lose the lamp and its box (the block is indoors; the ward has
+  none; the pass's set has a gate lamp OF ITS OWN, `ps_lamp` with its glowing box, which this rule did not reach — it burned at noon: SEVEN FINDINGS (3) below). (4) kitView A STACK PLACE PAST THE WALL'S END: the line of places runs 0.45 + k × 1.1 m from the jamb whatever the wall's length — a door 2.4 m
+  from its wall's corner stood the third man 0.2 m past it and every row passed. Now a plan PROBLEM for a WORKED-OUT stack place (1 ‥ 3; a door or a wall
+  anchor) with nothing standing on the anchor's line where he is: "place 3 … is 0.21 m past the end of the wall the stack stands on: write the way's
+  `side` … or his place in `slots`". A written place is the author's word; a gap's stack is not asked. NOT TIGHTENED to fit: the gap is the picture's
+  own (`KIT_VIEW_STAGE.gap`: at 0.9 two men overlap in the image; the step back and the lane are laid by it, and stack neighbours under 1.09 m are a
+  problem already). kitview-plan E's dry run says it of proposed anchors too (never a fail). (6) kitView THE PLAN'S `cam` IS THE PIN, NOT THE PAGE'S
+  CAMERA — REAL, NOT MENDED: `kitView.ts aim()` keeps the pin's yaw and pitch, slides the look point and scales the distance to the parent's `frame`
+  and the view's aspect, which no plan has. Worked through headless (aim()'s loop copied with the projection written out, three real page sizes, 35
+  ways: scratch only, never held against a page): the camera ends 5 to 8 m from the pin's place; the occluder list is the same on 32 ways, and on 3
+  the pin names boxes the slid camera's lines do not meet (the office's `box_0713`, six of the warehouse dock's eight), never the reverse — the pin
+  over-hides. No staged way's sunk list differs (the office writes its `hide`). What was done: `KitViewPlanned.cam` and kitview-plan C say what it is
+  and that nothing may be ray-tested from it. PROPOSED, not built (over 80 lines, and a way with no `hide` would sink by window size): the fit as one
+  pure function in `kitViewPlan.ts` that `aim()` and the plan both call (the frame message is a constant of `KIT_VIEW_PLACE` — the iframe is 2.75
+  columns wide, so column / frame is the same at every size — and only the aspect varies), the occluder pass under it at a nominal aspect, a page row
+  that holds the two cameras equal. (7) kitView `hideMore`: a written `hide` replaces the plan's own list, so one thing more meant copying the list
+  out. `hideMore [names]` is ADDED — to what the plan works out where no `hide` is written (`src.hide` stays 'derived'), to the written `hide` where
+  one is; a piece of the building named in it is the author's word and no "not a thing to sink" problem; the generated-id WARNING covers it. (1)(2) THE
+  SHARED STILL DRIVER (on the mount, `per-level/tools/drive.cjs`; NOT RUN): a lost GPU device or a blank canvas (luminance 0) ends the run with a plain
+  line and exit 1, no black still saved — ONE BROWSER AT A TIME ON A MACHINE; a `LEVELS` row's `way: N` clicks the sheet's Way in button from the
+  page's own script and holds the iframe's link to `way=N`. OWED ON A PAGE: a mission at `?hour=midday` on a way under the open sky (no lamp, no box,
+  no console line) and one that writes `light.porch.day`; `node tools/qa/kitview-levels.cjs` on a way with `hideMore`; the driver once with a `way` row.
+  SEVEN FINDINGS OF A REVIEW OF THE ABOVE (10-16; kitView `host/kitViewPlan.ts`, `host/kitView.ts` place(), `scene/scenarios.ts`, `scene/levelData.ts`,
+  the plan check, the page check, the driver on the mount; `src/game` not edited; no switch — picture only; the 19 staged ways' plans the same to the
+  byte. STATIC ONLY: kitview-plan 234 PASS on both stands, 96 FAIL under the break; NOTHING BELOW HAS RUN ON A PAGE, never seen on a GPU.)
+  (3) kitView THE WAY'S OWN LAMPS ARE ON THE PHOTOCELL TOO: a set's own lamp is in the plan's `keepLights` (under the open sky) and the game's photocell
+  opens only group `exterior` — the pass picked at Midday or Overcast showed its gate lamp lit and its box glowing. `kitPlanDayOut` (pure): at an hour
+  with the outside lamps out, on a way under the open sky, the way's own lamps — its set's `lights`, its `add.lamps` — are out, BY ID (an added lamp may
+  share a group with the level's own), at the game's own light switch (`target.on`: lamp and fixture glow together, what the photocell itself opens),
+  every restage. The way's new word `dayLights [ids or groups]` keeps the ones it names burning; a name that is no own lamp is a plan problem. No level
+  file edited. A LAMP UNDER A COVER (a ceiling or roof box over it: `kitPlanCovered`, the test `keepLights` is measured by) is a room's and burns. (4) kitView A HEADER BEAM IS NO WALL TO STACK ON:
+  the past-the-end test took any box thin across the line at any height — a barracks door's third man stood in an open 3 m gateway under its beam. Now
+  wall = a box on the line whose underside is below 1.5 m (`KIT_PLAN.wallFoot`; glass counts: a window is a wall by its pane or its sill) or ANOTHER DOOR
+  of the level on the line. (5) …and never a box the plan takes out of the picture (`hidden`: `hide`, `hideMore`, the occluders, the child's first
+  pass); THE FOURTH MAN'S PLACE IS ASKED TOO where it is worked out ("place 4 … behind Sam"). Over every door of every level, both team sides, both stack
+  sides (1396 plans): 975 such problems before (places 1/2/3: 87/352/536), 1363 after (87/359/545 and 372 of place 4): 16 more on the stack places (15
+  a header alone, 1 a hidden box), none fewer, no other problem moved; no staged way gained one. (6) kitView ONE NAME IN `show` AND IN `hide` /
+  `hideMore` IS A PLAN PROBLEM (its boxes went, its loose props stayed). (7) THE PAGE ROW: `HOUR=midday node tools/qa/kitview-levels.cjs` puts
+  `hour=midday` on each link and requires, on a way under the open sky at an hour the page's own table has the lamps out, the porch lamp disabled, its
+  box not among the world's statics (`__kitview.fixtureUp`), and the way's own lamps off at the game's switch with dark boxes; any other hour: said,
+  nothing judged. It is the row that fails if the child's photocell line is deleted or `main.ts lampsOut` inverted (the plan check holds only the pure
+  rule and the switch on a headless game). (1)(2) THE DRIVER (on the mount; NOT RUN): a device lost AFTER the picture is live (the next read of the
+  dropped iframe throws) ends with the NO STILL line and exit 1 as a loss before it does; the run exits 1 when ANY level saved no still or did not end
+  'done' (it exited 0 on "died", "never live", no row, no button, the wrong way, not started); `way: 1` passes on a link with no `way=` (the sheet
+  writes the key from 2 up). OWED ON A PAGE: `HOUR=midday node tools/qa/kitview-levels.cjs` (all, then `HOUR=night` as the control); the pass looked
+  at by day; the driver once, and once with a `way: 1` row.
   THE TWO RESCUE LEVELS' PICTURES (10-16; data only: `tools/levels/consulate.ts`, `tools/levels/registry.ts` and their four files). The team starts INSIDE the
   front door on both, so neither way stands on the start. CONSULATE: its own `front` door from the street (`ref [1, 18.75]`), all else measured. REGISTRY: a
   set `front` of its own front (`REGISTRY_KITVIEW`: 34 boxes, one door, one lamp `rg_lamp`, `pane: false`) — the scribe's table and typewriter up the wall past
@@ -312,6 +367,75 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   them those places is under the tiles and the wedge behind the wall is dark: only `exterior` lamps stay lit, and no light was tuned blind). NOBODY HAS:
   watched a quiet row's tiles play, seen the counting house's picture on a GPU with `cam_yard` live over its door, run the lessons' rows on the page since
   the seam was merged (before it: 19 of 19, train-silent 23 of 23), or played the 40 mm tile (not among the rows the page check plays).
+  SIX ITEMS AFTER THE MERGE (10-16; `host/kitView.ts`, `host/kitViewPlan.ts`, `host/kitViewSet.ts`, `scene/levelData.ts`, the three checks; no switch, no
+  Tab row, no word on the screen, nothing under `src/game`; both stands the same; every staged way's plan the same to the byte, one pass and the child's
+  two. STATIC ONLY: kitview-plan 582 PASS on both stands, 173 FAIL under the break; NOTHING BELOW HAS RUN ON A PAGE, never seen on a GPU.) (1) kitView THE
+  LEVEL'S OWN MEN RAISE NO ALARM: on the relay station's quiet row the page check saw the floor go 0 → 1 under Sam's charge and 1 → 2 under the wall
+  charge with no device reporting. WHO: `guards.ts updateEscalation`, by the picture's own park. A row's blast is made INSIDE the game's step (the door
+  tools' tick; the director's trigger is said after `park()`), so park's "what is in the air is numbered and behind him" came a step late: the five staff
+  parked 69 to 77 m from `gate_w` (a charge carries 80; the crossing's gate is out of that reach) heard it in the step that made it, went `alert` with
+  a fix, updateEscalation placed the alarm on the fix and opened an episode, park() calmed them, and the next step read the episode as over and raised
+  the floor. `park()` is now the exported `kitViewPark(game)`: as before, and each man's `heardUpTo` set to `KIT_VIEW_DEAF` (the guards' and civilians'
+  own "heard as far as" mark, past any event's number: deaf UNTIL THE GAME WRITES THAT MARK AGAIN — a man it stands up mid-step is given the count
+  as it then is: `qrf.ts`, `guards.ts spawnUnit` — and every park renews it, before and after each step), and — for a man made alert by another
+  road — `alarm.episode` / `alarm.placed` dropped, ONLY WHILE THE FLOOR IS AT 0 (a floor already up keeps its marks, and the page checks see it up). Headless over the 18 level-missions with a door anchor, the anchor's charge blown: the old park raised the floor on
+  5 (police-post, quiet-relay, quiet-yard alone and as two, vault), the new on 0. kitview-plan G, two rows: the fixture's door nearest the parked
+  staff, a control parked as it was that DOES raise it, the picture's that does not; a man put to `alert` by hand. The partner still says "compromised"
+  at the blast (the quiet mission's own word, no alarm). OWED ON THE PAGE: `LEVEL=quiet-relay WAY=1 KIND=quiet SQUAD=1 node tools/qa/kitview-levels.cjs`
+  (3 FAIL of 27 before). (2) `lived-check` does not walk a way's `add` for floor points (a low added box's centre was "a place a man goes"). (3) kitView
+  `add`, three review notes: a FILE that writes `add.laid` is refused (the validator takes the word only from the object `kitViewAddLevel` made:
+  `levelData.ts kitAddLaid`, by identity — a copy of the loader's output is refused too); `kitViewPlanWay` hands the caller's `hiddenStand` / `alsoHide`
+  on to a way with an `add` (it dropped every option with the level's floor — the `floor` AND a passed `free` are dropped there: below); an added piece is blamed for a stepped place only where the place is free
+  without it. (4) kitview-page's ROW THAT FAILED ONCE IN FIVE ("the breaching shotgun in member 2's big slot … a new beat frame 1: weapon by member 2 ·
+  0 cut") WAS THE CHECK'S RACE, the one kitview-levels had: `__kvPick` read the beat count and told the pick in one task, from 'rest'; the loop's own
+  next turn of the tile under the highlight (his gun) began on a display frame before the page heard the message. The director can turn a big-slot pick
+  into the gun's row only through a refusal, which writes `refused`, and from `settled` nothing in the row's start refuses. `__kvTold` (one helper, its
+  listener after the director's): a pick's row counts from the HEARING; the turn begun in between is `stray`, printed, and held to a cut with no mark.
+  (5) kitView `__kitview.held { n, field, why[], s, frames }`: THE DIRECTOR'S OWN WORD FOR A PICK IT KEPT BACK ('mend', 'arrive', 'home', 'sam', 'leaf'),
+  said in `direct()` where it turns back. kitview-levels allowed the picture's wait from a reading taken BEFORE the pick, which knew Sam's half step and
+  the leaf only: Sam's wand, picked with the stack still stood off his charge, waits for the men to walk home (`homing()`) — "up 17 frames, 284 ms" on
+  a bound of 4, at 60 Hz frames: the director's wait, not the machine's. The tool now reads `held` for the very beat. (6) kitView A WRITTEN STACK PLACE
+  AND THE DOOR: places 1 to 3 written INSIDE THE OPENING (past the jamb the wrong way) or INSIDE THE LEAF'S SWING (`KIT_PLAN.leafStop`) are plan
+  problems; of the 18 written stack places in the tree none gains one. NOT ASKED: "nearer the jamb than a body" (`KIT_PLAN.man` 0.3) — the warehouse
+  dock door's written place 1 stands 0.22 m past its jamb, in both looks, and would gain a problem.
+  **THE REVIEW OF THOSE SIX, 10-16** (seven fixes; STATIC ONLY: kitview-plan 584 PASS on both stands, 175 FAIL under the break, the staged plans'
+  dump the same; NOTHING HERE HAS RUN ON A PAGE). (a) `__kitview.held` IS NOW `{ n, field, i, why[], by{rule: frames}, s, frames }` AND MUST ACCOUNT
+  FOR THE DELAY: as first written, one held frame bought a row kitview-levels' whole 3 s `WAIT_MS`, `mend` was an excuse every pick after a row that
+  broke something met (`dirty` outlives the rest), a frame the director did not run on (a dissolve still asked for) was in no count, and a word left
+  by a pick that never began excused the next pick's row. The director: `heard()` (every place a pick is taken) starts the pick's clock and DROPS a
+  pending word; `i` is the open card's member; `by` counts the frames each rule held; a frame under a dissolve asked for between two frames holds
+  under 'mend'; `s` runs from the hearing to the row's begin. kitview-levels (`heldJudge`): the word is the begun beat's (number, member, thing — or
+  the gun's row `refused` names it for); the frames the page WORKED (`drawn` moved) less the frames a rule held are FRAMES at most; every rule is in
+  its table `HELD` with its bound — `mend`: FRAMES of it, and a row held by mend alone begins within FRAMES display frames as kitview-page asks of a
+  restage; `home` / `sam` / `leaf` / `arrive`: `WAIT_MS` from the pick; display frames passed over whole are held to the page's own pace
+  (`pace.every`). (b) THE PARK SAYS WHAT IT PUT RIGHT: `kitViewPark` returns `{ men, alarms }` — the level's men it found `suspicious` / `alert` /
+  `search`, the marks it dropped — and the child adds them on `__kitview.roused` for every park but a staging's own, never reset (the park calms the
+  men and drops the marks before any page reader runs: the checks' "an alarm placed" and "N alert" could no longer be true of what it mended).
+  kitview-levels' alarm limb of every tile row and its whole-run row, kitview-page's `sound()` and a whole-run row there, go red when it rises or is
+  not said; kitview-plan G holds it to 0 under the charge and to 1 man, 2 marks for the man set alert by hand. Headless over 31 mission links (way
+  1, the anchor's charge on the door ways, 6 s): 0 counted — NOBODY HAS SEEN the count on a page, where sight is the GPU meter's and the squad
+  fires. (c) A written place and the leaf: the stop asked is THE ONE ON THE TEAM'S SIDE (`maxAngle` on the positive side of doors.ts's `into = n0 ×
+  swing`, minus `minAngle` on the other; it was the wider of the two — a door that cannot open toward the team, or stops at a right angle there,
+  said "inside the leaf's swing"); a place further the wrong way than the anchor is wide is said PAST THE FAR JAMB, not "inside the opening".
+  (d) `kitViewPlanWay` drops a passed `free` with the `floor` under an `add` it lays (as on a set): `free` answers before the floor, and one made on
+  the bare level stood a man in the added crate with nothing stepped over. The child does not come that way. (e) kitview-page: the two rows that
+  tell their own pick (a door charge with the leaf open, a door order while Sam is walked home) keep the loop's stray turn (`__kvStrayOf`) and hold
+  it through `strayHeld` like every pick; `__kvTold` numbers the message it posts (`kvn`: the director reads only the keys it knows) and hears that
+  one, where any `kit` message matched — kitview-levels' `__kvRow` too. ROWS WHOSE MEANING MOVED (to run again): kitview-levels every timed tile
+  row and both alarm rows; kitview-page every row through `sound()`, the two inline rows, the new whole-run park row.
+  THE GLASSHOUSE, THE OFFICE AND THE BLOCK'S SQUAD ROWS (10-16; data only: `tools/levels/glasshouse.ts`, `tools/levels/blocksquads.ts`, their three
+  files and `levels/office.scenarios.ts`; no switch, no Tab row, no word on the screen; both stands the same). GLASSHOUSE: way 1 a `span` of the blank
+  end wall (the wall the mission breaches; a teammate's rows that need a leaf play the gun's row there), way 2 door `back` with `keepLights ['store']`.
+  THE OFFICE (five rows, one way): INDOORS, door `server` from the corridor (shut as authored: `breakroom_w`, `manager` and `conference` stand open as
+  authored, and a leaf that stands open cannot be an anchor), the corridor's partition written out by generated id (`box_0120`, `box_0121`, `box_0380`,
+  `box_0390`: a change of box order in `src/scene/officeGen.ts` means reading them again; kitview-plan WARNS of such ids), `roomLights 1`, the third
+  man's place written (the worked-out one stood on `laser_corridor`). BLOCK SQUADS: way 1 is `block.ts`'s kitchen door; way 2 is `crib_to_loading`
+  from the loading hall with the picture's own lamp and fill kept (that hall's panels are off: indoors is not lit), the south wall, the crib's
+  pegboard, `lived.street` and `lived.staging` hidden; the thirteen boxes hidden by id are FOUND at export by place with their count checked
+  (`cribWayOut`), never typed. The part's page checks: 31/28 (glasshouse), 28/28 (block squads), 83 of 84 and 28 of 28 alone (office); the office's
+  solo night was 20 of 22 on its tree — the parked men heard the `server` door's charge — which is THE LEVEL'S OWN MEN RAISE NO ALARM above (parked
+  men deaf, not parked further: any one spot is in earshot of some door). TAKEN, NOT BUILT: a door authored open as an anchor; lamps off by default
+  from `plan.indoors`; a hidden wall's look paint staying up; a worked-out place on a laser tripwire. Never seen on a GPU.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +

@@ -250,6 +250,13 @@ const isUnit2 = (v: unknown): boolean => Array.isArray(v) && v.length === 2 && i
 const SQUAD_KEYS = ['id', 'name', 'rooms', 'rally', 'barricade', 'mayLeave', 'training', 'arrive'] as const, SQUAD_ARRIVE_KEYS = ['door', 'spawn', 'men'] as const;
 const isRect = (r: any): boolean => !!r && isNum(r.x0) && isNum(r.x1) && isNum(r.z0) && isNum(r.z1) && r.x0 <= r.x1 && r.z0 <= r.z1;
 
+/** `add.laid` IS THE LOADER'S WORD ALONE (scenarios.kitView.ways[*].add — the Team & kit picture's own pieces): `laid: true` tells the validator the records
+ *  are IN the level, so it asks that their ids are the level's and gives them no box / light rule of their own. Written in a FILE it passed off any of the
+ *  level's own boxes as an added piece (shown, never sunk for the camera, judged by nothing). So the word counts only on an `add` object the picture's
+ *  loader made and handed here (src/host/kitViewSet.ts kitViewAddLevel → kitAddLaid): by identity — nothing a file's text, or a copy of the data, can say. */
+const KIT_ADD_LAID = new WeakSet<object>();
+export function kitAddLaid<T extends object>(add: T): T { KIT_ADD_LAID.add(add); return add; }
+
 /** Every structural / referential / range problem in `d`, one line each ('' = valid). Cheap enough to run at every boot (loadLevel does). It checks the
  *  SCHEMA — shapes, finiteness, unique ids, that every id reference resolves, enum values, array arities the drills index blind — not level DESIGN
  *  (reachability, sealing, budgets: that is tools/qa/level-lint.ts, lane G1b). */
@@ -705,13 +712,13 @@ export function validateLevelData(d: LevelData): string[] {
           const ways = recs(`${w}.ways`, K.ways); if (!ways.length) err(w, 'ways: at least one');
           if (ways.length > nWays) err(`${w}.ways`, `${ways.length} ways for ${nWays} team start${nWays === 1 ? '' : 's'} (one per way in: the level's own, then each of scenarios.roomClear.starts)`);
           ways.forEach((y: any, i) => { const yw = `${w}.ways[${i}]`; if (!isObj(y)) return;
-            known(yw, y, ['door', 'side', 'pin', 'slots', 'light', 'hide', 'hidePaint', 'roomLights', 'span', 'kind', 'set', 'ref', 'hand', 'slotGap', 'wall', 'lane', 'out', 'inside', 'pane', 'show', 'indoors', 'keepLights', 'litInside', 'add']);
+            known(yw, y, ['door', 'side', 'pin', 'slots', 'light', 'hide', 'hideMore', 'hidePaint', 'roomLights', 'span', 'kind', 'set', 'ref', 'hand', 'slotGap', 'wall', 'lane', 'out', 'inside', 'pane', 'show', 'indoors', 'keepLights', 'dayLights', 'litInside', 'add']);
             // (A PIECE OR A LAMP MORE on a level's own way — scenarios.ts KitViewWay.add: the shapes, and ids new to THE LEVEL'S OWN records — two ways may write
             //  the same id, for one way alone is ever laid in (src/host/kitViewSet.ts kitViewAddLevel), and what a way that says `laid` laid in is not the
             //  level's own. Then, where the shapes hold and the records are not laid in (those are the level's by then, judged above), EACH RECORD GETS THE
             //  LEVEL FORMAT'S OWN RULE — a box's, a light's, the one loadLevel refuses a level by: a lamp with no kind / dir / color / range, a box with a
             //  flag nobody knows or a yaw that is no number is said HERE, under this block's name, and never first at the picture's boot)
-            if (y.add !== undefined) { const aw = `${yw}.add`, n0 = errs.length; if (!isObj(y.add)) err(aw, 'must be an object: { boxes?, lamps? }'); else { known(aw, y.add, ['boxes', 'lamps', 'laid']); if (y.add.laid !== undefined && typeof y.add.laid !== 'boolean') err(`${aw}.laid`, 'true or false (the loader\'s word: the records are in the level already)');
+            if (y.add !== undefined) { const aw = `${yw}.add`, n0 = errs.length; if (!isObj(y.add)) err(aw, 'must be an object: { boxes?, lamps? }'); else { known(aw, y.add, ['boxes', 'lamps', 'laid']); if (y.add.laid !== undefined && !KIT_ADD_LAID.has(y.add)) err(`${aw}.laid`, 'never written in a file (the picture\'s loader says it of the level it laid the records into: src/host/kitViewSet.ts kitViewAddLevel)'); else if (y.add.laid !== undefined && typeof y.add.laid !== 'boolean') err(`${aw}.laid`, 'true or false (the loader\'s word: the records are in the level already)');
               if (y.set !== undefined) err(aw, 'a way on a set adds nothing: the set is the place for its boxes and lamps');
               const laidIn = (k: 'boxes' | 'lamps') => new Set<string>(ways.flatMap((z: any) => isObj(z) && isObj(z.add) && z.add.laid === true && Array.isArray(z.add[k]) ? z.add[k].map((o: any) => o?.id) : []));
               for (const [k, own] of [['boxes', d.boxes], ['lamps', d.lights]] as const) { const list = y.add[k]; if (list === undefined) continue;
@@ -734,22 +741,22 @@ export function validateLevelData(d: LevelData): string[] {
             if (y.wall !== undefined) { if (!isObj(y.wall)) err(`${yw}.wall`, 'must be an object'); else { known(`${yw}.wall`, y.wall, ['face', 'thickness', 'top']); for (const k of ['face', 'thickness', 'top']) if (y.wall[k] !== undefined && !isNum(y.wall[k])) err(`${yw}.wall.${k}`, 'a number'); } }
             if (y.pane !== undefined && y.pane !== false && !(isObj(y.pane) && isStr(y.pane.box) && (y.pane.stand === undefined || isVec(y.pane.stand)))) err(`${yw}.pane`, '{ box, stand? [x, z, yaw in degrees] } or false');
             for (const k of ['indoors', 'litInside']) if (y[k] !== undefined && typeof y[k] !== 'boolean') err(`${yw}.${k}`, 'true or false');
-            for (const k of ['show', 'keepLights']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of names');
+            for (const k of ['show', 'keepLights', 'dayLights']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of names');
             if (y.side !== undefined && y.side !== 1 && y.side !== -1) err(`${yw}.side`, '1 or -1');
             if (y.pin !== undefined) { if (!isObj(y.pin) || !isNum(y.pin.yaw) || !isNum(y.pin.pitch) || (y.pin.dist !== undefined && !(isNum(y.pin.dist) && y.pin.dist > 1))) err(`${yw}.pin`, '{ yaw, pitch, dist? } in radians and metres'); else known(`${yw}.pin`, y.pin, ['yaw', 'pitch', 'dist']); }
             if (y.slots !== undefined && !(Array.isArray(y.slots) && y.slots.length <= 5 && y.slots.every((p: unknown) => p === null || isVec(p)))) err(`${yw}.slots`, 'up to five [x, z, yaw in degrees]: the player, then the teammates from the door outward (null = a place left to the plan)');
             if (y.light !== undefined) { if (!isObj(y.light)) err(`${yw}.light`, 'must be an object'); else { const L = y.light, num = (w2: string, o: any, keys: string[]) => { for (const k of keys) if (o[k] !== undefined && !(isNum(o[k]) && o[k] >= 0)) err(`${w2}.${k}`, 'a number, 0 or more'); };
               known(`${yw}.light`, L, ['porch', 'fill', 'roomLights', 'moonScale', 'skyScale', 'sam']); num(`${yw}.light`, L, ['roomLights', 'moonScale', 'skyScale']);
               for (const who of ['porch', 'fill']) { const P = L[who], pw = `${yw}.light.${who}`; if (P === undefined) continue; if (!isObj(P)) { err(pw, 'must be an object'); continue; }
-                known(pw, P, ['kind', 'offset', 'aim', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'radius', 'volumetric', 'broad', ...(who === 'porch' ? ['fixture'] : [])]);
+                known(pw, P, ['kind', 'offset', 'aim', 'color', 'intensity', 'range', 'innerDeg', 'outerDeg', 'radius', 'volumetric', 'broad', ...(who === 'porch' ? ['fixture', 'day'] : [])]);
                 if (P.kind !== undefined && ![0, 1, 3].includes(P.kind)) err(`${pw}.kind`, '0 (point), 1 (spot) or 3 (area disk)');
                 for (const k of ['offset', 'aim', 'color']) if (P[k] !== undefined && !isVec(P[k])) err(`${pw}.${k}`, 'Vec3');
-                num(pw, P, ['intensity', 'range', 'innerDeg', 'outerDeg', 'radius', 'volumetric']);
+                num(pw, P, ['intensity', 'range', 'innerDeg', 'outerDeg', 'radius', 'volumetric', ...(who === 'porch' ? ['day'] : [])]);
                 if (P.broad !== undefined && typeof P.broad !== 'boolean') err(`${pw}.broad`, 'true or false');
                 if (who === 'porch' && P.fixture !== undefined && !(isObj(P.fixture) && isVec(P.fixture.at) && isVec(P.fixture.half) && isNum(P.fixture.glow))) err(`${pw}.fixture`, '{ at Vec3, half Vec3, glow }'); }
               if (L.sam !== undefined) { if (!isObj(L.sam)) err(`${yw}.light.sam`, 'must be an object'); else { known(`${yw}.light.sam`, L.sam, ['on', 'intensity', 'innerDeg', 'outerDeg', 'volumetric', 'aim']); num(`${yw}.light.sam`, L.sam, ['intensity', 'innerDeg', 'outerDeg', 'volumetric']);
                 if (L.sam.on !== undefined && typeof L.sam.on !== 'boolean') err(`${yw}.light.sam.on`, 'true or false'); if (L.sam.aim !== undefined && !isVec(L.sam.aim)) err(`${yw}.light.sam.aim`, 'Vec3'); } } } }
-            for (const k of ['hide', 'hidePaint']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of box ids / box groups');
+            for (const k of ['hide', 'hideMore', 'hidePaint']) if (y[k] !== undefined && !(Array.isArray(y[k]) && y[k].every((v: unknown) => typeof v === 'string' && v.length > 0))) err(`${yw}.${k}`, 'a list of box ids / box groups');
             if (y.roomLights !== undefined && !(isNum(y.roomLights) && y.roomLights >= 0)) err(`${yw}.roomLights`, 'a number, 0 or more'); });
         }
       }
