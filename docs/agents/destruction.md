@@ -589,6 +589,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kinds of floor the count was 0 too: at this site the middle kind never changed an outcome — it is a guard, not a measured gain);
   (c) the journal line; (d) the stand. MEASURED headless only, one site, one seed; never seen on a GPU, nobody has
   played it.
+- **Caught by a grenade with no cover, a man leaves by a doorway that already stands open** (`frag.ts FRAG.fleeDoor`, `fleeByDoor`, 10-16; the
+  maintainer's call on "a grenade lands on the squad in a bare room": they go out through the already open doorway beside them, never opening a
+  shut door, never sprinting). A SWITCH: OFF in the module and on the frozen stand (`TPS_FLEEDOOR=1`; a `FROZEN_HOLDS` row; `STAND_ENV`), ON in
+  the page (`?nofleedoor`; a row on the debugger's page beside the flee's own); a recording from before the key replays with it off
+  (`journal.ts applyKnobs`). Only with `FRAG.fleeWise`. `fleeSpot` deals ONE STRAIGHT LEG, so in a room with nothing to get behind every leg
+  ended on open floor inside what the burst kills at. Now, when the leg it deals is nothing, is in the burst's line (`exposedTo`), or stands in
+  the mouth of an open doorway (`fleeDoorMouth`: the floor the others' way out runs over), `fleeByDoor` is asked: spots beside each open doorway
+  within his legs' reach, on its FAR side, either hand, that the burst has no line to; the way there is the floor's own path (`nav.findPath`,
+  walked by `goTo` like any script goal) and must go through that doorway, through no door that is not open, no step of it nearer the thing than
+  he stands by more than `fleeDoorDip`, within what his legs make in the fuse left (`fleeDoorIn`), and not a mate's spot (`fleeApartM`). For
+  the squad, floor it has cleared is preferred to floor it has not (`fleeDoorNew`), but unknown floor beats dying. The way is found as his
+  own feet will find it (`goTo`'s prices), so the path checked is the path walked as it stands at the deal. OPEN = the leaf off its hinges, or
+  unlatched, not swinging to, and `fleeDoorOpen` rad off its frame: a shut or barely open door is never a way out and nobody touches a handle for it. THE LEAF:
+  the floor's path does not know a leaf, and a man who walks into an open one from behind swings it shut in the doorway on the men coming
+  through (measured: it shut the way on all four). So no leg may come within `fleeDoorLeaf` of a leaf standing open, nearer it than he began
+  (`openLeaves` / `legByLeaf`) — the way out, and with the rule on `fleeSpot`'s own straight leg too; a man the leaf stands in front of is
+  dealt the floor in front of the doorway past the leaf's end first (`via`, budget `fleeDoorVia`) and is dealt again as he gets there
+  (`fleeDoorViaM`, in stride, `Live.via`), or, when that takes him nearer the thing or there is no time, he keeps a straight leg. The pace is
+  the flee's own (`min(runSpeed, PACE.max)` for a teammate). `FRAG_STATS.byDoor` counts the deals. Off = `fleeByDoor` and the leaf test are
+  never asked: the build as it was. KNOWN LIMITS: one doorway takes about one man a second, so of four men a stride or two from a door with
+  three seconds left two get out, not four; the men behind an inward leaf with the grenade behind them mostly do not; the door is judged when
+  the leg is dealt (a leaf somebody then swings is not asked again until he is dealt again; his feet may re-plan on the way); a man dealt
+  again past the jamb can get down where he is; the squad throw's own forecast of where mates will get to (`squadthrow.ts`) does not know
+  this leg; the scripted run this came from no longer has a grenade land in that hall on the current build, so it is not a repro any more.
+  CHECK: `probes.ts frag-fleedoor` (in `frag`), both stands, `FLEEDOOR_BREAK=1` fails (a) on both. The site is read off the four-man floodlit
+  level (the first door with a bare side: the yard gate): (a) the gate open, four men by it, a grenade three metres in with 3.2 s left: on
+  either stand 3 deals of the way out, 2 men beyond the frame and unhurt at the burst, 2 killed; rule off: nobody dealt it, 2 wounded and 2
+  killed; (a2) nobody moves faster than the flee's pace; (b) the gate shut: nobody is dealt it and the leaf is on its latch until the burst;
+  (c) the men the open leaf stands in front of are never dealt the way straight through it — round its end, or nothing (with the leaf not
+  reckoned the same pick does send them through); (d) the journal line; (e) the stand. ALSO MEASURED by a scratch sweep, page stand, four men,
+  the door open, fuse left 2.6 / 3.2 / 3.8 / 4.4 s — unhurt of four, rule on against off: the yard gate 0 2 3 3 against 0 0 0 1; the hall
+  the report came from (the front door open inward) 1 2 2 3 against 1 1 1 1; killed never more than with it off; the hall with the door shut
+  0 of 4 either way. Headless only, one seed a staging; never seen on a GPU, nobody has played it.
 - **Lying snow in a blown hole's mouth goes with the blast (10-15; the maintainer, of a wall charge on the pass: "couldn't path through a hole from a wall
   breach").** His tape (76 s, re-run headless to 0.01 m of the page): the charge cut 1.56 m out of the tea room's outer wall (box 40) and two snow banks at its
   foot (tops 0.22 and 0.36 m — over the 0.2 m a body and the walk grid are stopped from; the level keeps such banks 1.4 m off every DOOR, `pass-check` 6, and
