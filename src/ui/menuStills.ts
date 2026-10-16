@@ -24,7 +24,7 @@ function manifestOf(): Promise<Manifest | null> {
     const later = () => { manifest = null; return null; };
     try {
       if (typeof fetch !== 'function' || typeof document === 'undefined' || typeof Image === 'undefined') return null;
-      if (document.querySelector?.('meta[name="tps-one-page"]')) return null;   // (the one-file build has no folder beside it: nothing is asked for)
+      if (document.querySelector?.('meta[name="tps-one-page"]') && !document.querySelector?.('script[data-pack="assets/menu/stills.json"]')) return null;   // (a one-file page has no folder beside it: nothing is asked for — unless it carries the pictures in itself, as tools/build-one.ts packs them: host/onefile.ts answers the asks below)
     } catch { return null; }
     let r: Response;
     try { r = await fetch(at('stills.json')); } catch { return later(); }

@@ -192,7 +192,7 @@ export class ReplayKey {
     };
   }
 }
-/** this page is all there is: the one-file build (tools/artifact-page.py marks its page; ui/menu.ts lists no tool page there) ships no replay.html */
+/** this page is all there is: the one-file build (tools/build-one.ts marks its page; ui/menu.ts lists no tool page there) ships no replay.html */
 const onePage = (): boolean => { try { return !!document.querySelector?.('meta[name="tps-one-page"]'); } catch { return false; } };
 const LEAVE_MS = 8000, ARM_MS = 6000;
 /** the viewer page beside this one, on a shelf entry */

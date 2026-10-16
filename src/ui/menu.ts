@@ -138,7 +138,7 @@ export const EXTRAS: { head: string; rows: { id: string; label: string; line: st
 ];
 /** a showcase row's link: its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
 function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }
-/** the one-file build (tools/artifact-page.py marks its page): index.html is all there is, so the tool pages are not listed */
+/** the one-file build (tools/build-one.ts marks its page): index.html is all there is, so the tool pages are not listed */
 const onePage = () => typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-one-page"]');
 /** a showcase started in place, by its row's id: true = started (or refused aloud), false = not from here — the row's link loads it */
 type TitleShows = Partial<Record<string, () => boolean>>;
