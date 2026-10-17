@@ -229,6 +229,10 @@ export const KIT_VIEW_QUIET = {
    *  team's side than `roofEave` m past its face) is DRAWN — the game's camera looks through such a slab; here the room behind the door is a dark
    *  shape, "they are inside", and the only warm things left are the pool and the door's slit. false = the room open to the camera, as it was */
   roofs: true, roofEave: 0.15,
+  /** THE FRAMING, for one subject — door, pool, man: down the clear column the lamp's fixture at `lamp` of its height and his boots at `boots` (the
+   *  distance follows from the two; the foot of the column is left to dark floor, and a partner), his spine `spine` of the way across it. With no
+   *  column told (the picture's page alone) the whole window is the column */
+  frame: { lamp: 0.3, boots: 0.67, spine: 0.47 },
   /** the door: this far ajar at rest (deg), eased back there at … rad/s after a row moved it · the room behind it: its own lamps that reach the doorway
    *  burn at this share of themselves (the loud cost's seam: quietInside()) · and THE BLADE: a small warm lamp of the picture's own hung … m behind
    *  the wall's far face, this high — low and close behind the gap, so that a long thin blade of light lies out across his floor (a room's lamp
@@ -541,7 +545,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const pacer = kitViewPacer(); let paceLoad = '';   // (… · the render scale and tier the pacer last saw: the quality ladder's hand on the load)
   let samCone: { inner: number; outer: number; vol: number } | null = null;   // Sam's weapon light as the game has it (the staging dims it; his light beat puts it back)
   const lamps: { porch: RtLight | null; fill: RtLight | null } = { porch: null, fill: null }; let dayOut: string[] = []; let fixture: Box | null = null, sky: { zenith: Vec3; horizon: Vec3 } | null = null;
-  let frameAsk: { cx: number; cy: number; h: number; w: number; man: number; door?: number; left?: number; right?: number; keep?: number } | null = null;
+  let frameAsk: { cx: number; cy: number; h: number; w: number; man: number; door?: number; left?: number; right?: number; keep?: number; top?: number; bottom?: number } | null = null;
   let look: Vec3 = [0, 1, 0], yaw = 0, pitch = KIT_VIEW_STAGE.pitch, dist = 11;
   let doorway: V2[] = [];   // the door's two jambs: kept inside the window with the five places (the door and its lamp are part of the picture)
   let stand: V2[] = [];   // the way's FIVE places, taken or not: what the camera is framed on — ONE framing per way, whatever the team's size (men come and go in their slots; nothing else moves)
@@ -550,7 +554,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the room burns at · the fill as staged and since when it is lifted · the loop's next rest · a leaf asked shut for a waiting row until · the gun last
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
-  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9;
+  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qFit: { lamp: Vec3; sam: V2 } | null = null;
   const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
   const base = new WeakMap<RtLight, number>();   // a room light's / the moon's intensity as the game has it (what `roomLights` / `moonScale` multiply)
@@ -677,7 +681,19 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const aim = () => {
     if (view.clientWidth > 0 && view.clientHeight > 0) cam.aspect = view.clientWidth / view.clientHeight;
     let L: Vec3 = [look[0], look[1], look[2]], D = dist; const F = frameAsk, M = stand;
-    if (F && M.length) {
+    if (Q && qFit) {   // THE QUIET PICTURE is framed for one subject (KIT_VIEW_QUIET.frame): the lamp's fixture and his boots at their heights down the clear column, his spine across it
+      const QF = KIT_VIEW_QUIET.frame, top = F?.top ?? 1, bot = F?.bottom ?? -1, lf = F?.left ?? -1, rt = F?.right ?? 1, yAt = (t: number) => top + (bot - top) * t, xAt = lf + (rt - lf) * (handR ? 1 - QF.spine : QF.spine);
+      const th = Math.tan(cam.fov / 2), sam = qFit.sam;
+      L = [sam[0], 1, sam[1]];
+      for (let i = 0; i < 12; i++) {
+        cam.target = L; cam.yaw = yaw; cam.pitch = pitch; cam.distance = cam.desiredDistance = D; cam.rebuild();
+        const pl = cam.project(qFit.lamp, 2, 2), pb = cam.project([sam[0], 0, sam[1]], 2, 2), ps = cam.project([sam[0], 0.5, sam[1]], 2, 2), B = cam.planarBasis();
+        const k = (pb[1] - pl[1]) / Math.max(0.05, yAt(QF.lamp) - yAt(QF.boots)), ey = 1 - pb[1] - yAt(QF.boots), ex = ps[0] - 1 - xAt;
+        const mx = ex * D * th * cam.aspect, mz = ey * D * th / Math.max(0.2, Math.sin(pitch));
+        L = [L[0] + B.right[0] * mx + B.fwd[0] * mz, L[1], L[2] + B.right[2] * mx + B.fwd[2] * mz];
+        D = Math.min(60, Math.max(4, D * Math.min(2, Math.max(0.5, k))));
+      }
+    } else if (F && M.length) {
       const th = Math.tan(cam.fov / 2), R = KIT_VIEW_STAGE.body, Rx = KIT_VIEW_STAGE.reach;
       const hung = F.door !== undefined && F.left !== undefined && F.right !== undefined && doorway.length === 2, dm: Vec3 = hung ? [(doorway[0][0] + doorway[1][0]) / 2, 1, (doorway[0][1] + doorway[1][1]) / 2] : [0, 0, 0];
       for (let i = 0; i < (hung ? 12 : 6); i++) {
@@ -847,6 +863,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // the camera: into the wall, turned toward the stack; at the middle of the men
     V.men = men(order);
     look = [P.cam.look[0], P.cam.look[1], P.cam.look[2]]; yaw = P.cam.yaw; pitch = P.cam.pitch; dist = P.cam.dist;   // (the plan's pin: the way's own `pin`, else into the wall, turned toward the stack, at the middle of the five places)
+    qFit = Q && lamps.porch ? { lamp: fixture ? [fixture.c[0], fixture.c[1], fixture.c[2]] : [lamps.porch.pos[0], lamps.porch.pos[1], lamps.porch.pos[2]], sam: [slots[0][0], slots[0][1]] } : null;
     aim();
     engine.resetTaa('kitview');
     { const side = door ? d.doorSide(door, [slots[0][0], 0, slots[0][1]]) : 1;   // (of Sam's slot)
@@ -1853,7 +1870,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the parent's messages: the same origin, and from the window that holds this frame (this window itself when the page is opened alone: a check's)
   window.addEventListener('message', e => {
     if (!kitViewFrom(e.origin) || e.source !== window.parent) return;
-    const m = e.data as { kv?: unknown; members?: unknown; squad?: unknown; who?: unknown; field?: unknown; on?: unknown; cx?: unknown; cy?: unknown; h?: unknown; w?: unknown; man?: unknown; door?: unknown; left?: unknown; right?: unknown; keep?: unknown } | null; if (!m || typeof m !== 'object') return;
+    const m = e.data as { kv?: unknown; members?: unknown; squad?: unknown; who?: unknown; field?: unknown; on?: unknown; cx?: unknown; cy?: unknown; h?: unknown; w?: unknown; man?: unknown; door?: unknown; left?: unknown; right?: unknown; keep?: unknown; top?: unknown; bottom?: unknown } | null; if (!m || typeof m !== 'object') return;
     if (m.kv === 'kit') {
       try {
         const was = cards; if (Array.isArray(m.members)) { d.kitCards(m.members); cards = snap(); hi = thing(hiF); }   // (…and the highlighted tile's thing read again: a value may name it — TILES)
@@ -1894,7 +1911,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
       const w = Number(m.w), man = Number(m.man), was = frameAsk; frameAsk = { cx: Math.max(-1, Math.min(1, cx)), cy: Math.max(-1, Math.min(1, cy)), h, w: w > 0.02 && w <= 1 ? w : 1, man: man > 0.02 && man <= 1 ? man : 1 };
       { const dr = Number(m.door), l = Number(m.left), r = Number(m.right), kp = Number(m.keep);   // (hung on the door: all three, in order, inside the view — or the men's middle as before)
         if (typeof m.door === 'number' && typeof m.left === 'number' && typeof m.right === 'number' && [dr, l, r].every(Number.isFinite) && l >= -1 && r <= 1 && l < dr && dr < r) Object.assign(frameAsk, { door: dr, left: l, right: r, keep: kp > 0 && kp <= 1 ? kp : 1 }); }
-      const hang = (f: typeof frameAsk) => (f!.door ?? 9) + (f!.left ?? 9) + (f!.right ?? 9) + (f!.keep ?? 9);
+      { const tp = Number(m.top), bt = Number(m.bottom); if (typeof m.top === 'number' && typeof m.bottom === 'number' && [tp, bt].every(Number.isFinite) && tp <= 1.5 && bt >= -1.5 && tp - bt > 0.2) Object.assign(frameAsk, { top: tp, bottom: bt }); }   // (the column's own top and foot in the window: the quiet picture's framing)
+      const hang = (f: typeof frameAsk) => (f!.door ?? 9) + (f!.left ?? 9) + (f!.right ?? 9) + (f!.keep ?? 9) + (f!.top ?? 9) + (f!.bottom ?? 9);
       if (state === 'none' || (was && Math.abs(was.cx - frameAsk.cx) + Math.abs(was.cy - frameAsk.cy) + Math.abs(was.h - frameAsk.h) + Math.abs(was.w - frameAsk.w) + Math.abs(was.man - frameAsk.man) + Math.abs(hang(was) - hang(frameAsk)) < 1e-3)) return;
       aim(); V.again();
     }

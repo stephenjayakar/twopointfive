@@ -129,7 +129,8 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     root.style.setProperty('--kv-low', `${Math.round(Math.min(60, Math.max(12, low * 100)))}%`);
     const nx = (x: number) => ((x - f.left) / f.width) * 2 - 1;
     tell({ kv: 'frame', cx: nx(c.left + c.width * P.cx), cy: 1 - ((c.top + c.height * P.cy - f.top) / f.height) * 2, h: Math.min(0.9, c.height * P.h / f.height), w: Math.min(0.9, c.width * P.w / f.width), man: Math.min(0.9, c.height * P.man / f.height),
-      door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep });
+      door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep,
+      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — host/kitView.ts KIT_VIEW_QUIET.frame)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
   const drop = () => { if (due) clearTimeout(due); if (patience) clearTimeout(patience); if (graceT) clearTimeout(graceT); due = patience = graceT = 0; want = ''; if (!frame) return; frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
