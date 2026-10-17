@@ -57,10 +57,11 @@ const AISLE: number[] = [15, 0, 17.6];
 
 /** One game under a seed: the room clear staged (`stage: 'nb'` = the night breach alone, false = neither), Sam put by `door`, in god mode and dark.
  *  `hot`: a stun canister goes off in the lobby four seconds before the probe starts — the whole floor has heard it (the pair's eyes are given back). */
-export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?: string; hot?: boolean; knobs?: Record<string, unknown>; nb?: Record<string, unknown> } = {}) {
+export async function rig(seed: number, o: { stage?: 'rc' | 'nb' | false; door?: string; hot?: boolean; /** false: squads from the rooms (SQUADDEAL) held off for this floor, by the stand's own word */ deal?: boolean; knobs?: Record<string, unknown>; nb?: Record<string, unknown> } = {}) {
   Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS)), o.knobs ?? {}); Object.assign(ROOMCLEAR, RC_DEFAULTS); Object.assign(NIGHTBREACH, NB_DEFAULTS, o.nb ?? {});
   Math.random = seeded(seed);
-  const W: any = await standUp(); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
+  const sd0 = process.env.TPS_SQUADDEAL; if (o.deal === false) process.env.TPS_SQUADDEAL = '0';
+  const W: any = await standUp().finally(() => { if (o.deal !== false) return; if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const game = W.game, input = W.input; const RC = game.roomClear, NB = game.nightBreach, O = game.orders, D = game.doorTools;
   game.godMode = true;
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; }
   const stage = o.stage ?? 'rc';
@@ -349,7 +350,7 @@ export const doortoolsLights = guarded(async () => {
 async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakroom_w', roomId = 'breakroom') {
   const out = { n: 0, first: 0, pair: 0, down: 0, of: 0, taken: 0 };
   for (const seed of seeds) {
-    const R = await rig(seed, { door, hot }); const { D } = R; const room = R.room(roomId); out.of += room.defenders.length;
+    const R = await rig(seed, { door, hot, deal: false }); const { D } = R; const room = R.room(roomId);   // (a ROOM-FIGHT floor: with squads dealt from the rooms the room's men are their squad's, still thinking four seconds after the bang and dug in behind wedged doors by twenty-five — the plain door then loses nobody, or nobody gets in, and there is nothing for a bang to beat) out.of += room.defenders.length;
     R.give(kind, door); const op = D.ops[0]; if (!op) { out.n++; continue; }
     for (let i = 0; i < 60 * 45 && D.ops.length; i++) { R.step(); if (kind === 'charge' && op.phase === 'armed') R.press('KeyF'); }
     R.step(60 * 6);
@@ -360,7 +361,7 @@ async function tally(kind: string, seeds: number[], hot: boolean, door = 'breakr
   return out;
 }
 export const doortoolsFirstMan = guarded(async () => {
-  const { verdict, done } = family('doortools-firstman: behind a bang or a charge fewer first men are lost than through the plain door');
+  const { verdict, done } = family('doortools-firstman: behind a bang or a charge fewer first men are lost than through the plain door · a room-fight floor (squads from the rooms held off inside these runs)');
   const seeds = [1, 2, 3, 4, 5, 6], line = (k: string, t: any) => `${k}: first man lost ${t.first}/${t.n} · pair lost ${t.pair}/${t.n * 2} · room's men down ${t.down}/${t.n * 2} · room taken ${t.taken}/${t.n}`;
   const open = await tally('openClear', seeds, true), bang = await tally('bangClear', seeds, true), charge = await tally('charge', seeds, true);
   verdict(bang.first < open.first && charge.first < open.first, `an ALERTED floor (a bang heard four seconds before), the break room's west door, seeds ${seeds.join(' ')}: the first man through is lost less often behind a bang, and behind a charge, than through the plain door`,

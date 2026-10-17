@@ -574,3 +574,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the roamer in the same room on every seed, and with it off for the coin as before. `ROAMER_BREAK=1` asks for the other stand's stage and must
   fail. Run: 3 PASS on frozen, on shipped and on frozen with `TPS_SAMESTART=1`; the break word fails on both stands. The registry's full plays
   (`registry-probes.ts` tallies, the 'BY WHERE THE ROAMER STOOD' table) were not re-run in this step.
+- **The registry's level check compares the file with the generator before the wrecking dressing** (2026-10-17; tests only): `tools/qa/registry-probes.ts
+  registryLevel` loaded the file with `{ lived: true }` alone, so on the SHIPPED stand (where the dressing switch is on) the loader's added dressing boxes made
+  `probes.ts registry-level` 1 FAIL (569 boxes against 664). It now loads with `{ lived: true, dressing: false }`: the generator's level against the file as
+  written, on every stand. Run: 6 PASS on frozen and on shipped. `registry-walk` is still red on shipped (four followers: one man never enters the copy room).
