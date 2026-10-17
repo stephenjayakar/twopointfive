@@ -234,6 +234,13 @@ export async function leversScreens(): Promise<boolean> {
       F.verdict(up === 'cones/hard/stuns base hard' && toH.includes('difficulty=hard') && !toH.includes('enemykit') && after === 'team/standard/stuns base standard', 'opened on a row\'s own hard link: hard\'s rungs under the kept lever while the screen is up, the link\'s own level on what Deploy loads; closed with no lever pressed, the machine\'s level again',
         `up: ${up} · deploy ${toH} · after: ${after}`);
       D.setDifficulty('standard');
+      // (a squad mix kept on the machine says its line on a squad mission's loadout only: none of it acts on a quiet mission or the solo night)
+      { D.setLever('fog', 'own', false); D.setLever('kit', 'stuns', false); const mixed = D.leversMixed(), noteOf = (L: any) => { const t = (L.root as unknown as El).all(e => e.cls.has('lo-levnote'))[0]?.textContent ?? ''; L.close(); return t; };
+        const n4 = noteOf(UI.openLoadout(e4, { host, search: `${M.missionHref(four, SEARCH)}`, deploy: () => {}, back: () => {} })), nS = noteOf(UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }));
+        const nQ = quietM ? noteOf(UI.openLoadout(UI.entryOfMission(quietM), { host, deploy: () => {}, back: () => {} })) : '';
+        D.setDifficulty('standard', false);
+        F.verdict(mixed && n4.includes('Your own mix') && nS === '' && nQ === '', 'a squad mix kept on the machine: its line under a squad mission\'s lever rows, none under the solo night\'s or a quiet mission\'s (the mix does not act there)',
+          `squad '${n4}' · solo '${nS}' · ${quietM ? `${quietM.id} '${nQ}'` : '(no quiet mission on this build)'}`); }
       const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloLR = leverRowsOf(Ls.root as unknown as El), soloL = soloLR.length, soloFog = QUIETFOG.on && QUIETFOG.solo; Ls.close();
       const lesson = (TRAINING_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
       F.verdict((soloFog ? soloLR.map(r => r.key).join(',') === 'fog,ai,kit' && soloLR.every(r => (r.key === 'fog') !== r.na) : soloL === 0) && lessonL <= 0,
