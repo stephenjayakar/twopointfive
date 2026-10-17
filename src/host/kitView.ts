@@ -215,23 +215,27 @@ export const KIT_VIEW_LOOP = {
  *  never seen on a GPU, never in motion at speed. */
 export const KIT_VIEW_QUIET = {
   on: true,
-  /** THE POOL: the porch lamp's place, but a tight SPOT straight down, tipped `tip` m out from the wall (about 2.4 m of floor lit under a 2.4 m lamp).
+  /** THE POOL: the porch lamp's place, but a tight SPOT straight down, tipped `tip` m out from the wall. `outerDeg` is a HALF angle (render/lights.ts
+   *  packs its cosine): under a 2.4 m lamp the lit floor is 2.4 × tan 24° = 1.07 m in radius, about 2.1 m across, and its edge (20° to 24°) 0.2 m wide —
+   *  a hard rim, the line that cuts him at the hips.
    *  A way's own `light.porch` keys still lie over these. It hangs as a real lamp of the game's (a `game.targets` entry over its glowing box) so that a
    *  round really puts it out */
-  lamp: { kind: 1 as const, intensity: 7, range: 5, innerDeg: 20, outerDeg: 38, radius: 0.06, broad: false, tip: 0.4 },
-  /** the yard: the fill bluer and lower · the moon and the sky less raised than the loud picture has them (never black: the men are still read) */
-  fill: { color: [0.55, 0.7, 1] as Vec3, intensity: 1.2 }, moonScale: 1.3, skyScale: 1.2,
+  lamp: { kind: 1 as const, intensity: 12, range: 5, innerDeg: 20, outerDeg: 24, radius: 0.03, broad: false, tip: 0.25 },
+  /** the yard: the moon DOWN (it lit everything to one middle value: the pool was a quarter over its own floor) and a blue fill the only light in
+   *  the moon's shadow — the floor round his feet a blue shape, never black · the sky as it was (it does next to nothing on the lowest presets) */
+  fill: { color: [0.4, 0.6, 1] as Vec3, intensity: 1.6 }, moonScale: 0.25, skyScale: 1.2,
   /** the door: this far ajar at rest (deg), eased back there at … rad/s after a row moved it · the room behind it: its own lamps that reach the doorway
-   *  burn at this share of themselves (the loud cost's seam: quietInside()), and where none does a small warm lamp of the picture's own hangs … m behind
-   *  the wall's far face, this high */
-  ajarDeg: 9, leafRate: 1.2, inside: 0.15, own: { back: 1.3, up: 2.1, color: [1, 0.72, 0.42] as Vec3, intensity: 0.5, range: 4.5 },
+   *  burn at this share of themselves (the loud cost's seam: quietInside()) · and THE BLADE: a small warm lamp of the picture's own hung … m behind
+   *  the wall's far face, this high — low and close behind the gap, so that a long thin blade of light lies out across his floor (a room's lamp
+   *  3 m back sees the gap half a degree wide: no blade at all). At a door or a gap, whatever the room has */
+  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.8, up: 1.2, color: [1, 0.72, 0.42] as Vec3, intensity: 1.4, range: 4.5 },
   /** THE REST POSE: Sam crouched this far along the wall from the door's middle, on the side the plan stands him (out from the wall: the wall men's
    *  own distance) · a partner the same again behind him */
-  samAlong: 1.55, mateGap: 1.1,
+  samAlong: 1.1, mateGap: 1.0,
   /** THE SUPPRESSED GUN'S ROW: seconds he takes to rise to a half crouch and aim · how far up (0 = stays down, 1 = stands) · seconds the dark is held
    *  from the round · the fill lifted to this over … s (eyes adjusting) · he walks to the jamb … s after the round: … m past the frame, … m off the
    *  wall's face · the loop rests this long before the lamp goes again */
-  rise: 0.65, half: 0.5, hold: 4, lift: 1.5, liftSecs: 0.5, walkAt: 1, jambAlong: 0.3, jambOut: 0.45, gunRest: 3.5,
+  rise: 0.65, half: 0.7, hold: 4, lift: 2.5, liftSecs: 1.2, walkAt: 1, jambAlong: 0.3, jambOut: 0.6, gunRest: 3.5,
   /** the suit / trim tile: a lean of … m toward the pool, held … s · a throw's step from the crouch (m toward the throwing post) · a gun left out after
    *  a row is put away after … s at rest */
   leanM: 0.4, leanSecs: 0.6, throwStep: 1.1, stow: 1,
@@ -805,15 +809,15 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (fixture && world.statics.includes(fixture)) { world.statics.splice(world.statics.indexOf(fixture), 1); world.staticsDirty = true; } fixture = null;
       if (F && lightK.porch.intensity > 0) { const c = lightK.porch.color; fixture = d.glowBox(at(F.at), [F.half[0], F.half[1], F.half[2]], Math.atan2(W.s[1], W.s[0]), [c[0] * F.glow, c[1] * F.glow, c[2] * F.glow]); world.addStatic(fixture); } }
     // (THE QUIET PICTURE: the pool lamp is a LAMP OF THE GAME'S — over the light and the glowing box just hung, so that Sam's round puts it out as it
-    //  puts out any fixture, and a restart's repairLights mends it; and where the room behind the door has no lamp of its own, a small warm one of the
-    //  picture's. The fill as staged is what the dark's lift multiplies)
+    //  puts out any fixture, and a restart's repairLights mends it; and behind the door a small warm lamp of the picture's own:
+    //  the blade on his floor. The fill as staged is what the dark's lift multiplies)
     fillBase = lamps.fill ? lamps.fill.intensity : 0;
     { const had = pool, i = had ? game.targets.indexOf(had) : -1;   // (ONE target for the page's life: it stays on the game's list through a restart, so the game's own repairLights is what mends it)
       if (Q && lamps.porch) { const c = lightK.porch.color, g = lightK.porch.fixture?.glow ?? 0, T2 = kitViewPoolTarget(lamps.porch, -1, [c[0] * g, c[1] * g, c[2] * g], lightK.porch.intensity);
         if (had && i >= 0) { had.pos = T2.pos; had.light = T2.light; had.baseEmissive = T2.baseEmissive; had.baseIntensity = T2.baseIntensity; had.on = true; } else { pool = T2; game.targets.push(T2); }
         poolSync(); }
       else { if (i >= 0) game.targets.splice(i, 1); pool = null; }
-      const O2 = QK.own, wantOwn = Q && !qIn.length && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
+      const O2 = QK.own, wantOwn = Q && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
       if (!wantOwn) { if (hung) engine.lights.remove(hung); qOwn = null; }
       else { const p = at([0, P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: 0.1, volumetric: 0, broad: false, enabled: true };
         if (hung) Object.assign(hung, rec); else qOwn = engine.lights.add({ name: 'kitview_inside', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, ...rec }); } }
