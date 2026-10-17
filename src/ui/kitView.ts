@@ -56,14 +56,15 @@ const KIT_VIEW_PLACE = {
   fade0: 0, fadeA: 0.07, fade1: 1,
   /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: host/kitView.ts
    *  KIT_VIEW_QUIET): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
-   *  this share of the WINDOW's width on (never left of two points past the three-tenths stop: the clear column and the stops before it are as they
-   *  are; never right of where it ends on a loud kind), and the pool of picture under the last row of tiles is not laid at all */
+   *  this share of ITS OWN window's width on (the iframe's; or from the first tile's left edge where that is further right) — the clear column is as
+   *  it is, the fade runs from its edge to there and nothing of the picture lies under the panel — and the pool of picture under the last row of
+   *  tiles is not laid at all */
   quietEnd: 0.4,
 };
 
 const ROOT_CLASS = 'kv-on';
 const FADE = 'linear-gradient(to right, #000 0, #000 var(--kv-clear, 35%), rgba(0,0,0,0.3) var(--kv-a, 39%), rgba(0,0,0,0.11) calc(var(--kv-a, 39%) * 0.55 + var(--kv-end, 73%) * 0.45), rgba(0,0,0,0.035) calc(var(--kv-a, 39%) * 0.15 + var(--kv-end, 73%) * 0.85), transparent var(--kv-end, 73%)), radial-gradient(ellipse 100% var(--kv-low, 40%) at 0 100%, #000 0, #000 var(--kv-core, 35%), transparent 100%)';
-const FADE_QUIET = FADE.slice(0, FADE.indexOf(', radial-gradient('));   // (the fade across alone: no pool of picture under the tiles)
+const FADE_QUIET = 'linear-gradient(to right, #000 0, #000 var(--kv-clear, 35%), transparent var(--kv-end, 40%))';   // (the quiet picture: whole to the column's edge, gone by the tiles — no stop under them, no pool of picture below them)
 const CSS = `
 #missions .mbody:has(> iframe.kv) { position: relative; }
 #missions .mbody > iframe.kv { display: block; position: absolute; left: 0; top: 0; z-index: 0; width: var(--kv-w, min(100%, 56vw)); max-width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--m-base); opacity: 0; transition: opacity 0.6s ease;
@@ -123,7 +124,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     const a = Math.min(Math.round(share(c.right + c.width * P.fadeA)), tiles && tiles.width > 0 && tiles.left > c.right ? share(tiles.left) : 100), clear = Math.min(share(c.right + c.width * P.fade0), a - 1);   // (the whole percent as before, or the tiles' own left edge if that is nearer)
     root.style.setProperty('--kv-clear', `${clear.toFixed(2)}%`); root.style.setProperty('--kv-a', `${+a.toFixed(2)}%`); root.style.setProperty('--kv-end', pct(c.right + c.width * P.fade1));
     root.classList.toggle('kv-quiet', quietAsk);
-    if (quietAsk) root.style.setProperty('--kv-end', `${Math.round(Math.min(share(c.right + c.width * P.fade1), Math.max(a + 2, share(window.innerWidth * P.quietEnd))))}%`);   // (the quiet picture: gone from four tenths of the window on)
+    if (quietAsk) root.style.setProperty('--kv-end', `${Math.max(a, clear + 1, P.quietEnd * 100).toFixed(2)}%`);   // (the quiet picture: gone from four tenths of its own window on, or from the tiles' left edge)
     root.style.setProperty('--kv-core', pct(c.right - c.width * 0.03));   // (…and the pool of picture under the last row of tiles as it was)
     root.style.setProperty('--kv-low', `${Math.round(Math.min(60, Math.max(12, low * 100)))}%`);
     const nx = (x: number) => ((x - f.left) / f.width) * 2 - 1;
