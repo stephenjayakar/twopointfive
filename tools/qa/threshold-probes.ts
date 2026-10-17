@@ -1,5 +1,5 @@
 // The 'threshold' family (game/doortools.ts — kind 'threshold': a room worked from the threshold before anybody goes in), run through probes.ts:
-//   bun run tools/qa/probes.ts threshold | threshold-pair | threshold-four | threshold-hold | threshold-first | threshold-doors | threshold-last | threshold-hand | threshold-play | threshold-identity
+//   bun run tools/qa/probes.ts threshold | threshold-pair | threshold-four | threshold-hold | threshold-first | threshold-doors | threshold-leaf | threshold-last | threshold-hand | threshold-play | threshold-identity
 // PASS / FAIL each, all headless. Every probe here gives the stage the way a console would (its rows on the door menu are thresholdmenu-probes.ts's) —
 // `game.doorTools.thresholdOn(<door name>, 'all')` — on a start-card scenario staged exactly as the page stages it (scenarioList.ts → scenarioRun.ts).
 // The harness has no light meter (what a man sees of another is guards.ts's direct-light estimate), no smoke, no picture: nothing here says how it LOOKS.
@@ -24,6 +24,8 @@
 //                       shipped one — a line more: one can a door at that same door, on the word too)
 //   threshold-doors     every door of the levels the seven scenarios play on, both faces: wherever the stack's own test passes (floor at a jamb), the stage
 //                       has somewhere shallow to step in to (2.5 m or less inside); the count of faces with a man on EACH jamb and with one jamb only is printed
+//   threshold-leaf      DOORTOOLS.thrDoorsLeaf: a man left on another door of the room is not put where that door's own leaf, stood open, hides it from
+//                       him — the depot, rule off beside rule on, three seeds (THRDOORSLEAF_BREAK=1: red)
 //   threshold-hand      DOORTOOLS.thrHand — a threshold held, every man put off the door from a second before Sam says 'bang, then step in' until a second
 //                       after (what a grenade by the stack does to them): with the rule the can waits for a man back at the door — not the lead — and no
 //                       longer than thrHandWait in all, past which it goes as it did, from the same man; without it the can leaves a doorway nobody
@@ -67,7 +69,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 /** every probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = NODEAL = YARDOUT = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = NODEAL = YARDOUT = false; DOORSLEAF = null; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
 
@@ -93,6 +95,8 @@ let NODEAL = false;
  *  THRESHOLD does with the room; with those guns in it who is left on the jambs is the yard fight's dice, and which of three seeds holds a wipe moved with any
  *  change that shifted a walk by half a second (three flips of threshold-four in a day, none of them a door rule's). */
 let YARDOUT = false;
+/** … and DOORTOOLS.thrDoorsLeaf as given for the runs staged while this is set (null: the stand's own) — threshold-leaf */
+let DOORSLEAF: boolean | null = null;
 /** … and the order's one wait, DOORTOOLS.thrHandWait, for the runs staged while this is set (null: the table's own) */
 let HANDWAIT: number | null = null;
 /** a start-card scenario staged as the page stages it, under a seed (the playthrough's own recipe: the page's chaos, Sam in god mode and pinned dark) */
@@ -101,6 +105,7 @@ async function stage(scn: string, seed: number) {
   Math.random = seeded(0x9137 + seed * 7919);
   const sd0 = process.env.TPS_SQUADDEAL, noDeal = NODEAL; if (noDeal) process.env.TPS_SQUADDEAL = '0';
   const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })).finally(() => { if (!noDeal) return; if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const g = W.game;
+  if (DOORSLEAF !== null) DOORTOOLS.thrDoorsLeaf = DOORSLEAF;
   if (NO_PLAIN) DOORTOOLS.outsidePlain = false;   // (after the stand-up, which on a stand that names TPS_OUTSIDEPLAIN writes the rule again every time)
   if (HAND !== null) DOORTOOLS.thrHand = HAND;
   DOORTOOLS.wordNoCan = WORDNOCAN; if (WORDNOCAN) DOORTOOLS.outsidePlain = true;
@@ -158,7 +163,7 @@ interface Run {
   shots: { t: number; who: string; outside: boolean }[]; downs: { t: number; who: string; by: string; byOutside: boolean }[]; bangs: { t: number; inside: number }[];
   /** the order's own men lost to a defender who is NOT at home in the room behind the door (another room's, the yard's): who, by whom */
   yard: { who: string; by: string }[];
-  bangs0: number; bangs1: number; pods: { who: string; deep: number }[]; holding: number; alive: number; left: number; cells: number; doorMen: { who: string; door: string; arrived: boolean; dist: number; line: boolean; inRoom: boolean }[];
+  bangs0: number; bangs1: number; pods: { who: string; deep: number }[]; holding: number; alive: number; left: number; cells: number; doorMen: { who: string; door: string; arrived: boolean; dist: number; line: boolean; inRoom: boolean; /** that door's own leaf, stood open on its stop, lies across his line to it */ leaf: boolean }[];
   /** man-frames the rear men spent with their eyes spare while the room was worked, of the man-frames they could have */
   spare: number; spareOf: number; secs: number;
   /** the order given to HOLD: when the lead said the door had gone quiet, when Sam said what next and what came back (null: taken), the kit's bangs and the
@@ -264,8 +269,17 @@ async function doorRun(scn: string, seed: number, door: string | null = null, ca
   // the room's OTHER doors (DOORTOOLS.thrDoors): the men the entry's last act put on them, watched until each is on his mark (a walker has a few metres to go)
   const onDoor = () => sent.filter((m: any) => m.state !== 'dead' && D.held.get(m)?.door && R.O.of(m) === D.held.get(m).A);
   if (onDoor().length) { await quiet(() => { for (let i = 0; i < 15 * 60 && onDoor().some((m: any) => !R.O.of(m).arrived); i++) R.step(); });
-    out.doorMen = onDoor().map((m: any) => { const o = D.held.get(m).door, fc = o.frameCentre, p = m.char.pos, l = flat(p, fc) || 1, at = [fc[0] + (p[0] - fc[0]) / l * 0.4, 1.2, fc[2] + (p[2] - fc[2]) / l * 0.4];
-      return { who: m.callsign, door: o.def.name, arrived: !!R.O.of(m).arrived, dist: l, line: !g.col.segmentBlocked([p[0], 1.5, p[2]], at), inRoom: room.cells.has(Math.floor(p[2] / nav.cell) * nav.W + Math.floor(p[0] / nav.cell)) }; }); }
+    out.doorMen = onDoor().map((m: any) => { const o = D.held.get(m).door, fc = o.frameCentre, p = m.char.pos, l = flat(p, fc) || 1, e = room.entries.find((x: any) => x.door === o);
+      // (the line: to the floor a step inside the frame, on the room's face — a point 0.4 m from the frame's middle TOWARD him lies in the jamb for a man
+      //  stood down the door's own wall, and read 'no line' of a man who has one. The leaf: the hinge, its tip, his line, with the leaf stood anywhere
+      //  from where a leaf pushed open comes to rest (1.45 rad, doors.ts) to its stop — this file's own sum, on where he ended, not the rule's on
+      //  where it sent him)
+      const at = e ? [fc[0] - e.out[0] * 0.4, 1.2, fc[2] - e.out[1] * 0.4] : [fc[0] + (p[0] - fc[0]) / l * 0.4, 1.2, fc[2] + (p[2] - fc[2]) / l * 0.4];
+      const stop = o.swing > 0 ? o.maxA : o.minA, h = o.def.hinge, side = (ax: number, az: number, bx: number, bz: number, cx: number, cz: number) => Math.sign((bx - ax) * (cz - az) - (bz - az) * (cx - ax));
+      const across = (a: number) => { const th = o.def.closedDir + a, tip = [h[0] + Math.cos(th) * (o.def.width + 0.05), h[1] + Math.sin(th) * (o.def.width + 0.05)];
+        return side(p[0], p[2], at[0], at[2], h[0], h[1]) !== side(p[0], p[2], at[0], at[2], tip[0], tip[1]) && side(h[0], h[1], tip[0], tip[1], p[0], p[2]) !== side(h[0], h[1], tip[0], tip[1], at[0], at[2]); };
+      let leaf = !o.off && across(stop); for (let a = Math.min(1.45, Math.abs(stop)); !o.off && !leaf && a < Math.abs(stop); a += 0.1) leaf = across(Math.sign(stop) * a);
+      return { who: m.callsign, door: o.def.name, arrived: !!R.O.of(m).arrived, dist: l, leaf, line: !g.col.segmentBlocked([p[0], 1.5, p[2]], at), inRoom: room.cells.has(Math.floor(p[2] / nav.cell) * nav.W + Math.floor(p[0] / nav.cell)) }; }); }
   return out;
 }
 /** how many men the step in sent (a pair that has lost a man steps in with one: he threw, and he is first) */
@@ -584,6 +598,28 @@ export const thresholdHold = guarded(async () => {
           `a recording without the key: ${before} · recorded on: ${kept} · recorded off: ${keptOff} · in the recording's flags: ${recOn.flags.behindSam} · DOORTOOLS in its tables: ${inTables}, and with the key there alone: ${byTable}`);
         } finally { KN.knobsBack(all); } }
     } finally { DOORTOOLS.behindSam = keep.b; SAMSTUN.on = keep.s; } }
+  return done();
+});
+
+/** DOORTOOLS.thrDoorsLeaf: nobody is left on another door of the room where that door's own leaf, stood open, hides it from him. The depot, the first
+ *  held door the yard does not watch (the store from its bay door, as the level stands: each run's line names the door), the yard's guns out, the
+ *  one-way doors up, three seeds, played with the rule OFF and ON. THRDOORSLEAF_BREAK=1: the rule left off in the ON runs — red. */
+export const thresholdLeaf = guarded(async () => {
+  const { verdict, done } = family('threshold-leaf: a man left on another door of the room is never put where that door\'s own leaf, stood open, hides it (DOORTOOLS.thrDoorsLeaf)');
+  const BREAK = process.env.THRDOORSLEAF_BREAK === '1'; YARDOUT = true;
+  const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`), oneWay0 = DOORWAY.oneWay; DOORWAY.oneWay = true;   // (the one-way doors, as the headless stand raises them for ONEWAY=1: the rule asks nothing of a double-acting leaf; the shipped stand has them anyway)
+  try {
+  const play = async (rule: boolean) => { DOORSLEAF = rule && !BREAK; const runs: Run[] = []; for (const seed of [1, 2, 3]) runs.push(await doorRun('depot-four', seed, null, 90, NaN, null, false, true)); return runs; };
+  const tell = (rs: Run[]) => rs.map(r => `${r.scn}:${r.seed} ${r.door}: ${r.doorMen.length ? r.doorMen.map(m => `${m.who} on ${m.door} from ${f1(m.dist)} m${m.arrived ? '' : ' · NOT THERE'}${m.line ? '' : ' · NO LINE'}${m.inRoom ? '' : ' · OUTSIDE THE ROOM'}${m.leaf ? ' · BEHIND ITS LEAF' : ''}`).join(', ') : 'nobody on another door'} · ended '${r.ended}'`).join('\n    ');
+  const off = await play(false), on = await play(true), men = (rs: Run[]) => rs.flatMap(r => r.doorMen);
+  verdict(men(off).some(m => m.leaf), 'the fault is there with the rule off: a man is left on a door from where its leaf, stood open, lies across his line to it', tell(off));
+  verdict(men(on).length > 0 && men(on).every(m => m.arrived && m.line && m.inRoom && !m.leaf) && on.filter(r => r.doorMen.length).length >= off.filter(r => r.doorMen.length).length && on.every(r => r.ended === 'in'),
+    'with the rule on every man left on another door is on his mark in the room with a line to it that its open leaf does not cross — and the door is held in as many runs', tell(on));
+  { const J = await import(`${ROOT}/src/game/journal.ts`), R = await stage('records-pair', 1), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.g)));
+    DOORTOOLS.thrDoorsLeaf = true; const old = snap(); delete old.tables.DOORTOOLS.thrDoorsLeaf; J.applyKnobs(R.g, old); const before = DOORTOOLS.thrDoorsLeaf;
+    DOORTOOLS.thrDoorsLeaf = false; const own = snap(); own.tables.DOORTOOLS.thrDoorsLeaf = true; J.applyKnobs(R.g, own); const carried = DOORTOOLS.thrDoorsLeaf;
+    verdict(before === false && carried === true, 'A RECORDING FROM BEFORE THE KEY replays with the rule off (journal.ts applyKnobs) — and a file that carries it keeps its own word', `no key in the file: ${before} · the key in the file, on: ${carried}`); }
+  } finally { DOORWAY.oneWay = oneWay0; }
   return done();
 });
 

@@ -167,6 +167,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
   DOORTOOLS.thrNoCan = q.get('thrnocan') !== '0';   // the can's wait spent with nobody at the door: no can, said why, and they go in keeping it (game/doortools.ts thrNoCan; the maintainer's answer, 10-16): ON in the page; ?thrnocan=0 = thrown from wherever the picked man stands, as it was
+  DOORTOOLS.thrDoorsLeaf = q.get('thrdoorsleaf') !== '0';   // a man left on another door of the room is put where that door's own leaf, stood open, does not hide it from him, while there is such floor (game/doortools.ts thrDoorsLeaf): ON in the page; ?thrdoorsleaf=0 = the posts as they were
   DOORTOOLS.fragHold = q.get('fraghold') !== '0';   // a door order waits for its men who ran from a grenade to be back on their marks before its door is opened, `fragHoldCap` s at most (game/doortools.ts fragHold; the maintainer's answer, 10-16): ON in the page; ?fraghold=0 = the order carries on with its men scattered, as it was — at a held doorway too
   DOORTOOLS.thrFragHold = DOORTOOLS.fragHold && q.get('thrfraghold') !== '0';   // … and a threshold waits the same way before a can or the step in (game/doortools.ts thrFragHold): ON in the page; ?thrfraghold=0 = that half alone off
   DOORWAY.sideKick = q.get('sidekick') !== '0';   // a boot from beside the latch jamb (game/doors.ts kickSpotSide): ON in the page; ?sidekick=0 = every kick square in front of the leaf
@@ -417,6 +418,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
   'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
   'DOORTOOLS.thrFragHold': 'TPS_THRFRAGHOLD=1',
+  'DOORTOOLS.thrDoorsLeaf': 'TPS_THRDOORSLEAF=1 (asked of one-way doors only: ONEWAY=1)',
   'DOORTOOLS.fragHold': 'TPS_FRAGHOLD=1 (this rule alone: the threshold\'s half has its own word above)',
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
