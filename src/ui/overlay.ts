@@ -6,7 +6,7 @@ import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
 import { FLOOR_KEY } from '../game/doors';
-import { playerAim, guardAcquired } from '../game/aim';
+import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
@@ -16,7 +16,7 @@ import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
 const HE40_SHORT_STROKE = 'rgba(255, 170, 90, 0.95)';
 import { needsTrip } from '../game/needs';
-import { dozeMark } from '../game/doze';
+import { headMark, waryDots } from './headmark';
 import { CKPT } from '../game/savestate';
 import { stripRows } from '../game/cues';
 import { fragMarks } from '../game/frag';
@@ -31,6 +31,7 @@ import { WindViz } from './windviz';
 import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
 import { PictureViz } from './pictureviz';
+import { menuTheme } from './theme';
 
 const EDGE = 1.1;   // markers / dots / the throw arc stay drawn until they are 10 % of the view past its edge (FollowCamera.project margin)
 /** The way off a lost man to where the round came from, as it lies on the screen: the turn, in degrees, of one right-pointing arrow ('' = the squad does not
@@ -128,6 +129,7 @@ export class Overlay implements HudLike {
   private orderMark: HTMLElement;                                                  // the ring on what the squad's order menu is frozen on (orders.ts mark())
   private objMark: HTMLElement;                                                    // diamond + distance on / toward the current objective
   constructor() {
+    menuTheme();   // the fight screen's rules read the menus' tokens (index.html `--h-…`)
     this.reticle = document.createElement('div'); this.reticle.className = 'reticle'; this.reticle.innerHTML = '<b></b><i></i>'; this.reticle.style.display = 'none'; this.root.appendChild(this.reticle);
     this.wish = document.createElement('div'); this.wish.className = 'aimwish'; this.wish.style.display = 'none'; this.root.appendChild(this.wish);
     this.ring = this.reticle.firstChild as HTMLElement; this.hint = this.reticle.lastChild as HTMLElement; this.hint.style.display = 'none';
@@ -135,9 +137,9 @@ export class Overlay implements HudLike {
     this.objMark = document.createElement('div'); this.objMark.className = 'objmark'; this.objMark.innerHTML = '<i></i><span></span>'; this.objMark.style.display = 'none'; this.root.appendChild(this.objMark);
     const NS = 'http://www.w3.org/2000/svg';
     this.trajPath = document.createElementNS(NS, 'polyline') as SVGPolylineElement;
-    this.trajPath.setAttribute('fill', 'none'); this.trajPath.setAttribute('stroke', 'rgba(150,240,220,0.85)'); this.trajPath.setAttribute('stroke-width', '2'); this.trajPath.setAttribute('stroke-dasharray', '5 6'); this.trajPath.setAttribute('stroke-linecap', 'round');
+    this.trajPath.setAttribute('fill', 'none'); this.trajPath.setAttribute('class', 'trajpath'); this.trajPath.setAttribute('stroke-width', '2'); this.trajPath.setAttribute('stroke-dasharray', '5 6'); this.trajPath.setAttribute('stroke-linecap', 'round');
     this.trajLand = document.createElementNS(NS, 'circle') as SVGCircleElement;
-    this.trajLand.setAttribute('r', '9'); this.trajLand.setAttribute('fill', 'rgba(150,240,220,0.12)'); this.trajLand.setAttribute('stroke', 'rgba(150,240,220,0.9)'); this.trajLand.setAttribute('stroke-width', '1.5');
+    this.trajLand.setAttribute('r', '9'); this.trajLand.setAttribute('class', 'trajland'); this.trajLand.setAttribute('stroke-width', '1.5');
     this.closeG = document.createElementNS(NS, 'g') as SVGGElement; this.closeG.setAttribute('class', 'closewin'); this.traj.appendChild(this.closeG);   // (under the throw arc: the floor's own marks first)
     this.traj.appendChild(this.trajPath); this.traj.appendChild(this.trajLand);
     this.squadThrow = new SquadThrowViz(this.traj, this.trajPath);   // (a squad throw's ring, walk and arc: over the floor's marks, under his own throw arc)
@@ -176,13 +178,7 @@ export class Overlay implements HudLike {
       const head = g.char.bones.head ?? g.char.pos; const [x, y, vis] = cam.project([head[0], head[1] + 0.45, head[2]], w, h, EDGE);
       if (!vis || game.fogOfWar.hidden(g)) { el.style.display = 'none'; return; }   // (fog of war: no marker over a man nobody on the team sees — never true while it is off)
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
-      let text = '', cls = 'calm'; const zz = dozeMark(game, g);
-      if (g.state === 'dead') { if (isBreathing(g)) { text = g.wound ? '✚' : 'zz'; cls = 'ko'; } else { text = '✕'; cls = 'dead'; } }   // out cold and breathing (the takedown, the choke, the whip, a ring to the head) reads asleep, not crossed out — the floor treats him as a body either way
-      else if (g.state === 'alert') { text = guardAcquired(game, g) ? '◎!' : '!'; cls = 'alert'; }   // ◎: he has you lined up — his track on you is past the aim model's first-shot gate (aim.ts; never shown with the model off)
-      else if (g.state === 'suspicious' || g.state === 'search') { text = '?'; cls = 'sus'; }
-      else if (zz) text = zz;   // asleep in his chair (doze.ts): a 'z' that grows with each breath; at his screen with headphones on: '♪' — nothing with its switch off
-      else if (g.awareness > 0.05) { text = '·'.repeat(1 + Math.floor(g.awareness * 6)); cls = 'sus'; }
-      if (g.state !== 'dead' && game.time < g.dazzledUntil) text = '✹' + text;   // dazzled by a stun canister
+      const mark = headMark(game, g), cls = mark.cls; let text = mark.text;   // (headmark.ts: which glyph, which colour — a living man of your own carries no wary mark)
       if (game.showDebug) text += ` ${g.state} ${(g.awareness * 100) | 0}%${game.time < g.dazzledUntil ? ` dazzled ${(g.dazzledUntil - game.time).toFixed(1)}s` : ''}`;
       if (game.showDebug) { const T = needsTrip(g); if (T) text += ` ${T.kind}:${T.phase}${T.phase === 'telegraph' ? ` ${Math.ceil(T.departAt - game.time)}s` : T.phase === 'dwell' ? ` ${Math.ceil(T.dwellUntil - game.time)}s` : ''}`; }   // (the debug label only: in play the trip is told by the man himself — the watch, the word, the neck — never by the HUD; needs.ts)
       el.textContent = text; el.className = 'marker ' + cls;
@@ -224,7 +220,7 @@ export class Overlay implements HudLike {
       else if (C.state === 'startled') { text = '?'; cls = 'sus civ'; }
       else if (C.state === 'cower' || C.state === 'held') { text = '·'; cls = 'sus civ'; }
       else if (C.state !== 'work') { text = C.state === 'phone' ? '!☎' : '!'; cls = 'alert civ'; }
-      else if (cv.awareness > 0.05) { text = '·'.repeat(1 + Math.floor(cv.awareness * 6)); cls = 'sus civ'; }
+      else if (waryDots(cv.awareness)) { text = waryDots(cv.awareness); cls = 'sus civ'; }
       if (game.showDebug) text += ` ${C.name} ${C.state}${C.cause ? ` [${C.cause}${C.armed ? '!' : ''}${C.reported ? ' told' : ''}]` : ''} ${(cv.awareness * 100) | 0}%`;
       if (!text) { el.style.display = 'none'; return; }
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.textContent = text; el.className = 'marker ' + cls;
@@ -240,7 +236,7 @@ export class Overlay implements HudLike {
       if (!vis || (it.guard && game.fogOfWar.hidden(it.guard))) { el.style.display = 'none'; return; }
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
       if (it.kind === 'guard') { el.style.display = 'none'; return; }   // living guards already carry a state marker; no extra dot
-      el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(143,240,180,0.75)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
+      el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(var(--h-acc-rgb),0.8)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
     // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)
     const hv = game.hover?.kind === 'cancel' ? null : game.hover; const pl = game.player;
@@ -295,13 +291,17 @@ export class Overlay implements HudLike {
     // log
     // radio traffic only: lines that went over the guards' net ('radio: …') within the last 8 s, newest last, older ones dimmed — the rest of game.messages
     // stays for the harness / probes but is not drawn (the interaction panel, the kit column and the world carry it)
+    // …and, with CUES.overheard, one dim row for a shout that reached an ear from a man the fog hides ('heard: …' — cues.ts overheard)
     { const rx = stripRows(game);   // (cues.ts: the defenders' net ranked and rate-limited; with its switch off, the message ring's 'radio: ' rows as ever)
       const key = rx.map(m => m.text + (game.time - m.t > 5 ? '~' : '')).join('|');
-      if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => `<span class="rx${game.time - m.t > 5 ? ' old' : ''}"><b>·)) RADIO</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`).join(''); } }
+      if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => { const heard = m.text.startsWith('heard: ');   // (cues.ts overheard: a shout that reached an ear — the strip's own dim row from the start, under its own word; no colour of its own)
+        return `<span class="rx${heard ? ' heard old' : game.time - m.t > 5 ? ' old' : ''}"><b>${heard ? 'HEARD' : '·)) RADIO'}</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`; }).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
     const ot = game.objectiveText();
-    if (ot !== this.objKey) { this.objKey = ot; this.objEl.textContent = ot; this.objEl.className = game.mission.stage; }
+    if (ot !== this.objKey) { this.objKey = ot; const W = 'objective ▸', cut = ot.indexOf(W);   // the line's own word is set apart as its label (a par clock in front of it is not part of it); the text read back is unchanged
+      if (cut < 0) this.objEl.textContent = ot; else this.objEl.innerHTML = `${esc(ot.slice(0, cut))}<b>${W}</b>${esc(ot.slice(cut + W.length))}`;
+      this.objEl.className = game.mission.stage; }
     { // alarm stage: level, whole seconds left on its clock, and whether an episode is running — rebuilt only when that key changes
       const lvl = game.quietUtility ? 0 : game.escalation; const left = lvl > 0 && game.escalationT > game.time ? Math.ceil(game.escalationT - game.time) : 0;
       const live = lvl > 0 && game.alarm.episode;

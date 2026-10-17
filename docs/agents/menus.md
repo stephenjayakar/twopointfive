@@ -22,6 +22,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   options — nothing (the default) · `run` = the pause card on 'Run so far' and back (main.ts `tabKey`) · `who` = Tab steps who takes the next order AS WELL AS T (main.ts hands a Tab press to the tick as a press of `ORDERS.whoKey`, so the HUD's, the lessons' and a tape's T all still hold) · `keys` =
   Options ▸ Controls over the paused game and back; each an existing thing, the losers come out when he has picked. `?cards` = the
   older start card (short list + Missions + Start + the sandbox row) that the next bullet describes, which the `*-look.cjs` tools other than startpage-look still drive.
+- **The fight screen wears the menus' look** (2026-10-16; the maintainer's "sure a" to the call "The fight screen in the menus' colours: move the mint green
+  monospace over to the menus' sand and orange"; before it the two read as two games). NO SWITCH, on purpose: it is a look, not a rule of the game (STYLE.md: no
+  player-facing switches for art constants), nothing of the simulation reads it, so a run's digest is the same on both stands. WHERE: every rule of the fight screen is
+  in `index.html`'s one sheet, and that sheet now opens with a `:root` block of `--h-…` tokens, the fight screen's ROLES (ink, plate, edge …), each
+  `var(--m-…, <that token's value>)`: the menus' own token once `menuTheme()` has run (the Overlay's constructor calls it too now), the literal for the moments before
+  the first script. So `--m-accent` moves the fight screen as it moves a menu (theme.ts gained `--m-bright-rgb` for the marks drawn in bright sand at an alpha).
+  WHAT MEANS WHAT: sand is the ink (`--h-ink`; values and lit things `--h-hi`; hints `--h-soft` / `--h-dim` / `--h-faint`; hairlines `rgba(var(--h-edge), a)`; backings
+  `rgba(var(--h-plate), a)`, warm black where they were blue-black). ORANGE (`--h-acc`) is spent on what leads on and nothing else: the lit interaction row's left bar
+  and its OWN key cap (`.it.primary > .what + .opt kbd`: not the hint keys under it, and a row that cannot be done keeps its dim cap; the row's FRAME is the selected
+  kit slot's sand frame, so 'chosen' is one thing in both columns; every other key cap is a plain sand cap; the cancel row lit is bright sand), the objective (its
+  diamond, its reticle, its dot, and the line's own word: `overlay.ts` sets 'objective ▸' apart as a `<b>` label, caps in the orange, the text read back from
+  `#objective` unchanged and a par clock in front of it left plain), the LIGHT bar while Sam is lit (`#meters.hot`), a lost man's way (it was the accent as a literal
+  already), the debugger's chosen system / focus / ticked box, the showcase timeline's playhead. NOT orange: a row header of kind 'objective', because `orders.ts`
+  uses that kind for every squad row that is not a door's; it is the bright ink. EVERY OTHER HUE KEPT ITS MEANING AND ITS VALUE: gold / red / blue = who an order
+  goes to, amber then red = alarm and REC, blue = a door, salmon = a body, red = a man, amber = a breaker / RING / a key / an off thing, yellow = a changed row in
+  the debugger; the one hue dropped is the cancel row's salmon (it sat a few degrees from the orange). NO GLOW, FLAT BARS: every coloured halo, the amber, blue and
+  red ones too, became a dark one or none, and the bars' fills are flat (the menus are flat); text that sits on the picture takes `--h-shadow` (the old 1 px drop plus a
+  5 px dark halo), since sand has no hue to stand off a sunlit floor with; for the same reason the objective line has a plate under it (and is not drawn while empty),
+  unlit kit rows went from 0.55 to 0.7 opacity and the kit's key hints from the faintest ink to `--h-soft`. TYPE: labels (`.what`, LIGHT / SOUND, ALARM, CHECKPOINT,
+  REC, kit names, the marks' words) are `--h-head` 700 at 11 or 12 px, kit tags 10 px; rows (`.opt`, `.hint`, radio, speech, the objective's text) are `--h-font`; key
+  caps and the bars' numbers are `--h-mono`. `body` is still mono and so is `#hud` (the debug read-out is columns) and the debugger (`#panel`, `#ptip`): they are
+  recoloured, not reset. ROW HEIGHTS WERE HELD: line heights are set so the open five-order door menu is 294 px tall (307 before) and a five-slot kit column 206
+  (205), measured in Chromium on the page's own markup; the kit column is 326 px wide against 309 where `--h-head` falls back to Inter, and narrower than that on a
+  Mac, whose 'Avenir Next Condensed' is the face the labels were sized for. FROM CODE: `ui/overlay.ts` gives the throw arc's two shapes a class (`.trajpath`,
+  `.trajland`: an attribute cannot hold a `var()`) and colours the objective's dot from `--h-acc-rgb`. A NEW ROW ON THE FIGHT SCREEN takes these tokens, never a
+  literal green or a typeface by name. CHECK: `bun run tools/qa/hud-look-check.ts` (reads files only, so there is no stand to run it on: no green-to-teal literal,
+  pale mints included, and no green or blue near-black in any rule of the sheet bar the named things that ARE green, a can's paint and two keys of the debrief's
+  map; each `--h-` fallback equal to theme.ts's value; every `font` in the fight screen's rules a token; no green in overlay.ts); `HUDLOOK_BREAK=1` adds one rule in
+  the old look and 'no green' and 'type' must both fail. SEEN, all on the software adapter in headless Chromium at 1440 × 900, never on a GPU and never on a Mac:
+  the real page on `?roomclear&squad4` (deployed, the order menu on a door, after a stack order, the debugger open) and the solo night at a door, each beside the
+  same DOM under the old sheet, with no console error; the alarm line, CHECKPOINT, REC, radio rows, speech, head marks, both reticles and the order mark only as
+  static markup under the real sheet. NOT SEEN BY ANYONE: the labels in the condensed face they were sized for, any of it over a sunlit floor at play speed, a lit
+  LIGHT bar, a lost man's row, a par clock in front of the objective, the showcase timeline, the close-in windows, the throw arc. NOT TOUCHED, each its owner's and
+  still mint mono on this screen: the F7 tag (`ui/replaykey.ts TAG_CSS`), two edges of the engine replay's bar (`replay/engineplay.ts`), the one-off tools
+  (`ui/sceneTweak.ts`, `ui/perfsweep.ts`), the debug floor views (`windviz`, `pictureviz`). TWO OVERLAPS REPORTED ON THIS SCREEN ARE NOT MENDED and were not seen
+  in any of the pictures above: a long order menu reaching the kit column in a window under about 640 px tall (it reached it before; the menu is now 13 px
+  shorter), and the objective's diamond drawn over the squad block when the objective lies up and to the left.
 - **Team & kit shows the team at the mission's way-in door** (2026-10-13, the owner's pick; `src/ui/kitView.ts` + `src/host/kitView.ts`). SWITCHES, BOTH UI-ONLY:
   `KIT_VIEW.on` / `?oldfigure` (off = the standing man, `kitFigure.ts`, everywhere, as before) and `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
   kit change a plain restage, nothing played — the parent opens the child `&stillkit`, which is what the child reads), both on in the page, both in the UI module's table (with `wait` 10 s, `kitMs` 150 and `grace` 2.5 s). No `src/game` code reads either, so
