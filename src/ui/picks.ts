@@ -20,7 +20,7 @@
 import { PICKS, PICKS_UI, pickHref, pickEntry, pickSquad, pickOfQuery, pickDifficulty, pickOtherDifficulty, pickChosenDifficulty, namesMission, nextPick, type Pick } from '../scene/picks';
 import { sizeTag, sizeWords } from '../game/loadout';
 import { hourLabel } from '../game/hours';
-import { difficultyWords, leversHref, leversLine, squadsOf } from '../game/difficulty';
+import { difficultyWords, leversHref, leversLine, squadsHeld } from '../game/difficulty';
 import { quietFogAside } from '../game/quietfog';
 import { weatherTitle } from '../game/weatherKinds';
 import { missionsBusy, missionList } from './missions';
@@ -164,7 +164,7 @@ export function picksBlock(search: string = typeof location !== 'undefined' ? lo
     const other = pickOtherDifficulty(p), altHref = other ? pickHref(p, search, undefined, undefined, other) : null;   // (none on a row with one difficulty: hard is its standard)
     if (other && altHref !== null) {
       const b = el('a', `palt ${other}`) as HTMLAnchorElement; b.setAttribute('href', altHref); b.setAttribute('data-alt', p.id); b.textContent = `${other} ›`;
-      b.title = `The same mission on ${difficultyWords(other, squadsOf(pickEntry(p)))}.`;   // (the build's own words for what that difficulty is HERE: on one squad map hard is the standard squads, and it says so)
+      b.title = `The same mission on ${difficultyWords(other, squadsHeld(pickEntry(p)))}.`;   // (the build's own words for what that difficulty is HERE: on one squad map hard is the standard squads, and it says so)
       b.onclick = (e?: Event) => { e?.preventDefault?.(); if (via) { pickLoadout(p, altHref); return; } b.textContent = 'loading…'; startPick(p, altHref); };
       alts.push(b); wrap.appendChild(b);
     } else { const gap = el('span', 'pgap'); gap.textContent = 'hard ›'; wrap.appendChild(gap); }   // (unseen: keeps this row's end in line with the others)

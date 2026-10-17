@@ -81,6 +81,9 @@ let NO_PLAIN = false;
 let HAND: boolean | null = null;
 /** threshold-grenade: DOORTOOLS.thrNoCan and thrFragHold, the same way */
 let NOCAN: boolean | null = null, FRAGHOLD: boolean | null = null;
+/** DOORTOOLS.wordNoCan as every run staged here has it (true raises the one-order outside clear it acts with). OFF but for threshold-hold's own two runs of it, on both
+ *  stands: every other line in this file was written of a word that bangs the blind pockets, and asks what that can does (the kit, who it blinds, Sam behind the door). */
+let WORDNOCAN = false;
 /** … and the order's one wait, DOORTOOLS.thrHandWait, for the runs staged while this is set (null: the table's own) */
 let HANDWAIT: number | null = null;
 /** a start-card scenario staged as the page stages it, under a seed (the playthrough's own recipe: the page's chaos, Sam in god mode and pinned dark) */
@@ -90,6 +93,7 @@ async function stage(scn: string, seed: number) {
   const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); const g = W.game;
   if (NO_PLAIN) DOORTOOLS.outsidePlain = false;   // (after the stand-up, which on a stand that names TPS_OUTSIDEPLAIN writes the rule again every time)
   if (HAND !== null) DOORTOOLS.thrHand = HAND;
+  DOORTOOLS.wordNoCan = WORDNOCAN; if (WORDNOCAN) DOORTOOLS.outsidePlain = true;
   if (NOCAN !== null) DOORTOOLS.thrNoCan = NOCAN; if (FRAGHOLD !== null) DOORTOOLS.thrFragHold = FRAGHOLD; if (HANDWAIT !== null) DOORTOOLS.thrHandWait = HANDWAIT;
   g.godMode = true; g.tune.chaos = 0.5;
   let q = scenarioQuery(E) as string; if (E.kind === 'roomclear') q = q.replace(/roomclear(=\d+)?/, `roomclear=${seed}`);
@@ -404,7 +408,14 @@ export const thresholdFirst = guarded(async () => {
 export const thresholdHold = guarded(async () => {
   const { verdict, done } = family('threshold-hold: worked from the threshold and HELD until told — the pair (the records office) and the four (the depot) — then step in / bang and step in / leave it / the word');
   const AFTER = 10, scns = ['records-pair', 'depot-four'], tells: Hold['tell'][] = ['step', 'bang', 'leave', 'word', 'key'];
-  const runs = new Map<string, Run>(); for (const scn of scns) for (const tell of tells) runs.set(`${scn}/${tell}`, await doorRun(scn, 1, null, 120, NaN, { tell, after: AFTER }, false, true));   // (the nearest held door a hold can be asked of: heldEntries' `unwatched`)
+  // (THE WORD as it was — a can for the blind pockets — is asked with DOORTOOLS.wordNoCan out of the way; the rule has its own two runs and its own line below.
+  //  WORDNOCAN_BREAK=1: those two are staged with the rule off too, and the line must fail on what it finds)
+  const RULE = process.env.WORDNOCAN_BREAK !== '1';
+  WORDNOCAN = false;
+  const runs = new Map<string, Run>(), quietWord = new Map<string, Run>();
+  try { for (const scn of scns) for (const tell of tells) runs.set(`${scn}/${tell}`, await doorRun(scn, 1, null, 120, NaN, { tell, after: AFTER }, false, true));   // (the nearest held door a hold can be asked of: heldEntries' `unwatched`)
+    WORDNOCAN = RULE; for (const scn of scns) for (const tell of ['word', 'key'] as const) quietWord.set(`${scn}/${tell}`, await doorRun(scn, 1, null, 120, NaN, { tell, after: AFTER }, false, true));
+  } finally { WORDNOCAN = false; }
   const all = [...runs.values()], of = (tell: string) => scns.map(scn => runs.get(`${scn}/${tell}`)!), i = (r: Run, re: RegExp) => idx(r, re), rel = (r: Run, t: number) => f1(t - r.beats[0].t);
   const tossed = (r: Run) => r.beats.filter(b => /^toss:/.test(b.what)).length, feet = (r: Run) => [...r.firstIn].map(([w, t]) => `${w} ${rel(r, t)} s`).join(', ') || 'nobody';
   verdict(all.every(r => !r.why && /· to hold$/.test(r.beats.find(b => /^threshold ·/.test(b.what))?.what ?? '')), 'the order is taken, to hold, in every run (thresholdOn(door, who, side, true))', all.map(r => r.why ? `${line(r)}: REFUSED — ${r.why}` : line(r)).join(' · '));
@@ -427,6 +438,11 @@ export const thresholdHold = guarded(async () => {
   for (const [tell, how] of [['word', 'doorTools.go(\'all\')'], ['key', `the ${DOORTOOLS.blowKey.replace('Key', '')} key, one frame, no menu up`]] as const)
     verdict(of(tell).every(r => (tell === 'key' || r.tellR === null) && i(r, /^the word$/) >= 0 && r.beats.find(b => /^the word$/.test(b.what))!.t - r.tellT < 0.1 && i(r, /^held /) > i(r, /^the word$/) && i(r, /^step in/) > i(r, /^held /) && (tossed(r) > 0 || i(r, /^no bang ·/) > 0) && r.inBefore === 0 && r.ended === 'in'),
       `THE WORD while holding (${how}): the blind pockets (a can, or 'no bang' said why), then the step in — nobody in before it`, of(tell).map(r => `${line(r)}: ${story(r)} · ended '${r.ended}'`).join('\n    '));
+  // the word under DOORTOOLS.wordNoCan: in with no can — and the same doors, the rule off, spent one or said why not (the lines above), so the line is not empty
+  { const qs = [...quietWord.values()], was = [...of('word'), ...of('key')];
+    verdict(qs.every(r => !r.why && i(r, /^the word$/) >= 0 && i(r, /^held /) > i(r, /^the word$/) && i(r, /^step in/) > i(r, /^held /) && tossed(r) === 0 && i(r, /^no bang ·/) < 0 && r.bangs.length === 0 && r.bangs1 === r.bangs0 && r.inBefore === 0 && r.ended === 'in') && was.some(r => tossed(r) > 0),
+      `THE WORD SPENDS NO CAN (DOORTOOLS.wordNoCan, with the one-order outside clear${RULE ? '' : ' — WORDNOCAN_BREAK: the rule off'}): the word to men holding a door from outside, from code and on its key — the jambs let go, the step in, nobody in before it, and no can thrown, none asked about, the kit as it was`,
+      qs.map(r => `${line(r)}: ${story(r)} · bangs ${r.bangs0} → ${r.bangs1} · ended '${r.ended}'`).join('\n    ') + `\n    the rule off, the same doors: ${was.map(r => `${tossed(r)} thrown`).join(', ')}`); }
   // nothing to tell: refused in words
   { const R = await stage('records-pair', 1), D = R.D, a = D.thresholdTell('step'), b = D.canThresholdThen('bang', null, R.team);
     const ent = heldEntries(R)[0].ent; g0: { const lx = -ent.out[1], lz = ent.out[0]; R.g.teleportPlayer([ent.at[0] + ent.out[0] * 3.4 + lx * 1.6, 0, ent.at[2] + ent.out[1] * 3.4 + lz * 1.6]); break g0; }

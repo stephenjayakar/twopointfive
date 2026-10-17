@@ -89,7 +89,7 @@ export const POWEROUT = {
 
 type Def = RoomFight['defs'][number];
 /** how a man held his post before he left it (enemysquads.ts's looker keeps the same) */
-interface Calm { awareness: number; hold: boolean; pinned: boolean; station: Vec3; home: Vec3; room: Def['room']; ev: number[]; watch: number; want: number; pt: Vec3 }
+export interface Calm { awareness: number; hold: boolean; pinned: boolean; station: Vec3; home: Vec3; room: Def['room']; ev: number[]; watch: number; want: number; pt: Vec3 }
 type Phase = 'wait' | 'out' | 'there' | 'back';
 interface Man { gd: Guard; role: 'lever' | 'cover'; phase: Phase; goal: Vec3; from: Vec3; watch: Vec3 | null; tries: number; stepT: number; heard0: number; thereT: number; calm: Calm | null }
 export interface PowerOutEvent { t: number; what: 'noticed' | 'said' | 'go' | 'there' | 'wrecked' | 'restored' | 'home' | 'abort' | 'lost' | 'overdue' | 'stay' | 'nobody'; who: string; why: string }
@@ -198,7 +198,7 @@ function coverSpot(g: Game, lever: Vec3, way: Vec3[], from: Vec3): { spot: Vec3;
   }
   return { spot: best ?? v3.copy(lever), watch: v3.copy(back) };
 }
-function snapshot(D: Def): Calm {
+export function calmOf(D: Def): Calm {
   const gd = D.gd;
   return { awareness: gd.awareness, hold: gd.hold, pinned: gd.pinned, station: v3.copy(D.station), home: v3.copy(D.home), room: D.room, ev: [...D.ev], watch: D.watch, want: D.want, pt: v3.copy(D.pt) };
 }
@@ -206,12 +206,20 @@ function snapshot(D: Def): Calm {
 function walk(g: Game, D: Def, to: Vec3) { run(g, D, to, null); order(D.gd, { speed: g.tune.guardInvestigate }); }
 /** back on the post he left, as he held it — `wary`: the breaker was no fault, he is not calmed down again */
 function settle(g: Game, st: State, M: Man, D: Def) {
-  const gd = D.gd, c = M.calm!;   // (only a calm man steps off — powerOutKept — so the post he left was a calm one)
-  if (gd.script) endGuardScript(gd, st.word ? 'suspicious' : 'patrol');
-  gd.awareness = st.word ? Math.min(0.45, Math.max(c.awareness, 0.35)) : c.awareness; gd.hold = c.hold; gd.pinned = c.pinned;
+  calmBack(D, M.calm!, st.word);   // (only a calm man steps off — powerOutKept — so the post he left was a calm one)
+}
+/** a man back on the post he left, as `calmOf` read it there — `wary`: he is not calmed down again (rescuecheck.ts puts its man back the same way) */
+export function calmBack(D: Def, c: Calm, wary: boolean) {
+  const gd = D.gd;
+  if (gd.script) endGuardScript(gd, wary ? 'suspicious' : 'patrol');
+  gd.awareness = wary ? Math.min(0.45, Math.max(c.awareness, 0.35)) : c.awareness; gd.hold = c.hold; gd.pinned = c.pinned;
   D.mode = 'hold'; D.station = c.station; D.home = c.home; D.room = c.room; D.ev = c.ev; D.watch = c.watch; D.want = c.want; D.pt[0] = c.pt[0]; D.pt[1] = c.pt[1]; D.pt[2] = c.pt[2];
   D.glanceUntil = -1; D.fixKeep = -1; D.rallyAt = NaN; D.lastState = gd.state; D.lastSeen = gd.lastSeenT; gd.lastKnown = D.pt;
 }
+/** a kept post as a checkpoint carries it (its room by id) and back */
+export type CalmSnap = Omit<Calm, 'room'> & { room: number };
+export const calmSave = (c: Calm): CalmSnap => ({ ...c, station: v3.copy(c.station), home: v3.copy(c.home), ev: [...c.ev], pt: v3.copy(c.pt), room: c.room ? c.room.id : -1 });
+export const calmLoad = (g: Game, c: CalmSnap): Calm => ({ ...c, station: v3.copy(c.station), home: v3.copy(c.home), ev: [...c.ev], pt: v3.copy(c.pt), room: g.fight.defs.map(D => D.room).find(R => R?.id === c.room) ?? null });
 
 /** lighting.ts setBlackout, on a trip that found the mains up: the answer's clock starts (a return on its first line with the switch off or no defenders) */
 export function powerOut(g: Game) {
@@ -369,7 +377,7 @@ function stepOff(g: Game, st: State, fight: boolean) {
   if (!goes.length) { if (!st.men.length) st.parties = Math.max(0, st.parties - 1); return; }
   if (!st.men.some(m => m.role === 'lever')) { const M = goes[0]; M.role = 'lever'; M.goal = leverSpot(g); M.watch = null; }
   for (const M of goes) { const D = defOf(g, M.gd)!, gd = M.gd;
-    M.calm = snapshot(D); M.heard0 = loudHeard(gd); M.phase = 'out'; walk(g, D, M.goal);
+    M.calm = calmOf(D); M.heard0 = loudHeard(gd); M.phase = 'out'; walk(g, D, M.goal);
     event(g, st, 'go', gd, `${M.role === 'lever' ? 'walks to the lever' : 'goes with him to cover it'}, ${flat(gd.char.pos, M.goal).toFixed(0)} m off, ${(g.time - st.since).toFixed(1)} s after the lights went`); }
   st.overdueAt = g.time + st.wayM / Math.max(0.5, g.tune.guardInvestigate) + POWEROUT.overdue;
 }
@@ -391,19 +399,18 @@ function standDown(g: Game, st: State) {
 
 // ---------------------------------------------------------------- the state's pair (new module state the game depends on rides a snapshot)
 export type PowerOutSnap = { since: number; decideAt: number; goAt: number; wayM: number; overdueAt: number; fell: Vec3 | null; seen: { i: number; lit: number }[]; lookAt: number; decided: boolean; word: boolean; parties: number; lost: boolean;
-  men: { i: number; role: Man['role']; phase: Phase; goal: Vec3; from: Vec3; watch: Vec3 | null; tries: number; stepT: number; heard0: number; thereT: number; calm: (Omit<Calm, 'room'> & { room: number }) | null }[] };
+  men: { i: number; role: Man['role']; phase: Phase; goal: Vec3; from: Vec3; watch: Vec3 | null; tries: number; stepT: number; heard0: number; thereT: number; calm: CalmSnap | null }[] };
 export function powerOutSnapshot(g: Game): PowerOutSnap | undefined {
   const st = STATES.get(g); if (!POWEROUT.on || !st) return undefined;
   return { since: st.since, decideAt: st.decideAt, goAt: st.goAt, wayM: st.wayM, overdueAt: st.overdueAt, fell: st.fell ? v3.copy(st.fell) : null, seen: st.seen.map(x => ({ ...x })), lookAt: st.lookAt, decided: st.decided, word: st.word, parties: st.parties, lost: st.lost,   // (the timeline is the check's and the debugger's: not kept)
     men: st.men.map(M => ({ i: g.guards.indexOf(M.gd), role: M.role, phase: M.phase, goal: v3.copy(M.goal), from: v3.copy(M.from), watch: M.watch ? v3.copy(M.watch) : null, tries: M.tries, stepT: M.stepT, heard0: M.heard0, thereT: M.thereT,
-      calm: M.calm ? { ...M.calm, station: v3.copy(M.calm.station), home: v3.copy(M.calm.home), ev: [...M.calm.ev], pt: v3.copy(M.calm.pt), room: M.calm.room ? M.calm.room.id : -1 } : null })) };
+      calm: M.calm ? calmSave(M.calm) : null })) };
 }
 export function powerOutRestore(g: Game, s: PowerOutSnap | null | undefined) {
   if (!s) { STATES.delete(g); return; }
-  const roomOf = (id: number) => g.fight.defs.map(D => D.room).find(R => R?.id === id) ?? null;
   const men: Man[] = [];
   for (const m of s.men) { const gd = g.guards[m.i]; if (!gd) continue;
     men.push({ gd, role: m.role, phase: m.phase, goal: v3.copy(m.goal), from: v3.copy(m.from), watch: m.watch ? v3.copy(m.watch) : null, tries: m.tries, stepT: m.stepT, heard0: m.heard0, thereT: m.thereT,
-      calm: m.calm ? { ...m.calm, station: v3.copy(m.calm.station), home: v3.copy(m.calm.home), ev: [...m.calm.ev], pt: v3.copy(m.calm.pt), room: roomOf(m.calm.room) } : null }); }
+      calm: m.calm ? calmLoad(g, m.calm) : null }); }
   STATES.set(g, { since: s.since, decideAt: s.decideAt ?? Infinity, goAt: s.goAt, wayM: s.wayM, overdueAt: s.overdueAt, fell: s.fell ? v3.copy(s.fell) : null, seen: s.seen.map(x => ({ ...x })), lookAt: s.lookAt, men, decided: s.decided, word: s.word, parties: s.parties, lost: s.lost, events: [] });   // (decideAt: Infinity is null in a file)
 }

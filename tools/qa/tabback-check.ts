@@ -83,6 +83,13 @@ export async function tabBackCheck(): Promise<boolean> {
         'the pause is the pause and nothing else: the first tick after the card holds \'Paused\' once, a Space list held as the card came up is shut with its row not done (and the same keys given tick by tick, as a replay gives them, end the same), a held arc is let go unsent, the order menu is still up, and main.ts takes Esc\'s press out of the frame and never backs out on it',
         `order menu up ${up0} → after the card ${up1}, ticks holding 'Paused' ${stA.seen} · Space list open ${L.open}, still open under the card ${L.under0} → shut on the first tick back ${L.shut}, anything done ${L.did}, ticks holding 'Paused' ${stL.seen} · the same keys tick by tick: shut ${T.shut}, anything done ${T.did} · arc held ${R.held} → ${R.after} on 'Paused', rounds gone ${R.flew} · main.ts: no back-out on Esc ${never}, the press leaves the frame ${takes}, Tab's trial waits its turn ${trial} · the hint rows name ${backName()}`); }
 
+    // ---- the words: Options ▸ Game's 'Tab key' row must not say Tab does nothing while Tab is the back key (ui/tabkey.ts tabChoices)
+    { const { tabChoices, TAB_CHOICES, TAB_BACK_LINE } = await import(`${ROOT}/src/ui/tabkey.ts`); const on = tabChoices(!BRK), off = tabChoices(false);
+      const first = on[0].v === 'off' && on[0].label === 'Nothing more' && on[0].line.startsWith(TAB_BACK_LINE) && !/does nothing/.test(on[0].line), rest = on.slice(1).every((c: any, i: number) => c.label === TAB_CHOICES[i + 1].label && c.line === `${TAB_CHOICES[i + 1].line} Backing out comes first.`);
+      const asWas = off.length === TAB_CHOICES.length && off.every((c: any, i: number) => c.v === TAB_CHOICES[i].v && c.label === TAB_CHOICES[i].label && c.line === TAB_CHOICES[i].line) && off[0].line === 'Tab does nothing.';
+      verdict(first && rest && asWas, 'the Tab key row on Options says what Tab does: with the rule on the first choice is \'Nothing more\' and says Tab backs out, every other choice says backing out comes first; with it off the row is as it was',
+        `rule on: '${on[0].label}' · '${on[0].line}' · the others end 'Backing out comes first.' ${rest} · rule off: as it was ${asWas}`); }
+
     // ---- the switch: a recording from before the key, the frozen stand's row
     { const { g } = await door(true); BACKKEY.tab = true; const snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), has = typeof snap.tables?.BACKKEY?.tab === 'boolean'; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.BACKKEY;
       const offOld = await quiet(() => { applyKnobs(g, old); const off = BACKKEY.tab === false; applyKnobs(g, snap); return off && BACKKEY.tab === true; });

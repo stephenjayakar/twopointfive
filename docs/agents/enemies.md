@@ -921,3 +921,123 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SHAPE: the free-man test repeats what enemysquads / darkfoe / lighting each ask in their own words (a shared "is this man the room fight's to send"
   would be roomfight's to own). NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU: the two lamps crossing a dark hall, whether the line reads on the strip in
   time, whether a lone man leaving his room reads as an opening or as a blunder, the lights coming back under the team.
+- **Squads from the rooms** (`src/game/squaddeal.ts`, `SQUADDEAL`; part of "defenders answer the plan the team chose"). WHAT WAS THERE: the contact
+  call, the men who come to a hit room, the pair that goes round, the radio check and the men who walk to a silent post are all enemysquads.ts's, and
+  none of it runs on a level whose file has no `scenarios.roomClear.squads` block (the depot, records, the kill house, the long hall, the floodlit yard,
+  defuse, the snatch, the office room clear): there a loud way in drew nobody at standard and a man taken quietly at the back was missed by nobody. THE
+  RULE: when a room clear's men are dealt, a structure with no squads block is handed one cut from ITS OWN ROOMS (`squadDeal`, called once in
+  roomclear.ts `onStaged`), and from there it is enemysquads.ts's floor like any squads level — nothing in the new file moves a man or says a line.
+  The file wins (a level that names squads keeps them word for word; `squads: []` = a level saying it is one pool; a Training lesson is left alone).
+  How many: the men as dealt, `one` (5) or fewer one squad, `two` (8) or fewer two, more three, never more squads than rooms with a man. Which rooms:
+  the rooms in a line along the house's longer side, cut where the men come nearest even shares, so a squad's rooms are neighbours and every squad has
+  a man. Names: `names` (Alpha, Bravo, Charlie) along that line. Everything else is the squads' default (may leave, wedge the doors their rooms do not
+  share). DYNAMIC: the block is made from THIS staging's placement, and every way a man then takes is asked of the walk grid as it stands, so a blown
+  wall changes the way they come. No man is added and nobody's eyes, aim or health change. A pure function: no dice, no clock, no state (nothing for a
+  checkpoint). WHAT IT COSTS, known: with squads staged the floor is a squads level to every rule that asks (`squadsLive`): the press stands down, men
+  dig in on their squad's word, and HARD on these eight levels is the drilled garrison and no longer "the defenders come at you together" — the mission
+  sheet says so (`difficulty.ts squadsHeld`, read by ui/picks.ts and ui/missions.ts; `squadsOf` stays the row's fact about its level FILE). The
+  maintainer's call is asked on that. With the enemy kit on stun charges at standard, the office room clear's defenders put 1 charge through a door in 8 scripted runs
+  where one pool puts three or more (it is the press that carries them, and the press stands down): the kit lever does little on these levels while
+  the rule is on (`levers-run` holds the rule off for its two tallies: it measures the kit lever on one pool). SWITCH: ON in the page (`?nosquaddeal`; the debugger
+  row 'enemies are in squads on every level'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'SQUADDEAL.on': 'TPS_SQUADDEAL=1'`), in the
+  knob registry and `JOURNAL_KNOBS` (a recording from before the key replays with it off). SEAMS in others' files, one clause each: roomclear.ts
+  (`onStaged`), difficulty.ts (`squadsHeld`), ui/picks.ts and ui/missions.ts (the Hard sentence asks `squadsHeld`), enemysquads-probes.ts (its "no
+  squads block = none staged" line holds the rule off), levers-probes.ts (as above). CHECK: `tools/qa/squaddeal-check.ts` (probe `squaddeal`), 7 lines:
+  (a) the cut on the eight rows (every room in one squad, a man in each, the count the men call for, roomclear.ts `checkSquads` silent), (b) the file
+  wins (the warehouse: the same object), (c) a loud way in draws men to the noise with their word 1.5 s or more before the first is there (the kill
+  house: "Alpha: coming to you from the store — hold on!" at 2.4 s, there at 5.5), (d) a quiet one draws a man to the silent post (word 40.0 s, there
+  44.1), (e) a blown wall changes the way (records: the first man's way 25.9 m, 21.7 m with the hole, and he passes 0.8 m from it), (f) off = the base
+  by the digest of (c)'s run (a run the rule changes: the break path's digest differs), (g) the mission sheet's Hard sentence. ALL PASS on both stands;
+  `SQUADDEAL_BREAK=1` red on (a) (c) (d) (f) (g) on both. MEASURED (`tools/qa/answers.ts`, below; shipped stand, seed 7, one seed): rows that answer
+  the three plans with three different telegraphed moves, 4 of 19 without the rule, 13 of 19 with it, on standard and on hard. MEASURED (the scripted
+  commander, `command-tally.ts --hands plan`, shipped stand, 8 seeds on each of depot, kill house, hall, floodlit, defuse, snatch, office room clear,
+  four men; rule on against off; small samples): STANDARD taken 56 of 56 against 51 (5 ran out the cap), clean 29 against 30, wiped 10 against 9, men
+  lost 1.54 against 1.38, Sam down 0.95 against 2.09 a run, 77.0 s against 85.5. HARD taken 55 of 56 both ways, clean 23 against 19, wiped 10 against
+  13, men lost 1.70 against 1.91, Sam down 2.48 against 1.80, 76.3 s against 74.4 — but level by level it moves: the depot is harder with squads
+  (wiped 5 of 8 against 2, Sam down 9.88 against 2.38), the long hall easier (wiped 2 against 7, clean 5 against 0). The standard tallies ran while
+  tool files were being copied into the measuring tree (the rule's own file unchanged). UNTUNED by play: `one` / `two`, the cut, the names. NOBODY HAS
+  PLAYED IT; NEVER SEEN ON A GPU: whether "coming to you" reads in time on the strip, whether two squads on a seven-man floor feel organised or thin,
+  the depot on hard.
+  A COST FOUND AFTER (10-17): the lone dark walk (darkfoe.ts: a blind man in a dark room walks to floor he can see) is for a man nobody else has,
+  and on a floor dealt into squads the garrison digs in on its squad's word — a dug-in man is dig-in's (`darkFoeKept` reads 'dug in'), so on the
+  levels that get squads here nobody takes that walk: on a blackout they send two to the breaker and the rest keep their rooms (a dug-in blind man
+  who knows still lights his lamp). `darkfoe-check.ts`'s walker runs hold `TPS_SQUADDEAL=0` themselves (the floors they were written for; 4 of its
+  16 lines were red on the shipped stand without that) and a new line asks that on the kill house as dealt nobody is sent and every man standing
+  is somebody else's. Whether a dug-in blind man should still take the walk is an open call for the maintainer.
+- **Squads that stay in their rooms still miss a room that goes silent** (`src/game/stayask.ts`, `STAYASK`; the quiet answer on the block and
+  Mousehole). WHAT WAS THERE: a squad counts only its own men, and the net's roll call of whole squads (`SQUADS.netAsk`, another goal's, off in the
+  page: `?radiocheck=net`) never sends a man of a `mayLeave: false` squad. On a floor where every squad stays — a room each, two or three men a room —
+  the team takes a whole room without a sound and the garrison stands as it stood. THE RULE, on a floor where it holds (`stayAskHere`, read once at
+  `squadsStage` and kept as `State.stayAsk`: two squads or more, EVERY one told to stay, no lesson on the level): the net's ask runs there whatever
+  its own switch says (their words, beats and dice: "Alpha: all squads — radio check", "Charlie? … Charlie, sound off"), and the nearest squad with a
+  man to leave at home sends `men` (one) to the silent squad's posts — "Alpha: nothing from Charlie — one moving to their rooms!", his boots filed for
+  the team's ears — where a squad free to leave sends two. A squad's count of its OWN men is as it was: the net ask's last-man rule ("I'm alone here,
+  somebody look!") stays its own switch's, so a man who misses his mate still walks to the post himself. Elsewhere nothing changes. NEEDS the radio
+  check (`SQUADS.radioCheck`, on in the page; `TPS_STAYASK=1` alone on a frozen run changes nothing). No man is added, nobody is told where the team
+  is (the places are their own posts); no dice or state of its own. SWITCH: ON in the page (`?nostayask`; the debugger row 'squads staying put
+  miss a silent room'), OFF in the module and on the frozen stand (`'STAYASK.on': 'TPS_STAYASK=1'`), in the registry and `JOURNAL_KNOBS`.
+  SEAMS in enemysquads.ts (another goal's file): `State.stayAsk`, `netAsks(g)` in place of seven reads of `SQUADS.netAsk`, and `netSend` (a squad
+  that stays may send `STAYASK.men` on such a floor). KNOWN SHAPE: the man sent ends in another squad's room while `squadStaysIn` still answers yes
+  for him (wallreact.ts, darkfoe.ts, laststand.ts judge him by his home room); nothing was seen to go wrong, nothing was run to find out. CHECK:
+  `tools/qa/stayask-check.ts` (probe `stayask`), 6 lines: (a) (b) the block and Mousehole — roll call, the silent squad asked for by name, "one
+  moving" in that order, ONE man off his post before any contact, his word 1.5 s or more before he is there (the block: 33.9 / 37.9 / 41.9 s, there
+  55.4; Mousehole 32.7 / 36.7 / 40.7, there 46.9); (c) the warehouse (a squad may leave): no roll call; (d) the orders lesson: no roll call; (e) off
+  = the base by the digest of (a)'s run; (f) ONE man of a room put down: his mate and the net do the same with the rule on and off. ALL PASS on both
+  stands; `STAYASK_BREAK=1` red on (a) (b) (e) on both. MEASURED (`answers.ts`, shipped, seed 7): with both rules 15 of 19 rows answer the three
+  plans, on standard and on hard (13 without this one: the block and Mousehole had words only on the quiet plan). NOT MEASURED: what it costs a team (the scripted
+  commander goes in loud). NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU: whether a lone man crossing the block reads as the garrison waking or as a gift.
+- **A rescue's men check in by radio** (`src/game/rescuecheck.ts`, `RESCUECHECK`; the quiet answer on the three rescues, and the roamer's word on
+  the other two plans). WHAT WAS THERE: a rescue's cast (captor, door man, guards, roamers: rescue.ts) are not squads, so none of the squads' senses
+  ran there — a man put down quietly at the back was missed by nobody, and a roamer let off his post went without a word. THE RULE, while a rescue
+  is staged and nobody of its cast is roused: every `every` s (first after `first`; beats from ids, no dice) the captor says "radio check — sound
+  off"; `askSecs` later a man who is down and not known to be is asked for BY HIS POST, never by the team's label for him (dialogue.ts `placeName`:
+  "the break room, sound off … the break room?"); `goSecs` later ONE man — a roamer on his post first, else the door man or a guard outside; never
+  the captor, never a man in the hostage room, never one who has learned or whom Hard's crew has dealt with, never a man another rule has
+  (`powerOutKept`) — says "nothing from the break room — one moving there!" and walks there at the investigate pace (powerout.ts's errand: `calmOf`
+  / `run` / `calmBack`, now exported from it). On the way and at the post he looks for ANY man of theirs down and not yet found, by the game's own
+  body test (`bodySeen`, the light on it; `feetM` at the post): "man down, the break room — they're inside!", the body is tallied and written to
+  the chronicle as any found body, he is roused and the room fight's from there. Nothing at the post after `waitSecs`: "nothing at the break room —
+  he's gone!" and he walks back. Nobody free: "nothing from the break room — nobody to spare. Stay on your doors!". A fight, a loud thing, or
+  anything of the team in his ears on the way sends him home at a run. A man down in the hostage room is never asked for and nobody is walked into it: that room is the
+  rescue's own (its clock, its hand-over). THE MAN WHO WENT AND DID NOT COME BACK is asked for at the next check where he was going, and the post he never reached is a
+  question again. THE CLOCKS ARE THE RESCUE'S: a man walking to look who has noticed nothing has not learned of the team (`rescueCheckOwns`, one
+  clause in rescue.ts's learned test; what he hears on the way he learns like any man) and the captor's clock is not touched. THE ROAMER'S WORD:
+  `wordSecs` before the rescue lets a roamer off his post he says where he is going — "heard that — moving to cover it!" with a loud thing of the
+  team's known, else "on my way — moving to the hostage door!" (not a man with the team in his eye; a noise that comes after his word is said as he
+  goes) — and HIS WORD IS KEPT: let go with a noise known and nothing of the team seen since he learned, his fix is that noise, as the rescue gives
+  it to a man who was calm (it leaves a man already alert with the fix his ears gave him, the doorway the echo came in through: he walked two
+  metres and searched there). From Hard's alarm on its roamers are the crew's (`cast().crewed`): none of this speaks for them. No man added; nobody
+  is told where the team is (a post is their own, the noise is what they heard). State per game with a snapshot / restore pair (savestate.ts
+  `rescueCheck`; the page refuses a checkpoint while a rescue runs, so the pair is run by the check only). SWITCH: ON in the page
+  (`?norescuecheck`; the debugger row "a rescue's men check in by radio"), OFF in the module and on the frozen stand (`'RESCUECHECK.on':
+  'TPS_RESCUECHECK=1'`), in the registry and `JOURNAL_KNOBS`. SEAMS in rescue.ts (another goal's file): the clause above, `cast()` and `noiseAt`;
+  game.ts ticks it after powerout. CHECK: `tools/qa/rescuecheck-check.ts` (probe `rescuecheck`), 7 lines: (a) (b) (c) the quiet way in on each
+  rescue — check, ask, "one moving", found, in that order (15.4 / 19.4 / 23.4 s on all three; there 25.8, 27.8, 29.5 s), one man off his post,
+  never the captor or a man of the hostage room, nobody learned before the body is found; (d) the loud way in: no radio check, the roamer's word
+  6.5 s, at the noise 12.5 s; (e) the lights cut: his word 6.5 s, at the hostage door 14.2 s; (f) the rule's state saved, dropped and loaded while
+  the man is on his way: the run ends as the unbroken one, line for line and by digest; (g) off twice = the same digests, quiet and loud. ALL PASS
+  on both stands; `RESCUECHECK_BREAK=1` red on all seven on both. OFF = THE BUILD AS IT WAS, by hand: the three plans on hostage-rescue and the
+  consulate digest the same on the commit before and on this one with the rule off, on both stands (12 runs). MEASURED: `answers.ts` below (the
+  three rescues hold on standard); `rescue-tally.ts`, shipped, 16 seeds × crawl / rush / flow, rule on against off (run before the names and the
+  lost-man rule were mended): flow 16 of 16 clean both ways, rush 2 clean and 14 Sam down both ways, crawl 1 clean both ways (1 costly run fewer
+  with it on, 2 of 32 hostages saved against 3; that tally's own crawl target is red on this stand with the rule off too). ONE BOOT OF THE REAL PAGE (headless Chromium on a software adapter, no GPU; the first rescue, the beats shortened by hand, the roamer put down by
+  the page's own hook): 118 pipelines, no page error, the radio check at 0.5 s, "the break room, sound off … the break room?" at 1.5 s, the door
+  man's "nothing from the break room — one moving there!" at 2.5 s; not run on to the body. NOT RUN BY ANY CHECK:
+  the empty-post line, the nobody-to-spare line, a man lost on his way, a word said late. NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU: whether a
+  body in a dark back room is found as a player would expect, how the radio check reads on the strip, whether a post's name tells a player which
+  man they mean.
+- **The table of answers** (`tools/qa/answers.ts`; `bun run tools/qa/answers.ts [--scn id,id] [--plan loud,quiet,lights] [--seed n] [--hard]
+  [--json file]`, `TPS_PROFILE=shipped` in front for the page's rules; exit 1 while a row does not hold — it is a table, not a registered probe).
+  Every listed room clear, rescue and night breach × three plans, staged as the mission's own row with no teammates and Sam out of everybody's sight:
+  LOUD (a charge's report at the front room's door, a stun and three seconds of fire inside, the room's men shot), QUIET (the back room's men put
+  down one a second without a sound), LIGHTS (the mains thrown by hand). Front and back are read off the floor (the defended room whose door is the
+  shortest walk from Sam's start, and the longest, among rooms with a man the plan can take: never the one who holds the hostages). It names the
+  move by where the movers got to — counter (a man at the noise), look (a man at a silent post), lights
+  (a man at the breaker), pull (a rescue: a man at the hostage room's door, or stopped nearer it than his post with a clear line on it), brace (the squads' own word was to lock
+  their doors, landed when the last man is set), away, words, none — and the telegraph as the earliest of a line on their net, a mover's boot and a
+  mover's lamp. A row HOLDS when its three plans draw three different moves out of counter / look / lights / pull / brace, each with 1.5 s or more
+  of lead. A level with ONE defended room (the night breach) has no front and back: it is printed ONE ROOM, held to the lights plan alone, and
+  counted apart. SHIPPED, seed 7, with the three rules on (squaddeal, stayask, rescuecheck): on STANDARD 18 of 19 hold and the night breach is ONE ROOM;
+  on HARD 15 hold, the night breach is ONE ROOM, and the three rescues fail on the loud plan ("words only" on two, "men moved, to nothing of the plan's" on the consulate) — Hard's rescue has a crew of its own
+  (rescue.ts: the captor's "they're here! … guns on my door!", a roamer's "staying dark — I'll come up behind them."), whose move lands on a team
+  stacked at the hostage door, and the table has no team: said, not seen to land. One seed; no GPU: a lamp is a flag, a line is a string.

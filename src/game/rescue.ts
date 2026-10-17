@@ -56,6 +56,7 @@ import { PRESSURE } from './pressure';   // (read inside defenders() only: Hard'
 import { order, endGuardScript, inBounds } from './squad';
 import { fireWeapon, killGuard } from './combat';
 import { RescueFlow } from './rescueflow';
+import { rescueCheckOwns } from './rescuecheck';   // (asked inside defenders() only)
 import { propGap, wallBetween } from './roomclear';   // (used inside checkRescue only: nothing of roomclear.ts is touched at load)
 import { spawnHostage, hostageSay } from './civilians';
 import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -571,7 +572,7 @@ export class Rescue {
       const D = this.defs.get(h)!; if (h.state === 'dead') continue;
       const acting = this.act?.by === h;
       if (hard && D.role !== 'captor' && isNaN(D.learned) && g.time >= this.alarmAt) { D.learned = g.time; this.note(`learned:${h.callsign}`); }   // the captor's word on the net: he knows it is on
-      if (isNaN(D.learned) && (h.state !== 'patrol' || h.awareness >= 0.3)) {
+      if (isNaN(D.learned) && (h.state !== 'patrol' || h.awareness >= 0.3) && !rescueCheckOwns(g, h)) {   // (rescuecheck.ts: a man walking to a silent mate's post has learned nothing of the team by it)
         D.learned = g.time; this.note(`learned:${h.callsign}`);
         if (K.start === 'quiet') this.startClock('heard');
       }
@@ -841,6 +842,15 @@ export class Rescue {
       if (o.state === 'dead' || O.of(o) !== e.op.mine.get(o)) continue;   // (re-ordered since: he is on Sam's order, not ours to post)
       if ((!e.side && first) || !S.side) { first = false; this.post(o, this.roomPoint('hold'), doorName(S.room.door)); } else this.post(o, v3.copy(S.side.hold), doorName(S.side.door));   // (a room with one door: everybody's gun on it)
     }
+  }
+
+  /** rescuecheck.ts: the last loud thing the team did, where a roamer is sent when he is let off his post (null: he goes to the hostage room's door) */
+  get noiseAt(): Vec3 | null { return this.noise; }
+  /** rescuecheck.ts: the living and the dead of the cast as their radio check reads them — who he is, whether he is posted in the hostage room, his post,
+   *  when he learned of the team (NaN: he has not), whether the rescue has let him off his post, and whether Hard's crew has dealt with him (given him a
+   *  part, or let him out of it: either way the crew's own words and moves cover him) */
+  cast(): { gd: Guard; role: 'captor' | 'door' | 'guard' | 'roamer'; inRoom: boolean; post: Vec3; learnedAt: number; released: boolean; crewed: boolean }[] {
+    return this.hostiles.map(gd => { const D = this.defs.get(gd)!; return { gd, role: D.role, inRoom: D.inRoom, post: D.mark.pos, learnedAt: D.learned, released: D.released, crewed: D.crew !== '' }; });
   }
 
   /** who holds the hostages right now: the living man of theirs in the office nearest a living hostage (null = nobody: the clock stands) */

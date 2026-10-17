@@ -220,6 +220,9 @@
     .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
     .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
     .objmark.edge i { border-color: var(--h-acc); box-shadow: none; }
+    .cammark { position: absolute; width: 9px; height: 9px; margin: -6px 0 0 -6px; border: 1.5px solid rgba(var(--h-acc-rgb),0.6); border-radius: 50%; background: rgba(0,0,0,0.35); box-shadow: 0 0 4px rgba(0,0,0,0.9); pointer-events: none; }   /* his own stuck sticky camera under the fog of war (ui/overlay.ts): a small lens; the one that sends is brighter with a red pupil */
+    .cammark.live { border-color: var(--h-acc); }
+    .cammark.live::after { content: ''; position: absolute; left: 2px; top: 2px; width: 5px; height: 5px; border-radius: 50%; background: #ff5a4e; box-shadow: 0 0 5px rgba(255,90,78,0.8); }
     /* the squad's order menu (orders.ts mark()): a dashed ring on what it is frozen on, a word under it, in the addressed element's colour */
     .ordermark { position: absolute; transform: translate(-50%, -11px); pointer-events: none; text-align: center; color: var(--h-hi); }
     .ordermark i { display: block; width: 20px; height: 20px; margin: 0 auto; border: 1.5px dashed currentColor; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.6); }
@@ -512,7 +515,7 @@
     body.breaching #caption .cap { font: 600 15px/1.35 var(--h-font); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: 0 1px 4px #000; }
     body.breaching #caption .sub { display: none; }
     body.breaching #log { bottom: calc(7.5% + 50px); }   /* radio lines ride above the lower third, not through it */
-    body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .aimwish, body.breaching .objmark, body.breaching .ordermark, body.breaching .lostfrom { display: none !important; }
+    body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .aimwish, body.breaching .objmark, body.breaching .ordermark, body.breaching .lostfrom, body.breaching .cammark { display: none !important; }
     /* ?kitview (src/host/kitView.ts): the page as a picture in the start page's iframe — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
     body.kitview { cursor: none; }

@@ -22,6 +22,8 @@ const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
+const { WALLPEN } = await import(`${ROOT}/src/game/wallpen.ts`);
+const wallPen0 = WALLPEN.on;
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -34,6 +36,7 @@ const DEFAULTS = JSON.parse(JSON.stringify(WALLS));
 async function stage(seed: number) {
   Math.random = seeded(seed); for (const k of Object.keys(DEFAULTS)) (WALLS as any)[k] = JSON.parse(JSON.stringify(DEFAULTS[k])); DESTRUCTION.on = true;
   const W = await standUp({ level: loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8'))) }); const { game, engine } = W;
+  WALLPEN.on = false;   // (rounds through thin walls, wallpen.ts, on as the page opens: a round then also marks the far face and whatever it meets beyond, and every line here counts ONE mark a round — this file asks what a round that STOPS in the wall shows. What a round that goes through leaves, and that the ring's count is the same with this look on and off, is `probes.ts wallpen`'s)
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true;
   game.godMode = true; game.aiEnabled = false; game.player.visibility = 0.02; game.tune.chaos = 0.5;
   for (const k of Object.keys(WALL_STATS)) (WALL_STATS as any)[k] = 0; WALL_LOG.length = 0;
@@ -78,7 +81,7 @@ export async function wallbreakWear(): Promise<boolean> {
   const title = `wallbreak-wear: a shot wall shows it before it gives — and only shows it (${LEVEL})`;
   console.log(`\n=== ${title} ===`); let all = true;
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const done = () => { console.log(`=== wallbreak-wear: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; };
+  const done = () => { WALLPEN.on = wallPen0; console.log(`=== wallbreak-wear: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; };
 
   // ---------------------------------------------------------------- marks
   { const { W, game, engine } = await stage(12); const wear = game.destr.walls.wear;

@@ -43,7 +43,7 @@ import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
 import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, shieldIn, kitIssueCards, kitDefault, type MemberKit, kitGun, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRows, kitSmokes, kitTeam, kitWalls, kitWords, squadCost } from '../game/kit';
-import { memberCard, tintCss, clipWorn, clipKey, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
+import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { gunIcon, kitIcon } from './kitIcons';
 /** the roster card's silhouette for the gun a man's card puts in his hands (kit.ts kitGun: a shield carrier's sidearm, the shotgun, else the rifle) */
@@ -230,10 +230,10 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       s.appendChild(el('div', 'lo-role', N.sub));
       if (here && cardsOn()) {   // his kit in a line, and his suit on the figure (kit.ts: the table the card under the slots changes)
         const m = KIT.members[i]; if (m.suit !== 'issued') fig.style.color = tintCss(SUITS[m.suit].tint);
-        name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(GUN_ICON[kitGun(m)] ?? 'pistol'); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
+        name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(GUN_ICON[kitGun(m)] ?? 'pistol', gunCanOf(i, m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
         { const ics = el('div', 'lo-ics'), K = m as unknown as Record<string, unknown>;   // (the same kit as drawings: the one page shows these in place of the words)
           let wide = 0;
-          for (const r of kitRows(i)) { const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[r.field]; if (v === 0 || v === false || v == null || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(r.field, v); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, a shield, the wand)
+          for (const r of kitRows(i)) { const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[r.field]; if (v === 0 || v === false || v == null || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(r.field, v, r.field === 'weapon' && gunCanOf(i, m)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, a shield, the wand)
             const narrow = CHIP_NARROW.has(r.field), c = el('span', narrow ? 'lo-ic n' : 'lo-ic'); c.innerHTML = narrow ? I.svg.replace('viewBox="0 0 64 32"', 'viewBox="16 0 32 32"') : I.svg; c.title = r.label; if (typeof v === 'number') c.appendChild(el('b', undefined, String(v)));
             wide += (ics.childElementCount ? CHIP_GAP : 0) + (narrow ? 1 : 2) + (typeof v === 'number' ? CHIP_IN + CHIP_DIGIT * String(v).length : 0); ics.appendChild(c); }
           widest = Math.max(widest, wide); s.appendChild(ics); }

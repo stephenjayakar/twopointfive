@@ -77,7 +77,8 @@ export interface SquadData {
   rally?: Vec3;
   /** doors it may shut and wedge; absent = every door of its rooms but one two of its own rooms share; [] = never */
   barricade?: string[];
-  /** false = its men stay in its rooms: no press, no flank, no going to help (absent = true) */
+  /** false = its men stay in its rooms: no press, no flank, no going to help (absent = true). On a floor where EVERY squad stays, one man still walks to a squad
+   *  that has gone silent on the net (game/stayask.ts) */
   mayLeave?: boolean;
   /** how its men take a fright (game/morale.ts trainingOf): every man green · its first man a steady leader and the rest green · every man steady; absent = the difficulty's mix */
   training?: 'green' | 'mixed' | 'trained';

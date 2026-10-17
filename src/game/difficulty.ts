@@ -33,6 +33,7 @@
 import { PRESSURE, PRESSURE_DEFAULTS, savePressure, resetPressure } from './pressure';
 import { DIGIN, DIGIN_DEFAULTS, saveDigIn, resetDigIn } from './digin';
 import { FOG } from './fogofwar';   // (the one row hard writes outside the two tables: the fog of war's cone — read inside setDifficulty only)
+import { SQUADDEAL } from './squaddeal';   // (read inside squadsHeld only: squaddeal.ts imports nothing but types)
 
 export type Difficulty = 'standard' | 'hard';
 export const DIFFICULTIES: Difficulty[] = ['standard', 'hard'];
@@ -287,6 +288,9 @@ export function leversHref(href: string): string {
  *  written beside the level's name by whoever adds the mission and held against the level file by tools/qa/levers-probes.ts — so a new squad level needs nothing
  *  in this file: without a sentence of its own in `SQUAD_HARD` its Hard reads 'the squads are a drilled garrison' */
 export function squadsOf(e: { level?: string; squads?: boolean } | null | undefined): string | boolean { return e?.squads ? e.level || true : false; }
+/** what the screens word a row's Hard by: the row's own fact, or (squaddeal.ts) squads cut from the rooms of a room clear whose file names none — 'held by
+ *  squads, not said which', so the drilled garrison's sentence and not the one pool's */
+export function squadsHeld(e: { level?: string; squads?: boolean; kind?: string } | null | undefined): string | boolean { return squadsOf(e) || (SQUADDEAL.on && e?.kind === 'roomclear'); }
 /** what hard is on each squad map, in a sentence (enemysquads.ts DRILL_AT is the rows; record rebuild/hard-everywhere/round2-squad-maps.md),
  *  by level file and by structure name: the mission sheet knows the one, a running game the other */
 const SQUAD_HARD: { file: string; structure: string; words: string }[] = [
