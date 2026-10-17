@@ -575,6 +575,28 @@ export const fragOwn = guardedOrder(async () => {
   F.verdict(runs >= 12 && blasts === runs, '(a) the order runs and the grenade goes off every time', `${blasts}/${runs} runs`);
   F.verdict(own === 0, '(b) no man of the team (Sam included) is killed or folded by the squad\'s grenade', lines.join('\n    '));
   F.verdict(hitRoom > 0, '(c) and it does reach the room: defenders killed or folded across the runs', `${hitRoom} over ${blasts} blasts`);
+  // (b3) FRAG.fleeSam — SAM'S PLACE IS A MATE'S WHO IS STAYING. Found on (b) above, the manager's door: the kicker's leg off the squad's own grenade was dealt
+  //      onto the floor Sam stood on, he stalled against him in its line and was killed (or was dealt again with a twentieth of a second to spare: which, was
+  //      a matter of when the stack had formed). Staged still, the flee's rules raised on either stand: the spot the deal gives a teammate with Sam elsewhere,
+  //      then Sam stood ON that spot and the deal asked again. FLEESAM_BREAK=1 = the rule left off for the second ask: he is dealt the floor Sam stands on.
+  { const SB = process.env.FLEESAM_BREAK === '1', FR: any = await import(`${ROOT}/src/game/frag.ts`), rows: string[] = []; let n = 0, listed = 0, onHim = 0, by = 0;
+    const R = await orderRig(7, 'manager'), g = R.game; g.aiEnabled = false; FRAG.fleeWise = true; FRAG.fleeApart = true;
+    const segD = (a: number[], b: number[], q: number[]) => { const dx = b[0] - a[0], dz = b[2] - a[2], L = dx * dx + dz * dz, t = L > 1e-6 ? Math.max(0, Math.min(1, ((q[0] - a[0]) * dx + (q[2] - a[2]) * dz) / L)) : 0; return Math.hypot(a[0] + dx * t - q[0], a[2] + dz * t - q[2]); };
+    const open = (a: number[], b: number[]) => !g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]]);
+    for (const A of R.ops) for (let k = 0; k < 8 && n < 6; k++) { const ang = k * Math.PI / 4, p = [...A.char.pos], G = [p[0] + Math.sin(ang) * 2.5, 0.05, p[2] + Math.cos(ang) * 2.5];
+      if (g.col.nav.isBlocked(G[0], G[2]) || exposedTo(g, [G[0], G[1] + FRAG.lift, G[2]], p, [p[0], 1.6, p[2]]) <= 0) continue;
+      g.teleportPlayer([2, 0, 2]); FRAG.fleeSam = false;
+      const s0 = FR.fleeSpot(g, { pos: [...p] }, G, FRAG.runSpeed, FRAG.fuse - 1, Infinity, { path: [], keep: null, apart: FR.fleeMates(g, A, G) }, A); if (!s0) continue;
+      g.teleportPlayer([s0[0], 0, s0[2]]); FRAG.fleeSam = !SB; const sam = [...g.player.char.pos], d0 = dist(sam, p) - 0.05;
+      const ap = FR.fleeMates(g, A, G), s1 = FR.fleeSpot(g, { pos: [...p] }, G, FRAG.runSpeed, FRAG.fuse - 1, Infinity, { path: [], keep: null, apart: ap }, A);
+      n++; const isListed = !!ap?.stay.some((q: number[]) => dist(q, sam) < 0.1), on = !!s1 && dist(s1, sam) < Math.min(FRAG.fleeApartM, d0) && open(s1, sam), past = !!s1 && !on && segD(p, s1, sam) < Math.min(FRAG.fleeLaneM, d0) && open(p, sam);
+      if (isListed) listed++; if (on) onHim++; if (past) by++;
+      rows.push(`${A.callsign} at ${at(p)}, a grenade at ${at(G)}: dealt ${at(s0)} with Sam elsewhere · Sam stood there: ${isListed ? 'his place is listed' : 'HIS PLACE IS NOT LISTED'}, dealt ${s1 ? `${at(s1)}, ${f2(dist(s1, sam))} m from him, the leg ${f2(segD(p, s1, sam))} m by him` : 'no leg (he gets down)'}${on ? ' — ON HIM' : past ? ' — PAST HIS SHOULDER' : ''}`); }
+    g.teleportPlayer([2, 0, 2]);
+    { const J: any = await import(`${ROOT}/src/game/journal.ts`), P: any = await import(`${ROOT}/src/host/profile.ts`);
+      FRAG.fleeSam = true; const old = J.knobsSnapshot(g), own = J.knobsSnapshot(g); delete old.tables.FRAG.fleeSam; J.applyKnobs(g, old); const without = FRAG.fleeSam; FRAG.fleeSam = false; J.applyKnobs(g, own); const withIt = FRAG.fleeSam;
+      F.verdict(without === false && withIt === true && P.FROZEN_HOLDS['FRAG.fleeSam'] === 'TPS_FLEEMATES=1', '(b3) … a recording from before the key replays with it off, one that carries it on plays with it on; FROZEN_HOLDS carries its row under the flee mends\' word', `applyKnobs with no key → ${without} · with it on → ${withIt} · row ${P.FROZEN_HOLDS['FRAG.fleeSam']}`); }
+    F.verdict(n >= 3 && listed === n && onHim === 0 && by === 0, `(b3) Sam's place is a mate's who is staying: with Sam stood on the spot a teammate's leg off a grenade would end at, the deal lists his place and gives a spot ${FRAG.fleeApartM} m or more from him by a leg ${FRAG.fleeLaneM} m or more off his shoulder, or none${SB ? ' (FLEESAM_BREAK: the rule left off)' : ''}`, `${n} stagings · listed ${listed} · dealt onto him ${onHim} · past his shoulder ${by}\n    ${rows.join('\n    ')}`); }
   // a teammate in the doorway's line when one lands gets off it
   { const R = await orderRig(5, 'breakroom_w'); const g = R.game; const Wd = R.door('breakroom_w'); Wd.latched = false; Wd.angle = 1.4; R.step(5);
     const m = R.ops[0]; const c = Wd.frameCentre; const inside = [c[0] + 3.0, 0, c[2]], P = g.col.nav.isBlocked(inside[0], inside[2]) ? [c[0] - 3.0, 0, c[2]] : inside;
