@@ -75,6 +75,10 @@
 // its first way gone; D's gap read as a wall, its porch lamp back over the opening's middle, the level handed over without its loose props, and without the names its stand left out, its pane out of the wall, the stepped place left to the line and another written, a hole in `slots` filled with a place on the wall's line, a quiet set's dress not said, a way judged by one pass alone, `litInside` not written, the devices left live, a generated id read as an authored name, a way's `add` not planned and laid into the mission, loaded without the loader's `laid` word, the other way's `add` left riding on the block, its records whole where broken ones are asked about, the child's way laid by id, the link's `way` read whatever the kind, a fourth man written on the stack's side not written; the child's plan taken from its second pass alone, an authored `hide` read as not written; the loaded set robbed of a
 // stand-in, given a box and a sky that are not its own, a way WITH a set asked to come back untouched, and the size the set's query says for a link that
 // carries none dropped) — rows of B, C, D and F must FAIL.
+// I. THE QUIET PICTURE (host/kitView.ts KIT_VIEW_QUIET): the kind read off every mission's link (quiet / solo / null; `kitloud` and the table off: null
+//    on every one), each quiet way's pool lamp and rest place, and — headless, the level built as the page builds it — one round from Sam's gun that
+//    puts the lamp out as a lamp of the game's own list, rouses nobody, and is mended by the game's repairLights. Its own break word:
+//    KITQUIET_BREAK=1 (the link read with `kitloud` in it, the round aimed beside the lamp) — I's kind and lamp rows must FAIL, exit 1.
 // The first line printed names the levels that carry a block (nothing else lists them).
 // Both stands: A to E read no switch (the level is read as the page loads it — lived-in rooms and dressing on); F's game is the stand's, and its rows are the
 // same on both (TPS_PROFILE=shipped).
@@ -960,6 +964,78 @@ async function acting(names: string[]) {
   { const slots = kitPlanSlots([0, 0], [1, 0], 0.86, [0, 1], 1, 0.12 + K.offFace, 0.12 + K.samOffFace, () => true).slots, a = kitPlanAct4([0.43, 0], [1, 0], [0, 1], 0.86, slots), b: V2 = [0.43 - (0.43 + K.act4[0]), K.act4[1]];
     row(a[0] === b[0] && a[1] === b[1], `at a ${0.86} m door the acting place is the one written, to the bit (${pt(a)}): nothing staged on a door moves`); }
 }
+/** I. THE QUIET PICTURE (host/kitView.ts KIT_VIEW_QUIET: on a quiet kind the picture is one pool of light, a crouched man beside it, and his
+ *  suppressed gun's tile puts the lamp out). What can be held with no page:
+ *    · THE KIND IS THE LINK'S — every row of the mission list, deployed at every size: a quiet mission's link reads 'quiet', a loud one's null (its
+ *      picture is not touched), the solo night's 'solo'; a set way's own query (kitViewSetQuery strips the mission's word) no longer says it, which
+ *      is why the child reads the link; `kitloud` in the link, or the table's `on` false, reads null on every link (the picture as it was).
+ *    · EVERY QUIET WAY IN THE TREE — each level's way a quiet mission's link stages (its own way or a set): the plan hangs the lamp's glowing box on a
+ *      wall (no box, no fixture to hit), the pool lamp lies over the porch place as a spot turned down, and Sam's rest place is worked out on free
+ *      floor (or the level wrote his place: said).
+ *    · THE LAMP IS A LAMP OF THE GAME'S, headless, on each of those ways: the level built as the page builds it, the mission started off its link, the
+ *      light and its box hung where the page hangs them, the target built by the page's own builder and pushed on the game's list, Sam on his rest
+ *      place; the park said before every step as the child says it. ONE round at the lamp from the gun in his hand breaks it (the game's own
+ *      shootOut), nobody is roused by it (the park's count 0, the floor at 0, no alarm placed, Sam up), and the game's own repairLights mends it.
+ *  KITQUIET_BREAK=1: the link is read with `kitloud` in it and the round is aimed 1.2 m beside the lamp — the kind rows and the lamp rows must FAIL.
+ *  WHAT THIS CANNOT SEE: the picture — the pose, the pool on the floor, the walk through the dark: tools/qa/kitview-levels.cjs on a quiet kind. */
+const BREAKQ = process.env.KITQUIET_BREAK === '1';
+async function quietPicture(names: string[]) {
+  say('\n=== I. the quiet picture: the kind off the link, every quiet way\'s lamp and rest place, one round that puts the lamp out');
+  const KV = await import(`${ROOT}/src/host/kitView.ts`), { kitViewQuietKind, kitViewSetQuery, kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink } = await import(`${ROOT}/src/host/kitViewSet.ts`);
+  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`), { squadSearch } = await import(`${ROOT}/src/game/loadout.ts`);
+  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`), { makeBox, BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+  const QK = KV.KIT_VIEW_QUIET, of = (link: string, on = true) => KV.kitViewQuietOf(new URLSearchParams(BREAKQ ? link + '&kitloud' : link), on);
+  // ---- the kind
+  { const bad: string[] = []; let quiet = 0, loud = 0, sets = 0;
+    for (const e of ALL_MISSIONS as Data[]) for (const n of [...new Set([e.squad, 0, 1, 2, 4])]) { const link = (squadSearch(scenarioQuery(e), n, e.squad) as string).replace(/^\?/, ''), want = e.kind === 'quiet' ? 'quiet' : null, got = of(link);
+      if (want) quiet++; else loud++;
+      if (got !== want) bad.push(`'?${link}' (${e.kind}) read ${got}`);
+      if (KV.kitViewQuietOf(new URLSearchParams(link + '&kitloud')) !== null || KV.kitViewQuietOf(new URLSearchParams(link), false) !== null) bad.push(`'?${link}' is not null with the switch off`);
+      if (want && kitViewQuietKind(kitViewSetQuery(new URLSearchParams(link))) === 'quiet') bad.push(`'?${link}': the set's own query still says quiet`); else if (want) sets++; }
+    row(bad.length === 0, `the kind is the link's: ${quiet} quiet link(s) read 'quiet' and ${loud} loud one(s) null (every mission of the list at its own size and at 0, 1, 2, 4); \`kitloud\` in the link, and the table off, read null on every one; a set way's own query says it on none of the ${sets} (the child reads the link)${bad.length ? ' — ' + bad.slice(0, 3).join(' · ') : ''}`);
+    row(of('solo') === 'solo' && of('') === 'solo' && of('levelFile=office.json') === 'solo' && of('squad4') === null && of('quiet&roomclear') === null, `…the solo night's link (no mission named) reads 'solo'; the four, and a link that names a loud mission beside \`quiet\`, null`); }
+  // ---- every quiet way in the tree
+  const ways: { name: string; k: number; Y: Data; link: string; data: Data }[] = [];
+  for (const e of ALL_MISSIONS as Data[]) { if (e.kind !== 'quiet') continue; const name = (e.level ?? 'office.json').replace(/\.json$/, ''); if (!names.includes(name) || ways.some(w => w.name === name)) continue;
+    const L = await levelOf(name), KB = L.data.scenarios?.kitView; if (!KB) continue;
+    const link = (squadSearch(scenarioQuery(e), 1, e.squad) as string).replace(/^\?/, ''), data: Data = name === 'office' ? L.data : parseLevelData(L.text), k = kitViewWayOfLink(new URLSearchParams(link), data), Y = KB.ways?.[k]; if (!Y) continue;
+    ways.push({ name, k, Y, link, data }); }
+  if (names.includes('office')) { const L = await levelOf('office'), Y = L.data.scenarios?.kitView?.ways?.[0]; if (Y) ways.push({ name: 'office', k: 0, Y, link: 'solo', data: L.data }); }   // (the solo night: no row of the list — the bundled office's first way, as kitViewWayOfLink gives a link that names no room clear)
+  if (!ways.length) { say('  (no quiet mission on a level with a block among those asked)'); return; }
+  const { standUp } = await import('./headless.ts'), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { fireWeapon, firearmOf } = await import(`${ROOT}/src/game/combat.ts`);
+  for (const w of ways) { const said = `${w.name} way ${w.k} (${w.Y.door ?? 'span'}${w.Y.set ? ', set ' + w.Y.set : ''})`;
+    const laid: Data = w.Y.set !== undefined ? kitViewSetLevel(w.data, w.k) : kitViewAddLevel(w.data, w.k), KB = laid.scenarios.kitView, Yb = kitPlanWayBuilt(KB.ways[w.k]), sp = laid.mission.playerSpawn;
+    const ref: V2 = [sp[0], sp[2]], G = kitPlanGeometry(laid, KB, Yb, ref); if (!G) { row(false, `${said}: no geometry to plan on`); continue; }
+    const P = kitViewPlanWay(laid, KB, Yb, ref), floor = kitPlanFloor((G.level.boxes as Data[]).filter((_, i) => !P.hidden.includes(i))) /* (the floor the picture stands on: the boxes the plan takes out of it are not there) */, free = (x: number, z: number) => !floor.blocked(x, z);
+    const lamp = KV.kitViewQuietLamp(P, w.Y.light?.porch), at = KV.kitViewQuietPlaces(P, 1, free), wrote = P.slotSrc[0] === 'authored';
+    const A = P.anchor, al = (p: readonly number[]) => (p[0] - A.mid[0]) * P.s[0] + (p[1] - A.mid[1]) * P.s[1], out = (p: readonly number[]) => (p[0] - A.mid[0]) * A.n[0] + (p[1] - A.mid[1]) * A.n[1];
+    row(!!P.lamps.porch.fixture && lamp.kind === 1 && lamp.intensity > 0 && lamp.outerDeg < 60 && lamp.aim[2] === 0 && Math.abs(lamp.aim[0] - lamp.offset[0]) < 1e-9 && lamp.aim[1] > lamp.offset[1],
+      `${said}: the pool lamp hangs over a glowing box on the wall (${P.lamps.porch.fixture ? `the box at ${pt(P.lamps.porch.fixture.at)}` : 'NO WALL CARRIES ONE'}), a spot of ${lamp.outerDeg} deg at ${lamp.intensity}, ${f2(lamp.offset[2])} m up, turned down and ${f2(lamp.aim[1] - lamp.offset[1])} m out`);
+    row(wrote || (!!at.sam && free(at.sam[0], at.sam[1]) && Math.abs(Math.abs(al(at.sam)) - QK.samAlong) < 1e-6 && out(at.sam) > P.wall.face + 0.3),
+      `${said}: Sam's rest place is ${wrote ? `the level's own ${pt(P.slots[0])} (written: it wins)` : at.sam ? `${pt(at.sam)} — ${f2(Math.abs(al(at.sam)))} m along the wall from the anchor's middle, ${f2(out(at.sam))} m out, free floor${at.mate ? `; a partner behind him at ${pt(at.mate)}` : '; NO free place behind him for a partner (the plan\'s stays)'}` : `NOT FREE FLOOR at ${QK.samAlong} m along the wall (the plan's ${pt(P.slots[0])} stays)`}`);
+    // ---- the lamp, as a lamp of the game's
+    try { const H = await standUp({ level: loadLevel(laid), seed: 1 }), g = H.game, st = startFromQuery(g, w.Y.set !== undefined ? kitViewSetQuery(new URLSearchParams(w.link)) : new URLSearchParams(w.link));
+      const W = (o: readonly number[]): [number, number, number] => [A.mid[0] + P.s[0] * o[0] + A.n[0] * o[1], o[2], A.mid[1] + P.s[1] * o[0] + A.n[1] * o[1]], F = P.lamps.porch.fixture, T = KV.KIT_VIEW_LIGHT.porch.fixture!;
+      const pos = W(lamp.offset), aim = W(lamp.aim), dl = Math.hypot(aim[0] - pos[0], aim[1] - pos[1], aim[2] - pos[2]) || 1;
+      const light = g.engine.lights.add({ name: 'kitview_porch', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: lamp.kind, pos, dir: [(aim[0] - pos[0]) / dl, (aim[1] - pos[1]) / dl, (aim[2] - pos[2]) / dl], color: [...lamp.color], intensity: lamp.intensity, peakIntensity: lamp.intensity, range: lamp.range, innerDeg: lamp.innerDeg, outerDeg: lamp.outerDeg, radius: lamp.radius, volumetric: lamp.volumetric, broad: lamp.broad, enabled: true });
+      const glow: [number, number, number] = [lamp.color[0] * T.glow, lamp.color[1] * T.glow, lamp.color[2] * T.glow];
+      const box = F ? makeBox({ c: W(F.at), h: [T.half[0], T.half[1], T.half[2]], yaw: Math.atan2(P.s[1], P.s[0]), albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }) : null; if (box) g.engine.world.addStatic(box);
+      const t = KV.kitViewPoolTarget(light, box ? g.engine.world.statics.indexOf(box) : -1, glow, lamp.intensity); g.targets.push(t);
+      const S0 = at.sam ?? P.slots[0], roused = { men: 0, alarms: 0 }; let first = true;
+      const park = () => { const r = KV.kitViewPark(g); if (!first) { roused.men += r.men; roused.alarms += r.alarms; } first = false; };
+      const steps = (n: number) => { for (let i = 0; i < n; i++) { park(); H.step(1 / 60); park(); } };
+      park(); g.godMode = true; g.teleportPlayer([S0[0], 0, S0[1]]); g.player.crouch = true; steps(20);
+      const lit0 = light.enabled && light.intensity > 0 && !t.broken, hit: [number, number, number] = BREAKQ ? [pos[0] + P.s[0] * 1.2, pos[1], pos[2] + P.s[1] * 1.2] : [pos[0], pos[1], pos[2]];
+      { const gun = firearmOf(g, g.player.char, true); if (!gun.fire()) { gun.rearm(); gun.fire(); } fireWeapon(g, g.player.char, hit, true, { steady: true }); }
+      steps(30);
+      const out1 = t.broken && !light.enabled, calm = roused.men === 0 && roused.alarms === 0 && g.escalation === 0 && !g.alarm.placed && !g.player.down;
+      g.repairLights(); steps(3);
+      const back = !t.broken && light.enabled && light.intensity > 0;
+      row(!st.why && lit0 && out1 && back && g.targets.includes(t), `${said}: the pool lamp is a lamp of the game's — hung where the page hangs it and lit (${lit0 ? 'burning' : 'NOT BURNING'}), ONE round from Sam's ${g.player.slot} on his rest place ${pt(S0)} ${out1 ? 'puts it out' : 'DOES NOT PUT IT OUT'} (the game's own shootOut), and the game's repairLights ${back ? 'mends it' : 'DOES NOT MEND IT'}${st.why ? ' — the mission REFUSED: ' + st.why : ''}`);
+      row(calm, `${said}: …and nobody is roused by it — the park put right ${roused.men} man-park(s) and ${roused.alarms} alarm mark(s) through the round and a half second after, the floor at ${g.escalation}, ${g.alarm.placed ? 'AN ALARM PLACED' : 'no alarm placed'}, Sam ${g.player.down ? 'DOWN' : 'up'}`);
+      if (g.quiet.active) g.quiet.stop(); if (g.roomClear.active) g.roomClear.stop();
+    } catch (err) { row(false, `${said}: the lamp could not be stood up headless — ${String((err as Error)?.message ?? err)}`); } }
+}
 if (BREAK) console.log('KITPLAN_BREAK=1: the derived side is flipped, a block\'s second place is moved onto the wall, the loaded set is spoiled — rows below must FAIL');
 await seam(asked.length ? asked : files);
 if (!asked.length || asked.includes('records')) await parity();
@@ -971,6 +1047,8 @@ await loader(asked.length ? asked : files);
 await dayLamps(withBlock);
 await dryRun(asked);
 if (!asked.length || asked.includes('vault')) await quietAlone();
+if (BREAKQ) console.log('KITQUIET_BREAK=1: the link is read with `kitloud` in it, the round is aimed beside the lamp — section I\'s kind and lamp rows must FAIL');
+await quietPicture(asked.length ? asked : files);
 if (warnings) console.log(`\n${warnings} WARNING line${warnings === 1 ? '' : 's'} above (names by generated id: said, never failed)`);
-console.log(`\nkitview-plan: ${passes} PASS, ${fails} FAIL${BREAK ? ' (under KITPLAN_BREAK=1: FAILs are the expected answer)' : ''}`);
+console.log(`\nkitview-plan: ${passes} PASS, ${fails} FAIL${BREAK ? ' (under KITPLAN_BREAK=1: FAILs are the expected answer)' : BREAKQ ? ' (under KITQUIET_BREAK=1: FAILs are the expected answer)' : ''}`);
 process.exit(fails ? 1 : 0);
