@@ -87,7 +87,12 @@ export const SNOW = { on: false };
 // decal just getting splatted on ... animated a bit? or some GPU particles", "dependent on force"): every thing that moves over lying snow marks it (a pushed
 // chair's legs, a rolling grenade, a slab of debris: game/snowMarks.ts), a mark FORMS (its floor sinks in over a moment, what it threw lands after) and kicks
 // loose snow up, all by how hard it was made (game/snowTracks.ts stampMark; ?snowmarks=0, TPS_SNOWMARKS=1). Picture only; wants `tracks`.
-export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, grains: false, blast: false, oneAir: false, marks: false };
+// `past` (10-17, his play of the pass, of a view by the level's edge: "snowfall missing from bottom left of image"): the snow goes on FALLING past the
+// level's rim. A flake high in the air is drawn well off its own ground, toward the camera's foot, so with the rim on the camera's side the flakes that
+// would show over the picture's near part are ones in the air past the rim, and there were none: flakes were born, kept and drawn only inside the world's
+// rectangle. With it the flakes' space is the view's disc out to SNOWFX.past m past the rim (game/snowFx.ts flakeOpen; particles_common.wgsl snowPast /
+// flakeOpen). Nothing lies out there: the ground past the rim stays the dark it is. ?snowpast=0, TPS_SNOWPAST=1. Picture only.
+export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, grains: false, blast: false, oneAir: false, marks: false, past: false };
 export const SNOW_LEVELS: readonly string[] = ['pass'];
 /** is the level called `name` (LevelData.name; a file's name without '.json') one built for snow — and the switch on? */
 export function snowLevel(name: string | null | undefined): boolean { return SNOW.on && !!name && SNOW_LEVELS.includes(name); }

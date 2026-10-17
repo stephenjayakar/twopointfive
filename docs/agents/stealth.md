@@ -123,6 +123,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the first loud tables beside them, no `-v2`). Lights-out's two listed meetings are a sentry at 8.0 m and a walker through a window at 6.6 m (the level's
   own warning, the missions thread's read); the bazaar's one is the alley trap at 4.6 m; the police post's four dropped are the shift running to the keypad
   door the ghost kicks. Not measured: a second man's eye, crouching, waiting; nothing seen on a GPU or played.
+- **The solo night opens under the fog of war** (`QUIETFOG.solo`, `quietfog.ts soloFogRow / soloFogLink`; from the solo night's kit screen, where the cameras
+  tile read "2 · no use here" and the wand's "no use here": "for the solo night missions we should have fog of war! then you really need the sticky cams").
+  What was there: the fog is raised by a LINK and only a room clear's, a rescue's or a quiet mission's rung did (`scenarioRun.ts fogOfQuery`); the solo
+  night's link is `?solo` with no scenario on it, so the plain night always ran with every guard shown, and `ui/loadout.ts` left the solo row out of the
+  quiet fog's row by name. The rule: the solo night's own link (`solo`, and none of quiet / roomclear / nightbreach / rescue / squad4 / demo / breach beside
+  it, never a lesson's level) is read as a quiet row's — the same rungs, the SAME pick this machine keeps for its quiet missions, the same default
+  (`QUIETFOG.def`: all round, with the mission's 2 cameras and its wand), `quietfog=off` on the link = every guard shown, `cams=0` = the fog with none.
+  The screens: the solo row has the fog's lever and the Sticky cameras row (the defenders' two levers stay greyed: its shift is the level's own); the kit
+  screen's cameras and wand tiles read the mission's instead of 'no use here'; the solo night's no-load start off the start card (`MISSIONS.startSolo`) is
+  taken only where the page already stands in the link's fog (`scenarioRun.ts sameFog`) — off a plain page the solo night under the fog is a load of
+  `?solo`. NOT touched: a page stood up plain (the floor under the title, a showcase, a harness game with no link staged) has no fog, as before; the
+  guards, their eyes, their numbers and the level. Neighbours' files touched, each a line or three: `scenarioRun.ts` (quietLike, sameFog),
+  `ui/loadout.ts`, `ui/missions.ts`, `game/loadout.ts` (the note's words). Switch: ON in the page (`?solofog=0`), OFF in the module and on the frozen stand (`TPS_SOLOFOG=1`); rides the
+  QUIETFOG table in a recording, one from before the key replays with it off; Tab row 'cam ▸ solo night fog'. Checks: `bun run tools/qa/probes.ts solo-fog` (family `solofog`,
+  `tools/qa/solofog-check.ts`, `SOLOFOG_BREAK=1` exits 1) and the real page `tools/qa/solofog-page.cjs` (the start page's rail and the
+  kit tiles; then `?solo` in play on the software adapter). 13 verdicts now, a restart among them. On the frozen stand `TPS_SOLOFOG=1` alone raises
+  nothing: it reads the quiet fog's own rows, so a frozen run of the solo night under the fog is `TPS_QUIETFOG=1 TPS_QUIETDEF=team TPS_STICKY=1
+  TPS_QUIETWAND=1 TPS_SOLOFOG=1` (and the wand's own word) with `?solo` staged. Older checks that state the solo night as it was hold the switch
+  down for that row or follow it (`missions-probes`, `loadout-probes`, `kitlent-check`, `quietfog-check`; `levers-probes` follows it). KNOWN, LEFT:
+  (1) the old start card's own Start (`?cards`, `ui/menu.ts`) closes the card over the plain page: a solo night with no fog, as it was; the starting
+  page's solo row is the fogged one. (2) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
+  row. (3) Alone, the rung 'own eyes' plays as 'cones' does. (4) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
+  tallies, on either stand, are of the solo night with every guard shown, not of the page's fogged one. (5) The kit note reads 'Alone on the office
+  floor.' under the fog (`game/loadout.ts noteOf`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never
+  seen on a GPU and never played: whether the office night is fair under the fog with two cameras and a wand is unmeasured (the quiet missions were
+  measured with `tools/qa/sticky-cover.ts`; the solo night was not).
+  AFTER THE STEP: a squad mix kept on the machine (the three levers) no longer says its line ("Your own mix, kept on this machine: …") under the lever
+  rows of the solo night's or a quiet mission's Team & kit screen: none of it acts there and its fog word read against the quiet fog's row
+  (`ui/loadout.ts paintLevers`, the kit card's file; words on a screen only, no switch). `levers-screens` holds it on both stands; red on the tree before.
 - **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
   2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
   WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an
