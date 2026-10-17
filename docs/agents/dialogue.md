@@ -79,3 +79,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   search the place.", which names nobody and is what he then does. Left: "twice" in two lines is true only while `ATTENTION.spent` is 3 (the wary line is the second
   taking's alone; a larger `spent` would have a third taking say 'twice'); "stay sharp" from a defender with no mate in earshot. The pick is by index off the game's die: the
   mend moves no draw; after it `probes.ts attention` (2 probes) is ALL PASS on frozen (`TPS_ATTENTION=1`) and on shipped, and the `words` family on both. Read, not heard.
+
+- **A shout heard: a hidden defender's shout that reaches an ear is a quiet row on the strip** (10-16, `src/game/cues.ts overheard`; the maintainer's call on the open
+  question 'a shout from a defender you can't see': yes — a quiet row on the radio strip, only when the shout really reaches the player's ears or a living teammate's,
+  no name, no place). Switch `CUES.overheard`: ON in the page (`?overheard=0` = such a shout is no row, as it was), OFF in the module and on the frozen stand
+  (`TPS_OVERHEARD=1` raises it; `TPS_PROFILE=shipped` has it up); a `FROZEN_HOLDS` row; `CUES` now rides a recording (`JOURNAL_KNOBS`), and a recording from before the
+  key replays with it down. THE RULE: `guards.ts say()` hands every SPOKEN line (never one on a net) to `overheard()`. A row only when all of: the speaker is hostile
+  to the player, alive, and the fog hides him (a man in sight has his bubble; the fog off = never); the line is SHOUTED = its writer put a '!' in it (`isShout` —
+  the tables' own mark, so a new shouted line needs nothing but its '!'); it has not just been drawn (the same words inside `dupSecs`, any two `overheardGap` 4 s
+  apart); the strip has a FREE row; and an ear of the team's gets it by the shout's own law (digin.ts `heardBy`: flat distance and the path both under `DIGIN.shoutM`
+  18 m × the propagation's carry — mouth at 1.2 m, ears at 1.6 m: the player's if he is up, each living teammate's). The cheap questions come first and the hearing
+  model is asked with `hearPath(..., keep = false)` (`SoundPaths.propagate`'s new third argument): the row leaves NO route in the half-second cache the AI's own
+  hearing reads. WHAT IS DRAWN: the words alone under the word HEARD (`stripRows` gives `'heard: …'`; ui/overlay.ts draws `<span class="rx heard old"><b>HEARD</b>…`,
+  the strip's existing dim row — no colour of its own, so the menus' colour rules reach it through `.rx`). No callsign, no squad, no room, no door, no side of the
+  screen. NEVER IN A ROW'S WAY: the row is a field of its own (`Cues.heardRow`), not one of `Cues.rows` — nothing that files, ranks, counts or reads the net's rows
+  meets it (the gap rule, `netWait`, the squelch, the playthrough bot's leads); the first row filed onto a full strip ends it for good; a checkpoint load (`adopt`)
+  and a clock gone back clear it. `Cues.heardLog` says why each offered shout was or was not drawn ('dup' · 'gap' · 'full' · 'far'); `stats.shouts` / `shoutsDrawn`.
+  It moves no man and no die: a row is not a sensing (the AI is told nothing, the bot is told nothing). CHECK: `bun run tools/qa/probes.ts words-overheard` (families
+  `words`, `cues`; `tools/qa/overheard-check.ts`, 15 verdicts: a bare clock for who gets a row and who does not; levels/block-squads.json under the fog, every hidden
+  defender shouting in turn with the player's ear brought beside him — on shipped 1,096 shouts in earshot drew, 632 out of it drew none, 0 wrong, and across 1,252
+  questions that went round walls the route cache grew by 0 (frozen with the switch raised: 869 · 697 · 0 · 1,578 · 0); one seed with the switch down and up, 60 digests equal; the stands' row, the word, the recording) — ALL PASS on frozen
+  and on shipped; `OVERHEARD_BREAK=1` (the switch left down) = 7 FAIL on each, exit 1. The page: `PORT=<port> node tools/qa/overheard-page.cjs` (headless Chromium, the
+  software adapter) — the page has the switch up and the strip's element is that one span; with `?overheard=0` no such row. MEASURED (playthrough.ts, the shipped
+  stand, block-squads · depot-four · rescue-registry · floodlit-four · killhouse-four · night-breach × seeds 1–4 = 24 runs): 77 hidden defenders' shouts offered,
+  12 drawn (42 out of earshot, 14 inside the 4 s gap, 9 with no free row); the words drawn: 'flashbang!' ×3, 'cover — get to cover!' ×2, 'CONTACT!', 'fire in the
+  hole!', 'get that against the door!', "the wall's down — watch it!", 'they got him! they got him!', "they're hitting the others — move!". The same 24
+  with `TPS_OVERHEARD=0`: every run ends the same way at the same second with the same team, kills and deaths (24 of 24) — taken 17, rescued 4, wiped 3 either way.
+  NOBODY HAS SEEN IT ON A GPU OR HEARD ANYTHING: whether a dim row under HEARD reads as 'I heard that' and not as a radio line, whether one row in two
+  fights is too few or 4 s too tight, and whether '!' is the right mark for a shout are by-eye calls. Left as found: a shout has no SOUND of its own (the row is the
+  only trace); a hidden defender's quiet spoken line is still nothing; teammates' ears count but the row does not say whose. The
+  rule asks who is hostile to the player, not which mission: the night staff's shouts under a quiet mission's fog are rows too — NOT measured (the 24 runs are loud
+  missions) and nobody has played it.

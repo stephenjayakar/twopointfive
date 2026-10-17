@@ -182,6 +182,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shared metres preferred, tritone handovers removed). NOBODY HAS HEARD IT: whether a piece suits its level is the maintainer's ear; he changes a pairing on the score page's
   LEVELS rows (two pickers a level) and pastes the line back, and a row here is edited to match. Glass Rain opens only two levels on purpose: it is the piece he liked least
   before its rewrite and he has not heard it since.
+- **Whose nerves the score follows (10-17)** (`src/game/guards.ts tension(g, theirs)`, switch `MUSIC.theirs` in `audio/pieces.ts`). The score's `intensity` is
+  `game.tension()`: the highest state of any man on the floor. It counted teammates too, and a man under a script never drains his awareness (`updateGuard` returns
+  into the script before the decay), so whatever a blast, a noise or a tripped breaker left on a teammate held the score up until his order ended: 0.32 after a frag
+  that left him standing (0.92 x 0.35), 0.21 after a flashbang at his feet, 0.68 if his order took him back in 'search', with every defender down. With the switch
+  ON, in LIVE PLAY a teammate counts only while he is in a fight of his own ('alert'); everything else the score reads is the opposition, the blackout and the alarm,
+  as before. WHILE A SHOW RUNS (`g.touring`, `g.director.showing`) every man counts as ever: the day showcase's pair are put in 'search' as its cue, and with them
+  left out the show's loud half played to the calm score (a review caught it; stepped headless on both stands, 132 s: the two readings equal on every frame). The
+  rule is a PARAMETER the page passes (`main.ts`: `game.tension(MUSIC.theirs)`, and the debugger's 'force tension' row), so no game module reads the listener's
+  table and a bare `game.tension()` (every tool, the frozen stand) is the reading as it was. In a room fight the team's own part was already nothing (the men fight
+  under their scripts in 'patrol'; two real entries watched frame by frame, the records office and the depot: 0.0 s in which the team alone held the tension above
+  the defenders'), so a fight sounds as it did. SWITCH: ON in the page, `?teamnerves` = every man counts, as it was; OFF in the module and on the frozen stand;
+  `TPS_MUSIC=1` raises it with the other two (`FROZEN_HOLDS['MUSIC.theirs']`); `teamnerves` is a visit word of a replay link (`ui/replaykey.ts VISIT_FLAGS`). No
+  rule reads it and no digest moves: the tension feeds the score alone. CHECK: `probes.ts music`, the line "the team's nerves" (a real records-office mission stood
+  up headless on the stand's own level file, a teammate under his script at 0.92, every defender down, ten seconds on: 0.32 as it was, 0.00 now; left searching
+  0.68 / 0.00; a defender alert or a teammate alert still 1.00; searching while a show runs 0.68; `main.ts` hands the switch over, by text) and a third 'stand'
+  line, on BOTH stands; `MUSIC_BREAK=1` must fail it. MEASURED 10-17 on one seed a level (records office, depot): the hold reproduced with one of the player's own
+  cans (flash 0.21, frag at 5 m 0.32, unchanged 80 s after the last defender fell). NOT DONE: defenders under a script hold their wariness the same way and still
+  count (that is the opposition's state, left alone); the cause itself (nothing takes a scripted man's wariness down) is not touched here; nobody has heard the
+  difference, and nothing here was run on a GPU or with sound.
 - **The lanes' dock, three nits (10-15)** (`src/replay/soundlanes.ts`; only under `?soundlanes`; no switch, nothing that plays changed): THE CORNER MAP GOES WITH THE HUD —
   `#tapemap` joins the `HUD` list, so `body.sndfilm-on` hides it for as long as the recorded picture is up and it is back the moment the HUD is (it showed NOW's places on
   THEN's picture and sat on its corner; the bar and the big map, M, stay). THE CARD UNSCROLLED SHOWS WHAT IS USED MOST: the mixer's three dials (pitch · level · tone — the

@@ -7,6 +7,8 @@
 import { type Game, type Guard, isBreathing } from '../game/game';
 import { guardAcquired } from '../game/aim';
 import { dozeMark } from '../game/doze';
+import { CONDITION } from '../game/condition';
+import { MOVES } from '../game/character';
 
 export interface HeadMark { text: string; cls: 'calm' | 'ko' | 'dead' | 'alert' | 'sus'; }
 
@@ -26,6 +28,7 @@ export function headMark(game: Game, g: Guard): HeadMark {
   else if (g.state === 'suspicious' || g.state === 'search') { if (wary) { text = '?'; cls = 'sus'; } }
   else if (zz) text = zz;   // asleep in his chair (doze.ts): a 'z' that grows with each breath; at his screen with headphones on: '♪' — nothing with its switch off
   else if (wary && waryDots(g.awareness)) { text = waryDots(g.awareness); cls = 'sus'; }
-  if (g.state !== 'dead' && game.time < g.dazzledUntil) { if (!text && own(g)) cls = 'sus'; text = '✹' + text; }   // dazzled by a stun canister (alone over a man of your own it keeps the colour it always had: whatever blinds a man also wrote the dots it stood before)
+  const posed = !HEADMARK_QA.ownWary && own(g) && CONDITION.on && CONDITION.looks && MOVES.on > 0.5 && MOVES.dazzle > 0.5;   // (a man of your own bent away with a forearm over his eyes says it himself: no mark over him with the condition switch and that pose on)
+  if (g.state !== 'dead' && game.time < g.dazzledUntil && !posed) { if (!text && own(g)) cls = 'sus'; text = '✹' + text; }   // dazzled by a stun canister (alone over a man of your own it keeps the colour it always had: whatever blinds a man also wrote the dots it stood before)
   return { text, cls };
 }

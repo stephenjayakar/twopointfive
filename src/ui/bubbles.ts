@@ -7,6 +7,17 @@ import type { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
 import { hudExpireBubbles } from '../game/journal';
 import type { BubblesLike } from '../host/hud';
+import { HEADMARK_QA } from './headmark';
+
+/** The tone of a man's bubble (its CSS class). A civilian by his own state; anybody else calm, the wary yellow ('sus') while he is searching or suspicious, the
+ *  red of a fight while alert. The wary yellow is the stealth game's read of a man who may find you out (headmark.ts, WHOSE MARKS): a man of the player's own
+ *  never wears it — left searching after a fight went cold, he speaks in the calm tone — and the red of a fight stays his, as the '!' over his head does.
+ *  (HEADMARK_QA.ownWary, the head mark check's break path, puts his yellow back with his marks.) */
+export function bubbleTone(g: Game['guards'][number]): 'calm' | 'sus' | 'alert' {
+  if (g.civ) return g.civ.state === 'work' || g.civ.state === 'held' ? 'calm' : g.civ.state === 'startled' || g.civ.state === 'cower' ? 'sus' : 'alert';
+  if (g.state === 'alert') return 'alert';
+  return (g.state === 'suspicious' || g.state === 'search') && (HEADMARK_QA.ownWary || g.team !== 'operative') ? 'sus' : 'calm';
+}
 
 type Bubble = { text: string; t: number; dur: number; radio: boolean };
 
@@ -76,8 +87,7 @@ export class Bubbles implements BubblesLike {
       const el = this.els[i]; const g = speakers[i]; const b = g ? game.cues.bubbleOf(g) : null;   // (his line, or a cue's — cues.ts)
       if (!g || !b || (g.state === 'dead' && !g.wound) || (g.civ && g.civ.state === 'gone') || game.fogOfWar.hidden(g)) { el.style.display = 'none'; continue; }   // (fog of war: no bubble over a man nobody on the team sees — his line is still heard; never true while it is off)
       if (game.time - b.t > b.dur) { g.bubble = null; el.style.display = 'none'; continue; }
-      const tone = g.civ ? (g.civ.state === 'work' || g.civ.state === 'held' ? 'calm' : g.civ.state === 'startled' || g.civ.state === 'cower' ? 'sus' : 'alert') : g.state === 'alert' ? 'alert' : g.state === 'suspicious' || g.state === 'search' ? 'sus' : 'calm';
-      if (!place(el, b, g.char.bones.head ?? g.char.pos, tone)) el.style.display = 'none';
+      if (!place(el, b, g.char.bones.head ?? g.char.pos, bubbleTone(g))) el.style.display = 'none';
     }
     { // Sam's line to the man in his arm, over HIS head (the pair stand half a metre apart, so his and the man's take turns on much the same spot — player.ts never has both up)
       const el = (this.samEl ??= this.make()); const pl = game.player; const b = pl.bubble;

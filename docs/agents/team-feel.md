@@ -245,8 +245,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `irlaser-probes.ts digest` (both pin it off) print the hashes a checkout of 93bb1005 prints. WHO: Sam, whenever the picture is the tube's (on exactly
   while `Player.nvAmount` > 0.5, post.wgsl's own swap — no tube frame without it, no bare-eyed frame with it; no key, it is part of the goggles; at a
   door with the wand under it and `WAND.nv`, the flood is the lens's); with `IRLIGHT.team` (on) every teammate whose goggles are down (`nvgDown`). Enemies
-  have no night vision and nothing of theirs reads it. WHAT: a real spot light at the brow along `aimYaw`, tipped `dip` 11° down, half angle `cone` 65°
-  (`core` 40°), `reach` 22 m, shadowed like any light; `power` 30 = on-axis intensity × the picture's exposure (the tube counts exposed luminance, so the
+  have no night vision and nothing of theirs reads it. WHAT: a real spot light at the brow along `aimYaw`, tipped `dip` 6° down, half angle `cone` 65°
+  (`core` 20°), `reach` 22 m, shadowed like any light; `power` 8 (30, 40° and 11° until 10-16: below) = on-axis intensity × the picture's exposure (the tube counts exposed luminance, so the
   flood reads the same through it at every hour and Brightness). HOW IT STAYS OUT OF THE ONE MODEL — by construction, four ways: (1) the lights live in
   `LightSet.ir` (render/lights.ts), never in `lights.lights`, so no CPU reader, digest, fog class, reach mask, bounce card or glass mask counts them;
   (2) they are uploaded only on a frame whose picture is the tube's (`LightSet.tube` = `settings.nvAmount > 0.5`, post.wgsl's own swap), flagged
@@ -260,8 +260,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `irOnMan` (a CPU estimate of the infrared light on the man looked at: the shader's falloff, window and cone, one segment test) to the light the meter
   reads on him, for a GOGGLED TEAMMATE'S eye only; nvg.ts `readPlace`'s `black` (too dark for the tube, so the white light comes on) retires
   (`irCarried`) — goggled teammates no longer put a white light on because a room has no light of its own; doortools.ts `thrTube` counts floor a jamb
-  man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (five: on the
-  goggles / the team carries one too / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
+  man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (six: on the
+  goggles / the team carries one too / only where it is too dark / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
   scenarios — a lamp per pair of goggles down, at the brow, the upload's bits for a bare and a tube picture, never out under a tube frame, the shader's
   text · irl-unseen: a held-door play of 2,160 frames a scenario, Sam's goggles down, the light on and off — the game digest, every man's awareness /
   irradiance / visibility, every camera, the light list and the light estimate on the lit floor identical frame for frame; `IRLIGHT_BREAK=1` puts the
@@ -287,6 +287,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the squad following) samples other rooms and doors with the light on, because goggled teammates read dark rooms (`IRLIGHT.team = false` gives the old
   sample number for number). That sweep's one red on the compound was not the light: two doors open in one corner, the second door's leaf drawn through the
   first doorway, the menu rightly the leaf's door (staged by hand the same ray picks the same door with the light off); the probe now counts that case apart.
+  **Less bright, and only where it is too dark** (10-16; the maintainer, of the pass's yard at night with four teammates, every man in a white pool:
+  "IR lights are a bit too bright. is it realistic to only have them turn on when it's actually too dark to see?"). It is: a tube works on the light that
+  is there, and an illuminator is for where there is none. TWO CHANGES. (1) THE NUMBERS, no switch (they are the tube's picture and nothing the sim
+  reads moves a digest with the light off): `power` 30 → 8, `core` 40° → 20°, `dip` 11° → 6°. The tube's picture is `log(1 + lum·gain) / log(1 + gain)`
+  and its hot shoulder starts at 0.75: at 30 one light put floor two metres off at 0.84 and five overlapping put floor four metres off there; at 8 one
+  light on open floor reads at most 0.68 (1.5 m off, the probe's sample of nine scenarios). Every tally above was measured at 30 and is not re-measured.
+  (2) SWITCH `IRLIGHT.auto`: ON in the page (`?noirauto`), OFF in the module and on the frozen stand (`TPS_IRAUTO=1`; `FROZEN_HOLDS`, standup pin,
+  standEnv), in the journal's knob table (a recording from before the key replays with it off). Off = a light that burns whenever the goggles are down,
+  the build before it. THE RULE (`burn`, per carrier): the place's own light (`nvgPlaceLight`: fixtures, the moon, nothing carried, nothing infrared — so
+  no light of this file answers its own question) through the tube (`tubeVis`) under `NVG.blackAt` (0.15 of the tube's range: the line the team already
+  called 'too dark for the tube' — no second threshold) on the floor under him, or on two or more readings of a fan across his flood (eleven rays,
+  −60° ‥ +60°, at 1.5 ‥ 12 m, each to the first wall; one dark reading alone is the shadow behind a cabinet in a lit office, and brought the light on
+  for two seconds as Sam turned his head — found by the probe on the registry and the snatch). Read every 0.25 s of the game's clock, each carrier on
+  his own beat (Sam's own floor every frame); on from a dark reading until `IRLIGHT.hold` (1.5 s) after the last, eased in over 0.15 s and out over
+  0.5 s, at full at once on the first reading after the goggles come down. Sam's wand has its own reading (the lens is in another place). Nothing is
+  saved: the reading starts again after a load. `irShowsAt` (the threshold's 'his flood would show a man there') stops at 12 m under the rule: past it
+  nothing brings his light on. Moonlit ground reads about 0.6 through the tube, so outdoors at night no light burns. COST: the lights are steady lights
+  (above), so a light that is out costs the frame nothing — the five shadowed spots are now only in the picture where a place is dark; the rule's own
+  cost is CPU: 8‥19 µs a reading, at most 78 readings a carrier every 0.25 s (0.4‥0.8 ms measured for a whole fan, headless). Row: 'IR light ▸ only
+  where it is too dark'; `irLightSummary` says 'off (light enough here)'. The performance sweep's GOGGLES stand (`tools/qa/perf-sweep-page.cjs`) holds
+  the rule off so that its lane still measures the light. QA `probes.ts irl-auto` (21 scenarios, the places taken off the level: Sam where everything
+  he could look at inside 13 m is light — none burns, the rule off and it does; on black floor — burning inside 0.1 s, full by 0.5; back in the light
+  — out at the hold and its fade; the team over four seconds — a goggled man on black floor has his, one with no black floor in sight keeps none; the
+  one-light brightness line; the stand): ALL PASS on both stands and on the frozen stand with both words raised, `IRAUTO_BREAK=1` (every place reads
+  dark) RED on both (shipped: a light place for Sam in 8 of 21 scenarios, black floor in 11; teammate-frames on black floor 1,290, all lit; with no
+  black floor in sight past the hold 581, none lit). The other four irlight probes pin the rule off (they check the light that burns whenever goggles
+  are down); the family 89 verdicts on each stand, `nvg` 188 on each, `IRLIGHT_BREAK=1` still red on both. Page check, software adapter (very low,
+  960×540), `MODE=yard node tools/qa/irlight-page.cjs <out>` (the pass, four teammates, hard, where the maintainer's shot was taken): the page as it
+  opens 0 lights burning and the frame's middle 146 of 255 through the tube; every light forced on at 8: 160, 3 % of the middle at the tube's ceiling;
+  at 30: 180, 20 %. The depot's dark room (`MODE=room`): tube alone 119, with the light 156 and 0 % at the ceiling; at the old numbers 195 and 18 %.
+  NOT MEASURED: no entry tally, tour or soak with the rule or the new power. NEVER SEEN ON A GPU, and only a player can judge: whether 8 is now too dim
+  in a big dark room, the moment a light comes on walking from a lit hall into a dark room (0.15 s) and its fade behind him, a light that stays out
+  when the only dark floor is one sliver or lies past 12 m, and whether five lights coming on at different moments reads as a team or as flicker.
 - **Silent or loud, on Sam's word** (`src/game/silent.ts`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
   quietly, no flashlight, etc."; scope page rebuild/silent-order/scope.md): the squad's POSTURE, one order — `go silent` on **X, 5** of the
   floor's menu and of a man's (under the header 'the whole squad'; a door's menu keeps 5 for the door tools; the order fits any target through `give`), the row
@@ -490,7 +523,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fight is a plain one). Unchanged: every mark over a defender, a civilian's own marks, and over a teammate the '!' of a fight, the '✹' of a
   stun (in the yellow it had) and 'zz' / '✚' / '✕' on the floor. NO SWITCH: the HUD only — nothing the simulation, a save or a digest reads.
   NOT MENDED HERE: `Guard.awareness` is written on a teammate as before, and what reads it off every man still does (guards.ts `tension`,
-  the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble keeps the wary
-  yellow while he is left searching (`bubbles.ts`). Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
-  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1 to 3 must fail) asks `headMark` what would be drawn over each man of a staged
+  the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble kept the wary
+  yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `bubbles.ts bubbleTone` gives a living man of the
+  player's own the calm tone while he is searching or suspicious (the red of a fight stays his, as his '!' does; a defender's and a civilian's tones as they
+  were); the check's lines (2b), the defender's bubble line and the bubbles.ts line say so, and `HEADMARK_BREAK=1` puts the yellow back with the marks. Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
+  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1, 2, 2b and 3 must fail) asks `headMark` what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
+- **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
+  0.35, hurtSecs 0, ownCalm, looks}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
+  and the journal's tables, so a recording from before it replays with it off). The maintainer, 10-16: telegraph a man's state through his
+  animation, "effectively just a health system ... but with very high lethality", "apply that system across the board". ONE MODEL for the
+  player, his men and the defenders: `conditionOf(g, man)` = {shaken, blind, folded, hurt, down}, read off stamps the game already kept on both
+  `Guard` and `Player` (`sup.v`, `dazzledUntil`, `staggerUntil`) plus the one new stamp, `hurtAt` (-1 = never). NOBODY GAINS A ROUND: how a man
+  goes down is not touched (`Player.MAX_HITS` 1, a defender and a teammate one round each), there is no count of anything, and a condition only
+  ever takes something from a man. WHO IS HURT: a man `frag.ts blast` reports 'wounded' (a frag, a 40 mm, the bomb a defuse lost: in its line
+  inside `woundM`, and the dice left him up). NOT a 'shielded' or 'stunned' man, not a civilian, not a man the debugger keeps whole, not the
+  player in god mode, nobody while a showcase runs (and `isHurt` reads false for its length). A door charge, a wall charge and the player's own
+  charge fold and blind as they did and leave a man SOUND (a call left with the maintainer). WHAT IT COSTS, for the rest of the mission
+  (`hurtSecs` 0; > 0 = it wears off): PACE, an AI man is never asked for more than `hurtPace` — `conditionPace` inside `teamPace`,
+  `stepAlongPath`, tactics.ts `stepGate` and the two planners that pick the corner a man can reach from a grenade (frag.ts, squadthrow.ts);
+  the player loses his sprint (player.ts: Shift is not a run for him, so it stops no reload and lets go of nothing). SPREAD, his rounds open as
+  if fire were on him at `hurtSup` — `conditionSup` (the larger of that and the fire really on him) asked by `guardFireMods`, `samSpread` and
+  the room fight's / the covering man's own line; how FAST he fires is not touched; with `tune.suppression` off nobody's rounds open, his
+  included. `looks` (true): the figures are dealt each state's look; false = the model and its costs with nobody showing it, QA's lever for
+  what the looks alone do to a run. `ownCalm`: guards.ts `tension` no longer counts a teammate's `awareness` at rest (nothing drains it under an order: a frag held the
+  score's intensity up for the mission) — with the switch off it counts it as before. Saves: `hurtAt` is an optional key written only for a
+  hurt man, so an older save loads and a save with nobody hurt is byte for byte what it was. The panel: `condition ▸ you hurt · Reyes folded
+  hurt` (`Game.conditionSummary()`). HOW IT SHOWS is the poses' (docs/agents/anim.md, "A man's condition on the figure"), and with them on a
+  stunned teammate's '✹' is gone from the HUD (`headmark.ts`: `CONDITION.on` and `MOVES.on` and `MOVES.dazzle`; a defender keeps his; headmark-check
+  line 3b). Checks: `tools/qa/condition-check.ts` (`probes.ts condition`, which also runs `condition-pose`; twelve lines — off, on, the fold's
+  seconds unchanged, pace through followPath / stepAlongPath, the player's sprint, spread and the gap, one round still downs each of the three
+  while hurt, god mode, the score, a checkpoint, who is not hurt, the registry; `CONDITION_BREAK=1` leaves the switch off and eight lines must
+  fail), ALL PASS on both stands; `tools/qa/condition-page.cjs` on the real page (software adapter). MEASURED on the shipped stand
+  (`ships.ts`, 21 loud missions on seeds 1 and 2, the rule on against `--set '{"CONDITION":{"on":false}}'`; the commander there plays in god
+  mode, so the player is never hurt in it): a man was left hurt in 2 of 42 runs (4 men) — grenades are rare, so what hurt costs is the check's
+  to show, not this tally's. Ends on / off: taken 24 / 23, wiped 10 / 11, rescued 5 / 5, lost 3 / 3; teammates up 80 / 81 of 148; defenders
+  left 65 / 63 of 294; mean 84.0 / 82.7 s. THE LOOKS MOVE A RUN: 34 of the 42 play out differently by digest, 32 of them with nobody hurt — a
+  figure's head and muzzle are where the simulation reads them, and a man under fire now tucks 10 cm. Six of those replayed with `looks` false
+  equal the switch-off digest run for run; with `ownCalm` false, the switch-on one. NOT SEEN, NOT PLAYED: nothing
+  of this on a GPU; nobody has played a mission with a hurt man in it; `hurtPace` and `hurtSup` are first numbers.
