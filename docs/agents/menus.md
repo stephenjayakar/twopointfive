@@ -500,18 +500,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   should have different gear screen stuff". On a QUIET KIND — a quiet mission's link, alone or as two, and the solo night, read off the
   LINK (`host/kitViewSet.ts kitViewQuietKind`, the reading the set's dress always used; never `game.quiet.active`: a set way is staged as
   a room clear) — and only where the porch lamp burns (by day, with no `light.porch.day`, the old picture), the picture is ONE image: Sam
-  DOWN, his gun put away and the rifle across his back (`KITANIM.sling` 2 on every quiet way now), 1.55 m along the wall from the door's
-  middle, beside a small warm POOL under the door's lamp (the porch place, a spot of 38 deg at 7 turned down and tipped 0.4 m out; a
-  way's own `light.porch` keys still lie over it); the level's own lamps on the team's side that reach the door's foot are out; the fill
-  bluer and lower (1.2), the moon x1.3 and the sky x1.2; no weapon light; the leaf 9 deg ajar on a room whose own lamps burn at 0.15 of
-  themselves (none there: a small warm lamp of the picture's own). A partner rests on a knee 1.1 m behind him and stands at the door
+  DOWN, his gun put away and the rifle across his back (`KITANIM.sling` 2 on every quiet way now), 1.1 m along the wall from the door's
+  middle, beside a small warm POOL under the door's lamp (the porch place, a spot of 24 deg at 16 turned down and tipped 0.25 m out —
+  `outerDeg` is a HALF angle: 1.07 m of floor in radius under a 2.4 m lamp, a 0.2 m rim; a way's own `light.porch` keys still lie over
+  it); the level's own lamps on the team's side that reach the door's foot are out; the moon x0.5 and BLUE (`moonTint` [0.4, 0.62, 1]
+  over its own colour: the moon is the floor's light), the fill bluer and low (0.8: it lights the wall's face and the men, next to
+  nothing of the floor), the sky x1.2; no weapon light; the leaf 16 deg ajar on a room whose own lamps burn at 0.15 of themselves, and
+  at every door a small warm lamp of the picture's own low behind the gap (`own`: 0.4 m back, 0.25 m past the frame on the LATCH's side, 1.2 m up, 2.5 — the leaf stands ajar INTO the room and its gap is
+  seen only from there): a blade of light out across his floor, slanting toward the hinge's side through where the pool is.
+  THE ROOF STAYS ON (`roofs`; `kitViewQuietRoofs`, pure): where the team stands under the sky, the cover slabs the game's camera looks
+  through (`NoPrimary`) that lie wholly behind the wall are DRAWN (the flag cleared for the picture's life, put back by `quietUndo`),
+  so the room behind the door is a dark slab and not the largest warm shape in the column; a throw through the door lands unseen.
+  THE FRAMING (`frame`): one subject — the lamp's fixture at 0.30 of the clear column's height, his boots at 0.67, his spine 0.55 of
+  the way across; the distance follows (the page tells the picture the column's `top` / `bottom` in its `frame` message; the picture's
+  page alone takes its whole window as the column). A partner rests on a knee 1.0 m behind him and stands at the door
   while his own card is open. A level's WRITTEN first place wins; a worked-out one that is not free floor leaves the plan's.
   THE POOL LAMP IS A LAMP OF THE GAME'S: the host builds a `LightTarget` over the picture's own light and glowing box and pushes it on
   `game.targets` (`kitViewPoolTarget`; nothing under `src/game` was edited), so the player's round puts it out by the game's own
   `shootOut` and a restart's `repairLights` mends it. WHAT PLAYS, by `QUIET_BEATS` (a table over `BEATS`: a thing not in it, or a quiet
   row whose start refuses, plays its old row): Sam's `weapon` with a SUPPRESSED gun in hand — the gun out, a rise to a half crouch on
-  the lamp (0.65 s), ONE round, the pool dies, the fill lifts x1.5 over 0.5 s, he walks down to the door's jamb through where it was,
-  the dark held 4 s from the round, then the room staged again under the dissolve and a 3.5 s rest; `suit` / `trim` — a lean of 0.4 m
+  the lamp (0.65 s), ONE round, the pool dies — A CUT (`cut`): the next frame takes no history, the gun's gas is taken out of the smoke
+  solver (unlit it drew as soot on the door) and the dead lamp's lead does not arc for this row (`FIXLOOK.on` held off: the fixture's
+  own burst is the only sparks, gone in half a second), with a cold flick at the muzzle as the round goes (`flick`) —, the moon lifts
+  x1.7 and the fill x1.3 over 1.2 s (the floor comes up blue), he walks down ACROSS the doorway, through where the pool was, to the FAR jamb (`jambFar`; 0.2 m
+  past the frame, 0.6 m off the wall; no free floor there: the jamb on his own side), the dark held 4 s from the round, then the room staged again under the dissolve and a 3.5 s rest; `suit` / `trim` — a lean of 0.4 m
   into the pool, held 0.6 s, and back; the throws from the crouch with a 1.1 m step; the wand and the sticky camera their own rows, he
   stays down. No tile under the highlight: the rest pose alone (`quietIdle`, the seam a torch pass hangs on). LOUD KIT on a quiet kind
   (an unsuppressed gun, a stun, a frag, a charge, a partner's gun) keeps its old row and costs nothing yet: `Row.loud` and
@@ -532,8 +544,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the places are the staged ones; the leaf hung is the leaf at its rest; the gun's row ends in a restage). LOUD UNMOVED: every change
   is behind the link's kind; the plan check's sections A to H print the same lines as before on both stands and its dry-run file is
   byte-identical. NOT SEEN: anything on a GPU; the loop at speed (stills on the software adapter only: the pool reads soft and wide
-  there, the room behind the door is NOT dim — its floor is lit by the sky through the roof the picture lifts — and the half crouch is
-  hard to tell from the crouch); the solo night's picture; any quiet way but the vault's and the crossing's on a page.
+  there and the half crouch is hard to tell from the crouch; the re-shoot's numbers and what it measured: below); the solo night's picture; any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +

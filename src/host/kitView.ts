@@ -222,10 +222,12 @@ export const KIT_VIEW_QUIET = {
    *  a hard rim, the line that cuts him at the hips.
    *  A way's own `light.porch` keys still lie over these. It hangs as a real lamp of the game's (a `game.targets` entry over its glowing box) so that a
    *  round really puts it out */
-  lamp: { kind: 1 as const, intensity: 12, range: 5, innerDeg: 20, outerDeg: 24, radius: 0.03, broad: false, tip: 0.25 },
-  /** the yard: the moon DOWN (it lit everything to one middle value: the pool was a quarter over its own floor) and a blue fill the only light in
-   *  the moon's shadow — the floor round his feet a blue shape, never black · the sky as it was (it does next to nothing on the lowest presets) */
-  fill: { color: [0.4, 0.6, 1] as Vec3, intensity: 1.6 }, moonScale: 0.25, skyScale: 1.2,
+  lamp: { kind: 1 as const, intensity: 16, range: 5, innerDeg: 20, outerDeg: 24, radius: 0.03, broad: false, tip: 0.25 },
+  /** the yard: the moon DOWN (it lit everything to one middle value: the pool was a quarter over its own floor) and turned BLUE (`moonTint` over
+   *  its own colour: it is the floor's light — the fill, low and far out, lights the wall's face and the men and next to nothing of the floor — and a
+   *  brown floor under a warm moon said afternoon) · the fill bluer and low: a pale wall under it was two thirds of the pool · the sky as it was
+   *  (it does next to nothing on the lowest presets) */
+  fill: { color: [0.4, 0.6, 1] as Vec3, intensity: 0.8 }, moonScale: 0.5, moonTint: [0.4, 0.62, 1] as Vec3, skyScale: 1.2,
   /** THE ROOF STAYS ON: where the team stands under the open sky, a roof or ceiling slab that lies wholly behind the wall (no further out over the
    *  team's side than `roofEave` m past its face) is DRAWN — the game's camera looks through such a slab; here the room behind the door is a dark
    *  shape, "they are inside", and the only warm things left are the pool and the door's slit. false = the room open to the camera, as it was */
@@ -233,19 +235,21 @@ export const KIT_VIEW_QUIET = {
   /** THE FRAMING, for one subject — door, pool, man: down the clear column the lamp's fixture at `lamp` of its height and his boots at `boots` (the
    *  distance follows from the two; the foot of the column is left to dark floor, and a partner), his spine `spine` of the way across it. With no
    *  column told (the picture's page alone) the whole window is the column */
-  frame: { lamp: 0.3, boots: 0.67, spine: 0.47 },
+  frame: { lamp: 0.3, boots: 0.67, spine: 0.55 },
   /** the door: this far ajar at rest (deg), eased back there at … rad/s after a row moved it · the room behind it: its own lamps that reach the doorway
    *  burn at this share of themselves (the loud cost's seam: quietInside()) · and THE BLADE: a small warm lamp of the picture's own hung … m behind
-   *  the wall's far face, this high — low and close behind the gap, so that a long thin blade of light lies out across his floor (a room's lamp
-   *  3 m back sees the gap half a degree wide: no blade at all). At a door or a gap, whatever the room has */
-  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.8, up: 1.2, color: [1, 0.72, 0.42] as Vec3, intensity: 1.4, range: 4.5 },
+   *  the wall's far face, … m past the frame on the LATCH's side, this high. The leaf stands ajar INTO the room: its gap is seen only from the
+   *  latch's side, so from there a long thin blade of light lies out across his floor, slanting toward the hinge's side through where the pool is
+   *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has */
+  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.25, up: 1.2, color: [1, 0.72, 0.42] as Vec3, intensity: 2.5, range: 4.5 },
   /** THE REST POSE: Sam crouched this far along the wall from the door's middle, on the side the plan stands him (out from the wall: the wall men's
    *  own distance) · a partner the same again behind him */
   samAlong: 1.1, mateGap: 1.0,
   /** THE SUPPRESSED GUN'S ROW: seconds he takes to rise to a half crouch and aim · how far up (0 = stays down, 1 = stands) · seconds the dark is held
-   *  from the round · the fill lifted to this over … s (eyes adjusting) · he walks to the jamb … s after the round: … m past the frame, … m off the
-   *  wall's face · the loop rests this long before the lamp goes again */
-  rise: 0.65, half: 0.7, hold: 4, lift: 2.5, liftSecs: 1.2, walkAt: 1, jambAlong: 0.3, jambOut: 0.6, gunRest: 3.5,
+   *  from the round · the MOON lifted to this, and the fill to this, over … s (eyes adjusting: the floor comes up blue) · he walks to the jamb … s after the round: … m past the frame, … m off the
+   *  wall's face — the FAR jamb (`jambFar`): across the doorway, through where the pool was, to end with the blade across a shoulder (false, or no
+   *  free floor there: the jamb on his own side) · the loop rests this long before the lamp goes again */
+  rise: 0.65, half: 0.7, hold: 4, lift: 1.7, liftFill: 1.3, liftSecs: 1.2, walkAt: 1, jambAlong: 0.2, jambOut: 0.6, jambFar: true, gunRest: 3.5,
   /** …and THE KILL IS A CUT: the frame after the lamp dies takes no history (no glow left fading on the floor), the gun's gas is taken out of the
    *  air (unlit, it drew as soot on the door) and the dead lamp's lead does not arc for this row (the fixture's own burst is the only sparks: gone in
    *  half a second) · a cold flick at the muzzle as the round goes: this bright, reaching … m, for … s (0 = none) */
@@ -559,7 +563,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the room burns at · the fill as staged and since when it is lifted · the loop's next rest · a leaf asked shut for a waiting row until · the gun last
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
-  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
+  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qMoon: RtLight | null = null, moonAt = 0, moonCol: Vec3 | null = null, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
   const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
   const base = new WeakMap<RtLight, number>();   // a room light's / the moon's intensity as the game has it (what `roomLights` / `moonScale` multiply)
@@ -845,7 +849,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (Q) for (const t of qIn) if (t.light) { t.light.enabled = t.on && !t.broken; t.light.intensity = t.baseIntensity; }   // (a still picture is frozen from here: the dim room written once, as the game writes it each step)
     { const moon = engine.lights.lights.find(l => l.name === 'moon' && l.kind === 2), S = engine.settings;
       if (moon && !base.has(moon)) base.set(moon, moon.intensity); sky ??= { zenith: [S.skyZenith[0], S.skyZenith[1], S.skyZenith[2]], horizon: [S.skyHorizon[0], S.skyHorizon[1], S.skyHorizon[2]] };
-      if (moon && moon.enabled && base.get(moon)! > 0) { moon.intensity = base.get(moon)! * lightK.moonScale; const k = lightK.skyScale; S.skyZenith = [sky.zenith[0] * k, sky.zenith[1] * k, sky.zenith[2] * k]; S.skyHorizon = [sky.horizon[0] * k, sky.horizon[1] * k, sky.horizon[2] * k]; } }
+      if (moon) { moonCol ??= [moon.color[0], moon.color[1], moon.color[2]]; const t = Q ? QK.moonTint : [1, 1, 1]; moon.color = [moonCol[0] * t[0], moonCol[1] * t[1], moonCol[2] * t[2]]; }   // (the quiet picture's moon is blue: over its own colour, put back on every other staging)
+      qMoon = null;
+      if (moon && moon.enabled && base.get(moon)! > 0) { moon.intensity = base.get(moon)! * lightK.moonScale; if (Q) { qMoon = moon; moonAt = moon.intensity; } const k = lightK.skyScale; S.skyZenith = [sky.zenith[0] * k, sky.zenith[1] * k, sky.zenith[2] * k]; S.skyHorizon = [sky.horizon[0] * k, sky.horizon[1] * k, sky.horizon[2] * k]; } }
     for (const who of ['porch', 'fill'] as const) { const K: KitViewLamp = lightK[who], P = at(K.offset);
       const rec = { kind: K.kind, pos: P, dir: unit(P, at(K.aim)), color: [K.color[0], K.color[1], K.color[2]] as Vec3, intensity: K.intensity, peakIntensity: K.intensity, range: K.range, innerDeg: K.innerDeg, outerDeg: K.outerDeg, radius: K.radius, volumetric: K.volumetric, broad: K.broad, enabled: K.intensity > 0 };
       const had = lamps[who]; if (had && engine.lights.lights.includes(had)) Object.assign(had, rec);
@@ -864,7 +870,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
       else { if (i >= 0) game.targets.splice(i, 1); pool = null; }
       const O2 = QK.own, wantOwn = Q && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
       if (!wantOwn) { if (hung) engine.lights.remove(hung); qOwn = null; }
-      else { const p = at([0, P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: 0.1, volumetric: 0, broad: false, enabled: true };
+      else { const lt = door ? ((A.mid[0] - door.def.hinge[0]) * W.s[0] + (A.mid[1] - door.def.hinge[1]) * W.s[1] >= 0 ? 1 : -1) : 0;   // (which way along the wall the leaf's free edge is; a gap: its middle)
+        const p = at([lt * (A.width / 2 + O2.side), P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: 0.1, volumetric: 0, broad: false, enabled: true };
         if (hung) Object.assign(hung, rec); else qOwn = engine.lights.add({ name: 'kitview_inside', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, ...rec }); } }
     // the camera: into the wall, turned toward the stack; at the middle of the men
     V.men = men(order);
@@ -1447,6 +1454,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  every kind — where there is no lamp burning to shoot, or the gun in his hand is not suppressed (the shotgun is loud kit: its old row) */
   /** the gun's own gas out of the air (the smoke solver's emitters and what they have laid: nothing else smokes in this row) */
   const gasOut = () => { const sm = game.smoke as unknown as { emitters?: unknown[]; clearAll?(): void }; if (sm.emitters?.length) sm.clearAll?.(); };
+  /** free floor all the way from a to b (the game's own grid, a quarter metre a step) */
+  const walkFree = (a: V2, b: V2) => { const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.25); for (let i = 1; i <= n; i++) if (game.col.nav.isBlocked(a[0] + (b[0] - a[0]) * i / n, a[1] + (b[1] - a[1]) * i / n)) return false; return true; };
   const lampUp = () => !!pool && pool.on && !pool.broken && pool.disabledUntil < game.time && !!pool.light;
   const quietGun: Row = { door: 'shut', damage: 'world', rest: KIT_VIEW_QUIET.gunRest, cap: 14,
     start: (B, S) => { const pl = game.player; if (B.man) return 'the lamp is Sam\'s to shoot';
@@ -1474,8 +1483,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
         B.marks.push('missed'); V.refused = 'weapon: the round did not put the lamp out'; B.legs = []; return quiet(B, S); }
       if (B.phase === 'dark') { const t = game.time - B.markT; if (QK.cut && t < 1.5) gasOut(); qRise = 1 - ss((t - QK.walkAt) / 0.4); aimLegs(B);
         if (t >= QK.walkAt && !B.post) {   // …and across where the pool was, down, to the jamb on his own side
-          const al = (S.sam[0] - S.plan.anchor.mid[0]) * S.s[0] + (S.sam[1] - S.plan.anchor.mid[1]) * S.s[1], sg = al > 0 ? 1 : -1, J = S.at([sg * (S.width / 2 + QK.jambAlong), S.plan.wall.face + QK.jambOut, 0]);
-          B.post = !game.col.nav.isBlocked(J[0], J[2]) ? [J[0], J[2]] : [p[0], p[2]];
+          const al = (S.sam[0] - S.plan.anchor.mid[0]) * S.s[0] + (S.sam[1] - S.plan.anchor.mid[1]) * S.s[1], sg = al > 0 ? 1 : -1, jamb = (k: number) => S.at([k * (S.width / 2 + QK.jambAlong), S.plan.wall.face + QK.jambOut, 0]), ok = (q: Vec3) => !game.col.nav.isBlocked(q[0], q[2]);
+          const Jf = jamb(-sg), J = QK.jambFar && ok(Jf) && walkFree([p[0], p[2]], [Jf[0], Jf[2]]) ? Jf : jamb(sg);
+          B.post = ok(J) ? [J[0], J[2]] : [p[0], p[2]];
           if (flat(p, B.post) > 0.1) { B.marks.push('walk'); game.puppet = { goal: [B.post[0], 0, B.post[1]], aim: game.puppet?.aim ?? null, throwAt: null, walk: K.samWalk }; } }
         return t >= QK.hold ? 'done' : 'on'; }
       return quiet(B, S); } };
@@ -1827,7 +1837,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     beamDir = null; if (B && B.lit) { const y = B.char.aimYaw, pit = B.pitch ? B.pitch.v : 0; beamDir = [Math.sin(y) * Math.cos(pit), Math.sin(pit), Math.cos(y) * Math.cos(pit)]; }   // (the beam's line is the gun's as it is DRAWN — the yaw his weight has let him get to — and the director's own pitch)
     S.torches(); park();
     if (Q) { const QK = KIT_VIEW_QUIET, u = isNaN(liftAt) ? 0 : Math.max(0, Math.min(1, (game.time - liftAt) / QK.liftSecs));   // (the dark: the fill lifted — eyes adjusting; the half crouch he shoots from, over the game's own knee)
-      if (lamps.fill && fillBase > 0) lamps.fill.intensity = lamps.fill.peakIntensity = fillBase * (1 + (QK.lift - 1) * u * u * (3 - 2 * u));
+      const e = u * u * (3 - 2 * u); if (lamps.fill && fillBase > 0) lamps.fill.intensity = lamps.fill.peakIntensity = fillBase * (1 + (QK.liftFill - 1) * e);
+      if (qMoon) qMoon.intensity = moonAt * (1 + (QK.lift - 1) * e);
       if (B && B.row === quietGun && qRise > 0) { const an = pl.char.anim as unknown as { crouch: number }; an.crouch = Math.min(an.crouch, 1 - QK.half * qRise); } else qRise = 0; }
     if (S.plan.indoors) for (const c of [pl.char, ...S.order.map(g => g.char)] as unknown as { wet: number; beads: number; wetRain: number }[]) { c.wet = 0; c.beads = 0; c.wetRain = 0; }   // (the plan: the team stands under a roof — no weather on the men, whatever the level's own roof test makes of a ceiling the camera never draws)
     if (B) { B.flash = Math.max(B.flash, pl.hitFlash);
