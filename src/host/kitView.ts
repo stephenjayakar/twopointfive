@@ -283,9 +283,11 @@ export const KIT_VIEW_QUIET = {
    *  AND HE IS FROZEN in it: where he stood as the row ended, no walk home under the hold, up out of the crouch from the cost's first frame (as
    *  the room flares behind the leaf: he is standing when it is thrown) and ALL of him turned to the door — his aim at `aimY` m up its middle
    *  and his body's own yaw asked round to it too, at `turn` deg/s (a start, not the calm rows' 100 and 150): a throw leaves his gun on the
-   *  door and his feet 50 deg off it, and the game turns only the chest to an aim that near — he stood twisted, which read as a stride */
+   *  door and his feet 50 deg off it, and the game turns only the chest to an aim that near — he stood twisted, which read as a stride.
+   *  ITS BRIGHTNESS (`lamp.intensity`): at 48 the wedge's core was twice the pool on a clear floor, but a frag's own smoke stands in the doorway
+   *  under it and took a third of that; at 64 the core under a frag is where the old slab's was */
   cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3, blade: 2, room: 1, pool: 0, aimY: 1.2, turn: 240,
-    lamp: { back: 0.45, backMin: 0.2, up: 1.9, side: 1.2, clear: 0.08, past: 0.25, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 48, range: 8, radius: 0.01 } },
+    lamp: { back: 0.45, backMin: 0.2, up: 1.9, side: 1.2, clear: 0.08, past: 0.25, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 64, range: 8, radius: 0.01 } },
   /** LIFE AT REST, no guard: after each of these seconds of rest in turn (a fixed list: no dice) the warm lamp behind the door slides `slide` m along
    *  the wall over `out` s, stays `stay` s and slides back, dark to `blinkTo` of itself for `blink` s from `blinkAt` (somebody passes it); every man's
    *  idle sway is stopped for its length. WHICH WAY: further past the LATCH (the only way the gap still sees it: slid the other way the lamp is
