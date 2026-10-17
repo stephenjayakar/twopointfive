@@ -19,7 +19,7 @@ import { Panel } from './panel';
 import { DEG } from '../math/vec';
 import { defaultRcConfig } from '../render/rc';
 import { AudioEngine } from '../audio/audio';
-import { PIECE_NAMES } from '../audio/pieces';
+import { PIECE_NAMES, MUSIC } from '../audio/pieces';
 import { Quality, QUALITY_NAMES, AIM_DISPLAY } from './quality';
 import * as fx from '../game/effects';
 import { FLOOR } from '../game/floor';
@@ -2147,7 +2147,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.slider(au, 'music volume', 0, 1, 0.01, () => audio.volume.music, v => { audio.volume.music = v; audio.setVolumes(); });
   panel.slider(au, 'ambience', 0, 1.5, 0.01, () => audio.volume.ambience, v => { audio.volume.ambience = v; audio.setVolumes(); });
   let forced = -1;
-  panel.slider(au, 'force tension', -1, 1, 0.05, () => forced, v => { forced = v; if (audio.music) audio.music.intensity = v < 0 ? game.tension() : v; }, '-1 = follow the game; otherwise pin the score intensity');
+  panel.slider(au, 'force tension', -1, 1, 0.05, () => forced, v => { forced = v; if (audio.music) audio.music.intensity = v < 0 ? game.tension(MUSIC.theirs) : v; }, '-1 = follow the game; otherwise pin the score intensity');
   setInterval(() => { window.__forcedTension = forced >= 0; if (forced >= 0 && audio.music) audio.music.intensity = forced; }, 200);
 
   // ================================================================ CHECKPOINTS (game/savestate.ts, STATUS G5): the dev rows — save now (the manual slot; 'force' lets go of Sam's hands and any drill in the FILE), load the

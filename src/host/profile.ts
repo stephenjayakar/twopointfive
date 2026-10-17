@@ -249,6 +249,7 @@ export function pageSwitches(q: URLSearchParams): void {
   LOOK.suit = suitOfQuery(q);   // …and under it the black sneaking suit Sam wears on a mission that is not a squad's loud one (game/cast.ts sneakSuit): ?suit=0 = the operators' issue dress on every mission
   MUSIC.pieces = !q.has('onetheme');   // more music than the one theme (audio/pieces.ts): seven newer pieces beside the theme (which of them plays where is MUSIC.byLevel's, next line) — ON in the page; ?onetheme = the theme alone, as it was. The listener's ears only: no rule reads it and a replay holds no sound
   MUSIC.byLevel = !q.has('shuffle');   // the level's own music (audio/setlist.ts): each level plays the two pieces written down for it, the first when play begins and the second after MUSIC.minutes, and the theme is the menu's alone — ON in the page; ?shuffle = the pieces dealt from a shuffled bag, as they were. The listener's ears only
+  MUSIC.theirs = !q.has('teamnerves');   // the score's tension is the opposition's nerves (game/guards.ts tension): in live play a teammate counts only while he is in a fight of his own, not for the wariness a blast or a noise left on him under an order (a show's own men read as ever) — ON in the page; ?teamnerves = every man on the floor counts, as it was. The listener's ears only
   LIVED.on = livedOfQuery(q);   // lived-in rooms (scene/lived.ts): the furniture, clutter, floor pieces and lamps that make each room of a level its own place, as the office's rooms are — ON in the page, raised before the level loads; ?lived=0 = every level as it was before there were any
   GUNWALL.on = !q.has('nogunwall');   // a raised gun comes to the low ready at a wall, a jamb or a leaf inside its reach (game/gunwall.ts): ON in the page; ?nogunwall = guns stay up and are drawn through the wall, as they were
   ROOMCLEAR.fresh = q.get('freshstart') !== '0';   // a room clear that names no placement seed deals a fresh one each visit, off the game's own die's seed (game/roomclear.ts): ON in the page; ?freshstart=0 = the authored placement on every load, as before (a row that pins its seed — the Training lessons — is never touched)
@@ -426,6 +427,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'LOOK.on': 'TPS_LOOK=1',
   'MUSIC.pieces': 'TPS_MUSIC=1',
   'MUSIC.byLevel': 'TPS_MUSIC=1 (with the pieces: the one word raises both)',
+  'MUSIC.theirs': 'TPS_MUSIC=1 (the same word again: whose nerves the tension reads)',
   'LIVED.on': 'TPS_LIVED=1',
   'ROOMCLEAR.fresh': 'none: tools/qa/fresh-start-check.ts sets it (it needs a Game with a die of its own, and playthrough.ts names every seed)',
   // tools/qa/headless.ts, as it loads
