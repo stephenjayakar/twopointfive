@@ -397,7 +397,8 @@ export const DOORTOOLS = {
    *  is during the pockets (not the word again). What an order should DO when a frag lands on its men — and so who is first over the line when they step
    *  in still walking back — is not decided here. */
   thrHand: false, thrHandWait: 6, thrHandEvery: 0.25,
-  /** TWO ANSWERS TO THE MAINTAINER'S OPEN CALLS ON A GRENADE AT THE STACK, BUILT AND LEFT OFF (in the page too) until he says: nothing changes while both are false.
+  /** TWO ANSWERS TO A GRENADE AT THE STACK — the maintainer said yes to both, 10-16: ON in the page (?thrnocan=0, ?thrfraghold=0), false here and on the frozen
+   *  stand (TPS_THRNOCAN=1, TPS_THRFRAGHOLD=1); nothing changes while both are false.
    *  `thrNoCan` (acts only under `thrHand`): the order's wait for a hand at the door is spent and still nobody is there — the can STAYS IN THE KIT, said why
    *  ('no bang · nobody at the door'), and the stage goes on as it does with no pocket worth a can (false = thrown as it was, from wherever the picked man
    *  stands). Once the wait is spent a later can of the order goes only from the picked man's own hand at the door, with no second wait.
@@ -411,6 +412,16 @@ export const DOORTOOLS = {
    *  while the can is in the air or its burst running is not read: they go behind their flash). The hold already waited for its LEAD to be back on his
    *  slice (he is `done` only there): this asks the same of every man. */
   thrNoCan: false, thrFragHold: false,
+  /** A GRENADE SCATTERS THE MEN OF A DOOR ORDER: THE ORDER WAITS FOR THEM (the maintainer's answer, 10-16: 'pause until they're back at the door, then go').
+   *  `fragHold` is what `thrFragHold` is to a held doorway, for EVERY door order while its door is still to be opened: with a man of the order who ran from a
+   *  grenade (frag.ts fragRunning) not back on his mark (fragBack; a man down or given another order is not waited for) the stack is not called, the leaf is
+   *  not opened (the shove, the boot, the pick, the tool on the lock), a charge's man who ran is not given up on, 'stood off' is not said — and a word, or one
+   *  signal for several doors, holds its first sound for all its doors ('the door waits', said by a man who did not run). The stage's own caps do not run
+   *  meanwhile. `fragHoldCap` s of that, in all, is the order's whole wait: after it the order goes on as it was ('on without …'), so a man who cannot get
+   *  back does not freeze the squad — and Sam's word given AGAIN while it is held sends them at once ('the word again'). NOT held: anything once the leaf has moved or the signal has gone (the can, the wait behind a burst, each man's turn
+   *  through the frame), Sam's own trigger on a set charge, a stack still waiting for Sam's word (who ran is kept: the wait begins when the word comes), a captor's last warning, the response team's own door orders (Sam's squad only). A threshold's hold and its pockets are `thrFragHold`'s. false = the
+   *  order as it was (the module's and the frozen stand's; ON in the page, ?fraghold=0 puts both off; TPS_FRAGHOLD=1). */
+  fragHold: false, fragHoldCap: 8,
   /** A KNOWN THREAT FIRST. The maintainer, 10-11, on a replay (the compound's shed: a man inside shot the jamb man, the word came, and the first man through
    *  walked to his point looking 95° off where the fire had come from): "the point man here saw his buddy go down, knows roughly where the enemy is in the
    *  room and looks the wrong way going in". `threatFirst` (false = the entry as it was, run for run): while a door is worked the order REMEMBERS, for
@@ -496,7 +507,7 @@ export const THR_PAGE = 'thr', HELD_PAGE = 'held';
 type Phase = 'stack' | 'ready' | 'kick' | 'toss' | 'fuse' | 'wait' | 'enter' | 'place' | 'standoff' | 'armed' | 'slice' | 'held' | 'thr' | 'pocket';
 /** One word of Sam's (go()) and the orders it let go together. `go1`: when they were all on their doors and the loud ones began (NaN: not yet);
  *  it is dropped from `words` once they have all crossed. */
-export interface Word { t0: number; go1: number }
+export interface Word { t0: number; go1: number; /** DOORTOOLS.fragHold: the game time this word was last held for a door whose men ran from a grenade (unset: not held) */ fledT?: number }
 type Post = StackPost;
 /** the phases a stack WALKS UP and WAITS in (tick: its last man keeps the rear through these). Once the can is on its way — toss, fuse, wait — or the
  *  boot or the shove goes, every gun turns in: the man behind the lead is through the frame on his heels, not a half turn late */
@@ -507,6 +518,10 @@ export interface DoorOp {
   /** given by code (order(): a scenario's own entry), not off the menu */
   coded?: boolean;
   men: Guard[]; lead: Guard;
+  /** DOORTOOLS.fragHold: the men of the order who ran from a grenade and are not back on their marks · the seconds the order has waited for such men, in all
+   *  (`fragHoldCap`) · the game time that was last counted (unset: not waiting) · 'the door waits' said and not answered yet · the order's signal has gone (a
+   *  word's first sound, a gate's): nothing of it waits from here */
+  fled?: Set<Guard>; fledW?: number; fledT?: number; fledSaid?: boolean; fledGo?: boolean;
   /** clear from outside by three or more: the men who do not work the opening — they watch the squad's back from the end of the file */
   rear: Set<Guard>;
   /** doorway.ts DOORMANNERS.stackCover: a man of the stack is covering a door standing open onto it (`door`) before he comes up to his mark — `cover`: the
@@ -768,8 +783,8 @@ export class DoorTools {
       // (the word is not about what the menu was opened on: its row sits under a header of its own and names who would take it. Its key is Sam's own — input()
       // below gives it, menu or no menu — so the row shows that key and has no digit; it is not LISTED on a door's menu, where that key is 'wait for my word')
       if (goKey !== null) g.orders.register({ id: 'go', head: WORD_HEAD, hotKey: goKey || undefined, label: t => { const w = this.waitingWords(g.orders.recipients(t)); return w ? `go · ${w}` : 'go'; }, targets: ['floor', 'door', 'none'], listed: ['floor', 'none'], ack: ['going.', 'moving.'],
-        only: (_S, men) => this.waitingMen(men),   // (a man with nothing waiting — on the F drill, say — is not this order's: his drill is not asked to let go of him)
-        valid: (_S, _t, men) => this.waitingAny(men).length > 0 || 'nobody waiting.', issue: (_S, men) => { this.goMen(men); } });
+        only: (_S, men) => { const w = this.waitingMen(men); if (w.length) return w; const h = this.fragHeld(men); return men.filter(m => h.some(o => o.men.includes(m))); },   // (a man with nothing waiting — on the F drill, say — is not this order's: his drill is not asked to let go of him)
+        valid: (_S, _t, men) => this.waitingAny(men).length > 0 || this.fragHeld(men).length > 0 || 'nobody waiting.', issue: (_S, men) => { this.goMen(men); } });
       else g.orders.unregister('go'); }
     // … and on the page of a HELD THRESHOLD the word has a row for the pair too — on the key that is its word there (the four's row above is not listed on
     // a door's menu). The pair's: the blind pockets banged, then the step in (pairWord). The four's is its one word — everything of theirs that waits on
@@ -1671,7 +1686,11 @@ export class DoorTools {
     this.wordKeyT = this.g.time; for (const c of this.set.filter(c => !this.onPendingWord(c))) this.trigger(c); return true;
   }
   private goMen(men: Guard[]): string | null {
-    const g = this.g, list = this.waitingAny(men); if (!list.length) return 'nobody is waiting on your word.';
+    const g = this.g;
+    if (DOORTOOLS.fragHold) {   // (THE WORD AGAIN while it is held for men who ran from a grenade: Sam's call — it waits for nobody)
+      const held = this.fragHeld(men);
+      if (held.length) { for (const o of held) { this.beat(o, 'the word again'); this.fragOn(o); } this.wordTick(); if (!this.waitingAny(men).length) return null; } }   // (others of these men still waiting for their FIRST word: it is given below)
+    const list = this.waitingAny(men); if (!list.length) return 'nobody is waiting on your word.';
     holdFireOrder(g, 'go');   // (holdfire.ts: the word, by whatever road it came — what waited on it lifted nothing until now)
     const w: Word = { t0: g.time, go1: NaN }; this.words.push(w); this.stats.words++;
     for (const x of list) { const op = 'stack' in x ? this.fromStack(x.men, x.stack) : x; if (!op) continue;
@@ -1704,9 +1723,12 @@ export class DoorTools {
     for (const w of [...this.words]) {
       const ops = this.ops.filter(o => o.word === w); if (!ops.length) { this.words.splice(this.words.indexOf(w), 1); continue; }
       if (isNaN(w.go1)) {   // nobody makes a sound until everybody is on his door (or the late pair has had its time)
+        if (K.fragHold && ops.some(o => this.fragWait(o))) { w.t0 += Math.min(t - (w.fledT ?? t), 0.1); w.fledT = t; continue; }   // (men of a door on this word ran from a grenade and are not back: nobody makes a sound yet — `fragHoldCap` a door at most — and the word's own clock for a late door does not run meanwhile)
+        if (K.fragHold) w.fledT = undefined;
         if (!ops.every(o => o.hold >= 1) && t - w.t0 < K.wordStack) continue;
         w.go1 = t;
         for (const op of ops) { if (op.hold < 1) { op.word = null; continue; }   // (too late: it carries on alone)
+          if (K.fragHold) this.fragOn(op);   // (the signal has gone: nothing of this door waits from here)
           if (op.kind === 'charge') { const c = this.chargeOn(op.door); if (c) this.blow(c); else op.word = null; }   // → 'wait'
           else if (op.phase === 'held') op.hold = 2;
           else if (op.kind === 'threshold' && op.thr) { op.hold = 0; if (op.phase === 'thr') { if (op.thr.wordStep) { this.heldBeat(op); this.toStep(op); } else { op.thr.asked = true; this.toPockets(op); } } }   // (its men on the jambs already: the pockets now, with the loud ones — and it crosses with the rest, from 'wait')
@@ -1866,7 +1888,9 @@ export class DoorTools {
       const own = !!S.menu && this.heldOn(S.menu.target, S.menu.men).length > 0;   // (the held door's OWN menu words its fifth row 'F: go': the key is the word there whatever the switch says)
       if ((K.thrMenuWord || !S.menu || own) && this.pairWord(S.recipients())) { input.pressed.delete(key); S.close(); return; }   // (with no menu, or any other: a menu that is up goes away, as it does for the four's word)
     }
-    const men = four ? S.recipients(row >= 0 ? M!.target : null) : [], waiting = this.waitingAny(men).length > 0;
+    const men = four ? S.recipients(row >= 0 ? M!.target : null) : [];
+    const again = four && K.fragHold && g.time - this.wordKeyT >= K.wordTap && this.fragHeld(men).length > 0;   // (the word AGAIN, on a word held for men who ran from a grenade; a second tap inside `wordTap` of the first is not it)
+    const waiting = this.waitingAny(men).length > 0 || again;
     if (waiting || row >= 0) {
       const st = NB.state; if (!(waiting && (st === 'set' || st === 'stacking') && NB.drillOps.some(m => men.includes(m)))) input.pressed.delete(key);
       if (row >= 0) S.pick(row); else { const p = g.player.char.pos; S.close(); S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }); }
@@ -1950,6 +1974,7 @@ export class DoorTools {
   private defuse(op: DoorOp) { const it = op.can; if (it && !it.fired && it.kind !== 'frag') it.fuse = Math.min(it.fuse, DOORTOOLS.fuseAfterLand); }
 
   private step(op: DoorOp) {
+    if (DOORTOOLS.fragHold && this.g.orders.sams && (op.phase === 'kick' || PRE.includes(op.phase)) && this.fragStep(op)) return;   // (men of the order ran from a grenade and are not back: the door is not opened yet)
     const g = this.g, K = DOORTOOLS, d = op.door, t = g.time, el = t - op.t0, lead = op.lead, name = doorWords(d);
     switch (op.phase) {
       case 'stack': {
@@ -1982,7 +2007,7 @@ export class DoorTools {
           break; }
         const G = op.gate;
         if (G) {   // one signal for several doors: not before the others are stacked and the word is given
-          if (isNaN(G.openT)) { if (!G.go || G.ops.some(o => this.ops.includes(o) && isNaN(o.readyT))) break; G.openT = t; }
+          if (isNaN(G.openT)) { if (!G.go || G.ops.some(o => this.ops.includes(o) && (isNaN(o.readyT) || this.fragWait(o)))) break; G.openT = t; if (K.fragHold) for (const o of G.ops) if (this.ops.includes(o)) this.fragOn(o); }   // (fragHold: a door beside this one on the signal is waiting for its men — and once the signal has gone nobody waits)
           const beside = G.ops.filter(o => o !== op && this.ops.includes(o));
           if (!this.willKick(op) && this.bootBeside(op)) { if (K.gateHand && !this.gateAsked.has(op) && !isOpen(d) && !this.lockedOut(d, op.side)) { this.gateAsked.add(op); this.toHandle(op, true); } break; }   // a door that only wants a hand (or stands open) goes with the boot beside it — its lead to the handle meanwhile (gateHand; asked once)   // a door that only wants a hand (or stands open) goes with the boot beside it
           if (op.kind === 'openClear' && beside.some(o => o.kind === 'bangClear' && (o.phase === 'stack' || o.phase === 'kick' || o.phase === 'toss' || o.phase === 'fuse' || o.phase === 'wait'))) break;   // and a door with no can of its own waits for the men behind the can beside it: its men go in when they do, not ahead of the flash
@@ -3239,6 +3264,63 @@ export class DoorTools {
   private thrFragWait(op: DoorOp): boolean {
     const K = DOORTOOLS, T = op.thr!;
     return K.thrFragHold && !!T.fled?.size && !T.handDone && (T.handW ?? 0) < K.thrHandWait && !op.lastStack && !op.lastHold && !this.g.rescue.lastWarning(op.door) && !(op.word && this.ops.some(o => o !== op && o.word === op.word));
+  }
+  /** DOORTOOLS.fragHold: is this order waiting for men who ran from a grenade — some of them not back, the stage it is in one that holds (fragHolds), its
+   *  one wait (`fragHoldCap`) not spent, its signal not gone. Sam's own squad only (the response team's cast of this module is not asked). Not asked under a
+   *  captor's last warning. */
+  private fragWait(op: DoorOp): boolean {
+    const K = DOORTOOLS;
+    return K.fragHold && !!op.fled?.size && !op.fledGo && this.g.orders.sams && (op.fledW ?? 0) < K.fragHoldCap && this.fragHolds(op) && !op.lastStack && !op.lastHold && !this.g.rescue.lastWarning(op.door);
+  }
+  /** … the orders on a word that has been given and is held for men who ran, where these men are on one of its doors (every door of such a word): the word
+   *  given AGAIN lets them all go (goMen), and the 'go' row is not greyed for it */
+  private fragHeld(men: Guard[]): DoorOp[] {
+    if (!DOORTOOLS.fragHold) return [];
+    const held = this.words.filter(w => isNaN(w.go1) && this.ops.some(o => o.word === w && o.men.some(m => men.includes(m))) && this.ops.some(o => o.word === w && this.fragWait(o)));
+    return held.length ? this.ops.filter(o => !!o.word && held.includes(o.word)) : [];
+  }
+  /** … the stages that hold, each while its door is still to be opened: the walk to the stack and its call (on one signal for several doors: once the
+   *  signal is raised) · a stack that is ready, once it is no longer waiting for Sam's word (the word given, or given up on) · the leaf itself — a boot,
+   *  shove or tool not yet begun (a hand on a pick stays on it) · a charge whose own man ran · 'stood off' · a set charge on a word that has been given */
+  private fragHolds(op: DoorOp): boolean {
+    const k = op.kick;
+    switch (op.phase) {
+      case 'stack': return !op.gate || op.gate.go;
+      case 'ready': return !op.onWord;
+      case 'standoff': return !!this.chargeOn(op.door);   // (the charge gone from the door — somebody opened it — is the order's own end, not waited on)
+      case 'place': return !!op.fled?.has(op.lead) && !isOpen(op.door);
+      case 'armed': return !!op.word && !!this.chargeOn(op.door);
+      case 'kick': return !!k && isNaN(k.t) && !k.by && !(k.gun && (k.gun.n > 0 || k.gun.nextT !== 0)) && !isOpen(op.door);   // (a shell gone or a hammer wound up is begun)
+      default: return false;
+    }
+  }
+  /** … back: on his own mark of the order (a man the order has no mark for is back once he has stopped running; one whose mark the stuck rule has moved to
+   *  where he stands — orders.ts — counts as back there) */
+  private fragBack(op: DoorOp, m: Guard): boolean { const A = op.mine.get(m); return !A?.post || flat(m.char.pos, A.post) <= 0.8; }
+  /** … the wait that was said is over: said so once, where men are still out ('on without …') */
+  private fragSaid(op: DoorOp) {
+    if (!op.fledSaid) return; op.fledSaid = false; const F = op.fled;
+    if (F?.size) this.beat(op, `on without ${[...F].map(m => m.callsign).join(', ')} · ${(op.fledW ?? 0) >= DOORTOOLS.fragHoldCap ? "the order's wait is spent" : 'not waited for'}`);
+  }
+  /** … the order's signal has gone (its word's first sound, the signal several doors share, Sam's word again): nothing of it waits from here */
+  private fragOn(op: DoorOp) { this.fragSaid(op); op.fledGo = true; }
+  /** DOORTOOLS.fragHold, once a tick for an order whose door is still to be opened (step): who of it ran from a grenade and is not back — and true when
+   *  the order does not move this tick. The seconds held are counted, and the stage's own clock does not run. Who ran is kept while nothing holds too (a
+   *  stack waiting for Sam's word): the count and 'the door waits' begin when the word comes. */
+  private fragStep(op: DoorOp): boolean {
+    const g = this.g, K = DOORTOOLS, t = g.time, F = op.fled ??= new Set<Guard>(), n0 = F.size, names = () => [...F].map(m => m.callsign).join(', ');
+    let came = false; for (const m of F) if (!op.men.includes(m)) F.delete(m);   // (down, or given another order: the order's men are the living ones still on it)
+    for (const m of op.men) { if (fragRunning(g, m)) F.add(m); else if (F.has(m) && this.fragBack(op, m)) { F.delete(m); came = true; } }
+    if (F.size && !n0) this.beat(op, `grenade on the stack · ${names()} off the door`);
+    if (!F.size && n0) this.beat(op, came ? 'the men are back' : 'nobody left to wait for');
+    const holds = this.fragHolds(op);
+    if (!holds || !this.fragWait(op)) {
+      if (holds || !F.size) this.fragSaid(op);   // (a stage that holds nothing with men still out — a charge going on by a man who did not run — leaves it said: the next stage does not say it again)
+      op.fledT = undefined; return false; }
+    const dt = op.fledT === undefined ? 0 : Math.min(t - op.fledT, 0.1); op.fledT = t; op.fledW = (op.fledW ?? 0) + dt; op.t0 += dt;
+    if (op.phase === 'place') op.setT = NaN;   // (its man is off the lock: what his hands had done of it is not kept — it goes on from the start when he is back, as it does for a man who walked off it)
+    if (!op.fledSaid) { op.fledSaid = true; this.beat(op, `the door waits: ${names()} not back`); g.say(op.men.find(m => !F.has(m)) ?? op.lead, 'hold — back on the door.'); }
+    return true;
   }
   private thrAt(op: DoorOp, m: Guard): boolean { return flat(m.char.pos, op.door.frameCentre) < DOORTOOLS.throwReach && offOf(op.door, m.char.pos, op.side) > 0; }
   /** the one order of men a can is thrown by. `hand` false: the stage's pick as it always was (thrThrower: never null). `hand` true (DOORTOOLS.thrHand): the
