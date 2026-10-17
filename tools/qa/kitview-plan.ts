@@ -976,7 +976,10 @@ async function acting(names: string[]) {
  *      light and its box hung where the page hangs them, the target built by the page's own builder and pushed on the game's list, Sam on his rest
  *      place; the park said before every step as the child says it. ONE round at the lamp from the gun in his hand breaks it (the game's own
  *      shootOut), nobody is roused by it (the park's count 0, the floor at 0, no alarm placed, Sam up), and the game's own repairLights mends it.
- *  KITQUIET_BREAK=1: the link is read with `kitloud` in it and the round is aimed 1.2 m beside the lamp — the kind rows and the lamp rows must FAIL.
+ *    · THE ROOF STAYS ON, on each of those ways: the slabs the picture draws (kitViewQuietRoofs, on the level as built) lie wholly behind the wall and
+ *      over no man's rest place; none where the team stands under a roof; the vault's hut keeps its roof.
+ *  KITQUIET_BREAK=1: the link is read with `kitloud` in it, the round is aimed 1.2 m beside the lamp and the roofs are asked with the key off — the
+ *  kind rows, the lamp rows and the vault's roof row must FAIL.
  *  WHAT THIS CANNOT SEE: the picture — the pose, the pool on the floor, the walk through the dark: tools/qa/kitview-levels.cjs on a quiet kind. */
 const BREAKQ = process.env.KITQUIET_BREAK === '1';
 async function quietPicture(names: string[]) {
@@ -1033,6 +1036,11 @@ async function quietPicture(names: string[]) {
       const back = !t.broken && light.enabled && light.intensity > 0;
       row(!st.why && lit0 && out1 && back && g.targets.includes(t), `${said}: the pool lamp is a lamp of the game's — hung where the page hangs it and lit (${lit0 ? 'burning' : 'NOT BURNING'}), ONE round from Sam's ${g.player.slot} on his rest place ${pt(S0)} ${out1 ? 'puts it out' : 'DOES NOT PUT IT OUT'} (the game's own shootOut), and the game's repairLights ${back ? 'mends it' : 'DOES NOT MEND IT'}${st.why ? ' — the mission REFUSED: ' + st.why : ''}`);
       row(calm, `${said}: …and nobody is roused by it — the park put right ${roused.men} man-park(s) and ${roused.alarms} alarm mark(s) through the round and a half second after, the floor at ${g.escalation}, ${g.alarm.placed ? 'AN ALARM PLACED' : 'no alarm placed'}, Sam ${g.player.down ? 'DOWN' : 'up'}`);
+      // ---- the roof stays on (KIT_VIEW_QUIET.roofs): the slabs drawn lie behind the wall, over no man's place; the vault's hut keeps its roof
+      { const B = g.level.boxes as { c: number[]; h: number[]; flags: number }[], roofs: number[] = KV.kitViewQuietRoofs(B, P, QK.roofs && !BREAKQ), lim = P.wall.face + QK.roofEave;
+        const over = (p: readonly number[] | null) => !!p && roofs.some(i => Math.abs(p[0] - B[i].c[0]) <= B[i].h[0] && Math.abs(p[1] - B[i].c[2]) <= B[i].h[2]);
+        const behind = roofs.every(i => out([B[i].c[0], B[i].c[2]]) < lim && (B[i].flags & BoxFlag.NoPrimary) !== 0), want = w.name === 'vault' ? 1 : 0;
+        row(roofs.length >= want && behind && !over(S0) && !over(at.mate) && (!P.indoors || roofs.length === 0), `${said}: the roof stays on — ${roofs.length} slab(s) the camera looks through ${roofs.length ? 'are drawn, each wholly behind the wall' + (behind ? '' : ' (ONE IS NOT)') : P.indoors ? 'drawn: the team stands under a roof itself' : 'lie wholly behind this wall'}${roofs.length < want ? ' — THE HUT\'S ROOF IS NOT AMONG THEM' : ''}${over(S0) || over(at.mate) ? ' — ONE LIES OVER A MAN\'S PLACE' : ''}`); }
       if (g.quiet.active) g.quiet.stop(); if (g.roomClear.active) g.roomClear.stop();
     } catch (err) { row(false, `${said}: the lamp could not be stood up headless — ${String((err as Error)?.message ?? err)}`); } }
 }

@@ -74,6 +74,7 @@ import type { LoopCtx } from './loop';
 import type { RtLight } from '../render/lights';
 import type { KitViewLamp, KitViewLight, KitViewWay } from '../scene/scenarios';
 import type { Box } from '../scene/boxes';
+import { BoxFlag } from '../scene/boxes';
 import type { Vec3 } from '../math/vec';
 import type { KitPlanLevel, KitViewPlanned } from './kitViewPlan';
 import { kitViewQuietKind } from './kitViewSet';   // (pure: the mission's kind, read off its link)
@@ -224,6 +225,10 @@ export const KIT_VIEW_QUIET = {
   /** the yard: the moon DOWN (it lit everything to one middle value: the pool was a quarter over its own floor) and a blue fill the only light in
    *  the moon's shadow — the floor round his feet a blue shape, never black · the sky as it was (it does next to nothing on the lowest presets) */
   fill: { color: [0.4, 0.6, 1] as Vec3, intensity: 1.6 }, moonScale: 0.25, skyScale: 1.2,
+  /** THE ROOF STAYS ON: where the team stands under the open sky, a roof or ceiling slab that lies wholly behind the wall (no further out over the
+   *  team's side than `roofEave` m past its face) is DRAWN — the game's camera looks through such a slab; here the room behind the door is a dark
+   *  shape, "they are inside", and the only warm things left are the pool and the door's slit. false = the room open to the camera, as it was */
+  roofs: true, roofEave: 0.15,
   /** the door: this far ajar at rest (deg), eased back there at … rad/s after a row moved it · the room behind it: its own lamps that reach the doorway
    *  burn at this share of themselves (the loud cost's seam: quietInside()) · and THE BLADE: a small warm lamp of the picture's own hung … m behind
    *  the wall's far face, this high — low and close behind the gap, so that a long thin blade of light lies out across his floor (a room's lamp
@@ -259,6 +264,18 @@ export function kitViewQuietPlaces(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wal
   const sam = P.slotSrc[0] !== 'authored' ? at(Q.samAlong) : null, mate = mates >= 1 && P.slotSrc[1] !== 'authored' ? at(Q.samAlong + Q.mateGap) : null;
   const S = sam && ok(sam) ? sam : null;
   return { sam: S, mate: S && mate && ok(mate) ? mate : null };
+}
+/** THE ROOF STAYS ON (pure; KIT_VIEW_QUIET.roofs): the level's boxes, by index, that the quiet picture DRAWS though the game's camera looks through
+ *  them — a cover (the plan's own test of one: its underside `coverY` up, `coverHalf` across both ways) flagged NoPrimary, no light's panel, that lies
+ *  wholly behind the wall: no corner of it further out over the team's side than `roofEave` past the wall's face (a turned slab: by its circle).
+ *  None where the team itself stands under a roof (the plan's `indoors`: the slab over the men is the one over the room), or with the key off. */
+export function kitViewQuietRoofs(boxes: readonly Pick<Box, 'c' | 'h' | 'yaw' | 'flags'>[], P: Pick<KitViewPlanned, 'anchor' | 'wall' | 'indoors'>, on: boolean = KIT_VIEW_QUIET.roofs): number[] {
+  if (!on || P.indoors) return [];
+  const m = P.anchor.mid, n = P.anchor.n, lim = P.wall.face + KIT_VIEW_QUIET.roofEave, outOf = (x: number, z: number) => (x - m[0]) * n[0] + (z - m[1]) * n[1], got: number[] = [];
+  boxes.forEach((b, i) => { if (!(b.flags & BoxFlag.NoPrimary) || (b.flags & (BoxFlag.NoShadow | BoxFlag.Emissive | BoxFlag.AreaLit)) || b.c[1] - b.h[1] < KIT_PLAN.coverY || Math.min(b.h[0], b.h[2]) < KIT_PLAN.coverHalf) return;
+    const far = b.yaw !== 0 ? outOf(b.c[0], b.c[2]) + Math.hypot(b.h[0], b.h[2]) <= lim : [[1, 1], [1, -1], [-1, 1], [-1, -1]].every(([i0, k0]) => outOf(b.c[0] + i0 * b.h[0], b.c[2] + k0 * b.h[2]) <= lim);
+    if (far) got.push(i); });
+  return got;
 }
 /** THE POOL LAMP AS A LAMP OF THE GAME'S (game/lighting.ts LightTarget, built by hand on the host side: the game makes its own only from a level's
  *  lights): the picture's porch light and its glowing box (its index in the world's statics), so that the player's round meets it as it meets any
@@ -534,6 +551,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
   let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9;
+  const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
   const base = new WeakMap<RtLight, number>();   // a room light's / the moon's intensity as the game has it (what `roomLights` / `moonScale` multiply)
 
@@ -704,7 +722,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const quietInside = (k: number) => { qShare = k; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; t.on = true; t.baseIntensity = a.I * k; t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
     if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * (k / KIT_VIEW_QUIET.inside); };
   /** …and as the mission had them (before a restart, at the picture's end: a base is the lamp's own, and no restart puts it back) */
-  const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { t.baseIntensity = a.I; t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = []; };
+  const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { t.baseIntensity = a.I; t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = [];
+    if (qRoofs.size) { for (const b of qRoofs) b.flags |= BoxFlag.NoPrimary; qRoofs.clear(); engine.world.staticsDirty = true; } };
   const stage = (expect?: number, head?: Guard | null, keep?: Keep | null) => { try { place(expect, head, keep); if (kitViewLoop && staged) live(staged); } catch (err) { console.error('kitview: the team could not be staged —', err); none(); } };
   const place = (expect?: number, head?: Guard | null, keep?: Keep | null) => {
     state = 'staging'; staged = null; dayOut = [];
@@ -750,7 +769,11 @@ export function kitViewStart(d: KitViewDeps): KitView {
         const o = outOf(t.pos);
         if (o >= P.wall.back) { if (t.on && dist(t.pos, foot) <= L.range) { t.on = false; qOut.push(t.name); } }
         else if (lit0!.has(t) && dist(t.pos, wedge) <= Math.min(L.range, KIT_PLAN.litReach)) { if (!lampAs.has(t)) lampAs.set(t, { I: t.baseIntensity, E: [t.baseEmissive[0], t.baseEmissive[1], t.baseEmissive[2]], on: t.on }); qIn.push(t); } }
-      quietInside(QK.inside); }
+      quietInside(QK.inside);
+      // (THE ROOF STAYS ON — KIT_VIEW_QUIET.roofs: the slabs the camera looks through, drawn where they lie wholly behind the wall and the team stands
+      //  under the sky. The flag is the box's own and no restart writes it: put back by quietUndo(), with the dimmed lamps)
+      { const Wd = engine.world; for (const i of kitViewQuietRoofs(game.level.boxes, P)) { const b = game.level.boxes[i]; if (Wd.statics[i] !== b) continue; b.flags &= ~BoxFlag.NoPrimary; qRoofs.add(b); }   // (index for index the level's boxes head the world's: one that is not is left alone)
+        if (qRoofs.size) Wd.staticsDirty = true; } }
     // the slots: a shield man first, then the others as staged
     const file = [...team.filter(g => d.shield(g)), ...team.filter(g => !d.shield(g))], all0 = d.team();
     const keptMen = keep ? keep.perm.map(i => all0[i]).filter(g => g && team.includes(g)) : [];   // (the file as it stood, by team index: a restart makes new men)
@@ -1797,7 +1820,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (game.time < ventKill && !(B && B.field === 'smoke')) shutCans();   // (a smoke cut short: its can vents nothing, whenever its fuse runs out)
   };
 
-  const V: KitView & { readonly lamps: { porch: RtLight | null; fill: RtLight | null }; readonly pin: FollowCamera['pin']; /** for the page check (tools/qa/kitview-levels.cjs HOUR): the way's own lamps put out for the hour, by id · the porch lamp's glowing box is among the world's statics */ readonly dayOut: string[]; readonly fixtureUp: boolean; /** THE QUIET PICTURE (KIT_VIEW_QUIET), for the page checks: null on a loud link or with the switch off — else the link's kind, whether it is staged, the pool lamp as the game has it, the level's lamps put out, the room's dimmed and the share they burn at, the leaf's rest angle, where Sam and a partner rest, how he is, and why the last quiet row gave way to the loud one */ readonly quiet: { kind: 'quiet' | 'solo'; on: boolean; lamp: { target: boolean; on: boolean; broken: boolean; lit: boolean; fixture: boolean; pos: Vec3 } | null; out: string[]; inside: { lamps: string[]; own: boolean; share: number }; leaf: number; place: V2 | null; mate: V2 | null; crouch: boolean; knee: number; holstered: boolean; lift: number; kept: string | null } | null } = {
+  const V: KitView & { readonly lamps: { porch: RtLight | null; fill: RtLight | null }; readonly pin: FollowCamera['pin']; /** for the page check (tools/qa/kitview-levels.cjs HOUR): the way's own lamps put out for the hour, by id · the porch lamp's glowing box is among the world's statics */ readonly dayOut: string[]; readonly fixtureUp: boolean; /** THE QUIET PICTURE (KIT_VIEW_QUIET), for the page checks: null on a loud link or with the switch off — else the link's kind, whether it is staged, the pool lamp as the game has it, the level's lamps put out, the room's dimmed and the share they burn at, the leaf's rest angle, where Sam and a partner rest, how he is, and why the last quiet row gave way to the loud one */ readonly quiet: { kind: 'quiet' | 'solo'; on: boolean; lamp: { target: boolean; on: boolean; broken: boolean; lit: boolean; fixture: boolean; pos: Vec3 } | null; out: string[]; /** the roof slabs drawn (KIT_VIEW_QUIET.roofs) */ roofs: number; inside: { lamps: string[]; own: boolean; share: number }; leaf: number; place: V2 | null; mate: V2 | null; crouch: boolean; knee: number; holstered: boolean; lift: number; kept: string | null } | null } = {
     get state() { return kitViewLoop && paused && said && state !== 'none' ? 'paused' : state; }, drawn: 0, skipped: 0, blocked: 0, men: [], door: null, way: 0,
     get beat() { return beat ? { n: beat.n, field: beat.field, i: beat.i, t: beat.t, phase: beat.phase, marks: beat.marks, post: beat.post ?? null } : null; }, get queue() { return asked !== null ? [asked] : []; }, get held() { return held ? { ...held, why: held.why.slice(), by: { ...held.by } } : null; }, restarts: 0, rehangs: 0, cuts: 0, preempt: true, home: true, standClear: true, seats: 0, pins: 0, roused: { men: 0, alarms: 0 }, last: null, refused: null, hits: { sam: 0, team: 0 }, shots: 0, stroke: { n: 0, raw: 0, drawn: 0, cap: 0 },
     get dissolve() { return { n: dz.n, phase: dz.phase, cuts: dz.cuts }; },
@@ -1810,7 +1833,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       return o; },
     get quiet() { if (quietKind === null) return null; const S = staged, pl = game.player, t = pool;
       return { kind: quietKind, on: Q && !!S, lamp: Q && t ? { target: game.targets.includes(t), on: t.on, broken: t.broken, lit: !!t.light && t.light.enabled && t.light.intensity > 0, fixture: t.boxes.length > 0 && engine.world.statics[t.boxes[0]] === fixture, pos: [t.pos[0], t.pos[1], t.pos[2]] as Vec3 } : null,
-        out: qOut.slice(), inside: { lamps: qIn.map(x => x.name), own: !!qOwn && engine.lights.lights.includes(qOwn), share: qShare }, leaf: S ? S.rest - S.shut : 0, place: Q && S ? [S.sam[0], S.sam[1]] as V2 : null, mate: Q && S?.mate ? S.mate.p : null,
+        out: qOut.slice(), roofs: qRoofs.size, inside: { lamps: qIn.map(x => x.name), own: !!qOwn && engine.lights.lights.includes(qOwn), share: qShare }, leaf: S ? S.rest - S.shut : 0, place: Q && S ? [S.sam[0], S.sam[1]] as V2 : null, mate: Q && S?.mate ? S.mate.p : null,
         crouch: pl.crouch, knee: (pl.char.anim as unknown as { crouch: number }).crouch, holstered: pl.holstered, lift: lamps.fill && fillBase > 0 ? lamps.fill.intensity / fillBase : 1, kept: qKept }; },
     get scan() { const S = staged, row = (name: string, k: object, c: { aimYaw: number }, rest: number) => { const s = scans.get(k); return { name, on: !!s?.on, deg: s ? s.v / R : 0, off: wrap(c.aimYaw - rest) / R }; }; return S ? [row('Sam', game.player, game.player.char, yawTo(game.player.char.pos, S.foot)), ...S.order.map(g => row(g.callsign, g, g.char, homeOf(S, g).yaw))] : []; },
     rest() {
