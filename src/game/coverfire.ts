@@ -22,6 +22,7 @@
 // THE SWITCH is COVERFIRE.on, and it only ever runs under the destruction goal's own (wallBreakOn: DESTRUCTION.on, tune.wallBreak, chaos > 0). Off = every
 // hook returns on its first line: no state, no dice, no round (play-through digests equal the base's). The page: on unless the URL carries ?nocoverfire.
 // Not here: what the man behind the cover then does, charges, glass, doors.
+import { conditionSup } from './condition';
 import { Vec3, v3, clamp, lerp, wrapAngle, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
@@ -279,7 +280,7 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   if (!on || Cw.lay < P.acquireMin - 1e-9 || g.time < Cw.next || g.time < O.next || g.time < O.reloadUntil) return true;   // (O.next: the room fight's own gap since his last round at a man)
   if (!gd.weapon.fire()) { O.reloadUntil = g.time + gd.weapon.def.reload.dur; g.say(gd, 'reloading.'); return true; }
   const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * Sk.spreadK;
-  const supK = g.tune.suppression && gd.sup.v >= SUPPRESSION.flinch ? 1.6 : 1;
+  const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
   fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(Cw.lay, 0, 1)) * supK + speed * P.shooterMoveK * 0.5 });
   O.rounds++; Cw.k++; if (g.fight) g.fight.stats.opRounds++;
   O.next = Cw.next = g.time + (Cw.k % 2 === 0 ? Sk.shift[0] + simRandom() * (Sk.shift[1] - Sk.shift[0]) : Sk.pair);

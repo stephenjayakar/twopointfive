@@ -38,6 +38,7 @@
 // What is asked of the renderer goes through Game.sensors (the smoke between each operative / defender pair in reach, ≤ ROOMFIGHT.pairs segments a frame, keys
 // 'fightS<a>_<b>'); headless nothing answers and the air is clear. guards.ts reads it back through pairSmoke() for every AI-on-AI sight test.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { conditionSup } from './condition';
 import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -1009,7 +1010,7 @@ export class RoomFight {
     O.lineT = 0;
     if (!gd.weapon.fire()) { O.reloadUntil = g.time + gd.weapon.def.reload.dur; this.speak(O, 'reloading.', 0); return; }
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
-    const supK = g.tune.suppression && gd.sup.v >= SUPPRESSION.flinch ? 1.6 : 1;
+    const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
     fireWeapon(g, c, to, false, { steady: true, spread: hands * (plateUp(gd) ? SHIELD.handsK : 1) * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });
     O.rounds++; O.n++; this.stats.opRounds++;
     O.next = g.time + (O.n % 2 === 0 ? pick(S.shift) : S.pair);
