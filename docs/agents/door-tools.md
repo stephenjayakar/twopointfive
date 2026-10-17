@@ -422,6 +422,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its four lines about the room and says so in a line of its own, 'A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM': every man of the order lost before
   any step in, each to a defender not at home in the room behind the door; never more than one run in three, never every run of a floor. NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
   over two cans, a can first, a shared word, more seeds. Headless only: never played, never heard (the spoken line), never seen on a GPU.
+- **Two door checks take the yard's guns off the floor (10-17).** `threshold-four` and `threshold-first` read the depot's `a_s`, the door on the
+  floodlit yard that two other rooms watch. Who of four men stacked on it lives to the step in is the yard fight's dice: over 16 seeds 24 of 64
+  are lost with the rear man's turn on and 25 with it off (that rule's owner's count), and which of the three seeds read holds a wipe moved with every change that shifted a walk by half a second (three
+  flips of `threshold-four` on shipped in a day: the seen walk, an open leaf gone round, the rear man's turn — none a door rule's). As the order
+  is given every defender not at home in the room behind the door is taken off the floor (threshold-probes `YARDOUT`, those two checks only): the
+  lines ask what the threshold does with the ROOM. Green on both stands with the rear man's turn on and off (four: 11 lines; first: 10 shipped,
+  9 frozen). The pass-over line above stays for a door that still has such guns. NOT judged by any door check now: a stack under fire from
+  across a yard.
 - **Two door checks run on ROOM-FIGHT floors (10-17).** `doortools-firstman` and `threshold-hold` hold squads from the rooms (SQUADDEAL) off inside
   their own runs, by the stand's own word (`TPS_SQUADDEAL=0` round the stand-up: `rig`'s `deal: false`, threshold-probes' `NODEAL`). On a dealt floor
   the room's men are their squad's and dig in on its word (that rule's owner's reading, its runs): four seconds after a bang they are still
