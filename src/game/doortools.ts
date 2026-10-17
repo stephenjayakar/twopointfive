@@ -430,6 +430,16 @@ export const DOORTOOLS = {
    *  while the can is in the air or its burst running is not read: they go behind their flash). The hold already waited for its LEAD to be back on his
    *  slice (he is `done` only there): this asks the same of every man. */
   thrNoCan: false, thrFragHold: false,
+  /** `thrDoors` and `otherDoorM`, THE DOOR'S OWN LEAF: a man left on another door of the room is not put where that door's leaf, stood open, lies across
+   *  his line to it while there is a post where it does not, and a man is not taken as holding it from where he stands if it would. The posts were
+   *  tried with the leaf as it stood, which is shut: on the hinge side the door a man comes in by swings round between him and the opening and he is
+   *  holding a door he cannot see (the depot's store, the man left on `c_n` 3.5 to 3.9 m down its own wall). Asked of the leaf from where a pushed
+   *  leaf comes to rest, near square, to its stop, and only of one-way doors (a double-acting leaf can stand either way). It is a preference, never a
+   *  refusal: a post the leaf would hide the door from costs metres of walk beside one it would not (LEAF_COST, more the more of that sweep hides
+   *  it — where a door stands in a corner and every post is on its hinge side, the deep one that sees past a leaf stood square wins), and of the
+   *  men who could cover a door from where they stand (`otherDoorM`) the one it would hide it from least is taken first. A door is never left
+   *  unheld for it. Off = the posts as they were */
+  thrDoorsLeaf: false,
   /** A GRENADE SCATTERS THE MEN OF A DOOR ORDER: THE ORDER WAITS FOR THEM (the maintainer's answer, 10-16: 'pause until they're back at the door, then go').
    *  `fragHold` is what `thrFragHold` is to a held doorway, for EVERY door order while its door is still to be opened: with a man of the order who ran from a
    *  grenade (frag.ts fragRunning) not back on his mark (fragBack; a man down or given another order is not waited for) the stack is not called, the leaf is
@@ -511,6 +521,12 @@ export const DOORTOOLS = {
   thrLast: true, thrLastM: 2, thrLastFresh: 3,
 };
 const flat = v3.distXZ, yawTo = v3.yawTo;
+/** thrDoorsLeaf: the leaf is taken this much longer than it is (m: it has a thickness, and a line that grazes its tip is no line) · it is asked from
+ *  this far open (rad: where a leaf pushed open and let go comes to rest, near square — doors.ts) to its stop, in steps of this (rad) · what a post
+ *  the leaf hides the door from costs beside one it does not, as metres of walk: this, and as much again in proportion to how much of that sweep
+ *  hides it · the posts tried last beside a door that opens into the room, [past a jamb, into the room] in m: where a door stands in a corner
+ *  every post out along its wall is behind the leaf, and the floor that sees past a leaf stood square is nearer the door's own line and deep */
+const LEAF_EDGE = 0.1, LEAF_FROM = 1.45, LEAF_STEP = 0.1, LEAF_COST = 4, LEAF_POSTS = [[0.2, 2.4], [0.5, 2.4]];
 /** who set a charge the player put on by hand (SetCharge.by), and how far a step may take him off it before it is broken off (the wall charge's own) */
 const SAM_BY = 'Sam', SAM_SHIFT = 0.35;
 
@@ -2202,7 +2218,7 @@ export class DoorTools {
         const RC = g.roomClear, room = RC?.active ? RC.rooms.find(r => r.def.id === RC.roomAt((WORDS.on ? lead : op.men[0]).char.pos)) : null;   // (the room the man who calls it stands in)
         if (room && !g.guards.some(x => x.state !== 'dead' && x.team === 'hostile' && RC.roomAt(x.char.pos) === room.def.id)) g.say(lead, `${room.def.name} clear.`);
         // (the room is theirs: from here each man's eyes are spare for its other ways in — cover.ts deals them; his sector stands where it deals nothing)
-        if (op.thr && K.otherDoorM > 0) this.otherDoors(op, true);   // (a threshold entry: what a man can take where he stands is dealt before anybody is walked to a door)
+        if (op.thr && K.otherDoorM > 0) this.otherDoors(op, true, true, K.thrDoors);   // (a threshold entry: what a man can take where he stands is dealt before anybody is walked to a door)
         if (op.thr && K.thrDoors) this.holdDoors(op);
         if (COVER.inRoom) for (const gd of op.men) { const A = op.mine.get(gd); if (A && op.pod.has(gd) && !this.held.get(gd)?.door) A.spare = true; }
         this.beat(op, 'in'); this.stats.entries++; this.end(op, 'in');
@@ -2607,8 +2623,9 @@ export class DoorTools {
    *  frame of the entry and, `ended`, for as long as a man of it holds the room after: a man down or re-ordered gives his door up, and it is dealt again; a
    *  door the squad has since been beyond, one another order has come to work, or one somebody else has been told to watch is GIVEN BACK — its man is on his
    *  sector again. While the floor is still being looked over half the entry's men stay the floor's, and both men of an entry of two. `deal` false: nothing new is dealt (the entry's last
-   *  frame: the door they came in by gets its man first). False: nobody of this entry is left in the room, or the rule is off. */
-  private otherDoors(op: DoorOp, ended = false, deal = true): boolean {
+   *  frame: the door they came in by gets its man first). False: nobody of this entry is left in the room, or the rule is off. `seen` (thrDoorsLeaf, a
+   *  threshold's last act): a man the door's own open leaf would hide it from does not keep or take it here — holdDoors posts a man on it next. */
+  private otherDoors(op: DoorOp, ended = false, deal = true, seen = false): boolean {
     const g = this.g, K = DOORTOOLS, d = op.door, M = op.other ??= new Map<Door, { gd: Guard; w: Vec3 }>();
     const ours = (m: Guard) => m.state !== 'dead' && op.pod.has(m) && g.orders.of(m) === op.mine.get(m) && (!ended || this.held.get(m)?.A === op.mine.get(m));
     const inside = op.men.filter(ours);
@@ -2629,7 +2646,7 @@ export class DoorTools {
       // (… and one a teammate stands by is not dealt while he does: a man in the file behind Sam is walking through, not standing by anything)
       const beside = (o: Door) => squad.some(m => flat(m.char.pos, o.frameCentre) < 3 && g.orders.of(m)?.post !== null);
       for (const [o, R] of [...M]) { const e = room.entries.find(x => x.door === o), O = g.cover.ready().find(x => x.door === o);
-        if (!e || !O || g.entry.farKnown(O, inner(e)) || theirs(o, R.gd)) { back(o, R.gd); this.beat(op, `other door · ${R.gd.callsign} off ${o.def.name}`); } }
+        if (!e || !O || g.entry.farKnown(O, inner(e)) || theirs(o, R.gd) || (seen && this.leafAcross(o, R.gd.char.pos, inner(e)) > 0)) { back(o, R.gd); this.beat(op, `other door · ${R.gd.callsign} off ${o.def.name}`); } }
       const free = !deal ? [] : inside.filter(m => { const H = this.held.get(m); return (op.onPod.has(m) || (ended && !!op.mine.get(m)?.arrived)) && !this.onOther(op, m) && !H?.out && !H?.door && g.time >= m.dazzledUntil; });
       // (a door into the building before one to the outside, and the nearer to the men in the room first: there may be more doors than men to spare)
       // (mid-search half the entry's guns may go to doors — and none of an entry of TWO: its first man, turned to a door a second after he crossed, was shot
@@ -2641,7 +2658,7 @@ export class DoorTools {
         const O = g.cover.ready().find(x => x.door === o), at = inner(e);
         if (!O || g.entry.farKnown(O, at) || theirs(o) || beside(o)) continue;
         if (nav.isBlocked(fc[0] + e.out[0] * 0.9, fc[2] + e.out[1] * 0.9) && nav.isBlocked(fc[0] + e.out[0] * 1.5, fc[2] + e.out[1] * 1.5)) continue;   // (no floor beyond: nobody comes that way)
-        const gd = free.filter(m => flat(m.char.pos, fc) <= K.otherDoorM && !g.col.segmentBlocked(eye(m.char.pos), at)).sort((a, b) => flat(a.char.pos, fc) - flat(b.char.pos, fc))[0];
+        const gd = free.filter(m => flat(m.char.pos, fc) <= K.otherDoorM && !g.col.segmentBlocked(eye(m.char.pos), at) && !(seen && this.leafAcross(o, m.char.pos, at) > 0)).sort((a, b) => (this.leafAcross(o, a.char.pos, at) - this.leafAcross(o, b.char.pos, at)) || flat(a.char.pos, fc) - flat(b.char.pos, fc))[0];   // (thrDoorsLeaf: the man the door's own leaf would hide it from least, first — and with `seen`, nobody it would hide it from: the caller walks a man to a post next)
         if (!gd) continue;
         const beyond: Vec3 = [fc[0] + e.out[0], 1.2, fc[2] + e.out[1]];   // (a metre on through it where he looks down its line; from beside it, the frame itself)
         M.set(o, { gd, w: g.col.segmentBlocked(eye(gd.char.pos), beyond) ? [fc[0], 1.2, fc[2]] : beyond });
@@ -2652,6 +2669,18 @@ export class DoorTools {
       A.watch = R.w; A.face = yaw; A.there = `holding · ${doorWords(o)}`;
       if (H) { H.face = yaw; H.d = 0; H.out = true; H.door = o; } }
     return true;
+  }
+  /** DOORTOOLS.thrDoorsLeaf: how much door `o`'s own leaf, stood open, would hide the door from a man at `p` — the share (0 to 1) of the angles from
+   *  near square to its stop (LEAF_FROM, LEAF_STEP: where a leaf left open can stand) at which it lies across the line on the floor from `p` to the
+   *  point the door is held on. 0: it never does (and a leaf that opens away from that point never does) */
+  private leafAcross(o: Door, p: Vec3, at: Vec3): number {
+    if (!DOORTOOLS.thrDoorsLeaf || !DOORWAY.oneWay || o.off) return 0;
+    const stop = o.swing > 0 ? o.maxA : o.minA, sg = Math.sign(stop), top = Math.abs(stop), W = o.def.width + LEAF_EDGE, hx = o.def.hinge[0], hz = o.def.hinge[1], rx = at[0] - p[0], rz = at[2] - p[2];
+    const cut = (a: number) => { const th = o.def.closedDir + a, lx = Math.cos(th) * W, lz = Math.sin(th) * W, den = rx * lz - rz * lx; if (Math.abs(den) < 1e-9) return 0;
+      const s = ((hx - p[0]) * lz - (hz - p[2]) * lx) / den, u = ((hx - p[0]) * rz - (hz - p[2]) * rx) / den;   // (s along his line, u out along the leaf)
+      return s > 0 && s < 1 && u > 0 && u < 1 ? 1 : 0; };
+    let n = 1, hid = cut(stop); for (let a = Math.min(LEAF_FROM, top); a < top; a += LEAF_STEP) { n++; hid += cut(sg * a); }
+    return hid / n;
   }
   /** THE ROOM'S OTHER DOORS, HELD (DOORTOOLS.thrDoors — a threshold stage's last act before 'in'): the farthest from the entry first, each to one of the men
    *  the entry has left on a sector (the man on the door they came in by keeps that). A man with a line to its frame from within `thrDoorsM` has it from
@@ -2672,16 +2701,18 @@ export class DoorTools {
     const said: string[] = [], dealt = new Map<Guard, Vec3>(), where = (m: Guard): Vec3 => dealt.get(m) ?? g.orders.of(m)?.post ?? m.char.pos, len = this.walks();
     for (const e of doors) { if (men.length <= stay) break;
       const o = e.door, W = o.def.width, fc = o.frameCentre, at: Vec3 = [fc[0] - e.out[0] * 0.4, 1.2, fc[2] - e.out[1] * 0.4], w: Vec3 = [fc[0] + e.out[0], 1.2, fc[2] + e.out[1]], rs = sideOf(o, [fc[0] - e.out[0], 0, fc[2] - e.out[1]]);
-      let gd: Guard | null = men.filter(m => flat(m.char.pos, fc) <= K.thrDoorsM && !g.col.segmentBlocked(eye(m.char.pos), at)).sort((a, b) => flat(a.char.pos, fc) - flat(b.char.pos, fc))[0] ?? null, post: Vec3 | null = null;
+      const inSwing = K.thrDoorsLeaf && DOORWAY.oneWay && !o.off && Math.sign(o.swing > 0 ? o.maxA : o.minA) === rs;   // (its leaf opens into this room: LEAF_POSTS)
+      let gd: Guard | null = men.filter(m => flat(m.char.pos, fc) <= K.thrDoorsM && !g.col.segmentBlocked(eye(m.char.pos), at) && !this.leafAcross(o, m.char.pos, at)).sort((a, b) => flat(a.char.pos, fc) - flat(b.char.pos, fc))[0] ?? null, post: Vec3 | null = null;
       // (DOORTOOLS.buddyDoors: a walk that takes him away from everybody is his pair's, or nobody's — away(); a man refused one point is tried on the
       //  others, then the next man; with nobody who may go the door is left to the room's own cover, as a door past `thrDoorsWalk` is)
       let mate: { gd: Guard; pod: { pos: Vec3; face: number } } | null = null;
       if (!gd) { const tried = new Set<string>();
         for (;;) { let best = Infinity, k = 0, key = ''; gd = null; post = null;
-          for (const [L, D] of [[1.5, 2.6], [2.0, 2.2], [1.1, 3.2], [2.4, 3.0], [1.8, 3.8], [0.9, 2.2]]) { k++;
+          for (const [L, D] of [[1.5, 2.6], [2.0, 2.2], [1.1, 3.2], [2.4, 3.0], [1.8, 3.8], [0.9, 2.2], ...(inSwing ? LEAF_POSTS : [])]) { k++;
             for (const sgn of [1, -1]) { const p = doorPt(o, W / 2 + sgn * (W / 2 + L), D, rs);
               if (nav.isBlocked(p[0], p[2]) || !room.cells.has(cell(p)) || g.col.segmentBlocked(eye(p), at)) continue;
-              for (const m of men) { const c = flat(m.char.pos, p) + 0.4 * k; if (c < best && clear(m, p) && !tried.has(`${men.indexOf(m)}:${k}:${sgn}`)) { best = c; gd = m; post = p; key = `${men.indexOf(m)}:${k}:${sgn}`; } } } }
+              const hid = this.leafAcross(o, p, at), behind = hid ? LEAF_COST * (1 + hid) : 0;   // (thrDoorsLeaf: a post the door's own leaf would hide it from is the last resort, and the less it would the better)
+              for (const m of men) { const c = flat(m.char.pos, p) + 0.4 * k + behind; if (c < best && clear(m, p) && !tried.has(`${men.indexOf(m)}:${k}:${sgn}`)) { best = c; gd = m; post = p; key = `${men.indexOf(m)}:${k}:${sgn}`; } } } }
           if (!gd || !post || walk(gd, post) > K.thrDoorsWalk) { gd = null; break; }   // (no way there, or a walk out of all proportion: that door is left)
           if (!(K.buddy && K.buddyDoors)) { if (!K.buddy && this.away(gd, post, men.length - 2 >= stay ? men : [], where, len) !== 'alone') this.stats.doorAlone++; break; }   // (as it was: one man, whoever is nearest — off only counts the walks that take him away from everybody)
           const h = this.away(gd, post, men.length - 2 >= stay ? men : [], where, len);

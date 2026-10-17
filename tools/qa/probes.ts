@@ -2756,6 +2756,7 @@ if (on('threshold-four', 'threshold', 'all')) await run('threshold-four', async 
 if (on('threshold-hold', 'threshold', 'all')) await run('threshold-hold', async () => (await import('./threshold-probes.ts')).thresholdHold());
 if (on('threshold-first', 'threshold', 'all')) await run('threshold-first', async () => (await import('./threshold-probes.ts')).thresholdFirst());
 if (on('threshold-doors', 'threshold', 'all')) await run('threshold-doors', async () => (await import('./threshold-probes.ts')).thresholdDoors());
+if (on('threshold-leaf', 'threshold', 'all')) await run('threshold-leaf', async () => (await import('./threshold-probes.ts')).thresholdLeaf());   // DOORTOOLS.thrDoorsLeaf: nobody is left on a door its own open leaf hides (THRDOORSLEAF_BREAK=1 must fail)
 if (on('threshold-last', 'threshold', 'all')) await run('threshold-last', async () => (await import('./threshold-probes.ts')).thresholdLast());
 if (on('threshold-hand', 'threshold', 'all')) await run('threshold-hand', async () => (await import('./threshold-probes.ts')).thresholdHand());   // DOORTOOLS.thrHand — no can from a hand that is not at the door; THRHAND_BREAK=1 must fail
 if (on('threshold-grenade', 'threshold', 'all')) await run('threshold-grenade', async () => (await import('./threshold-probes.ts')).thresholdGrenade());   // DOORTOOLS.thrFragHold / thrNoCan — a grenade by a held door: the hold waits for its men, a can nobody is back for stays in the kit (both on in the page). THRFRAGHOLD_BREAK=1 / THRNOCAN_BREAK=1 must fail
