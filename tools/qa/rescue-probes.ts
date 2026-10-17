@@ -65,9 +65,10 @@ const DEFAULTS = { ...RESCUE }, FLASH_ON = FLASH.on;
  *    rescue-flow-states    DOORMANNERS.on · glass (the roamer behind the conference glazing is shot through the pane)
  *    rescue-flow-twodoor   DARKFOE.on ('F is a man short')
  *    rescue-orders         DOORMANNERS.on · DARKFOE.on
- *    rescue-set            DOORMANNERS.on · glass · MOVES.on (its six-seed tally with the moves on: the room secured 4 of 6 either way and 5 of the 12 men lost, where
- *                          every bound was read at 6 of 6 and 12 of 12 — a tally that small moves with any rule; the one taken out here is the first the halving found) */
-export type Staged = 'DOORWAY.oneWay' | 'DOORMANNERS.on' | 'DARKFOE.on' | 'DOORTOOLS.testDoor' | 'DOORTOOLS.outsidePlain' | 'MOVES.on' | 'glass';
+ *    rescue-set            DOORMANNERS.on · glass · MOVES.gait (one part of the moves, the page under TPS_MOVES=1,gait=0. With glass held and the gait on, the untrained
+ *                          stance lifts the captor's head a few degrees and — as traced on the moves' side — he sees the pair through the pane before the bang: the six-seed tally reads 4 of 6
+ *                          rooms and 7 of 12 men where every bound was read at 6 of 6 and 12 of 12. Only in this staging — with nothing held the gait costs nothing) */
+export type Staged = 'DOORWAY.oneWay' | 'DOORMANNERS.on' | 'DARKFOE.on' | 'DOORTOOLS.testDoor' | 'DOORTOOLS.outsidePlain' | 'MOVES.gait' | 'glass';
 let HELD: readonly Staged[] = []; const HELD_OFF = new Set<string>();
 /** the glass parts off for a game a 'glass' probe has stood, by the frozen stand's own line (src/host/standup.ts): they are the stood game's, not a table's */
 function holdGlass(game: any) {
@@ -81,7 +82,7 @@ export const staged = (rules: readonly Staged[], fn: () => Promise<boolean>) => 
   try {
     return await guarded(async () => {
       for (const r of rules) { if (r === 'glass') continue;
-        const [t, k] = r.split('.'), T = knobRegistry()[t] as Record<string, unknown> | undefined, word = /^[A-Z][A-Z0-9_]*(?==)/.exec(FROZEN_HOLDS[r] ?? '')?.[0];
+        const [t, k] = r.split('.'), T = knobRegistry()[t] as Record<string, unknown> | undefined, word = /^[A-Z][A-Z0-9_]*(?==)/.exec(FROZEN_HOLDS[r] ?? FROZEN_HOLDS[`${t}.on`] ?? '')?.[0];   // (a part of a rule goes by the rule's own row and word: MOVES.gait by MOVES.on's)
         if (!T || !(k in T) || !word) throw new Error(`staged: '${r}' is no knob with a word of its own in FROZEN_HOLDS`);
         if (process.env[word] === undefined && !pinned(word) && T[k]) { put.push([T, k, T[k]]); T[k] = typeof T[k] === 'number' ? 0 : false; HELD_OFF.add(r); } }   // (a stand that pins the word has the rule off by its own line; MOVES.on is a number)
       HELD = rules; return fn();
@@ -315,7 +316,7 @@ export const rescueOrders = staged(['DOORMANNERS.on', 'DARKFOE.on'], async () =>
   return F.done();
 });
 
-export const rescueSet = staged(['DOORMANNERS.on', 'glass', 'MOVES.on'], async () => {
+export const rescueSet = staged(['DOORMANNERS.on', 'glass', 'MOVES.gait'], async () => {
   const F = family('rescue-set: clock two — a room hit before its men are set, and after');
   const SEEDS = [11, 12, 13, 14, 15, 16];
   const run = async (setSecs: number, roamers: number, seeds: number[], more: Record<string, unknown> = {}) => { let blind = 0, secured = 0, pair = 0, caught = 0; const gap: number[] = []; const rel: (number | undefined)[] = [], ral: boolean[] = []; let bad = '', left = 0;
