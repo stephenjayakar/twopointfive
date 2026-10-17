@@ -11,6 +11,8 @@
 //                                          dazzled — the eye's alone, a man the fight itself has blind or folded reads as with his eyes open) — and every enemy within 10 m
 //   PT_COVER=1 (env, with --trace)         the unasked cover's deal once a second: who watches which opening
 //   PT_NOTES=1 (env, with --trace)         the room fight's own notes as they are made (who has eyes on whom, who steps where, what each defender hears and does), and tactics.ts's log (plans, the doorway drill)
+//   PT_HUNT=first (env)                    room clears: once no room is held the commander goes for whoever is left BEFORE he walks the rooms again (the default walks
+//                                          every room first; the missions gate plays with this on — missions-gate.ts's head)
 //   PT_DIGEST=1 (env)                      every run's RunOut carries `digest`: game/digest.ts's digest of the whole game every half second, folded into one word
 //   PT_DIGEST=series (env)                 …and `digestSeries`: the movement digest (nobody's speech bubble in it) of every half second, one word each, unfolded —
 //                                          two arms of one seed set side by side give the half second they first part at; PT_DIGEST_AT=n then keeps the n-th
