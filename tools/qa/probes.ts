@@ -2667,6 +2667,7 @@ if (on('quickthrow', 'all')) await run('quickthrow', async () => (await import('
 if (on('samstun', 'all')) await run('samstun', async () => (await import('./samstun-check.ts')).samstunCheck());   // a frag and a stun canister do to the player what they do to a man beside him (src/game/samstun.ts)
 if (on('deathrecap', 'ui', 'all')) await run('deathrecap', async () => (await import('./deathrecap-check.ts')).deathrecapCheck());   // the end card knows who shot whom, from where, and says nothing while the run is on (src/game/deathrecap.ts, src/ui/recap.ts)
 if (on('friends', 'player', 'all')) await run('friends', async () => (await import('./friends-check.ts')).friendsCheck());   // the reticle passes over his own side, and his gun comes to the low ready off a teammate out of a fight (src/game/friends.ts)
+if (on('headmark', 'ui', 'all')) await run('headmark', async () => (await import('./headmark-check.ts')).headmarkCheck());   // no wary mark (the dots, the '?') over a living man of the player's own; a defender's marks as they were (src/ui/headmark.ts)
 // ---------------------------------------------------------------- the hostage rescue playtest (rescue-probes.ts; game/rescue.ts behind ?rescue): 'rescue' = the family
 if (on('rescue-off', 'rescue', 'all')) await run('rescue-off', async () => (await import('./rescue-probes.ts')).rescueOff());
 if (on('rescue-stage', 'rescue', 'all')) await run('rescue-stage', async () => (await import('./rescue-probes.ts')).rescueStage());

@@ -6,7 +6,7 @@ import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
 import { FLOOR_KEY } from '../game/doors';
-import { playerAim, guardAcquired } from '../game/aim';
+import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
 import { aimGunPoint, aimGunOn } from '../game/aimweight';
 import { previewTooClose } from '../game/he40';
@@ -16,7 +16,7 @@ import { GEAR, gearText, ringTag, shellTag } from '../game/gear';
 const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
 const HE40_SHORT_STROKE = 'rgba(255, 170, 90, 0.95)';
 import { needsTrip } from '../game/needs';
-import { dozeMark } from '../game/doze';
+import { headMark, waryDots } from './headmark';
 import { CKPT } from '../game/savestate';
 import { stripRows } from '../game/cues';
 import { fragMarks } from '../game/frag';
@@ -176,13 +176,7 @@ export class Overlay implements HudLike {
       const head = g.char.bones.head ?? g.char.pos; const [x, y, vis] = cam.project([head[0], head[1] + 0.45, head[2]], w, h, EDGE);
       if (!vis || game.fogOfWar.hidden(g)) { el.style.display = 'none'; return; }   // (fog of war: no marker over a man nobody on the team sees — never true while it is off)
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
-      let text = '', cls = 'calm'; const zz = dozeMark(game, g);
-      if (g.state === 'dead') { if (isBreathing(g)) { text = g.wound ? '✚' : 'zz'; cls = 'ko'; } else { text = '✕'; cls = 'dead'; } }   // out cold and breathing (the takedown, the choke, the whip, a ring to the head) reads asleep, not crossed out — the floor treats him as a body either way
-      else if (g.state === 'alert') { text = guardAcquired(game, g) ? '◎!' : '!'; cls = 'alert'; }   // ◎: he has you lined up — his track on you is past the aim model's first-shot gate (aim.ts; never shown with the model off)
-      else if (g.state === 'suspicious' || g.state === 'search') { text = '?'; cls = 'sus'; }
-      else if (zz) text = zz;   // asleep in his chair (doze.ts): a 'z' that grows with each breath; at his screen with headphones on: '♪' — nothing with its switch off
-      else if (g.awareness > 0.05) { text = '·'.repeat(1 + Math.floor(g.awareness * 6)); cls = 'sus'; }
-      if (g.state !== 'dead' && game.time < g.dazzledUntil) text = '✹' + text;   // dazzled by a stun canister
+      const mark = headMark(game, g), cls = mark.cls; let text = mark.text;   // (headmark.ts: which glyph, which colour — a living man of your own carries no wary mark)
       if (game.showDebug) text += ` ${g.state} ${(g.awareness * 100) | 0}%${game.time < g.dazzledUntil ? ` dazzled ${(g.dazzledUntil - game.time).toFixed(1)}s` : ''}`;
       if (game.showDebug) { const T = needsTrip(g); if (T) text += ` ${T.kind}:${T.phase}${T.phase === 'telegraph' ? ` ${Math.ceil(T.departAt - game.time)}s` : T.phase === 'dwell' ? ` ${Math.ceil(T.dwellUntil - game.time)}s` : ''}`; }   // (the debug label only: in play the trip is told by the man himself — the watch, the word, the neck — never by the HUD; needs.ts)
       el.textContent = text; el.className = 'marker ' + cls;
@@ -224,7 +218,7 @@ export class Overlay implements HudLike {
       else if (C.state === 'startled') { text = '?'; cls = 'sus civ'; }
       else if (C.state === 'cower' || C.state === 'held') { text = '·'; cls = 'sus civ'; }
       else if (C.state !== 'work') { text = C.state === 'phone' ? '!☎' : '!'; cls = 'alert civ'; }
-      else if (cv.awareness > 0.05) { text = '·'.repeat(1 + Math.floor(cv.awareness * 6)); cls = 'sus civ'; }
+      else if (waryDots(cv.awareness)) { text = waryDots(cv.awareness); cls = 'sus civ'; }
       if (game.showDebug) text += ` ${C.name} ${C.state}${C.cause ? ` [${C.cause}${C.armed ? '!' : ''}${C.reported ? ' told' : ''}]` : ''} ${(cv.awareness * 100) | 0}%`;
       if (!text) { el.style.display = 'none'; return; }
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.textContent = text; el.className = 'marker ' + cls;

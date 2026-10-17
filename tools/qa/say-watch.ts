@@ -107,7 +107,7 @@ export class SayWatch {
     }
     if (this.afterOn && Math.floor(t) !== this.lastAfter) { this.lastAfter = Math.floor(t);
       for (const h of g.guards) { if (h.team !== 'hostile' || h.state === 'dead') continue; const w = this.was.get(h); if (!w) continue;
-        const marker = h.state === 'alert' ? '!' : h.state === 'suspicious' || h.state === 'search' ? '?' : h.awareness > 0.05 ? '·'.repeat(1 + Math.floor(h.awareness * 6)) : '';   // (ui/overlay.ts: the glyph over a man's head)
+        const marker = h.state === 'alert' ? '!' : h.state === 'suspicious' || h.state === 'search' ? '?' : h.awareness > 0.05 ? '·'.repeat(1 + Math.floor(h.awareness * 6)) : '';   // (ui/headmark.ts: the glyph over a defender's head, less the doze and stun marks)
         this.out.after.push({ t: r1(t), who: h.callsign, state: h.state, mode: w.mode, marker, hidden: !!g.fogOfWar.hidden(h), fromMark: r1(flat(h.char.pos, w.mark)), toSam: r1(flat(h.char.pos, g.player.char.pos)), speed: r1(Math.hypot(h.char.vel[0], h.char.vel[2])) }); }
     }
   }
