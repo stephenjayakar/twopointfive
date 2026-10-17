@@ -69,6 +69,7 @@ import { PEEKSIGHT } from './peeksight';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
+import { CUES } from './cues';
 import { OWNCHARGE } from './owncharge';
 import { BIGSLOT } from './kit';
 import { SQUADTHROW } from './squadthrow';
@@ -271,6 +272,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.STICKY) STICKY.on = false;   // (a file from before the sticky cameras: no such load on his rifle)
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.take === undefined) STICKY.take = false;   // (…and one from before a stuck camera could be taken back: no such row)
+  if ((k.tables.CUES as Partial<typeof CUES> | undefined)?.overheard === undefined) CUES.overheard = false;   // (a file from before a hidden defender's shout was a row on the strip: no such row)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.mark === undefined) STICKY.mark = false;   // (…and one from before his own cameras showed in the fog: not in its picture)
   if (!k.tables.WORK) WORK.on = false;   // (a file from before a teammate could be sent to work a thing: its menus had no such row, and its breaker errand went to the nearest man whoever he was)
   else if ((k.tables.WORK as Partial<typeof WORK>).ownFace === undefined) WORK.ownFace = false;   // (…and one from before the errand was walked to the panel's own face: its man went to the fixed spot and re-armed the mains inside the bare radius)

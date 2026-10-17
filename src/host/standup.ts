@@ -46,6 +46,7 @@ import { WAND } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
 import { BIGSLOT } from '../game/kit';
 import { STICKY } from '../game/stickycam';
+import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
@@ -273,6 +274,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WAND')) WAND.on = String((globalThis as any).process?.env?.TPS_WAND ?? '') === '1';   // the optical wand (src/game/wand.ts): off, so your kit card has no such row and no door offers the look
     if (pinned('TPS_STICKY')) STICKY.on = String((globalThis as any).process?.env?.TPS_STICKY ?? '') === '1';   // sticky cameras (src/game/stickycam.ts): off, so your kit card has no such row and the rifle's launcher no third load
     if (pinned('TPS_CAMTAKE')) STICKY.take = String((globalThis as any).process?.env?.TPS_CAMTAKE ?? '') === '1';   // a stuck camera taken back onto the launcher (stickycam.ts takeCam): off, so a camera sent stays on its wall
+    if (pinned('TPS_OVERHEARD')) CUES.overheard = String((globalThis as any).process?.env?.TPS_OVERHEARD ?? '') === '1';   // a hidden defender's shout as a row on the strip (src/game/cues.ts overheard): off, so a shout nobody sees is no row
     if (pinned('TPS_CAMMARK')) STICKY.mark = String((globalThis as any).process?.env?.TPS_CAMMARK ?? '') === '1';   // his own stuck cameras shown in the fog of war (stickycam.ts stickyMarks): off, so a camera on floor nobody sees is not in the picture
     if (pinned('TPS_WORKTHINGS')) WORK.on = String((globalThis as any).process?.env?.TPS_WORKTHINGS ?? '') === '1';   // a teammate works a thing (src/game/workthings.ts): off, so the menu on the breaker is the floor's and lighting.ts deals the breaker errand as every frozen probe read it; `TPS_WORKTHINGS=1` turns it on
     if (pinned('TPS_UNSEEN')) UNSEEN.on = String((globalThis as any).process?.env?.TPS_UNSEEN ?? '') === '1';   // a squad nobody has found sneaks when Sam sneaks (src/game/unseen.ts): off, so teammates beside a crouched, slow or wall-hugging Sam stand, walk and shoot as in every frozen probe and digest; `TPS_UNSEEN=1` runs any tool with it on, tools/qa/unseen-probes.ts raises it itself
