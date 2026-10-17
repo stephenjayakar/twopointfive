@@ -126,6 +126,13 @@ export const COVER = {
    *  NOT END: a body squared to an opening that far round from his way would still read as facing away. (At −0.3 the walk is the same but for the
    *  moment he lets go; a number, no Tab row.) */
   backKeep: true, backBody: 0,
+  /** …and a man walking backwards whose opening the deal LETS GO OF (nobody of ours has taken him, nothing else re-poses him) comes out of it on his feet: the
+   *  order's own pose is 'walk forward', which a man walks along his BODY — still turned to the rear, so he went a quarter of a metre back the way he came and
+   *  hooked round, three quarters of a second gone, every time (48 times on the registry level's walk with four behind Sam). His feet keep the path he is on
+   *  (the runner's strafe) while his body comes round to the way he goes, his gun in front of it: until it is within `backTurnBody` (a cosine: 0.7 = an eighth
+   *  of a turn) of that way, or `backTurnSecs` are up; stood, run on or dealt a new opening he is that rule's again (a new job meets him as a man walking
+   *  backwards, so backKeep holds him the same way). Off = as it was. (The man run on over backOut still turns as he did: a number, no row.) */
+  backTurn: false, backTurnBody: 0.7, backTurnSecs: 1,
   /** how fast the muzzle travels to a newly dealt opening (1/s: it travels, it does not snap) */
   swing: 9,
   /** STEP TO SEE: a door standing open by the squad that NOBODY has a line into (every free man is behind its leaf or off its line; the leaf's edge is the
@@ -235,7 +242,7 @@ export class Cover {
   /** … `blind`: man-deals (one a man a deal, COVER.dealSecs apart) spent dealt an open door he has no line through — the leaf's edge · `unseen`: door-deals an
    *  open door within COVER.stepReach of a free man had NOBODY with a line into it (not Sam's gun, not a posted man's) · `steps`: steps begun · `stepped`:
    *  made · `stepSaw`: … and the doorway itself then dealt him */
-  stats = { deals: 0, takes: 0, swaps: 0, rear: 0, uncovered: 0, kept: 0, blind: 0, unseen: 0, steps: 0, stepped: 0, stepSaw: 0, rearRead: 0 };
+  stats = { deals: 0, takes: 0, swaps: 0, rear: 0, uncovered: 0, kept: 0, blind: 0, unseen: 0, steps: 0, stepped: 0, stepSaw: 0, rearRead: 0, turned: 0 };
   /** who has stepped (or is stepping) to see through which open door */
   steps = new Map<Guard, CoverStep>();
   /** since when each man has stood · no step for him before · no step tried for this door before (game seconds: all three go with a restart — reset()) */
@@ -252,10 +259,12 @@ export class Cover {
   private reads = new WeakMap<Assignment, { t: number; at: Vec3; pick: Watchable | null }>();
   /** REAR.settle: the job the deal last took off each man, and when — his gun stays on it REAR.secs (poseFor) unless something else has him first */
   private kept = new Map<Guard, { J: CoverJob; t: number }>();
+  /** COVER.backTurn: the men coming out of a back-pedal the deal let go of — the gun point carried in front of the body, when it began and the last frame it posed him */
+  private outs = new Map<Guard, { J: CoverJob; aim: Vec3; t0: number; t: number; on: boolean }>();
   constructor(private g: Game) { }
 
   /** nothing dealt, nothing known (a restart: Game.resetGuards) */
-  reset() { this.jobs.clear(); this.steps.clear(); this.stood = new WeakMap(); this.noStep = new WeakMap(); this.doorTry = new WeakMap(); this.rears.clear(); this.reads = new WeakMap(); this.kept.clear(); this.live = []; this.men = []; this.dealAt = 0; for (const k of Object.keys(this.stats) as (keyof Cover['stats'])[]) this.stats[k] = 0; this.log.length = 0; }
+  reset() { this.jobs.clear(); this.steps.clear(); this.stood = new WeakMap(); this.noStep = new WeakMap(); this.doorTry = new WeakMap(); this.rears.clear(); this.reads = new WeakMap(); this.kept.clear(); this.outs.clear(); this.live = []; this.men = []; this.dealAt = 0; for (const k of Object.keys(this.stats) as (keyof Cover['stats'])[]) this.stats[k] = 0; this.log.length = 0; }
   of(gd: Guard): CoverJob | null { return this.jobs.get(gd) ?? null; }
   /** the opening his gun has been left on (REAR.settle), if it is */
   keptJob(gd: Guard): CoverJob | null { return this.kept.get(gd)?.J ?? null; }
@@ -350,10 +359,11 @@ export class Cover {
   /** Once a frame from Game.update, before the orders pose the men. */
   tick() {
     const g = this.g, K = COVER;
-    if (!K.on || !g.orders.active) { if (this.jobs.size || this.kept.size) this.dropAll(); this.steps.clear(); this.live = []; this.men = []; return; }
+    if (!K.on || !g.orders.active) { if (this.jobs.size || this.kept.size || this.outs.size) this.dropAll(); this.steps.clear(); this.live = []; this.men = []; return; }
     for (const [gd] of [...this.jobs]) if (!this.free(gd)) this.drop(gd, true);   // (an order, a drill, a fight: his job goes the frame it has him)
     for (const [gd, k] of [...this.kept]) {   // (… and so does a gun left on an opening the deal has let go of; its time up, the order's own watch has it back)
       if (!REAR.settle || !this.free(gd)) this.unkeep(gd, true); else if (Math.abs(g.time - k.t) >= REAR.secs) this.unkeep(gd); }
+    for (const [gd] of [...this.outs]) if (!K.backTurn || !this.free(gd)) this.unturn(gd);   // (… and the man coming out of a back-pedal: taken, his feet and gun are given back as a job's are)
     for (const gd of g.orders.men()) { const v = gd.char.vel; if (Math.hypot(v[0], v[2]) > 0.3) this.heading.set(gd, Math.atan2(v[0], v[2])); }
     if (g.time < this.dealAt) return;
     this.dealAt = g.time + K.dealSecs;
@@ -508,7 +518,7 @@ export class Cover {
       const L = got.get(gd), J = this.jobs.get(gd);
       if (!L) { if (J) this.drop(gd); continue; }
       if (J && J.o === L.o) { J.to = L.at.get(gd) ?? L.o.at; continue; }
-      const P = J ?? this.keptOf(gd); this.kept.delete(gd);   // (a gun still on the opening he was last dealt: it goes from there, as on a swap)
+      const P = J ?? this.keptOf(gd); if (!P) this.unkeep(gd); this.kept.delete(gd);   // (a gun still on the opening he was last dealt: it goes from there, as on a swap)
       const c = gd.char, r = Math.max(1.5, flat(c.pos, L.o.at));
       const yaw = P ? P.yaw : c.aimYaw, rr = P ? P.r : r;   // (from where the muzzle is: it travels to the opening)
       const aim: Vec3 = P ? P.aim : [c.pos[0] + Math.sin(yaw) * rr, CHEST, c.pos[2] + Math.cos(yaw) * rr];
@@ -619,6 +629,7 @@ export class Cover {
       const A = this.g.orders.of(gd) ?? J.A;   // (the order he is under NOW: a job outlives a re-order that leaves him free, J.A is the one it was dealt under)
       if (REAR.file || (!!A.spare && !!A.post && !!A.from)) { J.to = [J.to[0], J.to[1], J.to[2]]; this.kept.set(gd, { J, t: this.g.time }); this.stats.kept++; return; }   // (its own copy of the point: the file's rear is one object the next deal moves for whoever is last by then)
     }
+    if (!taken) this.turnFrom(gd, J);
     if (taken) this.release(gd, J);
   }
   private release(gd: Guard, J: CoverJob) {
@@ -626,8 +637,32 @@ export class Cover {
     if (J.back && s.strafe) s.strafe = false;
     if (s.aimAt === J.aim) { s.aimAt = J.A.watch; if (s.upper === 'aim' && s.stance === 'none') { s.upper = J.A.upper; s.stance = J.A.stance; } }
   }
+  /** COVER.backTurn — the deal has let go of a man who was walking backwards on his opening (dropped, or a kept gun's time up): from here his feet are turnOut()'s until his body has come round */
+  private turnFrom(gd: Guard, J: CoverJob) { if (COVER.backTurn && J.back && gd.script?.strafe && gd.state !== 'dead') this.outs.set(gd, { J, aim: [J.aim[0], J.aim[1], J.aim[2]], t0: this.g.time, t: this.g.time, on: false }); }
+  /** …the way he goes: at the corner of his path he is walking to (the runner's strafe steers straight at it), else the way he is moving */
+  private wayOf(gd: Guard): number { const p = gd.char.pos, wp = gd.path[gd.pathI]; return wp && flat(p, wp) > 0.3 ? yawTo(p, wp) : this.heading.get(gd) ?? gd.char.bodyYaw; }
+  /** …is he still that man: posed by us last frame, inside the seconds, walking (not stood, not run on), his body still turned from the way he goes */
+  private turning(gd: Guard, still: boolean, pace: number): boolean {
+    const o = this.outs.get(gd), K = COVER, t = this.g.time; if (!o) return false;
+    return K.backTurn && !still && pace <= K.backOut && Math.abs(t - o.t) <= 0.1 && Math.abs(t - o.t0) < K.backTurnSecs && Math.cos(gd.char.bodyYaw - this.wayOf(gd)) < K.backTurnBody;
+  }
+  /** …and his pose while he is: the path's own feet (strafe), the body turning to the way he goes, the gun carried round in front of it. null: the order's own pose stands */
+  private turnOut(gd: Guard, still: boolean, pace: number): { at: Vec3; face: number | null; strafe: boolean } | null {
+    const o = this.outs.get(gd); if (!o) return null;
+    if (!this.turning(gd, still, pace)) { this.outs.delete(gd); return null; }   // (the order poses him this same frame: its own strafe, face and watch are written over ours)
+    const c = gd.char; if (!o.on) { o.on = true; this.stats.turned++; } o.t = this.g.time;
+    o.aim[0] = c.pos[0] + Math.sin(c.bodyYaw) * 3; o.aim[2] = c.pos[2] + Math.cos(c.bodyYaw) * 3;
+    return { at: o.aim, face: this.wayOf(gd), strafe: true };
+  }
+  /** …something else has him (an order that does not leave him free, a drill, a daze, the knob going off) and may not re-pose him: what the turn-out wrote into his script goes, as release() does it for a job */
+  private unturn(gd: Guard) {
+    const o = this.outs.get(gd); if (!o) return; this.outs.delete(gd);
+    const s = gd.script; if (!s || gd.state === 'dead') return;
+    if (s.strafe) s.strafe = false;
+    if (s.aimAt === o.aim) { s.aimAt = o.J.A.watch; if (s.upper === 'aim' && s.stance === 'none') { s.upper = o.J.A.upper; s.stance = o.J.A.stance; } }
+  }
   /** the gun comes off an opening the deal let go of: `taken` as for drop() */
-  private unkeep(gd: Guard, taken = false) { const k = this.kept.get(gd); if (!k) return; this.kept.delete(gd); if (taken) this.release(gd, k.J); }
+  private unkeep(gd: Guard, taken = false) { const k = this.kept.get(gd); if (!k) return; this.kept.delete(gd); if (taken) this.release(gd, k.J); else this.turnFrom(gd, k.J); }
   /** REAR.settle — the opening the deal last took off this man, while his gun is still on it: inside REAR.secs, the gun still the cover's, he still
    *  under one that leaves him free (tick() has looked), and nobody of ours in its line or stood in it (the deal's own muzzle rule, to the keeper's narrower
    *  lane). It is NOT asked whether he still has a line to it: losing that on the walk is the commonest reason the deal let go, and the gun going back and
@@ -645,14 +680,17 @@ export class Cover {
     for (const m of g.orders.men()) if (m !== gd && m.state !== 'dead' && ours(m.char.pos)) return null;
     return J;
   }
-  private dropAll() { for (const gd of [...this.jobs.keys()]) this.drop(gd, true); for (const gd of [...this.kept.keys()]) this.unkeep(gd, true); }
+  private dropAll() { for (const gd of [...this.jobs.keys()]) this.drop(gd, true); for (const gd of [...this.kept.keys()]) this.unkeep(gd, true); for (const gd of [...this.outs.keys()]) this.unturn(gd); }
 
   /** orders.ts tick(), for a man it is about to pose: where his gun goes and how he carries himself for the opening he was dealt — null: he has none (or is
    *  running to catch up with one behind him) and the order's own pose stands. `still`: his order has him stood (a holder; a follower closed up on a stopped
    *  Sam) · `pace`: the speed his order is about to walk him at. */
   poseFor(gd: Guard, still: boolean, pace: number): { at: Vec3; face: number | null; strafe: boolean } | null {
-    const J = this.jobs.get(gd) ?? this.keptOf(gd); if (!J) { this.kept.delete(gd); return null; }
+    const J = this.jobs.get(gd) ?? this.keptOf(gd);
+    if (!J) { this.unkeep(gd); return this.turnOut(gd, still, pace); }
     const g = this.g, K = COVER, c = gd.char, p = c.pos, to = J.to;
+    // (backTurn: dealt an opening while he is still coming out of the last one's back-pedal — he is a man walking backwards to this one too, or it would walk him forward along a body turned to the rear)
+    if (this.outs.has(gd)) { if (this.turning(gd, still, pace)) J.back = true; this.outs.delete(gd); }
     const dt = Math.min(0.1, Math.max(0, g.time - J.aimT)); J.aimT = g.time;
     // (the point is carried round him at a bearing and a range that ease onto the opening: eased as a point in the world it cut through him on a front-to-rear
     //  swing — the muzzle snapped half a turn in a frame and dipped at the floor)
