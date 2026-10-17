@@ -225,9 +225,10 @@ but synthetic writes still work.
   scene, the 75 s cut): snow 10 (the floor taken in 63 s, 21 rounds, one teammate lost; medians 61 s, 25.5 rounds, one lost; 10 of 12 took it inside the cut),
   dark 1 (the mains out 5 s in, two rooms banged and cleared, 6 rounds, nobody lost, 4 of 8 defenders left; medians 8.5 rounds, none lost, 4 left), storm 6
   (22 rounds, one lost, 4 of 11 left; medians 23.5 rounds, one lost, 4 left).
-  THE PAGE'S FIGHT IS NOT THE HEADLESS ONE: the page runs the free step (`FIXEDSTEP.on` false), so a fight parts from the headless run of its seed inside
-  the first second and two machines at different frame rates do not see the same fight; the `floors` line is how a report says which one it saw. The fixed
-  step on the page is another goal's work, and the benchmark takes it when it lands. Checks: `bun run tools/qa/bench-check.ts` (a fake page and a fake tab:
+  THE PAGE'S FIGHT IS NOT PROMISED TO BE THE HEADLESS ONE: the page steps the game at a fixed 60 Hz and draws a blend between ticks (`FIXEDSTEP.on`,
+  `TWEEN.on`; the hands-off player's keys go on before each tick), but no check has yet shown a page run of a seed equal to the headless run of it, and the
+  follow camera still moves per drawn frame, so two machines at different display rates are not promised the same fight; the `floors` line is how a report
+  says which one it saw. The seeds are picked headless. Checks: `bun run tools/qa/bench-check.ts` (a fake page and a fake tab:
   the acts on each of three pages, the lines carried, everything back at the end and from every stop, the slow-machine cuts, a tab hidden, the ring full, no
   heavy moment, the addresses, the reload guard, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another
   take), and on a real page `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: `?bench` goes to the first scene and Esc comes
