@@ -199,3 +199,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `STALL_MIN` (30, and never under `NAV_MS` + 15 minutes unless said; 0 = never) is a FAIL naming the section, exit 1; `NAV_MS` (480000, was a fixed 240 s that loads sit right under) is one load's limit.
   MEASURED on build 514, four cores, headless Chromium, software adapter: before, nv's seek back was still running after 9 minutes when stopped; after,
   under one; nv whole is 32 minutes and map 8 (both PASS). A real GPU's seek is untouched (the page draws its own frames; `open` and `stay` walk the page undriven).
+- **The F7 tag and the replay bar wear the fight screen's look** (10-17, after the fight screen moved to the menus' sand and orange: docs/agents/menus.md
+  "The fight screen wears the menus' look"). NO SWITCH, as there: a look, nothing a step reads. The tag (`ui/replaykey.ts TAG_CSS`) was mint mono on a
+  blue-black plate; it is the sheet's row type and ink on its plate (`--h-font`, `--h-ink`, `--h-plate`). The bar (`replay/engineplay.ts`) was already sand
+  and orange: its playhead's edge and knob were the mint (now `--h-hi`, bright sand, so it stands off the orange line under the played part), and its
+  backings blue-black (now `--h-field`; the corner map's and the large map's `--h-base`; the dark ink on a gold mark `--h-on`). Each token carries the
+  menus' literal after it for a page without the sheet. What a map DRAWS (its inks, the player's dot) is untouched. The map viewer (`replay.html`) is its
+  own page and was not in this. CHECK: `probes.ts cardreplay` scans both files' colour literals and typefaces (hue 75° to 190°, a near-black tinted green or
+  blue, a typeface by name) and must find all three in the tag as it was; `hud-look-check.ts` reads the page's sheet, not these files.

@@ -318,7 +318,7 @@ export class PerfSweep {
         if (!L || typeof L.irCap !== 'number') return "this build's goggles carry no infrared light";
         if (!L.tube) return 'the goggles are up here: no infrared light is in the picture';
         const n = L.irCount;   // (how many the last upload took)
-        if (!n) return 'no infrared light is in the picture here (?noirlight)';
+        if (!n) return 'no infrared light is in the picture here (?noirlight, or the place is light enough for the goggles alone)';
         if (one && n < 2) return 'one infrared light burns here: the row before prices it';
         return { row, label: `${row.label} (${n} of them here)`, from: { irLights: n }, to: { irLights: one ? 1 : 0 }, apply: () => { const was = L.irCap; L.irCap = one ? 1 : 0; return () => { L.irCap = was; }; } };
       }
