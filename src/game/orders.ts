@@ -1038,6 +1038,13 @@ export class SquadOrders {
         if (ps?.low && d < 0.5) low = true;   // (picture.ts: the cover he stepped to hides a man on a knee)
         keep = !aside && !sn?.must && roomKept(g, gd);   // (rearwatch.ts REARWATCH.room: he had one of a taken room's other doors when 'fall in' came — he keeps it, where he stands, until the squad is out of the room, and follows last)
         if (keep) speed = 0;   // (…and STOOD, with no goal: a runner held at speed 0 still steers his chest at his next waypoint, and the twist clamp then drags his gun off the door — and off a man he has seen)
+        // (wallcharge.ts WALLCHARGE.menClear: the place he is being sent to — or kept on — is inside the blast of a charge set on a wall: he walks to a stand-off
+        //  mark instead and keeps it until his place is clear. Asked last, of the place the lines above settled on, so everything above runs as it always
+        //  did; null with its switch off or nothing set. Never out of Sam's way, never a man the sneak has mid-crossing; at the pace he steps aside at — the
+        //  silent squad and a squad nobody has found at a walk, low with Sam)
+        const wb = aside || sn?.must ? null : g.wallCharge?.clearOf(gd, () => keep ? p : sGoal ?? st ?? (near ? p : slot)) ?? null;
+        if (wb) { if (flat(wb, A.goal) > 0.05) A.goal = [wb[0], 0, wb[2]]; sGoal = null; keep = false; d = flat(p, wb); low = sneakLow(g, gd) || unseenLow(g, gd);
+          speed = sneaking(g, gd) || unseenMan(g, gd) ? (low ? K.onto : K.walk) : K.brisk; }
         if (!aside && !sn?.must && g.fight.short(gd)) speed = 0;   // (guards.ts LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — he does not close on him; stepping out of Sam's own way still comes first)
         // stopped: the first man looks on past Sam (never swinging with his reticle), the rest back the way they came
         face = !stopped || d > 0.6 ? null : toSam < 0.3 ? A.faceNow ?? sam.bodyYaw : A.follow === 0 ? yawTo(p, sam.pos) : yawTo(sam.pos, p);
