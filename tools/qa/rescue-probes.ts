@@ -36,9 +36,9 @@ const { killGuard, fireWeapon, FLASH } = await import(`${ROOT}/src/game/combat.t
 const { NVG } = await import(`${ROOT}/src/game/nvg.ts`);
 const { SAMESTART } = await import(`${ROOT}/src/game/samestart.ts`);
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
-const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
+const { FROZEN_HOLDS, pinned } = await import(`${ROOT}/src/host/profile.ts`);
 const { glassFxForced } = await import(`${ROOT}/src/game/glass.ts`);
-const { glassPenHarness } = await import(`${ROOT}/src/game/glasspen.ts`);
+const { glassPenHarness, GLASSPEN } = await import(`${ROOT}/src/game/glasspen.ts`);
 
 export const DT = 1 / 60;
 const VERBOSE = process.argv.includes('--verbose');
@@ -60,12 +60,14 @@ const DEFAULTS = { ...RESCUE }, FLASH_ON = FLASH.on;
  *  whose own env word the run gives is left to that word, as on any stand. Each list is a set that turns its probe green on the shipped stand, found once by taking
  *  the shipped rules out by halves (single seeds: not the only such set, and nothing re-reads it — take a rule off a list and run the probe shipped to see):
  *    rescue-doortools      DOORWAY.oneWay · DOORTOOLS.testDoor ('stacked → the boot' is one order there) · DOORTOOLS.outsidePlain (the threshold rows its menu check asks for)
+ *                          — and rounds stopping in glass for ONE scene of it, the captor's clock under the can (paneStops below: he is shot through the pane beside the door before the can goes off)
  *    rescue-flow-pass      DOORMANNERS.on (the nearer man 3.5 m from Sam)
  *    rescue-flow-states    DOORMANNERS.on · glass (the roamer behind the conference glazing is shot through the pane)
  *    rescue-flow-twodoor   DARKFOE.on ('F is a man short')
  *    rescue-orders         DOORMANNERS.on · DARKFOE.on
- *    rescue-set            DOORMANNERS.on · glass */
-export type Staged = 'DOORWAY.oneWay' | 'DOORMANNERS.on' | 'DARKFOE.on' | 'DOORTOOLS.testDoor' | 'DOORTOOLS.outsidePlain' | 'glass';
+ *    rescue-set            DOORMANNERS.on · glass · MOVES.on (its six-seed tally with the moves on: the room secured 4 of 6 either way and 5 of the 12 men lost, where
+ *                          every bound was read at 6 of 6 and 12 of 12 — a tally that small moves with any rule; the one taken out here is the first the halving found) */
+export type Staged = 'DOORWAY.oneWay' | 'DOORMANNERS.on' | 'DARKFOE.on' | 'DOORTOOLS.testDoor' | 'DOORTOOLS.outsidePlain' | 'MOVES.on' | 'glass';
 let HELD: readonly Staged[] = []; const HELD_OFF = new Set<string>();
 /** the glass parts off for a game a 'glass' probe has stood, by the frozen stand's own line (src/host/standup.ts): they are the stood game's, not a table's */
 function holdGlass(game: any) {
@@ -81,11 +83,18 @@ export const staged = (rules: readonly Staged[], fn: () => Promise<boolean>) => 
       for (const r of rules) { if (r === 'glass') continue;
         const [t, k] = r.split('.'), T = knobRegistry()[t] as Record<string, unknown> | undefined, word = /^[A-Z][A-Z0-9_]*(?==)/.exec(FROZEN_HOLDS[r] ?? '')?.[0];
         if (!T || !(k in T) || !word) throw new Error(`staged: '${r}' is no knob with a word of its own in FROZEN_HOLDS`);
-        if (process.env[word] === undefined && T[k] !== false) { put.push([T, k, T[k]]); T[k] = false; HELD_OFF.add(r); } }
+        if (process.env[word] === undefined && !pinned(word) && T[k]) { put.push([T, k, T[k]]); T[k] = typeof T[k] === 'number' ? 0 : false; HELD_OFF.add(r); } }   // (a stand that pins the word has the rule off by its own line; MOVES.on is a number)
       HELD = rules; return fn();
     })();
   } finally { HELD = was; for (const [T, k, v] of put) T[k] = v; if (HELD_OFF.size) console.log(`    (staged without, and held off for this probe: ${[...HELD_OFF].join(' · ')} — rescue-probes.ts 'THE RULES A SCENE WAS STAGED ON')`); }
 };
+/** ONE SCENE of a `staged` probe with rounds stopping in glass (glasspen.ts GLASSPEN.on off: the page under ?glasspen=0), the rest of the probe as its stand has
+ *  it — put off before the scene's stand-up (the shipped stand's writes no table) and put back after it. A run that names GLASSPEN keeps its word; the probe's last
+ *  line says what was held */
+export async function paneStops<T>(fn: () => Promise<T>): Promise<T> {
+  const pen = GLASSPEN.on; glassPenHarness(); if (pen && !GLASSPEN.on) HELD_OFF.add('rounds through a pane (for one scene of it)');
+  try { return await fn(); } finally { GLASSPEN.on = pen; }
+}
 export const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const steady = (W: any) => W.engine.lights.lights.filter((l: any) => l.ttl < 0).length;
 export const up = (l: any[]) => l.filter(x => x.state !== 'dead').length;
@@ -306,7 +315,7 @@ export const rescueOrders = staged(['DOORMANNERS.on', 'DARKFOE.on'], async () =>
   return F.done();
 });
 
-export const rescueSet = staged(['DOORMANNERS.on', 'glass'], async () => {
+export const rescueSet = staged(['DOORMANNERS.on', 'glass', 'MOVES.on'], async () => {
   const F = family('rescue-set: clock two — a room hit before its men are set, and after');
   const SEEDS = [11, 12, 13, 14, 15, 16];
   const run = async (setSecs: number, roamers: number, seeds: number[], more: Record<string, unknown> = {}) => { let blind = 0, secured = 0, pair = 0, caught = 0; const gap: number[] = []; const rel: (number | undefined)[] = [], ral: boolean[] = []; let bad = '', left = 0;
