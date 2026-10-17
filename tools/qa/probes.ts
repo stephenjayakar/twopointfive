@@ -34,6 +34,7 @@
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
+//     kitcan: kitcan-tiles
 //     noshield: noshield-stands noshield-card noshield-staged noshield-tape
 //     takedown: takedown-harness takedown-rules takedown-off takedown-moves takedown-partner takedown-breathe takedown-lower takedown-kill takedown-beats
 //     stealthpose: stealthpose-harness stealthpose-off stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
@@ -2445,6 +2446,8 @@ if (on('kitpaste-fit', 'kitpaste', 'kit', 'all')) await run('kitpaste-fit', asyn
 if (on('kitpaste-cases', 'kitpaste', 'kit', 'all')) await run('kitpaste-cases', async () => (await import('./kitpaste-check.ts')).pasteCases());   // a shield man onto you, you onto a teammate, colours kept, a squad limit's refusal
 // WHAT A MISSION HANDS YOU SHOWS ON YOUR CARD (src/ui/kitCard.ts `lent`, src/ui/loadout.ts lentNow; tools/qa/kitlent-check.ts sets its switches itself; KITLENT_BREAK=1 must fail)
 if (on('kitlent-tiles', 'kitlent', 'kit', 'all')) await run('kitlent-tiles', async () => (await import('./kitlent-check.ts')).lentTiles());   // the cameras and the wand a quiet mission under the fog hands you, on your own tiles
+// A SUPPRESSED GUN IS DRAWN AND NAMED AS ONE ON THE KIT CARD (src/ui/kitCard.ts KIT_CAN, src/ui/kitIcons.ts; tools/qa/kitcan-check.ts sets its switches itself; KITCAN_BREAK=1 must fail)
+if (on('kitcan-tiles', 'kitcan', 'kit', 'all')) await run('kitcan-tiles', async () => (await import('./kitcan-check.ts')).canTiles());   // the can on the guns tile and the roster's drawing, your pistol alone named for it
 // THE BALLISTIC SHIELD IS OUT OF THE PAGE (src/game/shield.ts SHIELD.on, src/game/kit.ts shieldIn; tools/qa/noshield-check.ts sets the switch itself, so it asks the same on either stand; NOSHIELD_BREAK=1 must fail)
 if (on('noshield-stands', 'noshield', 'all')) await run('noshield-stands', async () => (await import('./noshield-check.ts')).noshieldStands());        // in on the frozen stand, out on the shipped; the word, the registry, the journal's tables
 if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored card that says shield is a card without

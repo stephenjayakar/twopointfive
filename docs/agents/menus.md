@@ -663,6 +663,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   software adapter, about four minutes a page: the screen as it opens, the fog kept off, `?nokitlent`). Not on the roster's chips or the one-line card. Never seen
   on a GPU; nobody has played it.
 
+- **A suppressed gun is drawn and named as one on the kit card** (2026-10-17; the maintainer on the Team & kit screen of a quiet mission: "quiet missions
+  should have different gear screen stuff i think. be creative!"; his shot showed the quiet set's guns tile reading 'GLOCK 19 ONLY' beside a bare pistol).
+  THIS IS ONE PART OF THAT ASK, the guns tile's; nothing in it asks whether the mission is quiet, and the rest of the ask belongs to the screen's picture
+  and panel. Both of your guns wear a suppressor (`weapons.ts suppressed`, drawn so in the game), and nothing drawn on the card showed it. Now
+  `game/kit.ts kitGunCan(i, m)` (the gun in his hands is a suppressed one: both of yours whatever the card's `suppressed` field holds, a teammate's by his
+  Suppressor row, never the shotgun) puts the can on the gun's drawing (`ui/kitIcons.ts GUN_CAN`, `kitIcon(field, value, can)` / `gunIcon(weapon, can)`:
+  the tube on the muzzle, one dark band where it screws on) in the three places a gun is drawn, all asked through `ui/kitCard.ts gunCanOf`: the guns
+  tile, the roster's chip (`.lo-ics`, the drawing the one start page shows) and the roster's gun over its words (`.lo-gun`, the `?cards` screen's). Your
+  pistol carried alone reads 'Suppressed Glock 19' on its tile (`youGunsCan`); the rifle's words stay 'Mk 18 + Glock 19' (two guns on one tile, and the
+  floor hears the rifle as gunfire all the same); a teammate's tile keeps his row's word, the Suppressor row beside it says the rest. `kitWords` and
+  `YOU_GUNS` are NOT changed (the roster's line, the card's line under the tiles and several checks read them), so on the `?cards` screen those two
+  lines still say 'Glock 19 only' under a tile that says 'Suppressed Glock 19'; the one start page shows neither line. SWITCH: `KIT_CAN.on` (UI only, no
+  knob table, no `FROZEN_HOLDS` row: nothing in the game reads it and no frozen fixture reads a drawing, as `KIT_LENT` beside it), ON in the module and
+  the page, `?nokitcan` = the bare drawings and 'Glock 19 only'. CHECK: `bun run tools/qa/kitcan-check.ts` (`probes.ts kitcan`, also in `kit`; a
+  headless DOM, it sets its switches itself so it asks the same on both stands; `KITCAN_BREAK=1` must fail), 7 lines. Looked at on the real page on the
+  software adapter at 1280 x 720 only (the tile's words fit uncut, no page error); under 1180 wide the one page hides the tile's drawing and only the
+  roster's chip carries the can, not looked at; the `?cards` screen's narrower tile not measured. THE MAINTAINER'S CALL, not taken: the quiet set still
+  carries a frag (`setCard` builds it on the issued card). Never seen on a GPU; nobody has played it.
+
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with

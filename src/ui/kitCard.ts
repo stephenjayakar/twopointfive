@@ -25,7 +25,7 @@
 //
 // The card owns its own CSS (one <style> on first use), so index.html needs nothing for it.
 import { gearText } from '../game/gear';   // (a kept note names the kit: worded as issued where it is shown)
-import { KIT, KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitDefault, kitName, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, type MemberKit } from '../game/kit';
+import { KIT, KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitDefault, kitGunCan, kitName, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, youGunsCan, type MemberKit } from '../game/kit';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 
@@ -59,6 +59,14 @@ export const IDLE_WORD = 'no use here', IDLE_WHY = 'no fog of war on this missio
 export const LENT_WORD = 'mission\u2019s', LENT_WHY = 'issued for this mission: takes none of your pouches';
 export const KIT_LENT = { on: true };
 try { if (new URLSearchParams(location.search).has('nokitlent')) KIT_LENT.on = false; } catch { /* no page (the harness) */ }
+/** THE SUPPRESSOR SHOWS ON THE CARD (the maintainer on a quiet mission's Team & kit screen, 10-17: 'quiet missions should have different gear screen stuff';
+ *  the quiet set's tile read 'Glock 19 only' beside a bare pistol, though the gun he deploys with wears its can): a gun that is suppressed (game/kit.ts
+ *  kitGunCan — both of yours, a teammate's by his Suppressor row) is drawn with the can on its muzzle, on the tile and on the roster's card, and your pistol
+ *  carried alone reads 'Suppressed Glock 19' (youGunsCan). `?nokitcan` = the bare drawings and the words as they were — UI only: nothing in the game reads it. */
+export const KIT_CAN = { on: true };
+try { if (new URLSearchParams(location.search).has('nokitcan')) KIT_CAN.on = false; } catch { /* no page (the harness) */ }
+/** member i's gun is drawn with its can: the one question the tile, the roster's gun and the roster's chip all ask */
+export const gunCanOf = (i: number, m: MemberKit): boolean => KIT_CAN.on && kitGunCan(i, m);
 /** THE COPIED CARD (one for the page; UI only: nothing in the game reads it) and its switch (`?nokitcopy` = off: no buttons, no keys) */
 export const KIT_CLIP: { on: boolean; card: MemberKit | null } = { on: true, card: null };
 try { if (new URLSearchParams(location.search).has('nokitcopy')) KIT_CLIP.on = false; } catch { /* no page (the harness) */ }
@@ -254,12 +262,13 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     }
     rows.forEach((r, k) => {
       const v = rowGet(r, m), e = rowEls[k], cost = kitRowCost(i, r, m), no = said && said.k === k ? said.why : '';
-      const I = kitIcon(r.field, v), idle = !I.none && !!opts.idle?.(r.field);   // (carried, and of no use on this mission: the tile says so itself)
+      const can = r.field === 'weapon' && gunCanOf(i, m);   // (the gun on this row wears a suppressor: drawn with it, and your pistol alone named for it)
+      const I = kitIcon(r.field, v, can), idle = !I.none && !!opts.idle?.(r.field);   // (carried, and of no use on this mission: the tile says so itself)
       // (the mission hands him more of it than his card carries: the tile shows what he will have — never on an idle tile, and only a count or a yes / no)
       const handed = KIT_LENT.on && !idle && (typeof v === 'number' || typeof v === 'boolean') ? Math.max(0, Math.floor(opts.lent?.(r.field) ?? 0)) : 0, lent = handed > (typeof v === 'number' ? v : v ? 1 : 0);
-      e.val.textContent = idle ? (typeof v === 'number' ? `${v} · ${IDLE_WORD}` : IDLE_WORD) : lent ? (typeof v === 'number' ? (v ? `${v} · ${LENT_WORD} ${handed}` : `${handed} · ${LENT_WORD}`) : LENT_WORD) : r.word(v); e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
+      e.val.textContent = idle ? (typeof v === 'number' ? `${v} · ${IDLE_WORD}` : IDLE_WORD) : lent ? (typeof v === 'number' ? (v ? `${v} · ${LENT_WORD} ${handed}` : `${handed} · ${LENT_WORD}`) : LENT_WORD) : (can && i === 0 ? youGunsCan(v) : null) ?? r.word(v); e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
       e.row.classList.toggle('idle', idle); e.row.classList.toggle('lent', lent); e.row.title = idle ? IDLE_WHY : lent ? LENT_WHY : '';
-      { const key = `${r.field}:${r.field === 'weapon' || r.field === 'big' ? v : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
+      { const key = `${r.field}:${r.field === 'weapon' || r.field === 'big' ? v : ''}${can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
       if (no) e.note.textContent = no;
       else { if (cost && !(lent && !v)) e.note.append(el('span', 'kc-cost', costWords(cost)), ' · '); e.note.append(r.note(lent ? { ...m, [r.field]: typeof v === 'number' ? handed : true } : m)); }   // (lent: the row's line for a man who HAS it — how it is used, not 'none in your pouches' — and no pouch rate on a tile the mission alone fills: what it hands takes none)
       e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, issued)); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
