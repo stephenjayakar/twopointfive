@@ -114,6 +114,8 @@ import { MUSIC } from '../audio/pieces';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
 import { ROOMCLEAR } from '../game/roomclear';
+import { FIXEDSTEP } from './loop';
+import { TWEEN } from './tween';
 
 export type Profile = 'frozen' | 'shipped';
 const envOf = (): Record<string, string | undefined> => (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -300,6 +302,8 @@ export function pageSwitches(q: URLSearchParams): void {
   STACKLINE.on = !q.has('nostackline');   // a man walking up to stack on a door that stands OPEN keeps the brisk walk onto his mark instead of the slow last steps (game/stackline.ts): ON in the page; ?nostackline = the slow last steps whatever the door, as they were
   REARWATCH.on = !q.has('norearwatch');   // a stack's rear man keeps his gun on the open way at its back, through the entry, and follows last (game/rearwatch.ts): ON in the page; ?norearwatch = his eyes as the unasked cover alone dealt them, every gun on the door once it goes
   REARWATCH.room = !q.has('noroomkeep');   // the man an entry left on a taken room's other door keeps it over 'fall in' until the squad is out of the room, then follows last (game/rearwatch.ts roomKeepTick): ON in the page; ?noroomkeep = his gun turns away the frame 'fall in' is given
+  FIXEDSTEP.on = !/^(0|off)$/.test(q.get('fixedstep') ?? '');   // the game runs in whole 1/60 s ticks whatever the display's rate (host/loop.ts FIXEDSTEP — the same game on a 60, a 120 and a 144 Hz display): ON in the page; ?fixedstep=0 = one update a frame on the frame's own time, as before (?fixedstep=<hz> = another tick rate: main.ts)
+  TWEEN.on = !/^(0|off)$/.test(q.get('tween') ?? '');   // …and a frame between two ticks is drawn at the blend of them (host/tween.ts: keyed boxes, the men, carried lights, the camera's look-at — a part of a tick behind the game, none on a 60 Hz display; acts only with the line above): ON in the page; ?tween=0 = every frame draws the last tick, as the fixed step did
 }
 
 /** the harness stood up as the page with no URL flag on a machine that has kept nothing: the page's own boot switches for an empty query, the kit read from an empty
@@ -361,6 +365,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
+  'FIXEDSTEP.on': 'TPS_FIXEDSTEP=1 (read only by a tool that steps through host/loop.ts stepFrame: the harness\'s own W.step names its dt)',
+  'TWEEN.on': 'TPS_TWEEN=1 (the picture between two ticks: the same)',
   'REARWATCH.room': 'TPS_ROOMKEEP=1',
   'CLOSE.on': 'TPS_CLOSE=1',
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',

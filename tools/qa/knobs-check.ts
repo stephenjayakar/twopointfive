@@ -39,6 +39,7 @@ export async function knobsCheck(): Promise<boolean> {
   const PAGE_ONLY: Record<string, string> = {
     DESTRUCTION: "a recording's env.destruction", LIVED: "a recording's env.lived", LOOK: 'picture only', MUSIC: "the viewer's own score: a tape's player leaves it as the page has it (knobs.ts VISIT_OWN)",
     RECAP: 'reads only (the end card)', PLAN: 'picture only (marks on the floor)',
+    FIXEDSTEP: "the page's frame loop, not a game rule: a recording replays the updates it holds whatever stepped them (knobs.ts VISIT_OWN)", TWEEN: 'picture only (what a frame between two ticks draws; knobs.ts VISIT_OWN)',
   };
   const prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8'), body = prof.slice(prof.indexOf('export function pageSwitches'));
   const wrote = [...new Set([...body.slice(0, body.search(/^}/m)).matchAll(/^\s*([A-Za-z_][A-Za-z0-9_]*)\.[A-Za-z0-9_.]+ = /gm)].map(m => m[1]))];

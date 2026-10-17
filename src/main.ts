@@ -31,6 +31,7 @@ import { pageSwitches } from './host/profile';
 import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
+import { TWEEN, Tween } from './host/tween';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
@@ -647,9 +648,12 @@ async function main() {
   }
   // THE FRAME: src/host/loop.ts stepFrame runs the one order main.ts always ran (the native entry runs the same function); what is DOM here — the menu / panel / recorder hotkeys, the
   // attract-stop still refresh, the show class + debrief card, the boot marks round the first render, perfrec's timings — goes in through the closures below.
-  // THE FIXED STEP (host/loop.ts FIXEDSTEP; off by default): ?fixedstep (or =1) = the game stepped in whole 1/60 s ticks whatever the display's rate, ?fixedstep=0 = off,
-  // ?fixedstep=<hz> = at another tick rate (30‥240); Tab ▸ Frame ▸ 'fixed 60 Hz game step' flips it live; __fixedstep = the knobs + what the last frame ran.
-  { const v = q.get('fixedstep'); if (v !== null) { const n = Number(v); FIXEDSTEP.on = v !== '0' && v !== 'off'; if (n >= 30 && n <= 240) FIXEDSTEP.hz = n; } }
+  // THE FIXED STEP (host/loop.ts FIXEDSTEP; ON in the page — host/profile.ts pageSwitches raised it with the other boot switches): the game stepped in whole 1/60 s ticks
+  // whatever the display's rate, ?fixedstep=0 = off (one update a frame, as before), ?fixedstep=<hz> = at another tick rate (30‥240); and a frame between two ticks drawn at
+  // the blend of them (host/tween.ts TWEEN; ?tween=0 = every frame draws the last tick). Tab ▸ Frame ▸ 'fixed 60 Hz game step' / 'draw between ticks' flip them live;
+  // __fixedstep = the knobs + what the last frame ran and drew.
+  { const n = Number(q.get('fixedstep')); if (n >= 30 && n <= 240) FIXEDSTEP.hz = n; }
+  const tween = new Tween(engine);
   let lastOfBurstNow = true;
   // Tab, while it is on trial (ui/tabkey.ts): 'run' = the pause card on 'Run so far' and back, 'keys' = Options ▸ Controls over a paused run and back. Never under a show.
   tabFromQuery(q);
@@ -684,7 +688,9 @@ async function main() {
     updateMs: 0,
     fixedStep: () => !scripted,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that)
     betweenTicks: () => { hudExpireBubbles(game); engine.world.upload(true); },
+    tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
+    timeScale: () => window.__timeScale ?? 1,
     frozen: () => ((menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
     present: () => !scripted || (lastOfBurstNow && !document.hidden),
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)
@@ -719,7 +725,7 @@ async function main() {
       }
     },
   };
-  (window as any).__fixedstep = { knobs: FIXEDSTEP, get ticks() { return loop.ticks ?? 0; }, get owed() { return loop.fixed?.acc ?? 0; } };
+  (window as any).__fixedstep = { knobs: FIXEDSTEP, tween: TWEEN, get ticks() { return loop.ticks ?? 0; }, get owed() { return loop.fixed?.acc ?? 0; }, get drew() { return tween.stale ? null : { ...tween.last, lag: tween.lag }; } };
   // ?kitview (host/kitView.ts): this page is the start page's PICTURE of the team at the mission's way-in door, in an iframe there — staged once the scenario above
   // has stood its team, then live (the open card's man uses his kit at the door) or, `&stillkit`, frozen, drawn for a warm window and held; it takes the
   // loop's `frozen`, `render` and two seams over and is read-only on storage
