@@ -152,8 +152,9 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.behindSam = q.get('behindsam') !== '0';   // Sam beyond a door is one of ours to the squad's own stun can: the word at a held door steps them in with the can kept, and a bang row on it is refused in words (game/doortools.ts samBehind): ON in the page; ?behindsam=0 = only teammates counted, as it was
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
-  DOORTOOLS.thrNoCan = q.get('thrnocan') === '1';   // OFF in the page until the maintainer's call (?thrnocan=1): the can's wait spent with nobody at the door — no can, said why (game/doortools.ts thrNoCan)
-  DOORTOOLS.thrFragHold = q.get('thrfraghold') === '1';   // OFF in the page until the maintainer's call (?thrfraghold=1): a threshold waits (the order's one wait at most) for its men who ran from a grenade to be back before a can or the step in (game/doortools.ts thrFragHold)
+  DOORTOOLS.thrNoCan = q.get('thrnocan') !== '0';   // the can's wait spent with nobody at the door: no can, said why, and they go in keeping it (game/doortools.ts thrNoCan; the maintainer's answer, 10-16): ON in the page; ?thrnocan=0 = thrown from wherever the picked man stands, as it was
+  DOORTOOLS.fragHold = q.get('fraghold') !== '0';   // a door order waits for its men who ran from a grenade to be back on their marks before its door is opened, `fragHoldCap` s at most (game/doortools.ts fragHold; the maintainer's answer, 10-16): ON in the page; ?fraghold=0 = the order carries on with its men scattered, as it was — at a held doorway too
+  DOORTOOLS.thrFragHold = DOORTOOLS.fragHold && q.get('thrfraghold') !== '0';   // … and a threshold waits the same way before a can or the step in (game/doortools.ts thrFragHold): ON in the page; ?thrfraghold=0 = that half alone off
   DOORWAY.sideKick = q.get('sidekick') !== '0';   // a boot from beside the latch jamb (game/doors.ts kickSpotSide): ON in the page; ?sidekick=0 = every kick square in front of the leaf
   DOORWAY.kickGlass = q.get('kickglass') !== '0';   // … never from in front of a pane a round reaches him through: the lead boots from the front there (game/doortools.ts bootSpot): ON in the page; ?kickglass=0 = the side spot wherever there is floor
   WX_OWN.roofs = q.get('ownroofs') !== '0';   // a level's own night storm rains by that level's own roofs (game/weather.ts syncRoofs: the records office's car park lay inside the OFFICE's no-rain rectangle): ON in the page; ?ownroofs=0 = the office's two rectangles on every level, as it was
@@ -374,6 +375,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
+  'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
+  'DOORTOOLS.thrFragHold': 'TPS_THRFRAGHOLD=1',
+  'DOORTOOLS.fragHold': 'TPS_FRAGHOLD=1 (this rule alone: the threshold\'s half has its own word above)',
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
   'FURN.mouth.on': 'TPS_HOLECLEAR=1',
