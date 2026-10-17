@@ -164,7 +164,8 @@ export async function missionsScreen(): Promise<boolean> {
           'Enter and Space on each scenario row load exactly that row\'s URL (which reads back to that row); a key held down does not; the sheet\'s button loads it too; a click on a row highlights it and a double click starts it',
           `${(L.length - 1) * 2} picks checked · button → ${byButton[0]} · double click on row 6 → ${dbl[0]}` + (bad.length ? ` — NOT: ${bad.join(' · ')}` : '')); }
       // ---- the solo night off the start card is Start; anywhere else it is a load of ?solo
-      { loads.length = 0; S.select(L.indexOf(M.SOLO_NIGHT)); const before = starts; M.missionsKey({ code: 'Enter' });
+      { const QFS = (await import(`${ROOT}/src/game/quietfog.ts`)).QUIETFOG, soloFogWas = QFS.solo; QFS.solo = false;   // (QUIETFOG.solo down for this one: under the fog the solo night off a plain page is a load of its own link — solofog-check.ts; here, the start as it was)
+        loads.length = 0; S.select(L.indexOf(M.SOLO_NIGHT)); const before = starts; M.missionsKey({ code: 'Enter' }); QFS.solo = soloFogWas;
         F.verdict(loads.length === 0 && starts === before + 1 && menu.mode === 'closed' && M.currentMissions() === null && !mroot.cls.has('on'), 'the solo night picked off the start card over the plain night is Start: the card closes, the list goes, nothing loads', `loads ${loads.length} · onStart ${starts - before} · menu '${menu.mode}'`);
         menu.open('pause'); const pauseBtn = !!buttonOf(root, 'Missions'); buttonOf(root, 'Missions')?.onclick?.(); const P = M.currentMissions()!; P.select(L.indexOf(M.SOLO_NIGHT)); loads.length = 0; P.pick();
         F.verdict(pauseBtn && loads.length === 1 && loads[0] === '/?solo&quality=high&mute' && menu.mode === 'pause', 'the plain pause card offers Missions too; the solo night picked from there is a load of ?solo (a fresh night), not a resume', `${loads.join(',')} · menu '${menu.mode}'`);

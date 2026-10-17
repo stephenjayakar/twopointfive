@@ -90,11 +90,15 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
     var ok = grainRec; var q2 = rec.pos.xz;
     let wispRec = SNOW_WISPS && snowNow() && rec.posB.y > 1.5 && rec.posB.y < 2.5;   // (a WISP's record, game/snowFx.ts: aspect 2 — each try must also land in a gust patch, and the flakes' curtains do not thin it)
     let puffRec = SNOW_WISPS && wispRec && ((rec.k.w >> 16u) & 255u) == 0u;   // (… and a BLAST's puff of powder, game/snowBlast.ts: a wisp record with no gust length — thrown where the blast was, whatever the gusts and the view's middle are doing, and born running out from it)
+    let skyRec = snowNow() && !wispRec && !grainRec && abs(rec.posB.x - frame.weatherE.z) < 0.5 && distance(rec.pos.xz, frame.weatherE.xy) < 2.0;   // (the falling snow's own record: its disc IS the view's — a kick's, a blast's throw's is a small one of its own, and what they throw up is lifted off snow that lies)
     for (var t = 0u; t < 32u && !ok; t++) {
       let rr = sqrt(rnd(seed, 20u + t * 3u)); let th = rnd(seed, 21u + t * 3u) * 6.2831853;
       q2 = rec.pos.xz + vec2f(cos(th), sin(th)) * (rr * rec.posB.x);
       let rim = 1.0 - smoothstep(0.7, 1.0, rr);
-      ok = rainOutdoors(q2) && rnd(seed, 22u + t * 3u) < rim;
+      var open = false; var keep = rim;
+      if (skyRec) { open = flakeOpen(q2); if (snowPast() > 0.0 && pastWorld(vec3f(q2.x, 0.0, q2.y))) { keep = min(rim, 1.0 - smoothstep(PAST_RIM_IN, PAST_RIM_OUT, rr)); } }   // (the SKY's flake may be born in the air past the level's rim — SNOW_LOOK.past, particles_common.wgsl snowPast — where the fall thins sooner toward the disc's edge: those flakes show only over the picture's near part, and every one out there is one fewer in the level)
+      else { open = rainOutdoors(q2); }
+      ok = open && rnd(seed, 22u + t * 3u) < keep;
       if (SNOW_WISPS) { if (wispRec && ok && !puffRec && !snowOneAir()) { ok = rnd(seed, 200u + t) < wispGust(q2, f32((rec.k.w >> 16u) & 255u) * (32.0 / 255.0)); } }
       if (SNOW_WISPS) { if (SNOW_GRAINS) { if (wispRec && ok && !puffRec && grain.b.w > 0.5 && !snowOneAir()) { ok = rnd(seed, 300u + t) < mix(1.0, smoothstep(0.55, 1.0, distance(q2, frame.weatherE.xy) / max(grain.a.y, 1.0)), clamp(grain.e.w, 0.0, 1.0)) && length(airAt(q2).xy) >= WISP_LEE_DIE * grain.a.x; } } }   // (with the grains running the wisps stand back from the view's middle: the veil is the far look — and none is thrown into air the field holds dead, where its step would fade it at once)
     }
@@ -746,7 +750,7 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     let mv = p.vel * dt; let len = length(mv);
     if (len > 1e-6) {
       let rd = mv / len;
-      if ((em.flags & 2u) != 0u) {
+      if ((em.flags & 2u) != 0u && !(snowNow() && snowPast() > 0.0 && pastWorld(p.pos) && pastWorld(p.pos + mv))) {   // (a flake whose whole step is past the level's rim has nothing to meet: no ray is cast for it. One that comes in over the rim is traced from where it is — the trace starts at the world's face)
         let hit = traceClosest(p.pos, rd, len + 0.01, 0u);
         if (hit.idx >= 0) {
           if (hit.inside) { pool.parts[slot].age = p.life; atomicAdd(&pool.hdr[3], 1u); return; }
@@ -785,7 +789,10 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
         if (E.z > 0.0) { let d = p.pos.xz - E.xy; if (abs(d.x) > E.z || abs(d.y) > E.z) { let w = (fract((d + E.z) / (2.0 * E.z)) * 2.0 - 1.0) * E.z; p.pos = vec3f(E.x + w.x, p.pos.y, E.y + w.y); } }
       }
     }
-    if (!rainOutdoors(p.pos.xz) || p.pos.y < -0.2 || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX)) { pool.parts[slot].age = p.life; return; }   // drifted over the roof's dry column / out of the world: gone
+    var gone = p.pos.y < -0.2;
+    if (snowNow() && snowPast() > 0.0) { gone = gone || !flakeOpen(p.pos.xz) || p.pos.y > WORLD_MAX.y; }   // (SNOW_LOOK.past: a flake's air goes on past the level's rim, to where the view's disc wraps it)
+    else { gone = gone || !rainOutdoors(p.pos.xz) || any(p.pos < WORLD_MIN) || any(p.pos > WORLD_MAX); }
+    if (gone) { pool.parts[slot].age = p.life; return; }   // drifted over the roof's dry column / out of the world: gone
   }
   let V = normalize(frame.camPos - p.pos);
   let tl = length(p.vel); let T = select(vec3f(0.0, -1.0, 0.0), p.vel / max(tl, 1e-6), tl > 1e-3);
@@ -817,6 +824,8 @@ fn wispWind() -> vec3f {
  *  flakes but seem to behave differently. we should probably just unify those systems … makes the air not feel physical as a fluid". With it on there is no grain
  *  kind: every snow particle — a falling flake, a wisp lifted off the ground — is carried by snowAir below, and what the wind lifts it lifts by one rule (grain.f.yz). */
 fn snowOneAir() -> bool { if (SNOW_GRAINS) { return grain.f.x > 0.5 && grain.b.w > 0.5; } return false; }
+/** past the level's rim there is no air field: a flake out there (SNOW_LOOK.past) is in the open wind — 0 inside the world, 1 from a metre and a half out */
+fn pastRimAir(p: vec3f) -> f32 { return smoothstep(0.0, 1.5, max(max(WORLD_MIN.x - p.x, p.x - WORLD_MAX.x), max(WORLD_MIN.z - p.z, p.z - WORLD_MAX.z))); }
 /** the air a snow particle at `p` is carried by. AMONG THE WALLS (under grain.g.x m) it is the simulated field's (airAt: the ground's air over the level's plan —
  *  round a wall's end, slack in its lee, fast through a gap) raised by the storm's own height profile (wind_field.wgsl windStorm: 0.55 at the ground → 1 at 2.5 m,
  *  so in the open, far from any wall, this IS `free`), with the field's lift; OVER THEM (above grain.g.y) it is `free`, the open wind the caller read (windAir × its
@@ -825,7 +834,7 @@ fn snowAir(p: vec3f, free: vec3f) -> vec3f {
   if (SNOW_GRAINS) {
     let A = airAt(p.xz);
     let h = (0.55 + 0.45 * clamp(p.y / 2.5, 0.0, 1.0)) / 0.55;
-    let b = smoothstep(grain.g.x, max(grain.g.y, grain.g.x + 0.01), p.y);
+    let b = max(smoothstep(grain.g.x, max(grain.g.y, grain.g.x + 0.01), p.y), pastRimAir(p));
     let low = vec3f(A.x * h, A.z * grain.g.z, A.y * h) * em.rainCfgD.w;
     return mix(low, free, b);
   }

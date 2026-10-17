@@ -20,6 +20,7 @@ export const SCENE_NOTES: Record<string, string> = {
   'SNOWFX.radiusK': 'the disc = this × the camera distance (wider than the rain\'s: a flake drifts metres on its way down)',
   'SNOWFX.radiusMin': 'the disc = this × the camera distance (wider than the rain\'s: a flake drifts metres on its way down)',
   'SNOWFX.radiusMax': 'the disc = this × the camera distance (wider than the rain\'s: a flake drifts metres on its way down)',
+  'SNOWFX.past': 'm past the level\'s rim the snow goes on falling, inside the view\'s disc (SNOW_LOOK.past; 0 = no flake past the rim) — live',
   'SNOWFX.airLow': 'm: under this the air is the simulated field\'s (the walls\' own: slack in a lee, fast through a gap) …',
   'SNOWFX.airHigh': 'over this the open wind; between, blended (a wall\'s top is at 3 m)',
   'SNOWFX.airLift': '× the field\'s lift (air going up and over what it meets)',

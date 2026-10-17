@@ -318,6 +318,10 @@ export const squadplayKey = guarded(async () => {
     verdict(stacked && who === 'orders to Blue One' && row?.text === 'go · Blue One' && l?.order === 'go' && l.who.join(' + ') === 'Blue One' && away && D.stats.words === 1, 'both pairs waiting, the orders to gold, X on Blue One: his menu\'s F row reads \'go · Blue One\' — who it would send — and F with that menu up sends him and nobody else (the menu goes away)', `"${who}" · row "${row?.key} ${row?.text}" · ${line(l)} · menu away ${away} · words ${D.stats.words}`); }
   // ---- a charge that is not the addressed men's: the block does not say F blows it while F is their word
   { const R = await rig(5, MANAGER); const { O, D } = R;
+    // (red's door here, the storage door, is locked, and on the SHIPPED stand the first word at a door nobody knew was locked ends 'found shut' with red still
+    // stacked on it — DOORTOOLS.testDoor, a FROZEN_HOLDS row, held by doortest-check.ts. These lines are about what F is and what the block says once red
+    // HAS gone in, so the word boots the door as it did; the next rig and `guarded` put the knob back.)
+    DOORTOOLS.testDoor = false;
     R.who('blue'); R.toolsOnDoor('manager'); R.press(CHARGE); const armed = R.until(() => D.set.length === 1, 45);
     R.who('red'); R.onDoor('storage'); R.press(K.quickKey); const on = R.set('red', 40);
     const n1 = R.notes().filter(s => /charge set|waiting/.test(s)).join(' ; ');

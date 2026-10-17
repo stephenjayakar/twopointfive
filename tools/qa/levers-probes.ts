@@ -214,8 +214,8 @@ export async function leversScreens(): Promise<boolean> {
         'Standard pressed: every lever back on standard\'s rung, nothing kept, the links as they were; with no mix A / D are standard / hard as ever', `${back} · D → ${keyHard}`);
       S.select(solo.id); const soloRows = leverRowsOf(root); if (quietM) S.select(quietM.id); const quietRows = quietM ? leverRowsOf(root) : []; if (lessonM) S.select(lessonM.id); const lessonRows = lessonM ? leverRowsOf(root) : [];
       const said = (rows: typeof soloRows) => rows.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ');
-      F.verdict(soloRows.every(r => r.na && r.note === '') && (!quietM || quietRows.every(r => r.key === 'fog' && QUIETFOG.on ? !r.na : r.na)) && lessonRows.every(r => r.na),
-        'the solo night greys all three rows (no fog of war, and its shift is the level\'s own); so does a quiet mission (its shift is the level\'s own; its fog lever is live only while game/quietfog.ts\'s rule is on, tools/qa/quietfog-check.ts) and a Training lesson (its page reads no lever)',
+      F.verdict(soloRows.every(r => (r.key === 'fog' && QUIETFOG.on && QUIETFOG.solo ? !r.na : r.na && r.note === '')) && (!quietM || quietRows.every(r => r.key === 'fog' && QUIETFOG.on ? !r.na : r.na)) && lessonRows.every(r => r.na),
+        'the solo night greys all three rows (no fog of war, and its shift is the level\'s own — but its fog row is live where game/quietfog.ts QUIETFOG.solo is up); so does a quiet mission (its shift is the level\'s own; its fog lever is live only while game/quietfog.ts\'s rule is on, tools/qa/quietfog-check.ts) and a Training lesson (its page reads no lever)',
         `solo: ${said(soloRows)}${quietM ? ` · ${quietM.id}: ${said(quietRows)}` : ' · (no quiet mission on this build)'}${lessonM ? ` · ${lessonM.id}: ${said(lessonRows)}` : ''}`);
       S.close();
       // ---- the loadout
@@ -234,9 +234,17 @@ export async function leversScreens(): Promise<boolean> {
       F.verdict(up === 'cones/hard/stuns base hard' && toH.includes('difficulty=hard') && !toH.includes('enemykit') && after === 'team/standard/stuns base standard', 'opened on a row\'s own hard link: hard\'s rungs under the kept lever while the screen is up, the link\'s own level on what Deploy loads; closed with no lever pressed, the machine\'s level again',
         `up: ${up} · deploy ${toH} · after: ${after}`);
       D.setDifficulty('standard');
-      const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloL = leverRowsOf(Ls.root as unknown as El).length; Ls.close();
+      // (a squad mix kept on the machine says its line on a squad mission's loadout only: none of it acts on a quiet mission or the solo night)
+      { D.setLever('fog', 'own', false); D.setLever('kit', 'stuns', false); const mixed = D.leversMixed(), noteOf = (L: any) => { const t = (L.root as unknown as El).all(e => e.cls.has('lo-levnote'))[0]?.textContent ?? ''; L.close(); return t; };
+        const n4 = noteOf(UI.openLoadout(e4, { host, search: `${M.missionHref(four, SEARCH)}`, deploy: () => {}, back: () => {} })), nS = noteOf(UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }));
+        const nQ = quietM ? noteOf(UI.openLoadout(UI.entryOfMission(quietM), { host, deploy: () => {}, back: () => {} })) : '';
+        D.setDifficulty('standard', false);
+        F.verdict(mixed && n4.includes('Your own mix') && nS === '' && nQ === '', 'a squad mix kept on the machine: its line under a squad mission\'s lever rows, none under the solo night\'s or a quiet mission\'s (the mix does not act there)',
+          `squad '${n4}' · solo '${nS}' · ${quietM ? `${quietM.id} '${nQ}'` : '(no quiet mission on this build)'}`); }
+      const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloLR = leverRowsOf(Ls.root as unknown as El), soloL = soloLR.length, soloFog = QUIETFOG.on && QUIETFOG.solo; Ls.close();
       const lesson = (TRAINING_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
-      F.verdict(soloL === 0 && lessonL <= 0, 'the solo night\'s loadout and a Training lesson\'s carry no lever rows', `solo ${soloL} rows · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
+      F.verdict((soloFog ? soloLR.map(r => r.key).join(',') === 'fog,ai,kit' && soloLR.every(r => (r.key === 'fog') !== r.na) : soloL === 0) && lessonL <= 0,
+        'the solo night\'s loadout and a Training lesson\'s carry no lever rows (where game/quietfog.ts QUIETFOG.solo is up the solo night\'s carries the three, the fog\'s alone live)', `solo ${soloL} rows${soloFog ? ` (${soloLR.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ')})` : ''} · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
     }); });
   } finally { fresh(); FOG.own = ownWas; }
   return F.done();

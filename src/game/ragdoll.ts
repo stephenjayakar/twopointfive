@@ -11,6 +11,7 @@
 import { Vec3, Quat } from '../math/vec';
 import type { Box } from '../scene/boxes';
 import { hyp2, hyp3, hyp4 } from '../math/vec';
+import { onExact } from '../math/exact';
 
 /** What the ragdoll needs from the collision layer (StaticCollision satisfies it; null = a bare floor at y = 0). */
 export interface RagdollWorld {
@@ -41,13 +42,14 @@ const APART: [number, number, number][] = [[12, 13, 0.9], [14, 15, 0.9], [12, 15
 /** knee direction rule over (hip, knee, ankle): the knee must stay on the trunk's forward side of the hip–ankle line — legs buckle forward, never bird-legged. (Elbows get
  *  no such rule: 'behind the shoulder–hand line' is wrong for half the poses arms take, and enforcing it clubbed forward-falling bodies over onto their backs.) */
 const KNEES: [number, number, number][] = [[10, 12, 14], [11, 13, 15]];
-const HIP_CONE_COS = Math.cos(75 * Math.PI / 180), NECK_CONE_COS = Math.cos(55 * Math.PI / 180);   // thigh within 75° of an axis tilted 47° forward of straight down (−25° extension … 120° flexion); head within 55° of the trunk's up
+let HIP_CONE_COS = 0, NECK_CONE_COS = 0;   // (made in onExact below: cos 75°, cos 55°)   // thigh within 75° of an axis tilted 47° forward of straight down (−25° extension … 120° flexion); head within 55° of the trunk's up
 
 const H = 1 / 180, MAX_SUBSTEPS = 9, ITERS = 8;
-const GRAV = 9.8, DAMP = Math.pow(0.45, H), DAMP_PINNED = Math.pow(0.003, H);   // velocity retention per second 0.45 (as a per-substep factor): falls stay lively, nothing rattles on; much heavier while dragged so the trailing body does not swing about
-const DAMP_SETTLE = Math.pow(0.02, H), SETTLE_V = 0.25;   // once the trunk is down to SETTLE_V (m/s) the limbs get this instead: joints have friction, a dead arm does not swing on its shoulder–hand hinge for three seconds
+const GRAV = 9.8; let DAMP = 0, DAMP_PINNED = 0;   // (made in onExact below: 0.45^H, 0.003^H)   // velocity retention per second 0.45 (as a per-substep factor): falls stay lively, nothing rattles on; much heavier while dragged so the trailing body does not swing about
+let DAMP_SETTLE = 0; const SETTLE_V = 0.25;   // (DAMP_SETTLE made in onExact below: 0.02^H)   // once the trunk is down to SETTLE_V (m/s) the limbs get this instead: joints have friction, a dead arm does not swing on its shoulder–hand hinge for three seconds
 const MAX_STEP = 0.045;     // m per substep (8 m/s, which a fall from standing never reaches): below the smallest radius, so a particle that ended a substep outside a box can never find its centre inside one — the push-out side is never ambiguous, no tunnelling through 8 cm partitions or 5 cm door leaves
 const PIN_STEP = 2.4 * H;   // m per substep a pinned ankle travels toward the hands (2.4 m/s): taking hold of a body gathers its legs in over a few frames instead of yanking it
+onExact(() => { HIP_CONE_COS = Math.cos(75 * Math.PI / 180); NECK_CONE_COS = Math.cos(55 * Math.PI / 180); DAMP = Math.pow(0.45, H); DAMP_PINNED = Math.pow(0.003, H); DAMP_SETTLE = Math.pow(0.02, H); });   // (the constants above that come out of Math's rounded functions: the engine's own values, or the game's own under math/exact.ts EXACT — remade when that switch is written)
 const MU = 0.7;             // Coulomb friction on floor and boxes: a shot body skids a hand's breadth, a dragged one trails straight behind you
 const SLEEP_WINDOW = 0.35, SLEEP_DISP = 0.012, MAX_AWAKE = 12;   // asleep when no particle has moved SLEEP_DISP (m) over the last SLEEP_WINDOW (s) — robust to both millimetre jitter and slow creep; hard cap (s)
 const Y_MIN = 0.03;         // statics entirely below this are floor finishes (the floor itself is the plane y = 0)

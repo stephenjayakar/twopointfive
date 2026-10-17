@@ -95,6 +95,12 @@ export class CharacterRenderer implements SkinnedDrawable {
     for (let k = 0; k < CHAR_MAT_FLOATS; k++) if (f[o + k] !== was[k]) { this.matDirty = true; break; }
   }
   private scratch = new Float32Array(CHAR_MAT_FLOATS);
+  // DRAWING BETWEEN TICKS (host/tween.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
+  // palette — a blend of two ticks', in an array of the caller's — over the GPU's copy. The staging is never written by it: what the game staged is what the next tick finds.
+  get staged(): Float32Array { return this.jointStaging; }
+  readonly jointFloats = JOINT_STRIDE * 16;
+  ownerOf(i: number): number { return this.instU32[i * INST_F32 + 7]; }
+  drawJoints(data: Float32Array, count: number) { if (count > 0) this.device.queue.writeBuffer(this.jointMats, 0, data.buffer, data.byteOffset, count * JOINT_STRIDE * 64); }
   finish(count: number) {
     this.instanceCount = count;
     if (this.matDirty) { this.device.queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; }

@@ -9,7 +9,7 @@
 //   THE DISC  round the view's look-at point, as the rain's. A flake is in the air for seconds, so two things the rain never needed: what is MISSING of the
 //             population is laid through the slab's whole HEIGHT at once (a fresh disc is full now, not after the first flakes have come down from the top;
 //             the steady trickle enters at the top, as snow does), and a flake that leaves the disc's
-//             square is carried round to the far side of it at its height (the wrap: frame.weatherE carries the disc, its lattice share 0) — the view moves at a
+//             square is carried round to the far side of it at its height (the wrap: frame.weatherE carries the disc, its lattice share 0 — or, NEGATIVE, the metres past the level's rim the snow goes on falling: SNOW_LOOK.past) — the view moves at a
 //             walk or a cut and the air it comes to is already snowing.
 //   NOBODY    reads any of it: no eye, ear or foot. Its dice are its own (never Math.random, never the game's die). Play under snow is play under Overcast, to
 //             the run digest (tools/qa/snow-check.ts).
@@ -66,6 +66,7 @@ export const SNOWFX = {
   windK: 1.0,         // × the air's velocity on the flakes
   sheetAmp: 0.3, sheetLen: 9, sheetDrift: 1.0,   // denser and thinner curtains crossing the yard, carried downwind
   radiusK: 0.75, radiusMin: 10, radiusMax: 30,   // the disc = this × the camera distance (wider than the rain's: a flake drifts metres on its way down)
+  past: 12,           // m past the level's rim the snow goes on falling, inside the view's disc (SNOW_LOOK.past; 0 = no flake past the rim) — live
   // ---- ONE SNOW IN ONE AIR (SNOW_LOOK.oneAir; particles.wgsl snowAir): the air a flake falls through — all LIVE
   airLow: 2.0,        // m: under this the air is the simulated field's (the walls' own: slack in a lee, fast through a gap) …
   airHigh: 3.4,       // … over this the open wind; between, blended (a wall's top is at 3 m)
@@ -173,6 +174,28 @@ export function flakeHidden(roofs: readonly (readonly number[])[], x: number, y:
   for (const R of roofs) if (x >= R[0] + wallIn && z >= R[1] + wallIn && x <= R[2] - wallIn && z <= R[3] - wallIn) return true;
   return false;
 }
+/** SNOW PAST THE LEVEL'S RIM (SNOW_LOOK.past) — particles_common.wgsl flakeOpen on the CPU: may a flake be in the air over ground point (x, z)? Under none of
+ *  `roofed`'s roofs, and inside the world's rim grown by `past` m; with past 0 it is the rain's own rule (a quarter metre INSIDE the rim), as it was. A flake high in
+ *  the air is drawn well off its own ground toward the camera's foot, so with the rim on the camera's side the near part of the picture is snowed on by flakes that
+ *  are past the rim. Nothing lies out there: wisps, kicks and prints keep the world's rim. Picture only. */
+export function flakeOpen(roofed: (x: number, z: number) => boolean, x: number, z: number, past: number): boolean {
+  const x0 = WORLD.min[0], z0 = WORLD.min[2], x1 = WORLD.max[0], z1 = WORLD.max[2];
+  if (past <= 0) return x > x0 + 0.25 && z > z0 + 0.25 && x < x1 - 0.25 && z < z1 - 0.25 && !roofed(x, z);
+  return x > x0 - past && z > z0 - past && x < x1 + past && z < z1 + past && !roofed(clamp(x, x0 + 0.26, x1 - 0.26), clamp(z, z0 + 0.26, z1 - 0.26));   // (past the rim: the roof rule of the rim beside it)
+}
+/** is ground point (x, z) past the world's rectangle (particles_common.wgsl pastWorld) */
+export const pastWorld = (x: number, z: number): boolean => x < WORLD.min[0] || z < WORLD.min[2] || x > WORLD.max[0] || z > WORLD.max[2];
+/** Past the rim the fall thins sooner toward the disc's edge than inside it (shares of the disc's radius; particles_common.wgsl PAST_RIM_IN / PAST_RIM_OUT hold
+ *  the same two). The ring's flakes are a fixed number spread over all the open air in the disc, and a flake past the rim shows only over the near part of the
+ *  picture: with the level's own taper (0.7‥1) the fall by an edge was a quarter thinner than in the middle of the yard; with this one it is the yard's. */
+export const PAST_TAPER = [0.5, 0.8] as const;
+/** the share of throws kept at `r01` of the disc's radius, over ground at (x, z): the emit kernel's own acceptance, and the sooner one past the world's rim */
+export function flakeTaper(r01: number, x: number, z: number, past: number, sooner: readonly [number, number] = PAST_TAPER): number {
+  if (past <= 0 || !pastWorld(x, z)) return rimTaper(r01);
+  const t = clamp((r01 - sooner[0]) / (sooner[1] - sooner[0]), 0, 1); return Math.min(rimTaper(r01), 1 - t * t * (3 - 2 * t));
+}
+/** how far past the rim the snow falls this frame (m): the switch and the number, 0 = not at all */
+export const snowPastM = (): number => SNOW_LOOK.past ? clamp(SNOWFX.past, 0, 40) : 0;
 export function snowing(g: Game): boolean { return ((g.engine as { weather?: WeatherFrame }).weather?.snow ?? 0) > 0.001; }
 
 const DOWN: Vec3 = [0, -1, 0];
@@ -217,13 +240,18 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
   const rSet = num(set.particleRainRadius, 0);
   const R = rSet > 0 ? clamp(rSet, 3, 40) : clamp(F.radiusK * cam.distance, F.radiusMin, F.radiusMax);
   const cx = cam.target[0], cz = cam.target[2];
-  const open = (x: number, z: number) => !(W?.underRoof(x, z)) && x > WORLD.min[0] + 0.25 && z > WORLD.min[2] + 0.25 && x < WORLD.max[0] - 0.25 && z < WORLD.max[2] - 0.25;
-  let area = 0;
+  const roofed = (x: number, z: number) => !!W?.underRoof(x, z);
+  const past = snowPastM();   // (SNOW_LOOK.past: the flakes' own air goes on this far past the rim — `area` below is theirs, `inside` the ground snow can LIE on, be lifted off, be kicked up from: inside the world's rim)
+  let area = 0, inside = 0;
   // (WISPS ON THE WIND FIELD, WX_OWN.wind: `blown` = that open ground weighed by the share of the storm's wind the field has over it — nothing in a roof's lee —
   // which is what the GPU's own throws then keep of a wisp record, particles.wgsl wispGust × wispShare. The flakes' `area` is not touched.)
   const onField = WX_OWN.wind && wispsOn(g); let blown = 0;
   { const x0 = Math.floor(cx - R), x1 = Math.ceil(cx + R), z0 = Math.floor(cz - R), z1 = Math.ceil(cz + R);
-    for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) { const px = x + 0.5, pz = z + 0.5; const r = Math.hypot(px - cx, pz - cz) / R; if (r >= 1 || !open(px, pz)) continue; area += rimTaper(r); if (onField) blown += rimTaper(r) * g.wind.stormShare(px, pz); } }
+    for (let z = z0; z < z1; z++) for (let x = x0; x < x1; x++) { const px = x + 0.5, pz = z + 0.5; const r = Math.hypot(px - cx, pz - cz) / R; if (r >= 1) continue;
+      if (!flakeOpen(roofed, px, pz, past)) continue;
+      const k = flakeTaper(r, px, pz, past); area += k;
+      if (past > 0 && pastWorld(px, pz)) continue;   // (past the rim: the flakes' air only)
+      inside += k; if (onField) blown += k * g.wind.stormShare(px, pz); } }
   const top = w.rainTop > 0 ? w.rainTop : 7;
   const want = F.perM2 * snow * area * num(set.particleRainDensity, 1);
   // A flake is in the air for one whole fall (`air`) and is FILED with the slowest flake's (the ring retires slots in order, by the life they were filed with).
@@ -251,8 +279,8 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
   const trickle = Math.min(Math.floor(st.birthAcc), room); st.birthAcc -= Math.floor(st.birthAcc); room -= trickle;
   // the make-up: one fill at a time — none filed while the last waits on the ring (a tick that was not drawn; two ticks to a frame under ?fixedstep)
   const fill = go && st.pop < 0.85 * target && st.fillAt !== Pp.rainStats.emitted ? Math.min(room, Math.ceil((target - st.pop) * sheetK)) : 0;
-  // the disc for the flake's wrap (frame.weatherE: centre, radius — and a lattice share of 0: there is no lattice rain to stand back)
-  { const nf = (w.nearFade && !Object.isFrozen(w.nearFade)) ? w.nearFade : (w.nearFade = [0, 0, 0, 0]); nf[0] = cx; nf[1] = cz; nf[2] = area > 0 ? R : 0; nf[3] = 0; }
+  // the disc for the flake's wrap (frame.weatherE: centre, radius — and no lattice share: there is no lattice rain to stand back. The slot carries the metres past the rim instead, negative)
+  { const nf = (w.nearFade && !Object.isFrozen(w.nearFade)) ? w.nearFade : (w.nearFade = [0, 0, 0, 0]); nf[0] = cx; nf[1] = cz; nf[2] = area > 0 ? R : 0; nf[3] = past > 0 ? -past : 0; }   // (w: the metres past the rim, NEGATIVE — particles_common.wgsl snowPast; 0 = none)
   const rec = (lift: number) => ({ shape: 'rainDisc' as const, radius: R, speed: F.fallV, speedJit: 0.1, life, lifeJit: 0, size: F.size, sizeJit: F.sizeJit, lift, seed: nextSeed(st) });
   let filed = 0;
   if (trickle > 0) filed += Pp.emit('rain', [cx, top, cz], DOWN, trickle, rec(Math.min(0.6, top)));
@@ -263,7 +291,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
   if (wOn && SNOW_LOOK.blast && dt > 0) left -= snowBlastPuffs(g, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))));   // (a blast's puff of powder goes first, and may dip into the ring's last slack: it is of the moment)
   if (oa && SNOW_LOOK.blast && dt > 0) left -= snowBlastThrow(g, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))), F.size, F.sizeJit);   // (ONE AIR: what a blast throws up is the same snow that is falling)
   if (SNOW_LOOK.marks && dt > 0) left -= markKicks(g, Pp, Math.max(0, Math.min(left, Math.floor(RAIN_CAP * 0.985 - Pp.rainStats.live))), F.size, F.sizeJit, cx, cz, R);   // (the loose snow a boot, a chair, a landing can kicks up: snowTracks.ts stampMark — of the moment too)
-  if (wOn) { updateWisps(g, st, Pp, dt, cx, cz, R, oa ? area : onField ? blown : area, left, wispMax, oa); left -= st.wisps.births; }
+  if (wOn) { updateWisps(g, st, Pp, dt, cx, cz, R, oa ? inside : onField ? blown : inside, left, wispMax, oa); left -= st.wisps.births; }   // (a wisp is lifted off lying snow: the ground inside the rim)
   else if (st.wisps.active) { const Ws = st.wisps; Ws.active = false; Ws.why = 'the switch is off'; Ws.births = 0; Ws.target = 0; st.wAcc = 0; }
   if (gOn) updateGrains(g, st, Pp, dt, cx, cz, left, life);
   else grainsOff(st, Pp, oa ? 'one snow in one air: no grains of their own' : !SNOW_LOOK.grains && !SNOW_LOOK.oneAir ? 'the switch is off' : SNOW_LOOK.oneAir ? 'one snow in one air, and no air to ride (the wind sim is off)' : 'no air to ride (the wind sim is off)');   // (the words a read-out shows beside the layer's box: never 'off' beside a ticked one)

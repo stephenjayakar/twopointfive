@@ -57,6 +57,7 @@ import { CLOSE, closeSeat, closeUnseat, closeSeated, closeHasSeat } from './clos
 import { attentionLend } from './attention';
 import { PLAYER_ID } from './consts';
 import { simRandom } from '../math/dice';
+import { mathsEpoch } from '../math/exact';
 
 /** the switch and its numbers. `minWait` s: the shortest wait he sits one out for · `maxWait` s: the longest (a man stood somewhere longer than this is POSTED
  *  there: a picket, not a man pausing on his round) · `chairM`: how far from his waypoint the chair may stand (straight; the walk to
@@ -82,9 +83,9 @@ const REC = new SideMap<Guard, Doze>('doze.REC');
 const SAID = new SideMap<Game, number[]>('doze.SAID');
 const TOUCH = new Int32Array(96);
 /** how far, and which way, a man will pull a chair up: every 5 cm offset inside `pullM`, nearest first (built on first use) */
-let PULLS: [number, number][] | null = null, PULLS_M = -1;
+let PULLS: [number, number][] | null = null, PULLS_M = -1, PULLS_E = -1;   // (PULLS_E: sorted by lengths, so by the maths of the day — math/exact.ts)
 function pulls(): [number, number][] {
-  if (!PULLS || PULLS_M !== DOZE.pullM) { PULLS = []; PULLS_M = DOZE.pullM; const n = Math.ceil(DOZE.pullM / 0.05);
+  if (!PULLS || PULLS_M !== DOZE.pullM || PULLS_E !== mathsEpoch) { PULLS = []; PULLS_M = DOZE.pullM; PULLS_E = mathsEpoch; const n = Math.ceil(DOZE.pullM / 0.05);
     for (let ix = -n; ix <= n; ix++) for (let iz = -n; iz <= n; iz++) if (Math.hypot(ix, iz) * 0.05 <= DOZE.pullM + 1e-6) PULLS.push([ix * 0.05, iz * 0.05]);
     PULLS.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]) || a[0] - b[0] || a[1] - b[1]); }
   return PULLS;

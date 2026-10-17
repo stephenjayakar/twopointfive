@@ -129,7 +129,7 @@ export const pack2x16f = (a: number, b: number) => (f16bits(a) | (f16bits(b) << 
 /** the value an f16 bit pattern denotes (what unpack2x16float hands the shader) */
 function f16value(bits: number): number {
   const s = bits & 0x8000 ? -1 : 1, e = (bits >> 10) & 31, m = bits & 1023;
-  return e === 0 ? s * m * 2 ** -24 : e === 31 ? (m ? NaN : s * Infinity) : s * (1 + m / 1024) * 2 ** (e - 15);
+  return e === 0 ? s * m * 5.9604644775390625e-8 : e === 31 ? (m ? NaN : s * Infinity) : s * (1 + m / 1024) * Math.pow(2, e - 15);
 }
 
 export class BoxWorld {

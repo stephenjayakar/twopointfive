@@ -13,6 +13,7 @@ import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { StaticCollision } from '../scene/collision';
 import { PropDef, PropKind } from '../scene/level';
+import { mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A character as the prop solver sees it: a kinematic-ish circle whose position may be corrected (held back) in place, like doors do. */
@@ -52,7 +53,7 @@ export class Prop {
   lastWho = 0; noiseT = -10; pushT = -10;   // who moved it last (blamed for its noise), last event time (rate limit), last time a character / leaf was pushing it
   /** world-space part boxes, mutated in place by place() — these are what gets rendered / traced / ray tested */
   readonly boxes: Box[];
-  private cy = 1; private sy = 0; private yawCached = NaN;
+  private cy = 1; private sy = 0; private yawCached = NaN; private mathsCached = -1;
   constructor(readonly def: PropDef, readonly id: number) {
     this.x = def.x; this.z = def.z; this.yaw = def.yaw; this.home = [def.x, def.z, def.yaw];
     this.hx = def.half[0]; this.hz = def.half[1]; this.radius = Math.hypot(this.hx, this.hz); this.height = def.height;
@@ -63,7 +64,7 @@ export class Prop {
     this.place();
   }
   get cs() { this.frame(); return this.cy; } get sn() { this.frame(); return this.sy; }
-  private frame() { if (this.yaw !== this.yawCached) { this.yawCached = this.yaw; this.cy = Math.cos(this.yaw); this.sy = Math.sin(this.yaw); } }
+  private frame() { if (this.yaw !== this.yawCached || this.mathsCached !== mathsEpoch) { this.yawCached = this.yaw; this.mathsCached = mathsEpoch; this.cy = Math.cos(this.yaw); this.sy = Math.sin(this.yaw); } }
   /** Refresh the world boxes from the pose. */
   place() {
     const cs = this.cs, sn = this.sn; const parts = this.def.parts;

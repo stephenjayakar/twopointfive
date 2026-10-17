@@ -68,18 +68,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   with nothing re-seeded (dice-check's checkpoint line; the file's `seed` comes back too, so `dice.seed` names the stream being rolled). Modules with dice of their own (weather, civilians' lines, the Director's programs, the hash counters of destruction / glass /
   particles) keep them. Not covered: code called on a game OUTSIDE its update / restart while another Game was stood up later in the same process draws that later game's die (harness
   only; the page has one Game).
-- **The fixed step** (`src/host/loop.ts FIXEDSTEP {on, hz 60, snap, maxTicks 4}`; DEFAULT OFF = `stepFrame` statement for statement as it was; `?fixedstep` / `?fixedstep=0` /
-  `?fixedstep=<hz>`, Tab ▸ Frame ▸ 'fixed 60 Hz game step', `__fixedstep {knobs, ticks, owed}`; co-op groundwork, nothing networked): on a LIVE frame (`LoopCtx.fixedStep`, main.ts:
+- **The fixed step** (`src/host/loop.ts FIXEDSTEP {on, hz 60, snap, maxTicks 4}`; the module's default is off = `stepFrame` statement for statement as it was; **ON IN THE PAGE**
+  since 2026-10-17 (`pageSwitches`: `?fixedstep=0` / `?fixedstep=off` = off, `?fixedstep=<hz>` = another tick rate; held off on the frozen stand, `FROZEN_HOLDS` row
+  `FIXEDSTEP.on`, `TPS_FIXEDSTEP=1` raises it; not in `JOURNAL_KNOBS` and on `knobs.ts VISIT_OWN`: no recording sets it, a tape's player leaves the viewer's loop alone),
+  Tab ▸ Frame ▸ 'fixed 60 Hz game step', `__fixedstep {knobs, tween, ticks, owed, drew}`; co-op groundwork, nothing networked): on a LIVE frame (`LoopCtx.fixedStep`, main.ts:
   not a scripted `__runFrames` frame — a script's dt is still exactly what it names) the frame's time goes through `planTicks` (an accumulator; `snapDt` takes a frame time within
   0.4 ms of 1‥3 refreshes of a common display as exactly that, so 60 Hz is one tick a frame; the time the snap puts aside is kept in `drift`, leaking 1 % a frame, and handed back
   half a tick at a time — a display the list does not know keeps the wall's clock within half a percent; main.ts plans from the rAF timestamps, `LoopCtx.vsyncDt`) and the game runs WHOLE ticks of exactly 1/hz: per tick demo.update → attract.update →
   game.update → lights.update (the men read ttl lights), `betweenTicks` (main.ts: the HUD's `hudExpireBubbles`, as a replay makes it after every update, then
-  `engine.world.upload(true)` — `between`: the motion-identity map stays the last DRAWN frame's) between two ticks of one frame. KNOWN: on a frame of two ticks or more a flash
-  that lives one tick and was made in the first is never drawn. One-frame input edges go to exactly one
+  `engine.world.upload(true)` — `between`: the motion-identity map stays the last DRAWN frame's) between two ticks of one frame. The cap of `maxTicks` a frame is against a stall: a clock
+  run faster than the wall's (`__timeScale` 2, `LoopCtx.timeScale`) may run that many more. One-frame input edges go to exactly one
   tick (`Input.endTick`; a tickless frame owes them to the next frame's first tick, after the hotkeys). Per drawn frame on the display's dt still: camera, mixer, smoke solver,
-  render — and there is NO interpolation, so off 60 Hz the men move at 60 a second under a display-rate camera (why it ships off; on when interpolation exists or the maintainer
-  likes it as is). `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
-  `FIXEDSTEP_BREAK=1` must fail). Nobody has seen it in a browser.
+  render — and what a frame between two ticks DRAWS is the next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
+  `FIXEDSTEP_BREAK=1` must fail). A page tool that runs the live loop and counts on one update a frame of the frame's own dt opens the page with `?fixedstep=0`.
+- **Drawing between ticks** (`src/host/tween.ts TWEEN {on, snap 1.5 m, flashes, ease}`, class `Tween`, `LoopCtx.tween`; the module's default is off = the fixed step draws the
+  last tick, as it did; **ON IN THE PAGE** (`?tween=0` / `?tween=off` = off; frozen stand off, `FROZEN_HOLDS` row `TWEEN.on`, `TPS_TWEEN=1`; `VISIT_OWN`, in no recording);
+  Tab ▸ Frame ▸ 'draw between ticks'; acts only under the fixed step, on live frames): a frame that falls between two ticks draws what MOVES at the blend of the tick before
+  the last and the last — keyed boxes (`Box.mkey`: door leaves, props, items, debris, what a man carries, devices: centre, yaw, quaternion, `dc`), the men (every joint
+  matrix of the palette, by the man's id, into an array of tween.ts's own that only the GPU is handed: `CharacterRenderer.staged / ownerOf / drawJoints`) and the ends of
+  their shadow proxies, every light that stood in both ticks (position, direction, by the object), where the follow camera looks and its aim lead (`Tween.at`), and a
+  framing a level script pins tick by tick (`Tween.pinAt`: the Director's tracking / swinging shots). `capture()` at the end of every tick copies what stands;
+  `pose(a)` hangs blended arrays on the drawn objects right before the host's render and `unpose()` hangs the tick's own back by reference right after — the game's own
+  state is never the blend when a tick runs. THE LAG (`Tween.phase`): the picture stands a CONSTANT part of a tick behind the game, the most any of the last 32 frames owed
+  the next tick — NOTHING on a display at the tick rate (every frame is the last tick itself, nothing hung: the 60 Hz picture is the one the fixed step alone drew), half a
+  tick at 120 Hz, 4/5 at 50, 11/12 at 144, never more than one; a frame that owes more pulls it up at once, a lag longer than needed is let go `ease` a frame. Cuts: a thing
+  that moved past `snap` in the tick, a keyed box whose half extents or owner changed, a man with no palette last tick — drawn where the last tick has them. SPENT FLASHES
+  (`flashes`): a timed light a tick left alight that its own clock retired before any draw is put back in the list for one render (the fixed step's old KNOWN). Stale
+  (`rest()`: the pause card, a script's `__runFrames`, either switch off): nothing hung, the GPU's palette the tick's again, the next live frame starts from its own capture.
+  LEFT AS THE TICK HAS THEM, so up to the lag AHEAD of the men they belong to on a frame between two ticks: boxes with no key — laser lines, tracers, sparks, one-tick
+  effect boxes (a key set where a beam is made would let it be blended: `combat.ts beamBoxes`) — and the HUD's marks and bubbles (laid from the game's positions).
+  And the GPU's sensor passes measure the POSED scene (they measure the picture, as ever; headless stand-ins read the tick). The engine replay viewer has its own loop:
+  not blended. `bun run tools/qa/tween-check.ts` on BOTH stands (stands / blend / even time / put back / same game / pin / flash / stale / off — the packed words the GPU
+  would be handed against the check's own record of the two ticks, at 50, 60, 120, 144 Hz, and 16 digests ≡ `W.step(1/60)` ≡ the blend off; `TWEEN_BREAK=1`: 'blend',
+  'even time', 'put back' fail). `node tools/qa/tween-page.cjs` (dev server on PORT): the real page's own loop on the software adapter — both on at the boot, the
+  engine's render with the blend hung and no console / GPU error, the clock scaled to stand for a 120 and a 144 Hz display, the pause card, both switches live and
+  by URL. COST (headless, one loaded cloud CPU, a four-man room fight in the compound at 144 Hz: 5 drawn men, 257 dynamic boxes, 37 lights; the machine three times over-booked while it ran, so read them against the 4.5‥9.4 ms game update and the 0.7‥0.9 ms box + light pack of the same run): `capture` 0.15‥0.26 ms a tick (about 3 % of the update; paid at every rate), `pose` + `unpose` 0.24 ms a frame at 144 Hz, 0.10 at 120 Hz, nothing at 60 Hz once the lag has settled.
+  **Never seen on a GPU or on a display over 60 Hz: how it LOOKS is the maintainer's to judge.**
 - **The player's input is one plain record a tick** (`src/game/cmd.ts`; co-op groundwork, nothing networked): `Game.update(dt, input, cam, canvas)` — the signature every host and
   tool calls, unchanged — is now journal.frameStart → the director's injected keys → `sampleCmd()` (the host's live Input / camera / view copied into a `PlayerCmd`: keys held,
   keys and buttons gone down, wheel, cursor, view size, and the seat's VIEW as numbers — viewProj, its inverse, the pose, the lens's aim lead) → **`Game.step(dt, cmd)`, the whole old body**,
@@ -139,10 +163,69 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `shield.given`, the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
   that runs several games in a process wants them on the Game. Another Game object is never walked into, but a memo that names another game's man is. CONFIG rows are
-  safe only while a rolled-back window never spans a scenario's start or stop. A closure in state is taken by its code: `Throwable.onBounce` still captures a can's
+  safe only while a rolled-back window never spans a scenario's start or stop, and a snapshot is put back under the maths (`EXACT.on`) and senses (`SENSE.cpu`)
+  settings it was taken under. A closure in state is taken by its code: `Throwable.onBounce` still captures a can's
   own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
   the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
   out-parameter, a class's `static` field. Never run on a GPU, and the page does not call any of it.
+- **The game's own maths** (`src/math/exact.ts`, switch `EXACT.on`; ON in the page, `?noexact` = the engine's own functions as before; OFF on the frozen stand,
+  `TPS_EXACT=1` raises it; the shipped stand has it on, `TPS_EXACT=0` there = `?noexact`; engine groundwork, nothing networked): the language leaves the
+  rounding of sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh and hypot to each engine, and they differ in the last place
+  (JavaScriptCore calls the system's library, V8 carries its own) — so one seed and one input stream played two different fights under bun and under
+  node from the first frame, and would between a browser and a server. With the switch on those fourteen are the game's own (ported from Go's pure-Go
+  `math` package, after Cephes and FreeBSD's msun; the licence notices are in the file's head; +, −, ×, ÷ and sqrt are exact everywhere and are all it
+  uses) and are put in `Math`'s place, so every call site in the tree computes on them unchanged; lengths (`hyp2/3/4`, `Math.hypot`) are then the Kahan
+  sum on every engine (Chrome's own). RULES: (1) the switch is settled BEFORE anything is built — the page's boot (`pageSwitches`), the harness's
+  (`headless.ts`, `standup.ts pinMaths`, first in `standGame`), a tape's (`engineplay.ts tables()`, `rerun.ts`, `replay.ts`: a recording from before
+  the key is built and played on the engine's functions); a flip under a live game is honoured from that step on, and what is KEPT from a rounded
+  function is remade (`onExact(fn)` for a constant a module works out as it loads — ragdoll.ts; `mathsEpoch` for a cache — a prop's frame, doze.ts's
+  sorted pulls). (2) No load-time `Math.sin(…)` constant outside `onExact`. (3) `**` cannot be replaced: in the simulation's folders write
+  `Math.pow(x, y)`; `x ** 2` alone is `x·x` on every engine and stays. (4) `Math.cbrt / expm1 / log1p / sinh / cosh / asinh / acosh / atanh` have no
+  own version: none is used under `src/`, and the check is red on one. CHECKS, each on both stands: `bun run tools/qa/exact-check.ts` (engines: one
+  stream of 2.3 million inputs folded under bun and under node, the same word; close: within 2 to 4 ulp of each engine's own, pow within 8; corners;
+  switch; load; uncovered; stand — `EXACT_BREAK=1` must fail) and `bun run tools/qa/coop-check.ts` (four scripted fights on the shipped stand, each
+  under bun AND node at this commit: raw float64 bits of the game — `game/digest.ts rawBits` — equal every half second, 1,356 to 3,840 frames;
+  `COOP_BREAK=1` = both on their own functions, must differ; `--ref` / `--write` = the older cross-machine reference file, which is from before this
+  and stale). OFF = THE BUILD AS IT WAS: 42 of 42 play-through digests (21 missions, seeds 1 and 2, `PT_DIGEST=1 tools/qa/playthrough.ts`) equal the build before on the frozen stand, and 42 of 42 on the shipped stand with the own maths held off (`TPS_EXACT=0`) and the record check on. COST (a room clear with the four, 1,500 harness steps on the shipped stand, off and on in turn, on a machine busy with other runs — read the ratio, not the milliseconds): under bun the median step 8.2 → 8.3 ms and the mean +8%; under node the median 12.7 → 13.4 ms (+6%) and the mean +10%. The sounds' synthesis at boot also runs on these functions and was not timed on a quiet machine.
+  NOT DONE / NOT SEEN: node's V8 is not Chrome's build of it, and nobody has run this in Chrome, in Safari or on a Mac — the two-engine line is bun
+  against node on one Linux machine; everything on the page (sound synthesis, the renderer's CPU side, the UI) also computes on these functions while
+  the switch is on.
+- **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
+  page plays on it is the maintainer's call; engine groundwork, nothing networked): off, the men see by the renderer's values through `Game.sensors` — a fight
+  on the page is then its seed, its inputs AND a stream of GPU readbacks that land a drawn frame or two late (the run tape keeps them, so a tape re-runs; a
+  machine with no GPU cannot play the fight afresh). On, nothing is asked of the probe: every LIGHT meter falls to the estimate it already had for 'no answer
+  yet' (`guards.ts lightEstimateAt` — direct light with the walls between, the hour, lightning; what the harness has always run on), Sam's own meter reads that
+  estimate too (headless it never moved before), and a sight line's SMOKE is `CpuSmoke`: each emitter handed to the solver also feeds a blob (what it let out,
+  thinning at the solver's decay, widening, a wall between a blob and the line shuts it out), answered in the step that asks (`Sensors.own`). While it is on the
+  game's own smoke sits ON the solver object (`ownSmoke`: `emit` and `clearAll` feed both, whoever calls them; `budget()` is answered from the game's own count
+  of live emitters, aged by the step — the solver's count ages by the drawn frame). A solver the picture has turned off still gets no emitter; the game's does.
+  COST TO 'ONE MODEL FOR PICTURE AND AI': the estimate has no bounced light and no smoke shadow, and the blobs are a model of the solver's picture, not a copy
+  — a place lit only by bounce reads darker to the men than it looks, and a minute-old wisp will not match cell for cell. `CpuSmoke.blobs` is simulation state
+  that no checkpoint carries yet. CHECK, both stands: `bun run tools/qa/sense-check.ts` (off = the probe asked as ever and the solver as built; on = sixty steps ask the probe
+  nothing, an emitter handed straight to the solver reaches the game's smoke; Sam's meter bright under a lamp and dark in the dark; a canister on a 9 m line shuts it, 0.00 at 12 s, leaves another line at 0.98, is not seen
+  through a wall and has cleared 75 s on, and keeps its place among 68 puffs; a taped room clear with the four and a smoke canister thrown, at mixed step times, re-run from its
+  seed and inputs with the game answering its own senses — about 50,000 reads, none different — the same to the bit; `SENSE_BREAK=1` must fail). `TPS_CPUSENSE=1 bun run tools/qa/coop-check.ts` is its
+  two-engine line. NOT SEEN: nobody has played with it on; how the blobs sit against the picture's smoke has never been looked at on a GPU.
+- **A record from anyone** (`src/game/cmd.ts checkCmd`, switch `CMDCHECK.on`; ON in the page, `?nocmdcheck` = believed as it comes; OFF on the frozen stand,
+  `TPS_CMDCHECK=1`; engine groundwork, nothing networked): `Game.step` makes the tick's record one an honest seat could have sent before anything reads it (and
+  before the tape keeps it) — an object of the right shape, finite numbers inside wide bounds, at most 24 key codes that look like key codes, five button bits,
+  sixteen numbers in each view matrix. A LOCAL seat's matrices are the host camera's and are kept while they are numbers (the page's lag its pose a step when it
+  orbits; a cut moves the look-at before the camera is rebuilt): an honest record comes through unchanged to the bit. A seat marked `seat.remote` (nobody today)
+  is refereed: its look-at is held within `CMDCHECK.reach` (80 m) of its own man, its eye within twice that, its pitch off straight down, and the eye, the
+  forward and both matrices are WORKED OUT AGAIN from the look-at, the angles, the distance and the lens (`camera.ts rebuild`, the working a re-run does from
+  the tape's pose) — what the record said of them is never read. A record that cannot be read or written is answered with a neutral one. What was put right is
+  counted on the seat (`seat.fixed`, `seat.fixedCmds`). `Game.seats` is the list of seats (one) and `Game.stepSeats(dt, cmds)` steps from
+  a list of records, refusing any other count. The bounds keep a record sane; they do not referee play (fog, reach of a pick, rate of fire are a server's
+  later work). THE ONE PLAYER, counted again 2026-10-17: `g.player` / `this.player` / `game.player` is written in 116
+  files under `src/game` (889 uses) and 9 outside it (144); the `'player'` foe word about 120 times; `PLAYER_ID` 113. RULE FOR NEW CODE: what a player
+  does comes off his seat (its record, its camera), and a rule that needs a man takes the man — it does not reach for `g.player`. CHECK, both stands: `bun run tools/qa/cmdcheck-check.ts` (honest: 900 steps of a room clear the same to the bit with the check on, 0 things put
+  right; shapes: 21 kinds of nonsense, each as a local and as a remote seat's, come back whole, a remote one's with the game's own view, and a second check changes
+  nothing; a local record whose matrices lag its pose is left alone; hostile: 720 steps with three records in four spoilt neither throw
+  nor lose a number; far; seats; `CMDCHECK_BREAK=1` must fail).
+- **The page against the harness** (`tools/qa/samefight-page.cjs` + `samefight-rerun.ts`; the page's `__digest {game, bits, chain}`; `game/digest.ts rawBits /
+  chainBits`): the real page (headless Chromium = V8, software adapter) plays a scripted stretch of a mission at a mix of step times with the raw bits of the
+  game folded after every step; its own replay file is then walked by bun (JavaScriptCore) off the run tape and must give the same words. With
+  `SAMEFIGHT_QUERY=cpusense` the tape's GPU values are not used. `SAMEFIGHT_BREAK=1` (the page on `?noexact`) must fail. A dev server on `PORT`. `SAMEFIGHT_SAY=1` says where the page has got to, `SAMEFIGHT_VIEW=320x180` a smaller picture, `SAMEFIGHT_DRAW=n` steps a draw. RESULTS: NONE YET — on the cloud machine's software adapter the page boots (about eight minutes of pipeline compiles), plays its first 200 steps in seconds and then sits for more than ten minutes at the first shots; no run has reached its end, so the page line is NOT SHOWN. What the check rests on is held headless: a tape re-run to the bit (sense-check `same`), two engines to the bit (coop-check). Run it where there is a GPU.
 - **Replays after the fact (F7)** (`src/game/replaybuf.ts` → `src/replay/format.ts`, `ui/replaykey.ts`, `src/replay/viewer.ts` + `replay.html`, `tools/qa/replay-at.ts`): the page ALWAYS keeps the last
   `REPLAY.seconds` (300) of play as a TRACE — every man's place / facing / state / order / mark / route, doors, items, rounds, the HUD's lines, the camera — sampled at 20 Hz off
   `Game.replayTap` (update's last statement; the buffer only READS: `replaybuf-probes.ts identity` holds the digests equal with it on and off), delta-coded between 5 s keyframes.

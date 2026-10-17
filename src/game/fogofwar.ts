@@ -557,7 +557,7 @@ export class FogOfWar {
    *  drops what does not fit, and the fog's questions are the ones to lose. */
   flushAsks() {
     if (!this.pending.length) return; const g = this.g, S = g.sensors;
-    for (const p of this.pending) { const room = (g.probe as { room?: number } | null)?.room; const full = room !== undefined && room <= 0; S.askSegment(p.key, p.a, p.b); if (full) S.forget(p.key); }   // (an ask the table had no room for: its old answer is not this frame's — no answer, and the man keeps his last verdict a while)
+    for (const p of this.pending) { const room = S.own ? undefined : (g.probe as { room?: number } | null)?.room;   /* (the senses on the CPU — sense.ts: no table to run out of) */ const full = room !== undefined && room <= 0; S.askSegment(p.key, p.a, p.b); if (full) S.forget(p.key); }   // (an ask the table had no room for: its old answer is not this frame's — no answer, and the man keeps his last verdict a while)
     this.pending.length = 0;
   }
   /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
