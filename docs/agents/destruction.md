@@ -713,12 +713,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   near-side and far-face man, 6000 flights with no box inside any span crossed, glass-only flights equal to `roundPath`'s, the wall engine's count, the
   showcase inert, the journal row; `WALLPEN_BREAK=1` must fail) and `wallmen-check` (the line says yes exactly where the round arrives; the three kinds of
   shooter fire through a partition and a leaf at a man they saw, not at one they did not, not through concrete; one sighting = one burst, seen again =
-  another; 120 cover picks; `WALLMEN_BREAK=1` / `WALLPEN_BREAK=1` must fail). FOUR CHECKS OF OTHER RULES HOLD IT OFF, each with the reason in place: `coverfire-probes.ts` (it asks the chew), `destruction-probes.ts` dust (it asks
+  another; 120 cover picks; `WALLMEN_BREAK=1` / `WALLPEN_BREAK=1` must fail). FIVE CHECKS OF OTHER RULES HOLD IT OFF, each with the reason in place: `coverfire-probes.ts` (it asks the chew), `destruction-probes.ts` dust (it asks
   the dust of a burst that stays in the plaster; beside its hold on the wall engine, for the same reason), `wallwear-probes.ts` (it counts one
   mark a round that STOPS in the wall; a round that goes through marks the far face and what it meets beyond — where it went in, the wall engine's wear look
   still takes its mark, and the game digest is the same with that look on and off: `wallpen-check` asks both) and `roomfight-probes.ts` next-room (its fight is a
   teammate's rounds INTO a wooden door for the noise; with this rule they come through past the two men inside, `lanes.ts` opens a lane on that door, and
-  nobody walks over alone to a fight at a lane's guns: 0 of 8 went, 6 of 8 with the rule off — two rules together, as each is written).
+  nobody walks over alone to a fight at a lane's guns: 0 of 8 went, 6 of 8 with the rule off — two rules together, as each is written); and `enemysquads-probes.ts` contact (a
+  teammate's rounds at a man by the mess's far partition go on through it and the comms room's, a man of the third squad drops in his own room, and that
+  squad is in contact before its word — its own rule reading its man down, not the answer to a call on the net that the probe asks; seen on the shipped stand
+  only after the build carried the rule, seed 2).
   ON THE REAL PAGE, software adapter: `node tools/qa/wallpen-page.cjs` (the page as it opens and with `?wallpen=0`: a clicked round ends beyond a partition's
   far face / at it, the Tab row and its counter, no console error).
   `tools/qa/wallpen-inventory.ts` prints, per level, the metres of full-height wall a round goes through. Off = the base by run digest: four squad missions
