@@ -5,209 +5,225 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>twopointsix — 2.5D RT stealth sandbox</title>
   <style>
-    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: ui-monospace, Menlo, monospace; color: #cfd; }
+    /* THE FIGHT SCREEN WEARS THE MENUS' LOOK (src/ui/theme.ts): sand ink on warm black and the ONE orange, which here marks what leads on: the row a tap of Space does,
+       the objective, a lost man's way. Every other hue still means something (gold / red / blue = who an order goes to; amber then red = alarm; blue = a door; red = a man).
+       Each token is the menus' own (`--m-…`, in the page from the first script on); the literal after it is that token's value for the moments before, and
+       `tools/qa/hud-look-check.ts` is red when one drifts from theme.ts, or when a green comes back into these rules. Labels are the menus' condensed caps, rows their
+       plain sans, digits and keys mono. A mark that sits on the picture keeps a dark halo (`--h-shadow`): sand has no hue to stand off a sunlit floor with. */
+    :root {
+      --h-ink: var(--m-text, #d2c9b5); --h-hi: var(--m-bright, #f0e9d9); --h-hi-rgb: var(--m-bright-rgb, 240,233,217); --h-soft: var(--m-soft, #a0977f); --h-dim: var(--m-dim, #938b76); --h-faint: var(--m-faint, #857d69);
+      --h-edge: var(--m-edge, 214,200,170); --h-acc: var(--m-accent, #f0912e); --h-acc-hi: var(--m-accent-hi, #ffb561); --h-acc-rgb: var(--m-accent-rgb, 240,145,46); --h-on: var(--m-on-accent, #140d05);
+      --h-base: var(--m-base, #0c0b09); --h-plate: var(--m-base-rgb, 12,11,9); --h-field: rgb(var(--m-panel-rgb, 21,19,16)); --h-btn: var(--m-btn-rgb, 44,40,33); --h-hover: var(--m-hover-rgb, 66,60,50);
+      --h-font: var(--m-font, Inter, ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif);
+      --h-head: var(--m-head, 'Avenir Next Condensed', 'DIN Condensed', 'Roboto Condensed', 'Arial Narrow', Inter, ui-sans-serif, system-ui, sans-serif);
+      --h-mono: var(--m-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+      --h-shadow: 0 1px 2px #000, 0 0 5px rgba(0,0,0,0.7);
+    }
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: var(--h-mono); color: var(--h-ink); }
     #app { position: fixed; inset: 0; }
     canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
     /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
        right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
     #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
-    #hud { font-size: 11px; line-height: 1.35; white-space: pre; color: #bfe; text-shadow: 0 1px 2px #000; max-height: calc(100vh - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
+    #hud { font: 11px/1.35 var(--h-mono); white-space: pre; color: var(--h-ink); text-shadow: var(--h-shadow); max-height: calc(100vh - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
     #hud:empty { display: none; }
     #hud:not(:empty) { min-width: 330px; }   /* a steady left edge for the panel beside it while the numbers change */
     /* interaction panel (overlay.ts setInteractions): what Space can do round here — one block per VERB (a shut door is 'push it open' and 'ease it open';
        the man in the arm 'question him' and 'choke him out'), a thin bar for a lock being picked / the drive coming out / a leaf easing round; the highlighted row
-       (a tap does it; Space held opens the list to choose another) is lit. Same thin green mono as the meters / objective line, the kit slots' translucent backing. */
-    #interact { display: none; width: 290px; margin: 46px 0 0 8px; font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.1em; color: #79d69a; text-shadow: 0 1px 2px #000; opacity: 0.95; }
+       (a tap does it; Space held opens the list to choose another) is lit. The same sand caps and rows as the meters / objective line, the kit slots' translucent backing. */
+    #interact { display: none; width: 290px; margin: 46px 0 0 8px; font: 11px/1.3 var(--h-font); letter-spacing: 0.01em; color: var(--h-ink); text-shadow: var(--h-shadow); opacity: 0.95; }
     #interact.on { display: block; }
     #hud:not(:empty) + #interact { margin-left: 0; }
-    #interact .it { position: relative; margin-bottom: 4px; padding: 4px 8px 5px 10px; background: rgba(4,10,12,0.55); border: 1px solid rgba(120,170,160,0.22); border-radius: 3px; }
+    #interact .it { position: relative; margin-bottom: 4px; padding: 4px 8px 5px 10px; background: rgba(var(--h-plate),0.6); border: 1px solid rgba(var(--h-edge),0.22); border-radius: 3px; }
     @media (max-height: 620px) { #interact { margin-top: 30px; } #interact .it { margin-bottom: 2px; padding: 2px 8px 3px 10px; } }   /* a short window: the open order menu clears the kit column under it */
-    #interact .it.primary { border-color: rgba(143,240,180,0.6); box-shadow: 0 0 8px rgba(60,160,120,0.22); background: rgba(4,12,10,0.66); }
-    #interact .it.primary::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 2px; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.55); border-radius: 2px 0 0 2px; }
-    #interact .what { display: flex; justify-content: space-between; gap: 8px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #a8f0c0; white-space: nowrap; }
+    #interact .it.primary { border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); background: rgba(var(--h-plate),0.72); }
+    #interact .it.primary::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 2px; background: var(--h-acc); border-radius: 2px 0 0 2px; }
+    #interact .what { display: flex; justify-content: space-between; gap: 8px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--h-hi); white-space: nowrap; }
     #interact .what span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-    #interact .what em { flex: none; font-style: normal; letter-spacing: 0.08em; text-transform: none; color: #8a9c96; }
-    #interact .it.k-door .what { color: #b4d8ff; } #interact .it.k-body .what { color: #f0b8a8; } #interact .it.k-guard .what { color: #ff9a8a; } #interact .it.k-objective .what { color: #b4ffd0; } #interact .it.k-breaker .what { color: #ffd08a; }
+    #interact .what em { flex: none; font: 400 10px/1.2 var(--h-font); letter-spacing: 0.02em; text-transform: none; color: var(--h-dim); }
+    #interact .it.k-door .what { color: #b4d8ff; } #interact .it.k-body .what { color: #f0b8a8; } #interact .it.k-guard .what { color: #ff9a8a; } #interact .it.k-objective .what { color: var(--h-hi); } #interact .it.k-breaker .what { color: #ffd08a; }
     #interact .it.off .what { color: #f0b888; }
     /* the squad's elements (orders.ts Tone): gold = the whole squad, red / blue = a pair or a man of it — the row's header, or one line of it */
     #interact .it.t-gold .what, #interact .t-gold.opt, #interact .t-gold.hint { color: #f2cf6b; } #interact .it.t-red .what, #interact .t-red.opt, #interact .t-red.hint { color: #ff9a8a; } #interact .it.t-blue .what, #interact .t-blue.opt, #interact .t-blue.hint { color: #9cc8ff; }
-    #interact .opt, #interact .hint { margin-top: 3px; white-space: normal; overflow-wrap: anywhere; letter-spacing: 0.04em; }   /* a long row WRAPS (it was cut with an ellipsis: 'cover this door — no line fro…' lost the one thing a greyed order has to say) */
+    #interact .opt, #interact .hint { margin-top: 3px; white-space: normal; overflow-wrap: anywhere; letter-spacing: 0.01em; }   /* a long row WRAPS (it was cut with an ellipsis: 'cover this door — no line fro…' lost the one thing a greyed order has to say) */
     #interact .opt:has(kbd) { display: flex; align-items: baseline; } #interact .opt kbd { flex: none; }   /* … and hangs under its own words, not under its key (whatever the key cap's width: 1, SPACE, LMB) */
-    #interact .opt { font-size: 11px; color: #dff; }
-    #interact .hint { color: #8fb0a2; }
-    #interact .hint.lost s { opacity: 0.6; } #interact .hint.lost b { display: inline-block; color: rgb(240,145,46); margin-left: 7px; font-weight: 700; } #interact .hint.lost b.n { animation: lostin 0.5s ease-out; } @keyframes lostin { from { scale: 2.2; opacity: 0; } }   /* a squad man lost: his line struck, the way it came from */
-    #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: #79d69a; color: #041008; font: 700 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
-    #interact .it.far .opt { color: #8a9c96; } #interact .it.far kbd { background: #4b665a; color: #0a1410; }
+    #interact .opt { font-size: 12px; line-height: 1.2; color: var(--h-hi); }
+    #interact .hint { color: var(--h-soft); }
+    #interact .hint.lost s { opacity: 0.6; } #interact .hint.lost b { display: inline-block; color: var(--h-acc); margin-left: 7px; font-weight: 700; } #interact .hint.lost b.n { animation: lostin 0.5s ease-out; } @keyframes lostin { from { scale: 2.2; opacity: 0; } }   /* a squad man lost: his line struck, the way it came from */
+    #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: rgba(var(--h-edge),0.8); color: var(--h-on); font: 700 9px/1.25 var(--h-mono); letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
+    #interact .it.primary > .what + .opt kbd { background: var(--h-acc); } #interact .it.primary.far > .what + .opt kbd { background: var(--h-faint); }
+    #interact .it.far .opt { color: var(--h-dim); } #interact .it.far kbd { background: var(--h-faint); color: var(--h-on); }
     /* the selector (interact.ts): every row is one verb — SPACE lit only on the highlighted one (a tap does it), the others' key dimmed until the highlight reaches
        them (Space held opens the list: wheel / arrows choose, let go acts); rows of the same thing tuck under its header; open, the frame brightens, a line at the
        top says how it works and the cancel row closes the list */
-    #interact .it:not(.primary) .opt.verb kbd { background: rgba(121,214,154,0.28); color: #9fd8b6; }
+    #interact .it:not(.primary) .opt.verb kbd { background: rgba(var(--h-edge),0.22); color: var(--h-soft); }
     #interact .it.cont { margin-top: -3px; border-top-color: transparent; border-top-left-radius: 0; border-top-right-radius: 0; padding-top: 1px; }
     #interact .it.cont .what { height: 0; }
     #interact .it.cont .what em:empty { display: none; }
-    #interact.open .it { border-color: rgba(150,220,200,0.35); }
-    #interact.open .it.primary { border-color: #b8ffd8; box-shadow: 0 0 12px rgba(90,220,160,0.45); }
-    #interact.open .it.primary::before { width: 3px; background: #d8ffe8; }
-    #interact .selhint { margin: 0 0 5px 2px; font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; color: #b8f0d0; }
-    #interact .it.k-cancel { padding-top: 3px; padding-bottom: 4px; background: rgba(14,10,8,0.55); border-color: rgba(200,150,120,0.3); }
-    #interact .it.k-cancel .opt { margin-top: 0; color: #e8c8b0; } #interact .it.k-cancel kbd { background: rgba(230,170,130,0.35); color: #ffe0c8; }
-    #interact .it.k-cancel.primary { border-color: #ffcfa8; box-shadow: 0 0 10px rgba(230,150,100,0.35); } #interact .it.k-cancel.primary::before { background: #ffcfa8; box-shadow: 0 0 6px rgba(255,180,130,0.55); } #interact .it.k-cancel.primary kbd { background: #ffcfa8; color: #1a0c04; }
-    #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(121,214,154,0.45); background: rgba(0,10,4,0.5); }
-    #interact .prog b { display: block; width: 0; height: 100%; background: linear-gradient(90deg, rgba(121,214,154,0.55), #8ff0b4); box-shadow: 0 0 6px rgba(120,240,170,0.35); }
-    #interact .it.k-door .prog b { background: linear-gradient(90deg, rgba(160,210,255,0.5), #bfe6ff); box-shadow: 0 0 6px rgba(80,150,230,0.4); }
-    #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: #8a9c96; }
+    #interact.open .it { border-color: rgba(var(--h-edge),0.4); }
+    #interact.open .it.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+    #interact.open .it.primary::before { width: 3px; background: var(--h-acc-hi); }
+    #interact .selhint { margin: 0 0 5px 2px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--h-soft); }
+    #interact .it.k-cancel { padding-top: 3px; padding-bottom: 4px; background: rgba(var(--h-plate),0.6); border-color: rgba(var(--h-edge),0.3); }
+    #interact .it.k-cancel .opt { margin-top: 0; color: var(--h-soft); } #interact .it.k-cancel kbd { background: rgba(var(--h-edge),0.3); color: var(--h-hi); }
+    #interact .it.k-cancel.primary { border-color: var(--h-hi); box-shadow: 0 0 10px rgba(0,0,0,0.4); } #interact .it.k-cancel.primary::before { background: var(--h-hi); box-shadow: 0 0 6px rgba(0,0,0,0.5); } #interact .it.k-cancel.primary kbd { background: var(--h-hi); color: var(--h-on); }
+    #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(var(--h-edge),0.45); background: rgba(var(--h-plate),0.5); }
+    #interact .prog b { display: block; width: 0; height: 100%; background: var(--h-ink); }
+    #interact .it.k-door .prog b { background: #bfe6ff; }
+    #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: var(--h-dim); }
     /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
     body.touring #interact { margin-top: calc(7.5vh + 4px); }
     @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh + 190px); } }
     /* THE TWEAK PANEL (Tab; ui/panel.ts + bindings.ts): a two-level tool — SYSTEMS down a left rail, collapsible SECTIONS on the selected system's page — in the HUD's own
-       thin green mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
+       thin sand mono. Header: a status strip (preset · resolution · fps · gpu ∪, so it is worth having up with the read-out off), the search box (every system at once;
        hover the panel and type, ← / → or [ / ] walk the rail) and the 'all knobs' switch that reveals the A/B rows (.row.adv) and the rarely-touched sections (.advsec). */
-    #panel { position: absolute; right: 8px; top: 8px; width: 372px; max-height: calc(100% - 16px); overflow: hidden; z-index: 12; display: flex; flex-direction: column; font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #cfd; background: rgba(5,9,11,0.94); border: 1px solid rgba(120,170,160,0.22); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+    #panel { position: absolute; right: 8px; top: 8px; width: 372px; max-height: calc(100% - 16px); overflow: hidden; z-index: 12; display: flex; flex-direction: column; font: 11px/1.3 var(--h-mono); color: var(--h-ink); background: rgba(var(--h-plate),0.94); border: 1px solid rgba(var(--h-edge),0.22); border-radius: 4px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
     #panel.hidden { display: none; }
-    #panel .phead { flex: none; padding: 6px 8px 5px; border-bottom: 1px solid rgba(120,170,160,0.16); background: rgba(4,10,10,0.6); }
-    #panel .pstat { font-size: 10px; letter-spacing: 0.06em; color: #79d69a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-bottom: 5px; text-shadow: 0 1px 2px #000; }
+    #panel .phead { flex: none; padding: 6px 8px 5px; border-bottom: 1px solid rgba(var(--h-edge),0.16); background: rgba(var(--h-plate),0.6); }
+    #panel .pstat { font-size: 10px; letter-spacing: 0.06em; color: var(--h-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; margin-bottom: 5px; text-shadow: 0 1px 2px #000; }
     #panel .pstat:empty { display: none; }
     #panel .psearch { display: flex; align-items: center; gap: 8px; }
-    #panel .psearch input[type=search] { flex: 1; min-width: 0; font: inherit; background: #0a1417; color: #dfe; border: 1px solid #2c3f44; border-radius: 3px; padding: 3px 7px; outline: none; }
-    #panel .psearch input[type=search]::placeholder { color: #56706a; }
-    #panel .psearch input[type=search]:focus { border-color: #79d69a; box-shadow: 0 0 0 1px rgba(121,214,154,0.25); }
-    #panel .psearch .all { color: #7f9a94; white-space: nowrap; display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 10px; letter-spacing: 0.06em; }
+    #panel .psearch input[type=search] { flex: 1; min-width: 0; font: inherit; background: var(--h-field); color: var(--h-hi); border: 1px solid rgba(var(--h-edge),0.2); border-radius: 3px; padding: 3px 7px; outline: none; }
+    #panel .psearch input[type=search]::placeholder { color: var(--h-faint); }
+    #panel .psearch input[type=search]:focus { border-color: var(--h-acc); box-shadow: 0 0 0 1px rgba(var(--h-acc-rgb),0.25); }
+    #panel .psearch .all { color: var(--h-dim); white-space: nowrap; display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 10px; letter-spacing: 0.06em; }
     #panel .phits { font-size: 10px; color: #f3c86a; letter-spacing: 0.04em; margin-top: 4px; }
     #panel .phits:empty { display: none; }
     #panel .pmain { flex: 1 1 auto; min-height: 0; display: flex; }
-    /* the rail: one button per system — a glyph and a short label; the active one carries the green bar; dimmed = nothing on that page until 'all knobs'; a search lights the systems it hit */
-    #panel .prail { flex: 0 0 48px; display: flex; flex-direction: column; gap: 1px; padding: 4px 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; border-right: 1px solid rgba(120,170,160,0.14); background: rgba(2,6,7,0.5); }
+    /* the rail: one button per system — a glyph and a short label; the active one carries the orange bar; dimmed = nothing on that page until 'all knobs'; a search lights the systems it hit */
+    #panel .prail { flex: 0 0 48px; display: flex; flex-direction: column; gap: 1px; padding: 4px 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: none; border-right: 1px solid rgba(var(--h-edge),0.14); background: rgba(var(--h-plate),0.5); }
     #panel .prail::-webkit-scrollbar { display: none; }
-    #panel .prail .sys { all: unset; box-sizing: border-box; width: 100%; padding: 5px 2px 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer; color: #6f8a80; border-left: 2px solid transparent; }
-    #panel .prail .sys i { font: normal 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+    #panel .prail .sys { all: unset; box-sizing: border-box; width: 100%; padding: 5px 2px 4px; display: flex; flex-direction: column; align-items: center; gap: 1px; cursor: pointer; color: var(--h-faint); border-left: 2px solid transparent; }
+    #panel .prail .sys i { font: normal 13px/1 var(--h-mono); }
     #panel .prail .sys span { font-size: 7.5px; letter-spacing: 0.08em; text-transform: uppercase; max-width: 44px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #panel .prail .sys:hover { color: #bfe; background: rgba(120,170,160,0.08); }
-    #panel .prail .sys.on { color: #dfffea; border-left-color: #79d69a; background: rgba(121,214,154,0.1); text-shadow: 0 0 6px rgba(120,240,170,0.4); }
+    #panel .prail .sys:hover { color: var(--h-ink); background: rgba(var(--h-edge),0.08); }
+    #panel .prail .sys.on { color: var(--h-hi); border-left-color: var(--h-acc); background: rgba(var(--h-acc-rgb),0.1); text-shadow: none; }
     #panel .prail .sys.dim:not(.on) { opacity: 0.45; }
     #panel.searching .prail .sys { opacity: 0.35; } #panel.searching .prail .sys.hit { opacity: 1; color: #f3d78a; }
-    #panel .pbody { flex: 1 1 auto; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 8px 10px; scrollbar-width: thin; scrollbar-color: #2c3f44 transparent; }
-    #panel .ptitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: #79d69a; padding: 7px 2px 3px; text-shadow: 0 0 8px rgba(120,240,170,0.25); }
-    #panel .ptitle span { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: 0.03em; text-transform: none; color: #6f8a7e; text-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #panel .pempty { margin: 10px 2px; font-size: 10px; color: #8a9890; font-style: italic; }
+    #panel .pbody { flex: 1 1 auto; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: 2px 8px 10px; scrollbar-width: thin; scrollbar-color: rgba(var(--h-edge),0.2) transparent; }
+    #panel .ptitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--h-ink); padding: 7px 2px 3px; text-shadow: none; }
+    #panel .ptitle span { display: block; margin-top: 2px; font-size: 9.5px; letter-spacing: 0.03em; text-transform: none; color: var(--h-faint); text-shadow: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pempty { margin: 10px 2px; font-size: 10px; color: var(--h-dim); font-style: italic; }
     /* a section: header = caret · NAME · live one-line summary (shown while collapsed) · ↺ (where a shipped-defaults table exists) */
-    #panel .psec { border-top: 1px solid rgba(120,170,160,0.12); }
+    #panel .psec { border-top: 1px solid rgba(var(--h-edge),0.12); }
     #panel .psec:first-of-type { border-top: none; }
     #panel h3.pshead { display: flex; align-items: baseline; gap: 6px; margin: 0; padding: 6px 2px 5px; font: inherit; font-weight: 400; cursor: pointer; user-select: none; }
-    #panel h3.pshead:hover { background: rgba(120,170,160,0.06); }
-    #panel .pshead .caret { flex: 0 0 9px; color: #4f6a62; font-weight: 400; font-size: 9px; }
-    #panel .pshead .nm { flex: 0 1 auto; min-width: 0; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #7fcdb0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    #panel .pshead.open .nm { color: #b8f0d0; }
+    #panel h3.pshead:hover { background: rgba(var(--h-edge),0.06); }
+    #panel .pshead .caret { flex: 0 0 9px; color: rgba(var(--h-edge),0.4); font-weight: 400; font-size: 9px; }
+    #panel .pshead .nm { flex: 0 1 auto; min-width: 0; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--h-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pshead.open .nm { color: var(--h-hi); }
     #panel.searching .pshead .nm { color: #f3d78a; letter-spacing: 0.04em; }
-    #panel .pshead .sum { flex: 1 1 0; min-width: 0; text-align: right; font-size: 9.5px; color: #6f8a7e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #panel .pshead .sum { flex: 1 1 0; min-width: 0; text-align: right; font-size: 9.5px; color: var(--h-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #panel .psec.open > .pshead .sum { opacity: 0.55; }
-    #panel .pshead .rst { all: unset; flex: none; cursor: pointer; color: #6f8a7e; font-size: 11px; padding: 0 3px; border-radius: 2px; }
+    #panel .pshead .rst { all: unset; flex: none; cursor: pointer; color: var(--h-faint); font-size: 11px; padding: 0 3px; border-radius: 2px; }
     #panel .pshead .rst:hover { color: #f0d878; background: rgba(240,216,120,0.1); }
-    #panel .psec.advsec > .pshead .nm::after { content: ' · A/B'; color: #56706a; font-weight: 400; letter-spacing: 0.04em; }
+    #panel .psec.advsec > .pshead .nm::after { content: ' · A/B'; color: var(--h-faint); font-weight: 400; letter-spacing: 0.04em; }
     #panel .sbody { padding: 1px 0 6px 4px; }
     /* rows: label left (ellipsis, full text in the tooltip), the control right; a thin track, a compact switch, tabular read-outs; A/B rows a shade dimmer with a dotted mark */
     #panel .row { display: flex; align-items: center; gap: 6px; min-height: 18px; margin: 1px 0; padding: 1px 2px; border-radius: 2px; }
-    #panel .row:hover { background: rgba(120,170,160,0.05); }
-    #panel .row label { flex: 1 1 auto; min-width: 0; color: #9db8ad; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    #panel .row.adv label { color: #7d958c; } #panel .row.adv label::before { content: '· '; color: #4f6a62; }
+    #panel .row:hover { background: rgba(var(--h-edge),0.05); }
+    #panel .row label { flex: 1 1 auto; min-width: 0; color: var(--h-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .row.adv label { color: var(--h-soft); } #panel .row.adv label::before { content: '· '; color: rgba(var(--h-edge),0.4); }
     #panel .row.changed label { color: #f0d878; }
     #panel .row.flash { animation: pflash 1.4s ease-out; } @keyframes pflash { 0%, 30% { background: rgba(240,216,120,0.28); } 100% { background: transparent; } }
-    #panel .row .val { flex: 0 0 40px; text-align: right; color: #dfffea; font-variant-numeric: tabular-nums; font-size: 10.5px; }
+    #panel .row .val { flex: 0 0 40px; text-align: right; color: var(--h-hi); font-variant-numeric: tabular-nums; font-size: 10.5px; }
     #panel .row .rev { flex: 0 0 9px; color: #f0d878; cursor: pointer; font-size: 7px; text-align: center; visibility: hidden; }
     #panel .row input[type=range] { flex: 0 0 96px; min-width: 0; height: 14px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
-    #panel .row input[type=range]::-webkit-slider-runnable-track { height: 2px; background: #2a423f; border-radius: 1px; }
-    #panel .row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; margin-top: -3.5px; border-radius: 50%; background: #8ff0b4; box-shadow: 0 0 5px rgba(120,240,170,0.45); border: none; }
-    #panel .row input[type=range]::-moz-range-track { height: 2px; background: #2a423f; } #panel .row input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: #8ff0b4; border: none; }
-    #panel .row input[type=range]:focus { outline: none; } #panel .row input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px rgba(121,214,154,0.35); }
-    #panel .row.changed input[type=range]::-webkit-slider-thumb { background: #f0d878; box-shadow: 0 0 5px rgba(240,216,120,0.45); }
+    #panel .row input[type=range]::-webkit-slider-runnable-track { height: 2px; background: rgba(var(--h-edge),0.2); border-radius: 1px; }
+    #panel .row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 9px; height: 9px; margin-top: -3.5px; border-radius: 50%; background: var(--h-hi); box-shadow: 0 0 5px rgba(0,0,0,0.5); border: none; }
+    #panel .row input[type=range]::-moz-range-track { height: 2px; background: rgba(var(--h-edge),0.2); } #panel .row input[type=range]::-moz-range-thumb { width: 9px; height: 9px; border-radius: 50%; background: var(--h-hi); border: none; }
+    #panel .row input[type=range]:focus { outline: none; } #panel .row input[type=range]:focus::-webkit-slider-thumb { box-shadow: 0 0 0 2px rgba(var(--h-acc-rgb),0.35); }
+    #panel .row.changed input[type=range]::-webkit-slider-thumb { background: #f0d878; box-shadow: 0 0 5px rgba(0,0,0,0.5); }
     /* the switch: a pill with its knob drawn as a background gradient (no pseudo-element — __panelShot's DOM raster keeps backgrounds, loses ::before) */
-    #panel .row input[type=checkbox] { -webkit-appearance: none; appearance: none; flex: 0 0 24px; width: 24px; height: 13px; margin: 0 1px 0 0; border-radius: 7px; border: 1px solid #34494c; cursor: pointer; background: #142125 radial-gradient(circle at 5.5px 50%, #647a72 0 4px, transparent 4.6px) no-repeat; transition: border-color .12s; }
-    #panel .row input[type=checkbox]:checked { border-color: rgba(121,214,154,0.75); background: rgba(121,214,154,0.22) radial-gradient(circle at 16.5px 50%, #8ff0b4 0 4px, rgba(143,240,180,0.35) 4.3px, transparent 6px) no-repeat; }
-    #panel .row input[type=checkbox]:hover { border-color: #56706a; } #panel .row input[type=checkbox]:checked:hover { border-color: #8ff0b4; }
-    #panel .row input[type=checkbox]:focus-visible { outline: 1px solid #79d69a; outline-offset: 1px; }
-    #panel.rastering .row input[type=range] { -webkit-appearance: auto; appearance: auto; accent-color: #8ff0b4; height: 12px; }   /* (__panelShot only: the custom track / thumb are pseudo-elements the DOM raster cannot carry — a capture shows the native slider in the panel's green instead) */
-    #panel .psearch input[type=checkbox] { accent-color: #79d69a; margin: 0; }
-    #panel .row select { flex: 0 1 auto; min-width: 0; max-width: 62%; font: inherit; font-size: 10.5px; background: #0d1a1e; color: #dfe; border: 1px solid #2c3f44; border-radius: 3px; padding: 1px 3px; outline: none; }
-    #panel .row select:focus { border-color: #79d69a; }
+    #panel .row input[type=checkbox] { -webkit-appearance: none; appearance: none; flex: 0 0 24px; width: 24px; height: 13px; margin: 0 1px 0 0; border-radius: 7px; border: 1px solid rgba(var(--h-edge),0.26); cursor: pointer; background: var(--h-field) radial-gradient(circle at 5.5px 50%, var(--h-faint) 0 4px, transparent 4.6px) no-repeat; transition: border-color .12s; }
+    #panel .row input[type=checkbox]:checked { border-color: rgba(var(--h-acc-rgb),0.8); background: rgba(var(--h-acc-rgb),0.22) radial-gradient(circle at 16.5px 50%, var(--h-acc) 0 4px, rgba(var(--h-acc-rgb),0.35) 4.3px, transparent 6px) no-repeat; }
+    #panel .row input[type=checkbox]:hover { border-color: var(--h-faint); } #panel .row input[type=checkbox]:checked:hover { border-color: var(--h-acc-hi); }
+    #panel .row input[type=checkbox]:focus-visible { outline: 1px solid var(--h-acc); outline-offset: 1px; }
+    #panel.rastering .row input[type=range] { -webkit-appearance: auto; appearance: auto; accent-color: var(--h-acc); height: 12px; }   /* (__panelShot only: the custom track / thumb are pseudo-elements the DOM raster cannot carry — a capture shows the native slider in the panel's orange instead) */
+    #panel .psearch input[type=checkbox] { accent-color: var(--h-acc); margin: 0; }
+    #panel .row select { flex: 0 1 auto; min-width: 0; max-width: 62%; font: inherit; font-size: 10.5px; background: var(--h-field); color: var(--h-hi); border: 1px solid rgba(var(--h-edge),0.2); border-radius: 3px; padding: 1px 3px; outline: none; }
+    #panel .row select:focus { border-color: var(--h-acc); }
     #panel .row.btnrow { align-items: baseline; flex-wrap: wrap; row-gap: 3px; }
-    #panel .row.btnrow label { flex: 0 0 auto; max-width: 40%; color: #7f9a94; font-size: 10px; letter-spacing: 0.04em; }
+    #panel .row.btnrow label { flex: 0 0 auto; max-width: 40%; color: var(--h-dim); font-size: 10px; letter-spacing: 0.04em; }
     #panel .row.btnrow label:empty { display: none; }
     #panel .row .btns { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px; justify-content: flex-end; }
-    #panel .row button { font: inherit; font-size: 10px; letter-spacing: 0.03em; background: rgba(20,40,32,0.55); color: #bfeed2; border: 1px solid rgba(121,214,154,0.32); border-radius: 3px; padding: 1px 6px 2px; cursor: pointer; white-space: nowrap; }
-    #panel .row button:hover { background: rgba(40,80,62,0.7); border-color: #79d69a; color: #eafff2; }
-    #panel .row button:active { background: #79d69a; color: #041008; }
-    #panel .row.textrow { display: block; min-height: 0; margin: 3px 0 4px 1px; padding: 3px 6px 3px 7px; border-left: 2px solid rgba(120,170,160,0.22); background: rgba(0,10,6,0.28); font-size: 10px; line-height: 1.35; color: #8fa89e !important; white-space: pre-wrap; word-break: break-word; }
+    #panel .row button { font: inherit; font-size: 10px; letter-spacing: 0.03em; background: rgba(var(--h-btn),0.7); color: var(--h-ink); border: 1px solid rgba(var(--h-edge),0.32); border-radius: 3px; padding: 1px 6px 2px; cursor: pointer; white-space: nowrap; }
+    #panel .row button:hover { background: rgba(var(--h-hover),0.85); border-color: var(--h-ink); color: var(--h-hi); }
+    #panel .row button:active { background: var(--h-acc); color: var(--h-on); }
+    #panel .row.textrow { display: block; min-height: 0; margin: 3px 0 4px 1px; padding: 3px 6px 3px 7px; border-left: 2px solid rgba(var(--h-edge),0.22); background: rgba(var(--h-plate),0.3); font-size: 10px; line-height: 1.35; color: var(--h-soft) !important; white-space: pre-wrap; word-break: break-word; }
     #panel .row.textrow.empty { display: none; }
     /* the panel's own hover tip (ui/panel.ts installTips): descriptions and whatever an ellipsis above cut short, wrapped, at once */
-    #ptip { position: fixed; z-index: 40; max-width: 356px; padding: 5px 8px 6px; font: 10.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #dcefe6; background: rgba(6,14,16,0.97); border: 1px solid rgba(121,214,154,0.38); border-radius: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.6); pointer-events: none; white-space: pre-wrap; word-break: break-word; letter-spacing: 0.02em; }
-    #panel .row input.num { width: 7ch; background: #0b1418; color: #dfe; border: 1px solid #26363d; border-radius: 3px; padding: 1px 4px; text-align: right; cursor: ew-resize; outline: none; font: inherit; }
-    #panel .row input.num:focus { cursor: text; border-color: #79d69a; }
+    #ptip { position: fixed; z-index: 40; max-width: 356px; padding: 5px 8px 6px; font: 10.5px/1.4 var(--h-mono); color: var(--h-ink); background: rgba(var(--h-plate),0.97); border: 1px solid rgba(var(--h-edge),0.38); border-radius: 3px; box-shadow: 0 6px 22px rgba(0,0,0,0.6); pointer-events: none; white-space: pre-wrap; word-break: break-word; letter-spacing: 0.02em; }
+    #panel .row input.num { width: 7ch; background: var(--h-field); color: var(--h-hi); border: 1px solid rgba(var(--h-edge),0.2); border-radius: 3px; padding: 1px 4px; text-align: right; cursor: ew-resize; outline: none; font: inherit; }
+    #panel .row input.num:focus { cursor: text; border-color: var(--h-acc); }
     #fatal { position: absolute; inset: 0; display: none; z-index: 40; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; }
     #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
     .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
-    .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: #8aa39a; font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: #8ba; font-weight: 400; font-size: 10px; }
+    .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.ko { color: var(--h-dim); font-weight: 400; font-size: 10px; letter-spacing: -0.05em; } .marker.calm { color: var(--h-soft); font-weight: 400; font-size: 10px; }
     .marker.frag { color: #ff5a3c; font-weight: 700; font-size: 14px; letter-spacing: 0.04em; }   /* frag.ts fragMarks: a defender's live grenade Sam has been cued on, with the seconds left */
-    .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(240,145,46,0.35), rgb(240,145,46)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
-    .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid rgb(240,145,46); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
+    .lostfrom { position: absolute; height: 3px; transform-origin: 0 50%; pointer-events: none; background: linear-gradient(90deg, rgba(var(--h-acc-rgb),0.35), var(--h-acc)); }   /* deathrecap.ts lostLive: the way the round came in at a squad man lost, on the ground at him */
+    .lostfrom::after { content: ''; position: absolute; right: -2px; top: -3.5px; border-left: 9px solid var(--h-acc); border-top: 5px solid transparent; border-bottom: 5px solid transparent; }
     .marker.lastseen { color: #cbb98a; font-weight: 400; font-size: 12px; letter-spacing: 0.08em; }   /* fogofwar.ts lastSeen: '(?)' where an enemy was last seen, fading — thin and bracketed, never a live man's bold '?' */
     .marker.civ { font-style: italic; opacity: 0.9; } .marker.civ.alert { color: #f96; } .marker.civ.sus { color: #fe9; }   /* the civilians' (civilians.ts): the same glyphs, softer and slanted — a frightened cleaner is not a man onto you */
     /* the ring on the marker F acts on (what it offers is spelled out in the interaction panel, #interact); dimmer while the thing is out of reach */
-    .reticle { position: absolute; width: 22px; height: 22px; border: 1.5px solid #7fe; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 6px #3aa; }
+    .reticle { position: absolute; width: 22px; height: 22px; border: 1.5px solid var(--h-hi); border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 6px rgba(0,0,0,0.8); }
     .reticle.far { opacity: 0.55; }
     .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; pointer-events: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring; under the aim model overlay.ts sizes it to the cone and brightens it as the aim settles */
-    .reticle.aim.k-free { border-color: rgba(150,235,225,0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
+    .reticle.aim.k-free { border-color: rgba(var(--h-hi-rgb),0.85); }   /* …round the bare cursor's point when nothing is near (aim model only) */
     .reticle.aim.trail { opacity: 0.55; }   /* aimweight.ts: the circle is where the gun points — quieter while it is still swinging onto the cursor */
     .aimwish { position: absolute; width: 5px; height: 5px; border-radius: 50%; transform: translate(-50%, -50%); background: #ffe9a8; opacity: 0.85; pointer-events: none; }   /* …and a dot on what the reticle snapped to (a light, a man) until it gets there */
     .aimwish.k-guard { background: #ff8070; }
-    .aimwish.gun { width: 12px; height: 12px; background: none; border: 1px solid rgba(150,235,225,0.85); opacity: 0.55; }   /* …or the circle itself, small, while the ring is busy on something Space acts on */
-    .reticle.off { border-color: #f96; box-shadow: 0 0 6px #a53; }
-    .reticle.k-door { border-color: #9cd0ff; box-shadow: 0 0 6px #38a; } .reticle.k-body { border-color: #f0a090; box-shadow: 0 0 6px #a54; } .reticle.k-guard { border-color: #ff8070; box-shadow: 0 0 7px #b43; } .reticle.k-objective { border-color: #8ff0b4; box-shadow: 0 0 7px #3c8; } .reticle.k-breaker { border-color: #ffd08a; box-shadow: 0 0 7px #a83; }
+    .aimwish.gun { width: 12px; height: 12px; background: none; border: 1px solid rgba(var(--h-hi-rgb),0.85); opacity: 0.55; }   /* …or the circle itself, small, while the ring is busy on something Space acts on */
+    .reticle.off { border-color: #f96; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
+    .reticle.k-door { border-color: #9cd0ff; box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-body { border-color: #f0a090; box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-guard { border-color: #ff8070; box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-objective { border-color: var(--h-acc); box-shadow: 0 0 5px rgba(0,0,0,0.8); } .reticle.k-breaker { border-color: #ffd08a; box-shadow: 0 0 5px rgba(0,0,0,0.8); }
     /* progress ring round the reticle (a lock being picked, the drive coming out): a conic sweep masked to a 3 px annulus just outside the ring */
-    .reticle b { display: none; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#bfe6ff var(--p, 0%), rgba(160,210,255,0.14) 0); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); filter: drop-shadow(0 0 3px #38a); }
-    .reticle.k-objective b { background: conic-gradient(#b4ffd0 var(--p, 0%), rgba(150,240,190,0.14) 0); }
+    .reticle b { display: none; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#bfe6ff var(--p, 0%), rgba(160,210,255,0.14) 0); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); filter: drop-shadow(0 0 3px rgba(0,0,0,0.7)); }
+    .reticle.k-objective b { background: conic-gradient(var(--h-acc-hi) var(--p, 0%), rgba(var(--h-acc-rgb),0.14) 0); }
     /* the one word beside the ring: the 40 mm's '40 MM · TOO CLOSE TO ARM' (overlay.ts HE40_SHORT; the plain 'RMB  OCP' / 'RMB  RING' words are gone) */
-    .reticle i { display: none; position: absolute; left: 100%; top: 100%; margin: 1px 0 0 5px; font: 600 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; font-style: normal; letter-spacing: 0.12em; white-space: pre; color: #9ff3c9; text-shadow: 0 1px 2px #000, 0 0 5px rgba(60,220,160,0.35); pointer-events: none; }
-    .reticle.k-light i { color: #ffe9a8; text-shadow: 0 1px 2px #000, 0 0 5px rgba(255,220,120,0.35); }
+    .reticle i { display: none; position: absolute; left: 100%; top: 100%; margin: 1px 0 0 5px; font: 600 10px/1 var(--h-head); font-style: normal; letter-spacing: 0.12em; white-space: pre; color: var(--h-hi); text-shadow: 0 1px 2px #000, 0 0 5px rgba(0,0,0,0.5); pointer-events: none; }
+    .reticle.k-light i { color: #ffe9a8; text-shadow: var(--h-shadow); }
     /* light / sound meters, bottom-left: two thin monochrome bars (Chaos-Theory-ish, minimal) */
-    #meters { position: absolute; left: 18px; bottom: 16px; width: 200px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.22em; color: #79d69a; text-shadow: 0 1px 2px #000; pointer-events: none; opacity: 0.92; }
+    #meters { position: absolute; left: 18px; bottom: 16px; width: 200px; font: 700 11px/1 var(--h-head); letter-spacing: 0.12em; color: var(--h-ink); text-shadow: var(--h-shadow); pointer-events: none; opacity: 0.92; }
     #meters .m { position: relative; height: 20px; margin-top: 6px; }
     #meters .m .lab { position: absolute; left: 0; top: 0; }
-    #meters .m .num { position: absolute; right: 0; top: 0; color: #a8f0c0; letter-spacing: 0.1em; }
-    #meters .m .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border: 1px solid rgba(121,214,154,0.55); background: rgba(0,10,4,0.45); }
-    #meters .m .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, rgba(121,214,154,0.55), #8ff0b4); box-shadow: 0 0 6px rgba(120,240,170,0.35); transition: width .08s linear; }
-    #meters .m .peak { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #d8ffe6; opacity: 0; }
-    #meters .m .ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(121,214,154,0.28) 19px 20px); }
-    #meters.hot .m.light .fill { background: linear-gradient(90deg, rgba(240,200,120,0.6), #ffe9a0); }
+    #meters .m .num { position: absolute; right: 0; top: 0; font: 9px/1 var(--h-mono); color: var(--h-hi); letter-spacing: 0.06em; }
+    #meters .m .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border: 1px solid rgba(var(--h-edge),0.55); background: rgba(var(--h-plate),0.5); }
+    #meters .m .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--h-ink); transition: width .08s linear; }
+    #meters .m .peak { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--h-hi); opacity: 0; }
+    #meters .m .ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(var(--h-edge),0.28) 19px 20px); }
+    #meters.hot .m.light .fill { background: var(--h-acc); }
     /* radio traffic (overlay.ts): only what goes over a net — the guards' channel you are listening in on, and (later) your own side. Everything else the old
        message log printed is carried by the interaction panel, the kit column and the world itself. */
-    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw); font: italic 11px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; color: #b9d6c8; text-align: center; text-shadow: 0 1px 2px #000; white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
-    #log .rx { display: block; opacity: 0.92; } #log .rx b { font-style: normal; font-weight: 600; color: #8fd9b0; letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; }
-    /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — same thin green language as the meters (overlay.ts) */
-    #objective { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.16em; color: #79d69a; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0.92; }
-    #objective.done { color: #a8f0c0; } #objective.failed { color: #f0a090; }
+    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); max-width: min(620px, 70vw); font: italic 12px/1.45 var(--h-font); color: var(--h-ink); text-align: center; text-shadow: var(--h-shadow); white-space: pre-wrap; pointer-events: none; letter-spacing: 0.02em; }
+    #log .rx { display: block; opacity: 0.92; } #log .rx b { font: 700 11px/1 var(--h-head); color: var(--h-hi); letter-spacing: 0.12em; margin-right: 6px; } #log .rx.old { opacity: 0.5; }
+    /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — the same caps as the meters; the objective is one of the things the orange is for (overlay.ts) */
+    #objective { position: absolute; left: 50%; top: 5px; padding: 5px 12px 4px; background: rgba(var(--h-plate),0.5); border-radius: 2px; transform: translateX(-50%); font: 12px/1 var(--h-font); letter-spacing: 0.02em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0.95; }
+    #objective b { margin-right: 3px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--h-acc); } #objective.done b, #objective.failed b { color: inherit; }
+    #objective:empty { display: none; } #objective.done { color: var(--h-hi); } #objective.failed { color: #f0a090; }
     /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
        a pulsing pip while an alarm episode is actually running (someone is alert / searching) */
-    #alarm { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.24em; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .4s; }
+    #alarm { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); font: 700 11px/1 var(--h-head); letter-spacing: 0.22em; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .4s; }
     #alarm.on { opacity: 0.95; } #alarm.l1 { color: #f3c86a; } #alarm.l2 { color: #ff7a5c; }
     #alarm i { display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: currentColor; vertical-align: 1px; opacity: 0.35; }
     #alarm.live i { animation: alarmPip 0.9s ease-in-out infinite; opacity: 1; }
     @keyframes alarmPip { 50% { opacity: 0.25; } }
     /* checkpoint tag (game/savestate.ts, overlay.ts): a discreet CHECKPOINT under the objective line for a couple of seconds when one is written / loaded */
-    #checkpoint { position: absolute; right: 14px; top: 10px; font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.28em; color: #79d69a; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
+    #checkpoint { position: absolute; right: 14px; top: 10px; font: 700 11px/1 var(--h-head); letter-spacing: 0.26em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
     #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
     #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
     body.touring #checkpoint, body.breaching #checkpoint { display: none; }
     /* the session journal's REC tag (game/journal.ts, overlay.ts; F10): under the checkpoint tag, red while recording, amber while it waits for a moment it may start on */
-    #journal { position: absolute; right: 14px; top: 26px; font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.16em; color: #e8b04c; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
+    #journal { position: absolute; right: 14px; top: 26px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; color: #e8b04c; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
     #journal.on { opacity: 0.9; }
     #journal.rec { color: #ff5a4e; }
     .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
-    .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid #8ff0b4; transform: rotate(45deg); box-shadow: 0 0 6px rgba(120,240,170,0.45); }
-    .objmark span { display: block; margin-top: 6px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; color: #a8f0c0; text-shadow: 0 1px 2px #000; white-space: nowrap; }
-    .objmark.edge i { border-color: #79d69a; box-shadow: none; }
+    .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid var(--h-acc); transform: rotate(45deg); box-shadow: 0 0 5px rgba(0,0,0,0.8); }
+    .objmark span { display: block; margin-top: 6px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: nowrap; }
+    .objmark.edge i { border-color: var(--h-acc); box-shadow: none; }
     /* the squad's order menu (orders.ts mark()): a dashed ring on what it is frozen on, a word under it, in the addressed element's colour */
-    .ordermark { position: absolute; transform: translate(-50%, -11px); pointer-events: none; text-align: center; color: #8ff0b4; }
+    .ordermark { position: absolute; transform: translate(-50%, -11px); pointer-events: none; text-align: center; color: var(--h-hi); }
     .ordermark i { display: block; width: 20px; height: 20px; margin: 0 auto; border: 1.5px dashed currentColor; border-radius: 50%; box-shadow: 0 0 8px rgba(0,0,0,0.6); }
-    .ordermark span { display: block; margin-top: 5px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; text-transform: uppercase; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+    .ordermark span { display: block; margin-top: 5px; font: 700 11px/1 var(--h-head); letter-spacing: 0.14em; text-transform: uppercase; text-shadow: var(--h-shadow); white-space: nowrap; }
     .ordermark.t-gold { color: #f2cf6b; } .ordermark.t-red { color: #ff9a8a; } .ordermark.t-blue { color: #9cc8ff; }
     body.attract #equip, body.attract #meters, body.attract #interact, body.attract #objective, body.attract #hud, body.attract .marker, body.attract .reticle, body.attract .aimwish, body.attract .idot, body.attract .lostfrom { display: none !important; }   /* nobody is playing while the attract camera runs: no kit, meters, prompts, read-out, markers or interactable dots over the shots (nothing reads these elements' layout, so display:none is safe) */
     /* THE MENUS (ui/menu.ts): the title screen, the pause card, the debrief. Colours and type are ui/theme.ts's tokens (--m-…), shared with the starting page, the loadout and the options screen */
@@ -463,20 +479,20 @@
     #missions .mrow > .vpips .vico { width: 11px; height: 11px; }
     #missions .mrow > .vpips .vmarks { height: 4px; gap: 1px; } #missions .mrow > .vpips .v1 { font-size: 6px; line-height: 4px; } #missions .mrow > .vpips .vall { width: 6px; height: 1px; }
     #missions .mrow > .vpips.none { opacity: 0.6; }
-    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(4,10,8,0.62), rgba(4,10,8,0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(140,220,180,0.25); }
+    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(var(--h-plate),0.62), rgba(var(--h-plate),0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(var(--h-edge),0.2); }
     #caption.on { opacity: 1; }
     /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
        there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
-    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
+    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 600 10px/1 var(--h-head); letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
     #timeline.on { display: flex; }
     body.panel-open #timeline { right: max(398px, calc(50% - 450px)); }
-    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(121,214,154,0.28); padding-top: 7px; color: rgba(190,240,210,0.45); transition: color .2s, border-color .2s; }
-    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px #000; }
-    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.5); }
-    #timeline .seg.done { border-top-color: rgba(143,240,180,0.75); color: rgba(190,240,210,0.7); }
+    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(var(--h-edge),0.28); padding-top: 7px; color: rgba(var(--h-edge),0.5); transition: color .2s, border-color .2s; }
+    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: var(--h-shadow); }
+    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: var(--h-acc); }
+    #timeline .seg.done { border-top-color: rgba(var(--h-edge),0.7); color: rgba(var(--h-edge),0.75); }
     #timeline .seg.done b { width: 100% !important; opacity: 0; }
-    #timeline .seg.cur { color: #d8ffe6; }
-    #timeline .seg:hover { color: #fff; border-top-color: rgba(143,240,180,0.9); }
+    #timeline .seg.cur { color: var(--h-hi); }
+    #timeline .seg:hover { color: #fff; border-top-color: rgba(var(--h-edge),0.9); }
     body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
     #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
     body.blinded #bubbles, body.blinded .bubble, body.blinded .marker, body.blinded .lostfrom { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
@@ -487,13 +503,13 @@
     #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the tour's letterbox / fades (a caption points at the light meter) */
     body.touring #equip .cond.god { display: none; }   /* the tour runs in god mode; no need to say so on screen */
     body.touring #caption { top: calc(7.5% + 22px); }
-    #caption .cap { font: 600 20px/1.25 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; color: #f4f7f2; text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
-    #caption .sub { margin-top: 8px; font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #c9d6cf; text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+    #caption .cap { font: 600 20px/1.25 var(--h-font); color: var(--h-hi); text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
+    #caption .sub { margin-top: 8px; font: 13px/1.45 var(--h-font); color: var(--h-ink); text-shadow: 0 1px 6px #000, 0 0 2px #000; }
     /* the breach showcase (game/breach.ts adds body.breaching for its length): the caption is a ONE-LINE lower third — a slim translucent band sitting on the
        bottom letterbox bar just over the beat strip, never over the men — and nothing of the player's HUD is drawn over an operation nobody is playing: no kit
        column, meters, interaction panel, objective, alarm, read-out, state markers or interactable dots (the speech bubbles stay: they are the barks) */
-    body.breaching #caption { top: auto; bottom: calc(7.5% + 6px); width: auto; max-width: min(1100px, 92vw); padding: 7px 18px 8px; border-top: none; border-radius: 2px; background: rgba(4,10,8,0.5); box-shadow: none; z-index: 7; }
-    body.breaching #caption .cap { font: 600 15px/1.35 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.02em; color: #eef3ef; text-shadow: 0 1px 4px #000; }
+    body.breaching #caption { top: auto; bottom: calc(7.5% + 6px); width: auto; max-width: min(1100px, 92vw); padding: 7px 18px 8px; border-top: none; border-radius: 2px; background: rgba(var(--h-plate),0.5); box-shadow: none; z-index: 7; }
+    body.breaching #caption .cap { font: 600 15px/1.35 var(--h-font); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: 0 1px 4px #000; }
     body.breaching #caption .sub { display: none; }
     body.breaching #log { bottom: calc(7.5% + 50px); }   /* radio lines ride above the lower third, not through it */
     body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .aimwish, body.breaching .objmark, body.breaching .ordermark, body.breaching .lostfrom { display: none !important; }
@@ -503,8 +519,8 @@
     body.kitview::after { content: ''; position: fixed; left: 0; top: 0; right: 0; height: 15vh; z-index: 100000; pointer-events: none; background: linear-gradient(to bottom, rgba(0,0,0,0.6), transparent); }   /* the top of the picture held down: a lit wall there is the brightest thing on the start page */
     #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     /* the squad's plan on the floor (game/floorplan.ts → ui/planfloor.ts): a man's dotted way, the ring he will stand in, the fan he watches, a hair line to
-       the point he is on — in his pair's colour (green for a squad with no pairs); rings at the feet of the men an open order menu goes to */
-    .plan { color: #8ff0b4; } .plan .t-gold { color: #f2cf6b; } .plan .t-red { color: #ff9a8a; } .plan .t-blue { color: #9cc8ff; }
+       the point he is on — in his pair's colour (bright sand for a squad with no pairs); rings at the feet of the men an open order menu goes to */
+    .plan { color: var(--h-hi); } .plan .t-gold { color: #f2cf6b; } .plan .t-red { color: #ff9a8a; } .plan .t-blue { color: #9cc8ff; }
     .plan .pp { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 0.1 8; }
     .plan .pm { fill: none; stroke: currentColor; stroke-width: 1.4; stroke-dasharray: 3 3; } .plan .pm.there { fill: currentColor; fill-opacity: 0.08; stroke-dasharray: none; }
     .plan .pf { fill: currentColor; fill-opacity: 0.05; stroke: currentColor; stroke-opacity: 0.45; stroke-width: 1; stroke-dasharray: 2 3; stroke-linejoin: round; } .plan .pf.there { fill-opacity: 0.13; stroke-dasharray: none; }
@@ -515,76 +531,77 @@
     .plan .pa { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 5 6; }
     .plan .pe { fill: currentColor; fill-opacity: 0.2; stroke: currentColor; stroke-width: 1.5; }
     .plan .pr { fill: currentColor; fill-opacity: 0.04; stroke: currentColor; stroke-opacity: 0.55; stroke-width: 1; stroke-dasharray: 2 7; }
-    .plan .pt { font: 700 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: currentColor; paint-order: stroke; stroke: rgba(6,10,12,0.72); stroke-width: 3px; stroke-linejoin: round; } .plan .pt.there { fill-opacity: 0.8; }
+    .plan .pt { font: 700 10px/1 var(--h-head); fill: currentColor; paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; } .plan .pt.there { fill-opacity: 0.8; }
     .plan > g { transition: opacity 0.25s linear; }
     /* waiting on the key: a quiet dashed bar; the one the key would send now is solid with the key on it — a charge's key is filled (it is the loud one) */
     .plan .pd { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-opacity: 0.6; stroke-dasharray: 2 5; } .plan .now .pd { stroke-width: 4; stroke-opacity: 1; stroke-dasharray: none; }
-    .plan .pk { fill: rgba(6,10,12,0.82); stroke: currentColor; stroke-width: 1.2; } .plan .pkt { font: 700 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; fill: currentColor; }
-    .plan .w-charge .pk, .plan .w-wall .pk { fill: currentColor; } .plan .w-charge .pkt, .plan .w-wall .pkt { fill: #0a0e10; }
+    .plan .pk { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.2; } .plan .pkt { font: 700 10px/1 var(--h-mono); fill: currentColor; }
+    .plan .w-charge .pk, .plan .w-wall .pk { fill: currentColor; } .plan .w-charge .pkt, .plan .w-wall .pkt { fill: var(--h-base); }
     .plan .laid .pp { stroke-width: 2.5; stroke-dasharray: 0.1 13; } .plan .laid .pd { stroke-width: 3; stroke-opacity: 0.9; stroke-dasharray: 5 5; } .plan .laid .pw { stroke-dasharray: 2 3; }   /* (a plan laid for the word, game/planlay.ts: nobody moving yet — wider gaps than a way being walked) */
     body.breaching .plan, body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
-    .closewin path { fill: rgba(150,240,220,0.06); stroke: rgba(150,240,220,0.55); stroke-width: 1.2; stroke-linejoin: round; }
-    .closewin path.cw-in { fill: rgba(150,240,220,0.24); stroke: rgba(200,255,240,0.98); stroke-width: 2; }
+    .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); }
+    .closewin path { fill: rgba(var(--h-edge),0.06); stroke: rgba(var(--h-edge),0.55); stroke-width: 1.2; stroke-linejoin: round; }
+    .closewin path.cw-in { fill: rgba(var(--h-edge),0.2); stroke: rgba(var(--h-hi-rgb),0.98); stroke-width: 2; }
     .closewin path.cw-shut { fill: none; stroke: rgba(255,190,120,0.5); stroke-dasharray: 3 4; }
-    .closewin text { font: 500 9.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; fill: rgba(170,245,228,0.9); paint-order: stroke; stroke: rgba(6,10,12,0.72); stroke-width: 3px; stroke-linejoin: round; }
-    .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: rgba(225,255,246,1); }
+    .closewin text { font: 500 10px/1 var(--h-font); letter-spacing: 0.03em; fill: rgba(var(--h-edge),0.9); paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; }
+    .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: var(--h-hi); }
     .closewin text.cw-shut { fill: rgba(255,200,140,0.85); }
     body.breaching .closewin { display: none; }
     /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
        pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
        3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */
-    #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font-size: 11px; color: #bfd6cf; text-shadow: 0 1px 2px #000; pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
-    #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(120,170,160,0.25); background: rgba(4,10,12,0.55); border-radius: 3px; opacity: 0.55; white-space: nowrap; }
-    #equip .slot.sel { opacity: 1; border-color: rgba(140,230,210,0.7); box-shadow: 0 0 8px rgba(60,160,140,0.25); }
-    #equip .slot.holstered { opacity: 0.55; border-style: dashed; }   /* E: the selected item put away */
-    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: #7a9; font-size: 10px; letter-spacing: 0.1em; }
+    #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font: 11px/1.15 var(--h-font); color: var(--h-ink); text-shadow: var(--h-shadow); pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+    #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(var(--h-edge),0.25); background: rgba(var(--h-plate),0.6); border-radius: 3px; opacity: 0.7; white-space: nowrap; }
+    #equip .slot.sel { opacity: 1; border-color: rgba(var(--h-edge),0.7); box-shadow: 0 0 8px rgba(0,0,0,0.4); }
+    #equip .slot.holstered { opacity: 0.7; border-style: dashed; }   /* E: the selected item put away */
+    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: var(--h-dim); font-size: 10px; letter-spacing: 0.1em; }
     #equip .slot.slung.holstered::after { content: 'slung · E'; }   /* the FN2000's row: put away is on his back */
     #equip .slot.slung .rounds i { width: 2px; } #equip .slot.slung .rounds i.spent { width: 0; }   /* thirty of them: slimmer pips */
     #equip .slot.absent { opacity: 0.3; border-style: dotted; }   /* the rifle's row in a kit without it: kept (greyed) so smoke and stun keep their numbers */
-    #equip .slot.absent .name { color: #8aa; }
-    #equip .tag { font-size: 9px; letter-spacing: 0.14em; padding: 0 4px; border: 1px solid rgba(120,170,160,0.35); border-radius: 2px; color: #6f8580; }   /* SEMI / AUTO (Z) and RING ×n (B): lit = what the trigger does now */
-    #equip .tag.on { color: #9ff3c9; border-color: rgba(159,243,201,0.6); text-shadow: 0 0 5px #3d8; }
-    #equip .tag.rings.on { color: #ffd27a; border-color: rgba(255,210,122,0.65); text-shadow: 0 0 5px rgba(255,200,90,0.4); }
+    #equip .slot.absent .name { color: var(--h-dim); }
+    #equip .tag { font: 700 10px/1.2 var(--h-head); letter-spacing: 0.14em; padding: 0 4px; border: 1px solid rgba(var(--h-edge),0.35); border-radius: 2px; color: var(--h-faint); }   /* SEMI / AUTO (Z) and RING ×n (B): lit = what the trigger does now */
+    #equip .tag.on { color: var(--h-hi); border-color: rgba(var(--h-edge),0.6); text-shadow: 0 0 5px #000; }
+    #equip .tag.rings.on { color: #ffd27a; border-color: rgba(255,210,122,0.65); }
     #equip .tag.ocp { margin-left: auto; display: inline-flex; align-items: center; }   /* the OCP's charge closes the pistol's row: the tag, then a slim meter of the charge inside it — lit (on) when a right click will fire it */
-    #equip .tag.ocp .ocpbar { width: 30px; height: 4px; margin-left: 5px; border-color: rgba(120,170,160,0.45); }
-    #equip .tag.ocp.on .ocpbar { border-color: rgba(160,220,210,0.6); }
-    #equip .tag.ocp:not(.on) .ocpbar b { background: #5d8f86; }
-    #equip .pace { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; color: #9bb; padding: 1px 7px; }
-    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(121,214,154,0.5); } #equip .pace .ticks i.on { background: #8ff0b4; box-shadow: 0 0 4px rgba(120,240,170,0.4); }
-    #equip .key { color: #7a9; font-weight: 700; }
-    #equip .name { letter-spacing: 0.06em; text-transform: uppercase; color: #dff; }
+    #equip .tag.ocp .ocpbar { width: 30px; height: 4px; margin-left: 5px; border-color: rgba(var(--h-edge),0.45); }
+    #equip .tag.ocp.on .ocpbar { border-color: rgba(var(--h-edge),0.6); }
+    #equip .tag.ocp:not(.on) .ocpbar b { background: var(--h-faint); }
+    #equip .pace { display: flex; align-items: center; gap: 8px; font: 600 10px/1.3 var(--h-head); letter-spacing: 0.14em; color: var(--h-soft); padding: 1px 7px; }
+    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(var(--h-edge),0.5); } #equip .pace .ticks i.on { background: var(--h-hi); box-shadow: 0 0 4px rgba(0,0,0,0.5); }
+    #equip .key { color: var(--h-dim); font: 700 11px/1 var(--h-mono); }
+    #equip .name { font: 700 12px/1 var(--h-head); letter-spacing: 0.08em; text-transform: uppercase; color: var(--h-hi); }
     /* the magazine's pips: a line of their own UNDER each gun's row, selected or not (so the column keeps its height when the selection changes). Out of the
        row's flow, so the row is as short as its name, count, spares and tags; `left` = the row's padding + the key digit + the gap: under the name */
     #equip .rounds { display: flex; gap: 2px; align-items: flex-end; position: absolute; left: calc(15px + 1ch); bottom: 4px; }
     #equip .slot:has(.rounds) { position: relative; padding-bottom: 19px; }
-    #equip .rounds i { display: block; width: 3px; height: 9px; background: #cfe; opacity: 0.9; }
-    #equip .rounds i.spent { background: transparent; border: 1px solid rgba(200,255,240,0.3); width: 1px; height: 7px; }
+    #equip .rounds i { display: block; width: 3px; height: 9px; background: var(--h-hi); opacity: 0.9; }
+    #equip .rounds i.spent { background: transparent; border: 1px solid rgba(var(--h-edge),0.3); width: 1px; height: 7px; }
     #equip .rounds i.chamber { height: 11px; background: #ffd27a; }
     #equip .mags { display: flex; gap: 3px; align-items: flex-end; margin-left: 4px; }
-    #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(200,255,240,0.55); position: relative; }
-    #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: #9dc; }
+    #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(var(--h-edge),0.55); position: relative; }
+    #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: var(--h-ink); }
     #equip .gadgets { display: flex; gap: 12px; padding: 1px 1px 2px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
-    #equip .g { color: #6f8580; } #equip .g.on { color: #9ff3c9; text-shadow: 0 0 6px #3d8; }
-    #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(160,220,210,0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
-    #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: #7fe0d0; }
+    #equip .g { color: var(--h-soft); } #equip .g.on { color: var(--h-hi); text-shadow: 0 0 6px #000; }
+    #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(var(--h-edge),0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
+    #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: var(--h-hi); }
     #equip .cans { display: flex; gap: 3px; } #equip .cans i { display: block; width: 6px; height: 11px; background: #7d8f74; border-top: 2px solid #b23; }
     #equip .cans.bangs i { background: #3e4346; border-top: 2px solid #e8e6dc; }
     #equip .cans.frags i { background: #4b5a2c; border-top: 2px solid #d9b21e; }
     #equip .cond { display: flex; gap: 8px; align-items: center; padding: 1px 1px 4px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
-    #equip .cond .pips { display: flex; gap: 3px; } #equip .cond .pips i { display: block; width: 14px; height: 6px; background: #9fd8c6; box-shadow: 0 0 5px rgba(80,220,180,0.35); }
+    #equip .cond .pips { display: flex; gap: 3px; } #equip .cond .pips i { display: block; width: 14px; height: 6px; background: var(--h-ink); box-shadow: 0 0 5px rgba(0,0,0,0.5); }
     #equip .cond .pips i.lost { background: transparent; border: 1px solid rgba(220,120,110,0.6); box-shadow: none; }
-    #equip .cond.down .g { color: #ff9c8c; text-shadow: 0 0 6px #c43; }
-    #equip .cond .keytag { margin-left: auto; padding: 0 5px; border: 1px solid rgba(255,210,122,0.65); border-radius: 2px; color: #ffd27a; letter-spacing: 0.14em; text-shadow: 0 0 5px rgba(255,200,90,0.4); box-shadow: 0 0 6px rgba(255,200,90,0.15); }   /* a key taken off a questioned man (Player.keys): the chamber round's amber, pushed to the row's right edge */
-    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9cb; background: #000; }
+    #equip .cond.down .g { color: #ff9c8c; }
+    #equip .cond .keytag { margin-left: auto; padding: 0 5px; border: 1px solid rgba(255,210,122,0.65); border-radius: 2px; color: #ffd27a; letter-spacing: 0.14em; }   /* a key taken off a questioned man (Player.keys): the chamber round's amber, pushed to the row's right edge */
+    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--h-soft); background: #000; }
     /* speech bubbles over guards' heads (Game.say): a caption, not a balloon — small, translucent, a hairline tail */
-    .bubble { position: absolute; transform: translate(-50%, -100%); max-width: 190px; padding: 3px 7px 4px; font: 11px/1.3 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #dcebe3; background: rgba(6, 12, 10, 0.78); border: 1px solid rgba(150, 190, 170, 0.45); border-radius: 4px; white-space: normal; text-align: center; letter-spacing: 0.01em; text-shadow: 0 1px 2px #000; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
-    .bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 7px; height: 7px; transform: translateX(-50%) rotate(45deg); background: rgba(6, 12, 10, 0.78); border-right: 1px solid rgba(150, 190, 170, 0.45); border-bottom: 1px solid rgba(150, 190, 170, 0.45); }
+    .bubble { position: absolute; transform: translate(-50%, -100%); max-width: 190px; padding: 3px 7px 4px; font: 11px/1.3 var(--h-font); color: var(--h-ink); background: rgba(var(--h-plate),0.78); border: 1px solid rgba(var(--h-edge),0.35); border-radius: 4px; white-space: normal; text-align: center; letter-spacing: 0.01em; text-shadow: var(--h-shadow); pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+    .bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 7px; height: 7px; transform: translateX(-50%) rotate(45deg); background: rgba(var(--h-plate),0.78); border-right: 1px solid rgba(var(--h-edge),0.35); border-bottom: 1px solid rgba(var(--h-edge),0.35); }
     .bubble.sus { border-color: rgba(255, 214, 102, 0.6); color: #fff0c8; } .bubble.sus::after { border-color: rgba(255, 214, 102, 0.6); }
     .bubble.alert { border-color: rgba(255, 96, 72, 0.7); color: #ffd8d0; } .bubble.alert::after { border-color: rgba(255, 96, 72, 0.7); }
-    /* Sam's own line to the man in his arm (player.ts askHeld → Player.bubble): the same caption in his goggles' cool green, a shade darker behind it */
-    .bubble.sam { color: #c8ffe4; background: rgba(2, 12, 9, 0.86); border-color: rgba(64, 230, 160, 0.6); } .bubble.sam::after { background: rgba(2, 12, 9, 0.86); border-color: rgba(64, 230, 160, 0.6); }
+    /* Sam's own line to the man in his arm (player.ts askHeld → Player.bubble): the same caption in the bright ink with a brighter frame, a shade darker behind it */
+    .bubble.sam { color: var(--h-hi); background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); } .bubble.sam::after { background: rgba(var(--h-plate),0.86); border-color: rgba(var(--h-edge),0.7); }
     .bubble.radio { font-style: italic; }
     .bubble.below { transform: translate(-50%, 0); }   /* hung under his head when the spot above it is under the caption card / the interaction panel */
     .bubble.below::after { bottom: auto; top: -5px; transform: translateX(-50%) rotate(225deg); }
