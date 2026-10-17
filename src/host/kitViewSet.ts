@@ -80,8 +80,18 @@ export function kitViewSetQuery(q: URLSearchParams): URLSearchParams {
  *  and the scenario that is up decides, as ever. Data only: main.ts says it in ?kitview's OWN window (an iframe: its own page, its own modules — scene/look.ts
  *  setSuitAs, KITANIM.sling), on a set and nowhere else. */
 export function kitViewSetDress(q: URLSearchParams): { suit: 'quiet' | null; sling: 2 } | null {
+  const kind = kitViewQuietKind(q);
+  return kind === 'quiet' ? { suit: 'quiet', sling: 2 } : kind === 'solo' ? { suit: null, sling: 2 } : null;
+}
+
+/** WHICH QUIET KIND a mission's link is, by the reading the dress above has always used (it is that reading, moved here so that two callers cannot
+ *  drift): 'quiet' — a quiet mission, alone or as two; 'solo' — a link that names NO mission (the solo night); null — a loud one (room clear, night
+ *  breach, rescue, the four). Read off the LINK and never off the scenario that is up: a set way's picture is staged as a room clear
+ *  (kitViewSetQuery strips `quiet` / `solo`), so `game.quiet.active` is false there. The quiet picture's switch (host/kitView.ts KIT_VIEW_QUIET)
+ *  asks this. */
+export function kitViewQuietKind(q: URLSearchParams): 'quiet' | 'solo' | null {
   const loud = ['roomclear', 'nightbreach', 'rescue'].some(k => q.has(k)), quiet = !loud && q.has('quiet'), none = !loud && !quiet && !q.has('squad4');
-  return quiet ? { suit: 'quiet', sling: 2 } : none ? { suit: null, sling: 2 } : null;
+  return quiet ? 'quiet' : none ? 'solo' : null;
 }
 
 /** LOOK TWINS: a set box's `material` may name alternatives, 'a|b|…' — the first the file's palette holds is the one it takes, so ONE block text serves a
