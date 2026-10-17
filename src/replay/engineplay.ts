@@ -454,7 +454,7 @@ export class TapePlay {
   private build(): void {
     if (typeof document === 'undefined' || !this.tape) return; const T = this.tape, F = this.F!;
     const css = document.createElement('style'); css.textContent = `
-#tapebar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;align-items:center;gap:10px;padding:8px 14px;background:rgb(17,19,22);border-top:1px solid rgba(233,226,214,.14);color:#e9e2d6;font:12px/1.2 var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.04em;user-select:none}
+#tapebar{position:fixed;left:0;right:0;bottom:0;z-index:70;display:flex;align-items:center;gap:10px;padding:8px 14px;background:var(--h-field,rgb(21,19,16));border-top:1px solid rgba(233,226,214,.14);color:#e9e2d6;font:12px/1.2 var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.04em;user-select:none}
 #tapebar button,#tapebar a{all:unset;cursor:pointer;padding:5px 9px;border:1px solid rgba(233,226,214,.28);border-radius:3px;color:inherit;text-transform:uppercase}
 #tapebar button:hover,#tapebar a:hover{border-color:var(--m-accent,#e8833a);color:var(--m-accent,#e8833a)}
 #tapebar [hidden]{display:none}
@@ -469,18 +469,18 @@ export class TapePlay {
 #tapebar .time{font-variant-numeric:tabular-nums;min-width:8.5em;text-align:center}
 #tapebar .line{position:relative;flex:1;height:28px;cursor:pointer;touch-action:none}
 #tapebar .line canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
-#tapebar .fill{position:absolute;left:0;top:0;height:100%;min-width:2px;border-right:2px solid #8ff0b4;border-bottom:2px solid var(--m-accent,#e8833a);box-sizing:border-box;pointer-events:none}
-#tapebar .fill::after{content:'';position:absolute;right:-5px;top:-4px;width:8px;height:8px;border-radius:50%;background:#8ff0b4}
-#tapebar .tk{position:absolute;top:-6px;transform:translateX(-50%);min-width:13px;height:13px;padding:0 2px;box-sizing:border-box;border-radius:7px;background:#f2cf6b;color:#16181b;font:700 9px/13px system-ui,sans-serif;text-align:center;letter-spacing:0}
+#tapebar .fill{position:absolute;left:0;top:0;height:100%;min-width:2px;border-right:2px solid var(--h-hi,#f0e9d9);border-bottom:2px solid var(--m-accent,#e8833a);box-sizing:border-box;pointer-events:none}
+#tapebar .fill::after{content:'';position:absolute;right:-5px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--h-hi,#f0e9d9)}
+#tapebar .tk{position:absolute;top:-6px;transform:translateX(-50%);min-width:13px;height:13px;padding:0 2px;box-sizing:border-box;border-radius:7px;background:#f2cf6b;color:var(--h-on,#140d05);font:700 9px/13px system-ui,sans-serif;text-align:center;letter-spacing:0}
 #tapebar .tk::after{content:'';position:absolute;left:50%;top:13px;width:1px;height:21px;background:#f2cf6b;opacity:.55}
 #tapebar .parted{position:absolute;top:0;width:0;height:100%;margin-left:-1px;border-left:2px dashed #ffb35c;pointer-events:none}
 #tapebar .ghost{position:absolute;top:0;width:1px;height:100%;background:rgba(233,226,214,.7);pointer-events:none}
-#tapebar .ghost::after{content:attr(data-t);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:2px 6px;border-radius:2px;background:rgb(17,19,22);font-variant-numeric:tabular-nums;white-space:nowrap}
-#tapemap{position:fixed;right:12px;top:12px;z-index:70;border:1px solid rgb(72,73,70);border-radius:3px;background:rgb(10,13,14);cursor:pointer}
+#tapebar .ghost::after{content:attr(data-t);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);padding:2px 6px;border-radius:2px;background:var(--h-field,rgb(21,19,16));font-variant-numeric:tabular-nums;white-space:nowrap}
+#tapemap{position:fixed;right:12px;top:12px;z-index:70;border:1px solid rgb(72,73,70);border-radius:3px;background:var(--h-base,#0c0b09);cursor:pointer}
 #tapemap:hover{border-color:var(--m-accent,#e8833a)}
-#tapemapbig{position:fixed;left:0;right:0;top:0;bottom:44px;z-index:72;display:grid;place-items:center;background:rgb(10,11,13);cursor:pointer}
+#tapemapbig{position:fixed;left:0;right:0;top:0;bottom:44px;z-index:72;display:grid;place-items:center;background:var(--h-base,#0c0b09);cursor:pointer}
 #tapemapbig[hidden]{display:none}
-#tapemapbig canvas{border:1px solid rgb(72,73,70);border-radius:3px;background:rgb(10,13,14);cursor:crosshair}
+#tapemapbig canvas{border:1px solid rgb(72,73,70);border-radius:3px;background:var(--h-base,#0c0b09);cursor:crosshair}
 #tapebar .say{min-width:0;white-space:nowrap;opacity:.8}
 #tapebar .say:empty,#tapebar .say.ok{display:none}
 body:has(#panel:not(.hidden)) #tapemap{right:392px}
@@ -492,10 +492,10 @@ body.taping #checkpoint,body.taping #journal{right:calc(var(--tape-map,236px) + 
 body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
 #tapebar .say.off{color:#ffb35c;opacity:1}
 #tapebig{position:fixed;left:0;right:0;top:0;bottom:calc(var(--tape-h,44px) + var(--sndl-h,0px));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
-#tapebig b{display:grid;place-items:center;width:84px;height:84px;border:2px solid var(--m-accent,#e8833a);border-radius:50%;font-size:34px;color:var(--m-accent,#e8833a);padding-left:6px;box-sizing:border-box;background:rgb(17,19,22)}
-#tapebig span{padding:5px 12px;border-radius:3px;background:rgb(17,19,22)}
+#tapebig b{display:grid;place-items:center;width:84px;height:84px;border:2px solid var(--m-accent,#e8833a);border-radius:50%;font-size:34px;color:var(--m-accent,#e8833a);padding-left:6px;box-sizing:border-box;background:var(--h-field,rgb(21,19,16))}
+#tapebig span{padding:5px 12px;border-radius:3px;background:var(--h-field,rgb(21,19,16))}
 #tapenote{position:fixed;left:50%;bottom:calc(var(--tape-h,44px) + var(--sndl-h,0px) + 10px);transform:translateX(-50%);z-index:71;width:min(560px,calc(100vw - 32px))}
-#tapenote input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--m-accent,#e8833a);border-radius:3px;background:rgb(17,19,22);color:#e9e2d6;font:14px system-ui,sans-serif;outline:none}`;
+#tapenote input{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--m-accent,#e8833a);border-radius:3px;background:var(--h-field,rgb(21,19,16));color:#e9e2d6;font:14px system-ui,sans-serif;outline:none}`;
     document.head.append(css);
     const el = <K2 extends keyof HTMLElementTagNameMap>(tag: K2, cls = '', text = ''): HTMLElementTagNameMap[K2] => { const e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; };
     const bar = el('div'); bar.id = 'tapebar';
@@ -620,7 +620,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
   }
   private refusal(): void {
     if (typeof document === 'undefined') return;
-    const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:80;max-width:min(640px,calc(100vw - 32px));padding:12px 16px;background:rgb(17,19,22);color:#e9e2d6;border:1px solid #e8833a;border-radius:3px;font:14px/1.4 system-ui,sans-serif';
+    const d = document.createElement('div'); d.style.cssText = 'position:fixed;left:50%;top:18px;transform:translateX(-50%);z-index:80;max-width:min(640px,calc(100vw - 32px));padding:12px 16px;background:var(--h-field,rgb(21,19,16));color:#e9e2d6;border:1px solid #e8833a;border-radius:3px;font:14px/1.4 system-ui,sans-serif';
     d.textContent = this.refuse + ' ';
     if (this.id !== null && !document.querySelector('meta[name="tps-one-page"]')) { const a = document.createElement('a'); a.textContent = 'Open the map'; a.href = viewerUrl(this.id); a.style.color = '#e8833a'; d.append(a); }
     const put2 = () => document.body.append(d); if (document.body) put2(); else window.addEventListener('DOMContentLoaded', put2);

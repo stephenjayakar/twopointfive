@@ -12,14 +12,19 @@
 //                 that whatever the floor is doing), in the list's order and round again. The theme is on no list: it is the main menu's. A new mission on the same page
 //                 keeps the music it has. Switch off (or a host that names no level): music.ts deals them from a shuffled bag (the page's own die, never the game's) — the
 //                 visit opens on a new one, a mission that starts once a piece has had MUSIC.missionAfter seconds moves on, and so does a piece that has had MUSIC.minutes.
+//   how tense     THE OPPOSITION'S NERVES (MUSIC.theirs — ON in the page, `?teamnerves` off; OFF here and on the frozen stand, raised by the same TPS_MUSIC=1): the tension the
+//                 score follows (game/guards.ts tension; the page hands it this switch) is how roused the men against the player are. In live play a teammate counts
+//                 only while he is in a fight of his own ('alert'); what a blast, a noise or a tripped breaker left on him does not. A man under an order never talks
+//                 himself calm, so with the switch off (as it was) one can left a teammate's wariness holding the score up for as long as his order stood, every
+//                 defender down or not. While a show runs (the day showcase's pair hunting) its men's scripted states are the score's cue and read as they always did.
 // A PIECE is data plus one `tick`: called once per sixteenth with the bar, the step in it, the smoothed intensity x and the chord's root, it plays through `Hands` (the voices
 // with the sequencer's die behind them — every random number a voice or a decision takes is drawn there, in the order asked). A piece keeps what it must remember between
 // steps in `h.m` (cleared when a piece begins).
 import type { MusicBackend, PieceVoices, MusicLevels, MetalHit, NoiseDice, KeyKind, PercKind, WindKind, BowKind } from './musicBackend';
 import { midi } from './musicBackend';
 
-/** the pieces switch, the level's-own-music switch and the two times the deal reads (registered in game/knobs.ts; the listener's ears only: no rule reads it, a replay holds no sound) */
-export const MUSIC = { pieces: false, byLevel: false, minutes: 4, missionAfter: 45 };
+/** the pieces switch, the level's-own-music switch, whose nerves the tension reads, and the two times the deal reads (registered in game/knobs.ts; the listener's ears only: no rule reads it, a replay holds no sound) */
+export const MUSIC = { pieces: false, byLevel: false, theirs: false, minutes: 4, missionAfter: 45 };
 
 /** a struck metal's dice, in the order the graph drew them: the base pitch, then per partial the decay's draw and the pan's (the theme's pinned stream rests on this order) */
 export function drawMetal(rnd: () => number): MetalHit {

@@ -59,6 +59,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`ui/sceneTweak.ts`, `ui/perfsweep.ts`), the debug floor views (`windviz`, `pictureviz`). TWO OVERLAPS REPORTED ON THIS SCREEN ARE NOT MENDED and were not seen
   in any of the pictures above: a long order menu reaching the kit column in a window under about 640 px tall (it reached it before; the menu is now 13 px
   shorter), and the objective's diamond drawn over the squad block when the objective lies up and to the left.
+- **A quiet mission's gear screen** (2026-10-17; the maintainer: "quiet missions should have different gear screen stuff i think. be creative!", with
+  show, not tell). The PANEL side of Team & kit; the picture beside it is the kit figure's. WHEN: the mission's kind is quiet or it is the solo night
+  (`ui/kitNoise.ts quietGear`), on the Team & kit step only: the root wears `quiet` (`ui/startpage.ts`, where `nokit` is set). `kitloud` on the address = the
+  panel as it was. No FROZEN row and no knob: it is DOM and a look, nothing of the simulation reads it. WHAT: (1) THE LIGHTS ARE OUT: on that step
+  `--m-accent` is the bright sand, so nothing on it is orange and the night picture is the brightest thing in the window. The cursor is told from 'on' by
+  weight, not hue: 4 px of bright sand under a tab or beside a tile where 'on' is 2 px of the soft ink, and the roster's standing bar a step dimmer. Deploy is
+  a hollow block: a 2 px bright frame over a faint fill. (2) THE TILES ARE SOLID PLATES (the panel colour at 0.94; they were the edge colour at 0.06), so the
+  room does not show through them. (3) THE KIT READS BY NOISE, no word added: every tile carries `data-noise` 0‥3 (`ui/kitCard.ts`, from `kitNoise.ts`), and
+  on this screen a tile above 0 wears a sound mark after its VALUE (the name's line is cut with an ellipsis in a narrow tile and holds the arrows): a source
+  and one arc = heard nearby and no alarm (an event with `loud: false`: the suppressed pistol's report, a smoke can's pop, a sticky camera fired and
+  striking), two arcs = the floor hears it (`loud: true`: every other gun, a stun can, a charge, a hammer), three = the blast (`level: 2`, frag.ts blast(): a
+  frag and a 40 mm grenade). Colour is spent on what he CARRIES: two arcs in the alarm's amber, three in its red (index.html `#alarm.l1` / `.l2`); one arc,
+  and every mark on a thing he has none of, in the ink. A gun's step is read off its `WEAPONS` row when asked; the fixed ones are a table that cites the
+  event each copies. So the quiet set reads at a glance: one arc on the pistol, and its one frag is the only colour on the card. (4) NONE CARRIED SINKS:
+  a tile with a count of none, an empty big slot, no wand or no shield (`.zero`; never a fitting switched off, such as a teammate's suppressor) goes to the
+  ground colour with its words at 0.65 (0.9 under the cursor). (5) AN EMPTY BIG SLOT is a tile like the rest, not the card's widest; with something in
+  it, it is wide as before. NOT DONE: the tiles keep their order (the keys walk the card's own order); the picture's fade under the panel is the kit
+  figure's (`ui/kitView.ts`). A loud mission's screen is untouched (every rule is under `#missions.one.quiet.pane-loadout`). CHECKS:
+  `bun run tools/qa/kitnoise-check.ts` (a gun's step follows `WEAPONS[...].report` for Sam's three picks and six teammate cards; each fixed step still has
+  the line of the game it copies; which missions take the look; `KITNOISE_BREAK=1` must fail) and `PORT=<port> node tools/qa/quietgear-page.cjs [outDir]`
+  (the real page in headless Chromium, no adapter needed: the look, the steps, a mark on every noisy tile and no other, the big slot, the quiet set's gun at
+  one arc, `kitloud`, the solo night, a loud mission as it was, no page error; `QUIETGEAR_BREAK=1` must fail). SEEN: stills of the real page's DOM at
+  1440 × 900 with no picture behind it, looked at twice by a reviewer. NOT SEEN BY ANYONE: the panel over the real night picture, on a GPU, in a Mac's
+  condensed face, with a pair (a teammate's card), in a window under 1180 px wide.
 - **Team & kit shows the team at the mission's way-in door** (2026-10-13, the owner's pick; `src/ui/kitView.ts` + `src/host/kitView.ts`). SWITCHES, BOTH UI-ONLY:
   `KIT_VIEW.on` / `?oldfigure` (off = the standing man, `kitFigure.ts`, everywhere, as before) and `KIT_VIEW.acts` / `?stillkit` (THE LOOP, 2026-10-14; off = the still picture: staged, warm, held, every
   kit change a plain restage, nothing played — the parent opens the child `&stillkit`, which is what the child reads), both on in the page, both in the UI module's table (with `wait` 10 s, `kitMs` 150 and `grace` 2.5 s). No `src/game` code reads either, so
