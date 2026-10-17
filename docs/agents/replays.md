@@ -68,18 +68,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   with nothing re-seeded (dice-check's checkpoint line; the file's `seed` comes back too, so `dice.seed` names the stream being rolled). Modules with dice of their own (weather, civilians' lines, the Director's programs, the hash counters of destruction / glass /
   particles) keep them. Not covered: code called on a game OUTSIDE its update / restart while another Game was stood up later in the same process draws that later game's die (harness
   only; the page has one Game).
-- **The fixed step** (`src/host/loop.ts FIXEDSTEP {on, hz 60, snap, maxTicks 4}`; DEFAULT OFF = `stepFrame` statement for statement as it was; `?fixedstep` / `?fixedstep=0` /
-  `?fixedstep=<hz>`, Tab ▸ Frame ▸ 'fixed 60 Hz game step', `__fixedstep {knobs, ticks, owed}`; co-op groundwork, nothing networked): on a LIVE frame (`LoopCtx.fixedStep`, main.ts:
+- **The fixed step** (`src/host/loop.ts FIXEDSTEP {on, hz 60, snap, maxTicks 4}`; the module's default is off = `stepFrame` statement for statement as it was; **ON IN THE PAGE**
+  since 2026-10-17 (`pageSwitches`: `?fixedstep=0` / `?fixedstep=off` = off, `?fixedstep=<hz>` = another tick rate; held off on the frozen stand, `FROZEN_HOLDS` row
+  `FIXEDSTEP.on`, `TPS_FIXEDSTEP=1` raises it; not in `JOURNAL_KNOBS` and on `knobs.ts VISIT_OWN`: no recording sets it, a tape's player leaves the viewer's loop alone),
+  Tab ▸ Frame ▸ 'fixed 60 Hz game step', `__fixedstep {knobs, tween, ticks, owed, drew}`; co-op groundwork, nothing networked): on a LIVE frame (`LoopCtx.fixedStep`, main.ts:
   not a scripted `__runFrames` frame — a script's dt is still exactly what it names) the frame's time goes through `planTicks` (an accumulator; `snapDt` takes a frame time within
   0.4 ms of 1‥3 refreshes of a common display as exactly that, so 60 Hz is one tick a frame; the time the snap puts aside is kept in `drift`, leaking 1 % a frame, and handed back
   half a tick at a time — a display the list does not know keeps the wall's clock within half a percent; main.ts plans from the rAF timestamps, `LoopCtx.vsyncDt`) and the game runs WHOLE ticks of exactly 1/hz: per tick demo.update → attract.update →
   game.update → lights.update (the men read ttl lights), `betweenTicks` (main.ts: the HUD's `hudExpireBubbles`, as a replay makes it after every update, then
-  `engine.world.upload(true)` — `between`: the motion-identity map stays the last DRAWN frame's) between two ticks of one frame. KNOWN: on a frame of two ticks or more a flash
-  that lives one tick and was made in the first is never drawn. One-frame input edges go to exactly one
+  `engine.world.upload(true)` — `between`: the motion-identity map stays the last DRAWN frame's) between two ticks of one frame. The cap of `maxTicks` a frame is against a stall: a clock
+  run faster than the wall's (`__timeScale` 2, `LoopCtx.timeScale`) may run that many more. One-frame input edges go to exactly one
   tick (`Input.endTick`; a tickless frame owes them to the next frame's first tick, after the hotkeys). Per drawn frame on the display's dt still: camera, mixer, smoke solver,
-  render — and there is NO interpolation, so off 60 Hz the men move at 60 a second under a display-rate camera (why it ships off; on when interpolation exists or the maintainer
-  likes it as is). `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
-  `FIXEDSTEP_BREAK=1` must fail). Nobody has seen it in a browser.
+  render — and what a frame between two ticks DRAWS is the next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
+  `FIXEDSTEP_BREAK=1` must fail). A page tool that runs the live loop and counts on one update a frame of the frame's own dt opens the page with `?fixedstep=0`.
+- **Drawing between ticks** (`src/host/tween.ts TWEEN {on, snap 1.5 m, flashes, ease}`, class `Tween`, `LoopCtx.tween`; the module's default is off = the fixed step draws the
+  last tick, as it did; **ON IN THE PAGE** (`?tween=0` / `?tween=off` = off; frozen stand off, `FROZEN_HOLDS` row `TWEEN.on`, `TPS_TWEEN=1`; `VISIT_OWN`, in no recording);
+  Tab ▸ Frame ▸ 'draw between ticks'; acts only under the fixed step, on live frames): a frame that falls between two ticks draws what MOVES at the blend of the tick before
+  the last and the last — keyed boxes (`Box.mkey`: door leaves, props, items, debris, what a man carries, devices: centre, yaw, quaternion, `dc`), the men (every joint
+  matrix of the palette, by the man's id, into an array of tween.ts's own that only the GPU is handed: `CharacterRenderer.staged / ownerOf / drawJoints`) and the ends of
+  their shadow proxies, every light that stood in both ticks (position, direction, by the object), where the follow camera looks and its aim lead (`Tween.at`), and a
+  framing a level script pins tick by tick (`Tween.pinAt`: the Director's tracking / swinging shots). `capture()` at the end of every tick copies what stands;
+  `pose(a)` hangs blended arrays on the drawn objects right before the host's render and `unpose()` hangs the tick's own back by reference right after — the game's own
+  state is never the blend when a tick runs. THE LAG (`Tween.phase`): the picture stands a CONSTANT part of a tick behind the game, the most any of the last 32 frames owed
+  the next tick — NOTHING on a display at the tick rate (every frame is the last tick itself, nothing hung: the 60 Hz picture is the one the fixed step alone drew), half a
+  tick at 120 Hz, 4/5 at 50, 11/12 at 144, never more than one; a frame that owes more pulls it up at once, a lag longer than needed is let go `ease` a frame. Cuts: a thing
+  that moved past `snap` in the tick, a keyed box whose half extents or owner changed, a man with no palette last tick — drawn where the last tick has them. SPENT FLASHES
+  (`flashes`): a timed light a tick left alight that its own clock retired before any draw is put back in the list for one render (the fixed step's old KNOWN). Stale
+  (`rest()`: the pause card, a script's `__runFrames`, either switch off): nothing hung, the GPU's palette the tick's again, the next live frame starts from its own capture.
+  LEFT AS THE TICK HAS THEM, so up to the lag AHEAD of the men they belong to on a frame between two ticks: boxes with no key — laser lines, tracers, sparks, one-tick
+  effect boxes (a key set where a beam is made would let it be blended: `combat.ts beamBoxes`) — and the HUD's marks and bubbles (laid from the game's positions).
+  And the GPU's sensor passes measure the POSED scene (they measure the picture, as ever; headless stand-ins read the tick). The engine replay viewer has its own loop:
+  not blended. `bun run tools/qa/tween-check.ts` on BOTH stands (stands / blend / even time / put back / same game / pin / flash / stale / off — the packed words the GPU
+  would be handed against the check's own record of the two ticks, at 50, 60, 120, 144 Hz, and 16 digests ≡ `W.step(1/60)` ≡ the blend off; `TWEEN_BREAK=1`: 'blend',
+  'even time', 'put back' fail). `node tools/qa/tween-page.cjs` (dev server on PORT): the real page's own loop on the software adapter — both on at the boot, the
+  engine's render with the blend hung and no console / GPU error, the clock scaled to stand for a 120 and a 144 Hz display, the pause card, both switches live and
+  by URL. COST (headless, one loaded cloud CPU, a four-man room fight in the compound at 144 Hz: 5 drawn men, 257 dynamic boxes, 37 lights; the machine three times over-booked while it ran, so read them against the 4.5‥9.4 ms game update and the 0.7‥0.9 ms box + light pack of the same run): `capture` 0.15‥0.26 ms a tick (about 3 % of the update; paid at every rate), `pose` + `unpose` 0.24 ms a frame at 144 Hz, 0.10 at 120 Hz, nothing at 60 Hz once the lag has settled.
+  **Never seen on a GPU or on a display over 60 Hz: how it LOOKS is the maintainer's to judge.**
 - **The player's input is one plain record a tick** (`src/game/cmd.ts`; co-op groundwork, nothing networked): `Game.update(dt, input, cam, canvas)` — the signature every host and
   tool calls, unchanged — is now journal.frameStart → the director's injected keys → `sampleCmd()` (the host's live Input / camera / view copied into a `PlayerCmd`: keys held,
   keys and buttons gone down, wheel, cursor, view size, and the seat's VIEW as numbers — viewProj, its inverse, the pose, the lens's aim lead) → **`Game.step(dt, cmd)`, the whole old body**,

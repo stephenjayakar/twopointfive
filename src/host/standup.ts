@@ -70,6 +70,8 @@ import { TAKE } from '../game/takecheck';
 import { QUIETFOG } from '../game/quietfog';
 import { TORCH } from '../game/calmtorch';
 import { BACKKEY } from '../game/backkey';
+import { FIXEDSTEP } from './loop';
+import { TWEEN } from './tween';
 import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { DARKDOOR } from '../game/darkdoor';
@@ -201,6 +203,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SWEEP')) HARD.sweep = String((globalThis as any).process?.env?.TPS_SWEEP ?? '') === '1';   // hard's defenders go and look when the team goes quiet (src/game/pressure.ts goLook, src/game/enemysquads.ts lookOut): off, so every frozen hard digest and tally plays the garrison that holds where the noise left it
     if (pinned('TPS_HOLDDROP')) HOLD.dropGun = String((globalThis as any).process?.env?.TPS_HOLDDROP ?? '') === '1';   // a held man drops his gun: off on the frozen stand (its hold probes and digests were recorded with the gun in his fist)
     if (pinned('TPS_TABBACK')) BACKKEY.tab = String((globalThis as any).process?.env?.TPS_TABBACK ?? '') === '1';   // Esc is only the pause and Tab backs out (src/game/backkey.ts): off on the frozen stand, where a Tab in the tick does nothing
+    if (pinned('TPS_FIXEDSTEP')) FIXEDSTEP.on = String((globalThis as any).process?.env?.TPS_FIXEDSTEP ?? '') === '1';   // the fixed 60 Hz game step (src/host/loop.ts): off on the frozen stand — a tool that steps through stepFrame gets one update a frame on the frame's own time, as every frozen digest was recorded
+    if (pinned('TPS_TWEEN')) TWEEN.on = String((globalThis as any).process?.env?.TPS_TWEEN ?? '') === '1';   // drawing between ticks (src/host/tween.ts): off on the frozen stand — picture only, and only under the line above
     if (pinned('TPS_HOLDYAW')) HOLD.oneFacing = String((globalThis as any).process?.env?.TPS_HOLDYAW ?? '') === '1';   // a held man keeps the hold's facing: off on the frozen stand (its showcase digests were recorded with the marks turning him)
     if (pinned('TPS_GUNHOLD')) GUNHOLD.on = String((globalThis as any).process?.env?.TPS_GUNHOLD ?? '') === '1';   // the pistol in a hold sends men to cover and round him: off on the frozen stand (its standoff probes and digests were recorded with men walking the ring in the open)
     if (pinned('TPS_STACKLINE')) STACKLINE.on = String((globalThis as any).process?.env?.TPS_STACKLINE ?? '') === '1';   // brisk through an open door's line on the walk up (src/game/stackline.ts): off, so a man ordered to stack takes the slow last steps onto his mark whatever the door, as in every frozen digest and tally; `TPS_STACKLINE=1` turns it on (the shipped default)
