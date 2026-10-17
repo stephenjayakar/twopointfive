@@ -236,14 +236,17 @@ export async function pictureCheck(): Promise<boolean> {
       } finally { pictureReset(g); fog.on = was.on; for (const [h, r] of was.recs) { if (r) fog.recs.set(h, r); else fog.recs.delete(h); } } }
     // (q) a step off a place the squad chose for itself: one man in the file behind Sam, Sam standing, the rest held far off
     { const { pictureStep, pictureStepOf } = P; let found = false, tried = 0, none = 0;
-      const stage = async (seed: number, on: boolean) => { const t = await stand(seed, on), M = places(t); if (!M) return null; const [a, ...more] = t.R.up as any[], h = t.R.hostiles[0], rest = [...more, ...t.R.hostiles.slice(1)];
-        /** everybody else out of the way, on places the spot `p` has no line to either way (his own eyes must not find him another enemy) */
-        const park = (p: number[]): Vec3[] | null => { const hid = M.far.filter(q => !t.either(q, p)); if (hid.length < 2) return null; rest.forEach((gd: any, i: number) => t.hold(gd, hid[i % (hid.length - 1)], hid[(i + 1) % hid.length])); return hid; };
-        return { t, G: t.g as any, M, a, h, park }; };
-      search: for (const seed of [3, 5, 1]) { const T = await stage(seed, ON); if (!T) continue; const { t, G, M, a, h, park } = T, nav = t.nav;
+      const stage = async (seed: number, on: boolean) => { const t = await stand(seed, on), M = places(t); if (!M) return null; const [a, ...more] = t.R.up as any[], h = t.R.hostiles[0], others = t.R.hostiles.slice(1) as any[];
+        /** a place off the floor: nobody there sees, is seen, fights or is heard well enough to be placed (the staged picture has to stay the one man told of) */
+        const off = (i: number): Vec3 => [500 + 3 * i, 0, 500];
+        /** everybody else out of the way: his mates on places the spot `p` and the believed man's place have no line to either way, the other defenders off the
+         *  floor (parked beside the mates they fought them, and a fight breaks glass and rolls chairs: a new line to the cover in the middle of the asking) */
+        const park = (p: number[]): Vec3[] | null => { const hid = M.far.filter(q => !t.either(q, p) && !t.either(q, M.h)); if (hid.length < 2) return null; more.forEach((gd: any, i: number) => t.hold(gd, hid[i % (hid.length - 1)], hid[(i + 1) % hid.length])); others.forEach((gd, i) => t.hold(gd, off(i + 1), off(i))); return hid; };
+        return { t, G: t.g as any, M, a, h, park, away: off(0) }; };
+      search: for (const seed of [3, 5, 1]) { const T = await stage(seed, ON); if (!T) continue; const { t, G, M, a, h, park, away } = T, nav = t.nav;
         for (const p of t.cells) { const d = flat(p, M.h); if (d < 4 || d > 14 || !t.sees(M.h, p) || !t.sees(p, M.h)) continue;
           const sm = ([[1.3, 0], [-1.3, 0], [0, 1.3], [0, -1.3]] as number[][]).map(([dx, dz]) => [p[0] + dx, 0, p[2] + dz] as Vec3).find(q => !nav.isBlocked(q[0], q[2]) && nav.walkable(p, q) && t.sees(M.h, q)); if (!sm) continue;
-          pictureReset(G); t.pins.clear(); const hid = park(p); if (!hid) continue; const away = hid[hid.length - 1]; t.hold(h, M.h, p); t.hold(a, p, M.h); G.teleportPlayer(sm); t.step(0.1); pictureTell(G, a, h, M.h);
+          pictureReset(G); t.pins.clear(); if (!park(p)) continue; t.hold(h, M.h, p); t.hold(a, p, M.h); G.teleportPlayer(sm); t.step(0.1); pictureTell(G, a, h, M.h);
           // (cover the rule may take, by its own word: a straight walk from the place, off Sam, no nearer the believed man than a stride, hidden a foot either way)
           const mayBe = (q: Vec3) => nav.walkable(p, q) && flat(q, sm) >= 1.2 && flat(q, M.h) >= 3 && flat(q, M.h) >= d - 1, firm = (c: any) => ([[0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]] as number[][]).every(([dx, dz]) => nav.isBlocked(c.at[0] + dx, c.at[2] + dz) || exposedAt(G, a, [c.at[0] + dx, 0, c.at[2] + dz]) <= 0);
           const such = () => (coverNear(G, a, p, PICTURE.stepM, 8, mayBe) as any[]).some(c => c.stand <= 0 && firm(c));
