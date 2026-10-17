@@ -1477,7 +1477,7 @@ export class CharacterAnimator {
    *  from the pose underneath — and that carried-in start while it applies */
   private thrLast: { r: Vec3; l: Vec3 } | null = null; private thrCarry: { r: Vec3; l: Vec3 } | null = null;
   /** this throw's read of its distance (THROW_BY, set by throwItem): `thrLow` ≥ 0 = an underhand toss of that size (0‥1), −1 = the overhand, at `thrFar` of its size (0‥1; 1 = as authored); `thrHang` = how far a toss lets the other hand down (0‥1, read off the pose underneath on the throw's first frame; −1 = not read yet) */
-  private thrLow = -1; private thrFar = 1; private thrHang = -1;
+  private thrLow = -1; private thrFar = 1; private thrHang = -1; private thrHit0 = 0;
   /** the standing idle's foot placement (model space, constant over the loop): where a kick plants both feet, soles as the clip has them */
   private idleFeet: { L: Vec3; R: Vec3; rL: Quat; rR: Quat };
   /** per kick: where the feet were when it started (the support foot is held from the first frame, the swing foot's path starts from its own spot) */
@@ -1752,7 +1752,7 @@ export class CharacterAnimator {
    *  authored. The clock is the same for every one of them. */
   throwItem(dist?: number, speed?: number) {
     this.thrCarry = this.throwT >= 0 && this.thrLast ? { r: v3.copy(this.thrLast.r), l: v3.copy(this.thrLast.l) } : null; this.throwT = 0;
-    this.thrLow = -1; this.thrFar = 1; this.thrHang = -1;
+    this.thrLow = -1; this.thrFar = 1; this.thrHang = -1; this.thrHit0 = Math.max(clamp(this.mvs.cf.x, 0, 1), clamp(this.mvs.dz.x, 0, 1));   // (how far a fold or a blinding already has him as the swing starts: throwLayer gives way only to what lands after)
     if (THROW_BY.on && dist !== undefined && dist === dist) { const lo = THROW_BY.toss, hi = Math.max(THROW_BY.full, lo + 0.01);
       if (dist < lo && !(speed !== undefined && speed >= THROW_BY.tossFast)) this.thrLow = clamp(dist / lo, 0, 1); else this.thrFar = smoothstep(lo, hi, dist); }
   }
@@ -4888,7 +4888,11 @@ export class CharacterAnimator {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, BY = THROW_BY;
     // which swing (throwItem): the underhand toss, or the overhand at its size — `full` = as authored, every number below untouched
     const low = this.thrLow >= 0, full = !low && this.thrFar >= 1, T = low ? THR_LOW : THR;
-    const kT = low ? lerp(BY.tossMin, 1, this.thrLow) : full ? 1 : lerp(BY.turnMin, 1, this.thrFar), kA = low ? kT : full ? 1 : lerp(BY.armMin, 1, this.thrFar), piv = low ? BY.tossPivot : BY.pivot;
+    // a blast that folds or blinds him MID-swing takes the swing: its arms and body English give way by how far the fold's and the blinded hunch's own weights have
+    // risen since it began (zero on a man in neither, so `give` is 1 and nothing below moves; a throw begun already blind, or in the tail of either, is swung whole)
+    const hit = Math.max(clamp(this.mvs.cf.x, 0, 1), clamp(this.mvs.dz.x, 0, 1)), h0 = this.thrHit0;
+    const give = BY.on && hit > h0 ? 1 - clamp((hit - h0) / Math.max(1 - h0, 0.25), 0, 1) : 1;
+    const kS = low ? lerp(BY.tossMin, 1, this.thrLow) : full ? 1 : lerp(BY.turnMin, 1, this.thrFar), kT = kS * give, kA = low ? kS : full ? 1 : lerp(BY.armMin, 1, this.thrFar), piv = low ? BY.tossPivot : BY.pivot;
     const cr = clamp(this.crouch, 0, 1), legK = (1 - 0.5 * cr) * (1 - 0.4 * smoothstep(0.3, 1.5, Math.abs(this.speed)));   // the legs' share: halved on bent knees, less again on the move
     // ---- what is underneath: feet to re-plant, and each hand from its shoulder (the paths' live end keys)
     fk.run(pA);
@@ -4897,7 +4901,7 @@ export class CharacterAnimator {
     // ---- body English (every curve is zero at both ends: full weight throughout)
     const chestYaw = curve(t, T.chestYaw) * DEGR * kT, pelYaw = curve(t, T.pelvisYaw) * DEGR * legK * kT, spYaw = chestYaw - pelYaw;   // the pelvis turn carries the whole spine; the spine joints add the rest
     const pitch = curve(t, T.pitch) * DEGR * kT, roll = curve(t, T.roll) * DEGR * kT;
-    const ext = low ? 0 : 18 * DEGR * cr * bump(t, 0, 0.12, 0.5, THROW_DUR) * (full ? 1 : lerp(BY.sit, 1, this.thrFar));   // crouched: sit up out of the clip's hunch to get the arm over (as lockpickLayer un-rounds the back), chest first
+    const ext = low ? 0 : 18 * DEGR * cr * bump(t, 0, 0.12, 0.5, THROW_DUR) * (full ? 1 : lerp(BY.sit, 1, this.thrFar)) * give;   // crouched: sit up out of the clip's hunch to get the arm over (as lockpickLayer un-rounds the back), chest first
     this.shift(pA, nd.hips, [curve(t, T.pelX) * legK * kT, curve(t, T.pelY) * legK * kT, curve(t, T.pelZ) * legK * kT]);
     this.turn(pA, nd.hips, qYaw(pelYaw));
     const seg = (k: number, kp: number, ke: number) => quat.mul(qYaw(spYaw * k), quat.mul(qRoll(roll * k), qPitch(pitch * kp - ext * ke)));
@@ -4952,7 +4956,7 @@ export class CharacterAnimator {
     const firm = bump(t, 0.22, 0.32, 0.5, 0.64); const cL = (a: number) => lerp(a, a + 0.25, firm);
     if (!low) this.hand(pB, 0, [cL(0.3), cL(0.35), cL(0.4), cL(0.45)], lerp(0.3, 0.6, firm));
     // ---- in through per-arm masks (clavicle subtrees): full weight but for a short hand-over of the elbow at each end; a carried-in restart is already at weight
-    const wR = cin ? 1 - smoothstep(0.62, THROW_DUR, t) : bump(t, 0, 0.06, 0.62, THROW_DUR), wL = (cin ? 1 - smoothstep(0.57, 0.72, t) : bump(t, 0, 0.09, 0.57, 0.72)) * wToss;
+    const wR = (cin ? 1 - smoothstep(0.62, THROW_DUR, t) : bump(t, 0, 0.06, 0.62, THROW_DUR)) * give, wL = (cin ? 1 - smoothstep(0.57, 0.72, t) : bump(t, 0, 0.09, 0.57, 0.72)) * wToss * give;
     const m = this.dynMask; m.fill(0);
     const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
     setSub(nd.shoulderR, wR); setSub(nd.shoulderL, wL); m[nd.shoulderR] = 0; m[nd.shoulderL] = 0;   // (the clavicles themselves are already posed in pA; pB carries the same turn)
