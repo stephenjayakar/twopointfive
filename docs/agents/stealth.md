@@ -137,7 +137,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   clamp), none on a viewer's picture with the fog lifted; the use key's own dot is not drawn inside a marked camera's lens. Picture only: no step reads it, the run digests the same down and up.
   THE SWITCH: ON in the page (`?cammark=0`), OFF in the module and on the frozen stand (`TPS_CAMMARK=1`; `FROZEN_HOLDS['STICKY.mark']`); in the knob
   registry with `STICKY`; a recording from before the key replays with it down (journal.ts); Tab ▸ Sticky cameras ▸ `cam ▸ shown in the fog`.
-  THE CHECK: `bun run tools/qa/probes.ts sticky-mark` (families sticky, fog; `tools/qa/sticky-check.ts mark`), 10 verdicts on both stands, on the vault
+  THE CHECK: `bun run tools/qa/probes.ts sticky-mark` (family sticky; `tools/qa/sticky-check.ts mark`), 10 verdicts on both stands, on the vault
   under the cones: the dark camera on unseen floor has 2 keyed boxes in `Game.dynBoxes` with the switch up and 0 down; the marks at each lens with the
   sender told apart; none in the air, none with no fog; the same digest; the stands' row and the journal. `STICKY_BREAK=1` exits 1 on both stands.
   `tools/qa/sticky-page.cjs` counts the `.cammark` elements on the real page (software adapter). NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the size and

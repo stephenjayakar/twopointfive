@@ -390,7 +390,8 @@ export async function stickyTake(): Promise<boolean> {
 export async function stickyMark(): Promise<boolean> {
   const F = family('sticky-mark: your own stuck sticky cameras show in the fog of war');
   await stand(70, 'vault.json');   // (the stand's own values are on the tables from the first game it stands up: read them after one)
-  const onWas = STICKY.on, qfWas = QF.QUIETFOG.on, markWas = STICKY.mark, thingsWas = FOG.things, rnd = Math.random, stood = STICKY.mark;
+  const onWas = STICKY.on, qfWas = QF.QUIETFOG.on, markWas = STICKY.mark, thingsWas = FOG.things, coneWas = FOG.cone, ownWas = FOG.own, rnd = Math.random, stood = STICKY.mark;
+  const { quitScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), games: any[] = [];   // (every mission this part starts is quit at its end: the rung's cone is the visit's, not the next probe's)
   const FILE = 'vault.json', RUNG = 'cones';   // (the floor and the rung the maintainer was on when he said it)
   /** two walls for two cameras: neither spot in any eye of the team's now, the second's lens with no line to the first */
   const twoWalls = (g: any) => {
@@ -402,7 +403,7 @@ export async function stickyMark(): Promise<boolean> {
   const boxesOf = (g: any, c: any) => (g.dynBoxes as any[]).filter(b => Math.hypot(b.c[0] - c.pos[0], b.c[1] - c.pos[1], b.c[2] - c.pos[2]) < 0.05);
   const red = (b: any) => !!b && b.albedo[0] > 0.2;
   try {
-    const { W, g } = await quietFloor(31, FILE, RUNG), fog = g.fogOfWar, pl = g.player; stickyIssue(pl, 2); FOG.things = true; STICKY.mark = !BREAK;
+    const { W, g } = await quietFloor(31, FILE, RUNG), fog = g.fogOfWar, pl = g.player; games.push(g); stickyIssue(pl, 2); FOG.things = true; STICKY.mark = !BREAK;
     const ww = twoWalls(g);
     F.verdict(fog.active && !!FOG.cone && !!ww, 'the vault, quiet, under the fog\'s cones: two walls no eye of the team has', `fog ${fog.active} · cone ${FOG.cone} · eyes ${fog.eyes.length} · walls ${ww ? 2 : 0}`);
     if (ww) {
@@ -436,7 +437,7 @@ export async function stickyMark(): Promise<boolean> {
     }
     // picture only: the same run by digest with the switch down and up
     const run = async (mark: boolean) => {
-      const { W, g } = await quietFloor(33, FILE, RUNG); STICKY.mark = mark; stickyIssue(g.player, 2); Math.random = seeded(778);
+      const { W, g } = await quietFloor(33, FILE, RUNG); games.push(g); STICKY.mark = mark; stickyIssue(g.player, 2); Math.random = seeded(778);
       const w2 = twoWalls(g); if (w2) { send(W, w2[0].from, v3.mad(w2[0].P, w2[0].n, -0.5) as Vec3); send(W, w2[1].from, v3.mad(w2[1].P, w2[1].n, -0.5) as Vec3); }
       g.aiEnabled = true; let marks = 0; steps(W, 300, () => { marks = Math.max(marks, stickyMarks(g).length); });
       return { h: hashDigest(digestGame(g, true)), out: g.player.cams.length, marks };
@@ -452,7 +453,7 @@ export async function stickyMark(): Promise<boolean> {
     delete snap.tables.STICKY.mark; STICKY.mark = true; JR.applyKnobs(W2.game, snap); const old = STICKY.mark;
     F.verdict(s.includes('TPS_CAMMARK') && PR.FROZEN_HOLDS['STICKY.mark'] === 'TPS_CAMMARK=1' && had && old === false && kept === true, 'the switch is a row of the two stands\' list with its word, rides a recording\'s tables, and a recording from before the key replays with it down', `STAND_ENV ${s.includes('TPS_CAMMARK')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['STICKY.mark']} · in the tables ${had} · an old recording: mark ${old} · one recorded with it up: mark ${kept}`);
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { back(); STICKY.on = onWas; STICKY.mark = markWas; QF.QUIETFOG.on = qfWas; FOG.things = thingsWas; Math.random = rnd; }
+  finally { for (const g of games) try { await hushed(() => quitScenario(g)); } catch { /* a game that never started one */ } back(); STICKY.on = onWas; STICKY.mark = markWas; QF.QUIETFOG.on = qfWas; FOG.things = thingsWas; FOG.cone = coneWas; FOG.own = ownWas; Math.random = rnd; }
   return F.done();
 }
 
