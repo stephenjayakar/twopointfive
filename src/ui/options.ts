@@ -15,7 +15,7 @@
 import { saveSandbox } from '../game/sandbox';
 import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
-import { TABKEY, TAB_CHOICES, setTabKey, tabDoes } from './tabkey';
+import { TABKEY, tabChoices, setTabKey, tabDoes } from './tabkey';
 import { BACKKEY } from '../game/backkey';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
@@ -270,7 +270,8 @@ function render(S: Screen) {
     flip(body, 'Autosave checkpoints', () => game.saves.enabled, v => { game.saves.setEnabled(v); },
       'A checkpoint is written by itself when the mission moves on, when you first enter a room, when you hide a body and every minute and a half of quiet play. Never while anyone is on to you. Enter on the down card loads the newest.');
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, 'The faint dots marking what Space and the right button can act on: lights, doors, bodies.');
-    seg(body, 'Tab key (trying out)', TAB_CHOICES, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => TAB_CHOICES.find(c => c.v === TABKEY.does)?.line ?? '');
+    const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
+    seg(body, 'Tab key (trying out)', tabOpts, () => TABKEY.does, v => { setTabKey(v); TABKEY.kept = v; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === TABKEY.does)?.line ?? '');
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'They still see you and shoot you; hits do nothing. Remembered on this machine.', ['On', 'Off']);
     flip(body, 'Enemies do not think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stands where he is: nobody patrols, hears or sees. Remembered on this machine.', ['On', 'Off']);
