@@ -2733,6 +2733,7 @@ export function say(g: Game, gd: Guard, text: string, radio = false, force = fal
   const net = radio || silentHush(g, gd);   // (a SILENT teammate calls nothing out: his line goes over the net — silent.ts)
   gd.bubble = { text, t: g.time, dur: bubbleSecs(text), radio: net };
   if (net) radioHand(gd, gd.bubble.dur);   // (handwork.ts: a line on the net lifts his hand to the handset — picture only)
+  if (!net && row) g.cues?.overheard(gd, text);   // a shout from a man the fog hides, where an ear of the team's really gets it: a row of its own on the strip, his words alone (cues.ts, behind CUES.overheard — off: nothing asked)
   if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
   if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0])))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
