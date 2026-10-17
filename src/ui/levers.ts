@@ -27,8 +27,8 @@ export interface LeverRow { key: LeverKey; el: HTMLElement; btns: HTMLElement[] 
 export interface LeverRowsUi {
   /** the rows in order */
   rows: LeverRow[];
-  /** light the buttons as the tables stand. `live` false for a row: the mission does not read that lever (the solo night has no fog of war and its shift is
-   *  the level's own) — the row is greyed and says nothing. `structure`: the structure the mission shown is fought on ('' = one with no rows of its own):
+  /** light the buttons as the tables stand. `live` false for a row: the mission does not read that lever (the solo night's shift is the level's own, and it has
+   *  no fog of war but the quiet one's: game/quietfog.ts QUIETFOG.solo) — the row is greyed and says nothing. `structure`: the structure the mission shown is fought on ('' = one with no rows of its own):
    *  the kit lit is the kit the level carries THERE (difficulty.ts HARD_AT), and a press on the level's own rung there lets the lever go. `quiet`: the
    *  mission shown is a quiet one that may be played under the fog (game/quietfog.ts) — the fog row shows its bottom rung too (off: every guard shown) and is the quiet pick's, lit where a quiet mission starts until it is moved */
   paint(live?: LeverLive, structure?: string, quiet?: boolean): void;
