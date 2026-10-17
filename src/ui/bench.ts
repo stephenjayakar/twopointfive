@@ -36,7 +36,7 @@ export interface BenchOpts {
   /** the sweep's own options, over the benchmark's (a dry run: `only` a few rows) */
   sweep?: Partial<SweepOpts>;
 }
-export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, waitMs: 25000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
+export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
 /** the frames a benchmark's take may hold: its six minutes at 240 a second (the F9 recorder's own ten minutes at 60 are full inside the sweep at 120) */
 export const BENCH_FRAMES = 96000;
 
@@ -263,6 +263,9 @@ export class Bench {
   /** the world holds still (host/loop.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
    *  picture on every machine — and the presets and the features on the scene's heavy moment */
   get freezing(): boolean { return this.active && this.state !== 'scene' && this.state !== 'tail'; }
+  /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (main.ts: no sample() while the world is held, and the boot's
+   *  calibration, where the wait gave up on it, picks nothing in the middle of a window; it goes on in the scene) */
+  get timing(): boolean { return this.state === 'opened' || this.state === 'held' || this.state === 'sweep'; }
   get progress(): string { return this.active ? this.state : this.last; }
 
   start(o: Partial<BenchOpts> = {}): string {

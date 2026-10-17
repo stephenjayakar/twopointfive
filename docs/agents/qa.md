@@ -204,7 +204,9 @@ but synthetic writes still work.
   whose frames take seconds is not away) starts that window over, or leaves that frame out of the scene's line. The benchmark's take asks the recorder for
   96,000 frames (`BENCH_FRAMES`, `PerfRecorder.start(note, frames)`: the F9 take's own 36,000 are full inside the sweep at 120 Hz); a run that fills even that
   ends with its report in the file and the rows it got through priced (`the recording was full`), never as a bare take. A screen of the page's own up over the
-  title (the mission list, options) refuses a run, and stops one that is timing the title. The display's rate is asked at the END (a run started with the page
+  title (the mission list, options) refuses a run, and stops one that is timing the title. While a window is timed on a held picture the page's quality model does not run at all: no `quality.sample()` (the gate in `main.ts` beside the sweep's), so the
+  resolution scaler cannot cut a preset's scale in the middle of its window, and no boot calibration tick (`Bench.timing`; the wait for calibration is 45 s, and
+  a calibration still going after it goes on in the scene, never inside a window). The display's rate is asked at the END (a run started with the page
   knows none at its start). `quitSearch` drops `bench`, so no mission's or show's link carries it. A floor the show cannot start on (a mission's units, a
   level without the script) is timed on its opening picture alone, and the report says so; a held picture under four frames a second is not swept. Unasked,
   nothing of it runs (`tick()` returns on its first line); it reads `Quality` and puts it back (the preset, auto, the ladder's rungs, every plain setting) and
