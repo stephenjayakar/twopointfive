@@ -136,7 +136,8 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       demoPos = frozen || !demo ? null : demo.update(dt);   // before the game step: the tour's scripted beats press keys / move the puppet's aim for THIS frame's update
       const showingBefore = !frozen && D.showing;   // a level-script showcase (the breach) has the frame: its drill, beats and camera run INSIDE the game step (director.tick) — attract stays out of it
       attractPos = demoPos || showingBefore || frozen || !attract ? null : attract.update(dt);   // attract mode's look-at when no scripted programme has the frame (it keys yaw / distance itself, as the tour does)
-      { const tU = performance.now(); if (!frozen) { ctx.beforeTick?.(dt); game.update(dt, input, cam, view); } ctx.updateMs = performance.now() - tU; }
+      if (!frozen) ctx.beforeTick?.(dt);   // (outside the update's own timing: a hands-off player's thinking is not the game's)
+      { const tU = performance.now(); if (!frozen) game.update(dt, input, cam, view); ctx.updateMs = performance.now() - tU; }
     } else {   // THE FIXED STEP: whole ticks of 1 / hz, each the old order's demo → attract → game with the same dt, the lights aged with the game (its men read them)
       const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null };
       const plan = planTicks(fx.acc, ctx.vsyncDt?.() ?? dt, FIXEDSTEP, fx.drift); fx.acc = plan.acc; fx.drift = plan.drift; ctx.ticks = plan.ticks;   // (the display's own frame time where the host has it: steadier than a clock read in the callback)

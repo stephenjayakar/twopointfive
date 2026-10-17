@@ -225,17 +225,17 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const { benchBegin, benchLegOfPage, benchSceneSearch } = await import('../../src/ui/benchrun');
   const { BENCH_SCENES, BENCH_SET } = await import('../../src/host/benchScenes');
   const { SCENARIOS } = await import('../../src/scene/scenarioList');
-  const tab = (search: string) => { const L: any = { pathname: '/', search, hash: '', went: [] as string[], assign(u: string) { this.went.push(u); } }; return L; };
+  const tab = (search: string) => { const L: any = { pathname: '/', search, hash: '', went: [] as string[], how: [] as string[], assign(u: string) { this.went.push(u); this.how.push('assign'); }, replace(u: string) { this.went.push(u); this.how.push('replace'); } }; return L; };
   const searchOf = (u: string) => u.slice(u.indexOf('?'));
-  const t0 = tab('?levelFile=depot.json&roomclear&squad4&bench=2&benchcap=30&nomusic&difficulty=standard');
-  check(benchBegin(true, t0) === null && t0.went.length === 1 && t0.went[0] === '/' + benchSceneSearch(BENCH_SCENES[0], 0, ['nomusic']), `begun: the first scene's address is loaded, the visitor's own flag on it and none of another mission's (${t0.went[0]})`);
+  const t0 = tab('?levelFile=depot.json&roomclear&squad4&bench=2&benchcap=30&nomusic&hard=0&hour=noon&quality=low');
+  check(benchBegin(true, t0) === null && t0.went.length === 1 && t0.how[0] === 'assign' && t0.went[0] === '/' + benchSceneSearch(BENCH_SCENES[0], 0, ['nomusic', 'quality=low']) && !/hard=0|hour=|depot/.test(t0.went[0]), `begun from the title: the first scene's address is loaded, the visitor's sound and quality flags on it and nothing that would change the fight (${t0.went[0]})`);
   { const u = new URLSearchParams(searchOf(t0.went[0])), S = BENCH_SCENES[0], E = SCENARIOS.find(e => e.id === S.scn)!;
-    check(u.get('levelFile') === E.level && u.get('roomclear') === String(S.seed) && u.get('seed') === String(S.seed) && u.has('squad4') && u.get('difficulty') === (S.hard ? 'hard' : 'standard') && u.has('noverdict') && u.get('benchrun') === '0' && !u.has('bench'), 'the address pins the level, the deal, the die and the difficulty, keeps no verdict of the try, and does not carry ?bench'); }
+    check(u.get('levelFile') === E.level && u.get('roomclear') === String(S.seed) && u.get('seed') === String(S.seed) && u.has('squad4') && u.get('difficulty') === (S.hard ? 'hard' : 'standard') && u.has('noverdict') && u.has('nokeep') && u.get('benchrun') === '0' && !u.has('bench'), 'the address pins the level, the deal, the die and the difficulty, keeps no verdict and no replay of the try, and does not carry ?bench'); }
   const l0 = benchLegOfPage(tab(searchOf(t0.went[0])));
   check(!!l0 && l0.scene.id === BENCH_SCENES[0].id && l0.secs === '2' && l0.cap === 30 && l0.leg.index === 0 && l0.leg.of === BENCH_SCENES.length && l0.leg.set === BENCH_SET && l0.leg.notes.some(n => /started from the title/.test(n)), 'the first scene\'s page finds its part: the seconds a window, the short cap, and the note that its load is a second one');
   check(benchLegOfPage(tab(searchOf(t0.went[0]))) === null && store.size === 0, 'the same page loaded again in the middle is a plain mission page, and the record is dropped');
   // a run through to the end
-  const t1 = tab('?quality=low'); benchBegin(false, t1);
+  const t1 = tab('?quality=low&bench'); check(benchBegin(false, t1) === null && t1.how[0] === 'replace', 'begun from the address: that address is replaced, so Back does not ask for another run');
   let at = searchOf(t1.went[0]), steps = 0; const closedTo: string[] = [];
   for (let i = 0; i < BENCH_SCENES.length; i++) { const pg = tab(at), l = benchLegOfPage(pg)!; steps += l ? 1 : 0;
     if (i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: [...l.leg.steps, { id: `scene:${l.scene.id}` } as any], notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0]); }

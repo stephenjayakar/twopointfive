@@ -113,6 +113,8 @@ export class HandsOff {
   private *wait(secs: number): Script { const t1 = this.t + secs; while (this.t < t1 - 1e-6) yield; }
   private *until(pred: () => boolean, secs: number): Script<boolean> { const t1 = this.t + secs; while (this.t < t1 - 1e-6 && !pred()) yield; return pred(); }
   private *key(code: string): Script { this.I.pressed.add(code); yield; }
+  /** a question that costs a path search, asked four times a second and not every tick (his thinking is inside the frames a benchmark times) */
+  private slow(f: () => boolean, every = 0.25): () => boolean { let next = -1, v = false; return () => { if (this.t >= next) { next = this.t + every; v = f(); } return v; }; }
 
   // ── his feet ──
   private free(p: ArrayLike<number>): Vec3 | null { const nav = this.g.col.nav; const q = nav.isBlocked(p[0], p[2]) ? nav.nearestFreePoint(p[0], p[2]) : p; return q ? [q[0], 0, q[2]] : null; }
@@ -212,7 +214,7 @@ export class HandsOff {
     const g = this.g, b = g.level.breaker; if (!b || g.blackout.active || !this.up.length) return;
     const p: Vec3 = [b.pos[0], b.pos[1], b.pos[2]], foot = this.free(p) ?? p, isIt = () => { const t = this.under(); return t.kind === 'floor' && !!(t as { thing?: unknown }).thing; };
     this.say(`→ the breaker at ${at(p)}`);
-    if (!this.onScreen(p)) { yield* this.fallIn(); yield* this.wait(1); yield* this.go(foot, 60, () => this.onScreen(p) && this.pathLen(this.pos, foot) < 12); }
+    if (!this.onScreen(p)) { yield* this.fallIn(); yield* this.wait(1); yield* this.go(foot, 60, this.slow(() => this.onScreen(p) && this.pathLen(this.pos, foot) < 12)); }
     let given = false;
     for (const q of [p, [foot[0], 0.05, foot[2]] as Vec3]) { if (!this.onScreen(q)) continue; this.look = q; yield* this.ticks(2); if (!isIt()) continue;
       const n = g.orders.log.length; yield* this.key(ORDERS.quickKey); this.say(`B · the breaker → ${this.orderGiven(n)}`); given = g.orders.log.length > n; if (given) { this.b++; break; } }
@@ -243,7 +245,8 @@ export class HandsOff {
       yield* this.fallIn();
       const path: Vec3[] = [[this.pos[0], 0, this.pos[2]], ...way, [hp[0], 0, hp[2]]]; let back = 5, p: Vec3 | null = null;
       for (let i = path.length - 1; i > 0 && !p; i--) { const a = path[i - 1], b = path[i], L = flat(a, b); if (L >= back) { const k = back / (L || 1); p = [b[0] + (a[0] - b[0]) * k, 0, b[2] + (a[2] - b[2]) * k]; } else back -= L; }
-      if (p) yield* this.go(this.free(p) ?? p, 40, () => h.state === 'dead' || (this.onScreen([h.char.pos[0], 0.05, h.char.pos[2]]) && this.pathLen(this.pos, h.char.pos) < 14));   // (… from where his floor first comes into the picture: a commander does not walk onto him)
+      const near = this.slow(() => this.onScreen([h.char.pos[0], 0.05, h.char.pos[2]]) && this.pathLen(this.pos, h.char.pos) < 14);
+      if (p) yield* this.go(this.free(p) ?? p, 40, () => h.state === 'dead' || near());   // (… from where his floor first comes into the picture: a commander does not walk onto him)
       if (h.state !== 'dead' && this.up.length) { const now = h.char.pos; this.look = [now[0], 0.05, now[2]]; yield* this.ticks(2); const n = g.orders.log.length; yield* this.key(ORDERS.quickKey); this.say(`B · floor by ${h.callsign} → ${this.orderGiven(n)}`); this.look = null; yield* this.until(() => h.state === 'dead', 14); }
     }
     yield* this.wait(15);

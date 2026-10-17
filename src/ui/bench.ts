@@ -80,7 +80,7 @@ export interface BenchLeg {
   set: string; scene: { id: string; name: string }; index: number; of: number; secs: number;
   /** what the pages before this one measured and said: their lines, their notes, their scenes, the first page's boot, the times the tab was away */
   steps: BenchStep[]; notes: string[]; scenes: BenchSceneRun[]; boot?: BenchBoot | null; away?: number;
-  /** not the last page: this page's lines with the earlier ones — the page keeps them and loads the next scene */
+  /** not the last page: this page's lines with the earlier ones — the page keeps them and loads the next scene (a throw: they could not be kept — the run ends here) */
   onward(next: Pick<BenchLeg, 'steps' | 'notes' | 'scenes' | 'boot' | 'away'>): void;
   /** the run is over on this page (done, or stopped): nothing is carried further */
   over(): void;
@@ -282,12 +282,14 @@ export class Bench {
   private wins: Win[] = []; private winId = ''; private winFrom = 0; private winFirst = -1; private wasSettled = false;
   private machine: BenchMachine | null = null; private back: (() => void) | null = null; private setPreset: ((p: QualityName) => void) | null = null;
   private keys: ((e: KeyboardEvent) => void) | null = null;
+  /** the card of a run over pages is up */
+  private carded = false;
   constructor(private engine: Engine, private quality: Quality, private rec: PerfRecorder, private deps: BenchDeps = {}) {}
 
   get active(): boolean { return this.state !== 'idle'; }
   /** the world holds still (host/loop.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
    *  picture on every machine — and the presets and the features on the scene's heavy moment */
-  get freezing(): boolean { return this.active && this.state !== 'scene' && this.state !== 'tail'; }
+  get freezing(): boolean { return this.carded || (this.active && this.state !== 'scene' && this.state !== 'tail'); }
   /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (main.ts: no sample() while the world is held, and the boot's
    *  calibration, where the wait gave up on it, picks nothing in the middle of a window; it goes on in the scene) */
   get timing(): boolean { return this.state === 'opened' || this.state === 'held' || this.state === 'sweep'; }
@@ -419,7 +421,7 @@ export class Bench {
     this.go('idle'); this.last = 'next scene'; this.grabKeys(false);
     if (this.rec.recording) this.rec.stop(false);
     this.leg = null;
-    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); console.error(e); }
+    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); console.error(e); try { L.closed?.(); } catch { /* */ } }   // (the lines could not be carried: the veil comes down and the page goes back to where the run was started)
     return true;
   }
   /** the live stretch that just ended (the scene is played in two: up to its heavy moment, and from there to its end) */
@@ -489,7 +491,7 @@ export class Bench {
     this.go('idle'); this.last = done ? 'done' : `stopped: ${why}`; this.grabKeys(false);
     const view = this.deps.view ?? null; view?.progress(null);
     try { L?.over(); } catch { /* */ }
-    const back = () => { try { L?.closed?.(); } catch { /* */ } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
+    const back = () => { this.carded = false; try { L?.closed?.(); } catch { /* */ } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
     if (!timed && !this.steps.length) { back(); return; }   // (stopped before anything was timed: nothing to show)
     this.sceneLine(L);
     if (!this.steps.length || !timed) { if (this.rec.recording) this.rec.stop(false); if (!this.steps.length) { back(); return; } }   // (stopped inside the first window: no number to show, and no file worth keeping)
@@ -503,6 +505,7 @@ export class Bench {
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
     if (this.rec.recording) { this.rec.event('bench', JSON.stringify(res)); this.dump = this.rec.stop(); }   // (the take downloads here, as any F9 one does)
+    this.carded = !!L && !!view;   // (a scene's page: its fight is not left running, hands off and unwatched, under the card — the world holds until the card is closed)
     view?.show(this.report, back, !!this.dump);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own

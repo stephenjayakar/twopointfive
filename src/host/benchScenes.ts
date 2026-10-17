@@ -24,7 +24,7 @@ export interface BenchSceneDef {
 /** the set's name in a report: a run under another set of scenes is not read against this one's */
 export const BENCH_SET = 'floors-1';
 export const BENCH_SCENES: BenchSceneDef[] = [
-  { id: 'snow', name: 'the pass, night snow', scn: 'pass-four', hard: true, seed: 1, secs: 240, god: true, plan: {} },
-  { id: 'dark', name: 'the block, dark', scn: 'block-four', hard: true, seed: 1, secs: 240, god: true, plan: { breaker: true } },
-  { id: 'storm', name: 'the compound, storm', scn: 'compound-four', hard: true, seed: 1, secs: 240, god: true, plan: {} },
+  { id: 'snow', name: 'the pass, night snow', scn: 'pass-four', hard: true, seed: 1, secs: 75, god: true, plan: {} },
+  { id: 'dark', name: 'the block, dark', scn: 'block-four', hard: true, seed: 1, secs: 75, god: true, plan: { breaker: true } },
+  { id: 'storm', name: 'the compound, storm', scn: 'compound-four', hard: true, seed: 1, secs: 75, god: true, plan: {} },
 ];

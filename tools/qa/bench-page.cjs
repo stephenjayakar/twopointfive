@@ -57,7 +57,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   if (!(await ready('the first scene'))) { await browser.close(); process.exit(1); }
   await frames(3);
   const scenes = await SCENES(), q0 = new URL(page.url()).searchParams;
-  check(/benchrun=0/.test(page.url()) && q0.get('roomclear') === String(scenes[0].seed) && q0.get('seed') === String(scenes[0].seed) && q0.has('noverdict') && !q0.has('bench') && q0.get('quality') === 'medium', `?bench on the address: the page went to the first scene's own address (${page.url().replace(/^https?:\/\/[^/]+/, '')})`);
+  check(/benchrun=0/.test(page.url()) && q0.get('roomclear') === String(scenes[0].seed) && q0.get('seed') === String(scenes[0].seed) && q0.has('noverdict') && q0.has('nokeep') && q0.has('mute') && !q0.has('bench') && q0.get('quality') === 'medium', `?bench on the address: the page went to the first scene's own address (${page.url().replace(/^https?:\/\/[^/]+/, '')})`);
   const first = await page.evaluate(() => ({ active: window.__bench.active, freezing: window.__bench.freezing, state: window.__bench.state, veil: document.getElementById('bench-veil')?.textContent ?? null, staged: !!window.__roomclear.state, squad: window.__game.orders.squad().length }));
   const rec0 = await record();
   check(first.active && first.freezing && /^Benchmark \d+ % · Esc stops$/.test(first.veil ?? '') && first.staged && first.squad === 4 && rec0 && rec0.live === 0 && rec0.warm === false && rec0.from === '/' + REST, `a run is under way on the staged mission, the world held, its record in the tab's session store (${JSON.stringify(first)} · from ${rec0?.from})`);
@@ -75,16 +75,16 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   // 2. the title's row: a short run start to finish
   await page.evaluate(() => new Promise(res => { const t0 = performance.now(); const f = () => (!window.__quality.calibrating || performance.now() - t0 > 120000 ? res(0) : requestAnimationFrame(f)); f(); }));
   await frames(3);
-  const before = await page.evaluate(STATE);
   await page.evaluate(() => sessionStorage.setItem('bench-check.short', '1'));
   const row = await page.evaluate(() => { const b = document.querySelector('#menu .xopen'); if (!b) return 'no Extras button'; b.click(); const shows = [...document.querySelectorAll('#menu a[data-extra]')].map(a => a.getAttribute('data-extra')); const a = document.querySelector('#menu a[data-extra="bench"]'); if (!a) return 'no Benchmark row'; const out = { href: a.getAttribute('href'), name: a.querySelector('b')?.textContent ?? a.textContent, rows: shows }; a.click(); return out; });
   check(row && row.name === 'Benchmark' && /^\?bench/.test(row.href) && !row.rows.includes('night') && !row.rows.includes('day'), `Extras has the Benchmark row and no showcase rows (${JSON.stringify(row)})`);
-  const per = []; let tooLong = false, R = null;
+  const per = []; let tooLong = false, R = null, before = null;
   for (let i = 0; i < scenes.length && !tooLong; i++) {
     await page.waitForURL(u => new RegExp(`benchrun=${i}(&|$)`).test(String(u)), { timeout: 120000 }).catch(() => {});
     if (!(await ready(`scene ${i}`))) { await browser.close(); process.exit(1); }
     const S = scenes[i], last = i === scenes.length - 1, seen = []; let prev = '', shot = false, keys = null, f9 = null, hands = null, done = null;
     log(`scene ${i}: ${S.id} · ${page.url().replace(/^https?:\/\/[^/]+/, '')}`);
+    if (last) before = await page.evaluate(STATE);   // (the last page's own settings as its level opened them: what the presets and the sweep must put back)
     if (i === 0) { const c = await record(); check(c && c.warm === true && c.opts && c.cap === CAP, `the row's run says its first load is a second one, and carries the check's options (${JSON.stringify({ warm: c?.warm, cap: c?.cap })})`); }
     await page.evaluate(() => { const w = window.__benchWatch = { by: {}, tag: 0, off: false };
       const f = () => { if (w.off) return; const s = window.__bench.state, t = window.__game.time, b = w.by[s] ?? (w.by[s] = { a: t, b: t, n: 0 }); b.a = Math.min(b.a, t); b.b = Math.max(b.b, t); b.n++; if ([...document.querySelectorAll('body > div')].some(d => /^SWEEP/.test(d.textContent || ''))) w.tag++; requestAnimationFrame(f); };
@@ -94,11 +94,12 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
       try { s = await page.evaluate(() => ({ state: window.__bench.state, last: window.__bench.last, veil: document.getElementById('bench-veil')?.textContent ?? '', orders: window.__game.orders.log.map(o => o.order), sam: [...window.__game.player.char.pos].map(v => +v.toFixed(1)), hands: window.__bench.hands ? { t: +window.__bench.hands.t.toFixed(1), end: window.__bench.hands.end, b: window.__bench.hands.b } : null, god: window.__game.godMode, dark: window.__game.blackout.active, acts: window.__bench.acts.join(' '), by: window.__benchWatch?.by, tag: window.__benchWatch?.tag })); }
       catch (e) { if (!last) break; throw e; }   // (the page went on to the next scene under the question)
       if (s.state !== prev) { seen.push(s.state); log(`  ${s.state} · ${s.veil}`); prev = s.state; }
-      if (s.hands) hands = s;
+      if (s.hands && s.state === 'scene') hands = s;
       done = s;
       if (s.state === 'scene' && !keys && s.hands && s.hands.t > 1) {   // hands off: the keys that would stop the recording, open the debugger, the panel or the pause card do nothing while it runs
+        await page.keyboard.down('KeyC').catch(() => {}); const held = await page.evaluate(() => window.__input.keys.has('KeyC')).catch(() => null); await page.keyboard.up('KeyC').catch(() => {});
         for (const k of ['p', 'F9', 'Backquote', 'Tab', 'Enter']) await page.keyboard.press(k).catch(() => {}); await frames(2).catch(() => {});
-        keys = await page.evaluate(() => ({ state: window.__bench.state, active: window.__bench.active, rec: window.__perfrec.recording, menu: window.__menu.isOpen })).catch(() => null);
+        keys = await page.evaluate(() => ({ state: window.__bench.state, active: window.__bench.active, rec: window.__perfrec.recording, menu: window.__menu.isOpen })).catch(() => null); if (keys) keys.reached = held;
       }
       if (s.state === 'scene' && !shot && s.hands && s.hands.t >= Math.min(CAP * 0.6, 6)) { shot = true; await page.screenshot({ path: path.join(OUT, `scene-${S.id}.png`) }).catch(() => {}); }
       if (last && s.state === 'held' && !f9) { await page.keyboard.press('F9'); await frames(2); f9 = await page.evaluate(() => ({ active: window.__bench.active, rec: window.__perfrec.recording })); }
@@ -109,7 +110,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
     per.push({ S, seen, hands, keys, f9, acts: done && done.state === 'idle' ? done.acts : seen.join(' '), by: done?.by, tag: done?.tag ?? 0 });
     const H = hands;
     check(!!H && H.hands.t > 0 && H.orders.length > 0 && H.god === true, `${S.id}: the hands-off player played it — ${H ? `${H.hands.t} s, orders ${[...new Set(H.orders)].join(', ')}, Sam at (${H.sam[0]}, ${H.sam[2]})${H.dark ? ', the mains out' : ''}` : 'no hands seen'}`);
-    check(!!keys && keys.active && keys.rec && !keys.menu, `${S.id}: P, F9, backtick, Tab and Enter during the scene change nothing (${JSON.stringify(keys)})`);
+    check(!!keys && keys.active && keys.rec && !keys.menu && keys.reached === false, `${S.id}: P, F9, backtick, Tab and Enter during the scene change nothing, and a key held never reaches the game (${JSON.stringify(keys)})`);
   }
   check(!tooLong, `the run ended by itself inside ${DEADLINE} minutes`);
   if (tooLong) await page.evaluate(() => window.__bench.stop('the check ran out of time')).catch(() => {});
@@ -119,7 +120,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
     check(held.every(x => x === 0) && span('scene') > 0 && L.tag === 0, `on the last page the game's clock stands still for the windows and the sweep (${held.join(' / ')} s), runs for the scene (${span('scene')} s), and the sweep put no tag of its own on the screen`);
     check(!!L.f9 && L.f9.active && L.f9.rec, `F9 while the picture is held: the recording goes on (${JSON.stringify(L.f9)})`); }
   await page.waitForTimeout(300); await frames(3);
-  R = await page.evaluate(() => ({ last: window.__bench.last, result: window.__bench.result, report: window.__bench.report, card: document.getElementById('bench-report')?.value ?? null, buttons: [...document.querySelectorAll('#bench-card button')].map(b => b.textContent), veil: !!document.getElementById('bench-veil'), rec: window.__perfrec.recording, sweep: window.__perfsweep.active, focus: document.activeElement?.id ?? '', god: window.__game.godMode, keysHeld: [...window.__input.keys] }));
+  R = await page.evaluate(() => ({ last: window.__bench.last, result: window.__bench.result, report: window.__bench.report, card: document.getElementById('bench-report')?.value ?? null, buttons: [...document.querySelectorAll('#bench-card button')].map(b => b.textContent), veil: !!document.getElementById('bench-veil'), rec: window.__perfrec.recording, sweep: window.__perfsweep.active, focus: document.activeElement?.id ?? '', god: window.__game.godMode, frozen: window.__bench.freezing, keysHeld: [...window.__input.keys] }));
   console.log((R.report || '').split('\n').map(l => '    | ' + l).join('\n'));
   fs.writeFileSync(path.join(OUT, 'report.txt'), R.report || '');
   check(R.last === 'done', `it ended as done (${R.last})`);
@@ -131,9 +132,9 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   const M = R.result?.machine ?? {}, B = R.result?.boot;
   check(!!M.webgpu && !!M.webgl && /GPU\s+\S/.test(R.report) && /browser\s+\S/.test(R.report) && /machine\s+\S/.test(R.report), `the report names the machine: ${M.webgl} · WebGPU ${M.webgpu}${M.fallback ? ' (fallback)' : ''} · ${M.browser} · ${M.os}`);
   check(!!B && B.pipelines[0] > 0 && B.pipelines[0] === B.pipelines[1] && /load\s+/.test(R.report) && (R.result?.notes ?? []).some(n => /started from the title/.test(n)), `the report carries the first page's boot and says it was a second load: ${JSON.stringify(B)}`);
-  check(!R.rec && !R.sweep && R.god === false && !R.keysHeld.some(k => /^Key[WASD]$/.test(k)) && (await record()) === null, `nothing is left running or held: no recording, no sweep, god mode off again, no walk key down, no record in the session store (${JSON.stringify({ rec: R.rec, sweep: R.sweep, god: R.god, keys: R.keysHeld })})`);
+  check(!R.rec && !R.sweep && R.god === false && R.frozen === true && !R.keysHeld.some(k => /^Key[WASD]$/.test(k)) && (await record()) === null, `nothing is left running or held: no recording, no sweep, god mode off again, the world held under the card, no walk key down, no record in the session store (${JSON.stringify({ rec: R.rec, sweep: R.sweep, god: R.god, keys: R.keysHeld })})`);
   const after = await page.evaluate(STATE);
-  check(after === before, 'every setting, the preset, auto and the ladder\'s rungs are as they stood on the title'); printDiff(before, after);
+  check(after === before, 'every setting, the preset, auto and the ladder\'s rungs are as the last page opened with'); printDiff(before, after);
   check(downloads.length === 1, `one file was downloaded over the whole run (${downloads.length})`);
   if (downloads.length) { const f = path.join(OUT, downloads[0].suggestedFilename()); await downloads[0].saveAs(f); const D = JSON.parse(fs.readFileSync(f, 'utf8'));
     const ev = k => D.events.filter(e => e.kind === k), b = ev('bench').length === 1 ? JSON.parse(ev('bench')[0].text) : null;

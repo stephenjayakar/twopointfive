@@ -99,7 +99,7 @@ import { ROOMFIT } from './game/roomfit';
 import { DOORSTAY, DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
 import { DOORMANNERS } from './game/doorway';
-import { initDifficulty, difficultyNow } from './game/difficulty';
+import { initDifficulty, difficultyNow, keptLevers } from './game/difficulty';
 import { initWeather, WX_OWN, WEATHER_BOOT, snowLevelOfQuery, SNOW_LOOK } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
@@ -159,7 +159,8 @@ async function main() {
   { const to = PICKS_UI.on ? pickRedirect(location.search) : null; if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   // `?bench` (ui/benchrun.ts): the benchmark asked for on the address — the way in for a machine nobody here can sit at. Its first scene is a mission's own page, so the
   // page goes there BEFORE anything boots: that scene's load is then this machine's first, and it is the one the report times. Never in ?kitview's own window.
-  if (q.has('bench') && !q.has(BENCH_RUN_KEY) && !kitViewOn) { const no = benchBegin(false); if (no === null) return; console.info(`benchmark: ${no}`); }
+  let benchRefused: string | null = null;
+  if (q.has('bench') && !q.has(BENCH_RUN_KEY) && !kitViewOn) { benchRefused = benchBegin(false); if (benchRefused === null) return; console.info(`benchmark: ${benchRefused}`); }   // (a refusal — a tab with no session store — is said on the HUD's line once the page is up)
   // `?playtape=<shelf id | file>` (replay/engineplay.ts): a saved replay played on THIS page — the real renderer and mixer — off its run tape. The page is first sent to
   // the tape's own query (so this boot is the recording's boot); `tape` then lays the tape's knob tables and kit over this machine's at each point below. Absent = nothing.
   const tapePlay = q.has(PLAYTAPE) ? await tapeFromUrl(q) : null; if (tapePlay === 'moved') return;
@@ -512,13 +513,14 @@ async function main() {
   const benchPage = !kitViewOn && !tape ? benchLegOfPage() : null;   // (this page is a scene's page of a run under way: its part of it — else null, a plain page)
   // the hands-off player of this page's scene: its keys go on the input before each game tick (the loop's beforeTick), Sam cannot go down while it plays (as the scene says)
   let hands: HandsOff | null = null, handsHeld = false, handsGod = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
-  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; } };
+  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; input.lockExcept = null; } };
   const handsTick = (dt: number) => { const H = hands; if (!H || !handsHeld) return;
     for (const e of game.events as readonly { kind: string; loud?: boolean }[]) if (((e.kind === 'shot' && e.loud !== false) || e.kind === 'guardShot') && !shotsSeen.has(e)) { shotsSeen.add(e); shotAt = H.t; }
-    H.tick(dt); };
+    try { H.tick(dt); } catch (e) { console.error(e); H.stop('spent'); } };   // (a throw in his script ends his scene, not the run)
   const benchScene: BenchScene | null = benchPage ? {
     start: () => { if (!game.roomClear.active) return 'the mission did not start'; const S = benchPage.scene;
       handsGod = game.godMode; handsHeld = true; game.godMode = S.god; shotAt = -9;
+      input.lockExcept = new Set(); input.keys.clear(); input.buttons = 0;   // (the real keyboard is out of the scene: a visitor's key would make it another fight. His own keys go straight onto the input)
       hands = new HandsOff(game, input, cam, canvas, { ...S.plan, seed: S.seed, cap: benchPage.cap }); return null; },
     active: () => !!hands && !hands.end, stop: () => handsOff(),
     heavy: () => !!hands && hands.t >= 12 && hands.t - shotAt < 0.4,   // (rounds in the air, a dozen seconds in: the stack is through its first door by then)
@@ -539,8 +541,10 @@ async function main() {
   // the row: a run begins as a page load of its first scene (this page has booted the game: that load is a second one, and the report says so). A refusal is said, on the HUD's line and the console
   startBench = () => { attract.poke(); const no = bench.active ? 'it is running' : perfrec.recording ? 'a recording is running' : benchBlocked() ?? benchBegin(true); if (no) { perfNote = `benchmark not now: ${no}`; perfNoteT = 6; console.info(perfNote); } };
   // a scene's page of a run under way: its part starts by itself (the wait for the page to settle, then the scene)
-  if (benchPage) { const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1000, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
-    if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }
+  if (benchPage) { if (benchPage.leg.index === 0 && Object.keys(keptLevers()).length) benchPage.leg.notes.push('this machine keeps difficulty levers of its own: its fights are not the set\'s as dealt');
+    const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
+    if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
+  else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file downloads (+ the shot server's /session sink)

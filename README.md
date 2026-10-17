@@ -55,7 +55,7 @@ Pick a mission, pick who comes and what they carry, deploy. Every key is also li
 |---|---|
 | `/workbench` | level editor and character viewer in one page: [docs/level-format.md](docs/level-format.md), [VIEWER.md](VIEWER.md) |
 | `/replay` | scrub a saved replay on a map and leave notes on it |
-| `/?bench`, or Extras ▸ Benchmark on the title | hands off, about six minutes: the day showcase, then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) and saves the numbers as a file. Nothing is sent anywhere |
+| `/?bench`, or Extras ▸ Benchmark on the title | hands off, about seven minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) and saves the numbers as a file. Nothing is sent anywhere |
 | `bun run tools/qa/probes.ts list` | the headless checks: the whole game runs without a GPU, about a second per simulated minute |
 | `sh tools/qa/gate.sh all-quick` | the wide set, slow |
 | `bun run qa` | typecheck, every mission played to its end, a tour and a soak |
