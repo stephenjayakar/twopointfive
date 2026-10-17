@@ -35,10 +35,11 @@
 // words, no colours of its own.
 import { KIT, kitRows } from '../game/kit';
 import { kitViewWays } from './missions';
+import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
 /** the switch (UI only: nothing in the game reads it) · the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · seconds a child is given to say `ready` (`?kitwait=N`: a slow adapter's) · ms after a kit message in which further changes are folded into ONE more */
-export const KIT_VIEW = { on: true, acts: true, wait: 10, kitMs: 150, grace: 2.5 };   // (grace: seconds the column stays EMPTY while the picture boots — the standing man stands in only for a child slower than this, never for a moment before the picture: `?kitgrace=N`)
-try { const q = new URLSearchParams(location.search); if (q.has('oldfigure')) KIT_VIEW.on = false; if (q.has('stillkit')) KIT_VIEW.acts = false; const g = Number(q.get('kitgrace')); if (q.has('kitgrace') && g >= 0) KIT_VIEW.grace = g; const w = Number(q.get('kitwait')); if (w > 0) KIT_VIEW.wait = w; } catch { /* no page (the harness) */ }
+export const KIT_VIEW = { on: true, acts: true, wait: 10, kitMs: 150, grace: 2.5, quiet: true };   // (grace: seconds the column stays EMPTY while the picture boots — the standing man stands in only for a child slower than this, never for a moment before the picture: `?kitgrace=N`)
+try { const q = new URLSearchParams(location.search); if (q.has('oldfigure')) KIT_VIEW.on = false; if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; const g = Number(q.get('kitgrace')); if (q.has('kitgrace') && g >= 0) KIT_VIEW.grace = g; const w = Number(q.get('kitwait')); if (w > 0) KIT_VIEW.wait = w; } catch { /* no page (the harness) */ }
 /** where things sit, in the figure column's own widths and heights (the page's 330 px column: the picture is hung on the DOOR — its line about six tenths
  *  of the way across, the first metre of the room behind it clear to the column's right edge, where a can thrown through the door comes to rest — and the
  *  five places left of it with 16 px of margin) */
@@ -53,14 +54,22 @@ const KIT_VIEW_PLACE = {
   /** from the column's right edge: the picture whole up to here (the edge itself: the room behind the door is in the column's last third) · three tenths
    *  of it here (the first tile's left edge — or at that edge itself if it is nearer: no tile has more of the picture under it than it had) · gone here (on the tile rows) */
   fade0: 0, fadeA: 0.07, fade1: 1,
+  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: host/kitView.ts
+   *  KIT_VIEW_QUIET): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
+   *  this share of ITS OWN window's width on (the iframe's; or from the first tile's left edge where that is further right) — the clear column is as
+   *  it is, the fade runs from its edge to there and nothing of the picture lies under the panel — and the pool of picture under the last row of
+   *  tiles is not laid at all */
+  quietEnd: 0.4,
 };
 
 const ROOT_CLASS = 'kv-on';
 const FADE = 'linear-gradient(to right, #000 0, #000 var(--kv-clear, 35%), rgba(0,0,0,0.3) var(--kv-a, 39%), rgba(0,0,0,0.11) calc(var(--kv-a, 39%) * 0.55 + var(--kv-end, 73%) * 0.45), rgba(0,0,0,0.035) calc(var(--kv-a, 39%) * 0.15 + var(--kv-end, 73%) * 0.85), transparent var(--kv-end, 73%)), radial-gradient(ellipse 100% var(--kv-low, 40%) at 0 100%, #000 0, #000 var(--kv-core, 35%), transparent 100%)';
+const FADE_QUIET = 'linear-gradient(to right, #000 0, #000 var(--kv-clear, 35%), transparent var(--kv-end, 40%))';   // (the quiet picture: whole to the column's edge, gone by the tiles — no stop under them, no pool of picture below them)
 const CSS = `
 #missions .mbody:has(> iframe.kv) { position: relative; }
 #missions .mbody > iframe.kv { display: block; position: absolute; left: 0; top: 0; z-index: 0; width: var(--kv-w, min(100%, 56vw)); max-width: 100%; height: 100%; border: 0; pointer-events: none; background: var(--m-base); opacity: 0; transition: opacity 0.6s ease;
   -webkit-mask-image: ${FADE}; mask-image: ${FADE}; }
+#missions.kv-quiet .mbody > iframe.kv { -webkit-mask-image: ${FADE_QUIET}; mask-image: ${FADE_QUIET}; }
 #missions.kv-on .mbody > iframe.kv { opacity: 1; }
 #missions.kv-on .mbody > .onefig, #missions.kv-on .mbody > .msheet { position: relative; z-index: 1; }
 #missions.kv-on .mbody > .onefig { border-right-color: transparent; }
@@ -103,6 +112,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const says = () => { if (!frame || !up) return;
     if (KIT_VIEW.acts && sel && sel !== selSent) { selSent = sel; tell({ kv: 'sel', ...JSON.parse(sel) as object }); }
     if (paused !== pauseSent) { pauseSent = paused; tell({ kv: 'pause', on: paused }); } };
+  let quietAsk = false;   // the picture asked for is a quiet kind's, the switch on: its fade (KIT_VIEW_PLACE.quietEnd)
   /** the iframe's size and fade, and where the men should sit, all off the column's rectangle */
   const place = () => {
     if (!frame) return;
@@ -113,11 +123,14 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     const tiles = body.querySelector?.('#loadout .lo-kit')?.getBoundingClientRect?.(), low = tiles && tiles.height > 0 ? (f.bottom - tiles.bottom) / f.height : 0.4;   // the room under the last row of tiles
     const a = Math.min(Math.round(share(c.right + c.width * P.fadeA)), tiles && tiles.width > 0 && tiles.left > c.right ? share(tiles.left) : 100), clear = Math.min(share(c.right + c.width * P.fade0), a - 1);   // (the whole percent as before, or the tiles' own left edge if that is nearer)
     root.style.setProperty('--kv-clear', `${clear.toFixed(2)}%`); root.style.setProperty('--kv-a', `${+a.toFixed(2)}%`); root.style.setProperty('--kv-end', pct(c.right + c.width * P.fade1));
+    root.classList.toggle('kv-quiet', quietAsk);
+    if (quietAsk) root.style.setProperty('--kv-end', `${Math.max(a, clear + 1, P.quietEnd * 100).toFixed(2)}%`);   // (the quiet picture: gone from four tenths of its own window on, or from the tiles' left edge)
     root.style.setProperty('--kv-core', pct(c.right - c.width * 0.03));   // (…and the pool of picture under the last row of tiles as it was)
     root.style.setProperty('--kv-low', `${Math.round(Math.min(60, Math.max(12, low * 100)))}%`);
     const nx = (x: number) => ((x - f.left) / f.width) * 2 - 1;
     tell({ kv: 'frame', cx: nx(c.left + c.width * P.cx), cy: 1 - ((c.top + c.height * P.cy - f.top) / f.height) * 2, h: Math.min(0.9, c.height * P.h / f.height), w: Math.min(0.9, c.width * P.w / f.width), man: Math.min(0.9, c.height * P.man / f.height),
-      door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep });
+      door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep,
+      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — host/kitView.ts KIT_VIEW_QUIET.frame)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
   const drop = () => { if (due) clearTimeout(due); if (patience) clearTimeout(patience); if (graceT) clearTimeout(graceT); due = patience = graceT = 0; want = ''; if (!frame) return; frame.remove(); frame = null; key = ''; live = false; up = false; sent = born = ''; selSent = ''; pauseSent = false; };
@@ -149,6 +162,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       // (a mission with NO level file is on the bundled office: its block is the office's own data — levels/office.scenarios.ts, through ui/missions.ts — and the
       //  child is asked with the mission's own query, no `levelFile` in it: main.ts builds the office and stages from that same block)
       const lv = ask.level ?? '', q = new URLSearchParams(ask.search.replace(/^[^?]*\?/, '')), k = keyOf(q), W = ways.get(lv);
+      quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;
       if (W === undefined) { ways.set(lv, null); void kitViewWays(ask.level).then(w => w, () => [] as boolean[]).then(w => { ways.set(lv, w); again(); }); }
       if (W == null) { hide(); drop(); root.setAttribute('data-kv-wait', ''); return true; }   // (asked, not yet answered — the plan's own fetch, a moment: the column waits empty rather than flash the standing man before a picture)
       // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture); a dealt one is no picture
@@ -163,7 +177,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
         const tier = (window as unknown as { __quality?: { current?: unknown } }).__quality?.current;   // (drawn at the tier this page stands at: no calibration of its own beside this one)
         const raw = ask.search.replace(/^[^?]*\?/, '');
         f.addEventListener('error', () => { if (frame === f) fail(k); });
-        f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
+        f.src = `${location.pathname}?${raw ? raw + '&' : ''}kitview&mute&noreplay${KIT_VIEW.acts ? '' : '&stillkit'}${KIT_VIEW.quiet || q.has('kitloud') ? '' : '&kitloud'}${typeof tier === 'string' && !q.has('quality') ? '&quality=' + encodeURIComponent(tier) : ''}`;
         body.appendChild(f); place();
         patience = setTimeout(() => { patience = 0; if (frame === f && !live) fail(k); }, KIT_VIEW.wait * 1000);
         bornT = performance.now(); graceT = setTimeout(() => { graceT = 0; if (frame === f && !live) again(); }, KIT_VIEW.grace * 1000 + 30);

@@ -59,6 +59,7 @@ import { PRESSURE, pressOwns, pressTick, pressStop, run as pressRun, charge as p
 import { buddyTick, buddyStop, buddyOwns } from './buddy';
 import { silentHolds, silentGlassHolds } from './silent';
 import { pairHolds, pairPasses } from './pairorders';
+import { workPasses } from './workthings';
 import { spottedHolds, spottedKeen } from './spotted';
 import { coverSeen, coverOp } from './coverfire';
 import { lastStandTick, lastStandStop, lastStandMan, lastStandOwns } from './laststand';
@@ -939,7 +940,7 @@ export class RoomFight {
       const vis = blind ? null : canSeeChar(g, gd, h.char, false); const rate = vis?.visible ? this.rateOn(gd, h, vis.dist, M.m >= S.notice) : 0;
       if (rate > 0.05) { M.m = Math.min(1, M.m + rate * dt); if (rate > 0.25) M.seenT = g.time; } else M.m = Math.max(0, M.m - 0.5 * dt);
       if (noShot) { if (vis?.visible && (clearShot(g, c, chestOf(h.char)) || clearShot(g, c, h.char.bones.head ?? v3.add(h.char.pos, [0, 1.6, 0])))) O.pass = null; else continue; }   // (walked on from for want of a shot — walkOn: seen all the while, and his again the moment there is one)
-      if (g.time - M.seenT < 0.25 && (M.m >= S.notice || hot) && !pairPasses(g, gd, h)) {   // a real sighting now (the alert AI's own licence: rate > 0.25) — and either he has made the shape out over time (a calm floor) or the floor is hot, when the sighting is enough, as it is for any roused man
+      if (g.time - M.seenT < 0.25 && (M.m >= S.notice || hot) && !pairPasses(g, gd, h) && !workPasses(g, gd, h)) {   // a real sighting now (the alert AI's own licence: rate > 0.25) — and either he has made the shape out over time (a calm floor) or the floor is hot, when the sighting is enough, as it is for any roused man
         const hc = h.char; const onUs = Math.abs(wrapAngle(v3.yawTo(hc.pos, c.pos) - hc.aimYaw)) < 0.35 ? 2 : 0;   // a muzzle on him outranks one that is not
         const R = ROOMFIGHT, d = vis?.dist ?? 9;
         const alarm = h.state === 'alert' || h.state === 'search', passed = M.glassT !== undefined;   // (passed: he has held a round at this man for a pane in the way — silent.ts; never true of a loud squad)
@@ -1035,7 +1036,7 @@ export class RoomFight {
    *  mate's muzzle is on if he has a line to him — after his reaction beat, for a couple of seconds */
   private cue(O: Op) {
     const g = this.g, c = O.gd.char, S = FIGHT_SKILL.operative;
-    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead')) { O.turn = null; O.lostAt = g.time; }
+    if (O.turn && (g.time > O.turn.until || O.turn.to.state === 'dead' || (!O.turn.door && workPasses(g, O.gd, O.turn.to)))) { O.turn = null; O.lostAt = g.time; }   // (… or workthings.ts: he is stood at the thing he was sent to work, and the look is for a man no round of his may go at — a door come open is still looked at)
     const look = O.turn && O.turn.pt ? O.turn : null;   // (a look at where steps come from — it follows them and lasts while they keep coming, `stepLookSecs` at most, and gives way to a shot or a mate's call)
     if (look && !look.door && O.stepBy && O.stepBy.by === look.to && g.time - O.stepBy.t < 0.6) { look.pt = O.stepBy.at; look.until = Math.min(Math.max(look.until, O.stepBy.t + 2.5), (look.t0 ?? g.time) + ROOMFIGHT.stepLookSecs); }
     if (O.turn && !look) return;
@@ -1044,8 +1045,8 @@ export class RoomFight {
     const A = g.orders.of(O.gd), arc = A && A.order === 'hold' && A.watch && A.arrived ? v3.yawTo(c.pos, A.watch) : null;
     const mine = (h: Guard) => arc === null || Math.abs(wrapAngle(v3.yawTo(c.pos, h.char.pos) - arc)) < ROOMFIGHT.arcHalfDeg * DEG;
     for (const r of this.reports) { if (g.time - r.t > 0.6 || r.by.state === 'dead' || r.by === gone) continue; const d = flat(c.pos, r.by.char.pos); if (d < bd && !g.col.segmentBlocked(eye, chestOf(r.by.char))) { bd = d; who = r.by; } }
-    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !g.col.segmentBlocked(eye, chestOf(X.tgt.char))) { who = X.tgt; call = true; }
-    if (!who && O.stepBy && g.time - O.stepBy.t < 0.6 && O.stepBy.by.state !== 'dead' && O.stepBy.by !== gone && mine(O.stepBy.by)) {   // footsteps coming, and his the nearest ears: he looks
+    if (!who) for (const X of this.ops) if (X !== O && X.tgt && X.tgt !== gone && X.tgt.state !== 'dead' && X.gd.state !== 'dead' && flat(c.pos, X.tgt.char.pos) < 16 && mine(X.tgt) && !g.col.segmentBlocked(eye, chestOf(X.tgt.char)) && !workPasses(g, O.gd, X.tgt)) { who = X.tgt; call = true; }   // (workthings.ts: not a man stood at the thing he was sent to work, for a man no round of his may go at)
+    if (!who && O.stepBy && g.time - O.stepBy.t < 0.6 && O.stepBy.by.state !== 'dead' && O.stepBy.by !== gone && mine(O.stepBy.by) && !workPasses(g, O.gd, O.stepBy.by)) {   // footsteps coming, and his the nearest ears: he looks
       if (!g.col.segmentBlocked(eye, chestOf(O.stepBy.by.char))) { who = O.stepBy.by; call = true; }
       else if (ROOMFIGHT.stepLook && !look && !(A && A.door && !A.arrived)) { who = O.stepBy.by; call = true; pt = O.stepBy.at; }   // … at where they come from, with no line to the man himself (never on his way to a door's mark or through it: his corner is his)
     }

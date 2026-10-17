@@ -585,6 +585,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (d) the stand. For the record in (b): the men themselves hit 2 of 5 either way on frozen (rules on: two wounded; off: two killed at the
   corner's mouth). MEASURED headless only, one seed a staging, defenders standing in for either side; never seen on a GPU, nobody has played
   it. A change to `fleeSpot` or `rollOn` runs `frag`, `picture` and (once it is in the build) `squadthrow-lob`.
+- **Sam's place is a mate's who is staying** (`frag.ts FRAG.fleeSam`, the same word as the three above: ON in the page, `?nofleemates`; off in the module
+  and on the frozen stand, `TPS_FLEEMATES=1`; the panel's 'frag ▸ furniture and a mate's corner' box; in the journal's FRAG table, a recording from
+  before the key replays with it off). FOUND 10-17 on `frag-own` (b), the office's manager door, shipped stand: the kicker's leg off the squad's own
+  ordered grenade was dealt onto the floor Sam stood on (`takenBy` listed the AI's men only), he stalled against him in its line for a second, and was
+  killed 3.7 m from it — or was dealt again by the 'no ground made for a second' rule with a twentieth of a second of fuse to spare: which of the two
+  was a matter of when the stack had formed, and the walk rule (`seenwalk.ts`, a stack that forms half a second later) tipped the check's seed 11.
+  With it, a teammate's deal has Sam's place in `stay`: no spot within `fleeApartM` of him, no leg within `fleeLaneM` of his shoulder. Sam is read
+  where he is: where he will go is his own business. MEASURED (shipped, the walk rule on, the ordered frag at three doors of the office floor × 20
+  seeds, 60 blasts): without it the kicker is killed in 7 (all at the manager's door, each after 55 ticks stood still on a leg in its line), with it
+  in none, and no man stands still on a leg in its line for half a second in any. Check: `probes.ts frag-own` line (b3), staged still on either stand
+  (Sam stood on the spot the deal would give: his place is listed, the spot dealt is 1 m or more from him by a leg 0.9 m or more off his shoulder);
+  `FLEESAM_BREAK=1` fails it on both stands. NOT DONE: a defender's deal does not read Sam (he is not of their side); the floor plan's forecast reads
+  him where he stands when it is asked. Never seen on a GPU; nobody has played it.
 - **A wall the burst will open is no cover to a man getting off a grenade** (`frag.ts FRAG.wallFlee`, 10-15; the twin of the door-leaf rule in
   `exposedTo`, built on the walls lane's read-only ask `Destruction.wallsFor` / `withWallsOpen`). A SWITCH: OFF in the module and on the frozen
   stand (`TPS_WALLFLEE=1`; a `FROZEN_HOLDS` row; `STAND_ENV`), ON in the page (`?nowallflee`; a row on the debugger's page beside the flee's own);

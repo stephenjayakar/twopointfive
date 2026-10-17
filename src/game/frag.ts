@@ -126,6 +126,11 @@ export const FRAG = {
    *  he was, a stride short of the corner the burst has no line to, and with no ring of spots nearer than 1.2 m was told to get down where he was: in the open,
    *  0.27 m from cover (the thrower of an ordered frag, wounded at 6.6 m). A man stopped short (a mate in the corner) is dealt again as before. */
   fleeOnto: false,
+  /** `fleeSam` (the same word again; 10-17, a kicker killed by his own squad's ordered grenade at a door): SAM IS A MATE WHO IS STAYING. The lists above were
+   *  made of the AI's men only, so a leg was dealt onto the floor the player stood on or past his shoulder — and the man stalled against him, still in its
+   *  line, until the one-second 'no ground made' deal came or the fuse ran out first (a matter of a twentieth of a second which). With it Sam's place is in
+   *  `stay` for a teammate's deal: no spot within `fleeApartM` of him, no leg within `fleeLaneM`. Where Sam will go is his own business: he is read where he is. */
+  fleeSam: false,
   /** A WALL THE BURST WILL OPEN IS NO COVER (10-15; the twin of the door rule in `exposedTo`): a man reckoning his cover from a grenade that has not gone off
    *  asks the destruction engine which walls and cover its burst would open (`Destruction.wallsFor`, the blast's own plan, nothing touched) and reads his line
    *  with those open (`withWallsOpen`). So the flee leaves a partition the burst is about to hole and a man behind one is not counted safe. ON in the page
@@ -607,6 +612,7 @@ function takenBy(g: Game, L: Live | null, gd: Guard, dz: Vec3): { stay: Vec3[]; 
     if (onLeg) go.push(q);
     else if (s || g.time < o.staggerUntil || g.time < o.dazzledUntil || flat(p, dz) > FRAG.fleeM || exposedTo(g, from, p, o.char.bones.head ?? v3.add(p, [0, 1.6, 0])) <= 0) stay.push(p);
   }
+  if (FRAG.fleeSam && gd.team === 'operative' && flat(g.player.char.pos, gd.char.pos) <= 8.5) stay.push(g.player.char.pos);   // (Sam: as solid as a mate, and nobody's to deal)
   return { stay, go };
 }
 /** The list the deal would hand `fleeSpot` for this man off a grenade that came to rest at `dz` and has dealt nobody yet (a forecast's, before the throw:
