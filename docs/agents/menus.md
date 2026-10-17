@@ -457,6 +457,46 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   any browser but Chromium (the first form tested only the word 'null', which Chromium never gives: it changed nothing there). THE CHECK:
   `bun run build:one && node tools/qa/kitview-disk.cjs` (the built file opened from disk, no adapter, no server: 6 of 6, two runs; `KITDISK_BREAK=1`
   = a target of '*' put back to `location.origin`, must exit 1: 4 FAIL, the frame down at 10.08 s).
+  THE QUIET PICTURE (10-17; `host/kitView.ts KIT_VIEW_QUIET`, ON in the page; `?kitloud` = off, forwarded to the picture by `ui/kitView.ts`,
+  whose own `KIT_VIEW.quiet` the same word puts off: the picture and its fade exactly as they were, on every kind. A host table like its
+  neighbours: nothing in the game reads it, so it has no row in the knob registry or the frozen holds). The maintainer: "quiet missions
+  should have different gear screen stuff". On a QUIET KIND — a quiet mission's link, alone or as two, and the solo night, read off the
+  LINK (`host/kitViewSet.ts kitViewQuietKind`, the reading the set's dress always used; never `game.quiet.active`: a set way is staged as
+  a room clear) — and only where the porch lamp burns (by day, with no `light.porch.day`, the old picture), the picture is ONE image: Sam
+  DOWN, his gun put away and the rifle across his back (`KITANIM.sling` 2 on every quiet way now), 1.55 m along the wall from the door's
+  middle, beside a small warm POOL under the door's lamp (the porch place, a spot of 38 deg at 7 turned down and tipped 0.4 m out; a
+  way's own `light.porch` keys still lie over it); the level's own lamps on the team's side that reach the door's foot are out; the fill
+  bluer and lower (1.2), the moon x1.3 and the sky x1.2; no weapon light; the leaf 9 deg ajar on a room whose own lamps burn at 0.15 of
+  themselves (none there: a small warm lamp of the picture's own). A partner rests on a knee 1.1 m behind him and stands at the door
+  while his own card is open. A level's WRITTEN first place wins; a worked-out one that is not free floor leaves the plan's.
+  THE POOL LAMP IS A LAMP OF THE GAME'S: the host builds a `LightTarget` over the picture's own light and glowing box and pushes it on
+  `game.targets` (`kitViewPoolTarget`; nothing under `src/game` was edited), so the player's round puts it out by the game's own
+  `shootOut` and a restart's `repairLights` mends it. WHAT PLAYS, by `QUIET_BEATS` (a table over `BEATS`: a thing not in it, or a quiet
+  row whose start refuses, plays its old row): Sam's `weapon` with a SUPPRESSED gun in hand — the gun out, a rise to a half crouch on
+  the lamp (0.65 s), ONE round, the pool dies, the fill lifts x1.5 over 0.5 s, he walks down to the door's jamb through where it was,
+  the dark held 4 s from the round, then the room staged again under the dissolve and a 3.5 s rest; `suit` / `trim` — a lean of 0.4 m
+  into the pool, held 0.6 s, and back; the throws from the crouch with a 1.1 m step; the wand and the sticky camera their own rows, he
+  stays down. No tile under the highlight: the rest pose alone (`quietIdle`, the seam a torch pass hangs on). LOUD KIT on a quiet kind
+  (an unsuppressed gun, a stun, a frag, a charge, a partner's gun) keeps its old row and costs nothing yet: `Row.loud` and
+  `quietInside(share)` (the room's lamps, 0.15 at rest) are the seams. THE PAGE: on a quiet kind the picture's fade under the tile
+  panel runs from the column's edge to NOTHING at 40% of the picture's own window, or at the first tile's left edge where that is
+  further (`KIT_VIEW_PLACE.quietEnd`; before, and still on a loud kind: three tenths at the first tile's left edge, gone one column's
+  width past the column) and the pool of picture under the last tile row is not laid: a dark stage showed through the gaps as noise.
+  TWO THINGS THE PARTNER'S ROWS NEEDED: a door order waits for the pulled-to leaf to LATCH (`leafWait`), and under a teammate's row Sam
+  is left up to 0.25 m more off his place (`tidy`) — he rests a body's width from where the game stacks a man on the door, the partner
+  shouldered him 4 cm over the line, and the walk home that gave him is `Game.puppet`, which took the partner's frag order away.
+  THE CHECKS: `bun run tools/qa/kitview-plan.ts` section I, both stands, 654 of 654 (the kind off 144 links, `kitloud` and the table off
+  null on every one; each of the 12 quiet ways' pool lamp and rest place; headless, the lamp hung as the page hangs it is put out by one
+  round from the rest place, the park's count 0, the floor at 0, and `repairLights` mends it); `KITQUIET_BREAK=1` = the link read with
+  `kitloud`, the round aimed beside the lamp: 15 FAIL, exit 1. The page, software adapter, the render stood in:
+  `LEVEL=vault KIND=quiet node tools/qa/kitview-levels.cjs` 24 of 24 (one round, 'shot' 'dark' 'walk', one restart, roused 0, console
+  clean), the same with `FLAGS=kitloud` 23 of 23 (the old rows, the page says nothing of it), `LEVEL=crossing KIND=quiet SQUAD=1` 29 of
+  29 (28 of 28 with `FLAGS=kitloud`), `LEVEL=records WAY=1` 29 of 29 (its 28 and the new row: a loud link says nothing of it). Rows whose meaning moved on a quiet kind are listed at the head of kitview-levels.cjs
+  (the places are the staged ones; the leaf hung is the leaf at its rest; the gun's row ends in a restage). LOUD UNMOVED: every change
+  is behind the link's kind; the plan check's sections A to H print the same lines as before on both stands and its dry-run file is
+  byte-identical. NOT SEEN: anything on a GPU; the loop at speed (stills on the software adapter only: the pool reads soft and wide
+  there, the room behind the door is NOT dim — its floor is lit by the sky through the roof the picture lifts — and the half crouch is
+  hard to tell from the crouch); the solo night's picture; any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +
