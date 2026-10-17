@@ -32,6 +32,9 @@ export const CONDITION = {
   hurtSecs: 0,
   /** the score does not read wariness off one of the player's own men at rest (guards.ts tension: under an order nothing drains that number) */
   ownCalm: true,
+  /** the figures are dealt each state's look (conditionPose). Off = the model and its costs with nobody showing any of it: QA's lever for telling what the
+   *  looks alone do to a run (a figure's head and muzzle are where the simulation reads them) */
+  looks: true,
 };
 export const CONDITION_STATS = { hurt: 0 };
 
@@ -99,7 +102,7 @@ export function conditionSummary(g: Game): string {
 /** Every frame, after the stun poses are dealt (Game.dealWeapons): each man's condition to his figure — the player's, his men's and the defenders' by the one
  *  rule. Off (and under a showcase): whatever it put on a figure comes off, and a figure it never touched is not touched. */
 export function conditionPose(g: Game): void {
-  const on = CONDITION.on && !g.touring && !g.director?.showing, S = SUPPRESSION;
+  const on = CONDITION.on && CONDITION.looks && !g.touring && !g.director?.showing, S = SUPPRESSION;
   const deal = (m: Man) => { const an = m.char.anim;
     if (!on) { if (an.hurt !== 0 || an.shaken !== 0 || an.foldToo) { an.hurt = 0; an.shaken = 0; an.foldToo = false; } return; }
     const down = isGuard(m) ? m.state === 'dead' : m.down;

@@ -495,7 +495,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands; `HEADMARK_BREAK=1` puts the marks back and lines 1 to 3 must fail) asks `headMark` what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
 - **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
-  0.35, hurtSecs 0, ownCalm}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
+  0.35, hurtSecs 0, ownCalm, looks}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
   and the journal's tables, so a recording from before it replays with it off). The maintainer, 10-16: telegraph a man's state through his
   animation, "effectively just a health system ... but with very high lethality", "apply that system across the board". ONE MODEL for the
   player, his men and the defenders: `conditionOf(g, man)` = {shaken, blind, folded, hurt, down}, read off stamps the game already kept on both
@@ -510,7 +510,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the player loses his sprint (player.ts: Shift is not a run for him, so it stops no reload and lets go of nothing). SPREAD, his rounds open as
   if fire were on him at `hurtSup` — `conditionSup` (the larger of that and the fire really on him) asked by `guardFireMods`, `samSpread` and
   the room fight's / the covering man's own line; how FAST he fires is not touched; with `tune.suppression` off nobody's rounds open, his
-  included. `ownCalm`: guards.ts `tension` no longer counts a teammate's `awareness` at rest (nothing drains it under an order: a frag held the
+  included. `looks` (true): the figures are dealt each state's look; false = the model and its costs with nobody showing it, QA's lever for
+  what the looks alone do to a run. `ownCalm`: guards.ts `tension` no longer counts a teammate's `awareness` at rest (nothing drains it under an order: a frag held the
   score's intensity up for the mission) — with the switch off it counts it as before. Saves: `hurtAt` is an optional key written only for a
   hurt man, so an older save loads and a save with nobody hurt is byte for byte what it was. The panel: `condition ▸ you hurt · Reyes folded
   hurt` (`Game.conditionSummary()`). HOW IT SHOWS is the poses' (docs/agents/anim.md, "A man's condition on the figure"), and with them on a
