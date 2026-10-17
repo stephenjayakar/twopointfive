@@ -230,7 +230,8 @@ function deflect(bi: number, at: Vec3, d: Vec3, T: PaneToll, eIn: number): Vec3 
   if (sin > 1e-4) { const k = Math.tan(A * GLASSPEN.bendK * sin) / sin; const px = T.n[0] - d[0] * T.cos, py = T.n[1] - d[1] * T.cos, pz = T.n[2] - d[2] * T.cos; out = [out[0] + px * k, out[1] + py * k, out[2] + pz * k]; }   // (p = the normal's part across the flight, length sin θ)
   return v3.normalize(out);
 }
-function crossing(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e: number, nth: number): PaneCross | null {
+/** one pane on a round's flight: what it takes and where the round leaves it — or null: spent in it (roundPath below; wallpen.ts thinPath, the flight over panes and thin walls alike) */
+export function paneCrossing(g: Game, bi: number, o: Vec3, d: Vec3, t: number, e: number, nth: number): PaneCross | null {
   const at = v3.mad(o, d, t); const T = paneToll(g, bi, at, d, e, nth); if (!T) return null;
   const b = g.level.boxes[bi]; const te = lineBox(at, d, b)?.t1 ?? -1; const thru = (te > 0 ? te : 2 * Math.min(b.h[0], b.h[2]) / T.cos) + EXIT_EPS;   // (the far end of the sheet's slab along the flight, + a hair)
   const exit = v3.mad(at, d, thru); const into = bornIn(g, exit, d, bi); if (into === -2) return null;   // out of the glass and into the frame it sits in: spent there
@@ -259,7 +260,7 @@ export function roundPath(g: Game, from: Vec3, dir: Vec3, range: number, energy:
   const segs: RoundSeg[] = [], cross: PaneCross[] = []; let o = from, d = dir, t0 = 0, e = energy;
   for (;;) {
     if (!hit) { segs.push({ o, d, t0, len: range - t0, e }); return cross.length ? { segs, cross, st: null, len: range } : null; }
-    const x: PaneCross | null = hit.index < 1e6 ? crossing(g, hit.index, o, d, hit.t, e, nth0 + cross.length) : null;
+    const x: PaneCross | null = hit.index < 1e6 ? paneCrossing(g, hit.index, o, d, hit.t, e, nth0 + cross.length) : null;
     segs.push({ o, d, t0, len: hit.t, e });
     if (!x) return cross.length ? { segs, cross, st: { t: t0 + hit.t, index: hit.index, n: hit.n }, len: t0 + hit.t } : null;
     x.t = t0 + hit.t; cross.push(x);

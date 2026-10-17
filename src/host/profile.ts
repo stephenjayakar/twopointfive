@@ -37,6 +37,7 @@ import { DOORWAY } from '../game/doors';
 import { WX_OWN, SNOW, SNOW_LOOK } from '../game/weatherKinds';
 import { AIR_SIM } from '../game/airSim';
 import { GLASS } from '../game/glass';
+import { WALLPEN } from '../game/wallpen';
 import { DOORPATH } from '../game/doorpath';
 import { COVERFIRE } from '../game/coverfire';
 import { LIGHTWALL } from '../game/lighting';
@@ -167,6 +168,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
+  WALLPEN.on = q.get('wallpen') !== '0';   // a round carries on through thin walls and wooden door leaves with the energy it has left (game/wallpen.ts: plasterboard partitions, fabric and wood screens, a leaf that is not steel — by the glass rule's energy, a toll by stuff and the length of its path through): ON in the page; ?wallpen=0 = a round stops in the first built thing it meets, as it did
   WALLCHARGE.on = !q.has('nowallcharge'); if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
   // each man of a room entry walks a real path through the door (doorpath.ts) — clear of the leaf, one tight file: ON in the page; ?nodoorpath = the entry as it
   // was; ?doorpath=gun = with the gun rule too (a rifle is not carried through a leaf: it ships off)
@@ -390,6 +392,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNOW_LOOK.blast': 'TPS_SNOWBLAST=1 (shows only on a snow level: with TPS_SNOW=1; the crater wants the prints: TPS_SNOWTRACKS=1; the throw wants the grains: TPS_SNOWGRAINS=1)',
   'AIR_SIM.on': 'TPS_AIR=1 (a picture only, and the harness has no field to feed: it changes what the game would hand one)',
   'GLASS.bothFaces': 'TPS_GLASSEARS=1',
+  'WALLPEN.on': 'TPS_WALLPEN=1',
   'HANDS.on': 'TPS_HANDS=1',
   'WORK.on': 'TPS_WORKTHINGS=1',
   'WAND.on': 'TPS_WAND=1',

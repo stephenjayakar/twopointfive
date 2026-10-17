@@ -25,6 +25,7 @@ const { WALLS, WALLS_DEFAULTS, WALL_STATS } = await import(`${ROOT}/src/game/wal
 const { COVERFIRE, COVERFIRE_DEFAULTS, COVERFIRE_STATS, COVERFIRE_LOG, COVERFIRE_WHY, coverfireSaw, coverfireOn, coverfireReport, coverSeen } = await import(`${ROOT}/src/game/coverfire.ts`);
 const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
 const { FRAG } = await import(`${ROOT}/src/game/frag.ts`);
+const { WALLPEN } = await import(`${ROOT}/src/game/wallpen.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
 const args = process.argv.slice(2);
@@ -35,7 +36,7 @@ const LEVEL = argOf('--level', 'block-squads'), SEED = +argOf('--seed', '11');
 // warehouse has 1.3 m crates and carton stacks
 const COVER_LEVEL = argOf('--cover-level', 'warehouse');
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-const realRandom = Math.random, holdFire0 = HOLDFIRE.on, defFrags0 = FRAG.defenders;
+const realRandom = Math.random, holdFire0 = HOLDFIRE.on, defFrags0 = FRAG.defenders, wallPen0 = WALLPEN.on;
 
 let fails = 0, checks = 0;
 function check(ok: boolean, what: string) { checks++; if (!ok) fails++; console.log(`  - ${ok ? 'PASS' : 'FAIL'} — ${what}`); return ok; }
@@ -58,6 +59,9 @@ async function stage(seed: number, knobs: Record<string, unknown> = {}, level = 
   //  (holdfire.ts: the teammate under an order here would never fire at a man who has noticed nobody), and a defender who carries a frag throws it at a man down
   //  behind a stack (frag.ts: the man runs off it, rightly, and then nobody is behind the stack). Here the squad's fire is free and no defender carries one)
   HOLDFIRE.on = false; FRAG.defenders = false;
+  // (…and a third: with rounds going THROUGH thin things — wallpen.ts, on as the page opens — a man fires a burst through a partition instead of chewing it
+  //  open, and cover fire runs without the destruction switch. This file asks the CHEW; `probes.ts wallmen` asks the burst. Held off here.)
+  WALLPEN.on = false;
   for (const gd of g.guards) { gd.flashlight.enabled = false; g.engine.lights.remove(gd.flashlight); }
   g.guards = []; g.tune.civilians = false; g.tune.qrf = false; g.tune.devices = false; g.tune.chaos = 0.5; g.godMode = true;
   for (const grp of new Set<string>(g.targets.map((t: any) => t.group).filter(Boolean))) g.setGroup(grp, true);   // every fixture on: what a man sees here is geometry, not the dark
@@ -374,7 +378,7 @@ const want = !names.length || names.includes('all') ? Object.keys(FAMILIES) : na
 const unknown = want.filter(n => !FAMILIES[n]);
 if (unknown.length) { console.log(`unknown: ${unknown.join(', ')} — known: ${Object.keys(FAMILIES).join(', ')}, all`); process.exit(2); }
 for (const n of want) { try { await FAMILIES[n](); } catch (e) { fails++; console.log(`  - FAIL — coverfire-${n} threw: ${(e as Error).stack ?? e}`); } }
-Math.random = realRandom; DESTRUCTION.on = false; HOLDFIRE.on = holdFire0; FRAG.defenders = defFrags0;
+Math.random = realRandom; DESTRUCTION.on = false; HOLDFIRE.on = holdFire0; FRAG.defenders = defFrags0; WALLPEN.on = wallPen0;
 Object.assign(COVERFIRE, JSON.parse(JSON.stringify(COVERFIRE_DEFAULTS))); Object.assign(WALLS, JSON.parse(JSON.stringify(WALLS_DEFAULTS)));
 console.log(fails ? `=== coverfire-probes: ${fails} FAILED of ${checks} ===` : checks ? `=== coverfire-probes ${want.join(' ')}: ALL PASS (${checks} checks) ===` : '=== coverfire-probes: NO VERDICT ===');
 process.exit(fails ? 1 : 0);

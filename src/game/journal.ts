@@ -53,6 +53,7 @@ import { SNOWBOG } from './snowBog';
 import { WX_OWN, SNOW, SNOW_LOOK } from './weatherKinds';
 import { AIR_SIM } from './airSim';
 import { GLASS } from './glass';
+import { WALLPEN } from './wallpen';
 import { LIGHTWALL } from './lighting';
 import { IRLIGHT } from './irlight';
 import { AIRDUST } from './airDust';
@@ -375,6 +376,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const sl = k.tables.SNOW_LOOK as Record<string, unknown> | undefined; if (!sl || !('marks' in sl)) SNOW_LOOK.marks = false; }   // (… or from before things marked the snow and a mark formed: picture only, a later key of the same table)
   { const sl = k.tables.SNOW_LOOK as Record<string, unknown> | undefined; if (!sl || !('oneAir' in sl)) SNOW_LOOK.oneAir = false; }   // (… or from before the snow was one snow in one air: picture only, a later key of the same table)   // (… or from before a blast marked the snow: picture only, a later key of the same table)
   if ((k.tables.GLASS as { bothFaces?: boolean } | undefined)?.bothFaces === undefined) GLASS.bothFaces = false;   // (…and from before a pane's crash was heard from both its faces: only from the point the round met it)
+  if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
   if (!k.tables.WALLCHARGE) WALLCHARGE.on = false;   // (a file from before the wall charge: its menus and Sam's rows were the build's without it)
   if (!k.tables.WALLS) assignDeep(WALLS as unknown as Record<string, unknown>, WALLS_DEFAULTS as unknown as Record<string, unknown>);
   if (typeof (k.tables.HANDS as { carryRide?: number } | undefined)?.carryRide !== 'number') { const Hn = knobTables().HANDS as { carryRide?: number } | undefined; if (Hn) Hn.carryRide = 0; }   // (a recording from before a carried body's limbs rode its carrier: they trail him as they did then)

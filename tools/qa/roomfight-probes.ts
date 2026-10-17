@@ -30,6 +30,7 @@ const { order } = await import(`${ROOT}/src/game/squad.ts`);
 const { fireWeapon, detonateStun, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
 const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
+const { WALLPEN } = await import(`${ROOT}/src/game/wallpen.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -44,7 +45,9 @@ const restore = () => { Object.assign(ROOMFIGHT, KNOBS0); for (const k of ['oper
 /** a probe whose staging has teammates open fire by themselves: floor() puts the unfound squad's hold off AFTER each stand-up (the stand-up writes the switch:
  *  on under shipped, and on the frozen stand with TPS_HOLDFIRE=1 — a pin written before it is written over) */
 let noHold = false;
-const guarded = (fn: () => Promise<boolean>) => async () => { const hold = HOLDFIRE.on; try { return await fn(); } finally { restore(); HOLDFIRE.on = hold; noHold = false; } };
+/** a probe that fires at a door leaf or a partition AS A BACKSTOP stages with rounds stopping there (wallpen.ts off, as on the frozen stand) */
+let noThin = false;
+const guarded = (fn: () => Promise<boolean>) => async () => { const hold = HOLDFIRE.on, thin = WALLPEN.on; try { return await fn(); } finally { restore(); HOLDFIRE.on = hold; noHold = false; WALLPEN.on = thin; noThin = false; } };
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const wrap = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
 const up = (l: any[]) => l.filter(x => x.state !== 'dead').length;
@@ -82,7 +85,7 @@ function tracker(W: any) {
  *  civilians / response team / devices, a fresh encounter — then whoever the probe spawns. Sam is parked dark at his spawn in the cubicles. */
 async function floor(seed: number, o: { lit?: boolean; chaos?: number } = {}) {
   Math.random = seeded(seed);
-  const W: any = await standUp(); const g = W.game; if (noHold) HOLDFIRE.on = false;
+  const W: any = await standUp(); const g = W.game; if (noHold) HOLDFIRE.on = false; if (noThin) WALLPEN.on = false;
   for (const gd of g.guards) { gd.flashlight.enabled = false; g.engine.lights.remove(gd.flashlight); }
   g.guards = []; g.tune.civilians = false; g.tune.qrf = false; g.tune.devices = false; g.tune.chaos = o.chaos ?? 0;
   g.restartEncounter();
@@ -195,6 +198,7 @@ export const roomfightFlank = guarded(async () => {
 // ================================================================ next room: the men next door hear it
 export const roomfightNextRoom = guarded(async () => {
   const { verdict, done } = family('roomfight-nextroom: a defender next door comes to a fight he can hear, and only to one');
+  noThin = true;   // (the fight is staged as a teammate's rounds INTO the break room's wooden west door, for the noise: with rounds through thin walls on — the shipped stand — they come through the leaf past the two men inside, which opens a lane on that door (lanes.ts: rounds passing a living man), and nobody walks over alone to a fight at a lane's guns. That is the two rules together, and wallmen-check's and the lanes' own business; this probe asks what he does about a fight he HEARS)
   const SEEDS = [51, 52, 53, 54, 55, 56, 57, 58];
   const post = [33.6, 0, 11.1];
   const run = async (seed: number, mode: 'fight' | 'quiet' | 'elsewhere') => {
