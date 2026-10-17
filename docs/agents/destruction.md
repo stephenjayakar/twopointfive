@@ -680,5 +680,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ON THE REAL PAGE, software adapter: `node tools/qa/wallpen-page.cjs` (the page as it opens and with `?wallpen=0`: a clicked round ends beyond a partition's
   far face / at it, the Tab row and its counter, no console error).
   `tools/qa/wallpen-inventory.ts` prints, per level, the metres of full-height wall a round goes through. Off = the base by run digest: four squad missions
-  × 3 seeds on each stand. EVERY NUMBER IN `WALLPEN` IS A CONSTANT NOBODY HAS PLAYED; what it moves on the listed levels is on the page. Never seen on a GPU
-  (the marks and chips on the far face, the rounds' tracers through a wall); never heard.
+  × 3 seeds on each stand. EVERY NUMBER IN `WALLPEN` IS A CONSTANT NOBODY HAS PLAYED. MEASURED 2026-10-17, shipped stand, the autopilot squad, the same
+  seeds off and on (`ships.ts --scn <rows> --seeds 1-12 --set '{"WALLPEN":{"on":false}}'` against `--set '{}'`): the 19 listed squad rows, 228 runs an
+  arm, won 158 → 153, squad men lost 350 → 353 of 792, defenders left standing 302 → 325, squad men killed by a man with no line of sight 68 → 84
+  (Mousehole 5 → 18), 98 bursts through (201 rounds); with the men's row off (`--set '{"WALLPEN":{"men":false}}'`) won 151, lost 354: the rounds move it,
+  the men little. The 10 two-way rows on their second way: won 83 → 82 of 120, lost 246 → 250 of 456; two of those 120 runs with the rule on hit the 300 s
+  cap with a last defender holding outside (not seen in any other arm, not explained). ONE ROW LOOKS MOVED: rescue-consulate over seeds 1-36 won 27 → 20,
+  squad lost 49 → 61 of 144, every lost run the captor's clock (no hostage was hit by a round, off or on); compound-four's 6 → 4 on 12 seeds was chance
+  (20 → 22 over 36). Twelve seeds a row is thin: a run diverges from the first round that goes through.
+  Never seen on a GPU (the marks and chips on the far face, the rounds' tracers through a wall); never heard.
