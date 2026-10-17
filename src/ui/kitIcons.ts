@@ -28,15 +28,22 @@ const CAM = '<path d="M12 6h4v20h-4z" opacity="0.6"/><path d="M16 9h15a3 3 0 0 1
 
 const BY_FIELD: Record<string, string> = { cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, cans: CANS, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, walls: WALL, shield: SHIELD, suit: SUIT, trim: TRIM };
 const BY_GUN: Record<string, string> = { rifle: RIFLE, pistol: PISTOL, shotgun: SHOTGUN };
+// (a gun that wears a suppressor is drawn with it — ui/kitCard.ts KIT_CAN: the can on the muzzle, one dark band where it screws on; no can fits the shotgun)
+const GUN_CAN: Record<string, string> = {
+  rifle: '<path d="M52.4 11.6h10a1.2 1.2 0 0 1 1.2 1.2v3.6a1.2 1.2 0 0 1-1.2 1.2H52.4z"/><path d="M54.2 11.6h1.2v6h-1.2z" fill="#0c0b09" opacity="0.5"/>',
+  pistol: '<path d="M51 9.4h11.4a1.2 1.2 0 0 1 1.2 1.2v4.8a1.2 1.2 0 0 1-1.2 1.2H51z"/><path d="M52.8 9.4h1.2v7.2h-1.2z" fill="#0c0b09" opacity="0.5"/>',
+};
 // (the big slot's row — game/kit.ts BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
 const HAMMER = '<path d="M5 7h9v4h2.4v3H14v4H5l-1.4-2.2V9.2z"/><path d="M16 11h3.6l1.4 1.5-1.4 1.5H16z" opacity="0.7"/><path d="M9 18h2.6v-1H52v1c3 0 5.4.8 8 2.6l-1 1.8c-2.4-1.2-4.4-1.8-7-1.8H9z"/><path d="M26 16.4h14v3.6H26z" fill="#0c0b09" opacity="0.4"/>';
 const EMPTY = '<path d="M6 6h52v20H6zM8 8v16h48V8z" fill-rule="evenodd" opacity="0.5"/>';
 const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL, shield: SHIELD };
 
-/** the drawing for a card's row at its value ('' where the row has none), and whether the value means he carries none of it (drawn faint) */
-export function kitIcon(field: string, value: unknown): { svg: string; none: boolean } {
-  const body = field === 'weapon' ? BY_GUN[String(value)] ?? RIFLE : field === 'big' ? BY_BIG[String(value)] ?? EMPTY : BY_FIELD[field];
+/** the drawing for a card's row at its value ('' where the row has none), and whether the value means he carries none of it (drawn faint); `can` = the gun
+ *  of the weapon row wears a suppressor */
+export function kitIcon(field: string, value: unknown, can = false): { svg: string; none: boolean } {
+  const body = field === 'weapon' ? gunBody(String(value), can) : field === 'big' ? BY_BIG[String(value)] ?? EMPTY : BY_FIELD[field];
   return { svg: body ? BOARD(body) : '', none: value === 0 || value === false || value === 'none' };
 }
-/** a gun's drawing by itself (the roster's cards) */
-export function gunIcon(weapon: string): string { return BOARD(BY_GUN[weapon] ?? RIFLE); }
+const gunBody = (weapon: string, can: boolean) => { const w = Object.hasOwn(BY_GUN, weapon) ? weapon : 'rifle'; return BY_GUN[w] + (can && Object.hasOwn(GUN_CAN, w) ? GUN_CAN[w] : ''); };
+/** a gun's drawing by itself (the roster's cards), with its suppressor where it wears one */
+export function gunIcon(weapon: string, can = false): string { return BOARD(gunBody(weapon, can)); }
