@@ -67,7 +67,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 /** every probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = NODEAL = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = NODEAL = YARDOUT = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
 
@@ -88,6 +88,11 @@ let WORDNOCAN = false;
  *  before they are told, and on a dealt floor the room's men are their squad's and have dug in by then (digin.ts) — what the step in then meets is that drill,
  *  not the door. Its lines were written of a room-fight floor and ask what the door tools do there. */
 let NODEAL = false;
+/** THE YARD'S GUNS OUT OF IT, for the runs staged while this is set: on a door another room watches (the depot's `a_s` on the floodlit yard — heldEntries) every
+ *  defender who is not at home in the room behind the door is taken off the floor as the order is given. threshold-four and threshold-first ask what the
+ *  THRESHOLD does with the room; with those guns in it who is left on the jambs is the yard fight's dice, and which of three seeds holds a wipe moved with any
+ *  change that shifted a walk by half a second (three flips of threshold-four in a day, none of them a door rule's). */
+let YARDOUT = false;
 /** … and the order's one wait, DOORTOOLS.thrHandWait, for the runs staged while this is set (null: the table's own) */
 let HANDWAIT: number | null = null;
 /** a start-card scenario staged as the page stages it, under a seed (the playthrough's own recipe: the page's chaos, Sam in god mode and pinned dark) */
@@ -190,7 +195,9 @@ async function doorRun(scn: string, seed: number, door: string | null = null, ca
     for (const [back, lat] of [[3.4, 1.6], [3.4, -1.6], [4.4, 1.2], [4.4, -1.2], [2.8, 2.2], [2.8, -2.2], [2.6, 0]]) { const p = [ent.at[0] + ent.out[0] * back + lx * lat, 0, ent.at[2] + ent.out[1] * back + lz * lat]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.1, p[2]], [ent.at[0] + ent.out[0] * 0.7, 1.1, ent.at[2] + ent.out[1] * 0.7])) { sam = p; break; } }
     if (!sam) continue; g.teleportPlayer(sam);
     const r = D.thresholdOn(d.def.name, 'all', undefined, !!hold); if (typeof r === 'string') { out.why = `${d.def.name}: ${r}`; continue; }
-    op = r; room = rm; out.door = d.def.name; out.why = null; break; }
+    op = r; room = rm; out.door = d.def.name; out.why = null;
+    if (YARDOUT) for (const h of R.hostiles) if (h.state !== 'dead' && g.fight.defs.find((x: any) => x.gd === h)?.room !== rm) killGuard(g, h, [0, 0, 1], true, 'struck');   // (in the frame the order is given: nobody has moved)
+    break; }
   if (!op) { out.why ??= 'no held room with a door the order could be given on'; return out; }
   const d = op.door, side = op.side, W = d.def.width, nav = g.col.nav; out.W = W;
   const sent: any[] = [...op.men], ids = new Map<number, any>(sent.map((m: any) => [m.char.id, m])), seen = new Set<any>(g.events), was = new Map<any, string>(R.hostiles.map((h: any) => [h, h.state]));
@@ -353,6 +360,7 @@ async function worded(verdict: Verdict, scn: string) {
 }
 export const thresholdFour = guarded(async () => {
   const { verdict, done } = family('threshold-four: the squad of four works a held room from the threshold — the depot and the office');
+  YARDOUT = true;
   const runs: Run[] = []; for (const scn of ['depot-four', 'room-clear-four']) for (const seed of [1, 2, 3]) runs.push(await doorRun(scn, seed));
   judge(verdict, runs, true);
   await worded(verdict, 'depot-four');
@@ -365,6 +373,7 @@ export const thresholdFirst = guarded(async () => {
   const scns = ['records-pair', 'room-clear-four', 'depot-four'], i = (r: Run, re: RegExp) => idx(r, re), cans = (r: Run) => r.beats.filter(b => /^toss:/.test(b.what)).length;
   const POCKET = ['hall-four', 'block-four'];
   const only0 = DOORTOOLS.thrFirstOnly; DOORTOOLS.thrFirstOnly = true;
+  YARDOUT = true;
   const hot: Run[] = []; for (const scn of scns) hot.push(await doorRun(scn, 1, null, 90, NaN, null, true));
   const first = (r: Run) => !r.why && / · a can first$/.test(r.beats.find(b => /^threshold ·/.test(b.what))?.what ?? '');
   verdict(hot.every(first), 'the floor hot, the stage says so as the leaf moves: \'threshold · … · a can first\'', hot.map(r => `${line(r)}: ${r.why ?? r.beats.find(b => /^threshold ·/.test(b.what))?.what}`).join('\n    '));
