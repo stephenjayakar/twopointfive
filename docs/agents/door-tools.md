@@ -477,7 +477,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shipped office door is opened 2.6 s later with a man 1.9 m off his mark. Rule on: 'the door waits' at the word, 'the men are back' 3.9 to 5.3 s
   after the grenade, the door opened 0 to 0.8 s after that with every man within 0.8 m of his mark, 'in' every time; bang and clear the same, the
   can from 1.2 to 1.5 m. Cap cut to 0.3 s: 'on without' 0.30 s after the wait began. The word again: opened on that frame (frozen), 1.8 and 2.8 s
-  later on shipped, where the man who opens it had run and has to be at the handle. An order on its own clock, men short of their marks: the stack is
+  later on shipped, where the man who opens it had run and has to be at the handle. Since 10-17 that line judges the door only (the
+  words, the frame, opened no later than by waiting): how an entry sent on without its men then ends is the room fight's, printed beside it. On the
+  shipped depot the four sent on that way are all lost inside on the build of 10-17 (they ended 'in' on 10-16; the line was red on the untouched
+  build head for it, and with the squads-from-rooms rule or the infrared light's own rule put off one of four is left and it ends 'in'). An order on its own clock, men short of their marks: the stack is
   called only with them back (the rule off waits for a walking man too; the rule says so and keeps `stackCap` from running under it). A locked door,
   the grenade as the lead steps off to it: frozen, no boot until the men are back (4.5 s); shipped, the boot lands 0.4 s after the grenade, before a
   man has moved, and is not stopped (the line passes on either and prints which). The charge: where its man ran, 'set' 2.4 to 2.5 s after he is back; where
