@@ -243,8 +243,10 @@ export const KIT_VIEW_QUIET = {
    *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has */
   ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.25, up: 1.2, color: [1, 0.72, 0.42] as Vec3, intensity: 2.5, range: 4.5 },
   /** THE REST POSE: Sam crouched this far along the wall from the door's middle, on the side the plan stands him (out from the wall: the wall men's
-   *  own distance) · a partner the same again behind him */
-  samAlong: 1.1, mateGap: 1.0,
+   *  own distance) · a partner the same again behind him · and HE GIVES WAY FIRST: while a partner's card is the open one (the partner is up at the
+   *  door, and the game stacks a man who works it a body's width from Sam's place) Sam rests this much further back along the wall — he steps back as
+   *  that card opens, before any row of the partner's, and forward again as his own does */
+  samAlong: 1.1, mateGap: 1.0, stepBack: 0.5,
   /** THE SUPPRESSED GUN'S ROW: seconds he takes to rise to a half crouch and aim · how far up (0 = stays down, 1 = stands) · seconds the dark is held
    *  from the round · the MOON lifted to this, and the fill to this, over … s (eyes adjusting: the floor comes up blue) · he walks to the jamb … s after the round: … m past the frame, … m off the
    *  wall's face — the FAR jamb (`jambFar`): across the doorway, through where the pool was, to end with the blade across a shoulder (false, or no
@@ -283,14 +285,14 @@ export function kitViewQuietLamp(P: Pick<KitViewPlanned, 'lamps'>, over: Partial
 /** THE REST PLACES (pure): Sam crouched `samAlong` m along the wall from the anchor's middle, on the side the plan stands him, at the wall men's
  *  distance, facing the door along the wall; a partner `mateGap` m behind him. A place the level WROTE wins (null here: the plan's stays), and so
  *  does the plan's where the worked-out one is not free floor. [x, z, yaw deg] */
-export function kitViewQuietPlaces(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall' | 'slots' | 'slotSrc'>, mates: number, free: (x: number, z: number) => boolean): { sam: [number, number, number] | null; mate: [number, number, number] | null } {
+export function kitViewQuietPlaces(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall' | 'slots' | 'slotSrc'>, mates: number, free: (x: number, z: number) => boolean): { sam: [number, number, number] | null; mate: [number, number, number] | null; /** Sam's place while a partner's card is open (`stepBack`): with a partner, at a door or a gap, on free floor — else null */ back: [number, number, number] | null } {
   const A = P.anchor, s = P.s, n = A.n, m = A.mid, Q = KIT_VIEW_QUIET, out = P.wall.face + KIT_PLAN.offFace;
   const al0 = (P.slots[0][0] - m[0]) * s[0] + (P.slots[0][1] - m[1]) * s[1], sg = al0 > 0 ? 1 : -1;
   const at = (al: number): [number, number, number] => [m[0] + s[0] * sg * al + n[0] * out, m[1] + s[1] * sg * al + n[1] * out, Math.atan2(-s[0] * sg, -s[1] * sg) / R];
   const ok = (p: [number, number, number]) => free(p[0], p[1]);
   const sam = P.slotSrc[0] !== 'authored' ? at(Q.samAlong) : null, mate = mates >= 1 && P.slotSrc[1] !== 'authored' ? at(Q.samAlong + Q.mateGap) : null;
-  const S = sam && ok(sam) ? sam : null;
-  return { sam: S, mate: S && mate && ok(mate) ? mate : null };
+  const S = sam && ok(sam) ? sam : null, back = S && mates >= 1 && A.kind !== 'wall' ? at(Q.samAlong + Q.stepBack) : null;
+  return { sam: S, mate: S && mate && ok(mate) ? mate : null, back: back && ok(back) ? back : null };
 }
 /** THE ROOF STAYS ON (pure; KIT_VIEW_QUIET.roofs): the level's boxes, by index, that the quiet picture DRAWS though the game's camera looks through
  *  them — a cover (the plan's own test of one: its underside `coverY` up, `coverHalf` across both ways) flagged NoPrimary, no light's panel, that lies
@@ -566,7 +568,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** a staging as the loop needs it: the door, the face the team is on and the leaf's angle shut, its foot, a point by [along the wall toward the stack, out
    *  on the team's side, up], the wall's own two directions, the floor spots inside, Sam's slot and its yaw, the teammates BY SLOT (the card switch deals
    *  them again: `rotate`) with the slots and their yaws, the fourth man's place while his card is open and whether he is on it, the weapon lights' own write */
-  interface Staged { door: Door | null; kind: 'door' | 'wall' | 'gap'; width: number; reachIn: number; fragM: number; fragLand: number; hole: boolean; plan: KitViewPlanned & { set: string | null }; side: 1 | -1; shut: number; /** the leaf's angle AT REST: `shut`, but on the quiet picture a hand ajar (KIT_VIEW_QUIET.ajarDeg) */ rest: number; /** the quiet picture: where the first teammate rests, crouched behind Sam, while his own card is not the open one */ mate: { p: V2; yaw: number } | null; foot: Vec3; at(o: Vec3): Vec3; s: V2; n: V2; latch: 1 | -1; inside: Vec3[]; smoke: Vec3[]; samSmoke: Vec3; samStun: Vec3; samFrag: Vec3; sam: V2; samYaw: number; order: Guard[]; spots: V2[]; yaws: number[]; act4: V2; four: boolean; torches(): void }
+  interface Staged { door: Door | null; kind: 'door' | 'wall' | 'gap'; width: number; reachIn: number; fragM: number; fragLand: number; hole: boolean; plan: KitViewPlanned & { set: string | null }; side: 1 | -1; shut: number; /** the leaf's angle AT REST: `shut`, but on the quiet picture a hand ajar (KIT_VIEW_QUIET.ajarDeg) */ rest: number; /** the quiet picture: where the first teammate rests, crouched behind Sam, while his own card is not the open one */ mate: { p: V2; yaw: number } | null; /** the quiet picture: Sam's rest place · and his place a step back along the wall while a partner's card is the open one (null: he has none) */ samRest: V2; samBack: V2 | null; foot: Vec3; at(o: Vec3): Vec3; s: V2; n: V2; latch: 1 | -1; inside: Vec3[]; smoke: Vec3[]; samSmoke: Vec3; samStun: Vec3; samFrag: Vec3; sam: V2; samYaw: number; order: Guard[]; spots: V2[]; yaws: number[]; act4: V2; four: boolean; torches(): void }
   /** a governed yaw (THE YAWS, below): its value and speed, what the game last wrote, and — owned by the director — the ease it is on */
   interface Chan { v: number; w: number; want: number; own: boolean; from: number; d: number; v0: number; t0: number; T: number; to: number }
   interface Gov { body: Chan; aim: Chan }
@@ -876,7 +878,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // (THE QUIET PICTURE'S REST: Sam crouched by the pool, a partner behind him — kitViewQuietPlaces; a place the level wrote, or a worked-out one that is
     //  not free floor, leaves the plan's. The camera stays framed on the plan's five)
     const qAt = Q ? kitViewQuietPlaces(P, order.length, (x, z) => !nav.isBlocked(x, z)) : null, mate0 = qAt?.mate && order[0] && order[0] !== head ? qAt.mate : null;
-    if (qAt?.sam) { slots[0] = qAt.sam; stand.push([qAt.sam[0], qAt.sam[1]]); if (mate0 || (qAt.mate && order[0])) stand.push([qAt.mate![0], qAt.mate![1]]); }   // (…and the camera is framed on the rest places too: the partner's fell off the window's edge)
+    const samRest: V2 | null = qAt?.sam ? [qAt.sam[0], qAt.sam[1]] : null;
+    if (qAt?.sam) { slots[0] = head && qAt.back ? qAt.back : qAt.sam; stand.push([qAt.sam[0], qAt.sam[1]]); if (mate0 || (qAt.mate && order[0])) stand.push([qAt.mate![0], qAt.mate![1]]); }   // (…and the camera is framed on the rest places too: the partner's fell off the window's edge)
     for (const p of slots) if (nav.isBlocked(p[0], p[1])) V.blocked++;
     if (P.slotSrc.slice(0, order.length + 1).some(x => x === 'derived')) V.blocked += P.stepped;   // (the worked-out line's steps count only where a man took one of its places)
     const chars: [object, number][] = [];
@@ -940,7 +943,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // the camera: into the wall, turned toward the stack; at the middle of the men
     V.men = men(order);
     look = [P.cam.look[0], P.cam.look[1], P.cam.look[2]]; yaw = P.cam.yaw; pitch = P.cam.pitch; dist = P.cam.dist;   // (the plan's pin: the way's own `pin`, else into the wall, turned toward the stack, at the middle of the five places)
-    qFit = Q && lamps.porch ? { lamp: fixture ? [fixture.c[0], fixture.c[1], fixture.c[2]] : [lamps.porch.pos[0], lamps.porch.pos[1], lamps.porch.pos[2]], sam: [slots[0][0], slots[0][1]] } : null;
+    qFit = Q && lamps.porch ? { lamp: fixture ? [fixture.c[0], fixture.c[1], fixture.c[2]] : [lamps.porch.pos[0], lamps.porch.pos[1], lamps.porch.pos[2]], sam: samRest ?? [slots[0][0], slots[0][1]] } : null;
     aim();
     engine.resetTaa('kitview');
     { const side = door ? d.doorSide(door, [slots[0][0], 0, slots[0][1]]) : 1;   // (of Sam's slot)
@@ -954,7 +957,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       const smoke: Vec3[] = spots(K.smokeM);   // (smoke, thrown short: KIT_VIEW_LOOP.smokeM)
       const a4 = kitPlanAct4(A.mid, W.s, W.n, A.width, P.slots, (x, z) => !nav.isBlocked(x, z));   // (the fourth man's place while his card is open: at Sam's jamb, on Sam's side of the door — and a body clear of every other man's place: at a wide opening, slid toward its middle)
       const fragM = Math.max(0.6, Math.min(K.samFragM, reachIn - 0.5)), fragLand = Math.min(K.fragLand, Math.max(0.3, fragM - 0.5));
-      holeShots = 0; staged = { door, kind: A.kind, width: A.width, reachIn, fragM, fragLand, hole: false, plan: P, side, shut: shut0, rest: door ? door.angle : 0, mate: qAt?.mate && order[0] ? { p: [qAt.mate[0], qAt.mate[1]], yaw: qAt.mate[2] * R } : null, foot, at, s: W.s, n: W.n, latch, inside, smoke, samSmoke: at([0, -K.samSmokeM, 0]), samStun: at([0, -K.samStunM, 0]), samFrag: at([0, -fragM, 0]), sam: [slots[0][0], slots[0][1]], samYaw: slots[0][2] * R, order, spots: order.map((_, i): V2 => [slots[i + 1][0], slots[i + 1][1]]), yaws: order.map((_, i) => slots[i + 1][2] * R), act4: a4, four: false, torches }; }
+      holeShots = 0; staged = { door, kind: A.kind, width: A.width, reachIn, fragM, fragLand, hole: false, plan: P, side, shut: shut0, rest: door ? door.angle : 0, mate: qAt?.mate && order[0] ? { p: [qAt.mate[0], qAt.mate[1]], yaw: qAt.mate[2] * R } : null, foot, at, s: W.s, n: W.n, latch, inside, smoke, samSmoke: at([0, -K.samSmokeM, 0]), samStun: at([0, -K.samStunM, 0]), samFrag: at([0, -fragM, 0]), sam: [slots[0][0], slots[0][1]], samRest: samRest ?? [slots[0][0], slots[0][1]], samBack: qAt?.back ? [qAt.back[0], qAt.back[1]] : null, samYaw: slots[0][2] * R, order, spots: order.map((_, i): V2 => [slots[i + 1][0], slots[i + 1][1]]), yaws: order.map((_, i) => slots[i + 1][2] * R), act4: a4, four: false, torches }; }
     V.again();
   };
 
@@ -1803,6 +1806,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // (THE QUIET PICTURE: Sam rests a body's width from where the game stacks a man on the door, and a partner taking his post shoulders him a few
     //  centimetres — over `onSlot`, and the walk home this gives him is Game.puppet, which takes the partner's order away: his frag went back on his
     //  belt. Under a teammate's row he is left where he was shouldered to, up to a quarter metre more; the row over, he is walked home as ever)
+    //  (…AND HE GIVES WAY FIRST: with a partner's card open his place IS a step back along the wall — KIT_VIEW_QUIET.stepBack — so the walk there is
+    //  this same walk home, taken as the card opens; a row of the partner's waits for it as it waits for any half step of his: waits(), 'sam')
+    if (S.samBack) { const w = actor() ? S.samBack : S.samRest; if (S.sam[0] !== w[0] || S.sam[1] !== w[1]) S.sam = [w[0], w[1]]; }
     const slack = Q && B && B.man ? 0.25 : 0;
     if ((!B || B.man) && !(B && B.row.team)) { if (flat(pl.char.pos, S.sam) > K.onSlot + slack && !(V.home && !B && !actor() && away(S))) game.puppet = { goal: [S.sam[0], 0, S.sam[1]], aim: null, throwAt: null, walk: K.samWalk }; else if (game.puppet) game.puppet = null; }   // (not under the whole team's row: Game.puppet takes the squad's order away — nor while a row of his waits for the men to walk home: under it they stood until he was home)
     if (!B && (tools().ops.length || tools().set.length)) { tools().reset(); pools(); }
