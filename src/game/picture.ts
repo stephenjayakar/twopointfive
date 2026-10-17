@@ -17,6 +17,7 @@
 // ONE switch, PICTURE.on: ON in the page (?nopicture = the build as it was), OFF here and on the frozen harness stand (TPS_PICTURE=1; a FROZEN_HOLDS row). The
 // memory alone moves nothing: each rule that asks it has its own key below (off = that rule as it was). No dice, no camera, no graphics setting, nothing off
 // the GPU; state per Game in a WeakMap with a reset and a snapshot / restore pair. Type-only game imports but for functions called inside functions.
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
@@ -103,8 +104,8 @@ interface Pic { owner: Guard | null; ideas: Map<Who, Idea>; downs: Map<Who, numb
 /** the step a man has taken off his place (PICTURE.step): whose asking it is (`key`: the order that has him — null: a loaded game's, the first asker's), the place he left, the cover, on a knee there, his next look at both */
 interface Step { key: object | null; mark: Vec3; at: Vec3; low: boolean; lookT: number; /** when it was dealt */ t0: number; }
 interface State { men: Map<Guard, Pic>; sam: Pic; tellT: number; done: WeakSet<object>; view: PictureView | null; viewT: number; }
-const STATES = new WeakMap<Game, State>();
-function stateOf(g: Game): State { let S = STATES.get(g); if (!S) { S = { men: new Map(), sam: { owner: null, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: -1e9 }, tellT: -1e9, done: new WeakSet(), view: null, viewT: -1e9 }; STATES.set(g, S); } return S; }
+const STATES = new SideMap<Game, State>('picture.STATES');
+function stateOf(g: Game): State { let S = STATES.get(g); if (!S) { S = { men: new Map(), sam: { owner: null, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: -1e9 }, tellT: -1e9, done: new SideSet(), view: null, viewT: -1e9 }; STATES.set(g, S); } return S; }
 function picOf(S: State, gd: Guard, now: number): Pic { let P = S.men.get(gd); if (!P) { P = { owner: gd, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: now + (S.men.size % 8) * PICTURE.lookSecs / 8 }; S.men.set(gd, P); } return P; }
 export const PICTURE_STATS = { looks: 0, seen: 0, heard: 0, told: 0, fixes: 0, lost: 0, downs: 0, forgot: 0, asks: 0, lines: 0, /** a rule's pick the picture changed */ moved: 0, /** a colleague's shots heard with the shooter's own idea of his man to go by (PICTURE.shot; one a hearer), those a metre or more from the true place, and those the hearer kept his own newer word over */ shotPlaced: 0, shotOff: 0, shotKept: 0, /** steps taken off a place in a believed line (PICTURE.step: the file's men, a wall charge's stand-off marks dealt again) */ stepped: 0, /** stack asks answered with a one-hand file (menu re-reads included), and those on the hinge hand */ filed: 0, filedHinge: 0 };
 export function pictureReset(g: Game) { STATES.delete(g); }

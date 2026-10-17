@@ -49,6 +49,7 @@
 // NOT BUILT: `arrive` squads (they validate and load; nobody comes — sixteen skinned characters are all on the floor with eleven defenders, and taking
 // bodies away mid-run is the room clear's bookkeeping to change first).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -277,7 +278,7 @@ interface State { /** (stayask.ts) every squad here stays in its rooms: the net'
 /** (netAsk) the net's check of the SQUADS: when the next roll call is due, the one running (called → a squad asked for by name), who asks, the squad asked
  *  about, the squads nobody asks after again (`done`: men went to its posts — whatever they found — or a body of it was said on the net with nobody of it left to answer) */
 interface NetCheck { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Squad | null; done: Set<Squad>; /** squads asked for by name with nobody sent after (nobody free, or a fight took the net): asked for once more at a later check, and no oftener */ tried: Map<Squad, number>; /** how often a squad that answers has been asked what is going on */ queried: Map<Squad, number>; /** lines said a breath after what they answer */ say: { t: number; gd: Guard; text: string; cls?: number }[]; die: () => number; tickT: number }
-const STATES = new WeakMap<Game, State>();
+const STATES = new SideMap<Game, State>('enemysquads.STATES');
 /** the net's ask runs on this floor: its own switch, or (stayask.ts) a floor whose every squad stays in its rooms */
 const netAsks = (g: Game): boolean => SQUADS.netAsk || !!STATES.get(g)?.stayAsk;
 /** hard on a squads level (SQUADS.drill*): the table while harder defenders are on, their `squadDrill` row is, and squads are staged in this game — else null */
@@ -865,7 +866,7 @@ const heardFire = (g: Game, Q: Squad, up: Guard[]) => up.some(x => !!roomOf(Q, x
 /** when a stun charge, or a door blown in, last reached this man's ears — as loud with a drop as gunfire is (a charge that fells the man behind the door is
  *  no silent drop). His Witness counts them and does not time them: the count is read once a frame for every man of a squad with the switch on (radioCheck),
  *  so it is seen to move the frame after he heard it; a gap in the reading (the switch was off meanwhile) starts over */
-const BANGS = new WeakMap<Guard, { n: number; t: number; read: number }>();
+const BANGS = new SideMap<Guard, { n: number; t: number; read: number }>('enemysquads.BANGS');
 function bangT(g: Game, x: Guard): number {
   const H = x.witness.heard, b = BANGS.get(x);
   if (!b || g.time - b.read > 0.5 || g.time < b.read || H.bang < b.n) { BANGS.set(x, { n: H.bang, t: -100, read: g.time }); return -100; }
@@ -1116,7 +1117,7 @@ function looks(g: Game, st: State, Q: Squad, L: Looker): boolean {
 /** he has noticed the team by his own bar: 'alert' is where guards.ts puts him once his awareness passes 0.85 (he shouts and fights), 'search' is a man
  *  who had one of them and lost him. 'suspicious' (0.3: he turns to look) is a man who thinks he saw something — not a man who calls contact */
 const noticed = (m: Guard) => m.state === 'alert' || m.state === 'search';
-const GLIMPSED = new WeakMap<Guard, number>();
+const GLIMPSED = new SideMap<Guard, number>('enemysquads.GLIMPSED');
 /** the trace's row for a sighting the squad does not call (once per sighting: again only after 3 s without one). Always false: nothing is called */
 function glimpse(g: Game, Q: Squad, m: Guard): boolean {
   const last = GLIMPSED.get(m) ?? -100; GLIMPSED.set(m, g.time);

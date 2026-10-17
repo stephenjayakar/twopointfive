@@ -22,6 +22,7 @@
 // showcase tour, the breach's daylight and the attract loop they are not on the floor at all. Authored as data (levels/office.json `civilians`, scene/level.ts
 // CivilianDef: her loop, the task and facing at each waypoint, her tints); the phones and the ways out are CIV_SPOTS below (TODO(LevelData), checked headless
 // like qrf.ts QRF_MARKS). Lines: dialogue.ts CIV_LINES. QA: tools/qa/civilians-probes.ts (`probes.ts civilians`), soak.ts --civilians on|off.
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
 import { plainShort } from './gear';   // (a leaf: a weapon's name as it is written into a row)
 import type { Game, DownKind, DownBy } from './game';
@@ -69,7 +70,7 @@ export function civSpots(g: Game): { phones: CivSpot[]; exits: CivSpot[] } {
   let o = ownSpots.get(Q); if (!o) ownSpots.set(Q, o = { phones: (Q.phones ?? []).map(s => ({ name: s.name, pos: s.pos, face: s.face })), exits: (Q.wayouts ?? []).map(s => ({ name: s.name, pos: s.pos, face: s.face })) });
   return o;
 }
-const ownSpots = new WeakMap<object, { phones: CivSpot[]; exits: CivSpot[] }>();
+const ownSpots = new SideMap<object, { phones: CivSpot[]; exits: CivSpot[] }>('civilians.ownSpots');
 
 // ================================================================ numbers (Tab ▸ Sandbox ▸ civilians rows read a few; the switch and killFails persist per machine)
 export const CIV = {
@@ -290,8 +291,8 @@ export function civiliansRestore(g: Game, snap: CivSnap | null | undefined) {
     C.talkT = fin(S.talkT); C.reported = !!S.reported; C.phoned = !!S.phoned; C.acked = !!S.acked;
     C.cowerAt = cp(S.cowerAt); C.complied = !!S.complied; C.complyUntil = sh(S.complyUntil, -1); C.refled = !!S.refled; C.foundT = fin(S.foundT); C.foundBy = man(S.foundBy); C.foundLineAt = S.foundLineAt < 0 ? -1 : sh(S.foundLineAt, -1); C.foundTold = !!S.foundTold;
     C.screamAt = sh(S.screamAt); C.whimperAt = sh(S.whimperAt); C.greetAt = sh(S.greetAt); C.lastLineAt = sh(S.lastLineAt);
-    C.told = new WeakMap(); for (const [cs, n] of S.told ?? []) { const o = man(cs); if (o) C.told.set(o, n | 0); }
-    C.knownBodies = new WeakSet(); for (const cs of S.knownBodies ?? []) { const o = anyone(cs); if (o) C.knownBodies.add(o); }
+    C.told = new SideMap(); for (const [cs, n] of S.told ?? []) { const o = man(cs); if (o) C.told.set(o, n | 0); }
+    C.knownBodies = new SideSet(); for (const cs of S.knownBodies ?? []) { const o = anyone(cs); if (o) C.knownBodies.add(o); }
     C.intelN = S.intelN | 0; C.outsideCallAt = S.outsideCallAt < 0 ? -1 : sh(S.outsideCallAt, -1); C.vis = fin(S.vis); if (Number.isFinite(S.dice)) C.dice = S.dice | 0;
     // the figure: the task's clip back on her at once where she was in it (a woman at her desk loads seated, not standing up into the chair over a second)
     const K = C.state === 'work' && gd.wait > 0 ? TASK_CLIP[taskAt(gd)] : null;
@@ -341,7 +342,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
     target: null, retargetAt: -1, badTargets: new Set(), freezeUntil: -1, pinTarget: false,
     reportTo: null, talkT: 0, reported: false, phoned: false, acked: false,
     cowerAt: null, complied: false, complyUntil: -1, refled: false, foundT: 0, foundBy: null, foundLineAt: -1, foundTold: false,
-    screamAt: -1e9, whimperAt: -1e9, greetAt: -1e9, lastLineAt: -1e9, told: new WeakMap(), knownBodies: new WeakSet(), intelN: 0, outsideCallAt: -1, vis: 0,
+    screamAt: -1e9, whimperAt: -1e9, greetAt: -1e9, lastLineAt: -1e9, told: new SideMap(), knownBodies: new SideSet(), intelN: 0, outsideCallAt: -1, vis: 0,
     dice: hashStr(`civdice:${def.name}`) | 0, rnd: () => 0, log: [],
   };
   gd.civ.rnd = diceOf(gd.civ);   // (the same sequence mulberry32(seed) gives — the state on the record so civiliansSnapshot can carry it)
@@ -423,7 +424,7 @@ export function civilianDoorContacts(g: Game, contacts: DoorContact[]) {
   for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !cv.held) contacts.push({ pos: cv.char.pos, radius: 0.34, bash: false, who: cv.char.id, quiet: cv.civ!.state === 'work' });
 }
 /** per-Game floor-wide memory: control's evacuation line said; the last greeting anywhere; the words / doings due a beat from now */
-const floors = new WeakMap<object, { evacTold: boolean; greetAt: number; pending: Pending[] }>();
+const floors = new SideMap<object, { evacTold: boolean; greetAt: number; pending: Pending[] }>('civilians.floors');
 function floorOf(g: Game) { let F = floors.get(g); if (!F) { F = { evacTold: false, greetAt: -1e9, pending: [] }; floors.set(g, F); } return F; }
 /** A word or a doing due at game time `at` — a guard's answer a beat after her line, his radio call after her report and the floor step after that, control's call
  *  after she got out of the door — as DATA, not a closure, so a checkpoint carries the queue (civiliansSnapshot: `cv` by name, `o` by callsign): whose it is

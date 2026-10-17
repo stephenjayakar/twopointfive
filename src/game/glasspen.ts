@@ -42,6 +42,7 @@
 //   man's hands (roundEnergyOf; a caller with no man in hand gets defaultEnergy = the sidearm's: a station is never counted on for a line a pistol would not
 //   have) — so a man fires through a pane exactly when his round would get through it, and one whose 9 mm dies in the manager's laminated sidelight still goes
 //   round by the door. Eyes always passed glass (segmentBlocked); feet and sound still do not (solidBlocked).
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { lineBox } from '../scene/collision';
@@ -162,7 +163,7 @@ function bornIn(g: Game, p: Vec3, d: Vec3, self: number): number {
 
 // ---------------------------------------------------------------- holes: where rounds have already gone through each pane (per Game; gone with the encounter)
 interface PenState { holes: Map<number, number[]>; log: string[]; /** counts every change to the holes (one made, all cleared, a file's put back) */ rev: number }
-const states = new WeakMap<Game, PenState>();
+const states = new SideMap<Game, PenState>('glasspen.states');
 function stateOf(g: Game): PenState { let s = states.get(g); if (!s) { s = { holes: new Map(), log: [], rev: 0 }; states.set(g, s); } return s; }
 /** Game.resetLevelState, beside resetGlass: the holes go with the stars */
 export function resetGlassPen(g: Game) { const s = states.get(g); if (s) { s.holes.clear(); s.log.length = 0; s.rev++; } }

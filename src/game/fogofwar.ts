@@ -114,6 +114,7 @@
 //     ray (a tripwire beam's end, the cursor's aim point) no longer meets his gun. Small, real, and invisible to the headless probes.
 //
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, LightTarget } from './game';
 import { type RtLight, packLight } from '../render/lights';
@@ -342,8 +343,8 @@ export class FogOfWar {
   stats = { frames: 0, eyes: 0, tested: 0, seen: 0, hidden: 0, smokeAsks: 0, smokeHid: 0, /** men in the picture this frame only because the squad is shooting at them (FOG.squadFire) */ byFire: 0 };
   /** FOG.squadFire's memory: each teammate's count of aimed rounds as of the last update (roomfight.ts Op.rounds) · per man fired at, when — on the module's own
    *  clock (s of update()s; never Game.time: a checkpoint load puts that back) */
-  private firedN = new WeakMap<object, number>(); private firedAt = new WeakMap<Guard, number>(); private fireClock = 0;
-  private recs = new WeakMap<Guard, Rec>();
+  private firedN = new SideMap<object, number>(); private firedAt = new SideMap<Guard, number>(); private fireClock = 0;
+  private recs = new SideMap<Guard, Rec>();
   /** per door: the angle the picture has it at, and the three boxes drawn in its place while that is not where it stands */
   private doorRecs = new Map<Door, { shown: number; ghost: Box[] | null }>();
   /** the leaves drawn as remembered this frame (what the probes read) */
@@ -382,7 +383,7 @@ export class FogOfWar {
    *  the team. A return on its first line while the switch is off. */
   update(_dt: number) {
     const F = this.frame;
-    if (!this.active) { if (F.on) { F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new WeakMap(); this.firedAt = new WeakMap(); this.fireClock = 0; this.lampRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
+    if (!this.active) { if (F.on) { F.on = false; F.count = 0; this.eyes = []; this.hiddenChars.clear(); this.pending.length = 0; this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0; this.lampRecs.clear(); F.lit = 0; F.lightCount = 0; F.full = false; this.fullClear(); } return; }
     const g = this.g; const S = this.stats; S.frames++; const frame = ++this.frameNo;
     // ---- the eyes: Sam, then the living operatives in list order (the renderer takes the first FOG_EYES; the CPU answer uses the same ones — one model)
     const eyes: FogEye[] = []; const eyeOf = (c: Character): FogEye => this.eyeOf(c);
@@ -505,7 +506,7 @@ export class FogOfWar {
   callStats = { contact: 0, heard: 0 };
   /** the module's own clock for the calls (s of update()s; never Game.time — a checkpoint load puts that back), per enemy: when he was last called · when the
    *  player's own eye last had him; per teammate: the step in his ears already told */
-  private callClock = 0; private lastCall = -1e9; private calledT = new WeakMap<Guard, number>(); private knownT = new WeakMap<Guard, number>(); private toldStep = new WeakMap<Guard, number>(); private callN = 0;
+  private callClock = 0; private lastCall = -1e9; private calledT = new SideMap<Guard, number>(); private knownT = new SideMap<Guard, number>(); private toldStep = new SideMap<Guard, number>(); private callN = 0;
   /** where `p` lies for the player's man, by the way he looks: 'front' / 'left' / 'right' / 'behind' */
   sideOf(p: Vec3): 'front' | 'left' | 'right' | 'behind' {
     const c = this.g.player.char, l = gazeOf(c), dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], d = Math.hypot(dx, dz) || 1;
@@ -560,8 +561,8 @@ export class FogOfWar {
     this.pending.length = 0;
   }
   /** A fresh encounter (Game.restartEncounter — a restart, a checkpoint load, the start of an F10 recording and of its replay): nobody has been seen, no pair asked. */
-  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.thingSince = -1; this.recs = new WeakMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new WeakMap(); this.firedAt = new WeakMap(); this.fireClock = 0;
-    this.callClock = 0; this.lastCall = -1e9; this.calledT = new WeakMap(); this.knownT = new WeakMap(); this.toldStep = new WeakMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
+  reset() { this.rawAt = -1; this.bared = false; this.lampRecs.clear(); this.doorRecs.clear(); this.doorsHeld = 0; this.thingRecs.clear(); this.thingSince = -1; this.recs = new SideMap(); this.asked.clear(); this.pending.length = 0; this.turn = 0; this.frameNo = 0; this.hiddenChars.clear(); this.firedN = new SideMap(); this.firedAt = new SideMap(); this.fireClock = 0;
+    this.callClock = 0; this.lastCall = -1e9; this.calledT = new SideMap(); this.knownT = new SideMap(); this.toldStep = new SideMap(); this.callN = 0; this.callLog = []; this.callStats = { contact: 0, heard: 0 }; }
 
   /** one eye on one living man, walls and leaves only: the game's own line-of-sight test (guards.ts eyeContact: statics and leaves against his chest AND his head,
    *  glass passed), inside the eye's field. The smoke along a clear line is update()'s second step. */

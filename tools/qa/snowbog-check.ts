@@ -54,7 +54,7 @@ export async function snowBogCheck(o: { verbose?: boolean } = {}): Promise<boole
     const items = R.g.items; const had = items.bog; if (raw) items.bog = null; SNOWBOG.on = R.sw;
     const it = items.spawn('frag', from, [v * 0.72, v * 0.7, 0], { fuse: 60, life: 60 }); it.spin = 0; it.tumbleRate = 0;
     let first: number[] | null = null, guess: number[] | null = null, n = 0;
-    for (; n < 600 && !it.settled; n++) { items.update(DT); if (!first && it.bounces > 0) { first = [...it.pos]; guess = [...fragRestGuess(R.g, it)]; } }
+    for (; n < 600 && !it.settled; n++) { items.update(DT, R.g); if (!first && it.bounces > 0) { first = [...it.pos]; guess = [...fragRestGuess(R.g, it)]; } }
     const at = [...it.pos]; items.items.splice(items.items.indexOf(it), 1); items.bog = had;
     return { first: first ?? at, at, bounces: it.bounces, frames: n, rested: it.settled, guess: guess ?? at, ran: first ? Math.hypot(at[0] - first[0], at[2] - first[2]) : 0, miss: guess ? Math.hypot(at[0] - guess[0], at[2] - guess[2]) : NaN };
   };

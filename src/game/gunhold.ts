@@ -33,6 +33,7 @@
 // standoff record itself does; no checkpoint is written with a man in Sam's arm (savestate.ts playerBusy), so nothing here is saved. The die is the game's
 // (simRandom). Seams: guards.ts standoffPerceive (gunHoldSee), standoffAlert (gunHoldFeet, gunHoldFree), standoffUpkeep (gunHoldKeeps), updateGuard's
 // suppression line (gunHoldRuns). Check: `bun run tools/qa/gunhold-check.ts` (`probes.ts gunhold`; `GUNHOLD_BREAK=1` must fail).
+import { SideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Pair, Standoff } from './guards';
@@ -83,7 +84,7 @@ type Phase = 'react' | 'plan' | 'run' | 'cover' | 'peek' | 'back' | 'flank' | 'l
 interface St { phase: Phase; goT: number; spot: Vec3 | null; low: boolean; edge: Vec3 | null; goal: Vec3 | null; planSam: Vec3 | null; planFacing: number; planT: number; peekT: number; peekEnd: number; peekFrom: number; checkT: number; runT: number; lineT: number; retryT: number; coverBad: boolean; shownT: number; bad: Vec3 | null; saidRound: boolean; }
 export interface GunHoldStats { armed: number; ran: number; noCover: number; rounds: number; noWay: number; looks: number; gone: number; lines: number; freeT: number; }
 
-const knowns = new WeakMap<object, Known>(); const states = new WeakMap<Standoff, St>(); const statsOf = new WeakMap<Game, GunHoldStats>(); const planned = new WeakMap<Game, number>();
+const knowns = new SideMap<object, Known>('gunhold.knowns'); const states = new SideMap<Standoff, St>('gunhold.states'); const statsOf = new SideMap<Game, GunHoldStats>('gunhold.statsOf'); const planned = new SideMap<Game, number>('gunhold.planned');
 export function gunHoldStats(g: Game): GunHoldStats { let s = statsOf.get(g); if (!s) { s = { armed: 0, ran: 0, noCover: 0, rounds: 0, noWay: 0, looks: 0, gone: 0, lines: 0, freeT: -1 }; statsOf.set(g, s); } return s; }
 export const GUNHOLD_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 

@@ -5,6 +5,7 @@
 // sequence on it. Deliberately small: perception, barks and shooting stay with whoever holds the script (they call say()/fireWeapon).
 // Below the runner: the first drill built on it — two men clearing a room (RoomClear), driven by a plan authored per room (level.ts, or the tour's own) —
 // and below that the live use of it: the lockdown pair clearing the rooms nearest the last fix (Clearing), which also runs the scripted men's senses.
+import { SideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, approachAngle, damp, clamp } from '../math/vec';
 import type { Game, Guard, GuardScript } from './game';
 import { isBreathing } from './game';
@@ -30,10 +31,10 @@ const FACE_WITHIN = 1.0;
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** settle watchdog per guard: the goal being settled onto, the closest he has got to it, and how long since that last improved — a mark he cannot
  *  actually reach (authored inside furniture, or someone standing on it) makes him stop short and stand rather than tread on the spot forever */
-const settleWatch = new WeakMap<Guard, { goal: Vec3; best: number; t: number }>();
+const settleWatch = new SideMap<Guard, { goal: Vec3; best: number; t: number }>('squad.settleWatch');
 /** a man the room fight walks on with his chest to a threat (GuardScript.over.walk) strafes his path, and a strafe has no stuck watchdog: where he was last
  *  seen to get somewhere, and when — wedged for over a second he walks his path the plain way (followPath's own side-step and re-path) for a while */
-const walkWatch = new WeakMap<Guard, { x: number; z: number; t: number }>();
+const walkWatch = new SideMap<Guard, { x: number; z: number; t: number }>('squad.walkWatch');
 
 /** Side-step / back-pedal along the current nav path: followPath's waypoint tolerances and easing, but the body is not turned to the path (the
  *  runner holds it on `face`) and there is no stuck watchdog. Returns true once the path is consumed. */

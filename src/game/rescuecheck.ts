@@ -33,6 +33,7 @@
 // No man is added and nobody's eyes, aim or health change; the post he walks to is his mate's own, not where the team is. No dice (the beats are the cast's
 // ids), no camera, no graphics setting, no wall clock. State per Game with its pair (rescueCheckSnapshot / rescueCheckRestore through savestate.ts).
 // Type-only game imports but for functions used inside calls (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { Vec3, v3 } from '../math/vec';
@@ -74,7 +75,7 @@ type Cast = ReturnType<Game['rescue']['cast']>;
 interface State { nextAt: number; n: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Guard | null; known: Set<Guard>;
   /** where a man who went out was going (he is looked for there, not on the post he left) */ where: Map<Guard, Vec3>;
   /** what a roamer has said of where he is going · the roamers whose letting-go this rule has seen */ worded: Map<Guard, 'noise' | 'door'>; kept: Set<Guard>; out: Out | null; events: RescueCheckEvent[] }
-const STATES = new WeakMap<Game, State>();
+const STATES = new SideMap<Game, State>('rescuecheck.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const frac = (x: number) => x - Math.floor(x);

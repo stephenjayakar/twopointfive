@@ -31,6 +31,7 @@
 //             simulation of the wind over the level's floor with the walls and door leaves as its obstacles (render/airField.ts; game/airSim.ts feeds it), so
 //             the snow runs round a wall's end, jets through a gap and curls behind a door's edge. With them on, the wisps stand back from the view's middle
 //             and ride the same air. Off: nothing is filed, no field is built, the wisps as they were. tools/qa/snowgrains-check.ts.
+import { SideMap } from '../math/side';
 import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
@@ -133,7 +134,7 @@ interface SnowState { seed: number; serial: number; birthAcc: number; pop: numbe
   gSerial: number; gAcc: number; gFill: number; gHold: number; gSeen: boolean; grains: GrainStats;
   /** ONE SNOW IN ONE AIR was in force last frame (oneAirCfg) */
   oneAir: boolean; }
-const states = new WeakMap<Game, SnowState>();
+const states = new SideMap<Game, SnowState>('snowFx.states');
 function stateOf(g: Game): SnowState {
   let s = states.get(g);
   if (!s) { s = { seed: 0x5a0f1a4e, serial: 1, birthAcc: 0, pop: 0, lastEmitted: -1, fillAt: -1, wasActive: false, bandOff: [0, 0], stats: { active: false, why: 'never run', radius: 0, centre: [0, 0], areaOut: 0, target: 0, capped: false, pop: 0, births: 0, totalBirths: 0, frames: 0 },

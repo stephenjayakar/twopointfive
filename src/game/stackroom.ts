@@ -34,6 +34,7 @@
 // turns it on for any headless tool), the shipped stand has it on; a recording carries it. Nothing here is state the game depends on: the floods are worked out
 // again from the nav grid whenever its cells change (a wall blown, furniture gone), so there is nothing to save. Nothing is rolled: no die.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
@@ -83,7 +84,7 @@ const flat = v3.distXZ, yawTo = v3.yawTo;
 /** a face's floor: per nav cell the steps of walking from the cell it was flooded from (−1: not on it) · its cells, the nearest first */
 interface Floor { seed: number; dist: Int16Array; cells: number[] }
 interface Book { nav: unknown; sig: number; doors: number; near: Uint8Array | null; floors: Map<Door, [Floor | null | undefined, Floor | null | undefined]> }
-const books = new WeakMap<Game, Book>();
+const books = new SideMap<Game, Book>('stackroom.books');
 
 /** orders.ts ORDERS.inWay: an ask made only to be looked at leaves the book as it stood. The floors and the doorway cells such an ask read for the first
  *  time are forgotten again, so the ask that later reads them for a deal reads them when it always did (a floor's seed is taken off the leaves as they stand

@@ -27,6 +27,7 @@
 //
 // DETERMINISM: no dice, no wall clock. Everything here runs off Sam's own position and the men's, inside the frame's usual order (rows → act → update).
 // (src/game is one import cycle: nothing below uses another game module's export at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, approachAngle, clamp, smoothstep } from '../math/vec';
 import type { Game, Guard, Interactable, Verb } from './game';
 import { canStand, grabVariant } from './player';
@@ -109,7 +110,7 @@ function note(g: Game, gd: Guard, what: 'take' | 'grab' | 'seat' | 'unseat', kin
 // ------------------------------------------------------------ per-game state: this frame's best offer (the ready pose reads it), the men sat down
 interface Seat { at: Vec3; face: number; hold: boolean; down: boolean }
 interface State { t: number; best: CloseOffer | null; seats: Map<Guard, Seat>; mode: Guard | null; modeD: number }
-const STATE = new WeakMap<Game, State>();
+const STATE = new SideMap<Game, State>('close.STATE');
 function stateOf(g: Game): State { let s = STATE.get(g); if (!s) { s = { t: -1, best: null, seats: new Map(), mode: null, modeD: Infinity }; STATE.set(g, s); } return s; }
 
 // ------------------------------------------------------------ the windows

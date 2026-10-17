@@ -14,6 +14,7 @@
 // The table is per VARIANT of the cast (anim/gltf.ts; game/cast.ts says who wears which) + a small per-man jitter off his id (never a die). Sam is 1 exactly; with no cast loaded
 // (the mannequin) everybody is 1; a man at 1 takes the code path as it was (the same buffers, no copy). While two bodies must register — a man in Sam's arm, a body hauled by the
 // ankles — the held one eases to 1 and back. The eased value is presentation state: not saved, not in any digest.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
 import type { Box } from '../scene/boxes';
@@ -42,7 +43,7 @@ function paired(g: Game, c: Character): boolean {
   const rec = g.guards.find(x => x.char === c) ?? g.civilians.find(x => x.char === c);
   return !!rec?.held;
 }
-const shown = new WeakMap<Character, number>();
+const shown = new SideMap<Character, number>('stature.shown');
 /** once a frame, before anything of the men is drawn: every man's scale for this frame. False with no cast loaded — nothing below is then asked. */
 export function statureTick(g: Game, men: Character[], dt: number): boolean {
   if (!g.ch.cast) return false;
@@ -80,7 +81,7 @@ export function drawnCapsules(c: Character, P: { caps: number[][]; bound: [numbe
   return { caps: P.caps.map(k => k[3] > 0 ? [X(k[0]), Y(k[1]), Z(k[2]), k[3] * s, X(k[4]), Y(k[5]), Z(k[6])] : k), bound: [X(P.bound[0]), Y(P.bound[1]), Z(P.bound[2]), P.bound[3] * s] };
 }
 type Fit = { r0: Float32Array; r1: Float32Array; pad?: number };
-const fits = new WeakMap<Character, { of: Fit; s: number; fit: Fit }>();
+const fits = new SideMap<Character, { of: Fit; s: number; fit: Fit }>('stature.fits');
 /** his round-cone fit (render/sdfrig.ts: metres in bind pose) at his drawn size */
 export function drawnFit(c: Character, fit: Fit, s: number): Fit {
   if (s === 1) return fit;

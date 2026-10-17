@@ -73,6 +73,7 @@
 // refuses such a file too rather than pour it over a living man), a body (a man's or a civilian's) still falling, a man scripted or the lockdown pair clearing
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
+import { SideMap } from '../math/side';
 import { loadSandbox } from './sandbox';
 import { Vec3, v3, quat } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -313,7 +314,7 @@ export function levelFingerprint(g: Game): SaveState['level'] {
   const fp = { fp: hashStr(s).toString(16), boxes: nBox, routes: L.routes.length, doors: L.doors.length };
   fpCache.set(g.level, fp); return fp;
 }
-const fpCache = new WeakMap<object, SaveState['level']>();
+const fpCache = new SideMap<object, SaveState['level']>('savestate.fpCache');
 function firearmSnap(w: Firearm): FirearmSnap { return { id: w.def.id, chamber: w.chamber, mag: w.mag, spare: [...w.spare], shotsFired: w.shotsFired, mode: w.mode, bursts: w.bursts, lastBurstT: w.lastBurstT }; }
 /** …and back: a reload half done is simply not (see the head: autosave never catches one; a forced save leaves the well as it stood) */
 function firearmApply(w: Firearm, s: FirearmSnap) {
@@ -585,7 +586,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   const items: Item[] = s.items.map(is => {
     const it = g.items.spawn(is.kind, is.pos, [0, 0, 0], { yaw: is.yaw, tumble: is.tumble, tumbleRate: 0, spin: 0, heading: is.heading, fill: is.fill, life: is.life, age: is.age, fired: !!is.fired, emitT: 0, who: is.who | 0, settled: true, fuse: 0, bounces: 1, radius: is.radius, restitution: is.restitution, friction: is.friction });
     it.vel = [0, 0, 0]; it.on = is.on >= 0 ? propsById[is.on] ?? null : null; it.onPose = is.onPose;
-    it.onBounce = (sp, p) => { if (sp >= 0.7) g.audio.play(is.kind === 'smoke' || is.kind === 'flash' ? 'canisterBounce' : 'magDrop', p, Math.min(1, sp / 3)); };   // (disturbed later, it clatters as any: nobody hears a checkpoint's items as fresh noise)
+    it.onBounce = (sp, p, g) => { if (sp >= 0.7) g.audio.play(is.kind === 'smoke' || is.kind === 'flash' ? 'canisterBounce' : 'magDrop', p, Math.min(1, sp / 3)); };   // (disturbed later, it clatters as any: nobody hears a checkpoint's items as fresh noise)
     return it;
   });
   // ---- Sam (restartEncounter made a fresh Player at the spawn with the rail light moved over; kit and place him)

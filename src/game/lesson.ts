@@ -19,6 +19,7 @@
 // accessor here (who()), so a second player is one place to change.
 //
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideSet } from '../math/side';
 import type { Game, Guard, Player } from './game';
 import type { LessonData, LessonStep, LessonTest, Rect } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
@@ -45,7 +46,7 @@ type TestFn = (g: Game, t: LessonTest, S: StepSeen) => boolean;
 interface TestKind { ok: TestFn; check?: (g: Game, t: LessonTest) => string | null }
 
 /** one test asked, safely: an unknown kind or a record the checker would refuse (a hand-edited file) is never true and never throws into the game's frame */
-const BAD = new WeakSet<object>();
+const BAD = new SideSet<object>('lesson.BAD');
 function passes(g: Game, t: LessonTest, S: StepSeen): boolean {
   try { return !!LESSON_TESTS[t?.is]?.ok(g, t, S); }
   catch (x) { if (!BAD.has(t)) { BAD.add(t); console.error(`lesson: test '${String(t?.is)}' threw (${(x as Error).message}) — it never passes; lesson-check names the fault`); } return false; }
@@ -237,7 +238,7 @@ export class Lesson {
     g.saves.request(g, 'lesson', this.i < L.steps.length ? `training ${this.i + 1}/${L.steps.length}` : 'training done');
   }
   private fresh(back = 0): StepSeen { const g = this.g, lg = g.orders?.log ?? [], ev = g.chronicle.events.length;
-    return { t0: g.time - back, n: new Map(), chron: ev, chron0: ev, heldAt: -1, lastOrder: lg[lg.length - 1] ?? null, lastPair: PAIR_LOG[PAIR_LOG.length - 1] ?? null, words: new Set(), heard: new WeakSet(), held: 0 }; }
+    return { t0: g.time - back, n: new Map(), chron: ev, chron0: ev, heldAt: -1, lastOrder: lg[lg.length - 1] ?? null, lastPair: PAIR_LOG[PAIR_LOG.length - 1] ?? null, words: new Set(), heard: new SideSet(), held: 0 }; }
   /** this frame's deeds into the step's counts */
   private count(S: StepSeen) {
     const g = this.g, add = (k: string) => S.n.set(k, (S.n.get(k) ?? 0) + 1);

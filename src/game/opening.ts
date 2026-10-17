@@ -14,6 +14,7 @@
 // stays up, `handedOver` says it is the player's) is still placed, and a man met long ago is never moved however he happens to stand.
 // NOT covered: the old tour's own hand-over (demo.ts — unreachable from the page), and a spot inside a prop or a shut leaf (the nav grid is the statics').
 // QA: tools/qa/opening-check.ts.
+import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import { Vec3, v3 } from '../math/vec';
 
@@ -34,11 +35,11 @@ function readUrl() {
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the men this module has already looked at (placed, or found not fresh / not in the way): each Guard object once */
-const seen = new WeakSet<Guard>();
+const seen = new SideSet<Guard>('opening.seen');
 /** game time each Guard object was first met at (under a show's flags too), and how long after it he still counts as fresh (longer than any one frame) */
-const born = new WeakMap<Guard, number>(), FRESH_SECS = 0.25;
+const born = new SideMap<Guard, number>('opening.born'), FRESH_SECS = 0.25;
 /** a route's spot, kept: the level's statics do not move, and a lap wholly inside the radius would otherwise be walked again on every restart */
-const spots = new WeakMap<object, { key: string; at: { pos: Vec3; yaw: number; wp: number } | null }>();
+const spots = new SideMap<object, { key: string; at: { pos: Vec3; yaw: number; wp: number } | null }>('opening.spots');
 
 /** metres by walking a → b over the nav grid (Infinity: no way) */
 function wayLen(g: Game, a: Vec3, b: Vec3): number {

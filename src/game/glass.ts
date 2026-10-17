@@ -11,6 +11,7 @@
 // reads this frame's 'bang' events once each; a kicked door does nothing to glass). Cracks accumulate — several hits on one pane overlap — and go with the
 // encounter: they are decals, and resetLevelState clears the decal list. Tab ▸ Renderer — glass has the knobs and a 'crack test' button; window.__glass the
 // console handles; tools/qa/glass-probes.ts the numbers.
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { PLAYER_ID } from './consts';
@@ -52,10 +53,10 @@ export function glassFxBoot(): boolean { loadGlassFx(); return GLASSFX.on; }
 
 /** per-Game glass bookkeeping (a WeakMap, like the whistle's: nothing on Game itself but the hooks) */
 interface GlassState { panes: number[]; seen: WeakSet<object>; hits: number; lastHitT: number; log: string[]; eventAt: Map<number, number>; crackAt: number; }
-const states = new WeakMap<Game, GlassState>();
+const states = new SideMap<Game, GlassState>('glass.states');
 export function glassState(g: Game): GlassState {
   let s = states.get(g);
-  if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new WeakSet(), hits: 0, lastHitT: -100, log: [], eventAt: new Map(), crackAt: -1e9 }; states.set(g, s); }
+  if (!s) { const panes: number[] = []; g.level.boxes.forEach((b, i) => { if (b.flags & BoxFlag.Glass) panes.push(i); }); s = { panes, seen: new SideSet(), hits: 0, lastHitT: -100, log: [], eventAt: new Map(), crackAt: -1e9 }; states.set(g, s); }
   return s;
 }
 

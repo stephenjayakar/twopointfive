@@ -1,5 +1,6 @@
 // Character = animated mannequin instance: locomotion/upper-body animation graph, procedural aim twist,
 // world placement, bone queries and RT proxy boxes — and, once dead, a ragdoll (ragdoll.ts) that poses the same skeleton.
+import { SideMap } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
@@ -358,7 +359,7 @@ function curve3(t: number, K: Keys3): Vec3 {
 /** sampleClip(clip, 0, false, out) for the clips the aim layer samples there every frame: that call writes fixed numbers (each track's first key, read off the clip alone —
  *  a sample never reads the pose it writes) into fixed slots, so they are found once per clip — sampled into a pose of NaNs: a slot still NaN afterwards is one the clip
  *  does not key — and replayed: the same floats into the same slots, the rest of `out` left as it stands, exactly as the sample leaves it. */
-const AT0 = new WeakMap<Clip, { at: Int32Array; v: Float32Array }>();
+const AT0 = new SideMap<Clip, { at: Int32Array; v: Float32Array }>('character.AT0');
 function sampleAt0(clip: Clip, out: Pose) {
   let e = AT0.get(clip);
   if (!e) {

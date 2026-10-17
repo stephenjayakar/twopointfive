@@ -19,6 +19,7 @@
 // hand too. A silent squad's man shuts it the same way and says his word over the net (silent.ts hush).
 // Nothing here runs unless the order is given or its row is on an open menu: no tick of the game's, no knob, no state but a WeakMap entry per man under it.
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -54,7 +55,7 @@ export const SHUTDOOR_LOG: { t: number; who: string; door: string; what: string 
 
 interface Spot { pos: Vec3; yaw: number; side: 1 | -1; far: boolean }
 interface Job { door: Door; spot: Spot; back: boolean; phase: 'go' | 'shut' | 'wait'; t0: number; t: number; pulls: number; moved: number; near?: number }
-const jobs = new WeakMap<Guard, Job>();
+const jobs = new SideMap<Guard, Job>('shutdoor.jobs');
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const ptOf = (d: Door, along: number, off: number, side: 1 | -1): Vec3 => { const F = frameOf(d); return [F.hx + F.ux * along + F.nx * side * off, 0, F.hz + F.uz * along + F.nz * side * off]; };
 const handleOf = (d: Door): Vec3 => ptOf(d, d.def.width - K.handleIn, 0, 1);
@@ -104,7 +105,7 @@ function spotsOf(g: Game, d: Door): (Spot | null)[] {
   const key = `${g.time}|${d.def.name}|${d.angle.toFixed(3)}`, hit = spotted.get(g); if (hit && hit.key === key) return hit.spots;
   const spots = [shutSpot(g, d, 1), shutSpot(g, d, -1)]; spotted.set(g, { key, spots }); return spots;
 }
-const spotted = new WeakMap<Game, { key: string; spots: (Spot | null)[] }>();
+const spotted = new SideMap<Game, { key: string; spots: (Spot | null)[] }>('shutdoor.spotted');
 /** the length of his walk to p by the walkers' grid (Infinity: no way) — the plain way: the order runner may take him a longer one round a kept-off room */
 function walk(g: Game, gd: Guard, p: Vec3): number {
   const at = gd.char.pos; if (flat(at, p) < 0.5) return flat(at, p);

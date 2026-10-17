@@ -41,6 +41,7 @@
 //   The die here is its own (mulberry32 off the room clear's seed and attempt): never Math.random. (digin.ts draws its own beats from Math.random as it always
 //   has — once `regroup` has ordered a dig-in the run is a different run; `callOut` alone never is.)
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -165,7 +166,7 @@ interface Spot { name: string; pos: Vec3 }
  *  since when he has stood still, when he last said he moved */
 interface Said { key: string; the: string; offT: number; stillAt: Vec3; stillT: number; saidT: number }
 export interface Hint { key: string; rooms: Set<string>; /** `places`: named places that are no room of the list, first named first */ spots: Spot[] }
-const STATES = new WeakMap<Game, State>();
+const STATES = new SideMap<Game, State>('laststand.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const alive = (D: Def) => D.gd.state !== 'dead';

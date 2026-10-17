@@ -29,6 +29,7 @@
 // (the stand-in reads the live sky, so the greyed sky is followed). Destruction: a wall that goes changes what the sky reaches — call
 // hourWorldChanged(g). Checkpoints carry the hour (savestate.ts `hour`), and with them the session journal (its frame 0 is a checkpoint).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, smoothstep } from '../math/vec';
 import type { Game, LightTarget } from './game';
 import type { RtLight } from '../render/lights';
@@ -128,7 +129,7 @@ interface HourState {
   box: { x0: number; x1: number; z0: number; z1: number; top: number };
   cells: Map<number, Open[]>; fine: Map<number, Open[]>;
 }
-const states = new WeakMap<Game, HourState>();
+const states = new SideMap<Game, HourState>('hours.states');
 export const SUN_NAME = 'sun', SUN_GROUP = 'hour';
 /** the hour this game stands at ('night' = the level as authored) */
 export function hourOf(g: Game): HourId { return states.get(g)?.def.id ?? 'night'; }

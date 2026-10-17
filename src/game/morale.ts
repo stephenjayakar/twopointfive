@@ -58,6 +58,7 @@
 // COUNTED and ride a checkpoint with the rest (moraleSnapshot / Restore).
 // The switch is off in the module and on the frozen stand: every seam returns on its first line, no man is met, no die is drawn — the build as it was.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard, GuardScript } from './game';
 import { TEMPERAMENT } from './game';
 import { squadOf } from './enemysquads';
@@ -120,10 +121,10 @@ const ACTS: MoraleAct[] = ['none', 'duck', 'down', 'back', 'burst', 'hold', 'bai
 interface Mind { shock: number; alone: boolean; dark: boolean; lit: number; ask: number; rung: 0 | 1 | 2; green: boolean; leaderDown: boolean; fall: number; lost: boolean; by: Guard | null; heard: number; said: boolean; brokeT: number;
   act: MoraleAct; t: number; hole: Vec3 | null; goal: Vec3 | null; rounds: number; next: number; calls: number; callT: number; baits: number; atHole: boolean; bark: number; shout: boolean;
   drive: boolean; driveT: number; script: GuardScript; }
-const stateOf = new WeakMap<Guard, Mind>();
+const stateOf = new SideMap<Guard, Mind>('morale.stateOf');
 /** a game's blasts not yet asked about (they are asked the frame after: see the head) */
 interface Blast { at: Vec3; t: number; who: number }
-const blastsOf = new WeakMap<Game, Blast[]>();
+const blastsOf = new SideMap<Game, Blast[]>('morale.blastsOf');
 
 /** THE LINES (placeholders in the register of the defenders' own — the writing pass is the maintainer's). `say` = the lines that name nobody; `he` = the
  *  `dark` / `lit` = said only by a man who stands in the one or the other (a man in a lit room does not say he cannot see); `he` = the
@@ -210,7 +211,7 @@ function bandOf(g: Game, gd: Guard): Guard[] | null {
 }
 /** the difficulty's mix, read once a tick (difficulty.ts leversShown clones two tables to answer): the enemy AI's rung — where rows under it were moved by
  *  hand and it stands on none, the rung the press being on or off implies */
-const mixAt = new WeakMap<Game, { key: string; mix: 'mixed' | 'hard' }>();
+const mixAt = new SideMap<Game, { key: string; mix: 'mixed' | 'hard' }>('morale.mixAt');
 function mixNow(g: Game): 'mixed' | 'hard' {
   const key = `${g.time}|${PRESSURE.on}|${DIGIN.on}`, had = mixAt.get(g); if (had && had.key === key) return had.mix;
   const mix = MORALE_AT[leversShown().ai ?? (PRESSURE.on ? 'hard' : 'standard')] ?? 'mixed'; mixAt.set(g, { key, mix });

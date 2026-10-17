@@ -16,6 +16,7 @@
 // AI has him. `Game.tune.needs` is the switch (default on; off = the patrol byte for byte as it was — tools/qa needs-identity holds it); NEEDS the numbers, Tab ▸
 // Sandbox, kept per machine. guards.ts calls needsPatrol from the patrol branch (his feet while a trip owns them) and game.ts needsTick once a frame (levels,
 // the deal, the interrupts); character.ts has the two tells (CharacterAnimator.tell); dialogue.ts the lines (NEEDS_LINES); chronicle.ts the 'needBreak' rows.
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { goTo, followPath, escalationOf, notGettingAnywhere } from './guards';
@@ -47,7 +48,7 @@ export function needSpot(g: Game, kind: NeedKind): NeedSpot | null {
   const Q = g.level.scenarios?.quiet; if (!Q) return NEED_SPOTS[kind] ?? null;
   const s = Q.needs?.[kind]; return s ? ownSpot(s, kind) : null;
 }
-const owned = new WeakMap<object, NeedSpot>();
+const owned = new SideMap<object, NeedSpot>('needs.owned');
 function ownSpot(s: { name: string; pos: Vec3; face: number; loop?: Vec3[] }, kind: NeedKind): NeedSpot { let o = owned.get(s); if (!o) owned.set(s, o = { kind, name: s.name, pos: s.pos, face: s.face, ...(s.loop ? { loop: s.loop } : {}) }); return o; }
 
 // ================================================================ numbers (Tab ▸ Sandbox ▸ needs rows; the kept ones persist per machine — loadNeeds / saveNeeds)
@@ -105,7 +106,7 @@ export interface Trip {
   gapBefore: number;
 }
 export interface NeedMem { needs: Need[]; trip: Trip | null; lastBackAt: number; trips: number; cancels: number; shaken: boolean; dealt: boolean; }
-const memOf = new WeakMap<Guard, NeedMem>();
+const memOf = new SideMap<Guard, NeedMem>('needs.memOf');
 function mem(gd: Guard): NeedMem { let M = memOf.get(gd); if (!M) { M = { needs: [], trip: null, lastBackAt: -1e9, trips: 0, cancels: 0, shaken: false, dealt: false }; memOf.set(gd, M); } return M; }
 /** read-only peek for the panel / the probes (null: the needs have never touched this man — the switch off, a unit, a corpse from before) */
 export function needsMem(gd: Guard): Readonly<NeedMem> | null { return memOf.get(gd) ?? null; }
@@ -115,7 +116,7 @@ export function needsTrip(gd: Guard): Readonly<Trip> | null { return memOf.get(g
 export function needsBusy(gd: Guard): boolean { return !!memOf.get(gd)?.trip; }
 
 /** per-Game: when anybody last walked off (the floor-wide gap) */
-const floorOf = new WeakMap<object, { lastDepartAt: number }>();
+const floorOf = new SideMap<object, { lastDepartAt: number }>('needs.floorOf');
 function floor(g: Game) { let F = floorOf.get(g); if (!F) { F = { lastDepartAt: -1e9 }; floorOf.set(g, F); } return F; }
 
 /** module-wide counters for the QA soak, and the last few things that happened (probes / the panel) */

@@ -15,6 +15,7 @@
 //
 // NOTHING LIVE SHOWS IN THE FOG (fogofwar.ts rule 4d; a boot's print keeps the same rule, snowTracks.ts updateSnowTracks): a thing on floor the team does not
 // see marks nothing while it is there — a furrow growing across unseen ground is the chair somebody over there just knocked. It is not caught up afterwards.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Prop } from './props';
 import type { Item } from './throwables';
@@ -58,14 +59,14 @@ export const SNOWMARKS = {
 };
 
 interface Seen { x: number; z: number; vy: number; sp: number; n: number; rest: boolean; mx: number; mz: number; marked: boolean; }
-let propSeen = new WeakMap<Prop, Float32Array>();
-let itemSeen = new WeakMap<Item, Seen>();
-let chunkSeen = new WeakMap<Chunk, Seen>();
+let propSeen = new SideMap<Prop, Float32Array>('snowMarks.propSeen');
+let itemSeen = new SideMap<Item, Seen>('snowMarks.itemSeen');
+let chunkSeen = new SideMap<Chunk, Seen>('snowMarks.chunkSeen');
 const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 const lies = (field: SnowField, x: number, z: number) => snowFieldAt(field, x, z).cover >= 0.5;
 
 /** a restart: nothing has been seen */
-export function clearSnowMarks() { propSeen = new WeakMap(); itemSeen = new WeakMap(); chunkSeen = new WeakMap(); }
+export function clearSnowMarks() { propSeen = new SideMap(); itemSeen = new SideMap(); chunkSeen = new SideMap(); }
 
 /** Once a frame, after the boots (game.ts stepSnowTracks; everything has moved): the things' marks. */
 export function updateSnowMarks(g: Game, T: SnowTracks, field: SnowField, dt: number) {

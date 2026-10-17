@@ -49,6 +49,7 @@
 // Probes: tools/qa/spotted-probes.ts. Tallies: tools/qa/pair-sneak.ts with SPOTTED=1 in the environment.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
 
+import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
@@ -114,7 +115,7 @@ interface Man {
   /** a man his hands did not reach in time is left alone until then · since when a man has really been turned (−1: none) · the last tick that read him */
   takeNo: { foe: Guard; until: number } | null; realT: number; tickT: number;
 }
-const men = new WeakMap<Guard, Man>();
+const men = new SideMap<Guard, Man>('spotted.men');
 export const SPOTTED_STATS = { wary: 0, caught: 0, calm: 0, slips: 0, freezes: 0, steps: 0, held: 0, heldUnaware: 0, keen: 0, cues: 0, braces: 0, takes: 0, taken: 0 };
 /** what changed, newest last (QA; the panel's summary) */
 export const SPOTTED_LOG: { t: number; who: string; to: SpottedMode; what: string | null; of: string | null }[] = [];
@@ -307,16 +308,16 @@ export function spottedGripped(g: Game, h: Guard): boolean { if (!SPOTTED.on) re
   for (const gd of g.guards) { if (gd.state === 'dead' || !silentMan(g, gd)) continue; const T = men.get(gd)?.take; if (T && T.foe === h && T.t0 >= 0 && g.time >= T.t0 && g.time - T.t0 < SPOTTED.takeSecs + 0.5) return true; }
   return false; }
 /** the men dropped in the last `braceSecs`: where each fell and when (per Game; the first tick only learns who is already down) */
-const drops = new WeakMap<Game, { down: WeakSet<Guard>; at: { pos: Vec3; t: number }[]; seen: boolean; t: number }>();
+const drops = new SideMap<Game, { down: WeakSet<Guard>; at: { pos: Vec3; t: number }[]; seen: boolean; t: number }>('spotted.drops');
 function fresh(g: Game): { pos: Vec3; t: number }[] {
-  let D = drops.get(g); if (!D) drops.set(g, D = { down: new WeakSet(), at: [], seen: false, t: g.time });
+  let D = drops.get(g); if (!D) drops.set(g, D = { down: new SideSet(), at: [], seen: false, t: g.time });
   if (g.time - D.t > 0.25 || g.time < D.t) { D.seen = false; D.at.length = 0; }   // (not asked for a while — loud and back, the knob — or a restart: whoever is down now is old news)
   D.t = g.time;
   for (const h of g.guards) { if (h.state !== 'dead' || D.down.has(h)) continue; D.down.add(h); if (D.seen && h.team !== 'operative') { D.at.push({ pos: [h.char.pos[0], 0, h.char.pos[2]], t: g.time }); SPOTTED_STATS.braces++; } }
   D.seen = true; while (D.at.length && (g.time - D.at[0].t > SPOTTED.braceSecs || g.time < D.at[0].t)) D.at.shift();
   return D.at;
 }
-const wrapped = new WeakSet<object>();
+const wrapped = new SideSet<object>('spotted.wrapped');
 /** Once a frame, after silent.ts has the posture and before the orders pose the men. */
 export function spottedTick(g: Game) {
   if (!SPOTTED.on || !squadSilent(g)) return;

@@ -24,6 +24,7 @@
 // hash of the burst's serial and the man's id, never Math.random.
 //
 // (No top-level statement here uses another game module's export: src/game is one import cycle — see CLAUDE.md.)
+import { SideMap } from '../math/side';
 import { wandDrop } from './wand';
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import * as fx from './effects';
@@ -237,7 +238,7 @@ export function exposedTo(g: Game, from: Vec3, feet: Vec3, head: Vec3, view: Gla
 /** the walls and cover a hand grenade bursting at `from` would open (the destruction engine's own plan, `Destruction.wallsFor`; none with FRAG.wallFlee off):
  *  a partition the burst is about to hole is no cover — the burst folds whoever it alone hides (FRAG.wallStun), or with that off hits him through the hole.
  *  The plan is asked once a tick for a point (a flee asks it of every spot it weighs, from the one rest guess), and again when a wall has opened since. */
-const WALLS_FOR = new WeakMap<Game, { time: number; serial: number; at: Map<string, readonly WallOpening[]> }>();
+const WALLS_FOR = new SideMap<Game, { time: number; serial: number; at: Map<string, readonly WallOpening[]> }>('frag.WALLS_FOR');
 const NO_WALLS: readonly WallOpening[] = [];
 function wallsFor(g: Game, from: Vec3): readonly WallOpening[] {
   if (!FRAG.wallFlee) return NO_WALLS;
@@ -250,7 +251,7 @@ function wallsFor(g: Game, from: Vec3): readonly WallOpening[] {
 }
 /** the leaves bursts have taken off on this very tick, per Game: they still stand in their frames until the doors are next stepped (two grenades on one door in
  *  one tick: the second is not shielded by the leaf the first took) */
-const TORN = new WeakMap<Game, { time: number; doors: { off: boolean; box: Box }[] }>();   // (the doors, not their boxes: a load on the same tick hangs a leaf again, and `off` says so)
+const TORN = new SideMap<Game, { time: number; doors: { off: boolean; box: Box }[] }>('frag.TORN');   // (the doors, not their boxes: a load on the same tick hangs a leaf again, and `off` says so)
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const sameSide = (a: Team, b: Team) => a === b || (a === 'player' && b === 'operative') || (a === 'operative' && b === 'player');
 
@@ -386,8 +387,8 @@ export function fragFuse(g: Game, it: Item, dt: number) { if (it.fired) return; 
 /** One live grenade's book: who knows of it and from when, who has shouted, where each man in its line is going. */
 interface Live { it: Item; side: Team; knows: Map<Guard, number>; shouted: Set<Team>; flee: Map<Guard, GuardScript | null>; /** FRAG.fleeDoor: on the leg round an open leaf's end, the way out still to be dealt */ via?: Set<Guard>; /** where it was (or was coming down) when each man's legs were dealt: it moves a metre on and they are dealt again */ fleeAt: Map<Guard, Vec3>; dealT: Map<Guard, number>; /** counted once in FRAG_STATS.fled */ counted: Set<Guard>; /** Sam has been told of it (a hostile one he can see, or hear land) */ cued: boolean; /** FRAG.fleeWise: where it will rest and the floor it has yet to cross, as last reckoned (restOf) */ rest?: Rest; /** FRAG.fleeWise: where and when each man on a leg last made ground (a man stood behind a mate in a corner is dealt another leg) */ made?: Map<Guard, { at: Vec3; t: number }>; }
 /** men who heard the other side shout a grenade out, and until when it keeps them listening for it (fragThrowTick sets it; the notice test below reads it) */
-const warned = new WeakMap<Guard, number>();
-const books = new WeakMap<Game, Live[]>();
+const warned = new SideMap<Guard, number>('frag.warned');
+const books = new SideMap<Game, Live[]>('frag.books');
 const booksOf = (g: Game) => { let b = books.get(g); if (!b) { b = []; books.set(g, b); } return b; };
 /** forget every live grenade's book (a restart, a load): nobody is left running from something that is no longer there */
 export function fragReset(g: Game) { defBooks.delete(g); const B = books.get(g); if (!B) return; for (const L of B) for (const gd of L.flee.keys()) { gd.path = []; gd.pathGoal = null; } B.length = 0; }
@@ -734,7 +735,7 @@ export function fragStepOff(g: Game, speed = 3.2): Vec3 | null {
 // ---------------------------------------------------------------- defenders' own frags
 interface Carrier { gd: Guard; frags: number; blockedT: number; bunchT: number; tryAt: number; wind: { until: number; at: Vec3; swung: boolean; lastT: number; /** another rule asked for the throw (fragThrowAt): the hand it was meant to leave — his arm round the corner he stands behind — and the point that arm goes toward (if he is no longer by that hand at the release, his arm goes round toward it from where he is) */ hand?: Vec3; toward?: Vec3 } | null; /** grenades that have left his hand */ away?: number; /** the open spots by a place another rule last asked him to throw at, kept a second (they do not depend on his hand) */ spots?: { at: Vec3; from: Vec3; t: number; list: Vec3[] } }
 interface DefBook { men: Guard[]; carriers: Carrier[]; lastT: number; serial: number; thrown: number; }
-const defBooks = new WeakMap<Game, DefBook>();
+const defBooks = new SideMap<Game, DefBook>('frag.defBooks');
 const defendersOf = (g: Game) => g.guards.filter(gd => gd.team === 'hostile' && !!gd.unit);
 /** deal the floor's frags: one defender in `defShare`, at most `defMax`, picked by a hash of the men's ids (never Math.random) — the same men every run of a seed */
 function dealCarriers(g: Game, was?: DefBook): DefBook {
@@ -773,7 +774,7 @@ export function fragThrowTick(g: Game, dt: number) {
       if (!lands(sol, Wd.at, 2) || !ownClear(g, gd, sol.land, true) || hostageNear(g, sol.land)) {   // (a mate has come into its reach, or he has lost the arc: it stays in his hand, he says so, and the floor's clock is as it was before he shouted)
         B.lastT = Wd.lastT; C.tryAt = g.time + 2; g.say(gd, w('no — holding it!', 'no — hold it!')); FRAG_STATS.held++; continue; }
       const it = g.items.spawn('frag', from, sol.v0, { fuse: F.defFuse, who: c.id, heading: v3.yawOf(sol.v0) });
-      it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
+      it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
       C.frags--; C.away = (C.away ?? 0) + 1; B.thrown++; FRAG_STATS.theirs++;
       continue;
     }

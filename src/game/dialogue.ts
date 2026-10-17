@@ -31,6 +31,7 @@
 //   token went null mid-hold, a synthetic context nothing fits. lintDialogue() holds every speaker to the same rules: ≤ MAX_CHARS (aim ≤ AIM_CHARS) after the
 //   longest token expansion, Sam ≤ SAM_MAX_CHARS, tokens only from TOKENS, needs only from NEEDS, and not one phrase off the ORIGINALITY_BLOCKLIST.
 // ============================================================================================================================================================
+import { SideMap } from '../math/side';
 import { v3, approachAngle } from '../math/vec';
 import type { Vec3 } from '../math/vec';
 import type { Level } from '../scene/level';
@@ -357,7 +358,7 @@ export { hashStr };
 
 // ---------------------------------------------------------------- names: rooms, routes, doors, numbers
 type Rect = { name: string; x0: number; x1: number; z0: number; z1: number };
-const roomRects = new WeakMap<Level, { rooms: Rect[]; building: Rect; office: boolean }>();
+const roomRects = new SideMap<Level, { rooms: Rect[]; building: Rect; office: boolean }>('dialogue.roomRects');
 /** the office level's open areas, which no clear plan bounds (level.ts: corridor z 10‥12.2, lobby x 4‥12, cubicle farm x 12‥28, break room x 28‥36, all z 12.2‥24; walls x 4‥36, z 4‥24) — used only when the level IS that office (its three route names); any other level is named by its own data (levelRects) */
 const OFFICE_AREAS: Rect[] = [{ name: 'the corridor', x0: 4, x1: 36, z0: 10, z1: 12.2 }, { name: 'the lobby', x0: 4, x1: 12, z0: 12.2, z1: 24 }, { name: 'the cubicles', x0: 12, x1: 28, z0: 12.2, z1: 24 }, { name: 'the break room', x0: 28, x1: 36, z0: 12.2, z1: 24 }];
 /** WHERE, for a line on the net ('— the mess', 'from outside the store': NOT a noun to put after 'in' — roomName below is that, and every dialogue template
@@ -370,7 +371,7 @@ export interface PlaceRect extends Rect { id: string | null }
 /** the level the game was written on (its three patrol routes): the one floor the office's own room tables below, and chronicle.ts's, are true of */
 export const isOffice = (level: Level) => ['corridor', 'cubicles', 'lobby_break'].every(n => level.routes.some(r => r.name === n));
 const withThe = (n: string) => /^the |\d$/.test(n) ? n : `the ${n}`;
-const ownRects = new WeakMap<Level, PlaceRect[] | null>();
+const ownRects = new SideMap<Level, PlaceRect[] | null>('dialogue.ownRects');
 /** THE LEVEL'S OWN NAMES for its floor, first match wins: its structure's rooms (scenarios.roomClear), its clear plans' rooms, then the places nobody holds
  *  (scenarios.places — scene/scenarios.ts PlacesData). null on the office (its names are roomName's tables: the level the game was written on) and on a level
  *  that names nothing. */
@@ -512,7 +513,7 @@ export interface DialogueCtx {
   time: number;
   recent: Map<string, number> | null;              // line id → game time anybody last said it (floor-wide staleness), null for synthetic contexts
 }
-const recentByGame = new WeakMap<object, Map<string, number>>();
+const recentByGame = new SideMap<object, Map<string, number>>('dialogue.recentByGame');
 /** seconds within which a line another man said counts as stale for everybody (× RECENT_W) */
 const RECENT_SECS = 90, RECENT_W = 0.25;
 
@@ -909,7 +910,7 @@ export const SAM_LINES: SamLine[] = [
 /** Sam's memory of his own lines (per Game): id → the game time he last said it, and the very last. A line said within SAM_RECENT_SECS stays out while
  *  anything else fits — across men too: the next man grabbed does not hear the same opener — and the last one is never said twice running. */
 export interface SamMemory { said: Map<string, number>; last: string | null; }
-const samMemByGame = new WeakMap<object, SamMemory>();
+const samMemByGame = new SideMap<object, SamMemory>('dialogue.samMemByGame');
 export function samMemoryOf(g: object): SamMemory { let m = samMemByGame.get(g); if (!m) { m = { said: new Map(), last: null }; samMemByGame.set(g, m); } return m; }
 const SAM_RECENT_SECS = 150;
 export interface SamPick {
@@ -1256,8 +1257,8 @@ export interface Script {
   pin?: IntelKind;                // the useful thing the script is built round: dealt only while it is the FIRST thing pending, and given first at his giving press
   beats: Record<StageKey, Beat>;
 }
-const scriptByTalk = new WeakMap<Talk, Script | null>();
-const forcedByTalk = new WeakMap<Talk, string | null>();
+const scriptByTalk = new SideMap<Talk, Script | null>('dialogue.scriptByTalk');
+const forcedByTalk = new SideMap<Talk, string | null>('dialogue.forcedByTalk');
 /** QA: make this man's NEXT deal a named script (or null = the pools), whatever would have been dealt. Cleared by the deal it forces. */
 export function forceScript(talk: Talk, id: string | null) { scriptByTalk.delete(talk); forcedByTalk.set(talk, id); }
 /** the deal forced on this man and not yet made (a checkpoint carries it on: game/savestate.ts), undefined = none pending */
@@ -1694,7 +1695,7 @@ export const HANDLER_LINES: Record<HandlerBeat, { h: string; s: string; hOwn?: s
   ],
 };
 interface RadioState { run: object | null; done: Set<HandlerBeat>; queue: { at: number; beat: HandlerBeat }[]; reply: { at: number; text: string } | null; lastAt: number; esc: number; blackout: boolean; found: number; }
-const radioByGame = new WeakMap<object, RadioState>();
+const radioByGame = new SideMap<object, RadioState>('dialogue.radioByGame');
 function radioState(g: Game): RadioState {
   let R = radioByGame.get(g); if (!R) { R = { run: null, done: new Set(), queue: [], reply: null, lastAt: -100, esc: 0, blackout: false, found: 0 }; radioByGame.set(g, R); }
   if (R.run !== g.mission) { R.run = g.mission; R.done.clear(); R.queue.length = 0; R.reply = null; R.lastAt = -100; R.esc = escalationOf(g); R.blackout = g.blackout.active; R.found = g.guards.filter(x => x.found).length; }   // a fresh run (restartEncounter makes a new Mission): every beat may sound again, and the edges start from where the floor stands
@@ -1957,7 +1958,7 @@ export const SNATCH_LINES = {
 export function snatchLines(): string[] { return Object.values(SNATCH_LINES).flat(); }
 
 interface AmbientState { next: number; run: AmbientRun | null; played: Map<string, number>; count: number; }
-const ambientByGame = new WeakMap<object, AmbientState>();
+const ambientByGame = new SideMap<object, AmbientState>('dialogue.ambientByGame');
 export function ambientState(g: Game): AmbientState { let S = ambientByGame.get(g); if (!S) { S = { next: -1, run: null, played: new Map(), count: 0 }; ambientByGame.set(g, S); } return S; }
 function ambientLive(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.puppet && !g.touring && escalationOf(g) === 0 && !g.alarm.episode && !g.blackout.active && !g.player.holding && !g.player.down; }
 /** a calm patrolling staff man with nothing on his hands or his mind, not already talking, not held still by anybody's script */

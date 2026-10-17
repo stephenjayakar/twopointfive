@@ -21,6 +21,7 @@
 //
 // Nobody notices a lens; it files no sound; no dice; nothing reads the camera. No state in a checkpoint: an order is not saved (a checkpoint is refused
 // with a squad on the floor), and after a load he simply is not looking.
+import { SideMap } from '../math/side';
 import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Input } from './input';
@@ -50,7 +51,7 @@ interface Job {
   knelt: boolean;
 }
 interface State { jobs: Map<Guard, Job> }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('wandorder.states');
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
 const live = (g: Game) => WAND.on && WAND.mate && g.fogOfWar.active;

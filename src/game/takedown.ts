@@ -26,6 +26,7 @@
 //
 // State: none of its own. The animator's clocks are its own (as every layer's: not in a checkpoint — a load mid-blow finds the men as the game has them); a
 // fall's guide lives on the falling Character and a save waits for a body still falling, as it always did.
+import { SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import type { BlowStyle, Character, FallStyle } from './character';
 import { HOLD_SHOW } from './character';   // (written inside takedownTick only: the game's one import cycle)
@@ -142,7 +143,7 @@ export function partnerFall(g: Game, foe: Guard, front: boolean, mate?: Guard) {
 }
 
 /** games with a body that breathes (so that the switch thrown off lets every one of them go, once, and then costs nothing) */
-const BREATHING = new WeakSet<Game>();
+const BREATHING = new SideSet<Game>('takedown.BREATHING');
 /** once a frame (game.ts): who breathes — every man and civilian out cold; nobody with the switch off or under a show (a body's breath stops where it is) */
 export function takedownTick(g: Game) {
   HOLD_SHOW.kill = live(g, 'kill'); HOLD_SHOW.beats = live(g, 'chokeBeats');   // (the fallback for a pose that does not say: the hold's layers have no Game to ask)

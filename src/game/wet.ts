@@ -14,6 +14,7 @@
 // model: a searcher noticing wet prints): a soaked man come indoors DRIPS for a few seconds (GPU water-drop particles off his hands and hem, particleFx's
 // 'debris' kind — nothing with the particles off) and leaves WET FOOTPRINTS, a 'wetprint' decal per step for his next WET.prints steps, fainter each step,
 // each fading out over WET.printFadeSecs (decals.wgsl wetPrintMark; nothing with the decals off).
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -47,11 +48,11 @@ export const WET: WetKnobs = { ...WET_DEFAULTS };
 
 /** per-character bookkeeping that is nobody else's business: the cached sky test, Sam's print budget and drip clock */
 interface WetMem { skyT: number; open: boolean; printsLeft: number; lastOutWetT: number; dripAcc: number; }
-const mem = new WeakMap<Character, WetMem>();
+const mem = new SideMap<Character, WetMem>('wet.mem');
 const memOf = (c: Character): WetMem => { let m = mem.get(c); if (!m) { m = { skyT: -1, open: true, printsLeft: 0, lastOutWetT: -1e9, dripAcc: 0 }; mem.set(c, m); } return m; };
 /** the prints this module placed, with when: aged (param) and retired here, cleared with every other mark by resetLevelState */
 interface PrintRec { d: Decal; t0: number; k0: number; }
-const prints = new WeakMap<Game, { list: PrintRec[]; ageT: number }>();
+const prints = new SideMap<Game, { list: PrintRec[]; ageT: number }>('wet.prints');
 const printsOf = (g: Game) => { let p = prints.get(g); if (!p) { p = { list: [], ageT: 0 }; prints.set(g, p); } return p; };
 /** counters for the panel / probes */
 export const WET_STATS = { skyTests: 0, prints: 0, drips: 0 };

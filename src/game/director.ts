@@ -40,6 +40,7 @@
 // c.doors.kickSpot(door, by) reads where that kick is thrown from; c.order(u, { aimAt: unit }) now TRACKS that man (his chest re-read every tick into the ordered aim
 // point until the next aim order — a muzzle that stays on a moving man), and { flinch: true } lets a choreographed man start at rounds past him (game.ts GuardScript.flinch,
 // suppression.ts: the anim alone). Bursts already were real rounds (stimulus.burst); the firefight is those, ordered.
+import { SideSet } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, DEG, damp, wrapAngle, smoothstep } from '../math/vec';
 import { mulberry32 } from '../math/dice';
@@ -403,7 +404,7 @@ export class Director {
   onProgramEnd: ((name: string, finished: boolean) => void) | null = null;
   frame: DirectorFrame | null = null;
   private cam: FollowCamera | null = null; private input: Input | null = null;
-  private serial = 0; private seen = new WeakSet<GameEvent>(); private exiting = false;
+  private serial = 0; private seen = new SideSet<GameEvent>(); private exiting = false;
   /** c.press / c.click land here and go into the Input at the top of the NEXT Game.update (injectInput): the tick runs after updatePlayer / updateInteract have read this frame's input, and
    *  main.ts clears the edge sets at the end of the frame — pressed there and then, a beat's key would reach nobody */
   private dueKeys = new Set<string>(); private dueClicks = 0;
@@ -943,7 +944,7 @@ export class Director {
           const gd = this.guardOf(R, o.by); const hand = gd.char.jointUnder('handL') ?? v3.add(gd.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(1.0, hand[1]), hand[2]];
           const to = this.placeOf(at); const sol = g.items.solve(from, [to[0], 0, to[2]], 9);
           const it = g.items.spawn(o.kind ?? 'flash', from, sol.v0, { fuse: o.fuse ?? 1.2, who: gd.char.id, heading: v3.yawOf(sol.v0) });
-          it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);
+          it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);
           this.push({ beat: b.name, kind: 'stimulus', what: `charge ${o.kind ?? 'flash'}`, data: { by: o.by.callsign, at: [+to[0].toFixed(2), 0, +to[2].toFixed(2)] } });
         },
         burst: (u, at, rounds, o = {}) => {

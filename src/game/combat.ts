@@ -368,8 +368,7 @@ export function dropFromHand(g: Game, c: Character, kind: 'torch' | DropKind, al
   const v: Vec3 = [c.vel[0] * 0.6 + dir[0] * 1.1 + (simRandom() - 0.5) * 0.6, 0.9 + simRandom() * 0.6, c.vel[2] * 0.6 + dir[2] * 1.1 + (simRandom() - 0.5) * 0.6];
   const it = g.items.spawn(kind, [h[0], Math.max(0.25, h[1]), h[2]], v, { who: c.id, fill: suppressed ? 1 : 0, heading: v3.yawOf(along), yaw: v3.yawOf(along), life: kind === 'torch' ? 90 : GUN_ITEM_LIFE });
   if (kind === 'rifle') { it.tumbleRate *= 0.55; it.spin *= 0.5; }   // 0.7 m and 2.7 kg of it: it turns over on the way down, it does not flick round like a pistol
-  let clatters = 0;
-  it.onBounce = (sp, p) => { if (sp < 0.7) return; g.audio.play('magDrop', p, Math.min(1, sp / 3) * (quiet ? 0.5 : 1), { rate: kind === 'pistol' ? 0.72 : kind === 'rifle' ? 0.6 : 0.85 }); if (!quiet && clatters++ < 2) g.events.push({ kind: 'prop', pos: v3.copy(p), time: g.time, loud: false, level: Math.min(0.5, 0.2 + sp * 0.08), who: 0 }); };   // who 0: nobody living made it — a clatter the room cannot explain (a guard-attributed noise would be shrugged off)
+  it.onBounce = (sp, p, g, it) => { if (sp < 0.7) return; g.audio.play('magDrop', p, Math.min(1, sp / 3) * (quiet ? 0.5 : 1), { rate: kind === 'pistol' ? 0.72 : kind === 'rifle' ? 0.6 : 0.85 }); if (!quiet && (it.clatters = (it.clatters ?? 0) + 1) <= 2) g.events.push({ kind: 'prop', pos: v3.copy(p), time: g.time, loud: false, level: Math.min(0.5, 0.2 + sp * 0.08), who: 0 }); };   // who 0: nobody living made it — a clatter the room cannot explain (a guard-attributed noise would be shrugged off)
   return it;
 }
 /** seconds a dropped gun lies there, sidearm or rifle (a torch goes sooner: 90) */
@@ -550,7 +549,7 @@ export function beamBoxes(g: Game, from: Vec3, dir: Vec3, L: number, out: Box[],
 }
 
 export function updateItems(g: Game, dt: number) {
-  g.items.update(dt);
+  g.items.update(dt, g);
   for (const it of g.items.items) {
     if (it.kind === 'smoke') {
       if (!it.fired) { it.fuse -= dt; if (it.fuse <= 0) { it.fired = true; startCanister(g, it); } }
@@ -671,5 +670,5 @@ export function detonateStun(g: Game, it: Item, borrowed = false, sam?: { side?:
 export function dropThrowable(g: Game, kind: ThrowKind, p: Vec3) {
   const from = g.player.char.pos; const heading = v3.yawTo(from, p);
   const it = g.items.spawn(kind, [p[0], Math.max(p[1], 0) + 0.25, p[2]], [Math.sin(heading) * 0.5, 0, Math.cos(heading) * 0.5], { fuse: kind === 'frag' ? FRAG.fuse : 0.35, heading });   // (a frag dropped from the panel keeps its whole fuse: time to get clear, and for the room to react)
-  it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
+  it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
 }

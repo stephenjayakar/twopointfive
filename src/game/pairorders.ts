@@ -26,6 +26,7 @@
 //   once a guard is suspicious. The stalk's own pace and crouch are knobs here until that part gives him a sneaking grade to read.
 //
 // No module-level table is built from another game module's exports (src/game is one import cycle): PAIR is a plain literal, the rows are made in seat().
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Input } from './input';
 import { v3, type Vec3 } from '../math/vec';
@@ -131,15 +132,15 @@ interface Job {
 export class PairOrders {
   private jobs = new Map<Guard, Job>();
   /** where each defender MOSTLY looks (his facing eased over ~6 s: the back a takedown goes for) and whether he is glancing off it right now */
-  private habit = new WeakMap<Guard, [number, number]>();
-  private glance = new WeakMap<Guard, { on: boolean; endT: number; h0?: [number, number] }>();
+  private habit = new SideMap<Guard, [number, number]>();
+  private glance = new SideMap<Guard, { on: boolean; endT: number; h0?: [number, number] }>();
   /** seconds a defender has stood where he is (0 while he walks) · how far (rad) his look has lately swung off the way he mostly faces, standing */
-  private stood = new WeakMap<Guard, number>();
-  private swept = new WeakMap<Guard, number>();
-  private dark = new WeakMap<Guard, { checkT: number; litT: number; saidT: number }>();
+  private stood = new SideMap<Guard, number>();
+  private swept = new SideMap<Guard, number>();
+  private dark = new SideMap<Guard, { checkT: number; litT: number; saidT: number }>();
   private darkMemo = new Map<string, { t: number; spot: Vec3 | null }>();
   /** the way each man is on to a back, under pairup.ts oneEye (stalk keeps it while it reads unseen) */
-  private ways = new WeakMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
+  private ways = new SideMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
   private seated = false; private goSeated = false; private handsWas = false;
   constructor(private g: Game) {
     const S = g.orders; flags();
