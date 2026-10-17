@@ -58,6 +58,10 @@ const PRESS_SECS = 0.08, DRIVEN_SECS = 0.25, DRIVEN_VEL = 0.5;
  *  (scene/doorSize.ts) that hand is the room there is: a 0.86 m leaf square open against a side wall leaves 0.83 m less its own thickness to walk through, and
  *  a man held a hand off it had 7 cm of it to find — he touched it, and a keyed man who touches a leaf on its stop takes it shut (the yank below). */
 const STOP_BODY = 0.3;
+/** (DoorContact.round) the back of a leaf standing open clear of its doorway, to a man who goes round it: he is moved along it toward its free end at
+ *  `ROUND_SLIDE` m/s (a walk); `ROUND_SECS` of men pressed on one leaf's back without a let-up (Door.pressT) and there is no way round (a wall by its tip, a
+ *  man in the gap): it turns under him as it does under anyone. Never a leaf turning faster than `ROUND_STILL` rad/s: that one is in somebody's hand. */
+const ROUND_SLIDE = 1.5, ROUND_SECS = 1.2, ROUND_STILL = 1.0;
 /** a shove written the wrong way on a leaf standing less open than this means OPEN IT (it is mirrored: the writers — doortools, the drills, qrf, kickIn — all
  *  shove a leaf they do not count open yet, up to 1.2‥1.4 rad, away from the man); on one standing wider it is a shove toward shut, and stays */
 const SHOVE_OPENS_BELOW = 1.2;
@@ -119,6 +123,9 @@ export interface DoorContact { pos: Vec3; radius: number; bash: boolean; who: nu
   /** a man of the AI who opens doors by the HANDLE (handleside.ts — game.ts sets it): his body against a leaf on the face it opens into is not his hand on it — the
    *  leaf is a wall to him, as it is to anyone for PRESS_SECS, until he has leaned on it this many seconds (wedged against it with no other way: then as before) */
   hand?: number;
+  /** a man who walks ROUND a leaf standing open across his way (doorway.ts DOORMANNERS.leafRound — game.ts sets it for Sam's squad): pressed on its back at a
+   *  walk he does not turn it toward shut, he goes along it and round its free end (ROUND_*) */
+  round?: boolean;
   /** a RUN at a door that has weight (sprintdoor.ts — game.ts sets it on a sprinting player while SPRINTDOOR is live; absent = every contact as it was): the
    *  rad/s a leaf leaves his shoulder at when he runs it open from its push face, and the rad/s + loudness of one he rips round by the handle from the face it
    *  opens toward (instead of the 7.5 haul at a bash's full noise). bashed / ripped (out): the leaf he did that to this frame (the last of each, where two
@@ -317,6 +324,8 @@ export class Doors {
   staged: () => boolean = () => false;
   /** DOORSTAY as it applies right now: leaves stay where they are left */
   get stay(): boolean { return DOORSTAY.on && !this.staged(); }
+  /** (DoorContact.round) how many times a leaf's back has been gone round — one for each unbroken press of it (checks read it) */
+  rounds = 0;
   /** does this leaf's hydraulic closer work (what waits on a door swinging to by itself asks this, never def.closer) */
   hasCloser(d: Door): boolean { return !this.stay && d.def.closer !== false; }
 
@@ -412,6 +421,16 @@ export class Doors {
                 if (bit) { d.passers |= bit; here |= bit; }
                 break;
               }
+            }
+            // (DoorContact.round) the same man behind a leaf standing WIDER than that, in nobody's hand: it used to turn toward shut under him — across the doorway
+            // the man ahead of him had just opened, who then pulled it again while the rest of the file pressed it back on him. He goes round it instead: the leaf
+            // is a wall to him and he is moved along it toward its free end, where its edge passes him as it does any keyed man (below). The leaf counts the
+            // press as any other (pressT — saved with it): ROUND_SECS of men against its back without a frame's let-up and there is no way round — it turns
+            // under him as before, and below that angle it is his to pull at once. Never one somebody is pulling to (closing).
+            if (c.round && ow && this.stay && !c.bash && !d.latched && !d.closing && sgn * S < 0 && d.angle * S >= Math.min(1.35, 0.8 * Math.abs(S > 0 ? d.maxA : d.minA)) && Math.abs(d.vel) < ROUND_STILL && d.openT >= DRIVEN_SECS) {
+              if (!pressed && d.pressT === 0) this.rounds++;
+              pressed = true;
+              if (d.pressT < ROUND_SECS) { d.vel *= 0.5; const k = shove(pen, dt, true) / Math.max(dist, 1e-4), sl = ROUND_SLIDE * dt; c.pos[0] += qx * k + u[0] * sl; c.pos[2] += qz * k + u[1] * sl; break; }   // (vel: a body soaks up a coasting leaf, as below)
             }
             const maxTurn = TURN_RATE * dt; const raw = sgn * (pen / lever) * 1.05, capped = Math.abs(raw) > maxTurn;   // a body pressed on the leaf right by its hinge whipped the tip through half a radian in one frame — and flung whoever stood in that arc a foot: a quarter radian a frame is already faster than any kick, the rest of the push waits a frame
             const want = d.angle + (capped ? Math.sign(raw) * maxTurn : raw);

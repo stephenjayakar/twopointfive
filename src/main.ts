@@ -1,4 +1,4 @@
-import { kitViewOn, kitViewStart, kitViewFatal, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
+import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
 import { Menu, loadSandbox, bootCard, SHOWCASE_BUTTONS } from './ui/menu';
 import { optionsOpen, openOptions } from './ui/options';
 import { TABKEY, tabFromQuery } from './ui/tabkey';
@@ -453,7 +453,7 @@ async function main() {
     if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { quitShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && !BACKKEY.tab && game.escape()) { e.preventDefault(); return; } if (BACKKEY.tab) input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (BACKKEY.tab, game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc during either showcase quits it to the start card — the maintainer, 08-13)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
   tape?.stood(game);   // (a tape: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
-  { const dress = kitSetUp ? kitViewSetDress(q) : null; if (dress) { setSuitAs(dress.suit); KITANIM.sling = dress.sling; } }   // (?kitview on a bespoke set of a QUIET mission or the solo night: the men dressed as that mission's are, the rifle across the back — this window's own modules, an iframe's; a loud mission's set and every other page: nothing said)
+  { const dress = kitSetUp ? kitViewSetDress(q) : null; if (dress) { setSuitAs(dress.suit); KITANIM.sling = dress.sling; } else if (kitViewOn && kitViewQuietOf(q)) KITANIM.sling = 2; }   // (?kitview on a bespoke set of a QUIET mission or the solo night: the men dressed as that mission's are, the rifle across the back — this window's own modules, an iframe's; a loud mission's set and every other page: nothing said)
   const booted = scenarioFromUrl(kitSetUp ? kitViewSetQuery(q) : q, game);   // (?kitview on a bespoke set: the picture is a room clear whatever the mission's kind — host/kitViewSet.ts; never otherwise)
   tape?.tables();
   // Esc ▸ 'Quit to scenarios' (and the down card's): the scenario stopped — its cast gone, the shift back, a fresh night — its flags off the URL, the start
@@ -1014,6 +1014,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   if (q.has('doorclosers')) DOORSTAY.on = false;
   // ?nohandleside: the AI's men open doors with their bodies wherever their walk meets the leaf, as before handleside.ts (for a visit: not kept). __handle: the switch, its rules, the counters
   if (q.has('nohandleside')) HANDLE.on = false;
+  if (q.get('leafround') === '0') DOORMANNERS.leafRound = false;   // ?leafround=0: a teammate walks into the back of a leaf standing open across his walk, as before (for a visit: not kept; its Tab row keeps its own)
   if (q.has('nodoormanners')) DOORMANNERS.on = false;   // ?nodoormanners: nobody waits or steps aside at a doorway, as before doorway.ts (for a visit: not kept; the Tab rows under the squad's feel keep theirs)
   (window as any).__handle = { get on() { return HANDLE.on; }, set on(v: boolean) { HANDLE.on = !!v; }, knobs: HANDLE, stats: HANDLE_STATS };
   (window as any).__doors = { get stay() { return DOORSTAY.on; }, set stay(v: boolean) { DOORSTAY.on = !!v; }, get exitsOut() { return DOORWAY.exitsOut; }, set exitsOut(v: boolean) { DOORWAY.exitsOut = !!v; }, swings: () => game.doorSwings, list: () => game.doors.list.map(d => ({ name: d.def.name, angle: +d.angle.toFixed(3), latched: d.latched, locked: d.locked, closing: d.closing })) };

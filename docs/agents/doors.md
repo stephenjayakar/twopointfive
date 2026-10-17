@@ -72,6 +72,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page's default (on) back unless `--set '{"DOORSTAY":{"on":false}}'`. Older text in this file about a closer 'waking' or a door 'springing locked behind him' describes the switch OFF.
   QA: `probes.ts stay-open` (tools/qa/doorstay-probes.ts: wait = every door of 11 levels opened four ways and left three minutes / off / lock / seal / save / edge / pass / floor;
   all but the long wait, plus `stay-open-wait-quick`, in `gate.sh doors`).
+- **A teammate at a walk goes round a leaf standing open across his way** (`DOORMANNERS.leafRound`, src/game/doorway.ts `roundsLeaves`; the doing is
+  doors.ts `DoorContact.round`, `ROUND_*`; 10-17). A door that opens out into a corridor stands across it once pulled open, and the path knows no leaf: the
+  file behind the man who opened it walked into the leaf's back and turned it to its frame, across the doorway, onto the man ahead, who pulled it again
+  while the rest pressed it back on him (the registry's copy room with four behind Sam: about ten seconds on a door Sam had just opened, and the first man
+  gave up and went round by the gallery — `registry-walk` red on the shipped stand). Now the back of a leaf standing open clear of its doorway (the angle
+  at which a press from behind no longer pulls it: 1.35 rad or four fifths of its stop) and in nobody's hand (`ROUND_STILL`) is a wall to a teammate on
+  the move (`ROUND_PACE`; never at a run into it): he is moved along it toward its free end at a walk (`ROUND_SLIDE`) and its edge passes him there as it
+  passes any keyed man. `ROUND_SECS` (1.2 s) of men pressed on its back without a let-up (the leaf's own `pressT`, so it is in a saved game) = no way
+  round (a wall by its tip, a man in the gap): it turns under him as before, and is his to pull at once. Never a leaf somebody is pulling to. A man stood by a leaf (on his mark) is not walked along it; Sam and the staff are as they were. ON in the page under the doorway manners
+  (`?leafround=0` for a visit, `?nodoormanners` takes the whole table off; Tab ▸ 'doors ▸ round an open leaf', kept per machine); it needs the one-way
+  doors and doors that stay as left, so the frozen stand has it only with all three raised (`QA_DOORMANNERS=1 QA_DOORSTAY=1 ONEWAY=1`); off = the leaf
+  turns under him, as it was; a recording from before the key replays with it off. QA: `bun run tools/qa/leaf-round-check.ts` (it raises the door rules
+  itself; the copy room's gallery door, the level's own pair: rule off the leaf is turned from 1.70 to 0.02 rad and the two are in the room at 3.8 / 4.7 s,
+  rule on it never leaves 1.70 and they are in at 2.1 / 3.2 s; a man held behind it has it turn after 1.3 s; a man stood against it does not move) — ALL
+  PASS on both stands, `LEAFROUND_BREAK=1` red on both (the file line and the held man's). `registry-walk` is green on both stands with it (four
+  followers, all in every room) — by a thin margin on the shipped stand: the rear man's back-watch is dropped twice as he comes round the leaf and each
+  time he walks a third of a second along his BODY, the wrong way (cover.ts hands him to the plain walk still facing back); with the cover rule off the
+  walk has a second in hand. One level, one door, one seed; never played, never seen on a GPU (in the picture a man slides a step along the door before
+  he rounds it).
 - **Office chairs roll** (`src/game/props.ts CASTOR {on, decel 0.4, visc 0.45, spin 1.2, startV 0.3, stopV 0.1}`: ON in the page, `?chairroll=0`; OFF in the module and on the frozen stand,
   `TPS_CHAIRROLL=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off): a prop of kind `chair` coasts on rolling
   resistance in place of `KIND.chair`'s 1.6 / 0.5, and raises PropEvent sound `'roll'` (`roll: 'start' | 'stop'`, level 0: nobody hears it, nothing plays, `Game.onPropEvent` returns on it).

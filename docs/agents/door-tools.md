@@ -416,8 +416,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lead). On: it waits 1.9 / 3.3 s (frozen) and 2.6 / 3.8 s (shipped) and is thrown from 3.0 to 3.9 m by a man who is not the lead. Kept off for
   9 s: 'can waited' at 6.1 s, thrown by the same man as with the rule off. Nobody run off: beat for beat the same with and without. And the journal
   line. The natural run: `threshold-four` on shipped is green again (depot-four seed 2, a_s: the can waits at 16.1 s, goes to Red Two at 18.2, thrown
-  at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`). NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
+  at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`). 10-17: that seed is lost on shipped again since an ordered walk keeps off
+  lit floor (the stack is called 0.8 s later, and all four are shot on their marks from across the yard by men of other rooms; no grenade; traced by
+  that rule's owner, whose 16 seeds of the run lose the whole four 3 times with the walk rule on and 4 with it off). `judge` passes such a run over in
+  its four lines about the room and says so in a line of its own, 'A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM': every man of the order lost before
+  any step in, each to a defender not at home in the room behind the door; never more than one run in three, never every run of a floor. NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
   over two cans, a can first, a shared word, more seeds. Headless only: never played, never heard (the spoken line), never seen on a GPU.
+- **Two door checks run on ROOM-FIGHT floors (10-17).** `doortools-firstman` and `threshold-hold` hold squads from the rooms (SQUADDEAL) off inside
+  their own runs, by the stand's own word (`TPS_SQUADDEAL=0` round the stand-up: `rig`'s `deal: false`, threshold-probes' `NODEAL`). On a dealt floor
+  the room's men are their squad's and dig in on its word (that rule's owner's reading, its runs): four seconds after a bang they are still
+  thinking, so the plain door loses no first man (0 of 6, against 4 of 6 on a room-fight floor) and a bang has nothing to beat; twenty-five seconds
+  after, every door is wedged and nobody gets in either way; and a hold told after ten seconds steps into a room that has set (the records pair's
+  last man lost on the line; the depot four's order at `c_w` ends 'nobody left on it' 3.3 s after 'step in', no can). Both were red on shipped for that from the build of
+  10-17 and are green again with the rule held off (firstman: plain 4 of 6 first men lost, bang 0, charge 1; threshold-hold 15 of 15; frozen the
+  same lines as before). NOT judged by any door check: what the door tools do on a dealt floor. What that drill means for play is the
+  defenders' own call, with the maintainer. Headless, the seeds the checks had; never played.
 - **A grenade by a held door: two answers, ON IN THE PAGE since 10-16 (built 10-15, the maintainer said yes to both).** His calls were: what an
   order does when a grenade lands on its men (pause until they are back at the door, then go), and what the can does when its wait runs out with
   nobody at the door (no can, the lead says so, they go in and keep it). Both are on in the page (`?thrfraghold=0` / `?thrnocan=0` put one off;
@@ -432,10 +445,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'nobody left to wait for'. `threshold-hand` holds both off for its own runs. NOT held: Sam's plain 'step in', a captor's last warning, a door that shares
   a word with another, the step in behind a can of the order's own that has just gone off (`entryCap`), and a grenade that lands while a can is in the
   air or its burst is running ('fuse' / 'wait' do not look). A man whose mark the stuck rule has moved to where he stands counts as back.
+  THE WORD THAT SPENDS NO CAN (`wordNoCan`, 10-17) went straight to the step in and past this wait: mended under this same switch. The word to a held
+  door whose men ran is OWED (`wordStepIn`: the hold goes on, off the word if it was on one, 'the door waits'), and paid in the hold's tick (`wordOwed`)
+  when they are back or the order's one wait is spent; the word AGAIN, outside `wordTap` of the first, pays it at once ('on without … · not waited
+  for'). Sam's own 'step in' row is still his say there and then. Measured, one seed, two doors, both stands: off, 'step in' on the word's frame; on, 1.4
+  to 2.7 s after it with every man back; the wait cut to 0.3 s, 0.3 s; the word again 1.5 s later, on that frame (one door a stand; the other's men
+  were back first). The entry that follows has no can, and how it ends is the room fight's (printed, not judged): on the shipped stand the depot's four end 3 of 4
+  up with the wait against 1 of 4 without; the records pair, down to one man in the hold, loses him inside with the wait and keeps him without. One
+  seed: no tally says which way it leans.
   `DOORTOOLS.thrNoCan` (Tab 'threshold: no can with nobody at the door', `TPS_THRNOCAN=1` frozen, `=0` shipped; acts only under thrHand): the wait spent
   and still no hand at the door, the can stays in the kit ('no bang · nobody at the door', the lead says so) and the stage goes on as with no pocket
   worth a can; a later can of that order goes only from the picked man's own hand at the door. A recording from before the keys replays with both
-  off (journal.ts). CHECK `probes.ts threshold-grenade` (family `threshold`; `THRFRAGHOLD_BREAK=1` and `THRNOCAN_BREAK=1` must each fail), 10 lines,
+  off (journal.ts). CHECK `probes.ts threshold-grenade` (family `threshold`; `THRFRAGHOLD_BREAK=1` and `THRNOCAN_BREAK=1` must each fail), 15 lines (five are the word's),
   both stands, the rules raised by the probe, ONE seed of two doors (the depot's c_w, four men; the records office's front, the pair), a REAL
   defender's grenade put down at the stack (the men kept from its burst). Measured: both off, Sam says bang a second after it lands, and 'step in' is
   said with men 4.0 to 5.3 m off the door (frozen both doors, shipped the pair; the shipped depot's men step off no further than a throw). With
@@ -469,7 +490,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shipped office door is opened 2.6 s later with a man 1.9 m off his mark. Rule on: 'the door waits' at the word, 'the men are back' 3.9 to 5.3 s
   after the grenade, the door opened 0 to 0.8 s after that with every man within 0.8 m of his mark, 'in' every time; bang and clear the same, the
   can from 1.2 to 1.5 m. Cap cut to 0.3 s: 'on without' 0.30 s after the wait began. The word again: opened on that frame (frozen), 1.8 and 2.8 s
-  later on shipped, where the man who opens it had run and has to be at the handle. An order on its own clock, men short of their marks: the stack is
+  later on shipped, where the man who opens it had run and has to be at the handle. Since 10-17 that line judges the door only (the
+  words, the frame, opened no later than by waiting): how an entry sent on without its men then ends is the room fight's, printed beside it. On the
+  shipped depot the four sent on that way are all lost inside on the build of 10-17 (they ended 'in' on 10-16; the line was red on the untouched
+  build head for it, and with the squads-from-rooms rule or the infrared light's own rule put off one of four is left and it ends 'in'). An order on its own clock, men short of their marks: the stack is
   called only with them back (the rule off waits for a walking man too; the rule says so and keeps `stackCap` from running under it). A locked door,
   the grenade as the lead steps off to it: frozen, no boot until the men are back (4.5 s); shipped, the boot lands 0.4 s after the grenade, before a
   man has moved, and is not stopped (the line passes on either and prints which). The charge: where its man ran, 'set' 2.4 to 2.5 s after he is back; where

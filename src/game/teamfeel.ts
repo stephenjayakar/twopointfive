@@ -56,6 +56,7 @@ Object.assign(KEPT.FRAG, { glassM: [0.5, 8, 0.25], glassPower: [0, 3, 0.1], pane
 Object.assign(KEPT.DOORMANNERS, { restClear: null, markClear: null, podClear: null, shortClear: null });   // (a follower's place, stack marks and the points after an entry keep off frames and swings: their own rows)
 Object.assign(KEPT.DOORMANNERS, { stepCover: null, planeDeg: [0, 60, 5] });   // (a defender's step off a doorway: never to a spot a rifle reaches through glass; cover on either face with them along the wall)
 Object.assign(KEPT.DOORMANNERS, { ownPlace: null });   // (a teammate on his own mark by a door is walked round, never walked into)
+Object.assign(KEPT.DOORMANNERS, { leafRound: null });   // (a leaf standing open across a teammate's walk is gone round, not turned shut under him)
 Object.assign(KEPT.ROOMFIGHT, { samTravel: null, samBeside: null, noShotGo: [0, 5, 0.25], keepTrack: null });
 // (the threshold's later rows — the far gun's set, the goggles, the room's other doors held — as their own statement: other parts add rows to the table's lines)
 Object.assign(KEPT.DOORTOOLS, { thrSet: null, thrTube: null, thrDark: null, thrDoors: null, thrDoorsM: [0, 12, 0.5], thrDoorsLit: null });
