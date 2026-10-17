@@ -67,6 +67,7 @@ import type { Input } from './input';
 import type { Door } from './doors';
 import { DOORWAY } from './doors';
 import type { Item } from './throwables';
+import { GRAVITY } from './throwables';
 import type { Assignment, OrderDef, OrderTarget, OrderNote, StackPost, Who } from './orders';
 import { sideOf, doorWords, WORD_HEAD, OWN_EPS } from './orders';
 import { BoxFlag, makeBox } from '../scene/boxes';
@@ -355,6 +356,23 @@ export const DOORTOOLS = {
    *  ONE order, 'clear from outside' = the jambs held until told (thresholdHold: no can of its own); going in is the page's own rows given again — 'open
    *  and clear' steps the holding men in with no can, 'bang and clear' puts ONE can in first — and a can asked for at a held door is one can, not `thrBangs`. */
   testDoor: false, outsidePlain: false,
+  /** THE WORD AT A DOOR HELD FROM OUTSIDE SPENDS NO CAN (acts with `outsidePlain`; false = the word bangs the blind pockets, then they step in, as it
+   *  was). The men holding a door from outside go in on the word with no can; a can goes in first only when it is asked for — 'bang and clear' given
+   *  to the holding men (row 2 of the door tools: one can, then in), or the word told 'bang, then step in' where that row exists. The maintainer, 10-16,
+   *  off his own tape (the word given at a held door, a can nobody ordered into an empty room): "when externally clearing a room, the men shouldn't
+   *  throw a bang unless i tell them to. i can do that by doing x 5 2 again". */
+  wordNoCan: false,
+  /** A BANG AND CLEAR'S CAN IS THROWN INTO THE ROOM (false = as it was: the can appears in the door frame at the thrower's end of the opening, up to two
+   *  metres from him, and goes off in the air `airIn` 1.6 m past the frame a third of a second later, on every door). Two things, the maintainer's
+   *  ("with bang and clear for a door, they often don't really throw the flash bang into the room", 10-16, with a tape of it):
+   *  WHERE IT GOES: the point of the floor beyond the door — `bangIntoMin` or more inside, no more than `thrThrowM` from the hand, a clear throw from
+   *  the opening — whose burst, chest high, has a line to the most of the floor the doorway opens onto; of the points that light `bangIntoLit` of what the
+   *  best one lights, the DEEPEST (a can thrown into a room goes past its middle); it goes off as it gets there, as a threshold's pocket can does. Never a
+   *  point with one of ours in its flash. No such point (a doorway onto a wall, a cupboard): the landing as it was.
+   *  WHERE IT LEAVES: the thrower's own hand. A thrower more than `bangHandM` from the opening's edge with a clear line to it passes the can to that edge
+   *  first — a quick flat lob past the first man, `bangPassV` m/s — and it turns in off the jamb. A leaf or a wall between them: from the edge, as it was.
+   *  Who throws (the second man), when (the leaf well round), and whose list the burst keeps off are as they were. */
+  bangInto: false, bangIntoMin: 1.5, bangIntoLit: 0.9, bangIntoDeep: 6.0, bangIntoWide: 4.2, bangHandM: 0.9, bangPassV: 6.5,
   /** HALTED ON A DOOR THE OTHER PAIR IS CHARGING (false = as it was). A pair stacked on a door steps back to rear security when the other pair is given a
    *  charge on it — asked once, as that order is given (startCharge). A pair that came to the door AFTER, on an entry order, and halted there 'found shut'
    *  (`testDoor`) was never asked: it stayed plain-stacked a stride and a half from the frame, inside `backblastM`, and the charge Sam blew dazzled his own
@@ -550,6 +568,8 @@ export interface DoorOp {
   corner: Map<Guard, { pts: Vec3[]; i: number; on: number; fight?: number; last?: number; turned?: boolean }>; search: RoomSearch | null | undefined;
   /** the man picked to go in first (leadSeen: picked when the can leaves a hand, or as they go) — undefined: not picked yet · the man who threw this order's can */
   first?: Guard; threw?: Guard;
+  /** DOORTOOLS.bangInto: where this bang and clear's can was thrown to (it goes off as it gets there) and where it left the hand reaching round the jamb · the pass from the thrower's own hand to that point, while it is in the air */
+  aim?: { at: Vec3; from: Vec3 }; pass?: { to: Vec3; v0: Vec3; T: number };
   beats: { t: number; what: string }[];
   /** given 'on my word': stacked, it waits ('ready') · the word that let it go, while that still has it in step with the others · where it stands with that
    *  word: 0 not there yet, 1 on its door with nothing begun, 2 a step from crossing */
@@ -791,7 +811,7 @@ export class DoorTools {
     const S = g.orders, thrKey = goKey === null ? DOORTOOLS.blowKey : goKey;
     if (thrKey !== this.thrKey) { this.thrKey = thrKey;
       S.register({ id: 'thrWord', page: HELD_PAGE, head: WORD_HEAD, hotKey: thrKey || undefined, targets: ['door'],
-        label: t => { if (!S.big) return silentNoCans(g) ? 'go · step in · no bang' : 'go · bang the blind pockets, step in'; const w = this.waitingWords(S.recipients(t)); return w ? `go · ${w}` : 'go'; },
+        label: t => { if (!S.big) return silentNoCans(g) || this.wordQuiet() ? 'go · step in · no bang' : 'go · bang the blind pockets, step in'; const w = this.waitingWords(S.recipients(t)); return w ? `go · ${w}` : 'go'; },
         only: (_S, men, t) => S.big ? this.waitingMen(men) : this.heldMen(men, t),
         valid: (_S, t, men) => this.heldOn(t, men).some(op => !op.word) || 'nobody is holding that door.',
         issue: (_S, men) => (S.big ? this.goMen(men) : this.pairWord(men) ? null : 'nobody is waiting on your word.') ?? undefined }); }
@@ -1644,11 +1664,16 @@ export class DoorTools {
    *  the loud ones (a bang, a charge) begin at once, the quiet ones do not touch their doors until the last bang's blind burst has run dry (or `wordIn`
    *  seconds). Null when something went; else why not. */
   go(who: Who = 'all'): string | null { this.sync(); const men = this.g.orders.men(who); if (!this.g.orders.big) return this.wordOnHold(men) ? null : 'nobody is waiting on your word.'; const r = this.goMen(men); return r !== null && this.wordEarly(men) ? null : r; }
+  /** the word at this held door is 'step in, no can': told so ('on my word · step in'), or never told what the word is under DOORTOOLS.wordNoCan (a hold
+   *  given to be HELD — a plain threshold's own word, which cuts its count short, bangs its pockets as it did; a word told 'bang' stays a bang) */
+  /** every door held on the word is one the word steps into with no can (wordNoCan): what the pair's go row says */
+  private wordQuiet(): boolean { const K = DOORTOOLS, held = this.ops.filter(o => o.thr); return K.outsidePlain && K.wordNoCan && held.length > 0 && held.every(o => this.wordSteps(o)); }
+  private wordSteps(op: DoorOp): boolean { const K = DOORTOOLS; return op.thr!.wordStep ?? (K.outsidePlain && K.wordNoCan && !!op.thrHold); }
   /** … and THE PAIR's, which has no word of its own but this: a room it is working from the threshold has its hold cut short there and then — the pockets,
    *  then the step in. True when a hold of these men's took it. (The four's goes with everything else on the word: goMen.) */
   private wordOnHold(men: Guard[]): boolean {
     let any = false;
-    for (const op of this.thresholdHeld(men)) { if (op.word) continue; this.beat(op, 'the word'); if (op.thr!.wordStep) { this.heldBeat(op); this.toStep(op); } else { op.thr!.asked = true; this.toPockets(op); } any = true; }
+    for (const op of this.thresholdHeld(men)) { if (op.word) continue; this.beat(op, 'the word'); if (this.wordSteps(op)) { this.heldBeat(op); this.toStep(op); } else { op.thr!.asked = true; this.toPockets(op); } any = true; }
     return this.wordEarly(men) || any;
   }
   /** … as Sam gives it — the key, or its row on a held threshold's page: a set charge goes with it, as with the four's, and the key is stamped (a second tap
@@ -1709,7 +1734,7 @@ export class DoorTools {
         for (const op of ops) { if (op.hold < 1) { op.word = null; continue; }   // (too late: it carries on alone)
           if (op.kind === 'charge') { const c = this.chargeOn(op.door); if (c) this.blow(c); else op.word = null; }   // → 'wait'
           else if (op.phase === 'held') op.hold = 2;
-          else if (op.kind === 'threshold' && op.thr) { op.hold = 0; if (op.phase === 'thr') { if (op.thr.wordStep) { this.heldBeat(op); this.toStep(op); } else { op.thr.asked = true; this.toPockets(op); } } }   // (its men on the jambs already: the pockets now, with the loud ones — and it crosses with the rest, from 'wait')
+          else if (op.kind === 'threshold' && op.thr) { op.hold = 0; if (op.phase === 'thr') { if (this.wordSteps(op)) { this.heldBeat(op); this.toStep(op); } else { op.thr.asked = true; this.toPockets(op); } } }   // (its men on the jambs already: the pockets now, with the loud ones — and it crosses with the rest, from 'wait')
           else if (op.kind === 'threshold') { op.hold = 0; op.word = null; op.worded = true; this.open(op); }   // (it begins with the loud ones and goes in on its own count: the room is worked for as long as it takes, and nobody else's entry waits on that)
           else if (op.kind === 'bangClear') { op.hold = 0; this.open(op); }
           else if (!isOpen(op.door) && (this.lockedOut(op.door, op.side) || (op.big && BIGSLOT.shut && !op.noGun && this.bigOpens(op.door, op.men)) || toolSpot(this.g, op.door, op.side, op.lead.char.pos, true, true))) { op.hold = 0; this.open(op); }   // (a locked door: its man onto the kick spot now — the boot itself waits; an unlocked one whose lead is not at its handle: onto the handle's place now, handleside.ts — the shove waits)
@@ -1947,7 +1972,8 @@ export class DoorTools {
     this.done.push(Object.assign(op, { ended: why })); if (this.done.length > 12) this.done.shift();
   }
   /** a canister this op threw and has not fired: left to its own short fuse (never a live can lying about for the long fuse it was thrown on) */
-  private defuse(op: DoorOp) { const it = op.can; if (it && !it.fired && it.kind !== 'frag') it.fuse = Math.min(it.fuse, DOORTOOLS.fuseAfterLand); }
+  private defuse(op: DoorOp) { const it = op.can; if (it && !it.fired && op.pass) { it.pos = v3.copy(op.pass.to); it.vel = v3.copy(op.pass.v0); it.heading = v3.yawOf(op.pass.v0); it.bounces = 0; it.settled = false; }   // (bangInto: an order cut short while the can is on its way to the door's edge — it goes in from there all the same, not on down the wall on our side)
+    op.pass = undefined; if (it && !it.fired && it.kind !== 'frag') it.fuse = Math.min(it.fuse, DOORTOOLS.fuseAfterLand); }
 
   private step(op: DoorOp) {
     const g = this.g, K = DOORTOOLS, d = op.door, t = g.time, el = t - op.t0, lead = op.lead, name = doorWords(d);
@@ -2045,21 +2071,30 @@ export class DoorTools {
             op.bangHeld = false; op.frag = false; this.refund(what); this.beat(op, `${tag} held`); this.note(`${what} held on ${d.def.name}: the leaf is in its way (${d.angle.toFixed(2)} rad) — in without it`); this.enter(op); break; }
         }
         op.bangHeld = false;
-        const from = doorPt(d, clamp(alongOf(d, th.char.pos), 0.25, W - 0.25), 0.35, op.side, 1.3), land = this.landAt(op, op.frag ? FRAG.orderIn : undefined);
+        const from = doorPt(d, clamp(alongOf(d, th.char.pos), 0.25, W - 0.25), 0.35, op.side, 1.3);
+        const into = !op.frag && !op.thr && K.bangInto ? this.bangSpot(op, from) : null, land = into?.at ?? this.landAt(op, op.frag ? FRAG.orderIn : undefined);   // (bangInto: thrown deep into the room, to the deepest point its burst lights nearly all the floor from, and off as it gets there)
         const sol = g.items.solve(from, land, 9);
+        // (bangInto, the hand: a thrower off the opening's edge with a clear line to it passes the can there first — a flat lob from his own hand — and it turns in off the jamb)
+        const hand: Vec3 = [th.char.pos[0] + (from[0] - th.char.pos[0]) * 0.2, 1.3, th.char.pos[2] + (from[2] - th.char.pos[2]) * 0.2], gap = flat(hand, from);
+        const pass = into && gap > K.bangHandM && K.bangPassV > 0 && !g.col.solidBlocked(hand, from) ? { to: from, v0: sol.v0, T: Math.max(0.15, gap / K.bangPassV) } : undefined;
+        const at0 = pass ? hand : from, v0: Vec3 = pass ? [(from[0] - hand[0]) / pass.T, (from[1] - hand[1] + 0.5 * GRAVITY * pass.T * pass.T) / pass.T, (from[2] - hand[2]) / pass.T] : sol.v0;
+        op.aim = into ? { at: into.at, from } : undefined; op.pass = pass;
         const it = op.frag ? g.items.spawn('frag', from, sol.v0, { fuse: FRAG.orderFuse, who: th.char.id, heading: v3.yawOf(sol.v0) })   // (a frag: on its OWN fuse from the hand — frag.ts; nobody is kept off its list)
-          : g.items.spawn('flash', from, sol.v0, { fuse: 99, who: th.char.id, heading: v3.yawOf(sol.v0) });   // (the long fuse: this op fires it — bang() — with the entry's own men kept off its list)
+          : g.items.spawn('flash', at0, v0, { fuse: 99, who: th.char.id, heading: v3.yawOf(v0) });   // (the long fuse: this op fires it — bang() — with the entry's own men kept off its list)
         it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
         th.char.anim.tossItem(TOSS_QUICK); g.say(th, op.frag ? 'frag out!' : WORDS.on ? 'bang out!' : 'bang out.'); if (op.frag) g.msg('frag out — stay off the door');
-        op.can = it; op.tossT = t; op.threw = th; op.phase = 'fuse'; this.beat(op, `toss:${th.callsign}`);
+        op.can = it; op.tossT = t; op.threw = th; op.phase = 'fuse'; this.beat(op, into ? `toss:${th.callsign} · into the room · ${(-offOf(d, into.at, op.side)).toFixed(1)} m in, ${(alongOf(d, into.at) - W / 2).toFixed(1)} along · ${into.n} of ${into.of} places lit${pass ? ` · passed ${gap.toFixed(1)} m to the door` : ''}` : `toss:${th.callsign}`);
         break;
       }
       case 'fuse': {
         const it = op.can!;
         if (it.fired) { op.bangT = t; op.bangAt = v3.copy(it.pos); op.phase = 'wait'; this.beat(op, op.frag ? `frag · ${offOf(d, it.pos, op.side) < 0 ? 'inside' : 'OUTSIDE'} ${Math.abs(offOf(d, it.pos, op.side)).toFixed(1)} m` : 'bang (its own fuse)'); if (op.frag) { this.stats.frags++; this.closeUp(op); } if (op.thr) this.thrBanged(op); break; }
         if (op.frag) { if (!g.items.items.includes(it)) this.end(op, 'the frag is gone'); break; }   // (its own fuse, from the thrower's hand: nothing here sets it off — and one taken off the floor unfired, a restart's sweep, does not leave the men waiting on it)
+        if (op.pass) {   // (bangInto: on its way from the hand to the opening's edge — there it turns in, on the throw that was solved from that point; a pass that met something is put there all the same)
+          if (t - op.tossT < op.pass.T && flat(it.pos, op.pass.to) > 0.12 && !it.bounces) break;
+          it.pos = v3.copy(op.pass.to); it.vel = v3.copy(op.pass.v0); it.heading = v3.yawOf(op.pass.v0); it.bounces = 0; it.settled = false; g.audio.play('canisterBounce', it.pos, 0.5); op.pass = undefined; break; }
         if (isNaN(op.landT) && (it.bounces > 0 || it.settled)) op.landT = t;
-        const aim = op.thr?.aim, hand = op.thr?.from;
+        const aim = op.thr?.aim ?? op.aim?.at, hand = op.thr?.from ?? op.aim?.from;
         const air = aim && hand ? isNaN(op.landT) && (flat(it.pos, aim) < 0.1 || flat(it.pos, hand) >= flat(aim, hand) - 0.05)   // (thrown at a pocket: it goes off as it gets there — not a step short: the floor it was thrown to light is counted from that point)
           : isNaN(op.landT) && it.vel[1] < 0 && it.pos[1] <= K.airH && offOf(d, it.pos, op.side) <= -K.airIn;   // cooked: it goes off in the air, chest high and well inside — over the furniture that would shadow a can on the floor
         if (air || (!isNaN(op.landT) && t - op.landT >= K.fuseAfterLand) || t - op.tossT >= K.tossCap) this.bang(op, it);
@@ -2067,6 +2102,7 @@ export class DoorTools {
       }
       case 'wait': {   // behind a bang / a charge: the defenders' blind burst comes back through the doorway — nobody crosses until it has run dry
         if (!this.burstDry(op)) break;
+        if (K.bangInto && op.gate?.ops.some(o => o !== op && this.ops.includes(o) && o.kind === 'bangClear' && !o.frag && (o.phase === 'fuse' || (o.phase === 'wait' && !this.burstDry(o))))) break;   // (bangInto: two doors on one signal still go in together — a can thrown deep is in the air longer than one that kept the old landing, and each door waits the other's burst out too)
         if (op.word) { op.hold = 2; break; }   // (in step with the other door: wordTick sends them in together)
         this.enter(op);
         break;
@@ -2300,6 +2336,38 @@ export class DoorTools {
   }
   /** where the canister is thrown to: `bangIn` inside the frame line on the doorway's centre line, or as far as the floor runs clear */
   private landAt(op: DoorOp, deep = DOORTOOLS.bangIn): Vec3 { return this.landFor(op.door, op.side, deep); }
+  /** DOORTOOLS.bangInto: where a bang and clear's can is thrown to from `from` (the hand at the opening's edge) — see the table's note. `n` of `of`: the
+   *  places of the floor beyond the door its burst has a line to. Null: no point worth it (the old landing stands). */
+  private bangSpot(op: DoorOp, from: Vec3): { at: Vec3; n: number; of: number } | null {
+    const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, nav = g.col.nav, far = -op.side as 1 | -1, inn = doorPt(d, W / 2, 0.6, far, 1.9);
+    const room = g.fight?.roomAt(doorPt(d, W / 2, 0.9, far)) ?? null;
+    // the floor the doorway opens onto: free floor beyond the frame that the doorway's own middle has a line to above the furniture (a 0.6 m lattice). The
+    // burst is counted on every other cell of it, and the can is offered every row of every other file (1.2 m apart): a few hundred sight lines in a real
+    // room, some four thousand at the very most, once a toss (timed on every door of three levels: 0.4 ms the median, 2.3 the worst, under a thousand lines)
+    const floor: Vec3[] = [], spots: Vec3[] = []; let ib = 0;
+    for (let b = 0.6; b <= K.bangIntoDeep + 1e-6; b += 0.6, ib++) { let ia = 0; for (let a = -K.bangIntoWide; a <= K.bangIntoWide + 1e-6; a += 0.6, ia++) {
+      const q = doorPt(d, W / 2 + a, b, far); if (nav.isBlocked(q[0], q[2]) || g.col.solidBlocked(inn, [q[0], 1.9, q[2]])) continue;
+      if (!((ia + ib) & 1)) floor.push(q);
+      if ((ia & 1) && (!room || g.fight!.roomAt(q) === room)) spots.push(q); } }   // (… and only in the room the door opens onto: not through a second doorway into the next)
+    if (floor.length < 6) return null;
+    // ours in a flash: the men this can would blind — not the ones bang() spares (this order's, its word's and gate's, and whoever of the team stands on this side by the door, Sam by the same test)
+    const word = op.word ? this.ops.filter(o => o.word === op.word) : [], near = (q: Vec3) => offOf(d, q, op.side) > 0 && flat(q, d.frameCentre) < 5;
+    const spared = (x: Guard) => op.men.includes(x) || word.some(o => o.men.includes(x)) || !!op.gate?.ops.some(o => o.men.includes(x)) || near(x.char.pos);
+    const ours = [...g.guards.filter(x => (g.orders.sams ? x.team === 'operative' && x.unit : g.orders.mine(x)) && x.state !== 'dead' && !spared(x)).map(x => x.char.pos), ...(g.player.down || (g.orders.sams && near(g.player.char.pos)) ? [] : [g.orders.samStood])];
+    const cands: { at: Vec3; n: number; of: number; sc: number }[] = [];
+    for (const P of spots) {
+      if (-offOf(d, P, op.side) < K.bangIntoMin || flat(from, P) > K.thrThrowM) continue;
+      const at: Vec3 = [P[0], K.airH - 0.05, P[2]]; if (g.col.solidBlocked(from, at)) continue;
+      if (ours.some(q => flat(q, P) <= K.thrFlashM && !g.col.segmentBlocked(at, [q[0], 1.45, q[2]]))) continue;   // (one of ours in its flash: not there)
+      let n = 0, sc = 0; for (const q of floor) { const r = flat(P, q); if (r <= K.thrFlashM && !g.col.segmentBlocked(at, [q[0], 1.45, q[2]])) { n++; sc += 1 - r / K.thrFlashM; } }
+      cands.push({ at, n, of: floor.length, sc }); }
+    // (of the points that light `bangIntoLit` of what the best of them lights, the DEEPEST: a can thrown into a room goes past its middle; then the nearest the most floor)
+    const most = cands.reduce((m, c) => Math.max(m, c.n), 0), deep = (c: { at: Vec3 }) => Math.round(-offOf(d, c.at, op.side) * 10), good = cands.filter(c => c.n >= most * K.bangIntoLit);
+    if (!room && most < floor.length * 0.5) return null;   // (no room known for that floor, and the best point lights under half of it: what the doorway sees is not one room — the landing as it was)
+    good.sort((a, b) => deep(b) - deep(a) || b.sc - a.sc);
+    for (const c of good.slice(0, 8)) if (g.items.solve(from, c.at, 9).points.some(q => flat(q, c.at) < 0.35 && Math.abs(q[1] - c.at[1]) < 0.6)) return c;   // (the throw's own arc gets there: not into the lintel, not onto a cabinet's top)
+    return null;
+  }
   private landFor(d: Door, side: 1 | -1, deep: number): Vec3 {
     const g = this.g, op = { side }, W = d.def.width; let best = doorPt(d, W / 2, 0.6, -op.side as 1 | -1), prev = best;
     const plan = doorPlan(g, d.def.name) as (RoomClearPlan & { toss?: { land: Vec3 } }) | null;   // (the breach plan's own landing spot, when this door has one from this face: open floor a can stops on)

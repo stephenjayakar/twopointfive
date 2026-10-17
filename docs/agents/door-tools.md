@@ -195,6 +195,42 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own shove is its opening — and where the door no longer stands open it is opened again first (beat 'can waits: the door has come shut'), the can waits up to `fragWayWait` for it,
   and then goes back on the belt with the bang's own words ('door is in the way — no bang. going in.', beat 'can held') and they step in; a door left standing open is banged beat
   for beat as before. `bun run tools/qa/heldshut-check.ts` (`probes.ts heldshut`, in family `doortools`; both stands; `HELDSHUT_BREAK=1` must fail). Never played by anybody.
+- **A bang and clear's can is thrown INTO the room, and leaves the hand** (`DOORTOOLS.bangInto`: ON in the page, `?banginto=0`; off in the module and on
+  the frozen stand, `TPS_BANGINTO=1`; panel 'bang ▸ thrown into the room'; journal: a recording from before the key replays with it off). The maintainer's
+  play, 10-16, with a tape: "with bang and clear for a door, they often don't really throw the flash bang into the room". On the tape the thrower stood two
+  metres down the wall, the can APPEARED in the door frame and went off in the air 1.75 m inside a third of a second later. Counted on 944 staged entries
+  (shipped stand, seven levels): 593 of 695 cans burst at exactly 1.6 m in and 0.6 m up, 0.3 s after appearing (`airIn` / `airH`: the air burst fires as
+  soon as the can is that far in and coming down); the can showed 1.6 m from the thrower on average, 2 m or more in 304, with a wall or the leaf between
+  them in 197. Never outside the doorway — it read as not thrown, not as thrown short. WHERE IT GOES: `bangSpot` — the free floor the doorway opens onto
+  (a 0.6 m lattice, `bangIntoDeep` × ±`bangIntoWide`, a line from the doorway's middle above the furniture); the can is offered every row of every other file
+  of it, in the room the door opens onto only (`fight.roomAt`; no room known there and the best point lighting under half the floor: no pick). Of the
+  points `bangIntoMin` 1.5 m or more inside, in a throw (`thrThrowM`), with a clear line from the door's edge, with none of ours in the flash (NOT the
+  men `bang()` spares: this order's, its word's and gate's, and whoever of the team stands on this side by the door, Sam by the same test), that light
+  `bangIntoLit` of what the best of them lights, the DEEPEST whose arc gets there; it bursts as it gets there, chest high. No such point (a closet, one
+  of ours gone into the room since the order): the landing as it was. Cost, once a toss: under a thousand sight lines, 0.4 ms the median and 2.3 the worst over every door of three levels. WHERE IT LEAVES: the
+  thrower's own hand; when he stands more than `bangHandM` from the opening's edge it is passed along the wall to the edge at `bangPassV` and goes in
+  from there (one bounce sound at the door); an order cut short during the pass turns the can in at the door all the same (`defuse`), not on down the
+  wall on our side. TWO DOORS ON ONE SIGNAL: a can thrown deep is in the air longer
+  than one that kept the old landing, so each door on a gate waits the other's burst out too and they still go in together (`rescue-doortools`' two-door
+  line went red on the shipped stand without it: 0.2 s apart). WHO throws, the `secondThrows` row, the
+  frag's path, the cans of a door held from outside and `landAt` are untouched. Measured, shipped stand, 99 shut doors on three levels, one seed, off →
+  on: burst depth 1.6 → 3.1 m on average (42 of 99 at 3.5 m or more; 15 still under 2 m: small rooms, and the 6 that kept the old landing), flight
+  0.36 → 0.61 s, the can first shows 1.6 → 1.0 m from the thrower (40 passed from the hand). NOT MENDED: at a door that opens toward the stack the open
+  leaf stands between the thrower and the opening's edge, there is no clear pass, and the can still first shows at the frame (33 of 99 with the leaf or
+  a wall between, as before). Defenders in the room stunned 44 of 53 → 45 of 52: no change to speak of — the rule moves where the can is seen to go,
+  not what it does. Ours dazzled 0. Check: `probes.ts
+  bangs` (family doortools; `BANGINTO_BREAK=1` fails three lines), both stands. The 0.3 s longer flight is a cost nobody has weighed in play. Never seen
+  on a GPU: whether the pass round the jamb reads as a throw, and whether a can four metres in looks right in a small room, are the maintainer's to say.
+- **The word at a door held from outside spends no can** (`DOORTOOLS.wordNoCan`, acting with `outsidePlain`: ON in the page, `?wordnocan=0`; off in the
+  module and on the frozen stand, `TPS_WORDNOCAN=1`; panel 'clear from outside ▸ the word spends no can'; journal: off when the key is absent). The
+  maintainer, 10-16: "when externally clearing a room, the men shouldn't throw a bang unless i tell them to. i can do that by doing x 5 2 again". On his
+  tape row 4 was given, then the word 7.6 s later, and a can nobody ordered went into an empty room 0.7 s after it. With the rule the word (the key, or
+  from code) to men holding the jambs steps them in — the same path as a word given `wordStep` — and the pair's go label reads 'go · step in · no bang'.
+  The can is his to order: row 2 given again to the men at the door ('bang, then go in': ONE can, then in), as before. A `thr` op that is not row 4's
+  hold, and the old two-stage outside order with `outsidePlain` off, bang on the word as they did. Check: `probes.ts threshold-hold`, the line THE WORD
+  SPENDS NO CAN (`WORDNOCAN_BREAK=1` fails it; the same doors with the rule off must throw), both stands; the stand, journal and boot lines are in
+  `probes.ts bangs`. EVERY OTHER staging in `tools/qa/threshold-probes.ts` holds the rule off on both stands: those lines ask what the word's can does
+  (the kit, the pockets, Sam behind the door). Nobody has played it.
 - **A bang or frag order on a door that stands open walks nobody across it** (`DOORTOOLS.openHand`, on; Team feel 'bang ▸ nobody crosses an open door', kept per machine; off = the deal as
   it was; pinned off in threshold-probes.ts's identity and the nvg digests; a recording from before the key replays with it off; the maintainer's replay, 10-12: "after being ordered to frag
   after externally clearing, blue one crosses across a dangerous threshold"). A pair holding an open door from outside has a man on each jamb; 'frag and clear' / 'bang and clear' is a fresh
