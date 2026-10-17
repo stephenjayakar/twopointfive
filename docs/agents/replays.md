@@ -126,10 +126,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own state as it was (they share nothing live); and the whole run rolled back dozens of times ends on the digest and the state word of the run never touched. A FAIL
   names the moment and the tick; `--why scn:seed:frame` prints the paths that differ. `--static` = the static pass alone (CLAUDE.md lists it); `--times scn:seed:frame`
   = times and bytes at one frame; `RB_LAST_DUMP=<file>` on a `--one` run writes the last state's word per part, to find where two arms' last states differ.
-  MEASURED: (room-clear-four seed 1, frame 600, the cloud box under other load, least of several) about 30,000 objects and 6.5 MB a whole snapshot, 2.4 MB of its
-  own a tick; a whole take about 40 ms, a take since the last about 15 ms, a tick 5 to 7 ms, eight ticks back put back about 10 ms, put back and played again about
-  52 to 66 ms. AN EIGHT-TICK ROLLBACK DOES NOT FIT A 16.7 ms FRAME ON THIS BOX: eight ticks alone are about 40 ms here; the cost of a take is the walk over some
-  30,000 small objects (18,000 of them three-number arrays).
+  MEASURED (headless, the cloud box, nothing else running; room-clear-four seed 1 at frame 600, median · least of 300): 29,000 objects and 6.5 MB a whole snapshot
+  (4.7 MB of typed arrays), 234 side tables; a whole take 54 · 43 ms; a tick of the game 10 · 7 ms; a take since the tick before 17 · 15 ms, 4,300 objects and 2.4 MB
+  of its own; eight ticks back put back 13 · 10 ms; A ROLLBACK OF EIGHT TICKS, put back and played again, 68 · 56 ms — IT DOES NOT FIT A 16.7 ms FRAME HERE: the
+  eight ticks alone are some 50 ms at this box's tick, and with a snapshot after each of them 214 ms. A take costs about two ticks; its cost is the walk over some 30,000
+  small objects (18,000 of them three-number arrays), not the bytes. What a rollback needs next is fewer, flatter objects (positions in typed arrays) or a tick that
+  is cheap enough — neither is in this change. RUN: the whole check on both stands, eleven scenarios (the default eight and pass-four, glasshouse-four,
+  snatch-four) on seed 1, capped at 45 s each: 153 moments on the frozen stand, 143 on the shipped one, every line PASS (a few fresh-game moments by `stateAlike`,
+  the line says how many); `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the same-game, ring and fresh-game lines on both stands, as it must. One
+  seed only; other seeds and longer runs were not run.
   KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
   `shield.given`, the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
