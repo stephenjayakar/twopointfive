@@ -806,7 +806,7 @@ function peekStep(g: Game, st: State, gd: Guard, p: Peek) {
   // out to FIRE down it: his burst goes unless he can see all of where they stood and nobody is there (then it is a look: clear)
   if (p.fire && p.fire.n > 0 && (seen || !L.guns.every(m => spotSeen(g, eye, m)))) { pinStep(g, st, gd, p, L, D, seen, back); return; }
   if (seen) {
-    L.until = Math.max(L.until, g.time + K.peekKeep); L.peekPart = 0; L.peekN++; L.peekAt = g.time + Math.min(K.peekMax, K.peekGap * 2 ** L.peekN); st.stats.peekThere++;
+    L.until = Math.max(L.until, g.time + K.peekKeep); L.peekPart = 0; L.peekN++; L.peekAt = g.time + Math.min(K.peekMax, K.peekGap * Math.pow(2, L.peekN)); st.stats.peekThere++;
     if (L.guns.length < 4 && L.guns.every(m => flat(m, seen) > 1.5)) L.guns.push([seen[0], 0, seen[2]]);   // (where they stand now: a place to stop is out of that one's sight too)
     if (g.time - st.saidT > 2) { st.saidT = g.time; g.say(gd, 'they\'re still on it — stay back!', true); }
     note(g, gd, `lane ${L.id}: a look — still held, from (${seen[0].toFixed(1)}, ${seen[2].toFixed(1)}); next no sooner than ${(L.peekAt - g.time).toFixed(0)} s`);

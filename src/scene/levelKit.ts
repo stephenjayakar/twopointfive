@@ -260,14 +260,14 @@ export function cardboardBox(k: LevelKit, x: number, z: number, s: number, yaw: 
       const p = k.props[i]; if (p.kind !== 'cardboard') continue;
       const cs = Math.cos(p.yaw), sn = Math.sin(p.yaw), dx = x - p.x, dz = z - p.z; const lx = cs * dx - sn * dz, lz = sn * dx + cs * dz;
       if (Math.abs(lx) > p.half[0] || Math.abs(lz) > p.half[1]) continue;
-      p.parts.push({ off: [lx, y + s / 2, lz], h: [s / 2, s / 2, s / 2], yaw: yaw - p.yaw, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) }); p.mass += 1 + 22 * s ** 3; fitProp(p); return;
+      p.parts.push({ off: [lx, y + s / 2, lz], h: [s / 2, s / 2, s / 2], yaw: yaw - p.yaw, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) }); p.mass += 1 + 22 * Math.pow(s, 3); fitProp(p); return;
     }
   }
-  prop(k, 'cardboard', x, z, yaw, 1 + 22 * s ** 3, [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) }]);
+  prop(k, 'cardboard', x, z, yaw, 1 + 22 * Math.pow(s, 3), [{ off: [0, y + s / 2, 0], h: [s / 2, s / 2, s / 2], yaw: 0, albedo: C.cardboard, ...mk(k, MD.cartonMarks([s / 2, s / 2, s / 2], k.texel)) }]);
 }
 /** a potted plant (scale s) */
 export function plant(k: LevelKit, x: number, z: number, s = 1): void {
-  prop(k, 'plant', x, z, 0, 14 * s ** 3, [
+  prop(k, 'plant', x, z, 0, 14 * Math.pow(s, 3), [
     { off: [0, 0.22 * s, 0], h: [0.2 * s, 0.22 * s, 0.2 * s], yaw: 0, albedo: [0.36, 0.3, 0.26] },
     { off: [0, 0.7 * s, 0], h: [0.26 * s, 0.28 * s, 0.26 * s], yaw: 0.6, albedo: C.plant },
     { off: [0.04 * s, 1.08 * s, -0.03 * s], h: [0.19 * s, 0.18 * s, 0.19 * s], yaw: 0.2, albedo: [C.plant[0] * 1.15, C.plant[1] * 1.15, C.plant[2] * 1.1] },

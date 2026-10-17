@@ -488,7 +488,7 @@ export function gwotKit(host: GwotHost) {
   /** a SATELLITE DISH on a pole (thin: no cover) — the one modern thing on every roofline, here stood in the yard */
   const satDish = (x: number, z: number, yaw = 0, height = 1.6) => { const b = piece(x, z, yaw); b(0, 0, 0, height, 0.03, 0.03, M.galv); b(0, -0.08, height - 0.1, height + 0.6, 0.36, 0.025, M.tin); b(0, -0.3, height + 0.2, height + 0.24, 0.02, 0.2, M.iron); };
   /** PROP (plant): a dry BUSH (camelthorn / scrub), scale s */
-  const bush = (x: number, z: number, s = 1) => host.prop('plant', x, z, 0, 3 * s ** 3, [
+  const bush = (x: number, z: number, s = 1) => host.prop('plant', x, z, 0, 3 * Math.pow(s, 3), [
     { off: [0, 0.22 * s, 0], h: [0.3 * s, 0.22 * s, 0.3 * s], yaw: 0.5, albedo: GWOT_PALETTE.scrub }, { off: [0.05 * s, 0.42 * s, -0.04 * s], h: [0.2 * s, 0.16 * s, 0.2 * s], yaw: 0.1, albedo: GWOT_PALETTE.straw },
   ], [0.3 * s, 0.3 * s]);
 
