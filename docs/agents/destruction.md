@@ -686,6 +686,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   longer than a hole, so two of the check's tests could no longer fail. `holesnow` now stands the level as the file has it and draws one site's bank out
   to 15 m itself (its sixth line; the feed row asked under 3 m, was 6). Proved by breaking the rule two ways in a side tree: the row not clipped to the hole
   (row 15.0 m) and the size bar holding snow (the bank stands) each turn that line red; the lines before it stayed green under the second. Both stands.
+- **What the walk grid calls floor, feet cross** (`UNDERFOOT` in `src/scene/collision.ts`, 10-17; the maintainer, of two wall charges on the pass: "one
+  set of guys couldn't pathfind through the wall breach"). His tape, re-run: the pair at the store's wall were sent through their hole and walked on the
+  spot at the wall's line (z 5.0) until the tape ended. The store keeps sacks against that wall; the blast took the pile's upper layers and left the
+  bottom one in the hole (two sacks, top 0.2 m). The walk grid's bake asks from 0.25 m up, so the route went straight across them; a walking body was
+  asked from 0.2 m up, and a top AT 0.2 is in that band. THE RULE: a circle test that begins at 0.2 m or above and under 0.25 begins at 0.25
+  (`collideCircle`, `circleTouches`): every walker — the men, the player, civilians, the stand-here tests — is stopped by what the bake calls blocked and
+  by nothing lower. Nothing re-baked, nothing drawn. SWITCH `UNDERFOOT.on` — ON in the page (`?underfoot=0` off), OFF in the module and on the frozen
+  stand (`TPS_UNDERFOOT=1`), a `FROZEN_HOLDS` row, in the registry and the journal (a recording from before the table replays off), a debugger row.
+  Check: `underfoot` (family `furnblast`; his breach blown on a fresh stand, a body walked along the grid's own way with the walkers' call, the level at
+  rest, off, the journal; `UNDERFOOT_BREAK=1` fails on both stands). MEASURED: the tape walked on from 127 s with the rule raised — both men in the
+  store and holding by 133.8 s, against never; every level file stood up on the page's stand and its grid's floor asked with the walkers' call: at rest
+  the two bands part on the pass alone (23 cells: the low steps of three snow banks, tops 0.22 to 0.25 m — on, those steps are waded and the bank stops
+  feet one step further in) and on one 0.2 m box of the pairs lesson. KNOWN, NOT MENDED HERE: the blast still leaves the pile's bottom layer lying in
+  the hole on the page's stand (the mouth rule passes over a top of 0.2 m or less — `furnblast.ts`), so the men walk over two sacks; a thing whose
+  top is 0.25 m or more is a wall to feet and grid alike, as before. Never seen on a GPU; nobody has played it.
 - **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
   wooden doors with the energy it has left, as it already does through glass"; page rebuild/thin-walls/read-first.md). SWITCH `WALLPEN.on`: ON in the page
   (`?wallpen=0` = a round stops in the first built thing it meets, as it did), OFF in the module and on the frozen stand (`TPS_WALLPEN=1` raises it;

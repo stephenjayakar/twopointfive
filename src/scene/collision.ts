@@ -66,6 +66,15 @@ function rayBoxHits(a0: number, a1: number, a2: number, r0: number, r1: number, 
   return entered;
 }
 
+/** WHAT THE WALK GRID CALLS FLOOR, FEET CROSS (`on`: raised by the page — src/host/profile.ts pageSwitches, ?underfoot=0 — off here and on the frozen stand,
+ *  TPS_UNDERFOOT=1). The grid's bake asks what stands between `y` (0.25 m) and a shoulder; a walking body was asked from `feet` (0.2 m), so a thing whose top
+ *  lies in between was floor to every route and a wall to every foot: the bottom layer of a pile of sacks whose upper layers a blast took (0.2 m: what a wall
+ *  charge left in its own hole — the men ordered through it walked on the spot at the wall's line), the low step of a bank of snow. On, a circle test that begins
+ *  at `feet` or above and under `y` begins at `y`: men, the player and everybody else who walks are stopped by what the bake calls blocked, and by nothing less.
+ *  Nothing is re-baked and nothing drawn changes; a test that begins lower (a body laid down, 0.05) is as it was. */
+export const UNDERFOOT = { on: false, feet: 0.2, y: 0.25 };
+const footBand = (y0: number) => UNDERFOOT.on && y0 >= UNDERFOOT.feet && y0 < UNDERFOOT.y ? UNDERFOOT.y : y0;
+
 const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (the panes one line of fire crosses)
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
@@ -144,7 +153,7 @@ export class StaticCollision {
   /** The statics a circle of radius r at (x, z) TOUCHES between heights y0 and y1 — collideCircle's own test (the same boxes skipped: runtime-hidden ones,
    *  walked-through glass), asked without moving anything. Indices into `out`; returns the count, or -1 if `out` was too short to hold them all. */
   circleTouches(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
-    const n = this.gather(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
+    y0 = footBand(y0); const n = this.gather(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
     let k = 0;
     for (let j = 0; j < n; j++) {
       const b = this.boxes[out[j]]; const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2];
@@ -155,7 +164,7 @@ export class StaticCollision {
   }
   /** Push a circle (XZ) of radius r out of static boxes overlapping the vertical span [y0, y1]. Mutates p. */
   collideCircle(p: Vec3, r: number, y0: number, y1: number, iterations = 3): boolean {
-    let touched = false;
+    let touched = false; y0 = footBand(y0);
     for (let it = 0; it < iterations; it++) {
       let any = false;
       const x0 = Math.max(0, Math.floor((p[0] - r) / this.cs)), x1 = Math.min(this.W - 1, Math.floor((p[0] + r) / this.cs));
