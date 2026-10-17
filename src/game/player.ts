@@ -1795,7 +1795,7 @@ export function doThrow(g: Game, sol: ThrowSolution, kind: ThrowKind) {
   const pl = g.player; if (g.throwCount(kind) <= 0) { g.msg(kind === 'frag' ? 'no frag grenades left' : kind === 'flash' ? 'no stun canisters left' : 'no smoke canisters left'); return; }
   if (pl.pendingThrow) return;                                   // one in the air per wind-up (double-tap G would otherwise eat a canister)
   if (kind === 'frag') pl.frags--; else if (kind === 'flash') pl.flashbangs--; else pl.canisters--;   // (always counted at the wind-up so a cancel's refund stays exact; under unlimited ammo the can comes BACK at release — the pendingThrow branch in update)
-  pl.char.anim.throwItem(); pl.pendingThrow = { t: THROW_RELEASE, sol, kind };   // it leaves the hand as the arm comes over the top (character.ts throwLayer), along the arc previewed at the click
+  pl.char.anim.throwItem(v3.distXZ(pl.char.pos, sol.land), Math.hypot(sol.v0[0], sol.v0[2])); pl.pendingThrow = { t: THROW_RELEASE, sol, kind };   // it leaves the hand as the arm comes over the top (character.ts throwLayer), along the arc previewed at the click
   g.audio.play('throw', throwOrigin(g), 0.7);
 }
 

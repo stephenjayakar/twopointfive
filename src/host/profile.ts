@@ -51,7 +51,7 @@ import { LANES } from '../game/lanes';
 import { HAULHOME } from '../game/digin';
 import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
-import { HOLD } from '../game/character';
+import { HOLD, THROW_BY } from '../game/character';
 import { CLOSE } from '../game/close';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
@@ -226,6 +226,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was
   CLOSE.heldClicks = !q.has('noheldclicks');   // with a man in his arm the two buttons (game/close.ts, player.ts updateHold): left click the knife — he is dead — right click the choke; the arm hold only — ON in the page; ?noheldclicks = neither click does anything there, as it was
   KITANIM.on = !q.has('nokitanim');   // kit animations (game/kitanim.ts): Sam's hands put kit away and bring it out, magazine changes by the gun's state (empty / tactical), the close-in mode's knife hand by distance — ON in the page; ?nokitanim = the kit changing hands on the key's frame, one reload, as it was
+  THROW_BY.on = !q.has('nothrowby');   // a throw reads its distance (game/character.ts THROW_BY): an underhand toss close in, the overhand short-armed in the middle, the whole wind-up far out, on one clock — ON in the page; ?nothrowby = one swing for every throw, as before
   TAKEDOWN.on = !q.has('notakedown');   // close-up takedowns as moves (game/takedown.ts): the chop, the palm heel, the hand over the mouth, the slash, the partner's blow and the man it lands on, the fall by the blow, a man out cold who breathes; ?notakedown = every takedown as it was
   STEALTHPOSE.on = !q.has('nostealthpose');   // stealth poses (game/stealthpose.ts): the crouch's hanging arms and sway, the crouch walk's arms, the back unrolling as he stands, the creep's leading hand, the squat at a door with the wand; ?nostealthpose = as it was
   HANDWORK.on = !q.has('nohandwork');   // hands that do the work (game/handwork.ts): a finger on the keypad, hands on a charge, the breaker's lever and the drive; a hand to the radio; a guard's torch ↔ sidearm swap as a move — ON in the page; ?nohandwork = all three on the frame, as they were
@@ -339,6 +340,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GUARD_EYE.far': 'TPS_FARSIGHT=1',
   'GUARD_EYE.farCalm': 'TPS_FARCALM=1',
   'KITANIM.on': 'TPS_KITANIM=1',
+  'THROW_BY.on': 'TPS_THROWBY=1',
   'START.fallIn': 'TPS_FALLIN=1',
   'SAMESTART.on': 'TPS_SAMESTART=1',
   'TAKE.wired': 'TPS_TAKECHECK=1',

@@ -79,7 +79,7 @@ import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
 import { GUNHOLD } from './gunhold';
-import { HOLD } from './character';
+import { HOLD, THROW_BY } from './character';
 import { STACKROOM } from './stackroom';
 import { START } from './startfile';
 import { HOLDFIRE } from './holdfire';
@@ -235,6 +235,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
+  if (!k.tables.THROW_BY) THROW_BY.on = false;   // (a file from before a throw read its distance: every throw in it was the one overhand, and that body is what its guards saw)
   if (typeof (k.tables.FOG as { things?: boolean } | undefined)?.things !== 'boolean') FOG.things = false;   // (a file from before nothing moved in the fog: its cursor's ray met the game's own list of loose things)
   if (typeof (k.tables.FOG as { flat?: number } | undefined)?.flat !== 'number') FOG.flat = 0;   // (a file from before the fog had its own light: its fog was the live frame dimmed)
   if (typeof (k.tables.FOG as { lit?: number } | undefined)?.lit !== 'number') FOG.lit = 0;   // (a file from before the fog was lit as the team last knew it: its fog was the one fixed light, or the live frame dimmed)

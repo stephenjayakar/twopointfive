@@ -103,7 +103,7 @@ import { WALLSNAP } from './wallsnap';
 import { cutConfig } from '../scene/cut';   // (the cut-pieces switch: not a game module, no cycle)
 
 /** the names a recording carries and a replay applies, in the order journal.ts has always written them (a session file's `knobs.tables` keys) */
-export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'SHIELD', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
+export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'SHIELD', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
@@ -112,7 +112,7 @@ import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
 import { KITANIM } from './kitanim';
-import { KIT } from './character';
+import { KIT, THROW_BY } from './character';
 import { HANDS } from './hands';
 import { WORK } from './workthings';
 import { WAND } from './wand';
@@ -200,6 +200,8 @@ export function knobRegistry(): Record<string, object> {
     WORDS,
     // kit animations (kitanim.ts; character.ts KIT): the switch, the magazine changes' beats and the lengths of the draws — when a round may leave a gun coming up reads them
     KITANIM, KIT,
+    // a throw reads its distance (character.ts THROW_BY): which swing the right arm makes — never when the can leaves it, where from or how it flies
+    THROW_BY,
     // hands on the world (hands.ts): a body taken up by its beats from the end he is at, a door worked by hand with him stepped clear — what Sam's body and door rows DO reads them
     HANDS, WORK, WAND, STICKY,
     // the player's own charges (owncharge.ts): his card's charge rows, the door charge by hand, what a man alone carries, the squad standing off on his charge

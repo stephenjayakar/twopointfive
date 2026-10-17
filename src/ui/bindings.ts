@@ -103,7 +103,7 @@ import { SPOTTED, SPOTTED_DEFAULTS, saveSpotted, spottedSummary } from '../game/
 import { PLAN } from '../game/floorplan';
 import { CLOSE, closeSummary, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { KITANIM, kitSummary } from '../game/kitanim';
-import { KIT } from '../game/character';
+import { KIT, THROW_BY } from '../game/character';
 import { HANDS, handsSummary } from '../game/hands';
 import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
 import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
@@ -1872,6 +1872,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   // (game/kitanim.ts: Sam handles his kit — the hands carry it to where it lives, the magazine change goes by the gun's state, the close-in carriage by distance; on in the page, ?nokitanim)
   { const kt = panel.section('Kit handling (equip, reloads, knife hand)', { open: false, summary: () => kitSummary() });
     panel.toggleBox(kt, 'kit animations', () => KITANIM.on, v => { KITANIM.on = v; }, 'THE switch (also ?nokitanim on the address). Your hands carry what you change: the pistol to the thigh holster, the rifle over the shoulder onto your back, cans to the belt, the knife to its sheath — and a gun fires only once it is up. Reloads differ: empty, dry (a round still up: no slide), tactical (rounds left: the magazine is put away, slower). Near a man the crouch and the knife hand go by how close you are. Off = the kit jumps between hand and holster on the key\'s frame, one reload, one close-in pose, as it was.');
+    panel.toggleBox(kt, 'throw by distance', () => THROW_BY.on, v => { THROW_BY.on = v; }, 'a throw reads how far it goes (also ?nothrowby): an underhand toss close in, a short-armed overhand in the middle, the whole wind-up far out. The can leaves at the same instant on the same arc. Off = one swing for every throw.');
     panel.toggleBox(kt, 'equip ▸ carried by hand', () => KITANIM.equip, v => { KITANIM.equip = v; }, 'the swaps alone', true);
     panel.toggleBox(kt, 'reload ▸ empty / dry / tactical', () => KITANIM.reload, v => { KITANIM.reload = v; }, 'the three magazine changes alone; off = the weapon row\'s one reload', true);
     panel.toggleBox(kt, 'close-in ▸ by distance', () => KITANIM.close, v => { KITANIM.close = v; }, 'closer than ever: the carriage deepens and the knife hand travels to the hilt as you close; the hands keep moving when you stand still. Off = one pose inside the mode.', true);

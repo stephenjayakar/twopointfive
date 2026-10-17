@@ -1064,6 +1064,47 @@ const THR = {
   fingL: [[0, [0, -1, 0.15]], [0.09, [0.1, -0.4, 0.9]], [0.17, [0.05, 0.15, 1]], [0.25, [0.1, 0.35, 0.9]], [0.33, [0.15, 0.6, 0.8]], [0.52, [0.1, 0.3, 0.9]], [0.63, [0.1, -0.7, 0.6]], [THROW_DUR, [0, -1, 0.15]]] as Keys3,
   backL: [[0, [1, 0, 0]], [0.09, [0.5, 0.8, 0.3]], [0.17, [0.3, 1, -0.1]], [0.25, [0.7, 0.7, -0.2]], [0.33, [1, 0.1, -0.3]], [0.52, [1, 0.2, -0.2]], [0.63, [1, 0.2, 0]], [THROW_DUR, [1, 0, 0]]] as Keys3,
 };
+/** A THROW READS ITS DISTANCE (the maintainer, 10-16, over a can thrown at a wall two steps off with the full wind-up: "we should have different animations
+ *  based on how far you're throwing something"). throwItem's `dist` = metres over the floor from the thrower to where the arc ends; with `on` (off in the
+ *  module and on the frozen stand, TPS_THROWBY=1; on in the page, ?nothrowby = one swing for every throw) it picks the swing. Three reads on ONE CLOCK — the
+ *  can leaves every one of them at THROW_RELEASE, and where it starts and how it flies are the thrower's, not the swing's:
+ *   · under `toss` m, and thrown under `tossFast` m/s over the floor (a hard throw a wall stops two steps off is no toss: it is the shortest overhand) — an
+ *     UNDERHAND TOSS (THR_LOW): the arm swings back past the hip and through, the wrist never above the shoulder; the backswing is `tossMin` of its size at
+ *     arm's length, all of it at `toss` m (drawn in toward `tossPivot`, off the shoulder: the hanging hand). From a hand up in front of him (a gun) there is
+ *     no backswing to whip into: past what `tossIn` m/s reaches by the top, the hand drops on one arc to the swing's low point and scoops from there. The
+ *     other arm is left to the pose underneath, or, up on a gun's support grip, is let down to hang (TOSS_HANG) for the swing;
+ *   · from `toss` to `full` m — the overhand SHORT-ARMED: the body's turn, lean and weight shift from `turnMin` of their size up to all of it, the hand's path
+ *     drawn in toward `pivot` (out beside the shoulder: the hand cocks no further back than the ear) from `armMin` of its size up to all of it — but back at
+ *     its authored size for `through` s either side of the release, so it lets go where the whole throw does and the path has no corner — the balance arm's
+ *     path and turn toward the pose underneath from `offMin`, the crouched sit-up from `sit`, by a smoothstep of the distance;
+ *   · `full` m and over — the overhand as authored. No distance told, or the switch off, is that too, bit for bit.
+ *  With the switch on the fist also drops its can the frame the thrown one is in the air (combat.ts: `throwing` runs three frames past the release).
+ *  The body the picture shows is the body the guards see and shoot at (one model): a toss keeps a crouched head down where the overhand sits him up.
+ *  UNTUNED by eye (nobody has seen these on a GPU). */
+export const THROW_BY = { on: false, toss: 3, tossFast: 7.3, tossIn: 4, tossMin: 0.6, through: 0.07, tossPivot: [-0.07, -0.46, 0.08] as Vec3, full: 10, turnMin: 0.4, armMin: 0.5, offMin: 0.45, sit: 0.6, pivot: [-0.2, 0.06, 0.18] as Vec3 };
+/** The underhand toss, THR's body and right-arm channels key for key (same axes, same clock: the hand lets go at THROW_RELEASE; the backswing tops out
+ *  earlier, at TOSS_TOP, so the swing through is no faster than the overhand's): the knees give and the trunk bows as the arm goes back, the weight comes
+ *  through onto the front foot with the swing; the hand goes back past the hip, down by the thigh at its lowest, and lets go RISING, at chest height out in
+ *  front just under the shoulder — as near as an underhand swing gets to where the can starts (the thrower's throw origin, shoulder height) — then follows through open, palm up;
+ *  the elbow stays behind and under the hand's line (swivel solved offline against each hand key, as THR's). The balance arm is left to the pose underneath. */
+const TOSS_TOP = 0.10, TOSS_LOW = 0.165;
+/** where a toss lets the balance arm down to when it is up in front of him: hanging by his side, off its shoulder joint */
+const TOSS_HANG: Vec3 = [0.10, -0.47, -0.02];
+const THR_LOW = {
+  chestYaw: [[0, 0], [0.05, -4], [TOSS_TOP, -9], [0.17, -5], [0.25, 1], [0.36, 5], [0.55, 2], [THROW_DUR, 0]] as Keys,
+  pelvisYaw: [[0, 0], [0.09, -4], [0.16, -1], [0.24, 2], [0.40, 3], [0.60, 0.5], [THROW_DUR, 0]] as Keys,
+  pitch: [[0, 0], [0.11, 9], [0.20, 7], [0.29, 1], [0.40, -2], [0.60, 0], [THROW_DUR, 0]] as Keys,
+  roll: [[0, 0], [TOSS_TOP, 3], [0.22, 2], [0.45, 0], [THROW_DUR, 0]] as Keys,
+  pelX: [[0, 0], [TOSS_TOP, -0.012], [THROW_RELEASE, 0.012], [0.50, 0.006], [THROW_DUR, 0]] as Keys,
+  pelY: [[0, 0], [0.12, -0.045], [0.20, -0.035], [0.31, 0], [0.42, 0.005], [0.60, 0], [THROW_DUR, 0]] as Keys,
+  pelZ: [[0, 0], [TOSS_TOP, -0.015], [THROW_RELEASE, 0.03], [0.50, 0.015], [THROW_DUR, 0]] as Keys,
+  clavUp: [[0, 0], [TOSS_TOP, -3], [0.30, 5], [0.60, 0], [THROW_DUR, 0]] as Keys,
+  clavFwd: [[0, 0], [TOSS_TOP, -5], [THROW_RELEASE, 6], [0.50, 2], [THROW_DUR, 0]] as Keys,
+  handR: [[TOSS_TOP, [-0.13, -0.41, -0.32]], [TOSS_LOW, [-0.10, -0.53, -0.02]], [0.225, [-0.07, -0.36, 0.37]], [THROW_RELEASE, [-0.05, -0.08, 0.50]], [0.34, [-0.04, -0.06, 0.52]], [0.46, [-0.04, -0.08, 0.49]]] as Keys3,
+  swivR: [[0, -62], [TOSS_TOP, -78.8], [0.165, -82.2], [0.225, -107.2], [THROW_RELEASE, -121.9], [0.34, -122.7], [0.46, -121.7], [0.62, -84], [THROW_DUR, -62]] as Keys,
+  fingR: [[0, [0, -1, 0.15]], [0.06, [0, -0.95, -0.3]], [TOSS_TOP, [-0.1, -0.8, -0.6]], [0.165, [0, -1, 0]], [0.225, [0, -0.7, 0.7]], [THROW_RELEASE, [0, -0.1, 1]], [0.34, [0, 0.2, 1]], [0.46, [0, 0.1, 1]], [0.62, [0, -0.8, 0.55]], [THROW_DUR, [0, -1, 0.15]]] as Keys3,
+  backR: [[0, [-1, 0, 0]], [0.06, [-1, 0, -0.1]], [TOSS_TOP, [-0.9, 0.1, -0.4]], [0.165, [-0.6, -0.1, -0.8]], [0.225, [-0.35, -0.7, -0.6]], [THROW_RELEASE, [-0.25, -0.95, -0.1]], [0.34, [-0.25, -0.95, 0.15]], [0.46, [-0.4, -0.9, 0.1]], [0.62, [-0.9, -0.3, 0]], [THROW_DUR, [-1, 0, 0]]] as Keys3,
+};
 
 /** THE BIG SLOT'S TOOLS IN HIS HANDS (CharacterAnimator.bigTool → bigLayer; the maintainer, 10-15, over Door Kickers 2 footage: "the character should have a
  *  hammer on their back, they put away their gun, equip the hammer, wind up, and then hit the door in one motion"). game/bigkit.ts owns the beat and its clock;
@@ -1435,6 +1476,8 @@ export class CharacterAnimator {
   /** throw: where each hand ended up last frame (offset from its shoulder joint, model axes) — a throw re-triggered mid-swing carries on from there instead of
    *  from the pose underneath — and that carried-in start while it applies */
   private thrLast: { r: Vec3; l: Vec3 } | null = null; private thrCarry: { r: Vec3; l: Vec3 } | null = null;
+  /** this throw's read of its distance (THROW_BY, set by throwItem): `thrLow` ≥ 0 = an underhand toss of that size (0‥1), −1 = the overhand, at `thrFar` of its size (0‥1; 1 = as authored); `thrHang` = how far a toss lets the other hand down (0‥1, read off the pose underneath on the throw's first frame; −1 = not read yet) */
+  private thrLow = -1; private thrFar = 1; private thrHang = -1;
   /** the standing idle's foot placement (model space, constant over the loop): where a kick plants both feet, soles as the clip has them */
   private idleFeet: { L: Vec3; R: Vec3; rL: Quat; rR: Quat };
   /** per kick: where the feet were when it started (the support foot is held from the first frame, the swing foot's path starts from its own spot) */
@@ -1703,9 +1746,19 @@ export class CharacterAnimator {
   private reloadDur = 1.6;
   /** Overhand throw off the right hand, THROW_DUR s, layered over whatever the legs are doing (standing, crouched, walking): torso and pelvis wind away and
    *  unwind hips-first, the hand comes up behind the head and whips past it — the item should leave it at THROW_RELEASE — then follows through down across
-   *  the body and eases back to the pose beneath. Re-triggering mid-swing starts the new wind-up from where the hands are. */
-  throwItem() { this.thrCarry = this.throwT >= 0 && this.thrLast ? { r: v3.copy(this.thrLast.r), l: v3.copy(this.thrLast.l) } : null; this.throwT = 0; }
+   *  the body and eases back to the pose beneath. Re-triggering mid-swing starts the new wind-up from where the hands are. `dist` (m over the floor to where the
+   *  arc ends) picks the swing that reads that far — an underhand toss close in, the overhand short-armed in the middle, all of it far out (THROW_BY, with its
+   *  switch on); `speed` (m/s over the floor it leaves at, where the caller knows it) keeps a hard throw from being a toss; no distance = the overhand as
+   *  authored. The clock is the same for every one of them. */
+  throwItem(dist?: number, speed?: number) {
+    this.thrCarry = this.throwT >= 0 && this.thrLast ? { r: v3.copy(this.thrLast.r), l: v3.copy(this.thrLast.l) } : null; this.throwT = 0;
+    this.thrLow = -1; this.thrFar = 1; this.thrHang = -1;
+    if (THROW_BY.on && dist !== undefined && dist === dist) { const lo = THROW_BY.toss, hi = Math.max(THROW_BY.full, lo + 0.01);
+      if (dist < lo && !(speed !== undefined && speed >= THROW_BY.tossFast)) this.thrLow = clamp(dist / lo, 0, 1); else this.thrFar = smoothstep(lo, hi, dist); }
+  }
   get reloading() { return this.reloadT >= 0; }
+  /** which swing the throw under way is (THROW_BY), null when not throwing — for the checks and the viewer's status line */
+  get throwRead(): 'toss' | 'short' | 'full' | null { return this.throwT < 0 ? null : this.thrLow >= 0 ? 'toss' : this.thrFar < 1 ? 'short' : 'full'; }
   /** the item is still in the hand (up to a hair past THROW_RELEASE): hand props keep drawing it, a beat waits with the re-draw */
   get throwing() { return this.throwT >= 0 && this.throwT < THROW_RELEASE + 0.05; }
   /** the throw one-shot is playing at all (wind-up through recovery) */
@@ -4832,23 +4885,26 @@ export class CharacterAnimator {
    *  and end on the live hand positions of the pose underneath, so the layer needs no cross-fade to get in or out (the arm weights only soften the elbow
    *  hand-over at each end). */
   private throwLayer(t: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, T = THR;
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, BY = THROW_BY;
+    // which swing (throwItem): the underhand toss, or the overhand at its size — `full` = as authored, every number below untouched
+    const low = this.thrLow >= 0, full = !low && this.thrFar >= 1, T = low ? THR_LOW : THR;
+    const kT = low ? lerp(BY.tossMin, 1, this.thrLow) : full ? 1 : lerp(BY.turnMin, 1, this.thrFar), kA = low ? kT : full ? 1 : lerp(BY.armMin, 1, this.thrFar), piv = low ? BY.tossPivot : BY.pivot;
     const cr = clamp(this.crouch, 0, 1), legK = (1 - 0.5 * cr) * (1 - 0.4 * smoothstep(0.3, 1.5, Math.abs(this.speed)));   // the legs' share: halved on bent knees, less again on the move
     // ---- what is underneath: feet to re-plant, and each hand from its shoulder (the paths' live end keys)
     fk.run(pA);
     const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
     const uR = v3.sub(fk.pos[nd.handR], fk.pos[nd.upperArmR]), uL = v3.sub(fk.pos[nd.handL], fk.pos[nd.upperArmL]);
     // ---- body English (every curve is zero at both ends: full weight throughout)
-    const chestYaw = curve(t, T.chestYaw) * DEGR, pelYaw = curve(t, T.pelvisYaw) * DEGR * legK, spYaw = chestYaw - pelYaw;   // the pelvis turn carries the whole spine; the spine joints add the rest
-    const pitch = curve(t, T.pitch) * DEGR, roll = curve(t, T.roll) * DEGR;
-    const ext = 18 * DEGR * cr * bump(t, 0, 0.12, 0.5, THROW_DUR);   // crouched: sit up out of the clip's hunch to get the arm over (as lockpickLayer un-rounds the back), chest first
-    this.shift(pA, nd.hips, [curve(t, T.pelX) * legK, curve(t, T.pelY) * legK, curve(t, T.pelZ) * legK]);
+    const chestYaw = curve(t, T.chestYaw) * DEGR * kT, pelYaw = curve(t, T.pelvisYaw) * DEGR * legK * kT, spYaw = chestYaw - pelYaw;   // the pelvis turn carries the whole spine; the spine joints add the rest
+    const pitch = curve(t, T.pitch) * DEGR * kT, roll = curve(t, T.roll) * DEGR * kT;
+    const ext = low ? 0 : 18 * DEGR * cr * bump(t, 0, 0.12, 0.5, THROW_DUR) * (full ? 1 : lerp(BY.sit, 1, this.thrFar));   // crouched: sit up out of the clip's hunch to get the arm over (as lockpickLayer un-rounds the back), chest first
+    this.shift(pA, nd.hips, [curve(t, T.pelX) * legK * kT, curve(t, T.pelY) * legK * kT, curve(t, T.pelZ) * legK * kT]);
     this.turn(pA, nd.hips, qYaw(pelYaw));
     const seg = (k: number, kp: number, ke: number) => quat.mul(qYaw(spYaw * k), quat.mul(qRoll(roll * k), qPitch(pitch * kp - ext * ke)));
     this.turn(pA, nd.spine1, seg(0.3 + 0.12 * cr, 0.4, 0.25)); this.turn(pA, nd.spine2, seg(0.35 + 0.13 * cr, 0.35, 0.3)); this.turn(pA, nd.spine3, seg(0.35 - 0.25 * cr, 0.25, 0.45));   // (the crouch clip lays the chest joint almost flat: there the turn is taken lower down, where the spine is still upright enough to twist about the vertical)
     const hy = -chestYaw * 0.85, hr = -roll * 0.7, hp = -pitch * 0.8 + ext;   // head: stays on the target (keeps 15 % of the turn), levelled out of the lean and the tilt, craned back down out of the sit-up
     this.turn(pA, nd.neck, quat.mul(qYaw(hy * 0.4), quat.mul(qRoll(hr * 0.4), qPitch(hp * 0.45)))); this.turn(pA, nd.head, quat.mul(qYaw(hy * 0.6), quat.mul(qRoll(hr * 0.6), qPitch(hp * 0.55))));
-    this.turn(pA, nd.shoulderR, quat.mul(qYaw(curve(t, T.clavFwd) * DEGR), qRoll(-curve(t, T.clavUp) * DEGR)));
+    this.turn(pA, nd.shoulderR, quat.mul(qYaw(curve(t, T.clavFwd) * DEGR * kT), qRoll(-curve(t, T.clavUp) * DEGR * kT)));
     fk.run(pA);   // feet back where the locomotion has them, soles as they were
     twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0.6, rL);
     twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0.6, rR);
@@ -4857,23 +4913,46 @@ export class CharacterAnimator {
     const shR = v3.copy(fk.pos[nd.upperArmR]), shL = v3.copy(fk.pos[nd.upperArmL]); const cin = this.thrCarry;
     const lowK = 1 - 0.45 * cr;   // crouched: the follow-through stays up off the front knee
     const lift = (K: Keys3) => K.map(([kt, p]) => [kt, [p[0], p[1] < -0.25 ? -0.25 + (p[1] + 0.25) * lowK : p[1], p[2]]] as const);
-    const kR = lift(T.handR), kL = lift(T.handL); const r0 = cin?.r ?? uR, l0 = cin?.l ?? uL;
+    // a shorter throw: the hand's path drawn in toward its pivot — but it lets go where it lets go: a toss from its swing through on is as authored, and the
+    // overhand's path comes back to its authored size over `through` s either side of the release (it is the wind-up and the tail that are small, with no corner)
+    const near = (K: Keys3): Keys3 => full ? K : K.map(([kt, p]) => { const k = low ? (kt > TOSS_LOW ? 1 : kA) : lerp(kA, 1, 1 - smoothstep(0, BY.through, Math.abs(kt - THROW_RELEASE))); return [kt, [piv[0] + (p[0] - piv[0]) * k, piv[1] + (p[1] - piv[1]) * k, piv[2] + (p[2] - piv[2]) * k]] as const; });
+    const r0 = cin?.r ?? uR, l0 = cin?.l ?? uL;
+    let kR = lift(near(T.handR));
+    if (low) {   // a toss from a hand that is nowhere near his hip (a gun up in front of him): no backswing it would have to be whipped into — the further the
+      // authored top is past what `tossIn` m/s reaches by its time, the more the hand just drops, on one arc, to the swing's low point and scoops from there
+      const top = kR[0][1], bot = kR[1][1], d = Math.hypot(top[0] - r0[0], top[1] - r0[1], top[2] - r0[2]), s = smoothstep(0.5, 1, BY.tossIn * TOSS_TOP / Math.max(d, 1e-6));
+      if (s < 1) kR = [[kR[0][0], [lerp(lerp(r0[0], bot[0], 0.6), top[0], s), lerp(lerp(r0[1], bot[1], 0.6), top[1], s), lerp(lerp(r0[2], bot[2], 0.6) - 0.06, top[2], s)]], ...kR.slice(1)];
+    }
+    // the balance arm: all of its reach only for the full throw — a shorter overhand draws its path, and the hand's turn with it, in toward the pose underneath
+    // (from `offMin`). A toss has no use for it: the arm is left to the pose underneath (no weight at all), unless that has the hand up in front of him (a
+    // gun's support grip) — then it is let down to hang by his side; which, is read once, on the throw's first frame (`thrHang`)
+    if (low && this.thrHang < 0) this.thrHang = smoothstep(-0.38, -0.28, uL[1]) * smoothstep(0.15, 0.28, uL[2]);
+    const kB = full ? 1 : lerp(BY.offMin, 1, this.thrFar), offG = low ? this.thrHang : 0, hangY = TOSS_HANG[1] < -0.25 ? -0.25 + (TOSS_HANG[1] + 0.25) * lowK : TOSS_HANG[1];
+    const offAt: Vec3 = [lerp(uL[0], TOSS_HANG[0], offG), lerp(uL[1], hangY, offG), lerp(uL[2], TOSS_HANG[2], offG)];
+    const kL: Keys3 = low ? [[0.32, offAt], [0.42, offAt]] : full ? lift(THR.handL) : lift(THR.handL.map(([kt, p]) => [kt, [uL[0] + (p[0] - uL[0]) * kB, uL[1] + (p[1] - uL[1]) * kB, uL[2] + (p[2] - uL[2]) * kB]] as const));
     // the ends of each path hang off the live hand: part way toward the first / from the last authored point, bowed out round the body — so an arm that starts
     // forward (walking), low and wide (crouched) or mid-swing (re-triggered) takes no detour through a waypoint that only suits the standing idle
     const via = (a: readonly number[], b: readonly number[], s: number, bow: Vec3): Vec3 => [lerp(a[0], b[0], s) + bow[0], lerp(a[1], b[1], s) + bow[1], lerp(a[2], b[2], s) + bow[2]];
     const topR = kR[0][1], endR = kR[kR.length - 1][1], reachL = kL[0][1], endL = kL[kL.length - 1][1];
-    const offR = curve3(t, [[0, r0], [0.06, via(r0, topR, 0.35, [-0.075, -0.015, 0.02])], [0.125, via(r0, topR, 0.75, [-0.11, 0.03, -0.09])], ...kR, [0.62, via(endR, uR, 0.55, [-0.10, 0.02, -0.02])], [THROW_DUR, uR]]);   // (up: hanging below the lifting elbow, then out behind it at shoulder height before it cocks up over it)
-    const offL = curve3(t, [[0, l0], [0.09, via(l0, reachL, 0.5, [0.04, 0, 0.02])], ...kL, [0.63, via(endL, uL, 0.5, [0.03, 0, 0.02])], [THROW_DUR, uL]]);
+    const offR = low ? curve3(t, [[0, r0], [0.05, via(r0, topR, 0.5, [-0.02, 0, -0.01])], ...kR, [0.62, via(endR, uR, 0.55, [-0.03, 0, 0.04])], [THROW_DUR, uR]])   // (the toss: straight back past the hip and round again, no detour)
+      : curve3(t, [[0, r0], [0.06, via(r0, topR, 0.35, [-0.075 * kA, -0.015 * kA, 0.02 * kA])], [0.125, via(r0, topR, 0.75, [-0.11 * kA, 0.03 * kA, -0.09 * kA])], ...kR, [0.62, via(endR, uR, 0.55, [-0.10, 0.02, -0.02])], [THROW_DUR, uR]]);   // (up: hanging below the lifting elbow, then out behind it at shoulder height before it cocks up over it)
+    const offL = curve3(t, [[0, l0], [0.09, low ? via(l0, reachL, 0.2, [0, 0, 0]) : via(l0, reachL, 0.5, [0.04, 0, 0.02])], ...kL, [0.63, via(endL, uL, 0.5, low ? [0, 0, 0] : [0.03, 0, 0.02])], [THROW_DUR, uL]]);
     twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.add(shR, offR), swivelPole(offR, SWIV_REF_R, curve(t, T.swivR) * DEGR), 1, this.handRot(1, curve3(t, T.fingR), curve3(t, T.backR)));
-    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(shL, offL), swivelPole(offL, SWIV_REF_L, curve(t, T.swivL) * DEGR), 1, this.handRot(0, curve3(t, T.fingL), curve3(t, T.backL)));
+    // (a toss's other arm: at weight only while it is let down, or while a throw re-triggered mid-swing hands it back to the pose underneath)
+    const wToss = low ? Math.max(offG, cin ? 1 - smoothstep(0, 0.15, t) : 0) : 1;
+    if (wToss > 0) {
+      const f0 = THR.fingL[0][1], b0 = THR.backL[0][1], fT = low ? f0 : curve3(t, THR.fingL), bT = low ? b0 : curve3(t, THR.backL), sT = low ? THR.swivL[0][1] : curve(t, THR.swivL);   // (a toss: the elbow hangs; the hand keeps the turn it has on its forearm)
+      const part = (a: readonly number[], b: readonly number[]): Vec3 => [lerp(a[0], b[0], kB), lerp(a[1], b[1], kB), lerp(a[2], b[2], kB)];
+      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(shL, offL), swivelPole(offL, SWIV_REF_L, (full || low ? sT : lerp(THR.swivL[0][1], sT, kB)) * DEGR), 1, low ? null : full ? this.handRot(0, fT as Vec3, bT as Vec3) : this.handRot(0, part(f0, fT), part(b0, bT)));
+    }
     // fingers: closed round the can, sprung open at the release, hanging loose after; the left hand firms up as it tucks in
     const open = smoothstep(THROW_RELEASE - 0.025, THROW_RELEASE + 0.03, t), loose = smoothstep(0.34, 0.49, t);
     const cR = (grip: number, flat: number, hang: number) => lerp(lerp(grip, flat, open), hang, loose);
     this.hand(pB, 1, [cR(0.5, 0.05, 0.25), cR(0.55, 0.08, 0.3), cR(0.62, 0.12, 0.35), cR(0.7, 0.15, 0.42)], cR(0.7, 0.1, 0.3));
     const firm = bump(t, 0.22, 0.32, 0.5, 0.64); const cL = (a: number) => lerp(a, a + 0.25, firm);
-    this.hand(pB, 0, [cL(0.3), cL(0.35), cL(0.4), cL(0.45)], lerp(0.3, 0.6, firm));
+    if (!low) this.hand(pB, 0, [cL(0.3), cL(0.35), cL(0.4), cL(0.45)], lerp(0.3, 0.6, firm));
     // ---- in through per-arm masks (clavicle subtrees): full weight but for a short hand-over of the elbow at each end; a carried-in restart is already at weight
-    const wR = cin ? 1 - smoothstep(0.62, THROW_DUR, t) : bump(t, 0, 0.06, 0.62, THROW_DUR), wL = cin ? 1 - smoothstep(0.57, 0.72, t) : bump(t, 0, 0.09, 0.57, 0.72);
+    const wR = cin ? 1 - smoothstep(0.62, THROW_DUR, t) : bump(t, 0, 0.06, 0.62, THROW_DUR), wL = (cin ? 1 - smoothstep(0.57, 0.72, t) : bump(t, 0, 0.09, 0.57, 0.72)) * wToss;
     const m = this.dynMask; m.fill(0);
     const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); };
     setSub(nd.shoulderR, wR); setSub(nd.shoulderL, wL); m[nd.shoulderR] = 0; m[nd.shoulderL] = 0;   // (the clavicles themselves are already posed in pA; pB carries the same turn)

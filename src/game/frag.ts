@@ -754,7 +754,7 @@ export function fragThrowTick(g: Game, dt: number) {
     if (C.wind) {   // the second it takes him: shot, folded or blinded in it and the grenade stays on his belt
       const Wd = C.wind;
       if (out) { C.wind = null; continue; }
-      if (!Wd.swung && g.time >= Wd.until - THROW_RELEASE) { Wd.swung = true; c.anim.throwItem(); }
+      if (!Wd.swung && g.time >= Wd.until - THROW_RELEASE) { Wd.swung = true; c.anim.throwItem(flat(c.pos, Wd.at)); }
       if (g.time < Wd.until) continue;
       C.wind = null;
       const from: Vec3 = Wd.hand && flat(Wd.hand, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], Wd.hand[1], c.pos[2]], Wd.hand) ? Wd.hand : Wd.toward ? armRound(g, c.pos, Wd.toward) : [c.pos[0] + Math.sin(c.aimYaw) * 0.35, c.pos[1] + 1.5, c.pos[2] + Math.cos(c.aimYaw) * 0.35];
