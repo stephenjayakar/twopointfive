@@ -974,8 +974,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the team's ears — where a squad free to leave sends two. A squad's count of its OWN men is as it was: the net ask's last-man rule ("I'm alone here,
   somebody look!") stays its own switch's, so a man who misses his mate still walks to the post himself. Elsewhere nothing changes. NEEDS the radio
   check (`SQUADS.radioCheck`, on in the page; `TPS_STAYASK=1` alone on a frozen run changes nothing). No man is added, nobody is told where the team
-  is (the places are their own posts); no dice or state of its own. SWITCH: ON in the page (`?nostayask`; the debugger row 'squads that stay put
-  still miss a silent room'), OFF in the module and on the frozen stand (`'STAYASK.on': 'TPS_STAYASK=1'`), in the registry and `JOURNAL_KNOBS`.
+  is (the places are their own posts); no dice or state of its own. SWITCH: ON in the page (`?nostayask`; the debugger row 'squads staying put
+  miss a silent room'), OFF in the module and on the frozen stand (`'STAYASK.on': 'TPS_STAYASK=1'`), in the registry and `JOURNAL_KNOBS`.
   SEAMS in enemysquads.ts (another goal's file): `State.stayAsk`, `netAsks(g)` in place of seven reads of `SQUADS.netAsk`, and `netSend` (a squad
   that stays may send `STAYASK.men` on such a floor). KNOWN SHAPE: the man sent ends in another squad's room while `squadStaysIn` still answers yes
   for him (wallreact.ts, darkfoe.ts, laststand.ts judge him by his home room); nothing was seen to go wrong, nothing was run to find out. CHECK:

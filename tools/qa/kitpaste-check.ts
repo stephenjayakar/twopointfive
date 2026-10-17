@@ -21,6 +21,7 @@ const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
 const { STICKY } = await import(`${ROOT}/src/game/stickycam.ts`);
 const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
+const { SHIELD } = await import(`${ROOT}/src/game/shield.ts`);
 const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -44,12 +45,13 @@ function writable(i: number): Set<string> {
 }
 /** the kit table, its rules and the switches this check moves, as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const was = cards(), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, wand = WAND.on, sticky = STICKY.on, own = OWNCHARGE.on, team = K.kitTeam(), table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
-  try { return await fn(); } finally { K.slotsSet(table); K.kitLoad(null, ''); WAND.on = wand; STICKY.on = sticky; OWNCHARGE.on = own; K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; K.kitTeam(team); for (let i = 0; i < N; i++) K.KIT.members[i] = was[i]; }
+  const was = cards(), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, wand = WAND.on, sticky = STICKY.on, own = OWNCHARGE.on, plate = SHIELD.on, team = K.kitTeam(), table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
+  try { return await fn(); } finally { K.slotsSet(table); K.kitLoad(null, ''); WAND.on = wand; STICKY.on = sticky; OWNCHARGE.on = own; SHIELD.on = plate; K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; K.kitTeam(team); for (let i = 0; i < N; i++) K.KIT.members[i] = was[i]; }
 }
 /** the rules put one way, the cards as issued, a store that counts its writes under the table */
 function stand(o: { slots: boolean; big: boolean; extras: boolean }) {
   WAND.on = STICKY.on = OWNCHARGE.on = o.extras; K.BIGSLOT.on = o.big;
+  SHIELD.on = true;   // (the shield in the game, as the cases below ask of it: the page has it out — shield.ts — and run by itself on the shipped stand this check read a shield man's card as a card with an empty big slot; the probe runner held it up, the check did not)
   const store = memStore(); K.kitLoad(store, o.slots ? '' : '?noslots'); K.BIGSLOT.on = o.big; K.kitTeam(N - 1); K.kitReset(); store.writes = 0;
   return store;
 }
@@ -111,6 +113,10 @@ export async function pasteCases(): Promise<boolean> {
       const r = K.kitPaste(0, { ...K.KIT.members[3] }), you = K.KIT.members[0];
       F.verdict(r.ok && you.shield === false && K.bigOf(you) === 'hammer' && you.charges === 2 && you.bangs === 1 && you.shells === 0 && !K.kitLegal(),
         'a shield man onto you: his counts are yours, the shield is not (it is no tile of yours) and your big slot keeps the hammer it held', `you: ${J(you)} · legal: ${K.kitLegal() ?? 'yes'}`);
+      // … and with the shield out of the game (the page as it opens): his card's shield is nothing, so what is copied is a card with an empty big slot, and yours is emptied as any paste of one would
+      { SHIELD.on = false; K.kitReset(); put(3, { shield: true, charges: 2, bangs: 1 }); put(0, { big: 'hammer' });
+        const o = K.kitPaste(0, { ...K.KIT.members[3] }), y = K.KIT.members[0]; SHIELD.on = true;
+        F.verdict(o.ok && y.shield === false && K.bigOf(y) === 'none' && y.charges === 2 && y.bangs === 1 && !K.kitLegal(), 'the same paste with the shield out of the game: the copied card\'s big slot is empty, so yours is emptied with it (no shield comes, and no row of yours is left unasked)', `you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
       K.kitReset(); put(0, { smoke: 3, bangs: 0, frags: 0, shells: 1, wand: false, cams: 0 }); put(2, {});
       const smokeMost = Math.max(...(rows(2).find(x => x.field === 'smoke')?.values ?? [0]) as number[]);
       const r2 = K.kitPaste(2, { ...K.KIT.members[0] }), mate = K.KIT.members[2];
