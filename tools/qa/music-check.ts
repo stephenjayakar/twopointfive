@@ -270,6 +270,7 @@ export async function musicCheck(): Promise<boolean> {
     { const { standUp } = await import('./headless.ts'), L: any = await import(`${ROOT}/src/scene/scenarioList.ts`), SC: any = await import(`${ROOT}/src/scene/scenarios.ts`), SR: any = await import(`${ROOT}/src/game/scenarioRun.ts`);
       const CB: any = await import(`${ROOT}/src/game/combat.ts`), LV: any = await import(`${ROOT}/src/scene/levelData.ts`), LL: any = await import(`${ROOT}/src/scene/levelLoad.ts`), LK: any = await import(`${ROOT}/src/scene/look.ts`), BREAK = process.env.MUSIC_BREAK === '1';
       const say = console.log, warn = console.warn, err = console.error; const why: string[] = []; let told = '';
+      const REST: any = (await import(`${ROOT}/src/game/condition.ts`).catch(() => null))?.CONDITION ?? null, rest0 = REST ? { on: REST.on, ownCalm: REST.ownCalm } : null;   // (a second rule on the same reading, where the tree has it: a teammate at rest does not count. Held off for the as-it-was readings below, read alone beside them)
       try {
         console.log = console.warn = console.error = () => { }; Math.random = mulberry32(7);
         const E = L.SCENARIOS.find((e: { id: string }) => e.id === 'records-pair'), looked = Bun.file(`${ROOT}/levels/${LK.lookLevelFile(E.level)}`), file = await looked.exists() ? looked : Bun.file(`${ROOT}/levels/${E.level}`);   // (the file the page plays on this stand: scene/look.ts)
@@ -284,10 +285,11 @@ export async function musicCheck(): Promise<boolean> {
           foes[0].state = 'alert'; const fight = on(true); foes[0].state = 'patrol';   // a defender who has seen them: the fight reads whichever way the switch stands
           man.awareness = 0.92; for (const x of foes) CB.killGuard(g, x, [0, 0, 1], true);
           step(10);
+          let alone = ''; if (REST) { REST.on = REST.ownCalm = true; const a = g.tension() as number, s0 = man.state; man.state = 'search'; alone = ` · the at-rest rule alone ${a.toFixed(2)} wary, ${(g.tension() as number).toFixed(2)} searching`; man.state = s0; REST.ownCalm = false; }
           const left = man.awareness as number, st = man.state as string, was = on(false), now = on(true);
           man.state = 'search'; const sWas = on(false), sNow = on(true); man.state = 'alert'; const aNow = on(true);
           const R = g.director.run; g.director.run = { show: true, ended: false }; man.state = 'search'; const show = g.director.showing ? on(true) : -1; g.director.run = R; man.state = st;   // (while a show runs its men's scripted 'search' is the score's cue)
-          told = `before anything ${calm.toFixed(2)} · a defender alert ${fight.toFixed(2)} · every defender down and ten seconds on, a teammate ${st} at ${left.toFixed(2)} under his script: ${was.toFixed(2)} as it was, ${now.toFixed(2)} now · the same man left searching ${sWas.toFixed(2)} as it was, ${sNow.toFixed(2)} now · in a fight of his own ${aNow.toFixed(2)} · searching while a show runs ${show.toFixed(2)}`;
+          told = `before anything ${calm.toFixed(2)} · a defender alert ${fight.toFixed(2)} · every defender down and ten seconds on, a teammate ${st} at ${left.toFixed(2)} under his script: ${was.toFixed(2)} as it was, ${now.toFixed(2)} now · the same man left searching ${sWas.toFixed(2)} as it was, ${sNow.toFixed(2)} now · in a fight of his own ${aNow.toFixed(2)} · searching while a show runs ${show.toFixed(2)}${alone}`;
           if (calm > 0.01) why.push(`a mission nobody has disturbed reads ${calm.toFixed(2)}`);
           if (fight !== 1 || aNow !== 1) why.push(`a fight does not read as one: a defender alert ${fight}, a teammate alert ${aNow}`);
           if (st !== 'patrol' || left < 0.9 || was < 0.3) why.push(`the hold this is about did not happen: a man under his script ${st} at ${left.toFixed(2)} after ten seconds, ${was.toFixed(2)} with the switch off (he was left at 0.92)`);
@@ -296,7 +298,7 @@ export async function musicCheck(): Promise<boolean> {
           if (!BREAK && show !== 0.68) why.push(`a show's own scripted man no longer reads: ${show}`);
         }
         const main = await Bun.file(`${ROOT}/src/main.ts`).text(); if (!/audio\.music\.intensity = game\.tension\(MUSIC\.theirs\)/.test(main)) why.push('main.ts does not hand the score the switch');
-      } finally { console.log = say; console.warn = warn; console.error = err; }
+      } finally { console.log = say; console.warn = warn; console.error = err; if (REST && rest0) Object.assign(REST, rest0); }
       line(!why.length, "the team's nerves: with every defender down a teammate's left-over wariness does not hold the score up; a fight and a show's own men still read; switch off = as it was", why.join(' · ') || told);
     }
     // ---- a tape: the run tape carries every registry table and its player puts each over the page's — the score's switch is the viewer's own (knobs.ts VISIT_OWN)
