@@ -150,7 +150,8 @@ Effect numbers are tuned by eye in the viewer and pasted back (`src/game/effects
 
 ## Screens
 
-The menus and the HUD are two different looks today.
+The menus and the fight screen are one look: the same sand, the same one orange, the same type
+(`src/ui/theme.ts`; the fight screen reads those tokens as `--h-…`, top of the sheet in `index.html`).
 
 **Menus** (`src/ui/theme.ts`) are a planning table: warm black `#0c0b09`, sand text `#d2c9b5`, and
 one orange `#f0912e`. Headings are condensed bold caps; body is a plain sans, sentence case, short.
@@ -160,11 +161,14 @@ not apply is not drawn. Missions are picture cards in groups, the way Door Kicke
 missions out; the pictures are frames of the game being played. The man on the kit screen is lit by
 rays, like the game.
 
-**The HUD** (`index.html`) is after Splinter Cell: Chaos Theory: small monospace caps in green
-(`#79d69a`, brighter `#8ff0b4`) on a faint dark backing, pushed to the edges. Kit and the LIGHT and SOUND bars sit bottom
-left, orders top left, the objective top centre, radio bottom centre. Any colour but green means
-something: gold, red and blue for who an order goes to; amber then red for alarm. In the world,
-marks are single glyphs over a head (`?`, `!`, `zz`, `✕`) and speech is a small caption.
+**The fight screen** (`index.html`) keeps the layout of Splinter Cell: Chaos Theory: small caps on a
+faint warm-black backing, pushed to the edges. Kit and the LIGHT and SOUND bars sit bottom left,
+orders top left, the objective top centre, radio bottom centre. Labels are the menus' condensed caps,
+rows their plain sans, digits and keys mono; the ink is sand. Orange is spent as sparingly as on a
+menu: the bar and key of the row a tap will do, the objective, the way a lost man was hit from. Any other colour means
+something: gold, red and blue for who an order goes to; amber then red for alarm; blue for a door.
+Nothing glows and a bar's fill is flat; a mark that sits on the picture carries a dark halo so sand reads on a sunlit floor.
+In the world, marks are single glyphs over a head (`?`, `!`, `zz`, `✕`) and speech is a small caption.
 
 **Words.** Orders are lower-case verb phrases ("stack up", "fall in"); labels are caps; blurbs are
 short and flat. Doors and rooms are named for what they are ("store door"), not by compass. If a screen needs a paragraph to
