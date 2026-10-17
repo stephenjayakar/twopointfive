@@ -2236,6 +2236,7 @@ if (on('picked-door', 'all')) await run('picked-door', () => pickedDoor());
 if (on('follower-corpse', 'all')) await run('follower-corpse', () => followerCorpse());
 if (on('held-leader', 'grab', 'all')) await run('held-leader', () => heldLeader());   // a held lockdown follower whose leader dies keeps no corpse as leader (superviseLockdown) — the grab family's business too
 if (on('holddrop', 'grab', 'all')) await run('holddrop', async () => (await import('./holddrop-check.ts')).holdDropCheck());   // a held man drops his gun (HOLD.dropGun): a rifleman, a drawn pistol, a calm man's torch, the hold's ends, a checkpoint, the journal
+if (on('tabback', 'orders', 'all')) await run('tabback', async () => (await import('./tabback-check.ts')).tabBackCheck());   // Esc is only the pause and Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (src/game/backkey.ts, BACKKEY.tab / ?tabback=0 / TPS_TABBACK=1)
 if (on('holdturn', 'grab', 'all')) await run('holdturn', async () => (await import('./holdturn-check.ts')).holdTurnCheck());   // a hold reads as one hold through a turn (HOLD.oneFacing): the pass, a calm defender in the arm, the cursor round a half circle each way
 if (on('reclear', 'all')) await run('reclear', () => reclear());
 if (on('takedown-wall', 'all')) await run('takedown-wall', () => takedownThroughWall());

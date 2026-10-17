@@ -5,6 +5,7 @@ import { v3, clamp, lerp } from '../math/vec';
 import { FollowCamera } from '../game/camera';
 import { Game, Player, Interactable, isBreathing } from '../game/game';
 import { FLOOR } from '../game/floor';
+import { backName } from '../game/backkey';
 import { FLOOR_KEY } from '../game/doors';
 import { playerAim } from '../game/aim';
 import { AIMCOST } from '../game/aimcost';
@@ -352,7 +353,7 @@ export class Overlay implements HudLike {
    *  many were left off the end, `open` = the selector is open (Space held: index.html #interact.open — the frame brightens, a header says let go to act,
    *  the cancel row is among the rows). The DOM is rebuilt only when the rows' text / reach / kind change; the distance and the progress bar are patched in
    *  place every frame. Hidden when there is nothing to list or a menu card is up. update() feeds it from the game's rows (deriveInteractions). */
-  setInteractions(rows: InteractRow[], primary = -1, more = 0, open = false, hint = 'let go to do it · wheel / ↑↓ chooses · Esc backs out', cancel = 'cancel — let go, do nothing') {
+  setInteractions(rows: InteractRow[], primary = -1, more = 0, open = false, hint = `let go to do it · wheel / ↑↓ chooses · ${backName()} backs out`, cancel = 'cancel — let go, do nothing') {
     if (!rows.length || this.menuEl.classList.contains('on')) { if (this.iaKey) { this.iaKey = ''; this.iaEl.className = ''; this.iaEl.textContent = ''; this.iaLive = []; } return; }
     const key = rows.map(r => `${r.kind}|${r.label}|${r.cont ? 1 : 0}|${r.tone ?? ''}|${r.opts.map(o => `${o.key}>${o.text}>${o.tone ?? ''}${o.mark !== undefined ? `~${o.mark}` : ''}`).join('/')}|${r.inReach ? 1 : 0}${r.off ? 1 : 0}${r.dist !== undefined ? 1 : 0}${r.progress !== undefined ? 1 : 0}`).join('\n') + `#${primary}#${more}#${open ? `1${hint}` : 0}#${cancel}`;
     if (key !== this.iaKey) {

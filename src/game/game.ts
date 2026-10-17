@@ -104,7 +104,7 @@ import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
 import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
-import { updateInteract, escapeInteract } from './interact';
+import { updateInteract, escapeInteract, backableInteract } from './interact';
 import { tacticsTick, loadTactics, tacticsSummary, tacticsReset } from './tactics';
 import { lanesTick, lanesReset } from './lanes';
 import { pictureTick, pictureReset } from './picture';
@@ -1789,6 +1789,8 @@ export class Game {
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
   escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this); }   // (the squad's command menu backs out first: orders.ts)
+  /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this); }
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

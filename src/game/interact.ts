@@ -9,6 +9,7 @@
 import type { Game, Interactable } from './game';
 import { Input } from './input';
 import { INTERACT_KEY } from './consts';
+import { backHit } from './backkey';
 import { wheelPace, pickHover, cancelRow, easeOffHold, holdKilling, stopPicking, stopWand } from './player';
 import { cancelDrive } from './mission';
 import { stopCoding } from './devices';
@@ -62,6 +63,8 @@ export function escapeInteract(g: Game): boolean {
   if (S.open || S.downT >= 0) { closeSelector(g, true); return true; }
   return cancelSustained(g);
 }
+/** is there anything here the back key would back out of — the open list or a press in hand, a running sustained verb (asked, nothing touched) */
+export function backableInteract(g: Game): boolean { const S = g.player.sel; return S.open || S.downT >= 0 || !!runningVerb(g); }
 /** anything to CHOOSE in this list: a row with a verb that is not the running one (a status line — getting hold of him, kicking it in — is nothing to open a list over) */
 export function choosable(rows: Interactable[]): boolean { return rows.some(r => r.kind !== 'cancel' && !!r.verb && !r.running); }
 function openSelector(g: Game) {
@@ -88,8 +91,9 @@ function closeSelector(g: Game, spent: boolean) {
 export function updateInteract(g: Game, dt: number, input: Input) {
   const pl = g.player, S = pl.sel;
   g.act = null;
-  const down = input.down(INTERACT_KEY), hit = input.hit(INTERACT_KEY), esc = input.hit('Escape');
+  const down = input.down(INTERACT_KEY), hit = input.hit(INTERACT_KEY), esc = backHit(input);
   if (pl.fHeld && !down && !hit) pl.fHeld = false;   // a spent press has come up: Space is live again
+  if (input.hit('Paused') && (S.open || S.downT >= 0)) closeSelector(g, true);   // the pause card was up over a held list (backkey.ts 'Paused'): shut, the press spent — Space let go under the card does no row
   // ---- a sustained verb is running: Space (a fresh press), Esc, or a step INTO it stops it; nothing else is on offer meanwhile
   const run = runningVerb(g);
   if (run) {
