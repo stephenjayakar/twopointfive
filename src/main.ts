@@ -535,7 +535,7 @@ async function main() {
     scene: benchScene,
     away: () => { const a = benchAway; benchAway = false; return a; },
     sweep: { start: o => perfsweep.start(o), active: () => perfsweep.active, flipped: () => perfsweep.flipped, progress: () => perfsweep.progress, stop: why => perfsweep.stop(why), settled: () => perfsweep.settled } });
-  (window as any).__bench = Object.defineProperties(bench, { hands: { get: () => hands }, scenes: { value: BENCH_SCENES }, begin: { value: (o?: Parameters<typeof benchBegin>[2]) => benchBegin(true, location, o) } });   // (+ for the checks: the scene's hands-off player, the set, a run begun with options of the caller's)
+  (window as any).__bench = Object.defineProperties(bench, { hands: { get: () => hands }, sceneDefs: { value: BENCH_SCENES }, begin: { value: (o?: Parameters<typeof benchBegin>[2]) => benchBegin(true, location, o) } });   // (+ for the checks: the scene's hands-off player, the set, a run begun with options of the caller's)
   const benchOpts = (b: string | null) => { const secs = parseFloat(b ?? ''); return isFinite(secs) && secs > 0 ? { measureMs: Math.min(60, secs) * 1000, settleMs: Math.min(2000, Math.max(300, secs * 500)) } : {}; };
   benchOn = () => bench.active;   // (no attract reel under a measurement, and the page's Esc and hotkeys stand down)
   // the row: a run begins as a page load of its first scene (this page has booted the game: that load is a second one, and the report says so). A refusal is said, on the HUD's line and the console

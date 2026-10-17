@@ -16,7 +16,7 @@ export interface BenchSceneDef {
   seed: number;
   /** the most seconds of play it gets */
   secs: number;
-  /** Sam cannot go down (the page's god mode, as the HUD then says): the scene runs for as long as the floor takes, whatever his luck in a doorway */
+  /** Sam cannot go down (the page's god mode, as the HUD then says): the scene runs to its cut, whatever his luck in a doorway */
   god: boolean;
   /** what the hands do beyond taking each held room by its nearest door */
   plan: Omit<HandsOffPlan, 'seed' | 'cap'>;
@@ -24,7 +24,7 @@ export interface BenchSceneDef {
 /** the set's name in a report: a run under another set of scenes is not read against this one's */
 export const BENCH_SET = 'floors-1';
 export const BENCH_SCENES: BenchSceneDef[] = [
-  { id: 'snow', name: 'the pass, night snow', scn: 'pass-four', hard: true, seed: 1, secs: 75, god: true, plan: {} },
+  { id: 'snow', name: 'the pass, night snow', scn: 'pass-four', hard: true, seed: 10, secs: 75, god: true, plan: {} },
   { id: 'dark', name: 'the block, dark', scn: 'block-four', hard: true, seed: 1, secs: 75, god: true, plan: { breaker: true } },
-  { id: 'storm', name: 'the compound, storm', scn: 'compound-four', hard: true, seed: 1, secs: 75, god: true, plan: {} },
+  { id: 'storm', name: 'the compound, storm', scn: 'compound-four', hard: true, seed: 6, secs: 75, god: true, plan: {} },
 ];

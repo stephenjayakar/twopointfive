@@ -221,7 +221,10 @@ but synthetic writes still work.
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
   said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
   of seeds and picks, among the runs that take the floor, the one nearest the set's medians in seconds, rounds fired and teammates lost (each over its MAD);
-  `--check` holds each kept seed to still taking its floor, `--twice scn:seed` to the same digest twice. SEEDLINE
+  `--check` holds each kept seed to still taking its floor, `--twice scn:seed` to the same digest twice. KEPT (12 seeds a
+  scene, the 75 s cut): snow 10 (the floor taken in 63 s, 21 rounds, one teammate lost; medians 61 s, 25.5 rounds, one lost; 10 of 12 took it inside the cut),
+  dark 1 (the mains out 5 s in, two rooms banged and cleared, 6 rounds, nobody lost, 4 of 8 defenders left; medians 8.5 rounds, none lost, 4 left), storm 6
+  (22 rounds, one lost, 4 of 11 left; medians 23.5 rounds, one lost, 4 left).
   THE PAGE'S FIGHT IS NOT THE HEADLESS ONE: the page runs the free step (`FIXEDSTEP.on` false), so a fight parts from the headless run of its seed inside
   the first second and two machines at different frame rates do not see the same fight; the `floors` line is how a report says which one it saw. The fixed
   step on the page is another goal's work, and the benchmark takes it when it lands. Checks: `bun run tools/qa/bench-check.ts` (a fake page and a fake tab:

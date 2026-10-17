@@ -5,12 +5,16 @@
 //   bun run tools/qa/bench-seeds.ts --trace snow:7                       one run in this process with the hands' timeline
 //   bun run tools/qa/bench-seeds.ts --twice snow:7                       the same run twice, digest against digest (exit 1 if they part): what a seed names headless
 //   --hz 120 | --jitter 0.08   the game stepped at another rate / at a rate that wobbles (the page's step when the fixed step is off): how far a seed's fight moves with it
-//   --check                    each scene's kept seed (benchScenes.ts) played once: red if it no longer ends 'taken' inside the scene's seconds (the pick has gone stale)
+//   --check                    each scene's kept seed (benchScenes.ts) played once: red if it is no longer a fight inside the scene's seconds — an order given, rounds
+//                              fired, the floor taken or still fought over at the cut, the mains out where the scene throws them (the pick has gone stale)
 // THE STAND: the page as it opens (TPS_PROFILE=shipped unless the caller said otherwise), the game on its own die (`seed`, the page's ?seed=N) and the deal pinned by the
 // same number (`roomclear=N`), the scene's difficulty and its god mode (a scene with it off ends where Sam goes down, here as on the page).
-// THE PICK. Of the runs that end 'taken' inside the scene's seconds: each run's distance from the set's medians in three numbers — seconds to
-// take the floor, rounds fired by everybody, teammates lost — each over that number's spread (the median distance from the median, floored), summed. The smallest
-// sum is the pick; ties go to the lower seed.
+// THE PICK. What the benchmark shows of a scene is its first `secs` seconds, so a run is counted to there. Of the runs that end with the floor taken or at
+// that cut (never one that broke): each run's distance from the set's medians in four numbers — seconds played, rounds fired by everybody, teammates lost,
+// defenders still up at the end — each over that number's spread (the median distance from the median, floored at 5 s, 10 rounds, half a man, one man),
+// summed. The smallest sum is the pick; ties go to the lower seed.
+//   --from runs.json           pick again from a kept --json file, nothing played
+//   BENCHSEEDS_BREAK=1         (with --check) each scene cut two seconds in: no fight, and the check must fail
 // WHAT IT CANNOT SAY. No GPU: Sam is seen through the CPU estimate of the light on him, and there is no smoke in a sight line. The page's fight on the same seed is
 // the same deal and the same dice, read through the picture's own light meter at the display's own frame time: it is not this fight tick for tick.
 process.env.TPS_PROFILE ??= 'shipped';
@@ -73,11 +77,11 @@ const line = (r: Out) => `${r.scn.padEnd(8)} seed ${String(r.seed).padStart(3)} 
 
 /** the pick: the run nearest the set's medians (the header's rule); null when no run of the set ends 'taken' */
 export function pick(runs: Out[]): { seed: number; why: string; table: { seed: number; d: number }[] } | null {
-  const ok = runs.filter(r => r.end === 'taken'); if (!ok.length) return null;
-  const cols: ((r: Out) => number)[] = [r => r.t, r => r.rounds, r => r.of - r.men], floor = [5, 20, 0.5];
+  const ok = runs.filter(r => r.end === 'taken' || r.end === 'cap'); if (!ok.length) return null;
+  const cols: ((r: Out) => number)[] = [r => r.t, r => r.rounds, r => r.of - r.men, r => r.left], floor = [5, 10, 0.5, 1];
   const med = cols.map(c => median(ok.map(c))), mad = cols.map((c, i) => Math.max(floor[i], median(ok.map(r => Math.abs(c(r) - med[i])))));
   const table = ok.map(r => ({ seed: r.seed, d: +cols.reduce((s, c, i) => s + Math.abs(c(r) - med[i]) / mad[i], 0).toFixed(2) })).sort((a, b) => a.d - b.d || a.seed - b.seed);
-  return { seed: table[0].seed, table, why: `${ok.length} of ${runs.length} runs taken · medians: ${f1(med[0])} s, ${f1(med[1])} rounds, ${f1(med[2])} teammates lost · spreads: ${f1(mad[0])} s, ${f1(mad[1])}, ${f1(mad[2])}` };
+  return { seed: table[0].seed, table, why: `${ok.filter(r => r.end === 'taken').length} of ${runs.length} runs took the floor inside the cut · medians: ${f1(med[0])} s, ${f1(med[1])} rounds, ${f1(med[2])} teammates lost, ${f1(med[3])} defenders left · spreads: ${f1(mad[0])} s, ${f1(mad[1])}, ${f1(mad[2])}, ${f1(mad[3])}` };
 }
 
 if (import.meta.main) {
@@ -90,7 +94,8 @@ if (import.meta.main) {
   if (flag('--one')) { const [s, n] = opt('--one').split(':'); const r = await playOne(s, +n, o); const { trace, ...rest } = r; process.stdout.write(`@@${JSON.stringify(rest)}\n`); process.exit(0); }
   const check = flag('--check'), scns: string[] = (opt('--scn') || BENCH_SCENES.map((s: any) => s.id).join(',')).split(','), jobs = Math.max(1, Number(opt('--jobs', '3')));
   if (scns.some(s => !BENCH_SCENES.some((x: any) => x.id === s))) { console.error(`scenes: ${BENCH_SCENES.map((s: any) => s.id).join(', ')}`); process.exit(2); }
-  const todo = scns.flatMap(s => (check ? [BENCH_SCENES.find((x: any) => x.id === s).seed] : seedsOf(opt('--seeds', '1-12'))).map(n => ({ s, n }))), runs: Out[] = []; let next = 0;
+  const BREAK = process.env.BENCHSEEDS_BREAK === '1'; if (check && BREAK) pass.push('--cap', '2');
+  const from = opt('--from'), todo = from ? [] : scns.flatMap(s => (check ? [BENCH_SCENES.find((x: any) => x.id === s).seed] : seedsOf(opt('--seeds', '1-12'))).map(n => ({ s, n }))), runs: Out[] = from ? JSON.parse(readFileSync(from, 'utf8')) : []; let next = 0;
   const worker = async () => { while (next < todo.length) { const j = todo[next++];
       const p = Bun.spawn(['bun', 'run', import.meta.path, '--one', `${j.s}:${j.n}`, ...pass], { stdout: 'pipe', stderr: 'ignore', env: process.env });
       const txt = await new Response(p.stdout).text(); await p.exited; const m = /^@@(.*)$/m.exec(txt);
@@ -100,8 +105,8 @@ if (import.meta.main) {
   runs.sort((a, b) => scns.indexOf(a.scn) - scns.indexOf(b.scn) || a.seed - b.seed);
   let bad = runs.some(r => r.end === 'error');
   for (const s of scns) { const rs = runs.filter(r => r.scn === s), S = BENCH_SCENES.find((x: any) => x.id === s);
-    if (check) { const r = rs[0], ok = r?.end === 'taken'; if (!ok) bad = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}: its kept seed ${S.seed} ${ok ? `still takes the floor (${f1(r.t)} s of ${S.secs}, men ${r.men}/${r.of}, ${r.rounds} rounds)` : `ended '${r?.end}' at ${f1(r?.t ?? 0)} s: pick again (bun run tools/qa/bench-seeds.ts --scn ${s})`}`); continue; }
-    const p = pick(rs); console.log(`\n${s} (${S.scn}${S.hard ? ', hard' : ''}): ${rs.length} seeds · ${p ? `PICK seed ${p.seed} — ${p.why}` : 'no run taken'}${p ? `\n  nearest first: ${p.table.slice(0, 6).map(x => `${x.seed} (${x.d})`).join(' · ')} · kept in benchScenes.ts: ${S.seed}` : ''}`); }
+    if (check) { const r = rs[0], ok = !!r && (r.end === 'taken' || r.end === 'cap') && r.b >= 1 && r.rounds >= 3 && (!S.plan.breaker || r.dark); if (!ok) bad = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}: its kept seed ${S.seed} ${ok ? `is still a fight (${r.end === 'taken' ? 'the floor taken in' : 'fought to the cut at'} ${f1(r.t)} s, men ${r.men}/${r.of}, ${r.left} of ${r.defenders} defenders left, ${r.rounds} rounds, ${r.b} orders${r.dark ? ', the mains out' : ''})` : `ended '${r?.end}' at ${f1(r?.t ?? 0)} s with ${r?.rounds ?? 0} rounds and ${r?.b ?? 0} orders: pick again (bun run tools/qa/bench-seeds.ts --scn ${s})`}`); continue; }
+    const p = pick(rs); console.log(`\n${s} (${S.scn}${S.hard ? ', hard' : ''}): ${rs.length} seeds · ${p ? `PICK seed ${p.seed} — ${p.why}` : 'no run to pick from'}${p ? `\n  nearest first: ${p.table.slice(0, 6).map(x => `${x.seed} (${x.d})`).join(' · ')} · kept in benchScenes.ts: ${S.seed}` : ''}`); }
   if (opt('--json')) writeFileSync(opt('--json'), JSON.stringify(runs, null, 1));
   process.exit(bad ? 1 : 0);
 }

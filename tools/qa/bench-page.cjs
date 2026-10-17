@@ -47,7 +47,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
     catch (e) { console.log(`- FAIL — ${what}: the page did not come ready — ${String(e).slice(0, 300)}${errs.length ? ` · ${errs[0]}` : ''}`); return false; } };
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   const record = () => page.evaluate(KEY => { try { const t = sessionStorage.getItem(KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }, KEY);
-  const SCENES = () => page.evaluate(() => window.__bench.scenes.map(s => ({ id: s.id, name: s.name, scn: s.scn, seed: s.seed, hard: s.hard })));
+  const SCENES = () => page.evaluate(() => window.__bench.sceneDefs.map(s => ({ id: s.id, name: s.name, scn: s.scn, seed: s.seed, hard: s.hard })));
   const REST = '?quality=medium&mute';
 
   // 1. ?bench on the address
