@@ -279,7 +279,7 @@ export const pelletsEnergy = guarded(async () => {
 export const pelletsShield = guarded(async () => {
   const { verdict, done } = family('pellets-shield: a shield man found by a round that crossed glass is logged on the bearing of the leg that reached him');
   // the turn in the glass made large so the two bearings are whole degrees apart (the shipped turn is a degree or two: the log rounds to one)
-  GLASSPEN.deflectDeg = 80; GLASSPEN.bendK = 0;
+  GLASSPEN.deflectDeg = 120; GLASSPEN.bendK = 0;
   const S = await stage(61); const { game } = S; const X = S.pane('annealed', 3);
   if (!X) { verdict(false, 'a plain pane with 3 m of floor', 'none'); return done(); }
   const C = S.behind(X, 1.6); const tan: Vec3 = [X.out[2], 0, -X.out[0]];
@@ -295,6 +295,8 @@ export const pelletsShield = guarded(async () => {
     const path = PEN.roundPath(game, from, d, 60, 1.0); if (!path || path.cross.length !== 1 || path.cross[0].turnDeg < 6) continue;
     const seg = path.segs[1]; const chest: Vec3 = [C.char.pos[0], 1.2, C.char.pos[2]]; const tc = v3.dot(v3.sub(chest, seg.o), seg.d); if (tc < 0.3) continue;
     const miss = v3.len(v3.sub(v3.mad(seg.o, seg.d, tc), chest)); if (miss > 0.1) continue;
+    // (… and the two bearings the verdict below tells apart: a turn of 6° in a pane 2.5 m from the muzzle is under 4° seen from him, so the turn alone does not say)
+    const near = v3.mad(seg.o, seg.d, Math.max(0, tc - 0.2)) as Vec3; if (Math.abs(rel(from, near) - rel(seg.o, near)) < 4.5) continue;
     if (SH.shieldStop(game, 'player', seg.o, seg.d, tc)) continue;
     pick = { from, to: v3.mad(from, d, 8) as Vec3, path };
   }
