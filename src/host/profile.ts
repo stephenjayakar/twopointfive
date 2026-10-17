@@ -155,6 +155,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
   ORDERS.roundOwn = q.get('roundown') !== '0';   // …and the cap never refuses a pair a way round that keeps it off the door it is to stack on (game/orders.ts route): ?roundown=0 = the cap as it was first made, a pair behind the ordered door walks through it
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
+  COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
@@ -403,6 +404,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.walkTries': 'TPS_WALKTRIES=1',
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
+  'COVER.backTurn': 'TPS_BACKTURN=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',

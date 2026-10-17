@@ -406,12 +406,12 @@ const WALK: { to: Vec3; words: string }[] = [
   { to: AT.sorting, words: 'sorting room' }, { to: [32.4, 0, 17.4], words: 'sorting room, its middle' }, { to: AT.sortingW, words: 'stacks' }, { to: AT.stacksN, words: 'stacks, north end' }, { to: AT.hall, words: 'hall (by the stacks\' hall door)' }, { to: AT.post, words: 'gallery' }, { to: [7.6, 0, 14.7], words: 'lobby' },
 ];
 const INSIDE_DOORS = ['reading', 'copy', 'copy_hall', 'office', 'office_side', 'stacks_w', 'stacks_hall', 'sorting'];
-async function walk(n: 2 | 4) {
+export async function walk(n: 2 | 4, each?: (g: any, men: any[]) => void) {   // (`each`: asked every frame of the walk, before it is counted — backturn-check.ts)
   const { g, men, P } = await team(n); for (const d of g.doors.list) d.locked = false;   // (the locks are off for the walk: what they do to a line is the tally's safe runs, with the pair behind Sam)
   const sam = new Set<string>(), theirs = men.map(() => new Set<string>()), opened = new Set<string>(), last = men.map((m: any) => [...m.char.pos]), still = men.map(() => 0);
   const back = n > 2 ? 6.5 : 4.5, close = n > 2 ? 5.0 : 3.2;   // the file's length behind Sam: the pair's rear man follows ~3 m back, the four's ~4.5 m
   let frames = 0, stuck = 0, closest = 9, jam = 0, walked = 0, far = 0, short = ''; let prev = [...P.pos];
-  const tick = () => { frames++; sam.add(spaceOf(P.pos)); walked += flat(P.pos, prev); prev = [...P.pos];
+  const tick = () => { each?.(g, men); frames++; sam.add(spaceOf(P.pos)); walked += flat(P.pos, prev); prev = [...P.pos];
     men.forEach((m: any, i: number) => { theirs[i].add(spaceOf(m.char.pos)); const d = flat(m.char.pos, P.pos); far = Math.max(far, d);
       if (flat(m.char.pos, last[i]) > 0.004) still[i] = 0; else if (d > back && ++still[i] > 60) stuck++; last[i] = [...m.char.pos]; });   // (a man farther behind Sam than the file's own length who has not moved for a second is stuck, not waiting)
     for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) { const d = flat(men[i].char.pos, men[j].char.pos); closest = Math.min(closest, d); if (d < 0.5) jam++; }
