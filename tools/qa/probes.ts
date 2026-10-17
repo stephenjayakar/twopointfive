@@ -28,7 +28,7 @@
 //     hands: hands-body hands-door hands-team hands-off hands-harness
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
-//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-off
+//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-wiring
@@ -2476,6 +2476,7 @@ if (on('wand-tile', 'wand', 'kit', 'all')) await run('wand-tile', async () => (a
 if (on('wand-look', 'wand', 'fog', 'all')) await run('wand-look', async () => (await import('./wand-check.ts')).wandLook());   // who is offered the row; hidden through the feed, seen through the lens inside its wedge; the lens in his eye's place
 if (on('wand-costs', 'wand', 'all')) await run('wand-costs', async () => (await import('./wand-check.ts')).wandCosts());   // the pan's rate and stops, the low lens, what pulls it out, the stow, the mark, the checkpoint gate
 if (on('wand-doors', 'wand', 'all')) await run('wand-doors', async () => (await import('./wand-check.ts')).wandDoors());   // every door face of every squad level: the lens beyond the leaf, in the open
+if (on('wand-mate', 'wand', 'kit', 'squadorders', 'all')) await run('wand-mate', async () => (await import('./wand-check.ts')).wandMate());   // a teammate's wand: carried and never ordered nothing happens; X on a shut door then V, his lens among the fog's eyes; what ends it; refusals
 if (on('wand-off', 'wand', 'all')) await run('wand-off', async () => (await import('./wand-check.ts')).wandOff());   // off, or carried and unused: the same run by digest; the two stands' row and the registry
 // ---------------------------------------------------------------- sticky cameras (src/game/stickycam.ts, sticky-check.ts): the launcher's third load; one stuck to a wall is one more eye for the fog of war
 if (on('sticky-kit', 'sticky', 'kit', 'all')) await run('sticky-kit', async () => (await import('./sticky-check.ts')).stickyKit());   // the row on your card with the switch, a pouch each, the store, staging onto the rifle
@@ -2976,6 +2977,7 @@ if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await i
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());
 if (on('irl-team', 'irlight', 'all')) await run('irl-team', async () => (await import('./irlight-probes.ts')).irlTeam());
 if (on('irl-off', 'irlight', 'all')) await run('irl-off', async () => (await import('./irlight-probes.ts')).irlOff());
+if (on('irl-auto', 'irlight', 'all')) await run('irl-auto', async () => (await import('./irlight-probes.ts')).irlAuto());
 // ---------------------------------------------------------------- dark on a lit man: from the dark, a teammate's light stays off and his closing walk waits (litman-probes.ts; guards.ts LIGHTS.litMan)
 if (on('litman-rule', 'litman', 'all')) await run('litman-rule', async () => (await import('./litman-probes.ts')).litmanRule());
 // ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES): off = the old calls to the bit; on = recoil, the toss, the flinch / hit, the stun hunch, the two gaits, a staged fight

@@ -25,7 +25,7 @@ const CRASH_MAX = 3, CRASH_TRY_MS = 2000, CRASH_GAP_MS = 60000;
 /** how long the page's own tag shows what F7 did (a shelf that does not answer is the shelf's own wait: shelf.ts SHELF.openMs, then the file is a download) */
 const TAG_MS = 7000;
 /** the tag: under the checkpoint and REC tags (index.html #checkpoint, #journal), over the cards and the debugger's panel, on a plate of its own so it reads over either */
-const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw);z-index:45;padding:3px 7px;border-radius:3px;background:rgba(5,9,11,0.94);font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0.08em;text-align:right;color:#79d69a;pointer-events:none;opacity:0;transition:opacity .3s';
+const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw);z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
 const OFF = 'Replay buffer is off (?noreplay or the stored switch): F7 has nothing to save';
 /** F7 as a key of ours: plain or with Shift, not a repeat, not typed into a field */
 const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '');
@@ -206,7 +206,7 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', 'fogedge', 'fogdesat'];
+export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat'];
 export function engineUrl(id: number, file: ReplayFile): string | null {
   const T = file.rerun; if (!T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;

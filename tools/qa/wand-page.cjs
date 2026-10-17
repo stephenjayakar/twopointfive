@@ -6,21 +6,27 @@
 //   play    the room clear staged from that kit: the wand is on him; at a shut door with a defender behind it the panel offers 'look under it'; the row and
 //           one Space start it; once through, the lens is his eye among the fog's and the man behind the door is in the picture; a step pulls it out
 //   nowand  the same page under ?nowand: nothing on him, no row
+//   mate    a teammate's card carries the wand (src/game/wandorder.ts): his chip's card shows the row, carried; in the room clear the door's order menu lists
+//           'wandLook' on V with no digit; X on the door then V sends that man alone, he kneels at it, his lens is one of the fog's eyes and the man behind
+//           the door comes into the picture; nobody looks before the order
+//   nowandmate  the same under ?nowandmate: no row on his card, no row on the door's menu, V sends nobody
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the whole page: frame + HUD) are written to outDir when one is given.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', ONLY = process.env.ONLY || '';   // (ONLY=card|play|nowand = that page alone)
+const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', ONLY = process.env.ONLY || '';   // (ONLY=card|play|nowand|mate|nowandmate = that page alone)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const KIT = JSON.stringify({ v: 2, members: [{ weapon: 'rifle', smoke: 0, bangs: 1, frags: 1, shells: 1, wand: true }] });
+const YOURS = { weapon: 'rifle', smoke: 0, bangs: 1, frags: 1, shells: 1, wand: true };
+const KIT = JSON.stringify({ v: 2, members: [YOURS] });
+const KIT_MATE = JSON.stringify({ v: 2, members: [{ ...YOURS, wand: false, smoke: 1 }, { weapon: 'rifle', bangs: 1, charges: 1, frags: 1, wand: true }] });   // (the first teammate's issued card with one stun canister given up for the wand; yours carries none)
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  const open = async (q) => {
+  const open = async (q, kit = KIT) => {
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-    await page.addInitScript(k => { try { localStorage.setItem('twopointsix.kit', k); } catch { } }, KIT);
+    await page.addInitScript(k => { try { localStorage.setItem('twopointsix.kit', k); } catch { } }, kit);
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&${q}`);
     const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; });
     if (fatal) errors.push('fatal: ' + fatal);
@@ -105,6 +111,57 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       'the room clear staged from that kit: the wand is on him, the door offers the look, the lens shows the man behind it, a step pulls it out', `${JSON.stringify(R)} · ${JSON.stringify(L)} · ${JSON.stringify(E)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     else line(R.wand === false && R.knob === false && !/wand/.test(R.rows || '') && !/look under it/.test(R.panel || '') && R.rows !== undefined && !errors.length,
       'under ?nowand: nothing on him, the switch off, the same door has no such row', `${JSON.stringify(R)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    await page.close();
+  }
+  // ── a teammate's wand, on your order — and the same with that switch off
+  for (const [name, flag, want] of [['mate', '', true], ['nowandmate', '&nowandmate', false]]) {
+    if (ONLY && ONLY !== name) continue;
+    { const { page, errors } = await open('loadout=room-clear-four&nocutboxes' + flag, KIT_MATE);   // his card
+      await page.waitForTimeout(500);
+      const C = await page.evaluate(() => { const chip = document.querySelector('#loadout .lo-slot[data-slot="1"]'); chip?.click();
+        const row = document.querySelector('#loadout .lo-kit .kc-row[data-field="wand"]'); (row || chip)?.scrollIntoView({ block: 'center' });
+        return { chip: !!chip, who: chip?.querySelector('.lo-name')?.textContent || '', picked: !!chip?.classList.contains('pick') || !!document.querySelector('#loadout .lo-slot[data-slot="1"].pick'), row: !!row,
+          label: (row?.querySelector('.kc-label')?.textContent || '').trim(), val: (row?.querySelector('.kc-val')?.textContent || '').trim(), title: row?.title || '', pouch: document.querySelector('#loadout .lo-slot[data-slot="1"] .lo-pouch')?.textContent || '',
+          yours: (() => { document.querySelector('#loadout .lo-slot[data-slot="0"]')?.click(); const r = document.querySelector('#loadout .lo-kit .kc-row[data-field="wand"]'); const v = (r?.querySelector('.kc-val')?.textContent || '').trim(); document.querySelector('#loadout .lo-slot[data-slot="1"]')?.click(); return v; })() }; });
+      await shot(page, `wand-${name}-card`, 0);
+      if (want) line(C.chip && C.picked && C.row && /optical wand/i.test(C.label) && /carried/i.test(C.val) && /4 \/ 4/.test(C.pouch) && !/carried/i.test(C.yours) && !errors.length, 'the first teammate\'s kit card shows the Optical wand row, carried, his pouches full; your own card carries none', `${JSON.stringify(C)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      else line(C.chip && C.picked && !C.row && !errors.length, 'under ?nowandmate: his card has no such row', `${JSON.stringify(C)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      await page.close(); }
+    const { page, errors } = await open('roomclear&squad4&freshstart=0&nocutboxes' + flag, KIT_MATE);
+    const R = await page.evaluate(async () => {
+      const g = window.__game, fog = g.fogOfWar, S = window.__orders; window.__menu.close(); window.__smoke.params.enabled = false;
+      window.__wandStep(30);
+      const out = { fog: fog.active, knob: window.__knobs?.registry?.().WAND?.mate, squad: S.squad().map(m => m.callsign).join(', '), wandOnYou: g.player.wand };
+      // a shut door the wand fits with a living defender within 5 m of it (the office's server room first: the headless check's own door)
+      let pick = null;
+      for (const d of g.doors.list) { if (d.off || !d.isClosed() || d.def.steel) continue;
+        for (const x of g.guards) { if (x.state === 'dead' || x.team !== 'hostile') continue; const dist = Math.hypot(x.char.pos[0] - d.pos[0], x.char.pos[2] - d.pos[2]) - (d.def.name === 'server' ? 100 : 0); if (dist < 5 && (!pick || dist < pick.dist)) pick = { d, x, dist }; } }
+      if (!pick) return { ...out, why: 'no shut door with a defender behind it' };
+      const { d, x } = pick; g.aiEnabled = false;
+      window.__wandStep(60);   // nobody was ordered: nobody looks
+      const unasked = fog.eyes.some(e => e.wand) || S.squad().some(m => S.of(m)?.order === 'wandLook');
+      const c = d.frameCentre; S.open(S.targetAt([c[0], 0, c[2]])); window.__wandStep(1);
+      const rows = (S.menu?.rows || []).map(r => `${r.id}${r.key ? `(${r.key})` : r.hotKey ? `[${r.hotKey}]` : ''}`).join(' '), high = (S.menu?.rows || []).filter(r => r.key != null && +r.key > 5).length;
+      Object.assign(out, { door: d.def.name, man: x.callsign, unasked, rows, high, panel: (document.getElementById('interact')?.innerText || '').replace(/\s+/g, ' ').slice(0, 500), hiddenBefore: fog.hidden(x) });
+      window.__wandDoor = d; window.__wandMan = x;
+      return out; });
+    await shot(page, `wand-${name}-menu`);
+    let L = null;
+    if (R.rows !== undefined) {
+      L = await page.evaluate(async () => { const S = window.__orders; window.__input.pressed.add('KeyV'); window.__wandStep(1);
+        const men = S.squad().filter(m => S.of(m)?.order === 'wandLook'); window.__wandHim = men[0] || null;
+        return { sent: men.map(m => m.callsign).join(', '), menuUp: !!S.menu, frames: 0, live: false }; });
+      for (let k = 0; k < 8 && L.sent && !L.live; k++) Object.assign(L, await page.evaluate(async (f0) => { const fog = window.__game.fogOfWar; let f = 0;
+        while (f < 240 && !fog.eyes.some(e => e.wand)) { window.__wandStep(1); f++; }
+        return { frames: f0 + f, live: fog.eyes.some(e => e.wand) }; }, L.frames));
+      if (L.live) { Object.assign(L, await page.evaluate(async () => { const g = window.__game, fog = g.fogOfWar, S = window.__orders, him = window.__wandHim, x = window.__wandMan; let seen = 0, eyes = 0;
+          for (let i = 0; i < 360; i++) { window.__wandStep(1); if (!fog.hidden(x)) seen++; if (fog.eyes.some(e => e.wand)) eyes++; }
+          return { seen, eyes, kneels: !!him.char.anim.lockpick, there: S.of(him)?.there || '', order: S.of(him)?.order || '', others: S.squad().filter(m => m !== him).map(m => S.of(m)?.order || '-').join(' ') }; }));
+        await shot(page, 'wand-mate-live'); } }
+    if (want) line(R.knob === true && R.fog === true && R.wandOnYou === false && R.unasked === false && /wandLook\[KeyV\]/.test(R.rows || '') && R.high === 0 && R.hiddenBefore && L && L.sent && !/,/.test(L.sent) && !L.menuUp && L.live && L.kneels && /^looking under/.test(L.there) && L.seen > 0 && L.eyes === 360 && !/wandLook/.test(L.others) && !errors.length,
+      'the room clear staged from that kit: nobody looks unordered; the door\'s menu lists the look on V with no digit; V sends the one man who carries it, he kneels at the door, his lens is a fog eye and shows the man behind it', `${JSON.stringify(R)} · ${JSON.stringify(L)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    else line(R.knob === false && R.rows !== undefined && !/wandLook/.test(R.rows) && R.unasked === false && L && !L.sent && !L.live && !errors.length,
+      'under ?nowandmate: the switch off, the same door\'s menu has no such row, V sends nobody', `${JSON.stringify(R)} · ${JSON.stringify(L)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
   await browser.close();

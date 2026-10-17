@@ -270,7 +270,10 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
   if (!k.tables.WAND) WAND.on = false;   // (a file from before the optical wand: no door offered the look)
-  else if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
+  else {
+    if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
+    if ((k.tables.WAND as Partial<typeof WAND>).mate === undefined) WAND.mate = false;   // (…and one from before a teammate could carry one: no card of theirs had the row, no door's menu the order)
+  }
   if (!k.tables.STICKY) STICKY.on = false;   // (a file from before the sticky cameras: no such load on his rifle)
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.take === undefined) STICKY.take = false;   // (…and one from before a stuck camera could be taken back: no such row)
@@ -329,6 +332,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.SAMESTART) SAMESTART.on = false;   // (a file from before every mission started the same way: its stagings were dealt — a fresh placement a visit, the next on a restart, a quiet deal off the die)
   if (!k.tables.LIGHTWALL) LIGHTWALL.on = false;   // (a file from before weapon lights stopped at walls: its lights stood at their lenses, and the light estimate read them there)
   if (!k.tables.IRLIGHT) IRLIGHT.on = false;   // (a file from before the goggles carried an infrared light: its teammates' tubes saw a man by the light the meter read alone, and a room with none was 'too dark for the tube')
+  if ((k.tables.IRLIGHT as Partial<typeof IRLIGHT> | undefined)?.auto === undefined) IRLIGHT.auto = false;   // (…and one from before the light burned only where it was too dark for the tube: its lights burned whenever the goggles were down)
   if (!k.tables.AIRDUST) AIRDUST.on = false;   // (a file from before the weather's dust stood in the rooms by their openings: its eyes were cut by the leak under every roof)
   if ((k.tables.WALLCHARGE as { outer?: boolean } | undefined)?.outer === undefined) WALLCHARGE.outer = false;   // (a file from before a charge went on an outer wall: there it was refused in words)
   if ((k.tables.WALLCHARGE as { safe?: boolean } | undefined)?.safe === undefined) WALLCHARGE.safe = false;   // (…and from before its safety radius grew: the stand-off and the backblast reach as they were)

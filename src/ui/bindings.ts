@@ -19,7 +19,7 @@ import { Panel } from './panel';
 import { DEG } from '../math/vec';
 import { defaultRcConfig } from '../render/rc';
 import { AudioEngine } from '../audio/audio';
-import { PIECE_NAMES } from '../audio/pieces';
+import { PIECE_NAMES, MUSIC } from '../audio/pieces';
 import { Quality, QUALITY_NAMES, AIM_DISPLAY } from './quality';
 import * as fx from '../game/effects';
 import { FLOOR } from '../game/floor';
@@ -1330,9 +1330,10 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
       { k: 'carry', label: 'IR lasers ▸ on whenever the gun is up', title: 'a teammate on goggles keeps his infrared laser on whenever his gun is at his shoulder — it lies along every sector he covers, since he cannot use his sights through the tube (thumb off it while his muzzle is lowered for a man in his line). Off = on only in the frames the red laser was: a man the guard AI has hunting, which a teammate in a scenario never is' },
     ]);
     feelRows('IRLIGHT', [
-      { k: 'on', label: 'IR light ▸ on the goggles', title: 'the goggles carry an infrared light: a wide flood from the brow that only night vision sees by, so a room with no light of its own shows through the goggles (N). It burns whenever the goggles are down — no key. Nobody without goggles sees it: the enemies have none, and the LIGHT bar does not move for it. Off (also ?noirlight on the address) = a tube amplifies only the light that is there, and a room with none is black noise' },
+      { k: 'on', label: 'IR light ▸ on the goggles', title: 'the goggles carry an infrared light: a wide flood from the brow that only night vision sees by, so a room with no light of its own shows through the goggles (N). It burns with the goggles down wherever they alone show too little (the row below) — no key. Nobody without goggles sees it: the enemies have none, and the LIGHT bar does not move for it. Off (also ?noirlight on the address) = a tube amplifies only the light that is there, and a room with none is black noise' },
       { k: 'team', label: 'IR light ▸ the team carries one too', title: 'every teammate on goggles burns his own, a goggled teammate sees a man standing in anybody\'s, and no place is too dark for his tube any more (he no longer puts his white light on for a black room; when the team is compromised the lights are free as ever). Off = yours alone, a picture and nothing else: the team sees and lights as it did' },
-      { k: 'power', label: 'IR light ▸ power', title: 'how bright the flood reads through the tube (30: a wall six metres off a little over half the tube\'s range; anything inside two metres at its ceiling). Never judged on a real GPU: turn it until a dark room reads well' },
+      { k: 'auto', label: 'IR light ▸ only where it is too dark', title: 'a man\'s infrared light burns only where his goggles alone show too little: the floor under him or along his look reads black through the tube by the place\'s own light. In a moonlit yard or a lit corridor it is out; it comes on as he looks into a dark room and goes out a moment after he is clear of it. Off (also ?noirauto on the address) = it burns whenever the goggles are down, as it did' },
+      { k: 'power', label: 'IR light ▸ power', title: 'how bright the flood reads through the tube (8: the floor two metres ahead at about 0.6 of the tube\'s range, a wall six metres off a little under half; it was 30, and a stacked squad\'s five put the ground at the ceiling). Never judged on a real GPU: turn it until a dark room reads well' },
       { k: 'cone', label: 'IR light ▸ half angle (°)', title: 'how wide the flood is to either side of where he faces' },
       { k: 'reach', label: 'IR light ▸ reach (m)', title: 'where the flood ends (full to about half of this)' },
     ]);
@@ -1846,6 +1847,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   // (game/wand.ts: the optical wand — a row of your kit card; carrying it, a shut door's rows offer a look under it where the fog of war hides the room; on in the page, ?nowand)
   { const wd = panel.section('Optical wand (a look under a shut door)', { open: false, summary: () => wandSummary(game) });
     panel.toggleBox(wd, 'optical wand in the kit', () => WAND.on, v => { WAND.on = v; }, 'THE switch (also ?nowand on the address). On: your kit card has an Optical wand row (a pouch), and carrying it a shut door offers "look under it" on Space wherever the fog of war is up. Off: no such row on the card or the door.');
+    panel.toggleBox(wd, 'wand ▸ a teammate, on order', () => WAND.mate, v => { WAND.mate = v; }, 'also ?nowandmate on the address. On: a teammate\'s kit card may carry the wand (a pouch), and X on a shut door then V sends the man who carries it to look under it — his lens is one of the fog\'s eyes. He never uses it unordered. Off: only you carry one.');
     panel.toggleBox(wd, 'wand ▸ on me now', () => game.player.wand, v => { game.player.wand = v; }, 'put the wand on you (or take it off) for this run without going through the loadout screen; a restart puts back what your card says', false);
     panel.slider(wd, 'wand ▸ feed (s)', 0, 4, 0.1, () => WAND.feedSecs, v => { WAND.feedSecs = v; }, 'seconds on your knee, hands on it, before the lens shows anything');
     panel.slider(wd, 'wand ▸ stow (s)', 0, 2, 0.05, () => WAND.stowSecs, v => { WAND.stowSecs = v; }, 'seconds without a round after it is pulled out, with kit handling off — on, the gun is drawn back by hand and that draw is the wait');
@@ -2154,7 +2156,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.slider(au, 'music volume', 0, 1, 0.01, () => audio.volume.music, v => { audio.volume.music = v; audio.setVolumes(); });
   panel.slider(au, 'ambience', 0, 1.5, 0.01, () => audio.volume.ambience, v => { audio.volume.ambience = v; audio.setVolumes(); });
   let forced = -1;
-  panel.slider(au, 'force tension', -1, 1, 0.05, () => forced, v => { forced = v; if (audio.music) audio.music.intensity = v < 0 ? game.tension() : v; }, '-1 = follow the game; otherwise pin the score intensity');
+  panel.slider(au, 'force tension', -1, 1, 0.05, () => forced, v => { forced = v; if (audio.music) audio.music.intensity = v < 0 ? game.tension(MUSIC.theirs) : v; }, '-1 = follow the game; otherwise pin the score intensity');
   setInterval(() => { window.__forcedTension = forced >= 0; if (forced >= 0 && audio.music) audio.music.intensity = forced; }, 200);
 
   // ================================================================ CHECKPOINTS (game/savestate.ts, STATUS G5): the dev rows — save now (the manual slot; 'force' lets go of Sam's hands and any drill in the FILE), load the

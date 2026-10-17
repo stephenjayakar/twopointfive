@@ -33,6 +33,7 @@ import { openLoadout, entryOfMission, type LoadoutScreen } from './loadout';
 import { notePicked } from './picks';
 import { difficultyNow, leversMixed, leversBase, leversHref } from '../game/difficulty';
 import { quietFogAside } from '../game/quietfog';
+import { quietGear } from './kitNoise';
 import type { HourId } from '../game/hours';
 import { WEATHER_PRESETS, snowLevel } from '../game/weatherKinds';
 import { squadOfQuery, sizeWords, kitAsIssued, type SquadSize } from '../game/loadout';
@@ -288,7 +289,44 @@ const CSS = `
 @media (max-width: 900px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) 250px; } #missions.one .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-left: 10px; padding-right: 10px; } }
 @media (max-width: 720px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 46%) minmax(0, 1fr); } }
 `;
-function styles() { menuTheme(); if (document.getElementById?.('startpage-css')) return; const s = document.createElement('style'); s.id = 'startpage-css'; s.textContent = CSS; (document.head ?? document.body)?.appendChild?.(s); }
+/** The sound mark on a tile of a quiet mission's gear screen: a source and one, two or three arcs (ui/kitNoise.ts says which), as a mask the rule fills with its own colour. */
+const arcs = (n: number): string => { const w = [0, 7, 10, 13][n], d = ['M4.7 1.9 A4 4 0 0 1 4.7 7.1', 'M7.3 0.6 A7 7 0 0 1 7.3 8.4', 'M10.7 0.5 A10 10 0 0 1 10.7 8.5'].slice(0, n).join(' ');
+  return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} 9"><circle cx="1.6" cy="4.5" r="1.3"/><path d="${d}" fill="none" stroke="#000" stroke-width="1.3" stroke-linecap="round"/></svg>`)}")`; };
+const Q = '#missions.one.quiet.pane-loadout', QK = `${Q} #loadout .lo-kit`;
+const QUIET_CSS = `
+/* A QUIET MISSION'S GEAR SCREEN (root class 'quiet' on the Team & kit step: a quiet mission and the solo night — ui/kitNoise.ts quietGear; 'kitloud' on the
+   address = the screen as it was; the maintainer, 10-17: "quiet missions should have different gear screen stuff"). THE LIGHTS ARE OUT: nothing on it is
+   orange — the cursor is bright sand, Deploy is a hollow block — so the night picture beside it is the brightest thing in the window; the tiles are solid
+   plates, so the room does not show through them. AND THE KIT READS BY NOISE, with no word added: a tile whose thing makes a sound when it is used wears a
+   sound mark by its value — one arc in the ink for what is heard nearby, two in the alarm's amber for what the floor hears, three in its red for the blast (index.html #alarm.l1 / .l2)
+   (the game's own steps, kitNoise.ts) — and a thing he carries none of sinks, so the quiet kit he has stands forward. An empty big slot is a tile like the rest. */
+${Q} { --m-accent: var(--m-bright); --m-accent-hi: var(--m-bright); --m-accent-rgb: var(--m-bright-rgb); }
+/* (the cursor with no orange: a 4 px bright bar where 'on' is 2 px of the soft ink, and the roster's standing bars a step dimmer, so only the cursor is bright) */
+${Q} #loadout .lo-team.sel .lo-size.on, ${Q} #loadout .lo-kits.sel .lo-set.pick, ${Q} #loadout .kc.focus .kc-sets.sel .kc-set.pick { box-shadow: inset 0 -4px 0 var(--m-bright); }
+${Q} #loadout .lo-slots.sel .lo-slot.pick { box-shadow: inset 0 -4px 0 var(--m-bright); }
+${Q} #loadout .lo-slot.p-you { border-left-color: var(--m-soft); }
+${Q} #loadout .lo-btn.primary { color: var(--m-bright); background: rgba(var(--m-edge),0.08); box-shadow: inset 0 0 0 2px var(--m-bright); }
+${Q} #loadout .lo-btn.primary:hover { background: rgba(var(--m-edge),0.18); }
+${Q} #loadout .lo-btn.primary.sel { box-shadow: inset 0 0 0 2px var(--m-bright), 0 0 0 2px var(--m-base), 0 0 0 4px var(--m-bright); }
+${Q} #loadout .lo-slot { background: rgba(var(--m-panel-rgb),0.94); }
+${Q} #loadout .lo-slot.pick, ${Q} #loadout .lo-slots.sel .lo-slot.pick, ${Q} #loadout .lo-slot.in:hover { background: rgba(var(--m-panel2-rgb),0.97); }
+${QK} .kc-row { background: rgba(var(--m-panel-rgb),0.94); }
+${QK} .kc-row.zero { background: rgba(var(--m-base-rgb),0.9); }
+${QK} .kc-row:hover, ${QK} .kc.focus .kc-row.sel { background: rgba(var(--m-panel2-rgb),0.97); }
+${QK} .kc.focus .kc-row.sel { border-left-width: 4px; padding-left: 9px; }
+${QK} .kc-row.zero .kc-label, ${QK} .kc-row.zero .kc-val { opacity: 0.65; }
+${QK} .kc-row.zero:hover .kc-label, ${QK} .kc-row.zero:hover .kc-val, ${QK} .kc.focus .kc-row.zero.sel .kc-label, ${QK} .kc.focus .kc-row.zero.sel .kc-val { opacity: 0.9; }
+@media (min-width: 1181px) { ${QK} .kc-row[data-field="big"].zero { grid-column: auto; grid-template-columns: 48px minmax(0, 1fr); padding-top: 8px; padding-bottom: 8px; } ${QK} .kc-row[data-field="big"].zero .kc-ico { height: 32px; } }
+@media (max-width: 1180px) { ${QK} .kc-row[data-field="big"].zero { grid-column: auto; } }
+/* the sound mark stands after the VALUE (the name's line is cut with an ellipsis in a narrow tile and holds the arrows; the value's is the tile's own and its type is the larger) */
+${QK} .kc-row:not([data-noise="0"]) .kc-val::after { content: ''; display: inline-block; height: 14px; margin-left: 10px; vertical-align: -1px; background: var(--m-soft); -webkit-mask: var(--arcs) no-repeat 0 0 / 100% 100%; mask: var(--arcs) no-repeat 0 0 / 100% 100%; }
+${QK} .kc-row[data-noise="1"] .kc-val::after { width: 10.9px; --arcs: ${arcs(1)}; }
+${QK} .kc-row[data-noise="2"] .kc-val::after { width: 15.6px; --arcs: ${arcs(2)}; }
+${QK} .kc-row[data-noise="3"] .kc-val::after { width: 20.2px; --arcs: ${arcs(3)}; }
+${QK} .kc-row[data-noise="2"]:not(.zero) .kc-val::after { background: #f3c86a; }   /* (the colour is spent on what he CARRIES: a thing he has none of keeps its arcs in the ink) */
+${QK} .kc-row[data-noise="3"]:not(.zero) .kc-val::after { background: #ff7a5c; }
+`;
+function styles() { menuTheme(); if (document.getElementById?.('startpage-css')) return; const s = document.createElement('style'); s.id = 'startpage-css'; s.textContent = CSS + QUIET_CSS; (document.head ?? document.body)?.appendChild?.(s); }
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
 export type Pane = 'list' | 'loadout';
@@ -344,7 +382,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   next.addEventListener('click', () => { setPane('loadout'); mount(); });
   const say = () => { const bar = host.querySelector?.('[data-row="actions"]') as HTMLElement | null; if (!bar) return;
     bar.setAttribute('data-what', pane === 'loadout' && KIT_CLIP.on && L?.card ? WHAT.loadout.replace('change', 'change · C copy · V paste') : WHAT[pane]); if (next.parentElement !== bar) bar.appendChild(next);   // (copy and paste of a man's kit — ui/kitCard.ts KIT_CLIP — where there are cards to copy)
-    root.classList.toggle('nokit', !!L && kitAsIssued(L.entry)); };
+    root.classList.toggle('nokit', !!L && kitAsIssued(L.entry)); root.classList.toggle('quiet', !!L && quietGear(L.entry.kind, search)); };
   const steps: [Pane, HTMLElement][] = [];
   const setPane = (p: Pane) => { const was = pane; pane = p; root.classList.toggle('pane-loadout', p === 'loadout'); root.classList.toggle('pane-list', p === 'list');
     for (const [k, b] of steps) { b.classList.toggle('on', k === p); if (k === p) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current'); }
@@ -424,7 +462,7 @@ export function openStartPage(opts: StartPageOpts = {}): StartPage | null {
   M = openMissions({ root: opts.root, list, keep: true, planPx: GROUPS_UI.on ? 640 : 1320, select: opts.select, first: PICKS_UI.on ? PICKS[0]?.mission : undefined, fold: GROUPS_UI.on, tiles: GROUPS_UI.on, heads: GROUPS_UI.on ? undefined : first > 0 && first < list.length ? { [first]: 'Every other mission' } : {},   // (the groups, folded — ui/missions.ts groupHeads / `fold`; a visit that names no row opens on the short list's first, wherever its group stands; ?nogroups = the short list on top and the one heading it had)
     onPick: () => { setPane('loadout'); mount(); },
     onPaint: () => { if (ready) onPaint(); },
-    onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout'); MISSIONS.keysAway = null; if (page === P) page = null;
+    onClose: () => { shut = true; if (L?.open) L.close(); L = null; fig?.close(); fig = null; kview?.close(); kview = null; figHost.remove?.(); root.classList.remove('one', 'tiles', 'pane-list', 'pane-loadout', 'quiet'); MISSIONS.keysAway = null; if (page === P) page = null;
       root.removeEventListener?.('click', onClick, true); for (const v of vals) if (v.lit) clearTimeout(v.lit);
       if (playerHour !== null) try { M.hour(playerHour); } catch { /* the list is gone */ }   // (the list remembers the PLAYER's hour, not one a short-list row put on)
       setTimeout(() => { const m = document.getElementById?.('menu'), b = m?.classList.contains('on') && !m.hasAttribute('inert') ? m.querySelector?.('.actions button.primary') as HTMLElement | null : null; if (b && !currentMissions()) b.focus?.(); }, 0); } });   // (the card behind has the keys again: Enter is its 'Play ›')

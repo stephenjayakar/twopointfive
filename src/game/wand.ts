@@ -1,6 +1,7 @@
 // The optical wand: a scope on a cable, fed under a shut door to see the room behind it before anybody opens it (SWAT 4's Optiwand, Ready or Not's mirror gun,
 // Chaos Theory's optic cable). A piece of KIT: a row of YOUR card (kit.ts `MemberKit.wand`, one pouch — slots.json tool `wand`), written onto the Player
-// (`Player.wand`) by kitPlayer. Teammates carry none.
+// (`Player.wand`) by kitPlayer. A TEAMMATE's card can carry one too (`WAND.mate`), and he uses it ONLY on your order: wandorder.ts (the order, his kneel,
+// his lens as one of the fog's eyes) — never by himself.
 //
 // ONE SWITCH, `WAND.on`: ON in the page (`?nowand` = the kit card has no such row and no door offers the look — the build as it was), OFF in the module and on
 // the frozen harness stand (`TPS_WAND=1`); a FROZEN_HOLDS row, in the knob registry and a journal's tables. With nobody carrying one, on = off by run digest.
@@ -20,7 +21,7 @@
 // handling on (the page) it is drawn by hand like any kit change and the lock-out is that draw's own (kitanim.ts, about half a second for the pistol, more off
 // the back for the rifle); with it off, `stowSecs`.
 //
-// WHAT IS NOT HERE: nobody on the far side notices the lens; no sound is filed; a teammate cannot be told to use one (parked by the maintainer); a steel fire
+// WHAT IS NOT HERE: nobody on the far side notices the lens; no sound is filed; the two-man recon role (a partner who scouts by himself) is parked by the maintainer; a steel fire
 // door has no gap to feed it through and a door off its hinges is a doorway. No dice, no GPU read, nothing of the camera: the aim point is the frame's input.
 // State is the Player's (`wand`, `wanding`): `wand` rides a checkpoint's player slice; a look under way refuses a plain save (savestate.ts playerBusy) and is
 // simply not in a forced one (a fresh Player is not looking).
@@ -56,6 +57,13 @@ export const WAND = {
   /** N is read while he looks: the goggles go down / up by a nod (his hands are on the cable) and the picture follows as anywhere else. false = N did
    *  nothing on his knee at the door, as it was (a recording from before the key replays so) */
   nv: true,
+  /** a TEAMMATE can carry the wand and be ORDERED to look under a door (wandorder.ts): ON in the page, `?nowandmate` = yours alone, as it was; OFF here
+   *  and on the frozen stand (`TPS_WANDMATE=1`). Acts only with `on`. A recording from before the key replays with it off. */
+  mate: false,
+  /** the order's key on a door's menu (X on the door, then this): no digit is free there, and nothing is ever on a digit above 5 */
+  orderKey: 'KeyV',
+  /** seconds for a teammate's lens to sweep from one end of its arc to the other and back (nobody aims it for him) */
+  sweepSecs: 5,
 };
 export const WAND_STATS = { looks: 0, live: 0, marked: 0 };
 

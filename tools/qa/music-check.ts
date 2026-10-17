@@ -2,7 +2,7 @@
 // every tension, are they different pieces, and does the deal hand them round? The sequencer is driven here over a recording backend on a made-up clock (no audio device,
 // no browser): what is held is WHICH NOTES ARE ASKED FOR AND WHEN. What they sound like is tools/qa/music-page.cjs (levels, measured in Chromium) and a listener's ears.
 //   bun run tools/qa/music-check.ts                exit 0 = all pass, 1 = a line failed          (also `probes.ts music`)
-//   MUSIC_BREAK=1 bun run tools/qa/music-check.ts  the red path: every newer piece is the first one over again, no table is the visit's own, nobody says the menu is up or which level it is, a level loses its row, a string in tune is called out of it — 'different', 'foundation', 'a tape', 'the menu', 'every level', "the level's music" and 'acoustic' must FAIL
+//   MUSIC_BREAK=1 bun run tools/qa/music-check.ts  the red path: every newer piece is the first one over again, no table is the visit's own, nobody says the menu is up or which level it is, a level loses its row, a string in tune is called out of it — 'different', 'foundation', 'a tape', 'the menu', 'every level', "the team's nerves", "the level's music" and 'acoustic' must FAIL
 //   run it on BOTH stands (TPS_PROFILE=shipped in front): the 'stand' line says which one it found
 // WHAT IS HELD:
 //   stand       the switch is off on the frozen stand and on on the shipped one (TPS_MUSIC=1 raises it), has its FROZEN_HOLDS row and its word, and ?onetheme puts it off
@@ -15,6 +15,7 @@
 //   the deal    an hour of calm on four seeds: the visit opens on a newer piece, every newer one is heard before the theme comes round, none twice running, a
 //   every level each mission's level (and the solo night's) has two pieces written for it (audio/setlist.ts), never the theme; no row for a level that is not there
 //   the level's music   MUSIC.byLevel: the score plays the level's list in its order whatever the page's die says, its first piece off the menu; a restart keeps it; ?shuffle = the bag
+//   the team's nerves   MUSIC.theirs: the tension the score follows (game/guards.ts tension) counts a teammate in live play only in a fight of his own; ?teamnerves = every man, as it was
 //   the menu    while the main menu is up (Music.menu) the score asks for the theme's own notes and deals nothing; a piece begins when play does; back on the menu, the theme
 //   a tape      a run tape's player (replay/engineplay.ts) writes the tape's knob tables over the page's and leaves MUSIC as the viewer's page has it
 //               bar-long swell leads each handover and ends on the new piece's first note; a piece picked by hand is not dealt straight back; a firefight holds a piece to twice its minutes and no longer; a mission that starts early keeps its piece, one that starts late moves on
@@ -58,11 +59,14 @@ export async function musicCheck(): Promise<boolean> {
   try {
     // ---- stand
     const want = process.env.TPS_MUSIC !== undefined ? process.env.TPS_MUSIC === '1' : harnessProfile() === 'shipped';
-    pageSwitches(new URLSearchParams('')); const page = MUSIC.pieces, pageL = MUSIC.byLevel; pageSwitches(new URLSearchParams('onetheme')); const off = MUSIC.pieces; pageSwitches(new URLSearchParams('shuffle')); const offL = MUSIC.byLevel, onL = MUSIC.pieces; MUSIC.pieces = stand; MUSIC.byLevel = keep.byLevel;
+    const KN: any = await import(`${ROOT}/src/game/knobs.ts`), tables = KN.knobsCopy();   // (pageSwitches writes every table the page has: all put back below, so the mission further down stands on THIS stand)
+    pageSwitches(new URLSearchParams('')); const page = MUSIC.pieces, pageL = MUSIC.byLevel, pageT = MUSIC.theirs; pageSwitches(new URLSearchParams('onetheme')); const off = MUSIC.pieces; pageSwitches(new URLSearchParams('shuffle')); const offL = MUSIC.byLevel, onL = MUSIC.pieces; pageSwitches(new URLSearchParams('teamnerves')); const offT = MUSIC.theirs, onT = MUSIC.pieces && MUSIC.byLevel; KN.knobsBack(tables); MUSIC.pieces = stand; MUSIC.byLevel = keep.byLevel; MUSIC.theirs = keep.theirs;
     line(stand === want && page === true && off === false && /TPS_MUSIC=1/.test(FROZEN_HOLDS['MUSIC.pieces'] ?? '') && STAND_ENV.includes('TPS_MUSIC'),
       `stand: the ${harnessProfile()} stand has the pieces ${stand ? 'ON' : 'OFF'}; the page has them on, ?onetheme off`, `stand ${stand} (expected ${want}) · page ${page} · ?onetheme ${off} · row ${FROZEN_HOLDS['MUSIC.pieces']}`);
     line(keep.byLevel === want && pageL === true && offL === false && onL === true && /TPS_MUSIC=1/.test(FROZEN_HOLDS['MUSIC.byLevel'] ?? ''),
       `stand: the ${harnessProfile()} stand has the level's own music ${keep.byLevel ? 'ON' : 'OFF'}; the page has it on, ?shuffle off (and the pieces still on)`, `stand ${keep.byLevel} (expected ${want}) · page ${pageL} · ?shuffle ${offL}, pieces ${onL} · row ${FROZEN_HOLDS['MUSIC.byLevel']}`);
+    line(keep.theirs === want && pageT === true && offT === false && onT === true && /TPS_MUSIC=1/.test(FROZEN_HOLDS['MUSIC.theirs'] ?? ''),
+      `stand: the ${harnessProfile()} stand has the tension reading the opposition's nerves alone ${keep.theirs ? 'ON' : 'OFF'}; the page has it on, ?teamnerves off (and the rest of the music still on)`, `stand ${keep.theirs} (expected ${want}) · page ${pageT} · ?teamnerves ${offT}, the rest ${onT} · row ${FROZEN_HOLDS['MUSIC.theirs']}`);
 
     // ---- the theme, switch off — and on a backend without the newer voices, switch on
     for (const themeOnly of [false, true]) {
@@ -260,6 +264,40 @@ export async function musicCheck(): Promise<boolean> {
         MUSIC.byLevel = true; if (opened.size < 3) why.push(`switch off: the four seeds open on ${opened.size} pieces`); }
       line(!why.length, `the level's music: its list in its order on any seed, behind a lead-out each time; its first piece off the menu; a restart keeps it; a piece picked by hand gives way to it; another list said in play comes in at the next bar; ?shuffle deals as before`,
         why.slice(0, 5).join(' · ') || `the records office, ${MUSIC.minutes * 3.5} minutes of calm: ${said}`);
+    }
+    // ---- the team's nerves: the tension the score follows is the opposition's (game/guards.ts tension(g, theirs); the page passes MUSIC.theirs). A real squad mission
+    //      stood up headless, a teammate under his order left as wary as a frag leaves a man standing (frag.ts writes 0.92), every defender down, ten seconds on
+    { const { standUp } = await import('./headless.ts'), L: any = await import(`${ROOT}/src/scene/scenarioList.ts`), SC: any = await import(`${ROOT}/src/scene/scenarios.ts`), SR: any = await import(`${ROOT}/src/game/scenarioRun.ts`);
+      const CB: any = await import(`${ROOT}/src/game/combat.ts`), LV: any = await import(`${ROOT}/src/scene/levelData.ts`), LL: any = await import(`${ROOT}/src/scene/levelLoad.ts`), LK: any = await import(`${ROOT}/src/scene/look.ts`), BREAK = process.env.MUSIC_BREAK === '1';
+      const say = console.log, warn = console.warn, err = console.error; const why: string[] = []; let told = '';
+      try {
+        console.log = console.warn = console.error = () => { }; Math.random = mulberry32(7);
+        const E = L.SCENARIOS.find((e: { id: string }) => e.id === 'records-pair'), looked = Bun.file(`${ROOT}/levels/${LK.lookLevelFile(E.level)}`), file = await looked.exists() ? looked : Bun.file(`${ROOT}/levels/${E.level}`);   // (the file the page plays on this stand: scene/look.ts)
+        const W: any = await standUp({ uploadEvery: 4, level: LL.loadLevel(LV.parseLevelData(await file.text())) }), g = W.game;
+        g.godMode = true; g.playerInvisible = true; const refused = SR.startFromQuery(g, new URLSearchParams(SC.scenarioQuery(E))).why; if (refused) why.push(`the records office would not start: ${refused}`);
+        const step = (secs: number) => { for (let i = 0; i < secs * 60; i++) { g.player.visibility = 0.05; W.step(1 / 60); } }, on = (v: boolean) => g.tension(v && !BREAK) as number;   // (the red path: nobody passes the switch)
+        step(2);
+        const ops: any[] = g.guards.filter((x: any) => x.team === 'operative' && x.state !== 'dead'), foes: any[] = g.guards.filter((x: any) => x.team !== 'operative' && x.state !== 'dead'), man = ops.find(o => o.script);
+        if (!man || !foes.length) why.push(`no teammate under a script on the floor: ${ops.length} teammates, ${ops.filter(o => o.script).length} scripted, ${foes.length} defenders`);
+        else {
+          const calm = on(true);
+          foes[0].state = 'alert'; const fight = on(true); foes[0].state = 'patrol';   // a defender who has seen them: the fight reads whichever way the switch stands
+          man.awareness = 0.92; for (const x of foes) CB.killGuard(g, x, [0, 0, 1], true);
+          step(10);
+          const left = man.awareness as number, st = man.state as string, was = on(false), now = on(true);
+          man.state = 'search'; const sWas = on(false), sNow = on(true); man.state = 'alert'; const aNow = on(true);
+          const R = g.director.run; g.director.run = { show: true, ended: false }; man.state = 'search'; const show = g.director.showing ? on(true) : -1; g.director.run = R; man.state = st;   // (while a show runs its men's scripted 'search' is the score's cue)
+          told = `before anything ${calm.toFixed(2)} · a defender alert ${fight.toFixed(2)} · every defender down and ten seconds on, a teammate ${st} at ${left.toFixed(2)} under his script: ${was.toFixed(2)} as it was, ${now.toFixed(2)} now · the same man left searching ${sWas.toFixed(2)} as it was, ${sNow.toFixed(2)} now · in a fight of his own ${aNow.toFixed(2)} · searching while a show runs ${show.toFixed(2)}`;
+          if (calm > 0.01) why.push(`a mission nobody has disturbed reads ${calm.toFixed(2)}`);
+          if (fight !== 1 || aNow !== 1) why.push(`a fight does not read as one: a defender alert ${fight}, a teammate alert ${aNow}`);
+          if (st !== 'patrol' || left < 0.9 || was < 0.3) why.push(`the hold this is about did not happen: a man under his script ${st} at ${left.toFixed(2)} after ten seconds, ${was.toFixed(2)} with the switch off (he was left at 0.92)`);
+          if (Math.abs(was - left * 0.35) > 1e-9 || sWas !== 0.68) why.push(`switch off is not the build as it was: ${was.toFixed(2)} for a ${st} teammate at ${left.toFixed(2)}, ${sWas} for one searching`);
+          if (now > 0.01 || sNow > 0.01) why.push(`a teammate's left-over wariness still holds the score up: ${now.toFixed(2)} wary, ${sNow.toFixed(2)} searching`);
+          if (!BREAK && show !== 0.68) why.push(`a show's own scripted man no longer reads: ${show}`);
+        }
+        const main = await Bun.file(`${ROOT}/src/main.ts`).text(); if (!/audio\.music\.intensity = game\.tension\(MUSIC\.theirs\)/.test(main)) why.push('main.ts does not hand the score the switch');
+      } finally { console.log = say; console.warn = warn; console.error = err; }
+      line(!why.length, "the team's nerves: with every defender down a teammate's left-over wariness does not hold the score up; a fight and a show's own men still read; switch off = as it was", why.join(' · ') || told);
     }
     // ---- a tape: the run tape carries every registry table and its player puts each over the page's — the score's switch is the viewer's own (knobs.ts VISIT_OWN)
     { const K: any = await import(`${ROOT}/src/game/knobs.ts`), E: any = await import(`${ROOT}/src/replay/engineplay.ts`), R = K.knobRegistry() as { MUSIC: typeof MUSIC; PACE: { max: number } }, pace = R.PACE.max, own = [...K.VISIT_OWN];

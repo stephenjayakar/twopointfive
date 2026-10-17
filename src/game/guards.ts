@@ -3222,11 +3222,15 @@ function lockdownDoors(g: Game, gd: Guard, calm = false) {
 }
 
 /** 0..1 tension for the score: patrol 0, suspicious ~0.5, search ~0.65, alert 1 — and an alarmed floor never quite settles (heightened 0.12, lockdown 0.22); a pair
- *  methodically clearing rooms (scripted, nominally 'search') sits at 0.3: purposeful, not alarmed. */
-export function tension(g: Game): number {
+ *  methodically clearing rooms (scripted, nominally 'search') sits at 0.3: purposeful, not alarmed. `theirs` (the page's score passes MUSIC.theirs, audio/pieces.ts; absent = every
+ *  man counts, as it was): in live play a teammate counts only while he is in a fight of his own ('alert') — the wariness a blast, a noise or a tripped breaker left
+ *  on him, and the 'search' his order takes him back in (orders.ts), never drain while he is under a script (updateGuard returns into it before the decay) and would
+ *  hold the score up with every defender down. While a SHOW runs its men's scripted states are the score's cue (the day showcase's pair hunting) and read as ever. */
+export function tension(g: Game, theirs = false): number {
   let x = Math.max(g.blackout.active ? 0.18 : 0, escalationOf(g) >= 2 ? 0.22 : escalationOf(g) >= 1 ? 0.12 : 0);
+  const live = theirs && !(g.touring || g.director.showing);
   for (const gd of g.guards) {
-    if (gd.state === 'dead') continue;
+    if (gd.state === 'dead' || (live && gd.team === 'operative' && gd.state !== 'alert')) continue;
     const s = gd.script && g.clearing && (gd === g.clearing.a || gd === g.clearing.b) ? 0.3 : gd.state === 'alert' ? 1 : gd.state === 'search' ? 0.68 : gd.state === 'suspicious' ? 0.45 + gd.awareness * 0.2 : gd.awareness * 0.35;
     x = Math.max(x, s);
   }
