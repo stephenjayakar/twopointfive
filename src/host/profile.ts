@@ -58,6 +58,7 @@ import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
 import { WAND } from '../game/wand';
 import { STICKY } from '../game/stickycam';
+import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
@@ -235,6 +236,7 @@ export function pageSwitches(q: URLSearchParams): void {
   BIGSLOT.shut = !q.has('nobigshut'); BIGSLOT.beside = !q.has('nobigbeside');   // (its two knobs of 10-15: the tools open any shut door, from beside the frame — each off = the build of 10-14's rule)
   STICKY.on = !q.has('nosticky');   // sticky cameras (game/stickycam.ts): a row of YOUR kit card and, carrying one, a third load for the rifle's launcher — sent to a wall it is one more eye on the fog of war. ON in the page, ?nosticky = no such row and no such load; off on the frozen stand (TPS_STICKY=1). Before the kit is read from the store, like the wand's.
   STICKY.take = q.get('camtake') !== '0';   // a stuck camera of your own is taken back with the use key and goes on the launcher again (game/stickycam.ts takeCam): ?camtake=0 = a camera sent is a camera spent, as before
+  CUES.overheard = q.get('overheard') !== '0';   // a shout from a defender the fog hides, where your ears or a living teammate's really get it, is a quiet row on the radio strip: his words alone, no name, no place (game/cues.ts overheard): ?overheard=0 = such a shout is no row, as before
   WORK.on = !q.has('noworkthings');   // a teammate works a thing in the level (game/workthings.ts): the orders' menu on the breaker, or on the mission's thing once it is to be taken, carries that thing's own order on digit 1 — ON in the page; ?noworkthings = the menu there is the floor's, and the breaker errand goes to the nearest man whoever he is, as it was
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   LIGHTWALL.on = !q.has('nolightwall');   // a weapon light stops at the wall its carrier is pressed to (game/lighting.ts lensClear): ON in the page; ?nolightwall = the light at its lens wherever that is, as it was
@@ -399,6 +401,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WAND.on': 'TPS_WAND=1',
   'STICKY.on': 'TPS_STICKY=1',
   'STICKY.take': 'TPS_CAMTAKE=1',
+  'CUES.overheard': 'TPS_OVERHEARD=1',
   'OWNCHARGE.on': 'TPS_OWNCHARGE=1',
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
