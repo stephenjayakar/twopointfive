@@ -25,7 +25,7 @@ const CRASH_MAX = 3, CRASH_TRY_MS = 2000, CRASH_GAP_MS = 60000;
 /** how long the page's own tag shows what F7 did (a shelf that does not answer is the shelf's own wait: shelf.ts SHELF.openMs, then the file is a download) */
 const TAG_MS = 7000;
 /** the tag: under the checkpoint and REC tags (index.html #checkpoint, #journal), over the cards and the debugger's panel, on a plate of its own so it reads over either */
-const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw);z-index:45;padding:3px 7px;border-radius:3px;background:rgba(5,9,11,0.94);font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:0.08em;text-align:right;color:#79d69a;pointer-events:none;opacity:0;transition:opacity .3s';
+const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw);z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
 const OFF = 'Replay buffer is off (?noreplay or the stored switch): F7 has nothing to save';
 /** F7 as a key of ours: plain or with Shift, not a repeat, not typed into a field */
 const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '');
