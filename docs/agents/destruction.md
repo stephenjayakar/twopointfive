@@ -646,6 +646,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the door open, fuse left 2.6 / 3.2 / 3.8 / 4.4 s — unhurt of four, rule on against off: the yard gate 0 2 3 3 against 0 0 0 1; the hall
   the report came from (the front door open inward) 1 2 2 3 against 1 1 1 1; killed never more than with it off; the hall with the door shut
   0 of 4 either way. Headless only, one seed a staging; never seen on a GPU, nobody has played it.
+  THE COST OF A DEAL (10-17, the grenade goal's reading of it: with every door open and a defender's pace a deal ran a floor path a candidate spot, up
+  to 20 ms a man): only the nearest `fleeDoorMost` 2 doorways standing open inside his reach are asked, their spots the nearest him first, a doorway is
+  done with at `fleeDoorTry` 4 ways found, and the path's leash is `fleeDoorNodes` 1500 (goTo's is 6000: a way found inside the leash is the same way).
+  Measured on the two stagings above, four fuses each: the same men unhurt as before the caps (hall 1 2 2 3, gate 0 2 3 3), floor paths asked at the
+  3.8 s fuse 72 → 51 and 98 → 67 (`FRAG_STATS.doorWalks`); `frag-fleedoor` green on both stands. Not timed on the many-doors floors it was reported on.
 - **Lying snow in a blown hole's mouth goes with the blast (10-15; the maintainer, of a wall charge on the pass: "couldn't path through a hole from a wall
   breach").** His tape (76 s, re-run headless to 0.01 m of the page): the charge cut 1.56 m out of the tea room's outer wall (box 40) and two snow banks at its
   foot (tops 0.22 and 0.36 m — over the 0.2 m a body and the walk grid are stopped from; the level keeps such banks 1.4 m off every DOOR, `pass-check` 6, and
