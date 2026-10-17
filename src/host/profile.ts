@@ -136,6 +136,7 @@ export function pageSwitches(q: URLSearchParams): void {
   FURNBLAST.on = !q.has('nofurnblast');   // furniture under a blast (game/furnblast.ts; inert without the switch above): ?nofurnblast = charges leave the furniture standing, as before
   FURN.mouth.on = q.get('holeclear') !== '0';   // a hole a blast opens is cleared of what stands in its mouths (furnblast.ts mouth()): ?holeclear=0 = whatever stood by the wall stands in the hole, as before
   FURN.mouth.snow = q.get('holesnow') !== '0';   // lying snow in a blown hole's mouths goes with the blast too (furnblast.ts mouthMine; acts only with the line above): ?holesnow=0 = a snow bank at the wall's foot stands in the hole, as before
+  FURN.mouth.base = q.get('holebase') !== '0';   // the bottom layer of a pile a blown hole takes goes with it (furnblast.ts mouth; acts only with a blown hole cleared): ?holebase=0 = the layer stays lying in the hole, as it did
   RUBBLE.on = !q.has('nokickrubble');   // men kick rubble aside as they walk (game/debris.ts feet; nothing to kick without the switch above): ?nokickrubble = pieces lie where they fell, as before
   EVICT.on = !q.has('nopopfix');   // a piece the debris pool evicts is its smallest and goes as chips by its size (game/breakTable.ts pick / dissolve; only under the cut pieces switch): ?nopopfix = the oldest piece, the fixed ball of chips, as before
   WALLREACT.on = !q.has('nowallreact');   // both sides reacting to what breaks (game/wallreact.ts): ?nowallreact = the destruction engine's own build
@@ -438,6 +439,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
   'FURN.mouth.on': 'TPS_HOLECLEAR=1',
   'FURN.mouth.snow': 'TPS_HOLESNOW=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',
+  'FURN.mouth.base': 'TPS_HOLEBASE=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',
   'WX_OWN.roofs': 'TPS_OWNROOFS=1',
   'WX_OWN.wind': 'TPS_WXWIND=1 (acts only on a level of three or four roofs of its own in force: a picked weather, a snow level with TPS_SNOW=1, or TPS_OWNROOFS=1)',
   'SNOW.on': 'TPS_SNOW=1',

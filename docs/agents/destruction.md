@@ -698,8 +698,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rest, a slab 0.2 m high the check lays across open floor and re-bakes over, off, the journal; `UNDERFOOT_BREAK=1` fails on both stands). MEASURED: the tape walked on from 127 s with the rule raised — both men in the
   store and holding by 133.8 s, against never; every level file stood up on the page's stand and its grid's floor asked with the walkers' call: at rest
   the two bands part on the pass alone (23 cells: the low steps of three snow banks, tops 0.22 to 0.25 m — on, those steps are waded and the bank stops
-  feet one step further in) and on one 0.2 m box of the pairs lesson. KNOWN, NOT MENDED HERE: the blast still leaves the pile's bottom layer lying in
-  the hole on the page's stand (the mouth rule passes over a top of 0.2 m or less — `furnblast.ts`), so the men walk THROUGH two sacks lying there (feet do not rise); a hauled body and a
+  feet one step further in) and on one 0.2 m box of the pairs lesson. SINCE (`FURN.mouth.base`, its own bullet below): the hole's last pass takes that bottom layer too, so at his
+  breach the hole is clear and this rule is what holds wherever such a low thing is still left on floor the grid routes across (a man walks THROUGH it: feet
+  do not rise); the check holds `FURN.mouth.base` off so that his breach keeps the sacks its line asks about. A hauled body and a
   shoved chair are asked lower than a walker and still meet such a thing (a body dragged behind its carrier catching there: not looked at); a thing whose
   top is 0.25 m or more is a wall to feet and grid alike, as before. Never seen on a GPU; nobody has played it.
 - **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
@@ -750,3 +751,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   squad lost 49 → 61 of 144, every lost run the captor's clock (no hostage was hit by a round, off or on); compound-four's 6 → 4 on 12 seeds was chance
   (20 → 22 over 36). Twelve seeds a row is thin: a run diverges from the first round that goes through.
   Never seen on a GPU (the marks and chips on the far face, the rounds' tracers through a wall); never heard.
+- **The bottom layer of a pile a blown hole takes goes with it** (`furnblast.ts mouth()`, `FURN.mouth.base`; the maintainer, 10-17, of two wall charges on the
+  pass: "one set of guys couldn't pathfind through the wall breach"). The store keeps sacks in piles against that wall, each layer 0.2 m thick; the blast took the
+  layers above and left the bottom one lying in the hole, because the hole rule passes over what is no higher than a step (top at or under 0.2 m: a mat, a kerb,
+  a low bank) and the furniture's own bands never list a thing that low (`FURN.root.minTop`). The feet's side of that tape is `UNDERFOOT` (collision.ts, check
+  `underfoot`: a walker's test begins where the walk grid's bake does); this is the blast's side. THE RULE, a last pass of `mouth()` over the zone: a low thing
+  with a body (`FURN.mouth.baseThick` 0.08 m: no mat) that CARRIED something now gone, by this blast or an earlier one, goes too, with whatever still rests on
+  it; one that carried nothing stays, as does one with a thing on it the hole rule never takes. `mouthWouldTake` is as it was (nothing that low shuts a cell of
+  the walk grid). SWITCH: ON in the page (`?holebase=0`), OFF in the module and on the frozen stand (`TPS_HOLEBASE=1`; acts only with a blown hole cleared,
+  `TPS_HOLECLEAR=1`); in the journal with the rest of `FURN`, a recording from before the key replays with it off. Check: `holebase` (family `furnblast`;
+  his breach with the rule on and off, the bars on the same site with the piles reshaped — a 0.06 m mat under taken layers, a block past the rule's height bar
+  on a bottom layer —, the switch; `HOLEBASE_BREAK=1`), both stands (the piles are the store's lived-in dressing: the check raises `LIVED.on`, which the
+  frozen stand holds off, so the site is the same on both); each bar was also broken in the code in turn and the line it holds went red. MEASURED,
+  headless, his site only: of 14 sacks in the two piles by the hole, 4 bottom ones were left before and none are now; the bank at the wall's foot (top 0.17 m)
+  stays. Across the levels every small floor thing with a top at 0.2 m is the bottom of such a pile (read off the level files, 10 levels have them). Nobody
+  has seen the hole on a GPU or played it.

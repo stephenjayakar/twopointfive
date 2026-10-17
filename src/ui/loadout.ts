@@ -167,7 +167,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
   const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
-    leverNote.textContent = quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };
+    leverNote.textContent = entry.kind === 'quiet' || entry.kind === 'solo' ? '' : quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };   // (the kept mix is the squad levers': none of it acts on a quiet mission or the solo night, and its fog word would read against the quiet fog's row just above)
   if ((entry.kind !== 'solo' || quietRow) && !kitAsIssued(entry) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts; the solo night under the fog has the fog's lever, its other two stay greyed: the shift is the level's own)
     leversBack = leversOpenOn(base);
     const box = el('div', 'lo-levers'); box.setAttribute('data-row', 'levers');

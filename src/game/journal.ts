@@ -400,6 +400,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.DOORWAY as { sideKick?: boolean } | undefined)?.sideKick === undefined) DOORWAY.sideKick = false;   // (…and from before a boot could be thrown from beside the door)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)
   if ((k.tables.FURN as { mouth?: { snow?: unknown } } | undefined)?.mouth?.snow === undefined) FURN.mouth.snow = false;   // (a file from before lying snow in a blown hole's mouths went with the blast: the bank stood)
+  if ((k.tables.FURN as { mouth?: { base?: unknown } } | undefined)?.mouth?.base === undefined) FURN.mouth.base = false;   // (a file from before the bottom layer of a blown pile went with it: the layer lay in the hole)
   if ((k.tables.ROOMFIGHT as { doorEars?: boolean } | undefined)?.doorEars === undefined) ROOMFIGHT.doorEars = false;   // (…and from before a teammate looked at a door an enemy's hand opens in his sight)
   if (!k.tables.AIR_SIM) AIR_SIM.on = false;   // (a file from before the air was a simulated field: no field is fed — a picture only, the run is the same either way)
   if (!k.tables.WX_OWN) WX_OWN.roofs = false;   // (a file from before a level's own storm rained by its own roofs: the office's two rectangles on every level)

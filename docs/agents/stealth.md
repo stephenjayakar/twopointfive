@@ -149,6 +149,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor.' under the fog (`game/loadout.ts noteOf`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never
   seen on a GPU and never played: whether the office night is fair under the fog with two cameras and a wand is unmeasured (the quiet missions were
   measured with `tools/qa/sticky-cover.ts`; the solo night was not).
+  AFTER THE STEP: a squad mix kept on the machine (the three levers) no longer says its line ("Your own mix, kept on this machine: …") under the lever
+  rows of the solo night's or a quiet mission's Team & kit screen: none of it acts there and its fog word read against the quiet fog's row
+  (`ui/loadout.ts paintLevers`, the kit card's file; words on a screen only, no switch). `levers-screens` holds it on both stands; red on the tree before.
 - **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
   2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
   WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an
