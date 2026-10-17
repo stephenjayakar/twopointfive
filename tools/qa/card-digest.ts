@@ -24,7 +24,7 @@ await withDom('?quality=high&mute', async (root) => {
   const { Menu, bootCard } = await import(`${ROOT}/src/ui/menu.ts`);
   Math.random = seeded(0x51c4); setDifficulty('standard', false);
   const W = await standUp({ uploadEvery: 4 });
-  const menu = new Menu({ engine: W.engine, game: W.game, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, startTour() {}, onStart() {} } as any);
+  const menu = new Menu({ engine: W.engine, game: W.game, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, onStart() {} } as any);
   const card = bootCard(); out.boot = fnv(serial(root)); card.off();
   menu.open('start'); out.start = fnv(serial(root));
   menu.open('pause'); out.pause = fnv(serial(root));

@@ -35,7 +35,7 @@ export class PictureViz {
     svg.insertBefore(this.root, before);
   }
   update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const bc = document.body.classList, views = bc.contains('blinded') || bc.contains('breaching') || bc.contains('attract') ? [] : pictureViews(game);
+    const bc = document.body.classList, views = bc.contains('blinded') || bc.contains('attract') ? [] : pictureViews(game);
     if (!views.length) { if (this.on) { this.on = false; this.root.style.display = 'none'; } return; }
     if (!this.on) { this.on = true; this.root.style.display = 'block'; }
     const D = {} as Record<Key, string>; for (const k of Object.keys(STYLE) as Key[]) D[k] = '';

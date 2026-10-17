@@ -1,7 +1,7 @@
 // Showcase tour: a hands-off tour that flies the camera between set pieces and fires scripted events (the blackout)
 // while the guards keep patrolling, drives the real player through six beats (the fire exit walked open by hand, takedown + drag,
 // the hold — grab, questions, the colleagues' standoff, the shove — firefight, canisters, the mission's drive pull) via Game.puppet,
-// and hands two guards a room-clearing drill (squad.ts RoomClear) via Guard.script. Toggle with P or start with ?demo.
+// and hands two guards a room-clearing drill (squad.ts RoomClear) via Guard.script. Started by console (__demo.start()) and by tools/qa/tour.ts only — no button, key or URL flag starts it; P or Esc stops it.
 // (The start card's idle attract programme is game/attract.ts; it borrows this tour's framings, not its beats.)
 import { Vec3, v3, DEG, damp, wrapAngle, smoothstep } from '../math/vec';
 import type { Game, Mission, LightTarget, SlotKind } from './game';

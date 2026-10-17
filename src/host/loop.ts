@@ -72,10 +72,8 @@ export interface LoopCtx {
   hotkeys?(frozen: boolean): void;
   /** right after the frozen decision (main.ts: the attract-stop still refresh) */
   afterFreeze?(frozen: boolean): void;
-  /** right after game.update, with the level script's frame if a showcase has it (main.ts: the lower-third class, the debrief card) */
+  /** right after game.update, with the level script's frame if a showcase has it (main.ts: the debrief card) */
   postUpdate?(dshow: DirectorFrame | null): void;
-  /** the timeline's pick for a level-script showcase (main.ts seekShow; the tour's own goto is called directly) */
-  seekShow?(k: number): void;
 }
 
 /** the caption a running show wants on the HUD: the tour's own, or the level script's frame (an empty one while it has none) — null = no show */
@@ -155,7 +153,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       demoPos = demo?.active ? fx.demoPos : null; attractPos = attract?.active && !demoPos && !D.showing ? fx.attractPos : null;   // (a frame with no tick keeps the last tick's look-at)
     }
     const dshow: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
-    ctx.postUpdate?.(dshow);   // (a show begun or ended inside the step or between frames: the HUD's class follows this frame; the end card out with the drive)
+    ctx.postUpdate?.(dshow);   // (the end card out with the drive)
     const shotPos: Vec3 | null = demoPos ?? (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the tour's / the level script's pinned shot / attract mode's
     ctx.host.settings.nvAmount = game.player.nvAmount; ctx.host.settings.hitFlash = game.player.hitFlash;
     if (ctx.audio) {
@@ -168,7 +166,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     cam.update(dt, shotPos ?? game.followPos(), shotPos || game.spectate >= 0 ? null : game.aimPoint);
     if (ctx.hud) {
       const sh = showCaption(ctx); ctx.hud.setCaption(sh ? sh.caption : '', sh ? sh.sub : '');
-      ctx.hud.setTimeline(demo?.active ? demo.chapters() : dshow ? D.chapters() : null, k => { if (demo?.active) demo.goto(k); else ctx.seekShow?.(k); });   // (a showcase's chapters: clickable — seekShow re-runs the story to that chapter)
+      ctx.hud.setTimeline(demo?.active ? demo.chapters() : dshow ? D.chapters() : null, k => { if (demo?.active) demo.goto(k); });   // (the tour's stops are clickable; a level-script showcase's chapters are shown, not sought)
     }
     if (!fixed) ctx.host.lights.update(dt, ctx.time);
     cam.kickIn();   // a blast's camera kick (game/blastFeel.ts → FollowCamera.kick): in for the render and the HUD laid over it, out again before anything else reads the camera — a return with none

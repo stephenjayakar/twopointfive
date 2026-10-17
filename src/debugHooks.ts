@@ -17,7 +17,6 @@ import type { Quality } from './ui/quality';
 import type { AudioEngine } from './audio/audio';
 import type { RigGizmo } from './viewerGizmo';
 import type { Attract } from './game/attract';
-import type { Breach } from './game/breach';
 import type { Director } from './game/director';
 import type { PerfRecorder } from './ui/perfrec';
 import type { BootSummary } from './ui/boot';
@@ -81,8 +80,6 @@ declare global {
     __readout?: Record<string, unknown>;
     /** the start card's attract mode (game/attract.ts): .start() / .stop() / .poke(), .active / .live */
     __attract?: Attract;
-    /** the daytime breach showcase — the facade over the level script's program 'breach' (game/breach.ts): .start() / .stop(), .t, .drill.phase / .beats, .log */
-    __breach?: Breach;
     /** the level script's DIRECTOR (game/director.ts): .programs, .armed, .problems, .start(name) / .stop(), .run, .log / rowsOf(), .frame, .summary() */
     __director?: Director;
     /** the F9 perf recorder (ui/perfrec.ts) */

@@ -85,7 +85,7 @@ export class PlanFloor {
     return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number) {
-    const bc = document.body.classList, P = PLAN.on && !(bc.contains('blinded') || bc.contains('breaching') || bc.contains('attract')) ? floorPlan(game) : null;   // (hidden by the page under those: nothing asked)
+    const bc = document.body.classList, P = PLAN.on && !(bc.contains('blinded') || bc.contains('attract')) ? floorPlan(game) : null;   // (hidden by the page under those: nothing asked)
     let n = 0, k = 0, nd = 0, nt = 0, nl = 0, you = false;
     if (P) {
       const f1 = (v: number) => v.toFixed(1);

@@ -1,24 +1,15 @@
-// The breach: a second, daytime showcase — Door Kickers rather than Splinter Cell. Ten in the morning, every fluorescent on and the sun raking in through the south
-// glass (lighting.ts setDaylight swaps the level's daylight variant in); two operatives in Sam's colours with FN2000s run the length of the main office at the low
-// ready, stack on the break room's side door, boot it, put a stun charge in the instant the leaf clears, go in on the bang — #1 through the fatal funnel and a
-// stride and a half straight in, a check across the middle and the man standing in it dropped, then his corner; #2 on his heels the other way — end in an L
-// owning the room and its next door, and stack on that door: cut, and the veil comes down on a fresh night-time encounter exactly as the start card has always
-// found it. Nobody plays: both operatives are scripted men (squad.ts's runner behind Guard.script, the drill below sequencing them the way RoomClear sequences the
-// lockdown pair — battle drill six, the same doctrine RoomClear's live men keep), the opposition are scripted too — pinned on their marks, muzzles on the door —
-// and the camera cuts round it on the drill's own cues from fixed, pinned framings. Started from the start card's button, ?breach, or __breach.start(); P stops it.
+// The breach DRILL: two operatives with FN2000s run up at the low ready, stack on a room's door, boot it, put a stun charge in the instant the leaf clears, go in
+// on the bang — #1 through the fatal funnel and a stride and a half straight in, a check across the middle and the man standing in it dropped, then his corner; #2
+// on his heels the other way — end in an L owning the room and its next door, and stack on that door. Both operatives are scripted men (squad.ts's runner behind
+// Guard.script, the drill below sequencing them the way RoomClear sequences the lockdown pair — battle drill six, the same doctrine RoomClear's live men keep).
 //
-// SINCE THE DIRECTOR (game/director.ts, docs/internal/director.md): the SHOW — cast, daylight, camera programme, captions, the cut and the restore — is the office's
-// level script (levels/office.script.ts, program 'breach', showcase: true) run by Game.director; what stays here is the DRILL it drives (BreachDrill: the one piece of
-// choreography with fourteen clocks, kept statement for statement) and `Breach` as a FACADE over the Director with the surface main.ts, the
-// __breach hook and tools/qa/breach-probes.ts always had (start / stop / update / active / t / drill / log / cast / chapters / onStop) — the probes stay byte-identical
-// and now exercise the Director's path. The cast are spawned UNITS (guards.ts spawnUnit, ids 20‥24: an operative's round finds a hostile through the ordinary
-// fireWeapon and he goes down to the hit; the drill only aims and pulls the trigger on cue, and drops a man itself only if both rounds of his pair found furniture —
-// `guaranteeDowns`, logged when it fires); the shift is benched (Game.guards holds the cast alone, torches out) and comes back with restartEncounter under the veil.
+// It began as the choreography of a daytime showcase (the office's level script, program 'breach', with a `Breach` facade here that main.ts and the probes drove).
+// The two showcases were removed; what stays is BreachDrill — the one piece of choreography with fourteen clocks, kept statement for statement — which the night
+// breach scenario runs LIVE on Sam's orders (game/nightbreach.ts, BreachLive) and a level script may still drive as a Director drill (game/director.ts D.drill).
+// Its men are spawned UNITS (guards.ts spawnUnit: an operative's round finds a hostile through the ordinary fireWeapon and he goes down to the hit; the drill only
+// aims and pulls the trigger on cue, and drops a man itself only if both rounds of his pair found furniture — `guaranteeDowns`, logged when it fires).
 import { Vec3, v3, quat, damp, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
-import type { FollowCamera } from './camera';
-import type { SmokeSystemLike } from '../smoke/types';
-import type { Input } from './input';
 import type { BreachPlan, BreachFlow } from '../scene/level';
 import type { Item } from './throwables';
 import { BoxFlag, makeBox } from '../scene/boxes';
@@ -460,50 +451,3 @@ export class BreachDrill {
     return true;
   }
 }
-
-// ================================================================ the show: a facade over the Director (the surface main.ts, __breach and tools/qa/breach-probes.ts always had)
-/** The breach as it was always started, stopped and read — now backed by Game.director running the office script's program 'breach'. Constructing it hands the Director
- *  the camera and the input (so a start before any frame pins its first shot and locks the keys at once); update(dt) ticks NOTHING (the Director ticks inside
- *  Game.update) and only reports the look-at the show is pinned on, the way main.ts / the probes always read it before stepping the game. */
-export class Breach {
-  /** called at the very end of a run's teardown: finished = it ran to its end rather than being cut off (main.ts puts the start card back up) */
-  onStop?: (finished: boolean) => void;
-  constructor(private game: Game, cam: FollowCamera, _smoke: SmokeSystemLike, input: Input) {
-    game.director.attach({ cam, input });
-    const prev = game.director.onProgramEnd;
-    game.director.onProgramEnd = (name, finished) => { prev?.(name, finished); if (name === PROGRAM) this.onStop?.(finished); };
-  }
-  /** does this level's script have an armed 'breach' program (a daylight variant and a plan behind it)? The start card only offers the button when it does. */
-  get available(): boolean { return this.game.director.canStart(PROGRAM) === null || this.active; }
-  get active(): boolean { const R = this.game.director.run; return !!R && !R.ended && R.name === PROGRAM; }
-  /** the show clock: seconds since start (the last run's length once it has stopped) */
-  get t(): number { const D = this.game.director; return this.active ? D.run!.t : D.lastRun?.name === PROGRAM ? D.lastRun.t : 0; }
-  get fade(): number { return this.active ? this.game.director.frame?.fade ?? 0 : 0; }
-  get caption(): string { return this.active ? this.game.director.frame?.caption ?? '' : ''; }
-  get sub(): string { return this.active ? this.game.director.frame?.sub ?? '' : ''; }
-  get shotI(): number { return this.game.director.chapters()?.i ?? -1; }
-  /** the drill the running program drives (null between runs) */
-  get drill(): BreachDrill | null { if (!this.active) return null; for (const d of this.game.director.run!.drills) if (d.impl.kind === 'breach') return d.impl.d; return null; }
-  /** the cast of the running program: the two operatives, the men inside */
-  get cast(): { ops: Guard[]; hostiles: Guard[] } | null { if (!this.active) return null; const us = [...this.game.director.run!.units.values()].map(u => u.gd); return { ops: us.filter(x => x.team === 'operative'), hostiles: us.filter(x => x.team === 'hostile') }; }
-  /** The beats of the last (or current) run in the shape they always had — the show's notes ('daylight' / 'cast' / 'shot:…') first, then every drill beat, then
-   *  'restore' — read off the Director's log for that run (which is chronological and says more: director.rowsOf()). */
-  get log(): { t: number; what: string }[] {
-    const D = this.game.director; const serial = this.active ? D.run!.serial : D.lastRun?.name === PROGRAM ? D.lastRun.serial : -1;
-    const rows = D.rowsOf(serial); const notes: { t: number; what: string }[] = [], drill: { t: number; what: string }[] = [], tailRows: { t: number; what: string }[] = [];
-    for (const r of rows) {
-      if (r.kind === 'drill') drill.push({ t: r.t, what: r.what });
-      else if (r.kind === 'camera') notes.push({ t: r.t, what: 'shot:' + r.what });
-      else if (r.kind === 'note' && (r.what === 'daylight' || r.what === 'cast')) notes.push({ t: r.t, what: r.what });
-      else if (r.kind === 'note' && r.what === 'restore') tailRows.push({ t: r.t, what: r.what });
-    }
-    return [...notes, ...drill, ...tailRows];
-  }
-  start() { const why = this.game.director.start(PROGRAM); if (why && typeof console !== 'undefined') console.warn('breach: ' + why); }
-  stop(finished = false) { if (this.active) this.game.director.stop(finished); }
-  chapters() { return this.game.director.chapters() ?? { list: [], i: -1, frac: 0 }; }
-  /** Once a frame BEFORE the game step, as ever — but the show now runs inside Game.update (director.tick): this only hands back the look-at it is pinned on (non-null = 'a scripted camera has the frame'). */
-  update(_dt: number): Vec3 | null { return this.active ? v3.copy(this.game.director.frame?.look ?? this.game.followPos()) : null; }
-}
-/** the office script's program this facade fronts (levels/office.script.ts) */
-const PROGRAM = 'breach';

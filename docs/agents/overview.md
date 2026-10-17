@@ -99,8 +99,8 @@ src/game/            game.ts (Game: state, constructor, event plumbing, doors/pr
                      drill, live Clearing dispatcher), qrf.ts (the response to going loud: trigger, radio telegraph, the four-man
                      element through the west stair door, the perimeter tier), consts.ts),
                      marks.ts (decal emit sites), particleFx.ts (GPU particle sites), glass.ts (rounds star panes), weather.ts (the storm), wet.ts (wet characters: the model + prints / drips),
-                     demo.ts (showcase tour: Shot list + puppet choreography), breach.ts (the daytime breach showcase: cast, BreachDrill,
-                     shots), character.ts (anim graph, aim, tactical stances /
+                     demo.ts (the old showcase tour: Shot list + puppet choreography; console and tools/qa/tour.ts only), breach.ts (BreachDrill: the two-man
+                     breach the night breach scenario runs live), character.ts (anim graph, aim, tactical stances /
                      kick / signals / lockpick layers), camera.ts (follow cam; spectate auto-yaw + low pitch up close),
                      ragdoll.ts, doors.ts, props.ts (pushable furniture), throwables.ts (canisters, dropped mags/
                      weapons), weapons.ts, effects.ts (all muzzle/stun/vent emitter numbers + `tracerFx`), sparks.ts, tracers.ts
@@ -120,7 +120,7 @@ tools/               serve.ts (+ levels-api.ts), build.ts, shot-server.ts, artif
                      level-export.ts (officeGen → levels/office.json; --check = stale test),
                      qa/ (headless harness: headless.ts, soak.ts, probes.ts, tour.ts, gait.ts = the animation's numbers, audio-render.ts,
                      mesh-shadow-ref.ts = the mesh-shadow BVH / capsule-vs-mesh numbers + the GPU replay fixture, level-probes.ts = the
-                     level-as-data identity / validate / round-trip family, fixtures/ (panel-inventory-main.json = the frozen Tab-row inventory, breach-beats-main.json = the breach's pre-port beat log),
+                     level-as-data identity / validate / round-trip family, fixtures/ (panel-inventory-main.json = the frozen Tab-row inventory),
                      sessions/*.json.gz = the F10 journal fixtures the gate replays, gpu-quiet.sh,
                      the in-page instruments *.js (served at /qa/<file>.js) and the review-page generators *-page.py — see 'A lane's deliverables' under Workflow)
 docs/                internal/<topic>.md = the notebooks (method, numbers, negatives) + review-ledger.md + architecture-review.md + morning-YYYY-MM-DD.html; review/<topic>.html = the self-contained

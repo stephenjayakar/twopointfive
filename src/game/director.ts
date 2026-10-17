@@ -1,5 +1,7 @@
 // The DIRECTOR: a level's bespoke scripting, run on the game clock (docs/design/level-scripting.md — milestone M1; the notebook is docs/internal/director.md).
-// A level's script (levels/office.script.ts) is a plain function `(D: DirectorApi) => void` that imports NOTHING from src/ at run time (`import type` only —
+// NO SHIPPED LEVEL HAS A SCRIPT TODAY: the office's (levels/office.script.ts — the night and day showcases, its programs 'night' and 'breach') was removed with the two
+// showcases, so on every level the Director has no manifest and idles (tick() returns on its first line); the engine stays as level scripting, and the checks stage scripts of their own (tools/qa/director-probes.ts).
+// A level's script is a plain function `(D: DirectorApi) => void` that imports NOTHING from src/ at run time (`import type` only —
 // the API is injected), so the same file can be transpile-served and hot-swapped later (M3) and its define pass runs under bun with no Game (the lint below).
 // What it can say:
 //   define time  D.mark / door / volume / route / plan / loadout / lightGroup / variant  → HANDLES by name (the script's manifest; resolved against the level
@@ -21,7 +23,7 @@
 // M1's cut (the doc §2.3 / §7): beats are atomic — a checkpoint is refused while any program runs (savestate.ts canSave asks blocksSave()); volumes got their runtime
 // slot (Level.volumes) so onEnter is real; loadouts and marks are declared IN the script with literals until LevelData v2 (M3) gives them a home; drill.advance and
 // the units[] / director save slices wait for M3; the tour stays demo.ts (M2). With no program running tick() is a return on its first line: the game is the game.
-// THE NIGHT SHOWCASE'S ADDITIONS (levels/office.script.ts program 'night' — the tour as a story: docs/design/showcases.md, docs/internal/night-showcase.md), all small,
+// WHAT THE NIGHT SHOWCASE ADDED (the removed program 'night' — the tour as a story; the verbs stay), all small,
 // all documented at their sites: D.device(id) (a handle on a level device — the keypad — linted like the doors); c.learnCode(device, from) (devices.ts learnCode: the
 // man in Sam's arm gives the pad's digits and Sam KNOWS them — the code row opens the door a minute later); c.say(unit) is FORCED (a scripted line is deliberate: a
 // held man's answer goes up too) and c.say('sam', …) puts a line over Sam (showcase-only); c.press / c.click are QUEUED and injected at the top of the NEXT Game.update
@@ -33,7 +35,7 @@
 // the puppet, as the tour's drive stop had it), c.handover(caption, sub) (the tour's 'Your turn': its own cast out, a fresh encounter under a WHOLE veil the beat
 // then lifts with c.fade, live controls, the follow camera back, the caption up — the program then finishes WITHOUT a second restore), and ProgramOpts.freshEncounter (restartEncounter as the show starts: the shift
 // on its marks at t = 0, so a man ordered at 0:29 is where 0:29 finds him every run).
-// THE DAY SHOWCASE'S LOUD HALF (program 'breach' past the drill's cut — docs/design/showcases.md 'it goes loud', docs/internal/day-showcase.md), likewise small and documented at their sites:
+// WHAT THE DAY SHOWCASE'S LOUD HALF ADDED (the removed program 'breach' past the drill's cut; the verbs stay), likewise small and documented at their sites:
 // c.chaos(k | null) is SHOWCASE-ONLY — the program's own destruction knob for its length (destruction.ts Destruction.showChaos, read by chaosOf even under `touring`, where the
 // player's knob reads 0; nulled here as the program ends, BEFORE the encounter is restored, so nothing it broke outlives the veil); c.doors.kick(door, by, {leg}) is a CAUSE
 // like charge / burst — the man throws the animator's kick and at its impact instant doors.ts kickIn does what a boot does (keep torn, leaf flung, the crack the floor hears),
@@ -221,7 +223,7 @@ export interface ProgramOpts {
   /** captions / camera / puppet allowed; the show plumbing (flags saved, quiet + touring + god + invisible + AI on, aftermath cleared, doors reset, input locked to P, a fresh
    *  restartEncounter under black at the end) wraps it — decision 4 */
   showcase?: boolean;
-  /** the caption is a one-line lower third and the HUD is hidden (index.html body.breaching, toggled by main.ts off director.frame.lowerThird) */
+  /** the caption is a one-line lower third and the HUD is hidden — carried on director.frame.lowerThird; the page's own style for it (index.html body.breaching) went with the two showcases: a page that wants it draws it off the frame) */
   lowerThird?: boolean;
   /** the cut: seconds the veil takes to come up once a beat calls c.finish(), and how long the end is held before the restore (the breach's 0.35 / 0.5) */
   endVeil?: number; endHold?: number;
@@ -420,7 +422,7 @@ export class Director {
     this.report();
   }
   private report() { const errs = this.problems.filter(p => p.level === 'error'); if (errs.length && typeof console !== 'undefined') console.error(`level script NOT armed — ${errs.length} lint error(s):\n  ` + errs.map(p => p.what).join('\n  ')); }
-  /** hand the Director the camera and the input before the first tick (main.ts / the Breach facade): a program started before any frame can then pin its first shot and lock the keys at once */
+  /** hand the Director the camera and the input before the first tick (main.ts): a program started before any frame can then pin its first shot and lock the keys at once */
   attach(o: { cam?: FollowCamera | null; input?: Input | null }) { if (o.cam) this.cam = o.cam; if (o.input) this.input = o.input; }
   get programs(): string[] { return this.manifest ? [...this.manifest.programs.keys()] : []; }
   /** is a SHOWCASE program holding the frame right now (main.ts: the camera, the listener, the veil, the HUD are its) */
@@ -434,7 +436,7 @@ export class Director {
     const P = this.manifest.programs.get(name); if (!P) return `no program '${name}' (programs: ${this.programs.join(', ') || 'none'})`;
     if (!this.armed) return 'the script is not armed (lint errors — see the console)';
     if (this.run && !this.run.ended) return `program '${this.run.name}' is running`;
-    if (P.opts.showcase && this.g.touring) return 'the tour or attract mode has the floor';   // (the card's Breach button and __breach stop them first; a bare start() over them would fight their resets — review 08-10 #22)
+    if (P.opts.showcase && this.g.touring) return 'the tour or attract mode has the floor';   // (a caller stops them first; a bare start() over them would fight their resets — review 08-10 #22)
     if (P.opts.showcase && (this.g.qrf?.state !== undefined && this.g.qrf.state !== 'idle' || this.g.guards.some(x => x.unit))) return 'a response unit is on the floor (the cast would not fit the character budget)';
     if (P.opts.showcase && !this.g.tune.teams && [...this.manifest.loadouts.values()].length && [...P.beats.values()].some(B => /\.\s*spawn\s*\(/.test(String(B.fn)))) return 'sides are switched off (tune.teams) — the cast cannot be spawned';   // (only a program whose beats spawn anybody: the night showcase casts the shift itself and runs with sides off)
     return null;

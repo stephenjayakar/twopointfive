@@ -1,9 +1,8 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
-import { Menu, loadSandbox, bootCard, SHOWCASE_BUTTONS } from './ui/menu';
+import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions } from './ui/options';
 import { TABKEY, tabFromQuery } from './ui/tabkey';
 import { BACKKEY } from './game/backkey';
-import { showKey } from './game/showkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitIssuedPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitAsIssued } from './game/loadout';
@@ -63,7 +62,6 @@ import { AudioEngine, SFX_TABLE } from './audio/audio';
 import { setlistOfQuery, setlistOf, setlistLevel } from './audio/setlist';
 import { MUSIC } from './audio/pieces';
 import { Demo } from './game/demo';
-import { Breach } from './game/breach';
 import { REACH_PACE } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
@@ -266,71 +264,15 @@ async function main() {
   const overlay = new Overlay();
   const bubbles = new Bubbles(document.getElementById('overlay')!);
   const demo = new Demo(game, cam, smoke, input); window.__demo = demo;
-  // the second showcase: the daytime breach — the office's level script, program 'breach', run by the Director (game/director.ts; levels/office.script.ts); game/breach.ts keeps
-  // the drill and `Breach` as the facade the card, the P key and __breach always drove (?breach boots straight into it, __breach.start() / .stop() by hand). Constructing it hands
-  // the Director the camera and the input; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
-  const breach = new Breach(game, cam, smoke, input); (window as any).__breach = breach; (window as any).__director = game.director;
+  // THE DIRECTOR (game/director.ts): level scripting. No shipped level has a script today — the office's two showcases, its only programs, were removed — so it idles, which
+  // is the game exactly. It is handed the camera and the input a program would pin and lock; __director is the Director itself (log, run, manifest, problems, start(name), stop(), summary()).
+  game.director.attach({ cam, input }); (window as any).__director = game.director;
   squadFlagsAndHooks(q, engine, game);
-  // THE NIGHT SHOWCASE (levels/office.script.ts program 'night', docs/internal/night-showcase.md): the start card's first button, ?demo and the P key run it — the office after dark as one
-  // continuous infiltration told in chapters (the lot in the storm, the fire exit's wedge, Kowalski's coffee run into the hold and the side door's code, the corridor camera's pool put out,
-  // smoke across Novak's aisle, the keypad and the drive, the breaker, out through the restrike), then the tour's own hand-over: a fresh encounter and the controls. game/demo.ts (the old
-  // 13-stop tour) stays in the tree for tools/qa/tour.ts's regression lap but is reachable from no button any more.
-  const NIGHT = 'night';
-  const nightActive = () => { const R = game.director.run; return !!R && !R.ended && R.name === NIGHT; };
-  const startNight = (): string | null => {
-    if (demo.active || game.director.showing) return 'a show is running';
-    const fromCard = menu.mode === 'start';
-    attract.poke(); if (menu.isOpen) menu.close();
-    kitShow(game);   // (the show's player carries what the show expects: a solo night's kit card comes off — game/kit.ts)
-    const why = game.director.start(NIGHT);
-    if (why) { console.warn('night showcase: ' + why); game.msg?.(`night showcase can't start: ${why}`); if (fromCard && !menu.isOpen) menu.open('start'); }   // (a refusal is said, not swallowed — a unit on the floor, an unarmed script — and the start card comes back if it was the caller; wave-5 review)
-    syncShowClass(); return why;
-  };
-  /** QUIT a running showcase back to the start card (Esc / P during either show; the maintainer, 08-13: no 'Your turn' hand-over any more — both shows simply return to the card). */
-  /** A SHOW'S OWN PAGE (?demo / ?breach: typed, or a row of the title's Extras clicked while the page still booted) HANDS BACK TO THE TITLE: once the show is over its key leaves
-   *  the address, so the card that comes up is the title (ui/startpage.ts startPageWanted reads the address) and a reload is the title too. Every other flag stays as typed. */
-  const offShowUrl = () => { try { const s = location.search; if (!/[?&](demo|breach)(=|&|$)/.test(s)) return; const keep = s.slice(1).split('&').filter(p => p && !/^(demo|breach)(=|$)/.test(p)); history.replaceState(history.state, '', location.pathname + (keep.length ? '?' + keep.join('&') : '') + location.hash); } catch { /* */ } };
-  const quitShow = () => { if (demo.active) demo.stop(); if (game.director.showing || game.director.handedOver) game.director.stop(true); syncShowClass(); offShowUrl(); if (menu.mode !== 'start') menu.open('start'); };
-  /** SEEK a running showcase to chapter k (← / → and the timeline along the bottom, both shows). A show is one continuous story — the body behind the counter, the code in Sam's head, the
-   *  mains — so a chapter is reached the honest way: the program restarted and the simulation run forward WITHOUT drawing or sound until its own camera enters that chapter (about a second
-   *  of wall clock for the far end of the night on this machine), then the picture carries on from there. */
-  let seeking = false;
-  const seekShow = (k: number) => {
-    const R0 = game.director.run; if (!R0 || R0.ended || !R0.show || seeking) return;
-    const name = R0.name; const ch = game.director.chapters(); if (!ch || k < 0 || k >= ch.list.length || k === ch.i) return;
-    const t0 = performance.now(); seeking = true; const audioWas = audio.enabled; audio.enabled = false; audio.setVolumes();
-    try {
-      if (k < ch.i) {   // BACK: the story cannot be un-told — restart it and run forward; AHEAD: just run forward from here
-        game.director.stop(true);
-        if (name === NIGHT) { if (startNight()) return; } else if (name === 'breach') breach.start(); else if (game.director.start(name)) return;
-      }
-      const DTS = 1 / 30; let n = 0;
-      while (n < 30 * 400) {   // (cap: 400 s of show)
-        const R = game.director.run; if (!R || R.ended) break;
-        const c = game.director.chapters(); if (c && c.i >= k) break;
-        timeAcc += DTS; game.update(DTS, input, cam, canvas); smoke.update(DTS); engine.lights.update(DTS, timeAcc); input.endFrame(); n++;   // (lights.update: muzzle / impact flashes age and retire as they would have — else a firefight's few hundred transients all sit at age 0 and flash at once on the first drawn frame; wave-5 review)
-      }
-      smoke.emitters = smoke.emitters.filter(e => e.kind === 'canister');   // presentation queues built up unseen: muzzle jets / dust puffs would all deposit on the first drawn frame (a can's plume is state — kept)
-      engine.particles?.clear();                                             // … and the GPU emit queue would drain as stale chips and paper over the next seconds
-      engine.resetTaa?.('seek'); console.log(`showcase seek → chapter ${k}: ${n} steps in ${(performance.now() - t0).toFixed(0)} ms`);
-    } finally { audio.enabled = audioWas; audio.setVolumes(); seeking = false; syncShowClass(); }
-  };
-  { const prev = game.director.onProgramEnd;
-    game.director.onProgramEnd = (name, finished) => { prev?.(name, finished); if (name !== NIGHT) return; syncShowClass(); if (!seeking) offShowUrl(); if (!seeking && menu.mode !== 'start') menu.open('start'); void finished; unattended = false; };   // (run by the attract loop with nobody here and left to its end: back to the start card rather than a live floor nobody plays — a visitor's poke mid-show keeps the live hand-over, as the tour always did)
-  }
-  (window as any).__night = {   // automation / console: start / stop / where it has got to / its rows of the Director's log
-    start: () => startNight(), stop: () => { if (nightActive()) game.director.stop(); },
-    get active() { return nightActive(); }, get t() { const D = game.director; return nightActive() ? D.run!.t : D.lastRun?.name === NIGHT ? D.lastRun.t : 0; },
-    get handedOver() { return game.director.handedOver; },
-    get log() { const D = game.director; const serial = nightActive() ? D.run!.serial : D.lastRun?.name === NIGHT ? D.lastRun.serial : -1; return D.rowsOf(serial); },
-    chapters: () => game.director.chapters(), summary: () => game.director.summary(),
-  };
-  /** the level script's SHOWCASE frame this step, if a showcase program has the frame (its pinned look-at, caption, veil, lower third) — read after game.update below */
-  /** index.html body.breaching = a showcase program that asked for the one-line lower third and no HUD (director.frame.lowerThird): kept in step every frame and the moment a show starts / stops */
-  let showClassOn = false;   // what the HUD's class was last set to — synced idempotently every frame, so a showcase begun or ended ANYWHERE (the card, P, __director.start between frames, a beat throwing) is followed
-  const syncShowClass = () => { const on = game.director.lowerThird; if (on !== showClassOn) { showClassOn = on; document.body.classList.toggle('breaching', on); } };
+  // game/demo.ts (the old 13-stop tour) stays in the tree for tools/qa/tour.ts's regression lap: __demo.start() by console, reachable from no button.
+  /** END whatever hands-off programme has the floor — the old tour, or a level-script program should a level ever carry one — back to the start card (Esc / P while it runs) */
+  const endShow = () => { if (demo.active) demo.stop(); if (game.director.showing || game.director.handedOver) game.director.stop(true); if (menu.mode !== 'start') menu.open('start'); };
   soloNightHooks(game);
-  /** whichever hands-off programme is running (the tour, or a showcase program of the level script — the breach), for the veil / captions / timeline / hotkeys below — never both:
+  /** whichever hands-off programme is running (the tour, or a showcase program of a level script), for the veil / captions / timeline / hotkeys below — never both:
    *  each refuses to start over the other */
   const show = (): { caption: string; sub: string; fade: number } | null => demo.active ? demo : game.director.showing ? (game.director.frame ?? { caption: '', sub: '', fade: 0 }) : null;
   // WGSL compile check against the live device (Chrome/Tint is the compiler we ship to; naga is not available on this machine):
@@ -407,8 +349,8 @@ async function main() {
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
-  const menu = new Menu({ engine, game, quality, audio, overlay, startTour: () => { if (breach.active) breach.stop(); if (demo.active) demo.stop(); startNight(); }, stopTour: () => { if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
-    startBreach: breach.available ? () => { if (!demo.active && !game.director.showing) breach.start(); } : undefined, startBench: () => startBench(), loadCheckpoint });   // (the card's NIGHT SHOWCASE = the level script's program 'night'; DAY SHOWCASE = its 'breach'; each ends whatever else is running first, and neither starts over the other)
+  const menu = new Menu({ engine, game, quality, audio, overlay, stopTour: () => { if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
+    startBench: () => startBench(), loadCheckpoint });
   window.__menu = menu;
   // __save: the checkpoints for the console / automation — save now (manual slot; force lets go of Sam's hands in the file), load the newest / a slot key / a
   // parsed state, the slot list, export (the newest slot's JSON text), import (text → the manual slot), clear, autosave on/off, the controller's line and log
@@ -423,34 +365,29 @@ async function main() {
     canSave: (force = false) => saveMod.canSave(game, force), snapshot: (force = true) => saveMod.saveState(game, { label: 'console', kind: 'harness', force }),
   };
   const loadCheckpoint2 = (state: object): string | null => { attract.poke(); if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); const why = game.saves.load(game, state as never); if (!why) { cam.target = v3.copy(game.followPos()); cam.pin = null; } return why; };
-  breach.onStop = (finished) => { syncShowClass(); if (!seeking) offShowUrl(); if (!seeking && menu.mode !== 'start') menu.open('start'); void finished; };   // (both showcases end on the start card whether they ran out or were quit — the maintainer, 08-13; a chapter SEEK restarts the program under the hood and must not flash the card)   // it ran to its end: back to the start card over the fresh night encounter it has just put back (cut off with P, the floor is live like an aborted tour)
   quality.onCalibrated = () => menu.refreshQualityNote();   // 'auto' picked on the pause card calibrates behind it: the card's note follows when it settles
   // attract mode (game/attract.ts): the start card left alone for a few seconds shows the place off by itself — the camera cuts round a loop of the tour's framings
   // while the patrols walk through them — and the first key, click, wheel tick or real mouse movement puts the card's own still view straight back (a fresh
   // encounter, the camera on Sam) and restarts the clock. Start card only: never over the pause / debrief card, never while the tour runs or auto quality is still
   // calibrating behind the card, never on a hidden tab, and never on a page automation is driving (?paused / __testVisible / any scripted hook below).
   let automated = testMute;   // any scripted hook used once (or the automation profile's mute flag): this page is a test rig, not a visitor
-  // after ONE full pass of the attract programme (~49 s of nobody touching anything on the start card) hand over to the showcase tour — the old 25 s auto-start's
-  // intent, without yanking the card from a reader mid-sentence or cutting a vantage off: attract stops itself, the card closes the way its own button closes it
+  // attract mode: with nobody touching anything on the start card it cuts round the level, pass after pass, until somebody does (it handed over to a showcase after its first pass
+  // while there was one to hand over to)
   const attract = new Attract(game, cam, () => menu.mode === 'start' && !missionsBusy() && !optionsOpen() && !demo.active && !game.director.showing && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !quality.calibrating && !automated && !benchOn() && !window.__pauseLoop && !window.__testVisible && !document.hidden,
-    (loops) => { if (loops >= 1) { if (!SHOWCASE_BUTTONS) return; attract.stop(); menu.close(); if (!demo.active && !game.director.showing) { if (!startNight()) unattended = true; else menu.open('start'); } } },   // (showcases off the menus for now: attract keeps cutting round the level instead of handing over)   // (a refused start — script disarmed, a unit on the floor — puts the card straight back: attract re-arms off it instead of stranding a live floor nobody is at)   // after a full pass of the attract programme with nobody here: the night showcase, and — nobody having touched anything by its end — the start card again
+    undefined,
     () => { refreshStill = true; });   // onStop: attract has just put the fresh encounter and the card's own camera back with no fade — the next frozen frame must show THAT, settled (step() below)
-  { // console / pane entry points obey the same rules as the start card's buttons: never over the tour or each other, and attract is put back in its box
-    // first — __breach.start() with the card's attract live otherwise let Attract.stop() reset the guards over the hired cast and froze the show (review 08-10 #22)
-    const rawB = breach.start.bind(breach); breach.start = () => { if (demo.active || game.director.showing) return; attract.poke(); if (menu.isOpen) menu.close(); kitShow(game); rawB(); syncShowClass(); };
+  { // the console's entry point obeys the rule a button would: never over a running programme, and attract is put back in its box first
     const rawD = demo.start.bind(demo) as (...x: unknown[]) => void; (demo as unknown as { start: (...x: unknown[]) => void }).start = (...a: unknown[]) => { if (demo.active || game.director.showing) return; attract.poke(); rawD(...a); };
   }
   let refreshStill = false;
-  let unattended = false;   // a show was started by the attract loop with nobody here: when it finishes, back to the start card (→ attract again after 6 s) rather than a live floor nobody plays — a visitor arriving mid-show (any poke) keeps the normal live hand-over
-  demo.onStop = (finished) => { if (unattended && finished && menu.mode !== 'start') menu.open('start'); unattended = false; };
   (window as any).__attract = attract;
-  for (const ev of ['keydown', 'mousedown', 'pointerdown', 'wheel', 'touchstart']) window.addEventListener(ev, () => { unattended = false; attract.poke(); }, { capture: true, passive: true });   // (someone is here: any unattended tour in progress hands over live as tours always have)
+  for (const ev of ['keydown', 'mousedown', 'pointerdown', 'wheel', 'touchstart']) window.addEventListener(ev, () => { attract.poke(); }, { capture: true, passive: true });   // (someone is here)
   { let mx: number | null = null, my: number | null = null;   // (a real change of position: a still mouse can still deliver mousemove on focus and layout changes, and movementX is not reliable everywhere; the first event only takes the reading)
     let mAcc = 0, mT = 0;
-    window.addEventListener('mousemove', e => { if (mx !== null && my !== null) { const dd = Math.abs(e.clientX - mx) + Math.abs(e.clientY - my); const now = performance.now(); mAcc = now - mT > 300 ? dd : mAcc + dd; mT = now; if (mAcc >= 3) { mAcc = 0; unattended = false; attract.poke(); } } mx = e.clientX; my = e.clientY; }, { capture: true, passive: true }); }   // (3 px inside 0.3 s: a sensor's 1 px jitter is not a person)
+    window.addEventListener('mousemove', e => { if (mx !== null && my !== null) { const dd = Math.abs(e.clientX - mx) + Math.abs(e.clientY - my); const now = performance.now(); mAcc = now - mT > 300 ? dd : mAcc + dd; mT = now; if (mAcc >= 3) { mAcc = 0; attract.poke(); } } mx = e.clientX; my = e.clientY; }, { capture: true, passive: true }); }   // (3 px inside 0.3 s: a sensor's 1 px jitter is not a person)
   window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (benchOn()) { input.pressed.delete('Escape'); return; }   // (Esc is the benchmark's while it runs: it stops itself, and puts the picture back BEFORE its scene is stopped — ui/bench.ts finish. Out of the frame's keys too: on a floor opened straight in, the world runs again the frame after, and its tick is not to read the key)
     if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
-    if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { quitShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && !BACKKEY.tab && game.escape()) { e.preventDefault(); return; } if (BACKKEY.tab) input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (BACKKEY.tab, game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc during either showcase quits it to the start card — the maintainer, 08-13)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
+    if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { endShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && !BACKKEY.tab && game.escape()) { e.preventDefault(); return; } if (BACKKEY.tab) input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (BACKKEY.tab, game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc over a running tour ends it to the start card)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
   tape?.stood(game);   // (a tape: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
   { const dress = kitSetUp ? kitViewSetDress(q) : null; if (dress) { setSuitAs(dress.suit); KITANIM.sling = dress.sling; } else if (kitViewOn && kitViewQuietOf(q)) KITANIM.sling = 2; }   // (?kitview on a bespoke set of a QUIET mission or the solo night: the men dressed as that mission's are, the rifle across the back — this window's own modules, an iframe's; a loud mission's set and every other page: nothing said)
@@ -484,8 +421,8 @@ async function main() {
   (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game) };
   if (q.has('nolesson')) LESSON.on = false;   // ?nolesson: a Training level plays as its mission alone — no step lines (game/lesson.ts; the lesson only ever reads the game, so the run is the same either way)
   (window as any).__lesson = { get on() { return LESSON.on; }, set on(v: boolean) { LESSON.on = v; }, get step() { return game.lesson.step; }, get i() { return game.lesson.i; }, summary: () => game.lesson.summary(), log: game.lesson.log, stats: LESSON_STATS, check: () => checkLesson(game) };   // a training lesson (game/lesson.ts): the step that is up, the level's block against its floor
-  kitSoloIf(game, q.has('solo') || (!q.has('demo') && !q.has('breach') && !game.quiet.active));   // the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
-  const openStartCard = !q.has('demo') && !q.has('breach') && !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
+  kitSoloIf(game, q.has('solo') || !game.quiet.active);   // the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
+  const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
 
   let last = performance.now(); let lastTs = -1, vsDt = -1; let timeAcc = 0; let fpsSm = 60; let frameCount = 0; let unionSm = 0; let simSm = 0;
   const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', 'gi reservoirs', 'rt raw'];   // (16 = phase 5's gather reservoirs: r M ÷ cap, g temporal taken, b spatial taps; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
@@ -549,9 +486,6 @@ async function main() {
   if (tape) automated = true;   // (a replay: no attract reel under it)
   if (new URLSearchParams(location.search).has('paused')) { window.__pauseLoop = true; automated = true; }   // ?paused: nothing runs until a script steps it (deterministic captures from frame 0) — and attract mode never, even if the loop is let go later
   window.__timeScale = 1;
-  if (new URLSearchParams(location.search).has('bench')) { /* (?bench plays the day showcase itself: no show started under it) */ }
-  else if (new URLSearchParams(location.search).has('demo')) setTimeout(() => { startNight(); }, 1500);   // ?demo: straight into the night showcase (the level script's 'night'; ?breach the day's)
-  else if (new URLSearchParams(location.search).has('breach')) setTimeout(() => { breach.start(); }, 1500);
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → download + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch { /* */ } });   // (also on the message line, so REC start / saved shows without the debug read-out)
@@ -572,8 +506,7 @@ async function main() {
   const bench: Bench = new Bench(engine, quality, perfrec, { boot: () => boot.summary(), machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
     blocked: () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : demo.active || game.director.showing ? 'a show is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null,
     covered: () => missionsBusy() || optionsOpen() ? 'a screen came up over it' : null,
-    scene: { start: () => { const why = game.director.canStart('breach'); if (why) return why; breach.start(); return breach.active ? null : 'the showcase did not start'; }, active: () => breach.active, stop: () => { if (breach.active) breach.stop(); },
-      heavy: () => { const c = breach.chapters(); return /smoke/.test(c.list[c.i]?.title ?? '') && c.frac >= 0.45 && smoke.stats.live > 0; } },   // (the canister's chapter of the day show, levels/office.script.ts, nearly half through: the plume some four seconds up, on the SHOW's clock, so the picture held is the same one on a slow machine. bench-check reads the title there. Muzzle and stun smoke earlier in the show is not it)
+    scene: null,
     away: () => { const a = benchAway; benchAway = false; return a; },
     sweep: { start: o => perfsweep.start(o), active: () => perfsweep.active, flipped: () => perfsweep.flipped, progress: () => perfsweep.progress, stop: why => perfsweep.stop(why), settled: () => perfsweep.settled } });
   (window as any).__bench = bench;
@@ -695,17 +628,14 @@ async function main() {
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick; Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
       if (input.hit('F10')) sessionrec.toggle();   // the session journal: asks now, starts at the top of the next live update it may (a paused card holds it pending), stops at the end of one
-      if (!frozen && input.hit('KeyP')) { const k = showKey({ showing: demo.active || game.director.showing || game.director.handedOver, buttons: SHOWCASE_BUTTONS, fresh: game.chronicle.events.length === 0 && Math.hypot(game.player.char.pos[0] - game.level.playerSpawn[0], game.player.char.pos[2] - game.level.playerSpawn[2]) < 0.5 }); if (k === 'stop') quitShow(); else if (k === 'start') startNight(); }   // (game/showkey.ts: P never starts a show over a run under way, nor while the card does not offer one)   // ('P runs the showcase again' on the hand-over card means it: over the held caption P ends that run as finished and starts a fresh one)   // P: the night showcase — or, over any running show (the night, the day's breach, the old tour by console), stops it onto the live night floor
+      if (!frozen && input.hit('KeyP') && (demo.active || game.director.showing || game.director.handedOver)) endShow();   // P: over a running tour (by console; or a level-script program) stops it to the start card — and starts nothing: the showcases it once started are gone
       if (!frozen && demo.active) { if (input.hit('ArrowRight')) demo.jump(+1); if (input.hit('ArrowLeft')) demo.jump(-1); }   // tour: arrows step between stops (the timeline at the bottom is clickable too)
-      else if (!frozen && game.director.showing) { const ch = game.director.chapters(); if (ch) { if (input.hit('ArrowRight')) seekShow(Math.min(ch.list.length - 1, ch.i + 1)); if (input.hit('ArrowLeft')) seekShow(Math.max(0, ch.i - 1)); } }   // both showcases: arrows seek chapter to chapter (seekShow), the timeline is clickable
     },
     postUpdate: () => {
-      syncShowClass();   // (a show begun or ended inside the step or between frames: the HUD's class follows this frame)
       vBooks();   // (what this machine keeps of the run that just ended, before its card is drawn)
       if (game.mission.debrief) { game.mission.debrief = false; menu.open('debrief'); }   // out with the drive: the end card (freezes the world like the pause menu; Esc / Keep playing resume, Again restarts)
       else if (game.verdict.takeDue()) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
     },
-    seekShow: (k) => seekShow(k),
     render: (camR, t, dt, present) => {
       if (viewHidden()) { behind.skipped++; perfrec.cpuRender = 0; return; }
       behind.drawn++;
@@ -800,7 +730,7 @@ async function main() {
       hud.textContent = show() || !readout.on ? '' : lines.join('\n');   // the showcases keep the screen clean; in play the read-out is opt-in (Tab ▸ Frame ▸ debug read-out, or ?hud) now that the kit and the interaction panel live on the left
     }
   }
-  // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for ?demo / ?breach), __ready resolves, the loop starts.
+  // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
   tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
   boot.mark('hooks');
@@ -1105,7 +1035,7 @@ function traceLabHooks(engine: Engine, game: Game) {
   // use; __hotCommon(src?, variant?) installs an edited common.wgsl text (no arg / null = refetch the file from disk; '' = back to the bundled text) and/or a TRACE_VARIANT, then rebuilds
   // EVERY pipeline that traces rays — direct + restir, the four gathers, the live reflection kernel, the volumetric march, the froxel kernels, the three cascade kernels, the particles'
   // sim — against the staged scene, so a traversal change is timed and pixel-compared without a reboot (composite's wet-coat side ray, the light probe and the bounce cards keep the boot
-  // prelude: reboot with ?trace=N for whole-frame identity). __daylight(on?) = the breach's daylight swap by hand (lighting.ts setDaylight, bit for bit) for the lab's sun-shadow scene B5.
+  // prelude: reboot with ?trace=N for whole-frame identity). __daylight(on?) = the level's daylight swap by hand (lighting.ts setDaylight, bit for bit) for the lab's sun-shadow scene B5.
   (window as any).__daylight = (on?: boolean) => { if (on !== undefined && !!on !== isDaylight(game)) setDaylight(game, !!on); return isDaylight(game); };
   (window as any).__scenePrelude = (lighting = false) => scenePrelude() + (lighting ? lightingCommonSrc : '');
   (window as any).__traceConfig = traceConfig;
