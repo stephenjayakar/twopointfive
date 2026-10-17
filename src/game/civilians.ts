@@ -43,7 +43,7 @@ import { RAG_COUNT } from './ragdoll';
 import type { DoorContact } from './doors';
 import type { Character } from './character';
 import { hearPath, airTrans } from './weather';
-import { simRandom, mulberry32 } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simRandom, mulberry32, rollOn } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 // ================================================================ authored spots (TODO(LevelData): the phones and the ways off the floor belong in the level file beside the
 // civilians block — like qrf.ts QRF_MARKS / needs.ts NEED_SPOTS they are checked headlessly against levels/office.json: free nav cells, reachable from every civilian's marks)
@@ -116,8 +116,8 @@ export const CIV = {
  *  opened' to the men's ears (guards.ts hearingCheck: who ≥ 10), not a creak nobody can explain */
 const CIV_ID0 = 40;
 // her own dice (line picks, the frozen beat) are mulberry32 (math/dice.ts) off her name — never Math.random, so a floor with her on it and unprovoked is the seeded floor without her
-/** the same die with its state kept ON the record (`dice`) instead of in a closure, so a checkpoint carries it: a loaded civilian draws on exactly where she was */
-function diceOf(C: { dice: number }): () => number { return () => { C.dice = (C.dice + 0x6D2B79F5) | 0; const a = C.dice; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// (the same die with its state kept ON the record — `dice`, rolled by `rnd` = math/dice.ts rollOn, which captures nothing — so a checkpoint carries it, a loaded
+//  civilian draws on exactly where she was, and a record a rollback snapshot puts into another game rolls its own die, not the first game's)
 /** run `fn` with Math.random swapped for a private seeded die: the Guard / Character constructors draw from Math.random (the idle phase, the look clock) and a civilian's
  *  construction must not move the game's own sequence by one draw (every seeded QA run, every frozen identity digest, is of the floor WITHOUT her) */
 function withDice<T>(seed: number, fn: () => T): T { const R = Math.random; Math.random = mulberry32(seed); try { return fn(); } finally { Math.random = R; } }
@@ -161,7 +161,7 @@ export interface Civ {
   /** her light meter (what a man's eye gets off her running through his torch): eased like everybody's */
   vis: number;
   /** her own dice: the mulberry state (a checkpoint keeps it) and the draw off it */
-  dice: number; rnd: () => number;
+  dice: number; rnd: (this: { dice: number }) => number;
   /** what happened when (probes / the panel): 't state/cause …' */
   log: string[];
 }
@@ -343,9 +343,8 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
     reportTo: null, talkT: 0, reported: false, phoned: false, acked: false,
     cowerAt: null, complied: false, complyUntil: -1, refled: false, foundT: 0, foundBy: null, foundLineAt: -1, foundTold: false,
     screamAt: -1e9, whimperAt: -1e9, greetAt: -1e9, lastLineAt: -1e9, told: new SideMap(), knownBodies: new SideSet(), intelN: 0, outsideCallAt: -1, vis: 0,
-    dice: hashStr(`civdice:${def.name}`) | 0, rnd: () => 0, log: [],
+    dice: hashStr(`civdice:${def.name}`) | 0, rnd: rollOn, log: [],   // (the sequence mulberry32(dice) gives)
   };
-  gd.civ.rnd = diceOf(gd.civ);   // (the same sequence mulberry32(seed) gives — the state on the record so civiliansSnapshot can carry it)
   gd.wait = route.wait[0] ?? 0;   // she starts AT her first mark, doing what she does there
   gd.char.update(0);
   return gd;

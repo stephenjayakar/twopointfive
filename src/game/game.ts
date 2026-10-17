@@ -2,6 +2,7 @@
 // The systems live beside it as plain-function modules taking the Game first: player.ts (controller, takedown / drag, throws, the cursor's
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
+import { wallClock } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
@@ -765,7 +766,7 @@ export class Game {
   props: PropSystem;
   /** door the player would operate with F right now (also drives the HUD prompt) */
   useDoor: Door | null = null;   // the hovered door when it is within reach (F acts on it)
-  reachStats = { lights: 0, meanFraction: 1, ms: 0 };   // reach masks built at construction (render/reach.ts): how many lights got one, the mean fraction of the level they reach, build time
+  reachStats = wallClock({ lights: 0, meanFraction: 1, ms: 0 }, 'ms');   // reach masks built at construction (render/reach.ts): how many lights got one, the mean fraction of the level they reach, build time
   /** the cells under the ceiling slab (reach.ts buildInteriorCells), kept for directional lights added later (the breach's sun: lighting.ts setDaylight → buildDirReach) */
   reachInterior: Uint8Array | null = null;
   /** WALL BREAKING (game/wallbreak.ts): the full-height walls the reach masks were derived from, the lights that carry a mask, and the ones waiting to have theirs
@@ -1166,7 +1167,7 @@ export class Game {
       }
       this.reachInterior = interior;
       for (const l of engine.lights.lights) if (l.kind === 2) this.buildDirReach(l);   // the moon: which indoor cells see the sky its way at all (used by the ReSTIR estimator only — lights.ts dirMasks)
-      this.reachStats = { lights: n, meanFraction: n ? cells / n : 1, ms: performance.now() - t0 }; }
+      this.reachStats = wallClock({ lights: n, meanFraction: n ? cells / n : 1, ms: performance.now() - t0 }, 'ms'); }
     // doors: leaves are dynamic occluders for sight / sound / projectiles (collision layer)
     this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e));
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)

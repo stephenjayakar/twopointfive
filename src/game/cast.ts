@@ -59,7 +59,7 @@ export function castVariantOf(g: Game, c: Character): CastVariant | null {
   if (!rec.unit || trained || rec.team !== 'guard') worn.set(c, v);   // (a staff-side unit is asked again until he is `trained`: qrf.ts sets that a statement after it spawns him)
   return v;
 }
-const hasNvg = new SideMap<CastVariant, boolean>('cast.hasNvg');
+const hasNvg = new SideMap<CastVariant, boolean>('cast.hasNvg'); hasNvg.asMemo();   // (a pure function of the variant, a row of the cast every game shares)
 /** THE SNEAKING SUIT (scene/look.ts LOOK.suit; the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): who is
  *  drawn in it THIS frame — under the default look, on a mission that is not a squad's loud one (a quiet mission; the plain night, its showcase with it), Sam, and on a
  *  quiet mission as two his partner (a pair in two dresses read as two sides from above). Asked every frame, so a mission started or quit on a running page re-dresses

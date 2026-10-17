@@ -99,7 +99,7 @@ export async function snowBogCheck(o: { verbose?: boolean } = {}): Promise<boole
       const gd: any = { char: { pos: [0, 0, 0], bones: {} } }; let worst = 0, worstFloor = 0, n = 0, none = 0; const said: string[] = [];
       for (const [name, p] of [['deep', YARD], ['trodden', ROAD]] as const) for (const [kind, rollK] of [['frag', SQUADTHROW.fragRollK], ['smoke', undefined]] as const) for (const dist of [5, 6]) {
         const at: [number, number, number] = [p[0] + dist - 1.5, 0, p[2]], stood: [number, number, number] = [p[0] - 1.5, 0, p[2]];
-        const real = (R: typeof On, arc: any) => { SNOWBOG.on = R.sw; const it = R.g.items.spawn(kind, [...arc.from], [...arc.sol.v0], { fuse: 60, life: 60 }); it.spin = 0; it.tumbleRate = 0; for (let i = 0; i < 900 && !it.settled; i++) R.g.items.update(DT); const q = [...it.pos]; R.g.items.items.splice(R.g.items.items.indexOf(it), 1); return Math.hypot(q[0] - at[0], q[2] - at[2]); };
+        const real = (R: typeof On, arc: any) => { SNOWBOG.on = R.sw; const it = R.g.items.spawn(kind, [...arc.from], [...arc.sol.v0], { fuse: 60, life: 60 }); it.spin = 0; it.tumbleRate = 0; for (let i = 0; i < 900 && !it.settled; i++) R.g.items.update(DT, R.g); const q = [...it.pos]; R.g.items.items.splice(R.g.items.items.indexOf(it), 1); return Math.hypot(q[0] - at[0], q[2] - at[2]); };
         SNOWBOG.on = true; const arc = squadArcTo(On.g, gd, at, rollK, stood); SNOWBOG.on = false; const arcF = squadArcTo(On.g, gd, at, rollK, stood); SNOWBOG.on = On.sw;
         if (!arc || !arcF) { none++; continue; }
         const m = real(On, arc), mf = real(On, arcF); n++; if (m > worst) worst = m; if (mf > worstFloor) worstFloor = mf; said.push(`${name} ${kind} ${dist} m: ${m.toFixed(2)}`);

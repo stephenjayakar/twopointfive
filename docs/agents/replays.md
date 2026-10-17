@@ -94,6 +94,50 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
   field, `mPerPx`, a blast's kick. The session journal's format is untouched (it files the raw camera and input before the sample).
+- **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
+  networked, NOTHING IN THE GAME CALLS IT: unused, the build is as it was — the 21 scripted play-throughs' digests on both stands are the ones from before it). Beside the
+  checkpoint (`savestate.ts`: a file with a schema a player keeps, refused in squad play and mid-action), not instead of it. `takeSnapshot(g)` walks everything the Game
+  reaches plus what `math/side.ts` lists, and keeps a shallow copy of each array, object, Map, Set and typed array: no schema, a new field on a Guard is in the next
+  snapshot. `takeSnapshot(g, since)` a tick later copies only what changed and shares the rest (a rollback ring's snapshot a tick). `restoreSnapshot(s)` writes the copies
+  back into the same objects (identities stand; the Game's host fields stay as they are NOW); `restoreSnapshot(s, other)` puts the state into ANOTHER Game on the same
+  level, walked side by side: an object the two games share (a module's constant row) stands for itself and is not written, a function is the other game's own closure
+  of the same code where one stands in the same slot (one function of the snapshot's is one function there), a field that is COMPUTED (a getter) is left to compute.
+  `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
+  box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's readings in flight, the session journal), the character file, what a closure
+  captured, a MEMO table, and it is references, not bytes (it cannot be sent to another process as it is).
+  THE RULE FOR NEW GAME CODE (the static pass is red otherwise): no `new WeakMap` / `new WeakSet` in `src/game`, `src/scene`, `src/anim`, `src/math` — `SideMap` / `SideSet`
+  (the same calls, and listable), a table at the top of a module NAMED `'<file>.<variable>'`, one made inside a function unnamed; a module `let` the simulation writes is
+  `rollbackVar('<file>.<name>', get, set)`; a module-level Map / Set / array (typed ones too) / object it writes is `rollbackRoot('<file>.<name>', it)` (or a knob
+  table); anything else gets a row in `tools/qa/rollback-exempt.ts` with its class and why (TALLY a counter nothing reads back · CONFIG set at a scenario's start ·
+  SCRATCH dead by the end of the call · CACHE rebuilt from what it is keyed on · CONST). State never lives in a closure: A DIE KEPT IN STATE IS A `Die`
+  (`math/dice.ts`: `dieOf(seed)`, `roll(die)`, or a `rnd: rollOn` method beside a `dice` field — the same numbers as `mulberry32(seed)`), never a `mulberry32`
+  closure, whose word no snapshot can reach (civilians, the Director's run, the radio checks and the last stand were changed to it: same sequences). A named table that
+  is a pure function of its key — what a miss would compute, whichever game filled it — says so in the statement after it, `table.asMemo()` (two today:
+  `cast.hasNvg`, `character.AT0`): not state, held by no snapshot, compared by nothing. A field that holds a wall-clock reading is marked where its holder is made,
+  `wallClock(obj, 'ms')` (the props', the reach masks' and the rig fit's timers, the checkpoints' `runId`): kept and put back, never compared. `math/side.ts` imports
+  nothing, so a top-level `new SideMap(...)` is safe in the import cycle.
+  THE CHECK: `bun run tools/qa/rollback-check.ts` (the frozen stand) and `TPS_PROFILE=shipped bun run tools/qa/rollback-check.ts`; `ROLLBACK_BREAK=1` flips the lowest bit
+  of one moving man's position after every restore and the three 'plays on' lines must FAIL. It runs the static pass, then scripted solo and squad play-throughs
+  (`--scn`, default eight; `--seeds`), and at a moment every few seconds — and at the first frames that find a round in the air, a leaf swinging, a fuse burning, a man
+  falling — takes the game and holds, by the state word after every tick: put back = the word it was; the SAME game plays the next ticks as the unbroken run; THE RING (a
+  snapshot after every tick, each since the one before; the one eight ticks back put back) plays the eight again; a FRESH game given the snapshot plays the same ticks
+  (where the strict word parts, the two are gone through value for value, `stateAlike`: every number to the bit, but not WHICH object stands where — the first game
+  points at a module's constant the other had not reached; the line says how many moments passed that way); TWO GAMES: the other game's ticks leave the first game's
+  own state as it was (they share nothing live); and the whole run rolled back dozens of times ends on the digest and the state word of the run never touched. A FAIL
+  names the moment and the tick; `--why scn:seed:frame` prints the paths that differ. `--static` = the static pass alone (CLAUDE.md lists it); `--times scn:seed:frame`
+  = times and bytes at one frame; `RB_LAST_DUMP=<file>` on a `--one` run writes the last state's word per part, to find where two arms' last states differ.
+  MEASURED: (room-clear-four seed 1, frame 600, the cloud box under other load, least of several) about 30,000 objects and 6.5 MB a whole snapshot, 2.4 MB of its
+  own a tick; a whole take about 40 ms, a take since the last about 15 ms, a tick 5 to 7 ms, eight ticks back put back about 10 ms, put back and played again about
+  52 to 66 ms. AN EIGHT-TICK ROLLBACK DOES NOT FIT A 16.7 ms FRAME ON THIS BOX: eight ticks alone are about 40 ms here; the cost of a take is the walk over some
+  30,000 small objects (18,000 of them three-number arrays).
+  KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
+  `shield.given`, the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
+  process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
+  that runs several games in a process wants them on the Game. Another Game object is never walked into, but a memo that names another game's man is. CONFIG rows are
+  safe only while a rolled-back window never spans a scenario's start or stop. A closure in state is taken by its code: `Throwable.onBounce` still captures a can's
+  own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
+  the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
+  out-parameter, a class's `static` field. Never run on a GPU, and the page does not call any of it.
 - **Replays after the fact (F7)** (`src/game/replaybuf.ts` → `src/replay/format.ts`, `ui/replaykey.ts`, `src/replay/viewer.ts` + `replay.html`, `tools/qa/replay-at.ts`): the page ALWAYS keeps the last
   `REPLAY.seconds` (300) of play as a TRACE — every man's place / facing / state / order / mark / route, doors, items, rounds, the HUD's lines, the camera — sampled at 20 Hz off
   `Game.replayTap` (update's last statement; the buffer only READS: `replaybuf-probes.ts identity` holds the digests equal with it on and off), delta-coded between 5 s keyframes.

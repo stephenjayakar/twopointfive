@@ -23,6 +23,7 @@ bun run typecheck:qa   # tools/qa (its own tsconfig)
 bun run tools/qa/probes.ts <name|family|all-quick|list>   # exit 0 pass · 1 a probe failed · 2 unknown name
 sh tools/qa/gate.sh <family …>                            # the families a change touched; red on any FAIL or silent probe
 bun run tools/qa/knobs-check.ts                           # after adding a knob table
+bun run tools/qa/rollback-check.ts --static               # after adding module state (a side table, a module `let`, a written container)
 bun run tools/qa/tour.ts --runs 3 --quiet                 # + soak.ts --seeds 1,2,3 --minutes 12 --quiet after gameplay changes
 ```
 Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
@@ -41,6 +42,9 @@ Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`
   whose `<NAME>_BREAK=1` path must fail, run on BOTH stands. A new default-on rule joins the frozen-digest pin lists.
 - **No `Math.random` in `src/game`** — `simRandom()` (`src/math/dice.ts`); `bun run tools/qa/dice-check.ts` is red on one. No wall
   clock inside the update either.
+- **Module state is registered** (`src/math/side.ts`; `docs/agents/replays.md`, the rollback snapshot). In the simulation's folders: `SideMap` /
+  `SideSet`, never `new WeakMap` / `WeakSet`; a module `let` or written container is `rollbackVar` / `rollbackRoot` or has its row in
+  `tools/qa/rollback-exempt.ts`; a die kept in state is a `Die` (`math/dice.ts`), never a closure. The static pass is red otherwise.
 - **`src/game` is one runtime import cycle.** No top-level statement may USE another game module's export (a module-level table or
   `new X()` built from one breaks only in the page's bundle). Build such tables lazily; boot a new module once in the page.
 - **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). A GPU value reaches

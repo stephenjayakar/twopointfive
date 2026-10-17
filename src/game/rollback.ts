@@ -17,7 +17,7 @@
 // too, so a check can hold that). A function is kept as it is: what a closure has captured cannot be seen from here, so state belongs on objects and in side
 // tables, never in a closure (the check's static pass names the module variables that are not registered).
 // (src/game is one import cycle: nothing below runs at the top level but type imports and math/side.ts, which is outside it.)
-import { SideMap, SideSet, sideRegistry, type SideVar } from '../math/side';
+import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys } from '../math/side';
 import type { Game } from './game';
 
 type Rec = Record<string, unknown>;
@@ -56,17 +56,17 @@ interface Chain {
   readonly base: { n: number };
   /** room to work in while one snapshot is taken: the take that last met each object (`epoch` counts them); what the snapshot it is taken since has of each (its copy,
    *  its keys, `met`: 0 not held, else one more than how many snapshots back it was first held; `fresh`: how many snapshots back its copy was made) */
-  stamp: Int32Array; met: Uint8Array; fresh: Uint8Array; epoch: number; readonly last: unknown[]; readonly lastShape: (string[] | undefined)[]; readonly stack: number[];
+  stamp: Int32Array; met: Uint8Array; fresh: Uint8Array; epoch: number; readonly last: unknown[]; readonly lastShape: (Shape | undefined)[]; readonly stack: number[];
 }
 export interface Snapshot {
   /** the Game it was taken from */
   readonly game: Game;
   readonly chain: Chain;
   /** the objects it holds — their numbers in the chain — and the shallow copy of each (children by reference): an array's elements, a typed array's, an object's VALUES
-   *  in the order of its keys (`shapes`), a Map's [key, value …], a Set's members; nothing for a side table (its entries are below). A copy is the very one of the
+   *  in the order of its keys (`shapes`: its make), a Map's [key, value …], a Set's members; nothing for a side table (its entries are below). A copy is the very one of the
    *  snapshot this was taken `since` when the object had not changed: a snapshot a tick costs what moved in that tick, not the whole game.
    *  `ages`: how many snapshots back (each taken since the one before) the object was first held, times 16, and how many back its copy was made — 15 at most each */
-  readonly at: Int32Array; readonly data: unknown[]; readonly shapes: (string[] | undefined)[]; readonly ages: Uint8Array;
+  readonly at: Int32Array; readonly data: unknown[]; readonly shapes: (Shape | undefined)[]; readonly ages: Uint8Array;
   /** every side table (the named ones, and the ones found hanging off an object) with its entries whose key the snapshot holds: [key, value, key, value …] of a map, [key, key …] of a set */
   readonly tables: Table[]; readonly entries: unknown[][];
   /** the registered module variables and what each held */
@@ -81,7 +81,7 @@ const WORDS_FROM = 256;
  *  of the game since, still held — or the chain has met this many times what a snapshot holds (the game makes a thousand objects a tick and drops as many) */
 const WALK_AGAIN = 1.25, WALK_SLACK = 2048, CHAIN_GROWS = 8, CHAIN_SLACK = 65536;
 /** an object first held within this many snapshots is held again only if met (most of what a tick makes is dropped within two); one whose copy was made within as many is looked into */
-const YOUNG = Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.RB_YOUNG ?? 3);
+const YOUNG = 3;
 
 /** the whole simulation as it stands.
  *  `since`: a snapshot taken of this game before (the last one, in a rollback ring; the one just restored, after a rollback) — an object that has not changed since is not
@@ -97,15 +97,16 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   const whole = !fc || from!.at.length > WALK_AGAIN * fc.base.n + WALK_SLACK || fc.index.size > CHAIN_GROWS * from!.at.length + CHAIN_SLACK;
   const chain: Chain = whole ? { index: new Map(), nodes: [], kinds: [], views: [], base: { n: 0 }, stamp: new Int32Array(1 << 16), met: new Uint8Array(1 << 16), fresh: new Uint8Array(1 << 16), epoch: 0, last: [], lastShape: [], stack: [] } : fc;
   const { index, nodes, kinds, views, stack } = chain, epoch = ++chain.epoch;
-  let stamp = chain.stamp, met = chain.met, fresh = chain.fresh;
+  let stamp = chain.stamp, met = chain.met, fresh = chain.fresh, seenN = 0;
+  const Game = (g as object).constructor;
   // what `since` has of each object, laid out by its number in that snapshot's chain
   const last = fc ? fc.last : [], lastShape = fc ? fc.lastShape : [], fIndex = fc ? fc.index : null;
   if (from) { const fa = from.at, fd = from.data, fs = from.shapes, ff = from.ages;
     for (let j = 0; j < fa.length; j++) { const i = fa[j]; last[i] = fd[j]; lastShape[i] = fs[j]; if (!whole) { met[i] = (ff[j] >> 4) + 1; fresh[i] = ff[j] & 15; } } }
   // (the four lists are written by place into room made at once: pushed one by one they were a quarter of the whole take)
   let cap = (from ? from.at.length : 32768) + 4096, held = 0;
-  let at = new Int32Array(cap), ages = new Uint8Array(cap); const data: unknown[] = new Array(cap), shapes: (string[] | undefined)[] = new Array(cap), found: Table[] = [], rawWeak: object[] = [];
-  const put = (i: number, c: unknown, shape: string[] | undefined, age: number): void => {
+  let at = new Int32Array(cap), ages = new Uint8Array(cap); const data: unknown[] = new Array(cap), shapes: (Shape | undefined)[] = new Array(cap), found: Table[] = [], rawWeak: object[] = [];
+  const put = (i: number, c: unknown, shape: Shape | undefined, age: number): void => {
     if (held === cap) { cap *= 2; const a2 = new Int32Array(cap); a2.set(at); at = a2; const g2 = new Uint8Array(cap); g2.set(ages); ages = g2; }
     at[held] = i; ages[held] = age; data[held] = c; shapes[held] = shape; held++;
   };
@@ -122,8 +123,9 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   /** an object pointed at: put on the stack to be held, unless it is already — or it is one of the old ones (those are gone through, met or not) */
   const see = (v: object): void => {
     let i = index.get(v);
-    if (i === undefined) i = add(v); else if (stamp[i] === epoch || met[i] > YOUNG) return;
-    stamp[i] = epoch; stack.push(i);
+    if (i === undefined) { if (v.constructor === Game && v !== g) return; i = add(v); }   // (ANOTHER Game, reached through a module's memo every game in the process shares: not this game's state, never walked into, never put back)
+    else if (stamp[i] === epoch || met[i] > YOUNG) return;
+    stamp[i] = epoch; stack.push(i); seenN++;
   };
   const seeFrom = (a: unknown[], from: number): void => { for (let j = from; j < a.length; j++) { const x = a[j]; if (typeof x === 'object' && x !== null) see(x); } };
   /** object `i` into the snapshot: the copy `since` has when it is still that to the bit, else a new one. `scan`: everything it points at is seen (always, of a new copy,
@@ -134,7 +136,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
     if (kind === K_SIDEMAP || kind === K_SIDESET) { if ((o as Table).sideName === undefined) found.push(o as Table); put(i, undefined, undefined, Math.min(15, met[i]) << 4 | 15); return; }
     if (kind === K_RAWWEAK) { rawWeak.push(o); put(i, undefined, undefined, Math.min(15, met[i]) << 4 | 15); return; }
     let li = i; if (whole) { const x = fIndex ? fIndex.get(o) : undefined; li = x === undefined ? -1 : x; }
-    const was = li >= 0 ? last[li] : undefined; let c = was, shape: string[] | undefined;
+    const was = li >= 0 ? last[li] : undefined; let c = was, shape: Shape | undefined;
     switch (kind) {
       case K_ARR: { const a = o as unknown[], n = a.length; let j = 0;
         if (c !== undefined && (c as unknown[]).length === n) j = firstDiff(a, c as unknown[], n); else c = undefined;
@@ -142,10 +144,10 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
         break; }
       case K_TYPED: if (c === undefined || firstDiffNum(o as Typed, c as Typed, (o as Typed).length) < (o as Typed).length) c = (o as Typed).slice(); break;
       case K_WORDS: { const a = views[i]!; if (c === undefined || firstDiffWords(a, c as Uint32Array, a.length) < a.length) c = a.slice(); break; }
-      case K_OBJ: { const ks = Object.keys(o), a = Object.values(o), n = ks.length, pk = li >= 0 ? lastShape[li] : undefined; let j = 0;   // (the values at once: read key by key, the objects were a quarter of a take)
-        if (c !== undefined && pk !== undefined && pk.length === n && sameKeys(ks, pk, n)) { j = firstDiff(a, c as unknown[], n); shape = pk; } else c = undefined;
-        if (c === undefined || j < n) { c = a; shape = ks; seeFrom(a, scan ? 0 : j); } else if (scan) seeFrom(a, 0);
-        break; }
+      case K_OBJ: { const ks = Object.keys(o), n = ks.length; let sh = li >= 0 ? lastShape[li] : undefined, j = 0;
+        if (c !== undefined && sh !== undefined && sh.keys.length === n && sameKeys(ks, sh.keys, n)) j = sh.diff(o as Rec, c as unknown[]); else { c = undefined; sh = shapeFor(ks); }
+        if (c === undefined || j < n) { const b = sh.copy(o as Rec); c = b; seeFrom(b, scan ? 0 : j); } else if (scan) seeFrom(c as unknown[], 0);
+        shape = sh; break; }
       case K_MAP: { const m = o as Map<unknown, unknown>, b = c as unknown[] | undefined; let j = 0, eq = b !== undefined && m.size * 2 === b.length; const fresh: unknown[] = [];
         m.forEach((v, k) => { if (eq && (differs(k, b![j]) || differs(v, b![j + 1]))) eq = false; j += 2; fresh.push(k, v); });
         if (!eq) c = fresh;
@@ -163,10 +165,33 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   const drain = (): void => { while (stack.length) hold(stack.pop()!, true); };
   // the host's and the statics as they stand now: met, never walked into (a mixer or a journal put in since the chain began is not either)
   for (const f of [HOST_FIELDS, STATIC_FIELDS]) for (const o of fieldsOf(g, f)) { let i = index.get(o); if (i === undefined) i = add(o); stamp[i] = epoch; }
-  if (whole) for (const r of rootsOf(g)) see(r);
-  else { // the old ones `since` holds: each as it is now; one whose copy is young is looked into (the young ones hang off those)
+  if (whole) {
+    // everything the statics reach is met and never walked into again by this chain (the character file's clips hang off every man: a fifth of all the game reaches)
+    const st: object[] = fieldsOf(g, STATIC_FIELDS).slice();
+    for (const o of st) kinds[index.get(o)!] = K_ATOM;
+    while (st.length) { const o = st.pop()!, each = (v: unknown): void => { if (typeof v === 'object' && v !== null && !index.has(v)) { const i = add(v); if (kinds[i] !== K_SIDEMAP && kinds[i] !== K_SIDESET && kinds[i] !== K_RAWWEAK) { kinds[i] = K_ATOM; st.push(v); } } };
+      if (Array.isArray(o)) o.forEach(each); else if (ArrayBuffer.isView(o)) continue;
+      else { const k = protoKind(o); if (k === K_OBJ) Object.values(o).forEach(each); else if (k === K_MAP) (o as Map<unknown, unknown>).forEach((v, key) => { each(key); each(v); }); else if (k === K_SET) (o as Set<unknown>).forEach(each); } }
+    for (const r of rootsOf(g)) see(r);
+  } else { // the old ones `since` holds: each as it is now. One that is not to be looked into and is what its copy says — nearly all of them — is held right here
     const fa = from!.at;
-    for (let j = 0; j < fa.length; j++) { const i = fa[j]; if (met[i] <= YOUNG || stamp[i] === epoch) continue; stamp[i] = epoch; hold(i, fresh[i] < YOUNG); }
+    for (let q = 0; q < fa.length; q++) {
+      const i = fa[q]; if (met[i] <= YOUNG || stamp[i] === epoch) continue;
+      stamp[i] = epoch;
+      if (fresh[i] >= YOUNG) {
+        const o = nodes[i], c = last[i]; let same = false, sh: Shape | undefined;
+        switch (kinds[i]) {
+          case K_ARR: { const n = (o as unknown[]).length; same = n === (c as unknown[]).length && firstDiff(o as unknown[], c as unknown[], n) === n; break; }
+          case K_TYPED: { const n = (o as Typed).length; same = firstDiffNum(o as Typed, c as Typed, n) === n; break; }
+          case K_WORDS: { const a = views[i]!, n = a.length; same = firstDiffWords(a, c as Uint32Array, n) === n; break; }
+          case K_OBJ: { const ks = Object.keys(o), n = ks.length; sh = lastShape[i]!; same = sh.keys.length === n && sameKeys(ks, sh.keys, n) && sh.diff(o as Rec, c as unknown[]) === n; break; }
+          case K_MAP: { const b = c as unknown[]; if ((o as Map<unknown, unknown>).size * 2 === b.length) { let j = 0; same = true; for (const e of o as Map<unknown, unknown>) { if (differs(e[0], b[j]) || differs(e[1], b[j + 1])) { same = false; break; } j += 2; } } break; }
+          case K_SET: { const b = c as unknown[]; if ((o as Set<unknown>).size === b.length) { let j = 0; same = true; for (const v of o as Set<unknown>) { if (differs(v, b[j++])) { same = false; break; } } } break; }
+        }
+        if (same) { const m = met[i], f = fresh[i] + 1; put(i, c, sh, (m > 15 ? 15 : m) << 4 | (f > 15 ? 15 : f)); continue; }
+      }
+      hold(i, fresh[i] < YOUNG);   // (one whose copy is young is looked into: the young ones hang off those)
+    }
   }
   for (const r of reg.roots) see(r.obj);
   const vars = reg.vars.slice(), varVals = vars.map(v => v.get());
@@ -174,8 +199,10 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   drain();
   // the side tables: an entry is in when its key is held — and its value may reach more objects, whose entries in other tables are in too: round until nothing is added
   const tables: Table[] = reg.tables.slice(), entries: unknown[][] = [], pend: object[][] = [];
-  for (let moved = true, nFound = 0; moved;) {
+  for (let moved = true, nFound = 0, was = -1; moved;) {
     moved = false;
+    if (seenN === was && nFound === found.length) break;   // (nothing was met since the last round: no key left over can have come in)
+    was = seenN;
     while (nFound < found.length) tables.push(found[nFound++]);
     for (let i = 0; i < tables.length; i++) {
       const t = tables[i]; let p = pend[i];
@@ -183,7 +210,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
       if (!p.length) continue;
       const e = entries[i], map = t instanceof SideMap ? t : null; let n = 0;
       for (let j = 0; j < p.length; j++) { const k = p[j], ki = index.get(k);
-        if (ki === undefined || stamp[ki] !== epoch) { p[n++] = k; continue; }
+        if (ki === undefined || (stamp[ki] !== epoch && kinds[ki] !== K_ATOM)) { p[n++] = k; continue; }   // (a static or a thing of the host's the chain has met is there for good: a snapshot since does not meet it again)
         moved = true;
         if (map) { const v = map.get(k); e.push(k, v); if (typeof v === 'object' && v !== null) see(v); } else e.push(k); }
       p.length = n;
@@ -197,6 +224,33 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   return { game: g, chain, at: at.subarray(0, held), data, shapes, ages: ages.subarray(0, held), tables, entries, vars, varVals, rawWeak };
 }
 
+/** an object's make: its keys in their order, and three small functions written for exactly those keys (read by name, a key is ten times dearer than a place in a list):
+ *  `diff` the first key whose value is not, to the bit, what a list of values has (how many keys when none) · `copy` its values as a list · `put` a list back into it */
+/** a field written back. One that is COMPUTED (`get budget() { … }` with no setter: a snapshot holds what it gave, as it holds any enumerable key) is left to compute
+ *  — what it gives follows from the rest of the state; so is a field of a frozen row. (The functions written from text for a make are not strict: the same there.) */
+function setKey(o: Rec, k: string, v: unknown): void { try { o[k] = v; } catch { /* computed, or frozen */ } }
+/** the keys of an object taken off before they are put on again in the copy's order — but not a computed one, which would come back as a plain value */
+function dropKeys(o: Rec, ks: string[]): void { for (const k of ks) { const d = Object.getOwnPropertyDescriptor(o, k); if (d && 'value' in d && d.configurable) delete o[k]; } }
+interface Shape { readonly keys: string[]; diff(o: Rec, b: unknown[]): number; copy(o: Rec): unknown[]; put(o: Rec, c: unknown[]): void }
+const MAKES = new Map<string, Shape>();
+let written = true;   // (down for good the first time the page will not have a function made from text)
+function shapeFor(keys: string[]): Shape {
+  const id = keys.join('\u0001'); let sh = MAKES.get(id); if (sh) return sh;
+  const n = keys.length;
+  if (written && n <= 512 && MAKES.size < 4096) try {
+    const at = keys.map(k => `o[${JSON.stringify(k)}]`);
+    sh = { keys,
+      diff: new Function('o', 'b', `var x,y;${at.map((a, j) => `x=${a};y=b[${j}];if(x!==y?(x===x||y===y):(x===0&&1/x!==1/y))return ${j};`).join('')}return ${n};`) as Shape['diff'],
+      copy: new Function('o', `return [${at.join(',')}];`) as Shape['copy'],
+      put: new Function('o', 'c', `var a,b;${at.map((a, j) => `a=${a};b=c[${j}];if(a!==b||(b===0&&1/a!==1/b))${a}=b;`).join('')}`) as Shape['put'] };
+  } catch { written = false; }
+  sh ??= { keys,
+    diff(o, b) { for (let j = 0; j < n; j++) if (differs(o[keys[j]], b[j])) return j; return n; },
+    copy(o) { const c = new Array<unknown>(n); for (let j = 0; j < n; j++) c[j] = o[keys[j]]; return c; },
+    put(o, c) { for (let j = 0; j < n; j++) { const k = keys[j], b = c[j], a = o[k]; if (a !== b || (b === 0 && !Object.is(a, b))) setKey(o, k, b); } } };
+  if (MAKES.size < 8192) MAKES.set(id, sh);   // (past that — a game keying objects by ever new names — a make is written for the call and dropped)
+  return sh;
+}
 /** the first place two lists part, to the bit (0 and -0 differ; a NaN is a NaN) — `n` when they do not. Small and apart, one for each make of list: the take spends
  *  most of its time here */
 function firstDiff(a: unknown[], b: unknown[], n: number): number {
@@ -217,6 +271,7 @@ export function restoreSnapshot(s: Snapshot, into: Game = s.game): void { if (in
 
 function restoreInPlace(s: Snapshot): void {
   const { at, data, shapes } = s, { nodes, kinds, views, index } = s.chain;
+  const G = s.game as unknown as Rec, host = HOST_FIELDS.map(f => G[f]);   // (the host's own — a journal begun since, a mixer swapped — stay as they are NOW: not the simulation's to put back)
   for (let q = 0; q < at.length; q++) {
     const i = at[q];
     switch (kinds[i]) {
@@ -224,10 +279,9 @@ function restoreInPlace(s: Snapshot): void {
         for (let j = 0; j < n; j++) { const b = c[j], a = o[j]; if (a !== b || (b === 0 && !Object.is(a, b))) o[j] = b; } break; }
       case K_TYPED: { const o = nodes[i] as Typed, c = data[q] as Typed, n = c.length; if (n <= 32) for (let j = 0; j < n; j++) o[j] = c[j]; else o.set(c); break; }
       case K_WORDS: views[i]!.set(data[q] as Uint32Array); break;
-      case K_OBJ: { const o = nodes[i] as Rec, c = data[q] as unknown[], pk = shapes[q]!, ks = Object.keys(o), n = pk.length; let same = ks.length === n;
-        for (let j = 0; same && j < n; j++) if (ks[j] !== pk[j]) same = false;
-        if (same) for (let j = 0; j < n; j++) { const k = pk[j], b = c[j], a = o[k]; if (a !== b || (b === 0 && !Object.is(a, b))) o[k] = b; }
-        else { for (const k of ks) delete o[k]; for (let j = 0; j < n; j++) o[pk[j]] = c[j]; }   // (a key added or dropped since, or their order: as the copy has them — a for-in over it must run as it would have)
+      case K_OBJ: { const o = nodes[i] as Rec, c = data[q] as unknown[], sh = shapes[q]!, pk = sh.keys, ks = Object.keys(o), n = pk.length;
+        if (ks.length === n && sameKeys(ks, pk, n)) sh.put(o, c);
+        else { dropKeys(o, ks); for (let j = 0; j < n; j++) setKey(o, pk[j], c[j]); }   // (a key added or dropped since, or their order: as the copy has them — a for-in over it must run as it would have)
         break; }
       case K_MAP: { const o = nodes[i] as Map<unknown, unknown>, c = data[q] as unknown[]; o.clear(); for (let j = 0; j < c.length; j += 2) o.set(c[j], c[j + 1]); break; }
       case K_SET: { const o = nodes[i] as Set<unknown>, c = data[q] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(c[j]); break; }
@@ -243,6 +297,34 @@ function restoreInPlace(s: Snapshot): void {
     if (t instanceof SideMap) for (let j = 0; j < e.length; j += 2) t.set(e[j] as object, e[j + 1]); else for (let j = 0; j < e.length; j++) t.add(e[j] as object);
   }
   for (let i = 0; i < s.vars.length; i++) s.vars[i].set(s.varVals[i] as never);
+  HOST_FIELDS.forEach((f, i) => { if (G[f] !== host[i]) G[f] = host[i]; });
+}
+
+/** everything a game reaches from its own roots and through the side tables — NOT through the module variables and containers every game in the process shares
+ *  (a memo there may name another game's men) */
+function reachOf(g: Game): Set<object> {
+  const seen = new Set<object>(), stack: object[] = [], found: Table[] = [];
+  const Game = (g as object).constructor;
+  const push = (v: unknown): void => { if (isObj(v) && !seen.has(v) && (v.constructor !== Game || v === g)) { seen.add(v); stack.push(v); } };
+  for (const o of [...fieldsOf(g, HOST_FIELDS), ...fieldsOf(g, STATIC_FIELDS)]) seen.add(o);
+  const drain = (): void => { while (stack.length) { const o = stack.pop()!;
+    if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) push(o[i]); continue; }
+    if (ArrayBuffer.isView(o)) continue;
+    switch (protoKind(o)) {
+      case K_OBJ: { const vs = Object.values(o); for (let i = 0; i < vs.length; i++) push(vs[i]); break; }
+      case K_MAP: (o as Map<unknown, unknown>).forEach((v, k) => { push(k); push(v); }); break;
+      case K_SET: (o as Set<unknown>).forEach(push); break;
+      case K_SIDEMAP: case K_SIDESET: if ((o as Table).sideName === undefined) found.push(o as Table); break;
+    } } };
+  for (const r of rootsOf(g)) push(r);
+  drain();
+  const tables: Table[] = sideRegistry().tables.slice();
+  for (let moved = true, nFound = 0; moved;) {
+    moved = false; while (nFound < found.length) tables.push(found[nFound++]);
+    for (const t of tables) { if (!(t instanceof SideMap)) continue; for (const k of t.liveKeys()) if (seen.has(k)) { const v = t.get(k); if (isObj(v) && !seen.has(v)) { push(v); moved = true; } } }
+    drain(); if (nFound < found.length) moved = true;
+  }
+  return seen;
 }
 
 /** functions a cross-game restore has written into a game they were not made in */
@@ -262,11 +344,12 @@ function restoreMapped(s: Snapshot, into: Game): void {
   const fits = (kind: number, a: object, b: object): boolean => kind === K_ARR ? Array.isArray(b) : Object.getPrototypeOf(a) === Object.getPrototypeOf(b)
     && ((kind !== K_TYPED && kind !== K_WORDS) || (a as Typed).length === (b as Typed).length) && (kind !== K_BUF || (a as ArrayBuffer).byteLength === (b as ArrayBuffer).byteLength);
   const bufFor = (a: ArrayBuffer): ArrayBuffer => { let b = (map.get(a) as ArrayBuffer | undefined) ?? bufs.get(a); if (!b) bufs.set(a, b = a.slice(0)); return b; };
-  const make = (kind: number, a: object): object => kind === K_ARR ? [] : kind === K_OBJ ? Object.create(Object.getPrototypeOf(a) as object | null) as object : kind === K_MAP ? new Map() : kind === K_SET ? new Set()
+  const born = (a: object): object => { const t = Object.create(Object.getPrototypeOf(a) as object | null) as object, ck = wallClockKeys(a); return ck ? wallClock(t as Rec, ...ck) : t; };
+  const make = (kind: number, a: object): object => kind === K_ARR ? [] : kind === K_OBJ ? born(a) : kind === K_MAP ? new Map() : kind === K_SET ? new Set()
     : kind === K_BUF ? bufFor(a as ArrayBuffer) : new ((a as Typed).constructor as new (b: ArrayBuffer, o: number, n: number) => Typed)(bufFor((a as Typed).buffer as ArrayBuffer), (a as Typed).byteOffset, (a as Typed).length);
   /** what the other game reaches as it stands: an object of the snapshot's that is in here is SHARED by the two games (a module's constant row a box's colour points at, a
    *  palette, the character file) and stands for itself — and nothing of the snapshot's is ever written into an object of the other game's that the first game reaches too */
-  const theirs = takeSnapshot(into).chain.index;
+  const theirs = reachOf(into), shared = new Set<object>();
   const bind = (a: object, b: unknown): void => {
     if (map.has(a)) return;
     if (theirs.has(a)) b = a; else if (isObj(b) && s.chain.index.has(b)) b = undefined;
@@ -283,10 +366,10 @@ function restoreMapped(s: Snapshot, into: Game): void {
     if (isObj(b) && !claimed.has(b) && fits(kind, a, b)) t = bb = b;
     else if (mayMake) { t = make(kind, a); made.add(t); }
     else { later.push(a); return; }
-    map.set(a, t); claimed.add(t);
+    map.set(a, t); claimed.add(t); if (t === a && theirs.has(a)) shared.add(a);
     const c = data[i];
     if (kind === K_ARR) { const cc = c as unknown[]; for (let j = cc.length - 1; j >= 0; j--) { const v = cc[j]; if (isObj(v)) stack.push([v, bb ? (bb as unknown[])[j] : undefined]); } }
-    else if (kind === K_OBJ) { const cc = c as unknown[], pk = shapes[i]!; for (let j = cc.length - 1; j >= 0; j--) { const v = cc[j]; if (isObj(v)) stack.push([v, bb ? (bb as Rec)[pk[j]] : undefined]); } }
+    else if (kind === K_OBJ) { const cc = c as unknown[], pk = shapes[i]!.keys; for (let j = cc.length - 1; j >= 0; j--) { const v = cc[j]; if (isObj(v)) stack.push([v, bb ? (bb as Rec)[pk[j]] : undefined]); } }
     else if (kind === K_MAP) { const cc = c as unknown[]; for (let j = 0; j < cc.length; j += 2) { const k = cc[j], v = cc[j + 1];
       if (isObj(k)) stack.push([k, undefined]); if (isObj(v)) stack.push([v, bb && !isObj(k) ? (bb as Map<unknown, unknown>).get(k) : undefined]); } }
     else if (kind === K_SET) { for (const v of c as unknown[]) if (isObj(v)) stack.push([v, undefined]); }
@@ -316,21 +399,35 @@ function restoreMapped(s: Snapshot, into: Game): void {
   for (const t of s.tables) if (t.sideName === undefined && !map.has(t)) bind(t, undefined);
   // … and the contents, every reference turned to the object that stands for it. A function already standing in the other game's object is that game's own closure: kept
   const tr = (v: unknown): unknown => typeof v === 'object' && v !== null ? map.get(v) ?? v : v;
-  /** the function for a slot: the other game's own closure when one of the same code stands there and it is that game's OWN (not one an earlier restore brought over, which
-   *  belongs to whatever stood there then); else the snapshot's, marked as brought over */
-  const fn = (v: Function, was: unknown): unknown => { if (typeof was === 'function' && (was === v || (!BROUGHT.has(was) && String(was) === String(v)))) return was; BROUGHT.add(v); return v; };
+  /** the function that stands for one of the snapshot's: the other game's OWN closure of the same code, where one stands in a slot the snapshot's stands in (not one an
+   *  earlier restore brought over, which belongs to whatever stood there then) — found over ALL the slots before anything is written, so that one function of the
+   *  snapshot's is one function there wherever it stands (a hook kept in two places is still the same hook: `a.onX === b.onX` holds as it did); else the snapshot's
+   *  own, marked as brought over. What a closure has CAPTURED is not looked at: the same code over other values is taken for the same function. */
+  const fns = new Map<Function, Function>();
+  const meet = (v: unknown, was: unknown): void => { if (typeof v === 'function' && !fns.has(v) && typeof was === 'function' && (was === v || (!BROUGHT.has(was) && String(was) === String(v)))) fns.set(v, was); };
   for (let i = 0; i < N; i++) {
-    const t = map.get(nodes[i])!, own = !made.has(t);
+    const t = map.get(nodes[i])!; if (made.has(t) || t === nodes[i]) continue;
     switch (kinds[i]) {
-      case K_ARR: { const o = t as unknown[], c = data[i] as unknown[]; const was = own ? o.slice() : null; o.length = c.length;
-        for (let j = 0; j < c.length; j++) { const v = c[j]; o[j] = typeof v === 'function' ? fn(v, was ? was[j] : undefined) : tr(v); } break; }
+      case K_ARR: { const c = data[i] as unknown[], o = t as unknown[]; for (let j = 0; j < c.length; j++) if (typeof c[j] === 'function') meet(c[j], o[j]); break; }
+      case K_OBJ: { const c = data[i] as unknown[], pk = shapes[i]!.keys, o = t as Rec; for (let j = 0; j < pk.length; j++) if (typeof c[j] === 'function') meet(c[j], o[pk[j]]); break; }
+      case K_MAP: { const c = data[i] as unknown[], o = t as Map<unknown, unknown>; for (let j = 0; j < c.length; j += 2) if (typeof c[j + 1] === 'function') meet(c[j + 1], o.get(tr(c[j]))); break; }
+    }
+  }
+  const bring = (v: Function): Function => { const w = fns.get(v); if (w) return w; BROUGHT.add(v); return v; }, same = (v: Function): Function => v;
+  for (let i = 0; i < N; i++) {
+    const t = map.get(nodes[i])!;
+    if (shared.has(t) || Object.isFrozen(t)) continue;   // (an object the two games share stands as it is — never written by a restore into either; nor a frozen row)
+    const fn = t === nodes[i] ? same : bring;   // (a module's own container, written in place: its functions are everyone's)
+    switch (kinds[i]) {
+      case K_ARR: { const o = t as unknown[], c = data[i] as unknown[]; o.length = c.length;
+        for (let j = 0; j < c.length; j++) { const v = c[j]; o[j] = typeof v === 'function' ? fn(v) : tr(v); } break; }
       case K_TYPED: (t as Typed).set(data[i] as Typed); break;
       case K_WORDS: new Uint32Array((t as Typed).buffer, (t as Typed).byteOffset, (t as Typed).byteLength >>> 2).set(data[i] as Uint32Array); break;
-      case K_OBJ: { const o = t as Rec, c = data[i] as unknown[], pk = shapes[i]!; const was = own ? Object.assign({}, o) as Rec : null;
-        for (const k of Object.keys(o)) delete o[k];
-        for (let j = 0; j < pk.length; j++) { const k = pk[j], v = c[j]; o[k] = typeof v === 'function' ? fn(v, was ? was[k] : undefined) : tr(v); } break; }
-      case K_MAP: { const o = t as Map<unknown, unknown>, c = data[i] as unknown[]; const was = own ? new Map(o) : null; o.clear();
-        for (let j = 0; j < c.length; j += 2) { const k = tr(c[j]), v = c[j + 1]; o.set(k, typeof v === 'function' ? fn(v, was ? was.get(k) : undefined) : tr(v)); } break; }
+      case K_OBJ: { const o = t as Rec, c = data[i] as unknown[], pk = shapes[i]!.keys, ks = Object.keys(o);
+        if (ks.length !== pk.length || !sameKeys(ks, pk, pk.length)) dropKeys(o, ks);   // (keys as the copy has them, in its order; an object of the same make keeps its own)
+        for (let j = 0; j < pk.length; j++) { const v = c[j]; setKey(o, pk[j], typeof v === 'function' ? fn(v) : tr(v)); } break; }
+      case K_MAP: { const o = t as Map<unknown, unknown>, c = data[i] as unknown[]; o.clear();
+        for (let j = 0; j < c.length; j += 2) { const v = c[j + 1]; o.set(tr(c[j]), typeof v === 'function' ? fn(v) : tr(v)); } break; }
       case K_SET: { const o = t as Set<unknown>, c = data[i] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(tr(c[j])); break; }
       case K_BUF: new Uint8Array(t as ArrayBuffer).set(new Uint8Array(data[i] as ArrayBuffer)); break;
     }
@@ -375,9 +472,10 @@ interface Sink { word(w: number): void; num(x: number): void; str(s: string): vo
   /** a typed array's elements, when the sink would rather take its bytes than each number */ typed?(o: Typed): void;
   /** a function met (kept as it is: what it has captured is in no snapshot) */ fn?(f: Function): void }
 
-/** every value of `g`'s state through `sink`, in an order that depends on the state alone. `full`: the statics too */
-function canon(g: Game, full: boolean, sink: Sink): void {
-  const reg = sideRegistry();
+/** every value of `g`'s state through `sink`, in an order that depends on the state alone. `full`: the statics too. `own`: without the modules' registered variables
+ *  and containers — what every game in the process shares — so only what THIS game reaches from itself and through the side tables */
+function canon(g: Game, full: boolean, sink: Sink, own = false): void {
+  const reg = sideRegistry(), Game = (g as object).constructor;
   const idx = new Map<object, number>(), found: Table[] = [], path = sink.path, where = new Map<object, string>();
   for (const o of fieldsOf(g, HOST_FIELDS)) idx.set(o, -1);
   if (!full) for (const o of fieldsOf(g, STATIC_FIELDS)) idx.set(o, -2);
@@ -394,6 +492,7 @@ function canon(g: Game, full: boolean, sink: Sink): void {
     if (v === null) { sink.word(9); return; }
     const o = v as object, seenAt = idx.get(o);
     if (seenAt !== undefined) { sink.word(10); sink.word(seenAt); return; }
+    if (o.constructor === Game && o !== g) { sink.word(22); return; }   // (another game, through a module's memo: not this game's state)
     idx.set(o, idx.size); if (path) where.set(o, path.join(''));
     if (Array.isArray(o)) { sink.word(11); sink.word(o.length);
       for (let i = 0; i < o.length; i++) { if (path) path.push(`[${i}]`); value(o[i]); if (path) path.pop(); } return; }
@@ -405,8 +504,8 @@ function canon(g: Game, full: boolean, sink: Sink): void {
       case K_OBJ: { const p = Object.getPrototypeOf(o) as object | null; let id = PROTO_ID.get(p);
         if (id === undefined) PROTO_ID.set(p, id = hashStr(p === null ? '(null)' : (p.constructor as { name?: string } | undefined)?.name ?? '?'));
         sink.word(14); sink.word(id);
-        for (const k in o) { if (k === 'ms' || k === 'runId') continue;   // (wall-clock readings — a field named `ms`: props.stats, reachStats; the save's `runId`, a run's name made of the clock
-          // and a serial so that two runs' saves are told apart — kept and put back like any, never compared: two plays of one seed differ in them and in nothing else)
+        const ck = wallClockKeys(o);
+        for (const k in o) { if (ck !== undefined && ck.includes(k)) continue;   // (a reading of the wall clock, marked where its holder is made: math/side.ts wallClock)
           sink.str(k); if (path) path.push('.' + k); value((o as Rec)[k]); if (path) path.pop(); }
         sink.word(15); return; }
       case K_MAP: { sink.word(16); sink.word((o as Map<unknown, unknown>).size); let n = 0;
@@ -420,8 +519,7 @@ function canon(g: Game, full: boolean, sink: Sink): void {
   };
   const root = (name: string, v: unknown): void => { if (path) path.push(name); sink.str(name); value(v); if (path) path.pop(); };
   { const r = rootsOf(g); root('game', r[0]); root('world', r[1]); root('lights', r[2]); }
-  for (const r of reg.roots) root(r.name, r.obj);
-  for (const v of reg.vars) root(v.name, v.get());
+  if (!own) { for (const r of reg.roots) root(r.name, r.obj); for (const v of reg.vars) root(v.name, v.get()); }
   // the side tables: the named ones by name, then the found ones as found; within one, by the order its keys were met — never by the order they were set
   const tables: Table[] = reg.tables.slice(), pend: object[][] = [], hit: object[] = [];
   for (let moved = true, nFound = 0; moved;) {
@@ -431,19 +529,20 @@ function canon(g: Game, full: boolean, sink: Sink): void {
       const t = tables[i]; let p = pend[i]; if (p === undefined) p = pend[i] = t.liveKeys();
       if (!p.length) continue;
       hit.length = 0; let n = 0;
-      for (let j = 0; j < p.length; j++) { const k = p[j], a = idx.get(k); if (a === undefined) p[n++] = k; else hit.push(k); }
+      for (let j = 0; j < p.length; j++) { const k = p[j], a = idx.get(k); if (a === undefined) p[n++] = k; else if (!own || a >= 0) hit.push(k); }   // (`own`: not what is kept of a thing of the host's or a static — every game's)
       p.length = n; if (!hit.length) continue;
       moved = true;
       hit.sort((a, b) => idx.get(a)! - idx.get(b)!);
-      const name = t.sideName ?? `table#${idx.get(t)}`, map = t instanceof SideMap ? t : null;
+      const name = t.sideName ?? (path ? `the table at ${where.get(t) ?? '?'}` : `table#${idx.get(t)}`), map = t instanceof SideMap ? t : null;
       for (const k of hit.slice()) { if (path) path.push(`${name}{${where.get(k) ?? 'a host or static object'}}`); sink.str(name); sink.word(idx.get(k)!); if (map) value(map.get(k)); if (path) path.pop(); }
     }
     if (nFound < found.length) moved = true;
   }
 }
 
-/** the whole state as one word (two 32-bit halves, hex). `full`: the statics too */
-export function stateHash(g: Game, full = false): string {
+/** the whole state as one word (two 32-bit halves, hex). `full`: the statics too. `own`: the game's own only (see canon) — a second game in the process that ticks
+ *  must leave this word of the first as it was, or the two share something live */
+export function stateHash(g: Game, full = false, own = false): string {
   let h1 = 0x811c9dc5 | 0, h2 = 0x9747b28c | 0; const notes: string[] = [];
   const word = (w: number): void => { h1 = Math.imul(h1 ^ w, 0x01000193); h2 = Math.imul((h2 << 5 | h2 >>> 27) ^ w, 0x9E3779B1); };
   const typed = (o: Typed): void => {   // (the raw bytes, four at a time where they sit on a word; a short one by its numbers — no buffer object is made for it)
@@ -452,7 +551,7 @@ export function stateHash(g: Game, full = false): string {
     const w = new Uint32Array(o.buffer, o.byteOffset, o.byteLength >>> 2);
     for (let i = 0; i < w.length; i++) { const x = w[i]; h1 = Math.imul(h1 ^ x, 0x01000193); h2 = Math.imul((h2 << 5 | h2 >>> 27) ^ x, 0x9E3779B1); }
   };
-  canon(g, full, { path: null, word, typed, num(x) { F64[0] = x; word(U32[0]); word(U32[1]); }, str(s) { word(hashStr(s)); }, note(w) { notes.push(w); } });
+  canon(g, full, { path: null, word, typed, num(x) { F64[0] = x; word(U32[0]); word(U32[1]); }, str(s) { word(hashStr(s)); }, note(w) { notes.push(w); } }, own);
   return (h1 >>> 0).toString(16).padStart(8, '0') + (h2 >>> 0).toString(16).padStart(8, '0');
 }
 
@@ -467,12 +566,79 @@ export function stateFunctions(g: Game): Map<string, number> {
   return out;
 }
 
+/** two games side by side, value for value: every number to the bit, every object against the one standing in the same place in the other — but not WHICH object
+ *  stands there (two fields that share one array in `a` and hold two equal arrays in `b` pass). What a state put into ANOTHER game is held to at the places the
+ *  strict word parts: the first game points at a module's constant row the other had not reached when it was handed the state, so the other holds its own equal copy
+ *  there, and its later ticks point at the row itself. A function stands for a function (each game keeps its own closures). The paths that differ, at most `max`;
+ *  empty = alike. */
+export function stateAlike(a: Game, b: Game, max = 12): string[] {
+  const reg = sideRegistry(), out: string[] = [], path: string[] = [];
+  /** an object of `a` → the first of `b` it was met against (and the others), an object of `b` → the first of `a`; where each of `a` was first met */
+  const first = new Map<object, object>(), more = new Map<object, Set<object>>(), back = new Map<object, object>(), where = new Map<object, string>();
+  const skip = new Set<object>([...fieldsOf(a, HOST_FIELDS), ...fieldsOf(a, STATIC_FIELDS)]), found: [Table, Table][] = [];
+  let pairs = 0;
+  const show = (v: unknown): string => typeof v === 'number' ? (F64[0] = v, `${v} (${U32[1].toString(16).padStart(8, '0')}${U32[0].toString(16).padStart(8, '0')})`) : typeof v === 'string' ? JSON.stringify(v).slice(0, 60)
+    : isObj(v) ? (Array.isArray(v) ? `an array of ${v.length}` : `a ${(v.constructor as { name?: string } | undefined)?.name ?? 'thing'}`) : String(v);
+  const say = (what: string): void => { const line = `${path.join('') || '(root)'}: ${what}`; if (out.length < max && !out.includes(line)) out.push(line); };
+  const keysOf = (o: object): string[] => { const ks: string[] = [], ck = wallClockKeys(o); for (const k in o) if (ck === undefined || !ck.includes(k)) ks.push(k); return ks; };
+  const Game = (a as object).constructor;
+  const bytes = (o: Typed | ArrayBuffer): Uint8Array => o instanceof ArrayBuffer ? new Uint8Array(o) : new Uint8Array(o.buffer, o.byteOffset, o.byteLength);
+  const pair = (x: unknown, y: unknown): void => {
+    if (out.length >= max) return;
+    if (!isObj(x) || !isObj(y)) { if (typeof x === 'function' && typeof y === 'function') return; if (typeof x !== typeof y || differs(x, y)) say(`${show(x)} | ${show(y)}`); return; }
+    if (x.constructor === Game && x !== a) return;   // (another game, through a module's memo)
+    if (x === y) { if (!first.has(x)) { first.set(x, x); back.set(x, x); where.set(x, path.join('')); pairs++; } return; }   // (shared by the two games: itself)
+    if (skip.has(x)) return;
+    const f = first.get(x);
+    if (f === y) return;
+    if (f !== undefined) { let m = more.get(x); if (!m) more.set(x, m = new Set()); if (m.has(y)) return; m.add(y); } else { first.set(x, y); where.set(x, path.join('')); }
+    if (!back.has(y)) back.set(y, x);
+    pairs++;
+    if (Array.isArray(x) || Array.isArray(y)) {
+      if (!Array.isArray(x) || !Array.isArray(y) || x.length !== y.length) { say(`${show(x)} | ${show(y)}`); return; }
+      for (let i = 0; i < x.length; i++) { path.push(`[${i}]`); pair(x[i], y[i]); path.pop(); } return; }
+    if (Object.getPrototypeOf(x) !== Object.getPrototypeOf(y)) { say(`${show(x)} | ${show(y)}`); return; }
+    if (ArrayBuffer.isView(x)) { if (!isTyped(x)) return;
+      const u = bytes(x), v = bytes(y as Typed); if (u.length !== v.length) { say(`${show(x)} of ${x.length} | of ${(y as Typed).length}`); return; }
+      for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { const j = i / (x.BYTES_PER_ELEMENT as number) | 0; path.push(`[${j}]`); say(`${show(x[j])} | ${show((y as Typed)[j])}`); path.pop(); return; }
+      return; }
+    switch (protoKind(x)) {
+      case K_OBJ: { const kx = keysOf(x), ky = keysOf(y);
+        if (kx.length !== ky.length || !sameKeys(kx, ky, kx.length)) { say(`keys ${kx.filter(k => !ky.includes(k)).join(',') || '(order)'} | ${ky.filter(k => !kx.includes(k)).join(',') || '(order)'}`); return; }
+        for (const k of kx) { path.push('.' + k); pair((x as Rec)[k], (y as Rec)[k]); path.pop(); } return; }
+      case K_MAP: { const mx = x as Map<unknown, unknown>, ey = [...(y as Map<unknown, unknown>)]; if (mx.size !== ey.length) { say(`a Map of ${mx.size} | of ${ey.length}`); return; }
+        let n = 0; for (const [k, v] of mx) { path.push(`<key ${n}>`); pair(k, ey[n][0]); path.pop(); path.push(`<${isObj(k) ? n : String(k)}>`); pair(v, ey[n][1]); path.pop(); n++; } return; }
+      case K_SET: { const sx = x as Set<unknown>, ey = [...(y as Set<unknown>)]; if (sx.size !== ey.length) { say(`a Set of ${sx.size} | of ${ey.length}`); return; }
+        let n = 0; for (const v of sx) { path.push(`<member ${n}>`); pair(v, ey[n]); path.pop(); n++; } return; }
+      case K_BUF: { const u = bytes(x as ArrayBuffer), v = bytes(y as ArrayBuffer); if (u.length !== v.length) { say(`a buffer of ${u.length} | of ${v.length}`); return; }
+        for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { path.push(`[${i}]`); say(`${u[i]} | ${v[i]}`); path.pop(); return; } return; }
+      case K_SIDEMAP: case K_SIDESET: if ((x as Table).sideName === undefined) found.push([x as Table, y as Table]); return;
+    }
+  };
+  { const ra = rootsOf(a), rb = rootsOf(b), names = ['game', 'world', 'lights']; for (let i = 0; i < ra.length; i++) { path.push(names[i]); pair(ra[i], rb[i]); path.pop(); } }
+  for (const r of reg.roots) { path.push(r.name); pair(r.obj, r.obj); path.pop(); }
+  // the side tables: an entry of an object of `a` against the entry of each object of `b` that stands for it — and no entry in `b`'s table without one in `a`'s
+  for (let was = -1; was !== pairs + found.length && out.length < max;) {
+    was = pairs + found.length;
+    const tables: [Table, Table][] = [...reg.tables.map(t => [t, t] as [Table, Table]), ...found];
+    for (let i = 0; i < tables.length; i++) {
+      const [tx, ty] = tables[i], name = tx.sideName ?? `a table at ${where.get(tx) ?? '?'}`, mx = tx instanceof SideMap ? tx : null, my = ty instanceof SideMap ? ty : null;
+      for (const k of tx.liveKeys()) { const y0 = first.get(k); if (y0 === undefined) continue;
+        for (const y of [y0, ...(more.get(k) ?? [])]) { path.push(`${name}{${where.get(k) ?? '?'}}`);
+          if (!ty.has(y)) { if (tx !== ty || y !== k) say(`an entry | none`); } else if (mx && my) pair(mx.get(k), my.get(y));
+          path.pop(); } }
+      for (const k of ty.liveKeys()) { const x = back.get(k); if (x === undefined || tx.has(x)) continue; path.push(`${name}{${where.get(x) ?? '?'}}`); say(`none | an entry`); path.pop(); }
+    }
+  }
+  return out;
+}
+
 /** a state laid out flat: every value in the fixed order with the path it sits at (stateDiff's two sides; a tool keeps one of a frame it cannot keep the game of) */
 export interface FlatState { toks: (number | string)[]; paths: string[] }
-export function stateFlat(g: Game, full = false): FlatState {
+export function stateFlat(g: Game, full = false, own = false): FlatState {
   const toks: (number | string)[] = [], paths: string[] = [], path: string[] = [];
   const at = (): string => path.join('');
-  canon(g, full, { path, word(w) { toks.push(w); paths.push(at()); }, num(x) { F64[0] = x; toks.push(`${x} (${U32[1].toString(16).padStart(8, '0')}${U32[0].toString(16).padStart(8, '0')})`); paths.push(at()); }, str(s) { toks.push('"' + s + '"'); paths.push(at()); }, note() {} });
+  canon(g, full, { path, word(w) { toks.push(w); paths.push(at()); }, num(x) { F64[0] = x; toks.push(`${x} (${U32[1].toString(16).padStart(8, '0')}${U32[0].toString(16).padStart(8, '0')})`); paths.push(at()); }, str(s) { toks.push('"' + s + '"'); paths.push(at()); }, note() {} }, own);
   return { toks, paths };
 }
 /** where two flat states differ, as paths (at most `max`; after the first place their shapes part, the walk is out of step and stops). Empty = the same to the bit */

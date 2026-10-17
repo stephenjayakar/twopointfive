@@ -8,6 +8,16 @@
 //   CONST     filled while the module loads, never written after
 // The line numbers in a reason are the ones it was judged at.
 export const ROLLBACK_EXEMPT: Record<string, string> = {
+  'src/game/rollback.ts MAKES': 'CACHE · an object\'s make (its keys in order) → the three functions written for those keys; rebuilt from the keys, the same whatever game asks',
+  'src/game/rollback.ts written': 'CONFIG · goes down once, the first time the page refuses a function made from text; never read by the simulation',
+  'src/game/blastLook.ts BITS': 'SCRATCH · the bits of STEP, written and read inside one call of nudge (blastLook.ts:228)',
+  'src/game/blastLook.ts STEP': 'SCRATCH · one number set and read back inside one call of nudge (blastLook.ts:228)',
+  'src/game/floor.ts FLOOR': 'CONST · the floor materials\' table: never written anywhere (floor.ts:75-76, audio.ts:206 and the panel\'s text read it); the scan\'s writes are fixtureBreak.ts\'s own FLOOR, a different object',
+  'src/game/kit.ts KIT_NOTE': 'CONFIG · the Team & kit page\'s note under a card (why a pick did not fit): written by the page\'s own edits and by kitFit at a mission\'s start, read by ui/kitCard.ts only',
+  'src/game/ragdoll.ts TRUNK_SET': 'CONST · filled by the statement beside it while the module loads (ragdoll.ts:32), only read after (224)',
+  'src/game/rollback.ts F64': 'SCRATCH · one number set and its two words read inside one call (the state\'s word, a value shown)',
+  'src/game/stature.ts byId': 'SCRATCH · filled at the top of one call and emptied at its end (stature.ts:94-100): nothing stands in it between calls',
+  'src/scene/boxes.ts f16Scratch': 'SCRATCH · one number set and its word read inside one call (boxes.ts:122)',
   'src/game/aimcost.ts AIMCOST_STATS': 'TALLY · counted in combat.ts:245/247; read only by aimcost.ts:117\'s summary string',
   'src/game/aimweight.ts AIMWEIGHT_STATS': 'TALLY · counted in aimweight.ts; no read in src/game, src/scene or src/anim',
   'src/game/airSim.ts offStats': 'CACHE · one blank \'switched off\' stats object made on first ask (airSim.ts:69) and only read (snowFx.ts reads .speed/.calm, the page\'s panel)',
@@ -172,6 +182,9 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/wind.ts WIND_STATS': 'TALLY · counted in wind.ts; no read in src/game, src/scene or src/anim; shown by main.ts',
   'src/game/workthings.ts WORK_STATS': 'TALLY · counted in workthings.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/workthings.ts:327)',
   'src/math/dice.ts cur': 'SCRATCH · which Game\'s die simRandom draws: set by useDice as the first statement of Game.update / step / restartEncounter (game.ts:1433/1470/1489) before any draw; the die\'s own word lives on the Game (g.dice)',
+  'src/math/side.ts STATE': 'CACHE · (math/side.ts\'s own bookkeeping: the named tables but the memos, rebuilt when a name or a memo mark was added)',
+  'src/math/side.ts memos': 'CACHE · (math/side.ts\'s own bookkeeping: how many tables are marked memos)',
+  'src/math/side.ts sortedMemos': 'CACHE · (math/side.ts\'s own bookkeeping: how many memo marks the registry was last built at)',
   'src/math/side.ts sorted': 'CACHE · (math/side.ts\'s own bookkeeping: how many names the registry was last sorted at)',
   'src/scene/cut.ts CUT_CLIP': 'SCRATCH · the clip test\'s answer (cut.ts:237, on its `return true`), read by the caller straight after (boxes.ts:894-899, collision.ts:30)',
   'src/scene/cut.ts cutConfig': 'CONFIG · written by cutBoxesInit from the URL / store (cut.ts:44-47) and the knob roads; read by boxes.ts, wallpen.ts',
@@ -188,7 +201,6 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/close.ts CLOSE_LOG': 'TALLY · pushed (and trimmed) in close.ts; no file under src/game, src/scene or src/anim reads a row back (main.ts:1264 hands it to the page hook)',
   'src/game/digin.ts DIGIN_LOG': 'TALLY · pushed (and trimmed) in digin.ts; no file under src/game, src/scene or src/anim reads a row back (emptied by the reset, digin.ts:906)',
   'src/game/doze.ts DOZE_LOG': 'TALLY · pushed (and trimmed) in doze.ts; no file under src/game, src/scene or src/anim reads a row back (main.ts:1046 hands it to the page hook)',
-  'src/game/floor.ts FLOOR': 'CONST · the floor materials\' table: never written anywhere (floor.ts:75-76, audio.ts:206 and the panel\'s text read it); the scan\'s writes are fixtureBreak.ts\'s own FLOOR, a different object',
   'src/game/glasspen.ts GLASSPEN_HOOKS': 'CONFIG · `crossed` is installed by the Game\'s constructor (game.ts:1197), the same function every time (it takes the Game as its argument); glasspen.ts:312 only calls it',
   'src/game/glasspen.ts linePanes': 'SCRATCH · emptied, filled by segmentBlocked and read for its length inside one call (glasspen.ts:390-391)',
   'src/game/holdfire.ts HOLDFIRE_LOG': 'TALLY · pushed (and trimmed) in holdfire.ts; no file under src/game, src/scene or src/anim reads a row back',
@@ -222,6 +234,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
 
 /** plain WeakMaps / WeakSets that may stand in the simulation's folders: `file name` → why no snapshot needs to list it */
 export const RAW_WEAK_OK: Record<string, string> = {
+  'src/math/side.ts CLOCKED': 'which objects hold a wall-clock reading and in which fields: a mark set where the holder is made (wallClock), read by the state\'s word alone, carried to the object a restore makes for it; no rule reads it',
   'src/game/rollback.ts BROUGHT': 'the snapshot\'s own bookkeeping across two games (which functions a cross-game restore carried over), not the game\'s state',
   'src/scene/levelLoad.ts levelFileOf': 'filled while a level file is read, keyed by the level: never written by a tick',
   'src/scene/levelLoad.ts levelNames': 'filled while a level file is read',

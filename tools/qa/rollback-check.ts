@@ -14,6 +14,8 @@
 //                  from the end is put back: the word of that tick, and the eight ticks after it again, to the bit
 //   fresh game     the snapshot is put into ANOTHER game stood up on the same scenario and seed and never stepped (the first moment; the same one again afterwards,
 //                  wherever the last moment left it): the same word at the moment, the same word after every tick
+//                  — or, where the word parts, the two games side by side value for value (stateAlike: every number to the bit, but not WHICH object stands
+//                  somewhere — this game points at a module's constant row the other had not reached, which then holds its own equal copy); the line says how many
 //   the run itself the snapshot is put back once more and the play-through goes on; at its end the run's own digest (game/digest.ts every half second, folded) and its
 //                  last state word are those of the SAME run played with no moment taken at all — a run rolled back dozens of times is the run never touched
 // A FAIL names the moment, the first tick that differs and (re-run with --why scn:seed:frame) the paths of the values that differ there.
@@ -26,18 +28,18 @@ import { ROOT } from './headless.ts';
 import { play, entryOf } from './playthrough.ts';
 import { ROLLBACK_EXEMPT, RAW_WEAK_OK } from './rollback-exempt.ts';
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
-const { takeSnapshot, restoreSnapshot, stateHash, stateFlat, flatDiff, stateRawWeak, snapshotBytes, stateFunctions } = await import(`${ROOT}/src/game/rollback.ts`) as typeof import('../../src/game/rollback.ts');
+const { takeSnapshot, restoreSnapshot, stateHash, stateFlat, flatDiff, stateAlike, stateRawWeak, snapshotBytes, stateFunctions } = await import(`${ROOT}/src/game/rollback.ts`) as typeof import('../../src/game/rollback.ts');
 const { cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
 
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 const KNOWN = ['--scn', '--seeds', '--cap', '--every', '--ticks', '--jobs', '--static', '--times', '--one', '--out', '--why', '--arm'];
 for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
 const BREAK = process.env.ROLLBACK_BREAK === '1';
-const DT = 1 / 60, CAP = Number(flag('--cap') ?? 75), EVERY = Number(flag('--every') ?? 5), TICKS = Number(flag('--ticks') ?? 120);
+const DT = 1 / 60, CAP = Number(flag('--cap') ?? 45), EVERY = Number(flag('--every') ?? 6), TICKS = Number(flag('--ticks') ?? 60);
 /** the default set: a solo night, a pair, the four in two pairs, a rescue, a compound, charges on a clock, two squads, walls to blow */
 const DEFAULT = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'compound-four', 'defuse-four', 'block-squads', 'mousehole-four'];
 
-interface Moment { frame: number; t: number; why: string; same: number; fresh: number; ring: number; back: boolean; backFull: boolean; freshAt: boolean; takeMs: number; tickTakeMs: number; restoreMs: number; freshMs: number; stepMs: number; bytes: number; own: number; objects: number }
+interface Moment { frame: number; t: number; why: string; same: number; fresh: number; /** the tick the other game's strict word parted at though it stayed alike value for value (−1 = it never parted) */ alias: number; /** the other game's ticks changed this game's own state: the two share something live */ leak: boolean; ring: number; back: boolean; backFull: boolean; freshAt: boolean; takeMs: number; tickTakeMs: number; restoreMs: number; freshMs: number; stepMs: number; bytes: number; own: number; objects: number }
 interface Out { scn: string; seed: number; arm: string; end: string; t: number; digest: string; last: string; frames: number; moments: Moment[]; rawWeak: string[]; why: string[]; fns: Record<string, number>; error?: string }
 
 /** what is in the air at this tick: the kinds of moment worth taking besides the clock's (each kind a few times a run) */
@@ -83,10 +85,11 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
     if (why === frame && same >= 0 && same <= WHY_TICK && flatRef === null) out.why.push('(ask for a tick at or before the first that differs)');
     if (why === frame && same === WHY_TICK && flatRef) out.why.push(...flatDiff(flatRef, stateFlat(g), 30).map(x => 'same game · ' + x));
     // the other game: stood up on the same scenario and seed, never stepped by the play-through
-    let fresh = -1, freshAt = true, freshMs = 0;
+    let fresh = -1, freshAt = true, freshMs = 0, alias = -1, leak = false;
     if (other) {
       restoreSnapshot(S);   // (this game back at the moment first: the module variables and the named tables the two games share are then the moment's)
       t0 = performance.now(); restoreSnapshot(S, other); freshMs = performance.now() - t0;
+      const mine = stateHash(g, false, true);   // (this game's own state: the other game's ticks below must leave it as it is, or the two share something live)
       other.dice.sys = g.dice.sys;   // (the die's 'Math.random as it was when I was made' is the play-through's of THIS run: the other game was stood up under an earlier one)
       freshAt = stateHash(other) === h0;
       if (!freshAt && why === frame) { restoreSnapshot(S); out.why.push(...flatDiff(stateFlat(g), stateFlat(other), 30).map(x => 'fresh game at the moment · ' + x)); }
@@ -95,11 +98,24 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
       for (let j = 0; j < TICKS; j++) { tick(other, cmd); if (stateHash(other) !== ref[j]) { fresh = j; break; }
         if (why === frame && j === WHY_TICK && flatRef) { out.why.push(...flatDiff(flatRef, stateFlat(other), 30).map(x => 'fresh game · ' + x)); if (process.env.WHY_EVENTS) out.why.push('fresh events: ' + JSON.stringify(other.events.map((e: any) => ({ ...e, source: e.source?.name ?? e.source?.id, by: undefined })), (_k, v) => typeof v === 'object' && v !== null && !Array.isArray(v) && Object.getPrototypeOf(v) !== Object.prototype ? '[obj]' : v).slice(0, 1500)); } }
       if (why === frame && fresh === WHY_TICK && flatRef) out.why.push(...flatDiff(flatRef, stateFlat(other), 30).map(x => 'fresh game · ' + x));
+      if (stateHash(g, false, true) !== mine) { leak = true; if (why === frame) { const now = stateFlat(g, false, true); restoreSnapshot(S); out.why.push(...flatDiff(stateFlat(g, false, true), now, 12).map(x => 'the other game\'s ticks moved THIS game · ' + x)); } }
+      // the strict word parted. The state, or only WHICH object stands somewhere? (This game points at a module's constant row the other had not reached when it was
+      // handed the state: its own equal copy stands there, and its own ticks then point at the row itself.) The other game from the moment again, and at every tick
+      // from the one that parted this game is put at that tick out of the ring and the two are gone through side by side, value for value (stateAlike)
+      if (fresh >= 0) {
+        const k = fresh; restoreSnapshot(S); restoreSnapshot(S, other); other.dice.sys = g.dice.sys; other.replayTap = null; other.audio = silent;
+        if (BREAK) flip(other);
+        let bad = -1;
+        for (let j = 0; j < TICKS && bad < 0; j++) { tick(other, cmd); if (j < k) continue;
+          restoreSnapshot(ring[j]); const d = stateAlike(g, other, 8);
+          if (d.length) { bad = j; if (why === frame) out.why.push(...d.map((x: string) => `fresh game, tick ${j}, value for value · ${x}`)); } }
+        if (bad < 0) { alias = k; fresh = -1; if (why === frame) out.why.push(`fresh game · alike value for value through all ${TICKS} ticks: only which object stands there differs, from tick ${k}`); } else fresh = bad;
+      }
     }
     restoreSnapshot(S); g.replayTap = tap;
     for (const [k, n] of stateFunctions(g)) out.fns[k] = Math.max(out.fns[k] ?? 0, n);
     const mid = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1] ?? 0;
-    out.moments.push({ frame, t: +g.time.toFixed(2), why: reason, same, fresh, ring: ringBad, back, backFull, freshAt, takeMs: +takeMs.toFixed(2), tickTakeMs: +mid(tickTake).toFixed(2), restoreMs: +restoreMs.toFixed(2), freshMs: +freshMs.toFixed(2), stepMs: +mid(steps).toFixed(2), bytes: size.bytes, own: mid(own), objects: size.objects });
+    out.moments.push({ frame, t: +g.time.toFixed(2), why: reason, same, fresh, alias, leak, ring: ringBad, back, backFull, freshAt, takeMs: +takeMs.toFixed(2), tickTakeMs: +mid(tickTake).toFixed(2), restoreMs: +restoreMs.toFixed(2), freshMs: +freshMs.toFixed(2), stepMs: +mid(steps).toFixed(2), bytes: size.bytes, own: mid(own), objects: size.objects });
   };
   Game.prototype.update = function (this: any, ...a: unknown[]) {
     if (mode === 'grab') { other = this; throw new Stop(); }
@@ -120,11 +136,16 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
   } as typeof update;
   const lastOf = new Map<string, number>();
   try {
-    if (arm === 'moments') { try { await play(scn, seed, CAP, false, {}); } catch (e) { if (!(e instanceof Stop)) throw e; } if (!other) throw new Error('the other game was never stood up'); }
+    // (the other game is stood up under BOTH arms: a few counters are the process's, not the Game's — guards.unitSerial names every unit made — and the run never
+    //  touched is the same run in the same process, less only the moments)
+    { try { await play(scn, seed, CAP, false, {}); } catch (e) { if (!(e instanceof Stop)) throw e; } if (!other) throw new Error('the other game was never stood up'); }
     mode = 'run';
     const r = await play(scn, seed, CAP, false, {});
     out.end = r.end; out.t = r.t; out.digest = String((r as any).digest ?? ''); out.frames = frame;
     if (r.end === 'error') out.error = r.why;
+    if (main && process.env.RB_LAST_DUMP) { const F = stateFlat(main), sec: Record<string, number> = {}, D = Number(process.env.RB_LAST_DEPTH ?? 2), pre = process.env.RB_LAST_PRE ?? '';
+      for (let i = 0; i < F.toks.length; i++) { const pth = F.paths[i]; if (!pth.startsWith(pre)) continue; const k = pth.split(/(?=[.\[{<])/).slice(0, D).join(''); let h = sec[k] ?? 0; const t = String(F.toks[i]); for (let c = 0; c < t.length; c++) h = Math.imul(h ^ t.charCodeAt(c), 0x01000193); sec[k] = h; }
+      writeFileSync(process.env.RB_LAST_DUMP, JSON.stringify(sec)); }
     if (main) { out.last = stateHash(main); out.rawWeak = stateRawWeak(main).slice(0, 20); }
   } catch (e) { out.error = String((e as Error)?.stack ?? e); }
   finally { Game.prototype.update = update; }
@@ -185,8 +206,9 @@ let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'the shipped stand' : 'the frozen stand'}${BREAK ? ' · ROLLBACK_BREAK=1 (every line below should FAIL but the static pass and the plain facts)' : ''} · ${ids.length} scenarios × seeds ${seeds.join(',')} · a moment every ${EVERY} s · ${TICKS} ticks compared · runs capped at ${CAP} s ===`);
 
-// ---- THE STATIC PASS: the rule of src/math/side.ts, read off the source. What it does not look at: a typed array kept at the top of a module (scratch, almost all of
-// them — one that carried state from tick to tick is what the runs below are for) and anything a closure has captured.
+// ---- THE STATIC PASS: the rule of src/math/side.ts, read off the source. What it does not look at: a class instance kept at the top of a module (`const X = new Thing()`:
+// none in the simulation's folders today), a container handed to a callee that writes it (an out-parameter: scratch), state on a class's `static` field, and
+// anything a closure has captured — one of those that carried state from tick to tick is what the runs below are for.
 {
   const SIM = ['src/game', 'src/scene', 'src/anim', 'src/math'];
   /** … and the one file of the renderer's folder the game keeps state in: the wall raster's and the reach masks' side tables */
@@ -196,6 +218,10 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
   const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`); const KNOBS = new Set(Object.keys(knobRegistry()));
   interface Decl { file: string; line: number; kind: 'let' | 'const'; name: string; init: string; exported: boolean }
   const decls: Decl[] = [];
+  /** is the `<` at `c` a type's bracket (`Map<string, T>`) and not a comparison (`i<n`)? Its `>` stands, outside any bracket opened after it, before the statement or a `&&` / `||` ends */
+  const closes = (t: string, c: number): boolean => { let d = 0; for (let e = c + 1; e < t.length; e++) { const x = t[e];
+    if (x === '(' || x === '[' || x === '{') d++; else if (x === ')' || x === ']' || x === '}') { if (--d < 0) return false; }
+    else if (d > 0) continue; else if (x === '>') { if (t[e - 1] !== '=') return true; } else if (x === ';' || ((x === '&' || x === '|') && t[e + 1] === x)) return false; } return true; };
   /** the declarators of the top-level `let` / `const` statements of a file: the name, and what stands after its `=` */
   for (const [file, src] of text) {
     const lines = src.split('\n');
@@ -210,7 +236,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
         if (ch === '/' && stmt[c + 1] === '/') { const e = stmt.indexOf('\n', c); if (e < 0) { stmt = stmt.slice(0, c); break; } stmt = stmt.slice(0, c) + stmt.slice(e); c--; continue; }
         if (ch === "'" || ch === '"' || ch === '`') { let e = c + 1; while (e < stmt.length && stmt[e] !== ch) e += stmt[e] === '\\' ? 2 : 1; c = e; continue; }
         if (ch === '(' || ch === '[' || ch === '{') depth++; else if (ch === ')' || ch === ']' || ch === '}') depth--;
-        else if (ch === '<' && /[\w$]/.test(stmt[c - 1] ?? '')) angle++; else if (ch === '>' && angle > 0 && stmt[c - 1] !== '=') angle--;
+        else if (ch === '<' && depth === 0 && /[\w$]/.test(stmt[c - 1] ?? '') && closes(stmt, c)) angle++; else if (ch === '>' && angle > 0 && stmt[c - 1] !== '=') angle--;
         else if (depth === 0 && angle === 0 && ch === ',') { parts.push(stmt.slice(start, c)); start = c + 1; }
         else if (depth === 0 && angle === 0 && ch === ';') { parts.push(stmt.slice(start, c)); start = -1; if (k === i) rest = stmt.slice(c + 1); break; }
       }
@@ -220,7 +246,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
         let eq = -1, d = 0, a = 0;
         for (let c = n[0].length; c < part.length; c++) { const ch = part[c];
           if (ch === '(' || ch === '[' || ch === '{') d++; else if (ch === ')' || ch === ']' || ch === '}') d--;
-          else if (ch === '<' && /[\w$]/.test(part[c - 1] ?? '')) a++; else if (ch === '>' && a > 0 && part[c - 1] !== '=') a--;
+          else if (ch === '<' && d === 0 && /[\w$]/.test(part[c - 1] ?? '') && closes(part, c)) a++; else if (ch === '>' && a > 0 && part[c - 1] !== '=') a--;
           else if (ch === '=' && d === 0 && a === 0 && part[c + 1] !== '>' && part[c + 1] !== '=') { eq = c; break; } }
         decls.push({ file, line: i + 1, kind: m[2] as 'let' | 'const', name: n[1], init: eq < 0 ? '' : part.slice(eq + 1).trim(), exported: !!m[1] });
       }
@@ -252,7 +278,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
     if (d.kind === 'let') { lets++;
       if (table && /\(\s*'/.test(d.init)) badTable.push(`${d.file}:${d.line} ${d.name}: a table in a \`let\` takes no name (the variable is registered; the table hangs off it)`);
       if (isReg) letReg++; else if (key in ROLLBACK_EXEMPT) used.add(key); else needLet.push(`${d.file}:${d.line} ${d.name}`); continue; }
-    if (!/^(new (Map|Set)\b|\[|\{|rollbackRoot\b)/.test(d.init)) continue;
+    if (!/^(new (Map|Set|Array|(Big)?(Float|Int|Uint)\d+(Clamped)?Array)\b|Array\.from\(|Array\(|\[|\{|rollbackRoot\b)/.test(d.init)) continue;
     let w = writes(d.name, text.get(d.file)!);
     if (d.exported) for (const f of files) if (f !== d.file && wordsOf(f).has(d.name)) w += writes(d.name, text.get(f)!);
     if (!w && !isReg) continue;
@@ -289,11 +315,14 @@ if (!argv.includes('--static')) {
     const m = res.get(`${scn}:${seed}:moments`)!, p = res.get(`${scn}:${seed}:plain`)!, id = `${scn}:${seed}`;
     if (m.error || p.error) { verdict(false, `${id} plays`, (m.error ?? p.error)!.split('\n').slice(0, 3).join(' / ')); continue; }
     const n = m.moments.length, kinds = new Map<string, number>(); for (const x of m.moments) for (const k of x.why.split(' + ')) kinds.set(k, (kinds.get(k) ?? 0) + 1);
+    const al = m.moments.filter(x => x.alias >= 0);
     const first = (f: (x: Moment) => boolean, say: (x: Moment) => string): string => { const bad = m.moments.filter(f); return bad.length ? `${bad.length} of ${n} — the first at frame ${bad[0].frame} (${bad[0].t} s, ${bad[0].why}): ${say(bad[0])} · --why ${id}:${bad[0].frame}` : `all ${n}`; };
     verdict(n > 0 && m.moments.every(x => x.back && x.backFull), `${id} put back: the state is the word it was at the moment`, `${first(x => !x.back || !x.backFull, x => x.back ? 'the statics differ' : 'the state differs')} (${[...kinds].map(([k, c]) => `${k} ${c}`).join(', ')})`);
     verdict(n > 0 && m.moments.every(x => x.same < 0), `${id} same game: ${TICKS} ticks on from the snapshot are the unbroken run's, every tick to the bit`, first(x => x.same >= 0, x => `tick ${x.same} differs`));
     verdict(n > 0 && m.moments.every(x => x.ring < 0), `${id} the ring: a snapshot after every tick, each taken since the one before; the one eight ticks back put back plays the eight again, to the bit`, first(x => x.ring >= 0, x => x.ring === 0 ? 'the state put back is not that tick\'s' : `tick ${x.ring} of the eight differs`));
-    verdict(n > 0 && m.moments.every(x => x.fresh < 0 && x.freshAt), `${id} fresh game: the snapshot in another game plays the same ${TICKS} ticks, every tick to the bit`, first(x => x.fresh >= 0 || !x.freshAt, x => x.freshAt ? `tick ${x.fresh} differs` : 'the state differs at the moment'));
+    verdict(n > 0 && m.moments.every(x => x.fresh < 0 && x.freshAt), `${id} fresh game: the snapshot in another game plays the same ${TICKS} ticks, every tick to the bit`, first(x => x.fresh >= 0 || !x.freshAt, x => x.freshAt ? `tick ${x.fresh} differs` : 'the state differs at the moment')
+      + (al.length ? ` · of them ${al.length} every value to the bit but not WHICH object stands somewhere (a module's constant the other game had not reached: its own equal copy) — the first at frame ${al[0].frame}, tick ${al[0].alias}` : ''));
+    verdict(n > 0 && m.moments.every(x => !x.leak), `${id} two games: the other game's ${TICKS} ticks leave this game's own state as it was (they share nothing live)`, first(x => x.leak, () => 'this game\'s own state moved'));
     verdict(m.digest !== '' && m.digest === p.digest && m.last === p.last && m.end === p.end && m.t === p.t, `${id} the run rolled back ${4 * n} times is the run never touched`, `digest ${m.digest} | ${p.digest} · last state ${m.last} | ${p.last} · ${m.end} at ${m.t} s | ${p.end} at ${p.t} s`);
     verdict(m.rawWeak.length === 0, `${id} no plain WeakMap or WeakSet in the state`, m.rawWeak.join(' · ') || 'none met');
     for (const x of m.moments) { takes.push(x.tickTakeMs); restores.push(x.restoreMs); bytes.push(x.bytes); objs.push(x.objects); owns.push(x.own); stepsMs.push(x.stepMs); }

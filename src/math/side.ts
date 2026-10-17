@@ -13,6 +13,7 @@
 
 type Table = SideMap<object, unknown> | SideSet<object>;
 const NAMED: Table[] = [];
+let memos = 0;
 const NAMES = new Set<string>();
 function named(t: Table, name: string): void {
   if (NAMES.has(name)) throw new Error(`side table '${name}' is named twice`);
@@ -40,6 +41,10 @@ class Keys {
 export class SideMap<K extends object, V> extends WeakMap<K, V> {
   /** the table's name when it stands at the top of a module ('module.variable'), undefined on one that hangs off an object */
   readonly sideName: string | undefined;
+  /** a MEMO: what a pure function of its key gave last time — a hit gives what a miss would compute, whichever game in the process filled it. Not state: no snapshot
+   *  holds it, nothing compares it. Said of a table in the statement after it (`const hasNvg = new SideMap<…>('cast.hasNvg'); hasNvg.asMemo();`), with the reason */
+  sideMemo = false;
+  asMemo(): this { this.sideMemo = true; memos++; return this; }
   private readonly sideKeys = new Keys();
   private readonly sideHas = (k: object): boolean => super.has(k as K);
   constructor(name?: string) { super(); this.sideName = name; if (name !== undefined) named(this as unknown as Table, name); }
@@ -50,6 +55,8 @@ export class SideMap<K extends object, V> extends WeakMap<K, V> {
 
 export class SideSet<K extends object> extends WeakSet<K> {
   readonly sideName: string | undefined;
+  sideMemo = false;
+  asMemo(): this { this.sideMemo = true; memos++; return this; }
   private readonly sideKeys = new Keys();
   private readonly sideHas = (k: object): boolean => super.has(k as K);
   constructor(name?: string) { super(); this.sideName = name; if (name !== undefined) named(this as unknown as Table, name); }
@@ -72,11 +79,18 @@ export function rollbackRoot<T extends object>(name: string, obj: T): T {
   NAMES.add(name); ROOTS.push({ name, obj }); return obj;
 }
 
-/** everything registered, for game/rollback.ts: the named tables, the variables and the roots, each in the order of its NAME (the same on every machine, whatever order the modules ran in) */
+/** fields that hold a reading of the WALL clock (a timer's `ms`, a run's name made of the time): kept and put back by a snapshot like any field, but never compared —
+ *  two plays of one seed differ in them and in nothing else. Marked on the object that holds them, where it is made: `stats = wallClock({ awake: 0, ms: 0 }, 'ms')` */
+const CLOCKED = new WeakMap<object, readonly string[]>();
+export function wallClock<T extends object>(o: T, ...keys: (keyof T & string)[]): T { CLOCKED.set(o, keys); return o; }
+export function wallClockKeys(o: object): readonly string[] | undefined { return CLOCKED.get(o); }
+
+/** everything registered, for game/rollback.ts: the named tables (but the memos), the variables and the roots, each in the order of its NAME (the same on every machine, whatever order the modules ran in) */
 export function sideRegistry(): { tables: readonly Table[]; vars: readonly SideVar[]; roots: readonly { name: string; obj: object }[] } {
-  if (sorted !== NAMES.size) {
+  if (sorted !== NAMES.size || sortedMemos !== memos) {
     NAMED.sort((a, b) => a.sideName! < b.sideName! ? -1 : 1); VARS.sort((a, b) => a.name < b.name ? -1 : 1); ROOTS.sort((a, b) => a.name < b.name ? -1 : 1); sorted = NAMES.size;
+    STATE = NAMED.filter(t => !t.sideMemo); sortedMemos = memos;
   }
-  return { tables: NAMED, vars: VARS, roots: ROOTS };
+  return { tables: STATE, vars: VARS, roots: ROOTS };
 }
-let sorted = 0;
+let sorted = 0, sortedMemos = 0, STATE: Table[] = [];

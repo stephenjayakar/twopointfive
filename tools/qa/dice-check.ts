@@ -72,9 +72,13 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
   if (why) verdict(false, 'checkpoint: the die rides the file', `cannot save: ${why}`);
   else {
     const s = saveState(g, { label: 'dice', kind: 'harness' }); const json = JSON.stringify(s); const n0 = g.dice.n;
-    const A = run(W, 10, 60); const nA = g.dice.n;
-    loadState(g, JSON.parse(json)); W.cam.target = [...g.player.char.pos]; const B = run(W, 10, 60); const nB = g.dice.n;
-    Math.random = seeded(31337); const W2 = await standUp({ seed: 1 }); loadState(W2.game, JSON.parse(json)); W2.cam.target = [...W2.game.player.char.pos]; const C = run(W2, 10, 60); const nC = W2.game.dice.n;
+    // (the camera is the host's, not the file's: the page cuts it to Sam on a load. All three start from that cut — target, where it is heading AND the matrices the
+    //  first tick's input record is read through; with only `target` set the same game's lens still stood over the fight it had just left, and on the shipped stand,
+    //  where Sam's body follows his aim, that showed in his yaw)
+    const cut = (X: any): void => { const p = X.game.player.char.pos; X.cam.target = [p[0], p[1], p[2]]; X.cam.desired = [p[0], p[1], p[2]]; X.cam.rebuild(); };
+    cut(W); const A = run(W, 10, 60); const nA = g.dice.n;
+    loadState(g, JSON.parse(json)); cut(W); const B = run(W, 10, 60); const nB = g.dice.n;
+    Math.random = seeded(31337); const W2 = await standUp({ seed: 1 }); loadState(W2.game, JSON.parse(json)); cut(W2); const C = run(W2, 10, 60); const nC = W2.game.dice.n;
     const ok = !!s.dice && A.text === B.text && B.text === C.text && nA === nB && nB === nC && nA > n0;
     verdict(ok, 'checkpoint: A (stepped on) ≡ B (same game, loaded) ≡ C (fresh game on another seed, loaded) with nothing re-seeded', ok ? `saved at roll ${n0}; ${nA - n0} rolls in the next 10 s, the same in all three; ${A.rows.length} digests equal`
       : `${s.dice ? '' : 'no die in the file · '}A/B ${A.text === B.text ? 'equal' : firstDiff(A.rows, B.rows)} · B/C ${B.text === C.text ? 'equal' : firstDiff(B.rows, C.rows)} · rolls ${n0} → ${nA} / ${nB} / ${nC}`);

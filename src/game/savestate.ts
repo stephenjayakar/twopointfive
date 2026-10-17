@@ -73,7 +73,7 @@
 // refuses such a file too rather than pour it over a living man), a body (a man's or a civilian's) still falling, a man scripted or the lockdown pair clearing
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
-import { SideMap, rollbackVar } from '../math/side';
+import { SideMap, rollbackVar, wallClock } from '../math/side';
 import { loadSandbox } from './sandbox';
 import { Vec3, v3, quat } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -777,7 +777,7 @@ export class Checkpoints {
   private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef = ''; private dragRef: object | null = null;
   /** the last autosave written, while it can still be regretted (key + game time) */
   private lastAuto: { key: string; t: number } | null = null;
-  constructor(store?: SaveStore) {
+  constructor(store?: SaveStore) { wallClock(this, 'runId');   // (a run's name is made of the clock and a serial: never compared between two plays)
     this.store = store ?? (typeof localStorage !== 'undefined' ? localStore : memoryStore());
     try { if (typeof localStorage !== 'undefined' && localStorage.getItem(KEY_AUTOSAVE_ON) === '0') this.enabled = false; } catch { /* */ }
   }

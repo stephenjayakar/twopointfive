@@ -10,6 +10,7 @@
 // the direct estimator's character visibility (an experiment).
 import { GltfCharacter, MeshData, castGoggles, castSuit } from '../anim/gltf';
 import { Mat4, Vec3, m4, v3 } from '../math/vec';
+import { wallClock } from '../math/side';
 
 /** = BoxWorld.CAPS_PER_CHAR: the slots of Character.capsules(), in its order */
 export const RIG_SLOTS = 15;
@@ -149,7 +150,7 @@ export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
     r0[si] = q0; r1[si] = q1;
     slots.push({ name: S.name, r0: q0, r1: q1, solved: [f0, f1], n, rms: n ? Math.sqrt(se / n) : 0, maxAbs: mx, cover: n ? inside / n : 0, len, hand: HAND_RADII[si], overridden: !!ov });
   });
-  const fit: RigFit = { r0, r1, slots, verts: V, ms: performance.now() - t0 };
+  const fit: RigFit = wallClock({ r0, r1, slots, verts: V, ms: performance.now() - t0 }, 'ms');   // (how long the solve took: a clock reading the game's state reaches — Game.rigFitOf — and nothing compares)
   if (partOf) {   // the cast: the least-squares cones do not BOUND what he wears — measure how far it stands outside them (capped: one stray vertex must not blow the sphere up)
     // pad = the greatest, over the worn vertices, of the distance to the NEAREST cone — found without asking every cone of every vertex: a vertex's nearest cone is no
     // farther than its OWN (the first slot it is a row of, else the one whose line it lies nearest: meshRows), so a vertex whose own-cone distance is inside the pad so far

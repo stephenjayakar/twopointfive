@@ -360,7 +360,7 @@ function curve3(t: number, K: Keys3): Vec3 {
 /** sampleClip(clip, 0, false, out) for the clips the aim layer samples there every frame: that call writes fixed numbers (each track's first key, read off the clip alone —
  *  a sample never reads the pose it writes) into fixed slots, so they are found once per clip — sampled into a pose of NaNs: a slot still NaN afterwards is one the clip
  *  does not key — and replayed: the same floats into the same slots, the rest of `out` left as it stands, exactly as the sample leaves it. */
-const AT0 = new SideMap<Clip, { at: Int32Array; v: Float32Array }>('character.AT0');
+const AT0 = new SideMap<Clip, { at: Int32Array; v: Float32Array }>('character.AT0'); AT0.asMemo();   // (read off the clip alone, a thing of the character file every game shares)
 function sampleAt0(clip: Clip, out: Pose) {
   let e = AT0.get(clip);
   if (!e) {

@@ -165,7 +165,7 @@ export class Throwables {
   }
 
   /** `g`: the Game the items are in, handed to a bounce's callback (the model viewer's stage has none, and no item of its own has a callback) */
-  update(dt: number, g: Game | null = null) {
+  update(dt: number, g: Game | null = null) {   // (null: the viewer's stage, which has no game)
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.age += dt; it.life -= dt;
       if (it.life <= 0) { this.items.splice(i, 1); continue; }
