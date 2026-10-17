@@ -247,6 +247,8 @@ export const KIT_VIEW_QUIET = {
    *  idle sway is stopped for its length. Where the room has lamps of its own the lamp that slides is one hung for the beat (the picture's own lamp's
    *  place and colour, at `gain` of it, in and out over `fade` s) */
   idle: { every: [15, 14, 16, 14.5, 15.5], slide: 0.8, out: 1.2, stay: 0.6, blinkAt: 0.5, blink: 0.4, blinkTo: 0.1, gain: 1, fade: 0.3 },
+  /** SAM'S WEAPON LIGHT on a quiet kind: from the crouch, on for one pass across the door — `sweep` s of it, held `hold` s — and off; aimed … m up */
+  light: { sweep: 0.5, hold: 0.2, aimY: 0.9 },
 };
 /** the quiet picture's kind for this link — 'quiet' | 'solo' — or null: a loud link, the switch off, or `kitloud` in the link (pure: the page check's too) */
 export function kitViewQuietOf(q: URLSearchParams, on: boolean = KIT_VIEW_QUIET.on): 'quiet' | 'solo' | null { return on && !q.has('kitloud') ? kitViewQuietKind(q) : null; }
@@ -1497,10 +1499,28 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (B.phase === 'out') { if (flat(p, B.post!) > 0.12 && el < 2) return 'on'; mark(B, 'lean'); to(B, 'hold'); game.puppet = { goal: null, aim: null, throwAt: null }; return 'on'; }
       if (B.phase === 'hold') { if (el < QK.leanSecs) return 'on'; to(B, 'back'); walkTo(S.sam); return 'on'; }
       return flat(p, S.sam) <= K.onSlot || el >= 2.5 ? 'done' : 'on'; } };
+  /** SAM'S WEAPON LIGHT on the quiet picture: the opposite of quiet, so it is one blink — from the crouch the gun comes out, the beam is ON as his aim
+   *  reaches the door's far jamb, crosses the door to the near one in `sweep` s, is held `hold` s and is OFF; the gun goes away again at rest (tidy()).
+   *  No step, no hand on the leaf, and no cost (the row is not loud). Refused — the old row plays, as on every kind — on a teammate's card, at a blank
+   *  wall, with no gun in his hand. Never seen on a GPU */
+  const quietLight: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 8,
+    start: (B, S) => { const pl = game.player; if (B.man) return 'Sam\'s';
+      if (!Q || walled(S)) return 'no door to cross';
+      if (pl.slot !== 'pistol' && pl.slot !== 'rifle') return 'no gun in his hand';
+      to(B, 'draw'); B.hTo = KIT_VIEW_QUIET.light.aimY; samStand(S); if (pl.holstered) input.pressed.add(pl.slot === 'rifle' ? 'Digit2' : 'Digit1');
+      return null; },
+    tick: (B, S) => { const pl = game.player, QL = KIT_VIEW_QUIET.light, el = game.time - B.pt, p = pl.char.pos;
+      if (B.phase === 'draw') { const busy = !!(pl.char.anim as unknown as { kitBusy?: boolean }).kitBusy;
+        if ((pl.holstered || busy || pl.equipT > 0 || el < 0.15) && el < 2.5) return 'on';
+        if (pl.holstered) { B.marks.push('kept'); V.refused = 'light: the gun never came out'; return 'done'; }
+        const m = S.plan.anchor.mid, sg = (S.sam[0] - m[0]) * S.s[0] + (S.sam[1] - m[1]) * S.s[1] >= 0 ? 1 : -1, w2 = S.width / 2, o = S.plan.wall.face;
+        B.quiet = true; B.legs = [{ yaw: yawTo(p, S.at([-sg * w2, o, 0])), cap: K.gunRate * R, minT: -1, hold: 0 }, { yaw: yawTo(p, S.at([sg * w2, o, 0])), cap: K.gunRate * R, minT: QL.sweep, hold: QL.hold }]; B.leg = 0; B.legT = NaN; to(B, 'act'); return 'on'; }
+      if (B.phase === 'act' && B.leg >= 1 && !B.lit) { B.lit = true; B.marks.push('beam'); }   // (on as his aim leaves the far jamb; quiet() puts it out as the leg home begins)
+      return quiet(B, S); } };
   /** THE QUIET KIND'S ROWS, one table over BEATS — a tile's thing → what it plays on the quiet picture, by the card it is on; a thing not here, and a
    *  quiet row whose start refuses, plays its row of BEATS as on every kind (the wand and the sticky camera keep theirs, from the crouch; loud kit keeps
    *  its old row until it has a cost of its own: `Row.loud` is what that pass will read) */
-  const QUIET_BEATS: Record<string, { mate?: Row; sam?: Row }> = { weapon: { sam: quietGun }, turn: { sam: quietLean } };
+  const QUIET_BEATS: Record<string, { mate?: Row; sam?: Row }> = { weapon: { sam: quietGun }, turn: { sam: quietLean }, light: { sam: quietLight } };
   const rowFor = (f: string, man: Guard | null): Row | undefined => (Q ? QUIET_BEATS[f]?.[man ? 'mate' : 'sam'] : undefined) ?? BEATS[f]?.[man ? 'mate' : 'sam'];
   /** the quiet picture with NO tile under the highlight: the rest pose is the picture (the loud one plays the gun, then the light) — the seam the torch
    *  pass hangs its idle on */
