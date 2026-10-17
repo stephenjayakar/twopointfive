@@ -16,6 +16,7 @@ import { saveSandbox } from '../game/sandbox';
 import { gearText } from '../game/gear';
 import { menuTheme } from './theme';
 import { TABKEY, TAB_CHOICES, setTabKey, tabDoes } from './tabkey';
+import { BACKKEY } from '../game/backkey';
 import { VOLUME_DEFAULTS } from '../audio/audio';   // (the mixer's levels on a fresh page: what Reset puts back)
 import type { MenuDeps } from './menu';
 import type { QualityName } from './quality';
@@ -305,7 +306,8 @@ function controls(body: HTMLElement) {
   const tab = tabRow();
   for (const g of KEYS) {
     const box = el('div', 'op-kgroup'); box.appendChild(el('div', 'op-sec', g.group));
-    const rows = tab && tab.group === g.group ? g.rows.flatMap(r => r[0][0] === tab.after ? [r, tab.row] : [r]) : g.rows;
+    const back: typeof g.rows = BACKKEY.tab && g.group === 'Game' ? g.rows.flatMap(r => r[0][0] === 'Esc' ? [r, [['Tab'], 'Back out of a list'] as typeof r] : [r]) : g.rows;   // (game/backkey.ts: the key Esc gave up)
+    const rows = tab && tab.group === g.group ? back.flatMap(r => r[0][0] === tab.after && r[1] !== 'Back out of a list' ? [r, tab.row] : [r]) : back;
     for (const [caps, what, small] of rows) {
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
       caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(el('kbd', '', k)); });

@@ -41,6 +41,7 @@ import type { Team } from './teams';
 import { wallReactReplan } from './wallreact';
 import type { RoomClearPlan } from '../scene/level';
 import { goTo, followPath, pieDoorway, PIE_EYES_SECS, dropToSearch, resetChase, pointInView, bodyPos, doorCells, crossesDoor, frameOf, notGettingAnywhere, chaseFix } from './guards';
+import { conditionPace } from './condition';
 import { laneCovers, laneDoor } from './lanes';
 import { isHostile, teamOfId, foeDown, spokenName, defenderWords } from './teams';
 import { sideShotEnergy } from './glasspen';
@@ -756,7 +757,7 @@ function entryLegs(g: Game, d: Door, sg: 1 | -1, nearA: number, k: 0 | 1, plan: 
 }
 /** Step him along a local path to `target` at `speed` (his body turned to `face`, or to the way he goes), the frame's push-out doing the rest; true once there. */
 function stepGate(g: Game, gd: Guard, G: Gate, dt: number, target: Vec3, speed: number, face: number | null): boolean {
-  const c = gd.char, nav = g.col.nav;
+  const c = gd.char, nav = g.col.nav; speed = conditionPace(g, gd, speed);   // (condition.ts: a hurt man's legs, whoever asks for them)
   if (!G.path || G.pathFor !== target) { G.path = nav.findPath(c.pos, target) ?? [v3.copy(target)]; const last = G.path[G.path.length - 1]; if (!last || flat(last, target) > 0.05) G.path.push(v3.copy(target)); G.pathI = 0; G.pathFor = target; }
   let arrived = false;
   while (G.pathI < G.path.length) {

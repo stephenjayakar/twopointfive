@@ -198,7 +198,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   up headless on the stand's own level file, a teammate under his script at 0.92, every defender down, ten seconds on: 0.32 as it was, 0.00 now; left searching
   0.68 / 0.00; a defender alert or a teammate alert still 1.00; searching while a show runs 0.68; `main.ts` hands the switch over, by text) and a third 'stand'
   line, on BOTH stands; `MUSIC_BREAK=1` must fail it. MEASURED 10-17 on one seed a level (records office, depot): the hold reproduced with one of the player's own
-  cans (flash 0.21, frag at 5 m 0.32, unchanged 80 s after the last defender fell). NOT DONE: defenders under a script hold their wariness the same way and still
+  cans (flash 0.21, frag at 5 m 0.32, unchanged 80 s after the last defender fell). A SECOND RULE ON THE SAME READING (`CONDITION.ownCalm`, game/condition.ts, in a tree
+  that has it): a teammate at rest in 'patrol' does not count, whoever asks and show or not; it leaves one left in 'search' or 'suspicious' counting. The two stack:
+  with both on this one holds the reading in live play, being the wider. The check holds that rule off for its as-it-was readings and prints it alone. NOT DONE: defenders under a script hold their wariness the same way and still
   count (that is the opposition's state, left alone); the cause itself (nothing takes a scripted man's wariness down) is not touched here; nobody has heard the
   difference, and nothing here was run on a GPU or with sound.
 - **The lanes' dock, three nits (10-15)** (`src/replay/soundlanes.ts`; only under `?soundlanes`; no switch, nothing that plays changed): THE CORNER MAP GOES WITH THE HUD —

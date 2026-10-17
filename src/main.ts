@@ -2,6 +2,7 @@ import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } f
 import { Menu, loadSandbox, bootCard, SHOWCASE_BUTTONS } from './ui/menu';
 import { optionsOpen, openOptions } from './ui/options';
 import { TABKEY, tabFromQuery } from './ui/tabkey';
+import { BACKKEY } from './game/backkey';
 import { showKey } from './game/showkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitIssuedPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
@@ -445,7 +446,7 @@ async function main() {
     let mAcc = 0, mT = 0;
     window.addEventListener('mousemove', e => { if (mx !== null && my !== null) { const dd = Math.abs(e.clientX - mx) + Math.abs(e.clientY - my); const now = performance.now(); mAcc = now - mT > 300 ? dd : mAcc + dd; mT = now; if (mAcc >= 3) { mAcc = 0; unattended = false; attract.poke(); } } mx = e.clientX; my = e.clientY; }, { capture: true, passive: true }); }   // (3 px inside 0.3 s: a sensor's 1 px jitter is not a person)
   window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
-    if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { quitShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && game.escape()) { e.preventDefault(); return; } menu.toggle(); e.preventDefault(); } }, { capture: true });   // (Esc during either showcase quits it to the start card — the maintainer, 08-13)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
+    if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { quitShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && !BACKKEY.tab && game.escape()) { e.preventDefault(); return; } if (BACKKEY.tab) input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (BACKKEY.tab, game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc during either showcase quits it to the start card — the maintainer, 08-13)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
   tape?.stood(game);   // (a tape: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
   { const dress = kitSetUp ? kitViewSetDress(q) : null; if (dress) { setSuitAs(dress.suit); KITANIM.sling = dress.sling; } else if (kitViewOn && kitViewQuietOf(q)) KITANIM.sling = 2; }   // (?kitview on a bespoke set of a QUIET mission or the solo night: the men dressed as that mission's are, the rifle across the back — this window's own modules, an iframe's; a loud mission's set and every other page: nothing said)
@@ -666,7 +667,8 @@ async function main() {
     hotkeys: (frozen) => {
       if (!frozen && input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
       if (!frozen && input.hit('BracketRight')) engine.settings.exposure *= 1.25;
-      if (TABKEY.does !== 'off' && input.hit('Tab')) { if (TABKEY.does === 'who') { if (!frozen) input.pressed.add(game.orders.knobs.whoKey); } else tabKey(frozen); }   // (what Tab does, on trial: ui/tabkey.ts — 'who' = a press of the orders' own key, handed to this frame's tick)
+      if (TABKEY.does !== 'off' && input.hit('Tab') && !(BACKKEY.tab && !frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
+        if (TABKEY.does === 'who') { if (!frozen) input.pressed.add(game.orders.knobs.whoKey); } else tabKey(frozen); }   // (what Tab does, on trial: ui/tabkey.ts — 'who' = a press of the orders' own key, handed to this frame's tick)
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick; Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
       if (input.hit('F10')) sessionrec.toggle();   // the session journal: asks now, starts at the top of the next live update it may (a paused card holds it pending), stops at the end of one

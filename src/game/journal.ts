@@ -73,6 +73,7 @@ import { OWNCHARGE } from './owncharge';
 import { BIGSLOT } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
+import { CONDITION } from './condition';
 import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
@@ -86,10 +87,12 @@ import { SAMESTART } from './samestart';
 import { TAKE } from './takecheck';
 import { QUIETFOG } from './quietfog';
 import { TORCH } from './calmtorch';
+import { BACKKEY } from './backkey';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
+import { POWEROUT } from './powerout';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -251,6 +254,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge and a shield were pouches, nobody carried a hammer)
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
+  if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
   if (!k.tables.AUTOPILOT) AUTOPILOT.on = false;   // (a file from before the quick key was the squad's autopilot: B on a door the men were stacked on gave 'stack up' again)
   if (!k.tables.SQUADTHROW) SQUADTHROW.on = false;   // (a file from before teammates threw a frag or a stun canister on order: the floor's menu had no such row)
   else {
@@ -288,6 +292,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.RELOAD) RELOAD.auto = false;   // (a file from before a dry gun reloaded itself: its player pressed R, and its frames have no reload he did not ask for)
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
   if (!k.tables.FRIENDS) { FRIENDS.noSnap = false; FRIENDS.lowReady = false; }   // (a file from before the reticle passed over his own side and his gun came down off a teammate)
+  if (!k.tables.BACKKEY) BACKKEY.tab = false;   // (a file from before Tab backed out of a list: a Tab in its ticks did nothing)
   if (!k.tables.TORCH) TORCH.calmOff = false;   // (a file from before a calm patrol's torch went dark in a lit place: its torches burned everywhere, and its meters read them)
   if (!k.tables.MORALE) MORALE.on = false;   // (a file from before a blast shook the men it did not hurt: every man stood where he stood, and nobody fired into the dust)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)
@@ -301,6 +306,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (d.lend === undefined) DOZE.lend = false; }   // (… and one from before the screen held his attention by the attention rule: his eyes were whole)
   if (!k.tables.DARKFOE) DARKFOE.on = false;   // (a file from before an alerted enemy lit his lamp or left his post for the dark: its defenders' lights stayed off and they stood where they were put)
   else if ((k.tables.DARKFOE as Partial<typeof DARKFOE>).suspect === undefined) DARKFOE.suspect = true;   // (…and one from before the lamp waited for the alert: a man who was only suspicious lit his too)
+  if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)
   if (!k.tables.PICTURE) PICTURE.on = false;   // (a file from before each man kept his own picture of the fight: nobody remembered where an enemy had been, and every spot was picked without one)

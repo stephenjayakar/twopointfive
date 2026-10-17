@@ -60,6 +60,7 @@ import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
 import type { Team } from './teams';
 import type { Input } from './input';
+import { backTake, backName } from './backkey';
 import type { Door } from './doors';
 import { lostOf, lostShown, type LostMan } from './deathrecap';
 import { BoxFlag } from '../scene/boxes';
@@ -796,6 +797,7 @@ export class SquadOrders {
 
   /** Esc (Game.escape, ahead of the pause menu): the menu, if it is up, steps back a page — from its first page it is dismissed. True = the press was used here. */
   escape(): boolean { if (!this.menu) return false; if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
+  /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
 
   /** Open the menu on a target (X / the middle button over the cursor's; the console, a probe): it stays up until pick() or close(). False: no squad to order. */
   open(target: OrderTarget = this.targetAt(this.g.aimPoint)): boolean {
@@ -917,7 +919,7 @@ export class SquadOrders {
       return;
     }
     // the menu is up: everything it answers to is taken out of the frame FIRST (whichever of them then acts, none is Sam's as well) …
-    const esc = input.pressed.delete('Escape'), blur = input.pressed.has('Blur'), space = input.pressed.delete(INTERACT_KEY);
+    const esc = backTake(input), blur = input.pressed.has('Blur'), space = input.pressed.delete(INTERACT_KEY);
     const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
     const lmb = input.lmbHit(); if (lmb && K.clickGives) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); }   // (the held button stays taken until he lets go: the seat remembers, cmd.ts)
     if (g.time - M.readT >= K.refreshSecs || this.due(M)) { this.refresh(); if (!this.menu) return; }   // (before any key of the frame is read against its rows)
@@ -2050,7 +2052,7 @@ export class SquadOrders {
       if (!rows.length) rows.push({ kind, label: head, opts: [{ key: '', text: 'no order fits' }], inReach: false, off: false });
       if (M.wordRow) rows.push({ kind, label: WORD_HEAD, opts: [{ key: waitD ? String(waitD) : !digitOf(ORDERS.waitKey) && ORDERS.waitKey ? keyName(ORDERS.waitKey) : altLive ? '' : alt, text: `wait for my word${waitD && alt && !altLive ? ` (${alt})` : ''} · ${M.onWord ? 'ON' : 'off'}` }], inReach: n > 0, off: false, cont: M.rows.length > 0 && headOf(M.rows[M.rows.length - 1]) === WORD_HEAD });
       rows.push({ kind: 'cancel', label: '', opts: [], inReach: true, off: false });
-      const closes = M.page !== null ? `esc / right click: back · ${key.toLowerCase()} closes` : `${key.toLowerCase()} / esc / right click closes`;
+      const back = backName().toLowerCase(), closes = M.page !== null ? `${back} / right click: back · ${key.toLowerCase()} closes` : `${key.toLowerCase()} / ${back} / right click closes`;
       return { menu: { rows: [whoRow, ...rows], primary: M.sel + 1, more: 0, open: true, hint: `${ORDERS.wheelElement ? 'digit picks · wheel: who' : ORDERS.clickGives ? 'digit, or wheel + click' : `digit, or wheel + space${ORDERS.mouseOpens ? ' / middle click' : ''}`} · ${closes}`, cancel: 'close — no order' }, status: [] };
     }
     const S = this.squad(), men = this.recipients(), tone = this.toneOf(men), some = men.length < S.filter(gd => gd.state !== 'dead').length;

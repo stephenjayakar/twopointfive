@@ -423,3 +423,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   every refresh of it (orders.ts `refreshSecs`, one a second — not every frame) searched two or three times over (measured headless: ten openings
   of the page on one worked spot 1,110 flights → 37). On the build with `FRAG.wallFlee` the lattice
   reads frag 84 → 147 of 661 shipped (walls a burst opens are no cover: fewer spots anybody may throw at, with the rule or without).
+- **Esc is only the pause; Tab backs out** (`src/game/backkey.ts`, `BACKKEY.tab`; the maintainer, 10-17: "esc is overloaded -- exiting out of menus as well as
+  going to pause. maybe we make tab exit out of menus and esc is always pause?"). SWITCH: ON in the page (`?tabback=0` = Esc backs out first and pauses only
+  with nothing to back out of, as it did), OFF in the module and on the frozen stand (`TPS_TABBACK=1`); the table is in the knob registry and the journal,
+  and a recording from before the key replays with it off. WHAT ESC BACKED OUT OF, and Tab does now: the squad's order menu (a page of it: back to the first
+  page), the open Space list, a running sustained verb (the leaf being eased, the pick, the choke, the drive), the launcher's held arc. In the tick the back
+  key is a press like any other (`backTake` in orders.ts with the menu up, `backHit` in interact.ts and player.ts); an Escape that reaches the tick still
+  backs out, so the harness's presses and an older tape's hold. ON THE PAGE no Escape reaches the tick with the rule on: main.ts takes the press out of the
+  frame's keys and toggles the pause, so no recording holds it. `'Paused'`: a key let go under the pause card would act on the tick play comes back (the
+  list does its row, the launcher sends its round), so with the rule on the loop (`host/loop.ts`) hands the first tick after a frozen frame the one-tick code
+  `'Paused'`, as Input hands it `'Blur'`: interact.ts shuts a held list with its press spent, player.ts lets go of a held arc unsent. It is a press in the
+  tick's keys: a recording carries it, a replay does the same, and nothing of the game changes between ticks for it (the start card is a frozen frame too:
+  a run's first tick holds one, and it is nothing to that tick). The order menu and a running verb are still there after the pause. TAB'S TRIAL
+  (`ui/tabkey.ts`) keeps the key whenever there is nothing to back out of (`Game.backable`, which counts a verb that cannot be taken back, the knife in the
+  hold and the breaker's lever, for the half second it runs); with its 'who' choice Tab no longer steps who while the order menu is up (T does).
+  WHAT SHOWS: the order menu's line and the Space list's line name `tab` where they named `esc`; Options ▸ Controls gains a Tab row under Esc. NOT TOUCHED:
+  the screens outside the fight (the pause card and its options, the mission list, team and kit: Esc is still back there), the showcases (Esc ends one),
+  a focused field of the debugger (Esc lets go of it). Check: `tabback` (family `orders`; each of the four staged as play stages it, rule on and off, then
+  the pause under `stepFrame` with Space let go under the card, the same keys tick by tick as a replay gives them, the switch in a recording;
+  `TABBACK_BREAK=1`), both stands. Never seen on a GPU.

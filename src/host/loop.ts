@@ -17,6 +17,7 @@
 // What stays per drawn frame on the display's own dt: the camera, the mixer, the smoke solver, the render. NO INTERPOLATION between ticks: off 60 Hz the men move at 60 a second
 // under a camera that moves at the display's rate. KNOWN, on a frame of two ticks or more (a display under the tick rate, a hitch): a flash that lives one tick and was made in
 // the frame's first is aged out by its second and never drawn — its light was in the game for its tick all the same. Switch off (the default) = every statement below as it was.
+import { BACKKEY } from '../game/backkey';
 import type { Game } from '../game/game';
 import type { Input } from '../game/input';
 import type { FollowCamera } from '../game/camera';
@@ -36,6 +37,8 @@ export interface LoopHost { readonly settings: Pick<RenderSettings, 'nvAmount' |
 
 export interface LoopCtx {
   game: Game; input: Input; cam: FollowCamera; view: View;
+  /** stepFrame's own: a frozen frame has gone by since the last tick (the next tick gets 'Paused' — game/backkey.ts) */
+  thaw?: boolean;
   /** this frame may be fixed-stepped (main.ts: a live frame, not a scripted __runFrames one — a script names its own dt). Absent = never: the loop as it was */
   fixedStep?(): boolean;
   /** the fixed step's own state, made by stepFrame on first use: time owed to the next tick, the last tick's scripted look-ats, the edges a tickless frame left */
@@ -116,6 +119,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   const frozen = ctx.frozen();   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card
   const frozenKeys = frozen && input.pressed.size ? [...input.pressed] : null;   // (the hotkeys' look below: the recorder keys are read on a frozen frame too)
   if (frozen) { dt = 0; input.endFrame(); game.player.launchHeld = null; }   // (…and the launcher's button, if it was down as the card came up, is let go of unsent: the tick that follows the card would read 'the button came up' and send the round — player.ts)
+  if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
   if (!frozen && input.wheelCtrl) cam.zoom(input.wheelCtrl);                 // Ctrl + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
   if (!frozen && input.orbitDX) cam.rotate(input.orbitDX * 0.006);          // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)

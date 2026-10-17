@@ -2,6 +2,7 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import type { View } from '../host/hud';
+import { backHit } from './backkey';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG, smoothstep } from '../math/vec';
 import { Input } from './input';
 import { FollowCamera } from './camera';
@@ -24,6 +25,7 @@ import { BIGSLOT } from './kit';
 import { lockPoint } from './shotgun';
 import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop } from './bigkit';
 import { samSpread } from './suppression';
+import { isHurt } from './condition';   // (a hurt man does not sprint: Shift is not a run for him, so it lets go of nothing either)
 import { fireRing, ringSolve, ringAimPoint } from './launcher';
 import { fireShell, shellSolve, shellAimPoint, shellBodies, arcArmed, HE40 } from './he40';
 import { LAUNCHER, LAUNCHER40 } from './weapons';
@@ -330,7 +332,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     else g.msg(`${rifle.def.short} is ${rifle.mode.toUpperCase()} only`);
   }
   nvKey(g, input, dt);
-  const sprintKey = (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
+  const sprintKey = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
   // R, or the gun in his hands run dry with a magazine left (autoreload.ts: asked every frame, so a reload a sprint took out of his hands starts again) — one way in either way
   if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey);
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)
@@ -354,7 +356,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (rooted) { mx = 0; mz = 0; }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
   if (input.hit('KeyC') && !pl.dragging) { if (!pl.crouch) pl.crouch = true; else if (canStand(g)) pl.crouch = false; else g.msg('no room to stand'); }   // crouch is C, only (Ctrl is the camera-orbit modifier now); standing needs the headroom
-  const wantSprint = (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
+  const wantSprint = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
   // back to the wall (Q): press against the face behind / beside you and sidle along it; Q again, breaking into a run or walking off it steps away (moveOnWall)
   if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)
@@ -535,7 +537,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     const beat = pl.equipT > 0 && !!pl.wall;   // (stacked on a wall the rifle's rise is the stack's own: stackUp holds the click and hands it back — below; off the wall the equip beat only DELAYS the round)
     const load = rifle.attachment;
     const owed = walled && !stunned && !!launchWas && aimWeighLaunchKeep(pl, dt);   // (aimweight.ts: a load let go of mid-swing and waiting on the circle is kept through a wall the gun swings past — nothing is sent or drawn while it is down)
-    let held: RifleAttachment | null = launchWas && load && !beat && (!walled || owed) && !stunned && !g.orders.menu && rifle.left(load) > 0 && !input.hit('Escape') && !input.hit('Blur') ? load : null;   // (…and still a round of it to send)
+    let held: RifleAttachment | null = launchWas && load && !beat && (!walled || owed) && !stunned && !g.orders.menu && rifle.left(load) > 0 && !backHit(input) && !input.hit('Blur') && !input.hit('Paused') ? load : null;   // (…and still a round of it to send)
     const down = input.rmb() || input.rmbHit();   // (rmbHit(): a click that began and ended inside one frame is still a frame of 'down' — its release, next frame, sends the round)
     if (!held && input.rmbHit() && !beat && !walled && !stunned) {   // (down for a wall — gunwall.ts: a press is nothing. Still coming off the sling: the press BEGINS it — '2, right button' in one breath — and the round waits for the rifle, below. An order menu up has eaten the button already: orders.ts)
       if (!load) { if (g.aimTarget && !pl.ocpHinted) { pl.ocpHinted = true; g.msg(`the OCP is on the pistol — 1 draws it`); } }   // nothing under this barrel (the shotgun in the rifle's slot): the right button is dead with it up — said once, over a light, then never again
