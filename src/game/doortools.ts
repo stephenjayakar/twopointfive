@@ -1094,8 +1094,9 @@ export class DoorTools {
     for (const op of ops) {
       this.beat(op, `told · ${what === 'step' ? 'step in' : what === 'bang' ? 'bang and step in' : 'leave it'}`);
       if (what !== 'leave') { op.word = w; op.hold = 0; }
+      const owed = !!op.thr!.stepOwed; op.thr!.stepOwed = false;   // (the word's owed step in: his say here is the newer one)
       if (what === 'bang') { op.thr!.force = true; if (op.thr!.first || op.thr!.wide) op.thr!.tossed = 0; this.toPockets(op); }   // (… and a can that went in first, unasked, is not the one he is asking for)
-      else if (what === 'step') { this.heldBeat(op); this.toStep(op); }
+      else if (what === 'step') { if (owed) this.wordStepGo(op); else { this.heldBeat(op); this.toStep(op); } }   // (owed: 'the door waits' is answered — 'on without …')
       else {   // off the door: the order over, its men a plain stack on the marks they came to the door by — what 'stack up' leaves, for whatever is said next
         this.heldBeat(op); g.say(op.lead, 'coming off the door.'); this.end(op, 'stood down');
         const d = op.door, left = op.men.filter(m => m.state !== 'dead' && op.post.has(m) && S.of(m) === op.mine.get(m));
@@ -1109,7 +1110,8 @@ export class DoorTools {
    *  in with no can, where the word alone bangs the pockets first; 'bang' is the word as it always was */
   private thenOnWord(what: 'step' | 'bang', men: Guard[], t: OrderTarget): string | void {
     const ok = this.canThresholdThen(what, t, men); if (ok !== true) return ok;
-    for (const op of this.thresholdHeld(men, t.kind === 'door' ? t.door : null)) { op.thr!.wordStep = what === 'step'; this.beat(op, `on the word · ${what === 'step' ? 'step in, no bang' : 'bang, then step in'}`); }
+    for (const op of this.thresholdHeld(men, t.kind === 'door' ? t.door : null)) { op.thr!.wordStep = what === 'step'; if (op.thr!.stepOwed) { op.thr!.stepOwed = false; op.thr!.fragT = undefined; op.thr!.fragSaid = false; }   // (a step in the last word owed: this is the newer order, and waits for the word again)
+      this.beat(op, `on the word · ${what === 'step' ? 'step in, no bang' : 'bang, then step in'}`); }
   }
   canThresholdThen(what: 'step' | 'bang' | 'leave', t: OrderTarget | null, men: Guard[]): true | string {
     const ops = this.thresholdHeld(men, t?.kind === 'door' ? t.door : null); if (!ops.length) return 'nobody is holding that door.';
@@ -2283,7 +2285,7 @@ export class DoorTools {
           if ((quiet || el >= K.thrCap) && !T.told) { T.told = true; this.beat(op, 'holding · on your word'); g.say(lead, 'holding on the door.');
             for (const m of T.jamb) { const J = op.mine.get(m); if (J) J.there = `holding the threshold on your word · ${name}`; } }
           break; }
-        if (!(quiet || el >= K.thrCap)) break;
+        if (!(quiet || el >= K.thrCap) || T.stepOwed) break;   // (an owed step in is a word that spends no can: the hold's cap does not throw one for it)
         this.toPockets(op);
         break;
       }
