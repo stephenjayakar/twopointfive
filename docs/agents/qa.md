@@ -225,3 +225,10 @@ but synthetic writes still work.
   `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: the address starts it and loses the word, Esc stops it, a short run start to finish with the
   game's clock read every frame, keys pressed into the scene, the show ended under it, the card keeping the keyboard, the download, the Extras row). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the six minutes are an estimate off the show's length and the
   sweep's, and nobody has looked at the card or watched the scene held.
+- **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
+  commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
+  `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s
+  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stays 300. Read on
+  one build, 42 squad runs as shipped: every row ends, the longest at 195 s; 3 rows reach a different end than under the default (the compound 2 stalled → taken, the warehouse
+  2 taken → wiped, the two charges 2 taken at 178 s → at 120 s). The gate judges a stall, never who won; its report line says which commander ran, and a row is played again
+  with `PT_HUNT=first bun run tools/qa/ships.ts --trace <id>:<seed>`. `PT_HUNT=rooms` in the caller's env = the default order under the gate. Headless only.

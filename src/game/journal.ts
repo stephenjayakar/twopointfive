@@ -385,7 +385,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (dt?.openHand === undefined) DOORTOOLS.openHand = false; if ((dt as { gateHand?: boolean } | undefined)?.gateHand === undefined) DOORTOOLS.gateHand = false;
     if ((dt as { podFrames?: boolean } | undefined)?.podFrames === undefined) DOORTOOLS.podFrames = false;
     if ((dt as { thrHand?: boolean } | undefined)?.thrHand === undefined) DOORTOOLS.thrHand = false;
-    if ((dt as { thrNoCan?: boolean } | undefined)?.thrNoCan === undefined) DOORTOOLS.thrNoCan = false; if ((dt as { thrFragHold?: boolean } | undefined)?.thrFragHold === undefined) DOORTOOLS.thrFragHold = false;
+    if ((dt as { thrNoCan?: boolean } | undefined)?.thrNoCan === undefined) DOORTOOLS.thrNoCan = false; if ((dt as { thrFragHold?: boolean } | undefined)?.thrFragHold === undefined) DOORTOOLS.thrFragHold = false; if ((dt as { thrDoorsLeaf?: boolean } | undefined)?.thrDoorsLeaf === undefined) DOORTOOLS.thrDoorsLeaf = false;
     if ((dt as { fragHold?: boolean } | undefined)?.fragHold === undefined) DOORTOOLS.fragHold = false; }   // (…and from before a door order waited for its men who ran from a grenade)   // (…and from before a threshold's can waited for a hand at the door)   // (…and from before an entry's points kept out of other doors' frames)   // (…and from before a bang / frag order on an open door kept every man on his own side of it)
   if ((k.tables.DOORWAY as { kickGlass?: boolean } | undefined)?.kickGlass === undefined) DOORWAY.kickGlass = false;   // (…and from before that boot was kept from in front of a pane)
   if ((k.tables.DOORWAY as { sideKick?: boolean } | undefined)?.sideKick === undefined) DOORWAY.sideKick = false;   // (…and from before a boot could be thrown from beside the door)

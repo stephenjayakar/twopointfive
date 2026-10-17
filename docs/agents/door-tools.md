@@ -430,6 +430,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines ask what the threshold does with the ROOM. Green on both stands with the rear man's turn on and off (four: 11 lines; first: 10 shipped,
   9 frozen). The pass-over line above stays for a door that still has such guns. NOT judged by any door check now: a stack under fire from
   across a yard.
+- **A man left on another door stands where its open leaf does not hide it (10-17).** `DOORTOOLS.thrDoorsLeaf`: ON in the page (`?thrdoorsleaf=0`
+  off; Tab → Player, doors & props 'other doors: never behind the leaf'), OFF in the module and on the frozen stand (`TPS_THRDOORSLEAF=1`, with `ONEWAY=1`: it
+  asks nothing of a double-acting leaf). The posts of `thrDoors` were tried with the leaf as it stood, shut; on the hinge side a door that opens
+  into the room swings round between the man and the opening. At the depot's store the man left on `c_n` stood 3.5 to 4.0 m down the door's
+  own wall, hidden from it by its leaf, on all three seeds on both stands. The rule: `leafAcross` gives the share of the leaf's sweep, from where
+  a pushed leaf comes to rest (1.45 rad) to its stop, that lies across his line to the door. A threshold's last act no longer lets a man keep or
+  take such a door from where he stands (`otherDoors(…, seen)`); `holdDoors` posts one, a hidden post costing `LEAF_COST` m of walk and more the
+  more of the sweep hides it, with two posts tried last beside a door that opens in (`LEAF_POSTS`, 0.2 and 0.5 m past a jamb, 2.4 m deep: the
+  store's door is in a corner and every post out along its wall is behind the leaf). On an ordinary entry (`otherDoorM`, nobody walks) the man it
+  hides the door from least is taken first, and a door is never left unheld for the rule. Check: `threshold-leaf` (rule off beside rule on, three
+  seeds, the yard's guns out, plus the journal line), `THRDOORSLEAF_BREAK=1` red, both on both stands; with the rule on the man stands 2.3 to
+  2.5 m off, a line to it, clear of the leaf from 1.45 rad to its stop. The check's `line` now reads the point the rule holds the door on (the
+  old point lay in the jamb for a man down the door's own wall). Measured at that one door only. NOT measured: other levels' corner doors, what
+  the move costs a man stood nearer the door's own line under fire through it. Never played, never seen on a GPU.
 - **Two door checks run on ROOM-FIGHT floors (10-17).** `doortools-firstman` and `threshold-hold` hold squads from the rooms (SQUADDEAL) off inside
   their own runs, by the stand's own word (`TPS_SQUADDEAL=0` round the stand-up: `rig`'s `deal: false`, threshold-probes' `NODEAL`). On a dealt floor
   the room's men are their squad's and dig in on its word (that rule's owner's reading, its runs): four seconds after a bang they are still

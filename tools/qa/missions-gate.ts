@@ -7,6 +7,11 @@
 //   bun run tools/qa/missions-gate.ts [--seeds 1-2] [--quiet-seeds 1-8] [--jobs N] [--cap 300] [--json f.json]
 // RED: a run that throws, a run that stalls (the commander stuck, the mission not ended inside --cap seconds), a mission of the list that was not played.
 // NOT judged: who won, how many came out, the smells — those are the tallies' business (playthrough.ts's own report is printed under the verdict lines).
+// THE COMMANDER HERE HUNTS FIRST (PT_HUNT=first, playthrough.ts): once no room is held he goes for whoever is left before he walks the rooms again. His default
+// walks every room first, and with the last man standing out in the open that ran the compound's seed 2 to the cap with the team 4 of 4 (the hunt began 19 s
+// before it). This gate judges a stall, never who won; the order does change which end a few rows reach (3 of 42 here), so a row is played again with
+// `PT_HUNT=first bun run tools/qa/ships.ts --trace <id>:<seed>`, and the tallies, which keep the default, are not to be read off this gate. PT_HUNT=rooms in the
+// caller's env = the default order under the gate (any other word, or none: first). The report line says which was run.
 // About five minutes at --jobs 4 on four cores. Exit 0 = every mission ended on every seed, 1 = a red line.
 import { resolve } from 'node:path';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -18,9 +23,10 @@ export async function missionsGate(opts: { seeds?: string; quietSeeds?: string; 
   const { SCENARIOS, QUIET_MISSIONS: QUIET } = await import(`${ROOT}/src/scene/scenarioList.ts`) as { SCENARIOS: Row[]; QUIET_MISSIONS: Row[] };
   const seeds = opts.seeds ?? '1-2', quietSeeds = opts.quietSeeds ?? '1-8', jobs = opts.jobs ?? Math.max(1, Math.min(4, cpus().length)), cap = opts.cap ?? 300;
   const dir = opts.json ? null : mkdtempSync(resolve(tmpdir(), 'missions-gate-')), file = opts.json ?? resolve(dir!, 'runs.json');
+  const hunt = process.env.PT_HUNT === 'rooms' ? 'rooms' : 'first';   // (the head: the gate's commander hunts first; 'rooms' = playthrough.ts's default order)
   let ok = true;
   try {
-    const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'ships.ts'), '--seeds', seeds, '--jobs', String(jobs), '--cap', String(cap), '--json', file], { stdout: 'pipe', stderr: 'pipe' });
+    const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'ships.ts'), '--seeds', seeds, '--jobs', String(jobs), '--cap', String(cap), '--json', file], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, PT_HUNT: hunt } });
     const [out, err] = await Promise.all([new Response(pr.stdout).text(), new Response(pr.stderr).text()]); const code = await pr.exited;
     let runs: { scn: string; seed: number; end: string; why: string; t: number; team: number; of: number }[] = [];
     try { runs = JSON.parse(readFileSync(file, 'utf8')).runs; } catch { /* no file: the play-through died before its report */ }
@@ -33,7 +39,7 @@ export async function missionsGate(opts: { seeds?: string; quietSeeds?: string; 
     }
     const strangers = runs.filter(r => !SCENARIOS.some(e => e.id === r.scn)); if (strangers.length) { ok = false; console.log(`- FAIL — runs of missions the list does not have: ${strangers.map(r => r.scn).join(' ')}`); }
     if (code !== 0 && ok) { ok = false; console.log(`- FAIL — the play-through exited ${code} with every run ended — ${err.trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`); }
-    console.log(`  (${runs.length} runs as shipped, seeds ${seeds}; the play-through's own report:)`);
+    console.log(`  (${runs.length} runs as shipped, seeds ${seeds}, the commander ${hunt === 'first' ? 'hunting first (PT_HUNT=first)' : 'walking the rooms first (PT_HUNT=rooms, his default)'}; the play-through's own report:)`);
     for (const ln of out.trim().split('\n')) console.log(`    ${ln}`);
     // THE QUIET MISSIONS: no squad to command — the scripted lone player (solo-night.ts --quiet, the partner with --squad 1) takes the thing and walks out,
     // a ghost (no eye finds him, nothing hurts him: solo-night.ts --ghost) so the run is the mission's own machinery start to debrief, not his luck. Red the same way: a throw, a stall, a row not played.
