@@ -44,6 +44,7 @@ import { MAX_LIGHTS } from '../render/lights';
 import { closeNearK } from './close';
 import { calmTorchDark } from './calmtorch';
 import { darkFoeLit } from './darkfoe';
+import { powerOutLit } from './powerout';
 import { hearWhistle, whistleSoft, whistlePatrolTick, glanceToward, WHISTLE, WHISTLE_SOFT_UPPER } from './whistle';
 import { hearPath, airTrans, loudLen, strokeLight } from './weather';
 import { ATTENTION, attentionHeard, attentionTick, attentionSideK, attentionAside, attentionEarK, attentionNoiseK, attentionStep, attentionWalk, attentionDwell, attentionTold, attentionAgain } from './attention';
@@ -2711,7 +2712,7 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   }
   if (g.time < gd.lightDeadUntil) { fl.enabled = false; }
   else if (gd.lightDeadUntil > 0 && g.time < gd.lightDeadUntil + 1.0) { fl.enabled = Math.sin(g.time * 50) > 0.2; }   // sputters back
-  else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
+  else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd) || powerOutLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
   if (fl.enabled && dozeDark(gd)) fl.enabled = false;   // (doze.ts: a man sat down to doze has put his torch out — false with its switch off)
   fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = g.engine.settings.flashlightRadius;
   return held;

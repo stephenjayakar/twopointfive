@@ -212,8 +212,10 @@ export const workPosted = () => keep(async () => {
   const errandOf = (g: any) => g.guards.filter((gd: any) => gd.task?.kind === 'breaker');
   const lineIn = (R: any) => R.said.filter((t: string) => /checking the breaker/.test(t));
   const plain = (R: any, secs: number) => { for (let i = 0; i < secs * 60; i++) { R.g.player.visibility = 0.05; R.W.step(DT); } };
+  const { POWEROUT } = await import(`${ROOT}/src/game/powerout.ts`); const po0 = POWEROUT.on;   // (a blackout sends defenders to the breaker, a later rule: held off for the two room clears here, after each stand-up — powerout-check.ts holds it, with WORK.posted on)
+  try {
   // --- a room clear: every defender is held on his mark
-  { const R = await rig(g => { g.fogOfWar.on = true; return g.roomClear.start(21); });
+  { const R = await rig(g => { g.fogOfWar.on = true; POWEROUT.on = false; return g.roomClear.start(21); });
     const { g } = R; const foes = g.guards.filter((gd: any) => gd.team !== 'operative' && gd.state !== 'dead');
     verdict(!R.why && foes.length > 0 && foes.every((gd: any) => gd.hold || gd.pinned), 'staged: the room clear, every defender held on his mark', `refusal ${R.why} · ${foes.map((gd: any) => `${gd.callsign}[${gd.hold ? 'hold' : ''}${gd.pinned ? ' pinned' : ''}]`).join(', ')}`);
     g.setBlackout(86400, 'hand'); plain(R, 1);
@@ -222,7 +224,7 @@ export const workPosted = () => keep(async () => {
     verdict(g.blackout.active && lineIn(R).length === 0, 'six seconds on it is still dark and still nobody has said it', `lines ${JSON.stringify(lineIn(R))}`); }
   // --- the fault, with the rule off: a held man is handed it, says it, and stands there
   { WORK.posted = false;
-    const R = await rig(g => { g.fogOfWar.on = true; return g.roomClear.start(21); });
+    const R = await rig(g => { g.fogOfWar.on = true; POWEROUT.on = false; return g.roomClear.start(21); });
     const { g } = R; g.setBlackout(86400, 'hand'); plain(R, 1);
     const man = errandOf(g)[0], at0 = man ? [...man.char.pos] : null; plain(R, 6);
     verdict(!!man && (man.hold || man.pinned) && lineIn(R).length >= 1 && flat(man.char.pos, at0!) < 0.5 && g.blackout.active, 'WORK.posted off = as it was: a held defender says he is checking the breaker and never leaves his mark',
@@ -235,6 +237,7 @@ export const workPosted = () => keep(async () => {
     const man = errandOf(g)[0], d0 = man ? flat(man.char.pos, bp) : 0; plain(R, 10);
     verdict(!!man && !man.hold && !man.pinned && lineIn(R).length >= 1 && d0 - flat(man.char.pos, bp) > 1, "the solo night: the nearest of the shift is handed it, says it, and walks for the breaker",
       man ? `${man.callsign}: ${f2(d0)} m → ${f2(flat(man.char.pos, bp))} m · lines ${JSON.stringify(lineIn(R))}` : 'nobody was handed it'); }
+  } finally { POWEROUT.on = po0; }
 });
 
 /** lighting.ts's own 'check the breaker' errand (the other side's, nobody ordered): walked to the panel's own face, and the mains re-armed only by a man with

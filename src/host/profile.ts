@@ -76,6 +76,7 @@ import { moraleFromQuery } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { DARKDOOR } from '../game/darkdoor';
 import { DARKFOE } from '../game/darkfoe';
+import { POWEROUT } from '../game/powerout';
 import { DOZE } from '../game/doze';
 import { netQuietFromQuery } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
@@ -212,6 +213,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DARKDOOR.on = !q.has('nodarkdoor');   // not in there alone (game/darkdoor.ts): a green man, alarmed and alone, stops at the doorway of a dark room, says so, sweeps the opening and waits for a mate — then they go in together, or nobody comes and he gives it up: ON in the page (it acts only with morale on); ?nodarkdoor = every man walks into the dark as he did
   DOZE.on = !q.has('nodoze');   // dozing in the dark (game/doze.ts): a calm staff man with a long wait in an unlit place sits in the chair there and nods off, and can be woken — ON in the page; ?nodoze = every man stands his wait awake, as it was
   DARKFOE.on = !q.has('nodarkfoe');   // an enemy on alert does not sit blind in the dark (game/darkfoe.ts): a defender who knows and cannot see what he is watching lights the lamp on his gun, and one with no lamp walks to where he can see — ON in the page; ?nodarkfoe = their lights stay off and they stand where they were put, as they did
+  POWEROUT.on = !q.has('nopowerout');   // the lights go out and somebody goes to put them back on (game/powerout.ts): a mission's defenders who see the lights die say so on their net and send their nearest free men to the breaker, lamps lit — ON in the page; ?nopowerout = they stand in the dark for as long as the team takes, as they did
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts; it needs the row above): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
   ATTENTION.on = !q.has('noattention');   // a guard has one attention, and where it is can be seen (game/attention.ts): ON in the page — a small thing that makes a calm man look takes his attention there for a time the floor shows, and his eye for the rest is narrower while it does; ?noattention = every wary man sweeps the room with his whole eye, as it was
   PICTURE.on = !q.has('nopicture');   // each man keeps his own picture of the fight (game/picture.ts): ON in the page — where he believes each enemy to be (seen, heard, told; it goes out of date), and the spot rules that ask it; ?nopicture = no memory kept and every spot picked as it was
@@ -346,6 +348,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'RUNNER.on': 'TPS_RUNNER=1',
   'DARKDOOR.on': 'TPS_DARKDOOR=1',
   'DARKFOE.on': 'TPS_DARKFOE=1',
+  'POWEROUT.on': 'TPS_POWEROUT=1',
   'DOZE.on': 'TPS_DOZE=1',
   'NETQUIET.on': 'TPS_NETQUIET=1',
   'ATTENTION.on': 'TPS_ATTENTION=1',

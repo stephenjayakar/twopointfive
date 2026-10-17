@@ -92,6 +92,7 @@ import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
+import { POWEROUT } from './powerout';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -305,6 +306,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (d.lend === undefined) DOZE.lend = false; }   // (… and one from before the screen held his attention by the attention rule: his eyes were whole)
   if (!k.tables.DARKFOE) DARKFOE.on = false;   // (a file from before an alerted enemy lit his lamp or left his post for the dark: its defenders' lights stayed off and they stood where they were put)
   else if ((k.tables.DARKFOE as Partial<typeof DARKFOE>).suspect === undefined) DARKFOE.suspect = true;   // (…and one from before the lamp waited for the alert: a man who was only suspicious lit his too)
+  if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)
   if (!k.tables.PICTURE) PICTURE.on = false;   // (a file from before each man kept his own picture of the fight: nobody remembered where an enemy had been, and every spot was picked without one)
