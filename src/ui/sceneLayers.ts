@@ -209,10 +209,11 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
   if (snowy) {
     { const vars = [
         mk('weather.snowRate', 'snowfall', 'src/game/weatherKinds.ts WEATHER_PRESETS.snow', () => W.snowRate, v => { W.snowRate = v; }, { min: 0.01, max: 2, step: 0.01 }, 'how hard it snows (the weather\'s own number: 1 = SNOWFX.perM2 flakes over a square metre). The flakes alone thin with it; it stops short of none, where the game stands the wisps, grains and all of the snow down with it (snowFx.ts snowing) — the layer\'s switch is the way to see the scene without flakes'),
-        ...table('SNOWFX', SNOWFX, FX, { rows: { size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, shutter: { max: 0.1, step: 0.0005 }, minPx: { max: 4, step: 0.05 }, maxPx: { max: 12, step: 0.1 }, iso: { max: 1 }, fwdK: { max: 1 }, fwdG: { max: 0.99 }, brightJit: { max: 1 }, sheetAmp: { max: 0.95 }, skid: { max: 1, step: 0.01 }, perM2: { step: 0.1 } } }),
+        ...table('SNOWFX', SNOWFX, FX, { rows: { size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, shutter: { max: 0.1, step: 0.0005 }, minPx: { max: 4, step: 0.05 }, maxPx: { max: 12, step: 0.1 }, iso: { max: 1 }, fwdK: { max: 1 }, fwdG: { max: 0.99 }, brightJit: { max: 1 }, sheetAmp: { max: 0.95 }, skid: { max: 1, step: 0.01 }, perM2: { step: 0.1 }, past: { max: 30, step: 0.5 } } }),
         ...part(/^FLAKE_/, { FLAKE_WALL_IN: { max: 0.5, step: 0.01 } }),
       ];
       readWhen(vars, ['SNOWFX.airLow', 'SNOWFX.airHigh', 'SNOWFX.airLift', 'SNOWFX.skid'], oneAir);
+      readWhen(vars, ['SNOWFX.past'], () => SNOW_LOOK.past);   // (the snow past the level's rim: nothing reads the metres with ?snowpast=0)
       layers.push({ id: 'flakes', name: 'Falling flakes', group: 'Air', vars, on: muting(vars, ['SNOWFX.gain', 'SNOWFX.skyK']), build: rebuildPart, stat: () => { const s = snowStats(game); return s.active ? `${Math.round(s.pop)} in the air` : s.why; } }); }
     // (ONE SNOW IN ONE AIR: read every frame, so its switch is live — but only on a page whose particle shaders were built to read the wind sim)
     if (AIR_SIM.on && (SNOW_LOOK.oneAir || SNOW_LOOK.grains)) layers.push({ id: 'oneair', name: 'Snow in one air', group: 'Air', vars: [], on: { mode: true, get: () => SNOW_LOOK.oneAir, set: on => { SNOW_LOOK.oneAir = on; } },

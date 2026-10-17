@@ -108,7 +108,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK'];
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -161,6 +161,7 @@ import { WORDS } from './words';
 import { LOOK } from '../scene/look';
 import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a game module, no cycle)
 import { LIVED } from '../scene/lived';
+import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -263,6 +264,8 @@ export function knobRegistry(): Record<string, object> {
     MUSIC,
     // lived-in rooms (scene/lived.ts): whether a level's lived things — the furniture that makes a room its own place — are loaded; read when a level loads
     LIVED,
+    // what the walk grid calls floor, feet cross (scene/collision.ts): a walker's circle test begins where the grid's bake begins
+    UNDERFOOT,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)
