@@ -424,8 +424,12 @@ export async function stickyMark(): Promise<boolean> {
       stickyIssue(pl, 1); const C = fireCam(g, pl, ww[0].from, v3.mad(ww[0].P, ww[0].n, -0.5) as Vec3); W.step(DT);
       const air = !!C.vel, mAir = stickyMarks(g).length, keyAir = (g.dynBoxes as any[]).some(b => b.mkey !== undefined && (b.mkey >>> 24) === 5 && b.mkey >= (5 << 24) + 0x800000 && Math.hypot(b.c[0] - C.pos[0], b.c[2] - C.pos[2]) < 0.2);
       let n = 0; while (C.vel && n++ < 180) W.step(DT); steps(W, 20); const M3 = stickyMarks(g) as any[];
-      F.verdict(air && mAir === 2 && !keyAir && !C.vel && M3.length === 3 && M3.filter(m => m.sends).length === 1 && near(M3.find(m => m.sends), C),
-        'a third one in the air carries no mark; landed it is marked and is the one that sends', `in the air ${air}: marks ${mAir}, keyed ${keyAir} · landed: marks ${M3.length}, sending ${M3.filter(m => m.sends).length} (the newest ${near(M3.find(m => m.sends), C)})`);
+      F.verdict(air && mAir === 2 && keyAir && !C.vel && M3.length === 3 && M3.filter(m => m.sends).length === 1 && near(M3.find(m => m.sends), C),
+        'a third one in the air is in the picture too (keyed) and carries no mark; landed it is marked and is the one that sends', `in the air ${air}: marks ${mAir}, keyed ${keyAir} · landed: marks ${M3.length}, sending ${M3.filter(m => m.sends).length} (the newest ${near(M3.find(m => m.sends), C)})`);
+      // a camera that is no longer out (taken back, retired) has no mark; a viewer's picture with the fog lifted has none
+      const gone = pl.cams.splice(pl.cams.indexOf(A), 1)[0]; steps(W, 2); const M4 = stickyMarks(g) as any[], k0 = (5 << 24) + 0x800000 + (gone.id % 4096) * 2, goneBoxes = (g.dynBoxes as any[]).filter(b => b.mkey === k0 || b.mkey === k0 + 1).length; pl.cams.unshift(gone); steps(W, 2);   // (by its own keys: the third camera lies beside where it was)
+      fog.bared = true; const mBared = stickyMarks(g).length; fog.bared = false;
+      F.verdict(M4.length === 2 && goneBoxes === 0 && stickyMarks(g).length === 3 && mBared === 0, 'a camera no longer out has no mark and no box; with the fog lifted for a viewer nothing is marked', `one gone: marks ${M4.length}, its boxes ${goneBoxes} · back: ${stickyMarks(g).length} · fog lifted for a viewer: ${mBared}`);
       // no fog, no marks (the floor is in plain view) — and the fog back, they are back
       fog.on = false; steps(W, 2); const mNoFog = stickyMarks(g).length, allIn = pl.cams.every((c: any) => boxesOf(g, c).length >= 2); fog.on = true; steps(W, 45); const mBack = stickyMarks(g).length;
       F.verdict(mNoFog === 0 && allIn && mBack === 3, 'with no fog up nothing is marked (every camera is drawn anyway); the fog back, the marks are back', `no fog: marks ${mNoFog}, all drawn ${allIn} · fog back: marks ${mBack}`);

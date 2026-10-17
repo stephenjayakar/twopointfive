@@ -51,8 +51,8 @@ export const STICKY = {
    *  landing's, over the 0.08 a calm man's ears start at — guards.ts — so one within about 2 m of him turns to it) */
   take: false, takeReach: 1.3, takeNoise: 0.1,
   /** HIS OWN STUCK CAMERAS SHOW IN THE FOG OF WAR (the maintainer, 10-17: "you should be able to see your sticky cameras in fog of war"): OFF here and on the
-   *  frozen stand, ON in the page (?cammark=0). Up, a stuck camera of his is a thing the fog never takes out of the picture (stickyBoxes keys its boxes as a
-   *  wall device's: bolted on, his own, it gives nobody away) and the HUD puts a small lens on each while the fog is live (stickyMarks), filled red on the
+   *  frozen stand, ON in the page (?cammark=0). Up, a camera of his is a thing the fog never takes out of the picture (stickyBoxes keys its boxes as a
+   *  wall device's: his own, it gives nobody away — one that DROPS off a wall blown out where nobody looks is seen to drop, as it is heard to) and the HUD puts a small lens on each while the fog is live (stickyMarks), filled red on the
    *  one that sends. Down: a camera on floor no eye of the team has is not drawn at all, and nothing marks one — as it was. Picture only. */
   mark: false,
 };
@@ -249,9 +249,9 @@ export function stickyBoxes(g: Game, out: Box[]) {
     const yaw = up ? 0 : v3.yawOf(z);
     const body: Vec3 = up ? [0.035, 0.014, 0.035] : [0.035, 0.035, 0.014], lens: Vec3 = up ? [0.012, 0.006, 0.012] : [0.012, 0.012, 0.006];
     const c0 = v3.mad(c.pos, z, c.vel ? 0 : 0.014), c1 = v3.mad(c.pos, z, c.vel ? 0.02 : 0.034);
-    // (STICKY.mark: a STUCK one's two boxes carry a wall device's key — the fog's rule for loose things lets those through wherever they are, fogofwar.ts
-    // THING_PASS; unkeyed, as one in flight stays, a box is in the picture only on floor the team sees)
-    const key = STICKY.mark && !c.vel ? MKEY.device + CAM_KEY + (c.id % 4096) * 2 : undefined;
+    // (STICKY.mark: its two boxes carry a wall device's key, in the air and stuck — the fog's rule for loose things lets those through wherever they are,
+    // fogofwar.ts THING_PASS; unkeyed, a box is in the picture only on floor the team sees: one fired into the fog went out of it in flight)
+    const key = STICKY.mark ? MKEY.device + CAM_KEY + (c.id % 4096) * 2 : undefined;
     out.push(makeBox({ c: c0, h: body, yaw, albedo: v3.copy(BODY), flags: BoxFlag.Dynamic | BoxFlag.NoShadow, mkey: key }));
     out.push(makeBox({ c: c1, h: lens, yaw, albedo: v3.copy(sends(c) ? LENS_LIVE : LENS), flags: BoxFlag.Dynamic | BoxFlag.NoShadow, mkey: key === undefined ? undefined : key + 1 }));
   }
@@ -268,7 +268,7 @@ function sending(g: Game): (c: StickyCam) => boolean {
  *  with either switch down. Picture only: no step reads it. */
 export interface CamMark { at: Vec3; sends: boolean }
 export function stickyMarks(g: Game): CamMark[] {
-  if (!STICKY.on || !STICKY.mark || !g.fogOfWar.active || !g.player.cams.length) return NO_MARKS;
+  if (!STICKY.on || !STICKY.mark || !g.fogOfWar.active || g.fogOfWar.bared || !g.player.cams.length) return NO_MARKS;   // (bared: a viewer's picture with the fog lifted — replay/engineplay.ts)
   const sends = sending(g), out: CamMark[] = [];
   for (const c of g.player.cams) if (!c.vel) out.push({ at: camLens(c), sends: sends(c) });
   return out;

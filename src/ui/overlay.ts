@@ -237,6 +237,7 @@ export class Overlay implements HudLike {
     for (let i = nG + civs.length; i < this.markers.length; i++) this.markers[i].style.display = 'none';   // (markers past the roster: a spawned unit despawned again — teams — or civilians gone, must not leave a mark hanging where they stood)
     // a faint dot on everything F can act on (lights, doors, bodies — so hidden ceiling panels and closed doors are discoverable)
     const its = game.interactables;
+    const camMarked = stickyMarks(game).length > 0;   // (his stuck cameras carry their own lens mark: no dot inside it)
     while (this.dots.length < its.length) { const el = document.createElement('div'); el.className = 'idot'; el.style.cssText = 'position:absolute;width:5px;height:5px;border-radius:50%;transform:translate(-50%,-50%);'; this.root.appendChild(el); this.dots.push(el); }   // (the class is only a handle for index.html to hide them wholesale — attract mode — over the inline display this loop keys)
     this.dots.forEach((el, i) => {
       const it = its[i];
@@ -244,7 +245,7 @@ export class Overlay implements HudLike {
       const [x, y, vis] = cam.project(it.pos, w, h, EDGE);
       if (!vis || (it.guard && game.fogOfWar.hidden(it.guard))) { el.style.display = 'none'; return; }
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
-      if (it.kind === 'guard') { el.style.display = 'none'; return; }   // living guards already carry a state marker; no extra dot
+      if (it.kind === 'guard' || (it.kind === 'cam' && camMarked)) { el.style.display = 'none'; return; }   // living guards already carry a state marker, a stuck camera its lens mark; no extra dot
       el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(143,240,180,0.75)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
     // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)
