@@ -2108,7 +2108,8 @@ export class DoorTools {
           : g.items.spawn('flash', at0, v0, { fuse: 99, who: th.char.id, heading: v3.yawOf(v0) });   // (the long fuse: this op fires it — bang() — with the entry's own men kept off its list)
         it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
         th.char.anim.tossItem(TOSS_QUICK); g.say(th, op.frag ? 'frag out!' : WORDS.on ? 'bang out!' : 'bang out.'); if (op.frag) g.msg('frag out — stay off the door');
-        op.can = it; op.tossT = t; op.threw = th; op.phase = 'fuse'; this.beat(op, into ? `toss:${th.callsign} · into the room · ${(-offOf(d, into.at, op.side)).toFixed(1)} m in, ${(alongOf(d, into.at) - W / 2).toFixed(1)} along · ${into.n} of ${into.of} places lit${pass ? ` · passed ${gap.toFixed(1)} m to the door` : ''}` : `toss:${th.callsign}`);
+        if (into) this.beat(op, `can into the room · ${(-offOf(d, into.at, op.side)).toFixed(1)} m in, ${(alongOf(d, into.at) - W / 2).toFixed(1)} along · ${into.n} of ${into.of} places lit${pass ? ` · passed ${gap.toFixed(1)} m to the door` : ''}`);   // (its own beat, and BEFORE the toss: 'toss:<callsign>' is read by name, and as the last beat of its tick)
+        op.can = it; op.tossT = t; op.threw = th; op.phase = 'fuse'; this.beat(op, `toss:${th.callsign}`);
         break;
       }
       case 'fuse': {

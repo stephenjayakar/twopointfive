@@ -68,7 +68,7 @@ export async function bangsCheck(): Promise<boolean> {
         if (!op) continue;
         // (5): a man of the team who is NOT on the order walks into the room once it is given (given with him in there it is refused in words: 'behind that door'), to where the can went the time before
         if (mate && !out.mate) { out.mate = mate.callsign; mate.char.pos[0] = mateAt![0]; mate.char.pos[2] = mateAt![2]; mate.path = []; mate.pathGoal = null; await quiet(() => O.give('hold', { kind: 'point', at: [mateAt![0], 0, mateAt![2]] }, [mate])); }
-        while (nb < op.beats.length) { const b = op.beats[nb++]; out.beats.push(`${(b.t - t0).toFixed(1)} ${b.what}`); if (/^toss:/.test(b.what)) { out.toss = b.what; out.tToss = b.t; } }
+        while (nb < op.beats.length) { const b = op.beats[nb++]; out.beats.push(`${(b.t - t0).toFixed(1)} ${b.what}`); if (/^toss:/.test(b.what)) { out.toss = `${b.what}${out.into ? ` · ${out.into}` : ''}`; out.tToss = b.t; } else if (/^can into the room/.test(b.what)) out.into = b.what; }
         if (!can && op.can) { can = op.can; const th = op.threw.char.pos; out.thrower = op.threw.callsign; out.handM = flat(th, can.pos); out.aim = op.aim ? { in: -offOf(d, op.aim.at, op.side), at: op.aim.at } : null; out.passed = !!op.pass; out.opSide = op.side;
           passTo = op.pass ? [...op.pass.to] : null; out.passMin = passTo ? flat(can.pos, passTo) : null;
           if (mate) { const m = mate.char.pos; out.mateIn = -offOf(d, m, op.side); out.mateM = out.aim ? flat(out.aim.at, m) : null; out.mateLine = out.aim ? flat(out.aim.at, m) <= DOORTOOLS.thrFlashM && !g.col.segmentBlocked(out.aim.at, [m[0], 1.45, m[2]]) : false; } }
