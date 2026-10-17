@@ -1063,7 +1063,8 @@ async function quietPicture(names: string[]) {
  *    · THE LEAF, headless, on each of those ways with a door: the level stood up as the page stands it, the leaf a hand ajar, the cost's own hand on
  *      it (the game's silent crack at the table's rate, from the team's side) — it stands wide within the throw's time, nobody is roused by it (the
  *      park's count 0, the floor at 0, no alarm placed), and the encounter's restart hangs it shut again for the staging to set ajar.
- *    · LIFE AT REST (kitViewIdleAt / kitViewIdleEvery, KIT_VIEW_QUIET.idle): the beat's timeline — out, held, back, one blink, no jump — and its waits.
+ *    · LIFE AT REST (kitViewIdleAt / kitViewIdleEvery, KIT_VIEW_QUIET.idle): the beat's timeline — out, held, back, one blink, no jump — and its waits;
+ *      and that it is SWITCHED OFF (`idle.on`, kitViewIdleOn): the table says no, a check's own raise says yes.
  *  KITCOST_BREAK=1: the gun's suppressor is read the wrong way round and the leaf is thrown at no speed — the rows of what costs and of the leaf must FAIL.
  *  WHAT THIS CANNOT SEE: the slab, the room's lamps at full, him up in it, the restage under the dissolve: tools/qa/kitview-levels.cjs on a quiet kind
  *  (`__kitview.cost`). Nothing of it has been seen on a GPU. */
@@ -1095,6 +1096,9 @@ async function quietCost(names: string[]) {
     const dark = xs.filter(a => a.lit < 1).length * secs / N, every = I.every.map((_: number, i: number) => KV.kitViewIdleEvery(i)), reach = xs.filter(a => a.x >= I.slide - 1e-9).length * secs / N;
     row(at(0).x === 0 && at(0).env === 0 && Math.abs(peak - I.slide) < 1e-9 && jump < I.slide * 0.02 && !at(secs - 0.01).done && at(secs).done && at(secs).x < 1e-9 && at(secs / 2).env === 1 && at(secs / 2).lit === 1 && at(I.blinkAt + I.blink / 2).lit === I.blinkTo && Math.abs(dark - I.blink) < 0.03 && Math.abs(reach - I.stay) < 0.05 && secs >= 2.5 && secs <= 3.5 && every.every((s: number) => s >= 14 && s <= 16) && KV.kitViewIdleEvery(I.every.length) === every[0],
       `life at rest: after ${every.join(', ')} s of rest in turn (a fixed list: no dice) the lamp behind the door slides ${f2(peak)} m along the wall and back in ${f2(secs)} s with no jump (${f2(jump * 1000)} mm at most between two of ${N} samples), stays ${f2(reach)} s at its far point, and is dark to ${I.blinkTo} of itself for ${f2(dark)} s from ${I.blinkAt} s; a lamp hung for the beat is in from nothing and out to nothing`); }
+  // (…AND THE BEAT IS SWITCHED OFF — `idle.on`, kitViewIdleOn: the table's word is no; only a check that raises it for itself gets one. KITCOST_BREAK: read as raised)
+  row(QK.idle.on === false && KV.kitViewIdleOn(BREAKC ? true : null) === false && KV.kitViewIdleOn(true) === true && KV.kitViewIdleOn(false, { on: true }) === false && KV.kitViewIdleOn(null, { on: true }) === true,
+    `life at rest is switched off: the table's \`idle.on\` is ${QK.idle.on}, so no beat begins (${KV.kitViewIdleOn(BREAKC ? true : null) ? 'A BEAT WOULD BEGIN' : 'none would'}); raised by a check for itself it plays, lowered by one it does not, whatever the table says`);
   // ---- every quiet way in the tree: the lamp, and the leaf
   const ways: { name: string; k: number; Y: Data; link: string; data: Data }[] = [];
   for (const e of ALL_MISSIONS as Data[]) { if (e.kind !== 'quiet') continue; const name = (e.level ?? 'office.json').replace(/\.json$/, ''); if (!names.includes(name) || ways.some(w => w.name === name)) continue;

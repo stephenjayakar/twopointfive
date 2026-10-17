@@ -279,8 +279,11 @@ export const KIT_VIEW_QUIET = {
    *  idle sway is stopped for its length. WHICH WAY: further past the LATCH (the only way the gap still sees it: slid the other way the lamp is
    *  behind the leaf and the blade only goes out) — the blade swings from its line straight out round toward the hinge's side, up along the wall
    *  (56 to 67 deg off the door's line at 0.5 m), and back; toward his boots only where he rests on the hinge's side. With no lamp of the
-   *  picture's own hung, one is hung for the beat (its place and colour, at `gain` of it, in and out over `fade` s) */
-  idle: { every: [15, 14, 16, 14.5, 15.5], slide: 0.5, out: 1.2, stay: 0.6, blinkAt: 0.5, blink: 0.4, blinkTo: 0.1, gain: 1, fade: 0.3 },
+   *  picture's own hung, one is hung for the beat (its place and colour, at `gain` of it, in and out over `fade` s).
+   *  SWITCHED OFF (`on`: the beat plays only when it is true; a check raises it for itself — `KitView.idleOn`). As it stands it reads as a
+   *  glitch: here he rests on the latch's side, so the blade swings AWAY from him; its pivot is hidden in the pool, so the pool seems to wag a
+   *  tail; and on the Team & kit page both ends of the swing fall outside the clear column. The code and its pure functions stay */
+  idle: { on: false, every: [15, 14, 16, 14.5, 15.5], slide: 0.5, out: 1.2, stay: 0.6, blinkAt: 0.5, blink: 0.4, blinkTo: 0.1, gain: 1, fade: 0.3 },
   /** SAM'S WEAPON LIGHT on a quiet kind: from the crouch, on for one pass across the door — `sweep` s of it, held `hold` s — and off; aimed … m up */
   light: { sweep: 0.5, hold: 0.2, aimY: 0.9 },
 };
@@ -428,6 +431,8 @@ export interface KitView {
   readonly life: { n: number; cuts: number; on: boolean; still: boolean; lamp: 'own' | 'beat' | null; far: number; next: number };
   /** a check's own: seconds of rest before the next idle beat, over the table's list (null: the table's) */
   idleEvery: number | null;
+  /** a check's own: the idle beat switched on or off over the table's `idle.on` (null: the table's) */
+  idleOn: boolean | null;
   /** the pace: the display's rate as read, every how many of its frames one is drawn, the count that rate starts from, down from it — and a fresh pacer, for a check to feed */
   readonly pace: { hz: number; every: number; base: number; slow: boolean }; pacer: typeof kitViewPacer;
   /** the last beat over — how it ended ('done' · 'cut': a pick · 'cap' · 'threw' · 'down'), where the thing it threw last lay, the brightest transient light
@@ -582,6 +587,8 @@ export function kitViewBladeLine(width: number, th: number, ajar: number, back: 
     if (clear) { lo = Math.min(lo, k); hi = Math.max(hi, k); } }
   return hi < lo ? null : { from: Math.atan(lo) / R, to: Math.atan(hi) / R };
 }
+/** …and whether the beat plays at all (pure): the table's switch, or what a check raised for itself (`KitView.idleOn`; null = the table's) */
+export function kitViewIdleOn(raised: boolean | null | undefined = null, I: { on: boolean } = KIT_VIEW_QUIET.idle): boolean { return raised ?? I.on; }
 /** …and the seconds of rest before the n-th beat (a fixed list in turn: no dice, and the clock is the game's) */
 export function kitViewIdleEvery(n: number, I: { every: readonly number[] } = KIT_VIEW_QUIET.idle): number { return I.every[((n % I.every.length) + I.every.length) % I.every.length]; }
 
@@ -1650,13 +1657,15 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  ajar swings round toward the hinge's side and back, dark for a blink as somebody passes the lamp; for its length nobody's gun wanders (scan(): held as it stands).
    *  The lamp that slides is the picture's own where it hangs one, else one hung for the beat at the same place. It never begins under a row, a pick
    *  or a cost, nor with a tile's own next turn due inside its length; a row that begins under it ends it that frame, the lamp put back. It does not
-   *  read the pool lamp: the same with the pool shot out. Not at a blank wall (no opening to see it through). Never seen on a GPU */
+   *  read the pool lamp: the same with the pool shot out. Not at a blank wall (no opening to see it through). Never seen on a GPU.
+   *  OFF AS SHIPPED (`idle.on` false: kitViewIdleOn): nothing here begins unless a check raises `idleOn` for itself */
   let lifeT = NaN, lifeNext = NaN, lifeN = 0, lifeStill = false, lifeLamp: RtLight | null = null, lifeHung = false, lifeHome: Vec3 = [0, 0, 0]; const lifeSeen = { n: 0, cuts: 0, far: 0 };
   const lifeOff = (cutIt = false) => { if (isNaN(lifeT)) return; if (cutIt) lifeSeen.cuts++; lifeT = NaN; lifeStill = false; lifeNext = NaN; const L = lifeLamp; lifeLamp = null; if (!L) return;
     if (lifeHung) engine.lights.remove(L); else { L.pos = [lifeHome[0], lifeHome[1], lifeHome[2]]; L.intensity = L.peakIntensity = KIT_VIEW_QUIET.own.intensity * qBlade; } };
   const life = (S: Staged) => { const QK = KIT_VIEW_QUIET, QI = QK.idle, pl = game.player;
     const busy = !Q || !said || !!beat || asked !== null || costOn() || dz.phase !== '' || dirty !== null || !!game.puppet || walled(S);
     if (isNaN(lifeT)) {
+      if (!kitViewIdleOn(V.idleOn, QI)) { lifeNext = NaN; return; }   // (SWITCHED OFF — `idle.on`: no beat ever begins, on any way; one already up runs to its end)
       if (busy || isNaN(lifeNext)) { lifeNext = game.time + (V.idleEvery ?? kitViewIdleEvery(lifeN, QI)); return; }   // (the clock runs from the last frame that was not rest)
       if (game.time < lifeNext || (hi !== null && restUntil - game.time < QI.out * 2 + QI.stay + 0.5)) return;
       if (offRest(S) || flat(pl.char.pos, S.sam) > K.onSlot || S.order.some(g => flat(g.char.pos, homeOf(S, g).p) > K.homeM)) return;
@@ -2044,7 +2053,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       return { kind: quietKind, on: Q && !!S, lamp: Q && t ? { target: game.targets.includes(t), on: t.on, broken: t.broken, lit: !!t.light && t.light.enabled && t.light.intensity > 0, fixture: t.boxes.length > 0 && engine.world.statics[t.boxes[0]] === fixture, pos: [t.pos[0], t.pos[1], t.pos[2]] as Vec3 } : null,
         out: qOut.slice(), roofs: qRoofs.size, inside: { lamps: qIn.map(x => x.name), own: !!qOwn && engine.lights.lights.includes(qOwn), share: qShare }, leaf: S ? S.rest - S.shut : 0, place: Q && S ? [S.sam[0], S.sam[1]] as V2 : null, mate: Q && S?.mate ? S.mate.p : null,
         crouch: pl.crouch, knee: (pl.char.anim as unknown as { crouch: number }).crouch, holstered: pl.holstered, lift: lamps.fill && fillBase > 0 ? lamps.fill.intensity / fillBase : 1, kept: qKept }; },
-    get life() { return { n: lifeSeen.n, cuts: lifeSeen.cuts, on: !isNaN(lifeT), still: lifeStill, lamp: lifeLamp ? (lifeHung ? 'beat' as const : 'own' as const) : null, far: lifeSeen.far, next: isNaN(lifeT) && !isNaN(lifeNext) ? lifeNext - game.time : NaN }; }, idleEvery: null,
+    get life() { return { n: lifeSeen.n, cuts: lifeSeen.cuts, on: !isNaN(lifeT), still: lifeStill, lamp: lifeLamp ? (lifeHung ? 'beat' as const : 'own' as const) : null, far: lifeSeen.far, next: isNaN(lifeT) && !isNaN(lifeNext) ? lifeNext - game.time : NaN }; }, idleEvery: null, idleOn: null,
     get cost() { return { n: costSeen.n, cuts: costSeen.cuts, on: costOn(), last: costSeen.last ? { ...costSeen.last } : null }; },
     get scan() { const S = staged, row = (name: string, k: object, c: { aimYaw: number }, rest: number) => { const s = scans.get(k); return { name, on: !!s?.on, deg: s ? s.v / R : 0, off: wrap(c.aimYaw - rest) / R }; }; return S ? [row('Sam', game.player, game.player.char, yawTo(game.player.char.pos, S.foot)), ...S.order.map(g => row(g.callsign, g, g.char, homeOf(S, g).yaw))] : []; },
     rest() {
