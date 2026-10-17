@@ -106,12 +106,30 @@ const pick2 = held ? 'native' : agrees(kahan2, 2) ? 'kahan' : agrees(scaled2, 2)
 const pick3 = held ? 'native' : agrees(kahan3, 3) ? 'kahan' : agrees(scaled3, 3) ? 'scaled' : 'native';
 const pick4 = held ? 'native' : agrees(kahan4, 4) ? 'kahan' : agrees(scaled4, 4) ? 'scaled' : 'native';
 
-/** Math.hypot(a, b) — this runtime's own bits (see the file's head) */
-export const hyp2: (a: number, b: number) => number = pick2 === 'kahan' ? kahan2 : pick2 === 'scaled' ? scaled2 : native2;
-/** Math.hypot(a, b, c) — this runtime's own bits */
-export const hyp3: (a: number, b: number, c: number) => number = pick3 === 'kahan' ? kahan3 : pick3 === 'scaled' ? scaled3 : native3;
-/** Math.hypot(a, b, c, d) — this runtime's own bits */
-export const hyp4: (a: number, b: number, c: number, d: number) => number = pick4 === 'kahan' ? kahan4 : pick4 === 'scaled' ? scaled4 : native4;
+const own2: (a: number, b: number) => number = pick2 === 'kahan' ? kahan2 : pick2 === 'scaled' ? scaled2 : native2;
+const own3: (a: number, b: number, c: number) => number = pick3 === 'kahan' ? kahan3 : pick3 === 'scaled' ? scaled3 : native3;
+const own4: (a: number, b: number, c: number, d: number) => number = pick4 === 'kahan' ? kahan4 : pick4 === 'scaled' ? scaled4 : native4;
+/** Math.hypot(a, b) — this runtime's own bits (see the file's head); under the game's own maths (math/exact.ts EXACT.on) the Kahan sum on every runtime */
+export let hyp2: (a: number, b: number) => number = own2;
+/** Math.hypot(a, b, c) — this runtime's own bits; under the game's own maths the Kahan sum */
+export let hyp3: (a: number, b: number, c: number) => number = own3;
+/** Math.hypot(a, b, c, d) — this runtime's own bits; under the game's own maths the Kahan sum */
+export let hyp4: (a: number, b: number, c: number, d: number) => number = own4;
+/** THE GAME'S OWN MATHS (math/exact.ts, which alone calls this): on = every length by the one algorithm whatever the runtime's Math.hypot does — the Kahan sum,
+ *  Chrome's own, so the page in Chrome computes the lengths it always did; off = each runtime's own bits again, as picked above. Under ?nohyp / TPS_NOHYP=1
+ *  nothing moves: every length still goes through Math.hypot itself, which is then the game's own (the same sum, so the same bits, at the A/B's cost). */
+export function hypExact(on: boolean): void { if (held) return; hyp2 = on ? kahan2 : own2; hyp3 = on ? kahan3 : own3; hyp4 = on ? kahan4 : own4; }
+/** the Kahan sum for any number of terms (what Math.hypot becomes under the game's own maths) */
+export function kahanN(v: ArrayLike<number>): number {
+  const n = v.length;
+  if (n === 2) return kahan2(v[0], v[1]); if (n === 3) return kahan3(v[0], v[1], v[2]); if (n === 4) return kahan4(v[0], v[1], v[2], v[3]);
+  let max = 0, nan = false;
+  for (let i = 0; i < n; i++) { const x = Math.abs(+v[i]); if (x !== x) nan = true; else if (x > max) max = x; }
+  if (max === INF) return INF; if (nan) return NaN; if (max === 0) return 0;
+  let sum = 0, comp = 0;
+  for (let i = 0; i < n; i++) { const k = Math.abs(+v[i]) / max, s = k * k - comp, p = sum + s; comp = (p - sum) - s; sum = p; }
+  return Math.sqrt(sum) * max;
+}
 /** which way each arity went on this runtime (QA; `trials` = the inputs each candidate was held to — a sampled match, not a proof) */
 export const HYP = { two: pick2, three: pick3, four: pick4, trials: TRIALS, held };
 // the page says once which way it went (a browser nobody has measured shows here; headless stays silent: tools parse its output)

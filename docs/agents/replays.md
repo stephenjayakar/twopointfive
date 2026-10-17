@@ -94,6 +94,64 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
   field, `mPerPx`, a blast's kick. The session journal's format is untouched (it files the raw camera and input before the sample).
+- **The game's own maths** (`src/math/exact.ts`, switch `EXACT.on`; ON in the page, `?noexact` = the engine's own functions as before; OFF on the frozen stand,
+  `TPS_EXACT=1` raises it; the shipped stand has it on, `TPS_EXACT=0` there = `?noexact`; engine groundwork, nothing networked): the language leaves the
+  rounding of sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh and hypot to each engine, and they differ in the last place
+  (JavaScriptCore calls the system's library, V8 carries its own) — so one seed and one input stream played two different fights under bun and under
+  node from the first frame, and would between a browser and a server. With the switch on those fourteen are the game's own (ported from Go's pure-Go
+  `math` package, after Cephes and FreeBSD's msun; the licence notices are in the file's head; +, −, ×, ÷ and sqrt are exact everywhere and are all it
+  uses) and are put in `Math`'s place, so every call site in the tree computes on them unchanged; lengths (`hyp2/3/4`, `Math.hypot`) are then the Kahan
+  sum on every engine (Chrome's own). RULES: (1) the switch is settled BEFORE anything is built — the page's boot (`pageSwitches`), the harness's
+  (`headless.ts`, `standup.ts pinMaths`, first in `standGame`), a tape's (`engineplay.ts tables()`, `rerun.ts`, `replay.ts`: a recording from before
+  the key is built and played on the engine's functions); a flip under a live game is honoured from that step on, and what is KEPT from a rounded
+  function is remade (`onExact(fn)` for a constant a module works out as it loads — ragdoll.ts; `mathsEpoch` for a cache — a prop's frame, doze.ts's
+  sorted pulls). (2) No load-time `Math.sin(…)` constant outside `onExact`. (3) `**` cannot be replaced: in the simulation's folders write
+  `Math.pow(x, y)`; `x ** 2` alone is `x·x` on every engine and stays. (4) `Math.cbrt / expm1 / log1p / sinh / cosh / asinh / acosh / atanh` have no
+  own version: none is used under `src/`, and the check is red on one. CHECKS, each on both stands: `bun run tools/qa/exact-check.ts` (engines: one
+  stream of 2.3 million inputs folded under bun and under node, the same word; close: within 2 to 4 ulp of each engine's own, pow within 8; corners;
+  switch; load; uncovered; stand — `EXACT_BREAK=1` must fail) and `bun run tools/qa/coop-check.ts` (four scripted fights on the shipped stand, each
+  under bun AND node at this commit: raw float64 bits of the game — `game/digest.ts rawBits` — equal every half second, 1,356 to 3,840 frames;
+  `COOP_BREAK=1` = both on their own functions, must differ; `--ref` / `--write` = the older cross-machine reference file, which is from before this
+  and stale). OFF = THE BUILD AS IT WAS: 42 of 42 play-through digests (21 missions, seeds 1 and 2, `PT_DIGEST=1 tools/qa/playthrough.ts`) equal the build before on the frozen stand, and 42 of 42 on the shipped stand with the own maths held off (`TPS_EXACT=0`) and the record check on. COST (a room clear with the four, 1,500 harness steps on the shipped stand, off and on in turn, on a machine busy with other runs — read the ratio, not the milliseconds): under bun the median step 8.2 → 8.3 ms and the mean +8%; under node the median 12.7 → 13.4 ms (+6%) and the mean +10%. The sounds' synthesis at boot also runs on these functions and was not timed on a quiet machine.
+  NOT DONE / NOT SEEN: node's V8 is not Chrome's build of it, and nobody has run this in Chrome, in Safari or on a Mac — the two-engine line is bun
+  against node on one Linux machine; everything on the page (sound synthesis, the renderer's CPU side, the UI) also computes on these functions while
+  the switch is on.
+- **The senses on the CPU** (`src/game/sense.ts`, switch `SENSE.cpu`; DEFAULT OFF on the page and on both stands — `?cpusense`, `TPS_CPUSENSE=1`; whether the
+  page plays on it is the maintainer's call; engine groundwork, nothing networked): off, the men see by the renderer's values through `Game.sensors` — a fight
+  on the page is then its seed, its inputs AND a stream of GPU readbacks that land a drawn frame or two late (the run tape keeps them, so a tape re-runs; a
+  machine with no GPU cannot play the fight afresh). On, nothing is asked of the probe: every LIGHT meter falls to the estimate it already had for 'no answer
+  yet' (`guards.ts lightEstimateAt` — direct light with the walls between, the hour, lightning; what the harness has always run on), Sam's own meter reads that
+  estimate too (headless it never moved before), and a sight line's SMOKE is `CpuSmoke`: each emitter handed to the solver also feeds a blob (what it let out,
+  thinning at the solver's decay, widening, a wall between a blob and the line shuts it out), answered in the step that asks (`Sensors.own`). While it is on the
+  game's own smoke sits ON the solver object (`ownSmoke`: `emit` and `clearAll` feed both, whoever calls them; `budget()` is answered from the game's own count
+  of live emitters, aged by the step — the solver's count ages by the drawn frame). A solver the picture has turned off still gets no emitter; the game's does.
+  COST TO 'ONE MODEL FOR PICTURE AND AI': the estimate has no bounced light and no smoke shadow, and the blobs are a model of the solver's picture, not a copy
+  — a place lit only by bounce reads darker to the men than it looks, and a minute-old wisp will not match cell for cell. `CpuSmoke.blobs` is simulation state
+  that no checkpoint carries yet. CHECK, both stands: `bun run tools/qa/sense-check.ts` (off = the probe asked as ever and the solver as built; on = sixty steps ask the probe
+  nothing, an emitter handed straight to the solver reaches the game's smoke; Sam's meter bright under a lamp and dark in the dark; a canister on a 9 m line shuts it, 0.00 at 12 s, leaves another line at 0.98, is not seen
+  through a wall and has cleared 75 s on, and keeps its place among 68 puffs; a taped room clear with the four and a smoke canister thrown, at mixed step times, re-run from its
+  seed and inputs with the game answering its own senses — about 50,000 reads, none different — the same to the bit; `SENSE_BREAK=1` must fail). `TPS_CPUSENSE=1 bun run tools/qa/coop-check.ts` is its
+  two-engine line. NOT SEEN: nobody has played with it on; how the blobs sit against the picture's smoke has never been looked at on a GPU.
+- **A record from anyone** (`src/game/cmd.ts checkCmd`, switch `CMDCHECK.on`; ON in the page, `?nocmdcheck` = believed as it comes; OFF on the frozen stand,
+  `TPS_CMDCHECK=1`; engine groundwork, nothing networked): `Game.step` makes the tick's record one an honest seat could have sent before anything reads it (and
+  before the tape keeps it) — an object of the right shape, finite numbers inside wide bounds, at most 24 key codes that look like key codes, five button bits,
+  sixteen numbers in each view matrix. A LOCAL seat's matrices are the host camera's and are kept while they are numbers (the page's lag its pose a step when it
+  orbits; a cut moves the look-at before the camera is rebuilt): an honest record comes through unchanged to the bit. A seat marked `seat.remote` (nobody today)
+  is refereed: its look-at is held within `CMDCHECK.reach` (80 m) of its own man, its eye within twice that, its pitch off straight down, and the eye, the
+  forward and both matrices are WORKED OUT AGAIN from the look-at, the angles, the distance and the lens (`camera.ts rebuild`, the working a re-run does from
+  the tape's pose) — what the record said of them is never read. A record that cannot be read or written is answered with a neutral one. What was put right is
+  counted on the seat (`seat.fixed`, `seat.fixedCmds`). `Game.seats` is the list of seats (one) and `Game.stepSeats(dt, cmds)` steps from
+  a list of records, refusing any other count. The bounds keep a record sane; they do not referee play (fog, reach of a pick, rate of fire are a server's
+  later work). THE ONE PLAYER, counted again 2026-10-17: `g.player` / `this.player` / `game.player` is written in 116
+  files under `src/game` (889 uses) and 9 outside it (144); the `'player'` foe word about 120 times; `PLAYER_ID` 113. RULE FOR NEW CODE: what a player
+  does comes off his seat (its record, its camera), and a rule that needs a man takes the man — it does not reach for `g.player`. CHECK, both stands: `bun run tools/qa/cmdcheck-check.ts` (honest: 900 steps of a room clear the same to the bit with the check on, 0 things put
+  right; shapes: 21 kinds of nonsense, each as a local and as a remote seat's, come back whole, a remote one's with the game's own view, and a second check changes
+  nothing; a local record whose matrices lag its pose is left alone; hostile: 720 steps with three records in four spoilt neither throw
+  nor lose a number; far; seats; `CMDCHECK_BREAK=1` must fail).
+- **The page against the harness** (`tools/qa/samefight-page.cjs` + `samefight-rerun.ts`; the page's `__digest {game, bits, chain}`; `game/digest.ts rawBits /
+  chainBits`): the real page (headless Chromium = V8, software adapter) plays a scripted stretch of a mission at a mix of step times with the raw bits of the
+  game folded after every step; its own replay file is then walked by bun (JavaScriptCore) off the run tape and must give the same words. With
+  `SAMEFIGHT_QUERY=cpusense` the tape's GPU values are not used. `SAMEFIGHT_BREAK=1` (the page on `?noexact`) must fail. A dev server on `PORT`. `SAMEFIGHT_SAY=1` says where the page has got to, `SAMEFIGHT_VIEW=320x180` a smaller picture, `SAMEFIGHT_DRAW=n` steps a draw. RESULTS: NONE YET — on the cloud machine's software adapter the page boots (about eight minutes of pipeline compiles), plays its first 200 steps in seconds and then sits for more than ten minutes at the first shots; no run has reached its end, so the page line is NOT SHOWN. What the check rests on is held headless: a tape re-run to the bit (sense-check `same`), two engines to the bit (coop-check). Run it where there is a GPU.
 - **Replays after the fact (F7)** (`src/game/replaybuf.ts` → `src/replay/format.ts`, `ui/replaykey.ts`, `src/replay/viewer.ts` + `replay.html`, `tools/qa/replay-at.ts`): the page ALWAYS keeps the last
   `REPLAY.seconds` (300) of play as a TRACE — every man's place / facing / state / order / mark / route, doors, items, rounds, the HUD's lines, the camera — sampled at 20 Hz off
   `Game.replayTap` (update's last statement; the buffer only READS: `replaybuf-probes.ts identity` holds the digests equal with it on and off), delta-coded between 5 s keyframes.

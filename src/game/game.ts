@@ -13,7 +13,7 @@ import { Character, MOVES, inDipLane } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
 import { Input } from './input';
 import { FollowCamera } from './camera';
-import { Seat, sampleCmd } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
+import { Seat, sampleCmd, checkCmd, CMDCHECK } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
 import type { PlayerCmd } from './cmd';
 import { RtLight } from '../render/lights';
 import { IrradianceProbe } from '../render/probe';
@@ -88,7 +88,8 @@ import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
 import { plateUp } from './shield';
-import { updateGuard, longRigOf, inHand, loadBodyLight, bodyLightSummary } from './guards';
+import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary } from './guards';
+import { SENSE, CpuSmoke, ownSmoke } from './sense';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
 import type { SearchPlan, Pieing, Standoff } from './guards';
 import type { Clearing } from './squad';
@@ -721,6 +722,9 @@ export class Game {
   /** THE seam between the GPU and the simulation (sensors.ts): every value the game takes off the renderer — the light meters, the smoke sight lines — is asked
    *  and read through this, by key; live it is the probe verbatim, a recording journals what it delivered, a replay serves that back without a GPU (journal.ts) */
   sensors: Sensors = new Sensors(() => this.probe);
+  /** THE SENSES ON THE CPU (sense.ts SENSE.cpu; off = nothing below runs): the game's own smoke, fed by every emitter handed to the solver while the switch is on,
+   *  and the solver as it was before the game's tee was put in front of it (null = no tee) */
+  cpuSmoke = new CpuSmoke(); private smokeOwned: { solver: SmokeSystemLike; undo: () => void } | null = null;
   /** the session journal's recorder (journal.ts): F10 / __journal on the game page, tools/qa/journal-probes.ts headless — idle unless somebody asked */
   journal: SessionRecorder = new SessionRecorder(this);
   /** THE REPLAY BUFFER's tap (replaybuf.ts): called as a step's first statement with the record it is about to run on, and as its last with none — it only reads. null (a game nobody gave a buffer) = nothing */
@@ -1430,7 +1434,7 @@ export class Game {
   rainSummary(): string { return rainSummary(this); }
 
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
-  restartEncounter() { useDice(this.dice); this.quiet?.current();
+  restartEncounter() { useDice(this.dice); this.sensors.ownReset(); this.quiet?.current();
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
     const light = this.player.light;
     this.player = new Player(this.ch, v3.copy(this.level.playerSpawn), this.fn2000); this.player.light = light; kitFresh(this); this.player.char.update(0);   // pose + bones exist before this frame's capsule upload
@@ -1478,15 +1482,21 @@ export class Game {
     this.viewProj = cam.viewProj;   // (between ticks `viewProj` is the host's live matrix again, as it always was for whoever asks on-screen-or-not from outside a tick)
     this.orders.hostView(input, cam, canvas);   // (between ticks the HUD and the tools ask the menu what the LIVE cursor is on, as they always did)
   }
+  /** every seat's record for one tick, in seat order — one seat today, so this is `step(dt, cmds[0])`; a list of another length is refused before anything runs */
+  stepSeats(dt: number, cmds: readonly PlayerCmd[]) { if (cmds.length !== this.seats.length) throw new Error(`stepSeats: ${cmds.length} record(s) for ${this.seats.length} seat(s)`); this.step(dt, cmds[0]); }
   /** the player's seat (cmd.ts): the tick's record loaded into an Input and a camera of the game's own — what everything below reads as `input` / `cam` / `canvas` */
   readonly seat = new Seat();
+  /** every seat, in order (cmd.ts): one today — `seat` */
+  readonly seats: readonly Seat[] = [this.seat];
   private cmdBuf: PlayerCmd | null = null;
   /** the tick itself, off the player's plain record: no Input, no camera, no canvas of the host's. What it leaves for the seat's camera is on the seat (cmd.ts Seat: `cam.peekOffset`,
    *  `cam.kick`, `takeCut()`) for whoever hosts the picture. Reads of the seat's view inside the tick go to the record: the reticle's snaps and the order menu's cursor,
    *  the walk keys' basis, on-screen-or-not for a line (viewProj), the thunder's pan, the rain's near field, metres per pixel, a blast's kick. */
   step(dt: number, cmd: PlayerCmd) {
+    if (CMDCHECK.on) { const r = checkCmd(cmd, this.seat.remote ? this.player.char.pos : null); cmd = r.cmd; if (r.fixed) { this.seat.fixed += r.fixed; this.seat.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
     this.replayTap?.(dt, cmd);   // the replay buffer's run tape (runtape.ts): this step's dt and record, before anything of it has run — reads only
     useDice(this.dice); this.quiet.current();
+    this.senseStep(dt);
     this.seat.load(cmd);
     const input = this.seat.input, cam = this.seat.cam, canvas = this.seat.canvas;
     openingStart(this);   // (opening.ts: a fresh encounter made under a show's flag and handed over live gets its opening here — each man looked at once, a return otherwise)
@@ -1772,6 +1782,16 @@ export class Game {
     });
     this.chars.finish(drawn.length);
   }
+  /** the top of a step under SENSE.cpu (sense.ts): the game's own smoke is put in front of the solver (and taken away again when the switch goes off, or when the
+   *  game is handed another solver), aged by this step, and the sensors answer a sight line from it in the step that asks. Off: two compares and a return. */
+  private senseStep(dt: number) {
+    const on = SENSE.cpu, O = this.smokeOwned;
+    if (on !== !!O || (O && O.solver !== this.smoke)) {
+      O?.undo(); this.smokeOwned = on ? { solver: this.smoke, undo: ownSmoke(this.smoke, this.cpuSmoke) } : null;
+      if (on !== !!O) { this.cpuSmoke.clear(); this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.trans(a, b, (p, q) => this.col.segmentBlocked(p, q)) : null); }
+    }
+    if (on) this.cpuSmoke.step(dt);
+  }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {
     // light meter queries — the SENSORS (sensors.ts): Sam's own meter asked at chest and head (his proxies skipped), the guards' smoke sight lines to him, then his read
@@ -1786,7 +1806,8 @@ export class Game {
       g.smokeTrans = (S.segment(`smoke${i}`, eye, chest, !tight || hostileTo(g, 'player')) ?? 1) * airTrans(this, eye, chest);   // (× a picked weather's fog along the same line — weather.ts airTrans, exactly 1 with no kind picked)   // (clear air until the probe has answered — headless, always)
     });
     this.fogOfWar.flushAsks();   // (fog of war: its smoke segments go to the probe after Sam's meter and the guards' lines — the table drops what does not fit)
-    const r1 = S.read('playerChest'), r2 = S.read('playerHead');
+    let r1 = S.read('playerChest'), r2 = S.read('playerHead');
+    if (S.own) { r1 = lightEstimateAt(this, pc.bones.chest ?? v3.add(pc.pos, [0, 1.2, 0])); r2 = lightEstimateAt(this, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])); }   // (the senses on the CPU — sense.ts: the estimate every other meter falls to, at the two points the probe is asked)
     if (r1 !== undefined && r2 !== undefined && Number.isFinite(r1) && Number.isFinite(r2)) {   // (a NaN / ∞ off a readback — a lost device, a resize race — is no reading: one frame of it damped in and the meter, and every eye that reads it, was NaN for good; review A6.4)
       const E = Math.max(r1, r2); this.player.irradiance = E;
       this.player.visibility = damp(this.player.visibility, this.visibilityOf(E), 6, dt);
