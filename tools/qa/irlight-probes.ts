@@ -1,6 +1,6 @@
 // The 'irlight' family: AN INFRARED LIGHT ON THE GOGGLES (the maintainer, 10-15: "maybe we should model IR lights on the nvg so even totally dark rooms are
 // visible. and we can assume enemies never have nvg"). The rule is game/irlight.ts; this family is its check. Run through probes.ts:
-//   bun run tools/qa/probes.ts irlight | irl-list | irl-unseen | irl-team | irl-off          (both stands: TPS_PROFILE=shipped in front for the page's)
+//   bun run tools/qa/probes.ts irlight | irl-list | irl-unseen | irl-team | irl-off | irl-auto          (both stands: TPS_PROFILE=shipped in front for the page's)
 // PASS / FAIL each, all headless (the Game of headless.ts stood up on each scenario's own level, started as a click on its row starts it — bang-tally.ts
 // stage()). NOTHING IS DRAWN: how a room reads through the tube under the flood is not judged here and has never been seen on a GPU; the GPU's light meter is
 // not run (headless it is the CPU stand-in). What is held is the mechanism: which lights exist, in which list, with which bits, and who reads them.
@@ -19,6 +19,15 @@
 //               enemy's eye reads nothing ever. The same held-door play with the light on and off: not one man-frame 'too dark for the tube' with it on.
 //   irl-off     THE SWITCH AND THE STANDS: off = no infrared light anywhere and the tube's term as nvg.ts had it; the frozen stand holds it off
 //               (TPS_IRLIGHT=1 raises it), the shipped stand has it on as the page does; the Team feel rows are kept by teamfeel.ts.
+//   irl-auto    IT BURNS ONLY WHERE IT IS TOO DARK FOR THE TUBE (IRLIGHT.auto; the maintainer, 10-16: "is it realistic to only have them turn on when it's
+//               actually too dark to see?"). Every scenario, the places taken off the level itself (Sam's start, every door, every enemy's spot): Sam stood
+//               with his goggles down where every floor he could look at inside 13 m reads over NVG.blackAt through the tube by the place's own light — no
+//               light of his burns, the same place with the rule off and it does; stood on floor that reads black — it burns inside a tenth of a second
+//               and is at full by half; back in the light — it is out IRLIGHT.hold and its fade later and not before. The team, played four seconds: no
+//               goggled man on black floor is without his, no goggled man who can look at no black floor keeps one, and no man with his goggles up has
+//               one. One light on open floor never reads past the tube's hot shoulder beyond arm's length (the brightness that was asked down). Its red
+//               path: IRAUTO_BREAK=1 calls every place dark, and this probe must FAIL. The other four probes hold the rule OFF: they check a light that
+//               burns whenever the goggles are down.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
@@ -31,6 +40,7 @@ const ILM: any = await import(`${ROOT}/src/game/irlight.ts`);
 const LTM: any = await import(`${ROOT}/src/render/lights.ts`);
 const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`);
 const IRLIGHT = ILM.IRLIGHT;
+const AUTO_AT_LOAD: boolean = IRLIGHT.auto;
 const ON_AT_LOAD: boolean = IRLIGHT.on;   // (what the stand left it at as the harness loaded: the shipped stand writes the page's switches once, then — profile.ts shippedBoot)
 
 const DT = 1 / 60;
@@ -53,8 +63,8 @@ function fnv() { let h = 0x811c9dc5 >>> 0; return { eat: (s: string) => { for (l
 const headOf = (c: any): number[] => c.bones.head ?? [c.pos[0], c.pos[1] + 1.62, c.pos[2]];
 const f2 = (x: number) => x.toFixed(2);
 /** a scenario as its row starts it with the light as asked, the team fallen in on Sam, Sam's goggles as asked, four seconds on */
-async function settled(id: string, on: boolean, team: boolean, nv: boolean) {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; IRLIGHT.on = on; IRLIGHT.team = team; g.player.nv = nv;
+async function settled(id: string, on: boolean, team: boolean, nv: boolean, auto = false) {
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = auto; g.player.nv = nv;
   await quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all')); step(240);
   return S;
 }
@@ -113,7 +123,7 @@ export const irlList = guarded(async () => {
 // ---------------------------------------------------------------- irl-unseen / irl-team: the same held-door play
 interface Play { hash: string; frames: number; irFrames: number; irMax: number; flood: number; awMax: number; black: number; white: number; gog: number; shots: number; down: number }
 async function play(id: string, on: boolean, team: boolean, nv: boolean): Promise<Play | null> {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IRLIGHT.on = on; IRLIGHT.team = team; g.player.nv = nv;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = false; g.player.nv = nv;
   const L = g.engine.lights, foes = g.guards.filter((x: any) => x.team === 'hostile'), H = fnv();
   const R: Play = { hash: '', frames: 0, irFrames: 0, irMax: 0, flood: 0, awMax: 0, black: 0, white: 0, gog: 0, shots: 0, down: 0 };
   const shots0 = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0);
@@ -207,12 +217,94 @@ export const irlOff = guarded(async () => {
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
     F.verdict(on > 0 && L.ir.length === 0, 'flipped in play it takes hold inside a frame', `on: ${on} burning two frames later · off: ${L.ir.length} the next frame`);
     reset(); }
-  { const rows = ['on', 'team', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team'].every(k => TFM.feelRange('IRLIGHT', k) === null);
-    F.verdict(kept.length === rows.length && sw, 'the Team feel rows are kept per machine (teamfeel.ts)', `${kept.join(', ')} · on / team are switches: ${sw}`); }
+  { const rows = ['on', 'team', 'auto', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto'].every(k => TFM.feelRange('IRLIGHT', k) === null);
+    F.verdict(kept.length === rows.length && sw, 'the Team feel rows are kept per machine (teamfeel.ts)', `${kept.join(', ')} · on / team / auto are switches: ${sw}`); }
   { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRLIGHT;
     const want = frozen || word !== undefined ? word === '1' : true;
     IRLIGHT.on = frozen ? !want : want; await quiet(() => standUp());   // (frozen: stood up from the opposite of what the pin should leave; shipped: the page's switches were written once as the harness loaded, and standUp leaves them be)
     F.verdict(IRLIGHT.on === want && (frozen || ON_AT_LOAD === want), frozen ? 'standUp() on the frozen stand puts IRLIGHT.on to what TPS_IRLIGHT says (unset: off — every stored digest and tally had no such light)' : 'the shipped stand has it on from the moment the harness loads, as the page does, and standUp() leaves it', `as the harness loaded: ${ON_AT_LOAD} · after standUp: ${IRLIGHT.on} · TPS_IRLIGHT ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
     DEFAULTS.on = IRLIGHT.on; }
+  return F.done();
+});
+
+// ---------------------------------------------------------------- irl-auto
+/** the place's own light at a floor point, through the tube (the rule's own two terms, asked from here) */
+const tubeAt = (g: any, x: number, z: number): number => NVM.tubeVis(g, NVM.nvgPlaceLight(g, [x, 1.2, z]));
+/** every floor point a man stood at P could look at inside 13 m (a metre past the rule's own fan; 120 ways, half a metre apart, to the first wall), himself
+ *  first: the least the tube reads — given up at the first one under `floor` (a place that is not light needs no more asking) */
+function leastSeen(g: any, P: number[], floor = -1): number {
+  let least = tubeAt(g, P[0], P[2]); const eye = [P[0], 1.5, P[2]]; if (least < floor) return least;
+  for (let a = 0; a < 120; a++) { const fx = Math.sin(a * Math.PI / 60), fz = Math.cos(a * Math.PI / 60);
+    for (let r = 1; r <= 13; r += 0.5) { const Q = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, Q)) break; least = Math.min(least, tubeAt(g, Q[0], Q[2])); if (least < floor) return least; } }
+  return least;
+}
+const FADE_OUT = 0.5;   // (irlight.ts: the ease out after the hold)
+export const irlAuto = guarded(async () => {
+  const F = family('irl-auto: the infrared light burns only where the goggles alone show too little');
+  const BRK = !!process.env.IRAUTO_BREAK, D: number = NVM.NVG.blackAt; let litAsked = 0, darkAsked = 0, teamDark = 0, teamOut = 0, teamLit = 0; const hot: string[] = [];
+  try {
+  for (const id of IDS) {
+    const S = await settled(id, true, true, true, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, fails: string[] = [], said: string[] = [];
+    if (BRK) NVM.NVG.blackAt = Infinity;   // (the red path: every reading says dark — the light of the build before the rule; `D` keeps the real line for what this probe asks itself)
+    const samLit = () => L.ir.find((l: any) => l.owner === pl.char.id);
+    // ---- the team, four seconds as they stand: a goggled man on black floor burns his; a man with his goggles up burns none
+    const since = new Map<any, number>(), litSince = new Map<any, number>();
+    for (let f = 0; f < 240; f++) { step();
+      for (const x of mates(g)) { const gog = NVM.nvgDown(g, x), has = L.ir.some((l: any) => l.owner === x.char.id);
+        if (!gog) { since.delete(x); litSince.delete(x); if (has) fails.push(`${x.callsign}: goggles up and a light burning`); continue; }
+        const blackFloor = tubeAt(g, x.char.pos[0], x.char.pos[2]) < D;
+        if (!blackFloor) { since.delete(x); if (!has) teamOut++; }
+        else { litSince.delete(x); if (!since.has(x)) since.set(x, g.time); if (g.time - since.get(x)! > 0.4) { teamDark++; if (!has) fails.push(`${x.callsign}: on black floor ${f2(g.time - since.get(x)!)} s with his goggles down and no light`); } }
+        // a goggled man who can look at no black floor (asked every quarter second: it is the slow question) keeps no light past its hold and its fade
+        if (!blackFloor && f % 15 === 0) { if (leastSeen(g, x.char.pos, D * 1.2) >= D * 1.2) { if (!litSince.has(x)) litSince.set(x, g.time); } else litSince.delete(x); }
+        if (!blackFloor && litSince.has(x) && g.time - litSince.get(x)! > IRLIGHT.hold + FADE_OUT + 0.6) { teamLit++; if (has) fails.push(`${x.callsign}: no black floor in his sight for ${f2(g.time - litSince.get(x)!)} s and his light burns`); } }
+      if (fails.length > 3) break; }
+    // ---- Sam, stood where the level is light and where it is black
+    g.godMode = true;
+    const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.pos[0], 0, x.char.pos[2]])];
+    const lit = cands.find(P => leastSeen(g, P, D * 1.2) >= D * 1.2), dark = cands.find(P => tubeAt(g, P[0], P[2]) < D * 0.8);
+    const litNow = () => leastSeen(g, pl.char.pos, D * 1.2) >= D * 1.2, blackNow = () => tubeAt(g, pl.char.pos[0], pl.char.pos[2]) < D;   // (asked of where he IS: a stand is nudged to free floor, and a door a teammate opens shows a room that was not in the picture)
+    const stand = async (P: number[], n: number) => { await quiet(() => g.teleportPlayer(P)); pl.nv = true; step(n); };
+    if (lit) { await stand(lit, 150); }
+    if (lit && litNow()) {   // (where he IS is still a light place: a stand is nudged to free floor)
+      const down = pl.nvAmount > 0.9, out1 = !samLit();
+      IRLIGHT.auto = false; step(2); const ruleOff = !!samLit(); IRLIGHT.auto = true; step(150);
+      if (litNow()) { litAsked++; const out2 = !samLit();
+        if (!down) fails.push(`in the light: Sam's goggles never came down (nvAmount ${f2(pl.nvAmount)})`);
+        if (!out1 || !out2) fails.push(`in the light (the least the tube reads of all he could look at: ${f2(leastSeen(g, pl.char.pos))}, the line ${f2(D)}): his light burns`);
+        if (!ruleOff) fails.push('in the light with the rule off: his light does not burn (goggles down)');
+        said.push(`light at ${lit[0].toFixed(1)},${lit[2].toFixed(1)} (tube ≥ ${f2(leastSeen(g, pl.char.pos))}): out · rule off: ${ruleOff ? 'burning' : 'OUT'}`); } }
+    if (dark) { await stand(dark, 6); }
+    if (dark && blackNow()) { darkAsked++;
+      const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1;
+      const E0 = NVM.nvgPlaceLight(g, [dark[0], 1.2, dark[2]]);
+      const l1 = samLit(), quick = !!l1; step(24); const l2 = samLit(), full = !!l2 && Math.abs(l2.intensity * X - IRLIGHT.power) < 1e-6;
+      const E1 = NVM.nvgPlaceLight(g, [dark[0], 1.2, dark[2]]), listed = L.lights.some((l: any) => L.ir.includes(l));
+      if (!quick) fails.push(`on black floor (tube ${f2(tubeAt(g, dark[0], dark[2]))}): no light 0.1 s after he stood there`);
+      if (!full) fails.push(`on black floor: not at full 0.5 s on (${l2 ? f2(l2.intensity * X) : 'none'} of ${IRLIGHT.power})`);
+      if (E0 !== E1 || listed) fails.push(`his own light answers the rule's question: the place's light ${E0.toFixed(4)} before, ${E1.toFixed(4)} with it burning${listed ? '; an infrared light in the list every reader sums' : ''}`);
+      // (one light on open floor: the tube's signal on a floor of reflectance 0.4 from arm's length out — post.wgsl's curve; its hot add starts at 0.75)
+      { const c = pl.char, gain = Math.max(g.engine.settings.nvGain, 1), sig = (E: number) => Math.log(1 + E * X * 0.4 / Math.PI * gain) / Math.log(1 + gain); const all = [...L.ir]; let most = 0, at = 0;
+        if (l2) { L.ir.length = 0; L.ir.push(l2);
+          for (let a = 0; a < 16; a++) { const fx = Math.sin(a * Math.PI / 8), fz = Math.cos(a * Math.PI / 8);
+            for (let r = 1.5; r <= 10; r += 0.5) { const Q = [c.pos[0] + fx * r, 0.05, c.pos[2] + fz * r]; if (g.col.segmentBlocked([c.pos[0], 1.5, c.pos[2]], [Q[0], 1.2, Q[2]])) break; const v = sig(ILM.irLightAt(g, Q) * 1); if (v > most) { most = v; at = r; } } }
+          L.ir.length = 0; for (const l of all) L.ir.push(l);
+          if (most > 0.75) fails.push(`one light puts open floor ${at} m off at ${f2(most)} of the tube's range (its hot shoulder starts at 0.75)`); if (most > 0) hot.push(`${id} ${f2(most)} at ${at} m`); } }
+      said.push(`black floor at ${dark[0].toFixed(1)},${dark[2].toFixed(1)} (tube ${f2(tubeAt(g, dark[0], dark[2]))}): burning inside 0.1 s, full by 0.5 s`);
+      if (lit && !BRK && blackNow()) { await quiet(() => g.teleportPlayer(lit)); const t0 = g.time, was = litNow(); let outAt = -1; for (let f = 0; f < 240 && outAt < 0; f++) { step(); if (!samLit()) outAt = g.time - t0; }
+        // (the floor under him read dark the frame before he left: out at the hold and its fade, a frame's slack either way)
+        if (was && litNow()) { if (outAt < 0 || outAt > IRLIGHT.hold + FADE_OUT + 0.1 || outAt < IRLIGHT.hold + FADE_OUT - 0.1) fails.push(`back in the light: out after ${outAt < 0 ? 'never (4 s)' : f2(outAt) + ' s'} (the hold is ${IRLIGHT.hold} s, its fade ${FADE_OUT})`);
+          said.push(`back in the light: out ${f2(outAt)} s later`); } } }
+    pl.nv = false; step(40); if (samLit()) fails.push('goggles up: his light still burns');
+    F.verdict(!fails.length, `${id}: the team as it stands, then Sam in the light and on black floor`, fails.slice(0, 6).join('; ') || said.join(' · ') || 'neither a light place nor black floor among Sam\'s start, the doors and the enemies\' spots: the team\'s part alone');
+    reset(); NVM.NVG.blackAt = D;
+  }
+  } finally { NVM.NVG.blackAt = D; }
+  F.verdict(litAsked > 0 && darkAsked > 0 && teamDark > 0 && teamLit > 0 && hot.length > 0, 'not vacuous: a light place and black floor were both found for Sam and for the team, and open floor lay in his flood', `Sam: a light place in ${litAsked} of ${IDS.length} scenarios, black floor in ${darkAsked} · goggled teammate-frames on black floor (light burning) ${teamDark}, with no black floor in sight past the hold (no light) ${teamLit}, off black floor with no light ${teamOut} · one light, the most open floor reads through the tube: ${hot.join(', ') || 'not asked'}`);
+  { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRAUTO;
+    const want = frozen || word !== undefined ? word === '1' : true;
+    IRLIGHT.auto = frozen ? !want : want; await quiet(() => standUp());
+    F.verdict(IRLIGHT.auto === want && (frozen || AUTO_AT_LOAD === want), frozen ? 'standUp() on the frozen stand puts IRLIGHT.auto to what TPS_IRAUTO says (unset: off — the light of every check written before the rule)' : 'the shipped stand has the rule on from the moment the harness loads, as the page does', `as the harness loaded: ${AUTO_AT_LOAD} · after standUp: ${IRLIGHT.auto} · TPS_IRAUTO ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
+    DEFAULTS.auto = IRLIGHT.auto; }
   return F.done();
 });
