@@ -2,7 +2,7 @@
 // adapter, its OWN frame loop let run (a script's __runFrames names its dt and bypasses both). Nothing is seen drawn: this reads what the loop did, and that nothing threw.
 //   node tools/qa/tween-page.cjs      env: PORT (the dev server's, default 5199) · QUERY (extra URL words, e.g. 'roomclear&squad=4') · REAL (frames drawn by the engine's
 //   own render before the stand-in takes over, default 3: a frame is seconds on this adapter)
-// the page opens with both on · the engine's own render draws live frames under both with no console or GPU error · at a display twice and 2.4 times the tick rate (the
+// the page opens with both on · the engine's own render draws live frames under both, some of them between two ticks with the blend hung, with no console or GPU error · at a display twice and 2.4 times the tick rate (the
 // page's clock scaled: __timeScale) every update is 1/60 s, the frames fall between ticks (a factor strictly between 0 and 1 on some) and the men and boxes are blended,
 // the picture a part of a tick behind (the lag is printed) · under the pause card nothing is hung · TWEEN off = the fixed step with nothing hung · FIXEDSTEP off = one
 // update a frame on the frame's own time · ?fixedstep=0 and ?tween=0 at the boot.
@@ -49,6 +49,11 @@ const check = (ok, what, detail) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} —
     await run(page, REAL); await page.evaluate(() => window.__engine.device.queue.onSubmittedWorkDone());
     let o = await take(page), s = said(o);
     check(o.frames.length >= REAL && s.dts.length === 1 && Math.abs(s.dts[0] - 1 / 60) < 1e-6 && s.hung > 0 && cons.length === 0, `the engine's own render: ${REAL} live frames drawn under both switches, every update 1/60 s, no console or GPU error`, s.text + (cons.length ? ' ✗ ' + cons.slice(0, 3).join(' ✗ ') : ''));
+    // …and with a blend hung: the clock slowed until each of these slow frames is half a tick (a frame here is capped at 50 ms = three ticks)
+    await page.evaluate(() => { window.__timeScale = 1 / 6; }); await run(page, 1); await take(page); await run(page, REAL + 1); await page.evaluate(() => window.__engine.device.queue.onSubmittedWorkDone());
+    o = await take(page); s = said(o);
+    check(o.frames.every(f => f.real) && s.frac > 0 && s.men > 0 && s.boxes > 0 && cons.length === 0, `the engine's own render with the blend hung: frames between two ticks drawn, no console or GPU error`, s.text + (cons.length ? ' ✗ ' + cons.slice(0, 3).join(' ✗ ') : ''));
+    await page.evaluate(() => { window.__timeScale = 1; });
     // a display at twice, then 2.4 times, the tick rate (the page's clock scaled; the render stood in for by the packs)
     for (const [scale, name] of [[0.5, 'twice'], [1 / 2.4, '2.4 times']]) {
       await page.evaluate(sc => { window.__tw.standIn = true; window.__timeScale = sc; }, scale);
