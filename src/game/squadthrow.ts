@@ -46,7 +46,7 @@
 // warning as last read. None of it is in a checkpoint — none is taken with a unit on the floor, and all of it is seconds old at most. No dice of its own:
 // the thrown thing draws the game's die as any thrown item does (throwables.ts spawn). 'Nobody of ours in it' is asked AT THE THROW, of where each stands then.
 // Check: tools/qa/squadthrow-check.ts (`probes.ts squadthrow`).
-import { SideMap } from '../math/side';
+import { SideMap, rollbackVar } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -170,6 +170,7 @@ function standThrow(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, lob?:
 /** SQUADTHROW.duck: a man of ours on his feet at `p` is off this frag's line before it bursts — the spot his legs will be dealt when it is called (frag.ts
  *  fleeSpot, the squad's pace, `duckSecs` of the fuse in hand and `late` more) is one the burst has no line to him at, down behind it */
 let duckMates: { g: Game; gd: Guard; t: number; x: number; y: number; z: number; m: ReturnType<typeof fleeMates> } | null = null;
+rollbackVar('squadthrow.duckMates', () => duckMates, v => { duckMates = v; });   // (a memo keyed by the game's clock)
 function fragClears(g: Game, gd: Guard, p: Vec3, pts: Vec3[], late = 0, taken?: Vec3[]): boolean {
   const K = SQUADTHROW; if (!K.lob || !K.duck || !FRAG.fleeWise || gd.held || g.time < gd.staggerUntil || g.time < gd.dazzledUntil) return false;   // (the flee it counts on is the one that runs from where the thing will REST: frag.ts FRAG.fleeWise — without that rule nobody is counted on to duck)
   if (pts.some(L => flat(p, L) < K.duckMinM)) return false;   // (inside what it kills at nobody is asked to duck: a leg that fails there is a man dead, not a man hurt)

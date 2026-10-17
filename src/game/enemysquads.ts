@@ -49,7 +49,7 @@
 // NOT BUILT: `arrive` squads (they validate and load; nobody comes — sixteen skinned characters are all on the floor with eleven defenders, and taking
 // bodies away mid-run is the room clear's bookkeeping to change first).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
-import { SideMap } from '../math/side';
+import { SideMap, rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { mulberry32 } from '../math/dice';
 import type { Game, Guard } from './game';
@@ -503,6 +503,7 @@ function teamKnownHow(g: Game): Known[] {
  *  the stack dear, a doorway's lane dear, a room somebody else of theirs holds a little dear — wayRound's, plus the lanes). */
 interface RoundCtx { t: number; T: Room; key: string; rear: Vec3[]; mouths: Vec3[]; fire: (a: Vec3, b: Vec3) => boolean; hot: (p: Vec3) => boolean; hotCell: (ix: number, iz: number) => boolean; lane: (p: Vec3) => boolean; cost: Map<number, number>; held: Map<number, Room> }
 let CTX: RoundCtx | null = null;
+rollbackVar('enemysquads.CTX', () => CTX, v => { CTX = v; });   // (a memo keyed by the game's clock: a tick played again must not be handed the first playing's)
 function roundCtx(g: Game, T: Room, known: Known[], theirs: Door[]): RoundCtx {
   const key = theirs.map(d => d.def.name).join('|') + '#' + known.length;
   if (CTX && CTX.t === g.time && CTX.T === T && CTX.key === key) return CTX;

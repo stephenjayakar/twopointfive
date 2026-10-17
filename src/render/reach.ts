@@ -29,6 +29,7 @@
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on
 // the break-room wall (commit 1170839); so the ring is OFF by default: a deliberate trade of a few dim far-panel slivers for no cell-edge
 // arcs. Turning it back on wants the consumer side changed first (level 1 = tail-only, never a leader, in direct.wgsl).
+import { SideMap } from '../math/side';
 import { WORLD } from '../scene/world';
 import { BoxFlag, type Box } from '../scene/boxes';
 import { cutConfig } from '../scene/cut';
@@ -74,7 +75,7 @@ export function buildWallRaster(statics: Box[], doors: ReachDoor[] = []): Uint8A
 /** How many samples a sight line may step from a sub-cell without missing anything: 1 on and beside a wall or a doorway's gap, more the farther the nearest one is
  *  (the Chebyshev distance d to it in sub-cells, two chamfer passes — exact for that metric; a line advances at most 0.8 sub-cell a sample on either axis, so the
  *  next ceil(1.25 (d - 1)) - 1 samples land within d - 1 sub-cells of this one: all open ground, which a sight line reads and forgets). Kept per raster. */
-const JUMPS = new WeakMap<Uint8Array, Uint8Array>();
+const JUMPS = new SideMap<Uint8Array, Uint8Array>('reach.JUMPS');
 function jumpsOf(solid: Uint8Array): Uint8Array {
   let j = JUMPS.get(solid); if (j) return j;
   const d = new Uint8Array(FW * FH); const CAP = 200;
@@ -183,7 +184,7 @@ export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [numbe
    *  masks as with `rects` alone (a line that reads no changed sub-cell answers as it did), from far fewer cells when the light stands near the hole */
   boxes?: readonly (readonly [number, number, number, number])[] }
 /** the source points every cell of a mask was decided from (reachMaskFor), where that is one set */
-const SOURCES = new WeakMap<Uint32Array, string>();
+const SOURCES = new SideMap<Uint32Array, string>('reach.SOURCES');
 /** was every cell of this mask decided from one set of source points? (then, inside the light's range, it equals a whole re-derive from them on the raster it was last
  *  decided against; in the half metre between the range the game queues a light by and ReachOnly.maxDist a cell may hold an older level — floor the light does not light) */
 export function reachOneSource(mask: Uint32Array): boolean { return SOURCES.has(mask); }

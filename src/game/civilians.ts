@@ -207,7 +207,7 @@ export interface CivSnapOne {
   wp: number; wait: number; awareness: number; heardUpTo: number;
   path: Vec3[]; pathI: number; pathGoal: Vec3 | null; repathT: number; lastPos: Vec3; stuckT: number; stuckN: number; stallRef: Vec3 | null; stallT: number;
   talk: { stage: number; presses: number; lastT: number; abortT: number }; bubble: { text: string; t: number; dur: number; radio: boolean } | null;
-  down: { kind: DownKind; by: DownBy; at: number; found: boolean; rag: { x: number[]; rot: [number, number, number, number]; sleeping: boolean } | null } | null;
+  down: { kind: DownKind; by: DownBy; at: number; found: boolean; rag: { x: number[]; rot: [number, number, number, number]; sleeping: boolean; own?: boolean } | null } | null;   // (own: savestate.ts RagSnap — the trunk's rest shape is these particles' own on a load)
   state: CivState; stateAt: number; taskT: number; riseT: number; settleT: number; seated: boolean; lookAt: Vec3 | null; lookUntil: number; shrugAt: number;
   cause: CivCause | null; causePos: Vec3 | null; causeAt: number; armed: boolean; alarmN: number; seenAt: number; seenPos: Vec3 | null; sawGun: boolean;
   target: { kind: 'guard' | 'phone' | 'exit'; guard: string | null; spot: string | null; pos: Vec3; planPos: Vec3 } | null; retargetAt: number; badTargets: string[]; freezeUntil: number; pinTarget: boolean;
@@ -230,7 +230,7 @@ export function civiliansSnapshot(g: Game): CivSnap {
       wp: gd.wp, wait: gd.wait, awareness: gd.awareness, heardUpTo: gd.heardUpTo,
       path: gd.path.map(p => v3.copy(p)), pathI: gd.pathI, pathGoal: cp(gd.pathGoal), repathT: gd.repathT, lastPos: v3.copy(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, stallRef: cp(gd.stallRef), stallT: gd.stallT,
       talk: { stage: gd.talk.stage, presses: gd.talk.presses, lastT: gd.talk.lastT, abortT: gd.talk.abortT }, bubble: gd.bubble ? { ...gd.bubble } : null,
-      down: dead ? { kind: gd.downKind ?? 'struck', by: gd.downBy ?? 'world', at: gd.diedAt, found: gd.found, rag: rag ? { x: Array.from(rag.x, x => Math.round(x * 1e4) / 1e4), rot: [rag.rot[0], rag.rot[1], rag.rot[2], rag.rot[3]], sleeping: rag.sleeping } : null } : null,
+      down: dead ? { kind: gd.downKind ?? 'struck', by: gd.downBy ?? 'world', at: gd.diedAt, found: gd.found, rag: rag ? { x: Array.from(rag.x, x => Math.round(x * 1e4) / 1e4), rot: [rag.rot[0], rag.rot[1], rag.rot[2], rag.rot[3]], sleeping: rag.sleeping, own: true } : null } : null,
       state: C.state, stateAt: C.stateAt, taskT: C.taskT, riseT: C.riseT, settleT: C.settleT, seated: C.seated, lookAt: cp(C.lookAt), lookUntil: C.lookUntil, shrugAt: C.shrugAt,
       cause: C.cause, causePos: cp(C.causePos), causeAt: C.causeAt, armed: C.armed, alarmN: C.alarmN, seenAt: C.seenAt, seenPos: cp(C.seenPos), sawGun: C.sawGun,
       target: C.target ? { kind: C.target.kind, guard: C.target.guard?.callsign ?? null, spot: C.target.spot?.name ?? null, pos: v3.copy(C.target.pos), planPos: v3.copy(C.target.planPos) } : null, retargetAt: C.retargetAt,
@@ -271,7 +271,7 @@ export function civiliansRestore(g: Game, snap: CivSnap | null | undefined) {
     if (S.down) {   // the body: settled where she lay (savestate.ts lays the men down the same way)
       gd.state = 'dead'; gd.speed = 0; gd.diedAt = sh(S.down.at); gd.downKind = S.down.kind; gd.downBy = S.down.by; gd.found = !!S.down.found; c.anim.act = null; C.target = null; C.reportTo = null;
       c.update(0); c.ragdollize(g.col, [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)], true);
-      const R = S.down.rag; if (R && R.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(R.x, R.rot); if (R.sleeping === false) c.ragdoll.wake(); }
+      const R = S.down.rag; if (R && R.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(R.x, R.rot, R.own === true); if (R.sleeping === false) c.ragdoll.wake(); }
       c.vel = [0, 0, 0]; c.anim.speed = 0; c.update(0);
       log(g, gd, `restored — down (${gd.downKind}${gd.found ? ', found' : ''})`);
       continue;

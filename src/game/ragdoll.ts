@@ -168,14 +168,26 @@ export class Ragdoll {
   }
   /** Checkpoint restore (game/savestate.ts): lay the body straight into a settled pose — every particle where the file has it, at rest, unpinned, asleep — with
    *  the trunk cluster's rotation re-fitted to those particles (warm-started from the file's `rot`, or from where it stands): a corpse comes back where and how
-   *  it lay without being simulated there again. The trunk is snapped rigid to THIS body's bind shape, so its members may move a centimetre off the file. */
-  settleAt(xs: ArrayLike<number>, rot?: ArrayLike<number>) {
+   *  it lay without being simulated there again. The trunk is snapped rigid to THIS body's bind shape, so its members may move a centimetre off the file —
+   *  unless `own`: then the trunk's rest shape is taken again from the file's particles themselves, under the rotation just fitted, and every particle is left
+   *  exactly where the file has it. (A body's rest shape is the trunk of the pose he DIED in; the fresh figure a load builds is seeded from its own stance:
+   *  snapped to that, the choked man of checkpoint-identity came back 5 cm off his file on the page's stand, 0.4 cm on the frozen one, and the loaded game was
+   *  not the saved one. The rotation is the fitted one either way, so the mesh is driven as it was.) */
+  settleAt(xs: ArrayLike<number>, rot?: ArrayLike<number>, own = false) {
     const x = this.x, px = this.px;
     for (let i = 0; i < N * 3; i++) { const v = Number(xs[i]); x[i] = Number.isFinite(v) ? v : x[i]; }
     for (let i = 0; i < N; i++) x[i * 3 + 1] = Math.max(x[i * 3 + 1], RADIUS[i]);
     if (rot && Number.isFinite(rot[0] + rot[1] + rot[2] + rot[3])) { const l = hyp4(rot[0], rot[1], rot[2], rot[3]) || 1; this.rot[0] = rot[0] / l; this.rot[1] = rot[1] / l; this.rot[2] = rot[2] / l; this.rot[3] = rot[3] / l; }
     this.clearPins();
+    if (own) this.snap.set(x);   // (the file's particles, kept over the fit: snap is free here — it is set again below)
     for (let k = 0; k < 8; k++) this.shapeMatch();   // (each pass = 10 extraction iterations warm-started from the last: converged well past a plain lie-down's quarter turn)
+    if (own) {   // the rest shape = the file's trunk about its own centroid, turned back by the fitted rotation (the match is then at rest on these particles: it moves none)
+      const s = this.snap, R = this.R, r0 = this.r0; let cx = 0, cy = 0, cz = 0;
+      for (const i of TRUNK) { const m = MASS[i]; cx += s[i * 3] * m; cy += s[i * 3 + 1] * m; cz += s[i * 3 + 2] * m; }
+      cx /= this.trunkMass; cy /= this.trunkMass; cz /= this.trunkMass;
+      TRUNK.forEach((i, k) => { const dx = s[i * 3] - cx, dy = s[i * 3 + 1] - cy, dz = s[i * 3 + 2] - cz; r0[k * 3] = R[0] * dx + R[3] * dy + R[6] * dz; r0[k * 3 + 1] = R[1] * dx + R[4] * dy + R[7] * dz; r0[k * 3 + 2] = R[2] * dx + R[5] * dy + R[8] * dz; });
+      x.set(s); this.centre[0] = cx; this.centre[1] = cy; this.centre[2] = cz;
+    }
     for (let i = 0; i < N * 3; i++) px[i] = x[i];
     const c = this.centre, pc = this.prevCentre; pc[0] = c[0]; pc[1] = c[1]; pc[2] = c[2];
     this.snap.set(x); this.snapT = 0; this.awake = 0; this.acc = 0; this.strain = 0; this.impactV = 0; this.sleeping = true;

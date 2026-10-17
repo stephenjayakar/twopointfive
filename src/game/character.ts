@@ -1,6 +1,6 @@
 // Character = animated mannequin instance: locomotion/upper-body animation graph, procedural aim twist,
 // world placement, bone queries and RT proxy boxes — and, once dead, a ragdoll (ragdoll.ts) that poses the same skeleton.
-import { SideMap } from '../math/side';
+import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
@@ -211,6 +211,7 @@ const SWAP_RATE = 14;
 /** which of takedown.ts's hold halves the two layers show where the pose itself does not say (HoldPose / HeldPose .kill / .beats, which win): takedownTick writes
  *  them once a frame — a frame late, and one table for every Game — the kill from the hold as a move of its own · the choke's beats. Off = that phase drawn as it was. */
 export const HOLD_SHOW = { kill: false, beats: false };
+rollbackRoot('character.HOLD_SHOW', HOLD_SHOW);   // (written by takedownTick once a frame, read by the hold's layers on the next)
 /** the kill's eased clock (hdKc / heKc): after the hold's own by a spring this stiff, its target led by the spring's lag so the cut lands where HOLD.kill.hit
  *  says; back out of a cancelled one at the slower rate */
 const KILL_RATE = 40, KILL_BACK = 9;

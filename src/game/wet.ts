@@ -14,7 +14,7 @@
 // model: a searcher noticing wet prints): a soaked man come indoors DRIPS for a few seconds (GPU water-drop particles off his hands and hem, particleFx's
 // 'debris' kind — nothing with the particles off) and leaves WET FOOTPRINTS, a 'wetprint' decal per step for his next WET.prints steps, fainter each step,
 // each fading out over WET.printFadeSecs (decals.wgsl wetPrintMark; nothing with the decals off).
-import { SideMap } from '../math/side';
+import { SideMap, rollbackVar, rollbackRoot } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -56,6 +56,7 @@ const prints = new SideMap<Game, { list: PrintRec[]; ageT: number }>('wet.prints
 const printsOf = (g: Game) => { let p = prints.get(g); if (!p) { p = { list: [], ageT: 0 }; prints.set(g, p); } return p; };
 /** counters for the panel / probes */
 export const WET_STATS = { skyTests: 0, prints: 0, drips: 0 };
+rollbackRoot('wet.WET_STATS', WET_STATS);   // (not a tally alone: `prints` seeds the next print's look)
 
 /** inside the building's footprint or the roofed stair tower — the rectangles the rain is drawn by (weather.ts / volumetrics.wgsl weatherC / weatherD) */
 export function underRoofRect(p: Vec3, g?: Game): boolean {
@@ -128,6 +129,7 @@ function samAftermath(g: Game, dt: number) {
 /** one drop off him: from a hand, the chin or the hem of the jacket, falling, gone when it lands (GPU 'debris' particle: lit, collides, short-lived) */
 const DRIP_FROM = ['handL', 'handR', 'head', 'hips', 'hips'] as const;
 let dripN = 0;
+rollbackVar('wet.dripN', () => dripN, v => { dripN = v; });
 function drip(g: Game, c: Character) {
   const P = gpuFx(g); if (!P) return;
   const k = DRIP_FROM[dripN++ % DRIP_FROM.length]; const b = c.bones[k]; if (!b) return;

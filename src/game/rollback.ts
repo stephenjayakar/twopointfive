@@ -4,6 +4,8 @@
 // moving, rounds in the air, a leaf swinging, a fuse burning — and nothing a player ever sees. Nothing in the game calls it yet: unused, the build is as it was.
 //   takeSnapshot(g)            walk everything the Game reaches (and the side tables, module variables and module containers registered in math/side.ts) and keep
 //                              a shallow copy of each array, object, Map, Set and typed array it meets. No schema: a new field on a Guard is in the next snapshot.
+//   takeSnapshot(g, since)     the same, a tick or a few later: only what changed since that snapshot is copied, the rest is shared with it (what a rollback ring
+//                              takes every tick: a fraction of the time and of the bytes)
 //   restoreSnapshot(s)         write every copy back into the object it was taken from. Identities stand: whoever held a Guard still holds that Guard.
 //   restoreSnapshot(s, other)  the same state into ANOTHER Game: the two are walked side by side from their roots, an object of the snapshot is written into the
 //                              object standing in the same place there (the other game's own level, its own closures, its own host), and one with no counterpart
@@ -22,7 +24,7 @@ type Rec = Record<string, unknown>;
 type Typed = Float32Array;   // (any typed array: the calls used are the same on all of them)
 type Table = SideMap<object, unknown> | SideSet<object>;
 
-const K_ATOM = 0, K_ARR = 1, K_TYPED = 2, K_OBJ = 3, K_MAP = 4, K_SET = 5, K_BUF = 6, K_SIDEMAP = 7, K_SIDESET = 8, K_RAWWEAK = 9;
+const K_ATOM = 0, K_ARR = 1, K_TYPED = 2, K_OBJ = 3, K_MAP = 4, K_SET = 5, K_BUF = 6, K_SIDEMAP = 7, K_SIDESET = 8, K_RAWWEAK = 9, K_WORDS = 10;
 const PROTO_KIND = new Map<object | null, number>();
 /** what an object that is neither an array nor a typed array is, decided once for its prototype */
 function protoKind(o: object): number {
@@ -45,14 +47,27 @@ const STATIC_FIELDS = ['ch'] as const;
 function rootsOf(g: Game): object[] { const e = (g as unknown as { engine: { world: object; lights: object } }).engine; return [g, e.world, e.lights]; }
 function fieldsOf(g: Game, names: readonly string[]): object[] { const out: object[] = []; for (const f of names) { const v = (g as unknown as Rec)[f]; if (isObj(v)) out.push(v); } return out; }
 
+/** what a run of snapshots of one game shares: every object any of them has met, numbered as met (the copied ones, and the ones left alone — a side table, something of
+ *  the host's, a static), with the kind of each; a long typed array's own bytes as 32-bit words (`views`: it is compared, copied and put back through them). Only ever
+ *  added to: an object that has dropped out of the game keeps its number (a snapshot taken while it stood still holds it), so a new chain is begun now and then */
+interface Chain {
+  readonly index: Map<object, number>; readonly nodes: object[]; readonly kinds: number[]; readonly views: (Uint32Array | null)[];
+  /** how many objects its first snapshot (the one taken by a whole walk) held */
+  readonly base: { n: number };
+  /** room to work in while one snapshot is taken: the take that last met each object (`epoch` counts them); what the snapshot it is taken since has of each (its copy,
+   *  its keys, `met`: 0 not held, else one more than how many snapshots back it was first held; `fresh`: how many snapshots back its copy was made) */
+  stamp: Int32Array; met: Uint8Array; fresh: Uint8Array; epoch: number; readonly last: unknown[]; readonly lastShape: (string[] | undefined)[]; readonly stack: number[];
+}
 export interface Snapshot {
   /** the Game it was taken from */
   readonly game: Game;
-  /** every object met (the copied ones and the ones left alone): a side table's entry is the snapshot's when its key is in here */
-  readonly seen: Set<object>;
-  /** the copied objects, the kind of each and its shallow copy (children by reference) */
-  readonly nodes: object[]; readonly kinds: number[]; readonly data: unknown[];
-  /** every side table (the named ones, and the ones found hanging off an object) with its entries whose key is in `seen`: [key, value, key, value …] of a map, [key, key …] of a set */
+  readonly chain: Chain;
+  /** the objects it holds — their numbers in the chain — and the shallow copy of each (children by reference): an array's elements, a typed array's, an object's VALUES
+   *  in the order of its keys (`shapes`), a Map's [key, value …], a Set's members; nothing for a side table (its entries are below). A copy is the very one of the
+   *  snapshot this was taken `since` when the object had not changed: a snapshot a tick costs what moved in that tick, not the whole game.
+   *  `ages`: how many snapshots back (each taken since the one before) the object was first held, times 16, and how many back its copy was made — 15 at most each */
+  readonly at: Int32Array; readonly data: unknown[]; readonly shapes: (string[] | undefined)[]; readonly ages: Uint8Array;
+  /** every side table (the named ones, and the ones found hanging off an object) with its entries whose key the snapshot holds: [key, value, key, value …] of a map, [key, key …] of a set */
   readonly tables: Table[]; readonly entries: unknown[][];
   /** the registered module variables and what each held */
   readonly vars: SideVar[]; readonly varVals: unknown[];
@@ -60,37 +75,104 @@ export interface Snapshot {
   readonly rawWeak: object[];
 }
 
-export function takeSnapshot(g: Game): Snapshot {
+/** a typed array long enough, and sitting on words, to be handled as 32-bit words */
+const WORDS_FROM = 256;
+/** a snapshot is taken by a whole walk again (and a new chain begun) when the last one holds this much more than the chain's first did — objects that have dropped out
+ *  of the game since, still held — or the chain has met this many times what a snapshot holds (the game makes a thousand objects a tick and drops as many) */
+const WALK_AGAIN = 1.25, WALK_SLACK = 2048, CHAIN_GROWS = 8, CHAIN_SLACK = 65536;
+/** an object first held within this many snapshots is held again only if met (most of what a tick makes is dropped within two); one whose copy was made within as many is looked into */
+const YOUNG = Number((globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.RB_YOUNG ?? 3);
+
+/** the whole simulation as it stands.
+ *  `since`: a snapshot taken of this game before (the last one, in a rollback ring; the one just restored, after a rollback) — an object that has not changed since is not
+ *  copied again, its copy is shared, and the game is not walked: the objects that snapshot held are gone through one by one, and only one that has changed (or had the
+ *  tick before) is looked into for what it points at. A fraction of the time and of the bytes. Any snapshot of the same game will do.
+ *  WHY THAT HOLDS EVERYTHING: an object the game reaches now is pointed at by one it reaches. If that one's copy is YOUNG snapshots old or more, it has pointed at it
+ *  for as long, so the object has been held for as long: it is one of the old ones, gone through whether met or not. If the copy is younger (or new now), the one
+ *  pointing is looked into and the object is met. So an object held for fewer than YOUNG snapshots is kept only if met — what a tick makes and the next drops is gone
+ *  from the next snapshot — and what a snapshot may hold too much of is an older object nothing points at any more (a comparison a tick, until the next whole walk). */
+export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   const reg = sideRegistry();
-  const seen = new Set<object>(), nodes: object[] = [], kinds: number[] = [], data: unknown[] = [], stack: object[] = [], found: Table[] = [], rawWeak: object[] = [];
-  for (const o of fieldsOf(g, HOST_FIELDS)) seen.add(o);
-  for (const o of fieldsOf(g, STATIC_FIELDS)) seen.add(o);
-  const push = (v: unknown): void => { if (typeof v === 'object' && v !== null && !seen.has(v)) { seen.add(v); stack.push(v); } };
-  const drain = (): void => {
-    while (stack.length) {
-      const o = stack.pop()!;
-      if (Array.isArray(o)) {
-        const c = o.slice(); nodes.push(o); kinds.push(K_ARR); data.push(c);
-        for (let i = 0; i < c.length; i++) { const v = c[i]; if (typeof v === 'object' && v !== null && !seen.has(v)) { seen.add(v); stack.push(v); } }
-      } else if (ArrayBuffer.isView(o)) {
-        if (isTyped(o)) { nodes.push(o); kinds.push(K_TYPED); data.push(o.slice()); }
-      } else switch (protoKind(o)) {
-        case K_OBJ: { const c = Object.assign({}, o) as Rec; nodes.push(o); kinds.push(K_OBJ); data.push(c);
-          for (const k in c) { const v = c[k]; if (typeof v === 'object' && v !== null && !seen.has(v)) { seen.add(v); stack.push(v); } } break; }
-        case K_MAP: { const c: unknown[] = []; (o as Map<unknown, unknown>).forEach((v, k) => { c.push(k, v); push(k); push(v); }); nodes.push(o); kinds.push(K_MAP); data.push(c); break; }
-        case K_SET: { const c: unknown[] = []; (o as Set<unknown>).forEach(v => { c.push(v); push(v); }); nodes.push(o); kinds.push(K_SET); data.push(c); break; }
-        case K_BUF: nodes.push(o); kinds.push(K_BUF); data.push((o as ArrayBuffer).slice(0)); break;
-        case K_SIDEMAP: case K_SIDESET: if ((o as Table).sideName === undefined) found.push(o as Table); break;
-        case K_RAWWEAK: rawWeak.push(o); break;
-      }
-    }
+  const from = since !== undefined && since.game === g ? since : null, fc = from ? from.chain : null;
+  const whole = !fc || from!.at.length > WALK_AGAIN * fc.base.n + WALK_SLACK || fc.index.size > CHAIN_GROWS * from!.at.length + CHAIN_SLACK;
+  const chain: Chain = whole ? { index: new Map(), nodes: [], kinds: [], views: [], base: { n: 0 }, stamp: new Int32Array(1 << 16), met: new Uint8Array(1 << 16), fresh: new Uint8Array(1 << 16), epoch: 0, last: [], lastShape: [], stack: [] } : fc;
+  const { index, nodes, kinds, views, stack } = chain, epoch = ++chain.epoch;
+  let stamp = chain.stamp, met = chain.met, fresh = chain.fresh;
+  // what `since` has of each object, laid out by its number in that snapshot's chain
+  const last = fc ? fc.last : [], lastShape = fc ? fc.lastShape : [], fIndex = fc ? fc.index : null;
+  if (from) { const fa = from.at, fd = from.data, fs = from.shapes, ff = from.ages;
+    for (let j = 0; j < fa.length; j++) { const i = fa[j]; last[i] = fd[j]; lastShape[i] = fs[j]; if (!whole) { met[i] = (ff[j] >> 4) + 1; fresh[i] = ff[j] & 15; } } }
+  // (the four lists are written by place into room made at once: pushed one by one they were a quarter of the whole take)
+  let cap = (from ? from.at.length : 32768) + 4096, held = 0;
+  let at = new Int32Array(cap), ages = new Uint8Array(cap); const data: unknown[] = new Array(cap), shapes: (string[] | undefined)[] = new Array(cap), found: Table[] = [], rawWeak: object[] = [];
+  const put = (i: number, c: unknown, shape: string[] | undefined, age: number): void => {
+    if (held === cap) { cap *= 2; const a2 = new Int32Array(cap); a2.set(at); at = a2; const g2 = new Uint8Array(cap); g2.set(ages); ages = g2; }
+    at[held] = i; ages[held] = age; data[held] = c; shapes[held] = shape; held++;
   };
-  for (const r of rootsOf(g)) push(r);
-  for (const r of reg.roots) push(r.obj);
+  /** an object met for the first time by this chain: numbered, with its kind */
+  const add = (o: object): number => {
+    let k: number, w: Uint32Array | null = null;
+    if (Array.isArray(o)) k = K_ARR;
+    else if (ArrayBuffer.isView(o)) { if (!isTyped(o)) k = K_ATOM; else if (o.byteLength >= WORDS_FROM && (o.byteOffset & 3) === 0 && (o.byteLength & 3) === 0) { k = K_WORDS; w = new Uint32Array(o.buffer, o.byteOffset, o.byteLength >>> 2); } else k = K_TYPED; }
+    else k = protoKind(o);
+    const i = nodes.length; nodes.push(o); kinds.push(k); views.push(w); index.set(o, i);
+    if (i >= stamp.length) { const n2 = stamp.length * 2, s2 = new Int32Array(n2); s2.set(stamp); stamp = chain.stamp = s2; const m2 = new Uint8Array(n2); m2.set(met); met = chain.met = m2; const f2 = new Uint8Array(n2); f2.set(fresh); fresh = chain.fresh = f2; }
+    return i;
+  };
+  /** an object pointed at: put on the stack to be held, unless it is already — or it is one of the old ones (those are gone through, met or not) */
+  const see = (v: object): void => {
+    let i = index.get(v);
+    if (i === undefined) i = add(v); else if (stamp[i] === epoch || met[i] > YOUNG) return;
+    stamp[i] = epoch; stack.push(i);
+  };
+  const seeFrom = (a: unknown[], from: number): void => { for (let j = from; j < a.length; j++) { const x = a[j]; if (typeof x === 'object' && x !== null) see(x); } };
+  /** object `i` into the snapshot: the copy `since` has when it is still that to the bit, else a new one. `scan`: everything it points at is seen (always, of a new copy,
+   *  from the first place it differs on: what stands before that `since` holds) */
+  const hold = (i: number, scan: boolean): void => {
+    const o = nodes[i], kind = kinds[i];
+    if (kind === K_ATOM) return;
+    if (kind === K_SIDEMAP || kind === K_SIDESET) { if ((o as Table).sideName === undefined) found.push(o as Table); put(i, undefined, undefined, Math.min(15, met[i]) << 4 | 15); return; }
+    if (kind === K_RAWWEAK) { rawWeak.push(o); put(i, undefined, undefined, Math.min(15, met[i]) << 4 | 15); return; }
+    let li = i; if (whole) { const x = fIndex ? fIndex.get(o) : undefined; li = x === undefined ? -1 : x; }
+    const was = li >= 0 ? last[li] : undefined; let c = was, shape: string[] | undefined;
+    switch (kind) {
+      case K_ARR: { const a = o as unknown[], n = a.length; let j = 0;
+        if (c !== undefined && (c as unknown[]).length === n) j = firstDiff(a, c as unknown[], n); else c = undefined;
+        if (c === undefined || j < n) { const b = a.slice(); c = b; seeFrom(b, scan ? 0 : j); } else if (scan) seeFrom(a, 0);
+        break; }
+      case K_TYPED: if (c === undefined || firstDiffNum(o as Typed, c as Typed, (o as Typed).length) < (o as Typed).length) c = (o as Typed).slice(); break;
+      case K_WORDS: { const a = views[i]!; if (c === undefined || firstDiffWords(a, c as Uint32Array, a.length) < a.length) c = a.slice(); break; }
+      case K_OBJ: { const ks = Object.keys(o), a = Object.values(o), n = ks.length, pk = li >= 0 ? lastShape[li] : undefined; let j = 0;   // (the values at once: read key by key, the objects were a quarter of a take)
+        if (c !== undefined && pk !== undefined && pk.length === n && sameKeys(ks, pk, n)) { j = firstDiff(a, c as unknown[], n); shape = pk; } else c = undefined;
+        if (c === undefined || j < n) { c = a; shape = ks; seeFrom(a, scan ? 0 : j); } else if (scan) seeFrom(a, 0);
+        break; }
+      case K_MAP: { const m = o as Map<unknown, unknown>, b = c as unknown[] | undefined; let j = 0, eq = b !== undefined && m.size * 2 === b.length; const fresh: unknown[] = [];
+        m.forEach((v, k) => { if (eq && (differs(k, b![j]) || differs(v, b![j + 1]))) eq = false; j += 2; fresh.push(k, v); });
+        if (!eq) c = fresh;
+        if (!eq || scan) for (let q = 0; q < fresh.length; q++) { const x = fresh[q]; if (typeof x === 'object' && x !== null) see(x); }
+        break; }
+      case K_SET: { const m = o as Set<unknown>, b = c as unknown[] | undefined; let j = 0, eq = b !== undefined && m.size === b.length; const fresh: unknown[] = [];
+        m.forEach(v => { if (eq && differs(v, b![j])) eq = false; j++; fresh.push(v); });
+        if (!eq) c = fresh;
+        if (!eq || scan) for (let q = 0; q < fresh.length; q++) { const x = fresh[q]; if (typeof x === 'object' && x !== null) see(x); }
+        break; }
+      case K_BUF: c = (o as ArrayBuffer).slice(0); break;
+    }
+    put(i, c, shape, Math.min(15, met[i]) << 4 | (c !== was ? 0 : Math.min(15, fresh[i] + 1)));
+  };
+  const drain = (): void => { while (stack.length) hold(stack.pop()!, true); };
+  // the host's and the statics as they stand now: met, never walked into (a mixer or a journal put in since the chain began is not either)
+  for (const f of [HOST_FIELDS, STATIC_FIELDS]) for (const o of fieldsOf(g, f)) { let i = index.get(o); if (i === undefined) i = add(o); stamp[i] = epoch; }
+  if (whole) for (const r of rootsOf(g)) see(r);
+  else { // the old ones `since` holds: each as it is now; one whose copy is young is looked into (the young ones hang off those)
+    const fa = from!.at;
+    for (let j = 0; j < fa.length; j++) { const i = fa[j]; if (met[i] <= YOUNG || stamp[i] === epoch) continue; stamp[i] = epoch; hold(i, fresh[i] < YOUNG); }
+  }
+  for (const r of reg.roots) see(r.obj);
   const vars = reg.vars.slice(), varVals = vars.map(v => v.get());
-  for (const v of varVals) push(v);
+  for (const v of varVals) if (typeof v === 'object' && v !== null) see(v);
   drain();
-  // the side tables: an entry is in when its key has been met — and its value may reach more objects, whose entries in other tables are in too: round until nothing is added
+  // the side tables: an entry is in when its key is held — and its value may reach more objects, whose entries in other tables are in too: round until nothing is added
   const tables: Table[] = reg.tables.slice(), entries: unknown[][] = [], pend: object[][] = [];
   for (let moved = true, nFound = 0; moved;) {
     moved = false;
@@ -100,42 +182,64 @@ export function takeSnapshot(g: Game): Snapshot {
       if (p === undefined) { p = pend[i] = t.liveKeys(); entries[i] = []; }
       if (!p.length) continue;
       const e = entries[i], map = t instanceof SideMap ? t : null; let n = 0;
-      for (let j = 0; j < p.length; j++) { const k = p[j];
-        if (!seen.has(k)) { p[n++] = k; continue; }
+      for (let j = 0; j < p.length; j++) { const k = p[j], ki = index.get(k);
+        if (ki === undefined || stamp[ki] !== epoch) { p[n++] = k; continue; }
         moved = true;
-        if (map) { const v = map.get(k); e.push(k, v); push(v); } else e.push(k); }
+        if (map) { const v = map.get(k); e.push(k, v); if (typeof v === 'object' && v !== null) see(v); } else e.push(k); }
       p.length = n;
     }
     drain();
     if (nFound < found.length) moved = true;
   }
-  return { game: g, seen, nodes, kinds, data, tables, entries, vars, varVals, rawWeak };
+  if (from) { const fa = from.at, fm = fc!.met; for (let j = 0; j < fa.length; j++) { const i = fa[j]; last[i] = undefined; lastShape[i] = undefined; fm[i] = 0; } }
+  data.length = held; shapes.length = held;
+  if (whole) { chain.base.n = held; ages.fill(255, 0, held); }   // (a whole walk has met everything it holds: all of it is old to the next)
+  return { game: g, chain, at: at.subarray(0, held), data, shapes, ages: ages.subarray(0, held), tables, entries, vars, varVals, rawWeak };
 }
+
+/** the first place two lists part, to the bit (0 and -0 differ; a NaN is a NaN) — `n` when they do not. Small and apart, one for each make of list: the take spends
+ *  most of its time here */
+function firstDiff(a: unknown[], b: unknown[], n: number): number {
+  for (let j = 0; j < n; j++) { const x = a[j], y = b[j]; if (x !== y ? (x === x || y === y) : (x === 0 && 1 / (x as number) !== 1 / (y as number))) return j; }
+  return n;
+}
+function firstDiffNum(a: Typed, b: Typed, n: number): number {
+  for (let j = 0; j < n; j++) { const x = a[j], y = b[j]; if (x !== y ? (x === x || y === y) : (x === 0 && 1 / x !== 1 / y)) return j; }
+  return n;
+}
+function firstDiffWords(a: Uint32Array, b: Uint32Array, n: number): number { for (let j = 0; j < n; j++) if (a[j] !== b[j]) return j; return n; }
+function sameKeys(a: string[], b: string[], n: number): boolean { for (let j = 0; j < n; j++) if (a[j] !== b[j]) return false; return true; }
+/** two values that are not the same to the bit (0 and -0 differ; a NaN is a NaN) */
+function differs(x: unknown, y: unknown): boolean { return x !== y ? (x === x || y === y) : (x === 0 && 1 / (x as number) !== 1 / (y as number)); }
 
 /** write `s` back: into the Game it was taken from (in place), or into `into` — another Game on the same level */
 export function restoreSnapshot(s: Snapshot, into: Game = s.game): void { if (into === s.game) restoreInPlace(s); else restoreMapped(s, into); }
 
 function restoreInPlace(s: Snapshot): void {
-  const { nodes, kinds, data, seen } = s;
-  for (let i = 0; i < nodes.length; i++) {
+  const { at, data, shapes } = s, { nodes, kinds, views, index } = s.chain;
+  for (let q = 0; q < at.length; q++) {
+    const i = at[q];
     switch (kinds[i]) {
-      case K_ARR: { const o = nodes[i] as unknown[], c = data[i] as unknown[], n = c.length; if (o.length !== n) o.length = n;
+      case K_ARR: { const o = nodes[i] as unknown[], c = data[q] as unknown[], n = c.length; if (o.length !== n) o.length = n;
         for (let j = 0; j < n; j++) { const b = c[j], a = o[j]; if (a !== b || (b === 0 && !Object.is(a, b))) o[j] = b; } break; }
-      case K_TYPED: (nodes[i] as Typed).set(data[i] as Typed); break;
-      case K_OBJ: { const o = nodes[i] as Rec, c = data[i] as Rec, ko = Object.keys(o); let n = 0, same = true;
-        for (const k in c) { if (ko[n++] !== k) same = false; const b = c[k], a = o[k]; if (a !== b || (b === 0 && !Object.is(a, b))) o[k] = b; }
-        if (!same || n !== ko.length) { for (const k of ko) delete o[k]; for (const k in c) o[k] = c[k]; }   // (a key added or dropped since, or their order: as the copy has them — a for-in over it must run as it would have)
+      case K_TYPED: { const o = nodes[i] as Typed, c = data[q] as Typed, n = c.length; if (n <= 32) for (let j = 0; j < n; j++) o[j] = c[j]; else o.set(c); break; }
+      case K_WORDS: views[i]!.set(data[q] as Uint32Array); break;
+      case K_OBJ: { const o = nodes[i] as Rec, c = data[q] as unknown[], pk = shapes[q]!, ks = Object.keys(o), n = pk.length; let same = ks.length === n;
+        for (let j = 0; same && j < n; j++) if (ks[j] !== pk[j]) same = false;
+        if (same) for (let j = 0; j < n; j++) { const k = pk[j], b = c[j], a = o[k]; if (a !== b || (b === 0 && !Object.is(a, b))) o[k] = b; }
+        else { for (const k of ks) delete o[k]; for (let j = 0; j < n; j++) o[pk[j]] = c[j]; }   // (a key added or dropped since, or their order: as the copy has them — a for-in over it must run as it would have)
         break; }
-      case K_MAP: { const o = nodes[i] as Map<unknown, unknown>, c = data[i] as unknown[]; o.clear(); for (let j = 0; j < c.length; j += 2) o.set(c[j], c[j + 1]); break; }
-      case K_SET: { const o = nodes[i] as Set<unknown>, c = data[i] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(c[j]); break; }
-      case K_BUF: new Uint8Array(nodes[i] as ArrayBuffer).set(new Uint8Array(data[i] as ArrayBuffer)); break;
+      case K_MAP: { const o = nodes[i] as Map<unknown, unknown>, c = data[q] as unknown[]; o.clear(); for (let j = 0; j < c.length; j += 2) o.set(c[j], c[j + 1]); break; }
+      case K_SET: { const o = nodes[i] as Set<unknown>, c = data[q] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(c[j]); break; }
+      case K_BUF: new Uint8Array(nodes[i] as ArrayBuffer).set(new Uint8Array(data[q] as ArrayBuffer)); break;
     }
   }
+  // the side tables: every entry under a key this chain has met goes (an object made since is out of the game again; another Game's entries in the same table stand), the snapshot's are set
   const keys: object[] = [];
   for (let i = 0; i < s.tables.length; i++) {
     const t = s.tables[i], e = s.entries[i];
     keys.length = 0; t.liveKeys(keys);
-    for (let j = 0; j < keys.length; j++) if (seen.has(keys[j])) t.delete(keys[j]);
+    for (let j = 0; j < keys.length; j++) if (index.has(keys[j])) t.delete(keys[j]);
     if (t instanceof SideMap) for (let j = 0; j < e.length; j += 2) t.set(e[j] as object, e[j + 1]); else for (let j = 0; j < e.length; j++) t.add(e[j] as object);
   }
   for (let i = 0; i < s.vars.length; i++) s.vars[i].set(s.varVals[i] as never);
@@ -144,8 +248,10 @@ function restoreInPlace(s: Snapshot): void {
 /** functions a cross-game restore has written into a game they were not made in */
 const BROUGHT = new WeakSet<Function>();
 function restoreMapped(s: Snapshot, into: Game): void {
-  const { nodes, kinds, data } = s;
-  const at = new Map<object, number>(); for (let i = 0; i < nodes.length; i++) at.set(nodes[i], i);
+  const { data, shapes } = s, { nodes: cn, kinds: ck } = s.chain, N = s.at.length;
+  /** the snapshot's objects and the kind of each, in its own order */
+  const nodes: object[] = new Array(N), kinds: number[] = new Array(N);
+  const at = new Map<object, number>(); for (let i = 0; i < N; i++) { const ci = s.at[i]; nodes[i] = cn[ci]; kinds[i] = ck[ci]; if (data[i] !== undefined) at.set(nodes[i], i); }
   /** an object of the snapshot's game → the object that stands for it in `into` */
   const map = new Map<object, object>();
   /** objects of `into` already standing for one (and the ones made anew), and the made-anew alone */
@@ -154,16 +260,16 @@ function restoreMapped(s: Snapshot, into: Game): void {
   const stack: [object, unknown][] = [], later: object[] = [];
   let mayMake = false;
   const fits = (kind: number, a: object, b: object): boolean => kind === K_ARR ? Array.isArray(b) : Object.getPrototypeOf(a) === Object.getPrototypeOf(b)
-    && (kind !== K_TYPED || (a as Typed).length === (b as Typed).length) && (kind !== K_BUF || (a as ArrayBuffer).byteLength === (b as ArrayBuffer).byteLength);
+    && ((kind !== K_TYPED && kind !== K_WORDS) || (a as Typed).length === (b as Typed).length) && (kind !== K_BUF || (a as ArrayBuffer).byteLength === (b as ArrayBuffer).byteLength);
   const bufFor = (a: ArrayBuffer): ArrayBuffer => { let b = (map.get(a) as ArrayBuffer | undefined) ?? bufs.get(a); if (!b) bufs.set(a, b = a.slice(0)); return b; };
   const make = (kind: number, a: object): object => kind === K_ARR ? [] : kind === K_OBJ ? Object.create(Object.getPrototypeOf(a) as object | null) as object : kind === K_MAP ? new Map() : kind === K_SET ? new Set()
     : kind === K_BUF ? bufFor(a as ArrayBuffer) : new ((a as Typed).constructor as new (b: ArrayBuffer, o: number, n: number) => Typed)(bufFor((a as Typed).buffer as ArrayBuffer), (a as Typed).byteOffset, (a as Typed).length);
   /** what the other game reaches as it stands: an object of the snapshot's that is in here is SHARED by the two games (a module's constant row a box's colour points at, a
    *  palette, the character file) and stands for itself — and nothing of the snapshot's is ever written into an object of the other game's that the first game reaches too */
-  const theirs = takeSnapshot(into).seen;
+  const theirs = takeSnapshot(into).chain.index;
   const bind = (a: object, b: unknown): void => {
     if (map.has(a)) return;
-    if (theirs.has(a)) b = a; else if (isObj(b) && s.seen.has(b)) b = undefined;
+    if (theirs.has(a)) b = a; else if (isObj(b) && s.chain.index.has(b)) b = undefined;
     const i = at.get(a);
     if (i === undefined) {   // not a copied object: a side table, something of the host's, a static, a native — the other game's own in the same place when it has one of the same make, else this one
       const k = Array.isArray(a) || ArrayBuffer.isView(a) ? K_ATOM : protoKind(a);
@@ -180,7 +286,7 @@ function restoreMapped(s: Snapshot, into: Game): void {
     map.set(a, t); claimed.add(t);
     const c = data[i];
     if (kind === K_ARR) { const cc = c as unknown[]; for (let j = cc.length - 1; j >= 0; j--) { const v = cc[j]; if (isObj(v)) stack.push([v, bb ? (bb as unknown[])[j] : undefined]); } }
-    else if (kind === K_OBJ) { const cc = c as Rec; for (const k in cc) { const v = cc[k]; if (isObj(v)) stack.push([v, bb ? (bb as Rec)[k] : undefined]); } }
+    else if (kind === K_OBJ) { const cc = c as unknown[], pk = shapes[i]!; for (let j = cc.length - 1; j >= 0; j--) { const v = cc[j]; if (isObj(v)) stack.push([v, bb ? (bb as Rec)[pk[j]] : undefined]); } }
     else if (kind === K_MAP) { const cc = c as unknown[]; for (let j = 0; j < cc.length; j += 2) { const k = cc[j], v = cc[j + 1];
       if (isObj(k)) stack.push([k, undefined]); if (isObj(v)) stack.push([v, bb && !isObj(k) ? (bb as Map<unknown, unknown>).get(k) : undefined]); } }
     else if (kind === K_SET) { for (const v of c as unknown[]) if (isObj(v)) stack.push([v, undefined]); }
@@ -206,22 +312,23 @@ function restoreMapped(s: Snapshot, into: Game): void {
   // whatever is left has nobody standing in its place: made anew
   mayMake = true;
   for (let n = 0; n < later.length; n++) { bind(later[n], undefined); drain(); }
-  for (let i = 0; i < nodes.length; i++) if (!map.has(nodes[i])) { bind(nodes[i], undefined); drain(); }
+  for (let i = 0; i < N; i++) if (!map.has(nodes[i])) { bind(nodes[i], undefined); drain(); }
   for (const t of s.tables) if (t.sideName === undefined && !map.has(t)) bind(t, undefined);
   // … and the contents, every reference turned to the object that stands for it. A function already standing in the other game's object is that game's own closure: kept
   const tr = (v: unknown): unknown => typeof v === 'object' && v !== null ? map.get(v) ?? v : v;
   /** the function for a slot: the other game's own closure when one of the same code stands there and it is that game's OWN (not one an earlier restore brought over, which
    *  belongs to whatever stood there then); else the snapshot's, marked as brought over */
   const fn = (v: Function, was: unknown): unknown => { if (typeof was === 'function' && (was === v || (!BROUGHT.has(was) && String(was) === String(v)))) return was; BROUGHT.add(v); return v; };
-  for (let i = 0; i < nodes.length; i++) {
+  for (let i = 0; i < N; i++) {
     const t = map.get(nodes[i])!, own = !made.has(t);
     switch (kinds[i]) {
       case K_ARR: { const o = t as unknown[], c = data[i] as unknown[]; const was = own ? o.slice() : null; o.length = c.length;
         for (let j = 0; j < c.length; j++) { const v = c[j]; o[j] = typeof v === 'function' ? fn(v, was ? was[j] : undefined) : tr(v); } break; }
       case K_TYPED: (t as Typed).set(data[i] as Typed); break;
-      case K_OBJ: { const o = t as Rec, c = data[i] as Rec; const was = own ? Object.assign({}, o) as Rec : null;
+      case K_WORDS: new Uint32Array((t as Typed).buffer, (t as Typed).byteOffset, (t as Typed).byteLength >>> 2).set(data[i] as Uint32Array); break;
+      case K_OBJ: { const o = t as Rec, c = data[i] as unknown[], pk = shapes[i]!; const was = own ? Object.assign({}, o) as Rec : null;
         for (const k of Object.keys(o)) delete o[k];
-        for (const k in c) { const v = c[k]; o[k] = typeof v === 'function' ? fn(v, was ? was[k] : undefined) : tr(v); } break; }
+        for (let j = 0; j < pk.length; j++) { const k = pk[j], v = c[j]; o[k] = typeof v === 'function' ? fn(v, was ? was[k] : undefined) : tr(v); } break; }
       case K_MAP: { const o = t as Map<unknown, unknown>, c = data[i] as unknown[]; const was = own ? new Map(o) : null; o.clear();
         for (let j = 0; j < c.length; j += 2) { const k = tr(c[j]), v = c[j + 1]; o.set(k, typeof v === 'function' ? fn(v, was ? was.get(k) : undefined) : tr(v)); } break; }
       case K_SET: { const o = t as Set<unknown>, c = data[i] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(tr(c[j])); break; }
@@ -238,21 +345,24 @@ function restoreMapped(s: Snapshot, into: Game): void {
   for (let i = 0; i < s.vars.length; i++) s.vars[i].set(tr(s.varVals[i]) as never);
 }
 
-/** roughly what a snapshot holds, in bytes: 8 a slot, a typed array's own bytes, a string's length (keys are not counted: an object's shape is shared) */
-export function snapshotBytes(s: Snapshot): { bytes: number; objects: number; typed: number; slots: number; tables: number; entries: number } {
-  let typed = 0, slots = 0, strs = 0, entries = 0;
-  const val = (v: unknown): void => { slots++; if (typeof v === 'string') strs += v.length; };
-  for (let i = 0; i < s.nodes.length; i++) {
-    const c = s.data[i];
-    switch (s.kinds[i]) {
-      case K_TYPED: typed += (c as Typed).byteLength; break;
-      case K_BUF: typed += (c as ArrayBuffer).byteLength; break;
-      case K_OBJ: for (const k in c as Rec) val((c as Rec)[k]); break;
-      default: for (const v of c as unknown[]) val(v);
+/** roughly what a snapshot holds, in bytes: 8 a slot, a typed array's own bytes, a string's length (keys are not counted: an object's shape is shared).
+ *  `since`: the snapshot it was taken since — `own` is then what it holds that the other does not (the copies made anew), `changed` how many objects that is */
+export function snapshotBytes(s: Snapshot, since?: Snapshot): { bytes: number; objects: number; typed: number; slots: number; tables: number; entries: number; own: number; changed: number } {
+  let typed = 0, slots = 0, strs = 0, entries = 0, own = 0, changed = 0;
+  const shared = since ? new Set(since.data) : null, kinds = s.chain.kinds;
+  for (let i = 0; i < s.at.length; i++) {
+    const c = s.data[i]; let b = 0;
+    if (c === undefined) continue;   // (a side table: its entries are counted below)
+    switch (kinds[s.at[i]]) {
+      case K_TYPED: case K_WORDS: b = (c as Typed).byteLength; typed += b; break;
+      case K_BUF: b = (c as ArrayBuffer).byteLength; typed += b; break;
+      default: { const a = c as unknown[]; slots += a.length; b = 8 * a.length; for (let j = 0; j < a.length; j++) { const v = a[j]; if (typeof v === 'string') { strs += v.length; b += v.length; } } }
     }
+    if (!shared || !shared.has(c)) { own += b; changed++; }
   }
-  for (const e of s.entries) { entries += e.length; for (const v of e) val(v); }
-  return { bytes: typed + slots * 8 + strs, objects: s.nodes.length, typed, slots, tables: s.tables.length, entries };
+  for (const e of s.entries) { entries += e.length; slots += e.length; own += 8 * e.length; }
+  own += 24 * s.at.length;   // (the three lists every snapshot has of its own: which object, its copy, its keys)
+  return { bytes: typed + slots * 8 + strs + 24 * s.at.length, objects: s.at.length, typed, slots, tables: s.tables.length, entries, own, changed };
 }
 
 // ---- the state in one fixed order, to the bit: a word of it (stateHash), or two games' side by side with the paths that differ (stateDiff)
@@ -295,7 +405,8 @@ function canon(g: Game, full: boolean, sink: Sink): void {
       case K_OBJ: { const p = Object.getPrototypeOf(o) as object | null; let id = PROTO_ID.get(p);
         if (id === undefined) PROTO_ID.set(p, id = hashStr(p === null ? '(null)' : (p.constructor as { name?: string } | undefined)?.name ?? '?'));
         sink.word(14); sink.word(id);
-        for (const k in o) { if (k === 'ms') continue;   // (a field named `ms` is a wall-clock reading — props.stats, reachStats: kept and put back like any, never compared)
+        for (const k in o) { if (k === 'ms' || k === 'runId') continue;   // (wall-clock readings — a field named `ms`: props.stats, reachStats; the save's `runId`, a run's name made of the clock
+          // and a serial so that two runs' saves are told apart — kept and put back like any, never compared: two plays of one seed differ in them and in nothing else)
           sink.str(k); if (path) path.push('.' + k); value((o as Rec)[k]); if (path) path.pop(); }
         sink.word(15); return; }
       case K_MAP: { sink.word(16); sink.word((o as Map<unknown, unknown>).size); let n = 0;

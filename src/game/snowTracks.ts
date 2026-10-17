@@ -17,7 +17,7 @@
 // (`kicks`: snowFx.ts files them as flakes). How fast it sinks, how late the lumps land and how much snow goes up are the FORCE's: a sprint over a walk, a
 // fallen man over a boot, a drum over a chair. With the switch off a mark is whole in the frame it is made, byte for byte as it was. Once formed, a mark's
 // bytes are the bytes it had before there was any forming: the same walk still presses the same map.
-import { SideMap } from '../math/side';
+import { SideMap, rollbackVar } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
 import { WORLD } from '../scene/world';
@@ -135,7 +135,8 @@ function dirtied(T: Stamp, x0: number, z0: number, x1: number, z1: number) {
   if (!D) T.dirty = [x0, z0, x1, z1]; else { if (x0 < D[0]) D[0] = x0; if (z0 < D[1]) D[1] = z0; if (x1 > D[2]) D[2] = x1; if (z1 > D[3]) D[3] = z1; }
 }
 interface Feet { l: [number, number] | null; r: [number, number] | null; pl: [number, number] | null; pr: [number, number] | null; body: [number, number] | null; hips: [number, number] | null; lain: number; }
-let feetOf = new SideMap<Character, Feet>('snowTracks.feetOf');
+let feetOf = new SideMap<Character, Feet>();   // (made afresh by clearSnowTracks, so it takes no name: the snapshot holds the variable)
+rollbackVar('snowTracks.feetOf', () => feetOf, v => { feetOf = v; });
 
 export function makeSnowTracks(): SnowTracks {
   const w = Math.round(WORLD.gridW * WORLD.gridCell * TRACK_RES), h = Math.round(WORLD.gridH * WORLD.gridCell * TRACK_RES) + TRACK_PAD;

@@ -1,6 +1,7 @@
 // Combat and kit: shots and hits, kills and what leaves dying hands, hand props / holsters / lasers, live throwables (canisters, stun) and their effects.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { rollbackVar } from '../math/side';
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
 import { wandDrop } from './wand';
 import { DOORBLAST } from './doorblast';
@@ -81,6 +82,7 @@ export function firearmOf(g: Game, shooter: Character, isPlayer: boolean): Firea
   return g.guards.find(x => x.char === shooter)?.weapon ?? (strayGun ??= new Firearm(WEAPONS.guard9mm));
 }
 let strayGun: Firearm | null = null;
+rollbackVar('combat.strayGun', () => strayGun, v => { strayGun = v; });   // (a gun like any other once it is made: its rounds and its clock are fired off)
 
 /** would the OLD near-is-a-hit rule have broken this fixture on these legs? (a count for the panel and the check: rounds the real-hit rule let pass) */
 function nearLamp(t: LightTarget, legs: readonly RoundLeg[], slack: number): boolean {

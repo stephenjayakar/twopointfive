@@ -1,7 +1,7 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { SideMap, SideSet } from '../math/side';
+import { SideMap, SideSet, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
 import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
@@ -1329,6 +1329,7 @@ const heldLastFrame = new SideSet<Guard>('guards.heldLastFrame');
 /** QA counters (tools/qa: the unstick probe, the soak's smell line): side-steps begun, snaps made, and when / whom the last snap moved (the soak's one-frame
  *  displacement net lets that man through that frame, as it does its own teleports) */
 export const UNSTICK = { legs: 0, snaps: 0, lastSnapT: -1, lastSnapWho: null as Guard | null };
+rollbackRoot('guards.UNSTICK', UNSTICK);   // (the last snap's man and time are read by the same frame's sweep)
 /** Is the nav cell under (x, z) one no plan can leave: blocked itself and all four orthogonal neighbours blocked (the world's edge counting as blocked)? Five
  *  byte reads. A blocked cell with a free neighbour is NOT stranded — A* steps straight into the neighbour and the path's first point is its centre. */
 export function strandedAt(g: Game, x: number, z: number): boolean {
@@ -3280,6 +3281,7 @@ const MAX_SKINNED = 16;
 /** ids handed to units: clear of Sam's 1 and the staff's 10‥15, inside the owner byte */
 const UNIT_ID0 = 20, UNIT_ID1 = 250;
 let unitSerial = 0;
+rollbackVar('guards.unitSerial', () => unitSerial, v => { unitSerial = v; });
 const TEAM_TINT: Record<Team, Vec3> = { guard: [0.42, 0.36, 0.25], operative: [0.07, 0.09, 0.1], hostile: [0.36, 0.33, 0.24], player: [0.05, 0.06, 0.07], civilian: [0.75, 0.62, 0.08] };
 const TEAM_TINT2: Record<Team, Vec3> = { guard: [0.02, 0.02, 0.025], operative: [0.05, 0.07, 0.06], hostile: [0.09, 0.08, 0.05], player: [0.1, 0.32, 0.18], civilian: [0.05, 0.06, 0.1] };
 export function spawnUnit(g: Game, o: UnitOpts): Guard {

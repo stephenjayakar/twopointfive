@@ -26,7 +26,7 @@
 //   once a guard is suspicious. The stalk's own pace and crouch are knobs here until that part gives him a sneaking grade to read.
 //
 // No module-level table is built from another game module's exports (src/game is one import cycle): PAIR is a plain literal, the rows are made in seat().
-import { SideMap } from '../math/side';
+import { SideMap, rollbackRoot } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Input } from './input';
 import { v3, type Vec3 } from '../math/vec';
@@ -101,6 +101,7 @@ export const PAIR = {
 export const PAIR_STATS = { given: 0, marks: 0, taken: 0, blown: 0, called: 0, cancelled: 0, held: 0, dark: 0, lit: 0, watched: 0, anyway: 0 };
 /** what happened when (the probes read it; capped): 'mark:<man> on <foe>', 'now:…', 'set:…', 'go:<by>', 'watched:<foe> by <who>', 'clear:…', 'anyway:…', 'hands:…', 'down:…', 'blown:…', 'off:<why>', 'cancel:…', 'dark:…', 'lit:…' */
 export const PAIR_LOG: { t: number; what: string }[] = [];
+rollbackRoot('pairorders.PAIR_LOG', PAIR_LOG);   // (not a log alone: a lesson's `pair` step counts the rows filed since it began — lesson.ts)
 /** ?pairorders (=0: off) and the harness's PAIRORDERS — read at load, and again once the Game has read the stored team feel back (the flag is this visit's word) */
 function flags() {
   try { const q = new URLSearchParams(location.search); if (q.has('pairorders')) PAIR.on = q.get('pairorders') !== '0'; } catch { /* no page (the harness) */ }
