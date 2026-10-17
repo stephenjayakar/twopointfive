@@ -82,6 +82,7 @@ import { kitViewPlanChild, kitPlanGeometry, kitPlanWayBuilt, kitPlanAct4, kitPla
 import { OWNCHARGE } from '../game/owncharge';   // (a leaf: read inside a row's start only)
 import { samBigSpot } from '../game/bigkit';   // (asked inside a row's start only: where the game stands Sam for the big slot's tool)
 import { BIG_ORDER } from '../game/doortools';   // (a name, read inside a row only)
+import { FIXLOOK } from '../game/fixtureBreak';   // (a leaf table: written inside the quiet gun's row only — the dead lamp's arcing lead is held off for that row)
 import { exposedTo } from '../game/frag';   // (asked inside a row's tick only: has a burst THERE a line to Sam — the game's own reckoning, glass that it would break counted open)
 
 /** THE LIGHT, one table (a way's `light` in the level file lies over it, key by key). Every place is door-relative — [along the wall toward the stack, out
@@ -245,6 +246,10 @@ export const KIT_VIEW_QUIET = {
    *  from the round · the fill lifted to this over … s (eyes adjusting) · he walks to the jamb … s after the round: … m past the frame, … m off the
    *  wall's face · the loop rests this long before the lamp goes again */
   rise: 0.65, half: 0.7, hold: 4, lift: 2.5, liftSecs: 1.2, walkAt: 1, jambAlong: 0.3, jambOut: 0.6, gunRest: 3.5,
+  /** …and THE KILL IS A CUT: the frame after the lamp dies takes no history (no glow left fading on the floor), the gun's gas is taken out of the
+   *  air (unlit, it drew as soot on the door) and the dead lamp's lead does not arc for this row (the fixture's own burst is the only sparks: gone in
+   *  half a second) · a cold flick at the muzzle as the round goes: this bright, reaching … m, for … s (0 = none) */
+  cut: true, flick: { intensity: 5, range: 3.5, secs: 0.07 },
   /** the suit / trim tile: a lean of … m toward the pool, held … s · a throw's step from the crouch (m toward the throwing post) · a gun left out after
    *  a row is put away after … s at rest */
   leanM: 0.4, leanSecs: 0.6, throwStep: 1.1, stow: 1,
@@ -554,7 +559,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the room burns at · the fill as staged and since when it is lifted · the loop's next rest · a leaf asked shut for a waiting row until · the gun last
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
-  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qFit: { lamp: Vec3; sam: V2 } | null = null;
+  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
   const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
   const base = new WeakMap<RtLight, number>();   // a room light's / the moon's intensity as the game has it (what `roomLights` / `moonScale` multiply)
@@ -739,7 +744,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * (k / KIT_VIEW_QUIET.inside); };
   /** …and as the mission had them (before a restart, at the picture's end: a base is the lamp's own, and no restart puts it back) */
   const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { t.baseIntensity = a.I; t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = [];
-    if (qRoofs.size) { for (const b of qRoofs) b.flags |= BoxFlag.NoPrimary; qRoofs.clear(); engine.world.staticsDirty = true; } };
+    if (qRoofs.size) { for (const b of qRoofs) b.flags |= BoxFlag.NoPrimary; qRoofs.clear(); engine.world.staticsDirty = true; }
+    if (qLead !== null) { FIXLOOK.on = qLead; qLead = null; } };
   const stage = (expect?: number, head?: Guard | null, keep?: Keep | null) => { try { place(expect, head, keep); if (kitViewLoop && staged) live(staged); } catch (err) { console.error('kitview: the team could not be staged —', err); none(); } };
   const place = (expect?: number, head?: Guard | null, keep?: Keep | null) => {
     state = 'staging'; staged = null; dayOut = [];
@@ -1439,6 +1445,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  `hold` s from the round: the fill lifts (after()), and he WALKS, down, through where the pool was to the door's jamb. Then the room is staged
    *  again under the dissolve (the restart's repairLights mends the lamp) and the loop rests `gunRest` s. Refused — the loud gun's row plays, as on
    *  every kind — where there is no lamp burning to shoot, or the gun in his hand is not suppressed (the shotgun is loud kit: its old row) */
+  /** the gun's own gas out of the air (the smoke solver's emitters and what they have laid: nothing else smokes in this row) */
+  const gasOut = () => { const sm = game.smoke as unknown as { emitters?: unknown[]; clearAll?(): void }; if (sm.emitters?.length) sm.clearAll?.(); };
   const lampUp = () => !!pool && pool.on && !pool.broken && pool.disabledUntil < game.time && !!pool.light;
   const quietGun: Row = { door: 'shut', damage: 'world', rest: KIT_VIEW_QUIET.gunRest, cap: 14,
     start: (B, S) => { const pl = game.player; if (B.man) return 'the lamp is Sam\'s to shoot';
@@ -1446,6 +1454,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (pl.slot !== 'pistol' && pl.slot !== 'rifle') return 'no gun in his hand';
       if (!(pl.slot === 'rifle' ? pl.rifle.def : pl.pistol.def).suppressed) return 'not a suppressed gun';
       to(B, 'draw'); B.hTo = 1.1; samStand(S); if (pl.holstered) input.pressed.add(pl.slot === 'rifle' ? 'Digit2' : 'Digit1');
+      if (KIT_VIEW_QUIET.cut && qLead === null) { qLead = FIXLOOK.on; FIXLOOK.on = false; }   // (the dead lamp's lead does not arc in this row: put back by quietUndo(), at the restage the row ends in)
       return null; },
     tick: (B, S) => { const pl = game.player, QK = KIT_VIEW_QUIET, el = game.time - B.pt, L = pool, p = pl.char.pos, ss = (u: number) => { const x = Math.max(0, Math.min(1, u)); return x * x * (3 - 2 * x); };
       if (!L) return 'done';
@@ -1456,12 +1465,14 @@ export function kitViewStart(d: KitViewDeps): KitView {
         const D = Math.max(0.5, flat(L.pos, [p[0], p[2]])), h0 = 1.15; B.quiet = true; B.hTo = h0 + (L.pos[1] - h0) * 3 / D;   // (the aim point is put 3 m out on his yaw: this high there, his line passes the lamp)
         B.legs = [{ yaw: yawTo(p, L.pos), cap: K.gunRate * R, minT: QK.rise, hold: 0.1 }]; B.leg = 0; B.legT = NaN; to(B, 'rise'); return 'on'; }
       if (B.phase === 'rise') { qRise = ss(el / QK.rise); if (!aimLegs(B) || el < QK.rise) return 'on';
-        d.fire(null, [L.pos[0], L.pos[1], L.pos[2]]); V.shots++; B.shots++; B.shotT = game.time; B.marks.push('shot'); to(B, 'shot'); return 'on'; }   // (ONE round, AT the lamp: the gun's own line, as every burst of the picture's is fired)
+        d.fire(null, [L.pos[0], L.pos[1], L.pos[2]]); V.shots++; B.shots++; B.shotT = game.time; B.marks.push('shot'); to(B, 'shot');
+        if (QK.flick.intensity > 0) { const y = pl.char.aimYaw; engine.lights.flash([p[0] + Math.sin(y) * 0.5, 1.25, p[2] + Math.cos(y) * 0.5], [0.7, 0.8, 1], QK.flick.intensity, QK.flick.range, QK.flick.secs, 0); }   // (the cold flick on the wall beside him: he did that)
+        return 'on'; }   // (ONE round, AT the lamp: the gun's own line, as every burst of the picture's is fired)
       if (B.phase === 'shot') { qRise = 1;
-        if (L.broken) { mark(B, 'dark'); liftAt = game.time; to(B, 'dark'); B.legs = [{ yaw: yawTo(p, S.at([0, -1.5, 0])), cap: K.gunRate * R, minT: -1, hold: 0 }]; B.leg = 0; B.legT = NaN; B.hTo = 1; return 'on'; }
+        if (L.broken) { mark(B, 'dark'); liftAt = game.time; if (QK.cut) { gasOut(); engine.resetTaa('kitview'); } to(B, 'dark'); B.legs = [{ yaw: yawTo(p, S.at([0, -1.5, 0])), cap: K.gunRate * R, minT: -1, hold: 0 }]; B.leg = 0; B.legT = NaN; B.hTo = 1; return 'on'; }
         if (el < 0.4) return 'on';
         B.marks.push('missed'); V.refused = 'weapon: the round did not put the lamp out'; B.legs = []; return quiet(B, S); }
-      if (B.phase === 'dark') { const t = game.time - B.markT; qRise = 1 - ss((t - QK.walkAt) / 0.4); aimLegs(B);
+      if (B.phase === 'dark') { const t = game.time - B.markT; if (QK.cut && t < 1.5) gasOut(); qRise = 1 - ss((t - QK.walkAt) / 0.4); aimLegs(B);
         if (t >= QK.walkAt && !B.post) {   // …and across where the pool was, down, to the jamb on his own side
           const al = (S.sam[0] - S.plan.anchor.mid[0]) * S.s[0] + (S.sam[1] - S.plan.anchor.mid[1]) * S.s[1], sg = al > 0 ? 1 : -1, J = S.at([sg * (S.width / 2 + QK.jambAlong), S.plan.wall.face + QK.jambOut, 0]);
           B.post = !game.col.nav.isBlocked(J[0], J[2]) ? [J[0], J[2]] : [p[0], p[2]];
