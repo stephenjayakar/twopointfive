@@ -253,4 +253,16 @@ sw.start({ rounds: 1, only: ['heldAdaptive'] }); check(S.heldAdaptive === true, 
   { const p = mk(set(5)); p.start({ ...opts, only: ['irLightOne'] }); for (let i = 0; i < 400 && L.irCap !== 1; i++) { now += 50; upload(); p.tick(); }
     const capped = L.irCap === 1; p.stop(); check(capped && L.irCap === Infinity, 'stopped while the second row is flipped: the cap is off again'); }
 }
+// a sweep inside somebody else's take (the benchmark's: src/ui/bench.ts): the recording goes on when it ends, and the page is told nothing
+{
+  const S2: any = { heldRays: 4, renderScale: 0.8 }, e3: any[] = [], said: string[] = []; let stops = 0;
+  const r: any = { recording: true, start() { this.recording = true; }, stop() { this.recording = false; stops++; }, event(k: string, t: string) { e3.push(JSON.parse(t)); } };
+  const mk3 = () => new PerfSweep({ settings: S2, width: 100, height: 50, timer: { enabled: true } } as any, { fogOfWar: null } as any, { current: 'high', calibrating: false, label: 'high', auto: true } as any, { stats: { live: 0 }, params: { enabled: true } } as any, r, s => said.push(s));
+  const inside = mk3(); inside.start({ rounds: 1, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['held2'], inside: true });
+  for (let i = 0; i < 60 && inside.active; i++) { now += 16; inside.tick(); }
+  check(!inside.active && inside.last === 'done' && r.recording && stops === 0 && e3.some(e => e.op === 'end' && e.done) && !said.length && S2.heldRays === 4, 'inside another take: the sweep ends, the recording goes on, nothing is said on the page, the row is back');
+  const own = mk3(); own.start({ rounds: 1, settleMs: 0, measureMs: 0, settleFrames: 1, measureFrames: 2, only: ['held2'] });
+  for (let i = 0; i < 60 && own.active; i++) { now += 16; own.tick(); }
+  check(!own.active && !r.recording && stops === 1 && said.length === 2, 'on its own, as ever: the sweep stops the recording and says so');
+}
 process.exit(red ? 1 : 0);

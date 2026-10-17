@@ -67,6 +67,7 @@ import { Breach } from './game/breach';
 import { REACH_PACE } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
+import { Bench, benchView, machineFacts } from './ui/bench';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
@@ -376,7 +377,8 @@ async function main() {
   rendererFlagsAndHotSwaps(engine);   // (holds URL flags written BEFORE the preset is applied, as they were: it stays above `new Quality`)
   traceLabHooks(engine, game);
   giMotionHooks(engine);
-  { let lastHint = -10; input.onLockedInput = () => { const now = performance.now() / 1000; if (show() && now - lastHint > 3) { lastHint = now; game.msg(demo.active ? 'hands-off tour — P to stop · Esc to pause' : 'hands-off showcase — P to stop · Esc to pause'); } }; }
+  let benchOn: () => boolean = () => false;   // (a benchmark is running: set where it is built, below — ui/bench.ts)
+  { let lastHint = -10; input.onLockedInput = () => { const now = performance.now() / 1000; if (show() && !benchOn() && now - lastHint > 3) { lastHint = now; game.msg(demo.active ? 'hands-off tour — P to stop · Esc to pause' : 'hands-off showcase — P to stop · Esc to pause'); } }; }
   const quality = new Quality(engine, smoke); window.__quality = quality;
   { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { quality.auto = false; quality.climbAllowed = false; quality.apply(qp as QualityName); } }   // ?quality= pins for this visit without touching the remembered choice
   { const ap = new URLSearchParams(location.search).get('aim'); const aim = ap === null ? null : ladderAimOf(ap); if (aim !== null) engine.settings.ladderAim = aim; else if (ap !== null) console.warn(`?aim=${ap}: not one of asnow | 0 | 60 | 90 | 120 | display — the ladder keeps its default (${engine.settings.ladderAim === 60 ? 'hold 60' : 'settings.ladderAim ' + engine.settings.ladderAim})`); if (engine.settings.ladderAim) quality.watchDisplay(); }   // the frame rate the ladder works to (ui/quality.ts HOLD): settings.ladderAim's default is HOLD 60; ?aim= sets it for this visit, ?aim=asnow (or ?aim=0) = the ladder as it was before the aim
@@ -404,8 +406,9 @@ async function main() {
   loadSandbox(game);   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
+  let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
   const menu = new Menu({ engine, game, quality, audio, overlay, startTour: () => { if (breach.active) breach.stop(); if (demo.active) demo.stop(); startNight(); }, stopTour: () => { if (demo.active) demo.stop(); if (game.director.showing) game.director.stop(); }, focusGame: () => input.focusGame(), onStart: () => { attract.poke(); kitFresh(game); if (gestured) audio.start(); }, replay: () => viewReplay,
-    startBreach: breach.available ? () => { if (!demo.active && !game.director.showing) breach.start(); } : undefined, loadCheckpoint });   // (the card's NIGHT SHOWCASE = the level script's program 'night'; DAY SHOWCASE = its 'breach'; each ends whatever else is running first, and neither starts over the other)
+    startBreach: breach.available ? () => { if (!demo.active && !game.director.showing) breach.start(); } : undefined, startBench: () => startBench(), loadCheckpoint });   // (the card's NIGHT SHOWCASE = the level script's program 'night'; DAY SHOWCASE = its 'breach'; each ends whatever else is running first, and neither starts over the other)
   window.__menu = menu;
   // __save: the checkpoints for the console / automation — save now (manual slot; force lets go of Sam's hands in the file), load the newest / a slot key / a
   // parsed state, the slot list, export (the newest slot's JSON text), import (text → the manual slot), clear, autosave on/off, the controller's line and log
@@ -429,7 +432,7 @@ async function main() {
   let automated = testMute;   // any scripted hook used once (or the automation profile's mute flag): this page is a test rig, not a visitor
   // after ONE full pass of the attract programme (~49 s of nobody touching anything on the start card) hand over to the showcase tour — the old 25 s auto-start's
   // intent, without yanking the card from a reader mid-sentence or cutting a vantage off: attract stops itself, the card closes the way its own button closes it
-  const attract = new Attract(game, cam, () => menu.mode === 'start' && !missionsBusy() && !optionsOpen() && !demo.active && !game.director.showing && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !quality.calibrating && !automated && !window.__pauseLoop && !window.__testVisible && !document.hidden,
+  const attract = new Attract(game, cam, () => menu.mode === 'start' && !missionsBusy() && !optionsOpen() && !demo.active && !game.director.showing && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !quality.calibrating && !automated && !benchOn() && !window.__pauseLoop && !window.__testVisible && !document.hidden,
     (loops) => { if (loops >= 1) { if (!SHOWCASE_BUTTONS) return; attract.stop(); menu.close(); if (!demo.active && !game.director.showing) { if (!startNight()) unattended = true; else menu.open('start'); } } },   // (showcases off the menus for now: attract keeps cutting round the level instead of handing over)   // (a refused start — script disarmed, a unit on the floor — puts the card straight back: attract re-arms off it instead of stranding a live floor nobody is at)   // after a full pass of the attract programme with nobody here: the night showcase, and — nobody having touched anything by its end — the start card again
     () => { refreshStill = true; });   // onStop: attract has just put the fresh encounter and the card's own camera back with no fade — the next frozen frame must show THAT, settled (step() below)
   { // console / pane entry points obey the same rules as the start card's buttons: never over the tour or each other, and attract is put back in its box
@@ -445,7 +448,8 @@ async function main() {
   { let mx: number | null = null, my: number | null = null;   // (a real change of position: a still mouse can still deliver mousemove on focus and layout changes, and movementX is not reliable everywhere; the first event only takes the reading)
     let mAcc = 0, mT = 0;
     window.addEventListener('mousemove', e => { if (mx !== null && my !== null) { const dd = Math.abs(e.clientX - mx) + Math.abs(e.clientY - my); const now = performance.now(); mAcc = now - mT > 300 ? dd : mAcc + dd; mT = now; if (mAcc >= 3) { mAcc = 0; unattended = false; attract.poke(); } } mx = e.clientX; my = e.clientY; }, { capture: true, passive: true }); }   // (3 px inside 0.3 s: a sensor's 1 px jitter is not a person)
-  window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
+  window.addEventListener('keydown', e => { if (e.code === 'Escape' && !e.repeat) { if (benchOn()) return;   // (Esc is the benchmark's while it runs: it stops itself, and puts the picture back BEFORE its scene is stopped — ui/bench.ts finish)
+    if (!menu.isOpen && panelWantsEsc()) { const a = document.activeElement as HTMLElement; a.dataset.esc = '1'; a.blur(); delete a.dataset.esc; return; }   // (the mark: a field that takes Esc as 'never mind' reads it in the change its blur fires)
     if (!menu.isOpen && (demo.active || game.director.showing || game.director.handedOver)) { quitShow(); e.preventDefault(); return; } if (!menu.isOpen && !show() && !BACKKEY.tab && game.escape()) { e.preventDefault(); return; } if (BACKKEY.tab) input.pressed.delete('Escape'); menu.toggle(); e.preventDefault(); } }, { capture: true });   // (BACKKEY.tab, game/backkey.ts: Esc is only the pause — nothing backs out on it; Tab does that, in the tick)   // (Esc during either showcase quits it to the start card — the maintainer, 08-13)   // (Esc first backs out of an open Space selector / stops a running verb — the leaf being eased, the pick, the choke, the drive: game/interact.ts — and only then pauses)
   const panelWantsEsc = () => { const a = document.activeElement; return !!a && (a instanceof HTMLInputElement || a instanceof HTMLSelectElement) && !!a.closest('#panel, #sndcard'); };   // first Esc just releases a focused tweak-panel control; controls inside the menu never block it
   tape?.stood(game);   // (a tape: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
@@ -545,7 +549,8 @@ async function main() {
   if (tape) automated = true;   // (a replay: no attract reel under it)
   if (new URLSearchParams(location.search).has('paused')) { window.__pauseLoop = true; automated = true; }   // ?paused: nothing runs until a script steps it (deterministic captures from frame 0) — and attract mode never, even if the loop is let go later
   window.__timeScale = 1;
-  if (new URLSearchParams(location.search).has('demo')) setTimeout(() => { startNight(); }, 1500);   // ?demo: straight into the night showcase (the level script's 'night'; ?breach the day's)
+  if (new URLSearchParams(location.search).has('bench')) { /* (?bench plays the day showcase itself: no show started under it) */ }
+  else if (new URLSearchParams(location.search).has('demo')) setTimeout(() => { startNight(); }, 1500);   // ?demo: straight into the night showcase (the level script's 'night'; ?breach the day's)
   else if (new URLSearchParams(location.search).has('breach')) setTimeout(() => { breach.start(); }, 1500);
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → download + shot server
@@ -555,11 +560,28 @@ async function main() {
   (window as any).__perfrec = perfrec;
   // F8: the perf SWEEP (ui/perfsweep.ts) — a measurement take over the recorder: the world frozen where it stands (Shift+F8: left running), auto quality held, one heavy feature
   // flipped at a time and put back, each flip a recorder event; the take downloads as any F9 one does. Its own key listener, not one of the loop's hotkeys: F8 must stop a frozen sweep, and a frozen frame shows the hotkeys at most the recorder keys (F9 there stops the recorder and with it the sweep).
-  const perfsweep = new PerfSweep(engine, game, quality, smoke, perfrec, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } },
-    () => quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' ? 'start a run first' : null);
+  const perfsweep: PerfSweep = new PerfSweep(engine, game, quality, smoke, perfrec, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } },
+    () => bench.active && !bench.sweeping ? 'the benchmark is running' : quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' && !bench.sweeping ? 'start a run first' : null);
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
   window.addEventListener('keydown', e => { if (e.code === 'F8' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '')) { e.preventDefault(); perfsweep.toggle(e.shiftKey); } });
+  // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address — the way in for a machine nobody here can sit at): hands off, the opening picture timed,
+  // the day showcase played live as the scene, its smoke held still and timed under each preset and each sweep row, then a short text to copy (the GPU by name, the boot's
+  // timings, a line per window) and the take's json in the downloads. Nothing is sent anywhere. ?bench=N = N seconds a window. Unasked, nothing of it runs
+  let benchAway = false; document.addEventListener('visibilitychange', () => { if (document.hidden) benchAway = true; });
+  const bench: Bench = new Bench(engine, quality, perfrec, { boot: () => boot.summary(), machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
+    blocked: () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : demo.active || game.director.showing ? 'a show is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null,
+    covered: () => missionsBusy() || optionsOpen() ? 'a screen came up over it' : null,
+    scene: { start: () => { const why = game.director.canStart('breach'); if (why) return why; breach.start(); return breach.active ? null : 'the showcase did not start'; }, active: () => breach.active, stop: () => { if (breach.active) breach.stop(); },
+      heavy: () => { const c = breach.chapters(); return /smoke/.test(c.list[c.i]?.title ?? '') && c.frac >= 0.45 && smoke.stats.live > 0; } },   // (the canister's chapter of the day show, levels/office.script.ts, nearly half through: the plume some four seconds up, on the SHOW's clock, so the picture held is the same one on a slow machine. bench-check reads the title there. Muzzle and stun smoke earlier in the show is not it)
+    away: () => { const a = benchAway; benchAway = false; return a; },
+    sweep: { start: o => perfsweep.start(o), active: () => perfsweep.active, flipped: () => perfsweep.flipped, progress: () => perfsweep.progress, stop: why => perfsweep.stop(why), settled: () => perfsweep.settled } });
+  (window as any).__bench = bench;
+  const benchOpts = (b: string | null) => { const secs = parseFloat(b ?? ''); return isFinite(secs) && secs > 0 ? { measureMs: Math.min(60, secs) * 1000, settleMs: Math.min(2000, Math.max(300, secs * 500)) } : {}; };
+  benchOn = () => bench.active;   // (no attract reel under a measurement, and the page's Esc and hotkeys stand down)
+  startBench = () => { attract.poke(); const said = bench.start(benchOpts(new URLSearchParams(location.search).get('bench'))); if (!bench.active) { perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } };   // (a refusal is said, on the HUD's line and the console)
+  // ?bench: once, and off the address as it starts (a reload, a mission picked from the title or a show's link would carry it along and start another). Never in ?kitview's own window
+  if (!kitViewOn && new URLSearchParams(location.search).has('bench')) { startBench(); try { const keep = location.search.slice(1).split('&').filter(p => p && !/^bench(=|$)/.test(p)); history.replaceState(history.state, '', location.pathname + (keep.length ? '?' + keep.join('&') : '') + location.hash); } catch { /* the address stays */ } }
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file downloads (+ the shot server's /session sink)
@@ -594,14 +616,14 @@ async function main() {
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)
       if (rawDt > 0) fpsSm = fpsSm * 0.95 + (1 / rawDt) * 0.05;   // HUD frame rate from wall-clock, not the clamped / time-scaled game dt
       if (quality.calibrating) quality.calibrateTick(rawDt);                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
-      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !perfsweep.active) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
+      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
         quality.sample(rawDt, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN);
       }
       perfrec.cpuFrameStart = performance.now();
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      perfrec.frame(rawDt, fpsSm); perfsweep.tick(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); perfsweep.tick(); bench.tick(rawDt); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -646,7 +668,7 @@ async function main() {
   // (the options layer opened over a PAUSED run lets the frame show through on purpose — ui/options.ts `.over-game`: Brightness and the tier are judged against it — so it is drawn as ever)
   const viewCovered = (): boolean => menu.isOpen && !attract.live && (!!startPage() || (optionsOpen() && !document.getElementById('options')?.classList.contains('over-game')));
   const viewHidden = (): boolean => {
-    if (!behind.on || !rendered || scripted || tape || !viewCovered() || quality.calibrating || perfsweep.active || perfsweep.freezing || perfrec.recording) { behindSince = -1; return false; }
+    if (!behind.on || !rendered || scripted || tape || !viewCovered() || quality.calibrating || perfsweep.active || perfsweep.freezing || bench.active || perfrec.recording) { behindSince = -1; return false; }
     if (behindSince < 0) behindSince = behind.drawn;
     return behind.drawn - behindSince >= behind.warm;
   };
@@ -661,10 +683,11 @@ async function main() {
     fixedStep: () => !scripted,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that)
     betweenTicks: () => { hudExpireBubbles(game); engine.world.upload(true); },
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
-    frozen: () => ((menu.isOpen && !attract.live) || perfsweep.freezing) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
+    frozen: () => ((menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
     present: () => !scripted || (lastOfBurstNow && !document.hidden),
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)
     hotkeys: (frozen) => {
+      if (bench.active) return;   // (hands off: P would quit its scene, F9 its recording)
       if (!frozen && input.hit('BracketLeft')) engine.settings.exposure /= 1.25;
       if (!frozen && input.hit('BracketRight')) engine.settings.exposure *= 1.25;
       if (TABKEY.does !== 'off' && input.hit('Tab') && !(BACKKEY.tab && !frozen && game.backable())) {   // (…unless Tab is backing out of something this frame: game/backkey.ts)
@@ -754,7 +777,7 @@ async function main() {
       // one stat per line (a narrow column down the left edge reads better than three long rows across the picture)
       const row = (k: string, v: string) => k.padEnd(11) + v;
       lines.push(gpu.adapterInfo);
-      if (perfrec.recording || perfNoteT > 0) lines.push(perfrec.recording ? (perfsweep.active ? '● REC (the sweep; F8 stops)' : '● REC (F9 stops)') : perfNote);
+      if (perfrec.recording || perfNoteT > 0) lines.push(perfrec.recording ? (perfsweep.active ? '● REC (the sweep; F8 stops)' : bench.active ? '● REC (the benchmark; Esc stops)' : '● REC (F9 stops)') : perfNote);
       lines.push(row('res', `${engine.width}×${engine.height} ×${engine.settings.renderScale.toFixed(2)}${engine.capScale < 0.999 ? ` of ${engine.settings.maxInternalHeight}p` : ''}${engine.settings.taau ? ` → ${engine.outWidth}×${engine.outHeight} taau${engine.sharpOn ? ' sharp' : ''}` : ''}`));   // the render scale is relative to the cap: '1368×770 ×0.77 of 1000p → 1777×1000 taau' = 770 rows rendered under the 1000-row cap, resolved to 1000; no 'of' = the window itself is under the cap; no '→' = TAAU off (the canvas IS the internal size)
       lines.push(row('quality', `${quality.label}${quality.adaptive ? ' +adapt' : ''}`));
       lines.push(row('fps', `${fpsSm.toFixed(0)}`));
