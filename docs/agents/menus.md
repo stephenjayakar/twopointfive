@@ -558,17 +558,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   TWO THINGS THE PARTNER'S ROWS NEEDED: a door order waits for the pulled-to leaf to LATCH (`leafWait`), and under a teammate's row Sam
   is left up to 0.25 m more off his place (`tidy`) — he rests a body's width from where the game stacks a man on the door, the partner
   shouldered him 4 cm over the line, and the walk home that gave him is `Game.puppet`, which took the partner's frag order away.
-  THE CHECKS: `bun run tools/qa/kitview-plan.ts` section I, both stands, 654 of 654 (the kind off 144 links, `kitloud` and the table off
+  THE CHECKS: `bun run tools/qa/kitview-plan.ts` section I, both stands, 667 of 667 (the kind off 144 links, `kitloud` and the table off
   null on every one; each of the 12 quiet ways' pool lamp and rest place; headless, the lamp hung as the page hangs it is put out by one
-  round from the rest place, the park's count 0, the floor at 0, and `repairLights` mends it); `KITQUIET_BREAK=1` = the link read with
-  `kitloud`, the round aimed beside the lamp: 15 FAIL, exit 1. The page, software adapter, the render stood in:
+  round from the rest place, the park's count 0, the floor at 0, and `repairLights` mends it; the roof slabs drawn lie wholly behind the wall and over no man's place, and the vault's hut keeps its
+  roof); `KITQUIET_BREAK=1` = the link read with `kitloud`, the round aimed beside the lamp, the roofs asked with the key off: 16 FAIL,
+  exit 1. The page, software adapter, the render stood in:
   `LEVEL=vault KIND=quiet node tools/qa/kitview-levels.cjs` 24 of 24 (one round, 'shot' 'dark' 'walk', one restart, roused 0, console
   clean), the same with `FLAGS=kitloud` 23 of 23 (the old rows, the page says nothing of it), `LEVEL=crossing KIND=quiet SQUAD=1` 29 of
   29 (28 of 28 with `FLAGS=kitloud`), `LEVEL=records WAY=1` 29 of 29 (its 28 and the new row: a loud link says nothing of it). Rows whose meaning moved on a quiet kind are listed at the head of kitview-levels.cjs
   (the places are the staged ones; the leaf hung is the leaf at its rest; the gun's row ends in a restage). LOUD UNMOVED: every change
   is behind the link's kind; the plan check's sections A to H print the same lines as before on both stands and its dry-run file is
   byte-identical. NOT SEEN: anything on a GPU; the loop at speed (stills on the software adapter only: the pool reads soft and wide
-  there and the half crouch is hard to tell from the crouch; the re-shoot's numbers and what it measured: below); the solo night's picture; any quiet way but the vault's and the crossing's on a page.
+  there and the half crouch is hard to tell from the crouch). THE RE-SHOOT (10-17, the same adapter and preset; 7 x 7 px means,
+  sRGB^2.2 x 100, after the tonemap: RELATIVE only), the vault's rest picture before / after: the pool's core 8.5 / 11.3, the yard's
+  floor 2.2 brown / 0.25 blue, the floor in the moon's shadow 0.04 / 0.01, the room behind the wall 6.2 / a roof at 0.7, the wall's
+  top 15.7 / 5.8, the door's leaf 15.3 / 3.8, the man 1.0 / 0.2: the pool is the brightest thing but its own fixture. WHAT STOPS
+  10 : 1 : 0.5: the vault's pale wall takes about twenty times what its dirt floor does of the same moon, so a floor at a tenth of the
+  pool puts the wall over it; the fill, low and far out, does not reach the floor, so the moon's shadow is black. One test with the moon
+  off showed the room lit by its OWN lamp at 0.15, not by the sky. The page: the fixture at 0.30 of the column, the pool's middle 0.55,
+  his head 0.59, his boots 0.67. NOT READING YET: the blade is a faint warm smear, not a line (2.5 behind a 16 deg gap; never brighter
+  than the floor round it by more than a tenth); after the round he is a dark shape on a dark floor and his own shadow lies on the wall
+  behind him; the vault's dark mat cuts a straight edge through the pool; where no roof lies over the room (the crossing's compound)
+  the lamp behind the door shows it dim and warm; AS TWO, a partner who works the door shoulders Sam up to 0.45 m off his rest place (a body's
+  width nearer the door now) and Sam walks home after: the page check gives a Sam still being walked home 0.5 m at a teammate's row's
+  end on a quiet kind (marked in kitview-levels.cjs) — the jostle itself wants the partner's rows to move Sam first; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
+  set). Never seen: any of it on a GPU or at speed; the walk across the doorway in motion; the solo night's picture (the same framing, under a roof: no slab drawn); any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +

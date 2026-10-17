@@ -96,6 +96,8 @@ const fs = require('fs'), path = require('path');
 //   · 'the world whole': the leaf HUNG is the leaf at its REST angle — a hand ajar there, shut everywhere else (`leaf.ajar` is measured from it);
 //   · Sam's 'weapon' row: its end is the room staged again (one restart more) and not the gun lowered; 'the gun's burst hits no man' counts its one round;
 //   · the 'cut' row: the tile that cuts the smoke is the lamp's row — it too ends in a restage.
+//   · 'every man home' at the end of a TEAMMATE's row: Sam, shouldered off his rest place by a partner at the door and still being walked home, is
+//     given SAM_GIVE (0.5 m) of it and not HOME_M — his rest place is a body's width nearer the door since the re-shoot (KIT_VIEW_QUIET.samAlong 1.1).
 // FLAGS (words added to the page's link, '&'-joined: `FLAGS=kitloud`).
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', WARM = +(process.env.WARM || 6), SCALE = +(process.env.SCALE || 2);
 const ROW_MS = +(process.env.ROW_MS || 240000), FRAMES = +(process.env.FRAMES || 4), WAIT_MS = +(process.env.WAIT_MS || 3000), HELD = { mend: 'frames', home: 'ms', sam: 'ms', leaf: 'ms', arrive: 'ms' } /* the director's rules for a wait this tool knows, each with its bound: FRAMES of it · WAIT_MS from the pick */, BREAK = process.env.KITLEVELS_BREAK === '1', FLAGS = (process.env.FLAGS || '').split('&').filter(Boolean), PLAIN = process.env.LOOK === 'plain', HOUR = (process.env.HOUR || '').trim();
@@ -272,7 +274,10 @@ async function one(browser, L) {
   //  on his place and the leaf HUNG — ajar is the row's own use of it, an order or a dissolve the new beat's)
   // (HOME_M: every man within it of his place. SAM AT A WALL LEFT OPEN — what the charge threw down may lie on his place: his half step home is given up within
   //  SAM_GIVE of it, and where he stands is then his place: host/kitView.ts KIT_VIEW_LOOP.samGive, the same number)
-  const HOME_M = 0.35, SAM_GIVE = 0.5, off = (s, by) => Math.max(0, ...s.men.filter(m => !(by === 'next' && s.beat && m.slot === (s.beat.i === 0 ? 0 : 1))).map(m => m.slot === 0 && s.hole ? Math.max(0, m.off - (SAM_GIVE - HOME_M)) : m.off));
+  //  (MOVED WITH THE QUIET PICTURE'S RE-SHOOT: Sam rests 1.1 m along the wall, the pool's rim across his hips — a body's width nearer the door than he
+  //  did, and where the game stacks a partner who works the door. The partner shoulders him up to 0.45 m off his place; Sam walks home as that row ends.
+  //  On a quiet kind, at a row's end read at the next beat, a Sam STILL BEING WALKED HOME is given the same SAM_GIVE — a Sam left standing there is not)
+  const HOME_M = 0.35, SAM_GIVE = 0.5, off = (s, by) => Math.max(0, ...s.men.filter(m => !(by === 'next' && s.beat && m.slot === (s.beat.i === 0 ? 0 : 1))).map(m => m.slot === 0 && (s.hole || (QUIET && by === 'next' && s.puppet)) ? Math.max(0, m.off - (SAM_GIVE - HOME_M)) : m.off));
   // (A WALL ANCHOR'S FLAG AND ITS WALL NEVER DISAGREE: `hole` exactly when the span is open)
   const whole = (s, by) => off(s, by) <= HOME_M && s.hurt === 0 && s.alive === N && (!s.leaf || (!s.leaf.off && (by === 'next' || s.leaf.ajar < 0.05))) && (s.wallUp === null || s.hole === !s.wallUp) && (by === 'next' || (s.set_ === 0 && s.ops === 0 && !s.puppet && s.dz === ''));
   const wholeSaid = (s, by) => `the furthest man ${off(s, by).toFixed(2)} m off his place${by === 'next' ? ' (the next beat\'s own man apart)' : ''} · ${s.hurt} hurt, ${s.alive} of ${N} up${s.leaf ? ` · the leaf ${s.leaf.off ? 'OFF' : s.leaf.ajar.toFixed(2) + ' rad ajar'}` : ''}${s.wallUp !== null ? ` · the wall ${s.wallUp ? (s.hole ? 'STANDS WITH ITS HOLE FLAG UP' : 'stands') : s.hole ? 'open: the hole its charge left, kept' : 'OPEN, NO HOLE KEPT'}` : ''} · ${s.set_} charge(s) set, ${s.ops} door op(s)${s.puppet ? ' · Sam still a puppet' : ''}${s.dz ? ` · dissolve '${s.dz}'` : ''}`;
