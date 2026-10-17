@@ -136,7 +136,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `?solo`. NOT touched: a page stood up plain (the floor under the title, a showcase, a harness game with no link staged) has no fog, as before; the
   guards, their eyes, their numbers and the level. Neighbours' files touched, each a line or three: `scenarioRun.ts` (quietLike, sameFog),
   `ui/loadout.ts`, `ui/missions.ts`, `game/loadout.ts` (the note's words). Switch: ON in the page (`?solofog=0`), OFF in the module and on the frozen stand (`TPS_SOLOFOG=1`); rides the
-  QUIETFOG table in a recording, one from before the key replays with it off. Checks: `bun run tools/qa/probes.ts solo-fog` (family `solofog`,
+  QUIETFOG table in a recording, one from before the key replays with it off; Tab row 'cam ▸ solo night fog'. Checks: `bun run tools/qa/probes.ts solo-fog` (family `solofog`,
   `tools/qa/solofog-check.ts`, `SOLOFOG_BREAK=1` exits 1) and the real page `tools/qa/solofog-page.cjs` (the start page's rail and the
   kit tiles; then `?solo` in play on the software adapter). 13 verdicts now, a restart among them. On the frozen stand `TPS_SOLOFOG=1` alone raises
   nothing: it reads the quiet fog's own rows, so a frozen run of the solo night under the fog is `TPS_QUIETFOG=1 TPS_QUIETDEF=team TPS_STICKY=1
