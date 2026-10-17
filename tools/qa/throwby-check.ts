@@ -15,6 +15,9 @@
 //   (e) the clock is one clock: every swing holds the can exactly as long (`throwing`) and is over on the same frame;
 //   (r) a throw re-triggered mid-swing into ANOTHER read: each wrist, on its own, moves no further in a frame than that wrist ever does in a swing nobody
 //       re-triggered, or re-triggered into itself, in the WHOLE WIND-UP — the swing as it was before the table — does (+ SLACK);
+//   (y) A BLAST MID-SWING takes the swing: folded or blinded a few frames into any of the three, both wrists and the head go where the same man's go when he is
+//       hit doing nothing (the fold's and the blinded hunch's own weights; MOVES raised for the line) — against a swing that throws on, with the switch off
+//   (z) … only one that LANDS mid-swing: a throw begun already blinded or folded, or as either lets go, is the whole swing (the switch-off one)
 //   (h) the stands: standUp() leaves the switch as the stand says (frozen: off unless TPS_THROWBY=1; shipped: on, from the harness's one boot), FROZEN_HOLDS and STAND_ENV carry the word,
 //       the page's boot puts it on and ?nothrowby off, the knob registry and the journal's list hold the table;
 //   (f) the Game, switch on: a can thrown short, middling and long — and one aimed far that a near wall stops, where the level has such a line — has the
@@ -25,7 +28,7 @@
 //   (k) ONE CAN: switch on, the fist is not round a can on any frame the thrown one is in the air (combat.ts: `throwing` runs three frames past the release);
 //       a wind-up called off before the release keeps its can in the fist, off and on;
 // Not staged here: the two defender call sites (frag.ts, lanes.ts) pass the same distance the same way and are read, not run.
-// THROWBY_BREAK=1 = the switch left off for the 'on' lines: (f) and (k) must fail.   exit 0 = all hold · 1 = one does not
+// THROWBY_BREAK=1 = the switch left off for the 'on' lines: (y), (f) and (k) must fail.   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -157,6 +160,48 @@ export async function throwbyCheck(): Promise<boolean> {
       seen.push(`${how}: into another read at most ${(wr * 100).toFixed(1)} / ${(wl * 100).toFixed(1)} cm a frame (throwing wrist / the other), otherwise ${(nr * 100).toFixed(1)} / ${(nl * 100).toFixed(1)}`); wr = wl = 0;
     }
     line(!bad.length, `(r) a throw re-triggered mid-swing into another read: neither wrist moves further in a frame than it does in the whole wind-up, plain or re-triggered into itself (+ ${SLACK * 100} cm), empty-handed and with a gun in his hands`, bad.length ? bad.join(' · ') : seen.join(' · '));
+  }
+
+  // ---- a blast mid-swing: the swing gives way to the fold and to the blinded hunch (those are MOVES': raised for these lines, put back after)
+  { const MV = CH.MOVES, keep = { ...MV }, brk = process.env.THROWBY_BREAK === '1'; MV.on = 1; MV.dazzle = 1; MV.clutch = 1;
+    const AT = 4, bad: string[] = [], seen: string[] = [], PARTS = ['the throwing wrist', 'the off wrist', 'the head'] as const;
+    const hit = (c: any, kind: string, k = 1) => { if (kind === 'blinded') c.anim.dazzle = k ? { from: [0.05, 0, 3], k: 1 } : null; else { c.anim.clutch = k; c.anim.foldToo = true; } };
+    const at = (f: ReturnType<typeof figure>): P3[] => [f.wristR(), f.wristL(), sub(f.c.bones.head, f.c.bones.hips)];
+    /** a man hit `AT` frames into a throw against the same man hit doing nothing: how far apart their wrists and heads are, frame by frame, with how far the blast has him */
+    const gaps = (kind: string, d: number, how: Carriage, on: boolean) => {
+      const a = figure(how), b = figure(how); BY.on = true; a.c.anim.throwItem(d); BY.on = on; const out: { w: number; gap: number[] }[] = []; let fast = 0, pr = a.wristR();
+      for (let i = 0; i < 46; i++) { if (i === AT) { hit(a.c, kind); hit(b.c, kind); } const m = a.c.anim.mvs, w = Math.max(m.cf.x, m.dz.x); a.step(); b.step();
+        const pa = at(a), pb = at(b); fast = Math.max(fast, len(sub(pa[0], pr)) / DT); pr = pa[0]; out.push({ w, gap: pa.map((p, k) => len(sub(p, pb[k]))) }); }
+      BY.on = true; return { out, fast };
+    };
+    /** a 12 m throw begun `after` frames after a hit that lasted `held` frames: every frame's wrists and head */
+    const begun = (kind: string, held: number, after: number, on: boolean) => {
+      const a = figure('standing'); hit(a.c, kind); for (let i = 0; i < held; i++) a.step(); if (after >= 0) { hit(a.c, kind, 0); for (let i = 0; i < after; i++) a.step(); }
+      const w0 = Math.max(a.c.anim.mvs.cf.x, a.c.anim.mvs.dz.x); BY.on = true; a.c.anim.throwItem(12); BY.on = on; const out: number[] = []; for (let i = 0; i < 46; i++) { a.step(); for (const p of at(a)) out.push(...p); } BY.on = true; return { w0, out };
+    };
+    try {
+      for (const kind of ['blinded', 'folded']) for (const how of ['standing', 'armed', 'crouched'] as Carriage[]) for (const d of [2, 5, 12]) {
+        const off = gaps(kind, d, how, false), on = gaps(kind, d, how, !brk); const teeth = [0, 0, 0], half = [0, 0, 0], most = [0, 0, 0];
+        for (let i = AT; i < off.out.length; i++) for (let k = 0; k < 3; k++) { const w = on.out[i].w, g0 = off.out[i].gap[k], g1 = on.out[i].gap[k], sl = k ? SLACK / 4 : SLACK; if (w >= 0.5) teeth[k] = Math.max(teeth[k], g0);
+          if (w >= 0.5 && g1 > 0.8 * g0 + sl) half[k] = Math.max(half[k], g1 - 0.8 * g0); if (w >= 0.8 && g1 > 0.45 * g0 + sl) most[k] = Math.max(most[k], g1 - 0.45 * g0); }
+        if (teeth[0] < 0.1) bad.push(`${kind}, ${how}, ${d} m: nothing to give way (the unfaded arm is never more than ${teeth[0].toFixed(2)} m off the hit man's)`);
+        for (let k = 0; k < 3; k++) if (half[k] > 0 || most[k] > 0) bad.push(`${kind}, ${how}, ${d} m: ${PARTS[k]} throws on (${half[k].toFixed(3)} m over at half, ${most[k].toFixed(3)} m over at most of the way)`);
+        if (on.fast > off.fast + 0.5) bad.push(`${kind}, ${how}, ${d} m: the wrist goes ${on.fast.toFixed(1)} m/s giving way, ${off.fast.toFixed(1)} throwing on`);
+        if (d === 12 && how !== 'armed') seen.push(`${kind}, ${how}: wrist ${off.out[AT + 20].gap[0].toFixed(2)} → ${on.out[AT + 20].gap[0].toFixed(2)} m, off wrist ${teeth[1].toFixed(2)} m and head ${teeth[2].toFixed(3)} m at stake`);
+      }
+      if (!brk) { if (!(Math.max(...['blinded', 'folded'].map(k => gaps(k, 12, 'armed', false).out.reduce((m, o) => o.w >= 0.5 ? Math.max(m, o.gap[1]) : m, 0))) > 0.03)) bad.push('the off wrist is never at stake: the line cannot see its fade');
+        if (!(Math.max(...['blinded', 'folded'].map(k => gaps(k, 12, 'crouched', false).out.reduce((m, o) => o.w >= 0.8 ? Math.max(m, o.gap[2]) : m, 0))) > 0.02)) bad.push('the head is never at stake: the line cannot see the trunk fade'); }
+    } finally { Object.assign(MV, keep); }
+    line(!bad.length, `(y) a blast mid-swing takes the swing: folded or blinded ${AT} frames into a toss, a short and a full overhand, standing, crouched and with a gun, both wrists and the head go where the hit man's go — by the time the blast has him halfway they are nearer than a swing that throws on, and most of the way there with it; nothing faster for it (a third of a second after the hit, the full overhand: ${seen.join(' · ')})`, bad.join(' · '));
+    // … but only a blast that lands mid-swing: a throw begun already blinded or folded, or in the tail as either lets go, is the whole swing
+    { MV.on = 1; MV.dazzle = 1; MV.clutch = 1; const bad: string[] = [], seen: string[] = [];
+      try { for (const kind of ['blinded', 'folded']) for (const [name, held, after] of [['already', 90, -1], ['as it lets go', 90, 1], ['in its tail', 90, 12]] as const) {
+          const off = begun(kind, held, after, false), on = begun(kind, held, after, true); let d = 0; for (let i = 0; i < off.out.length; i++) d = Math.max(d, Math.abs(on.out[i] - off.out[i]));
+          seen.push(`${kind} ${name} ${on.w0.toFixed(2)}`); if (after < 12 && !(on.w0 > 0.5)) bad.push(`${kind} ${name}: he is only ${on.w0.toFixed(2)} hit as the throw begins, the case shows nothing`);
+          if (after < 0 ? d > 0.005 : d !== 0) bad.push(`${kind} ${name}: the swing is not the whole one (a wrist or the head ${d.toFixed(3)} m off it)`); }
+      } finally { Object.assign(MV, keep); }
+      line(!bad.length, `(z) only a blast that LANDS mid-swing: a 12 m throw begun already blinded or folded, the frame either lets go, and in its tail is the whole swing — the switch-off one, bit for bit as the hit lets go and within half a centimetre while it still has him (how far the hit has him as each begins: ${seen.join(' · ')})`, bad.join(' · '));
+    }
   }
 
   // ---- the stands
