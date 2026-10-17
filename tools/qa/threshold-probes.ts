@@ -67,7 +67,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 /** every probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = NODEAL = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
 
@@ -84,13 +84,18 @@ let NOCAN: boolean | null = null, FRAGHOLD: boolean | null = null;
 /** DOORTOOLS.wordNoCan as every run staged here has it (true raises the one-order outside clear it acts with). OFF but for threshold-hold's own two runs of it, on both
  *  stands: every other line in this file was written of a word that bangs the blind pockets, and asks what that can does (the kit, who it blinds, Sam behind the door). */
 let WORDNOCAN = false;
+/** squads from the rooms (SQUADDEAL) held off for the runs staged while this is set, by the stand's own word. threshold-hold: its men hold ten seconds and more
+ *  before they are told, and on a dealt floor the room's men are their squad's and have dug in by then (digin.ts) — what the step in then meets is that drill,
+ *  not the door. Its lines were written of a room-fight floor and ask what the door tools do there. */
+let NODEAL = false;
 /** … and the order's one wait, DOORTOOLS.thrHandWait, for the runs staged while this is set (null: the table's own) */
 let HANDWAIT: number | null = null;
 /** a start-card scenario staged as the page stages it, under a seed (the playthrough's own recipe: the page's chaos, Sam in god mode and pinned dark) */
 async function stage(scn: string, seed: number) {
   const E = SCENARIOS.find((e: any) => e.id === scn); if (!E) throw new Error(`no scenario '${scn}'`);
   Math.random = seeded(0x9137 + seed * 7919);
-  const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); const g = W.game;
+  const sd0 = process.env.TPS_SQUADDEAL, noDeal = NODEAL; if (noDeal) process.env.TPS_SQUADDEAL = '0';
+  const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })).finally(() => { if (!noDeal) return; if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const g = W.game;
   if (NO_PLAIN) DOORTOOLS.outsidePlain = false;   // (after the stand-up, which on a stand that names TPS_OUTSIDEPLAIN writes the rule again every time)
   if (HAND !== null) DOORTOOLS.thrHand = HAND;
   DOORTOOLS.wordNoCan = WORDNOCAN; if (WORDNOCAN) DOORTOOLS.outsidePlain = true;
@@ -416,7 +421,8 @@ export const thresholdFirst = guarded(async () => {
 
 /** THE OTHER ORDER: work it from the threshold and hold until told — and everything Sam can then say */
 export const thresholdHold = guarded(async () => {
-  const { verdict, done } = family('threshold-hold: worked from the threshold and HELD until told — the pair (the records office) and the four (the depot) — then step in / bang and step in / leave it / the word');
+  const { verdict, done } = family('threshold-hold: worked from the threshold and HELD until told — the pair (the records office) and the four (the depot) — then step in / bang and step in / leave it / the word · room-fight floors (squads from the rooms held off inside these runs: a dealt floor has dug in by the time a hold is told)');
+  NODEAL = true;
   const AFTER = 10, scns = ['records-pair', 'depot-four'], tells: Hold['tell'][] = ['step', 'bang', 'leave', 'word', 'key'];
   // (THE WORD as it was — a can for the blind pockets — is asked with DOORTOOLS.wordNoCan out of the way; the rule has its own two runs and its own line below.
   //  WORDNOCAN_BREAK=1: those two are staged with the rule off too, and the line must fail on what it finds)
