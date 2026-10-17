@@ -69,6 +69,7 @@ import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { DARKDOOR } from '../game/darkdoor';
 import { DARKFOE } from '../game/darkfoe';
+import { POWEROUT } from '../game/powerout';
 import { DOZE } from '../game/doze';
 import { NETQUIET } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
@@ -221,6 +222,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_DARKDOOR')) DARKDOOR.on = String((globalThis as any).process?.env?.TPS_DARKDOOR ?? '') === '1';   // not in there alone (src/game/darkdoor.ts): off, so an alarmed man walks through a dark doorway as he always did, no man is met and no room is read, as every frozen digest and tally was made; `TPS_DARKDOOR=1` turns it on (the shipped default — it acts only with TPS_MORALE=1 as well)
     if (pinned('TPS_DOZE')) DOZE.on = String((globalThis as any).process?.env?.TPS_DOZE ?? '') === '1';   // a calm man dozes a long dark wait out in a chair (src/game/doze.ts): off, so every man stands his waits awake with his eyes and ears as every frozen run had them; `TPS_DOZE=1` turns it on (the shipped stand has it on)
     if (pinned('TPS_DARKFOE')) DARKFOE.on = String((globalThis as any).process?.env?.TPS_DARKFOE ?? '') === '1';   // an alerted enemy lights his lamp or walks to where he can see (src/game/darkfoe.ts): off, so every defender's weapon light stays as the mission dealt it and he holds where he was put, as every frozen digest and tally was made; `TPS_DARKFOE=1` turns it on
+    if (pinned('TPS_POWEROUT')) POWEROUT.on = String((globalThis as any).process?.env?.TPS_POWEROUT ?? '') === '1';   // a mission's defenders answer a blackout (src/game/powerout.ts): off, so nobody of theirs walks to the breaker and the dark is no word to anybody, as every frozen digest and tally was made; `TPS_POWEROUT=1` turns it on (the shipped stand has it on)
     if (pinned('TPS_NETQUIET')) NETQUIET.on = String((globalThis as any).process?.env?.TPS_NETQUIET ?? '') === '1';   // the net goes quiet (src/game/netquiet.ts): off, so a check nobody answers and a body found shake nobody, no line of its is said, no man whips to a noise and the last man holds his room as he did, as every frozen digest and tally was made; `TPS_NETQUIET=1` turns it on (it needs TPS_MORALE=1 to do anything)
     if (pinned('TPS_ATTENTION')) ATTENTION.on = String((globalThis as any).process?.env?.TPS_ATTENTION ?? '') === '1';   // a guard's attention can be taken (src/game/attention.ts): off, so a wary man sweeps the room with his whole eye, no hold narrows it and no mark is drawn, as every frozen digest and tally was
     if (pinned('TPS_PICTURE')) PICTURE.on = String((globalThis as any).process?.env?.TPS_PICTURE ?? '') === '1';   // each man's own picture of the fight (src/game/picture.ts): off, so no man keeps a memory of where his enemies were and every spot is picked as every frozen digest and tally had it

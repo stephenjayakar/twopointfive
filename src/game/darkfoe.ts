@@ -46,6 +46,7 @@ import { squadDefers, squadStaysIn } from './enemysquads';
 import { laneHolds, laneWarns } from './lanes';
 import { pressOwns } from './pressure';
 import { buddyOwns } from './buddy';
+import { powerOutWord } from './powerout';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?nodarkfoe = defenders leave their lights alone and stand
  *  where they were put, as they did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_DARKFOE=1 turns it on). `litAt` is on the meter's
@@ -112,6 +113,7 @@ function learns(gd: Guard): boolean {
 /** …or for now: a mate's burning lamp in his view (his eye's cone about his aim, a clear line, `lampM`) — and, only with `suspect`, being suspicious this moment */
 function hasWord(g: Game, gd: Guard): boolean {
   if (DARKFOE.suspect && gd.state === 'suspicious') return true;   // (the maintainer, 10-13: the lamp only once he is alerted — a man who has merely heard something keeps it off, and a partner told to hold still stays in the dark)
+  if (powerOutWord(g, gd)) return true;   // (powerout.ts, false on its first line with its switch off: their net has called the dark the team's doing)
   if (!DARKFOE.byLamp) return false;
   const c = gd.char, eye: Vec3 = [c.pos[0], 1.5, c.pos[2]], cos = Math.cos(GUARD_EYE.halfDeg * Math.PI / 180), fx = Math.sin(c.aimYaw), fz = Math.cos(c.aimYaw);
   for (const o of g.guards) { if (o === gd || o.team !== gd.team || o.state === 'dead' || !stateOf.get(o)?.knows || !darkFoeLit(g, o) || !o.flashlight?.enabled) continue;   // (a lamp lit by one who KNOWS, and really burning: word of a word is no word, so a ring of lamps cannot keep itself lit)
