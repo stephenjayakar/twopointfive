@@ -38,7 +38,8 @@
 // round, is where defenders last saw or heard it — never its true position.
 //
 // A hit squad's men in its OTHER rooms come to the room under attack after their own beat. A man who gives ground (roomfight.ts breakOff) goes to the squad's
-// `rally` point when it is in a room of the squad's the team is not known to be in; a `mayLeave: false` squad's men never leave its rooms.
+// `rally` point when it is in a room of the squad's the team is not known to be in; a `mayLeave: false` squad's men never leave its rooms (but, stayask.ts: on a floor
+// where EVERY squad stays, one man of a squad walks to the posts of a squad that has gone silent on the net).
 //
 // WHAT THIS FILE OWNS: who of a squad may leave his room, and when. So on a squads level the stock rally (roomfight.ts) and the harder defenders' press
 // (pressure.ts consider) do not take a squad's man — one clause each — and digin.ts waits for the squad's word before a man starts on his door. Everything
@@ -68,6 +69,7 @@ import { wayName } from './dialogue';
 import { WORDS } from './words';
 import { netFeedAsked, netFeedBody, netFeedHolds } from './netquietfeed';   // (a leaf: netquiet.ts itself is not to be imported from here — see that file's head)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { STAYASK, stayAskHere } from './stayask';   // (squads that stay in their rooms still miss a room that goes silent: read at staging and in netSend)
 
 export const SQUADS = {
   /** off = a squads block is ignored: the level's defenders are one pool, as on any level without one */
@@ -271,11 +273,13 @@ interface Squad {
   /** (netAsk) a squad is not answering the net: stood to, and counting its own men at the quicker beat */ wary?: boolean; /** (callCutAsk) the dice the beat before a cut-off caller is asked for is drawn on — its own, so the call lengths of a run do not depend on whether anybody asks */ askDie?: () => number;
   sent: Sent[]; /** (goRound) men who went round and are home again, wherever that is: the timeline still says if one goes down */ went: Sent[]; due: { gd: Guard; at: Vec3; t: number; /** the room of the squad's he is wanted in */ room?: StructureRoom | null }[]; events: SquadEvent[];
 }
-interface State { S: StructureData; squads: Squad[]; of: Map<Guard, Squad>; net: { t: number; squad: Squad; at: Vec3; /** the door of its room the team was met at (goRound; null: a man dropped and nobody saw by which) */ door: Door | null }[]; /** (netAsk) made on the first tick with the switch on */ nc?: NetCheck; /** (drillLook) the newest word the garrison has of the team — when, where — and the word the last look went out on */ word?: { t: number; at: Vec3; done: number; /** when a look was last called · a man of a look went down out there (no squad sends another this fight) · the men of the last look while any is still out · the look called and not yet gone */ saidT: number; lost: boolean; out: Guard[] | null; call: { Q: Squad; go: Def[]; at: Vec3; goT: number; w: number } | null } }
+interface State { /** (stayask.ts) every squad here stays in its rooms: the net's ask runs whatever its switch says, and a squad that stays sends one man to a silent squad's posts */ stayAsk?: boolean; S: StructureData; squads: Squad[]; of: Map<Guard, Squad>; net: { t: number; squad: Squad; at: Vec3; /** the door of its room the team was met at (goRound; null: a man dropped and nobody saw by which) */ door: Door | null }[]; /** (netAsk) made on the first tick with the switch on */ nc?: NetCheck; /** (drillLook) the newest word the garrison has of the team — when, where — and the word the last look went out on */ word?: { t: number; at: Vec3; done: number; /** when a look was last called · a man of a look went down out there (no squad sends another this fight) · the men of the last look while any is still out · the look called and not yet gone */ saidT: number; lost: boolean; out: Guard[] | null; call: { Q: Squad; go: Def[]; at: Vec3; goT: number; w: number } | null } }
 /** (netAsk) the net's check of the SQUADS: when the next roll call is due, the one running (called → a squad asked for by name), who asks, the squad asked
  *  about, the squads nobody asks after again (`done`: men went to its posts — whatever they found — or a body of it was said on the net with nobody of it left to answer) */
 interface NetCheck { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Squad | null; done: Set<Squad>; /** squads asked for by name with nobody sent after (nobody free, or a fight took the net): asked for once more at a later check, and no oftener */ tried: Map<Squad, number>; /** how often a squad that answers has been asked what is going on */ queried: Map<Squad, number>; /** lines said a breath after what they answer */ say: { t: number; gd: Guard; text: string; cls?: number }[]; die: () => number; tickT: number }
 const STATES = new WeakMap<Game, State>();
+/** the net's ask runs on this floor: its own switch, or (stayask.ts) a floor whose every squad stays in its rooms */
+const netAsks = (g: Game): boolean => SQUADS.netAsk || !!STATES.get(g)?.stayAsk;
 /** hard on a squads level (SQUADS.drill*): the table while harder defenders are on, their `squadDrill` row is, and squads are staged in this game — else null */
 /** WHAT HARD IS ON ONE SQUAD MAP, by its structure's name (`scenarios.roomClear.name`): rows of the drill read in place of SQUADS' own while
  *  `SQUADS.drillByMap` is on. A map not named here gets the table's rows. Record: rebuild/hard-everywhere/round2-squad-maps.md */
@@ -343,7 +347,7 @@ export function squadsStage(g: Game, S: StructureData | null, hostiles: Guard[],
       state: 'hold', state0: null, fix: null, newsT: -100, decideAt: 0, decidedAt: -100, contactT: -100, calledT: -100, calledRoom: null, fallen: new Set(), ready: false, hitRoom: null, sent: [], went: [], due: [], events: [] };
     squads.push(Q); for (const m of men) of.set(m, Q);
   }
-  if (squads.length) STATES.set(g, { S, squads, of, net: [] });
+  if (squads.length) STATES.set(g, { S, squads, of, net: [], stayAsk: stayAskHere(g, squads.map(Q => Q.def)) });
 }
 /** the staging is gone (roomclear.ts clear) */
 export function squadsStop(g: Game) {
@@ -584,7 +588,7 @@ function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], ta
 // ---------------------------------------------------------------- the squad's word
 function event(g: Game, Q: Squad, what: SquadEvent['what'], why: string, by: Guard | null = null) {
   Q.events.push({ t: g.time, what, n: home(g, Q).length, why }); if (Q.events.length > 240) Q.events.splice(0, 80);
-  if (SQUADS.netAsk) { if (what === 'asks' || what === 'looks' || what === 'cut off' || what === 'net help') Q.trouble = g.time; else if (what === 'no sign' || what === 'found' || what === 'contact' || what === 'said') Q.trouble = undefined; }   // (what the other squads heard of it, and whether they heard how it ended: a field nothing reads but netAsk)
+  if (netAsks(g)) { if (what === 'asks' || what === 'looks' || what === 'cut off' || what === 'net help') Q.trouble = g.time; else if (what === 'no sign' || what === 'found' || what === 'contact' || what === 'said') Q.trouble = undefined; }   // (what the other squads heard of it, and whether they heard how it ended: a field nothing reads but netAsk)
   note(g, by, `${Q.name} ${what}: ${why}`);
   if (what === 'found') netFeedBody(g, by, Q.men);   // (netquiet.ts, filed through netquietfeed.ts — a return on its first line with its switch off: a body found shakes the finder, and less the men he tells)
 }
@@ -703,7 +707,7 @@ function doorAt(g: Game, room: StructureRoom | null, at: Vec3): Door | null {
  *  their way after their own beat */
 function contact(g: Game, st: State, Q: Squad, at: Vec3, room: StructureRoom | null, byDrop = false, by: Guard | null = null, words?: { say: string; why: string }) {
   const was = Q.state, fresh = was !== 'contact'; Q.state = 'contact'; Q.contactT = g.time; Q.ready = false; if (room) Q.hitRoom = room;
-  if (SQUADS.netAsk) Q.rc?.netOut?.clear();   // (the errand the net sent its men on is over: a squad in contact counts its men as a squad in a fight does)
+  if (netAsks(g)) Q.rc?.netOut?.clear();   // (the errand the net sent its men on is over: a squad in contact counts its men as a squad in a fight does)
   const caller = (by && !runnerOwns(by) ? by : null) ?? Q.men.find(m => fit(g, m) && !Q.sent.some(s => s.gd === m)) ?? null;   // (`by`, callBeat: the man whose call it is ends it himself)
   if (caller && (g.time - Q.calledT > SQUADS.recallSecs || fresh && g.time - Q.calledT > 6 || !!room && room !== Q.calledRoom)) {
     const door = byDrop || !SQUADS.goRound ? null : doorAt(g, room, at);
@@ -969,7 +973,7 @@ function radioCheck(g: Game, Q: Squad, busy: boolean): { at: Vec3; room: Structu
       if (!C.caller) return idle(5, true);   // (the man who called it cannot go on with it and nobody else can: asked again shortly)
       if (C.late && K.callBeat && K.callCutAsk[1] > 0 && !C.byEar) C.t0 = Math.max(C.t0, g.time - K.checkAsk);   // (callCutAsk: an ask a mate's call HELD UP — one net; only that one, a check nobody talked over keeps its clock to the frame — is still followed by the breath it gives him to answer before men go)
       C.late = false;
-      if (K.netAsk && !C.byEar && !C.who) for (const m of Q.men) if (offNet(m) && !C.known.has(m)) (C.asked ??= new Set()).add(m);   // (netAsk: a 'sound off' round — every man who did not answer it is a man the squad knows it has not heard from)
+      if (netAsks(g) && !C.byEar && !C.who) for (const m of Q.men) if (offNet(m) && !C.known.has(m)) (C.asked ??= new Set()).add(m);   // (netAsk: a 'sound off' round — every man who did not answer it is a man the squad knows it has not heard from)
       C.who = who; C.stage = 'asked'; C.promised?.delete(who);
       onNet(g, C.caller!, `${Q.name}: ${mate(who)}? … ${mate(who)}, sound off`, 2); event(g, Q, 'asks', `no answer from ${who.callsign}: ${C.caller.callsign} asks for him by name`, C.caller);
       netFeedAsked(g, C.caller, who, Q.men);   // (netquiet.ts, filed through netquietfeed.ts — a return on its first line with its switch off: a mate who does not answer shakes the man who asked and the men who heard him ask)
@@ -1006,7 +1010,7 @@ function radioCheck(g: Game, Q: Squad, busy: boolean): { at: Vec3; room: Structu
         }
         alone = true; netWary(g, st, `${who.callsign} of ${Q.name}`);   // (nobody can come: he goes himself, and says that he is alone — the squads hear that much)
       }
-      if (K.netAsk) { (C.asked ??= new Set()).add(who); for (const D of go) (C.out ??= new Set()).add(D.gd); }
+      if (netAsks(g)) { (C.asked ??= new Set()).add(who); for (const D of go) (C.out ??= new Set()).add(D.gd); }
       for (const D of go) { C.look.push(looker(g, Q, D, who, r.at)); walk(g, D, r.at); }
       onNet(g, go[0].gd, alone ? `${Q.name}: nothing from ${mate(who)} — I'm alone here, going myself!` : `${Q.name}: nothing from ${mate(who)} — ${COUNT[go.length] ?? go.length} moving to his post!`);
       event(g, Q, 'looks', `${go.map(D => D.gd.callsign).join(' and ')} walk${go.length > 1 ? '' : 's'} to where ${who.callsign} stood, ${flat(go[0].gd.char.pos, r.at).toFixed(0)} m off, ${(g.time - r.t).toFixed(1)} s after he went quiet${K.netAsk ? alone ? ': the last of the squad at home, and no squad has two to send' : '' : ': nothing is said to the other squads'}`, go[0].gd);
@@ -1159,7 +1163,7 @@ function callsCut(g: Game, Q: Squad) {
     const m = c.by;
     // (netCutAlarm) the net sent him to find out why a squad is silent; his squad heard him key up, and then nothing: that IS what he found. A man of it at
     // home calls contact at the post he was sent to (what the squad knows — not where the team is), and the net has its answer about that squad
-    const sentBy = SQUADS.netAsk && SQUADS.netCutAlarm && offNet(m) && Q.state !== 'contact' ? Q.rc?.netOut?.get(m) : undefined, st = sentBy ? STATES.get(g) : undefined;
+    const sentBy = netAsks(g) && SQUADS.netCutAlarm && offNet(m) && Q.state !== 'contact' ? Q.rc?.netOut?.get(m) : undefined, st = sentBy ? STATES.get(g) : undefined;
     const says = sentBy && st && g.time - sentBy.t < NET_OUT_SECS ? home(g, Q).find(D => D.gd !== m)?.gd ?? null : null;
     if (sentBy && st && says) {
       const X = sentBy.about;
@@ -1226,7 +1230,7 @@ function callsTick(g: Game, Q: Squad, busy: boolean): Call | null {
   for (const c of L) if ((loud || g.time >= c.end) && (!done || c.end < done.end)) done = c;
   if (!done) return null;
   L.length = 0;
-  if (done.body && Q.rc) { Q.rc.known.add(done.body); if (SQUADS.netAsk) { const st = STATES.get(g), X = st?.of.get(done.body); if (st && X && X !== Q) seenTo(st, X, done.body); } event(g, Q, 'found', `${done.by.callsign} has said it: ${done.body.callsign} is down${loud && g.time < done.end ? ' (the floor went loud under his call)' : ''}, ${(g.time - done.t0).toFixed(1)} s after he keyed up`, done.by); }
+  if (done.body && Q.rc) { Q.rc.known.add(done.body); if (netAsks(g)) { const st = STATES.get(g), X = st?.of.get(done.body); if (st && X && X !== Q) seenTo(st, X, done.body); } event(g, Q, 'found', `${done.by.callsign} has said it: ${done.body.callsign} is down${loud && g.time < done.end ? ' (the floor went loud under his call)' : ''}, ${(g.time - done.t0).toFixed(1)} s after he keyed up`, done.by); }
   else event(g, Q, 'said', `${done.by.callsign}'s call is through${loud && g.time < done.end ? ' at once (the floor went loud under it)' : ''}, ${(g.time - done.t0).toFixed(1)} s after he keyed up`, done.by);
   return done;
 }
@@ -1257,10 +1261,11 @@ function waitsOn(Q: Squad): Guard[] { const C = Q.rc; return C ? Q.men.filter(m 
 function netSend(g: Game, st: State, X: Squad, who: Guard, stops: Vec3[], all: boolean): { Q: Squad; go: Def[] } | null {
   const K = SQUADS, at = stops[0]; let best: { Q: Squad; go: Def[]; d: number } | null = null;
   for (const Q of st.squads) {
-    if (Q === X || Q.state !== 'hold' || Q.def.mayLeave === false || Q.sent.some(s => alive(s.gd)) || Q.calls?.length) continue;
+    const stays = Q.def.mayLeave === false, n = stays ? STAYASK.men : K.netLookMen;   // (stayask.ts: on a floor where every squad stays, one that stays sends its one man)
+    if (Q === X || n < 1 || Q.state !== 'hold' || (stays && !st.stayAsk) || Q.sent.some(s => alive(s.gd)) || Q.calls?.length) continue;
     const C0 = Q.rc; if (C0 && (C0.look.length || C0.stage === 'asked' || C0.cut?.length) || Q.trouble !== undefined || C0?.out && [...C0.out].some(m => offNet(m) && !C0.known.has(m))) continue;   // (trouble of its own: a man asked for, men out, a call that broke off, or men it sent who have not been heard of since)
     const H = home(g, Q), free = H.filter(D => !Q.went.some(s => s.gd === D.gd));
-    const go = goers(free, at, Math.min(K.netLookMen, H.length - 1)); if (go.length < K.netLookMen) continue;   // (the number is the rule: nobody is sent across the floor short of it)
+    const go = goers(free, at, Math.min(n, H.length - 1)); if (go.length < n) continue;   // (the number is the rule: nobody is sent across the floor short of it)
     const d = Math.min(...go.map(D => flat(D.gd.char.pos, at)));
     if (!best || d < best.d) best = { Q, go, d };
   }
@@ -1447,7 +1452,7 @@ export function squadsTick(g: Game) {
     note(g, null, `${Q.name} hears of them (${fix.by === 'net' ? fix.ally!.name + "'s call" : 'its own ears'})${waits ? ', holds' : ''}: its word in ${(Q.decideAt - g.time).toFixed(1)} s`);
   }
   for (const Q of st.squads) if (Q.state === 'alerted' && g.time >= Q.decideAt) decide(g, st, Q);
-  if (K.netAsk && K.radioCheck) netCheck(g, st);   // (netAsk) the net's check of the squads: one that has gone silent is asked after
+  if (netAsks(g) && K.radioCheck) netCheck(g, st);   // (netAsk) the net's check of the squads: one that has gone silent is asked after
   lookOut(g, st);   // (drillLook) a drilled garrison that has lost the team sends a pair to look
   // 3 · the men who were sent
   const lostWhy = (s: Sent) => `${s.gd.callsign} down ${s.back ? 'on his way back to his post' : s.phase === 'run' ? 'on the way' : s.there !== undefined && s.spot && flat(s.gd.char.pos, s.spot) < 4 ? 'at his spot' : s.there !== undefined ? (s.hold ? 'after leaving his spot' : 'after going in') : s.phase === 'set' ? 'where he stopped' : 'in the fight he ran into'}${s.door ? ' (' + s.door.def.name + ')' : ''}, ${(g.time - s.t0).toFixed(1)} s after the word`;
