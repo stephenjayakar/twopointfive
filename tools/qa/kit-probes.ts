@@ -67,6 +67,7 @@ export async function kitTable(): Promise<boolean> {
     // FROM HERE THE FREE ROWS (the pouches rule off): every row steps through each of its values and comes round; back the other way it returns
     free();
     let stepped = 0, bad: string[] = []; const you = 6 + ['wand', 'cams', 'charges', 'walls'].filter(f => K.kitRows(0).some((r: any) => r.field === f)).length;   // (the optical wand is a row of your card while its switch is on — wand.ts, stickycam.ts — and so are your charge rows while theirs is: owncharge.ts)
+    const mate = 11 + (K.kitRows(1).some((r: any) => r.field === 'wand') ? 1 : 0);   // (a teammate's optical wand is a row of his card while WAND.mate is on — the page; off on the frozen stand)
     for (let i = 0; i < KIT_MEMBERS; i++) for (const r of K.kitRows(i)) {
       const seen: unknown[] = []; for (let n = 0; n < r.values.length; n++) seen.push(K.kitStep(i, r.field, 1));
       const def = K.rowGet(r, K.kitDefault(i)), d = r.values.indexOf(def), n = r.values.length;
@@ -76,7 +77,7 @@ export async function kitTable(): Promise<boolean> {
       if (!round || back !== r.values[(d - 1 + n) % n] || fwd !== def || !words || n < 2) bad.push(`${i}.${r.field}`);
       stepped++;
     }
-    F.verdict(stepped === you + 4 * 11 && !bad.length && !M.some((_m, i) => K.kitChanged(i)), 'the free rows (pouches rule off): every row of every card has two or more values, words for each, steps round them and back, and ends where it began', `${stepped} rows (you ${you}, each teammate 11)${bad.length ? ` · bad: ${bad.join(' ')}` : ''}`);
+    F.verdict(stepped === you + 4 * mate && !bad.length && !M.some((_m, i) => K.kitChanged(i)), 'the free rows (pouches rule off): every row of every card has two or more values, words for each, steps round them and back, and ends where it began', `${stepped} rows (you ${you}, each teammate ${mate})${bad.length ? ` · bad: ${bad.join(' ')}` : ''}`);
     F.verdict(K.kitRows(0).every((r: any) => ['weapon', 'cans', 'frags', 'shells', 'cams', 'charges', 'walls', 'wand', 'suit', 'trim'].includes(r.field)) && ['weapon', 'suppressed', 'light', 'nvg', 'bangs', 'smoke', 'charges', 'frags', 'shield', 'suit', 'trim'].every(f => K.kitRows(1).some((r: any) => r.field === f)),
       'your card has no row for what is not a choice of yours (both your guns are suppressed, your light and goggles are on their own keys); a teammate\'s has the eleven', `you: ${K.kitRows(0).map((r: any) => r.label).join(', ')} · teammate: ${K.kitRows(1).map((r: any) => r.label).join(', ')}`);
     // the four guns a card can name are four real, enabled rows
