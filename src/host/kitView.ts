@@ -242,10 +242,12 @@ export const KIT_VIEW_QUIET = {
    *  latch's side, so from there a long thin blade of light lies out across his floor, slanting toward the hinge's side through where the pool is
    *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has.
    *  ITS NUMBERS ARE THE BLADE'S: the gap is a slot three fingers wide, so the lamp is nearly a point (`radius`: at 0.1 the whole blade was the
-   *  lamp's own half shadow, a smear) and bright (at 2.5 the blade was a tenth over the moon's floor; at 20 odd it is a fifth to a third of the
-   *  pool, the second brightest thing on the floor), high under the lintel so it carries across the yard, and `side` sets its line: 0.05 = a
-   *  thin line straight out (7 to 16 deg off the door's own line), 0.25 = a wedge 32 to 45 deg toward the hinge's side */
-  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.1, up: 1.9, color: [1, 0.72, 0.42] as Vec3, intensity: 22, range: 8, radius: 0.02 },
+   *  lamp's own half shadow, a smear), high under the lintel so it carries across the yard, and `side` sets its line: 0.05 = a
+   *  thin line straight out (7 to 16 deg off the door's own line), 0.25 = a wedge 32 to 45 deg toward the hinge's side.
+   *  AND IT IS QUIET (`intensity`): at 2.5 the blade was a tenth over the moon's floor, nothing; at 22 it was a third of the pool, a half metre
+   *  ribbon that made the pool a comet and took the eye off the man. At 8 it is a faint line beside one clean disc: the swing of the door starts
+   *  from something, and the loud cost's slit (`cost.blade`) still flares over it */
+  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.1, up: 1.9, color: [1, 0.72, 0.42] as Vec3, intensity: 8, range: 8, radius: 0.02 },
   /** THE REST POSE: Sam crouched this far along the wall from the door's middle, on the side the plan stands him (out from the wall: the wall men's
    *  own distance) · a partner the same again behind him · and HE GIVES WAY FIRST: while a partner's card is the open one (the partner is up at the
    *  door, and the game stacks a man who works it a body's width from Sam's place) Sam rests this much further back along the wall — he steps back as
