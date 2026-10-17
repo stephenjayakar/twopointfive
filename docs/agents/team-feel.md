@@ -519,5 +519,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line 3b). Checks: `tools/qa/condition-check.ts` (`probes.ts condition`, which also runs `condition-pose`; twelve lines — off, on, the fold's
   seconds unchanged, pace through followPath / stepAlongPath, the player's sprint, spread and the gap, one round still downs each of the three
   while hurt, god mode, the score, a checkpoint, who is not hurt, the registry; `CONDITION_BREAK=1` leaves the switch off and eight lines must
-  fail), ALL PASS on both stands; `tools/qa/condition-page.cjs` on the real page (software adapter). NOT SEEN, NOT PLAYED: nothing
+  fail), ALL PASS on both stands; `tools/qa/condition-page.cjs` on the real page (software adapter). MEASURED on the shipped stand
+  (`ships.ts`, 21 loud missions on seeds 1 and 2, the rule on against `--set '{"CONDITION":{"on":false}}'`; the commander there plays in god
+  mode, so the player is never hurt in it): a man was left hurt in 2 of 42 runs (4 men) — grenades are rare, so what hurt costs is the check's
+  to show, not this tally's. Ends on / off: taken 24 / 23, wiped 10 / 11, rescued 5 / 5, lost 3 / 3; teammates up 80 / 81 of 148; defenders
+  left 65 / 63 of 294; mean 84.0 / 82.7 s. THE LOOKS MOVE A RUN: 34 of the 42 play out differently by digest, 32 of them with nobody hurt — a
+  figure's head and muzzle are where the simulation reads them, and a man under fire now tucks 10 cm. Six of those replayed with `looks` false
+  equal the switch-off digest run for run; with `ownCalm` false, the switch-on one. NOT SEEN, NOT PLAYED: nothing
   of this on a GPU; nobody has played a mission with a hurt man in it; `hurtPace` and `hurtSup` are first numbers.
