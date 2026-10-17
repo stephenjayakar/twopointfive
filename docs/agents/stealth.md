@@ -123,6 +123,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the first loud tables beside them, no `-v2`). Lights-out's two listed meetings are a sentry at 8.0 m and a walker through a window at 6.6 m (the level's
   own warning, the missions thread's read); the bazaar's one is the alley trap at 4.6 m; the police post's four dropped are the shift running to the keypad
   door the ghost kicks. Not measured: a second man's eye, crouching, waiting; nothing seen on a GPU or played.
+- **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
+  2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
+  WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an
+  eye of the team sees. The one camera that sends is its own eye and stayed; a DARK one (the older of two, `STICKY.live` 1) on floor nobody watches, or
+  behind his back under the cones, was not drawn at all — and a fist-sized dark block under the fog's dim reads as nothing anyway. What a sending camera
+  sees already lifted the fog (its wedge is one of the fog's eyes); that part is unchanged.
+  THE RULE: up, (1) a STUCK camera's boxes carry a wall device's key (`MKEY.device + 0x800000 + id × 2 + part`; fogofwar.ts `THING_PASS` lets that class
+  through wherever it is — bolted on, his own, it gives nobody away; one still in the air stays unkeyed), so it is always in the picture; (2) while the fog
+  is live the HUD puts a small lens on each stuck camera of his (`stickyMarks(g)` → `{ at: the lens, sends }`; a ring, brighter with a red pupil on the one
+  that sends), so he finds them to take back and reads which one is the feed. No mark with no fog up, none on one in flight, none off screen (no edge
+  clamp). Picture only: no step reads it, the run digests the same down and up.
+  THE SWITCH: ON in the page (`?cammark=0`), OFF in the module and on the frozen stand (`TPS_CAMMARK=1`; `FROZEN_HOLDS['STICKY.mark']`); in the knob
+  registry with `STICKY`; a recording from before the key replays with it down (journal.ts); Tab ▸ Sticky cameras ▸ `cam ▸ shown in the fog`.
+  THE CHECK: `bun run tools/qa/probes.ts sticky-mark` (families sticky, fog; `tools/qa/sticky-check.ts mark`), 9 verdicts on both stands, on the vault
+  under the cones: the dark camera on unseen floor has 2 keyed boxes in `Game.dynBoxes` with the switch up and 0 down; the marks at each lens with the
+  sender told apart; none in the air, none with no fog; the same digest; the stands' row and the journal. `STICKY_BREAK=1` exits 1 on both stands.
+  `tools/qa/sticky-page.cjs` counts the `.cammark` elements on the real page (software adapter). NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the size and
+  colour of the lens mark are a first guess, and whether the camera's own block reads under the fog's dim without the mark is not known.
 - **Interaction = rows + one Space grammar** (`player.ts buildInteractables` → `Game.nearby` / `hover`; `interact.ts`): every verb is
   its own row (`Interactable.verb`: a shut door = `push` + `ease`, a lock = `pick` (+ `rattle` crouched) + `kick`, keyed = `unlock` +
   `ease`, guard behind = `grab`, held arm = `question` + `choke`, held gun = `whip`, body `drag`/`drop`, rack `drive`, breaker), top

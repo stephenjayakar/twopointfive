@@ -19,7 +19,7 @@
 // No dice, no clock but the Game's, nothing read off the picture. STICKY.on: on in the page (?nosticky), off in the module and on the frozen stand
 // (TPS_STICKY=1) — off, no card row, no load on any rifle, no eye: the build as it was.
 import { Vec3, v3 } from '../math/vec';
-import { BoxFlag, makeBox, Box } from '../scene/boxes';
+import { BoxFlag, makeBox, Box, MKEY } from '../scene/boxes';
 import type { Character } from './character';
 import type { Game, Guard, Interactable, Player, Verb } from './game';
 import type { ThrowSolution } from './throwables';
@@ -50,6 +50,11 @@ export const STICKY = {
    *  page (?camtake=0) · `takeReach` m on the plan from his feet to it · `takeNoise`: the tick of pulling it off, at his feet (a 'prop' event: under the
    *  landing's, over the 0.08 a calm man's ears start at — guards.ts — so one within about 2 m of him turns to it) */
   take: false, takeReach: 1.3, takeNoise: 0.1,
+  /** HIS OWN STUCK CAMERAS SHOW IN THE FOG OF WAR (the maintainer, 10-17: "you should be able to see your sticky cameras in fog of war"): OFF here and on the
+   *  frozen stand, ON in the page (?cammark=0). Up, a stuck camera of his is a thing the fog never takes out of the picture (stickyBoxes keys its boxes as a
+   *  wall device's: bolted on, his own, it gives nobody away) and the HUD puts a small lens on each while the fog is live (stickyMarks), filled red on the
+   *  one that sends. Down: a camera on floor no eye of the team has is not drawn at all, and nothing marks one — as it was. Picture only. */
+  mark: false,
 };
 export const STICKY_STATS = { fired: 0, stuck: 0, dropped: 0, retired: 0, blind: 0, taken: 0 };
 export function stickyStatsReset() { const S = STICKY_STATS; S.fired = S.stuck = S.dropped = S.retired = S.blind = S.taken = 0; }
@@ -238,17 +243,37 @@ const BODY: Vec3 = [0.05, 0.05, 0.055], LENS: Vec3 = [0.012, 0.012, 0.014], LENS
  *  up, none past the frame's five) — is a dull red, a dark one's black (paint, never a light).
  *  Picture only: NoShadow dynamics no ray, eye or foot meets. */
 export function stickyBoxes(g: Game, out: Box[]) {
-  const live = STICKY.on && g.fogOfWar.active ? stickyLive(g.player) : NONE_CAMS, eyes = g.fogOfWar.eyes;
-  const sends = (c: StickyCam) => live.includes(c) && eyes.some(e => e.id === EYE_ID + (c.id % 50));
+  const sends = sending(g);
   for (const c of g.player.cams) {
     const z = c.vel ? v3.normalize(c.vel) : c.n; const up = Math.abs(z[1]) > 0.9;
     const yaw = up ? 0 : v3.yawOf(z);
     const body: Vec3 = up ? [0.035, 0.014, 0.035] : [0.035, 0.035, 0.014], lens: Vec3 = up ? [0.012, 0.006, 0.012] : [0.012, 0.012, 0.006];
     const c0 = v3.mad(c.pos, z, c.vel ? 0 : 0.014), c1 = v3.mad(c.pos, z, c.vel ? 0.02 : 0.034);
-    out.push(makeBox({ c: c0, h: body, yaw, albedo: v3.copy(BODY), flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
-    out.push(makeBox({ c: c1, h: lens, yaw, albedo: v3.copy(sends(c) ? LENS_LIVE : LENS), flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
+    // (STICKY.mark: a STUCK one's two boxes carry a wall device's key — the fog's rule for loose things lets those through wherever they are, fogofwar.ts
+    // THING_PASS; unkeyed, as one in flight stays, a box is in the picture only on floor the team sees)
+    const key = STICKY.mark && !c.vel ? MKEY.device + CAM_KEY + (c.id % 4096) * 2 : undefined;
+    out.push(makeBox({ c: c0, h: body, yaw, albedo: v3.copy(BODY), flags: BoxFlag.Dynamic | BoxFlag.NoShadow, mkey: key }));
+    out.push(makeBox({ c: c1, h: lens, yaw, albedo: v3.copy(sends(c) ? LENS_LIVE : LENS), flags: BoxFlag.Dynamic | BoxFlag.NoShadow, mkey: key === undefined ? undefined : key + 1 }));
   }
 }
+/** where a stuck camera's keys start among the wall devices' (devices.ts numbers its own from 0 by ordinal: a few hundred at most) */
+const CAM_KEY = 0x800000;
+/** is this camera SENDING this frame: one of the newest STICKY.live stuck, and the fog took it as an eye (none with no fog up, none past the frame's five) */
+function sending(g: Game): (c: StickyCam) => boolean {
+  const live = STICKY.on && g.fogOfWar.active ? stickyLive(g.player) : NONE_CAMS, eyes = g.fogOfWar.eyes;
+  return c => live.includes(c) && eyes.some(e => e.id === EYE_ID + (c.id % 50));
+}
+/** THE HUD'S MARKS ON HIS OWN STUCK CAMERAS (STICKY.mark; ui/overlay.ts draws a small lens at each): where each one's lens is and whether it sends. Only
+ *  while the fog of war is live — with no fog a camera shows nothing new and the floor it is on is in plain view — and never one still in the air. Empty
+ *  with either switch down. Picture only: no step reads it. */
+export interface CamMark { at: Vec3; sends: boolean }
+export function stickyMarks(g: Game): CamMark[] {
+  if (!STICKY.on || !STICKY.mark || !g.fogOfWar.active || !g.player.cams.length) return NO_MARKS;
+  const sends = sending(g), out: CamMark[] = [];
+  for (const c of g.player.cams) if (!c.vel) out.push({ at: camLens(c), sends: sends(c) });
+  return out;
+}
+const NO_MARKS: CamMark[] = [];
 
 /** a camera of his is still in the air (savestate.ts: a plain save waits for it) */
 export function stickyFlying(g: Game): boolean { return g.player.cams.some(c => !!c.vel); }

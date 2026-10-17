@@ -17,6 +17,7 @@ const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
 const HE40_SHORT_STROKE = 'rgba(255, 170, 90, 0.95)';
 import { needsTrip } from '../game/needs';
 import { headMark, waryDots } from './headmark';
+import { stickyMarks } from '../game/stickycam';
 import { CKPT } from '../game/savestate';
 import { stripRows } from '../game/cues';
 import { fragMarks } from '../game/frag';
@@ -87,6 +88,7 @@ export class Overlay implements HudLike {
   private markers: HTMLElement[] = [];
   private fragMarksEl: HTMLElement[] = [];   // (frag.ts fragMarks: a defender's live grenade Sam has been cued on)
   private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
+  private camMarks: HTMLElement[] = [];    // (stickycam.ts stickyMarks: a small lens on each of his own stuck sticky cameras while the fog of war is live — STICKY.mark)
   private seenMarks: HTMLElement[] = [];   // (fogofwar.ts lastSeen: a fading '?' where an enemy was last seen — FOG.lastSeen, 0 = none)
   private dots: HTMLElement[] = [];
   showLightDots = true;
@@ -187,6 +189,15 @@ export class Overlay implements HudLike {
       this.seenMarks.forEach((el, i) => { const s = seen[i]; if (!s) { el.style.display = 'none'; return; }
         const [x, y, vis] = cam.project([s.at[0], s.at[1] + 2.1, s.at[2]], w, h, EDGE); if (!vis) { el.style.display = 'none'; return; }
         el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.opacity = String(Math.max(0.15, 1 - s.age / Math.max(0.01, s.life))); }); }
+    // his own stuck sticky cameras under the fog of war (stickycam.ts stickyMarks — none unless STICKY.mark is up and the fog is live): a small lens on each, red in the one that sends
+    { const cams = stickyMarks(game); let n = 0;
+      for (const m of cams) {
+        const [x, y, vis] = cam.project(m.at, w, h, EDGE); if (!vis) continue;
+        let el = this.camMarks[n]; if (!el) { el = document.createElement('div'); this.root.appendChild(el); this.camMarks.push(el); }
+        n++; const cls = m.sends ? 'cammark live' : 'cammark'; if (el.className !== cls) el.className = cls;
+        const st = el.style; st.display = 'block'; st.left = `${x}px`; st.top = `${y}px`;
+      }
+      for (let i = n; i < this.camMarks.length; i++) this.camMarks[i].style.display = 'none'; }
     // a man of the squad lost, once the squad has the way it came from (deathrecap.ts lostLive: somebody saw him go down, or heard it) AND only while the way is drawn at all (RECAP.liveArrows: off as shipped): a stroke on the ground at him, toward it
     { const lost = lostArrowsShown() ? lostLive(game) : [], life = RECAP.liveMarkSecs; let n = 0;
       for (const L of lost) {

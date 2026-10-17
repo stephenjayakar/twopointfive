@@ -21,6 +21,9 @@
 //           before the keys replays the old way; the two stands' rows
 //   take    STICKY.take: a stuck camera is a row of the use key at it — taken back, on the launcher again, its eye gone; not through a wall, not out of reach;
 //           the switch down = no row and the same run by digest; the two stands' row and a recording from before the key
+//   mark    STICKY.mark: his own stuck cameras show in the fog of war — a dark one on floor no eye has stays in the picture's box list (down: it is not there),
+//           the HUD's marks say where each lens is and which one sends, none for one in the air or with no fog; the switch down = the same run by digest;
+//           the two stands' row and a recording from before the key
 //   wand    QUIETFOG.wand: the mission that hands out its cameras hands Sam an optical wand too — not the fog alone, not with no fog, gone when the mission is
 //           quit; the switch down = the mission as it was; the two stands' row and a recording from before the key
 //   off     the switch off, and on with none carried: the same run by digest; the two stands' row, the env word, the registry
@@ -30,7 +33,7 @@ import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 
 const SC = await import(`${ROOT}/src/game/stickycam.ts`);
-const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens } = SC;
+const { STICKY, STICKY_STATS, stickyIssue, fireCam, stickyEyes, camLens, stickyMarks } = SC;
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const QF = await import(`${ROOT}/src/game/quietfog.ts`);
 const { FOG_EYES } = await import(`${ROOT}/src/render/fogofwar.ts`);
@@ -382,6 +385,73 @@ export async function stickyTake(): Promise<boolean> {
   return F.done();
 }
 
+// ================================================================================================ mark
+/** STICKY.mark: his own stuck cameras show in the fog of war — never taken out of the picture, a lens on each on the HUD (STICKY_BREAK=1: the switch left down) */
+export async function stickyMark(): Promise<boolean> {
+  const F = family('sticky-mark: your own stuck sticky cameras show in the fog of war');
+  await stand(70, 'vault.json');   // (the stand's own values are on the tables from the first game it stands up: read them after one)
+  const onWas = STICKY.on, qfWas = QF.QUIETFOG.on, markWas = STICKY.mark, thingsWas = FOG.things, rnd = Math.random, stood = STICKY.mark;
+  const FILE = 'vault.json', RUNG = 'cones';   // (the floor and the rung the maintainer was on when he said it)
+  /** two walls for two cameras: neither spot in any eye of the team's now, the second's lens with no line to the first */
+  const twoWalls = (g: any) => {
+    const fog = g.fogOfWar, all: NonNullable<ReturnType<typeof wallFor>>[] = [];
+    for (const gd of g.guards) { const w = wallFor(g, gd); if (w && !fog.thingSeen(w.P[0] + w.n[0] * 0.06, w.P[2] + w.n[2] * 0.06, 0, 0)) all.push(w); }
+    for (const a of all) for (const b of all) if (v3.dist(a.P, b.P) > 3 && g.col.segmentBlocked(v3.mad(b.P, b.n, STICKY.off), v3.mad(a.P, a.n, STICKY.off))) return [a, b];
+    return null;
+  };
+  const boxesOf = (g: any, c: any) => (g.dynBoxes as any[]).filter(b => Math.hypot(b.c[0] - c.pos[0], b.c[1] - c.pos[1], b.c[2] - c.pos[2]) < 0.05);
+  const red = (b: any) => !!b && b.albedo[0] > 0.2;
+  try {
+    const { W, g } = await quietFloor(31, FILE, RUNG), fog = g.fogOfWar, pl = g.player; stickyIssue(pl, 2); FOG.things = true; STICKY.mark = !BREAK;
+    const ww = twoWalls(g);
+    F.verdict(fog.active && !!FOG.cone && !!ww, 'the vault, quiet, under the fog\'s cones: two walls no eye of the team has', `fog ${fog.active} · cone ${FOG.cone} · eyes ${fog.eyes.length} · walls ${ww ? 2 : 0}`);
+    if (ww) {
+      const A = send(W, ww[0].from, v3.mad(ww[0].P, ww[0].n, -0.5) as Vec3), B = send(W, ww[1].from, v3.mad(ww[1].P, ww[1].n, -0.5) as Vec3); steps(W, 40);
+      const unseenA = !fog.thingSeen(A.pos[0], A.pos[2], 0, 0), eyeB = fog.eyes.some((e: any) => e.id >= 200);
+      F.verdict(!A.vel && !B.vel && pl.cams.length === 2 && unseenA && eyeB && fog.eyes.length === 2, 'two cameras stuck: the newer sends, the older is dark on floor nobody sees (one feed at a time)', `out ${pl.cams.length} · the older one's floor seen ${!unseenA} · eyes ${fog.eyes.length} (a camera among them ${eyeB})`);
+      // in the picture: the list the frame hands the renderer (Game.dynBoxes after the fog's own rule for loose things)
+      const upA = boxesOf(g, A), upB = boxesOf(g, B), dev = (b: any) => b?.mkey !== undefined && (b.mkey >>> 24) === 5;
+      STICKY.mark = false; steps(W, 2); const dnA = boxesOf(g, A), dnB = boxesOf(g, B); STICKY.mark = !BREAK; steps(W, 2);
+      F.verdict(upA.length === 2 && upB.length === 2 && upA.every(dev) && !red(upA[1]) && red(upB[1]) && dnA.length === 0 && dnB.length === 2 && dnB.every(b => b.mkey === undefined),
+        'with the switch up both are in the picture — the dark one too, its lens black, the sending one\'s red; down, the dark one is not drawn (as it was)',
+        `up: older ${upA.length} boxes (keyed ${upA.every(dev)}, lens red ${red(upA[1])}) · newer ${upB.length} (lens red ${red(upB[1])}) · down: older ${dnA.length} · newer ${dnB.length}`);
+      // the HUD's marks
+      const near = (m: any, c: any) => !!m && v3.dist(m.at, camLens(c)) < 1e-6;
+      const M = stickyMarks(g) as any[]; STICKY.mark = false; const mDown = stickyMarks(g).length; STICKY.mark = !BREAK;
+      F.verdict(M.length === 2 && near(M[0], A) && near(M[1], B) && M[0].sends === false && M[1].sends === true && mDown === 0,
+        'the HUD is handed a mark at each lens, the sending one told apart; none with the switch down', `marks ${M.length} · sends ${M.map(m => m.sends).join(' ')} · at the lenses ${near(M[0], A)} ${near(M[1], B)} · down ${mDown}`);
+      // one in the air carries no mark and no key; landed, it is the one that sends
+      stickyIssue(pl, 1); const C = fireCam(g, pl, ww[0].from, v3.mad(ww[0].P, ww[0].n, -0.5) as Vec3); W.step(DT);
+      const air = !!C.vel, mAir = stickyMarks(g).length, keyAir = (g.dynBoxes as any[]).some(b => b.mkey !== undefined && (b.mkey >>> 24) === 5 && b.mkey >= (5 << 24) + 0x800000 && Math.hypot(b.c[0] - C.pos[0], b.c[2] - C.pos[2]) < 0.2);
+      let n = 0; while (C.vel && n++ < 180) W.step(DT); steps(W, 20); const M3 = stickyMarks(g) as any[];
+      F.verdict(air && mAir === 2 && !keyAir && !C.vel && M3.length === 3 && M3.filter(m => m.sends).length === 1 && near(M3.find(m => m.sends), C),
+        'a third one in the air carries no mark; landed it is marked and is the one that sends', `in the air ${air}: marks ${mAir}, keyed ${keyAir} · landed: marks ${M3.length}, sending ${M3.filter(m => m.sends).length} (the newest ${near(M3.find(m => m.sends), C)})`);
+      // no fog, no marks (the floor is in plain view) — and the fog back, they are back
+      fog.on = false; steps(W, 2); const mNoFog = stickyMarks(g).length, allIn = pl.cams.every((c: any) => boxesOf(g, c).length >= 2); fog.on = true; steps(W, 45); const mBack = stickyMarks(g).length;
+      F.verdict(mNoFog === 0 && allIn && mBack === 3, 'with no fog up nothing is marked (every camera is drawn anyway); the fog back, the marks are back', `no fog: marks ${mNoFog}, all drawn ${allIn} · fog back: marks ${mBack}`);
+    }
+    // picture only: the same run by digest with the switch down and up
+    const run = async (mark: boolean) => {
+      const { W, g } = await quietFloor(33, FILE, RUNG); STICKY.mark = mark; stickyIssue(g.player, 2); Math.random = seeded(778);
+      const w2 = twoWalls(g); if (w2) { send(W, w2[0].from, v3.mad(w2[0].P, w2[0].n, -0.5) as Vec3); send(W, w2[1].from, v3.mad(w2[1].P, w2[1].n, -0.5) as Vec3); }
+      g.aiEnabled = true; let marks = 0; steps(W, 300, () => { marks = Math.max(marks, stickyMarks(g).length); });
+      return { h: hashDigest(digestGame(g, true)), out: g.player.cams.length, marks };
+    };
+    const a = await run(false), b = await run(!BREAK);
+    F.verdict(a.h === b.h && a.out === 2 && b.out === 2 && a.marks === 0 && b.marks === 2, 'five seconds of the mission with two cameras out, the guards live: the same run by digest down and up', `down ${a.h} (${a.out} out, marks ${a.marks}) · up ${b.h} (${b.out} out, marks ${b.marks})`);
+    // the two stands' row, the word, and a recording from before the key
+    const s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], PR = await import(`${ROOT}/src/host/profile.ts`), JR = await import(`${ROOT}/src/game/journal.ts`);
+    const shipped = process.env.TPS_PROFILE === 'shipped';
+    F.verdict(stood === (shipped || process.env.TPS_CAMMARK === '1'), 'as the stand stands a game up: the switch up on the shipped stand, down on the frozen one unless its word raises it', `${shipped ? 'shipped' : 'frozen'} stand: mark ${stood}`);
+    const W2 = await stand(71, FILE), snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W2.game))); const had = 'mark' in snap.tables.STICKY;
+    STICKY.mark = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W2.game))); STICKY.mark = false; JR.applyKnobs(W2.game, snapUp); const kept = STICKY.mark;
+    delete snap.tables.STICKY.mark; STICKY.mark = true; JR.applyKnobs(W2.game, snap); const old = STICKY.mark;
+    F.verdict(s.includes('TPS_CAMMARK') && PR.FROZEN_HOLDS['STICKY.mark'] === 'TPS_CAMMARK=1' && had && old === false && kept === true, 'the switch is a row of the two stands\' list with its word, rides a recording\'s tables, and a recording from before the key replays with it down', `STAND_ENV ${s.includes('TPS_CAMMARK')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['STICKY.mark']} · in the tables ${had} · an old recording: mark ${old} · one recorded with it up: mark ${kept}`);
+  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
+  finally { back(); STICKY.on = onWas; STICKY.mark = markWas; QF.QUIETFOG.on = qfWas; FOG.things = thingsWas; Math.random = rnd; }
+  return F.done();
+}
+
 /** QUIETFOG.wand: the mission's own wand — handed out with the mission's cameras, to Sam, whatever his card carries (STICKY_BREAK=1: the switch left down) */
 export async function stickyWand(): Promise<boolean> {
   const F = family('sticky-wand: a quiet mission under the fog hands you an optical wand with its cameras');
@@ -600,7 +670,7 @@ export async function stickyDefault(): Promise<boolean> {
 
 export async function stickyCheck(only?: string): Promise<boolean> {
   let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['kit', stickyKit], ['fly', stickyFly], ['fog', stickyFog], ['save', stickySave], ['ways', stickyWays], ['default', stickyDefault], ['take', stickyTake], ['wand', stickyWand], ['off', stickyOff]];
+  const parts: [string, () => Promise<boolean>][] = [['kit', stickyKit], ['fly', stickyFly], ['fog', stickyFog], ['save', stickySave], ['ways', stickyWays], ['default', stickyDefault], ['take', stickyTake], ['mark', stickyMark], ['wand', stickyWand], ['off', stickyOff]];
   for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
   return ok;
 }
