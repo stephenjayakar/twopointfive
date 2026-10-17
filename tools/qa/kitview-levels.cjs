@@ -96,6 +96,10 @@ const fs = require('fs'), path = require('path');
 //   · 'the world whole': the leaf HUNG is the leaf at its REST angle — a hand ajar there, shut everywhere else (`leaf.ajar` is measured from it);
 //   · Sam's 'weapon' row: its end is the room staged again (one restart more) and not the gun lowered; 'the gun's burst hits no man' counts its one round;
 //   · the 'cut' row: the tile that cuts the smoke is the lamp's row — it too ends in a restage.
+//   · LOUD KIT'S COST (KIT_VIEW_QUIET.cost, `__kitview.cost`): a loud tile's row that went off is answered from inside before the picture settles — one row
+//     more on every kind holds it: on a quiet kind each such row was answered (the room at full, the leaf thrown wide, Sam up) and the room staged again
+//     after it; with `kitloud`, and on a loud kind, none ever played. 'every man home and the world whole' is unmoved: it is read once the cost's own
+//     restage has settled (`__kitview.settled` is false while a cost is up).
 // FLAGS (words added to the page's link, '&'-joined: `FLAGS=kitloud`).
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', WARM = +(process.env.WARM || 6), SCALE = +(process.env.SCALE || 2);
 const ROW_MS = +(process.env.ROW_MS || 240000), FRAMES = +(process.env.FRAMES || 4), WAIT_MS = +(process.env.WAIT_MS || 3000), HELD = { mend: 'frames', home: 'ms', sam: 'ms', leaf: 'ms', arrive: 'ms' } /* the director's rules for a wait this tool knows, each with its bound: FRAMES of it · WAIT_MS from the pick */, BREAK = process.env.KITLEVELS_BREAK === '1', FLAGS = (process.env.FLAGS || '').split('&').filter(Boolean), PLAIN = process.env.LOOK === 'plain', HOUR = (process.env.HOUR || '').trim();
@@ -158,7 +162,7 @@ async function one(browser, L) {
         offMax: Math.max(0, ...men.map(m => m.off)), hurt: team.filter(x => x.wound || x.state === 'dead').length + (g.player.down ? 1 : 0), alive: team.filter(x => x.state !== 'dead').length,
         others: g.guards.concat(g.civilians).filter(x => x.team !== 'operative' && x.char.pos[0] > -30).length,
         leaf: d ? { ajar: Math.abs(d.angle - (d.def.angle || 0) - (k.quiet && k.quiet.on ? k.quiet.leaf : 0)), off: !!d.off } : null, problems: P.problems || [],   // (the quiet picture's leaf rests a hand ajar: measured from its rest)
-        quiet: k.quiet ? JSON.parse(JSON.stringify(k.quiet)) : null,
+        quiet: k.quiet ? JSON.parse(JSON.stringify(k.quiet)) : null, cost: k.cost ? JSON.parse(JSON.stringify(k.cost)) : null,
         // (a wall anchor STANDS when every point along its span — a quarter metre apart, a tenth in from each end — is shut on the game's own nav grid)
         wallUp: A.kind === 'wall' ? (() => { const n = Math.max(2, Math.ceil(A.width * 0.8 / 0.25)); for (let i = 0; i <= n; i++) { const u = 0.1 + 0.8 * i / n; if (!g.col.nav.isBlocked(A.a[0] + (A.b[0] - A.a[0]) * u, A.a[1] + (A.b[1] - A.a[1]) * u)) return false; } return true; })() : null,
         set_: g.doorTools.set.length, ops: g.doorTools.ops.length, puppet: !!g.puppet, dz: k.dissolve.phase, settled: !!k.settled, beat: k.beat ? { n: k.beat.n, field: k.beat.field, i: k.beat.i, t: k.beat.t, phase: k.beat.phase } : null,
@@ -263,6 +267,7 @@ async function one(browser, L) {
   else if (L.kind === 'quiet' || L.kind === 'solo') row(q0 === null, `${w}: FLAGS=kitloud — the page says nothing of the quiet picture (the picture as it was)`, quietSaid(q0));
   else row(q0 === null, `${w}: a loud kind — the page says nothing of the quiet picture`, quietSaid(q0));
   const lampShots = [];
+  const costs = [], LOUD = ['bangs', 'frags', 'charges', 'walls', 'bigtool'], BANGS = ['bang', 'frag', 'blow', 'gave'];   // (loud kit's cost: the tiles whose own row is loud by nature, and the marks a bang leaves on one)
   // THE DRESS ON A SET IS THE MISSION'S (a set is staged as a room clear, whose men wear the issue dress: main.ts says the mission's own dress in this window —
   // host/kitViewSet.ts kitViewSetDress). A quiet mission dresses every man in the sneaking suit, the solo night Sam; a loud mission's set: nothing judged
   if (r0.at.set && (L.kind === 'quiet' || L.kind === 'solo')) { const D = r0.at.dress, who = L.kind === 'quiet' ? (D || []).map((_, i) => i) : [0];
@@ -313,6 +318,10 @@ async function one(browser, L) {
       `${!r.began ? 'NO ROW BEGAN' : `${own ? `the ${f} row` : guns_ ? `THE GUN'S ROW ('${r.began.refused}')` : `ANOTHER ROW (${r.began.field}, member ${r.began.i}${r.began.refused ? `, '${r.began.refused}'` : ''})`} up ${r.began.frames} frame(s), ${r.began.ms.toFixed(0)} ms after the pick${held ? ` (the row's own wait, by the director's word: ${r.began.held.why.map(y => `${y} ${r.began.held.by[y] || 0}`).join(' + ')} frame(s), ${r.began.held.frames} held in all of ${r.began.worked} the page worked — ${r.began.held.s.toFixed(2)} s of the game's clock from the hearing to the row${timed && r.began.frames > FRAMES ? W.ok ? '' : ` — THE WORD DOES NOT ACCOUNT FOR THE DELAY: ${W.bad.join('; ')}` : ''})` : r.began.heldOther ? ` (a held word on this beat's number is ANOTHER PICK'S — ${r.began.heldOther}: no excuse)` : ''}`} · ${r.ended ? `over and ${r.ended.by === 'next' ? 'the loop\'s next beat up' : 'settled'} ${(r.ended.ms / 1000).toFixed(1)} s on (${r.at.last ? r.at.last.how : '?'})` : `NEVER SETTLED in ${ROW_MS / 1000} s (${r.at.state}${r.at.beat ? ', ' + r.at.beat.field + '/' + r.at.beat.phase : ''})`} · ${wholeSaid(r.at, r.ended && r.ended.by)}${opened ? ' · (the wall was opened for it first: its charge, then the row through the hole)' : ''}${thrownSaid}${straySaid}${rangSaid}`);
     if (own && THROWN.includes(f) && r.at.last && r.at.last.field === f) throwsSeen.push({ who, f, out: r.at.last.restOut, how: r.at.last.how, hurt: r.at.hurt, hitsSam: (r.at.hits.sam || 0) - (b.hits.sam || 0), kept: r.at.refused });
     if (QUIET && who === 0 && f === 'weapon') lampShots.push({ shots: r.at.shots - b.shots, marks: r.at.last && r.at.last.field === 'weapon' ? r.at.last.marks : [], how: r.at.last ? r.at.last.how : '', restarts: r.at.restarts - b.restarts, q: r.at.quiet, kept: r.at.quiet ? r.at.quiet.kept : null });
+    // (LOUD KIT'S COST, a quiet kind: `due` = this tile's own row ran to its end with a bang's mark on it — a frag, a stun, a charge — and so must be answered;
+    //  a gun's row is due one only by the page's own word, the gun read off the man: said)
+    if (r.at.cost && b.cost) { const l = r.at.last, mine = !!l && l.field === f && (l.how === 'done' || l.how === 'cap'), bang = mine && LOUD.includes(f) && !l.marks.includes('prelude') && l.marks.some(m => BANGS.includes(m));
+      costs.push({ who, f, due: bang, n: r.at.cost.n - b.cost.n, last: r.at.cost.last, restarts: r.at.restarts - b.restarts, q: r.at.quiet, marks: l ? l.marks : [], how: l ? l.how : '', by: r.ended ? r.ended.by : null }); }
     if (f === 'weapon') { guns.push({ who, shots: r.at.shots - b.shots, hurt: r.at.hurt }); if (r.at.shots > b.shots) burstOf = `${whoSaid} gun (${r.at.shots - b.shots} round(s))`; }
     return r; };
   for (const f of SAM) await tile(0, f, f !== 'weapon');   // (his gun is the tile already under the highlight: the loop's own turn of it is what comes up, not a pick's)
@@ -332,6 +341,16 @@ async function one(browser, L) {
   if (QUIET) { const x = lampShots[0];
     row(!!x && x.shots === 1 && x.marks.includes('shot') && x.marks.includes('dark') && x.restarts === 1 && restOk(x.q), `${w}: THE QUIET PICTURE's gun — ONE suppressed round puts the pool lamp out ('shot', 'dark'), the room is staged again once and the lamp burns after, Sam down with his gun away`,
       x ? `${x.shots} round(s) · marks [${x.marks.join(', ')}] (${x.how}) · ${x.restarts} restart(s) under the row · after: ${quietSaid(x.q)}${x.kept ? ` · the quiet row gave way: '${x.kept}'` : ''}` : 'Sam\'s weapon tile never played'); }
+  // LOUD KIT'S COST (host/kitView.ts KIT_VIEW_QUIET.cost, `__kitview.cost`): on a quiet kind every loud row that went off was answered — the room at full, the
+  // leaf (where one still hung) thrown wide, Sam up, the cost's lamp hung, run to its end — and the room was staged again after it: the picture at rest as the
+  // staging row found it (the lamp burning, Sam down, his gun away) with the room dim again. A row with no bang (the suit, smoke, the suppressed gun, a thing
+  // kept on the belt) has none, save a gun's row the page itself read as fired with no suppressor (said). With `kitloud`, and on a loud kind: none, ever
+  if (QUIET) { const okOne = c => c.n === 1 && !!c.last && c.last.how === 'done' && c.last.share === 1 && c.last.up && c.last.lamp && (!c.last.door || c.last.leaf >= 1.4) && c.restarts >= 1 && restOk(c.q) && c.q.inside.share < 1;
+    const due = costs.filter(c => c.due), gunned = costs.filter(c => !c.due && c.n > 0 && c.f === 'weapon'), stray = costs.filter(c => !c.due && c.n > 0 && c.f !== 'weapon'), bad = [...due, ...gunned].filter(c => !okOne(c));
+    row(bad.length === 0 && stray.length === 0, `${w}: LOUD KIT'S COST — every loud row that went off is answered from inside (the room at full, the leaf thrown wide, Sam up in the lamp hung for it), the room is staged again after it (the leaf ajar, the room dim, the pool lamp burning, Sam down, his gun away), and no row without a bang has one`,
+      `${due.length ? due.map(c => `${c.who ? 'teammate ' + c.who : 'Sam'} ${c.f} [${c.marks.join(', ')}]: ${c.n} cost${c.last ? ` (${c.last.how || 'STILL UP'}, ${c.last.s.toFixed(2)} s, the room at ${c.last.share}, ${c.last.door ? `the leaf ${(c.last.leaf * 180 / Math.PI).toFixed(0)} deg` : 'no leaf left to throw'}, ${c.last.up ? 'up' : 'NOT UP'}, the slab ${c.last.catches ? 'reaches him' : 'stops short of him'}), ${c.restarts} restart(s), after: ${quietSaid(c.q)}, the room at ${c.q ? c.q.inside.share : '?'}` : ''}`).join(' · ') : 'true of nothing: no loud row went off on this way (each was kept, refused or the gun\'s row: above)'}${gunned.length ? ` · a gun with no suppressor: ${gunned.map(c => `${c.who ? 'teammate ' + c.who : 'Sam'} (${c.n} cost, ${c.last ? c.last.how : '?'})`).join(', ')}` : ''}${stray.length ? ` · A COST WITH NO BANG: ${stray.map(c => `${c.who ? 'teammate ' + c.who : 'Sam'} ${c.f} [${c.marks.join(', ')}] (${c.how})`).join(', ')}` : ''} · ${costs.filter(c => c.n === 0).length} row(s) with none`); }
+  else { const zc = await page.evaluate(() => { const c = window.__kitview.cost; return c ? c.n : -1; });
+    row(zc === 0, `${w}: ${L.kind === 'quiet' || L.kind === 'solo' ? 'FLAGS=kitloud' : 'a loud kind'} — no row was ever answered with a cost (the picture as it was)`, `${zc} cost(s) played over the run`); }
   row(guns.length === (N >= 1 ? 2 : 1) && guns.every(x => x.hurt === 0), `${w}: the gun's burst hits no man`, guns.map(x => `${x.who ? 'teammate ' + x.who : 'Sam'}: ${x.shots} round(s), ${x.hurt} hurt`).join(' · '));
   // a row cut mid-way by another pick (Sam's card again: his smoke, cut by his gun's tile)
   { await page.evaluate(([msg, ms]) => window.__kvRow(msg, ms), [{ kv: 'sel', who: 0, field: 'weapon' }, ROW_MS]);
