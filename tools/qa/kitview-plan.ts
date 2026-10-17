@@ -79,6 +79,10 @@
 //    on every one), each quiet way's pool lamp and rest place, and — headless, the level built as the page builds it — one round from Sam's gun that
 //    puts the lamp out as a lamp of the game's own list, rouses nobody, and is mended by the game's repairLights. Its own break word:
 //    KITQUIET_BREAK=1 (the link read with `kitloud` in it, the round aimed beside the lamp) — I's kind and lamp rows must FAIL, exit 1.
+// J. LOUD KIT'S COST on the quiet picture (KIT_VIEW_QUIET.cost): which rows have one (the director's own test), its timeline, its lamp on every quiet
+//    way, and — headless — the leaf thrown wide by the game's silent hand with nobody roused, hung again by the restart. Its own break word:
+//    KITCOST_BREAK=1 (the gun's suppressor read the wrong way round, the leaf thrown at no speed, the cost's lamp hung as the old slab's, the idle
+//    beat read as raised) — J's rows of what costs, of the leaf, of the wedge and of the beat's switch must FAIL, exit 1.
 // The first line printed names the levels that carry a block (nothing else lists them).
 // Both stands: A to E read no switch (the level is read as the page loads it — lived-in rooms and dressing on); F's game is the stand's, and its rows are the
 // same on both (TPS_PROFILE=shipped).
@@ -1016,6 +1020,11 @@ async function quietPicture(names: string[]) {
       `${said}: the pool lamp hangs over a glowing box on the wall (${P.lamps.porch.fixture ? `the box at ${pt(P.lamps.porch.fixture.at)}` : 'NO WALL CARRIES ONE'}), a spot of ${lamp.outerDeg} deg at ${lamp.intensity}, ${f2(lamp.offset[2])} m up, turned down and ${f2(lamp.aim[1] - lamp.offset[1])} m out`);
     row(wrote || (!!at.sam && free(at.sam[0], at.sam[1]) && Math.abs(Math.abs(al(at.sam)) - QK.samAlong) < 1e-6 && out(at.sam) > P.wall.face + 0.3),
       `${said}: Sam's rest place is ${wrote ? `the level's own ${pt(P.slots[0])} (written: it wins)` : at.sam ? `${pt(at.sam)} — ${f2(Math.abs(al(at.sam)))} m along the wall from the anchor's middle, ${f2(out(at.sam))} m out, free floor${at.mate ? `; a partner behind him at ${pt(at.mate)}` : '; NO free place behind him for a partner (the plan\'s stays)'}` : `NOT FREE FLOOR at ${QK.samAlong} m along the wall (the plan's ${pt(P.slots[0])} stays)`}`);
+    // (HE GIVES WAY FIRST — `stepBack`: with a partner's card open Sam's place is a step back along the wall, on free floor, no nearer the door than the
+    //  place he rested at before the re-shoot (1.55 m: where a partner at the door never shouldered him) and short of the partner's own rest place)
+    { const back = BREAKQ ? at.sam : at.back, need = !wrote && A.kind !== 'wall' && !!at.sam;
+      row(!need || (!!back && free(back[0], back[1]) && Math.abs(al(back)) >= 1.55 - 1e-6 && Math.abs(Math.abs(al(back)) - QK.samAlong - QK.stepBack) < 1e-6 && Math.abs(out(back) - out(at.sam!)) < 1e-6 && (!at.mate || Math.abs(al(at.mate)) - Math.abs(al(back)) >= 0.45)),
+        `${said}: with a partner's card open Sam ${!need ? `keeps his place (${wrote ? 'the level wrote it' : A.kind === 'wall' ? 'a blank wall: nobody works a door' : 'no worked-out place'})` : back ? `rests a step back at ${pt(back)} — ${f2(Math.abs(al(back)))} m along the wall, free floor${at.mate ? `, ${f2(Math.abs(al(at.mate)) - Math.abs(al(back)))} m short of the partner's own place` : ''}` : `HAS NO FREE PLACE ${QK.stepBack} m BACK`}`); }
     // ---- the lamp, as a lamp of the game's
     try { const H = await standUp({ level: loadLevel(laid), seed: 1 }), g = H.game, st = startFromQuery(g, w.Y.set !== undefined ? kitViewSetQuery(new URLSearchParams(w.link)) : new URLSearchParams(w.link));
       const W = (o: readonly number[]): [number, number, number] => [A.mid[0] + P.s[0] * o[0] + A.n[0] * o[1], o[2], A.mid[1] + P.s[1] * o[0] + A.n[1] * o[1]], F = P.lamps.porch.fixture, T = KV.KIT_VIEW_LIGHT.porch.fixture!;
@@ -1044,6 +1053,105 @@ async function quietPicture(names: string[]) {
       if (g.quiet.active) g.quiet.stop(); if (g.roomClear.active) g.roomClear.stop();
     } catch (err) { row(false, `${said}: the lamp could not be stood up headless — ${String((err as Error)?.message ?? err)}`); } }
 }
+/** J. LOUD KIT'S COST ON THE QUIET PICTURE (host/kitView.ts KIT_VIEW_QUIET.cost: a loud row that went off is answered from inside — the room at full
+ *  behind the leaf ajar, the leaf thrown wide, a slab of light along the wall over him, then the room staged again). What can be held with no page:
+ *    · WHICH ROWS COST (kitViewCostly, the director's own test): a loud row that went off on the quiet picture — and never a suppressed gun's burst, a
+ *      row with no bang's mark, a row a pick cut, the wall charge that only opens a wall for another row, a row that is not loud; and with the picture
+ *      NOT staged quiet (`kitloud` in the link, the switch off, a loud mission's link: the kind reads null, so nothing is staged quiet) nothing costs.
+ *    · THE TIMELINE (kitViewCostAt): the room at full from the first frame with the leaf not yet thrown, the throw `slit` s in, over about 2 s in.
+ *    · THE COST'S LAMP on every quiet way in the tree (kitViewCostLamp): behind the wall's far face, on free floor, and how far along the wall its
+ *      slab reaches against where Sam rests (said; a way whose slab stops short of him is named); and that what gets out is a WEDGE with the doorway's
+ *      shape that he stands inside (its two edges, its width, how far past him its edge falls).
+ *    · THE LEAF, headless, on each of those ways with a door: the level stood up as the page stands it, the leaf a hand ajar, the cost's own hand on
+ *      it (the game's silent crack at the table's rate, from the team's side) — it stands wide within the throw's time, nobody is roused by it (the
+ *      park's count 0, the floor at 0, no alarm placed), and the encounter's restart hangs it shut again for the staging to set ajar.
+ *    · LIFE AT REST (kitViewIdleAt / kitViewIdleEvery, KIT_VIEW_QUIET.idle): the beat's timeline — out, held, back, one blink, no jump — and its waits;
+ *      and that it is SWITCHED OFF (`idle.on`, kitViewIdleOn): the table says no, a check's own raise says yes.
+ *  KITCOST_BREAK=1: the gun's suppressor is read the wrong way round, the leaf is thrown at no speed, the cost's lamp is hung as the old slab's and the
+ *  idle beat is read as raised — the rows of what costs, of the leaf, of the wedge and of the beat's switch must FAIL.
+ *  WHAT THIS CANNOT SEE: the wedge on the floor, the room's lamps at full, him up and still in it, his one shadow, the restage under the dissolve: tools/qa/kitview-levels.cjs on a quiet kind
+ *  (`__kitview.cost`). Nothing of it has been seen on a GPU. */
+const BREAKC = process.env.KITCOST_BREAK === '1';
+const WEDGE_DEG = 66;   // (the widest fan the cost's lamp may throw through a doorway: the old slab was 75)
+async function quietCost(names: string[]) {
+  say('\n=== J. the quiet picture: loud kit\'s cost — which rows have one, its timeline, its lamp, the leaf thrown wide — and life at rest');
+  const KV = await import(`${ROOT}/src/host/kitView.ts`), { kitViewSetQuery, kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink } = await import(`${ROOT}/src/host/kitViewSet.ts`);
+  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`), { squadSearch } = await import(`${ROOT}/src/game/loadout.ts`);
+  const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  const QK = KV.KIT_VIEW_QUIET, C = QK.cost, R = Math.PI / 180;
+  // ---- which rows cost
+  { type Rw = { quiet: boolean; loud: boolean; prelude: boolean; how: string; gun: boolean; shots: number; suppressed: boolean; marked: boolean };
+    const costly = (r: Rw) => KV.kitViewCostly(BREAKC ? { ...r, suppressed: !r.suppressed } : r), base: Rw = { quiet: true, loud: true, prelude: false, how: 'done', gun: false, shots: 0, suppressed: false, marked: true };
+    const yes: [string, Rw][] = [['a frag, a stun, a charge, a tool that went off', base], ['the same, ended by its cap', { ...base, how: 'cap' }], ['a burst from a gun with no suppressor', { ...base, gun: true, shots: 3, marked: false }], ['a teammate\'s one round with no suppressor', { ...base, gun: true, shots: 1, marked: false }]];
+    const no: [string, Rw][] = [['a suppressed gun\'s burst', { ...base, gun: true, shots: 3, suppressed: true, marked: false }], ['a gun\'s row with no round fired', { ...base, gun: true, shots: 0, marked: false }], ['a loud thing kept (no bang\'s mark)', { ...base, marked: false }],
+      ['a row a pick cut', { ...base, how: 'cut' }], ['a row ended by a man down', { ...base, how: 'down' }], ['the wall charge that opens a wall for another row', { ...base, prelude: true }], ['a row that is not loud (the suit, the wand, smoke)', { ...base, loud: false }]];
+    const badY = yes.filter(([, r]) => !costly(r)).map(x => x[0]), badN = no.filter(([, r]) => costly(r)).map(x => x[0]), off = [...yes, ...no].filter(([, r]) => KV.kitViewCostly({ ...r, quiet: false })).map(x => x[0]);
+    row(badY.length === 0 && badN.length === 0, `which rows cost: ${yes.length} loud ending(s) have one (${yes.map(x => x[0]).join(' · ')}) and ${no.length} have none (${no.map(x => x[0]).join(' · ')})${badY.length ? ' — NO COST FOR: ' + badY.join(' · ') : ''}${badN.length ? ' — A COST FOR: ' + badN.join(' · ') : ''}`);
+    let nulls = 0; const kinds: string[] = [];
+    for (const e of ALL_MISSIONS as Data[]) { const link = (squadSearch(scenarioQuery(e), e.squad, e.squad) as string).replace(/^\?/, '');
+      if (KV.kitViewQuietOf(new URLSearchParams(link + '&kitloud')) !== null || KV.kitViewQuietOf(new URLSearchParams(link), false) !== null || (e.kind !== 'quiet' && KV.kitViewQuietOf(new URLSearchParams(link)) !== null)) kinds.push(link); else nulls++; }
+    row(off.length === 0 && kinds.length === 0, `…and where the picture is not staged quiet nothing costs: none of those ${yes.length + no.length} endings (${off.length ? 'A COST FOR: ' + off.join(' · ') : 'none'}), and the kind reads null — nothing is staged quiet — with \`kitloud\` in the link, with the switch off and on every loud mission's link (${nulls} of ${(ALL_MISSIONS as Data[]).length} mission link(s)${kinds.length ? '; NOT NULL: ' + kinds.slice(0, 3).join(' · ') : ''})`); }
+  // ---- the timeline
+  { const a0 = KV.kitViewCostAt(0), a1 = KV.kitViewCostAt(C.slit - 0.01), a2 = KV.kitViewCostAt(C.slit), end = C.slit + C.wideDeg * R / C.swing + C.hold, a3 = KV.kitViewCostAt(end - 0.01), a4 = KV.kitViewCostAt(end);
+    row(a0.share === 1 && a0.pool === 1 && a1.share === 1 && a2.share === C.room && a2.pool === C.pool && C.room > 0 && C.room <= 1 && C.pool === 0 && !a0.open && !a1.open && a2.open && !a3.done && a4.done && end >= 1.5 && end <= 3 && C.wideDeg * R / C.swing <= 0.4,
+      `the timeline: the room at full from the first frame (share ${a0.share}) with the leaf still ajar, the leaf thrown ${C.slit} s in (${f2(C.wideDeg * R / C.swing)} s to ${C.wideDeg} deg at ${C.swing} rad/s), held ${C.hold} s, over ${f2(end)} s from the old row's end (a row holds 0.8 to 1.6 s after its bang: about 3 s from the bang); once the leaf is thrown ONE lamp lights the yard — the pool lamp at ${a2.pool} of itself (out), the room's own at ${a2.share}`); }
+  // ---- life at rest (KIT_VIEW_QUIET.idle): the beat's own timeline
+  { const I = QK.idle, secs = I.out * 2 + I.stay, at = KV.kitViewIdleAt, N = 300, xs = Array.from({ length: N + 1 }, (_, i) => at(i * secs / N)), peak = Math.max(...xs.map(a => a.x)), jump = Math.max(...xs.slice(1).map((a, i) => Math.abs(a.x - xs[i].x)));
+    const dark = xs.filter(a => a.lit < 1).length * secs / N, every = I.every.map((_: number, i: number) => KV.kitViewIdleEvery(i)), reach = xs.filter(a => a.x >= I.slide - 1e-9).length * secs / N;
+    row(at(0).x === 0 && at(0).env === 0 && Math.abs(peak - I.slide) < 1e-9 && jump < I.slide * 0.02 && !at(secs - 0.01).done && at(secs).done && at(secs).x < 1e-9 && at(secs / 2).env === 1 && at(secs / 2).lit === 1 && at(I.blinkAt + I.blink / 2).lit === I.blinkTo && Math.abs(dark - I.blink) < 0.03 && Math.abs(reach - I.stay) < 0.05 && secs >= 2.5 && secs <= 3.5 && every.every((s: number) => s >= 14 && s <= 16) && KV.kitViewIdleEvery(I.every.length) === every[0],
+      `life at rest: after ${every.join(', ')} s of rest in turn (a fixed list: no dice) the lamp behind the door slides ${f2(peak)} m along the wall and back in ${f2(secs)} s with no jump (${f2(jump * 1000)} mm at most between two of ${N} samples), stays ${f2(reach)} s at its far point, and is dark to ${I.blinkTo} of itself for ${f2(dark)} s from ${I.blinkAt} s; a lamp hung for the beat is in from nothing and out to nothing`); }
+  // (…AND THE BEAT IS SWITCHED OFF — `idle.on`, kitViewIdleOn: the table's word is no; only a check that raises it for itself gets one. KITCOST_BREAK: read as raised)
+  row(QK.idle.on === false && KV.kitViewIdleOn(BREAKC ? true : null) === false && KV.kitViewIdleOn(true) === true && KV.kitViewIdleOn(false, { on: true }) === false && KV.kitViewIdleOn(null, { on: true }) === true,
+    `life at rest is switched off: the table's \`idle.on\` is ${QK.idle.on}, so no beat begins (${KV.kitViewIdleOn(BREAKC ? true : null) ? 'A BEAT WOULD BEGIN' : 'none would'}); raised by a check for itself it plays, lowered by one it does not, whatever the table says`);
+  // ---- every quiet way in the tree: the lamp, and the leaf
+  const ways: { name: string; k: number; Y: Data; link: string; data: Data }[] = [];
+  for (const e of ALL_MISSIONS as Data[]) { if (e.kind !== 'quiet') continue; const name = (e.level ?? 'office.json').replace(/\.json$/, ''); if (!names.includes(name) || ways.some(w => w.name === name)) continue;
+    const L = await levelOf(name), KB = L.data.scenarios?.kitView; if (!KB) continue;
+    const link = (squadSearch(scenarioQuery(e), 1, e.squad) as string).replace(/^\?/, ''), data: Data = name === 'office' ? L.data : parseLevelData(L.text), k = kitViewWayOfLink(new URLSearchParams(link), data), Y = KB.ways?.[k]; if (!Y) continue;
+    ways.push({ name, k, Y, link, data }); }
+  if (names.includes('office')) { const L = await levelOf('office'), Y = L.data.scenarios?.kitView?.ways?.[0]; if (Y) ways.push({ name: 'office', k: 0, Y, link: 'solo', data: L.data }); }
+  if (!ways.length) { say('  (no quiet mission on a level with a block among those asked)'); return; }
+  const { standUp } = await import('./headless.ts'), { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  for (const w of ways) { const said = `${w.name} way ${w.k} (${w.Y.door ?? 'span'}${w.Y.set ? ', set ' + w.Y.set : ''})`;
+    const laid: Data = w.Y.set !== undefined ? kitViewSetLevel(w.data, w.k) : kitViewAddLevel(w.data, w.k), KB = laid.scenarios.kitView, Yb = kitPlanWayBuilt(KB.ways[w.k]), sp = laid.mission.playerSpawn;
+    const ref: V2 = [sp[0], sp[2]], G = kitPlanGeometry(laid, KB, Yb, ref); if (!G) { row(false, `${said}: no geometry to plan on`); continue; }
+    const P = kitViewPlanWay(laid, KB, Yb, ref), floor = kitPlanFloor((G.level.boxes as Data[]).filter((_, i) => !P.hidden.includes(i))), free = (x: number, z: number) => !floor.blocked(x, z);
+    const A = P.anchor, at = KV.kitViewQuietPlaces(P, 1, free), S0 = at.sam ?? P.slots[0], dd: Data | null = A.door !== null ? (laid.doors as Data[]).find(o => o.id === A.door) ?? null : null;
+    const al = (p: readonly number[]) => (p[0] - A.mid[0]) * P.s[0] + (p[1] - A.mid[1]) * P.s[1], out = (p: readonly number[]) => (p[0] - A.mid[0]) * A.n[0] + (p[1] - A.mid[1]) * A.n[1];
+    const Lp = KV.kitViewCostLamp(P, A.width, S0, dd ? dd.hinge : null, free), lp: V2 = [Lp.pos[0], Lp.pos[2]], sg = al(S0) >= 0 ? 1 : -1;
+    row(out(lp) < P.wall.back - 0.05 && (free(lp[0], lp[1]) || (Math.abs(Lp.along) < A.width / 2 && Lp.back < A.width)) /* (free floor, or inside the doorway in the leaf's own sweep: nothing stands there) */ && Lp.back >= C.lamp.backMin - 1e-9 && Lp.back <= C.lamp.back + 1e-9 && Lp.along * sg <= A.width / 2 && Lp.along * sg >= -(A.width / 2 + C.lamp.side) - 1e-9,
+      `${said}: the cost's lamp hangs behind the wall on free floor or in the doorway's own sweep — ${pt(lp)}, ${f2(P.wall.back - out(lp))} m behind its far face, ${f2(Math.abs(Lp.along))} m along from the door's middle ${Lp.along * sg < 0 ? 'away from Sam' : 'on his side'}${dd ? `, the hinge ${al(dd.hinge) * sg < 0 ? 'on the far jamb (the thrown leaf stands there: the lamp inside the doorway)' : 'on his jamb'}` : ', no leaf'}; its slab's edge falls ${f2(Lp.reach)} m along the wall at his distance from it, Sam's middle at ${f2(Math.abs(al(S0)))} m: ${Lp.reach >= Math.abs(al(S0)) ? 'all of him is in it' : Lp.catches ? 'his near side is in it' : 'IT STOPS SHORT OF HIM (said: he is lit by what the room throws back)'}`);
+    // (CAUGHT, NOT "THE LIGHTS CAME ON": what gets out between the jambs is a WEDGE with the doorway's shape — no wider than WEDGE_DEG, its far edge near
+    //  straight out of the door (the floor on the door's far side stays dark), its near edge past his place but not far past it (the floor along the
+    //  wall behind him stays dark) — and he stands inside it. KITCOST_BREAK: read with the lamp the old table hung, hard behind the wall)
+    { const Lw = BREAKC ? KV.kitViewCostLamp(P, A.width, S0, dd ? dd.hinge : null, free, { ...C.lamp, back: 0.45, backMin: 0.15, past: 0.75 }) : Lp, W = Lw.wedge, sA = Math.abs(al(S0));
+      row(W.to - W.from <= WEDGE_DEG && W.from >= -12 && W.from <= 12 && Lw.reach >= sA + C.lamp.body - 1e-6 && Lw.reach <= sA + 0.6,
+        `${said}: the cost's light is a wedge with the doorway's shape and he stands in it — ${f2(W.from)} to ${f2(W.to)} deg off the door's own line toward him (${f2(W.to - W.from)} deg wide, ${WEDGE_DEG} at most), its edge ${f2(Lw.reach)} m along the wall at his distance from it against his ${f2(sA)} m: ${Lw.reach >= sA + C.lamp.body - 1e-6 ? `${f2(Lw.reach - sA)} m past his middle` : 'NOT ALL OF HIM IS IN IT'}${Lw.reach > sA + 0.6 ? ' — A SLAB: IT RUNS ON ALONG THE WALL BEHIND HIM' : ''}`); }
+    if (!dd) { say(`  (${said}: no leaf on this way — the cost is the room at full and its lamp; nothing to throw)`); continue; }
+    // (THE BLADE AND ITS SWING — kitViewBladeLine: through the leaf ajar the picture's own lamp throws a thin fan out across the yard; the idle beat
+    //  slides the lamp FURTHER past the latch, so the fan still gets out and has swung round toward the hinge's side. KITCOST_BREAK: slid the other way)
+    if (A.kind === 'door') { const I = QK.idle, O = QK.own, line = (side: number) => KV.kitViewBladeLine(A.width, P.wall.thickness, QK.ajarDeg * R, O.back, side), b0 = line(O.side), b1 = line(O.side + (BREAKC ? -1 : 1) * I.slide);
+      row(!!b0 && b0.from >= 0 && b0.to - b0.from <= 20, `${said}: the blade at rest gets out through the leaf ajar as a thin fan — ${b0 ? `${f2(b0.from)} to ${f2(b0.to)} deg off the door's own line, toward the hinge's side` : 'NO LIGHT GETS OUT'}`);
+      row(!!b0 && !!b1 && b1.from - b0.to >= 25, `${said}: the idle beat's slide (${I.slide} m past the latch) swings it and it still gets out — ${b1 ? `${f2(b1.from)} to ${f2(b1.to)} deg at the slide's end` : 'THE LAMP IS BEHIND THE LEAF: THE BLADE ONLY GOES OUT'}`); }
+    try { const H = await standUp({ level: loadLevel(laid), seed: 1 }), g = H.game, st = startFromQuery(g, w.Y.set !== undefined ? kitViewSetQuery(new URLSearchParams(w.link)) : new URLSearchParams(w.link));
+      const door = g.doors.byName(A.door), roused = { men: 0, alarms: 0 }; let first = true;
+      const park = () => { const r = KV.kitViewPark(g); if (!first) { roused.men += r.men; roused.alarms += r.alarms; } first = false; };
+      const step = (dt: number) => { park(); H.step(dt); park(); };
+      const ajar = () => { door.locked = false; g.doors.crack(door, [S0[0], 0, S0[1]], g.player.char.id, 1, undefined, QK.ajarDeg * R, QK.ajarDeg * R); };
+      park(); g.godMode = true; g.teleportPlayer([S0[0], 0, S0[1]]); g.player.crouch = true; const shut0 = door.angle; ajar(); for (let i = 0; i < 20; i++) step(1 / 60);
+      const rest = door.angle - shut0, F: [number, number, number] = [A.mid[0] + A.n[0], 0, A.mid[1] + A.n[1]], want = Math.min(C.wideDeg * R, Math.max(Math.abs(door.minA), Math.abs(door.maxA)));
+      let t = 0, wideAt = NaN, peak = 0;
+      for (; !KV.kitViewCostAt(t).done; t += 1 / 60) { if (KV.kitViewCostAt(t).open) { g.doors.crack(door, F, g.player.char.id, 1 / 60, undefined, BREAKC ? 0 : C.swing, C.wideDeg * R); g.player.crouch = false; }
+        step(1 / 60); peak = Math.max(peak, Math.abs(door.angle - shut0)); if (isNaN(wideAt) && Math.abs(door.angle - shut0) >= want - 0.1) wideAt = t; }
+      const held = Math.abs(door.angle - shut0), calm = roused.men === 0 && roused.alarms === 0 && g.escalation === 0 && !g.alarm.placed && !g.player.down;
+      g.restartEncounter(); const door2 = g.doors.byName(A.door), hung = Math.abs(door2.angle - shut0) < 1e-3 && !door2.off; first = true; park(); door2.locked = false; g.doors.crack(door2, [S0[0], 0, S0[1]], g.player.char.id, 1, undefined, QK.ajarDeg * R, QK.ajarDeg * R); for (let i = 0; i < 10; i++) step(1 / 60);
+      const back = Math.abs((door2.angle - shut0) - rest) < 0.02;
+      row(!st.why && Math.abs(rest) > 0.1 && Math.sign(door.angle - shut0) === Math.sign(rest) && !isNaN(wideAt) && wideAt <= C.slit + C.wideDeg * R / C.swing + 0.1 && held >= want - 0.1 && hung && back,
+        `${said}: the leaf, ${f2(Math.abs(rest) / R)} deg ajar at rest, is thrown wide by the game's own silent hand — ${isNaN(wideAt) ? `NEVER WIDE (${f2(peak / R)} deg at most)` : `${f2(peak / R)} deg, ${f2(wideAt - C.slit)} s after the throw`}, the same way it stood ajar, and stands there to the cost's end (${f2(held / R)} deg); the encounter's restart ${hung ? 'hangs it shut' : 'DOES NOT HANG IT SHUT'} and the staging's hand sets it ${back ? 'ajar again' : 'NOT AJAR AS BEFORE'}${st.why ? ' — the mission REFUSED: ' + st.why : ''}`);
+      row(calm, `${said}: …and nobody is roused by it — the park put right ${roused.men} man-park(s) and ${roused.alarms} alarm mark(s) through the cost and the restart, the floor at ${g.escalation}, ${g.alarm.placed ? 'AN ALARM PLACED' : 'no alarm placed'}, Sam ${g.player.down ? 'DOWN' : 'up'}`);
+      if (g.quiet.active) g.quiet.stop(); if (g.roomClear.active) g.roomClear.stop();
+    } catch (err) { row(false, `${said}: the leaf could not be stood up headless — ${String((err as Error)?.message ?? err)}`); } }
+}
 if (BREAK) console.log('KITPLAN_BREAK=1: the derived side is flipped, a block\'s second place is moved onto the wall, the loaded set is spoiled — rows below must FAIL');
 await seam(asked.length ? asked : files);
 if (!asked.length || asked.includes('records')) await parity();
@@ -1057,6 +1165,8 @@ await dryRun(asked);
 if (!asked.length || asked.includes('vault')) await quietAlone();
 if (BREAKQ) console.log('KITQUIET_BREAK=1: the link is read with `kitloud` in it, the round is aimed beside the lamp — section I\'s kind and lamp rows must FAIL');
 await quietPicture(asked.length ? asked : files);
+if (BREAKC) console.log('KITCOST_BREAK=1: the suppressor is read the wrong way round, the leaf is thrown at no speed, the cost\'s lamp is hung as the old slab\'s, the idle beat is read as raised and its lamp slid behind the leaf — section J\'s rows of what costs, of the leaf, of the wedge, of the beat\'s switch and of the blade\'s swing must FAIL');
+await quietCost(asked.length ? asked : files);
 if (warnings) console.log(`\n${warnings} WARNING line${warnings === 1 ? '' : 's'} above (names by generated id: said, never failed)`);
-console.log(`\nkitview-plan: ${passes} PASS, ${fails} FAIL${BREAK ? ' (under KITPLAN_BREAK=1: FAILs are the expected answer)' : BREAKQ ? ' (under KITQUIET_BREAK=1: FAILs are the expected answer)' : ''}`);
+console.log(`\nkitview-plan: ${passes} PASS, ${fails} FAIL${BREAK ? ' (under KITPLAN_BREAK=1: FAILs are the expected answer)' : BREAKQ ? ' (under KITQUIET_BREAK=1: FAILs are the expected answer)' : BREAKC ? ' (under KITCOST_BREAK=1: FAILs are the expected answer)' : ''}`);
 process.exit(fails ? 1 : 0);
