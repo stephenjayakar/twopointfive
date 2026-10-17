@@ -40,20 +40,22 @@ const MAX_PASSES = 48, NUM_COLS = 24;
 const C = { t: 0, dt: 1, fps: 2, cpuUpdate: 3, cpuRender: 4, cpuOther: 5, gpuSum: 6, gpuUnion: 7, resW: 8, resH: 9, eff: 10, adaptive: 11, cam0: 12, cam1: 13, cam2: 14, cam3: 15, cam4: 16, lights: 17, dyn: 18, particles: 19, smoke: 20, decals: 21, rain: 22, stroke: 23 } as const;
 class FrameRing {
   n = 0;
+  /** frames this take may hold (the F9 take: MAX_FRAMES; a caller that needs more asks for it: the benchmark, on a fast display) */
+  limit = MAX_FRAMES; private cap = 0;
   // the columns are allocated on the FIRST recording (≈ 25 MB for the ten-minute cap) — a page that never presses F9 keeps nothing but this object
   num!: Float64Array; gpuN!: Uint8Array; gpuId!: Uint8Array; gpuVal!: Float64Array; str!: Uint16Array; private unionMissing!: Uint8Array;   // str = preset · guards · qrf (interned); unionMissing: gpuUnion undefined = the key left out, as before
   private allocated = false;
   private passIdx = new Map<string, number>(); readonly passNames: string[] = [];
   private strIdx = new Map<string, number>(); readonly strings: string[] = [];
-  private ensure(): void {
-    if (this.allocated) return; this.allocated = true;
-    this.num = new Float64Array(MAX_FRAMES * NUM_COLS); this.gpuN = new Uint8Array(MAX_FRAMES); this.gpuId = new Uint8Array(MAX_FRAMES * MAX_PASSES); this.gpuVal = new Float64Array(MAX_FRAMES * MAX_PASSES);
-    this.str = new Uint16Array(MAX_FRAMES * 3); this.unionMissing = new Uint8Array(MAX_FRAMES);
+  private ensure(frames: number): void {
+    if (this.allocated && this.cap >= frames) return; this.allocated = true; this.cap = frames;   // (a longer take than any before it: the columns again, at its size)
+    this.num = new Float64Array(frames * NUM_COLS); this.gpuN = new Uint8Array(frames); this.gpuId = new Uint8Array(frames * MAX_PASSES); this.gpuVal = new Float64Array(frames * MAX_PASSES);
+    this.str = new Uint16Array(frames * 3); this.unionMissing = new Uint8Array(frames);
   }
   intern(s: string): number { let i = this.strIdx.get(s); if (i === undefined) { i = this.strings.length; this.strings.push(s); this.strIdx.set(s, i); } return i; }
   passId(k: string): number { let i = this.passIdx.get(k); if (i === undefined) { i = this.passNames.length; if (i >= 255) return 255; this.passNames.push(k); this.passIdx.set(k, i); } return i; }
-  get full() { return this.n >= MAX_FRAMES; }
-  reset() { this.ensure(); this.n = 0; }
+  get full() { return this.n >= this.limit; }
+  reset(frames = MAX_FRAMES) { this.ensure(frames); this.limit = frames; this.n = 0; }
   /** the row's numeric columns + the gpu rows + the strings — the caller has rounded every number as the page's frame() did */
   push(cols: number[], gpu: [string, number][], unionMissing: boolean, preset: string, guards: string, qrf: string): void {
     const f = this.n++; const b = f * NUM_COLS; for (let i = 0; i < NUM_COLS; i++) this.num[b + i] = cols[i];
@@ -79,7 +81,7 @@ export class PerfRecorder {
   recording = false;
   private ring = new FrameRing(); private events: PerfEvent[] = [];
   private t0 = 0; private startedAt = ''; private settings0: Record<string, unknown> = {};
-  private commit: string | undefined;
+  commit: string | undefined;
   private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0;
   /** CPU section marks written by main.ts's step() each frame (ms) */
   cpuUpdate = 0; cpuRender = 0; cpuFrameStart = 0;
@@ -87,22 +89,28 @@ export class PerfRecorder {
   /** frames recorded so far (the ring's count) */
   get frameCount(): number { return this.ring.n; }
   toggle(): void { if (this.recording) this.stop(); else this.start(); }
-  start(note = ''): void {
-    this.ring.reset(); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
+  /** frames: the most this take may hold (default the ten minutes at 60) */
+  start(note = '', frames = MAX_FRAMES): void {
+    this.ring.reset(Math.max(1, Math.floor(frames))); this.events = []; this.t0 = performance.now(); this.startedAt = new Date().toISOString(); this.recording = true;
     if (this.commit === undefined && typeof document !== 'undefined') try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }   // (asked on the first recording, as the session journal asks: ui/sessionrec.ts)
     this.settings0 = this.snapSettings(); this.lastSettingsKey = JSON.stringify(this.settings0);
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;
     this.event('start', note || 'recording started (F9 stops; the dump downloads and goes to the shot server if it is up)');
     this.hudNote('● REC — F9 to stop');
   }
-  stop(): PerfDump | null {
+  /** frame f of the take under way, as the dump will carry it (ui/bench.ts reads its own windows back) */
+  frameAt(f: number): PerfFrame { return this.ring.frameAt(f); }
+  /** room left in the ring, frames (the recorder stops itself when it is full) */
+  get framesLeft(): number { return this.ring.limit - this.ring.n; }
+  /** deliver = false: the take is dropped (a benchmark stopped before it had a number: ui/bench.ts) */
+  stop(deliver = true): PerfDump | null {
     if (!this.recording) return null;
     this.recording = false; this.event('stop', `${this.ring.n} frames`);
     const frames: PerfFrame[] = new Array(this.ring.n); for (let f = 0; f < this.ring.n; f++) frames[f] = this.ring.frameAt(f);   // (the objects exist only for the dump: built here, serialized, dropped)
     const dump: PerfDump = { version: 1, startedAt: this.startedAt, machine: this.engine.gpu?.adapterInfo ?? 'unknown', dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'bun', ...(this.commit ? { commit: this.commit } : {}), ...(typeof location !== 'undefined' ? { query: location.search } : {}), ...(typeof (this.game as unknown as { smoke?: { stats?: { pool?: number } } }).smoke?.stats?.pool === 'number' ? { smokeUnit: 512 } : {}),
       note: `twopointsix perf recording · ${this.ring.n} frames · ${(this.ring.n ? this.ring.lastT() / 1000 : 0).toFixed(1)} s`,
       frames, events: this.events, settingsAtStart: this.settings0, settingsAtEnd: this.snapSettings() };
-    this.deliver(dump); this.hudNote(`REC saved — ${this.ring.n} frames`);
+    if (deliver) { this.deliver(dump); this.hudNote(`REC saved — ${this.ring.n} frames`); }
     return dump;
   }
   event(kind: string, text: string): void { this.events.push({ t: +(performance.now() - this.t0).toFixed(1), frame: this.ring.n, kind, text }); }
@@ -152,7 +160,8 @@ export class PerfRecorder {
   deliver(dump: PerfDump): void {
     const name = `perf-${this.startedAt.replace(/[:.]/g, '-')}`; const body = new Blob(serializeDump(dump), { type: 'application/json' });
     if (typeof document !== 'undefined') try { const a = document.createElement('a'); a.href = URL.createObjectURL(body); a.download = name + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); } catch { /* no DOM */ }
-    try { void fetch(`http://localhost:5174/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body, headers: { 'Content-Type': 'application/json' } }).catch(() => {}); } catch { /* no sink */ }
+    // (the shot server is a thing of a page served from this machine: a page opened from anywhere else asks nothing of the visitor's own localhost)
+    if (typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) try { void fetch(`http://localhost:5174/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body, headers: { 'Content-Type': 'application/json' } }).catch(() => {}); } catch { /* no sink */ }
     if (typeof window !== 'undefined') (window as unknown as { __lastPerfDump?: PerfDump }).__lastPerfDump = dump;
   }
 }

@@ -90,6 +90,8 @@ export interface SweepOpts {
   live: boolean;
   /** only these row ids (a dry run) */
   only?: string[];
+  /** a sweep inside somebody else's take (the benchmark's: ui/bench.ts): the recording goes on when it ends, and it puts no line or tag of its own on the screen */
+  inside?: boolean;
 }
 export const SWEEP_DEFAULTS: SweepOpts = { rounds: 3, settleMs: 500, measureMs: 1000, settleFrames: 12, measureFrames: 30, live: false };
 
@@ -127,6 +129,8 @@ export class PerfSweep {
   /** the world holds still for the take (host/loop.ts frozen: no game step, the picture stays live) */
   get freezing(): boolean { return this.active && !this.opts.live; }
   get progress(): string { return this.active ? `${this.at + 1}/${this.plan.length}` : this.last; }
+  /** the segment under way is past its settle: its frames from here are the ones that count (a caller pricing the rows as they go: ui/bench.ts) */
+  get settled(): boolean { return this.active && !this.warming && this.at >= 0 && performance.now() - this.segT0 >= this.segSettle && this.segFrames >= this.opts.settleFrames; }
   /** the row flipped right now ('base' between two flips, '' while warming up or with no sweep on) — what a script watching the page keys on */
   get flipped(): string { return !this.active || this.warming || this.at < 0 ? '' : this.plan[this.at]?.armed?.row.id ?? 'base'; }
   toggle(live = false): void { if (this.active) this.stop('F8'); else this.start({ live }); }
@@ -153,7 +157,7 @@ export class PerfSweep {
     this.rec.event('sweep', JSON.stringify({ op: 'begin', mode: this.opts.live ? 'live' : 'frozen', rounds: this.opts.rounds, settleMs: this.opts.settleMs, measureMs: this.opts.measureMs, settleFrames: this.opts.settleFrames, measureFrames: this.opts.measureFrames,
       preset: this.quality.label, res: [this.engine.width, this.engine.height], scale: S.renderScale, smoke: this.smoke.stats.live, timers: !!this.engine.timer?.enabled,
       rows: armed.map(a => ({ id: a.row.id, label: a.label, from: a.from, to: a.to })), skipped }));
-    this.note(`SWEEP: measuring for about ${secs >= 90 ? `${Math.round(secs / 60)} min` : `${secs} s`}, hands off. The picture will flicker. F8 stops`);
+    if (!this.opts.inside) this.note(`SWEEP: measuring for about ${secs >= 90 ? `${Math.round(secs / 60)} min` : `${secs} s`}, hands off. The picture will flicker. F8 stops`);
     this.at = -1;
     const warm = armed.filter(a => a.row.warm);
     if (warm.length) {   // their shaders compiled before anything is timed: all of them on together for a few seconds, then off, then the first segment
@@ -208,9 +212,9 @@ export class PerfSweep {
     if (keep) this.keepBack(); else { try { this.undoLive(); } catch { /* */ } this.restoreAll(); }
     this.live = []; this.warming = false;
     this.active = false; this.last = done ? 'done' : `stopped: ${why}`;
-    if (this.rec.recording) { this.rec.event('sweep', JSON.stringify({ op: 'end', done, why })); this.rec.stop(); }
+    if (this.rec.recording) { this.rec.event('sweep', JSON.stringify({ op: 'end', done, why })); if (!this.opts.inside) this.rec.stop(); }
     this.showTag(null);
-    this.note(done ? 'SWEEP done: the perf-….json that just downloaded is the take' : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): everything is back as it was`);
+    if (!this.opts.inside) this.note(done ? 'SWEEP done: the perf-….json that just downloaded is the take' : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): everything is back as it was`);
   }
   /** the quality was set by hand since the take began: any quality.apply that was not the preset row's own (the same preset picked again counts: the card's scale slider pins it),
    *  or — on a page whose Quality cannot be watched — the preset no longer the one the sweep stands at */
@@ -344,6 +348,7 @@ export class PerfSweep {
   private showTag(text: string | null): void {
     if (typeof document === 'undefined') return;
     if (text === null) { this.tag?.remove(); this.tag = null; return; }
+    if (this.opts.inside) return;
     if (!this.tag) { const t = document.createElement('div'); t.style.cssText = 'position:fixed;top:8px;left:50%;transform:translateX(-50%);z-index:50;padding:4px 10px;font:12px ui-monospace,Menlo,monospace;color:#fff;background:rgba(160,30,30,.85);border-radius:3px;pointer-events:none'; document.body.appendChild(t); this.tag = t; }
     this.tag.textContent = text;
   }

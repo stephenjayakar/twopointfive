@@ -181,3 +181,35 @@ but synthetic writes still work.
   shipped 0 FAIL. The three left are NOT the close-in mode's (red with every close-in switch off): `controls-behind` (d) the card counts no shot on a
   pistol click's frame, (f) a can's click is no throw on its frame; `guard-key` (b) the closer never latches the server door again (reads as doors stay
   where left, inferred). No single `TPS_<NAME>=0` turns any of the three green (every word in `STAND_ENV` tried but the snow, music, picture and words ones).
+- **THE BENCHMARK (`src/ui/bench.ts`, 2026-10-17; title ▸ Extras ▸ Benchmark, or `?bench` on the game's address; `__bench`).** For a machine nobody on the project can
+  sit at, and for tuning the quality levels: one press, hands off, about six minutes. In order: the world held still while auto quality finishes measuring, and
+  that opening picture timed AS THE PAGE OPENED; THE SCENE, the day showcase (`breach`) played live with auto quality doing what it does in play; at the scene's
+  heavy moment (the show's smoke chapter nearly half through, with the plume up: on the SHOW's clock, so the picture held is the same one on a slow machine;
+  `main.ts` looks for the chapter of `LOUD_CHAPTERS` whose title says smoke, and `bench-check` holds the script to having exactly one; five minutes of the
+  scene's own running with no such moment = held where it stands, and the report says so, which is what a machine under about nine frames a second gets, the
+  show's clock running slow there) the world held still where it stands and that picture timed as it stood, then under each preset of
+  `AUTO_LADDER` from the bottom up (a preset under eight frames a second is the last one tried), then, everything put back, with each heavy feature flipped alone
+  (the F8 sweep, one round, `SweepOpts.inside`: the recording goes on and the sweep says nothing on the screen; the card prices a row from where the sweep
+  calls its segment settled, `PerfSweep.settled`, so a slow row's seconds of settle are out of its number as they are out of the report tool's); the scene plays out. It ends on a card with a
+  text report (the GPU by name off WebGL's unmasked renderer, since Chrome's WebGPU adapter line is only `apple metal-3`; the browser, the system, the screen,
+  on battery or not; THE BOOT's timings off `ui/boot.ts`: to the start card, the shaders, the longest freeze, the first frame; a line per window; the ten
+  features that move the frame most) and a Copy button, and the take downloads as the F9 recorder's json with one `bench` event carrying all of it
+  (`tools/qa/perf-report.ts` prints the report first; the take's sweep events price every row as an F8 take's do). NOTHING IS SENT ANYWHERE (and the recorder's POST of a
+  take to the shot server now goes out only from a page served off localhost: an F9 take on a hosted page asks nothing of the visitor's own machine). Esc stops
+  a run and puts everything back (inside the first window: no card and no file). HANDS OFF: the page's Esc and its hotkeys stand down while a run is on
+  (`benchOn()` / `bench.active` in `main.ts`: P would quit the scene, F9 the recording; those listeners sit ahead of the benchmark's own key grab), `#menu` is
+  `inert` under the veil and under the card (the title takes the focus back a tick after the show ends), and no attract reel starts. `?bench` comes OFF THE
+  ADDRESS as the run starts (a reload, a mission's link or a show's link would carry it into a second run), is passed over in `?kitview`'s window, and wins over
+  `?demo` / `?breach` beside it. `?bench=N` = N seconds a window. A tab hidden during a run (the page's `visibilitychange`, not the size of a gap: a machine
+  whose frames take seconds is not away) starts that window over, or leaves that frame out of the scene's line. The benchmark's take asks the recorder for
+  96,000 frames (`BENCH_FRAMES`, `PerfRecorder.start(note, frames)`: the F9 take's own 36,000 are full inside the sweep at 120 Hz); a run that fills even that
+  ends with its report in the file and the rows it got through priced (`the recording was full`), never as a bare take. A screen of the page's own up over the
+  title (the mission list, options) refuses a run, and stops one that is timing the title. The display's rate is asked at the END (a run started with the page
+  knows none at its start). `quitSearch` drops `bench`, so no mission's or show's link carries it. A floor the show cannot start on (a mission's units, a
+  level without the script) is timed on its opening picture alone, and the report says so; a held picture under four frames a second is not swept. Unasked,
+  nothing of it runs (`tick()` returns on its first line); it reads `Quality` and puts it back (the preset, auto, the ladder's rungs, every plain setting) and
+  changes nothing in the quality model. Checks: `bun run tools/qa/bench-check.ts` (a fake page: the acts in order, everything back at the end and from every
+  stop, the slow-machine cuts, a tab hidden, the ring full, no heavy moment, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another take), and on a real page
+  `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: the address starts it and loses the word, Esc stops it, a short run start to finish with the
+  game's clock read every frame, keys pressed into the scene, the show ended under it, the card keeping the keyboard, the download, the Extras row). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the six minutes are an estimate off the show's length and the
+  sweep's, and nobody has looked at the card or watched the scene held.
