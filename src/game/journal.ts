@@ -98,6 +98,7 @@ import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
 import { RESCUECHECK } from './rescuecheck';
+import { EXACT } from '../math/exact';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -321,6 +322,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
   if (!k.tables.SQUADDEAL) SQUADDEAL.on = false;   // (a file from before a level with no squads block was handed squads cut from its rooms: its defenders were one pool)
   if (!k.tables.STAYASK) STAYASK.on = false;   // (a file from before squads that stay in their rooms missed a silent room: nobody asked after another squad there, and nobody went)
+  if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
   if (!k.tables.RESCUECHECK) RESCUECHECK.on = false;   // (a file from before a rescue's men checked in by radio: a man of theirs taken without a sound was missed by nobody)
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)

@@ -71,7 +71,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const put = (dst: Record<string, unknown>, src: Record<string, unknown>) => { for (const k of Object.keys(src)) { if (!(k in dst)) continue; const a = dst[k], b = src[k];
     if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
-    for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } } };
+    for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
+    if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false; };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
   const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
     Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, (c.members as unknown[])[i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards); };

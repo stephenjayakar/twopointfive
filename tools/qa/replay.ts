@@ -47,6 +47,7 @@ export async function replaySession(F: any, name: string, opts: ReplayOpts = {})
   // ---- stand up as recorded: env → settings / particles / canister row; the checkpoint; the knobs; the staggers; the seed
   Math.random = simDie(0x5e55, Math.random);   // (whatever the fresh boot draws before the load: nothing after it depends on it)
   if (!(F.knobs as any)?.tables?.DOORWAY) (await import(`${ROOT}/src/game/doors.ts`)).DOORWAY.oneWay = false;   // (a recording from before the doors had one side carries no table: it was made on the double-acting leaves, whatever the last file in this process left)
+  process.env.TPS_EXACT = (F.knobs as any)?.tables?.EXACT?.on ? '1' : '0';   // (the maths the file was recorded on — src/math/exact.ts — said as the stand's own word, so the level and the game are BUILT on it: applyKnobs below comes after the build)
   const W = await standUp({ env: F.env });
   const { game, input, cam, canvas } = W;
   const fp = levelFingerprint(game); if (fp.fp !== F.level?.fp) { R.bad = `another level (file ${F.level?.fp} ${F.level?.boxes} boxes, this build ${fp.fp} ${fp.boxes} boxes) — re-record`; return R; }
