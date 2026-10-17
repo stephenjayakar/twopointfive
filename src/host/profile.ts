@@ -192,7 +192,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SPRINTDOOR.on = !q.has('nosprintdoor');   // a sprint into a door has weight (game/sprintdoor.ts): a shoulder through one that opens away costs a quarter of the run, one that opens toward him is booted off its hinges — ON in the page; ?nosprintdoor = every leaf flung at full speed from either face, as it was
   AIMWEIGHT.on = !q.has('noaimweight');   // the player's aim has weight (game/aimweight.ts): his gun turns at a limited rate and the aiming circle trails the cursor, shots going where the circle is — ON in the page; ?noaimweight = the gun eased onto the cursor as it was
   FRAG.fleeWise = !q.has('nofleewise');   // nobody runs onto a live grenade (game/frag.ts FRAG.fleeWise): judged from where it will rest, no leg nearer it than he stands, the leg he has kept, no staying put inside its lethal reach — ON in the page; ?nofleewise = the flee as it was
-  FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = !q.has('nofleemates');   // three mends to that flee (game/frag.ts): the rest guess counts the loose furniture the grenade will stop at, no leg shoulders a mate out of the corner he is staying in or running for, and a man a stride short of his corner comes onto it — ON in the page; ?nofleemates = both off, the flee as it was
+  FRAG.restProps = FRAG.fleeApart = FRAG.fleeOnto = FRAG.fleeSam = !q.has('nofleemates');   // three mends to that flee (game/frag.ts): the rest guess counts the loose furniture the grenade will stop at, no leg shoulders a mate out of the corner he is staying in or running for, and a man a stride short of his corner comes onto it — ON in the page; ?nofleemates = both off, the flee as it was
   FRAG.fleeDoor = !q.has('nofleedoor');   // caught by a grenade with no cover to get behind, a man leaves by a doorway that already stands open (game/frag.ts fleeByDoor; ?nofleedoor = the one straight leg inside the room)
   FRAG.wallFlee = !q.has('nowallflee');   // a wall or cover piece the burst would open is no cover to a man reckoning it before it goes off (game/frag.ts exposedTo; ?nowallflee = only the door leaves it would take count)
   AIMCOST.lamp = q.get('lamphit') !== '0';   // a lamp breaks only to a round that MEETS it, and the reticle coming onto a lamp starts the aim's settle over (game/aimcost.ts) — ON in the page; ?lamphit=0 = a round passing within 0.3‥0.45 m breaks it, as it was
@@ -329,6 +329,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRAG.restProps': 'TPS_FLEEMATES=1',
   'FRAG.fleeApart': 'TPS_FLEEMATES=1',
   'FRAG.fleeOnto': 'TPS_FLEEMATES=1',
+  'FRAG.fleeSam': 'TPS_FLEEMATES=1',
   'FRAG.wallFlee': 'TPS_WALLFLEE=1',
   'FRAG.fleeDoor': 'TPS_FLEEDOOR=1',
   'DOORSTAY.on': 'QA_DOORSTAY=1 (playthrough.ts plays it on)',
