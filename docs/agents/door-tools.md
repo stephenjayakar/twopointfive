@@ -432,10 +432,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'nobody left to wait for'. `threshold-hand` holds both off for its own runs. NOT held: Sam's plain 'step in', a captor's last warning, a door that shares
   a word with another, the step in behind a can of the order's own that has just gone off (`entryCap`), and a grenade that lands while a can is in the
   air or its burst is running ('fuse' / 'wait' do not look). A man whose mark the stuck rule has moved to where he stands counts as back.
+  THE WORD THAT SPENDS NO CAN (`wordNoCan`, 10-17) went straight to the step in and past this wait: mended under this same switch. The word to a held
+  door whose men ran is OWED (`wordStepIn`: the hold goes on, off the word if it was on one, 'the door waits'), and paid in the hold's tick (`wordOwed`)
+  when they are back or the order's one wait is spent; the word AGAIN, outside `wordTap` of the first, pays it at once ('on without … · not waited
+  for'). Sam's own 'step in' row is still his say there and then. Measured, one seed, two doors, both stands: off, 'step in' on the word's frame; on, 1.4
+  to 2.7 s after it with every man back; the wait cut to 0.3 s, 0.3 s; the word again 1.5 s later, on that frame (one door a stand; the other's men
+  were back first). The entry that follows has no can, and how it ends is the room fight's (printed, not judged): on the shipped stand the depot's four end 3 of 4
+  up with the wait against 1 of 4 without; the records pair, down to one man in the hold, loses him inside with the wait and keeps him without. One
+  seed: no tally says which way it leans.
   `DOORTOOLS.thrNoCan` (Tab 'threshold: no can with nobody at the door', `TPS_THRNOCAN=1` frozen, `=0` shipped; acts only under thrHand): the wait spent
   and still no hand at the door, the can stays in the kit ('no bang · nobody at the door', the lead says so) and the stage goes on as with no pocket
   worth a can; a later can of that order goes only from the picked man's own hand at the door. A recording from before the keys replays with both
-  off (journal.ts). CHECK `probes.ts threshold-grenade` (family `threshold`; `THRFRAGHOLD_BREAK=1` and `THRNOCAN_BREAK=1` must each fail), 10 lines,
+  off (journal.ts). CHECK `probes.ts threshold-grenade` (family `threshold`; `THRFRAGHOLD_BREAK=1` and `THRNOCAN_BREAK=1` must each fail), 15 lines (five are the word's),
   both stands, the rules raised by the probe, ONE seed of two doors (the depot's c_w, four men; the records office's front, the pair), a REAL
   defender's grenade put down at the stack (the men kept from its burst). Measured: both off, Sam says bang a second after it lands, and 'step in' is
   said with men 4.0 to 5.3 m off the door (frozen both doors, shipped the pair; the shipped depot's men step off no further than a throw). With
