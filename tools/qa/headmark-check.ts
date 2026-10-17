@@ -7,6 +7,7 @@
 //                 colour it had, 'zz' / '✕' on the floor;
 //   the rest  (4) a defender with the same awareness: the dots, as ever (1 + floor(awareness × 6) of them, class sus);
 //             (5) a defender searching: '?', class sus;
+//             (3b) the '✹' goes from a stunned teammate once his figure says it (CONDITION.on and the blinded pose on): a defender keeps his;
 //             (5b) a defender in a fight: '!', and '◎!' once the aim model has his man lined up;
 //   the page  (6) overlay.ts takes each guard's mark from headMark and has no dots or '?' rule of its own.
 // HEADMARK_BREAK=1 = the wary marks put back over his own men: (1), (2) and (3) must fail.   exit 0 = all hold · 1 = one does not
@@ -34,11 +35,16 @@ export async function headmarkCheck(): Promise<boolean> {
     { set(mate, 'search', 0.5); set(other, 'suspicious', 0.5); const a = headMark(game, mate), b = headMark(game, other);
       line(a.text === '' && b.text === '', 'a living teammate left searching or suspicious: nothing over his head', `${mate.callsign} ${show(a)} · ${other.callsign} ${show(b)}`); }
     // (3) what stays his
-    { const AM = await import(`${ROOT}/src/game/aim.ts`); const lined = (gd: any) => { gd.aim.track = 1; return AM.guardAcquired(game, gd) as boolean; };
+    { const { CONDITION } = await import(`${ROOT}/src/game/condition.ts`); const { MOVES } = await import(`${ROOT}/src/game/character.ts`); const keepC = CONDITION.on, keepM = MOVES.on; CONDITION.on = false;   // (the stun's own mark, as it stands with the pose not saying it: 3b asks with it)
+      const AM = await import(`${ROOT}/src/game/aim.ts`); const lined = (gd: any) => { gd.aim.track = 1; return AM.guardAcquired(game, gd) as boolean; };
       set(mate, 'alert', 1); const canLine = lined(mate), fight = headMark(game, mate);
       set(mate, 'patrol', 0.6); mate.dazzledUntil = game.time + 3; const stun = headMark(game, mate); mate.dazzledUntil = -1;
       const st = other.state, dk = other.downKind; other.state = 'dead'; other.downKind = 'struck'; const cold = headMark(game, other); other.downKind = 'shot'; const dead = headMark(game, other); other.state = st; other.downKind = dk;
       line(fight.cls === 'alert' && fight.text === '!' && stun.text === '✹' && stun.cls === 'sus' && cold.text === 'zz' && dead.text === '✕', 'a teammate in a fight keeps a plain \'!\', stunned the \'✹\' alone in its yellow, out cold \'zz\', dead \'✕\'', `fight ${show(fight)} (the aim model has him lined up: ${canLine}) · stunned ${show(stun)} · out cold ${show(cold)} · dead ${show(dead)}`);
+      // (3b) …and no '✹' over him once the figure says it: the condition switch and the blinded pose both on (a defender keeps his)
+      { CONDITION.on = true; MOVES.on = 1; set(mate, 'patrol', 0); mate.dazzledUntil = game.time + 3; const own = headMark(game, mate); mate.dazzledUntil = -1; set(foe, 'patrol', 0); foe.dazzledUntil = game.time + 3; const theirs = headMark(game, foe); foe.dazzledUntil = -1;
+        MOVES.on = 0; mate.dazzledUntil = game.time + 3; const noPose = headMark(game, mate); mate.dazzledUntil = -1; CONDITION.on = keepC; MOVES.on = keepM;
+        line(own.text === '' && theirs.text === '✹' && noPose.text === '✹', 'a stunned teammate carries no \'✹\' once his figure says it (the condition switch and the blinded pose on); a defender keeps his, and so does a teammate with the pose off', `teammate ${show(own)} · defender ${show(theirs)} · teammate with the pose off ${show(noPose)}`); }
       // (5b) the same question of a defender
       set(foe, 'alert', 1); const fl = lined(foe), fm = headMark(game, foe); set(foe, 'patrol', 0);
       line(fm.cls === 'alert' && fm.text === (fl ? '◎!' : '!'), 'a defender in a fight: \'!\', and \'◎!\' once the aim model has his man lined up', `lined up ${fl} · ${show(fm)}`); }

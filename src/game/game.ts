@@ -157,7 +157,7 @@ import type { FloorMat } from './floor';
 import * as dialogue from './dialogue';
 import type { DialoguePick } from './dialogue';
 import { Sup, updateSuppression, suppressionSummary } from './suppression';
-import { conditionSummary } from './condition';
+import { conditionSummary, conditionPose } from './condition';
 import { AimState, trackPlayer, aimSummary } from './aim';
 import { Qrf, updateQrf, resetQrf, loadQrfTune } from './qrf';
 import { openingStart } from './opening';
@@ -1646,6 +1646,7 @@ export class Game {
       }
       this.player.char.anim.trained = 1;
     }
+    conditionPose(this);   // (condition.ts: each man's condition to his figure — nothing dealt with its switch off)
   }
   /** this frame's dynamic boxes, and what STEPS while they are gathered: stature, the fx's time to live, tracers, sparks, the spent cases' landings, the wall charge's look and camera kick, a broken fixture's pieces. Skip it and those stop. Returns whether stature scaled anybody (drawCharacters takes it) */
   private stepFxAndDynBoxes(all: Character[], dt: number, cam: FollowCamera, canvas: View) {

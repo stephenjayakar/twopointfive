@@ -278,7 +278,7 @@ export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
 /** What suppression does to a guard's NEXT round (the two fire sites read it, flag off = nothing): extra cone on top of his row's spread, and × the cadence he draws after it. */
 export function guardFireMods(g: Game, gd: Guard): { spread: number; gap: number } {
   if (!g.tune.suppression) return { spread: 0, gap: 1 };
-  const s = conditionSup(g, gd, gd.sup.v); return { spread: SUPPRESSION.guardSpread * s, gap: 1 + SUPPRESSION.gapK * s };   // (condition.ts: a hurt man's rounds go as if fire were on him)
+  return { spread: SUPPRESSION.guardSpread * conditionSup(g, gd, gd.sup.v), gap: 1 + SUPPRESSION.gapK * gd.sup.v };   // (condition.ts: a hurt man's rounds go wider, as if fire were on him; how fast he fires is the fire's alone)
 }
 /** is he rattled (s ≥ flinch, reactions on): the closing run drops to a jog, the standoff's orbit to half pace */
 export function flinching(g: Game, gd: Guard): boolean { return reacts(g, gd) && gd.sup.v >= SUPPRESSION.flinch; }

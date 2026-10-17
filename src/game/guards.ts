@@ -1005,7 +1005,7 @@ function standoffBark(g: Game, gd: Guard, moment: StandoffMoment, force: boolean
 /** Side-step / back-pedal along the current nav path (followPath's tolerances and easing, but the body is not turned to it — the standoff keeps his chest to the
  *  pair — and no stuck side-step of its own: notGettingAnywhere watches the leg). True once the path is consumed. */
 export function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean {
-  const c = gd.char;
+  const c = gd.char; speed = conditionPace(g, gd, speed);   // (condition.ts: a hurt man's legs, whoever asks for them)
   if (unstickFirst(g, gd, dt)) return false;   // (a side-step off a stranded cell first, as followPath: un-stick)
   while (gd.pathI < gd.path.length) {
     const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);

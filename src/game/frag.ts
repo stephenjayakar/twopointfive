@@ -51,7 +51,7 @@ import { w } from './words';
 import { SAMSTUN, foldCancels } from './samstun';
 import { DESTRUCTION } from './destructionSwitch';
 import { runnerOwns } from './runner';   // (asked inside fragThrowTick only)
-import { conditionHurt } from './condition';   // (called inside blast only)
+import { conditionHurt, conditionPace } from './condition';   // (called inside blast only)
 import { moraleBlast } from './morale';   // (called inside blast only: src/game is one import cycle)
 import { chaosOf } from './destruction';   // (called inside blast only: src/game is one import cycle)
 import { PICTURE, PICTURE_STATS, exposureAsker } from './picture';   // (asked inside fleeSpot only)
@@ -663,7 +663,7 @@ export function fragTick(g: Game, _dt: number) {
         if (!gd.script && !gd.hold && !gd.pinned && flat(c.pos, dz) <= F.lethalM + 2) /* (a man planted on a post goes nowhere anyway: he fights on from behind it) */ { L.flee.set(gd, { goal: null, upper: 'none', crouch: true }); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); gd.path = []; gd.pathGoal = null; }
         continue;
       }
-      const speed = gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed;   // (a teammate never sprints: the spot is one HIS legs make)
+      const speed = conditionPace(g, gd, gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed);   // (a teammate never sprints: the spot is one HIS legs make)
       const acc = gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, W = wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined;
       let spot = fleeSpot(g, c, dz, speed, it.fuse, acc, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);
       // (FRAG.fleeDoor: the straight leg leaves him in its line — or there is none: out by an open doorway his legs make, to a spot beside it the burst has no line to)

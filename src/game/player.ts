@@ -331,7 +331,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     else g.msg(`${rifle.def.short} is ${rifle.mode.toUpperCase()} only`);
   }
   nvKey(g, input, dt);
-  const sprintKey = (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
+  const sprintKey = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
   // R, or the gun in his hands run dry with a magazine left (autoreload.ts: asked every frame, so a reload a sprint took out of his hands starts again) — one way in either way
   if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey);
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)

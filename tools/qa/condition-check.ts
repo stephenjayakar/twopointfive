@@ -4,17 +4,23 @@
 // its wound band, in its line, the same way for every line below:
 //   (1) the switch off: the burst folds all three and nobody is hurt (the build as it was)
 //   (2) the switch on: the same burst leaves all three HURT, and folds each for the seconds his distance owes with the switch off — hurt adds nothing to that
-//   (3) pace: a hurt defender asked for his chase pace is given the hurt pace by the legs' own function (followPath), a sound one his chase; a hurt teammate
-//       asked for the team's top pace is given the hurt pace
+//   (3) pace: a hurt defender asked for his chase pace is walked at the hurt pace by the legs' own functions (followPath, and stepAlongPath, which the
+//       stand-off and a gun in a hold step him by), a sound one at his chase; a hurt teammate asked for the team's top pace the same, through followPath
 //   (4) the player: hurt, Shift and W held never make a sprint (a walk's speed); sound, they do
 //   (5) spread: with no fire on him a hurt defender's rounds open as at `hurtSup` (a sound one's: nothing), the player's the same by his own reader, and a
-//       hurt teammate is over the line the room fight and the covering man widen his rounds at (both files ask conditionSup)
+//       hurt teammate is over the line the room fight and the covering man widen his rounds at (both files ask conditionSup). Fire on him past `hurtSup`
+//       opens them as that fire does, no more (the larger of the two, never a sum), and how fast he fires is the fire's alone: hurt changes no gap
 //   (6) one round still puts each of them down: a hurt defender, a hurt teammate, the hurt player (one hit is all he has, hurt or not)
 //   (7) god mode: the burst folds the player as it did and does not leave him hurt
 //   (8) the score: a teammate at rest with a blast's wariness written on him and nobody else stirring is not tension (it was, at a third, with the switch off)
-//   (9) a checkpoint taken with a man and the player hurt puts both back hurt; taken with nobody hurt it carries no such key
+//   (9) a checkpoint taken with a man and the player hurt puts both back hurt; taken with nobody hurt it carries no such key, and loaded over hurt men
+//       it leaves nobody hurt
 //   (10) the registry: the knob table, the journal's list (a file without the table plays with it off), the two stands' row and word
-// CONDITION_BREAK=1 = the switch left off for the 'on' lines: (2), (3), (4), (5), (8) and (9) must fail.   exit 0 = all hold · 1 = one does not
+//   (11) the figures: all three are dealt the hurt look and the fold by conditionPose; the switch off takes it back the next frame (how each reads on the
+//        bones: condition-pose-check.ts)
+//   (12) who is NOT hurt: a man the burst had no line to (a wall between, 'shielded') beside one in the open who is; nobody while a showcase runs (and a
+//        man hurt before it reads sound for as long as it does); with `hurtSecs` set, a man that long past his blast
+// CONDITION_BREAK=1 = the switch left off for the 'on' lines: (2), (3), (4), (5), (8), (9), (11) and (12) must fail.   exit 0 = all hold · 1 = one does not
 import { resolve } from 'node:path';
 import { readFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -80,22 +86,32 @@ export async function conditionCheck(): Promise<boolean> {
         const co = conditionOf(g, foe), cm = conditionOf(g, mate), cy = conditionOf(g, pl);
         line(h.mate && h.foe && h.you && same && co.hurt && co.folded && !co.down && cm.hurt && cm.folded && cy.hurt && cy.folded && pl.hitsLeft === Player.MAX_HITS,
           '(2) the switch on: the same burst leaves all three hurt, and folds each for the seconds his distance owes with the switch off', `serial ${S.serial} · hurt ${J(h)} · folded ${f2(left.mate)} / ${f2(left.foe)} / ${f2(left.you)} s, owed ${f2(owe.mate)} / ${f2(owe.foe)} / ${f2(owe.you)} s · '${conditionSummary(g)}'`);
+        // (11) the figures: what conditionPose deals each of the three this frame, and takes back with the switch off
+        { const an = (m: any) => m.char.anim, of = () => [mate, foe, pl].map(m => ({ hurt: an(m).hurt, fold: an(m).foldToo }));
+          S.R.step(1); const on = of(), shaken = an(pl).shaken; CONDITION.on = false; S.R.step(1); const off = of(), shakenOff = an(pl).shaken; CONDITION.on = ON; S.R.step(1);
+          line(on.every(x => x.hurt === 1 && x.fold === true) && shaken > 0.9 && off.every(x => x.hurt === 0 && x.fold === false) && shakenOff === 0,
+            '(11) each of the three figures is dealt the hurt look and the fold, the player\'s the tucked head of a man with the blast still on him; with the switch off the next frame takes all of it back', `on ${J(on)} · the player shaken ${f2(shaken)} · off ${J(off)} · shaken ${f2(shakenOff)}`); }
         // (3) pace — the legs' own function, a clear run of floor ahead of him, asked for the chase
-        const legs = (gd: any, speed: number) => { const c = gd.char, keep = { st: gd.staggerUntil, rt: gd.reactT, p: [...c.pos], path: gd.path, pi: gd.pathI, sp: gd.speed, lp: gd.lastPos, yaw: c.bodyYaw };
+        const legs = (gd: any, speed: number, fn: any = GU.followPath) => { const c = gd.char, keep = { st: gd.staggerUntil, rt: gd.reactT, p: [...c.pos], path: gd.path, pi: gd.pathI, sp: gd.speed, lp: gd.lastPos, yaw: c.bodyYaw };
           const to = [S.P.at[0], 0, S.P.at[2]]; gd.staggerUntil = -1; gd.path = [to]; gd.pathI = 0; gd.speed = 0; c.bodyYaw = Math.atan2(to[0] - c.pos[0], to[2] - c.pos[2]); let top = 0;
-          for (let i = 0; i < 120; i++) { c.pos = [...keep.p]; gd.lastPos = [...keep.p]; GU.followPath(g, gd, 1 / 60, speed); top = Math.max(top, gd.speed); }
+          for (let i = 0; i < 120; i++) { c.pos = [...keep.p]; gd.lastPos = [...keep.p]; fn(g, gd, 1 / 60, speed); top = Math.max(top, gd.speed); }
           c.pos = keep.p; gd.staggerUntil = keep.st; gd.reactT = keep.rt; gd.path = keep.path; gd.pathI = keep.pi; gd.speed = keep.sp; gd.lastPos = keep.lp; c.bodyYaw = keep.yaw; c.vel = [0, 0, 0]; return top; };
         const chase = g.tune.guardChase, hurtTop = legs(foe, chase); const at = foe.hurtAt; foe.hurtAt = -1; const soundTop = legs(foe, chase); foe.hurtAt = at;
-        const mateP = GU.teamPace(g, mate, GU.PACE.max); const mAt = mate.hurtAt; mate.hurtAt = -1; const mateSound = GU.teamPace(g, mate, GU.PACE.max); mate.hurtAt = mAt;
-        line(hurtTop > 0.8 && hurtTop <= CONDITION.hurtPace + 1e-6 && soundTop > CONDITION.hurtPace + 0.5 && mateP === CONDITION.hurtPace && mateSound > CONDITION.hurtPace,
-          '(3) a hurt defender asked for his chase pace is walked at the hurt pace by followPath, a sound one at his chase; a hurt teammate asked for the team\'s top pace gets the hurt pace', `defender asked ${f2(chase)}: hurt ${f2(hurtTop)} m/s · sound ${f2(soundTop)} m/s · teammate asked ${f2(GU.PACE.max)}: hurt ${f2(mateP)} · sound ${f2(mateSound)} · hurtPace ${CONDITION.hurtPace}`);
+        const sideTop = legs(foe, chase, GU.stepAlongPath); foe.hurtAt = -1; const sideSound = legs(foe, chase, GU.stepAlongPath); foe.hurtAt = at;
+        const mateP = legs(mate, GU.PACE.max); const mAt = mate.hurtAt; mate.hurtAt = -1; const mateSound = legs(mate, GU.PACE.max); mate.hurtAt = mAt;
+        const cap = CONDITION.hurtPace + 1e-6;
+        line(hurtTop > 0.8 && hurtTop <= cap && soundTop > CONDITION.hurtPace + 0.5 && sideTop > 0.8 && sideTop <= cap && sideSound > CONDITION.hurtPace + 0.5 && mateP > 0.8 && mateP <= cap && mateSound > CONDITION.hurtPace + 0.3,
+          '(3) a hurt defender asked for his chase pace is walked at the hurt pace by followPath and by stepAlongPath, a sound one at his chase; a hurt teammate asked for the team\'s top pace the same', `defender asked ${f2(chase)}: followPath hurt ${f2(hurtTop)} m/s · sound ${f2(soundTop)} · stepAlongPath hurt ${f2(sideTop)} · sound ${f2(sideSound)} · teammate asked ${f2(GU.PACE.max)}: hurt ${f2(mateP)} · sound ${f2(mateSound)} · hurtPace ${CONDITION.hurtPace}`);
         // (5) spread — nothing on any of them
         mate.sup.v = 0; foe.sup.v = 0; pl.sup.v = 0; const S0 = SU.SUPPRESSION;
         const gf = SU.guardFireMods(g, foe).spread, ys = SU.samSpread(g), ms = conditionSup(g, mate, 0);
         foe.hurtAt = -1; const gf0 = SU.guardFireMods(g, foe).spread; foe.hurtAt = at; const yAt = pl.hurtAt; pl.hurtAt = -1; const ys0 = SU.samSpread(g); pl.hurtAt = yAt;
         const src = (f: string) => /conditionSup\(g, gd, gd\.sup\.v\) >= SUPPRESSION\.flinch/.test(readFileSync(`${ROOT}/src/game/${f}`, 'utf8'));
-        line(Math.abs(gf - S0.guardSpread * CONDITION.hurtSup) < 1e-9 && gf0 === 0 && Math.abs(ys - S0.samSpread * CONDITION.hurtSup) < 1e-9 && ys0 === 0 && ms >= S0.flinch && src('roomfight.ts') && src('coverfire.ts'),
-          '(5) with no fire on him a hurt defender\'s and the hurt player\'s rounds open as at hurtSup (sound: nothing), and a hurt teammate is over the line his rounds widen at', `defender ${gf.toFixed(4)} rad (sound ${gf0}) · you ${ys.toFixed(4)} rad (sound ${ys0}) · teammate reads ${f2(ms)} against the flinch line ${S0.flinch} · roomfight.ts ${src('roomfight.ts')} · coverfire.ts ${src('coverfire.ts')}`);
+        const gap0 = SU.guardFireMods(g, foe).gap, over = Math.min(1, CONDITION.hurtSup + 0.3); foe.sup.v = over; const hi = SU.guardFireMods(g, foe); foe.hurtAt = -1; const hiSound = SU.guardFireMods(g, foe); foe.hurtAt = at; foe.sup.v = 0;
+        line(Math.abs(gf - S0.guardSpread * CONDITION.hurtSup) < 1e-9 && gf0 === 0 && Math.abs(ys - S0.samSpread * CONDITION.hurtSup) < 1e-9 && ys0 === 0 && ms >= S0.flinch && src('roomfight.ts') && src('coverfire.ts')
+            && gap0 === 1 && hi.spread === hiSound.spread && hi.gap === hiSound.gap && hi.spread > gf,
+          '(5) with no fire on him a hurt defender\'s and the hurt player\'s rounds open as at hurtSup (sound: nothing) and he fires as fast as ever; with more fire than that on him he is as a sound man under it; a hurt teammate is over the line his rounds widen at',
+          `defender ${gf.toFixed(4)} rad (sound ${gf0}), gap ×${f2(gap0)} · with ${f2(over)} on him: hurt ${hi.spread.toFixed(4)} rad ×${f2(hi.gap)}, sound ${hiSound.spread.toFixed(4)} rad ×${f2(hiSound.gap)} · you ${ys.toFixed(4)} rad (sound ${ys0}) · teammate reads ${f2(ms)} against the flinch line ${S0.flinch} · roomfight.ts ${src('roomfight.ts')} · coverfire.ts ${src('coverfire.ts')}`);
         // (8) the score
         { const keep = g.guards.map((x: any) => [x.state, x.awareness]); for (const x of g.guards) if (x.state !== 'dead') { x.state = 'patrol'; x.awareness = 0; } mate.awareness = 0.92;
           const on = GU.tension(g); CONDITION.on = false; const off = GU.tension(g); CONDITION.on = ON; g.guards.forEach((x: any, i: number) => { x.state = keep[i][0]; x.awareness = keep[i][1]; });
@@ -135,9 +151,27 @@ export async function conditionCheck(): Promise<boolean> {
     { const FR = await import('./frag-probes.ts'); const R: any = await hushed(() => FR.rig(71)); const g = R.game, pl = g.player, gd = g.guards.find((x: any) => x.state !== 'dead'); g.aiEnabled = false; g.godMode = false; CONDITION.on = ON; R.step(5);
       const s0 = J(SAVE.saveState(g, { kind: 'harness', force: true })); C.conditionHurt(g, gd); R.step(30); C.conditionHurt(g, pl); R.step(30);
       const had = { man: gd.hurtAt, you: pl.hurtAt }, i = g.guards.indexOf(gd), s1: any = SAVE.saveState(g, { kind: 'harness', force: true }); gd.hurtAt = -1; pl.hurtAt = -1;
-      await hushed(() => SAVE.loadState(g, s1)); const back = { man: R.game.guards[i]?.hurtAt, you: R.game.player.hurtAt };
-      line(had.man >= 0 && had.you > had.man && back.man === had.man && back.you === had.you && isHurt(R.game, R.game.guards[i]) && isHurt(R.game, R.game.player) && !s0.includes('"hurtAt"') && J(s1).includes('"hurtAt"'),
-        '(9) a checkpoint taken with a man and the player hurt puts both back hurt; taken with nobody hurt it carries no key', `saved ${J(had)} · loaded ${J(back)} · the key in a save with nobody hurt: ${s0.includes('"hurtAt"')}`); }
+      await hushed(() => SAVE.loadState(g, s1)); const back = { man: R.game.guards[i]?.hurtAt, you: R.game.player.hurtAt }, hurtBack = isHurt(R.game, R.game.guards[i]) && isHurt(R.game, R.game.player);
+      await hushed(() => SAVE.loadState(g, JSON.parse(s0))); const clean = { man: R.game.guards[i]?.hurtAt, you: R.game.player.hurtAt };
+      line(had.man >= 0 && had.you > had.man && back.man === had.man && back.you === had.you && hurtBack && !s0.includes('"hurtAt"') && J(s1).includes('"hurtAt"') && clean.man === -1 && clean.you === -1,
+        '(9) a checkpoint taken with a man and the player hurt puts both back hurt; taken with nobody hurt it carries no key, and loaded over them it leaves nobody hurt', `saved ${J(had)} · loaded ${J(back)} · the key in a save with nobody hurt: ${s0.includes('"hurtAt"')} · that save loaded over the hurt men ${J(clean)}`); }
+    // (12) who is not hurt
+    { const S = await staged(ON); if (S.err) line(false, '(12) who is not hurt', S.err); else { const g = S.g, foe = S.foe, nav = g.col.nav, from = [S.P.at[0], FRAG.lift, S.P.at[2]];
+        // a second defender stood where the same burst point has no line to him, inside the band it wounds in
+        const hid = g.guards.find((x: any) => x.state !== 'dead' && x !== foe && x.team === foe.team && !x.civ); let spot: number[] | null = null;
+        for (let k = 0; k < 400 && !spot; k++) { const a = k * 2.399963, r = 4.5 + (k % 7) * 0.45, q = [S.P.at[0] + Math.sin(a) * r, 0, S.P.at[2] + Math.cos(a) * r];
+          if (!nav.isBlocked(q[0], q[2]) && exposure(g, from, q, [q[0], 1.65, q[2]]) === 0) spot = q; }
+        let res = 'no floor behind a wall within its reach', hidHurt = true, openHurt = false;
+        if (hid && spot) { put(hid, spot, S.P.at); foe.hurtAt = -1; foe.staggerUntil = -1; let rep: any = null;
+          for (let serial = 11; serial <= 16; serial++) { rep = blast(g, S.P.at, { who: 0, serial, fx: false }); if (foe.state !== 'dead') break; }
+          res = rep.hits.find((h: any) => h.id === hid.char.id)?.result ?? 'not reached'; hidHurt = isHurt(g, hid) || hid.hurtAt !== -1; openHurt = isHurt(g, foe); }
+        // a showcase: nobody is left hurt by it, and a man hurt before it reads sound while it runs
+        const tour = g.touring; foe.hurtAt = g.time; g.touring = true; const inShow = isHurt(g, foe), mate2 = S.mate; mate2.hurtAt = -1; const took = C.conditionHurt(g, mate2); g.touring = tour; const after = isHurt(g, foe);
+        // an hour glass on it
+        const secs = CONDITION.hurtSecs, age = g.time; foe.hurtAt = 0; CONDITION.hurtSecs = age * 0.5; const past = isHurt(g, foe); CONDITION.hurtSecs = age * 2; const within = isHurt(g, foe); CONDITION.hurtSecs = secs;
+        line((res === 'shielded' || res === 'not reached') && !hidHurt && openHurt && !inShow && !took && mate2.hurtAt === -1 && after && age > 0 && !past && within,
+          '(12) a man the burst has no line to is not hurt (the one in the open beside him is); a showcase leaves nobody hurt and reads a hurt man as sound while it runs; with hurtSecs set a man that long past his blast is sound again',
+          `behind the wall: '${res}', hurt ${hidHurt} · in the open: hurt ${openHurt} · under a showcase: reads hurt ${inShow}, a blast's mark taken ${took} · after it: ${after} · a man hurt ${f2(age)} s ago: with hurtSecs at half that ${past}, at twice that ${within}`); } }
     // (10) the registry
     { const reg = KN.knobRegistry().CONDITION === CONDITION, jn = KN.JOURNAL_KNOBS.includes('CONDITION'), hold = FROZEN_HOLDS['CONDITION.on'] === 'TPS_CONDITION=1', env = (STAND_ENV as readonly string[]).includes('TPS_CONDITION');
       const R: any = await hushed(() => rig(5101, { stage: 'rc' })); CONDITION.on = true; const k = JO.knobsSnapshot(R.game); const has = !!k.tables.CONDITION; delete k.tables.CONDITION; await hushed(() => JO.applyKnobs(R.game, k)); const old = CONDITION.on;

@@ -5,15 +5,22 @@
 // touched here, and there is no count of anything.
 //
 // One cost for all three, each charged where that man's speed and spread are already settled:
-//   pace     an AI man through teamPace (guards.ts: every path he walks) · the player loses his sprint (player.ts)
+//   pace     an AI man wherever his legs are asked for a speed: teamPace (guards.ts: every path he walks), stepAlongPath and the room entry's stepGate
+//            (tactics.ts), which take their speed straight, and the two planners that pick where a man can run to from a grenade (frag.ts, squadthrow.ts:
+//            the corner is one HIS legs make) · the player loses his sprint (player.ts: Shift is not a run for him, so it stops no reload either)
 //   spread   as if fire were on him at `hurtSup`: conditionSup, which the three readers of a man's suppression for his rounds ask (suppression.ts
-//            guardFireMods and samSpread; the room fight's and the covering man's own line)
-// What a man looks like in each state is the poses' to say (character.ts, dealt from conditionOf in Game.dealWeapons).
+//            guardFireMods and samSpread; the room fight's and the covering man's own line). The larger of that and the fire really on him, never a sum;
+//            how fast he fires is not touched. It rides suppression's own switch: with `tune.suppression` off nobody's rounds open, a hurt man's included.
+// Only a burst (frag.ts blast: a frag, a 40 mm, the bomb a defuse lost) leaves a man hurt. A door or wall charge and the player's own charge fold a man
+// and blind him as they did and leave him sound.
+// What a man looks like in each state is the poses' to say (character.ts mvPost / mvArms: the fold of a man knocked about, the hunch and short step of a
+// hurt one, the tucked head of one under fire), dealt by conditionPose every frame for all three alike. A showcase's cast is left as it was written.
 //
 // CONDITION.on: OFF here and on the frozen stand (TPS_CONDITION=1 raises it), ON in the page (?nocondition). Off = no man is ever hurt and every reader below
 // answers as the build did before it. tools/qa/condition-check.ts (probes.ts condition; CONDITION_BREAK=1).
 import type { Game, Guard, Player } from './game';
 import { SUPPRESSION } from './suppression';
+import { clamp } from '../math/vec';
 
 export const CONDITION = {
   on: false,
@@ -46,7 +53,7 @@ const isGuard = (m: Man): m is Guard => 'callsign' in m;
 
 /** is this man hurt now (never with the switch off) */
 export function isHurt(g: Game, m: Man): boolean {
-  if (!CONDITION.on || m.hurtAt < 0) return false;
+  if (!CONDITION.on || m.hurtAt < 0 || g.touring || g.puppet) return false;   // (a showcase's cast walks the marks it was written against, whatever the mission before it left on the player)
   return CONDITION.hurtSecs <= 0 || g.time - m.hurtAt < CONDITION.hurtSecs;
 }
 
@@ -87,4 +94,16 @@ export function conditionSummary(g: Game): string {
   const parts: string[] = []; const me = word(conditionOf(g, g.player)); if (me && !g.player.down) parts.push(`you ${me}`);
   for (const gd of g.guards) { if (gd.state === 'dead' || gd.civ) continue; const w = word(conditionOf(g, gd)); if (w) parts.push(`${gd.callsign} ${w}`); }
   return `condition ▸ ${parts.length ? parts.join(' · ') : 'all sound'}`;
+}
+
+/** Every frame, after the stun poses are dealt (Game.dealWeapons): each man's condition to his figure — the player's, his men's and the defenders' by the one
+ *  rule. Off (and under a showcase): whatever it put on a figure comes off, and a figure it never touched is not touched. */
+export function conditionPose(g: Game): void {
+  const on = CONDITION.on && !g.touring && !g.director?.showing, S = SUPPRESSION;
+  const deal = (m: Man) => { const an = m.char.anim;
+    if (!on) { if (an.hurt !== 0 || an.shaken !== 0 || an.foldToo) { an.hurt = 0; an.shaken = 0; an.foldToo = false; } return; }
+    const down = isGuard(m) ? m.state === 'dead' : m.down;
+    an.foldToo = true; an.hurt = !down && isHurt(g, m) ? 1 : 0; an.hurtSide = -1;   // (his free hand is his left and it goes across to his right ribs: that is the side he favours, every man)
+    an.shaken = down || !g.tune.suppression ? 0 : clamp((m.sup.v - (S.flinch - 0.1)) / Math.max(1e-3, S.pinned - (S.flinch - 0.1)), 0, 1); };
+  deal(g.player); for (const gd of g.guards) if (!gd.civ) deal(gd);
 }

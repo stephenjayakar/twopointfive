@@ -494,3 +494,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   yellow while he is left searching (`bubbles.ts`). Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
   stands; `HEADMARK_BREAK=1` puts the marks back and lines 1 to 3 must fail) asks `headMark` what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
+- **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
+  0.35, hurtSecs 0, ownCalm}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
+  and the journal's tables, so a recording from before it replays with it off). The maintainer, 10-16: telegraph a man's state through his
+  animation, "effectively just a health system ... but with very high lethality", "apply that system across the board". ONE MODEL for the
+  player, his men and the defenders: `conditionOf(g, man)` = {shaken, blind, folded, hurt, down}, read off stamps the game already kept on both
+  `Guard` and `Player` (`sup.v`, `dazzledUntil`, `staggerUntil`) plus the one new stamp, `hurtAt` (-1 = never). NOBODY GAINS A ROUND: how a man
+  goes down is not touched (`Player.MAX_HITS` 1, a defender and a teammate one round each), there is no count of anything, and a condition only
+  ever takes something from a man. WHO IS HURT: a man `frag.ts blast` reports 'wounded' (a frag, a 40 mm, the bomb a defuse lost: in its line
+  inside `woundM`, and the dice left him up). NOT a 'shielded' or 'stunned' man, not a civilian, not a man the debugger keeps whole, not the
+  player in god mode, nobody while a showcase runs (and `isHurt` reads false for its length). A door charge, a wall charge and the player's own
+  charge fold and blind as they did and leave a man SOUND (a call left with the maintainer). WHAT IT COSTS, for the rest of the mission
+  (`hurtSecs` 0; > 0 = it wears off): PACE, an AI man is never asked for more than `hurtPace` — `conditionPace` inside `teamPace`,
+  `stepAlongPath`, tactics.ts `stepGate` and the two planners that pick the corner a man can reach from a grenade (frag.ts, squadthrow.ts);
+  the player loses his sprint (player.ts: Shift is not a run for him, so it stops no reload and lets go of nothing). SPREAD, his rounds open as
+  if fire were on him at `hurtSup` — `conditionSup` (the larger of that and the fire really on him) asked by `guardFireMods`, `samSpread` and
+  the room fight's / the covering man's own line; how FAST he fires is not touched; with `tune.suppression` off nobody's rounds open, his
+  included. `ownCalm`: guards.ts `tension` no longer counts a teammate's `awareness` at rest (nothing drains it under an order: a frag held the
+  score's intensity up for the mission) — with the switch off it counts it as before. Saves: `hurtAt` is an optional key written only for a
+  hurt man, so an older save loads and a save with nobody hurt is byte for byte what it was. The panel: `condition ▸ you hurt · Reyes folded
+  hurt` (`Game.conditionSummary()`). HOW IT SHOWS is the poses' (docs/agents/anim.md, "A man's condition on the figure"), and with them on a
+  stunned teammate's '✹' is gone from the HUD (`headmark.ts`: `CONDITION.on` and `MOVES.on` and `MOVES.dazzle`; a defender keeps his; headmark-check
+  line 3b). Checks: `tools/qa/condition-check.ts` (`probes.ts condition`, which also runs `condition-pose`; twelve lines — off, on, the fold's
+  seconds unchanged, pace through followPath / stepAlongPath, the player's sprint, spread and the gap, one round still downs each of the three
+  while hurt, god mode, the score, a checkpoint, who is not hurt, the registry; `CONDITION_BREAK=1` leaves the switch off and eight lines must
+  fail), ALL PASS on both stands; `tools/qa/condition-page.cjs` on the real page (software adapter). NOT SEEN, NOT PLAYED: nothing
+  of this on a GPU; nobody has played a mission with a hurt man in it; `hurtPace` and `hurtSup` are first numbers.
