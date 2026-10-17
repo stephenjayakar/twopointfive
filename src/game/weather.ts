@@ -453,8 +453,8 @@ function zero(f: WeatherFrame) { f.rain = 0; f.snow = 0; f.wet = 0; f.flash = [0
 
 /** HEARING through the weather: `g.col.sound.propagate(src, ear)` with the path stretched by the weather's noise at the listener (Weather.hearMask) — the very
  *  object propagate() returned when no kind is picked. Every consumer of the hearing model asks through this. */
-export function hearPath(g: Game, src: Vec3, ear: Vec3): ReturnType<Game['col']['sound']['propagate']> {
-  const p = g.col.sound.propagate(src, ear); const k = g.weather ? g.weather.hearMask(ear) : 1;
+export function hearPath(g: Game, src: Vec3, ear: Vec3, keep = true): ReturnType<Game['col']['sound']['propagate']> {
+  const p = g.col.sound.propagate(src, ear, keep); const k = g.weather ? g.weather.hearMask(ear) : 1;
   return k === 1 ? p : { ...p, pathLen: p.pathLen * k };
 }
 /** the length a LOUD sound's path is taken at (guards.ts hearingCheck: where a routed shot is placed, how long a far man takes to place it): hearPath's own with
