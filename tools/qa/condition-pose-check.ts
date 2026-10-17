@@ -8,7 +8,9 @@
 //   (d) under fire with the rifle up: the head is down and he has sunk, the bore within a few degrees; it is gone two seconds after the fire stops
 //   (e) knocked about (the game's `clutch`): doubled over with `foldToo`, the trunk the base's without it (the wounds switch off)
 //   (f) every input back at rest: two and a half seconds on he is the sound twin again, to the millimetre
-// CONDITION_BREAK=1 = the looks not dealt (every input left at rest): (a) to (e) must fail.   exit 0 = all hold · 1 = one does not
+//   (g) the gun carried, no stance (the gaze stabiliser's own case: it keeps the eye line level under a working body): a hurt man's head and a shaken
+//       man's are bowed as far as at the low ready, standing and walking, and a sound man's eye line is where it was
+// CONDITION_BREAK=1 = the looks not dealt (every input left at rest): (a) to (e) and (g) must fail.   exit 0 = all hold · 1 = one does not
 import { ROOT, loadCharacter } from './headless.ts';
 
 export async function conditionPoseCheck(): Promise<boolean> {
@@ -21,9 +23,9 @@ export async function conditionPoseCheck(): Promise<boolean> {
   const off = (a: V3, b: V3) => Math.acos(Math.min(1, (a[0] * b[0] + a[1] * b[1] + a[2] * b[2]) / (Math.hypot(...a) * Math.hypot(...b))));   // the angle between two bores
   const keep = { ...CH.MOVES }, deal = process.env.CONDITION_BREAK !== '1'; CH.MOVES.on = 1;
   const gltf = await loadCharacter();
-  const man = (o: { aim?: boolean; speed?: number } = {}) => { const c: any = new CH.Character(gltf, { id: 1, tint: [1, 1, 1], tint2: [1, 1, 1], pos: [0, 0, 0], yaw: 0 });
+  const man = (o: { aim?: boolean; speed?: number; carried?: boolean } = {}) => { const c: any = new CH.Character(gltf, { id: 1, tint: [1, 1, 1], tint2: [1, 1, 1], pos: [0, 0, 0], yaw: 0 });
     c.anim.phase = 0; c.anim.longGun = true; c.anim.longSteady = 1; c.muzzleAhead = 0.5; c.anim.trained = 1;
-    if (o.aim === false) { c.anim.upper = 'none'; c.anim.stance = 'lowReady'; } else c.anim.upper = 'aim';
+    if (o.aim === false) { c.anim.upper = 'none'; if (!o.carried) c.anim.stance = 'lowReady'; } else c.anim.upper = 'aim';
     if (o.speed) c.anim.speed = o.speed; for (let i = 0; i < 90; i++) c.update(DT); return c; };
   const snap = (c: any) => ({ hR: [...c.bones.handR] as V3, hL: [...c.bones.handL] as V3, fL: [...c.bones.footL] as V3, fR: [...c.bones.footR] as V3, head: [...c.bones.head] as V3, chest: [...c.bones.chest] as V3, pitch: Math.asin(c.gunDir[1]), dir: [...c.gunDir] as V3, grip: dist(c.bones.handL, c.bones.handR) });
   const run = (cs: any[], secs: number) => { for (let f = 0; f < Math.round(secs * 60); f++) for (const c of cs) c.update(DT); };
@@ -59,6 +61,14 @@ export async function conditionPoseCheck(): Promise<boolean> {
     { const c = man({ aim: false }), k = man({ aim: false }); Object.assign(c.anim, { hurt: 1, shaken: 1, foldToo: true, clutch: 1 }); run([c, k], 1.5); const mid = dist(snap(c).head, snap(k).head);
       Object.assign(c.anim, { hurt: 0, shaken: 0, foldToo: false, clutch: 0 }); run([c, k], 2.5); const a = snap(c), z = snap(k); const gap = Math.max(dist(a.head, z.head), dist(a.hL, z.hL), dist(a.hR, z.hR), dist(a.chest, z.chest));
       line(mid > 0.08 && gap < 0.002, '(f) every input back at rest: two and a half seconds on he is the sound twin again', `with all of it on him the head was ${cm(mid)} off the sound man's · afterwards head, hands and chest within ${(gap * 1000).toFixed(2)} mm`); }
+    // (g) the gun carried: the stabiliser's eye line goes down with the looks
+    { const el = (c: any) => { let sum = 0; for (let i = 0; i < 60; i++) { c.update(DT); sum += Math.asin(c.headDir()[1]); } return sum / 60 * 57.2958; };
+      const bow = (carried: boolean, speed: number, k: Record<string, unknown>) => { const c = man({ aim: false, carried, speed }), z = man({ aim: false, carried, speed }); set(c, k); run([c, z], 2.5); return el(z) - el(c); };
+      const rows = [0, 1.2].map(speed => ({ speed, hurt: bow(true, speed, { hurt: 1 }), hurtLow: bow(false, speed, { hurt: 1 }), shaken: bow(true, speed, { shaken: 1 }), shakenLow: bow(false, speed, { shaken: 1 }) }));
+      const sound = el(man({ aim: false, carried: true })), want = CH.GAZE_EL.stand;
+      line(rows.every(r => r.hurt > 14 && Math.abs(r.hurt - r.hurtLow) < 5 && r.shaken > 22 && Math.abs(r.shaken - r.shakenLow) < 5) && sound < -want + 20 && sound > -want - 20,
+        '(g) the gun carried, no stance: a hurt man\'s head and a shaken man\'s are bowed as far as at the low ready, standing and walking',
+        rows.map(r => `${r.speed} m/s: hurt ${r.hurt.toFixed(1)}° further down (low ready ${r.hurtLow.toFixed(1)}°) — want > 14 · shaken ${r.shaken.toFixed(1)}° (low ready ${r.shakenLow.toFixed(1)}°) — want > 22`).join(' · ') + ` · a sound man's head ${sound.toFixed(1)}°`); }
   } finally { Object.assign(CH.MOVES, keep); }
   console.log(all ? '\ncondition-pose: ALL PASS' : '\ncondition-pose: FAIL');
   return all;

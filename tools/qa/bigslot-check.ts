@@ -227,7 +227,7 @@ export async function bigCard(): Promise<boolean> {
 
       // the switch off: the build before's rows, and `big` inert
       { K.BIGSLOT.on = false; K.kitLoad(null, '');
-        const f = fields(1), walls = f.includes('walls'), want = ['weapon', 'suppressed', 'light', 'nvg', 'bangs', 'smoke', 'charges', ...(walls ? ['walls'] : []), 'frags', 'shield', 'suit', 'trim'];
+        const f = fields(1), walls = f.includes('walls'), want = ['weapon', 'suppressed', 'light', 'nvg', 'bangs', 'smoke', 'charges', ...(walls ? ['walls'] : []), 'frags', ...(f.includes('wand') ? ['wand'] : []) /* (a teammate's optical wand: a row of his card while WAND.mate is on, no affair of the big slot's) */, 'shield', 'suit', 'trim'];
         const guns = [0, 1].map(i => (rowOf(i, 'weapon').values as string[]).join('/')), cost = K.kitCost(1);
         F.verdict(f.join() === want.join() && guns.every(g => g === 'rifle/pistol/shotgun') && !fields(0).includes('big') && cost.big === null,
           'THE SWITCH OFF: a teammate\'s rows are the build before\'s to the row, the weapon row offers the shotgun (yours too), and no card has a big row or a big slot to count', `Red One: ${f.join(' ')} · weapon rows ${guns.join(' · ')} · you: ${fields(0).join(' ')} · kitCost(1).big ${J(cost.big)}`);

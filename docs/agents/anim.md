@@ -104,7 +104,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`sup.v` from a tenth under the flinch line to pinned), head down between the shoulders, sunk 10 cm, in fast and out over a second or two.
   FOLDED: `foldToo` raises the clutch's fold (`foldOn(too)`) for a staggered man with the wounds switch off, and deeper than the wounds' own
   (`MV2.clutch.fold.pitchToo` 34°). Under the fold and the blinded hunch the hurt and shaken looks give way by those weights (never two folds
-  added); a man with a shield (`handKept`) gets no hunch. All three springs are in `mvReset` and `mvLive`. Measured headless on the bones
+  added); a man with a shield (`handKept`) gets no hunch. All three springs are in `mvReset` and `mvLive`. THE GAZE STABILISER
+  keeps the eye line level under a working body and stands aside for a stance or an aim, so with the gun CARRIED it took four fifths of both bows
+  back out through the neck (hurt showed 4° of its 20°, shaken 6° of its 29°): its target elevation now goes down by what the two looks pose
+  (`hurt.pitch + hurt.head`, `shaken.pitch + shaken.head`, each by its spring), so the head is bowed the same whatever the gun is doing (check line g). Measured headless on the bones
   (`tools/qa/condition-pose-check.ts`, `probes.ts condition-pose`; `CONDITION_BREAK=1` fails a to e): hurt at the low ready the head 7.9 cm
   forward and 5.0 cm lower, the hand 24 cm from the chest joint; rifle up the bore 3.3° off a sound man's; walking the head rides 8 cm to the
   favoured side and 8 cm lower; shaken 11 cm lower, bore 2.7° off; folded 17 cm lower; at rest again to the millimetre. Strips `hurt-stand`,
