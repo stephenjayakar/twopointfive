@@ -329,12 +329,16 @@ export const foursquadClear = guarded(async () => {
       const up = men.filter((m: any) => m.state !== 'dead'), isIn = (m: any) => inBounds(room.def.bounds, m.char.pos, 0.2);
       const left = room.defenders.filter((h: any) => h.state !== 'dead').length;
       const done1 = !!op && op.ended === 'in'; if (done1) ended++;
-      const crossedAll = sent.length >= 3 && sent.every((m: any) => op.crossed.has(m) || m.state === 'dead'); if (took && done1 && crossedAll) allIn++;
+      // (a man who fell on his way to the stack was never given a place inside: he 'fell trying' as much as one who fell in the doorway. On the SHIPPED stand
+      // storage seed 5 loses two at the stack — the room's own man, alerted by the squad's shots at another on the way, opens his door on them — and the two
+      // left are sent and cross: the line's own words, which a bare count of the men sent read as a failure.)
+      const fellBefore = men.filter((m: any) => m.state === 'dead' && !sent.includes(m)).length;
+      const crossedAll = sent.length >= 1 && sent.length + fellBefore >= 3 && sent.every((m: any) => op.crossed.has(m) || m.state === 'dead'); if (took && done1 && crossedAll) allIn++;
       if (left === 0) cleared++; lost += 4 - up.length;
       for (const f of R.fratricide) ff.push(`${C.door}/${seed}: ${f}`);
       rounds += R.rounds; for (const x of R.through) through.push(`${C.door}/${seed}: ${x}`);
       for (const m of up) if (inDoorway(d, m.char.pos)) stuck.push(`${C.door}/${seed}: ${m.callsign}`);
-      rows.push(`${C.id} ${C.door} seed ${seed}: ${took ? 'four on it' : `NOT taken (${op ? `${op.kind}, ${op.men.length} men` : 'no order'})`} · ended '${op?.ended}' · sent in ${sent.length}, crossed ${inMen.length}, inside now ${up.filter(isIn).length} of ${up.length} up · defenders left ${left}/${room.defenders.length} · teammates down ${4 - up.length}${R.downs.filter(x => x.who.team === 'operative').map(x => ` (${x.who.callsign} by ${x.by?.callsign ?? '?'})`).join('')}`);
+      rows.push(`${C.id} ${C.door} seed ${seed}: ${took ? 'four on it' : `NOT taken (${op ? `${op.kind}, ${op.men.length} men` : 'no order'})`} · ended '${op?.ended}' · sent in ${sent.length}${fellBefore ? ` (${fellBefore} fell before the entry)` : ''}, crossed ${inMen.length}, inside now ${up.filter(isIn).length} of ${up.length} up · defenders left ${left}/${room.defenders.length} · teammates down ${4 - up.length}${R.downs.filter(x => x.who.team === 'operative').map(x => ` (${x.who.callsign} by ${x.by?.callsign ?? '?'})`).join('')}`);
     } catch (e) { threw = `${C.door}/${seed}: ${e instanceof Error ? e.stack : e}`; }
   }
   verdict(!threw, 'nothing threw', threw || `${runs} runs`);

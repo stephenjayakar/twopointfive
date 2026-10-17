@@ -698,8 +698,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rest, a slab 0.2 m high the check lays across open floor and re-bakes over, off, the journal; `UNDERFOOT_BREAK=1` fails on both stands). MEASURED: the tape walked on from 127 s with the rule raised — both men in the
   store and holding by 133.8 s, against never; every level file stood up on the page's stand and its grid's floor asked with the walkers' call: at rest
   the two bands part on the pass alone (23 cells: the low steps of three snow banks, tops 0.22 to 0.25 m — on, those steps are waded and the bank stops
-  feet one step further in) and on one 0.2 m box of the pairs lesson. KNOWN, NOT MENDED HERE: the blast still leaves the pile's bottom layer lying in
-  the hole on the page's stand (the mouth rule passes over a top of 0.2 m or less — `furnblast.ts`), so the men walk THROUGH two sacks lying there (feet do not rise); a hauled body and a
+  feet one step further in) and on one 0.2 m box of the pairs lesson. SINCE (`FURN.mouth.base`, its own bullet below): the hole's last pass takes that bottom layer too, so at his
+  breach the hole is clear and this rule is what holds wherever such a low thing is still left on floor the grid routes across (a man walks THROUGH it: feet
+  do not rise); the check holds `FURN.mouth.base` off so that his breach keeps the sacks its line asks about. A hauled body and a
   shoved chair are asked lower than a walker and still meet such a thing (a body dragged behind its carrier catching there: not looked at); a thing whose
   top is 0.25 m or more is a wall to feet and grid alike, as before. Never seen on a GPU; nobody has played it.
 - **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and

@@ -108,7 +108,13 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT'];
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT',
+  // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
+  'EXACT',
+  // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
+  'SENSE',
+  // a record from anyone (cmd.ts): a recording made with the check on replays with it on
+  'CMDCHECK'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -130,6 +136,8 @@ import { TAKE } from './takecheck';
 import { QUIETFOG } from './quietfog';
 import { TORCH } from './calmtorch';
 import { BACKKEY } from './backkey';
+import { FIXEDSTEP } from '../host/loop';
+import { TWEEN } from '../host/tween';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
@@ -138,6 +146,9 @@ import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
 import { RESCUECHECK } from './rescuecheck';
+import { EXACT } from '../math/exact';
+import { SENSE } from './sense';
+import { CMDCHECK } from './cmd';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -172,8 +183,9 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
 /** Tables that are the VISIT's own and never a tape's: how this viewer asked to hear or see the page, with nothing in the run turning on it. A run tape carries
  *  every registry table and its player puts each back over the page's (replay/engineplay.ts) — all but these: MUSIC (audio/pieces.ts) is read at every deal of
  *  a piece, so a tape made with the pieces on would play them to a viewer who opened it with `?onetheme`, and one made under `?onetheme` would take the pieces
- *  from everybody who plays it. */
-export const VISIT_OWN: string[] = ['MUSIC'];
+ *  from everybody who plays it. FIXEDSTEP and TWEEN (host/loop.ts, host/tween.ts) are how this page's frame loop steps and draws: a tape replays the updates it
+ *  holds whatever stepped them, and the viewer's loop is the viewer's. */
+export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
 export function knobRegistry(): Record<string, object> {
@@ -222,6 +234,9 @@ export function knobRegistry(): Record<string, object> {
     TORCH,
     // Esc is only the pause; Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (backkey.ts): what a Tab in a tick does reads this
     BACKKEY,
+    // the frame loop's two (host/loop.ts, host/tween.ts — not game rules, and no recording's to set: not in JOURNAL_KNOBS, and VISIT_OWN above keeps a tape's player off them): the game in
+    // whole 1/60 s ticks, and a frame between two ticks drawn at the blend of them. Here so that the two stands' difference and a probe's put-back cover them
+    FIXEDSTEP, TWEEN,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
     MORALE,
     // a man's condition (condition.ts): whether a blast that leaves a man standing leaves him hurt, the pace and the spread that costs him, how long
@@ -239,6 +254,12 @@ export function knobRegistry(): Record<string, object> {
     // squads that stay in their rooms still miss a room that goes silent (stayask.ts): the net's ask on a floor where every squad stays, and the one man who goes
     STAYASK,
     RESCUECHECK,
+    // the game's own maths (math/exact.ts EXACT.on: a setter — writing it puts the functions in Math's place or takes them out)
+    EXACT,
+    // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
+    SENSE,
+    // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
+    CMDCHECK,
     // dozing in the dark (doze.ts): who sits a long dark wait out asleep in a chair, how dull his ears are and what wakes him — who hears and sees whom reads these
     DOZE,
     // the net goes quiet (netquiet.ts): what an unanswered check, a body found and a mate seen to fall add to a man's dread, the whip to a noise, the last man's spot — read these

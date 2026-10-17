@@ -83,6 +83,9 @@ import { POWEROUT } from '../game/powerout';
 import { SQUADDEAL } from '../game/squaddeal';
 import { STAYASK } from '../game/stayask';
 import { RESCUECHECK } from '../game/rescuecheck';
+import { EXACT } from '../math/exact';
+import { SENSE } from '../game/sense';
+import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
 import { netQuietFromQuery } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
@@ -111,6 +114,8 @@ import { MUSIC } from '../audio/pieces';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
 import { ROOMCLEAR } from '../game/roomclear';
+import { FIXEDSTEP } from './loop';
+import { TWEEN } from './tween';
 
 export type Profile = 'frozen' | 'shipped';
 const envOf = (): Record<string, string | undefined> => (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
@@ -234,6 +239,9 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADDEAL.on = !q.has('nosquaddeal');   // squads from the rooms (game/squaddeal.ts): a level whose file names no squads is handed some cut from its rooms, so a loud way in and a quiet one each draw their own move there too — ON in the page; ?nosquaddeal = such a level's defenders are one pool, as they were
   STAYASK.on = !q.has('nostayask');   // squads that stay in their rooms still miss a room that goes silent (game/stayask.ts): on a floor where every squad stays (the block, Mousehole) the net's roll call runs and the nearest squad sends one man to the silent rooms — ON in the page; ?nostayask = nobody there asks after another squad, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
+  EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
+  SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
+  CMDCHECK.on = !q.has('nocmdcheck');   // a record from anyone (game/cmd.ts checkCmd): the tick's input record is made one an honest seat could have sent before the tick reads it (finite, bounded, the two matrices worked out again) — an honest record comes through unchanged to the bit; ?nocmdcheck = believed as it comes, as before
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts; it needs the row above): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
   ATTENTION.on = !q.has('noattention');   // a guard has one attention, and where it is can be seen (game/attention.ts): ON in the page — a small thing that makes a calm man look takes his attention there for a time the floor shows, and his eye for the rest is narrower while it does; ?noattention = every wary man sweeps the room with his whole eye, as it was
   PICTURE.on = !q.has('nopicture');   // each man keeps his own picture of the fight (game/picture.ts): ON in the page — where he believes each enemy to be (seen, heard, told; it goes out of date), and the spot rules that ask it; ?nopicture = no memory kept and every spot picked as it was
@@ -294,6 +302,8 @@ export function pageSwitches(q: URLSearchParams): void {
   STACKLINE.on = !q.has('nostackline');   // a man walking up to stack on a door that stands OPEN keeps the brisk walk onto his mark instead of the slow last steps (game/stackline.ts): ON in the page; ?nostackline = the slow last steps whatever the door, as they were
   REARWATCH.on = !q.has('norearwatch');   // a stack's rear man keeps his gun on the open way at its back, through the entry, and follows last (game/rearwatch.ts): ON in the page; ?norearwatch = his eyes as the unasked cover alone dealt them, every gun on the door once it goes
   REARWATCH.room = !q.has('noroomkeep');   // the man an entry left on a taken room's other door keeps it over 'fall in' until the squad is out of the room, then follows last (game/rearwatch.ts roomKeepTick): ON in the page; ?noroomkeep = his gun turns away the frame 'fall in' is given
+  FIXEDSTEP.on = !/^(0|off)$/.test(q.get('fixedstep') ?? '');   // the game runs in whole 1/60 s ticks whatever the display's rate (host/loop.ts FIXEDSTEP — the same game on a 60, a 120 and a 144 Hz display): ON in the page; ?fixedstep=0 = one update a frame on the frame's own time, as before (?fixedstep=<hz> = another tick rate: main.ts)
+  TWEEN.on = !/^(0|off)$/.test(q.get('tween') ?? '');   // …and a frame between two ticks is drawn at the blend of them (host/tween.ts: keyed boxes, the men, carried lights, the camera's look-at — a part of a tick behind the game, none on a 60 Hz display; acts only with the line above): ON in the page; ?tween=0 = every frame draws the last tick, as the fixed step did
 }
 
 /** the harness stood up as the page with no URL flag on a machine that has kept nothing: the page's own boot switches for an empty query, the kit read from an empty
@@ -355,6 +365,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
+  'FIXEDSTEP.on': 'TPS_FIXEDSTEP=1 (read only by a tool that steps through host/loop.ts stepFrame: the harness\'s own W.step names its dt)',
+  'TWEEN.on': 'TPS_TWEEN=1 (the picture between two ticks: the same)',
   'REARWATCH.room': 'TPS_ROOMKEEP=1',
   'CLOSE.on': 'TPS_CLOSE=1',
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',
@@ -378,6 +390,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADDEAL.on': 'TPS_SQUADDEAL=1',
   'STAYASK.on': 'TPS_STAYASK=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
+  'EXACT.on': 'TPS_EXACT=1',
+  'CMDCHECK.on': 'TPS_CMDCHECK=1',
   'DOZE.on': 'TPS_DOZE=1',
   'NETQUIET.on': 'TPS_NETQUIET=1',
   'ATTENTION.on': 'TPS_ATTENTION=1',

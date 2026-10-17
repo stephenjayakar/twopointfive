@@ -28,6 +28,8 @@ export interface RerunReport {
   castDiffers: string;
   /** sensor reads the re-run made that the page had not made on that step (served the key's last value) */
   unjournaled: number;
+  /** a tape made with the senses on the CPU: the reads the re-run's game answered ITSELF, and how many of them were not the value the page's game had read */
+  ownSenses: { on: boolean; reads: number; differ: number };
   /** what the stand-up had to say (a scenario that did not start, a build that differs) */
   warnings: string[];
 }
@@ -71,7 +73,9 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const put = (dst: Record<string, unknown>, src: Record<string, unknown>) => { for (const k of Object.keys(src)) { if (!(k in dst)) continue; const a = dst[k], b = src[k];
     if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
   const tables = () => { const src = { ...(rc.knobs?.tables ?? {}), ...(rc.tables ?? {}) } as Record<string, unknown>, into = rc.tables ? reg : J.knobTables() as Record<string, Record<string, unknown>>;
-    for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } } };
+    for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
+    if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false;
+    if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
   const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
     Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, (c.members as unknown[])[i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards); };
@@ -122,7 +126,13 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   if (activeScenario(g) !== rc.scenario) warnings.push(`the page had scenario ${rc.scenario ?? 'none'} up at its first step; this game has ${activeScenario(g) ?? 'none'}`);
   // ---- the tape's streams and the sensors served off it: src/replay/tapewalk.ts, the one walk this tool and the engine replay (src/replay/engineplay.ts) share
   const walk = new TapeWalk(tape, { cam: [W.cam.target[0], W.cam.target[1], W.cam.target[2], W.cam.yaw, W.cam.pitch, W.cam.distance, W.cam.aspect, W.cam.fov, W.cam.aimLead], mouse: [W.input.mouseX, W.input.mouseY] });
-  walk.served = opts.served ?? null; g.sensors.read = (key: string): number | undefined => walk.read(key);
+  walk.served = opts.served ?? null;
+  // (a tape made with the senses on the CPU — src/game/sense.ts — needs none of its values: the game answers itself, from its seed and its inputs alone, and what the
+  //  tape kept is only HELD AGAINST those answers — as f32, the tape's own width)
+  const SENSE = reg.SENSE as { cpu?: boolean } | undefined, ownSenses = { on: !!SENSE?.cpu, reads: 0, differ: 0 };
+  { const S = g.sensors, mine = S.read.bind(S);   // (asked of the switch at every read: a tape may move it between two steps)
+    S.read = (key: string): number | undefined => { const t = walk.read(key); if (!SENSE?.cpu) return t;
+      const v = mine(key); ownSenses.reads++; if (!Object.is(v === undefined ? v : Math.fround(v), t === undefined ? t : Math.fround(t))) ownSenses.differ++; return v; }; }
   const byN = new Map<number, number>(); F.samples.forEach((s, i) => byN.set(s.n, i));
   const idOf = new Map<number, number>(); F.cast.forEach((c, ci) => idOf.set(c.id, ci));
   let compared = 0, worst: Drift | null = null, drift: Drift | null = null, castDiffers = '';
@@ -153,7 +163,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
       castDiffers = miss.length ? `the trace has ${miss.join(', ')} on the floor; the re-run does not` : '';
       if (miss.length && !drift) drift = { r: D.r[si], n: f + 1, who: miss[0], metres: Infinity }; }
   }
-  return { W, refuse: '', D, report: { ticks: toN, toN, compared, worst, drift, tol, castDiffers, unjournaled: walk.unjournaled, warnings } };
+  return { W, refuse: '', D, report: { ticks: toN, toN, compared, worst, drift, tol, castDiffers, unjournaled: walk.unjournaled, ownSenses, warnings } };
 }
 
 /** the report in words: the first line is the verdict */

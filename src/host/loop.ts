@@ -14,9 +14,13 @@
 // (planTicks), every tick is demo.update → attract.update → game.update → lights.update with the SAME dt, and a frame draws whatever the last tick left. So the simulation computes
 // the same numbers on a 60, a 120 and a 144 Hz display (tools/qa/fixedstep-check.ts), which a variable step never can. One-frame input edges (a key press, a click, the wheel)
 // belong to exactly ONE tick: the first of the frame; a frame with no tick hands them to the next frame's first tick (the hotkeys have had their look and do not see them twice).
-// What stays per drawn frame on the display's own dt: the camera, the mixer, the smoke solver, the render. NO INTERPOLATION between ticks: off 60 Hz the men move at 60 a second
-// under a camera that moves at the display's rate. KNOWN, on a frame of two ticks or more (a display under the tick rate, a hitch): a flash that lives one tick and was made in
-// the frame's first is aged out by its second and never drawn — its light was in the game for its tick all the same. Switch off (the default) = every statement below as it was.
+// What stays per drawn frame on the display's own dt: the camera, the mixer, the smoke solver, the render. BETWEEN TICKS (host/tween.ts TWEEN, its own switch; LoopCtx.tween): a
+// frame that falls between two ticks is drawn between them — what moves (keyed boxes, the men, carried lights, where the camera is asked to look) at the blend of the tick
+// before the last and the last, a constant part of a tick behind the game (none on a display at the tick rate, never more than one: tween.ts phase), and never read back
+// by it: the blend hangs on the drawn objects from just before the host's render to just after. With that
+// switch off there is no interpolation: off 60 Hz the men move at 60 a second under a camera that moves at the display's rate, and on a frame of two ticks or more (a display
+// under the tick rate, a hitch) a flash that lives one tick and was made in the frame's first is aged out by its second and never drawn (with it on, tween.ts draws it once).
+// The module's default is off = every statement below as it was; THE PAGE turns both on (host/profile.ts pageSwitches: ?fixedstep=0, ?tween=0).
 import { BACKKEY } from '../game/backkey';
 import type { Game } from '../game/game';
 import type { Input } from '../game/input';
@@ -25,6 +29,7 @@ import type { DirectorFrame } from '../game/director';
 import type { Vec3 } from '../math/vec';
 import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View, Chapters } from './hud';
+import { TWEEN, type Tween } from './tween';
 
 /** the showcase tour (game/demo.ts Demo) as the loop sees it */
 export interface DemoLike { readonly active: boolean; caption: string; sub: string; fade: number; update(dt: number): Vec3 | null; chapters(): Chapters; goto(k: number): void; }
@@ -47,8 +52,13 @@ export interface LoopCtx {
    *  boxes packed into the grid its rays walk (engine.render does it once a frame; a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
    *  to the game (an expired speech bubble nulled: a replay makes it after EVERY update) */
   betweenTicks?(): void;
+  /** drawing between ticks (host/tween.ts; main.ts makes one over its engine): with TWEEN.on and the fixed step running this frame, the picture is the blend of the last two
+   *  ticks. Absent = never: the fixed step draws the last tick */
+  tween?: Tween;
   /** this frame's time as the DISPLAY counts it (main.ts: the rAF timestamps' difference, clamped and time-scaled as `dt` is) — what the fixed step plans its ticks from */
   vsyncDt?(): number | undefined;
+  /** how much faster than the wall's the host runs the clock (main.ts __timeScale; absent = 1): above 1 the fixed step's cap on ticks a frame grows with it */
+  timeScale?(): number;
   /** OUT: game ticks run this frame (1 on the variable step, 0 frozen; 0‥FIXEDSTEP.maxTicks on the fixed one) */
   ticks?: number;
   host: LoopHost;
@@ -129,6 +139,9 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   if (view.clientWidth > 0 && view.clientHeight > 0) {
     const demo = ctx.demo, attract = ctx.attract, D = game.director;
     const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.();
+    const tw = fixed && TWEEN.on ? ctx.tween : undefined;   // (drawing between ticks: only on a frame the fixed step runs)
+    if (!tw && ctx.tween && !ctx.tween.stale) ctx.tween.rest();
+    const shotOf = !tw ? null : (dp: Vec3 | null, ap: Vec3 | null): Vec3 | null => { if (demo?.active && dp) return dp; const lk = D.showing ? D.frame?.look : null; return lk ? lk : attract?.active && !D.showing ? ap : null; };   // (a scripted look-at as a tick leaves it: the tour's / the level script's pinned shot / attract mode's)
     let demoPos: Vec3 | null, attractPos: Vec3 | null;
     if (!fixed) {
       if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; }
@@ -140,42 +153,52 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       { const tU = performance.now(); if (!frozen) game.update(dt, input, cam, view); ctx.updateMs = performance.now() - tU; }
     } else {   // THE FIXED STEP: whole ticks of 1 / hz, each the old order's demo → attract → game with the same dt, the lights aged with the game (its men read them)
       const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null };
-      const plan = planTicks(fx.acc, ctx.vsyncDt?.() ?? dt, FIXEDSTEP, fx.drift); fx.acc = plan.acc; fx.drift = plan.drift; ctx.ticks = plan.ticks;   // (the display's own frame time where the host has it: steadier than a clock read in the callback)
+      const fast = ctx.timeScale?.() ?? 1;   // (a clock run faster than the wall's asks for that many more ticks of a slow frame: the cap is against a stall, not against the scale)
+      const plan = planTicks(fx.acc, ctx.vsyncDt?.() ?? dt, fast > 1 ? { ...FIXEDSTEP, maxTicks: Math.ceil(FIXEDSTEP.maxTicks * fast) } : FIXEDSTEP, fx.drift); fx.acc = plan.acc; fx.drift = plan.drift; ctx.ticks = plan.ticks;   // (the display's own frame time where the host has it: steadier than a clock read in the callback)
       const tdt = 1 / FIXEDSTEP.hz;
       if (fx.owed) { for (const k of fx.owed.pressed) input.pressed.add(k); input.clicked |= fx.owed.clicked; input.wheel += fx.owed.wheel; fx.owed = null; }   // (after the hotkeys above: they saw these last frame)
-      const tU = performance.now();
+      const tU = performance.now(); let bt = 0;   // (bt: the ms the hands-off player's thinking took, outside the update's own timing as on the free step)
+      if (tw?.stale) tw.capture({ follow: game.followPos(), aim: game.aimPoint, shot: shotOf!(fx.demoPos, fx.attractPos) }, cam.pin);   // (the first tweened frame: what stands before its first tick is what that tick is blended FROM)
       for (let i = 0; i < plan.ticks; i++) {
         if (i) { input.endTick(); ctx.betweenTicks?.(); }   // a press, a click, the wheel: the first tick's alone; the host packs the world the last tick left (what a draw would have done)
         fx.demoPos = demo ? demo.update(tdt) : null;
         fx.attractPos = fx.demoPos || D.showing || !attract ? null : attract.update(tdt);
-        ctx.beforeTick?.(tdt);
+        if (ctx.beforeTick) { const b0 = performance.now(); ctx.beforeTick(tdt); bt += performance.now() - b0; }
         game.update(tdt, input, cam, view);
         ctx.host.lights.update(tdt, ctx.time);
+        tw?.capture({ follow: game.followPos(), aim: game.aimPoint, shot: shotOf!(fx.demoPos, fx.attractPos) }, cam.pin);
       }
-      ctx.updateMs = performance.now() - tU;
+      ctx.updateMs = performance.now() - tU - bt;
       if (!plan.ticks && (input.pressed.size || input.clicked || input.wheel)) fx.owed = { pressed: [...input.pressed], clicked: input.clicked, wheel: input.wheel };
       demoPos = demo?.active ? fx.demoPos : null; attractPos = attract?.active && !demoPos && !D.showing ? fx.attractPos : null;   // (a frame with no tick keeps the last tick's look-at)
     }
     const dshow: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
     ctx.postUpdate?.(dshow);   // (the end card out with the drive)
-    const shotPos: Vec3 | null = demoPos ?? (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the tour's / the level script's pinned shot / attract mode's
+    const blend = tw ? tw.phase(ctx.fixed!.acc * FIXEDSTEP.hz) : 1;   // (1 = the last tick as it is; below it, that far from the tick before the last to it: tween.ts phase — the time owed the next tick, less the lag the display's rate asks)
+    const shotNow: Vec3 | null = demoPos ?? (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the tour's / the level script's pinned shot / attract mode's
+    const shotPos = tw ? tw.at('shot', shotNow, blend) : shotNow;
+    const followPos = tw ? tw.at('follow', game.followPos(), blend)! : game.followPos();   // (between ticks the camera follows the man where he is DRAWN)
     ctx.host.settings.nvAmount = game.player.nvAmount; ctx.host.settings.hitFlash = game.player.hitFlash;
     if (ctx.audio) {
       const lp = ((attract?.active ?? false) || !!dshow) && shotPos ? shotPos : game.player.char.pos;   // (a showcase parks Sam 30 m away outdoors exactly as attract does: listen from the shot, not from him — review 08-10 #3)
       ctx.audio.setListener([lp[0], lp[1] + 1.6, lp[2]], cam.forward); ctx.audio.update(dt, ctx.time);   // ← these two MUST stay statements: an 08-09 comment reshuffle swallowed them into the line above for three days (listener stuck at the lot corner, finished voices never released)
     }
     ctx.smoke?.update(dt);
-    { const spect = !shotPos && game.spectate >= 0; if (spect) cam.autoYaw(dt, game.followPos(), (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(dt, spect);   // spectating a guard: come round to the side he can be seen from,
+    { const spect = !shotPos && game.spectate >= 0; if (spect) cam.autoYaw(dt, followPos, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(dt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!dshow || dshow.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, dt * 3); }   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
-    cam.update(dt, shotPos ?? game.followPos(), shotPos || game.spectate >= 0 ? null : game.aimPoint);
+    { const pin = cam.pin; if (tw && pin) cam.pin = tw.pinAt(pin, blend);   // (a framing a level script keys once a tick — a shot that tracks, swings, pushes in — is drawn between its last two)
+      try { cam.update(dt, shotPos ?? followPos, shotPos || game.spectate >= 0 ? null : tw ? tw.at('aim', game.aimPoint, blend) : game.aimPoint); } finally { cam.pin = pin; } }
     if (ctx.hud) {
       const sh = showCaption(ctx); ctx.hud.setCaption(sh ? sh.caption : '', sh ? sh.sub : '');
       ctx.hud.setTimeline(demo?.active ? demo.chapters() : dshow ? D.chapters() : null, k => { if (demo?.active) demo.goto(k); });   // (the tour's stops are clickable; a level-script showcase's chapters are shown, not sought)
     }
     if (!fixed) ctx.host.lights.update(dt, ctx.time);
     cam.kickIn();   // a blast's camera kick (game/blastFeel.ts → FollowCamera.kick): in for the render and the HUD laid over it, out again before anything else reads the camera — a return with none
-    try { ctx.render(cam, ctx.time, dt, ctx.present()); ctx.hud?.update(game, cam, view); ctx.bubbles?.update(game, cam, view); }
-    finally { cam.kickOut(); }
+    try {
+      if (tw) { try { tw.pose(blend); ctx.render(cam, ctx.time, dt, ctx.present()); } finally { tw.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and every tick, read the game's own)
+      else ctx.render(cam, ctx.time, dt, ctx.present());
+      ctx.hud?.update(game, cam, view); ctx.bubbles?.update(game, cam, view);
+    } finally { cam.kickOut(); }
   }
   input.endFrame();
 }

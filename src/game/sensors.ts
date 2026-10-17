@@ -79,22 +79,31 @@ export class Sensors {
   private src: SensorJournal | null = null; private cursor = 0; private seq: number[] = []; private vals: (number | undefined)[] = [];
   private pending = new Map<string, (number | undefined)[]>(); private lastServed = new Map<string, number | undefined>();
 
+  /** THE SENSES ON THE CPU (sense.ts SENSE.cpu; set by the Game, null = off): a sight line's transmittance worked out by the game itself, in the step that asks.
+   *  While it is set nothing is asked of the probe and nothing of the probe's is served: a LIGHT read has no answer (every meter's own estimate stands in, as it
+   *  always has until the first answer), a SEGMENT read is `own`'s for the line last asked under that key. Record files those values, replay serves what was filed. */
+  own: ((a: Vec3, b: Vec3) => number) | null = null;
+  private ownVals = new Map<string, number>();
+  /** hand the sight lines to the game's own working (null = back to the probe); answers kept from before are dropped */
+  setOwn(f: ((a: Vec3, b: Vec3) => number) | null): void { this.own = f; this.ownVals.clear(); }
+  /** a new encounter: no line's answer outlives the world it was worked out in */
+  ownReset(): void { this.ownVals.clear(); }
   /** `probeOf` hands the probe as it stands now (the harness swaps its methods mid-run) */
   constructor(private probeOf: () => ProbeLike) {}
 
   // ================================================================================================== the queries (every GPU → gameplay read is one of these)
   /** queue an irradiance query at `pos` under `key` (skipOwner: the character whose own proxies must not shadow a reading inside his chest) — dropped in replay */
-  ask(key: string, pos: Vec3, skipOwner = 0): void { this.stats.asks++; if (this.mode !== 'replay') this.probeOf().query(key, pos, skipOwner, askRank(key, false)); }
+  ask(key: string, pos: Vec3, skipOwner = 0): void { this.stats.asks++; if (this.own) return; if (this.mode !== 'replay') this.probeOf().query(key, pos, skipOwner, askRank(key, false)); }
   /** queue a smoke-transmittance query along a → b under `key` — dropped in replay */
-  askSegment(key: string, a: Vec3, b: Vec3): void { this.stats.asks++; if (this.mode !== 'replay') this.probeOf().querySegment(key, a, b, askRank(key, true)); }
+  askSegment(key: string, a: Vec3, b: Vec3): void { this.stats.asks++; if (this.own) { if (this.mode !== 'replay') this.ownVals.set(key, this.own(a, b)); return; } if (this.mode !== 'replay') this.probeOf().querySegment(key, a, b, askRank(key, true)); }
   /** drop a stale answer for `key` (a search plan re-using its keys for new spots): the probe keeps the last value per key for ever otherwise — nothing to do in replay (what was delivered is what is served) */
-  forget(key: string): void { if (this.mode !== 'replay') this.probeOf().results.delete(key); }
+  forget(key: string): void { if (this.own) { this.ownVals.delete(key); return; } if (this.mode !== 'replay') this.probeOf().results.delete(key); }
   /** THE read: the latest answer for `key` (max-axis irradiance in W/m², or a segment's transmittance 0‥1) or undefined while there is none — journaled in record, served in replay */
   read(key: string): number | undefined {
     this.stats.reads++;
-    if (this.mode === 'live') return first(this.probeOf().get(key));
+    if (this.mode === 'live') return this.own ? this.ownVals.get(key) : first(this.probeOf().get(key));
     if (this.mode === 'record') {
-      const v = first(this.probeOf().get(key));
+      const v = this.own ? this.ownVals.get(key) : first(this.probeOf().get(key));
       if (!this.inFrame) { this.stats.strays++; return v; }
       let ki = this.keyIdx.get(key); if (ki === undefined) { ki = this.keys.length; this.keys.push(key); this.keyIdx.set(key, ki); this.bytes += key.length + 3; }
       this.curSeq.push(ki); this.curVals.push(v);

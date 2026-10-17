@@ -247,7 +247,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(BENCH_SCENES.length >= 2 && rows.every(e => !!e && e.kind === 'roomclear' && e.squad === 4 && !!e.level) && new Set(BENCH_SCENES.map(S => S.id)).size === BENCH_SCENES.length && BENCH_SCENES.every(S => S.name.length <= 21 && Number.isInteger(S.seed) && S.secs >= 60), `every scene is a four-man room clear of the mission list on its own level, with a name that fits its column: ${BENCH_SCENES.map(S => `${S.id} = ${S.scn} seed ${S.seed}`).join(' · ')}`);
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
-  check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick\?\.\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
+  check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
 }
 { // the recorder stopped by hand, and a run refused
   const p = page(), was = before(p);

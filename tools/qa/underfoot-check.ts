@@ -21,9 +21,9 @@ export async function underfootCheck(): Promise<boolean> {
   const { UNDERFOOT, BAKE_Y } = await import(`${ROOT}/src/scene/collision.ts`);
   const { FURN } = await import(`${ROOT}/src/game/furnblast.ts`); const { DESTRUCTION, FURNBLAST } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { WALLCHARGE, wallAt } = await import(`${ROOT}/src/game/wallcharge.ts`); const JOURNAL = await import(`${ROOT}/src/game/journal.ts`) as any; const { pageSwitches } = await import(`${ROOT}/src/host/profile.ts`) as any; const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`) as any; const knobs0 = knobsCopy();
-  const was = { u: UNDERFOOT.on, d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, s: FURN.mouth.snow, w: WALLCHARGE.on, o: WALLCHARGE.outer }, log = console.log;
+  const was = { u: UNDERFOOT.on, d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, s: FURN.mouth.snow, b: FURN.mouth.base, w: WALLCHARGE.on, o: WALLCHARGE.outer }, log = console.log;
   const data = readFileSync(`${ROOT}/levels/pass.json`, 'utf8'), R = 0.3, Y0 = 0.2, Y1 = 1.5;
-  const raise = (rule: boolean) => { UNDERFOOT.on = rule && !BRK; DESTRUCTION.on = true; FURNBLAST.on = true; FURN.mouth.on = true; FURN.mouth.snow = true; WALLCHARGE.on = true; WALLCHARGE.outer = true; };
+  const raise = (rule: boolean) => { UNDERFOOT.on = rule && !BRK; DESTRUCTION.on = true; FURNBLAST.on = true; FURN.mouth.on = true; FURN.mouth.snow = true; FURN.mouth.base = false; WALLCHARGE.on = true; WALLCHARGE.outer = true; };   // (FURN.mouth.base held OFF: the hole's last pass now takes the pile's bottom layer too, and this check wants his breach as his tape had it — the sacks lying in the hole — so that the line about it still asks the walkers' band)
   const stand = async (rule: boolean) => { raise(rule); console.log = () => { }; try { const W: any = await standUp({ level: loadLevel(parseLevelData(data)), seed: 1 }); raise(rule); const g = W.game; g.godMode = true; g.aiEnabled = false; g.tune.chaos = 0.5; for (let i = 0; i < 4; i++) W.step(1 / 60); return W; } finally { console.log = log; } };
   const top = (b: any) => b.c[1] + b.h[1], out = new Int32Array(64);
   /** floor cells of the grid where a walker's own call is pushed at all */
@@ -59,13 +59,13 @@ export async function underfootCheck(): Promise<boolean> {
         verdict(open0 && floor && w.end < 0.35 && (BRK || w0.end > 0.5), 'a slab 0.2 m high laid across open floor: the grid still calls it floor, and a man walked along the grid\'s way crosses it (off: he is held at it)', `open before ${open0}; floor to the grid after the re-bake ${floor}; ends ${w.end.toFixed(2)} m from the far point (the rule off: ${w0.end.toFixed(2)} m)`); }
       // (3) off is the build as it was; an old recording replays with it off
       const off = await blown(false);
-      verdict(BRK || (!!off && (off.left.length ? off.end > 1 : off.end < 0.35)), 'with the rule off the same man is held at the wall where the blast left a thing in the hole, as on his tape (the page\'s stand leaves the pile\'s bottom layer; the frozen stand\'s blast takes the pile whole, and there he is through either way)', off ? `${off.left.length} thing(s) left under the band; ends ${off.end.toFixed(2)} m from the far point, at (${off.at[0].toFixed(2)}, ${off.at[2].toFixed(2)})` : 'no wall place');
+      verdict(BRK || (!!off && (off.left.length ? off.end > 1 : off.end < 0.35)), 'with the rule off the same man is held at the wall where the blast left a thing in the hole, as on his tape (the page\'s stand, with the hole\'s last pass held off as this check holds it, leaves the pile\'s bottom layer; the frozen stand has no pile there, and there he is through either way)', off ? `${off.left.length} thing(s) left under the band; ends ${off.end.toFixed(2)} m from the far point, at (${off.at[0].toFixed(2)}, ${off.at[2].toFixed(2)})` : 'no wall place');
       { const g = off?.g ?? on.g, snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
         UNDERFOOT.on = true; const old = snap(); delete old.tables.UNDERFOOT; JOURNAL.applyKnobs(g, old); const without = UNDERFOOT.on;
         UNDERFOOT.on = true; const own = snap(); UNDERFOOT.on = false; JOURNAL.applyKnobs(g, own); const withIt = UNDERFOOT.on;
         let a: unknown = 'no pageSwitches', b: unknown = a; if (typeof pageSwitches === 'function') { pageSwitches(new URLSearchParams('')); a = UNDERFOOT.on; pageSwitches(new URLSearchParams('underfoot=0')); b = UNDERFOOT.on; }
         verdict(without === false && withIt === true && a === true && b === false, 'a recording from before the key replays with the rule off (journal.ts applyKnobs), one that carries it keeps it; the page opens with it on and ?underfoot=0 puts it off', `applyKnobs with no table → ${without} · with it → ${withIt} · the page → ${a} · ?underfoot=0 → ${b}`); }
     }
-  } finally { console.log = log; knobsBack(knobs0); UNDERFOOT.on = was.u; DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; FURN.mouth.snow = was.s; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; }
+  } finally { console.log = log; knobsBack(knobs0); UNDERFOOT.on = was.u; DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; FURN.mouth.snow = was.s; FURN.mouth.base = was.b; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; }
   return all;
 }
