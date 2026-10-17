@@ -19,6 +19,7 @@
 // tools/qa/loadout-probes.ts loadout-stage holds the two together, man for man at every size.
 // Types and pure functions only: nothing here imports the game (src/game is one import cycle) or touches the DOM beyond localStorage, guarded.
 import type { PairId } from './game';
+import { soloFogRow } from './quietfog';   // (called inside noteOf only: src/game is one import cycle)
 
 /** how many teammates stand beside Sam */
 export type SquadSize = 0 | 1 | 2 | 3 | 4;
@@ -85,7 +86,7 @@ export function squadChoices(e: { id?: string; kind: LoadoutKind; squad: number;
 export const CANNOT: Record<string, Partial<Record<SquadSize, string>>> = {};
 /** what a size changes on a kind of scenario (`office`: the bundled level, the one with a breach plan — F's drill) */
 function noteOf(kind: LoadoutKind, n: SquadSize, office: boolean, own = 2): string {
-  if (kind === 'solo') return 'Alone on the office floor: your own kit is all there is.';
+  if (kind === 'solo') return soloFogRow() ? 'Alone on the office floor.' : 'Alone on the office floor: your own kit is all there is.';   // (under the fog the mission hands out its cameras and wand — quietfog.ts QUIETFOG.solo: the kit tiles show them)
   if (kind === 'quiet') return n === 0 ? 'Alone: your own kit, and nobody to cover a door.' : n === 1 ? 'One partner, silent from the start: he follows low in your steps and takes a man on your mark (X on the man, then F).' : '';
   if (n === 0) return kind === 'rescue' ? 'Alone: nobody to stack or flow with you. The clock is the same.' : 'Alone: no orders to give. Every room is yours to take.';
   if (n === 1) return kind === 'rescue' ? 'One man: he takes one door on your F; nobody for the side door.' : office ? 'One man: no F drill (it takes two). He takes your orders with X.' : 'One man: he takes your orders with X.';

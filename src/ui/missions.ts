@@ -22,8 +22,8 @@ import { MISSION_GROUPS, type MissionGroup, type ScenarioEntry } from '../scene/
 import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, levelWords, teamWords, teamTag } from '../scene/scenarioList';
 import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
 import { leverRows, leversSig } from './levers';
-import { fogOfQuery } from '../game/scenarioRun';
-import { quietFogHref, quietFogRow, quietFogAside } from '../game/quietfog';
+import { fogOfQuery, sameFog } from '../game/scenarioRun';
+import { quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { WEATHER_KINDS, WEATHER_PRESETS, weatherTitle, weatherWords, weatherOfSearch, weatherSearch, snowLevel, type WeatherKind } from '../game/weatherKinds';
 import { HOUR_IDS, HOURS, hourIdOf, hourHref, hourLive, hourLabel, hourClock, hourWords, type HourId } from '../game/hours';
 import { menuTheme } from './theme';
@@ -123,7 +123,7 @@ export const diffLive = (m: Mission): boolean => !!m.scenario && m.scenario.kind
 /** the query string a pick of `m` loads: the scenario's own (pickSearch) with the difficulty the tables stand at riding along, or `?solo` — the visitor's
  *  other flags kept either way */
 export function missionHref(m: Mission, search = '', hour?: HourId): string {
-  const href = quietFogHref(m.scenario ? quietFogAside(() => difficultyHref(pickSearch(m.scenario!, search))) : (rest => `?${SOLO_KEY}${rest ? '&' + rest.slice(1) : ''}`)(quitSearch(search)), quietFogRow(m.scenario));   // (a quiet mission's rung of the fog lever — game/quietfog.ts: this machine's pick on a quiet row's link, a rung the visitor arrived with dropped from every other)
+  const href = quietFogHref(m.scenario ? quietFogAside(() => difficultyHref(pickSearch(m.scenario!, search))) : (rest => `?${SOLO_KEY}${rest ? '&' + rest.slice(1) : ''}`)(quitSearch(search)), m.scenario ? quietFogRow(m.scenario) : soloFogRow());   // (a quiet mission's rung of the fog lever — game/quietfog.ts: this machine's pick on a quiet row's link, a rung the visitor arrived with dropped from every other)
   return hour === undefined ? href : hourHref(href, hour);   // (THE HOUR — game/hours.ts: the sheet's row puts its pick on the link; none given = whatever the visitor's own flags carry)
 }
 /** the row a query string would boot (null: it names nothing on the list — a plain URL boots the start card, not a mission) */
@@ -323,7 +323,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission\'s shift is the level\'s own on either' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either';
     dnote.title = dnote.textContent ?? '';   // (the sheet shows two lines of it: index.html .mdiff > .dn)
     { const fogOn = !!m.scenario && fogOfQuery(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
-      const quiet = quietFogRow(m.scenario);   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
+      const quiet = m.scenario ? quietFogRow(m.scenario) : soloFogRow();   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
       levers.paint(key => m.scenario?.group !== 'training' && (key === 'fog' ? fogOn || quiet : diffLive(m)), m.scenario?.kind === 'roomclear' ? structureOfLevel(m.scenario.level) : '', quiet); }
     go.textContent = MISSIONS.pickLabel; go.setAttribute('href', hrefs[sel]); go.setAttribute('data-mission', m.id);
     (rows[sel] as unknown as { scrollIntoView?: (o: unknown) => void }).scrollIntoView?.({ block: 'nearest' });
@@ -352,7 +352,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
       try { globalThis.localStorage?.setItem(LS, m.id); } catch { /* no store */ }
       if (fn) { if (!opts.keep) S.close(); fn(m, href); return; }   // (closed FIRST: the next screen's keys and focus are its own; its Back reopens the list on this row)
       // the solo night off the real start card over the plain night: Start, as it has always been — no load
-      if (!m.scenario && MISSIONS.startSolo && hourSel === hourLive() && wx === weatherOfSearch(search) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(search).has(k))) { const start = MISSIONS.startSolo; S.close(); start(); return; }   // (…at the hour and in the weather the page stands at: another of either is a load)
+      if (!m.scenario && MISSIONS.startSolo && hourSel === hourLive() && wx === weatherOfSearch(search) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(search).has(k)) && sameFog(href, search)) { const start = MISSIONS.startSolo; S.close(); start(); return; }   // (…at the hour and in the weather the page stands at: another of either is a load)
       go.textContent = 'starting…';
       const L = location as Location, to = (L.pathname ?? '') + href + (L.hash ?? '');
       if (to === (L.pathname ?? '') + (L.search ?? '') + (L.hash ?? '')) L.reload(); else L.assign(to);

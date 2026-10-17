@@ -24,13 +24,29 @@
 // (`TPS_QUIETDEF=team`). A LINK SAYS ONLY WHAT DIFFERS FROM THE DEFAULT: at 'team' a bare quiet link is the fog with cameras, `quietfog=off` is all shown,
 // `cams=0` the fog with none; at 'off' the links are the ones this file always wrote. The store likewise keeps a pick only where it differs. A Training
 // lesson is on 'off' whatever the default. A recording from before the key replays with 'off' (journal.ts).
+//
+// THE SOLO NIGHT TOO (`QUIETFOG.solo`; the maintainer, 10-17, from the kit screen of the solo night, where the cameras and the wand read 'no use here':
+// "for the solo night missions we should have fog of war! then you really need the sticky cams"). What was there: only a link that names a room clear, a
+// rescue or a quiet mission's rung raised the fog (scenarioRun.ts fogOfQuery); the solo night's link (`?solo`, no scenario on it) named none, so the plain
+// night always ran with every guard shown and nothing for a camera to look into. With the switch up the solo night's link is read as a quiet row's is:
+// the same rungs, the same pick this machine keeps for its quiet missions, the same default (QUIETFOG.def), the mission's cameras and its wand handed out
+// with the fog, `quietfog=off` on the link = every guard shown. Only the link `solo` with no scenario, showcase or lesson beside it: a page stood up
+// plain (the floor under a title card, a showcase, a harness game) is as it was. ON in the page (`?solofog=0`), OFF here and on the frozen stand
+// (`TPS_SOLOFOG=1`); a recording from before the key replays with it off (journal.ts). Nothing here makes the night harder by numbers: the guards, their
+// eyes and the level are untouched.
 import { setConeVisit, coneVisitNow } from './difficulty';
 import type { FogRung } from './difficulty';
 import { FOG } from './fogofwar';
 import { STICKY, stickyVisit } from './stickycam';   // (read inside functions only)
 import type { Game } from './game';
 
-export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean } = { on: false, def: 'off', wand: false };
+export const QUIETFOG: { on: boolean; def: QuietRung; wand: boolean; solo: boolean } = { on: false, def: 'off', wand: false, solo: false };
+/** the solo night's row is one the lever is live on (QUIETFOG.solo): the screens ask this where a quiet row is asked quietFogRow */
+export const soloFogRow = (): boolean => QUIETFOG.on && QUIETFOG.solo;
+/** keys beside `solo` that make the link something else than the solo night (a scenario's, a showcase's) */
+const NOT_SOLO = ['quiet', 'roomclear', 'nightbreach', 'rescue', 'squad4', 'demo', 'breach'];
+/** a link is the solo night's own, to be read as a quiet row's (the rule up, `solo` on it, nothing else staged by it) */
+export const soloFogLink = (q: URLSearchParams): boolean => soloFogRow() && q.has('solo') && !NOT_SOLO.some(k => q.has(k));
 /** THE MISSION'S OWN WAND (`QUIETFOG.wand`; OFF here and on the frozen stand, ON in the page — ?quietwand=0): a quiet mission that hands out its cameras (started
  *  under the fog, not the fog alone, not a lesson: stickyVisit, set where the mission starts and let go of where it ends) hands Sam an optical wand as well,
  *  whatever his card carries — kit.ts kitPlayer reads this beside the wand's own switch. Measured 10-16 (tools/qa/sticky-cover.ts --all-quiet): the look
@@ -83,7 +99,7 @@ export function setQuietCams(on: boolean, keep = true) {
 /** the cameras a quiet mission's query asks to be handed (0: not a quiet mission, a lesson, no fog, either switch off — and none named where the cameras
  *  are a button to press; where they come with the fog, none named is STICKY.issue and `cams=0` is none) */
 export function quietCamsOfQuery(q: URLSearchParams, lesson = false): number {
-  if (!QUIETFOG.on || !STICKY.on || lesson || !q.has('quiet')) return 0;
+  if (!QUIETFOG.on || !STICKY.on || lesson || !(q.has('quiet') || soloFogLink(q))) return 0;
   if (quietFogOfQuery(q, lesson) === 'off') return 0;   // (only ever with a rung up: with no fog a camera shows nothing)
   if (!q.has(PARAM_CAMS)) return quietCamsDefault() ? STICKY.issue : 0;
   const n = Number(q.get(PARAM_CAMS)); return Number.isFinite(n) ? Math.max(0, Math.min(STICKY.carry, Math.floor(n))) : 0;
@@ -122,7 +138,7 @@ export function quietFogHref(href: string, quiet: boolean): string {
 }
 /** the rung a query asks its quiet mission to be played under (none named: the default's; 'off': not a quiet mission, a lesson, or the switch off) */
 export function quietFogOfQuery(q: URLSearchParams, lesson = false): QuietRung {
-  if (!QUIETFOG.on || lesson || !q.has('quiet')) return 'off';
+  if (!QUIETFOG.on || lesson || !(q.has('quiet') || soloFogLink(q))) return 'off';
   const v = q.get(PARAM); return isRung(v) ? v : quietFogDefault();
 }
 
