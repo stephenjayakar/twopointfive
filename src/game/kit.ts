@@ -109,7 +109,7 @@ export interface MemberKit {
   suit: SuitId; trim: TrimId;
   /** teammates: he carries the ballistic shield (shield.ts) — a pistol in the other hand whatever `weapon` says, the lead's mark in a stack, first through */
   shield: boolean;
-  /** you: the optical wand rides in a pouch (wand.ts — a look under a shut door before anybody opens it). Teammates carry none: false, and no row. */
+  /** the optical wand rides in a pouch (wand.ts — a look under a shut door before anybody opens it). A teammate's card has the row only under `WAND.mate`, and he uses it only on your order (wandorder.ts); else false, and no row. */
   wand: boolean;
   /** you: sticky cameras for the rifle's launcher (stickycam.ts — each one sent to a wall is one more eye on the fog of war). None as issued; none without the rifle. Teammates carry none: 0, and no row. */
   cams: number;
@@ -213,7 +213,7 @@ const SLOT_AMOUNT: Record<string, (m: MemberKit) => number> = {
   shield: m => (shieldOf(m) ? 1 : 0), shotgun: m => (bigOn ? (m.big === 'shotgun' ? 1 : 0) : m.weapon === 'shotgun' && !shieldOf(m) ? 1 : 0),   // (BIGSLOT: the shotgun is what is in the big slot, never the gun)
   hammer: m => (bigOn && m.big === 'hammer' ? 1 : 0),
   cams: m => (m.cams && STICKY.on ? m.cams : 0),   // (sticky cameras, yours alone: nothing while their switch is off — and an issued card carries none, so this table is never asked the switch as the module loads)
-  wand: m => (m.wand && WAND.on ? 1 : 0),   // (the optical wand, yours alone: nothing while its switch is off — and an issued card, which carries none, never asks the switch: this table is read as the module loads)
+  wand: m => (m.wand && WAND.on ? 1 : 0),   // (the optical wand, yours or a teammate's: nothing while its switch is off; a teammate's card carries one only where its row is — kitLoad never reads one onto it otherwise — and an issued card, which carries none, never asks the switch: this table is read as the module loads)
 };
 /** … and how a card is put to `n` of one (`d` = what he is issued: a shotgun given up is the issued gun again) */
 const SLOT_PUT: Record<string, (m: MemberKit, n: number, d: MemberKit) => void> = {
@@ -225,7 +225,7 @@ const SLOT_PUT: Record<string, (m: MemberKit, n: number, d: MemberKit) => void> 
 const SLOT_WORD: Record<string, string> = { smoke: 'smoke canister', bangs: 'stun canister', frags: 'frag', shells: 'launcher grenade', charges: 'door charge', walls: 'wall charge', shield: 'shield', shotgun: 'shotgun', wand: 'optical wand', cams: 'sticky camera', hammer: 'hammer' };
 /** the most of each a card's row can hold whatever a table says — [you, a teammate]; 0 = no such row on his card. A table's most-a-man is never read above
  *  these (kitPlayer and the rows would not deliver it). */
-const OWN_MAX: Record<string, [number, number]> = { smoke: [SMOKE_MAX, SMOKE_MATE_MAX], bangs: [STUN_MAX, BANGS_MAX], frags: [FRAGS_MAX, FRAGS_MAX - 1], shells: [SHELLS_MAX, 0], charges: [CHARGES_MAX, CHARGES_MAX], walls: [WALLS_MAX, WALLS_MAX], shield: [0, 1], shotgun: [1, 1], wand: [1, 0], cams: [CAMS_MAX, 0], hammer: [1, 1] };
+const OWN_MAX: Record<string, [number, number]> = { smoke: [SMOKE_MAX, SMOKE_MATE_MAX], bangs: [STUN_MAX, BANGS_MAX], frags: [FRAGS_MAX, FRAGS_MAX - 1], shells: [SHELLS_MAX, 0], charges: [CHARGES_MAX, CHARGES_MAX], walls: [WALLS_MAX, WALLS_MAX], shield: [0, 1], shotgun: [1, 1], wand: [1, 1], cams: [CAMS_MAX, 0], hammer: [1, 1] };
 /** what an over-budget kit gives up first (kitFitAll) */
 const TRIM = ['shells', 'smoke', 'frags', 'charges', 'bangs', 'cams', 'wand', 'walls', 'shield', 'shotgun', 'hammer'];
 /** … and of the big things on a card over its big slot: what the card does NOT show goes first (bigOf: a shield before a wall charge before the rest) */
@@ -402,8 +402,8 @@ const wallRow = (i: number) => SLOTS.on && wallHere() && (i > 0 || OWNCHARGE.on)
 /** door charges have a row on member i's card: a teammate's always; YOURS with your own charges switched on (owncharge.ts) and, under the pouches rule, a
  *  table that lets you carry one */
 const chargeRow = (i: number) => i > 0 || (OWNCHARGE.on && slotMax('charges', 0, CHARGES_MAX) > 0);
-/** the optical wand has a row on YOUR card: its switch on (wand.ts) and, under the pouches rule, a table that prices it and lets you carry one */
-const wandRow = () => WAND.on && (!SLOTS.on || (SLOTS.table.items.wand?.max[0] ?? 0) > 0);
+/** the optical wand has a row on a card: its switch on (wand.ts) — for a teammate's card `WAND.mate` too — and, under the pouches rule, a table that prices it and lets that man carry one */
+const wandRow = (i = 0) => WAND.on && (i === 0 || WAND.mate) && (!SLOTS.on || (SLOTS.table.items.wand?.max[i] ?? 0) > 0);   // (a teammate's: only under WAND.mate — he looks on your order alone, wandorder.ts)
 /** the sticky cameras have a row on YOUR card: their switch on (stickycam.ts) and, under the pouches rule, a table that prices them and lets you carry one */
 const camRow = () => STICKY.on && (!SLOTS.on || (SLOTS.table.items.cams?.max[0] ?? 0) > 0);
 /** Five cards brought inside the rule for a squad of `n` teammates (all four: legal at any size), in place: a row over its most comes down to it; a man
@@ -579,6 +579,8 @@ function buildRows(i: number): KitRow[] {
     ...(slotMax('smoke', i, SMOKE_MATE_MAX) > 0 ? [{ field: 'smoke', item: 'smoke', label: 'Smoke canisters', values: upTo(slotMax('smoke', i, SMOKE_MATE_MAX)), word: v => String(v), note: m => m.smoke ? `added to the squad's smoke: X on a spot of floor, then ${SQUADSMOKE.orderKey.replace(/^Key/, '')} — the nearest man with a throw tosses one there` : 'none: the squad has no smoke to throw on order' } as KitRow] : []),   // (no row on a table that gives a teammate none)
     ...chargeRows(i),
     { field: 'frags', item: 'frags', label: 'Frag grenades', values: upTo(slotMax('frags', i, FRAGS_MAX - 1)) /* (a teammate: one fewer than you may carry) */, word: v => String(v), note: () => 'added to the squad count: frag and clear, on the door tools' },
+    ...(wandRow(i) ? [{ field: 'wand', item: 'wand', label: 'Optical wand', values: [false, true], word: yesNo('carried', 'none'),
+      note: (m: MemberKit) => m.wand ? `X on a shut door, then ${WAND.orderKey.replace(/^Key/, '')}: he looks under it` : 'none in his pouches' } as KitRow] : []),   // (wandorder.ts: used on your order, never by himself)
     ...(!shieldIn() ? [] : [{ field: 'shield', item: 'shield', label: 'Shield', values: [false, true], word: yesNo('ballistic shield', 'none'), note: m => m.shield ? 'stops rounds from his front; pistol in the other hand; he leads the stack and goes in first' : 'no shield: his weapon in both hands' } as KitRow]),   // (shield.ts SHIELD.on: out of the page — no row)
     suitRow, trimRow,
   ];
@@ -598,7 +600,7 @@ function buildRowsBig(i: number): KitRow[] {
 /** (built once per member, per way the rule stands, per table: a counted row's values are the table's `max`) */
 const rowCache = new Map<string, KitRow[]>();
 /** the rows of member i's card, top to bottom */
-export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${shieldIn()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
+export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${shieldIn()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
 /** What a row costs member i's pouches as his card stands, and its rate in plain words ('a pouch each', 'the shield takes 2 pouches') — null for a row
  *  that is not a pouch (a light, a colour; a shield or a shotgun while the table prices it at nothing), and for every row while the rule is off. */
 export function kitRowCost(i: number, r: KitRow, m: MemberKit = KIT.members[i]): { pouches: number; rate: string } | null {
@@ -773,9 +775,10 @@ export function kitLoad(s: Store | null, search = '') {
   const q = new URLSearchParams(search);
   store = s; KIT.on = !q.has('nokit'); SLOTS.on = SLOTS.ok && !q.has('noslots'); team = KIT_MEMBERS - 1;
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; }
-  kept0 = null;
+  kept0 = null; keptWand = [];
   try { const raw = s?.getItem(KIT_LS); if (raw) { const j = JSON.parse(raw) as { members?: unknown[] }; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = kitSanitize(i, j.members?.[i]);
       kept0 = keptOf(j.members?.[0]);
+      keptWand = (j.members ?? []).map((r, i) => i > 0 && !!r && typeof r === 'object' && (r as { wand?: unknown }).wand === true);
       { const m = KIT.members[0], other: Record<typeof COUNTS0[number], number> = ruleOn ? BUILT : ISSUED[0], now = issuedCard(0); if (COUNTS0.every(k => m[k] === other[k])) for (const k of COUNTS0) m[k] = now[k]; }   // (as issued the other way the rule stands = as issued)
       if (SLOTS.on) kitFitAll(KIT.members).forEach((left, i) => { if (left.length) KIT_NOTE[i] = i === 0 && KIT.members[0].weapon !== 'rifle' && left.length === 1 && left[0].includes(SLOT_WORD.shells) ? `No FN2000 in your saved kit: ${left[0]} left behind.` : `Your saved kit was over the ${bigOn && !/canister|frag|grenade|door charge|camera|wand/.test(left.join()) ? 'big slot' : 'pouches'}: ${left.join(', ')} left behind.`; }); } }
   catch { /* an unreadable store: as issued */ }
@@ -825,11 +828,14 @@ function keptOf(raw: unknown): typeof kept0 {
   if (int(R.charges, 1) && R.charges <= CHARGES_MAX) k.charges = R.charges; if (int(R.walls, 1) && R.walls <= WALLS_MAX) k.walls = R.walls;
   return k.charges || k.walls ? k : null;
 }
+/** A TEAMMATE'S WAND ON A VISIT WITH ITS ROW OFF (?nowandmate, ?nowand): the stored card's wand is not read onto his card (no row: no pouch, no words, nothing
+ *  drawn on him, no order), and is kept here so the next change of any row does not write the store without it. Where the row is on, the card is the truth. */
+let keptWand: boolean[] = [];
 function keptNow(): { charges?: number; walls?: number } { const k: { charges?: number; walls?: number } = {}; if (kept0?.charges && !chargeRow(0)) k.charges = kept0.charges; if (kept0?.walls && !wallRow(0)) k.walls = kept0.walls; return k; }
 /** (your card also carries `cans` — the split of six its two counts are, where they are one — for a build from before the pouches rule reading this store) */
-export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, members: KIT.members.map((m, i) => (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : m)) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
+export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, members: KIT.members.map((m, i) => (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : wandRow(i) ? (keptWand[i] = m.wand, m) : keptWand[i] ? { ...m, wand: true } : m)) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
 /** every card back as issued (and the store's copy) */
-export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; kitSave(); }
+export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; kitSave(); }
 // slots.json, checked once as this module loads (after the issued table above, which the check reads; nothing of another game module is touched)
 { const c = slotsCheck(slotsData); if ('table' in c) SLOTS.table = c.table; else { SLOTS.ok = SLOTS.on = false; SLOTS.why = c.why; console.error(`kit: slots.json refused — ${c.why}. The pouches rule is off: every row is free.`); } }
 
