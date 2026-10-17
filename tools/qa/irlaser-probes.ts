@@ -154,7 +154,10 @@ export const irDraw = guarded(async () => {
     const S = await settled(id); const { g, step } = S; const team = mates(g); g.player.nv = true; step(30);
     let up = 0, upShown = 0, lowered = 0, loweredShown = 0, bad = 0, frames = 0;
     const O = g.orders; for (const e of doorsOf(S)) if (!(await quiet(() => O.give('stack', O.targetAt(e.door.frameCentre), 'all')))) break;
-    const watch = (count: boolean) => { let shownAny = 0; for (const x of team) { if (x.state === 'dead') continue; const reach = CBM.laserReach(g, x.char, x, true), own = !!reach && !!reach.on && IRM.paintsOwn(g, x, reach.on), on = IRM.laserOn(g, x) && !own, shown = g.dynBoxes.some((b: any) => isIr(b) && onBore(x.char, b) && !onBore(g.player.char, b));
+    // (Sam's own line is told from a man's by BEING Sam's — the boxes irlaser.ts draws for him this frame — not by lying near Sam's bore: a teammate's 0.6 m
+    //  line onto a wall beside him had both its boxes within 5 cm of Sam's bore for one frame of a walk, and read as not shown with the line there)
+    const watch = (count: boolean) => { let shownAny = 0; const samB: any[] = []; IRM.samLaserBoxes(g, samB); const sams = (b: any) => samB.some((q: any) => q.c[0] === b.c[0] && q.c[1] === b.c[1] && q.c[2] === b.c[2]);
+      for (const x of team) { if (x.state === 'dead') continue; const reach = CBM.laserReach(g, x.char, x, true), own = !!reach && !!reach.on && IRM.paintsOwn(g, x, reach.on), on = IRM.laserOn(g, x) && !own, shown = g.dynBoxes.some((b: any) => isIr(b) && onBore(x.char, b) && !sams(b));
         if (shown) shownAny++; if (!count) continue;
         if (on) { up++; if (shown) upShown++; else if (reach) bad++; } else { lowered++; if (shown) { loweredShown++; bad++; } } } return shownAny; };
     for (let f = 0; f < 60 * 12; f++) { step(); frames++; watch(true); }
