@@ -65,7 +65,10 @@ import { Demo } from './game/demo';
 import { REACH_PACE } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
-import { Bench, benchView, machineFacts } from './ui/bench';
+import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
+import { benchBegin, benchLegOfPage, BENCH_RUN_KEY } from './ui/benchrun';
+import { BENCH_SCENES } from './host/benchScenes';
+import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
@@ -154,6 +157,9 @@ async function main() {
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
   // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
   { const to = PICKS_UI.on ? pickRedirect(location.search) : null; if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
+  // `?bench` (ui/benchrun.ts): the benchmark asked for on the address — the way in for a machine nobody here can sit at. Its first scene is a mission's own page, so the
+  // page goes there BEFORE anything boots: that scene's load is then this machine's first, and it is the one the report times. Never in ?kitview's own window.
+  if (q.has('bench') && !q.has(BENCH_RUN_KEY) && !kitViewOn) { const no = benchBegin(false); if (no === null) return; console.info(`benchmark: ${no}`); }
   // `?playtape=<shelf id | file>` (replay/engineplay.ts): a saved replay played on THIS page — the real renderer and mixer — off its run tape. The page is first sent to
   // the tape's own query (so this boot is the recording's boot); `tape` then lays the tape's knob tables and kit over this machine's at each point below. Absent = nothing.
   const tapePlay = q.has(PLAYTAPE) ? await tapeFromUrl(q) : null; if (tapePlay === 'moved') return;
@@ -499,22 +505,42 @@ async function main() {
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
   window.addEventListener('keydown', e => { if (e.code === 'F8' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '')) { e.preventDefault(); perfsweep.toggle(e.shiftKey); } });
-  // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address — the way in for a machine nobody here can sit at): hands off, the opening picture timed,
-  // the day showcase played live as the scene, its smoke held still and timed under each preset and each sweep row, then a short text to copy (the GPU by name, the boot's
-  // timings, a line per window) and the take's json in the downloads. Nothing is sent anywhere. ?bench=N = N seconds a window. Unasked, nothing of it runs
+  // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address): hands off, a page per scene of host/benchScenes.ts (ui/benchrun.ts carries the run
+  // from page to page), each a real mission played through the game's own keys by host/handsoff.ts. The first page's opening picture is timed, every scene live, and the
+  // last one's fight is held still and timed under each preset and each sweep row; then a short text to copy (the GPU by name, the boot's timings, a line per window and
+  // per scene) and the take's json in the downloads. Nothing is sent anywhere. ?bench=N = N seconds a window. Unasked, nothing of it runs
+  const benchPage = !kitViewOn && !tape ? benchLegOfPage() : null;   // (this page is a scene's page of a run under way: its part of it — else null, a plain page)
+  // the hands-off player of this page's scene: its keys go on the input before each game tick (the loop's beforeTick), Sam cannot go down while it plays (as the scene says)
+  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
+  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; } };
+  const handsTick = (dt: number) => { const H = hands; if (!H || !handsHeld) return;
+    for (const e of game.events as readonly { kind: string; loud?: boolean }[]) if (((e.kind === 'shot' && e.loud !== false) || e.kind === 'guardShot') && !shotsSeen.has(e)) { shotsSeen.add(e); shotAt = H.t; }
+    H.tick(dt); };
+  const benchScene: BenchScene | null = benchPage ? {
+    start: () => { if (!game.roomClear.active) return 'the mission did not start'; const S = benchPage.scene;
+      handsGod = game.godMode; handsHeld = true; game.godMode = S.god; shotAt = -9;
+      hands = new HandsOff(game, input, cam, canvas, { ...S.plan, seed: S.seed, cap: benchPage.cap }); return null; },
+    active: () => !!hands && !hands.end, stop: () => handsOff(),
+    heavy: () => !!hands && hands.t >= 12 && hands.t - shotAt < 0.4,   // (rounds in the air, a dozen seconds in: the stack is through its first door by then)
+    said: () => { const H = hands; if (!H) return ''; const sq = game.orders.squad(), up = sq.filter(m => (m as { state: string }).state !== 'dead').length;
+      return `${H.end === 'taken' ? 'taken in' : H.end === 'sam' ? 'Sam down at' : 'fighting at'} ${Math.round(H.t)} s, ${up} of ${sq.length} up`; },
+  } : null;
   let benchAway = false; document.addEventListener('visibilitychange', () => { if (document.hidden) benchAway = true; });
+  const benchBlocked = () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : demo.active || game.director.showing ? 'the tour is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null;
   const bench: Bench = new Bench(engine, quality, perfrec, { boot: () => boot.summary(), machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
-    blocked: () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : demo.active || game.director.showing ? 'a show is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null,
+    blocked: () => benchBlocked(),
     covered: () => missionsBusy() || optionsOpen() ? 'a screen came up over it' : null,
-    scene: null,
+    scene: benchScene,
     away: () => { const a = benchAway; benchAway = false; return a; },
     sweep: { start: o => perfsweep.start(o), active: () => perfsweep.active, flipped: () => perfsweep.flipped, progress: () => perfsweep.progress, stop: why => perfsweep.stop(why), settled: () => perfsweep.settled } });
-  (window as any).__bench = bench;
+  (window as any).__bench = Object.defineProperties(bench, { hands: { get: () => hands }, scenes: { value: BENCH_SCENES }, begin: { value: (o?: Parameters<typeof benchBegin>[2]) => benchBegin(true, location, o) } });   // (+ for the checks: the scene's hands-off player, the set, a run begun with options of the caller's)
   const benchOpts = (b: string | null) => { const secs = parseFloat(b ?? ''); return isFinite(secs) && secs > 0 ? { measureMs: Math.min(60, secs) * 1000, settleMs: Math.min(2000, Math.max(300, secs * 500)) } : {}; };
   benchOn = () => bench.active;   // (no attract reel under a measurement, and the page's Esc and hotkeys stand down)
-  startBench = () => { attract.poke(); const said = bench.start(benchOpts(new URLSearchParams(location.search).get('bench'))); if (!bench.active) { perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } };   // (a refusal is said, on the HUD's line and the console)
-  // ?bench: once, and off the address as it starts (a reload, a mission picked from the title or a show's link would carry it along and start another). Never in ?kitview's own window
-  if (!kitViewOn && new URLSearchParams(location.search).has('bench')) { startBench(); try { const keep = location.search.slice(1).split('&').filter(p => p && !/^bench(=|$)/.test(p)); history.replaceState(history.state, '', location.pathname + (keep.length ? '?' + keep.join('&') : '') + location.hash); } catch { /* the address stays */ } }
+  // the row: a run begins as a page load of its first scene (this page has booted the game: that load is a second one, and the report says so). A refusal is said, on the HUD's line and the console
+  startBench = () => { attract.poke(); const no = bench.active ? 'it is running' : perfrec.recording ? 'a recording is running' : benchBlocked() ?? benchBegin(true); if (no) { perfNote = `benchmark not now: ${no}`; perfNoteT = 6; console.info(perfNote); } };
+  // a scene's page of a run under way: its part starts by itself (the wait for the page to settle, then the scene)
+  if (benchPage) { const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1000, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
+    if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file downloads (+ the shot server's /session sink)
@@ -556,7 +582,7 @@ async function main() {
       perfrec.cpuFrameStart = performance.now();
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      perfrec.frame(rawDt, fpsSm); perfsweep.tick(); bench.tick(rawDt); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -616,6 +642,7 @@ async function main() {
     fixedStep: () => !scripted,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that)
     betweenTicks: () => { hudExpireBubbles(game); engine.world.upload(true); },
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
+    beforeTick: dt => handsTick(dt),
     frozen: () => ((menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
     present: () => !scripted || (lastOfBurstNow && !document.hidden),
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)

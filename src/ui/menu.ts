@@ -123,7 +123,7 @@ export const EXTRAS: { head: string; rows: { id: string; label: string; line: st
     { id: 'chars', label: 'Characters and effects', line: 'The cast, the kit in their hands, muzzle flash, smoke and tracers on a studio stage.', href: 'workbench.html#mode=chars' },
     { id: 'replay', label: 'Replays', line: 'The last minutes of a run as a map you can scrub. F7 keeps one while you play.', href: 'replay.html' },
     { id: 'sounds', label: 'Sounds', line: 'Every sound of the game on one page.', href: 'sounds.html' },
-    { id: 'bench', label: 'Benchmark', line: 'The day showcase, then each quality level and each heavy feature timed on this machine. Hands off, a few minutes; the numbers come as a text to copy and a file.', href: '?bench' },
+    { id: 'bench', label: 'Benchmark', line: 'Three floors played hands off, then each quality level timed on this machine. A text to copy and a file.', href: '?bench' },
     { id: 'dump', label: 'Hand over replays', line: DUMP_LINE, href: 'replay.html#kept' } ] },
 ];
 /** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
@@ -170,7 +170,7 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
 }
 
 export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio: AudioEngine; overlay: Overlay; stopTour?: () => void; onStart: () => void; focusGame?: () => void;
-  /** the benchmark (ui/bench.ts): Extras ▸ Benchmark on the live title starts it in place */
+  /** the benchmark (ui/bench.ts): Extras ▸ Benchmark on the live title begins it (a page load of its first scene: ui/benchrun.ts) */
   startBench?: () => void;
   /** checkpoints (game/savestate.ts): load the stored slot `key` into the game — main.ts stops any show first and snaps the camera after; returns why not, or null */
   loadCheckpoint?: (key: string) => string | null;

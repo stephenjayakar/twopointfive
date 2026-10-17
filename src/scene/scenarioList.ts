@@ -206,7 +206,7 @@ export function quitSearch(search: string): string {
   const q = new URLSearchParams(search); for (const k of SCENARIO_KEYS) q.delete(k);
   q.delete('way');   // (the way in is ONE mission's pick — ui/missions.ts waySearch puts it on that row's link alone; it names no scenario, so it is not a SCENARIO_KEY)
   if (q.get('quietfog') !== '0') q.delete('quietfog');   // (a rung of the fog lever is a QUIET mission's pick — game/quietfog.ts puts it on a quiet row's link alone; `quietfog=0`, the rule's own off switch, is the visitor's flag and stays)
-  q.delete('bench');   // (the benchmark's word, ui/bench.ts: one run on the page it was asked on, never carried onto a mission's or a show's link)
+  for (const k of ['bench', 'benchcap', 'benchrun']) q.delete(k);   // (the benchmark's words, ui/bench.ts and ui/benchrun.ts: one run on the page it was asked on, never carried onto a mission's link)
   q.delete('cams');   // (… and the sticky cameras handed with it: the button beside the lever, on a quiet row's link alone)
   return bare(q);
 }

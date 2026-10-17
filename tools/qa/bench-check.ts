@@ -1,7 +1,8 @@
 // The benchmark's own stepping held to a fake page (src/ui/bench.ts): nothing while unasked; the opening picture, the scene live, its heavy moment held still under
-// each preset, the sweep inside the same take, the scene's tail; everything put back at the end and when stopped; a slow machine cut short; the text of the report.
+// each preset, the sweep inside the same take, the scene's tail; everything put back at the end and when stopped; a slow machine cut short; the text of the report;
+// a run over a set of scenes, one page each (the lines handed from page to page: src/ui/benchrun.ts on a fake tab), and the scenes' own table.
 // No browser, no GPU.   bun run tools/qa/bench-check.ts   (exit 0 = all pass; BENCH_BREAK=1 leaves a preset on at the end and must fail)
-import { Bench, benchReport, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep } from '../../src/ui/bench';
+import { Bench, benchReport, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
 import { AUTO_LADDER } from '../../src/ui/quality';
 import { readFileSync } from 'node:fs';
 const BREAK = (globalThis as any).process?.env?.BENCH_BREAK === '1';
@@ -23,13 +24,13 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const smoke = { params: { rbIters: 8 } };
   let sceneT = -1, sceneStops = 0; const LEN = o.scene === 'short' ? 3000 : 20000;
   const scene: BenchScene | null = o.scene === 'none' ? { start: () => 'units are on the floor', active: () => false, stop() {}, heavy: () => false }
-    : { start: () => { sceneT = 0; return null; }, active: () => sceneT >= 0 && sceneT < LEN, stop() { sceneStops++; sceneT = -1; }, heavy: () => o.scene !== 'calm' && sceneT >= 5000 };
+    : { start: () => { sceneT = 0; return null; }, active: () => sceneT >= 0 && sceneT < LEN, stop() { sceneStops++; sceneT = -1; }, heavy: () => o.scene !== 'calm' && sceneT >= 5000, said: () => `over at ${Math.round(Math.min(Math.max(sceneT, 0), LEN) / 1000)} s` };
   const SEQ = ['base', 'reflect', 'base', 'sharp', 'base']; let sw = -1, swFrames = 0, swStops = 0, swOpts: any = null;
   const sweep: BenchSweep = { start(op) { swOpts = op; sw = 0; swFrames = 0; return 'sweeping'; }, active: () => sw >= 0, flipped: () => sw >= 0 ? SEQ[sw] : '', ...(o.settled ? { settled: () => sw >= 0 && swFrames >= 6 } : {}), progress: () => sw >= 0 ? `${sw + 1}/${SEQ.length}` : 'done', stop() { swStops++; sw = -1; } };
-  const shown: string[] = []; let veil: string | null = null;
+  const shown: string[] = []; let veil: string | null = null, closeCard: (() => void) | null = null;
   const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' } };
   let hidden = false, live = 0;
-  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, _close, sv) => { shown.push(r); saved.push(sv !== false); } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}),
+  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, close, sv) => { shown.push(r); saved.push(sv !== false); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}),
     boot: () => ({ marks: { interactive: 12400 }, spans: { beforeScript: 300, pipelines: 9100, firstFrameCpu: 400, firstFrameGpu: 1700 }, pipelines: { total: 212, done: 212, failed: 0 }, longTasks: [], maxLongTask: 5100, maxRafGap: 6200, rafGapAt: 0, userAgent: 'x' }),
     machine: () => ({ now: { webgpu: 'fake metal-3', webgl: 'ANGLE (Fake, ANGLE Metal Renderer: Fake M9 Pro, Unspecified Version)', browser: 'Chrome 154', os: 'macOS 15.1.0 arm', userAgent: 'x', dpr: 2, threads: 10, memoryGb: 8, screen: [1728, 1117], view: [1512, 860], ...(o.hz ? {} : { hz: 120 }), power: 'on battery (67 %)' }, more: Promise.resolve() }) });
   const states: string[] = [], frozenIn = new Set<string>(), liveIn = new Set<string>();
@@ -47,7 +48,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
     if (states[states.length - 1] !== bench.state) states.push(bench.state);
   };
   const run = (cap = 200000) => { for (let i = 0; i < cap && bench.active; i++) frame(); };
-  return { cover(why: string | null) { covered = why; }, saved, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
+  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, saved, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
 }
 const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current, p.Q.auto, p.Q.climbed, [...p.Q.failed], [...p.Q.failCount], p.smoke.params.rbIters]);
 
@@ -187,10 +188,66 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const still = w.bench.state; for (let i = 0; i < 10; i++) w.frame();
   check(still === 'waiting' && w.bench.state === 'opened', 'opened in a tab nobody looked at for a minute: the wait starts over when it is looked at');
 }
-{ // the page's wiring, read as text: the scene's heavy moment is a chapter of the day show whose title the page looks for
-  const script = readFileSync(new URL('../../levels/office.script.ts', import.meta.url), 'utf8'), main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8');
-  const loud = /const LOUD_CHAPTERS = \[(.*?)\];/.exec(script)?.[1] ?? '', titles = [...loud.matchAll(/title: '([^']*)'/g)].map(m => m[1]);
-  check(titles.filter(t => /smoke/.test(t)).length === 1 && /heavy: \(\) => \{ const c = breach\.chapters\(\); return \/smoke\/\.test\(/.test(main), `the day show has one chapter the page takes for its heavy moment: ${titles.filter(t => /smoke/.test(t)).join(', ') || 'none'}`);
+{ // A RUN OVER A SET OF SCENES, one page each: the first page times its opening picture and its scene and hands on; a middle page its scene; the last holds, sweeps and shows every line
+  const SET = 'test-set', defs = [{ id: 'a', name: 'floor a' }, { id: 'b', name: 'floor b' }, { id: 'c', name: 'floor c' }];
+  let carried: any = { steps: [], notes: [], scenes: [] }, overs = 0, closes = 0; const handed: any[] = [];
+  const legOf = (i: number): BenchLeg => ({ set: SET, scene: defs[i], index: i, of: 3, secs: 20, ...carried, onward: n => { handed.push(n); carried = JSON.parse(JSON.stringify(n)); }, over: () => { overs++; }, closed: () => { closes++; } });
+  const p0 = page({ scene: 'short' }); p0.bench.start({}, legOf(0)); p0.run();
+  check(p0.states.join(' ') === 'waiting opened scene idle' && p0.bench.last === 'next scene' && handed.length === 1 && handed[0].steps.map((s: any) => s.id).join(' ') === 'opened scene:a' && handed[0].steps[1].label === 'floor a', `the first page: its opening picture, its scene, handed on (${p0.states.join(' ')} · ${handed[0]?.steps.map((s: any) => s.id).join(' ')})`);
+  check(!p0.rec.recording && !p0.dumps && !p0.shown.length && p0.veil !== null && !overs && p0.applied.length === 0 && handed[0].scenes.length === 1 && handed[0].scenes[0].end === 'over at 3 s' && handed[0].boot?.toCard === 12400, 'handing on: no file, no card, the veil left up over the load, no preset touched; the scene\'s own word for its end and the first page\'s boot go along');
+  const p1 = page({ scene: 'short' }); p1.bench.start({}, legOf(1)); p1.run();
+  check(p1.states.join(' ') === 'waiting scene idle' && handed.length === 2 && handed[1].steps.map((s: any) => s.id).join(' ') === 'opened scene:a scene:b' && !p1.frozenIn.has('opened'), `a middle page: its scene alone, after the lines it was handed (${handed[1]?.steps.map((s: any) => s.id).join(' ')})`);
+  const p2 = page(), was = before(p2); p2.bench.start({}, legOf(2)); p2.run();
+  const R = p2.bench.result as BenchResult, ids = R.steps.map(s => s.id).join(' ');
+  check(p2.states.join(' ') === 'waiting scene held sweep tail idle' && p2.bench.last === 'done' && ids === 'opened scene:a scene:b scene:c held verylow low medium high', `the last page: its scene, the heavy moment held, the sweep, the tail; every line of the run (${ids})`);
+  check(R.set === SET && R.scenes?.map(x => x.id).join(' ') === 'a b c' && R.scenes!.every(x => typeof x.query === 'string') && R.boot?.toCard === 12400 && handed.length === 2 && overs === 1 && before(p2) === was && p2.dumps === 1, 'the result names the set and its scenes, the boot is the first page\'s, the run is over once, everything back, one file');
+  check(/scenes test-set/.test(p2.bench.report) && /^floors\s+a over at 3 s · b over at 3 s/m.test(p2.bench.report) && /floor a/.test(p2.bench.report) && /floor c/.test(p2.bench.report) && /the scene held still/.test(p2.bench.report) && p2.bench.report.split('\n').every(l => l.length <= 150), 'the text names the set and carries a line per scene');
+  console.log(p2.bench.report.split('\n').map(l => '    | ' + l).join('\n'));
+  // the percentage on the veil climbs across the pages, and a later page's scene is live from its first timed frame
+  { const q = page({ scene: 'short' }); carried = { steps: [], notes: [], scenes: [] }; const seen: number[] = []; q.bench.start({}, legOf(1)); for (let i = 0; i < 100000 && q.bench.active; i++) { q.frame(); const m = /(\d+) %/.exec(q.veil ?? ''); if (m) seen.push(+m[1]); }
+    check(seen.length > 0 && Math.min(...seen) >= 33 && Math.max(...seen) <= 67, `the veil's percentage on the second page of three stays in its own third (${Math.min(...seen)} to ${Math.max(...seen)})`); }
+  // stopped on a middle page: what the earlier pages measured is still shown, and nothing is carried further
+  { carried = JSON.parse(JSON.stringify(handed[0])); overs = 0; const n = handed.length; const q = page(); q.bench.start({}, legOf(1)); for (let i = 0; i < 100000 && q.bench.state !== 'scene'; i++) q.frame(); for (let i = 0; i < 30; i++) q.frame();
+    q.bench.stop('Esc');
+    check(!q.bench.active && overs === 1 && handed.length === n && q.shown.length === 1 && /floor a/.test(q.shown[0]) && /floor b/.test(q.shown[0]) && /stopped early \(Esc\)/.test(q.shown[0]) && q.sceneStops === 1, 'Esc on a middle page: the card shows the lines so far, the scene is ended, the run is over'); }
+  // stopped on the first page before anything was timed: no card to close, so the page is sent back by itself to where the run was started
+  { carried = { steps: [], notes: [], scenes: [] }; overs = 0; const c0 = closes; const q = page({ scene: 'short' }); q.bench.start({}, legOf(0)); q.frame(); q.frame();
+    q.bench.stop('Esc');
+    check(!q.bench.active && overs === 1 && closes === c0 + 1 && !q.shown.length && !q.dumps && !q.rec.recording, 'Esc on the first page before a window was timed: no card, no file, the run over, the page sent back'); }
+  // a scene that will not start on a middle page: said, and the run goes on
+  { carried = JSON.parse(JSON.stringify(handed[0])); const n = handed.length; const q = page({ scene: 'none' }); q.bench.start({}, legOf(1)); q.run();
+    check(handed.length === n + 1 && handed[n].notes.some((x: string) => /floor b was not played \(units are on the floor\)/.test(x)) && handed[n].steps.map((s: any) => s.id).join(' ') === 'opened scene:a', 'a scene that will not start: the report says so and the next page is loaded all the same'); }
+  // the card's Close on the last page is the page's to act on
+  { const view = (p2 as any).closeCard as (() => void) | undefined, c0 = closes; view?.(); check(closes === c0 + 1, 'the card\'s Close is handed to the page (which goes back to where the run was started)'); }
+}
+{ // THE PAGES OF A RUN (src/ui/benchrun.ts) on a fake tab: the record in the session store, the addresses, a reload in the middle
+  const store = new Map<string, string>(); (globalThis as any).sessionStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, removeItem: (k: string) => { store.delete(k); } };
+  const { benchBegin, benchLegOfPage, benchSceneSearch } = await import('../../src/ui/benchrun');
+  const { BENCH_SCENES, BENCH_SET } = await import('../../src/host/benchScenes');
+  const { SCENARIOS } = await import('../../src/scene/scenarioList');
+  const tab = (search: string) => { const L: any = { pathname: '/', search, hash: '', went: [] as string[], assign(u: string) { this.went.push(u); } }; return L; };
+  const searchOf = (u: string) => u.slice(u.indexOf('?'));
+  const t0 = tab('?levelFile=depot.json&roomclear&squad4&bench=2&benchcap=30&nomusic&difficulty=standard');
+  check(benchBegin(true, t0) === null && t0.went.length === 1 && t0.went[0] === '/' + benchSceneSearch(BENCH_SCENES[0], 0, ['nomusic']), `begun: the first scene's address is loaded, the visitor's own flag on it and none of another mission's (${t0.went[0]})`);
+  { const u = new URLSearchParams(searchOf(t0.went[0])), S = BENCH_SCENES[0], E = SCENARIOS.find(e => e.id === S.scn)!;
+    check(u.get('levelFile') === E.level && u.get('roomclear') === String(S.seed) && u.get('seed') === String(S.seed) && u.has('squad4') && u.get('difficulty') === (S.hard ? 'hard' : 'standard') && u.has('noverdict') && u.get('benchrun') === '0' && !u.has('bench'), 'the address pins the level, the deal, the die and the difficulty, keeps no verdict of the try, and does not carry ?bench'); }
+  const l0 = benchLegOfPage(tab(searchOf(t0.went[0])));
+  check(!!l0 && l0.scene.id === BENCH_SCENES[0].id && l0.secs === '2' && l0.cap === 30 && l0.leg.index === 0 && l0.leg.of === BENCH_SCENES.length && l0.leg.set === BENCH_SET && l0.leg.notes.some(n => /started from the title/.test(n)), 'the first scene\'s page finds its part: the seconds a window, the short cap, and the note that its load is a second one');
+  check(benchLegOfPage(tab(searchOf(t0.went[0]))) === null && store.size === 0, 'the same page loaded again in the middle is a plain mission page, and the record is dropped');
+  // a run through to the end
+  const t1 = tab('?quality=low'); benchBegin(false, t1);
+  let at = searchOf(t1.went[0]), steps = 0; const closedTo: string[] = [];
+  for (let i = 0; i < BENCH_SCENES.length; i++) { const pg = tab(at), l = benchLegOfPage(pg)!; steps += l ? 1 : 0;
+    if (i < BENCH_SCENES.length - 1) { l.leg.onward({ steps: [...l.leg.steps, { id: `scene:${l.scene.id}` } as any], notes: l.leg.notes, scenes: l.leg.scenes, boot: null, away: 0 }); at = searchOf(pg.went[0]); }
+    else { check(l.leg.steps.length === BENCH_SCENES.length - 1 && !l.leg.notes.some(n => /started from the title/.test(n)), 'the last page is handed every earlier line; a run begun from the address has no second-load note'); l.leg.over(); l.leg.closed!(); closedTo.push(pg.went[0]); } }
+  check(steps === BENCH_SCENES.length && store.size === 0 && closedTo[0] === '/?quality=low', `every scene got its page, the record is gone at the end, and Close goes back to where the run was started (${closedTo[0]})`);
+  check(benchLegOfPage(tab(at)) === null, 'a scene\'s address opened with no run under way is a plain mission page');
+  // the scenes themselves
+  const rows = BENCH_SCENES.map(S => SCENARIOS.find(e => e.id === S.scn));
+  check(BENCH_SCENES.length >= 2 && rows.every(e => !!e && e.kind === 'roomclear' && e.squad === 4 && !!e.level) && new Set(BENCH_SCENES.map(S => S.id)).size === BENCH_SCENES.length && BENCH_SCENES.every(S => S.name.length <= 21 && Number.isInteger(S.seed) && S.secs >= 60), `every scene is a four-man room clear of the mission list on its own level, with a name that fits its column: ${BENCH_SCENES.map(S => `${S.id} = ${S.scn} seed ${S.seed}`).join(' · ')}`);
+  // the page's wiring, read as text
+  const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
+  check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick\?\.\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
 }
 { // the recorder stopped by hand, and a run refused
   const p = page(), was = before(p);

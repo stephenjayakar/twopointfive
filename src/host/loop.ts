@@ -72,6 +72,8 @@ export interface LoopCtx {
   hotkeys?(frozen: boolean): void;
   /** right after the frozen decision (main.ts: the attract-stop still refresh) */
   afterFreeze?(frozen: boolean): void;
+  /** right before each game tick, with that tick's dt (main.ts: the benchmark's hands-off player puts this tick's keys and cursor on the input — host/handsoff.ts) */
+  beforeTick?(dt: number): void;
   /** right after game.update, with the level script's frame if a showcase has it (main.ts: the debrief card) */
   postUpdate?(dshow: DirectorFrame | null): void;
 }
@@ -134,7 +136,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       demoPos = frozen || !demo ? null : demo.update(dt);   // before the game step: the tour's scripted beats press keys / move the puppet's aim for THIS frame's update
       const showingBefore = !frozen && D.showing;   // a level-script showcase (the breach) has the frame: its drill, beats and camera run INSIDE the game step (director.tick) — attract stays out of it
       attractPos = demoPos || showingBefore || frozen || !attract ? null : attract.update(dt);   // attract mode's look-at when no scripted programme has the frame (it keys yaw / distance itself, as the tour does)
-      { const tU = performance.now(); if (!frozen) game.update(dt, input, cam, view); ctx.updateMs = performance.now() - tU; }
+      { const tU = performance.now(); if (!frozen) { ctx.beforeTick?.(dt); game.update(dt, input, cam, view); } ctx.updateMs = performance.now() - tU; }
     } else {   // THE FIXED STEP: whole ticks of 1 / hz, each the old order's demo → attract → game with the same dt, the lights aged with the game (its men read them)
       const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null };
       const plan = planTicks(fx.acc, ctx.vsyncDt?.() ?? dt, FIXEDSTEP, fx.drift); fx.acc = plan.acc; fx.drift = plan.drift; ctx.ticks = plan.ticks;   // (the display's own frame time where the host has it: steadier than a clock read in the callback)
@@ -145,6 +147,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         if (i) { input.endTick(); ctx.betweenTicks?.(); }   // a press, a click, the wheel: the first tick's alone; the host packs the world the last tick left (what a draw would have done)
         fx.demoPos = demo ? demo.update(tdt) : null;
         fx.attractPos = fx.demoPos || D.showing || !attract ? null : attract.update(tdt);
+        ctx.beforeTick?.(tdt);
         game.update(tdt, input, cam, view);
         ctx.host.lights.update(tdt, ctx.time);
       }
