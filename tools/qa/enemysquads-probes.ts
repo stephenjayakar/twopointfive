@@ -73,7 +73,9 @@ export async function enemysquadsStage(): Promise<boolean> {
   } finally { R.done(); }
   const Off = await rig('block-squads.json', 1, false);
   try { F.verdict(!squadsLive(Off.g) && !squadsReport(Off.g).length && !Off.g.nightBreach.hostiles.some((h: any) => squadOwns(Off.g, h)), 'SQUADS.on off: the same eleven men, no squads — one pool', `live ${squadsLive(Off.g)} · ${Off.g.nightBreach.hostiles.length} defenders`); } finally { Off.done(); }
-  const B = await rig('records.json', 1);   // (the block carried no squads until its rebuild dealt its eight men into four; records is a room clear whose file declares none)
+  // (squaddeal.ts, a later rule, cuts a level with no squads block into squads of its rooms: held off for this stand-up by the stand's own word — squaddeal-check.ts holds that rule)
+  const sd0 = process.env.TPS_SQUADDEAL; process.env.TPS_SQUADDEAL = '0';
+  const B = await rig('records.json', 1).finally(() => { if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; });   // (the block carried no squads until its rebuild dealt its eight men into four; records is a room clear whose file declares none)
   try { F.verdict(!B.why && B.g.nightBreach.hostiles.length > 0 && !squadsLive(B.g) && !B.g.nightBreach.hostiles.some((h: any) => squadOwns(B.g, h) || squadStaysIn(B.g, h)), 'a level with no squads block (records): its defenders stand, none staged, the seams answer no', `start ${B.why ?? 'ok'} · live ${squadsLive(B.g)} · ${B.g.nightBreach.hostiles.length} defenders`); } finally { B.done(); }
   return F.done();
 }

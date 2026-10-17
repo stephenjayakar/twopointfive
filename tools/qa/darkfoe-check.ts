@@ -44,7 +44,9 @@ export async function darkfoeCheck(): Promise<boolean> {
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log('\n=== darkfoe: an enemy on alert does not sit blind in the dark ===');
   const levelOf = (file: string) => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')));
-  const stand = async (seed: number, file = 'mousehole.json', deal = 1) => { Math.random = seeded(seed); const W: any = await quiet(() => standUp({ uploadEvery: 4, level: levelOf(file) })); const g = W.game;
+  // (`dealt`: squaddeal.ts held off or on for this floor through the stand's own word, set before the room clear starts; left out = as the stand has it)
+  const stand = async (seed: number, file = 'mousehole.json', deal = 1, dealt?: boolean) => { Math.random = seeded(seed); const sd0 = process.env.TPS_SQUADDEAL; if (dealt !== undefined) process.env.TPS_SQUADDEAL = dealt ? '1' : '0';
+    const W: any = await quiet(() => standUp({ uploadEvery: 4, level: levelOf(file) })).finally(() => { if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const g = W.game;
     g.playerInvisible = true; g.godMode = true;
     const why = await quiet(async () => g.roomClear.start(deal)); if (why) throw new Error(`the room clear did not start on ${file}: ${why}`);
     await quiet(async () => { for (let i = 0; i < 90; i++) W.step(DT); }); return W; };
@@ -126,7 +128,9 @@ export async function darkfoeCheck(): Promise<boolean> {
 
     // (d) nobody carries a light, real gunfire
     { type Row = { who: string; lvl: string; kept: string | null; state: string; sees: boolean; toSees: boolean; inRoom: boolean };
-      const runD = async (file: string, deal: number, mode: 'room' | 'roam' | 'off', set = false) => { const W = await stand(34, file, deal), g = W.game; Object.assign(DARKFOE, was, { on: true, carry: 0, seek: mode !== 'off', roam: mode === 'roam' }); darkFoeRestore(g, null);
+      // (the walker runs hold squaddeal.ts OFF themselves: on a floor whose men it deals into squads the garrison digs in, and a dug-in man is dig-in's, not
+      // this rule's — the walk is for a man nobody else has, and these floors were picked as ones with such men. `dealt` true = the floor as the page deals it)
+      const runD = async (file: string, deal: number, mode: 'room' | 'roam' | 'off', set = false, dealt = false) => { const W = await stand(34, file, deal, dealt), g = W.game; Object.assign(DARKFOE, was, { on: true, carry: 0, seek: mode !== 'off', roam: mode === 'roam' }); darkFoeRestore(g, null);
         const men = foes(g); await shots(W);
         let lit: any = null;   // the man the check's lamp was set for
         if (set) { const nav = g.col.nav, cs = nav.cell; await step(W, 60 * 7);   // (the shots have died away: nobody is 'in a fight')
@@ -153,7 +157,7 @@ export async function darkfoeCheck(): Promise<boolean> {
               rows.push({ who: gd.callsign, lvl: file, kept: P.kept === 'in a fight' && calm ? null : P.kept, state: P.state, sees: ownSees(g, p0), toSees: ownSees(g, S.to), inRoom: !D?.room || D.room.cells.has(nav.idx(Math.floor(S.to[0] / nav.cell), Math.floor(S.to[2] / nav.cell))) }); } } }
         const there = [...sent].filter(gd => gd.state !== 'dead' && flat(gd.char.pos, darkFoeOf(gd)!.to) < 1.2), theirs = there.filter(gd => { const D = g.fight.defs.find((d: any) => d.gd === gd); return D?.mode === 'hold' && gd.hold && gd.pinned && gd.state === 'alert'; });
         const dug = men.filter(gd => gd.state !== 'dead' && darkFoeOf(gd)?.blind && darkFoeKept(g, gd) === 'dug in');
-        return { file, lit, litSent: !!lit && sent.has(lit), rows, sent: sent.size, lamps, fast, top, cap, there: there.length, theirs: theirs.length, over: men.filter(gd => (darkFoeOf(gd)?.moves ?? 0) > DARKFOE.moves).length, alerts: g.mission?.stats?.alerts ?? -1, dug, dugSent: dug.filter(gd => sent.has(gd)).length }; };
+        return { file, lit, litSent: !!lit && sent.has(lit), rows, sent: sent.size, lamps, fast, top, cap, there: there.length, theirs: theirs.length, over: men.filter(gd => (darkFoeOf(gd)?.moves ?? 0) > DARKFOE.moves).length, kept: men.filter(gd => gd.state !== 'dead').map(gd => darkFoeKept(g, gd)), alerts: g.mission?.stats?.alerts ?? -1, dug, dugSent: dug.filter(gd => sent.has(gd)).length }; };
       let own: any = null; for (const [f, d] of [['killhouse.json', 1], ['hall.json', 1], ['depot.json', 1]] as [string, number][]) { own = await runD(f, d, 'room', true); if (own.lit) break; }
       const off = await runD(own.file, 1, 'off', true), room = await runD('depot.json', 1, 'room'), roam = await runD('depot.json', 1, 'roam'), mouse = await runD('mousehole.json', 1, 'room');
       const all = [own, room, mouse], rows = all.flatMap(r => r.rows), sum = (rs: any[], k: string) => rs.reduce((a, r) => a + r[k], 0), lvl = (f: string) => f.replace('.json', '');
@@ -164,6 +168,8 @@ export async function darkfoeCheck(): Promise<boolean> {
       line(own.there >= 1 && own.theirs === own.there && own.fast === 0, 'the walk is at the stumbling pace and ends as the room fight\'s man again: holding where he got to, pinned, alert as he was',
         `got there ${own.there} of ${own.sent} · holding, pinned, alert ${own.theirs} · top pace ${own.top.toFixed(2)} m/s against ${own.cap.toFixed(2)} · frames over it ${own.fast}`);
       line(mouse.dug.length >= 1 && mouse.dugSent === 0, 'on Mousehole (stay-home squads) a blind man dig-in has is never sent', `blind and dug in at the end: ${mouse.dug.map((gd: any) => gd.callsign).join(', ') || 'nobody'} · of them sent ${mouse.dugSent} · sent there in all ${mouse.sent}`);
+      { const dealt = await runD('killhouse.json', 1, 'room', false, true), tally = [...new Set(dealt.kept as (string | null)[])].map(k => `${dealt.kept.filter((x: string | null) => x === k).length} ${k ?? 'FREE'}`).join(', ');
+        line(dealt.sent === 0 && dealt.kept.length > 0 && dealt.kept.every((k: string | null) => k !== null), 'on the kill house with its men dealt into squads (squaddeal.ts on) nobody is sent: every man standing is somebody else\'s', `sent ${dealt.sent} · at the end: ${tally || 'nobody standing'}`); }
       line(roam.rows.length >= room.rows.length && roam.rows.some((r: Row) => !r.inRoom) && roam.rows.every((r: Row) => good(r, false)), 'on depot.json as dealt, `roam` lets a man out of his room for it: no fewer are sent, each still alert, nobody else\'s, from floor with no light in view to floor he can see from',
         `sent ${roam.rows.length} (in the room only: ${room.rows.length}) · out of their room ${roam.rows.filter((r: Row) => !r.inRoom).length} · not good: ${roam.rows.filter((r: Row) => !good(r, false)).map((r: Row) => `${r.who} kept=${r.kept} state=${r.state} sees=${r.sees} toSees=${r.toSees}`).join(' | ') || 'none'}`);
       line(!!own.lit && off.lit?.callsign === own.lit.callsign && off.sent === 0 && off.lamps === 0 && off.alerts === own.alerts && roam.alerts === room.alerts, '…with `seek` off nobody walks on the same floor, and the mission\'s alert count is the same whichever way',

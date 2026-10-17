@@ -2,6 +2,7 @@
 //   bun run tools/qa/perf-report.ts docs/perf/perf-2026-08-10T….json [--spikes 12] [--pass direct]
 //   bun run tools/qa/perf-report.ts <sweep take>.json --md      (a sweep take's feature table as markdown, nothing else)
 import { readFileSync } from 'fs';
+import { benchReport, type BenchResult } from '../../src/ui/bench';   // a BENCHMARK take (Extras ▸ Benchmark / ?bench, src/ui/bench.ts): the report its card showed, printed first, as the machine's own word
 import { sweepText, sweepMarkdown, smokeText } from './perf-sweep';   // a SWEEP take (F8, src/ui/perfsweep.ts): a table per feature flipped — printed after the plain tables; --md = that table as markdown, alone
 // gpuSum = Σ of per-pass durations; gpuUnion (dumps from 08-10 on) = the union of the passes' intervals on the GPU timeline. Metal runs independent passes side by
 // side when the queue is full, so Σ double-counts the overlap (35–55 % of the frame at high / medium in the field — the '7–13 ms cascade bursts' were exactly that:
@@ -14,7 +15,9 @@ const D = JSON.parse(readFileSync(file, 'utf8')) as { note: string; machine: str
 const F = D.frames; if (!F.length) { console.log('empty recording'); process.exit(0); }
 if (process.argv.includes('--md')) { const md = sweepMarkdown(D); console.log(md.length ? md.join('\n') : 'no sweep in this take'); process.exit(0); }
 const RENDER = /^(gbuffer|composite|post|fxaa|pdraw)$/;
-const sweepLines = sweepText(D), EV = D.events.filter(e => e.kind !== 'sweep'), nSweep = D.events.length - EV.length;   // (a sweep take's segment events are read into the table at the end, not listed)
+const benchEv = D.events.find(e => e.kind === 'bench');
+if (benchEv) try { console.log(`\n── the benchmark's own report (what its card showed) ──\n${benchReport(JSON.parse(benchEv.text) as BenchResult)}`); } catch { console.log('\n(a bench event that does not parse)'); }
+const sweepLines = sweepText(D), EV = D.events.filter(e => e.kind !== 'sweep' && e.kind !== 'bench'), nSweep = D.events.filter(e => e.kind === 'sweep').length;   // (a sweep take's segment events are read into the table at the end, not listed)
 const stat = (a: number[]) => { if (!a.length) return { n: 0, mean: 0, sd: 0, p50: 0, p95: 0, max: 0, min: 0 }; const s = [...a].sort((x, y) => x - y); const m = a.reduce((x, y) => x + y, 0) / a.length; return { n: a.length, mean: m, sd: Math.sqrt(a.reduce((x, y) => x + (y - m) ** 2, 0) / a.length), p50: s[Math.floor(0.5 * (s.length - 1))], p95: s[Math.floor(0.95 * (s.length - 1))], max: s[s.length - 1], min: s[0] }; };
 const f1 = (v: number) => v.toFixed(1).padStart(6), f2 = (v: number) => v.toFixed(2).padStart(7);
 const dur = F[F.length - 1].t / 1000;

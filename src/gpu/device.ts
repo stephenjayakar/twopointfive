@@ -2,6 +2,8 @@
 export interface Gpu {
   device: GPUDevice;
   adapterInfo: string;
+  /** the adapter is the browser's software fallback: no GPU does the work (absent where the browser does not say) */
+  adapterFallback?: boolean;
   canvas: HTMLCanvasElement;
   ctx: GPUCanvasContext;
   format: GPUTextureFormat;
@@ -38,6 +40,7 @@ export async function initGpu(canvas: HTMLCanvasElement): Promise<Gpu> {
   return {
     device, canvas, ctx, format,
     adapterInfo: `${info.vendor} ${info.architecture} ${info.description}`.trim(),
+    adapterFallback: (info as { isFallbackAdapter?: boolean }).isFallbackAdapter === true,
     hasTimestamps: feats.includes('timestamp-query'),
     linearSampler: device.createSampler({ magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'nearest', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', addressModeW: 'clamp-to-edge' }),
   };

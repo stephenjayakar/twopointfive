@@ -21,7 +21,12 @@
 //             order has no feet of his own to weigh.
 // THE SWITCH is COVERFIRE.on, and it only ever runs under the destruction goal's own (wallBreakOn: DESTRUCTION.on, tune.wallBreak, chaos > 0). Off = every
 // hook returns on its first line: no state, no dice, no round (play-through digests equal the base's). The page: on unless the URL carries ?nocoverfire.
-// Not here: what the man behind the cover then does, charges, glass, doors.
+// WITH ROUNDS GOING THROUGH THIN THINGS (wallpen.ts, WALLPEN.on and its `men` row; off = everything above, to the round): the line is first asked as the
+// ROUND flies it — a partition, a screen, a wooden door leaf this gun's round crosses with a man known behind it gets a short burst THROUGH it ('thru': at
+// most WALLPEN.thruRounds on one sighting, booked as `thru` / `thruShots`, never as a chew), with or without the destruction goal's switch; what the round does
+// not cross is chewed as above. So where both are live a partition is fired through, not opened — it still opens under the rounds that cross it, by the
+// engine's own count.
+// Not here: what the man behind the cover then does, charges, glass.
 import { conditionSup } from './condition';
 import { Vec3, v3, clamp, lerp, wrapAngle, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -38,6 +43,8 @@ import { pairHolds } from './pairorders';
 import { spottedHolds } from './spotted';
 import { FIGHT_SKILL } from './roomfight';
 import { civilianBodies } from './civilians';
+import { wallMenLive, thinLine, flightLen, WALLPEN } from './wallpen';
+import { roundEnergy, shotEnergy } from './glasspen';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export const COVERFIRE = {
@@ -70,12 +77,12 @@ export const COVERFIRE = {
 export const COVERFIRE_DEFAULTS = JSON.parse(JSON.stringify(COVERFIRE)) as typeof COVERFIRE;
 /** chews started · rounds fired on one · of them stopped at the piece · times a piece being chewed gave · given up (it stood) · rounds held for a friend in or
  *  past the lane · held by the silent order · starts on a mate's call · starts refused: walking is quicker */
-export const COVERFIRE_STATS = { chews: 0, shots: 0, landed: 0, opened: 0, gaveUp: 0, heldFriend: 0, heldSilent: 0, calls: 0, walked: 0, opChews: 0, defChews: 0 };
+export const COVERFIRE_STATS = { chews: 0, shots: 0, landed: 0, opened: 0, gaveUp: 0, heldFriend: 0, heldSilent: 0, calls: 0, walked: 0, opChews: 0, defChews: 0, thru: 0, thruShots: 0 };
 export const COVERFIRE_LOG: string[] = [];
 /** QA: why a known place was not worth rounds, counted per frame asked (far · clear · door · solid · close · beyond · prop · gone · behind · deep · rounds · call) */
 export const COVERFIRE_WHY: Record<string, number> = {};
 const no = (why: string): null => { COVERFIRE_WHY[why] = (COVERFIRE_WHY[why] ?? 0) + 1; return null; };
-const ZERO: typeof COVERFIRE_STATS = { chews: 0, shots: 0, landed: 0, opened: 0, gaveUp: 0, heldFriend: 0, heldSilent: 0, calls: 0, walked: 0, opChews: 0, defChews: 0 };
+const ZERO: typeof COVERFIRE_STATS = { chews: 0, shots: 0, landed: 0, opened: 0, gaveUp: 0, heldFriend: 0, heldSilent: 0, calls: 0, walked: 0, opChews: 0, defChews: 0, thru: 0, thruShots: 0 };
 /** a count, on this game's books and on the process's (the probes read the latter) */
 const bump = (S: State, k: keyof typeof COVERFIRE_STATS) => { S.stats[k]++; COVERFIRE_STATS[k]++; };
 
@@ -89,9 +96,11 @@ interface State { /** the last frame ticked: a clock that has gone BACK (a check
 interface OpLike { gd: Guard; meters: Map<Guard, { m: number; seenT: number }>; tgt: Guard | null; aim: Vec3; reloadUntil: number; rounds: number; next: number }
 
 const states = new WeakMap<Game, State>();
+/** the engine's half: walls and cover give under rounds */
+const chewLive = (g: Game) => wallBreakOn(g) && chaosOf(g) > 0;
 function live(g: Game): boolean {
-  if (!COVERFIRE.on || !wallBreakOn(g) || !g.aiEnabled || g.touring || chaosOf(g) <= 0) return false;
-  return true;
+  if (!COVERFIRE.on || !g.aiEnabled || g.touring) return false;
+  return chewLive(g) || wallMenLive(g);   // (wallpen.ts: rounds go THROUGH thin things — a man who knows somebody is behind one has a round for it whether or not walls break)
 }
 function stateOf(g: Game): State {
   let S = states.get(g);
@@ -139,6 +148,15 @@ function ask(g: Game, gd: Guard, to: Vec3): Ask | 'clear' | null {
   const d = v3.sub(to, from); const L = v3.len(d); if (L < C.minM || L > C.maxM) return no('far');
   const dir: Vec3 = [d[0] / L, d[1] / L, d[2] / L], reach = L - 0.3;
   const st = g.col.raycast(from, dir, reach); if (!st) { no('clear'); return 'clear'; }
+  if (wallMenLive(g)) {                                                   // (wallpen.ts: would THIS gun's round get to the place — then it is fired through, not chewed)
+    const T = thinLine(g, from, to, roundEnergy(gd.weapon.def), 0.3, st);
+    // (not his to fire through — his muzzle is at it, the man is not behind THIS, loose furniture would stop it, a pane stands in it and his side's rounds
+    //  are not laid through glass (glasspen.ts shotEnergy) — and the line is asked as it always was, below)
+    const x = T && T !== 'clear' ? T.walls[0] : null;
+    if (x && T && T !== 'clear' && x.t >= C.nearM && L - x.t <= WALLPEN.behindM && !(T.panes && shotEnergy(g, gd.char, gd.weapon.def) === 0) && !g.props.raycast(from, dir, reach))
+      return { index: x.index, id: -2 - x.index, kind: 'thru', hit: x.at, rounds: WALLPEN.thruRounds, layers: T.walls.length };   // (ids under zero: never one of the engine's)
+  }
+  if (!chewLive(g)) return no('solid');
   if (st.index >= 1e6) return no('door');                                 // a door leaf: the doors' own
   const B = W.breakableAt(st.index); if (!B) return no('solid');            // concrete, metal, glass, a fitting: nothing the engine indexed
   if (st.t < C.nearM) return no('close');                                   // pressed to it: the gun is in the wall, not laid on it
@@ -165,7 +183,7 @@ function ask(g: Game, gd: Guard, to: Vec3): Ask | 'clear' | null {
 function lane(g: Game, gd: Guard, from: Vec3, to: Vec3): boolean {
   const C = COVERFIRE; const dx = to[0] - from[0], dz = to[2] - from[2]; const L2 = dx * dx + dz * dz; if (L2 < 0.01) return false;
   const L = Math.sqrt(L2); const dir = v3.normalize(v3.sub(to, from));
-  const on = g.col.raycast(to, dir, C.pastM); const tMax = 1 + (on ? on.t : C.pastM) / L;
+  const on = wallMenLive(g) ? null : g.col.raycast(to, dir, C.pastM); const tMax = 1 + (wallMenLive(g) ? flightLen(g, to, dir, C.pastM, roundEnergy(gd.weapon.def)) : on ? on.t : C.pastM) / L;   // (to what stops it: wallpen.ts — the next wall, unless a round goes through that too)
   const hit = (ch: Character): boolean => {
     const h = ch.bones.hips ?? ch.pos; const t = clamp(((h[0] - from[0]) * dx + (h[2] - from[2]) * dz) / L2, 0, tMax);
     return Math.hypot(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < C.lane + C.coneK * t * L;
@@ -182,6 +200,8 @@ function worth(g: Game, gd: Guard, to: Vec3, rounds: number): boolean {
   let len = 0, q = gd.char.pos; for (const p of path) { len += flat(q, p); q = p; } len += flat(q, to);
   return rounds * C.roundSecs <= len / C.walkPace;
 }
+/** rounds he will spend on it: a thing chewed gets slack (it may want more than the count said); a burst fired THROUGH a thin thing is what it is */
+const budgetOf = (kind: string, rounds: number) => kind === 'thru' ? rounds : Math.ceil(rounds * COVERFIRE.slackK) + COVERFIRE.slack;
 const stays = (gd: Guard) => gd.pinned || !!gd.hold || !!gd.script;
 
 // ---------------------------------------------------------------- the choice
@@ -205,19 +225,21 @@ function choose(g: Game, S: State, gd: Guard, K: Know, call: boolean, seen: bool
   if (a === 'clear') { if (held) { if (Cw!.fired) log(g, `${gd.callsign} off #${Cw!.id} after ${Cw!.fired}: the line is clear`); M.chew = null; } return null; }
   if (!a) return null;   // (held: his line is on something else this frame — a step of his own, a jamb — and the chew is his a little longer)
   if (call && a.kind !== 'cover' && !C.callWalls && !(held && !Cw!.call)) { if (held) M.chew = null; return no('call'); }   // (…nor for what stands behind the crate once it gives; a chew laid on his OWN sighting is his whoever is calling)   // a call is good for the crate a man is behind, not for a wall into a room he has not seen
-  if ((M.gave.get(a.id) ?? -1) > g.time) { if (held) M.chew = null; return null; }
+  const rest = M.gave.get(a.id) ?? -1;
+  if (rest > g.time && !(a.kind === 'thru' && (seen || K.t > rest - WALLPEN.thruRestSecs))) { if (held) M.chew = null; return null; }   // (a burst fired through: the rest is for the SIGHTING it was fired on — a man in his eyes, or seen again since, is another matter)
   if (!Cw || !held || Cw.id !== a.id) {
     if (!held) {
       if (M.no && M.no.id === a.id && M.no.until > g.time) return null;
       if (!stays(gd) && !worth(g, gd, to, a.rounds)) { M.no = { id: a.id, until: g.time + C.walkAskSecs }; bump(S, 'walked'); return null; }
     }
     const was = held ? Cw : null;
-    Cw = M.chew = { id: a.id, kind: a.kind, who: K.who, to: v3.copy(to), hit: a.hit, h0: a.hit, kt: K.t, n: 0, fired: was?.fired ?? 0, want: a.rounds, layers: a.layers, budget: Math.ceil(a.rounds * C.slackK) + C.slack, fresh: false,
+    Cw = M.chew = { id: a.id, kind: a.kind, who: K.who, to: v3.copy(to), hit: a.hit, h0: a.hit, kt: K.t, n: 0, fired: was?.fired ?? 0, want: a.rounds, layers: a.layers, budget: budgetOf(a.kind, a.rounds), fresh: false,
       lay: was?.lay ?? 0, t: g.time, next: was?.next ?? 0, k: was?.k ?? 0, call, seen };
   }
   Cw.hit = a.hit; Cw.t = g.time; if (K.t > Cw.kt) Cw.kt = K.t; if (seen) Cw.to = v3.copy(to);
   if (seen && v3.dist(a.hit, Cw.h0) > 0.5) Cw.fresh = true;   // (a man in sight has moved on along the piece: another cell of it, another count)
-  if (Cw.fresh) { Cw.fresh = false; Cw.n = 0; Cw.h0 = a.hit; Cw.want = a.rounds; Cw.budget = Math.ceil(a.rounds * C.slackK) + C.slack; }   // (it gave: what stands behind is a new count)
+  if (Cw.fresh) { Cw.fresh = false; Cw.n = 0; Cw.h0 = a.hit; Cw.want = a.rounds; Cw.budget = budgetOf(a.kind, a.rounds); }   // (it gave: what stands behind is a new count)
+  if (Cw.n >= Cw.budget && a.kind === 'thru') { if (seen) return Cw; M.gave.set(a.id, g.time + WALLPEN.thruRestSecs); M.chew = null; log(g, `${gd.callsign} off #${a.id}: ${Cw.n} rounds through it`); return null; }   // (his burst at a place he REMEMBERS is through: he looks before he spends more — a man in his eyes is fired at while he is)
   if (Cw.n >= Cw.budget) { M.gave.set(a.id, g.time + C.giveSecs); M.chew = null; bump(S, 'gaveUp'); log(g, `${gd.callsign} leaves #${a.id}: ${Cw.n} rounds in and it stands`); return null; }
   return Cw;
 }
@@ -316,6 +338,11 @@ export function coverfireTick(g: Game, dt: number) {
     if (e.kind !== 'guardShot' || e.time !== g.time || !e.to) continue;
     for (const [gd, M] of S.men) {
       const Cw = M.chew; if (!Cw || gd.char.id !== e.who || Cw.t !== g.time) continue;
+      if (Cw.kind === 'thru') {   // (wallpen.ts: a burst THROUGH a thin thing is no chew — nothing is being opened, no piece keeps a count)
+        if (!Cw.fired) { bump(S, 'thru'); log(g, `${gd.callsign} through #${Cw.id} for ${nameOf(Cw.who)}${Cw.seen ? ' (in sight)' : ''}: ${Cw.want} rounds, ${Cw.layers} deep`);
+          if (C.line && gd.team === 'operative' && g.time - M.saidT > C.saySecs && g.time - S.saidT > 4) { M.saidT = S.saidT = g.time; g.say(gd, C.line); } }
+        Cw.n++; Cw.fired++; bump(S, 'thruShots'); break;
+      }
       if (!Cw.fired) {   // the first round of it: a chew begun (counted, logged and — a teammate — said here, not when he only laid his gun on it)
         bump(S, 'chews'); if (Cw.call) bump(S, 'calls'); bump(S, gd.team === 'operative' ? 'opChews' : 'defChews');
         log(g, `${gd.callsign} on ${Cw.kind} #${Cw.id} for ${nameOf(Cw.who)}${Cw.call ? ' (a call)' : Cw.seen ? ' (in sight)' : ''}: ${Cw.want} rounds wanted, ${Cw.layers} deep`);

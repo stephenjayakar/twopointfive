@@ -60,6 +60,7 @@ import { ROOMFIT } from './roomfit';
 import { NVG } from './nvg';
 import { IR } from './irlaser';
 import { IRLIGHT } from './irlight';
+import { WALLPEN } from './wallpen';
 import { ENTRY } from './entrypoints';
 import { SILENT } from './silent';
 import { PAIR } from './pairorders';
@@ -82,6 +83,7 @@ import { REARWATCH } from './rearwatch';
 import { STACKLINE } from './stackline';
 import { SNEAK } from './sneak';
 import { UNSEEN } from './unseen';
+import { SEENWALK } from './seenwalk';
 import { HOLDFIRE } from './holdfire';
 import { PAIRUP } from './pairup';
 import { LESSON } from './lesson';
@@ -102,19 +104,20 @@ import { WALLSNAP } from './wallsnap';
 import { cutConfig } from '../scene/cut';   // (the cut-pieces switch: not a game module, no cycle)
 
 /** the names a recording carries and a replay applies, in the order journal.ts has always written them (a session file's `knobs.tables` keys) */
-export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'SHIELD', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE',
+export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'SHIELD', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY'];
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
 import { KITANIM } from './kitanim';
-import { KIT } from './character';
+import { KIT, THROW_BY } from './character';
 import { HANDS } from './hands';
 import { WORK } from './workthings';
 import { WAND } from './wand';
+import { PEEKSIGHT } from './peeksight';
 import { STICKY } from './stickycam';
 import { OWNCHARGE } from './owncharge';
 import { SQUADTHROW } from './squadthrow';
@@ -131,6 +134,10 @@ import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
+import { POWEROUT } from './powerout';
+import { SQUADDEAL } from './squaddeal';
+import { STAYASK } from './stayask';
+import { RESCUECHECK } from './rescuecheck';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -198,8 +205,10 @@ export function knobRegistry(): Record<string, object> {
     WORDS,
     // kit animations (kitanim.ts; character.ts KIT): the switch, the magazine changes' beats and the lengths of the draws — when a round may leave a gun coming up reads them
     KITANIM, KIT,
+    // a throw reads its distance (character.ts THROW_BY): which swing the right arm makes — never when the can leaves it, where from or how it flies
+    THROW_BY,
     // hands on the world (hands.ts): a body taken up by its beats from the end he is at, a door worked by hand with him stepped clear — what Sam's body and door rows DO reads them
-    HANDS, WORK, WAND, STICKY,
+    HANDS, WORK, WAND, STICKY, PEEKSIGHT,
     // the player's own charges (owncharge.ts): his card's charge rows, the door charge by hand, what a man alone carries, the squad standing off on his charge
     OWNCHARGE,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by
@@ -222,6 +231,13 @@ export function knobRegistry(): Record<string, object> {
     DARKDOOR,
     // an enemy on alert does not sit blind in the dark (darkfoe.ts): whose weapon light burns and who leaves his post read these — the meter reads the lamps
     DARKFOE,
+    // the lights go out and somebody goes to put them back on (powerout.ts): which defenders walk to the breaker, when, and what their side makes of the dark read these
+    POWEROUT,
+    // squads from the rooms (squaddeal.ts): a level whose file names no squads is handed some cut from its rooms when its men are dealt
+    SQUADDEAL,
+    // squads that stay in their rooms still miss a room that goes silent (stayask.ts): the net's ask on a floor where every squad stays, and the one man who goes
+    STAYASK,
+    RESCUECHECK,
     // dozing in the dark (doze.ts): who sits a long dark wait out asleep in a chair, how dull his ears are and what wakes him — who hears and sees whom reads these
     DOZE,
     // the net goes quiet (netquiet.ts): what an unanswered check, a body found and a mate seen to fall add to a man's dread, the whip to a noise, the last man's spot — read these
@@ -242,7 +258,7 @@ export function knobRegistry(): Record<string, object> {
     // lived-in rooms (scene/lived.ts): whether a level's lived things — the furniture that makes a room its own place — are loaded; read when a level loads
     LIVED,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
-    FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
+    FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)
     RESCUE, DIGIN, HAULHOME, PRESSURE, LANES, GUNHOLD, HARD, HARD_AT, DRILLED, SQUADS, DRILL_AT, CUES, BUDDY, WX_SIM, WX_OWN, SNOW, SNOW_LOOK, AIR_SIM, LASTSTAND, CLEARLINE, STACKROOM, REARWATCH, STACKLINE,
     // the team's own rules that no other list named (found by tools/qa/knobs-check.ts), and the two scenarios' own tables
@@ -253,6 +269,8 @@ export function knobRegistry(): Record<string, object> {
     VERDICT,
     // a squad nobody has found sneaks when Sam sneaks (unseen.ts): who is low, how fast, how loud, and whose round is held
     UNSEEN,
+    // an ordered walk keeps off lit floor that a room nobody has cleared can see (seenwalk.ts): the bar for lit, the price, where the eyes stand
+    SEENWALK,
     // a squad nobody has found never fires first (holdfire.ts): whose round is held until the player's shot or his order starts the fight
     HOLDFIRE,
     // switches that stand alone

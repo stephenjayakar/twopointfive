@@ -53,6 +53,7 @@ import { SNOWBOG } from './snowBog';
 import { WX_OWN, SNOW, SNOW_LOOK } from './weatherKinds';
 import { AIR_SIM } from './airSim';
 import { GLASS } from './glass';
+import { WALLPEN } from './wallpen';
 import { LIGHTWALL } from './lighting';
 import { IRLIGHT } from './irlight';
 import { AIRDUST } from './airDust';
@@ -65,6 +66,7 @@ import { CLOSE } from './close';
 import { KITANIM } from './kitanim';
 import { WORK } from './workthings';
 import { WAND } from './wand';
+import { PEEKSIGHT } from './peeksight';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
@@ -78,7 +80,7 @@ import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
 import { GUNHOLD } from './gunhold';
-import { HOLD } from './character';
+import { HOLD, THROW_BY } from './character';
 import { STACKROOM } from './stackroom';
 import { START } from './startfile';
 import { HOLDFIRE } from './holdfire';
@@ -92,12 +94,17 @@ import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
 import { DARKFOE } from './darkfoe';
+import { POWEROUT } from './powerout';
+import { SQUADDEAL } from './squaddeal';
+import { STAYASK } from './stayask';
+import { RESCUECHECK } from './rescuecheck';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
 import { PICTURE } from './picture';
 import { RELOAD } from './autoreload';
 import { SAMSTUN } from './samstun';
+import { SEENWALK } from './seenwalk';
 import { TEAMTALLY } from './teamtally';
 import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
@@ -233,6 +240,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
+  if (!k.tables.THROW_BY) THROW_BY.on = false;   // (a file from before a throw read its distance: every throw in it was the one overhand, and that body is what its guards saw)
   if (typeof (k.tables.FOG as { things?: boolean } | undefined)?.things !== 'boolean') FOG.things = false;   // (a file from before nothing moved in the fog: its cursor's ray met the game's own list of loose things)
   if (typeof (k.tables.FOG as { flat?: number } | undefined)?.flat !== 'number') FOG.flat = 0;   // (a file from before the fog had its own light: its fog was the live frame dimmed)
   if (typeof (k.tables.FOG as { lit?: number } | undefined)?.lit !== 'number') FOG.lit = 0;   // (a file from before the fog was lit as the team last knew it: its fog was the one fixed light, or the live frame dimmed)
@@ -268,6 +276,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
+  if (!k.tables.PEEKSIGHT) PEEKSIGHT.on = false;   // (a file from before a peek round the end of a wall lifted the fog: his eye stayed over his feet)
   if (!k.tables.WAND) WAND.on = false;   // (a file from before the optical wand: no door offered the look)
   else {
     if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
@@ -277,11 +286,13 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.take === undefined) STICKY.take = false;   // (…and one from before a stuck camera could be taken back: no such row)
   if ((k.tables.CUES as Partial<typeof CUES> | undefined)?.overheard === undefined) CUES.overheard = false;   // (a file from before a hidden defender's shout was a row on the strip: no such row)
+  if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.mark === undefined) STICKY.mark = false;   // (…and one from before his own cameras showed in the fog: not in its picture)
   if (!k.tables.WORK) WORK.on = false;   // (a file from before a teammate could be sent to work a thing: its menus had no such row, and its breaker errand went to the nearest man whoever he was)
   else if ((k.tables.WORK as Partial<typeof WORK>).ownFace === undefined) WORK.ownFace = false;   // (…and one from before the errand was walked to the panel's own face: its man went to the fixed spot and re-armed the mains inside the bare radius)
   if (!k.tables.CLOSE) CLOSE.on = false;   // (a file from before the close-in windows: one way in, from behind — its rows and its takedowns were made by that gate)
   if (!k.tables.STACKROOM) STACKROOM.on = false;   // (a file from before door stacks were held to the room's floor: its men walked to the marks the build then dealt)
   if (typeof (k.tables.STACKROOM as { view?: boolean } | undefined)?.view !== 'boolean') STACKROOM.view = false;   // (…and from before a stack waiting on an OPEN door stood out of the room's view: the jamb marks, as recorded)
+  if (!k.tables.SEENWALK) SEENWALK.on = false;   // (a file from before an ordered walk weighed lit floor in view of an uncleared room: the walks as they were)
   if (!k.tables.SAMSTUN) SAMSTUN.on = false; else if ((k.tables.SAMSTUN as Partial<typeof SAMSTUN>).ownSeen === undefined) SAMSTUN.ownSeen = false;   // (a file from before a blast folded or blinded the player: his feet and his picture were his own through every one — and one from before a watched can of his own side counted in full)
   if (!k.tables.SPRINTDOOR) SPRINTDOOR.on = false;
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
@@ -305,6 +316,10 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (d.lend === undefined) DOZE.lend = false; }   // (… and one from before the screen held his attention by the attention rule: his eyes were whole)
   if (!k.tables.DARKFOE) DARKFOE.on = false;   // (a file from before an alerted enemy lit his lamp or left his post for the dark: its defenders' lights stayed off and they stood where they were put)
   else if ((k.tables.DARKFOE as Partial<typeof DARKFOE>).suspect === undefined) DARKFOE.suspect = true;   // (…and one from before the lamp waited for the alert: a man who was only suspicious lit his too)
+  if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
+  if (!k.tables.SQUADDEAL) SQUADDEAL.on = false;   // (a file from before a level with no squads block was handed squads cut from its rooms: its defenders were one pool)
+  if (!k.tables.STAYASK) STAYASK.on = false;   // (a file from before squads that stay in their rooms missed a silent room: nobody asked after another squad there, and nobody went)
+  if (!k.tables.RESCUECHECK) RESCUECHECK.on = false;   // (a file from before a rescue's men checked in by radio: a man of theirs taken without a sound was missed by nobody)
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)
   if (!k.tables.PICTURE) PICTURE.on = false;   // (a file from before each man kept his own picture of the fight: nobody remembered where an enemy had been, and every spot was picked without one)
@@ -358,7 +373,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof k.flags.stalkAmbient === 'boolean') SNEAK.stalkAmbient = k.flags.stalkAmbient;   // (a recording's own tables did not carry SNEAK when this key came, so it rides with the flags as well, as the fog does: made with the stalk's light taking the walker's own meter, it replays so)
   else if ((k.tables.SNEAK as { stalkAmbient?: boolean } | undefined)?.stalkAmbient === undefined) SNEAK.stalkAmbient = false;   // (…and a file from before the key: the estimate alone, as it was; a run tape that carries the key writes its own value back right after this)
   { const dt = k.tables.DOORTOOLS as { testDoor?: boolean; outsidePlain?: boolean; haltBack?: boolean; threatFirst?: boolean; openAir?: boolean; flowMax?: number; bangWay?: boolean; threatStuck?: number; openHand?: boolean; behindSam?: boolean } | undefined;   // (…from before an entry halted at a door found shut, before 'clear from outside' was one plain order, before the first man in kept his gun on a known threat, and before yards and very large rooms were left unswept: each as it was)
-    if (dt?.testDoor === undefined) DOORTOOLS.testDoor = false; if (dt?.outsidePlain === undefined) DOORTOOLS.outsidePlain = false;
+    if (dt?.testDoor === undefined) DOORTOOLS.testDoor = false; if (dt?.outsidePlain === undefined) DOORTOOLS.outsidePlain = false; if ((dt as { wordNoCan?: boolean } | undefined)?.wordNoCan === undefined) DOORTOOLS.wordNoCan = false; if ((dt as { bangInto?: boolean } | undefined)?.bangInto === undefined) DOORTOOLS.bangInto = false;
     if (dt?.haltBack === undefined) DOORTOOLS.haltBack = false;   // (…and from before a pair halted on a door the other pair is charging stepped back off it: it stays stacked where it halted, as it was. A recording that carries the key keeps its own.)
     if (typeof k.flags.behindSam === 'boolean') DOORTOOLS.behindSam = k.flags.behindSam;   // (a recording's own tables did not carry DOORTOOLS then either: this key rides with the flags too, so a recording made with it on replays on)
     else if (dt?.behindSam === undefined) DOORTOOLS.behindSam = false;   // (…and a file from before Sam beyond a door kept the squad's own stun can in the kit: the word at a held door banged its pockets wherever he stood)
@@ -387,6 +402,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const sl = k.tables.SNOW_LOOK as Record<string, unknown> | undefined; if (!sl || !('marks' in sl)) SNOW_LOOK.marks = false; }   // (… or from before things marked the snow and a mark formed: picture only, a later key of the same table)
   { const sl = k.tables.SNOW_LOOK as Record<string, unknown> | undefined; if (!sl || !('oneAir' in sl)) SNOW_LOOK.oneAir = false; }   // (… or from before the snow was one snow in one air: picture only, a later key of the same table)   // (… or from before a blast marked the snow: picture only, a later key of the same table)
   if ((k.tables.GLASS as { bothFaces?: boolean } | undefined)?.bothFaces === undefined) GLASS.bothFaces = false;   // (…and from before a pane's crash was heard from both its faces: only from the point the round met it)
+  if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
   if (!k.tables.WALLCHARGE) WALLCHARGE.on = false;   // (a file from before the wall charge: its menus and Sam's rows were the build's without it)
   if (!k.tables.WALLS) assignDeep(WALLS as unknown as Record<string, unknown>, WALLS_DEFAULTS as unknown as Record<string, unknown>);
   if (typeof (k.tables.HANDS as { carryRide?: number } | undefined)?.carryRide !== 'number') { const Hn = knobTables().HANDS as { carryRide?: number } | undefined; if (Hn) Hn.carryRide = 0; }   // (a recording from before a carried body's limbs rode its carrier: they trail him as they did then)

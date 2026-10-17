@@ -185,4 +185,23 @@ export function register(SC: Record<string, any>, CH: any) {
     c.drive = () => { c.turnBegin?.(); c.aimYaw = ease(c.aimYaw, to, 6 / 60); };
     for (const t of [0.1, 0.2, 0.3, 0.4, 0.5, 0.6]) { S.run(t - (S.t - t0)); S.shot(`${Math.round(t * 1000)} ms`); }
   } };
+
+  // A THROW READS ITS DISTANCE (character.ts THROW_BY, its switch put on for the strip): the right arm's one-shot told how far the can goes
+  const THROWS: [string, number | undefined, boolean | 'armed', string][] = [
+    ['throw-toss', 2, false, 'a can thrown 2 m: the underhand toss'], ['throw-toss-crouch', 2.5, true, 'a can thrown 2.5 m from the crouch: the underhand toss'], ['throw-toss-armed', 2, 'armed', 'a can thrown 2 m with a gun in his hands: the toss, the support hand let down'],
+    ['throw-short', 6, false, 'a can thrown 6 m: the overhand, short-armed'], ['throw-least', 3, false, 'a can thrown 3 m, or thrown hard at a wall two steps off: the shortest overhand'], ['throw-full', 12, false, 'a can thrown 12 m: the whole wind-up'],
+    ['throw-full-crouch', 12, true, 'a can thrown 12 m from the crouch'], ['throw-untold', undefined, false, 'a throw told no distance: the one overhand, as before'],
+  ];
+  for (const [id, dist, crouch, title] of THROWS) SC[id] = { title, opts: { follow: false }, run(S: any) {
+    const c = S.man({}); c.anim.upper = crouch === 'armed' ? 'relaxed' : 'none'; if (crouch === true) c.anim.crouchTarget = 1; S.run(0.8); S.shot('ready'); const t0 = S.t, was = CH.THROW_BY.on; CH.THROW_BY.on = true; c.anim.throwItem(dist); CH.THROW_BY.on = was;
+    for (const t of [0.08, 0.165, 0.225, 0.28, 0.35, 0.46, 0.62, 0.75]) { S.run(t - (S.t - t0)); S.shot(t === CH.THROW_RELEASE ? `${t.toFixed(2)} s: it leaves the hand` : `${t.toFixed(2)} s`); }
+  } };
+  // … and a blast mid-swing takes the swing (the switch and MOVES held on for the whole strip): hit four frames into the whole wind-up
+  for (const [id, blind, title] of [['throw-blinded', true, 'blinded 0.07 s into a 12 m throw: the swing gives way to the hunch'], ['throw-folded', false, 'folded by a blast 0.07 s into a 12 m throw: the swing gives way to the fold']] as const) SC[id] = { title, opts: { follow: false }, run(S: any) {
+    const was = CH.THROW_BY.on, keep = { ...CH.MOVES }; CH.THROW_BY.on = true; CH.MOVES.on = 1; CH.MOVES.dazzle = 1; CH.MOVES.clutch = 1;
+    try { const c = S.man({}); c.anim.upper = 'none'; S.run(0.8); S.shot('ready'); const t0 = S.t; c.anim.throwItem(12); S.run(4 / 60);
+      if (blind) c.anim.dazzle = { from: [0.3, 0, 1] as Vec3, k: 1 }; else { c.anim.clutch = 1; c.anim.foldToo = true; } S.shot('0.07 s: the blast');
+      for (const t of [0.165, 0.225, 0.28, 0.35, 0.46, 0.62, 0.75]) { S.run(t - (S.t - t0)); S.shot(`${t.toFixed(2)} s`); }
+    } finally { CH.THROW_BY.on = was; Object.assign(CH.MOVES, keep); }
+  } };
 }

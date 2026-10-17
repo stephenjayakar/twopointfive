@@ -41,6 +41,7 @@ const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID, NOBODY_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { cutBoxesOn } = await import(`${ROOT}/src/scene/cut.ts`);
 const { BREAK_STATS } = await import(`${ROOT}/src/game/breakTable.ts`);
+const { WALLPEN } = await import(`${ROOT}/src/game/wallpen.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
@@ -199,6 +200,7 @@ export async function destructionDust() {
     // (the dust of rounds into plaster that STANDS: with the one switch on — the page's stand — twenty rifle rounds at chaos 1 open the wall's cells (wallbreak.ts),
     //  their dust is the cell's own at its middle, and the rest of the burst lands in the room beyond: that is the wallbreak family's to ask. Here the wall holds)
     game.tune.wallBreak = false;
+    const thin0 = WALLPEN.on; WALLPEN.on = false;   // (…and it STOPS them: with rounds through thin walls — wallpen.ts, on as the page opens — every round of the burst lands in the room beyond, with its dust; what a round that goes through leaves is `probes.ts wallpen`'s to ask)
     fireWeapon(game, game.player.char, WALL, true, { weapon: WEAPONS.fn2000 }); W.step(DT);
     const afterOne = smokeLog.filter(e => e.kind === 'puff').length;   // E after one round at chaos 1 = 2 → over tPuff 1.5? (1 round: heat 1 → E 2 ≥ 1.5 — a puff IS due at chaos 1; at 0.5 it is not: checked below)
     for (let r = 0; r < 20; r++) { fireWeapon(game, game.player.char, [WALL[0] + (r % 5) * 0.2 - 0.4, WALL[1] + (r % 3) * 0.15, WALL[2]], true, { weapon: WEAPONS.fn2000 }); for (let f = 0; f < 6; f++) W.step(DT); }
@@ -210,7 +212,7 @@ export async function destructionDust() {
       if (p.lattice !== 'coarse' || !(p.ttl > 0.1 && p.ttl < 1) || !(p.radius >= D.CHAOS.puff.radius * 0.9)) { fails.push(`puff lattice/ttl/radius ${p.lattice}/${p.ttl}/${p.radius}`); break; }
       if (Math.hypot(p.pos[0] - WALL[0], p.pos[2] - WALL[2]) > 1.2 || p.pos[2] < WALL[2]) { fails.push(`a puff at ${p2(p.pos)} — not just off the wall face at z ${WALL[2]}`); break; }
     }
-    F.verdict(!fails.length, `21 rounds into the corridor plaster at chaos 1: ${puffs.length} 'puff' emitters (the first round alone: ${afterOne}), density ${puffs[0]?.density?.toFixed(1)} on the coarse lattice, ttl ${puffs[0]?.ttl}, all within a metre of the holes on the room side of the wall`, fails.join('; ') || `refused by the caps: ${D.DESTR_STATS.puffsRefused}`); }
+    F.verdict(!fails.length, `21 rounds into the corridor plaster at chaos 1: ${puffs.length} 'puff' emitters (the first round alone: ${afterOne}), density ${puffs[0]?.density?.toFixed(1)} on the coarse lattice, ttl ${puffs[0]?.ttl}, all within a metre of the holes on the room side of the wall`, fails.join('; ') || `refused by the caps: ${D.DESTR_STATS.puffsRefused}`); WALLPEN.on = thin0; }
   { const { W, game, smokeLog } = await stage(3202, 0.5, [21.5, 0, 11.4], Math.PI);
     fireWeapon(game, game.player.char, WALL, true, { weapon: WEAPONS.fn2000 }); for (let f = 0; f < 30; f++) W.step(DT);
     const lone = smokeLog.filter(e => e.kind === 'puff').length;

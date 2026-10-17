@@ -100,6 +100,8 @@ export interface ViewerState {
   door: { show: boolean; dist: number; hinge: -1 | 1; width: number };
   /** throw one-shot: put a real can in the air at THROW_RELEASE (the game's pendingThrow does exactly that) */
   throwSpawn: boolean;
+  /** throw one-shot: metres the throw is told it goes (character.ts THROW_BY picks the swing); 0 = told nothing, the one overhand */
+  throwDist: number;
   // ---- stage / camera
   track: number; trackBone: string; wall: boolean; marks: boolean;
   cans: { loop: boolean; loopEvery: number; plume: boolean; t: number };
@@ -128,7 +130,7 @@ export function makeState(): ViewerState {
     hold: { on: false, who: 0, variant: 1, phase: 1, t: 0, auto: true, chain: false, gunOut: 0, gunPitchDeg: 0, agitation: 0.4, marker: true, shotT: -1, knife: false },
     doorHand: { on: false, w: 1, hand: 0 },
     door: { show: false, dist: 0.75, hinge: 1, width: 0.9 },
-    throwSpawn: true,
+    throwSpawn: true, throwDist: 0,
     track: 1, trackBone: 'head', wall: true, marks: false,
     cans: { loop: false, loopEvery: 8, plume: true, t: 0 },
     allOff: false,
