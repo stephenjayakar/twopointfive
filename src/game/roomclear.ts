@@ -41,6 +41,7 @@ import { runnerFled } from './runner';   // (asked inside tick only)
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { inBounds } from './squad';
 import { squadsStage, squadsStop, squadsTick } from './enemysquads';
+import { squadDeal } from './squaddeal';
 import { difficultyHere } from './difficulty';
 import { lastStandHint } from './laststand';
 import { w, WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -320,7 +321,7 @@ export class RoomClearScenario {
     // (a man the staging posted outside his room — pressure.ts PRESSURE.picket — is of the room he stands in, so the one he left can be called clear behind him)
     const roomOf = (i: number) => (nb.marks[i]?.picket ? S.rooms.find(r => inBounds(nb.marks[i].pos, r.bounds))?.id : undefined) ?? dealt[i]?.room;
     this.rooms = S.rooms.map(def => ({ def, defenders: nb.hostiles.filter((_, i) => roomOf(i) === def.id), cleared: false, clearedAt: NaN }));
-    squadsStage(g, S, nb.hostiles, dealt.map(p => p.room));   // enemysquads.ts: the structure's squads take their men (no squads block: nothing)
+    squadsStage(g, squadDeal(S, dealt.map(p => p.room), !!g.level.scenarios?.lesson), nb.hostiles, dealt.map(p => p.room));   // enemysquads.ts: the structure's squads take their men (no squads block: nothing — or, squaddeal.ts, squads cut from its rooms)
     this.note(`staged:${this.seed}/${this.attempt}`);
   }
 

@@ -20,7 +20,7 @@ import { PICKS_UI, pickLeaveSearch, onShortList } from '../scene/picks';
 import { SAMESTART } from '../game/samestart';   // (a leaf: every mission starts the same way on every try)
 import { MISSION_GROUPS, type MissionGroup, type ScenarioEntry } from '../scene/scenarios';
 import { ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, levelWords, teamWords, teamTag } from '../scene/scenarioList';
-import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsOf, type Difficulty } from '../game/difficulty';
+import { DIFFICULTIES, difficultyNow, setDifficulty, difficultyWords, difficultyHref, structureOfLevel, squadsHeld, type Difficulty } from '../game/difficulty';
 import { leverRows, leversSig } from './levers';
 import { fogOfQuery } from '../game/scenarioRun';
 import { quietFogHref, quietFogRow, quietFogAside } from '../game/quietfog';
@@ -320,7 +320,7 @@ export function openMissions(opts: MissionsOpts = {}): MissionsScreen {
     fTeam.textContent = teamWordsOf(m); fDef.textContent = m.defenders; fLean.textContent = leanWords(m.lean); fLevel.textContent = m.scenario?.level ? levelWords(m.scenario) : 'office';
     for (const [lv, b] of dbtns) { b.className = now === lv ? 'dbtn on' : 'dbtn'; b.setAttribute('aria-pressed', now === lv ? 'true' : 'false'); }
     diff.className = diffLive(m) ? 'mdiff' : 'mdiff na';   // (greyed where the pick changes nothing: the solo night, and a quiet mission — its shift is the level's own)
-    dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission\'s shift is the level\'s own on either' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsOf(m.scenario))) : 'the night shift is the same on either';
+    dnote.textContent = m.scenario?.kind === 'quiet' ? 'a quiet mission\'s shift is the level\'s own on either' : m.scenario ? quietFogAside(() => difficultyWords(now!, squadsHeld(m.scenario))) : 'the night shift is the same on either';
     dnote.title = dnote.textContent ?? '';   // (the sheet shows two lines of it: index.html .mdiff > .dn)
     { const fogOn = !!m.scenario && fogOfQuery(new URLSearchParams(hrefs[sel].replace(/^[^?]*\?/, '')));   // (the fog of war is up on a room clear and a rescue — game/scenarioRun.ts fogOfQuery: the lever is greyed where the mission has none; a Training lesson is taught on the level as it is — its page reads no lever, game/difficulty.ts initDifficulty)
       const quiet = quietFogRow(m.scenario);   // (a quiet mission may be played under the fog — game/quietfog.ts: the lever is live there with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
