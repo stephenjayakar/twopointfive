@@ -105,7 +105,7 @@ export async function snowWispsCheck(o: { verbose?: boolean } = {}): Promise<boo
     // ---- open
     { A.g.engine.settings.particleRainRadius = 2; const under = fly(A, 30, roofed ?? [0, 0, 0], 1); A.g.engine.settings.particleRainRadius = 0;
       const emit = readFileSync(resolve(ROOT, 'src/render/shaders/particles.wgsl'), 'utf8');
-      const tries = /ok = rainOutdoors\(q2\) && rnd\(seed, 22u \+ t \* 3u\) < rim;\s*\n\s*if \(SNOW_WISPS\) \{ if \(wispRec && ok && !puffRec && !snowOneAir\(\)\) \{ ok = [^\n]*wispGust\(/.test(emit);   // a wisp's try must first be the flake's own (open ground), THEN a gust patch
+      const tries = /let skyRec = snowNow\(\) && !wispRec && !grainRec/.test(emit) && /else \{ open = rainOutdoors\(q2\); \}\s*\n\s*ok = open && rnd\(seed, 22u \+ t \* 3u\) < keep;\s*\n\s*if \(SNOW_WISPS\) \{ if \(wispRec && ok && !puffRec && !snowOneAir\(\)\) \{ ok = [^\n]*wispGust\(/.test(emit);   // a wisp's try must first be the flake's own (open ground), THEN a gust patch
       const step = emit.slice(emit.indexOf('fn wispStep(')); const ends = /if \(!rainOutdoors\(p\.pos\.xz\)[^\n]*\{ pool\.parts\[slot\]\.age = p\.life; return; \}/.test(step);
       verdict(!!roofed && under.S.areaOut < 3 && under.wisps.length === 0 && under.Ws.target < 0.01 * on.Ws.target && tries && ends,
         'open — none under a roof', `the view deep under a roof (${roofed ? roofed[0] + ', ' + roofed[2] : 'none found'}), the disc drawn in: ${under.S.areaOut.toFixed(1)} m² open, ${under.wisps.length} wisp records (target ${under.Ws.target.toFixed(1)}) · the shader text: a wisp's birth is thrown by the flakes' own open-ground tries: ${tries} · its step ends it under a roof: ${ends} (the GPU's own throws are never run here: no GPU)`); }

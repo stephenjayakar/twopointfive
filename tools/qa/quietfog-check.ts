@@ -56,9 +56,9 @@ const press = (root: El, key: string, rung: string) => { const b = rowsOf(root).
 
 export async function quietfogCheck(): Promise<boolean> {
   const F = family('quietfog: a quiet mission can be played under the fog of war — the fog lever\'s rungs, asked with all shown as where a quiet mission starts');
-  const BREAK = process.env.QUIETFOG_BREAK === '1', onWas = QF.QUIETFOG.on, defWas = QF.QUIETFOG.def, ownWas = FOG.own, rnd = Math.random;
+  const BREAK = process.env.QUIETFOG_BREAK === '1', onWas = QF.QUIETFOG.on, defWas = QF.QUIETFOG.def, soloWas = QF.QUIETFOG.solo, ownWas = FOG.own, rnd = Math.random;
   // the rungs are asked with the bottom rung as the quiet missions' default, as they were written (QUIETFOG.def 'off': the frozen stand's); the page's own default — the fog all round — is sticky-check.ts's `default` family
-  const raise = () => { QF.QUIETFOG.on = !BREAK; QF.QUIETFOG.def = 'off'; };
+  const raise = () => { QF.QUIETFOG.on = !BREAK; QF.QUIETFOG.def = 'off'; QF.QUIETFOG.solo = false; };   // (…and the solo night with no fog, as these rows were written: its own rule is solofog-check.ts)
   try {
     // ───────────────────────────── rules
     { QF.QUIETFOG.on = false; QF.QUIETFOG.def = 'off'; fresh();
@@ -219,7 +219,7 @@ export async function quietfogCheck(): Promise<boolean> {
         'a tripwire under the fog senses the floor as it stands: a leaf swung into the beam out of sight is still drawn shut and the drawn beam runs its length, the sensor\'s beam ends on the leaf; no fog = one reach, as it was',
         ang ? `storage door at ${ang.toFixed(2)} rad cuts the ${L.len.toFixed(2)} m beam at ${real.toFixed(2)} m · under the fog: leaf drawn as remembered ${on!.held}, drawn beam ${on!.cut.toFixed(2)} m, sensor ${on!.sense.toFixed(2)} m · no fog: drawn ${off!.cut.toFixed(2)} m, sensor ${off!.sense.toFixed(2)} m` : 'no angle of the storage door cut the beam on this stand'); } finally { DOORWAY.oneWay = oneWay; } }
   } catch (e) { F.verdict(false, 'the check ran to its end', e instanceof Error ? e.stack ?? e.message : String(e)); }
-  finally { QF.quietFogEnd(); D.setLever?.('fog', null, false); fresh(); QF.QUIETFOG.on = onWas; QF.QUIETFOG.def = defWas; FOG.own = ownWas; Math.random = rnd; }
+  finally { QF.quietFogEnd(); D.setLever?.('fog', null, false); fresh(); QF.QUIETFOG.on = onWas; QF.QUIETFOG.def = defWas; QF.QUIETFOG.solo = soloWas; FOG.own = ownWas; Math.random = rnd; }
   return F.done();
 }
 

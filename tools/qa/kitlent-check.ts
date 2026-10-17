@@ -102,7 +102,8 @@ export async function lentTiles(): Promise<boolean> {
           await hushed(() => quitScenario(g)); }
 
         // elsewhere nothing is handed: a squad mission, the solo night, a teammate's card on the quiet mission
-        const four = tiles(open('room-clear-four').root), solo = tiles(open('solo-night').root);
+        const soloFogWas = QF.QUIETFOG.solo; QF.QUIETFOG.solo = false;   // (the solo night as it was: under the fog it is handed the mission's cameras and wand as a quiet mission is — solofog-check.ts)
+        const four = tiles(open('room-clear-four').root), solo = tiles(open('solo-night').root); QF.QUIETFOG.solo = soloFogWas;
         const duo = list.find(x => /quiet/.test(x.id) && /duo|two|pair/.test(x.id)); let mate: Record<string, Tile> | null = null;
         if (duo) { const L = open(duo.id); L.L.pick(1); mate = tiles(L.root); }
         F.verdict(plain(four) && !solo.cams.lent && !solo.wand.lent && (!mate || Object.values(mate).every(r => !r.lent)), 'ELSEWHERE: a squad mission, the solo night and a teammate\'s card show nothing as handed', `room clear: ${say(four)} · solo night: ${say(solo)} · a teammate's card on ${duo ? duo.id : '(no quiet mission for two on the list: not asked)'}: ${mate ? Object.entries(mate).filter(([, r]) => r.lent).map(([f]) => f).join(' ') || 'none lent' : 'n/a'}`);

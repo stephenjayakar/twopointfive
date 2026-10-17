@@ -36,14 +36,16 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
     const page = await browser.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
+    const t0 = Date.now(); if (process.env.SAMEFIGHT_SAY) page.on('console', m => { if (m.text().startsWith('[samefight]')) console.error(`  ${((Date.now() - t0) / 1000).toFixed(0)} s ${m.text()}`); });   // (SAMEFIGHT_SAY=1: where the page has got to, on stderr — the software adapter is slow)
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&seed=7&nokeep&${q}${BREAK ? '&noexact' : ''}${EXTRA ? '&' + EXTRA : ''}`);
-    const t0 = Date.now();
     const P = await page.evaluate(async ({ script, every }) => {
       await window.__ready; try { window.__menu && window.__menu.close(); } catch { /* */ }
+      console.log('[samefight] the page is up'); let row = 0;
       const g = window.__game, inp = window.__input, cv = document.getElementById('view'), C = window.__digest.chain(30);
       const before = { events: g.events.length, up: g.guards.filter(x => x.state !== 'dead').length };
       for (const [n, hz, keys, cur, buttons] of script) {
         inp.mouseX = cur[0] * cv.clientWidth; inp.mouseY = cur[1] * cv.clientHeight; if (buttons & ~inp.buttons) inp.clicked |= buttons & ~inp.buttons; inp.buttons = buttons;
+        console.log(`[samefight] row ${++row} of ${script.length}`);
         for (let k = 0; k < n; k += every) { window.__runFrames(Math.min(every, n - k), 1 / hz, keys); await new Promise(r => setTimeout(r, 0)); }   // (a draw every `every` steps: the probe answers, the smoke runs — the GPU's values reach the game and its tape)
       }
       inp.buttons = 0; C.stop();

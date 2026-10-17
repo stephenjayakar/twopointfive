@@ -112,6 +112,7 @@ import { squadSenses } from '../game/enemysquads';
 import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
 import { MUSIC } from '../audio/pieces';
 import { LIVED, livedOfQuery } from '../scene/lived';
+import { UNDERFOOT } from '../scene/collision';
 import { ROOMCLEAR } from '../game/roomclear';
 
 export type Profile = 'frozen' | 'shipped';
@@ -159,6 +160,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.roundOwn = q.get('roundown') !== '0';   // …and the cap never refuses a pair a way round that keeps it off the door it is to stack on (game/orders.ts route): ?roundown=0 = the cap as it was first made, a pair behind the ordered door walks through it
   COVER.rearRead = q.get('rearread') !== '0';   // a rear man on a mark with no door (a wall charge's stand-off, the mate covering a man at work) watches what the ground round him offers — a way in, a long run of floor — not the spot he stood on when the order came (game/cover.ts readRear over roomfit.ts watchablesAt): ON in the page; ?rearread=0 = 'the way he came', as it was
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
+  UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
@@ -184,6 +186,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.oneAir = q.get('snowair') !== '0';   // … and its snow is ONE SNOW IN ONE AIR: the flakes fall through the simulated wind among the walls, a wisp is snow that wind lifts where it is fast enough, and the grains are no layer of their own (game/snowFx.ts oneAirOn, particles.wgsl snowAir; picture only): ON in the page; ?snowair=0 = flakes on the plain storm wind, wisps in gust patches, grains near the view, as they were
   SNOWBOG.on = q.get('snowbog') !== '0';   // thrown things bog down in lying snow: a grenade that comes down on a snow level's open ground keeps little of its bounce and its slide (game/snowBog.ts; PLAY, not picture): ON in the page; ?snowbog=0 = it bounces and skids there as on a floor
   SNOW_LOOK.marks = q.get('snowmarks') !== '0';   // … every thing that moves over the snow marks it, and a mark forms and kicks loose snow up by how hard it was made (game/snowMarks.ts, snowTracks.ts stampMark; picture only): ON in the page; ?snowmarks=0 = boots and blasts alone mark it, whole at once
+  SNOW_LOOK.past = q.get('snowpast') !== '0';   // … and its snow goes on falling past the level's rim, so a view by the edge is snowed across (game/snowFx.ts flakeOpen; picture only): ON in the page; ?snowpast=0 = no flake past the world's rectangle
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
@@ -214,6 +217,7 @@ export function pageSwitches(q: URLSearchParams): void {
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
   QUIETFOG.def = q.get('quietdef') === 'off' || q.get('quietdef') === '0' ? 'off' : 'team';   // WHERE a quiet mission starts (the maintainer's pick, 10-13): under the fog, lifted round you and your partner, the mission's sticky cameras handed out — a bare quiet link is that. ?quietdef=off = it starts with every guard shown, as it did
+  QUIETFOG.solo = q.get('solofog') !== '0';   // the solo night's own link is read as a quiet row's: it opens under the fog of war with the mission's cameras and wand (game/quietfog.ts soloFogLink): ?solofog=0 = the solo night with every guard shown, as it was
   QUIETFOG.wand = q.get('quietwand') !== '0';   // a quiet mission under the fog hands you an optical wand with its cameras, whatever your card carries (game/quietfog.ts quietWand): ?quietwand=0 = only a wand in your own pouch
   TAKE.wired = !(q.has('takecheck') && q.get('takecheck') !== '0');   // on a quiet mission a man is sent to look at the emptied holder only where the level says it is wired (game/takecheck.ts): ON in the page; ?takecheck = a man is sent seven seconds after every take, as it was
   HOLDFIRE.on = !q.has('noholdfire');   // a squad nobody has found never fires first (game/holdfire.ts): a teammate's round at a man who has not noticed anybody is held until the player's own shot or an order of his that means fire, walking or sneaking — ON in the page; ?noholdfire = they shoot on sight unless silent or sneaking, as they did
@@ -369,6 +373,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'QUIETFOG.on': 'TPS_QUIETFOG=1',
   'QUIETFOG.def': 'TPS_QUIETDEF=team',
   'QUIETFOG.wand': 'TPS_QUIETWAND=1',
+  'QUIETFOG.solo': 'TPS_SOLOFOG=1',
   'TORCH.calmOff': 'TPS_CALMTORCH=1',
   'MORALE.on': 'TPS_MORALE=1',
   'RUNNER.on': 'TPS_RUNNER=1',
@@ -414,6 +419,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'COVER.rearRead': 'TPS_REARREAD=1',
   'COVER.backTurn': 'TPS_BACKTURN=1',
+  'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
@@ -445,6 +451,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNOW_LOOK.oneAir': 'TPS_SNOWAIR=1 (shows only on a snow level: with TPS_SNOW=1; it wants the air field: TPS_AIR=1 on a page with a GPU; with it the grains stand down)',
   'SNOWBOG.on': 'TPS_SNOWBOG=1 (acts only on a snow level: with TPS_SNOW=1)',
   'SNOW_LOOK.marks': 'TPS_SNOWMARKS=1 (shows only on a snow level: with TPS_SNOW=1; it wants the prints: TPS_SNOWTRACKS=1)',
+  'SNOW_LOOK.past': 'TPS_SNOWPAST=1 (shows only on a snow level: with TPS_SNOW=1)',
   'SNOW_LOOK.blast': 'TPS_SNOWBLAST=1 (shows only on a snow level: with TPS_SNOW=1; the crater wants the prints: TPS_SNOWTRACKS=1; the throw wants the grains: TPS_SNOWGRAINS=1)',
   'AIR_SIM.on': 'TPS_AIR=1 (a picture only, and the harness has no field to feed: it changes what the game would hand one)',
   'GLASS.bothFaces': 'TPS_GLASSEARS=1',

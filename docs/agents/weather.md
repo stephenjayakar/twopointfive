@@ -760,3 +760,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     a GPU, never seen moving**: the shimmer is all motion. AND A SOFTWARE STILL DOES NOT SHOW A WISP AT ALL: two close stills of the lit yard with `WISP_HAZE`
     at 0.16 and at 0.05 are the same picture to within a grey level (mean difference under 1 of 765) — the soft pale banks in such a still are the snow
     SURFACE under the lamps and its own glints, not blown snow (misread once as a fog of wisps, retuned on it, taken back). Judge the wisps only on a GPU.
+- **The snow goes on falling past the level's rim** (10-17; switch `SNOW_LOOK.past`: ON in the page, `?snowpast=0`; OFF in the module and frozen,
+  `TPS_SNOWPAST=1`, shows only with `TPS_SNOW=1`; picture only). The maintainer, of a view by the pass's edge: "snowfall missing from bottom left of image".
+  A flake was born, kept and drawn only inside the world's rectangle (`rainOutdoors`, the step's `any(p.pos < WORLD_MIN)` end, `flakeHidden`'s rim line). A
+  flake high in the air is drawn well off its own ground, toward the camera's foot, so with the rim on the camera's side (the pass's road, where every
+  mission there starts; any corner) the flakes that would show over the near part of the picture are in the air PAST the rim, and none was ever there; and the
+  splat hid a flake from every pixel whose surface was not inside the rim.
+  - WHAT IT IS. `SNOWFX.past` (12 m, live, a row under Falling flakes, dimmed with the switch off; 0 = none) rides the frame's disc slot NEGATIVE
+    (`frame.weatherE.w = −past`; the lattice rain's readers ask `> 0.0`, a snow level's share was 0 already, and `rainFx.ts` stands down on a snow level before
+    it reads the slot). `particles_common.wgsl snowPast / flakeOpen / pastWorld`: the SKY's record (`skyRec`: its disc is the view's) asks `flakeOpen` at birth
+    and every flake's step ends by it: the world's rim grown by the metres, with `rainOutdoors`' own roofs asked of the rim beside a point past it. A step
+    wholly past the rim casts no ray (nothing to meet; one that comes in over the rim is traced, the trace starts at the world's face); a flake out there is lit
+    where it is (the shadow rays clip to the world themselves); the wind over it is the open storm (`pastRimAir`); the splat's rim test stands down, which also
+    hid every flake drawn over ground past the rim. A WISP, a grain, a kick, a blast's throw are born by `rainOutdoors` as before: nothing lies out there
+    (`snowFx.ts` files the wisps by `inside`, the flakes by `area`).
+  - THE FALL STAYS AS THICK. The ring's flakes are one fixed number (the count setting, and the ring is full at about 4,000 with the wisps in it) spread over all
+    the open air in the disc, so every flake past the rim is one fewer in the level. Past the rim the births thin sooner toward the disc's edge
+    (`PAST_RIM_IN / PAST_RIM_OUT` 0.5‥0.8 of the radius; `snowFx.ts PAST_TAPER` is the CPU's copy): those flakes show only over the near part of the picture.
+    Measured on the CPU twin, of the ring's flakes on screen: the yard 37%, the road 32%, the corner 37 to 39%; with the level's own 0.7‥1 taper out there it
+    was 26 to 28%, a quarter thinner than the yard. In the middle of the yard nothing moves.
+  - CHECK `tools/qa/snowpast-check.ts` (probe `snowpast`, families snow / weather): stands, rim, frame, fills (the screen in twelve parts through the play camera:
+    off, two or three parts by the rim are bare; on, none, the least 0.71 of an even share), thick, yard, off (switch off, or the metres at 0: the same records
+    byte for byte), digest (one game digest on and off), text. `SNOWPAST_BREAK=1` fails on both stands.
+  - NOT THIS: a view from outside the BACK wall with the camera over the buildings shows no flakes over the rooms' insides. That is the roofs' rule (rooms stay
+    dry to the eye), not the rim.
+  - **Never seen on a GPU.** The flakes' birth, step and splat are WGSL the harness cannot run: the page was booted on the software adapter (it compiles, no
+    validation errors) and stills taken there. Nobody has seen flakes past the rim moving, or how the fall reads against the black outside the level.

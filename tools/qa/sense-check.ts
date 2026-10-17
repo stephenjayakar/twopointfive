@@ -105,7 +105,7 @@ const watch = (g: any) => { const P = g.probe, C = { asks: 0 }, q = P.query, s =
     const S2 = new CpuSmoke(); for (let k = 0; k < SENSE.smoke.cap + 20; k++) S2.emit({ pos: [k, 0, 0], dir: [0, 1, 0], speed: 0, radius: 0.3, density: 6, temperature: 1, ttl: 1, age: 0 } as never);
     S2.emit({ pos: [-9, 0, 0], dir: [0, 1, 0], speed: 0, radius: P.canisterRadius, density: P.canisterDensity, temperature: 1, ttl: P.canisterDuration, age: 0 } as never);
     S2.emit({ pos: [-8, 0, 0], dir: [0, 1, 0], speed: 0, radius: 0.3, density: 6, temperature: 1, ttl: 1, age: 0 } as never);
-    const kept = BREAK || (S2.blobs.length === SENSE.smoke.cap && S2.blobs.some(x => x.x === -9));
+    const kept = BREAK || (S2.blobs.length === SENSE.smoke.cap && S2.blobs.some((x: { x: number }) => x.x === -9));
     verdict(before === 1 && shut < 0.3 && side > 0.8 && walled === 1 && after > 0.8 && blobs >= 1 && kept, 'smoke: a canister on a sight line shuts it while it burns, and only it',
       `a ${len} m line, the canister at its middle: clear ${before.toFixed(2)} → after 12 s ${shut.toFixed(3)} (blind under 0.30) · a line the other way ${side.toFixed(2)} · the same smoke behind a wall ${walled.toFixed(2)} · 75 s later ${after.toFixed(2)} · ${blobs} blob(s) held · a canister let out among ${SENSE.smoke.cap + 20} puffs kept its place ${kept}`);
   }
