@@ -61,6 +61,7 @@ import { GEAR } from '../game/gear';
 import { GUARD_EYE } from '../game/guards';
 import { WORDS } from '../game/words';
 import { UNSEEN } from '../game/unseen';
+import { SEENWALK } from '../game/seenwalk';
 import { HOLDFIRE } from '../game/holdfire';
 import { FOG, FOG_DESAT_WAS, FOG_EDGE_ON, FOG_FLAT_ON, FOG_LIT_ON } from '../game/fogofwar';
 import { START } from '../game/startfile';
@@ -260,6 +261,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_DOORTEST')) DOORTOOLS.testDoor = String((globalThis as any).process?.env?.TPS_DOORTEST ?? '') === '1';   // an entry order halts at a door found locked or wedged (src/game/doortools.ts haltAt): off, so every frozen probe's entry goes straight to its boot; TPS_DOORTEST=1 raises it
     if (pinned('TPS_OUTSIDEPLAIN')) DOORTOOLS.outsidePlain = String((globalThis as any).process?.env?.TPS_OUTSIDEPLAIN ?? '') === '1';   // 'clear from outside' as one order, no threshold pages: off, the menu every frozen probe presses; TPS_OUTSIDEPLAIN=1
     if (pinned('TPS_WORDNOCAN')) DOORTOOLS.wordNoCan = String((globalThis as any).process?.env?.TPS_WORDNOCAN ?? '') === '1';   // the word at a door held from outside spends no can (src/game/doortools.ts wordSteps): off, the word bangs the pockets as every frozen probe has it; acts with TPS_OUTSIDEPLAIN=1
+    if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
     if (pinned('TPS_BANGINTO')) DOORTOOLS.bangInto = String((globalThis as any).process?.env?.TPS_BANGINTO ?? '') === '1';   // a bang and clear's can thrown into the room from the hand (src/game/doortools.ts bangSpot): off, the can as every frozen tally threw it
     if (pinned('TPS_HALTBACK')) DOORTOOLS.haltBack = String((globalThis as any).process?.env?.TPS_HALTBACK ?? '') === '1';   // a pair halted on a door the other pair is charging steps back off it (src/game/doortools.ts haltBack): off, so every frozen probe's halted pair stands where it stood; TPS_HALTBACK=1 raises it
     if (pinned('TPS_BEHINDSAM')) DOORTOOLS.behindSam = String((globalThis as any).process?.env?.TPS_BEHINDSAM ?? '') === '1';   // Sam beyond a door counted as one of ours by the squad's own stun can (src/game/doortools.ts samBehind): off, so the word at a held door bangs its pockets wherever he stands, as every frozen probe and digest was made; TPS_BEHINDSAM=1 raises it

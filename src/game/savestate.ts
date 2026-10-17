@@ -140,6 +140,7 @@ import type { Box } from '../scene/boxes';
 import { LOOK_DECALS, lookDecal } from './lookDecals';
 import { diceInUse } from '../math/dice';
 import { sprintDoorTurning } from './sprintdoor';
+import { seenReset } from './seenwalk';
 
 // ================================================================================================================================ the schema
 export const SAVE_VERSION = 1;
@@ -554,6 +555,7 @@ export function canLoad(g: Game, s: SaveState | null | undefined): string | null
  *  state (poses, torch lights, leaf boxes) rebuilt; a 'checkpoint loaded' row goes on the chronicle. Throws with canLoad's reason when refused. */
 export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) {
   const why = canLoad(g, s); if (why) throw new Error(`checkpoint refused: ${why}`);
+  seenReset(g);   // (seenwalk.ts: what a walk kept of the floor's light and view is the abandoned moment's)
   // what the abandoned future knew that the file cannot: how many times THIS run has already been loaded / saved (a man who dies five times onto one
   // checkpoint has five loads on his card, not the file's nought)
   const sameRun = !!g.saves && g.saves.runId === s.runId; const prevLoads = sameRun ? g.chronicle.counts.loads : 0, prevSaves = sameRun ? g.chronicle.counts.saves : 0;

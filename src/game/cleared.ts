@@ -22,6 +22,7 @@ import type { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
 import { doorCells } from './guards';
+import { seenReset } from './seenwalk';
 
 const ROOM_MAX_CELLS = 2400;   // roomfight.ts's own cap: past this a flood is open floor
 
@@ -36,7 +37,7 @@ export class ClearedRooms {
   stats = { round: 0, through: 0, face: 0, mouth: 0 };
   constructor(private g: Game) { }
   /** nothing known (a restart: Game.resetGuards) */
-  reset() { this.knownRoom.fill(0); this.known = 0; this.last = -1; this.stats = { round: 0, through: 0, face: 0, mouth: 0 }; }
+  reset() { seenReset(this.g); this.knownRoom.fill(0); this.known = 0; this.last = -1; this.stats = { round: 0, through: 0, face: 0, mouth: 0 }; }
 
   /** the rooms of the level: a flood from the floor on either face of every door (a room no door leads to is nobody's to clear) */
   private build(): Uint16Array {
@@ -73,6 +74,12 @@ export class ClearedRooms {
     return out;
   }
   isKnown(room: number): boolean { return !room || !!this.knownRoom[room]; }
+  /** where somebody might stand in the rooms nobody of the team has been in: one point of their floor every `step` nav cells each way (seenwalk.ts) */
+  unknownEyes(step: number): { x: number; z: number }[] {
+    const nav = this.g.col.nav, M = this.build(), K = this.knownRoom, out: { x: number; z: number }[] = [], n = Math.max(1, step | 0);
+    for (let iz = 0; iz < nav.H; iz += n) for (let ix = 0; ix < nav.W; ix += n) { const r = M[nav.idx(ix, iz)]; if (r && !K[r]) out.push({ x: (ix + 0.5) * nav.cell, z: (iz + 0.5) * nav.cell }); }
+    return out;
+  }
   /** one of ours stands at `p` */
   mark(p: Vec3) { const r = this.roomAt(p); if (r && !this.knownRoom[r]) { this.knownRoom[r] = 1; this.known++; } }
   /** how many rooms are known (it only grows inside an encounter: a cheap 'has what is known changed') */
