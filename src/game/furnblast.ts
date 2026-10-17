@@ -78,7 +78,7 @@ export const FURN = {
    *  every bank over 0.2 m clear of its doors because it stops feet, and a charge makes a door anywhere). The maintainer, 10-15, of a wall charge on the pass:
    *  "couldn't path through a hole from a wall breach" — two banks at the foot stopped him, the walk grid and the charge's own 'is it a hole' ray ("it held").
    *  off = a bank stands in the hole it was blown under. PICTURE: the snow field (render/snowField.ts) is baked at the level's start and still draws its hill. */
-  mouth: { on: false, depth: 0.9, top: 2.3, vol: 3.0, chunks: 12, snow: false },
+  mouth: { on: false, depth: 0.9, top: 2.3, vol: 3.0, chunks: 12, snow: false, base: false, baseThick: 0.08 },
   /** WHAT HUNG ON THE WALL UNDER A CHARGE (hungGoes; wallcharge.ts WALLCHARGE.hung is its switch): cut into slabs `len` m long (at most `max`) by `strips`; the
    *  slabs within `underM` of the charge along the wall are driven through the hole at `through` m/s (lo, hi), the rest torn off into the room at `back` m/s
    *  and along the wall at up to `side` m/s, `up` m/s off the floor, tumbling (`spin`, as throwPiece's); a long slab counts as under the charge only with its middle within `holeM` of it; `chunks` = rigid pieces one thing may make (past it,
@@ -605,6 +605,18 @@ export class Furniture {
       take(i); for (const j of up) take(j);
     }
     if (razed.length) { const up = stack(razed); if (up) for (const j of up) take(j); else FURN_STATS.mouthLeft++; }   // (what stood on the razed stretch: a chest's top)
+    // THE BOTTOM LAYER GOES WITH THE PILE (FURN.mouth.base): the pass above leaves what is no higher than a step (top at or under 0.2 m: a mat, a kerb, a low
+    // bank), and the furniture's own bands never list it (root.minTop). A pile of sacks is layers 0.2 m thick: the blast took the layers above and left the
+    // bottom one lying in the hole. A low thing with a body (baseThick: no mat) that CARRIED something now gone, by this blast or an earlier one, goes too, with
+    // whatever still rests on it; one that carried nothing stays, as does one with a thing on it this rule never takes.
+    if (FURN.mouth.base) for (let i = 0; i < n; i++) {
+      const b = boxes[i], reach = Math.max(b.h[0], b.h[2]) * 1.42; if (Math.abs(b.c[0] - cx) > hx + reach || Math.abs(b.c[2] - cz) > hz + reach || done.has(i) || b.flags & (BoxFlag.NoPrimary | BoxFlag.NoShadow)) continue;
+      const a = aabbOf(b); if (!overPlan(a, zone) || a.y1 > 0.2 || a.y1 - a.y0 < FURN.mouth.baseThick || walls.breakableAt(i) || !this.mouthMine(i, b, a) || !this.mouthOk(i)) continue;
+      let carried = false; for (let j = 0; j < n && !carried; j++) { if (j === i || !(done.has(j) || this.hidden.has(j))) continue; const o = boxes[j]; carried = Math.abs(o.c[1] - o.h[1] - a.y1) <= FURN.touch && overPlan(aabbOf(o), a); }
+      if (!carried) continue;
+      const up = stack([a]); if (!up) { FURN_STATS.mouthLeft++; continue; }
+      take(i); for (const j of up) take(j);
+    }
     if (!hid.length) return;
     const q = { x0: 1e9, x1: -1e9, z0: 1e9, z1: -1e9 }; for (const i of hid) { const a = aabbOf(boxes[i]); q.x0 = Math.min(q.x0, a.x0); q.x1 = Math.max(q.x1, a.x1); q.z0 = Math.min(q.z0, a.z0); q.z1 = Math.max(q.z1, a.z1); }
     const c: Vec3 = [(q.x0 + q.x1) / 2, 0.6, (q.z0 + q.z1) / 2];
