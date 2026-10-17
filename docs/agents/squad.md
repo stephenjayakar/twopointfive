@@ -253,7 +253,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hook, three quarters of a second gone. THE RULE: from the let-go (a dropped job, or a kept gun's time up) his feet keep the path (strafe), his body turns to the corner of his path
   he is walking to, his gun carried in front of it, until the body is within `backTurnBody` (cosine 0.7) of that way or `backTurnSecs` 1 are up; stood, run on over `backOut`, or not
   posed for a frame, it ends; dealt a new opening meanwhile he meets it as a man walking backwards (backKeep holds him the same way); taken by an order that does not leave him free,
-  a daze or the knob going off, his script is given back as a job's is. Seen through the doors goal's doorway mend (a leaf walked round) on the registry walk. CHECK
+  a daze or the knob going off, his script is given back as a job's is. Seen on the registry walk, beside the doorway rule that walks a man round an open leaf. CHECK
   `tools/qa/backturn-check.ts` (`probes.ts backturn`, family cover; `BACKTURN_BREAK=1` fails on both stands): the registry walk with four, rule off then on. MEASURED 10-17, one walk
   per stand, headless: shipped 42 let-goes with the body turned, 5.16 m walked against the path (worst 0.42) → 35 let-goes, 0.09 m (worst 0.03), path made in the 0.8 s after 0.44 →
   1.19 m; frozen stand with the switch raised 2.76 m → 0.02 m, 0.66 → 1.08 m. The walk's stuck man-frames (0.65 % off, 0.73 % on, shipped) are a rear man stood ON his own place over
