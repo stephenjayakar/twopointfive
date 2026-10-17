@@ -759,7 +759,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // (THE QUIET PICTURE'S REST: Sam crouched by the pool, a partner behind him — kitViewQuietPlaces; a place the level wrote, or a worked-out one that is
     //  not free floor, leaves the plan's. The camera stays framed on the plan's five)
     const qAt = Q ? kitViewQuietPlaces(P, order.length, (x, z) => !nav.isBlocked(x, z)) : null, mate0 = qAt?.mate && order[0] && order[0] !== head ? qAt.mate : null;
-    if (qAt?.sam) slots[0] = qAt.sam;
+    if (qAt?.sam) { slots[0] = qAt.sam; stand.push([qAt.sam[0], qAt.sam[1]]); if (mate0 || (qAt.mate && order[0])) stand.push([qAt.mate![0], qAt.mate![1]]); }   // (…and the camera is framed on the rest places too: the partner's fell off the window's edge)
     for (const p of slots) if (nav.isBlocked(p[0], p[1])) V.blocked++;
     if (P.slotSrc.slice(0, order.length + 1).some(x => x === 'derived')) V.blocked += P.stepped;   // (the worked-out line's steps count only where a man took one of its places)
     const chars: [object, number][] = [];
@@ -845,6 +845,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const crack = (S: Staged, B: Beat, wide: number) => { if (S.door) game.doors.crack(S.door!, B.char.pos, B.char.id, stepDt, undefined, K.swing, wide); };
   const wideOpen = (S: Staged, wide: number) => !S.door || Math.abs(S.door!.angle - S.shut) >= wide - 0.1;
   const isAjar = (S: Staged) => !!S.door && !S.door!.off && Math.abs(S.door!.angle - S.shut) >= 0.03;
+  /** not yet SHUT for a row that works a shut leaf: ajar — or, on the quiet picture, where the leaf rests ajar and is pulled to for such a row, still
+   *  on its way (a frag's thrower reads how the leaf turns under the shove: a leaf still being pulled to was no shut door to him, and he kept the grenade) */
+  const leafWait = (S: Staged) => isAjar(S) || (S.rest !== S.shut && !!S.door && !S.door!.off && (!S.door!.latched || S.door!.closing));
   const offRest = (S: Staged) => !!S.door && !S.door!.off && Math.abs(S.door!.angle - S.rest) >= 0.03;   // (the leaf is not where it rests: `rest` is `shut` but on the quiet picture)
   const unlock = (S: Staged) => { if (S.door) (S.door as { locked: boolean }).locked = false; };
   const walled = (S: Staged) => S.kind === 'wall' && !S.hole;
@@ -1596,7 +1599,11 @@ export function kitViewStart(d: KitViewDeps): KitView {
     //  stands IS his place: Game.puppet left on him would refuse the squad every order for as long as the hole is kept)
     if (S.hole && game.puppet && !game.puppet.aim && !game.puppet.throwAt && (!B || B.man)) { const dH = flat(pl.char.pos, S.sam); if (dH <= K.onSlot || dH < stuckD - 0.02) { stuckD = dH; stuckT = game.time; } else if (game.time - stuckT >= 1 && dH <= K.samGive) { S.sam = [pl.char.pos[0], pl.char.pos[2]]; stuckD = Infinity; stuckT = game.time; } }   // (only the half step itself, and only its last stretch: a walk still metres out is a walk)
     else { stuckD = Infinity; stuckT = game.time; }
-    if ((!B || B.man) && !(B && B.row.team)) { if (flat(pl.char.pos, S.sam) > K.onSlot && !(V.home && !B && !actor() && away(S))) game.puppet = { goal: [S.sam[0], 0, S.sam[1]], aim: null, throwAt: null, walk: K.samWalk }; else if (game.puppet) game.puppet = null; }   // (not under the whole team's row: Game.puppet takes the squad's order away — nor while a row of his waits for the men to walk home: under it they stood until he was home)
+    // (THE QUIET PICTURE: Sam rests a body's width from where the game stacks a man on the door, and a partner taking his post shoulders him a few
+    //  centimetres — over `onSlot`, and the walk home this gives him is Game.puppet, which takes the partner's order away: his frag went back on his
+    //  belt. Under a teammate's row he is left where he was shouldered to, up to a quarter metre more; the row over, he is walked home as ever)
+    const slack = Q && B && B.man ? 0.25 : 0;
+    if ((!B || B.man) && !(B && B.row.team)) { if (flat(pl.char.pos, S.sam) > K.onSlot + slack && !(V.home && !B && !actor() && away(S))) game.puppet = { goal: [S.sam[0], 0, S.sam[1]], aim: null, throwAt: null, walk: K.samWalk }; else if (game.puppet) game.puppet = null; }   // (not under the whole team's row: Game.puppet takes the squad's order away — nor while a row of his waits for the men to walk home: under it they stood until he was home)
     if (!B && (tools().ops.length || tools().set.length)) { tools().reset(); pools(); }
     { const WC = game.wallCharge; if (!B && dirty !== 'world' && WC && (WC.ops.length || WC.set.length)) { WC.reset(); pools(); } }   // (not while the room waits for its restage: a charge that came down unblown goes under the dissolve, never off the wall under the eye — finish())
     if (!B && shot && game.time - shotAt >= K.hold) mend();   // (the pane his rounds broke: whole again, plain)
@@ -1622,7 +1629,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  door order's while the leaf is not yet to (the order's own test says "it's open": tidy() is pulling it — not Sam's own charge, nor the big slot's tools: each of those rows begins at once and pulls the leaf to itself, under his walk to the door / before its order is given). KIT_VIEW_LOOP.wait s at most, then begun as it stands */
   const waits = (S: Staged, f: string): boolean => {
     const man = actor(), row0 = rowFor(f, man), row1 = row0?.opening && walled(S) && !shutWall.has(S.plan) ? wallRow : row0, row = row1 === wallRow && row0 === wallRow && shutOwn.has(S.plan) ? gunRow : row1;   // (the charge that opens the wall for it is the squad's order: waited for as the wall charge's own row is)
-    if (!((!!man && !!game.puppet) || (!!row && !!row.team && (!!game.puppet || flat(game.player.char.pos, S.sam) > K.onSlot)) || (!!row && row.door === 'none' && row !== ownCharge && row !== bigSam && row !== bigMate && isAjar(S)))) return false;
+    if (!((!!man && !!game.puppet) || (!!row && !!row.team && (!!game.puppet || flat(game.player.char.pos, S.sam) > K.onSlot)) || (!!row && row.door === 'none' && row !== ownCharge && row !== bigSam && row !== bigMate && leafWait(S)))) return false;
     if (isNaN(waitT)) waitT = game.time;
     if (S.rest !== S.shut && row && row.door === 'none') leafAsk = game.time + 0.5;   // (the quiet picture's leaf rests ajar: a door order waits for it SHUT — tidy() pulls it to while this asks)
     return game.time - waitT < K.wait; };
@@ -1669,7 +1676,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (!now && !isNaN(restNext)) { restUntil = game.time + restNext; restNext = NaN; return; }   // (the lamp just mended: the loop's own turn waits)
     restNext = NaN;
     const f = now ? asked! : nextThing();
-    if (waits(S, f)) { hold(...(game.puppet || flat(game.player.char.pos, S.sam) > K.onSlot ? ['sam'] : []), ...(isAjar(S) ? ['leaf'] : [])); return; }   // (`asked` is kept: the pick plays when it can)
+    if (waits(S, f)) { hold(...(game.puppet || flat(game.player.char.pos, S.sam) > K.onSlot ? ['sam'] : []), ...(leafWait(S) ? ['leaf'] : [])); return; }   // (`asked` is kept: the pick plays when it can)
     waitT = NaN; if (now) asked = null; else if (hi === null) flip++;
     picking = now; begin(S, f);
   };
