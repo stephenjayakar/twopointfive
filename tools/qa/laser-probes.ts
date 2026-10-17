@@ -23,6 +23,7 @@ const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
 const { resetChase } = await import(`${ROOT}/src/game/guards.ts`);
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
+const { drawnBeam } = await import(`${ROOT}/src/game/stature.ts`);
 const LASER = CBM.LASER;
 
 const DT = 1 / 60;
@@ -38,7 +39,10 @@ const f2 = (x: number) => x.toFixed(2);
 
 // ---------------------------------------------------------------- the draw as it was before the switch (combat.ts laserBoxes + beamBoxes at af55d89, verbatim): the reference.
 // (FROZEN on purpose — it is what 'the switch puts the old lasers back' is measured against. A later, intended change to what a laser MEETS (laserBoxes' hit tests)
-//  is made here too, and said so; nothing else below it changes.)
+//  is made here too, and said so; nothing else below it changes. One such: a man of the cast is drawn at his own height (stature.ts), so his beam leaves his
+//  DRAWN muzzle and ends on the simulation's point — `drawnBeam`, the game's own, asked here as combat.ts laserBoxes asks it. On the mannequin (the frozen
+//  stand) it hands back the very ray, k 1: box for box the draw this was. Without it laser-off and ir-off were red wherever the harness stands on the
+//  cast — the shipped stand, or TPS_CAST=1 — by a centimetre at the muzzle of every man not drawn at 1.)
 function beamBoxesOld(g: any, from: number[], dir: number[], L: number, out: any[], dot: boolean) {
   const red = [1, 0.06, 0.03];
   const hw = Math.max(0.0022, 0.45 * g.mPerPx); const gain = 0.0022 / hw;
@@ -55,13 +59,14 @@ export function laserBoxesOld(g: any, gd: any, out: any[]) {
   for (const o of g.guards) { if (o === gd || o.state === 'dead' || g.fogOfWar.hidden(o)) continue; const t = o.char.rayHit(from, dir, L); if (t >= 0) L = Math.min(L, t); }
   if (L < 0.05) return;
   const dot = !!(wh || ph || L < 30);
+  const B = drawnBeam(c, from, dir, L);
   const fog = g.fogOfWar;
   if (fog.active && fog.knobs.lasers && !fog.onTeam(gd)) {
     if (!fog.seen(gd)) return;
-    for (const [t0, t1] of fog.beamRuns(from, dir, L)) if (t1 - t0 > 0.02) beamBoxesOld(g, v3.mad(from, dir, t0), dir, t1 - t0, out, dot && t1 >= L - 1e-6);
+    for (const [t0, t1] of fog.beamRuns(from, dir, L)) if (t1 - t0 > 0.02) beamBoxesOld(g, v3.mad(B.from, B.dir, t0 * B.k), B.dir, (t1 - t0) * B.k, out, dot && t1 >= L - 1e-6);
     return;
   }
-  beamBoxesOld(g, from, dir, L, out, dot);
+  beamBoxesOld(g, B.from, B.dir, L * B.k, out, dot);
 }
 const isDot = (b: any) => b.h[2] <= 0.02;
 const lineLen = (l: any[]) => l.filter(b => !isDot(b)).reduce((a, b) => a + 2 * b.h[2], 0);
