@@ -214,8 +214,8 @@ export async function leversScreens(): Promise<boolean> {
         'Standard pressed: every lever back on standard\'s rung, nothing kept, the links as they were; with no mix A / D are standard / hard as ever', `${back} · D → ${keyHard}`);
       S.select(solo.id); const soloRows = leverRowsOf(root); if (quietM) S.select(quietM.id); const quietRows = quietM ? leverRowsOf(root) : []; if (lessonM) S.select(lessonM.id); const lessonRows = lessonM ? leverRowsOf(root) : [];
       const said = (rows: typeof soloRows) => rows.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ');
-      F.verdict(soloRows.every(r => r.na && r.note === '') && (!quietM || quietRows.every(r => r.key === 'fog' && QUIETFOG.on ? !r.na : r.na)) && lessonRows.every(r => r.na),
-        'the solo night greys all three rows (no fog of war, and its shift is the level\'s own); so does a quiet mission (its shift is the level\'s own; its fog lever is live only while game/quietfog.ts\'s rule is on, tools/qa/quietfog-check.ts) and a Training lesson (its page reads no lever)',
+      F.verdict(soloRows.every(r => (r.key === 'fog' && QUIETFOG.on && QUIETFOG.solo ? !r.na : r.na && r.note === '')) && (!quietM || quietRows.every(r => r.key === 'fog' && QUIETFOG.on ? !r.na : r.na)) && lessonRows.every(r => r.na),
+        'the solo night greys all three rows (no fog of war, and its shift is the level\'s own — but its fog row is live where game/quietfog.ts QUIETFOG.solo is up); so does a quiet mission (its shift is the level\'s own; its fog lever is live only while game/quietfog.ts\'s rule is on, tools/qa/quietfog-check.ts) and a Training lesson (its page reads no lever)',
         `solo: ${said(soloRows)}${quietM ? ` · ${quietM.id}: ${said(quietRows)}` : ' · (no quiet mission on this build)'}${lessonM ? ` · ${lessonM.id}: ${said(lessonRows)}` : ''}`);
       S.close();
       // ---- the loadout

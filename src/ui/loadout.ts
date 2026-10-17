@@ -35,8 +35,8 @@ import { pickSearch, levelWords, SCENARIO_KEYS } from '../scene/scenarioList';
 import { MISSIONS, SOLO_NIGHT, SOLO_KEY, unplayed, missionList, missionHref, openMissions, closeMissions, issuedWalls, issuedKit, type IssuedKit, type Mission } from './missions';
 import { difficultyHref, leversHref, leversMixed, leversLine, structureOfLevel } from '../game/difficulty';
 import { leverRows, leversOpenOn, type LeverRowsUi } from './levers';
-import { fogOfQuery, quietCamsOfLink } from '../game/scenarioRun';
-import { QUIETFOG, quietFogHref, quietFogRow, quietFogAside } from '../game/quietfog';
+import { fogOfQuery, quietCamsOfLink, sameFog } from '../game/scenarioRun';
+import { QUIETFOG, quietFogHref, quietFogRow, quietFogAside, soloFogRow } from '../game/quietfog';
 import { STICKY } from '../game/stickycam';   // (read inside the screen only: what a quiet mission hands you — lentNow)
 import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
@@ -146,11 +146,11 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // THE DIFFICULTY LEVERS (ui/levers.ts, game/difficulty.ts LEVERS — the maintainer, 10-10: 'let's actually unbundle difficulty a bit'): what standard / hard
   // is made of, each its own to move before the run — fog of war (three rungs), the enemy's AI, the enemy's kit. One line of buttons under the mission's head,
   // by the mouse (the keys' rows are the team's and the kit's, as they were); the level the screen was opened on stands under them (leversOpenOn) and a
-  // moved lever is kept on this machine. Not on the solo night (no fog of war, and its shift is the level's own) nor on a Training lesson (played as issued).
+  // moved lever is kept on this machine. Not on a Training lesson (played as issued); on the solo night only the fog's, and only where it has one (QUIETFOG.solo).
   let levers: LeverRowsUi | null = null, leversBack: (touched: boolean) => void = () => { /* nothing to put back */ };
   const leverNote = el('div', 'lo-levnote');
-  const quietRow = entry.kind !== 'solo' && quietFogRow(entry as ScenarioEntry);   // (a quiet mission may be played under the fog — game/quietfog.ts: the fog lever is live on its screen with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved)
-  // NO FOG OF WAR ON THIS MISSION AS IT WOULD DEPLOY NOW (the solo night always; a quiet mission until its fog lever is raised): the kit that only looks into
+  const quietRow = entry.kind === 'solo' ? soloFogRow() : quietFogRow(entry as ScenarioEntry);   // (a quiet mission may be played under the fog — game/quietfog.ts: the fog lever is live on its screen with a bottom rung of its own, off, and lit where a quiet mission starts — QUIETFOG.def — until it is moved; the solo night with it where QUIETFOG.solo is up: its link is read as a quiet row's)
+  // NO FOG OF WAR ON THIS MISSION AS IT WOULD DEPLOY NOW (a quiet mission or the solo night with the fog lever at its bottom rung; the solo night always with QUIETFOG.solo down): the kit that only looks into
   // the fog — FOG_KIT — does nothing there, and a tile that carries one says so itself (ui/kitCard.ts `idle`). Asked live: the lever is on this screen.
   const noFog = () => !fogOfQuery(new URLSearchParams(quietFogHref(base, quietRow).replace(/^[^?]*\?/, '')));
   // WHAT THIS MISSION HANDS YOU OVER YOUR CARD, AS IT WOULD DEPLOY NOW (a quiet mission under the fog: scenarioRun.ts hands its link's sticky cameras for
@@ -166,9 +166,9 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const lentNow = (f: string): number => (member !== 0 || !FOG_KIT.includes(f) ? 0 : f === 'cams' ? lentOf().cams : lentOf().wand);
   const lookSig = () => `${noFog()}|${lentNow('cams')}|${lentNow('wand')}`;
   let fogWas = '';   // (set where the first card is mounted: `member` is not there yet)
-  const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
+  const paintLevers = () => { if (!levers) return; levers.paint(key => (key === 'fog' ? quietRow || fogOfQuery(new URLSearchParams(base.replace(/^[^?]*\?/, ''))) : entry.kind !== 'quiet' && entry.kind !== 'solo'), entry.kind === 'roomclear' ? structureOfLevel(entry.level) : '', quietRow);   // (the fog lever where the mission has a fog of war — game/scenarioRun.ts; the defenders' two not on a quiet mission, whose shift is the level's own)
     leverNote.textContent = quietFogAside(() => leversMixed() ? `Your own mix, kept on this machine: ${leversLine()}.` : ''); };
-  if (entry.kind !== 'solo' && !kitAsIssued(entry) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts)
+  if ((entry.kind !== 'solo' || quietRow) && !kitAsIssued(entry) && !opts.embedded) {   // (mounted inside the one starting page — ui/startpage.ts — the sheet over it carries the rows: ui/missions.ts; the solo night under the fog has the fog's lever, its other two stay greyed: the shift is the level's own)
     leversBack = leversOpenOn(base);
     const box = el('div', 'lo-levers'); box.setAttribute('data-row', 'levers');
     levers = leverRows(box, { row: 'lo-lever', label: 'lo-levl', btn: 'lo-levb', note: 'lo-levn' }, () => S.paint());
@@ -291,7 +291,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       if (opts.deploy) { opts.deploy(to, squad); return; }
       // the solo night off the real start card over the plain night: Start, as it has always been — no load (ui/missions.ts's own shortcut, taken here now that
       // this screen stands between the list and the run); the card's Start puts your kit on the player (main.ts onStart → kitFresh)
-      if (entry.kind === 'solo' && MISSIONS.startSolo && hourIdOf(new URLSearchParams(to).get('hour')) === hourLive() && weatherOfSearch(to) === weatherOfSearch(pageSearch) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(pageSearch).has(k))) { KIT_SOLO.on = true; MISSIONS.startSolo(); return; }   // (…at the hour and in the weather the page stands at — game/hours.ts, game/weatherKinds.ts: another of either is a load)
+      if (entry.kind === 'solo' && MISSIONS.startSolo && hourIdOf(new URLSearchParams(to).get('hour')) === hourLive() && weatherOfSearch(to) === weatherOfSearch(pageSearch) && !SCENARIO_KEYS.some(k => k !== SOLO_KEY && new URLSearchParams(pageSearch).has(k)) && sameFog(to, pageSearch)) { KIT_SOLO.on = true; MISSIONS.startSolo(); return; }   // (…at the hour and in the weather the page stands at — game/hours.ts, game/weatherKinds.ts: another of either is a load — and in the fog it stands in: the solo night under the fog off a plain page is a load of its own link, game/quietfog.ts QUIETFOG.solo)
       const url = location.pathname + to + location.hash;
       if (url === location.pathname + location.search + location.hash) location.reload(); else location.assign(url);
     },

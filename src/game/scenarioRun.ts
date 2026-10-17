@@ -7,7 +7,7 @@ import { hourFromQuery } from './hours';   // (called inside startFromQuery only
 import { difficultyHere } from './difficulty';   // (called inside startScenario only)
 import { weatherOfSearch } from './weatherKinds';   // (tables and pure functions: no game import)
 import { kitSoloStand } from './kit';   // (called inside startFromQuery only)
-import { quietFogOfQuery, quietCamsOfQuery, quietFogStart, quietFogEnd, type QuietRung } from './quietfog';
+import { quietFogOfQuery, quietCamsOfQuery, quietFogStart, quietFogEnd, soloFogLink, type QuietRung } from './quietfog';
 import { stickyVisitSet } from './stickycam';   // (called inside functions only)
 import { ALL_MISSIONS, TRAINING_MISSIONS, specOfQuery, teamWords, type ScenarioSpec } from '../scene/scenarioList';
 import type { ScenarioEntry } from '../scene/scenarios';
@@ -23,10 +23,17 @@ export function plainFog(q: URLSearchParams): boolean { return !(q.has('nofow') 
  *  the mission sheet's lever; 'off' = none — every quiet mission until the lever is moved — and always on a Training lesson's level and with the rule off) */
 /** the sticky cameras a link hands the player for the visit WHERE ITS FOG RUNS (a quiet mission's own, never a lesson's — quietfog.ts quietCamsOfQuery): one
  *  rule for the staging below and for the loadout screen that shows them on his card before he deploys (ui/loadout.ts lentNow) */
-export const quietCamsOfLink = (q: URLSearchParams): number => (specOfQuery(q)?.kind === 'quiet' ? quietCamsOfQuery(q, lessonLevel(q)) : 0);
-export function quietRungOfQuery(q: URLSearchParams): QuietRung { return specOfQuery(q)?.kind === 'quiet' ? quietFogOfQuery(q, lessonLevel(q)) : 'off'; }   // (the kind as the start reads it: `quiet` beside `roomclear` is the room clear)
+/** the link is one the quiet fog reads: a quiet mission's, or the solo night's own where that rule is up (quietfog.ts soloFogLink: `solo`, nothing staged) */
+const quietLike = (q: URLSearchParams): boolean => { const s = specOfQuery(q); return s ? s.kind === 'quiet' : soloFogLink(q); };
+export const quietCamsOfLink = (q: URLSearchParams): number => (quietLike(q) ? quietCamsOfQuery(q, lessonLevel(q)) : 0);
+export function quietRungOfQuery(q: URLSearchParams): QuietRung { return quietLike(q) ? quietFogOfQuery(q, lessonLevel(q)) : 'off'; }   // (the kind as the start reads it: `quiet` beside `roomclear` is the room clear)
 /** fog of war as a query string asks for it: ?nofow / ?nofogofwar off, ?fow / ?fogofwar on, else on under the room clear and the rescue — and on a quiet
  *  mission whose link carries a rung of the fog lever (quietRungOfQuery) */
+/** two links stand in the same fog: on or off, the same rung, the same cameras handed (the screens' no-load start asks it of the page and the link) */
+export function sameFog(a: string | URLSearchParams, b: string | URLSearchParams): boolean {
+  const sig = (s: string | URLSearchParams) => { const q = typeof s === 'string' ? new URLSearchParams(s.replace(/^[^?]*\?/, '')) : s; return `${fogOfQuery(q)}|${quietRungOfQuery(q)}|${quietCamsOfLink(q)}`; };
+  return sig(a) === sig(b);
+}
 export function fogOfQuery(q: URLSearchParams): boolean {
   if (q.has('nofow') || q.has('nofogofwar')) return false;
   const four = q.has('squad4') && !q.has('nightbreach') && !q.has('rescue') && !q.has('quiet');
