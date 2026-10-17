@@ -213,6 +213,23 @@ fn rainOutdoors(p: vec2f) -> bool {
   return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w)
       && p.x > WORLD_MIN.x + 0.25 && p.y > WORLD_MIN.z + 0.25 && p.x < WORLD_MAX.x - 0.25 && p.y < WORLD_MAX.z - 0.25;
 }
+/** SNOW PAST THE LEVEL'S RIM (game/weatherKinds.ts SNOW_LOOK.past; the maintainer, of a view by the pass's edge: "snowfall missing from bottom left of image"). A flake
+ *  high in the air is drawn well off its own ground, toward the camera's foot: with the rim on the camera's side, the flakes that would show over the near part of
+ *  the picture are in the air PAST the rim, and none was ever there (births, the step and the splat all kept to the world's rectangle). snowPast() = how many metres
+ *  past the rim the snow goes on falling: game/snowFx.ts hands it over as frame.weatherE.w NEGATIVE (that slot is the lattice rain's share, asked `> 0.0` by its
+ *  readers; a snow level has no lattice rain, and game/rainFx.ts stands down on one before it reads the slot). 0 = no flake past the rim: the build as it was. */
+fn snowPast() -> f32 { return max(-frame.weatherE.w, 0.0); }
+/** … may a FLAKE be in the air over ground point p: inside the world's rim grown by snowPast() and under no roof — rainOutdoors' own answer for p, or for the rim
+ *  beside it when p is past it (one roof rule: a roof's dry column runs straight out from the rim). With 0 it is rainOutdoors to the letter. Nothing LIES past the
+ *  rim (a wisp, a grain, a kick, a blast's throw are born by rainOutdoors): only the sky's falling snow. game/snowFx.ts flakeOpen is this on the CPU. */
+fn flakeOpen(p: vec2f) -> bool {
+  let m = snowPast();
+  if (m <= 0.0) { return rainOutdoors(p); }
+  return all(p > WORLD_MIN.xz - vec2f(m)) && all(p < WORLD_MAX.xz + vec2f(m)) && rainOutdoors(clamp(p, WORLD_MIN.xz + vec2f(0.26), WORLD_MAX.xz - vec2f(0.26)));
+}
+/** … and is p past the world's rectangle (no box, no air field out there) */
+const PAST_RIM_IN = 0.5; const PAST_RIM_OUT = 0.8;   // shares of the view's disc between which the fall past the rim thins to nothing (game/snowFx.ts PAST_TAPER holds the same two)
+fn pastWorld(p: vec3f) -> bool { return p.x < WORLD_MIN.x || p.z < WORLD_MIN.z || p.x > WORLD_MAX.x || p.z > WORLD_MAX.z; }
 /** … and is SURFACE point P under one of the two roofs — inside the interior / annex footprint AND below the ceiling slab (a wall's top or a unit standing on the roof is in the open).
  *  Rain only exists outdoors, so nothing under a roof can ever be seen THROUGH a drop: the top-down raster looks straight through the NoPrimary roof and lays the lit rooms a few
  *  pixels beside the outdoor drops ON SCREEN with three metres of wall and slab between them in the world — a screen-space read landing there is refused (particles_draw.wgsl
@@ -234,7 +251,7 @@ const FLAKE_WALL_IN: f32 = 0.2;   // m (snowFx.ts FLAKE_WALL_IN: the same number
 fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN && p.y >= R.y + FLAKE_WALL_IN && p.x <= R.z - FLAKE_WALL_IN && p.y <= R.w - FLAKE_WALL_IN; }
 fn flakeHidden(P: vec3f) -> bool {
   let q = P.xz;
-  if (!(q.x > WORLD_MIN.x + 0.25 && q.y > WORLD_MIN.z + 0.25 && q.x < WORLD_MAX.x - 0.25 && q.y < WORLD_MAX.z - 0.25)) { return true; }
+  if (snowPast() <= 0.0 && !(q.x > WORLD_MIN.x + 0.25 && q.y > WORLD_MIN.z + 0.25 && q.x < WORLD_MAX.x - 0.25 && q.y < WORLD_MAX.z - 0.25)) { return true; }   // (with the snow falling past the rim, the ground's last quarter metre shows it as the rest does)
   if (P.y > CEIL_Y - 0.05) { return false; }
   var r = flakeRectIn(frame.weatherC, q) || flakeRectIn(frame.weatherD, q);
   if (WX_KINDS) { if (frame.cardCfg.y != 0u) { r = r || flakeRectIn(wxRect(frame.cardCfg.y), q) || flakeRectIn(wxRect(frame.cardCfg.z), q); } }

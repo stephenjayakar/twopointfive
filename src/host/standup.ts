@@ -166,6 +166,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_SNOWGRAINS')) SNOW_LOOK.grains = String((globalThis as any).process?.env?.TPS_SNOWGRAINS ?? '') === '1';   // … no fine grains ride a simulated wind near the view
   if (opts.harness && pinned('TPS_SNOWAIR')) SNOW_LOOK.oneAir = String((globalThis as any).process?.env?.TPS_SNOWAIR ?? '') === '1';   // … its snow is not one snow in one air
   if (opts.harness && pinned('TPS_SNOWMARKS')) SNOW_LOOK.marks = String((globalThis as any).process?.env?.TPS_SNOWMARKS ?? '') === '1';   // … things leave no mark on it and a mark is whole at once
+  if (opts.harness && pinned('TPS_SNOWPAST')) SNOW_LOOK.past = String((globalThis as any).process?.env?.TPS_SNOWPAST ?? '') === '1';   // … and no flake falls past the level's rim
   if (opts.harness && pinned('TPS_SNOWBLAST')) SNOW_LOOK.blast = String((globalThis as any).process?.env?.TPS_SNOWBLAST ?? '') === '1';   // … no blast marks the snow
   if (opts.harness && pinned('TPS_SNOWBREATH')) SNOW_LOOK.breath = String((globalThis as any).process?.env?.TPS_SNOWBREATH ?? '') === '1';   // … and nobody's breath steams in its cold
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
