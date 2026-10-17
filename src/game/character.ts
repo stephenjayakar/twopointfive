@@ -2212,7 +2212,10 @@ export class CharacterAnimator {
       if (this.gz.w > 0.01) {
         this.fkPart(this.pA, this.fkHead); const fk = this.fk; const g = quat.rotate(fk.rot[nd.head], this.gazeLocal);   // (the head's chain alone: nothing else is read)
         const el = Math.asin(clamp(g[1], -1, 1)) + this.nvA, gyaw = Math.atan2(g[0], g[2]);   // (+ nvA, the nod as posed: a goggle nod is a meant tip of the head — measured without it, or the stabiliser takes most of it back out through the neck)
-        const targetEl = -(GAZE_EL.stand + (GAZE_EL.crouch - GAZE_EL.stand) * crouchPose + (GAZE_EL.sprint - GAZE_EL.stand) * wSprint * (1 - crouchPose)) * DEGR;
+        // (a man's condition bows his head on purpose — MV2.hurt, MV2.shaken: the eye line this keeps goes down with those looks by what they pose, or with the
+        //  gun carried it took four fifths of the bow back out through the neck; at rest both weights are 0 and the target is the gait's own)
+        const bow = (MV2.hurt.pitch + MV2.hurt.head) * clamp(this.mvs.hu.x, 0, 1) + (MV2.shaken.pitch + MV2.shaken.head) * clamp(this.mvs.sk.x, 0, 1);
+        const targetEl = -(GAZE_EL.stand + (GAZE_EL.crouch - GAZE_EL.stand) * crouchPose + (GAZE_EL.sprint - GAZE_EL.stand) * wSprint * (1 - crouchPose) + bow) * DEGR;
         const wantPitch = clamp((el - targetEl) * GAZE.keep, -30 * DEGR, 30 * DEGR);   // (twist pitch + = chin down: looking too far down, el < target, gives a negative — chin-up — correction)
         this.gz.pitch = damp(this.gz.pitch, wantPitch, 25, dt);
         if (!this.gz.yawInit) { this.gz.yawRef = gyaw; this.gz.yawInit = true; }
