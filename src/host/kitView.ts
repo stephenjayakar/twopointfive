@@ -280,9 +280,10 @@ export const KIT_VIEW_QUIET = {
    *  door to about 53 deg toward him — its edge crosses the floor a quarter metre beyond his place, so he stands lit just inside it, and the
    *  floor along the wall behind him and all the floor on the door's far side stay dark. (Further back is a narrower, door-shaped fan that
    *  MISSES him: he rests a body's width off the wall, 1.1 m along — at 1.0 m back the edge falls 0.84 m along at his distance.)
-   *  AND HE IS FROZEN in it: where he stood as the row ended, turned to the door (`aimY` m up its middle), no walk home under the hold. He
-   *  comes round to it at `turn` deg/s, body and gun — a start, not the calm rows' 100 and 150: the row leaves him facing along the wall, and at
-   *  the calm rate he was still turning, a foot in the air, a second after the leaf was thrown; at this he is round as it stands wide */
+   *  AND HE IS FROZEN in it: where he stood as the row ended, no walk home under the hold, up out of the crouch from the cost's first frame (as
+   *  the room flares behind the leaf: he is standing when it is thrown) and ALL of him turned to the door — his aim at `aimY` m up its middle
+   *  and his body's own yaw asked round to it too, at `turn` deg/s (a start, not the calm rows' 100 and 150): a throw leaves his gun on the
+   *  door and his feet 50 deg off it, and the game turns only the chest to an aim that near — he stood twisted, which read as a stride */
   cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3, blade: 2, room: 1, pool: 0, aimY: 1.2, turn: 240,
     lamp: { back: 0.45, backMin: 0.2, up: 1.9, side: 1.2, clear: 0.08, past: 0.25, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 48, range: 8, radius: 0.01 } },
   /** LIFE AT REST, no guard: after each of these seconds of rest in turn (a fixed list: no dice) the warm lamp behind the door slides `slide` m along
@@ -1663,7 +1664,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const C = KIT_VIEW_QUIET.cost, el = game.time - costT, at = kitViewCostAt(el), D = S.door, pl = game.player, last = costSeen.last!;
     stowT = game.time; last.s = el; last.moved = Math.max(last.moved, flat(pl.char.pos, costFeet));   // (his gun stays as the row left it: nothing is put away under the slab)
     if (asked === null && !at.done) {
-      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); } pl.crouch = false;
+      pl.crouch = false;   // (he starts up as the room flares behind the leaf: standing, turned to it, when it is thrown)
+      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); }
         if (!last.up) { quietInside(at.share, 0);   // (…and the blade's own lamp is out under the wedge, the room's own back down: ONE lamp throws it, one hard edge, one shadow)
           if (pool && !pool.broken && at.pool < 1) { costPool = { I: pool.baseIntensity, E: [pool.baseEmissive[0], pool.baseEmissive[1], pool.baseEmissive[2]] }; pool.baseIntensity = costPool.I * at.pool; pool.baseEmissive = [costPool.E[0] * at.pool, costPool.E[1] * at.pool, costPool.E[2] * at.pool]; last.pool = true; } }   // (…and the pool lamp out: its base, which the game multiplies each step — no round, no event, nobody hears a lamp go)
         last.up = true; }
@@ -1963,7 +1965,10 @@ export function kitViewStart(d: KitViewDeps): KitView {
   };
   /** Sam's two yaws, governed: each channel's step toward what the game last wrote — after the game's step, by the time THAT step took (a step by the
    *  frame before's time read as a rate half as fast again on an uneven frame) */
-  const yaws = (dt: number) => { const G = govs.get(game.player.char); if (G) { const T = costOn() ? KIT_VIEW_QUIET.cost.turn : 0; chanTick(G.body, Math.max(K.bodyRate, T) * R, dt); chanTick(G.aim, Math.max(K.gunRate, T) * R, dt); } };   // (under a loud row's cost he comes round to the door at the cost's own rate: caught)
+  const yaws = (dt: number) => { const G = govs.get(game.player.char); if (!G) return;
+    const T = costOn() ? KIT_VIEW_QUIET.cost.turn : 0;   // (under a loud row's cost ALL of him comes round to the door, at the cost's own rate: the game turns his chest and gun to an aim under `torso` off his feet and leaves the feet — he stood twisted, a stride's pose — so his body's channel is asked for the door too)
+    if (T > 0 && staged) G.body.want = yawTo(game.player.char.pos, staged.at([0, 0, 0]));
+    chanTick(G.body, Math.max(K.bodyRate, T) * R, dt); chanTick(G.aim, Math.max(K.gunRate, T) * R, dt); };
   const SHORT = /fiveseven|guard9mm/;   // the pistols' rows (the rest are long guns)
   /** a teammate's gun written live: his hands' errand now (the animator's own kit swap: the right hand over the shoulder and back), the model at its far point */
   const swapGun = (man: Guard, id: string, shield = false) => {
