@@ -93,3 +93,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `WOUND` is in journal.ts's knob tables, `WOUND_STATS` beside it is not; `Guard.wound` is NOT in the digest. `__wounds` {on, knobs, stats, men()}, `__killGuard(i, 'wounded', zone, dir)`.
   QA: `probes.ts wounds` (zone / off / state / both / again / save / play; `WOUNDS_BREAK=1 … wounds-zone` must fail), strips `wounded-knee / wounded-leg / wounded-back`,
   playthrough.ts `RunOut.wounds`. The clutch (MOVES second pass) can also HOLD A FOLD: `MOVES.fold` (trunk + head for as long as `anim.clutch` is up, a spring in `mvPost` — so not arms-only) is **0 = up with the wounds switch and only with it** (`character.ts FOLD_WITH.on`, which wounds.ts points at `WOUND.on`; wounds off, a staggered man's trunk is the base's frame for frame — `moves-kept` holds it), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). A man carrying the gear build's shield (`anim.shield`, read through `handKept`; no such field on this base) gets no clutch arm and no fold, the sway alone.
+- **A man's condition on the figure** (`character.ts MV2.hurt / MV2.shaken`, the animator's `hurt`, `hurtSide`, `shaken`, `foldToo`; dealt every frame
+  for the player, his men and the defenders alike by `condition.ts conditionPose` from `Game.dealWeapons`, nothing under a showcase; all inside the
+  MOVES pass, so none of it on the frozen stand or with `?nomoves`). HURT (`mvPost`): a hunch he keeps (`pitch` 11°, head 9°, pelvis 2.5 cm), a lean
+  over the side he favours (`lean` 8°, a slow sway standing), and on the move a short heavy stride onto that side — the pelvis dips and goes across,
+  the trunk rolls and turns into it (`step…`; the walk plants the right foot on the positive half of the phase's sine). Every man favours his RIGHT:
+  the hand he has free is his left and the clutch arm takes it across to his right ribs (`mvArms`: `hurt × MV2.hurt.arm`, only while the gun is
+  out of his shoulder and he is not throwing, striking or at a big tool). With the gun in his shoulder he braces: `brace` of the hunch and
+  `headBrace` of the head come out so the bore stays within a few degrees; the lean is about the bore and stays. SHAKEN: by the fire on him
+  (`sup.v` from a tenth under the flinch line to pinned), head down between the shoulders, sunk 10 cm, in fast and out over a second or two.
+  FOLDED: `foldToo` raises the clutch's fold (`foldOn(too)`) for a staggered man with the wounds switch off, and deeper than the wounds' own
+  (`MV2.clutch.fold.pitchToo` 34°). Under the fold and the blinded hunch the hurt and shaken looks give way by those weights (never two folds
+  added); a man with a shield (`handKept`) gets no hunch. All three springs are in `mvReset` and `mvLive`. Measured headless on the bones
+  (`tools/qa/condition-pose-check.ts`, `probes.ts condition-pose`; `CONDITION_BREAK=1` fails a to e): hurt at the low ready the head 7.9 cm
+  forward and 5.0 cm lower, the hand 24 cm from the chest joint; rifle up the bore 3.3° off a sound man's; walking the head rides 8 cm to the
+  favoured side and 8 cm lower; shaken 11 cm lower, bore 2.7° off; folded 17 cm lower; at rest again to the millimetre. Strips `hurt-stand`,
+  `hurt-walk`, `hurt-walk-up`, `hurt-defender`, `shaken`, `fold-operator` (`pose-strip.ts`), looked at as stills by two readers. NEVER SEEN on a
+  GPU or in motion: whether the limp reads as hurt and not comic at game size, and whether hurt with the rifle up tells apart from shaken, are
+  the maintainer's to judge.

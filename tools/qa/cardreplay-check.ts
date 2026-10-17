@@ -113,6 +113,19 @@ export async function cardReplayCheck(): Promise<boolean> {
     const roads: [string, string][] = [['ui/replaykey.ts', rk], ['replay/viewer.ts', viewer], ['replay/engineplay.ts', readFileSync(`${ROOT}/src/replay/engineplay.ts`, 'utf8')], ['replay.html', readFileSync(`${ROOT}/replay.html`, 'utf8')]];
     const tabbed = roads.filter(([, text]) => /window\.open\(|_blank/.test(text)).map(([name]) => name);
     verdict(tabbed.length === 0, 'no way between the game, the replay and the map viewer opens a tab', `window.open or _blank in: ${tabbed.join(', ') || 'none of ' + roads.map(r => r[0]).join(', ')}`);
+    // THE F7 TAG AND THE REPLAY BAR WEAR THE FIGHT SCREEN'S LOOK (docs/agents/menus.md "The fight screen wears the menus' look"; hud-look-check.ts reads the page's
+    // sheet, not these two files' own rules): no colour of the old mint family, no near-black tinted green or blue, no typeface by name. The scan must also
+    // find all three in the tag as it was, or its silence means nothing.
+    const cold = (text: string): string[] => { const bad: string[] = [];
+      for (const m of text.matchAll(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b|rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/g)) {
+        const h = m[1] ? (m[1].length === 3 ? [...m[1]].map(c => c + c).join('') : m[1]) : '', [r, g, b] = h ? [0, 2, 4].map(k => parseInt(h.slice(k, k + 2), 16)) : [+m[2], +m[3], +m[4]];
+        const hi = Math.max(r, g, b), lo = Math.min(r, g, b), d = hi - lo, hue = !d ? -1 : (60 * (hi === r ? ((g - b) / d) % 6 : hi === g ? (b - r) / d + 2 : (r - g) / d + 4) + 360) % 360;
+        if (hi < 40 ? (g > r + 1 || b > r + 1) : (hue >= 75 && hue <= 190 && d / hi > 0.12)) bad.push(m[0]); }
+      for (const m of text.matchAll(/font(?:-family)?:[^;'"`}]*?\b(ui-monospace|SFMono[\w-]*|Menlo|Consolas|Inter|Helvetica|Arial|Avenir)\b/g)) bad.push(m[1]);
+      return bad; };
+    const was = cold('background:rgba(5,9,11,0.94);font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#79d69a;'), now = [roads[0], roads[2]].map(([name, text]) => [name, cold(text)] as const);
+    verdict(was.length === 3 && now.every(([, bad]) => bad.length === 0), 'the F7 tag and the replay bar hold no mint green, no cool black and no typeface by name',
+      `the old tag read by the same scan: ${was.join(' · ')} · now ${now.map(([name, bad]) => `${name}: ${bad.join(' ') || 'none'}`).join(' · ')}`);
     verdict(card && wired && keyToo && toEngine, "the end card has a Replay button only when the page hands it a viewer, armed like the card's other buttons; Shift+F7 goes the same road, and the card's press goes where the viewer's 'Play in engine' goes",
       `menu.ts debrief(): ${card} · main.ts wiring: ${wired} · the key: ${keyToo} · the engine page's address: ${toEngine}`); }
   console.log(`=== cardreplay: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);

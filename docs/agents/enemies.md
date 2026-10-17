@@ -880,3 +880,44 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   like any light (fried, a charge spent, dark). PLAY, AS IT IS: on the page most patrol torches in lit corridors are out, so a torch to knock out with the
   OCP is found in the dark rooms or on a man already looking. Proved by taking `gd.flashlight.enabled` out of `ocpable` in a side tree: the line goes red.
   Both stands. Never seen on a GPU.
+- **A blackout sends enemies to the breaker** (`src/game/powerout.ts`, `POWEROUT.on`, 10-17; the first slice of "defenders answer the plan the team
+  chose": the answer to the mains being cut). BEFORE: a mission's defenders are every one of them held on a mark by the room fight, so with the `posted`
+  rule nobody was handed the walk to the breaker and nobody said anything: the team cut the mains and the garrison stood in the dark for as long as the
+  team cared to take. THE RULE, once per blackout, for the room fight's hostile defenders: a man NOTICES (a mains fixture burning in his plain view inside
+  `seeM` 14 m, or the floor he stands on / watches / has about him going from lit to dark by the place's own light: `lightEstimateAt`, the CPU floor
+  meter, read again `darkAfter` 0.3 s after the trip); `think` 3–6 s later (by the man's id, no dice) one of them says on their net what they do, nobody
+  steps for `beat` 2 s after it, then up to `men` 2 of the FREE men nearest the breaker by the way they would walk (no further than `maxM` 60 m, a man
+  left in every room that had one while that can be done, the nearest alone when nobody can be spared, a `mayLeave: false` squad too) walk there at the
+  pace of a man going to look, weapon lights on, boots filed for the team's ears; the first puts his hand to the lever (lighting.ts's own re-arm, fumble
+  and "breaker's back in"), the second stops short and watches the way they came; mains back, by anybody: they walk home and hold as they held. LINES (on
+  the net, so on the team's strip; `cues.ts` reads the going lines as class 1 and the staying lines as class 3 already): "power's out — two moving to
+  the breaker!" / "… on my way to the breaker!"; "power's out — that's them! Stay on your doors!" when the garrison already knows (a man alert or
+  searching, gunfire / a boot / a charge in his ears, or hostages held: rescue.ts has every defender learn of the team by the dark itself);
+  "power's out again — that's no fault. Stay on your doors!" the second time in one fight (`parties` 1); "… again — nobody goes." after a party that
+  lost a man; "breaker's wrecked — that's them!" at a breaker shot to scrap; "he's down at the breaker — that's them!" from a mate who SEES the place his
+  mate fell (or reaches his own place and finds nobody at the lever); "nothing from the breaker — that's them!" `overdue` 15 s past the walk's own
+  length when a party that fell unseen has not been heard from. Every "that's them" line puts THE WORD out (`powerOutWord`): darkfoe.ts takes it as it
+  takes a mate's lamp, a man of theirs whose view is dark lights his own while the mains are down. A fight starting while they are out: a hand already on
+  the lever finishes, anybody else runs back to his post. The first man dazzled or taken at the beat: the second takes the lever; neither: nobody goes
+  and the walk is not counted. The way is asked of the walk grid as it stands at the word and on every leg, so a blown wall or a wedged door changes the
+  way they come. NOTHING here gives anybody better eyes, aim or health and no man is added; a defender acts on a light he lost, his net and his own
+  senses on the walk, never on where the team is. SWITCH: ON in the page (`?nopowerout` off; the debugger row 'a blackout sends enemies to the
+  breaker'), OFF in the module and on the frozen stand (`FROZEN_HOLDS` `'POWEROUT.on': 'TPS_POWEROUT=1'`), in the knob registry and the journal (a
+  recording from before the key replays with it off), state in the checkpoint (`powerOutSnapshot` / `powerOutRestore` through savestate.ts; the
+  debugger's timeline is not kept). SEAMS in others' files, one clause each: lighting.ts (`setBlackout` tells it; the re-arm reads `powerOutMan`),
+  game.ts (the tick, the reset), guards.ts (`powerOutLit` in the torch pose), darkfoe.ts (the word). CHECK: `tools/qa/powerout-check.ts` (probe
+  `powerout`, 18 lines (a)–(n): word before step, who goes and who does not, boots and lamps, mains back at the lever, home again, the second cut, a
+  garrison that knows, a shot breaker, a fight while out, the snapshot round trip, a breaker in a man's own room, the glasshouse's floor-dark notice with
+  the store bulb off, no mains light = nobody, the dazzled lead, the seen fall, the unseen fall, the switch thrown off under a walk, and off = base by 30
+  run digests) ALL PASS on both stands; `POWEROUT_BREAK=1` red on (a) and (h). `workthings-probes.ts work-posted` holds the rule off inside its two
+  room-clear rigs (it measures the stock errand with nobody free; a later rule held off as other checks hold the quiet net). GATES after it: frozen
+  powerout, workthings, darkfoe, checkpoints, journal, shipped all pass; shipped powerout, darkfoe, darkdoor, depot, floodlit, calmtorch, farcalm,
+  handwork, cues, glasshouse, shipped, journal pass. RED ON THE SHIPPED STAND AT THE BUILD HEAD WITHOUT THIS CHANGE (run on a clean copy, not this
+  rule's): `work-breaker`, `night-restore`, `checkpoint-identity`, `checkpoint-autosave`, `checkpoint-death`. MEASURED (the scripted commander, shipped
+  stand, breaker on order, night vision, rule on against off; small samples): glasshouse four 12 seeds, 10 of 12 taken and 31 of 48 up both ways (the
+  team had been heard before the cut in all 12: "that's them", nobody walks); pass four 8 seeds, 7 taken both ways, 22 up against 19; warehouse four 8
+  seeds, 6 taken against 5, 15 of 32 up against 12, mean 210 s against 166 (a party sent in 8 of 8); depot four 8 seeds, 8 taken and 20 of 32 up both
+  ways ("that's them" in all 8). So in scripted play the walk is mostly seen when the team cuts the lights BEFORE it is heard. UNTUNED by play. KNOWN
+  SHAPE: the free-man test repeats what enemysquads / darkfoe / lighting each ask in their own words (a shared "is this man the room fight's to send"
+  would be roomfight's to own). NOBODY HAS PLAYED IT; NEVER SEEN ON A GPU: the two lamps crossing a dark hall, whether the line reads on the strip in
+  time, whether a lone man leaving his room reads as an opening or as a blunder, the lights coming back under the team.

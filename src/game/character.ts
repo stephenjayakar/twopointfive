@@ -636,7 +636,7 @@ export const MOVES = { on: 1, recoil: 1, toss: 1, dazzle: 1, flinch: 1, gait: 1,
   steadyRun: 1 };
 /** who else raises the fold while MOVES.fold is 0: wounds.ts hands its switch in (this file reads no game table) */
 export const FOLD_WITH = { on: (): boolean => false };
-const foldOn = () => MOVES.on > 0.5 && MOVES.clutch > 0.5 && (MOVES.fold > 0.5 || (MOVES.fold === 0 && FOLD_WITH.on()));
+const foldOn = (too = false) => MOVES.on > 0.5 && MOVES.clutch > 0.5 && (MOVES.fold > 0.5 || (MOVES.fold === 0 && (too || FOLD_WITH.on())));   // (`too`: the figure's own `foldToo` — condition.ts raises the fold with its switch as wounds.ts does with its own)
 export function setMoves(on: boolean) { MOVES.on = on ? 1 : 0; }
 try { const q = new URLSearchParams(location.search); if (q.has('moves')) MOVES.on = q.get('moves') !== '0' ? 1 : 0; if (q.has('nomoves')) MOVES.on = 0; if (q.has('entry')) { MOVES.entry = q.get('entry') !== '0' ? 1 : 0; MOVES.entryEyes = q.get('entry') === 'eyes' ? 1 : 0; } if (q.has('fold')) MOVES.fold = q.get('fold') !== '0' ? 1 : -1; if (q.has('snap')) MOVES.snap = q.get('snap') !== '0' ? 1 : 0; if (q.has('steady')) MOVES.steady = q.get('steady') === '0' ? 0 : q.get('steady') === '2' ? 2 : 1; } catch { /* no page (the harness) */ }
 const mvOn = (k: keyof typeof MOVES) => MOVES.on > 0.5 && MOVES[k] > 0.5;
@@ -708,7 +708,16 @@ const MV2 = {
    *  back of the crown — above a bun — with `elbow` = how far back of square the elbows are held (trunk frame) */
   bound: { rate: 6, back: { up: 0.07, out: 0.045, behind: 0.15, curl: [0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: [0.28, 0.32, 0.36, 0.4], knuckle: [16, 5], thumb: 0.3 } },
   clutch: { rate: 7, at: [-0.14, 0.12, 0.12] as Vec3, pole: [1, -0.05, -0.35] as Vec3,   // (the hand UP and ACROSS onto the far ribs, the elbow out where the game camera sees it: at the old point — WOUND_AT below — it sat at the belt, hidden under the trunk)
-    fold: { rate: 6, pitch: 24, head: 20, drop: 0.05, sway: 3, hz: 1 } },   // ° of trunk fold and head down held for the whole stagger, m the pelvis sinks, ° of roll he sways through at hz (`at` / `pole`: off the lower chest joint, trunk frame [across to his left, up, forward])
+    fold: { rate: 6, pitch: 24, pitchToo: 34, head: 20, drop: 0.05, sway: 3, hz: 1 } },   // ° of trunk fold and head down held for the whole stagger, m the pelvis sinks, ° of roll he sways through at hz (`at` / `pole`: off the lower chest joint, trunk frame [across to his left, up, forward])
+  /** A MAN'S CONDITION (condition.ts deals `hurt` and `shaken`). HURT, held for as long as he is: ° of trunk hunch, ° of lean over the side he favours, ° of head
+   *  down, m the pelvis sinks, ° he sways through at hz standing; `brace` = how much of the trunk's share comes out with the gun in his shoulder (the trunk
+   *  carries the gun: a hunch held under an aim would point it at the floor; the lean is about the bore and stays, and `headBrace` of the head's share comes
+   *  out so his eye stays behind the sights). `step…`: on top, at the top of each stride onto that side — the short heavy step:
+   *  ° more hunch, ° of roll over it, ° the trunk turns into it, ° the head drops, m the pelvis dips and goes across. `arm`: the support hand goes back to his
+   *  ribs (the clutch's own arm) by this much of `hurt` whenever the gun is not in his shoulder. */
+  hurt: { rate: 4, pitch: 11, lean: 8, head: 9, headBrace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, stepPitch: 5, stepRoll: 10, stepYaw: 5, stepHead: 4, stepDrop: 0.04, stepSide: 0.06, arm: 1 },
+  /** SHAKEN, by how much fire is on him: ° of trunk hunch (less `brace` of it under an aim), ° the head comes down between the shoulders, m he sinks */
+  shaken: { rateIn: 12, rateOut: 3, pitch: 11, head: 18, drop: 0.1, brace: 0.75 },
   /** the muzzle past a friend's back: the bore put down by `pitch` degrees with the stock still in the shoulder, the trigger hand a little down and back with it */
   dip: { pitch: -36, down: 0.035, back: 0.02, rateIn: 13, rateOut: 9, lane: [0.25, 1.9, 0.34] },
 };
@@ -1290,7 +1299,7 @@ export class CharacterAnimator {
   /** MOVES state: recoil (decaying sums the rounds add to), the flinch / hit / toss clocks with their directions (model space), the dazzle's eased weight */
   private mvs = { back: 0, climb: 0, yaw: 0, rock: 0, sho: 0, head: 0, n: 0,
     flT: -1, flD: [0, 0, 1] as Vec3, htT: -1, htD: [0, 0, -1] as Vec3, htSide: 1, tsT: -1, tsRel: TOSS_RELEASE, armL: 0,
-    dz: new Spring(), dzD: [0, 0, 1] as Vec3, dzT: 0, dzSd: 0, glide: new Spring(), hipY: NaN, cf: new Spring(), cfT: 0 };
+    dz: new Spring(), dzD: [0, 0, 1] as Vec3, dzT: 0, dzSd: 0, glide: new Spring(), hipY: NaN, cf: new Spring(), cfT: 0, hu: new Spring(), huT: 0, sk: new Spring() };
   /** a MOVES reaction has the trunk and head this frame (the life layer, the tells and the gaze stabiliser stand aside as they do for the old one-shots) */
   private get mvBusy() { const m = this.mvs; return m.flT >= 0 || m.htT >= 0 || m.dz.x > 0 || m.cf.x > 0; }
   /** MOVES (second pass, inputs — nothing reads them with the pass off). `reloadBack`: the long gun in his hands is a bullpup (the magazine BEHIND the grip: the
@@ -1298,6 +1307,10 @@ export class CharacterAnimator {
    *  to stay down). `clutch`: 0‥1, the support hand pressed to the body (a man knocked about and still on his feet). `dip`: 0‥1, a friend's back is in front of the
    *  muzzle at arm's length — the gun comes down past him (MOVES.entry). game.ts / civilians.ts deal them every frame. */
   reloadBack = false; bound: 0 | 1 | 2 = 0; clutch = 0; dip = 0;
+  /** A MAN'S CONDITION (condition.ts deals these every frame; all at rest with its switch off, and then nothing reads them). `hurt` 0‥1: a blast reached him and
+   *  he is still up — the hunch he keeps, the short heavy step, the hand back at his ribs when the gun is out of his shoulder; `hurtSide`: the side he favours
+   *  (1 = his left). `shaken` 0‥1: fire on him — head down between the shoulders. `foldToo`: the clutch's fold is his whatever the wounds switch says. */
+  hurt = 0; hurtSide: 1 | -1 = -1; shaken = 0; foldToo = false;
   /** the long gun in his hands is fed by a box MAGAZINE (every row but a tube-fed shotgun, whose shells go in one at a time): false = no magazine change is mimed */
   reloadMag = true;
   /** …and the reload's clock, dealt each frame by whoever OWNS the weapon's beat (game.ts: a guard's reloadT — which stands still while he is not on his man — and a
@@ -2100,9 +2113,9 @@ export class CharacterAnimator {
     //      the hit, the stun charge's hunch (+ its forearm over the eyes) — and the support hand's toss
     if (MOVES.on > 0.5) {
       const gate = (1 - wHd) * (1 - wHe) * (1 - wLp) * (1 - wHl) * (1 - wSt * wl) * (1 - wKslow); this.mvs.armL = 0;   // (both hands on a body yield like the lock tools: a reaction turning the trunk would take them off the limbs they hold)
-      if (this.mvBusy || this.mvs.tsT >= 0 || this.dazzle || (this.clutch > 0 && foldOn())) this.mvPost(dt, gate);
+      if (this.mvBusy || this.mvs.tsT >= 0 || this.dazzle || (this.clutch > 0 && foldOn(this.foldToo)) || this.hurt > 0 || this.shaken > 0 || this.mvs.hu.x !== 0 || this.mvs.sk.x !== 0) this.mvPost(dt, gate);
       const n = this.mv2;
-      if (this.rlT >= 0 || this.reloadAt >= 0 || this.bound !== 0 || this.clutch > 0 || n.rw.x !== 0 || n.bd.x !== 0 || n.cl.x !== 0) {
+      if (this.rlT >= 0 || this.reloadAt >= 0 || this.bound !== 0 || this.clutch > 0 || this.hurt > 0 || n.rw.x !== 0 || n.bd.x !== 0 || n.cl.x !== 0) {
         const pre = (this.armsBuf ??= new Pose(this.pA.numNodes)).copy(this.pA), o = this.mv2Shown; this.mvArms(dt, gate);
         this.armsPre = o.reload > 0 || o.bound > 0 || o.clutch > 0 ? pre : null;
       } else this.armsPre = null;
@@ -2236,8 +2249,8 @@ export class CharacterAnimator {
 
   // ================================================================ MOVES (the loud demo's motion pass — see MOVES / MV)
   private mvOut: MvGait = { live: false, g: 0, u: 0, st: 0 };
-  private get mvLive() { const m = this.mvs; return m.flT >= 0 || m.htT >= 0 || m.tsT >= 0 || m.dz.x !== 0 || m.dz.v !== 0 || m.cf.x !== 0 || m.back + m.climb + Math.abs(m.yaw) + m.rock + m.sho + m.head > 0 || m.glide.x !== 0 || this.rlT >= 0 || this.mv2.rw.x !== 0 || this.mv2.bd.x !== 0 || this.mv2.cl.x !== 0 || this.mv2.dip.x !== 0; }
-  private mvReset() { const m = this.mvs; m.back = m.climb = m.yaw = m.rock = m.sho = m.head = 0; m.flT = m.htT = m.tsT = -1; m.dz.x = m.dz.v = 0; m.dzT = 0; m.cf.x = m.cf.v = 0; m.cfT = 0; m.glide.x = m.glide.v = 0; m.hipY = NaN; const n = this.mv2, o = this.mv2Shown; this.rlT = -1; n.rw.x = n.rw.v = n.bd.x = n.bd.v = n.cl.x = n.cl.v = n.dip.x = n.dip.v = 0; o.reload = o.bound = o.clutch = o.dip = 0; this.sightsLift = 0; }
+  private get mvLive() { const m = this.mvs; return m.flT >= 0 || m.htT >= 0 || m.tsT >= 0 || m.dz.x !== 0 || m.dz.v !== 0 || m.cf.x !== 0 || m.hu.x !== 0 || m.sk.x !== 0 || m.back + m.climb + Math.abs(m.yaw) + m.rock + m.sho + m.head > 0 || m.glide.x !== 0 || this.rlT >= 0 || this.mv2.rw.x !== 0 || this.mv2.bd.x !== 0 || this.mv2.cl.x !== 0 || this.mv2.dip.x !== 0; }
+  private mvReset() { const m = this.mvs; m.back = m.climb = m.yaw = m.rock = m.sho = m.head = 0; m.flT = m.htT = m.tsT = -1; m.dz.x = m.dz.v = 0; m.dzT = 0; m.cf.x = m.cf.v = 0; m.cfT = 0; m.hu.x = m.hu.v = 0; m.huT = 0; m.sk.x = m.sk.v = 0; m.glide.x = m.glide.v = 0; m.hipY = NaN; const n = this.mv2, o = this.mv2Shown; this.rlT = -1; n.rw.x = n.rw.v = n.bd.x = n.bd.v = n.cl.x = n.cl.v = n.dip.x = n.dip.v = 0; o.reload = o.bound = o.clutch = o.dip = 0; this.sightsLift = 0; }
   /** Before the stances and the arms: bleed the recoil's sums off (each at its own rate, by training), and the pelvis's share of how a side carries itself — a
    *  trained man with a long gun sinks onto bent knees when he moves (and a little when he stands on the gun) and most of the walk's bob is taken out, the feet
    *  IK'd back exactly where the cycle has them (the sneak layer's way: pole weight 0, so at no drop this is the identity). `moveW` = moving, upright, off the wall;
@@ -2311,7 +2324,8 @@ export class CharacterAnimator {
       const D = this.rlB.dur, w = bump(n.rlAt, 0, 0.1, D - 0.24, D - 0.02) * clamp(n.rw.x, 0, 1) * free * (pist ? 1 : smoothstep(0.3, 0.9, clamp(this.lg.w.x, 0, 1)));
       o.reload = w > 0.003 ? w : 0; if (o.reload > 0) { if (pist) this.pistolReloadArm(n.rlAt, w); else this.reloadArm(n.rlAt, w); } }
     // ---- a man knocked about and still up: the support hand off the gun and pressed to his ribs
-    { const want = mvOn('clutch') && o.reload === 0 && !busy && !this.handKept ? clamp(this.clutch, 0, 1) : 0;   // (a shield on that arm: the hand stays on its handle)
+    { const rest = this.hurt > 0 ? clamp(this.hurt, 0, 1) * MV2.hurt.arm * (1 - smoothstep(0.1, 0.5, this.upperW.aim)) * (this.throwT < 0 && this.strikeT < 0 && !this.bigTool ? 1 : 0) : 0;   // (hurt: the hand goes back to his ribs whenever the gun is out of his shoulder and the hand has no other work)
+      const want = mvOn('clutch') && o.reload === 0 && !busy && !this.handKept ? clamp(Math.max(this.clutch, rest), 0, 1) : 0;   // (a shield on that arm: the hand stays on its handle)
       if (want > 0 || n.cl.x !== 0) { n.cl.step(want, MV2.clutch.rate, dt); if (want === 0 && n.cl.x < 0.01) n.cl.x = n.cl.v = 0; }
       o.clutch = clamp(n.cl.x, 0, 1) * free; if (o.clutch > 0.003) this.clutchArm(o.clutch); else o.clutch = 0; }
     // ---- kept down: a hostage's wrists behind her back, hands on the head for somebody told to stay where he is (nothing in the hands: both arms)
@@ -2473,10 +2487,31 @@ export class CharacterAnimator {
     // rock is gone in half a second, and a man upright again with a hand at his belt read as a low ready
     // (under the blinded hunch the fold gives way by the hunch's own weight — the two never add to more than one fold; a man carrying a shield only sways: the plate
     // hangs off his shoulder line and his hand stays on its handle)
-    { const Fd = MV2.clutch.fold, want = this.clutch > 0 && foldOn() ? clamp(this.clutch, 0, 1) * (1 - clamp(dzw, 0, 1)) : 0, up = this.handKept ? 0 : 1;
+    let cfw = 0;
+    { const Fd = MV2.clutch.fold, want = this.clutch > 0 && foldOn(this.foldToo) ? clamp(this.clutch, 0, 1) * (1 - clamp(dzw, 0, 1)) : 0, up = this.handKept ? 0 : 1;
       if (want > 0 || m.cf.x !== 0) { m.cf.step(want, Fd.rate, dt); if (want === 0 && m.cf.x < 0.01) m.cf.x = m.cf.v = 0; }
-      const cf = clamp(m.cf.x, 0, 1) * gate;
-      if (cf > 0.003) { m.cfT += dt; const s = Math.sin(m.cfT * 2 * Math.PI * Fd.hz); pitch += Fd.pitch * cf * up; roll += Fd.sway * s * cf; hp += Fd.head * cf * up; drop += Fd.drop * cf * up; sx += 0.012 * s * cf; } else m.cfT = 0; }
+      const cf = clamp(m.cf.x, 0, 1) * gate; cfw = cf;
+      if (cf > 0.003) { m.cfT += dt; const s = Math.sin(m.cfT * 2 * Math.PI * Fd.hz); pitch += (this.foldToo ? Fd.pitchToo : Fd.pitch) * cf * up; roll += Fd.sway * s * cf; hp += Fd.head * cf * up; drop += Fd.drop * cf * up; sx += 0.012 * s * cf; } else m.cfT = 0; }
+    // A MAN'S CONDITION (condition.ts deals `hurt` and `shaken`: both 0 with its switch off, and then neither block does anything). Under the fold and the
+    // blinded hunch both give way by those weights — never two folds added.
+    //   HURT: he keeps a hunch over the side he favours and sways a little standing; on the move every stride onto that side is short and heavy — the pelvis
+    //   dips and goes across, the trunk rolls and turns into it, the head drops. With the gun in his shoulder he braces: most of the trunk's hunch comes out (the lean stays: it is about
+    //   the bore). A man with a shield keeps the plate upright: no hunch, as under the fold.
+    { const H = MV2.hurt, want = clamp(this.hurt, 0, 1), under = (1 - clamp(dzw, 0, 1)) * (1 - cfw);
+      if (want > 0 || m.hu.x !== 0) { m.hu.step(want, H.rate, dt); if (want === 0 && m.hu.x < 0.01) m.hu.x = m.hu.v = 0; }
+      const hu = clamp(m.hu.x, 0, 1) * gate * under;
+      if (hu > 0.003) {
+        const sd = this.hurtSide, aimW = clamp(this.upperW.aim, 0, 1), brace = 1 - H.brace * aimW, mw = smoothstep(0.15, 0.7, Math.abs(this.speed)), up = this.handKept ? 0 : 1;
+        const st = Math.max(0, -sd * Math.sin(2 * Math.PI * this.phase)), step = st * st * mw;   // (0‥1 once a cycle: the stride onto the side he favours — the walk plants his right foot on the sine's positive half)
+        m.huT += dt; const br = Math.sin(m.huT * 2 * Math.PI * H.hz) * (1 - mw);
+        pitch += (H.pitch + H.stepPitch * step) * brace * hu * up; roll -= sd * (H.lean + H.stepRoll * step + H.sway * br) * hu; yaw += sd * H.stepYaw * step * brace * hu;
+        hp += (H.head * (1 - H.headBrace * aimW) + H.stepHead * step) * hu; drop += (H.drop + H.stepDrop * step) * hu; sx += sd * H.stepSide * step * hu;
+      } else m.huT = 0;
+      //   SHAKEN: the head comes down between the shoulders and he sinks a little, for as long as the fire is on him
+      const K = MV2.shaken, wantK = clamp(this.shaken, 0, 1);
+      if (wantK > 0 || m.sk.x !== 0) { m.sk.step(wantK, wantK > m.sk.x ? K.rateIn : K.rateOut, dt); if (wantK === 0 && m.sk.x < 0.01) m.sk.x = m.sk.v = 0; }
+      const sk = clamp(m.sk.x, 0, 1) * gate * under;
+      if (sk > 0.003) { pitch += K.pitch * (1 - K.brace * clamp(this.upperW.aim, 0, 1)) * sk * (this.handKept ? 0 : 1); hp += K.head * sk; drop += K.drop * sk; } }
     const ts = m.tsT, R = m.tsRel, TD = R + TOSS_AFTER;
     if (ts >= 0) {   // the toss's body English: the left shoulder goes back with the hand, then through with it; a dip of the knees under the swing
       const wind = curve(ts, [[0, 0], [R * 0.8, 1], [R + 0.03, 0.2], [R + 0.2, -1], [R + 0.4, -0.6], [TD, 0]]) * gate;

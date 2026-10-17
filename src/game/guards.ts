@@ -22,6 +22,7 @@ import { Guard, isBreathing, TEMPERAMENT } from './game';
 import { runGuardScript, Clearing, inBounds, endGuardScript } from './squad';
 import { fragFlee, ownBang, ownNoise } from './frag';
 import { moraleScript } from './morale';
+import { conditionPace, conditionCalm } from './condition';
 import { runnerScript, runnerFled } from './runner';
 import { DARKDOOR, darkDoorGate, darkDoorLook } from './darkdoor';
 import { netQuietAsked, netQuietBody, netQuietPose } from './netquiet';
@@ -43,6 +44,7 @@ import { MAX_LIGHTS } from '../render/lights';
 import { closeNearK } from './close';
 import { calmTorchDark } from './calmtorch';
 import { darkFoeLit } from './darkfoe';
+import { powerOutLit } from './powerout';
 import { hearWhistle, whistleSoft, whistlePatrolTick, glanceToward, WHISTLE, WHISTLE_SOFT_UPPER } from './whistle';
 import { hearPath, airTrans, loudLen, strokeLight } from './weather';
 import { ATTENTION, attentionHeard, attentionTick, attentionSideK, attentionAside, attentionEarK, attentionNoiseK, attentionStep, attentionWalk, attentionDwell, attentionTold, attentionAgain } from './attention';
@@ -1004,7 +1006,7 @@ function standoffBark(g: Game, gd: Guard, moment: StandoffMoment, force: boolean
 /** Side-step / back-pedal along the current nav path (followPath's tolerances and easing, but the body is not turned to it — the standoff keeps his chest to the
  *  pair — and no stuck side-step of its own: notGettingAnywhere watches the leg). True once the path is consumed. */
 export function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean {
-  const c = gd.char;
+  const c = gd.char; speed = conditionPace(g, gd, speed);   // (condition.ts: a hurt man's legs, whoever asks for them)
   if (unstickFirst(g, gd, dt)) return false;   // (a side-step off a stranded cell first, as followPath: un-stick)
   while (gd.pathI < gd.path.length) {
     const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
@@ -1559,7 +1561,7 @@ export function teamLit(g: Game, gd: Guard): boolean {
 /** is this man one of the team whose pace PACE governs right now */
 export function teamPaced(g: Game, gd: Guard): boolean { return PACE.on && gd.team === 'operative' && !!gd.unit && fightLive(g); }
 /** the speed his legs may be asked for (PACE.max for the team; anybody else: as asked) */
-export function teamPace(g: Game, gd: Guard, speed: number): number { return silentPace(g, gd, teamPaced(g, gd) ? Math.min(speed, PACE.max) : speed); }   // (… and a SILENT squad's walk under that: silent.ts)
+export function teamPace(g: Game, gd: Guard, speed: number): number { return conditionPace(g, gd, silentPace(g, gd, teamPaced(g, gd) ? Math.min(speed, PACE.max) : speed)); }   // (… and a SILENT squad's walk under that: silent.ts)
 /** where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, and round his FRONT (eased against the body's own yaw, inside the
  *  runner's twist limit: the short way to a point behind him lies across his back, where the limit would hold the gun on the wrong shoulder); anybody else's is on it */
 export function teamTurn(g: Game, gd: Guard, to: number, dt: number): number {
@@ -2710,7 +2712,7 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   }
   if (g.time < gd.lightDeadUntil) { fl.enabled = false; }
   else if (gd.lightDeadUntil > 0 && g.time < gd.lightDeadUntil + 1.0) { fl.enabled = Math.sin(g.time * 50) > 0.2; }   // sputters back
-  else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
+  else fl.enabled = (!gd.unit || ((gd.unit.light || darkFoeLit(g, gd) || powerOutLit(g, gd)) && (!lightRuled(g, gd) || teamLit(g, gd)) && !nvgDark(g, gd) && !silentDark(g, gd))) && !(torch && calmTorchDark(g, gd, dt));   // (a unit spawned with its weapon light off — a daylight room — keeps it off: teams, spawnUnit; a teammate under Sam's orders burns his only while it helps: LIGHTS above — and not at all while the team is dark on its goggles: nvg.ts · a calm staff man's hand torch burns only where his place is dark: calmtorch.ts, nothing with its switch off · an enemy unit dealt a dark light burns it once he knows and is blind: darkfoe.ts, false with its switch off)
   if (fl.enabled && dozeDark(gd)) fl.enabled = false;   // (doze.ts: a man sat down to doze has put his torch out — false with its switch off)
   fl.peakIntensity = T.flashIntensity; fl.intensity = T.flashIntensity; fl.innerDeg = T.flashInner; fl.outerDeg = T.flashOuter; fl.radius = g.engine.settings.flashlightRadius;
   return held;
@@ -3221,12 +3223,16 @@ function lockdownDoors(g: Game, gd: Guard, calm = false) {
 }
 
 /** 0..1 tension for the score: patrol 0, suspicious ~0.5, search ~0.65, alert 1 — and an alarmed floor never quite settles (heightened 0.12, lockdown 0.22); a pair
- *  methodically clearing rooms (scripted, nominally 'search') sits at 0.3: purposeful, not alarmed. */
-export function tension(g: Game): number {
+ *  methodically clearing rooms (scripted, nominally 'search') sits at 0.3: purposeful, not alarmed. `theirs` (the page's score passes MUSIC.theirs, audio/pieces.ts; absent = every
+ *  man counts, as it was): in live play a teammate counts only while he is in a fight of his own ('alert') — the wariness a blast, a noise or a tripped breaker left
+ *  on him, and the 'search' his order takes him back in (orders.ts), never drain while he is under a script (updateGuard returns into it before the decay) and would
+ *  hold the score up with every defender down. While a SHOW runs its men's scripted states are the score's cue (the day showcase's pair hunting) and read as ever. */
+export function tension(g: Game, theirs = false): number {
   let x = Math.max(g.blackout.active ? 0.18 : 0, escalationOf(g) >= 2 ? 0.22 : escalationOf(g) >= 1 ? 0.12 : 0);
+  const live = theirs && !(g.touring || g.director.showing);
   for (const gd of g.guards) {
-    if (gd.state === 'dead') continue;
-    const s = gd.script && g.clearing && (gd === g.clearing.a || gd === g.clearing.b) ? 0.3 : gd.state === 'alert' ? 1 : gd.state === 'search' ? 0.68 : gd.state === 'suspicious' ? 0.45 + gd.awareness * 0.2 : gd.awareness * 0.35;
+    if (gd.state === 'dead' || (live && gd.team === 'operative' && gd.state !== 'alert')) continue;
+    const s = gd.script && g.clearing && (gd === g.clearing.a || gd === g.clearing.b) ? 0.3 : gd.state === 'alert' ? 1 : gd.state === 'search' ? 0.68 : gd.state === 'suspicious' ? 0.45 + gd.awareness * 0.2 : conditionCalm(gd) ? 0 : gd.awareness * 0.35;   // (condition.ts: one of the player's own at rest is not a wary guard — under an order nothing drains his number)
     x = Math.max(x, s);
   }
   return x;

@@ -1,8 +1,8 @@
 // THE OPTICAL WAND (src/game/wand.ts — a piece of YOUR kit; carrying it, 'look under it' on a shut door's rows where the fog of war hides the room), headless:
-//   bun run tools/qa/wand-check.ts [kit|tile|look|costs|doors|off] (probes.ts wand; WAND_BREAK=1 = the switch left off: must fail)
+//   bun run tools/qa/wand-check.ts [kit|tile|look|costs|doors|mate|off] (probes.ts wand; WAND_BREAK=1 = the switch left off: must fail)
 // The maintainer, 10-11: "maybe we can add the optical wand/cable as prep? what's actually realistic here?" · "yeah let's add it to kit".
 //   kit     the row on your card only with the switch; under the pouches rule the issued card is full, so the wand is refused until a pouch is given up, then
-//           it takes one; the store keeps it and a build with the switch off reads the same store as none; teammates have no such row; staging puts it on
+//           it takes one; the store keeps it and a build with the switch off reads the same store as none; teammates have no such row while their own switch (WAND.mate) is off; staging puts it on
 //           the Player; a checkpoint's player slice carries it
 //   tile    the real Team & kit screen on a stand-in DOM, a wand and two sticky cameras on your card: on the solo night (never a fog of war) both tiles say
 //           'no use here' where their value is and are marked idle, every other tile as ever; on a squad mission they read as carried; on a quiet mission
@@ -14,6 +14,9 @@
 //           and no round leaves for the stow; the man he saw keeps a '(?)' for markSecs and no longer; a plain save waits while he looks; the lens is on
 //           the floor: what stands on the floor hides what is behind it (counted against a standing eye in the same place, over every door face)
 //   doors   every door of every squad level, both faces: the lens is on the far side of the shut leaf and not inside anything solid
+//   mate    (wandorder.ts, switch WAND.mate) a teammate's card may carry it at a pouch's price; carried and never ordered nothing happens; X on a shut door,
+//           then V: the carrier alone walks up, kneels and feeds it, his eye among the fog's is the lens; blinded, re-ordered, the leaf moving each end it;
+//           refused in words on an open door, a steel one, men with no wand; carried and not ordered = the same run by digest
 //   off     the switch off, and the switch on with the wand carried and never used: the same run by digest
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself. Nothing here looks at a picture.
 import { resolve } from 'node:path';
@@ -22,7 +25,9 @@ import { standUp, ROOT } from './headless.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const WD = await import(`${ROOT}/src/game/wand.ts`);
-const { WAND, WAND_STATS, wandLens, wandOffered, wandFov, wandPanMax, wandEye } = WD;
+const { WAND, WAND_STATS, wandLens, wandOffered, wandFov, wandPanMax, wandEye, wandFits } = WD;
+const WO = await import(`${ROOT}/src/game/wandorder.ts`);
+const WH = await import(`${ROOT}/src/game/whistle.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { FOG, fieldDeg } = await import(`${ROOT}/src/game/fogofwar.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -85,7 +90,8 @@ function feed(W: any, at: number[], cap = 300) { let n = 0; while (n < cap && W.
 // ───────────────────────────────────────────────────────────── kit
 export async function wandKit(): Promise<boolean> {
   const F = family('wand-kit: the optical wand is a row of your card that takes a pouch, is kept per machine and rides onto the Player');
-  const onWas = WAND.on, rnd = Math.random;
+  const onWas = WAND.on, mateWas = WAND.mate, rnd = Math.random;
+  WAND.mate = false;   // a teammate's row is its own switch's (wand-mate holds it)
   try {
     await keepKit(async () => {
       const fields = (i: number) => K.kitRows(i).map((r: any) => r.field as string);
@@ -94,7 +100,7 @@ export async function wandKit(): Promise<boolean> {
       raise(); K.kitLoad(null, '');
       const onRows = fields(0), mates = [1, 2, 3, 4].map(i => fields(i).includes('wand'));
       F.verdict(!offRows.includes('wand') && onRows.includes('wand') && onRows.indexOf('wand') === onRows.indexOf('suit') - 1 && onRows.indexOf('wand') > onRows.indexOf('shells') && !mates.some(Boolean) && onRows.filter((f: string) => f !== 'wand').join() === offRows.join(),
-        'the row is on YOUR card only with the switch, the last of your kit rows (after the 40 mm row, and after your charge rows where your card has them: owncharge.ts); no other row moves; no teammate has one', `off ${offRows.join(' ')} · on ${onRows.join(' ')} · teammates ${J(mates)}`);
+        'the row is on YOUR card only with the switch, the last of your kit rows (after the 40 mm row, and after your charge rows where your card has them: owncharge.ts); no other row moves; no teammate has one while his own switch is off', `off ${offRows.join(' ')} · on ${onRows.join(' ')} · teammates ${J(mates)}`);
 
       // the pouches rule: issued = full
       const c0 = K.kitCost(0), t0 = K.kitTry(0, 'wand', 1), stillNone = K.KIT.members[0].wand === false;
@@ -142,7 +148,7 @@ export async function wandKit(): Promise<boolean> {
         'a checkpoint says whether the wand is on him and a load puts that back; a file that does not say leaves what the staging gave him; with the switch off nothing is written and a file\'s wand is not handed out', `file ${inFile} / ${s0.player.wand} · loaded ${loaded} / ${loaded0} · a file without the key ${loadedOld} · switch off: key written ${'wand' in sOff.player}, a file with it loads ${loadedOff}`);
     });
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { WAND.on = onWas; Math.random = rnd; }
+  finally { WAND.on = onWas; WAND.mate = mateWas; Math.random = rnd; }
   return F.done();
 }
 
@@ -382,6 +388,182 @@ export async function wandDoors(): Promise<boolean> {
   return F.done();
 }
 
+// ───────────────────────────────────────────────────────────── mate
+/** The maintainer, 10-16, asked whether a teammate should look under the door with the wand first: "a, but yeah you have to order it". */
+export async function wandMate(): Promise<boolean> {
+  const F = family('wand-mate: a teammate may carry the wand, and looks under a shut door only on your order (X on the door, then V)');
+  const onWas = WAND.on, mateWas = WAND.mate, rnd = Math.random, ownWas = FOG.own, lsWas = FOG.lastSeen;
+  const raiseMate = () => { raise(); WAND.mate = !BREAK; };
+  const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a)), flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+  /** Red One's card with the wand on it: under the pouches rule his issued card is full, so a stun canister is given up for it. */
+  const card = () => { if (!K.kitSet(1, 'wand', true)) { K.kitSet(1, 'bangs', Math.max(0, K.KIT.members[1].bangs - 1)); K.kitSet(1, 'wand', true); } return !!K.KIT.members[1].wand; };
+  try {
+    await keepKit(async () => {
+      // the card
+      const has = (i: number) => K.kitRows(i).some((r: any) => r.field === 'wand');
+      // what this machine keeps: a teammate's wand, on a visit with his row off, stays in the store and is not on his card
+      {
+        const mem: Record<string, string> = {}, shelf = { getItem: (k: string) => mem[k] ?? null, setItem: (k: string, v: string) => { mem[k] = v; }, removeItem: (k: string) => { delete mem[k]; } };
+        const stored = () => { try { return !!JSON.parse(mem[K.KIT_LS] ?? '{}').members?.[1]?.wand; } catch { return false; } };
+        raiseMate(); K.kitLoad(shelf as any, '');
+        K.kitSet(1, 'bangs', Math.max(0, K.KIT.members[1].bangs - 1)); const put = K.kitSet(1, 'wand', true); K.kitSave(); const st1 = stored();
+        WAND.mate = false; K.kitLoad(shelf as any, '');
+        const offCard = !!K.KIT.members[1].wand, offLine = K.kitCost(1).lines.some((l: any) => l.item === 'wand'), offRow = has(1);
+        K.kitSet(2, 'bangs', Math.max(0, K.KIT.members[2].bangs - 1)); K.kitSave(); const st2 = stored();
+        raiseMate(); K.kitLoad(shelf as any, '');
+        const backCard = !!K.KIT.members[1].wand; K.kitSet(1, 'wand', false); K.kitSave(); const st3 = stored();
+        F.verdict(put && st1 && !offCard && !offLine && !offRow && st2 && backCard && !st3, 'a wand kept on a teammate\'s card: on a visit with his row off it is not on his card (no pouch, no row) and another row changed does not write it out of the store; with the row back it is on his card, and taken off there it is gone from the store',
+          `put on ${put}, stored ${st1} · row off: on his card ${offCard}, a pouch ${offLine}, a row ${offRow}, stored after another change ${st2} · row on again: on his card ${backCard}, stored once taken off ${st3}`);
+      }
+      raise(); WAND.mate = false; K.kitLoad(null, '');
+      const rowOff = [1, 2, 3, 4].map(has);
+      raiseMate();
+      const rowOn = [1, 2, 3, 4].map(has), full = K.kitCost(1), t0 = K.kitTry(1, 'wand', 1), none = !K.KIT.members[1].wand;
+      const gave = K.kitSet(1, 'bangs', K.KIT.members[1].bangs - 1), took = K.kitSet(1, 'wand', true), c1 = K.kitCost(1);
+      F.verdict(K.SLOTS.on && !rowOff.some(Boolean) && rowOn.every(Boolean) && none && full.free === 0 && !t0.ok && /pouch/.test(t0.why) && gave && took && c1.used === full.used && c1.lines.some((l: any) => l.item === 'wand'),
+        'a teammate\'s card has the row only with its switch; nobody is issued one; his issued card is full, so it is refused until he gives a pouch up, and then it takes that pouch',
+        `row with it off ${rowOff.map(Number).join('')} on ${rowOn.map(Number).join('')} · issued ${full.used} of ${full.total} · tried: ${t0.ok ? 'taken' : t0.why} · a stun given up ${gave}, wand ${took}, ${c1.used} of ${c1.total} · ${c1.lines.map((l: any) => `${l.n} ${l.item}`).join(', ')}`);
+
+      // the room clear with four, Red One carrying it, a defender behind the shut server door
+      const W = await stand(5), g = W.game; raiseMate(); FOG.own = false; FOG.lastSeen = 0;
+      const carded = card();
+      await hushed(() => startFromQuery(g, 'roomclear&squad4')); await hushed(() => steps(W, 30));
+      const S = g.orders, fog = g.fogOfWar, d = g.doors.list.find((x: any) => x.def.name === 'server'), T = g.guards.find((x: any) => x.callsign === 'Tango 5');
+      if (!d || !T || !fog.active) throw new Error(`no stage: door ${!!d} man ${!!T} fog ${fog.active}`);
+      g.aiEnabled = false;
+      const squad: any[] = S.squad(), carriers = squad.filter(gd => K.kitOf(gd)?.wand), him = carriers[0];
+      if (!him) throw new Error(`nobody was staged with the wand (card ${carded}, ${squad.length} men)`);
+      const doorTgt = (x: any) => { const c = x.frameCentre; return S.targetAt([c[0], 0, c[2]]); };
+      const tgt = doorTgt(d), wandEyes = () => fog.eyes.filter((e: any) => e.wand), jobs = () => WO.wandOrderJobs(g), ordersOf = () => squad.map(gd => S.of(gd)?.order ?? '-');
+      const run = (n: number, each: () => void) => hushed(() => { for (let i = 0; i < n; i++) { W.step(DT); each(); } });
+      const until = (cap: number, done: () => boolean, each?: () => void) => hushed(() => { let n = 0; while (n < cap && !done()) { W.step(DT); n++; each?.(); } return n; });
+
+      let drawn0 = 0, eyes0 = 0, jobs0 = 0, knelt0 = 0;
+      await run(300, () => { drawn0 += fog.drawn(T) ? 1 : 0; eyes0 += wandEyes().length; jobs0 += jobs().length; knelt0 += squad.some(gd => gd.char.anim.lockpick) ? 1 : 0; });
+      F.verdict(carriers.length === 1 && tgt.kind === 'door' && !jobs0 && !eyes0 && !knelt0 && !drawn0, 'carried and never ordered, five seconds: nobody kneels at a door, no lens is among the fog\'s eyes, the man behind the door is not in the picture',
+        `carrying: ${carriers.map(gd => gd.callsign).join(', ')} · jobs ${jobs0} · lens eyes ${eyes0} · frames a man knelt ${knelt0} · frames he was drawn ${drawn0}`);
+
+      // the menu
+      S.open(tgt);
+      const rows: any[] = S.menu?.rows ?? [], wr = rows.find(x => x.id === WO.WAND_ORDER), high = rows.filter(x => x.key != null && +x.key > 5).map(x => x.id);
+      S.close(); S.open(S.targetAt(g.player.char.pos));
+      const elsewhere = (S.menu?.rows ?? []).some((x: any) => x.id === WO.WAND_ORDER), elseKind = S.menu?.target.kind; S.close();
+      F.verdict(!!wr && wr.hotKey === WAND.orderKey && !wr.key && !high.length && !elsewhere, 'the order is a row of a door\'s menu on a key of its own, V: it takes no digit, no row is on a digit above 5, and no other target\'s menu lists it',
+        `door menu: ${rows.map(x => `${x.id}${x.key ? `(${x.key})` : x.hotKey ? `[${x.hotKey}]` : ''}`).join(' ')} · above 5: ${high.join(',') || 'none'} · on a '${elseKind}' menu ${elsewhere}`);
+
+      // V with no menu is still his whistle; V on the door's menu is the order, and no whistle
+      const b0 = WH.WHISTLE_STATS.blown; W.input.pressed.add(WAND.orderKey); W.step(DT);
+      const whistled = WH.WHISTLE_STATS.blown - b0, jobsW = jobs().length;
+      await run(150, () => {});   // past the whistle's own gap
+      S.open(tgt);
+      const before = ordersOf(), b1 = WH.WHISTLE_STATS.blown, st0 = WO.WANDORDER_STATS.ordered;
+      W.input.pressed.add(WAND.orderKey); W.step(DT);
+      const js = jobs(), after = ordersOf(), others = squad.every((gd, i) => gd === him || after[i] === before[i]), side = js[0]?.side;
+      F.verdict(whistled === 1 && !jobsW && !S.menu && js.length === 1 && js[0].gd === him && js[0].door === d && S.of(him)?.order === WO.WAND_ORDER && others && WH.WHISTLE_STATS.blown === b1 && WO.WANDORDER_STATS.ordered === st0 + 1,
+        'X on the door, then V: the man who carries it takes the order, the other three keep theirs, the menu goes, and the press is not a whistle (with no menu up V whistles as ever and orders nobody)',
+        `no menu: whistles ${whistled}, jobs ${jobsW} · on the menu: jobs ${js.map((j: any) => `${j.gd.callsign} side ${j.side}`).join(', ') || 'none'} · his order ${S.of(him)?.order} · the others ${before.join(',')} → ${after.join(',')} · whistles ${WH.WHISTLE_STATS.blown - b1}`);
+
+      // he walks up, kneels, feeds it; the lens is his eye
+      let early = 0, drawnWalk = 0;
+      const walk = await until(1500, () => !!jobs()[0]?.live, () => { if (!jobs()[0]?.live) { early += wandEyes().length; drawnWalk += fog.drawn(T) ? 1 : 0; } });
+      const L = wandLens(d, side), pan = wandPanMax(), e0: any = wandEyes()[0], kneel: number[] = [...him.char.pos];
+      const at0 = { knelt: !!him.char.anim.lockpick, side: g.doors.side(d, him.char.pos), off: flat(him.char.pos, L.pos), there: S.of(him)?.there ?? '' };
+      let bad = 0, offArc = 0, most = 0, seenN = 0, twice = 0, lo = 9, hi = -9;
+      await run(360, () => {
+        const es: any[] = wandEyes(); most = Math.max(most, fog.eyes.length); seenN += fog.seen(T) ? 1 : 0;
+        twice += fog.eyes.filter((e: any) => e.id === him.char.id).length !== 1 ? 1 : 0;
+        if (es.length !== 1 || es[0].id !== him.char.id || flat(es[0].pos, L.pos) > 1e-6 || Math.abs(es[0].pos[1] - WAND.eyeY) > 1e-6) { bad++; return; }
+        const a = wrap(Math.atan2(es[0].look[0], es[0].look[2]) - L.yaw); lo = Math.min(lo, a); hi = Math.max(hi, a); if (Math.abs(a) > pan + 1e-6) offArc++;
+      });
+      F.verdict(walk < 1500 && !early && !drawnWalk && at0.knelt && at0.side === side && at0.off < 1.2 && !!e0 && e0.fov === wandFov() && /^looking under/.test(at0.there) && !bad && !offArc && !twice && most <= 5 && seenN > 0 && hi - lo > pan,
+        'he walks to the door, kneels on the squad\'s side and feeds it: nothing is seen before the lens is through; then his eye among the fog\'s is the lens beyond the leaf, on the floor, sweeping between the wand\'s own stops, and the man behind the door is seen',
+        `live after ${(walk * DT).toFixed(1)} s · lens eyes before ${early}, frames drawn before ${drawnWalk} · knelt ${at0.knelt}, side ${at0.side}/${side}, ${at0.off.toFixed(2)} m from the lens · '${at0.there}' · six seconds: frames without exactly his lens ${bad}, beyond the stops ${offArc}, counted twice ${twice}, most eyes ${most}, swept ${(lo / DEG).toFixed(0)}°‥${(hi / DEG).toFixed(0)}° of ±${(pan / DEG).toFixed(0)}° · frames the man was seen ${seenN} of 360`);
+
+      // only the player's own eyes lift the fog: the lens he ordered still does
+      FOG.own = true; let ownSeen = 0, ownIds = ''; const pid = g.player.char.id;
+      await run(360, () => { ownSeen += fog.seen(T) ? 1 : 0; ownIds = fog.eyes.map((e: any) => `${e.id}${e.wand ? 'W' : ''}`).join(','); });
+      FOG.own = false; await run(30, () => {});
+      F.verdict(ownIds === `${pid},${him.char.id}W` && ownSeen > 0, 'under \'only my own eyes\' the fog\'s eyes are the player and the lens he ordered, nobody else, and the man is seen through it', `eyes ${ownIds} · frames seen ${ownSeen} of 360`);
+
+      // blinded: the lens is out, and is fed again
+      him.dazzledUntil = g.time + 0.5; W.step(DT); W.step(DT);
+      const dz = { eyes: wandEyes().length, live: !!jobs()[0]?.live, knelt: !!him.char.anim.lockpick };
+      const back = await until(900, () => !!jobs()[0]?.live);
+      F.verdict(!dz.eyes && !dz.live && !dz.knelt && back < 900 && back * DT > 0.5 + WAND.feedSecs - 0.2, 'blinded, his lens shows nothing and he is off his knee; it is fed again from the start once he can see', `blind: lens eyes ${dz.eyes}, live ${dz.live}, knelt ${dz.knelt} · live again after ${(back * DT).toFixed(1)} s (blind 0.5 + feed ${WAND.feedSecs})`);
+
+      // any other order ends the look; the man he saw keeps the wand's mark
+      await run(60, () => {});
+      const fell = S.give('fallIn', tgt, 'all'); W.step(DT); W.step(DT);
+      const g1 = { jobs: jobs().length, knelt: !!him.char.anim.lockpick, order: S.of(him)?.order, eyes: wandEyes().length };
+      const lost = await until(900, () => !fog.drawn(T)), mk = fog.lastSeen().filter((m: any) => m.gd === T)[0];
+      F.verdict(fell === null && !g1.jobs && !g1.knelt && g1.order === 'fallIn' && !g1.eyes && lost < 900 && !!mk && mk.life === WAND.markSecs,
+        '\'fall in\' ends it on the frame: he is up, the lens is out of the fog\'s eyes; the man he saw goes out of the picture and keeps the wand\'s own fading mark', `given: ${fell ?? 'yes'} · jobs ${g1.jobs}, knelt ${g1.knelt}, his order ${g1.order}, lens eyes ${g1.eyes} · out of the picture after ${(lost * DT).toFixed(1)} s · mark ${mk ? `life ${mk.life} s` : 'none'}`);
+
+      // the leaf moves under the lens
+      const again = S.give(WO.WAND_ORDER, tgt, 'all'), w2 = await until(1500, () => !!jobs()[0]?.live), mv0 = WO.WANDORDER_STATS.moved;
+      d.angle = 0.6 * (d.swing || 1); await run(5, () => {});
+      const h1 = { jobs: jobs().length, knelt: !!him.char.anim.lockpick, order: S.of(him)?.order, eyes: wandEyes().length, moved: WO.WANDORDER_STATS.moved - mv0 };
+      await run(300, () => {});
+      const A2 = S.of(him), stepped = flat(him.char.pos, kneel);
+      F.verdict(again === null && w2 < 1500 && !h1.jobs && !h1.knelt && h1.order === 'hold' && !h1.eyes && h1.moved === 1 && !!A2?.arrived && A2.order === 'hold' && stepped > 0.4,
+        'given again by code he looks again; the leaf comes off its latch under the lens: the wand is out, he is up, and he holds on the door from beside it, off the spot he knelt on', `given: ${again ?? 'yes'}, live after ${(w2 * DT).toFixed(1)} s · leaf moved: jobs ${h1.jobs}, knelt ${h1.knelt}, his order ${h1.order}, lens eyes ${h1.eyes} · five seconds on: '${A2?.there}' arrived ${A2?.arrived}, ${stepped.toFixed(2)} m from where he knelt`);
+
+      // the room fight takes his gun: the lens is out for as long as it has him, and is fed again from the start
+      const others2: any[] = g.doors.list.filter((x: any) => x !== d && wandFits(x));
+      let dA: any = null; for (const x of others2) if (S.give(WO.WAND_ORDER, doorTgt(x), 'all') === null) { dA = x; break; }
+      const wA = dA ? await until(2400, () => !!jobs()[0]?.live) : 2400;
+      let ovEyes = 0, ovLive = 0, ovKnelt = 0;
+      await hushed(() => { for (let i = 0; i < 20; i++) { if (him.script) him.script.over = { aimAt: [him.char.pos[0] + 3, 1.2, him.char.pos[2]], face: null }; W.step(DT); if (i > 1) { ovEyes += wandEyes().length; ovLive += jobs()[0]?.live ? 1 : 0; ovKnelt += him.char.anim.lockpick ? 1 : 0; } } if (him.script) him.script.over = null; });
+      const ovJob = jobs().length, ovBack = await until(900, () => !!jobs()[0]?.live);
+      F.verdict(!!dA && wA < 2400 && !ovEyes && !ovLive && !ovKnelt && ovJob === 1 && ovBack < 900 && ovBack * DT > WAND.feedSecs - 0.2,
+        'ordered to a second shut door he looks there; while the room fight has his gun on something the lens shows nothing and he is off his knee, the order still his; let go, he feeds it again from the start', `second door ${dA?.def.name ?? 'none took the order'}, live after ${(wA * DT).toFixed(1)} s · under the fight: lens eyes ${ovEyes}, live ${ovLive}, knelt ${ovKnelt} frames of 18 · job kept ${ovJob} · live again after ${(ovBack * DT).toFixed(1)} s (feed ${WAND.feedSecs})`);
+
+      // ordered to another door from his knees: he is up on the frame, and kneels again only at the new door
+      let dB: any = null; const o0 = WO.WANDORDER_STATS.ordered;
+      for (const x of others2) if (x !== dA && wandFits(x) && S.give(WO.WAND_ORDER, doorTgt(x), 'all') === null) { dB = x; break; }
+      W.step(DT);
+      const r1 = { knelt: !!him.char.anim.lockpick, jobs: jobs().length, door: jobs()[0]?.door, eyes: wandEyes().length, live: !!jobs()[0]?.live };
+      let farKnee = 0; const LB = dB ? wandLens(dB, jobs()[0]?.side ?? 1) : null;
+      const wB = dB ? await until(2400, () => !!jobs()[0]?.live, () => { if (LB && him.char.anim.lockpick && flat(him.char.pos, LB.pos) > 1.5) farKnee++; }) : 2400;
+      const eB: any = wandEyes()[0];
+      F.verdict(!!dB && !r1.knelt && r1.jobs === 1 && r1.door === dB && !r1.eyes && !r1.live && WO.WANDORDER_STATS.ordered === o0 + 1 && wB < 2400 && !farKnee && !!eB && !!LB && flat(eB.pos, LB.pos) < 1e-6,
+        'given a third door while he kneels at the second: he is on his feet that frame with one job, for the new door; he walks there upright and the lens is under the new door', `third door ${dB?.def.name ?? 'none took the order'} · the frame after: knelt ${r1.knelt}, jobs ${r1.jobs}, for it ${r1.door === dB}, lens eyes ${r1.eyes} · frames on a knee away from it ${farKnee} · live after ${(wB * DT).toFixed(1)} s`);
+
+      // its switch thrown under a man who is looking: a plain hold where he is
+      WAND.mate = false; W.step(DT); W.step(DT);
+      const sw = { jobs: jobs().length, knelt: !!him.char.anim.lockpick, order: S.of(him)?.order, eyes: wandEyes().length };
+      raiseMate(); W.step(DT);
+      F.verdict(!sw.jobs && !sw.knelt && sw.order === 'hold' && !sw.eyes && !jobs().length, 'its switch thrown off under a man who is looking: the lens is out, he is up and on a plain hold; thrown on again, nobody looks unasked', `off: jobs ${sw.jobs}, knelt ${sw.knelt}, his order ${sw.order}, lens eyes ${sw.eyes} · on again: jobs ${jobs().length}`);
+
+      // what is refused, in words
+      const openR = S.give(WO.WAND_ORDER, tgt, 'all');
+      const steel = g.doors.list.find((x: any) => x.def.steel), steelR = steel ? S.give(WO.WAND_ORDER, doorTgt(steel), 'all') : 'no steel door';
+      const shut = g.doors.list.find((x: any) => x !== d && wandFits(x)), blueR = shut ? S.give(WO.WAND_ORDER, doorTgt(shut), 'blue') : 'no shut door';
+      F.verdict(typeof openR === 'string' && typeof steelR === 'string' && !!steel && typeof blueR === 'string' && !!shut && /wand/.test(blueR) && !jobs().length, 'refused in words, nobody sent: a door that is not shut, a steel door, men who carry no wand', `open: ${openR} · steel (${steel?.def.name}): ${steelR} · the blue pair on ${shut?.def.name}: ${blueR}`);
+
+      // its switch, thrown on a running game
+      WAND.mate = false; W.step(DT);
+      const offDef = S.defs.some((x: any) => x.id === WO.WAND_ORDER), offRow = has(1);
+      raiseMate(); W.step(DT);
+      const onDef = S.defs.some((x: any) => x.id === WO.WAND_ORDER);
+      F.verdict(!offDef && !offRow && onDef, 'its switch off on a running game: the order is off every menu and the card row is gone; on again, the order is back', `off: order listed ${offDef}, card row ${offRow} · on again: ${onDef}`);
+
+      // carried and never ordered = the build without it, by digest
+      const play = async (mate: boolean) => {
+        const W = await stand(11), g = W.game; raise(); WAND.mate = mate; card(); Math.random = seeded(4242);
+        await hushed(() => { startFromQuery(g, 'roomclear&squad4'); steps(W, 600); });
+        return { h: hashDigest(digestGame(g, true)), row: g.orders.defs.some((x: any) => x.id === WO.WAND_ORDER), jobs: WO.wandOrderJobs(g).length, eyes: g.fogOfWar.eyes.filter((e: any) => e.wand).length };
+      };
+      const a = await play(false), b = await play(!BREAK);
+      F.verdict(a.h === b.h && !a.row && b.row && !b.jobs && !b.eyes, 'ten seconds of the four-man room clear with the wand on Red One\'s card digest the same with its switch off and on: carried and not ordered, nothing differs', `off ${a.h} · on ${b.h} · order listed ${a.row}/${b.row} · jobs ${b.jobs} · lens eyes ${b.eyes}`);
+    });
+    const s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], P = await import(`${ROOT}/src/host/profile.ts`);
+    F.verdict(s.includes('TPS_WANDMATE') && P.FROZEN_HOLDS['WAND.mate'] === 'TPS_WANDMATE=1', 'the switch is a row of the two stands\' list and has its word', `STAND_ENV ${s.includes('TPS_WANDMATE')} · FROZEN_HOLDS ${P.FROZEN_HOLDS['WAND.mate']}`);
+  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
+  finally { WAND.on = onWas; WAND.mate = mateWas; FOG.own = ownWas; FOG.lastSeen = lsWas; Math.random = rnd; }
+  return F.done();
+}
+
 // ───────────────────────────────────────────────────────────── off
 export async function wandOff(): Promise<boolean> {
   const F = family('wand-off: the switch off is the build as it was, and a wand carried and never used changes nothing');
@@ -404,7 +586,7 @@ export async function wandOff(): Promise<boolean> {
 
 export async function wandCheck(only?: string): Promise<boolean> {
   let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['kit', wandKit], ['tile', wandTile], ['look', wandLook], ['costs', wandCosts], ['doors', wandDoors], ['off', wandOff]];
+  const parts: [string, () => Promise<boolean>][] = [['kit', wandKit], ['tile', wandTile], ['look', wandLook], ['costs', wandCosts], ['doors', wandDoors], ['mate', wandMate], ['off', wandOff]];
   for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
   return ok;
 }

@@ -104,11 +104,12 @@ import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
 import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
-import { updateInteract, escapeInteract } from './interact';
+import { updateInteract, escapeInteract, backableInteract } from './interact';
 import { tacticsTick, loadTactics, tacticsSummary, tacticsReset } from './tactics';
 import { lanesTick, lanesReset } from './lanes';
 import { pictureTick, pictureReset } from './picture';
 import { darkFoeTick } from './darkfoe';
+import { powerOutTick, powerOutReset } from './powerout';
 import { dozeTick, dozeInChair, dozeReset } from './doze';
 import { wallReactTick, wallReactReset } from './wallreact';
 import { BLAST_PACE } from './destructionSwitch';
@@ -141,6 +142,7 @@ import { ClearedRooms } from './cleared';
 import { Rescue } from './rescue';
 import { DoorTools } from './doortools';
 import { squadSmokeKey } from './squadsmoke';
+import { wandOrderKey } from './wandorder';
 import { squadThrowKey } from './squadthrow';
 import { PairOrders } from './pairorders';
 import { pairUpApply } from './pairup';
@@ -157,6 +159,7 @@ import type { FloorMat } from './floor';
 import * as dialogue from './dialogue';
 import type { DialoguePick } from './dialogue';
 import { Sup, updateSuppression, suppressionSummary } from './suppression';
+import { conditionSummary, conditionPose } from './condition';
 import { AimState, trackPlayer, aimSummary } from './aim';
 import { Qrf, updateQrf, resetQrf, loadQrfTune } from './qrf';
 import { openingStart } from './opening';
@@ -274,6 +277,8 @@ export class Player {
   hitFlash = 0;
   /** a blast that left him up (samstun.ts): folded until / blind until, on the game clock, and where the flash was — the same two stamps a Guard carries */
   staggerUntil = -1; dazzledUntil = -1; dazzledAt: Vec3 | null = null; stunPosed = false;
+  /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
+  hurtAt = -1;
   /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
   doorBashAt = -10; doorBashLean = 0; doorRipUntil = -1; doorKickTail = false;
   /** the look his head was last given against that turn, and the game time it was given on (player.ts's sprint facing; game.ts takes it back off the frame nobody renews it) */
@@ -612,6 +617,8 @@ export class Guard {
   /** a ring airfoil took him in the body (launcher.ts staggerGuard): doubled over till this time — rooted like the dazzle (reactT), no round from him, but he can SEE,
    *  and he comes out of it alert toward the side it came from */
   staggerUntil = -1;
+  /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
+  hurtAt = -1;
   sawPlayerThisFrame = false; lastPos: Vec3; stuckT = 0; stuckN = 0;
   /** a real sighting of his FOE this frame, whoever that is (teams) — sawPlayerThisFrame stays what its name says: eyes on Sam (what the mission's 'spotted' count
    *  and the witnesses read), which for the staff is the same thing */
@@ -1281,8 +1288,8 @@ export class Game {
   }
 
 
-  resetGuards() { dozeReset(this); closeReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
-  tension() : number { return tension(this); }
+  resetGuards() { powerOutReset(this); dozeReset(this); closeReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
+  tension(theirs = false) : number { return tension(this, theirs); }
   /** one line on the alarm escalation for the panel / debugging (level, clock, episode, lockdown pair + post) */
   escalationSummary(): string { return escalationSummary(this); }
   /** panel / debug: one level up by hand (as if an alarm had just found nobody), or straight back to calm */
@@ -1305,6 +1312,7 @@ export class Game {
   /** panel / console: everybody's suppression — Sam's scalar, then every living man with anything on him: his scalar and what it has him doing (flinching, head
    *  down and for how long, shifting to cover, holding it) — or the nearest man at rest (suppression.ts suppressionSummary) */
   suppressionSummary(): string { return suppressionSummary(this); }
+  conditionSummary(): string { return conditionSummary(this); }
   /** panel / console: the aim-settle model — Sam's track and cone with its terms, then every alert man's (or the nearest at rest): track, Sam's bearing rate
    *  across him, his cone and its terms, whether he is braking for a shot, his last round (aim.ts aimSummary) */
   aimSummary(): string { return aimSummary(this); }
@@ -1486,6 +1494,7 @@ export class Game {
     this.orders.input(dt, input, cam, canvas);   // the squad's command menu (orders.ts): X / B / T / the middle button, and the open menu's wheel / arrows / digits / clicks / Space / Esc taken out of the frame's input before the selector and the player read them — with no squad, one pass over the guard list and a return
     if (this.doorTools.menuKey(input)) this.player.throwEaten = true;   // (the door tools' 'frag and clear' row is on G with its page up — doortools.ts: taken here, before the player's quick-throw reads the key)
     squadSmokeKey(this, input);
+    wandOrderKey(this, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)
     this.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
     if (squadThrowKey(this, input)) this.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
     updateInteract(this, dt, input);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
@@ -1517,6 +1526,7 @@ export class Game {
     spottedTick(this);       // a silent teammate with a suspicious man about, or caught (spotted.ts; a return with its switch off)
     this.orders.tick();      // squad orders (orders.ts): each man under one of Sam's orders walked to it and posed on it, after the drills that may own him — with nobody under one, a pass over the guard list and a return
     this.doorPath.tick(dt);  // a room entry's men on their own lines through the door (doorpath.ts): after the orders have posed them, before anybody walks — a return on its first line with the switch off
+    powerOutTick(this, dt);  // the lights go out and somebody goes to put them back on (powerout.ts): the defenders' word when it is due, each man out for the breaker a step on — before the room fight, which would plant a man whose leg has ended; a return on its first line with the switch off
     this.fight.tick(dt);   // the room fight (roomfight.ts): what every hostile / operative unit watches, fears and shoots at this frame — a return on its first lines while none stands or a show has the floor
     moraleTick(this, dt);   // shaken (morale.ts): the blasts since last frame read for who they shook, each man's dread and rung, a broken man's sequence a step on — before anybody moves; a return on its first line with the switch off
     runnerTick(this, dt);   // drops it and runs (runner.ts): a broken man alone, dry, with an enemy in his eyes at arm's length shouts it, lets the weapon go and runs; every man in a run a step on — a return on its first line with the switch off
@@ -1640,6 +1650,7 @@ export class Game {
       }
       this.player.char.anim.trained = 1;
     }
+    conditionPose(this);   // (condition.ts: each man's condition to his figure — nothing dealt with its switch off)
   }
   /** this frame's dynamic boxes, and what STEPS while they are gathered: stature, the fx's time to live, tracers, sparks, the spent cases' landings, the wall charge's look and camera kick, a broken fixture's pieces. Skip it and those stop. Returns whether stature scaled anybody (drawCharacters takes it) */
   private stepFxAndDynBoxes(all: Character[], dt: number, cam: FollowCamera, canvas: View) {
@@ -1789,6 +1800,8 @@ export class Game {
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
   escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this); }   // (the squad's command menu backs out first: orders.ts)
+  /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this); }
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

@@ -12,6 +12,7 @@ import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId }
 import { isHostile } from './teams';
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
+import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A WEAPON LIGHT STOPS AT A WALL. A man's light is a light AT ITS LENS — on the carbine's handguard, under the pistol's rail, at the hand torch's glass — and a man
@@ -108,6 +109,7 @@ export function updateTargets(g: Game, dt: number) {
 export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'debug' | 'hand') {
   const bo = g.blackout; const permanent = !isFinite(seconds);
   if (bo.active && bo.permanent) return;
+  const fresh = !bo.active;
   if (!bo.active) bo.since = g.time;
   bo.active = true; bo.permanent = permanent; bo.until = permanent ? Infinity : Math.max(bo.until, g.time + seconds);
   g.audio.play('powerDown', g.level.breaker.pos, 1.0); g.audio.play('powerDown', null, 0.35);
@@ -118,7 +120,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
   for (const gd of g.guards) {
     if (gd.state === 'dead') continue;
     if (gd.state === 'patrol') { gd.awareness = Math.max(gd.awareness, 0.34); gd.reactT = 1.0 + simRandom(); }
-    const d = v3.dist(gd.char.pos, g.level.breaker.pos); if (d < bd && gd.state !== 'alert' && !gd.held && theirMains(gd) && !workNotHis(gd) && !workStaysPut(g, gd)) { bd = d; best = gd; }   // (nor is the errand handed to the man Sam is holding, nor — workthings.ts — to one who cannot leave his post: he would say he was going and stand there)
+    const d = v3.dist(gd.char.pos, g.level.breaker.pos); if (d < bd && gd.state !== 'alert' && !gd.held && theirMains(gd) && !workNotHis(gd) && !workStaysPut(g, gd) && !powerOutMan(g, gd)) { bd = d; best = gd; }   // (nor is the errand handed to the man Sam is holding, nor — workthings.ts — to one who cannot leave his post: he would say he was going and stand there)
   }
   if (best && !best.task) {
     const E = breakerErrand(g), goal: Vec3 = E ? v3.copy(E.goal) : [g.level.breaker.pos[0] - 0.4, 0, g.level.breaker.pos[2] - 0.9];   // (workthings.ts: floor at the panel's own face where the fixed spot is in a wall or behind one)
@@ -126,6 +128,7 @@ export function setBlackout(g: Game, seconds: number, cause: 'ocp' | 'shot' | 'd
     if (best.state === 'patrol') { best.state = 'suspicious'; best.reactT = 1.2; best.searchT = 0; }
     g.say(best, "power's out — checking the breaker", true); g.audio.play('radio', best.char.pos, 0.6);
   }
+  if (fresh) powerOut(g);   // (powerout.ts: a mission's defenders see the lights die, say what they do about it and then do it)
 }
 
 export function endBlackout(g: Game) {

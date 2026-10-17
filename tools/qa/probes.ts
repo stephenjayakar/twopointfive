@@ -28,7 +28,7 @@
 //     hands: hands-body hands-door hands-team hands-off hands-harness
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
-//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-off
+//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-wiring
@@ -2236,6 +2236,7 @@ if (on('picked-door', 'all')) await run('picked-door', () => pickedDoor());
 if (on('follower-corpse', 'all')) await run('follower-corpse', () => followerCorpse());
 if (on('held-leader', 'grab', 'all')) await run('held-leader', () => heldLeader());   // a held lockdown follower whose leader dies keeps no corpse as leader (superviseLockdown) — the grab family's business too
 if (on('holddrop', 'grab', 'all')) await run('holddrop', async () => (await import('./holddrop-check.ts')).holdDropCheck());   // a held man drops his gun (HOLD.dropGun): a rifleman, a drawn pistol, a calm man's torch, the hold's ends, a checkpoint, the journal
+if (on('tabback', 'orders', 'all')) await run('tabback', async () => (await import('./tabback-check.ts')).tabBackCheck());   // Esc is only the pause and Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (src/game/backkey.ts, BACKKEY.tab / ?tabback=0 / TPS_TABBACK=1)
 if (on('holdturn', 'grab', 'all')) await run('holdturn', async () => (await import('./holdturn-check.ts')).holdTurnCheck());   // a hold reads as one hold through a turn (HOLD.oneFacing): the pass, a calm defender in the arm, the cursor round a half circle each way
 if (on('reclear', 'all')) await run('reclear', () => reclear());
 if (on('takedown-wall', 'all')) await run('takedown-wall', () => takedownThroughWall());
@@ -2476,6 +2477,7 @@ if (on('wand-tile', 'wand', 'kit', 'all')) await run('wand-tile', async () => (a
 if (on('wand-look', 'wand', 'fog', 'all')) await run('wand-look', async () => (await import('./wand-check.ts')).wandLook());   // who is offered the row; hidden through the feed, seen through the lens inside its wedge; the lens in his eye's place
 if (on('wand-costs', 'wand', 'all')) await run('wand-costs', async () => (await import('./wand-check.ts')).wandCosts());   // the pan's rate and stops, the low lens, what pulls it out, the stow, the mark, the checkpoint gate
 if (on('wand-doors', 'wand', 'all')) await run('wand-doors', async () => (await import('./wand-check.ts')).wandDoors());   // every door face of every squad level: the lens beyond the leaf, in the open
+if (on('wand-mate', 'wand', 'kit', 'squadorders', 'all')) await run('wand-mate', async () => (await import('./wand-check.ts')).wandMate());   // a teammate's wand: carried and never ordered nothing happens; X on a shut door then V, his lens among the fog's eyes; what ends it; refusals
 if (on('wand-off', 'wand', 'all')) await run('wand-off', async () => (await import('./wand-check.ts')).wandOff());   // off, or carried and unused: the same run by digest; the two stands' row and the registry
 // ---------------------------------------------------------------- sticky cameras (src/game/stickycam.ts, sticky-check.ts): the launcher's third load; one stuck to a wall is one more eye for the fog of war
 if (on('sticky-kit', 'sticky', 'kit', 'all')) await run('sticky-kit', async () => (await import('./sticky-check.ts')).stickyKit());   // the row on your card with the switch, a pouch each, the store, staging onto the rifle
@@ -2619,6 +2621,7 @@ if (on('morale', 'all')) await run('training', async () => (await import('./trai
 if (on('runner', 'all')) await run('runner', async () => (await import('./runner-check.ts')).runnerCheck());   // drops it and runs: a broken man alone, dry, with an enemy in his eyes shouts it, lets the weapon go and runs (src/game/runner.ts, RUNNER.on / ?norunner; RUNNER_BREAK=1 must fail)
 if (on('darkdoor', 'all')) await run('darkdoor', async () => (await import('./darkdoor-check.ts')).darkdoorCheck());   // not in there alone: a green man, alarmed and alone, stops at the doorway of a dark room, calls a mate and goes in with him — or gives it up, or the third time goes in alone (src/game/darkdoor.ts, DARKDOOR.on / ?nodarkdoor; needs MORALE.on); DARKDOOR_BREAK=1 = no room is dark to the rule
 if (on('darkfoe', 'all')) await run('darkfoe', async () => (await import('./darkfoe-check.ts')).darkfoeCheck());   // an enemy on alert does not sit blind in the dark: lamps on, or a walk to where he can see (src/game/darkfoe.ts, DARKFOE.on / ?nodarkfoe / TPS_DARKFOE=1)
+if (on('powerout', 'all')) await run('powerout', async () => (await import('./powerout-check.ts')).poweroutCheck());   // the lights go out and somebody goes to put them back on (src/game/powerout.ts): a mission's defenders say so on their net, send their nearest free men to the breaker with their lamps lit, and hold the dark for the team's doing when they know better (POWEROUT_BREAK=1 = the beat thrown away and the rule left on for the off line: must FAIL). No GPU, never played
 if (on('music', 'all')) await run('music', async () => (await import('./music-check.ts')).musicCheck());   // more music than the one theme (audio/pieces.ts MUSIC.pieces): the theme untouched with it off, each piece plays, they differ, the deal hands them round (MUSIC_BREAK=1 must fail)
 if (on('doze', 'quiet', 'all')) await run('doze', async () => (await import('./doze-check.ts')).dozeCheck());   // dozing in the dark (src/game/doze.ts, DOZE.on / ?nodoze / TPS_DOZE=1): a calm man with a long wait in an unlit place sits in the chair there and sleeps — eyes shut, ears dull, what wakes him, the take over the chair, the timetable, a checkpoint, off = the base (DOZE_BREAK=1 must fail)
 if (on('netquiet', 'all')) await run('netquiet', async () => (await import('./netquiet-check.ts')).netquietCheck());   // the net goes quiet: unanswered checks, bodies and falls feed the dread, the calls get worse, a jumpy man whips to a noise, the last man backs to his arc and goes low (src/game/netquiet.ts, NETQUIET.on / ?nonetquiet / TPS_NETQUIET=1; NETQUIET_BREAK=1 must fail)
@@ -2668,6 +2671,8 @@ if (on('samstun', 'all')) await run('samstun', async () => (await import('./sams
 if (on('deathrecap', 'ui', 'all')) await run('deathrecap', async () => (await import('./deathrecap-check.ts')).deathrecapCheck());   // the end card knows who shot whom, from where, and says nothing while the run is on (src/game/deathrecap.ts, src/ui/recap.ts)
 if (on('friends', 'player', 'all')) await run('friends', async () => (await import('./friends-check.ts')).friendsCheck());   // the reticle passes over his own side, and his gun comes to the low ready off a teammate out of a fight (src/game/friends.ts)
 if (on('headmark', 'ui', 'all')) await run('headmark', async () => (await import('./headmark-check.ts')).headmarkCheck());   // no wary mark (the dots, the '?') over a living man of the player's own; a defender's marks as they were (src/ui/headmark.ts)
+if (on('condition', 'all')) await run('condition', async () => (await import('./condition-check.ts')).conditionCheck());   // a man's condition (condition.ts): a blast that leaves a man standing leaves him hurt — pace and spread, the same of all three; one round still kills; CONDITION_BREAK=1 must fail
+if (on('condition-pose', 'condition', 'all')) await run('condition-pose', async () => (await import('./condition-pose-check.ts')).conditionPoseCheck());   // …and how each state shows on the figure (character.ts: the hurt man's hunch, step and hand, the tucked head under fire, the fold), on the bones
 // ---------------------------------------------------------------- the hostage rescue playtest (rescue-probes.ts; game/rescue.ts behind ?rescue): 'rescue' = the family
 if (on('rescue-off', 'rescue', 'all')) await run('rescue-off', async () => (await import('./rescue-probes.ts')).rescueOff());
 if (on('rescue-stage', 'rescue', 'all')) await run('rescue-stage', async () => (await import('./rescue-probes.ts')).rescueStage());
@@ -2972,6 +2977,7 @@ if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await i
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());
 if (on('irl-team', 'irlight', 'all')) await run('irl-team', async () => (await import('./irlight-probes.ts')).irlTeam());
 if (on('irl-off', 'irlight', 'all')) await run('irl-off', async () => (await import('./irlight-probes.ts')).irlOff());
+if (on('irl-auto', 'irlight', 'all')) await run('irl-auto', async () => (await import('./irlight-probes.ts')).irlAuto());
 // ---------------------------------------------------------------- dark on a lit man: from the dark, a teammate's light stays off and his closing walk waits (litman-probes.ts; guards.ts LIGHTS.litMan)
 if (on('litman-rule', 'litman', 'all')) await run('litman-rule', async () => (await import('./litman-probes.ts')).litmanRule());
 // ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES): off = the old calls to the bit; on = recoil, the toss, the flinch / hit, the stun hunch, the two gaits, a staged fight
