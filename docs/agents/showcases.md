@@ -11,8 +11,9 @@ and the DAY showcase (program `'breach'`: `?breach`, `__breach`, the `Breach` fa
 ran them (`probes.ts night`, `day`, `breach-run / -restore / -tour`, `director-breach-digest` and its two fixtures, `oneway-night`, `show-key-check.ts`). `?demo` and
 `?breach` are now plain flags nothing reads: the page opens on the title. What stays, and is described below: the old tour (`__demo`, `tools/qa/tour.ts`), `BreachDrill`
 (the night breach scenario runs it live), the daylight variant (`setDaylight`, `__daylight`), `plans.breach`, and the Director ENGINE with no program on any shipped level.
-The bullets below were cut down to what is still true; other area files still mention the shows in passing as history. Nobody has driven the page since the removal
-(no GPU here): typecheck, build and the headless gates only.
+The bullets below were cut down to what is still true; other area files still mention the shows in passing as history. THE BENCHMARK, which played the day showcase as
+its scene, plays three real floors instead (docs/agents/qa.md 'THE BENCHMARK'). Since the removal the page has been driven on the software adapter only
+(`tools/qa/bench-page.cjs`: the title, its Extras list with no showcase rows, three mission pages); never seen on a GPU.
 
 <!-- was CLAUDE.md lines 695–758 -->
 - **Showcase tour** (`src/game/demo.ts`; `__demo.start()` by console and `tools/qa/tour.ts` only — no key, card or URL flag starts it; P or Esc over it ends it to the start card): `Shot {dur,pos,yaw,yawTo,swing,dist,distFrom,caption,sub,enter,exit,

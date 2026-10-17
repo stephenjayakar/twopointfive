@@ -232,7 +232,8 @@ but synthetic writes still work.
   heavy moment, the addresses, the reload guard, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another
   take), and on a real page `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: `?bench` goes to the first scene and Esc comes
   back, then the row's run start to finish over three pages with the hands-off player seen ordering and walking on each, keys pressed into a scene, the
-  game's clock read every frame, the card, the one download, Close). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
+  game's clock read every frame, the card, the one download, Close; the check steps each scene on the game's own clock with `__runFrames`, a frame there
+  taking seconds, so a scene ends by the player's own cut and the last page's tail is the fake page's to prove). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
