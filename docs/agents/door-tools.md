@@ -422,6 +422,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its four lines about the room and says so in a line of its own, 'A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM': every man of the order lost before
   any step in, each to a defender not at home in the room behind the door; never more than one run in three, never every run of a floor. NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
   over two cans, a can first, a shared word, more seeds. Headless only: never played, never heard (the spoken line), never seen on a GPU.
+- **Two door checks run on ROOM-FIGHT floors (10-17).** `doortools-firstman` and `threshold-hold` hold squads from the rooms (SQUADDEAL) off inside
+  their own runs, by the stand's own word (`TPS_SQUADDEAL=0` round the stand-up: `rig`'s `deal: false`, threshold-probes' `NODEAL`). On a dealt floor
+  the room's men are their squad's and dig in on its word (that rule's owner's reading, its runs): four seconds after a bang they are still
+  thinking, so the plain door loses no first man (0 of 6, against 4 of 6 on a room-fight floor) and a bang has nothing to beat; twenty-five seconds
+  after, every door is wedged and nobody gets in either way; and a hold told after ten seconds steps into a room that has set (the records pair's
+  last man lost on the line; the depot four's order at `c_w` ends 'nobody left on it' 3.3 s after 'step in', no can). Both were red on shipped for that from the build of
+  10-17 and are green again with the rule held off (firstman: plain 4 of 6 first men lost, bang 0, charge 1; threshold-hold 15 of 15; frozen the
+  same lines as before). NOT judged by any door check: what the door tools do on a dealt floor. What that drill means for play is the
+  defenders' own call, with the maintainer. Headless, the seeds the checks had; never played.
 - **A grenade by a held door: two answers, ON IN THE PAGE since 10-16 (built 10-15, the maintainer said yes to both).** His calls were: what an
   order does when a grenade lands on its men (pause until they are back at the door, then go), and what the can does when its wait runs out with
   nobody at the door (no can, the lead says so, they go in and keep it). Both are on in the page (`?thrfraghold=0` / `?thrnocan=0` put one off;
