@@ -157,7 +157,7 @@ export async function wandKit(): Promise<boolean> {
 export async function wandTile(): Promise<boolean> {
   const F = family('wand-tile: a carried wand or sticky camera says so itself where the mission has no fog of war for it to look into');
   const onWas = WAND.on, G = globalThis as any, hadLS = 'localStorage' in G, prevLS = G.localStorage;
-  const { STICKY } = await import(`${ROOT}/src/game/stickycam.ts`), QF = await import(`${ROOT}/src/game/quietfog.ts`), stickyWas = STICKY.on, qfWas = QF.QUIETFOG.on;
+  const { STICKY } = await import(`${ROOT}/src/game/stickycam.ts`), QF = await import(`${ROOT}/src/game/quietfog.ts`), stickyWas = STICKY.on, qfWas = QF.QUIETFOG.on, soloFogWas = QF.QUIETFOG.solo;
   try {
     await keepKit(async () => { await withDom('?quality=high&mute', async () => {
       G.localStorage = memStore(); G.location.pathname = '/'; G.location.hash = ''; G.location.assign = () => { }; G.location.reload = () => { };
@@ -171,7 +171,8 @@ export async function wandTile(): Promise<boolean> {
       const open = (id: string) => { const m = list.find(x => x.id === id); const host = new El('DIV') as any; const L = UI.openLoadout(UI.entryOfMission(m), { host, search: M.missionHref(m, SEARCH), deploy: () => { }, back: () => { } }); up.push(L); return { L, root: L.root as unknown as El }; };
       const say = (t: Record<string, { idle: boolean; val: string }>) => Object.entries(t).map(([f, r]) => `${f} '${r.val}'${r.idle ? ' idle' : ''}`).join(' · ');
 
-      // the solo night: never a fog
+      // the solo night: never a fog (as it was: where QUIETFOG.solo is up — the page — it opens under the fog and is handed the mission's cameras and wand, solofog-check.ts; held down for these two lines)
+      QF.QUIETFOG.solo = false;
       const solo = open('solo-night'), t0 = tiles(solo.root), others0 = Object.entries(t0).filter(([f]) => f !== 'wand' && f !== 'cams');
       F.verdict(tw.ok && tc.ok && cost.used === 3 && !!t0.wand && !!t0.cams && t0.wand.idle && t0.wand.val === KC.IDLE_WORD && t0.cams.idle && t0.cams.val === `2 · ${KC.IDLE_WORD}` && t0.wand.title === KC.IDLE_WHY && !t0.wand.dimIco
         && others0.length > 2 && others0.every(([, r]) => !r.idle && !r.title && !r.val.includes(KC.IDLE_WORD)),
@@ -179,7 +180,7 @@ export async function wandTile(): Promise<boolean> {
       // …and a tile that carries none is a plain empty tile
       K.kitSet(0, 'wand', false); K.kitSet(0, 'cams', 0); const soloBare = open('solo-night'), tb = tiles(soloBare.root);
       F.verdict(!!tb.wand && !tb.wand.idle && tb.wand.val !== KC.IDLE_WORD && !tb.wand.title && !tb.cams.idle && tb.cams.val === '0', 'none carried there: the two tiles are empty tiles like any other, nothing marked', say({ wand: tb.wand, cams: tb.cams }));
-      K.kitTry(0, 'wand', 1); K.kitTry(0, 'cams', 2);
+      K.kitTry(0, 'wand', 1); K.kitTry(0, 'cams', 2); QF.QUIETFOG.solo = soloFogWas;
 
       // a squad mission: its own fog
       const four = open('room-clear-four'), t1 = tiles(four.root);
@@ -195,7 +196,7 @@ export async function wandTile(): Promise<boolean> {
       } finally { for (const L of up) L.close?.(); QF.setQuietFog('off'); QF.quietFogForget(); M.MISSIONS.onPick = pickWas; }
     }); });
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
-  finally { WAND.on = onWas; STICKY.on = stickyWas; QF.QUIETFOG.on = qfWas; if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
+  finally { WAND.on = onWas; STICKY.on = stickyWas; QF.QUIETFOG.on = qfWas; QF.QUIETFOG.solo = soloFogWas; if (hadLS) G.localStorage = prevLS; else delete G.localStorage; }
   return F.done();
 }
 
