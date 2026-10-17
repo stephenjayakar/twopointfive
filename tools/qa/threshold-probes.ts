@@ -739,7 +739,7 @@ export const thresholdLast = guarded(async () => {
   return done();
 });
 
-/** A GRENADE AT A HELD DOOR, the two answers built and left off (DOORTOOLS.thrFragHold, thrNoCan): each raised by the probe on either stand, and each
+/** A GRENADE AT A HELD DOOR, the two answers (DOORTOOLS.thrFragHold, thrNoCan — on in the page since the maintainer's yes, 10-16): each set by the probe on either stand, and each
  *  shown beside the same run with it off. THRFRAGHOLD_BREAK=1 / THRNOCAN_BREAK=1: that rule left off where it should be on — red. */
 export const thresholdGrenade = guarded(async () => {
   const { verdict, done } = family('threshold-grenade: a grenade by a held door — the order waits for its men who ran (DOORTOOLS.thrFragHold); a can nobody is back for stays in the kit (DOORTOOLS.thrNoCan)');

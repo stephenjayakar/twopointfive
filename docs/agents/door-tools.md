@@ -418,10 +418,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   line. The natural run: `threshold-four` on shipped is green again (depot-four seed 2, a_s: the can waits at 16.1 s, goes to Red Two at 18.2, thrown
   at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`). NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
   over two cans, a can first, a shared word, more seeds. Headless only: never played, never heard (the spoken line), never seen on a GPU.
-- **A grenade by a held door: two answers BUILT AND OFF, waiting on the maintainer (10-15).** His open calls: what an order does when a grenade
-  lands on its men, and what the can does when its wait runs out with nobody at the door. Both leans are built so he can flip them; neither is on
-  anywhere (page, module, frozen stand), so nothing he plays changes and every digest is as it was. `DOORTOOLS.thrFragHold` (Tab 'threshold: wait for
-  the men who ran', `?thrfraghold=1`, `TPS_THRFRAGHOLD=1` on either stand): the men of a threshold who ran from a grenade (frag.ts
+- **A grenade by a held door: two answers, ON IN THE PAGE since 10-16 (built 10-15, the maintainer said yes to both).** His calls were: what an
+  order does when a grenade lands on its men (pause until they are back at the door, then go), and what the can does when its wait runs out with
+  nobody at the door (no can, the lead says so, they go in and keep it). Both are on in the page (`?thrfraghold=0` / `?thrnocan=0` put one off;
+  `?fraghold=0`, the bullet below, puts thrFragHold off with it), false in the module and on the frozen stand, a `FROZEN_HOLDS` row each: every
+  frozen digest is as it was. `DOORTOOLS.thrFragHold` (Tab 'threshold: wait for
+  the men who ran', `TPS_THRFRAGHOLD=1` raises it on the frozen stand, `=0` puts it off on shipped): the men of a threshold who ran from a grenade (frag.ts
   `fragRunning`) are kept in `T.fled` until each is back at the door or on his mark (`thrBack`; a man down or re-ordered drops out). While any is
   out, the hold does not count the door quiet (its own `thrCap` still ends it) and the pockets give neither a can nor the step in ('the door waits',
   said by a man who did not run), whoever sent them there (the hold's clock, its cap, the word, 'bang, then step in'). The wait at the pockets is the
@@ -430,7 +432,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'nobody left to wait for'. `threshold-hand` holds both off for its own runs. NOT held: Sam's plain 'step in', a captor's last warning, a door that shares
   a word with another, the step in behind a can of the order's own that has just gone off (`entryCap`), and a grenade that lands while a can is in the
   air or its burst is running ('fuse' / 'wait' do not look). A man whose mark the stuck rule has moved to where he stands counts as back.
-  `DOORTOOLS.thrNoCan` (Tab 'threshold: no can with nobody at the door', `?thrnocan=1`, `TPS_THRNOCAN=1`; acts only under thrHand): the wait spent
+  `DOORTOOLS.thrNoCan` (Tab 'threshold: no can with nobody at the door', `TPS_THRNOCAN=1` frozen, `=0` shipped; acts only under thrHand): the wait spent
   and still no hand at the door, the can stays in the kit ('no bang · nobody at the door', the lead says so) and the stage goes on as with no pocket
   worth a can; a later can of that order goes only from the picked man's own hand at the door. A recording from before the keys replays with both
   off (journal.ts). CHECK `probes.ts threshold-grenade` (family `threshold`; `THRFRAGHOLD_BREAK=1` and `THRNOCAN_BREAK=1` must each fail), 10 lines,
@@ -441,5 +443,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wait cut to 0.3 s: 'on without' at 0.3 s, the can goes. A hold that steps in by itself: off, the depot's ends 1.1 s after its men are back (frozen)
   or 2.5 s BEFORE (shipped); on, never sooner than `thrQuiet` after. thrNoCan, men kept off 9 s: off, thrown from 5.5 m after 6.1 s; on, no can, kit
   3 → 3, in they go. Nobody run off, or a hand back in time: beat for beat the same. NOT covered by any line: a man killed by the grenade (the probe
-  keeps them alive), a shared word, a last warning during the wait, a can first, two cans, more seeds; no tally of what either costs or saves. If
-  he says no to either, its row, word, flag and lines come out. Headless only: never played, never heard, never seen on a GPU.
+  keeps them alive), a shared word, a last warning during the wait, a can first, two cans, more seeds; no tally of what either costs or saves.
+  Headless only: never played, never heard, never seen on a GPU.
+- **A grenade scatters the men of ANY door order: the order waits for them before its door is opened (`DOORTOOLS.fragHold`, 10-16).** The
+  maintainer's call (pause until they are back at the door, then go) for open and clear, bang and clear, the charge, and the orders a scenario makes
+  itself. ON in the page (`?fraghold=0` puts it AND thrFragHold off), false in the module and on the frozen stand (`TPS_FRAGHOLD=1` raises it there,
+  `TPS_FRAGHOLD=0` puts this rule alone off on shipped), a `FROZEN_HOLDS` row, Tab 'door order: wait for the men who ran', in the nvg-off / ir-off
+  pin lists, the journal line (a recording from before the key replays with it off). What it does (`fragStep`, first thing in `step()` for an order
+  in `PRE` or 'kick'): the order's men who are `fragRunning` (frag.ts) are kept in `op.fled` until each is back within 0.8 m of his own mark
+  (`fragBack`; a man down or re-ordered drops out). While any is out and the stage is one that holds (`fragHolds`), the order does not move, its own
+  stage clock does not run, 'the door waits: …' goes in the log once and a man who did not run says 'hold — back on the door.' The stages: the walk to
+  the stack and its call; a ready stack once Sam's word has been given (a stack still WAITING for the word holds nothing, who ran is kept, and the wait
+  begins when the word comes); a boot, shove, shell or hammer not yet begun; a charge whose own man ran (what his hands had done of it is not kept);
+  'stood off'; a set charge on a given word. A word shared by several doors holds its first sound for all of them (`wordTick`, the word's own clock
+  for a late door held with it), and so does the signal several scenario orders share (`together()`). The wait is the ORDER's one wait,
+  `fragHoldCap` 8 s, summed over its stages: spent, 'on without … · the order's wait is spent' and it goes on as it would have. Sam's word given
+  AGAIN while a word is held lets it go at once ('the word again', 'on without … · not waited for'): the go key outside `wordTap` of the first
+  press, or the 'go' row, which is not greyed for it. A signal that scenario orders share has no second press. NOT held: a
+  door already opened and everything after it (a can in the air, the entry), a blow begun, a hand on a pick, Sam's own trigger on a set charge, a charge somebody's opening of the door has taken off it, a
+  captor's last warning, the response team's own door orders (Sam's squad only: `g.orders.sams`). A threshold's hold and its pockets are
+  thrFragHold's. CHECK `probes.ts door-grenade` (family `doortools`; `FRAGHOLD_BREAK=1` must fail: 9 lines red on both stands), 12 lines, both
+  stands, ONE seed, the depot's c_w and the office's breakroom doors with four men (the pair for one charge row), a REAL defender's grenade put
+  down at the feet of the stack's rear man (2.3 m and more off the frame, so its burst does not take the leaf; the men are kept from the burst).
+  Measured: rule off, the word a second after the grenade opens the door at once with two to four men running (frozen, and the shipped depot); the
+  shipped office door is opened 2.6 s later with a man 1.9 m off his mark. Rule on: 'the door waits' at the word, 'the men are back' 3.9 to 5.3 s
+  after the grenade, the door opened 0 to 0.8 s after that with every man within 0.8 m of his mark, 'in' every time; bang and clear the same, the
+  can from 1.2 to 1.5 m. Cap cut to 0.3 s: 'on without' 0.30 s after the wait began. The word again: opened on that frame (frozen), 1.8 and 2.8 s
+  later on shipped, where the man who opens it had run and has to be at the handle. An order on its own clock, men short of their marks: the stack is
+  called only with them back (the rule off waits for a walking man too; the rule says so and keeps `stackCap` from running under it). A locked door,
+  the grenade as the lead steps off to it: frozen, no boot until the men are back (4.5 s); shipped, the boot lands 0.4 s after the grenade, before a
+  man has moved, and is not stopped (the line passes on either and prints which). The charge: where its man ran, 'set' 2.4 to 2.5 s after he is back; where
+  he stayed, he sets it and 'armed' is said only with the others back. One word for two doors, and one signal for two scenario orders: neither door
+  before the grenade door's men are back (4.3 to 4.7 s, against 1.0 to 1.4 with the rule off). No grenade: beat for beat the same, to the frame.
+  KNOWN LIMITS: a man whose mark the stuck rule (orders.ts) has moved to where he stands counts as back there; N doors on one word can hold it N
+  caps at the worst; a running man can push an unlocked leaf ajar on his way (seen once, frozen: the order then shoves it, still after the men are
+  back); the pick's lost progress is not counted while the order is held; the HUD's word note shows nothing for a held word (the spoken line and
+  the log carry it). NOT covered by any line: the go key's own press (the check gives the 'go' order the key gives), a man killed by the grenade, a grenade on a stack
+  still waiting for the word with the word given much later, the hammer and the shell, a pick, a second grenade, more seeds or levels; no tally of
+  what the wait costs or saves in a room fight (the men up at the end are the same with and without on every shipped row; one frozen row ends a
+  man fewer with the rule). Headless
+  only: never played, never heard (the spoken line), never seen on a GPU.
