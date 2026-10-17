@@ -263,9 +263,11 @@ export const KIT_VIEW_QUIET = {
    *  ajar · the leaf thrown to `wideDeg` at `swing` rad/s and he is up · held `hold` s · the loop rests `rest` s after the room is staged again. ITS
    *  LAMP, the picture's own, hung for the cost alone: `back` m behind the wall's far face (`backMin` at least, where it has to come nearer for the
    *  slab to reach him), `up` high, slid along the wall away from him (to `side` m past the far jamb; `clear` m inside the doorway where the open leaf
-   *  stands on that side) until the slab's edge passes `past` m beyond his place (he is IN it where it reaches the near `body` m of him) */
-  cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3,
-    lamp: { back: 0.45, backMin: 0.15, up: 1.9, side: 1.2, clear: 0.15, past: 0.4, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 24, range: 8, radius: 0.08 } },
+   *  stands on that side) until the slab's edge passes `past` m beyond his place (he is IN it where it reaches the near `body` m of him).
+   *  ONE LAMP THROWS THE SLAB, nearly a point (`radius`: the jambs' shadows are its hard edges): the blade's own lamp burns at `blade` of itself
+   *  for the slit and is OUT once the leaf is thrown. At 40 the slab is two to three times the pool, which stays lit inside it and is lost in it */
+  cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3, blade: 2,
+    lamp: { back: 0.45, backMin: 0.15, up: 1.9, side: 1.2, clear: 0.08, past: 0.75, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 40, range: 8, radius: 0.03 } },
   /** LIFE AT REST, no guard: after each of these seconds of rest in turn (a fixed list: no dice) the warm lamp behind the door slides `slide` m along
    *  the wall over `out` s, stays `stay` s and slides back, dark to `blinkTo` of itself for `blink` s from `blinkAt` (somebody passes it); every man's
    *  idle sway is stopped for its length. Where the room has lamps of its own the lamp that slides is one hung for the beat (the picture's own lamp's
@@ -547,7 +549,7 @@ export function kitViewCostLamp(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall'>
   const reach = () => w2 + (w2 - a) * o / (th + back);
   if (reach() < Math.abs(sAl) + C.past - 1e-6 && need > 0) { back = Math.max(C.backMin, Math.min(C.back, (w2 - a) * o / need - th)); }
   const at = (): Vec3 => [m[0] + s[0] * sg * a + n[0] * (P.wall.back - back), C.up, m[1] + s[1] * sg * a + n[1] * (P.wall.back - back)];
-  for (let k = 0; k < 6; k++) { const p = at(); if (free(p[0], p[2])) break; a *= 0.6; if (k === 5) a = 0; }
+  for (let k = 0; k < 12; k++) { const p = at(); if ((Math.abs(a) < w2 && back < width) || free(p[0], p[2])) break; a *= 0.85; if (k === 11) a = 0; }   // (inside the doorway, in the leaf's own sweep, nothing stands: the walker's grid shuts a body's width off each jamb, and every 5 cm nearer the jamb is 15 cm more of slab at his place)
   return { pos: at(), along: sg * a, back, reach: reach(), catches: reach() >= Math.abs(sAl) - C.body };
 }
 /** LIFE AT REST (KIT_VIEW_QUIET.idle), `t` s into the beat (pure): how far along the wall the lamp behind the door has slid (m; eased out, held, eased
@@ -629,7 +631,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the room burns at · the fill as staged and since when it is lifted · the loop's next rest · a leaf asked shut for a waiting row until · the gun last
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
-  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qMoon: RtLight | null = null, moonAt = 0, moonCol: Vec3 | null = null, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
+  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, qBlade = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qMoon: RtLight | null = null, moonAt = 0, moonCol: Vec3 | null = null, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
   const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
   const base = new WeakMap<RtLight, number>();   // a room light's / the moon's intensity as the game has it (what `roomLights` / `moonScale` multiply)
@@ -810,8 +812,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const poolSync = () => { if (!pool) return; const i = fixture ? engine.world.statics.indexOf(fixture) : -1; pool.boxes = i >= 0 ? [i] : []; if (lamps.porch) pool.light = lamps.porch; };
   /** THE ROOM BEHIND THE DOOR burns at this share of itself (the quiet picture: KIT_VIEW_QUIET.inside at rest; 1 = as the mission lights it — the seam
    *  a loud tool's cost floods it by): each lamp's own base, which the game multiplies each step, and its fixture's glow */
-  const quietInside = (k: number) => { qShare = k; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; t.on = true; t.baseIntensity = a.I * k; t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
-    if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * (k / KIT_VIEW_QUIET.inside); };
+  const quietInside = (k: number, blade = 1) => { qShare = k; qBlade = blade; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; t.on = true; t.baseIntensity = a.I * k; t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
+    if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * blade; };   // (…and the picture's own lamp behind the leaf at `blade` of itself: the cost's — brighter through the gap, then out under the slab)
   /** …and as the mission had them (before a restart, at the picture's end: a base is the lamp's own, and no restart puts it back) */
   const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { t.baseIntensity = a.I; t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = [];
     if (qRoofs.size) { for (const b of qRoofs) b.flags |= BoxFlag.NoPrimary; qRoofs.clear(); engine.world.staticsDirty = true; }
@@ -1606,7 +1608,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const costBegin = (S: Staged, B: Beat) => { const L = KIT_VIEW_QUIET.cost.lamp, D = S.door; lifeOff(true);
     const G = kitViewCostLamp(S.plan, S.width, S.sam, D && !D.off ? D.def.hinge : null, (x, z) => !game.col.nav.isBlocked(x, z));
     costT = game.time; costSeen.n++; costSeen.last = { field: B.field, i: B.i, share: 1, door: !!D && !D.off, leaf: 0, up: false, lamp: true, catches: G.catches, s: 0, how: '' };
-    quietInside(1);
+    quietInside(1, KIT_VIEW_QUIET.cost.blade);
     costLamp = engine.lights.add({ name: 'kitview_cost', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: 0 as const, pos: G.pos, dir: [0, -1, 0] as Vec3, color: [L.color[0], L.color[1], L.color[2]] as Vec3,
       intensity: L.intensity, peakIntensity: L.intensity, range: L.range, innerDeg: 0, outerDeg: 180, radius: L.radius, volumetric: 0, broad: false, enabled: true }); };
   /** each live frame with no row up: true while the cost plays (nothing else begins under it) */
@@ -1614,7 +1616,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const C = KIT_VIEW_QUIET.cost, el = game.time - costT, at = kitViewCostAt(el), D = S.door, pl = game.player, last = costSeen.last!;
     stowT = game.time; last.s = el;   // (his gun stays as the row left it: nothing is put away under the slab)
     if (asked === null && !at.done) {
-      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); } pl.crouch = false; last.up = true; }
+      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); } pl.crouch = false; if (!last.up) quietInside(1, 0); last.up = true; }   // (…and the blade's own lamp is out under the slab: ONE lamp throws it, one hard edge)
       if (D && !D.off) last.leaf = Math.max(last.leaf, Math.abs(D.angle - S.shut));
       return true; }
     if (!at.done) costSeen.cuts++; last.how = at.done ? 'done' : 'cut';
