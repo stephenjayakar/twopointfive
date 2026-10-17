@@ -2,6 +2,7 @@
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
 import type { View } from '../host/hud';
+import { backHit } from './backkey';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG, smoothstep } from '../math/vec';
 import { Input } from './input';
 import { FollowCamera } from './camera';
@@ -536,7 +537,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     const beat = pl.equipT > 0 && !!pl.wall;   // (stacked on a wall the rifle's rise is the stack's own: stackUp holds the click and hands it back — below; off the wall the equip beat only DELAYS the round)
     const load = rifle.attachment;
     const owed = walled && !stunned && !!launchWas && aimWeighLaunchKeep(pl, dt);   // (aimweight.ts: a load let go of mid-swing and waiting on the circle is kept through a wall the gun swings past — nothing is sent or drawn while it is down)
-    let held: RifleAttachment | null = launchWas && load && !beat && (!walled || owed) && !stunned && !g.orders.menu && rifle.left(load) > 0 && !input.hit('Escape') && !input.hit('Blur') ? load : null;   // (…and still a round of it to send)
+    let held: RifleAttachment | null = launchWas && load && !beat && (!walled || owed) && !stunned && !g.orders.menu && rifle.left(load) > 0 && !backHit(input) && !input.hit('Blur') && !input.hit('Paused') ? load : null;   // (…and still a round of it to send)
     const down = input.rmb() || input.rmbHit();   // (rmbHit(): a click that began and ended inside one frame is still a frame of 'down' — its release, next frame, sends the round)
     if (!held && input.rmbHit() && !beat && !walled && !stunned) {   // (down for a wall — gunwall.ts: a press is nothing. Still coming off the sling: the press BEGINS it — '2, right button' in one breath — and the round waits for the rifle, below. An order menu up has eaten the button already: orders.ts)
       if (!load) { if (g.aimTarget && !pl.ocpHinted) { pl.ocpHinted = true; g.msg(`the OCP is on the pistol — 1 draws it`); } }   // nothing under this barrel (the shotgun in the rifle's slot): the right button is dead with it up — said once, over a light, then never again

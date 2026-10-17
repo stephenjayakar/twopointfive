@@ -71,6 +71,7 @@ import { SAMESTART } from '../game/samestart';
 import { TAKE } from '../game/takecheck';
 import { QUIETFOG } from '../game/quietfog';
 import { TORCH } from '../game/calmtorch';
+import { BACKKEY } from '../game/backkey';
 import { moraleFromQuery } from '../game/morale';
 import { RUNNER } from '../game/runner';
 import { DARKDOOR } from '../game/darkdoor';
@@ -259,6 +260,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAMESTART.on = q.get('samestart') !== '0';   // every mission starts the same way on every try (game/samestart.ts): a room clear's defenders on the level's own marks each load and each restart, a rescue's roamers and clock as written, a quiet mission the first of its lists — ON in the page; ?samestart=0 = every staging dealt as before (the line above, the restart's next placement, the quiet deal off the die)
   { const w = q.get('way'); ROOMCLEAR.way = w === 'any' ? -1 : w !== null && /^\d+$/.test(w) ? +w : 0; }   // …and the way in (ROOMCLEAR.way; the mission sheet's 'Way in' row writes it on the link): absent or ?way=1 = the level's own start, ?way=2 … = its other ones, ?way=any = dealt off this visit's die with the marks
   HOLD.dropGun = !q.has('nogundrop');   // a man taken in the arm drops the gun he had in his hand: it lies on the floor like any dropped gun (game/player.ts startGrab)
+  BACKKEY.tab = q.get('tabback') !== '0';   // Esc is only the pause; Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (game/backkey.ts): ON in the page; ?tabback=0 = Esc backs out first, as it did
   HOLD.oneFacing = q.get('holdyaw') !== '0';   // a man in the arm faces where the hold faces him — nothing else turns him (game/nightbreach.ts: the calm defenders' marks)
   GUNHOLD.on = !q.has('nogunhold');   // men who see the pistol come out of a hold run for cover and work round him; the line at his back is used once he has fired (game/gunhold.ts)
   LANES.on = !q.has('nolanes');   // a room fight's defenders remember a lane that cost them — fire down a hallway, mates dropped in it — and stop walking into it: they hold its mouth, go round, or put a charge in first (game/lanes.ts): ON in the page; ?nolanes = they come as they did
@@ -326,6 +328,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'GUNHOLD.on': 'TPS_GUNHOLD=1',
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
+  'BACKKEY.tab': 'TPS_TABBACK=1',
   'REARWATCH.room': 'TPS_ROOMKEEP=1',
   'CLOSE.on': 'TPS_CLOSE=1',
   'CLOSE.heldClicks': 'TPS_HELDCLICKS=1',

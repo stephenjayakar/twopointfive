@@ -87,6 +87,7 @@ import { SAMESTART } from './samestart';
 import { TAKE } from './takecheck';
 import { QUIETFOG } from './quietfog';
 import { TORCH } from './calmtorch';
+import { BACKKEY } from './backkey';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
@@ -290,6 +291,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.RELOAD) RELOAD.auto = false;   // (a file from before a dry gun reloaded itself: its player pressed R, and its frames have no reload he did not ask for)
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
   if (!k.tables.FRIENDS) { FRIENDS.noSnap = false; FRIENDS.lowReady = false; }   // (a file from before the reticle passed over his own side and his gun came down off a teammate)
+  if (!k.tables.BACKKEY) BACKKEY.tab = false;   // (a file from before Tab backed out of a list: a Tab in its ticks did nothing)
   if (!k.tables.TORCH) TORCH.calmOff = false;   // (a file from before a calm patrol's torch went dark in a lit place: its torches burned everywhere, and its meters read them)
   if (!k.tables.MORALE) MORALE.on = false;   // (a file from before a blast shook the men it did not hurt: every man stood where he stood, and nobody fired into the dust)
   if ((k.tables.MORALE as Partial<typeof MORALE> | undefined)?.training === undefined) { MORALE.training = 'none'; MORALE.nerve = 'normal'; MORALE.fanStep = 0; }   // (…and one from before a man was green or steady: every man the first slice's — broken alone in the dark only, folded when he was, and scrabbling straight back with no fan to find him a way (fanStep 0 shuts it). A recording that carries the keys keeps its own: assignDeep takes a string row as it takes a number)

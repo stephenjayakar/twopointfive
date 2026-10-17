@@ -106,7 +106,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION'];
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'BACKKEY'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -126,6 +126,7 @@ import { SAMESTART } from './samestart';
 import { TAKE } from './takecheck';
 import { QUIETFOG } from './quietfog';
 import { TORCH } from './calmtorch';
+import { BACKKEY } from './backkey';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { DARKDOOR } from './darkdoor';
@@ -209,6 +210,8 @@ export function knobRegistry(): Record<string, object> {
     PLANLAY,
     // a calm patrol's hand torch burns only where his place is dark (calmtorch.ts): the light meter reads the torch, so who is seen where reads these
     TORCH,
+    // Esc is only the pause; Tab backs out of the order menu, the Space list, a running verb, the launcher's arc (backkey.ts): what a Tab in a tick does reads this
+    BACKKEY,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
     MORALE,
     // a man's condition (condition.ts): whether a blast that leaves a man standing leaves him hurt, the pace and the spread that costs him, how long

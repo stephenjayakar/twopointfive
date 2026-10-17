@@ -2,6 +2,8 @@
 // for the player to try in play — each one something the game ALREADY has, put on Tab, never a new screen or a new verb — with 'nothing' the default (the build
 // as it was) and a fine place to end up. Chosen on Options ▸ Game ('Tab key'), kept per machine with that screen's other rows (ui/options.ts), or for one visit
 // by `?tab=run|who|keys|off`. The choices that lose come out again; this file is the one place they live.
+// SINCE: Tab is also the back key in the fight (game/backkey.ts, BACKKEY.tab): with a list up, a verb running or the launcher's arc held it backs out of
+// that, and a choice here gets the press only when there is nothing to back out of (main.ts asks Game.backable first).
 //   run  = Tab pauses on the pause card with 'Run so far' open (the map with his path, the timeline, the score as it stands); Tab again resumes.
 //   who  = Tab steps who takes the next order, AS WELL AS T: main.ts turns a Tab press into a press of the orders' own key (`ORDERS.whoKey`) before the tick, so the
 //          key the HUD, the controls list and the lessons name still works, and a run's tape (which files the tick's keys, not this choice) reruns the same.
