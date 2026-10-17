@@ -66,6 +66,7 @@ import { CLOSE } from './close';
 import { KITANIM } from './kitanim';
 import { WORK } from './workthings';
 import { WAND } from './wand';
+import { PEEKSIGHT } from './peeksight';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
@@ -271,6 +272,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
+  if (!k.tables.PEEKSIGHT) PEEKSIGHT.on = false;   // (a file from before a peek round the end of a wall lifted the fog: his eye stayed over his feet)
   if (!k.tables.WAND) WAND.on = false;   // (a file from before the optical wand: no door offered the look)
   else {
     if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
@@ -280,6 +282,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.take === undefined) STICKY.take = false;   // (…and one from before a stuck camera could be taken back: no such row)
   if ((k.tables.CUES as Partial<typeof CUES> | undefined)?.overheard === undefined) CUES.overheard = false;   // (a file from before a hidden defender's shout was a row on the strip: no such row)
+  if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.mark === undefined) STICKY.mark = false;   // (…and one from before his own cameras showed in the fog: not in its picture)
   if (!k.tables.WORK) WORK.on = false;   // (a file from before a teammate could be sent to work a thing: its menus had no such row, and its breaker errand went to the nearest man whoever he was)
   else if ((k.tables.WORK as Partial<typeof WORK>).ownFace === undefined) WORK.ownFace = false;   // (…and one from before the errand was walked to the panel's own face: its man went to the fixed spot and re-armed the mains inside the bare radius)
   if (!k.tables.CLOSE) CLOSE.on = false;   // (a file from before the close-in windows: one way in, from behind — its rows and its takedowns were made by that gate)

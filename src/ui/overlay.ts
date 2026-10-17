@@ -18,6 +18,7 @@ const HE40_SHORT = '40 MM · TOO CLOSE TO ARM';
 const HE40_SHORT_STROKE = 'rgba(255, 170, 90, 0.95)';
 import { needsTrip } from '../game/needs';
 import { headMark, waryDots } from './headmark';
+import { stickyMarks } from '../game/stickycam';
 import { CKPT } from '../game/savestate';
 import { stripRows } from '../game/cues';
 import { fragMarks } from '../game/frag';
@@ -89,6 +90,7 @@ export class Overlay implements HudLike {
   private markers: HTMLElement[] = [];
   private fragMarksEl: HTMLElement[] = [];   // (frag.ts fragMarks: a defender's live grenade Sam has been cued on)
   private lostMarks: HTMLElement[] = [];   // (deathrecap.ts lostLive: the way the round came in at a squad man lost)
+  private camMarks: HTMLElement[] = [];    // (stickycam.ts stickyMarks: a small lens on each of his own stuck sticky cameras while the fog of war is live — STICKY.mark)
   private seenMarks: HTMLElement[] = [];   // (fogofwar.ts lastSeen: a fading '?' where an enemy was last seen — FOG.lastSeen, 0 = none)
   private dots: HTMLElement[] = [];
   showLightDots = true;
@@ -190,6 +192,15 @@ export class Overlay implements HudLike {
       this.seenMarks.forEach((el, i) => { const s = seen[i]; if (!s) { el.style.display = 'none'; return; }
         const [x, y, vis] = cam.project([s.at[0], s.at[1] + 2.1, s.at[2]], w, h, EDGE); if (!vis) { el.style.display = 'none'; return; }
         el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`; el.style.opacity = String(Math.max(0.15, 1 - s.age / Math.max(0.01, s.life))); }); }
+    // his own stuck sticky cameras under the fog of war (stickycam.ts stickyMarks — none unless STICKY.mark is up and the fog is live): a small lens on each, red in the one that sends
+    { const cams = stickyMarks(game); let n = 0;
+      for (const m of cams) {
+        const [x, y, vis] = cam.project(m.at, w, h, EDGE); if (!vis) continue;
+        let el = this.camMarks[n]; if (!el) { el = document.createElement('div'); this.root.appendChild(el); this.camMarks.push(el); }
+        n++; const cls = m.sends ? 'cammark live' : 'cammark'; if (el.className !== cls) el.className = cls;
+        const st = el.style; st.display = 'block'; st.left = `${x}px`; st.top = `${y}px`;
+      }
+      for (let i = n; i < this.camMarks.length; i++) this.camMarks[i].style.display = 'none'; }
     // a man of the squad lost, once the squad has the way it came from (deathrecap.ts lostLive: somebody saw him go down, or heard it) AND only while the way is drawn at all (RECAP.liveArrows: off as shipped): a stroke on the ground at him, toward it
     { const lost = lostArrowsShown() ? lostLive(game) : [], life = RECAP.liveMarkSecs; let n = 0;
       for (const L of lost) {
@@ -229,6 +240,7 @@ export class Overlay implements HudLike {
     for (let i = nG + civs.length; i < this.markers.length; i++) this.markers[i].style.display = 'none';   // (markers past the roster: a spawned unit despawned again — teams — or civilians gone, must not leave a mark hanging where they stood)
     // a faint dot on everything F can act on (lights, doors, bodies — so hidden ceiling panels and closed doors are discoverable)
     const its = game.interactables;
+    const camMarked = stickyMarks(game).length > 0;   // (his stuck cameras carry their own lens mark: no dot inside it)
     while (this.dots.length < its.length) { const el = document.createElement('div'); el.className = 'idot'; el.style.cssText = 'position:absolute;width:5px;height:5px;border-radius:50%;transform:translate(-50%,-50%);'; this.root.appendChild(el); this.dots.push(el); }   // (the class is only a handle for index.html to hide them wholesale — attract mode — over the inline display this loop keys)
     this.dots.forEach((el, i) => {
       const it = its[i];
@@ -236,7 +248,7 @@ export class Overlay implements HudLike {
       const [x, y, vis] = cam.project(it.pos, w, h, EDGE);
       if (!vis || (it.guard && game.fogOfWar.hidden(it.guard))) { el.style.display = 'none'; return; }
       el.style.display = 'block'; el.style.left = `${x}px`; el.style.top = `${y}px`;
-      if (it.kind === 'guard') { el.style.display = 'none'; return; }   // living guards already carry a state marker; no extra dot
+      if (it.kind === 'guard' || (it.kind === 'cam' && camMarked)) { el.style.display = 'none'; return; }   // living guards already carry a state marker, a stuck camera its lens mark; no extra dot
       el.style.background = it.kind === 'door' ? 'rgba(150,190,230,0.5)' : it.kind === 'body' ? 'rgba(230,140,120,0.6)' : it.kind === 'objective' ? 'rgba(var(--h-acc-rgb),0.8)' : it.off ? 'rgba(120,140,160,0.45)' : 'rgba(255,240,180,0.55)';
     });
     // the ring on the highlighted row's thing (what it offers is listed in the interaction panel, below — the ring only says WHICH thing Space means; the selector's cancel row has no thing)

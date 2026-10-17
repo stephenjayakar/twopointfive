@@ -109,6 +109,7 @@ import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
 import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
+import { PEEKSIGHT } from '../game/peeksight';
 import { BIGSLOT } from '../game/kit';
 import { SHIELD } from '../game/shield';
 import { BIG_STATS } from '../game/bigkit';
@@ -1139,6 +1140,10 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   // FOG OF WAR (game/fogofwar.ts; ?fow / ?nofow, on under ?roomclear): the switch and its look — nothing here is kept per machine
   const fw = panel.section('Fog of war', { open: false, summary: () => game.fogOfWar.summary() });
   panel.toggleBox(fw, 'fog of war', () => game.fogOfWar.on, v => { game.fogOfWar.on = v; }, 'the Door Kickers rule: men nobody on your team (you + living teammates) has a line of sight to are not drawn, with what they carry, and the floor and walls outside the team\'s combined sight are dimmed and greyed. Sight is the game\'s own line-of-sight test (walls and shut doors block, glass passes, smoke hides men); sound is untouched. On in every room clear and rescue started from the mission list, off on the plain night; off = the game and the frame exactly as before. The native build hides the men but does not dim');
+  panel.toggleBox(fw, 'a peek lifts it', () => PEEKSIGHT.on, v => { PEEKSIGHT.on = v; }, 'back to a wall and pushed into its open end, your eye for the fog is where a head leaned round that end would be: the hallway past the door frame shows (off: the eye stays over your feet and a peek moves only the camera)');
+  panel.slider(fw, 'peek ▸ head out (m)', 0, 0.6, 0.05, () => PEEKSIGHT.out, v => { PEEKSIGHT.out = v; }, 'how far past the end of the wall the eye stands at full peek');
+  panel.slider(fw, 'peek ▸ off the wall (m)', 0.05, 0.5, 0.05, () => PEEKSIGHT.off, v => { PEEKSIGHT.off = v; }, 'how far off the wall the eye stands at full peek, on your side of it (small: a head against the frame, which sees further along a hallway behind your own wall)');
+  panel.slider(fw, 'peek ▸ look round (°)', 30, 120, 5, () => PEEKSIGHT.turnDeg, v => { PEEKSIGHT.turnDeg = v; }, 'how far round the end the eye looks under the cones: 90 is square through the doorway');
   knobRows(panel, fw, FOG as unknown as KnobTable, null, () => { }, [
     { k: 'dim', label: 'fog of war ▸ unseen brightness', min: 0, max: 1, step: 0.05, title: 'how far down the floor and walls nobody on the team sees are pushed (radiance × this; 1 = not dimmed)' },
     { k: 'desat', label: 'fog of war ▸ unseen greying', min: 0, max: 1, step: 0.05, title: 'how far toward grey the unseen floor and walls go (0 = colour kept)' },
@@ -1860,6 +1865,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.slider(sc, 'cam ▸ out at once', 1, 3, 1, () => STICKY.max, v => { STICKY.max = v; }, 'how many stuck cameras may be on the walls at once: one more takes the oldest down. How many of them SEND is the next row');
     panel.slider(sc, 'cam ▸ live feeds', 1, 3, 1, () => STICKY.live, v => { STICKY.live = v; }, 'how many of the cameras out send a picture, the newest first (1 = sending the next one gives up the last one\'s view; 3 = every camera out is an eye)');
     panel.toggleBox(sc, 'cam ▸ take back', () => STICKY.take, v => { STICKY.take = v; }, 'a stuck camera of your own is taken back with the use key, standing at it, and is on the launcher again (off: a camera sent is a camera spent)');
+    panel.toggleBox(sc, 'cam ▸ shown in the fog', () => STICKY.mark, v => { STICKY.mark = v; }, 'a stuck camera of your own stays in the picture under the fog of war and carries a small lens on the HUD, red in the one that sends (off: a camera on floor nobody sees is not drawn)');
     panel.slider(sc, 'cam ▸ take reach (m)', 0.8, 2.5, 0.1, () => STICKY.takeReach, v => { STICKY.takeReach = v; }, 'how close on the plan you stand to a stuck camera to take it back');
     panel.toggleBox(sc, 'cam ▸ mission wand', () => QUIETFOG.wand, v => { QUIETFOG.wand = v; }, 'a quiet mission under the fog hands you an optical wand with its cameras, whatever your card carries (read when your man is kitted: the next start or restart)');
     panel.slider(sc, 'cam ▸ lens (°)', 60, 180, 5, () => STICKY.fovDeg, v => { STICKY.fovDeg = v; }, 'how wide a camera on a wall sees, about the wall\'s own normal (one lying on the floor sees all round)');

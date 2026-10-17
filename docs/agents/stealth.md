@@ -123,6 +123,50 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the first loud tables beside them, no `-v2`). Lights-out's two listed meetings are a sentry at 8.0 m and a walker through a window at 6.6 m (the level's
   own warning, the missions thread's read); the bazaar's one is the alley trap at 4.6 m; the police post's four dropped are the shift running to the keypad
   door the ghost kicks. Not measured: a second man's eye, crouching, waiting; nothing seen on a GPU or played.
+- **Your own stuck cameras show in the fog of war** (`STICKY.mark`, `stickycam.ts stickyBoxes / stickyMarks`, drawn by `ui/overlay.ts` as `.cammark`;
+  2026-10-17; the maintainer, from play on the vault, quiet, hard, the fog's cones: "nit, you should be able to see your sticky cameras in fog of war").
+  WHAT WAS THERE: a camera's two boxes were unkeyed, so the fog's rule for loose things (fogofwar.ts rule 4d) handed them to the picture only on floor an
+  eye of the team sees. The one camera that sends is its own eye and stayed; a DARK one (the older of two, `STICKY.live` 1) on floor nobody watches, or
+  behind his back under the cones, was not drawn at all — and a fist-sized dark block under the fog's dim reads as nothing anyway. What a sending camera
+  sees already lifted the fog (its wedge is one of the fog's eyes); that part is unchanged.
+  THE RULE: up, (1) a camera's boxes, in the air and stuck, carry a wall device's key (`MKEY.device + 0x800000 + id × 2 + part`; fogofwar.ts `THING_PASS`
+  lets that class through wherever it is — his own, it gives nobody away), so it is always in the picture, fired into the fog included. KNOWN, LEFT: a
+  camera on a wall that is blown out where nobody looks is seen to drop live in the fog (it is heard to, and it is his); (2) while the fog
+  is live the HUD puts a small lens on each stuck camera of his (`stickyMarks(g)` → `{ at: the lens, sends }`; a ring, brighter with a red pupil on the one
+  that sends), so he finds them to take back and reads which one is the feed. No mark with no fog up, none on one in flight, none off screen (no edge
+  clamp), none on a viewer's picture with the fog lifted; the use key's own dot is not drawn inside a marked camera's lens. Picture only: no step reads it, the run digests the same down and up.
+  THE SWITCH: ON in the page (`?cammark=0`), OFF in the module and on the frozen stand (`TPS_CAMMARK=1`; `FROZEN_HOLDS['STICKY.mark']`); in the knob
+  registry with `STICKY`; a recording from before the key replays with it down (journal.ts); Tab ▸ Sticky cameras ▸ `cam ▸ shown in the fog`.
+  THE CHECK: `bun run tools/qa/probes.ts sticky-mark` (family sticky; `tools/qa/sticky-check.ts mark`), 10 verdicts on both stands, on the vault
+  under the cones: the dark camera on unseen floor has 2 keyed boxes in `Game.dynBoxes` with the switch up and 0 down; the marks at each lens with the
+  sender told apart; none in the air, none with no fog; the same digest; the stands' row and the journal. `STICKY_BREAK=1` exits 1 on both stands.
+  `tools/qa/sticky-page.cjs` counts the `.cammark` elements on the real page (software adapter). NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the size and
+  colour of the lens mark are a first guess, and whether the camera's own block reads under the fog's dim without the mark is not known.
+- **A peek round the end of a wall lifts the fog of war** (`PEEKSIGHT`, `src/game/peeksight.ts peekEye`, one line in `fogofwar.ts update` where the player's
+  eye is listed: `wandEye ?? peekEye ?? own`). From play (the police post, quiet, hard, the fog's cones): "peeking around a door … should let you see down the
+  hallway". What was there: the wall hold's peek (`player.ts moveOnWall`, `Player.wall.peek`) moves the camera's look-at and cranes the neck, the man stays on
+  the wall, and the fog's eye for him stayed over his feet looking off the wall into his own room, so the camera showed a hallway under the fog. The rule:
+  while the peek is in, his eye for the fog stands where a head leaned round that end would be (`out` 0.3 m past the end of the face, `off` 0.1 m off the
+  wall's plane on HIS side of it, never through it; his own eye height, crouched too), looking `turnDeg` 90° round from along-the-wall, square into the
+  opening (the look turns by angle, by way of along-the-wall); it rides the peek's own ease in and out; it REPLACES his own eye for that time (one head, no
+  eye slot taken from a camera: under the cones the room behind his shoulder goes back under the fog but for the near field); a solid in the lean's way (a
+  leaf across the end, a pane) stops it short. The place is measured from where he actually stands, so on the rifle stack (`WALLSNAP`, he really steps out)
+  the step-out is not counted twice, and there the look stays the rifle's. What it sees through a doorway: square through and a wide wedge either side; back
+  along a hallway BEHIND his own wall only as far as the wall's thickness lets a head by the frame see (about as far back as the hallway is deep), no more.
+  **Not changed: what anybody else sees.** Guards' eyes go by his real head and chest, which stay on the wall (on the stack they really are out, and seen), so
+  a back-to-the-wall peek exposes him no more than it did; a head that is out being a head that can be seen is a change to what guards see and is the
+  maintainer's call, not built. Nothing in `player.ts` or the wall hold's files is changed. Known, not mended: the hold let go at full peek (stepping out
+  round the end, Q) puts the eye back over his feet in one frame, and on a face barely longer than he is wide the peek can change ends while still in: the
+  mask jumps, as the camera's look-at does. With a partner, the team's calls are told from this eye too (`tellCalls` reads `eyes[0]`). Switch `PEEKSIGHT.on`:
+  ON in the page (`?peeksight=0`), OFF in the module and on the frozen stand (`TPS_PEEKSIGHT=1`), registered in `knobs.ts`, in `JOURNAL_KNOBS` (a recording
+  from before the table replays with it off); Tab rows under Fog of war: 'a peek lifts it', 'peek ▸ head out (m)', 'peek ▸ off the wall (m)', 'peek ▸ look
+  round (°)'. Check: `bun run tools/qa/probes.ts peek-sight` (family `peeksight`; `tools/qa/peeksight-check.ts`), 12 verdicts on the police post with the
+  real keys (Q, then pushed into the end beside the open front door): the eye's place and height, its look, the floor and a guard 2.5 m through the doorway
+  seen up and not down, open floor hard behind his wall seen neither way, his head still on the wall, crouched, let go = his own eye, four seconds of the
+  held peek with guards live digesting the same down and up (solo), the rifle stack (place asked of a man stepped 0.6 m out; the look his rifle's), the
+  stands' row and an old recording; `PEEKSIGHT_BREAK=1` exits 1. Measured on one level, one doorway, one seed, both stands. Not asserted: an outside corner,
+  a leaf across the end, the cones off, the ease mid-way. Never seen on a GPU and never played: `out`, `off` and `turnDeg` are first guesses, and how the
+  mask's sweep reads as the peek eases is unjudged.
 - **Interaction = rows + one Space grammar** (`player.ts buildInteractables` → `Game.nearby` / `hover`; `interact.ts`): every verb is
   its own row (`Interactable.verb`: a shut door = `push` + `ease`, a lock = `pick` (+ `rattle` crouched) + `kick`, keyed = `unlock` +
   `ease`, guard behind = `grab`, held arm = `question` + `choke`, held gun = `whip`, body `drag`/`drop`, rack `drive`, breaker), top
