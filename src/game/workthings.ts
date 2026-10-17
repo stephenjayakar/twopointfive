@@ -45,6 +45,7 @@ import { drivePulled, rackDist } from './mission';
 import { quietWords, holderStand } from './quiet';
 import { chronObjective } from './chronicle';
 import { sneakLow, SNEAK } from './sneak';
+import { silentHolds } from './silent';
 
 export const WORK = {
   /** the whole of it (false: the menu, the men and lighting.ts as they were) */
@@ -64,6 +65,10 @@ export const WORK = {
    *  and a bare radius at fixed offsets from the panel, right only where it hangs facing the way the office's does — elsewhere the man stood in a wall, or
    *  re-armed it from the far side of the one it hangs on) */
   ownFace: true,
+  /** a man stood at his thing does not take as a target, or turn to look for at a mate's call or a footfall, a man his round is held for (the squad's fire
+   *  is held and that man has noticed nobody): he works the thing, his partner's gun on the man if he has a partner (false: his muzzle stays on that man for
+   *  as long as the hold stands, his chest turned off the thing, and it is never worked) */
+  heldPass: true,
 };
 export const WORK_STATS = { given: 0, done: 0, moot: 0 };
 export const WORK_ORDER = 'work';
@@ -304,6 +309,8 @@ export class WorkThings {
   /** what the hand `hand(c)` has out is doing, for whoever poses it: the verb, the seconds since it went out and the seconds the work takes (null: no hand
    *  out). `secs` runs on through the fade after the work is done or dropped; a read only, nothing here is written */
   job(c: Character): WorkJob | null { const H = this.hands.get(c); return H ? { verb: H.verb, secs: Math.max(0, this.g.time - H.t0), need: H.need } : null; }
+  /** he is at work and stood on the spot his thing is worked from (workPasses) */
+  atThing(gd: Guard): boolean { const J = this.jobs.get(gd); return !!J && this.working(gd) && !!J.A.arrived && !!J.thing.stand && flat(gd.char.pos, J.thing.stand) < 0.45; }
   /** is this man working a thing (a probe, the HUD) */
   working(gd: Guard): boolean { const J = this.jobs.get(gd); return !!J && gd.state !== 'dead' && this.g.orders.of(gd) === J.A; }
   /** the man an order has on a defuse mission's charge i (defuse.ts: the objective row's 'charge 1 · Red One on it'): `on` = his hand is on it NOW (his
@@ -327,6 +334,19 @@ export function workOn(g: Game, box: Box | undefined): OrderTarget | null { retu
 export function workRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] { return WORK.on && g.work ? g.work.rows(t, page, rows) : rows; }
 /** game.ts handsOnDoors */
 export function workHand(g: Game, c: Character): DoorPush | null { return g.work ? g.work.hand(c) : null; }
+/** roomfight.ts's eyes and what turns a man with nobody in his sight (a mate's call, footfalls), beside the pair's pairPasses: A MAN STOOD AT THE THING HE
+ *  WAS SENT TO WORK DOES NOT TAKE AS A TARGET, OR TURN TO LOOK FOR, A MAN HIS ROUND IS HELD FOR — the squad's fire is held and that man has noticed nobody
+ *  (silent.ts silentHolds: the silent order, the sneak, the hold nobody has lifted; each wants him neither alert nor searching and under its `noticed` bar).
+ *  With his muzzle on such a man the room fight kept his chest turned to him, the order kept turning it back to the thing, and for as long as the hold stood
+ *  the thing was never worked. He does what he was sent to do; a man who covers him (give(): spare eyes behind him, when he has a partner) has that man. The
+ *  frame that hold no longer holds his round (the man has noticed, the alarm is up, the hold is lifted) this is false and the fight has him as ever: the
+ *  hand comes off (tick). Only AT the thing: on the walk there his gun goes onto whoever he sees, as it did. NOT passed, his gun staying on them as before:
+ *  a man held only by spotted.ts's rule (suspicious, or roused and no danger yet) or only for a pane in the way (silentGlassHolds) — each has noticed
+ *  something, and a back turned on him would be the dumber thing. False with the switch or `heldPass` off. */
+export function workPasses(g: Game, gd: Guard, h: Guard): boolean {
+  if (!WORK.on || !WORK.heldPass || !g.work) return false;
+  return g.work.atThing(gd) && silentHolds(g, gd, h);
+}
 /** a pose layer's read beside workHand: what that hand is doing and how far in (null whenever workHand is null) */
 export function workJob(g: Game, c: Character): WorkJob | null { return g.work && g.work.hand(c) ? g.work.job(c) : null; }
 /** lighting.ts: is the breaker none of this man's business unless he is told (a teammate, with the switch on) */

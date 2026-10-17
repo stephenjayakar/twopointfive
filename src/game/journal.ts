@@ -289,6 +289,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.mark === undefined) STICKY.mark = false;   // (…and one from before his own cameras showed in the fog: not in its picture)
   if (!k.tables.WORK) WORK.on = false;   // (a file from before a teammate could be sent to work a thing: its menus had no such row, and its breaker errand went to the nearest man whoever he was)
   else if ((k.tables.WORK as Partial<typeof WORK>).ownFace === undefined) WORK.ownFace = false;   // (…and one from before the errand was walked to the panel's own face: its man went to the fixed spot and re-armed the mains inside the bare radius)
+  if ((k.tables.WORK as Partial<typeof WORK> | undefined)?.heldPass === undefined) WORK.heldPass = false;   // (…and one from before a man stood at his thing passed over a man he may not shoot: his muzzle stayed on that man and the thing was not worked while the hold stood)
   if (!k.tables.CLOSE) CLOSE.on = false;   // (a file from before the close-in windows: one way in, from behind — its rows and its takedowns were made by that gate)
   if (!k.tables.STACKROOM) STACKROOM.on = false;   // (a file from before door stacks were held to the room's floor: its men walked to the marks the build then dealt)
   if (typeof (k.tables.STACKROOM as { view?: boolean } | undefined)?.view !== 'boolean') STACKROOM.view = false;   // (…and from before a stack waiting on an OPEN door stood out of the room's view: the jamb marks, as recorded)
