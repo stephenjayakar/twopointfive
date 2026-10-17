@@ -9,8 +9,11 @@
 //   env: PORT (the dev server's, default 5199) · OUT (a folder for the dump, the report and a still per scene, default a temp one) · SIZE (the viewport, default
 //        320x180) · CAP (game seconds each scene plays, default 10) · DEADLINE (minutes the whole check may take, default 150)
 // The software adapter takes a second or so to draw a frame and its pass timers time the CPU: this proves the run's mechanics, no number in its report is a price.
-// Quality is pinned on the address (auto never settles on frames this slow, and the sweep waits for it). The run's own options (short windows, two sweep rows, a
-// heavy moment that need not come) are written into the run's record as each page opens, since a run started by the row carries none.
+// Quality is pinned on the address (auto never settles on frames this slow, and the sweep waits for it). The run's own options (short windows, two sweep rows, no
+// cut on the wall's clock) are written into the run's record as each page opens, since a run started by the row carries none. A SCENE IS STEPPED BY THE CHECK
+// (__runFrames, a second of the game's clock a call, drawn once): at a frame every few seconds the wall's clock would end it before the hands-off player had
+// walked a step. Each scene so plays its CAP seconds through the page's own loop, input and camera, and ends by the player's own cut; the last page's scene
+// therefore ends before a heavy moment, and the picture it left is the one held (the tail is the fake page's to prove: bench-check).
 // Exit 0 = every check passed, 1 = one failed (printed) or a page did not boot.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
@@ -20,7 +23,7 @@ const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000
 let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 fs.mkdirSync(OUT, { recursive: true });
 const KEY = 'twopointsix.bench';
-const OPTS = { settleMs: 300, measureMs: 300, slowMs: 1e9, sweepSlowMs: 1e9, heavyHoldMs: 0, heavyCapMs: Math.max(2000, CAP * 400), sweep: { only: ['held2', 'reflect'], settleFrames: 1, measureFrames: 2, settleMs: 0, measureMs: 0 } };
+const OPTS = { waitFrames: 3, settleFrames: 1, measureFrames: 2, settleMs: 300, measureMs: 300, slowMs: 1e9, sweepSlowMs: 1e9, heavyHoldMs: 0, heavyCapMs: 6e5, sceneCapMs: 6e5, sweep: { only: ['held2', 'reflect'], settleFrames: 1, measureFrames: 2, settleMs: 0, measureMs: 0 } };
 
 // in the page: everything a run may move, as one string
 const STATE = () => {
@@ -64,8 +67,8 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   // Esc: nothing was timed yet on a machine this slow, so there is no card to close and the page goes back by itself to the address the run was started from
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
-  if (await page.evaluate(() => !!document.getElementById('bench-card')).catch(() => false)) await page.click('#bench-card button:nth-of-type(2)').catch(() => {});   // (a machine fast enough to have timed a window shows its card: closed)
-  await page.waitForURL(u => !/benchrun=/.test(String(u)), { timeout: 60000 }).catch(() => {});
+  if (await page.evaluate(() => !!document.getElementById('bench-card')).catch(() => false)) await page.click('#bench-card button:nth-of-type(2)', { noWaitAfter: true }).catch(() => {});   // (a machine fast enough to have timed a window shows its card: closed)
+  await page.waitForURL(u => !/benchrun=/.test(String(u)), { timeout: 120000, waitUntil: 'commit' }).catch(() => {});
   log('the title');
   if (!(await ready('the title'))) { await browser.close(); process.exit(1); }
   { const back = await page.evaluate(() => ({ active: window.__bench.active, veil: !!document.getElementById('bench-veil'), rec: window.__perfrec.recording, menu: window.__menu.mode }));
@@ -82,26 +85,31 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   for (let i = 0; i < scenes.length && !tooLong; i++) {
     await page.waitForURL(u => new RegExp(`benchrun=${i}(&|$)`).test(String(u)), { timeout: 120000 }).catch(() => {});
     if (!(await ready(`scene ${i}`))) { await browser.close(); process.exit(1); }
-    const S = scenes[i], last = i === scenes.length - 1, seen = []; let prev = '', shot = false, keys = null, f9 = null, hands = null, done = null;
+    const S = scenes[i], last = i === scenes.length - 1, seen = []; let prev = '', shot = false, keys = null, f9 = null, hands = null, done = null, sam0 = null;
     log(`scene ${i}: ${S.id} · ${page.url().replace(/^https?:\/\/[^/]+/, '')}`);
-    if (last) before = await page.evaluate(STATE);   // (the last page's own settings as its level opened them: what the presets and the sweep must put back)
     if (i === 0) { const c = await record(); check(c && c.warm === true && c.opts && c.cap === CAP, `the row's run says its first load is a second one, and carries the check's options (${JSON.stringify({ warm: c?.warm, cap: c?.cap })})`); }
     await page.evaluate(() => { const w = window.__benchWatch = { by: {}, tag: 0, off: false };
       const f = () => { if (w.off) return; const s = window.__bench.state, t = window.__game.time, b = w.by[s] ?? (w.by[s] = { a: t, b: t, n: 0 }); b.a = Math.min(b.a, t); b.b = Math.max(b.b, t); b.n++; if ([...document.querySelectorAll('body > div')].some(d => /^SWEEP/.test(d.textContent || ''))) w.tag++; requestAnimationFrame(f); };
       requestAnimationFrame(f); });
     for (;;) {
       let s = null;
-      try { s = await page.evaluate(() => ({ state: window.__bench.state, last: window.__bench.last, veil: document.getElementById('bench-veil')?.textContent ?? '', orders: window.__game.orders.log.map(o => o.order), sam: [...window.__game.player.char.pos].map(v => +v.toFixed(1)), hands: window.__bench.hands ? { t: +window.__bench.hands.t.toFixed(1), end: window.__bench.hands.end, b: window.__bench.hands.b } : null, god: window.__game.godMode, dark: window.__game.blackout.active, acts: window.__bench.acts.join(' '), by: window.__benchWatch?.by, tag: window.__benchWatch?.tag })); }
+      try { s = await page.evaluate(() => { const B = window.__bench, G = window.__game;
+        if (B.state === 'scene' && B.hands && !B.hands.end) window.__runFrames(60, 1 / 60);   // (the scene, a second of its own clock: the hands-off player's keys go on the input before each of these ticks, as before a frame's)
+        return { state: B.state, last: B.last, veil: document.getElementById('bench-veil')?.textContent ?? '', orders: G.orders.log.map(o => o.order), sam: [...G.player.char.pos].map(v => +v.toFixed(1)), hands: B.hands ? { t: +B.hands.t.toFixed(1), end: B.hands.end, b: B.hands.b } : null, god: G.godMode, dark: G.blackout.active, locked: !!window.__input.lockExcept, acts: B.acts.join(' '), by: window.__benchWatch?.by, tag: window.__benchWatch?.tag }; }); }
       catch (e) { if (!last) break; throw e; }   // (the page went on to the next scene under the question)
       if (s.state !== prev) { seen.push(s.state); log(`  ${s.state} · ${s.veil}`); prev = s.state; }
-      if (s.hands && s.state === 'scene') hands = s;
+      if (s.hands && s.state === 'scene') { if (!sam0) sam0 = s.sam; hands = s; }
       done = s;
-      if (s.state === 'scene' && !keys && s.hands && s.hands.t > 1) {   // hands off: the keys that would stop the recording, open the debugger, the panel or the pause card do nothing while it runs
-        await page.keyboard.down('KeyC').catch(() => {}); const held = await page.evaluate(() => window.__input.keys.has('KeyC')).catch(() => null); await page.keyboard.up('KeyC').catch(() => {});
-        for (const k of ['p', 'F9', 'Backquote', 'Tab', 'Enter']) await page.keyboard.press(k).catch(() => {}); await frames(2).catch(() => {});
-        keys = await page.evaluate(() => ({ state: window.__bench.state, active: window.__bench.active, rec: window.__perfrec.recording, menu: window.__menu.isOpen })).catch(() => null); if (keys) keys.reached = held;
+      if (s.state === 'scene' && s.hands && !s.hands.end) {
+        if (!keys && s.hands.t > 1) {   // hands off: a key held never reaches the game, and the keys that would stop the recording, open the debugger, the panel or the pause card do nothing
+          await page.keyboard.down('KeyC').catch(() => {}); const held = await page.evaluate(() => window.__input.keys.has('KeyC')).catch(() => null); await page.keyboard.up('KeyC').catch(() => {});
+          for (const k of ['p', 'F9', 'Backquote', 'Tab', 'Enter']) await page.keyboard.press(k).catch(() => {});
+          keys = await page.evaluate(() => ({ state: window.__bench.state, active: window.__bench.active, rec: window.__perfrec.recording, menu: window.__menu.isOpen })).catch(() => null); if (keys) keys.reached = held;
+          if (last) before = await page.evaluate(STATE);   // (the last page's settings with its level and its weather up: what the presets and the sweep must put back)
+        }
+        if (!shot && s.hands.t >= CAP - 2) { shot = true; await page.screenshot({ path: path.join(OUT, `scene-${S.id}.png`) }).catch(() => {}); }
+        continue;
       }
-      if (s.state === 'scene' && !shot && s.hands && s.hands.t >= Math.min(CAP * 0.6, 6)) { shot = true; await page.screenshot({ path: path.join(OUT, `scene-${S.id}.png`) }).catch(() => {}); }
       if (last && s.state === 'held' && !f9) { await page.keyboard.press('F9'); await frames(2); f9 = await page.evaluate(() => ({ active: window.__bench.active, rec: window.__perfrec.recording })); }
       if (s.state === 'idle' && (last || s.last === 'next scene') && seen.length > 1) break;
       if (Date.now() - T0 > DEADLINE * 60000) { tooLong = true; break; }
@@ -109,15 +117,16 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
     }
     per.push({ S, seen, hands, keys, f9, acts: done && done.state === 'idle' ? done.acts : seen.join(' '), by: done?.by, tag: done?.tag ?? 0 });
     const H = hands;
-    check(!!H && H.hands.t > 0 && H.orders.length > 0 && H.god === true, `${S.id}: the hands-off player played it — ${H ? `${H.hands.t} s, orders ${[...new Set(H.orders)].join(', ')}, Sam at (${H.sam[0]}, ${H.sam[2]})${H.dark ? ', the mains out' : ''}` : 'no hands seen'}`);
+    const walked = H && sam0 ? Math.hypot(H.sam[0] - sam0[0], H.sam[2] - sam0[2]) : 0;
+    check(!!H && H.hands.t >= CAP - 1.5 && H.orders.length > 0 && walked > 1 && H.god === true && H.locked === true, `${S.id}: the hands-off player played it on the page — ${H ? `${H.hands.t} s, orders ${[...new Set(H.orders)].join(', ')}, Sam walked ${walked.toFixed(1)} m to (${H.sam[0]}, ${H.sam[2]})${H.dark ? ', the mains out' : ''}, the keyboard locked out ${H.locked}` : 'no hands seen'}`);
     check(!!keys && keys.active && keys.rec && !keys.menu && keys.reached === false, `${S.id}: P, F9, backtick, Tab and Enter during the scene change nothing, and a key held never reaches the game (${JSON.stringify(keys)})`);
   }
   check(!tooLong, `the run ended by itself inside ${DEADLINE} minutes`);
   if (tooLong) await page.evaluate(() => window.__bench.stop('the check ran out of time')).catch(() => {});
   { const trim = a => a.replace(/ idle$/, ''), want = scenes.map((_, i) => i === 0 ? 'waiting opened scene' : 'waiting scene'), got = per.map(p => trim(p.acts));
-    check(JSON.stringify(got.slice(0, -1)) === JSON.stringify(want.slice(0, -1)) && ['waiting scene held sweep tail', 'waiting scene held sweep'].includes(got[got.length - 1]), `each page's acts in order: ${got.join(' | ')}`); }
+    check(JSON.stringify(got.slice(0, -1)) === JSON.stringify(want.slice(0, -1)) && got[got.length - 1] === 'waiting scene held sweep', `each page's acts in order: ${got.join(' | ')}`); }
   { const L = per[per.length - 1], span = s => L.by && L.by[s] ? +(L.by[s].b - L.by[s].a).toFixed(3) : null, held = ['held', 'sweep'].map(span);
-    check(held.every(x => x === 0) && span('scene') > 0 && L.tag === 0, `on the last page the game's clock stands still for the windows and the sweep (${held.join(' / ')} s), runs for the scene (${span('scene')} s), and the sweep put no tag of its own on the screen`);
+    check(held.every(x => x === 0) && L.tag === 0, `on the last page the game's clock stands still for the windows and the sweep (${held.join(' / ')} s), and the sweep put no tag of its own on the screen`);
     check(!!L.f9 && L.f9.active && L.f9.rec, `F9 while the picture is held: the recording goes on (${JSON.stringify(L.f9)})`); }
   await page.waitForTimeout(300); await frames(3);
   R = await page.evaluate(() => ({ last: window.__bench.last, result: window.__bench.result, report: window.__bench.report, card: document.getElementById('bench-report')?.value ?? null, buttons: [...document.querySelectorAll('#bench-card button')].map(b => b.textContent), veil: !!document.getElementById('bench-veil'), rec: window.__perfrec.recording, sweep: window.__perfsweep.active, focus: document.activeElement?.id ?? '', god: window.__game.godMode, frozen: window.__bench.freezing, keysHeld: [...window.__input.keys] }));
@@ -134,14 +143,14 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   check(!!B && B.pipelines[0] > 0 && B.pipelines[0] === B.pipelines[1] && /load\s+/.test(R.report) && (R.result?.notes ?? []).some(n => /started from the title/.test(n)), `the report carries the first page's boot and says it was a second load: ${JSON.stringify(B)}`);
   check(!R.rec && !R.sweep && R.god === false && R.frozen === true && !R.keysHeld.some(k => /^Key[WASD]$/.test(k)) && (await record()) === null, `nothing is left running or held: no recording, no sweep, god mode off again, the world held under the card, no walk key down, no record in the session store (${JSON.stringify({ rec: R.rec, sweep: R.sweep, god: R.god, keys: R.keysHeld })})`);
   const after = await page.evaluate(STATE);
-  check(after === before, 'every setting, the preset, auto and the ladder\'s rungs are as the last page opened with'); printDiff(before, after);
+  check(after === before, 'every setting, the preset, auto and the ladder\'s rungs are as they stood in the last page\'s scene'); printDiff(before, after);
   check(downloads.length === 1, `one file was downloaded over the whole run (${downloads.length})`);
   if (downloads.length) { const f = path.join(OUT, downloads[0].suggestedFilename()); await downloads[0].saveAs(f); const D = JSON.parse(fs.readFileSync(f, 'utf8'));
     const ev = k => D.events.filter(e => e.kind === k), b = ev('bench').length === 1 ? JSON.parse(ev('bench')[0].text) : null;
     check(/^perf-.*\.json$/.test(path.basename(f)) && D.frames.length > 20 && !!b && b.steps.length === steps.length && b.set === R.result.set && ev('sweep').some(e => JSON.parse(e.text).op === 'end'), `${path.basename(f)}: ${D.frames.length} frames, the sweep's events and the whole report inside (${(fs.statSync(f).size / 1024).toFixed(0)} KB)`); }
   // 3. Close goes back to where the run was started
-  await page.click('#bench-card button:nth-of-type(2)');
-  await page.waitForURL(u => !/benchrun=/.test(String(u)), { timeout: 60000 }).catch(() => {});
+  await page.click('#bench-card button:nth-of-type(2)', { noWaitAfter: true });
+  await page.waitForURL(u => !/benchrun=/.test(String(u)), { timeout: 120000, waitUntil: 'commit' }).catch(() => {});
   check(page.url().replace(/^https?:\/\/[^/]+/, '') === '/' + REST, `Close loads the address the run was started from (${page.url().replace(/^https?:\/\/[^/]+/, '')})`);
   check(!errs.length, `no page or console error (${errs.length})`); for (const e of errs.slice(0, 6)) console.log('    ' + e);
   await browser.close();
