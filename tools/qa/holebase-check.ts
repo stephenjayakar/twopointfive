@@ -6,7 +6,8 @@
 // what is no higher than a step (top at or under 0.2 m), and the furniture's own bands never list a thing that low. The feet's side of it is UNDERFOOT
 // (collision.ts, its own check `underfoot`); this is the blast's side.
 // THE SITE: his own (the store's outer wall by the floor point 31.3, 5.0, set from the yard side), on a fresh stand of the level with the page's destruction
-// switches: a charge set as the order sets it and blown as F blows it. Then what is left of the two piles by the hole, read off the level's own boxes.
+// switches (and its lived-in rooms, LIVED.on: the piles are the store's own dressing, and the frozen stand holds that off): a charge set as the order sets it
+// and blown as F blows it. Then what is left of the two piles by the hole, read off the level's own boxes.
 // THE BARS, on the same site with the piles reshaped by the check before the level stands: the right pile's bottom layer made a MAT (0.06 m thick, under the rule's baseThick, the layers
 // above let down onto it) and a thing the hole rule never takes (a block up past its height bar) stood on the left pile's bottom layer. Both bottom layers
 // must stay. The low bank at the wall's foot (top 0.17 m, nothing on it) must stay at every site.
@@ -20,10 +21,10 @@ export async function holeBaseCheck(): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { FURN } = await import(`${ROOT}/src/game/furnblast.ts`); const { DESTRUCTION, FURNBLAST } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { WALLCHARGE, wallAt } = await import(`${ROOT}/src/game/wallcharge.ts`); const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`) as any;
-  const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-  const was = { d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, s: FURN.mouth.snow, b: FURN.mouth.base, w: WALLCHARGE.on, o: WALLCHARGE.outer }, log = console.log;
+  const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
+  const was = { l: LIVED.on, d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, s: FURN.mouth.snow, b: FURN.mouth.base, w: WALLCHARGE.on, o: WALLCHARGE.outer }, log = console.log;
   const data = readFileSync(`${ROOT}/levels/pass.json`, 'utf8'), GONE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
-  const raise = (rule: boolean) => { DESTRUCTION.on = true; FURNBLAST.on = true; FURN.mouth.on = true; FURN.mouth.snow = true; FURN.mouth.base = rule && !BRK; WALLCHARGE.on = true; WALLCHARGE.outer = true; };
+  const raise = (rule: boolean) => { LIVED.on = true; DESTRUCTION.on = true; FURNBLAST.on = true; FURN.mouth.on = true; FURN.mouth.snow = true; FURN.mouth.base = rule && !BRK; WALLCHARGE.on = true; WALLCHARGE.outer = true; };
   const at: Vec3 = [31.3, 0, 5.0], from: Vec3 = [31.3, 0, 3.6];
   /** the two piles by his hole and the bank at the wall's foot, by where the level puts them */
   const near = (b: any) => Math.abs(b.c[0] - 30.8) < 1.3 && b.c[2] > 5.2 && b.c[2] < 6.3 && b.h[0] < 0.5 && b.h[2] < 0.5 && b.c[1] + b.h[1] < 1.0;
@@ -60,7 +61,7 @@ export async function holeBaseCheck(): Promise<boolean> {
         verdict(has && offOld && typeof FROZEN_HOLDS['FURN.mouth.base'] === 'string' && /TPS_HOLEBASE=1/.test(FROZEN_HOLDS['FURN.mouth.base']), 'a recording carries the switch, one from before the key replays with it off, and the frozen stand holds it off by name',
           `in the file ${has} · off for an old file ${offOld} · FROZEN_HOLDS ${FROZEN_HOLDS['FURN.mouth.base']}`); }
     }
-  } finally { DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; FURN.mouth.snow = was.s; FURN.mouth.base = was.b; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; console.log = log; }
+  } finally { LIVED.on = was.l; DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; FURN.mouth.snow = was.s; FURN.mouth.base = was.b; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; console.log = log; }
   console.log(`=== holebase: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

@@ -760,7 +760,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the walk grid). SWITCH: ON in the page (`?holebase=0`), OFF in the module and on the frozen stand (`TPS_HOLEBASE=1`; acts only with a blown hole cleared,
   `TPS_HOLECLEAR=1`); in the journal with the rest of `FURN`, a recording from before the key replays with it off. Check: `holebase` (family `furnblast`;
   his breach with the rule on and off, the bars on the same site with the piles reshaped — a 0.06 m mat under taken layers, a block past the rule's height bar
-  on a bottom layer —, the switch; `HOLEBASE_BREAK=1`), both stands; each bar was also broken in the code in turn and the line it holds went red. MEASURED,
+  on a bottom layer —, the switch; `HOLEBASE_BREAK=1`), both stands (the piles are the store's lived-in dressing: the check raises `LIVED.on`, which the
+  frozen stand holds off, so the site is the same on both); each bar was also broken in the code in turn and the line it holds went red. MEASURED,
   headless, his site only: of 14 sacks in the two piles by the hole, 4 bottom ones were left before and none are now; the bank at the wall's foot (top 0.17 m)
   stays. Across the levels every small floor thing with a top at 0.2 m is the bottom of such a pile (read off the level files, 10 levels have them). Nobody
   has seen the hole on a GPU or played it.
