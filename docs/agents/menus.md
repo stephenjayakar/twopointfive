@@ -555,21 +555,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   slot's tools, a gun's burst) and that WENT OFF (`kitViewCostly`, pure: its bang's mark; a gun's row by a round fired from a gun
   whose `def.suppressed` is false, Sam's or a teammate's; never a pick's cut, a thing kept on the belt, the wall charge that only
   opens a wall for another row) plays as on every kind, and as it ends: the room behind the door at full behind the leaf still ajar,
-  the blade's own lamp at twice itself through the gap (`quietInside(1, cost.blade)`); `slit` 0.4 s later the leaf is thrown to 100
-  deg by the game's own silent `crack`, Sam is up out of the crouch and the blade's lamp is OUT, so that ONE lamp of the picture's own
-  throws the slab (`kitViewCostLamp`: nearly a point, radius 0.03, at 40, 1.9 m up, behind the wall, slid along it away from him so
-  the slab falls along the wall over him; where the leaf's hinge is on the far jamb the lamp stays inside the doorway, 8 cm off that
-  jamb and 0.15 m behind the wall, in the leaf's own sweep, where the walker's grid is not asked: the slab's edge then falls 1.83 m
-  along the wall at his distance from it, and he rests at 1.1). Held 1.5 s, then the lamp out, the room dim, and the room staged again
-  under the dissolve (every man ON his place, the leaf ajar, the pool lamp mended, he down); the loop rests 3 s. About 2.1 s from the
-  row's end. THE POOL LAMP STAYS LIT under it: the slab is two to three times the pool and the pool is lost inside it. A pick ends it
-  at once, the same way. `__kitview.settled` is false while it is up; `__kitview.cost` says what played. NO man of the level's stands
-  in the slab on any way (not built); nobody is roused. THE BLADE (`KIT_VIEW_QUIET.own`): the lamp behind the leaf ajar is nearly a
+  the blade's own lamp at twice itself through the gap (`quietInside(1, cost.blade)`); Sam starts up out of the crouch at once;
+  `slit` 0.4 s later the leaf is thrown to 100 deg by the game's own silent `crack` and the blade's lamp AND THE POOL LAMP are out (`cost.pool` 0:
+  its base, which the game multiplies each step — no round, no event, back as the cost ends), so that ONE lamp of the picture's own
+  lights the yard (`kitViewCostLamp`: a point, radius 0.01, at 64, 1.9 m up, behind the wall, slid along it away from him; where
+  the leaf's hinge is on the far jamb it stays inside the doorway, 8 cm off that jamb, in the leaf's own sweep, where the walker's
+  grid is not asked). IT IS A WEDGE WITH THE DOORWAY'S SHAPE, NOT A SLAB (the second art review, 10-17: the slab read "the lights
+  came on", not "caught"). `past` 0.25 (was 0.75) lets the lamp hang 0.35 m behind the wall (was 0.15): the fan between the jambs
+  runs from 8 deg past straight out on the door's far side to 53 deg toward him (60 wide; the slab was 75) and its edge falls 1.35 m
+  along the wall at his distance from it, a quarter metre past where he rests at 1.1 — he stands just inside it, and the floor along
+  the wall behind him and on the door's far side stays dark. THE FAN'S WIDTH IS SET BY HIM: he rests a body's width off the wall, so
+  a lamp 1.0 m back, which throws a narrower and more door-like fan (32 deg), puts its edge 0.84 m along and MISSES him (one still).
+  `cost.room` (1) is the share the room's own lamps burn at once the leaf is thrown: under the roof that stays on they add nothing
+  to the yard's floor (stills at 1 and at 0.15: the same), the seam is there for a way where they would flood it. HE IS FROZEN
+  (`tidy`: under a cost Game.puppet has no goal and its aim is the door's middle, `cost.aimY` 1.2 m up): no walk home under the
+  hold, his feet where the row left them (`__kitview.cost.last.moved`), and ALL of him comes round to the door at `cost.turn` 240
+  deg/s: a throw leaves his gun on the door and his feet 50 deg off it, the game turns only the chest to an aim that near, and he
+  stood twisted — a stride's pose in a still — so `yaws()` asks his body's own channel for the door too (89 to 139 deg in under
+  half a second, by the page's log). Held
+  1.5 s, then the lamp out, the room dim, and the room staged again under the dissolve (every man ON his place, the leaf ajar, the
+  pool lamp burning, he down); the loop rests 3 s. About 2.1 s from the row's end. A pick ends it at once, the same way.
+  `__kitview.settled` is false while it is up; `__kitview.cost` says what played. NO man of the level's stands in the wedge on any
+  way (not built); nobody is roused. THE BLADE (`KIT_VIEW_QUIET.own`): the lamp behind the leaf ajar is nearly a
   point (radius 0.02: at 0.1, behind a slot three fingers wide, the whole blade was the lamp's own half shadow, and at 2.5 it was a
-  tenth over the floor), at 22, 1.9 m up under the lintel, 0.4 m behind the wall and 0.1 m past the latch's jamb. `kitViewBladeLine`
+  tenth over the floor), at 8 (the second art review: at 22 it was a third of the pool, a half metre ribbon that made the pool a
+  comet and pulled the eye off the man; at 8 it is a tenth of the pool, a faint band beside one clean disc, and the cost's slit
+  still flares over it at twice that), 1.9 m up under the lintel, 0.4 m behind the wall and 0.1 m past the latch's jamb. `kitViewBladeLine`
   (pure) works out the fan that gets out between the leaf's free edge and the jamb, in degrees off the door's own line: the leaf
   stands ajar INTO the room, so the blade can lie straight out or toward the HINGE's side and never the other way; at rest 14 to 25
-  deg. LIFE AT REST (`KIT_VIEW_QUIET.idle`): after 15, 14, 16, 14.5, 15.5 s of rest in turn (a fixed list, the game's clock, no dice)
+  deg. LIFE AT REST (`KIT_VIEW_QUIET.idle`) IS SWITCHED OFF (`idle.on` false; `kitViewIdleOn`, pure; no beat ever begins, on any way,
+  on the page or off it) by the second art review: as built it swings AWAY from the man, its pivot is hidden in the pool so that the
+  pool seems to wag a tail, and on the Team & kit page both ends of the swing fall outside the clear column. The code, its pure
+  functions and their rows stay, and a check raises it for itself (`__kitview.idleOn = true`; null = the table's word). What it
+  does when raised: after 15, 14, 16, 14.5, 15.5 s of rest in turn (a fixed list, the game's clock, no dice)
   the lamp behind the door slides 0.5 m along the wall over 1.2 s, stays 0.6 s and slides back (`kitViewIdleAt`, pure), dark to a
   tenth for 0.4 s on the way out; for those 3 s nobody's idle sway moves (`scan()` held as it stands, Sam and a partner). WHICH WAY:
   further past the LATCH (at a gap with no leaf: away from Sam), so the blade swings from its line out across the yard round toward
@@ -577,7 +595,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is BEHIND the leaf: the blade only went out. On the vault and the crossing Sam rests on the latch's side, so the blade swings AWAY
   from him: "toward his boots" cannot be had at such a door. It never begins under a row, a pick, a cost, a dissolve, or with a
   highlighted tile's next turn due inside its length; a row begun under it ends it that frame (the lamp put back at once). Not at a
-  blank wall. `__kitview.life`; `__kitview.idleEvery` is a check's own short wait. SAM'S LIGHT TILE on a quiet kind
+  blank wall. `__kitview.life`; `__kitview.idleEvery` is a check's own short wait, `__kitview.idleOn` its own raise. SAM'S LIGHT TILE on a quiet kind
   (`KIT_VIEW_QUIET.light`, `quietLight`): from the crouch the gun comes out, the beam is on as his aim leaves the door's far jamb,
   crosses to the near one in 0.5 s, held 0.2 s, off; the gun goes away at rest. Mark 'beam'. No step, no hand on the leaf, no cost. A
   teammate's light, a blank wall: the old row. `Row.loud` and `quietInside(share, blade)` (the room's lamps, 0.15 at rest) are the
@@ -626,6 +644,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor round it. WEAK: the blade is a ribbon about half a metre wide at the frame's edge, not a hairline (its edges are soft on this
   adapter); under the cost Sam is lit from behind, a rim and a long shadow, not a bright figure (his suit is dark and the lamp is
   behind the wall); on the whole page the column goes warm from the door's foot past his boots with him up and lit in it, but at that size the slab's edges are soft (one still, its cost begun at rest by hand, not by a tile).
+  THE SECOND ART REVIEW'S THREE CORRECTIONS (10-17; all under the picture's own switch, nothing on a loud kind): the blade at rest at
+  8, the idle beat off, the cost a wedge from one lamp with the pool out and him frozen in it — each told in its place above; where the join's
+  measures just above say otherwise (the slab, the pool lit inside it, the blade at 4, a beat at rest), these are the newer.
+  CHECKS: `tools/qa/kitview-plan.ts` 763 of 763 on both stands. Section J also holds that the beat's switch is off and that it
+  plays only raised; that once the leaf is thrown the pool lamp is at 0; and on each of the 13 quiet ways that the cost's fan is
+  no wider than 66 deg, its far edge within 12 deg of straight out and its near edge 0.2 to 0.6 m past his middle (47 to 64 deg
+  wide, 0.25 m past him on every one). `KITQUIET_BREAK=1` 29 FAIL, `KITCOST_BREAK=1` (also: the lamp hung as the old slab's, the
+  beat read as raised) 41 FAIL, exit 1 each. The page, software adapter, the render stood in: `LEVEL=vault KIND=quiet` 29 of 29 — a
+  row more: held 8 s at rest with a 1 s wait asked for, no beat begins and none began over the run; only then is the beat's own
+  row run, the switch raised by the check; and under every cost his feet moved 0.00 m (0.15 allowed) with the pool lamp out —
+  `LEVEL=crossing KIND=quiet SQUAD=1` 34 of 34 (seven costs, Sam's and the partner's), `LEVEL=records WAY=1` 30 of 30 and the vault
+  with `FLAGS=kitloud` 24 of 24 (both unmoved: no cost, no beat).
+  MEASURED ON STILLS (the vault, the same adapter, preset and 7 x 7 px means: RELATIVE only). AT REST: the pool 12 to 14, the band
+  beside it 1.5 (it was 4.0 to 4.4), the floor 0.1 to 0.3 — one clean disc and a faint band half a metre wide, not a hairline.
+  UNDER THE COST, Sam's real frag, half a second after the leaf is thrown: the wedge's core in front of the door 15 to 24 (12 at the
+  door's foot, where the frag's own smoke stands), 9 to 15 two metres out, 3 to 9 at three metres, the dark floor beside it 0.3;
+  0.62 of the yard's floor in view is dark (0.54 under the old slab); the floor at his boots 14, the man himself 2 — a
+  silhouette: the camera sees his back and the lamp is beyond him. He stands square to the door with his feet together, and his
+  shadow is one, long, with clean edges: his legs and, a finger beside them, his near arm. The edge on his side is hard; the far
+  edge is hazy with the frag's smoke (hard with no frag). ON THE WHOLE PAGE (the cost begun at rest by hand, the lamp then at
+  48): a warm band across the column from the door's foot to his boots, 17 to 22, dark floor above it 0.4 and behind him along the
+  wall 0.2, the man 1.5 to 3 standing in it; its edges are crumbly at that size on this preset.
+  THE MAT'S BLOTCHES ARE NOT MARKS: the frag leaves 8 decals and the restage takes all 8 (0 at rest, 8 under the cost, 0 after), and
+  the mat at rest and after the restage is clean at six times the exposure. The dark blotches show only under the cost's lamp,
+  with a frag or with none, and drift and fade from one frame to the next: this preset's sampling of the one low lamp, with the
+  frag's smoke adding its own. Left as it is.
+  NOBODY HAS SEEN any of this on a GPU, or in motion: the turn to the door and the rise are read off the page's own log (his body
+  89 to 139 deg in under half a second) and one still. WEAK: the wedge is 60 deg wide, a broad door shape and not a narrow one,
+  because he must stand in it where he rests; he is a dark figure in the light, not a lit one; the band at rest is still half a
+  metre wide; no still of the cost at the crossing or as two.
   LOUD UNMOVED: every change
   is behind the link's kind; the plan check's sections A to H print the same lines as before on both stands and its dry-run file is
   byte-identical. NOT SEEN: anything on a GPU; the loop at speed (stills on the software adapter only: the pool reads soft and wide
