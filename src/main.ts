@@ -1014,6 +1014,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   if (q.has('doorclosers')) DOORSTAY.on = false;
   // ?nohandleside: the AI's men open doors with their bodies wherever their walk meets the leaf, as before handleside.ts (for a visit: not kept). __handle: the switch, its rules, the counters
   if (q.has('nohandleside')) HANDLE.on = false;
+  if (q.get('leafround') === '0') DOORMANNERS.leafRound = false;   // ?leafround=0: a teammate walks into the back of a leaf standing open across his walk, as before (for a visit: not kept; its Tab row keeps its own)
   if (q.has('nodoormanners')) DOORMANNERS.on = false;   // ?nodoormanners: nobody waits or steps aside at a doorway, as before doorway.ts (for a visit: not kept; the Tab rows under the squad's feel keep theirs)
   (window as any).__handle = { get on() { return HANDLE.on; }, set on(v: boolean) { HANDLE.on = !!v; }, knobs: HANDLE, stats: HANDLE_STATS };
   (window as any).__doors = { get stay() { return DOORSTAY.on; }, set stay(v: boolean) { DOORSTAY.on = !!v; }, get exitsOut() { return DOORWAY.exitsOut; }, set exitsOut(v: boolean) { DOORWAY.exitsOut = !!v; }, swings: () => game.doorSwings, list: () => game.doors.list.map(d => ({ name: d.def.name, angle: +d.angle.toFixed(3), latched: d.latched, locked: d.locked, closing: d.closing })) };
