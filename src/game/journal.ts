@@ -96,6 +96,7 @@ import { ATTENTION } from './attention';
 import { PICTURE } from './picture';
 import { RELOAD } from './autoreload';
 import { SAMSTUN } from './samstun';
+import { SEENWALK } from './seenwalk';
 import { TEAMTALLY } from './teamtally';
 import { AIMWEIGHT } from './aimweight';
 import { SPRINTDOOR } from './sprintdoor';
@@ -276,6 +277,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CLOSE) CLOSE.on = false;   // (a file from before the close-in windows: one way in, from behind — its rows and its takedowns were made by that gate)
   if (!k.tables.STACKROOM) STACKROOM.on = false;   // (a file from before door stacks were held to the room's floor: its men walked to the marks the build then dealt)
   if (typeof (k.tables.STACKROOM as { view?: boolean } | undefined)?.view !== 'boolean') STACKROOM.view = false;   // (…and from before a stack waiting on an OPEN door stood out of the room's view: the jamb marks, as recorded)
+  if (!k.tables.SEENWALK) SEENWALK.on = false;   // (a file from before an ordered walk weighed lit floor in view of an uncleared room: the walks as they were)
   if (!k.tables.SAMSTUN) SAMSTUN.on = false; else if ((k.tables.SAMSTUN as Partial<typeof SAMSTUN>).ownSeen === undefined) SAMSTUN.ownSeen = false;   // (a file from before a blast folded or blinded the player: his feet and his picture were his own through every one — and one from before a watched can of his own side counted in full)
   if (!k.tables.SPRINTDOOR) SPRINTDOOR.on = false;
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)

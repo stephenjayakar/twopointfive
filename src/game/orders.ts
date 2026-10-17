@@ -81,6 +81,7 @@ import { wallTarget, wallRows } from './wallcharge';
 import type { WallSpot } from './wallcharge';
 import { workNear, workOn, workRows } from './workthings';
 import type { WorkThing } from './workthings';
+import { SEENWALK, SEENWALK_STATS, seenPrice } from './seenwalk';
 import { DOORMANNERS, DOORMANNERS_STATS, STACK_OWN, doorwayStand, doorwayFile, doorwayLane, doorwayOffLane, doorwayLanePrice, doorwayInWay, doorwayClearNear, doorwayHeld } from './doorway';
 import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet, pictureStep } from './picture';   // (asked inside stackSeen and the file's pose only: src/game is one import cycle)
 import { stackLinePace } from './stackline';
@@ -1856,12 +1857,28 @@ export class SquadOrders {
     const len = (q: Vec3[]) => { let m = 0, a: Vec3 = from; for (const b of q) { m += flat(a, b); a = b; } return m; };
     // (`base` = the way he would be walked without this rule, found under `pen`: the way round is never through a door `base` does not take, never at a
     //  lock, never through more uncleared room than `base`, at most laneLong times as long + 1 m, and a metre of lane the less — else null: `base` it is)
-    const laneWay = (base: Vec3[], pen: ((ix: number, iz: number) => number) | null): Vec3[] | null => {
+    const laneOnly = (base: Vec3[], pen: ((ix: number, iz: number) => number) | null): Vec3[] | null => {
       if (whyOnly || !DOORMANNERS.on || !DOORMANNERS.laneWalk) return null;   // (`whyOnly`: a menu asking whether he CAN get there — a lane never changes that, and its search is the dear one)
       const mine = doorsOn(base), lanes = doorwayLanePrice(g, d => mine.includes(d)), laneM = lanes ? C.dearAlong(from, base, lanes) : 0; if (!lanes || laneM < 1) return null;
       const way = nav.findPath(from, to, ROUND_ITER, pen ? (ix, iz) => pen(ix, iz) * lanes(ix, iz) : lanes);
       if (!way || shut(way) || doorsOn(way).some(d => !mine.includes(d)) || C.dearAlong(from, way, lanes) > laneM - 1 || len(way) > len(base) * DOORMANNERS.laneLong + 1 || (unk && C.dearAlong(from, way, unk) > Math.max(OFF_M, C.dearAlong(from, base, unk)))) return null;
       return way;
+    };
+    // (seenwalk.ts, SEENWALK.on: … nor over lit floor that a room nobody has been in has a sight line to. Asked AFTER the lanes, of the way they left him: by
+    //  the doors the short way takes, at no lock, through no more uncleared room and down no more lane, at most SEENWALK.long times as long + 1 m, and
+    //  SEENWALK.less metres or more the less in view — else the way the lanes left him, as it was)
+    const laneWay = (base: Vec3[], pen: ((ix: number, iz: number) => number) | null): Vec3[] | null => {
+      const viaLane = laneOnly(base, pen); if (!SEENWALK.on || whyOnly) return viaLane;
+      return seenWay(viaLane ?? base, base, pen) ?? viaLane;
+    };
+    const seenWay = (now: Vec3[], base: Vec3[], pen: ((ix: number, iz: number) => number) | null): Vec3[] | null => {
+      const seen = seenPrice(g, from, now), mS = seen ? C.dearAlong(from, now, seen) : 0; if (!seen || mS < SEENWALK.less) return null;
+      SEENWALK_STATS.inView++;
+      const mine = doorsOn(base), lanes = DOORMANNERS.on && DOORMANNERS.laneWalk ? doorwayLanePrice(g, d => mine.includes(d)) : null, both = lanes ? (ix: number, iz: number) => Math.max(lanes(ix, iz), seen(ix, iz)) : seen;
+      const way = nav.findPath(from, to, ROUND_ITER, pen ? (ix, iz) => pen(ix, iz) * both(ix, iz) : both);
+      if (!way || shut(way) || doorsOn(way).some(d => !mine.includes(d)) || C.dearAlong(from, way, seen) > mS - SEENWALK.less || (lanes && C.dearAlong(from, way, lanes) > C.dearAlong(from, now, lanes) + 0.5)
+        || len(way) > len(now) * SEENWALK.long + 1 || (unk && C.dearAlong(from, way, unk) > Math.max(OFF_M, C.dearAlong(from, now, unk)))) return null;
+      SEENWALK_STATS.round++; return way;
     };
     if (!shut(path) && !round && !off) { const way = laneWay(path, unk); return { why: null, via: way ? way.slice(0, -1).map(q => [q[0], 0, q[2]] as Vec3) : [] }; }
     const dear = new Set<number>();   // every doorway locked against him (and the one he is shy of), made all but a wall: is there another way?

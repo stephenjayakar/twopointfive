@@ -82,6 +82,7 @@ import { REARWATCH } from './rearwatch';
 import { STACKLINE } from './stackline';
 import { SNEAK } from './sneak';
 import { UNSEEN } from './unseen';
+import { SEENWALK } from './seenwalk';
 import { HOLDFIRE } from './holdfire';
 import { PAIRUP } from './pairup';
 import { LESSON } from './lesson';
@@ -106,7 +107,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES'];
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'SEENWALK'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -247,6 +248,8 @@ export function knobRegistry(): Record<string, object> {
     VERDICT,
     // a squad nobody has found sneaks when Sam sneaks (unseen.ts): who is low, how fast, how loud, and whose round is held
     UNSEEN,
+    // an ordered walk keeps off lit floor that a room nobody has cleared can see (seenwalk.ts): the bar for lit, the price, where the eyes stand
+    SEENWALK,
     // a squad nobody has found never fires first (holdfire.ts): whose round is held until the player's shot or his order starts the fight
     HOLDFIRE,
     // switches that stand alone

@@ -185,6 +185,38 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   orders' walkers on one door. `orders-edges`' line 'move there through a door locked against Sam is refused with the door named' went red on the
   shipped stand (it found no refused door) and now asks with the key held off: it is the refusal itself, read against the ring. Two levels, three doors, one seed, no run tally. Nobody has seen or played it;
   never seen on a GPU; the level's own wedges (a defender's) were not staged.
+- **An ordered walk keeps off lit floor that an uncleared room can see** (`src/game/seenwalk.ts`, `SEENWALK.on`: ON in the page, `?seenwalk=0`; off in the
+  module and on the frozen stand, `TPS_SEENWALK=1`; panel 'walk ▸ keeps off lit floor in view'; the table is in the journal, a recording from before it
+  replays with it off). Found at the glasshouse (the squad's walk to a door went past lit glass); the maintainer, asked whether to build a rule for
+  glass, 10-16: "can that just work with the regular visibility systems? men will consider themselves visible in that condition". So NO RULE FOR GLASS: a
+  block of floor is dear to the walker when it is LIT (the place's own steady light on the meter's scale, `calmtorch.ts placeLight`, at or over `litAt`
+  0.1, the sneak's own bar) and IN VIEW (a sight line, `segmentBlocked`: glass passes it, a wall or a leaf stops it, to where somebody might stand in a
+  room nobody of the team has been in — `cleared.ts unknownEyes`, a point every 2 m of its floor — inside a guard's reach of a man that lit,
+  `guards.ts eyeReach`). Asked in `orders.ts route()` AFTER the lanes (`laneWay`: the lanes' own way is found exactly as before, then this one of the
+  way they left him): the way round is taken only by the doors the short way takes, at no lock, through no more uncleared room and no more than half a metre more lane, at
+  most `long` 1.35 times as long + 1 m (of the way the lanes left him, so on top of their own 1.6), and `less` 1.5 m or more the less in view. WHOSE
+  WALKS: every walk that router finds but a menu's question — an order's, a man back on his order, the marks a door tool, a wall charge, a rescue or a
+  search walks its men to (assigned through the same router, as the lanes are), and the walk the throw planner reads of it (`squadthrow.ts walkLine`).
+  The room he is ordered INTO counts as a room that can see him until it is cleared, so the last metres to an open door bend to its wall. No such way: the way as it was — an order is never refused and a
+  mark never moved for it; a spot the player points at is his order, only the way to it is weighed. Where the walk was dark already, or every room in
+  reach is known, nothing is asked. MEASURED (shipped stand, one man's walk from the squad's start to both faces of every door, seven levels, 223
+  walks): 47 take another way; metres of walk on such floor 1204 → 1049; the office floor 188 → 153 (6 of 14), the barracks 469 → 407 (22 of 54), the
+  depot 245 → 208 (8 of 26), the block 133 → 121 (7 of 31), the warehouse 56 → 48 (4 of 40), the compound 41 → 41. AT THE GLASSHOUSE ITSELF NOTHING
+  CHANGES: the forecourt is lit and in view of the glazed rooms wall to wall (10 m of the 18.5 m walk to the front door) and there is no dark way to a
+  door in a glass wall — that stays the level's lesson. COST: asked when a walk is begun and by the throw planner when it plans a walk; a route asked cold is 2 to 10 ms on
+  average with the rule against under 1 without, 26 ms the worst seen (the office floor; a shared cloud core), paid on the tick an order is given. A
+  block is read once a tick and shared by every walk asked that tick (the men of one order). NOTHING IS KEPT PAST THE TICK, on purpose: the picture asks
+  walks too (the throw planner's drawn plan) and what is drawn must never decide what the game reads; `seenReset` on a restart and a checkpoint loaded.
+  The throw planner with its page open (shipped, both kinds asked every tick for 90 ticks of each of 17 targets on the office floor, 35 at the
+  barracks): it asked the rule 10 and 48 times in all; its mean time a tick 1.64 → 1.46 ms and 1.07 → 1.03 ms, the worst tick 55 → 42 ms and 100 → 91
+  ms (its own cold flood; no cost of the rule's to be seen in it).
+  Check: `probes.ts seenwalk` (family orders; `SEENWALK_BREAK=1` fails seven lines), both stands: the way; the same BY HAND with none of the rule's
+  own price (the meter at each half metre, a line from every floor cell of every uncleared room: 19.2 m lit and in view → 11.0); a man walking it
+  (26.1 m with 16.5 in view → 28.0 m with 8.9), and the same walk to the bit, 879 ticks, with the picture asking walks of its own between the
+  ticks; nothing lit / every room known = the way as it was; the glasshouse's forecourt (and the rule was asked
+  of it); journal and boot; what is read is kept for the tick and no longer (read again with a door moved, the clock moved, a reset), the same way each time. NOT DONE: it reads where a defender MIGHT stand, never where one is (that is `sneak.ts sneakWalk`'s, for the silent pair); men following Sam
+  are not routed by it; Sam's own lit state is his. Never seen on a GPU; nobody has played it: whether a way a third
+  longer for 8 m less in view is the bargain a loud squad should take is the maintainer's to say (`long`, `less`).
 - **A man on his stack mark is walked round, not into** (`DOORMANNERS.ownPlace`, src/game/doorway.ts `doorwayGate`; 10-13). A stack's second-rank man reached his
   mark first, the man bound for the wall place beyond it walked into him and shoved him onto that place, and the two stood on each other's marks. Now a friend
   within `ownM` (0.45 m) of the mark his order gave him is a standing man whatever his last steps say, a corner is put beside him when the walker's way goes on
