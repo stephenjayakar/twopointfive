@@ -106,7 +106,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT'];
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'PEEKSIGHT'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -115,6 +115,7 @@ import { KIT } from './character';
 import { HANDS } from './hands';
 import { WORK } from './workthings';
 import { WAND } from './wand';
+import { PEEKSIGHT } from './peeksight';
 import { STICKY } from './stickycam';
 import { OWNCHARGE } from './owncharge';
 import { SQUADTHROW } from './squadthrow';
@@ -197,7 +198,7 @@ export function knobRegistry(): Record<string, object> {
     // kit animations (kitanim.ts; character.ts KIT): the switch, the magazine changes' beats and the lengths of the draws — when a round may leave a gun coming up reads them
     KITANIM, KIT,
     // hands on the world (hands.ts): a body taken up by its beats from the end he is at, a door worked by hand with him stepped clear — what Sam's body and door rows DO reads them
-    HANDS, WORK, WAND, STICKY,
+    HANDS, WORK, WAND, STICKY, PEEKSIGHT,
     // the player's own charges (owncharge.ts): his card's charge rows, the door charge by hand, what a man alone carries, the squad standing off on his charge
     OWNCHARGE,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by

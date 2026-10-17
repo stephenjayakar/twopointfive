@@ -108,6 +108,7 @@ import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
 import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
+import { PEEKSIGHT } from '../game/peeksight';
 import { BIGSLOT } from '../game/kit';
 import { SHIELD } from '../game/shield';
 import { BIG_STATS } from '../game/bigkit';
@@ -1135,6 +1136,10 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   // FOG OF WAR (game/fogofwar.ts; ?fow / ?nofow, on under ?roomclear): the switch and its look — nothing here is kept per machine
   const fw = panel.section('Fog of war', { open: false, summary: () => game.fogOfWar.summary() });
   panel.toggleBox(fw, 'fog of war', () => game.fogOfWar.on, v => { game.fogOfWar.on = v; }, 'the Door Kickers rule: men nobody on your team (you + living teammates) has a line of sight to are not drawn, with what they carry, and the floor and walls outside the team\'s combined sight are dimmed and greyed. Sight is the game\'s own line-of-sight test (walls and shut doors block, glass passes, smoke hides men); sound is untouched. On in every room clear and rescue started from the mission list, off on the plain night; off = the game and the frame exactly as before. The native build hides the men but does not dim');
+  panel.toggleBox(fw, 'a peek lifts it', () => PEEKSIGHT.on, v => { PEEKSIGHT.on = v; }, 'back to a wall and pushed into its open end, your eye for the fog is where a head leaned round that end would be: the hallway past the door frame shows (off: the eye stays over your feet and a peek moves only the camera)');
+  panel.slider(fw, 'peek ▸ head out (m)', 0, 0.6, 0.05, () => PEEKSIGHT.out, v => { PEEKSIGHT.out = v; }, 'how far past the end of the wall the eye stands at full peek');
+  panel.slider(fw, 'peek ▸ off the wall (m)', 0.05, 0.5, 0.05, () => PEEKSIGHT.off, v => { PEEKSIGHT.off = v; }, 'how far off the wall the eye stands at full peek, on your side of it (small: a head against the frame, which sees further along a hallway behind your own wall)');
+  panel.slider(fw, 'peek ▸ look round (°)', 30, 120, 5, () => PEEKSIGHT.turnDeg, v => { PEEKSIGHT.turnDeg = v; }, 'how far round the end the eye looks under the cones: 90 is square through the doorway');
   knobRows(panel, fw, FOG as unknown as KnobTable, null, () => { }, [
     { k: 'dim', label: 'fog of war ▸ unseen brightness', min: 0, max: 1, step: 0.05, title: 'how far down the floor and walls nobody on the team sees are pushed (radiance × this; 1 = not dimmed)' },
     { k: 'desat', label: 'fog of war ▸ unseen greying', min: 0, max: 1, step: 0.05, title: 'how far toward grey the unseen floor and walls go (0 = colour kept)' },

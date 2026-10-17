@@ -142,6 +142,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sender told apart; none in the air, none with no fog; the same digest; the stands' row and the journal. `STICKY_BREAK=1` exits 1 on both stands.
   `tools/qa/sticky-page.cjs` counts the `.cammark` elements on the real page (software adapter). NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the size and
   colour of the lens mark are a first guess, and whether the camera's own block reads under the fog's dim without the mark is not known.
+- **A peek round the end of a wall lifts the fog of war** (`PEEKSIGHT`, `src/game/peeksight.ts peekEye`, one line in `fogofwar.ts update` where the player's
+  eye is listed: `wandEye ?? peekEye ?? own`). From play (the police post, quiet, hard, the fog's cones): "peeking around a door … should let you see down the
+  hallway". What was there: the wall hold's peek (`player.ts moveOnWall`, `Player.wall.peek`) moves the camera's look-at and cranes the neck, the man stays on
+  the wall, and the fog's eye for him stayed over his feet looking off the wall into his own room, so the camera showed a hallway under the fog. The rule:
+  while the peek is in, his eye for the fog stands where a head leaned round that end would be (`out` 0.3 m past the end of the face, `off` 0.1 m off the
+  wall's plane on HIS side of it, never through it; his own eye height, crouched too), looking `turnDeg` 90° round from along-the-wall, square into the
+  opening (the look turns by angle, by way of along-the-wall); it rides the peek's own ease in and out; it REPLACES his own eye for that time (one head, no
+  eye slot taken from a camera: under the cones the room behind his shoulder goes back under the fog but for the near field); a solid in the lean's way (a
+  leaf across the end, a pane) stops it short. The place is measured from where he actually stands, so on the rifle stack (`WALLSNAP`, he really steps out)
+  the step-out is not counted twice, and there the look stays the rifle's. What it sees through a doorway: square through and a wide wedge either side; back
+  along a hallway BEHIND his own wall only as far as the wall's thickness lets a head by the frame see (about as far back as the hallway is deep), no more.
+  **Not changed: what anybody else sees.** Guards' eyes go by his real head and chest, which stay on the wall (on the stack they really are out, and seen), so
+  a back-to-the-wall peek exposes him no more than it did; a head that is out being a head that can be seen is a change to what guards see and is the
+  maintainer's call, not built. Nothing in `player.ts` or the wall hold's files is changed. Known, not mended: the hold let go at full peek (stepping out
+  round the end, Q) puts the eye back over his feet in one frame, and on a face barely longer than he is wide the peek can change ends while still in: the
+  mask jumps, as the camera's look-at does. With a partner, the team's calls are told from this eye too (`tellCalls` reads `eyes[0]`). Switch `PEEKSIGHT.on`:
+  ON in the page (`?peeksight=0`), OFF in the module and on the frozen stand (`TPS_PEEKSIGHT=1`), registered in `knobs.ts`, in `JOURNAL_KNOBS` (a recording
+  from before the table replays with it off); Tab rows under Fog of war: 'a peek lifts it', 'peek ▸ head out (m)', 'peek ▸ off the wall (m)', 'peek ▸ look
+  round (°)'. Check: `bun run tools/qa/probes.ts peek-sight` (family `peeksight`; `tools/qa/peeksight-check.ts`), 12 verdicts on the police post with the
+  real keys (Q, then pushed into the end beside the open front door): the eye's place and height, its look, the floor and a guard 2.5 m through the doorway
+  seen up and not down, open floor hard behind his wall seen neither way, his head still on the wall, crouched, let go = his own eye, four seconds of the
+  held peek with guards live digesting the same down and up (solo), the rifle stack (place asked of a man stepped 0.6 m out; the look his rifle's), the
+  stands' row and an old recording; `PEEKSIGHT_BREAK=1` exits 1. Measured on one level, one doorway, one seed, both stands. Not asserted: an outside corner,
+  a leaf across the end, the cones off, the ease mid-way. Never seen on a GPU and never played: `out`, `off` and `turnDeg` are first guesses, and how the
+  mask's sweep reads as the peek eases is unjudged.
 - **Interaction = rows + one Space grammar** (`player.ts buildInteractables` → `Game.nearby` / `hover`; `interact.ts`): every verb is
   its own row (`Interactable.verb`: a shut door = `push` + `ease`, a lock = `pick` (+ `rattle` crouched) + `kick`, keyed = `unlock` +
   `ease`, guard behind = `grab`, held arm = `question` + `choke`, held gun = `whip`, body `drag`/`drop`, rack `drive`, breaker), top

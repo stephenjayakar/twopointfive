@@ -68,7 +68,7 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
         v = await pg.evaluate(async () => { await window.__ready; const g = window.__game, pl = g.player, t0 = g.time, until = performance.now() + 90000;
           while (!(g.time > t0) && performance.now() < until) await new Promise(r => setTimeout(r, 250));   // the game clock moves = it is running, not only built
           const K = window.__knobs && typeof window.__knobs.registry === 'function' ? window.__knobs.registry() : null;
-          const first = { wand: pl.wand, cams: pl.rifle ? pl.rifle.cams : null, fog: g.fogOfWar ? g.fogOfWar.active : null, time: +g.time.toFixed(2), knobs: !!K, take: K && K.STICKY ? K.STICKY.take : null, qwand: K && K.QUIETFOG ? K.QUIETFOG.wand : null, mark: K && K.STICKY ? K.STICKY.mark : null };
+          const first = { wand: pl.wand, cams: pl.rifle ? pl.rifle.cams : null, fog: g.fogOfWar ? g.fogOfWar.active : null, time: +g.time.toFixed(2), knobs: !!K, take: K && K.STICKY ? K.STICKY.take : null, qwand: K && K.QUIETFOG ? K.QUIETFOG.wand : null, mark: K && K.STICKY ? K.STICKY.mark : null, peek: K && K.PEEKSIGHT ? K.PEEKSIGHT.on : null };
           // a camera of his own lying stuck a step from him (as one that came to rest on the floor: stickycam.ts StickyCam), then a few frames: the HUD's lens marks (STICKY.mark)
           pl.cams.push({ pos: [pl.char.pos[0] + 0.8, 0.02, pl.char.pos[2]], n: [0, 1, 0], vel: null, age: 0, si: -1, id: 900 });
           const marksShown = () => [...document.querySelectorAll('.cammark')].filter(e => e.style.display !== 'none');
@@ -77,13 +77,14 @@ const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${
           return { ...first, marks: shown.length, liveMarks: shown.filter(e => e.classList.contains('live')).length }; });
       } catch (e) { why = String(e).slice(0, 300); }
       await pg.close(); return { v, why, errs }; };
-    const a = await load(link), b = await load(`${link}&camtake=0&quietwand=0&cammark=0`), say = x => x.v ? JSON.stringify(x.v) : `the page did not come ready — ${x.why}`;
+    const a = await load(link), b = await load(`${link}&camtake=0&quietwand=0&cammark=0&peeksight=0`), say = x => x.v ? JSON.stringify(x.v) : `the page did not come ready — ${x.why}`;
     check(!!a.v && a.v.wand === true && a.v.cams === 2 && a.v.fog === true && a.v.time > 0, 'the quiet mission\'s own link, in play: the player holds the optical wand, 2 sticky cameras ride the rifle, the fog of war is live, the game clock runs', `?${link} · ${say(a)}`);
     check(!!a.v && a.v.knobs && a.v.take === true && a.v.qwand === true, 'that page\'s switches (window.__knobs): STICKY.take and QUIETFOG.wand are both on', a.v ? (a.v.knobs ? `STICKY.take ${a.v.take} · QUIETFOG.wand ${a.v.qwand}` : 'window.__knobs.registry is not there: not read') : say(a));
     check(!!b.v && !b.v.wand && b.v.cams === 2 && b.v.fog === true && b.v.time > 0, '&camtake=0&quietwand=0: no wand on the player, still 2 cameras, the fog still live', `${say(b)}`);
     check(!!b.v && b.v.knobs && b.v.take === false && b.v.qwand === false, '&camtake=0&quietwand=0: both switches read off', b.v ? (b.v.knobs ? `STICKY.take ${b.v.take} · QUIETFOG.wand ${b.v.qwand}` : 'window.__knobs.registry is not there: not read') : say(b));
     check(!!a.v && a.v.mark === true && a.v.marks === 1 && a.v.liveMarks === 1, 'a camera of his own stuck on the floor beside him, under the fog: the HUD shows one lens mark on it, the sending kind (STICKY.mark on)', a.v ? `STICKY.mark ${a.v.mark} · marks shown ${a.v.marks} · sending ${a.v.liveMarks}` : say(a));
     check(!!b.v && b.v.mark === false && b.v.marks === 0, '&cammark=0: the switch reads off and the same camera carries no mark', b.v ? `STICKY.mark ${b.v.mark} · marks shown ${b.v.marks}` : say(b));
+    check(!!a.v && a.v.peek === true && !!b.v && b.v.peek === false, 'the peek\'s eye for the fog (PEEKSIGHT.on) is on as the page opens and &peeksight=0 puts it off', a.v && b.v ? `bare link ${a.v.peek} · &peeksight=0 ${b.v.peek}` : `${say(a)} · ${say(b)}`);
     const all = [...a.errs.map(e => `bare link: ${e}`), ...b.errs.map(e => `both off: ${e}`)];
     check(all.length === 0, 'no console error, page error or failed resource on either load of the mission', all.length ? `${all.length} (${a.errs.length} + ${b.errs.length}), the first: ${all[0]}` : '0 + 0');
     await gb.close();

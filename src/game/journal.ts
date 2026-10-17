@@ -65,6 +65,7 @@ import { CLOSE } from './close';
 import { KITANIM } from './kitanim';
 import { WORK } from './workthings';
 import { WAND } from './wand';
+import { PEEKSIGHT } from './peeksight';
 import { TAKEDOWN } from './takedown';
 import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
@@ -264,6 +265,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.kill === undefined) TAKEDOWN.kill = false; }   // (…and from before the kill from the hold was a move: the phase was drawn as the hold, and he fell as the knife from behind dropped him)
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
+  if (!k.tables.PEEKSIGHT) PEEKSIGHT.on = false;   // (a file from before a peek round the end of a wall lifted the fog: his eye stayed over his feet)
   if (!k.tables.WAND) WAND.on = false;   // (a file from before the optical wand: no door offered the look)
   else if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
   if (!k.tables.STICKY) STICKY.on = false;   // (a file from before the sticky cameras: no such load on his rifle)
