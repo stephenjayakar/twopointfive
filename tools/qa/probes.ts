@@ -2666,6 +2666,7 @@ if (on('quickthrow', 'all')) await run('quickthrow', async () => (await import('
 if (on('samstun', 'all')) await run('samstun', async () => (await import('./samstun-check.ts')).samstunCheck());   // a frag and a stun canister do to the player what they do to a man beside him (src/game/samstun.ts)
 if (on('deathrecap', 'ui', 'all')) await run('deathrecap', async () => (await import('./deathrecap-check.ts')).deathrecapCheck());   // the end card knows who shot whom, from where, and says nothing while the run is on (src/game/deathrecap.ts, src/ui/recap.ts)
 if (on('friends', 'player', 'all')) await run('friends', async () => (await import('./friends-check.ts')).friendsCheck());   // the reticle passes over his own side, and his gun comes to the low ready off a teammate out of a fight (src/game/friends.ts)
+if (on('headmark', 'ui', 'all')) await run('headmark', async () => (await import('./headmark-check.ts')).headmarkCheck());   // no wary mark (the dots, the '?') over a living man of the player's own; a defender's marks as they were (src/ui/headmark.ts)
 // ---------------------------------------------------------------- the hostage rescue playtest (rescue-probes.ts; game/rescue.ts behind ?rescue): 'rescue' = the family
 if (on('rescue-off', 'rescue', 'all')) await run('rescue-off', async () => (await import('./rescue-probes.ts')).rescueOff());
 if (on('rescue-stage', 'rescue', 'all')) await run('rescue-stage', async () => (await import('./rescue-probes.ts')).rescueStage());
@@ -2704,6 +2705,7 @@ if (on('frag-order', 'frag', 'all')) await run('frag-order', async () => (await 
 if (on('frag-own', 'frag', 'all')) await run('frag-own', async () => (await import('./frag-probes.ts')).fragOwn());
 if (on('frag-theirs', 'frag', 'all')) await run('frag-theirs', async () => (await import('./frag-probes.ts')).fragTheirs());
 if (on('frag-mates', 'frag', 'all')) await run('frag-mates', async () => (await import('./frag-probes.ts')).fragMates());   // the rest guess counts loose furniture; no leg ends in a mate's corner (FRAG.restProps / fleeApart; FRAGMATES_BREAK=1 must fail)
+if (on('frag-fleedoor', 'frag', 'all')) await run('frag-fleedoor', async () => (await import('./frag-probes.ts')).fragFleeDoor());   // caught by a grenade with no cover, a man leaves by a doorway that already stands open (FRAG.fleeDoor; FLEEDOOR_BREAK=1 must fail)
 if (on('frag-wallflee', 'frag', 'all')) await run('frag-wallflee', async () => (await import('./frag-probes.ts')).fragWallFlee());   // a wall the burst will open is no cover to a man getting off it (FRAG.wallFlee; WALLFLEE_BREAK=1 must fail)
 // BURSTS × GLASS (tools/qa/burstglass-probes.ts — a frag's or a 40 mm round's burst beside a window: the glass takes it by the fracture model's rules FIRST, the men
 // are judged through what that left; rebuild/gear-and-glass/bursts.md). Stands the glass parts up itself; BURSTGLASS_BASE=1 runs it on the base build's numbers = red.
