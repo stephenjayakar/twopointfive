@@ -1114,6 +1114,11 @@ async function quietCost(names: string[]) {
     row(out(lp) < P.wall.back - 0.05 && (free(lp[0], lp[1]) || (Math.abs(Lp.along) < A.width / 2 && Lp.back < A.width)) /* (free floor, or inside the doorway in the leaf's own sweep: nothing stands there) */ && Lp.back >= C.lamp.backMin - 1e-9 && Lp.back <= C.lamp.back + 1e-9 && Lp.along * sg <= A.width / 2 && Lp.along * sg >= -(A.width / 2 + C.lamp.side) - 1e-9,
       `${said}: the cost's lamp hangs behind the wall on free floor or in the doorway's own sweep — ${pt(lp)}, ${f2(P.wall.back - out(lp))} m behind its far face, ${f2(Math.abs(Lp.along))} m along from the door's middle ${Lp.along * sg < 0 ? 'away from Sam' : 'on his side'}${dd ? `, the hinge ${al(dd.hinge) * sg < 0 ? 'on the far jamb (the thrown leaf stands there: the lamp inside the doorway)' : 'on his jamb'}` : ', no leaf'}; its slab's edge falls ${f2(Lp.reach)} m along the wall at his distance from it, Sam's middle at ${f2(Math.abs(al(S0)))} m: ${Lp.reach >= Math.abs(al(S0)) ? 'all of him is in it' : Lp.catches ? 'his near side is in it' : 'IT STOPS SHORT OF HIM (said: he is lit by what the room throws back)'}`);
     if (!dd) { say(`  (${said}: no leaf on this way — the cost is the room at full and its lamp; nothing to throw)`); continue; }
+    // (THE BLADE AND ITS SWING — kitViewBladeLine: through the leaf ajar the picture's own lamp throws a thin fan out across the yard; the idle beat
+    //  slides the lamp FURTHER past the latch, so the fan still gets out and has swung round toward the hinge's side. KITCOST_BREAK: slid the other way)
+    if (A.kind === 'door') { const I = QK.idle, O = QK.own, line = (side: number) => KV.kitViewBladeLine(A.width, P.wall.thickness, QK.ajarDeg * R, O.back, side), b0 = line(O.side), b1 = line(O.side + (BREAKC ? -1 : 1) * I.slide);
+      row(!!b0 && b0.from >= 0 && b0.to - b0.from <= 20, `${said}: the blade at rest gets out through the leaf ajar as a thin fan — ${b0 ? `${f2(b0.from)} to ${f2(b0.to)} deg off the door's own line, toward the hinge's side` : 'NO LIGHT GETS OUT'}`);
+      row(!!b0 && !!b1 && b1.from - b0.to >= 25, `${said}: the idle beat's slide (${I.slide} m past the latch) swings it and it still gets out — ${b1 ? `${f2(b1.from)} to ${f2(b1.to)} deg at the slide's end` : 'THE LAMP IS BEHIND THE LEAF: THE BLADE ONLY GOES OUT'}`); }
     try { const H = await standUp({ level: loadLevel(laid), seed: 1 }), g = H.game, st = startFromQuery(g, w.Y.set !== undefined ? kitViewSetQuery(new URLSearchParams(w.link)) : new URLSearchParams(w.link));
       const door = g.doors.byName(A.door), roused = { men: 0, alarms: 0 }; let first = true;
       const park = () => { const r = KV.kitViewPark(g); if (!first) { roused.men += r.men; roused.alarms += r.alarms; } first = false; };
@@ -1146,7 +1151,7 @@ await dryRun(asked);
 if (!asked.length || asked.includes('vault')) await quietAlone();
 if (BREAKQ) console.log('KITQUIET_BREAK=1: the link is read with `kitloud` in it, the round is aimed beside the lamp — section I\'s kind and lamp rows must FAIL');
 await quietPicture(asked.length ? asked : files);
-if (BREAKC) console.log('KITCOST_BREAK=1: the suppressor is read the wrong way round, the leaf is thrown at no speed — section J\'s rows of what costs and of the leaf must FAIL');
+if (BREAKC) console.log('KITCOST_BREAK=1: the suppressor is read the wrong way round, the leaf is thrown at no speed, the idle lamp is slid behind the leaf — section J\'s rows of what costs, of the leaf and of the blade\'s swing must FAIL');
 await quietCost(asked.length ? asked : files);
 if (warnings) console.log(`\n${warnings} WARNING line${warnings === 1 ? '' : 's'} above (names by generated id: said, never failed)`);
 console.log(`\nkitview-plan: ${passes} PASS, ${fails} FAIL${BREAK ? ' (under KITPLAN_BREAK=1: FAILs are the expected answer)' : BREAKQ ? ' (under KITQUIET_BREAK=1: FAILs are the expected answer)' : BREAKC ? ' (under KITCOST_BREAK=1: FAILs are the expected answer)' : ''}`);

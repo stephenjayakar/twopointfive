@@ -240,8 +240,12 @@ export const KIT_VIEW_QUIET = {
    *  burn at this share of themselves (the loud cost's seam: quietInside()) · and THE BLADE: a small warm lamp of the picture's own hung … m behind
    *  the wall's far face, … m past the frame on the LATCH's side, this high. The leaf stands ajar INTO the room: its gap is seen only from the
    *  latch's side, so from there a long thin blade of light lies out across his floor, slanting toward the hinge's side through where the pool is
-   *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has */
-  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.25, up: 1.2, color: [1, 0.72, 0.42] as Vec3, intensity: 2.5, range: 4.5 },
+   *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has.
+   *  ITS NUMBERS ARE THE BLADE'S: the gap is a slot three fingers wide, so the lamp is nearly a point (`radius`: at 0.1 the whole blade was the
+   *  lamp's own half shadow, a smear) and bright (at 2.5 the blade was a tenth over the moon's floor; at 20 odd it is a fifth to a third of the
+   *  pool, the second brightest thing on the floor), high under the lintel so it carries across the yard, and `side` sets its line: 0.05 = a
+   *  thin line straight out (7 to 16 deg off the door's own line), 0.25 = a wedge 32 to 45 deg toward the hinge's side */
+  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.1, up: 1.9, color: [1, 0.72, 0.42] as Vec3, intensity: 22, range: 8, radius: 0.02 },
   /** THE REST POSE: Sam crouched this far along the wall from the door's middle, on the side the plan stands him (out from the wall: the wall men's
    *  own distance) · a partner the same again behind him · and HE GIVES WAY FIRST: while a partner's card is the open one (the partner is up at the
    *  door, and the game stacks a man who works it a body's width from Sam's place) Sam rests this much further back along the wall — he steps back as
@@ -270,9 +274,11 @@ export const KIT_VIEW_QUIET = {
     lamp: { back: 0.45, backMin: 0.15, up: 1.9, side: 1.2, clear: 0.08, past: 0.75, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 40, range: 8, radius: 0.03 } },
   /** LIFE AT REST, no guard: after each of these seconds of rest in turn (a fixed list: no dice) the warm lamp behind the door slides `slide` m along
    *  the wall over `out` s, stays `stay` s and slides back, dark to `blinkTo` of itself for `blink` s from `blinkAt` (somebody passes it); every man's
-   *  idle sway is stopped for its length. Where the room has lamps of its own the lamp that slides is one hung for the beat (the picture's own lamp's
-   *  place and colour, at `gain` of it, in and out over `fade` s) */
-  idle: { every: [15, 14, 16, 14.5, 15.5], slide: 0.8, out: 1.2, stay: 0.6, blinkAt: 0.5, blink: 0.4, blinkTo: 0.1, gain: 1, fade: 0.3 },
+   *  idle sway is stopped for its length. WHICH WAY: further past the LATCH (the only way the gap still sees it: slid the other way the lamp is
+   *  behind the leaf and the blade only goes out) — the blade swings from its line straight out round toward the hinge's side, up along the wall
+   *  (56 to 67 deg off the door's line at 0.5 m), and back; toward his boots only where he rests on the hinge's side. With no lamp of the
+   *  picture's own hung, one is hung for the beat (its place and colour, at `gain` of it, in and out over `fade` s) */
+  idle: { every: [15, 14, 16, 14.5, 15.5], slide: 0.5, out: 1.2, stay: 0.6, blinkAt: 0.5, blink: 0.4, blinkTo: 0.1, gain: 1, fade: 0.3 },
   /** SAM'S WEAPON LIGHT on a quiet kind: from the crouch, on for one pass across the door — `sweep` s of it, held `hold` s — and off; aimed … m up */
   light: { sweep: 0.5, hold: 0.2, aimY: 0.9 },
 };
@@ -558,6 +564,21 @@ export function kitViewIdleAt(t: number, I: { slide: number; out: number; stay: 
   const secs = I.out * 2 + I.stay, ss = (u: number) => { const x = Math.max(0, Math.min(1, u)); return x * x * (3 - 2 * x); };
   const x = t <= I.out ? ss(t / I.out) : t <= I.out + I.stay ? 1 : 1 - ss((t - I.out - I.stay) / I.out);
   return { x: I.slide * x, lit: t >= I.blinkAt && t < I.blinkAt + I.blink ? I.blinkTo : 1, env: Math.max(0, Math.min(1, t / I.fade, (secs - t) / I.fade)), done: t >= secs };
+}
+/** THE BLADE'S LINE (pure; the plan check's): through a leaf `width` wide hung at the middle of a wall `th` thick and standing `ajar` rad into the room,
+ *  from a point lamp `back` m behind the wall's far face and `side` m past the latch's jamb (negative: behind the leaf) — the fan of light that gets
+ *  out through the slot between the leaf's free edge and the jamb, clear of the leaf's face and of both jambs: its two edges in degrees off the
+ *  door's own line, positive toward the hinge's side. null = no light gets out (the lamp is behind the leaf, or the leaf is to) */
+export function kitViewBladeLine(width: number, th: number, ajar: number, back: number, side: number): { from: number; to: number } | null {
+  const E: [number, number] = [-width * (1 - Math.cos(ajar)), width * Math.sin(ajar) - th / 2];   // (the free edge: x past the latch's jamb, d behind the wall's far face)
+  if (E[1] <= 1e-6 || back <= 1e-6) return null;
+  let lo = Infinity, hi = -Infinity; const N = 64;
+  for (let i = 1; i < N; i++) { const u = i / N, px = E[0] * u, pd = E[1] * u; if (back - pd <= 1e-6) continue;
+    const k = (side - px) / (back - pd), x = (d: number) => px - k * (pd - d);   // (x where the ray is at depth d; k: m toward the hinge per m out)
+    if (x(0) > 0 || x(-th) > 0 || x(-th) < -width) continue;   // (the latch's jamb · the hinge's)
+    let clear = true; for (let j = 1; j <= 16 && clear; j++) { const d = pd - (pd + th / 2) * j / 16, xl = -width + (d + th / 2) / (E[1] + th / 2) * (E[0] + width); if (x(d) < xl - 1e-9) clear = false; }   // (not through the leaf's own face)
+    if (clear) { lo = Math.min(lo, k); hi = Math.max(hi, k); } }
+  return hi < lo ? null : { from: Math.atan(lo) / R, to: Math.atan(hi) / R };
 }
 /** …and the seconds of rest before the n-th beat (a fixed list in turn: no dice, and the clock is the game's) */
 export function kitViewIdleEvery(n: number, I: { every: readonly number[] } = KIT_VIEW_QUIET.idle): number { return I.every[((n % I.every.length) + I.every.length) % I.every.length]; }
@@ -940,7 +961,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       const O2 = QK.own, wantOwn = Q && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
       if (!wantOwn) { if (hung) engine.lights.remove(hung); qOwn = null; }
       else { const lt = door ? ((A.mid[0] - door.def.hinge[0]) * W.s[0] + (A.mid[1] - door.def.hinge[1]) * W.s[1] >= 0 ? 1 : -1) : 0;   // (which way along the wall the leaf's free edge is; a gap: its middle)
-        const p = at([lt * (A.width / 2 + O2.side), P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: 0.1, volumetric: 0, broad: false, enabled: true };
+        const p = at([lt * (A.width / 2 + O2.side), P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: O2.radius, volumetric: 0, broad: false, enabled: true };
         if (hung) Object.assign(hung, rec); else qOwn = engine.lights.add({ name: 'kitview_inside', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, ...rec }); } }
     // the camera: into the wall, turned toward the stack; at the middle of the men
     V.men = men(order);
@@ -1623,14 +1644,14 @@ export function kitViewStart(d: KitViewDeps): KitView {
     costOff(); quietInside(KIT_VIEW_QUIET.inside); dirty = 'world'; apart = true; restUntil = game.time; restNext = asked !== null ? NaN : C.rest;   // (cut to dark; what it left has no undo under the eye: the room staged again, every man ON his place)
     return false; };
   /** LIFE AT REST, with no guard: after `every` s of rest — nothing playing, nothing asked, nothing to mend, every man on his place, the leaf at its
-   *  rest — the warm lamp behind the door slides along the wall, away from him, and back (kitViewIdleAt), so the warm blade through the leaf ajar
-   *  swings toward his boots and back, dark for a blink as somebody passes the lamp; for its length nobody's gun wanders (scan(): held as it stands).
+   *  rest — the warm lamp behind the door slides along the wall, further past the latch, and back (kitViewIdleAt), so the warm blade through the leaf
+   *  ajar swings round toward the hinge's side and back, dark for a blink as somebody passes the lamp; for its length nobody's gun wanders (scan(): held as it stands).
    *  The lamp that slides is the picture's own where it hangs one, else one hung for the beat at the same place. It never begins under a row, a pick
    *  or a cost, nor with a tile's own next turn due inside its length; a row that begins under it ends it that frame, the lamp put back. It does not
    *  read the pool lamp: the same with the pool shot out. Not at a blank wall (no opening to see it through). Never seen on a GPU */
   let lifeT = NaN, lifeNext = NaN, lifeN = 0, lifeStill = false, lifeLamp: RtLight | null = null, lifeHung = false, lifeHome: Vec3 = [0, 0, 0]; const lifeSeen = { n: 0, cuts: 0, far: 0 };
   const lifeOff = (cutIt = false) => { if (isNaN(lifeT)) return; if (cutIt) lifeSeen.cuts++; lifeT = NaN; lifeStill = false; lifeNext = NaN; const L = lifeLamp; lifeLamp = null; if (!L) return;
-    if (lifeHung) engine.lights.remove(L); else { L.pos = [lifeHome[0], lifeHome[1], lifeHome[2]]; L.intensity = L.peakIntensity = KIT_VIEW_QUIET.own.intensity * (qShare / KIT_VIEW_QUIET.inside); } };
+    if (lifeHung) engine.lights.remove(L); else { L.pos = [lifeHome[0], lifeHome[1], lifeHome[2]]; L.intensity = L.peakIntensity = KIT_VIEW_QUIET.own.intensity * qBlade; } };
   const life = (S: Staged) => { const QK = KIT_VIEW_QUIET, QI = QK.idle, pl = game.player;
     const busy = !Q || !said || !!beat || asked !== null || costOn() || dz.phase !== '' || dirty !== null || !!game.puppet || walled(S);
     if (isNaN(lifeT)) {
@@ -1638,14 +1659,16 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (game.time < lifeNext || (hi !== null && restUntil - game.time < QI.out * 2 + QI.stay + 0.5)) return;
       if (offRest(S) || flat(pl.char.pos, S.sam) > K.onSlot || S.order.some(g => flat(g.char.pos, homeOf(S, g).p) > K.homeM)) return;
       const hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null, O = QK.own;
-      lifeT = game.time; lifeN++; lifeSeen.n++; lifeHung = !hung; lifeHome = hung ? [hung.pos[0], hung.pos[1], hung.pos[2]] : S.at([0, S.plan.wall.back - O.back, O.up]);
+      lifeT = game.time; lifeN++; lifeSeen.n++; lifeHung = !hung; lifeHome = hung ? [hung.pos[0], hung.pos[1], hung.pos[2]] : S.at([S.door ? S.latch * (S.width / 2 + O.side) : 0, S.plan.wall.back - O.back, O.up]);
       lifeLamp = hung ?? engine.lights.add({ name: 'kitview_idle', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: 0 as const, pos: [lifeHome[0], lifeHome[1], lifeHome[2]] as Vec3, dir: [0, -1, 0] as Vec3, color: [O.color[0], O.color[1], O.color[2]] as Vec3,
-        intensity: 0, peakIntensity: 0, range: O.range, innerDeg: 0, outerDeg: 180, radius: 0.1, volumetric: 0, broad: false, enabled: true }); }
+        intensity: 0, peakIntensity: 0, range: O.range, innerDeg: 0, outerDeg: 180, radius: O.radius, volumetric: 0, broad: false, enabled: true }); }
     else if (busy) { lifeOff(true); return; }
     const a = kitViewIdleAt(game.time - lifeT, QI), L = lifeLamp; if (a.done || !L) { lifeOff(); return; }
-    const m = S.plan.anchor.mid, sg = (S.sam[0] - m[0]) * S.s[0] + (S.sam[1] - m[1]) * S.s[1] >= 0 ? 1 : -1;
-    L.pos = [lifeHome[0] - S.s[0] * sg * a.x, lifeHome[1], lifeHome[2] - S.s[1] * sg * a.x];
-    L.intensity = L.peakIntensity = (lifeHung ? QK.own.intensity * QI.gain * a.env : QK.own.intensity * (qShare / QK.inside)) * a.lit;
+    // (WHICH WAY: at a leaf ajar the gap is seen only from the latch's side, so the lamp slides FURTHER past the latch — the blade swings from
+    //  straight out toward the hinge's side and back; slid the other way it is behind the leaf and the blade only goes out. At a gap: away from him)
+    const m = S.plan.anchor.mid, sg = (S.sam[0] - m[0]) * S.s[0] + (S.sam[1] - m[1]) * S.s[1] >= 0 ? 1 : -1, way = S.door && !S.door.off ? S.latch : -sg;
+    L.pos = [lifeHome[0] + S.s[0] * way * a.x, lifeHome[1], lifeHome[2] + S.s[1] * way * a.x];
+    L.intensity = L.peakIntensity = (lifeHung ? QK.own.intensity * QI.gain * a.env : QK.own.intensity * qBlade) * a.lit;
     lifeStill = true; lifeSeen.far = Math.max(lifeSeen.far, a.x); };
   /** THE TABLE (calls 0: every demo is one row — what it does to the door, what it leaves that only a dissolve mends, its rest before it plays again): a
    *  thing on a card (a tile's field; 'turn' = suit / trim, 'swap' = a gun changed) → how a teammate (`mate`) and Sam use it at the door. A tile with no row
