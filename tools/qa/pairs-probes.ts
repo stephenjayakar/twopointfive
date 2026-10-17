@@ -152,7 +152,11 @@ export const pairsHold = guarded(async () => {
   const { verdict, done } = family('pairs-hold: one pair holds while the other clears');
   // ---- (a) red stacked on the north door, blue opens and clears through the west door
   { const rows: string[] = []; let kept = 0, ended = 0, n = 0, lost = 0, drift = 0; const ff: string[] = [], thr: string[] = [];
-    for (const seed of [2, 5, 9]) { n++; const R = await rig(seed, CORRIDOR, { tag: 'hold-a' }); const { O, D } = R; const dn = R.door('breakroom_n'), red = R.men('red');
+    // (the defenders' own frag grenades are pinned off here as in (b) below, and for its reason: a stacked man runs from a grenade that lands by him, as he
+    //  should — 1.8 m off his mark on seed 5 the day a walk to the stack took half a second longer — and that run is frag.ts's and `probes.ts frag`'s to
+    //  judge. What is asked here is the stack kept and the marks held against the other pair's order)
+    const fragWasA = FRAG.defenders; try {
+    for (const seed of [2, 5, 9]) { n++; const R = await rig(seed, CORRIDOR, { tag: 'hold-a' }); const { O, D } = R; const dn = R.door('breakroom_n'), red = R.men('red'); FRAG.defenders = false;
       R.give('stack', 'breakroom_n', 'red'); R.set('red', 30); const posts = new Map(red.map((m: any) => [m, [...O.of(m).post]] as const));
       const why = R.give('openClear', 'breakroom_w', 'blue'); const op = D.ops[0], sent = op ? [...op.men] : []; let stayed = true, far = 0;   // (who the order TOOK: a man lost in the room is off op.men by the end)
       R.post = () => { for (const m of R.men('red')) { const a = O.of(m); if (a?.order !== 'stack' || a.door !== dn) stayed = false; far = Math.max(far, dist(m.char.pos, posts.get(m)! as any)); } };
@@ -160,6 +164,7 @@ export const pairsHold = guarded(async () => {
       const good = why === null && !!op && sent.length === 2 && sent.every((m: any) => O.pairOf(m) === 'blue'); if (stayed && good) kept++; if (op?.ended === 'in') ended++;
       lost += R.lost().length; drift = Math.max(drift, far); ff.push(...R.fratricide); thr.push(...R.through);
       rows.push(`seed ${seed}: blue's order → ${why} (${sent.length} men), ended '${op?.ended}' · red kept its stack ${stayed}, most it moved off its marks ${f2(far)} m · lost ${names(R.lost()) || 'none'} · defenders down ${R.hostiles.filter((h: any) => h.state === 'dead').length}`); }
+    } finally { FRAG.defenders = fragWasA; }
     verdict(kept === n && ended === n, 'red keeps its stack on the north door from the order to the end while blue — two men, blue alone — opens and clears through the west door', rows.join('\n    '));
     verdict(drift < 0.8, 'red stays on its marks (within 0.8 m) the whole time', `most ${f2(drift)} m`);
     verdict(ff.length === 0 && thr.length === 0, 'no teammate down to a teammate, no round fired through one', `${ff.join(' · ') || 'none'} · through ${thr.length} · ${lost} lost to defenders in ${n} runs`); }

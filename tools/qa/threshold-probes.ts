@@ -67,7 +67,7 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 /** every probe leaves the feel tables (teamfeel.ts: DOORTOOLS among them) as it found them, pass, fail or throw */
-const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
+const guarded = (fn: () => Promise<boolean>) => async () => { const T = feelTables(), keep = JSON.parse(JSON.stringify(T)); try { return await fn(); } finally { NO_PLAIN = NODEAL = YARDOUT = false; HAND = NOCAN = FRAGHOLD = HANDWAIT = null; for (const n of Object.keys(keep)) Object.assign(T[n], keep[n]); } };
 async function quiet<T>(fn: () => T | Promise<T>): Promise<T> { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } }
 const levelOfFile = (file: string): any => { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); return isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); };
 
@@ -84,13 +84,23 @@ let NOCAN: boolean | null = null, FRAGHOLD: boolean | null = null;
 /** DOORTOOLS.wordNoCan as every run staged here has it (true raises the one-order outside clear it acts with). OFF but for threshold-hold's own two runs of it, on both
  *  stands: every other line in this file was written of a word that bangs the blind pockets, and asks what that can does (the kit, who it blinds, Sam behind the door). */
 let WORDNOCAN = false;
+/** squads from the rooms (SQUADDEAL) held off for the runs staged while this is set, by the stand's own word. threshold-hold: its men hold ten seconds and more
+ *  before they are told, and on a dealt floor the room's men are their squad's and have dug in by then (digin.ts) — what the step in then meets is that drill,
+ *  not the door. Its lines were written of a room-fight floor and ask what the door tools do there. */
+let NODEAL = false;
+/** THE YARD'S GUNS OUT OF IT, for the runs staged while this is set: on a door another room watches (the depot's `a_s` on the floodlit yard — heldEntries) every
+ *  defender who is not at home in the room behind the door is taken off the floor as the order is given. threshold-four and threshold-first ask what the
+ *  THRESHOLD does with the room; with those guns in it who is left on the jambs is the yard fight's dice, and which of three seeds holds a wipe moved with any
+ *  change that shifted a walk by half a second (three flips of threshold-four in a day, none of them a door rule's). */
+let YARDOUT = false;
 /** … and the order's one wait, DOORTOOLS.thrHandWait, for the runs staged while this is set (null: the table's own) */
 let HANDWAIT: number | null = null;
 /** a start-card scenario staged as the page stages it, under a seed (the playthrough's own recipe: the page's chaos, Sam in god mode and pinned dark) */
 async function stage(scn: string, seed: number) {
   const E = SCENARIOS.find((e: any) => e.id === scn); if (!E) throw new Error(`no scenario '${scn}'`);
   Math.random = seeded(0x9137 + seed * 7919);
-  const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })); const g = W.game;
+  const sd0 = process.env.TPS_SQUADDEAL, noDeal = NODEAL; if (noDeal) process.env.TPS_SQUADDEAL = '0';
+  const W: any = await quiet(() => standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) })).finally(() => { if (!noDeal) return; if (sd0 === undefined) delete process.env.TPS_SQUADDEAL; else process.env.TPS_SQUADDEAL = sd0; }); const g = W.game;
   if (NO_PLAIN) DOORTOOLS.outsidePlain = false;   // (after the stand-up, which on a stand that names TPS_OUTSIDEPLAIN writes the rule again every time)
   if (HAND !== null) DOORTOOLS.thrHand = HAND;
   DOORTOOLS.wordNoCan = WORDNOCAN; if (WORDNOCAN) DOORTOOLS.outsidePlain = true;
@@ -146,6 +156,8 @@ interface Run {
   firstIn: Map<string, number>; inBefore: number;
   /** rounds fired by the order's men, with where the shooter stood · their men who dropped, by whom · every blast */
   shots: { t: number; who: string; outside: boolean }[]; downs: { t: number; who: string; by: string; byOutside: boolean }[]; bangs: { t: number; inside: number }[];
+  /** the order's own men lost to a defender who is NOT at home in the room behind the door (another room's, the yard's): who, by whom */
+  yard: { who: string; by: string }[];
   bangs0: number; bangs1: number; pods: { who: string; deep: number }[]; holding: number; alive: number; left: number; cells: number; doorMen: { who: string; door: string; arrived: boolean; dist: number; line: boolean; inRoom: boolean }[];
   /** man-frames the rear men spent with their eyes spare while the room was worked, of the man-frames they could have */
   spare: number; spareOf: number; secs: number;
@@ -164,7 +176,7 @@ interface Run {
   backT: number;
 }
 /** given to hold: what Sam says `after` seconds past the lead's 'holding' — a follow-up by name, the word from code, or the word's key for one frame */
-interface Hold { tell: 'step' | 'bang' | 'leave' | 'word' | 'key'; after: number }
+interface Hold { tell: 'step' | 'bang' | 'leave' | 'word' | 'key'; after: number; /** the word given a second time, this long after the first */ again?: number }
 const tOf = (r: Run, re: RegExp) => r.beats.find(b => re.test(b.what))?.t ?? NaN;
 const idx = (r: Run, re: RegExp) => r.beats.findIndex(b => re.test(b.what));
 
@@ -175,7 +187,7 @@ const idx = (r: Run, re: RegExp) => r.beats.findIndex(b => re.test(b.what));
 async function doorRun(scn: string, seed: number, door: string | null = null, cap = 90, word = NaN, hold: Hold | null = null, hot = false, unwatched = false, away = 0, frag = NaN): Promise<Run> {
   const R = await stage(scn, seed), g = R.g, D = R.D, men0: any[] = [...R.team];
   const FR: any = isNaN(frag) ? null : await import(`${ROOT}/src/game/frag.ts`); if (FR) FR.FRAG.on = true;   // (`frag`: a defender's grenade is put down — at the lead's feet that many s before Sam speaks to a held door, or at the rear-most man's that far into a hold that steps in by itself; the men get off it by their own rule — frag.ts fragFlee — and are kept from its burst)
-  const out: Run = { scn, seed, door: door ?? '', n: men0.length, why: null, beats: [], ended: '', phases: [], atOpen: [], W: 0, firstIn: new Map(), inBefore: 0, shots: [], downs: [], bangs: [], bangs0: D.bangs, bangs1: D.bangs, pods: [], doorMen: [], holding: 0, alive: 0, left: NaN, cells: NaN, spare: 0, spareOf: 0, secs: 0, toldT: NaN, tellT: NaN, tellR: null, tellBangs: NaN, tellPhase: '', endAt: [], heldBack: NaN, outBangs: NaN, tossAt: [], fragT: NaN, fragRan: [], thrEndT: NaN, backT: NaN };
+  const out: Run = { scn, seed, door: door ?? '', n: men0.length, why: null, beats: [], ended: '', phases: [], atOpen: [], W: 0, firstIn: new Map(), inBefore: 0, shots: [], downs: [], bangs: [], yard: [], bangs0: D.bangs, bangs1: D.bangs, pods: [], doorMen: [], holding: 0, alive: 0, left: NaN, cells: NaN, spare: 0, spareOf: 0, secs: 0, toldT: NaN, tellT: NaN, tellR: null, tellBangs: NaN, tellPhase: '', endAt: [], heldBack: NaN, outBangs: NaN, tossAt: [], fragT: NaN, fragRan: [], thrEndT: NaN, backT: NaN };
   let op: any = null, room: any = null; const stoodAt = new Map<any, number[]>(); let canFirst = false;
   for (const { room: rm, ent } of heldEntries(R, unwatched)) { const d = ent.door; if (door && d.def.name !== door) continue;
     // the commander: off the opening's line, on the face the room is NOT on (a ghost — he is put there, he does not walk)
@@ -183,12 +195,14 @@ async function doorRun(scn: string, seed: number, door: string | null = null, ca
     for (const [back, lat] of [[3.4, 1.6], [3.4, -1.6], [4.4, 1.2], [4.4, -1.2], [2.8, 2.2], [2.8, -2.2], [2.6, 0]]) { const p = [ent.at[0] + ent.out[0] * back + lx * lat, 0, ent.at[2] + ent.out[1] * back + lz * lat]; if (!g.col.nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([p[0], 1.1, p[2]], [ent.at[0] + ent.out[0] * 0.7, 1.1, ent.at[2] + ent.out[1] * 0.7])) { sam = p; break; } }
     if (!sam) continue; g.teleportPlayer(sam);
     const r = D.thresholdOn(d.def.name, 'all', undefined, !!hold); if (typeof r === 'string') { out.why = `${d.def.name}: ${r}`; continue; }
-    op = r; room = rm; out.door = d.def.name; out.why = null; break; }
+    op = r; room = rm; out.door = d.def.name; out.why = null;
+    if (YARDOUT) for (const h of R.hostiles) if (h.state !== 'dead' && g.fight.defs.find((x: any) => x.gd === h)?.room !== rm) killGuard(g, h, [0, 0, 1], true, 'struck');   // (in the frame the order is given: nobody has moved)
+    break; }
   if (!op) { out.why ??= 'no held room with a door the order could be given on'; return out; }
   const d = op.door, side = op.side, W = d.def.width, nav = g.col.nav; out.W = W;
   const sent: any[] = [...op.men], ids = new Map<number, any>(sent.map((m: any) => [m.char.id, m])), seen = new Set<any>(g.events), was = new Map<any, string>(R.hostiles.map((h: any) => [h, h.state]));
   const over = (p: number[]) => (offOf(d, p, side) < -0.15 && alongOf(d, p) > -0.6 && alongOf(d, p) < W + 0.6) || room.cells.has(Math.floor(p[2] / nav.cell) * nav.W + Math.floor(p[0] / nav.cell));
-  let stepT = NaN, thrT = NaN; const podded = new Set<any>();
+  let stepT = NaN, thrT = NaN, told2 = false; const podded = new Set<any>();
   // (`away`: a place for each man beyond a throw of the frame, on the squad's face, with a walk back to the lead's mark that is no tour of the floor)
   const godWas = new Map<any, boolean>(); let awayAt: number[][] | null | undefined; const awaySpots = (): number[][] | null => { const got: number[][] = [], fc = d.frameCentre, back = op.post.get(op.lead)?.pos ?? fc;
     for (let r = DOORTOOLS.throwReach + 1.5; r <= DOORTOOLS.throwReach + 5 && got.length < sent.length; r += 0.75) for (let a = 0; a < 24 && got.length < sent.length; a++) { const th = a / 24 * Math.PI * 2, p = [fc[0] + Math.sin(th) * r, 0, fc[2] + Math.cos(th) * r];
@@ -213,6 +227,7 @@ async function doorRun(scn: string, seed: number, door: string | null = null, ca
     if (hold && isNaN(out.toldT)) { const b = op.beats.find((x: any) => /^holding · on your word/.test(x.what)); if (b) out.toldT = b.t; }
     if (hold && isNaN(out.tellT) && t - out.toldT >= hold.after) { out.tellT = t; out.tellBangs = D.bangs; out.tellPhase = D.ops.includes(op) ? op.phase : '(over)';
       if (hold.tell === 'key') R.W.input.pressed.add(DOORTOOLS.blowKey); else out.tellR = hold.tell === 'word' ? D.go('all') : D.thresholdTell(hold.tell); }
+    if (hold?.again !== undefined && !isNaN(out.tellT) && !told2 && t - out.tellT >= hold.again) { told2 = true; D.go('all'); }
     { const tosses = op.beats.filter((x: any) => /^toss:/.test(x.what)); for (let k = out.tossAt.length; k < tosses.length; k++) { const who = tosses[k].what.slice(5).split(' · ')[0], m = sent.find((x: any) => x.callsign === who); out.tossAt.push({ who, near: m ? flat(m.char.pos, d.frameCentre) : NaN, lead: op.lead.callsign }); } }   // (read BEFORE the men are put back off the door below: where the frame itself left the thrower)
     const back = (m: any) => { const p = m.char.pos, post = op.mine.get(m)?.post; return (flat(p, d.frameCentre) < DOORTOOLS.throwReach && offOf(d, p, side) > 0) || (!!post && flat(p, post) <= 0.6); };
     { if (isNaN(out.thrEndT) && !isNaN(thrT) && (isNaN(frag) || !isNaN(out.fragT)) && (op.phase !== 'thr' || !D.ops.includes(op))) { out.thrEndT = t - thrT; out.offAtEnd = sent.filter((m: any) => m.state !== 'dead' && !back(m)).map((m: any) => `${m.callsign} ${flat(m.char.pos, d.frameCentre).toFixed(1)} m`); }
@@ -245,6 +260,7 @@ async function doorRun(scn: string, seed: number, door: string | null = null, ca
   out.beats = op.beats.map((b: any) => ({ t: b.t, what: b.what })); out.ended = op.ended ?? '(still under way)'; out.secs = g.time - t0; out.bangs1 = D.bangs;
   out.alive = sent.filter((m: any) => m.state !== 'dead').length; out.holding = sent.filter((m: any) => m.state !== 'dead' && /^holding (the room$|· )/.test(R.O.of(m)?.there ?? '')).length;   // (a man the entry left on one of the room's OTHER doors — DOORTOOLS.thrDoors — holds the room from there: 'holding · <door>')
   if (op.search) { out.left = op.search.left; out.cells = op.search.pts.length; }
+  for (const m of sent) { if (m.state !== 'dead') continue; const k = R.hostiles.find((h: any) => h.char.id === m.killerId); if (k && g.fight.defs.find((x: any) => x.gd === k)?.room !== room) out.yard.push({ who: m.callsign, by: k.callsign ?? 'a man' }); }
   // the room's OTHER doors (DOORTOOLS.thrDoors): the men the entry's last act put on them, watched until each is on his mark (a walker has a few metres to go)
   const onDoor = () => sent.filter((m: any) => m.state !== 'dead' && D.held.get(m)?.door && R.O.of(m) === D.held.get(m).A);
   if (onDoor().length) { await quiet(() => { for (let i = 0; i < 15 * 60 && onDoor().some((m: any) => !R.O.of(m).arrived); i++) R.step(); });
@@ -287,6 +303,12 @@ function judge(verdict: Verdict, runs: Run[], four: boolean) {
       && file.reduce((s, m) => s + (m.glass ?? 0), 0) <= GLASSPEN.stackLeastK * (r.glassJamb! + (L.glass ?? 0)); };
   verdict(ran.every(r => { const j = jambs(r); return (j.hi.length >= 1 && j.lo.length >= 1 && j.out && j.hi.some(m => m.lead) !== j.lo.some(m => m.lead)) || oneWall(r); }), 'as the leaf moves a man stands on EACH jamb — within 1.6 m of his edge of the opening, on the wall — the lead one of them, and every man of the order is outside the frame line' + (ran.some(pane) ? ' · a jamb the room reaches through glass is left bare (GLASSPEN.stackEyes): there the lead holds his own and the rest file behind him on that wall, every place in fewer such lines' : ''),
     ran.map(r => `${line(r)}: ${r.atOpen.map(m => `${m.who}${m.lead ? ' (lead)' : ''} ${m.along > r.W ? `latch +${f1(m.along - r.W)}` : m.along < 0 ? `hinge +${f1(-m.along)}` : `IN THE OPENING ${f1(m.along)}`} · ${f1(m.off)} off${pane(r) ? ` · ${m.glass ?? 0} through glass` : ''}`).join(', ')}${pane(r) ? ` · the other jamb: ${r.glassJamb} lines through glass` : ''}`).join('\n    '));
+  // A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM: every man of the order lost before any step in, each to a defender who is not at home in the room behind the
+  // door (the depot's a_s on the floodlit yard — heldEntries: 'who is left on the jambs is that fight's dice, on either stand'). The lines from the phases on
+  // ask what the THRESHOLD did with the room; such a run never had a hold to ask of. Passed over there, said here — and never the many, nor a whole floor.
+  const shotOff = (r: Run) => r.n > 0 && r.yard.length === r.n && idx(r, /^step in/) < 0 && r.ended === 'nobody left on it', kept = ran.filter(r => !shotOff(r)), off = ran.filter(shotOff);
+  if (off.length) verdict(off.length * 3 <= ran.length && new Set(kept.map(r => r.scn)).size === new Set(ran.map(r => r.scn)).size, 'A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM is passed over by the lines below (the phases, the pockets, the step in, the hand-over): every man of the order lost before any step in, each to a defender who is not at home in the room behind the door — a door another room watches, where who is left on the jambs is that fight\'s dice. Never more than one run in three, and never every run of a floor',
+    off.map(r => `${line(r)}: ${r.yard.map(y => `${y.who} by ${y.by}`).join(', ')} · ended '${r.ended}' after ${f1(r.secs)} s`).join('\n    '));
   // the phases, in order
   const firstCan = (r: Run) => DOORTOOLS.thrFirst > 0 && r.beats.some(b => /^threshold ·.* · a can first$/.test(b.what));
   const ordered = (r: Run) => { const seq = ['^stacked$', '^threshold ·', '^held ', '^step in', '^cross:', '^handover$', '^searched ·', '^in$'].map(s => idx(r, new RegExp(s))); const toss = idx(r, /^toss:/), bang = idx(r, /^bang ·/), none = idx(r, /^no bang ·/);
@@ -298,8 +320,8 @@ function judge(verdict: Verdict, runs: Run[], four: boolean) {
         && later.every(k => k > seq[2] && k < seq[3] && r.beats.slice(k, seq[3]).some(b => /^bang ·/.test(b.what))) && (!DOORTOOLS.thrFirstOnly || !later.length)
         && /^stack,(kick,)?pocket,fuse,pocket,thr,pocket,(fuse,pocket,)*(wait,)?enter$/.test(r.phases.join(',')); }
     return mono && can && /^stack,(kick,)?thr,pocket,(fuse,pocket,)*(wait,)?enter$/.test(r.phases.join(',')); };
-  verdict(ran.every(ordered), 'the phases come in order: stacked → threshold (the jambs held) → held → the pockets (toss → bang, or \'no bang\' said why) → step in → first man over the line → hand-over → searched → in' + (ran.some(firstCan) ? ' · on a floor already loud a can goes in first (thrFirst): threshold → toss → bang → out onto the diagonals → held, and on as written' : ''),
-    ran.map(r => `${line(r)} [${r.phases.join(' ')}]: ${story(r)}`).join('\n    '));
+  verdict(kept.every(ordered), 'the phases come in order: stacked → threshold (the jambs held) → held → the pockets (toss → bang, or \'no bang\' said why) → step in → first man over the line → hand-over → searched → in' + (ran.some(firstCan) ? ' · on a floor already loud a can goes in first (thrFirst): threshold → toss → bang → out onto the diagonals → held, and on as written' : ''),
+    kept.map(r => `${line(r)} [${r.phases.join(' ')}]: ${story(r)}`).join('\n    '));
   // nobody in before the step in — by the probe's own watch of every man's feet
   verdict(ran.every(r => r.inBefore === 0 && [...r.firstIn.values()].every(t => t >= tOf(r, /^step in/))), 'NOBODY is over the frame line, nor on the room\'s floor, on any frame before \'step in\' (every man of the order watched every frame — not the module\'s own beats)',
     ran.map(r => `${line(r)}: ${r.inBefore} man-frames inside before the step in at ${f1(tOf(r, /^step in/) - r.beats[0].t)} s · first feet inside ${[...r.firstIn].map(([w, t]) => `${w} ${f1(t - r.beats[0].t)} s`).join(', ') || 'nobody'} · worked from outside for ${f1(tOf(r, /^step in/) - tOf(r, /^threshold ·/))} s`).join('\n    '));
@@ -308,17 +330,17 @@ function judge(verdict: Verdict, runs: Run[], four: boolean) {
   verdict(ran.some(r => outside(r).rounds > 0 && outside(r).contact > 0) && ran.every(r => outside(r).in === 0), 'the room\'s men are ENGAGED FROM OUTSIDE: in at least one run a man at the door has one of theirs in his sight and rounds go in through the opening before anybody steps in — and no round before the step in is fired from inside, in any run',
     ran.map(r => { const o = outside(r); return `${line(r)}: ${o.contact} at the door with a man in sight · ${o.rounds} rounds from outside · ${o.down} of theirs down from out there`; }).join('\n    '));
   // the blind pockets
-  const banged = ran.filter(r => idx(r, /^toss:/) >= 0);
+  const banged = kept.filter(r => idx(r, /^toss:/) >= 0);
   const pocket = (r: Run) => { const ts = tOf(r, /^step in/), first = r.beats.find(b => /^cross:/.test(b.what))?.what.slice(6), throwers = r.beats.filter(b => /^toss:/.test(b.what)).map(b => b.what.slice(5).split(' · ')[0]);
     return { throwers, first, ok: r.bangs.length === throwers.length && r.bangs.every(b => b.inside > 0.5 && b.t < ts) && r.bangs0 - r.bangs1 === throwers.length && (stepped(r) < 2 || throwers.every(w => w !== first)) && throwers.length <= DOORTOOLS.thrBangs }; };
-  verdict(banged.length > 0 && banged.every(r => pocket(r).ok) && ran.every(r => idx(r, /^toss:/) >= 0 || idx(r, /^no bang ·/) >= 0), 'THE BLIND POCKETS ARE BANGED: a can from the kit\'s own count, thrown by a man who is not the first man in (two or more stepping in), bursts inside the room before anybody crosses — in at least one run; a run with no can says why',
-    ran.map(r => { const p = pocket(r), lit = r.beats.filter(b => /^pocket banged/.test(b.what)).map(b => b.what.replace('pocket banged · ', '')).join('; '); return `${line(r)}: ${p.throwers.length ? `${p.throwers.join(', ')} threw · ${r.bangs.map(b => `burst ${f1(b.inside)} m inside`).join(', ')} · ${lit || 'no floor model'} · bangs ${r.bangs0} → ${r.bangs1} · first man in ${p.first}` : r.beats.find(b => /^no bang/.test(b.what))?.what}`; }).join('\n    '));
+  verdict(banged.length > 0 && banged.every(r => pocket(r).ok) && kept.every(r => idx(r, /^toss:/) >= 0 || idx(r, /^no bang ·/) >= 0), 'THE BLIND POCKETS ARE BANGED: a can from the kit\'s own count, thrown by a man who is not the first man in (two or more stepping in), bursts inside the room before anybody crosses — in at least one run; a run with no can says why',
+    kept.map(r => { const p = pocket(r), lit = r.beats.filter(b => /^pocket banged/.test(b.what)).map(b => b.what.replace('pocket banged · ', '')).join('; '); return `${line(r)}: ${p.throwers.length ? `${p.throwers.join(', ')} threw · ${r.bangs.map(b => `burst ${f1(b.inside)} m inside`).join(', ')} · ${lit || 'no floor model'} · bangs ${r.bangs0} → ${r.bangs1} · first man in ${p.first}` : r.beats.find(b => /^no bang/.test(b.what))?.what}`; }).join('\n    '));
   // the shallow step
-  verdict(ran.every(r => r.pods.length > 0 && r.pods.every(p => p.deep > 0.2 && p.deep <= 2.5 + 1e-6) && (idx(r, /^toss:/) < 0 || tOf(r, /^cross:/) >= Math.max(...r.bangs.map(b => b.t)) + DOORTOOLS.afterBang - 0.05)), 'THE STEP IN IS SHALLOW: every point a man is sent to is inside the room and 2.5 m or less from the frame line (the search may send a man on to dead floor after) — and behind a can nobody crosses before the bang\'s own count',
-    ran.map(r => `${line(r)}: ${r.pods.map(p => `${p.who} ${f1(p.deep)} m in`).join(', ')}${r.bangs.length ? ` · first over the line ${f1(tOf(r, /^cross:/) - Math.max(...r.bangs.map(b => b.t)))} s after the last burst` : ''}`).join('\n    '));
+  verdict(kept.every(r => r.pods.length > 0 && r.pods.every(p => p.deep > 0.2 && p.deep <= 2.5 + 1e-6) && (idx(r, /^toss:/) < 0 || tOf(r, /^cross:/) >= Math.max(...r.bangs.map(b => b.t)) + DOORTOOLS.afterBang - 0.05)), 'THE STEP IN IS SHALLOW: every point a man is sent to is inside the room and 2.5 m or less from the frame line (the search may send a man on to dead floor after) — and behind a can nobody crosses before the bang\'s own count',
+    kept.map(r => `${line(r)}: ${r.pods.map(p => `${p.who} ${f1(p.deep)} m in`).join(', ')}${r.bangs.length ? ` · first over the line ${f1(tOf(r, /^cross:/) - Math.max(...r.bangs.map(b => b.t)))} s after the last burst` : ''}`).join('\n    '));
   // the hand-over
-  verdict(ran.every(r => r.ended === 'in' && r.holding === r.alive && (isNaN(r.cells) || idx(r, /^searched ·/) > idx(r, /^handover$/))), 'THE HAND-OVER: from the step in it is the entry\'s own room clear — the floor looked over by its search, the order ended \'in\', every man of it still up left holding the room',
-    ran.map(r => `${line(r)}: ended '${r.ended}' after ${f1(r.secs)} s · ${r.holding} of ${r.alive} up holding the room (${r.n - r.alive} lost) · ${isNaN(r.cells) ? 'no floor model' : `${r.left} of ${r.cells} cells left unseen`} · ${r.beats.find(b => /^held /.test(b.what))?.what}`).join('\n    '));
+  verdict(kept.every(r => r.ended === 'in' && r.holding === r.alive && (isNaN(r.cells) || idx(r, /^searched ·/) > idx(r, /^handover$/))), 'THE HAND-OVER: from the step in it is the entry\'s own room clear — the floor looked over by its search, the order ended \'in\', every man of it still up left holding the room',
+    kept.map(r => `${line(r)}: ended '${r.ended}' after ${f1(r.secs)} s · ${r.holding} of ${r.alive} up holding the room (${r.n - r.alive} lost) · ${isNaN(r.cells) ? 'no floor model' : `${r.left} of ${r.cells} cells left unseen`} · ${r.beats.find(b => /^held /.test(b.what))?.what}`).join('\n    '));
   if (four) verdict(ran.every(r => r.atOpen.length - 2 >= 1 && r.spareOf > 0 && r.spare >= 0.8 * r.spareOf), 'the squad of four: the men on neither jamb keep the squad\'s back — their eyes spare for the way a man could come at it — while the room is worked (until one turns in to throw, and the step in)',
     ran.map(r => `${line(r)}: ${r.atOpen.length - 2} behind the jamb men · eyes spare ${r.spare} of ${r.spareOf} man-frames`).join('\n    '));
 }
@@ -338,6 +360,7 @@ async function worded(verdict: Verdict, scn: string) {
 }
 export const thresholdFour = guarded(async () => {
   const { verdict, done } = family('threshold-four: the squad of four works a held room from the threshold — the depot and the office');
+  YARDOUT = true;
   const runs: Run[] = []; for (const scn of ['depot-four', 'room-clear-four']) for (const seed of [1, 2, 3]) runs.push(await doorRun(scn, seed));
   judge(verdict, runs, true);
   await worded(verdict, 'depot-four');
@@ -350,6 +373,7 @@ export const thresholdFirst = guarded(async () => {
   const scns = ['records-pair', 'room-clear-four', 'depot-four'], i = (r: Run, re: RegExp) => idx(r, re), cans = (r: Run) => r.beats.filter(b => /^toss:/.test(b.what)).length;
   const POCKET = ['hall-four', 'block-four'];
   const only0 = DOORTOOLS.thrFirstOnly; DOORTOOLS.thrFirstOnly = true;
+  YARDOUT = true;
   const hot: Run[] = []; for (const scn of scns) hot.push(await doorRun(scn, 1, null, 90, NaN, null, true));
   const first = (r: Run) => !r.why && / · a can first$/.test(r.beats.find(b => /^threshold ·/.test(b.what))?.what ?? '');
   verdict(hot.every(first), 'the floor hot, the stage says so as the leaf moves: \'threshold · … · a can first\'', hot.map(r => `${line(r)}: ${r.why ?? r.beats.find(b => /^threshold ·/.test(b.what))?.what}`).join('\n    '));
@@ -406,7 +430,8 @@ export const thresholdFirst = guarded(async () => {
 
 /** THE OTHER ORDER: work it from the threshold and hold until told — and everything Sam can then say */
 export const thresholdHold = guarded(async () => {
-  const { verdict, done } = family('threshold-hold: worked from the threshold and HELD until told — the pair (the records office) and the four (the depot) — then step in / bang and step in / leave it / the word');
+  const { verdict, done } = family('threshold-hold: worked from the threshold and HELD until told — the pair (the records office) and the four (the depot) — then step in / bang and step in / leave it / the word · room-fight floors (squads from the rooms held off inside these runs: a dealt floor has dug in by the time a hold is told)');
+  NODEAL = true;
   const AFTER = 10, scns = ['records-pair', 'depot-four'], tells: Hold['tell'][] = ['step', 'bang', 'leave', 'word', 'key'];
   // (THE WORD as it was — a can for the blind pockets — is asked with DOORTOOLS.wordNoCan out of the way; the rule has its own two runs and its own line below.
   //  WORDNOCAN_BREAK=1: those two are staged with the rule off too, and the line must fail on what it finds)
@@ -791,10 +816,34 @@ export const thresholdGrenade = guarded(async () => {
   HAND = NOCAN = null;
   verdict(thrown.every(r => !r.why && has(r, WAITS) && cans(r) >= 1 && r.tossAt[0].near >= reach - 0.05 && !has(r, NONE)),
     `AS IT IS, with the rule off: the wait runs out with nobody at the door and the can is thrown from ${reach} m or more away`, thrown.map(tellC).join('\n    '));
-  verdict(kept.every(r => !r.why && has(r, WAITS) && has(r, NONE) && cans(r) === 0 && r.bangs.length === 0 && r.bangs1 === r.bangs0 && r.ended === 'in'),
-    "WITH THE RULE THE CAN STAYS IN THE KIT: 'no bang · nobody at the door' is said, nothing is thrown, the kit's count is what it was, and the order still ends 'in'", kept.map(tellC).join('\n    '));
+  verdict(kept.every(r => !r.why && has(r, WAITS) && has(r, NONE) && cans(r) === 0 && r.bangs.length === 0 && r.bangs1 === r.bangs0 && tOf(r, /^step in/) >= tOf(r, NONE)),
+    "WITH THE RULE THE CAN STAYS IN THE KIT: 'no bang · nobody at the door' is said, nothing is thrown, the kit's count is what it was, and the order goes on to its step in (how an entry with no can then ends is the room fight's, and printed: a pair down to one man steps in alone)", kept.map(tellC).join('\n    '));
   verdict(backOn.every((r, k) => same(r, backOff[k]) && cans(r) >= 1 && !has(r, NONE)),
     'A HAND BACK IN TIME, the rule changes nothing: the can waits, is thrown from the door, and the run plays beat for beat as with the rule off', backOn.map((r, k) => `${line(r)}: ${r.beats.length} beats with the rule, ${backOff[k].beats.length} without · ${cans(r)} can(s)`).join('\n    '));
+  // ---- THE WORD where it spends no can (DOORTOOLS.wordNoCan, as the page has it): it steps the men in — and with thrFragHold it waits for the men who ran,
+  //      as the can's stage does. The first word is owed; the word again (outside the tap window) pays it at once.
+  { const word: Hold = { tell: 'word', after: 2 }, AGAIN = 1.5, STEPIN = /^step in/, NOTW = /^on without .* · not waited for$/;
+    const wOff: Run[] = [], wOn: Run[] = [], wLate: Run[] = [], wAgain: Run[] = [], qOff: Run[] = [], qOn: Run[] = [];
+    WORDNOCAN = true; HAND = true;
+    try { for (const [scn, door] of DOORS) {
+      FRAGHOLD = false; qOff.push(await doorRun(scn, 1, door, 120, NaN, word)); wOff.push(await doorRun(scn, 1, door, 120, NaN, word, false, false, 0, LEAD));
+      FRAGHOLD = !FB; qOn.push(await doorRun(scn, 1, door, 120, NaN, word)); wOn.push(await doorRun(scn, 1, door, 120, NaN, word, false, false, 0, LEAD));
+      wAgain.push(await doorRun(scn, 1, door, 120, NaN, { ...word, again: AGAIN }, false, false, 0, LEAD));
+      HANDWAIT = SHORT; wLate.push(await doorRun(scn, 1, door, 120, NaN, word, false, false, 0, LEAD)); HANDWAIT = null; K.thrHandWait = wait; } }
+    finally { WORDNOCAN = false; FRAGHOLD = HAND = null; HANDWAIT = null; K.thrHandWait = wait; }
+    const tellW = (r: Run) => `step in ${f1(tOf(r, STEPIN) - r.tellT)} s after the word · ${tellF(r)}`;
+    verdict(wOff.every(r => !r.why && r.fragRan.length >= 1 && !has(r, WAIT) && cans(r) === 0 && tOf(r, STEPIN) - r.tellT < 0.1),
+      "THE WORD THAT SPENDS NO CAN, the grenade rule off: a grenade lands by the stack, the men run, Sam gives the word — and 'step in' is said on that frame, whoever is still running", wOff.map(tellW).join('\n    '));
+    verdict(wOn.every(r => !r.why && r.fragRan.length >= 1 && has(r, RAN) && has(r, WAIT) && has(r, BACK) && !has(r, SPENT) && tOf(r, STEPIN) >= tOf(r, BACK) && cans(r) === 0 && !!r.offAtStep && r.offAtStep.length === 0),
+      "… WITH THE RULE THE WORD WAITS FOR THEM: 'the door waits' is said, nobody steps in until 'the men are back', no can is spent, and 'step in' is said with every living man at the door or on his mark (how the entry with no can then ends is the room fight's, and printed)", wOn.map(tellW).join('\n    '));
+    verdict(wLate.every(r => !r.why && has(r, WAIT) && has(r, SPENT) && tOf(r, SPENT) - tOf(r, WAIT) >= SHORT - 0.1 && tOf(r, SPENT) - tOf(r, WAIT) < SHORT + 0.3 && tOf(r, STEPIN) >= tOf(r, SPENT) && tOf(r, STEPIN) - tOf(r, SPENT) < 0.1 && cans(r) === 0),
+      `… NO LONGER THAN THE ORDER'S ONE WAIT (thrHandWait, cut to ${SHORT} s for this line): 'on without … · the order's wait is spent', and they step in on that frame`, wLate.map(r => `waited ${(tOf(r, SPENT) - tOf(r, WAIT)).toFixed(2)} s · ${tellW(r)}`).join('\n    '));
+    // (a door whose men are back before the second word comes has nothing left to send: it stepped in when they were back, as the line above)
+    const early = (r: Run) => tOf(r, BACK) < r.tellT + AGAIN, sent = (r: Run) => has(r, NOTW) && !has(r, SPENT) && Math.abs(tOf(r, STEPIN) - (r.tellT + AGAIN)) < 0.1 && !(tOf(r, BACK) < tOf(r, STEPIN));
+    verdict(wAgain.every(r => !r.why && has(r, WAIT) && cans(r) === 0 && (early(r) ? tOf(r, STEPIN) >= tOf(r, BACK) && !has(r, NOTW) : sent(r))) && wAgain.some(r => !early(r)),
+      `… AND THE WORD AGAIN SENDS THEM AT ONCE (${AGAIN} s after the first): 'on without … · not waited for', 'step in' on that frame, before anybody is called back — on one of these doors at least; a door whose men were back before the second word stepped in then (which is which: printed)`, wAgain.map(r => `${early(r) ? 'BACK BEFORE THE SECOND WORD' : 'SENT BY THE SECOND WORD'} · ${tellW(r)}`).join('\n    '));
+    verdict(qOn.every((r, k) => same(r, qOff[k]) && !has(r, RAN)),
+      'NO GRENADE, the word plays beat for beat, to the frame, as with the grenade rule off', qOn.map((r, k) => `${line(r)}: ${r.beats.length} beats with the rule, ${qOff[k].beats.length} without`).join('\n    ')); }
   { const J = await import(`${ROOT}/src/game/journal.ts`), R = await stage('records-pair', 1), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.g)));
     DOORTOOLS.thrNoCan = DOORTOOLS.thrFragHold = true; const old = snap(); delete old.tables.DOORTOOLS.thrNoCan; delete old.tables.DOORTOOLS.thrFragHold; J.applyKnobs(R.g, old); const before = [DOORTOOLS.thrNoCan, DOORTOOLS.thrFragHold];
     DOORTOOLS.thrNoCan = DOORTOOLS.thrFragHold = false; const own = snap(); own.tables.DOORTOOLS.thrNoCan = own.tables.DOORTOOLS.thrFragHold = true; J.applyKnobs(R.g, own); const carried = [DOORTOOLS.thrNoCan, DOORTOOLS.thrFragHold];

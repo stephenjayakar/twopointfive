@@ -307,7 +307,7 @@ export const registryLevel = guarded(async () => {
   verdict(errs.length === 0, 'the file validates', errs.length ? errs.slice(0, 6).join(' · ') : `${data.boxes.length} boxes · ${data.doors.length} doors · ${data.props.length} props · ${data.lights.length} light + ${data.switchables.length} switchables · scenarios ${Object.keys(data.scenarios ?? {}).join(', ')}`);
   const gen = buildRegistry(); gen.level.scenarios = gen.scenarios; { const DS = await import('../../src/scene/doorSize.ts'); DS.fitDoors(gen.level.doors); DS.fitWaysOut(gen.level, (gen.scenarios as any)?.quiet); }   // (as tools/levels/export.ts writes it: the leaves and the ways out fitted to the real doors)
   { const FL = await import('../levels/flatLayers.ts'), LV = await import('../../src/scene/lived.ts'); FL.layGeneratedFloor(gen.level.boxes, gen.groups, LV.isLived, BoxFlag); }   // (… and its floor swept into order, as the export sweeps it before it writes: flatLayers.ts)
-  const diffs: string[] = []; const n = structuralDiff(gen.level, loadLevel(data, { lived: true }), diffs);   // (the generator builds the lived-in rooms' furniture: src/scene/lived.ts)
+  const diffs: string[] = []; const n = structuralDiff(gen.level, loadLevel(data, { lived: true, dressing: false }), diffs);   // (the generator builds the lived-in rooms' furniture: src/scene/lived.ts; the wrecking dressing is the loader's, added after it, so it is left out on every stand)
   verdict(n === 0, 'the file is the generator\'s level (tools/levels/registry.ts build → the same Level, field for field)', n ? `${n} diffs: ${diffs.slice(0, 4).join(' · ')} — bun run tools/levels/export.ts registry` : '0 diffs');
   const lint = lintLevel(data), bad = lint.findings.filter((f: any) => f.severity !== 'info');
   verdict(lint.errors === 0 && lint.warnings === 0, 'the level lint is clean (no error, no warning)', bad.length ? bad.slice(0, 5).map((f: any) => `${f.severity}: ${f.message}`).join(' · ') : `${lint.infos} notes in all`);
@@ -406,12 +406,12 @@ const WALK: { to: Vec3; words: string }[] = [
   { to: AT.sorting, words: 'sorting room' }, { to: [32.4, 0, 17.4], words: 'sorting room, its middle' }, { to: AT.sortingW, words: 'stacks' }, { to: AT.stacksN, words: 'stacks, north end' }, { to: AT.hall, words: 'hall (by the stacks\' hall door)' }, { to: AT.post, words: 'gallery' }, { to: [7.6, 0, 14.7], words: 'lobby' },
 ];
 const INSIDE_DOORS = ['reading', 'copy', 'copy_hall', 'office', 'office_side', 'stacks_w', 'stacks_hall', 'sorting'];
-async function walk(n: 2 | 4) {
+export async function walk(n: 2 | 4, each?: (g: any, men: any[]) => void) {   // (`each`: asked every frame of the walk, before it is counted — backturn-check.ts)
   const { g, men, P } = await team(n); for (const d of g.doors.list) d.locked = false;   // (the locks are off for the walk: what they do to a line is the tally's safe runs, with the pair behind Sam)
   const sam = new Set<string>(), theirs = men.map(() => new Set<string>()), opened = new Set<string>(), last = men.map((m: any) => [...m.char.pos]), still = men.map(() => 0);
   const back = n > 2 ? 6.5 : 4.5, close = n > 2 ? 5.0 : 3.2;   // the file's length behind Sam: the pair's rear man follows ~3 m back, the four's ~4.5 m
   let frames = 0, stuck = 0, closest = 9, jam = 0, walked = 0, far = 0, short = ''; let prev = [...P.pos];
-  const tick = () => { frames++; sam.add(spaceOf(P.pos)); walked += flat(P.pos, prev); prev = [...P.pos];
+  const tick = () => { each?.(g, men); frames++; sam.add(spaceOf(P.pos)); walked += flat(P.pos, prev); prev = [...P.pos];
     men.forEach((m: any, i: number) => { theirs[i].add(spaceOf(m.char.pos)); const d = flat(m.char.pos, P.pos); far = Math.max(far, d);
       if (flat(m.char.pos, last[i]) > 0.004) still[i] = 0; else if (d > back && ++still[i] > 60) stuck++; last[i] = [...m.char.pos]; });   // (a man farther behind Sam than the file's own length who has not moved for a second is stuck, not waiting)
     for (let i = 0; i < men.length; i++) for (let j = i + 1; j < men.length; j++) { const d = flat(men[i].char.pos, men[j].char.pos); closest = Math.min(closest, d); if (d < 0.5) jam++; }

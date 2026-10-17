@@ -55,6 +55,12 @@ export const DOORMANNERS = {
    *  the last `ownEndM` metres of a walk that ENDS by a door (a stack's second rank stands further than 2.5 m from the frame's middle: the man bound for the
    *  wall place beyond it shoved the rear man off his mark, onto his own, and the two then stood on each other's). Off = the rule as it was */
   ownPlace: true, ownM: 0.45, ownEndM: 2.5,
+  /** AN OPEN LEAF ACROSS HIS WALK (the squad; doors.ts does it, game.ts hands it this row as `DoorContact.round`): a door pulled open toward a corridor stands
+   *  across it, and a man whose walk goes through where the leaf stands herded it round to its frame with his body — onto the man ahead of him, who had to pull
+   *  it again (the registry's copy room with four behind Sam: ten seconds on a door Sam had just opened, the leaf pressed back on the man re-opening it by the
+   *  three behind). With this the back of a leaf standing open clear of its doorway is a wall to a teammate at a walk, and he goes along it and round its free
+   *  end; where there is no way round he has it out of his way as before (`ROUND_SECS` pressed on it). Off = the leaf turns toward shut under him, as it was */
+  leafRound: true,
   /** the swing: this far past the leaf's tip is still 'where it sweeps' */
   sweep: 0.2,
   /** STAND, the LANE of a door standing open (`laneAjar` rad or more, or off its hinges): the floor either face of its frame that a man beyond it looks — and
@@ -213,6 +219,10 @@ function behindLeaf(d: Door, along: number, perp: number): boolean {
   const s = -(along * lz - perp * lx) / den, t = -(along * cz - perp * cx) / den;
   return s > 0 && s < 1 && t > 0 && t < 1;
 }
+/** `leafRound`: does this man go round a leaf standing open across his walk (game.ts asks it for his body on the doors: DoorContact.round) — on the move
+ *  only (`ROUND_PACE` m/s): a man stood by a leaf, on his mark, is not walked along it */
+export const ROUND_PACE = 0.5;
+export function roundsLeaves(gd: Guard): boolean { return DOORMANNERS.on && DOORMANNERS.leafRound && gd.team === 'operative'; }
 /** STAND: is the file's switch on (orders.ts asks before it looks at who stands by whom) */
 export function doorwayFile(): boolean { return DOORMANNERS.on && DOORMANNERS.stand; }
 

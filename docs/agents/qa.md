@@ -100,6 +100,16 @@ card is live (rejects if the boot dies) — `await window.__ready` is the one li
 poll for `__engine && __runFrames` stay correct. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
 first-frame GPU) and one `boot … ms to interactive · …` console line prints at GPU-ready. Typical script: navigate with `?paused&quality=medium`, `await __ready`, wait for `#view.clientWidth > 0`
 (a hidden pane gives a 0×0 canvas, rAF stops and timers throttle), `__menu.close()`, then step with `__runFrames`.
+**`__runFrames` draws every frame it steps and does not wait for the GPU** (only the last of a burst is put on the canvas). On a GPU slower than the script the
+frames pile up behind it. Measured 10-17 on the software adapter, 1280×720, Very low, `?roomclear`: a drawn frame is about 30 s of GPU (the first one out from
+under the menu 3½ min) and a burst of 60 is queued in under a second, so three bursts leave an hour and a half of drawing queued, and a later call does not come
+back until the browser takes more (a page check's fourth `__runFrames(60)` not back inside four minutes, no error anywhere: it reads as a hang in the game and is
+not one; that it is the browser holding the call is read off the numbers, not seen). So on that adapter a tool that only needs the GAME to have run steps with the
+draw stubbed — `const e = __engine, real = e.render; e.render = () => { e.world.upload(); }; try { __runFrames(n); } finally { e.render = real; }`, the stub packing
+the world as replays.md's 'an undrawn step must pack the world' says, thirty-odd page tools do — and draws the frames it wants to look at one at a time, each waited
+for (`__runFrames(1); await __engine.device.queue.onSubmittedWorkDone()`). Same page, same day: eight stubbed bursts of 60 back in 0.2–0.5 s each, the game's clock
+eight seconds on, then one drawn frame through the GPU in 32 s. What lives in the draw stands still while it is stubbed: the smoke solver, the GPU particles, the
+light meter's answers (and its asks queue up from the first stubbed ticks — draw a frame or two before reading it; read off render/probe.ts `put`, not measured).
 The start card has an idle **attract mode** (`src/game/attract.ts`, `__attract`): 6 s without input and the world starts running behind the card with the
 camera cutting round the level — never under `?paused`, `__testVisible`, or once any of `__runFrames/__mouse/__click` has been called, but a plain page left
 on the start card WILL start it (any key / click / mouse move puts the still view and a fresh encounter back; `__attract.start()/.stop()` by hand).

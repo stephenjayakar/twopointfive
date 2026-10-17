@@ -26,7 +26,7 @@
 //     dialogue: dialogue-exchange dialogue-heard dialogue-intel dialogue-lint dialogue-none dialogue-radio dialogue-sawhurt dialogue-seed dialogue-shapes
 //     director: director-breach-digest director-lint director-scheduler director-showcase-scan
 //     hands: hands-body hands-door hands-team hands-off hands-harness
-//     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-defuse work-off work-harness
+//     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
@@ -2418,6 +2418,7 @@ if (on('work-objective', 'workthings', 'all')) await run('work-objective', async
 if (on('work-edges', 'workthings', 'all')) await run('work-edges', async () => (await import('./workthings-probes.ts')).workEdges());   // the far side of its wall is not the breaker; Sam at it is Sam; a man stopped short of it does not work it
 if (on('work-posted', 'workthings', 'all')) await run('work-posted', async () => (await import('./workthings-probes.ts')).workPosted());   // the mains go: a man held on his post is not handed the errand and does not say he is going; a man who can walk still is
 if (on('work-face', 'workthings', 'all')) await run('work-face', async () => (await import('./workthings-probes.ts')).workFace());   // the other side's breaker errand goes to the panel's own face and re-arms it only with a line to it (the relay station: it was through the compound wall, or never)
+if (on('work-held', 'workthings', 'all')) await run('work-held', async () => (await import('./workthings-probes.ts')).workHeld());   // fire held, an unaware defender in sight of the panel: the man sent still throws the breaker, his partner's gun on that man
 if (on('work-defuse', 'workthings', 'all')) await run('work-defuse', async () => (await import('./workthings-probes.ts')).workDefuse());   // a charge the run ended on (Sam down) is not called safe by the man at it
 if (on('work-off', 'workthings', 'all')) await run('work-off', async () => (await import('./workthings-probes.ts')).workOff());   // the switch off: the floor's menu, no such order
 if (on('work-harness', 'workthings', 'all')) await run('work-harness', async () => (await import('./workthings-probes.ts')).workHarness());   // the two stands, the page switch, the knob table
@@ -2563,6 +2564,8 @@ if (on('orders-edges', 'squadorders', 'all')) await run('orders-edges', async ()
 if (on('filespread', 'squadorders', 'all')) await run('filespread', async () => (await import('./filespread-check.ts')).filespreadCheck());
 // a rear man with no door behind him watches a way in, not a wall (cover.ts COVER.rearRead; rearread-check.ts; REARREAD_BREAK=1 must fail)
 if (on('rearread', 'cover', 'wallcharge', 'all')) await run('rearread', async () => (await import('./rearread-check.ts')).rearreadCheck());
+// a man walking backwards on the door behind, let go of, keeps his way while he turns (cover.ts COVER.backTurn; backturn-check.ts; BACKTURN_BREAK=1 must fail)
+if (on('backturn', 'cover', 'all')) await run('backturn', async () => (await import('./backturn-check.ts')).backturnCheck());
 // ---------------------------------------------------------------- the command menu as a press menu + who an order goes to, with four in two pairs (orderui-probes.ts; game/orders.ts under NIGHTBREACH.squad = 4): 'orderui' = the family
 if (on('orderui-four', 'orderui', 'all')) await run('orderui-four', async () => (await import('./orderui-probes.ts')).orderuiFour());
 if (on('orderui-hud', 'orderui', 'all')) await run('orderui-hud', async () => (await import('./orderui-probes.ts')).orderuiHud());

@@ -15,7 +15,7 @@
 //   a lost lead   a gated order held stacked whose lead is shot: the next man walks to that jamb before the gate's doors open
 //   the panel     rescue.press() (the panel's F) blows a set charge as the key does; two men sent to the side door's marks one at a time get one each
 import { standUp, ROOT } from './headless.ts';
-import { rig, family, staged, up, dist, f1, DT } from './rescue-probes.ts';
+import { rig, family, staged, paneStops, up, dist, f1, DT } from './rescue-probes.ts';
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
 const { FIGHT_SKILL } = await import(`${ROOT}/src/game/roomfight.ts`);
@@ -94,7 +94,9 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
       'it is the menu\'s order and none of F\'s (nothing of F\'s entry in the scenario\'s log) — and the room is taken with both hostages alive', `'${R.summary().slice(0, 170)}'`);
     R.stop(); }
   // ---- the captor's clock under that can, the room fight's daze at its default
-  { const { T, R, g, DTL, O, fd } = await doorRig(33, { clock: true, resolveSpread: 0 }); const cap = R.hostiles[0];
+  // (this one scene with rounds stopping in glass: where a pane passes a round, a teammate shoots the captor through the office's glazing beside the door as the
+  // boot lands, before the can goes off — the room is taken all the same, and there is no dazzled captor left to read a clock on. rescue-probes.ts paneStops)
+  await paneStops(async () => { const { T, R, g, DTL, O, fd } = await doorRig(33, { clock: true, resolveSpread: 0 }); const cap = R.hostiles[0];
     const daze = JSON.stringify(FIGHT_SKILL.hostile.daze);
     T.secs(2); const r0 = R.resolve; T.secs(1); const rising = R.resolve - r0;
     const w = O.give('bangClear', O.targetAt(fd.frameCentre), 'all'); const op = DTL.ops[0];
@@ -107,7 +109,7 @@ export const rescueDoorTools = staged(['DOORWAY.oneWay', 'DOORTOOLS.testDoor', '
     F.verdict(w === null && daze === '[1,2]' && rising > 0.01 && byCan && frames >= 20 && hi - lo < 1e-9, 'the captor dazzled by the door tools\' can (the room fight\'s daze at its default): his clock was running, and stands still for every frame he is dazzled',
       `FIGHT_SKILL.hostile.daze ${daze} · resolve +${rising.toFixed(3)} in the second before the order · dazzled ${(frames * DT).toFixed(1)} s: resolve ${f1(lo * 100)} % → ${f1(hi * 100)} % (moved ${(hi - lo).toExponential(1)}) · ${cap.state === 'dead' ? 'he was shot before it wore off' : `a second after it wore off: ${before.toFixed(3)} → ${after.toFixed(3)}`}`);
     F.verdict(cap.state === 'dead' || after > before, 'and it runs again once he can see (or he did not live to)', `captor ${cap.state} · step ${R.clockStep} · hostages ${up(R.hostages)}/2`);
-    R.stop(); }
+    R.stop(); });
   // ---- X, 5, 3: a charge from the menu on the corridor door; F is its trigger
   { const { T, R, g, DTL, O, fd } = await doorRig(34); const t0 = g.time;
     pick(T.W, () => T.step(), fd.frameCentre, 5, 3); const op = DTL.ops[0];

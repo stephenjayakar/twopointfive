@@ -25,6 +25,7 @@ const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { BODY_LIGHT } = await import(`${ROOT}/src/game/guards.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
+const { WALLPEN } = await import(`${ROOT}/src/game/wallpen.ts`);
 
 const DT = 1 / 60;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -138,6 +139,10 @@ export async function enemysquadsContact(): Promise<boolean> {
   const F = family('enemysquads-contact: the team met in the mess — Alpha calls it, Bravo sends men, Charlie locks down; off: nobody says anything');
   for (const on of [true, false]) {
     const R = await rig('block-squads.json', 2, on);
+    // (rounds through thin walls, wallpen.ts, on as the page opens: a teammate's rounds at Alpha's man by the mess's far partition go on through it and the
+    // comms room's, a man of Charlie drops in his own room before its word, and Charlie is in CONTACT — the squads' rule reading its man down, not the answer
+    // to a call on the net these lines ask. Held off for this staging; what a round through a wall does is `probes.ts wallpen`'s to ask)
+    const thin0 = WALLPEN.on; WALLPEN.on = false;
     try {
       const g = R.g; R.step(1);
       g.teleportPlayer(messSpot(R)); g.player.visibility = 1;
@@ -156,7 +161,7 @@ export async function enemysquadsContact(): Promise<boolean> {
       // Alpha's state at that word calls for
       const cT = R.choices('Charlie')[0]?.t ?? NaN, aDown = ev('Alpha').find((e: any) => e.what === 'down'), gone = !!aDown && aDown.t <= cT, want = gone ? /^Charlie: Alpha's not answering — lock the doors/ : /^Charlie: holding — lock the doors/, other = gone ? /^Charlie: holding/ : /^Charlie: Alpha's not answering/;
       F.verdict(R.said.some(t => /^Bravo: (moving to Alpha|two going round)/.test(t)) && R.said.some(t => want.test(t)) && !R.said.some(t => other.test(t)), `both said it on the net (Charlie: ${gone ? `"Alpha's not answering", Alpha down @${aDown.t} before its word @${cT}` : `"holding", Alpha still up at its word @${cT}`})`, R.said.filter(t => /^(Bravo|Charlie)/.test(t)).join(' | '));
-    } finally { R.done(); }
+    } finally { WALLPEN.on = thin0; R.done(); }
   }
   return F.done();
 }

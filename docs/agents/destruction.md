@@ -585,6 +585,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (d) the stand. For the record in (b): the men themselves hit 2 of 5 either way on frozen (rules on: two wounded; off: two killed at the
   corner's mouth). MEASURED headless only, one seed a staging, defenders standing in for either side; never seen on a GPU, nobody has played
   it. A change to `fleeSpot` or `rollOn` runs `frag`, `picture` and (once it is in the build) `squadthrow-lob`.
+- **Sam's place is a mate's who is staying** (`frag.ts FRAG.fleeSam`, the same word as the three above: ON in the page, `?nofleemates`; off in the module
+  and on the frozen stand, `TPS_FLEEMATES=1`; the panel's 'frag ▸ furniture and a mate's corner' box; in the journal's FRAG table, a recording from
+  before the key replays with it off). FOUND 10-17 on `frag-own` (b), the office's manager door, shipped stand: the kicker's leg off the squad's own
+  ordered grenade was dealt onto the floor Sam stood on (`takenBy` listed the AI's men only), he stalled against him in its line for a second, and was
+  killed 3.7 m from it — or was dealt again by the 'no ground made for a second' rule with a twentieth of a second of fuse to spare: which of the two
+  was a matter of when the stack had formed, and the walk rule (`seenwalk.ts`, a stack that forms half a second later) tipped the check's seed 11.
+  With it, a teammate's deal has Sam's place in `stay`: no spot within `fleeApartM` of him, no leg within `fleeLaneM` of his shoulder. Sam is read
+  where he is: where he will go is his own business. MEASURED (shipped, the walk rule on, the ordered frag at three doors of the office floor × 20
+  seeds, 60 blasts): without it the kicker is killed in 7 (all at the manager's door, each after 55 ticks stood still on a leg in its line), with it
+  in none, and no man stands still on a leg in its line for half a second in any. Check: `probes.ts frag-own` line (b3), staged still on either stand
+  (Sam stood on the spot the deal would give: his place is listed, the spot dealt is 1 m or more from him by a leg 0.9 m or more off his shoulder);
+  `FLEESAM_BREAK=1` fails it on both stands. NOT DONE: a defender's deal does not read Sam (he is not of their side); the floor plan's forecast reads
+  him where he stands when it is asked. Never seen on a GPU; nobody has played it.
 - **A wall the burst will open is no cover to a man getting off a grenade** (`frag.ts FRAG.wallFlee`, 10-15; the twin of the door-leaf rule in
   `exposedTo`, built on the walls lane's read-only ask `Destruction.wallsFor` / `withWallsOpen`). A SWITCH: OFF in the module and on the frozen
   stand (`TPS_WALLFLEE=1`; a `FROZEN_HOLDS` row; `STAND_ENV`), ON in the page (`?nowallflee`; a row on the debugger's page beside the flee's own);
@@ -700,12 +713,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   near-side and far-face man, 6000 flights with no box inside any span crossed, glass-only flights equal to `roundPath`'s, the wall engine's count, the
   showcase inert, the journal row; `WALLPEN_BREAK=1` must fail) and `wallmen-check` (the line says yes exactly where the round arrives; the three kinds of
   shooter fire through a partition and a leaf at a man they saw, not at one they did not, not through concrete; one sighting = one burst, seen again =
-  another; 120 cover picks; `WALLMEN_BREAK=1` / `WALLPEN_BREAK=1` must fail). FOUR CHECKS OF OTHER RULES HOLD IT OFF, each with the reason in place: `coverfire-probes.ts` (it asks the chew), `destruction-probes.ts` dust (it asks
+  another; 120 cover picks; `WALLMEN_BREAK=1` / `WALLPEN_BREAK=1` must fail). FIVE CHECKS OF OTHER RULES HOLD IT OFF, each with the reason in place: `coverfire-probes.ts` (it asks the chew), `destruction-probes.ts` dust (it asks
   the dust of a burst that stays in the plaster; beside its hold on the wall engine, for the same reason), `wallwear-probes.ts` (it counts one
   mark a round that STOPS in the wall; a round that goes through marks the far face and what it meets beyond — where it went in, the wall engine's wear look
   still takes its mark, and the game digest is the same with that look on and off: `wallpen-check` asks both) and `roomfight-probes.ts` next-room (its fight is a
   teammate's rounds INTO a wooden door for the noise; with this rule they come through past the two men inside, `lanes.ts` opens a lane on that door, and
-  nobody walks over alone to a fight at a lane's guns: 0 of 8 went, 6 of 8 with the rule off — two rules together, as each is written).
+  nobody walks over alone to a fight at a lane's guns: 0 of 8 went, 6 of 8 with the rule off — two rules together, as each is written); and `enemysquads-probes.ts` contact (a
+  teammate's rounds at a man by the mess's far partition go on through it and the comms room's, a man of the third squad drops in his own room, and that
+  squad is in contact before its word — its own rule reading its man down, not the answer to a call on the net that the probe asks; seen on the shipped stand
+  only after the build carried the rule, seed 2).
   ON THE REAL PAGE, software adapter: `node tools/qa/wallpen-page.cjs` (the page as it opens and with `?wallpen=0`: a clicked round ends beyond a partition's
   far face / at it, the Tab row and its counter, no console error).
   `tools/qa/wallpen-inventory.ts` prints, per level, the metres of full-height wall a round goes through. Off = the base by run digest: four squad missions

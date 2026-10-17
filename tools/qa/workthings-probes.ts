@@ -1,5 +1,5 @@
 // The `workthings` probes (src/game/workthings.ts: a teammate is sent to work the breaker, or the mission's thing) — `bun run tools/qa/probes.ts workthings`,
-// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-defuse / work-off / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
+// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-defuse / work-off / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
 // the panel is built from), every order given THROUGH THE INPUT as the page writes it — the harness cursor on the thing, then one-frame presses. WORK.on is
 // raised by the probe itself: the frozen stand holds it off (TPS_WORKTHINGS=1).
 //   work-breaker    the room clear's pair on the office: X with the cursor on the breaker panel lists the thing's own order on digit 1 where 'move there' is
@@ -14,13 +14,17 @@
 //   work-defuse     a mission's charge (defuse.ts): sent to it he makes it safe and says so; the run ending under his hand (Sam down) leaves the charge armed,
 //                   and he neither says 'charge is safe.' nor is a job counted done; the same for a quiet mission's partner with his hands in the holder
 //                   (he does not take it, and does not say it is already gone)
+//   work-held       the squad's fire held and a defender who has noticed nobody stood in plain sight of the panel: the man sent still throws the breaker (his
+//                   partner's gun on that man, no round fired), his footfalls turn nobody at the panel, and the moment that man notices he is the squad's to shoot again. Asserts the fault with
+//                   WORK.heldPass off (his muzzle stays on the man, the mains stay on); WORKHELD_BREAK=1 leaves the rule off for the rule's own lines: must fail
 //   work-off        the switch off: the menu on the panel is the floor's (or nothing), the order cannot be given, no thing is listed
 //   work-harness    the frozen stand holds it off, the page turns it on unless ?noworkthings, the table is a registered knob table a recording carries
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { WORK, WORK_STATS, workHand, workJob, breakerErrand } = await import(`${ROOT}/src/game/workthings.ts`);
+const { WORK, WORK_STATS, workHand, workJob, breakerErrand, workPasses } = await import(`${ROOT}/src/game/workthings.ts`);
+const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
 const { breakerResetNear } = await import(`${ROOT}/src/game/lighting.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -130,6 +134,73 @@ export const workBreaker = () => keep(async () => {
   g.setBlackout(Infinity, 'shot'); R.step(2); R.aim = panel(g); R.step(2); R.press('KeyX');
   verdict(!R.rows().some((d: any) => d.id === 'work'), 'a breaker a round has wrecked is no thing to work (Sam has no row for it either)', menuWords(R));
   console.log(`    stats: ${JSON.stringify(WORK_STATS)} · ${g.work.summary()}`);
+});
+
+/** THE SQUAD'S FIRE IS HELD AND A MAN NOBODY MAY SHOOT YET STANDS IN SIGHT OF THE THING (WORK.heldPass; workPasses, asked by roomfight.ts's eyes and its mate's
+ *  call). The fault it holds, asserted with the key off: the man sent to the breaker stands at the panel with his muzzle on that man, his chest turned to and
+ *  fro between the two, and the mains stay on for as long as the hold stands. WORKHELD_BREAK=1 leaves the rule off and asks the rule's lines: must fail. */
+export const workHeld = () => keep(async () => {
+  console.log("\n=== work-held: fire held, a defender who has noticed nobody in sight of the panel — the man sent still throws the breaker ===");
+  const RULE = !process.env.WORKHELD_BREAK, hf0 = HOLDFIRE.on; let quietAt = -1;
+  const foes = (g: any): any[] => g.guards.filter((gd: any) => gd.team !== 'operative' && gd.state !== 'dead');
+  /** the room clear's pair on the office, the squad's fire held (holdfire.ts, as the page has it), the storage door open to them, one defender set down in
+   *  plain sight of where the breaker is worked from, his back to it — and the order given */
+  const stage = async (pass: boolean, steps = false) => {
+    const R = await rig(g => { g.fogOfWar.on = true; return g.roomClear.start(21); }); const { g, O } = R; HOLDFIRE.on = true; WORK.heldPass = pass;
+    R.gather(); unlock(g); R.step(70);
+    const th = g.work.things().find((x: any) => x.kind === 'breaker'), st = th.stand as number[];
+    // a spot 3 to 6 m off the stand with floor under it and nothing solid between the two chests (the office's own first)
+    const ok = (q: number[]) => !g.col.nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([st[0], 1.2, st[2]], [q[0], 1.2, q[2]]);
+    let at: number[] | null = ok([31.8, 0, 5.3]) ? [31.8, 0, 5.3] : null;
+    for (let r = 3; r <= 6 && !at; r += 0.5) for (let k = 0; k < 24 && !at; k++) { const q = [st[0] + Math.cos(k * Math.PI / 12) * r, 0, st[2] + Math.sin(k * Math.PI / 12) * r]; if (ok(q)) at = q; }
+    const X = at ? foes(g).sort((a, b) => flat(a.char.pos, at!) - flat(b.char.pos, at!))[0] : null, away = at ? Math.atan2(at[0] - st[0], at[2] - st[2]) : 0;
+    let fr = 0;   // (`steps`: he shifts his feet where he stands — a walking man's footfall filed twice a second, as guards.ts files one, for the squad's ears)
+    const pin = (alert = false) => { if (!X || !at || X.state === 'dead') return; X.char.pos[0] = at[0]; X.char.pos[2] = at[2]; X.char.vel = [0, 0, 0]; X.char.bodyYaw = X.char.aimYaw = away; if (alert) { X.state = 'alert'; X.awareness = 1; }
+      if (steps && fr++ % 30 === 0) g.events.push({ kind: 'step', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: 0.33, who: X.char.id }); };
+    pin(); R.step(30);
+    const why = O.give('work', { kind: 'floor', at: st, thing: th }, 'all'), ops: any[] = O.squad(), worker = ops.find(o => g.work.working(o)), mate = ops.find(o => o !== worker);
+    return { R, g, O, th, st, at, X, pin, why, worker, mate };
+  };
+  /** played until the mains go or `secs` are up: frames the man at work stood at his thing with his muzzle that man's, frames his partner's was while his hand was out, rounds the squad fired */
+  const play = (S: Awaited<ReturnType<typeof stage>>, secs: number) => {
+    const { R, g, X, worker, mate } = S; const r0 = g.fight.stats.opRounds; let onHim = 0, at = 0, covered = 0, hand = 0, noticed = false;
+    for (let i = 0; i < secs * 60 && !g.blackout.active; i++) { S.pin(); R.step();
+      if (g.work.atThing(worker)) { at++; if (g.fight.opOf(worker)?.tgt === X) onHim++; }
+      if (workHand(g, worker.char)) { hand++; if (g.fight.opOf(mate)?.tgt === X) covered++; }
+      if (X.state === 'alert' || X.state === 'search' || X.state === 'dead') noticed = true; }
+    return { dark: g.blackout.active as boolean, onHim, at, covered, hand, noticed, rounds: g.fight.stats.opRounds - r0,
+      words: `mains ${g.blackout.active ? 'out' : 'on'} at ${f2(g.time)} s · ${worker.callsign} at the panel ${at} frames, ${onHim} of them with his muzzle on ${X.callsign} · hand out ${hand} frames, ${mate?.callsign}'s gun on ${X.callsign} for ${covered} of them · ${g.fight.stats.opRounds - r0} rounds · ${X.callsign} ${X.state}` };
+  };
+  try {
+    // --- the fault, the key off
+    { const S = await stage(false);
+      verdict(!S.R.why && !S.why && !!S.at && !!S.X && !!S.worker && !!S.mate && HOLDFIRE.on, 'staged: the pair sent to the breaker with the squad\'s fire held, a defender set down in sight of the panel with his back to it', `refusal ${S.R.why} ${S.why} · ${S.X?.callsign} at ${S.at?.map(f2)} · ${S.at ? f2(flat(S.at, S.st)) : '-'} m from the stand · worker ${S.worker?.callsign}`);
+      if (!S.worker || !S.X || !S.mate) return;
+      const r = play(S, 45);
+      verdict(!r.dark && r.onHim > 600 && r.hand === 0 && r.rounds === 0 && !r.noticed, 'THE FAULT, key off: he stands at the panel with his muzzle on a man he may not shoot, and the mains stay on', r.words);
+      verdict(workPasses(S.g, S.worker, S.X) === false, 'key off: the room fight is told nothing (workPasses false)', `${workPasses(S.g, S.worker, S.X)}`); }
+    // --- the rule
+    { const S = await stage(RULE); if (!S.worker || !S.X || !S.mate) { verdict(false, 'staged again for the rule', `${S.R.why} ${S.why}`); return; }
+      const r = play(S, 45); quietAt = r.at;
+      verdict(r.dark && r.rounds === 0 && !r.noticed, 'key on: he throws the breaker with that man in sight — no round fired, the man neither alert nor searching', r.words);
+      verdict(r.hand > 0 && r.onHim === 0, 'stood at the panel his muzzle was never that man\'s: his hand went out to the panel', `${r.onHim} of ${r.at} frames · hand out ${r.hand}`);
+      verdict(r.hand > 0 && r.covered === r.hand, 'for every frame his hand was out, the gun of the man who covers him was on that man', `${r.covered} of ${r.hand}`);
+      verdict(r.hand > 0 && r.hand <= Math.round((WORK.handSecs + WORK.breakerSecs) * 60) + 3, 'the hand went out once and stayed out for the time the work takes', `${r.hand} frames out · the work takes ${Math.round((WORK.handSecs + WORK.breakerSecs) * 60)}`); }
+    // --- … and with that man shifting his feet (footfalls in the squad's ears twice a second): no look for him either — the same frames at the panel as with
+    //     him silent (a look for those steps, or a look dropped and made again every frame, costs seconds: 755 frames more with the seam in cue() taken out)
+    { const F = await stage(false, true); if (!F.worker || !F.X || !F.mate) { verdict(false, 'staged with footfalls, key off', `${F.R.why} ${F.why}`); return; }
+      const f = play(F, 45), S = await stage(RULE, true); if (!S.worker || !S.X || !S.mate) { verdict(false, 'staged with footfalls', `${S.R.why} ${S.why}`); return; }
+      const r = play(S, 45);
+      verdict(!f.dark && f.onHim > 600, 'footfalls, key off: the fault again', f.words);
+      verdict(r.dark && r.rounds === 0 && !r.noticed && r.onHim === 0 && r.hand > 0 && r.hand <= Math.round((WORK.handSecs + WORK.breakerSecs) * 60) + 3 && Math.abs(r.at - quietAt) <= 3, 'footfalls, key on: never his target, the hand out once, and the mains out in the frames it took with the man silent', `${r.words} · silent: ${quietAt} frames at the panel`); }
+    // --- and the pass ends when the hold does: the same again, the man made to notice with the hand out
+    { const S = await stage(RULE); if (!S.worker || !S.X || !S.mate) { verdict(false, 'staged a third time', `${S.R.why} ${S.why}`); return; }
+      const { R, g, X, worker } = S; let out = false, took = false;
+      for (let i = 0; i < 45 * 60 && !out; i++) { S.pin(); R.step(); out = g.work.atThing(worker) && !!workHand(g, worker.char); }
+      const before = workPasses(g, worker, X); S.pin(true); const after = workPasses(g, worker, X), r0 = g.fight.stats.opRounds;
+      for (let i = 0; i < 180 && X.state !== 'dead'; i++) { S.pin(true); R.step(); if (g.fight.opOf(worker)?.tgt === X) took = true; }
+      verdict(out && before === true && after === false && took && (X.state === 'dead' || g.fight.stats.opRounds > r0), 'the man notices with the hand out: that frame he is passed over no longer — he is the worker\'s target, and the squad\'s rounds go at him', `hand out at the panel ${out} · passed before ${before}, after ${after} · the worker\'s target ${took} · ${g.fight.stats.opRounds - r0} rounds in 3 s · ${X.callsign} ${X.state}`); }
+  } finally { HOLDFIRE.on = hf0; }
 });
 
 export const workFour = () => keep(async () => {
