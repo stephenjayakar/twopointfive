@@ -112,7 +112,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switch; load; uncovered; stand — `EXACT_BREAK=1` must fail) and `bun run tools/qa/coop-check.ts` (four scripted fights on the shipped stand, each
   under bun AND node at this commit: raw float64 bits of the game — `game/digest.ts rawBits` — equal every half second, 1,356 to 3,840 frames;
   `COOP_BREAK=1` = both on their own functions, must differ; `--ref` / `--write` = the older cross-machine reference file, which is from before this
-  and stale). OFF = THE BUILD AS IT WAS: 42 of 42 play-through digests equal the build before on the frozen stand, the shipped stand's arm not yet filed here. COST: not yet measured.
+  and stale). OFF = THE BUILD AS IT WAS: 42 of 42 play-through digests (21 missions, seeds 1 and 2, `PT_DIGEST=1 tools/qa/playthrough.ts`) equal the build before on the frozen stand, and 42 of 42 on the shipped stand with the own maths held off (`TPS_EXACT=0`) and the record check on. COST (a room clear with the four, 1,500 harness steps on the shipped stand, off and on in turn, on a machine busy with other runs — read the ratio, not the milliseconds): under bun the median step 8.2 → 8.3 ms and the mean +8%; under node the median 12.7 → 13.4 ms (+6%) and the mean +10%. The sounds' synthesis at boot also runs on these functions and was not timed on a quiet machine.
   NOT DONE / NOT SEEN: node's V8 is not Chrome's build of it, and nobody has run this in Chrome, in Safari or on a Mac — the two-engine line is bun
   against node on one Linux machine; everything on the page (sound synthesis, the renderer's CPU side, the UI) also computes on these functions while
   the switch is on.
@@ -142,14 +142,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the tape's pose) — what the record said of them is never read. A record that cannot be read or written is answered with a neutral one. What was put right is
   counted on the seat (`seat.fixed`, `seat.fixedCmds`). `Game.seats` is the list of seats (one) and `Game.stepSeats(dt, cmds)` steps from
   a list of records, refusing any other count. The bounds keep a record sane; they do not referee play (fog, reach of a pick, rate of fire are a server's
-  later work). CHECK, both stands: `bun run tools/qa/cmdcheck-check.ts` (honest: 900 steps of a room clear the same to the bit with the check on, 0 things put
+  later work). THE ONE PLAYER, counted again 2026-10-17: `g.player` / `this.player` / `game.player` is written in 116
+  files under `src/game` (889 uses) and 9 outside it (144); the `'player'` foe word about 120 times; `PLAYER_ID` 113. RULE FOR NEW CODE: what a player
+  does comes off his seat (its record, its camera), and a rule that needs a man takes the man — it does not reach for `g.player`. CHECK, both stands: `bun run tools/qa/cmdcheck-check.ts` (honest: 900 steps of a room clear the same to the bit with the check on, 0 things put
   right; shapes: 21 kinds of nonsense, each as a local and as a remote seat's, come back whole, a remote one's with the game's own view, and a second check changes
   nothing; a local record whose matrices lag its pose is left alone; hostile: 720 steps with three records in four spoilt neither throw
   nor lose a number; far; seats; `CMDCHECK_BREAK=1` must fail).
 - **The page against the harness** (`tools/qa/samefight-page.cjs` + `samefight-rerun.ts`; the page's `__digest {game, bits, chain}`; `game/digest.ts rawBits /
   chainBits`): the real page (headless Chromium = V8, software adapter) plays a scripted stretch of a mission at a mix of step times with the raw bits of the
   game folded after every step; its own replay file is then walked by bun (JavaScriptCore) off the run tape and must give the same words. With
-  `SAMEFIGHT_QUERY=cpusense` the tape's GPU values are not used. `SAMEFIGHT_BREAK=1` (the page on `?noexact`) must fail. A dev server on `PORT`. RESULTS: not yet run to the end on this machine.
+  `SAMEFIGHT_QUERY=cpusense` the tape's GPU values are not used. `SAMEFIGHT_BREAK=1` (the page on `?noexact`) must fail. A dev server on `PORT`. `SAMEFIGHT_SAY=1` says where the page has got to, `SAMEFIGHT_VIEW=320x180` a smaller picture, `SAMEFIGHT_DRAW=n` steps a draw. RESULTS: NONE YET — on the cloud machine's software adapter the page boots (about eight minutes of pipeline compiles), plays its first 200 steps in seconds and then sits for more than ten minutes at the first shots; no run has reached its end, so the page line is NOT SHOWN. What the check rests on is held headless: a tape re-run to the bit (sense-check `same`), two engines to the bit (coop-check). Run it where there is a GPU.
 - **Replays after the fact (F7)** (`src/game/replaybuf.ts` → `src/replay/format.ts`, `ui/replaykey.ts`, `src/replay/viewer.ts` + `replay.html`, `tools/qa/replay-at.ts`): the page ALWAYS keeps the last
   `REPLAY.seconds` (300) of play as a TRACE — every man's place / facing / state / order / mark / route, doors, items, rounds, the HUD's lines, the camera — sampled at 20 Hz off
   `Game.replayTap` (update's last statement; the buffer only READS: `replaybuf-probes.ts identity` holds the digests equal with it on and off), delta-coded between 5 s keyframes.

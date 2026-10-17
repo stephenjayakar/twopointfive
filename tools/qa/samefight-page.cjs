@@ -15,6 +15,7 @@ const { tmpdir } = require('node:os');
 const { join, resolve } = require('node:path');
 const ROOT = resolve(__dirname, '../..');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', BREAK = process.env.SAMEFIGHT_BREAK === '1', EXTRA = process.env.SAMEFIGHT_QUERY || '', DRAW = Math.max(1, Number(process.env.SAMEFIGHT_DRAW || 30) | 0);   // (a draw on the software adapter is seconds: one every 30 steps by default)
+const VIEW = (process.env.SAMEFIGHT_VIEW || '960x540').split('x').map(Number);   // (SAMEFIGHT_VIEW=480x270: a smaller picture — the software adapter pays by the pixel, the game does not care)
 const arg = k => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : undefined; };
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
@@ -33,7 +34,7 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
   console.log(`=== samefight-page: ${picked.length} run(s) on the real page (Chromium, software adapter) against a headless re-run of each one's tape${BREAK ? ' · SAMEFIGHT_BREAK: the page on ?noexact' : ''} ===`);
   for (const name of picked) {
     const q = RUNS[name]; if (!q) { line(false, `${name}: no such run (${Object.keys(RUNS).join(', ')})`); continue; }
-    const page = await browser.newPage({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 }); const errors = [];
+    const page = await browser.newPage({ viewport: { width: VIEW[0], height: VIEW[1] }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     const t0 = Date.now(); if (process.env.SAMEFIGHT_SAY) page.on('console', m => { if (m.text().startsWith('[samefight]')) console.error(`  ${((Date.now() - t0) / 1000).toFixed(0)} s ${m.text()}`); });   // (SAMEFIGHT_SAY=1: where the page has got to, on stderr — the software adapter is slow)
