@@ -416,7 +416,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lead). On: it waits 1.9 / 3.3 s (frozen) and 2.6 / 3.8 s (shipped) and is thrown from 3.0 to 3.9 m by a man who is not the lead. Kept off for
   9 s: 'can waited' at 6.1 s, thrown by the same man as with the rule off. Nobody run off: beat for beat the same with and without. And the journal
   line. The natural run: `threshold-four` on shipped is green again (depot-four seed 2, a_s: the can waits at 16.1 s, goes to Red Two at 18.2, thrown
-  at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`). NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
+  at 18.8; that one seed; its row is off `EXPECTED_RED_SHIPPED`). 10-17: that seed is lost on shipped again since an ordered walk keeps off
+  lit floor (the stack is called 0.8 s later, and all four are shot on their marks from across the yard by men of other rooms; no grenade; traced by
+  that rule's owner, whose 16 seeds of the run lose the whole four 3 times with the walk rule on and 4 with it off). `judge` passes such a run over in
+  its four lines about the room and says so in a line of its own, 'A RUN SHOT OFF THE DOOR FROM OUTSIDE THE ROOM': every man of the order lost before
+  any step in, each to a defender not at home in the room behind the door; never more than one run in three, never every run of a floor. NOT covered by any line: the lead-only branch with a man off his mark, a wait summed
   over two cans, a can first, a shared word, more seeds. Headless only: never played, never heard (the spoken line), never seen on a GPU.
 - **A grenade by a held door: two answers, ON IN THE PAGE since 10-16 (built 10-15, the maintainer said yes to both).** His calls were: what an
   order does when a grenade lands on its men (pause until they are back at the door, then go), and what the can does when its wait runs out with
