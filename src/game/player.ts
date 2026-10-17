@@ -24,6 +24,7 @@ import { BIGSLOT } from './kit';
 import { lockPoint } from './shotgun';
 import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop } from './bigkit';
 import { samSpread } from './suppression';
+import { isHurt } from './condition';   // (a hurt man does not sprint: Shift is not a run for him, so it lets go of nothing either)
 import { fireRing, ringSolve, ringAimPoint } from './launcher';
 import { fireShell, shellSolve, shellAimPoint, shellBodies, arcArmed, HE40 } from './he40';
 import { LAUNCHER, LAUNCHER40 } from './weapons';
@@ -330,7 +331,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     else g.msg(`${rifle.def.short} is ${rifle.mode.toUpperCase()} only`);
   }
   nvKey(g, input, dt);
-  const sprintKey = (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
+  const sprintKey = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
   // R, or the gun in his hands run dry with a magazine left (autoreload.ts: asked every frame, so a reload a sprint took out of his hands starts again) — one way in either way
   if (input.hit('KeyR') || (pl.pistolUp && autoReloadDue(g, pl, gun)) || (pl.rifleUp && autoReloadDue(g, pl, pl.rifle))) reloadInHand(g, sprintKey);
   // movement input — none while the selector is open (Space held past a tap: he is choosing what to do, feet still; interact.ts)
@@ -354,7 +355,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (rooted) { mx = 0; mz = 0; }
   const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
   if (input.hit('KeyC') && !pl.dragging) { if (!pl.crouch) pl.crouch = true; else if (canStand(g)) pl.crouch = false; else g.msg('no room to stand'); }   // crouch is C, only (Ctrl is the camera-orbit modifier now); standing needs the headroom
-  const wantSprint = (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
+  const wantSprint = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (HANDS.on && (pl.haul || pl.doorMove) ? ownMove : ml > 0);   // (a step the hands' moves take for him is never a sprint; his own keys with Shift are one in any beat of a pick-up, planted or not: it lets go — hands.ts)
   // back to the wall (Q): press against the face behind / beside you and sidle along it; Q again, breaking into a run or walking off it steps away (moveOnWall)
   if (rooted) { /* folded: no reaching for a wall, no pushing off one */ }
   else if (input.hit('KeyQ')) { if (pl.wall) wallStepOff(g, mx, mz, ml, 'q'); else if (!wantSprint) { const why = { blocked: false }; if (!wallSnap(g, cam, why) && !wallSnapLater(g, ml, why)) g.msg(pl.dragging ? 'hands full' : why.blocked ? "can't get to the wall here" : 'nothing to put your back to here'); } }   // (at a run there is no taking hold: Shift is one of the ways off it; blocked: a face in reach but furniture standing against it where he would go)

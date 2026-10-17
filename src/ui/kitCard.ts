@@ -28,6 +28,7 @@ import { gearText } from '../game/gear';   // (a kept note names the kit: worded
 import { KIT, KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitDefault, kitName, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, type MemberKit } from '../game/kit';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
+import { kitNoise } from './kitNoise';
 
 export interface MemberCardOpts {
   /** Esc on the card */
@@ -258,7 +259,8 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       // (the mission hands him more of it than his card carries: the tile shows what he will have — never on an idle tile, and only a count or a yes / no)
       const handed = KIT_LENT.on && !idle && (typeof v === 'number' || typeof v === 'boolean') ? Math.max(0, Math.floor(opts.lent?.(r.field) ?? 0)) : 0, lent = handed > (typeof v === 'number' ? v : v ? 1 : 0);
       e.val.textContent = idle ? (typeof v === 'number' ? `${v} · ${IDLE_WORD}` : IDLE_WORD) : lent ? (typeof v === 'number' ? (v ? `${v} · ${LENT_WORD} ${handed}` : `${handed} · ${LENT_WORD}`) : LENT_WORD) : r.word(v); e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
-      e.row.classList.toggle('idle', idle); e.row.classList.toggle('lent', lent); e.row.title = idle ? IDLE_WHY : lent ? LENT_WHY : '';
+      e.row.classList.toggle('idle', idle); e.row.classList.toggle('lent', lent); e.row.classList.toggle('zero', !lent && (typeof v === 'number' ? v === 0 : I.none && (r.field === 'big' || r.field === 'wand' || r.field === 'shield'))); e.row.setAttribute('data-noise', String(kitNoise(r.field, m, i)));   // (none of the thing carried — a count of none, an empty big slot, no wand, no shield; never a fitting switched off —; how loud it is in use — ui/kitNoise.ts: both are drawn on a quiet mission's gear screen only)
+      e.row.title = idle ? IDLE_WHY : lent ? LENT_WHY : '';
       { const key = `${r.field}:${r.field === 'weapon' || r.field === 'big' ? v : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
       if (no) e.note.textContent = no;
       else { if (cost && !(lent && !v)) e.note.append(el('span', 'kc-cost', costWords(cost)), ' · '); e.note.append(r.note(lent ? { ...m, [r.field]: typeof v === 'number' ? handed : true } : m)); }   // (lent: the row's line for a man who HAS it — how it is used, not 'none in your pouches' — and no pouch rate on a tile the mission alone fills: what it hands takes none)

@@ -86,6 +86,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   marks are dealt; a checkpoint load forgets what the team knew (the fog's record is not saved: for `fireKnownS` after a load the marks are dealt on what is
   seen now); an enemy only HEARD is not known; the walk TO a mark is not judged; they still wait with their backs to the charge whatever watches them; the old (`safe` off) marks are
   untouched. Never seen on a GPU; nobody has played it.
+- **The men with Sam step back from a charge set on a wall** (`WALLCHARGE.menClear`, 10-16; the maintainer, The pass, the trigger's row reading TOO
+  CLOSE with two of his men named: "after i place a wall charge, my guys should move away with standoff"). The cause: a man on 'fall in' keeps his place in
+  the file behind Sam, and Sam at the wall's foot puts the whole file inside the radius; only an ORDERED charge dealt stand-off marks. The rule
+  (`wallcharge.ts clearOf`, asked by `orders.ts` in the fall-in branch every step): the place a follower would take — where he stands when that is his
+  place, his place in the file, or the step cover / his picture gave him — in the line of any charge on a wall and nearer than its stand-off distance (4 m outdoors, 6 m indoors, less
+  `menClearIn` 0.1 m: wider than the reach the row warns by) is swapped for a stand-off mark: the same marks an ordered charge deals (`safePosts`: along the wall past the radius, out of the
+  blast's line, back across the floor, only on floor the squad holds), clear of EVERY charge on a wall, the nearest to him that nobody else has or stands
+  on (an ordered charge's men keep theirs) and that he can walk to; no mark left = straight back from a charge to its stand-off where that is floor he can
+  walk to; none = he keeps his place, the row still names him, and he is asked again a second on. A kept mark that a second charge puts in ITS line is
+  dealt again. Asked LAST in the fall-in branch, of the place the lines above it settled on (a rear man keeping a door: where he stands; the silent
+  squad's man: the sneak's own goal), so with nothing on a wall or the switch off the branch runs as it did. He keeps the mark until his place has been
+  clear `menClearS` 0.75 s (Sam walking away with the file behind him, or the charge blown / off the wall), then falls in as before. Pace `ORDERS.brisk`
+  (never a sprint); the silent squad and a squad nobody has found at `ORDERS.walk`, low with Sam. It outranks the cover step, the picture step and a rear
+  man keeping a door; it does not outrank stepping out of Sam's way, a man the sneak has mid-crossing or a man held short in the dark. NOT in it: a man in a hot fight
+  (the branch is not reached); a man on an order of his own (hold, a
+  door, a pair's job) keeps it and the row names him; door charges set by hand; the blast's far side; the walk TO a mark is not checked against the
+  blast. The switch: ON in the page (`?menclear=0`; debugger row 'wall charge ▸ men with you step back'), OFF in the module and on the frozen stand
+  (`TPS_MENCLEAR=1`; acts only with `WALLCHARGE.safe`: `TPS_WALLSAFE=1 TPS_MENCLEAR=1`); a recording from before the key replays with it off; stat
+  `wallCharge.stats.cleared`. Nothing of the player's own set / F row flow changed: one public method and two private maps on `WallCharge`. THE CHECK:
+  `tools/qa/menclear-check.ts` (`probes.ts menclear`, family `wallcharge`), his case staged on The pass (four on fall in bunched at the bunk room's yard
+  wall, a charge by 'Sam'): off, all four named; on, the row names only 'you' after 2.5 s (3.0 s silent, at 1.5 m/s), four on marks 4 to 6 m off, each
+  dealt once; Sam clear → they fall in; Sam back → they stand off; a second charge by their marks → dealt again, out of both; a held man holds; the
+  charge off the wall → the file closes up; journal and boot lines. `MENCLEAR_BREAK=1` fails six lines on both stands. Cost: the radius is read once a
+  charge, the marks once (again when more men ask, another charge goes on, or two seconds on), then a distance test a man a step, a ray inside it. One site, one seed, headless: never seen on a GPU, nobody has played it.
 - **The wall checks' stage on the REBUILT block** (10-13; `tools/qa` only — no rule of the game moved, no switch, no tally). The block's floor was rebuilt (every
   held room an L, one bare hall from the squad's start to the far end, lived-in things against walls) and the probes that pick their stage by a scan picked a bad
   one: `wallcharge-squad` / `-standoff` gathered the squad INSIDE the mess (the +side of the partition nearest the start) among its defenders; `wallreact-cover` /

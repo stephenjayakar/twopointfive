@@ -151,6 +151,35 @@ export function register(SC: Record<string, any>, CH: any) {
     c.drive = () => { c.turnBegin?.(); c.bodyYaw = ease(c.bodyYaw, to, 8 / 60); c.aimYaw = ease(c.aimYaw, to, 8 / 60); let off = c.aimYaw - c.bodyYaw; while (off > Math.PI) off -= 2 * Math.PI; while (off < -Math.PI) off += 2 * Math.PI; if (Math.abs(off) > 1.5) c.aimYaw = c.bodyYaw + Math.sign(off) * 1.5; };
     for (const t of [0.133, 0.267, 0.4, 0.533, 0.667, 0.8]) { S.run(t - (S.t - t0)); S.shot(`${Math.round(t * 1000)} ms`); }
   } };
+  // A MAN'S CONDITION (src/game/condition.ts: conditionPose deals `hurt`, `shaken` and `foldToo` to every figure — here they are set as it sets them)
+  SC['hurt-stand'] = { title: 'hurt and still up: an operator at the low ready, sound, then as a blast has left him — and with the rifle brought up into his shoulder', opts: { side: 'left' }, run(S: any) {
+    const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.stance = 'lowReady'; c.anim.upper = 'none'; S.run(0.8); S.shot('sound');
+    c.anim.hurt = 1; S.run(0.4); S.shot('hurt +0.4 s'); S.run(0.8); S.shot('+1.2 s'); S.run(1.1); S.shot('+2.3 s');
+    c.anim.stance = 'none'; c.anim.upper = 'aim'; S.run(0.6); S.shot('rifle up'); S.run(0.6); S.shot('+0.6 s');
+  } };
+  SC['hurt-walk'] = { title: 'a hurt operator moving between doors: rifle at the low ready, 1.3 m/s — the short heavy step onto the side he favours (carry-walk is the sound man)', opts: { side: 'left' }, run(S: any) {
+    const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.stance = 'lowReady'; c.anim.upper = 'none'; c.anim.hurt = 1; walkTo(c, 1.3);
+    S.run(2.0); const T = 0.92; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); }
+  } };
+  SC['hurt-walk-up'] = { title: 'a hurt operator crossing a room: rifle shouldered, 1.3 m/s — he braces, the step stays (carry-up is the sound man)', opts: { side: 'left' }, run(S: any) {
+    const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.upper = 'aim'; c.anim.hurt = 1; walkTo(c, 1.3);
+    S.run(2.0); const T = 0.92; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); }
+  } };
+  SC['hurt-defender'] = { title: 'a hurt defender falling back at his walk: carbine in the hands, 1.5 m/s', run(S: any) {
+    const c = S.man({ rifle: true, tone: 1 }); c.anim.trained = 0; c.anim.upper = 'relaxed'; c.anim.hurt = 1; c.anim.hurtSide = -1; walkTo(c, 1.5);
+    S.run(2.0); const T = 0.85; for (let i = 0; i < 6; i++) { S.shot(`${(i / 6).toFixed(2)} of a cycle`); S.run(T / 6); }
+  } };
+  SC['shaken'] = { title: 'fire on him: an operator with his rifle up as rounds start passing, and a second and a half after they stop', run(S: any) {
+    const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.upper = 'aim'; S.run(0.8); S.shot('rifle up');
+    c.anim.shaken = 1; S.run(0.1); S.shot('fire on him +0.1 s'); S.run(0.3); S.shot('+0.4 s'); S.run(0.8); S.shot('+1.2 s');
+    c.anim.shaken = 0; S.run(0.5); S.shot('it stops +0.5 s'); S.run(1.0); S.shot('+1.5 s');
+  } };
+  SC['fold-operator'] = { title: 'knocked about and still up, one of your own: folded over the hurt for as long as the game roots him, then hurt', opts: { side: 'left' }, run(S: any) {
+    const c = S.man({ rifle: true, steady: 1 }); c.anim.trained = 1; c.anim.upper = 'aim'; S.run(0.8); S.shot('rifle up');
+    c.anim.foldToo = true; c.anim.upper = 'none'; c.anim.stance = 'lowReady'; c.anim.hitFrom?.([0, 0, 1]); c.anim.clutch = 1; c.anim.hurt = 1;
+    { const t0 = S.t; for (const t of [0.12, 0.4, 0.9, 1.4]) { S.run(t - (S.t - t0)); S.shot(`${t.toFixed(2)} s`); } }
+    c.anim.clutch = 0; S.run(0.5); S.shot('up again +0.5 s'); S.run(1.0); S.shot('+1.5 s');
+  } };
   SC['turn-defender'] = { title: 'a defender swings his carbine a quarter turn to a door going in (eased at 6 rad/s, as his AI does): one frame every 100 ms', opts: { follow: false }, run(S: any) {
     const c = turner(S, 0.12, 0.82); S.shot('before'); const t0 = S.t, to = -Math.PI / 2;
     c.drive = () => { c.turnBegin?.(); c.aimYaw = ease(c.aimYaw, to, 6 / 60); };

@@ -51,6 +51,7 @@ import { w } from './words';
 import { SAMSTUN, foldCancels } from './samstun';
 import { DESTRUCTION } from './destructionSwitch';
 import { runnerOwns } from './runner';   // (asked inside fragThrowTick only)
+import { conditionHurt, conditionPace } from './condition';   // (called inside blast only)
 import { moraleBlast } from './morale';   // (called inside blast only: src/game is one import cycle)
 import { chaosOf } from './destruction';   // (called inside blast only: src/game is one import cycle)
 import { PICTURE, PICTURE_STATS, exposureAsker } from './picture';   // (asked inside fleeSpot only)
@@ -331,6 +332,7 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
         gd.staggerUntil = Math.max(gd.staggerUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
         gd.awareness = Math.max(gd.awareness, 0.92); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
         gd.path = []; gd.pathGoal = null; gd.speed = 0;
+        if (j.r === 'wounded') conditionHurt(g, gd);   // (condition.ts: it reached him and left him up — hurt from now; a return on its first line with the switch off)
       }
       c.anim.hit();
     }
@@ -342,6 +344,7 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
         rep.player = j.r; rep.hits.push({ id: c.id, name: 'you', team: 'player', d: j.d, exposed: j.e, result: j.r, ...(j.r === 'stunned' && j.behind ? { behind: j.behind } : {}) });
         const came = j.behind === 'cover' ? 'the blast broke through your cover' : 'the blast came through the door';
         if (j.r === 'killed') { if (g.godMode) rep.player = 'wounded'; else { hitPlayer(g, away(c.pos)); pl.hitFlash = 1; chronHit(g, g.guards.find(x => x.char.id === spec.who)?.callsign ?? (mine ? 'his own grenade' : name)); if (!pl.down) rep.player = 'wounded'; } }
+        if (rep.player === 'wounded') conditionHurt(g, pl);   // (condition.ts: the same of the player — never in god mode, never with the switch off)
         if ((rep.player === 'wounded' || rep.player === 'stunned') && F.samStun) {
           const secs = lerp(F.stagger[0], F.stagger[1], clamp(j.d / wound, 0, 1));
           pl.staggerUntil = Math.max(pl.staggerUntil, g.time + secs);   // (samstun.ts: with its switch on he is rooted with his gun down for it, as a man is)
@@ -660,7 +663,7 @@ export function fragTick(g: Game, _dt: number) {
         if (!gd.script && !gd.hold && !gd.pinned && flat(c.pos, dz) <= F.lethalM + 2) /* (a man planted on a post goes nowhere anyway: he fights on from behind it) */ { L.flee.set(gd, { goal: null, upper: 'none', crouch: true }); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); gd.path = []; gd.pathGoal = null; }
         continue;
       }
-      const speed = gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed;   // (a teammate never sprints: the spot is one HIS legs make)
+      const speed = conditionPace(g, gd, gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed);   // (a teammate never sprints: the spot is one HIS legs make)
       const acc = gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, W = wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined;
       let spot = fleeSpot(g, c, dz, speed, it.fuse, acc, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);
       // (FRAG.fleeDoor: the straight leg leaves him in its line — or there is none: out by an open doorway his legs make, to a spot beside it the burst has no line to)
