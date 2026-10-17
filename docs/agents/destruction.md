@@ -695,11 +695,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   by nothing lower. Nothing re-baked, nothing drawn. SWITCH `UNDERFOOT.on` — ON in the page (`?underfoot=0` off), OFF in the module and on the frozen
   stand (`TPS_UNDERFOOT=1`), a `FROZEN_HOLDS` row, in the registry and the journal (a recording from before the table replays off), a debugger row.
   Check: `underfoot` (family `furnblast`; his breach blown on a fresh stand, a body walked along the grid's own way with the walkers' call, the level at
-  rest, off, the journal; `UNDERFOOT_BREAK=1` fails on both stands). MEASURED: the tape walked on from 127 s with the rule raised — both men in the
+  rest, a slab 0.2 m high the check lays across open floor and re-bakes over, off, the journal; `UNDERFOOT_BREAK=1` fails on both stands). MEASURED: the tape walked on from 127 s with the rule raised — both men in the
   store and holding by 133.8 s, against never; every level file stood up on the page's stand and its grid's floor asked with the walkers' call: at rest
   the two bands part on the pass alone (23 cells: the low steps of three snow banks, tops 0.22 to 0.25 m — on, those steps are waded and the bank stops
   feet one step further in) and on one 0.2 m box of the pairs lesson. KNOWN, NOT MENDED HERE: the blast still leaves the pile's bottom layer lying in
-  the hole on the page's stand (the mouth rule passes over a top of 0.2 m or less — `furnblast.ts`), so the men walk over two sacks; a thing whose
+  the hole on the page's stand (the mouth rule passes over a top of 0.2 m or less — `furnblast.ts`), so the men walk THROUGH two sacks lying there (feet do not rise); a hauled body and a
+  shoved chair are asked lower than a walker and still meet such a thing (a body dragged behind its carrier catching there: not looked at); a thing whose
   top is 0.25 m or more is a wall to feet and grid alike, as before. Never seen on a GPU; nobody has played it.
 - **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
   wooden doors with the energy it has left, as it already does through glass"; page rebuild/thin-walls/read-first.md). SWITCH `WALLPEN.on`: ON in the page

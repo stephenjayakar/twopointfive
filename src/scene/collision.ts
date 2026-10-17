@@ -67,13 +67,16 @@ function rayBoxHits(a0: number, a1: number, a2: number, r0: number, r1: number, 
 }
 
 /** WHAT THE WALK GRID CALLS FLOOR, FEET CROSS (`on`: raised by the page — src/host/profile.ts pageSwitches, ?underfoot=0 — off here and on the frozen stand,
- *  TPS_UNDERFOOT=1). The grid's bake asks what stands between `y` (0.25 m) and a shoulder; a walking body was asked from `feet` (0.2 m), so a thing whose top
+ *  TPS_UNDERFOOT=1). The grid's bake asks what stands between BAKE_Y (0.25 m) and a shoulder; a walking body was asked from FEET_Y (0.2 m), so a thing whose top
  *  lies in between was floor to every route and a wall to every foot: the bottom layer of a pile of sacks whose upper layers a blast took (0.2 m: what a wall
  *  charge left in its own hole — the men ordered through it walked on the spot at the wall's line), the low step of a bank of snow. On, a circle test that begins
- *  at `feet` or above and under `y` begins at `y`: men, the player and everybody else who walks are stopped by what the bake calls blocked, and by nothing less.
- *  Nothing is re-baked and nothing drawn changes; a test that begins lower (a body laid down, 0.05) is as it was. */
-export const UNDERFOOT = { on: false, feet: 0.2, y: 0.25 };
-const footBand = (y0: number) => UNDERFOOT.on && y0 >= UNDERFOOT.feet && y0 < UNDERFOOT.y ? UNDERFOOT.y : y0;
+ *  at FEET_Y or above and under BAKE_Y begins at BAKE_Y: men, the player and everybody else who walks are stopped by what the bake calls blocked, and by nothing less.
+ *  Nothing is re-baked and nothing drawn changes; a test that begins lower (a body laid down, 0.05) is as it was. The two heights are not knobs: the bake
+ *  below spells its own 0.25, and a band moved from under it would part the two again. (circleTouches takes the same band only so that it stays
+ *  collideCircle's own test, as its comment promises: nobody asks it from 0.2 today.) */
+export const UNDERFOOT = { on: false };
+export const FEET_Y = 0.2, BAKE_Y = 0.25;
+const footBand = (y0: number) => UNDERFOOT.on && y0 >= FEET_Y && y0 < BAKE_Y ? BAKE_Y : y0;
 
 const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (the panes one line of fire crosses)
 export class StaticCollision {
