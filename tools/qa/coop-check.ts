@@ -32,21 +32,9 @@ async function one(scn: string, seed: number): Promise<Row> {
   { let cur = Math.random; Object.defineProperty(Math, 'random', { configurable: true, get() { return cur; }, set(f: () => number) { const w = () => { draws++; return f(); }; Object.assign(w, f); cur = w; } }); }
   const { Game } = await import('../../src/game/game.ts');
   const PT = await import('./playthrough.ts');
-  const f64 = new Float64Array(1), u32 = new Uint32Array(f64.buffer);
-  let h = 0x811c9dc5;   // chained over the whole run: a difference at any frame stays in every later half second's word
-  const num = (x: number) => { f64[0] = x; h = Math.imul(h ^ u32[0], 0x01000193) >>> 0; h = Math.imul(h ^ u32[1], 0x01000193) >>> 0; };
-  const str = (s: string) => { for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; };
-  const man = (c: any) => { for (let k = 0; k < 3; k++) { num(c.pos[k]); num(c.vel?.[k] ?? 0); } num(c.bodyYaw); num(c.aimYaw); num(c.aimPitch ?? 0); };
-  const walk = (g: any) => {
-    num(g.time); man(g.player.char); num(g.player.visibility ?? 0); num(g.player.noise ?? 0);
-    for (const gd of g.guards) { man(gd.char); num(gd.awareness ?? 0); str(String(gd.state)); num(gd.wait ?? 0); }
-    for (const cv of g.civilians ?? []) { man(cv.char); str(String(cv.state)); }
-    for (const d of g.doors.list) num(d.angle);
-    for (const p of g.props.props) { num(p.x); num(p.z); num(p.yaw); }
-    for (const it of g.items.items) for (let k = 0; k < 3; k++) num(it.pos[k]);
-    for (const c of g.destr?.debris?.chunks ?? []) for (let k = 0; k < 3; k++) num(c.box.c[k]);
-    num(g.events.length); num(g.eventSeq ?? 0);
-  };
+  const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');
+  let h: number = RAW_BITS_SEED;   // chained over the whole run: a difference at any frame stays in every later half second's word (game/digest.ts rawBits)
+  const walk = (g: unknown) => { h = rawBits(g as never, h); };
   const bits: string[] = []; let frames = 0;
   const update = Game.prototype.update;
   Game.prototype.update = function (this: unknown, ...a: unknown[]) { const r = (update as (...x: unknown[]) => unknown).apply(this, a); walk(this); if (++frames % 30 === 0) bits.push(h.toString(36)); return r; } as typeof update;

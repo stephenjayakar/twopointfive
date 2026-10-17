@@ -2464,8 +2464,8 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  shadowed by one segment test against the statics and the door leaves (collision.ts — the CPU's stand-in for occluded()). What it has not got, named: no
  *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon (kind 2: indoors it only comes through
  *  the glazing, and unshadowed it would light everybody), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
- *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter never
- *  touches it. ~one segment test per light in range: a few dozen per target per frame. */
+ *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
+ *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame. */
 export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false): number {
   const acc = [0, 0, 0, 0, 0, 0];
   const lights = g.engine.lights.lights;

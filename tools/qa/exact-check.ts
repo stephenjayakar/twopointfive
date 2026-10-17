@@ -127,6 +127,7 @@ const ulps = (a: number, b: number): number => {
   const bad: string[] = []; let n = 0;
   for (const [fn] of ONE) for (const x of SPEC) { if ((fn === 'sin' || fn === 'cos' || fn === 'tan') && Math.abs(x) >= 1e15 && isFinite(x)) continue; n++; const a = own[fn](x), b = SYS[fn](x); if (kind(a) !== kind(b) || (isFinite(a) && ulps(a, b) > 64)) bad.push(`${fn}(${x}) = ${a}, the engine's ${b}`); }
   for (const [y, x] of [[-1e-300, -1e300], [1e-300, -1e300], [-1e-200, -1e200], [-5e-324, -1], [5e-324, -1]]) { n++; const a = own.atan2(y, x), b = SYS.atan2(y, x); if (a !== b) bad.push(`atan2(${y}, ${x}) = ${a}, the engine's ${b} (a quotient that underflows keeps y's side of the cut)`); }
+  for (const k of [-300, -20, -5, -1, 0, 1, 2, 3, 15, 22, 23, 100, 300]) { n++; const a = own.log10(Number(`1e${k}`)); if (a !== k) bad.push(`log10(1e${k}) = ${a}, not ${k}`); }   // (a decade found by floor(log10 x) is the right one)
   for (const x of SPEC) for (const y of SPEC) {
     n += 3;
     { const a = own.atan2(x, y), b = SYS.atan2(x, y); if (kind(a) !== kind(b) || ulps(a, b) > 4) bad.push(`atan2(${x}, ${y}) = ${a}, the engine's ${b}`); }

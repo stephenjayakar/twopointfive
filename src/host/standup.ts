@@ -79,6 +79,8 @@ import { SQUADDEAL } from '../game/squaddeal';
 import { STAYASK } from '../game/stayask';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { EXACT } from '../math/exact';
+import { SENSE } from '../game/sense';
+import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
 import { NETQUIET } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
@@ -152,9 +154,13 @@ export function populateHost(host: HostApi, level: Level): void {
  *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
  *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
 export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
+/** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
+export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1'; }
+/** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
+export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) pinMaths();   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }

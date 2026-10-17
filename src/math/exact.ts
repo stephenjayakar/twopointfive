@@ -234,7 +234,14 @@ export function log(x: number): number {
   return k * LN2HI - ((hfsq - (s * (hfsq + R) + k * LN2LO)) - f);
 }
 const INV_LN10 = 0.4342944819032518, INV_LN2 = 1.4426950408889634;   // 1/ln 10, 1/ln 2, each rounded once
-export function log10(x: number): number { return log(x) * INV_LN10; }
+let pow10: Map<number, number> | null = null;
+export function log10(x: number): number {
+  const y = log(x) * INV_LN10, r = Math.round(y);
+  // (a power of ten: its exponent, exactly — the product above may sit one place off it. The table is the decimal literals 1e-323 … 1e308 as the language reads
+  //  them, which every engine must read the same)
+  if (y !== r && Math.abs(y - r) < 1e-9 && r >= -323 && r <= 308) { if (!pow10) { pow10 = new Map(); for (let k = -323; k <= 308; k++) pow10.set(k, Number(`1e${k}`)); } if (pow10.get(r) === x) return r; }
+  return y;
+}
 export function log2(x: number): number {
   let frac = frexp(x), e = FE;
   if (frac === 0.5) return e - 1;   // (a power of two: its exponent, exactly)
@@ -243,6 +250,8 @@ export function log2(x: number): number {
 }
 
 // ---- x^y: the whole part of y by squaring on the fraction of x, the rest through e^(y ln x)
+// (each squaring can lose a place: a whole exponent in the thousands and beyond is good to fewer digits than the engine's — exact-check's bound is held on the
+//  exponents game code writes. A decay over a long count is exp(n · ln k), not pow(k, n).)
 export function pow(x: number, y: number): number {
   // (what the language asks of the corners, where it and the algorithm's own table part)
   if (y !== y) return NaN;
