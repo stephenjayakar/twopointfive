@@ -143,7 +143,7 @@ export const FRAG = {
    *  `fleeDoorViaM` m of it. For the squad, floor it has been on is taken before floor it has not (`fleeDoorNew` off the score — cleared.ts). Acts only
    *  with fleeWise; either side's men. ON in the page (`?nofleedoor` = off); OFF here and on the frozen stand (`TPS_FLEEDOOR=1`); a recording from before
    *  the key replays with it off. */
-  fleeDoor: false, fleeDoorOpen: 1.0, fleeDoorIn: 1.0, fleeDoorDip: 0.6, fleeDoorMouth: 0.9, fleeDoorLeaf: 0.3, fleeDoorVia: 0.9, fleeDoorViaM: 0.45, fleeDoorNew: 30,
+  fleeDoor: false, fleeDoorOpen: 1.0, fleeDoorIn: 1.0, fleeDoorDip: 0.6, fleeDoorMouth: 0.9, fleeDoorLeaf: 0.3, fleeDoorVia: 0.9, fleeDoorViaM: 0.45, fleeDoorNew: 30, fleeDoorMost: 2, fleeDoorTry: 4, fleeDoorNodes: 1500,
   /** DEFENDERS' OWN FRAGS (fragThrowTick, a room fight only). defenders = the switch (false: nobody on their side carries one and nothing of it runs — the game
    *  as it was); one man in `defShare` carries ONE, at most `defMax` on a floor. A carrier throws at the fix he is fighting from `defNear`‥`defFar` m when the
    *  man he saw inside `defFresh` s has been out of his line of fire for `defBlocked` s (behind cover, round a corner) or he has had two or more of them within
@@ -174,10 +174,10 @@ export interface BlastReport { at: Vec3; who: number; hits: BlastHit[]; killed: 
 
 /** QA: every burst's report, newest last (capped), and running counts. */
 export const FRAG_LOG: BlastReport[] = [];
-export const FRAG_STATS = { thrown: 0, bursts: 0, killed: 0, wounded: 0, shielded: 0, shouts: 0, fled: 0, /** legs dealt out by an open doorway (FRAG.fleeDoor) */ byDoor: 0, own: 0, theirs: 0, cues: 0, /** a defender's wind-up that ended with the grenade still in his hand */ held: 0, /** bursts that stunned the player without putting him down */ samStunned: 0, /** men folded behind a door the burst took off or a wall / cover it broke (the player is the report's `player`) — FRAG.doorStun, FRAG.wallStun */ stunned: 0 };
+export const FRAG_STATS = { thrown: 0, bursts: 0, killed: 0, wounded: 0, shielded: 0, shouts: 0, fled: 0, /** legs dealt out by an open doorway (FRAG.fleeDoor) */ byDoor: 0, /** …and the floor paths asked for them */ doorWalks: 0, own: 0, theirs: 0, cues: 0, /** a defender's wind-up that ended with the grenade still in his hand */ held: 0, /** bursts that stunned the player without putting him down */ samStunned: 0, /** men folded behind a door the burst took off or a wall / cover it broke (the player is the report's `player`) — FRAG.doorStun, FRAG.wallStun */ stunned: 0 };
 /** QA: carrier-frames a defender with a frag did NOT throw, by the first reason (calm · stale · near · far · line · gap · hostage · arc · own) */
 export const FRAG_WHY: Record<string, number> = {};
-export function fragStatsReset() { FRAG_LOG.length = 0; for (const k of Object.keys(FRAG_WHY)) delete FRAG_WHY[k]; const S = FRAG_STATS; S.thrown = S.bursts = S.killed = S.wounded = S.shielded = S.shouts = S.fled = S.byDoor = S.own = S.theirs = S.cues = S.held = S.samStunned = S.stunned = 0; }
+export function fragStatsReset() { FRAG_LOG.length = 0; for (const k of Object.keys(FRAG_WHY)) delete FRAG_WHY[k]; const S = FRAG_STATS; S.doorWalks = 0; S.thrown = S.bursts = S.killed = S.wounded = S.shielded = S.shouts = S.fled = S.byDoor = S.own = S.theirs = S.cues = S.held = S.samStunned = S.stunned = 0; }
 
 function hash01(a: number, b: number): number { let x = (Math.imul(a | 0, 0x9E3779B1) ^ Math.imul((b | 0) + 0x7F4A7C15, 0x85EBCA6B)) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0xC2B2AE35) >>> 0; x ^= x >>> 13; return (x >>> 8) / 16777216; }
 
@@ -542,7 +542,7 @@ export function fleeByDoor(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, l
   const clear = (a: Vec3, b: Vec3, ref: number): 0 | 1 | 2 => { const r = flat(a, b); for (let t = 0.25; t < r + 0.25; t += 0.25) { const u = r > 1e-3 ? Math.min(1, t / r) : 1; if (near(a[0] + (b[0] - a[0]) * u, a[2] + (b[2] - a[2]) * u)) return 1; } return legByLeaf(leaves, a, b, ref) ? 2 : 0; };
   /** the floor's own way from `a` to the spot `p` through doorway `d`: its length — or -1 (no way, a door that is not open on it, a step nearer the thing, not through `d`) · -2 (a leaf stands in it) */
   const walk = (a: Vec3, p: Vec3, d: Door): number => {
-    const way = nav.findPath(a, p, 6000, who ? lanePenalty(g, who, tacticsPenalty(g, who, p)) : undefined); if (!way) return -1;
+    FRAG_STATS.doorWalks++; const way = nav.findPath(a, p, K.fleeDoorNodes, who ? lanePenalty(g, who, tacticsPenalty(g, who, p)) : undefined); if (!way) return -1;   // (goTo's own planner, so the way judged is the way walked — on a shorter leash: a spot inside his reach is found well inside it, and a spot with no way to it costs no more than that)
     let q = a, len = 0, thru = false; const ref = leafDist(leaves, a[0], a[2]);
     for (const b of [...way, p]) {
       for (const x of g.doors.list) if (crossesDoor(q, b, x) || onFrame(b, x)) { if (x === d) thru = true; else if (!openWay(x)) return -1; }
@@ -559,11 +559,15 @@ export function fleeByDoor(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, l
     const same = !!wise.keep && flat(goal, wise.keep) < 0.05, sc = 100 - len * 2 + Math.min(flat(p, at), 4) * 0.2 - (!ours || g.cleared.knownAt(p) ? 0 : K.fleeDoorNew) + (same ? K.fleeKeep : 0);
     if (sc > bestS) { bestS = sc; best = same ? wise.keep : goal; via = v; }
   };
-  for (const d of g.doors.list) {
-    if (!openWay(d)) continue;
-    const fc = d.frameCentre, W = d.def.width; if (flat(fc, c.pos) > reach) continue;
+  // (the cost of a deal: a floor path a spot. Only the nearest fleeDoorMost doorways standing open inside his reach are asked, their spots the nearest him
+  //  first, and a doorway is done with at fleeDoorTry ways found — late in a mission, every door the squad left open, a grenade is still one frame's work)
+  const open = g.doors.list.filter(d => openWay(d) && flat(d.frameCentre, c.pos) <= reach).sort((a, b) => flat(a.frameCentre, c.pos) - flat(b.frameCentre, c.pos));
+  let asked = 0;
+  for (const d of open) {
+    const fc = d.frameCentre, W = d.def.width;
     const th = d.def.closedDir, ux = Math.cos(th), uz = Math.sin(th), nx = -uz, nz = ux, side = (c.pos[0] - fc[0]) * nx + (c.pos[2] - fc[2]) * nz >= 0 ? 1 : -1;
     if (((at[0] - fc[0]) * nx + (at[2] - fc[2]) * nz) * side < 0) continue;   // (it lies beyond that doorway: no way out is towards it)
+    if (asked++ >= K.fleeDoorMost) break;
     const spots: Vec3[] = [];
     for (const k of [1, -1]) for (const a of [0.4, 0.8, 1.6, 2.4]) for (const o of [0.7, 1.1]) {   // (beside the opening, either hand, room for the men who follow; a body off the wall)
       const s = W / 2 + a, p: Vec3 = [fc[0] + ux * s * k - nx * o * side, 0, fc[2] + uz * s * k - nz * o * side];
@@ -571,8 +575,9 @@ export function fleeByDoor(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, l
       if (wise.apart && (wise.apart.go.some(q => flat(p, q) < K.fleeApartM) || wise.apart.stay.some(q => flat(p, q) < K.fleeApartM))) continue;
       if (exposedTo(g, from, p, [p[0], 1.15, p[2]]) === 0) spots.push(p);
     }
-    let got = false, leafed = false;
-    for (const p of spots) { const len = walk(c.pos, p, d); if (len === -2) leafed = true; if (len < 0 || len > reach) continue; got = true; take(p, p, len, false); }
+    spots.sort((a, b) => flat(a, c.pos) - flat(b, c.pos));
+    let got = false, leafed = false, ways = 0;
+    for (const p of spots) { if (ways >= K.fleeDoorTry || flat(p, c.pos) > reach) break; const len = walk(c.pos, p, d); if (len === -2) leafed = true; if (len < 0 || len > reach) continue; got = true; ways++; take(p, p, len, false); }
     if (got || !leafed || d.off) continue;
     // behind its own open leaf: round the leaf's end first, to the floor in front of the doorway, then out
     const u = d.dir(), h = d.def.hinge, tipN = Math.max(0, ((h[0] + u[0] * W - fc[0]) * nx + (h[1] + u[1] * W - fc[2]) * nz) * side);
@@ -580,7 +585,7 @@ export function fleeByDoor(g: Game, c: { pos: Vec3 }, at: Vec3, speed: number, l
       const S: Vec3 = [fc[0] + nx * side * (tipN + m), 0, fc[2] + nz * side * (tipN + m)], l0 = flat(c.pos, S);
       if (l0 < K.fleeDoorViaM || nav.isBlocked(S[0], S[2]) || !nav.walkable(c.pos, S) || clear(c.pos, S, leafDist(leaves, c.pos[0], c.pos[2])) || (wise.not && flat(S, wise.not) < 0.3)) continue;
       let any = false;
-      for (const p of spots) { const len = walk(S, p, d); if (len < 0 || l0 + len > reach * K.fleeDoorVia) continue; any = true; take(S, p, l0 + len, true); }
+      let n = 0; for (const p of spots) { if (n >= K.fleeDoorTry) break; const len = walk(S, p, d); if (len < 0 || l0 + len > reach * K.fleeDoorVia) continue; any = true; n++; take(S, p, l0 + len, true); }
       if (any) break;
     }
   }
