@@ -1544,7 +1544,7 @@ export class Game {
     for (const g of this.guards) updateGuard(this, g, dt);
     pictureTick(this, dt);   // each man's own picture of the fight (picture.ts): who he sees from where he now stands, whose fire he places by ear, what his net tells him — after everybody has moved; a return on its first line with its switch off
     this.doorPath.after();   // (doorpath.ts: what its gun rule lent a script for this frame's pose is taken back)
-    coverfireTick(this, dt);   // aimed fire at breakable cover (coverfire.ts): this frame's sightings kept as what each man knows, the wall engine's change feed read, the rounds counted — a return on its first line unless the destruction switch and its own are on
+    coverfireTick(this, dt);   // aimed fire at breakable cover (coverfire.ts): this frame's sightings kept as what each man knows, the wall engine's change feed read, the rounds counted — a return on its first line unless its own switch is on and either the destruction switch or rounds through thin things (wallpen.ts)
     updateCivilians(this, dt);    // the cleaner / the late worker (civilians.ts): their eyes and ears (the guards' own tests), the loop, the fright, the run to a guard or a phone, what that guard then knows — after the shift has moved and heard, before the escalation reads anybody
     updateEscalation(this, dt);   // after the guards: this frame's alert states settle the episode, the level and the lockdown duties they read next frame
     updateQrf(this, dt);          // the response to going loud (qrf.ts): the trigger off this frame's alarm level / gunfire heard / bodies found, the radio telegraph, the element's script and senses — a return while idle

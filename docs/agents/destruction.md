@@ -668,3 +668,41 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   longer than a hole, so two of the check's tests could no longer fail. `holesnow` now stands the level as the file has it and draws one site's bank out
   to 15 m itself (its sixth line; the feed row asked under 3 m, was 6). Proved by breaking the rule two ways in a side tree: the row not clipped to the hole
   (row 15.0 m) and the size bar holding snow (the bank stands) each turn that line red; the lines before it stayed green under the second. Both stands.
+- **Rounds through thin walls and doors** (`src/game/wallpen.ts`; the maintainer, 2026-10-16: "a rifle round carries on through drywall, partitions and
+  wooden doors with the energy it has left, as it already does through glass"; page rebuild/thin-walls/read-first.md). SWITCH `WALLPEN.on`: ON in the page
+  (`?wallpen=0` = a round stops in the first built thing it meets, as it did), OFF in the module and on the frozen stand (`TPS_WALLPEN=1` raises it;
+  `FROZEN_HOLDS` row; journal: a recording with no `WALLPEN` table replays with it off), inert while a showcase runs; Tab ▸ Renderer fx ▸ Glass ▸ 'rounds pass
+  through thin walls and doors' + a counter line. No state: nothing rides in a checkpoint. THE ROUND: it carries the glass rule's ENERGY (rifle 1, 9 mm 0.5,
+  one pellet 0.3); a THIN THING is plasterboard in the wall paints up to 17 cm with ceiling over both its faces (the wall engine's own partition test, asked
+  of a sill or a header too: a building's shell is structure whatever its paint), wood up to 12 cm, a fabric screen, cardboard, a plant, and a door leaf that is
+  not steel and still hangs; the toll is `base[stuff] + perM[stuff] × metres of path inside the box` (a slant pays more by its longer path; over `maxThru` it
+  is running along inside the sheet and is spent), under `minEnergy` left or past `maxThings` things it is spent, and NOTHING ELSE MAY STAND IN THE SPAN (a
+  jamb post, a planter under its plant: the round stops there as before). So a rifle round has four or five partitions or three door leaves in it, a 9 mm two
+  partitions or one leaf, a pellet one partition and no leaf (the shotgun's lock rule keeps its pellets). It leaves turned inside a small hashed cone, marks
+  and chips BOTH faces, and where it went in the wall engine still counts it (a partition still opens under sustained fire — it no longer has to first). One
+  flight for Sam, the squad and the defenders; a round that is through is a round (no hit points anywhere). Concrete, stone, steel, a steel door, anything
+  tilted, lit, a fixture: stopped, as ever. With the rule off `fireWeapon` flies glasspen.ts `roundPath` untouched; `thinPath` is the same loop with thin
+  things added (over glass alone the two are swept equal by the check). THE MEN (`WALLPEN.men`, a row of the same rule, no switch of its own in the page):
+  a man who KNOWS an enemy is behind a thin thing — his own sighting, cover fire's books — asks `thinLine` whether his gun's round gets there and puts a burst
+  of at most `thruRounds` (4) through it on that sighting (`coverfire.ts ask`, kind 'thru': defender, teammate on the fight AI, teammate under an order;
+  a wooden door leaf too; never on a mate's call, never past a friend / hostage / civilian in the lane as far as the round would fly, never through glass
+  for a side whose rounds are not laid through panes; booked as `thru` / `thruShots`, not as a chew; cover fire now also runs with the destruction switch off
+  when this is live, and a partition a round crosses is fired THROUGH, not chewed open); and a man picking cover from a gun (`suppression.ts coverFrom`: pinned
+  men, the room fight, the clear line, the wall reactions) takes a place the hardest round in the game does not reach before one that is only hidden — the
+  hidden one is still his when there is no other. NOT built: the line of fire asked about an enemy in SIGHT (`shotBlocked`) still ends at a partition; door
+  stacks do not move off thin walls; nobody fires at a sound through a door (a call for the maintainer). CHECKS, both stands: `probes.ts wallpen` =
+  `wallpen-check` (toll arithmetic, chains by gun, slant and graze, hard wall and steel door, fired rounds on and off through a partition and a leaf, the
+  near-side and far-face man, 6000 flights with no box inside any span crossed, glass-only flights equal to `roundPath`'s, the wall engine's count, the
+  showcase inert, the journal row; `WALLPEN_BREAK=1` must fail) and `wallmen-check` (the line says yes exactly where the round arrives; the three kinds of
+  shooter fire through a partition and a leaf at a man they saw, not at one they did not, not through concrete; one sighting = one burst, seen again =
+  another; 120 cover picks; `WALLMEN_BREAK=1` / `WALLPEN_BREAK=1` must fail). FOUR CHECKS OF OTHER RULES HOLD IT OFF, each with the reason in place: `coverfire-probes.ts` (it asks the chew), `destruction-probes.ts` dust (it asks
+  the dust of a burst that stays in the plaster; beside its hold on the wall engine, for the same reason), `wallwear-probes.ts` (it counts one
+  mark a round that STOPS in the wall; a round that goes through marks the far face and what it meets beyond — where it went in, the wall engine's wear look
+  still takes its mark, and the game digest is the same with that look on and off: `wallpen-check` asks both) and `roomfight-probes.ts` next-room (its fight is a
+  teammate's rounds INTO a wooden door for the noise; with this rule they come through past the two men inside, `lanes.ts` opens a lane on that door, and
+  nobody walks over alone to a fight at a lane's guns: 0 of 8 went, 6 of 8 with the rule off — two rules together, as each is written).
+  ON THE REAL PAGE, software adapter: `node tools/qa/wallpen-page.cjs` (the page as it opens and with `?wallpen=0`: a clicked round ends beyond a partition's
+  far face / at it, the Tab row and its counter, no console error).
+  `tools/qa/wallpen-inventory.ts` prints, per level, the metres of full-height wall a round goes through. Off = the base by run digest: four squad missions
+  × 3 seeds on each stand. EVERY NUMBER IN `WALLPEN` IS A CONSTANT NOBODY HAS PLAYED; what it moves on the listed levels is on the page. Never seen on a GPU
+  (the marks and chips on the far face, the rounds' tracers through a wall); never heard.

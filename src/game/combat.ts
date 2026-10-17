@@ -27,7 +27,8 @@ import { noteRound } from './suppression';
 import { AIM_DEBUG } from './aim';
 import { AIMCOST, AIMCOST_STATS, lampStruck, legsNear, type RoundLeg } from './aimcost';   // a lamp needs a real hit (a leaf)
 import { glassHit } from './glass';
-import { glassPenLive, roundEnergy, roundPath, commitCrossings, armThroughGlass, spentInPane, segAt, pathAt } from './glasspen';
+import { glassPenLive, roundEnergy, roundPath, commitCrossings, armThroughGlass, spentInPane, segAt, pathAt, type RoundPath } from './glasspen';
+import { wallPenLive, thinPath, commitWalls, spentInWall, type WallCross } from './wallpen';
 import { DESTRUCTION } from './destructionSwitch';
 import { chaosOf } from './destruction';
 import { COVERFIRE } from './coverfire';
@@ -133,13 +134,14 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   // GLASS PENETRATION (glasspen.ts, behind GLASSPEN.on — off, or no sheet of glass first in the round's way, = `pen` null and every statement below is the one it
   // was): the round's flight as LEGS — through each pane it has the energy for, turned a little at each — ending in the static it finally stops in. Distances
   // (tHit, st.t, ph.t) are then metres of that path, and every 'along dir' below reads the leg it happened on.
-  const penLive = glassPenLive(g); const e0 = penLive ? roundEnergy(def) : 1; let eK = 1;   // (eK: the share of its energy the round still has where it meets furniture)
+  const penLive = glassPenLive(g), wallLive = wallPenLive(g); const e0 = penLive || wallLive ? roundEnergy(def) : 1; let eK = 1;   // (eK: the share of its energy the round still has where it meets furniture)
   let through = armThrough(g, shooter);                               // the pistol itself out through a panel (below): the round goes into that, at the muzzle
   let eMuzzle = e0;
   let armPanes = 0;
   if (through && penLive) { const arm = armThroughGlass(g, shooter, dir, e0, pel ?? undefined); if (arm) { through = false; eMuzzle = arm.e; armPanes = arm.panes; } }   // …unless that panel is a sheet of glass the round goes through: the muzzle is already past it, the pane is filed at the arm, and the round flies on from the muzzle with what the glass left it
   if (through) tHit = 0;
-  const pen = penLive && !through ? roundPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : null;
+  // THIN WALLS AND DOORS (wallpen.ts, behind WALLPEN.on — off = `wallLive` false and this line is the one it was): the same flight, over panes and thin things alike
+  const pen: (RoundPath & { walls?: WallCross[] }) | null = through ? null : wallLive ? thinPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : penLive ? roundPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : null;
   if (pen) { tHit = pen.len; st = pen.st; }
   const armAt = through && pel ? acrossArm(g, shooter) : null;   // (a shell with the muzzle through a panel: which, and where the arm crosses it — the glass below, the lock rule's leaf further down)
   if (armAt && penLive) { if (armAt.index < 1e6) spentInPane(g, armAt.index, armAt.at, dir, e0, shooter.id, pel!); }   // (rounds through glass live: its pellets are spent in that pane at the arm point by the shell rule — one mark for the nine)
@@ -184,7 +186,8 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (sh) { tHit = sh.t; hitGuard = null; playerHit = false; hostageHit = false; shieldNote(g, o.blind ? null : sg, sh.gd); clackFx(g, pen ? pathAt(pen, tHit - 0.02) : v3.mad(muzzle, dir, tHit - 0.02)); }   // (a blind round is counted and teaches its man nothing: he never saw where it went)
   const hitP = pen ? pathAt(pen, tHit) : v3.mad(muzzle, dir, tHit);
   const flown = dir;                                              // (the bore's line, kept for the log)
-  if (pen) { dir = segAt(pen, tHit).d; commitCrossings(g, pen.cross, tHit, shooter.id, pel ?? undefined); }   // from here `dir` is the round's direction WHERE IT STOPPED; every pane it got through before that has its star, its crack and its hole (a man or a chair on the near side: the glass never heard of it)
+  if (pen) { dir = segAt(pen, tHit).d; commitCrossings(g, pen.cross, tHit, shooter.id, pel ?? undefined); if (pen.walls) commitWalls(g, pen.walls, tHit, shooter, def, lead, third, pel); }   // from here `dir` is the round's direction WHERE IT STOPPED; every pane it got through before that has its star, its crack and its hole (a man or a chair on the near side: the glass never heard of it)
+  if (wallLive && st && !hitGuard && !playerHit && !through && Math.abs(tHit - st.t) < 1e-6) spentInWall(g, st.index);   // (counted: a round that stopped in a thing a stronger or squarer one goes through)
   if (st && st.index < 1e6 && !hitGuard && !playerHit && !through && (penLive || third) && Math.abs(tHit - st.t) < 1e-6) { if (penLive) spentInPane(g, st.index, hitP, dir, pen ? segAt(pen, tHit).e : eMuzzle, shooter.id, pel ?? undefined); else glassHit(g, st.index, hitP, dir, shooter.id); }   // (a pellet, rounds through glass live: EVERY pellet that stops in a pane marks it, by the shell rule a pellet that goes through is held to — glasspen.ts; with that switch off a pane is the starred wall it was and every third pellet stars it, as before)   // the round stopped in a static: if that is a glass pane it stars it (glass.ts — a hole and cracks ON the pane, the crack heard; the pane holds: the next round stops in it too)
   if (pel) { const ah = armAt;   // (the muzzle pushed through a leaf — pressed to the lock: the shell is in THAT leaf, where the arm crosses it)
     pelletEnd(pel, ah ? ah.index : st && !hitGuard && !playerHit && !through && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1, tHit, ah ? ah.at : hitP); }

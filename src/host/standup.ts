@@ -89,6 +89,7 @@ import { FRIENDS } from '../game/friends';
 import { kitSoloStand } from '../game/kit';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
+import { WALLPEN } from '../game/wallpen';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
@@ -267,6 +268,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_OWNROOFS')) WX_OWN.roofs = String((globalThis as any).process?.env?.TPS_OWNROOFS ?? '') === '1';   // a level's own night storm under that level's own roofs (src/game/weather.ts syncRoofs): off, so every level is rained on by the office's two rectangles as in every frozen probe; TPS_OWNROOFS=1 raises it
     if (pinned('TPS_WXWIND')) WX_OWN.wind = String((globalThis as any).process?.env?.TPS_WXWIND ?? '') === '1';   // … and that storm's WIND roof by roof (src/game/wind.ts syncField): off, so three or four roofs keep the storm out of their bounding box — no wind in a yard, for a flake or for smoke — as in every frozen probe; TPS_WXWIND=1 raises it
     if (pinned('TPS_GLASSEARS')) GLASS.bothFaces = String((globalThis as any).process?.env?.TPS_GLASSEARS ?? '') === '1';   // a pane's crash heard from both its faces (src/game/glass.ts glassEvent, guards.ts glassHeard): off, so a window shot from outside is heard only from the shooter's side of it, as in every frozen probe; TPS_GLASSEARS=1 raises it
+    if (pinned('TPS_WALLPEN')) WALLPEN.on = String((globalThis as any).process?.env?.TPS_WALLPEN ?? '') === '1';   // rounds through thin walls and doors (src/game/wallpen.ts): off, so a round stops in the first built thing it meets, as in every frozen probe, digest and tally; TPS_WALLPEN=1 raises it
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_STEALTHPOSE')) STEALTHPOSE.on = String((globalThis as any).process?.env?.TPS_STEALTHPOSE ?? '') === '1';   // stealth poses (src/game/stealthpose.ts): off, so his arms and head are where every stored digest has them
     if (pinned('TPS_HANDWORK')) HANDWORK.on = String((globalThis as any).process?.env?.TPS_HANDWORK ?? '') === '1';   // hands that do the work (src/game/handwork.ts): off, so the breaker flips on the frame, a code runs on its old clock and Sam is not planted at the rack — as every frozen probe and digest read them; `TPS_HANDWORK=1` turns it on
