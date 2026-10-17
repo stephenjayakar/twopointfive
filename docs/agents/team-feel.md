@@ -490,7 +490,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fight is a plain one). Unchanged: every mark over a defender, a civilian's own marks, and over a teammate the '!' of a fight, the '✹' of a
   stun (in the yellow it had) and 'zz' / '✚' / '✕' on the floor. NO SWITCH: the HUD only — nothing the simulation, a save or a digest reads.
   NOT MENDED HERE: `Guard.awareness` is written on a teammate as before, and what reads it off every man still does (guards.ts `tension`,
-  the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble keeps the wary
-  yellow while he is left searching (`bubbles.ts`). Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
-  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1 to 3 must fail) asks `headMark` what would be drawn over each man of a staged
+  the score's intensity: a teammate a frag left at 0.92 holds it at 0.32 until his order ends); a teammate's speech bubble kept the wary
+  yellow while he was left searching — MENDED 10-17 by the dialogue pass, the same way and with no switch: `bubbles.ts bubbleTone` gives a living man of the
+  player's own the calm tone while he is searching or suspicious (the red of a fight stays his, as his '!' does; a defender's and a civilian's tones as they
+  were); the check's lines (2b), the defender's bubble line and the bubbles.ts line say so, and `HEADMARK_BREAK=1` puts the yellow back with the marks. Check `tools/qa/headmark-check.ts` (`probes.ts headmark`, family `ui`; the same on both
+  stands; `HEADMARK_BREAK=1` puts the marks back and lines 1, 2, 2b and 3 must fail) asks `headMark` what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.

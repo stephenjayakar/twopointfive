@@ -28,7 +28,7 @@
 //     hands: hands-body hands-door hands-team hands-off hands-harness
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
-//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-off
+//     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-wiring
@@ -2476,6 +2476,7 @@ if (on('wand-tile', 'wand', 'kit', 'all')) await run('wand-tile', async () => (a
 if (on('wand-look', 'wand', 'fog', 'all')) await run('wand-look', async () => (await import('./wand-check.ts')).wandLook());   // who is offered the row; hidden through the feed, seen through the lens inside its wedge; the lens in his eye's place
 if (on('wand-costs', 'wand', 'all')) await run('wand-costs', async () => (await import('./wand-check.ts')).wandCosts());   // the pan's rate and stops, the low lens, what pulls it out, the stow, the mark, the checkpoint gate
 if (on('wand-doors', 'wand', 'all')) await run('wand-doors', async () => (await import('./wand-check.ts')).wandDoors());   // every door face of every squad level: the lens beyond the leaf, in the open
+if (on('wand-mate', 'wand', 'kit', 'squadorders', 'all')) await run('wand-mate', async () => (await import('./wand-check.ts')).wandMate());   // a teammate's wand: carried and never ordered nothing happens; X on a shut door then V, his lens among the fog's eyes; what ends it; refusals
 if (on('wand-off', 'wand', 'all')) await run('wand-off', async () => (await import('./wand-check.ts')).wandOff());   // off, or carried and unused: the same run by digest; the two stands' row and the registry
 // ---------------------------------------------------------------- sticky cameras (src/game/stickycam.ts, sticky-check.ts): the launcher's third load; one stuck to a wall is one more eye for the fog of war
 if (on('sticky-kit', 'sticky', 'kit', 'all')) await run('sticky-kit', async () => (await import('./sticky-check.ts')).stickyKit());   // the row on your card with the switch, a pouch each, the store, staging onto the rifle
@@ -2632,6 +2633,7 @@ if (on('holesnow', 'furnblast', 'all')) await run('holesnow', async () => (await
 if (on('wallfurn', 'wallcharge', 'all')) await run('wallfurn', async () => (await import('./wallfurn-check.ts')).wallfurnCheck());   // a wall charge goes on a wall whose far side is only furniture the charge itself breaks (src/game/wallcharge.ts WALLCHARGE.farFurn / ?wallfurn=0)
 if (on('hungcharge', 'wallcharge', 'all')) await run('hungcharge', async () => (await import('./hungcharge-check.ts')).hungchargeCheck());   // a wall charge set on a board that hangs on the wall takes the board and the wall: no dud, the board in pieces (src/game/wallcharge.ts hung)
 if (on('standfire', 'wallcharge', 'all')) await run('standfire', async () => (await import('./standfire-check.ts')).standfireCheck());   // the men who stand off a wall charge keep out of the fire of the enemies the team knows of (WALLCHARGE.outOfFire): the maintainer's tape staged on The pass
+if (on('menclear', 'wallcharge', 'all')) await run('menclear', async () => (await import('./menclear-check.ts')).menclearCheck());   // the men with Sam step back from a charge set on a wall (WALLCHARGE.menClear): the maintainer's case staged on The pass
 if (on('pall', 'destruction', 'wallcharge', 'all')) await run('pall', async () => (await import('./pall-check.ts')).pallCheck());   // a wall charge, a hand grenade and a 40 mm raise a pall of dust and smoke the solver carries (destruction.ts CHAOS.pall): what is asked of the solver, on and off; PALL_BREAK=1 must fail
 if (on('mess', 'destruction', 'wallcharge', 'all')) await run('mess', async () => (await import('./mess-check.ts')).messCheck());   // a blast and a broken thing leave the floor a mess: films of settled dust shaped to the room, the mark of a chunk the pool took — picture-only marks (src/game/floormess.ts CHAOS.mess)
 if (on('cardreplay', 'replay', 'all')) await run('cardreplay', async () => (await import('./cardreplay-check.ts')).cardReplayCheck());   // the end card's Replay button: Shift+F7's work on one press
@@ -2738,7 +2740,8 @@ if (on('threshold-first', 'threshold', 'all')) await run('threshold-first', asyn
 if (on('threshold-doors', 'threshold', 'all')) await run('threshold-doors', async () => (await import('./threshold-probes.ts')).thresholdDoors());
 if (on('threshold-last', 'threshold', 'all')) await run('threshold-last', async () => (await import('./threshold-probes.ts')).thresholdLast());
 if (on('threshold-hand', 'threshold', 'all')) await run('threshold-hand', async () => (await import('./threshold-probes.ts')).thresholdHand());   // DOORTOOLS.thrHand — no can from a hand that is not at the door; THRHAND_BREAK=1 must fail
-if (on('threshold-grenade', 'threshold', 'all')) await run('threshold-grenade', async () => (await import('./threshold-probes.ts')).thresholdGrenade());   // DOORTOOLS.thrFragHold / thrNoCan — a grenade by a held door: the hold waits for its men, a can nobody is back for stays in the kit (both off until the maintainer says). THRFRAGHOLD_BREAK=1 / THRNOCAN_BREAK=1 must fail
+if (on('threshold-grenade', 'threshold', 'all')) await run('threshold-grenade', async () => (await import('./threshold-probes.ts')).thresholdGrenade());   // DOORTOOLS.thrFragHold / thrNoCan — a grenade by a held door: the hold waits for its men, a can nobody is back for stays in the kit (both on in the page). THRFRAGHOLD_BREAK=1 / THRNOCAN_BREAK=1 must fail
+if (on('door-grenade', 'doortools', 'all')) await run('door-grenade', async () => (await import('./doorgrenade-probes.ts')).doorGrenade());   // DOORTOOLS.fragHold — a grenade scatters the men of a door order: the door is not opened, a charge's man not given up on and a word makes no sound until they are back on their marks, `fragHoldCap` s at most. FRAGHOLD_BREAK=1 must fail
 if (on('threshold-play', 'threshold', 'all')) await run('threshold-play', async () => (await import('./threshold-probes.ts')).thresholdPlay());
 if (on('threshold-identity', 'threshold', 'all')) await run('threshold-identity', async () => (await import('./threshold-probes.ts')).thresholdIdentity());
 // ---------------------------------------------------------------- … and as an order on the door menu (thresholdmenu-probes.ts; doortools.ts THR_PAGE / HELD_PAGE: both forms behind X, 5, 4 in every start-card scenario, what next behind X, 5 while the jambs are held — all by keys)

@@ -267,7 +267,10 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
   if (!k.tables.WAND) WAND.on = false;   // (a file from before the optical wand: no door offered the look)
-  else if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
+  else {
+    if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
+    if ((k.tables.WAND as Partial<typeof WAND>).mate === undefined) WAND.mate = false;   // (…and one from before a teammate could carry one: no card of theirs had the row, no door's menu the order)
+  }
   if (!k.tables.STICKY) STICKY.on = false;   // (a file from before the sticky cameras: no such load on his rifle)
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.take === undefined) STICKY.take = false;   // (…and one from before a stuck camera could be taken back: no such row)
@@ -332,6 +335,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.WALLCHARGE as { farMouth?: boolean } | undefined)?.farMouth === undefined) WALLCHARGE.farMouth = false;   // (…and from before what a blown hole's own clearing takes stopped counting either: wallcharge.ts farMouth)
   if ((k.tables.WALLCHARGE as { safeBack?: boolean } | undefined)?.safeBack === undefined) WALLCHARGE.safeBack = false;   // (…and from before the safe marks were dealt by the walk back to the hole: by the straight line, up to safeWalkM of walk, and afterBlow stood out on them)
   if ((k.tables.WALLCHARGE as { outOfFire?: boolean } | undefined)?.outOfFire === undefined) WALLCHARGE.outOfFire = false;   // (…and from before the stand-off marks were ranked by the fire of the enemies the team knows of: the nearest safe marks, whatever looks at them)
+  if ((k.tables.WALLCHARGE as { menClear?: boolean } | undefined)?.menClear === undefined) WALLCHARGE.menClear = false;   // (…and from before the men with Sam stepped back from a set wall charge: they keep their places in the file)
   if ((k.tables.ORDERS as { fileSpread?: boolean } | undefined)?.fileSpread === undefined) ORDERS.fileSpread = false;   // (a file from before two fall-in places on one spot were dealt apart: the places as they fell. A recording from before its tables carried ORDERS (knobs.ts JOURNAL_KNOBS) lands here too; a run tape writes its own value back right after this — rerun.ts / engineplay.ts tables())
   if ((k.tables.ORDERS as { fileHold?: boolean } | undefined)?.fileHold === undefined) ORDERS.fileHold = false;   // (a recording from before the key — its ORDERS row has no such key — replays with it off: a follower the spread found no floor for is handed his place as it fell, a mate's body's room or no)
   if ((k.tables.ORDERS as { backEnd?: boolean } | undefined)?.backEnd === undefined) ORDERS.backEnd = false;   // (a recording from before the key — its ORDERS row has no such key — replays with it off: the file's further back off a doorway is counted in full where the floor has run out, and the near band is as wide as it was)
@@ -359,7 +363,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (dt?.openHand === undefined) DOORTOOLS.openHand = false; if ((dt as { gateHand?: boolean } | undefined)?.gateHand === undefined) DOORTOOLS.gateHand = false;
     if ((dt as { podFrames?: boolean } | undefined)?.podFrames === undefined) DOORTOOLS.podFrames = false;
     if ((dt as { thrHand?: boolean } | undefined)?.thrHand === undefined) DOORTOOLS.thrHand = false;
-    if ((dt as { thrNoCan?: boolean } | undefined)?.thrNoCan === undefined) DOORTOOLS.thrNoCan = false; if ((dt as { thrFragHold?: boolean } | undefined)?.thrFragHold === undefined) DOORTOOLS.thrFragHold = false; }   // (…and from before a threshold's can waited for a hand at the door)   // (…and from before an entry's points kept out of other doors' frames)   // (…and from before a bang / frag order on an open door kept every man on his own side of it)
+    if ((dt as { thrNoCan?: boolean } | undefined)?.thrNoCan === undefined) DOORTOOLS.thrNoCan = false; if ((dt as { thrFragHold?: boolean } | undefined)?.thrFragHold === undefined) DOORTOOLS.thrFragHold = false;
+    if ((dt as { fragHold?: boolean } | undefined)?.fragHold === undefined) DOORTOOLS.fragHold = false; }   // (…and from before a door order waited for its men who ran from a grenade)   // (…and from before a threshold's can waited for a hand at the door)   // (…and from before an entry's points kept out of other doors' frames)   // (…and from before a bang / frag order on an open door kept every man on his own side of it)
   if ((k.tables.DOORWAY as { kickGlass?: boolean } | undefined)?.kickGlass === undefined) DOORWAY.kickGlass = false;   // (…and from before that boot was kept from in front of a pane)
   if ((k.tables.DOORWAY as { sideKick?: boolean } | undefined)?.sideKick === undefined) DOORWAY.sideKick = false;   // (…and from before a boot could be thrown from beside the door)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)

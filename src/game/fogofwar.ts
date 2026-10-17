@@ -124,6 +124,7 @@ import type { Door, Doors } from './doors';
 import { type Box, MKEY } from '../scene/boxes';
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
 import { WAND, WAND_STATS, wandEye } from './wand';
+import { mateWandEye, mateWandEyes } from './wandorder';
 import { STICKY_STATS, stickyEyes } from './stickycam';
 
 /** The knobs (Tab ▸ Sandbox ▸ Fog of war, __fow.knobs; read every frame). */
@@ -385,7 +386,8 @@ export class FogOfWar {
     // ---- the eyes: Sam, then the living operatives in list order (the renderer takes the first FOG_EYES; the CPU answer uses the same ones — one model)
     const eyes: FogEye[] = []; const eyeOf = (c: Character): FogEye => this.eyeOf(c);
     eyes.push(wandEye(g) ?? eyeOf(g.player.char));   // (looking under a door his eyes are in the scope: the lens stands in his own eye's place — wand.ts)
-    if (!FOG.own) for (const gd of g.guards) { if (eyes.length >= FOG_EYES) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(eyeOf(gd.char)); }
+    if (!FOG.own) for (const gd of g.guards) { if (eyes.length >= FOG_EYES) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(mateWandEye(g, gd) ?? eyeOf(gd.char)); }   // (a teammate ordered to look under a door: his lens in his own eye's place — wandorder.ts)
+    else for (const e of mateWandEyes(g)) { if (eyes.length >= FOG_EYES) break; eyes.push(e); }   // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
     for (const e of stickyEyes(g)) { if (eyes.length >= FOG_EYES) { STICKY_STATS.blind++; break; } eyes.push(e); }   // (his sticky cameras, newest first, in the places the frame has left: stickycam.ts — nothing with none out)
     this.eyes = eyes; S.eyes = eyes.length;
     // (the squad's own men for the doors' rule, FOG.squadDoors: every living teammate who is not blinded, whoever's eyes lift the fog)
@@ -397,6 +399,7 @@ export class FogOfWar {
     // ---- everybody else: seen by any of them?
     this.pending.length = 0; this.hiddenChars.clear(); S.tested = 0; S.seen = 0; S.hidden = 0; S.smokeHid = 0; S.byFire = 0;
     const held = g.player.holding?.g ?? null;
+    const pid = g.player.char.id;   // (the smoke line of the player's lens is asked under 'W', a teammate's ordered lens under 'W' + his id)
     // (1) lines of sight: per man, the eyes with a clear line to him, nearest first — a living man with one waits on the smoke along it (2); everybody else is decided here
     const men: Guard[] = []; for (const gd of g.guards) if (!this.onTeam(gd)) men.push(gd); for (const cv of g.civilians) if (!this.onTeam(cv) && cv.civ?.state !== 'gone') men.push(cv);   // (a civilian gone through an exit is nobody)
     const lines = new Map<Guard, boolean>(); const jobs: { gd: Guard; chest: Vec3; pairs: { key: string; e: FogEye }[] }[] = [];
@@ -414,7 +417,7 @@ export class FogOfWar {
       const clear: FogEye[] = []; for (let k = 0; k < nn && clear.length < SMOKE_EYES; k++) if (this.lineToMan(near[k], gd, chest)) clear.push(near[k]);
       near.length = 0;
       lines.set(gd, clear.length > 0);
-      if (clear.length) jobs.push({ gd, chest, pairs: clear.map(e => ({ key: `fow${e.wand ? 'W' : e.id}_${gd.char.id}`, e })) });
+      if (clear.length) jobs.push({ gd, chest, pairs: clear.map(e => ({ key: `fow${e.wand ? (e.id === pid ? 'W' : 'W' + e.id) : e.id}_${gd.char.id}`, e })) });
     }
     // (2) the smoke along those lines, through the sensors. The frame's asks are dealt a pair a man, every man before anybody's second pair, starting a man
     //     further round each frame and with each man's two pairs taking the first place in turn — past the budget everybody is still served, both eyes. A pair's
@@ -458,9 +461,9 @@ export class FogOfWar {
       else if (fired && !dead && !(since >= 0 && since < FOG.linger)) S.byFire++;
     };
     for (const gd of men) judge(gd);
-    if (eyes[0].wand) for (const gd of men) {   // (whom the lens itself has, in the picture: his mark outlives the look — lastSeen)
+    for (const eye of eyes) if (eye.wand) for (const gd of men) {   // (whom a lens itself has, in the picture: his mark outlives the look — lastSeen; the player's, or an ordered teammate's)
       if (gd.state === 'dead' || !isHostile(gd.team, 'player')) continue; const r = this.recs.get(gd); if (!r || !r.seen) continue;
-      if (this.lineToMan(eyes[0], gd, gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0]))) { if (r.wandT === undefined || g.time - r.wandT > 1 || g.time < r.wandT) WAND_STATS.marked++; r.wandT = g.time; }
+      if (this.lineToMan(eye, gd, gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0]))) { if (r.wandT === undefined || g.time - r.wandT > 1 || g.time < r.wandT) WAND_STATS.marked++; r.wandT = g.time; }
     }
     this.tellCalls(_dt);
     // ---- the doors: a leaf that stands where the picture has it needs no look; one that does not comes up to date the frame an eye has a line to it or to its place

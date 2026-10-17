@@ -189,6 +189,15 @@ export const WALLCHARGE = {
    *  first: a mark under fire is taken before a mark in the blast, and no new place is looked for — the same places, in another order. The wall the
    *  charge is on is no cover where it will open (underFire): square in front of the charge is the lane of whoever is known behind it. */
   outOfFire: false, fireKnownS: 30, fireM: 30, fireStep: 0.5, fireGrain: 0.03,
+  /** THE MEN WITH SAM STEP BACK FROM A SET CHARGE (acts with `safe`; off: they keep their places in the file, in the blast or not). A man on 'fall in' whose
+   *  place — where he stands when that is his place, his place in the file, or the step cover or his picture gave him — is inside the radius of a charge on
+   *  a wall (in its line and nearer than the stand-off distance, `menClearIn` under it: wider than the reach the trigger's row warns by) is walked to a stand-off mark instead: the same
+   *  marks an ordered charge deals (safePosts — along the wall past the radius, out of the blast's line, back across the floor; only on floor the squad
+   *  holds), the nearest to him that nobody else has. He keeps it until his place has been out of the blast `menClearS` — Sam walking clear with the file
+   *  behind him, or the charge gone off the wall — and then falls in as he would. Never a sprint: the pace he steps out of Sam's way at; the silent squad
+   *  at a walk. A man on an order of his own keeps the order. The maintainer, 10-16, The pass, the row reading TOO CLOSE with two of his men named: "after
+   *  i place a wall charge, my guys should move away with standoff". */
+  menClear: false, menClearIn: 0.1, menClearS: 0.75,
   /** SAM inside the reach when it goes: s with no round and no throw, at the wall · at the reach's edge — and his aim opened by suppression's own scalar,
    *  whole at the wall, `samSup` of it at the edge */
   samSecs: [2.0, 0.6] as [number, number], samSup: 0.5,
@@ -337,7 +346,11 @@ export function wallChargeRows(g: Game, p: Vec3, busy: boolean, row: RowFn, offe
 export class WallCharge {
   readonly knobs = WALLCHARGE;
   ops: WallOp[] = []; done: (WallOp & { ended: string })[] = []; set: SetWallCharge[] = [];
-  stats = { orders: 0, set: 0, bySam: 0, blown: 0, holes: 0, duds: 0, knocked: 0, stunned: 0, backblast: 0, entries: 0, back: 0 };
+  stats = { orders: 0, set: 0, bySam: 0, blown: 0, holes: 0, duds: 0, knocked: 0, stunned: 0, backblast: 0, entries: 0, back: 0, cleared: 0 };
+  /** WALLCHARGE.menClear: the men walked off a set charge (his mark, and when his place was last in the blast · when he was last asked about) and the marks dealt for each charge */
+  private away = new Map<Guard, { c: SetWallCharge; at: Vec3; hitT: number; t: number }>();
+  private awayMarks = new Map<SetWallCharge, { n: number; marks: Vec3[]; t: number; sets: number; R: ReturnType<typeof safeRadius>; pad: ReturnType<typeof safeRadius> }>();
+  private awayNone = new Map<Guard, number>();
   log: { t: number; what: string }[] = [];
   /** the two rows (registered only while the module is live — seat()) */
   readonly opener: OrderDef; readonly row: OrderDef;
@@ -378,7 +391,7 @@ export class WallCharge {
     this.row.page = page ? WALL_PAGE : undefined; this.row.key = page ? 3 : 5; S.register(this.row); this.seated = true;
   }
   /** a fresh run: nothing set, nothing under way (the counts are the door tools' to put back) */
-  reset() { this.ops = []; this.done = []; this.set = []; this.sam = null; this.offered = null; this.alone = 0; this.carried = this.brought = WALLCHARGE.carried; this.log = []; for (const k of Object.keys(this.stats) as (keyof WallCharge['stats'])[]) this.stats[k] = 0; this.lastBlow = null; this.walks = null; this.keep.asks = this.keep.hits = 0; }
+  reset() { this.ops = []; this.done = []; this.set = []; this.sam = null; this.offered = null; this.alone = 0; this.carried = this.brought = WALLCHARGE.carried; this.log = []; for (const k of Object.keys(this.stats) as (keyof WallCharge['stats'])[]) this.stats[k] = 0; this.lastBlow = null; this.walks = null; this.keep.asks = this.keep.hits = 0; this.away.clear(); this.awayMarks.clear(); this.awayNone.clear(); }
   /** the switch went off mid-run: what is set comes off the wall and back into the bag, what is under way ends where it stands */
   private stop() { for (const op of [...this.ops]) this.end(op, 'switched off'); for (const c of this.set.splice(0)) this.giveBack(c, 'switched off'); this.sam = null; this.marker = null; this.walks = null; }
   private note(what: string) { this.log.push({ t: this.g.time, what }); if (this.log.length > 300) this.log.splice(0, 100); }
@@ -623,6 +636,40 @@ export class WallCharge {
     const d = flat(p, wallPt(W, 0, 0)); if (d >= R.reach || wallOff(W, p) < -thick(W) / 2) return 0;
     const cut = () => this.g.col.solidBlocked(wallPt(W, 0, 0.5, 1.1), [p[0], 1.1, p[2]]);
     return (leaves ? cut() : this.noLeaves(cut)) ? 0 : 1 - d / R.reach;
+  }
+  /** A FOLLOWER'S PLACE IS IN THE BLAST OF A SET CHARGE (WALLCHARGE.menClear): the stand-off mark he walks to instead — null: his place is clear of every
+   *  charge on a wall (and has been for menClearS), the floor has no mark for him, or the switch is off. Asked by orders.ts of a man on 'fall in', every
+   *  step, with the place he would otherwise take (`where`: read only when a charge is on a wall). */
+  clearOf(gd: Guard, where: () => Vec3): Vec3 | null {
+    const K = WALLCHARGE, g = this.g, t = g.time;
+    if (!K.on || !K.safe || !K.menClear || !this.set.length) { if (this.away.size) this.away.clear(); if (this.awayMarks.size) this.awayMarks.clear(); if (this.awayNone.size) this.awayNone.clear(); return null; }
+    for (const c of this.awayMarks.keys()) if (!this.set.includes(c)) this.awayMarks.delete(c);
+    for (const [m, a] of this.away) if (m.state === 'dead' || !this.set.includes(a.c) || (m !== gd && Math.abs(t - a.t) > 0.5)) this.away.delete(m);   // (the charge gone, or a man no longer on 'fall in': his mark is free)
+    /** the charge's radius, read once while it is on the wall (the roof over it is a handful of rays), and the same with the stand-off distance for its reach */
+    const rOf = (c: SetWallCharge) => { let M = this.awayMarks.get(c); if (!M) { const R = safeRadius(g, c.wall); this.awayMarks.set(c, M = { n: 0, marks: [], t: -1e9, sets: 0, R, pad: { ...R, reach: Math.max(R.reach, R.standoff - K.menClearIn) } }); } return M; };
+    const hit = (c: SetWallCharge, q: Vec3) => this.blastShare(c.wall, q, rOf(c).pad, false) > 0;   // (blastShare: the distance first, the line only inside it)
+    let A = this.away.get(gd); if (A && this.set.some(o => hit(o, A!.at))) { this.away.delete(gd); A = undefined; }   // (another charge has gone on a wall by his mark: dealt again)
+    const place = where(), c = this.set.find(c => hit(c, place));
+    if (A) { A.t = t; if (c || t < A.hitT) A.hitT = t; else if (t - A.hitT >= K.menClearS) { this.away.delete(gd); return null; } return A.at; }
+    if (!c) return null;
+    const none = this.awayNone.get(gd); if (none !== undefined && t >= none && t - none < 1) return null; this.awayNone.delete(gd);   // (the floor had no mark for him: asked again a second on)
+    const p = gd.char.pos, nav = g.col.nav, S = g.orders, taken: Vec3[] = []; for (const [m, a] of this.away) if (m !== gd) taken.push(a.at);
+    for (const op of this.ops) for (const q of op.post.values()) taken.push(q);   // (the marks of the men an order stood off: theirs)
+    const clear = (q: Vec3) => !this.set.some(o => hit(o, q));   // (out of EVERY charge on a wall, not only the one his place is by)
+    const others = S.men().filter(m => m !== gd), free = (q: Vec3) => !taken.some(o => flat(o, q) < 0.8) && !others.some(m => flat(m.char.pos, q) < 0.6) && clear(q);
+    const n = Math.max(1, others.length + 1), M = rOf(c);
+    // (the marks: dealt once for the charge and kept — asked again when more men want one, another charge has gone on a wall, or the deal is two seconds old; two more than the men, where the floor has them)
+    if (M.n < n || M.sets !== this.set.length || Math.abs(t - M.t) > 2) { const spot = this.setSpot(c.wall) ?? wallPt(c.wall, 0, K.setOff), memo = new Map<string, unknown>(), kept: Kept = <T>(key: string, work: () => T): T => { if (!memo.has(key)) memo.set(key, work()); return memo.get(key) as T; };
+      let marks: Vec3[] | null = null; for (let k = n + 2; k >= 1 && !marks; k--) marks = this.safePosts(c.wall, k, spot, clear, kept); M.n = n; M.marks = marks ?? []; M.t = t; M.sets = this.set.length; }
+    let at: Vec3 | null = null; const all: Vec3[] = []; for (const o of this.set) all.push(...rOf(o).marks);
+    for (const q of all.sort((a, b) => flat(p, a) - flat(p, b))) if (free(q) && !S.reach(gd, q)) { at = q; break; }   // (the nearest to him that is nobody's and that he can walk to)
+    if (!at) for (const o of [c, ...this.set.filter(k => k !== c)]) {   // (no mark left for him: straight back from a charge to its stand-off, where that is floor he can walk to and out of every blast)
+      const w = wallPt(o.wall, 0, 0), dx = p[0] - w[0], dz = p[2] - w[2], L = Math.hypot(dx, dz), R = rOf(o).R; if (at || L <= 0.2) continue;
+      for (const d of [0, 0.9, 1.8]) { const q: Vec3 = [w[0] + dx / L * (R.standoff + d), 0, w[2] + dz / L * (R.standoff + d)];
+        if (!nav.isBlocked(q[0], q[2]) && nav.walkable(p, q) && !this.inFrame(q) && free(q)) { at = q; break; } } }
+    if (!at) { this.awayNone.set(gd, t); return null; }
+    A = { c, at: [at[0], 0, at[2]], hitT: t, t }; this.away.set(gd, A); this.stats.cleared++; this.note(`${gd.callsign} steps back from the charge on wall ${c.wall.index}`);
+    return A.at;
   }
   /** a line asked with the door leaves out of the way: BEFORE the blast a leaf standing between a man and the charge is no cover (the blast flings it or takes
    *  it off its hinges) — the stand-off marks and the trigger's warning ask this way; blow() itself asks with the leaves where the blast left them */
