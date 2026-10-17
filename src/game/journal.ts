@@ -267,7 +267,10 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.STEALTHPOSE) STEALTHPOSE.on = false;   // (a file from before the stealth poses: his arms were the crouch clip's and he knelt at a door with the wand as at a lock)
   else if ((k.tables.STEALTHPOSE as Partial<typeof STEALTHPOSE>).nod === undefined) STEALTHPOSE.nod = false;   // (…and one from before a goggle nod showed in the look under a door: the look took the nod back out of his head)
   if (!k.tables.WAND) WAND.on = false;   // (a file from before the optical wand: no door offered the look)
-  else if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
+  else {
+    if ((k.tables.WAND as Partial<typeof WAND>).nv === undefined) WAND.nv = false;   // (…and one from before N was read while he looked: the key did nothing on his knee at the door)
+    if ((k.tables.WAND as Partial<typeof WAND>).mate === undefined) WAND.mate = false;   // (…and one from before a teammate could carry one: no card of theirs had the row, no door's menu the order)
+  }
   if (!k.tables.STICKY) STICKY.on = false;   // (a file from before the sticky cameras: no such load on his rifle)
   else if ((k.tables.STICKY as Partial<typeof STICKY>).live === undefined) STICKY.live = STICKY.max;   // (…and one from before only the newest camera sent a picture: every camera out was an eye)
   if ((k.tables.STICKY as Partial<typeof STICKY> | undefined)?.take === undefined) STICKY.take = false;   // (…and one from before a stuck camera could be taken back: no such row)
