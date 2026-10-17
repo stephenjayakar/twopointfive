@@ -113,6 +113,7 @@ import { runnerSnapshot, runnerRestore, type RunnerSnap } from './runner';
 import { darkDoorSnapshot, darkDoorRestore, type DarkDoorSnap } from './darkdoor';
 import { netQuietSnapshot, netQuietRestore, type NetQuietSnap } from './netquiet';
 import { powerOutSnapshot, powerOutRestore, type PowerOutSnap } from './powerout';
+import { rescueCheckSnapshot, rescueCheckRestore, type RescueCheckSnap } from './rescuecheck';
 import { attentionSnapshot, attentionRestore, type AttentionSnap } from './attention';
 import { pictureSnapshot, pictureRestore, type PictureSnap } from './picture';
 import { gearText } from './gear';
@@ -255,6 +256,8 @@ export interface SaveState {
   /** each roster man's count of mates gone quiet, the line he owes, his whip and the last man's act — netquiet.ts; absent with its switch off or nobody met */
   netQuiet?: NetQuietSnap;
   powerOut?: PowerOutSnap;
+  /** the rescue's radio check (rescuecheck.ts): absent with its switch off or outside a rescue */
+  rescueCheck?: RescueCheckSnap;
   /** each roster man's held attention (where, what, how long is left) and his memory of the takings — attention.ts; absent with its switch off or nobody met */
   attention?: AttentionSnap;
   /** each roster man's ideas of his enemies (where, how old, how he came by each) and what Sam's eyes have put on the squad's net — picture.ts; absent with its switch off or nothing known */
@@ -491,7 +494,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout, gw = gunWallSnapshot(g), ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const bo = g.blackout, gw = gunWallSnapshot(g), ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -515,6 +518,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(dd ? { darkdoor: dd } : null),   // (who is stopped at which dark doorway, who is coming — darkdoor.ts; no key with its switch off)
     ...(nq ? { netQuiet: nq } : null),   // (each man's quiet count, owed line, whip and last-man act — netquiet.ts; no key with its switch off)
     ...(po ? { powerOut: po } : null),   // (the men out for the breaker and what their side has said about the dark — powerout.ts; no key with its switch off or before a first blackout)
+    ...(rk ? { rescueCheck: rk } : null),   // (the rescue's radio check and the man out for a silent post — rescuecheck.ts)
     ...(at ? { attention: at } : null),   // (each man's held attention and his memory of the takings — attention.ts; no key with its switch off)
     ...(pi ? { picture: pi } : null),   // (each man's ideas of his enemies — picture.ts; no key with its switch off)
     ...(gw ? { gunWall: gw } : null),   // (whose gun a wall holds down — gunwall.ts; no key with its switch off or nobody at a wall)
@@ -658,6 +662,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   darkDoorRestore(g, s.darkdoor);   // (each man's balk as the file had it — darkdoor.ts; a file without the slice: nobody stopped, every door open to him)
   netQuietRestore(g, s.netQuiet);   // (…and what the quiet net has done to each of them — netquiet.ts; a file without it: every man met afresh)
   powerOutRestore(g, s.powerOut);   // (…and the walk to the breaker — powerout.ts; a file without it: nobody is out and the next blackout is their first)
+  rescueCheckRestore(g, s.rescueCheck);   // (…and the rescue's radio check — rescuecheck.ts; a file without it: the check starts afresh)
   attentionRestore(g, s.attention);   // (…and whose attention was on what, for how much longer — attention.ts; a file without it: every man's attention his own)
   pictureRestore(g, s.picture);   // (…and what each man believed of where his enemies were — picture.ts; a file without it: nobody knows of anybody yet)
   try { G.forEach((gd, i) => { attachFlashlight(g, gd); const bd = s.guards[i]?.beamDir; if (bd) gd.beamDir = c3(bd); }); } finally { calmTorchPosed(); }   // torch lights where the hands (or the floor) now have them — the smoothed carry direction itself stays the file's (attachFlashlight eases it on from there next frame)
