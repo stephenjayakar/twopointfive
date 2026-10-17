@@ -4,7 +4,7 @@
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
 import { wandDrop } from './wand';
 import { DOORBLAST } from './doorblast';
-import { Character } from './character';
+import { Character, THROW_BY, THROW_RELEASE } from './character';
 import { CanisterParams } from '../smoke/types';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { Item } from './throwables';
@@ -412,7 +412,7 @@ function handPropsRaw(g: Game, out: Box[]) {
   // beside the FN2000 (playtest 08-08). player.ts throws by the same accessor, so what the fist shows is what a click would throw.
   const kindSel = pl.canisterSel; const an = pl.char.anim; const pistolUpNow = pl.pistolUp && !busy;   // (close.ts: the knife of the close-in tell is in the right fist only when no pistol is)
   const heldNow: ThrowKind | null = pl.down || busy || !kindSel || pl.holstered || pl.dragging || pl.sprinting ? null
-    : an.inThrow ? (an.throwing ? (pl.pendingThrow ? pl.pendingThrow.kind : kindSel) : null)
+    : an.inThrow ? (an.throwing ? (pl.pendingThrow ? pl.pendingThrow.kind : THROW_BY.on && an.throwTime >= THROW_RELEASE ? null : kindSel) : null)   // (THROW_BY: the can is out of the fist the frame it is in the air — `throwing` runs three frames past the release, and the fist used to show the next can under the one just thrown; a wind-up called off before that keeps its can, as ever)
     : g.throwCount(kindSel) > 0 ? kindSel : null;
   const knifeNow = (!!pl.holding && pl.holding.variant === 'arm' && !pl.down && !an.holdGunSide) || (an.knifeShown && !pl.down && !pl.holding && !pistolUpNow);   // a man held with the hands empty: the knife is out, in the fist at his throat (character.ts holdLayer poses it) — for exactly as long as the hold lasts, sheathed again the frame it ends however it ends; swapped mid-hold (E) the old tool leaves the fist on the key's frame (the variant / Player.holstered change there) and the other arrives half way through the animator's hand-over, the fist then back behind the man's shoulder (holdGunSide) — never the two in one fist
   // the FN2000: in both hands (selected and off the sling, hands not busy on a lock or a man, not hauling a body — the animator's long gun then, player.ts), else slung across

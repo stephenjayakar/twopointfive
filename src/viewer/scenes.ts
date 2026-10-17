@@ -143,7 +143,7 @@ export function applyVariant(rt: Runtime, sceneId: string, variantId: string): V
     upper: B.upper, slot: B.slot, goggles: B.goggles, nv: B.nv, lightOn: B.lightOn, sweep: B.sweep, tracerAll: B.tracerAll, longSteady: B.longSteady,   // (longSteady too: a 'steady against the gait ▸ off' A/B must not leak into the next variant — review 08-10 #26)
     aimPitchDeg: B.aimPitchDeg, aimYawDeg: B.aimYawDeg, lookYawDeg: B.lookYawDeg, turntable: B.turntable, turnRate: B.turnRate,
     stance: B.stance, stackSide: B.stackSide, peek: B.peek, lockpick: B.lockpick,
-    tacShot: B.tacShot, tacLoop: B.tacLoop, tacEvery: B.tacEvery, clip: 0, paused: false,
+    tacShot: B.tacShot, tacLoop: B.tacLoop, tacEvery: B.tacEvery, throwDist: 0, clip: 0, paused: false,
     world: B.world, home: B.home, legYawDeg: B.legYawDeg, legM: B.legM,
   } satisfies Partial<ViewerState>);
   st.hold = { ...B.hold, marker: st.hold.marker }; st.doorHand = { ...B.doorHand }; st.door = { ...B.door }; st.cans.plume = B.cans.plume; st.cans.loop = false;

@@ -18,7 +18,7 @@ import { loadCharacterSet, castUrlFor, castSide, castGoggles, GltfCharacter } fr
 import { CharacterRenderer } from '../anim/characters';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig } from '../render/sdfrig';
-import { Character, SignalKind, Stance, UpperMode, THROW_RELEASE, HOLD, LONG_STANCES, LongStance, defaultAnimParams } from '../game/character';
+import { Character, SignalKind, Stance, UpperMode, THROW_RELEASE, THROW_BY, HOLD, LONG_STANCES, LongStance, defaultAnimParams } from '../game/character';
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
@@ -220,7 +220,7 @@ export class Runtime {
       case 0: an.kickDoor(); break;
       case 1: case 2: case 3: an.signal((['hold', 'go', 'rally'] as SignalKind[])[i - 1]); break;
       case 4: an.flinch(); break;
-      case 5: an.throwItem(); break;
+      case 5: if (st.throwDist > 0) { const was = THROW_BY.on; THROW_BY.on = true; an.throwItem(st.throwDist); THROW_BY.on = was; } else an.throwItem(); break;   // (the sheet's 'throw distance m': the swing that reads that far, whatever the switch says)
       case 6: { const R = this.samRifle() ? WEAPONS.fn2000.reload : st.guard && st.carbine ? WEAPONS.aks74u.reload : null; if (R) an.reload(this.samRifle() ? R.dur : undefined, R); else an.reload(); break; }   // (a long gun: the weapon's own beat for the moves' support hand, as the game deals it)
       case 7: this.shoot(); break;
       case 8: an.strike(); break;
@@ -241,7 +241,7 @@ export class Runtime {
     for (let i = 0; i < 48; i++) char.update(1 / 60);
     if (shot) this.fireTac(shot === 'kick' ? 0 : shot === 'flinch' ? 4 : shot === 'throw' ? 5 : shot === 'squeeze' ? 12 : ['hold', 'go', 'rally'].indexOf(shot) + 1);   // (squeeze sits at the END of TAC_SHOTS: indexOf's −1 used to make it the door kick)
     for (let i = 0, n = Math.max(0, Math.round(t * 120)); i < n; i++) char.update(1 / 120);
-    return `${shot ?? 'settled'} @ ${t.toFixed(3)} s${an.kicking ? ` (kick t=${an.kickTime.toFixed(3)})` : ''}${an.inThrow ? ` (throw t=${an.throwTime.toFixed(3)}${an.throwTime >= THROW_RELEASE ? ', released' : ', can in hand'})` : ''} — viewer paused`;
+    return `${shot ?? 'settled'} @ ${t.toFixed(3)} s${an.kicking ? ` (kick t=${an.kickTime.toFixed(3)})` : ''}${an.inThrow ? ` (throw t=${an.throwTime.toFixed(3)}${an.throwTime >= THROW_RELEASE ? ', released' : ', can in hand'}, ${an.throwRead})` : ''} — viewer paused`;
   }
   /** the upper-body mode the state comes to: as player.ts has it, the relaxed two-hand carry only with the pistol actually in the hand (holstered or a can up →
    *  the arms follow the legs; the rifle in the hands → the long-gun solve has the arms, 'relaxed' comes to none); the guard kit always has something in the hand */
@@ -509,7 +509,7 @@ export class Runtime {
     lines.push(`character / prop viewer · ${this.gpu.adapterInfo} | ${engine.width}x${engine.height} (${quality.current}${quality.adaptive ? ', adaptive' : ''} ×${S.renderScale.toFixed(2)}) | ${this.fpsSm.toFixed(0)} fps | gpu ~${t.total(['composite', 'post', 'fxaa', 'gbuffer']).toFixed(2)} ms`);
     const r = char.anim.rawClip;
     const animLine = r ? `raw clip ${r.clip.name} (${r.clip.duration.toFixed(2)} s) t=${(((r.time % r.clip.duration) + r.clip.duration) % r.clip.duration).toFixed(2)}` : `graph: ${st.speed.toFixed(2)} m/s${st.crouch ? ' crouched' : ''}${st.reverse ? ' backpedal' : ''}${st.path ? ` (${['', 'circle', 'back & forth', 'turn on spot'][st.path]})` : ''}${st.deliberate > 0 ? ` · deliberate ${st.deliberate.toFixed(2)}` : ''} · upper ${char.anim.upper} · phase ${char.anim.phase.toFixed(2)}`;
-    lines.push(`${animLine} · stance ${STANCES[st.stance]}${st.lockpick ? ' · lockpick' : ''}${st.hold.on ? ` · ${st.hold.who ? 'held' : 'hold'} ${HOLD_VARIANTS[st.hold.variant]} ${HOLD_PHASES[st.hold.phase]}` : ''}${this.kickFlashT > 0 ? ' · ▮▮ KICK IMPACT ▮▮' : ''}${this.relFlashT > 0 ? ' · ▮▮ THROW RELEASE ▮▮' : char.anim.inThrow ? ` · throw ${char.anim.throwTime.toFixed(2)}s` : ''} · aim pitch ${st.aimPitchDeg}° · body yaw ${Math.round(wrapAngle(char.bodyYaw) / DEG)}°${st.allOff ? ' · ALL TWEAKS OFF' : ''}${st.paused ? ' · PAUSED' : ''}`);
+    lines.push(`${animLine} · stance ${STANCES[st.stance]}${st.lockpick ? ' · lockpick' : ''}${st.hold.on ? ` · ${st.hold.who ? 'held' : 'hold'} ${HOLD_VARIANTS[st.hold.variant]} ${HOLD_PHASES[st.hold.phase]}` : ''}${this.kickFlashT > 0 ? ' · ▮▮ KICK IMPACT ▮▮' : ''}${this.relFlashT > 0 ? ' · ▮▮ THROW RELEASE ▮▮' : char.anim.inThrow ? ` · throw ${char.anim.throwTime.toFixed(2)}s ${char.anim.throwRead}` : ''} · aim pitch ${st.aimPitchDeg}° · body yaw ${Math.round(wrapAngle(char.bodyYaw) / DEG)}°${st.allOff ? ' · ALL TWEAKS OFF' : ''}${st.paused ? ' · PAUSED' : ''}`);
     lines.push(`kit: ${st.guard ? `guard, ${st.carbine ? `carbine (${char.anim.longShown ?? '—'})` : st.guardTorch ? 'torch' : 'pistol drawn'}` : `player, ${st.rifle === 2 ? `${gearText('FN2000')} in the hands (${char.anim.longShown ?? '—'})` : (['holstered', 'slot 1', 'slot 2 (can)'][st.slot] ?? `slot ${st.slot}`) + (st.rifle === 1 ? ` + ${gearText('FN2000')} slung` : '')}, goggles ${st.goggles ? (st.nv ? 'down (NV on)' : 'up') : 'off'}`} · light ${st.lightOn ? 'on' : 'off'} · props ${this.dyn.length} boxes · lights ${engine.lights.activeCount} · cam yaw ${Math.round(wrapAngle(cam.yaw) / DEG)}° pitch ${Math.round(cam.pitch / DEG)}° dist ${cam.distance.toFixed(2)} m · view ${S.debugView} · exp ${S.exposure.toFixed(2)}`);
     return lines;
   }

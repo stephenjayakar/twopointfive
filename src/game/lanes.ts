@@ -515,7 +515,7 @@ function stun(g: Game, st: State, L: Lane, at: Guard[]) {
   const land: Vec3 = [L.from[0] - tx / tl * 1.6, 0, L.from[2] - tz / tl * 1.6];
   const sol = g.items.solve(from, land, 11);
   if (flat(sol.land, land) > 3 || flat(sol.land, L.from) > 4.5) return;   // (no arc from here: a wall, a lintel, too far)
-  giveStuns(best, stunsOf(best) - 1); c.anim.throwItem();
+  giveStuns(best, stunsOf(best) - 1); c.anim.throwItem(flat(c.pos, sol.land), Math.hypot(sol.v0[0], sol.v0[2]));
   const it = g.items.spawn('flash', from, sol.v0, { fuse: 0.7, who: c.id, heading: v3.yawOf(sol.v0) });
   it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
   g.audio.play('throw', from, 0.7);

@@ -165,6 +165,38 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the issue kit's carbine on the back. Not asked by anything: the OCP on a torch the calm torch rule has put out. Headless only; never seen on a GPU.
 
 <!-- was CLAUDE.md lines 2564–2610 -->
+- **A throw reads its distance** (the maintainer, 10-16, over a can thrown at a wall two steps off with the full wind-up: "we should have different
+  animations based on how far you're throwing something"). `CharacterAnimator.throwItem(dist?, speed?)` takes the metres over the floor to where the arc
+  ends (`ThrowSolution.land`, the preview's own end) and, where the caller has it, the speed over the floor the thing leaves at; `character.ts THROW_BY`
+  picks the swing. Under `toss` 3 m and under `tossFast` 7.3 m/s: an UNDERHAND TOSS (`THR_LOW`: back past the hip and through, the wrist never above the
+  shoulder, let go rising at chest height; `tossMin` of its backswing at arm's length). From a hand up on a gun there is no backswing to whip into (past
+  what `tossIn` m/s reaches, the hand drops on one arc to the swing's low point and scoops), and the other arm, left alone otherwise, is let down from
+  the support grip to hang (`thrHang`, read once on the throw's first frame). To `full` 10 m: the overhand SHORT-ARMED (the body's turn from `turnMin`,
+  the hand's path drawn in toward `pivot` from `armMin` but back at its authored size for `through` s either side of the release, the balance arm's path
+  and turn toward the pose underneath from `offMin`, all by a smoothstep of the distance). 10 m and over: the overhand as authored. A HARD throw a near
+  wall stops (the cursor far out, `land` two steps off) is the shortest overhand, not a toss: the speed says no toss, the distance says how much arm. No
+  distance, or the switch off = the one overhand, the code path that scales nothing (compared with the file before the table over 1,650 poses-by-frame
+  cases in review: no difference). ONE CLOCK: every swing is `THROW_DUR` long and lets go at `THROW_RELEASE`, so the can is not touched — the same frame,
+  the same `throwOrigin` (shoulder height and 0.32 m ahead: a toss's hand lets go 0.2 to 0.35 m from where the can appears, an overhand's 0.2 to 0.45 m,
+  as before; a can that starts at the hand is the flight's own change and was not made), the same arc. ONE CAN: with the switch on the fist drops its can
+  the frame the thrown one is in the air (`combat.ts handPropsRaw`; `throwing` runs three frames past the release and the fist showed the next can under
+  the one just thrown); a wind-up called off keeps its can. THE BODY IS SEEN: the swing moves bones the sight and light code read, so with somebody
+  watching a run can differ off and on — the picture and the AI on one model. Who tells the animator: the player (`player.ts doThrow`, distance and
+  speed), the stun thrown at a covered lane (`lanes.ts`, both), a defender's frag (`frag.ts`, the distance to the wind-up's `at`); the team's `tossItem`
+  (the support hand, round a door frame) is a toss already and is not touched. Switch `THROW_BY.on` — ON in the page (`?nothrowby` = one swing for every
+  throw), OFF in the module and on the frozen stand (`TPS_THROWBY=1`), `FROZEN_HOLDS['THROW_BY.on']`; a registered knob table, in `JOURNAL_KNOBS` (a
+  recording from before the table replays with it off); Tab ▸ Kit handling ▸ 'throw by distance'; the viewer's Tactical sheet has 'throw distance m' for
+  the one-shot and its status line names the read. Check: `tools/qa/throwby-check.ts` (`probes.ts throwby`, family `player`; `THROWBY_BREAK=1` fails (f)
+  and (k)): the reads standing, crouched, walking, and with a gun in his hands standing and crouched; no wrist faster than the whole wind-up's, no corner
+  in its line sharper (+ 20°), the other wrist no faster and bent no further (+ 10°), no elbow under 45°; one clock; a hard throw is no toss; a throw
+  re-triggered into another read moves neither wrist further in a frame than the whole wind-up does; the stands; the Game's four throws (one aimed far
+  that a wall stops at 1 m) read right; the can identical off and on; one can — 27 of 27 on both stands, the break red on both. Measured (headless): the tour 3 of 3 on the
+  frozen stand with and without `TPS_THROWBY=1` (the same seeds); the soak, seeds 1 2 3, 12 minutes each — clean on the shipped stand, and on the frozen
+  stand the same two violation kinds on seed 3 with the word and without it (`held-scripted`, `checkon-stale`: not this rule's); `probes.ts kitanim`,
+  `quickthrow` on both stands and `frag` on shipped all pass. Strips:
+  `pose-strip.ts throw-toss | throw-toss-crouch | throw-toss-armed | throw-least | throw-short | throw-full | throw-full-crouch | throw-untold`. The table
+  and the toss's keys are first-pass numbers, looked at as capsule strips and as stills of the page on a software renderer: NEVER SEEN ON A GPU, and
+  nobody has played it. Not done: the swings do not yet give way to a hurt or dazed man's movement states.
 - **Hands = picking a body up, working a door by hand** (`src/game/hands.ts`, state on the Player: `Player.haul: Haul | null`, `Player.doorMove: DoorMove | null`; `HANDS.on` — ON in
   the page (`?nohands` = as it was), OFF on the frozen stand (`TPS_HANDS=1`), `FROZEN_HOLDS['HANDS.on']`; `HANDS.body` / `HANDS.door` = its two halves; a registered knob table, in
   `JOURNAL_KNOBS`; Tab ▸ Sandbox ▸ Hands). OFF = nothing in the file runs: the ankle pins on the frame of the tap, the leaf flung by `Doors.use`. A BODY is taken by the END HE IS AT
