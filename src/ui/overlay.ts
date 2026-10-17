@@ -291,9 +291,11 @@ export class Overlay implements HudLike {
     // log
     // radio traffic only: lines that went over the guards' net ('radio: …') within the last 8 s, newest last, older ones dimmed — the rest of game.messages
     // stays for the harness / probes but is not drawn (the interaction panel, the kit column and the world carry it)
+    // …and, with CUES.overheard, one dim row for a shout that reached an ear from a man the fog hides ('heard: …' — cues.ts overheard)
     { const rx = stripRows(game);   // (cues.ts: the defenders' net ranked and rate-limited; with its switch off, the message ring's 'radio: ' rows as ever)
       const key = rx.map(m => m.text + (game.time - m.t > 5 ? '~' : '')).join('|');
-      if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => `<span class="rx${game.time - m.t > 5 ? ' old' : ''}"><b>·)) RADIO</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`).join(''); } }
+      if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => { const heard = m.text.startsWith('heard: ');   // (cues.ts overheard: a shout that reached an ear — the strip's own dim row from the start, under its own word; no colour of its own)
+        return `<span class="rx${heard ? ' heard old' : game.time - m.t > 5 ? ' old' : ''}"><b>${heard ? 'HEARD' : '·)) RADIO'}</b>${m.text.slice(7).replace(/[<>&]/g, c => c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;')}</span>`; }).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
     const ot = game.objectiveText();
