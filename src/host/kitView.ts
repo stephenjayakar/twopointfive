@@ -270,10 +270,21 @@ export const KIT_VIEW_QUIET = {
    *  LAMP, the picture's own, hung for the cost alone: `back` m behind the wall's far face (`backMin` at least, where it has to come nearer for the
    *  slab to reach him), `up` high, slid along the wall away from him (to `side` m past the far jamb; `clear` m inside the doorway where the open leaf
    *  stands on that side) until the slab's edge passes `past` m beyond his place (he is IN it where it reaches the near `body` m of him).
-   *  ONE LAMP THROWS THE SLAB, nearly a point (`radius`: the jambs' shadows are its hard edges): the blade's own lamp burns at `blade` of itself
-   *  for the slit and is OUT once the leaf is thrown. At 40 the slab is two to three times the pool, which stays lit inside it and is lost in it */
-  cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3, blade: 2,
-    lamp: { back: 0.45, backMin: 0.15, up: 1.9, side: 1.2, clear: 0.08, past: 0.75, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 40, range: 8, radius: 0.03 } },
+   *  ONE LAMP THROWS IT, a point (`radius`: the jambs' shadows are its hard edges): the blade's own lamp burns at `blade` of itself for the slit
+   *  and is OUT once the leaf is thrown, and so is the pool lamp (`pool`: the share of itself it burns at under the thrown leaf — it was one more
+   *  light, a second shadow of him, and lost in the slab anyway; back with the restage) — so he has ONE long shadow. The room's own lamps burn
+   *  at `room` of themselves from then (1: full, as through the slit — under the roof that stays on they add nothing to the yard's floor; the
+   *  seam to take them down at a way where they come out through the doorway as a flood).
+   *  IT READS AS "CAUGHT" BY ITS SHAPE: a WEDGE with the doorway's shape, not a slab. `past` was 0.75 and pulled the lamp to 0.15 m behind the
+   *  wall: a fan 75 deg wide that filled the yard. At 0.25 the lamp hangs about 0.35 m back and the fan runs from just past straight out of the
+   *  door to about 53 deg toward him — its edge crosses the floor a quarter metre beyond his place, so he stands lit just inside it, and the
+   *  floor along the wall behind him and all the floor on the door's far side stay dark. (Further back is a narrower, door-shaped fan that
+   *  MISSES him: he rests a body's width off the wall, 1.1 m along — at 1.0 m back the edge falls 0.84 m along at his distance.)
+   *  AND HE IS FROZEN in it: where he stood as the row ended, turned to the door (`aimY` m up its middle), no walk home under the hold. He
+   *  comes round to it at `turn` deg/s, body and gun — a start, not the calm rows' 100 and 150: the row leaves him facing along the wall, and at
+   *  the calm rate he was still turning, a foot in the air, a second after the leaf was thrown; at this he is round as it stands wide */
+  cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3, blade: 2, room: 1, pool: 0, aimY: 1.2, turn: 240,
+    lamp: { back: 0.45, backMin: 0.2, up: 1.9, side: 1.2, clear: 0.08, past: 0.25, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 48, range: 8, radius: 0.01 } },
   /** LIFE AT REST, no guard: after each of these seconds of rest in turn (a fixed list: no dice) the warm lamp behind the door slides `slide` m along
    *  the wall over `out` s, stays `stay` s and slides back, dark to `blinkTo` of itself for `blink` s from `blinkAt` (somebody passes it); every man's
    *  idle sway is stopped for its length. WHICH WAY: further past the LATCH (the only way the gap still sees it: slid the other way the lamp is
@@ -425,7 +436,7 @@ export interface KitView {
   /** LOUD KIT'S COST (KIT_VIEW_QUIET.cost), for the checks: how many played and how many a pick cut short · one is up · the last: whose row it
    *  followed, the most the room burned at, there was a hung leaf to throw and the widest it stood off shut (rad), he was up, the lamp hung and whether its slab reaches
    *  his place, how long it ran and how it ended ('' while it runs · 'done' · 'cut') */
-  readonly cost: { n: number; cuts: number; on: boolean; last: { field: string; i: number; share: number; door: boolean; leaf: number; up: boolean; lamp: boolean; catches: boolean; s: number; how: string } | null };
+  readonly cost: { n: number; cuts: number; on: boolean; last: { field: string; i: number; share: number; door: boolean; leaf: number; up: boolean; lamp: boolean; catches: boolean; s: number; how: string; /** the furthest his feet moved under it (m) · the pool lamp was put out under the thrown leaf */ moved: number; pool: boolean } | null };
   /** LIFE AT REST (KIT_VIEW_QUIET.idle), for the checks: beats begun and how many a row cut short · one is up and the men are held still · the lamp
    *  that slides ('own': the picture's own behind the door · 'beat': one hung for the beat) · the furthest it slid (m) · seconds to the next (NaN: none due) */
   readonly life: { n: number; cuts: number; on: boolean; still: boolean; lamp: 'own' | 'beat' | null; far: number; next: number };
@@ -543,18 +554,20 @@ export function kitViewCostly(r: { quiet: boolean; loud: boolean; prelude: boole
   return r.gun ? r.shots > 0 && !r.suppressed : r.marked;
 }
 /** …and the cost `t` s from the old row's end (pure): the room behind the door at this share of itself (1: full, from its first frame, the leaf
- *  still a hand ajar) · the leaf is being thrown wide and he is up out of the crouch · it is over (the room is staged again under the dissolve) */
-export function kitViewCostAt(t: number, C: { slit: number; wideDeg: number; swing: number; hold: number } = KIT_VIEW_QUIET.cost): { share: number; open: boolean; done: boolean } {
-  return { share: 1, open: t >= C.slit, done: t >= C.slit + C.wideDeg * R / Math.max(0.1, C.swing) + C.hold };
+ *  still a hand ajar; `room` once the leaf is thrown: one lamp throws the wedge) · the pool lamp at this share of itself (out under the wedge) · the
+ *  leaf is being thrown wide and he is up out of the crouch · it is over (the room is staged again under the dissolve) */
+export function kitViewCostAt(t: number, C: { slit: number; wideDeg: number; swing: number; hold: number; room: number; pool: number } = KIT_VIEW_QUIET.cost): { share: number; pool: number; open: boolean; done: boolean } {
+  return { share: t >= C.slit ? C.room : 1, pool: t >= C.slit ? C.pool : 1, open: t >= C.slit, done: t >= C.slit + C.wideDeg * R / Math.max(0.1, C.swing) + C.hold };
 }
 /** THE COST'S LAMP (pure): where it hangs so that the slab through the opened doorway falls ALONG the wall over the man beside it, not straight out
  *  past him — he rests a body's width off the wall, so a lamp behind the door's middle lights the floor in front of the door and leaves him in the
  *  jamb's shadow. Behind the wall, slid along it away from him until the line past his own jamb reaches `past` m beyond his place; no further than
  *  `side` m past the far jamb — or, where the leaf's hinge is on that jamb (the thrown leaf stands there, across the lamp), `clear` m inside the
  *  doorway and nearer the wall for it; pulled toward the door's middle off floor that is not free. `reach` = how far along the wall, at his distance
- *  from it, the slab's edge falls; `catches` = that reaches the near side of him (`body` m short of his middle). [x, y, z] */
+ *  from it, the slab's edge falls; `catches` = that reaches the near side of him (`body` m short of his middle); `wedge` = the fan that gets out
+ *  between the two jambs, its edges in degrees off the door's own line, positive toward him. [x, y, z] */
 export function kitViewCostLamp(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall'>, width: number, sam: readonly number[], hinge: readonly number[] | null, free: (x: number, z: number) => boolean,
-  C: { back: number; backMin: number; up: number; side: number; clear: number; past: number; body: number } = KIT_VIEW_QUIET.cost.lamp): { pos: Vec3; along: number; back: number; reach: number; catches: boolean } {
+  C: { back: number; backMin: number; up: number; side: number; clear: number; past: number; body: number } = KIT_VIEW_QUIET.cost.lamp): { pos: Vec3; along: number; back: number; reach: number; catches: boolean; wedge: { from: number; to: number } } {
   const m = P.anchor.mid, s = P.s, n = P.anchor.n, al = (p: readonly number[]) => (p[0] - m[0]) * s[0] + (p[1] - m[1]) * s[1], w2 = width / 2;
   const sAl = al(sam), sg = sAl >= 0 ? 1 : -1, o = Math.max(0.2, (sam[0] - m[0]) * n[0] + (sam[1] - m[1]) * n[1] - P.wall.face), th = P.wall.face - P.wall.back;
   const leafFar = !!hinge && al(hinge) * sg < 0, lo = leafFar ? -(w2 - C.clear) : -(w2 + C.side), hi = w2 - C.clear, need = Math.abs(sAl) + C.past - w2;   // (`need`: how far past his own jamb the edge must fall)
@@ -563,7 +576,9 @@ export function kitViewCostLamp(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall'>
   if (reach() < Math.abs(sAl) + C.past - 1e-6 && need > 0) { back = Math.max(C.backMin, Math.min(C.back, (w2 - a) * o / need - th)); }
   const at = (): Vec3 => [m[0] + s[0] * sg * a + n[0] * (P.wall.back - back), C.up, m[1] + s[1] * sg * a + n[1] * (P.wall.back - back)];
   for (let k = 0; k < 12; k++) { const p = at(); if ((Math.abs(a) < w2 && back < width) || free(p[0], p[2])) break; a *= 0.85; if (k === 11) a = 0; }   // (inside the doorway, in the leaf's own sweep, nothing stands: the walker's grid shuts a body's width off each jamb, and every 5 cm nearer the jamb is 15 cm more of slab at his place)
-  return { pos: at(), along: sg * a, back, reach: reach(), catches: reach() >= Math.abs(sAl) - C.body };
+  // (the fan: its edge on his side grazes his jamb's corner on the team's face; the other grazes the far jamb's — on the team's face from a lamp inside the doorway, on the room's from one past it)
+  const wedge = { from: Math.atan2(-w2 - a, a > -w2 ? th + back : back) / R, to: Math.atan2(w2 - a, th + back) / R };
+  return { pos: at(), along: sg * a, back, reach: reach(), catches: reach() >= Math.abs(sAl) - C.body, wedge };
 }
 /** LIFE AT REST (KIT_VIEW_QUIET.idle), `t` s into the beat (pure): how far along the wall the lamp behind the door has slid (m; eased out, held, eased
  *  back) · the share of itself it burns at (the blink) · the share a lamp hung for the beat alone is faded in at · it is over */
@@ -1632,21 +1647,26 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  hung for the cost alone (kitViewCostLamp). Held, then the lamp is out and the room dim again, and the room is staged again under the dissolve
    *  (every man on his place, the leaf ajar, the lamp mended, he down); the loop rests `rest` s. A pick ends it at once, the same way. No man of the
    *  level's is asked for anything: nobody is roused. Never seen on a GPU */
-  let costT = NaN, costLamp: RtLight | null = null; const costSeen: { n: number; cuts: number; last: KitView['cost']['last'] } = { n: 0, cuts: 0, last: null };
+  let costT = NaN, costLamp: RtLight | null = null, costPool: { I: number; E: Vec3 } | null = null, costFeet: V2 = [0, 0]; const costSeen: { n: number; cuts: number; last: KitView['cost']['last'] } = { n: 0, cuts: 0, last: null };
   const costOn = () => !isNaN(costT);
-  const costOff = () => { costT = NaN; if (costLamp) { engine.lights.remove(costLamp); costLamp = null; } };
+  const costOff = () => { costT = NaN; if (costLamp) { engine.lights.remove(costLamp); costLamp = null; }
+    if (costPool && pool) { pool.baseIntensity = costPool.I; pool.baseEmissive = [costPool.E[0], costPool.E[1], costPool.E[2]]; } costPool = null; };   // (the pool lamp's own base back: the restage finds it as it was)
   const costBegin = (S: Staged, B: Beat) => { const L = KIT_VIEW_QUIET.cost.lamp, D = S.door; lifeOff(true);
     const G = kitViewCostLamp(S.plan, S.width, S.sam, D && !D.off ? D.def.hinge : null, (x, z) => !game.col.nav.isBlocked(x, z));
-    costT = game.time; costSeen.n++; costSeen.last = { field: B.field, i: B.i, share: 1, door: !!D && !D.off, leaf: 0, up: false, lamp: true, catches: G.catches, s: 0, how: '' };
+    costT = game.time; costSeen.n++; costSeen.last = { field: B.field, i: B.i, share: 1, door: !!D && !D.off, leaf: 0, up: false, lamp: true, catches: G.catches, s: 0, how: '', moved: 0, pool: false };
+    costFeet = [game.player.char.pos[0], game.player.char.pos[2]];   // (HE IS FROZEN where the row left him: tidy() holds him there, turned to the door)
     quietInside(1, KIT_VIEW_QUIET.cost.blade);
     costLamp = engine.lights.add({ name: 'kitview_cost', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: 0 as const, pos: G.pos, dir: [0, -1, 0] as Vec3, color: [L.color[0], L.color[1], L.color[2]] as Vec3,
       intensity: L.intensity, peakIntensity: L.intensity, range: L.range, innerDeg: 0, outerDeg: 180, radius: L.radius, volumetric: 0, broad: false, enabled: true }); };
   /** each live frame with no row up: true while the cost plays (nothing else begins under it) */
   const costTick = (S: Staged): boolean => { if (isNaN(costT)) return false;
     const C = KIT_VIEW_QUIET.cost, el = game.time - costT, at = kitViewCostAt(el), D = S.door, pl = game.player, last = costSeen.last!;
-    stowT = game.time; last.s = el;   // (his gun stays as the row left it: nothing is put away under the slab)
+    stowT = game.time; last.s = el; last.moved = Math.max(last.moved, flat(pl.char.pos, costFeet));   // (his gun stays as the row left it: nothing is put away under the slab)
     if (asked === null && !at.done) {
-      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); } pl.crouch = false; if (!last.up) quietInside(1, 0); last.up = true; }   // (…and the blade's own lamp is out under the slab: ONE lamp throws it, one hard edge)
+      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); } pl.crouch = false;
+        if (!last.up) { quietInside(at.share, 0);   // (…and the blade's own lamp is out under the wedge, the room's own back down: ONE lamp throws it, one hard edge, one shadow)
+          if (pool && !pool.broken && at.pool < 1) { costPool = { I: pool.baseIntensity, E: [pool.baseEmissive[0], pool.baseEmissive[1], pool.baseEmissive[2]] }; pool.baseIntensity = costPool.I * at.pool; pool.baseEmissive = [costPool.E[0] * at.pool, costPool.E[1] * at.pool, costPool.E[2] * at.pool]; last.pool = true; } }   // (…and the pool lamp out: its base, which the game multiplies each step — no round, no event, nobody hears a lamp go)
+        last.up = true; }
       if (D && !D.off) last.leaf = Math.max(last.leaf, Math.abs(D.angle - S.shut));
       return true; }
     if (!at.done) costSeen.cuts++; last.how = at.done ? 'done' : 'cut';
@@ -1846,7 +1866,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     //  this same walk home, taken as the card opens; a row of the partner's waits for it as it waits for any half step of his: waits(), 'sam')
     if (S.samBack) { const w = actor() ? S.samBack : S.samRest; if (S.sam[0] !== w[0] || S.sam[1] !== w[1]) S.sam = [w[0], w[1]]; }
     const slack = Q && B && B.man ? 0.25 : 0;
-    if ((!B || B.man) && !(B && B.row.team)) { if (flat(pl.char.pos, S.sam) > K.onSlot + slack && !(V.home && !B && !actor() && away(S))) game.puppet = { goal: [S.sam[0], 0, S.sam[1]], aim: null, throwAt: null, walk: K.samWalk }; else if (game.puppet) game.puppet = null; }   // (not under the whole team's row: Game.puppet takes the squad's order away — nor while a row of his waits for the men to walk home: under it they stood until he was home)
+    if (costOn()) game.puppet = { goal: null, aim: S.at([0, 0, KIT_VIEW_QUIET.cost.aimY]), throwAt: null };   // (CAUGHT: under the cost he is frozen — no walk home, his feet where the row left them, turned to the door)
+    else if ((!B || B.man) && !(B && B.row.team)) { if (flat(pl.char.pos, S.sam) > K.onSlot + slack && !(V.home && !B && !actor() && away(S))) game.puppet = { goal: [S.sam[0], 0, S.sam[1]], aim: null, throwAt: null, walk: K.samWalk }; else if (game.puppet) game.puppet = null; }   // (not under the whole team's row: Game.puppet takes the squad's order away — nor while a row of his waits for the men to walk home: under it they stood until he was home)
     if (!B && (tools().ops.length || tools().set.length)) { tools().reset(); pools(); }
     { const WC = game.wallCharge; if (!B && dirty !== 'world' && WC && (WC.ops.length || WC.set.length)) { WC.reset(); pools(); } }   // (not while the room waits for its restage: a charge that came down unblown goes under the dissolve, never off the wall under the eye — finish())
     if (!B && shot && game.time - shotAt >= K.hold) mend();   // (the pane his rounds broke: whole again, plain)
@@ -1942,7 +1963,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   };
   /** Sam's two yaws, governed: each channel's step toward what the game last wrote — after the game's step, by the time THAT step took (a step by the
    *  frame before's time read as a rate half as fast again on an uneven frame) */
-  const yaws = (dt: number) => { const G = govs.get(game.player.char); if (G) { chanTick(G.body, K.bodyRate * R, dt); chanTick(G.aim, K.gunRate * R, dt); } };
+  const yaws = (dt: number) => { const G = govs.get(game.player.char); if (G) { const T = costOn() ? KIT_VIEW_QUIET.cost.turn : 0; chanTick(G.body, Math.max(K.bodyRate, T) * R, dt); chanTick(G.aim, Math.max(K.gunRate, T) * R, dt); } };   // (under a loud row's cost he comes round to the door at the cost's own rate: caught)
   const SHORT = /fiveseven|guard9mm/;   // the pistols' rows (the rest are long guns)
   /** a teammate's gun written live: his hands' errand now (the animator's own kit swap: the right hand over the shoulder and back), the model at its far point */
   const swapGun = (man: Guard, id: string, shield = false) => {
