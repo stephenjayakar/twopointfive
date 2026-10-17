@@ -14,6 +14,13 @@
 //                 SIMULATION DOES NOT KNOW: a seeded 20 s digests identically with the look on, with it off, and on the mannequin
 //                 + THE SNEAKING SUIT (LOOK.suit; game/cast.ts sneakSuit): on the plain night and on a quiet mission as two, Sam (and the partner) drawn without helmet,
 //                 back kit and mesh goggles, in black rows; on a room clear the issue dress; nothing with the suit's switch or the look off
+//   cast-beam     STATURE's laser (game/stature.ts drawnBeam through combat.ts laserBoxes — the cast is drawn a few per cent taller or shorter per man, about his feet):
+//                 a teammate's weapon laser laid twenty-four ways leaves his DRAWN muzzle and still ends on the point the simulation's ray ends on, bead and all; the
+//                 men asked are not all at 1 (the gap between the two muzzles is printed); a man at 1 gets the very ray back. Asked of the boxes laserBoxes hands
+//                 out (which carry no drawn copy of their own: Box.dc / dh unset), against a drawn muzzle worked out here (his feet + scale × the rest), never of
+//                 drawnBeam's own answer; a way with no beam must be one the game holds back (a goggled man's bore on one of his own). NOT asked: an enemy's beam
+//                 cut by the fog of war (laserBoxes' other branch). Also rides 'lasers'. Its red path: CASTBEAM_BREAK=1 bun run tools/qa/probes.ts cast-beam
+//                 must FAIL (the check is handed beamBoxes' line along the simulation's own ray: a beam from the muzzle the simulation has)
 //   bun run tools/qa/probes.ts cast
 import { ROOT, standUp, loadCastOf } from './headless.ts';
 import { spawnUnit, despawnUnit } from '../../src/game/guards.ts';
@@ -207,6 +214,51 @@ export async function castGame() {
     { const gm = B.W.game; const anyParts = [gm.player.char, ...gm.guards.map((x: any) => x.char)].some((c: any) => c.parts !== 0); const u: Uint32Array = gm.chars.instU32; let z = true; for (let i = 0; i < 16; i++) if (u[i * 24 + 22] !== 0) z = false;
       verdict(!gm.ch.cast && !anyParts && z && gm.rigFits === null, 'on the mannequin nobody has a mask, the instance word stays 0 and there are no per-man fits (the build as it was)'); }
   } finally { Math.random = sysRandom; }
+}
+
+/** STATURE's laser: the line the draw hands the renderer runs from the DRAWN muzzle to the simulation's own end point (see the head). */
+export async function castBeam() {
+  console.log('\n=== cast-beam: a weapon laser leaves the drawn muzzle and ends where the simulation\'s ray ends ===');
+  if (!verdict(existsSync(CAST_PATH), 'the file exists')) return;
+  const BREAK = process.env.CASTBEAM_BREAK === '1', sysRandom = Math.random;
+  const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`); const CBM: any = await import(`${ROOT}/src/game/combat.ts`);
+  const ST: any = await import(`${ROOT}/src/game/stature.ts`); const IRL: any = await import(`${ROOT}/src/game/irlaser.ts`); const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
+  const was = NIGHTBREACH.squad; let g: any = null;
+  try {
+    Math.random = seeded(7); const W: any = await standUp({ cast: true }); g = W.game;
+    NIGHTBREACH.squad = 4; const why = g.nightBreach.start(); for (let f = 0; f < 30; f++) W.step(1 / 60);
+    const ops: any[] = g.guards.filter((x: any) => x.team === 'operative'), scales = ops.map(x => ST.statureOf(x.char));
+    verdict(!why && ops.length === 4 && scales.some(s => s !== 1) && ops.every((x, i) => scales[i] === ST.statureBase(g, x.char)), 'the four stand on the cast and are not all drawn at the skeleton\'s height', why ?? scales.map((s, i) => `${ops[i].callsign} ${s}`).join(' · '));
+    const mm = (a: number[], b: number[]) => v3.dist(a, b) * 1000, at = v3.mad;
+    let asked = 0, blank = 0, lost = 0, copies = 0, beads = 0, nearMax = 0, farMax = 0, beadMax = 0, gapMax = 0, lenMax = 0; const bad: string[] = [];
+    for (const gd of ops) {
+      const c = gd.char, s = ST.statureOf(c), ch = c.bones.chest ?? [c.pos[0], 1.2, c.pos[2]], keep = { m: c.muzzle, d: c.gunDir };
+      try {
+        for (let w = 0; w < 24; w++) {
+          const yaw = (w % 8) * Math.PI / 4 + 0.2, pitch = [-0.15, 0, 0.1][w >> 3], dir = [Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)];
+          c.muzzle = at(ch, [dir[0], 0, dir[2]], 0.5); c.gunDir = dir;
+          const ir = IRL.laserBand(g, gd) === 'ir', R = CBM.laserReach(g, c, gd, ir), out: any[] = [];
+          IRL.irViewAs(true, () => BREAK && R ? CBM.beamBoxes(g, R.from, R.dir, R.L, out, R.dot, ir, true) : CBM.laserBoxes(g, gd, out));
+          if (out.length === 0) {   // no beam: only where the game holds one back (nothing to meet inside 5 cm, or a goggled man's bore on one of his own)
+            if (!R || (ir && R.on && IRL.paintsOwn(g, gd, R.on))) blank++; else if (++lost && bad.length < 4) bad.push(`${gd.callsign} (×${s}) way ${w}: no beam, and nothing holds one back`);
+            continue; }
+          asked++; const line = out[0], z = quat.rotate(line.rot, [0, 0, 1]), near = at(line.c, z, -line.h[2]), far = at(line.c, z, line.h[2]);
+          if (out.some((b: any) => b.dc || b.dh)) copies++;   // (a beam is not bolted to him: scaled about his feet its far end would leave the simulation's point)
+          const muzzle = at(c.pos, v3.sub(R.from, c.pos), s), end = at(R.from, R.dir, R.L), eN = mm(near, muzzle), eF = mm(far, end);
+          nearMax = Math.max(nearMax, eN); farMax = Math.max(farMax, eF); gapMax = Math.max(gapMax, mm(muzzle, R.from)); lenMax = Math.max(lenMax, Math.abs(line.h[2] * 2 - R.L) * 1000);
+          let eB = 0; if (R.dot) { beads++; eB = out[1] ? Math.abs(mm(out[1].c, end) - 6) + mm(out[1].c, at(far, z, -0.006)) : 99; beadMax = Math.max(beadMax, eB); }
+          if ((eN > 0.5 || eF > 0.5 || eB > 0.5) && bad.length < 4) bad.push(`${gd.callsign} (×${s}) way ${w}: near end ${eN.toFixed(1)} mm off his drawn muzzle, far end ${eF.toFixed(1)} mm off the ray's end${R.dot ? `, bead ${eB.toFixed(1)} mm` : ''}`);
+        }
+      } finally { c.muzzle = keep.m; c.gunDir = keep.d; }
+    }
+    verdict(asked >= 48 && lost === 0 && bad.length === 0 && nearMax <= 0.5 && farMax <= 0.5, `the line starts on the drawn muzzle and ends on the simulation's point (${asked} beams of 4 men; ${blank} ways the game holds the beam back, ${lost} with none and no reason)`,
+      bad.length ? bad.join('\n    ') : asked < 48 ? `only ${asked} beams to ask (48 wanted)` : `near end ≤ ${nearMax.toFixed(2)} mm off the drawn muzzle, far end ≤ ${farMax.toFixed(2)} mm off the ray's end (0.5 mm allowed)`);
+    verdict(beads >= 24 && beadMax <= 0.5, `the bead sits 6 mm short of that same end, on the drawn line (${beads} beads)`, `≤ ${beadMax.toFixed(2)} mm off`);
+    verdict(copies === 0, 'no beam box carries a drawn copy of its own (Box.dc / dh): the line is handed to the renderer where it was asked', `${copies} beams with one`);
+    verdict(gapMax > 5 && lenMax > 0.5, 'the question is a real one here: the drawn muzzle is not the simulation\'s, and the drawn line is not the ray\'s length', `up to ${gapMax.toFixed(1)} mm between the two muzzles, up to ${lenMax.toFixed(1)} mm of length`);
+    { const sam = g.player.char, from = [1, 1.3, 2], dir = [0, 0, 1], B = ST.drawnBeam(sam, from, dir, 7);
+      verdict(ST.statureOf(sam) === 1 && B.from === from && B.dir === dir && B.k === 1, 'a man drawn as the skeleton has him (Sam) gets the very ray back'); }
+  } finally { NIGHTBREACH.squad = was; try { g?.nightBreach.stop(); } catch { /* the probe is over */ } Math.random = sysRandom; }
 }
 
 /** THE LOOK: the second file and everything LOOK.on switches — and the simulation knowing none of it (see the head). */
