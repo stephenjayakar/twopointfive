@@ -57,7 +57,7 @@
 //     perf: perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
-//     cast: cast-loader cast-file cast-fit cast-game cast-look   (the look switch: both files, OFF = today's masks, one digest under either look;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
+//     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
 //     selftest: selftest-fail selftest-knobs selftest-pass selftest-quiet selftest-throw
 //     snap: snap-bites snap-page   (+ snap-open, by its own name only: red today)
@@ -3223,6 +3223,7 @@ if (on('director-scheduler', 'director', 'all')) await run('director-scheduler',
 { let ran = false;
   const cf = async (name: string, fn: string) => { if (on(name, 'cast', 'all')) { ran = true; await run(name, async () => ((await import('./cast-probes.ts')) as any)[fn]()); } };
   await cf('cast-loader', 'castLoader'); await cf('cast-file', 'castFile'); await cf('cast-fit', 'castFit'); await cf('cast-game', 'castGame'); await cf('cast-look', 'castLook');
+  if (on('cast-beam', 'cast', 'lasers', 'all')) { ran = true; await run('cast-beam', async () => ((await import('./cast-probes.ts')) as any).castBeam()); }   // (also with the lasers: the draw it asks is combat.ts laserBoxes)
   if (ran) familyBanner('cast', (await import('./cast-probes.ts')).castFailures()); }
 /** A stand-alone QA script run as a child (its process.exit stays its own): every line echoed through console.log so run() and gate.sh count its check lines; a non-zero exit is a FAIL line. */
 async function runScript(file: string, args: string[] = []): Promise<boolean> {
