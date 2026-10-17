@@ -422,7 +422,8 @@ export class SoundPaths {
   tick(time: number) { this.now = time; if (this.cache.size > 512) this.cache.clear(); }
   /** the level changed under the cached routes (a wall holed, cover gone — game/wallbreak.ts): every answer is asked afresh */
   invalidate() { this.cache.clear(); }
-  propagate(src: Vec3, dst: Vec3): Propagation {
+  /** `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
+  propagate(src: Vec3, dst: Vec3, keep = true): Propagation {
     const a: Vec3 = [src[0], Math.max(src[1], 0.9), src[2]], b: Vec3 = [dst[0], Math.max(dst[1], 0.9), dst[2]];
     const straight = v3.dist(a, b);
     // (solidBlocked throughout: sound does not pass a glass pane — it goes round through the door like round any wall, or through the opening once the pane is broken)
@@ -463,7 +464,7 @@ export class SoundPaths {
       const muffle = doorInWay ? 0.85 : 0.35;
       r = { direct: false, routed: true, pathLen: L, via, apparent: [dst[0] + dir[0] * L, src[1], dst[2] + dir[2] * L], muffle, carry: 1 - muffle * 0.8 };
     }
-    this.cache.set(key, { t: this.now, r }); return r;
+    if (keep) this.cache.set(key, { t: this.now, r }); return r;
   }
 }
 

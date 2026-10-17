@@ -58,6 +58,7 @@ import { HANDS } from '../game/hands';
 import { WORK } from '../game/workthings';
 import { WAND } from '../game/wand';
 import { STICKY } from '../game/stickycam';
+import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
@@ -137,6 +138,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CHAOS.mess.on = q.get('mess') !== '0';   // what a blast and a broken thing leave on the floor: the film of settled dust and grit, the mark of a chunk the pool took (src/game/floormess.ts; marks laid only for the picture — ?mess=0 = the floor as clean as it was)
   WALLCHARGE.hung = q.get('hungcharge') !== '0';   // a wall charge set where something hangs on the wall (a notice board) takes it and the wall: it is no shield to the wall, and goes in pieces (game/wallcharge.ts hung; ?hungcharge=0 = the charge is a dud there, as it was)
   WALLCHARGE.outOfFire = q.get('standfire') !== '0';   // the men who stand off a wall charge take the safe marks no enemy the team knows of can shoot first, then the least under that fire (game/wallcharge.ts underFire; known = the fog's own record: in the picture now, or seen in the last 30 s where he was last seen — and, with the men's own pictures on (PICTURE.wall; ?nopicture off), anybody one of them saw, heard or was told of in that time; acts with the safety radius; ?standfire=0 = the nearest safe marks whatever looks at them, as it was)
+  WALLCHARGE.menClear = q.get('menclear') !== '0';   // a man on 'fall in' whose place is in the line of a charge set on a wall, nearer than its stand-off distance, walks to a stand-off mark and keeps it until his place is clear (game/wallcharge.ts clearOf; ?menclear=0 = he keeps his place in the file, in the blast or not; acts with the larger safety radius)
   WALLCHARGE.farFurn = q.get('wallfurn') !== '0';   // furniture against a wall's far face is no 'no floor behind it' (game/wallcharge.ts mouthAfter: a cot stood against the wall inside goes with the wall): ON in the page; ?wallfurn=0 = refused there as it was
   CASTOR.on = q.get('chairroll') !== '0';   // an office chair rolls and coasts on its castors (game/props.ts CASTOR): ON in the page; ?chairroll=0 = it stops like any other furniture, as it was
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
@@ -154,8 +156,9 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.behindSam = q.get('behindsam') !== '0';   // Sam beyond a door is one of ours to the squad's own stun can: the word at a held door steps them in with the can kept, and a bang row on it is refused in words (game/doortools.ts samBehind): ON in the page; ?behindsam=0 = only teammates counted, as it was
   DOORTOOLS.podFrames = q.get('podframes') !== '0';   // no point of an entry is dealt in ANOTHER door's frame, or beyond one (game/doortools.ts inFrame; the barracks' n_end entry had a man on n4b's threshold): ON in the page; ?podframes=0 = the points as they were
   DOORTOOLS.thrHand = q.get('thrhand') !== '0';   // a threshold's can is thrown only by a man within reach of the frame, and waits for one (game/doortools.ts thrHand: a frag had run the stack off the door and the can left a doorway nobody stood at): ON in the page; ?thrhand=0 = the thrower wherever he stands
-  DOORTOOLS.thrNoCan = q.get('thrnocan') === '1';   // OFF in the page until the maintainer's call (?thrnocan=1): the can's wait spent with nobody at the door — no can, said why (game/doortools.ts thrNoCan)
-  DOORTOOLS.thrFragHold = q.get('thrfraghold') === '1';   // OFF in the page until the maintainer's call (?thrfraghold=1): a threshold waits (the order's one wait at most) for its men who ran from a grenade to be back before a can or the step in (game/doortools.ts thrFragHold)
+  DOORTOOLS.thrNoCan = q.get('thrnocan') !== '0';   // the can's wait spent with nobody at the door: no can, said why, and they go in keeping it (game/doortools.ts thrNoCan; the maintainer's answer, 10-16): ON in the page; ?thrnocan=0 = thrown from wherever the picked man stands, as it was
+  DOORTOOLS.fragHold = q.get('fraghold') !== '0';   // a door order waits for its men who ran from a grenade to be back on their marks before its door is opened, `fragHoldCap` s at most (game/doortools.ts fragHold; the maintainer's answer, 10-16): ON in the page; ?fraghold=0 = the order carries on with its men scattered, as it was — at a held doorway too
+  DOORTOOLS.thrFragHold = DOORTOOLS.fragHold && q.get('thrfraghold') !== '0';   // … and a threshold waits the same way before a can or the step in (game/doortools.ts thrFragHold): ON in the page; ?thrfraghold=0 = that half alone off
   DOORWAY.sideKick = q.get('sidekick') !== '0';   // a boot from beside the latch jamb (game/doors.ts kickSpotSide): ON in the page; ?sidekick=0 = every kick square in front of the leaf
   DOORWAY.kickGlass = q.get('kickglass') !== '0';   // … never from in front of a pane a round reaches him through: the lead boots from the front there (game/doortools.ts bootSpot): ON in the page; ?kickglass=0 = the side spot wherever there is floor
   WX_OWN.roofs = q.get('ownroofs') !== '0';   // a level's own night storm rains by that level's own roofs (game/weather.ts syncRoofs: the records office's car park lay inside the OFFICE's no-rain rectangle): ON in the page; ?ownroofs=0 = the office's two rectangles on every level, as it was
@@ -240,6 +243,7 @@ export function pageSwitches(q: URLSearchParams): void {
   BIGSLOT.shut = !q.has('nobigshut'); BIGSLOT.beside = !q.has('nobigbeside');   // (its two knobs of 10-15: the tools open any shut door, from beside the frame — each off = the build of 10-14's rule)
   STICKY.on = !q.has('nosticky');   // sticky cameras (game/stickycam.ts): a row of YOUR kit card and, carrying one, a third load for the rifle's launcher — sent to a wall it is one more eye on the fog of war. ON in the page, ?nosticky = no such row and no such load; off on the frozen stand (TPS_STICKY=1). Before the kit is read from the store, like the wand's.
   STICKY.take = q.get('camtake') !== '0';   // a stuck camera of your own is taken back with the use key and goes on the launcher again (game/stickycam.ts takeCam): ?camtake=0 = a camera sent is a camera spent, as before
+  CUES.overheard = q.get('overheard') !== '0';   // a shout from a defender the fog hides, where your ears or a living teammate's really get it, is a quiet row on the radio strip: his words alone, no name, no place (game/cues.ts overheard): ?overheard=0 = such a shout is no row, as before
   WORK.on = !q.has('noworkthings');   // a teammate works a thing in the level (game/workthings.ts): the orders' menu on the breaker, or on the mission's thing once it is to be taken, carries that thing's own order on digit 1 — ON in the page; ?noworkthings = the menu there is the floor's, and the breaker errand goes to the nearest man whoever he is, as it was
   IRLIGHT.on = !q.has('noirlight');   // an infrared light on the goggles (game/irlight.ts): a room with no light of its own shows through night vision, to you and to a goggled teammate and to nobody else — ON in the page; ?noirlight = a tube amplifies only the light that is there, as it was
   LIGHTWALL.on = !q.has('nolightwall');   // a weapon light stops at the wall its carrier is pressed to (game/lighting.ts lensClear): ON in the page; ?nolightwall = the light at its lens wherever that is, as it was
@@ -362,6 +366,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLCHARGE.farFurn': 'TPS_WALLFURN=1',
   'WALLCHARGE.hung': 'TPS_HUNGCHARGE=1',
   'WALLCHARGE.outOfFire': 'TPS_STANDFIRE=1',
+  'WALLCHARGE.menClear': 'TPS_MENCLEAR=1',
   'CHAOS.pall.on': 'TPS_PALL=1',
   'CHAOS.mess.on': 'TPS_MESS=1',
   'WALLREACT.everyGone': 'TPS_EVERYGONE=1',
@@ -381,6 +386,9 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.behindSam': 'TPS_BEHINDSAM=1',
   'DOORTOOLS.podFrames': 'TPS_PODFRAMES=1',
   'DOORTOOLS.thrHand': 'TPS_THRHAND=1',
+  'DOORTOOLS.thrNoCan': 'TPS_THRNOCAN=1 (acts only with the can\'s wait for a hand up as well: TPS_THRHAND=1)',
+  'DOORTOOLS.thrFragHold': 'TPS_THRFRAGHOLD=1',
+  'DOORTOOLS.fragHold': 'TPS_FRAGHOLD=1 (this rule alone: the threshold\'s half has its own word above)',
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
   'FURN.mouth.on': 'TPS_HOLECLEAR=1',
@@ -406,6 +414,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WAND.on': 'TPS_WAND=1',
   'STICKY.on': 'TPS_STICKY=1',
   'STICKY.take': 'TPS_CAMTAKE=1',
+  'CUES.overheard': 'TPS_OVERHEARD=1',
   'OWNCHARGE.on': 'TPS_OWNCHARGE=1',
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',

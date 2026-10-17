@@ -52,6 +52,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   table on every level, as it was: the frozen digests' words). A new note in roomfight / squads / pressure that is a decision wants a pattern in `Cues.note`. QA `probes.ts cues` (lines / strip / run: on vs
   off digests equal bar bubbles); playthrough.ts `--set '{"CUES":{"on":false}}'`, RunOut `cues` (+ `digestMove` = the digest without bubbles under `PT_DIGEST`), say-watch.ts
   `cues`. Nobody has heard or seen any of it (no GPU / audio in the cloud): the wording, the squelch gain and whether three rows read are by-eye calls.
+  Since 10-16 the strip can carry one row that is NOT on the net: a hidden defender's shout that reached an ear (`CUES.overheard`, `Cues.heardRow` — a field of its
+  own, never one of `rows`; the 'A shout heard' bullet in dialogue.md has the rule, the switch and the check). `CUES` rides a recording from that day.
 
 <!-- was CLAUDE.md lines 1444–1540 -->
 - **Defender squads (10-07;** `src/game/enemysquads.ts`, record rebuild/enemy-squads/squads.md, the file format squad-format.md beside it):
