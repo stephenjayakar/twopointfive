@@ -234,9 +234,10 @@ export async function leversScreens(): Promise<boolean> {
       F.verdict(up === 'cones/hard/stuns base hard' && toH.includes('difficulty=hard') && !toH.includes('enemykit') && after === 'team/standard/stuns base standard', 'opened on a row\'s own hard link: hard\'s rungs under the kept lever while the screen is up, the link\'s own level on what Deploy loads; closed with no lever pressed, the machine\'s level again',
         `up: ${up} · deploy ${toH} · after: ${after}`);
       D.setDifficulty('standard');
-      const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloL = leverRowsOf(Ls.root as unknown as El).length; Ls.close();
+      const Ls = UI.openLoadout(UI.entryOfMission(solo), { host, deploy: () => {}, back: () => {} }); const soloLR = leverRowsOf(Ls.root as unknown as El), soloL = soloLR.length, soloFog = QUIETFOG.on && QUIETFOG.solo; Ls.close();
       const lesson = (TRAINING_MISSIONS as any[])[0]; let lessonL = -1; if (lesson) { const Lt = UI.openLoadout(lesson, { host, deploy: () => {}, back: () => {} }); lessonL = leverRowsOf(Lt.root as unknown as El).length; Lt.close(); }
-      F.verdict(soloL === 0 && lessonL <= 0, 'the solo night\'s loadout and a Training lesson\'s carry no lever rows', `solo ${soloL} rows · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
+      F.verdict((soloFog ? soloLR.map(r => r.key).join(',') === 'fog,ai,kit' && soloLR.every(r => (r.key === 'fog') !== r.na) : soloL === 0) && lessonL <= 0,
+        'the solo night\'s loadout and a Training lesson\'s carry no lever rows (where game/quietfog.ts QUIETFOG.solo is up the solo night\'s carries the three, the fog\'s alone live)', `solo ${soloL} rows${soloFog ? ` (${soloLR.map(r => `${r.key} ${r.na ? 'greyed' : 'live'}`).join(' · ')})` : ''} · lesson ${lesson ? `${lesson.id} ${lessonL} rows` : '(none on this build)'}`);
     }); });
   } finally { fresh(); FOG.own = ownWas; }
   return F.done();
