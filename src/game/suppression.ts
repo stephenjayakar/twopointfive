@@ -6,6 +6,7 @@
 // behind whatever he stands at, a shift to cover when it will not stop — all behind Game.tune.suppression); Sam's own rounds open up with his (player.ts, the
 // one mechanical effect this lane gives him; his picture / mix / reticle are lane R4's, reading the same Player.sup). What the player learns by feel — two close
 // rounds put a man's head down for a second and a half — is literally the guards' rule with these constants.
+import { conditionSup } from './condition';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { TEMPERAMENT } from './game';
@@ -277,12 +278,12 @@ export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
 /** What suppression does to a guard's NEXT round (the two fire sites read it, flag off = nothing): extra cone on top of his row's spread, and × the cadence he draws after it. */
 export function guardFireMods(g: Game, gd: Guard): { spread: number; gap: number } {
   if (!g.tune.suppression) return { spread: 0, gap: 1 };
-  const s = gd.sup.v; return { spread: SUPPRESSION.guardSpread * s, gap: 1 + SUPPRESSION.gapK * s };
+  const s = conditionSup(g, gd, gd.sup.v); return { spread: SUPPRESSION.guardSpread * s, gap: 1 + SUPPRESSION.gapK * s };   // (condition.ts: a hurt man's rounds go as if fire were on him)
 }
 /** is he rattled (s ≥ flinch, reactions on): the closing run drops to a jog, the standoff's orbit to half pace */
 export function flinching(g: Game, gd: Guard): boolean { return reacts(g, gd) && gd.sup.v >= SUPPRESSION.flinch; }
 /** Extra cone on Sam's own round for HIS suppression (player.ts, both fire sites): 0 with the flag off, and 0 under the tour's puppet (its scripted rounds must land). */
-export function samSpread(g: Game): number { return g.tune.suppression && !g.puppet ? SUPPRESSION.samSpread * g.player.sup.v : 0; }
+export function samSpread(g: Game): number { return g.tune.suppression && !g.puppet ? SUPPRESSION.samSpread * conditionSup(g, g.player, g.player.sup.v) : 0; }
 
 /** Panel / QA: 'suppression ▸ Sam 0.00 · Reyes 0.71 head-down 0.6 s (pinned 2.1 s) · …' — Sam, then every living man with anything on him (or the nearest, at rest). */
 export function suppressionSummary(g: Game): string {

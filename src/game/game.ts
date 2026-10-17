@@ -157,6 +157,7 @@ import type { FloorMat } from './floor';
 import * as dialogue from './dialogue';
 import type { DialoguePick } from './dialogue';
 import { Sup, updateSuppression, suppressionSummary } from './suppression';
+import { conditionSummary } from './condition';
 import { AimState, trackPlayer, aimSummary } from './aim';
 import { Qrf, updateQrf, resetQrf, loadQrfTune } from './qrf';
 import { openingStart } from './opening';
@@ -274,6 +275,8 @@ export class Player {
   hitFlash = 0;
   /** a blast that left him up (samstun.ts): folded until / blind until, on the game clock, and where the flash was — the same two stamps a Guard carries */
   staggerUntil = -1; dazzledUntil = -1; dazzledAt: Vec3 | null = null; stunPosed = false;
+  /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
+  hurtAt = -1;
   /** a sprint into a door (sprintdoor.ts): when he last put his shoulder through one and which way it turned him, and until when his hand is ripping one round (the run held to a walk) — on the game clock */
   doorBashAt = -10; doorBashLean = 0; doorRipUntil = -1; doorKickTail = false;
   /** the look his head was last given against that turn, and the game time it was given on (player.ts's sprint facing; game.ts takes it back off the frame nobody renews it) */
@@ -612,6 +615,8 @@ export class Guard {
   /** a ring airfoil took him in the body (launcher.ts staggerGuard): doubled over till this time — rooted like the dazzle (reactT), no round from him, but he can SEE,
    *  and he comes out of it alert toward the side it came from */
   staggerUntil = -1;
+  /** game time a blast left him hurt (condition.ts: -1 = never; read through isHurt) */
+  hurtAt = -1;
   sawPlayerThisFrame = false; lastPos: Vec3; stuckT = 0; stuckN = 0;
   /** a real sighting of his FOE this frame, whoever that is (teams) — sawPlayerThisFrame stays what its name says: eyes on Sam (what the mission's 'spotted' count
    *  and the witnesses read), which for the staff is the same thing */
@@ -1305,6 +1310,7 @@ export class Game {
   /** panel / console: everybody's suppression — Sam's scalar, then every living man with anything on him: his scalar and what it has him doing (flinching, head
    *  down and for how long, shifting to cover, holding it) — or the nearest man at rest (suppression.ts suppressionSummary) */
   suppressionSummary(): string { return suppressionSummary(this); }
+  conditionSummary(): string { return conditionSummary(this); }
   /** panel / console: the aim-settle model — Sam's track and cone with its terms, then every alert man's (or the nearest at rest): track, Sam's bearing rate
    *  across him, his cone and its terms, whether he is braking for a shot, his last round (aim.ts aimSummary) */
   aimSummary(): string { return aimSummary(this); }

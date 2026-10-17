@@ -179,6 +179,7 @@ import { doorCells, frameOf, canSeeChar } from '../../src/game/guards.ts';
 import { pickHover } from '../../src/game/player.ts';
 import { HOLDFIRE_STATS } from '../../src/game/holdfire.ts';
 import { fragStepOff, FRAG_STATS, FRAG_WHY, FRAG_LOG, fragStatsReset } from '../../src/game/frag.ts';
+import { CONDITION_STATS } from '../../src/game/condition.ts';   // (the JSON's `condition`: how many men a blast left hurt this run)
 import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../../src/game/destructionSwitch.ts';
 import { WALLREACT, WALLREACT_STATS, wallReactOf } from '../../src/game/wallreact.ts';
 import { REARWATCH_STATS, rearWatchLog, rearWatchRows } from '../../src/game/rearwatch.ts';
@@ -1657,7 +1658,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     if (LASTM?.LASTSTAND && (LASTM.LASTSTAND.regroup || LASTM.LASTSTAND.callOut)) { const r = LASTM.lastStandReport(P.g); out.lastStand = { on: r.on, stats: r.stats, room: r.room, in: r.in.length, out: r.out.length, named: r.named, said: r.said }; }
     if (P.leaves.length) (out as any).leaves = P.leaves;   // (the commander's own: open leaves across his way he pulled to — absent when he never did)
     if (SHUT) (out as any).shut = P.shut.map(({ ref, ...x }) => ({ ...x, open: !ref.latched }));   // (open: that door stands open again as the run ends)
-    out.trace = P.trace; (out as any).frag = { ...FRAG_STATS }; (out as any).holdfire = { ...HOLDFIRE_STATS, lifts: { ...HOLDFIRE_STATS.lifts } };
+    out.trace = P.trace; (out as any).frag = { ...FRAG_STATS }; (out as any).condition = { ...CONDITION_STATS }; (out as any).holdfire = { ...HOLDFIRE_STATS, lifts: { ...HOLDFIRE_STATS.lifts } };
     { const ids = new Map<number, string>(P.g.guards.map((x: any) => [x.char.id, x.team])); const T = { bursts: 0, teamKilled: 0, teamHit: 0, teamStunned: 0, teamBehindCover: 0, ownKilled: 0, ownHit: 0, ownStunned: 0, sam: 0 };   // what the DEFENDERS' grenades did (frag.ts FRAG_LOG): to the team, to their own side, to the commander (who is in god mode here: 'sam' counts bursts that would have had him)
       for (const r of FRAG_LOG) { if (ids.get(r.who) !== 'hostile') continue; T.bursts++; if (r.player === 'killed' || r.player === 'wounded' || r.player === 'stunned') T.sam++;
         for (const h of r.hits) { if (h.team === 'operative') { if (h.result === 'killed') T.teamKilled++; else if (h.result === 'wounded') T.teamHit++; else if (h.result === 'stunned') T.teamStunned++; else T.teamBehindCover++; } else if (h.team === 'hostile') { if (h.result === 'killed') T.ownKilled++; else if (h.result === 'wounded') T.ownHit++; else if (h.result === 'stunned') T.ownStunned++; } } }

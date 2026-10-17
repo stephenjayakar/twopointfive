@@ -158,7 +158,7 @@ export interface PlayerSnap {
   pistol: FirearmSnap & { lightOn: boolean }; rifle: FirearmSnap & { lightOn: boolean; attIdx: number; rings: number; ringCd: number; /** the long gun, when it is not the FN2000 (kit.ts 'shotgun') */ gun?: WeaponId ; /** 40 mm rounds (absent in a file from before them: the issue stands) */ shells?: number; /** sticky cameras left for the tube (stickycam.ts; written only while its switch is on: −1 = none were issued, absent = the file does not say and what the staging put on him stands) */ cams?: number };
   /** his sticky cameras that are out, stuck (stickycam.ts; absent with none) */ cams?: StickySnap[]; /** the last camera id handed out this run (absent = none sent, or a file from before it: the highest id that is out stands) */ camSeq?: number;
   ocpCharge: number; hasRifle: boolean; rifleGone: boolean; ocpHinted: boolean; equipT: number;
-  ripU?: number; bashAt?: number; bashLean?: number; stagU?: number; dazU?: number; dazAt?: number[]; aw?: number[]; keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; animPhase: number;
+  ripU?: number; bashAt?: number; bashLean?: number; stagU?: number; hurtAt?: number; dazU?: number; dazAt?: number[]; aw?: number[]; keys: string[]; codes: string[]; hitsLeft: number; nv: boolean; pace: number; lastFireT: number; fireCd: number; noise: number; visibility: number; stepPhase: number; animPhase: number;
   wet: V3;   // coat, beads, rain
   bubble: Bubble | null;
 }
@@ -181,7 +181,7 @@ export interface GuardSnap {
   gunLostAt: number; torchLostAt: number; lightLitAtLoss: boolean; lightDeadUntil: number; flashlightOn: boolean; sweep: number; beamDir: V3;
   path: V3[]; pathI: number; repathT: number; pathGoal: V3 | null;
   weapon: FirearmSnap; fireCd: number; reactT: number; searchT: number; lookPhase: number; speed: number; stepPhase: number; heardUpTo: number;
-  diedAt: number; dazzledUntil: number; staggerUntil: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
+  diedAt: number; dazzledUntil: number; staggerUntil: number; hurtAt?: number; lastPos: V3; stuckT: number; stuckN: number; killerId: number; sawBodyT: number;
   alertBest: number; alertStallT: number; alertRef: V3 | null; chaseT: number; shotBlockedT: number;
   sightPos: V3; sightVel: V3; sightT: number; ledT: number; fixT: number; fixRef: V3 | null;
   pieLast: number; pieLastT: number; piePrev: V3 | null; piePrevT: number;   // pieLast: door index, −1 none
@@ -420,7 +420,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ocpCharge: pl.ocp.charge, hasRifle: pl.hasRifle, rifleGone: pl.rifleGone, ocpHinted: pl.ocpHinted, equipT: pl.equipT,
     ...(aimWeightSnapshot(pl) ? { aw: aimWeightSnapshot(pl) } : {}),   // (aimweight.ts: only while his gun is mid-swing onto the cursor)
     ...(pl.doorRipUntil > g.time ? { ripU: pl.doorRipUntil } : {}), ...(sprintDoorTurning(g, pl) ? { bashAt: pl.doorBashAt, bashLean: pl.doorBashLean } : {}),   // (sprintdoor.ts: only while one is running)
-    ...(pl.staggerUntil > g.time ? { stagU: pl.staggerUntil } : {}), ...(pl.dazzledUntil > g.time ? { dazU: pl.dazzledUntil, dazAt: pl.dazzledAt ? [...pl.dazzledAt] : undefined } : {}),   // (samstun.ts: only while one is running)
+    ...(pl.staggerUntil > g.time ? { stagU: pl.staggerUntil } : {}), ...(pl.hurtAt >= 0 ? { hurtAt: pl.hurtAt } : {}), ...(pl.dazzledUntil > g.time ? { dazU: pl.dazzledUntil, dazAt: pl.dazzledAt ? [...pl.dazzledAt] : undefined } : {}),   // (samstun.ts: only while one is running)
     keys: [...pl.keys], codes: [...pl.codes], hitsLeft: pl.hitsLeft, nv: pl.nv, pace: pl.pace, lastFireT: pl.lastFireT, fireCd: pl.fireCd, noise: pl.noise, visibility: pl.visibility, stepPhase: pl.stepPhase, animPhase: pc.anim.phase,
     wet: [pc.wet, pc.beads, pc.wetRain], bubble: pl.bubble ? { ...pl.bubble } : null,
   };
@@ -446,7 +446,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       gunLostAt: gd.gunLostAt, torchLostAt: gd.torchLostAt, lightLitAtLoss: gd.lightLitAtLoss, lightDeadUntil: gd.lightDeadUntil, flashlightOn: gd.flashlight.enabled, sweep: gd.sweep, beamDir: c3(gd.beamDir),
       path: scripted ? [] : gd.path.map(c3), pathI: scripted ? 0 : gd.pathI, repathT: gd.repathT, pathGoal: scripted ? null : c3n(gd.pathGoal),
       weapon: firearmSnap(gd.weapon), fireCd: gd.fireCd, reactT: gd.reactT, searchT: gd.searchT, lookPhase: gd.lookPhase, speed: scripted ? 0 : gd.speed, stepPhase: gd.stepPhase, heardUpTo: gd.heardUpTo,
-      diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
+      diedAt: gd.diedAt, dazzledUntil: gd.dazzledUntil, staggerUntil: gd.staggerUntil, ...(gd.hurtAt >= 0 ? { hurtAt: gd.hurtAt } : {}), lastPos: c3(gd.lastPos), stuckT: gd.stuckT, stuckN: gd.stuckN, killerId: gd.killerId, sawBodyT: gd.sawBodyT,
       alertBest: gd.alertBest, alertStallT: gd.alertStallT, alertRef: c3n(gd.alertRef), chaseT: gd.chaseT, shotBlockedT: gd.shotBlockedT,
       sightPos: c3(gd.sightPos), sightVel: c3(gd.sightVel), sightT: gd.sightT, ledT: gd.ledT, fixT: gd.fixT, fixRef: c3n(gd.fixRef),
       pieLast: gd.pieLast ? g.doors.list.indexOf(gd.pieLast) : -1, pieLastT: gd.pieLastT, piePrev: c3n(gd.piePrev), piePrevT: gd.piePrevT,
@@ -593,7 +593,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     pl.ocp.charge = Math.max(0, Math.min(1, fin(P.ocpCharge, 1))); pl.rifleGone = false; pl.ocpHinted = !!P.ocpHinted; pl.equipT = Math.max(0, fin(P.equipT));
     aimWeightRestore(pl, P.aw);
     pl.doorKickTail = false; pl.doorRipUntil = fin(P.ripU ?? -1, -1); pl.doorBashAt = fin(P.bashAt ?? -10, -10); pl.doorBashLean = P.bashLean === 1 || P.bashLean === -1 ? P.bashLean : 0;
-    pl.staggerUntil = fin(P.stagU ?? -1, -1); pl.dazzledUntil = fin(P.dazU ?? -1, -1); pl.dazzledAt = Array.isArray(P.dazAt) && P.dazAt.length === 3 ? [fin(P.dazAt[0], 0), fin(P.dazAt[1], 0), fin(P.dazAt[2], 0)] : null;
+    pl.staggerUntil = fin(P.stagU ?? -1, -1); pl.hurtAt = fin(P.hurtAt ?? -1, -1); pl.dazzledUntil = fin(P.dazU ?? -1, -1); pl.dazzledAt = Array.isArray(P.dazAt) && P.dazAt.length === 3 ? [fin(P.dazAt[0], 0), fin(P.dazAt[1], 0), fin(P.dazAt[2], 0)] : null;
     pl.keys = new Set(P.keys ?? []); pl.codes = new Set(P.codes ?? []); pl.hitsLeft = Math.max(1, Math.min(Player.MAX_HITS, P.hitsLeft | 0)); pl.nv = !!P.nv; pl.nvAmount = pl.nv ? 1 : 0; pl.pace = Math.max(0.2, Math.min(1, fin(P.pace, 1)));
     pl.lastFireT = fin(P.lastFireT, -10); pl.fireCd = fin(P.fireCd); pl.noise = fin(P.noise); pl.visibility = fin(P.visibility); pl.irradiance = 0; pl.stepPhase = fin(P.stepPhase);   // (visibility: the meter as it stood — the probe overwrites it on the first frame that answers; headless it is the script's knob and stays)
     pc.wet = fin(P.wet?.[0]); pc.beads = fin(P.wet?.[1]); pc.wetRain = fin(P.wet?.[2]);
@@ -620,7 +620,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     gd.path = (S.path ?? []).map(c3); gd.pathI = Math.max(0, S.pathI | 0);   // (as saved, not clamped to the path — see civiliansRestore)
     gd.repathT = fin(S.repathT); gd.pathGoal = c3n(S.pathGoal);
     gd.fireCd = fin(S.fireCd, 1); gd.reloadT = -1; gd.reactT = fin(S.reactT); gd.searchT = fin(S.searchT); gd.lookPhase = fin(S.lookPhase); gd.speed = dead ? 0 : fin(S.speed); gd.stepPhase = fin(S.stepPhase); gd.heardUpTo = fin(S.heardUpTo, -1);
-    gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
+    gd.diedAt = fin(S.diedAt, -1); gd.dazzledUntil = fin(S.dazzledUntil, -1); gd.staggerUntil = fin(S.staggerUntil, -1); gd.hurtAt = fin(S.hurtAt ?? -1, -1); gd.lastPos = c3(S.lastPos ?? S.pos); gd.stuckT = fin(S.stuckT); gd.stuckN = S.stuckN | 0; gd.killerId = S.killerId ?? -1; gd.sawBodyT = fin(S.sawBodyT, -100);
     gd.alertBest = fin(S.alertBest, 1e9); gd.alertStallT = fin(S.alertStallT); gd.alertRef = c3n(S.alertRef); gd.chaseT = fin(S.chaseT); gd.shotBlockedT = fin(S.shotBlockedT);
     gd.sightPos = c3(S.sightPos ?? [0, 0, 0]); gd.sightVel = c3(S.sightVel ?? [0, 0, 0]); gd.sightT = fin(S.sightT, -100); gd.ledT = fin(S.ledT, -100); gd.fixT = fin(S.fixT, -100); gd.fixRef = c3n(S.fixRef);
     gd.searchPlan = null; gd.pieing = null; gd.standoff = null; gd.script = null; gd.hold = false; gd.pinned = false; gd.held = null;

@@ -48,6 +48,7 @@ import { STICKY } from '../game/stickycam';
 import { OWNCHARGE } from '../game/owncharge';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
+import { CONDITION } from '../game/condition';
 import { PLANLAY } from '../game/planlay';
 import { STACKROOM } from '../game/stackroom';
 import { HANDLE } from '../game/handleside';
@@ -265,6 +266,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_WORDS')) WORDS.on = String((globalThis as any).process?.env?.TPS_WORDS ?? '') === '1';   // the dialogue pass (src/game/words.ts): off, so every man says what he said in every frozen probe, digest and session fixture (a bubble's time is its length); `TPS_WORDS=1` turns it on (the shipped default)
     if (pinned('TPS_OWNCHARGE')) OWNCHARGE.on = String((globalThis as any).process?.env?.TPS_OWNCHARGE ?? '') === '1';   // the player's own charges (src/game/owncharge.ts): off, so your card has no charge rows and no door offers 'set a charge'
     if (pinned('TPS_PLANLAY')) PLANLAY.on = String((globalThis as any).process?.env?.TPS_PLANLAY ?? '') === '1';   // X is where the plan is laid (src/game/planlay.ts): off, so 'wait for my word' is the four's door tools' row on every frozen probe; TPS_PLANLAY=1 raises it
+    if (pinned('TPS_CONDITION')) CONDITION.on = String((globalThis as any).process?.env?.TPS_CONDITION ?? '') === '1';   // a man's condition (src/game/condition.ts): off, so a blast that leaves a man up folds him for its seconds and then he is as he was, as every frozen probe, digest and tally was recorded
     if (pinned('TPS_AUTOPILOT')) AUTOPILOT.on = String((globalThis as any).process?.env?.TPS_AUTOPILOT ?? '') === '1';   // B is the squad's autopilot (src/game/autopilot.ts): off, so the quick key is the target's first row on every frozen probe; TPS_AUTOPILOT=1 raises it
     if (pinned('TPS_SQUADTHROW')) SQUADTHROW.on = String((globalThis as any).process?.env?.TPS_SQUADTHROW ?? '') === '1';   // frags and stun canisters thrown on order (src/game/squadthrow.ts): off, so the floor's menu has no 'throw' row
     if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge and a shield are pouches, and nobody carries a hammer
