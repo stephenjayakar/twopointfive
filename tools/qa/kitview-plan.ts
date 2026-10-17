@@ -1050,12 +1050,13 @@ async function quietPicture(names: string[]) {
  *    · THE LEAF, headless, on each of those ways with a door: the level stood up as the page stands it, the leaf a hand ajar, the cost's own hand on
  *      it (the game's silent crack at the table's rate, from the team's side) — it stands wide within the throw's time, nobody is roused by it (the
  *      park's count 0, the floor at 0, no alarm placed), and the encounter's restart hangs it shut again for the staging to set ajar.
+ *    · LIFE AT REST (kitViewIdleAt / kitViewIdleEvery, KIT_VIEW_QUIET.idle): the beat's timeline — out, held, back, one blink, no jump — and its waits.
  *  KITCOST_BREAK=1: the gun's suppressor is read the wrong way round and the leaf is thrown at no speed — the rows of what costs and of the leaf must FAIL.
  *  WHAT THIS CANNOT SEE: the slab, the room's lamps at full, him up in it, the restage under the dissolve: tools/qa/kitview-levels.cjs on a quiet kind
  *  (`__kitview.cost`). Nothing of it has been seen on a GPU. */
 const BREAKC = process.env.KITCOST_BREAK === '1';
 async function quietCost(names: string[]) {
-  say('\n=== J. the quiet picture: loud kit\'s cost — which rows have one, its timeline, its lamp, the leaf thrown wide');
+  say('\n=== J. the quiet picture: loud kit\'s cost — which rows have one, its timeline, its lamp, the leaf thrown wide — and life at rest');
   const KV = await import(`${ROOT}/src/host/kitView.ts`), { kitViewSetQuery, kitViewSetLevel, kitViewAddLevel, kitViewWayOfLink } = await import(`${ROOT}/src/host/kitViewSet.ts`);
   const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), { scenarioQuery } = await import(`${ROOT}/src/scene/scenarios.ts`), { squadSearch } = await import(`${ROOT}/src/game/loadout.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -1076,6 +1077,11 @@ async function quietCost(names: string[]) {
   { const a0 = KV.kitViewCostAt(0), a1 = KV.kitViewCostAt(C.slit - 0.01), a2 = KV.kitViewCostAt(C.slit), end = C.slit + C.wideDeg * R / C.swing + C.hold, a3 = KV.kitViewCostAt(end - 0.01), a4 = KV.kitViewCostAt(end);
     row(a0.share === 1 && !a0.open && !a1.open && a2.open && !a3.done && a4.done && end >= 1.5 && end <= 3 && C.wideDeg * R / C.swing <= 0.4,
       `the timeline: the room at full from the first frame (share ${a0.share}) with the leaf still ajar, the leaf thrown ${C.slit} s in (${f2(C.wideDeg * R / C.swing)} s to ${C.wideDeg} deg at ${C.swing} rad/s), held ${C.hold} s, over ${f2(end)} s from the old row's end (a row holds 0.8 to 1.6 s after its bang: about 3 s from the bang)`); }
+  // ---- life at rest (KIT_VIEW_QUIET.idle): the beat's own timeline
+  { const I = QK.idle, secs = I.out * 2 + I.stay, at = KV.kitViewIdleAt, N = 300, xs = Array.from({ length: N + 1 }, (_, i) => at(i * secs / N)), peak = Math.max(...xs.map(a => a.x)), jump = Math.max(...xs.slice(1).map((a, i) => Math.abs(a.x - xs[i].x)));
+    const dark = xs.filter(a => a.lit < 1).length * secs / N, every = I.every.map((_: number, i: number) => KV.kitViewIdleEvery(i)), reach = xs.filter(a => a.x >= I.slide - 1e-9).length * secs / N;
+    row(at(0).x === 0 && at(0).env === 0 && Math.abs(peak - I.slide) < 1e-9 && jump < I.slide * 0.02 && !at(secs - 0.01).done && at(secs).done && at(secs).x < 1e-9 && at(secs / 2).env === 1 && at(secs / 2).lit === 1 && at(I.blinkAt + I.blink / 2).lit === I.blinkTo && Math.abs(dark - I.blink) < 0.03 && Math.abs(reach - I.stay) < 0.05 && secs >= 2.5 && secs <= 3.5 && every.every((s: number) => s >= 14 && s <= 16) && KV.kitViewIdleEvery(I.every.length) === every[0],
+      `life at rest: after ${every.join(', ')} s of rest in turn (a fixed list: no dice) the lamp behind the door slides ${f2(peak)} m along the wall and back in ${f2(secs)} s with no jump (${f2(jump * 1000)} mm at most between two of ${N} samples), stays ${f2(reach)} s at its far point, and is dark to ${I.blinkTo} of itself for ${f2(dark)} s from ${I.blinkAt} s; a lamp hung for the beat is in from nothing and out to nothing`); }
   // ---- every quiet way in the tree: the lamp, and the leaf
   const ways: { name: string; k: number; Y: Data; link: string; data: Data }[] = [];
   for (const e of ALL_MISSIONS as Data[]) { if (e.kind !== 'quiet') continue; const name = (e.level ?? 'office.json').replace(/\.json$/, ''); if (!names.includes(name) || ways.some(w => w.name === name)) continue;
