@@ -549,15 +549,51 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   x1.7 and the fill x1.3 over 1.2 s (the floor comes up blue), he walks down ACROSS the doorway, through where the pool was, to the FAR jamb (`jambFar`; 0.2 m
   past the frame, 0.6 m off the wall; no free floor there: the jamb on his own side), the dark held 4 s from the round, then the room staged again under the dissolve and a 3.5 s rest; `suit` / `trim` — a lean of 0.4 m
   into the pool, held 0.6 s, and back; the throws from the crouch with a 1.1 m step; the wand and the sticky camera their own rows, he
-  stays down. No tile under the highlight: the rest pose alone (`quietIdle`, the seam a torch pass hangs on). LOUD KIT on a quiet kind
-  (an unsuppressed gun, a stun, a frag, a charge, a partner's gun) keeps its old row and costs nothing yet: `Row.loud` and
-  `quietInside(share)` (the room's lamps, 0.15 at rest) are the seams. THE PAGE: on a quiet kind the picture's fade under the tile
+  stays down. No tile under the highlight: the rest pose alone (`quietIdle`, the seam a torch pass hangs on).
+  LOUD KIT ON A QUIET KIND SHOWS ITS COST (`KIT_VIEW_QUIET.cost`; under the picture's own switch: `KIT_VIEW_QUIET.on`, `?kitloud` off,
+  nothing on a loud mission). A row that is loud by nature (`Row.loud`: the frag, the stun, the door charge, the wall charge, the big
+  slot's tools, a gun's burst) and that WENT OFF (`kitViewCostly`, pure: its bang's mark; a gun's row by a round fired from a gun
+  whose `def.suppressed` is false, Sam's or a teammate's; never a pick's cut, a thing kept on the belt, the wall charge that only
+  opens a wall for another row) plays as on every kind, and as it ends: the room behind the door at full behind the leaf still ajar,
+  the blade's own lamp at twice itself through the gap (`quietInside(1, cost.blade)`); `slit` 0.4 s later the leaf is thrown to 100
+  deg by the game's own silent `crack`, Sam is up out of the crouch and the blade's lamp is OUT, so that ONE lamp of the picture's own
+  throws the slab (`kitViewCostLamp`: nearly a point, radius 0.03, at 40, 1.9 m up, behind the wall, slid along it away from him so
+  the slab falls along the wall over him; where the leaf's hinge is on the far jamb the lamp stays inside the doorway, 8 cm off that
+  jamb and 0.15 m behind the wall, in the leaf's own sweep, where the walker's grid is not asked: the slab's edge then falls 1.83 m
+  along the wall at his distance from it, and he rests at 1.1). Held 1.5 s, then the lamp out, the room dim, and the room staged again
+  under the dissolve (every man ON his place, the leaf ajar, the pool lamp mended, he down); the loop rests 3 s. About 2.1 s from the
+  row's end. THE POOL LAMP STAYS LIT under it: the slab is two to three times the pool and the pool is lost inside it. A pick ends it
+  at once, the same way. `__kitview.settled` is false while it is up; `__kitview.cost` says what played. NO man of the level's stands
+  in the slab on any way (not built); nobody is roused. THE BLADE (`KIT_VIEW_QUIET.own`): the lamp behind the leaf ajar is nearly a
+  point (radius 0.02: at 0.1, behind a slot three fingers wide, the whole blade was the lamp's own half shadow, and at 2.5 it was a
+  tenth over the floor), at 22, 1.9 m up under the lintel, 0.4 m behind the wall and 0.1 m past the latch's jamb. `kitViewBladeLine`
+  (pure) works out the fan that gets out between the leaf's free edge and the jamb, in degrees off the door's own line: the leaf
+  stands ajar INTO the room, so the blade can lie straight out or toward the HINGE's side and never the other way; at rest 14 to 25
+  deg. LIFE AT REST (`KIT_VIEW_QUIET.idle`): after 15, 14, 16, 14.5, 15.5 s of rest in turn (a fixed list, the game's clock, no dice)
+  the lamp behind the door slides 0.5 m along the wall over 1.2 s, stays 0.6 s and slides back (`kitViewIdleAt`, pure), dark to a
+  tenth for 0.4 s on the way out; for those 3 s nobody's idle sway moves (`scan()` held as it stands, Sam and a partner). WHICH WAY:
+  further past the LATCH (at a gap with no leaf: away from Sam), so the blade swings from its line out across the yard round toward
+  the wall on the hinge's side (56 to 66 deg) and back. As first built it slid away from Sam, which on a leaf hinged on the far jamb
+  is BEHIND the leaf: the blade only went out. On the vault and the crossing Sam rests on the latch's side, so the blade swings AWAY
+  from him: "toward his boots" cannot be had at such a door. It never begins under a row, a pick, a cost, a dissolve, or with a
+  highlighted tile's next turn due inside its length; a row begun under it ends it that frame (the lamp put back at once). Not at a
+  blank wall. `__kitview.life`; `__kitview.idleEvery` is a check's own short wait. SAM'S LIGHT TILE on a quiet kind
+  (`KIT_VIEW_QUIET.light`, `quietLight`): from the crouch the gun comes out, the beam is on as his aim leaves the door's far jamb,
+  crosses to the near one in 0.5 s, held 0.2 s, off; the gun goes away at rest. Mark 'beam'. No step, no hand on the leaf, no cost. A
+  teammate's light, a blank wall: the old row. `Row.loud` and `quietInside(share, blade)` (the room's lamps, 0.15 at rest) are the
+  seams.
+  THE PAGE: on a quiet kind the picture's fade under the tile
   panel runs from the column's edge to NOTHING at 40% of the picture's own window, or at the first tile's left edge where that is
   further (`KIT_VIEW_PLACE.quietEnd`; before, and still on a loud kind: three tenths at the first tile's left edge, gone one column's
   width past the column) and the pool of picture under the last tile row is not laid: a dark stage showed through the gaps as noise.
-  TWO THINGS THE PARTNER'S ROWS NEEDED: a door order waits for the pulled-to leaf to LATCH (`leafWait`), and under a teammate's row Sam
+  THREE THINGS THE PARTNER'S ROWS NEEDED: a door order waits for the pulled-to leaf to LATCH (`leafWait`), and under a teammate's row Sam
   is left up to 0.25 m more off his place (`tidy`) — he rests a body's width from where the game stacks a man on the door, the partner
-  shouldered him 4 cm over the line, and the walk home that gave him is `Game.puppet`, which took the partner's frag order away.
+  shouldered him 4 cm over the line, and the walk home that gave him is `Game.puppet`, which took the partner's frag order away;
+  and HE GIVES WAY FIRST (`KIT_VIEW_QUIET.stepBack` 0.5): since the re-shoot Sam rests where the game stacks a man who works the door,
+  and a partner at the door shouldered him up to 0.45 m. With a partner's card the open one Sam's place IS a step back along the wall
+  (1.6 m from the door's middle: `kitViewQuietPlaces().back`, `Staged.samRest` / `samBack`, set by the open card in `tidy`); he walks
+  there as the card opens, a row of the partner's waits for it as for any half step of his (`waits`, 'sam'), and he comes forward with
+  his own card. The page check's allowance for a shouldered Sam is out again.
   THE CHECKS: `bun run tools/qa/kitview-plan.ts` section I, both stands, 667 of 667 (the kind off 144 links, `kitloud` and the table off
   null on every one; each of the 12 quiet ways' pool lamp and rest place; headless, the lamp hung as the page hangs it is put out by one
   round from the rest place, the park's count 0, the floor at 0, and `repairLights` mends it; the roof slabs drawn lie wholly behind the wall and over no man's place, and the vault's hut keeps its
@@ -566,7 +602,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `LEVEL=vault KIND=quiet node tools/qa/kitview-levels.cjs` 24 of 24 (one round, 'shot' 'dark' 'walk', one restart, roused 0, console
   clean), the same with `FLAGS=kitloud` 23 of 23 (the old rows, the page says nothing of it), `LEVEL=crossing KIND=quiet SQUAD=1` 29 of
   29 (28 of 28 with `FLAGS=kitloud`), `LEVEL=records WAY=1` 29 of 29 (its 28 and the new row: a loud link says nothing of it). Rows whose meaning moved on a quiet kind are listed at the head of kitview-levels.cjs
-  (the places are the staged ones; the leaf hung is the leaf at its rest; the gun's row ends in a restage). LOUD UNMOVED: every change
+  (the places are the staged ones; the leaf hung is the leaf at its rest; the gun's row ends in a restage).
+  THE JOIN (10-17, the look with the cost, the beat and the blade): `tools/qa/kitview-plan.ts` 749 of 749 on both stands — section I
+  also holds Sam's step back on every quiet way (free floor, no nearer the door than his old 1.55 m, short of the partner's own
+  place); section J which endings cost (11 cases) and none where the picture is not staged quiet, the cost's and the beat's timelines,
+  on every quiet way the cost's lamp behind the wall on free floor or in the doorway's own sweep, the blade's fan at rest and at the
+  slide's end (it still gets out, swung 25 deg or more), and headless the leaf thrown wide by the game's own hand with nobody roused
+  and hung again by the restart. `KITQUIET_BREAK=1` (also: the step back read as no step) 29 FAIL, `KITCOST_BREAK=1` (the suppressor
+  read the wrong way round, the leaf thrown at no speed, the idle lamp slid behind the leaf) 27 FAIL, exit 1 each. The page, software
+  adapter, the render stood in: `LEVEL=vault KIND=quiet` 28 of 28 (costs after Sam's stun, frag and door charge, each 2.1 s, the leaf
+  108 to 110 deg, one restart each; the light one blink; a beat at rest cut by a pick), `LEVEL=crossing KIND=quiet SQUAD=1` 33 of 33
+  (the partner's charge: the furthest man 0.00 m off his place, where Sam was shouldered 0.45 m), `LEVEL=records WAY=1` 30 of 30 and
+  the vault with `FLAGS=kitloud` 24 of 24 (no cost, no beat), `LEVEL=office KIND=solo` 28 of 28, `LEVEL=kv-quiet-set KIND=quiet` 29 of 29 (the fixture the plan check writes, never committed).
+  MEASURED ON STILLS (the vault, 7 x 7 px means as above, RELATIVE only): at rest the pool 12 to 18, the floor 0.25, the BLADE where
+  it leaves the pool 4.0 to 4.4 and 2.5 out in the moon's shadow — a warm line from the door's foot across the yard, the second
+  brightest thing on the floor; at the slide's end the blade lies from the pool's rim up along the wall on the hinge's side, 4.5 to
+  5.8 beside the pool and 1.3 to 1.5 further along (0.3 there at rest): two stills, the swing between them never seen in motion. UNDER
+  THE COST (Sam's frag, about half a second after the leaf is thrown): the slab's core in front of the door 20 to 28 (the pool at rest
+  12 to 18, and lost in it), 8 to 16 two metres out, 3 to 7 at three metres and beyond, the dark floor beside it 0.3; its far edge a
+  straight line out from the hinge's jamb; Sam up in it, 2.5 at the chest against 0.1 at rest, his shadow thrown long across the yard
+  to the frame's foot. The slab is the brightest thing on the floor. NOBODY HAS SEEN any of it on a GPU or in motion at speed: the
+  swing of the blade and the throw of the leaf are two stills each; a better preset's bounce will soften the slab's edges and lift the
+  floor round it. WEAK: the blade is a ribbon about half a metre wide at the frame's edge, not a hairline (its edges are soft on this
+  adapter); under the cost Sam is lit from behind, a rim and a long shadow, not a bright figure (his suit is dark and the lamp is
+  behind the wall); on the whole page the column goes warm from the door's foot past his boots with him up and lit in it, but at that size the slab's edges are soft (one still, its cost begun at rest by hand, not by a tile).
+  LOUD UNMOVED: every change
   is behind the link's kind; the plan check's sections A to H print the same lines as before on both stands and its dry-run file is
   byte-identical. NOT SEEN: anything on a GPU; the loop at speed (stills on the software adapter only: the pool reads soft and wide
   there and the half crouch is hard to tell from the crouch). THE RE-SHOOT (10-17, the same adapter and preset; 7 x 7 px means,
@@ -576,12 +636,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   10 : 1 : 0.5: the vault's pale wall takes about twenty times what its dirt floor does of the same moon, so a floor at a tenth of the
   pool puts the wall over it; the fill, low and far out, does not reach the floor, so the moon's shadow is black. One test with the moon
   off showed the room lit by its OWN lamp at 0.15, not by the sky. The page: the fixture at 0.30 of the column, the pool's middle 0.55,
-  his head 0.59, his boots 0.67. NOT READING YET: the blade is a faint warm smear, not a line (2.5 behind a 16 deg gap; never brighter
-  than the floor round it by more than a tenth); after the round he is a dark shape on a dark floor and his own shadow lies on the wall
+  his head 0.59, his boots 0.67. NOT READING YET (the blade and the partner's shoulder were here: see THE JOIN above): after the round he is a dark shape on a dark floor and his own shadow lies on the wall
   behind him; the vault's dark mat cuts a straight edge through the pool; where no roof lies over the room (the crossing's compound)
-  the lamp behind the door shows it dim and warm; AS TWO, a partner who works the door shoulders Sam up to 0.45 m off his rest place (a body's
-  width nearer the door now) and Sam walks home after: the page check gives a Sam still being walked home 0.5 m at a teammate's row's
-  end on a quiet kind (marked in kitview-levels.cjs) — the jostle itself wants the partner's rows to move Sam first; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
+  the lamp behind the door shows it dim and warm; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
   set). Never seen: any of it on a GPU or at speed; the walk across the doorway in motion; the solo night's picture (the same framing, under a roof: no slab drawn); any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
   barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list

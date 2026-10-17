@@ -240,11 +240,17 @@ export const KIT_VIEW_QUIET = {
    *  burn at this share of themselves (the loud cost's seam: quietInside()) · and THE BLADE: a small warm lamp of the picture's own hung … m behind
    *  the wall's far face, … m past the frame on the LATCH's side, this high. The leaf stands ajar INTO the room: its gap is seen only from the
    *  latch's side, so from there a long thin blade of light lies out across his floor, slanting toward the hinge's side through where the pool is
-   *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has */
-  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.25, up: 1.2, color: [1, 0.72, 0.42] as Vec3, intensity: 2.5, range: 4.5 },
+   *  (a lamp behind the door's middle, or a room's own 3 m back, sees no gap at all). At a door or a gap, whatever the room has.
+   *  ITS NUMBERS ARE THE BLADE'S: the gap is a slot three fingers wide, so the lamp is nearly a point (`radius`: at 0.1 the whole blade was the
+   *  lamp's own half shadow, a smear) and bright (at 2.5 the blade was a tenth over the moon's floor; at 20 odd it is a fifth to a third of the
+   *  pool, the second brightest thing on the floor), high under the lintel so it carries across the yard, and `side` sets its line: 0.05 = a
+   *  thin line straight out (7 to 16 deg off the door's own line), 0.25 = a wedge 32 to 45 deg toward the hinge's side */
+  ajarDeg: 16, leafRate: 1.2, inside: 0.15, own: { back: 0.4, side: 0.1, up: 1.9, color: [1, 0.72, 0.42] as Vec3, intensity: 22, range: 8, radius: 0.02 },
   /** THE REST POSE: Sam crouched this far along the wall from the door's middle, on the side the plan stands him (out from the wall: the wall men's
-   *  own distance) · a partner the same again behind him */
-  samAlong: 1.1, mateGap: 1.0,
+   *  own distance) · a partner the same again behind him · and HE GIVES WAY FIRST: while a partner's card is the open one (the partner is up at the
+   *  door, and the game stacks a man who works it a body's width from Sam's place) Sam rests this much further back along the wall — he steps back as
+   *  that card opens, before any row of the partner's, and forward again as his own does */
+  samAlong: 1.1, mateGap: 1.0, stepBack: 0.5,
   /** THE SUPPRESSED GUN'S ROW: seconds he takes to rise to a half crouch and aim · how far up (0 = stays down, 1 = stands) · seconds the dark is held
    *  from the round · the MOON lifted to this, and the fill to this, over … s (eyes adjusting: the floor comes up blue) · he walks to the jamb … s after the round: … m past the frame, … m off the
    *  wall's face — the FAR jamb (`jambFar`): across the doorway, through where the pool was, to end with the blade across a shoulder (false, or no
@@ -257,6 +263,24 @@ export const KIT_VIEW_QUIET = {
   /** the suit / trim tile: a lean of … m toward the pool, held … s · a throw's step from the crouch (m toward the throwing post) · a gun left out after
    *  a row is put away after … s at rest */
   leanM: 0.4, leanSecs: 0.6, throwStep: 1.1, stow: 1,
+  /** LOUD KIT'S COST (kitViewCostly: a row that is loud and WENT OFF, never a suppressed gun's): the room at full for `slit` s behind the leaf still
+   *  ajar · the leaf thrown to `wideDeg` at `swing` rad/s and he is up · held `hold` s · the loop rests `rest` s after the room is staged again. ITS
+   *  LAMP, the picture's own, hung for the cost alone: `back` m behind the wall's far face (`backMin` at least, where it has to come nearer for the
+   *  slab to reach him), `up` high, slid along the wall away from him (to `side` m past the far jamb; `clear` m inside the doorway where the open leaf
+   *  stands on that side) until the slab's edge passes `past` m beyond his place (he is IN it where it reaches the near `body` m of him).
+   *  ONE LAMP THROWS THE SLAB, nearly a point (`radius`: the jambs' shadows are its hard edges): the blade's own lamp burns at `blade` of itself
+   *  for the slit and is OUT once the leaf is thrown. At 40 the slab is two to three times the pool, which stays lit inside it and is lost in it */
+  cost: { slit: 0.4, wideDeg: 100, swing: 9, hold: 1.5, rest: 3, blade: 2,
+    lamp: { back: 0.45, backMin: 0.15, up: 1.9, side: 1.2, clear: 0.08, past: 0.75, body: 0.2, color: [1, 0.74, 0.46] as Vec3, intensity: 40, range: 8, radius: 0.03 } },
+  /** LIFE AT REST, no guard: after each of these seconds of rest in turn (a fixed list: no dice) the warm lamp behind the door slides `slide` m along
+   *  the wall over `out` s, stays `stay` s and slides back, dark to `blinkTo` of itself for `blink` s from `blinkAt` (somebody passes it); every man's
+   *  idle sway is stopped for its length. WHICH WAY: further past the LATCH (the only way the gap still sees it: slid the other way the lamp is
+   *  behind the leaf and the blade only goes out) — the blade swings from its line straight out round toward the hinge's side, up along the wall
+   *  (56 to 67 deg off the door's line at 0.5 m), and back; toward his boots only where he rests on the hinge's side. With no lamp of the
+   *  picture's own hung, one is hung for the beat (its place and colour, at `gain` of it, in and out over `fade` s) */
+  idle: { every: [15, 14, 16, 14.5, 15.5], slide: 0.5, out: 1.2, stay: 0.6, blinkAt: 0.5, blink: 0.4, blinkTo: 0.1, gain: 1, fade: 0.3 },
+  /** SAM'S WEAPON LIGHT on a quiet kind: from the crouch, on for one pass across the door — `sweep` s of it, held `hold` s — and off; aimed … m up */
+  light: { sweep: 0.5, hold: 0.2, aimY: 0.9 },
 };
 /** the quiet picture's kind for this link — 'quiet' | 'solo' — or null: a loud link, the switch off, or `kitloud` in the link (pure: the page check's too) */
 export function kitViewQuietOf(q: URLSearchParams, on: boolean = KIT_VIEW_QUIET.on): 'quiet' | 'solo' | null { return on && !q.has('kitloud') ? kitViewQuietKind(q) : null; }
@@ -269,14 +293,14 @@ export function kitViewQuietLamp(P: Pick<KitViewPlanned, 'lamps'>, over: Partial
 /** THE REST PLACES (pure): Sam crouched `samAlong` m along the wall from the anchor's middle, on the side the plan stands him, at the wall men's
  *  distance, facing the door along the wall; a partner `mateGap` m behind him. A place the level WROTE wins (null here: the plan's stays), and so
  *  does the plan's where the worked-out one is not free floor. [x, z, yaw deg] */
-export function kitViewQuietPlaces(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall' | 'slots' | 'slotSrc'>, mates: number, free: (x: number, z: number) => boolean): { sam: [number, number, number] | null; mate: [number, number, number] | null } {
+export function kitViewQuietPlaces(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall' | 'slots' | 'slotSrc'>, mates: number, free: (x: number, z: number) => boolean): { sam: [number, number, number] | null; mate: [number, number, number] | null; /** Sam's place while a partner's card is open (`stepBack`): with a partner, at a door or a gap, on free floor — else null */ back: [number, number, number] | null } {
   const A = P.anchor, s = P.s, n = A.n, m = A.mid, Q = KIT_VIEW_QUIET, out = P.wall.face + KIT_PLAN.offFace;
   const al0 = (P.slots[0][0] - m[0]) * s[0] + (P.slots[0][1] - m[1]) * s[1], sg = al0 > 0 ? 1 : -1;
   const at = (al: number): [number, number, number] => [m[0] + s[0] * sg * al + n[0] * out, m[1] + s[1] * sg * al + n[1] * out, Math.atan2(-s[0] * sg, -s[1] * sg) / R];
   const ok = (p: [number, number, number]) => free(p[0], p[1]);
   const sam = P.slotSrc[0] !== 'authored' ? at(Q.samAlong) : null, mate = mates >= 1 && P.slotSrc[1] !== 'authored' ? at(Q.samAlong + Q.mateGap) : null;
-  const S = sam && ok(sam) ? sam : null;
-  return { sam: S, mate: S && mate && ok(mate) ? mate : null };
+  const S = sam && ok(sam) ? sam : null, back = S && mates >= 1 && A.kind !== 'wall' ? at(Q.samAlong + Q.stepBack) : null;
+  return { sam: S, mate: S && mate && ok(mate) ? mate : null, back: back && ok(back) ? back : null };
 }
 /** THE ROOF STAYS ON (pure; KIT_VIEW_QUIET.roofs): the level's boxes, by index, that the quiet picture DRAWS though the game's camera looks through
  *  them — a cover (the plan's own test of one: its underside `coverY` up, `coverHalf` across both ways) flagged NoPrimary, no light's panel, that lies
@@ -393,6 +417,15 @@ export interface KitView {
   readonly scan: { name: string; on: boolean; deg: number; off: number }[];
   /** nothing is in motion: no beat, every man on his place, the leaf to, Game.puppet let go, no dissolve up */
   readonly settled: boolean;
+  /** LOUD KIT'S COST (KIT_VIEW_QUIET.cost), for the checks: how many played and how many a pick cut short · one is up · the last: whose row it
+   *  followed, the most the room burned at, there was a hung leaf to throw and the widest it stood off shut (rad), he was up, the lamp hung and whether its slab reaches
+   *  his place, how long it ran and how it ended ('' while it runs · 'done' · 'cut') */
+  readonly cost: { n: number; cuts: number; on: boolean; last: { field: string; i: number; share: number; door: boolean; leaf: number; up: boolean; lamp: boolean; catches: boolean; s: number; how: string } | null };
+  /** LIFE AT REST (KIT_VIEW_QUIET.idle), for the checks: beats begun and how many a row cut short · one is up and the men are held still · the lamp
+   *  that slides ('own': the picture's own behind the door · 'beat': one hung for the beat) · the furthest it slid (m) · seconds to the next (NaN: none due) */
+  readonly life: { n: number; cuts: number; on: boolean; still: boolean; lamp: 'own' | 'beat' | null; far: number; next: number };
+  /** a check's own: seconds of rest before the next idle beat, over the table's list (null: the table's) */
+  idleEvery: number | null;
   /** the pace: the display's rate as read, every how many of its frames one is drawn, the count that rate starts from, down from it — and a fresh pacer, for a check to feed */
   readonly pace: { hz: number; every: number; base: number; slow: boolean }; pacer: typeof kitViewPacer;
   /** the last beat over — how it ended ('done' · 'cut': a pick · 'cap' · 'threw' · 'down'), where the thing it threw last lay, the brightest transient light
@@ -494,6 +527,62 @@ export function kitViewPark(game: { tune: { devices: boolean; lasers: boolean };
   return { men, alarms };
 }
 
+/** LOUD KIT ON A QUIET JOB SHOWS ITS COST (KIT_VIEW_QUIET.cost; show, not tell: no word says it). Does the row that just ended have one (pure: the plan
+ *  check's too)? Only on the quiet picture as STAGED (`quiet`), only a row that is loud by nature (`Row.loud`) and ran to its own end ('done', its
+ *  cap: a pick's cut has none, nor has the wall charge that only opens a wall FOR another row), and only if it WENT OFF: a gun's row by a round fired
+ *  from a gun with no suppressor (read off the gun itself: weapons.ts `suppressed`), every other by its bang's own mark. */
+export function kitViewCostly(r: { quiet: boolean; loud: boolean; prelude: boolean; how: string; gun: boolean; shots: number; suppressed: boolean; marked: boolean }): boolean {
+  if (!r.quiet || !r.loud || r.prelude || (r.how !== 'done' && r.how !== 'cap')) return false;
+  return r.gun ? r.shots > 0 && !r.suppressed : r.marked;
+}
+/** …and the cost `t` s from the old row's end (pure): the room behind the door at this share of itself (1: full, from its first frame, the leaf
+ *  still a hand ajar) · the leaf is being thrown wide and he is up out of the crouch · it is over (the room is staged again under the dissolve) */
+export function kitViewCostAt(t: number, C: { slit: number; wideDeg: number; swing: number; hold: number } = KIT_VIEW_QUIET.cost): { share: number; open: boolean; done: boolean } {
+  return { share: 1, open: t >= C.slit, done: t >= C.slit + C.wideDeg * R / Math.max(0.1, C.swing) + C.hold };
+}
+/** THE COST'S LAMP (pure): where it hangs so that the slab through the opened doorway falls ALONG the wall over the man beside it, not straight out
+ *  past him — he rests a body's width off the wall, so a lamp behind the door's middle lights the floor in front of the door and leaves him in the
+ *  jamb's shadow. Behind the wall, slid along it away from him until the line past his own jamb reaches `past` m beyond his place; no further than
+ *  `side` m past the far jamb — or, where the leaf's hinge is on that jamb (the thrown leaf stands there, across the lamp), `clear` m inside the
+ *  doorway and nearer the wall for it; pulled toward the door's middle off floor that is not free. `reach` = how far along the wall, at his distance
+ *  from it, the slab's edge falls; `catches` = that reaches the near side of him (`body` m short of his middle). [x, y, z] */
+export function kitViewCostLamp(P: Pick<KitViewPlanned, 'anchor' | 's' | 'wall'>, width: number, sam: readonly number[], hinge: readonly number[] | null, free: (x: number, z: number) => boolean,
+  C: { back: number; backMin: number; up: number; side: number; clear: number; past: number; body: number } = KIT_VIEW_QUIET.cost.lamp): { pos: Vec3; along: number; back: number; reach: number; catches: boolean } {
+  const m = P.anchor.mid, s = P.s, n = P.anchor.n, al = (p: readonly number[]) => (p[0] - m[0]) * s[0] + (p[1] - m[1]) * s[1], w2 = width / 2;
+  const sAl = al(sam), sg = sAl >= 0 ? 1 : -1, o = Math.max(0.2, (sam[0] - m[0]) * n[0] + (sam[1] - m[1]) * n[1] - P.wall.face), th = P.wall.face - P.wall.back;
+  const leafFar = !!hinge && al(hinge) * sg < 0, lo = leafFar ? -(w2 - C.clear) : -(w2 + C.side), hi = w2 - C.clear, need = Math.abs(sAl) + C.past - w2;   // (`need`: how far past his own jamb the edge must fall)
+  let back = C.back, a = Math.max(lo, Math.min(hi, w2 - need * (th + back) / o));
+  const reach = () => w2 + (w2 - a) * o / (th + back);
+  if (reach() < Math.abs(sAl) + C.past - 1e-6 && need > 0) { back = Math.max(C.backMin, Math.min(C.back, (w2 - a) * o / need - th)); }
+  const at = (): Vec3 => [m[0] + s[0] * sg * a + n[0] * (P.wall.back - back), C.up, m[1] + s[1] * sg * a + n[1] * (P.wall.back - back)];
+  for (let k = 0; k < 12; k++) { const p = at(); if ((Math.abs(a) < w2 && back < width) || free(p[0], p[2])) break; a *= 0.85; if (k === 11) a = 0; }   // (inside the doorway, in the leaf's own sweep, nothing stands: the walker's grid shuts a body's width off each jamb, and every 5 cm nearer the jamb is 15 cm more of slab at his place)
+  return { pos: at(), along: sg * a, back, reach: reach(), catches: reach() >= Math.abs(sAl) - C.body };
+}
+/** LIFE AT REST (KIT_VIEW_QUIET.idle), `t` s into the beat (pure): how far along the wall the lamp behind the door has slid (m; eased out, held, eased
+ *  back) · the share of itself it burns at (the blink) · the share a lamp hung for the beat alone is faded in at · it is over */
+export function kitViewIdleAt(t: number, I: { slide: number; out: number; stay: number; blinkAt: number; blink: number; blinkTo: number; fade: number } = KIT_VIEW_QUIET.idle): { x: number; lit: number; env: number; done: boolean } {
+  const secs = I.out * 2 + I.stay, ss = (u: number) => { const x = Math.max(0, Math.min(1, u)); return x * x * (3 - 2 * x); };
+  const x = t <= I.out ? ss(t / I.out) : t <= I.out + I.stay ? 1 : 1 - ss((t - I.out - I.stay) / I.out);
+  return { x: I.slide * x, lit: t >= I.blinkAt && t < I.blinkAt + I.blink ? I.blinkTo : 1, env: Math.max(0, Math.min(1, t / I.fade, (secs - t) / I.fade)), done: t >= secs };
+}
+/** THE BLADE'S LINE (pure; the plan check's): through a leaf `width` wide hung at the middle of a wall `th` thick and standing `ajar` rad into the room,
+ *  from a point lamp `back` m behind the wall's far face and `side` m past the latch's jamb (negative: behind the leaf) — the fan of light that gets
+ *  out through the slot between the leaf's free edge and the jamb, clear of the leaf's face and of both jambs: its two edges in degrees off the
+ *  door's own line, positive toward the hinge's side. null = no light gets out (the lamp is behind the leaf, or the leaf is to) */
+export function kitViewBladeLine(width: number, th: number, ajar: number, back: number, side: number): { from: number; to: number } | null {
+  const E: [number, number] = [-width * (1 - Math.cos(ajar)), width * Math.sin(ajar) - th / 2];   // (the free edge: x past the latch's jamb, d behind the wall's far face)
+  if (E[1] <= 1e-6 || back <= 1e-6) return null;
+  let lo = Infinity, hi = -Infinity; const N = 64;
+  for (let i = 1; i < N; i++) { const u = i / N, px = E[0] * u, pd = E[1] * u; if (back - pd <= 1e-6) continue;
+    const k = (side - px) / (back - pd), x = (d: number) => px - k * (pd - d);   // (x where the ray is at depth d; k: m toward the hinge per m out)
+    if (x(0) > 0 || x(-th) > 0 || x(-th) < -width) continue;   // (the latch's jamb · the hinge's)
+    let clear = true; for (let j = 1; j <= 16 && clear; j++) { const d = pd - (pd + th / 2) * j / 16, xl = -width + (d + th / 2) / (E[1] + th / 2) * (E[0] + width); if (x(d) < xl - 1e-9) clear = false; }   // (not through the leaf's own face)
+    if (clear) { lo = Math.min(lo, k); hi = Math.max(hi, k); } }
+  return hi < lo ? null : { from: Math.atan(lo) / R, to: Math.atan(hi) / R };
+}
+/** …and the seconds of rest before the n-th beat (a fixed list in turn: no dice, and the clock is the game's) */
+export function kitViewIdleEvery(n: number, I: { every: readonly number[] } = KIT_VIEW_QUIET.idle): number { return I.every[((n % I.every.length) + I.every.length) % I.every.length]; }
+
 export function kitViewStart(d: KitViewDeps): KitView {
   const { game, engine, cam, input, view, loop } = d, K = KIT_VIEW_LOOP;
   const post = (kv: string) => { try { if (window.parent !== window) window.parent.postMessage({ kv }, kitViewPostTo()); } catch { /* */ } };
@@ -502,7 +591,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** a staging as the loop needs it: the door, the face the team is on and the leaf's angle shut, its foot, a point by [along the wall toward the stack, out
    *  on the team's side, up], the wall's own two directions, the floor spots inside, Sam's slot and its yaw, the teammates BY SLOT (the card switch deals
    *  them again: `rotate`) with the slots and their yaws, the fourth man's place while his card is open and whether he is on it, the weapon lights' own write */
-  interface Staged { door: Door | null; kind: 'door' | 'wall' | 'gap'; width: number; reachIn: number; fragM: number; fragLand: number; hole: boolean; plan: KitViewPlanned & { set: string | null }; side: 1 | -1; shut: number; /** the leaf's angle AT REST: `shut`, but on the quiet picture a hand ajar (KIT_VIEW_QUIET.ajarDeg) */ rest: number; /** the quiet picture: where the first teammate rests, crouched behind Sam, while his own card is not the open one */ mate: { p: V2; yaw: number } | null; foot: Vec3; at(o: Vec3): Vec3; s: V2; n: V2; latch: 1 | -1; inside: Vec3[]; smoke: Vec3[]; samSmoke: Vec3; samStun: Vec3; samFrag: Vec3; sam: V2; samYaw: number; order: Guard[]; spots: V2[]; yaws: number[]; act4: V2; four: boolean; torches(): void }
+  interface Staged { door: Door | null; kind: 'door' | 'wall' | 'gap'; width: number; reachIn: number; fragM: number; fragLand: number; hole: boolean; plan: KitViewPlanned & { set: string | null }; side: 1 | -1; shut: number; /** the leaf's angle AT REST: `shut`, but on the quiet picture a hand ajar (KIT_VIEW_QUIET.ajarDeg) */ rest: number; /** the quiet picture: where the first teammate rests, crouched behind Sam, while his own card is not the open one */ mate: { p: V2; yaw: number } | null; /** the quiet picture: Sam's rest place · and his place a step back along the wall while a partner's card is the open one (null: he has none) */ samRest: V2; samBack: V2 | null; foot: Vec3; at(o: Vec3): Vec3; s: V2; n: V2; latch: 1 | -1; inside: Vec3[]; smoke: Vec3[]; samSmoke: Vec3; samStun: Vec3; samFrag: Vec3; sam: V2; samYaw: number; order: Guard[]; spots: V2[]; yaws: number[]; act4: V2; four: boolean; torches(): void }
   /** a governed yaw (THE YAWS, below): its value and speed, what the game last wrote, and — owned by the director — the ease it is on */
   interface Chan { v: number; w: number; want: number; own: boolean; from: number; d: number; v0: number; t0: number; T: number; to: number }
   interface Gov { body: Chan; aim: Chan }
@@ -563,7 +652,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   // the room burns at · the fill as staged and since when it is lifted · the loop's next rest · a leaf asked shut for a waiting row until · the gun last
   // put away at · why the quiet row of the last tile gave way to the loud one · the half crouch (0 = down)
   const quietKind = (() => { try { return kitViewQuietOf(new URLSearchParams(location.search)); } catch { return null; } })();
-  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qMoon: RtLight | null = null, moonAt = 0, moonCol: Vec3 | null = null, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
+  let Q = false, pool: LightTarget | null = null, qOut: string[] = [], qIn: LightTarget[] = [], qOwn: RtLight | null = null, qShare = 1, qBlade = 1, fillBase = 0, liftAt = NaN, restNext = NaN, leafAsk = -1, stowT = -1e9, qKept: string | null = null, qRise = 0, lastEnd = -1e9, qMoon: RtLight | null = null, moonAt = 0, moonCol: Vec3 | null = null, qFit: { lamp: Vec3; sam: V2 } | null = null, qLead: boolean | null = null;
   const qRoofs = new Set<Box>();   // (the roof slabs drawn for the quiet picture: KIT_VIEW_QUIET.roofs)
   const lampAs = new WeakMap<LightTarget, { I: number; E: Vec3; on: boolean }>();
   const base = new WeakMap<RtLight, number>();   // a room light's / the moon's intensity as the game has it (what `roomLights` / `moonScale` multiply)
@@ -744,8 +833,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const poolSync = () => { if (!pool) return; const i = fixture ? engine.world.statics.indexOf(fixture) : -1; pool.boxes = i >= 0 ? [i] : []; if (lamps.porch) pool.light = lamps.porch; };
   /** THE ROOM BEHIND THE DOOR burns at this share of itself (the quiet picture: KIT_VIEW_QUIET.inside at rest; 1 = as the mission lights it — the seam
    *  a loud tool's cost floods it by): each lamp's own base, which the game multiplies each step, and its fixture's glow */
-  const quietInside = (k: number) => { qShare = k; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; t.on = true; t.baseIntensity = a.I * k; t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
-    if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * (k / KIT_VIEW_QUIET.inside); };
+  const quietInside = (k: number, blade = 1) => { qShare = k; qBlade = blade; for (const t of qIn) { const a = lampAs.get(t); if (!a) continue; t.on = true; t.baseIntensity = a.I * k; t.baseEmissive = [a.E[0] * k, a.E[1] * k, a.E[2] * k]; }
+    if (qOwn) qOwn.intensity = qOwn.peakIntensity = KIT_VIEW_QUIET.own.intensity * blade; };   // (…and the picture's own lamp behind the leaf at `blade` of itself: the cost's — brighter through the gap, then out under the slab)
   /** …and as the mission had them (before a restart, at the picture's end: a base is the lamp's own, and no restart puts it back) */
   const quietUndo = () => { for (const t of qIn) { const a = lampAs.get(t); if (a) { t.baseIntensity = a.I; t.baseEmissive = [a.E[0], a.E[1], a.E[2]]; } } qIn = []; if (pool) pool.boxes = [];
     if (qRoofs.size) { for (const b of qRoofs) b.flags |= BoxFlag.NoPrimary; qRoofs.clear(); engine.world.staticsDirty = true; }
@@ -812,7 +901,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // (THE QUIET PICTURE'S REST: Sam crouched by the pool, a partner behind him — kitViewQuietPlaces; a place the level wrote, or a worked-out one that is
     //  not free floor, leaves the plan's. The camera stays framed on the plan's five)
     const qAt = Q ? kitViewQuietPlaces(P, order.length, (x, z) => !nav.isBlocked(x, z)) : null, mate0 = qAt?.mate && order[0] && order[0] !== head ? qAt.mate : null;
-    if (qAt?.sam) { slots[0] = qAt.sam; stand.push([qAt.sam[0], qAt.sam[1]]); if (mate0 || (qAt.mate && order[0])) stand.push([qAt.mate![0], qAt.mate![1]]); }   // (…and the camera is framed on the rest places too: the partner's fell off the window's edge)
+    const samRest: V2 | null = qAt?.sam ? [qAt.sam[0], qAt.sam[1]] : null;
+    if (qAt?.sam) { slots[0] = head && qAt.back ? qAt.back : qAt.sam; stand.push([qAt.sam[0], qAt.sam[1]]); if (mate0 || (qAt.mate && order[0])) stand.push([qAt.mate![0], qAt.mate![1]]); }   // (…and the camera is framed on the rest places too: the partner's fell off the window's edge)
     for (const p of slots) if (nav.isBlocked(p[0], p[1])) V.blocked++;
     if (P.slotSrc.slice(0, order.length + 1).some(x => x === 'derived')) V.blocked += P.stepped;   // (the worked-out line's steps count only where a man took one of its places)
     const chars: [object, number][] = [];
@@ -871,12 +961,12 @@ export function kitViewStart(d: KitViewDeps): KitView {
       const O2 = QK.own, wantOwn = Q && A.kind !== 'wall', hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null;
       if (!wantOwn) { if (hung) engine.lights.remove(hung); qOwn = null; }
       else { const lt = door ? ((A.mid[0] - door.def.hinge[0]) * W.s[0] + (A.mid[1] - door.def.hinge[1]) * W.s[1] >= 0 ? 1 : -1) : 0;   // (which way along the wall the leaf's free edge is; a gap: its middle)
-        const p = at([lt * (A.width / 2 + O2.side), P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: 0.1, volumetric: 0, broad: false, enabled: true };
+        const p = at([lt * (A.width / 2 + O2.side), P.wall.back - O2.back, O2.up]), rec = { kind: 0 as const, pos: p, dir: [0, -1, 0] as Vec3, color: [O2.color[0], O2.color[1], O2.color[2]] as Vec3, intensity: O2.intensity, peakIntensity: O2.intensity, range: O2.range, innerDeg: 0, outerDeg: 180, radius: O2.radius, volumetric: 0, broad: false, enabled: true };
         if (hung) Object.assign(hung, rec); else qOwn = engine.lights.add({ name: 'kitview_inside', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, ...rec }); } }
     // the camera: into the wall, turned toward the stack; at the middle of the men
     V.men = men(order);
     look = [P.cam.look[0], P.cam.look[1], P.cam.look[2]]; yaw = P.cam.yaw; pitch = P.cam.pitch; dist = P.cam.dist;   // (the plan's pin: the way's own `pin`, else into the wall, turned toward the stack, at the middle of the five places)
-    qFit = Q && lamps.porch ? { lamp: fixture ? [fixture.c[0], fixture.c[1], fixture.c[2]] : [lamps.porch.pos[0], lamps.porch.pos[1], lamps.porch.pos[2]], sam: [slots[0][0], slots[0][1]] } : null;
+    qFit = Q && lamps.porch ? { lamp: fixture ? [fixture.c[0], fixture.c[1], fixture.c[2]] : [lamps.porch.pos[0], lamps.porch.pos[1], lamps.porch.pos[2]], sam: samRest ?? [slots[0][0], slots[0][1]] } : null;
     aim();
     engine.resetTaa('kitview');
     { const side = door ? d.doorSide(door, [slots[0][0], 0, slots[0][1]]) : 1;   // (of Sam's slot)
@@ -890,7 +980,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
       const smoke: Vec3[] = spots(K.smokeM);   // (smoke, thrown short: KIT_VIEW_LOOP.smokeM)
       const a4 = kitPlanAct4(A.mid, W.s, W.n, A.width, P.slots, (x, z) => !nav.isBlocked(x, z));   // (the fourth man's place while his card is open: at Sam's jamb, on Sam's side of the door — and a body clear of every other man's place: at a wide opening, slid toward its middle)
       const fragM = Math.max(0.6, Math.min(K.samFragM, reachIn - 0.5)), fragLand = Math.min(K.fragLand, Math.max(0.3, fragM - 0.5));
-      holeShots = 0; staged = { door, kind: A.kind, width: A.width, reachIn, fragM, fragLand, hole: false, plan: P, side, shut: shut0, rest: door ? door.angle : 0, mate: qAt?.mate && order[0] ? { p: [qAt.mate[0], qAt.mate[1]], yaw: qAt.mate[2] * R } : null, foot, at, s: W.s, n: W.n, latch, inside, smoke, samSmoke: at([0, -K.samSmokeM, 0]), samStun: at([0, -K.samStunM, 0]), samFrag: at([0, -fragM, 0]), sam: [slots[0][0], slots[0][1]], samYaw: slots[0][2] * R, order, spots: order.map((_, i): V2 => [slots[i + 1][0], slots[i + 1][1]]), yaws: order.map((_, i) => slots[i + 1][2] * R), act4: a4, four: false, torches }; }
+      holeShots = 0; staged = { door, kind: A.kind, width: A.width, reachIn, fragM, fragLand, hole: false, plan: P, side, shut: shut0, rest: door ? door.angle : 0, mate: qAt?.mate && order[0] ? { p: [qAt.mate[0], qAt.mate[1]], yaw: qAt.mate[2] * R } : null, foot, at, s: W.s, n: W.n, latch, inside, smoke, samSmoke: at([0, -K.samSmokeM, 0]), samStun: at([0, -K.samStunM, 0]), samFrag: at([0, -fragM, 0]), sam: [slots[0][0], slots[0][1]], samRest: samRest ?? [slots[0][0], slots[0][1]], samBack: qAt?.back ? [qAt.back[0], qAt.back[1]] : null, samYaw: slots[0][2] * R, order, spots: order.map((_, i): V2 => [slots[i + 1][0], slots[i + 1][1]]), yaws: order.map((_, i) => slots[i + 1][2] * R), act4: a4, four: false, torches }; }
     V.again();
   };
 
@@ -1500,14 +1590,86 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (B.phase === 'out') { if (flat(p, B.post!) > 0.12 && el < 2) return 'on'; mark(B, 'lean'); to(B, 'hold'); game.puppet = { goal: null, aim: null, throwAt: null }; return 'on'; }
       if (B.phase === 'hold') { if (el < QK.leanSecs) return 'on'; to(B, 'back'); walkTo(S.sam); return 'on'; }
       return flat(p, S.sam) <= K.onSlot || el >= 2.5 ? 'done' : 'on'; } };
+  /** SAM'S WEAPON LIGHT on the quiet picture: the opposite of quiet, so it is one blink — from the crouch the gun comes out, the beam is ON as his aim
+   *  reaches the door's far jamb, crosses the door to the near one in `sweep` s, is held `hold` s and is OFF; the gun goes away again at rest (tidy()).
+   *  No step, no hand on the leaf, and no cost (the row is not loud). Refused — the old row plays, as on every kind — on a teammate's card, at a blank
+   *  wall, with no gun in his hand. Never seen on a GPU */
+  const quietLight: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 8,
+    start: (B, S) => { const pl = game.player; if (B.man) return 'Sam\'s';
+      if (!Q || walled(S)) return 'no door to cross';
+      if (pl.slot !== 'pistol' && pl.slot !== 'rifle') return 'no gun in his hand';
+      to(B, 'draw'); B.hTo = KIT_VIEW_QUIET.light.aimY; samStand(S); if (pl.holstered) input.pressed.add(pl.slot === 'rifle' ? 'Digit2' : 'Digit1');
+      return null; },
+    tick: (B, S) => { const pl = game.player, QL = KIT_VIEW_QUIET.light, el = game.time - B.pt, p = pl.char.pos;
+      if (B.phase === 'draw') { const busy = !!(pl.char.anim as unknown as { kitBusy?: boolean }).kitBusy;
+        if ((pl.holstered || busy || pl.equipT > 0 || el < 0.15) && el < 2.5) return 'on';
+        if (pl.holstered) { B.marks.push('kept'); V.refused = 'light: the gun never came out'; return 'done'; }
+        const m = S.plan.anchor.mid, sg = (S.sam[0] - m[0]) * S.s[0] + (S.sam[1] - m[1]) * S.s[1] >= 0 ? 1 : -1, w2 = S.width / 2, o = S.plan.wall.face;
+        B.quiet = true; B.legs = [{ yaw: yawTo(p, S.at([-sg * w2, o, 0])), cap: K.gunRate * R, minT: -1, hold: 0 }, { yaw: yawTo(p, S.at([sg * w2, o, 0])), cap: K.gunRate * R, minT: QL.sweep, hold: QL.hold }]; B.leg = 0; B.legT = NaN; to(B, 'act'); return 'on'; }
+      if (B.phase === 'act' && B.leg >= 1 && !B.lit) { B.lit = true; B.marks.push('beam'); }   // (on as his aim leaves the far jamb; quiet() puts it out as the leg home begins)
+      return quiet(B, S); } };
   /** THE QUIET KIND'S ROWS, one table over BEATS — a tile's thing → what it plays on the quiet picture, by the card it is on; a thing not here, and a
    *  quiet row whose start refuses, plays its row of BEATS as on every kind (the wand and the sticky camera keep theirs, from the crouch; loud kit keeps
    *  its old row until it has a cost of its own: `Row.loud` is what that pass will read) */
-  const QUIET_BEATS: Record<string, { mate?: Row; sam?: Row }> = { weapon: { sam: quietGun }, turn: { sam: quietLean } };
+  const QUIET_BEATS: Record<string, { mate?: Row; sam?: Row }> = { weapon: { sam: quietGun }, turn: { sam: quietLean }, light: { sam: quietLight } };
   const rowFor = (f: string, man: Guard | null): Row | undefined => (Q ? QUIET_BEATS[f]?.[man ? 'mate' : 'sam'] : undefined) ?? BEATS[f]?.[man ? 'mate' : 'sam'];
   /** the quiet picture with NO tile under the highlight: the rest pose is the picture (the loud one plays the gun, then the light) — the seam the torch
    *  pass hangs its idle on */
   const quietIdle = (S: Staged) => { void S; restUntil = game.time + 0.5; };
+  // ------------------------------------------------------------ LOUD KIT'S COST · LIFE AT REST (KIT_VIEW_QUIET.cost / .idle; staged: `Q`)
+  /** LOUD KIT ON A QUIET JOB SHOWS ITS COST: the loud row plays as on every kind, and as it ends (finish(): kitViewCostly) somebody inside has heard
+   *  it — the room behind the door goes from dim to full behind the leaf still a hand ajar, `slit` s later the leaf is thrown wide (the game's own
+   *  silent hand on it, away from the team) and a slab of warm light falls out along the wall over him, up out of his crouch: the picture's own lamp,
+   *  hung for the cost alone (kitViewCostLamp). Held, then the lamp is out and the room dim again, and the room is staged again under the dissolve
+   *  (every man on his place, the leaf ajar, the lamp mended, he down); the loop rests `rest` s. A pick ends it at once, the same way. No man of the
+   *  level's is asked for anything: nobody is roused. Never seen on a GPU */
+  let costT = NaN, costLamp: RtLight | null = null; const costSeen: { n: number; cuts: number; last: KitView['cost']['last'] } = { n: 0, cuts: 0, last: null };
+  const costOn = () => !isNaN(costT);
+  const costOff = () => { costT = NaN; if (costLamp) { engine.lights.remove(costLamp); costLamp = null; } };
+  const costBegin = (S: Staged, B: Beat) => { const L = KIT_VIEW_QUIET.cost.lamp, D = S.door; lifeOff(true);
+    const G = kitViewCostLamp(S.plan, S.width, S.sam, D && !D.off ? D.def.hinge : null, (x, z) => !game.col.nav.isBlocked(x, z));
+    costT = game.time; costSeen.n++; costSeen.last = { field: B.field, i: B.i, share: 1, door: !!D && !D.off, leaf: 0, up: false, lamp: true, catches: G.catches, s: 0, how: '' };
+    quietInside(1, KIT_VIEW_QUIET.cost.blade);
+    costLamp = engine.lights.add({ name: 'kitview_cost', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: 0 as const, pos: G.pos, dir: [0, -1, 0] as Vec3, color: [L.color[0], L.color[1], L.color[2]] as Vec3,
+      intensity: L.intensity, peakIntensity: L.intensity, range: L.range, innerDeg: 0, outerDeg: 180, radius: L.radius, volumetric: 0, broad: false, enabled: true }); };
+  /** each live frame with no row up: true while the cost plays (nothing else begins under it) */
+  const costTick = (S: Staged): boolean => { if (isNaN(costT)) return false;
+    const C = KIT_VIEW_QUIET.cost, el = game.time - costT, at = kitViewCostAt(el), D = S.door, pl = game.player, last = costSeen.last!;
+    stowT = game.time; last.s = el;   // (his gun stays as the row left it: nothing is put away under the slab)
+    if (asked === null && !at.done) {
+      if (at.open) { if (D && !D.off) { unlock(S); const F = S.at([0, 1, 0]); game.doors.crack(D, F, pl.char.id, stepDt, undefined, C.swing, C.wideDeg * R); } pl.crouch = false; if (!last.up) quietInside(1, 0); last.up = true; }   // (…and the blade's own lamp is out under the slab: ONE lamp throws it, one hard edge)
+      if (D && !D.off) last.leaf = Math.max(last.leaf, Math.abs(D.angle - S.shut));
+      return true; }
+    if (!at.done) costSeen.cuts++; last.how = at.done ? 'done' : 'cut';
+    costOff(); quietInside(KIT_VIEW_QUIET.inside); dirty = 'world'; apart = true; restUntil = game.time; restNext = asked !== null ? NaN : C.rest;   // (cut to dark; what it left has no undo under the eye: the room staged again, every man ON his place)
+    return false; };
+  /** LIFE AT REST, with no guard: after `every` s of rest — nothing playing, nothing asked, nothing to mend, every man on his place, the leaf at its
+   *  rest — the warm lamp behind the door slides along the wall, further past the latch, and back (kitViewIdleAt), so the warm blade through the leaf
+   *  ajar swings round toward the hinge's side and back, dark for a blink as somebody passes the lamp; for its length nobody's gun wanders (scan(): held as it stands).
+   *  The lamp that slides is the picture's own where it hangs one, else one hung for the beat at the same place. It never begins under a row, a pick
+   *  or a cost, nor with a tile's own next turn due inside its length; a row that begins under it ends it that frame, the lamp put back. It does not
+   *  read the pool lamp: the same with the pool shot out. Not at a blank wall (no opening to see it through). Never seen on a GPU */
+  let lifeT = NaN, lifeNext = NaN, lifeN = 0, lifeStill = false, lifeLamp: RtLight | null = null, lifeHung = false, lifeHome: Vec3 = [0, 0, 0]; const lifeSeen = { n: 0, cuts: 0, far: 0 };
+  const lifeOff = (cutIt = false) => { if (isNaN(lifeT)) return; if (cutIt) lifeSeen.cuts++; lifeT = NaN; lifeStill = false; lifeNext = NaN; const L = lifeLamp; lifeLamp = null; if (!L) return;
+    if (lifeHung) engine.lights.remove(L); else { L.pos = [lifeHome[0], lifeHome[1], lifeHome[2]]; L.intensity = L.peakIntensity = KIT_VIEW_QUIET.own.intensity * qBlade; } };
+  const life = (S: Staged) => { const QK = KIT_VIEW_QUIET, QI = QK.idle, pl = game.player;
+    const busy = !Q || !said || !!beat || asked !== null || costOn() || dz.phase !== '' || dirty !== null || !!game.puppet || walled(S);
+    if (isNaN(lifeT)) {
+      if (busy || isNaN(lifeNext)) { lifeNext = game.time + (V.idleEvery ?? kitViewIdleEvery(lifeN, QI)); return; }   // (the clock runs from the last frame that was not rest)
+      if (game.time < lifeNext || (hi !== null && restUntil - game.time < QI.out * 2 + QI.stay + 0.5)) return;
+      if (offRest(S) || flat(pl.char.pos, S.sam) > K.onSlot || S.order.some(g => flat(g.char.pos, homeOf(S, g).p) > K.homeM)) return;
+      const hung = qOwn && engine.lights.lights.includes(qOwn) ? qOwn : null, O = QK.own;
+      lifeT = game.time; lifeN++; lifeSeen.n++; lifeHung = !hung; lifeHome = hung ? [hung.pos[0], hung.pos[1], hung.pos[2]] : S.at([S.door ? S.latch * (S.width / 2 + O.side) : 0, S.plan.wall.back - O.back, O.up]);
+      lifeLamp = hung ?? engine.lights.add({ name: 'kitview_idle', group: 'kitview', owner: 0, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, kind: 0 as const, pos: [lifeHome[0], lifeHome[1], lifeHome[2]] as Vec3, dir: [0, -1, 0] as Vec3, color: [O.color[0], O.color[1], O.color[2]] as Vec3,
+        intensity: 0, peakIntensity: 0, range: O.range, innerDeg: 0, outerDeg: 180, radius: O.radius, volumetric: 0, broad: false, enabled: true }); }
+    else if (busy) { lifeOff(true); return; }
+    const a = kitViewIdleAt(game.time - lifeT, QI), L = lifeLamp; if (a.done || !L) { lifeOff(); return; }
+    // (WHICH WAY: at a leaf ajar the gap is seen only from the latch's side, so the lamp slides FURTHER past the latch — the blade swings from
+    //  straight out toward the hinge's side and back; slid the other way it is behind the leaf and the blade only goes out. At a gap: away from him)
+    const m = S.plan.anchor.mid, sg = (S.sam[0] - m[0]) * S.s[0] + (S.sam[1] - m[1]) * S.s[1] >= 0 ? 1 : -1, way = S.door && !S.door.off ? S.latch : -sg;
+    L.pos = [lifeHome[0] + S.s[0] * way * a.x, lifeHome[1], lifeHome[2] + S.s[1] * way * a.x];
+    L.intensity = L.peakIntensity = (lifeHung ? QK.own.intensity * QI.gain * a.env : QK.own.intensity * qBlade) * a.lit;
+    lifeStill = true; lifeSeen.far = Math.max(lifeSeen.far, a.x); };
   /** THE TABLE (calls 0: every demo is one row — what it does to the door, what it leaves that only a dissolve mends, its rest before it plays again): a
    *  thing on a card (a tile's field; 'turn' = suit / trim, 'swap' = a gun changed) → how a teammate (`mate`) and Sam use it at the door. A tile with no row
    *  here plays the gun's (the goggles: no order and no setter lowers them — nvg.ts; the big slot's hammer and breaching shotgun: nothing is drawn in his hands yet) */
@@ -1606,6 +1768,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (S && B.row === wallRow && how !== 'cut' && !B.marks.includes('blow')) {
       const no = B.marks.includes('cap') ? 'the wall charge never went off inside its row' : (V.refused ?? '').replace(/^[a-z]+: /, '') || 'the wall charge came down unblown'; wallKept(S, B, no); if (V.refused === null) V.refused = `walls: ${no}`;
       const WC = game.wallCharge; if (WC && (WC.set.length || WC.ops.length || B.marks.includes('down') || far)) { dirty = 'world'; apart ||= far; restUntil = game.time; } }
+    // LOUD KIT'S COST (the quiet picture): a loud row that went off is answered from inside — costBegin(); what the row left is mended by the cost's own restage
+    if (S && kitViewCostly({ quiet: Q, loud: !!B.row.loud, prelude: B.prelude, how, gun: B.row === gunRow || B.row === gunDoor, shots: B.shots, suppressed: !!(B.man ? B.man.weapon : game.player.gunInHand())?.def.suppressed, marked: !isNaN(B.markT) })) costBegin(S, B);
   };
   /** THE CUT (calls 1d): a pick ends whatever is running, now. A quiet beat: nothing to mend (his yaws come round under a rate: the next beat eases from where the
    *  gun points). A throw before the can left the hand: the wind-up cancelled, the open leaf the next row's to use or tidy()'s to pull to. A can already
@@ -1657,7 +1821,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     //  waits for it shut (waits(): `leafAsk`), and eased back ajar after — the host's own hand on the angle, no latch, no noise)
     const toShut = S.rest === S.shut || (B ? !!B.row.leaf : game.time < leafAsk);
     if (D && (!B || B.row.door === 'shut') && !D.off && toShut && Math.abs(D.angle - S.shut) >= 0.03 && game.time - pulled > 1) { pulled = game.time; game.doors.pullTo(D, (B ? B.char : S.order[0]?.char ?? pl.char).id); }
-    if (D && (!B || B.row.door === 'shut') && !D.off && !toShut && Math.abs(D.angle - S.rest) > 1e-4) { const dA = S.rest - D.angle, st = KIT_VIEW_QUIET.leafRate * stepDt, L = D as unknown as { latched: boolean; closing: boolean; vel: number; angle: number }; L.latched = false; L.closing = false; L.vel = 0; L.angle = Math.abs(dA) <= st ? S.rest : D.angle + Math.sign(dA) * st; }
+    if (D && (!B || B.row.door === 'shut') && !D.off && !toShut && !costOn() && Math.abs(D.angle - S.rest) > 1e-4) { const dA = S.rest - D.angle, st = KIT_VIEW_QUIET.leafRate * stepDt, L = D as unknown as { latched: boolean; closing: boolean; vel: number; angle: number }; L.latched = false; L.closing = false; L.vel = 0; L.angle = Math.abs(dA) <= st ? S.rest : D.angle + Math.sign(dA) * st; }
     // (…and his gun, left out by a row, goes back in its holster / across his back once he is home: his own key, the game's own motion)
     if (Q && !B && !game.puppet && !pl.holstered && (pl.slot === 'pistol' || pl.slot === 'rifle') && game.time - stowT > 1 && flat(pl.char.pos, S.sam) <= K.onSlot && !(pl.char.anim as unknown as { kitBusy?: boolean }).kitBusy && asked === null && game.time - lastEnd >= KIT_VIEW_QUIET.stow) { stowT = game.time; input.pressed.add('KeyE'); }
     // (AT A WALL LEFT OPEN — `hole`: what the charge threw down may lie on his place. A half step home that gets no nearer for a second is given up, and where he
@@ -1667,6 +1831,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
     // (THE QUIET PICTURE: Sam rests a body's width from where the game stacks a man on the door, and a partner taking his post shoulders him a few
     //  centimetres — over `onSlot`, and the walk home this gives him is Game.puppet, which takes the partner's order away: his frag went back on his
     //  belt. Under a teammate's row he is left where he was shouldered to, up to a quarter metre more; the row over, he is walked home as ever)
+    //  (…AND HE GIVES WAY FIRST: with a partner's card open his place IS a step back along the wall — KIT_VIEW_QUIET.stepBack — so the walk there is
+    //  this same walk home, taken as the card opens; a row of the partner's waits for it as it waits for any half step of his: waits(), 'sam')
+    if (S.samBack) { const w = actor() ? S.samBack : S.samRest; if (S.sam[0] !== w[0] || S.sam[1] !== w[1]) S.sam = [w[0], w[1]]; }
     const slack = Q && B && B.man ? 0.25 : 0;
     if ((!B || B.man) && !(B && B.row.team)) { if (flat(pl.char.pos, S.sam) > K.onSlot + slack && !(V.home && !B && !actor() && away(S))) game.puppet = { goal: [S.sam[0], 0, S.sam[1]], aim: null, throwAt: null, walk: K.samWalk }; else if (game.puppet) game.puppet = null; }   // (not under the whole team's row: Game.puppet takes the squad's order away — nor while a row of his waits for the men to walk home: under it they stood until he was home)
     if (!B && (tools().ops.length || tools().set.length)) { tools().reset(); pools(); }
@@ -1676,7 +1843,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** the encounter restarted and the team staged again as the table and the size now stand — every man put back where he stood, the file's order kept
    *  (`keep` false: a plain staging, the page's first) */
   const open = () => { const i = want >= 1 && d.team()[want - 1] ? want : 0; if (i === who) return false; who = i; flip = 0; return true; };   // (the card asked for, if its man is on the team as it now stands — a `sel` may come before the kit message that brings him)
-  const unhang = () => { for (const who of ['porch', 'fill'] as const) { const l = lamps[who]; if (l) engine.lights.remove(l); } if (qOwn) engine.lights.remove(qOwn); quietUndo(); };   // (…the quiet picture's own lamp with them, and the room's lamps as the mission has them)
+  const unhang = () => { for (const who of ['porch', 'fill'] as const) { const l = lamps[who]; if (l) engine.lights.remove(l); } if (qOwn) engine.lights.remove(qOwn); costOff(); lifeOff(); quietUndo(); };   // (…the quiet picture's own lamp with them, and the room's lamps as the mission has them)
   const restage = (keep = true, onSlots = false) => {
     const S = staged, T = d.team(), pose = (c: { pos: Vec3; bodyYaw: number; aimYaw: number }): Pose => [c.pos[0], c.pos[2], c.bodyYaw, c.aimYaw];
     const kept: Keep | null = keep && S ? { perm: S.order.map(g => T.indexOf(g)), poses: onSlots ? [] : T.map(g => pose(g.char)), sam: pose(game.player.char) } : null;   // (`onSlots`: the file's order kept, each teammate ON his place)
@@ -1731,8 +1898,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (cutNow) { cutNow = false; if (beat) cut(S); }
     const B = beat;
     if (B) { let r: Step = B.row.tick(B, S); if (r === 'on' && B.t >= B.row.cap) { B.marks.push('cap'); r = 'done'; } if (r === 'done') finish(B, B.marks.includes('cap') ? 'cap' : 'done'); }
-    tidy(S);
+    tidy(S); life(S);
     if (beat || !said) return;
+    if (costTick(S)) return;   // (loud kit's cost is up: nothing begins under it — a pick ends it, and the room is staged again first)
     const now = asked !== null && (V.preempt || game.time >= restUntil);
     if (!now && game.time < restUntil) return;
     if (dirty) { hold('mend'); undo(S); return; }   // (the next frame, under the copy: the leaf hung / the room staged — and the row begins)
@@ -1786,7 +1954,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const scan = (key: object, i: number, ok: boolean, v0 = 0): number => {
     let s = scans.get(key); if (!s) { s = { k: i * 3, from: v0, to: v0, t0: -1e9, next: game.time + 0.6 + 0.9 * i, v: v0, on: false }; scans.set(key, s); }
     if (!ok) { s.on = false; s.from = s.to = s.v = 0; s.next = game.time + 0.5 + 0.4 * i; return 0; }
-    if (dz.phase !== '') { s.t0 += stepDt; s.next += stepDt; return s.v; }   // (under a dissolve: as he stands)
+    if (dz.phase !== '' || lifeStill) { s.t0 += stepDt; s.next += stepDt; return s.v; }   // (under a dissolve — and through the quiet picture's idle beat, where every man freezes: as he stands)
     s.on = true;
     if (game.time >= s.next) { s.from = s.v; s.to = K.scanDeg[s.k % K.scanDeg.length] * R; s.t0 = game.time; s.next = game.time + K.scanGap[(s.k + i) % K.scanGap.length]; s.k++; }
     const u = Math.max(0, Math.min(1, (game.time - s.t0) / K.scanEase)), u3 = u * u * u; s.v = s.from + (s.to - s.from) * (10 * u3 - 15 * u3 * u + 6 * u3 * u * u); return s.v; };
@@ -1863,7 +2031,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     get state() { return kitViewLoop && paused && said && state !== 'none' ? 'paused' : state; }, drawn: 0, skipped: 0, blocked: 0, men: [], door: null, way: 0,
     get beat() { return beat ? { n: beat.n, field: beat.field, i: beat.i, t: beat.t, phase: beat.phase, marks: beat.marks, post: beat.post ?? null } : null; }, get queue() { return asked !== null ? [asked] : []; }, get held() { return held ? { ...held, why: held.why.slice(), by: { ...held.by } } : null; }, restarts: 0, rehangs: 0, cuts: 0, preempt: true, home: true, standClear: true, seats: 0, pins: 0, roused: { men: 0, alarms: 0 }, last: null, refused: null, hits: { sam: 0, team: 0 }, shots: 0, stroke: { n: 0, raw: 0, drawn: 0, cap: 0 },
     get dissolve() { return { n: dz.n, phase: dz.phase, cuts: dz.cuts }; },
-    get settled() { const S = staged; return !!S && !beat && !game.puppet && dz.phase === '' && !offRest(S) && S.order.every(g => flat(g.char.pos, homeOf(S, g).p) <= (V.home ? K.homeM : K.onSlot + 0.1)) && flat(game.player.char.pos, S.sam) <= K.onSlot + 0.1; },
+    get settled() { const S = staged; return !!S && !beat && !costOn() && !game.puppet && dz.phase === '' && !offRest(S) && S.order.every(g => flat(g.char.pos, homeOf(S, g).p) <= (V.home ? K.homeM : K.onSlot + 0.1)) && flat(game.player.char.pos, S.sam) <= K.onSlot + 0.1; },
     get pace() { return { hz: pacer.hz, every: pacer.every, base: pacer.base, slow: pacer.slow }; }, pacer: kitViewPacer,
     get lamps() { return lamps; }, get pin() { return cam.pin; }, get dayOut() { return dayOut; }, get fixtureUp() { return !!fixture && engine.world.statics.includes(fixture); },
     get plan() { const S = staged; if (!plan || state === 'none') return null; const o = { ...plan, reachIn: S ? S.reachIn : 0, hole: !!S?.hole, sunk: sunkN };
@@ -1874,6 +2042,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
       return { kind: quietKind, on: Q && !!S, lamp: Q && t ? { target: game.targets.includes(t), on: t.on, broken: t.broken, lit: !!t.light && t.light.enabled && t.light.intensity > 0, fixture: t.boxes.length > 0 && engine.world.statics[t.boxes[0]] === fixture, pos: [t.pos[0], t.pos[1], t.pos[2]] as Vec3 } : null,
         out: qOut.slice(), roofs: qRoofs.size, inside: { lamps: qIn.map(x => x.name), own: !!qOwn && engine.lights.lights.includes(qOwn), share: qShare }, leaf: S ? S.rest - S.shut : 0, place: Q && S ? [S.sam[0], S.sam[1]] as V2 : null, mate: Q && S?.mate ? S.mate.p : null,
         crouch: pl.crouch, knee: (pl.char.anim as unknown as { crouch: number }).crouch, holstered: pl.holstered, lift: lamps.fill && fillBase > 0 ? lamps.fill.intensity / fillBase : 1, kept: qKept }; },
+    get life() { return { n: lifeSeen.n, cuts: lifeSeen.cuts, on: !isNaN(lifeT), still: lifeStill, lamp: lifeLamp ? (lifeHung ? 'beat' as const : 'own' as const) : null, far: lifeSeen.far, next: isNaN(lifeT) && !isNaN(lifeNext) ? lifeNext - game.time : NaN }; }, idleEvery: null,
+    get cost() { return { n: costSeen.n, cuts: costSeen.cuts, on: costOn(), last: costSeen.last ? { ...costSeen.last } : null }; },
     get scan() { const S = staged, row = (name: string, k: object, c: { aimYaw: number }, rest: number) => { const s = scans.get(k); return { name, on: !!s?.on, deg: s ? s.v / R : 0, off: wrap(c.aimYaw - rest) / R }; }; return S ? [row('Sam', game.player, game.player.char, yawTo(game.player.char.pos, S.foot)), ...S.order.map(g => row(g.callsign, g, g.char, homeOf(S, g).yaw))] : []; },
     rest() {
       if (kitViewLoop ? state !== 'none' && !(paused && said) : state === 'warm' || state === 'staging') return false;   // (a pause waits for the first picture: a child paused before it would never say `ready`)
