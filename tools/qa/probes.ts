@@ -2973,6 +2973,7 @@ if (on('irl-list', 'irlight', 'all')) await run('irl-list', async () => (await i
 if (on('irl-unseen', 'irlight', 'all')) await run('irl-unseen', async () => (await import('./irlight-probes.ts')).irlUnseen());
 if (on('irl-team', 'irlight', 'all')) await run('irl-team', async () => (await import('./irlight-probes.ts')).irlTeam());
 if (on('irl-off', 'irlight', 'all')) await run('irl-off', async () => (await import('./irlight-probes.ts')).irlOff());
+if (on('irl-auto', 'irlight', 'all')) await run('irl-auto', async () => (await import('./irlight-probes.ts')).irlAuto());
 // ---------------------------------------------------------------- dark on a lit man: from the dark, a teammate's light stays off and his closing walk waits (litman-probes.ts; guards.ts LIGHTS.litMan)
 if (on('litman-rule', 'litman', 'all')) await run('litman-rule', async () => (await import('./litman-probes.ts')).litmanRule());
 // ---------------------------------------------------------------- the loud demo's motion pass (moves-probes.ts; character.ts MOVES): off = the old calls to the bit; on = recoil, the toss, the flinch / hit, the stun hunch, the two gaits, a staged fight

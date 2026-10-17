@@ -51,7 +51,8 @@ const printDiff = (x, y, name = '') => { if (x === y) return; const a = JSON.par
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   await frames(3);
   log('ready; the loop is running');
-  if (GOGGLES) { await page.keyboard.press('KeyN');
+  if (GOGGLES) { await page.evaluate(() => { const K = window.__knobs?.registry?.().IRLIGHT; if (K && 'auto' in K) K.auto = false; });   // (the stand prices the lights: they burn whenever the goggles are down here, not only where the place is too dark — game/irlight.ts IRLIGHT.auto)
+    await page.keyboard.press('KeyN');
     const up = await page.evaluate(ms => new Promise(res => { const t0 = performance.now(); let k = 0; const f = () => { const L = window.__engine.lights; k++; if ((L.tube && L.irCount > 0) || performance.now() - t0 > ms) return res({ tube: !!L.tube, n: L.irCount ?? null, frames: k, nv: window.__game.player.nv }); requestAnimationFrame(f); }; requestAnimationFrame(f); }), Number(process.env.GOGGLES_WAIT || 6) * 60000);
     check(up.tube && up.n > 0, `goggles down: the picture is the tube's and the renderer takes infrared light (${JSON.stringify(up)})`);
     if (!(up.tube && up.n > 0)) { console.log('  (no infrared light to sweep on this stand: a kit without goggles, ?noirlight, or goggles that were already down — nothing further is run)'); await browser.close(); process.exit(1); } }
