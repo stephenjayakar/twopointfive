@@ -587,7 +587,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shooter's rounds go through in place of the hard cover he had before either rule. Now a place that STOPS the shooter's round though another
   known man has a line to it is kept over a thin one (a slot each; the upgrade may spend plans only while eight of the twelve are unspent, so a
   later place hidden from everybody is still reached). Line (l) was red on the shipped stand for it at the build head and is green; its staging
-  no longer believes the second enemy on the pinned man's own spot.
+  no longer believes the second enemy on the pinned man's own spot. MEASURED, the same runs with the mend against without: none of 24 standard
+  and none of 40 Hard differs (21 and 30 taken both ways), so it is rare in a scripted fight; the check line is what shows it.
 - **No wary mark over a man of your own** (`src/ui/headmark.ts headMark`, drawn by `overlay.ts`; the maintainer, 10-16, of the yellow dots over
   his squad: telegraph a man's state through his animation instead). The row of yellow dots (`awareness`) and the yellow '?' (`search` /
   `suspicious`) are the stealth game's read of a man who may find you out. A teammate under an order runs no senses, so nothing drains his
