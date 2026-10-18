@@ -1738,7 +1738,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** THE TILES, ONE table: a tile's field → the thing it plays, by the card it is on — a field not here plays the row of its own name (null: none — the gun,
    *  then the light). A field whose VALUE names the demo is one line here (`big`: the big slot's tile, the shield's row while the shield is what is in it):
    *  the highlight is kept as the tile's FIELD (`hiF`) and read through this table again at every kit message */
-  const TILES: Record<string, (card: Record<string, unknown>) => string | null> = { weapon: () => 'weapon', suppressed: () => 'weapon', suit: () => 'turn', trim: () => 'turn',
+  const TILES: Record<string, (card: Record<string, unknown>) => string | null> = { weapon: () => 'weapon', primary: () => 'weapon', secondary: () => 'weapon', suppressed: () => 'weapon', suit: () => 'turn', trim: () => 'turn',
     big: c => c.shield === true ? 'shield' : num(c.walls) > 0 ? 'walls' : c.big === 'shotgun' || c.big === 'hammer' ? 'bigtool' : null };   // (THE BIG SLOT, read as kit.ts bigOf reads the card: the shield in it plays the shield's row, a wall charge the wall charge's, the breaching shotgun and the hammer the tool's own on the door — nothing in it has none)
   const thing = (f: unknown, i = who): string | null => typeof f !== 'string' ? null : Object.hasOwn(TILES, f) ? TILES[f](cards[i] ?? {}) : Object.hasOwn(BEATS, f) && f !== 'turn' && f !== 'swap' ? f : null;
   // (THE BIG SLOT — kit.ts BIGSLOT, the card's last tile, field `big`: what is in the open card's slot is the card read as kit.ts bigOf reads it — `shield` true, else `walls` over 0, else `big` 'shotgun' | 'hammer' | 'none'. The shield and the wall charge have rows: the others are the gun, then the light. A change of it under the highlight comes as a `kit` message, not a `sel`: the kit message reads `hi` again. With `&nobigslot` the Shield row's own field, `shield`, is a key of BEATS)
@@ -2118,9 +2118,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
           if (x.i > 0 && !g) { hard = true; break; }
           if (COUNTS.includes(f)) { if (x.i === who && thing(f) && play !== 'swap') play = thing(f); continue; }   // (a count that moved WITH his gun — the launcher's rounds go with the rifle — is the gun's change)
           if (!g) {   // Sam's own card: put on him again as he stands — a gun by way of his holster
-            if (f === 'weapon') { samCardDue = true; if (who === 0) play = 'swap'; } else { samCardDue = true; if (who === 0 && thing(f) && play !== 'swap') play = thing(f); }
+            if (f === 'weapon' || f === 'primary' || f === 'secondary') { samCardDue = true; if (who === 0) play = 'swap'; } else { samCardDue = true; if (who === 0 && thing(f) && play !== 'swap') play = thing(f); }
             continue; }
-          if (f === 'weapon' || f === 'suppressed' || (f === 'shield' && c.shield === true)) { swapGun(g, d.gun(x.i), f === 'shield'); if (x.i === who) play = 'swap'; }
+          if (f === 'weapon' || f === 'primary' || f === 'secondary' || f === 'suppressed' || (f === 'shield' && c.shield === true)) { swapGun(g, d.gun(x.i), f === 'shield'); if (x.i === who) play = 'swap'; }
           else if (f === 'light') { g.lightDeadUntil = c.light === true ? -1 : Infinity; if (x.i === who && play !== 'swap') play = 'light'; }
           else if (f === 'suit' || f === 'trim') { const t = d.tints(x.i), v = f === 'suit' ? t.suit ?? issued.suit.get(x.i) : t.trim ?? issued.trim.get(x.i); if (!v) { hard = true; break; }
             if (f === 'suit') g.char.tint = [...v] as Vec3; else g.char.tint2 = [...v] as Vec3; if (x.i === who && play === null) play = 'turn'; }

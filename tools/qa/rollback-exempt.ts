@@ -42,6 +42,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/airSim.ts offStats': 'CACHE · one blank \'switched off\' stats object made on first ask (airSim.ts:69) and only read (snowFx.ts reads .speed/.calm, the page\'s panel)',
   'src/game/attention.ts ATTENTION_STATS': 'TALLY · counted in attention.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/attention.ts:326)',
   'src/game/autopilot.ts AUTOPILOT_STATS': 'TALLY · counted in autopilot.ts:102 and orders.ts:472; read only by the page\'s __autopilot hook (main.ts:1032)',
+  'src/game/gunslots.ts GUNSLOTS_STATS': 'TALLY · counted in gunslots.ts; no read in src/game, src/scene or src/anim; read by tools/qa/gunslots-check.ts',
   'src/game/bigkit.ts BIG_STATS': 'TALLY · counted in bigkit.ts; no read in src/game, src/scene or src/anim; shown by ui/bindings.ts',
   'src/game/blastFeel.ts FEEL': 'CONFIG · FEEL.kick written by loadFeel (this machine\'s store, read once on first use) and the panel\'s slider (ui/bindings.ts:2123); nothing else writes it',
   'src/game/blastFeel.ts loaded': 'CONFIG · once-only latch of loadFeel (blastFeel.ts:83): the store read once per process, the same answer every time',

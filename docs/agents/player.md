@@ -504,3 +504,40 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   as Player (`defuse.ts restore`, `format.ts decode`); an old replay's LOG lines keep the old word. Checks that match the strings follow (`roomclear-ends`,
   `verdict-check`, `deathrecap-check`, `defuse-check`, `roomkeep-check`, `teams-player`, `verdict-look.cjs`; 12 panel-inventory rows reworded with `--reword`).
   Headless only, both stands; the title, the kit page and a room clear's down line read off the real page on the software adapter. Never seen on a GPU.
+- **A primary and a secondary for every man** (`src/game/gunslots.ts`, `GUNSLOTS.on`; the maintainer, 10-18: "also should we model more firearms? and separate
+  primary and secondary slots?"). On in the page (`?nogunslots` = the card of the build before), off in the module and on the frozen stand
+  (`FROZEN_HOLDS 'GUNSLOTS.on'`, `TPS_GUNSLOTS=1`); a recording from before the table replays with it off (`journal.ts applyKnobs`). It rides on the big
+  slot's card (`BIGSLOT`: the shotgun is kit there, never a man's gun): with that off the card is the build before's too. WHAT THERE WAS: you carried two
+  guns (the pistol on 1, the long gun on 2 — the swap the maintainer likes: "swapping the guns feels good") and a teammate ONE; his card had one Weapon row
+  and the sidearm on his thigh was drawn only. WHAT IT IS NOW: the card's one gun row is two — **Primary** (a long gun of `gunslots.ts PICKS`, or none: the
+  sidearm alone) and **Secondary** (a sidearm) — on every member's card, each a row of choices over its own field (`MemberKit.primary` / `.secondary`: a
+  pick id; `kit.ts buildRowsGuns`). WHETHER a long gun is brought stays in `MemberKit.weapon` ('pistol' = none), the one field every rule of the build
+  before reads (your launcher rounds stay home with no long gun, the kit figure's yaw, `kitPlayer`) and every older hand writes (the Quiet set, a mission's
+  issue card, `kitSet(i, 'weapon', …)` from a tool — taken as the Primary row's long gun / none): `primary` only says WHICH long gun, and the Primary row's
+  `none` is `weapon: 'pistol'` (one source of truth; nothing to keep in step). A pick names two `weapons.ts` rows:
+  the gun with a suppressor fitted and without (`pickRow`; a teammate's Suppressor row picks between them, both of yours wear one). `kitGun(m)` is the
+  primary's row (the secondary's with none), `kitSide(m)` the gun NOT in his hands, `kitSecond(m)` the secondary slot's row. A stored card from before the
+  slots is its gun field plus the issued picks (`kitSanitize` → `gunsHome`). A tile names the gun the card then hands him (`word(v, m)`: the bare row's
+  name with the suppressor off). TODAY THE TABLE HAS ONE PICK A SLOT (the issue
+  carbine, the issue pistol): the rows, the store and the second gun are in; the list of guns is the next step of the same goal.
+  **A teammate carries both.** `Guard.second` = the gun that is not in his hands (`sideStage`, from `kitStage`; none for a man whose gun is a pistol).
+  `GUNSLOTS.dry`: the round that empties his primary on a man within `near` (10 m) sends him to his sidearm instead of a magazine change — `out` 0.7 s
+  where the carbine's reload is 2.4 s — on both trigger paths (the fight AI: `guards.ts startReloadBeat` → `sideOutAlert`, the range = his man's last known
+  place; a room fight: `roomfight.ts tickOp`'s dry click → `sideOut`). `sideLocked` (his hands between guns: no round) is asked by all three triggers a
+  teammate has — the room fight's, cover fire's, the fight AI's fire site. The swap is written where the
+  big slot's shotgun writes its own (`route.weapon`: `game.ts` deals a man's row off his route every frame). The long gun hangs down his front on its
+  sling while the sidearm is out (`combat.ts hungSide` → `rigProps hungBoxes`). `sideTick` (every frame, `game.ts`): nobody in his eyes and no round from
+  it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.5 s); an empty
+  sidearm is never drawn. Past `near`, or with no
+  second gun, he reloads as he always has. You: nothing changes in your hands. No checkpoint slice: a floor with a spawned unit on it takes no
+  checkpoint (`savestate.ts canSave`), and every teammate is one.
+  UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
+  `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
+  Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
+  `GUNSLOTS_BREAK=1` fails all four families. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
+  switch held off (`probes.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
+  on, the third is down to a sidearm round 0.50 s after the guns ran dry; off, he was still standing twelve seconds later (one seed, one room).
+  `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE: more guns than the two (the Secondary row has one
+  value until then);
+  a swap ANIMATION on a teammate (his pose changes with the row in his hands, the equip sound plays, nothing is animated between); the dry man's sense
+  beyond range and sight (he does not weigh cover or a mate's line). Headless only; never seen on a GPU, never played.

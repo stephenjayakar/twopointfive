@@ -60,6 +60,7 @@ import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
+import { sideOutAlert, sideLocked } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
@@ -2283,7 +2284,8 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         // is who a round from in front finds first, combat.ts fireWeapon), and the same beat is kept in hand for when he is out of it.
         const shield = T.muzzleDiscipline && shieldUp(g);
         if (shield) gd.fireCd = Math.max(gd.fireCd, SHIELD_RELEASE_BEAT_MIN + dt);   // (+dt as in standoffAlert: measured from the frame the man leaves the arm, not this one)
-        if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
+        if (sideLocked(g, gd)) { /* (gunslots.ts: his hands are between his two guns — no round, no magazine) */ }
+        else if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
         else if (gd.weapon.def.burst) burstTrigger(g, gd, dt, aimAt, !shield && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && aimReady(g, gd), !shield && !twisted && !poked && !gd.muzzleDown);   // the carbine: short bursts through the same gates — all of them to begin one (aimReady among them: a burst is gated on the track at its START, not round by round — aim.ts), the per-round ones (the shield, a colleague in the line, poked, twisted) to let each round of it go (rifles, burstTrigger)
         else if (!shield && gd.fireCd <= 0 && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && !roundPastColleague(g, gd, aimAt) && aimReady(g, gd) && gd.weapon.fire()) {   // (muzzleDown: the pistol is not even up — a colleague is, or a beat ago was, in the line; roundPastColleague: the bore's own line this frame, the last look in a scrum; aimReady: lined up on him — the aim model's first-shot gate, aim.ts, always true with it off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
           const W = gd.weapon.def, M = guardFireMods(g, gd); gd.fireCd = (W.cd + simRandom() * W.cdJitter) * M.gap; fireWeapon(g, c, aimAt, false, guardRound(g, gd, M.spread)); noteBore(g, gd, aimAt);   // the weapon's cadence: its floor plus the drawn jitter (the 9 mm's 0.55–1.05 s) — stretched, and the round wider, by the rounds going past his own head (suppression.ts guardFireMods: ×1 / +0 at rest, so a quiet fight is the fight it was); the cone through the aim model (aim.ts guardRound: settle × his row + Sam crossing + his own feet — { spread: M.spread } exactly with it off; noteBore: a round into the frame a hand off the muzzle is remembered against this spot)
@@ -2598,7 +2600,8 @@ export function inHand(gd: Guard): 'torch' | 'weapon' | null {
 }
 /** The magazine is empty: he stands there changing it for the row's reload.dur (the beat the fire sites count down — no round leaves meanwhile), says so, and the
  *  slide-back clack plays at him. */
-export function startReloadBeat(g: Game, gd: Guard) { const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
+export function startReloadBeat(g: Game, gd: Guard) { if (gd.second && sideOutAlert(g, gd)) return;   // (gunslots.ts: a teammate dry on a man close in front of him goes to his sidearm — no magazine change yet)
+  const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
 /** …counted down each frame he could otherwise fire; the frame it runs out the gun is simply full again (his spares are bottomless) and the NEXT frame may fire.
  *  A row that stages its reload (reload.out — the long guns; the sidearm's beat is one undivided 1.7 s and drops nothing) lets the empty go the frame the beat
  *  crosses `out`: a rifleman's thirty-round box clatters down out of the receiver (a 'mag' item with fill 2: throwables draws the long bakelite box) — physical,
