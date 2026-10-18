@@ -7,17 +7,18 @@
 //      the address the run was started from.
 //   node tools/qa/bench-page.cjs
 //   env: PORT (the dev server's, default 5199) · OUT (a folder for the dump, the report and a still per scene, default a temp one) · SIZE (the viewport, default
-//        320x180) · CAP (game seconds each scene plays, default 10) · DEADLINE (minutes the whole check may take, default 150)
+//        320x180) · CAP (game seconds each scene plays, default 10) · DEADLINE (minutes the whole check may take, default 150) · STEP=script (below)
 // The software adapter takes a second or so to draw a frame and its pass timers time the CPU: this proves the run's mechanics, no number in its report is a price.
 // Quality is pinned on the address (auto never settles on frames this slow, and the sweep waits for it). The run's own options (short windows, two sweep rows, no
-// cut on the wall's clock) are written into the run's record as each page opens, since a run started by the row carries none. A SCENE IS STEPPED BY THE CHECK
-// (__runFrames, a second of the game's clock a call, drawn once): at a frame every few seconds the wall's clock would end it before the hands-off player had
-// walked a step. Each scene so plays its CAP seconds through the page's own loop, input and camera, and ends by the player's own cut; the last page's scene
+// cut on the wall's clock) are written into the run's record as each page opens, since a run started by the row carries none. A SCENE IS PLAYED BY THE PAGE'S
+// OWN FRAMES, up to four ticks of its fixed step a frame (at a frame every few seconds the wall's clock would end it before the hands-off player had walked a
+// step: hence no cut on it here); STEP=script has the check step it instead (__runFrames, a second of the game's clock a call at thirty updates, off the fixed
+// step). Each scene so plays its CAP seconds through the page's own loop, input and camera, and ends by the player's own cut; the last page's scene
 // therefore ends before a heavy moment, and the picture it left is the one held (the tail is the fake page's to prove: bench-check).
 // Exit 0 = every check passed, 1 = one failed (printed) or a page did not boot.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), os = require('os'), path = require('path');
-const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'bench-')), DEADLINE = Number(process.env.DEADLINE || 150), CAP = Number(process.env.CAP || 10), [VW, VH] = (process.env.SIZE || '320x180').split('x').map(Number);
+const PORT = process.env.PORT || 5199, OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'bench-')), DEADLINE = Number(process.env.DEADLINE || 150), CAP = Number(process.env.CAP || 10), [VW, VH] = (process.env.SIZE || '320x180').split('x').map(Number), SCRIPT = process.env.STEP === 'script';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
@@ -93,9 +94,9 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
       requestAnimationFrame(f); });
     for (;;) {
       let s = null;
-      try { s = await page.evaluate(() => { const B = window.__bench, G = window.__game;
-        if (B.state === 'scene' && B.hands && !B.hands.end) window.__runFrames(30, 1 / 30);   // (the scene, a second of its own clock at thirty updates: the hands-off player's keys go on the input before each of them, as before a live tick's. The wall's clock is no cap here, the check's options put it out of reach: a software frame takes seconds)
-        return { state: B.state, last: B.last, veil: document.getElementById('bench-veil')?.textContent ?? '', orders: G.orders.log.map(o => o.order), sam: [...G.player.char.pos].map(v => +v.toFixed(1)), hands: B.hands ? { t: +B.hands.t.toFixed(1), end: B.hands.end, b: B.hands.b } : null, god: G.godMode, dark: G.blackout.active, locked: !!window.__input.lockExcept, acts: B.acts.join(' '), by: window.__benchWatch?.by, tag: window.__benchWatch?.tag }; }); }
+      try { s = await page.evaluate(SCRIPT => { const B = window.__bench, G = window.__game;
+        if (SCRIPT && B.state === 'scene' && B.hands && !B.hands.end) window.__runFrames(30, 1 / 30);   // (STEP=script: the scene stepped a second at a time at thirty updates, off the page's fixed step. Without it the page's own frames play the scene, up to four ticks of its fixed step a frame: the wall's clock is no cap here, the check's options put it out of reach, since a software frame takes seconds)
+        return { state: B.state, last: B.last, veil: document.getElementById('bench-veil')?.textContent ?? '', orders: G.orders.log.map(o => o.order), sam: [...G.player.char.pos].map(v => +v.toFixed(1)), hands: B.hands ? { t: +B.hands.t.toFixed(1), end: B.hands.end, b: B.hands.b } : null, god: G.godMode, dark: G.blackout.active, locked: !!window.__input.lockExcept, acts: B.acts.join(' '), by: window.__benchWatch?.by, tag: window.__benchWatch?.tag }; }, SCRIPT); }
       catch (e) { if (!last) break; throw e; }   // (the page went on to the next scene under the question)
       if (s.state !== prev) { seen.push(s.state); log(`  ${s.state} · ${s.veil}`); prev = s.state; }
       if (s.hands && s.state === 'scene') { if (!sam0) sam0 = s.sam; hands = s; }
@@ -107,7 +108,8 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
           keys = await page.evaluate(() => ({ state: window.__bench.state, active: window.__bench.active, rec: window.__perfrec.recording, menu: window.__menu.isOpen })).catch(() => null); if (keys) keys.reached = held;
           if (last) before = await page.evaluate(STATE);   // (the last page's settings with its level and its weather up: what the presets and the sweep must put back)
         }
-        if (!shot && s.hands.t >= CAP - 2) { shot = true; await page.screenshot({ path: path.join(OUT, `scene-${S.id}.png`) }).catch(() => {}); }
+        if (!shot && s.hands.t >= CAP - 2) { shot = true; await page.screenshot({ path: path.join(OUT, `scene-${S.id}.png`), timeout: 240000 }).catch(e => log(`  no still of ${S.id}: ${String(e).slice(0, 120)}`)); }
+        if (!SCRIPT) await page.waitForTimeout(1000);
         continue;
       }
       if (last && s.state === 'held' && !f9) { await page.keyboard.press('F9'); await frames(2); f9 = await page.evaluate(() => ({ active: window.__bench.active, rec: window.__perfrec.recording })); }
