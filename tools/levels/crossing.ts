@@ -247,7 +247,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- outside the wall: what each way in is known by ----------------
   grp('outside');
-  G.container(24.6, 26.5, 0, 'paintRust'); G.crates(11.4, 26.4, 0.2, 3); G.tyres(12.9, 25.3, 2);      // the lorry park, outside the south gate: a box waiting its turn, a pallet's worth of crates
+  G.container(24.6, 26.5, 0, 'paintRust'); const lorryPark0 = K.boxes.length; G.crates(11.4, 26.4, 0.2, 3); G.tyres(12.9, 25.3, 2); const lorryPark1 = K.boxes.length;      // the lorry park, outside the south gate: a box waiting its turn, a pallet's worth of crates
   G.stall(1.5, 18.6, HALF, 2.2, 'tarpBlue'); G.handcart(1.9, 14.7, 0.15, 'sacks');                     // the tea stall, outside the west wicket; a cart left at the shut road gate
   G.motorbike(38.1, 14.7, HALF + 0.2); G.drums(38.4, 16.9, 2); G.bush(38.7, 21.6, 1.0);               // the east road: a bike left at the shut gate, the ditch's scrub
   // ---------------- the west yard (north of the road): impounded things, dark ----------------
@@ -384,7 +384,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the south gate from the lorry park, where the pair starts — the
   // lot's pickup and the seized blue box over the wall behind them. The pallet of crates and the two tyres left outside the gate (`G.crates(11.4, 26.4 …)`,
-  // `G.tyres(12.9, 25.3 …)` above) stand where the file of five forms, so they are out of the picture: by id, as the export numbers them.
+  // `G.tyres(12.9, 25.3 …)` above) stand where the file of five forms, so they are out of the picture: by id, as the export numbers them (the kit's list is the file's, box for box).
   // FOR THE PICTURE ONLY (`add`: the mission never loads these): only `exterior` lamps stay lit in a picture and the lane's are 8 m off, so the strip behind the
   // gate was black, and what makes this a crossing (the booms, the lane) is under the tiles. So the picture gets a work bulb on a pole against the wall,
   // past the HESCO column (over its first cell, at 30, the cell's top burned white on the page still), and a spare boom — the lane's own post and arm (`add` at 10.3, 16.5 above), its arm down along the HESCO column, banded red.
@@ -401,7 +401,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [12.45, 2.2, 23.25], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 14, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
-  const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: ['box_0305', 'box_0306', 'box_0307', 'box_0308', 'box_0309', 'box_0310', 'box_0311', 'box_0312', 'box_0313', 'box_0314', 'box_0315'], add: kitAdd }] };
+  // (FOUND, not typed: an unnamed box has its place in the file for an id, so a box added earlier in this generator would turn a typed list onto other boxes.
+  //  The eleven are what those two calls laid, counted off the kit's list either side of them; a count that is not eleven throws.)
+  if (lorryPark1 - lorryPark0 !== 11) throw new Error(`crossing: the gear screen's way hides the 11 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
+  const lorryParkOut = Array.from({ length: lorryPark1 - lorryPark0 }, (_, k) => `box_${String(lorryPark0 + k).padStart(4, '0')}`);
+  const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
   return { level, scenarios: { quiet: QUIET, kitView }, groups: trace.groups, surfaces };
 }
 
