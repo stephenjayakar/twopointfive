@@ -38,7 +38,7 @@ const CHAINS: [string[], string, number][] = [
 interface BoxRec { name: string; c: P3; cw: P3; corners: P3[]; h: P3; }
 interface Frame { b: Record<string, P3>; boxes: BoxRec[]; at: P3; atW: P3; bad: number; }
 interface Cell { fr: Frame; label: string[]; mark: boolean; }
-type Tool = { kind: 'hammer' | 'shotgun'; t: number; equip: number; windup: number; stow: number; blows: number[]; end: number; at: P3 };
+type Tool = { kind: 'hammer' | 'shotgun'; t: number; equip: number; windup: number; stow: number; blows: number[]; end: number; at: P3; snug?: boolean };
 
 /** the man's joints and prop boxes this frame in HIS frame: [to his right, up from the floor, forward], the origin under his pelvis */
 function measure(c: any, boxesW: any[], atW: P3): Frame {
@@ -123,7 +123,7 @@ function beat(name: string, c: any, T: Tool, until: number, draw: (out: any[]) =
   const cells: Cell[] = [], an = c.anim; let pv: Frame | null = null, n = 0;
   const worst = { R: 0, L: 0, tool: 0, fR: 0, fL: 0, fT: 0 }; let hideOn = NaN, hideOff = NaN, kOff = NaN, kOn = NaN, bad = 0; const blows: string[] = [];
   for (let t = -lead; t <= until + 1e-9; t += DT, n++) {
-    const tt = Math.round(t / DT) * DT; an.bigTool = tt >= 0 ? { ...T, t: tt } : null; c.update(DT);
+    const tt = Math.round(t / DT) * DT; an.bigTool = tt >= 0 ? { ...T, t: tt, snug: BIGSLOT.snug } : null; c.update(DT);   // (snug: the shares the game gives him — kit.ts BIGSLOT.snug)
     const all: any[] = []; draw(all); const fr = measure(c, all, T.at); bad += fr.bad;
     const blow = T.blows.some(b => Math.abs(b - tt) < DT / 2), head = fr.boxes.find(b => b.name === BIG_TAG && b.h[0] > 0.05), tool = head ?? fr.boxes.find(b => b.name === '-' && b.h[2] > 0.1);
     if (blow) blows.push(`t ${tt.toFixed(2)}: ${T.kind === 'hammer' ? (head ? `head's middle ${(dist(head.cw, T.at) * 100).toFixed(1)} cm off the point` : 'NO HEAD BOX') : 'shell'} · arms: right ${(dist(c.bones.upperArmR, c.bones.handR) * 100).toFixed(0)} cm, left ${(dist(c.bones.upperArmL, c.bones.handL) * 100).toFixed(0)} cm shoulder to wrist`);

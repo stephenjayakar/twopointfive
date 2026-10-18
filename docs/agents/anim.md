@@ -67,7 +67,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of what it wears), strips `reload-operator reload-defender hostage stay-down clutch entry-dip`; `mv2Shown {reload, bound, clutch, dip}` is what the layers show this frame.
 - **The big slot's tool in the hands** (`character.ts anim.bigTool`, `bigLayer`, table `BIGMOVE`; `rigProps.ts BIGRIG / bigBoxes / hungBoxes / bigBackOf`; switch `kit.ts
   BIGSLOT.moves` — the rule and its checks: `docs/agents/player.md`, *The big slot's tools are carried, walked to the frame and swung*). The game writes ONE struct a frame ({
-  kind, t, equip, windup, stow, blows, end, at }) and the pose is a pure function of it: nothing here keeps a clock, so a load or a replay lands on the same frame. An
+  kind, t, equip, windup, stow, blows, end, at, snug }; `snug` absent = the first-pass shares, `player.md` *stay in a hand on the way*) and the pose is a pure function of it: nothing here keeps a clock, so a load or a replay lands on the same frame. An
   upper-body layer over whatever the legs do (he walks while it comes out); the trunk squares to `at` and assumes he roughly faces it; `blows` are absolute times on `t`'s
   clock and the head is solved ONTO `at` at each; the stow runs `end … end + stow` and wants the last blow a rebound before `end` (`bigRebound(kind)`, which the game's clock
   asks for). Out: `bigK` (0 back … 1 hands, what the drawer carries the prop by) and `hideHeldItem`. Under the HAMMER his own gun's line (`muzzle`, the bore, a falling body's seed) is read off the WHOLE pose under the layer (`handPre = bigBuf`), so the swing does

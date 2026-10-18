@@ -150,7 +150,7 @@ export function samBigWalk(g: Game, dt: number): number {
 /** BIGSLOT.moves — what the animator is told of the beat this frame (character.ts bigTool; null: no tool's beat, or the moves off) */
 export function samBigPose(g: Game) {
   const T = g.player.kick?.tool, M = T?.moves; if (!T || !M) return null;
-  return { kind: T.kind, t: T.t, equip: T.kind === 'hammer' ? BIGSLOT.equip : BIGSLOT.draw, windup: bigWind(), stow: BIGSLOT.stow, blows: M.blows, end: M.end, at: M.at };
+  return { kind: T.kind, t: T.t, equip: T.kind === 'hammer' ? BIGSLOT.equip : BIGSLOT.draw, windup: bigWind(), stow: BIGSLOT.stow, blows: M.blows, end: M.end, at: M.at, snug: BIGSLOT.snug };
 }
 /** the hammer's wind-up (s): `BIGSLOT.heft` with the moves on — the swing is drawn — and `BIGSLOT.windup`, as it was, with them off */
 export const bigWind = (): number => (BIGSLOT.moves ? BIGSLOT.heft : BIGSLOT.windup);
@@ -296,5 +296,5 @@ export function hammerOutTick(g: Game, mine: (gd: Guard) => boolean) {
     if (H.end < 0 && !mine(gd)) hammerIn(g, gd);
     const t = g.time - H.t0;
     if (H.end >= 0 && t >= H.end + BIGSLOT.stow) { gd.bigOut = null; gd.char.anim.bigTool = null; continue; }
-    gd.char.anim.bigTool = { kind: 'hammer', t, equip: BIGSLOT.equip, windup: bigWind(), stow: BIGSLOT.stow, blows: H.blows, end: H.end, at: H.at }; }
+    gd.char.anim.bigTool = { kind: 'hammer', t, equip: BIGSLOT.equip, windup: bigWind(), stow: BIGSLOT.stow, blows: H.blows, end: H.end, at: H.at, snug: BIGSLOT.snug }; }
 }

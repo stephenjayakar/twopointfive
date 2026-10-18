@@ -84,7 +84,7 @@ const SITS: Record<string, { say: string; go(x: Ctx): void }> = {
 };
 /** the big slot's beat as bigkit.ts hands it to the animator (a function of the record: `t` is the game's clock, stepped here) */
 function big(x: Ctx, kind: 'hammer' | 'shotgun', blows: number[], until: number) {
-  const a = x.c.anim; const B = { kind, t: 0, equip: 0.7, windup: 0.5, stow: 0.6, blows, end: -1, at: [0, 1.0, 0.8] as V3 };
+  const a = x.c.anim; const B = { kind, t: 0, equip: 0.7, windup: 0.5, stow: 0.6, blows, end: -1, at: [0, 1.0, 0.8] as V3, snug: true };
   for (let t = 0; t < until; t += DT) { B.t = t; a.bigTool = B; x.run(DT); }
 }
 

@@ -267,11 +267,13 @@ export const SLOTS: { on: boolean; ok: boolean; why: string; table: SlotTable } 
  *  hammer, wind up, and then hit the door in one motion"): the tool is CARRIED where it can be seen (the hammer on a man's back), a man's own gun is put
  *  away for it, `equip` seconds bring it into his hands (as he walks onto his spot), the blow is one wound-up swing and `stow` seconds put it back; you
  *  take the row from `reach` metres of the door — where a stack stands — and WALK to a free place beside either jamb (bigkit.ts samBigSpot), never
- *  slid there and never square in the opening while there is floor beside it. Off = the build of 10-15 morning. */
-export const BIGSLOT: { on: boolean; swings: number; swing: number; windup: number; draw: number; shells: number; shut: boolean; beside: boolean; moves: boolean; equip: number; stow: number; reach: number; heft: number } = {
+ *  slid there and never square in the opening while there is floor beside it. Off = the build of 10-15 morning.
+ *  `snug` (with the moves): his own gun and the tool each stay IN A HAND while they are off him (character.ts BIGMOVE.snug — the animator is told by the
+ *  beat's record). Off = the first-pass shares: the tool drawn part way between his back and a fist that had left, his rifle carried toward his shoulder. */
+export const BIGSLOT: { on: boolean; swings: number; swing: number; windup: number; draw: number; shells: number; shut: boolean; beside: boolean; moves: boolean; snug: boolean; equip: number; stow: number; reach: number; heft: number } = {
   get on() { return bigOn; },
   set on(v: boolean) { if (v === bigOn) return; bigOn = v; rowCache.clear(); if (!v) return; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = bigHome({ ...KIT.members[i] }, i); if (ruleOn && SLOTS.ok) kitFitAll(KIT.members, SLOTS.table, team); },
-  swings: 2, swing: 0.7, windup: 0.45, draw: 0.5, shells: 2, shut: true, beside: true, moves: true, equip: 0.6, stow: 0.45, reach: 2.4, heft: 0.7 };   // (`heft`: the hammer's wind-up WITH the moves on, s — the swing is drawn, and wants the footage's anticipation: the hammer held up, clear of him, before it comes down; `windup` is the one with them off)
+  swings: 2, swing: 0.7, windup: 0.45, draw: 0.5, shells: 2, shut: true, beside: true, moves: true, snug: true, equip: 0.6, stow: 0.45, reach: 2.4, heft: 0.7 };   // (`heft`: the hammer's wind-up WITH the moves on, s — the swing is drawn, and wants the footage's anticipation: the hammer held up, clear of him, before it comes down; `windup` is the one with them off)
 /** A CARD AS THE BIG SLOT READS IT (only ever called with the switch on): the shotgun is no gun — a card whose weapon row says so (a stored kit, a
  *  table's loadout, a mission's issue block, a probe's hand) is the issued gun, with the shotgun in his big slot unless a shield or a wall charge is
  *  already there (the build before charged a shield man with the shotgun row for the shield alone: he carried a pistol). */

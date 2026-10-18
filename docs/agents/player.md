@@ -184,7 +184,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   torch a whistle's soft answer raises is drawn in the hanging RIGHT hand while the clip lifts the LEFT (the light's origin is the right hand's: moving it is a rule change — or
   `WHISTLE_SOFT_UPPER = 'none'`); Sam's slung rifle runs 5‥8 cm into his radio pack — only with the sneaking suit or kit handling switched off, or on the frozen stand (as the page ships a quiet mission wears the suit with no pack and a loud one hangs the rifle in front on its sling: cast.ts `sneakSuit`, kitanim.ts `kitSlingFront`); the breacher's kit mesh already carries a long tool and the hammer and
   shotgun cross it; a shield's window lets the helmet 2.5 cm through at a crouched aim; a hammer between hands and back, and a teammate's rifle as it comes off (the big slot's own
-  moves); a torch is beside the fist for the frames of the torch ↔ sidearm swap (the swap's reach for the belt is the animator's, game state, and goes to the torch's OLD place: the look-only
+  moves: MENDED since, the bullet 'stay in a hand on the way' below); a torch is beside the fist for the frames of the torch ↔ sidearm swap (the swap's reach for the belt is the animator's, game state, and goes to the torch's OLD place: the look-only
   pass draws the hand the 7.5 cm further out to where the torch now hangs — `anim.swapBelt`, check line 17: 1.4 cm from the old place, 1.7 cm from the new); through a long gun's
   reload the TRIGGER hand and the body play the pistol's clip (the support arm does work the magazine change with the movement pass on: probes.ts `moves-reload`; with it off, the
   frozen stand, it holds nothing); a defender throws overhand with the carbine in the throwing fist. THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
@@ -416,6 +416,38 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `BIGRIG`'s numbers were placed against headless stick strips and the software adapter's stills, not in the viewer; putting his own gun away is a pop at 0.17 s (a carried
   put-away would add about 0.6 s: a call for the maintainer); the last blow rebounds though the door gives; with `KITANIM` off (and on a teammate) his own gun pops to its
   place rather than travelling; the shotgun is the carbine's boxes; a dead man keeps the tool on his back.
+- **The big slot's tool and his own gun stay in a hand on the way** (`BIGSLOT.snug`, a key of the big slot's table as `moves` is: ON in the module — so in the page,
+  `?nobigsnug` puts it off — live only under `BIGSLOT.on` and `moves`, so OFF on the frozen stand with them and riding the parent's `FROZEN_HOLDS` row; Tab ▸ 'Big slot' ▸
+  'tool and gun stay in a hand'; a recording whose `BIGSLOT` table has no `snug` replays with it off, `journal.ts applyKnobs`). The maintainer, 10-18: "gun not aligned to
+  hand for partner. we should do a pass for all the attachment points" — that pass (IN HAND, above) measured the hammer out of the hands on its way to and from the back and a
+  teammate's rifle as the hammer comes off, and left both to the big slot. WHAT WAS WRONG, three things in `character.ts`: (1) the tool went from his back to his fist
+  (`bigK`) over `take` 0.47‥0.82 of the equip, but the fist is on his back at `grab` 0.5 and LEAVES: for a quarter of the move the hammer was drawn part way between a back
+  and a hand already on its way down (8.5 cm at p95, 10 at worst); (2) his own gun stayed in his hands until `hide` 0.28 while the right hand was already going over his
+  shoulder — the rifle rode up with it, the other hand 15 cm off its handguard on average and 30 at worst, the bore up to 95° off the fingers; (3) putting it back, the
+  fist's place on his back was built on the pose BEFORE the chest twist and the drawer reads the joints AFTER it: twisted 86° at the aim as he walks off, the fist stopped
+  13 cm wide of the tool and the tool jumped that far in two frames. NOW (`BIGMOVE.snug`; the animator is told by the beat's own record, `anim.bigTool.snug`, written by
+  `bigkit.ts` — the pose stays a function of the record): the tool changes between back and fist over 0.44‥0.56, while the fist is THERE, and goes back over the last fifth
+  of `put`; his gun is let go at 0.06 (a teammate's falls to its sling at once, yours goes where it went) and shows again from 0.94 of the stow; the fist's place is the
+  back's frame as it WILL be (`twisted`, `untwist` run forwards) brought back through `untwist`. The beat's own times (`equip`, `heft`, the blows, `stow`) do not move, nor
+  does anything a door or a guard reads. For YOU it also means your gun and its rail light are away 0.13 s sooner and back 0.04 s later (`hideHeldItem` is what the light,
+  the IR laser and the kit hands read). QA: `bun run tools/qa/bigslot-check.ts moves` — 'IN A HAND ALL THE WAY' (in the game: a teammate's hammer on the manager's door,
+  every frame of the beat, the hammer as drawn against the hollow of his fist while it is off his back, and how far a hand carries his own gun), 'BY THE RECORD, OUT AND
+  BACK' (the animator alone, a teammate at the aim with his chest square and turned a radian either way: out, one blow, back — the put-back and the turned back are asked
+  here, the same on any stand), a control under each (the switch off; a record with no `snug`) and the journal line; `BIGSNUG_BREAK=1` must fail the two; both stands.
+  `tools/qa/attach-play.ts` asks the tool of a fist only while it is off his back (a hand on its way to a tool still on him holds nothing — teammates and you);
+  `bigmoves-strip.ts` and `attach-mesh.ts` write `snug` into their records, so the strips show what the game shows. MEASURED 10-18, headless: the check's teammate, the
+  hammer 0.0 cm out of his fist at the worst on both stands (off: 9.9 cm frozen, 8.5 shipped) and his gun carried 4.4 / 1.7 cm (off: 45.1 / 26.8); by the record 0.0 cm out
+  and back at 0 and ±1 rad (no `snug`: 4.5 and 3.6 cm square, 10.1 and 8.7 turned one way, 8.1 and 5.5 the other); `bigslot-check` whole, green on both stands, the two
+  lines red under the break on both; and two played missions on the shipped stand (`attach-play`, the kill house with a mixed squad and the compound, one seed, 12.9
+  thousand frames, two men with hammers): the hammer in a fist 0.0 / 0.4 / 0.4 cm mean / p95 / worst over 633 frames (it was 2.6 / 8.5 / 10.3 on its way), the rifle as the
+  hammer comes off 4 frames with the support hand 3.6 / 6.2 cm off it and the bore 8° / 15° off the fingers (it was 34 frames, 15 / 30 cm, 45° / 95°). NOBODY HAS SEEN IT
+  ON A GPU OR PLAYED IT: whether a gun let go that early reads as dropped rather than slung, and whether the change of hands at the shoulder reads at 60 frames a second,
+  are for a person. LEFT, measured: THE SHOTGUN takes the same four shares, but its fist's place over the shoulder is the rifle's, not where the slung shotgun lies — it
+  still changes hands across a gap (your own, traced on the check's storage door: 7.1 cm from the hollow at the shoulder by the nearest box, a measure that reads 2.9 at
+  rest; it peaked at 8.7), now in 6 frames where it took 16. A TEAMMATE THE FIGHT TAKES before he has put the hammer back has it on his back at once (`bigkit.ts hammerIn`
+  hard, `bigFired`: what is drawn is what the sim did) — a one-frame change, by rule; the check's teammate on the shipped stand is one. The breacher's cast mesh carries a
+  long tool of its own that the hammer and the shotgun cross (art, or which man wears that kit: the maintainer's); the shield's window and the helmet (the shield is out
+  of the page, below).
 - **The ballistic shield is out of the page** (`src/game/shield.ts SHIELD.on` — the switch the shield always had; `src/game/kit.ts shieldIn`. OFF in the page since 10-15, `?shield` =
   back for the visit; ON in the module and on the frozen stand, whose probes, tallies and fixtures stage one — the quick throw's pattern: a `FROZEN_HOLDS` row `'SHIELD.on':
   'TPS_SHIELD=0'`, `TPS_SHIELD` in `STAND_ENV`, pinned in `standup.ts` (a probe that wants it off under a FROZEN stand-up gives the word `TPS_SHIELD=0`: a hand alone, or a `--set` row, is written over, as the quick throw's is); the table was already in the knob registry and a journal's tables, so a recording made with a shield replays
