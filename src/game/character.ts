@@ -1117,6 +1117,10 @@ const THR_LOW = {
  *  by `grab`, the tool leaves his back for the fist over `take` (bigK), the left hand is on it over `join`; stowing, it is on his back again by `put`, the left
  *  hand is off it by `unjoin` and his own gun shows again from `show`. `arc` = how far the right fist bows out round the shoulder on its way (trunk frame: his
  *  left, up, forward), `wait` = where the left hand waits meanwhile, off its own shoulder.
+ *  `snug` (the record's own word, bigkit.ts BIGSLOT.snug) = the four shares that keep each thing in a hand while it is off him: his own gun is let go as his
+ *  hands leave it (it was carried a third of the way to his shoulder, the other hand 15 to 30 cm off it), and the tool changes between his back and his fist
+ *  while the fist is THERE (`take` round `grab`; back onto him over the last `1 - putAt` of `put`) — it was drawn part way between the two for a quarter of the
+ *  move, up to 10 cm out of a fist already on its way down. The shares above them are the build before's.
  *  THE HAMMER, as (g, d): g = the right fist's grip off the right shoulder joint, d = the handle's line, butt → head. `ready`: held across him, head up by the
  *  right shoulder (legs free: nothing of the trunk or the feet). A blow's window (`windup` s before it lands, never reaching back past the blow before): raised
  *  to `wound` over `raise` of what the swing leaves, held, then the swing — the last `swing` share of the window, kept between swingMin and swingMax s — over the
@@ -1127,7 +1131,8 @@ const THR_LOW = {
  *  (`pitch`); each shell a kick (`kick` m back up the bore, `climb` ° of muzzle, over `kickIn` s, gone in about three `kickOut`).
  *  FIRST-PASS numbers, placed against headless stick strips (tools/qa/bigmoves-strip.ts); never seen in the renderer. */
 const BIGMOVE = {
-  hide: 0.28, grab: 0.5, take: [0.47, 0.82], join: [0.65, 0.96], put: 0.58, unjoin: 0.28, show: 0.85,
+  hide: 0.28, grab: 0.5, take: [0.47, 0.82], join: [0.65, 0.96], put: 0.58, putAt: 0.45, unjoin: 0.28, show: 0.85,
+  snug: { hide: 0.06, take: [0.44, 0.56], putAt: 0.8, show: 0.94 },
   arc: [-0.16, 0.12, 0.04] as Vec3, wait: [-0.1, -0.34, 0.2] as Vec3,
   hammer: {
     ready: { g: [0.06, -0.1, 0.34] as Vec3, d: [-0.42, 0.9, -0.1] as Vec3 },
@@ -1146,10 +1151,11 @@ const BIGMOVE = {
  *  (bigkit.ts), so the stow never starts inside the rebound */
 export const bigRebound = (kind: 'hammer' | 'shotgun'): number => (kind === 'hammer' ? BIGMOVE.hammer.rebound : BIGMOVE.shotgun.kickIn + BIGMOVE.shotgun.kickOut);
 /** bigTool: his hands are off his own gun for it this frame (hideHeldItem) — from `hide` of the equip until `show` of the stow */
-function bigOff(B: { t: number; equip: number; stow: number; end: number }): boolean {
+function bigOff(B: { t: number; equip: number; stow: number; end: number; snug?: boolean }): boolean {
   if (!(B.t >= 0)) return false;
-  if (B.end >= 0 && B.t >= B.end) return (B.t - B.end) / Math.max(1e-3, B.stow) < BIGMOVE.show;
-  return B.t >= BIGMOVE.hide * B.equip;
+  const S = B.snug ? BIGMOVE.snug : BIGMOVE;
+  if (B.end >= 0 && B.t >= B.end) return (B.t - B.end) / Math.max(1e-3, B.stow) < S.show;
+  return B.t >= S.hide * B.equip;
 }
 /** a unit direction turned k of the way to another (the short way round) */
 function dirMix(a: Vec3, b: Vec3, k: number): Vec3 { return k <= 0 ? a : k >= 1 ? b : v3.normalize(quat.rotate(quat.slerp([0, 0, 0, 1], quat.fromTo(a, b), k), a)); }
@@ -1281,8 +1287,9 @@ export class CharacterAnimator {
    *  clock `t` (0 = his hands leave his gun). `equip` s: gun away, the tool into both hands. `blows`: the times each blow LANDS (hammer) / each shell goes
    *  (shotgun); a blow is wound up over the `windup` s before it. `end` ≥ 0: from then, `stow` s put the tool back and his hands return to his gun.
    *  `at`: the world point struck or shot (the lock, about a metre up the leaf). The pose is a function of this record and of the pose underneath, nothing
-   *  else (bigLayer; BIGMOVE): the animator keeps no clock of its own for it, and never clears it — whoever wrote it nulls it. */
-  bigTool: { kind: 'hammer' | 'shotgun'; t: number; equip: number; windup: number; stow: number; blows: number[]; end: number; at: Vec3 } | null = null;
+   *  else (bigLayer; BIGMOVE): the animator keeps no clock of its own for it, and never clears it — whoever wrote it nulls it. `snug`: the shares that keep
+   *  his gun and the tool in a hand on the way (BIGMOVE.snug; absent = the build before's). */
+  bigTool: { kind: 'hammer' | 'shotgun'; t: number; equip: number; windup: number; stow: number; blows: number[]; end: number; at: Vec3; snug?: boolean } | null = null;
   /** Output, for the drawer (combat.ts handProps → rigProps bigBoxes): where the big slot's tool is this frame — 0 on his back, 1 in his hands, between = on its
    *  way from one to the other. 0 whenever bigTool is null. While his hands are off his own gun for it hideHeldItem above is raised too. */
   bigK = 0;
@@ -3820,6 +3827,18 @@ export class CharacterAnimator {
     const P3t = v3.add(quat.rotate(E2, v3.sub(v3.add(quat.rotate(E1, v3.sub(P3, P1)), P1), P2t)), P2t);
     return (H: Vec3): Vec3 => { const x1 = v3.add(quat.rotate(iE3, v3.sub(H, P3t)), P3t); const x2 = v3.add(quat.rotate(iE2, v3.sub(x1, P2t)), P2t); return v3.add(quat.rotate(iE1, v3.sub(x2, P1)), P1); };
   }
+  /** … and run FORWARDS: where a point posed below spine3 ENDS UP after that twist, and where spine2 itself does (it turns with spine1's share alone). The same
+   *  construction; fk current on the pose asked about. */
+  private twisted(twY: number, twP: number): { at: (H: Vec3) => Vec3; spine2: Vec3 } {
+    const nd = this.nodes, fk = this.fk;
+    if (!twY && !twP) return { at: (H: Vec3) => H, spine2: v3.copy(fk.pos[nd.spine2]) };
+    const E1 = qYaw(twY * 0.25), E2 = qYaw(twY * 0.35); let E3 = qYaw(twY * 0.4);
+    if (twP) { const right = quat.rotate(E3, AX); E3 = quat.mul(quat.axisAngle(right, twP), E3); }
+    const P1 = v3.copy(fk.pos[nd.spine1]), P2 = fk.pos[nd.spine2], P3 = fk.pos[nd.spine3];
+    const P2t = v3.add(quat.rotate(E1, v3.sub(P2, P1)), P1);
+    const P3t = v3.add(quat.rotate(E2, v3.sub(v3.add(quat.rotate(E1, v3.sub(P3, P1)), P1), P2t)), P2t);
+    return { spine2: P2t, at: (H: Vec3): Vec3 => { const x1 = v3.add(quat.rotate(E1, v3.sub(H, P1)), P1); const x2 = v3.add(quat.rotate(E2, v3.sub(x1, P2t)), P2t); return v3.add(quat.rotate(E3, v3.sub(x2, P3t)), P3t); } };
+  }
   /** untwist's rotation alone, for a direction (a hand's fingers / back that must END UP pointing somewhere after the chest twist) */
   private untwistDir(twY: number, twP: number): (d: Vec3) => Vec3 {
     if (!twY && !twP) return (d: Vec3) => d;
@@ -4801,7 +4820,7 @@ export class CharacterAnimator {
     if (stowing) { const k = 1 - e3(us / (M.put * 0.5)); wind *= k; sw *= k; plant *= k; }
     const ue = Math.max(clamp(t / Math.max(1e-3, B.equip), 0, 1), wind);   // (a blow asked for before the tool is out: it comes out with the wind-up)
     const eb = e3((ue - M.grab) / (1 - M.grab)), inHands = stowing ? Math.min(eb, 1 - e3(us / M.put)) : eb, es = Math.pow(sw, 1.8);   // (the swing ARRIVES fast: no ease into the door)
-    this.bigK = smoothstep(M.take[0], M.take[1], ue) * (stowing ? 1 - smoothstep(M.put * 0.45, M.put, us) : 1);
+    { const S = B.snug ? M.snug : M; this.bigK = smoothstep(S.take[0], S.take[1], ue) * (stowing ? 1 - smoothstep(M.put * S.putAt, M.put, us) : 1); }
     if (ham) { (this.bigBuf ??= new Pose(pA.numNodes)).copy(pA); this.bigUnder = true; }
     // ---- where the point is from where he stands (model space; its bearing off the pelvis, level)
     fk.run(pA);
@@ -4836,7 +4855,7 @@ export class CharacterAnimator {
     pB.copy(pA); fk.run(pB);
     const F = this.trunkFrame(), dirT = (q: readonly number[]): Vec3 => [F.left[0] * q[0] + F.up[0] * q[1] + F.fwd[0] * q[2], F.left[1] * q[0] + F.up[1] * q[1] + F.fwd[1] * q[2], F.left[2] * q[0] + F.up[2] * q[1] + F.fwd[2] * q[2]];
     type Spot = { at: Vec3; rot: Quat; f?: Vec3; b?: Vec3 };
-    const sR = v3.copy(fk.pos[nd.upperArmR]), sL = v3.copy(fk.pos[nd.upperArmL]), Hp = this.untwist(twY, twP)(at0), arc = dirT(M.arc);
+    const sR = v3.copy(fk.pos[nd.upperArmR]), sL = v3.copy(fk.pos[nd.upperArmL]), un = this.untwist(twY, twP), Hp = un(at0), arc = dirT(M.arc);
     const uR: Spot = { at: v3.copy(fk.pos[nd.handR]), rot: [...fk.rot[nd.handR]] as Quat }, uL: Spot = { at: v3.copy(fk.pos[nd.handL]), rot: [...fk.rot[nd.handL]] as Quat };
     const mix = (a: Spot, b: Spot, e: number, bow?: Vec3): Spot => e <= 0 ? a : e >= 1 ? b : { at: bow ? v3.mad(v3.lerp(a.at, b.at, e), bow, Math.sin(Math.PI * e)) : v3.lerp(a.at, b.at, e), rot: quat.slerp(a.rot, b.rot, e) };
     let backR: Spot, held: Spot, leftOn: (wr: Vec3) => Spot;
@@ -4848,7 +4867,11 @@ export class CharacterAnimator {
       const fist = (side: 0 | 1, g: Vec3, d: Vec3, sh: Vec3): Spot => { let h = v3.add(v3.sub(g, sh), dirT([side ? -0.03 : 0.03, 0, 0.02])); h = v3.mad(h, d, -v3.dot(h, d)); if (v3.len(h) < 1e-3) h = v3.cross(d, F.up);
         const f = v3.normalize(h), b = side ? v3.cross(f, d) : v3.cross(d, f); return { at: v3.mad(v3.mad(g, f, -G.fwd), b, G.palm), rot: this.handRot(side, f, b), f, b }; };
       // on his back, as the drawer has it (BIGRIG.hammer.back, through the back's own frame off THIS pose's joints): the fist takes it just under the head
-      const bk = bigBackOf(fk.pos[nd.hips], fk.pos[nd.spine2], fk.pos[nd.thighL], fk.pos[nd.thighR], fk.pos[nd.upperArmL], fk.pos[nd.upperArmR], R.back, this.bigClear);   // (… with whatever else lies across his back under it: the drawer's own word)
+      // (… and, BIGSLOT.snug: the drawer's joints are the ones AFTER the chest twist still to come — his hips and thighs stay, his shoulders turn. Turned far, aiming
+      //  across himself as he walks off, the fist stopped 13 cm wide of a tool it was to put back. So: the back's frame as it WILL be, and the place that ENDS UP there)
+      const tw = B.snug && (twY || twP) ? this.twisted(twY, twP) : null, uaL = fk.pos[nd.upperArmL], uaR = fk.pos[nd.upperArmR];
+      const bkW = bigBackOf(fk.pos[nd.hips], tw ? tw.spine2 : fk.pos[nd.spine2], fk.pos[nd.thighL], fk.pos[nd.thighR], tw ? tw.at(uaL) : uaL, tw ? tw.at(uaR) : uaR, R.back, this.bigClear);   // (… with whatever else lies across his back under it: the drawer's own word)
+      const bk = tw ? { o: un(bkW.o), z: this.untwistDir(twY, twP)(bkW.z) } : bkW;
       const backL: Line = { g: v3.mad(bk.o, bk.z, R.headAt - H.grabAt), d: bk.z }, readyL = off(H.ready), woundL = off(H.wound), overL = off(H.over);
       // the blow: the head ON the point, the butt end by the pelvis on the point's own side
       const hp = fk.pos[nd.hips], b0: Vec3 = [hp[0] + tleft[0] * H.butt[0] + tdir[0] * H.butt[2], hp[1] + H.butt[1], hp[2] + tleft[2] * H.butt[0] + tdir[2] * H.butt[2]];

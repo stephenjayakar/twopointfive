@@ -115,14 +115,15 @@ if (process.env.ATTACH_HOOK) {
     { const c = pl.char, a = c.anim, busy = a.hideHeldItem, mine = of(c);   // Sam: the drawer's own rules, said short (combat.ts handPropsRaw)
       const knife = mine.some(x => x.name === RP.KNIFE_TAG), rifle = pl.hasRifle && pl.rifleUp && !busy && !pl.down, pistol = pl.pistolUp && !pl.down && !busy;
       const can = !pl.down && !busy && pl.canisterSel && !pl.holstered && !pl.dragging && !pl.sprinting && (a.inThrow || g.throwCount(pl.canisterSel) > 0);
-      const holds = pl.down ? 'down' : a.bigTool && busy ? `big:${a.bigTool.kind}` : knife ? 'knife' : rifle ? 'rifle' : pistol ? 'pistol' : can ? `can` : 'nothing';
+      const holds = pl.down ? 'down' : a.bigTool && busy ? (a.bigK > 0.02 ? `big:${a.bigTool.kind}` : 'nothing (his hand on its way to or from the tool on his back)') : knife ? 'knife' : rifle ? 'rifle' : pistol ? 'pistol' : can ? `can` : 'nothing';
       man(g, c, 'Sam', holds, holds === 'rifle', holds === 'pistol', mine, null); }
     for (const gd of g.guards) {
       const c = gd.char, a = c.anim, who = (gd.team === 'operative' ? 'teammate' : gd.team === 'civilian' ? 'civilian' : 'hostile') + (g.fogOfWar.hidden(gd) ? ' (in the fog)' : ''), mine = of(c);
       let holds: string, long = false, pistol = false;
       if (gd.state === 'dead') holds = 'dead';
       else { const rk = GD.rigOf(gd), held = HW.swapHeld(gd, GD.inHand(gd)), big = BK.bigCarried(g, c);
-        if (big && a.bigTool && a.hideHeldItem) holds = `big:${a.bigTool.kind}`;
+        if (big && a.bigTool && a.hideHeldItem && a.bigK > 0.02) holds = `big:${a.bigTool.kind}`;
+        else if (big && a.bigTool && a.hideHeldItem) holds = 'nothing (his hand on its way to or from the tool on his back)';
         else if (big === 'shotgun' && gd.slung?.out) { holds = 'shotgun (big slot, out)'; long = true; }
         else if (!held) holds = `nothing (${rk})`;
         else if (held === 'torch') holds = 'torch';
