@@ -91,7 +91,7 @@ import type { SnatchSnap } from './snatch';
 import type { DefuseSnap } from './defuse';
 import { woundRestore, type Wound } from './wounds';
 import type { GameEvent, LightTarget, MissionStage, Mission, SlotKind, ThrowKind, Witness, GuardState, DownKind, DownBy, GuardTask } from './game';
-import { Firearm, Rifle, WEAPONS } from './weapons';
+import { Firearm, Pistol, Rifle, WEAPONS } from './weapons';
 import { aimWeightSnapshot, aimWeightRestore } from './aimweight';
 import type { WeaponId, FireMode } from './weapons';
 import type { Item, ItemKind } from './throwables';
@@ -596,6 +596,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     pl.crouch = !!P.crouch; pc.anim.crouchTarget = pl.crouch ? 1 : 0; pc.anim.phase = fin(P.animPhase);
     pl.holstered = !!P.holstered; pl.slot = (KIT_ORDER as readonly string[]).includes(P.slot) ? P.slot : 'pistol'; if (pl.slot === 'rifle' && !pl.hasRifle) pl.slot = 'pistol';
     pl.throwKind = P.throwKind === 'flash' ? 'flash' : 'smoke'; pl.canisters = Math.max(0, P.canisters | 0); pl.flashbangs = Math.max(0, P.flashbangs | 0); if (typeof P.frags === 'number') pl.frags = Math.max(0, P.frags | 0); if (typeof P.wand === 'boolean') pl.wand = WAND.on && (P.wand || quietWand(g));   /* (…and a file that says none never takes the mission's own off him) */ if (P.bigKit !== undefined) pl.bigKit = BIGSLOT.on && (P.bigKit === 'shotgun' || P.bigKit === 'hammer') ? P.bigKit : 'none'; ownChargesBack(g, P.own);   // (a file that says: his, while the switch stands; one from before the wand, or made with it off, says nothing and the card just staged stands)
+    { const id = P.pistol.id && WEAPONS[P.pistol.id]?.cls === 'pistol' ? P.pistol.id : pl.pistol.def.id; if (pl.pistol.def.id !== id) pl.pistol = new Pistol(WEAPONS[id]); }   // (the sidearm the file was saved with: gunslots.ts — a file from before the slots names the one there was)
     firearmApply(pl.pistol, P.pistol); pl.pistol.lightOn = !!P.pistol.lightOn;
     { const id = P.rifle.gun && WEAPONS[P.rifle.gun] ? P.rifle.gun : 'fn2000'; if (pl.rifle.def.id !== id) pl.rifle = new Rifle(WEAPONS[id]); }   // (the long gun the file was saved with: its tube is not a magazine of thirty)
     if (typeof P.rifle.cams === 'number') stickyRestore(pl, P.cams, P.rifle.cams >= 0 ? P.rifle.cams : undefined, P.camSeq);   // (before the load's index is read: 'cam' is on the rifle's list only once issued)
