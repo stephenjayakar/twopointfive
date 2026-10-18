@@ -14,7 +14,6 @@ import type { WeaponId } from '../game/weapons';   // (type only: what a route m
 import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // the office's scenario data (plain literals, type-only imports): what the night breach / room clear / rescue take from this level
-import officeScript from '../../levels/office.script';   // the office's level script (a function importing nothing at run time — game/director.ts injects its API): bundled beside its JSON
 
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
@@ -69,7 +68,7 @@ export interface RoomClearPlan {
   lines: { stack1: string; stack2: string; go2: string; in1: string; side2: string; side1: string; push1: string; under2: string; nothing2: string; corner1: string; empty2: string; radio1: string };
 }
 
-/** The breach showcase's plan (game/breach.ts — the daytime, Door Kickers-style second demo): a RoomClearPlan for the door the pair takes (stack marks and the
+/** The breach drill's plan (game/breach.ts BreachDrill — written for the removed daytime showcase, run live by the night breach): a RoomClearPlan for the door the pair takes (stack marks and the
  *  kick are the drill's own fields and mean what they mean there) plus what only a hot breach has — the men waiting inside on their marks, #1's step BACK off
  *  the doorway after his boot (his own side of the frame: he never crosses the open threshold), #2's mark tight on the jamb with the stun charge in his support
  *  hand and where it lands, each man's flow through the room (battle drill six: through the fatal funnel a stride and a half, check the centre, engage what
@@ -173,7 +172,7 @@ export interface Level {
   volumes?: VolumeDef[];
   /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
   marks?: MarkDef[];
-  /** this level's SCRIPT (game/director.ts runs it: bespoke set pieces, the breach showcase as program 'breach'); absent = no Director programs, the game exactly as it is */
+  /** this level's SCRIPT (game/director.ts runs it: bespoke set pieces as named programs); absent = no Director programs, the game exactly as it is — no shipped level has one today */
   script?: LevelScriptFn;
   /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block; for the office, levels/office.scenarios.ts attached at load. Absent = no scenario can be staged on this level */
@@ -184,7 +183,7 @@ export interface Level {
   breaker: { pos: Vec3; boxes: number[] };
   beacons: { pos: Vec3; box: number }[];
   sky: { zenith: Vec3; horizon: Vec3 };
-  /** the daytime variant (optional: the viewer's stage has none) and the breach showcase staged in it (game/breach.ts) */
+  /** the daytime variant (optional: the viewer's stage has none) and the breach drill's plan (game/breach.ts BreachDrill) */
   daylight?: DaylightDef;
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — main.ts hands it to the engine */
@@ -209,7 +208,7 @@ export function buildLevel(): Level {
   // ?level=local: boot on the level EDITOR's current document (editor ▶ writes it to localStorage 'twopointsix.editorLevel' and opens /?level=local — src/editor)
   bootedLocalLevel = false;
   if (typeof location !== 'undefined' && typeof localStorage !== 'undefined' && new URLSearchParams(location.search).get('level') === 'local') {
-    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const data = parseLevelData(t), lvl = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); bootedLocalLevel = true; return lvl; } }   // (the editor's document is the office being edited: its script comes with it — a program whose marks / doors / plans the document lacks is simply not armed, game/director.ts lint)
+    try { const t = localStorage.getItem('twopointsix.editorLevel'); if (t) { const data = parseLevelData(t), lvl = isOfficeFamily(data) ? withOfficeScript(loadLevel(data)) : loadLevel(data); bootedLocalLevel = true; return lvl; } }   // (the editor's document is the office being edited: its scenario data comes with it)
     catch (e) { console.error('?level=local: falling back to the bundled office —', e); }
   }
   return buildBundledLevel();
@@ -220,20 +219,20 @@ export function buildBundledLevel(): Level {
   if (typeof location !== 'undefined' && new URLSearchParams(location.search).get('level') === 'relief') return withOfficeScript(loadLevel(OFFICE_RELIEF_DATA));   // ?level=relief: the pre-demotion office (main's geometry, no markings)
   return withOfficeScript(loadLevel(OFFICE_DATA));
 }
-/** attach the office's level script to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) — loadLevel itself stays pure data → Level.
- *  The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data (tools/qa level-identity's
- *  generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
-export function withOfficeScript(level: Level): Level { return withScenarios(withScript(level, OFFICE_SCRIPT), OFFICE_SCENARIOS); }
+/** attach what the office keeps OUTSIDE its level file to a Level of the office family (the bundled file, relief, a texel variant off the dev server, the editor's document) —
+ *  loadLevel itself stays pure data → Level. Today that is its scenario data alone: the office's level script (the night and day showcases) was removed, so the office has no
+ *  script and the Director no program (the name stays: every tool that loads a level file calls this). */
+export function withOfficeScript(level: Level): Level { return withScenarios(level, OFFICE_SCENARIOS); }
+/** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
+ *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
 export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
-/** … and its scenario data likewise (levels/office.scenarios.ts), unless the file carried a `scenarios` block of its own (loadLevel has put that on the Level as
+/** the office's scenario data (levels/office.scenarios.ts), unless the file carried a `scenarios` block of its own (loadLevel has put that on the Level as
  *  ordinary data): non-enumerable for the same reason — levels/office.json and everything that walks the office as data stay exactly as they were. */
 export function withScenarios(level: Level, scenarios: LevelScenarios): Level { if (!level.scenarios) Object.defineProperty(level, 'scenarios', { value: scenarios, enumerable: false, writable: true, configurable: true }); return level; }
-/** is this level file one of the OFFICE family (the bundled file, relief, the texel variants, the editor's document of it) — the levels the office's script and
- *  scenario data belong to? Anything else off the dev server (?levelFile=) is its own level: its scenarios are its file's, and it has no script. */
+/** is this level file one of the OFFICE family (the bundled file, relief, the texel variants, the editor's document of it) — the levels the office's
+ *  scenario data belongs to? Anything else off the dev server (?levelFile=) is its own level: its scenarios are its file's. */
 export function isOfficeFamily(data: { name?: string }): boolean { return typeof data.name !== 'string' || data.name === 'office' || data.name.startsWith('office-'); }
-/** the office's level script (levels/office.script.ts): program 'breach' today */
-export const OFFICE_SCRIPT: LevelScriptFn = officeScript;
-/** …and its scenario data (levels/office.scenarios.ts), for whoever must read the office's blocks before a Level is built (main.ts: ?kitview's set loader) */
+/** the office's scenario data (levels/office.scenarios.ts), for whoever must read the office's blocks before a Level is built (main.ts: ?kitview's set loader) */
 export { OFFICE_SCENARIOS };
 /** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
 export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;

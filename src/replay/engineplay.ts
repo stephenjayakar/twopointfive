@@ -75,7 +75,7 @@ const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PIT
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
 export interface TapeView { look: Vec3; yaw: number; pitch: number; dist: number }
 /** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
-const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', 'demo', 'breach', PLAYTAPE, 'at'];   // (a show's own flag would start the show under the replay: a run with a show in it cannot be replayed anyway)
+const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at'];
 /** …and the ones this visit keeps from its own address: ui/replaykey.ts VISIT_FLAGS (the end card's Replay hands the same ones on to the tab it opens) */
 
 type Plain = Record<string, unknown>;
@@ -225,7 +225,7 @@ export class TapePlay {
       else if (kind === 'kit') this.kitOf(data); }
     h.pre?.(); this.env(h.engine.settings);
     const dt = W.step(cv, I);
-    { const c = W.cam; cam.target = [c[0], c[1], c[2]]; cam.yaw = W.lensYaw; cam.pitch = c[4]; cam.distance = c[5]; cam.aspect = c[6]; cam.fov = c[7]; cam.aimLead = c[8]; cam.rebuild(); cam.yaw = c[3]; }   // (an orbit's step ran on the matrices of the yaw before: tapewalk.ts lensYaw, as tools/qa/rerun.ts lays it)
+    W.layCamera(cam);   // (tapewalk.ts: the pose, and the matrices the page's step read, as tools/qa/rerun.ts lays them)
     try { g.update(dt, I, cam, cv as unknown as HTMLCanvasElement); } catch (e) { W.failed(); throw e; }
     W.done();
     if (g.mission.debrief) g.mission.debrief = false;   // (the page's own line after a step: the end card's flag is taken — the card itself is not opened over a replay)
@@ -275,7 +275,7 @@ export class TapePlay {
   private seekDone(): void {
     const h = this.host!; this.seekTo = -1; if (this.audioWas === null) return;
     h.audio.enabled = this.audioWas; h.audio.setVolumes(); this.audioWas = null;
-    if (h.smoke) h.smoke.emitters = h.smoke.emitters.filter(e => e.kind === 'canister'); h.engine.particles?.clear(); h.engine.resetTaa?.('seek');   // (main.ts seekShow's own tidy: queues built up unseen would all land on the first drawn frame)
+    if (h.smoke) h.smoke.emitters = h.smoke.emitters.filter(e => e.kind === 'canister'); h.engine.particles?.clear(); h.engine.resetTaa?.('seek');   // (a seek's tidy: queues built up unseen would all land on the first drawn frame)
   }
   /** the fog of war on the picture (`on` absent = the other way): the viewer's, never the run's → is it on */
   private fogSet(on = this.nofog): boolean { if (!this.host?.game.fogOfWar.active) return !this.nofog; this.nofog = !on; this.paint(); return on; }

@@ -15,7 +15,7 @@
 //     aim-door: aim-door-chase aim-door-sweep
 //     airfoil: airfoil-head airfoil-hostage airfoil-miss airfoil-preview airfoil-torso
 //     all: all-quick
-//     breach: breach-daylight breach-restore breach-run breach-tour
+//     breach: breach-daylight   (+ clear-doctrine; the daytime breach showcase's own probes went with the show)
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
@@ -24,7 +24,7 @@
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
 //     dialogue: dialogue-exchange dialogue-heard dialogue-intel dialogue-lint dialogue-none dialogue-radio dialogue-sawhurt dialogue-seed dialogue-shapes
-//     director: director-breach-digest director-lint director-scheduler director-showcase-scan
+//     director: director-lint director-scheduler director-showcase-scan
 //     hands: hands-body hands-door hands-team hands-off hands-harness
 //     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
@@ -51,8 +51,6 @@
 //     level: level-identity level-lint level-roundtrip level-validate
 //     materials: materials-arealight materials-finish materials-frame materials-presets materials-vndf materials-wear
 //     needs: needs-determinism needs-frozen-up needs-identity needs-interrupts needs-one-away needs-telegraph
-//     night: night-restore night-run night-tour
-//     day: day-destruction day-restore day-run
 //     particles: particles-determinism particles-off particles-queue particles-sites
 //     perf: perf-cards perf-flags perf-texpool
 //     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad
@@ -2526,11 +2524,8 @@ if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (a
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
-// ---------------------------------------------------------------- the daytime breach showcase (breach-probes.ts): 'breach' = the family
+// ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)
 if (on('breach-daylight', 'breach', 'all')) await run('breach-daylight', async () => (await import('./breach-probes.ts')).breachDaylight());
-if (on('breach-run', 'breach', 'all')) await run('breach-run', async () => (await import('./breach-probes.ts')).breachRun());
-if (on('breach-restore', 'breach', 'all')) await run('breach-restore', async () => (await import('./breach-probes.ts')).breachRestore());
-if (on('breach-tour', 'breach', 'all')) await run('breach-tour', async () => (await import('./breach-probes.ts')).breachTour());
 // ---------------------------------------------------------------- the night TEAM breach playtest (nightbreach-probes.ts; game/nightbreach.ts behind ?nightbreach): 'nightbreach' = the family
 if (on('nightbreach-off', 'nightbreach', 'all')) await run('nightbreach-off', async () => (await import('./nightbreach-probes.ts')).nightbreachOff());
 if (on('nightbreach-stage', 'nightbreach', 'all')) await run('nightbreach-stage', async () => (await import('./nightbreach-probes.ts')).nightbreachStage());
@@ -2797,7 +2792,7 @@ if (on('stack-inway', 'inway', 'all')) await run('stack-inway', async () => (awa
 // ---------------------------------------------------------------- a walk whose way runs at a door nobody has tried walks up and tries it (walktries-probes.ts; game/orders.ts ORDERS.walkTries, game/doortools.ts walkTried): 'walktries' = the family
 if (on('move-walktries', 'walktries', 'all')) await run('move-walktries', async () => (await import('./walktries-probes.ts')).moveWalkTries());
 // ---------------------------------------------------------------- every door opens one way (oneway-probes.ts; game/doors.ts DOORWAY + game/doorswing.ts): 'oneway' = the family
-for (const [n, f] of [['oneway-deal', 'onewayDeal'], ['oneway-night', 'onewayNight'], ['oneway-read', 'onewayRead'], ['oneway-leaf', 'onewayLeaf'], ['oneway-player', 'onewayPlayer'], ['oneway-men', 'onewayMen'], ['oneway-save', 'onewaySave'], ['oneway-off', 'onewayOff']] as const)
+for (const [n, f] of [['oneway-deal', 'onewayDeal'], ['oneway-read', 'onewayRead'], ['oneway-leaf', 'onewayLeaf'], ['oneway-player', 'onewayPlayer'], ['oneway-men', 'onewayMen'], ['oneway-save', 'onewaySave'], ['oneway-off', 'onewayOff']] as const)
   if (on(n, 'oneway', 'all')) await run(n, async () => (await import('./oneway-probes.ts'))[f]());
 // ---------------------------------------------------------------- a frame holds a boot from the face its door opens toward (frameholds-probes.ts; game/doors.ts DOORWAY.frameHolds, game/digin.ts): 'frameholds' = the family
 for (const [n, f] of [['frameholds-boot', 'frameholdsBoot'], ['frameholds-tools', 'frameholdsTools'], ['frameholds-sam', 'frameholdsSam'], ['frameholds-wedge', 'frameholdsWedge']] as const)
@@ -3133,16 +3128,6 @@ if (on('registry-run', 'registry', 'all')) await run('registry-run', async () =>
 if (on('consulate-level', 'consulate', 'all')) await run('consulate-level', async () => (await import('./consulate-probes.ts')).consulateLevel());
 if (on('consulate-stage', 'consulate', 'all')) await run('consulate-stage', async () => (await import('./consulate-probes.ts')).consulateStage());
 if (on('consulate-run', 'consulate', 'all')) await run('consulate-run', async () => (await import('./consulate-probes.ts')).consulateRun());
-// ---------------------------------------------------------------- the NIGHT showcase (night-probes.ts; levels/office.script.ts program 'night'): 'night' = the family — the show end to end with its beats in order and its
-// systems paying off (the code learned then keyed, the pool out, the drive out, the mains down and back), Sam never hit / seen, the floor it hands back, the old tour clean after it
-if (on('night-run', 'night', 'all')) await run('night-run', async () => (await import('./night-probes.ts')).nightRun());
-if (on('night-restore', 'night', 'all')) await run('night-restore', async () => (await import('./night-probes.ts')).nightRestore());
-if (on('night-tour', 'night', 'all')) await run('night-tour', async () => (await import('./night-probes.ts')).nightTour());
-// ---------------------------------------------------------------- the DAY showcase's loud half (day-probes.ts; levels/office.script.ts program 'breach' past the drill's cut): 'day' = the family — the whole day show end to end with
-// the loud half's beats in order, four down by real rounds and the pair out alive; what the loud minute breaks under the show at its own chaos and that none of it outlives the veil; the restore past it
-if (on('day-run', 'day', 'all')) await run('day-run', async () => (await import('./day-probes.ts')).dayRun());
-if (on('day-destruction', 'day', 'all')) await run('day-destruction', async () => (await import('./day-probes.ts')).dayDestruction());
-if (on('day-restore', 'day', 'all')) await run('day-restore', async () => (await import('./day-probes.ts')).dayRestore());
 // ---------------------------------------------------------------- glass (E3, glass-probes.ts): 'glass' = the family — the flag through the file, sight through / sound sealed, the round that stars it (never breaks it), the boot and the bang, the renderer's lists on and off,
 // and the guards' LINES across it (glass-lines: a sight line through a pane is not a shot line — also in the 'doors' set, being the alert-man-at-an-opening question with a pane for the jamb)
 let glassBannerPending: { f0: number } | null = null;
@@ -3203,9 +3188,8 @@ let glassBannerPending: { f0: number } | null = null;
 // broken and a burst beside glass a shell has holed (the fracture model's record and the shell's own, both live), and the one line a pinned defender is asked about under ?glassfoes=0
 if (on('gearglass-joined', 'gearglass', 'all')) await run('gearglass-joined', async () => (await import('./gearglass-probes.ts')).gearglassJoined());
 if (on('gearglass-pinned', 'gearglass', 'all')) await run('gearglass-pinned', async () => (await import('./gearglass-probes.ts')).gearglassPinned());
-// ---------------------------------------------------------------- the level script's DIRECTOR (director-probes.ts, docs/internal/director.md): 'director' = the family — the breach as the office
-// script against the frozen pre-port beat log, the define-time lint, the showcase-verb scan, the scheduling core + idle identity; the digest also rides 'breach' (it IS the breach)
-if (on('director-breach-digest', 'director', 'breach', 'all')) await run('director-breach-digest', async () => (await import('./director-probes.ts')).directorBreachDigest());
+// ---------------------------------------------------------------- the level script's DIRECTOR (director-probes.ts, docs/internal/director.md): 'director' = the family — the define-time lint (and: the shipped
+// office has no script), the showcase-verb scan, the scheduling core + idle identity, each on a script the probe stages itself (the office's script and its beat-log digest went with the two showcases)
 if (on('director-lint', 'director', 'all')) await run('director-lint', async () => (await import('./director-probes.ts')).directorLint());
 if (on('director-showcase-scan', 'director', 'all')) await run('director-showcase-scan', async () => (await import('./director-probes.ts')).directorShowcaseScan());
 if (on('director-scheduler', 'director', 'all')) await run('director-scheduler', async () => (await import('./director-probes.ts')).directorScheduler());
@@ -3254,7 +3238,7 @@ if (on('attract', 'all')) await run('attract', () => runScript('attract.ts', VER
 if (on('records', 'all')) await run('records', () => runScript('records-probes.ts', ['all']));
 if (on('records-runs')) await run('records-runs', () => runScript('records-runs.ts', ['runs', '--seeds', '1-12']));
 if (on('records-doors')) await run('records-doors', () => runScript('records-runs.ts', ['doors', '--seeds', '1-6']));
-if (on('clear-doctrine', 'breach', 'all')) await run('clear-doctrine', async () => (await import('./breach-probes.ts')).clearDoctrine());   // the guards' live RoomClear keeps the doctrine the breach stages (kicker off the funnel, centre then corner, #2 on the next door)
+if (on('clear-doctrine', 'breach', 'all')) await run('clear-doctrine', async () => (await import('./breach-probes.ts')).clearDoctrine());   // the guards' live RoomClear keeps the doctrine the breach drill stages (kicker off the funnel, centre then corner, #2 on the next door)
 // ---------------------------------------------------------------- the response to going loud (qrf-probes.ts): 'qrf' = the family — trigger, telegraph, the element as one unit, one wave, reset, never under the tour / breach, the renderer's budgets, the perimeter tier
 if (on('qrf-trigger', 'qrf', 'all')) await run('qrf-trigger', async () => (await import('./qrf-probes.ts')).qrfTrigger());
 if (on('qrf-timeline', 'qrf', 'all')) await run('qrf-timeline', async () => (await import('./qrf-probes.ts')).qrfTimeline());

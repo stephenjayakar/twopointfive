@@ -34,6 +34,7 @@ function ctxOf(W: any, extra: Record<string, unknown> = {}): any {
 const frameOf = (ctx: any, dt: number) => { if (BREAK && FIXEDSTEP.on) { const hz = FIXEDSTEP.hz; FIXEDSTEP.hz = 1 / Math.max(dt, 1e-4); FIXEDSTEP.snap = 1; try { stepFrame(ctx, dt); } finally { FIXEDSTEP.hz = hz; FIXEDSTEP.snap = 0.0004; } } else stepFrame(ctx, dt); };
 
 // ---- plan
+const jit2 = (r: () => number) => r();
 { const rows: string[] = []; let ok = true;
   const jit = seeded(7);
   const cases: [string, (i: number) => number, number][] = [['30', () => 1 / 30, 600], ['50', () => 1 / 50, 600], ['59.94', () => 1.001 / 60, 599], ['60', () => 1 / 60, 600],
@@ -46,6 +47,14 @@ const frameOf = (ctx: any, dt: number) => { if (BREAK && FIXEDSTEP.on) { const h
        most <= FIXEDSTEP.maxTicks && (!name.startsWith('60') && name !== '59.94' || ones === frames);
     if (!good) ok = false; rows.push(`${name} Hz: ${frames} frames → ${ticks} ticks (most in a frame ${most})${good ? '' : ' ✗'}`);
   }
+  // every display from 40 to 260 Hz in tenths, steady and with ±0.3 ms of jitter: no frame ever plans FEWER THAN NO ticks (the time the snap put aside, handed back
+  // on a display a little faster than a listed rate — 170 Hz against 165 — used to take the accumulator under zero: a frame of −1 ticks, its presses dropped)
+  { let least = 0, worst = '', n = 0, off = 0, offAt = ''; const j2 = seeded(11);
+    for (const jitter of [0, 0.0003]) for (let hz10 = 400; hz10 <= 2600; hz10++) { const hz = hz10 / 10; let acc = 0, drift = 0, t = 0, ticks = 0;
+      while (t < 10 - 1e-9) { const dt = 1 / hz + (jit2(j2) - 0.5) * 2 * jitter; const p = planTicks(acc, dt, FIXEDSTEP, drift); acc = p.acc; drift = p.drift; ticks += p.ticks; if (p.ticks < least || p.acc < 0) { least = Math.min(least, p.ticks, p.acc < 0 ? -1 : 0); worst ||= `${hz} Hz${jitter ? ' with jitter' : ''}`; } t += dt; n++; }
+      const e = Math.abs(ticks - 600) / 600; if (e > off) { off = e; offAt = `${hz} Hz`; } }
+    const good = least === 0 && off < 0.03; if (!good) ok = false;
+    rows.push(`40‥260 Hz in tenths, steady and jittered (${n} frames): ${least === 0 ? 'no frame under 0 ticks, nothing owed under 0' : `a frame of ${least} ticks or time owed under 0, first at ${worst} ✗`} · the clock furthest off the wall's ${(off * 100).toFixed(2)} % at ${offAt}${off < 0.03 ? '' : ' ✗'}`); }
   const hitch = planTicks(0.004, 0.1);
   if (hitch.ticks !== FIXEDSTEP.maxTicks || hitch.acc !== 0) { ok = false; rows.push(`a 100 ms hitch: ${hitch.ticks} ticks, ${hitch.acc} owed ✗`); } else rows.push(`a 100 ms hitch: ${hitch.ticks} ticks, nothing owed`);
   verdict(ok, 'plan: ten seconds are 600 ticks at every display rate; 60 Hz is one tick a frame', rows.join(' · ')); }

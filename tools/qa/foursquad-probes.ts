@@ -324,7 +324,8 @@ export const foursquadClear = guarded(async () => {
     try {
       const why = R.give(C.id, C.door);   // (the row's own order, as the menu's release gives it — the cursor's ray from this camera does not reach every corridor door: foursquad-stack gives one through the menu itself)
       const op = D.ops[0]; const took = why === null && !!op && op.kind === C.id && op.door === d && op.men.length === 4;
-      R.until(() => !D.ops.includes(op), 45); R.step(60);
+      let dealtT = NaN; R.post = () => { if (Number.isNaN(dealtT) && op?.pod?.size) dealtT = g.time; };   // (the moment the entry is dealt: the first step the order has given anybody a place inside)
+      R.until(() => !D.ops.includes(op), 45); R.step(60); R.post = null;
       const inMen = op ? [...op.crossed.keys()] : [], sent = op ? [...op.pod.keys()] : [];
       const up = men.filter((m: any) => m.state !== 'dead'), isIn = (m: any) => inBounds(room.def.bounds, m.char.pos, 0.2);
       const left = room.defenders.filter((h: any) => h.state !== 'dead').length;
@@ -332,7 +333,8 @@ export const foursquadClear = guarded(async () => {
       // (a man who fell on his way to the stack was never given a place inside: he 'fell trying' as much as one who fell in the doorway. On the SHIPPED stand
       // storage seed 5 loses two at the stack — the room's own man, alerted by the squad's shots at another on the way, opens his door on them — and the two
       // left are sent and cross: the line's own words, which a bare count of the men sent read as a failure.)
-      const fellBefore = men.filter((m: any) => m.state === 'dead' && !sent.includes(m)).length;
+      // (… BEFORE: down by the step the entry was dealt. A man the order left out who was shot afterwards is a man it sent too few of, not one who fell trying.)
+      const fellBefore = R.downs.filter(x => men.includes(x.who) && !sent.includes(x.who) && x.t <= dealtT).length;
       const crossedAll = sent.length >= 1 && sent.length + fellBefore >= 3 && sent.every((m: any) => op.crossed.has(m) || m.state === 'dead'); if (took && done1 && crossedAll) allIn++;
       if (left === 0) cleared++; lost += 4 - up.length;
       for (const f of R.fratricide) ff.push(`${C.door}/${seed}: ${f}`);
