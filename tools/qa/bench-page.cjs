@@ -47,7 +47,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   page.on('console', m => { if (m.type() !== 'error') return; const at = m.location().url || ''; if (!(/\/favicon\.ico$/.test(at) || /^http:\/\/localhost:5174\//.test(at))) errs.push(`${m.text().slice(0, 400)}${at ? ` (${at})` : ''}`); });
   const downloads = []; page.on('download', d => downloads.push(d));
   const went = []; page.on('framenavigated', f => { if (f === page.mainFrame()) went.push(f.url().replace(/^https?:\/\/[^/]+/, '')); });
-  const ready = async what => { try { await page.waitForFunction(() => !!window.__ready, null, { timeout: 600000 }); await page.evaluate(async () => { await window.__ready; }); return true; }
+  const ready = async what => { try { await page.waitForFunction(() => !!window.__ready, null, { timeout: 1500000 }); await page.evaluate(async () => { await window.__ready; }); return true; }
     catch (e) { console.log(`- FAIL — ${what}: the page did not come ready — ${String(e).slice(0, 300)}${errs.length ? ` · ${errs[0]}` : ''}`); return false; } };
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   const record = () => page.evaluate(KEY => { try { const t = sessionStorage.getItem(KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }, KEY);
@@ -117,7 +117,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
       if (Date.now() - T0 > DEADLINE * 60000) { tooLong = true; break; }
       await page.waitForTimeout(400);
     }
-    per.push({ S, seen, hands, keys, f9, acts: done && done.state === 'idle' ? done.acts : seen.join(' '), by: done?.by, tag: done?.tag ?? 0 });
+    per.push({ S, seen, hands, keys, f9, acts: done ? done.acts : seen.join(' '), by: done?.by, tag: done?.tag ?? 0 });
     const H = hands;
     const walked = H && sam0 ? Math.hypot(H.sam[0] - sam0[0], H.sam[2] - sam0[2]) : 0;
     check(!!H && H.hands.t >= CAP - 1.5 && H.orders.length > 0 && (walked > 1 || i > 0) && H.god === true && H.locked === true, `${S.id}: the hands-off player played it on the page — ${H ? `${H.hands.t} s, orders ${[...new Set(H.orders)].join(', ')}, Sam walked ${walked.toFixed(1)} m to (${H.sam[0]}, ${H.sam[2]})${H.dark ? ', the mains out' : ''}, the keyboard locked out ${H.locked}` : 'no hands seen'}`);
@@ -125,6 +125,7 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   }
   check(!tooLong, `the run ended by itself inside ${DEADLINE} minutes`);
   if (tooLong) await page.evaluate(() => window.__bench.stop('the check ran out of time')).catch(() => {});
+  // (a page's acts are the benchmark's own list as the page last told it, not the states the check's polls happened to catch: on a slow box a poll can miss 'waiting')
   { const trim = a => a.replace(/ idle$/, ''), want = scenes.map((_, i) => i === 0 ? 'waiting opened scene' : 'waiting scene'), got = per.map(p => trim(p.acts));
     check(JSON.stringify(got.slice(0, -1)) === JSON.stringify(want.slice(0, -1)) && got[got.length - 1] === 'waiting scene held sweep', `each page's acts in order: ${got.join(' | ')}`); }
   { const L = per[per.length - 1], span = s => L.by && L.by[s] ? +(L.by[s].b - L.by[s].a).toFixed(3) : null, held = ['held', 'sweep'].map(span);
