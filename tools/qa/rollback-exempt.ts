@@ -111,6 +111,8 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/irlaser.ts viewTube': 'SCRATCH · set and put back (finally) inside one irViewAs call (irlaser.ts:66; combat.ts:488, between steps); null at every other moment',
   'src/game/kit.ts KIT_SOLO': 'CONFIG · written by kitSolo / kitSoloStand (boot, a scenario\'s start), host/profile.ts:300 and ui/loadout.ts:294; kitFresh only reads it',
   'src/game/kit.ts bigOn': 'CONFIG · the big slot\'s switch: its setter (kit.ts:273), and flipped and put back in a finally inside two table checks (367-369, 599)',
+  'src/game/kit.ts dealKits': 'CACHE · the counted things of the issue and of each kit the slots table names, in the table\'s layout: made once a table (kit.ts dealTable), a pure function of that table',
+  'src/game/kit.ts dealOwn': 'CONFIG · the stored cards are the player\'s own layout (a counted thing changed by hand on a team of three or four): written by the kit screen\'s edits, kitLoad, kitReset and a squad kit put on by name; read where the cards are worn (kitWorn) — the kit screen and a staging, never a tick',
   'src/game/kit.ts issuedPage': 'CONFIG · written by kitIssuedPage only (kit.ts:805: a lesson\'s page says so at its start)',
   'src/game/kit.ts issuing': 'SCRATCH · true only for the length of one asIssued call (kit.ts:825-827, dropped in its finally)',
   'src/game/kit.ts kept0': 'CONFIG · (its type holds a `;`). The stored card\'s two charge counts kept off the card: kitLoad / kitSave / kitReset (the kit screen and the store)',

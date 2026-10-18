@@ -10,7 +10,7 @@ import { CanisterParams } from '../smoke/types';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { Item } from './throwables';
 import * as fx from './effects';
-import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, packSideBind, RIG } from './rigProps';
+import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
 import { sideLocal } from './packside';   // (a leaf)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
@@ -51,7 +51,8 @@ import { shieldStop, shieldNote, shieldBoxes, shieldLost } from './shield';
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
 import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
-import { fragFuse, FRAG } from './frag';
+import { fragFuse, fragInFist, FRAG } from './frag';
+import { GUNHAND } from './gunhand';
 import { SAMSTUN, staggerPlayer, dazzlePlayer } from './samstun';
 import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
@@ -465,6 +466,8 @@ function guardProps(g: Game, gd: Guard, out: Box[]) {
   if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); return; }
   bigBoxes(gd.char, big, alive ? an.bigK : 0, out);
 }
+/** GUNHAND.throwFree (gunhand.ts): a man throwing with his free hand, the long gun still in the other — the grenade is drawn in the LEFT fist until it leaves him */
+function freeCan(g: Game, gd: Guard, out: Box[]) { if (GUNHAND.on && GUNHAND.throwFree && gd.char.anim.throwOff && fragInFist(g, gd)) freeCanBoxes(gd.char, 'frag', out); }
 /** … his row without the big slot's tool. `hang` (never without one): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
 function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
   gd.char.inHand = null;   // (inhand.ts: said below on the rows that put a pistol, a torch or a long gun in his hands)
@@ -485,13 +488,14 @@ function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
     else { rigBoxes(gd.char, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, weapon: carbine ? 'carbine' : 'pistol', hang: true, ...(HO ? { holsterOut: HO } : null) }, out); if (kitIndex(gd) && nvgWorn(g, gd)) gogglesBoxes(gd.char, nvgDown(g, gd), out, RIG.goggles); }
     return; }
   if (rk === 'sc20k') { if (INHAND.on && INHAND.long) gd.char.inHand = longHold('sc20k');
-    rigBoxes(gd.char, { goggles: nvgWorn(g, gd), nv: nvgDown(g, gd), slot: 0, lightOn: false, isGuard: false, holster: true, rifle: 'hand', rifleBlack: sneakSuit(g, gd.char), rifleLight: fl.enabled }, out); if (laserOn(g, gd)) laserBoxes(g, gd, out); return; }   // (teams: a man handed Sam's bullpup — the showcase's operative — is drawn through Sam's own kit path: the FN2000 in both hands, a sidearm on the thigh, no goggles — a teammate in a scenario wears Sam's: nvg.ts)
+    rigBoxes(gd.char, { goggles: nvgWorn(g, gd), nv: nvgDown(g, gd), slot: 0, lightOn: false, isGuard: false, holster: true, rifle: 'hand', rifleBlack: sneakSuit(g, gd.char), rifleLight: fl.enabled }, out); if (laserOn(g, gd)) laserBoxes(g, gd, out); freeCan(g, gd, out); return; }   // (teams: a man handed Sam's bullpup — the showcase's operative — is drawn through Sam's own kit path: the FN2000 in both hands, a sidearm on the thigh, no goggles — a teammate in a scenario wears Sam's: nvg.ts)
   if (kitPistol(gd) && gd.weapon.def.rig === 'pistol') { if (INHAND.on) gd.char.inHand = IN_PISTOL; rigBoxes(gd.char, { goggles: nvgWorn(g, gd), nv: nvgDown(g, gd), slot: 1, lightOn: fl.enabled, isGuard: false, ...(INHAND.on ? { inHand: true, ...(INHAND.fit ? { fit: true } : null) } : null) }, out); if (laserOn(g, gd)) laserBoxes(g, gd, out); return; }   // (kit.ts: a teammate whose card hands him Sam's Five-seveN is drawn with Sam's — the can on it, the rail light under it)
   const ih = INHAND.on && !carbine && held !== 'torch';   // (inhand.ts: his pistol is drawn in the hand; a torch and a carbine are drawn where they were and the hand goes to them)
   if (INHAND.on) gd.char.inHand = carbine ? (INHAND.long ? longHold('carbine') : null) : held === 'torch' ? (INHAND.torch ? torchHold(gd.beamDir) : null) : IN_PISTOL;
   rigBoxes(gd.char, { goggles: false, nv: false, slot: 1, lightOn: fl.enabled, isGuard: true, torch: held === 'torch', beamDir: gd.beamDir, lensColor: fl.color, weapon: carbine ? 'carbine' : 'pistol', ...(ih ? { inHand: true } : null), ...(HO ? { holsterOut: HO } : null) }, out);
   if (kitIndex(gd) && nvgWorn(g, gd)) gogglesBoxes(gd.char, nvgDown(g, gd), out, RIG.goggles);   // (kit.ts: a teammate whose card hands him the carbine or the 9 mm wears his goggles like the rest)
   if (laserOn(g, gd)) laserBoxes(g, gd, out);   // drawn and hunting (irlaser.ts laserOn — for a man without goggles exactly: alert / search, muzzle not lowered, not held): the sidearm's laser is on — thumb off the switch while the gun is down for a colleague in the line (guards.ts muzzleCheck): nobody paints the back of the man ahead of him; pinned in Sam's arm the hand is off it altogether
+  if (carbine) freeCan(g, gd, out);   // (last: nothing of his before it changes its place in the list for the frames it is drawn)
 }
 /** …and what the men the fog of war leaves OUT carry — for a viewer's picture without the fog (Game.fogLift: a replay played in the engine). Never part of a
  *  step: the frame's own list (handProps) is what every ray and rule reads. */
