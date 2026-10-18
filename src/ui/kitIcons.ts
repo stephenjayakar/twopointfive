@@ -2,6 +2,7 @@
 // kit laid out on a table and not as a list of words. Each is an inline SVG in the page's own colour (`currentColor`), drawn here from plain shapes on a
 // 64 × 32 board: the game has no art files and these are no more than a sign for the thing. Keyed by the card's field (game/kit.ts KitField) and, for the
 // gun, its value. Pure strings: nothing at module level uses another module's exports.
+import { pickIcon } from '../game/gunslots';   // (called inside kitIcon only: a slot's pick → which gun drawing)
 const BOARD = (body: string) => `<svg viewBox="0 0 64 32" aria-hidden="true" focusable="false" fill="currentColor" stroke="none">${body}</svg>`;
 const line = (d: string, w = 1.6) => `<path d="${d}" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
 
@@ -40,6 +41,7 @@ const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: 
 /** the drawing for a card's row at its value ('' where the row has none), and whether the value means he carries none of it (drawn faint); `can` = the gun
  *  of the weapon row wears a suppressor */
 export function kitIcon(field: string, value: unknown, can = false): { svg: string; none: boolean } {
+  if (field === 'primary' || field === 'secondary') { const k = pickIcon(value); return { svg: BOARD(k ? gunBody(k, can) : EMPTY), none: !k }; }   // (game/gunslots.ts: a slot's pick, drawn as its class of gun — an empty board for no long gun)
   const body = field === 'weapon' ? gunBody(String(value), can) : field === 'big' ? BY_BIG[String(value)] ?? EMPTY : BY_FIELD[field];
   return { svg: body ? BOARD(body) : '', none: value === 0 || value === false || value === 'none' };
 }
