@@ -25,7 +25,7 @@ import { kickScuff } from './marks';
 import { hammerBlows } from './bigkit';
 import { BIGSLOT } from './kit';
 import { lockPoint } from './shotgun';
-import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop } from './bigkit';
+import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop, samBigLeadOf } from './bigkit';
 import { samSpread } from './suppression';
 import { isHurt } from './condition';   // (a hurt man does not sprint: Shift is not a run for him, so it lets go of nothing either)
 import { fireRing, ringSolve, ringAimPoint } from './launcher';
@@ -55,6 +55,7 @@ import { whistleKey } from './whistle';
 import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './wand';
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
+import { rescueEndRows } from './rescueend';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
 import { feedDeal, feedPlan, feedPlay } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
@@ -1751,7 +1752,8 @@ export function startKick(g: Game, d: Door, run = false, tool?: 'shotgun' | 'ham
   pl.doorKickTail = false;
   const beside = tool ? samBigSpot(g, d, c.pos, tool) : null;
   const spot = beside ?? (run ? null : sideKickSpot(g, d, c.pos)) ?? g.doors.kickSpot(d, c.pos);   // taken ONCE, off the leaf as it stands now: a man coming through with his key mid-kick swings the leaf, and a spot re-read off the swinging leaf orbited the hinge with it — reeling the planted kicker through the doorway (or at 20 fps through the wall beside it)
-  if (tool) { pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: 0, n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
+  if (tool) { const lead = BIGSLOT.moves ? samBigLeadOf(g) : 0;
+    pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: -lead, ...(lead > 0 ? { lead } : {}), n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
     ...(BIGSLOT.moves ? { moves: { arrived: false, at: beside?.at ?? lockPoint(d, bigSide(d, c.pos)), blows: [], end: -1, ...(beside?.via ? { via: beside.via } : {}) } } : {}) } }; return; }   // (bigkit.ts: the big slot's tool on the lock in the boot's place — the same planted beat, no leg thrown)
   pl.kick = run ? { door: d, spot: spot.pos, yaw: spot.yaw, run: true } : { door: d, spot: spot.pos, yaw: spot.yaw }; c.anim.kickDoor();   // (run — sprintdoor.ts: the boot at a sprint, at the face the leaf opens toward)
 }
@@ -2065,6 +2067,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       }
     }
     wallChargeRows(g, p, busy, row, offer);   // a breaching charge on a partition, by hand (wallcharge.ts — nothing unless its switch and the destruction's are up)
+    rescueEndRows(g, p, busy, row, offer);   // a rescue's hostages: on your feet — with me / stay here (rescueend.ts — nothing unless a rescue is up with its switch on)
     defuseRows(g, p, busy || !!g.wallCharge?.setting, row, offer);   // a defuse mission's live charges (defuse.ts — nothing on a level without the block)
     stickyRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a stuck sticky camera of his own, taken back (stickycam.ts — nothing unless STICKY.take is up)
     // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters

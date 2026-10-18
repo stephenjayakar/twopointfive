@@ -104,6 +104,8 @@ import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
 import { RESCUECHECK } from './rescuecheck';
+import { RESCUEEND } from './rescueend';
+import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
@@ -272,7 +274,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).heard === undefined) GUNSLOTS.heard = false;   // (…and from before a teammate's quiet round was heard: it reached nobody)
   if (!k.tables.GUNLOOK) GUNLOOK.on = false;   // (a file from before each gun had its own look: every row was its stand-in — its muzzle, its flash and its reload's beats the stand-in's)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge was pouches, nobody carried a hammer)
-  else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
+  else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
@@ -341,6 +343,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
+  if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
+  if (!k.tables.RESCUEFLUSH) RESCUEFLUSH.on = false;   // (a file from before the men left alive on a rescue came for the hostages: they stayed where the fight left them)
   if (!k.tables.RESCUECHECK) RESCUECHECK.on = false;   // (a file from before a rescue's men checked in by radio: a man of theirs taken without a sound was missed by nobody)
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)

@@ -119,14 +119,20 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
 };
 
 /** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest). The way this level is named for is a WALL: the first way is
- *  a bespoke set — a stretch of the clinic's street wall with the ward behind it, three cots and the cross on the floor — anchored on a span of blank wall, so the
- *  picture is a breach and not a door. Its boxes name their paint 'look|plain': the first the file's palette holds, so this one block serves the look file too.
- *  The second way is the level's own fire exit. */
+ *  a bespoke set — a stretch of the clinic's street wall with the ward behind it, three cots and the cross on the floor. It was anchored on a span of blank wall
+ *  (a breach and not a door), and every pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order —
+ *  stood idle there: the maintainer, of the hammer on this level, "some demos still don't really do anything". So the set has a SIDE DOOR in that wall
+ *  (`mh_side`, the wall cut round it with a lintel over) and the way is anchored on it: the stack stands on the same wall, and the wall charge still opens
+ *  the wall beside the door (KIT_VIEW_LOOP.wallAt is measured along the stack's wall). Its boxes name their paint 'look|plain': the first the file's palette
+ *  holds, so this one block serves the look file too. The second way was the level's own fire exit, which is STEEL (the hammer, the shotgun, a charge and
+ *  the wand are refused by it): it is the same set, as the pass's two ways are one gate. */
 const MOUSEHOLE_KITVIEW: KitViewData = {
-  sets: { ward: { ref: [19.25, 17], boxes: [
+  sets: { ward: { ref: [20.5, 17], doors: [{id: 'mh_side', hinge: [20.07, 14], closedDir: 0, width: 0.86, exterior: true}], boxes: [
     {id: 'mh_ground', c: [20, -0.125, 14], h: [20, 0.125, 14], material: 'dirt|grass'},
     {id: 'mh_floor', c: [18, 0.002, 11.44], h: [6, 0.002, 2.44], material: 'slab|lino'},
-    {id: 'mh_wall', c: [18, 1.5, 14], h: [7, 1.5, 0.12], material: 'render|concrete'},
+    {id: 'mh_wall_w', c: [15.535, 1.5, 14], h: [4.535, 1.5, 0.12], material: 'render|concrete'},
+    {id: 'mh_wall_e', c: [22.965, 1.5, 14], h: [2.035, 1.5, 0.12], material: 'render|concrete'},
+    {id: 'mh_lintel', c: [20.5, 2.525, 14], h: [0.43, 0.475, 0.12], material: 'render|concrete'},
     {id: 'mh_back', c: [17.3, 1.5, 8.94], h: [5.36, 1.5, 0.06], material: 'whitewash|wall'},
     {id: 'mh_part_a', c: [12, 1.5, 11.44], h: [0.06, 1.5, 2.44], material: 'whitewash|wall'},
     {id: 'mh_part_b', c: [24, 1.5, 11.44], h: [0.06, 1.5, 2.44], material: 'whitewash|wall'},
@@ -142,8 +148,8 @@ const MOUSEHOLE_KITVIEW: KitViewData = {
     {id: 'mh_cross_b', c: [17.45, 0.007, 12.6], h: [0.25, 0.002, 0.75], albedo: [0.07, 0.3, 0.29], flags: ['NoShadow']},
   ] } },
   ways: [
-    {span: [[18.5, 14], [20, 14]], set: 'ward', pane: false, light: {porch: {intensity: 0}, moonScale: 2.4}},
-    {door: 'fire_exit', hide: ['box_0203']},
+    {door: 'mh_side', set: 'ward', pane: false, light: {porch: {intensity: 0}, moonScale: 2.4}},
+    {door: 'mh_side', set: 'ward', pane: false, light: {porch: {intensity: 0}, moonScale: 2.4}},
   ] };
 
 export const MOUSEHOLE_SCENARIOS: LevelScenarios = { roomClear: MOUSEHOLE_STRUCTURE, kitView: MOUSEHOLE_KITVIEW,

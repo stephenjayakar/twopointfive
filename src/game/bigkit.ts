@@ -53,7 +53,8 @@ import { chronDoor } from './chronicle';
 import { kickScuff } from './marks';
 import { startKick } from './player';
 import { PLAYER_ID } from './consts';
-import { bigRebound, type Character } from './character';
+import { bigRebound, KIT, type Character } from './character';
+import { KITANIM, kitInHand, kitSlingFront } from './kitanim';
 import { samWork } from './handwork';
 
 /** counted since the page (or the harness) stood up — the check's and the panel's */
@@ -63,6 +64,8 @@ const TAIL = 0.3;
 /** `BIGKIT_BREAK=1` (the check's): the tools do nothing to a lock — the shell is not fired, the last blow does not land */
 export const bigBroken = () => BREAK;
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BIGKIT_BREAK ?? '') === '1'; } catch { return false; } })();
+/** `BIGWEIGHT_BREAK=1` (the check's): the weight is never on — the tool's times and the gun's let-go are the build before's whatever the switch says */
+const WEIGHT_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.BIGWEIGHT_BREAK ?? '') === '1'; } catch { return false; } })();
 
 // ------------------------------------------------------------ you
 /** the big slot's tool that OPENS this door from where you stand (null: none carried, the switch off, a show, the door open, off its hinges or steel, a
@@ -150,8 +153,40 @@ export function samBigWalk(g: Game, dt: number): number {
 /** BIGSLOT.moves — what the animator is told of the beat this frame (character.ts bigTool; null: no tool's beat, or the moves off) */
 export function samBigPose(g: Game) {
   const T = g.player.kick?.tool, M = T?.moves; if (!T || !M) return null;
-  return { kind: T.kind, t: T.t, equip: T.kind === 'hammer' ? BIGSLOT.equip : BIGSLOT.draw, windup: bigWind(), stow: BIGSLOT.stow, blows: M.blows, end: M.end, at: M.at, snug: BIGSLOT.snug };
+  return { kind: T.kind, t: T.t, equip: bigEquip(T.kind), windup: bigWind(), stow: bigStow(), blows: M.blows, end: M.end, at: M.at, snug: BIGSLOT.snug };
 }
+/** BIGSLOT.weight — THE TOOL CHANGES HANDS WITH THE WEIGHT OF A GUN SWAP (the maintainer, 10-18: "the swaps when taking out the hammer and putting it back
+ *  feel too fast -- swapping the guns feels good, can we make sure they all feel similarly physical?"). A rifle off his back takes the kit's hand 0.71 s
+ *  (character.ts KIT: reach + draw) and 0.76 s to put back (stow + the hand away); the hammer was in both hands 0.6 s after his own gun VANISHED from them
+ *  and back on him in 0.45 s. With the weight on: the tool's own times are `equipW` / `drawW` / `stowW`; YOUR gun is first carried to its holster or sling
+ *  by the kit's own hand (samBigLeadOf: the beat's clock starts that far below zero, kitanim.ts runs the errand — samBigCarry); and the hammer's first
+ *  wind-up may begin `flow` s before the hammer is fully out (bigOutBy), so out, up and down read as one move — `flow` is the whole of what was added to
+ *  the hammer's way out, so a blow from empty hands lands when it did and a blow with a gun up is later by that gun's own stow, no more. A teammate's
+ *  record carries the same times (his own gun hangs on him: it still falls to its sling as his hands leave it); his hammer's blow waits what it did, his
+ *  shotgun's shell `drawW`. Off (`?nobigweight`, a recording from before the key) = the times and the let-go of the build before. */
+const weighed = (): boolean => BIGSLOT.moves && BIGSLOT.weight && !WEIGHT_BREAK;
+/** … is on (kitanim.ts asks) */
+export const bigWeighed = (): boolean => weighed();
+/** … seconds from the hand leaving for the tool to the tool in his hands · to put it back · after which a hammer's wind-up may begin (a shell: the same as bigEquip) */
+export const bigEquip = (kind: 'hammer' | 'shotgun'): number => (weighed() ? (kind === 'hammer' ? BIGSLOT.equipW : BIGSLOT.drawW) : kind === 'hammer' ? BIGSLOT.equip : BIGSLOT.draw);
+export const bigStow = (): number => (weighed() ? BIGSLOT.stowW : BIGSLOT.stow);
+export const bigOutBy = (kind: 'hammer' | 'shotgun'): number => bigEquip(kind) - (weighed() && kind === 'hammer' ? Math.min(BIGSLOT.flow, bigEquip(kind) * 0.5) : 0);
+/** … how long YOUR own gun (or the can in your fist) takes to be put away by hand before the hand goes for the tool: the kit's own stow for what its hand
+ *  HOLDS (`kitWas` — what the last errand brought there, not what the game says is up: a pistol the wall's own arms have just handed back was never the kit's
+ *  to carry, and is let go as before; a rifle on a sling in front is let down, not taken over the shoulder) — 0 with nothing in that hand, with the kit's hand
+ *  off, or the weight off. An upper bound: an errand that is over sooner (a gun asked back half way out) ends the wait with it — samBigTick. */
+export function samBigLeadOf(g: Game): number {
+  if (!weighed() || !KITANIM.on || !KITANIM.equip || g.touring) return 0;
+  const it = g.player.kitWas; if (!it || !kitInHand(g)) return 0;
+  return it === 'rifle' && kitSlingFront(g) ? KIT.front.stow : KIT.stow[it];
+}
+/** … and that errand is the kit's to run this frame (kitanim.ts kitTick / kitInHand): while the beat's clock is below zero, and after it until the empty
+ *  hand has come away from the holster (the tool's own pose starts on the hand the pose under it shows: an errand dropped there would jump it) */
+export function samBigCarry(g: Game): boolean {
+  const T = g.player.kick?.tool; if (!T?.moves || !(T.lead! > 0)) return false;
+  return T.t < 0 || (g.player.char.anim.kitBusy && T.t < CARRY_TAIL);
+}
+const CARRY_TAIL = 0.6;
 /** the hammer's wind-up (s): `BIGSLOT.heft` with the moves on — the swing is drawn — and `BIGSLOT.windup`, as it was, with them off */
 export const bigWind = (): number => (BIGSLOT.moves ? BIGSLOT.heft : BIGSLOT.windup);
 /** … and from one blow to the next: with the moves on never less than a follow-through and a wind-up */
@@ -186,19 +221,21 @@ export function samBigTick(g: Game, dt: number): boolean {
   T.t += dt;
   // (the moves: a blow or a shell that has just LANDED is followed through before the tool starts back — the animator's own rebound; a blow still to come is
   //  not swung. His legs are his own at T.done; the tool goes back onto him over the BIGSLOT.stow seconds after M.end — samBigTailTick)
+  if (T.t < 0 && T.t > dt - (T.lead ?? 0) && !c.anim.kitBusy) T.t = 0;   // (BIGSLOT.weight: the kit's errand is over before the wait it was given — or was never the kit's to run: nothing to wait for)
   const M = T.moves, over = (tail: number, landed = false) => { T.done = T.t + tail; if (M && M.end < 0) { M.end = T.t + (landed ? Math.min(tail, bigRebound(T.kind)) : 0); M.blows = M.blows.filter(b => b <= T.t); } };
   if (T.done >= 0) {
     if (T.t < T.done) return false;
     // (broken from the face it opens toward: nothing flung it — the same hands pull it open, once the tool is back on him)
     const pull = T.gave && BIGSLOT.shut && !d.off && d.isClosed() && !g.doors.lockedOut(d, c.pos, pl.keys);
-    if (pull && M && T.t < M.end + BIGSLOT.stow) { T.done = M.end + BIGSLOT.stow; return false; }
+    if (pull && M && T.t < M.end + bigStow()) { T.done = M.end + bigStow(); return false; }
     if (pull) g.doors.use(d, c.pos, PLAYER_ID, pl.keys);
     return true; }
-  if (d.off || (BIGSLOT.shut ? !d.isClosed() : !g.doors.lockedOut(d, c.pos, pl.keys))) { over(0.15); return false; }   // (somebody else had it open — or, the lock-only rule, turned the lock — under his hands)
+  if (d.off || (BIGSLOT.shut ? !d.isClosed() : !g.doors.lockedOut(d, c.pos, pl.keys))) { if (T.t < 0) return true;   // (… while his own gun was still on its way to its place: nothing of the tool has begun — the beat is over at once, and the kit's hand brings the gun back up)
+    over(0.15); return false; }   // (somebody else had it open — or, the lock-only rule, turned the lock — under his hands)
   if (M && !Number.isFinite(T.next)) {   // (the moves: on his way to the place — the first blow is wound up, the first shell goes, once he stands on it with the tool in his hands)
     if (!M.arrived && T.t >= MOVE_CAP) { if (v3.distXZ(c.pos, K.spot) < 0.5) M.arrived = true; else { g.msg('no room to work it from here'); over(0); return false; } }   // (a man stepped into his way: from where he got to if that is at the place, else the beat is given up)
     if (!M.arrived) return false;
-    T.next = Math.max(T.t, T.kind === 'hammer' ? BIGSLOT.equip : BIGSLOT.draw) + (T.kind === 'hammer' ? bigWind() : 0); M.blows.push(T.next); return false; }
+    T.next = Math.max(T.t, bigOutBy(T.kind)) + (T.kind === 'hammer' ? bigWind() : 0); M.blows.push(T.next); return false; }
   if (T.t < T.next) return false;
   T.n++;
   if (T.kind === 'shotgun') {
@@ -250,7 +287,7 @@ export function gunUp(g: Game, gd: Guard): boolean {
     gd.route.weapon = 'm870'; gd.weapon = s.gun; gd.reloadT = -1; gd.char.muzzleAhead = WEAPONS.m870.muzzleAhead;
     s.out = true; s.t = g.time; BIG_STATS.drawn++;
   }
-  return g.time - gd.slung!.t >= BIGSLOT.draw;
+  return g.time - gd.slung!.t >= bigEquip('shotgun');
 }
 /** … and is slung again: his own gun back in his hands, as he put it down (a dead man keeps what he fell with) */
 export function gunDown(gd: Guard) {
@@ -295,6 +332,6 @@ export function hammerOutTick(g: Game, mine: (gd: Guard) => boolean) {
     if (!BIGSLOT.moves || gd.state === 'dead') { gd.bigOut = null; gd.char.anim.bigTool = null; continue; }
     if (H.end < 0 && !mine(gd)) hammerIn(g, gd);
     const t = g.time - H.t0;
-    if (H.end >= 0 && t >= H.end + BIGSLOT.stow) { gd.bigOut = null; gd.char.anim.bigTool = null; continue; }
-    gd.char.anim.bigTool = { kind: 'hammer', t, equip: BIGSLOT.equip, windup: bigWind(), stow: BIGSLOT.stow, blows: H.blows, end: H.end, at: H.at, snug: BIGSLOT.snug }; }
+    if (H.end >= 0 && t >= H.end + bigStow()) { gd.bigOut = null; gd.char.anim.bigTool = null; continue; }
+    gd.char.anim.bigTool = { kind: 'hammer', t, equip: bigEquip('hammer'), windup: bigWind(), stow: bigStow(), blows: H.blows, end: H.end, at: H.at, snug: BIGSLOT.snug }; }
 }

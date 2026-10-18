@@ -17,6 +17,7 @@ const { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);
 const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { BIGSLOT } = await import(`${ROOT}/src/game/kit.ts`);
+const { bigEquip, bigStow, bigOutBy, bigSwing } = await import(`${ROOT}/src/game/bigkit.ts`);
 const { handProps } = await import(`${ROOT}/src/game/combat.ts`);
 const { rigBoxes, BIG_TAG } = await import(`${ROOT}/src/game/rigProps.ts`);
 const { rigOf } = await import(`${ROOT}/src/game/guards.ts`);
@@ -140,30 +141,50 @@ function beat(name: string, c: any, T: Tool, until: number, draw: (out: any[]) =
   return cells;
 }
 const want = (n: string) => !only || only.includes(n);
+/** when the hammer's first blow lands on a man already at his place: out (bigkit.ts bigOutBy — BIGSLOT.weight lets the wind-up begin a little before it is all out), then the wind-up */
+const B1 = (): number => bigOutBy('hammer') + BIGSLOT.heft;
 /** the point: `fwd` m in front of him and `side` m to his left, 1 m up */
 const pointOf = (c: any, fwd = 0.8, side = 0, h = 1.0): P3 => { const sn = Math.sin(c.bodyYaw), cs = Math.cos(c.bodyYaw); return [c.pos[0] + sn * fwd + cs * side, c.pos[1] + h, c.pos[2] + cs * fwd - sn * side]; };
 const NOTE = (T: Tool) => `equip ${T.equip} s · wind-up ${T.windup} s · ${T.kind === 'hammer' ? 'blows land' : 'shells go'} at ${T.blows.map(b => b.toFixed(2)).join(', ')} s · stowed from ${T.end.toFixed(2)} over ${T.stow} s · a cell every ${EVERY}${EVERY === 1 ? 'st' : EVERY === 2 ? 'nd' : EVERY === 3 ? 'rd' : 'th'} frame + each blow's own`;
 
 if (want('hammer')) { const { g } = await world(); const pl = g.player, c = pl.char; pl.bigKit = 'hammer';
-  const T: Tool = { kind: 'hammer', t: 0, equip: BIGSLOT.equip ?? 0.6, windup: BIGSLOT.heft, stow: BIGSLOT.stow ?? 0.45, blows: [1.3, 2.25], end: 2.25 + 0.25, at: pointOf(c) };
+  const T: Tool = { kind: 'hammer', t: 0, equip: bigEquip('hammer'), windup: BIGSLOT.heft, stow: bigStow(), blows: [B1(), B1() + bigSwing()], end: B1() + bigSwing() + 0.25, at: pointOf(c) };
   write('bigmoves-hammer', 'The hammer, Sam, hands empty: off his back, ready, two blows at the game\'s own times, stowed', NOTE(T), beat('hammer', c, T, T.end + T.stow + 0.1, o => handProps(g, o))); }
 if (want('hammer-slow')) { const { g } = await world(); const pl = g.player, c = pl.char; pl.bigKit = 'hammer';
   const T: Tool = { kind: 'hammer', t: 0, equip: 0.7, windup: 1.2, stow: 0.5, blows: [2.1], end: 2.5, at: pointOf(c, 0.7, 0.25) };
   write('bigmoves-hammer-slow', 'The hammer at the reference footage\'s pace (a 1.2 s wind-up), the point a quarter metre to his left', NOTE(T), beat('hammer-slow', c, T, T.end + T.stow + 0.1, o => handProps(g, o))); }
 if (want('hammer-rifle')) { for (const front of [false, true]) { const { g } = await world({ rifle: true, front }); const pl = g.player, c = pl.char; pl.bigKit = 'hammer';
   if (!pl.rifleUp) console.log('hammer-rifle: the rifle did not come up');
-  const T: Tool = { kind: 'hammer', t: 0, equip: BIGSLOT.equip, windup: BIGSLOT.heft, stow: BIGSLOT.stow, blows: [1.3], end: 1.55, at: pointOf(c, 1.0) };
+  const T: Tool = { kind: 'hammer', t: 0, equip: bigEquip('hammer'), windup: BIGSLOT.heft, stow: bigStow(), blows: [B1()], end: B1() + 0.25, at: pointOf(c, 1.0) };
   const nm = `hammer-rifle-${front ? 'front' : 'back'}`;
   write(`bigmoves-${nm}`, `The hammer, Sam with his rifle up (it lives ${front ? 'on its sling in front' : 'across his back'}): the rifle away, one blow at a point a metre off, the rifle back`, NOTE(T), beat(nm, c, T, T.end + T.stow + 0.1, o => handProps(g, o))); } }
 if (want('hammer-mate')) { const { g } = await world(); const gd = g.guards.find((m: any) => rigOf(m) === 'carbine') ?? g.guards[0], c = gd.char, rk = rigOf(gd);
   c.pos = [24, 0, 12]; c.bodyYaw = c.aimYaw = 0; c.vel = [0, 0, 0]; for (let i = 0; i < 30; i++) c.update(DT);
-  const T: Tool = { kind: 'hammer', t: 0, equip: BIGSLOT.equip, windup: BIGSLOT.heft, stow: BIGSLOT.stow, blows: [1.3, 2.25], end: 2.5, at: pointOf(c) };
+  const T: Tool = { kind: 'hammer', t: 0, equip: bigEquip('hammer'), windup: BIGSLOT.heft, stow: bigStow(), blows: [B1(), B1() + bigSwing()], end: B1() + bigSwing() + 0.25, at: pointOf(c) };
   // (a guard-kit man drawn through rigBoxes itself, as combat.ts guardProps asks it: no team is staged here, so bigCarried has nothing to say of him)
   const draw = (o: any[]) => { const an = c.anim; rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, weapon: rk === 'carbine' ? 'carbine' : 'pistol', ...(an.bigTool && an.hideHeldItem ? { hang: true } : null), big: 'hammer', bigK: an.bigK }, o); };
   write('bigmoves-hammer-mate', `The hammer, a guard-kit man (${rk}${c.anim.longGun ? ', the long-gun arms under it' : ''}): his own gun hung down his front, two blows, his gun back`, NOTE(T), beat('hammer-mate', c, T, T.end + T.stow + 0.1, draw)); }
 for (const rifle of [false, true]) { const nm = rifle ? 'shotgun-rifle' : 'shotgun'; if (!want(nm)) continue;
   const { g } = await world({ rifle }); const pl = g.player, c = pl.char; pl.bigKit = 'shotgun';
-  const T: Tool = { kind: 'shotgun', t: 0, equip: BIGSLOT.draw, windup: 0, stow: BIGSLOT.stow, blows: [0.8, 1.7], end: 1.87, at: pointOf(c, 0.75, 0.1) };
+  const T: Tool = { kind: 'shotgun', t: 0, equip: bigEquip('shotgun'), windup: 0, stow: bigStow(), blows: [bigEquip('shotgun') + 0.1, bigEquip('shotgun') + 1.0], end: bigEquip('shotgun') + 1.17, at: pointOf(c, 0.75, 0.1) };
   write(`bigmoves-${nm}`, `The breaching shotgun, Sam${rifle ? ' with his rifle up' : ', hands empty'}: off his back into the shoulder, two shells, slung`, NOTE(T), beat(nm, c, T, T.end + T.stow + 0.1, o => handProps(g, o))); }
+// THE GAME'S OWN BEAT (bigkit.ts, BIGSLOT.weight): nothing written by this tool — the plain night's storage door, Sam a step past its latch edge with a gun
+// up, the row taken, and every frame the game itself steps until his gun is up again: his gun carried to its place by the kit's hand, the tool out, the blow
+// or the shell, the tool back, his gun drawn. (tools/qa/bigslot-check.ts walkTo stages it; `--noweight` = the build before the weight.)
+for (const [tool, hand, front] of [['hammer', 'pistol', false], ['hammer', 'rifle', true], ['hammer', 'rifle', false], ['shotgun', 'pistol', false], ['shotgun', 'rifle', true]] as const) {
+  const nm = `game-${tool}-${hand}${hand === 'rifle' ? (front ? '-front' : '-back') : ''}`; if (!want(nm) && !want('game')) continue;
+  const { walkTo } = await import('./bigslot-check.ts'); const noweight = process.argv.includes('--noweight');
+  const cells: Cell[] = []; let pv: Frame | null = null, n = 0, idle = 0; const worst = { R: 0, L: 0, fR: 0, fL: 0 }; const marks: string[] = []; let was = '';
+  const r = await walkTo(61, tool, 'push', [0.86 + 0.35, 0.6], { hand, front, noweight, kit: true, each: (g: any, since: number) => { const pl = g.player, c = pl.char, an = c.anim, T = pl.kick?.tool;
+    if (!T && !an.bigTool && !an.kitBusy) { if (++idle > 8) return; } else idle = 0;
+    const all: any[] = []; handProps(g, all); const fr = measure(c, all, (T?.moves?.at ?? an.bigTool?.at ?? c.pos) as P3), bt = an.bigTool?.t as number | undefined, blow = !!an.bigTool && an.bigTool.blows.some((b: number) => Math.abs(b - an.bigTool.t) < DT / 2);
+    if (pv) { const dR = dist(fr.b.handR, pv.b.handR), dL = dist(fr.b.handL, pv.b.handL); if (dR > worst.R) { worst.R = dR; worst.fR = since; } if (dL > worst.L) { worst.L = dL; worst.fL = since; } }
+    const state = T && T.t < 0 ? 'his gun to its place, by hand' : an.bigTool ? (an.bigTool.end >= 0 && an.bigTool.t >= an.bigTool.end ? 'the tool going back' : an.bigK >= 0.98 ? 'the tool in his hands' : 'the tool coming out') : an.kitBusy ? 'his gun drawn, by hand' : 'his hands his own';
+    if (state !== was) { marks.push(`${since.toFixed(2)} s ${state}`); was = state; }
+    if (n++ % EVERY === 0 || blow) cells.push({ fr, mark: blow, label: [`${since.toFixed(2)} s${blow ? (tool === 'hammer' ? ' · BLOW' : ' · SHELL') : ''}`, state, `${bt === undefined ? '' : `beat ${bt.toFixed(2)} · `}bigK ${(+an.bigK).toFixed(2)}${an.kitBusy ? ' · kit hand' : ''}${an.hideHeldItem ? ' · gun away' : ''}`] });
+    pv = fr; } });
+  console.log(`${nm}${noweight ? ' (the weight OFF)' : ''}: began ${r.began} · ${marks.join(' → ')} · worst one-frame jump in his own frame: right wrist ${(worst.R * 100).toFixed(1)} cm @${worst.fR.toFixed(2)} s, left wrist ${(worst.L * 100).toFixed(1)} cm @${worst.fL.toFixed(2)} s`);
+  write(`bigmoves-${nm}${noweight ? '-noweight' : ''}`, `THE GAME'S OWN BEAT${noweight ? ' with the weight OFF (the build before)' : ''}: the ${tool}, Sam with his ${hand}${hand === 'rifle' ? (front ? ' (slung in front)' : ' (slung on his back)') : ''} up, a step from the storage door — seconds since the row was taken`, `${marks.join(' → ')} · a cell every ${EVERY}${EVERY === 1 ? 'st' : EVERY === 2 ? 'nd' : EVERY === 3 ? 'rd' : 'th'} frame, stepped by the game (nothing written by this tool)`, cells);
+}
 console.log(`\n${written.length} files written`);
 process.exit(0);

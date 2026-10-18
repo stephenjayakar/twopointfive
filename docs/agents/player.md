@@ -472,6 +472,42 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   rest; it peaked at 8.7), now in 6 frames where it took 16. A TEAMMATE THE FIGHT TAKES before he has put the hammer back has it on his back at once (`bigkit.ts hammerIn`
   hard, `bigFired`: what is drawn is what the sim did) — a one-frame change, by rule; the check's teammate on the shipped stand is one. The breacher's cast mesh carries a
   long tool of its own that the hammer and the shotgun cross (art, or which man wears that kit: the maintainer's).
+- **The big slot's tool changes hands with the weight of a gun swap** (`BIGSLOT.weight`, a key of the big slot's table as `moves` and `snug` are: ON in the module — so
+  in the page, `?nobigweight` puts it off — live only under `BIGSLOT.on` and `moves`, so OFF on the frozen stand with them and riding the parent's `FROZEN_HOLDS` row; Tab ▸
+  'Big slot' ▸ 'tool swaps weigh what a gun swap does' and its four sliders; a recording whose `BIGSLOT` table has no `weight` replays with it off, `journal.ts
+  applyKnobs`). The maintainer, 10-18: "the swaps when taking out the hammer and putting it back feel too fast -- swapping the guns feels good, can we make sure they all
+  feel similarly physical?" THE REFERENCE (`character.ts KIT`, as the game steps it — `bun run tools/qa/swap-times.ts`): pistol to rifle 1.03 s and back 1.00 with the
+  rifle across his back, 0.67 / 0.63 with it on its sling in front; every part of it is a hand carrying a thing to its place. THE TOOLS BEFORE: your own gun VANISHED from
+  your hands 0.07 s after the row (`snug.hide`), the hammer was in both hands at 0.6 s and the shotgun at the shoulder at 0.5, and either was back on him 0.45 s after it
+  started back (off the fist at 0.27). NOW (`bigkit.ts`): (1) YOUR gun is carried to its holster or sling by the kit's own hand first — `samBigLeadOf` starts the beat's
+  clock that gun's own stow below zero (pistol 0.3 s, rifle in front 0.36, rifle on his back 0.54, a can 0.26; none with empty hands or with the kit's hand off),
+  `samBigCarry` leaves the errand to `kitanim.ts kitTick` (the beat does not take the arm from it, `kitInHand` says nothing is held), and he walks to his place meanwhile;
+  (2) the tool's own times are `equipW` 0.8 s (hammer to both hands), `drawW` 0.7 (shotgun to the shoulder) and `stowW` 0.75 (either back) in place of 0.6 / 0.5 / 0.45 —
+  `bigEquip` / `bigStow`, written into the beat's record, so the pose stays a function of it; (3) the hammer's wind-up may begin `flow` 0.2 s before the hammer is all out
+  (`bigOutBy`: the animator already lets a wind-up bring the tool out), which is the whole of what was added to its way out. A TEAMMATE's record carries the same times;
+  his own gun still falls to its sling as his hands leave it (it hangs on him), his hammer's blow waits what it did, his shotgun's shell 0.2 s more. WHAT IT COSTS A
+  DOOR (headless, off the game's clock, one seed, the plain night's storage door; the same on both stands with the kit's hand raised): the hammer's one blow from a step
+  away lands at 1.30 s with empty hands (as before), 1.60 with the pistol up, 1.67 with the rifle in front, 1.85 with it on his back — before: 1.30 whatever he held; from
+  the stack's second place (the walk hides most of the wait) 1.50 / 1.60 / 1.67 / 1.85 against 1.50; the shotgun's shell from a step away 0.70 / 1.00 / 1.07 / 1.25
+  against 0.52, from the stack's place 0.77 / 1.00 / 1.07 / 1.25 against 0.77; his gun is up again 0.27 s later than before after either (the longer way back). Nothing a
+  guard or a door reads moves except those times; as issued nobody carries a hammer or a shotgun, so no tally moves until a card is given one. QA: `bun run
+  tools/qa/probes.ts bigslot-weight` (11 lines: your gun to its place by hand — the beat's clock below zero for the gun's own stow, the kit's hand at work in every frame
+  of it, the gun never hidden in them; the record's times and the hammer later into the fist and later onto his back, no step of his right hand in a frame longer than
+  the kit's own draw takes; the blow's time and the cost against the switch off; the way back; called off inside the wait; off a wall hold; what is in his hands sets the
+  wait; the shotgun; a teammate's record; the journal line — each with its control under the switch off), `BIGWEIGHT_BREAK=1` fails eight of the eleven; both stands
+  (the frozen stand raises the kit's hand by hand and says so). FOUR EDGES a review found, each held by a line: (a) the tail's fire lock (0.70 s now) was cut to the kit's
+  `plainLock` 0.45 by `kitTick`, so for 0.2 s a round could leave a gun still on its way back to his hands — the clamp leaves a tool's tail alone; (b) the wait is for
+  what the kit's hand HOLDS (`kitWas`), not what the game says is up: a pistol handed back by a wall hold's own arms was waited for with no errand to run — none now, and
+  a wait whose errand is over early ends with it (`samBigTick`); (c) a beat called off inside the wait (the door opened by another hand) ended only when the clock came
+  up to zero, and could leave a negative end that read as none — it is over at once now, no pose shown, the kit's hand bringing the gun straight back; (d) the frame the
+  tool let go of his hands his gun stood in them, then went to its holster to be drawn (the animator's word is a frame old when the kit reads it) — with the weight on
+  the kit reads the beat's record itself (`kitanim.ts handsOff`, `character.ts bigOff`) and draws the same frame; off, the build before keeps its frame.
+  `bigslot-moves`' own lines read `bigEquip` / `bigStow` / `bigOutBy` now, and its `snug`-off control holds the weight off with it (the first-pass timing is the build
+  before both). `tools/qa/bigmoves-strip.ts --only game` draws THE GAME'S OWN BEAT — nothing written by the tool, the row taken a step from the door with a gun up and
+  every frame stepped by the game until the gun is up again (`--noweight` = the build before); `tools/qa/bigmoves-page.cjs` asks the wait and the times of the real page
+  and has a `noweight` section. NOBODY HAS SEEN THIS ON A GPU OR PLAYED IT: the times are measured, the look is read off stick strips and the software adapter — whether
+  0.8 and 0.75 s feel like the gun swap in the hand, and whether the wait before the shotgun's shell is too long with a rifle on his back, are the maintainer's to say
+  (the four sliders are live in the panel).
 - **The ballistic shield is gone from the game** (10-18; the maintainer, 10-15: "we should also probably just get rid of the ballistic shield, doesn't match the vibes
   (feels more like swat)", 10-18: "we should just remove the riot shield"). It was switched off in the page from 10-15 to 10-18 (`SHIELD.on`, in on the frozen stand) and is
   now CUT: no `src/game/shield.ts`, no `SHIELD` knob table, no `TPS_SHIELD` word or `FROZEN_HOLDS` row, no `?shield`, no Tab row; `MemberKit` has no `shield` field and the big slot
@@ -550,7 +586,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   teammate has — the room fight's, cover fire's, the fight AI's fire site. The swap is written where the
   big slot's shotgun writes its own (`route.weapon`: `game.ts` deals a man's row off his route every frame). The long gun hangs down his front on its
   sling while the sidearm is out (`combat.ts hungSide` → `rigProps hungBoxes`). `sideTick` (every frame, `game.ts`): nobody in his eyes and no round from
-  it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.5 s); an empty
+  it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.65 s, as long as your own swap back to the long gun); an empty
   sidearm is never drawn. Past `near`, or with no
   second gun, he reloads as he always has. You: the swap in your hands is as it was (1 your secondary, 2 your primary); which two guns they are is
   your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no

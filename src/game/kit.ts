@@ -274,10 +274,10 @@ export const SLOTS: { on: boolean; ok: boolean; why: string; table: SlotTable } 
  *  slid there and never square in the opening while there is floor beside it. Off = the build of 10-15 morning.
  *  `snug` (with the moves): his own gun and the tool each stay IN A HAND while they are off him (character.ts BIGMOVE.snug — the animator is told by the
  *  beat's record). Off = the first-pass shares: the tool drawn part way between his back and a fist that had left, his rifle carried toward his shoulder. */
-export const BIGSLOT: { on: boolean; swings: number; swing: number; windup: number; draw: number; shells: number; shut: boolean; beside: boolean; moves: boolean; snug: boolean; equip: number; stow: number; reach: number; heft: number } = {
+export const BIGSLOT: { on: boolean; swings: number; swing: number; windup: number; draw: number; shells: number; shut: boolean; beside: boolean; moves: boolean; snug: boolean; weight: boolean; equip: number; stow: number; reach: number; heft: number; equipW: number; drawW: number; stowW: number; flow: number } = {
   get on() { return bigOn; },
   set on(v: boolean) { if (v === bigOn) return; bigOn = v; rowCache.clear(); if (!v) return; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = bigHome({ ...KIT.members[i] }, i); if (ruleOn && SLOTS.ok) kitFitAll(KIT.members, SLOTS.table, team); },
-  swings: 2, swing: 0.7, windup: 0.45, draw: 0.5, shells: 2, shut: true, beside: true, moves: true, snug: true, equip: 0.6, stow: 0.45, reach: 2.4, heft: 0.7 };   // (`heft`: the hammer's wind-up WITH the moves on, s — the swing is drawn, and wants the footage's anticipation: the hammer held up, clear of him, before it comes down; `windup` is the one with them off)
+  swings: 2, swing: 0.7, windup: 0.45, draw: 0.5, shells: 2, shut: true, beside: true, moves: true, snug: true, weight: true, equip: 0.6, stow: 0.45, reach: 2.4, heft: 0.7, equipW: 0.8, drawW: 0.7, stowW: 0.75, flow: 0.2 };   // (`weight`, with the moves: the tool changes hands with the weight of a gun swap — bigkit.ts bigEquip / bigStow: `equipW` / `drawW` / `stowW` s in place of equip / draw / stow, your own gun carried to its place by hand first, and the hammer's wind-up begun `flow` s before the hammer is fully out)   // (`heft`: the hammer's wind-up WITH the moves on, s — the swing is drawn, and wants the footage's anticipation: the hammer held up, clear of him, before it comes down; `windup` is the one with them off)
 /** A CARD AS THE BIG SLOT READS IT (only ever called with the switch on): the shotgun is no gun — a card whose weapon row says so (a stored kit, a
  *  table's loadout, a mission's issue block, a probe's hand) is the issued gun, with the shotgun in his big slot unless a wall charge is
  *  already there. */
@@ -356,7 +356,7 @@ export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[]
 let dealOwn = false;
 /** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
 export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
-export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing() && team >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, team)[i] : issuedCard(i); }
+export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing() && team >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, team)[i] : { ...issuedCard(i) }; }
 /** A CARD IS READ AND CHANGED AS IT IS WORN. `f` runs with the worn cards standing in the table (a teammate's card, while they are dealt), nothing written to
  *  the store. A peek puts the table back. A change that was TAKEN (`taken`) is kept one of two ways: it moved a counted thing — the worn cards are now the
  *  player's own and stay in the table as they stand; or it moved something else (a gun, a look, a big thing) — that is written onto the table's own cards and
@@ -942,10 +942,10 @@ function kitIssue(g: Game, f: () => void): boolean {
   return true;
 }
 function asIssued(f: () => void) {
-  const cards = KIT.members.slice(), notes = KIT_NOTE.slice(), s = store, t = team;
-  issuing = true; store = null;
+  const cards = KIT.members.slice(), notes = KIT_NOTE.slice(), s = store, t = team, own = dealOwn;
+  issuing = true; store = null; dealOwn = false;   // (the issue is nobody's own layout: it is dealt as the screen shows it, whatever the player's stored cards are)
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; }
-  try { f(); } finally { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = notes[i]; } store = s; team = t; issuing = false; }
+  try { f(); } finally { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = notes[i]; } store = s; team = t; dealOwn = own; issuing = false; }
 }
 /** YOUR OWN CHARGES ON A VISIT WITH THEIR ROWS OFF (?noowncharge, or a build without the wall charge): the stored card's door and wall charges are not read
  *  onto your card (no row: nothing of them is carried, priced or worded), and are kept here so the next change of any row does not write the store without

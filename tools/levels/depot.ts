@@ -464,10 +464,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   // the open floor's names (src/game/dialogue.ts: a held room is its own name; these are for everywhere a held room is not)
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways are the level's own. The main gate has no leaf
-  // (its two are chained back on the inside of the wall), so the first way is anchored on the opening itself, post to post: the stack on the wall north of it,
-  // the yard and its floodlight through it. The second is the back gate's leaf in the east wall.
-  // (the picture's lamp is hung on the wall at the stack's end of the opening: left to be measured it hangs over the anchor's middle, which on a gap is open air)
-  scenarios.kitView = { ways: [{ span: [[4, 12.5], [4, 15.5]], side: -1, light: { porch: { offset: [1.7, 0.67, 2.4], aim: [3.2, 1.6, 0], fixture: { at: [1.7, 0.17, 2.27], half: [0.17, 0.045, 0.05], glow: 5 } } } }, { door: 'back_gate' }] };
+  // (its two are chained back on the inside of the wall), and a picture anchored on the opening had nothing for the kit that works a leaf — the hammer, the
+  // shotgun, a door charge, the wand, a bang or a frag on order all stood idle there. So the first way is the first door the team meets through that gate:
+  // the first hut's door on the yard (`a_s`), which plans with nothing in the camera's way. The second is the back gate's leaf in the east wall.
+  scenarios.kitView = { ways: [{ door: 'a_s' }, { door: 'back_gate' }] };
   scenarios.places = { areas: [
     { name: 'yard', bounds: { ...R.yard } }, { name: 'east yard', bounds: { ...R.east } }, { name: 'aerial park', bounds: { ...R.aerials } },
     { name: 'duty office', bounds: { ...R.duty } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'battery room', bounds: { ...R.battery } },

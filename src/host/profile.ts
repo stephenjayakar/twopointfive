@@ -88,6 +88,8 @@ import { POWEROUT } from '../game/powerout';
 import { SQUADDEAL } from '../game/squaddeal';
 import { STAYASK } from '../game/stayask';
 import { RESCUECHECK } from '../game/rescuecheck';
+import { RESCUEEND } from '../game/rescueend';
+import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
@@ -244,6 +246,8 @@ export function pageSwitches(q: URLSearchParams): void {
   POWEROUT.on = !q.has('nopowerout');   // the lights go out and somebody goes to put them back on (game/powerout.ts): a mission's defenders who see the lights die say so on their net and send their nearest free men to the breaker, lamps lit — ON in the page; ?nopowerout = they stand in the dark for as long as the team takes, as they did
   SQUADDEAL.on = !q.has('nosquaddeal');   // squads from the rooms (game/squaddeal.ts): a level whose file names no squads is handed some cut from its rooms, so a loud way in and a quiet one each draw their own move there too — ON in the page; ?nosquaddeal = such a level's defenders are one pool, as they were
   STAYASK.on = !q.has('nostayask');   // squads that stay in their rooms still miss a room that goes silent (game/stayask.ts): on a floor where every squad stays (the block, Mousehole) the net's roll call runs and the nearest squad sends one man to the silent rooms — ON in the page; ?nostayask = nobody there asks after another squad, as it was
+  RESCUEEND.on = !q.has('norescueend');   // how a rescue is won (game/rescueend.ts): the hostages led out the way the team came in (Space on one: on your feet — with me), or nobody of theirs left on the floor — ON in the page; ?norescueend = the room held fifteen seconds wins it, as it was
+  RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
   EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
@@ -281,6 +285,7 @@ export function pageSwitches(q: URLSearchParams): void {
   KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size, so a run is the run it was. ?nokitdeal = the cards as they were
   BIGSLOT.moves = !q.has('nobigmoves');   // (…and of 10-15 evening: the hammer rides on a man's back, his gun is put away for it, it is wound up and swung as one move, and you take the row from where a stack stands and WALK to a free place beside either jamb — ?nobigmoves = the tools as they stood that morning)
   BIGSLOT.snug = !q.has('nobigsnug');   // (…and with the moves: his gun and the tool each stay in a hand while they are off him — the gun let go as his hands leave it, the tool changing between his back and his fist while the fist is there; ?nobigsnug = the first-pass shares, the tool drawn part way between the two. Looks, and how long your own gun and its light are away: about a sixth of a second more)
+  BIGSLOT.weight = !q.has('nobigweight');   // (…and of 10-18: the tool changes hands with the weight of a gun swap — your gun carried to its place by hand before the hand goes for the tool, the tool out and back in the times a long gun takes; ?nobigweight = the gun let go at once, 0.6 s out and 0.45 s back)
   BIGSLOT.shut = !q.has('nobigshut'); BIGSLOT.beside = !q.has('nobigbeside');   // (its two knobs of 10-15: the tools open any shut door, from beside the frame — each off = the build of 10-14's rule)
   STICKY.on = !q.has('nosticky');   // sticky cameras (game/stickycam.ts): a row of YOUR kit card and, carrying one, a third load for the rifle's launcher — sent to a wall it is one more eye on the fog of war. ON in the page, ?nosticky = no such row and no such load; off on the frozen stand (TPS_STICKY=1). Before the kit is read from the store, like the wand's.
   STICKY.take = q.get('camtake') !== '0';   // a stuck camera of your own is taken back with the use key and goes on the launcher again (game/stickycam.ts takeCam): ?camtake=0 = a camera sent is a camera spent, as before
@@ -403,6 +408,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADDEAL.on': 'TPS_SQUADDEAL=1',
   'STAYASK.on': 'TPS_STAYASK=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
+  'RESCUEEND.on': 'TPS_RESCUEEND=1',
+  'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'EXACT.on': 'TPS_EXACT=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
   'DOZE.on': 'TPS_DOZE=1',
