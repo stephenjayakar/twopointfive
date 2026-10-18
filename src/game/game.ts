@@ -88,7 +88,6 @@ import { samStaggered } from './samstun';
 import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
-import { plateUp } from './shield';
 import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary } from './guards';
 import { SENSE, CpuSmoke, ownSmoke } from './sense';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
@@ -360,7 +359,7 @@ export class Player {
    *  Space or Esc breaks off, the progress kept on the door a moment); the kick in progress — rooted square to the leaf until the foot is back down (spot / yaw:
    *  where, fixed when the kick began); fHeld: the Space press now down has been SPENT (it stopped a running verb, a teleport / a kick / a finished pick swallowed
    *  it) and must come up before Space arms again */
-  picking: Door | null = null; kick: { door: Door; spot: Vec3; yaw: number; run?: boolean; /** the beat is the big slot's tool on the lock, not the boot (bigkit.ts samBigTick): which, its clock, the blows or shells so far, the next one's time */ tool?: { kind: 'shotgun' | 'hammer'; side: 1 | -1; t: number; n: number; /** blows the hammer needs here (one where a boot would do, BIGSLOT.swings where the frame holds one) */ need: number; next: number; done: number; /** the door gave to it: a leaf left standing home (broken from the face it opens toward) is pulled open as the beat ends — BIGSLOT.shut */ gave?: boolean;
+  picking: Door | null = null; kick: { door: Door; spot: Vec3; yaw: number; run?: boolean; /** the beat is the big slot's tool on the lock, not the boot (bigkit.ts samBigTick): which, its clock, the blows or shells so far, the next one's time */ tool?: { kind: 'shotgun' | 'hammer'; side: 1 | -1; /** the beat's clock: 0 = his hands leave for the tool; it starts `lead` below that while his own gun is carried away by hand (bigkit.ts BIGSLOT.weight) */ t: number; lead?: number; n: number; /** blows the hammer needs here (one where a boot would do, BIGSLOT.swings where the frame holds one) */ need: number; next: number; done: number; /** the door gave to it: a leaf left standing home (broken from the face it opens toward) is pulled open as the beat ends — BIGSLOT.shut */ gave?: boolean;
     /** BIGSLOT.moves (bigkit.ts): he WALKS onto his place with the tool coming into his hands — `arrived` once he stands on it; the point struck or shot; when each blow or shell lands, on `t` (the last one may still be to come); when his hands began putting it back (−1: not yet) */ moves?: { arrived: boolean; at: Vec3; blows: number[]; end: number; /** the corner of his walk, round a man of the file (gone once he has turned it) */ via?: Vec3 } } } | null = null; fHeld = false;
   /** the optical wand (wand.ts): `wand` = it is in his kit (his card's row — kit.ts kitPlayer); `wanding` = he is on his knee at a shut door with it under the
    *  leaf (player.ts startWand / updateWanding; a step, Space or Esc pulls it out) */
@@ -1665,7 +1664,7 @@ export class Game {
           const dz = an.dazzle ?? (an.dazzle = { from: gd.char.pos, k: 0 }); dz.from = gd.dazzledAt ?? gd.lastKnown ?? gd.char.pos; dz.k = Math.min(1, (gd.dazzledUntil - this.time) / 0.5);
         } else an.dazzle = null;
         // turn weight (character.ts TURN — nothing reads it with that off): his yaws are weighed by what he carries, bar a man in Sam's arm and a showcase's cast (their timings are the choreography's)
-        { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def, plateUp(gd) ? 0.6 : 1); tw.k = an.trained; }
+        { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def); tw.k = an.trained; }
       }
       this.player.char.anim.trained = 1;
     }

@@ -79,7 +79,7 @@ import { toolSpot, toolStep } from './handleside';
 import { SHOTGUN, breachSpot, carriesBreacher } from './shotgun';
 import { WEAPONS } from './weapons';
 import { BIGSLOT, kitBig } from './kit';   // (the big slot's switch and what a staged teammate carries in it: asked inside the lock stage only)
-import { carriesHammer, gunUp, gunDown, hammerBlow, bigBroken, hammerOut, hammerIn, hammerOutTick, bigWind, bigSwing } from './bigkit';
+import { carriesHammer, gunUp, gunDown, hammerBlow, bigBroken, hammerOut, hammerIn, hammerOutTick, bigWind, bigSwing, bigOutBy } from './bigkit';
 import { SILENT, squadSilent, silentUrgent, silentNoBoot, silentPick, silentBoot, silentCompromised, silentEase, silentNoCans, silentTool, SILENT_STATS } from './silent';
 import { doorPlan } from './roomclear';
 import { NIGHTBREACH } from './nightbreach';
@@ -93,7 +93,6 @@ import { DOORPATH } from './doorpath';
 import { colleagueInLine, lightEstimateAt, LIGHTS } from './guards';
 import type { RoomClearPlan } from '../scene/level';
 import { FloorSeen } from './floorseen';
-import { shieldDeal, shieldFirst, plateUp, SHIELD_STATS } from './shield';
 import { DOORMANNERS, DOORMANNERS_STATS, doorwayInWay, doorwayClearNear, doorwayLane } from './doorway';
 import { GLASSPEN } from './glasspen';   // (DOORWAY.kickGlass: read in bootSpot, at order time only)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -869,7 +868,7 @@ export class DoorTools {
   private stackable(t: OrderTarget, men: Guard[]): true | string | false {
     if (t.kind !== 'door') return false; const S = this.g.orders;
     const posts = this.dealStack(t.door, t.side, men)?.posts; if (!posts) return S.noRoomWords('no room on that door.', () => this.dealStack(t.door, t.side, men)?.posts);   // (orders.ts ORDERS.inWay: … or that it is Sam who is in the way, where it is)
-    for (const [gd, p] of shieldDeal(S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0)), posts, t.door, m => S.pairOf(m))) { const w = S.reach(gd, p); if (w) return w; }   // (shieldDeal: the very deal start() makes — shield.ts)
+    for (const [gd, p] of S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0))) { const w = S.reach(gd, p); if (w) return w; }   // (the very deal start() makes)
     if (DOORTOOLS.testDoor && !this.knownShut(t.door, t.side)) return true;   // (nobody has tried it: the row is given, and the man at the handle says what he finds — the menu does not read a lock for him)
     if (t.door.def.steel && !isOpen(t.door) && this.lockedOut(t.door, t.side)) return 'steel, and locked.';
     if (this.frameHeld(t.door, t.side) && !this.pickable(t.door) && !this.bigOpens(t.door, men)) return this.noBoot(t.door);   // (it opens toward them and no pick opens it: every entry order would end at the door — doors.ts DOORWAY.frameHolds)
@@ -1156,16 +1155,11 @@ export class DoorTools {
     const op = this.newOp(kind, d, t.side, men, 'stack'); op.bangHeld = kind === 'bangClear'; if (frag) op.frag = true; if (this.bigNext && kind === 'openClear') op.big = true; op.onWord = onWord && S.big; op.thrHold = hold && kind === 'threshold'; const name = doorWords(d), watch: Vec3 = [d.frameCentre[0], 1.05, d.frameCentre[2]];
     let lead: Guard | null = null, la = -Infinity, lx = false;
     const oh = DOORTOOLS.openHand && kind === 'bangClear' && stackViewOpen(d);   // (openHand: nobody is walked across the front of a door that stands open)
-    const deal0 = S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0)), plain = oh ? deal0.map(([m, p]) => [m, p] as [Guard, Vec3]) : null;
-    let dealt = shieldDeal(deal0, posts, d, m => S.pairOf(m));
-    if (plain) { const sm = shieldFirst(men), sp = sm && dealt.find(([m]) => m === sm)?.[1], pp = sm && plain.find(([m]) => m === sm)?.[1];   // (openHand: the plate is not walked across an open door to the lead's mark when the plain deal leaves him on his own hand)
-      if (sm && sp && pp && sp !== pp && this.crossesOpen(d, t.side, sm.char.pos, sp) && !this.crossesOpen(d, t.side, sm.char.pos, pp)) dealt = plain; }
-    for (const [gd, p] of dealt) { const P = posts.find(x => x.pos === p)!; op.post.set(gd, P);   // (shieldDeal — shield.ts: a man carrying the shield takes the lead's mark; the deal as it was with none)
+    for (const [gd, p] of S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0))) { const P = posts.find(x => x.pos === p)!; op.post.set(gd, P);
       this.assign(op, gd, { post: P.pos, face: P.face, watch, stance: P.lead ? 'stack' : 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: P.stackSide, going: `stacking · ${name}`, there: `stacked · ${name}` });
       const a = P.lead ? alongOf(d, P.pos) : -Infinity, x = oh && P.lead && this.crossesOpen(d, t.side, gd.char.pos, P.pos);
       if (lead && P.lead && x !== lx ? !x : a > la) { la = a; lead = gd; lx = x; } }   // (the lead: the man on the latch-side jamb — the handle and the keep are his; a door standing open has no handle to work: a man who need not cross it first)
     op.lead = lead ?? men[0];
-    { const sm = shieldFirst(men), sp = sm && op.post.get(sm); if (sm && sp?.lead && !(oh && this.crossesOpen(d, t.side, sm.char.pos, sp.pos))) op.lead = sm; }   // (two lead marks, a split stack: the one the shield is on leads — not across an open door: openHand)
     if (oh) this.leadHand(op, posts, watch);
     const filed = new Set<Guard>();
     if (kind === 'outside' && men.length > 2) {
@@ -1254,10 +1248,10 @@ export class DoorTools {
    *  ALONE is dealt the latch jamb, the one place of the face (orders.ts stackPlaces), whichever hand he stands on, and walked across the open doorway to it
    *  (a replay, 10-13: the last man of a pair at a blown storage door, shot in front of it). His place is then his own hand's jamb: a lead mark of the deal
    *  there nobody else has, else the dealt mark mirrored about the doorway's middle (the other jamb's own mark, facing the other way) — floor of this room,
-   *  nothing solid between him and it, nobody standing on it. None = the place as dealt, never a refusal; a man carrying the shield is not re-dealt */
+   *  nothing solid between him and it, nobody standing on it. None = the place as dealt, never a refusal */
   private leadHand(op: DoorOp, posts: Post[], watch: Vec3) {
     const g = this.g, d = op.door, side = op.side, gd = op.lead, P = op.post.get(gd), W = d.def.width, name = doorWords(d);
-    if (!P || !P.lead || shieldFirst(op.men) === gd || !this.crossesOpen(d, side, gd.char.pos, P.pos)) return;
+    if (!P || !P.lead || !this.crossesOpen(d, side, gd.char.pos, P.pos)) return;
     const h = this.handOf(d, side, gd.char.pos), at = gd.char.pos;
     const others = [g.orders.samStood, ...g.guards.filter(x => (g.orders.sams ? x.team === 'operative' : g.orders.mine(x)) && x.state !== 'dead' && !op.men.includes(x)).map(x => x.char.pos)];
     const free = (c: Vec3) => !op.men.some(m => m !== gd && flat(op.post.get(m)?.pos ?? m.char.pos, c) < 0.7) && !others.some(p => flat(p, c) < 0.7) && !g.col.nav.isBlocked(c[0], c[2]) && stackRoomKeeps(g, d, side, c)
@@ -1540,7 +1534,7 @@ export class DoorTools {
     const H = BIGSLOT.moves ? hammerOut(g, by, G.at) : null, tell = (at: number) => { if (H) { const rel = t - H.t0; H.blows = H.blows.filter(b => b <= rel); H.blows.push(at - H.t0); } };
     const on = flat(c.pos, k.pos) < 0.4 && Math.abs(wrapAngle(c.bodyYaw - yawTo(c.pos, G.at))) < 0.35;
     if (!on) { if (t - op.t0 >= K.kickCap + SHOTGUN.aimCap) this.gunOff(op, 'never got onto the lock'); return; }
-    if (G.nextT === 0) { G.nextT = (H ? Math.max(t, H.t0 + BIGSLOT.equip) : t) + bigWind(); op.t0 = t; tell(G.nextT); return; }   // (the wind-up is silent, and done before any word)
+    if (G.nextT === 0) { G.nextT = (H ? Math.max(t, H.t0 + bigOutBy('hammer')) : t) + bigWind(); op.t0 = t; tell(G.nextT); return; }   // (the wind-up is silent, and done before any word)
     if (op.word && op.kind !== 'bangClear') { op.hold = 2; if (H && t > G.nextT - WORD_LEAD) { G.nextT = t + WORD_LEAD; tell(G.nextT); } return; }   // (the word has others to wait for: nothing is heard before it — his first blow lands on it, the lock gives a beat after; the moves: held wound up, the swing let go on the word)
     if (t < G.nextT) return;
     G.n++; G.nextT = t + bigSwing(); op.t0 = t;
@@ -1782,7 +1776,6 @@ export class DoorTools {
       if (on[i]) { const A = op.mine.get(gd)!; A.arrived = true; A.arrT = this.g.time; }   // (he is standing on it: the word does not wait a frame for him to arrive again)
       const a = (P.lead ? 10 : 0) - Math.abs(alongOf(d, P.pos) - (W + S.knobs.jambPast)); if (a > la) { la = a; lead = gd; } });   // (the man on the latch jamb; else the nearest it)
     op.lead = lead ?? men[0];
-    { const sm = shieldFirst(men); if (sm && op.post.get(sm)?.lead) op.lead = sm; }   // (shield.ts: the 'stack up' dealt him the lead's mark — orders.ts — and the door is his)
     this.beat(op, `from the stack · ${men.map(m => m.callsign).join(', ')} · lead ${op.lead.callsign}`);
     return op;
   }
@@ -2127,7 +2120,7 @@ export class DoorTools {
           this.enter(op); break;
         }
         const first = kicked || !K.secondThrows || !K.leadSeen ? lead : (op.first = this.firstIn(op));   // (leadSeen: the man who will be first through is picked here — the can is somebody else's)
-        const next = kicked || K.secondThrows ? op.men.filter(m => m !== first && m.state !== 'dead' && !plateUp(m) && offOf(d, m.char.pos, op.side) > 0 && (kicked || flat(m.char.pos, d.frameCentre) < K.throwReach)).sort((a, b) => flat(a.char.pos, d.frameCentre) - flat(b.char.pos, d.frameCentre))[0] : undefined;
+        const next = kicked || K.secondThrows ? op.men.filter(m => m !== first && m.state !== 'dead' && offOf(d, m.char.pos, op.side) > 0 && (kicked || flat(m.char.pos, d.frameCentre) < K.throwReach)).sort((a, b) => flat(a.char.pos, d.frameCentre) - flat(b.char.pos, d.frameCentre))[0] : undefined;
         const th = next ?? first, W = d.def.width;   // (the man behind the first man throws it, with it ready: the first man's gun stays on the opening — he throws it himself only when he is alone at the door)
         if (K.tossTurn > 0 && th !== lead && !kicked && t - op.openT < K.tossAfterOpen + K.tossTurn && Math.abs(wrapAngle(th.char.aimYaw - yawTo(th.char.pos, d.frameCentre))) > 1.2) break;   // (rear security until the shove: he may be given a moment to come round to the door before he throws)
         if (op.frag ? K.fragWay : K.bangWay && !op.thr) {   // (fragWay / bangWay: not thrown at a door — the leaf must be well round and still going, or standing open, as it leaves the hand)
@@ -2562,7 +2555,6 @@ export class DoorTools {
    *  (the entry's first point of domination; left out, the door's first point as the room's shape gives it — only the room it lies in is read) */
   private firstIn(op: DoorOp, at?: Vec3): Guard {
     const K = DOORTOOLS, lead = op.lead, d = op.door, W = d.def.width;
-    { const sm = shieldFirst(op.men); if (sm && (sm === lead || offOf(d, sm.char.pos, op.side) > 0)) return sm; }   // (shield.ts: the plate goes through the door first, whoever has seen most of the room — null with no shield in the stack)
     if (!K.leadSeen || op.men.length < 2) return lead;
     if (op.first && op.first.state !== 'dead' && op.men.includes(op.first)) return op.first;
     const where = (m: Guard) => op.post.get(m)?.pos ?? m.char.pos, hi = (m: Guard) => alongOf(d, where(m)) > W / 2, near = (m: Guard) => flat(where(m), d.frameCentre);
@@ -3067,8 +3059,7 @@ export class DoorTools {
     const g = this.g, S = g.orders, t = g.time; const pods = this.pods(op.door, op.side, op.men.length > 2 || S.big ? 4 : op.men.length);   // (three men are offered both near points: the third takes the one on his own side; a pair of the four is offered them too — podsApart)
     if (!pods.length) { g.say(op.lead, 'no way in.'); this.end(op, 'no floor inside'); return; }
     const first = this.firstIn(op, pods[0].pos); this.led.entries++;
-    if (shieldFirst([first])) { SHIELD_STATS.led++; this.beat(op, `first:${first.callsign} · the shield`); }
-    else if (first !== op.lead) { this.led.bySeen++; this.beat(op, `first:${first.callsign} · has seen most of the room`); }
+    if (first !== op.lead) { this.led.bySeen++; this.beat(op, `first:${first.callsign} · has seen most of the room`); }
     let men = [first, ...op.men.filter(m => m !== first)];
     if (men.length > 2) {
       // THREE OR MORE: in turn off alternate jambs while both files have men — the lead, the front man of the other file, then the men behind them — the first
@@ -3460,7 +3451,7 @@ export class DoorTools {
     const K = DOORTOOLS, T = op.thr!, d = op.door, near = (m: Guard) => flat(m.char.pos, d.frameCentre);
     const ok = (m: Guard) => hand ? this.thrAt(op, m) : !op.lastStack || near(m) < K.throwReach;   // (a stack that went without its far-jamb man: he throws nothing from down the wall — the lead's own hand)
     const back = (m: Guard) => this.thrBack(op, m);
-    return op.men.filter(m => !T.jamb.includes(m) && !plateUp(m) && this.thrAt(op, m)).sort((a, b) => near(a) - near(b)).find(fit) ?? T.jamb.find(m => m !== op.lead && !plateUp(m) && ok(m) && fit(m)) ?? T.jamb.find(m => m !== op.lead && ok(m) && fit(m))
+    return op.men.filter(m => !T.jamb.includes(m) && this.thrAt(op, m)).sort((a, b) => near(a) - near(b)).find(fit) ?? T.jamb.find(m => m !== op.lead && ok(m) && fit(m))
       ?? (!hand || (this.thrAt(op, op.lead) && fit(op.lead) && op.men.every(m => m === op.lead || back(m))) ? op.lead : null);
   }
   /** is this cell of the room lit by the place itself — floor a man with no light of his own can see a man standing on (asked once a cell an order) */
@@ -3531,9 +3522,7 @@ export class DoorTools {
   private stepIn(op: DoorOp) {
     const g = this.g, S = g.orders, K = DOORTOOLS, T = op.thr!, d = op.door, t = g.time, near = (m: Guard) => flat(m.char.pos, d.frameCentre);
     this.thrMen(op);
-    const sm = shieldFirst(T.jamb.filter(m => m.state !== 'dead' && (m !== op.threw || m === op.lead) && (m === op.lead || !op.lastStack || near(m) < K.throwReach)));   // (shield.ts: the shield man off the jambs steps in first — under the rules any first man is picked by: not the man who threw the pockets' cans, nor, on a last warning's stack, one still walking up)
-    if (sm) { SHIELD_STATS.led++; if (sm !== T.jamb[0]) T.jamb = [sm, ...T.jamb.filter(m => m !== sm)]; this.beat(op, `first:${sm.callsign} · the shield`); }
-    else if (K.leadSeen && T.jamb.length > 1) { const f = this.seenMost(op.lead, T.jamb.filter(m => m.state !== 'dead' && (m !== op.threw || m === op.lead) && (m === op.lead || !op.lastStack || near(m) < K.throwReach)), T.pods[0]?.pos);   // (the man off the jambs who has seen most of the room steps in first — not the one who threw the pockets' cans, nor, on a last warning's stack, a man still walking up)
+    if (K.leadSeen && T.jamb.length > 1) { const f = this.seenMost(op.lead, T.jamb.filter(m => m.state !== 'dead' && (m !== op.threw || m === op.lead) && (m === op.lead || !op.lastStack || near(m) < K.throwReach)), T.pods[0]?.pos);   // (the man off the jambs who has seen most of the room steps in first — not the one who threw the pockets' cans, nor, on a last warning's stack, a man still walking up)
       if (f !== T.jamb[0]) { T.jamb = [f, ...T.jamb.filter(m => m !== f)]; this.led.bySeen++; this.beat(op, `first:${f.callsign} · has seen most of the room`); } }
     this.led.entries++;
     const pods = S.big && op.men.length <= 2 ? this.podsApart(op, T.pods, op.men.length) : T.pods;

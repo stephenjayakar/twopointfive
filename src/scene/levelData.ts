@@ -679,15 +679,16 @@ export function validateLevelData(d: LevelData): string[] {
         }
       }
       if (S.issue !== undefined) {   // (scene/scenarios.ts IssueData: kit this level hands the squad — game/kit.ts kitIssue)
-        const I = S.issue, w = 'scenarios.issue', BOOLS = ['suppressed', 'light', 'nvg', 'shield'], NUMS = ['bangs', 'charges', 'smoke', 'frags', 'walls', 'shells'];
+        const I = S.issue, w = 'scenarios.issue', BOOLS = ['suppressed', 'light', 'nvg'], NUMS = ['bangs', 'charges', 'smoke', 'frags', 'walls', 'shells'];
         if (!isObj(I) || !isObj(I.members)) err(w, 'must be an object { members: { <place>: { … } } }');
         else {
           known(w, I, ['members']);
           for (const [k, c] of Object.entries(I.members as Record<string, any>)) { const cw = `${w}.members.${k}`;
             if (!/^[0-4]$/.test(k)) err(cw, "a place on the roster: '0' (you) to '4'");
             if (!isObj(c)) { err(cw, 'must be an object'); continue; }
-            known(cw, c, ['weapon', ...BOOLS, ...NUMS]);
-            for (const f of k === '0' ? ['shield', 'charges', 'walls'] : ['shells']) if (c[f] !== undefined) err(`${cw}.${f}`, k === '0' ? 'a teammate\'s alone: it does nothing on your own card' : 'yours alone: a teammate carries no 40 mm');
+            if (c.shield !== undefined) err(`${cw}.shield`, 'the ballistic shield is out of the game: take the key out (the rest of the card stands)');
+            known(cw, c, ['weapon', 'shield', ...BOOLS, ...NUMS]);   // ('shield': said above, in words of its own)
+            for (const f of k === '0' ? ['charges', 'walls'] : ['shells']) if (c[f] !== undefined) err(`${cw}.${f}`, k === '0' ? 'a teammate\'s alone: it does nothing on your own card' : 'yours alone: a teammate carries no 40 mm');
             if (c.weapon !== undefined && !['rifle', 'pistol', 'shotgun'].includes(c.weapon)) err(`${cw}.weapon`, "'rifle' | 'pistol' | 'shotgun'");
             for (const b of BOOLS) if (c[b] !== undefined && typeof c[b] !== 'boolean') err(`${cw}.${b}`, 'true | false');
             for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }

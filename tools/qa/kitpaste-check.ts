@@ -7,7 +7,7 @@
 //           copied one or his tile's most, the man's colours and every field his
 //           card has no tile for are as they were, nobody else's card moved, the copied card did not, `changed` names the tiles that moved, a second
 //           paste moves nothing (he wears it), and the store is written once for a paste that moved a tile and not at all for one that moved none
-//   cases   by name, with the big slot on: a shield man onto you (no shield for you: your big slot keeps what it held), your own card copied and
+//   cases   by name, with the big slot on: a hammer man onto you (his hammer in your big slot, where your shotgun was), a man with nothing in his onto you (yours is emptied), a wall charge man onto you (your big slot keeps what it held), your own card copied and
 //           pasted back with the pouches rule off (nothing moves), you onto a teammate (his row's most, no
 //           launcher round, wand or camera), a teammate onto you (your launcher rounds go: his card carries none), a pistol card onto you, colours kept,
 //           and under a table with a squad limit a paste the squad has no room for is refused with the reason and nothing is written
@@ -21,7 +21,6 @@ const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
 const { STICKY } = await import(`${ROOT}/src/game/stickycam.ts`);
 const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
-const { SHIELD } = await import(`${ROOT}/src/game/shield.ts`);
 const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -36,22 +35,21 @@ const N = K.KIT_MEMBERS as number;
 const memStore = () => { const m = new Map<string, string>(); const S = { writes: 0, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { S.writes++; m.set(k, String(v)); }, removeItem: (k: string) => { m.delete(k); } }; return S; };
 const rows = (i: number): any[] => K.kitRows(i);
 const cards = (): any[] => K.KIT.members.map((m: any) => ({ ...m }));
-/** the fields of a card a paste onto member i may write: his tiles' own, and what a tile of several fields is made of (the big slot's three; your cans'
+/** the fields of a card a paste onto member i may write: his tiles' own, and what a tile of several fields is made of (the big slot's two; your cans'
  *  two; the launcher's rounds and cameras, which go home with the rifle) */
 function writable(i: number): Set<string> {
   const w = new Set<string>();
-  for (const r of rows(i)) { w.add(r.field); if (r.field === 'big') { w.add('walls'); w.add('shield'); } if (r.field === 'cans') { w.add('smoke'); w.add('bangs'); } if (r.field === 'weapon' && i === 0) { w.add('shells'); w.add('cams'); } }
+  for (const r of rows(i)) { w.add(r.field); if (r.field === 'big') w.add('walls'); if (r.field === 'cans') { w.add('smoke'); w.add('bangs'); } if (r.field === 'weapon' && i === 0) { w.add('shells'); w.add('cams'); } }
   w.delete('suit'); w.delete('trim'); return w;
 }
 /** the kit table, its rules and the switches this check moves, as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const was = cards(), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, wand = WAND.on, sticky = STICKY.on, own = OWNCHARGE.on, plate = SHIELD.on, team = K.kitTeam(), table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
-  try { return await fn(); } finally { K.slotsSet(table); K.kitLoad(null, ''); WAND.on = wand; STICKY.on = sticky; OWNCHARGE.on = own; SHIELD.on = plate; K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; K.kitTeam(team); for (let i = 0; i < N; i++) K.KIT.members[i] = was[i]; }
+  const was = cards(), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, wand = WAND.on, sticky = STICKY.on, own = OWNCHARGE.on, team = K.kitTeam(), table = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8'));
+  try { return await fn(); } finally { K.slotsSet(table); K.kitLoad(null, ''); WAND.on = wand; STICKY.on = sticky; OWNCHARGE.on = own; K.BIGSLOT.on = big; K.SLOTS.on = slots; K.KIT.on = on; K.kitTeam(team); for (let i = 0; i < N; i++) K.KIT.members[i] = was[i]; }
 }
 /** the rules put one way, the cards as issued, a store that counts its writes under the table */
 function stand(o: { slots: boolean; big: boolean; extras: boolean }) {
   WAND.on = STICKY.on = OWNCHARGE.on = o.extras; K.BIGSLOT.on = o.big;
-  SHIELD.on = true;   // (the shield in the game, as the cases below ask of it: the page has it out — shield.ts — and run by itself on the shipped stand this check read a shield man's card as a card with an empty big slot; the probe runner held it up, the check did not)
   const store = memStore(); K.kitLoad(store, o.slots ? '' : '?noslots'); K.BIGSLOT.on = o.big; K.kitTeam(N - 1); K.kitReset(); store.writes = 0;
   return store;
 }
@@ -109,14 +107,21 @@ export async function pasteCases(): Promise<boolean> {
   await kept(() => {
     const put = (i: number, o: Record<string, unknown>) => { K.KIT.members[i] = { ...K.kitDefault(i), ...o }; };
     { const store = stand({ slots: true, big: true, extras: true });
-      put(3, { shield: true, charges: 2, bangs: 1 }); put(0, { big: 'hammer' });
+      put(3, { big: 'hammer', charges: 2, bangs: 1 }); put(0, { big: 'shotgun' });
       const r = K.kitPaste(0, { ...K.KIT.members[3] }), you = K.KIT.members[0];
-      F.verdict(r.ok && you.shield === false && K.bigOf(you) === 'hammer' && you.charges === 2 && you.bangs === 1 && you.shells === 0 && !K.kitLegal(),
-        'a shield man onto you: his counts are yours, the shield is not (it is no tile of yours) and your big slot keeps the hammer it held', `you: ${J(you)} · legal: ${K.kitLegal() ?? 'yes'}`);
-      // … and with the shield out of the game (the page as it opens): his card's shield is nothing, so what is copied is a card with an empty big slot, and yours is emptied as any paste of one would
-      { SHIELD.on = false; K.kitReset(); put(3, { shield: true, charges: 2, bangs: 1 }); put(0, { big: 'hammer' });
-        const o = K.kitPaste(0, { ...K.KIT.members[3] }), y = K.KIT.members[0]; SHIELD.on = true;
-        F.verdict(o.ok && y.shield === false && K.bigOf(y) === 'none' && y.charges === 2 && y.bangs === 1 && !K.kitLegal(), 'the same paste with the shield out of the game: the copied card\'s big slot is empty, so yours is emptied with it (no shield comes, and no row of yours is left unasked)', `you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
+      F.verdict(r.ok && K.bigOf(you) === 'hammer' && you.charges === 2 && you.bangs === 1 && you.shells === 0 && !K.kitLegal(),
+        'a hammer man onto you: his counts are yours, and his hammer is in your big slot where the shotgun was (one big thing, his)', `you: ${J(you)} · legal: ${K.kitLegal() ?? 'yes'}`);
+      // … and a man with nothing in his big slot: what is copied is a card with an empty one, and yours is emptied as the row asks
+      { K.kitReset(); put(3, { charges: 2, bangs: 1 }); put(0, { big: 'hammer' });
+        const o = K.kitPaste(0, { ...K.KIT.members[3] }), y = K.KIT.members[0];
+        F.verdict(o.ok && K.bigOf(y) === 'none' && y.charges === 2 && y.bangs === 1 && !K.kitLegal(), 'a man with an empty big slot onto you: yours is emptied with it (the hammer goes home, and no row of yours is left unasked)', `you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
+      // … and a big thing your row does not offer (a teammate's wall charge, your own charges off): the row cannot show it, so your big slot keeps what it held;
+      // with your own charges on the row offers it and it is yours like any other value
+      if (K.wallHere()) for (const own of [false, true]) { OWNCHARGE.on = own; K.kitReset(); put(3, { walls: 1, charges: 0, bangs: 1 }); put(0, { big: 'hammer' });
+        const offers = ((K.kitRows(0).find((r: any) => r.field === 'big')?.values ?? []) as string[]).includes('wall'), o = K.kitPaste(0, { ...K.KIT.members[3] }), y = K.KIT.members[0];
+        F.verdict(o.ok && K.bigOf(K.KIT.members[3]) === 'wall' && K.bigOf(y) === (offers ? 'wall' : 'hammer') && y.bangs === 1 && !K.kitLegal() && (own || !offers),
+          `a wall charge man onto you, your own charges ${own ? 'ON' : 'OFF'}: his counts are yours, and ${offers ? 'so is the wall charge (your big row offers it)' : 'the wall charge is not (your big row does not offer it): your big slot keeps the hammer it held'}`, `your big row offers it: ${offers} · you: ${J(y)} · legal: ${K.kitLegal() ?? 'yes'}`); }
+      OWNCHARGE.on = true;
       K.kitReset(); put(0, { smoke: 3, bangs: 0, frags: 0, shells: 1, wand: false, cams: 0 }); put(2, {});
       const smokeMost = Math.max(...(rows(2).find(x => x.field === 'smoke')?.values ?? [0]) as number[]);
       const r2 = K.kitPaste(2, { ...K.KIT.members[0] }), mate = K.KIT.members[2];

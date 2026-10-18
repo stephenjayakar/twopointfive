@@ -33,7 +33,6 @@ import { WORDS, w } from './words';
 import { CUES } from './cues';
 import { SUPPRESSION, headDown, endDisplace, holdingCover, guardFireMods, flinching } from './suppression';
 import { trackGuard, aimReady, feetSettled, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
-import { SHIELD, SHIELD_STATS, shieldAny, shieldAim, shieldLow, shieldBlocks, shieldScreens } from './shield';
 import { isHostile, teamOfId, hostileTo, foeChar, foeDown, foeCrouched, HOSTILE, spokenName, defenderWords } from './teams';
 import type { Team } from './teams';
 import type { WeaponId } from './weapons';
@@ -60,7 +59,7 @@ import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
-import { sideOutAlert, sideLocked } from './gunslots';   // (called inside startReloadBeat only)
+import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
@@ -121,7 +120,8 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
     const heardAt: Vec3 = [prop.via[0], 0, prop.via[2]];                       // where to go and look: the source if heard directly, else the doorway / corner it came through
     // a report below the gunshot line (level < 1: the suppressed pistol — playtest 08-09 — or a canister's pop / skitter): an odd noise worth a look, heard
     // out to ~7 m of open air per unit level along the same propagation (through a shut door far less), suspicion toward it, no radio, no 'shots fired'
-    if (e.kind === 'shot' && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
+    const odd = e.kind === 'shot' || (e.kind === 'guardShot' && quietHeard() && dStraight >= 0.1 && shotRelation(g, gd, e) === 'threat');   // (gunslots.ts: a quiet round from the other side's gun is the odd noise Sam's is — it used to reach nobody)
+    if (odd && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
       gd.awareness = Math.max(gd.awareness, 0.5);
       const at = prop.direct ? v3.copy(e.pos) : heardAt;   // where he places it: the source through open air, the doorway / corner it came round otherwise — as every other noise below is placed (review A6.7: the routed pop used to hand him the shooter's exact feet through the wall)
       if (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0) gd.lastKnown = at;   // (a man fighting trusts his own eyes over an echo, as the gunfire branch below)
@@ -2240,7 +2240,6 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
           const head = pc.bones.head ?? v3.add(pc.pos, [0, crouched ? 1.05 : 1.6, 0]);
           if (clearShot(g, c, head)) aimAt = head; else blocked = true;
         }
-        if (!blocked && shieldAny()) { const from = shotOrigin(c), low = shieldAim(g, gd, gd.foe, from, aimAt); if (low && clearShot(g, c, low)) { shieldLow(g, gd, gd.foe, from, aimAt); aimAt = low; } }   // THE SHIELD (shield.ts): his own rounds have been dying in the plate that man carries and it is on his line still — he comes down under it at the shins, where that line is open (null, and the chest as ever, with no shield on the floor / from the flank / before he has learned it)
         if (!blocked && !gd.pinned && boreFouled(g, gd)) blocked = true;   // two of his rounds running went into the frame from this spot — a hand off the muzzle, or anything on his own half of the line (aim.ts noteBore): the shoulder's line clears the jamb, the bore does not — no line from here, he closes / steps for a real one (model off: never)
         if (blocked && coverSeen(g, gd, gd.foe, aimAt)) blocked = false;   // (coverfire.ts: what stands in the line is breakable and he knows the man is behind it — the rounds go into it, by every gate below)
         const facingErr = Math.abs(wrapAngle(Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
@@ -2533,18 +2532,16 @@ function acquireFoe(g: Game, gd: Guard) {
     gd.foe = null; gd.aim.clear(); lostMan = true;
   }
   let best: Foe = null, bestRate = 0.05, curVisible = false;
-  const eye = shieldAny() && SHIELD.retarget ? shotOrigin(gd.char) : null, shy = eye && gd.foe && gd.foe !== 'player' && shieldBlocks(g, gd, gd.foe, eye) ? gd.foe : null;   // THE SHIELD (shield.ts): the man he is on carries a plate his rounds have been dying in, and it stands between them now — another enemy in his sight is the better man to be on (null with no shield on the floor: the lines below then read as they always did)
   const consider = (f: 'player' | Guard, ch: Character) => {
     const vis = f === 'player' ? canSee(g, gd) : canSeeChar(g, gd, ch, false); if (!vis.visible) return;
     const rate = f === 'player' ? sightGain(g, gd, vis.dist) : sightGainOn(g, gd, f, vis.dist);
     if (f === gd.foe && rate > 0.05) curVisible = true;
-    if (rate > bestRate && !(shy && eye && (f === shy || shieldScreens(shy, eye, ch)))) { bestRate = rate; best = f; }   // (not the shield man, nor a man stood behind his plate)
+    if (rate > bestRate) { bestRate = rate; best = f; }
   };
   if (isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) consider('player', g.player.char);
   for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.char.alive && isHostile(gd.team, o.team) && !runnerFled(o)) consider(o, o.char);
   const op = gd.team === 'operative';
-  if (curVisible && !(shy && best)) return;
-  if (shy && best) SHIELD_STATS.retargets++;
+  if (curVisible) return;
   if (best && best !== gd.foe) { gd.foe = best; gd.aim.clear(); if (mine) g.say(gd, op ? 'he\'s down — next.' : 'got him!'); return; }   // a new man: he lines him up from nothing (aim.ts keys the track by foe too)
   if (lostMan && !best && !gd.unit && gd.team === 'guard' && !g.player.down) {
     // A STAFF MAN (here only on a quiet mission with a partner: the call site): the man he dropped is one of TWO intruders, and the other is still on his floor.

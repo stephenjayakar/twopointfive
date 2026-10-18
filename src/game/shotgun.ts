@@ -106,7 +106,8 @@ export function fireShell(g: Game, shooter: Character, target: Vec3, isPlayer: b
   }
   SHOTGUN_LAST.ends = shell.ends; SHOTGUN_LAST.glass = shell.glass;
   // the lock: enough of the shell into a latched leaf by its latch edge, from close
-  const B = P.breach; let leaves: Map<Door, number> | null = null;
+  const B = P.breach; if (!B) return;   // (a fighting shotgun: its shell opens no lock — weapons.ts m1014)
+  let leaves: Map<Door, number> | null = null;
   for (const e of shell.ends) {
     if (e.index < 1e6 || e.t > B.reachM) continue;
     const box = g.col.dynamicBoxes[e.index - 1e6], d = box ? g.doors.list.find(x => x.box === box) : undefined; if (!d || !d.latched || !d.locked || d.lockId.startsWith('wedge:')) continue;   // (a LOCK: a leaf merely shut is not flung by a pattern that strays onto it, and a wedge at its foot is not a keep — digin.ts, the boot's)

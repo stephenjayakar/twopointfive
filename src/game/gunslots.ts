@@ -4,7 +4,8 @@
 // the one gun row stood (kit.ts), each a PICK of the table below: what the tile says, and the weapons.ts row it is with a suppressor on and with it off. A
 // teammate is staged with both (Guard.second: the gun that is NOT in his hands), and with `dry` he goes to his sidearm when the primary runs dry on a man
 // close in front of him — `out` seconds, where standing there changing a magazine is the row's whole reload — and takes the primary up again, reloaded, once
-// nobody has been in front of him for `lull` seconds (sideTick). You: nothing changes in your hands — 1 is your secondary, 2 your primary, the swap as it was.
+// nobody has been in front of him for `lull` seconds (sideTick). You: 1 is your secondary, 2 your primary, the swap as it was — and which two guns they
+// are is your card's (kit.ts kitPlayer builds them from the picks; the issue pair is the pair you were built with).
 // Off (the module, the frozen stand, `?nogunslots`): the card of the build before — one gun row — and nobody but you has a second gun. `GUNSLOTS_BREAK=1`
 // (tools/qa/gunslots-check.ts): a teammate is staged without his second gun and the card keeps its one gun row.
 // The picks ride on the big slot's card (kit.ts BIGSLOT: the shotgun is kit there, never a man's gun): with that switch off the card is the build before's too.
@@ -20,10 +21,15 @@ export const GUNSLOTS = {
   out: 0.7,
   /** seconds with nobody in front of him before the sidearm goes back, and the seconds that takes on top of the primary's own reload */
   lull: 1.6, back: 0.5,
+  /** a TEAMMATE's round below the gunshot line (a suppressed pistol, the MP7) is the odd noise yours is to a man of the other side near enough to hear it
+   *  (guards.ts hearingCheck). Off: only your own quiet rounds were ever heard — a teammate's reached nobody, however near. */
+  heard: true,
 };
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GUNSLOTS_BREAK ?? '') === '1'; } catch { return false; } })();
 /** GUNSLOTS_BREAK=1 (the check's break path): the card keeps its one gun row and nobody is handed a second gun */
 export const gunsBroken = (): boolean => BREAK;
+/** guards.ts hearingCheck: this quiet report from a teammate's gun counts, as yours does */
+export const quietHeard = (): boolean => GUNSLOTS.on && GUNSLOTS.heard && !BREAK;
 export const GUNSLOTS_STATS = { staged: 0, out: 0, back: 0 };
 /** his man counts as in his eyes this long after he last saw him */
 const SEEN_SECS = 0.5;
@@ -35,7 +41,13 @@ export interface GunPick { id: string; slot: GunSlot; can: WeaponId | null; bare
 /** (plain words only: nothing of another game module is read as this loads) */
 const PICKS: GunPick[] = [
   { id: 'mk18', slot: 'primary', can: 'fn2000', bare: 'aks74u' },   // (the issue carbine: the two rows a teammate's Weapon + Suppressor rows have always meant)
+  { id: 'mk12', slot: 'primary', can: 'mk12', bare: null },   // reach
+  { id: 'mp7', slot: 'primary', can: 'mp7', bare: null },   // quiet and quick
+  { id: 'mk46', slot: 'primary', can: null, bare: 'mk46' },   // volume
+  { id: 'm1014', slot: 'primary', can: null, bare: 'm1014' },   // the room
   { id: 'g19', slot: 'secondary', can: 'fiveseven', bare: 'guard9mm' },
+  { id: 'hk45', slot: 'secondary', can: 'hk45', bare: null },   // the quietest
+  { id: 'g18', slot: 'secondary', can: null, bare: 'g18' },   // a fight in the holster
 ];
 /** no long gun: the sidearm is the gun in his hands */
 export const NO_PRIMARY = 'none';

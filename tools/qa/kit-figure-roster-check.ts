@@ -88,7 +88,6 @@ for (const [what, file, query, n] of RUNS) {
     ['you, the rifle', 0, card(0)], ['you, the pistol', 0, card(0, { weapon: 'pistol' })],
     ['a teammate, the quiet rifle', 1, card(1, { weapon: 'rifle', suppressed: true })], ['a teammate, the loud rifle', 1, card(1, { weapon: 'rifle', suppressed: false })], ['a teammate, the shotgun', 2, card(2, { weapon: 'shotgun' })],
     ['a teammate, the quiet pistol', 3, card(3, { weapon: 'pistol', suppressed: true })], ['a teammate, the loud pistol', 4, card(4, { weapon: 'pistol', suppressed: false })],
-    ['a teammate, the shield man\'s gun', 2, card(2, { shield: true })],
   ];
   const fit = KITANIM.on && KITANIM.grips;
   for (const [what, member, c] of POSES) {

@@ -104,7 +104,6 @@ import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
-import { SHIELD } from '../game/shield';
 import { FRIENDS } from '../game/friends';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
@@ -223,7 +222,6 @@ export function pageSwitches(q: URLSearchParams): void {
   RECAP.live = q.get('recaplive') !== '0';   // …and while the run is on, a lost teammate's row struck with the way the round came from, squad's view only (deathrecap.ts lostLive); ?recaplive=0 = the row as it was
   RECAP.liveArrows = q.get('recaparrows') === '1';   // …with nothing DRAWN for the way it came from: no arrow on his row, no stroke on the ground at him ("we shouldn't show the arrows, feels unrealistic"); ?recaparrows=1 = both drawn, as they were
   QUICKTHROW.on = q.has('quickthrow') && q.get('quickthrow') !== '0';   // the G quick throw (game/quickthrow.ts): GONE from the page — a can is thrown from its slot with a click; ?quickthrow = back for the visit
-  SHIELD.on = q.has('shield') && q.get('shield') !== '0';   // the ballistic shield (game/shield.ts): GONE from the page — the maintainer, 10-15: "we should also probably just get rid of the ballistic shield, doesn't match the vibes (feels more like swat)". No card offers one, a stored card that held one reads as an empty big slot, a mission that issued one stages without; ?shield = back for the visit. A recording that carries the table replays as it was made
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
@@ -282,10 +280,11 @@ export function pageSwitches(q: URLSearchParams): void {
   PEEKSIGHT.on = q.get('peeksight') !== '0';   // a peek round the end of a wall (back to it, pushed into an open end) lifts the fog of war as a head leaned round it would see (game/peeksight.ts): ?peeksight=0 = the fog's eye stays over his feet, as before
   WAND.on = !q.has('nowand');   // the optical wand (game/wand.ts): a row of YOUR kit card and, carrying it, 'look under it' on a shut door's rows where the fog of war hides the room — ON in the page, ?nowand = no such row on the card or the door; off on the frozen stand (TPS_WAND=1). Before the kit is read (kitLoad): a stored card's wand is read through its row
   WAND.mate = !q.has('nowandmate');   // … and a TEAMMATE's card can carry one, which he uses ONLY on your order (game/wandorder.ts: a door's menu, V): ON in the page, ?nowandmate = yours alone, as it was; off on the frozen stand (TPS_WANDMATE=1)
-  BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the shield, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
+  BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
   KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size, so a run is the run it was. ?nokitdeal = the cards as they were
   BIGSLOT.moves = !q.has('nobigmoves');   // (…and of 10-15 evening: the hammer rides on a man's back, his gun is put away for it, it is wound up and swung as one move, and you take the row from where a stack stands and WALK to a free place beside either jamb — ?nobigmoves = the tools as they stood that morning)
   BIGSLOT.snug = !q.has('nobigsnug');   // (…and with the moves: his gun and the tool each stay in a hand while they are off him — the gun let go as his hands leave it, the tool changing between his back and his fist while the fist is there; ?nobigsnug = the first-pass shares, the tool drawn part way between the two. Looks, and how long your own gun and its light are away: about a sixth of a second more)
+  BIGSLOT.weight = !q.has('nobigweight');   // (…and of 10-18: the tool changes hands with the weight of a gun swap — your gun carried to its place by hand before the hand goes for the tool, the tool out and back in the times a long gun takes; ?nobigweight = the gun let go at once, 0.6 s out and 0.45 s back)
   BIGSLOT.shut = !q.has('nobigshut'); BIGSLOT.beside = !q.has('nobigbeside');   // (its two knobs of 10-15: the tools open any shut door, from beside the frame — each off = the build of 10-14's rule)
   STICKY.on = !q.has('nosticky');   // sticky cameras (game/stickycam.ts): a row of YOUR kit card and, carrying one, a third load for the rifle's launcher — sent to a wall it is one more eye on the fog of war. ON in the page, ?nosticky = no such row and no such load; off on the frozen stand (TPS_STICKY=1). Before the kit is read from the store, like the wand's.
   STICKY.take = q.get('camtake') !== '0';   // a stuck camera of your own is taken back with the use key and goes on the launcher again (game/stickycam.ts takeCam): ?camtake=0 = a camera sent is a camera spent, as before
@@ -423,7 +422,6 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIMCOST.lamp': 'TPS_LAMPHIT=1',
   'AIMCOST.move': 'TPS_MOVECOST=1',
   'QUICKTHROW.on': 'TPS_QUICKTHROW=0',   // (the one row the FROZEN stand has on and the page does not: the word takes it away)
-  'SHIELD.on': 'TPS_SHIELD=0',   // (the ballistic shield: the frozen stand still has it — its probes, tallies and fixtures stage one — and the page does not)
   'FRIENDS.noSnap': 'TPS_FRIENDS=1',
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',

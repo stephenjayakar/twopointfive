@@ -246,9 +246,9 @@ export interface LessonData {
 export interface ParData { gold: number; silver: number; bronze: number; lossSecs: number }
 /** A MISSION'S OWN ISSUE (game/kit.ts kitIssue): kit this level hands the squad whatever the machine keeps, with no visit to the loadout screen. `members` is
  *  keyed by the man's place on the roster ('0' = you, '1'‥'4' = the teammates in order); each record is the FIELDS THAT DIFFER from his issue card (kit.ts
- *  MemberKit: the rest of the card is as issued) — `{ '1': { shield: true, bangs: 2, charges: 0, frags: 0 } }` = Red One carries the shield. A card the
+ *  MemberKit: the rest of the card is as issued) — `{ '1': { weapon: 'shotgun', bangs: 2, charges: 0 } }` = Red One carries the breaching shotgun, two stun canisters and no charge; `{}` = every man as issued. A card the
  *  pouches rule does not allow is trimmed as any card is. A level without the block is staged with the cards the machine keeps, as ever. */
-export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed?: boolean; light?: boolean; nvg?: boolean; bangs?: number; charges?: number; smoke?: number; frags?: number; walls?: number; shells?: number; shield?: boolean }
+export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed?: boolean; light?: boolean; nvg?: boolean; bangs?: number; charges?: number; smoke?: number; frags?: number; walls?: number; shells?: number }
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** A SNATCH (game/snatch.ts — an overlay on a level's ROOM CLEAR, as a lesson is one on a mission): ONE unarmed man the team has to take alive. He is a
  *  civilian of the usual make (game/civilians.ts: his eyes, his ears, his run, his hands on his head), put on the floor at every staging of the room clear;
@@ -324,7 +324,7 @@ export interface KitViewWay {
   side?: 1 | -1;
   /** the camera (radians; FollowCamera.pin's yaw and pitch): absent = worked out from the wall. the picture is framed on the way's five places whatever the team's size, and `dist` is only where the fit to the page starts from */
   pin?: { yaw: number; pitch: number; dist?: number };
-  /** authored places, [x, z, yaw in degrees (0 = +z, 90 = +x)]: [0] Sam, then the teammates from the door outward (a shield man first). A man with no slot takes the worked-out one —
+  /** authored places, [x, z, yaw in degrees (0 = +z, 90 = +x)]: [0] Sam, then the teammates from the door outward. A man with no slot takes the worked-out one —
    *  and ONE PLACE CAN BE WRITTEN ALONE: `null` holds a place that is left to the plan (`[null, null, [x, z, yaw]]` = the second stack man's only) */
   slots?: ([number, number, number] | null)[];
   /** laid over src/host/kitView.ts KIT_VIEW_LIGHT, key by key */
