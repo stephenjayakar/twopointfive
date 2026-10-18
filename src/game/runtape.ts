@@ -16,6 +16,7 @@ import { activeScenario } from './scenarioRun';
 import { knobRegistry, NOT_KNOBS } from './knobs';
 import { KIT } from './kit';
 import { STAND_ENV } from '../host/standEnv';
+import { FollowCamera } from './camera';
 
 type Proc = { versions?: Record<string, string | undefined>; env?: Record<string, string | undefined> } | undefined;
 const proc = (): Proc => (globalThis as { process?: Proc }).process;
@@ -55,6 +56,9 @@ export class RunTapeRec {
   private dt: [number, number][] = [];
   private view: number[][] = []; private viewKey = '';
   private cam: TapeVal[][] = []; private camPrev: number[] = new Array<number>(9).fill(NaN);
+  /** the steps whose matrices were not their pose's (format.ts RunTape.lens); the camera a pose is built on to find out (made at the first step: src/game is one
+   *  import cycle); the yaw the matrices were last KNOWN to be built with (NaN: not known) */
+  private lens: TapeVal[][] = []; private scratch: FollowCamera | null = null; private builtYaw = NaN;
   private input: [number, TapeInput][] = []; private keysKey = ''; private buttons = 0; private mx = NaN; private my = NaN;
   private keys: string[] = []; private keyIdx = new Map<string, number>();
   private sens: RunTape['sens']['rows'] = [];
@@ -75,9 +79,21 @@ export class RunTapeRec {
     if (f >= RUNTAPE.minutes * 3600) { this.kill(f, `the page's game had run more than ${RUNTAPE.minutes} min of steps`); return; }
     { const L = this.dt[this.dt.length - 1]; if (L && L[1] === dt) L[0]++; else this.dt.push([1, dt]); }
     { const k = `${cmd.w},${cmd.h},${cmd.pw},${cmd.ph}`; if (k !== this.viewKey) { this.viewKey = k; this.view.push([f, cmd.w, cmd.h, cmd.pw, cmd.ph]); } }
-    { const V = cmd.view, c = [V.target[0], V.target[1], V.target[2], V.yaw, V.pitch, V.distance, V.aspect, V.fov, V.aimLead]; let mask = 0; const row: TapeVal[] = [f, 0];
+    { const V = cmd.view, c = [V.target[0], V.target[1], V.target[2], V.yaw, V.pitch, V.distance, V.aspect, V.fov, V.aimLead]; let mask = 0; const row: TapeVal[] = [f, 0], yaw0 = this.camPrev[3];
       for (let i = 0; i < 9; i++) if (!Object.is(c[i], this.camPrev[i])) { mask |= 1 << i; row.push(enc(c[i])); this.camPrev[i] = c[i]; }
-      if (mask) { row[1] = mask; this.cam.push(row); } }
+      if (mask) { row[1] = mask; this.cam.push(row); }
+      // THE LENS: the record's matrices are the host camera's as they stood, and its pose may have been written since they were built — then the step's ray is not
+      // the pose's. Found by building the pose and holding it against the record, to the bit; told as the yaw that does build them where one of the two likely
+      // ones does (the step before's: a pan or an orbit written a frame ahead; the last one known: a second tick of the same frame), else as the matrices themselves
+      const S = this.scratch ??= new FollowCamera(); S.target[0] = c[0]; S.target[1] = c[1]; S.target[2] = c[2]; S.pitch = c[4]; S.distance = c[5]; S.aspect = c[6]; S.fov = c[7];
+      const builds = (yaw: number): boolean => { S.yaw = yaw; S.rebuild();
+        for (let i = 0; i < 16; i++) if (!Object.is(S.viewProj[i], V.vp[i]) || !Object.is(S.invViewProj[i], V.ivp[i])) return false;
+        for (let i = 0; i < 3; i++) if (!Object.is(S.pos[i], V.pos[i]) || !Object.is(S.forward[i], V.forward[i])) return false;
+        return true; };
+      if (builds(c[3])) this.builtYaw = c[3];
+      else if (yaw0 === yaw0 && !Object.is(yaw0, c[3]) && builds(yaw0)) { this.lens.push([f, enc(yaw0)]); this.builtYaw = yaw0; }
+      else if (this.builtYaw === this.builtYaw && !Object.is(this.builtYaw, yaw0) && builds(this.builtYaw)) this.lens.push([f, enc(this.builtYaw)]);
+      else { const L: TapeVal[] = [f]; for (const a of [V.vp, V.ivp, V.pos, V.forward]) for (const x of a) L.push(enc(x)); this.lens.push(L); this.builtYaw = NaN; } }
     { const rec: TapeInput = {}; let any = false; const kk = cmd.keys.join(' ');
       if (kk !== this.keysKey) { this.keysKey = kk; rec.k = cmd.keys.slice(); any = true; }
       if (cmd.pressed.length) { rec.p = cmd.pressed.slice(); any = true; }
@@ -147,19 +163,19 @@ export class RunTapeRec {
   }
   private kill(f: number, why: string): void {
     this.dead = why; this.deadAt = f; this.inTick = false;
-    this.dt = []; this.view = []; this.cam = []; this.input = []; this.sens = []; this.x = []; this.keys = []; this.keyIdx.clear(); this.recipe = null;
+    this.dt = []; this.view = []; this.cam = []; this.lens = []; this.builtYaw = NaN; this.input = []; this.sens = []; this.x = []; this.keys = []; this.keyIdx.clear(); this.recipe = null;
   }
   /** the tape as the file carries it (a tape that ended: its reason) */
   file(search: string, levelFile?: string): RunTape | { dead: string; tick: number } | undefined {
     if (this.dead) return { dead: this.dead, tick: this.deadAt };
     if (!this.recipe || !this.ticks) return undefined;
     return { v: 1, ticks: this.ticks, recipe: { ...this.recipe, search, ...(levelFile ? { levelFile } : {}) }, dt: this.dt.map(r => [r[0], r[1]] as [number, number]), view: this.view.slice(), cam: this.cam.slice(), input: this.input.slice(),
-      sens: { keys: this.keys.slice(), rows: this.sens.slice(), f32: 1 }, x: this.x.slice() };
+      sens: { keys: this.keys.slice(), rows: this.sens.slice(), f32: 1 }, x: this.x.slice(), lens: this.lens.slice() };
   }
   /** THE KEPT TAPE (src/replay/kept.ts, ui/replaykey.ts keep()): the rows taped since the last call, as a piece a kept tape appends — asked BETWEEN two steps. The first
    *  piece carries the recipe; a tape that ended hands its reason once (the rows it had not yet handed over went with it) and nothing after. null = nothing new.
    *  Only reads the tape: file() is what it was. */
-  private took = { ticks: 0, view: 0, cam: 0, input: 0, keys: 0, sens: 0, x: 0, recipe: false, dead: false };
+  private took = { ticks: 0, view: 0, cam: 0, input: 0, keys: 0, sens: 0, x: 0, lens: 0, recipe: false, dead: false };
   since(): TapePiece | { dead: string; tick: number } | null {
     const T = this.took;
     if (this.dead) { if (T.dead) return null; T.dead = true; return { dead: this.dead, tick: this.deadAt }; }
@@ -167,9 +183,9 @@ export class RunTapeRec {
     // (the last run of `dt` is counted up in place: the steps since the last piece are read off the tail)
     const dt: [number, number][] = []; for (let left = this.ticks - T.ticks, i = this.dt.length - 1; left > 0 && i >= 0; i--) { const n = Math.min(left, this.dt[i][0]); dt.unshift([n, this.dt[i][1]]); left -= n; }
     const P: TapePiece = { ticks: this.ticks, ...(T.recipe ? {} : { recipe: this.recipe, f32: 1 as const }), dt, view: this.view.slice(T.view), cam: this.cam.slice(T.cam), input: this.input.slice(T.input),
-      keys: this.keys.slice(T.keys), sens: this.sens.slice(T.sens), x: this.x.slice(T.x) };
-    this.took = { ticks: this.ticks, view: this.view.length, cam: this.cam.length, input: this.input.length, keys: this.keys.length, sens: this.sens.length, x: this.x.length, recipe: true, dead: false };
+      keys: this.keys.slice(T.keys), sens: this.sens.slice(T.sens), x: this.x.slice(T.x), ...(!T.recipe || this.lens.length > T.lens ? { lens: this.lens.slice(T.lens) } : {}) };
+    this.took = { ticks: this.ticks, view: this.view.length, cam: this.cam.length, input: this.input.length, keys: this.keys.length, sens: this.sens.length, x: this.x.length, lens: this.lens.length, recipe: true, dead: false };
     return P;
   }
-  summary(): string { return this.dead ? `no re-run: ${this.dead} (step ${this.deadAt})` : `re-run tape: ${this.ticks} steps · ${this.input.length} input rows · ${this.cam.length} camera rows · ${this.sens.length} sensor rows · ${this.x.length} outside changes`; }
+  summary(): string { return this.dead ? `no re-run: ${this.dead} (step ${this.deadAt})` : `re-run tape: ${this.ticks} steps · ${this.input.length} input rows · ${this.cam.length} camera rows${this.lens.length ? ` (${this.lens.length} with a lens of their own)` : ''} · ${this.sens.length} sensor rows · ${this.x.length} outside changes`; }
 }

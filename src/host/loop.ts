@@ -124,7 +124,8 @@ export function planTicks(acc: number, dt: number, K: { hz: number; snap: number
   drift = drift * 0.99 + (dt - use);
   if (Math.abs(drift) > step / 2) { use += drift; drift = 0; }
   acc += use;
-  let ticks = Math.floor(acc / step + 1e-6);
+  if (acc < 0) { drift += acc; acc = 0; }   // (time handed back that this frame cannot pay — a display a little FASTER than a listed rate, 170 Hz against 165: it stays owed; an accumulator under zero planned a frame of −1 ticks)
+  let ticks = Math.max(0, Math.floor(acc / step + 1e-6));
   acc -= ticks * step; if (Math.abs(acc) < step * 1e-6) acc = 0;
   if (ticks > K.maxTicks) { ticks = K.maxTicks; acc = 0; drift = 0; }
   return { ticks, acc, drift };
@@ -192,7 +193,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         tw?.capture(cam);
       }
       ctx.updateMs = performance.now() - tU - bt;
-      if (!plan.ticks && (input.pressed.size || input.clicked || input.wheel)) fx.owed = { pressed: [...input.pressed], clicked: input.clicked, wheel: input.wheel };
+      if (plan.ticks < 1 && (input.pressed.size || input.clicked || input.wheel)) fx.owed = { pressed: [...input.pressed], clicked: input.clicked, wheel: input.wheel };
       demoPos = demo?.active ? fx.demoPos : null; attractPos = attract?.active && !demoPos && !D.showing ? fx.attractPos : null;   // (a frame with no tick keeps the last tick's look-at)
     }
     const dshow: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;

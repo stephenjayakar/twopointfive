@@ -70,7 +70,7 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 (+ the hot-swap hooks `__hotVol __hotDirect __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
 `__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
 (+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program, `?sdfsmooth` / `?charsoft` / `?charsoftmarch` + `__rigTrace(rays)` from the SDF character rig),
-`__runFrames(n, dt=1/60, keys=[])` (fixed-step frames with synthetic keys held), `__mouse(x, y, buttons?)`,
+`__runFrames(n, dt=1/60, keys=[], draw=true)` (fixed-step frames with synthetic keys held; `draw` false = only the burst's last step is drawn, the others pack the world as a draw would and go on — what a script on the software adapter wants, and NOT a check of the drawn-every-step path: the GPU's senses then answer once a burst), `__mouse(x, y, buttons?)`,
 `__click`, `__pauseLoop` (stop the rAF loop; step only via `__runFrames`), `__resetClock()`, `__shot(name, q, scale)`
 (JPEG to the shot server), `__panelShot(name, {frame?, quality?, scale?})` (the tweak PANEL (the debugger, on backtick) is HTML, outside the frame `__shot` reads back: `#panel` rasterised through
 editor/domshot.ts and laid over the frame + the overlay's canvases; native sliders in the raster), `__png(name)` (lossless readback for pixel A/B), `__timeScale`, `__wgsl(src, {prelude:'scene'|'lighting'})`
@@ -100,7 +100,7 @@ card is live (rejects if the boot dies) — `await window.__ready` is the one li
 poll for `__engine && __runFrames` stay correct. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
 first-frame GPU) and one `boot … ms to interactive · …` console line prints at GPU-ready. Typical script: navigate with `?paused&quality=medium`, `await __ready`, wait for `#view.clientWidth > 0`
 (a hidden pane gives a 0×0 canvas, rAF stops and timers throttle), `__menu.close()`, then step with `__runFrames`.
-**`__runFrames` draws every frame it steps and does not wait for the GPU** (only the last of a burst is put on the canvas). On a GPU slower than the script the
+**`__runFrames` draws every frame it steps (unless its fourth argument is false) and does not wait for the GPU** (only the last of a burst is put on the canvas). On a GPU slower than the script the
 frames pile up behind it. Measured 10-17 on the software adapter, 1280×720, Very low, `?roomclear`: a drawn frame is about 30 s of GPU (the first one out from
 under the menu 3½ min) and a burst of 60 is queued in under a second, so three bursts leave an hour and a half of drawing queued, and a later call does not come
 back until the browser takes more (a page check's fourth `__runFrames(60)` not back inside four minutes, no error anywhere: it reads as a hang in the game and is
@@ -233,9 +233,10 @@ but synthetic writes still work.
   the acts on each of three pages, the lines carried, everything back at the end and from every stop, the slow-machine cuts, a tab hidden, the ring full, no
   heavy moment, the addresses, the reload guard, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another
   take), and on a real page `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: `?bench` goes to the first scene and Esc comes
-  back, then the row's run start to finish over three pages with the hands-off player seen ordering and walking on each, keys pressed into a scene, the
-  game's clock read every frame, the card, the one download, Close; the check steps each scene on the game's own clock with `__runFrames`, a frame there
-  taking seconds, so a scene ends by the player's own cut and the last page's tail is the fake page's to prove). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
+  back, then the row's run start to finish over three pages with the hands-off player seen giving its orders on each and walking on the first, keys
+  pressed into a scene, the game's clock read every frame, the card, the one download, Close; the page's own frames play each scene under the fixed step,
+  a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
+  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and

@@ -438,7 +438,10 @@ async function main() {
 
   // scripted stepping for automated testing: __runFrames(n, dt, keys[]) runs n fixed steps with the given keys held
   let scripted = false;
-  window.__runFrames = (n: number, dtFixed = 1 / 60, keys: string[] = []) => { automated = true; attract.poke(); scripted = true; for (const k of keys) input.keys.add(k); for (let i = 0; i < n; i++) step(dtFixed, i === n - 1); for (const k of keys) input.keys.delete(k); scripted = false; };
+  // (draw = false: only the burst's last step is rendered; the steps before it pack the world a draw would have packed and draw nothing. For a long scripted run
+  //  on a slow adapter: the game steps the same, the GPU's senses are answered at the bursts' ends)
+  let leanBurst = false;
+  window.__runFrames = (n: number, dtFixed = 1 / 60, keys: string[] = [], draw = true) => { automated = true; attract.poke(); scripted = true; leanBurst = !draw; for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) step(dtFixed, i === n - 1); } finally { for (const k of keys) input.keys.delete(k); leanBurst = false; scripted = false; } };   // (`draw` false: only the burst's last step is drawn — the others pack the world and go on; a step that throws leaves no key held and no burst open)
   // __stage(pin | null, opts?): automation framing + staging in one call — pin = { look:[x,y,z], yaw, pitch, dist } fixes the camera verbatim (FollowCamera.pin:
   // no damping / aim lead), null releases it; opts.park = true parks every guard far away, torches off, held + pinned (the usual capture hygiene);
   // opts.guards = [{ i, pos, yaw?, torch?, aimPitch?, state? }] then places the listed ones; opts.player = { pos, yaw?, crouch?, holstered?, invisible? }.
@@ -564,7 +567,7 @@ async function main() {
   // Shift+F7 also opens the viewer (replay.html: a map with a scrubber, and notes that stay in the file); ?noreplay = no buffer, the build as it was
   const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
   (window as any).__replay = replaykey.hook();
-  (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number) => digestMod.chainBits(game, every) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
+  (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
   // First-use warm-up behind the start card (renderer v3 P0-B, measured 08-11 on the M4 Max with the box solver of the day): the smoke solver's first live smoke touches its buffers and 3D textures and runs
   // the sim's JS cold (≈ 10 ms GPU + 35 ms JS the first time then, nothing after), the GPU particles' first burst binds their pool and pipelines — paid on the first presented frames
@@ -676,7 +679,7 @@ async function main() {
       else if (game.verdict.takeDue()) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
     },
     render: (camR, t, dt, present) => {
-      if (viewHidden()) { behind.skipped++; perfrec.cpuRender = 0; return; }
+      if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.upload(true); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still packs the world its tick left, as a draw would have: the cursor's ray reads that pack)
       behind.drawn++;
       const firstRender = !rendered;
       const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR;

@@ -225,7 +225,7 @@ export class TapePlay {
       else if (kind === 'kit') this.kitOf(data); }
     h.pre?.(); this.env(h.engine.settings);
     const dt = W.step(cv, I);
-    { const c = W.cam; cam.target = [c[0], c[1], c[2]]; cam.yaw = W.lensYaw; cam.pitch = c[4]; cam.distance = c[5]; cam.aspect = c[6]; cam.fov = c[7]; cam.aimLead = c[8]; cam.rebuild(); cam.yaw = c[3]; }   // (an orbit's step ran on the matrices of the yaw before: tapewalk.ts lensYaw, as tools/qa/rerun.ts lays it)
+    W.layCamera(cam);   // (tapewalk.ts: the pose, and the matrices the page's step read, as tools/qa/rerun.ts lays them)
     try { g.update(dt, I, cam, cv as unknown as HTMLCanvasElement); } catch (e) { W.failed(); throw e; }
     W.done();
     if (g.mission.debrief) g.mission.debrief = false;   // (the page's own line after a step: the end card's flag is taken — the card itself is not opened over a replay)
