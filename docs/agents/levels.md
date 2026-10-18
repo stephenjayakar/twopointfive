@@ -237,3 +237,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`src/scene/levelData.ts`: "take the key out (the rest of the card stands)"), and the skill says that. `tools/qa/level-needs.ts` was brought in line by
   the shield's own step (issue cards are read as written). On build ba34118, both stands: 488 PASS, no FAIL, 65 NOTE; `KITDEAL_BREAK=1` 22 FAIL;
   `NEEDS_BREAK=1` exits 1.
+- **The level skill says where a Team & kit picture stands** (10-18; the skill's words only). Since every way of a `scenarios.kitView` block must anchor on
+  a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other, `kitview-work.cjs` holds the page to it), the skill's kit
+  picture item says so, with what to write where a mission's own way in is a gate, a gap or a wall. `--run` already runs `kitview-plan` for a level, so the
+  level command is red on such a way with no change to it. On build d2ec4b7, both stands: 488 PASS, no FAIL, 65 NOTE.
