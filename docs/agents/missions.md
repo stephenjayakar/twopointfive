@@ -577,3 +577,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   registryLevel` loaded the file with `{ lived: true }` alone, so on the SHIPPED stand (where the dressing switch is on) the loader's added dressing boxes made
   `probes.ts registry-level` 1 FAIL (569 boxes against 664). It now loads with `{ lived: true, dressing: false }`: the generator's level against the file as
   written, on every stand. Run: 6 PASS on frozen and on shipped. `registry-walk` is still red on shipped (four followers: one man never enters the copy room).
+- **The snatch's gate hut sounds as its own floor** (2026-10-18; level data, no switch). `tools/levels/snatch.ts` `surfaces.building` was the house's rectangle, and a
+  footstep zone is read only inside it, so the hut's zone out in the side yard was never read: the hut sounded as the yard ('asphalt', loud 0.9), not the 'stone'
+  (1.1) it is drawn as. `building` is now the whole world, as on the floodlit yard, so the plan is all zones; nothing else underfoot changes. Check: `bun run
+  tools/qa/map-check.ts snatch --no-runs` (was 1 FAIL, 'never read: hut'; now ALL PASS, 'gate hut stone'); `probes.ts snatch` 20 and `floors` 6 pass on both stands.
+  Played as shipped, before against after: straight in, 12 seeds, the same 12 runs (lost at about 25 s, by design); the back gate covered first (`PT_SNATCH=cover`),
+  24 seeds, won 24 and 66 of 96 men up both ways, two seeds a different length (0.1 s and 13 s). The level's own part moved, so `lived-check`'s base list names
+  this step. Headless only: nobody has heard it.

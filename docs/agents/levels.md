@@ -170,6 +170,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TRAPPED_BREAK=1` exits 1; `probes.ts scenario-levels` ALL PASS on both stands. WHAT THE ROW STOPS ASKING THAT PASSED: the four took the floor by the
   front on shipped on seeds 0 and 2 (3 of 4 and 4 of 4 up). NOT A CLAIM THAT THE TRAP TRAPS: the level is `untuned`, and its owner's own tally has the
   front way winning most runs on shipped; whether the yard should cost more is the level's tuning, not this check's.
+- **A level does not deal the squad's kit; `bun run tools/qa/kit-audit.ts` lists what its mission gets** (2026-10-18). The issued kit and the named
+  squad kits are one table for every mission (`src/game/kit.ts`, `docs/agents/menus.md`: the squad's kit is dealt over the men who come). A level's
+  file adds to it in two ways only: `scenarios.issue.members` (a block of cards by place on the roster, the fields that differ, written against the
+  pair's layout; the Team & kit screen then shows no cards, and a level's issue card is put on as written)
+  and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
+  says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
+  squad is issued (no hammer or shotgun opens steel, and nobody is issued a big-slot tool), whether frags can be ordered at all (never with a hostage,
+  the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
+  (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
   screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level
   skill that goes through everything that's needed for a level based on what we've seen" · "seems like we miss a lot". `.claude/skills/level/SKILL.md` is
@@ -198,3 +207,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   all-quick; wire it in once it is green (`--skip kit` gives the exit code of the rest meanwhile). NOT ASKED BY IT: anything by eye or by play (the idea,
   the five checks, light per room, sight lines at the starts, whether furniture reads from above, whether a picture looks like play), and `said` holds
   only that a level is NAMED in these files. It stands no game up: nothing here was seen on a GPU or played.
+- **The two foot bands that ran across a doorway are mended** (level data, no switch; 10-18; the two the dado bullet above left as "NOT mended", the `doorway`
+  need's two reds). `G.skirt` lays one band the length it is given, so a band given a whole wall crosses that wall's doors. Glasshouse: the back wall's foot
+  was `G.skirt('x', 8, 10, 30, -1)`, 0.76 m of it across door `back`; it is two calls now, 10 to 13.76 and 14.74 to 30 (the frame's outer faces). Crossing:
+  the east wall's foot across `gate_ne`, cut at 6.76 and 7.74 the same way in its own step. EACH FILE HAS ONE BOX MORE, so every unnamed box after the band
+  moved up one id: a list that names boxes by typed id moves with it (the crossing's door picture finds its eleven now, counted off the generator's own
+  calls, and throws when the count is not eleven; the glasshouse names none). A LEVEL'S FINGERPRINT MOVES WITH ITS BOXES: a tape or a checkpoint taken on
+  either level before this refuses to load. `lived-check`'s base moved to each step in turn (`BASE_REVS`, newest first). CHECKED, glasshouse, both stands
+  unless said: export `--check`; `level-needs glasshouse` has no `doorway` line; `lived-check`, `level-lint`, `level-identity`, `door-size`, `kitview-plan`,
+  `secondway`, the `glasshouse` probes, `scenario-levels`; one boot of the mission on the page with the software adapter (no page error, no band left
+  across the doorway, the door there). NEVER SEEN ON A GPU and not played: that the wall's foot reads right either side of the frame is by the numbers.

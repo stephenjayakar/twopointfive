@@ -109,6 +109,7 @@ import { PLAN } from '../game/floorplan';
 import { CLOSE, closeSummary, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { KITANIM, kitSummary } from '../game/kitanim';
 import { INHAND } from '../game/inhand';
+import { PACKSIDE } from '../game/packside';
 import { KIT, THROW_BY } from '../game/character';
 import { HANDS, handsSummary } from '../game/hands';
 import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
@@ -116,7 +117,7 @@ import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
-import { BIGSLOT } from '../game/kit';
+import { BIGSLOT, KITDEAL } from '../game/kit';
 import { BIG_STATS } from '../game/bigkit';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
@@ -1845,6 +1846,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   }
   // (game/kit.ts BIGSLOT + game/bigkit.ts: one big slot a man — the breaching shotgun as kit, the dynamic hammer; on in the page, ?nobigslot)
   { const bs = panel.section('Big slot (breaching shotgun, hammer)', { open: false, summary: () => `${BIGSLOT.on ? 'on' : 'off'} · you carry ${game.player.bigKit === 'none' ? 'nothing big' : game.player.bigKit === 'shotgun' ? 'the breaching shotgun' : 'the hammer'} · locks: ${BIG_STATS.samShot} shot, ${BIG_STATS.samHammered} hammered by you; ${BIG_STATS.drawn} teammate draws, ${BIG_STATS.mateHammered} hammered by a teammate` });
+    panel.toggleBox(bs, 'squad kit dealt over who comes', () => KITDEAL.on, v => { KITDEAL.on = v; }, 'On (also off with ?nokitdeal): with three or four teammates the issued kit and each named squad kit are shared out among the men who come, a charge and a stun to each pair; the squad carries the same count. Off: the first two carry all of it and the others come with empty pouches. The stored cards never move: Team & kit shows the cards as worn at its next draw, and a mission stages them');
     panel.toggleBox(bs, 'one big slot a man', () => BIGSLOT.on, v => { BIGSLOT.on = v; }, 'THE switch (also ?nobigslot on the address). On: every kit card has one Big slot row — breaching shotgun, dynamic hammer or wall charge, one of them — and none of them costs a pouch; the shotgun is kit, not a gun: its man keeps his rifle. Off: the shotgun is a weapon row, a wall charge costs two pouches, nobody has a hammer. The cards on the loadout screen follow at their next draw; men already staged keep what they were staged with.');
     panel.select(bs, 'big slot ▸ on me now', ['none', 'shotgun', 'hammer'], () => (['none', 'shotgun', 'hammer'] as const).indexOf(game.player.bigKit), v => { game.player.bigKit = (['none', 'shotgun', 'hammer'] as const)[v] ?? 'none'; }, 'put the breaching shotgun or the hammer on you (or take it off) for this run without going through the loadout screen: at a door locked against you its row takes the boot\'s place. A restart puts back what your card says');
     panel.toggleBox(bs, 'any shut door', () => BIGSLOT.shut, v => { BIGSLOT.shut = v; }, 'On: the hammer and the breaching shotgun open ANY shut door that is not steel, locked or not — the row is listed under the door\'s own (push, ease), and a door opened with one always ends open. A squad whose man carries one has a row of its own on a door\'s tools, on H: X on the door, then H. Off: only a door locked against you offers the tool, and teammates use theirs only on a locked door (the build of 10-14)');
@@ -1899,6 +1901,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(kt, 'close-in ▸ by distance', () => KITANIM.close, v => { KITANIM.close = v; }, 'closer than ever: the carriage deepens and the knife hand travels to the hilt as you close; the hands keep moving when you stand still. Off = one pose inside the mode.', true);
     panel.toggleBox(kt, 'grips ▸ things sit in his hands', () => KITANIM.grips, v => { KITANIM.grips = v; }, 'the can in the fist, the guns\' grips in the palm, the foregrip in the fingers, a magazine across the palm. Picture only. Off = every held thing off the wrist joint as before.', true);
     panel.toggleBox(kt, 'in hand ▸ a pistol stays in the fist', () => INHAND.on, v => { INHAND.on = v; }, 'every man: a pistol is drawn in the hand that holds it, and the hand turns onto the line it points. Picture only. Off = laid on the aim line from the wrist, as before.', true);
+    panel.toggleBox(kt, 'packs ▸ back tools ride at the side', () => PACKSIDE.on, v => { PACKSIDE.on = v; }, 'a man who wears a pack: his hammer, breaching shotgun or slung rifle stands strapped upright at the pack\'s side and moves with it (also ?packside=0 on the address). Picture only. Off = across his back and through the pack, as before.', true);
     panel.toggleBox(kt, 'night vision ▸ by hand or a nod', () => KITANIM.nv, v => { KITANIM.nv = v; }, 'N: the left hand flips the goggles down / up when it is free; with the hands busy (the rifle up, the pistol at the aim, a man in his arm, a reload) a nod of the head does it. The picture changes as they reach his eyes. Off = they jump on the key', true);
     panel.select(kt, 'rifle sling', ['by the mission', 'in front', 'on his back'], () => KITANIM.sling, v => { KITANIM.sling = v as 0 | 1 | 2; }, 'where the rifle lives when it is not in your hands. By the mission: a squad\'s loud mission lets it down on its sling in FRONT (quicker both ways), a quiet mission and the solo night put it across your BACK. Or force either.');
     panel.slider(kt, 'early click (s)', 0, 0.6, 0.05, () => KITANIM.clickKeep, v => { KITANIM.clickKeep = v; }, 'a left click this long before a drawn gun is up is kept and fires the moment it is. 0 = a click during a draw is dropped, as it was');
