@@ -260,8 +260,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `irOnMan` (a CPU estimate of the infrared light on the man looked at: the shader's falloff, window and cone, one segment test) to the light the meter
   reads on him, for a GOGGLED TEAMMATE'S eye only; nvg.ts `readPlace`'s `black` (too dark for the tube, so the white light comes on) retires
   (`irCarried`) — goggled teammates no longer put a white light on because a room has no light of its own; doortools.ts `thrTube` counts floor a jamb
-  man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (six: on the
-  goggles / the team carries one too / only where it is too dark / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
+  man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (eight: on the
+  goggles / the team carries one too / only where it is too dark / by the light the picture has / floor min / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
   scenarios — a lamp per pair of goggles down, at the brow, the upload's bits for a bare and a tube picture, never out under a tube frame, the shader's
   text · irl-unseen: a held-door play of 2,160 frames a scenario, Sam's goggles down, the light on and off — the game digest, every man's awareness /
   irradiance / visibility, every camera, the light list and the light estimate on the lit floor identical frame for frame; `IRLIGHT_BREAK=1` puts the
@@ -320,6 +320,47 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT MEASURED: no entry tally, tour or soak with the rule or the new power. NEVER SEEN ON A GPU, and only a player can judge: whether 8 is now too dim
   in a big dark room, the moment a light comes on walking from a lit hall into a dark room (0.15 s) and its fade behind him, a light that stays out
   when the only dark floor is one sliver or lies past 12 m, and whether five lights coming on at different moments reads as a team or as flicker.
+  **By the light the picture has** (10-18; the maintainer, of the vault's strongroom — its own bulb off, the room plain in his goggles round a pool of
+  his flood: "still feels like the IR light here is unnecessary"). WHY IT BURNED: the rule's question went to the CPU's light estimate
+  (`lightEstimateAt`: direct light only, "no bounce"), to which every room with no lamp of its own is 0 — while the tube shows that room by what comes
+  round the door frame and off the walls. SWITCH `IRLIGHT.meter`: ON in the page (`?noirmeter`), OFF in the module and on the frozen stand
+  (`TPS_IRMETER=1`; `FROZEN_HOLDS`, standup pin, standEnv), in the journal's knob table (a recording from before the key replays with it off). Off =
+  the CPU's estimate alone, the build before. THE RULE (`burn`, the `live` branch): the CPU's rule keeps the FIRST word — where it calls a place light
+  nothing is asked — and the renderer's light meter (the probe pass: shadowed direct light + the radiance cache; it refuses the infrared bit, so no
+  light of this file answers its own question) gets the LAST word on what the CPU calls dark: the floor under him by the meter key that already reads
+  it every frame (`playerChest`, a teammate's `unitC<id>`; the wand's lens asks its own) and a spread of up to five (`IRL_METER.slots`) of the dark
+  points his fan found, asked through `Game.lightQuery` on his beat under his own keys (`irl<id>:<slot>`) and read every frame (one read sequence a
+  frame: the sensors' journal writes its key list at every change of it). A point is dark when the PICTURE of it is under `IRLIGHT.show` (0.1 of the
+  tube's range; row 'IR light ▸ floor min' (a slider's label is cut at about nineteen characters)): the CPU's direct light + the meter's bounce × `settings.indirectScale` (0.35 — the meter's
+  bounce is physical, the picture's is scaled in fgather.wgsl) through the tube's curve (`nvg.ts tubeSig`). A line of its own, higher than
+  `NVG.blackAt` (where a MAN is lost to a goggled eye, about 0.035 of the range): direct light is well over that or nothing, bounce is every value
+  between, and floor at 0.05 of the range is grain to the player; the maintainer's strongroom read about 0.3 in his shot. Under this branch the
+  CPU's first word is asked by the same line. The same count decides (his own floor, or two of the points). A point not yet answered waits `IRL_METER.wait` (0.25 s, no light), then takes the CPU's word; the first reading that
+  is decided still puts his light at full or out at once. WHERE NO RENDERER ANSWERS — headless, `SENSE.cpu`, a page before its first frame (Sam's own
+  meter has no answer) — the CPU's rule is the whole rule at once, so HEADLESS NOTHING MOVES on either stand: every tally and digest is the build's.
+  KNOWN EDGES: the meter also has carried white light, so a torch on the floor he looks at puts his light out a hold later; `irShowsAt` and nvg.ts
+  `readPlace` still go by the CPU (a man in a bounce-lit room is read by his own meter, which has the bounce); up to five more probe places a
+  carrier on his beat, only where the CPU finds dark (the probe has 64 a frame); in the page the fan no longer stops at its second dark reading
+  (it needs them all to pick a spread), 0.4‥0.8 ms a carrier a beat as measured headless before. Row: 'IR light ▸ by the light the picture has'.
+  QA `probes.ts irl-meter` (21 scenarios; no renderer headless, so its answers are PLANTED through the swapped `Game.lightAt`: on floor the CPU calls
+  black with Sam's goggles brought down afresh — answered lit: not one frame of his light or a teammate's, and with the switch off it burns; answered
+  dark: burning the frame his goggles are down, at full; 0.015 W/m²: dark at the picture's bounce scale, light with the scale at 1; the fan's points
+  never answered: light 0.27 s after his question; nothing answered at all, or `SENSE.cpu`: nothing asked, light at once; floor the CPU calls light:
+  nothing asked; at most ten points asked in a frame; forgotten with his goggles; the stand, the row, a recording without the key): black floor in
+  11 scenarios, light in 7 (8 shipped). ALL PASS on both stands; `IRMETER_BREAK=1` (the switch held off) RED on both, 11 lines each. The family: 112
+  verdicts on each stand, the three of the frozen stand with all three words raised 50; `nvg` 188 on each; `IRAUTO_BREAK=1` and `IRLIGHT_BREAK=1`
+  still red (shipped). The five older irlight probes hold the switch off. HEADLESS NOTHING MOVES, checked: four scenarios, 900 frames each on the
+  shipped stand, goggles down, the switch on and off — the same game digest and the same count of burning lights (2,719‥4,492 light-frames). Page
+  check, software adapter (very low, 640×360), `MODE=vault node tools/qa/irlight-page.cjs <out>` (the maintainer's address, Sam in the middle of the
+  strongroom, its bulb off): ALL PASS for who decides — the line at 0.02 and the renderer's answers put his light out where the switch off burns it;
+  at 0.4 it burns; every answer planted dark and it burns. TOLD, not asked: on that adapter at that quality his light STILL BURNS there at the line
+  as it ships, door open or shut — the dark points of his fan read 0.011‥0.025 W/m² at the meter, 0.05‥0.09 of the range in the picture (grain),
+  while the floor under him in the door's light reads 0.34. The maintainer's own shot reads about 0.3 over that floor (80 of 255 where the lamp-lit
+  counting room reads 202 for a computed 0.78‥0.90, and 100 in a court whose floor has no direct light at all): his GPU's picture has several
+  times the bounce the software adapter's very low has, and by the picture's line his room is light. NOT RUN: the page check's yard and room modes
+  after this change, a tour, a soak, an entry tally. NEVER SEEN ON A GPU, and only a player can judge: whether the meter on his GPU reads that room
+  as his picture shows it (if his light still burns there, lower 'floor min'), a light that comes on for the darker half of a room
+  as he turns, and a torch beam crossing dark floor putting his light out for a moment.
 - **Silent or loud, on Sam's word** (`src/game/silent.ts`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
   quietly, no flashlight, etc."; scope page rebuild/silent-order/scope.md): the squad's POSTURE, one order — `go silent` on **X, 5** of the
   floor's menu and of a man's (under the header 'the whole squad'; a door's menu keeps 5 for the door tools; the order fits any target through `give`), the row

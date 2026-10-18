@@ -31,7 +31,7 @@ const KEPT: Record<FeelName, Record<string, [number, number, number] | null>> = 
   LIGHTS: { on: null, litOff: null, litAt: [0.05, 0.9, 0.05], lookDark: null, afterSecs: [0, 10, 0.5], hotSecs: [0, 15, 0.5], stepSecs: [0, 15, 0.5], onM: [0.2, 5, 0.1], aloneM: [2, 20, 0.5] },
   NVG: { on: null, lead: null, own: null, quietSecs: [0, 90, 5], darkAt: [0.05, 0.9, 0.05], blackAt: [0, 0.6, 0.05] },
   IR: { on: null, sam: null, carry: null },
-  IRLIGHT: { on: null, team: null, auto: null, power: [1, 100, 1], cone: [30, 85, 5], reach: [8, 30, 1] },   // the infrared light on the goggles (irlight.ts)
+  IRLIGHT: { on: null, team: null, auto: null, meter: null, show: [0.02, 0.4, 0.01], power: [1, 100, 1], cone: [30, 85, 5], reach: [8, 30, 1] },   // the infrared light on the goggles (irlight.ts)
   FOG: { own: null, calls: null, doors: null, lasers: null },
   LASER: { enemy: null },
   FRAG: {},

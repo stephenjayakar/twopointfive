@@ -173,7 +173,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`INHAND.long`: the trigger hand moved onto it — `rigProps.longHold`, `GRIPFIT.long` the other way round; gun, muzzle, weapon light and the hand on the fore-end untouched; Sam's own
   rifle keeps kit handling's fit, and gets this only with that off); a defender's holster a third inside his long shirt (`holsterOut` 3 cm, defenders only); the torch on a belt three
   quarters inside the man (`belt`, `handwork.ts beltTorch`). A man who dies is let go of first (`ragdollize`). CHECK: `bun run tools/qa/inhand-check.ts` (probe `inhand`, family
-  `kitanim`; 16 lines, both stands; `INHAND_BREAK=1` must fail): bench scripts for both sides' pistols (grip to the fist's hollow 1.7 cm a teammate's / 2.4 cm a defender's at worst, was
+  `kitanim`; 17 lines, both stands; `INHAND_BREAK=1` must fail): bench scripts for both sides' pistols (grip to the fist's hollow 1.7 cm a teammate's / 2.4 cm a defender's at worst, was
   8‥9; on the simulation's line to 2.6° once the aim shows — the 9 mm's own rake; the two-hand hold's spacing and both arms' bone lengths unchanged to the millimetre; the rule adds
   under 8° a frame to either hand through aims, a reload, a flinch, a blow and a kit errand; a shot from a crouched low ready: bore 2.6° off the round's line and the grip in the fist,
   was 8 cm out of it; a fifth of a second into anything that takes the arm the hand is the animator's own to 0.1°), torch (the fist's hollow to its line 12.4 cm → 1.2, its boxes
@@ -182,11 +182,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   run's digest equal off and on). One seed. PAGE (software adapter): `PORT=<port> node tools/qa/inhand-page.cjs` — the switch on, the men shown told and posed, no page
   error; `?inhand=0` off. STILLS: `tools/qa/pose-mesh.ts <variant> pistol-crouch|pistol-crouch-up|pistol-aside|torch|rifle-aim … --inhand`. LEFT ALONE, measured: the
   torch a whistle's soft answer raises is drawn in the hanging RIGHT hand while the clip lifts the LEFT (the light's origin is the right hand's: moving it is a rule change — or
-  `WHISTLE_SOFT_UPPER = 'none'`); Sam's slung rifle runs 5‥8 cm into his radio pack (not in the sneaking suit); the breacher's kit mesh already carries a long tool and the hammer and
+  `WHISTLE_SOFT_UPPER = 'none'`); Sam's slung rifle runs 5‥8 cm into his radio pack — only with the sneaking suit or kit handling switched off, or on the frozen stand (as the page ships a quiet mission wears the suit with no pack and a loud one hangs the rifle in front on its sling: cast.ts `sneakSuit`, kitanim.ts `kitSlingFront`); the breacher's kit mesh already carries a long tool and the hammer and
   shotgun cross it; a shield's window lets the helmet 2.5 cm through at a crouched aim; a hammer between hands and back, and a teammate's rifle as it comes off (the big slot's own
-  moves: MENDED since, the bullet 'stay in a hand on the way' below); the hand of the torch ↔ sidearm swap reaches for the belt torch's OLD place, 6 cm inside where it now hangs (the reach is the animator's: game state), and a torch is beside
-  the fist for the frames of that swap; every long gun reloads on the pistol's clip, the support hand holding nothing; a defender throws overhand with the carbine in the throwing fist.
-  The viewer and the Team & kit figure draw without the rule (the viewer's RIG numbers are tuned in the frames they always were). NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
+  moves: MENDED since, the bullet 'stay in a hand on the way' below); a torch is beside the fist for the frames of the torch ↔ sidearm swap (the swap's reach for the belt is the animator's, game state, and goes to the torch's OLD place: the look-only
+  pass draws the hand the 7.5 cm further out to where the torch now hangs — `anim.swapBelt`, check line 17: 1.4 cm from the old place, 1.7 cm from the new); through a long gun's
+  reload the TRIGGER hand and the body play the pistol's clip (the support arm does work the magazine change with the movement pass on: probes.ts `moves-reload`; with it off, the
+  frozen stand, it holds nothing); a defender throws overhand with the carbine in the throwing fist. THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
+  word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; page line: `HALF=bench … inhand-page.cjs`), so a rig number fitted there is judged on
+  the picture the game draws. The Team & kit figure (`src/ui/kitFigure.ts`) still draws without it. NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
   Workbench sheets of the skinned cast and by the numbers above.
 - **The rifle family's probes read the page's rules where they are live** (`tools/qa/fn2000-probes.ts`, 10-16; tests only, no game code). `kit-slots`, `rifle-cadence`,
   `rifle-reload` and `rifle-slot` pinned the old kit's beats and were red on the SHIPPED stand. Now: a kit change carried by hand is waited out (`kitWait`: `stage()`, kit-slots'
