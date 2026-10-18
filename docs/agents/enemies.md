@@ -1087,8 +1087,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pane that stops a round is a wall to this) and no smoke hiding her (`Game.sensors.segment`, under `smokeK`; headless the air is clear) HAS
   her, as the man standing in the room always did (rescue.ts `captor()` → `flush.holder`); one who came for her is `killSecs` from turning his gun on her,
   then `RESCUE.aimSecs` from the round — the same act, broken the same ways, and broken too if she leaves his line before the round (`act:broken`). Lines
-  (their net, said once per errand): "it's gone quiet in there — I'm going in for them!" · "going round — I'll take the other door!" · "they're gone —
-  they're moving them! cut them off!" · "on the way out — they don't leave with them!" · "moving on that noise — keep them boxed in!". Never: a man added,
+  (their net, said once per errand): "it's gone quiet in there — I'm going in for them!" · "going round — I'll take the other door!" · "the hostages are
+  gone — they're moving them! cut them off!" · "on the way out — they don't leave with the hostages!" · "moving on that noise — keep them boxed in!" (two of
+  them reworded by the dialogue pass, 10-18: its bullet in dialogue.md). Never: a man added,
   more health, a response from outside, a place he has not heard or guarded (the room, a noise his side heard, the door the team came in by). SEAMS:
   rescue.ts `tick()` (`flush.tick()`), `captor()`, `clock()`, `letGo()`, `outsidePoint`. OFF = THE BUILD AS IT WAS (the check's (f)). CHECK: `bun run
   tools/qa/probes.ts rescueflush` (`RESCUEFLUSH_SEEDS=1,2,3`), per mission: they come (first word at `afterSecs`, the second by the side door) · the gun on
