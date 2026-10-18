@@ -57,6 +57,8 @@ import { PRESSURE } from './pressure';   // (read inside defenders() only: Hard'
 import { order, endGuardScript, inBounds } from './squad';
 import { fireWeapon, killGuard } from './combat';
 import { RescueFlow } from './rescueflow';
+import { RESCUEEND, RescueEnd } from './rescueend';   // (read inside methods only: how a rescue is won — out, or cleared)
+import { RESCUEFLUSH, RescueFlush } from './rescueflush';   // (likewise: the men left alive come for the hostages)
 import { rescueCheckOwns } from './rescuecheck';   // (asked inside defenders() only)
 import { propGap, wallBetween } from './roomclear';   // (used inside checkRescue only: nothing of roomclear.ts is touched at load)
 import { spawnHostage, hostageSay } from './civilians';
@@ -257,7 +259,9 @@ export class Rescue {
   private auto = new SideSet<object>();
   /** the corridor just outside the server room's door (roundBy) */
   private serverOut: Vec3 | null = null;
-  constructor(private g: Game) { this.flow = new RescueFlow(g, this); }
+  /** how it is won (rescueend.ts: the hostages led out, or the floor cleared — RESCUEEND) · the men left alive coming for them (rescueflush.ts — RESCUEFLUSH) */
+  readonly ending: RescueEnd; readonly flush: RescueFlush;
+  constructor(private g: Game) { this.flow = new RescueFlow(g, this); this.ending = new RescueEnd(g, this); this.flush = new RescueFlush(g, this); }
 
   /** what the scenario takes from the level it stands on (Level.scenarios.rescue; null = the level has none, and it cannot start) */
   get data(): RescueData | null { return this.g.level.scenarios?.rescue ?? null; }
@@ -349,7 +353,7 @@ export class Rescue {
     for (const gd of [...this.ops, ...this.hostiles]) { if (gd.script) endGuardScript(gd, 'patrol'); despawnUnit(g, gd); }
     g.civilians = g.civilians.filter(c => !this.hostages.includes(c));
     this.ops = []; this.hostiles = []; this.hostages = []; this.entry = null; this.defs.clear(); this.act = null;
-    this.searchT.clear(); this.searchA.clear(); this.flow.reset(); this.marks(false);
+    this.searchT.clear(); this.searchA.clear(); this.flow.reset(); this.ending.reset(); this.flush.reset(); this.marks(false);
   }
   /** the scenario's own additions to the squad's door work, for as long as it is up: the side door's marks from the server room (SIDE_MARKS → orders.ts
    *  doorMarks) and the room's two doors linked on the charge trigger (doortools.ts linked) */
@@ -369,7 +373,7 @@ export class Rescue {
     const g = this.g, K = RESCUE, S = this.data; if (!S) throw new Error('the level has no hostage rescue data');
     const MARKS = { hostages: S.hostages, captor: S.captor, doorIn: S.doorMan.inside, doorOut: S.doorMan.outside, roamers: S.roamers };
     this.ops = []; this.hostiles = []; this.hostages = []; this.entry = null; this.defs.clear();
-    this.called = false; this.searchT.clear(); this.searchA.clear(); this.flow.reset();
+    this.called = false; this.searchT.clear(); this.searchA.clear(); this.flow.reset(); this.ending.reset(); this.flush.reset();
     this.plan = g.level.clearPlans?.find(p => p.door === S.room.door) ?? null; this.marks(true);
     { const sv = S.side?.from ? g.doors.byName(S.side.from.door) : undefined; this.serverOut = sv ? this.outOf(sv, this.fromBounds, 1.0) : null; }
     g.fight.reset(); g.fight.blindFire = K.blindFire;   // (the room fight starts clean on the new cast)
@@ -538,11 +542,13 @@ export class Rescue {
     if (input.hit('KeyF')) this.orderDoor();
     this.hear();
     this.defenders();
+    this.flush.tick();   // (rescueflush.ts: the room fallen and the team loud — the men left alive are sent for the hostages; a return on its first line with its switch off)
     this.flow.tick();
     this.search();
     g.doorTools.lights = RESCUE.opLights;
     for (const o of this.ops) if (o.unit) o.unit.light = this.dynamic && RESCUE.opLights;   // weapon lights once the clock runs (guards.ts attachFlashlight reads the unit's own switch)
     this.clock(dt);
+    this.ending.tick();   // (rescueend.ts: this frame's word to the hostages — a return on its first line with its switch off)
     this.outcome();
     this.voices();
   }
@@ -854,16 +860,23 @@ export class Rescue {
     return this.hostiles.map(gd => { const D = this.defs.get(gd)!; return { gd, role: D.role, inRoom: D.inRoom, post: D.mark.pos, learnedAt: D.learned, released: D.released, crewed: D.crew !== '' }; });
   }
 
+  /** rescueflush.ts: a man it sends is nobody's to send again — not the roamer's release at set, not Hard's crew */
+  letGo(gd: Guard) { const D = this.defs.get(gd); if (D) { D.released = true; D.crew = 'out'; } }
+  /** the floor just outside the hostage room's main door (rescueflush.ts: which man is nearest it) */
+  get outsidePoint(): Vec3 { return this.roomPoint('outside'); }
+  /** the floor a metre outside the hostage room's side door (rescueflush.ts: where a man sent round goes first); null on a level with none */
+  get sideOutside(): Vec3 | null { const n = this.data?.side?.door, d = n ? this.g.doors.byName(n) : undefined; return d ? this.outOf(d, this.bounds, 1.0) : null; }
   /** who holds the hostages right now: the living man of theirs in the office nearest a living hostage (null = nobody: the clock stands) */
   captor(): Guard | null {
     const B = this.bounds; let best: Guard | null = null, bd = 1e9;
-    const alive = this.hostages.filter(h => h.state !== 'dead'); if (!alive.length) return null;
-    const was = this.capBy; if (was && was.state !== 'dead' && !was.held && inBounds(was.char.pos, B)) return was;   // the man who has it keeps it while he can: a second man walking in takes nothing over
-    for (const h of this.hostiles) {
+    const all = this.hostages.filter(h => h.state !== 'dead'); if (!all.length) return null;
+    const alive = RESCUEEND.on || RESCUEFLUSH.on ? all.filter(x => inBounds(x.char.pos, B)) : all;   // (the rules that let a hostage leave the room: a man standing in it has the ones still IN it — one walked out of it is had by line and reach, flush.holder below)
+    const was = this.capBy; if (alive.length && was && was.state !== 'dead' && !was.held && inBounds(was.char.pos, B)) return was;   // the man who has it keeps it while he can: a second man walking in takes nothing over
+    if (alive.length) for (const h of this.hostiles) {
       if (h.state === 'dead' || h.held || !inBounds(h.char.pos, B)) continue;
       const d = Math.min(...alive.map(x => flat(x.char.pos, h.char.pos))); if (d < bd) { bd = d; best = h; }
     }
-    return best;
+    return best ?? this.flush.holder(was);   // (rescueflush.ts, null with its switch off: nobody of theirs in the room — a man with a line to one of them from outside it has her)
   }
   /** THE CAPTOR'S LAST WARNING, as the men at a door have it (doortools.ts DOORTOOLS.thrLast): `d` is one of the hostage room's doors, a man of theirs still
    *  holds the hostages, and his clock is at its last step — 'about to' (the step the HUD words for Sam the moment it is reached, and the captor's "last
@@ -883,12 +896,13 @@ export class Rescue {
       const by = A.by;
       if (by.state === 'dead' || g.time < by.dazzledUntil || g.time < by.staggerUntil || by.held || A.victim.state === 'dead') { this.endAct(); this.note('act:broken'); return; }   // shot, blinded or grabbed with his gun on her: the round never comes (and the clock is where it was — the next second he is free he turns again)
       if (g.time < A.at) return;
+      if ((RESCUEEND.on || RESCUEFLUSH.on) && !this.flush.victims(by, [A.victim]).length) { this.endAct(); this.note('act:broken'); return; }   // she was walked out of his line while he brought the gun up: no round
       const c = by.char, v = A.victim, chest = v.char.bones.chest ?? v3.add(v.char.pos, [0, 0.6, 0]);
       if (!by.weapon.fire()) { by.weapon.rearm(); by.weapon.fire(); }
       const pl = g.player, upBefore = this.ops.filter(o => o.state !== 'dead').length, flash = pl.hitFlash, down = pl.down;
       fireWeapon(g, c, chest, false, { steady: true, spread: 0.01 });
       const took = pl.down !== down || pl.hitFlash > flash || this.ops.filter(o => o.state !== 'dead').length < upBefore;   // one of the team was standing in the line: the round is his (an AI round tests the men it is hostile to, never a civilian — the hostage's death is the scenario's to deal)
-      this.endAct(); { const A = this.data?.room.doorAim; if (A) by.lastKnown = [A[0], 0, A[2]]; } by.awareness = 1;
+      this.endAct(); { const A = this.data?.room.doorAim; if (A && (!(RESCUEEND.on || RESCUEFLUSH.on) || inBounds(by.char.pos, this.bounds))) by.lastKnown = [A[0], 0, A[2]]; } by.awareness = 1;   // (back on the door he holds — a man who shot from outside the room, rescueflush.ts, keeps what he was hunting)
       if (took) { this.note('act:blocked'); return; }   // (the clock stays where it was: he turns on her again the next moment he can)
       this.executed.add(v); killGuard(g, v, v3.normalize(v3.sub(chest, c.muzzle)), false, 'shot', 'guard');
       if (WORDS.on) { const o = this.hostages.find(h => h !== v && h.state !== 'dead'); if (o) hostageSay(g, o, 'shot', v); this.murmurAt = g.time + 6; }
@@ -897,7 +911,8 @@ export class Rescue {
     }
     const cap = this.captor();
     if (!cap) { this.setStep('stopped'); return; }
-    if (this.capBy && this.capBy !== cap) this.resolve = Math.min(this.resolve, Math.max(0, 1 - K.secondHostageSecs / this.resolveSecs));   // the clock has passed to another man (the captor is down, or this one has just come in): he is that long from doing it, however far the last one had got
+    if (this.capBy !== cap && RESCUEFLUSH.on && this.flush.came(cap)) this.resolve = Math.max(0, 1 - RESCUEFLUSH.killSecs / this.resolveSecs);   // (rescueflush.ts: a man who CAME for them has made up his mind — killSecs from it, however little of the clock had run)
+    else if (this.capBy && this.capBy !== cap) this.resolve = Math.min(this.resolve, Math.max(0, 1 - K.secondHostageSecs / this.resolveSecs));   // the clock has passed to another man (the captor is down, or this one has just come in): he is that long from doing it, however far the last one had got
     this.capBy = cap;
     if (g.time < cap.dazzledUntil || g.time < cap.staggerUntil) return;   // blind (or doubled over a ring): the clock stands for as long as he is
     this.resolve = Math.min(1, this.resolve + dt / this.resolveSecs);
@@ -905,7 +920,8 @@ export class Rescue {
     if (g.time >= this.barkAt && cap.state !== 'dead') { this.barkAt = g.time + 5 + this.resolve * 2; g.say(cap, this.step === 'about to' ? w('last chance! I mean it!', 'last chance! i mean it!') : this.step === 'counting' ? w('I\'m counting! back off!', 'i\'m counting! back off!') : w('stay out! I\'ll do it!', 'stay out! i\'ll do it!')); }
     if (this.resolve >= 1) {
       const alive = this.hostages.filter(h => h.state !== 'dead'); if (!alive.length) return;
-      const v = alive.reduce((a, b) => flat(a.char.pos, cap.char.pos) <= flat(b.char.pos, cap.char.pos) ? a : b);
+      const mine = RESCUEEND.on || RESCUEFLUSH.on ? this.flush.victims(cap, alive) : alive; if (!mine.length) return;   // (a hostage may have left the room: his gun goes on one he HAS — in the room with him, or in his line)
+      const v = mine.reduce((a, b) => flat(a.char.pos, cap.char.pos) <= flat(b.char.pos, cap.char.pos) ? a : b);
       const at = v.char.bones.chest ?? v3.add(v.char.pos, [0, 0.6, 0]);
       // (for that second he is on the scenario's script — and off the room fight's roster, which lets nobody else script a man holding a post of its own: his
       // record is kept and handed back, so what he had heard at which door is not lost — endAct)
@@ -938,6 +954,7 @@ export class Rescue {
     for (const h of this.hostages) {
       if (h.state !== 'dead' || this.counted.has(h)) continue; this.counted.add(h);
       if (this.executed.has(h)) { this.note(`executed:${h.callsign}`); g.msg(`${h.civ?.name ?? 'a hostage'} has been shot`); }
+      else if ((RESCUEEND.on || RESCUEFLUSH.on) && this.hostiles.some(x => x.char.id === h.killerId)) { this.note(`killed:${h.callsign}`); g.msg(`${h.civ?.name ?? 'a hostage'} has been killed`); }   // (a hostage on her feet caught by a grenade of THEIRS: frag.ts names its thrower — theirs to answer for, as a round of theirs is)
       else { this.note(`teamfire:${h.callsign}`); this.end('lost', `${h.civ?.name ?? 'a hostage'} was hit by your own fire`); return; }
     }
     const alive = this.hostages.filter(h => h.state !== 'dead').length;
@@ -946,10 +963,12 @@ export class Rescue {
     const B = this.bounds, pad = isNaN(this.securedAt) ? 0 : 0.4;   // (once it is held, a step onto the threshold does not let go of it; and a room taken without a sound — a quiet start's clock never started — is taken all the same)
     const theirs = this.hostiles.some(h => h.state !== 'dead' && !h.held && inBounds(h.char.pos, B));
     const ours = (!g.player.down && inBounds(g.player.char.pos, B, pad)) || this.ops.some(o => o.state !== 'dead' && inBounds(o.char.pos, B, pad));
-    if (!theirs && ours) {
-      if (isNaN(this.securedAt)) { this.securedAt = g.time; this.note('secured'); g.msg(`hostage room secured — hold it (${Math.round(K.holdSecs)} s)`);
+    if (RESCUEEND.on) { const how = this.ending.won(); if (how) { this.end('rescued', how === 'out' ? `${alive} of ${this.hostages.length} hostages out` : `${alive} of ${this.hostages.length} hostages alive · building cleared`); return; } }   // (rescueend.ts: the two ways it is won — the hold below ends nothing)
+    const kept = RESCUEEND.on && !isNaN(this.securedAt) && (!theirs || !this.hostages.some(h => h.state !== 'dead' && inBounds(h.char.pos, B)));   // (the rule on: a room taken stays taken while nobody of theirs is back in it with the hostages — the team may walk out of it with them, and leave them anywhere)
+    if ((!theirs && ours) || kept) {
+      if (isNaN(this.securedAt)) { this.securedAt = g.time; this.note('secured'); g.msg(RESCUEEND.on ? 'hostage room secured — bring them out, or clear the building' : `hostage room secured — hold it (${Math.round(K.holdSecs)} s)`);
         if (WORDS.on && !this.said.has('h:secured')) { this.said.add('h:secured'); const h = this.hostages.find(x => x.state !== 'dead'); if (h && hostageSay(g, h, 'secured')) this.ackAt = g.time + 2.4; } }
-      else if (g.time - this.securedAt >= K.holdSecs) this.end('rescued', `${alive} of ${this.hostages.length} hostages alive`);
+      else if (!RESCUEEND.on && g.time - this.securedAt >= K.holdSecs) this.end('rescued', `${alive} of ${this.hostages.length} hostages alive`);
     } else if (!isNaN(this.securedAt)) { this.securedAt = NaN; this.note('unsecured'); g.msg(theirs ? 'contact in the hostage room — it is not yours yet' : 'nobody is holding the hostage room'); }
   }
   /** THE HOSTAGES' VOICES (the dialogue pass — words.ts; the words are dialogue.ts HOSTAGE_LINES, the saying civilians.ts hostageSay). One low line at a time
@@ -986,7 +1005,7 @@ export class Rescue {
     const g = this.g;
     const team = (g.player.down ? 0 : 1) + this.ops.filter(o => o.state !== 'dead').length;
     const secs = isNaN(this.t0) ? 0 : (isNaN(this.securedAt) || state === 'lost' ? g.time : this.securedAt) - this.t0;
-    const timed = isNaN(this.t0) ? 'room secured before anybody knew' : `room secured ${secs.toFixed(0)} s after the clock started`;
+    const timed = isNaN(this.t0) ? 'room secured before anybody knew' : isNaN(this.securedAt) && state === 'rescued' ? `${secs.toFixed(0)} s after the clock started` : `room secured ${secs.toFixed(0)} s after the clock started`;   // (a floor cleared with the room never stood in — rescueend.ts — has no 'secured' to time)
     const left = this.hostages.filter(h => h.state !== 'dead').length;
     const grade = state === 'lost' ? 'failed' : left === this.hostages.length ? 'clean' : 'costly';
     this.result = { state, grade, why, hostages: left, team, secs };
@@ -1011,6 +1030,8 @@ export class Rescue {
     const R = this.result;
     if (R) return { text: R.state === 'rescued' ? `${R.grade === 'clean' ? 'clean' : 'costly'} — ${R.why} · shift+enter stages it again` : `failed — ${R.why} · ${this.g.player.down ? 'enter' : 'shift+enter'} stages it again`, pos: null };
     const alive = this.hostages.filter(h => h.state !== 'dead').length;
+    if (RESCUEEND.on && (!isNaN(this.securedAt) || this.ending.lead)) {   // (rescueend.ts: where to take them — and the clock, when a man of theirs has one of them again)
+      const o = this.ending.objective(); return { text: RESCUE.clock && !isNaN(this.t0) && this.step !== 'stopped' ? `${o.text} · the captor is ${this.step}` : o.text, pos: o.pos }; }
     if (!isNaN(this.securedAt)) return { text: `objective ▸ hold the hostage room · ${Math.max(0, Math.ceil(RESCUE.holdSecs - (this.g.time - this.securedAt)))} s`, pos };
     const clock = !RESCUE.clock || isNaN(this.t0) ? '' : this.step === 'stopped' ? ' · nobody on them' : ` · the captor is ${this.step}`;
     const behind = RESCUE.marks && this.dynamic ? this.flow.line() : '';   // (the openings Sam has come past, and what is known of each — in place of the directions he no longer needs)

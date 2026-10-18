@@ -64,11 +64,12 @@ const DEFAULTS = { ...RESCUE }, FLASH_ON = FLASH.on;
  *    rescue-flow-pass      DOORMANNERS.on (the nearer man 3.5 m from Sam)
  *    rescue-flow-states    DOORMANNERS.on · glass (the roamer behind the conference glazing is shot through the pane)
  *    rescue-flow-twodoor   DARKFOE.on ('F is a man short')
- *    rescue-orders         DOORMANNERS.on · DARKFOE.on
+ *    rescue-clock          RESCUEEND.on (its last scenes stand in a room with every man of theirs down: under the rule that is a run already won, cleared)
+ *    rescue-orders         DOORMANNERS.on · DARKFOE.on · RESCUEEND.on (it asks for the old end by name: the room held holdSecs)
  *    rescue-set            DOORMANNERS.on · glass · MOVES.gait (one part of the moves, the page under TPS_MOVES=1,gait=0. With glass held and the gait on, the untrained
  *                          stance lifts the captor's head a few degrees and — as traced on the moves' side — he sees the pair through the pane before the bang: the six-seed tally reads 4 of 6
  *                          rooms and 7 of 12 men where every bound was read at 6 of 6 and 12 of 12. Only in this staging — with nothing held the gait costs nothing) */
-export type Staged = 'DOORWAY.oneWay' | 'DOORMANNERS.on' | 'DARKFOE.on' | 'DOORTOOLS.testDoor' | 'DOORTOOLS.outsidePlain' | 'MOVES.gait' | 'glass';
+export type Staged = 'DOORWAY.oneWay' | 'DOORMANNERS.on' | 'DARKFOE.on' | 'DOORTOOLS.testDoor' | 'DOORTOOLS.outsidePlain' | 'MOVES.gait' | 'RESCUEEND.on' | 'glass';
 let HELD: readonly Staged[] = []; const HELD_OFF = new Set<string>();
 /** the glass parts off for a game a 'glass' probe has stood, by the frozen stand's own line (src/host/standup.ts): they are the stood game's, not a table's */
 function holdGlass(game: any) {
@@ -187,7 +188,7 @@ export const rescueStage = guarded(async () => {
   return F.done();
 });
 
-export const rescueClock = guarded(async () => {
+export const rescueClock = staged(['RESCUEEND.on'], async () => {
   const F = family('rescue-clock: the captor\'s clock — the steps, the two shots, the charge that stops it, the round that loses the run');
   const K = { resolveSpread: 0, resolveSecs: 20, secondHostageSecs: 6 };
   const hold = (T: any) => { give(T, 'hold'); T.step(); };   // (the menu's hold: the clock started by an order, the pair standing where they are)
@@ -246,7 +247,7 @@ export const rescueClock = guarded(async () => {
   return F.done();
 });
 
-export const rescueOrders = staged(['DOORMANNERS.on', 'DARKFOE.on'], async () => {
+export const rescueOrders = staged(['DOORMANNERS.on', 'DARKFOE.on', 'RESCUEEND.on'], async () => {
   const F = family('rescue-orders: F bangs and clears the hostage room (the door tools\' order, given for Sam); the order menu has the pair otherwise; the quiet start\'s two words');
   // (the light rule's own line is read with the goggles off: with them — nvg.ts — the pair walks the corridor dark until the charge, probes.ts nvg-quiet / nvg-loud)
   { const nv = NVG.on; NVG.on = false; const T = await rig(11, { setSecs: 30, captorSet: false }); const R = T.R; T.secs(0.5); const dark = R.ops.every((o: any) => !o.flashlight.enabled); T.press('KeyF'); T.secs(1.5);
