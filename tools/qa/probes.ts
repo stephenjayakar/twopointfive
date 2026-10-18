@@ -31,7 +31,7 @@
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
-//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-off
+//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
@@ -2443,6 +2443,7 @@ if (on('handwork-harness', 'handwork', 'all')) await run('handwork-harness', asy
 if (on('gunslots-card', 'gunslots', 'kit', 'all')) await run('gunslots-card', async () => (await import('./gunslots-check.ts')).gunslotsCard());     // two gun rows where the one stood, the old gun field following, a card from before them, off = the rows before
 if (on('gunslots-mate', 'gunslots', 'all')) await run('gunslots-mate', async () => (await import('./gunslots-check.ts')).gunslotsMate());            // a staged teammate's second gun, out when dry and near, back and reloaded when nobody is in front of him
 if (on('gunslots-fight', 'gunslots', 'all')) await run('gunslots-fight', async () => (await import('./gunslots-check.ts')).gunslotsFight());         // two men dry at five metres: the third man goes down to a sidearm inside the reload
+if (on('gunslots-guns', 'gunslots', 'all')) await run('gunslots-guns', async () => (await import('./gunslots-check.ts')).gunslotsGuns());             // the guns the two rows offer, each set apart by a measure: reach, who hears it, the turn, the feed; a fight with each
 if (on('gunslots-off', 'gunslots', 'all')) await run('gunslots-off', async () => (await import('./gunslots-check.ts')).gunslotsOff());               // off = the same run by digest, the stands' row, the registry, a recording from before it
 // THE PLAYER CARRIES AND SETS CHARGES LIKE THE SQUAD (src/game/owncharge.ts; tools/qa/owncharge-check.ts raises the switch itself, so it asks the same on either stand; OWNCHARGE_BREAK=1 must fail)
 if (on('owncharge-kit', 'owncharge', 'kit', 'all')) await run('owncharge-kit', async () => (await import('./owncharge-check.ts')).ownchargeKit());       // the two rows on your card with the switch, the teammates' prices, the squad's count, the store, no squad cap on wall charges

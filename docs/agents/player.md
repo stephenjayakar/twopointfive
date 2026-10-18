@@ -588,15 +588,42 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   sling while the sidearm is out (`combat.ts hungSide` → `rigProps hungBoxes`). `sideTick` (every frame, `game.ts`): nobody in his eyes and no round from
   it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.5 s); an empty
   sidearm is never drawn. Past `near`, or with no
-  second gun, he reloads as he always has. You: nothing changes in your hands. No checkpoint slice: a floor with a spawned unit on it takes no
+  second gun, he reloads as he always has. You: the swap in your hands is as it was (1 your secondary, 2 your primary); which two guns they are is
+  your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no
   checkpoint (`savestate.ts canSave`), and every teammate is one.
   UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
   `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
-  Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
-  `GUNSLOTS_BREAK=1` fails all four families. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
+  Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -guns -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
+  `GUNSLOTS_BREAK=1` fails every family. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
   switch held off (`probes.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
   on, the third is down to a sidearm round 0.50 s after the guns ran dry; off, he was still standing twelve seconds later (one seed, one room).
-  `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE: more guns than the two (the Secondary row has one
-  value until then);
+  `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE:
   a swap ANIMATION on a teammate (his pose changes with the row in his hands, the equip sound plays, nothing is animated between); the dry man's sense
   beyond range and sight (he does not weigh cover or a mate's line). Headless only; never seen on a GPU, never played.
+
+- **More guns in the two slots** (`weapons.ts WEAPONS` rows `mk12 mp7 mk46 m1014 hk45 g18`, offered by `gunslots.ts PICKS`; the maintainer, 10-18: "should we
+  model more firearms?"). Under `GUNSLOTS` (the bullet above: no switch of their own — off, nothing constructs one). EACH IS SET APART BY SOMETHING FELT,
+  NEVER BY HIT POINTS (`damage: 'oneShot'`, every row). Primaries: **Mk 18** (the issue carbine, `fn2000` / bare `aks74u`: the only one with the launcher
+  under it) · **Mk 12** REACH (semi, 20, `hands.still` 0.45 and half the carbine's `aiSpread`; slow to come round 0.62, wide on the move) · **MP7** QUIET
+  AND QUICK (report 0.8 = not gunfire, 40 at 900 a minute, handling 0.95, the steadiest on the move; no group past a room) · **Mk 46** VOLUME (100 on the
+  belt, a string that barely opens; handling 0.5, wide on the feet and closed kneeling `hands.crouch`, 6 s to feed, loud, tracers) · **M1014** THE ROOM
+  (7 shells at 0.28 s, a tighter pattern to 10 m; opens no lock — `PelletSpec.breach` is now OPTIONAL and absent on it, so no door tool picks its man as the
+  breacher). Secondaries: **Glock 19** (issue: `fiveseven` / bare `guard9mm`) · **HK45** THE QUIETEST (report 0.45, 8 rounds, slower) · **Glock 18** (33
+  on automatic, loud; Z with it selected is its selector). New row fields: `hands` (your cone's multipliers by row — `player.ts rifleSpread`), `launcher:
+  false` (`Rifle`: no ring, no 40 mm, no camera tube; `kit.ts tubed(m)` homes the shells and the cameras and the card says which gun has one), `weightKg`
+  and `bulk` (DATA for the kit's mobility and concealment score: nothing reads them yet). YOUR GUNS ARE YOUR CARD'S: `kitPlayer` builds `pl.rifle` /
+  `pl.pistol` from the two picks (`Pistol` takes a row; the issue pair is the pair you were built with — nothing is made), the pistol's fire site reads an
+  automatic sear as the rifle's does (only on a row with `auto`: the issue pistol's path is the one it was), a checkpoint restores the sidearm by its id.
+  A pick is `{ can, bare }`: the row with the suppressor on and with it off — the new ones exist one way only, so a teammate's Suppressor row changes
+  nothing on them (the roster chips and the card draw a can by the row's own `suppressed`: `kitRowCan`). A shield man's hand gun is his Secondary pick.
+  **A teammate's quiet round is heard** (`GUNSLOTS.heard`, on with the switch): a report below the gunshot line from the other side's gun (`guardShot`,
+  `shotRelation` = threat) is the odd noise your own is (`guards.ts hearingCheck`) — before, only YOUR quiet rounds reached anybody, so a suppressed
+  pistol or an MP7 in a teammate's hands was heard by nobody at any range. This changes quiet play in a pair on the page (his suppressed pistol too): a call
+  left for the maintainer. EVERY NEW GUN IS A STAND-IN TO LOOK AT AND LISTEN TO: drawn as the issue carbine / the pump gun / the issue pistols, speaking
+  with their reports, ejecting their brass (`particleFx CASINGS`), the HUD's pips standing for two or five rounds on a big magazine (`ui/overlay.ts`).
+  Check: `gunslots-guns` (in `gunslots-check.ts`), both stands, fails under `GUNSLOTS_BREAK=1`. MEASURED (headless, one floor, one seed): your group at
+  25 m standing still — Mk 12 0.11 m, Mk 18 0.25, Mk 46 0.38 (0.13 kneeling), MP7 0.40; a teammate's — Mk 12 1.1 m, Mk 46 2.8, Mk 18 3.4, MP7 6.5; the
+  farthest listener one round turns down a clear line — HK45 5 m, Glock 19 7 m, MP7 9 m, every other gun the whole line as gunfire; a teammate's MP7
+  round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
+  of their own; defenders drawing from the list; a teammate USING a gun for what it is for (the Mk 46 man does not hold lanes, the Mk 12 man does not
+  hang back); the weight in any score; tuning by play. Never seen on a GPU, never fired by a person.
