@@ -1815,7 +1815,7 @@ export class CharacterAnimator {
    *  the fist is on the torch by it: thumb to the lens in the low carry, thumb to the tail cap once it is raised */
   get torchUp(): number { return this.tuK; }
   /** GUNHAND.longReload: his long gun is off its line and his eyes are down at its magazine well — not on his sights, whatever carriage it is in (guards.ts
-   *  canSeeChar and fogofwar.ts gazeOf ask before they lay his eye on his aim). False with the rule off. */
+   *  canSeeChar asks before it lays his eye on his aim; fogofwar.ts gazeOf blends by `rlShown` instead, so the cone swings). False with the rule off. */
   get atWell(): boolean { return Math.max(this.rlc.k, this.rlc.h) > 0.5; }
   /** IN HAND (inhand.ts): nothing but the aim or the carry has the gun arm this frame — no hold, errand, swap, one-shot or look-only move over it. Character.inHandPass
    *  turns a pistol's or a torch's hand only then (and eases out otherwise): it does not fight a pose that has somewhere else to put that hand */
