@@ -110,14 +110,14 @@ export const GLASSHOUSE_STRUCTURE: StructureData = {
   ],
 };
 /** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): both ways are the station's own walls, nothing built for
- *  the picture. WAY 1 is the hole the mission issues its one wall charge for: a span of the blank end wall over three of that wall's own columns (it is cut in 19
- *  of 0.514 m from z 8.12; the three run 13.26 to 14.80), the stack toward the forecourt — so the camera looks down the dark side yard at the lit corner, and the wedge behind
- *  the wall is the glasshouse's end: the benches of seedling trays under the panes the floodlamps shine through. The span stops there and not a column further
- *  along: the lane beside the stack would end on the water tank's plinth. WAY 2 is the back door from the back lot, the stack on the latch's side, with the
+ *  the picture. WAY 1 was a span of the blank end wall, the hole the mission issues its one wall charge for — and a picture on a blank wall had nothing for the
+ *  kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle; the gun only scanned). It is the FRONT
+ *  door now, seen from the forecourt (`ref`: the team's own start is round the corner, on the building's other side of that wall's line), the stack along the
+ *  glass: the gun's row has a pane to fire through, and the wall charge opens the wall beside the door. WAY 2 is the back door from the back lot, the stack on the latch's side, with the
  *  store's own bulb kept burning (`keepLights`: the one lit room of the level, and what its vent shows from that lot): the seed racks stand behind that stretch
  *  of wall. */
 const GLASSHOUSE_KITVIEW: KitViewData = { ways: [
-  { span: [[30, 13.25], [30, 14.75]], side: 1 },
+  { door: 'front', ref: [20, 20.5] },
   { door: 'back', side: 1, keepLights: ['store'] },
 ] };
 export const GLASSHOUSE_SCENARIOS: LevelScenarios = { roomClear: GLASSHOUSE_STRUCTURE, kitView: GLASSHOUSE_KITVIEW,
@@ -157,7 +157,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.partZ(18, 8.12, 12.94, 'whitewash', [{ a: 8.26, b: 9.46 }]);                             // store | lab: blank, the store's door at the back-wall end (where the camera sees it: the note at STORE_E)
   G.partZ(24, 8.12, 12.94, 'whitewash', [screen(8.5, 10.0, 1), { a: 10.4, b: 11.6 }]);       // lab | office: a pane and the office's door
   G.dado('x', 18, 17.6, 19.4, -1, 'paintGreen'); G.dado('x', 18, 20.6, 22.4, -1, 'paintGreen');   // the station's green, on the block round the front door (inside)
-  G.skirt('x', 8, 10, 30, -1); G.skirt('z', 10, 8, 18, -1); G.skirt('z', 30, 8, 18, 1);      // the damp foot of the blank walls, outside
+  G.skirt('x', 8, 10, 13.76, -1); G.skirt('x', 8, 14.74, 30, -1); G.skirt('z', 10, 8, 18, -1); G.skirt('z', 30, 8, 18, 1);      // the damp foot of the blank walls, outside (it stops at the back door's frame, 13.76‥14.74: a band run across a doorway reads as a slab standing in it)
 
   // ---- the seed racks: steel shelving stacked to the beams with sacked seed, down the store 1.9 m inside its lab door, from the back wall to 1.44 m short
   // of the wall the glasshouse is behind. KEPT, not furniture: it is why the store is blind. The lab's door is at the racks' closed end and the way round them

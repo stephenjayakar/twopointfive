@@ -95,7 +95,7 @@
     "rugMadder": { "albedo": [0.1, 0.03, 0.035], "rough": 0.95 }
   },
   "surfaces": {
-    "building": { "x0": 12, "x1": 26, "z0": 8, "z1": 18 },
+    "building": { "x0": 0, "x1": 40, "z0": 0, "z1": 28 },
     "grassEdge": 0,
     "inside": "asphalt",
     "outside": "asphalt",
@@ -550,7 +550,7 @@
     },
     "kitView": {
       "ways": [
-        { "span": [[14.72, 23], [17.28, 23]], "side": -1, "hide": ["outside"], "light": { "porch": { "offset": [1.61, 0.77, 2.38], "aim": [3.2, 1.6, 0], "fixture": { "at": [1.61, 0.27, 2.25], "half": [0.17, 0.045, 0.05], "glow": 5 } } } }
+        { "door": "front" }
       ]
     }
   }

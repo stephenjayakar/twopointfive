@@ -16,6 +16,8 @@ import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Vec3, v3, clamp } from '../math/vec';
 import { RIG, rigSource } from '../game/rigProps';
 import { INHAND } from '../game/inhand';
+import { GUNHAND } from '../game/gunhand';
+import { PACKSIDE } from '../game/packside';
 import { gearFromQuery, gearText } from '../game/gear';
 import { HOLD, LONG, SignalKind, Stance, LongStance } from '../game/character';
 import { createEditorApp, EditorApp } from '../editor/app';
@@ -57,7 +59,9 @@ async function main() {
   let quality: Quality | null = null;
   let prefs: any = {}; try { prefs = JSON.parse(localStorage.getItem(persist.LS.prefs) ?? '{}'); } catch { /* */ }
   gearFromQuery(new URLSearchParams(location.search));   // the workbench stages the kit as the page ships it (game/gear.ts; the game page's own line is host/profile.ts pageSwitches): the 2010s carbine and goggles, ?oldgear = the Splinter Cell kit
+  PACKSIDE.on = new URLSearchParams(location.search).get('packside') === '1';   // (game/packside.ts: a long thing on a back that wears a pack stands at the pack's side — OFF here unless ?packside=1: there the across-the-back gizmos would move nothing on screen while a drag still rewrote their numbers)
   INHAND.on = new URLSearchParams(location.search).get('inhand') !== '0';   // (game/inhand.ts, as the game page boots it — host/profile.ts pageSwitches: what a staged man holds is drawn in his hand, so a rig number fitted here is judged on the picture the game draws; ?inhand=0 = as it was)
+  GUNHAND.on = new URLSearchParams(location.search).get('gunhand') !== '0';   // (game/gunhand.ts, likewise: the moves that keep to the free hand — the whistle's torch, the throw, a long gun's reload — are judged here as the page plays them)
   LOOK.on = lookOfQuery(new URLSearchParams(location.search));   // (the default look, as the game page boots it — host/profile.ts pageSwitches: the staged men wear the cast and the material tables the game draws; ?look=plain = the old cast. Set before the runtime fetches the cast)
   const qp = new URLSearchParams(location.search).get('quality');
   let qName: QualityName = (QUALITY_NAMES as string[]).includes(qp ?? '') ? qp as QualityName : (QUALITY_NAMES as string[]).includes(prefs.quality) ? prefs.quality : 'medium';

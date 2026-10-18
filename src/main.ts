@@ -83,7 +83,6 @@ import { GEAR } from './game/gear';
 import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpots } from './game/civilians';
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
-import { shieldCarried, giveShield } from './game/shield';   // (already loaded by game/kit.ts above: no load order moves)
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
@@ -693,11 +692,11 @@ async function main() {
   // ?kitview (host/kitView.ts): this page is the start page's PICTURE of the team at the mission's way-in door, in an iframe there — staged once the scenario above
   // has stood its team, then live (the open card's man uses his kit at the door) or, `&stillkit`, frozen, drawn for a warm window and held; it takes the
   // loop's `frozen`, `render` and two seams over and is read-only on storage
-  const kitView: KitView | null = kitViewOn ? kitViewStart({ game, engine, cam, input, view: canvas, loop, audio, team: () => teamOf(game), shield: shieldCarried, doorSide: sideOf, file: () => levelFileOf.get(game.level) ?? null, lampsOut: () => { const h = hourOf(game); return h !== 'night' && !HOURS[h].lamps; }, glowBox: (c, h, yaw, glow) => makeBox({ c, h, yaw, albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }),   // (dark under its glow: at 0.9 a weapon light crossing it lit a hard white box on the wall — the owner's recording, 10-14; a guess at what that was, never seen on a GPU)
-    kitCards: members => kitLoad({ getItem: () => JSON.stringify({ v: 2, members }), setItem: () => { /* nothing kept */ } }, location.search),
+  const kitView: KitView | null = kitViewOn ? kitViewStart({ game, engine, cam, input, view: canvas, loop, audio, team: () => teamOf(game), doorSide: sideOf, file: () => levelFileOf.get(game.level) ?? null, lampsOut: () => { const h = hourOf(game); return h !== 'night' && !HOURS[h].lamps; }, glowBox: (c, h, yaw, glow) => makeBox({ c, h, yaw, albedo: [0.04, 0.04, 0.04], emissive: glow, flags: BoxFlag.Emissive | BoxFlag.AreaLit }),   // (dark under its glow: at 0.9 a weapon light crossing it lit a hard white box on the wall — the owner's recording, 10-14; a guess at what that was, never seen on a GPU)
+    kitCards: members => kitLoad({ getItem: () => JSON.stringify({ v: 2, own: true, members }), setItem: () => { /* nothing kept */ } }, location.search),
     kit: () => KIT.members, tiles: i => kitRows(i).map(r => r.field), smoke: n => squadSmokeStage(game, n),
     gun: i => kitGun(KIT.members[i]), tints: i => { const m = KIT.members[i]; return { suit: m.suit === 'issued' ? null : SUITS[m.suit].tint, trim: m.trim === 'issued' ? null : TRIMS[m.trim].tint }; },   // (written on the live men: a card changed under the picture's eye)
-    samCard: () => { kitShow(game); kitPlayer(game); }, giveShield, turn: spec => { setTurn(spec); },
+    samCard: () => { kitShow(game); kitPlayer(game); }, turn: spec => { setTurn(spec); },
     fire: (man, at) => { const c = man ? man.char : game.player.char, w = firearmOf(game, c, !man); if (!w.fire()) { w.rearm(); w.fire(); }   // (as every fire site: Firearm.fire() cycles the round out FIRST — the gun's own counters are what tracers.ts isTracerRound reads; a dry or reloading gun is stood up fresh for it. The view tops the magazine up as the row ends)
       fireWeapon(game, c, at, !man, { steady: true }); }, panes: () => glassMod.glassPanes(game).map(i => game.level.boxes[i]),
     mendGlass: () => { glassMod.resetGlass(game); resetGlassPen(game); } }) : null;

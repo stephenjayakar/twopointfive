@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "hall",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/hall.ts build → tools/levels/export.ts", "notes": "The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, one teammate issued the shield (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall" },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/hall.ts build → tools/levels/export.ts", "notes": "The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall" },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -348,7 +348,7 @@
       ]
     },
     "issue": {
-      "members": { "1": { "shield": true, "bangs": 2, "charges": 0, "frags": 0 } }
+      "members": {  }
     },
     "kitView": {
       "ways": [

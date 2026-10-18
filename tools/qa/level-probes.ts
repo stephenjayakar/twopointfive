@@ -8,7 +8,7 @@
 //   level-roundtrip  LevelData → Level → LevelData is the identity on the office (ids, groups, materials, pinned footprints all survive), the serializer is
 //                    a fixed point (serialize ∘ parse ∘ serialize), and two loads share no mutable state.
 //   bun run tools/qa/probes.ts level        (each prints PASS / FAIL lines; probes.ts sets exit code 1 if any level probe FAILed)
-import { ROOT } from './headless.ts';
+import { ROOT, asExporter } from './headless.ts';
 
 const { buildLevel, OFFICE_DATA } = await import(`${ROOT}/src/scene/level.ts`);
 const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/src/scene/officeGen.ts`);
@@ -16,6 +16,7 @@ const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`
 const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData, indexLevelData, freshId } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE, floorAt } = await import(`${ROOT}/src/game/floor.ts`);
+const { EXACT } = await import(`${ROOT}/src/math/exact.ts`);
 
 let failures = 0;
 function verdict(ok: boolean, what: string, detail = '') { if (!ok) failures++; console.log(`  ${ok ? 'PASS' : 'FAIL'} ${what}${detail ? ` — ${detail}` : ''}`); }
@@ -35,28 +36,37 @@ function exportOpts(trace: { groups: string[] }) {
 
 export async function levelIdentity() {
   console.log('\n=== level-identity: the procedural generator vs levels/office.json → loadLevel, field for field ===');
-  const trace = { groups: [] as string[] };
-  const A = buildOfficeProcedural(trace);          // the legacy generator
-  const B = buildLevel();                          // the bundled JSON through the loader — what main.ts and the harness boot
-  const diffs: string[] = []; const n = structuralDiff(A, B, diffs, 5);
-  console.log(`  A (generator): ${A.boxes.length} boxes · ${A.lights.length} lights · ${A.switchables.length} switchables · ${A.doors.length} doors · ${A.routes.length} routes · ${A.props.length} props · ${A.clearPlans.length} clear plans`);
-  console.log(`  B (office.json): ${B.boxes.length} boxes · ${B.lights.length} lights · ${B.switchables.length} switchables · ${B.doors.length} doors · ${B.routes.length} routes · ${B.props.length} props · ${B.clearPlans.length} clear plans`);
-  verdict(n === 0, `Level A ≡ Level B structurally (${n} diff${n === 1 ? '' : 's'})`, n ? `first ${diffs.length}: ${diffs.join(' | ')}` : 'boxes in order with c/h/yaw/rot/albedo/emissive/flags/name/owner/cutHeight, lights, switchables (box indices), doors, routes, chokepoints, props (parts, half, height, mass), clear plans, breach, daylight, mission, breaker, beacons, sky, spawn');
-  // per-part tallies, so a reader sees what was compared even at 0
-  const parts: [string, unknown, unknown][] = [['boxes', A.boxes, B.boxes], ['lights', A.lights, B.lights], ['switchables', A.switchables, B.switchables], ['doors', A.doors, B.doors], ['routes', A.routes, B.routes], ['chokepoints', A.chokepoints, B.chokepoints], ['props', A.props, B.props], ['clearPlans', A.clearPlans, B.clearPlans], ['breach', A.breach, B.breach], ['daylight', A.daylight, B.daylight], ['mission', A.mission, B.mission], ['breaker', A.breaker, B.breaker], ['beacons', A.beacons, B.beacons], ['sky', A.sky, B.sky], ['playerSpawn', A.playerSpawn, B.playerSpawn]];
-  console.log('  per part: ' + parts.map(([k, a, b]) => `${k} ${structuralDiff(a, b, [], 0)}`).join(' · ') + ' (diffs)');
-  verdict(Object.keys(A).join(',') === Object.keys(B).join(','), 'same top-level key order', Object.keys(B).join(','));
-  // the strictest leaf check there is: Object.is over every number (−0 is the one thing === forgives) — reported, not gated: the file prints −0 as 0
-  let negZeroA = 0; const scan = (v: any) => { if (typeof v === 'number') { if (Object.is(v, -0)) negZeroA++; } else if (v && typeof v === 'object') for (const k of Object.keys(v)) scan(v[k]); }; scan(A);
-  console.log(`  note: the generator emits ${negZeroA} negative zero(s) (the bike's tilted-tube quaternions: 0·sin); the file holds them as 0 — equal under ===, and ±0 cannot change a rotation`);
-  // digests: both Levels converted with the same annotations hash alike, and equal the bundled data's digest
-  const dA = levelDataDigest(levelToData(A, exportOpts(trace))), dB = levelDataDigest(levelToData(B, { ...exportOpts(trace) })), dFile = levelDataDigest(OFFICE_DATA);
-  verdict(dA === dB && dB === dFile, 'digest(generator → data) = digest(loaded → data) = digest(levels/office.json)', `${dA} / ${dB} / ${dFile}`);
-  // staleness: what the exporter would write now IS the bundled file (byte for byte after canonical serialization)
-  const fresh = serializeLevelData(levelToData(A, exportOpts(trace))); const bundled = serializeLevelData(OFFICE_DATA);
-  verdict(fresh === bundled, 'levels/office.json is what tools/level-export.ts writes from the generator today (not stale)', fresh === bundled ? `${(fresh.length / 1024).toFixed(1)} KB, ${fresh.split('\n').length - 1} lines` : 'run: bun run tools/level-export.ts');
+  // (the whole comparison runs AS THE EXPORTER RUNS — headless.ts asExporter: on the engine's maths on every stand. The file on disk is what the exporter wrote,
+  // and it raises no stand; on a stand with the game's own maths up (math/exact.ts EXACT.on: the shipped one) the generator's sin / cos, and the loader's and the
+  // converter's fit of a prop's footprint, round a last bit another way, which would read as a stale file that no re-export can mend. What the generator makes
+  // on this stand's own maths is counted in a note after the verdicts, not gated.)
+  let bundled = '';
+  asExporter(() => {
+    const trace = { groups: [] as string[] };
+    const A = buildOfficeProcedural(trace);          // the legacy generator
+    const B = buildLevel();                          // the bundled JSON through the loader — what main.ts and the harness boot
+    const diffs: string[] = []; const n = structuralDiff(A, B, diffs, 5);
+    console.log(`  A (generator): ${A.boxes.length} boxes · ${A.lights.length} lights · ${A.switchables.length} switchables · ${A.doors.length} doors · ${A.routes.length} routes · ${A.props.length} props · ${A.clearPlans.length} clear plans`);
+    console.log(`  B (office.json): ${B.boxes.length} boxes · ${B.lights.length} lights · ${B.switchables.length} switchables · ${B.doors.length} doors · ${B.routes.length} routes · ${B.props.length} props · ${B.clearPlans.length} clear plans`);
+    verdict(n === 0, `Level A ≡ Level B structurally (${n} diff${n === 1 ? '' : 's'})`, n ? `first ${diffs.length}: ${diffs.join(' | ')}` : 'boxes in order with c/h/yaw/rot/albedo/emissive/flags/name/owner/cutHeight, lights, switchables (box indices), doors, routes, chokepoints, props (parts, half, height, mass), clear plans, breach, daylight, mission, breaker, beacons, sky, spawn');
+    // per-part tallies, so a reader sees what was compared even at 0
+    const parts: [string, unknown, unknown][] = [['boxes', A.boxes, B.boxes], ['lights', A.lights, B.lights], ['switchables', A.switchables, B.switchables], ['doors', A.doors, B.doors], ['routes', A.routes, B.routes], ['chokepoints', A.chokepoints, B.chokepoints], ['props', A.props, B.props], ['clearPlans', A.clearPlans, B.clearPlans], ['breach', A.breach, B.breach], ['daylight', A.daylight, B.daylight], ['mission', A.mission, B.mission], ['breaker', A.breaker, B.breaker], ['beacons', A.beacons, B.beacons], ['sky', A.sky, B.sky], ['playerSpawn', A.playerSpawn, B.playerSpawn]];
+    console.log('  per part: ' + parts.map(([k, a, b]) => `${k} ${structuralDiff(a, b, [], 0)}`).join(' · ') + ' (diffs)');
+    verdict(Object.keys(A).join(',') === Object.keys(B).join(','), 'same top-level key order', Object.keys(B).join(','));
+    // the strictest leaf check there is: Object.is over every number (−0 is the one thing === forgives) — reported, not gated: the file prints −0 as 0
+    let negZeroA = 0; const scan = (v: any) => { if (typeof v === 'number') { if (Object.is(v, -0)) negZeroA++; } else if (v && typeof v === 'object') for (const k of Object.keys(v)) scan(v[k]); }; scan(A);
+    console.log(`  note: the generator emits ${negZeroA} negative zero(s) (the bike's tilted-tube quaternions: 0·sin); the file holds them as 0 — equal under ===, and ±0 cannot change a rotation`);
+    // digests: both Levels converted with the same annotations hash alike, and equal the bundled data's digest
+    const dA = levelDataDigest(levelToData(A, exportOpts(trace))), dB = levelDataDigest(levelToData(B, { ...exportOpts(trace) })), dFile = levelDataDigest(OFFICE_DATA);
+    verdict(dA === dB && dB === dFile, 'digest(generator → data) = digest(loaded → data) = digest(levels/office.json)', `${dA} / ${dB} / ${dFile}`);
+    // staleness: what the exporter would write now IS the bundled file (byte for byte after canonical serialization)
+    const fresh = serializeLevelData(levelToData(A, exportOpts(trace))); bundled = serializeLevelData(OFFICE_DATA);
+    verdict(fresh === bundled, 'levels/office.json is what tools/level-export.ts writes from the generator today (not stale)', fresh === bundled ? `${(fresh.length / 1024).toFixed(1)} KB, ${fresh.split('\n').length - 1} lines` : 'run: bun run tools/level-export.ts');
+  });
   const onDisk = await Bun.file(`${ROOT}/levels/office.json`).text();
   verdict(onDisk === bundled, 'the file on disk is in canonical form (serialize(parse(file)) === file)', onDisk === bundled ? '' : 'hand-edited out of canonical order/format — re-save through serializeLevelData');
+  if (EXACT.on) { let said = 'the generator threw'; try { const d: string[] = [], n = structuralDiff(buildOfficeProcedural({ groups: [] }), buildLevel(), d, 2); said = `${n} difference(s)${n ? `: ${d.join(' | ')}` : ''}`; } catch { /* a note, never a verdict */ }
+    console.log(`  note: on this stand's own maths, the generator against the loaded file: ${said} — not gated (a last bit of a sin or a cos; more than a handful means a branch in the generator turns on one)`); }
 }
 
 export async function levelValidate() {

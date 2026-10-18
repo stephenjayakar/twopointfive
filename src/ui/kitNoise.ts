@@ -8,7 +8,7 @@
 //   3  the blast, `level: 2` — frag.ts blast(): a frag grenade, and a 40 mm grenade (he40.ts goes off with the same blast)
 // A gun's step is read off its row of WEAPONS when asked, so a gun retuned there moves its mark with it.
 import { WEAPONS, type WeaponId } from '../game/weapons';
-import { bigOf, kitGun, type MemberKit } from '../game/kit';
+import { bigOf, kitGun, kitSecond, type MemberKit } from '../game/kit';
 
 export type KitNoise = 0 | 1 | 2 | 3;
 const gun = (id: WeaponId): KitNoise => (WEAPONS[id]?.report.loud ? 2 : 1);
@@ -19,6 +19,8 @@ const FIXED: Record<string, KitNoise> = { smoke: 1, cams: 1, bangs: 2, charges: 
 /** The step for the card's row `field` as member `i`'s card `m` stands (a count of none still has its step: it is what the thing WOULD do). */
 export function kitNoise(field: string, m: MemberKit, i: number): KitNoise {
   if (field === 'weapon') return gun(i === 0 ? SAM[m.weapon] ?? 'fiveseven' : kitGun(m));
+  if (field === 'primary') return m.weapon === 'pistol' ? 0 : gun(kitGun(m));   // (game/gunslots.ts: the two slots' rows — each by its own row's report)
+  if (field === 'secondary') { const w = kitSecond(m); return w ? gun(w) : 0; }
   if (field === 'big') { const b = bigOf(m); return b === 'shotgun' ? gun('m870') : b === 'hammer' || b === 'wall' ? 2 : 0; }
   return FIXED[field] ?? 0;
 }

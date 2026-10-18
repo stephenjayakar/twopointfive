@@ -238,6 +238,12 @@ const CASINGS: Partial<Record<WeaponId, CasingSpec>> = {
   aks74u:    { color: LACQUERED_STEEL, diameter: 0.010, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.45, 0.5], speed: 4.8, tink: 0.55 },   // AKs fling their empties hard, forward and right
   ak74m:     { color: LACQUERED_STEEL, diameter: 0.010, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.45, 0.5], speed: 4.8, tink: 0.55 },
   akms:      { color: LACQUERED_STEEL, diameter: 0.0113, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.45, 0.5], speed: 4.5, tink: 0.55 },
+  // (the guns a card's two slots offer — gunslots.ts: each ejects as the gun it is drawn as until it has a model of its own; the gas shotgun's hulls are owed with it)
+  mk12:      { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.5, 0.15], speed: 3.4, tink: 0.5 },
+  mk46:      { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.16, up: 0.02, right: 0.03, dir: [1, -0.1, 0.1], speed: 3.0, tink: 0.45 },   // (down and right, out of the bottom of the feed tray)
+  mp7:       { color: BRASS, diameter: 0.0075, from: 'hand', ahead: 0.10, up: 0.06, right: 0.02, dir: [1, 0.7, -0.1], speed: 3.0, tink: 0.5 },
+  hk45:      { color: BRASS, diameter: 0.012,  from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.8, -0.2], speed: 2.6, tink: 0.5 },
+  g18:       { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.8, -0.2], speed: 3.0, tink: 0.5 },
   fn2000:    { color: BRASS, diameter: 0.0095, from: 'muzzle', ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1], speed: 1.1, tink: 0.4 },  // forward ejection: the cases trundle out of the tube by the muzzle and drop
 };
 interface FxState { tinks: { t: number; pos: Vec3; rate: number }[]; n: number }

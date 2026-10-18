@@ -73,11 +73,14 @@ import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
 import { CUES } from './cues';
 import { OWNCHARGE } from './owncharge';
-import { BIGSLOT } from './kit';
+import { GUNSLOTS } from './gunslots';
+import { BIGSLOT, KITDEAL } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
 import { INHAND } from './inhand';
+import { GUNHAND } from './gunhand';
+import { PACKSIDE } from './packside';
 import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
@@ -264,10 +267,15 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (was.glass === undefined) LANES.glass = false; if (was.stopClear === undefined) LANES.stopClear = false; if (was.roused === undefined) LANES.roused = false;
     if (was.frag === undefined) LANES.frag = false; if (was.fragOwn === undefined) LANES.fragOwn = false; }   // (…and from before a man held on a lane threw his grenade down it: he never did — nor was he kept his own through its wind-up)
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
-  if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge and a shield were pouches, nobody carried a hammer)
-  else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
+  if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
+  else if ((k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).heard === undefined) GUNSLOTS.heard = false;   // (…and from before a teammate's quiet round was heard: it reached nobody)
+  if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge was pouches, nobody carried a hammer)
+  else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
+  if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
+  if (!k.tables.GUNHAND) GUNHAND.on = false;   // (a file from before a move kept to the hand that is free: a whistle raised the empty fist, a defender threw with his carbine hand, a long gun reloaded on the pistol's clip)
+  if (!k.tables.PACKSIDE) PACKSIDE.on = false;   // (a file from before a long thing stood at the side of a man's pack: it lay across his back. Looks only: the run is the same either way)
   if (!k.tables.INHAND) INHAND.on = false;   // (a file from before a pistol was drawn in the hand: every gun was laid on the aim line from the wrist. Looks only: the run is the same either way)
   if (!k.tables.AUTOPILOT) AUTOPILOT.on = false;   // (a file from before the quick key was the squad's autopilot: B on a door the men were stacked on gave 'stack up' again)
   if (!k.tables.SQUADTHROW) SQUADTHROW.on = false;   // (a file from before teammates threw a frag or a stun canister on order: the floor's menu had no such row)
@@ -297,6 +305,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.WORK) WORK.on = false;   // (a file from before a teammate could be sent to work a thing: its menus had no such row, and its breaker errand went to the nearest man whoever he was)
   else if ((k.tables.WORK as Partial<typeof WORK>).ownFace === undefined) WORK.ownFace = false;   // (…and one from before the errand was walked to the panel's own face: its man went to the fixed spot and re-armed the mains inside the bare radius)
   if ((k.tables.WORK as Partial<typeof WORK> | undefined)?.heldPass === undefined) WORK.heldPass = false;   // (…and one from before a man stood at his thing passed over a man he may not shoot: his muzzle stayed on that man and the thing was not worked while the hold stood)
+  if ((k.tables.WORK as Partial<typeof WORK> | undefined)?.offWalk === undefined) WORK.offWalk = false;   // (…and one from before a follower stopped standing still on a man's walk to the breaker)
   if (!k.tables.CLOSE) CLOSE.on = false;   // (a file from before the close-in windows: one way in, from behind — its rows and its takedowns were made by that gate)
   if (!k.tables.STACKROOM) STACKROOM.on = false;   // (a file from before door stacks were held to the room's floor: its men walked to the marks the build then dealt)
   if (typeof (k.tables.STACKROOM as { view?: boolean } | undefined)?.view !== 'boolean') STACKROOM.view = false;   // (…and from before a stack waiting on an OPEN door stood out of the room's view: the jamb marks, as recorded)
@@ -340,7 +349,9 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (p.fallback === undefined) PICTURE.fallback = false;   // (…and one from before a defender giving his room up minded every enemy he knew of: one threat point)
     if (p.stack === undefined) PICTURE.stack = false;   // (…and one from before a stack filed on one hand of a door out of a known enemy's line: the walls' marks)
     if (p.step === undefined) PICTURE.step = false;   // (…and one from before a man stepped off a place of the squad's own choosing that was in a known enemy's line)
-    if (p.shot === undefined) PICTURE.shot = false; }   // (…and one from before a colleague's shots placed the enemy where the shooter believed him: the true place)
+    if (p.shot === undefined) PICTURE.shot = false;   // (…and one from before a colleague's shots placed the enemy where the shooter believed him: the true place)
+    if (p.run === undefined) PICTURE.run = false;   // (…and one from before a man who dropped his gun and ran went by his own picture: every enemy's true place)
+    if (p.coverHard === undefined) PICTURE.coverHard = false; }   // (…and one from before a pinned man with no place hidden from everybody kept the place that stops a round over one a round goes through)
   if (!k.tables.QUIETFOG) QUIETFOG.on = false;   // (a file from before a quiet mission could be played under the fog of war: its query named no rung)
   if ((k.tables.QUIETFOG as Partial<typeof QUIETFOG> | undefined)?.def === undefined) QUIETFOG.def = 'off';   // (…and one from before a quiet mission STARTED under the fog: its bare quiet link was played with every guard shown)
   if ((k.tables.QUIETFOG as Partial<typeof QUIETFOG> | undefined)?.wand === undefined) QUIETFOG.wand = false;   // (…and one from before the mission handed out a wand: only the card's)

@@ -37,8 +37,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `flinchFrom(dir)` (a duck off the rounds) vs `hitFrom(dir)` (knocked along the round), `anim.dazzle` (the blinded hunch for as long as `Guard.dazzledAt` holds — the trigger hand keeps the gun
   on its line so a blind burst still leaves; the hand over the eyes sits UNDER a brim / helmet rim: `MV.dazzle.handDrop / handOut / handRoll / handPole`, fitted to the cast's hats with the models part's cast-pose tool), `tossItem()` (the support-hand underhand bang toss; `throwItem()` stays the overhand), signal `'squeeze'` (the stack's set), fall variety at
   ragdollize. Poses feed the sim (rounds leave the drawn muzzle), so MOVES on is not bit-identical — the door tally (32 seeds) shows no measurable shift. TURN = `TURN` knobs + `WeaponDef.handling`
-  (`weapons.ts handlingOf(def, kit = 1)` = THE one place the weight is read: the row's number, else its class's — pistol 1, carbine 0.82, FN2000 0.8, rifle 0.7 —, else a carbine's; × `kit` for
-  what else is in his hands, e.g. a shield held up) + `Character.turn {on, h, k}` dealt each frame in game.ts (every armed AI man; not Sam, civilians, a held man or a
+  (`weapons.ts handlingOf(def)` = THE one place the weight is read: the row's number, else its class's — pistol 1, carbine 0.82, FN2000 0.8, rifle 0.7 —, else a carbine's) +
+  `Character.turn {on, h, k}` dealt each frame in game.ts (every armed AI man; not Sam, civilians, a held man or a
   showcase's cast): **between a man's updates `bodyYaw` / `aimYaw` hold the WEIGHED yaws; `c.turnBegin()` (updateGuard's second statement) puts the AI's WISH back so its own easings run wish to
   wish; `Character.update` → `turnWeigh` steps body and gun toward the wish (acceleration, a top rate × handling, a brake that lands on the point) and writes the weighed yaws back.** So: an easing
   of his yaw OUTSIDE his own update must start from `c.wantBody` (roomfight.ts applyWatch, dialogue.ts), and a facing / fire gate INSIDE his update must read `c.gunYaw` (guards.ts ×3, aim.ts) —
@@ -65,6 +65,33 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dip took off the bore (`anim.sightsLift`) and guards.ts `canSeeChar` adds it back; the light stays down. Measured a no-op in play: 462 of the 463 runs the dip moved come out digest
   for digest the dip's. It does not cover `gd.muzzleDown` (the low ready leaves the shoulder; `probes.ts roomfight-eyes` asks `canSeeChar` itself about a dipped man, both ways). QA: `probes.ts moves-reload / moves-kept / moves-entry / moves-second / moves-cast` (the last skins every cast variant and holds the hands out
   of what it wears), strips `reload-operator reload-defender hostage stay-down clutch entry-dip`; `mv2Shown {reload, bound, clutch, dip}` is what the layers show this frame.
+- **A long gun reloads with a move of its own** (`gunhand.ts GUNHAND.longReload`, under `GUNHAND.on`; `character.ts LONG_RELOAD` + `reloadCarry`; the Tab row *gun hand*). Before:
+  through a long gun's magazine change the trigger hand, the trunk and the head played the PISTOL's reload clip — the rifle swung up beside his head in a fist turned for a
+  sidearm (bore 35‥102° off its carriage, the hand 25‥41 cm from where the carriage has it, up to 10° in a frame) while the support arm changed a magazine on a gun that was
+  no longer where a rifle is held. On: the clip is left out of the pose (its CLOCK runs on, so `reloading` and every gate that asks it hear what they heard); the carriage
+  he is in goes to the reload carry by a weight that is up 0.35 s into the beat and down 0.06 s before its end — the trigger hand on the grip at one point off the chest
+  joint, the muzzle 20° up and 12° across for a box ahead of the grip (the carbines, the issue carbine), 12° / 4° for the bullpup (`reloadBack`); the head goes 22° down
+  toward the gun from just before the empty comes out until the fresh one is seated; the trunk keeps the carriage's own blade and lean; then the carriage he came from. The
+  clock is the support hand's own (`mvArms`): the game's beat where it deals one (a guard's `reloadT`, a room-fight teammate's `reloadUntil` — which never played a clip),
+  else `reload()`'s — so the player, teammates, defenders and responders all do it, and `reloadArm` lands the magazine on the well where the gun now is (it works in the
+  trigger hand's frame). A low carriage tucked for a wall (`gunWall`) keeps its tuck: the hands do the change there. A beat that stands still (a guard's counts down only at his fire sites — off his man it waits) puts the gun back on its carriage after a quarter second, and so do hands with other work (a signal, a tell, a throw, a strike, a tool); it comes up again as the change goes on. While the carry is more than half up his eyes are not on his sights (`anim.atWell`: guards.ts `canSeeChar` keeps to his head's eye); the fog cone's gaze (fogofwar.ts `gazeOf`) goes from his aim to his head BY the carry (`rlShown`, eased), so the cone swings over the third of a second the gun takes and does not jump — 1.2° a frame at most over the check's reloads, where a gate on `atWell` turned it 8.9° in one (the fog rules' owner's catch; check line 10c). The gaze stabiliser stands down for the look at the
+  well as it does for the clip. It changes the pose the game reads (the bore, the rail light, the head, the arms' hit capsules) for the length of a reload; durations, when
+  the rounds are in and who may fire are untouched, and the gun is on its carriage on the frame the rounds are in. Tube-fed guns (`reloadMag` false) take the carry with
+  the support hand left on the fore-end; with the movement pass off both hands stay on the gun, nothing changes the magazine and every gun takes the box row (`reloadBack`
+  and the beat are that pass's inputs: `moves-off` holds them nobody's). The pouches on the hip (`MV2.reload.pouch[0]`, `KIT.mag.dump` / `via`) are placed by the hips'
+  own line under the rule, not the shoulders': the clip squared the chest over the belt, the shoulder carriage blades it 36° and carried the dump pouch 6 cm round with
+  it (`kitanim-reload`, the rifle's tactical change, was red on the shipped stand until this). `moves-reload` and `moves-kept` compare a man changing a magazine with
+  one who is not, to the bit: they hold the rule off (`tools/qa/moves-probes.ts gunhandOff`) and this check holds the hand at the well under the carry. Stands: ON in the page (`?gunhand=0`
+  off), OFF in the module and on the frozen stand (`TPS_GUNHAND=1`); the journal carries the table. Check: `tools/qa/gunhand-reload-check.ts` (probe `gunhand-reload`,
+  family `gunhand`; `GUNHAND_BREAK=1` fails eight of its fourteen lines; line 10b is the beat that stands still, 10c the fog cone's gaze), the same bench numbers on both stands: over 19 reloads (the player's bullpup and issue carbine, a
+  room-fight teammate, a defender and a responder with the short carbine; low ready, on the aim, crouched, up a stair, walking, calm patrol, high port; 3264 frames) the
+  palm is 1.0 cm off the drawn grip at worst (rule off 3.0‥3.6), the support wrist 2.0 cm off the magazine's mark at out and seat (rule off 7.1), the fastest frame
+  4.5° (from the calm patrol's muzzle-down carry), the chest joint 0.0 cm off the carriage's (rule off 2.0), bore and trigger hand 0.00° / 0.0 cm off the figure that
+  never reloaded on the reload's last frame; in a game the player's rifle reload ends on the same frame off and on (frame 145 frozen, 166 shipped), 25 →
+  30 rounds, no click through it fires, the carry 0 at the next shot. `rlShown {carry, head}` is what it shows; stills `tools/qa/pose-mesh.ts <variant> reload-mag|reload
+  --inhand --gunhand`. NOT measured: tour / soak tallies with it on (a reloading man's bore, light and head point elsewhere for two seconds — expect the shipped stand's
+  digests to move). First-pass numbers, not through the maintainer's viewer pass; the gun is never canted (it is drawn upright about its bore). NEVER SEEN ON A GPU OR IN
+  PLAY: judged on Blender Workbench sheets of the skinned cast and by the numbers above.
 - **The big slot's tool in the hands** (`character.ts anim.bigTool`, `bigLayer`, table `BIGMOVE`; `rigProps.ts BIGRIG / bigBoxes / hungBoxes / bigBackOf`; switch `kit.ts
   BIGSLOT.moves` — the rule and its checks: `docs/agents/player.md`, *The big slot's tools are carried, walked to the frame and swung*). The game writes ONE struct a frame ({
   kind, t, equip, windup, stow, blows, end, at, snug }; `snug` absent = the first-pass shares, `player.md` *stay in a hand on the way*) and the pose is a pure function of it: nothing here keeps a clock, so a load or a replay lands on the same frame. An
@@ -92,7 +119,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shut a room). Checkpoints carry `wound` + the layer's clock (`woundRestore`); a plain save waits while he is still sinking. `turnDrop()` = TURN let go of as he goes down.
   `WOUND` is in journal.ts's knob tables, `WOUND_STATS` beside it is not; `Guard.wound` is NOT in the digest. `__wounds` {on, knobs, stats, men()}, `__killGuard(i, 'wounded', zone, dir)`.
   QA: `probes.ts wounds` (zone / off / state / both / again / save / play; `WOUNDS_BREAK=1 … wounds-zone` must fail), strips `wounded-knee / wounded-leg / wounded-back`,
-  playthrough.ts `RunOut.wounds`. The clutch (MOVES second pass) can also HOLD A FOLD: `MOVES.fold` (trunk + head for as long as `anim.clutch` is up, a spring in `mvPost` — so not arms-only) is **0 = up with the wounds switch and only with it** (`character.ts FOLD_WITH.on`, which wounds.ts points at `WOUND.on`; wounds off, a staggered man's trunk is the base's frame for frame — `moves-kept` holds it), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). A man carrying the gear build's shield (`anim.shield`, read through `handKept`; no such field on this base) gets no clutch arm and no fold, the sway alone.
+  playthrough.ts `RunOut.wounds`. The clutch (MOVES second pass) can also HOLD A FOLD: `MOVES.fold` (trunk + head for as long as `anim.clutch` is up, a spring in `mvPost` — so not arms-only) is **0 = up with the wounds switch and only with it** (`character.ts FOLD_WITH.on`, which wounds.ts points at `WOUND.on`; wounds off, a staggered man's trunk is the base's frame for frame — `moves-kept` holds it), 1 = on by itself (`?fold`), -1 = never (`?fold=0`).
 - **A man's condition on the figure** (`character.ts MV2.hurt / MV2.shaken`, the animator's `hurt`, `hurtSide`, `shaken`, `foldToo`; dealt every frame
   for the player, his men and the defenders alike by `condition.ts conditionPose` from `Game.dealWeapons`, nothing under a showcase; all inside the
   MOVES pass, so none of it on the frozen stand or with `?nomoves`). HURT (`mvPost`): a hunch he keeps (`pitch` 11°, head 9°, pelvis 2.5 cm), a lean
@@ -104,7 +131,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`sup.v` from a tenth under the flinch line to pinned), head down between the shoulders, sunk 10 cm, in fast and out over a second or two.
   FOLDED: `foldToo` raises the clutch's fold (`foldOn(too)`) for a staggered man with the wounds switch off, and deeper than the wounds' own
   (`MV2.clutch.fold.pitchToo` 34°). Under the fold and the blinded hunch the hurt and shaken looks give way by those weights (never two folds
-  added); a man with a shield (`handKept`) gets no hunch. All three springs are in `mvReset` and `mvLive`. THE GAZE STABILISER
+  added). All three springs are in `mvReset` and `mvLive`. THE GAZE STABILISER
   keeps the eye line level under a working body and stands aside for a stance or an aim, so with the gun CARRIED it took four fifths of both bows
   back out through the neck (hurt showed 4° of its 20°, shaken 6° of its 29°): its target elevation now goes down by what the two looks pose
   (`hurt.pitch + hurt.head`, `shaken.pitch + shaken.head`, each by its spring), so the head is bowed the same whatever the gun is doing (check line g). Measured headless on the bones

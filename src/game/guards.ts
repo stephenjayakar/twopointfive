@@ -33,7 +33,6 @@ import { WORDS, w } from './words';
 import { CUES } from './cues';
 import { SUPPRESSION, headDown, endDisplace, holdingCover, guardFireMods, flinching } from './suppression';
 import { trackGuard, aimReady, feetSettled, guardRound, handsCone, aimBrake, noteBore, boreFouled, AIM_DEBUG } from './aim';
-import { SHIELD, SHIELD_STATS, shieldAny, shieldAim, shieldLow, shieldBlocks, shieldScreens } from './shield';
 import { isHostile, teamOfId, hostileTo, foeChar, foeDown, foeCrouched, HOSTILE, spokenName, defenderWords } from './teams';
 import type { Team } from './teams';
 import type { WeaponId } from './weapons';
@@ -60,6 +59,7 @@ import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
+import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
@@ -120,7 +120,8 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
     const heardAt: Vec3 = [prop.via[0], 0, prop.via[2]];                       // where to go and look: the source if heard directly, else the doorway / corner it came through
     // a report below the gunshot line (level < 1: the suppressed pistol — playtest 08-09 — or a canister's pop / skitter): an odd noise worth a look, heard
     // out to ~7 m of open air per unit level along the same propagation (through a shut door far less), suspicion toward it, no radio, no 'shots fired'
-    if (e.kind === 'shot' && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
+    const odd = e.kind === 'shot' || (e.kind === 'guardShot' && quietHeard() && dStraight >= 0.1 && shotRelation(g, gd, e) === 'threat');   // (gunslots.ts: a quiet round from the other side's gun is the odd noise Sam's is — it used to reach nobody)
+    if (odd && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
       gd.awareness = Math.max(gd.awareness, 0.5);
       const at = prop.direct ? v3.copy(e.pos) : heardAt;   // where he places it: the source through open air, the doorway / corner it came round otherwise — as every other noise below is placed (review A6.7: the routed pop used to hand him the shooter's exact feet through the wall)
       if (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0) gd.lastKnown = at;   // (a man fighting trusts his own eyes over an echo, as the gunfire branch below)
@@ -1223,7 +1224,7 @@ export function canSeeChar(g: Game, gd: Guard, pc: Character, isPlayer: boolean)
     const c = gd.char, ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw);   // (gunYaw: aimYaw — or, turning under weight, where the gun has got to)
     let lv = c.gunDir[0] * ax + c.gunDir[2] * az;   // how level along his aim the bore lies, in plan
     const lift = c.anim.sightsLift; if (lift > 0) { const gh = Math.hypot(c.gunDir[0], c.gunDir[2]); if (gh > 1e-6) lv *= Math.cos(lift) - c.gunDir[1] / gh * Math.sin(lift); }   // (character.ts MOVES.entryEyes: the entry dip's own pitch put back — the question asked of his gun line as if it were not down past a friend; 0 unless that switch is on and he is dipped)
-    if (c.anim.longShown === 'shoulder' && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans); }
+    if (c.anim.longShown === 'shoulder' && !c.anim.atWell && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans); }
   }
   if (!isPlayer && r.visible && pairSmoke(g, gd.char, pc) < 0.3) r.visible = false;   // an AI man lost in a plume, by the same line as Sam (roomfight.ts marches the pair's segment; 1 = clear wherever it does not)
   return r;
@@ -2239,7 +2240,6 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
           const head = pc.bones.head ?? v3.add(pc.pos, [0, crouched ? 1.05 : 1.6, 0]);
           if (clearShot(g, c, head)) aimAt = head; else blocked = true;
         }
-        if (!blocked && shieldAny()) { const from = shotOrigin(c), low = shieldAim(g, gd, gd.foe, from, aimAt); if (low && clearShot(g, c, low)) { shieldLow(g, gd, gd.foe, from, aimAt); aimAt = low; } }   // THE SHIELD (shield.ts): his own rounds have been dying in the plate that man carries and it is on his line still — he comes down under it at the shins, where that line is open (null, and the chest as ever, with no shield on the floor / from the flank / before he has learned it)
         if (!blocked && !gd.pinned && boreFouled(g, gd)) blocked = true;   // two of his rounds running went into the frame from this spot — a hand off the muzzle, or anything on his own half of the line (aim.ts noteBore): the shoulder's line clears the jamb, the bore does not — no line from here, he closes / steps for a real one (model off: never)
         if (blocked && coverSeen(g, gd, gd.foe, aimAt)) blocked = false;   // (coverfire.ts: what stands in the line is breakable and he knows the man is behind it — the rounds go into it, by every gate below)
         const facingErr = Math.abs(wrapAngle(Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]) - c.gunYaw));   // (gunYaw: aimYaw — or, turning under weight (character.ts TURN), where the gun has got to)
@@ -2283,7 +2283,8 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
         // is who a round from in front finds first, combat.ts fireWeapon), and the same beat is kept in hand for when he is out of it.
         const shield = T.muzzleDiscipline && shieldUp(g);
         if (shield) gd.fireCd = Math.max(gd.fireCd, SHIELD_RELEASE_BEAT_MIN + dt);   // (+dt as in standoffAlert: measured from the frame the man leaves the arm, not this one)
-        if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
+        if (sideLocked(g, gd)) { /* (gunslots.ts: his hands are between his two guns — no round, no magazine) */ }
+        else if (gd.reloadT >= 0) tickReloadBeat(g, gd, dt);
         else if (gd.weapon.def.burst) burstTrigger(g, gd, dt, aimAt, !shield && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && aimReady(g, gd), !shield && !twisted && !poked && !gd.muzzleDown);   // the carbine: short bursts through the same gates — all of them to begin one (aimReady among them: a burst is gated on the track at its START, not round by round — aim.ts), the per-round ones (the shield, a colleague in the line, poked, twisted) to let each round of it go (rifles, burstTrigger)
         else if (!shield && gd.fireCd <= 0 && facingErr < 0.25 && !blocked && !twisted && !poked && !gd.muzzleDown && !roundPastColleague(g, gd, aimAt) && aimReady(g, gd) && gd.weapon.fire()) {   // (muzzleDown: the pistol is not even up — a colleague is, or a beat ago was, in the line; roundPastColleague: the bore's own line this frame, the last look in a scrum; aimReady: lined up on him — the aim model's first-shot gate, aim.ts, always true with it off; weapon.fire last: the round is only cycled out of the gun once everything else has said yes)
           const W = gd.weapon.def, M = guardFireMods(g, gd); gd.fireCd = (W.cd + simRandom() * W.cdJitter) * M.gap; fireWeapon(g, c, aimAt, false, guardRound(g, gd, M.spread)); noteBore(g, gd, aimAt);   // the weapon's cadence: its floor plus the drawn jitter (the 9 mm's 0.55–1.05 s) — stretched, and the round wider, by the rounds going past his own head (suppression.ts guardFireMods: ×1 / +0 at rest, so a quiet fight is the fight it was); the cone through the aim model (aim.ts guardRound: settle × his row + Sam crossing + his own feet — { spread: M.spread } exactly with it off; noteBore: a round into the frame a hand off the muzzle is remembered against this spot)
@@ -2531,18 +2532,16 @@ function acquireFoe(g: Game, gd: Guard) {
     gd.foe = null; gd.aim.clear(); lostMan = true;
   }
   let best: Foe = null, bestRate = 0.05, curVisible = false;
-  const eye = shieldAny() && SHIELD.retarget ? shotOrigin(gd.char) : null, shy = eye && gd.foe && gd.foe !== 'player' && shieldBlocks(g, gd, gd.foe, eye) ? gd.foe : null;   // THE SHIELD (shield.ts): the man he is on carries a plate his rounds have been dying in, and it stands between them now — another enemy in his sight is the better man to be on (null with no shield on the floor: the lines below then read as they always did)
   const consider = (f: 'player' | Guard, ch: Character) => {
     const vis = f === 'player' ? canSee(g, gd) : canSeeChar(g, gd, ch, false); if (!vis.visible) return;
     const rate = f === 'player' ? sightGain(g, gd, vis.dist) : sightGainOn(g, gd, f, vis.dist);
     if (f === gd.foe && rate > 0.05) curVisible = true;
-    if (rate > bestRate && !(shy && eye && (f === shy || shieldScreens(shy, eye, ch)))) { bestRate = rate; best = f; }   // (not the shield man, nor a man stood behind his plate)
+    if (rate > bestRate) { bestRate = rate; best = f; }
   };
   if (isHostile(gd.team, 'player') && !g.player.down && !g.playerInvisible) consider('player', g.player.char);
   for (const o of g.guards) if (o !== gd && o.state !== 'dead' && o.char.alive && isHostile(gd.team, o.team) && !runnerFled(o)) consider(o, o.char);
   const op = gd.team === 'operative';
-  if (curVisible && !(shy && best)) return;
-  if (shy && best) SHIELD_STATS.retargets++;
+  if (curVisible) return;
   if (best && best !== gd.foe) { gd.foe = best; gd.aim.clear(); if (mine) g.say(gd, op ? 'he\'s down — next.' : 'got him!'); return; }   // a new man: he lines him up from nothing (aim.ts keys the track by foe too)
   if (lostMan && !best && !gd.unit && gd.team === 'guard' && !g.player.down) {
     // A STAFF MAN (here only on a quiet mission with a partner: the call site): the man he dropped is one of TWO intruders, and the other is still on his floor.
@@ -2598,7 +2597,8 @@ export function inHand(gd: Guard): 'torch' | 'weapon' | null {
 }
 /** The magazine is empty: he stands there changing it for the row's reload.dur (the beat the fire sites count down — no round leaves meanwhile), says so, and the
  *  slide-back clack plays at him. */
-export function startReloadBeat(g: Game, gd: Guard) { const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
+export function startReloadBeat(g: Game, gd: Guard) { if (gd.second && sideOutAlert(g, gd)) return;   // (gunslots.ts: a teammate dry on a man close in front of him goes to his sidearm — no magazine change yet)
+  const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
 /** …counted down each frame he could otherwise fire; the frame it runs out the gun is simply full again (his spares are bottomless) and the NEXT frame may fire.
  *  A row that stages its reload (reload.out — the long guns; the sidearm's beat is one undivided 1.7 s and drops nothing) lets the empty go the frame the beat
  *  crosses `out`: a rifleman's thirty-round box clatters down out of the receiver (a 'mag' item with fill 2: throwables draws the long bakelite box) — physical,

@@ -73,7 +73,6 @@ import { PLAYER_ID, INTERACT_KEY } from './consts';
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig } from './glasspen';   // (GLASS IS NOT COVER: stackPosts → behindGlass; used at order time only, nothing touched at load)
-import { shieldDeal } from './shield';
 import { sneakFollow, sneakWay, sneaking, sneakLow, sneakPost, sneakTick, sneakWord } from './sneak';
 import { unseenMan, unseenLow, unseenFollow, unseenPost, unseenWallSlot, unseenWallLost } from './unseen';
 import { roomKept } from './rearwatch';
@@ -505,13 +504,13 @@ export class SquadOrders {
       { id: 'stack', key: 1, label: 'stack up', targets: ['door'], ack: ['stacking up.', 'on the door.'], valid: (S, t, men) => {
         if (t.kind !== 'door') return false;
         const posts = S.stackPostsWait(t.door, t.side, men); if (!posts) return S.noRoomWords('no room on that door.', () => S.stackPostsWait(t.door, t.side, men));   // (ORDERS.inWay: … or that it is Sam who is in the way, where it is)
-        for (const [gd, p] of shieldDeal(S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0)), posts, t.door, m => S.pairOf(m))) { const w = S.reach(gd, p); if (w) return w; }
+        for (const [gd, p] of S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0))) { const w = S.reach(gd, p); if (w) return w; }
         return true;
       }, issue: (S, men, t) => {
         if (t.kind !== 'door') return 'no door';
         const posts = S.stackPostsWait(t.door, t.side, men); if (!posts) return S.noRoomWords('no room to stack on that door', () => S.stackPostsWait(t.door, t.side, men));
         const name = doorWords(t.door);
-        shieldDeal(S.pair(men, posts.map(p => p.pos), posts.map(p => p.group ?? 0)), posts, t.door, m => S.pairOf(m)).forEach(([gd, p]) => { const P = posts.find(x => x.pos === p)!;   // (shieldDeal — shield.ts: a man carrying the shield takes the lead's mark)
+        S.pair(men, posts.map(p => p.pos), posts.map(p => p.group ?? 0)).forEach(([gd, p]) => { const P = posts.find(x => x.pos === p)!;
           S.assign(gd, { order: 'stack', post: P.pos, face: P.face, watch: [t.door.frameCentre[0], 1.05, t.door.frameCentre[2]], door: t.door, shy: t.door, stance: P.lead ? 'stack' : 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: P.stackSide, going: `stacking · ${name}`, there: `stacked · ${name}`, setLine: 'set.' }); });
         S.spareRear(men, t.door, null);
       } },
@@ -1959,7 +1958,7 @@ export class SquadOrders {
     let out: Map<Guard, { door: Door; side: 1 | -1; post: StackPost }> | null = null; const at: { door: Door; side: 1 | -1; men: Guard[] }[] = [];
     for (const gd of men) { const L = this.walkTry(gd, to); if (!L) continue; const k = at.find(x => x.door === L.door && x.side === L.side); if (k) k.men.push(gd); else at.push({ ...L, men: [gd] }); }
     for (const { door, side, men } of at) { const posts = this.stackPostsWait(door, side, men); if (!posts) return this.noRoomWords('no room on that door.', () => this.stackPostsWait(door, side, men));
-      for (const [gd, p] of shieldDeal(this.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0)), posts, door, m => this.pairOf(m))) (out ??= new Map()).set(gd, { door, side, post: posts.find(x => x.pos === p)! }); }
+      for (const [gd, p] of this.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0))) (out ??= new Map()).set(gd, { door, side, post: posts.find(x => x.pos === p)! }); }
     return out;
   }
   /** … a man of them sent: to his stack mark on that door, in the stack's carriage, still on his 'move' — and 'moving' by the HUD, on his mark too — until

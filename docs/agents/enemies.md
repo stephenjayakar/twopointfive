@@ -349,7 +349,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `FARSIGHT_BREAK=1` must fail). MEASURED (shipped stand, on against `TPS_FARSIGHT=0`, playthrough.ts): the 20 squad missions × seeds 1-6 — 81 of 120 digests equal, won 77
   on / 80 off, teammates lost 221 / 209; nine missions moved, all but one inside a seed's noise. THE LONG HALL IS WHERE IT BITES: hall-four × seeds 7-18 played without the
   shield walk, taken 8 of 12 on / 11 off, teammates lost 34 / 18, and 22 of the 34 fall to a gun past 16 m (the hall's far pair, Tango 1 and 2) in the first 40 s — 1 of 18
-  off; led down the hall behind the shield (`PT_HALL=file`, seeds 1-12) 12 of 12 taken on both, lost 15 / 10, no killer past 12 m on either. records-pair × seeds 7-18: 11 of
+  off; led down the hall behind the shield (`PT_HALL=file`, seeds 1-12; the shield has since left the game) 12 of 12 taken on both, lost 15 / 10, no killer past 12 m on either. records-pair × seeds 7-18: 11 of
   12 taken on both, lost 6 / 7 (the first tally's 3 / 5 was noise). On the frozen stand `TPS_FARSIGHT=1` moves no verdict in close, standoff, roomfight, quiet, silent, sneak,
   sticky, fog, pairup, pairs, lights-out, stealthpose, squadfire or journal. Never played: 26 m and the 0.4 / 0.8 meter bars are first numbers.
 - **Shaken — the first slice of enemy morale** (`src/game/morale.ts`, table `MORALE`; `MORALE.on` — ON in the page, `?nomorale` = every man as steady as he
@@ -489,6 +489,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   his eyes, or no run); and enemysquads.ts `fit` / `contact()` pass over a man `runnerOwns`, so from his shout on he puts nothing on the squad's net.
   runner-check (17), squads staged: the shout 0.78 s after "I'm out!", no line of his after it to the frame he is gone (5.78 s); on the tree before the
   change both lines are red (0.00 s; "Gate: contact — guard hut!"). 33 lines green on both stands.
+  WHO HE PLANS ROUND (10-18, `PICTURE.run`, picture.ts; `?picrun=0`): with the picture on, the way, the reachable floor, the outside he picks, the corner
+  and the look ahead are reckoned from the men HE knows of, where he believes each to be, not from every enemy's true place; he leaves the floor on the
+  TRUE lines as before. The rule, its check line and what was measured: `docs/agents/team-feel.md`, STEP 8 of the own-picture bullet.
 - **Not in there alone — the dark doorway** (`src/game/darkdoor.ts`, table `DARKDOOR`; `DARKDOOR.on` — ON in the page, `?nodarkdoor` = every man walks into
   the dark as he did; OFF in the module and on the frozen stand, `TPS_DARKDOOR=1` raises it, `TPS_PROFILE=shipped` has it on; IT ACTS ONLY WITH `MORALE.on`
   AS WELL (frozen: `TPS_MORALE=1 TPS_DARKDOOR=1`); `FROZEN_HOLDS` row, `JOURNAL_KNOBS` + `applyKnobs` so a recording from before the key replays with it off,
@@ -1041,3 +1044,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on HARD 15 hold, the night breach is ONE ROOM, and the three rescues fail on the loud plan ("words only" on two, "men moved, to nothing of the plan's" on the consulate) — Hard's rescue has a crew of its own
   (rescue.ts: the captor's "they're here! … guns on my door!", a roamer's "staying dark — I'll come up behind them."), whose move lands on a team
   stacked at the hostage door, and the table has no team: said, not seen to land. One seed; no GPU: a lamp is a flag, a line is a string.
+- **A defender throws with his free hand** (`src/game/gunhand.ts`, `GUNHAND.on` + the key `throwFree`, 10-18; the maintainer on the in-hand pass's
+  list, of "a defender throws overhand with the carbine in the throwing fist": "yep fix it"). THE FAULT: the throw (`character.ts throwItem` /
+  `throwLayer`) is one move for everybody and its throwing arm is the right one; a man with a long gun is drawn with that gun off his right wrist, so
+  the carbine went up behind his head and over the top with the grenade (bench: its grip 33 cm over the shoulder joint, 9.5 cm off the palm).
+  THE RULE: a throw begun with a long gun in the hands (`anim.longGun`) is the FREE hand's — the authored swing MIRRORED: the trunk winds the other
+  way, the left arm takes the right arm's path (the overhand, the short one and THROW_BY's underhand toss alike), and the right arm is left to the
+  long hold: its carriage goes to the low ready for the swing and comes back up over the recovery, the trigger hand held where that hold has it (not
+  swung round with the shoulders, and let down to 12 cm under the shoulder where a crouched low ready has it level with it). IN HAND's long hold
+  stays on the grip through it (`anim.throwOff`). The grenade is drawn in the LEFT fist from the swing's first frame until it leaves
+  (`rigProps.freeCanBoxes`, by `frag.ts fragInFist`: guards drew no grenade in the hand before), and the plain throw's grenade starts AT that hand
+  where the hand has an arc to the same landing spot (`fragThrowTick`; otherwise, and with the rule off, from the point 35 cm ahead of his chest it
+  always did). NOT CHANGED: who throws, the wind-up and release times, the scatter and the spot aimed at, the fuse. WHO IT REACHES: every caller of
+  `throwItem` with a long gun up — defenders and responders with the carbine (frag.ts), a TEAMMATE at a lane's mouth putting a stun charge down it
+  (lanes.ts `stun`: the swing only — that charge is in the air on the frame he starts, from his arm round the corner, as before), a defender's
+  grenade round a corner (`fragThrowAt`: the swing and the fist's grenade; it still leaves from the arm-round-the-corner point). Teammates' ordered
+  throws were already the support hand's (`tossItem`), and Sam throws with the rifle on his back — the slots' throws, and the G quick throw, which
+  slings it first (player.ts): none is touched. A round that leaves inside the swing has the gun in the shoulder for it (`shootT` is asked before the
+  throw's low ready), as every shot does. Pistol men throw as they did. STANDS: off on the frozen stand
+  (`TPS_GUNHAND=1` raises it; `FROZEN_HOLDS['GUNHAND.on']`), on in the page (`?gunhand=0`), journalled (a recording from before the table replays
+  with it off). OFF = the build as it was: 1,920 frames of throws by a carbine man and a pistol man (standing, low ready, crouched, walking, the
+  short one, the toss, re-triggered mid-swing) hash the same pose and bones as the commit before. CHECK: `bun run tools/qa/probes.ts gunhand-throw`
+  (family `gunhand`; `tools/qa/gunhand-throw-check.ts`, both stands; `GUNHAND_BREAK=1` leaves the key off and lines 3, 4, 5 and 9 fail). MEASURED,
+  both stands, 7 bench throws of 44 frames each: grip to the palm's hollow 1.0 cm at worst, the trigger wrist 7.7 cm or more below its shoulder, the
+  left wrist 28 cm over its own in the overhand and 32 to 48 cm ahead of it at the release, the can 2.3 cm from the left fist's hollow, the same
+  swing, release frame and last frame with the rule off and on. One game run (frag-theirs' corridor, seed 3, a defender dealt the carbine): the
+  same man throws 1.02 s after his shout either way, the bursts 5 to 10 cm apart, the grenade starts 0 cm from the left hand and is in that fist
+  17 frames. NEVER SEEN ON A GPU OR IN PLAY: poses and boxes measured headless; how a left-handed overhand reads from above, and the gun's low
+  ready beside it, nobody has looked at. The run with the switch on is not the run with it off (it changes the pose the game reads).
