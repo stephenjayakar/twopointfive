@@ -686,7 +686,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   when the run ends, won or lost, is called off and never arrives. The debrief's 'of N defenders' counts the team's men once they exist. A restage despawns them with the cast. SWITCH: `RESPONSE.raid`,
   on with `RESPONSE.on` in the page (`?responseraid=0`; the backtick panel's QRF section, 'the team: a raid brings it too'), nothing on the frozen stand
   (`RESPONSE.on` is off there); a recording whose `RESPONSE` table has no `raid` key replays with it off (`journal.ts`). CHECK: `response-check.ts` lines
-  (15) to (20), both stands, and its `RAIDS` list; `RESPONSE_BREAK=1` fails all six. MEASURED, headless, the shipped stand, god mode, eight seeds a
+  (15) to (20), both stands, and its `RAIDS` list ((18) also stages the office's hostage rescue: no block answers a rescue, so the rescue's own ending never has a team on its way); `RESPONSE_BREAK=1` fails all six. MEASURED, headless, the shipped stand, god mode, eight seeds a
   level, 200 s, three rifle rounds at the start line and a squad that never leaves it (so not a played raid): the depot's hut called 8 of 8, the escort
   (2 or 3, 55 to 90 s) came in 8 of 8, always by the back gate (the squad stood at the main one) and met the squad 8 of 8 — it lost every man in 5 runs
   and put all four teammates down in 3; the records office's desk called 5 of 8 (in the other three the desk man came out and was shot inside his six

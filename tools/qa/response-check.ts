@@ -27,7 +27,7 @@
 //        squad fight
 //   (16) the men at the set down before they can say it: nobody calls, however long the fight goes on
 //   (17) the place is not taken while the team it called is up: the last defender down, the run goes on; the team down, it ends
-//   (18) the raid rule off, or a block that does not say `raid` (the office under a room clear): the same gunfire calls nobody
+//   (18) the raid rule off, or a block that does not say `raid` (the office under a room clear, or under a hostage rescue): the same gunfire calls nobody
 //   (19) a restage mid-response: the team's men are gone with the cast, nothing is owed from the run before
 //   (20) a team still on the road when the last defender falls never arrives: the place is taken and the call is called off
 // RESPONSE_BREAK=1 = the switch left off for the 'on' lines (and on for the 'off' lines): every line but (1) and (2), which read files and floors, must fail.
@@ -58,7 +58,7 @@ async function stand(file: string | null, seed: number, on: boolean, q: string |
   Math.random = seeded(0x7e5 + seed * 7919);
   const W: any = await hushed(() => standUp({ uploadEvery: 4, seed, ...(file ? { level: loadLevel(parseLevelData(text(file))) } : {}) }));
   const g = W.game; RESPONSE.on = on; RESPONSE.deal = true; RESPONSE.net = true; RESPONSE.raid = true; PICTURE.on = true;
-  if (q && (g.level.scenarios?.quiet || /roomclear/.test(q))) await hushed(() => startFromQuery(g, q));
+  if (q && (g.level.scenarios?.quiet || /roomclear|rescue/.test(q))) await hushed(() => startFromQuery(g, q));
   g.godMode = true; g.aiEnabled = true; g.tune.qrf = true; g.tune.perimeter = false;
   for (let i = 0; i < 20; i++) W.step(DT);
   return W;
@@ -252,8 +252,9 @@ export async function responseCheck(): Promise<boolean> {
   // ---- (18) the raid rule off, and a block with no `raid`
   { const W = await stand('depot.json', 15, true, RAIDS['depot.json']); const g = W.game; RESPONSE.raid = BREAK; goLoud(W); steps(W, 14); const st = g.qrf.state, has = hasResponse(g);
     const W2 = await stand(null, 18, true, '?roomclear'); const g2 = W2.game; RESPONSE.raid = !BREAK; goLoud(W2); steps(W2, 14);
-    line(st === 'idle' && !has && g2.qrf.state === 'idle' && g2.nightBreach.active, '(18) the raid rule off: the same raid on the depot calls nobody; and the office, whose block answers a quiet night, sends nobody to a room clear',
-      `depot, rule off: ${st}, has a team ${has} · the office under a room clear: ${g2.qrf.state} (raid on ${g2.nightBreach.active})`); RESPONSE.raid = true; }
+    const W3 = await stand(null, 18, true, '?rescue'); const g3 = W3.game; goLoud(W3); steps(W3, 14); const asked3 = requestQrf(g3, 'gunfire');
+    line(st === 'idle' && !has && g2.qrf.state === 'idle' && g2.nightBreach.active && g3.qrf.state === 'idle' && !asked3 && !!g3.rescue?.active, '(18) the raid rule off: the same raid on the depot calls nobody; and the office, whose block answers a quiet night, sends nobody to a room clear or to a hostage rescue (a rescue ends on its own cast: no team is ever on its way to one)',
+      `depot, rule off: ${st}, has a team ${has} · the office under a room clear: ${g2.qrf.state} (raid on ${g2.nightBreach.active}) · under a rescue: ${g3.qrf.state}, a call on gunfire taken ${asked3} (rescue on ${!!g3.rescue?.active})`); RESPONSE.raid = true; }
 
   // ---- (19) a restage mid-response
   { const W = await stand('depot.json', 19, ON, RAIDS['depot.json']); const g = W.game, Q = g.qrf; goLoud(W);
