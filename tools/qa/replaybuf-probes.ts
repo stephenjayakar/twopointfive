@@ -115,11 +115,12 @@ console.log('\n=== replay buffer ===');
   const W = await standUp({ seed: 11 }); const buf = new ReplayBuffer(); buf.tape.born(W.game);
   // (headless nothing answers the sensors, so a tape made here never held a number. This run's are answered while its steps run: dim values off a die of their
   // own, two in three a 32-bit float as the page's renderer hands back, the rest doubles, and now and then no answer or a minus zero, as a page's tape has —
-  // the tape writes every kind and the re-run must be served each one to the bit)
+  // the tape writes every kind and the re-run must be served each one to the bit. WHICH kind is a die's too, never the read's number: with every eleventh read
+  // unanswered and a stand that makes eleven reads a step, one sensor went unanswered all run and the tape, which writes changes, held 'no answer' once)
   const given: (number | undefined)[][] = []; let answering = false;
-  { const S = W.game.sensors as any, read0 = S.read, die = mulberry32(99); let n = 0;
+  { const S = W.game.sensors as any, read0 = S.read, die = mulberry32(99), kind = mulberry32(1199);
     S.read = function (this: unknown, key: string) { if (!answering) return read0.call(this, key);
-      const k = n++, v = 0.02 + 0.3 * die(), out = k % 11 === 5 ? undefined : k % 37 === 9 ? -0 : k % 3 ? Math.fround(v) : v; given[given.length - 1].push(out); return out; }; }
+      const v = 0.02 + 0.3 * die(), k = kind(), out = k < 1 / 11 ? undefined : k < 1 / 11 + 1 / 37 ? -0 : k < 0.42 ? v : Math.fround(v); given[given.length - 1].push(out); return out; }; }
   W.game.replayTap = (dt: number, cmd?: unknown) => { if (cmd) buf.top(W.game, dt, cmd); else buf.tick(W.game, dt, W.cam); };
   const N = 30 * 60; let dAt = ''; const { PACE, LIGHTS } = await import(`${ROOT}/src/game/guards.ts`), pace0 = PACE.max, lit0 = { ...LIGHTS }, { RUNTAPE } = await import(`${ROOT}/src/game/runtape.ts`);
   for (let f = 0; f < N; f++) {
