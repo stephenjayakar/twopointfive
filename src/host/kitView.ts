@@ -18,7 +18,7 @@
 //
 // WHERE: level data, `scenarios.kitView.ways[way]` (scene/scenarios.ts KitViewWay; `way` = RoomClearScenario.way — 0 the level's own start, k its starts[k − 1]).
 // Only the door is needed: stack slots along the wall on the team's side, KIT_VIEW_STAGE.off m off the wall line and KIT_VIEW_STAGE.gap m apart from KIT_VIEW_STAGE.jamb m past
-// the jamb away from the hinge — a shield man first, then the others as staged, side on to the wall and facing the door; Sam across the door, further off the
+// the jamb away from the hinge — the men as staged, side on to the wall and facing the door; Sam across the door, further off the
 // wall and turned onto it; a fourth teammate behind him. A slot that is not free floor (the nav grid) is stepped over. The camera looks into the wall, turned
 // KIT_VIEW_STAGE.yaw toward the stack, at the game's own pitch, from a distance that grows with the stack. Authored `slots` / `pin` / `light` lie over all of that.
 //
@@ -48,8 +48,7 @@
 // down: no round fired), the weapon light (on at his feet, the leaf pushed, the beam slices the opening, off), suit and trim (an eased quarter turn and
 // back), a gun changed (the holster move, then the gun's row); a can THROUGH the door — smoke, Sam's stun (a half step and his hand on the leaf together,
 // the can to a spot just inside, the leaf pulled to behind it); LOUD ones by the squad's own door orders, cut before anybody goes in — a stun canister, a
-// frag, a door charge (set, stood off, blown). THE SHIELD: its man squares the plate to the shut door from a mark in front of it, pistol up, down on a
-// knee, the next man closed up behind him. THE REST OF THE KIT (10-15, the owner's first note: "we should have animations for all the pieces of gear") — Sam's
+// frag, a door charge (set, stood off, blown). THE REST OF THE KIT (10-15, the owner's first note: "we should have animations for all the pieces of gear") — Sam's
 // OPTICAL WAND (on his knee at the shut door, the lens fed under it and turned: the game's own row, the fog of war the game's for its length and lifted for
 // every draw), a STICKY CAMERA (the leaf held, one shot of the launcher onto the nearest wall inside), the 40 MM (shouldered down the wall away from the
 // stack and NOT fired: through this door it is a dud), the WALL CHARGE (the squad's own order to the whole team: set on the stack's wall, walked off, blown,
@@ -156,12 +155,10 @@ export const KIT_VIEW_LOOP = {
   smokeM: [0.6, 0.5, 0.8], samSmokeM: 0.2, samStunM: 0.24,
   /** seconds from the bang / the can venting to the row's end · a can's vent is shut off this long after it began · a smoke CUT short vents nothing for this long (its fuse may still be running) */
   afterStun: 0.8, afterSmoke: 2.5, ventSecs: 5, ventKill: 6,
-  /** THE SHIELD: his mark in front of the shut door [along the wall toward the stack, out from its line] · the next man closes up to the first of these that is free floor, from that mark [toward the
-   *  stack, further out]: at his back, else behind his shoulder on the stack's side (a way's hidden boxes still stand in the nav grid) · seconds
-   *  on the knee (getting down, and held) · seconds getting up before he walks back. SAM'S OWN CHARGE: where he sets it from (as `post`: inside his reach
+  /** SAM'S OWN CHARGE: where he sets it from (as `post`: inside his reach
    *  of the leaf, 1.35 m) · his row at the door is asked for this long at most (the game's own, by his own key). THE BIG SLOT'S TOOL in his hands: he is walked no further than … m from the middle of the frame (the door's row is offered inside 1.35 m, and a walk ends within `wayM` of its mark). SAM'S OWN FRAG: aimed this far in from the door's middle (it lies 2.4 to 2.9 m in: further than a burst's reach of the leaf. 10-15: on the front way Sam crouches behind a WINDOW — with its pane gone a burst in a band of the room has a line to him through it, about the door's own axis at that depth, further to his side nearer the wall; a grenade at rest 2.89 m in and 0.13 m from the axis staggered him. Aimed 3 m in it lay 4.4 to 4.6 m in, still in the band: so it is thrown ACROSS the door instead, `fragHalf`) · the leaf is pulled to this far ajar behind it (rad),
    *  from this long after it left his hand */
-  shieldAt: [0.3, 1.0], shieldTwo: [[0, 0.75], [0.6, 0.4], [0.8, 0.1]], shieldKnee: 1.6, shieldUp: 0.5, ownPost: [0.15, 1.1], ownAsk: 1.5, bigReach: 1.0, samFragM: 1.5, ajar: 0.35, ajarAt: 0.25,
+  ownPost: [0.15, 1.1], ownAsk: 1.5, bigReach: 1.0, samFragM: 1.5, ajar: 0.35, ajarAt: 0.25,
   /** a set charge is blown once its man is clear ('armed'), or this long after it was set · a blown door / a frag's room: the row runs on this long after its mark */
   clearSecs: 1.5, aftermath: 1.6,
   /** THE OPTICAL WAND: where Sam is walked to in front of the shut door [along the wall toward the stack, out from its line] (inside his reach of the leaf: the
@@ -188,7 +185,7 @@ export const KIT_VIEW_LOOP = {
   wait: 2.5,
   /** HOME (10-15, the owner's drive of the real page): a teammate is ON his place within … m (the game's walker eases onto a mark to 4 cm; `onSlot` + 0.1 called
    *  men 0.16 and 0.26 m short of theirs settled, and Game.puppet then held them there) · a row of SAM's waits this long at most for the men to walk home (a CUT
-   *  sends the men its row had off their slots at once, together, at `swapPace`: the shield's number two has 1.8 m to walk) — then, or AT ONCE where a man is
+   *  sends the men its row had off their slots at once, together, at `swapPace`) — then, or AT ONCE where a man is
    *  further than … m from his place (no short walk), they are put there under the dissolve. Sam's own walk home is his next row's: it is not waited for */
   homeM: 0.08, homeSecs: 1.5, farM: 2.5,
   /** SAM'S OWN FRAG, the throw made sure of (his hand stood in front of the latch jamb when his chest was square to the wall — the grenade came back off it and
@@ -361,14 +358,12 @@ if (kitViewOn) {
 }
 
 /** (`slot`: which of the way's places the staging gave him — 0 Sam's, then the teammates' from the door outward) */
-export interface KitViewMan { name: string; x: number; z: number; yaw: number; gun: string; shield: boolean; light: boolean; slot: number }
+export interface KitViewMan { name: string; x: number; z: number; yaw: number; gun: string; light: boolean; slot: number }
 export interface KitViewDeps {
   game: Game; engine: Engine; cam: FollowCamera; input: Input; view: HTMLCanvasElement; loop: LoopCtx;
   audio: { enabled: boolean; setVolumes(): void };
   /** the teammates the scenario staged, in staging order (game/scenarioRun.ts teamOf) */
   team(): Guard[];
-  /** he carries the shield (game/shield.ts shieldCarried) */
-  shield(g: Guard): boolean;
   /** the face of a door a point is on (game/orders.ts sideOf) */
   doorSide(d: Door, p: Vec3): 1 | -1;
   /** a glowing box for a lamp's fixture (main.ts: scene/boxes.ts makeBox, emissive, its emission carried by the lamp) — not yet in the world */
@@ -386,8 +381,8 @@ export interface KitViewDeps {
   /** the squad's smoke for this run: the count, and the order's row on the menu (game/squadsmoke.ts squadSmokeStage) */
   smoke(n: number): void;
   /** WRITTEN LIVE (kit.ts, through main.ts): the weapons row member i's card works out to (kitGun) · his suit and trim colours (null: as issued) · Sam's
-   *  card put on him again as he stands (kitShow, then kitPlayer) · the shield onto a teammate (shield.ts giveShield: there is no taking it back) */
-  gun(i: number): string; tints(i: number): { suit: Vec3 | null; trim: Vec3 | null }; samCard(): void; giveShield(g: Guard): void; turn(spec: string): void;
+   *  card put on him again as he stands (kitShow, then kitPlayer) */
+  gun(i: number): string; tints(i: number): { suit: Vec3 | null; trim: Vec3 | null }; samCard(): void; turn(spec: string): void;
   /** ONE ROUND of the gun in his hands at a point (combat.ts fireWeapon, steady: `man` null = Sam) — the game's own flash, report, tracer and glass · the level's panes of glass (glass.ts glassPanes: statics) */
   fire(man: Guard | null, at: Vec3): void; panes(): Box[];
   /** the glass's own books as a fresh encounter has them (glass.ts resetGlass, glasspen.ts resetGlassPen: the stars' count and log, the holes rounds went through) */
@@ -637,7 +632,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  hands, the thing thrown (the things that lay there before it) and where it last lay, the brightest transient light drawn, the picture's whiting as the
    *  game had it, a bystander's furthest drift — and its AIM: the channel, the legs and the one it is on, when that one's hold began, the aim is the
    *  director's (a quiet row), the body turns with it (suit / trim), the beam's pitch and whether it has risen, the height the aim point is put at — and the
-   *  OTHER men it took off their slots (the shield's number two, the stack stood off Sam's charge): each is sent home as it ends, however it ends — and (a
+   *  OTHER men it took off their slots (the stack stood off Sam's charge): each is sent home as it ends, however it ends — and (a
    *  row of the whole team's) the men have been let go of the squad's order: each stands where he is */
   interface Beat extends KitViewBeat { row: Row; /** this beat is the wall charge that opens a blank wall FOR the row asked (begin()) */ prelude: boolean; /** the wall charge's row: its charge is for the span itself (a wall anchor, the first spot asked) */ onSpan?: boolean; man: Guard | null; char: { pos: Vec3; bodyYaw: number; aimYaw: number; id: number }; home: V2; yaw: number; t0: number; pt: number; markT: number; base: number; post: V2 | null; spot: Vec3 | null;
     lit: boolean; thrown: boolean; given: boolean; hand: string; item: { pos: Vec3; fired: boolean } | null; old: WeakSet<object>; rest: Vec3 | null; peak: number; flash: number; drift: number;
@@ -664,7 +659,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   let beamDir: Vec3 | null = null;   // the lit man's beam this frame (the director's own line: torches() writes it after the step)
   let wandKit: { k: { wand: boolean }; was: boolean } | null = null;   // a teammate's wand row: his staged card and what it carried as the row found it
   let fogUp = false, wandWas = false, apart = false, tubeWas = -2;   // the wand's row has the fog of war ON for the game (lifted for every draw) · Player.wand as its row found it · the men a row left far off their places go back ONTO them under the dissolve · the load a launcher's row found on Sam's tube (Rifle.attIdx; -2: none taken), put back as it ends
-  const swaps: { man: Guard; id: string; at: number; shield: boolean }[] = [];   // teammates' guns on their way in (swapGun)
+  const swaps: { man: Guard; id: string; at: number }[] = [];   // teammates' guns on their way in (swapGun)
   const issued = { suit: new Map<number, Vec3>(), trim: new Map<number, Vec3>() };   // a member's colours as the scenario staged him (his card as issued)
   // the dissolve: '' none · 'ask' the copy is owed at the end of this frame's draw · 'work' taken: the work runs before the next step · 'settle' frames
   // drawn under it · 'fade' — the work, frames left, copies made, works done with no copy, when the fade ends (the wall clock: it is CSS)
@@ -750,9 +745,9 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const ops = () => d.team().filter(g => g.state !== 'dead');
   /** the men as they stand, for `__kitview.men` */
   const men = (order: Guard[]): KitViewMan[] => {
-    const p = game.player, row = (name: string, c: { pos: Vec3; bodyYaw: number }, gun: string, shield: boolean, light: boolean, slot: number): KitViewMan => ({ name, x: +c.pos[0].toFixed(2), z: +c.pos[2].toFixed(2), yaw: Math.round(c.bodyYaw / R), gun, shield, light, slot });
-    return [row('Sam', p.char, p.rifleUp ? 'rifle' : p.pistolUp ? 'pistol' : 'hands', false, !!p.light?.enabled, 0),
-      ...ops().map(g => row(g.callsign, g.char, g.weapon.def.id, d.shield(g), !!g.flashlight?.enabled, order.indexOf(g) + 1))];
+    const p = game.player, row = (name: string, c: { pos: Vec3; bodyYaw: number }, gun: string, light: boolean, slot: number): KitViewMan => ({ name, x: +c.pos[0].toFixed(2), z: +c.pos[2].toFixed(2), yaw: Math.round(c.bodyYaw / R), gun, light, slot });
+    return [row('Sam', p.char, p.rifleUp ? 'rifle' : p.pistolUp ? 'pistol' : 'hands', !!p.light?.enabled, 0),
+      ...ops().map(g => row(g.callsign, g.char, g.weapon.def.id, !!g.flashlight?.enabled, order.indexOf(g) + 1))];
   };
   /** the boxes the way's `hide` / `hidePaint` name, out of the picture: sunk under the ground (this instance is thrown away; a box is not taken out of the
    *  world, whose authored count a restart cuts back to) */
@@ -854,7 +849,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const park = (staging = false) => { const r = kitViewPark(game); if (!staging) { V.roused.men += r.men; V.roused.alarms += r.alarms; } };   // (`staging`: place()'s own — the men as the mission or a restart stood them up are nobody roused)
   const none = () => { V.men = []; staged = null; state = 'none'; dz.work.length = 0; veilOff(); post('none'); };
   /** `expect` = the team's size a `kit` message asked for: a team the game did not make that size is not the picture of those tiles · `head` = the
-   *  teammate whose card is open (the loop's actor): stood FIRST at the door (ahead of a shield man), since the man on the jamb is the man who works the
+   *  teammate whose card is open (the loop's actor): stood FIRST at the door, since the man on the jamb is the man who works the
    *  door · `keep` = the men as they stood before a restart (a restage under the dissolve): the file's order and each man's two yaws — WHO is where in the
    *  stack, never an off-slot place: every man is put ON his slot (10-15: put back where he stood, a man a row of Sam's had frozen short of his slot, or
    *  one who had run from a grenade, was staged there again and never came home; `home` off: where he stood, as it was) */
@@ -919,8 +914,8 @@ export function kitViewStart(d: KitViewDeps): KitView {
       //  under the sky. The flag is the box's own and no restart writes it: put back by quietUndo(), with the dimmed lamps)
       { const Wd = engine.world; for (const i of kitViewQuietRoofs(game.level.boxes, P)) { const b = game.level.boxes[i]; if (Wd.statics[i] !== b) continue; b.flags &= ~BoxFlag.NoPrimary; qRoofs.add(b); }   // (index for index the level's boxes head the world's: one that is not is left alone)
         if (qRoofs.size) Wd.staticsDirty = true; } }
-    // the slots: a shield man first, then the others as staged
-    const file = [...team.filter(g => d.shield(g)), ...team.filter(g => !d.shield(g))], all0 = d.team();
+    // the slots: the men as staged
+    const file = [...team], all0 = d.team();
     const keptMen = keep ? keep.perm.map(i => all0[i]).filter(g => g && team.includes(g)) : [];   // (the file as it stood, by team index: a restart makes new men)
     const order = keep ? [...keptMen, ...file.filter(g => !keptMen.includes(g))] : head && file.includes(head) ? [head, ...file.filter(g => g !== head)] : file;
     const nav = game.col.nav, W = { s: P.s, n: A.n, mid: A.mid };
@@ -1314,7 +1309,6 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const thrown = (kind: 'smoke' | 'flash' | 'frag'): Row => ({ door: 'open', damage: kind === 'frag' ? 'world' : 'none', opening: true, loud: kind !== 'smoke', rest: kind === 'frag' ? K.hold : K.restCan, cap: 14,
     start: (B, S) => {
       if (walled(S)) return 'a blank wall: no opening to throw through';
-      if (B.man && d.shield(B.man)) return 'no hand free for it';   // (squadsmoke.ts squadHandFree: the shield man's other hand holds his pistol)
       const P = stepOut(B, S, Q && !B.man ? KIT_VIEW_QUIET.throwStep : kind === 'frag' ? K.fragHalf : K.half), spot = B.man ? S.smoke[0] ?? S.inside[0] : kind === 'smoke' ? S.samSmoke : kind === 'flash' ? S.samStun : S.samFrag;   // (thrown short, to lie just inside the door)
       if (!spot || game.col.nav.isBlocked(P[0], P[1])) return 'no room at the door';
       B.post = P; B.spot = spot; B.base = kind === 'frag' ? tools().stats.frags : cans().length; to(B, 'open'); unlock(S);   // (this instance is thrown away: a way-in door found locked is simply opened)
@@ -1346,20 +1340,6 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (isNaN(B.markT) && (kind === 'smoke' ? cans().length > B.base || !!B.item?.fired : !!B.item?.fired)) mark(B, kind === 'smoke' ? 'smoke' : 'bang');
       if (isNaN(B.markT)) return el > 6 ? 'done' : 'on';
       return game.time - B.markT >= (kind === 'smoke' ? K.afterSmoke : K.afterStun) ? 'done' : 'on'; } });
-  /** THE SHIELD (calls 5): its man steps to a mark in front of the shut door, the plate squared to it (his chest is turned under the body's rate) and his
-   *  pistol up past its edge (the order's own aim: a watch point on the leaf straight ahead of him); down on a knee behind it; the next man of the stack
-   *  closes up to his back. Up, and both walk home. Nothing to undo. The fourth man (across the door) takes the mark from his own side */
-  const shieldRow: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 8,
-    start: (B, S) => { const man = B.man!, nav = game.col.nav; if (!d.shield(man)) return 'no shield carried';
-      const sd = S.order.indexOf(man) === 3 ? -1 : 1, G = S.at([K.shieldAt[0] * sd, K.shieldAt[1], 0]), P: V2 = [G[0], G[2]]; if (nav.isBlocked(P[0], P[1])) return 'no room at the door';
-      const face = yawOf([-S.n[0], -S.n[1]]), two = S.order.find((g, j) => g !== man && j < 3), Q = K.shieldTwo.map(o => S.at([(K.shieldAt[0] + o[0]) * sd, K.shieldAt[1] + o[1], 0])).find(q => !nav.isBlocked(q[0], q[2]));
-      B.post = P; B.yaw = face; to(B, 'go'); go(man, [P]); { const W = walk.get(man)!; W.face = face; W.watch = S.at([K.shieldAt[0] * sd, 0, 1.1]); }
-      if (two && Q) { B.moved.push(two); go(two, [[Q[0], Q[2]]], K.pace, K.shuffle[0]); walk.get(two)!.face = face; }
-      return null; },
-    tick: (B) => { const man = B.man!, el = game.time - B.pt;
-      if (B.phase === 'go') { if ((flat(man.char.pos, B.post!) > K.wayM || off(man.char.bodyYaw, B.yaw) > 10 * R) && el < 2.5) return 'on'; low(man, true); mark(B, 'knee'); to(B, 'knee'); return 'on'; }
-      if (B.phase === 'knee') { if (el < K.shieldKnee) return 'on'; low(man, false); to(B, 'up'); return 'on'; }
-      return el >= K.shieldUp ? 'done' : 'on'; } };
   /** the stack a slot back from the door, rearmost first, facing it (Sam's own charge: clear of the blast on its own side — doortools.ts backblastM
    *  dazzles a teammate within 1.6 m of the frame). All of them or none: with no free floor behind the last man they stand, and after() puts the dazzle out */
   const standOff = (B: Beat, S: Staged) => { const nS = Math.min(3, S.order.length), G = KIT_VIEW_STAGE.gap, back = (k: number): V2 => [S.spots[k][0] + S.s[0] * G, S.spots[k][1] + S.s[1] * G];
@@ -1583,7 +1563,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const samDraw = () => { input.pressed.add(cards[0]?.weapon === 'pistol' ? 'Digit1' : 'Digit2'); };
   const swapRow: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 5,
     start: (B) => { to(B, 'stow'); if (!B.man) { input.pressed.delete('Digit1'); input.pressed.delete('Digit2'); if (!game.player.holstered) input.pressed.add('KeyE'); } return null; },   // (a draw owed by a swap cut this frame is not made: his hands are empty already)
-    tick: (B, S) => { const el = game.time - B.pt, up = (): Step => { const sh = !!B.man && hi === 'shield' && d.shield(B.man), rows = sh ? [shieldRow] : Q && !B.man ? [quietGun, gunRow] : [gunRow]; B.field = sh ? 'shield' : 'weapon'; for (const row of rows) { B.row = row; to(B, 'act'); if (row.start(B, S) === null) return 'on'; } return 'done'; };   // (a shield just put on, under the highlight: its own row)
+    tick: (B, S) => { const el = game.time - B.pt, up = (): Step => { const rows = Q && !B.man ? [quietGun, gunRow] : [gunRow]; B.field = 'weapon'; for (const row of rows) { B.row = row; to(B, 'act'); if (row.start(B, S) === null) return 'on'; } return 'done'; };
       if (B.man) return el >= K.swapUp ? up() : 'on';
       const pl = game.player, busy = !!(pl.char.anim as unknown as { kitBusy?: boolean }).kitBusy;
       if ((busy || el < 0.2) && el < 1.5) return 'on';
@@ -1752,7 +1732,6 @@ export function kitViewStart(d: KitViewDeps): KitView {
         if (!isNaN(B.markT)) return game.time - B.markT >= K.aftermath ? 'done' : 'on';
         if (c) { if (B.phase !== 'set') { to(B, 'set'); B.marks.push('set'); } if (game.time - B.pt >= K.clearSecs || tools().ops.some(o => o.kind === 'charge' && o.door === S.door && o.phase === 'armed')) tools().trigger(c); }
         return 'on'; } }, sam: ownCharge },
-    shield: { mate: shieldRow },
     wand: { mate: wandMate, sam: wandRow }, cams: { sam: camRow }, shells: { sam: shellRow }, walls: { mate: wallRow, sam: wallRow }, bigtool: { mate: bigMate, sam: bigSam },
     // suit, trim: one eased quarter turn — the quarter that shows the camera his front (out from the wall) — and back
     turn: (() => { const row: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 10,
@@ -1762,19 +1741,19 @@ export function kitViewStart(d: KitViewDeps): KitView {
       tick: quiet }; return { mate: row, sam: row }; })(),
   };
   /** THE TILES, ONE table: a tile's field → the thing it plays, by the card it is on — a field not here plays the row of its own name (null: none — the gun,
-   *  then the light). A field whose VALUE names the demo is one line here (`big`: the big slot's tile, the shield's row while the shield is what is in it):
+   *  then the light). A field whose VALUE names the demo is one line here (`big`: the big slot's tile, the wall charge's row while a wall charge is what is in it):
    *  the highlight is kept as the tile's FIELD (`hiF`) and read through this table again at every kit message */
-  const TILES: Record<string, (card: Record<string, unknown>) => string | null> = { weapon: () => 'weapon', suppressed: () => 'weapon', suit: () => 'turn', trim: () => 'turn', nvg: () => 'turn',
-    big: c => c.shield === true ? 'shield' : num(c.walls) > 0 ? 'walls' : c.big === 'shotgun' || c.big === 'hammer' ? 'bigtool' : null };   // (THE BIG SLOT, read as kit.ts bigOf reads the card: the shield in it plays the shield's row, a wall charge the wall charge's, the breaching shotgun and the hammer the tool's own on the door — nothing in it has none)
+  const TILES: Record<string, (card: Record<string, unknown>) => string | null> = { weapon: () => 'weapon', primary: () => 'weapon', secondary: () => 'weapon', suppressed: () => 'weapon', suit: () => 'turn', trim: () => 'turn', nvg: () => 'turn',
+    big: c => num(c.walls) > 0 ? 'walls' : c.big === 'shotgun' || c.big === 'hammer' ? 'bigtool' : null };   // (THE BIG SLOT, read as kit.ts bigOf reads the card: a wall charge in it plays the wall charge's row, the breaching shotgun and the hammer the tool's own on the door — nothing in it has none)
   const thing = (f: unknown, i = who): string | null => typeof f !== 'string' ? null : Object.hasOwn(TILES, f) ? TILES[f](cards[i] ?? {}) : Object.hasOwn(BEATS, f) && f !== 'turn' && f !== 'swap' ? f : null;
-  // (THE BIG SLOT — kit.ts BIGSLOT, the card's last tile, field `big`: what is in the open card's slot is the card read as kit.ts bigOf reads it — `shield` true, else `walls` over 0, else `big` 'shotgun' | 'hammer' | 'none'. The shield and the wall charge have rows: the others are the gun, then the light. A change of it under the highlight comes as a `kit` message, not a `sel`: the kit message reads `hi` again. With `&nobigslot` the Shield row's own field, `shield`, is a key of BEATS)
+  // (THE BIG SLOT — kit.ts BIGSLOT, the card's last tile, field `big`: what is in the open card's slot is the card read as kit.ts bigOf reads it — `walls` over 0, else `big` 'shotgun' | 'hammer' | 'none'. A change of it under the highlight comes as a `kit` message, not a `sel`: the kit message reads `hi` again)
   const actor = (): Guard | null => who > 0 ? d.team()[who - 1] ?? null : null;   // (member i is the team's [i − 1]: the staging's order is the cards')
   /** THE LOOP HOLDS ON THE HIGHLIGHTED TILE (calls 1e): it never wanders through his other kit. No tile under the highlight (the cards, the size, a tile
    *  with no row): the gun, then the light */
   const nextThing = (): string => hi ?? (flip % 2 ? 'light' : 'weapon');   // (`flip` moves on as it begins: direct())
 
-  // THE DISSOLVE (the owner, 10-14: "i don't like the fade to black animations"): ONE mechanism for what cannot be done live — the team's size, a shield
-  // taken off, the goggles, a blown door hung again, a frag's room. The last frame drawn is copied to a 2D canvas laid over the game's (in the task that
+  // THE DISSOLVE (the owner, 10-14: "i don't like the fade to black animations"): ONE mechanism for what cannot be done live — the team's size,
+  // the goggles, a blown door hung again, a frag's room. The last frame drawn is copied to a 2D canvas laid over the game's (in the task that
   // drew it: a WebGPU canvas reads back empty after it), the work is done under it on the next frame — every man put back where he stood, the file's order
   // kept — `settle` frames are drawn, and the copy fades out over `dissolveMs`. The camera is pinned, so the picture dissolves onto itself: only what
   // changed is seen changing. The director runs on underneath (a thing asked for begins under it). No copy to be had: the work is done as it stands
@@ -1853,7 +1832,6 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const begin = (S: Staged, f: string): void => {
     const man = actor(), k = man ? S.order.indexOf(man) : -1; if (man && k < 0) { restUntil = game.time + 1; return; }
     if (f === 'light' && man && cards[who]?.light !== true) f = 'weapon';   // (no light fitted: the gun comes up dark — the toggle is the tile's job)
-    if (f === 'shield' && !(man && d.shield(man))) f = 'weapon';   // (none carried: the same)
     if (!BEATS[f]?.[man ? 'mate' : 'sam']) f = 'weapon';
     const qRow = Q ? QUIET_BEATS[f]?.[man ? 'mate' : 'sam'] : undefined;   // (the quiet picture's row for this thing, where it has one)
     const c = man ? man.char : game.player.char, H = man ? homeOf(S, man) : { p: S.sam, yaw: S.samYaw };
@@ -1927,7 +1905,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (isNaN(waitT)) waitT = game.time;
     if (S.rest !== S.shut && row && row.door === 'none') leafAsk = game.time + 0.5;   // (the quiet picture's leaf rests ajar: a door order waits for it SHUT — tidy() pulls it to while this asks)
     return game.time - waitT < K.wait; };
-  /** no row of SAM's begins while a man the last row took off his slot (the stack stood off his charge, the shield's number two) is not home: Game.puppet —
+  /** no row of SAM's begins while a man the last row took off his slot (the stack stood off his charge) is not home: Game.puppet —
    *  every row of Sam's — holds each man where he stands, so the stack stood a slot back for the whole of the next row. The cut itself, Sam walked home by
    *  tidy() and the men's walk ARE what a pick shows at once; `swapSecs` at most from the row's end.
    *  HOME (10-15): ANY man off his place, whoever took him off it (a restart makes new men: the list of the men 'the last row moved' named nobody, and a
@@ -2000,11 +1978,11 @@ export function kitViewStart(d: KitViewDeps): KitView {
     chanTick(G.body, Math.max(K.bodyRate, T) * R, dt); chanTick(G.aim, Math.max(K.gunRate, T) * R, dt); };
   const SHORT = /fiveseven|guard9mm/;   // the pistols' rows (the rest are long guns)
   /** a teammate's gun written live: his hands' errand now (the animator's own kit swap: the right hand over the shoulder and back), the model at its far point */
-  const swapGun = (man: Guard, id: string, shield = false) => {
-    const had = swaps.find(x => x.man === man); if (had) { had.id = id; had.shield ||= shield; return; }   // (a new pick before the write only changes what is written)
+  const swapGun = (man: Guard, id: string) => {
+    const had = swaps.find(x => x.man === man); if (had) { had.id = id; return; }   // (a new pick before the write only changes what is written)
     const item = (x: string) => SHORT.test(x) ? 'pistol' : 'rifle', from = item(man.weapon.def.id), into = item(id);
     try { (man.char.anim as unknown as { kitSwap(a: string, b: string, shown?: unknown, same?: boolean): number }).kitSwap(from, into, undefined, from === into); } catch { /* no errand: the model is written all the same */ }
-    swaps.push({ man, id, at: game.time + K.swapAt, shield });
+    swaps.push({ man, id, at: game.time + K.swapAt });
   };
   /** Sam's card put on him again as he stands (kit.ts kitShow then kitPlayer, through main.ts) — what is in his hand kept where the card still has it */
   const samCard = () => { const pl = game.player, slot = pl.slot, hol = pl.holstered; d.samCard(); if (slot !== 'rifle' || pl.hasRifle) pl.slot = slot; pl.holstered = hol; samCardDue = false; pools(beat?.field);
@@ -2048,7 +2026,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     { const s = cam.project([S.foot[0], 0, S.foot[2]], view.clientWidth, view.clientHeight); if (s[2]) { input.mouseX = s[0]; input.mouseY = s[1]; } }
     for (let i = swaps.length - 1; i >= 0; i--) { const x = swaps[i]; if (game.time < x.at) continue; swaps.splice(i, 1); if (!S.order.includes(x.man)) continue;
       if (x.man.weapon.def.id !== x.id && !SHORT.test(x.man.weapon.def.id) && !SHORT.test(x.id)) (x.man.char.anim as unknown as { longGun: boolean }).longGun = false;   // (a long gun for another: game.ts dealWeapons writes his muzzle's reach only as long ↔ short changes — it kept the old gun's. Told short for the instant before this step deals him the new one, it writes all of it again)
-      (x.man.route as { weapon?: string }).weapon = x.id; if (x.shield) d.giveShield(x.man); }
+      (x.man.route as { weapon?: string }).weapon = x.id; }
     if (samCardDue && !(beat && !beat.man) && asked !== 'swap') samCard();   // (a swap asked for puts it on him itself, his hands empty; a swap never begun — another pick took its place — leaves it owed here)
     if (beat) beat.t = game.time - beat.t0;
     if (dz.phase === 'ask') hold('mend');   // (a dissolve asked for between two frames — a card's change that restages: the director does not run under it, and the pick it brought waits for the room)
@@ -2137,7 +2115,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
         if (n !== undefined) { sizeN = n; if (game.rescue.active) game.rescue.knobs.squad = n as never; else game.nightBreach.knobs.squad = n as never; }
         if (!kitViewLoop) { unhang(); game.restartEncounter(); V.restarts++; stage(n); cam.kick = null; return; }   // STILL: every kit message a plain restage (the picture's lamps off the list first, as the live restage takes them: the office with four men is at the light cap with them on it, and said `none`)
         // WHAT MOVED, on the cards of the men who come — and each written LIVE where the game can take it (a count: the pools; a teammate's gun, light,
-        // suit, trim, a shield put ON; all of Sam's card). What it cannot (the size, a shield taken off, the goggles): a restage under the dissolve
+        // suit, trim; all of Sam's card). What it cannot (the size, the goggles): a restage under the dissolve
         const team = n ?? ops().length, moved: { i: number; f: string }[] = [];
         for (let i = 0; i <= team; i++) for (const f of new Set([...Object.keys(was[i] ?? {}), ...Object.keys(cards[i] ?? {})])) if (was[i]?.[f] !== cards[i]?.[f]) moved.push({ i, f });
         const S = staged, T = d.team(); let hard = !S || state === 'none' || team !== ops().length, play: string | null = null;
@@ -2145,13 +2123,13 @@ export function kitViewStart(d: KitViewDeps): KitView {
           if (x.i > 0 && !g) { hard = true; break; }
           if (COUNTS.includes(f)) { if (x.i === who && thing(f) && play !== 'swap') play = thing(f); continue; }   // (a count that moved WITH his gun — the launcher's rounds go with the rifle — is the gun's change)
           if (!g) {   // Sam's own card: put on him again as he stands — a gun by way of his holster
-            if (f === 'weapon') { samCardDue = true; if (who === 0) play = 'swap'; } else { samCardDue = true; if (who === 0 && thing(f) && play !== 'swap') play = thing(f); }
+            if (f === 'weapon' || f === 'primary' || f === 'secondary') { samCardDue = true; if (who === 0) play = 'swap'; } else { samCardDue = true; if (who === 0 && thing(f) && play !== 'swap') play = thing(f); }
             continue; }
-          if (f === 'weapon' || f === 'suppressed' || (f === 'shield' && c.shield === true)) { swapGun(g, d.gun(x.i), f === 'shield'); if (x.i === who) play = 'swap'; }
+          if (f === 'weapon' || f === 'primary' || f === 'secondary' || f === 'suppressed') { swapGun(g, d.gun(x.i)); if (x.i === who) play = 'swap'; }
           else if (f === 'light') { g.lightDeadUntil = c.light === true ? -1 : Infinity; if (x.i === who && play !== 'swap') play = 'light'; }
           else if (f === 'suit' || f === 'trim') { const t = d.tints(x.i), v = f === 'suit' ? t.suit ?? issued.suit.get(x.i) : t.trim ?? issued.trim.get(x.i); if (!v) { hard = true; break; }
             if (f === 'suit') g.char.tint = [...v] as Vec3; else g.char.tint2 = [...v] as Vec3; if (x.i === who && play === null) play = 'turn'; }
-          else { hard = true; break; } }   // (a shield off, the goggles: no live path in the game)
+          else { hard = true; break; } }   // (the goggles: no live path in the game)
         if (hard) { if (beat && staged) cut(staged); if (play !== null) heard(play === 'swap' ? 'weapon' : play); dissolve(() => restage()); return; }
         pools(beat?.field);
         if (play !== null) pick(play);   // (a tile just changed on the open card: its thing, now)

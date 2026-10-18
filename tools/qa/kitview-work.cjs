@@ -45,19 +45,19 @@ const PICKS = [
   { name: 'sam.frags', who: 0, field: 'frags', thing: 'frags' }, { name: 'sam.shells', who: 0, field: 'shells', thing: 'shells' }, { name: 'sam.charges', who: 0, field: 'charges', thing: 'charges' },
   { name: 'sam.cams', who: 0, field: 'cams', thing: 'cams' }, { name: 'sam.wand', who: 0, field: 'wand', thing: 'wand', set: { wand: true } },
   { name: 'sam.suit', who: 0, field: 'suit', thing: 'turn' }, { name: 'sam.trim', who: 0, field: 'trim', thing: 'turn' },
-  { name: 'sam.big.shotgun', who: 0, field: 'big', thing: 'bigtool', set: { big: 'shotgun', walls: 0, shield: false } }, { name: 'sam.big.hammer', who: 0, field: 'big', thing: 'bigtool', set: { big: 'hammer', walls: 0, shield: false } },
-  { name: 'sam.big.wall', who: 0, field: 'big', thing: 'walls', set: { big: 'none', walls: 1, shield: false } },
+  { name: 'sam.big.shotgun', who: 0, field: 'big', thing: 'bigtool', set: { big: 'shotgun', walls: 0 } }, { name: 'sam.big.hammer', who: 0, field: 'big', thing: 'bigtool', set: { big: 'hammer', walls: 0 } },
+  { name: 'sam.big.wall', who: 0, field: 'big', thing: 'walls', set: { big: 'none', walls: 1 } },
   { name: 'mate.weapon', who: 1, field: 'weapon', thing: 'weapon' }, { name: 'mate.suppressed', who: 1, field: 'suppressed', thing: 'weapon' }, { name: 'mate.light', who: 1, field: 'light', thing: 'light', set: { light: true } },
   { name: 'mate.nvg', who: 1, field: 'nvg', thing: 'turn' }, { name: 'mate.bangs', who: 1, field: 'bangs', thing: 'bangs' }, { name: 'mate.smoke', who: 1, field: 'smoke', thing: 'smoke' },
   { name: 'mate.charges', who: 1, field: 'charges', thing: 'charges' }, { name: 'mate.frags', who: 1, field: 'frags', thing: 'frags' }, { name: 'mate.wand', who: 1, field: 'wand', thing: 'wand', set: { wand: true } },
   { name: 'mate.suit', who: 1, field: 'suit', thing: 'turn' }, { name: 'mate.trim', who: 1, field: 'trim', thing: 'turn' },
-  { name: 'mate.big.shotgun', who: 1, field: 'big', thing: 'bigtool', set: { big: 'shotgun', walls: 0, shield: false } }, { name: 'mate.big.hammer', who: 1, field: 'big', thing: 'bigtool', set: { big: 'hammer', walls: 0, shield: false } },
-  { name: 'mate.big.wall', who: 1, field: 'big', thing: 'walls', set: { big: 'none', walls: 1, shield: false } },
-];   // (the ballistic shield is not a pick of the page as it opens: its tile is there only under `?shield`)
+  { name: 'mate.big.shotgun', who: 1, field: 'big', thing: 'bigtool', set: { big: 'shotgun', walls: 0 } }, { name: 'mate.big.hammer', who: 1, field: 'big', thing: 'bigtool', set: { big: 'hammer', walls: 0 } },
+  { name: 'mate.big.wall', who: 1, field: 'big', thing: 'walls', set: { big: 'none', walls: 1 } },
+];
 // THE SETS (SETS=1, or named in PICKS): a squad kit set (slots.json `loadouts`) and a member's set (as issued / quiet / loud: here on Sam's card, the open one) are a whole card written at once,
 // with no tile of their own. Each is put on through the page's own kit table (`__kit.loadout` / `__kit.preset`), told to the picture as the menu tells it,
 // and what the picture then plays is SAID — never judged: the page has no row for a set, and what it shows is the open card's change, or the room staged again.
-const SETS = [...['wall', 'stun', 'frag', 'quiet', 'shield'].map(id => ({ name: `set.squad.${id}`, loadout: id })), ...['issued', 'quiet', 'loud'].map(id => ({ name: `set.member.${id}`, preset: id }))];
+const SETS = [...['wall', 'stun', 'frag', 'quiet'].map(id => ({ name: `set.squad.${id}`, loadout: id })), ...['issued', 'quiet', 'loud'].map(id => ({ name: `set.member.${id}`, preset: id }))];
 // EXCUSED: a pick that cannot show its kit on some way, and why — said as a pass where it is idle THERE and for no other reason; anywhere else it fails
 const EXCUSED = [
   { pick: 'mate.frags', when: (a, L) => L.kind === 'rescue', why: "a rescue: the squad's frag on order is refused with hostages on the floor (the game's own rule), and the gun's row plays" },

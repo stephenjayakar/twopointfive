@@ -349,7 +349,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `FARSIGHT_BREAK=1` must fail). MEASURED (shipped stand, on against `TPS_FARSIGHT=0`, playthrough.ts): the 20 squad missions × seeds 1-6 — 81 of 120 digests equal, won 77
   on / 80 off, teammates lost 221 / 209; nine missions moved, all but one inside a seed's noise. THE LONG HALL IS WHERE IT BITES: hall-four × seeds 7-18 played without the
   shield walk, taken 8 of 12 on / 11 off, teammates lost 34 / 18, and 22 of the 34 fall to a gun past 16 m (the hall's far pair, Tango 1 and 2) in the first 40 s — 1 of 18
-  off; led down the hall behind the shield (`PT_HALL=file`, seeds 1-12) 12 of 12 taken on both, lost 15 / 10, no killer past 12 m on either. records-pair × seeds 7-18: 11 of
+  off; led down the hall behind the shield (`PT_HALL=file`, seeds 1-12; the shield has since left the game) 12 of 12 taken on both, lost 15 / 10, no killer past 12 m on either. records-pair × seeds 7-18: 11 of
   12 taken on both, lost 6 / 7 (the first tally's 3 / 5 was noise). On the frozen stand `TPS_FARSIGHT=1` moves no verdict in close, standoff, roomfight, quiet, silent, sneak,
   sticky, fog, pairup, pairs, lights-out, stealthpose, squadfire or journal. Never played: 26 m and the 0.4 / 0.8 meter bars are first numbers.
 - **Shaken — the first slice of enemy morale** (`src/game/morale.ts`, table `MORALE`; `MORALE.on` — ON in the page, `?nomorale` = every man as steady as he

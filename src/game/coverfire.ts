@@ -46,6 +46,7 @@ import { FIGHT_SKILL } from './roomfight';
 import { civilianBodies } from './civilians';
 import { wallMenLive, thinLine, flightLen, WALLPEN } from './wallpen';
 import { roundEnergy, shotEnergy } from './glasspen';
+import { sideLocked } from './gunslots';   // (called inside the trigger only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export const COVERFIRE = {
@@ -300,7 +301,7 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   const on = Math.abs(wrapAngle(brg - c.aimYaw)) < P.onDeg * DEG + Math.atan2(0.35, Math.max(dist, 0.3)) && v3.dist(O.aim, to) < 0.3 && !gd.muzzleDown;
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * Sk.settleK;
   Cw.lay = !g.tune.aimModel ? (on ? 1 : 0) : on ? Math.min(1, Cw.lay + dt / settle) : Math.max(0, Cw.lay - P.loseRate * dt);
-  if (!on || Cw.lay < P.acquireMin - 1e-9 || g.time < Cw.next || g.time < O.next || g.time < O.reloadUntil) return true;   // (O.next: the room fight's own gap since his last round at a man)
+  if (!on || Cw.lay < P.acquireMin - 1e-9 || g.time < Cw.next || g.time < O.next || g.time < O.reloadUntil || sideLocked(g, gd)) return true;   // (O.next: the room fight's own gap since his last round at a man)
   if (!gd.weapon.fire()) { O.reloadUntil = g.time + gd.weapon.def.reload.dur; g.say(gd, 'reloading.'); return true; }
   const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * Sk.spreadK;
   const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;

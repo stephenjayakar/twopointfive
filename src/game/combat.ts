@@ -12,6 +12,7 @@ import { Item } from './throwables';
 import * as fx from './effects';
 import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
 import { sideLocal } from './packside';   // (a leaf)
+import { sideHung } from './gunslots';   // (called inside handProps only)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
@@ -46,8 +47,7 @@ import { laserBand, laserOn, irViewer, irNote, irViewAs, paintsOwn, samLaserBoxe
 import { thinNote, thinAir } from './thinline';
 import { drawnBeam } from './stature';
 import { bulletMark, bangScorch, staticSurface } from './marks';
-import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, breakerSparkFx, clackFx } from './particleFx';
-import { shieldStop, shieldNote, shieldBoxes, shieldLost } from './shield';
+import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, breakerSparkFx } from './particleFx';
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
 import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
@@ -183,13 +183,6 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
     }
   }
   if (ph && !hitGuard && !playerHit) tHit = ph.t;
-  // THE BALLISTIC SHIELD (shield.ts): the plate a man of a side hostile to the shooter carries is a box on him, and a round whose line meets it before it meets
-  // whatever it would have stopped in — him, the man behind him, the wall — stops in the plate. No hit points, no dice: from his side, his back, under it at
-  // his shins, the line misses the plate and finds the body column above exactly as it always did. (Null on the first test with no shield on the floor.)
-  let sh: { t: number; gd: Guard } | null = null;   // (through glass: asked leg by leg of the round's path, at its distance along it)
-  if (!through && !pen) sh = shieldStop(g, sgTeam, muzzle, dir, tHit);
-  else if (pen) for (const s of pen.segs) { if (s.t0 >= tHit) break; const h = shieldStop(g, sgTeam, s.o, s.d, Math.min(s.len, tHit - s.t0)); if (h) { sh = { t: s.t0 + h.t, gd: h.gd }; break; } }
-  if (sh) { tHit = sh.t; hitGuard = null; playerHit = false; hostageHit = false; shieldNote(g, o.blind ? null : sg, sh.gd); clackFx(g, pen ? pathAt(pen, tHit - 0.02) : v3.mad(muzzle, dir, tHit - 0.02)); }   // (a blind round is counted and teaches its man nothing: he never saw where it went)
   const hitP = pen ? pathAt(pen, tHit) : v3.mad(muzzle, dir, tHit);
   const flown = dir;                                              // (the bore's line, kept for the log)
   if (pen) { dir = segAt(pen, tHit).d; commitCrossings(g, pen.cross, tHit, shooter.id, pel ?? undefined); if (pen.walls) commitWalls(g, pen.walls, tHit, shooter, def, lead, third, pel); }   // from here `dir` is the round's direction WHERE IT STOPPED; every pane it got through before that has its star, its crack and its hole (a man or a chair on the near side: the glass never heard of it)
@@ -197,7 +190,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (st && st.index < 1e6 && !hitGuard && !playerHit && !through && (penLive || third) && Math.abs(tHit - st.t) < 1e-6) { if (penLive) spentInPane(g, st.index, hitP, dir, pen ? segAt(pen, tHit).e : eMuzzle, shooter.id, pel ?? undefined); else glassHit(g, st.index, hitP, dir, shooter.id); }   // (a pellet, rounds through glass live: EVERY pellet that stops in a pane marks it, by the shell rule a pellet that goes through is held to — glasspen.ts; with that switch off a pane is the starred wall it was and every third pellet stars it, as before)   // the round stopped in a static: if that is a glass pane it stars it (glass.ts — a hole and cracks ON the pane, the crack heard; the pane holds: the next round stops in it too)
   if (pel) { const ah = armAt;   // (the muzzle pushed through a leaf — pressed to the lock: the shell is in THAT leaf, where the arm crosses it)
     pelletEnd(pel, ah ? ah.index : st && !hitGuard && !playerHit && !through && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1, tHit, ah ? ah.at : hitP); }
-  if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? g.player.char : sh ? sh.gd.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
+  if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? g.player.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
   if (pen && ph) eK = segAt(pen, ph.t).e / e0; else if (penLive) eK = eMuzzle / e0;
   if (ph && ph.t <= tHit + 1e-3 && third) { const J = def.propImpulse * eK; const pd = pen ? segAt(pen, ph.t).d : dir; g.props.applyImpulse(ph.prop, pen ? pathAt(pen, ph.t) : v3.mad(muzzle, dir, ph.t), [pd[0] * J, 0, pd[2] * J], shooter.id, true); }   // (not a prop standing behind the body the round stopped in) the row's few N·s, exaggerated over the real round so it reads: cartons hop, chairs twitch and roll — and it is heard at the prop
   // bullet wake through smoke volumes
@@ -206,17 +199,16 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (lead) g.engine.lights.flash(v3.mad(hitP, dir, -0.05), [1, 0.8, 0.5], 1.5, 2.5, 0.05, 0);
   const inGlass = !!(st && st.index < 1e6 && !through && Math.abs(tHit - st.t) < 1e-6 && (g.level.boxes[st.index]?.flags ?? 0) & BoxFlag.Glass);   // the round stopped in a pane / the solid bottle: glassHit above played its crack (or nothing for solid glass) — no wall thud, and no bullet decal on a box that is never rasterised (review 08-12)
   if (!hitGuard && !playerHit && !inGlass && lead) g.audio.play('bulletImpact', hitP, 0.8);
-  if (!hitGuard && !playerHit && !through && !inGlass && !sh) bulletMark(g, hitP, ph && ph.t <= tHit + 1e-3 ? ph.n : st ? st.n : [0, 1, 0], ph && ph.t <= tHit + 1e-3 ? { box: ph.box, dynamic: true } : st && st.t <= tHit + 1e-3 ? staticSurface(g, st.index) : null, def);   // decals (E1, marks.ts): the hole where the round stopped — in the furniture it knocked, else the static / the leaf it met; nothing in flesh, in the sky, or through the panel at the muzzle
+  if (!hitGuard && !playerHit && !through && !inGlass) bulletMark(g, hitP, ph && ph.t <= tHit + 1e-3 ? ph.n : st ? st.n : [0, 1, 0], ph && ph.t <= tHit + 1e-3 ? { box: ph.box, dynamic: true } : st && st.t <= tHit + 1e-3 ? staticSurface(g, st.index) : null, def);   // decals (E1, marks.ts): the hole where the round stopped — in the furniture it knocked, else the static / the leaf it met; nothing in flesh, in the sky, or through the panel at the muzzle
   // …and what the round knocks out of what it stopped in (GPU particles; nothing with them off): sparks off the racks, chips and a puff of gypsum off a partition, splinters
   // off a leaf, by the material of the very box / prop / leaf the scan found — not for a round in a man, into the night, or into the panel at a muzzle pressed to it
-  if (!hitGuard && !playerHit && !through && !sh) { if (ph && ph.t <= tHit + 1e-3) impactFx(g, hitP, dir, { n: ph.n, prop: ph.prop }, def); else if (st) impactFx(g, hitP, dir, { n: st.n, index: st.index }, def); }
-  if (!hitGuard && !playerHit && !through && !sh && third) g.destr.round(shooter, hitP, dir, ph && ph.t <= tHit + 1e-3 ? { n: ph.n, prop: ph.prop, box: ph.box } : st ? { n: st.n, index: st.index } : { n: [0, 1, 0] }, def);   // DESTRUCTION (destruction.ts, behind tune.chaos — a return at 0): the beaten zone's heat and what this round does on top of the hole and the puff — paper up, dust into the smoke, a dent / shred / crack, things off the desk, a tile off the ceiling
-  if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through || sh ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
+  if (!hitGuard && !playerHit && !through) { if (ph && ph.t <= tHit + 1e-3) impactFx(g, hitP, dir, { n: ph.n, prop: ph.prop }, def); else if (st) impactFx(g, hitP, dir, { n: st.n, index: st.index }, def); }
+  if (!hitGuard && !playerHit && !through && third) g.destr.round(shooter, hitP, dir, ph && ph.t <= tHit + 1e-3 ? { n: ph.n, prop: ph.prop, box: ph.box } : st ? { n: st.n, index: st.index } : { n: [0, 1, 0] }, def);   // DESTRUCTION (destruction.ts, behind tune.chaos — a return at 0): the beaten zone's heat and what this round does on top of the hole and the puff — paper up, dust into the smoke, a dent / shred / crack, things off the desk, a tile off the ceiling
+  if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
   recapRound(g, playerHit ? g.player.char : hitGuard?.char, playerHit ? g.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
     if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
-    if (wasUp) shieldLost(g, hitGuard, sg?.callsign ?? 'player', muzzle, hitP, pen && segAt(pen, tHit) !== pen.segs[0] ? dir : undefined);   // (shield.ts: a shield man found by a round — where it came from, for the record; nothing for anybody else)
     const foeLine = sg && isHostile(sg.team, hitGuard.team) ? `${hitGuard.callsign} down — ${sg.callsign}'s round` : undefined;   // (teams: not 'hit by his own side' — he was the other side's to hit)
     const does = roundDoes(g, hitGuard, v3.dist(v3.mad(muzzle, dir, tHit), hitP) < 1e-6 ? muzzle : v3.mad(hitP, dir, -tHit), dir, tHit, hostageHit, isPlayer);   // WOUNDS (wounds.ts): where it landed decides — 'shot' is the only answer with the switch off. (Its line is the muzzle's for a straight round, as ever; for a round that has changed direction on its way — through glass, in a build where one can: `dir` and `tHit` are then its last leg's and its whole path's — it is taken BACK from where the round stopped, so the stretch of the man that is measured is the one it went into)
     if (does !== 'none') killGuard(g, hitGuard, dir, false, does === 'shot' ? 'shot' : 'wounded', isPlayer ? 'player' : 'guard', does !== 'shot' ? (foeLine ? `${hitGuard.callsign} hit, down and breathing — ${sg!.callsign}'s round` : `${hitGuard.callsign} down — wounded, out of the fight`) : foeLine, does === 'shot' ? undefined : does);
@@ -457,21 +449,23 @@ export function hammerSide(c: Game['player']['char']): { o: Vec3; z: Vec3 } | nu
 /** what ONE guard / unit carries and wears, as boxes (handPropsRaw's row for him — it only reads him) */
 function guardProps(g: Game, gd: Guard, out: Box[]) {
   const big = bigCarried(g, gd.char);   // (bigkit.ts: a teammate's big slot — null for everybody else and with the switch off: his row as it always was)
-  if (!big) { guardKit(g, gd, out, false); return; }
+  if (!big) { guardKit(g, gd, out, false); hungSide(g, gd, out); return; }
   const an = gd.char.anim, alive = gd.state !== 'dead';
   an.bigSide = big === 'hammer' ? hammerSide(gd.char) : null;
   guardKit(g, gd, out, alive && an.bigTool !== null && an.hideHeldItem);   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
   // … then the tool itself, LAST of his boxes (the motion keys of the parts above are their ordinals). The shotgun OUT (bigkit.ts gunUp) is already the gun in his
   // hands, drawn above as his weapon: the gun he put down for it hangs down his front, and no second shotgun rides his back
-  if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); return; }
+  if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); else hungSide(g, gd, out); return; }
+  hungSide(g, gd, out);
   bigBoxes(gd.char, big, alive ? an.bigK : 0, out);
 }
 /** GUNHAND.throwFree (gunhand.ts): a man throwing with his free hand, the long gun still in the other — the grenade is drawn in the LEFT fist until it leaves him */
 function freeCan(g: Game, gd: Guard, out: Box[]) { if (GUNHAND.on && GUNHAND.throwFree && gd.char.anim.throwOff && fragInFist(g, gd)) freeCanBoxes(gd.char, 'frag', out); }
+/** gunslots.ts: a teammate with his sidearm out — the long gun he let go of hangs down his front on its sling */
+function hungSide(g: Game, gd: Guard, out: Box[]) { const own = sideHung(gd); if (own) hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); }
 /** … his row without the big slot's tool. `hang` (never without one): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
 function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
   gd.char.inHand = null;   // (inhand.ts: said below on the rows that put a pistol, a torch or a long gun in his hands)
-  shieldBoxes(gd, out);   // (shield.ts: the plate on a teammate whose card hands him one — the very box the round test hits; nothing for anybody else)
   const HO = INHAND.on && sideOfTeam(gd.team, gd.trained) === 'defender' ? INHAND.holsterOut : 0, HR = HO ? { ...RIG.holster, out: RIG.holster.out + HO } : undefined;   // (inhand.ts: a defender's holster clear of his long shirt)
   const rk = rigOf(gd); const carbine = rk === 'carbine';   // rifles (guards.ts rigOf): the carbine is in both hands in every living state, its light on the handguard, the sidearm on the thigh throughout; dying, the whole rifle leaves his hands (killGuard → the row's 'rifle' drop) and the sidearm he never drew stays on the body
   if (gd.state === 'dead') { if (nvgWorn(g, gd)) gogglesBoxes(gd.char, false, out, RIG.goggles);   // (nvg.ts: a teammate's goggles stay on his head, dark, as Sam's do)

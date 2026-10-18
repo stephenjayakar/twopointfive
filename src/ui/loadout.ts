@@ -42,14 +42,14 @@ import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, shieldIn, kitIssueCards, kitDefault, type MemberKit, kitGun, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRows, kitShown, kitSmokes, kitTeam, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
+import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitDefault, type MemberKit, kitGun, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRows, kitShown, kitSmokes, kitTeam, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { gunIcon, kitIcon } from './kitIcons';
-/** the roster card's silhouette for the gun a man's card puts in his hands (kit.ts kitGun: a shield carrier's sidearm, the shotgun, else the rifle) */
+/** the roster card's silhouette for the gun a man's card puts in his hands (kit.ts kitGun: a sidearm, the shotgun, else the rifle) */
 const GUN_ICON: Record<string, string> = { fn2000: 'rifle', aks74u: 'rifle', m870: 'shotgun' };
 /** a roster chip's drawings (the one page): beside whatever he carries a COUNT of, these rows; and the rows whose drawing is a narrow thing, cut to a square board so a line of them starts flush */
-const CHIP_SHOWS = new Set(['weapon', 'shield', 'wand', 'big']), CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells', 'shield']);
+const CHIP_SHOWS = new Set(['weapon', 'primary', 'wand', 'big']), CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells']);
 const CHIP_GAP = 0.65, CHIP_IN = 0.18, CHIP_DIGIT = 0.46;   // a chip's icon row in icon heights: between two things, between a drawing and its count, one digit (startpage.ts's em values for the same)
 
 /** what the screen preps: a scenario's row (scene/scenarios.ts ScenarioEntry fits as it is), or the solo night (`kind: 'solo'`, squad 0) */
@@ -184,8 +184,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   // says so and each man who comes shows what the mission hands him. Not when the link this screen deploys carries ?noissue (the run then wears the kept cards)
   let missionKit: IssuedKit | null = null;
   const issueOf = (i: number) => { const c = missionKit?.[String(i)]; if (!c) return ''; const n = (k: string) => (typeof c[k] === 'number' && (c[k] as number) > 0 ? c[k] as number : 0), pl = (k: number, w: string) => (k ? `${k} ${w}${k === 1 ? '' : 's'}` : '');
-    return [c.shield === true && shieldIn() ? 'shield' : '', typeof c.weapon === 'string' ? c.weapon : '', n('bangs') ? `${n('bangs')} stun` : '', pl(n('charges'), 'charge'), pl(n('frags'), 'frag'), n('smoke') ? `${n('smoke')} smoke` : '', pl(n('walls'), 'wall charge'), pl(n('shells'), 'shell'), pl(n('cams'), 'sticky camera'), c.wand === true ? 'optical wand' : ''].filter(Boolean).join(' · '); };
-  const issueWho = () => { const R = rosterOf(squad), who: string[] = []; for (let i = 0; i <= squad; i++) { const c = missionKit?.[String(i)]; if (!c) continue; const what = c.shield === true && shieldIn() ? 'the shield' : c.weapon === 'shotgun' ? 'the shotgun' : ''; if (what) who.push(`${i === 0 ? 'you carry' : `${R[i - 1].name} carries`} ${what}`); } return who.join(', '); };
+    return [typeof c.weapon === 'string' ? c.weapon : '', n('bangs') ? `${n('bangs')} stun` : '', pl(n('charges'), 'charge'), pl(n('frags'), 'frag'), n('smoke') ? `${n('smoke')} smoke` : '', pl(n('walls'), 'wall charge'), pl(n('shells'), 'shell'), pl(n('cams'), 'sticky camera'), c.wand === true ? 'optical wand' : ''].filter(Boolean).join(' · '); };
+  const issueWho = () => { const R = rosterOf(squad), who: string[] = []; for (let i = 0; i <= squad; i++) { const c = missionKit?.[String(i)]; if (!c) continue; const what = c.weapon === 'shotgun' ? 'the shotgun' : ''; if (what) who.push(`${i === 0 ? 'you carry' : `${R[i - 1].name} carries`} ${what}`); } return who.join(', '); };
   const squadKits = () => (loadoutHooks.memberCard && KIT.on && SLOTS.on && entry.kind !== 'solo' && !issuedOnly ? kitLoadouts() : []);
   const putKit = (id: string) => { const why = kitLoadout(id); mountCard(true); drawSlots(); S.paint(); if (why) { note.textContent = why; note.className = 'lo-note off'; } };
   for (const L of squadKits()) {
@@ -233,7 +233,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
         name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(GUN_ICON[kitGun(m)] ?? 'pistol', gunCanOf(i, m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
         { const ics = el('div', 'lo-ics'), K = m as unknown as Record<string, unknown>;   // (the same kit as drawings: the one page shows these in place of the words)
           let wide = 0;
-          for (const r of kitRows(i)) { const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[r.field]; if (v === 0 || v === false || v == null || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(r.field, v, r.field === 'weapon' && gunCanOf(i, m)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, a shield, the wand)
+          for (const r of kitRows(i)) { const f = r.field === 'primary' && m.weapon === 'pistol' ? 'secondary' : r.field;   // (no long gun brought: his sidearm is the gun the chip draws)
+            const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[f]; if (v === 0 || v === false || v == null || v === 'none' || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(f, v, (f === 'weapon' || f === 'primary' || f === 'secondary') && gunCanOf(i, m)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, the wand)
             const narrow = CHIP_NARROW.has(r.field), c = el('span', narrow ? 'lo-ic n' : 'lo-ic'); c.innerHTML = narrow ? I.svg.replace('viewBox="0 0 64 32"', 'viewBox="16 0 32 32"') : I.svg; c.title = r.label; if (typeof v === 'number') c.appendChild(el('b', undefined, String(v)));
             wide += (ics.childElementCount ? CHIP_GAP : 0) + (narrow ? 1 : 2) + (typeof v === 'number' ? CHIP_IN + CHIP_DIGIT * String(v).length : 0); ics.appendChild(c); }
           widest = Math.max(widest, wide); s.appendChild(ics); }
@@ -351,7 +352,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   S.rows = rowsNow();
   if (!issuedOnly && entry.level) void issuedKit(entry.level).then(K => {
     if (!K || !open || new URLSearchParams(S.search().replace(/^[^?]*\?/, '')).has('noissue')) return;
-    const at = S.rows[S.sel]?.el; missionKit = kitIssueCards(K); issuedOnly = true;   // (kit.ts: the cards a staging will put on — a shield's card is not one while the shield is out)
+    const at = S.rows[S.sel]?.el; missionKit = K; issuedOnly = true;   // (the cards a staging will put on)
     (kitsRow as unknown as { remove?: () => void }).remove?.();
     S.rows = rowsNow(); S.sel = Math.max(0, S.rows.findIndex(r => r.el === at));
     foot.textContent = footWords(); mountCard(); drawSlots(); S.paint();

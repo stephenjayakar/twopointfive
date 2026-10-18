@@ -243,7 +243,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   three or more men mostly never had the fault (the other jamb's file already kept its wall). `bun run tools/qa/openhand-check.ts [scenario …] [--verbose]` (`probes.ts openhand`, in
   family `doortools`; both stands; his door by keys — X, 5, 4, then X, 5, G — for the pair and the four, then the first door of every squad room clear, then a shut door dealt the same
   either way; `OPENHAND_BREAK=1` must fail). Frozen stand, men in front of the open door before the burst over 16 missions: 2 without the rule (the two pair missions), 0 with; the frag
-  bursts inside and they go in, nobody lost, in every one. AFTER ITS REVIEW: a man carrying the shield is never re-dealt (his place is the lead's own business); a place Sam or a
+  bursts inside and they go in, nobody lost, in every one. AFTER ITS REVIEW: a place Sam or a
   teammate outside the order stands on is not taken; a man is 'on a hand' only with nothing solid between him and that jamb's mark, 5 cm clear of the opening's own line. THE LEAD AND A LONE MAN TOO (`leadHand`, off a replay, 10-13: the last man of a pair
   sent alone at a blown storage door was dealt the latch jamb — the one place of the face — from the hinge side, and shot crossing in front of it): a lead whose dealt mark is across
   the open doorway from where he stands takes a lead mark of the deal on his own hand nobody else has, else the dealt mark mirrored about the doorway's middle (floor of this room,

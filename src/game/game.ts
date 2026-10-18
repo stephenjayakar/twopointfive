@@ -88,7 +88,6 @@ import { samStaggered } from './samstun';
 import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
-import { plateUp } from './shield';
 import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary } from './guards';
 import { SENSE, CpuSmoke, ownSmoke } from './sense';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
@@ -101,6 +100,7 @@ import { doorMoveBegin, doorMoveTick, haulSetDown, teamDoorHand } from './hands'
 import type { Haul, DoorMove } from './hands';
 import type { Wanding } from './wand';
 import { samBigStart } from './bigkit';
+import { sideTick } from './gunslots';   // (called inside the update only)
 import type { StickyCam } from './stickycam';
 import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
@@ -611,6 +611,9 @@ export class Guard {
   stepPhase = 0; heardUpTo = -1; smokeTrans = 1; lightDeadUntil = -1; diedAt = -1;
   /** a teammate's breaching shotgun out of his big slot and in his hands for a lock (bigkit.ts gunUp / gunDown): the gun he put down for it, to take up again */
   slung: { own: Firearm; ownId: WeaponId | undefined; ahead: number; gun: Firearm; out: boolean; t: number } | null = null;
+  /** a teammate's second gun (gunslots.ts GUNSLOTS: his card's other slot) — `gun` / `id` / `ahead` are the one that is NOT in his hands; `out`: that is his
+   *  primary, let go onto its sling for the sidearm; `t` the game time a man was last in front of him with it out (in his eyes, or a round from it); `lock`: no round before this (his hands are between guns) */
+  second: { gun: Firearm; id: WeaponId; ahead: number; out: boolean; t: number; lock: number; /** the sidearm's round count when he was last seen firing it */ shots: number } | null = null;
   /** BIGSLOT.moves (bigkit.ts hammerOut): the hammer off a teammate's back and in his hands for a door — the game time his hands left his gun for it, when each
    *  blow lands and when he began putting it back, both on that clock (end −1: not yet), and the point struck. null = on his back. Not saved: a load finds it there. */
   bigOut: { t0: number; blows: number[]; end: number; at: Vec3 } | null = null;
@@ -1642,6 +1645,7 @@ export class Game {
         if (!gd.unit) gd.carbine = deal === 'all' || (deal === 'reyes' && gd.callsign === 'Reyes');
         const want: WeaponId = gd.carbine ? 'aks74u' : (gd.route.weapon ?? 'guard9mm');
         if (gd.state !== 'dead' && gd.weapon.def.id !== want) { gd.weapon = new Firearm(WEAPONS[want]); gd.reloadT = -1; }
+        if (gd.second) sideTick(this, gd);   // (gunslots.ts: a teammate's sidearm goes back once nobody is in front of him)
         const long = longRigOf(gd), cb = long !== null; const an = gd.char.anim; const def = gd.weapon.def;   // (long: WHICH long gun — the FN2000 in an operative's hands has its own grip point and muzzle, guards.ts longRigOf)
         if (an.longGun !== cb) { an.longGun = cb; an.longSteady = long === 'sc20k' ? 1 : 0; gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : cb && def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead; }   // (longSteady: a man handed Sam's bullpup — the breach's operatives — carries it as player.ts armRifle has Sam carry it, the gun riding his shoulders' mean line at a run instead of pumping with the run clip's arms (character.ts LONG_STEADY); the carbine men keep theirs as the poses pass left them, 0 — carbine-probes (4) places the trigger hand by the unsteadied carriage)
         if (long === 'sc20k') an.longGrip = grip20k ??= sc20kGrip(); else if (cb) an.longGrip = grip ??= carbineGrip();
@@ -1660,7 +1664,7 @@ export class Game {
           const dz = an.dazzle ?? (an.dazzle = { from: gd.char.pos, k: 0 }); dz.from = gd.dazzledAt ?? gd.lastKnown ?? gd.char.pos; dz.k = Math.min(1, (gd.dazzledUntil - this.time) / 0.5);
         } else an.dazzle = null;
         // turn weight (character.ts TURN — nothing reads it with that off): his yaws are weighed by what he carries, bar a man in Sam's arm and a showcase's cast (their timings are the choreography's)
-        { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def, plateUp(gd) ? 0.6 : 1); tw.k = an.trained; }
+        { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def); tw.k = an.trained; }
       }
       this.player.char.anim.trained = 1;
     }
