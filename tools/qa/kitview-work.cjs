@@ -60,6 +60,7 @@ const PICKS = [
 const SETS = [...['wall', 'stun', 'frag', 'quiet', 'shield'].map(id => ({ name: `set.squad.${id}`, loadout: id })), ...['issued', 'quiet', 'loud'].map(id => ({ name: `set.member.${id}`, preset: id }))];
 // EXCUSED: a pick that cannot show its kit on some way, and why — said as a pass where it is idle THERE and for no other reason; anywhere else it fails
 const EXCUSED = [
+  { pick: 'mate.frags', when: (a, L) => L.kind === 'rescue', why: "a rescue: the squad's frag on order is refused with hostages on the floor (the game's own rule), and the gun's row plays" },
   { pick: 'sam.cams', when: a => a.reachIn >= 12, why: "the way in opens on a yard: no wall inside within the sticky camera's reach (kitView.ts camReach, 12 m of open floor behind the leaf or more) to stick it to" },
   { pick: 'sam.big.wall', when: a => a.men === 1, why: "Sam alone: the picture's wall charge is the squad's order (one man sets it, the rest stand off) and there is no squad to take it; his own hands' row at a wall is refused while the picture walks him" },
 ];
@@ -161,7 +162,7 @@ async function one(browser, L) {
     const first = mine[0] || r.seen[0] || null, why = hit ? '' : (first && first.refused) || (mine.find(s => s.refused) || {}).refused || (first ? `played '${first.field}' to [${first.marks.join(', ')}] (${first.how})` : 'no row began');
     const said = r.seen.map(s => `#${s.n} ${s.i ? 'teammate ' + s.i : 'Sam'} '${s.field}'${s.prelude ? ' (the wall charge first)' : ''} ${s.phases.join('>')} → [${s.marks.join(', ')}] ${s.how ?? 'still up'} ${s.t.toFixed(1)} s${s.hand ? ` · in hand: ${s.hand}` : ''}${s.refused ? ` · refused '${s.refused}'` : ''}${!hit && s.trace && s.trace.length > 1 ? ` · the door order: ${s.trace.join(' > ')}` : ''}`).join('\n      ');
     table.push({ level: L.name, way: L.k + 1, kind: L.kind, anchor: a.kind, door: a.door, steel: a.steel, set: a.set, quiet: a.quiet, pick: p.name, thing: p.thing, work: !!hit, why, hand: hit ? hit.hand : '', turns: r.seen });
-    const ex = hit ? null : EXCUSED.find(x => x.pick === p.name && x.when(a)) || null; table[table.length - 1].excused = ex ? ex.why : '';
+    const ex = hit ? null : EXCUSED.find(x => x.pick === p.name && x.when(a, L)) || null; table[table.length - 1].excused = ex ? ex.why : '';
     table[table.length - 1].attempt = tryN + 1;
     if (!hit && !ex && tryN === 0) { st.why = why; st.said = said; queue.splice(qi + 1, 0, { p, n: 1, st }, { p, n: 2, st }); continue; }
     if (tryN > 0) { if (!hit) st.idle++; if (tryN === 1) continue;

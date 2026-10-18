@@ -190,7 +190,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A pick idle on its first pick is picked twice more: idle again on either is red; at work both times is a pass that says it MISSED ITS FIRST TURN
   ONCE and is counted in the tally (Sam's frag that came back off the leaf and was taken away, `kept`: once in some twenty throws here, on the depot's
   hut door). Also EXCUSED: the sticky camera where the way in opens on a yard (12 m of open floor or more behind the leaf: `camReach` finds no wall to
-  stick it to — every level whose picture stands at its yard gate). An idle turn of a door order prints the order's stages and the leaf's angle;
+  stick it to — the police post's gate), and a teammate's frag on a RESCUE (the order is refused with hostages on the floor: the consulate). An idle turn of a door order prints the order's stages and the leaf's angle;
   `REPEAT=n` plays the picks n times on one boot.
   MEASURED AFTER (the real page, headless Chromium on the software adapter, the clock at 2, one turn a pick, 27 picks a picture and 13 with Sam
   alone): before the join with the build's head, every pick AT WORK on mousehole ways 1 and 2, depot way 1, glasshouse way 1, snatch, floodlit, the
