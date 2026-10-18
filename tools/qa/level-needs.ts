@@ -43,7 +43,7 @@ const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
 const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
-const { kitDefault, kitIssueCards, kitCost, kitTeam } = await import(`${ROOT}/src/game/kit.ts`);
+const { kitDefault, kitCost, kitTeam } = await import(`${ROOT}/src/game/kit.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
 
@@ -123,9 +123,9 @@ export function lampsOutside(L: LevelFile): string[] {
 }
 /** KIT: who comes with nothing but his gun, as issued, at each size the row offers — the game's own issue cards, priced by the game's own pouches
  *  (game/kit.ts kitCost: a card that fills none carries nothing), with the level's own issue written over them where a staging would put it on
- *  (scenarios.issue through kitIssueCards; never on a lesson's level, whose page plays the plain issue with the block unread) */
+ *  (scenarios.issue's cards as written; never on a lesson's level, whose page plays the plain issue with the block unread) */
 export function bareMen(L: LevelFile, e: Row, T: Tables): string[] {
-  const issue = L.scenarios?.lesson ? {} : kitIssueCards(L.scenarios?.issue?.members ?? {}) as Record<string, Card>, out: string[] = [];
+  const issue = L.scenarios?.lesson ? {} : (L.scenarios?.issue?.members ?? {}) as Record<string, Card>, out: string[] = [];
   for (const c of squadChoices(e) as { n: 0 | 1 | 2 | 3 | 4; ok: boolean }[]) {
     if (!c.ok || c.n === 0) continue;
     const names = (rosterOf(c.n) as { name: string }[]).map(m => m.name), bare: string[] = [];
@@ -277,7 +277,7 @@ if (import.meta.main) {
     L.boxes.push({ id: 'planted_dado', group: 'planted', c: along ? [d.hinge[0] + 0.12, 0.55, mid] : [mid, 0.55, d.hinge[1] + 0.12], h: along ? [0.004, 0.55, 2] : [2, 0.55, 0.004], flags: ['NoShadow'] });
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
     const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
-    const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0, shield: false };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
+    const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0 };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
     const lines = ask(name, L, null, [row], { music: () => false, still: () => false, picture: () => false, docs: '', card: i => ({ ...kitDefault(i), ...bareCard }) });
     /** what each planted gap must be found as: the mark, and every phrase its lines must carry */
     const WANT: Record<string, { mark: Mark; says: string[] }> = {
