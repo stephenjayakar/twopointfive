@@ -19,7 +19,7 @@ TPS_PROFILE=shipped bun run tools/qa/level-needs.ts <name> --run     # and again
 bun run tools/qa/map-check.ts <name>              # the floor: file, lint, size, structure, squads, nav from every way in, its card, 48 scripted runs
 ```
 
-A FAIL is a gap. A NOTE is a thing to look at and say out loud. `--skip kit` leaves a need out while it is red for a reason
+A FAIL is a gap. A NOTE is a thing to look at and say out loud. `--skip <need>` leaves a need out while it is red for a reason
 that is not yours. What no tool can ask is marked **by eye** or **by play**: those are yours to do, and to say you did or
 did not.
 
@@ -157,11 +157,15 @@ like that."
   place in the team). A level changes it in two places only: `scenarios.issue.members` and `roomClear.wallCharges`. So what
   your team carries is that table plus those two fields, at EVERY size the row offers. **seen** "as issued still has blue
   team pretty empty": the squad's stuns, charges and frags rode on the first two teammates, so at three and four the blue
-  pair came with a rifle and nothing else, on every squad mission. **check** `kit` (red on every row while the table leaves
-  a man bare: the mend is the table's, never a block per level).
+  pair came with a rifle and nothing else, on every squad mission; the issue is now worn shared out over the men who come.
+  **check** `kit` asks the issue as the page deals it, on either stand (were the table to leave a man bare it is red on every
+  row that brings him: the mend is the table's, never a block per level; `KITDEAL_BREAK=1` in front shows the cards before
+  the deal). `bun run tools/qa/kit-audit.ts` lists who carries what on every mission: read your level's row.
 - **A level's own cards are for a mission built round a kit**, not a patch: with `scenarios.issue` every staging wears the
   issue and the player's kept cards are not worn or shown. A card that hands out a tool the game has switched off is
-  dropped whole. Check it is worn, at each size, and what Team & kit shows. **check** `bun run tools/qa/issue-check.ts`.
+  dropped whole. Cards of your own that change a counted thing (stun, charges, frags, smoke) are no longer the issue, so
+  the game does not share them out over a bigger team: write a card for every man who comes. Check it is worn, at each
+  size, and what Team & kit shows. **check** `kit` (reads the cards as a staging wears them); `bun run tools/qa/issue-check.ts`.
 - **Count the doors against what the squad brings**: locked doors, steel doors (no charge, hammer or shotgun opens steel)
   against the door charges issued; say how each is meant to be opened. **check** `kit` notes them.
 - **An order needs kit somebody is issued.** A frag on order is refused near a hostage, a man to take or a civilian, so on a
@@ -172,7 +176,9 @@ like that."
 - **The sizes it offers are sizes it was laid out for**: a row built for one size says `only`. Who carries the floor's
   grenades follows room order.
 - **The Team & kit picture** is the level's own `scenarios.kitView` block, the same to the byte in a look twin; name boxes
-  by group, not by a generated `box_NNNN` id. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>`; the page
+  by group, not by a generated `box_NNNN` id. Where a `hide` list does name box ids, whoever shifts the level's box ids
+  builds that list again from the generator's box range in the same step (other typed lists are left): a generated id names
+  whatever box now holds that number. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>`; the page
   by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`.
 
 ## 8. What the player reads
