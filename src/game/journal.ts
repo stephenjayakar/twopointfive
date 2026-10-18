@@ -73,6 +73,7 @@ import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
 import { CUES } from './cues';
 import { OWNCHARGE } from './owncharge';
+import { GUNSLOTS } from './gunslots';
 import { BIGSLOT, KITDEAL } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
@@ -266,6 +267,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (was.glass === undefined) LANES.glass = false; if (was.stopClear === undefined) LANES.stopClear = false; if (was.roused === undefined) LANES.roused = false;
     if (was.frag === undefined) LANES.frag = false; if (was.fragOwn === undefined) LANES.fragOwn = false; }   // (…and from before a man held on a lane threw his grenade down it: he never did — nor was he kept his own through its wind-up)
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
+  if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge and a shield were pouches, nobody carried a hammer)
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)

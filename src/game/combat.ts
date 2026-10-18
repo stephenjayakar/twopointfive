@@ -12,6 +12,7 @@ import { Item } from './throwables';
 import * as fx from './effects';
 import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
 import { sideLocal } from './packside';   // (a leaf)
+import { sideHung } from './gunslots';   // (called inside handProps only)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
@@ -457,17 +458,20 @@ export function hammerSide(c: Game['player']['char']): { o: Vec3; z: Vec3 } | nu
 /** what ONE guard / unit carries and wears, as boxes (handPropsRaw's row for him — it only reads him) */
 function guardProps(g: Game, gd: Guard, out: Box[]) {
   const big = bigCarried(g, gd.char);   // (bigkit.ts: a teammate's big slot — null for everybody else and with the switch off: his row as it always was)
-  if (!big) { guardKit(g, gd, out, false); return; }
+  if (!big) { guardKit(g, gd, out, false); hungSide(g, gd, out); return; }
   const an = gd.char.anim, alive = gd.state !== 'dead';
   an.bigSide = big === 'hammer' ? hammerSide(gd.char) : null;
   guardKit(g, gd, out, alive && an.bigTool !== null && an.hideHeldItem);   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
   // … then the tool itself, LAST of his boxes (the motion keys of the parts above are their ordinals). The shotgun OUT (bigkit.ts gunUp) is already the gun in his
   // hands, drawn above as his weapon: the gun he put down for it hangs down his front, and no second shotgun rides his back
-  if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); return; }
+  if (big === 'shotgun' && alive && gd.slung?.out) { const own = gd.slung.own.def.rig; if (own === 'carbine' || own === 'sc20k') hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); else hungSide(g, gd, out); return; }
+  hungSide(g, gd, out);
   bigBoxes(gd.char, big, alive ? an.bigK : 0, out);
 }
 /** GUNHAND.throwFree (gunhand.ts): a man throwing with his free hand, the long gun still in the other — the grenade is drawn in the LEFT fist until it leaves him */
 function freeCan(g: Game, gd: Guard, out: Box[]) { if (GUNHAND.on && GUNHAND.throwFree && gd.char.anim.throwOff && fragInFist(g, gd)) freeCanBoxes(gd.char, 'frag', out); }
+/** gunslots.ts: a teammate with his sidearm out — the long gun he let go of hangs down his front on its sling */
+function hungSide(g: Game, gd: Guard, out: Box[]) { const own = sideHung(gd); if (own) hungBoxes(gd.char, own, out, RIG, sneakSuit(g, gd.char)); }
 /** … his row without the big slot's tool. `hang` (never without one): his own gun is out of his hands for it — a long gun on its sling down his front, a sidearm on his thigh, no lit lens, no laser */
 function guardKit(g: Game, gd: Guard, out: Box[], hang: boolean) {
   gd.char.inHand = null;   // (inhand.ts: said below on the rows that put a pistol, a torch or a long gun in his hands)
