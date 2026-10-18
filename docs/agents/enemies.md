@@ -489,6 +489,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   his eyes, or no run); and enemysquads.ts `fit` / `contact()` pass over a man `runnerOwns`, so from his shout on he puts nothing on the squad's net.
   runner-check (17), squads staged: the shout 0.78 s after "I'm out!", no line of his after it to the frame he is gone (5.78 s); on the tree before the
   change both lines are red (0.00 s; "Gate: contact — guard hut!"). 33 lines green on both stands.
+  WHO HE PLANS ROUND (10-18, `PICTURE.run`, picture.ts; `?picrun=0`): with the picture on, the way, the reachable floor, the outside he picks, the corner
+  and the look ahead are reckoned from the men HE knows of, where he believes each to be, not from every enemy's true place; he leaves the floor on the
+  TRUE lines as before. The rule, its check line and what was measured: `docs/agents/team-feel.md`, STEP 8 of the own-picture bullet.
 - **Not in there alone — the dark doorway** (`src/game/darkdoor.ts`, table `DARKDOOR`; `DARKDOOR.on` — ON in the page, `?nodarkdoor` = every man walks into
   the dark as he did; OFF in the module and on the frozen stand, `TPS_DARKDOOR=1` raises it, `TPS_PROFILE=shipped` has it on; IT ACTS ONLY WITH `MORALE.on`
   AS WELL (frozen: `TPS_MORALE=1 TPS_DARKDOOR=1`); `FROZEN_HOLDS` row, `JOURNAL_KNOBS` + `applyKnobs` so a recording from before the key replays with it off,

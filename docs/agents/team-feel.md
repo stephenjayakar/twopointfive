@@ -524,8 +524,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   change to the makers of stack marks runs `probes.ts picture` as well as `pairs`, `handleside`, `stack-inway`, `glasstune`, `stackroom-check`.
   Never played: nobody has watched four men file on one hand, nor the entry that follows from a file.
   STEP 6, 10-15 (`PICTURE.step`; tuning `stepAt` 0.5, `stepFree` 0.25, `stepM` 2.5, `stepAfter` 0.6, `stepRest` 1.5, `stepSecs` 5; `?picstep=0`
-  puts it off, the debugger's Picture toggle too): BUILT ON A LEAN WHILE THE MAINTAINER WAS AWAY — his call 1 on the own-picture page, not yet
-  answered; if he says no, the key ships false and nothing else changes. Two places the squad chose for itself are left when a man learns an enemy
+  puts it off, the debugger's Picture toggle too): built on a lean while the maintainer was away — his call 1 on the own-picture page; HE HAS
+  SINCE PLAYED THE BUILD WITH IT ON AND SAID KEEP (10-18). Two places the squad chose for itself are left when a man learns an enemy
   has a line to them. (1) The file behind Sam (`orders.ts` follow pose → `pictureStep`): Sam standing, a follower whose place (where he stands
   when that is his place, else his slot) has been `stepAt` or more exposed for `stepAfter` s walks to cover inside `stepM` that no believed enemy
   has a line to, standing or on a knee, hidden a foot either way, a straight walk from the place, never up to a believed man. He goes back when
@@ -543,8 +543,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   JSON row carries the counts (`playthrough.ts` `picture`). Not built: a door charge's stand-off dealt again, stack marks, hold and entry
   points, the enemy's side, the floor view drawing the step. A recording without `PICTURE.step` replays with it off. Never played, never seen
   on a GPU: nobody has watched a man leave the file for cover, nor whether it reads as sense or as fidgeting.
-  STEP 7, 10-15 (`PICTURE.shot`; `?picshot=0`, the Picture toggle): BUILT ON A LEAN WHILE HE WAS AWAY — his call 3, the first of the enemy's
-  all-seeing reads. `guards.ts colleagueFirePos` used to hand a man who heard a colleague fire the TRUE place of the colleague's target, through
+  STEP 7, 10-15 (`PICTURE.shot`; `?picshot=0`, the Picture toggle): built on a lean while he was away — his call 3, the first of the enemy's
+  all-seeing reads; HE HAS SINCE PLAYED THE BUILD WITH IT ON AND SAID KEEP (10-18), the next read to go with it (step 8). His call 2 is answered too: a spot
+  he points at himself (move there, hold) never bends to cover — nothing is built for it, and nothing should be. `guards.ts colleagueFirePos` used to hand a man who heard a colleague fire the TRUE place of the colleague's target, through
   any wall. Now he gets the shooter's own idea of that man, at its own age: the hearer's picture takes it as a call, his fix is stamped with the
   idea's time (so the search, the frag and the squad's 'freshest fix' read a stale word as stale), and he keeps what he works from when his own
   word is the newer or the shooter has seen the place empty. A shooter with no idea of his man, a show (`g.touring`: no pictures are kept), the
@@ -554,8 +555,40 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   none of 327 was off and 146 kept theirs. So the place handed over is nearly always right (a man firing mostly sees his man) and what changes a
   run is the hearer keeping his own fresher fix; the squad does not come out better for it in these runs (six fewer standing over 40 Hard runs
   that go both ways: read as noise, not as a gain). `PICTURE_STATS.shotPlaced` / `shotOff` / `shotKept` count hearings, one a hearer. The other
-  all-seeing reads the audit lists are untouched. A recording without `PICTURE.shot` replays with it off. Never played. The measurements are of
-  the branch before its last merge of the build head.
+  all-seeing reads the audit lists are untouched (step 8 takes the next). A recording without `PICTURE.shot` replays with it off. The
+  measurements are of the branch before its last merge of the build head.
+  STEP 8, 10-18 (`PICTURE.run`; `?picrun=0`, the Picture toggle 'a runner: only who HE knows of'; off on the frozen stand with the rest of the
+  picture, no hold of its own): THE MAN WHO DROPS HIS GUN AND RUNS GOES BY HIS OWN PICTURE — the second of the enemy's all-seeing reads to go.
+  `runner.ts` planned his whole run round every living enemy's TRUE place, through any wall: the floor he may reach (`flood`), the outside nobody
+  has a line to, the corner farthest from them, the dear cells of his way (`route`), the look ahead for a man in it (`wayBarred`), the wall he
+  turns his face to. With the rule each is reckoned from `known()`: every idea his picture still holds (seen, heard fire, told before he ran;
+  the picture forgets at `forgetSecs`) but a place he has since seen empty, each man where he BELIEVES him. So a man he knows nothing of bars no
+  way of his until he sees him, and then the look ahead (every `replanSecs`) turns him as it always did; a man who walked off after he last saw
+  him is still steered round where he was. THE WORLD'S OWN RULE KEEPS THE TRUTH: he is taken off the floor only when no enemy truly has a line
+  to him, and is low while one has. Stopped outside with a man's eyes on him he looks about him and HAS that man (a line runs both ways:
+  `pictureTell` of the true watchers on the `retrySecs` look), so he goes on to floor that man cannot see instead of sitting in plain view. From
+  the drop on he is off his side's net in the picture too (`picture.ts onNet`, as netquiet.ts and enemysquads.ts have him): he is told nothing
+  and calls nothing; what he tells his mates he shouts (runner.ts `tell`, unchanged: the place the enemy stood when he broke). `runnerBreak`,
+  the seam that starts a run directly, reads the nearest man he KNOWS of for that place. The run's own geometry is kept (one ray from the eye to
+  1.2 m over the cell, `shyM`), so on against off differ in WHO is known and nothing else. Line (t) of `probes.ts picture` holds it on both
+  stands: an enemy he knows nothing of standing on his way turns nothing; a man he was told is there turns it though nobody is; a word he has
+  forgotten, or a place seen empty, turns nothing; out and stopped, watched by a man he did not know of, he has him, moves on, and leaves the
+  floor only out of that man's line; the rule off, the true place turns the way and a told one does not. `PICTURE_BREAK=1` fails it with the
+  rest (21 of 23). `runner-check.ts` passes on both stands with the rule on: its player who is teleported out to the yard is now a step the
+  man is TOLD of (a walk he would have watched). `PICTURE_STATS.ran` / `ranOff` count the ways planned from a picture and those planned on one
+  that was not the truth. MEASURED, and it tells little: `ships.ts`, seeds 1-8, standard (room-clear-four, killhouse-four, depot-four) on against
+  `--set '{"PICTURE":{"run":false}}'`: 24 runs, none differs; Hard (five levels, 40 runs): `ran` is 0 in every run, as on standard — the scripted
+  commander never baits a man dry at arm's length, so NOBODY RUNS in these fights and the rule is never reached. What holds it is line (t) and
+  the runner's own check. A recording without `PICTURE.run` replays with it off. Never seen on a GPU, never played:
+  nobody has watched a man run past a teammate he had not seen.
+  WITH IT, A MEND TO STEP 2's COVER RULE (`PICTURE.coverHard`, a key the journal carries so an older recording replays as it played; no flag,
+  no toggle): `suppression.ts coverFrom` kept ONE fallback place while it looked for cover hidden from every known man, and with rounds passing
+  thin walls (wallpen.ts) that slot went to whichever kind came first — so a man with no place hidden from everybody could be dealt a spot the
+  shooter's rounds go through in place of the hard cover he had before either rule. Now a place that STOPS the shooter's round though another
+  known man has a line to it is kept over a thin one (a slot each; the upgrade may spend plans only while eight of the twelve are unspent, so a
+  later place hidden from everybody is still reached). Line (l) was red on the shipped stand for it at the build head and is green; its staging
+  no longer believes the second enemy on the pinned man's own spot. MEASURED, the same runs with the mend against without: none of 24 standard
+  and none of 40 Hard differs (21 and 30 taken both ways), so it is rare in a scripted fight; the check line is what shows it.
 - **No wary mark over a man of your own** (`src/ui/headmark.ts headMark`, drawn by `overlay.ts`; the maintainer, 10-16, of the yellow dots over
   his squad: telegraph a man's state through his animation instead). The row of yellow dots (`awareness`) and the yellow '?' (`search` /
   `suspicious`) are the stealth game's read of a man who may find you out. A teammate under an order runs no senses, so nothing drains his
