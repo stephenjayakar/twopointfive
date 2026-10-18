@@ -24,7 +24,12 @@ const ROOT = resolve(import.meta.dir, '../..');
 // older bases are commits of the history before the move and are not in a clone of this repo, so they are no longer listed; the last of them was the records office's Team & kit door picture, scenarios.kitView — the LAST picture to take one: the block is exempt below; before it the police post's terminal on the bunk room's footlocker; before it the floodlit shed's roof flagged to be seen through from above; before it real-size doors, then the look levels' floor decals re-layered, then every level's floor laid in tiers, then a door hung outward or a window for every room a wedge could shut) — so the check holds on a branch from before a step and on the join after it.
 // A base may itself carry lived things: its lived things are taken out like today's, and what is held is everything else.
 // 6b2c35201: the crossing's east wall foot cut at the yard gate's frame (one box more; no other level's own part moved).
-const BASE_REVS = ['6b2c35201', 'b6c0aff16'];
+// fcae91f17: the snatch's footstep plan covers the whole world, so the gate hut's zone is read.
+// 9fb5b67a1: the join of those two steps. The check holds EVERY level against ONE base, and each of the two holds only its own level's change, so the base
+// is the first commit that carries both; a later step that changes a level's own part on purpose goes in front of it the same way.
+// 150575169: the glasshouse's back wall foot cut at the back door's frame (the same: one box more, no other level's own part moved).
+// 113556864: the join that first carries the glasshouse's step with the two before it (one base for every level, as above).
+const BASE_REVS = ['113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
 /** roomclear.ts propGap, repeated (this tool imports nothing of src/game): the floor distance from a point to a prop's yawed footprint */
 function propGap(p: { home: [number, number, number]; hx: number; hz: number }, at: number[]): number {
