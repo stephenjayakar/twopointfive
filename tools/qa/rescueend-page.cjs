@@ -1,5 +1,5 @@
 // HOW A RESCUE ENDS, ON THE REAL PAGE (src/game/rescueend.ts RESCUEEND, src/game/rescueflush.ts RESCUEFLUSH): headless Chromium on the software WebGPU
-// adapter (tools/qa/page-look.cjs's recipe), the registry's rescue as the page deals it on Hard.
+// adapter (tools/qa/page-look.cjs's recipe), the registry's rescue as the page deals it on Hard, Sam alone (squad=0), unseen and unhurt.
 //   PORT=5231 node tools/qa/rescueend-page.cjs        (a dev server on that port: PORT=5231 bun run tools/serve.ts)
 //   on    both switches are up in the page's own registry; the room's men put down and the room stood in for 20 s does NOT end the run and the objective
 //         asks for the way out or a clear; a hostage in reach offers 'on your feet — with me', the row and one Space get them all up; walked to the way
@@ -10,7 +10,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&pick=registry&seed=7';
+const MISSION = 'levelFile=registry.json&rescue&difficulty=hard&pick=registry&seed=7&squad=0';   // (no teammates: with the pair on the floor the men left are shot inside the 20 s and the run is won cleared — which is the rule, and not what the first page asks)
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
