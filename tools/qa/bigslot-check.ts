@@ -1,13 +1,13 @@
-// THE BIG SLOT (src/game/kit.ts BIGSLOT — every card has ONE big slot beside its pouches: the wall charge, the shield, the breaching shotgun, the dynamic
+// THE BIG SLOT (src/game/kit.ts BIGSLOT — every card has ONE big slot beside its pouches: the wall charge, the breaching shotgun, the dynamic
 // hammer; src/game/bigkit.ts — the last two on a locked door: yours a row in the boot's place, a teammate's on a door order), headless:
 //   bun run tools/qa/bigslot-check.ts [card|off|you|mate|shut|moves|wiring]      (BIGKIT_BREAK=1 = the tools do nothing to a lock: every 'the lock is gone' line must fail)
 // The maintainer, 10-14: "you have a single big slot on the bottom that can fit larger kit items and then smaller pouches for other stuff" · "i do think we
 // should change the breaching shotgun to not take up a primary weapon slot" · "and then we should also add a dynamic hammer".
-//   card    the switch on: one 'big' row a card, the weapon row a rifle or a pistol, no shield row and no wall charge row; no step of the row puts two big
+//   card    the switch on: one 'big' row a card, the weapon row a rifle or a pistol, no wall charge row; no step of the row puts two big
 //           things on a man; a stored shotgun-as-gun card is read as the issued gun with the shotgun in the big slot; a stored card with two big things comes
-//           down to one (the shield before a wall charge or a hammer) and says so; a hand that still sets 'shield', 'walls' or the shotgun as a gun is
+//           down to one (the wall charge before a hammer) and says so; a hand that still sets 'walls' or the shotgun as a gun is
 //           answered through the big row; the issued kit and every squad kit of the table are legal; a big thing fills the slot and no pouch; a table
-//           from before the big slot marks the four big things by default. The switch off: a teammate's rows are the build before's, the weapon row
+//           from before the big slot marks the three big things by default. The switch off: a teammate's rows are the build before's, the weapon row
 //           offers the shotgun, and a stored `big` is kept, inert
 //   off     the switch off: a hammer forced onto the Player gets no row at a locked door, a staged man whose card says hammer carries none, and the
 //           room clear's manager door under open and clear is the same run by digest with the cards' big slots filled as with them empty
@@ -47,7 +47,6 @@ import { standUp, loadCharacter, ROOT } from './headless.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const BK = await import(`${ROOT}/src/game/bigkit.ts`);
-const { SHIELD } = await import(`${ROOT}/src/game/shield.ts`);
 const { BIG_STATS } = BK;
 const { doorPt, alongOf, offOf } = await import(`${ROOT}/src/game/doortools.ts`);
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -100,13 +99,13 @@ const memStore = (init: Record<string, string> = {}) => { const m = new Map(Obje
 const fields = (i: number): string[] => K.kitRows(i).map((r: any) => r.field as string);
 const rowOf = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field === f);
 /** how many big things a card holds, counted off its fields (never asked of the table under test) */
-const bigThings = (m: any) => (m.shield ? 1 : 0) + (m.walls | 0) + (m.big && m.big !== 'none' ? 1 : 0);
+const bigThings = (m: any) => (m.walls | 0) + (m.big && m.big !== 'none' ? 1 : 0);
 const stats = () => ({ ...BIG_STATS }) as Record<string, number>;
 const since = (a: Record<string, number>) => Object.fromEntries(Object.entries(BIG_STATS as Record<string, number>).map(([k, v]) => [k, v - a[k]])) as Record<string, number>;
 /** the kit table, its rules, the switch, the doors' frame rule, the silent order's switch and the dice as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, plate = SHIELD.on, shut = K.BIGSLOT.shut, beside = K.BIGSLOT.beside, moves = K.BIGSLOT.moves, snug = K.BIGSLOT.snug, solo = { ...K.KIT_SOLO }, way = { oneWay: DOORWAY.oneWay, frameHolds: DOORWAY.frameHolds }, hush = SIL.SILENT.on, rnd = Math.random;
-  try { return await fn(); } finally { K.kitLoad(null, ''); K.BIGSLOT.on = big; SHIELD.on = plate; K.BIGSLOT.shut = shut; K.BIGSLOT.beside = beside; K.BIGSLOT.moves = moves; K.BIGSLOT.snug = snug; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); Object.assign(DOORWAY, way); SIL.SILENT.on = hush; Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, shut = K.BIGSLOT.shut, beside = K.BIGSLOT.beside, moves = K.BIGSLOT.moves, snug = K.BIGSLOT.snug, solo = { ...K.KIT_SOLO }, way = { oneWay: DOORWAY.oneWay, frameHolds: DOORWAY.frameHolds }, hush = SIL.SILENT.on, rnd = Math.random;
+  try { return await fn(); } finally { K.kitLoad(null, ''); K.BIGSLOT.on = big; K.BIGSLOT.shut = shut; K.BIGSLOT.beside = beside; K.BIGSLOT.moves = moves; K.BIGSLOT.snug = snug; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); Object.assign(DOORWAY, way); SIL.SILENT.on = hush; Math.random = rnd; }
 }
 
 // where Sam stands for the manager's door (his side of it is the side the squad works it from): the corridor, off the line of the opening
@@ -154,18 +153,16 @@ export async function bigCard(): Promise<boolean> {
   await kept(async () => {
     try {
       await hushed(() => standUp());   // (the tables stood as the stand has them)
-      const ALLOWED = ['none', 'shotgun', 'hammer', 'wall', 'shield'];
-      // (THE SHIELD is out of the page since 10-15 — shield.ts SHIELD.on, off on the shipped stand: this family is about the card WITH every big thing the
-      // build has, so it raises that switch too, as it raises the big slot's; the card without the shield is tools/qa/noshield-check.ts's)
-      K.BIGSLOT.on = true; SHIELD.on = true; K.kitLoad(null, '');
+      const ALLOWED = ['none', 'shotgun', 'hammer', 'wall'];
+      K.BIGSLOT.on = true; K.kitLoad(null, '');
       const per = [0, 1, 2, 3, 4].map(i => { const f = fields(i), big = rowOf(i, 'big'), gun = rowOf(i, 'weapon'); return { f, big: (big?.values ?? []) as string[], gun: (gun?.values ?? []) as string[] }; });
-      F.verdict(K.SLOTS.on && per.every(p => p.f.filter(x => x === 'big').length === 1 && !p.f.includes('shield') && !p.f.includes('walls') && p.gun.join() === 'rifle,pistol' && p.big[0] === 'none' && p.big.includes('shotgun') && p.big.includes('hammer') && p.big.every(v => ALLOWED.includes(v)))
-        && !per[0].big.includes('shield') && per.slice(1).every(p => p.big.includes('shield')),
-        'the switch on, the pouches rule on: every card has ONE big row — empty, the shotgun, the hammer (a wall charge where the build has one; the shield a teammate\'s alone) — its weapon row is a rifle or a pistol, and there is no shield row and no wall charge row',
+      F.verdict(K.SLOTS.on && per.every(p => p.f.filter(x => x === 'big').length === 1 && !p.f.includes('walls') && p.gun.join() === 'rifle,pistol' && p.big[0] === 'none' && p.big.includes('shotgun') && p.big.includes('hammer') && p.big.every(v => ALLOWED.includes(v)) && new Set(p.big).size === p.big.length)
+        && per.slice(1).every(p => p.big.includes('wall') === K.wallHere()),
+        'the switch on, the pouches rule on: every card has ONE big row — empty, the shotgun, the hammer (a wall charge where the build has one) and nothing else — its weapon row is a rifle or a pistol, and there is no wall charge row',
         per.map((p, i) => `${i}: ${p.f.join(' ')} · weapon ${p.gun.join('/')} · big ${p.big.join('/')}`).join('\n    '));
       K.kitLoad(null, '?noslots'); const free = [0, 1].map(i => ({ f: fields(i), big: (rowOf(i, 'big')?.values ?? []) as string[], gun: (rowOf(i, 'weapon')?.values ?? []) as string[] }));
-      F.verdict(!K.SLOTS.on && free.every(p => p.f.filter(x => x === 'big').length === 1 && !p.f.includes('shield') && !p.f.includes('walls') && p.gun.join() === 'rifle,pistol' && p.big.includes('shotgun') && p.big.includes('hammer')),
-        'the same with the pouches rule off (the frozen stand\'s free rows): the big row is still the one home of the shotgun, the hammer and the shield', free.map((p, i) => `${i}: ${p.f.join(' ')} · big ${p.big.join('/')}`).join(' · '));
+      F.verdict(!K.SLOTS.on && free.every(p => p.f.filter(x => x === 'big').length === 1 && !p.f.includes('walls') && p.gun.join() === 'rifle,pistol' && p.big.includes('shotgun') && p.big.includes('hammer')),
+        'the same with the pouches rule off (the frozen stand\'s free rows): the big row is still the one home of the shotgun and the hammer', free.map((p, i) => `${i}: ${p.f.join(' ')} · big ${p.big.join('/')}`).join(' · '));
 
       // no step of the row leaves two big things on a man — walked twice round, both ways, on you and on a teammate
       K.kitLoad(null, '');
@@ -181,34 +178,35 @@ export async function bigCard(): Promise<boolean> {
         F.verdict(you.weapon === K.kitDefault(0).weapon && you.big === 'shotgun' && mate.weapon === K.kitDefault(1).weapon && mate.big === 'shotgun' && K.kitGun(mate) !== 'm870' && legal === null && /shotgun/.test(words),
           'a stored card whose GUN is the shotgun (the build before\'s; yours and a teammate\'s) is read as the issued gun with the shotgun in the big slot', `you: weapon ${you.weapon}, big ${you.big} · Red One: weapon ${mate.weapon} (${K.kitGun(mate)}), big ${mate.big} · legal ${legal} · "${words}"`); }
       // … and one over the big slot
-      { const walls = rowOf(1, 'big').values.includes('wall'), over = walls ? { shield: true, walls: 1 } : { shield: true, big: 'hammer' };
-        const st = memStore({ [K.KIT_LS]: J({ v: 2, members: [0, 1, 2, 3, 4].map(i => (i === 1 ? { ...K.kitDefault(1), ...over } : K.kitDefault(i))) }) });
+      // (the wall charge is the last thing a man over his big slot gives up — the card shows it before the rest, kit.ts bigOf: beside a hammer it is the hammer that stays home)
+      { const walls = rowOf(1, 'big').values.includes('wall');
+        const st = memStore({ [K.KIT_LS]: J({ v: 2, members: [0, 1, 2, 3, 4].map(i => (i === 1 ? { ...K.kitDefault(1), walls: 1, big: 'hammer' } : K.kitDefault(i))) }) });
         K.kitLoad(st, ''); const m = { ...K.KIT.members[1] }, note = K.KIT_NOTE[1], c = K.kitCost(1);
-        F.verdict(bigThings(m) === 1 && c.big?.used === 1 && /left behind/.test(note) && /big slot/.test(note) && K.kitLegal() === null,
-          `a stored teammate's card with ${walls ? 'a shield AND a wall charge' : 'a shield AND a hammer (this build has no wall charge row: the hammer stands in for it)'} comes down to one big thing, and the card says what stayed behind`, `kept: shield ${m.shield}, walls ${m.walls}, big ${m.big} · big slot ${J(c.big)} · note: "${note}"`); }
-
-      // … the shield is the last thing a man over his big slot gives up: beside a hammer it is the hammer that stays home
-      { const st = memStore({ [K.KIT_LS]: J({ v: 2, members: [0, 1, 2, 3, 4].map(i => (i === 1 ? { ...K.kitDefault(1), shield: true, big: 'hammer' } : K.kitDefault(i))) }) });
-        K.kitLoad(st, ''); const m = { ...K.KIT.members[1] }, note = K.KIT_NOTE[1];
-        F.verdict(m.shield === true && m.big === 'none' && !m.walls && K.bigOf(m) === 'shield' && /hammer/.test(note) && /left behind/.test(note) && !/shield/.test(note) && K.kitLegal() === null,
-          'a stored teammate\'s card with a shield AND a hammer keeps the SHIELD and leaves the hammer behind, in words', `kept: shield ${m.shield}, walls ${m.walls}, big ${m.big} · note: "${note}"`); }
+        F.verdict(bigThings(m) === 1 && c.big?.used === 1 && K.kitLegal() === null && (walls ? m.walls === 1 && m.big === 'none' && K.bigOf(m) === 'wall' && /hammer/.test(note) && /left behind/.test(note) && /big slot/.test(note) && !/wall charge/.test(note) : m.walls === 0 && m.big === 'hammer' && note === ''),
+          walls ? 'a stored teammate\'s card with a wall charge AND a hammer comes down to one big thing: it keeps the WALL CHARGE and leaves the hammer behind, and the card says so in words'
+            : 'a stored teammate\'s card with a wall charge AND a hammer, in a build with no wall charge row: the wall charge is not read, the hammer is his one big thing, and nothing is said', `kept: walls ${m.walls}, big ${m.big} · big slot ${J(c.big)} · note: "${note}"`); }
+      // … and two of the same big thing: one stays
+      { const walls = rowOf(1, 'big').values.includes('wall');
+        const st = memStore({ [K.KIT_LS]: J({ v: 2, members: [0, 1, 2, 3, 4].map(i => (i === 1 ? { ...K.kitDefault(1), walls: 2 } : K.kitDefault(i))) }) });
+        K.kitLoad(st, ''); const m = { ...K.KIT.members[1] }, note = K.KIT_NOTE[1], c = K.kitCost(1);
+        F.verdict(K.kitLegal() === null && (walls ? bigThings(m) === 1 && m.walls === 1 && c.big?.used === 1 && /1 wall charge left behind/.test(note) && /big slot/.test(note) : m.walls === 0),
+          walls ? 'a stored teammate\'s card with TWO wall charges (the build before\'s most a man) keeps one, and the card says the other stayed behind' : 'two stored wall charges in a build with no wall charge row: neither is read', `kept: walls ${m.walls}, big ${m.big} · big slot ${J(c.big)} · note: "${note}"`); }
       // a hand that still names the rows of the build before (a tool, a tally) is answered through the big row
       { K.kitLoad(null, ''); const gun0 = K.kitDefault(1).weapon, walls = rowOf(1, 'big').values.includes('wall'), was = (i: number) => `${K.bigOf(K.KIT.members[i])}`;
-        const a = K.kitSet(1, 'shield', true), a1 = was(1), aF = K.KIT.members[1].shield;
-        const b = K.kitSet(1, 'weapon', 'shotgun'), b1 = was(1), bGun = K.KIT.members[1].weapon, bShield = K.KIT.members[1].shield, bMost = bigThings(K.KIT.members[1]);
+        const b = K.kitSet(1, 'weapon', 'shotgun'), b1 = was(1), bGun = K.KIT.members[1].weapon, bMost = bigThings(K.KIT.members[1]);
         const c = walls ? K.kitSet(1, 'walls', 1) : true, c1 = walls ? was(1) : 'wall', cMost = bigThings(K.KIT.members[1]);
         const d = walls ? K.kitSet(1, 'walls', 0) : true, d1 = walls ? was(1) : 'none';
-        const e = K.kitSet(1, 'shield', true) && K.kitSet(1, 'shield', false), e1 = was(1);
+        const e = K.kitSet(1, 'weapon', 'shotgun') && K.kitSet(1, 'weapon', gun0), e1 = was(1), eGun = K.KIT.members[1].weapon;
         const y = K.kitSet(0, 'weapon', 'shotgun'), y1 = was(0), yGun = K.KIT.members[0].weapon; K.kitSet(0, 'big', 'none'); K.kitSet(1, 'big', 'none');
-        F.verdict(a && a1 === 'shield' && aF === true && b && b1 === 'shotgun' && bGun === gun0 && bShield === false && bMost === 1 && c && c1 === 'wall' && cMost === 1 && d && d1 === 'none' && e && e1 === 'none' && y && y1 === 'shotgun' && yGun === K.kitDefault(0).weapon && K.kitLegal() === null,
-          `the switch on, kitSet by the build before's names — 'shield' true, the weapon 'shotgun'${walls ? ", 'walls' 1" : ' (this build has no wall charge row: \'walls\' not asked)'} — is answered through the big row: one big thing at a time, and the weapon stays the issued gun`,
-          `Red One: shield true → ${a} big ${a1} · weapon shotgun → ${b} big ${b1}, weapon ${bGun}, shield ${bShield} · walls 1 → ${c} big ${c1} · walls 0 → ${d} big ${d1} · shield on then off → ${e} big ${e1} · you: weapon shotgun → ${y} big ${y1}, weapon ${yGun}`); }
+        F.verdict(b && b1 === 'shotgun' && bGun === gun0 && bMost === 1 && c && c1 === 'wall' && cMost === 1 && d && d1 === 'none' && e && e1 === 'shotgun' && eGun === gun0 && y && y1 === 'shotgun' && yGun === K.kitDefault(0).weapon && K.kitLegal() === null,
+          `the switch on, kitSet by the build before's names — the weapon 'shotgun'${walls ? ", 'walls' 1" : ' (this build has no wall charge row: \'walls\' not asked)'} — is answered through the big row: one big thing at a time (the wall charge takes the shotgun's place), and the weapon stays the issued gun — set back to it by name, the shotgun stays where the big row has it`,
+          `Red One: weapon shotgun → ${b} big ${b1}, weapon ${bGun} · walls 1 → ${c} big ${c1} · walls 0 → ${d} big ${d1} · weapon shotgun, then the issued gun → ${e} big ${e1}, weapon ${eGun} · you: weapon shotgun → ${y} big ${y1}, weapon ${yGun}`); }
 
       // the issued kit and the table's squad kits
       { K.kitLoad(null, ''); const issued = K.kitLegal(), list = K.kitLoadouts() as { id: string; name: string }[];
         const each = list.map(l => { const w = K.kitLoadout(l.id), legal = K.kitLegal(), most = Math.max(...K.KIT.members.map(bigThings)); return { id: l.id, w, legal, most }; });
-        F.verdict(issued === null && list.length >= 2 && each.every(e => e.w === null && e.legal === null && e.most <= 1) && K.SLOTS.table.v === 9,
-          'the issued kit and every squad kit the screen can put on are legal fills under the big slot (slots.json v9), no man of them with two big things', `issued: ${issued === null ? 'legal' : issued} · ${each.map(e => `${e.id}: ${e.w ?? 'put on'}, ${e.legal ?? 'legal'}, most big things ${e.most}`).join(' · ')} · table v${K.SLOTS.table.v}`); }
+        F.verdict(issued === null && list.length >= 2 && each.every(e => e.w === null && e.legal === null && e.most <= 1) && K.SLOTS.table.v === 10,
+          'the issued kit and every squad kit the screen can put on are legal fills under the big slot (slots.json v10), no man of them with two big things', `issued: ${issued === null ? 'legal' : issued} · ${each.map(e => `${e.id}: ${e.w ?? 'put on'}, ${e.legal ?? 'legal'}, most big things ${e.most}`).join(' · ')} · table v${K.SLOTS.table.v}`); }
 
       // a big thing fills the slot and no pouch — yours on a card whose four pouches are full
       { K.kitLoad(null, ''); const lines: string[] = []; let ok = true;
@@ -218,20 +216,20 @@ export async function bigCard(): Promise<boolean> {
         const full = K.kitCost(0); K.kitSet(0, 'big', 'none'); K.kitSet(1, 'big', 'none');
         F.verdict(ok && full.used === full.total, 'the shotgun or the hammer on a card reads 1 of 1 in its big slot and leaves its pouches as they were — yours taken with all four pouches full', lines.join('\n    ')); }
 
-      // a table from before the big slot (no tool marked big, no member given a slot): the four things the slot is for are big by default
+      // a table from before the big slot (no tool marked big, no member given a slot): the three things the slot is for are big by default
       { const RAW = JSON.parse(readFileSync(resolve(ROOT, 'src/game/slots.json'), 'utf8')), strip = <T extends object>(o: T) => { const { big: _big, ...rest } = o as T & { big?: unknown }; return rest; };
         const old = { ...RAW, members: RAW.members.map(strip), tools: RAW.tools.map(strip) };
         K.kitLoad(null, ''); let why: string | null = 'not asked', marks = '', slotsOf = '', cost: { used: number; big: unknown } | null = null, back: string | null = 'not put back';
-        try { why = K.slotsSet(old); const T = K.SLOTS.table; marks = ['walls', 'shield', 'shotgun', 'hammer'].map(k => `${k} ${T.items[k] ? !!T.items[k].big : 'no such tool'}`).join(', '); slotsOf = J(T.big);
+        try { why = K.slotsSet(old); const T = K.SLOTS.table; marks = ['walls', 'shotgun', 'hammer'].map(k => `${k} ${T.items[k] ? !!T.items[k].big : 'no such tool'}`).join(', '); slotsOf = J(T.big);
           K.kitSet(1, 'big', 'hammer'); const c = K.kitCost(1); cost = { used: c.used, big: c.big }; K.kitSet(1, 'big', 'none'); }
         finally { back = K.slotsSet(RAW); }
         const issued = K.kitCost(1, K.kitDefault(1)).used, T = K.SLOTS.table;
-        F.verdict(why === null && !/false|no such/.test(marks) && slotsOf === J([1, 1, 1, 1, 1]) && cost?.used === issued && J(cost?.big) === J({ used: 1, total: 1 }) && back === null && T.v === 9 && !!T.items.hammer?.big,
-          'a slots table of the shape before v9 (no `big` on any tool or member) is taken, and marks the wall charge, the shield, the shotgun and the hammer big, one slot a man — the hammer on a card costs no pouch under it (the shipped table put back after)', `taken: ${why ?? 'yes'} · ${marks} · big slots ${slotsOf} · Red One with a hammer: pouches ${cost?.used} (issued ${issued}), big ${J(cost?.big)} · put back: ${back ?? 'yes'}, v${T.v}`); }
+        F.verdict(why === null && !/false|no such/.test(marks) && slotsOf === J([1, 1, 1, 1, 1]) && cost?.used === issued && J(cost?.big) === J({ used: 1, total: 1 }) && back === null && T.v === 10 && !!T.items.hammer?.big,
+          'a slots table of the shape before v9 (no `big` on any tool or member) is taken, and marks the wall charge, the shotgun and the hammer big, one slot a man — the hammer on a card costs no pouch under it (the shipped table put back after)', `taken: ${why ?? 'yes'} · ${marks} · big slots ${slotsOf} · Red One with a hammer: pouches ${cost?.used} (issued ${issued}), big ${J(cost?.big)} · put back: ${back ?? 'yes'}, v${T.v}`); }
 
       // the switch off: the build before's rows, and `big` inert
       { K.BIGSLOT.on = false; K.kitLoad(null, '');
-        const f = fields(1), walls = f.includes('walls'), want = ['weapon', 'suppressed', 'light', 'nvg', 'bangs', 'smoke', 'charges', ...(walls ? ['walls'] : []), 'frags', ...(f.includes('wand') ? ['wand'] : []) /* (a teammate's optical wand: a row of his card while WAND.mate is on, no affair of the big slot's) */, 'shield', 'suit', 'trim'];
+        const f = fields(1), walls = f.includes('walls'), want = ['weapon', 'suppressed', 'light', 'nvg', 'bangs', 'smoke', 'charges', ...(walls ? ['walls'] : []), 'frags', ...(f.includes('wand') ? ['wand'] : []) /* (a teammate's optical wand: a row of his card while WAND.mate is on, no affair of the big slot's) */, 'suit', 'trim'];
         const guns = [0, 1].map(i => (rowOf(i, 'weapon').values as string[]).join('/')), cost = K.kitCost(1);
         F.verdict(f.join() === want.join() && guns.every(g => g === 'rifle/pistol/shotgun') && !fields(0).includes('big') && cost.big === null,
           'THE SWITCH OFF: a teammate\'s rows are the build before\'s to the row, the weapon row offers the shotgun (yours too), and no card has a big row or a big slot to count', `Red One: ${f.join(' ')} · weapon rows ${guns.join(' · ')} · you: ${fields(0).join(' ')} · kitCost(1).big ${J(cost.big)}`);
@@ -533,7 +531,7 @@ export async function bigWiring(): Promise<boolean> {
         await hushed(() => JR.applyKnobs(g, now)); const b = { on: K.BIGSLOT.on, shut: K.BIGSLOT.shut, beside: K.BIGSLOT.beside };
         F.verdict(a.on === true && a.shut === false && a.beside === false && b.shut === true && b.beside === true, 'a recording from the build of 10-14 (a BIGSLOT table with no `shut` and no `beside`) replays with the big slot ON and both of them OFF; one made now, with both on', `applied the older table: ${J(a)} · applied its own: ${J(b)}`); }
       const T = K.SLOTS.table, bigs = Object.entries(T.items as Record<string, { big?: boolean }>).filter(([, it]) => it.big).map(([k]) => k).sort();
-      F.verdict(T.v === 9 && T.big.length === K.KIT_MEMBERS && T.big.every((n: number) => n === 1) && ['hammer', 'shield', 'shotgun'].every(k => bigs.includes(k)), 'slots.json is v9: one big slot a man, and the shield, the shotgun and the hammer marked big (the wall charge with them where the build prices one)', `v${T.v} · big slots ${J(T.big)} · big things: ${bigs.join(', ')}`);
+      F.verdict(T.v === 10 && T.big.length === K.KIT_MEMBERS && T.big.every((n: number) => n === 1) && bigs.join() === ['hammer', 'shotgun', ...(T.items.walls ? ['walls'] : [])].join(), 'slots.json is v10: one big slot a man, and the shotgun and the hammer marked big (the wall charge with them where the build prices one) and nothing else', `v${T.v} · big slots ${J(T.big)} · big things: ${bigs.join(', ')}`);
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });
   return F.done();

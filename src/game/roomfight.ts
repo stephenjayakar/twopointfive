@@ -69,7 +69,6 @@ import { runnerOwns, runnerFled } from './runner';
 import { netQuietLook, netQuietHolds } from './netquiet';
 import { laneHolds, laneWarns, laneThrows } from './lanes';
 import { shotEnergy } from './glasspen';
-import { SHIELD, plateUp } from './shield';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
 import { gunWallIs } from './gunwall';
@@ -1013,7 +1012,7 @@ export class RoomFight {
     if (!gd.weapon.fire()) { O.reloadUntil = g.time + gd.weapon.def.reload.dur; this.speak(O, 'reloading.', 0); return; }
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
     const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
-    fireWeapon(g, c, to, false, { steady: true, spread: hands * (plateUp(gd) ? SHIELD.handsK : 1) * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });
+    fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });
     O.rounds++; O.n++; this.stats.opRounds++;
     O.next = g.time + (O.n % 2 === 0 ? pick(S.shift) : S.pair);
     if (gd.weapon.def.pellets) O.next = Math.max(O.next, g.time + gd.weapon.def.cd);   // (a pump gun: no controlled pair comes faster than its action is worked — shotgun.ts)

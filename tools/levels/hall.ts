@@ -2,8 +2,9 @@
 // hall 23 m long, lit but for its far end, and two men stand in that dim end with their guns down its length. Nothing stands in the hall, the one door of
 // the wing opens onto its near end, and every room but one has the hall for its only way in: the entry, and every stack after it, is made in those men's
 // view. The hall is itself a ROOM of the structure (its door: 'front') — a room clear shuts every door a structure room lists, so a gun put behind an open
-// door at the hall's end would be staged behind a shut one. One teammate carries the ballistic shield (shield.ts) AS ISSUED — the file's `scenarios.issue`
-// block (game/kit.ts kitIssue), no visit to the loadout screen.
+// door at the hall's end would be staged behind a shut one. The kit is AS ISSUED for every man — the file's `scenarios.issue`
+// block (game/kit.ts kitIssue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
+// game — the maintainer, 10-18 — and nobody has re-tuned the hall without it.)
 //
 //        x 9              20          22              32        37
 //   z 8  ┌────────────────┬───────────────────────────┬─────────┐
@@ -18,7 +19,7 @@
 //   lights: the hall's first 16 m and the four rooms lit, the hall's far end and the guardroom dark · garrison: hall 2 · bunks 1 · kit room 1 · store 1 · ready room 2
 //
 //   bun run tools/levels/export.ts hall [--check]      → levels/hall.json
-//   page: ?levelFile=hall.json&roomclear&squad4        (&noissue: the squad's kit as this machine keeps it, no shield unless a card carries one)
+//   page: ?levelFile=hall.json&roomclear&squad4        (&noissue: the squad's kit as this machine keeps it)
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { IssueData, KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
@@ -29,12 +30,11 @@ import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
 
 export const NAME = 'hall';
-export const NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, one teammate issued the shield (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
+export const NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
 
-/** THE ISSUE (game/kit.ts kitIssue): the first teammate — place '1': Red One of the four (the size the row deploys at), Blue One when a URL stages a
- *  pair or one — carries the shield and two stun canisters — four pouches, the rule's most for one man (slots.json); the charge
- *  and the grenade his issue card carries stay home. Everybody else as issued. */
-export const ISSUE: IssueData = { members: { '1': { shield: true, bangs: 2, charges: 0, frags: 0 } } };
+/** THE ISSUE (game/kit.ts kitIssue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
+ *  teammate the ballistic shield until the shield left the game (10-18); since 10-15 the page has staged this level with the plain issue. */
+export const ISSUE: IssueData = { members: {} };
 
 // THE TEAM & KIT PICTURE (scenarios.kitView): the level's own front door with the hall lit (the range card's lines run out of it under the stack). The
 // porch's bench stood in the lane beside the stack and its sandbag line was cut by the frame's edge: the group steps out. The porch lamp is pale and low, so the card's pale blue holds on the ground.
@@ -201,7 +201,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const GUARD: Rect = { x0: 32.06, x1: 36.88, z0: 8.12, z1: 19.88 }, HALL: Rect = { x0: 9.12, x1: 31.94, z0: 12.86, z1: 15.14 };
 
   // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — doortools.ts pods2 reads a plan's two for the
-  //  first two men in. The first two then stand in file and only the shield's pistol answers the far guns, while the third and fourth still fan out and one
+  //  first two men in. The first two then stand in file and only the front man's gun answers the far guns, while the third and fourth still fan out and one
   //  goes on up the hall alone (Blue Two lost 7 m in, in 15 of 24 runs): 24 seeds as shipped, 40 of 96 teammates up against 60 without the plan, the far guns' kills 38 against 12.)
 
   const level: Level = {
