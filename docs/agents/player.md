@@ -626,7 +626,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   farthest listener one round turns down a clear line — HK45 5 m, Glock 19 7 m, MP7 9 m, every other gun the whole line as gunfire; a teammate's MP7
   round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
   of their own; defenders drawing from the list; a teammate USING a gun for what it is for (the Mk 46 man does not hold lanes, the Mk 12 man does not
-  hang back); the weight in any score; tuning by play. Never seen on a GPU, never fired by a person.- **Each gun its own look, sound and reload** (`src/game/gunlook.ts`, `GUNLOOK.on`; `src/game/gunreload.ts`; 10-18). The six guns the two slots offer beside the issue
+  hang back); the weight in any score; tuning by play. Never seen on a GPU, never fired by a person.
+- **Each gun its own look, sound and reload** (`src/game/gunlook.ts`, `GUNLOOK.on`; `src/game/gunreload.ts`; 10-18). The six guns the two slots offer beside the issue
   pair (Mk 12, MP7, Mk 46, M1014, HK45, Glock 18) were rows that are FELT and stand-ins to look at and listen to. SWITCH: on in the page (`?nogunlook` = the build
   before), off in the module and on the frozen stand (`FROZEN_HOLDS 'GUNLOOK.on'`, `TPS_GUNLOOK=1`, which shows nothing without `TPS_GUNSLOTS=1 TPS_BIGSLOT=1`); a
   recording from before the table replays with it off (`journal.ts applyKnobs`). WHAT A ROW NAMES: `weapons.ts WeaponDef.own = { model, voice, flame }` beside its
@@ -652,5 +653,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
   sidearm the whole feed is mimed with only its first sound; the books still take the whole tube out at the row's `out` and put it back at `in_`, so a shell-fed
   reload CANCELLED part way leaves the tube empty however many were heard going in (the row's books: the guns goal's); a teammate with the bare Mk 18 is still
-  drawn as the defenders' short rifle; a gun dropped on the floor is the old item; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
+  drawn as the defenders' short rifle; a gun dropped on the floor is the old item; a long reload's feeding is the support arm INSIDE `gunhand.ts longReload` (the carriage and the trigger hand are that move's; a
+  branch per feed was not agreed with that rule's owner); at the side of a pack (`packside.ts`) a model stands where the stand-in does, by the STAND-IN's sizes
+  (`rigProps.ts packSideDims`): butts level, the far end 0.18 m lower on the Mk 12, 0.10 on the Mk 46, 0.06 on the M1014, 0.16 higher on the MP7, and the Mk 46's
+  belt box on the face that lies to the pack, never looked at; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
   share an origin (`gunlook-own` is red the day one is tuned alone). Every number is a first one. NEVER SEEN ON A GPU, NEVER HEARD, NEVER PLAYED.
