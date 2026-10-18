@@ -461,6 +461,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   a re-run, in words (`replay/format.ts tapeShield`: the table on AND a teammate's card carrying it or the long hall's issue; the map viewer plays its samples as ever). QA:
   `bun run tools/qa/noshield-check.ts [gone|card|staged|tape]` (`probes.ts noshield`, in all-quick; the same 24 lines on BOTH stands; `NOSHIELD_BREAK=1` lies to the check — a
   shield value on the big row, every tape waved through — and must fail a card line and the tape line). The `shield-*` probes, `shield-tally.ts` and `pellets-shield` went with it.
+  `tools/qa/lived-check.ts` holds a level to its file at a base commit and loads that file with today's reader: a base whose issue block hands out the shield (the long hall's)
+  has its issue block and the level's note read as today's, said in a line, and takes no new base revision; `tools/qa/level-needs.ts` reads a level's issue cards as written.
   LEFT AS IT IS: the riot shields stacked in the barracks' bunk room (`tools/levels/barracks.ts`: set dressing, nobody carries one). MEASURED, headless only: see the long hall's
   bullet in missions.md for the hall without it. NOBODY HAS PLAYED A MISSION SINCE THE CUT; the kit figure, the kit view and a stack without a shield man have not been seen on a GPU.
 - **Lamps need a real hit, and moving feet cost the shot** (`src/game/aimcost.ts`, table `AIMCOST`; two switches, `AIMCOST.lamp` — ON in the page, `?lamphit=0`; and
