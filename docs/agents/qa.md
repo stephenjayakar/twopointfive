@@ -65,8 +65,8 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
 
 ## Driving the app headlessly (Browser pane / any automation)
 
-`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __glass __wet __froxel __rt __gi __mark __save __sharp __civ __sdfrig __wind __breach __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
-(+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __night __director __pair __wounds __hour __fow __extra`)
+`src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __glass __wet __froxel __rt __gi __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
+(+ since the rebuild, the squad game's: `__orders __roomclear __nightbreach __rescue __scenarios __picks __doortools __doors __doorblast __fight __wallcharge __glassbreak __director __pair __wounds __hour __fow __extra`)
 (+ the hot-swap hooks `__hotVol __hotDirect __hotRestir __hotFroxel __hotDenoise __hotReflect __hotGather`: recompile a pass from source WITH its real preludes — prefer them to `__wgsl` for the big kernels;
 `__hotCommon(src?, variant?)` swaps an edited common.wgsl / `TRACE_VARIANT` into EVERY tracing pipeline at once — the ray-traversal lab's hook, see the *Stratified gather directions + the trace lab* bullet)
 (+ URL flags `?sharp` / `?nosharp` / `?noiq` / `?gbaa` / `?nomv` from the image-quality program, `?sdfsmooth` / `?charsoft` / `?charsoftmarch` + `__rigTrace(rays)` from the SDF character rig),
@@ -78,7 +78,7 @@ editor/domshot.ts and laid over the frame + the overlay's canvases; native slide
 temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `naga` is not installed here, so Chrome/Tint through the page is the WGSL validator; a Linux sandbox could run naga if ever
 needed).
 URL flags: `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
-auto off), `?demo` (starts the NIGHT SHOWCASE — the Director's program 'night'; the old tour is `__demo.start()` only), `?breach` (starts the daytime breach showcase — `__breach.start()/.stop()`, `.t`, `.drill.phase/.beats`, `.log`), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
+auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing; the old tour is `__demo.start()` only), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
 profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?level=local` (boot on the level EDITOR's current document: the workbench's ▶ *play from here*
 stashes it under localStorage `twopointsix.editorLevel` and opens this — an unreadable stash falls back to the bundled office with a console error), `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
 from boot — otherwise opt-in per machine, Tab ▸ Frame ▸ debug read-out), `?nop5` (renderer v3 phase 5's ultra extras off from boot AND vetoed for the presets — ultra's frame as it was before the
@@ -191,40 +191,53 @@ but synthetic writes still work.
   shipped 0 FAIL. The three left are NOT the close-in mode's (red with every close-in switch off): `controls-behind` (d) the card counts no shot on a
   pistol click's frame, (f) a can's click is no throw on its frame; `guard-key` (b) the closer never latches the server door again (reads as doors stay
   where left, inferred). No single `TPS_<NAME>=0` turns any of the three green (every word in `STAND_ENV` tried but the snow, music, picture and words ones).
-- **THE BENCHMARK (`src/ui/bench.ts`, 2026-10-17; title ▸ Extras ▸ Benchmark, or `?bench` on the game's address; `__bench`).** For a machine nobody on the project can
-  sit at, and for tuning the quality levels: one press, hands off, about six minutes. In order: the world held still while auto quality finishes measuring, and
-  that opening picture timed AS THE PAGE OPENED; THE SCENE, the day showcase (`breach`) played live with auto quality doing what it does in play; at the scene's
-  heavy moment (the show's smoke chapter nearly half through, with the plume up: on the SHOW's clock, so the picture held is the same one on a slow machine;
-  `main.ts` looks for the chapter of `LOUD_CHAPTERS` whose title says smoke, and `bench-check` holds the script to having exactly one; five minutes of the
-  scene's own running with no such moment = held where it stands, and the report says so, which is what a machine under about nine frames a second gets, the
-  show's clock running slow there) the world held still where it stands and that picture timed as it stood, then under each preset of
-  `AUTO_LADDER` from the bottom up (a preset under eight frames a second is the last one tried), then, everything put back, with each heavy feature flipped alone
-  (the F8 sweep, one round, `SweepOpts.inside`: the recording goes on and the sweep says nothing on the screen; the card prices a row from where the sweep
-  calls its segment settled, `PerfSweep.settled`, so a slow row's seconds of settle are out of its number as they are out of the report tool's); the scene plays out. It ends on a card with a
-  text report (the GPU by name off WebGL's unmasked renderer, since Chrome's WebGPU adapter line is only `apple metal-3`; the browser, the system, the screen,
-  on battery or not; THE BOOT's timings off `ui/boot.ts`: to the start card, the shaders, the longest freeze, the first frame; a line per window; the ten
-  features that move the frame most) and a Copy button, and the take downloads as the F9 recorder's json with one `bench` event carrying all of it
-  (`tools/qa/perf-report.ts` prints the report first; the take's sweep events price every row as an F8 take's do). NOTHING IS SENT ANYWHERE (and the recorder's POST of a
-  take to the shot server now goes out only from a page served off localhost: an F9 take on a hosted page asks nothing of the visitor's own machine). Esc stops
-  a run and puts everything back (inside the first window: no card and no file). HANDS OFF: the page's Esc and its hotkeys stand down while a run is on
-  (`benchOn()` / `bench.active` in `main.ts`: P would quit the scene, F9 the recording; those listeners sit ahead of the benchmark's own key grab), `#menu` is
-  `inert` under the veil and under the card (the title takes the focus back a tick after the show ends), and no attract reel starts. `?bench` comes OFF THE
-  ADDRESS as the run starts (a reload, a mission's link or a show's link would carry it into a second run), is passed over in `?kitview`'s window, and wins over
-  `?demo` / `?breach` beside it. `?bench=N` = N seconds a window. A tab hidden during a run (the page's `visibilitychange`, not the size of a gap: a machine
-  whose frames take seconds is not away) starts that window over, or leaves that frame out of the scene's line. The benchmark's take asks the recorder for
-  96,000 frames (`BENCH_FRAMES`, `PerfRecorder.start(note, frames)`: the F9 take's own 36,000 are full inside the sweep at 120 Hz); a run that fills even that
-  ends with its report in the file and the rows it got through priced (`the recording was full`), never as a bare take. A screen of the page's own up over the
-  title (the mission list, options) refuses a run, and stops one that is timing the title. While a window is timed on a held picture the page's quality model does not run at all: no `quality.sample()` (the gate in `main.ts` beside the sweep's), so the
-  resolution scaler cannot cut a preset's scale in the middle of its window, and no boot calibration tick (`Bench.timing`; the wait for calibration is 45 s, and
-  a calibration still going after it goes on in the scene, never inside a window). The display's rate is asked at the END (a run started with the page
-  knows none at its start). `quitSearch` drops `bench`, so no mission's or show's link carries it. A floor the show cannot start on (a mission's units, a
-  level without the script) is timed on its opening picture alone, and the report says so; a held picture under four frames a second is not swept. Unasked,
-  nothing of it runs (`tick()` returns on its first line); it reads `Quality` and puts it back (the preset, auto, the ladder's rungs, every plain setting) and
-  changes nothing in the quality model. Checks: `bun run tools/qa/bench-check.ts` (a fake page: the acts in order, everything back at the end and from every
-  stop, the slow-machine cuts, a tab hidden, the ring full, no heavy moment, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another take), and on a real page
-  `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: the address starts it and loses the word, Esc stops it, a short run start to finish with the
-  game's clock read every frame, keys pressed into the scene, the show ended under it, the card keeping the keyboard, the download, the Extras row). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the six minutes are an estimate off the show's length and the
-  sweep's, and nobody has looked at the card or watched the scene held.
+- **THE BENCHMARK (`src/ui/bench.ts`, `src/ui/benchrun.ts`, `src/host/benchScenes.ts`, `src/host/handsoff.ts`, 2026-10-17; title ▸ Extras ▸ Benchmark, or `?bench`
+  on the game's address; `__bench`).** For a machine nobody on the project can sit at, and for tuning the quality levels: one press, hands off, about seven
+  minutes. ITS SCENES ARE REAL FLOORS (the set `floors-1`; the day showcase it once played was removed with both showcases): the pass in night snow, the block
+  with the mains thrown by a teammate (red emergency lights, the men's torches), the compound in a storm; four teammates, hard, each a mission of the list on
+  its own deal and die. A LEVEL IS ONLY LOADED AT BOOT, so a run is A PAGE PER SCENE: `benchBegin` writes a small record to the tab's session store and loads
+  the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
+  record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
+  with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic` and `quality` ride along: anything else would
+  make it another fight than the set's. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
+  goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
+  times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
+  twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
+  the rifle on whoever the fog shows on a clear line after a rolled beat, then a hunt for whoever is left; all of it written onto the host `Input` in the
+  loop's `beforeTick`, before the tick samples the command, so the game is played by its own keys and its own AI on both sides. Sam cannot go down while it
+  plays (`godMode`, put back after; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
+  (`input.lockExcept`), and its one direct write is the door verb in the no-teammates-left path (`selectVerb('door','kick')`). A scene plays at most 75 s of
+  game time. In order: page one holds the world while auto quality finishes measuring and times that opening picture AS THE PAGE OPENED, then plays its
+  scene live with auto quality doing what it does in play; page two its scene; page three its scene until ITS HEAVY MOMENT (a round fired in the last 0.4 s,
+  a dozen seconds in; none by 45 s = held where it stands, and the report says so), the world held still and that picture timed as it stood, then under each
+  preset of `AUTO_LADDER` from the bottom up (a preset under eight frames a second is the last one tried), then, everything put back, with each heavy feature
+  flipped alone (the F8 sweep, one round, `SweepOpts.inside`), then the fight plays out. It ends on a card (the world held under it) with a text report (the
+  GPU by name off WebGL's unmasked renderer, the browser, the system, the screen, on battery or not; the first page's BOOT timings; a line per window and per
+  scene; `floors`: how each fight ended, so two machines' numbers are known to be of the same fight only where those agree; the ten features that move the
+  frame most) and a Copy button, and the LAST page's take downloads as the F9 recorder's json with one `bench` event carrying all of it (`set`, `scenes[]`
+  with each scene's address, end and boot; the earlier scenes' frames are not in the file, their lines are). `tools/qa/perf-report.ts` prints the report
+  first. NOTHING IS SENT ANYWHERE. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
+  reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
+  leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
+  said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
+  of seeds and picks, among the runs that take the floor, the one nearest the set's medians in seconds, rounds fired and teammates lost (each over its MAD);
+  `--check` holds each kept seed to still taking its floor, `--twice scn:seed` to the same digest twice. KEPT (12 seeds a
+  scene, the 75 s cut): snow 10 (the floor taken in 63 s, 21 rounds, one teammate lost; medians 61 s, 25.5 rounds, one lost; 10 of 12 took it inside the cut),
+  dark 1 (the mains out 5 s in, two rooms banged and cleared, 6 rounds, nobody lost, 4 of 8 defenders left; medians 8.5 rounds, none lost, 4 left), storm 6
+  (22 rounds, one lost, 4 of 11 left; medians 23.5 rounds, one lost, 4 left).
+  THE PAGE'S FIGHT IS NOT PROMISED TO BE THE HEADLESS ONE: the page steps the game at a fixed 60 Hz, the camera with the tick, and draws a blend between
+  ticks (`FIXEDSTEP.on`, `TWEEN.on`: docs/agents/replays.md; the hands-off player's keys go on before each tick), so a display's rate alone no longer
+  makes another fight. But no check has shown a benchmark scene on a page equal to the headless run of its seed (the page's men read the GPU's light and
+  smoke, the headless ones their stand-ins), nor two machines equal; the `floors` line is how a report says which fight it saw. The seeds are picked
+  headless. Checks: `bun run tools/qa/bench-check.ts` (a fake page and a fake tab:
+  the acts on each of three pages, the lines carried, everything back at the end and from every stop, the slow-machine cuts, a tab hidden, the ring full, no
+  heavy moment, the addresses, the reload guard, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another
+  take), and on a real page `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: `?bench` goes to the first scene and Esc comes
+  back, then the row's run start to finish over three pages with the hands-off player seen giving its orders on each and walking on the first, keys
+  pressed into a scene, the game's clock read every frame, the card, the one download, Close; the page's own frames play each scene under the fixed step,
+  a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
+  tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
+  minutes are an estimate, and nobody has watched a scene played or looked at the card.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
   `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s

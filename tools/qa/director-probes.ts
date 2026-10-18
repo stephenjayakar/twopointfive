@@ -1,31 +1,21 @@
 // The 'director' family (probes.ts: `bun run tools/qa/probes.ts director` — also in 'all'): the level-scripting DIRECTOR (src/game/director.ts, docs/design/level-scripting.md
 // M1, docs/internal/director.md) held to what it claims without a browser:
-//   director-breach-digest   the breach re-expressed as the office's script (levels/office.script.ts, program 'breach') produces THE SAME beat log as the pre-port
-//                            Breach class did on main — every drill beat and every show note (daylight / cast / shot:…), in the same order, on the same FRAME (t
-//                            rounded to 1/60) — against tools/qa/fixtures/breach-beats-main.json, frozen on main @0b51b27 BEFORE the port (never rewritten). Since the
-//                            DAY SHOWCASE'S LOUD HALF (docs/internal/day-showcase.md) the show runs on past the drill's cut, so that fixture is held as a PREFIX: every
-//                            one of its beats but 'restore' must stand in the new log at its old frame, in its old order (the first half frame-identical); and the WHOLE
-//                            show's log — the loud half's set-ups and its restore too — is held against tools/qa/fixtures/day-beats-main.json, frozen on feat/day-loud
-//                            with `--write` (which writes only that file). Two seeds.
-//   director-lint            the define-time manifest lint: the office script's manifest (marks / doors / plans / loadouts / light groups it names, its programs,
-//                            beats and triggers) is complete against levels/office.json (no unresolved name), and a script naming a door / plan / group the level
-//                            lacks is REPORTED by name with the beat that uses it — and the Director refuses to arm that program (armed false, the game playable).
+// (The office's script — the night and day showcases — was removed, and with it director-breach-digest and its two frozen beat logs: no shipped level has a script, so
+// every probe here stages its own. What nothing here runs any more: a showcase program end to end, and BreachDrill driven as a Director drill.)
+//   director-lint            the define-time manifest lint: the shipped office carries NO script (its Director has no program and refuses a start by name, the
+//                            game stepping on), and a script naming a door / plan / group the level lacks is REPORTED by name with the beat that uses it — and
+//                            the Director refuses to arm that program (armed false, the game playable).
 //   director-showcase-scan   the showcase-verb scan: camera / caption / puppet / press / click / stage / fade / daylight / shift are used only inside programs
-//                            declared showcase: true — the office script passes; a synthetic play program calling c.caption(…) is caught statically by name AND
+//                            declared showcase: true — a synthetic play program calling c.caption(…) is caught statically by name AND
 //                            throws at run time without touching the world.
 //   director-scheduler       the scheduling core on a bare Game: onStart / after / onEvent triggers fire once, beats resume on the exact tick their condition holds
 //                            (wait / until / done / any / all), a throwing beat is failed and logged with its step while the frame goes on and its units are
 //                            released to the AI, MAX_RESUMES caps a runaway, two seeded runs log identically, and with NO program running the seeded game digests
 //                            exactly as a game whose Director was never ticked (the identity the tactics / needs / civilians cards hold from their side).
-import { writeFileSync, readFileSync, existsSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { standUp, ROOT } from './headless.ts';
 
 const DT = 1 / 60;
 const argv = process.argv.slice(2);
-const WRITE = argv.includes('--write'), VERBOSE = argv.includes('--verbose');
-const FIXTURE = resolve(ROOT, 'tools/qa/fixtures/breach-beats-main.json');   // the pre-port / pre-loud log: read only, held as the first half's prefix
-const DAY_FIXTURE = resolve(ROOT, 'tools/qa/fixtures/day-beats-main.json'); // the whole day show's log since the loud half (--write freezes THIS one)
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -33,106 +23,20 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
   return { verdict: (ok, label, detail) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); }, done: () => { console.log(`=== ${title.split(':')[0]}: ${all ? 'ALL PASS' : 'FAILURES above'} ===`); return all; } };
 }
 
-// ---------------------------------------------------------------- the breach's beat log, as breach-probes.ts runs the show (the recipe the fixture was frozen with)
-type Beat = { what: string; f: number; t: number };
-/** Run the breach on a fresh seeded stand-up exactly as breach-probes.ts breachRun does (seed → standUp → 30 idle frames → new Breach(game, cam, smoke, input) → start →
- *  { breach.update(DT); step } until it stops itself, 70 s cap) and return its log with every t also rounded to the frame. Works against the pre-port Breach class and the
- *  post-port facade alike: that is the point. */
-export async function breachBeats(seed: number): Promise<{ beats: Beat[]; frames: number; finished: boolean | null; timedOut: boolean }> {
-  const { Breach } = await import(`${ROOT}/src/game/breach.ts`);
-  Math.random = seeded(seed);
-  const W: any = await standUp(); const { game, cam, input } = W;
-  for (let i = 0; i < 30; i++) W.step(DT);
-  const breach = new Breach(game, cam, W.smoke, input);
-  let finished: boolean | null = null; breach.onStop = (f: boolean) => { finished = f; };
-  breach.start();
-  let frames = 0;
-  while (breach.active && frames < 200 / DT) {   // (the drill's ~28 s and the loud half's ~100)
-    const p = breach.update(DT);
-    if (!breach.active) break;
-    W.step(DT, p); W.engine.lights.upload(game.time);
-    frames++;
-  }
-  const timedOut = breach.active; if (timedOut) breach.stop();
-  const beats: Beat[] = (breach.log as { t: number; what: string }[]).map(b => ({ what: b.what, f: Math.round(b.t * 60), t: +b.t.toFixed(4) }));
-  return { beats, frames, finished, timedOut };
-}
-const SEEDS = [11, 12];
-
-/** `--write`: freeze the WHOLE-SHOW fixture (day-beats-main.json) from THIS tree — the file records the commit it was taken on. The pre-port fixture is never rewritten. */
-async function writeFixture() {
-  const { execSync } = await import('node:child_process');
-  let commit = 'unknown'; try { commit = execSync('git rev-parse --short HEAD', { cwd: ROOT }).toString().trim(); } catch { /* */ }
-  const runs: Record<string, unknown> = {};
-  for (const s of SEEDS) { const R = await breachBeats(s); runs[String(s)] = { frames: R.frames, finished: R.finished, timedOut: R.timedOut, beats: R.beats }; console.log(`  seed ${s}: ${R.beats.length} beats, ${R.frames} frames, finished=${R.finished}`); }
-  const doc = {
-    what: "the DAY showcase's beat log (Breach.log = show notes + camera set-ups + BreachDrill.beats + 'restore' — the drill AND the loud half) per seed, t in seconds and rounded to the frame (f = round(t·60))",
-    provenance: { commit, takenAt: new Date().toISOString(), tree: 'feat/day-loud: the breach extended past its cut by the loud half (docs/internal/day-showcase.md); its first half held frame-identical to breach-beats-main.json @0b51b27 by the same probe', recipe: 'tools/qa/director-probes.ts breachBeats(seed): Math.random = mulberry(seed); standUp(); 30 × step(1/60); new Breach(game, cam, smoke, input).start(); { breach.update(1/60); step(1/60, look); lights.upload } until it stops itself', seeds: SEEDS, dt: DT },
-    runs,
-  };
-  writeFileSync(DAY_FIXTURE, JSON.stringify(doc, null, 1) + '\n');
-  console.log(`wrote ${DAY_FIXTURE} @${commit}`);
-}
-
-// ---------------------------------------------------------------- director-breach-digest
-export async function directorBreachDigest(): Promise<boolean> {
-  const F = family('director-breach-digest: the day showcase logs the pre-port breach\'s beats on the same frames up to the drill\'s cut (tools/qa/fixtures/breach-beats-main.json as a prefix), and its whole log — the loud half too — matches the one frozen on the branch (day-beats-main.json)');
-  if (WRITE) { await writeFixture(); F.verdict(true, 'whole-show fixture written (--write)', DAY_FIXTURE); return F.done(); }
-  if (!existsSync(FIXTURE)) { F.verdict(false, 'pre-port fixture present', `${FIXTURE} missing`); return F.done(); }
-  const fx = JSON.parse(readFileSync(FIXTURE, 'utf8'));
-  const dfx = existsSync(DAY_FIXTURE) ? JSON.parse(readFileSync(DAY_FIXTURE, 'utf8')) : null;
-  for (const s of SEEDS) {
-    const want = fx.runs[String(s)] as { frames: number; finished: boolean; beats: Beat[] } | undefined;
-    if (!want) { F.verdict(false, `seed ${s}`, 'not in the pre-port fixture'); continue; }
-    const R = await breachBeats(s);
-    { // (a) THE FIRST HALF: the pre-port log's beats (all but its 'restore') stand in ours at the same frames in the same order
-      const f: string[] = [];
-      if (R.timedOut) f.push('the show never stopped itself (200 s)');
-      const old = want.beats.filter(x => x.what !== 'restore'); let k = -1, matched = 0;
-      const hit = new Set<number>();
-      for (const b of old) { const i = R.beats.findIndex((x, j) => j > k && x.what === b.what && x.f === b.f); if (i < 0) { const any = R.beats.find(x => x.what === b.what); f.push(`'${b.what}@f${b.f}' ${any ? `is at f${any.f} now` : 'missing'}`); if (f.length > 4) break; continue; } k = i; matched++; hit.add(i); }
-      const cutNow = R.beats.find(x => x.what === 'cut')?.f, cutWas = old.find(x => x.what === 'cut')?.f;
-      // …and NOTHING NEW at or before the cut: a row of ours the fixture does not have, on a frame ≤ the cut, is the loud half (or anything else) leaking into the first half
-      const early = R.beats.filter((x, j) => !hit.has(j) && x.what !== 'restore' && cutWas !== undefined && x.f <= cutWas);
-      if (early.length) f.push(`${early.length} row(s) not in the pre-port log at or before the cut: ${early.slice(0, 4).map(x => `'${x.what}@f${x.f}'`).join(', ')}`);
-      F.verdict(f.length === 0, `seed ${s}: the first half frame-identical — all ${old.length} pre-port beats (main @${fx.provenance?.commit}, 'restore' apart) at their old frames in their old order; the drill's cut still on f${cutWas}`, f.join('; ') || `${matched}/${old.length} matched; cut@f${cutNow}; the show now runs on to ${R.beats.length} beats over ${R.frames} frames`); }
-    { // (b) THE WHOLE SHOW against the branch's own frozen log
-      const f: string[] = [];
-      if (!dfx) f.push(`${DAY_FIXTURE} missing — freeze it with --write`);
-      else {
-        const dw = dfx.runs[String(s)] as { frames: number; finished: boolean; beats: Beat[] } | undefined;
-        if (!dw) f.push('seed not in the day fixture');
-        else {
-          if (R.finished !== dw.finished) f.push(`finished=${R.finished} (was ${dw.finished})`);
-          if (R.frames !== dw.frames && R.frames !== dw.frames + 1) f.push(`${R.frames} frames of show (was ${dw.frames})`);
-          const n = Math.max(R.beats.length, dw.beats.length); let firstDiff = -1;
-          for (let i = 0; i < n; i++) { const a = R.beats[i], b = dw.beats[i]; if (!a || !b || a.what !== b.what || a.f !== b.f) { firstDiff = i; break; } }
-          if (firstDiff >= 0) { const a = R.beats[firstDiff], b = dw.beats[firstDiff]; f.push(`beat #${firstDiff} differs: now ${a ? `${a.what}@f${a.f}` : '—'} vs frozen ${b ? `${b.what}@f${b.f}` : '—'} (${R.beats.length} vs ${dw.beats.length} beats)`); if (VERBOSE) { console.log('   now   : ' + R.beats.map(x => `${x.what}@${x.f}`).join(' ')); console.log('   frozen: ' + dw.beats.map(x => `${x.what}@${x.f}`).join(' ')); } }
-        }
-      }
-      F.verdict(f.length === 0, `seed ${s}: the whole show's ${R.beats.length} beats, names and frames identical to the log frozen @${dfx?.provenance?.commit ?? '—'}`, f.join('; ') || `${R.beats.length} beats over ${R.frames} frames; last: ${R.beats.slice(-3).map(x => `${x.what}@f${x.f}`).join(' ')}`); }
-  }
-  return F.done();
-}
-
-
 // ---------------------------------------------------------------- director-lint
 export async function directorLint(): Promise<boolean> {
-  const F = family("director-lint: the define-time manifest lint — the office script resolves against office.json; a script naming what the level lacks is reported by name and not armed (director.ts lintManifest)");
+  const F = family("director-lint: the define-time manifest lint — the shipped office has no script; a script naming what the level lacks is reported by name and not armed (director.ts lintManifest)");
   const Dm = await import(`${ROOT}/src/game/director.ts`); const { buildLevel } = await import(`${ROOT}/src/scene/level.ts`);
   const level = buildLevel();
-  { // (a) the office script: manifest complete, no problems, and its expectations name real things
+  { // (a) the shipped office: no script on the Level, so the Game's Director has no manifest, no program, and says why a start by name is refused — the game steps on
     const f: string[] = [];
-    if (typeof level.script !== 'function') f.push('level.script missing on buildLevel()');
-    const M = Dm.manifestOf(level.script); const probs = Dm.lintManifest(M, level) as { level: string; what: string }[];
-    const errs = probs.filter(p => p.level === 'error'); if (errs.length) f.push(`${errs.length} lint errors: ${errs.map(p => p.what).join(' | ')}`);
-    if (!M.programs.has('breach')) f.push("no program 'breach'"); else { const P = M.programs.get('breach'); if (!P.opts.showcase) f.push("'breach' not declared showcase"); for (const b of ['show', 'camera', 'veil']) if (!P.beats.has(b)) f.push(`'breach' lacks beat '${b}'`); if (!P.triggers.some((t: any) => t.kind === 'start' && t.beat === 'show')) f.push("'breach' has no onStart('show')"); }
-    if (!M.plans.has('breach') || !M.variants.has('daylight') || !M.loadouts.has('blue') || !M.loadouts.has('tango') || !M.marks.has('park')) f.push(`manifest incomplete: plans ${[...M.plans.keys()]} variants ${[...M.variants]} loadouts ${[...M.loadouts.keys()]} marks ${[...M.marks.keys()]}`);
-    if (!M.expects.some((e: any) => e.kind === 'order' && e.program === 'breach' && e.beats.length >= 10)) f.push('no expect.order for breach');
-    // …and the Game arms it
+    if (level.script !== undefined) f.push('buildLevel() carries a script (the office has none since the two showcases were removed)');
     Math.random = seeded(5); const W: any = await standUp(); const D = W.game.director;
-    if (!D.armed) f.push(`the Game's Director is not armed: ${D.problems.map((p: any) => p.what).join(' | ')}`); if (D.canStart('breach') !== null) f.push(`canStart('breach'): ${D.canStart('breach')}`);
-    F.verdict(f.length === 0, "the office script: manifest = { plan breach, variant daylight, loadouts blue/tango, mark park, program breach (showcase; beats show/camera/veil; onStart show), expect.order } — zero lint problems, armed in the Game, 'breach' startable", f.join('; ') || `programs ${[...M.programs.keys()].join('/')}, ${probs.length} problems, ${M.expects.length} expectations; ${D.summary()}`);
+    if (D.manifest !== null || D.programs.length) f.push(`the Game's Director has programs: ${D.programs.join(' / ')}`); if (D.problems.length) f.push(`problems: ${D.problems.map((p: any) => p.what).join(' | ')}`);
+    for (const name of ['breach', 'night']) { const why = D.canStart(name); if (why === null) f.push(`canStart('${name}') says it can`); const said = D.start(name); if (!said) f.push(`start('${name}') was not refused`); }
+    if (D.run || D.showing) f.push('a run exists after the refused starts');
+    for (let i = 0; i < 5; i++) W.step(DT);
+    F.verdict(f.length === 0, "the shipped office: no script on the Level, the Game's Director with no manifest and no program, start('breach') / start('night') refused with a reason, no run, the game steps on", f.join('; ') || `canStart: "${D.canStart('breach')}"; ${D.summary()}`);
   }
   { // (b) a script naming things the office does not have: every miss reported by name; a Director built on it is NOT armed and refuses to start, the game untouched
     const bad = (D: any) => {
@@ -158,9 +62,7 @@ export async function directorLint(): Promise<boolean> {
 // ---------------------------------------------------------------- director-showcase-scan
 export async function directorShowcaseScan(): Promise<boolean> {
   const F = family('director-showcase-scan: captions / camera / puppet / staging only in programs declared showcase (decision 4) — found statically by name AND refused at run time (director.ts scanShowcaseVerbs)');
-  const Dm = await import(`${ROOT}/src/game/director.ts`); const { buildLevel } = await import(`${ROOT}/src/scene/level.ts`);
-  const level = buildLevel();
-  { const hits = Dm.scanShowcaseVerbs(Dm.manifestOf(level.script)); F.verdict(hits.length === 0, "the office script: no showcase verb outside a showcase program", hits.length ? JSON.stringify(hits) : `verbs scanned: ${Dm.SHOWCASE_VERBS.join(' ')}`); }
+  const Dm = await import(`${ROOT}/src/game/director.ts`);
   { // a PLAY program using them: every one found by (program, beat, verb); a mention in a comment is not a use; the same verbs inside a showcase program of the same script are fine
     const naughty = (D: any) => {
       D.program('main', (P: any) => {
@@ -265,19 +167,18 @@ export async function directorScheduler(): Promise<boolean> {
     const M = Dm.manifestOf(testScript); const exp = M.expects.find((e: any) => e.kind === 'order' && e.program === 'main'); const seq = R1.rows.filter((r: any) => r.kind === 'note').map((r: any) => r.what);
     let k = -1, ok = !!exp; const missing: string[] = []; for (const w of exp?.beats ?? []) { const i = seq.indexOf(w); if (i < 0) { missing.push(w); ok = false; continue; } if (i < k) ok = false; k = Math.max(k, i); }
     F.verdict(ok, "the script's own D.expect.order('main', [hello, walked, opened]) holds on the run's log (expectations live beside the beats they describe)", ok ? `notes: ${seq.join(' → ')}` : `missing ${missing.join(', ')} / out of order in ${seq.join(' → ')}`); }
-  { // IDLE IDENTITY: the office's armed Director with no program running changes nothing — 40 s of the seeded live game digests exactly as the same game whose Director has no script at all
+  { // IDLE IDENTITY: the Director the shipped office is built with changes nothing — 40 s of the seeded live game digests exactly as the same game handed a fresh script-less Director (while the office carried a script this held the ARMED idle Director to that; the digest is the one it printed then)
     const digestOf = async (noScript: boolean) => { Math.random = seeded(4242); const W: any = await standUp(); if (noScript) W.game.director = new Dm.Director(W.game, null); Math.random = seeded(99); for (let i = 0; i < 40 / DT; i++) W.step(DT); return digestGame(W.game); };
     const a = await digestOf(false), b = await digestOf(true); const d = diffDigest(a, b);
-    F.verdict(d.length === 0, "idle identity: 40 s of the seeded office with the armed Director (no program started) ≡ the same run with a script-less Director — the game is the game (the tactics / needs / civilians identity cards hold it against main's frozen digests from their side)", d.length ? d.join('; ') : `digest ${hashDigest(a)} both ways`); }
+    F.verdict(d.length === 0, "idle identity: 40 s of the seeded office with the Director it is built with (no program started) ≡ the same run with a script-less Director — the game is the game (the tactics / needs / civilians identity cards hold it against main's frozen digests from their side)", d.length ? d.join('; ') : `digest ${hashDigest(a)} both ways`); }
   return F.done();
 }
 
-if (import.meta.main) {   // bun run tools/qa/director-probes.ts [--write] [digest|lint|scan|scheduler]
+if (import.meta.main) {   // bun run tools/qa/director-probes.ts [lint|scan|scheduler]
   const pick = argv.find(a => !a.startsWith('--'));
   let ok = true;
-  if (!pick || pick === 'digest') ok = (await directorBreachDigest()) && ok;
-  if (!WRITE && (!pick || pick === 'lint')) ok = (await directorLint()) && ok;
-  if (!WRITE && (!pick || pick === 'scan')) ok = (await directorShowcaseScan()) && ok;
-  if (!WRITE && (!pick || pick === 'scheduler')) ok = (await directorScheduler()) && ok;
+  if (!pick || pick === 'lint') ok = (await directorLint()) && ok;
+  if (!pick || pick === 'scan') ok = (await directorShowcaseScan()) && ok;
+  if (!pick || pick === 'scheduler') ok = (await directorScheduler()) && ok;
   process.exit(ok ? 0 : 1);
 }

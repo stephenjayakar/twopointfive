@@ -93,7 +93,7 @@ export async function missionsScreen(): Promise<boolean> {
       const loads: string[] = []; G.location.pathname = '/'; G.location.hash = ''; G.location.assign = (u: string) => { loads.push(u); }; G.location.reload = () => { loads.push('(reload)'); };
       const W = await quiet(() => standUp({ uploadEvery: 4 })); const g = W.game;
       let starts = 0;
-      const menu = new Menu({ engine: W.engine, game: g, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, startTour() {}, onStart() { starts++; } } as any);
+      const menu = new Menu({ engine: W.engine, game: g, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, onStart() { starts++; } } as any);
       const L: any[] = M.missionList();
       setDifficulty('standard', false); M.MISSIONS.onPick = null;
       // ---- the start card

@@ -1,7 +1,7 @@
 // The 'oneway' family: EVERY DOOR OPENS ONE WAY (src/game/doors.ts DOORWAY, src/game/doorswing.ts; the maintainer, 10-08: "doors could use some work too. only open one
 // direction"). Every door of every level a mission is played on (the office and each scenario's own level file), from BOTH faces, by every kind of opener — and
 // after every step of every case the one invariant: the leaf's angle never leaves the side it opens into.
-//   bun run tools/qa/probes.ts oneway | oneway-deal | oneway-night | oneway-read | oneway-leaf | oneway-player | oneway-men | oneway-save | oneway-off
+//   bun run tools/qa/probes.ts oneway | oneway-deal | oneway-read | oneway-leaf | oneway-player | oneway-men | oneway-save | oneway-off
 // All headless; nothing here looks at a picture.
 //   oneway-deal     the side every door was dealt and why (doorswing.ts): a door of a held room off a hall opens into the room, a drill plan's door the way its
 //                   plan throws it, a keyed door away from its cylinder; the same deal on a second boot; the table printed
@@ -117,43 +117,6 @@ export const onewayDeal = guarded(async () => {
   // (the counts are a FLOOR, as of 10-08: a level that loses its `exterior` marks must fail here, not pass with nothing to check)
   F.verdict(ext.length >= 29 && turned.length >= 22 && turned.every(e => e.why === 'outside' && e.out === e.after) && flipped === turned.length && offBad.length === 0, `${ext.length} exterior doors: ${turned.length} turned to open outward, ${left.length} left as dealt; the switch off = the room rules' deal, door for door, and a leaf stood open follows a live flip (${flipped})`,
     `${ext.map(e => `${e.level} ${e.door}: ${word(e, e.before)} ${e.why0}${e.into0 ? ` (${e.into0})` : ''} → ${word(e, e.after)} ${e.why}  [roof ${e.roof[0]}/9 on +, ${e.roof[1]}/9 on −]`).join('\n    ')}\n    left as dealt: ${left.map(e => `${e.level} ${e.door} (${e.roof[0] >= 6 && e.roof[1] >= 6 ? 'a roof over both faces' : e.roof[0] <= 2 && e.roof[1] <= 2 ? 'open sky over both faces' : e.why})`).join(' · ') || 'none'}${planned.length ? `\n    a drill plan throws these the other way (its shove is turned round): ${planned.join(', ')}` : ''}${unmarked.length ? `\n    NOT marked exterior in their level, a roof over one face only (left to the room rules — a level's one-word call): ${unmarked.join(' · ')}` : ''}${offBad.length ? `\n    WRONG with the switch off: ${offBad.join('; ')}` : ''}`);
-  return F.done();
-});
-
-// ---------------------------------------------------------------- oneway-night
-/** THE NIGHT SHOWCASE AT THE FIRE EXIT. levels/office.script.ts walked its opening beat for a leaf that swings INTO the break room off Sam; with the exit opening OUTWARD he
- *  waits on its handle side instead, eases it toward him, goes in by the front of the opening and pulls it to behind him. Held here with the switch on: the leaf never
- *  comes within his own radius of him while he is outside it, the beat's notes land in order, the exit is shut and latched before the break-room chapter — and with the
- *  switch off the beat is the one first walked (his mark north of the frame, the leaf opening + into the room). */
-export const onewayNight = guarded(async () => {
-  const F = family('oneway-night: the night showcase goes in through a fire exit that opens outward');
-  const beat = async (oneWay: boolean, out: boolean, secs: number) => { const W = await boot(undefined, oneWay, out); const { game: g, cam, input } = W; for (let i = 0; i < 30; i++) W.step(DT);
-    const D = g.director; D.attach({ cam, input }); let finished: boolean | null = null; const prev = D.onProgramEnd; D.onProgramEnd = (n: string, f: boolean) => { prev?.(n, f); if (n === 'night') finished = f; };
-    const err = D.start('night', { seed: 111 }); const serial = D.run?.serial; const d = g.doors.byName('fire_exit');
-    const R = { err, staged: [...g.player.char.pos], swing: d.swing, notes: new Map<string, number>(), gap: Infinity, widest: 0, shutAt: -1, bad: [] as string[], pullFrom: -1, pullVel: 0, pulledF: -1, finished: null as boolean | null, t: 0 };
-    for (let f = 0; f < secs * 60 && D.run && D.run.serial === serial && !D.run.ended; f++) { W.step(DT, D.frame?.look ?? null); const t = R.t = D.run?.t ?? R.t;
-      if (f === 0) R.staged = [...g.player.char.pos];
-      for (const r of D.rowsOf(serial)) if (r.kind === 'note' && !R.notes.has(r.what)) { R.notes.set(r.what, r.t); if (/capped|late|missed|watchdog/.test(r.what)) R.bad.push(`${r.what}@${r.t.toFixed(1)}`); }
-      R.widest = Math.max(R.widest, Math.abs(d.angle));
-      const p = g.player.char.pos, [hx, hz] = d.def.hinge, [ux, uz] = d.dir(), k = Math.max(0, Math.min(d.def.width, (p[0] - hx) * ux + (p[2] - hz) * uz));
-      if (!d.latched && !R.notes.has('inside')) R.gap = Math.min(R.gap, Math.hypot(p[0] - hx - ux * k, p[2] - hz - uz * k));
-      if (R.notes.has('door:pulled') && R.pulledF < 0) { R.pulledF = f; R.pullFrom = Math.hypot(p[0] - d.frameCentre[0], p[2] - d.frameCentre[2]); }
-      if (R.pulledF >= 0 && f === R.pulledF + 20) R.pullVel = Math.abs(d.vel);   // (a third of a second after his hand: the pull's own spring has it moving — a closer alone creeps)
-      if (R.shutAt < 0 && R.notes.has('door:pulled') && d.latched) R.shutAt = t; }
-    R.finished = finished; if (D.run && D.run.serial === serial && !D.run.ended) D.stop(false); return R; };
-  const order = ['ch:lot', 'ch:door', 'door:eased', 'inside', 'door:pulled', 'ch:breakroom'];
-  const inOrder = (R: any) => order.every((n, i) => R.notes.has(n) && (i === 0 || R.notes.get(n) >= R.notes.get(order[i - 1])));
-  const line = (R: any) => `staged (${R.staged[0].toFixed(2)}, ${R.staged[2].toFixed(2)}) · leaf to ${R.widest.toFixed(2)} rad on side ${R.swing} · ${order.map(n => `${n} ${R.notes.get(n)?.toFixed(2) ?? '—'}`).join(' · ')} · pulled from ${R.pullFrom.toFixed(2)} m off the frame, leaf at ${R.pullVel.toFixed(2)} rad/s a third of a second on · shut ${R.shutAt.toFixed(2)}${R.bad.length ? ` · ${R.bad.join(' ')}` : ''}${R.err ? ` · start refused: ${R.err}` : ''}`;
-  const shut = (R: any) => R.shutAt > 0 && R.shutAt < R.notes.get('ch:breakroom')! && R.pullVel > 0.5 && !R.bad.length;
-  // the switch ON (?exitsout), the WHOLE show (he comes back out past this door's lot at the end): to its end by itself, no mark he could not make
-  const A = await beat(true, true, 300);
-  F.verdict(A.err === null && A.swing === -1 && A.staged[2] > 21.18 && inOrder(A) && A.gap >= 0.3 && A.widest > 1.2 && shut(A) && A.pullFrom < 1.0 && A.finished === true,
-    'the exit opening outward: Sam waits on its handle side, the leaf opens toward him without touching him, he draws it to from the threshold, and the show runs to its end',
-    `${line(A)} · nearest the leaf came to him outside ${A.gap.toFixed(2)} m (his radius 0.30) · finished ${A.finished} at ${A.t.toFixed(1)} s`);
-  const B = await beat(true, false, 31);
-  F.verdict(B.err === null && B.swing === 1 && Math.abs(B.staged[2] - 20.0) < 1e-6 && inOrder(B) && shut(B), 'the switch off, as shipped: the beat as first walked (his mark north of the frame, the leaf into the room off him)', line(B));
-  const C = await beat(false, false, 31);
-  F.verdict(C.err === null && Math.abs(C.staged[2] - 20.0) < 1e-6 && inOrder(C) && shut(C) && ['door:eased', 'inside', 'door:pulled'].every(n => C.notes.get(n) === B.notes.get(n)), 'one-way doors off (double-acting leaves): the same first-walked beat, note for note', line(C));
   return F.done();
 });
 

@@ -164,11 +164,11 @@ export const TRAINING_MISSIONS: ScenarioEntry[] = [
 /** EVERY MISSION THE LIST HOLDS: the squad's, the quiet ones, the training group — what the missions screen draws, what a query is read back to, what the pause card names */
 export const ALL_MISSIONS: ScenarioEntry[] = [...SCENARIOS, ...QUIET_MISSIONS, ...TRAINING_MISSIONS];
 
-/** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along. The two showcase
- *  flags are here too: a row clicked on a `?demo` / `?breach` page's card must not carry the showcase into the scenario. (`?level=` is NOT: a scenario on the
+/** the query keys a scenario owns: a pick replaces them, a quit drops them, everything else on the URL (?quality=, ?mute, ?hud …) rides along.
+ *  (`?level=` is NOT: a scenario on the
  *  relief office or on the editor's own level is a thing to want.) `solo` is the mission list's flag for the plain night straight in (ui/missions.ts): a pick or
  *  a quit drops it like the rest. */
-export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'demo', 'breach', 'solo'];   // (`squad=N`: the loadout's size, game/loadout.ts; `loadout=<id>`: its screen, ui/loadout.ts)
+export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, game/loadout.ts; `loadout=<id>`: its screen, ui/loadout.ts)
 
 /** 'you + the pair' / 'you + four' (and the loadout's other sizes: 'solo', 'you + one', 'you + three'): how many teammates, in the picker's words */
 export function teamWords(e: { squad: number }): string { return sizeWords(e.squad); }
@@ -206,7 +206,7 @@ export function quitSearch(search: string): string {
   const q = new URLSearchParams(search); for (const k of SCENARIO_KEYS) q.delete(k);
   q.delete('way');   // (the way in is ONE mission's pick — ui/missions.ts waySearch puts it on that row's link alone; it names no scenario, so it is not a SCENARIO_KEY)
   if (q.get('quietfog') !== '0') q.delete('quietfog');   // (a rung of the fog lever is a QUIET mission's pick — game/quietfog.ts puts it on a quiet row's link alone; `quietfog=0`, the rule's own off switch, is the visitor's flag and stays)
-  q.delete('bench');   // (the benchmark's word, ui/bench.ts: one run on the page it was asked on, never carried onto a mission's or a show's link)
+  for (const k of ['bench', 'benchcap', 'benchrun']) q.delete(k);   // (the benchmark's words, ui/bench.ts and ui/benchrun.ts: one run on the page it was asked on, never carried onto a mission's link)
   q.delete('cams');   // (… and the sticky cameras handed with it: the button beside the lever, on a quiet row's link alone)
   return bare(q);
 }

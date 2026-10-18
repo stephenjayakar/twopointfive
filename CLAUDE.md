@@ -91,7 +91,8 @@ happened when; the live queue is outside the repo.
   decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
 - `weather.md` — the hour, weather kinds, cloud over the hour, the level's own roofs, the dust volume, wet characters, wind.
 - `levels.md` — the level is data, scenario data in the level file, the GWOT look and its look files, lived-in rooms, the roof rule.
-- `showcases.md` — the tour, the breach showcase, the Director (level scripting), the night and day showcases.
+- `showcases.md` — the old tour, the breach drill and the daylight variant, the Director (level scripting, no program today), the removed
+  night and day showcases.
 - `anim.md` — MOVES and TURN, the second MOVES pass, wounds, character materials.
 - `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
   the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:

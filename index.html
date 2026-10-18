@@ -211,7 +211,7 @@
     #checkpoint { position: absolute; right: 14px; top: 10px; font: 700 11px/1 var(--h-head); letter-spacing: 0.26em; color: var(--h-ink); text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .5s; }
     #checkpoint.on { opacity: 0.8; transition: opacity .15s; }
     #checkpoint b { display: inline-block; width: 5px; height: 5px; margin-right: 7px; transform: rotate(45deg); background: currentColor; vertical-align: 1px; }
-    body.touring #checkpoint, body.breaching #checkpoint { display: none; }
+    body.touring #checkpoint { display: none; }
     /* the session journal's REC tag (game/journal.ts, overlay.ts; F10): under the checkpoint tag, red while recording, amber while it waits for a moment it may start on */
     #journal { position: absolute; right: 14px; top: 26px; font: 700 11px/1 var(--h-head); letter-spacing: 0.16em; color: #e8b04c; text-shadow: var(--h-shadow); white-space: pre; pointer-events: none; opacity: 0; transition: opacity .3s; }
     #journal.on { opacity: 0.9; }
@@ -263,7 +263,7 @@
     #menu.title .actions .btn:hover, #menu.title .actions .btn:focus { padding-left: 28px; background: rgba(var(--m-hover-rgb),0.7); border-left-color: var(--m-accent); }
     #menu.title .actions .btn.primary { font-size: 34px; padding: 14px 18px 11px; margin-bottom: 8px; background: var(--m-accent); border-left-color: var(--m-accent-hi); }
     #menu.title .actions .btn.primary:hover, #menu.title .actions .btn.primary:focus { padding-left: 28px; background: var(--m-accent-hi); border-left-color: var(--m-bright); }
-    /* the title's EXTRAS page (ui/menu.ts EXTRAS): the showcases and the tool pages, a link each, under two small heads */
+    /* the title's EXTRAS page (ui/menu.ts EXTRAS): the tool pages, a link each, under a small head */
     #menu.title .actions .xhead { margin: 14px 0 4px 4px; font: 600 11px/1.2 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-dim); }
     #menu.title .actions .xhead:first-child { margin-top: 0; }
     #menu.title .actions .btn.xrow { display: block; width: min(520px, 100%); font-size: 20px; padding: 10px 18px 9px; text-decoration: none; color: var(--m-btn-text); }
@@ -508,14 +508,6 @@
     body.touring #caption { top: calc(7.5% + 22px); }
     #caption .cap { font: 600 20px/1.25 var(--h-font); color: var(--h-hi); text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
     #caption .sub { margin-top: 8px; font: 13px/1.45 var(--h-font); color: var(--h-ink); text-shadow: 0 1px 6px #000, 0 0 2px #000; }
-    /* the breach showcase (game/breach.ts adds body.breaching for its length): the caption is a ONE-LINE lower third — a slim translucent band sitting on the
-       bottom letterbox bar just over the beat strip, never over the men — and nothing of the player's HUD is drawn over an operation nobody is playing: no kit
-       column, meters, interaction panel, objective, alarm, read-out, state markers or interactable dots (the speech bubbles stay: they are the barks) */
-    body.breaching #caption { top: auto; bottom: calc(7.5% + 6px); width: auto; max-width: min(1100px, 92vw); padding: 7px 18px 8px; border-top: none; border-radius: 2px; background: rgba(var(--h-plate),0.5); box-shadow: none; z-index: 7; }
-    body.breaching #caption .cap { font: 600 15px/1.35 var(--h-font); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: 0 1px 4px #000; }
-    body.breaching #caption .sub { display: none; }
-    body.breaching #log { bottom: calc(7.5% + 50px); }   /* radio lines ride above the lower third, not through it */
-    body.breaching #equip, body.breaching #meters, body.breaching #interact, body.breaching #objective, body.breaching #alarm, body.breaching #hud, body.breaching .marker, body.breaching .idot, body.breaching .reticle, body.breaching .aimwish, body.breaching .objmark, body.breaching .ordermark, body.breaching .lostfrom, body.breaching .cammark { display: none !important; }
     /* ?kitview (src/host/kitView.ts): the page as a picture in the start page's iframe — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
     body.kitview { cursor: none; }
@@ -541,7 +533,7 @@
     .plan .pk { fill: rgba(var(--h-plate),0.82); stroke: currentColor; stroke-width: 1.2; } .plan .pkt { font: 700 10px/1 var(--h-mono); fill: currentColor; }
     .plan .w-charge .pk, .plan .w-wall .pk { fill: currentColor; } .plan .w-charge .pkt, .plan .w-wall .pkt { fill: var(--h-base); }
     .plan .laid .pp { stroke-width: 2.5; stroke-dasharray: 0.1 13; } .plan .laid .pd { stroke-width: 3; stroke-opacity: 0.9; stroke-dasharray: 5 5; } .plan .laid .pw { stroke-dasharray: 2 3; }   /* (a plan laid for the word, game/planlay.ts: nobody moving yet — wider gaps than a way being walked) */
-    body.breaching .plan, body.attract .plan, body.blinded .plan { display: none; }
+    body.attract .plan, body.blinded .plan { display: none; }
     /* closer than ever (game/close.ts → ui/overlay.ts drawClose): the windows round a man near Sam, on the floor — open = a thin outline, the one he stands in
        filled and bright, a shut one amber and broken; each with what it gives in a few words just outside its arc */
     .trajpath { stroke: rgba(var(--h-hi-rgb),0.85); } .trajland { fill: rgba(var(--h-hi-rgb),0.12); stroke: rgba(var(--h-hi-rgb),0.9); }
@@ -551,7 +543,6 @@
     .closewin text { font: 500 10px/1 var(--h-font); letter-spacing: 0.03em; fill: rgba(var(--h-edge),0.9); paint-order: stroke; stroke: rgba(var(--h-plate),0.72); stroke-width: 3px; stroke-linejoin: round; }
     .closewin text.cw-in { font-weight: 700; font-size: 11px; fill: var(--h-hi); }
     .closewin text.cw-shut { fill: rgba(255,200,140,0.85); }
-    body.breaching .closewin { display: none; }
     /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (the selected gun's light · night vision) and the condition
        pips as two slim rows on top, then one slot per item in the digits' order — 1 the pistol (its OCP charge closing the row), 2 the FN2000 (SEMI/AUTO, RING ×n),
        3 smoke, 4 stun: key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */

@@ -39,10 +39,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   = both, `Game.doorSwings` = the deal as it stands. An authored `swing` and a folding stop speak first; a door roofed on both faces (the stair towers') or neither (yard
   gates) is not touched. 23 of the 32 exterior doors turn (table: `probes.ts oneway-deal`, which also asks the level's solids by rays and holds 'no exterior door with a
   roof over one face opens inward'). A squad coming in from outside is on such a door's PULL face: the lead goes to the handle and pulls (handleside.ts); a boot from
-  that face is held by the frame while `DOORWAY.frameHolds` is on (the next bullet; off, it throws the leaf open toward the kicker); a charge tears it off into the room as ever. The NIGHT SHOWCASE goes in through the office's fire exit: its
-  script reads `c.query.door(d).swing` (director.ts: the face the leaf opens onto, 0 = double-acting) and, with the exit outward, stages Sam on the HANDLE side
-  (`NIGHT.lotOut`), has him go in by the front of the opening (`doorFront`) once the leaf stands wide and draw it to from just inside the threshold (`pullOut`); inward or double-acting = the marks as first walked
-  (`probes.ts oneway-night` holds both). Doors NOT marked `exterior` are never turned (the compound's house / shed doors, the kit yard's: listed by oneway-deal).
+  that face is held by the frame while `DOORWAY.frameHolds` is on (the next bullet; off, it throws the leaf open toward the kicker); a charge tears it off into the room as ever. (The removed NIGHT SHOWCASE went in through the office's fire exit and staged Sam by `c.query.door(d).swing` — director.ts: the face the leaf opens onto,
+  0 = double-acting; the read stays for any level script. Its probe `oneway-night` went with the show.) Doors NOT marked `exterior` are never turned (the compound's house / shed doors, the kit yard's: listed by oneway-deal).
 - **A frame holds a boot from the face its door opens toward** (`doors.ts DOORWAY.frameHolds`, on in the page and in `playthrough.ts`; `?frameholds=0` / Tab ▸ Sandbox ('no boot opens a
   door toward you') / `__doors.frameHolds`; the HARNESS stands up with it OFF — `QA_FRAMEHOLDS=1` turns it on for any family; needs one-way on and no showcase on the stage:
   `Doors.frameRule`; off = the base by run digest; a journal from before the key replays without it). `Doors.bootHolds(d, from)` = the rule on, the leaf home (< 0.05 rad, on its

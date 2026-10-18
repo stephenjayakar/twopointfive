@@ -141,7 +141,7 @@ export const nightbreachStage = guarded(async () => {
   verdict(Math.abs(door.angle) < 0.02 && (!next || Math.abs(next.angle) < 0.02), 'the breach door and the room\'s other door are shut', `${P.door} ${f2(door.angle)} · ${P.next?.door} ${next ? f2(next.angle) : '—'}`);
   W.engine.lights.upload(g.time);
   verdict(1 + g.guards.length <= 8 && steady(W) <= MAX_LIGHTS, 'budgets: characters ≤ 8, steady lights ≤ MAX_LIGHTS', `characters ${1 + g.guards.length} · steady lights ${steady(W)} of ${MAX_LIGHTS} (night floor before: ${R.before.steady})`);
-  verdict(canSave(g, false) !== null && g.director.canStart('night') !== null, 'checkpoints and the showcases refuse while it stands', `save: ${canSave(g, false)} · night showcase: ${g.director.canStart('night')}`);
+  verdict(canSave(g, false) !== null, 'checkpoints refuse while it stands', `save: ${canSave(g, false)}`);
   const at0 = [...NB.ops, ...NB.hostiles].map((x: any) => [...x.char.pos]);
   R.step(60 * 5);
   const moved = [...NB.ops, ...NB.hostiles].map((x: any, i: number) => dist(x.char.pos, at0[i]));
