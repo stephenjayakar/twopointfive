@@ -42,13 +42,13 @@ const row = (ok, what, detail) => { rows++; console.log(`- ${ok ? 'PASS' : 'FAIL
 //  giving, the lens through, the launcher at the shoulder, the turn made / the quiet picture's `lean`)
 const WORK = { weapon: ['shot', 'burst', 'dark'], light: ['lit', 'beam'], smoke: ['smoke'], bangs: ['bang'], frags: ['frag'], charges: ['blow'], wand: ['through'], cams: ['stuck'], shells: ['up'], walls: ['hole', 'blow'], bigtool: ['gave'], turn: ['turn', 'lean'] };
 const PICKS = [
-  { name: 'sam.weapon', who: 0, field: 'weapon', thing: 'weapon' }, { name: 'sam.smoke', who: 0, field: 'smoke', thing: 'smoke' }, { name: 'sam.bangs', who: 0, field: 'bangs', thing: 'bangs' },
+  { name: 'sam.weapon', who: 0, field: 'weapon', thing: 'weapon' }, { name: 'sam.primary', who: 0, field: 'primary', thing: 'weapon' }, { name: 'sam.secondary', who: 0, field: 'secondary', thing: 'weapon' }, { name: 'sam.smoke', who: 0, field: 'smoke', thing: 'smoke' }, { name: 'sam.bangs', who: 0, field: 'bangs', thing: 'bangs' },
   { name: 'sam.frags', who: 0, field: 'frags', thing: 'frags' }, { name: 'sam.shells', who: 0, field: 'shells', thing: 'shells' }, { name: 'sam.charges', who: 0, field: 'charges', thing: 'charges' },
   { name: 'sam.cams', who: 0, field: 'cams', thing: 'cams' }, { name: 'sam.wand', who: 0, field: 'wand', thing: 'wand', set: { wand: true } },
   { name: 'sam.suit', who: 0, field: 'suit', thing: 'turn' }, { name: 'sam.trim', who: 0, field: 'trim', thing: 'turn' },
   { name: 'sam.big.shotgun', who: 0, field: 'big', thing: 'bigtool', set: { big: 'shotgun', walls: 0 } }, { name: 'sam.big.hammer', who: 0, field: 'big', thing: 'bigtool', set: { big: 'hammer', walls: 0 } },
   { name: 'sam.big.wall', who: 0, field: 'big', thing: 'walls', set: { big: 'none', walls: 1 } },
-  { name: 'mate.weapon', who: 1, field: 'weapon', thing: 'weapon' }, { name: 'mate.suppressed', who: 1, field: 'suppressed', thing: 'weapon' }, { name: 'mate.light', who: 1, field: 'light', thing: 'light', set: { light: true } },
+  { name: 'mate.weapon', who: 1, field: 'weapon', thing: 'weapon' }, { name: 'mate.primary', who: 1, field: 'primary', thing: 'weapon' }, { name: 'mate.secondary', who: 1, field: 'secondary', thing: 'weapon' }, { name: 'mate.suppressed', who: 1, field: 'suppressed', thing: 'weapon' }, { name: 'mate.light', who: 1, field: 'light', thing: 'light', set: { light: true } },
   { name: 'mate.nvg', who: 1, field: 'nvg', thing: 'turn' }, { name: 'mate.bangs', who: 1, field: 'bangs', thing: 'bangs' }, { name: 'mate.smoke', who: 1, field: 'smoke', thing: 'smoke' },
   { name: 'mate.charges', who: 1, field: 'charges', thing: 'charges' }, { name: 'mate.frags', who: 1, field: 'frags', thing: 'frags' }, { name: 'mate.wand', who: 1, field: 'wand', thing: 'wand', set: { wand: true } },
   { name: 'mate.suit', who: 1, field: 'suit', thing: 'turn' }, { name: 'mate.trim', who: 1, field: 'trim', thing: 'turn' },
