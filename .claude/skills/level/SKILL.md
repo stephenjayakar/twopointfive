@@ -139,6 +139,12 @@ like that."
   `tyres bunks radio`. Same check.
 - **It ends.** **seen** "the two loud tutorial missions don't have termination conditions". **check**
   `bun run tools/qa/missions-gate.ts` (every row, two seeds, ends as shipped).
+- **On a rescue the way in is the way out, as the game is now**: a rescue is won when every living hostage has been led
+  to within 3.5 m of the mark the team starts on (`scenarios.rescue.team.sam`), or when the floor is cleared; holding the
+  hostage room no longer ends it. So the start wants room for the team and the hostages to stand, and a way back from
+  the hostage room that a hostage can walk. First numbers, and whether the way out stays the way in is the maintainer's
+  open call. **seen** "the hostage rescue missions should have you safely extract the hostage or fully clear the map."
+  **check** `bun run tools/qa/probes.ts rescueend` (the mission's `out` line walks them there).
 - **A quiet level**: the `quiet` block (starts, spots, exits, patrols), `mission` equal to `spots[0]` / `exits[0]`; every
   guard a man with a job; `wired: true` only where the holder really is on an alarm (**seen** "predictably getting a guard
   to come by when you pull the objective is a bit contrived"); a dark way exists and the short way crosses light; no deal
@@ -149,7 +155,10 @@ like that."
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
-  stands): the pattern of the glasshouse, the pass, the depot.
+  stands): the pattern of the glasshouse, the pass, the depot. A check that holds the file against the generator that
+  wrote it runs the generator as the exporter does (`asExporter` in `tools/qa/headless.ts`): the page's own sin and cos
+  round a last bit another way than the file was written with. **seen** the `level-identity` probe red on the shipped stand
+  for that and nothing else. Whether a file is stale is `export.ts <name> --check`'s question, not such a check's.
 
 ## 7. The team and its kit
 

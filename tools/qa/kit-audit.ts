@@ -14,12 +14,14 @@ import { cardWords, comesBare } from './kitdeal-check.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-const { squadChoices } = await import(`${ROOT}/src/game/loadout.ts`);
+const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
 const { OFFICE_SCENARIOS } = await import(`${ROOT}/levels/office.scenarios.ts`) as { OFFICE_SCENARIOS: any };
 
 const DEAL = !process.argv.includes('--deal=off');
 type Card = Record<string, any>;
-const MEN = ['You', 'Red One', 'Red Two', 'Blue One', 'Blue Two'];
+const MEN = ['You', 'Red One', 'Red Two', 'Blue One', 'Blue Two'];   // (the cards by the four's names: a level's issue block names cards)
+/** card i of a team of n by the name the roster calls him (game/loadout.ts rosterOf: one or two teammates are 'Blue One', 'Blue Two', on cards 1 and 2) */
+const man = (n: number, i: number): string => (i === 0 ? 'You' : rosterOf(n)[i - 1]?.name ?? MEN[i]);
 const line = (m: Card) => cardWords(m).replace(/ \+ /g, ', ').replace(/^nothing$/, '**nothing**');
 
 K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, '');   // (the page's stand for these rows: the pouches rule and the big slot on)
@@ -30,9 +32,9 @@ out.push('## Every squad kit at every team size', '', '| Squad kit | Team | Squa
 const bareAt: Record<string, string[]> = {};
 for (const L of kits) for (const n of [1, 2, 3, 4]) {
   K.KITDEAL.on = DEAL; K.kitTeam(n); const why = K.kitLoadout(L.id) as string | null, P = K.kitPool(n), W = K.kitWorn(n) as Card[];
-  const who = Array.from({ length: n }, (_x, k) => k + 1), bare = who.filter(i => comesBare(i, W[i])).map(i => MEN[i]);
+  const who = Array.from({ length: n }, (_x, k) => k + 1), bare = who.filter(i => comesBare(i, W[i])).map(i => man(n, i));
   if (bare.length) (bareAt[L.name] ??= []).push(`+${n}: ${bare.join(', ')}`);
-  out.push(`| ${L.name} | +${n} | ${why ?? `${P.bangs} / ${P.charges} / ${P.frags} / ${K.kitSmokes(n)} / ${K.kitWalls(n)}`} | ${who.map(i => `${MEN[i]}: ${line(W[i])} (${K.kitCost(i, W[i]).used})`).join(' · ')} | ${bare.join(', ') || 'nobody'} |`);
+  out.push(`| ${L.name} | +${n} | ${why ?? `${P.bangs} / ${P.charges} / ${P.frags} / ${K.kitSmokes(n)} / ${K.kitWalls(n)}`} | ${who.map(i => `${man(n, i)}: ${line(W[i])} (${K.kitCost(i, W[i]).used})`).join(' · ')} | ${bare.join(', ') || 'nobody'} |`);
 }
 out.push('', '## Every mission', '', '| Mission | Kind | Its own team | Sizes offered | Cards on Team & kit | The level\'s own kit | Doors: locked / steel of all | Frags on order | Kit picture placed |', '|---|---|---|---|---|---|---|---|---|');
 const notes: string[] = [];

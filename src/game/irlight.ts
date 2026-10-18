@@ -201,9 +201,12 @@ export function irLightTick(g: Game) {
   if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); K.men.clear(); K.seen.clear(); for (const id of [...K.need.keys()]) drop(g, K, id); } return; }
   const kit = K ?? kitOf(g); list.length = 0; kit.seen.clear();
   /** his light posed, and in the list if any of it burns (auto: only where his place is too dark for the tube) */
-  // (the renderer is asked only where it answers: Sam's own meter — asked every frame, game.ts lightMeter — has an answer. Headless it never has)
-  const live = IRLIGHT.auto && IRLIGHT.meter && !SENSE.cpu && g.lightAt('playerChest') !== undefined;
-  const lit = (L: RtLight, key: number, at: Vec3, yaw: number, each: boolean, ownKey: string | null) => { const k = burn(g, kit, key, at, yaw, each, live, ownKey); if (k > 0) { L.intensity *= k; L.peakIntensity = L.intensity; list.push(L); } else out(L); };
+  // (the renderer is asked only where it answers: Sam's own meter — asked every frame, game.ts lightMeter — has an answer. Headless it never has. Read once
+  //  a frame and only when somebody's goggles are down: with nobody's down this file reads no sensor at all, as before the rule)
+  let live: boolean | undefined;
+  const lit = (L: RtLight, key: number, at: Vec3, yaw: number, each: boolean, ownKey: string | null) => {
+    live ??= IRLIGHT.auto && IRLIGHT.meter && !SENSE.cpu && g.lightAt('playerChest') !== undefined;
+    const k = burn(g, kit, key, at, yaw, each, live, ownKey); if (k > 0) { L.intensity *= k; L.peakIntensity = L.intensity; list.push(L); } else out(L); };
   const sc = g.player.char;
   if (samOn(g)) {
     const L = kit.sam ??= lamp('ir_sam', sc.id); pose(g, L, sc);

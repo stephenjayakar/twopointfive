@@ -190,7 +190,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   A pick idle on its first pick is picked twice more: idle again on either is red; at work both times is a pass that says it MISSED ITS FIRST TURN
   ONCE and is counted in the tally (Sam's frag that came back off the leaf and was taken away, `kept`: once in some twenty throws here, on the depot's
   hut door). Also EXCUSED: the sticky camera where the way in opens on a yard (12 m of open floor or more behind the leaf: `camReach` finds no wall to
-  stick it to — the police post's gate), and a teammate's frag on a RESCUE (the order is refused with hostages on the floor: the consulate). An idle turn of a door order prints the order's stages and the leaf's angle;
+  stick it to — the police post's gate), and a teammate's frag on a RESCUE (the order is refused with hostages on the floor: the consulate). The big slot's shotgun and hammer on the LONG HALL (the level
+  issues its own kit — `kitIssue` — and a card's big slot never reaches the men: `Player.bigKit` stays 'none', no `bigClear` order), and the wall charge
+  at the records' WEST door (too short a stretch of wall beside it). The PASS: the wall charge (no floor behind the gate set's wall) and Sam's frag
+  (the wicket opens on the yard: its burst always has a line to him, and it is taken away). The BLOCK: Sam's wand at the kitchen door, NOT EXPLAINED
+  (never offered to him there; a teammate's works). `DEBUG_EVAL='<expression of g>'` samples the game through a pick's turn. An idle turn of a door order prints the order's stages and the leaf's angle;
   `REPEAT=n` plays the picks n times on one boot.
   MEASURED AFTER (the real page, headless Chromium on the software adapter, the clock at 2, one turn a pick, 27 picks a picture and 13 with Sam
   alone): before the join with the build's head, every pick AT WORK on mousehole ways 1 and 2, depot way 1, glasshouse way 1, snatch, floodlit, the
@@ -198,6 +202,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on mousehole 4 FAIL, exit 1. On the join: mousehole both ways 54 of 54, snatch and floodlit 27 of 27, the office 26 of 27 (the teammate's frag of
   (6), before its mend), depot way 1 26 of 27 (Sam's frag `kept` once; 8 of 8 on a repeat), the police post (quiet, Sam alone) 11 of 13: the wall
   charge and the camera at a yard gate, both excused. `kitview-levels.cjs` on mousehole way 1: 30 PASS of 30. The console said nothing on any.
+  SINCE THE TWO GUN TILES: the check also picks each man's `primary` and `secondary` tile (both play the gun's row), 31 picks a picture;
+  mousehole way 1 on that join 31 of 31.
+  THE WHOLE SWEEP ON THE JOINS (every level with a block bar the lessons, 36 ways): every pick at work on mousehole, depot, glasshouse, barracks,
+  killhouse, block-squads, compound, warehouse (both ways each), snatch, floodlit, the office, defuse, registry, the records' front; the misses are the
+  excused ones named above (the long hall's big tools, the consulate's frag on order, the pass's wall charge and Sam's frag, the records' west wall
+  charge, the block's wand for Sam, a quiet man alone's wall charge, the camera at the police post's and lights-out's gates). A first turn missed once:
+  Sam's wand at the crossing's and the bazaar's gate, his frag at the depot's hut door, his gun on the long hall's first pick after the boot.
   NOT DONE, SAID ON THE PAGE'S LIST: the 40 mm is shouldered and never fired (the round arms 8 m out); a squad kit set has no demo of its own; the quiet picture still plays the loud answers (an open
   call with the kit figure's owner, not decided here).
   NEVER SEEN ON A GPU: every picture named above as changed (mousehole's door in the ward's wall and its lintel, the four re-anchored ways), the
@@ -1002,10 +1013,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kit. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
   page and on the shipped stand (`?nokitdeal`; the debugger's Big slot section, 'squad kit dealt over who comes'); in the knob registry and
   `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off at any moment = every card shown and staged as the table writes it.
-  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 23 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
+  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 24 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
   comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs`. The older card probes (`kit-*`,
   `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
-  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. LISTING: `bun run
+  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. `bigslot-check.ts` run BY ITS
+  OWN FILE takes the same holds itself (the deal for its card part, the two gun rows for every part: it was red on the shipped stand alone while
+  green inside the gate), and now runs its `weight` part too. A MISSION'S ISSUE IS NOBODY'S OWN LAYOUT: `asIssued` holds the player's own-layout
+  mark off for the staging, so cards changed by hand never stage a mission's issue undealt (the check's hall line, red without it). LISTING: `bun run
   tools/qa/kit-audit.ts` (`--deal=off` for the cards before) prints every kit at every size and one row a mission. MEASURED: The pass, four, 240
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has

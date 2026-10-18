@@ -10,7 +10,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tools / the editor keep the LevelData as the document and use `indexLevelData` for id → index. To CHANGE the level while the legacy
   generator (`scene/officeGen.ts buildOfficeProcedural`) still exists: edit the generator, `bun run tools/level-export.ts`, commit both
   (the export refuses a file that does not reload to the same Level; `probes.ts level` = generator vs JSON 0 diffs + validator + round
-  trip, and `tools/level-export.ts --check` says stale/not). Hand edits to the JSON are legitimate but make `level-identity`'s "not stale"
+  trip, and `tools/level-export.ts --check` says stale/not; `level-identity` runs AS THE EXPORTER RUNS, on the engine's maths on every
+  stand — `tools/qa/headless.ts asExporter` — because the exporter raises no stand: under the game's own maths, `math/exact.ts`, the
+  generator's sin / cos round one quaternion's last bit another way, which it prints as a note and does not gate). Hand edits to the JSON are legitimate but make `level-identity`'s "not stale"
   line fail until the generator is retired (lane G1b) — say so when you do it. Flags in the file are names (`NoPrimary NoShadow Cutaway
   Gloss`); runtime bits (Emissive / AreaLit / Rot / Dynamic) are never authored. Unknown keys are validation ERRORS (one `KEYS` registry in
   levelData.ts feeds both the validator and the canonical form — adding a field = interface + KEYS + both directions in levelLoad.ts); the drill
@@ -241,3 +243,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other, `kitview-work.cjs` holds the page to it), the skill's kit
   picture item says so, with what to write where a mission's own way in is a gate, a gap or a wall. `--run` already runs `kitview-plan` for a level, so the
   level command is red on such a way with no change to it. On build d2ec4b7, both stands: 488 PASS, no FAIL, 65 NOTE.
+- **The level skill says how a check holds a file against its generator** (10-18; the skill's words only). The skill's "a check of its own" item now says
+  such a check runs the generator as the exporter does (`tools/qa/headless.ts asExporter`), since under the page's own maths a generator's sin / cos round a
+  last bit another way than the file was written with (the `level-identity` probe was red on the shipped stand for that alone), and that staleness is
+  `export.ts <name> --check`'s question. `tools/qa/level-needs.ts` needed nothing: it runs no generator in its own process, and `--run`'s export check is a
+  fresh process that raises no stand. On build 956661a, both stands: 488 PASS, no FAIL, 65 NOTE.
+- **The level skill says a rescue's start is also its way out** (10-18; the skill's words only; the rule is `missions.md`'s "A rescue is won out, or
+  cleared"). Its mission section gains one item for whoever lays out a rescue: the team's start mark (`scenarios.rescue.team.sam`) is where the hostages are
+  led to, so it wants standing room and a way back a hostage can walk; said as the game is now, since the way out being the way in is an open call. No need
+  was added to `tools/qa/level-needs.ts`: `probes.ts rescueend` walks each rescue's hostages out. On build ab96d87, both stands: 488 PASS, no FAIL, 65 NOTE.

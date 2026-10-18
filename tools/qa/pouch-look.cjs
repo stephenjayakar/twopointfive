@@ -19,6 +19,7 @@ const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || 'pouch-look';
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
+const SHOT_MS = 240000;   // (a still waits for a frame, and the software adapter's can take minutes with other runs beside it: Playwright's own 30 s gave no reading at all)
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -40,7 +41,7 @@ const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
   try {
     // ── the cards
     { const page = await open('&kit', '#kit-preview .kc', null); log('cards: ready');
-      const box = async (name) => { const r = await page.evaluate(() => { const b = document.querySelector('#kit-preview .kp').getBoundingClientRect(); return { x: b.left, y: b.top, width: b.width, height: b.height }; }); await page.screenshot({ path: path.join(outDir, `${name}.png`), clip: r }); R.notes.push(`${name}: ${JSON.stringify(await state(page))}`); };
+      const box = async (name) => { const r = await page.evaluate(() => { const b = document.querySelector('#kit-preview .kp').getBoundingClientRect(); return { x: b.left, y: b.top, width: b.width, height: b.height }; }); await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, `${name}.png`), clip: r }); R.notes.push(`${name}: ${JSON.stringify(await state(page))}`); };
       const card = (i) => `#kit-preview .kc[data-member="${i}"]`, row = (i, f) => `${card(i)} .kc-row[data-field="${f}"]`, next = (i, f) => `${row(i, f)} .kc-step:last-of-type`, prev = (i, f) => `${row(i, f)} .kc-step:first-of-type`;
       const says = async (what, sel) => R.notes.push(`${what}: ` + JSON.stringify(await page.evaluate((s) => document.querySelector(s).textContent, sel)));
       await page.evaluate(() => window.__kit.reset()); await box('cards-issued');
@@ -51,7 +52,10 @@ const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
       // your own card: one more smoke canister as issued
       await page.click(next(0, 'smoke')); await box('cards-you-refused'); await says('your smoke row says', `${row(0, 'smoke')} .kc-note`);
       // the rifle swapped away: the 40 mm row comes to none, its pouches free; a round asked for is refused
-      await page.evaluate(() => window.__kit.reset()); await page.click(next(0, 'weapon')); await says('your 40 mm row, no rifle', `${row(0, 'shells')} .kc-note`); await page.click(next(0, 'shells')); await box('cards-norifle'); await says('… a round asked for', `${row(0, 'shells')} .kc-note`);
+      await page.evaluate(() => window.__kit.reset());
+      // (the one gun row's first step is the pistol alone; with a primary and a secondary on the card — gunslots.ts, on in the page — the primary row is stepped until no long gun is brought)
+      if (await page.$(row(0, 'weapon'))) await page.click(next(0, 'weapon')); else for (let k = 0; k < 8 && / \+ /.test((await state(page)).words[0].split(' · ')[0]); k++) await page.click(next(0, 'primary'));
+      await says('your 40 mm row, no rifle', `${row(0, 'shells')} .kc-note`); await page.click(next(0, 'shells')); await box('cards-norifle'); await says('… a round asked for', `${row(0, 'shells')} .kc-note`);
       await page.evaluate(() => window.__kit.reset());
       for (const p of ['quiet', 'loud']) { await page.evaluate((p) => window.__kit.preset(p), p); await box(`cards-${p}`); }
       { const wall = await page.evaluate(() => (window.__kit.reset(), window.__kit.loadout('wall'))); R.notes.push('loadout wall: ' + JSON.stringify(wall) + ' · wallHere ' + JSON.stringify(await page.evaluate(() => window.__kit.wallHere()))); if (wall === 'done') await box('cards-wall'); }
@@ -63,13 +67,13 @@ const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
     { const over = JSON.stringify({ v: 2, members: [{ smoke: 6, bangs: 4, frags: 3, shells: 4, suit: 'navy' }, { bangs: 3, charges: 2, frags: 2 }, null, { bangs: 3, charges: 1 }, null] });
       const page = await open('&kit', '#kit-preview .kc', over); log('saved-over: ready');
       const r = await page.evaluate(() => { const b = document.querySelector('#kit-preview .kp').getBoundingClientRect(); return { x: b.left, y: b.top, width: b.width, height: b.height }; });
-      await page.screenshot({ path: path.join(outDir, 'cards-saved-over.png'), clip: r }); R.notes.push('cards-saved-over: ' + JSON.stringify(await state(page)) + ' · store untouched: ' + JSON.stringify(await page.evaluate((o) => localStorage.getItem('twopointsix.kit') === o, over)));
+      await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'cards-saved-over.png'), clip: r }); R.notes.push('cards-saved-over: ' + JSON.stringify(await state(page)) + ' · store untouched: ' + JSON.stringify(await page.evaluate((o) => localStorage.getItem('twopointsix.kit') === o, over)));
       await page.close(); }
     // ── the rule off
     { const page = await open('&kit&noslots', '#kit-preview .kc', null); log('off: ready');
       await page.evaluate(() => window.__kit.reset());
       const r = await page.evaluate(() => { const b = document.querySelector('#kit-preview .kp').getBoundingClientRect(); return { x: b.left, y: b.top, width: b.width, height: b.height }; });
-      await page.screenshot({ path: path.join(outDir, 'cards-off.png'), clip: r }); R.notes.push('cards-off: ' + JSON.stringify(await state(page)));
+      await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'cards-off.png'), clip: r }); R.notes.push('cards-off: ' + JSON.stringify(await state(page)));
       await page.close(); }
     // ── the loadout screen (room clear with four), Red One picked
     for (const [name, q] of [['loadout', ''], ['loadout-off', '&noslots']]) {
@@ -77,19 +81,19 @@ const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
       await page.evaluate(() => window.__kit.reset());
       await page.click('#loadout .lo-slot[data-slot="1"]');
       await page.waitForTimeout(150);
-      if (name === 'loadout') { await page.screenshot({ path: path.join(outDir, 'loadout-issued.png') });
-        await page.click('#loadout .kc .kc-row[data-field="bangs"] .kc-step:last-of-type'); await page.waitForTimeout(100); await page.screenshot({ path: path.join(outDir, 'loadout-refused.png') });
+      if (name === 'loadout') { await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'loadout-issued.png') });
+        await page.click('#loadout .kc .kc-row[data-field="bangs"] .kc-step:last-of-type'); await page.waitForTimeout(100); await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'loadout-refused.png') });
         R.notes.push('loadout: slots ' + JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('#loadout .lo-pouch')].map(x => x.textContent))) + ' · squad ' + JSON.stringify(await page.evaluate(() => document.querySelector('#loadout .lo-squadp')?.textContent)) + ' · pool ' + JSON.stringify(await page.evaluate(() => document.querySelector('#loadout .lo-pool')?.textContent)) + ' · fits the window: ' + JSON.stringify(await page.evaluate(() => { const b = document.querySelector('#loadout .lo-card')?.getBoundingClientRect(); return b ? { w: Math.round(b.width), h: Math.round(b.height), inW: b.right <= innerWidth && b.left >= 0, inH: b.bottom <= innerHeight && b.top >= 0, scroll: document.querySelector('#loadout .lo-card').scrollHeight > document.querySelector('#loadout .lo-card').clientHeight } : null; })));
-      } else { await page.screenshot({ path: path.join(outDir, 'loadout-off.png') }); R.notes.push('loadout-off: foot ' + JSON.stringify(await page.evaluate(() => document.querySelector('#loadout .lo-foot')?.textContent))); }
+      } else { await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'loadout-off.png') }); R.notes.push('loadout-off: foot ' + JSON.stringify(await page.evaluate(() => document.querySelector('#loadout .lo-foot')?.textContent))); }
       if (name === 'loadout') {   // the Squad kit row: one press puts a loadout of the table on all five
         await page.evaluate(() => window.__kit.reset()); R.notes.push('squad kit buttons: ' + JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('#loadout .lo-set')].map(x => x.textContent))));
-        await page.click('#loadout .lo-set[data-kit="stun"]'); await page.waitForTimeout(100); await page.screenshot({ path: path.join(outDir, 'loadout-squadkit.png') });
-        if (await page.$('#loadout .lo-set[data-kit="wall"]')) { await page.click('#loadout .lo-set[data-kit="wall"]'); await page.click('#loadout .lo-slot[data-slot="1"]'); await page.waitForTimeout(100); await page.screenshot({ path: path.join(outDir, 'loadout-wall.png') }); R.notes.push('loadout-wall: pool ' + JSON.stringify(await page.evaluate(() => document.querySelector('#loadout .lo-pool')?.textContent)) + ' · walls ' + JSON.stringify(await page.evaluate(() => window.__kit.walls(4)))); }
+        await page.click('#loadout .lo-set[data-kit="stun"]'); await page.waitForTimeout(100); await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'loadout-squadkit.png') });
+        if (await page.$('#loadout .lo-set[data-kit="wall"]')) { await page.click('#loadout .lo-set[data-kit="wall"]'); await page.click('#loadout .lo-slot[data-slot="1"]'); await page.waitForTimeout(100); await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, 'loadout-wall.png') }); R.notes.push('loadout-wall: pool ' + JSON.stringify(await page.evaluate(() => document.querySelector('#loadout .lo-pool')?.textContent)) + ' · walls ' + JSON.stringify(await page.evaluate(() => window.__kit.walls(4)))); }
         else R.notes.push('loadout-wall: no "One wall charge" button — this build\'s wall charge takes no count from the cards');
         await page.click('#loadout .lo-set[data-kit="issued"]');
       }
       // your own card too (seven rows under the rule)
-      await page.click('#loadout .lo-slot[data-slot="0"]'); await page.waitForTimeout(150); await page.screenshot({ path: path.join(outDir, `${name}-you.png`) });
+      await page.click('#loadout .lo-slot[data-slot="0"]'); await page.waitForTimeout(150); await page.screenshot({ timeout: SHOT_MS, path: path.join(outDir, `${name}-you.png`) });
       await page.close();
     }
   } catch (e) { R.errors.push('threw: ' + String(e && e.stack || e).slice(0, 800)); }
