@@ -7,6 +7,7 @@ import { SNOWBOG } from './snowBog';
 import type { PropSystem, Prop } from './props';
 import type { Team } from './teams';
 import { GEAR } from './gear';   // (a leaf: which rifle a dropped FN2000-row item is DRAWN as)
+import type { Game } from './game';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export type ItemKind = 'smoke' | 'mag' | 'flash' | 'frag' | 'pistol' | 'torch' | 'rifle' | 'ring' | 'shell';   // pistol / torch / rifle: dropped from a dying hand (combat.ts dropFromHand — the rifle is what the long-gun rows let go of, weapons.ts WeaponDef.drop: a rifleman's whole AKS-74U, or with fill 1 Sam's FN2000) — physical like the rest (tumble, bounce, settle, nudge props), and set dressing once down: nobody picks them up (a guard's magazines would not fit the Five-seveN anyway, and nothing on the floor is ammunition); ring: a spent ring airfoil (launcher.ts hands it over the moment its flight ends — off a wall, off a man — to clatter down and lie there: not retrievable either)
@@ -87,7 +88,11 @@ export interface Item {
   /** a stun can: whose side's it is, said by a caller that takes the thrower off the guard list for the bang (doortools.ts bang, DOORTOOLS.ownCan) — combat.ts
    *  detonateStun reads it ahead of looking the thrower up; unset = looked up, as ever */
   side?: Team;
-  onBounce?: (speed: number, p: Vec3) => void;
+  /** called on a bounce with the Game the item is in and the item itself: what it does it does to THOSE (a callback that kept a Game or a count of its own in its
+   *  closure could not be rolled back, nor go into another game with the item — rollback.ts) */
+  onBounce?: (speed: number, p: Vec3, g: Game, it: Item) => void;
+  /** onBounce's own count, where it keeps one (combat.ts dropFromHand: the first two clatters are heard) */
+  clatters?: number;
 }
 
 export interface ThrowSolution { v0: Vec3; T: number; points: Vec3[]; land: Vec3; }
@@ -159,7 +164,8 @@ export class Throwables {
     return { v0, T, points, land };
   }
 
-  update(dt: number) {
+  /** `g`: the Game the items are in, handed to a bounce's callback (the model viewer's stage has none, and no item of its own has a callback) */
+  update(dt: number, g: Game | null = null) {   // (null: the viewer's stage, which has no game)
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.age += dt; it.life -= dt;
       if (it.life <= 0) { this.items.splice(i, 1); continue; }
@@ -194,7 +200,7 @@ export class Throwables {
             it.vel = v3.add(v3.scale(vT, Math.max(0, 1 - it.friction * (0.5 + 0.5 * Math.abs(n[1])))), v3.scale(vN, -it.restitution));
             if (bog > 0) { const up = v3.dot(it.vel, n), b = bogBounce(bog), s = bogSlide(bog); it.vel = v3.add(v3.scale(v3.sub(it.vel, v3.scale(n, up)), s), v3.scale(n, up * b)); }   // … it keeps little of its slide and of its bounce
             it.spin *= 0.6; it.tumbleRate *= 0.45; it.bounces++; if (Math.hypot(it.vel[0], it.vel[2]) > 0.3) it.heading = v3.yawOf(it.vel);
-            if (speed > 0.6) it.onBounce?.(speed, it.pos);
+            if (speed > 0.6) it.onBounce?.(speed, it.pos, g!, it);
             // settle when slow on an upward-facing surface
             if (n[1] > 0.6 && Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0)) { it.settled = true; it.on = hit.prop; it.onPose = hit.prop ? poseKey(hit.prop) : 0; it.vel = [0, 0, 0]; it.spin = 0; it.pos[1] = it.pos[1] + 0.001; }
           }
@@ -204,7 +210,7 @@ export class Throwables {
         }
         if (it.pos[1] < it.radius) { // safety floor
           const bog = this.bog ? this.bog(it.pos[0], 0, it.pos[2]) : 0;
-          it.pos[1] = it.radius; if (it.vel[1] < 0) { const sp = -it.vel[1]; it.vel[1] *= -it.restitution; it.vel[0] *= 0.7; it.vel[2] *= 0.7; if (bog > 0) { it.vel[1] *= bogBounce(bog); it.vel[0] *= bogSlide(bog); it.vel[2] *= bogSlide(bog); } it.bounces++; if (sp > 0.6) it.onBounce?.(sp, it.pos); }
+          it.pos[1] = it.radius; if (it.vel[1] < 0) { const sp = -it.vel[1]; it.vel[1] *= -it.restitution; it.vel[0] *= 0.7; it.vel[2] *= 0.7; if (bog > 0) { it.vel[1] *= bogBounce(bog); it.vel[0] *= bogSlide(bog); it.vel[2] *= bogSlide(bog); } it.bounces++; if (sp > 0.6) it.onBounce?.(sp, it.pos, g!, it); }
           if (Math.abs(it.vel[1]) < 0.5 && Math.hypot(it.vel[0], it.vel[2]) < 0.35 + (bog > 0 ? bogStick(bog) : 0)) { it.settled = true; it.vel = [0, 0, 0]; }
         }
         it.yaw += it.spin * h; it.tumble += it.tumbleRate * h;

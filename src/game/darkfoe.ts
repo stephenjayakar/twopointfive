@@ -33,6 +33,7 @@
 // No dice, no camera, no graphics setting, no wall clock: the CPU's light estimate, counted seconds. Per-man state rides darkFoeSnapshot / darkFoeRestore (units
 // are in no checkpoint today — savestate.ts canSave refuses with one on the floor — so nothing calls the pair but the check).
 // Type-only game imports but for functions used inside calls (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import type { Vec3 } from '../math/vec';
@@ -73,7 +74,7 @@ type Def = RoomFight['defs'][number];
 /** per man: he knows for good, or for now (`word`: suspicious this moment, a mate's lamp in his view); the last reading of his view (true = blind) and seconds since it was read; his lamp, seconds the reading has stood against it, seconds since
  *  it last moved; seconds he has been blind with no light; walks taken, seconds since the last search, and where the last walk was sent */
 interface FoeState { knows: boolean; word: boolean; blind: boolean; ask: number; lit: boolean; against: number; held: number; blindFor: number; moves: number; since: number; to: Vec3 | null; }
-const stateOf = new WeakMap<Guard, FoeState>();
+const stateOf = new SideMap<Guard, FoeState>('darkfoe.stateOf');
 
 const frac = (x: number) => x - Math.floor(x);
 /** his id's share of 0‥1: spread so that neighbours in the roster differ (no dice) */

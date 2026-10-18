@@ -50,6 +50,7 @@
 // Off = the cards, the rows, the prices and the run of the build before: `big` is kept on a card, inert (no row, no price, nothing on the man).
 //
 // (src/game is one import cycle: the tables below are plain literals; nothing here is built from another game module's exports at module load.)
+import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { Firearm, Rifle, WEAPONS, type WeaponId } from './weapons';
@@ -848,8 +849,8 @@ export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members
 
 // ------------------------------------------------------------ on the floor
 /** the men a staging put a card on, and those of them with no goggles (nvg.ts asks kitGoggles) */
-const manOf = new WeakMap<Guard, { i: number; kit: MemberKit }>();
-const bareEyed = new WeakSet<Guard>();
+const manOf = new SideMap<Guard, { i: number; kit: MemberKit }>('kit.manOf');
+const bareEyed = new SideSet<Guard>('kit.bareEyed');
 /** the last staging's men, in member order, and how many stagings there have been (the page's __kit hook and the probes read it) */
 export const KIT_STAGED: { n: number; ops: Guard[] } = { n: 0, ops: [] };
 /** the card a staged teammate was staged WITH — a copy taken then, so what he has, not what the table says now (null: no staging put a card on him: not
@@ -865,7 +866,7 @@ export function kitPistol(gd: Guard): boolean { return manOf.has(gd) && gd.weapo
 export function kitBig(gd: Guard): BigKit { const m = bigOn ? manOf.get(gd)?.kit : undefined; return m && !shieldOf(m) && !m.walls ? m.big : 'none'; }
 
 /** what a Player carried before his card went on (kitShow gives it back) */
-const issuedPlayer = new WeakMap<object, { rifle: boolean; gun: Rifle; slot: Game['player']['slot']; smoke: number; stun: number; frags: number; shells: number; wand: boolean; big: BigKit; /** sticky cameras for the tube, −1 = that load was not on his rifle */ cams: number; tint: Vec3; tint2: Vec3 }>();
+const issuedPlayer = new SideMap<object, { rifle: boolean; gun: Rifle; slot: Game['player']['slot']; smoke: number; stun: number; frags: number; shells: number; wand: boolean; big: BigKit; /** sticky cameras for the tube, −1 = that load was not on his rifle */ cams: number; tint: Vec3; tint2: Vec3 }>('kit.issuedPlayer');
 /** YOUR card onto the fresh Player (a scenario's staging calls kitStage, which calls this; a plain night's start may call it by itself): the rifle left at
  *  home, your four counts, the two colours. A count is written where the card differs from WHAT A PLAYER IS BUILT WITH (BUILT — not from the issue card:
  *  under the pouches rule you are issued one of each, fewer than a Player's own; and the same literals the build before compared with, so with the rule off

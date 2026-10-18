@@ -5,12 +5,13 @@
 // A weapon laser's line also carries an AIR mark (`thinAir`: its bead, or null): the renderer may then draw it as light in the air instead of as a box (settings.beamAir,
 // render/passes.ts setBeams → composite.wgsl beamAir) — the box itself is never written.
 // PICTURE ONLY: the note is a WeakMap beside the box, `thinFit` never writes a noted box nor the list it is handed, and nothing in a step reads either. A leaf: types only.
+import { SideMap } from '../math/side';
 import type { Box } from '../scene/boxes';
 
 interface Thin { hw0: number; k: number; e: [number, number, number] }
-const THIN = new WeakMap<Box, Thin>();
+const THIN = new SideMap<Box, Thin>('thinline.THIN');
 /** A WEAPON LASER's line → the bead at its landing point (null = none): the lines the renderer may draw as light in the air instead of as a box (render/passes.ts setBeams) */
-const AIR = new WeakMap<Box, Box | null>();
+const AIR = new SideMap<Box, Box | null>('thinline.AIR');
 
 /** `b` is a thin line along its local z: `hw0` = its true half-width (m), `k` = the pixels its half-width must cover, (r, g, bl) = what it emits at that true width. Returns `b`. */
 export function thinNote(b: Box, hw0: number, k: number, r: number, g: number, bl: number): Box {

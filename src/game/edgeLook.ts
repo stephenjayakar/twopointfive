@@ -27,6 +27,7 @@
 // Everything is rebuilt from wallbreak's own cells, so a reset drops it, and a checkpoint's load re-derives it (rubble at rest) — nothing here is saved but the soot's four marks, which ride the decal ring's slice.
 // BOUNDED: ≤ EDGE.maxDecor standing pieces, ≤ EDGE.maxRubble fragments (the oldest go first), and both together never past what the frame's box budget has
 // left. It rides the destruction switch: wallbreak calls `opened` only when a wall really opened.
+import { rollbackRoot } from '../math/side';
 import { Vec3, v3, quat, Quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import { cutBoxesOn } from '../scene/cut';
@@ -67,6 +68,7 @@ export const EDGE = {
    *  before any mark play laid and never push one out (render/decals.ts `look`), so the untagged count is the base's past 512 marks too. */
   scorchDecals: true,
 };
+rollbackRoot('edgeLook.EDGE', EDGE);   // (fail() below puts `on` down in the middle of a frame: a tick played again must find it as it stood)
 export const EDGE_STATS = { decor: 0, rubble: 0, flying: 0, scorch: 0, shed: 0, capped: 0, rebuilds: 0 };
 
 /** what this module reads of wallbreak's Breakable (handed over by its one hook — nothing here writes to it) */

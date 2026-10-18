@@ -37,6 +37,7 @@
 //
 // PLAN.on: on on every stand (it is picture only: with nobody asking `floorPlan` nothing runs; asked, a run's digest is the same — tools/qa/plan-check.ts);
 // `?noplan` in the page = nothing drawn, the HUD as it was. The one piece of state is a WeakMap of nav legs kept between asks, picture only, in no checkpoint.
+import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -116,7 +117,7 @@ export function planTag(callsign: string): string {
 }
 
 interface Leg { key: string; t: number; pts: Vec3[] | null }
-const legs = new WeakMap<Guard, Leg[]>();   // picture only (see the head): the nav grid's answer for a leg, kept PLAN.reaskSecs
+const legs = new SideMap<Guard, Leg[]>('floorplan.legs');   // picture only (see the head): the nav grid's answer for a leg, kept PLAN.reaskSecs
 function leg(g: Game, gd: Guard, k: number, a: Vec3, b: Vec3, iters = 3000): Vec3[] | null {
   let L = legs.get(gd); if (!L) legs.set(gd, L = []);
   const key = `${b[0].toFixed(1)},${b[2].toFixed(1)}`, c = L[k], dt = c ? g.time - c.t : -1;

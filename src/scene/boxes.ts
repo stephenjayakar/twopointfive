@@ -1,4 +1,5 @@
 // Box scene representation, GPU packing and the 2D (XZ) uniform grid used by all ray queries.
+import { SideMap } from '../math/side';
 import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
@@ -269,7 +270,7 @@ export class BoxWorld {
   markingTexel = MARKING_TEXEL;
   markData = new Float32Array(MARK_TABLE_ROWS * 4); markRows = 0; private markDirty = false;   // the table (vec4 rows) and how many rows are taken
   private markByKey = new Map<string, { slot: number; n: number; rows: number; sec: Vec3; anyEmit: boolean; marks: MarkingDef[]; base: Vec3; h: Vec3 }>();
-  private markOfBox = new WeakMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
+  private markOfBox = new SideMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
   markStatsInfo = { lists: 0, records: 0, rows: 0, boxes: 0, dropped: 0, uploads: 0 };
   // ---- CUT BOXES (scene/cut.ts): under the switch (latched here at construction — the shaders were compiled from the same value) a box with a cut record raises
   // BOX_CUT_BIT in its GPU flags word and its planes are packed into the CUT TABLE, a third tail region of matBuf after the marking and glass tables: CUT_STRIDE vec4
@@ -358,7 +359,7 @@ export class BoxWorld {
    *  stroke). The next upload re-registers exactly the lists the boxes then carry. Returns the rows that were taken. */
   resetMarkTable(): number {
     const taken = this.markRows;
-    this.markRows = 0; this.markByKey.clear(); this.markOfBox = new WeakMap(); this.markDirty = true; this.packEpoch++;   // (every static repacks — and so re-registers its list)
+    this.markRows = 0; this.markByKey.clear(); this.markOfBox = new SideMap(); this.markDirty = true; this.packEpoch++;   // (every static repacks — and so re-registers its list)
     this.markStatsInfo.lists = 0; this.markStatsInfo.records = 0; this.markStatsInfo.rows = 0;
     return taken;
   }

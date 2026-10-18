@@ -37,6 +37,7 @@
 //   The one line that said what nobody then did — 'back to your posts', from a man whose side then stands where it is — is reworded for a unit (guards.ts),
 //   and a place on the net is named by the level's own rooms (dialogue.ts placeName: 'coming at him from the car park' on a floor with no car park).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
@@ -144,8 +145,8 @@ export class Cues {
   /** every new line said, by kind (the QA tally) · every row filed, newest last (capped): what was drawn and what was not, and why */
   kinds: Partial<Record<CueKind, number>> = {};
   log: { t: number; who: string; text: string; cls: number; kind: CueKind | 'heard' | 'raw' | 'call'; drawn: boolean; why: string }[] = [];
-  private bubbles = new WeakMap<Guard, Bubble>();
-  private men = new WeakMap<Guard, Man>();
+  private bubbles = new SideMap<Guard, Bubble>();
+  private men = new SideMap<Guard, Man>();
   private lastNote: unknown = null; private lastT = -1; private said = new Map<string, number>(); private classT: number[] = []; private squadT: number[] = []; private kindT: Partial<Record<CueKind, number>> = {}; private n = 0; private squelchDue = false;
   /** the one shout heard on the strip, if any (overheard): a field of its own, never one of `rows` — nothing that files, ranks or reads the net's rows meets it */
   heardRow: { t: number; text: string } | null = null;
@@ -155,7 +156,7 @@ export class Cues {
   constructor(private g: Game) {}
 
   /** the encounter is another one (a restart, a checkpoint loaded: the clock may have gone back) */
-  reset() { this.heardRow = null; this.heardLog = []; this.heardSaid.clear(); this.shoutT = undefined; this.rows = []; this.bubbles = new WeakMap(); this.men = new WeakMap(); this.lastNote = null; this.said.clear(); this.classT = []; this.squadT = []; this.kindT = {}; this.squelchDue = false; this.stats = newStats(); this.kinds = {}; this.log = []; }
+  reset() { this.heardRow = null; this.heardLog = []; this.heardSaid.clear(); this.shoutT = undefined; this.rows = []; this.bubbles = new SideMap(); this.men = new SideMap(); this.lastNote = null; this.said.clear(); this.classT = []; this.squadT = []; this.kindT = {}; this.squelchDue = false; this.stats = newStats(); this.kinds = {}; this.log = []; }
 
   // ---------------------------------------------------------------- the strip
   private alive(): CueRow[] { const t = this.g.time; return this.rows = this.rows.filter(r => r.t <= t && t - r.t < CUES.secs); }

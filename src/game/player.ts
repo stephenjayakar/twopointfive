@@ -1,6 +1,7 @@
 // Player controller: movement / crouch / sprint under real or puppet input, back-to-the-wall (Q), the pistol and rail light + its OCP, the FN2000 (kit slot 2: SEMI / AUTO on the left button, its attachment — the ring launcher — on the right, its light), throws, silent takedown and body drag, plus the cursor: what is under it and what Space would do (interactables).
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { SideMap } from '../math/side';
 import type { View } from '../host/hud';
 import { backHit } from './backkey';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG, smoothstep } from '../math/vec';
@@ -240,7 +241,7 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
   if (pl.pistolUp && !sprinting && !pl.wall) {   // (on the wall or holstered the pistol is on his thigh: nothing to reload in the hand)
     const plan = kitReload(g, gun, false);   // (kitanim.ts: the change this gun's state calls for — empty / dry / tactical — on its own beat; null = the row's, as ever)
     if (gun.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill: 0, who: PLAYER_ID }); it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill: 0, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
       magIn: () => g.audio.play('magIn', c.pos, 0.8),
       rack: () => g.audio.play('rack', c.pos, 0.8),
     }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(); g.msg('reloading'); return true; }
@@ -251,7 +252,7 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
     const rackIt = rifle.chamber === 0;   // (the moves' support hand: a round still up the pipe and the handle is left alone — weapons.ts racks only an empty chamber)
     const plan = kitReload(g, rifle, true);
     if (rifle.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: 3, who: PLAYER_ID }); it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 }); } },
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 }); } },
       magIn: () => g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }),
       rack: () => g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }),
     }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
@@ -595,7 +596,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     const { sol, kind: k2 } = pl.pendingThrow;
     const it = g.items.spawn(k2, throwOrigin(g), sol.v0, k2 === 'flash' ? { fuse: flashFuse(g), who: PLAYER_ID } : k2 === 'frag' ? { fuse: FRAG.fuse, who: PLAYER_ID } : { who: PLAYER_ID });
     if (k2 === 'frag') { FRAG_STATS.thrown++; g.msg('frag out!'); }
-    it.onBounce = (sp, p) => { g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.events.push({ kind: 'shot', pos: v3.copy(p), time: g.time, loud: false }); };
+    it.onBounce = (sp, p, g) => { g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.events.push({ kind: 'shot', pos: v3.copy(p), time: g.time, loud: false }); };
     chronThrown(g, k2); pl.pendingThrow = null; if (g.infiniteAmmo) canBack(pl, k2);   // unlimited ammo (the start card's sandbox row): the belt refills as the can leaves the hand
     if ((pl.slot === 'smoke' && pl.canisters === 0) || (pl.slot === 'flash' && pl.flashbangs === 0) || (pl.slot === 'frag' && pl.frags === 0)) pl.slot = 'pistol';   // the last can of the selected kind is away: back onto the pistol (drawn — the hand that threw it is free)
   } }
@@ -894,7 +895,7 @@ function wallStepOff(g: Game, mx: number, mz: number, ml: number, how: 'q' | 'ru
 
 /** Q pressed with no face in reach while he is on the move: remembered for WALLSNAP.buffer seconds (the words wait with it). `at` = the game clock the last
  *  time it was looked at: a frame that went to something else (a takedown, a man in his arm, a kick, a lock, a keypad return before the Q lines) drops it. */
-const wsPend = new WeakMap<Player, { t: number; at: number; blocked: boolean }>();
+const wsPend = new SideMap<Player, { t: number; at: number; blocked: boolean }>('player.wsPend');
 function wallSnapLater(g: Game, ml: number, why: { blocked: boolean }): boolean {
   if (!WALLSNAP.on || ml <= 0 || WALLSNAP.buffer <= 0 || g.player.dragging) return false;
   wsPend.set(g.player, { t: WALLSNAP.buffer, at: g.time, blocked: why.blocked }); return true;
@@ -1863,7 +1864,7 @@ export function updateAim(g: Game, input: Input, cam: FollowCamera, canvas: View
   if (!g.aimTarget) lightAt.delete(g); else if (onIt || !at) lightAt.set(g, [mx, my]);
 }
 /** where the cursor last was ON the light the reticle has (CSS px) — updateAim keeps that light while the cursor stays there */
-const lightAt = new WeakMap<Game, [number, number]>();
+const lightAt = new SideMap<Game, [number, number]>('player.lightAt');
 
 /** Every marker Space concerns itself with this frame (Game.interactables: one per thing — the dots in the world, the auto-aim's lights) and the ROWS: what Space
  *  can do right now, one verb per row (Game.nearby — the top MAX_NEAR by what matters, the cancel row at the foot while the selector is open), and the highlighted

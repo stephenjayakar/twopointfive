@@ -33,6 +33,7 @@
 // old lines), followPath → doorGate, goTo → tacticsPenalty, the aim block → tacticsLook, the body discovery → tacticsBodyFound, bodyAftermath → bodyDutyBlocked;
 // combat.ts killGuard → tacticsManDown. The radio lines go through Game.say like everybody's (so the debrief's chronicle has them). Everything readable from
 // above is the point: the presser kneeling at his corner, the flanker jogging the long way round, the pair on the jamb slicing the opening before they cross.
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -143,14 +144,14 @@ interface TState {
   /** game time of the last deal that came to nothing (fewer than two men with a route): no re-try inside a second, or two men on an unreachable fix would run A* every frame */
   dealFailT: number;
 }
-const states = new WeakMap<Game, TState>();
+const states = new SideMap<Game, TState>('tactics.states');
 function S(g: Game): TState {
   let s = states.get(g);
-  if (!s) { s = { plans: [], roles: new Map(), lone: new Map(), danger: [], gates: new Map(), cleared: new Map(), seenEv: new WeakSet(), planSerial: 0, lastLoneCallT: -100, dealFailT: -100 }; states.set(g, s); }
+  if (!s) { s = { plans: [], roles: new Map(), lone: new Map(), danger: [], gates: new Map(), cleared: new Map(), seenEv: new SideSet(), planSerial: 0, lastLoneCallT: -100, dealFailT: -100 }; states.set(g, s); }
   return s;
 }
 /** stun charges on a man (nobody on the night staff carries one; a response team, or a probe, hands them out) */
-const kit = new WeakMap<Guard, { stuns: number }>();
+const kit = new SideMap<Guard, { stuns: number }>('tactics.kit');
 export function giveStuns(gd: Guard, n: number) { kit.set(gd, { stuns: Math.max(0, n) }); }
 export function stunsOf(gd: Guard): number { return kit.get(gd)?.stuns ?? 0; }
 
@@ -991,7 +992,7 @@ function beginToss(g: Game, gd: Guard, G: Gate, thrower: Guard) {
   const land = doorPt(d, d.def.width / 2 + dir * 0.2, -TOSS_IN_M, G.side, 0);
   const sol = g.items.solve(from, land, 9);
   const it = g.items.spawn('flash', from, sol.v0, { fuse: 99, who: ch.id, heading: v3.yawOf(sol.v0) });   // (fuse 99: it goes off on OUR clock — TOSS_FUSE after it lands — not the item's)
-  it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
+  it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
   g.audio.play('throw', from, 0.7);
   g.say(thrower, 'bang out'); if (thrower !== gd) { const M = S(g).gates.get(thrower); if (M) M.look = awayLook(d, M, thrower.char.pos); }
   G.can = it; G.tossT = g.time; G.landT = -1; G.phase = 'toss'; G.t = 0;

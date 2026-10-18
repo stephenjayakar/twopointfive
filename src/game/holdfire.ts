@@ -36,6 +36,7 @@
 // Habits: no dice · reads no camera, canvas or graphics setting · `leadOf` is the one place that says which player's squad · state is per Game in a WeakMap
 // with a snapshot / restore pair below (no checkpoint is taken with a unit on the floor today, so savestate.ts does not carry it yet).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import type { Game, Guard, Player } from './game';
 import type { Character } from './character';
 import { hostileTo } from './teams';
@@ -70,7 +71,7 @@ export const HOLDFIRE_LOG: { t: number; why: LiftWhy; what: string }[] = [];
 
 interface State { /** when the hold was last lifted (game time; −∞: never) and by what */ liftT: number; why: LiftWhy | null; /** the roster it was lifted for */ cast: Guard[]; /** whose shot or order it was */ by: Player | null;
   /** when 'go loud' to a silent squad last lifted it (−∞: never; never later than liftT, and gone with it) */ loudT: number }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('holdfire.states');
 const stateOf = (g: Game): State => { let S = states.get(g); if (!S) states.set(g, S = { liftT: -Infinity, why: null, cast: [], by: null, loudT: -Infinity }); return S; };
 /** which player's squad this is (one place: with a second player this asks whose) */
 const leadOf = (g: Game): Player => g.player;

@@ -21,6 +21,7 @@
 //     (the tour and the showcases are choreographed round the beams) or quietUtility.
 // No dice, no camera, no graphics setting: the estimate is the CPU's, the same on every host.
 // Type-only game imports but for guards.ts's two functions, used inside calls only (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Vec3 } from '../math/vec';
 import { lightEstimateAt, handCarry } from './guards';
@@ -37,7 +38,7 @@ export const TORCH = { calmOff: false, litAt: 0.2, offK: 1.2, spillM: 3, dayM: 1
 
 /** per man: is the torch dark, the last reading of his place (placeRead), seconds the reading has stood against the torch, seconds since the place was read, seconds since the switch last moved */
 interface TorchState { dark: boolean; read: -1 | 0 | 1; against: number; ask: number; held: number; }
-const stateOf = new WeakMap<Guard, TorchState>();
+const stateOf = new SideMap<Guard, TorchState>('calmtorch.stateOf');
 /** a load is posing the men's lights (savestate.ts, between calmTorchRestore and calmTorchPosed): the light is decided, no time is counted */
 let posing = false;
 export const TORCH_STATS = { clicksOn: 0, clicksOff: 0, asks: 0 };

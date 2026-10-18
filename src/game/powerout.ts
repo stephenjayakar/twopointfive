@@ -44,6 +44,7 @@
 // wedged shut changes the way they come; a breaker no man can reach inside `maxM` sends nobody.
 // No dice, no camera, no graphics setting, no wall clock. State per Game (powerOutSnapshot / powerOutRestore beside it, carried by savestate.ts; the timeline
 // is the check's and the debugger's and is not kept). Type-only game imports but for functions used inside calls (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { Vec3, v3 } from '../math/vec';
@@ -107,7 +108,7 @@ interface State {
   parties: number; lost: boolean;
   events: PowerOutEvent[];
 }
-const STATES = new WeakMap<Game, State>();
+const STATES = new SideMap<Game, State>('powerout.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const frac = (x: number) => x - Math.floor(x);

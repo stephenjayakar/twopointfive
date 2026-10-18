@@ -17,6 +17,7 @@
 // level in snow). A frame nobody asked for encodes nothing and draws no map: a level whose air nothing rides yet pays nothing for it. Still air (no source
 // blowing for AIR_SIM.settle seconds) is not stepped either.
 // SWITCH: AIR_SIM.on — ON in the page (`?air=0` = no field is built: the build as it was), OFF here and on the frozen stand (TPS_AIR=1).
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
@@ -51,7 +52,7 @@ const CAND = 8;   // floats a candidate source: distance from the view, x, z, vx
 interface AirState { w: number; h: number; base: Uint8Array; mask: Uint8Array; roof: Uint8Array; key: number; leafKey: number; sent: boolean; lastT: number; quiet: number; fresh: boolean; want: boolean; src: Float32Array; cand: Float32Array; stats: AirSimStats;
   /** short radial shoves filed by the game (airPuff below: a blast) — each a source of its own until its time is up */
   puffs: { x: number; z: number; out: number; sigma: number; rate: number; t: number; secs: number }[] }
-const states = new WeakMap<Game, AirState>();
+const states = new SideMap<Game, AirState>('airSim.states');
 const blankStats = (w: number, h: number, why: string): AirSimStats => ({ active: false, why, w, h, solid: 0, roofed: 0, open: 0, leaves: 0, rebuilt: 0, restamped: 0, sources: 0, wind: [0, 0], speed: 0, calm: 0 });
 function stateOf(g: Game): AirState {
   let s = states.get(g);

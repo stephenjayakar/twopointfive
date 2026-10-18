@@ -43,6 +43,7 @@
 // SHOW, NOT TELL: nothing is drawn or written for the player but the men themselves. One die (simRandom, only for which line of a pool), no wall clock, no
 // graphics setting. The switch is off in the module and on the frozen stand: every seam returns on its first line, no man is met, no die is drawn.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, DEG } from '../math/vec';
@@ -117,7 +118,7 @@ const NONE = 0, SAID = 1, BACK = 2, LOW = 3, DONE = 4;
 interface Mind { quiet: number; asked: Set<number>; known: Set<number>; paid: Map<number, number>; say: number; sayT: number; sayName: string; bark: number; lastKind: number; bodyT: number; roused: number;
   heardT: number; cs: number; cl: number; fx: number; fz: number; whipAt: Vec3 | null; whipIn: number; whipT: number; whipHeld: number;
   last: number; t: number; mateT: number; news: number; newsT: number; eye: number; eyeHalf: number; spot: Vec3 | null; yaw: number; arc: number; look: Vec3 | null; low: boolean; }
-const stateOf = new WeakMap<Guard, Mind>();
+const stateOf = new SideMap<Guard, Mind>('netquiet.stateOf');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const live = () => NETQUIET.on && MORALE.on;

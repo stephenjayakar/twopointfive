@@ -44,6 +44,7 @@
 // NOT here: a charge on a door (doortools.ts, and the doors goal's own blast), the frag (the gear goal), what either side makes of a hole afterwards.
 // Restart / a checkpoint's load: a new Player or a new cast is a fresh run — nothing set, nothing under way (sync); the wall itself is the engine's to put
 // back. A set charge is not saved.
+import { SideMap } from '../math/side';
 import { holdFireOrder } from './holdfire';   // (called inside blow only)
 import { Vec3, v3, clamp, lerp } from '../math/vec';
 import type { Game, Guard, Interactable, Verb } from './game';
@@ -260,7 +261,7 @@ export function wallChargeOn(g: Game): boolean { return WALLCHARGE.on && wallBre
 
 /** how high the open-sky test looks (m) · the samples it takes off each face: metres out, and along the wall as a share of its half length */
 const SKY_TOP = 12, SKY_OFF = [0.5, 1.0, 1.6], SKY_ALONG = [-0.5, 0, 0.5];
-const skyMemo = new WeakMap<object, Map<number, number>>();
+const skyMemo = new SideMap<object, Map<number, number>>('wallcharge.skyMemo');
 /** THE FACES OF A WALL THE OPEN SKY IS OVER: 0 = neither (a wall inside), 1 = one (a building's outer wall), 2 = both (a yard wall). Asked of the level's own
  *  geometry as the glass asks it of a pane (glassbreak.ts skySide): upward solid rays from chest height at nine places off each face — a canopy or a lamp head
  *  over part of one side does not flip the majority. Kept per static (the authored statics do not move; a hole in the wall changes nothing over it). */
@@ -382,7 +383,7 @@ export class WallCharge {
     return live;
   }
   /** a row the wall's fifth has taken the digit of: itself, digitless (one stand-in a row, so the menu's highlight rides it by identity) */
-  private standIns = new WeakMap<OrderDef, OrderDef>();
+  private standIns = new SideMap<OrderDef, OrderDef>();
   undigit(d: OrderDef): OrderDef { let x = this.standIns.get(d); if (!x) this.standIns.set(d, x = Object.create(d, { key: { value: undefined, writable: true, enumerable: true } }) as OrderDef); return x; }
   private seat() {
     const S = this.g.orders; S.unregister(WALL_PAGE); S.unregister(WALL_ORDER); this.seated = false; if (!this.mode) return;

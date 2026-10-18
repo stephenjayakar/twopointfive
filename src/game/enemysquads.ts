@@ -49,8 +49,9 @@
 // NOT BUILT: `arrive` squads (they validate and load; nobody comes — sixteen skinned characters are all on the floor with eleven defenders, and taking
 // bodies away mid-run is the room clear's bookkeeping to change first).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap, rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
-import { mulberry32 } from '../math/dice';
+import { dieOf, roll, type Die } from '../math/dice';   // (dice kept in state carry their word on an object: a rollback snapshot holds it — a mulberry32 closure's it cannot)
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { RoomFight, FightSkill } from './roomfight';
@@ -248,7 +249,7 @@ export interface SquadEvent { t: number; what: 'contact' | 'reinforce' | SquadCh
 /** (radioCheck) a squad's net check: when the next is due, the one running (called → asked by name), the men who went quiet in its rooms (where, when, and
  *  what small sounds each mate had heard by then), the ones whose fate it knows (`known`: seen down) or has given up asking for (`looked`: looked for at his
  *  post and not found — a body seen later is still seen), and the men out looking */
-interface Check { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; who: Guard | null; silent: Quiet[]; known: Set<Guard>; looked: Set<Guard>; look: Looker[]; n: number; /** its own dice (checkDice) */ die: () => number; /** (callCutAsk) men whose call broke off, still to be asked for by name: no sooner than `at` */ cut?: { who: Guard; at: number }[]; /** (callCutAsk) the routine check's own time, kept while `nextAt` is pulled in for a man on `cut` — put back if he comes on the net again before he is asked for */ beat?: number; /** (callCutAsk) a mate's call held up an ask that was due: the men go no sooner after it than after any ask */ late?: boolean; /** (callCutAsk) men a 'cut off' row has said will be asked for and who have not been yet: the trace says so if contact comes first */ promised?: Set<Guard>; /** (callCutAsk) men who stopped being lookers by their own eyes, away from the post they left (`from`): taken there, they are filed there */ afield?: Map<Guard, Vec3>; /** (netAsk) men of its own it has sent to look (for a mate, or at another squad's posts): one of them off the net with his end unknown is a man it is still waiting for */ out?: Set<Guard>; /** (netAsk) men of its own asked for by name who did not answer */ asked?: Set<Guard>; /** (netAsk) men the net has sent from this squad: the squad they went to look at, the post they were sent to, when */ netOut?: Map<Guard, { about: Squad; at: Vec3; t: number }>;
+interface Check { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; who: Guard | null; silent: Quiet[]; known: Set<Guard>; looked: Set<Guard>; look: Looker[]; n: number; /** its own dice (checkDice) */ die: Die; /** (callCutAsk) men whose call broke off, still to be asked for by name: no sooner than `at` */ cut?: { who: Guard; at: number }[]; /** (callCutAsk) the routine check's own time, kept while `nextAt` is pulled in for a man on `cut` — put back if he comes on the net again before he is asked for */ beat?: number; /** (callCutAsk) a mate's call held up an ask that was due: the men go no sooner after it than after any ask */ late?: boolean; /** (callCutAsk) men a 'cut off' row has said will be asked for and who have not been yet: the trace says so if contact comes first */ promised?: Set<Guard>; /** (callCutAsk) men who stopped being lookers by their own eyes, away from the post they left (`from`): taken there, they are filed there */ afield?: Map<Guard, Vec3>; /** (netAsk) men of its own it has sent to look (for a mate, or at another squad's posts): one of them off the net with his end unknown is a man it is still waiting for */ out?: Set<Guard>; /** (netAsk) men of its own asked for by name who did not answer */ asked?: Set<Guard>; /** (netAsk) men the net has sent from this squad: the squad they went to look at, the post they were sent to, when */ netOut?: Map<Guard, { about: Squad; at: Vec3; t: number }>;
   /** the one running was started by `caller`'s own ears (he heard something where `who` stands): it is his to ask, and it dies with him */ byEar: boolean; /** when it last ran (a gap = the switch was off meanwhile: the check starts over) */ tickT: number }
 interface Quiet { gd: Guard; at: Vec3; t: number; heard: boolean; /** filed alive, in somebody's arm (dropped later, he is a new silence) */ held: boolean; small0: Map<Guard, number> }
 /** a man walking to a silent mate's post, or back from it: `calm` = his post and how he held it when he left (he is put back on it as he was, wary — he saw nobody) */
@@ -267,17 +268,17 @@ interface Squad {
   /** (drillOwn) when it last said a room of its own is gone */ ownSaid?: number; stayed?: Set<string>;
   /** the room of its own the team was last met in (where a squad coming round to it is going) */ hitRoom: StructureRoom | null;
   /** (radioCheck) made on the squad's first tick with the switch on */ rc?: Check;
-  /** (callBeat) the calls its men have on the air, and the dice their lengths are drawn on (made at the first call) */ calls?: Call[]; callDie?: () => number;
+  /** (callBeat) the calls its men have on the air, and the dice their lengths are drawn on (made at the first call) */ calls?: Call[]; callDie?: Die;
   /** (callCutAsk) men whose call broke off while they were blinded or reeling — on the net still, so nobody asked: one who goes off it inside HUNG_SECS without having keyed up again is asked for after all */ hung?: { who: Guard; t: number }[];
   /** when its trouble was last on the air with no word of how it ended (a call cut off, a man asked for by name, men sent to a post) — what the other squads heard (read only by netAsk) */ trouble?: number;
-  /** (netAsk) a squad is not answering the net: stood to, and counting its own men at the quicker beat */ wary?: boolean; /** (callCutAsk) the dice the beat before a cut-off caller is asked for is drawn on — its own, so the call lengths of a run do not depend on whether anybody asks */ askDie?: () => number;
+  /** (netAsk) a squad is not answering the net: stood to, and counting its own men at the quicker beat */ wary?: boolean; /** (callCutAsk) the dice the beat before a cut-off caller is asked for is drawn on — its own, so the call lengths of a run do not depend on whether anybody asks */ askDie?: Die;
   sent: Sent[]; /** (goRound) men who went round and are home again, wherever that is: the timeline still says if one goes down */ went: Sent[]; due: { gd: Guard; at: Vec3; t: number; /** the room of the squad's he is wanted in */ room?: StructureRoom | null }[]; events: SquadEvent[];
 }
 interface State { /** (stayask.ts) every squad here stays in its rooms: the net's ask runs whatever its switch says, and a squad that stays sends one man to a silent squad's posts */ stayAsk?: boolean; S: StructureData; squads: Squad[]; of: Map<Guard, Squad>; net: { t: number; squad: Squad; at: Vec3; /** the door of its room the team was met at (goRound; null: a man dropped and nobody saw by which) */ door: Door | null }[]; /** (netAsk) made on the first tick with the switch on */ nc?: NetCheck; /** (drillLook) the newest word the garrison has of the team — when, where — and the word the last look went out on */ word?: { t: number; at: Vec3; done: number; /** when a look was last called · a man of a look went down out there (no squad sends another this fight) · the men of the last look while any is still out · the look called and not yet gone */ saidT: number; lost: boolean; out: Guard[] | null; call: { Q: Squad; go: Def[]; at: Vec3; goT: number; w: number } | null } }
 /** (netAsk) the net's check of the SQUADS: when the next roll call is due, the one running (called → a squad asked for by name), who asks, the squad asked
  *  about, the squads nobody asks after again (`done`: men went to its posts — whatever they found — or a body of it was said on the net with nobody of it left to answer) */
-interface NetCheck { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Squad | null; done: Set<Squad>; /** squads asked for by name with nobody sent after (nobody free, or a fight took the net): asked for once more at a later check, and no oftener */ tried: Map<Squad, number>; /** how often a squad that answers has been asked what is going on */ queried: Map<Squad, number>; /** lines said a breath after what they answer */ say: { t: number; gd: Guard; text: string; cls?: number }[]; die: () => number; tickT: number }
-const STATES = new WeakMap<Game, State>();
+interface NetCheck { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; about: Squad | null; done: Set<Squad>; /** squads asked for by name with nobody sent after (nobody free, or a fight took the net): asked for once more at a later check, and no oftener */ tried: Map<Squad, number>; /** how often a squad that answers has been asked what is going on */ queried: Map<Squad, number>; /** lines said a breath after what they answer */ say: { t: number; gd: Guard; text: string; cls?: number }[]; die: Die; tickT: number }
+const STATES = new SideMap<Game, State>('enemysquads.STATES');
 /** the net's ask runs on this floor: its own switch, or (stayask.ts) a floor whose every squad stays in its rooms */
 const netAsks = (g: Game): boolean => SQUADS.netAsk || !!STATES.get(g)?.stayAsk;
 /** hard on a squads level (SQUADS.drill*): the table while harder defenders are on, their `squadDrill` row is, and squads are staged in this game — else null */
@@ -502,6 +503,7 @@ function teamKnownHow(g: Game): Known[] {
  *  the stack dear, a doorway's lane dear, a room somebody else of theirs holds a little dear — wayRound's, plus the lanes). */
 interface RoundCtx { t: number; T: Room; key: string; rear: Vec3[]; mouths: Vec3[]; fire: (a: Vec3, b: Vec3) => boolean; hot: (p: Vec3) => boolean; hotCell: (ix: number, iz: number) => boolean; lane: (p: Vec3) => boolean; cost: Map<number, number>; held: Map<number, Room> }
 let CTX: RoundCtx | null = null;
+rollbackVar('enemysquads.CTX', () => CTX, v => { CTX = v; });   // (a memo keyed by the game's clock: a tick played again must not be handed the first playing's)
 function roundCtx(g: Game, T: Room, known: Known[], theirs: Door[]): RoundCtx {
   const key = theirs.map(d => d.def.name).join('|') + '#' + known.length;
   if (CTX && CTX.t === g.time && CTX.T === T && CTX.key === key) return CTX;
@@ -831,12 +833,12 @@ function lostRoomHas(g: Game, s: Sent, at: Vec3): boolean {
 // ---------------------------------------------------------------- unseen drops: a mate's eyes, the net's check (SQUADS.radioCheck)
 /** the check's OWN dice, never the game's: with the switch on a run stays the run it was until the first frame the switch changes something (a drop it does not
  *  call). Seeded off the squad's name and its men's stride phases — dealt differently every run, and reading them disturbs nothing */
-function checkDice(Q: Squad, salt = 0): () => number {
+function checkDice(Q: Squad, salt = 0): Die {
   let h = 0x811c9dc5 ^ salt; for (let i = 0; i < Q.name.length; i++) h = Math.imul(h ^ Q.name.charCodeAt(i), 0x01000193);
-  return mulberry32((h ^ Math.floor(Q.men.reduce((s, m) => s + m.char.anim.phase, 0) * 0x7fffff)) >>> 0);
+  return dieOf((h ^ Math.floor(Q.men.reduce((s, m) => s + m.char.anim.phase, 0) * 0x7fffff)) >>> 0);
 }
-const checkBeat = (Q: Squad, die: () => number) => SQUADS.checkEvery * (Q.newsT > -100 || Q.contactT > -100 || Q.wary ? SQUADS.checkAlertK : 1) * (1 + (die() * 2 - 1) * SQUADS.checkJitter);   // (a squad that has heard of the team, or met it, counts its men oftener, as the staff's net does once alarmed)
-function rcOf(g: Game, Q: Squad): Check { if (Q.rc) return Q.rc; const die = checkDice(Q); return Q.rc = { nextAt: g.time + die() * checkBeat(Q, die), stage: 'idle', t0: 0, caller: null, who: null, silent: [], known: new Set(), looked: new Set(), look: [], n: 0, die, byEar: false, tickT: g.time }; }
+const checkBeat = (Q: Squad, die: Die) => SQUADS.checkEvery * (Q.newsT > -100 || Q.contactT > -100 || Q.wary ? SQUADS.checkAlertK : 1) * (1 + (roll(die) * 2 - 1) * SQUADS.checkJitter);   // (a squad that has heard of the team, or met it, counts its men oftener, as the staff's net does once alarmed)
+function rcOf(g: Game, Q: Squad): Check { if (Q.rc) return Q.rc; const die = checkDice(Q); return Q.rc = { nextAt: g.time + roll(die) * checkBeat(Q, die), stage: 'idle', t0: 0, caller: null, who: null, silent: [], known: new Set(), looked: new Set(), look: [], n: 0, die, byEar: false, tickT: g.time }; }
 /** a man of the squad has gone quiet: where he stood, when, and what each mate's ears had counted by then. Nobody is told by it */
 function wentSilent(g: Game, Q: Squad, m: Guard, at: Vec3 = m.char.pos, broke = false) {
   const C = rcOf(g, Q), small0 = () => new Map(Q.men.map(x => [x, x.witness.heard.small])), was = C.silent.find(r => r.gd === m);
@@ -865,7 +867,7 @@ const heardFire = (g: Game, Q: Squad, up: Guard[]) => up.some(x => !!roomOf(Q, x
 /** when a stun charge, or a door blown in, last reached this man's ears — as loud with a drop as gunfire is (a charge that fells the man behind the door is
  *  no silent drop). His Witness counts them and does not time them: the count is read once a frame for every man of a squad with the switch on (radioCheck),
  *  so it is seen to move the frame after he heard it; a gap in the reading (the switch was off meanwhile) starts over */
-const BANGS = new WeakMap<Guard, { n: number; t: number; read: number }>();
+const BANGS = new SideMap<Guard, { n: number; t: number; read: number }>('enemysquads.BANGS');
 function bangT(g: Game, x: Guard): number {
   const H = x.witness.heard, b = BANGS.get(x);
   if (!b || g.time - b.read > 0.5 || g.time < b.read || H.bang < b.n) { BANGS.set(x, { n: H.bang, t: -100, read: g.time }); return -100; }
@@ -912,7 +914,7 @@ function radioCheck(g: Game, Q: Squad, busy: boolean): { at: Vec3; room: Structu
     r.heard = true;
     if (K.heardKnows) { C.known.add(m); event(g, Q, 'found', `${ear.callsign} heard ${m.callsign} go down: that is enough`, ear); seen = { at: v3.copy(r.at), room: roomOf(Q, r.at, 1) }; }
     else if (C.stage === 'idle' && !busy && !C.look.length && Q.state !== 'alerted') {   // (not with the squad's word due: its check would be dropped the same frame)
-      C.stage = 'called'; C.byEar = true; C.caller = ear; C.who = m; C.t0 = g.time + K.checkHeard[0] + C.die() * (K.checkHeard[1] - K.checkHeard[0]) - K.checkAsk;
+      C.stage = 'called'; C.byEar = true; C.caller = ear; C.who = m; C.t0 = g.time + K.checkHeard[0] + roll(C.die) * (K.checkHeard[1] - K.checkHeard[0]) - K.checkAsk;
       event(g, Q, 'check', `${ear.callsign} heard something where ${m.callsign} stands: he asks for him in ${(C.t0 + K.checkAsk - g.time).toFixed(1)} s`, ear);
     }
   }
@@ -1116,7 +1118,7 @@ function looks(g: Game, st: State, Q: Squad, L: Looker): boolean {
 /** he has noticed the team by his own bar: 'alert' is where guards.ts puts him once his awareness passes 0.85 (he shouts and fights), 'search' is a man
  *  who had one of them and lost him. 'suspicious' (0.3: he turns to look) is a man who thinks he saw something — not a man who calls contact */
 const noticed = (m: Guard) => m.state === 'alert' || m.state === 'search';
-const GLIMPSED = new WeakMap<Guard, number>();
+const GLIMPSED = new SideMap<Guard, number>('enemysquads.GLIMPSED');
 /** the trace's row for a sighting the squad does not call (once per sighting: again only after 3 s without one). Always false: nothing is called */
 function glimpse(g: Game, Q: Squad, m: Guard): boolean {
   const last = GLIMPSED.get(m) ?? -100; GLIMPSED.set(m, g.time);
@@ -1136,7 +1138,7 @@ function keyUp(g: Game, Q: Squad, m: Guard, at: Vec3, room: StructureRoom | null
   if (!fit(g, m)) return true;   // (taken, blinded or reeling: he has it and cannot say it — no call, no line, nothing drawn; fit again with it still in his eye, he keys up)
   const L = Q.calls ??= [], c = L.find(x => x.by === m);
   if (c) { if (!body) { c.eyes = true; c.at = v3.copy(at); c.room = room; } return true; }
-  const die = Q.callDie ??= checkDice(Q, 0x2545f491), [lo, hi] = SQUADS.callSecs, secs = lo + die() * (hi - lo);
+  const die = Q.callDie ??= checkDice(Q, 0x2545f491), [lo, hi] = SQUADS.callSecs, secs = lo + roll(die) * (hi - lo);
   L.push({ by: m, t0: g.time, end: g.time + secs, at: v3.copy(at), room, body, eyes: !body });
   onNet(g, m, `${Q.name}: ${mate(m)} — I've got—`, 2);
   event(g, Q, 'calls', `${m.callsign} keys up (${body ? `${body.callsign} down in his sight` : `one of them in his sight, ${m.state}`}): the squad has it in ${secs.toFixed(2)} s unless he is cut off`, m);
@@ -1188,7 +1190,7 @@ function cutAsk(g: Game, Q: Squad, m: Guard): string {
   const K = SQUADS, [lo, hi] = K.callCutAsk;
   const mate = K.callBeat && K.radioCheck && hi > 0 && offNet(m) && Q.state !== 'contact' ? home(g, Q).find(D => D.gd !== m)?.gd ?? Q.men.find(x => x !== m && fit(g, x)) ?? null : null;
   if (!mate) return '';
-  const C = rcOf(g, Q), ask = lo + (Q.askDie ??= checkDice(Q, 0x3c6ef372))() * (hi - lo), D0 = defOf(g, m);
+  const C = rcOf(g, Q), ask = lo + roll(Q.askDie ??= checkDice(Q, 0x3c6ef372)) * (hi - lo), D0 = defOf(g, m);
   // (a man out looking or sent to a door, or one the room fight has not planted — a looker who keyed up by his eyes on his way: his station is the post he LEFT)
   const from = C.afield?.get(m); if (from && flat(m.char.pos, from) <= 3) C.afield!.delete(m);
   const out = C.look.some(X => X.gd === m) || Q.sent.some(x => x.gd === m) || !D0 || !!from && flat(m.char.pos, from) > 3;
@@ -1281,8 +1283,8 @@ function netSend(g: Game, st: State, X: Squad, who: Guard, stops: Vec3[], all: b
 const NET_TRIES = 2;
 function netCheck(g: Game, st: State) {
   const K = SQUADS;
-  const N: NetCheck = st.nc ??= (() => { const die = checkDice(st.squads[0], 0x1b873593); return { nextAt: g.time + (0.5 + 0.5 * die()) * K.netEvery, stage: 'idle' as const, t0: 0, caller: null, about: null, done: new Set<Squad>(), tried: new Map<Squad, number>(), queried: new Map<Squad, number>(), say: [], die, tickT: g.time }; })();
-  const beat = () => K.netEvery * (st.squads.some(Q => Q.wary || Q.newsT > -100 || Q.contactT > -100) ? K.checkAlertK : 1) * (1 + (N.die() * 2 - 1) * K.checkJitter);
+  const N: NetCheck = st.nc ??= (() => { const die = checkDice(st.squads[0], 0x1b873593); return { nextAt: g.time + (0.5 + 0.5 * roll(die)) * K.netEvery, stage: 'idle' as const, t0: 0, caller: null, about: null, done: new Set<Squad>(), tried: new Map<Squad, number>(), queried: new Map<Squad, number>(), say: [], die, tickT: g.time }; })();
+  const beat = () => K.netEvery * (st.squads.some(Q => Q.wary || Q.newsT > -100 || Q.contactT > -100) ? K.checkAlertK : 1) * (1 + (roll(N.die) * 2 - 1) * K.checkJitter);
   const idle = (after: number) => { N.stage = 'idle'; N.about = null; N.caller = null; N.nextAt = g.time + after; };
   if (g.time - N.tickT > 1) idle(beat());   // (the switch was off a while: no check half run is taken up again)
   N.tickT = g.time;

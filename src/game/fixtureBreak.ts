@@ -16,6 +16,7 @@
 //   · sparks and glass are GPU particles (nothing without them); no decal, no sound, no smoke, no debris-pool chunk, no GameEvent;
 //   · every choice hashes the fixture's own position — never Math.random, never the lane's counters or rate caps.
 // Nothing is saved: after a restart every target is unbroken and the records go; after a checkpoint load a broken panel is simply drawn fallen (no beat).
+import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import { DESTRUCTION } from './destructionSwitch';
@@ -58,7 +59,7 @@ interface Rec {
   lay: number;
 }
 interface State { recs: Rec[]; by: Map<LightTarget, Rec>; prev: WeakMap<LightTarget, boolean>; kind: WeakMap<LightTarget, 0 | 1 | 2>; lastT: number; scan: number; keys: number }
-const STATE = new WeakMap<Game, State>();
+const STATE = new SideMap<Game, State>('fixtureBreak.STATE');
 
 /** integer hash → [0, 1) (the module's own dice, keyed by the fixture's place) */
 function h01(x: number): number { x = Math.imul((x ^ 0x68E31DA4) >>> 0, 0x9E3779B1) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0x85EBCA77) >>> 0; x ^= x >>> 13; return (x >>> 8) / 16777216; }
@@ -194,7 +195,7 @@ function seedOf(r: Rec): number { return (Math.imul((r.seed ^ 0x51ED270B) + r.em
 export function fixtureBreakBoxes(g: Game, out: Box[], dt: number) {
   let S = STATE.get(g);
   if (!DESTRUCTION.on || !FIXLOOK.on) { if (S) { S.recs.length = 0; S.by.clear(); S.lastT = -1; } return; }
-  if (!S) STATE.set(g, S = { recs: [], by: new Map(), prev: new WeakMap(), kind: new WeakMap(), lastT: -1, scan: 0, keys: 0 });
+  if (!S) STATE.set(g, S = { recs: [], by: new Map(), prev: new SideMap(), kind: new SideMap(), lastT: -1, scan: 0, keys: 0 });
   const now = g.time; const running = S.lastT >= 0 && now >= S.lastT && now - S.lastT < 0.5;   // (the clock ran on from the last frame: a target broken since then BROKE — after a load or a restart it is just found broken)
   if (!running && S.recs.length) { S.recs.length = 0; S.by.clear(); }   // (the clock jumped — a checkpoint load: whatever is broken now is found broken, hanging at rest)
   S.lastT = now; S.scan++;

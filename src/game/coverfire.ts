@@ -27,6 +27,7 @@
 // not cross is chewed as above. So where both are live a partition is fired through, not opened — it still opens under the rounds that cross it, by the
 // engine's own count.
 // Not here: what the man behind the cover then does, charges, glass.
+import { SideMap } from '../math/side';
 import { conditionSup } from './condition';
 import { Vec3, v3, clamp, lerp, wrapAngle, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -95,7 +96,7 @@ interface State { /** the last frame ticked: a clock that has gone BACK (a check
 /** what the room fight hands over of a teammate under an order (roomfight.ts Op — the fields read or written here) */
 interface OpLike { gd: Guard; meters: Map<Guard, { m: number; seenT: number }>; tgt: Guard | null; aim: Vec3; reloadUntil: number; rounds: number; next: number }
 
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('coverfire.states');
 /** the engine's half: walls and cover give under rounds */
 const chewLive = (g: Game) => wallBreakOn(g) && chaosOf(g) > 0;
 function live(g: Game): boolean {

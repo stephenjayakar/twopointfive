@@ -45,6 +45,7 @@
 // stack while the squad is in the room (Book.shut, read by rearWays), so a rear man of the stack gets it by the rules above. Sam standing in the room keeps
 // him on it. Nothing here deals a door: who has one is the entry's own rule, read a frame late. Not saved (a load: the entry's own hold is gone too).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -100,8 +101,8 @@ interface Book { pins: Map<Guard, RearPin>; byOp: WeakMap<DoorOp, Guard>; short:
   keeps: Map<Guard, RoomKeep>; was: [Guard, Door, Assignment][];
   /** a taken room's other door that was being kept when an order to stack came: SHUT, it still counts as a way behind that stack (rearWays) while the squad is in the room */
   shut: Map<Door, { o: Opening; room: object; at: Vec3 }> }
-const books = new WeakMap<Game, Book>();
-const bookOf = (g: Game): Book => { let B = books.get(g); if (!B) books.set(g, B = { pins: new Map(), byOp: new WeakMap(), short: new WeakMap(), letOff: new WeakSet(), log: [], rows: 0, keeps: new Map(), was: [], shut: new Map() }); return B; };
+const books = new SideMap<Game, Book>('rearwatch.books');
+const bookOf = (g: Game): Book => { let B = books.get(g); if (!B) books.set(g, B = { pins: new Map(), byOp: new SideMap(), short: new SideMap(), letOff: new SideSet(), log: [], rows: 0, keeps: new Map(), was: [], shut: new Map() }); return B; };
 
 const flat = v3.distXZ, EYE = 1.55, CHEST = 1.1;   // (cover.ts's own heights)
 const PRE = ['stack', 'ready', 'place', 'standoff', 'armed'], GOING = ['kick', 'toss', 'fuse', 'wait', 'enter'], ENTRIES = ['openClear', 'bangClear', 'charge'];

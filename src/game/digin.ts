@@ -33,6 +33,7 @@
 // restores `locked` itself). The team has been in a room: its men are the room fight's again (no fear topped up, no second dig-in there).
 //
 // IMPORT CYCLE (src/game is one): nothing at module level uses another game module's exports.
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -214,8 +215,8 @@ interface Man { far: boolean; owe: number; haulBy: number; deep: boolean; look: 
 type Cue = 'radio' | 'shout' | 'scrape' | 'tried' | 'kick';
 interface RoomSt { room: Room; expected: number; second: number; at: number; t0: number; men: Guard[]; bracer: Guard | null; wedged: number; cueAt: number; cues: Set<Cue>; enteredAt: number; readyAt: number; callout: boolean }
 interface St { men: WeakMap<Guard, Man>; rooms: Map<Room, RoomSt>; wedges: Map<Door, { keySide: 1 | -1; lockId: string; kicked: boolean; tried: boolean; byT: number }>; fix: { at: Vec3; t: number; room: Room | null; heard: boolean } | null; called: WeakSet<Guard>; used: Set<Prop>; away: Set<Door>; frameT: number; bangCall: number }
-const states = new WeakMap<Game, St>();
-const stateOf = (g: Game): St => { let s = states.get(g); if (!s) { s = { men: new WeakMap(), rooms: new Map(), wedges: new Map(), fix: null, called: new WeakSet(), used: new Set(), away: new Set(), frameT: -1, bangCall: NaN }; states.set(g, s); } return s; };
+const states = new SideMap<Game, St>('digin.states');
+const stateOf = (g: Game): St => { let s = states.get(g); if (!s) { s = { men: new SideMap(), rooms: new Map(), wedges: new Map(), fix: null, called: new SideSet(), used: new Set(), away: new Set(), frameT: -1, bangCall: NaN }; states.set(g, s); } return s; };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const pick = (r: [number, number]) => r[0] + simRandom() * (r[1] - r[0]);

@@ -24,6 +24,7 @@
 //
 // SEENWALK.on: ON in the page (?seenwalk=0), off here and on the frozen stand (TPS_SEENWALK=1). Check: tools/qa/seenwalk-check.ts (SEENWALK_BREAK=1).
 // Headless: the light is the CPU stand-in's and the lines are the collision's. Never seen on a GPU; nobody has played it.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Vec3 } from '../math/vec';
 import { placeLight } from './calmtorch';
@@ -45,7 +46,7 @@ export const SEENWALK_DEFAULTS: typeof SEENWALK = { ...SEENWALK };
 export const SEENWALK_STATS = { asks: 0, blocks: 0, lines: 0, inView: 0, round: 0 };
 
 interface Shared { t: number; known: number; nav: unknown; stamp: string; eyes: { x: number; z: number }[]; memo: Map<number, number> }
-const shared = new WeakMap<Game, Shared>();
+const shared = new SideMap<Game, Shared>('seenwalk.shared');
 /** what is kept of this game, FOR THE TICK ONLY: thrown away with the clock moved, a room cleared, the floor changed (a wall blown), a door moved, locked or off its frame, a number here changed.
  *  (No longer than the tick on purpose: the picture asks walks too — the throw planner's drawn plan — and what is drawn must never decide what the game reads.
  *  The clock moves at the top of a step, before anything of the game asks, so the game never reads a block the picture read first of another moment's floor.) */

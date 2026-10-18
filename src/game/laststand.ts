@@ -41,8 +41,9 @@
 //   The die here is its own (mulberry32 off the room clear's seed and attempt): never Math.random. (digin.ts draws its own beats from Math.random as it always
 //   has — once `regroup` has ordered a dig-in the run is a different run; `callOut` alone never is.)
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
-import { mulberry32 } from '../math/dice';
+import { dieOf, roll, type Die } from '../math/dice';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
 import { run, boots, pressOwns } from './pressure';
@@ -151,7 +152,7 @@ const newStats = () => ({
 });
 interface Later { at: number; t0: number; gd: Guard; kind: LineKind; text: string; cls: number; then?: () => void; /** `places`: the line's wording and what fills it, asked again as it is said */ tpl: string; redo?: () => { vars: Record<string, string>; then?: () => void } }
 interface State {
-  die: () => number; nextAt: number; check: Check | null; known: Set<Def>; named: Map<Def, string>; stand: Stand | null;
+  die: Die; nextAt: number; check: Check | null; known: Set<Def>; named: Map<Def, string>; stand: Stand | null;
   /** `places`: the place each of them last named that is no room of the structure, and what every named man said last (to say again when it is no longer true) */
   spots: Map<Def, Spot>; at: Map<Def, Said>; loneSaid: boolean; fewN: number; told: Set<Def>;
   hint: Hint | null; said: LastStandSaid[]; stats: ReturnType<typeof newStats>; stale: boolean;
@@ -165,11 +166,11 @@ interface Spot { name: string; pos: Vec3 }
  *  since when he has stood still, when he last said he moved */
 interface Said { key: string; the: string; offT: number; stillAt: Vec3; stillT: number; saidT: number }
 export interface Hint { key: string; rooms: Set<string>; /** `places`: named places that are no room of the list, first named first */ spots: Spot[] }
-const STATES = new WeakMap<Game, State>();
+const STATES = new SideMap<Game, State>('laststand.STATES');
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const alive = (D: Def) => D.gd.state !== 'dead';
-const pick = (st: State, r: [number, number]) => r[0] + st.die() * (r[1] - r[0]);
+const pick = (st: State, r: [number, number]) => r[0] + roll(st.die) * (r[1] - r[0]);
 const cellOf = (g: Game, p: Vec3) => { const nav = g.col.nav; return nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell)); };
 const inRoom = (g: Game, R: Room | null, p: Vec3) => !!R && R.cells.has(cellOf(g, p));
 const note = (g: Game, F: RoomFight, gd: Guard | null, what: string) => { F.log.push({ t: g.time, who: gd ? gd.callsign : '-', what: `[last] ${what}` }); if (F.log.length > 600) F.log.splice(0, 200); };
@@ -215,7 +216,7 @@ function voice(g: Game, F: RoomFight, st: State, gd: Guard, kind: LineKind, text
  *  HUD (the room it names): it happens when the line is said, never for a line that was not */
 const fill = (tpl: string, vars: Record<string, string>) => tpl.replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? '');
 function net(g: Game, F: RoomFight, st: State, gd: Guard, kind: LineKind, vars: Record<string, string> = {}, then?: () => void, redo?: Later['redo']) {
-  const L = LINES[kind], i = st.rot.get(kind) ?? Math.floor(st.die() * L.say.length) % L.say.length; st.rot.set(kind, (i + 1) % L.say.length);
+  const L = LINES[kind], i = st.rot.get(kind) ?? Math.floor(roll(st.die) * L.say.length) % L.say.length; st.rot.set(kind, (i + 1) % L.say.length);
   const tpl = (WORDS.on && L.now || L.say)[i], text = fill(tpl, vars);
   const at = Math.max(g.time + (g.cues?.netWait(L.cls) ?? 0), st.clsAt[L.cls] ?? 0); st.clsAt[L.cls] = at + (CUES.gaps[L.cls] ?? 0) + 0.1;
   if (at > g.time) st.later.push({ at, t0: g.time, gd, kind, text, cls: L.cls, then, tpl, redo }); else { voice(g, F, st, gd, kind, text, L.cls); then?.(); }
@@ -544,7 +545,7 @@ function tickStand(g: Game, F: RoomFight, st: State, S: Stand) {
   if (S.room && g.time >= S.thumpAt) {
     S.thumpAt = g.time + pick(st, K.thump);
     if (digInEntered(g, S.room)) return;
-    const doors = digInWedged(g, S.room), e = doors[Math.floor(st.die() * doors.length)], who = e && here.find(D => calm(g, D) && D.mode === 'hold' && digInPhase(g, D.gd) === 'set');
+    const doors = digInWedged(g, S.room), e = doors[Math.floor(roll(st.die) * doors.length)], who = e && here.find(D => calm(g, D) && D.mode === 'hold' && digInPhase(g, D.gd) === 'set');
     if (!e || !who) return;
     g.audio.play('propThud', e.at, 0.9, { rate: 0.8 });
     g.events.push({ kind: 'prop', pos: [e.at[0], 0, e.at[2]], time: g.time, loud: false, level: K.thumpLevel, who: who.gd.char.id });   // (blamed on him: his own side ignore it)
@@ -554,7 +555,7 @@ function tickStand(g: Game, F: RoomFight, st: State, S: Stand) {
 
 // ---------------------------------------------------------------- the seams
 const fresh = (g: Game): State => {
-  const rc = g.roomClear, die = mulberry32((Math.imul(rc.seed | 0, 0x9E3779B1) ^ Math.imul(rc.attempt | 0, 0x85EBCA6B) ^ 0x1A575A4D) | 0); for (let i = 0; i < 4; i++) die();
+  const rc = g.roomClear, die = dieOf((Math.imul(rc.seed | 0, 0x9E3779B1) ^ Math.imul(rc.attempt | 0, 0x85EBCA6B) ^ 0x1A575A4D) | 0); for (let i = 0; i < 4; i++) roll(die);
   const key = `${rc.seed}:${rc.attempt}`, was = STATES.get(g); let post = was?.key === key ? was.post : null;   // (the same staging, the fight stopped and started: the lists have been moved on since)
   if (!post) { post = new Map<Guard, string>(); for (const r of rc.rooms) for (const gd of r.defenders) post.set(gd, r.def.id); }
   return { post, key, die, nextAt: 0, check: null, known: new Set(), named: new Map(), spots: new Map(), at: new Map(), stand: null, loneSaid: false, fewN: 0, told: new Set(), hint: null, said: [], stats: newStats(), stale: false, rot: new Map<LineKind, number>([['movedAt', 0], ['movedFree', 0]]), clsAt: [], later: [] };   // (`places`' own lines start on their first wording: they draw nothing from the die, so the checks fall on the same beats with it on and off)

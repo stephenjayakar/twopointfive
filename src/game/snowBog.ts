@@ -7,6 +7,7 @@
 // WHERE SNOW LIES, for the game: on a snow level (weatherKinds.ts snowLevel), under the open sky (weather.ts underRoof — the level's roofs), at the ground (a
 // landing on a desk or a roof is as it was), and not where the level's floor says otherwise: a thin lay of trodden snow (the road) bogs by `packed`, of old
 // snow by `old`, and any other thin lay (swept earth, a doormat) is bare ground — the same reading the picture's bake makes of the same boxes.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
@@ -32,7 +33,7 @@ export const bogRun = (bog: number) => bog > 0 ? Math.pow(Math.max(0, 1 - bog), 
 
 interface Lay { b: Box; k: number; }
 interface Ground { lays: Lay[]; banks: Box[]; }
-const groundOf = new WeakMap<object, Ground>();
+const groundOf = new SideMap<object, Ground>('snowBog.groundOf');
 function ground(g: Game): Ground {
   const lvl = g.level as unknown as { boxes: Box[] }; let G = groundOf.get(lvl);
   if (!G) {

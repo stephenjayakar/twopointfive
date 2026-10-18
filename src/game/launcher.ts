@@ -164,7 +164,7 @@ function bounceOff(v: Vec3, n: Vec3): Vec3 { const vn = v3.dot(v, n); const vN =
 function spend(g: Game, r: Ring, at: Vec3, vel: Vec3) {
   const sp = v3.len(vel); if (sp > RING.spentSpeedMax) vel = v3.scale(vel, RING.spentSpeedMax / sp);
   const it = g.items.spawn('ring', v3.copy(at), vel, { who: r.shooter.id, heading: v3.yawOf(vel) });
-  it.onBounce = (sp, p) => { if (sp > 1.2) g.audio.play('canisterBounce', p, Math.min(0.5, sp / 12), { rate: 1.7 }); };   // the little skitters after the first clack: quiet, and not events (the clack was)
+  it.onBounce = (sp, p, g) => { if (sp > 1.2) g.audio.play('canisterBounce', p, Math.min(0.5, sp / 12), { rate: 1.7 }); };   // the little skitters after the first clack: quiet, and not events (the clack was)
 }
 /** the ring meeting something hard: a bright little clack (the canister's ping, pitched up) and a noise the room cannot place a man behind — they go and look at IT */
 function clack(g: Game, at: Vec3, k = 1) {

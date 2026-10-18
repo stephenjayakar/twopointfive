@@ -28,6 +28,7 @@
 // NVG.on false = no goggles on anybody, no dark, no tube: every function below answers as if this file did not exist (the build before it, to the frame).
 // State is per Game and derived every frame (nothing saved: a load re-derives it inside a frame).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import { lightEstimateAt, escalationOf, lightRuled, LIGHTS } from './guards';
@@ -88,7 +89,7 @@ interface Team {
 export interface NvgNote { t: number; who: string; what: string }
 /** QA / the panel: what changed and when (the last 200) */
 export const NVG_LOG: NvgNote[] = [];
-const teams = new WeakMap<Game, Team>();
+const teams = new SideMap<Game, Team>('nvg.teams');
 const fresh = (): Team => ({ t: -100, mode: 'off', why: 'no rule', men: new Map(), leadLitT: -Infinity, huntT: -Infinity, alarmT: -Infinity, calledT: -Infinity, callDue: false });
 const note = (g: Game, gd: Guard | null, what: string) => { NVG_LOG.push({ t: g.time, who: gd ? gd.callsign : '-', what }); if (NVG_LOG.length > 200) NVG_LOG.splice(0, 50); };
 /** the team's state while it is this frame's (or the last few: the rig is drawn after the tick, a paused frame draws again) */

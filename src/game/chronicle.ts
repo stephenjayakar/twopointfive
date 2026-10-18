@@ -7,6 +7,7 @@
 // Read by the debrief card (ui/debrief.ts: the score, the rating word, the badges, the stats grid, the scrollable timeline, the floor map with the path and the
 // pins) and by the QA probes (tools/qa/debrief-probes.ts). Lives on Game.chronicle; restartEncounter() replaces it; the end card and the down card read it as it
 // stood when the run ended, and it survives 'Keep playing' (nothing more is written: the mission is done).
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard, GameEvent, LightTarget, MissionStats, DownKind } from './game';
 import type { Door } from './doors';
@@ -122,10 +123,10 @@ export class Chronicle {
   /** the path: x, z, t triples in a flat array, `pathN` of them; sampled every `pathEvery` s of the mission clock, next at `pathNext` */
   path = new Float32Array(PATH_CAP * 3); pathN = 0; pathEvery = PATH_SECS; pathNext = 0;
   /** which hearing-model event has already made a row (three men hearing one shot are one row with three names), and the row it made */
-  private heardOf = new WeakMap<object, ChronEvent>();
+  private heardOf = new SideMap<object, ChronEvent>();
 
   /** hearing-model events that were COUNTED (counts.heard) but could not make a row (the caps): the next man hearing the same noise must not count it again */
-  private heardNoRow = new WeakSet<object>();
+  private heardNoRow = new SideSet<object>();
 
   /** the core append: null when refused (caps). `pos` is copied; `level` = the level the run is on (the row's room is in ITS words). */
   add(t: number, kind: ChronKind, pos: Vec3, data: ChronData, level?: Level): ChronEvent | null {

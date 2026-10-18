@@ -37,6 +37,7 @@
 // COUNTED and ride a checkpoint with the rest (runnerSnapshot / Restore).
 // The switch is off in the module and on the frozen stand, and acts only with MORALE.on: every seam returns on its first line, no man is met, no die is drawn.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard, GuardScript } from './game';
 import type { Character } from './character';
 import { Vec3, v3 } from '../math/vec';
@@ -71,7 +72,7 @@ const PHASES: RunPhase[] = ['say', 'mates', 'out', 'low', 'gone'];
  *  corner looks (the wall: away from the nearest enemy). `drive` = this file's script has him this frame (stamped `driveT`). */
 interface Run { phase: RunPhase; t: number; fled: boolean; from: Vec3; goal: Vec3 | null; mate: Guard | null; told: number; unseen: number; at: Vec3; stall: number; isOut: boolean;
   tries: number; plan: number; face: number | null; drive: boolean; driveT: number; script: GuardScript; }
-const stateOf = new WeakMap<Guard, Run>();
+const stateOf = new SideMap<Guard, Run>('runner.stateOf');
 
 /** THE LINES (placeholders in the register of the defenders' own — the writing pass is the maintainer's). done: shouted at the enemy in front of him, the
  *  beat before the gun goes down. mates: shouted to his own as he runs in on them — `he` as the night staff have it (their intruder is one man), `they` a
@@ -150,7 +151,7 @@ export function runnerBreak(g: Game, gd: Guard): boolean {
 }
 
 /** the rectangle round every room of the level's structure [x0, x1, z0, z1], worked out once a level (null = the level has no structure) */
-const rects = new WeakMap<object, [number, number, number, number]>();
+const rects = new SideMap<object, [number, number, number, number]>('runner.rects');
 function rectOf(g: Game): [number, number, number, number] | null {
   const rooms = g.level.scenarios?.roomClear?.rooms; if (!rooms?.length) return null;
   let R = rects.get(rooms);

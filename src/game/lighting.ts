@@ -1,6 +1,7 @@
 // Lights as game objects: switchable fixtures and their groups, the OCP, the mains breaker (blackout / restrike / beacons / a guard sent to reset it), light events into the hearing model.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { leverHands } from './handwork';
 import { missionLive } from './mission';
@@ -26,7 +27,7 @@ import { simRandom } from '../math/dice';   // the simulation's die (math/dice.t
 export const LIGHTWALL = { on: false, gap: 0.03 };
 /** QA: how many wall tests the rule made, how many pulled a light back, and the furthest one was pulled (m) — tools/qa/lightwall-watch.ts reads it; nothing in the game does */
 export const LENS_STATS = { asked: 0, pulled: 0, maxBack: 0 };
-const LENS_FROM = new WeakMap<RtLight, Vec3>();   // a carried light → what its lens hung off when it was last placed (lensRecheck asks again from there)
+const LENS_FROM = new SideMap<RtLight, Vec3>('lighting.LENS_FROM');   // a carried light → what its lens hung off when it was last placed (lensRecheck asks again from there)
 const LENS_SLANT = 0.3;   // the least |cos| between the line and the surface's normal the pull-back divides by (a grazing line is not chased back to the shoulder)
 /** Where a carried light is, given where its lens is drawn: `lens` itself unless a wall or a door leaf stands between `from` (the gun shoulder; a dropped
  *  torch's own body) and the emitter — then pulled back along that line until the whole emitter (`radius`) is `gap` short of the surface, never behind `from`.
@@ -186,7 +187,7 @@ export function setGroup(g: Game, group: string, on: boolean) { for (const t of 
 /** What setDaylight(true) found and must put back: every target's switch, the level lights it disabled, the sky, the haze, a PERMANENT blackout it lifted for the
  *  show (the breaker SHOT is mains gone for good, not until ten in the morning: review A6.8 — a timed trip it lifted stays lifted) — and the sun it added. */
 interface DayState { hour: HourId; hourSunK: number; hourSunGiven: boolean; targets: Map<LightTarget, boolean>; lightsOff: RtLight[]; sky: { zenith: Vec3; horizon: Vec3 }; haze: number; exposure: number; sun: RtLight; blackout: { active: boolean; permanent: boolean; until: number; since: number } | null; }
-const dayStates = new WeakMap<Game, DayState>();
+const dayStates = new SideMap<Game, DayState>('lighting.dayStates');
 /** Is the daytime variant in (setDaylight)? */
 export function isDaylight(g: Game): boolean { return dayStates.has(g); }
 /** Swap the level's daytime variant in (on) or back out (off): level.daylight — a directional sun added to the light set, the sky lifted, the listed fixture groups

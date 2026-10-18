@@ -8,6 +8,7 @@
 // sight, sound or the nav grid (guards path straight through and shove them, which is the point).
 // Conventions: yaw as Box.yaw / level frameAt (local +X → world (cos, −sin), local +Z → (sin, cos)); angular velocity w = d(yaw)/dt, so a
 // point at offset r from the centre moves at (w·rz, −w·rx) and a planar impulse J at r changes w by (rz·Jx − rx·Jz)/I ("cross2" below).
+import { wallClock } from '../math/side';
 import { Vec3 } from '../math/vec';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { StaticCollision } from '../scene/collision';
@@ -117,7 +118,7 @@ export class PropSystem {
   enabled = true;            // off: props freeze where they are (still solid to characters)
   frictionScale = 1;
   time = 0;
-  stats = { awake: 0, ms: 0 };
+  stats = wallClock({ awake: 0, ms: 0 }, 'ms');
   private near = new Int32Array(256);
   private byBox = new Map<Box, Prop>();
   private muted = true;      // no events while settling / resetting

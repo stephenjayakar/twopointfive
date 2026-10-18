@@ -40,9 +40,10 @@
 // c.doors.kickSpot(door, by) reads where that kick is thrown from; c.order(u, { aimAt: unit }) now TRACKS that man (his chest re-read every tick into the ordered aim
 // point until the next aim order — a muzzle that stays on a moving man), and { flinch: true } lets a choreographed man start at rounds past him (game.ts GuardScript.flinch,
 // suppression.ts: the anim alone). Bursts already were real rounds (stimulus.burst); the firefight is those, ordered.
+import { SideSet } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, DEG, damp, wrapAngle, smoothstep } from '../math/vec';
-import { mulberry32 } from '../math/dice';
+import { rollOn } from '../math/dice';
 import type { Game, Guard, GuardScript, GameEvent, GuardState, Interactable, Verb } from './game';
 import type { FollowCamera } from './camera';
 import type { Input } from './input';
@@ -384,7 +385,7 @@ interface ShowState { saved: { ai: boolean; god: boolean; invisible: boolean; qu
   /** the night showcase's plumbing: the storm's knobs before c.weather touched them (put back at the end), whether c.mission has the mission thread live, and whether the show has HANDED OVER
    *  (c.handover: the encounter is the player's already — the end restores nothing and raises no veil); the day showcase's: whether c.chaos has the program's own destruction knob set */
   weatherSaved: { storm: number; rain: number } | null; missionOn: boolean; handedOver: boolean; chaosSet: boolean }
-interface Run { serial: number; name: string; def: ProgramDef; t: number; dt: number; tickN: number; rng: () => number; seed: number; beats: LiveBeat[]; byName: Map<string, LiveBeat>; fired: Set<number>; signals: { name: string; t: number; data?: Json }[]; sigSeen: number; flags: Record<string, Json>;
+interface Run { serial: number; name: string; def: ProgramDef; t: number; dt: number; tickN: number; /** the run's own die: its word on the record, rolled by math/dice.ts rollOn (no closure: a rollback snapshot holds where it stands) */ dice: number; rng: (this: { dice: number }) => number; seed: number; beats: LiveBeat[]; byName: Map<string, LiveBeat>; fired: Set<number>; signals: { name: string; t: number; data?: Json }[]; sigSeen: number; flags: Record<string, Json>;
   units: Map<number, UnitRec>; drills: DrillRun[]; bursts: { u: UnitRef; at: Place | UnitRef; left: number; cadence: number; spread: number; next: number; cond: { k: 'pred'; test: () => boolean; label: string }; fired: number }[];
   /** kicks thrown and not yet landed (c.doors.kick: doors.ts kickIn on the animator's impact frame), and aim points tracking a man (c.order aimAt: unit — his chest re-read into the ordered vector every tick) */
   kicks: { door: Door; gd: Guard; by: string; beat: string }[]; tracks: { gd: Guard; vec: Vec3; tgt: Guard }[];
@@ -403,7 +404,7 @@ export class Director {
   onProgramEnd: ((name: string, finished: boolean) => void) | null = null;
   frame: DirectorFrame | null = null;
   private cam: FollowCamera | null = null; private input: Input | null = null;
-  private serial = 0; private seen = new WeakSet<GameEvent>(); private exiting = false;
+  private serial = 0; private seen = new SideSet<GameEvent>(); private exiting = false;
   /** c.press / c.click land here and go into the Input at the top of the NEXT Game.update (injectInput): the tick runs after updatePlayer / updateInteract have read this frame's input, and
    *  main.ts clears the edge sets at the end of the frame — pressed there and then, a beat's key would reach nobody */
   private dueKeys = new Set<string>(); private dueClicks = 0;
@@ -466,7 +467,7 @@ export class Director {
     const why = this.canStart(name); if (why) return why;
     const def = this.manifest!.programs.get(name)!;
     const seed = (opts.seed ?? 0x2545F491 ^ (this.serial * 0x9E3779B9)) >>> 0;
-    const R: Run = { serial: ++this.serial, name, def, t: 0, dt: 0, tickN: 0, rng: mulberry32(seed), seed, beats: [], byName: new Map(), fired: new Set(), signals: [], sigSeen: 0, flags: {}, units: new Map(), drills: [], bursts: [], kicks: [], tracks: [], show: null, objective: null, systemsSaved: null, ended: false, finishing: false, failedShow: false, query: null };
+    const R: Run = { serial: ++this.serial, name, def, t: 0, dt: 0, tickN: 0, dice: seed | 0, rng: rollOn, seed, beats: [], byName: new Map(), fired: new Set(), signals: [], sigSeen: 0, flags: {}, units: new Map(), drills: [], bursts: [], kicks: [], tracks: [], show: null, objective: null, systemsSaved: null, ended: false, finishing: false, failedShow: false, query: null };
     this.run = R; this.frame = null;
     this.push({ beat: '', kind: 'program', what: 'start', data: { seed } });
     if (def.opts.showcase) this.enterShow(R); else this.applySystems(R);
@@ -943,7 +944,7 @@ export class Director {
           const gd = this.guardOf(R, o.by); const hand = gd.char.jointUnder('handL') ?? v3.add(gd.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(1.0, hand[1]), hand[2]];
           const to = this.placeOf(at); const sol = g.items.solve(from, [to[0], 0, to[2]], 9);
           const it = g.items.spawn(o.kind ?? 'flash', from, sol.v0, { fuse: o.fuse ?? 1.2, who: gd.char.id, heading: v3.yawOf(sol.v0) });
-          it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);
+          it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.audio.play('throw', from, 0.7);
           this.push({ beat: b.name, kind: 'stimulus', what: `charge ${o.kind ?? 'flash'}`, data: { by: o.by.callsign, at: [+to[0].toFixed(2), 0, +to[2].toFixed(2)] } });
         },
         burst: (u, at, rounds, o = {}) => {
