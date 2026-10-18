@@ -87,6 +87,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one, not once a render. `FollowCamera.frame()` runs before the frame's ticks ('previous' = the matrix the last frame was DRAWN with: TAAU-off reprojection). Per drawn frame on the display's dt still: mixer, smoke solver, render, a blast's kick — and what a frame between two ticks DRAWS is the
   next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
   `FIXEDSTEP_BREAK=1` must fail). A page tool that runs the live loop and counts on one update a frame of the frame's own dt opens the page with `?fixedstep=0`.
+  The accumulator never goes under zero (`planTicks`: time the snap hands back that a frame cannot pay stays in `drift` — a display a little faster than a listed rate, 121.4 or 170 Hz,
+  used to plan a frame of −1 ticks and drop its presses; the check's plan row sweeps 40‥260 Hz in tenths, steady and jittered).
   `?kitview`'s picture never takes the fixed step (`main.ts` `fixedStep`): `host/kitView.ts` stands its men round every update from the loop's two once-a-frame hooks, so it keeps one
   update a drawn frame under its own pacer (`tools/qa/kitview-page.cjs` failed its door-tool rows with ticks unattended: a man 0.8 m past the door's line).
 - **Drawing between ticks** (`src/host/tween.ts TWEEN {on, snap 1.5 m, flashes, ease}`, class `Tween`, `LoopCtx.tween`; the module's default is off = the fixed step draws the
