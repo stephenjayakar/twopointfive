@@ -22,7 +22,8 @@ import { Character, SignalKind, Stance, UpperMode, THROW_RELEASE, THROW_BY, HOLD
 import { SmokeSystem } from '../smoke/smoke';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import { RIG, rigBoxes, holsterBoxes, rigLightPose, rigTorchPos, torchCarryDir, railLightDef, torchLightDef, RigNodeMeta, carbineGrip, carbineMuzzleAhead, carbineLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose } from '../game/rigProps';
+import { INHAND, IN_PISTOL } from '../game/inhand';
+import { RIG, longHold, torchHold, rigBoxes, holsterBoxes, rigLightPose, rigTorchPos, torchCarryDir, railLightDef, torchLightDef, RigNodeMeta, carbineGrip, carbineMuzzleAhead, carbineLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose } from '../game/rigProps';
 import { RigGizmo } from '../viewerGizmo';
 import * as fxm from '../game/effects';
 import { Sparks } from '../game/sparks';
@@ -422,7 +423,11 @@ export class Runtime {
         torchLight.enabled = st.lightOn && !handsBusy;
         if (st.carbine) { const lp = carbineLightPose(c, RIG); torchLight.pos = lp.pos; torchLight.dir = lp.dir; } else { torchLight.pos = rigTorchPos(c, dir, torch); torchLight.dir = dir; }
         railLight.enabled = false;
-        if (st.showProps) { if (handsBusy && !st.carbine) holsterBoxes(c, dyn, { slide: RIG.guardPistol.slide, grip: RIG.guardPistol.grip }, meta); else rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: st.lightOn, isGuard: true, torch, beamDir: this.beamDir, lensColor: torchLight.color, weapon: st.carbine ? 'carbine' : 'pistol' }, dyn, RIG, meta); }
+        // IN HAND (game/inhand.ts), as combat.ts guardKit says it: the figure is told what its right hand holds (its look-only pass poses the hand to it next update), a pistol is
+        // laid out in the hand's own frame and a defender's holster hangs clear of his shirt. A raw clip is shown as the clip is: nothing is said.
+        const ih = INHAND.on, HO = ih && this.wornSide === 'defender' ? INHAND.holsterOut : 0, HR = HO ? { ...RIG.holster, out: RIG.holster.out + HO } : undefined;
+        c.inHand = !ih || handsBusy || c.anim.rawClip ? null : st.carbine ? (INHAND.long ? longHold('carbine') : null) : torch ? (INHAND.torch ? torchHold(this.beamDir) : null) : IN_PISTOL;
+        if (st.showProps) { if (handsBusy && !st.carbine) holsterBoxes(c, dyn, { slide: RIG.guardPistol.slide, grip: RIG.guardPistol.grip }, meta, HR); else rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: st.lightOn, isGuard: true, torch, beamDir: this.beamDir, lensColor: torchLight.color, weapon: st.carbine ? 'carbine' : 'pistol', ...(ih && !st.carbine && !torch ? { inHand: true } : null), ...(HO ? { holsterOut: HO } : null) }, dyn, RIG, meta); }
       } else {
         torchLight.enabled = false;
         const rifleHand = this.samRifle() && !handsBusy && c.alive;   // the FN2000 in both hands (else, if carried at all, across his back)
@@ -430,7 +435,9 @@ export class Runtime {
         if (railLight.enabled) { const lp = rifleHand ? sc20kLightPose(c) : rigLightPose(c); railLight.pos = lp.pos; railLight.dir = lp.dir; }
         const thrown = c.anim.inThrow && c.anim.throwTime >= THROW_RELEASE;   // the can has left the hand: draw it empty for the rest of the throw
         const knife = st.hold.knife || (st.hold.on && st.hold.who === 0 && HOLD_VARIANTS[st.hold.variant] === 'arm' && !!c.anim.holdPose);   // as combat.ts handProps: the knife is out for the life of an arm hold
-        if (st.showProps) rigBoxes(c, { goggles: st.goggles, nv: st.nv, slot: handsBusy || rifleHand ? 0 : st.slot, lightOn: st.lightOn, isGuard: false, holster: handsBusy || rifleHand || c.alive || st.slot !== 1, held: handsBusy || thrown || rifleHand ? null : st.slot === 2 ? 'smoke' : st.slot === 3 ? 'flash' : null, knife, rifle: rifleHand ? 'hand' : st.rifle ? 'slung' : null, rifleLight: rifleHand && st.lightOn }, dyn, RIG, meta);   // (as game.ts: can up → gun on the thigh + can in the fist; picking → empty hands, gun on the thigh; slot 0 = holstered, hands free; the rifle in the hands → the pistol on the thigh whatever the slot, or slung on his back)
+        const ih = INHAND.on && c.alive;   // (IN HAND, as combat.ts handProps says it of Sam: his pistol in the hand's own frame, and the hand moved onto a rifle's grip)
+        c.inHand = !ih || handsBusy || c.anim.rawClip ? null : rifleHand ? (INHAND.long ? longHold('sc20k') : null) : st.slot === 1 ? IN_PISTOL : null;
+        if (st.showProps) rigBoxes(c, { goggles: st.goggles, nv: st.nv, slot: handsBusy || rifleHand ? 0 : st.slot, lightOn: st.lightOn, isGuard: false, ...(ih ? { inHand: true } : null), holster: handsBusy || rifleHand || c.alive || st.slot !== 1, held: handsBusy || thrown || rifleHand ? null : st.slot === 2 ? 'smoke' : st.slot === 3 ? 'flash' : null, knife, rifle: rifleHand ? 'hand' : st.rifle ? 'slung' : null, rifleLight: rifleHand && st.lightOn }, dyn, RIG, meta);   // (as game.ts: can up → gun on the thigh + can in the fist; picking → empty hands, gun on the thigh; slot 0 = holstered, hands free; the rifle in the hands → the pistol on the thigh whatever the slot, or slung on his back)
       }
       if (st.emitterGizmos && !st.guard && (st.slot === 1 || this.samRifle()) && !handsBusy && st.showProps) {   // shot emitter anchors ride the muzzle frame; a tiny bright cube marks each so it can be picked like a rig part
         const MF = fxm.muzzleFrame(c.muzzle, c.gunDir); const SH = fxm.shot;

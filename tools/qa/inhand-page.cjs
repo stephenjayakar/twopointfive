@@ -5,7 +5,9 @@
 //          has posed their hands (inHandK > 0) and no joint the game reads moved off the animator's (bones.handR is the skeleton's wrist only where the pass
 //          left the wrist alone)
 //   off    the same page with ?inhand=0: the switch is off, nobody is told anything, every skeleton is posed once
-// exit 0 = both, with no page error · 1 = otherwise. With an outDir, a still of the page is written there. HALF=on|off runs one of the two (a boot on the
+//   bench  the character viewer (/workbench#mode=chars) draws its staged man by the same rule: a guard aiming his pistol, carrying his torch and shouldering
+//          his carbine is told what his hand holds and posed to it; with ?inhand=0 nobody is
+// exit 0 = all three, with no page error · 1 = otherwise. With an outDir, a still of the page is written there. HALF=on|off|bench runs one of the three (a boot on the
 // software adapter is minutes on a loaded machine).
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
@@ -33,7 +35,7 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&l
     const told = men.map(m => ({ kind: m.char.inHand ? m.char.inHand.kind : null, k: +m.char.inHandK.toFixed(2), team: m === g.player ? 'you' : m.team }));
     return { on: window.__knobs.registry().INHAND.on, men: men.length, told };
   };
-  if (HALF !== 'off') {
+  if (HALF !== 'off' && HALF !== 'bench') {
   const A = await open(''); const a = await A.page.evaluate(stage);
   const toldA = a.told.filter(t => t.kind), posedA = a.told.filter(t => t.k > 0);
   line(a.on === true && toldA.length >= 1 && posedA.length >= 1 && !A.errors.length, 'the page opens with the switch on: the men shown are told what is in their hands and the look-only pass has posed them',
@@ -45,10 +47,34 @@ const URL = extra => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&l
   }
   await A.page.close();
   }
-  if (HALF !== 'on') {
+  if (HALF !== 'on' && HALF !== 'bench') {
   const B = await open('&inhand=0'); const b = await B.page.evaluate(stage);
   line(b.on === false && b.told.every(t => !t.kind && t.k === 0) && !B.errors.length, 'the same page with ?inhand=0: the switch is off, nobody is told anything, no skeleton is posed twice',
     `INHAND.on ${b.on} · ${b.men} men shown · told ${JSON.stringify(b.told)} · errors ${JSON.stringify(B.errors.slice(0, 3))}`);
+  }
+  if (HALF === '' || HALF === 'bench') {
+    const bench = async extra => { const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); const errors = [];
+      page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
+      page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
+      await page.goto(`http://localhost:${PORT}/workbench?quality=${QUALITY}${extra}#mode=chars`);
+      await page.waitForFunction(() => window.__vrt && window.__step && window.__lab, null, { timeout: 0 });
+      const told = await page.evaluate(() => { const rt = window.__vrt, st = window.__lab, e = window.__engine, real = e.render, out = [];
+        const aim = st.upper;   // (whatever upper layer the scene opened on is put back at the end)
+        const run = (label, set) => { Object.assign(st, set); e.render = () => { e.world.upload(); }; try { window.__step(45); } finally { e.render = real; }
+          const c = rt.char; out.push({ label, kind: c.inHand ? c.inHand.kind : null, k: +c.inHandK.toFixed(2) }); };
+        run('guard torch', { guard: true, carbine: false, guardTorch: true, upper: 4 });
+        run('guard carbine', { guard: true, carbine: true, guardTorch: false });
+        run('guard pistol', { guard: true, carbine: false, guardTorch: false, upper: 2 });
+        run('sam pistol', { guard: false, slot: 1, rifle: 0 });
+        st.upper = aim; return out; });
+      await page.close(); return { told, errors }; };
+    const C = await bench(''); // (upper 4 = the torch carry, 2 = the two-hand aim: viewer/state.ts UPPERS)
+    const want = { 'guard torch': 'torch', 'guard carbine': 'long', 'guard pistol': 'pistol', 'sam pistol': 'pistol' };
+    line(C.told.every(t => t.kind === want[t.label]) && C.told.every(t => t.k > 0) && !C.errors.length, 'the character viewer says the same words of its staged man (a torch, a long gun, a pistol) and his hand is posed to them',
+      `told ${JSON.stringify(C.told)} · errors ${JSON.stringify(C.errors.slice(0, 3))}`);
+    const D = await bench('&inhand=0');
+    line(D.told.every(t => !t.kind && t.k === 0) && !D.errors.length, 'the viewer with ?inhand=0: nobody is told anything',
+      `told ${JSON.stringify(D.told)} · errors ${JSON.stringify(D.errors.slice(0, 3))}`);
   }
   await browser.close();
   console.log(`=== inhand-page: ${failed ? 'FAIL' : 'ALL PASS'} ===`); process.exit(failed ? 1 : 0);
