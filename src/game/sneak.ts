@@ -56,6 +56,7 @@ import { SPOTTED, spottedMode } from './spotted';
 import { lightEstimateAt, GUARD_EYE, eyeContact, escalationOf, KEEN, type Eye } from './guards';
 import { hostileTo } from './teams';
 import { dozeAsleep } from './doze';
+import { workComing } from './workthings';
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
 export const SNEAK = {
@@ -476,6 +477,10 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
             const d = r + 0.3 * flat(q, T[i].p) + (dc ? (deep < 0.5 ? 0.8 : 0) + 0.6 * Math.max(0, flat(q, dc) - d0) : 0); if (d < bd && sideOk(q, lo, deep)) { bd = d; best = q; } } }
         if (!best) M!.sideT = g.time;
         return best; };
+      // (workthings.ts: a man is walking to the breaker over where he stands and Sam is going on — waiting for THAT man's back, or backing off down the
+      //  way he is coming, is being walked into: he goes on after Sam across what he would have waited short of. Another man's eyes on the stretch, the
+      //  line of a door Sam is at, Sam stood still with him at his place: each holds him as before)
+      const coming = eyes.filter(h => workComing(g, gd, h)), onWalk = coming.length > 0 && (rem > gap + 0.5 || !stopped);
       if (eyes.length) {
         if (rem > gap + 0.5 || !stopped) {
           // walking: the next stretch of the trail, read a step at a time for the posture he walks in
@@ -493,11 +498,12 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
             // looked at, but a step or two of dim light at range costs a watcher next to nothing: what the crossing would ADD to each looker's awareness, by
             // the eye's own arithmetic on the read of each step, with a margin — inside `budget` he goes (and a man Sam has just stirred has none to spare)
             const cheap = end >= 0 && watched && !tooLong && crossCost(g, eyes, T, first, end) <= K.budget;
-            if (end >= 0 && (cheap || (!watched && (!tooLong || (K.patience > 0 && waited >= K.patience))))) { mode = 'cross'; from = first; to = end; }
-            else { mode = 'wait'; why = watched ? (lit ? 'lit' : 'near') : !ex(first, lowWalk).seen ? 'door' : end < 0 ? 'open' : 'long'; }
+            const walked = onWalk && ex(first, lowWalk).seen && (!by || coming.includes(by));
+            if (end >= 0 && (walked || cheap || (!watched && (!tooLong || (K.patience > 0 && waited >= K.patience))))) { mode = 'cross'; from = first; to = end; }
+            else if (!walked) { mode = 'wait'; why = watched ? (lit ? 'lit' : 'near') : !ex(first, lowWalk).seen ? 'door' : end < 0 ? 'open' : 'long'; }
             // (what he saw, kept: the looker, and the steps it was — a door swinging shut between them does not un-see it)
             M.mem = mode === 'wait' && watched && by && lit ? { h: by, a: first + S.off, b: last + S.off, t: g.time } : null;
-          } else if (M.mem) {
+          } else if (M.mem && !(onWalk && coming.includes(M.mem.h))) {
             // nothing reads exposed ahead — but a moment ago a man was looking at that lit stretch, and he cannot SEE that man now (the door between them
             // swung to on its closer): he takes him to be looking still, for `memory` seconds — unless the light on it has gone, or he is past it
             const m = M.mem, a = Math.max(0, idx(m.a)), b = Math.min(T.length - 1, idx(m.b)), hc = m.h.char;
@@ -515,7 +521,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
         }
         // CAUGHT: he is seen where he stands (his own bones, his own meter — whatever the read of the crumbs said): looked at, or stood still in it → the same
         // nearest dark step, either way along the trail, low. Not twice inside a few seconds: a man hopping about a doorway is worse than one low and still in it.
-        if (mode !== 'stand' && (here.watched || (here.seen && (mode === 'wait' || stopped))) && (g.time - M.hideT > K.hideGap || g.time < M.hideT)) {
+        if (mode !== 'stand' && !(onWalk && (!here.by || coming.includes(here.by))) && (here.watched || (here.seen && (mode === 'wait' || stopped))) && (g.time - M.hideT > K.hideGap || g.time < M.hideT)) {
           const k = dark(i, true, true, true); if (k >= 0) { stand = k; mode = 'back'; } else if ((side = aside(true, true))) mode = 'back'; }
         // (stood aside and not seen there: he keeps the spot while he waits, or while Sam stands — the trail's own steps are the seen ones)
         if (!side && M.side && (mode === 'wait' || (mode === 'walk' && stopped && rem <= gap + K.sideM + 0.5)) && K.side && flat(M.side, T[i].p) < K.sideM + 1 && sideOk(M.side, crouchOut(mode), 0)) side = M.side;
