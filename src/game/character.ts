@@ -550,6 +550,22 @@ function longTargets(stance: LongStance, crouchW: number): number[] {
   for (let i = 0; i < a.length; i++) a[i] += (b[i] - a[i]) * w;
   return a;
 }
+/** GUN HAND (gunhand.ts `longReload`): A LONG GUN'S RELOAD CARRY. Through its magazine change a long gun is held the way a rifle is worked, not played through the
+ *  pistol's reload clip: the trigger hand keeps the grip, the stock comes in under the shoulder, the muzzle a little up and across so the well stands where the
+ *  support hand can get at it; the head goes down to the well as the empty comes out and comes back up once the fresh one is seated. The carriage he is in (LONG)
+ *  goes toward these numbers by the carry's weight and back to itself by the end of the beat — LONG's units and axes, the gun and the head only: the trunk keeps
+ *  the carriage's own blade and lean. `at`: the trigger hand's wrist off the CHEST joint [side, up, fwd], whatever the carriage's own anchor (one place to work a
+ *  gun, inside the support arm's reach on every carriage). `box`: a magazine ahead of the grip (the carbines); `back`: the bullpup's, behind it (the muzzle less
+ *  far up: its well is under his own forearm). `head`: ° — toward the gun side, down. Seconds: `in` to come to the carry from the reload's first frame, `out` to
+ *  go back, done `end` before the beat is; the head starts down `headIn` before the empty goes and is up `headOut` after the fresh one seats. `rate`: 1/s, the
+ *  fastest either weight moves (a beat taken away mid-change eases out at it). First-pass numbers off the measured reach — not through the maintainer's viewer
+ *  pass. */
+export const LONG_RELOAD = {
+  box: { at: [-0.15, -0.075, 0.19] as Vec3, pitch: 20, aimK: 0, yaw: 12 },
+  back: { at: [-0.16, -0.06, 0.21] as Vec3, pitch: 12, aimK: 0, yaw: 4 },
+  head: { yaw: -10, pitch: 22, roll: 0 },
+  in: 0.35, out: 0.35, end: 0.06, headIn: 0.3, headOut: 0.3, rate: 8,
+};
 const LC = { side: 0, up: 1, fwd: 2, pitch: 3, aimK: 4, yaw: 5, blade: 6, lean: 7, headYaw: 8, headPitch: 9, headRoll: 10, elbowR: 11, elbowL: 14, poleW: 17, sway: 18, anchor: 19, steady: 20, count: 21 };
 /** THE LOW READY PULLED IN FOR A WALL (CharacterAnimator.gunWall, written by game/gunwall.ts; 0 = every carriage exactly as it was): the low ready puts a
  *  long gun's muzzle half a metre ahead of his feet and a pistol's 43 cm, and a man can stand with his centre 30 cm off a wall — so the low ready alone still
@@ -1371,6 +1387,11 @@ export class CharacterAnimator {
    *  the hand runs on reload()'s own. */
   reloadAt = -1; reloadRow: ReloadBeat | null = null;
   private rlT = -1; private rlB = { dur: 1.6, out: 0.43, in_: 1.04, rack: 1.36, pull: true, keep: -1, hand: false, fresh: 0.7 }; private rlSrc: ReloadBeat | null = null;
+  /** GUN HAND (`longReload`): the long gun's reload carry — `k` the gun's share of LONG_RELOAD, `h` the head's; `ch` the carriage's channels with those shares
+   *  taken (what longBody / longArms pose from while either is up; the springs themselves are never written). Both 0 with the switch off: the springs, to the bit. */
+  private rlc = { k: 0, h: 0, ch: null as { x: number }[] | null };
+  /** what that carry shows this frame (QA; nothing reads them) */
+  rlShown = { carry: 0, head: 0 };
   // ---- KIT HANDLING (KIT above; dealt by game/kitanim.ts for Sam — a man nobody calls kitSwap on, hands a kit beat or feeds closeK has none of it)
   private kit: { t: number; from: KitItem | null; to: KitItem | null; tA: number; tR: number; D: number; s0: number; roll0: number; re: boolean; front: boolean; cap: { r: Vec3; rq: Quat; l: Vec3; lq: Quat; mr: Vec3 | null; ml: Vec3 | null; mf: Vec3 | null; mb: Vec3 | null } } | null = null;
   /** KIT, input: the rifle lives on a sling in FRONT of him, not across his back (kitanim.ts kitSlingFront — read when a swap begins) — and how far it is
@@ -1988,7 +2009,8 @@ export class CharacterAnimator {
         chs.forEach((sp, i) => { sp.x = from[i]; sp.v = 0; });
       } else chs.forEach((sp, i) => sp.step(tgt[i], SW, dt));
       this.lg.seen = want; this.longShown = wLg > 0.5 ? want : null; if (this.longGun) lgWant = want;
-    } else { this.lg.seen = null; this.longShown = null; }
+      this.reloadCarry(dt, want);
+    } else { this.lg.seen = null; this.longShown = null; this.rlc.k = this.rlc.h = this.rlShown.carry = this.rlShown.head = 0; }
     const wWallArms = wSt * wl * (this.stance === 'wall' ? 1 : 1 - wLg);   // the wall hold's claim on the ARMS: its share of the stance while it is held; coming off it, a long gun back in the hands (the player's, drawn off the sling the frame he steps away) takes them back at once rather than through the hold's fifth of a second out — the weapon is drawn in the hand from that frame, so the hands are on it from that frame (the body still peels off the plaster at the hold's own rate: wallBody)
     // crouch pose (the kick stands him up: crouchPose above)
     if (crouchPose > 0.001) {
@@ -2167,7 +2189,9 @@ export class CharacterAnimator {
       else this.kitLayer(dt, y, -p * 0.35);
     } else if (this.kitHold !== undefined) this.kitCancel();
     this.kitGunFree = 0;
-    if (this.reloadT >= 0) {
+    if (this.reloadT >= 0 && GUNHAND.on && GUNHAND.longReload && this.longGun) {   // GUN HAND: a long gun's reload is its carriage's own move (reloadCarry) — the pistol's clip is left out of the pose; its clock runs on as it did, so everything that asks `reloading` hears what it heard
+      const d = c.Pistol_Reload.duration; this.reloadT += dt * (d / this.reloadDur); if (this.reloadT > d) this.reloadT = -1;
+    } else if (this.reloadT >= 0) {
       sampleClip(c.Pistol_Reload, this.reloadT, false, this.pB);
       const d = c.Pistol_Reload.duration; const w = clamp(Math.min(this.reloadT / 0.12, (d - this.reloadT) / 0.15), 0, 1);
       if (this.rlB.hand && !this.longGun) this.kitGunFree = w;
@@ -2242,7 +2266,7 @@ export class CharacterAnimator {
     // floor and the run swings the head 10° side to side; measured off the finished pose, the neck (40 %) and head (60 %) take GAZE_KEEP of the pitch error
     // toward a per-gait target elevation and damp the yaw wobble against a ½ s reference of itself (slow, meant head turns pass; the bob does not). Out of
     // the way of everything that poses the head on purpose: stances, the holds, the kick / throw / hit one-shots, the aim clip, death.
-    { const wantW = (1 - wSt) * (1 - wHd) * (1 - wHe) * (1 - wLp) * (1 - this.upperW.aim) * (1 - wAct) * (kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.reloadT >= 0 || this.tellT >= 0 || this.mvBusy || this.wk.shown > 0.02 || this.rx.w.x > 0.02 || this.bigTool !== null ? 0 : 1);   // (the lockpick's look at the keyway, the reload's glance at the gun and the tells' look at the watch / into the stretch are authored looks: left alone; so is an action clip's seated / kneeling head)
+    { const wantW = (1 - wSt) * (1 - wHd) * (1 - wHe) * (1 - wLp) * (1 - this.upperW.aim) * (1 - wAct) * (kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.reloadT >= 0 || this.rlc.h > 0 || this.tellT >= 0 || this.mvBusy || this.wk.shown > 0.02 || this.rx.w.x > 0.02 || this.bigTool !== null ? 0 : 1);   // (the lockpick's look at the keyway, the reload's glance at the gun and the tells' look at the watch / into the stretch are authored looks: left alone; so is an action clip's seated / kneeling head — and the long gun's own look down at its well, GUN HAND, which runs on the game's beat past the clip's clock)
       this.gz.w = damp(this.gz.w, wantW, 10, dt);
       if (this.gz.w > 0.01) {
         this.fkPart(this.pA, this.fkHead); const fk = this.fk; const g = quat.rotate(fk.rot[nd.head], this.gazeLocal);   // (the head's chain alone: nothing else is read)
@@ -2447,7 +2471,12 @@ export class CharacterAnimator {
     const at = (p: readonly number[]): Vec3 => v3.add(pR, dir(p));
     const cur = v3.copy(fk.pos[nd.handL]), rot0 = [...fk.rot[nd.handL]] as Quat;
     const F = this.trunkFrame(), tk = (o: Vec3, p: Vec3): Vec3 => v3.mad(v3.mad(v3.mad(o, F.left, p[0]), F.up, p[1]), F.fwd, p[2]);
-    const pouch = T > 0.5 ? tk(fk.pos[nd.spine2], R.pouch[1]) : tk(fk.pos[nd.hips], R.pouch[0]);
+    // GUN HAND: the clip squared the shoulders over the belt, so "off the pelvis, trunk frame" was the belt's own frame; the carriage that now stays through a
+    // long gun's change blades them (36° at the shoulder), which would carry the hip's pouches round with the chest — those points go by the hips' own line
+    let hk = (p: Vec3): Vec3 => tk(fk.pos[nd.hips], p);
+    if (GUNHAND.on && GUNHAND.longReload && this.longGun) { const l = v3.sub(fk.pos[nd.thighL], fk.pos[nd.thighR]), hl = v3.normalize(v3.mad(l, F.up, -v3.dot(l, F.up))), hf = v3.cross(hl, F.up), H = fk.pos[nd.hips];
+      hk = p => v3.mad(v3.mad(v3.mad(H, hl, p[0]), F.up, p[1]), hf, p[2]); }
+    const pouch = T > 0.5 ? tk(fk.pos[nd.spine2], R.pouch[1]) : hk(R.pouch[0]);
     const o = B.out, i = B.in_, r = B.rack, D = B.dur, h = (o + i) * 0.5;
     const mag = at(K.mag), strip = at(K.strip), hd = at(K.handle), pl = at(K.pull);
     // the empty comes straight down out of the well and is let go there (`strip`: a hand's width under it — dropped, not thrown); the fresh one comes up from under.
@@ -2456,8 +2485,8 @@ export class CharacterAnimator {
     const FL = R.flare, slap = fum && B.pull && r - i >= 0.4, fl = fum ? (1 - T) * Math.max(bump(t, i - 0.36, i - 0.22, i - 0.09, i + 0.02), slap ? bump(t, i + 0.07, i + 0.15, i + 0.19, i + 0.27) : 0) : 0;
     const hit = v3.mad(v3.mad(v3.mad(mag, yW, -0.035), xW, wob * 1.2), d, wob * 1.6), off = fum ? tk(lw(hit, strip, 0.65), v3.scale(FL.off, 1 - T)) : hit, tapP = slap ? tk(v3.mad(mag, yW, -R.tap * (1 - T)), v3.scale(FL.tap, 1 - T)) : mag;
     const over = v3.mad(v3.mad(pl, d, -(R.fling + 0.1 * (1 - T))), xW, 0.04 + 0.05 * (1 - T));
-    const kp = B.keep, fr = B.fresh, dump = kp >= 0 ? tk(fk.pos[nd.hips], KIT.mag.dump) : pouch;   // (KIT: a magazine with rounds in it goes to the dump pouch on the hip before the hand goes for a fresh one)
-    const p = curve3(t, [[0, cur], [Math.max(0.1, o - 0.2), mag], [o, mag], [o + 0.12, strip], ...(kp >= 0 ? [[(o + 0.05 + kp) * 0.5, tk(fk.pos[nd.hips], KIT.mag.via)], [kp - 0.07, dump], [kp + 0.05, dump], [fr, pouch], [fr + 0.1, pouch]] : [[hp, pouch], [hp + 0.12, pouch]]) as [number, Vec3][],
+    const kp = B.keep, fr = B.fresh, dump = kp >= 0 ? hk(KIT.mag.dump) : pouch;   // (KIT: a magazine with rounds in it goes to the dump pouch on the hip before the hand goes for a fresh one)
+    const p = curve3(t, [[0, cur], [Math.max(0.1, o - 0.2), mag], [o, mag], [o + 0.12, strip], ...(kp >= 0 ? [[(o + 0.05 + kp) * 0.5, hk(KIT.mag.via)], [kp - 0.07, dump], [kp + 0.05, dump], [fr, pouch], [fr + 0.1, pouch]] : [[hp, pouch], [hp + 0.12, pouch]]) as [number, Vec3][],
       ...(fum ? [[Math.max(hp + 0.13, i - 0.3), hit], [i - 0.14, off]] : [[i - 0.16, strip]]) as [number, Vec3][], [i, mag], [i + 0.08, mag],   // (the max: rlBeat's floor in_ − out ≥ 0.6 alone leaves the lip key 0.02 s before the pouch's; the shipped rows have a second between them and never reach it)
       ...(B.pull ? [...(fum && r - i >= 0.4 ? [[i + 0.17, tapP], [i + 0.25, mag]] : []), [r - 0.1, hd], [r, hd], [r + 0.08, pl], [r + 0.17, over]] : [[i + 0.42, cur]]) as [number, Vec3][], [D - 0.03, cur]]);
     // the hand: round the magazine from its front (fingers across it, palm toward him), fingers down into the pouch, hooked on the handle
@@ -3118,6 +3147,37 @@ export class CharacterAnimator {
     if (v3.len(want) > 1e-4 && v3.len(cur) > 1e-4) { const wn = v3.normalize(want), cn = v3.normalize(cur); D = quat.mul(quat.axisAngle(gd, Math.atan2(v3.dot(v3.cross(cn, wn), gd), v3.dot(cn, wn))), D); }
     return D;
   }
+  /** which row of LONG_RELOAD this gun's carry takes (`reloadBack` is the second movement pass's input: nobody's with that pass off) */
+  private rlRow() { return this.reloadBack && MOVES.on > 0.5 ? LONG_RELOAD.back : LONG_RELOAD.box; }
+  /** the carriage's channels as they are posed: the springs' own — or, while a reload carry is up (GUN HAND), those with its share of LONG_RELOAD taken */
+  private lgChannels(): readonly { x: number }[] { const C = this.rlc; return (C.k > 0 || C.h > 0) && C.ch ? C.ch : this.lg.ch; }
+  /** GUN HAND (`longReload`), once a frame after the carriage's springs: how much of the reload carry (LONG_RELOAD) the long gun shows, and the channels with it
+   *  taken. The clock is the one the magazine change runs on (mvArms): the game's own where it deals one (a guard's beat, a room-fight teammate's — reloadAt), else
+   *  reload()'s beat. Up over the beat's first `in` seconds, down by its end: the gun is on its carriage again before a round can leave it. A low carriage pulled in for
+   *  a wall (gunWall) keeps to its tuck — the muzzle stays out of the plaster, the hands do the change there. Nothing with the switch off. */
+  private reloadCarry(dt: number, want: LongStance) {
+    const C = this.rlc, S = this.rlShown;
+    if (!(GUNHAND.on && GUNHAND.longReload)) { C.k = C.h = S.carry = S.head = 0; return; }
+    const R = LONG_RELOAD, B = this.rlB; let t = -1, D = 0, out = B.out, in_ = B.in_;
+    if (this.longGun) {
+      if (MOVES.on > 0.5) {   // (the hand's own clock, as mvArms picks it — which runs after this and moves rlT on: both read this frame's)
+        if (this.reloadAt >= 0 && this.reloadRow) { t = this.reloadAt; D = Math.max(0.3, this.reloadRow.dur); }
+        else if (this.rlT >= 0) { t = this.rlT; D = B.dur; }
+      } else if (this.reloadT >= 0) { D = this.reloadDur; t = this.reloadT * (D / this.clips.Pistol_Reload.duration); out = D * 0.27; in_ = D * 0.65; }   // (no movement pass, no hand, nothing of a beat read: the clip's clock, which runs on under the carry, and rlBeat's own shares of it)
+    }
+    const tuck = want === 'lowLong' || want === 'patrolLong' ? clamp(this.gunWall, 0, 1) : 0;
+    const kT = t >= 0 ? bump(t, 0, R.in, D - R.end - R.out, D - R.end) * (1 - tuck) : 0;
+    const hT = t >= 0 ? bump(t, Math.max(0, out - R.headIn), Math.max(0.05, out - 0.05), Math.min(in_ + 0.1, D - R.end - R.headOut), Math.min(in_ + 0.1 + R.headOut, D - R.end)) : 0;
+    const step = Math.max(0, R.rate * dt); C.k += clamp(kT - C.k, -step, step); C.h += clamp(hT - C.h, -step, step);
+    S.carry = C.k; S.head = C.h;
+    if (C.k > 0 || C.h > 0) {
+      const ch = this.lg.ch, X = (C.ch ??= Array.from({ length: LC.count }, () => ({ x: 0 }))), G = this.rlRow();
+      for (let i = 0; i < LC.count; i++) X[i].x = ch[i].x;
+      const to = (i: number, v: number, w: number) => { X[i].x += (v - X[i].x) * w; };
+      to(LC.pitch, G.pitch, C.k); to(LC.aimK, G.aimK, C.k); to(LC.yaw, G.yaw, C.k);   // (the hand's point itself is longArms': off the chest joint, clear of the carriage's anchor and its steadied line)
+      to(LC.headYaw, R.head.yaw, C.h); to(LC.headPitch, R.head.pitch, C.h); to(LC.headRoll, R.head.roll, C.h);
+    }
+  }
   /** The long gun, trunk half (weight w): the upper spine bladed toward the gun and taken back out at the neck, a lean spread hips-first with the head levelled out of
    *  it, and the head set to the stock — the carriage channels' current values (LONG), straight into pA. Runs before longArms so the shoulders are where the arms
    *  will be solved from. `run` (the pose's jog + sprint share, the carry pass only): a figure that steadies its long gun (longSteady) first has the run clip's pumping
@@ -3126,7 +3186,7 @@ export class CharacterAnimator {
    *  much the twist is measured and taken out about the trunk's own line instead of the model's upright (MOVES.steadyRun) — at 0, every jog, the hold as it was. */
   private longBody(w: number, run = 0, sprint = 0) {
     if (w < 0.003) return;
-    const pA = this.pA, nd = this.nodes, ch = this.lg.ch;
+    const pA = this.pA, nd = this.nodes, ch = this.lgChannels();
     const hold = run * clamp(this.longSteady, 0, 1) * LONG_STEADY.runYaw * w;
     if (hold > 0.003) {
       this.fkPart(pA, this.fkArms); const fk = this.fk; const a = fk.pos[nd.upperArmL], b = fk.pos[nd.upperArmR];
@@ -3163,7 +3223,7 @@ export class CharacterAnimator {
    *  set and grips, blended in through the arms mask — or, on the pass after the aim clip (yieldDoor), arm by arm short of whatever a hand on a door still holds. */
   private longArms(w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
     if (w < 0.003) return;
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ch = this.lg.ch, t = this.idleT, G = this.longGrip;
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ch = this.lgChannels(), t = this.idleT, G = this.longGrip;
     pB.copy(pA); blendPose(pB, this.pAim, 1, this.armsMask, pB);   // current body, the aim clip's clavicles / trigger grip / fingers to start from
     this.fkPart(pB, this.fkArms);   // (chest joint + the arms: all that is read before solve()'s first twoBoneIK runs the whole skeleton)
     const chest = v3.copy(fk.pos[nd.spine3]);
@@ -3202,6 +3262,7 @@ export class CharacterAnimator {
       const iso = clamp(ch[LC.steady].x, 0, 1) * clamp(this.longSteady, 0, 1);
       if (iso > 1e-3) anchor[0] = lerp(anchor[0], l1, iso); }
     const off: Vec3 = [anchor[0] - chest[0] + ch[LC.side].x + 0.004 * sway * Math.sin(t * 1.3 + 0.6), anchor[1] - chest[1] + ch[LC.up].x + 0.003 * sway * Math.sin(t * 2.1), anchor[2] - chest[2] + ch[LC.fwd].x - pump];   // (chest-relative from here on)
+    if (this.rlc.k > 0) { const k = this.rlc.k, at = this.rlRow().at; off[0] += (at[0] - off[0]) * k; off[1] += (at[1] - off[1]) * k; off[2] += (at[2] - off[2]) * k; }   // (GUN HAND: the reload carry's own point)
     { const py = lerp(LONG_PIVOT[1], anchor[1] - chest[1], kA), pz = lerp(LONG_PIVOT[2], anchor[2] - chest[2], kA);   // the swing's pivot: between the shoulders … the gun shoulder itself
       const th = this.aimPitch * ch[LC.aimK].x, ry = off[1] - py, rz = off[2] - pz;                       // about it: up with the muzzle raised, down and back with it lowered
       off[1] = py + ry * Math.cos(th) + rz * Math.sin(th); off[2] = pz - ry * Math.sin(th) + rz * Math.cos(th);

@@ -186,8 +186,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shotgun cross it; a shield's window lets the helmet 2.5 cm through at a crouched aim; a hammer between hands and back, and a teammate's rifle as it comes off (the big slot's own
   moves: MENDED since, the bullet 'stay in a hand on the way' below); a torch is beside the fist for the frames of the torch ↔ sidearm swap (the swap's reach for the belt is the animator's, game state, and goes to the torch's OLD place: the look-only
   pass draws the hand the 7.5 cm further out to where the torch now hangs — `anim.swapBelt`, check line 17: 1.4 cm from the old place, 1.7 cm from the new); through a long gun's
-  reload the TRIGGER hand and the body play the pistol's clip (the support arm does work the magazine change with the movement pass on: probes.ts `moves-reload`; with it off, the
-  frozen stand, it holds nothing); a defender threw overhand with the carbine in the throwing fist (MENDED since under its own switch: `GUNHAND.throwFree`,
+  reload the TRIGGER hand and the body played the pistol's clip (MENDED since under `GUNHAND.longReload`: `docs/agents/anim.md`, *A long gun reloads with a move of its own* —
+  with that switch off, the frozen stand, it is as it was); a defender threw overhand with the carbine in the throwing fist (MENDED since under its own switch: `GUNHAND.throwFree`,
   enemies.md 'A defender throws with his free hand' — IN HAND's long hold stays on the grip through that throw). THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
   word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; page line: `HALF=bench … inhand-page.cjs`), so a rig number fitted there is judged on
   the picture the game draws. The Team & kit figure (`src/ui/kitFigure.ts`) still draws without it. NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
