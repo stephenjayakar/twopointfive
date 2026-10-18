@@ -1100,3 +1100,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 22 lines on each stand (it raises the
   switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
   digest the same off and on with nobody dealt and the cards as issued.
+  MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
+  room-clear-four, depot-four, warehouse-four and killhouse-four over seeds 1 to 4, sixteen floors): taken 15 → 16, clean 6 → 8, wiped 3 → 3, men lost a
+  floor 1.88 → 2.06, seconds 97.0 → 96.1 — too few floors to call a move either way. Where the belt-fed gun shows is the depot's lane: rounds that hit Sam
+  on its four seeds 13, 2, 1, 0 before and 14, 24, 30, 0 after (god mode counts them; men lost 2.50 → 2.75). The solo night's soak (page's stand, seeds
+  1, 2, 3, twelve minutes): all pass, and its report is the same file as before but for the wall clock (no cast is dealt there). The tour on the frozen
+  stand: 3 of 3 before and after (it is red 0 of 3 on the page's stand before this change and after: old reds, not this rule's).
+  NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
+  looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
+  drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
