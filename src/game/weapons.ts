@@ -14,7 +14,7 @@ import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
 import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
 
-export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870';
+export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18';
 export type FireMode = 'semi' | 'auto' | 'burst';
 export type WeaponClass = 'pistol' | 'carbine' | 'rifle' | 'shotgun';
 /** what leaves a dying (or downed) hand that held it: a throwables.ts ItemKind (combat.ts dropFromHand) — 'rifle' has no body of its own until R2 gives it one */
@@ -45,9 +45,9 @@ export interface TracerSpec { every: number; lastN: number; color: Vec3; }
  *  a pellet does to a man is by the PATTERN, never by a count kept on him: inside `dropM` any one pellet of it puts him down (the whole charge is still a fist
  *  wide); past it he goes down only to `need` or more pellets of ONE shell, and a man caught by fewer is peppered — doubled over a second and a half, alert, on
  *  his feet (launcher.ts staggerGuard). Nothing is remembered from one shell to the next.
- *  `breach`: what the same shell does to a door's lock — `need` or more pellets into a latched leaf within `latchM` of its latch edge, from a muzzle within
+ *  `breach` (absent: nothing): what the same shell does to a door's lock — `need` or more pellets into a latched leaf within `latchM` of its latch edge, from a muzzle within
  *  `reachM` of where they land, and the keep is gone and the leaf goes in (doors.ts kickIn: a steel door rings and holds, as it does under a boot). */
-export interface PelletSpec { n: number; cone: number; dropM: number; need: number; breach: { reachM: number; latchM: number; need: number }; }
+export interface PelletSpec { n: number; cone: number; dropM: number; need: number; breach?: { reachM: number; latchM: number; need: number }; }   // (no `breach`: a shell of it opens no lock, and the man who carries it is nobody's door breacher — the M1014)
 
 export interface WeaponDef {
   id: WeaponId;
@@ -100,6 +100,14 @@ export interface WeaponDef {
   tracer: TracerSpec | null;
   /** a shotgun: every pull is a shell of this many pellets (PelletSpec) — absent: a single round */
   pellets?: PelletSpec;
+  /** YOUR hands on a long gun (player.ts rifleSpread): what this row does to RIFLE_SPREAD's cone standing still, on the move, and crouched (× the common
+   *  crouch factor) — absent: 1 each, the FN2000's own hands. The reach a gun has in your hands; a teammate's and a defender's is `aiSpread`. */
+  hands?: { still: number; moving: number; crouch?: number };
+  /** false: nothing rides under its barrel (Rifle: no ring launcher, no 40 mm, no camera tube) — absent: the FN2000's launcher, as every long gun of yours had */
+  launcher?: false;
+  /** what it weighs loaded, kilograms, and how much of it there is to hide and to get through a door with (0 a pistol … 4 a belt-fed gun): DATA for the kit's
+   *  mobility and concealment score — nothing in this file reads them */
+  weightKg: number; bulk: number;
 }
 
 /** The service-pistol spread every guard's hands have had since the first firefight (combat.ts fireWeapon's old literal line): 0.05 + min(0.06, v·0.014) + max(0, range − 8)·0.006. */
@@ -118,6 +126,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     modes: ['semi'], cd: 0.22, cdJitter: 0, burst: null, auto: null,
     report: { level: 0.6, loud: false, voice: 'pistolSuppressed' }, suppressed: true, muzzleFx: 'pistolSuppressed', propImpulse: 4,   // (level < 1: an odd noise nearby — a look, suspicion — never 'that was a shot' (guards.ts hearingCheck); the FN2000 keeps level 1: a 5.56, suppressed or not, is unmistakable. Tab ▸ Sandbox has the sliders)
     aiSpread: AI_PISTOL_SPREAD, damage: 'oneShot', muzzleAhead: 0.26, rig: 'pistol', light: 'rail', drop: 'pistol', tracer: null,
+    weightKg: 0.9, bulk: 0,
   },
   // The guards' 9 mm — was never modelled at all: Guard.shots counted to 12 and reloadT counted 1.7 s down (guards.ts, both fire sites), the alert branch drew
   // 0.55–1.05 s between rounds, fireWeapon took the loud branch of every `isPlayer ?` (the big bright card, full light, 'pistolLoud', 'guardShot', 6 N·s) and its
@@ -128,6 +137,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     modes: ['semi'], cd: 0.55, cdJitter: 0.5, burst: null, auto: null,
     report: { level: 1, loud: true, voice: 'pistolLoud' }, suppressed: false, muzzleFx: 'pistolBare', propImpulse: 6,
     aiSpread: AI_PISTOL_SPREAD, damage: 'oneShot', muzzleAhead: 0.26, rig: 'guardPistol', light: 'rail', drop: 'pistol', tracer: null,
+    weightKg: 0.95, bulk: 0,
   },
   // AKS-74U-pattern carbine (5.45×39, 206 mm barrel): the guards' long gun (docs/internal/sc20k-design.md §3), dealt over a man's sidearm row by game.ts
   // tune.carbineGuards ('none' by default: nobody carries it and the floor is exactly what it was). 600 rpm so each flash owns its frames; 2–4 round bursts
@@ -143,6 +153,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 6,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle',
     tracer: { every: 3, lastN: 3, color: [1.0, 0.42, 0.12] },
+    weightKg: 3.0, bulk: 2,
   },
   // Sam's FN2000 (5.56 bullpup, integrally suppressed — "okay if it's not materially louder than the pistol", per the maintainer and per canon; docs/internal/
   // sc20k-design.md §5, lane R5): 30+1 topped up like the Five-seveN and two spare thirties he manages the same way (the empty clatters down out of the well behind
@@ -161,6 +172,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'rifleSuppressed' }, suppressed: true, muzzleFx: 'sc20k', propImpulse: 5,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.52, rig: 'sc20k', light: 'handguard', drop: 'rifle', tracer: null,
     handling: 0.8,   // (a bullpup: a rifle's weight held in close — it comes round nearly like the carbine)
+    weightKg: 3.9, bulk: 2,
   },
   // The squad's breaching shotgun (gear, 10-08: a Remington 870-pattern pump, short barrel, stand-off muzzle device) — a row a teammate's loadout card hands him
   // in place of his rifle (kit.ts 'shotgun') and that you may bring in place of the FN2000 (kit slot 2, the same keys). Six in the tube and one up the pipe, a
@@ -177,6 +189,79 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 2,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle', tracer: null,
     pellets: { n: 9, cone: 0.06, dropM: 8, need: 4, breach: { reachM: 2, latchM: 0.5, need: 4 } },
+    weightKg: 3.4, bulk: 3,
+  },
+  // ---- THE GUNS A CARD'S TWO SLOTS OFFER BESIDE THE ISSUE PAIR (gunslots.ts PICKS; the maintainer, 10-18: "should we model more firearms?"). Each is set apart
+  // by something felt in play — reach, who hears it, how it comes round, how long it runs and how long it takes to feed — and NEVER by what a round does to a
+  // man (damage 'oneShot', every row). Nothing constructs one unless a card picks it. Every one of them is drawn and heard as a gun the game already has (its
+  // rig, voice and muzzleFx name the stand-in): a model, a report and a reload of its own are owed to each. UNTUNED: nobody has fired one on a GPU.
+  // Mk 12 SPR-pattern (5.56, the long barrel, a can, a magnified sight): REACH. Semi only and a slower cadence, twenty to a magazine, tight in the hands
+  // standing still (hands.still) and in a teammate's (aiSpread: half the carbine's base, the fall-off starting twice as far out) — and it comes round like the
+  // long thing it is (handling 0.62), opens up badly on the move, and has nothing under its barrel.
+  mk12: {
+    id: 'mk12', enabled: true, name: 'Mk 12 SPR (suppressed)', short: 'Mk 12', calibre: '5.56×45 mm', cls: 'rifle',
+    magCapacity: 20, spareMags: 3, topUp: true, reload: { dur: 2.6, out: 0.55, in_: 1.65, rack: 2.2 },
+    modes: ['semi'], cd: 0.3, cdJitter: 0.15, burst: null, auto: null,
+    report: { level: 1, loud: true, voice: 'rifleSuppressed' }, suppressed: true, muzzleFx: 'sc20k', propImpulse: 5,
+    aiSpread: { base: 0.018, moveK: 0.02, moveCap: 0.08, rangeFrom: 16, rangeK: 0.003 }, damage: 'oneShot', muzzleAhead: 0.52, rig: 'sc20k', light: 'handguard', drop: 'rifle', tracer: null,
+    handling: 0.62, hands: { still: 0.45, moving: 1.4 }, launcher: false, weightKg: 5.0, bulk: 3,
+  },
+  // MP7-pattern (4.6×30, a can): QUIET AND QUICK. The one long gun the floor does not hear as gunfire (level 0.8: an odd noise, heard a third farther off than
+  // the suppressed pistol's 0.6), forty to a magazine at 900 a minute, in the hands like a pistol (handling 0.95) and the steadiest thing there is on the move
+  // — and past a room's length its group is gone (hands.still 1.6; aiSpread opens from 7 m at twice the carbine's rate). Nothing under its barrel.
+  mp7: {
+    id: 'mp7', enabled: true, name: 'MP7A1 (suppressed)', short: 'MP7', calibre: '4.6×30 mm', cls: 'carbine',
+    magCapacity: 40, spareMags: 3, topUp: true, reload: { dur: 2.0, out: 0.4, in_: 1.25, rack: 1.65 },
+    modes: ['auto', 'semi'], cd: 0.12, cdJitter: 0, burst: { min: 2, max: 4, interval: 4 / 60, gapMin: 0.5, gapMax: 0.9, spreadPerRound: 0.02, spreadCap: 0.12 }, auto: { interval: 4 / 60, spreadPerRound: 0.008, spreadCap: 0.07, resetAfter: 0.25 },
+    report: { level: 0.8, loud: false, voice: 'pistolSuppressed' }, suppressed: true, muzzleFx: 'pistolSuppressed', propImpulse: 3,
+    aiSpread: { base: 0.045, moveK: 0.008, moveCap: 0.03, rangeFrom: 7, rangeK: 0.012 }, damage: 'oneShot', muzzleAhead: 0.40, rig: 'sc20k', light: 'handguard', drop: 'rifle', tracer: null,
+    handling: 0.95, hands: { still: 1.6, moving: 0.7 }, launcher: false, weightKg: 2.3, bulk: 1,
+  },
+  // Mk 46-pattern light machine gun (5.56, a hundred on the belt): VOLUME. It runs three times as long as a magazine and a string of it barely opens — a lane
+  // held, heads kept down (suppression.ts counts its rounds like any) — and everything else about it is the price: half a pistol's turn (handling 0.5), a wide
+  // cone on the feet that only closes kneeling (hands.crouch), six seconds standing there with the feed cover up, one spare belt, bare and loud with a red
+  // tracer every fifth round, no launcher.
+  mk46: {
+    id: 'mk46', enabled: true, name: 'Mk 46 light machine gun', short: 'Mk 46', calibre: '5.56×45 mm', cls: 'rifle',
+    magCapacity: 100, spareMags: 1, topUp: true, reload: { dur: 6.0, out: 1.2, in_: 4.4, rack: 5.4 },
+    modes: ['auto'], cd: 5 / 60, cdJitter: 0, burst: { min: 5, max: 9, interval: 5 / 60, gapMin: 0.5, gapMax: 1.0, spreadPerRound: 0.012, spreadCap: 0.14 }, auto: { interval: 5 / 60, spreadPerRound: 0.004, spreadCap: 0.06, resetAfter: 0.3 },
+    report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 6,
+    aiSpread: { base: 0.05, moveK: 0.03, moveCap: 0.12, rangeFrom: 10, rangeK: 0.004 }, damage: 'oneShot', muzzleAhead: 0.52, rig: 'sc20k', light: 'none', drop: 'rifle',
+    tracer: { every: 5, lastN: 0, color: [1.0, 0.25, 0.12] },
+    handling: 0.5, hands: { still: 1.5, moving: 2.4, crouch: 0.5 }, launcher: false, weightKg: 8.0, bulk: 4,
+  },
+  // M1014-pattern (a gas-operated 12 gauge): THE ROOM. A fighting shotgun, not the big slot's door tool — seven in the tube as fast as the trigger is pulled
+  // (0.28 s where the pump takes 0.9), a tighter pattern that carries a man's end two metres farther (dropM 10) — and it opens no lock (no `breach`: the
+  // door tools never pick its man for the gun), feeds a shell at a time, is loud, and past the yard's width is a peppering.
+  m1014: {
+    id: 'm1014', enabled: true, name: 'M1014 shotgun', short: 'M1014', calibre: '12 gauge', cls: 'shotgun',
+    magCapacity: 7, spareMags: 3, topUp: true, reload: { dur: 3.6, out: 0.4, in_: 2.9, rack: 3.3 },
+    modes: ['semi'], cd: 0.28, cdJitter: 0.1, burst: null, auto: null,
+    report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 2,
+    aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle', tracer: null,
+    pellets: { n: 9, cone: 0.045, dropM: 10, need: 4 },
+    handling: 0.72, launcher: false, weightKg: 3.9, bulk: 3,
+  },
+  // HK45-pattern (.45, subsonic, a can): THE QUIETEST GUN. Heard three quarters as far as the issue pistol (level 0.45 against 0.6) — and eight to a magazine
+  // where that holds ten or fifteen, a slower hand between rounds.
+  hk45: {
+    id: 'hk45', enabled: true, name: 'HK45 (suppressed)', short: 'HK45', calibre: '.45 ACP', cls: 'pistol',
+    magCapacity: 8, spareMags: 3, topUp: true, reload: { dur: 1.7, out: 0.4, in_: 1.1, rack: 1.45 },
+    modes: ['semi'], cd: 0.3, cdJitter: 0, burst: null, auto: null,
+    report: { level: 0.45, loud: false, voice: 'pistolSuppressed' }, suppressed: true, muzzleFx: 'pistolSuppressed', propImpulse: 5,
+    aiSpread: AI_PISTOL_SPREAD, damage: 'oneShot', muzzleAhead: 0.26, rig: 'pistol', light: 'rail', drop: 'pistol', tracer: null,
+    weightKg: 1.2, bulk: 0,
+  },
+  // Glock 18-pattern (9 mm, the long magazine, no can): A FIGHT IN THE HOLSTER. Thirty-three rounds at 1200 a minute under a held trigger — the sidearm that
+  // finishes a room when the long gun is dry — and it is loud like any bare gun, climbs fast (the string's cone is twice the carbine's), and gives up
+  // everything the suppressed pistol is for.
+  g18: {
+    id: 'g18', enabled: true, name: 'Glock 18', short: 'Glock 18', calibre: '9×19 mm', cls: 'pistol',
+    magCapacity: 33, spareMags: 2, topUp: true, reload: { dur: 1.8, out: 0.4, in_: 1.15, rack: 1.5 },
+    modes: ['auto', 'semi'], cd: 0.2, cdJitter: 0, burst: { min: 3, max: 5, interval: 3 / 60, gapMin: 0.5, gapMax: 0.9, spreadPerRound: 0.03, spreadCap: 0.18 }, auto: { interval: 3 / 60, spreadPerRound: 0.02, spreadCap: 0.16, resetAfter: 0.25 },
+    report: { level: 1, loud: true, voice: 'pistolLoud' }, suppressed: false, muzzleFx: 'pistolBare', propImpulse: 6,
+    aiSpread: { ...AI_PISTOL_SPREAD, base: 0.06 }, damage: 'oneShot', muzzleAhead: 0.26, rig: 'guardPistol', light: 'rail', drop: 'pistol', tracer: null,
+    weightKg: 1.0, bulk: 0,
   },
   // ---- switched off: rows from the design (§2 / §3), nothing constructs them. Each names what its lane still owes it. ----
   // AK-74M-pattern rifle (415 mm barrel, brake): tighter, a smaller flash than the shorty (doc: light gain 1.1 — its own muzzleFx block when a setting wants it).
@@ -187,6 +272,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine' /* stand-in: doc gain 1.1 */, propImpulse: 6,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.03 }, damage: 'oneShot', muzzleAhead: 0.66, rig: 'carbine', light: 'handguard', drop: 'rifle',
     tracer: { every: 3, lastN: 3, color: [1.0, 0.42, 0.12] },
+    weightKg: 3.6, bulk: 3,
   },
   // AKMS-pattern (7.62×39): heavier report ('carbineHeavy'), looser, opens faster. Same debts.
   akms: {
@@ -195,6 +281,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     modes: ['auto', 'semi'], cd: 0.1, cdJitter: 0, burst: { min: 2, max: 3, interval: 0.1, gapMin: 0.9, gapMax: 1.6, spreadPerRound: 0.04, spreadCap: 0.16 }, auto: null,
     report: { level: 1, loud: true, voice: 'carbineHeavy' }, suppressed: false, muzzleFx: 'pistolBare' /* stand-in: doc gain 1.3 */, propImpulse: 6,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.04 }, damage: 'oneShot', muzzleAhead: 0.62, rig: 'carbine', light: 'none', drop: 'rifle', tracer: null,
+    weightKg: 3.5, bulk: 3,
   },
 };
 
@@ -331,7 +418,7 @@ export class Firearm {
 /** Sam's sidearm: the Five-seveN row plus the rail light's switch (L). Every `pl.pistol.*` site reads this. */
 export class Pistol extends Firearm {
   lightOn = false;
-  constructor() { super(WEAPONS.fiveseven); }
+  constructor(def: WeaponDef = WEAPONS.fiveseven) { super(def); }   // (gunslots.ts: the sidearm your card's secondary slot picks)
 }
 
 /** What rides under the FN2000's fore-end for the RIGHT button to fire (the left always fires rounds): the launcher's loads — the ring airfoil and the 40 mm
@@ -351,7 +438,7 @@ export class Rifle extends Firearm {
   shells = LAUNCHER40.rounds;
   /** sticky cameras left for the tube (stickycam.ts: 0 on every rifle until stickyIssue hands him some — and then 'cam' is the third load 2 steps to) */
   cams = 0;
-  constructor(def: WeaponDef = WEAPONS.fn2000) { super(def); if (def.pellets) { this.attachments.length = 0; this.attIdx = -1; this.rings = 0; this.shells = 0; } }   // (the breaching shotgun in the rifle's slot — kit.ts: no launcher under its barrel)
+  constructor(def: WeaponDef = WEAPONS.fn2000) { super(def); if (def.pellets || def.launcher === false) { this.attachments.length = 0; this.attIdx = -1; this.rings = 0; this.shells = 0; } }   // (the breaching shotgun in the rifle's slot — kit.ts: no launcher under its barrel)
   /** the attachment the right button fires now (null: nothing under this barrel) */
   get attachment(): RifleAttachment | null { return this.attIdx >= 0 ? this.attachments[this.attIdx] ?? null : null; }
   /** rounds left of an attachment */

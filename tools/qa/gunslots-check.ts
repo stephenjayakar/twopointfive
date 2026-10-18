@@ -12,7 +12,10 @@ import { rig } from './doortools-probes.ts';
 
 const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
-const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
+const { WEAPONS, Rifle, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
+const { rifleSpread } = await import(`${ROOT}/src/game/player.ts`);
+const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
+const { hearPath } = await import(`${ROOT}/src/game/weather.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -149,9 +152,99 @@ export async function gunslotsOff(): Promise<boolean> {
   return F.done();
 }
 
+// ───────────────────────────────────────────────────────────── guns
+/** the row a pick is in your hands / a teammate's with his suppressor on */
+const rowOfPick = (id: string) => (WEAPONS as any)[(K.kitGun({ ...K.kitDefault(1), weapon: gunPicks('primary').includes(id) ? 'rifle' : 'pistol', primary: gunPicks('primary').includes(id) ? id : 'mk18', secondary: gunPicks('secondary').includes(id) ? id : 'g19', suppressed: true }))];
+export async function gunslotsGuns(): Promise<boolean> {
+  const F = family('gunslots-guns: more guns, each set apart by something measured');
+  await kept(async () => {
+    raise(!BREAK); K.KIT.on = true;
+    const longs = gunPicks('primary').filter((p: string) => p !== 'none'), sides = gunPicks('secondary');
+    F.verdict(longs.length >= 5 && sides.length >= 3, 'the two rows offer a handful of guns each', `primary: ${longs.join(' ')} (or none) · secondary: ${sides.join(' ')}`);
+    if (longs.length < 5 || sides.length < 3) return;
+    const D = Object.fromEntries([...longs, ...sides].map((id: string) => [id, rowOfPick(id)])) as Record<string, any>;
+    // every pick: on a teammate's card he is staged with it and his sidearm; on yours the Player carries the two rows
+    { const R: any = await hushed(() => rig(17, { stage: false })); raise(!BREAK); const g = R.game; const at = g.player.char.pos, bad: string[] = [], seen: string[] = [];
+      const ops = [0, 1].map(k => spawnUnit(g, { team: 'operative', pos: [at[0] + 1 + k, 0, at[2] + 1], yaw: 0, name: `Op${k}`, light: false }));
+      for (const id of longs) for (const side of sides) {
+        K.KIT.members[1] = K.kitDefault(1); const a = K.kitSet(1, 'primary', id), b = K.kitSet(1, 'secondary', side); K.kitStage(g, ops);
+        const gd: any = ops[0], want = D[id].id, wantSide = (WEAPONS as any)[K.kitSide(K.KIT.members[1])]?.id;
+        if (!a || !b || gd.weapon.def.id !== want || gd.second?.id !== wantSide || gd.route.weapon !== want) bad.push(`${id}+${side}: ${gd.weapon.def.id}+${gd.second?.id}`); else if (side === sides[0]) seen.push(`${id}→${want}`);
+      }
+      K.KIT.members[1] = K.kitDefault(1);
+      F.verdict(!bad.length, 'every primary with every secondary: a teammate is staged with that gun in his hands and that sidearm behind it', bad.length ? bad.join(' · ') : seen.join(' · '));
+      const mine: string[] = [], wrong: string[] = [];
+      for (const id of longs) { const side = sides[longs.indexOf(id) % sides.length]; K.KIT.members[0] = K.kitDefault(0); K.kitSet(0, 'primary', id); K.kitSet(0, 'secondary', side); K.kitPlayer(g);
+        const pl = g.player, tube = pl.rifle.attachments.length > 0; (pl.hasRifle && pl.rifle.def.id === D[id].id && pl.pistol.def.id === D[side].id && tube === (D[id].launcher !== false && !D[id].pellets) ? mine : wrong).push(`${id}+${side}: ${pl.rifle.def.id}+${pl.pistol.def.id}${tube ? ' (launcher)' : ''}`); }
+      K.KIT.members[0] = K.kitDefault(0); K.kitPlayer(g);
+      const backTo = `${g.player.rifle.def.id}+${g.player.pistol.def.id}`;
+      F.verdict(!wrong.length && mine.filter(x => x.includes('(launcher)')).length === 1 && backTo === `${D[longs[0]].id}+${D[sides[0]].id}`, 'your card: slot 2 is the primary you picked and slot 1 the secondary; only the issue carbine has the launcher under it; the card as issued again is the pair you were built with', `${[...mine, ...wrong.map(x => 'WRONG ' + x)].join(' · ')} · as issued: ${backTo}`);
+      // REACH — your hands (the cone standing still, as a group's radius at 25 m) and a teammate's (the row's own spread at 25 m, his man standing)
+      const pl = g.player, was = pl.rifle, crouch = pl.crouch; pl.crouch = false;
+      const hands = Object.fromEntries(longs.filter((id: string) => !D[id].pellets).map((id: string) => { pl.rifle = new Rifle(D[id]); const still = rifleSpread(g, 0) * 25, moving = rifleSpread(g, 3) * 25; pl.crouch = true; const knelt = rifleSpread(g, 0) * 25; pl.crouch = false; return [id, { still, moving, knelt }]; })) as Record<string, { still: number; moving: number; knelt: number }>;
+      pl.rifle = was; pl.crouch = crouch;
+      const ai = (id: string, m: number) => { const A = D[id].aiSpread; return (A.base + Math.max(0, m - A.rangeFrom) * A.rangeK) * m; };
+      F.verdict(hands.mk12.still < hands.mk18.still * 0.6 && hands.mp7.still > hands.mk18.still * 1.3 && hands.mp7.moving < hands.mk18.moving && hands.mk46.moving > hands.mk18.moving * 2 && hands.mk46.knelt < hands.mk46.still * 0.5 && ai('mk12', 25) < ai('mk18', 25) * 0.6 && ai('mp7', 25) > ai('mk18', 25) * 1.5 && ai('mp7', 5) < ai('mk18', 5) * 1.5,
+        'REACH: at 25 m the Mk 12 holds a group well under the carbine\'s, in your hands and a teammate\'s; the MP7\'s is gone at that range but it is the steadiest on the move; the Mk 46 is wide on the feet and closes kneeling',
+        `your group at 25 m, still / moving / knelt (m): ${Object.entries(hands).map(([id, h]) => `${id} ${f2(h.still)} / ${f2(h.moving)} / ${f2(h.knelt)}`).join(' · ')}\n    a teammate's at 25 m (m): ${longs.filter((id: string) => !D[id].pellets).map((id: string) => `${id} ${f2(ai(id, 25))}`).join(' · ')}`);
+    }
+    // WHO HEARS IT — one round from your hands, a listener every metre down a clear line: the farthest one it turned, and whether the floor took it for gunfire
+    { const heard: Record<string, { far: number; gunfire: boolean }> = {}; let line = '';
+      for (const id of [...sides, ...longs]) {
+        const R: any = await hushed(() => rig(17, { stage: false })); raise(!BREAK); const g = R.game; g.guards.length = 0; const at = g.player.char.pos;
+        let dir: [number, number] | null = null; for (let k = 0; k < 16 && !dir; k++) { const a = k * Math.PI / 8, u: [number, number] = [Math.cos(a), Math.sin(a)]; if ([5, 8, 11].every(m => hearPath(g, [at[0], 1, at[2]], [at[0] + u[0] * m, 1.5, at[2] + u[1] * m]).direct)) dir = u; }
+        if (!dir) { F.verdict(false, 'a clear line of eleven metres from where you stand', 'none found on this floor'); return; }
+        const M = [5, 6, 7, 8, 9, 10, 11], ls = M.map((m, k) => spawnUnit(g, { team: 'guard', pos: [at[0] + dir![0] * m, 0, at[2] + dir![1] * m], yaw: Math.atan2(dir![0], dir![1]), name: `L${k}`, light: false }));
+        for (let i = 0; i < 5; i++) R.step();
+        fireWeapon(g, g.player.char, [at[0] - dir[0] * 10, 1.2, at[2] - dir[1] * 10], true, { weapon: D[id] });
+        for (let i = 0; i < 30; i++) R.step();
+        const turned = M.filter((_, k) => (ls[k] as any).witness.heard.small > 0 || (ls[k] as any).witness.heard.shots > 0);
+        heard[id] = { far: turned.length ? Math.max(...turned) : 0, gunfire: ls.some((l: any) => l.witness.heard.shots > 0) }; line = `along ${dir.map(f2).join(',')}`;
+      }
+      // … and the same round from a TEAMMATE's gun beside you (GUNSLOTS.heard): the same heads turn; with that off, as it always was, nobody's
+      const mate = async (on: boolean) => { const R: any = await hushed(() => rig(17, { stage: false })); raise(!BREAK); GUNSLOTS.heard = on; const g = R.game; g.guards.length = 0; const at = g.player.char.pos;
+        let dir: [number, number] | null = null; for (let k = 0; k < 16 && !dir; k++) { const a = k * Math.PI / 8, u: [number, number] = [Math.cos(a), Math.sin(a)]; if ([5, 8, 11].every(m => hearPath(g, [at[0], 1, at[2]], [at[0] + u[0] * m, 1.5, at[2] + u[1] * m]).direct)) dir = u; }
+        if (!dir) return -1;
+        const op = spawnUnit(g, { team: 'operative', pos: [at[0], 0, at[2]], yaw: 0, name: 'Archer', light: false }), o = (op as any).char.pos;
+        const M = [6, 8, 9, 10, 11], ls = M.map((m, k) => spawnUnit(g, { team: 'hostile', pos: [o[0] + dir![0] * m, 0, o[2] + dir![1] * m], yaw: Math.atan2(dir![0], dir![1]), name: `L${k}`, light: false }));
+        for (let i = 0; i < 5; i++) R.step();
+        fireWeapon(g, (op as any).char, [o[0] - dir[0] * 10, 1.2, o[2] - dir[1] * 10], false, { weapon: D.mp7 });
+        for (let i = 0; i < 30; i++) R.step();
+        const turned = M.filter((_, k) => (ls[k] as any).witness.heard.small > 0); return turned.length ? Math.max(...turned) : 0; };
+      const mateOn = await mate(true), mateOff = await mate(false); GUNSLOTS.heard = true;
+      F.verdict(mateOn === heard.mp7.far && mateOff === 0, 'a teammate\'s MP7 round beside you turns the same heads yours does; with that key off it reaches nobody, as a teammate\'s quiet round always had', `farthest listener turned by a teammate's round: ${mateOn} m (yours ${heard.mp7.far} m) · key off: ${mateOff} m`);
+      const quiet = ['hk45', 'g19', 'mp7'], loud = [...longs, ...sides].filter(id => !quiet.includes(id));
+      F.verdict(quiet.every(id => !heard[id].gunfire) && heard.hk45.far < heard.g19.far && heard.g19.far < heard.mp7.far && heard.mp7.far < 11 && loud.every(id => heard[id].gunfire && heard[id].far === 11),
+        'WHO HEARS IT: the HK45 turns the fewest heads, then the issue pistol, then the MP7 — none of the three is taken for gunfire; every other gun is, by every man on the line',
+        `farthest listener turned (m), ${line}: ${[...quiet, ...loud].map(id => `${id} ${heard[id].far}${heard[id].gunfire ? ' GUNFIRE' : ''}`).join(' · ')}`); }
+    // HOW IT COMES ROUND, HOW LONG IT RUNS, HOW LONG IT FEEDS — the row's own numbers, as the turn weight, the trigger and the reload read them
+    { const turn = (id: string) => handlingOf(D[id]), runs = (id: string) => { const d = D[id]; return { n: d.magCapacity + (d.topUp ? 1 : 0), secs: (d.magCapacity + (d.topUp ? 1 : 0)) * (d.auto ? d.auto.interval : d.cd), feed: d.reload.dur }; };
+      F.verdict(turn('mk46') < turn('mk12') && turn('mk12') < turn('m1014') && turn('m1014') < turn('mk18') && turn('mk18') < turn('mp7') && turn('mp7') < turn('g19') && runs('mk46').n >= 3 * runs('mk18').n && runs('mk46').feed > 2 * runs('mk18').feed && runs('g18').n > 2 * runs('g19').n && runs('hk45').n < runs('g19').n && D.m1014.cd < WEAPONS.m870.cd / 2 && D.mk12.modes.join() === 'semi' && D.g18.modes[0] === 'auto',
+        'IN THE HANDS: the Mk 46 comes round slowest and the MP7 nearly like a pistol; the Mk 46 runs three magazines\' worth and takes over twice as long to feed; the Glock 18 holds twice the issue pistol and the HK45 less; the M1014 cycles in under half the pump\'s time',
+        `turn weight (1 = a pistol): ${[...longs, ...sides].map(id => `${id} ${f2(turn(id))}`).join(' · ')}\n    rounds · seconds of trigger · reload: ${[...longs, ...sides].map(id => { const r = runs(id); return `${id} ${r.n} · ${f2(r.secs)} · ${f2(r.feed)}`; }).join(' | ')}`);
+      F.verdict(Object.values(WEAPONS).every((d: any) => d.damage === 'oneShot') && Object.values(D).every((d: any) => d.weightKg > 0 && d.bulk >= 0), 'never by hit points: every row\'s round does what every round does; each row says what it weighs and how bulky it is', Object.entries(D).map(([id, d]) => `${id} ${d.weightKg} kg / ${d.bulk}`).join(' · ')); }
+    // IN A FIGHT — two teammates with each primary (then each sidearm alone), three men five metres in front of them: the fight is finished with that gun
+    { const rows: string[] = []; let all = true;
+      for (const pick of [...longs.map((id: string) => ({ primary: id, secondary: sides[0], alone: false })), ...sides.map((id: string) => ({ primary: longs[0], secondary: id, alone: true }))]) {
+        const R: any = await hushed(() => rig(17, { stage: false })); raise(!BREAK); const g = R.game; K.KIT.on = true; g.guards.length = 0;
+        for (const i of [1, 2]) { K.KIT.members[i] = K.kitDefault(i); K.kitSet(i, 'primary', pick.alone ? 'none' : pick.primary); K.kitSet(i, 'secondary', pick.secondary); }
+        const ops = [spawnUnit(g, { team: 'operative', pos: [14.2, 0, 13.35], yaw: Math.PI / 2, name: 'Archer' }), spawnUnit(g, { team: 'operative', pos: [14.0, 0, 12.65], yaw: Math.PI / 2, name: 'Bishop' })];
+        K.kitStage(g, ops); const want = D[pick.alone ? pick.secondary : pick.primary].id;
+        const hos = [0, 1, 2].map(k => spawnUnit(g, { team: 'hostile', pos: [19.5 + 0.3 * k, 0, 12.2 + 0.5 * k], yaw: -Math.PI / 2, name: `H${k}`, light: false })); for (const h of hos) (h as any).hold = true;
+        let n = 0, shots = 0, other = 0, done = -1; const t0 = g.time;
+        for (let i = 0; i < 60 * 10 && done < 0; i++) { R.step(); for (; n < g.events.length; n++) { const e = g.events[n]; if (e.kind === 'guardShot' && ops.some((o: any) => o.char.id === e.who)) { if (e.weapon === want) shots++; else other++; } } if (hos.every((h: any) => h.state === 'dead')) done = g.time - t0; }
+        const ok = ops.every((o: any) => o.weapon.def.id === want || o.second?.out) && shots > 0 && done > 0; all &&= ok;
+        rows.push(`${pick.alone ? pick.secondary + ' alone' : pick.primary}: ${done > 0 ? f2(done) + ' s' : 'NOT FINISHED'}, ${shots} round${shots === 1 ? '' : 's'}${other ? ` (+${other} from the sidearm)` : ''}`);
+      }
+      for (const i of [1, 2]) K.KIT.members[i] = K.kitDefault(i);
+      F.verdict(all, 'IN A FIGHT: with each gun in their hands two teammates put three men down at five metres, and the rounds are that gun\'s', rows.join(' · ')); }
+  });
+  return F.done();
+}
+
 if (import.meta.main) {
-  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['card', gunslotsCard], ['mate', gunslotsMate], ['fight', gunslotsFight], ['off', gunslotsOff]];
-  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (card mate fight off)`); process.exit(2); }
+  const want = process.argv.slice(2); const all: [string, () => Promise<boolean>][] = [['card', gunslotsCard], ['mate', gunslotsMate], ['fight', gunslotsFight], ['guns', gunslotsGuns], ['off', gunslotsOff]];
+  const bad = want.filter(w => !all.some(([n]) => n === w)); if (bad.length) { console.error(`unknown: ${bad.join(' ')} (card mate fight guns off)`); process.exit(2); }
   let ok = true; for (const [n, fn] of all) if (!want.length || want.includes(n)) { try { ok = (await fn()) && ok; } catch (e) { ok = false; console.log(`- FAIL — gunslots-${n} threw\n    ${(e as Error).stack ?? (e as Error).message}`); } }
   console.log(`\n=== gunslots-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1);
 }

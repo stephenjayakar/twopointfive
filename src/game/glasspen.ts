@@ -64,7 +64,8 @@ export const GLASSPEN = {
      *  the same width, and round where the 9 mm is jacketed: it gets through ONE sheet of plain or toughened glass met near square-on (0.20 / 0.14 left of it:
      *  still a pellet beyond — past 56° off a plain pane's normal, 27° off a toughened one's, it is spent in the sheet), never a second standing one, and
      *  never a laminated sheet. The maintainer's call (rebuild/gear-and-glass/pellets.md): 0.22‥0.27 = plain glass only, 0.35 = two plain panes */
-    m870: 0.3 } as Record<string, number>,
+    m870: 0.3, m1014: 0.3,   // (the same shell out of the gas gun)
+    mp7: 0.6 /* (4.6 mm: a small fast round — the 5.7's) */ } as Record<string, number>,
   byClass: { rifle: 1.0, carbine: 0.9, pistol: 0.5 } as Record<string, number>,
   /** the energy a line-of-fire question assumes when it has no man's gun to ask (a station picked for 'whoever stands here'): the sidearm's */
   defaultEnergy: 0.5,
