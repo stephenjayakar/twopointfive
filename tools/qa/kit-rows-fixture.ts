@@ -3,6 +3,7 @@
 //   git worktree add /tmp/base a7ce1d6 && bun run tools/qa/kit-rows-fixture.ts /tmp/base '' 'a7ce1d6 (the one build before the pouches rule)' > tools/qa/fixtures/kit-rows-base.json
 //   bun run tools/qa/kit-rows-fixture.ts "$PWD" '?noslots'      (this tree with the rule off: the same JSON but for its "from" — and for a teammate's
 //                                                                Smoke canisters row, added since: pouch-table takes it out of its side. Never re-freeze the fixture from this tree.)
+// (That build's teammate also has a Shield row, out of the game since 10-18: pouch-table takes it out of the fixture's side. The file is that run word for word.)
 const root = process.argv[2] ?? process.cwd();
 const K = await import(`${root}/src/game/kit.ts`);
 K.kitLoad(null, process.argv[3] ?? ''); K.kitReset();

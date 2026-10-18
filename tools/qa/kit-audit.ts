@@ -15,7 +15,6 @@ import { cardWords, comesBare } from './kitdeal-check.ts';
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { squadChoices } = await import(`${ROOT}/src/game/loadout.ts`);
-const { SHIELD } = await import(`${ROOT}/src/game/shield.ts`);
 const { OFFICE_SCENARIOS } = await import(`${ROOT}/levels/office.scenarios.ts`) as { OFFICE_SCENARIOS: any };
 
 const DEAL = !process.argv.includes('--deal=off');
@@ -23,7 +22,7 @@ type Card = Record<string, any>;
 const MEN = ['You', 'Red One', 'Red Two', 'Blue One', 'Blue Two'];
 const line = (m: Card) => cardWords(m).replace(/ \+ /g, ', ').replace(/^nothing$/, '**nothing**');
 
-K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; SHIELD.on = false; K.kitLoad(null, '');   // (the page's stand for these rows: the pouches rule and the big slot on, the shield out)
+K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.kitLoad(null, '');   // (the page's stand for these rows: the pouches rule and the big slot on)
 const kits = K.kitLoadouts() as { id: string; name: string }[];
 const out: string[] = [];
 out.push(`# Who carries what`, '', `The squad's kit dealt over the men who come: **${DEAL ? 'on' : 'off'}**. Pouches are out of four a man; nobody is issued anything for his big slot.`, '');
@@ -41,8 +40,8 @@ K.kitTeam(1); K.kitLoadout('issued'); const partner = line(K.KIT.members[1]);   
 for (const s of ALL_MISSIONS as any[]) {
   const file = s.level ?? 'office.json', d = JSON.parse(readFileSync(resolve(ROOT, 'levels', file), 'utf8')), sc = d.scenarios ?? (file === 'office.json' ? OFFICE_SCENARIOS : {}), rc = sc.roomClear ?? {}, doors: any[] = d.doors ?? [];   // (the office's block is levels/office.scenarios.ts, attached at load)
   const sizes = (squadChoices(s) as { n: number; ok: boolean }[]).filter(c => c.ok).map(c => (c.n ? `+${c.n}` : 'alone')).join(' ');
-  const block = sc.issue?.members as Record<string, Card> | undefined, worn = block ? K.kitIssueCards(block) as Record<string, Card> : null;
-  const own = [block ? `issue block: ${Object.entries(block).map(([i, c]) => `${MEN[+i]} ${JSON.stringify(c)}`).join('; ')}${worn && !Object.keys(worn).length ? ' (not worn: the shield is out of the game, so the plain issue is)' : ''}` : '', typeof rc.wallCharges === 'number' && rc.wallCharges > 0 ? `${rc.wallCharges} wall charge${rc.wallCharges === 1 ? '' : 's'} of its own` : ''].filter(Boolean).join(' · ') || 'none';
+  const block = sc.issue?.members as Record<string, Card> | undefined;
+  const own = [block ? `issue block: ${Object.entries(block).map(([i, c]) => `${MEN[+i]} ${JSON.stringify(c)}`).join('; ')}${!Object.keys(block).length ? '(names nobody: every man in the plain issue)' : ''}` : '', typeof rc.wallCharges === 'number' && rc.wallCharges > 0 ? `${rc.wallCharges} wall charge${rc.wallCharges === 1 ? '' : 's'} of its own` : ''].filter(Boolean).join(' · ') || 'none';
   const cards = s.group === 'training' ? 'none: a lesson is played as issued' : block ? 'none: the mission issues its own' : s.kind === 'quiet' && s.squad === 0 ? 'yours' : 'all who come';
   const locked = doors.filter(x => x.locked).length, steel = doors.filter(x => x.steel).length;
   const noFrag = s.kind === 'rescue' ? 'refused near a hostage' : sc.snatch || rc.snatch || /snatch/.test(s.id) ? 'refused near the man you came for' : (d.civilians ?? sc.civilians)?.length ? 'refused near a civilian' : 'yes';

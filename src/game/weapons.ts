@@ -208,9 +208,8 @@ export const LAUNCHER40 = { rounds: 3, cd: 2.6 };
 /** a row's handling (WeaponDef.handling), or its class's: a pistol 1, a short carbine 0.82, a full rifle 0.7 */
 export const HANDLING_BY_CLASS: Record<WeaponClass, number> = { pistol: 1, carbine: 0.82, rifle: 0.7, shotgun: 0.75 };
 /** THE one place the turn weight reads what a man carries (game.ts deals it to `Character.turn.h` every frame): the row's own `handling`, else its class's, else a
- *  carbine's (a row cast into a class this table has not met: a new WeaponClass must add its row here, tsc says so); × `kit` for what else is in his hands (a shield
- *  held up: pass its factor; 1, or anything that is not a positive number, = nothing). Never NaN: the turn's step would carry it into his yaws. */
-export function handlingOf(def: WeaponDef, kit = 1): number { return (def.handling ?? HANDLING_BY_CLASS[def.cls] ?? HANDLING_BY_CLASS.carbine) * (kit > 0 && Number.isFinite(kit) ? kit : 1); }
+ *  carbine's (a row cast into a class this table has not met: a new WeaponClass must add its row here, tsc says so). */
+export function handlingOf(def: WeaponDef): number { return def.handling ?? HANDLING_BY_CLASS[def.cls] ?? HANDLING_BY_CLASS.carbine; }
 
 /** Callbacks for the beats of the staged reload (player.ts plays the foley and drops the empty on them). */
 export interface ReloadEvents { magOut?(rounds: number, dropped: boolean): void; magIn?(rounds: number): void; rack?(): void; done?(): void; }

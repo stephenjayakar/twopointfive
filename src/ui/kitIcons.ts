@@ -20,14 +20,13 @@ const LIGHT = '<path d="M10 12h24l8-3h3v14h-3l-8-3H10z"/><path d="M14 20h8v4h-8z
 const NVG = '<path d="M11 10h15a2 2 0 0 1 2 2v2h8v-2a2 2 0 0 1 2-2h15a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H38a2 2 0 0 1-2-2v-3h-8v3a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V12a2 2 0 0 1 2-2z"/><path d="M28.6 3h6.8v8h-6.8z" opacity="0.7"/><circle cx="18.5" cy="17" r="3.6" fill="#0c0b09" opacity="0.55"/><circle cx="45.5" cy="17" r="3.6" fill="#0c0b09" opacity="0.55"/>';
 const CHARGE = '<path d="M18 4h10v24H18z"/><path d="M18 10h10v1.6H18zM18 20h10v1.6H18z" fill="#0c0b09" opacity="0.5"/>' + line('M28 16c8 0 6 9 14 9', 1.4) + '<path d="M42 21.6h10v6.8H42z"/>';
 const WALL = '<path d="M12 3h26v26H12zM17 8v16h16V8z" fill-rule="evenodd"/>' + line('M38 16c7 0 4 9 10 9', 1.4) + '<path d="M48 21.6h9v6.8h-9z"/>';
-const SHIELD = '<path d="M22 2h20a3 3 0 0 1 3 3v22a3 3 0 0 1-3 3H22a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3zm4.6 5v4.4h10.8V7z" fill-rule="evenodd"/>';
 const SUIT = '<path d="M22 3h5.6l1.6 4h5.6l1.6-4H42l3 9-2 4v13H21V16l-2-4zm3 15v6h5.6v-6zm8.4 0v6H39v-6z" fill-rule="evenodd"/>';
 const TRIM = '<path d="M20 6l12 6.6L44 6v5.4L32 18l-12-6.6zM20 15l12 6.6L44 15v5.4L32 27l-12-6.6z"/>';
 
 const WAND = line('M6 25h18c8 0 8-14 16-14h6', 2) + '<path d="M46 7.6h9a1.6 1.6 0 0 1 1.6 1.6v3.6A1.6 1.6 0 0 1 55 14.4h-9z"/><circle cx="58.6" cy="11" r="1.8"/>' + '<path d="M3 20h7a1.6 1.6 0 0 1 1.6 1.6v6.8A1.6 1.6 0 0 1 10 30H3z"/><path d="M4.6 22h4.8v3.4H4.6z" fill="#0a0c0f" opacity="0.55"/>';   // (a cable from a small screen to a lens head)
 const CAM = '<path d="M12 6h4v20h-4z" opacity="0.6"/><path d="M16 9h15a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H16z"/><circle cx="28" cy="16" r="3.4" fill="#0a0c0f" opacity="0.55"/>' + line('M39 12l11-6M40 16h13M39 20l11 6', 1.5);   // (a puck on a wall, its lens, what it watches)
 
-const BY_FIELD: Record<string, string> = { cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, cans: CANS, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, walls: WALL, shield: SHIELD, suit: SUIT, trim: TRIM };
+const BY_FIELD: Record<string, string> = { cams: CAM, wand: WAND, shells: SHELL, smoke: SMOKE, bangs: STUN, frags: FRAG, cans: CANS, suppressed: SUPPRESSOR, light: LIGHT, nvg: NVG, charges: CHARGE, walls: WALL, suit: SUIT, trim: TRIM };
 const BY_GUN: Record<string, string> = { rifle: RIFLE, pistol: PISTOL, shotgun: SHOTGUN };
 // (a gun that wears a suppressor is drawn with it — ui/kitCard.ts KIT_CAN: the can on the muzzle, one dark band where it screws on; no can fits the shotgun)
 const GUN_CAN: Record<string, string> = {
@@ -37,7 +36,7 @@ const GUN_CAN: Record<string, string> = {
 // (the big slot's row — game/kit.ts BIGSLOT — is drawn by what is in it: a breaching hammer is a head with a spike behind it on a long shaft, a pry claw at its foot)
 const HAMMER = '<path d="M5 7h9v4h2.4v3H14v4H5l-1.4-2.2V9.2z"/><path d="M16 11h3.6l1.4 1.5-1.4 1.5H16z" opacity="0.7"/><path d="M9 18h2.6v-1H52v1c3 0 5.4.8 8 2.6l-1 1.8c-2.4-1.2-4.4-1.8-7-1.8H9z"/><path d="M26 16.4h14v3.6H26z" fill="#0c0b09" opacity="0.4"/>';
 const EMPTY = '<path d="M6 6h52v20H6zM8 8v16h48V8z" fill-rule="evenodd" opacity="0.5"/>';
-const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL, shield: SHIELD };
+const BY_BIG: Record<string, string> = { none: EMPTY, shotgun: SHOTGUN, hammer: HAMMER, wall: WALL };
 
 /** the drawing for a card's row at its value ('' where the row has none), and whether the value means he carries none of it (drawn faint); `can` = the gun
  *  of the weapon row wears a suppressor */

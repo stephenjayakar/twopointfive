@@ -1,7 +1,7 @@
 // THE BIG SLOT ON THE REAL PAGE (src/game/kit.ts BIGSLOT, src/game/bigkit.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's
 // recipe), a kit with the hammer in YOUR big slot and the breaching shotgun in Red One's planted in the store.
 //   PORT=5231 node tools/qa/bigslot-page.cjs [outDir]        (a dev server on that port: PORT=5231 bun run tools/serve.ts)
-//   card   the loadout screen of the four-man room clear: every card has ONE 'Big slot' row, the last, no Shield row and no Wall charges row; yours reads
+//   card   the loadout screen of the four-man room clear: every card has ONE 'Big slot' row, the last, and no Wall charges row; yours reads
 //          'dynamic hammer' and its wide pip is lit; one press of its arrow steps it
 //   play   the pair's room clear staged from that kit: the hammer is on you, Red One keeps his rifle; at a door locked against you the panel offers the
 //          hammer in the boot's place, the row and one Space take the lock, and no shot is fired (a level with no door locked against you: the nearest
@@ -11,7 +11,6 @@
 //          worked from beside the jamb. And the squad's row: the menu opened on a shut door reads 'H: shotgun and clear' on its first page, and H
 //          gives it from there
 //   off    the same page under ?nobigslot: no 'Big slot' row on any card, nothing on you, the same door offers the boot
-//   shield the ballistic shield out of the page: the loadout screen says nothing of one and takes none, the long hall's the same; ?shield = back
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the card's rows) are written to outDir when one is given.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
@@ -44,8 +43,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   // ── card
   if (!ONLY || ONLY === 'card') { const { page, errors } = await open('loadout=room-clear-four&nocutboxes'); await page.waitForTimeout(500);
     const C = await cardOf(page);
-    line(C.knob === true && C.big.length === 1 && C.last === 'big' && !C.fields.includes('shield') && !C.fields.includes('walls') && /dynamic hammer/.test(C.big[0]) && C.wide?.length === 1 && C.wide[0] === true,
-      'your card on the loadout screen: ONE Big slot row, the last, no Shield row and no Wall charges row; it reads the hammer your stored kit carries and the head\'s wide pip is lit', `rows ${C.fields.join(' ')} · '${C.big.join(' | ')}' · wide pip ${JSON.stringify(C.wide)} · switch ${C.knob}`);
+    line(C.knob === true && C.big.length === 1 && C.last === 'big' && !C.fields.includes('walls') && /dynamic hammer/.test(C.big[0]) && C.wide?.length === 1 && C.wide[0] === true,
+      'your card on the loadout screen: ONE Big slot row, the last, and no Wall charges row; it reads the hammer your stored kit carries and the head\'s wide pip is lit', `rows ${C.fields.join(' ')} · '${C.big.join(' | ')}' · wide pip ${JSON.stringify(C.wide)} · switch ${C.knob}`);
     await still(page, 'bigslot-card-hammer');
     const stepped = await page.evaluate(() => { const b = document.querySelector('.kc-row[data-field="big"]'), nx = b ? [...b.querySelectorAll('button')].at(-1) : null; nx?.click(); return !!nx; }); await page.waitForTimeout(300);
     const C2 = await cardOf(page);
@@ -109,29 +108,6 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const { page, errors } = await open('loadout=room-clear-four&nocutboxes&nobigslot'); await page.waitForTimeout(500); const C = await cardOf(page);
     line(C.knob === false && C.big.length === 0 && C.wide?.length === 0, '?nobigslot on the loadout screen: no Big slot row, no wide pip', `rows ${C.fields.join(' ')} · switch ${C.knob}`);
     line(errors.length === 0, 'no page error (off, loadout)', errors.join(' · ') || 'none'); await page.close(); }
-  // ── the ballistic shield is out of the page (shield.ts SHIELD.on, off here since 10-15; ?shield = back for the visit)
-  if (!ONLY || ONLY === 'shield') {
-    const read = (page) => page.evaluate(() => { const K = window.__kit, text = (document.body.innerText || ''), sel = [...document.querySelectorAll('select option, button')].map(e => (e.textContent || '').trim()).filter(t => /shield/i.test(t));
-      const lo = K.loadouts().filter(l => /shield/i.test(l.id + l.name)).map(l => `${l.id}: ${l.missing.join(',') || 'can be put on'}`), set = K.set(2, 'shield', true), big = K.KIT.members[2].shield === true;
-      return { knob: window.__knobs?.registry?.().SHIELD?.on, said: (text.match(/[^\n]*shield[^\n]*/gi) || []).slice(0, 3), sel, lo, set, big }; });
-    { const { page, errors } = await open('loadout=room-clear-four&nocutboxes'); await page.waitForTimeout(500); const R = await read(page);
-      line(R.knob === false && R.said.length === 0 && R.sel.length === 0 && R.set === false && !R.big && R.lo.length > 0 && R.lo.every(l => !/can be put on/.test(l)), 'the loadout screen as the page opens: the shield is off, no word on the screen says shield, no squad kit with one can be put on, a hand that sets one is refused',
-        `SHIELD.on ${R.knob} · lines that say shield: ${R.said.join(' | ') || 'none'} · buttons: ${R.sel.join(' | ') || 'none'} · the table's: ${R.lo.join(' ; ') || 'none'} · set → ${R.set}`);
-      line(errors.length === 0, 'no page error (the shield out, loadout)', errors.join(' · ') || 'none'); await page.close(); }
-    const hall = async (q) => { const { page, errors } = await open(`loadout=hall-four&nocutboxes${q}`);   // (its level file issues its own kit: the cards go once the file has come — kitpaste-page.cjs's recipe)
-      await page.waitForFunction(() => !document.querySelector('#missions.one #loadout .kc') && document.querySelectorAll('#missions.one #loadout .lo-sum').length > 0, null, { timeout: 30000 }).catch(() => {}); await page.waitForTimeout(200);
-      const R = await page.evaluate(() => ({ cards: document.querySelectorAll('#missions.one #loadout .kc').length, sums: [...document.querySelectorAll('#missions.one #loadout .lo-sum')].map(e => (e.textContent || '').trim()), said: ((document.body.innerText || '').match(/[^\n]*shield[^\n]*/gi) || []).slice(0, 3) }));
-      return { page, errors, R }; };
-    { const { page, errors, R } = await hall('');
-      line(R.cards === 0 && R.sums.length >= 4 && R.sums.every(s => s === 'as issued') && R.said.length === 0, 'the long hall\'s loadout screen (its kit is issued: the shield was Red One\'s): the issued screen, every man reads as issued, and no line says shield', `cards ${R.cards} · ${R.sums.join(' | ')} · lines that say shield: ${R.said.join(' | ') || 'none'}`);
-      line(errors.length === 0, 'no page error (the long hall, loadout)', errors.join(' · ') || 'none'); await page.close(); }
-    { const { page, errors, R } = await hall('&shield');
-      line(R.cards === 0 && R.sums.some(s => /2 stun/.test(s)) && R.said.length > 0, 'the control, ?shield: the same screen shows Red One\'s issue card and names the shield', `${R.sums.join(' | ')} · lines that say shield: ${R.said.join(' | ') || 'none'}`);
-      line(errors.length === 0, 'no page error (the long hall, ?shield)', errors.join(' · ') || 'none'); await page.close(); }
-    { const { page, errors } = await open('loadout=room-clear-four&nocutboxes&shield'); await page.waitForTimeout(500); const R = await read(page);
-      line(R.knob === true && R.set === true && R.big, '?shield: the switch is on for the visit and a teammate\'s card takes the shield again (nothing was cut)', `SHIELD.on ${R.knob} · set → ${R.set} · the table's: ${R.lo.join(' ; ') || 'none'}`);
-      line(errors.length === 0, 'no page error (?shield, loadout)', errors.join(' · ') || 'none'); await page.close(); }
-  }
   await browser.close();
   console.log(failed ? '\nbigslot-page: FAILED' : '\nbigslot-page: ALL PASS'); process.exit(failed ? 1 : 0);
 })();
