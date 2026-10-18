@@ -5,6 +5,7 @@
 //   bun run tools/qa/pose-mesh.ts list
 //   bun run tools/qa/pose-mesh.ts <variant> <situation> [--out <dir>] [--moves off] [--id N] [--no-props] [--tag <text>] [--at <secs>] [--set '<json>']
 //       → <dir>/<variant>__<situation>[__<tag>].ply + .json      (dir: ./pose-mesh-out unless given)
+//       --gunhand: a move keeps to the hand that is free (src/game/gunhand.ts, as the page has it): `rifle-throw` is then the left hand's, the can drawn in it
 //       --inhand: the hands posed to what he holds (src/game/inhand.ts, as the page has it): a pistol drawn in the hand, the hand put to a torch or a long gun
 //       --gunhand: the moves that keep to the free hand (src/game/gunhand.ts, as the page has it): torch-up brings the torch up in the hand that holds it
 //       --at: that much longer in the situation before the pose is taken (a gait at another point of its cycle);  --set '{"MOVES":{"steady":0}}': character.ts tables written over
@@ -65,6 +66,7 @@ const SITS: Record<string, { say: string; go(x: Ctx): void }> = {
   'crouch-rifle-walk': { say: 'crouched and moving at 1.3 m/s with the long gun shouldered (the player sneaking, rifle up)', go: x => { x.arm('rifle'); const a = x.c.anim; a.upper = 'aim'; a.crouchTarget = 1; if ('longStance' in a) { a.longStance = 'shoulder'; a.longSteady = 1; } x.walk(1.3); x.run(2); } },
   'rifle-walk': { say: 'the long gun carried at a walk (1.3 m/s)', go: x => { x.arm('rifle'); const a = x.c.anim; if (x.side === 'operator') { a.upper = 'none'; a.stance = 'lowReady'; } else a.upper = 'relaxed'; x.walk(1.3); x.run(2.3); } },
   'rifle-aim': { say: 'the long gun shouldered, on a man', go: x => { x.arm('rifle'); x.c.anim.upper = 'aim'; x.run(2); } },
+  'rifle-throw': { say: 'the long gun up, an overhand throw 0.2 s in (the hand at the top of the swing; --gunhand: the free hand\'s)', go: x => { x.arm('rifle'); x.c.anim.upper = 'aim'; x.run(2); x.c.anim.throwItem(); x.run(0.2); } },
   'rifle-fire': { say: 'the long gun shouldered, 0.05 s after a round', go: x => { x.arm('rifle'); x.c.anim.upper = 'aim'; x.run(2); x.c.anim.fire(); x.run(0.05); } },
   'rifle-crouch': { say: 'the long gun shouldered, crouched', go: x => { x.arm('rifle'); x.c.anim.upper = 'aim'; x.c.anim.crouchTarget = 1; x.run(2); } },
   'pistol-carry': { say: 'the pistol out, lowered', go: x => { x.arm('pistol'); x.c.anim.upper = 'relaxed'; x.run(2); } },
@@ -175,6 +177,7 @@ if (!has('--no-props')) {
     else if (variant.side === 'civilian') { if (c.anim.bound === 1) RP.wristTieBoxes?.(c, out); }   // (empty hands, nothing worn — but a bound hostage's wrist tie, combat.ts handProps)
     else if (held === 'rifle' || held === 'pistol' || held === 'torch') RP.rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: held === 'torch', ...(inhand && held === 'torch' ? { beamDir: [0, 0, 1] } : null), weapon: held === 'rifle' ? 'carbine' : 'pistol', ...(inhand && held === 'pistol' ? { inHand: true } : null) }, out);
     else RP.holsterBoxes(c, out, { slide: RP.RIG.guardPistol.slide, grip: RP.RIG.guardPistol.grip });
+    if (c.anim.throwOff && c.anim.throwing) RP.freeCanBoxes?.(c, 'frag', out);   // (a throw off the free hand: the grenade in that fist, as combat.ts guardKit draws it)
     for (const b of out) {
       const q: number[] = b.rot ?? [0, Math.sin(b.yaw / 2), 0, Math.cos(b.yaw / 2)], [qx, qy, qz, qw] = q;
       const rot = (v: V3): V3 => { const tx = 2 * (qy * v[2] - qz * v[1]), ty = 2 * (qz * v[0] - qx * v[2]), tz = 2 * (qx * v[1] - qy * v[0]); return [v[0] + qw * tx + qy * tz - qz * ty, v[1] + qw * ty + qz * tx - qx * tz, v[2] + qw * tz + qx * ty - qy * tx]; };
