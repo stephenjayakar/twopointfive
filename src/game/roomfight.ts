@@ -73,6 +73,7 @@ import { SHIELD, plateUp } from './shield';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
 import { gunWallIs } from './gunwall';
+import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside tickOp only)
 import { AIMCOST, feetHold } from './aimcost';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
@@ -918,6 +919,7 @@ export class RoomFight {
     gd.skill = S;
     if (gd.state === 'dead') { O.tgt = null; O.turn = null; O.step = null; this.restore(O); return; }
     if (O.reloadUntil > 0 && g.time >= O.reloadUntil) { gd.weapon.rearm(); O.reloadUntil = 0; }
+    if (O.tgt) sideSeen(g, gd);   // (gunslots.ts: a man in front of him — a sidearm that is out stays out)
     // a mate down in his view: said once
     for (const X of this.ops) if (X !== O && X.gd.state === 'dead' && !this.downCalled.has(X.gd) && !g.col.segmentBlocked(eyeOf(c), [X.gd.char.pos[0], 0.4, X.gd.char.pos[2]])) { this.downCalled.add(X.gd); this.speak(O, X.gd.wound ? `${X.gd.callsign}'s hit — breathing.` : 'man down.', 0); }
     if (!gd.script) {   // the fight AI has him (its eyes, its trigger, its muzzle discipline for the men on the guard list): Sam is not on that list — his line is kept here
@@ -1001,7 +1003,7 @@ export class RoomFight {
     if (onMan && gunWallIs(g, c)) { O.heldForLine++; O.blockT += dt; O.wallT += dt; this.walkOn(O); if (O.tgt && this.sideStep(O, chest, speed, O.wallT, 'steps aside: his gun is in a wall')) O.wallT = 0; return; }   // (gunwall.ts: on his man with the gun IN a wall, so at the low ready — no shot from here, as with no line: an order's walk goes on for one, a planted man steps aside for one)
     O.wallT = 0;
     if (!on) O.blockT = Math.max(0, O.blockT - dt);   // (no shot is counted only while his gun is on the man: off him, the count runs back down)
-    if (O.track < P.acquireMin - 1e-9 || g.time < O.next || g.time < O.reloadUntil || !on) return;
+    if (O.track < P.acquireMin - 1e-9 || g.time < O.next || g.time < O.reloadUntil || sideLocked(g, gd) || !on) return;
     if (silentHolds(g, gd, h) || pairHolds(g, gd, h) || spottedHolds(g, gd, h)) { this.speak(O, 'eyes on. holding.', 8); return; }   // (silent.ts: the man has not noticed the team — the gun stays on him, no round goes)
     let to = chest;
     if (!clearShot(g, c, to)) { const head = hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]); if (clearShot(g, c, head)) to = head; else if (!coverSeen(g, gd, h, chest)) { O.heldForLine++; O.blockT += dt; this.walkOn(O); return; } }   // (coverfire.ts: no line, and what blocks it is breakable and worth the rounds — they go into it)
@@ -1010,7 +1012,8 @@ export class RoomFight {
     const inLine = this.friendInLine(c.muzzle, to, gd);
     if (inLine) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; if (inLine === 'player') this.holdShort(O); if (!clearLineBlocked(g, gd, h, to, inLine)) this.sideStep(O, to, speed); this.letGo(O); return; }
     O.lineT = 0;
-    if (!gd.weapon.fire()) { O.reloadUntil = g.time + gd.weapon.def.reload.dur; this.speak(O, 'reloading.', 0); return; }
+    if (!gd.weapon.fire()) { if (sideOut(g, gd, dist)) return;   // (gunslots.ts: dry on a man close in front of him — his sidearm, not a magazine change)
+      O.reloadUntil = g.time + gd.weapon.def.reload.dur; this.speak(O, 'reloading.', 0); return; }
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
     const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
     fireWeapon(g, c, to, false, { steady: true, spread: hands * (plateUp(gd) ? SHIELD.handsK : 1) * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });

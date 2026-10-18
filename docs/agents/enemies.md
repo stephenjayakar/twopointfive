@@ -1113,3 +1113,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on HARD 15 hold, the night breach is ONE ROOM, and the three rescues fail on the loud plan ("words only" on two, "men moved, to nothing of the plan's" on the consulate) — Hard's rescue has a crew of its own
   (rescue.ts: the captor's "they're here! … guns on my door!", a roamer's "staying dark — I'll come up behind them."), whose move lands on a team
   stacked at the hostage door, and the table has no team: said, not seen to land. One seed; no GPU: a lamp is a flag, a line is a string.
+- **A defender throws with his free hand** (`src/game/gunhand.ts`, `GUNHAND.on` + the key `throwFree`, 10-18; the maintainer on the in-hand pass's
+  list, of "a defender throws overhand with the carbine in the throwing fist": "yep fix it"). THE FAULT: the throw (`character.ts throwItem` /
+  `throwLayer`) is one move for everybody and its throwing arm is the right one; a man with a long gun is drawn with that gun off his right wrist, so
+  the carbine went up behind his head and over the top with the grenade (bench: its grip 33 cm over the shoulder joint, 9.5 cm off the palm).
+  THE RULE: a throw begun with a long gun in the hands (`anim.longGun`) is the FREE hand's — the authored swing MIRRORED: the trunk winds the other
+  way, the left arm takes the right arm's path (the overhand, the short one and THROW_BY's underhand toss alike), and the right arm is left to the
+  long hold: its carriage goes to the low ready for the swing and comes back up over the recovery, the trigger hand held where that hold has it (not
+  swung round with the shoulders, and let down to 12 cm under the shoulder where a crouched low ready has it level with it). IN HAND's long hold
+  stays on the grip through it (`anim.throwOff`). The grenade is drawn in the LEFT fist from the swing's first frame until it leaves
+  (`rigProps.freeCanBoxes`, by `frag.ts fragInFist`: guards drew no grenade in the hand before), and the plain throw's grenade starts AT that hand
+  where the hand has an arc to the same landing spot (`fragThrowTick`; otherwise, and with the rule off, from the point 35 cm ahead of his chest it
+  always did). NOT CHANGED: who throws, the wind-up and release times, the scatter and the spot aimed at, the fuse. WHO IT REACHES: every caller of
+  `throwItem` with a long gun up — defenders and responders with the carbine (frag.ts), a TEAMMATE at a lane's mouth putting a stun charge down it
+  (lanes.ts `stun`: the swing only — that charge is in the air on the frame he starts, from his arm round the corner, as before), a defender's
+  grenade round a corner (`fragThrowAt`: the swing and the fist's grenade; it still leaves from the arm-round-the-corner point). Teammates' ordered
+  throws were already the support hand's (`tossItem`), and Sam throws with the rifle on his back — the slots' throws, and the G quick throw, which
+  slings it first (player.ts): none is touched. A round that leaves inside the swing has the gun in the shoulder for it (`shootT` is asked before the
+  throw's low ready), as every shot does. Pistol men throw as they did. STANDS: off on the frozen stand
+  (`TPS_GUNHAND=1` raises it; `FROZEN_HOLDS['GUNHAND.on']`), on in the page (`?gunhand=0`), journalled (a recording from before the table replays
+  with it off). OFF = the build as it was: 1,920 frames of throws by a carbine man and a pistol man (standing, low ready, crouched, walking, the
+  short one, the toss, re-triggered mid-swing) hash the same pose and bones as the commit before. CHECK: `bun run tools/qa/probes.ts gunhand-throw`
+  (family `gunhand`; `tools/qa/gunhand-throw-check.ts`, both stands; `GUNHAND_BREAK=1` leaves the key off and lines 3, 4, 5 and 9 fail). MEASURED,
+  both stands, 7 bench throws of 44 frames each: grip to the palm's hollow 1.0 cm at worst, the trigger wrist 7.7 cm or more below its shoulder, the
+  left wrist 28 cm over its own in the overhand and 32 to 48 cm ahead of it at the release, the can 2.3 cm from the left fist's hollow, the same
+  swing, release frame and last frame with the rule off and on. One game run (frag-theirs' corridor, seed 3, a defender dealt the carbine): the
+  same man throws 1.02 s after his shout either way, the bursts 5 to 10 cm apart, the grenade starts 0 cm from the left hand and is in that fist
+  17 frames. NEVER SEEN ON A GPU OR IN PLAY: poses and boxes measured headless; how a left-handed overhand reads from above, and the gun's low
+  ready beside it, nobody has looked at. The run with the switch on is not the run with it off (it changes the pose the game reads).
