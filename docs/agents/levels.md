@@ -173,7 +173,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A level does not deal the squad's kit; `bun run tools/qa/kit-audit.ts` lists what its mission gets** (2026-10-18). The issued kit and the named
   squad kits are one table for every mission (`src/game/kit.ts`, `docs/agents/menus.md`: the squad's kit is dealt over the men who come). A level's
   file adds to it in two ways only: `scenarios.issue.members` (a block of cards by place on the roster, the fields that differ, written against the
-  pair's layout; the Team & kit screen then shows no cards, and a card that hands out the shield is dropped whole while the shield is out of the game)
+  pair's layout; the Team & kit screen then shows no cards, and a level's issue card is put on as written)
   and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
   says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
   squad is issued (no hammer or shotgun opens steel, and nobody is issued a big-slot tool), whether frags can be ordered at all (never with a hostage,
@@ -225,10 +225,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   card for every man who comes. The needs are asked OF THE PAGE AS IT OPENS on either stand (`host/profile.ts pageSwitches` with no flag and `kitLoad`
   with nothing kept, what the shipped stand boots with), because a rule the frozen stand holds off would call a man bare whom no player sees bare; a
   refused `slots.json` stops the tool with that word. The stand still decides what `--run`'s own checks see. `KITDEAL_BREAK=1` in front is the need's own red path: the
-  cards as the table writes them, red on the 22 rows that bring a third man. A level's own cards that are not worn while the shield is out of the game are
-  counted on its line (the long hall's one). The skill's kit items say the same, and its kit picture item gains a rule from the kit figure's side: where a
+  cards as the table writes them, red on the 22 rows that bring a third man. A level's own cards are worn as written (the long hall's block
+  names nobody since the shield left the game: its four come in the plain issue). The skill's kit items say the same, and its kit picture item gains a rule from the kit figure's side: where a
   `kitView` hide list names box ids, whoever shifts the level's box ids builds it again from the generator's box range in the same step. AS THE 36 LEVELS
   STAND on build 1e1f943, both stands the same: 488 PASS, no FAIL, 65 NOTE (the two `doorway` reds and the snatch's footstep zone of the bullet above were
   mended by their owners); `NEEDS_BREAK=1` exits 1 on both. With `--run` every one of the levels' own checks exits 0 on both stands. STILL NOT IN A GATE (its owner's call). NOT ASKED YET, each waiting on
   its own work: a need for a level's response-team block, and one for a rescue that ends only on extraction or a full clear. Nothing here was seen on a
   GPU or played, and nobody has gone through the 36 levels by eye against the skill's by-eye items.
+- **The level skill after the shield left the game** (10-18; the skill's words only). Its kit item said a level's own card that hands out a tool the game
+  has switched off is dropped whole; with the ballistic shield cut, a card that still says `shield` is REFUSED as the file loads, in words
+  (`src/scene/levelData.ts`: "take the key out (the rest of the card stands)"), and the skill says that. `tools/qa/level-needs.ts` was brought in line by
+  the shield's own step (issue cards are read as written). On build ba34118, both stands: 488 PASS, no FAIL, 65 NOTE; `KITDEAL_BREAK=1` 22 FAIL;
+  `NEEDS_BREAK=1` exits 1.
+- **The level skill says where a Team & kit picture stands** (10-18; the skill's words only). Since every way of a `scenarios.kitView` block must anchor on
+  a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other, `kitview-work.cjs` holds the page to it), the skill's kit
+  picture item says so, with what to write where a mission's own way in is a gate, a gap or a wall. `--run` already runs `kitview-plan` for a level, so the
+  level command is red on such a way with no change to it. On build d2ec4b7, both stands: 488 PASS, no FAIL, 65 NOTE.

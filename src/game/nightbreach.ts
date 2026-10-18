@@ -45,10 +45,9 @@ import { HOLD } from './character';   // (read inside the tick only: HOLD.oneFac
 import { endGuardScript, order } from './squad';
 import { fireWeapon } from './combat';
 import { SUPPRESSION } from './suppression';
-import { kitStage, KIT } from './kit';
+import { kitStage } from './kit';
 import { teamStartsFallenIn } from './startfile';
 import { issueStage } from './issue';   // (type-only game imports: a level that issues its own wall charges — scenarios.roomClear.wallCharges)
-import { SHIELD } from './shield';
 import { picketMarks, postPicket } from './pressure';
 import type { TeamStart } from '../scene/scenarios';
 import type { SquadSize } from './loadout';
@@ -265,8 +264,7 @@ export class NightBreach {
     this.noDrill = !drilled;
     if (P && !drilled) for (const id of [P.door, P.next?.door]) { const d = id ? g.doors.byName(id) : undefined; if (d) { d.reset(); d.angle = 0; d.vel = 0; d.latched = true; d.closing = false; } }
     if (P && drilled) {
-      const sf = KIT.on && SHIELD.on && SHIELD.first && !KIT.members[1].shield && KIT.members[2].shield ? 1 : 0;   // (shield.ts: the drill's #1 boots the door and goes in first — that is the man whose card carries the shield, when it is the second man's)
-      this.drill = new BreachDrill(g, P, this.ops[sf], this.ops[1 - sf], this.hostiles.filter((_, i) => this.marks[i].drill !== false), { guaranteeDowns: false, live: this.live });   // (the drill's men: the ones behind ITS door)
+      this.drill = new BreachDrill(g, P, this.ops[0], this.ops[1], this.hostiles.filter((_, i) => this.marks[i].drill !== false), { guaranteeDowns: false, live: this.live });   // (the drill's men: the ones behind ITS door)
       this.drill.start();
     }
     for (const gd of this.ops.slice(drilled ? 2 : 0)) {   // (a level with no breach plan has no drill: all of them stand by like this — the order menu's from the first frame)   // the second pair: stood at the low ready as the drill stands its own two (breach.ts start), on a script with no goal — the room fight's overlay covers them (roomfight.ts tickOp: any scripted operative), the X menu moves them

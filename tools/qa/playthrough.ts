@@ -63,9 +63,9 @@
 //   PT_WEDGED=charge (env)                 room scenarios: a door the stack finds wedged from inside (digin.ts) gets a breaching charge, blown once set, not the boot
 //   PT_FRAG=1 (env)                        room scenarios: 'frag and clear' (doortools.ts fragClear) on a held room's door while the squad has a frag, then the usual tool
 //   PT_ROUTE=s34,n_end,n4b (env)          room clear: the commander's doors in that order while their rooms are still held, then the nearest as ever
-//   PT_HALL=file|low|bare (env)           a level with a room 'hall' and a shield on the team (levels/hall.json): before the rooms the carrier is walked down the
-//                                         line of the hall's own door in bounds, the others told onto the line behind him; low = his assignment also crouched (no order does
-//                                         that: a what-if); bare = the control, the same walk led by the first teammate when nobody carries a shield. PT_HALL_FIRST / _BOUND / _GAP / _SHORT / _HOLD = its numbers (hallLead)
+//   PT_HALL=bare (env)                    a level with a room 'hall' (levels/hall.json): before the rooms the first teammate is walked down the line of the hall's own
+//                                         door in bounds, the others told onto the line behind him. (`file` and `low` were the same walk led by a ballistic shield:
+//                                         the shield is gone from the game and both words are refused, saying so.) PT_HALL_FIRST / _BOUND / _GAP / _SHORT / _HOLD = its numbers (hallLead)
 //   PT_SNATCH=cover|front (env)           a snatch level (game/snatch.ts): cover = the blue pair posted PT_SNATCH_BACK (4.5) m short of the man's nearest way out
 //                                          before anything loud (PT_SNATCH_VIA=x,z: by that point first), the rooms worked with red; front (or unset) = everybody in the front. The run's JSON carries `snatch`
 //   PT_FIRST=shop (env)                   room clear: the commander's first room is that one of the structure (its id) instead of the nearest held room
@@ -186,7 +186,6 @@ import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../../src/game/destructio
 import { WALLREACT, WALLREACT_STATS, wallReactOf } from '../../src/game/wallreact.ts';
 import { REARWATCH_STATS, rearWatchLog, rearWatchRows } from '../../src/game/rearwatch.ts';
 import { PICTURE_STATS } from '../../src/game/picture.ts';
-import { SHIELD_STATS, plateUp } from '../../src/game/shield.ts';
 if (import.meta.main && pinned('PT_DESTR')) DESTRUCTION.on = process.env.PT_DESTR === '1';   // THE ONE SWITCH of the destruction goal: OPT IN (PT_DESTR=1), and only when this file is the program — a tool that imports play() or spawns this file keeps the one build by digest
 WALLREACT.on = process.env.PT_WALLREACT !== '0';   // both sides reacting to what breaks (game/wallreact.ts): PT_WALLREACT=0 = the destruction engine's own build by digest
 const { COVERFIRE, coverfireReport } = await import(`${ROOT}/src/game/coverfire.ts`); COVERFIRE.on = process.env.PT_COVERFIRE !== '0'; if (process.env.PT_COVERFIRE === 'callwalls') COVERFIRE.callWalls = true;   // aimed fire at breakable cover (coverfire.ts): its own switch, PT_COVERFIRE=0 = the destruction engine's build by digest · =callwalls: a mate's call is good for a partition too
@@ -1043,37 +1042,36 @@ function cutMains(P: Player) {
   if (PT_NV && g.blackout.active) { g.player.nv = true; P.say('(Sam: goggles down)'); }
   P.wait(1);
 }
-/** PT_HALL=file | low (env, a TOOL-ONLY arm for a level whose structure has a room 'hall' and whose team carries a shield — levels/hall.json): before the rooms
- *  the SHIELD WALKS THE HALL. The carrier alone is told 'move there' down the line of the hall's own door in `HALL_BOUND` m bounds and then 'cover' its far end; each of
- *  the others is told 'move there' onto that line behind him, `HALL_GAP` m apart, so the file stands in the plate's lee; Sam comes last (in this tool his
- *  body stops rounds: ahead of a man he would be a second shield). `low` = the carrier's assignment is also written `crouch` — NOT something a player can order
- *  (no row crouches a teammate): it asks what the plate's low edge would buy. `bare` = THE CONTROL: the same walk led by the first teammate when nobody carries a
- *  shield (run it with --set '{"ISSUE":{"on":false}}'): what the file alone buys, without the plate. Ends when no living defender is inside the hall's bounds (down, or gone
- *  out of it), the carrier is down, or the last bound is stood. AS MEASURED: 'cover' is given only once the file is up behind him, so until then the carrier's gun
- *  (and plate) is on whatever watch 'move there' fitted him (roomfit.ts — a near uncleared door as likely as the hall's length). Under PT_SEARCH nothing of
+/** PT_HALL=bare (env, a TOOL-ONLY arm for a level whose structure has a room 'hall' — levels/hall.json): before the rooms THE FILE WALKS THE HALL. The first
+ *  teammate alone is told 'move there' down the line of the hall's own door in `HALL_BOUND` m bounds and then 'cover' its far end; each of the others is told
+ *  'move there' onto that line behind him, `HALL_GAP` m apart; Sam comes last (in this tool his body stops rounds: ahead of a man he would be cover no player
+ *  is). It was the CONTROL of two arms led by a ballistic shield (`file`, and `low` with the carrier crouched): the shield is gone from the game (10-18), so
+ *  those two words are refused in words and the numbers taken under `bare` still mean what they did. Ends when no living defender is inside the hall's bounds
+ *  (down, or gone out of it), the lead is down, or the last bound is stood. AS MEASURED: 'cover' is given only once the file is up behind him, so until then
+ *  the lead's gun is on whatever watch 'move there' fitted him (roomfit.ts — a near uncleared door as likely as the hall's length). Under PT_SEARCH nothing of
  *  this runs (playSearch is another commander). */
 function hallLead(P: Player) {
   if (!HALL_ARM) return;
-  if (!['file', 'low', 'bare'].includes(HALL_ARM)) throw new Error(`PT_HALL: '${HALL_ARM}' is not file, low or bare`);
-  const g = P.g, R = g.roomClear?.structure?.rooms.find((r: any) => r.id === 'hall'), c = P.team.find((m: any) => plateUp(m)) ?? (HALL_ARM === 'bare' ? P.team[0] : null);
-  if (!R || !c) { P.say(`hall: ${R ? 'nobody carries a shield' : "the structure has no room 'hall'"} — the usual commander`); return; }
+  if (HALL_ARM === 'file' || HALL_ARM === 'low') throw new Error(`PT_HALL=${HALL_ARM} walked a ballistic shield down the hall, and the shield is gone from the game: PT_HALL=bare is the same walk led by the first teammate`);
+  if (HALL_ARM !== 'bare') throw new Error(`PT_HALL: '${HALL_ARM}' is not bare`);
+  const g = P.g, R = g.roomClear?.structure?.rooms.find((r: any) => r.id === 'hall'), c = P.team[0] ?? null;
+  if (!R || !c) { P.say(`hall: ${R ? 'no teammate to lead' : "the structure has no room 'hall'"} — the usual commander`); return; }
   const b = R.bounds, alongX = b.x1 - b.x0 >= b.z1 - b.z0, lo = alongX ? b.x0 : b.z0, hi = alongX ? b.x1 : b.z1, d0 = g.doors.list.find((d: any) => d.def.name === R.doors?.[0]?.id), mid = d0 ? (alongX ? d0.frameCentre[2] : d0.frameCentre[0]) : alongX ? (b.z0 + b.z1) / 2 : (b.x0 + b.x1) / 2;   // (the line of the hall's own door: the file walks in on it)
   const near = Math.abs((alongX ? P.pos[0] : P.pos[2]) - lo) <= Math.abs((alongX ? P.pos[0] : P.pos[2]) - hi) ? lo : hi, far = near === lo ? hi : lo, s = Math.sign(far - near);
   const pt = (along: number): Vec3 => alongX ? [near + s * along, 0, mid] : [mid, 0, near + s * along];
   const fl = (p: Vec3) => ({ kind: 'floor', at: P.O.freeSpot(p) ?? p }), len = Math.abs(far - near);
   const home = () => P.hostiles.filter((h: any) => h.state !== 'dead' && h.char.pos[0] > b.x0 && h.char.pos[0] < b.x1 && h.char.pos[2] > b.z0 && h.char.pos[2] < b.z1);
-  const low = () => { if (HALL_ARM === 'low') { const A = P.O.of(c); if (A) A.crouch = true; } };
   const over = () => c.state === 'dead' || !home().length;
   const tell = (id: string, to: Vec3, m: any, label: string): boolean => { const why = P.O.give(id, fl(to), m); P.orders++; if (why) { P.refused.push(`${id} ${label}: ${why}`); P.say(`order ${id} · ${label} — REFUSED: ${why}`); return false; } P.say(`order ${id} · ${label}`); P.step(); return true; };
-  const run = (pred: () => boolean, secs: number, sam: Vec3 | null) => { for (let i = 0; i < secs * 60 && !pred(); i++) { low(); if (sam) P.goal = flat(P.pos, sam) > 0.4 ? sam : null; P.step(); } P.goal = null; };
+  const run = (pred: () => boolean, secs: number, sam: Vec3 | null) => { for (let i = 0; i < secs * 60 && !pred(); i++) { if (sam) P.goal = flat(P.pos, sam) > 0.4 ? sam : null; P.step(); } P.goal = null; };
   P.fallIn(); P.wait(1.5);
-  P.say(`hall: ${c.callsign} leads ${plateUp(c) ? 'with the shield' : 'with NO shield (the control)'}${HALL_ARM === 'low' ? ', crouched' : ''} · ${f1(len)} m, ${home().length} at its far end`);
+  P.say(`hall: ${c.callsign} leads · ${f1(len)} m, ${home().length} at its far end`);
   let stood = 0;
   for (let along = HALL_FIRST; along <= len - HALL_SHORT + 0.01 && !over(); along += HALL_BOUND) {
     const mark = pt(along), rest = P.upAll.filter((m: any) => m !== c);
     if (!tell('move', mark, c, `${c.callsign} to ${at(mark)}`)) break;
     const samAt = (k: number) => P.free(pt(Math.max(-3, along - HALL_GAP * (k + 1) - 0.6)));
-    run(() => over() || !!P.O.of(c)?.arrived || flat(c.char.pos, mark) < 2.2, 14, stood ? samAt(rest.length) : null);   // (the carrier is ahead before the file moves)
+    run(() => over() || !!P.O.of(c)?.arrived || flat(c.char.pos, mark) < 2.2, 14, stood ? samAt(rest.length) : null);   // (the lead is ahead before the file moves)
     rest.forEach((m: any, k: number) => { if (m.state !== 'dead') tell('move', pt(along - HALL_GAP * (k + 1)), m, `${m.callsign} in behind him`); });
     run(() => over() || (!!P.O.of(c)?.arrived && rest.every((m: any) => m.state === 'dead' || P.O.of(m)?.arrived)), 14, samAt(rest.length));
     if (over()) break;
@@ -1674,7 +1672,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     { const ids = new Map<number, string>(P.g.guards.map((x: any) => [x.char.id, x.team])); const T = { bursts: 0, teamKilled: 0, teamHit: 0, teamStunned: 0, teamBehindCover: 0, ownKilled: 0, ownHit: 0, ownStunned: 0, sam: 0 };   // what the DEFENDERS' grenades did (frag.ts FRAG_LOG): to the team, to their own side, to the commander (who is in god mode here: 'sam' counts bursts that would have had him)
       for (const r of FRAG_LOG) { if (ids.get(r.who) !== 'hostile') continue; T.bursts++; if (r.player === 'killed' || r.player === 'wounded' || r.player === 'stunned') T.sam++;
         for (const h of r.hits) { if (h.team === 'operative') { if (h.result === 'killed') T.teamKilled++; else if (h.result === 'wounded') T.teamHit++; else if (h.result === 'stunned') T.teamStunned++; else T.teamBehindCover++; } else if (h.team === 'hostile') { if (h.result === 'killed') T.ownKilled++; else if (h.result === 'wounded') T.ownHit++; else if (h.result === 'stunned') T.ownStunned++; } } }
-      (out as any).fragTheirs = T; } (out as any).fragWhy = { ...FRAG_WHY }; (out as any).rear = { ...REARWATCH_STATS }; (out as any).picture = { ...PICTURE_STATS }; if (SHIELD_STATS.given) (out as any).shield = { ...SHIELD_STATS };   // (rearwatch.ts: the stack's rear watch and the taken rooms' doors kept over 'fall in' — its counters, this run's since every run is its own process)
+      (out as any).fragTheirs = T; } (out as any).fragWhy = { ...FRAG_WHY }; (out as any).rear = { ...REARWATCH_STATS }; (out as any).picture = { ...PICTURE_STATS };   // (rearwatch.ts: the stack's rear watch and the taken rooms' doors kept over 'fall in' — its counters, this run's since every run is its own process)
       if (P.lightw) (out as any).lightwall = P.lightw.out(); if (P.gunw) (out as any).gunwall = P.gunw.out(); if (P.fogw) (out as any).fogfire = P.fogw.out(); if (CUES.overheard) { const L = P.g.cues.heardLog as { text: string; drawn: boolean; why: string }[]; (out as any).overheard = { offered: P.g.cues.stats.shouts, drawn: P.g.cues.stats.shoutsDrawn, said: [...new Set(L.filter(r => r.drawn).map(r => r.text))], held: L.filter(r => !r.drawn).map(r => `${r.why}: ${r.text}`) }; } /* (cues.ts overheard: hidden defenders' shouts offered · of them rows on the strip · their words · the ones held back and why) */ if (RUBBLE.on) (out as any).rubble = { ...P.g.destr.debris.feetStats, heap: { ...(P.g.destr.edgeLook?.footBook?.stats ?? {}) }, pool: { ...P.g.destr.debris.stats } }; if (CUTW) (out as any).cut = { on: CUTW.on(), first: P.cutFirst, counts: cutCounts(P.g), table: { ...CUTW.B }, plates: { cutPlates: CUTW.S.cutPlates, cutSplit: CUTW.S.cutSplit, crumbled: CUTW.S.crumbled }, pool: { ...(P.g.destr?.debris?.stats ?? {}) } }; if (DIGF) { (out as any).digestFrames = P.digFrames; if (P.digFrameAt) (out as any).digestFrameAt = P.digFrameAt; } if (process.env.PT_DIGEST) { out.digest = P.digest; out.digestMove = P.digestMove; if (P.series.length) out.digestSeries = P.series; if (P.digestAt) out.digestAt = P.digestAt; } out.cover = { ...P.g.cover.stats }; out.coverfire = coverfireReport(P.g); if ((P.g as any).cleared) (out as any).cleared = { ...(P.g as any).cleared.stats, summary: (P.g as any).cleared.summary() }; out.cues = { on: cuesOn, ...P.g.cues.stats, kinds: { ...P.g.cues.kinds }, ...(SAY ? { log: P.g.cues.log } : {}) }; out.tools = { ...P.D.stats }; out.pressure = pressureStats(P.g); if (bud) out.buddy = buddyStats(P.g); Object.assign(out, P.defw.close(P.t)); if (P.sayw) (out as any).said = P.sayw.close(); if (P.ways) (out as any).ways = P.ways.close(); if (P.paths) (out as any).paths = P.paths.close(); if (DOORPATH.on) (out as any).doorpath = { ...(P.g as any).doorPath.stats }; if (P.linew) (out as any).line = P.linew.close(P.t); if (P.holes) (out as any).destr = { ...(out as any).destr, ...P.holes.close() };   // (beside the chaos lane's counts written above: one `destr` block, both parts' keys — none shared)
     if (P.doorw) { (out as any).doors = P.doorw.close(); const M = (P as any).doorM; if (M) (out as any).doors.manners = { ...M.DOORMANNERS_STATS }; }
     { const sq = squadsReport(P.g); if (sq.length) { out.squads = sq; if (verbose) for (const q of sq) for (const e of q.events) console.log(`${e.t.toFixed(1).padStart(6)}     squad · ${q.name} ${e.what} (${e.n} at home): ${e.why}`); } }

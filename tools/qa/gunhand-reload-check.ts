@@ -23,7 +23,7 @@
 //   (12) a recording from before the key replays with it off, one that carries it keeps it; the page opens with it on and ?gunhand=0 puts it off.
 //
 //   bun run tools/qa/gunhand-reload-check.ts [--verbose]     (both stands: it raises the switch itself)
-//   GUNHAND_BREAK=1 …                                        (the rule left off for the 'on' lines: (3), (4), (5), (6), (9), (10) and (10b) must fail)
+//   GUNHAND_BREAK=1 …                                        (the rule left off for the 'on' lines: (3), (4), (5), (6), (9), (10), (10b) and (10c) must fail)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -46,6 +46,7 @@ export async function gunhandReloadCheck(): Promise<boolean> {
   const { INHAND } = await import(`${ROOT}/src/game/inhand.ts`);
   const { GEAR } = await import(`${ROOT}/src/game/gear.ts`);
   const CH: any = await import(`${ROOT}/src/game/character.ts`);
+  const FOG: any = await import(`${ROOT}/src/game/fogofwar.ts`);
   const RP: any = await import(`${ROOT}/src/game/rigProps.ts`);
   const KN: any = await import(`${ROOT}/src/game/knobs.ts`);
   const JO: any = await import(`${ROOT}/src/game/journal.ts`);
@@ -79,7 +80,7 @@ export async function gunhandReloadCheck(): Promise<boolean> {
       return out; };
     const step = (m: Man, rule: boolean, moves: boolean) => { GUNHAND.on = rule; INHAND.on = true; CH.MOVES.on = moves ? 1 : 0; CH.MOVES.reload = 1; const c = m.c;
       c.inHand = m.gun === 'pistol' ? null : RP.longHold(m.gun === 'carbine' ? 'carbine' : 'sc20k'); if (c.vel) c.pos = [c.pos[0] + c.vel[0] * DT, c.pos[1], c.pos[2] + c.vel[2] * DT]; c.update(DT); };
-    interface Row { t: number; grip: number; well: number; mag: number; fore: number; turn: number; pitch: number; headOff: number; headEnd: number; headDown: number; chest: number; gunOff: number; handOff: number; shown: boolean; carry: number; reloading: [boolean, boolean]; simSame: boolean }
+    interface Row { t: number; grip: number; well: number; mag: number; fore: number; turn: number; pitch: number; headOff: number; headEnd: number; headDown: number; chest: number; gunOff: number; handOff: number; shown: boolean; carry: number; gaze: number; reloading: [boolean, boolean]; simSame: boolean }
     interface Beat { dur: number; out: number; in_: number; rack: number }
     const FN: Beat = { dur: 2.4, out: 0.5, in_: 1.5, rack: 2.0 }, AK: Beat = { dur: 2.6, out: 0.7, in_: 1.7, rack: 2.2 };
     type Pose = (c: any) => void;
@@ -110,7 +111,7 @@ export async function gunhandReloadCheck(): Promise<boolean> {
         rows.push({ t, grip: gm ? len(sub(bx[gm.boxStart].c, hollowR(c))) : 0, well: M ? len(sub(c.bones.handL, gunAt(c, M.mag))) : 0, mag: mg ? offBox(bx[mg.boxStart], drawn(c, c.anim.nodes.handL)) : 0, fore: gl ? len(sub(drawn(c, c.anim.nodes.handL), gl.frame.o)) : 0,
           turn: last ? deg(dot(last, gd)) : 0, pitch: Math.asin(Math.max(-1, Math.min(1, gd[1]))) * 180 / Math.PI,
           headOff: deg(dot(c.headDir(), R.c.headDir())), headEnd: Math.min(deg(dot(c.headDir(), R.c.headDir())), deg(dot(c.headDir(), A.c.headDir()))), headDown: (R.c.headDir()[1] - c.headDir()[1]), chest: len(sub(rel(B, 'chest'), rel(R, 'chest'))), gunOff: deg(dot(gd, R.c.gunDir)), handOff: len(sub(rel(B, 'handR'), rel(R, 'handR'))),
-          shown: c.anim.longShown !== null, carry: c.anim.rlShown.carry, reloading: [A.c.anim.reloading, c.anim.reloading], simSame: JSON.stringify([A.c.bones, A.c.gunDir, A.c.muzzle]) === JSON.stringify([c.bones, c.gunDir, c.muzzle]) });
+          shown: c.anim.longShown !== null, carry: c.anim.rlShown.carry, gaze: (g => Math.atan2(g[0], g[2]) * 180 / Math.PI)(FOG.gazeOf(c)), reloading: [A.c.anim.reloading, c.anim.reloading], simSame: JSON.stringify([A.c.bones, A.c.gunDir, A.c.muzzle]) === JSON.stringify([c.bones, c.gunDir, c.muzzle]) });
         last = [...gd] as V3; }
       return rows; };
     const mx = (rs: Row[], f: (r: Row) => number) => rs.reduce((a, r) => Math.max(a, f(r)), 0), at = (rs: Row[], t: number) => rs[Math.round(t * 60) - 1];
@@ -164,6 +165,11 @@ export async function gunhandReloadCheck(): Promise<boolean> {
     { const p = play('operator', 'bullpup', POSES['low ready'], FN, 'own', ON, true, 1), b = body(p, FN);
       line(mx(b, r => r.gunOff) <= 1 && mx(b, r => r.carry) === 0 && mx(p, r => r.grip) <= 0.015 && at(p, FN.out).well <= 0.03 && mx(b, r => r.headOff) >= 10, '(10) against a wall (the low ready tucked): the muzzle keeps to its tuck, the hands do the change there, the head still goes down',
         `head ${f1(mx(b, r => r.headOff))}° · bore ${mx(b, r => r.gunOff).toFixed(2)}° off the tuck · palm off the grip ${cm(mx(p, r => r.grip))} cm · wrist off the well's mark ${cm(at(p, FN.out).well)} cm`); }
+
+    // (10c) the fog cone's gaze (fogofwar.ts gazeOf: his head, and on his sights his aim) through the change
+    { const sw = (rs: Row[]) => rs.reduce((a, r, i) => i ? Math.max(a, Math.abs(((r.gaze - rs[i - 1].gaze + 540) % 360) - 180)) : 0, 0);
+      const on = Math.max(...runs.map(r => sw(r.on))), worst = runs.reduce((a, r) => sw(r.on) > sw(a.on) ? r : a);
+      line(on <= 3, '(10c) the fog cone does not jump: through every reload the gaze the cone is laid on (his aim on his sights, his head at the well) turns no more than 3° in a frame', `fastest frame ${f1(on)}° (${worst.name}, ${worst.pose}) · rule off ${f1(Math.max(...runs.map(r => sw(r.off))))}°`); }
 
     // (10b) a beat that stands still
     { const m = man('defender', 'carbine'); POSES['on the aim'](m.c); for (let i = 0; i < 90; i++) step(m, ON, true);

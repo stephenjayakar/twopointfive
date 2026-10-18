@@ -31,12 +31,13 @@
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
-//     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-wiring
+//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
+//     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
 //     kitcan: kitcan-tiles
 //     kitdeal: kitdeal-cards kitdeal-run kitdeal-screen kitdeal-stands
-//     noshield: noshield-stands noshield-card noshield-staged noshield-tape
+//     noshield: noshield-gone noshield-card noshield-staged noshield-tape
 //     takedown: takedown-harness takedown-rules takedown-off takedown-moves takedown-partner takedown-breathe takedown-lower takedown-kill takedown-beats
 //     stealthpose: stealthpose-harness stealthpose-off stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
 //     close: close-dark close-duo close-grab close-harness close-held close-marks close-melee close-mode close-off close-offer close-rows close-seat close-tell close-windows
@@ -102,7 +103,7 @@ const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
 const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'weapons-identity', 'teams-identity', 'tactics-identity', 'needs-identity', 'civilians-identity', 'wind-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'glasspen-off', 'pellets-identity', 'director-scheduler',
-  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
+  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'gunslots', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
 const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
@@ -127,11 +128,16 @@ console.error = (...args: unknown[]) => { if (tapDepth) scan(args); rawErr(...ar
 // under every menu and makes it LAY the order; the row as the page has it is planlay-check.ts's, on both stands. So the new switch is held off for these on
 // EVERY stand, as the frozen stand holds it (standup.ts reads the word as each probe stands its game up) — unless whoever runs the tool set the word himself.
 const ROWS_AS_THEY_WERE = /^(squadplay|thresholdmenu|orderkeys|pressorders|doormenu|doortools-menu|orders-menu)(-|$)/;
-// THE KIT CARDS AS THEY WERE. These probes set a shield, a wall charge or the breaching shotgun through rows of their own and count pouches for them — the
+// THE KIT CARDS AS THEY WERE. These probes set a wall charge or the breaching shotgun through rows of their own and count pouches for them — the
 // card of the build before the big slot (src/game/kit.ts BIGSLOT, on in the page: one big row, the shotgun off the weapon row, big things free of pouches).
 // The card as the page has it is bigslot-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the frozen stand holds it —
 // unless whoever runs the tool set the word himself.
-const CARDS_AS_THEY_WERE = /^(kit|pouch|shield|shotgun|squadsmoke)(-|$)/;   // (owncharge-kit reads both cards itself: the rows a thing first, the big slot at its foot)
+const CARDS_AS_THEY_WERE = /^(kit|pouch|shotgun|squadsmoke)(-|$)/;   // (owncharge-kit reads both cards itself: the rows a thing first, the big slot at its foot)
+// THE CARD'S ONE GUN ROW. These probes read or step a card's gun through its 'weapon' row (and hold that no field without a tile moves under a paste) — the
+// card of the build before the two gun slots (src/game/gunslots.ts GUNSLOTS, on in the page: a Primary and a Secondary row where the gun row stood, `weapon`
+// following the primary). The card as the page has it is gunslots-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the
+// frozen stand holds it — unless whoever runs the tool set the word himself. (The probes of CARDS_AS_THEY_WERE need no word: the slots ride on the big slot.)
+const GUN_ROW_AS_IT_WAS = /^(bigslot|kitpaste|kitlent|kitcan|sticky)(-|$)/;
 // YOUR CARD AS IT WAS. pouch-table reads a card's notes and refusals word for word ("no FN2000, no launcher …") and holds every row of every card against a
 // fixture written from the build before the pouches rule. Four rules since, each on in the page, change what it reads: the 2010s issue kit renames the rifle
 // and the pistol in those words (src/game/gear.ts GEAR), and your own card gains a door charge row (owncharge.ts OWNCHARGE), a camera row (stickycam.ts STICKY)
@@ -142,10 +148,7 @@ const CARD_AS_IT_WAS = /^pouch-table$/;
 // men empty — to press a pouch too many, to trade one across two cards, to count a stored card. Since the squad's kit is dealt over the men who come (src/game/
 // kit.ts KITDEAL, on in the page) a card reads as it is WORN, and that is kitdeal-check.ts's to hold, on both stands, with a seeded walk of presses of its own.
 // So the deal is held off for these on EVERY stand, as the frozen stand holds it — unless whoever runs the tool set the word himself.
-const DEAL_AS_IT_WAS = /^(kit|pouch|shield|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
-// THE BALLISTIC SHIELD is out of the page since 10-15 (src/game/shield.ts SHIELD.on, off on the shipped stand; tools/qa/noshield-check.ts). The probes that put
-// one on a card — the card's own, the shield's, the level's issue — were written with it in the game: they hold it in on EVERY stand, as the frozen stand has it.
-const SHIELD_AS_IT_WAS = /^(kit|kitpaste|pouch|shield|shotgun|squadsmoke|issue)(-|$)/;   // (kitpaste: its 'a shield man onto you' case)
+const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND']];
 async function run(name: string, fn: () => unknown): Promise<boolean> {
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
@@ -153,12 +156,12 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const SOLO = (await import(`${ROOT}/src/game/kit.ts`)).KIT_SOLO, soloOn = SOLO.on;   // (…and so is 'the plain night wears your card' (kit.ts KIT_SOLO.on, a flag of the visit in no knob table): a probe that starts a quiet mission alone raises it by the page's own question (kitSoloIf), and left up it put your card on every plain game stood up after it — kit-solo went red behind the sticky family in one run)
   const layHeld = ROWS_AS_THEY_WERE.test(name) && process.env.TPS_PLANLAY === undefined; if (layHeld) process.env.TPS_PLANLAY = '0';
   const bigHeld = CARDS_AS_THEY_WERE.test(name) && process.env.TPS_BIGSLOT === undefined; if (bigHeld) { process.env.TPS_BIGSLOT = '0'; (await import(`${ROOT}/src/game/kit.ts`)).BIGSLOT.on = false; }   // (…and off now, for a probe that reads the cards before it stands a game up; knobsBack puts the table back)
+  const gunHeld = GUN_ROW_AS_IT_WAS.test(name) && process.env.TPS_GUNSLOTS === undefined; if (gunHeld) { process.env.TPS_GUNSLOTS = '0'; (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS.on = false; }   // (as the big slot's line above)
   const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
-  const plateHeld = SHIELD_AS_IT_WAS.test(name) && process.env.TPS_SHIELD === undefined; if (plateHeld) { process.env.TPS_SHIELD = '1'; (await import(`${ROOT}/src/game/shield.ts`)).SHIELD.on = true; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (plateHeld) delete process.env.TPS_SHIELD; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
+  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (gunHeld) delete process.env.TPS_GUNSLOTS; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2436,6 +2439,12 @@ if (on('handwork-swap', 'handwork', 'all')) await run('handwork-swap', async () 
 if (on('handwork-off', 'handwork', 'all')) await run('handwork-off', async () => (await import('./handwork-probes.ts')).handworkOff());   // the switch off: everything on the tap as it was; the picture-only halves digest the same on and off
 if (on('handwork-harness', 'handwork', 'all')) await run('handwork-harness', async () => (await import('./handwork-probes.ts')).handworkHarness());   // the two stands, the page switch, the knob table
 // ---------------------------------------------------------------- the optical wand (src/game/wand.ts, wand-check.ts): a piece of your kit; carrying it, a look under a shut door where the fog of war hides the room
+// A PRIMARY AND A SECONDARY FOR EVERY MAN (src/game/gunslots.ts; tools/qa/gunslots-check.ts raises the switch itself, so it asks the same on either stand; GUNSLOTS_BREAK=1 must fail)
+if (on('gunslots-card', 'gunslots', 'kit', 'all')) await run('gunslots-card', async () => (await import('./gunslots-check.ts')).gunslotsCard());     // two gun rows where the one stood, the old gun field following, a card from before them, off = the rows before
+if (on('gunslots-mate', 'gunslots', 'all')) await run('gunslots-mate', async () => (await import('./gunslots-check.ts')).gunslotsMate());            // a staged teammate's second gun, out when dry and near, back and reloaded when nobody is in front of him
+if (on('gunslots-fight', 'gunslots', 'all')) await run('gunslots-fight', async () => (await import('./gunslots-check.ts')).gunslotsFight());         // two men dry at five metres: the third man goes down to a sidearm inside the reload
+if (on('gunslots-guns', 'gunslots', 'all')) await run('gunslots-guns', async () => (await import('./gunslots-check.ts')).gunslotsGuns());             // the guns the two rows offer, each set apart by a measure: reach, who hears it, the turn, the feed; a fight with each
+if (on('gunslots-off', 'gunslots', 'all')) await run('gunslots-off', async () => (await import('./gunslots-check.ts')).gunslotsOff());               // off = the same run by digest, the stands' row, the registry, a recording from before it
 // THE PLAYER CARRIES AND SETS CHARGES LIKE THE SQUAD (src/game/owncharge.ts; tools/qa/owncharge-check.ts raises the switch itself, so it asks the same on either stand; OWNCHARGE_BREAK=1 must fail)
 if (on('owncharge-kit', 'owncharge', 'kit', 'all')) await run('owncharge-kit', async () => (await import('./owncharge-check.ts')).ownchargeKit());       // the two rows on your card with the switch, the teammates' prices, the squad's count, the store, no squad cap on wall charges
 if (on('owncharge-door', 'owncharge', 'doortools', 'all')) await run('owncharge-door', async () => (await import('./owncharge-check.ts')).ownchargeDoor());   // alone: the card's count, the row, set / broken off / handed back / blown, a restart, one more row on a lock
@@ -2449,10 +2458,11 @@ if (on('bigslot-you', 'bigslot', 'all')) await run('bigslot-you', async () => (a
 if (on('bigslot-mate', 'bigslot', 'doortools', 'all')) await run('bigslot-mate', async () => (await import('./bigslot-check.ts')).bigMate());      // a teammate's shotgun off its sling and back, his hammer, the face the leaf opens toward
 if (on('bigslot-shut', 'bigslot', 'doortools', 'all')) await run('bigslot-shut', async () => (await import('./bigslot-check.ts')).bigShut());      // any shut door, from beside the frame, the door ends open; the squad's row on H
 if (on('bigslot-moves', 'bigslot', 'doortools', 'all')) await run('bigslot-moves', async () => (await import('./bigslot-check.ts')).bigMoves());    // BIGSLOT.moves: the row from the stack's distance, the walk to a place beside the frame, the tool drawn and swung, the tail
+if (on('bigslot-weight', 'bigslot', 'doortools', 'all')) await run('bigslot-weight', async () => (await import('./bigslot-check.ts')).bigWeight());   // BIGSLOT.weight: the tool changes hands with the weight of a gun swap — your gun to its place by hand first, the tool out and back in a long gun's time; BIGWEIGHT_BREAK=1 must fail
 if (on('bigslot-wiring', 'bigslot', 'all')) await run('bigslot-wiring', async () => (await import('./bigslot-check.ts')).bigWiring());             // the stands' row and word, the registry, the journal's tables, slots.json
 // COPY AND PASTE FOR LOADOUTS (src/game/kit.ts kitPaste; tools/qa/kitpaste-check.ts sets the card's rules itself, each way, so it asks the same on either stand; KITPASTE_BREAK=1 must fail)
 if (on('kitpaste-fit', 'kitpaste', 'kit', 'all')) await run('kitpaste-fit', async () => (await import('./kitpaste-check.ts')).pasteFit());         // any man's card onto any man's: a legal squad, a card of his own tiles, one write
-if (on('kitpaste-cases', 'kitpaste', 'kit', 'all')) await run('kitpaste-cases', async () => (await import('./kitpaste-check.ts')).pasteCases());   // a shield man onto you, you onto a teammate, colours kept, a squad limit's refusal
+if (on('kitpaste-cases', 'kitpaste', 'kit', 'all')) await run('kitpaste-cases', async () => (await import('./kitpaste-check.ts')).pasteCases());   // a teammate onto you, you onto a teammate, colours kept, a squad limit's refusal
 // WHAT A MISSION HANDS YOU SHOWS ON YOUR CARD (src/ui/kitCard.ts `lent`, src/ui/loadout.ts lentNow; tools/qa/kitlent-check.ts sets its switches itself; KITLENT_BREAK=1 must fail)
 if (on('kitlent-tiles', 'kitlent', 'kit', 'all')) await run('kitlent-tiles', async () => (await import('./kitlent-check.ts')).lentTiles());   // the cameras and the wand a quiet mission under the fog hands you, on your own tiles
 // A SUPPRESSED GUN IS DRAWN AND NAMED AS ONE ON THE KIT CARD (src/ui/kitCard.ts KIT_CAN, src/ui/kitIcons.ts; tools/qa/kitcan-check.ts sets its switches itself; KITCAN_BREAK=1 must fail)
@@ -2462,11 +2472,11 @@ if (on('kitdeal-cards', 'kitdeal', 'kit', 'all')) await run('kitdeal-cards', asy
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the same run by digest; cards dealt for four staged smaller; a mission's own issue
 if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 if (on('kitdeal-stands', 'kitdeal', 'kit', 'all')) await run('kitdeal-stands', async () => (await import('./kitdeal-check.ts')).dealStands());   // the two stands, the registry, a recording's tables
-// THE BALLISTIC SHIELD IS OUT OF THE PAGE (src/game/shield.ts SHIELD.on, src/game/kit.ts shieldIn; tools/qa/noshield-check.ts sets the switch itself, so it asks the same on either stand; NOSHIELD_BREAK=1 must fail)
-if (on('noshield-stands', 'noshield', 'all')) await run('noshield-stands', async () => (await import('./noshield-check.ts')).noshieldStands());        // in on the frozen stand, out on the shipped; the word, the registry, the journal's tables
-if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored card that says shield is a card without
-if (on('noshield-staged', 'noshield', 'all')) await run('noshield-staged', async () => (await import('./noshield-check.ts')).noshieldStaged());        // the long hall stages without it; no mission's words name one
-if (on('noshield-tape', 'noshield', 'journal', 'all')) await run('noshield-tape', async () => (await import('./noshield-check.ts')).noshieldTape());   // a recording made with one replays with it
+// THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18; tools/qa/noshield-check.ts — the same lines on either stand: there is no switch left to differ in)
+if (on('noshield-gone', 'noshield', 'all')) await run('noshield-gone', async () => (await import('./noshield-check.ts')).noshieldGone());            // no module, no knob table, no stand's word, no Tab row, no key of the kit view
+if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored or pasted card that says shield is a card without, and is saved without the word
+if (on('noshield-staged', 'noshield', 'all')) await run('noshield-staged', async () => (await import('./noshield-check.ts')).noshieldStaged());        // the long hall stages in the plain issue; no level issues one, and one that says so is refused in words; no mission's words name one
+if (on('noshield-tape', 'noshield', 'journal', 'all')) await run('noshield-tape', async () => (await import('./noshield-check.ts')).noshieldTape());   // a journal that carries the old table still applies; a run tape made with a shield is refused in words
 // CLOSE-UP TAKEDOWNS AS MOVES (src/game/takedown.ts; tools/qa/takedown-check.ts writes the switch itself for each arm, so it asks the same on either stand; TAKEDOWN_BREAK=1 must fail). One process shares the staged runs: nine moves, off and on
 if (on('takedown-harness', 'takedown', 'all')) await run('takedown-harness', async () => (await import('./takedown-check.ts')).takedownHarness());   // the frozen stand's row and word, the page's switch, the knob registry, a recording's tables
 if (on('takedown-rules', 'takedown', 'close', 'all')) await run('takedown-rules', async () => (await import('./takedown-check.ts')).takedownRules());   // off against on, move by move: out on the same frame, downKind, hearing events, chronicle rows, draws, Sam's place
@@ -3126,13 +3136,6 @@ if (on('shotgun-range', 'shotgun', 'all')) await run('shotgun-range', async () =
 if (on('shotgun-door', 'shotgun', 'all')) await run('shotgun-door', async () => (await import('./shotgun-probes.ts')).shotgunDoor());
 if (on('shotgun-card', 'shotgun', 'all')) await run('shotgun-card', async () => (await import('./shotgun-probes.ts')).shotgunCard());
 if (on('shotgun-identity', 'shotgun', 'all')) await run('shotgun-identity', async () => (await import('./shotgun-probes.ts')).shotgunIdentity());
-// ---------------------------------------------------------------- a teammate's BALLISTIC SHIELD (shield-probes.ts; game/shield.ts, the kit card's Shield row): 'shield' = the family
-if (on('shield-card', 'shield', 'all')) await run('shield-card', async () => (await import('./shield-probes.ts')).shieldCard());
-if (on('shield-rounds', 'shield', 'all')) await run('shield-rounds', async () => (await import('./shield-probes.ts')).shieldRounds());
-if (on('shield-entry', 'shield', 'all')) await run('shield-entry', async () => (await import('./shield-probes.ts')).shieldEntry());
-if (on('shield-defenders', 'shield', 'all')) await run('shield-defenders', async () => (await import('./shield-probes.ts')).shieldDefenders());
-if (on('shield-blast', 'shield', 'frag', 'all')) await run('shield-blast', async () => (await import('./shield-probes.ts')).shieldBlast());   // (the gear build's seam: a grenade's burst against the plate)
-if (on('shield-identity', 'shield', 'all')) await run('shield-identity', async () => (await import('./shield-probes.ts')).shieldIdentity());
 // ---------------------------------------------------------------- a shot does not cost a man his corner, and the man who has seen most of the room goes in first (cornerlead-probes.ts;
 // doortools.ts DOORTOOLS.cornerOwed / collapse / leadSeen, floorseen.ts): a handful of held rooms' doors entered with the three off and as shipped. The full count: bun run tools/qa/cornerlead-probes.ts
 if (on('cornerlead-corners', 'cornerlead', 'all')) await run('cornerlead-corners', async () => (await import('./cornerlead-probes.ts')).cornerleadCorners());
@@ -3200,10 +3203,10 @@ let glassBannerPending: { f0: number } | null = null;
   await gtf('glasstune-budget', 'glasstuneBudget'); await gtf('glasstune-stack', 'glasstuneStack'); await gtf('glasstune-off', 'glasstuneOff');
   if (gtRan && which === 'glasstune') familyBanner('glasstune', FAILED.length - f0); }
 // ---------------------------------------------------------------- A LOAD OF SHOT AND A PANE (pellets-probes.ts; glasspen.ts 'the shell rule', rebuild/gear-and-glass/pellets.md): 'pellets' = the family — one
-// crossing at the arm point for a pressed shell, pellets through and pellets stopped marked by the one rule (+ the 1 / 4 / 8 m table), the M870's own through-glass value, the shield log's bearing after
-// glass, the two identities against 0ee0094, and the red paths
+// crossing at the arm point for a pressed shell, pellets through and pellets stopped marked by the one rule (+ the 1 / 4 / 8 m table), the M870's own through-glass value,
+// the two identities against 0ee0094, and the red paths
 { const pf = async (name: string, fn: string) => { if (on(name, 'pellets', 'all')) await run(name, async () => ((await import('./pellets-probes.ts')) as any)[fn]()); };
-  await pf('pellets-arm', 'pelletsArm'); await pf('pellets-rule', 'pelletsRule'); await pf('pellets-energy', 'pelletsEnergy'); await pf('pellets-shield', 'pelletsShield');
+  await pf('pellets-arm', 'pelletsArm'); await pf('pellets-rule', 'pelletsRule'); await pf('pellets-energy', 'pelletsEnergy');
   await pf('pellets-identity', 'pelletsIdentity'); await pf('pellets-red', 'pelletsRed'); }
 // ---------------------------------------------------------------- GEAR × GLASS, JOINED (gearglass-probes.ts; rebuild/gear-and-glass/read-first.md): 'gearglass' = the family — a shell at glass a burst has
 // broken and a burst beside glass a shell has holed (the fracture model's record and the shell's own, both live), and the one line a pinned defender is asked about under ?glassfoes=0

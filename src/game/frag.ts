@@ -36,7 +36,6 @@ import type { WallOpening } from './wallbreak';
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';
 import { killGuard, hitPlayer } from './combat';
-import { shieldBlast } from './shield';   // (called inside blast only: src/game is one import cycle)
 import { bangScorch } from './marks';
 import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
@@ -323,7 +322,6 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   for (const gd of [...g.guards, ...civiliansShown(g)]) {   // (a civilian who has left the floor is not there to be hit)
     if (gd.state === 'dead' || gd.god) continue;
     const c = gd.char, head = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); const j = judge(c.pos, head, c.id); if (!j.r) continue;
-    if (j.r !== 'shielded' && shieldBlast(gd, from)) j.r = 'shielded';   // (a ballistic shield between the burst and his chest — shield.ts: nothing asked, nothing drawn, when no shield is on the floor)
     rep.hits.push({ id: c.id, name: gd.callsign, team: gd.team, d: j.d, exposed: j.e, result: j.r, ...(j.r === 'stunned' && j.behind ? { behind: j.behind } : {}) });
     if (j.r === 'shielded') { rep.shielded++; continue; }
     if (sameSide(side, gd.team) && spec.who) FRAG_STATS.own++;

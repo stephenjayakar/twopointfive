@@ -24,7 +24,7 @@ import { kickScuff } from './marks';
 import { hammerBlows } from './bigkit';
 import { BIGSLOT } from './kit';
 import { lockPoint } from './shotgun';
-import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop } from './bigkit';
+import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop, samBigLeadOf } from './bigkit';
 import { samSpread } from './suppression';
 import { isHurt } from './condition';   // (a hurt man does not sprint: Shift is not a run for him, so it lets go of nothing either)
 import { fireRing, ringSolve, ringAimPoint } from './launcher';
@@ -329,9 +329,10 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (KITANIM.on || pl.kitWas !== undefined || c.anim.closeK >= 0) kitTick(g);   // (kitanim.ts: the hands' errands when what he carries changed — on the key's own frame — and the close-in mode's distance; let go of once the switch is off)
   if (KITANIM.on || pl.kitOwed >= 0) kitClick(g, input);   // (kitanim.ts: a click made in the last moments of a draw is kept for the frame the gun is up)
   if (input.hit('KeyL')) { const lit = pl.rifleSel ? rifle : gun; lit.lightOn = !lit.lightOn; g.audio.play('click', c.muzzle, 0.6); }   // the light of the gun the kit has selected (its switch is under the thumb of the hand it is in)
-  if (input.hit('KeyZ') && pl.rifleSel) {   // the selector (a property of the rifle: in the hands or slung) — what the LEFT button fires; the attachment on the right is its own thing
-    if (rifle.def.modes.length > 1) { const m = rifle.cycleMode(); g.msg(`${rifle.def.short}: ${m.toUpperCase()}${m === 'auto' ? ' — hold the trigger' : ' — one round a click'}`); g.audio.play('click', c.muzzle, 0.7); }
-    else g.msg(`${rifle.def.short} is ${rifle.mode.toUpperCase()} only`);
+  if (input.hit('KeyZ') && (pl.rifleSel || (pl.slot === 'pistol' && gun.def.modes.length > 1))) {   // the selector (a property of the rifle: in the hands or slung) — what the LEFT button fires; the attachment on the right is its own thing. (A sidearm with two sears — gunslots.ts — has one too, with it selected.)
+    const sel = pl.rifleSel ? rifle : gun;
+    if (sel.def.modes.length > 1) { const m = sel.cycleMode(); g.msg(`${sel.def.short}: ${m.toUpperCase()}${m === 'auto' ? ' — hold the trigger' : ' — one round a click'}`); g.audio.play('click', c.muzzle, 0.7); }
+    else g.msg(`${sel.def.short} is ${sel.mode.toUpperCase()} only`);
   }
   nvKey(g, input, dt);
   const sprintKey = !isHurt(g, pl) && (input.down('ShiftLeft') || input.down('ShiftRight')) && (input.down('KeyW') || input.down('KeyA') || input.down('KeyS') || input.down('KeyD'));
@@ -489,7 +490,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   // a wall, a jamb or a leaf inside the raised gun's reach on the line he aims along (gunwall.ts; nothing with its switch off): the gun comes to the low ready —
   // the rifle's low carriage, the pistol's stance — and no round leaves it until there is room to bring it up
   const rifleAim = rifleUp && c.anim.longStance === 'shoulder';
-  const lockAt = rifleAim && pl.rifle.def.pellets ? breachAim(g, c, pl.rifle.def.pellets.breach) : null;   // the breaching shotgun laid on a lock: that muzzle is there on purpose, and a breach shot at a lock always fires
+  const lockAt = rifleAim && pl.rifle.def.pellets?.breach ? breachAim(g, c, pl.rifle.def.pellets.breach) : null;   // the breaching shotgun laid on a lock: that muzzle is there on purpose, and a breach shot at a lock always fires
   const offFriend = samOffFriend(g, c, (rifleAim || gunUp) && !pl.sprinting && !lockAt, dt);   // (friends.ts FRIENDS.lowReady: a teammate in the line of a raised gun with nobody in a fight; false with the switch off)
   const walled = (stunned && (rifleAim || gunUp)) || (!pl.wall && gunWalled(g, c, rifleAim || gunUp ? 'aim' : null, lockAt, dt, false, !!lockAt)) || offFriend !== false;   // (stunned with a gun up: it comes down as at a wall)   // (the pistol in the hand, aimed or carried: a click is about to bring it up)
   if (walled) { c.anim.upper = 'none'; if (rifleAim) armRifle(g, true, 'lowLong'); if (input.lmbHit()) g.msg(stunned ? 'stunned — the gun will not come up yet' : offFriend !== false ? `gun down — ${offFriend ? offFriend.callsign : 'a friend'} is in your line` : 'no room to bring the gun up'); }
@@ -498,15 +499,17 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (pl.wall && WALLSNAP.on) wallSnapPose(g, dt, aiming);   // (the take's feet, the landing, the stack's stance and carriage: wallsnap.ts)
   else if (pl.wall && pl.wall.takeT !== undefined) { c.anim.wallTake = -1; c.anim.wallHit = 0; c.anim.stackPress = 0; }   // (the switch thrown off under a hold it took: its channels to rest, the hold goes on as the old one)
   pl.fireCd -= dt;
+  if (gun.def.auto) gun.autoIdle(dt, gunUp && input.lmb());   // (a sidearm with an automatic sear — gunslots.ts, the Glock 18: its held string lapses as the rifle's does; nothing to count on a row without one)
   if (gunUp && !pl.sprinting && !pl.dragging) {
-    if (input.lmbHit() && !walled && pl.fireCd <= 0 && pl.equipT <= 0) {   // (equipT: the pistol only just came out in the rifle's place — X off the FN2000 — and is not up yet; never non-zero in a kit without the rifle)
+    if ((gun.automatic ? input.lmb() || input.lmbHit() : input.lmbHit()) && !walled && pl.fireCd <= (gun.automatic ? 1e-4 : 0) && pl.equipT <= 0) {   // (equipT: the pistol only just came out in the rifle's place — X off the FN2000 — and is not up yet; never non-zero in a kit without the rifle)
+      const grow = gun.autoSpread;   // (0 on a row with no automatic sear: every pistol there was)
       if (gun.fire()) {
-        pl.fireCd = gun.def.cd; pl.lastFireT = g.time;   // the row's cadence (the Five-seveN's 0.22 s; no jitter in Sam's hands)
+        pl.fireCd = gun.automatic ? gun.def.auto!.interval : gun.def.cd; pl.lastFireT = g.time; if (gun.def.auto) gun.autoFired();   // the row's cadence (the Five-seveN's 0.22 s; no jitter in Sam's hands)
         const pt = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : null;
         const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : v3.add(g.aimGuard.char.pos, [0, 1.25, 0])) : freeAim(g);   // a fixture under the reticle IS the target (that is what 'click: shoot' promises); else a guard under the cursor; else level along the cursor's heading (freeAim — the same line the gun / rail light are held on)
-        fireWeapon(g, c, aimWeighShot(g, tgt), true, { spread: samSpread(g) + samAim(g) });   // dead-on — unless rounds are going past his own head: then it opens up with his suppression (suppression.ts samSpread: 0 at rest, 0 with the flag off, 0 for the tour's scripted double-taps) — and by the aim model's cone (aim.ts samAim: unsettled, a man crossing, his own feet; 0 with tune.aimModel off / under the puppet)
+        fireWeapon(g, c, aimWeighShot(g, tgt), true, { spread: grow + samSpread(g) + samAim(g) });   // dead-on — unless rounds are going past his own head: then it opens up with his suppression (suppression.ts samSpread: 0 at rest, 0 with the flag off, 0 for the tour's scripted double-taps) — and by the aim model's cone (aim.ts samAim: unsettled, a man crossing, his own feet; 0 with tune.aimModel off / under the puppet)
         if (gun.roundsReady === 0 && !autoReloads(g, gun)) g.msg('empty — press R');   // (autoreload.ts: with a magazine left the reload starts itself a beat on and says 'reloading')
-      } else { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!gun.reloading) g.msg(gun.roundsReady === 0 ? autoReloads(g, gun) ? 'click — empty' : 'click — empty (R to reload)' : 'reloading…'); }
+      } else if (input.lmbHit()) { pl.fireCd = 0.25; g.audio.play('dryFire', c.muzzle, 0.7); if (!gun.reloading) g.msg(gun.roundsReady === 0 ? autoReloads(g, gun) ? 'click — empty' : 'click — empty (R to reload)' : 'reloading…'); }   // (the PRESS clicks dry: a trigger held on an empty automatic is silence, as the rifle's)
     }
     // right click with the pistol out: the OCP zaps the LIGHT the reticle has snapped to (aimTarget: the auto-aimed fixture or the breaker; or the lit torch / weapon
     // light of the man the ring sits on — his light is electronics too, g.ocp handles both). On a man with no light burning there is nothing for it to do, and it does
@@ -622,9 +625,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
 /** The cone Sam's next rifle round is drawn with for how he stands (RIFLE_SPREAD): still or on the move at `speed`, × crouched, × braced. The AUTO string's growth
  *  and his suppression's share are added at the fire site (they are the row's and suppression.ts's, not his stance's). */
 export function rifleSpread(g: Game, speed: number): number {
-  const pl = g.player, S = RIFLE_SPREAD;
+  const pl = g.player, S = RIFLE_SPREAD, H = pl.rifle.def.hands;   // (weapons.ts `hands`: the reach this long gun has in his hands — absent on the FN2000 and the shotgun: 1 each)
   const feet = AIMCOST.move && !g.touring ? Math.max(speed, pl.aim.moveSm) : speed;   // (aimcost.ts: the feet his hands still remember — a stop on the trigger's own step is not 'still')
-  return (feet > S.moveAt ? S.moving : S.still) * (pl.crouch ? S.crouchK : 1) * (pl.braced ? S.braceK : 1);
+  return (feet > S.moveAt ? S.moving * (H?.moving ?? 1) : S.still * (H?.still ?? 1)) * (pl.crouch ? S.crouchK * (H?.crouch ?? 1) : 1) * (pl.braced ? S.braceK : 1);
 }
 
 /** Living guards are solid to you and never step aside (updateGuard / runGuardScript separate guards from each other only — a man must not be blocked or steered by a
@@ -1738,7 +1741,8 @@ export function startKick(g: Game, d: Door, run = false, tool?: 'shotgun' | 'ham
   pl.doorKickTail = false;
   const beside = tool ? samBigSpot(g, d, c.pos, tool) : null;
   const spot = beside ?? (run ? null : sideKickSpot(g, d, c.pos)) ?? g.doors.kickSpot(d, c.pos);   // taken ONCE, off the leaf as it stands now: a man coming through with his key mid-kick swings the leaf, and a spot re-read off the swinging leaf orbited the hinge with it — reeling the planted kicker through the doorway (or at 20 fps through the wall beside it)
-  if (tool) { pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: 0, n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
+  if (tool) { const lead = BIGSLOT.moves ? samBigLeadOf(g) : 0;
+    pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: -lead, ...(lead > 0 ? { lead } : {}), n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
     ...(BIGSLOT.moves ? { moves: { arrived: false, at: beside?.at ?? lockPoint(d, bigSide(d, c.pos)), blows: [], end: -1, ...(beside?.via ? { via: beside.via } : {}) } } : {}) } }; return; }   // (bigkit.ts: the big slot's tool on the lock in the boot's place — the same planted beat, no leg thrown)
   pl.kick = run ? { door: d, spot: spot.pos, yaw: spot.yaw, run: true } : { door: d, spot: spot.pos, yaw: spot.yaw }; c.anim.kickDoor();   // (run — sprintdoor.ts: the boot at a sprint, at the face the leaf opens toward)
 }

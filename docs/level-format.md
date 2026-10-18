@@ -221,15 +221,15 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   against the whole squad to one charge then the other, by the wings or by the workshops' back doors, and the player's own hands on one).
 - `issue` — a KIT ISSUED BY THE LEVEL (`game/kit.ts kitIssue`): `{ members: { '<place>': { …card fields } } }`, place `'0'` = the player, `'1'`‥`'4'` the
   teammates in roster order; each entry lists only the fields that differ from the issue card (`weapon` rifle | pistol | shotgun, `suppressed`, `light`,
-  `nvg`, `shield`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `shield charges walls` are a teammate's alone and `shells`
-  the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count). Every staging on that level wears the issue card with those
+  `nvg`, and the counts `bangs charges smoke frags walls shells`, whole numbers 0‥9; `charges walls` are a teammate's alone and `shells`
+  the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count; a card that still says `shield` is refused in words — the ballistic shield left the game on 10-18). Every staging on that level wears the issue card with those
   fields over it, whatever kit the machine keeps, and the kept kit is not written; `?noissue` (`ISSUE.on` false) = the kept kit as on any level. Today:
-  `levels/hall.json` (the first teammate carries the shield: Red One of the four).
+  `levels/hall.json`, whose block is empty since the shield went (`members: {}`: every man on the plain issue, no visit to the loadout screen).
 - `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
   it, and a level without the block shows the menu's standing man as before): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
   `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked
   out from that door's frame and the side the team starts on — teammates along the wall 0.7 m off its face and 0.9 m apart from 0.45 m past the jamb away
-  from the hinge (a shield man first), Sam across the door, no nearer its middle than 1.8 m (an authored slot for him should keep that too: a door charge's moment goes off beside him
+  from the hinge, Sam across the door, no nearer its middle than 1.8 m (an authored slot for him should keep that too: a door charge's moment goes off beside him
   and dazzles within 1.6 m), and turned onto it, a fourth teammate behind him; a place that is not free floor is stepped over.
   Optional, each laid over the worked-out value: `side` (1 | −1: which side of the door the stack forms on, −1 = the hinge's) · `pin { yaw, pitch, dist? }`
   (radians / metres; the camera is framed on the way's FIVE places whatever the team's size: one framing per way) · `slots [[x, z, yaw°] …]` (up to five: Sam, then the teammates from the door
@@ -282,6 +282,11 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   'wall' only the wall charge plays (the wall is stood again under the dissolve after it); every row that works a leaf — a door charge, the wand, a
   teammate's bang or frag order, the big tool — plays the GUN's there. Throws and the spot a round is put on are held to the floor measured behind the
   anchor (`inside`). The stack's `hand` mirrors the child's own framing (door / left / right) — a way whose stack falls on the right needs nothing said.
+  EVERY WAY ANCHORS ON A DOOR THAT IS NOT STEEL (10-18; tools/qa/kitview-plan.ts section C fails any other way, tools/qa/kitview-work.cjs holds the page
+  to it): a pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order — played the gun's row on a
+  span or a steel door, and on a blank wall the gun only scanned: the picture stood still for that pick. A mission whose own way in is a gate, a gap or a
+  wall writes the first door behind it (`ref`: the side the picture is taken from, when that door is another way's too), or a set with a door in the wall
+  the stack stands on (mousehole's `ward`: the wall charge still opens the wall beside the door — `KIT_VIEW_LOOP.wallAt` is measured along the stack's wall).
   ANY KIND of mission may carry a block: a way on a set is always staged as a room clear of the set; a level's own way is staged by the mission's own
   kind (room clear, rescue, night breach; a quiet mission and the solo night with their own men: Sam alone, or Sam and his partner). Only a level
   with no block shows the standing man.

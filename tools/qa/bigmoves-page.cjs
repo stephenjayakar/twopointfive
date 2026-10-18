@@ -5,7 +5,9 @@
 //          hammer's and the HUD's row is lit; Space: he WALKS to a place beside the frame, never in the opening, the hammer coming off his back into his
 //          hands (anim.bigK 0 → 1, his hands off his gun), one blow, the door ends open, the hammer goes back while his legs are his own, his hands are his
 //          own after
+//          — and THE WEIGHT (BIGSLOT.weight): his own gun goes to its place by the kit's hand first, the hammer out and back in the weighed times
 //   off    the same place under ?nobigmoves: no row from there (the build before: step to the leaf first)
+//   noweight  the same row under ?nobigweight: no wait for his gun, the first times
 //   mate   X on a shut door, then H: Red One takes the hammer off his back, swings it from beside the frame, puts it back; the door ends open
 // exit 0 = all of it, with no page error · 1 = otherwise. With an outDir the renderer's own frames are written there (the software adapter, quality
 // `QUALITY`, default low: Sam before / wound up / at the blow / after, Red One wound up / at the blow) — they are for LOOKING at, nothing reads them.
@@ -81,9 +83,11 @@ const HELP = () => {
     // Space — to the frame before the wind-up is at its top
     const A = await page.evaluate(() => { const g = window.__game, pl = g.player, d = window.__bmD, s = window.__bmS, an = pl.char.anim, W = d.def.width;
       const ok = g.selectVerb('door', 'hammer') && g.hover?.door === d; if (ok) { window.__input.pressed.add('Space'); window.__bmStep(1); }
-      const T = window.__bmT = { began: !!pl.kick?.tool?.moves && pl.kick.door === d, inOpening: 0, walked: 0, posed: 0, offGun: 0, kMax: 0, frames: 0 };
+      const up = pl.rifleUp ? 'rifle' : pl.pistolUp ? 'pistol' : 'nothing';
+      const T = window.__bmT = { began: !!pl.kick?.tool?.moves && pl.kick.door === d, inOpening: 0, walked: 0, posed: 0, offGun: 0, kMax: 0, frames: 0, up, lead: pl.kick?.tool?.lead ?? 0, carry: 0, carryBusy: 0, carryHid: 0, equip: null, stow: null, knobs: window.__knobs?.registry?.().BIGSLOT ?? {} };   // (lead …: BIGSLOT.weight — his own gun to its place by the kit's hand before the hand goes for the tool)
       window.__bmWatch = () => { const p = pl.char.pos, al = window.__bmAlong(d, p), off = window.__bmOff(d, s, p); T.frames++; if (pl.kick) { if (al > 0.05 && al < W - 0.05 && off < 1.3) T.inOpening++; if (an.speed > 0.2) T.walked++; }
-        if (an.bigTool) T.posed++; if (an.hideHeldItem) T.offGun++; T.kMax = Math.max(T.kMax, an.bigK); };
+        if (an.bigTool) { T.posed++; T.equip = an.bigTool.equip; T.stow = an.bigTool.stow; } if (an.hideHeldItem) T.offGun++; T.kMax = Math.max(T.kMax, an.bigK);
+        if (pl.kick?.tool && pl.kick.tool.t < 0) { T.carry++; if (an.kitBusy) T.carryBusy++; if (an.hideHeldItem) T.carryHid++; } };
       for (let i = 0; i < 400 && pl.kick; i++) { window.__bmStep(1); window.__bmWatch(); const B = an.bigTool; if (B && B.blows.length && B.blows[0] - B.t < 0.1) break; }
       return { ok, ...T, t: an.bigTool?.t ?? null, blow: an.bigTool?.blows?.[0] ?? null, bigK: an.bigK }; });
     await still(page, 'moves-2-wound-up');
@@ -98,7 +102,17 @@ const HELP = () => {
     await still(page, 'moves-4-after');
     line(A.ok && A.began && C.walked >= 15 && C.inOpening === 0 && (B.at[0] < -0.05 || B.at[0] > S.W + 0.05) && B.at[1] < 0.9, 'Space from there: he WALKS to a place beside the frame — never in the opening — and works it hard by the wall', `began ${A.began} · frames his legs walked ${C.walked} · frames in the opening ${C.inOpening} · he stood ${B.at[0].toFixed(2)} m along a ${S.W.toFixed(2)} m leaf, ${B.at[1].toFixed(2)} m off the wall`);
     line(C.posed > 30 && C.kMax > 0.99 && C.offGun > 30 && B.broken && C.open && C.free.posed && C.free.lock > 0.3 && !C.after.posed && C.after.bigK === 0 && !C.after.offGun && C.after.lock === 0 && C.gunBack < 2, 'the hammer comes off his back into his hands (his hands off his gun), ONE blow, the door ENDS OPEN; it goes back while his legs are his own, and his hands are his own after', JSON.stringify({ posed: C.posed, kMax: C.kMax, offGun: C.offGun, broken: B.broken, open: C.open, free: C.free, 'gun back s after his legs': C.gunBack, after: C.after }));
+    line(C.up !== 'nothing' && C.lead > 0.2 && C.carry >= Math.round(C.lead * 60) - 2 && C.carryBusy >= C.carry - 1 && C.carryHid === 0 && C.equip === C.knobs.equipW && C.stow === C.knobs.stowW && C.equip > C.knobs.equip && C.stow > C.knobs.stow, 'THE WEIGHT (BIGSLOT.weight): his own gun is carried to its place by the kit\'s hand before the hand goes for the hammer — never popped away — and the hammer comes out and goes back in the weighed times', JSON.stringify({ 'in his hands': C.up, 'the beat waits s': C.lead, 'frames of it': C.carry, 'the kit hand at work in': C.carryBusy, 'the gun hidden in': C.carryHid, 'the record: out in': C.equip, 'back in': C.stow }));
     line(errors.length === 0, 'no page error (sam)', errors.join(' · ') || 'none'); await page.close(); }
+
+  if (!ONLY || ONLY === 'noweight') { const { page, errors } = await open('roomclear&nocutboxes&nobigweight');
+    const S = await stage(page);
+    const N = S.why ? null : await page.evaluate(() => { const g = window.__game, pl = g.player, d = window.__bmD, an = pl.char.anim;
+      const ok = g.selectVerb('door', 'hammer') && g.hover?.door === d; if (ok) { window.__input.pressed.add('Space'); window.__bmStep(1); }
+      const lead = pl.kick?.tool?.lead ?? 0; let below = 0, equip = null, stow = null; for (let i = 0; i < 40 && pl.kick; i++) { window.__bmStep(1); if (pl.kick?.tool && pl.kick.tool.t < 0) below++; if (an.bigTool) { equip = an.bigTool.equip; stow = an.bigTool.stow; } }
+      const B = window.__knobs?.registry?.().BIGSLOT ?? {}; return { ok, began: !!pl.kick?.tool?.moves, lead, below, equip, stow, weight: B.weight, first: [B.equip, B.stow] }; });
+    line(!!N && N.ok && N.began && N.weight === false && N.lead === 0 && N.below === 0 && N.equip === N.first[0] && N.stow === N.first[1], '?nobigweight: the same row is the build before — no wait for his gun, the first times', JSON.stringify(N ?? S));
+    line(errors.length === 0, 'no page error (noweight)', errors.join(' · ') || 'none'); await page.close(); }
 
   if (!ONLY || ONLY === 'off') { const { page, errors } = await open('roomclear&nocutboxes&nobigmoves');
     const S = await stage(page);

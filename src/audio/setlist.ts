@@ -27,7 +27,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'compound': ['Undertow', 'Glass Rain'],                  // eleven behind a wall at night: the bells, then frame drum and dulcimer
   'barracks': ['Wire Act', 'Undertow'],                    // two galleries that look across at each other
   'floodlit': ['Paper Walls', 'Wire Act'],                 // a lit yard to cross: both in twelve-eight, a fifth apart
-  'hall': ['Undertow', 'Paper Walls'],                     // a shield walking a long bare hall: slow, heavy, led by drums
+  'hall': ['Undertow', 'Paper Walls'],                     // four men down a long bare hall under two guns: slow, heavy, led by drums
   'mousehole': ['Paper Walls', 'Undertow'],                // the walls are the way in
   'glasshouse': ['Glass Rain', 'Wire Act'],                // rooms walled in glass
   'pass': ['Undertow', 'Glass Rain'],                      // a teahouse under snow: bells, then the dulcimer

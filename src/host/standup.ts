@@ -49,6 +49,7 @@ import { BIGSLOT, KITDEAL } from '../game/kit';
 import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
+import { GUNSLOTS } from '../game/gunslots';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
@@ -100,7 +101,6 @@ import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
-import { SHIELD } from '../game/shield';
 import { FRIENDS } from '../game/friends';
 import { kitSoloStand } from '../game/kit';
 import { glassPenHarness } from '../game/glasspen';
@@ -244,7 +244,6 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_TEAMTALLY')) TEAMTALLY.on = String((globalThis as any).process?.env?.TPS_TEAMTALLY ?? '') === '1';   // a partner's men are on Sam's card on a quiet mission as two (src/game/teamtally.ts): off, so a quiet run as two keeps the numbers every tally was recorded with
     if (pinned('TPS_AUTORELOAD')) RELOAD.auto = String((globalThis as any).process?.env?.TPS_AUTORELOAD ?? '') === '1';   // a dry gun reloads itself (src/game/autoreload.ts): off, so a dry gun waits for R as every frozen probe, digest and scripted player expects; `TPS_AUTORELOAD=1` turns it on
     if (pinned('TPS_QUICKTHROW')) QUICKTHROW.on = String((globalThis as any).process?.env?.TPS_QUICKTHROW ?? '') !== '0';   // the G quick throw (src/game/quickthrow.ts): ON here — the page plays without it, but the frozen probes and a recorded session press G (the soak does not); `TPS_QUICKTHROW=0` takes it away
-    if (pinned('TPS_SHIELD')) SHIELD.on = String((globalThis as any).process?.env?.TPS_SHIELD ?? '') !== '0';   // the ballistic shield (src/game/shield.ts): ON here by the module's own default — the page plays without it (gone 10-15), but the frozen probes, tallies and fixtures stage one, `TPS_SHIELD=0` = the page's (a probe that wants it off under a FROZEN stand-up gives the word: a hand alone, or a --set row, is written over here, as the quick throw's is)
     if (pinned('TPS_FRIENDS')) FRIENDS.noSnap = String((globalThis as any).process?.env?.TPS_FRIENDS ?? '') === '1';   // the reticle passes over men of the player's own side (src/game/friends.ts): off, so a scripted cursor near a teammate snaps as every frozen probe and digest saw it; `TPS_FRIENDS=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page
     if (pinned('TPS_QUIETFOG')) QUIETFOG.on = String((globalThis as any).process?.env?.TPS_QUIETFOG ?? '') === '1';   // quiet missions under the fog of war (src/game/quietfog.ts): off, so a quiet mission's query reads no rung of the fog lever, as every frozen run was made
@@ -319,6 +318,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_HANDS')) HANDS.on = String((globalThis as any).process?.env?.TPS_HANDS ?? '') === '1';   // hands on the world (src/game/hands.ts): off, so a body is the ankle drag on its old clock and a door row flings the leaf, as every frozen probe and digest read them; `TPS_HANDS=1` turns it on (the shipped default)
     if (pinned('TPS_WORDS')) WORDS.on = String((globalThis as any).process?.env?.TPS_WORDS ?? '') === '1';   // the dialogue pass (src/game/words.ts): off, so every man says what he said in every frozen probe, digest and session fixture (a bubble's time is its length); `TPS_WORDS=1` turns it on (the shipped default)
     if (pinned('TPS_OWNCHARGE')) OWNCHARGE.on = String((globalThis as any).process?.env?.TPS_OWNCHARGE ?? '') === '1';   // the player's own charges (src/game/owncharge.ts): off, so your card has no charge rows and no door offers 'set a charge'
+    if (pinned('TPS_GUNSLOTS')) GUNSLOTS.on = String((globalThis as any).process?.env?.TPS_GUNSLOTS ?? '') === '1';   // a primary and a secondary for every man (src/game/gunslots.ts): off, so a card has its one gun row and a teammate one gun
     if (pinned('TPS_PLANLAY')) PLANLAY.on = String((globalThis as any).process?.env?.TPS_PLANLAY ?? '') === '1';   // X is where the plan is laid (src/game/planlay.ts): off, so 'wait for my word' is the four's door tools' row on every frozen probe; TPS_PLANLAY=1 raises it
     if (pinned('TPS_CONDITION')) CONDITION.on = String((globalThis as any).process?.env?.TPS_CONDITION ?? '') === '1';   // a man's condition (src/game/condition.ts): off, so a blast that leaves a man up folds him for its seconds and then he is as he was, as every frozen probe, digest and tally was recorded
     if (pinned('TPS_PACKSIDE')) PACKSIDE.on = String((globalThis as any).process?.env?.TPS_PACKSIDE ?? '') === '1';   // a long thing on a back that wears a pack stands at the pack's side (src/game/packside.ts): off, so every back box and part mask is what every frozen probe read; looks only, no digest moves either way
@@ -326,7 +326,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_GUNHAND')) GUNHAND.on = String((globalThis as any).process?.env?.TPS_GUNHAND ?? '') === '1';   // a move keeps to the hand that is free (src/game/gunhand.ts): off, so every pose a frozen probe read is the pose it read
     if (pinned('TPS_AUTOPILOT')) AUTOPILOT.on = String((globalThis as any).process?.env?.TPS_AUTOPILOT ?? '') === '1';   // B is the squad's autopilot (src/game/autopilot.ts): off, so the quick key is the target's first row on every frozen probe; TPS_AUTOPILOT=1 raises it
     if (pinned('TPS_SQUADTHROW')) SQUADTHROW.on = String((globalThis as any).process?.env?.TPS_SQUADTHROW ?? '') === '1';   // frags and stun canisters thrown on order (src/game/squadthrow.ts): off, so the floor's menu has no 'throw' row
-    if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge and a shield are pouches, and nobody carries a hammer
+    if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge is pouches, and nobody carries a hammer
     if (pinned('TPS_KITDEAL')) KITDEAL.on = String((globalThis as any).process?.env?.TPS_KITDEAL ?? '') === '1';   // the squad's kit dealt over the men who come (src/game/kit.ts KITDEAL): off, so with three or four teammates the first two carry all of it
     if (pinned('TPS_PEEKSIGHT')) PEEKSIGHT.on = String((globalThis as any).process?.env?.TPS_PEEKSIGHT ?? '') === '1';   // a peek round the end of a wall lifts the fog (src/game/peeksight.ts): off, so the fog's eye stays over his feet
     if (pinned('TPS_WAND')) WAND.on = String((globalThis as any).process?.env?.TPS_WAND ?? '') === '1';   // the optical wand (src/game/wand.ts): off, so your kit card has no such row and no door offers the look

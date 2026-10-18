@@ -35,7 +35,6 @@ import type { ThrowSolution } from './throwables';
 import { GRAVITY } from './throwables';
 import { bogRun, snowBogAt } from './snowBog';
 import { TOSS_QUICK } from './character';
-import { plateUp } from './shield';
 
 export const SQUADSMOKE = {
   /** the row's own key, read while a menu that lists the row is up (game.ts → squadSmokeKey). Not a digit: the floor menu's five are taken */
@@ -93,9 +92,9 @@ function runClear(g: Game, a: Vec3, b: Vec3): boolean {
   }
   return true;
 }
-/** has this man a hand for a throw right now (the shield man's other hand holds his pistol; hands on a lock's tools stay there; a man doubled over or blind
+/** has this man a hand for a throw right now (hands on a lock's tools stay there; a man doubled over or blind
  *  throws nothing) — squadthrow.ts asks it too */
-export function squadHandFree(g: Game, gd: Guard): boolean { return !(gd.state === 'dead' || plateUp(gd) || gd.char.anim.lockpick || g.time < gd.staggerUntil || g.time < gd.dazzledUntil); }
+export function squadHandFree(g: Game, gd: Guard): boolean { return !(gd.state === 'dead' || gd.char.anim.lockpick || g.time < gd.staggerUntil || g.time < gd.dazzledUntil); }
 /** ONE MAN'S THROW to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests (null: he has none — his hand would be in
  *  a wall, the arc's first impact is not the floor by the spot, or something stands in its run). `rollK`: the run of the body thrown (default: a can's);
  *  squadthrow.ts asks it for a frag and a stun canister */

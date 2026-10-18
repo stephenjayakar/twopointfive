@@ -178,7 +178,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   merge with the build that carries the game's own maths and the CPU senses: night-breach, room-clear-four and mousehole-four on both stands, and room-clear-four
   and hostage-rescue on the shipped stand with `TPS_CPUSENSE=1`, every line PASS. One seed only; other seeds and longer runs were not run.
   KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
-  `shield.given`, the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
+  the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
   that runs several games in a process wants them on the Game. Another Game object is never walked into, but a memo that names another game's man is. CONFIG rows are
   safe only while a rolled-back window never spans a scenario's start or stop, and a snapshot is put back under the maths (`EXACT.on`) and senses (`SENSE.cpu`)

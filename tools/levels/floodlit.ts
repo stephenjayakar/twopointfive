@@ -96,11 +96,11 @@ export const FLOODLIT_STRUCTURE: StructureData = {
   ],
 };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the level's one idea from where the team stands — the
- *  main gate, which has no leaf: the two posts under their lamps, the stack in the dark along the outside of the wall, and through the opening the yard under
- *  its floodlights. Anchored on the opening, post to post (the team forms up ten metres west of it, on the same
- *  side). The picture hangs no lamp of its own: the two on the gate posts are the level's, and they are lit. */
-export const FLOODLIT_KITVIEW: KitViewData = { ways: [{ span: [[18.54, 24], [21.46, 24]], light: { porch: { intensity: 0 } } }] };
+/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the main gate has no leaf, and a picture anchored on
+ *  that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the wand, a bang or a frag on order all stood idle). So
+ *  the way is the door the gate leads to: the building's front door, straight across the yard under its floodlights. The picture hangs no lamp of its own:
+ *  the yard's floods are the level's, one of them over this door, and they are lit. */
+export const FLOODLIT_KITVIEW: KitViewData = { ways: [{ door: 'front', light: { porch: { intensity: 0 } } }] };
 
 export const FLOODLIT_SCENARIOS: LevelScenarios = { roomClear: FLOODLIT_STRUCTURE, kitView: FLOODLIT_KITVIEW,
   places: { areas: [{ name: FLOODLIT_ROOMS.yard.name, bounds: { ...FLOODLIT_ROOMS.yard.bounds } }, { name: FLOODLIT_ROOMS.shed.name, bounds: { ...FLOODLIT_ROOMS.shed.bounds } }] } };

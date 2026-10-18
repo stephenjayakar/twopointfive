@@ -171,6 +171,20 @@ export interface ReplayFile {
   rerun?: RunTape | { dead: string; tick: number };
 }
 
+/** THE BALLISTIC SHIELD IS GONE FROM THE GAME (10-18). A run tape re-runs the game from its inputs, so a run made with a shield man in it cannot be re-run:
+ *  he would stage with his own gun and the run part from the tape at the first round his plate stopped. Both readers say so in words before a re-run starts
+ *  (the page's engineplay.ts, tools/qa/rerun.ts); the map viewer plays such a file as ever — its samples are the recording itself. A tape was made with one
+ *  when the shield was in that game (its SHIELD table on: every tape before 10-15, a `?shield` visit after) AND a teammate's card carried it or the level
+ *  issued it (the long hall's issue block did until the shield went). A card on a man who did not come that day reads the same: such a tape is refused too. */
+export function tapeShield(T: RunTape): boolean {
+  const rc = T.recipe, tb = (rc.knobs as { tables?: Record<string, unknown> } | null)?.tables?.SHIELD ?? rc.tables?.SHIELD;
+  if ((tb as { on?: unknown } | undefined)?.on !== true) return false;
+  const carded = rc.kit?.on !== false && (rc.kit?.members ?? []).some((c, i) => i > 0 && (c as { shield?: unknown } | null)?.shield === true);
+  const issued = /(^|\/)hall(-gwot)?\.json$/.test(rc.levelFile ?? '') && !new URLSearchParams(rc.search ?? '').has('noissue');
+  return carded || issued;
+}
+export const TAPE_SHIELD = 'This replay was recorded with a ballistic shield, which is no longer in the game';
+
 /** a file's sanity, in words ('' = fine) */
 export function checkReplay(F: Partial<ReplayFile> | null | undefined): string {
   if (!F || typeof F !== 'object') return 'not an object';
