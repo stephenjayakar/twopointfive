@@ -12,13 +12,17 @@
 //                  after every one
 //   the ring       a snapshot is taken after every one of those ticks, each SINCE the one before (what did not change is shared, not copied); the one eight ticks
 //                  from the end is put back: the word of that tick, and the eight ticks after it again, to the bit
-//   fresh game     the snapshot is put into ANOTHER game stood up on the same scenario and seed and never stepped (the first moment; the same one again afterwards,
+//   fresh game     the snapshot is put into ANOTHER game stood up on the same scenario and seed and stepped once (the first moment; the same one again afterwards,
 //                  wherever the last moment left it): the same word at the moment, the same word after every tick
 //                  — or, where the word parts, the two games side by side value for value (stateAlike: every number to the bit, but not WHICH object stands
 //                  somewhere — this game points at a module's constant row the other had not reached, which then holds its own equal copy); the line says how many
+//   two games      while the other game plays those ticks this game's OWN state (stateHash's `own`: without the modules' registered variables and containers, which
+//                  every game in the process shares) stays the word it was: the two share nothing live
 //   the run itself the snapshot is put back once more and the play-through goes on; at its end the run's own digest (game/digest.ts every half second, folded) and its
 //                  last state word are those of the SAME run played with no moment taken at all — a run rolled back dozens of times is the run never touched
 // A FAIL names the moment, the first tick that differs and (re-run with --why scn:seed:frame) the paths of the values that differ there.
+// RB_LAST_DUMP=<file> (with RB_LAST_DEPTH, RB_LAST_PRE) on a --one run writes the last state's word per part: two arms' files side by side say where their
+// last states part.
 // NOT HELD HERE: the page (no GPU in the cloud: the smoke solver's fields and the GPU light meter's readings in flight are the host's and are not in a snapshot), a snapshot
 // sent to another process (it holds references, not bytes), and the commander's own orders inside the ticks compared (they are stepped off one held record).
 import { resolve } from 'node:path';
@@ -118,7 +122,7 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
     out.moments.push({ frame, t: +g.time.toFixed(2), why: reason, same, fresh, alias, leak, ring: ringBad, back, backFull, freshAt, takeMs: +takeMs.toFixed(2), tickTakeMs: +mid(tickTake).toFixed(2), restoreMs: +restoreMs.toFixed(2), freshMs: +freshMs.toFixed(2), stepMs: +mid(steps).toFixed(2), bytes: size.bytes, own: mid(own), objects: size.objects });
   };
   Game.prototype.update = function (this: any, ...a: unknown[]) {
-    if (mode === 'grab') { other = this; throw new Stop(); }
+    if (mode === 'grab') { if (other === this) throw new Stop(); other = this; return (update as (...x: unknown[]) => unknown).apply(this, a); }   // (the other game takes ONE step and is stopped at its second: what a game hangs on its host at its first step — its own closures, which no snapshot carries — is then its own)
     if (main === null) { main = this; frame = 0; }
     if (this === main) {
       if (arm === 'moments' && this.cmdBuf && frame > 30) {

@@ -144,7 +144,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of one moving man's position after every restore and the three 'plays on' lines must FAIL. It runs the static pass, then scripted solo and squad play-throughs
   (`--scn`, default eight; `--seeds`), and at a moment every few seconds — and at the first frames that find a round in the air, a leaf swinging, a fuse burning, a man
   falling — takes the game and holds, by the state word after every tick: put back = the word it was; the SAME game plays the next ticks as the unbroken run; THE RING (a
-  snapshot after every tick, each since the one before; the one eight ticks back put back) plays the eight again; a FRESH game given the snapshot plays the same ticks
+  snapshot after every tick, each since the one before; the one eight ticks back put back) plays the eight again; a FRESH game (stood up on the same scenario and seed and stepped ONCE, so that what a game hangs on its host at its first step is its own) given the
+  snapshot plays the same ticks
   (where the strict word parts, the two are gone through value for value, `stateAlike`: every number to the bit, but not WHICH object stands where — the first game
   points at a module's constant the other had not reached; the line says how many moments passed that way); TWO GAMES: the other game's ticks leave the first game's
   own state as it was (they share nothing live); and the whole run rolled back dozens of times ends on the digest and the state word of the run never touched. A FAIL
@@ -157,14 +158,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   small objects (18,000 of them three-number arrays), not the bytes. What a rollback needs next is fewer, flatter objects (positions in typed arrays) or a tick that
   is cheap enough — neither is in this change. RUN: the whole check on both stands, eleven scenarios (the default eight and pass-four, glasshouse-four,
   snatch-four) on seed 1, capped at 45 s each: 153 moments on the frozen stand, 143 on the shipped one, every line PASS (a few fresh-game moments by `stateAlike`,
-  the line says how many); `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the same-game, ring and fresh-game lines on both stands, as it must. One
-  seed only; other seeds and longer runs were not run.
+  the line says how many); `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the same-game, ring and fresh-game lines on both stands, as it must. On the
+  merge with the build that carries the game's own maths and the CPU senses: night-breach, room-clear-four and mousehole-four on both stands, and room-clear-four
+  and hostage-rescue on the shipped stand with `TPS_CPUSENSE=1`, every line PASS. One seed only; other seeds and longer runs were not run.
   KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
   `shield.given`, the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
   process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
   that runs several games in a process wants them on the Game. Another Game object is never walked into, but a memo that names another game's man is. CONFIG rows are
   safe only while a rolled-back window never spans a scenario's start or stop, and a snapshot is put back under the maths (`EXACT.on`) and senses (`SENSE.cpu`)
-  settings it was taken under. A closure in state is taken by its code: `Throwable.onBounce` still captures a can's
+  settings it was taken under. A game that has NEVER stepped, given a snapshot, keeps the first game's closures where it has none of its own (under `SENSE.cpu`:
+  the wrap on the smoke solver and `Sensors.own`, which then read the FIRST game's smoke and walls — the check's two-games line found it). A closure in state is
+  taken by its code: `Throwable.onBounce` still captures a can's
   own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
   the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
   out-parameter, a class's `static` field. Never run on a GPU, and the page does not call any of it.
