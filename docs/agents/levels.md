@@ -248,3 +248,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   last bit another way than the file was written with (the `level-identity` probe was red on the shipped stand for that alone), and that staleness is
   `export.ts <name> --check`'s question. `tools/qa/level-needs.ts` needed nothing: it runs no generator in its own process, and `--run`'s export check is a
   fresh process that raises no stand. On build 956661a, both stands: 488 PASS, no FAIL, 65 NOTE.
+- **The level skill says a rescue's start is also its way out** (10-18; the skill's words only; the rule is `missions.md`'s "A rescue is won out, or
+  cleared"). Its mission section gains one item for whoever lays out a rescue: the team's start mark (`scenarios.rescue.team.sam`) is where the hostages are
+  led to, so it wants standing room and a way back a hostage can walk; said as the game is now, since the way out being the way in is an open call. No need
+  was added to `tools/qa/level-needs.ts`: `probes.ts rescueend` walks each rescue's hostages out. On build ab96d87, both stands: 488 PASS, no FAIL, 65 NOTE.

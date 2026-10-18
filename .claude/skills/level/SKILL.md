@@ -139,6 +139,12 @@ like that."
   `tyres bunks radio`. Same check.
 - **It ends.** **seen** "the two loud tutorial missions don't have termination conditions". **check**
   `bun run tools/qa/missions-gate.ts` (every row, two seeds, ends as shipped).
+- **On a rescue the way in is the way out, as the game is now**: a rescue is won when every living hostage has been led
+  to within 3.5 m of the mark the team starts on (`scenarios.rescue.team.sam`), or when the floor is cleared; holding the
+  hostage room no longer ends it. So the start wants room for the team and the hostages to stand, and a way back from
+  the hostage room that a hostage can walk. First numbers, and whether the way out stays the way in is the maintainer's
+  open call. **seen** "the hostage rescue missions should have you safely extract the hostage or fully clear the map."
+  **check** `bun run tools/qa/probes.ts rescueend` (the mission's `out` line walks them there).
 - **A quiet level**: the `quiet` block (starts, spots, exits, patrols), `mission` equal to `spots[0]` / `exits[0]`; every
   guard a man with a job; `wired: true` only where the holder really is on an alarm (**seen** "predictably getting a guard
   to come by when you pull the objective is a bit contrived"); a dark way exists and the short way crosses light; no deal
