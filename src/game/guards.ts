@@ -2386,7 +2386,7 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   if (gd.muzzleEvalT !== g.time) muzzleCheck(g, gd, upper === 'aim' ? (aimAt ?? aimAhead(c)) : null, dt);
   if (!gd.pinned) gunWallCheck(g, gd, upper === 'aim' ? 'aim' : null, aimAt, dt, gd.state === 'alert');   // …and a wall inside the raised gun's reach does the same (gunwall.ts; nothing with its switch off)
   const lowered = gd.muzzleDown || duck || staggered;   // the gun down: for a colleague in the line, with his own head down under fire (suppression), or doubled over a ring airfoil — the same low ready ('lowLong' on the carbine, the animator's mapping)
-  c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
+  c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.lean = 0; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
   gunWallPose(g, c);
   c.anim.reverse = moveSpeed > 0.2 && c.vel[0] * Math.sin(c.bodyYaw) + c.vel[2] * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (the standoff's back-off and side-step round the ring keep his chest to the pair): the cycle plays backwards, as the player's back-pedal does — and worked out afresh every frame, so nothing (a hold that ended mid-haul) leaves it stuck on him
   c.update(dt);
