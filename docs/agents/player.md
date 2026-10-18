@@ -167,7 +167,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   BREACHER'S MODELLED RAM IS WORN ONLY WHILE HE CARRIES NO REAL TOOL (`PACKSIDE.ram`, `cast.ts castParts` → `packMask`): with a hammer or a shotgun in his big slot he is drawn in the
   small assault pack (the cast holds 32 parts, its cap: no new part); (4) the hand that takes the hammer's handle is DRAWN going to the same place, in the picture only
   (`combat.ts hammerSide` → `CharacterAnimator.bigSide`, the chest joint's own space → `Character.packSidePass`, a two-bone override after `inHandPass`: the arm the
-  simulation reads, `bigLayer`'s, is the rule-off arm to the bit). The workbench holds the rule off unless `?packside=1` (its across-the-back gizmos would move nothing). A man with no pack (the sneaking suit, the mannequin) carries everything where he always did.
+  simulation reads, `bigLayer`'s, is the rule-off arm to the bit; the pass keeps `simHandR` as `inHandPass` does, so `handFrameR(true)` — what a kit swap starts from — is the
+  animator's hand, and `ragdollize` lets the override go). The workbench holds the rule off unless `?packside=1` (its across-the-back gizmos would move nothing). A man with no pack (the sneaking suit, the mannequin) carries everything where he always did.
   QA: `probes.ts packside` (`tools/qa/packside-check.ts`, 11 lines, both stands; `PACKSIDE_BREAK=1` fails (3) to (7)) samples every box of the tool each 1.5 cm against the SKINNED
   worn mesh by ray parity, pack and body apart: five operators x hammer / shotgun x twelve poses + Sam's rifle alone and beside each tool — rule on, 0 samples inside any pack, the
   worst into the man 1.3 cm (the hammer's head under the back of the helmet, the hydration-carrier man crouched), top end fixed against the pack's vertices to under a millimetre,

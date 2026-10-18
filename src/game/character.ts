@@ -5192,6 +5192,7 @@ export class Character {
     const r3 = sk.globalRot[n.spine3], d1 = quat.rotate(r3, sd.z), g1 = v3.mad(v3.add(sk.nodePos(n.spine3), quat.rotate(r3, sd.o)), d1, an.bigGrab);   // … and where the tool is: the chest joint's own space (combat.ts hammerSide)
     let q = quat.fromTo(v3.normalize(d0), v3.normalize(d1)); if (w < 1) q = quat.slerp([0, 0, 0, 1], q, w);
     const R = sk.nodePos(n.handR), g = sk.globalRot[n.handR], ov = this.inHandOv ??= [];
+    this.simHandR ??= [g[0], g[1], g[2], g[3]];   // (handFrameR(true), what a kit swap starts from: the hand as the animator had it, as inHandPass keeps it)
     this.reachOv(ov, true, v3.add(v3.lerp(g0, g1, w), quat.rotate(q, v3.sub(R, g0))), quat.normalize(quat.mul(q, [g[0], g[1], g[2], g[3]])));
     sk.update(an.pose, this.world, an.twists, ov);
   }
@@ -5347,7 +5348,7 @@ export class Character {
     // the moves' look-only arms (a reload's hand, the hand to the ribs, a hostage's tied wrists) are not what falls: the body is seeded from the pose under them and
     // from that pose's own momentum, so who lies where is the same with those layers on or off (they are let go of on the frame he dies)
     { const under = this.anim.underPose(); if (under) { this.anim.pose.copy(under); this.skel.update(this.anim.pose, this.world, this.anim.twists); this.readBones(0); } }   // (…and the gun arm under a torch ↔ sidearm swap: handwork.ts)
-    if (this.inHandK > 0) { this.skel.update(this.anim.pose, this.world, this.anim.twists); this.inHandK = 0; this.simHandR = this.inHandCur = null; }   // (inhand.ts: the look-only hands are let go of — the limbs the mesh drive starts from are the ones the particles were read off)
+    if (this.inHandK > 0 || this.inHandOv?.length) { this.skel.update(this.anim.pose, this.world, this.anim.twists); this.inHandK = 0; this.simHandR = this.inHandCur = null; if (this.inHandOv) this.inHandOv.length = 0; }   // (inhand.ts: the look-only hands are let go of — the limbs the mesh drive starts from are the ones the particles were read off)
     this.anim.nvCancel();   // (a goggle flip he was in the middle of: the goggles are where the game says, not half way for as long as he lies there)
     this.alive = false; this.vel = [0, 0, 0];
     const n = this.anim.nodes, b = this.bones, pb = this.prevSim ?? this.prevBones, pdt = this.prevDt; const Y = quat.yaw(this.bodyYaw);

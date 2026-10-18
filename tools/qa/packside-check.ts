@@ -17,7 +17,8 @@
 //   (7) it MOVES WITH THE PACK: through a walk, a crouch and an aim swung across him the tool's top end keeps its place against the pack's own vertices and
 //       no box slides across the pack's face, to a millimetre — while its lower end swings in to lie along his back;
 //   (8) THE HAND FINDS IT: through the hammer's draw the right fist is drawn closing on the handle where the drawer has it (the picture's pose: the joints
-//       the simulation reads of that arm are the ones it read with the rule off);
+//       the simulation reads of that arm, the hand's frame a kit swap starts from (handFrameR(true)) and the arm a man shot in the middle of the reach
+//       falls from are the ones with the rule off);
 //   (9) a man with no pack (the sneaking suit) carries the tool where he always did: the boxes are the rule-off boxes;
 // THE GAME:
 //   (10) the run is the same run with the rule off and on (the game's own digest), the team's tools drawn on their backs on the way;
@@ -194,21 +195,27 @@ export async function packsideCheck(): Promise<boolean> {
       line(n > 500 && drift <= 0.001 && slide <= 0.001 && swing > 0.02, '(7) it moves with the pack: through a walk, a crouch and an aim swung across him the tool\'s top end keeps its place against the pack\'s own vertices and no part of it slides across the pack\'s face — while its lower end swings in to lie along his back',
         `the most the hammer's head moved against three of the pack's vertices: ${(drift * 1000).toFixed(2)} mm (${at || '-'}) · the most any box moved across the pack's upright plane: ${(slide * 1000).toFixed(2)} mm · over ${n} frames · the most it turned about its top end against the pack: ${(swing * 180 / Math.PI).toFixed(0)}°`); }
     // (8) the hand finds it
-    { const rows: { gap: number; tag: string }[] = [], simOff: number[] = [], simOn: number[] = []; let bad = '';
+    { const rows: { gap: number; tag: string }[] = [], simOff: number[] = [], simOn: number[] = [], fallOff: number[] = [], fallOn: number[] = []; let bad = '', reach = 1;
       for (const pass of [0, 1]) for (const v of ops) { const rule = pass === 1 && ON; PACKSIDE.on = rule; const { c, run } = man(v); c.parts = maskOf(v, true); carry(c); run(1);
         const B = { kind: 'hammer', t: 0, equip: 0.7, windup: 0.5, stow: 0.6, blows: [] as number[], end: -1, at: [0, 1.0, 0.8] as V3, snug: true };
         let best = Infinity;
-        for (let t = 0; t < 0.5; t += DT) { B.t = t; c.anim.bigTool = B; c.anim.bigSide = CB.hammerSide(c); run(DT); (pass ? simOn : simOff).push(...(c.bones.handR as number[]));
+        for (let t = 0; t < 0.5; t += DT) { B.t = t; c.anim.bigTool = B; c.anim.bigSide = CB.hammerSide(c); run(DT); { const hs = c.handFrameR(true); (pass ? simOn : simOff).push(...(c.bones.handR as number[]), ...hs.fingers, ...hs.back); }   // (his wrist, and the hand's frame a kit swap starts from: kitanim.ts)
           if ((c.anim.bigK ?? 0) > 0.02) break;   // (it has left his back: the fist had it)
           const hb = tool(c, 'hammer')[0]; if (!hb) { bad = 'no hammer drawn'; break; }
           const w = c.world, hp = c.skel.nodePos(c.anim.nodes.handR), wr: V3 = [w[0] * hp[0] + w[4] * hp[1] + w[8] * hp[2] + w[12], w[1] * hp[0] + w[5] * hp[1] + w[9] * hp[2] + w[13], w[2] * hp[0] + w[6] * hp[1] + w[10] * hp[2] + w[14]];
           const hf = c.handFrameR(), hollow: V3 = [0, 1, 2].map(i => wr[i] + hf.fingers[i] * 0.08 - hf.back[i] * 0.03) as V3;
           best = Math.min(best, Math.max(0, sdBox(hb, hollow))); }
+        // (shot in the middle of the reach: the arm he falls from is the simulation's, not the drawn one)
+        { const { c: d, run: go } = man(v); d.parts = maskOf(v, true); carry(d); go(1);
+          for (let t = 0; t < 0.2; t += DT) { d.anim.bigTool = { ...B, t }; d.anim.bigSide = CB.hammerSide(d); go(DT); }
+          if (rule) reach = Math.min(reach, d.anim.bigAtBack); d.ragdollize(null, [0, 0, 1], true); const nn = d.anim.nodes;
+          for (const j of [nn.upperArmR, nn.forearmR, nn.handR]) { const r = d.skel.globalRot[j]; (pass ? fallOn : fallOff).push(r[0], r[1], r[2], r[3]); } }
         rows.push({ gap: best, tag: `${pass ? 'on' : 'off'} ${v.name}` }); if (VERBOSE) console.log(`    ${rule ? 'on ' : 'off'} ${v.name} the fist's hollow to the handle at its nearest before it leaves his back: ${cm(best)} cm`); }
       const a = rows.filter(x => x.tag.startsWith('off')), b = rows.filter(x => x.tag.startsWith('on')), mx = (xs: typeof rows) => xs.reduce((w, x) => (x.gap > w.gap ? x : w), xs[0]);
       let sim = simOff.length === simOn.length ? 0 : 9; for (let k = 0; k < Math.min(simOff.length, simOn.length); k++) sim = Math.max(sim, Math.abs(simOff[k] - simOn[k]));   // (the joints the simulation reads of that arm: the picture's hand moved, they did not)
-      line(!bad && b.length === ops.length && mx(b).gap <= Math.max(0.03, mx(a).gap + 0.01) && (BREAK || sim < 1e-9) && simOn.length > 100, '(8) the hand finds it: drawing the hammer, the right fist is DRAWN closing on the handle where the drawer has it, as near as it did across a bare back — and the arm the simulation reads is the arm it read with the rule off',
-        `rule on: the fist's hollow to the handle at its nearest, the worst man ${cm(mx(b).gap)} cm (${mx(b).tag}) · rule off ${cm(mx(a).gap)} cm (${mx(a).tag}) · his wrist as the game reads it, rule on against off over ${simOn.length / 3} frames: ${sim.toExponential(1)} m apart${bad ? ' · ' + bad : ''}`); }
+      let fall = fallOff.length === fallOn.length ? 0 : 9; for (let k = 0; k < Math.min(fallOff.length, fallOn.length); k++) fall = Math.max(fall, Math.abs(fallOff[k] - fallOn[k]));
+      line(!bad && b.length === ops.length && mx(b).gap <= Math.max(0.03, mx(a).gap + 0.01) && (BREAK || (sim < 1e-9 && fall < 1e-9 && reach > 0.5)) && simOn.length > 100 && fallOn.length === ops.length * 12, '(8) the hand finds it: drawing the hammer, the right fist is DRAWN closing on the handle where the drawer has it, as near as it did across a bare back — and the arm the simulation reads, the hand a kit swap starts from and the arm a man shot in the middle of the reach falls from are the ones with the rule off',
+        `rule on: the fist's hollow to the handle at its nearest, the worst man ${cm(mx(b).gap)} cm (${mx(b).tag}) · rule off ${cm(mx(a).gap)} cm (${mx(a).tag}) · his wrist as the game reads it, and the frame of his hand a kit swap starts from, rule on against off over ${simOn.length / 9} frames: ${sim.toExponential(1)} apart · shot in the middle of the reach (the drawn fist ${(reach * 100).toFixed(0)}% of the way to the pack's side), his right arm's three joints as he starts to fall, on against off: ${fall.toExponential(1)} apart${bad ? ' · ' + bad : ''}`); }
     // (9) no pack: as it was
     { let same = true, n = 0; for (const v of ops) for (const kind of ['hammer', 'shotgun'] as const) { const boxes = (rule: boolean) => { PACKSIDE.on = rule; const { c, run } = man(v); c.parts = maskOf(v, true, true); carry(c); run(1); return JSON.stringify(tool(c, kind).map(b => [b.c, b.h, qOf(b)])); };
         n++; same &&= boxes(false) === boxes(true); }
