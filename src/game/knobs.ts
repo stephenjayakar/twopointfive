@@ -92,7 +92,7 @@ import { VERDICT } from './verdict';
 import { SNATCH } from './snatch';
 import { DEFUSE } from './defuse';
 import { SPOTTED } from './spotted';
-import { SLOTS, ISSUE, BIGSLOT } from './kit';
+import { SLOTS, ISSUE, BIGSLOT, KITDEAL } from './kit';
 import { NIGHTBREACH } from './nightbreach';
 import { ROOMCLEAR } from './roomclear';
 import { BREAKS } from './breakTable';
@@ -104,11 +104,11 @@ import { WALLSNAP } from './wallsnap';
 import { cutConfig } from '../scene/cut';   // (the cut-pieces switch: not a game module, no cycle)
 
 /** the names a recording carries and a replay applies, in the order journal.ts has always written them (a session file's `knobs.tables` keys) */
-export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'SHIELD', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
+export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'SHIELD', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT',
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'PACKSIDE', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT',
   // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
   'EXACT',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
@@ -132,6 +132,7 @@ import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
 import { INHAND } from './inhand';
+import { PACKSIDE } from './packside';
 import { PLANLAY } from './planlay';
 import { START } from './startfile';
 import { SAMESTART } from './samestart';
@@ -244,7 +245,7 @@ export function knobRegistry(): Record<string, object> {
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
     MORALE,
     // a man's condition (condition.ts): whether a blast that leaves a man standing leaves him hurt, the pace and the spread that costs him, how long
-    CONDITION, INHAND,
+    CONDITION, INHAND, PACKSIDE,
     // drops it and runs (runner.ts): who lets his weapon go and runs, where to, and when he stops counting as a living hostile — reads these
     RUNNER,
     // not in there alone (darkdoor.ts): who stops at the doorway of a dark room, how dark is dark, how long he waits for a mate and when he goes in anyway
@@ -307,6 +308,8 @@ export function knobRegistry(): Record<string, object> {
     SLOTS, DESTRUCTION,
     // the big slot (kit.ts BIGSLOT, bigkit.ts): the switch — one big thing a man, the shotgun kit and not a gun, the hammer — and the hammer's and the kit shotgun's beats: what a locked door costs reads them
     BIGSLOT,
+    // the squad's kit dealt over the men who come (kit.ts KITDEAL): with three or four teammates the issued and the named kits are shared out, nobody comes with empty pouches; the squad's count is the same
+    KITDEAL,
     // the cut-pieces switch (scene/cut.ts cutConfig: `on` read at boot, `swap` = two sets of ray programs). A recording carries it in its env (env.cutBoxes), not here
     CUT: cutConfig,
   };
