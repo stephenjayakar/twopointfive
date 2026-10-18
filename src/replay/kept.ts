@@ -13,7 +13,7 @@
 //   {k:'file'}   a whole replay file the shelf holds whose visit is NOT kept here (saved before the page kept tapes, or its visit has been let go)
 // `assemble` turns one visit's head and pieces back into a ReplayFile — the very thing F7 writes, so the viewer, tools/qa/replay-at.ts and the re-run read it as
 // they read any other. No game code is imported: the viewer page and the reading tool (tools/qa/replay-dump.ts) load this file alone.
-import type { CastRow, Sample, ReplayEvent, ReplayLine, ReplayNote, ReplayFile, RunTape } from './format';
+import type { CastRow, Sample, ReplayEvent, ReplayLine, ReplayNote, ReplayFile, RunTape, TapeVal } from './format';
 
 export const KEPT_VERSION = 1;
 
@@ -24,6 +24,8 @@ export interface TapePiece {
   dt: [number, number][]; view: number[][]; cam: RunTape['cam']; input: RunTape['input'];
   /** sensor keys first met in this piece (appended to the visit's list: a row's indices are into the whole list) */
   keys: string[]; sens: RunTape['sens']['rows']; x: RunTape['x'];
+  /** the lens rows of these steps (format.ts RunTape.lens): where there were any, and — empty or not — on a visit's first piece (the tape keeps them) */
+  lens?: TapeVal[][];
 }
 /** what the ring gained since the piece before, on the ring's own clock and cast indices; `cast` = rows first met in this piece (appended to the visit's cast) */
 export interface KeptPiece {
@@ -106,7 +108,7 @@ export function assemble(v: Visit, why = 'kept'): Assembled | null {
       if (!tape) { if (!T.recipe) { tapeOpen = false; tapeEnd = 'the first piece of the run tape is missing'; continue; }
         tape = { v: 1, ticks: 0, recipe: { ...T.recipe, search: v.head.url ?? '', ...(v.head.level.file ? { levelFile: v.head.level.file } : {}) }, dt: [], view: [], cam: [], input: [], sens: { keys: [], rows: [], ...(T.f32 ? { f32: 1 as const } : {}) }, x: [] }; }
       for (const run of T.dt) { const D = tape.dt[tape.dt.length - 1]; if (D && D[1] === run[1]) D[0] += run[0]; else tape.dt.push([run[0], run[1]]); }
-      add(tape.view, T.view); add(tape.cam, T.cam); add(tape.input, T.input); add(tape.sens.keys, T.keys); add(tape.sens.rows, T.sens); add(tape.x, T.x); tape.ticks = T.ticks;
+      add(tape.view, T.view); add(tape.cam, T.cam); add(tape.input, T.input); add(tape.sens.keys, T.keys); add(tape.sens.rows, T.sens); add(tape.x, T.x); if (T.lens && (tape.lens || T.recipe)) add(tape.lens ??= [], T.lens);   /* (a visit whose first piece had none is a tape from before the rows: none are laid on it) */ tape.ticks = T.ticks;
     }
   }
   if (!S.length) return null;

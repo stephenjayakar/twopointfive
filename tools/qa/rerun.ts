@@ -147,12 +147,13 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
       else if (kind === 'table') { const [name, src] = data as [string, any]; const Tb = reg[name]; if (Tb && plain(src)) put(Tb, src); }
       else if (kind === 'kit') kitOf(data); }
     const dt = walk.step(W.canvas, W.input);
-    { const c = walk.cam, cam = W.cam; cam.target[0] = c[0]; cam.target[1] = c[1]; cam.target[2] = c[2]; cam.yaw = walk.lensYaw; cam.pitch = c[4]; cam.distance = c[5]; cam.aspect = c[6]; cam.fov = c[7]; cam.aimLead = c[8]; cam.rebuild(); cam.yaw = c[3]; }   // (lensYaw: tapewalk.ts — an orbiting page's matrices are a step behind its yaw)
+    walk.layCamera(W.cam);   // (tapewalk.ts: the pose, and the matrices the page's step read — an orbit's or a pan's lag a step behind its yaw)
     g.update(dt, W.input, W.cam, W.canvas);
     walk.done();
     // between two steps, as the page (host/loop.ts) and a tool's W.step do: flashes age, the world is packed again (the cursor's ray reads the boxes as of the last pack: without it
     // it lands on men, leaves and props where they stood at stand-up), and under the page's HUD an expired bubble is let go
-    W.engine.lights.update(dt, g.time); W.engine.world.dynamics = g.dynBoxes; W.engine.world.upload(); if (want === 'page') J.hudExpireBubbles(g);
+    W.engine.lights.update(dt, g.time); if (want !== 'page') W.engine.world.dynamics = g.dynBoxes; W.engine.world.upload();   // (a headless tool's own step hands the world the game's whole list — headless.ts W.step; the page packs the list the step itself handed over, which under the fog of war is not the whole one)
+    if (want === 'page') J.hudExpireBubbles(g);
     opts.each?.(W, f);
     // ---- held against the trace
     const si = byN.get(f + 1);
