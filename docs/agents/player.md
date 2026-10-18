@@ -590,4 +590,31 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   farthest listener one round turns down a clear line — HK45 5 m, Glock 19 7 m, MP7 9 m, every other gun the whole line as gunfire; a teammate's MP7
   round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
   of their own; defenders drawing from the list; a teammate USING a gun for what it is for (the Mk 46 man does not hold lanes, the Mk 12 man does not
-  hang back); the weight in any score; tuning by play. Never seen on a GPU, never fired by a person.
+  hang back); the weight in any score; tuning by play. Never seen on a GPU, never fired by a person.- **Each gun its own look, sound and reload** (`src/game/gunlook.ts`, `GUNLOOK.on`; `src/game/gunreload.ts`; 10-18). The six guns the two slots offer beside the issue
+  pair (Mk 12, MP7, Mk 46, M1014, HK45, Glock 18) were rows that are FELT and stand-ins to look at and listen to. SWITCH: on in the page (`?nogunlook` = the build
+  before), off in the module and on the frozen stand (`FROZEN_HOLDS 'GUNLOOK.on'`, `TPS_GUNLOOK=1`, which shows nothing without `TPS_GUNSLOTS=1 TPS_BIGSLOT=1`); a
+  recording from before the table replays with it off (`journal.ts applyKnobs`). WHAT A ROW NAMES: `weapons.ts WeaponDef.own = { model, voice, flame }` beside its
+  stand-in fields (`rig`, `report.voice`, `muzzleFx`), read only through `gunlook.ts gunOwn / voiceOf / flameOf`. NO PLAY NUMBER MOVED. MODELS: `LONG_MODELS` /
+  `PISTOL_MODELS`, part tables in the group's own axes (the trigger hand, the sling and the holster stay where the group has them); `Character.gunLook
+  { hand, long, side }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you, `ui/kitFigure.ts` for its figure) and read by `rigProps.ts`
+  (in the hands, slung, hung down the front, holstered; the roster chip and the card's icon are `ui/kitIcons.ts OWN_GUN`). The big slot's pump gun (`m870`) is a
+  model too, with a 12 gauge's voice; its muzzle and hand are where the short rifle's were. THREE THINGS THE SIMULATION READS, only of a man who carries one of the
+  rows: his MUZZLE is the model's far face (ahead of the wrist: Mk 12 0.70 m, Mk 46 0.62, M1014 0.56, MP7 0.40 — the stand-ins were 0.52, 0.52, 0.50 and, on you,
+  0.52), his flash's light gain is the flame row's (`effects.ts muzzleFx` rows `mk12 mp7 mk46 m1014 hk45 g18`, first numbers), and the BEATS inside his reload
+  (never its length). SOUND: seven reports and eight feeding sounds, `docs/agents/sounds.md`. CASES: each row had its own casing row; the M1014 now throws a red
+  hull (`particleFx.ts casingOf`: nothing with the switch off, as before). RELOADS (`gunreload.ts FEED`): the Mk 46's belt — cover up, box off (an empty one
+  falls), a full box on, the belt laid, the cover shut, the handle run on an empty chamber, on the row's own stages (0.54 / 1.2 / 3.18 / 4.4 / 4.9 / 5.4 s of its
+  6 s; the kit's scaled beat on the shipped stand); the M1014 and the pump gun fed ONE SHELL AT A TIME, a trip of the hand and a `shellIn` each, the M1014 begun
+  empty taking its first in the port with the bolt dropped on it; the magazine guns as ever with a magazine of their own size in the hand and on the floor, the
+  MP7's hand at the foot of its pistol grip. A reload is as long as it was, to the frame, and the same rounds end up in the same places. CHECKS, both stands:
+  `tools/qa/gunlook-check.ts` (`own`: every row a slot hands out names a model, a voice, a flame and a casing row, no two guns share one — by name and by what is
+  in them — and what two guns may share is said in the file; `hands`: a teammate and you with every pick are told, drawn and heard as that gun, off = the
+  stand-in; `off`: ten seconds of the staged room clear digest the same with the switch off and on, seed 17, cards as issued) and `tools/qa/gunreload-check.ts`;
+  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale) and
+  `tools/qa/gunlook-sheet.ts` (the kit figure with each gun, software-drawn; `--off` the before); `tools/qa/gunlook-page.cjs` boots the real page with all six on
+  a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
+  the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
+  sidearm the whole feed is mimed with only its first sound; the books still take the whole tube out at the row's `out` and put it back at `in_`, so a shell-fed
+  reload CANCELLED part way leaves the tube empty however many were heard going in (the row's books: the guns goal's); a teammate with the bare Mk 18 is still
+  drawn as the defenders' short rifle; a gun dropped on the floor is the old item; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
+  share an origin (`gunlook-own` is red the day one is tuned alone). Every number is a first one. NEVER SEEN ON A GPU, NEVER HEARD, NEVER PLAYED.

@@ -10,7 +10,8 @@ import { FollowCamera } from './camera';
 import { Doors, Door, DOORWAY } from './doors';
 import { RAG } from './ragdoll';
 import { ThrowSolution } from './throwables';
-import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle } from './rigProps';
+import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle, modelGrip, modelMuzzleAhead } from './rigProps';
+import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand } from './handwork';
 import type { SamWork } from './handwork';
@@ -55,6 +56,7 @@ import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './w
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
+import { feedDeal, feedPlan, feedPlay } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
 import type { CloseKind } from './close';
 import { wetFootfall } from './wet';
@@ -228,7 +230,10 @@ function poseGunLight(g: Game) {
 function armRifle(g: Game, inHands: boolean, carriage: LongStance | null) {
   const pl = g.player, an = pl.char.anim;
   an.longGun = inHands; an.longStance = inHands ? carriage : null; an.longSteady = 1; an.reloadBack = !GEAR.on;   /* (the 2010s carbine's magazine is ahead of the grip: the carbine's marks) */ an.reloadMag = !(pl.rifle.def as { pellets?: unknown }).pellets;   // (a pump shotgun in the rifle's slot has no magazine to change)
-  if (inHands) { an.longGrip = sc20kGrip(undefined, KITANIM.on && KITANIM.grips && !g.touring); pl.char.muzzleAhead = sc20kMuzzleAhead(); }   // (kitanim.ts grips: the support hand follows the gun as it is drawn in his hands — rigProps GRIPFIT)
+  feedDeal(an, inHands ? pl.rifle : null);   // (gunreload.ts: a gun with a model of its own is fed its own way — a belt box, shells one at a time, a magazine up the grip. Nothing with gunlook.ts off)
+  pl.char.gunLook = gunLookOf(pl.char.gunLook, inHands ? pl.rifle.def : pl.pistol.def, inHands ? pl.pistol.def : pl.rifle.def);   // (gunlook.ts: which of his two guns are drawn as models of their own — null with the switch off)
+  const own = inHands ? pl.char.gunLook?.hand ?? null : null, fit = KITANIM.on && KITANIM.grips && !g.touring;   // (… and a model in his hands has its own support-hand point and its own muzzle)
+  if (inHands) { an.longGrip = (own ? modelGrip(own, fit) : null) ?? sc20kGrip(undefined, fit); pl.char.muzzleAhead = (own ? modelMuzzleAhead(own) : null) ?? sc20kMuzzleAhead(); }   // (kitanim.ts grips: the support hand follows the gun as it is drawn in his hands — rigProps GRIPFIT)
   else pl.char.muzzleAhead = pl.pistol.def.muzzleAhead;
 }
 /** RELOAD THE GUN IN HIS HANDS — the one way a reload starts for the player (the R key calls it; anything else that wants him reloading — a rule that reloads an
@@ -240,8 +245,9 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
   if (c.anim.kitBusy || (KITANIM.on && pl.equipT > 0)) return false;   // (kitanim.ts: the gun is not in his hands yet — or is on its way out of them, or still on his thigh through the swing of the throw that handed the slot to it)
   if (pl.pistolUp && !sprinting && !pl.wall) {   // (on the wall or holstered the pistol is on his thigh: nothing to reload in the hand)
     const plan = kitReload(g, gun, false);   // (kitanim.ts: the change this gun's state calls for — empty / dry / tactical — on its own beat; null = the row's, as ever)
+    const fill = feedPlan(gun, plan?.row ?? gun.def.reload)?.drop ?? 0;   // (gunreload.ts: a pistol with a model of its own drops ITS magazine — the Glock 18's long one. 0, the box as ever, with that switch off)
     if (gun.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill: 0, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
       magIn: () => g.audio.play('magIn', c.pos, 0.8),
       rack: () => g.audio.play('rack', c.pos, 0.8),
     }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(); g.msg('reloading'); return true; }
@@ -251,11 +257,16 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
   if (pl.rifleUp && !sprinting && (!pl.wall || pl.wall.kind === 'stack')) {   // the rifle in the hands: the same staged beat off its row (2.4 s: the empty out of the well behind the grip at 0.5 — its black thirty, 'mag' fill 3 — the fullest spare in at 1.5, the charging handle at 2.0)
     const rackIt = rifle.chamber === 0;   // (the moves' support hand: a round still up the pipe and the handle is left alone — weapons.ts racks only an empty chamber)
     const plan = kitReload(g, rifle, true);
+    // EACH GUN FED ITS OWN WAY (gunreload.ts; null with gunlook.ts off or a row with no model, and then every line below is the line it was): `own` = a belt gun's or
+    // a tube gun's own sounds on this beat, played as the weapon's clock passes each (Firearm's cues) IN PLACE of the three a magazine change makes; `drop` = what an
+    // empty one leaving the gun is drawn as (null: nothing falls). The beat, the books and the dice are the weapon's, untouched.
+    const fp = feedPlan(rifle, plan?.row ?? rifle.def.reload), own = fp?.cues ?? null, belt = fp?.drop === 5;
     if (rifle.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 }); } },
-      magIn: () => g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }),
-      rack: () => g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }),
-    }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
+      magOut: (rounds, dropped) => { if (!own) g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets && fp?.drop !== null) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: fp?.drop ?? 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: belt ? 0.6 : 0.8 }); } },
+      magIn: () => { if (!own) g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }); },
+      rack: () => { if (!own) g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }); },
+      cue: i => { if (own) feedPlay(g, c.pos, own[i]); },
+    }, plan?.row, fp?.times)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
     if (rifle.spare.length === 0) g.msg(rifle.def.pellets ? `no more shells for the ${rifle.def.short}` : `no spare magazines for the ${rifle.def.short}`);
     return false;
   }

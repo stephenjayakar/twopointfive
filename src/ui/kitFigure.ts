@@ -19,9 +19,11 @@
 import type { GltfCharacter, CastInfo, CastVariant } from '../anim/gltf';
 import { castSide, castSuit, castGoggles, castFile, loadGltfCast } from '../anim/gltf';
 import { Character } from '../game/character';
-import { rigBoxes, gogglesBoxes, sc20kGrip, sc20kMuzzleAhead, carbineGrip, carbineMuzzleAhead, longHold, RIG, type RigNodeMeta } from '../game/rigProps';
+import { rigBoxes, gogglesBoxes, sc20kGrip, sc20kMuzzleAhead, carbineGrip, carbineMuzzleAhead, longHold, modelGrip, modelMuzzleAhead, RIG, type RigNodeMeta } from '../game/rigProps';
+import { gunLookOf, gunLookOn } from '../game/gunlook';
+import { pickRow } from '../game/gunslots';
 import { charSlots, writeCharPalette, CHAR_MAT_FLOATS } from '../render/charMaterials';
-import { SUITS, TRIMS, kitGun, type MemberKit } from '../game/kit';
+import { SUITS, TRIMS, kitGun, kitSecond, type MemberKit } from '../game/kit';
 import { rosterOf, type SquadSize } from '../game/loadout';
 import { SQUAD4 } from '../game/nightbreach';
 import { operatorAt } from '../game/cast';
@@ -310,6 +312,11 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   if (rig === 'sc20k') { a.longGun = true; a.longSteady = 1; a.longGrip = sc20kGrip(undefined, me && fit); c.muzzleAhead = sc20kMuzzleAhead(); a.stance = 'lowReady'; }   // (the fitted hold is yours alone: a teammate's rifle is drawn unfitted, and the game lays his hand by the plain one)
   else if (rig === 'carbine') { a.longGun = true; a.longSteady = 0; a.longGrip = carbineGrip(); c.muzzleAhead = carbineMuzzleAhead(); a.stance = 'lowReady'; }
   else { a.upper = 'relaxed'; a.stance = FIGURE.pose.pistol; }   // (the pistol in both hands at the game's own low ready, as the rifle is: the relaxed carry points it across his chest)
+  { // (gunlook.ts: the guns his card names drawn as the models they are — the one in his hands and the one on his thigh — with the support hand and the muzzle a model has of its own, as the game deals them)
+    const can = me || m.suppressed, two = kitSecond(m) !== null, hRow = two ? pickRow(m.weapon === 'pistol' ? m.secondary : m.primary, can) ?? kitGun(m) : kitGun(m), oRow = two && m.weapon !== 'pistol' ? pickRow(m.secondary, can) : null;
+    c.gunLook = gunLookOf(null, WEAPONS[hRow], oRow ? WEAPONS[oRow] : null);
+    const own = a.longGun ? c.gunLook?.hand ?? null : null, G = own ? modelGrip(own, me && fit) : null, ahead = own ? modelMuzzleAhead(own) : null;
+    if (G) a.longGrip = G; if (ahead !== null) c.muzzleAhead = ahead; }
   a.lookPitchExtra = FIGURE.pose.chin; a.lookYawExtra = FIGURE.pose.turn;
   // IN HAND (game/inhand.ts): the word the game's drawer says of his right hand, row for row (combat.ts: handPropsRaw for you, guardKit for a teammate) — said before
   // the pose is baked, so the figure's own look-only pass has the hand where the game's has it: a long gun stays put and the trigger hand goes onto its grip (yours
@@ -690,7 +697,7 @@ function raster(M: Fig, B: Buf, yaw: number, frame: number): void {
 
 // ------------------------------------------------------------ the mount
 
-const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, INHAND.on && [INHAND.long, INHAND.fit]]);
+const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, INHAND.on && [INHAND.long, INHAND.fit], gunLookOn()]);
 const yawOf = (a: FigureAsk) => (a.card.weapon === 'pistol' ? FIGURE.yawPistol : FIGURE.yaw);
 /** a frame of his life: the game's animator stepped, his surface moved with it */
 function live1(M: Fig, dt: number): void { if (dt > 0) ownDie(() => M.c.update(dt * FIGURE.pace)); coarse(M); }

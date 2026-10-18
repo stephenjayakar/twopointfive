@@ -59,6 +59,7 @@ import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
+import { feedDeal, feedDrop, feedStarts, feedTick } from './gunreload';   // (called inside the reload beat only)
 import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
@@ -2598,7 +2599,9 @@ export function inHand(gd: Guard): 'torch' | 'weapon' | null {
 /** The magazine is empty: he stands there changing it for the row's reload.dur (the beat the fire sites count down — no round leaves meanwhile), says so, and the
  *  slide-back clack plays at him. */
 export function startReloadBeat(g: Game, gd: Guard) { if (gd.second && sideOutAlert(g, gd)) return;   // (gunslots.ts: a teammate dry on a man close in front of him goes to his sidearm — no magazine change yet)
-  const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
+  const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true);
+  if (!feedStarts(gd.weapon.def)) g.audio.play('magOut', c.pos, 0.5);   // (gunreload.ts: a belt gun's or a tube gun's first sound is its own, on its beat — tickReloadBeat. The clack as ever with gunlook.ts off)
+  g.say(gd, 'reloading!'); }
 /** …counted down each frame he could otherwise fire; the frame it runs out the gun is simply full again (his spares are bottomless) and the NEXT frame may fire.
  *  A row that stages its reload (reload.out — the long guns; the sidearm's beat is one undivided 1.7 s and drops nothing) lets the empty go the frame the beat
  *  crosses `out`: a rifleman's thirty-round box clatters down out of the receiver (a 'mag' item with fill 2: throwables draws the long bakelite box) — physical,
@@ -2606,10 +2609,13 @@ export function startReloadBeat(g: Game, gd: Guard) { if (gd.second && sideOutAl
 export function tickReloadBeat(g: Game, gd: Guard, dt: number) {
   const w = gd.weapon, R = w.def.reload; const before = R.dur - gd.reloadT;
   gd.reloadT -= dt;
-  if (R.out !== undefined && before < R.out && R.dur - gd.reloadT >= R.out) {
+  // EACH GUN FED ITS OWN WAY (gunreload.ts; nothing with gunlook.ts off or a row with no model): the sounds of his gun's own feeding as his beat passes them, the
+  // hand's stations dealt to his animator, and what falls drawn as what it is — nothing at all out of a tube gun (`drop` null; undefined = the box that always fell)
+  const drop = feedDrop(w.def); feedDeal(gd.char.anim, gd.char.anim.longGun ? w : null, true); feedTick(g, gd.char, w.def, before, R.dur - gd.reloadT);
+  if (R.out !== undefined && drop !== null && before < R.out && R.dur - gd.reloadT >= R.out) {
     const c = gd.char; const h = c.bones.handR ?? v3.add(c.pos, [0, 1.1, 0]); const d = c.gunDir;
-    const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.vel[0] * 0.5 + d[0] * 0.3, -0.4, c.vel[2] * 0.5 + d[2] * 0.3], { fill: 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
-    it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 });
+    const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.vel[0] * 0.5 + d[0] * 0.3, -0.4, c.vel[2] * 0.5 + d[2] * 0.3], { fill: drop ?? 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
+    it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: drop === 5 ? 0.6 : 0.8 });
   }
   if (gd.reloadT < 0) w.rearm();
 }

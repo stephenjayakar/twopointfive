@@ -283,9 +283,11 @@ export class Throwables {
         out.push(itemBox(v3.add(c0, quat.rotate(rot, [0, 0, S.half[2] * 0.62])), [S.half[0] + 0.001, S.half[1] + 0.001, S.half[2] * 0.4], it.yaw, rot, v3.copy(S.nose), BoxFlag.Dynamic | BoxFlag.NoShadow));
       } else {
         const flat = it.settled; const box30 = it.fill > 1, box20k = it.fill >= 3;   // fill 2: a rifleman's empty 30-round box (guards.ts tickReloadBeat) — longer, and bakelite-coloured like the one on the gun; fill 3: the FN2000's black thirty out of Sam's reload (player.ts); else a pistol magazine (fill 0 empty, 0‥1 part full)
-        const col: Vec3 = box20k ? v3.copy(SC20K_ITEM.metal) : box30 ? v3.copy(RIFLE_ITEM.wood) : it.fill > 0 ? [0.09, 0.09, 0.1] : [0.06, 0.06, 0.065]; const hl = box30 ? 0.095 : 0.055, hw = box30 ? 0.014 : 0.018;
-        if (flat) out.push(makeBox({ c: [it.pos[0], it.pos[1] + 0.012, it.pos[2]], h: [hw, 0.012, hl], yaw: it.yaw, albedo: col, flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
-        else out.push(itemBox(v3.copy(it.pos), [hw, hl, 0.03], it.yaw, quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble)), col, BoxFlag.Dynamic | BoxFlag.NoShadow));   // a dropped magazine tumbles too
+        // fill 4‥7 (gunreload.ts, a gun fed its own way — nobody spawns one with gunlook.ts off): the Glock 18's long magazine · the Mk 46's belt box · the Mk 12's short twenty · the MP7's long thin forty
+        const own = it.fill >= 4 ? ([{ hl: 0.11, hw: 0.016, th: 0.012, col: [0.06, 0.06, 0.065] }, { hl: 0.06, hw: 0.045, th: 0.035, col: [0.16, 0.17, 0.1] }, { hl: 0.065, hw: 0.014, th: 0.012, col: [0.03, 0.03, 0.033] }, { hl: 0.1, hw: 0.011, th: 0.012, col: [0.03, 0.03, 0.033] }] as const)[Math.min(3, it.fill - 4)] : null;
+        const col: Vec3 = own ? [own.col[0], own.col[1], own.col[2]] : box20k ? v3.copy(SC20K_ITEM.metal) : box30 ? v3.copy(RIFLE_ITEM.wood) : it.fill > 0 ? [0.09, 0.09, 0.1] : [0.06, 0.06, 0.065]; const hl = own ? own.hl : box30 ? 0.095 : 0.055, hw = own ? own.hw : box30 ? 0.014 : 0.018, th = own ? own.th : 0.012;
+        if (flat) out.push(makeBox({ c: [it.pos[0], it.pos[1] + th, it.pos[2]], h: [hw, th, hl], yaw: it.yaw, albedo: col, flags: BoxFlag.Dynamic | BoxFlag.NoShadow }));
+        else out.push(itemBox(v3.copy(it.pos), [hw, hl, own ? Math.max(0.03, own.th) : 0.03], it.yaw, quat.mul(quat.yaw(it.yaw), quat.axisAngle([1, 0, 0], it.tumble)), col, BoxFlag.Dynamic | BoxFlag.NoShadow));   // a dropped magazine tumbles too
       }
       for (let k = n0; k < out.length; k++) out[k].mkey = MKEY.item + (it.serial & 8191) * 8 + Math.min(7, k - n0);   // MOTION IDENTITY per part (scene/boxes.ts MKEY): the g-buffer reprojects the flying can through ITS last transform whatever spawned or died around it in the list
     }

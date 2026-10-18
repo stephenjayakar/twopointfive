@@ -34,6 +34,7 @@ import type { Input } from './input';
 import { CLOSE } from './close';   // (read inside functions only — the game's one import cycle)
 import { activeScenario } from './scenarioRun';   // (the same)
 import { slingRestWant } from './rigProps';   // (the same)
+import { feedOf, reloadShow } from './gunreload';   // (the same)
 import { samWork } from './handwork';   // (the same: while his hands are at work on a thing the work has them)
 
 export type ReloadKind = 'empty' | 'dry' | 'tactical';
@@ -243,7 +244,9 @@ export function kitShow(g: Game, v: { pistolInHand: boolean; rifle: 'hand' | 'sl
   }
   if (KITANIM.reload) {
     const rs = an.reloadShow, long = v.rifle === 'hand';
-    if (rs && (v.pistolInHand || (long && !pl.rifle.def.pellets))) { kit ??= {}; kit.noMag = rs.out && long; kit.magL = rs.hand ? (long ? 'rifle' : 'pistol') : null; }
+    if (rs && (v.pistolInHand || (long && !pl.rifle.def.pellets))) { kit ??= {}; kit.noMag = rs.out && long; kit.magL = rs.hand ? (long ? 'rifle' : 'pistol') : null;
+      // (gunreload.ts: a gun with a model of its own carries its OWN thing in the hand — reloadHandBoxes — never the two kinds' box too; and its magazine / belt box is off the gun when ITS feeding says so)
+      const def = long ? pl.rifle.def : pl.pistol.def; if (feedOf(def)) { kit.magL = null; kit.noMag = long && (reloadShow(pl.char, def.id)?.noMag ?? false); } }
   }
   return kit;
 }

@@ -64,6 +64,7 @@ import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { GUNSLOTS } from '../game/gunslots';
+import { GUNLOOK } from '../game/gunlook';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
@@ -265,6 +266,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
+  GUNLOOK.on = !q.has('nogunlook');   // each gun its own look, sound and reload (game/gunlook.ts): the Mk 12, MP7, Mk 46, M1014, HK45 and Glock 18 drawn as themselves, each with its own report, flame and way of being fed. ?nogunlook = each drawn and heard as the issue gun it stood in for
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
@@ -485,6 +487,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STICKY.mark': 'TPS_CAMMARK=1',
   'OWNCHARGE.on': 'TPS_OWNCHARGE=1',
   'GUNSLOTS.on': 'TPS_GUNSLOTS=1 (rides on the card of the big slot: TPS_BIGSLOT=1 with it)',
+  'GUNLOOK.on': 'TPS_GUNLOOK=1 (nothing to see without a man who carries one of the guns: TPS_GUNSLOTS=1 and TPS_BIGSLOT=1 with it)',
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
