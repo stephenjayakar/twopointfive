@@ -13,7 +13,7 @@ const read = () => { const root = document.getElementById('missions'), go = docu
   const rows = [...document.querySelectorAll('#loadout .lo-kit .kc-row')];
   return { quiet: !!root && root.classList.contains('quiet'), goBg: go ? cs(go).backgroundColor : '', accent: cs(root).getPropertyValue('--m-accent').trim(), base: cs(document.documentElement).getPropertyValue('--m-accent').trim(),
     noise: Object.fromEntries(rows.map(r => [r.dataset.field, +r.dataset.noise])), marks: rows.filter(r => getComputedStyle(r.querySelector('.kc-val'), '::after').content !== 'none').map(r => r.dataset.field),
-    bigWide: (() => { const b = rows.find(r => r.dataset.field === 'big'), a = rows.find(r => r.dataset.field === 'weapon'); return b && a ? b.getBoundingClientRect().width > a.getBoundingClientRect().width * 1.5 : null; })(),
+    bigWide: (() => { const b = rows.find(r => r.dataset.field === 'big'), a = rows.find(r => r.dataset.field !== 'big'); return b && a ? b.getBoundingClientRect().width > a.getBoundingClientRect().width * 1.5 : null; })(),
     zero: rows.filter(r => r.classList.contains('zero')).map(r => r.dataset.field) }; };
 (async () => {
   const b = await chromium.launch({ args: ['--no-sandbox'] }), errs = [];
@@ -31,7 +31,8 @@ const read = () => { const root = document.getElementById('missions'), go = docu
   check(q.marks.length > 0 && q.marks.every(f => n[f] > 0) && Object.keys(n).filter(f => n[f] > 0).every(f => q.marks.includes(f)), 'a mark on every tile that makes a noise, on no other', `marked: ${q.marks.join(' ')}`);
   check(q.bigWide === false && q.zero.includes('big'), 'an empty big slot is a tile like the rest', `big wider than a tile: ${q.bigWide} · none carried: ${q.zero.join(' ') || '(nothing)'}`);
   const s = await open('loadout=vault-quiet', 'quiet-set', 'quiet set');
-  check(s.noise.weapon === 1, 'the quiet set\'s gun is the quietest', `guns step ${s.noise.weapon} with the quiet set on (the suppressed pistol's report is not loud)`);
+  const guns = s.noise.weapon ?? Math.max(s.noise.primary ?? 0, s.noise.secondary ?? 0);   // (one Guns row, or the two gun slots' rows: the loudest gun the card puts in his hands)
+  check(guns === 1, 'the quiet set\'s gun is the quietest', `guns step ${guns} with the quiet set on (the suppressed pistol's report is not loud)`);
   const k = await open('loadout=vault-quiet&kitloud', 'kitloud');
   check(!k.quiet && !clear(k.goBg) && k.marks.length === 0 && k.accent === k.base, '`kitloud` is the screen as it was', `root quiet ${k.quiet} · Deploy's fill ${k.goBg} · marks ${k.marks.length}`);
   const o = await open('loadout=solo-night', 'solo');

@@ -36,7 +36,6 @@ import type { WallOpening } from './wallbreak';
 import { chronHit } from './chronicle';
 import { civiliansShown } from './civilians';
 import { killGuard, hitPlayer } from './combat';
-import { shieldBlast } from './shield';   // (called inside blast only: src/game is one import cycle)
 import { bangScorch } from './marks';
 import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
@@ -46,6 +45,7 @@ import type { Door } from './doors';
 import { lanePenalty } from './lanes';       // (asked inside fleeByDoor only)
 import { tacticsPenalty } from './tactics';
 import { THROW_RELEASE } from './character';
+import { GUNHAND } from './gunhand';   // (read inside fragThrowTick only)
 import { glassBreakLive } from './glassbreak';
 import { shotEnergy } from './glasspen';
 import { w } from './words';
@@ -322,7 +322,6 @@ export function blast(g: Game, at: Vec3, spec: BlastSpec): BlastReport {
   for (const gd of [...g.guards, ...civiliansShown(g)]) {   // (a civilian who has left the floor is not there to be hit)
     if (gd.state === 'dead' || gd.god) continue;
     const c = gd.char, head = c.bones.head ?? v3.add(c.pos, [0, 1.65, 0]); const j = judge(c.pos, head, c.id); if (!j.r) continue;
-    if (j.r !== 'shielded' && shieldBlast(gd, from)) j.r = 'shielded';   // (a ballistic shield between the burst and his chest — shield.ts: nothing asked, nothing drawn, when no shield is on the floor)
     rep.hits.push({ id: c.id, name: gd.callsign, team: gd.team, d: j.d, exposed: j.e, result: j.r, ...(j.r === 'stunned' && j.behind ? { behind: j.behind } : {}) });
     if (j.r === 'shielded') { rep.shielded++; continue; }
     if (sameSide(side, gd.team) && spec.who) FRAG_STATS.own++;
@@ -769,8 +768,12 @@ export function fragThrowTick(g: Game, dt: number) {
       if (!Wd.swung && g.time >= Wd.until - THROW_RELEASE) { Wd.swung = true; c.anim.throwItem(flat(c.pos, Wd.at)); }
       if (g.time < Wd.until) continue;
       C.wind = null;
-      const from: Vec3 = Wd.hand && flat(Wd.hand, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], Wd.hand[1], c.pos[2]], Wd.hand) ? Wd.hand : Wd.toward ? armRound(g, c.pos, Wd.toward) : [c.pos[0] + Math.sin(c.aimYaw) * 0.35, c.pos[1] + 1.5, c.pos[2] + Math.cos(c.aimYaw) * 0.35];
-      const sol = g.items.solve(from, Wd.at, 11);
+      let from: Vec3 = Wd.hand && flat(Wd.hand, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], Wd.hand[1], c.pos[2]], Wd.hand) ? Wd.hand : Wd.toward ? armRound(g, c.pos, Wd.toward) : [c.pos[0] + Math.sin(c.aimYaw) * 0.35, c.pos[1] + 1.5, c.pos[2] + Math.cos(c.aimYaw) * 0.35];
+      let sol = g.items.solve(from, Wd.at, 11);
+      if (GUNHAND.on && GUNHAND.throwFree && !Wd.toward && c.anim.throwOff) {   // (gunhand.ts: thrown with the free hand, it leaves THAT hand — where the hand has the same arc to the same spot; from where it always did otherwise. The plain throw only: an arm round a corner is that rule's own point)
+        const h = c.bones.handL;
+        if (h && flat(h, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], h[1], c.pos[2]], h)) { const sh = g.items.solve(h, Wd.at, 11); if (lands(sh, Wd.at, 2)) { from = v3.copy(h); sol = sh; } }
+      }
       if (!lands(sol, Wd.at, 2) || !ownClear(g, gd, sol.land, true) || hostageNear(g, sol.land)) {   // (a mate has come into its reach, or he has lost the arc: it stays in his hand, he says so, and the floor's clock is as it was before he shouted)
         B.lastT = Wd.lastT; C.tryAt = g.time + 2; g.say(gd, w('no — holding it!', 'no — hold it!')); FRAG_STATS.held++; continue; }
       const it = g.items.spawn('frag', from, sol.v0, { fuse: F.defFuse, who: c.id, heading: v3.yawOf(sol.v0) });
@@ -850,6 +853,8 @@ function windUp(g: Game, B: DefBook, C: Carrier, head: Vec3, from: Vec3, aim: Ve
   }
   return null;
 }
+/** GUNHAND.throwFree, for the drawer (combat.ts guardKit): the grenade of a throw under way is still in his fist — swung, not yet let go */
+export function fragInFist(g: Game, gd: Guard): boolean { return !!defBooks.get(g)?.carriers.find(C => C.gd === gd)?.wind?.swung; }
 /** an arm round a corner: the hand half a pace from a man at `p` toward `to`, chest high (no arm goes through a wall: from where he stands, or not at all) */
 export function armRound(g: Game, p: Vec3, to: Vec3): Vec3 {
   const dx = to[0] - p[0], dz = to[2] - p[2], d = Math.hypot(dx, dz) || 1, out = Math.min(0.7, d), from: Vec3 = [p[0] + dx / d * out, p[1] + 1.5, p[2] + dz / d * out];

@@ -14,8 +14,7 @@
 // resolve does it.
 //
 // PICTURE ONLY. It reads the kit card it is handed and writes nothing anywhere; the game's die is not rolled (the Character it poses is its own, built and stepped under a die of this file's).
-// Two things here are drawn by this file alone, because the game draws them only on a staged man: the ballistic shield's plate (game/shield.ts's numbers) and
-// the pouches on his belt for what the card carries a COUNT of (no such boxes exist in play: a can is drawn only in the fist).
+// One thing here is drawn by this file alone: the pouches on his belt for what the card carries a COUNT of (no such boxes exist in play: a can is drawn only in the fist).
 // Nothing is drawn until the cast has loaded (main.ts hands it over: setFigureCast) and nowhere without a 2D canvas (the probes' DOM).
 import type { GltfCharacter, CastInfo, CastVariant } from '../anim/gltf';
 import { castSide, castSuit, castGoggles, castFile, loadGltfCast } from '../anim/gltf';
@@ -27,7 +26,6 @@ import { rosterOf, type SquadSize } from '../game/loadout';
 import { SQUAD4 } from '../game/nightbreach';
 import { operatorAt } from '../game/cast';
 import { WEAPONS } from '../game/weapons';
-import { SHIELD } from '../game/shield';
 import { KITANIM } from '../game/kitanim';
 import { INHAND, IN_PISTOL, type InHandWord } from '../game/inhand';
 import { CLOSE } from '../game/close';
@@ -53,9 +51,9 @@ export interface Lamp { p: Vec3; r: number; col: Vec3; aim: Vec3; cone: [number,
 /** the look's numbers (judged on headless sheets and the software adapter's screenshots only: tools/qa/kit-figure-sheet.ts) */
 export const FIGURE = {
   /** camera: turn about him at rest (rad; 0 = square on), pitch down (the game looks down at 55°: this is part of the way there), distance */
-  yaw: -0.6, yawPistol: -1.1, yawShield: -1.6, pitch: 0.26, dist: 7,
+  yaw: -0.6, yawPistol: -1.1, pitch: 0.26, dist: 7,
   /** his height's share of the canvas, where his feet stand in it (0 top ‥ 1 bottom), and the width kept for him and his gun at any turn, m; `lead` = how far in front of him the
-   *  camera looks in a pistol's or a shield's view, m */
+   *  camera looks in a pistol's view, m */
   fill: 0.84, feet: 0.89, wide: 1.1, tall: 1.9, lead: 0.13,
   /** the lamps, in his world (he faces +z; they stay put while a drag walks the camera round him): a warm work lamp high in front, a paler one high behind his other
    *  shoulder (it draws his outline, it does not paint him) */
@@ -148,7 +146,7 @@ type Bx = Pick<Box, 'c' | 'h' | 'albedo'> & { yaw?: number; rot?: Box['rot'] };
 
 interface Fig {
   key: string; ch: GltfCharacter; c: Character; top: number;
-  /** how far in front of him the camera looks, m (a pistol held out, a shield: the view is turned to his side and what he holds needs the room) */
+  /** how far in front of him the camera looks, m (a pistol held out: the view is turned to his side and what he holds needs the room) */
   lead: number;
   /** a short word for what he is made of (the page checks read it: another kit is another word, whatever frame he is on) */
   word: string;
@@ -225,25 +223,6 @@ function pouches(c: Character, m: MemberKit, out: Bx[], slim = false): void {
     out.push({ c: [ch[0] - f[0] * back, ch[1] - 0.06, ch[2] - f[2] * back], h: [0.085, 0.11, 0.014], yaw, albedo: [0.2, 0.22, 0.12] });
     out.push({ c: [ch[0] - f[0] * (back + 0.003), ch[1] - 0.06, ch[2] - f[2] * (back + 0.003)], h: [0.087, 0.012, 0.016], yaw, albedo: [0.05, 0.05, 0.05] }); }
 }
-
-/** the ballistic shield's plate where game/shield.ts stands it (that file draws it only on a staged man) */
-function plate(c: Character, out: Bx[], mark: Vec3): void {
-  const sl = c.bones.upperArmL, sr = c.bones.upperArmR; if (!sl || !sr) return;
-  const dx = sl[0] - sr[0], dz = sl[2] - sr[2], L = Math.hypot(dx, dz) || 1, fx = -dz / L, fz = dx / L, S = SHIELD, P = PLATE;
-  const cx = (sl[0] + sr[0]) / 2 + fx * S.ahead + fz * S.left, cz = (sl[2] + sr[2]) / 2 + fz * S.ahead - fx * S.left, cy = c.pos[1] + S.bottom + S.half[1], yaw = Math.atan2(fx, fz);
-  const [hx, hy, hz] = S.half, b: Bx = { c: [cx, cy, cz], h: [hx, hy, hz], yaw, albedo: P.face }, py = hy - S.portBelowTop, [pw, ph] = S.portHalf, e = P.edge;
-  out.push(b,
-    sub(b, [0, hy - e, 0], [hx + 0.003, e, hz + 0.004], P.rim), sub(b, [0, -hy + e, 0], [hx + 0.003, e, hz + 0.004], P.rim),            // the rubber edge: top, bottom,
-    sub(b, [hx - e, 0, 0], [e + 0.003, hy - 2 * e, hz + 0.004], P.rim), sub(b, [-hx + e, 0, 0], [e + 0.003, hy - 2 * e, hz + 0.004], P.rim),   // and the two sides
-    sub(b, [0, py, 0], [pw + 0.018, ph + 0.018, hz + 0.003], P.bezel), sub(b, [0, py, 0], [pw, ph, hz + 0.0035], P.glass),                 // the viewport in its bezel
-    sub(b, [-pw * 0.15, py, hz + 0.0037], [pw * 0.55, 0.0035, 0.0003], P.glint, 0.42),                                                  // a glint across the glass
-    sub(b, [0, py - ph - 0.055, hz + 0.0015], [pw + 0.018, 0.011, 0.0018], mark),                                                       // his pair's colour under it
-    sub(b, [0.03, S.grip, -hz - 0.03], [0.012, 0.09, 0.012], P.strap), sub(b, [0.17, S.grip - 0.14, -hz - 0.012], [0.02, 0.07, 0.012], P.strap)); // behind it: the grip in his fist (shieldLayer's wrist), the strap his forearm lies in
-  for (const [x, y] of [[0.03, S.grip + 0.09], [0.03, S.grip - 0.09], [0.17, S.grip - 0.07], [0.17, S.grip - 0.21]]) out.push(sub(b, [x, y, hz + 0.001], [0.013, 0.013, 0.0025], P.bolt));   // their bolts, through the face
-}
-/** the shield as this view draws it (the game's own is one dark slab and a strip: from across a room that is all it is): a matt face in a rubber edge, a glass
- *  viewport in its bezel, the grip and the forearm strap behind, their bolt heads on the face */
-const PLATE = { face: [0.015, 0.016, 0.018] as Vec3, rim: [0.045, 0.046, 0.048] as Vec3, bezel: [0.06, 0.063, 0.068] as Vec3, glass: [0.15, 0.21, 0.24] as Vec3, glint: [0.5, 0.58, 0.62] as Vec3, strap: [0.09, 0.08, 0.06] as Vec3, bolt: [0.2, 0.2, 0.2] as Vec3, edge: 0.011 };
 
 /** a box in another box's own frame: `off` from its centre along its axes, half sizes `h`, rolled `roll` about its long (z) axis */
 function sub(b: Bx, off: Vec3, h: Vec3, albedo: Vec3, roll = 0): Bx {
@@ -324,7 +303,7 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
     const v = figureMan(ch.cast, ask.member);
     if (v) c.parts = ask.suit ? castSuit(ch.cast, v.mask) : castGoggles(ch.cast, v.mask, me || m.nvg); }
   // the gun his card names, as the game hands it out (kit.ts kitGun, kitPlayer; guards.ts rigOf)
-  const shield = !me && m.shield && SHIELD.on, fit = KITANIM.on && KITANIM.grips;
+  const fit = KITANIM.on && KITANIM.grips;
   const rig = me ? (m.weapon === 'pistol' ? 'pistol' : 'sc20k') : WEAPONS[kitGun(m)].rig;
   const a = c.anim; a.phase = 0; a.trained = 1; a.upper = 'none'; a.stance = 'none';
   for (let i = 0; i < 30; i++) c.update(1 / 60);
@@ -332,7 +311,6 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   else if (rig === 'carbine') { a.longGun = true; a.longSteady = 0; a.longGrip = carbineGrip(); c.muzzleAhead = carbineMuzzleAhead(); a.stance = 'lowReady'; }
   else { a.upper = 'relaxed'; a.stance = FIGURE.pose.pistol; }   // (the pistol in both hands at the game's own low ready, as the rifle is: the relaxed carry points it across his chest)
   a.lookPitchExtra = FIGURE.pose.chin; a.lookYawExtra = FIGURE.pose.turn;
-  if (shield) a.shield = true;
   // IN HAND (game/inhand.ts): the word the game's drawer says of his right hand, row for row (combat.ts: handPropsRaw for you, guardKit for a teammate) — said before
   // the pose is baked, so the figure's own look-only pass has the hand where the game's has it: a long gun stays put and the trigger hand goes onto its grip (yours
   // is drawn fitted into the hand by kit handling instead, as in the game), a pistol is laid out in the hand's own frame. Off (`?inhand=0`): no word, the figure as it was.
@@ -371,7 +349,7 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   };
   const boxes = (): Bx[] => {
     const { bx, meta } = rigged();
-    const out: Bx[] = dress(bx, meta, suitOn); if (shield) plate(c, out, tint2); pouches(c, m, out, pouchSlim);
+    const out: Bx[] = dress(bx, meta, suitOn); pouches(c, m, out, pouchSlim);
     return out;
   };
   let first: Bx[] = []; try { first = boxes(); } catch { /* a rig the cast has no bone for: the man alone */ }
@@ -466,7 +444,7 @@ function groundAt(F: Fig, x: number, z: number): number {
  *  the game's own units at the game's own exposure; `cloud` (0‥1, the picked weather's cover) dims the sun and moves its light to the sky as the game's does. */
 function lightOf(hour: HourId | undefined, cloud = 0, turn = 0): Pick<Fig, 'lamps' | 'sky' | 'ex' | 'ramp' | 'fill' | 'back' | 'backA'> {
   const B = FIGURE.back, co = Math.cos(turn), si = Math.sin(turn);
-  // (the lamps hang where the VIEW has them: a man shown from another side — the pistol, the shield — keeps his key on the camera's one hand and his rim on the other)
+  // (the lamps hang where the VIEW has them: a man shown from another side — the pistol — keeps his key on the camera's one hand and his rim on the other)
   const round = (v: Vec3): Vec3 => [v[0] * co + v[2] * si, v[1], v[2] * co - v[0] * si], hung = (l: Lamp): Lamp => ({ ...l, p: round(l.p), aim: round(l.aim) });
   if (!hour || hour === 'night') return { lamps: FIGURE.lamps.map(hung), sky: FIGURE.sky, ex: FIGURE.exposure, ramp: 1, fill: { ...FIGURE.glow, dir: round(FIGURE.glow.dir) }, back: B.night, backA: B.nightA };
   const H = HOURS[hour], D = FIGURE.day, rad = Math.PI / 180, b = D.off * rad, e = H.sun.elevDeg * rad, d = D.far, [cs, ck] = cloudLight(H, cloud), w = cloudSoft(Math.max(cloud, H.cloud ?? 0));
@@ -712,8 +690,8 @@ function raster(M: Fig, B: Buf, yaw: number, frame: number): void {
 
 // ------------------------------------------------------------ the mount
 
-const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, SHIELD.on, INHAND.on && [INHAND.long, INHAND.fit]]);
-const yawOf = (a: FigureAsk) => (a.card.shield && a.member > 0 && SHIELD.on ? FIGURE.yawShield : a.card.weapon === 'pistol' ? FIGURE.yawPistol : FIGURE.yaw);
+const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, INHAND.on && [INHAND.long, INHAND.fit]]);
+const yawOf = (a: FigureAsk) => (a.card.weapon === 'pistol' ? FIGURE.yawPistol : FIGURE.yaw);
 /** a frame of his life: the game's animator stepped, his surface moved with it */
 function live1(M: Fig, dt: number): void { if (dt > 0) ownDie(() => M.c.update(dt * FIGURE.pace)); coarse(M); }
 

@@ -162,10 +162,11 @@ like that."
   row that brings him: the mend is the table's, never a block per level; `KITDEAL_BREAK=1` in front shows the cards before
   the deal). `bun run tools/qa/kit-audit.ts` lists who carries what on every mission: read your level's row.
 - **A level's own cards are for a mission built round a kit**, not a patch: with `scenarios.issue` every staging wears the
-  issue and the player's kept cards are not worn or shown. A card that hands out a tool the game has switched off is
-  dropped whole. Cards of your own that change a counted thing (stun, charges, frags, smoke) are no longer the issue, so
-  the game does not share them out over a bigger team: write a card for every man who comes. Check it is worn, at each
-  size, and what Team & kit shows. **check** `kit` (reads the cards as a staging wears them); `bun run tools/qa/issue-check.ts`.
+  issue and the player's kept cards are not worn or shown. The ballistic shield is out of the game: a card that
+  still says `shield` is refused as the file loads, in words (take the key out; the rest of the card stands). Cards of
+  your own that change a counted thing (stun, charges, frags, smoke) are no longer the issue, so the game does not share
+  them out over a bigger team: write a card for every man who comes. Check it is worn, at each size, and what Team & kit
+  shows. **check** `kit` (reads the cards as a staging wears them); `bun run tools/qa/issue-check.ts`.
 - **Count the doors against what the squad brings**: locked doors, steel doors (no charge, hammer or shotgun opens steel)
   against the door charges issued; say how each is meant to be opened. **check** `kit` notes them.
 - **An order needs kit somebody is issued.** A frag on order is refused near a hostage, a man to take or a civilian, so on a

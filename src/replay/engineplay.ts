@@ -43,7 +43,7 @@
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
-import { PLAYER_NAME, backToGame, checkReplay, clock, decode, downloadReplay, isErrorMark, sampleAt } from './format';
+import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, downloadReplay, isErrorMark, sampleAt, tapeShield } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
@@ -117,7 +117,7 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
     }
   } catch (e) { why = `Could not read ${v}: ${(e as Error).message}`; }
   if (F && !why) why = checkReplay(F);
-  if (F && !why) { const T = F.rerun; if (!T) why = 'This replay has no run tape (saved by an older build, or with the tape off): the map viewer plays it.'; else if ('dead' in T) why = `This replay’s run tape ended early (${T.dead}): the map viewer plays it.`; }
+  if (F && !why) { const T = F.rerun; if (!T) why = 'This replay has no run tape (saved by an older build, or with the tape off): the map viewer plays it.'; else if ('dead' in T) why = `This replay’s run tape ended early (${T.dead}): the map viewer plays it.`; else if (tapeShield(T)) why = `${TAPE_SHIELD}: the map viewer plays it.`; }
   if (!F || why) return new TapePlay(F, id, v, why || 'No replay.');
   const tape = F.rerun as RunTape, want = tapeSearch(tape, q, v);
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }

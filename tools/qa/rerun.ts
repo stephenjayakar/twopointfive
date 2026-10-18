@@ -13,7 +13,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Headless } from './headless.ts';   // (the harness itself is imported inside rerun(), once the stand the tape was made on is known: it reads TPS_PROFILE as it loads)
 import type { ReplayFile, RunTape, Decoded } from '../../src/replay/format.ts';
-import { decode, clock } from '../../src/replay/format.ts';
+import { decode, clock, tapeShield, TAPE_SHIELD } from '../../src/replay/format.ts';
 import { TapeWalk } from '../../src/replay/tapewalk.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
@@ -50,6 +50,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
   const out = (refuse: string): Rerun => ({ W: null, refuse, report: null, D });
   if (!T) return out('this replay has no run tape (it was saved by a build from before the tape): it reads as a trace — drop --rerun');
   if ('dead' in T) return out(`this replay's run tape ended at step ${T.tick}: ${T.dead}. It reads as a trace — drop --rerun`);
+  if (!opts.force && tapeShield(T as RunTape)) return out(`${TAPE_SHIELD.replace(/^This/, 'this')}: it reads as a trace — drop --rerun`);
   const tape = T as RunTape, lastN = F.samples.length ? F.samples[F.samples.length - 1].n : tape.ticks, toN = Math.min(tape.ticks, Math.max(0, Math.round(opts.toN ?? lastN)));
   const J = await import(`${ROOT}/src/game/journal.ts`), K = await import(`${ROOT}/src/game/knobs.ts`), { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
   const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { mulberry32 } = await import(`${ROOT}/src/math/dice.ts`);

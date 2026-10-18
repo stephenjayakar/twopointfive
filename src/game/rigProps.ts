@@ -685,11 +685,11 @@ export function sheathBoxes(c: Character, out: Box[], full = true, rig: Rig = RI
 
 /** A canister in the right hand (slot 2 / 3 up): the throwable's own body — smoke can olive with a red band, stun can near-black with a pale band —
  *  standing in the fist, tilted a little forward. */
-function heldCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[], K: Rig['can'] = RIG.can, meta?: MetaSink, fit = false) {
-  const hand = c.bones.handR; if (!hand) return;
+function heldCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[], K: Rig['can'] = RIG.can, meta?: MetaSink, fit = false, left = false) {
+  const hand = left ? c.bones.handL : c.bones.handR; if (!hand) return;
   const f = c.forward(); const axis = v3.normalize([f[0] * K.tilt, 1, f[2] * K.tilt]);
   let g0 = frameFrom(v3.mad(hand, axis, K.sink), axis, f);
-  if (fit) { const hf = c.handFrameR(), F = GRIPFIT.can, mid = (K.body.l0 + K.body.l1) / 2;   // (IN the fist: its middle in the hollow of the hand, standing along the thumb's line whatever the arm does)
+  if (fit) { const hf = left ? c.handFrameL() : c.handFrameR(), F = GRIPFIT.can, mid = (K.body.l0 + K.body.l1) / 2;   // (IN the fist: its middle in the hollow of the hand, standing along the thumb's line whatever the arm does)
     g0 = frameFrom(v3.mad(v3.mad(v3.mad(hand, hf.fingers, F.fwd), hf.back, -F.palm), hf.thumb, F.side - mid), hf.thumb, hf.fingers); }
   const g = applyAdj(g0, K.adj);
   const body: Vec3 = kind === 'frag' ? [0.13, 0.17, 0.08] : kind === 'flash' ? [0.07, 0.075, 0.08] : [0.25, 0.29, 0.2]; const band: Vec3 = kind === 'frag' ? [0.75, 0.62, 0.1] : kind === 'flash' ? [0.7, 0.7, 0.66] : [0.6, 0.08, 0.06];   // (frag: throwables.ts FRAG_ITEM's olive body and yellow band)
@@ -697,6 +697,9 @@ function heldCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[]
   seg(out, g, K.body, body, [0, 0, 0], meta, 'can.body');
   seg(out, g, K.band, band, [0, 0, 0], meta, 'can.band');
 }
+
+/** GUNHAND.throwFree (gunhand.ts): the can of a throw off the FREE hand — in the left fist, as a fitted can is in the right (combat.ts guardKit, while it has not left him) */
+export function freeCanBoxes(c: Character, kind: 'smoke' | 'flash' | 'frag', out: Box[], meta?: RigNodeMeta[]) { curOwner = c.id & 0xff; heldCanBoxes(c, kind, out, RIG.can, meta, true, true); }
 
 /** The carbine's group frame: the sidearm's hand frame (wrist, z along char.gunDir, y up out of the receiver) moved by the group adj onto the bore above the trigger. */
 function carbineFrame(c: Character, hand: Vec3, C: Rig['carbine']): { handF: Frame; g: Frame } { return pistolFrame(c, hand, C); }

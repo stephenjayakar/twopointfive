@@ -88,7 +88,6 @@ import { samStaggered } from './samstun';
 import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
-import { plateUp } from './shield';
 import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary } from './guards';
 import { SENSE, CpuSmoke, ownSmoke } from './sense';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
@@ -1665,7 +1664,7 @@ export class Game {
           const dz = an.dazzle ?? (an.dazzle = { from: gd.char.pos, k: 0 }); dz.from = gd.dazzledAt ?? gd.lastKnown ?? gd.char.pos; dz.k = Math.min(1, (gd.dazzledUntil - this.time) / 0.5);
         } else an.dazzle = null;
         // turn weight (character.ts TURN — nothing reads it with that off): his yaws are weighed by what he carries, bar a man in Sam's arm and a showcase's cast (their timings are the choreography's)
-        { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def, plateUp(gd) ? 0.6 : 1); tw.k = an.trained; }
+        { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def); tw.k = an.trained; }
       }
       this.player.char.anim.trained = 1;
     }

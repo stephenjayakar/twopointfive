@@ -30,8 +30,8 @@ export function configs(): Cfg[] {
   a('you quiet set', 0, kitPresetCard(0, 'quiet')); a('you loud set', 0, kitPresetCard(0, 'loud'));
   a('you suit rifle', 0, card(0), { suit: true }); a('you suit pistol', 0, card(0, { weapon: 'pistol' }), { suit: true });
   a('you office', 0, card(0), { look: false }); a('you office pistol', 0, card(0, { weapon: 'pistol' }), { look: false }); a('you office suit', 0, card(0), { look: false, suit: true });
-  // each member, issued / pistol / shotgun / shield
-  for (let m = 1; m <= 4; m++) { a(`m${m} issued`, m, card(m)); a(`m${m} pistol`, m, card(m, { weapon: 'pistol' })); a(`m${m} shotgun`, m, card(m, { weapon: 'shotgun' })); a(`m${m} shield`, m, card(m, { shield: true })); }
+  // each member, issued / pistol / shotgun
+  for (let m = 1; m <= 4; m++) { a(`m${m} issued`, m, card(m)); a(`m${m} pistol`, m, card(m, { weapon: 'pistol' })); a(`m${m} shotgun`, m, card(m, { weapon: 'shotgun' })); }
   a('m1 office', 1, card(1), { look: false }); a('m1 quiet duo suit', 1, kitPresetCard(1, 'quiet'), { squad: 1, suit: true });
   // suits and trims
   for (const s of ['black', 'grey', 'navy', 'olive', 'jungle', 'khaki', 'desert'] as const) a(`suit ${s}`, 0, card(0, { suit: s }));
