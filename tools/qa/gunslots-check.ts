@@ -27,12 +27,13 @@ function family(title: string): { verdict: Verdict; done: () => boolean } {
 const hushed = async <T>(fn: () => Promise<T> | T): Promise<T> => { const log = console.log, err = console.error, warn = console.warn; console.log = console.error = console.warn = () => { }; try { return await fn(); } finally { console.log = log; console.error = err; console.warn = warn; } };
 const J = (o: unknown) => JSON.stringify(o), f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : String(x));
 const BREAK = process.env.GUNSLOTS_BREAK === '1';
-/** the switch as the page has it, with the big slot it rides on (the frozen stand pins both off as it stands a game up: raised after) */
-const raise = (on = true) => { GUNSLOTS.on = on; K.BIGSLOT.on = true; };
+/** the switch as the page has it, with the big slot it rides on (the frozen stand pins both off as it stands a game up: raised after) — and every card as
+ *  the table writes it (kit.ts KITDEAL off: what a team of three or four is dealt is kitdeal-check.ts's to hold) */
+const raise = (on = true) => { GUNSLOTS.on = on; K.BIGSLOT.on = true; K.KITDEAL.on = false; };
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
-  const was = { ...GUNSLOTS }, big = K.BIGSLOT.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);
-  try { return await fn(); } finally { Object.assign(GUNSLOTS, was); K.BIGSLOT.on = big; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
+  const was = { ...GUNSLOTS }, big = K.BIGSLOT.on, deal = K.KITDEAL.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);
+  try { return await fn(); } finally { Object.assign(GUNSLOTS, was); K.BIGSLOT.on = big; K.KITDEAL.on = deal; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
 }
 const fields = (i: number) => K.kitRows(i).map((r: any) => r.field);
 const row = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field === f);
