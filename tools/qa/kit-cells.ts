@@ -1,9 +1,9 @@
 // A LOADOUT AS A COMMAND — tools/qa/ships.ts's stand (the play-through as the page ships it: glass parts, the movement pass, the light turn weight, the cast,
 // the defenders' frags) with THE KIT CARDS SET FROM A JSON SPEC before each run, and every run's row saying what the squad carried in and what it spent.
-// For the kit-slots tallies ('what is a stun canister / a door charge / a frag / a shield worth to the scripted squad'): a cell is a command, not a code edit.
+// For the kit-slots tallies ('what is a stun canister / a door charge / a frag worth to the scripted squad'): a cell is a command, not a code edit.
 //   bun run tools/qa/kit-cells.ts --name no-stun --kit '{"1":{"bangs":0},"2":{"bangs":0}}' --scn warehouse-four --seeds 1-144 --jobs 4 --cap 420 --json out.json
 //     --kit JSON    member index → card fields (0 = you, 1‥4 = the teammates in staging order: Red One, Red Two, Blue One, Blue Two). A field is one of the
-//                   member's own card rows (src/game/kit.ts kitRows: weapon suppressed light nvg bangs charges frags shield suit trim; you: weapon cans frags
+//                   member's own card rows (src/game/kit.ts kitRows: weapon suppressed light nvg bangs charges frags suit trim; you: weapon cans frags
 //                   shells suit trim) and its value one the row offers — set through kitSet, the card's own click, so nothing a card cannot do can be asked.
 //                   "all" = every teammate (1‥4): --kit '{"all":{"bangs":3}}'. No --kit = every card as issued = ships.ts, run for run.
 //     --name cell   the cell's name (goes in the JSON and the total line)

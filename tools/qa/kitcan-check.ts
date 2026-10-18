@@ -54,7 +54,7 @@ export async function canTiles(): Promise<boolean> {
 
         // the drawings themselves: the can is a thing added to the pistol and the rifle, and to nothing else
         F.verdict(svg('pistol', true) !== svg('pistol', false) && svg('rifle', true) !== svg('rifle', false) && ['pistol', 'rifle'].every(w => svg(w, true).startsWith(svg(w, false).replace(/<\/svg>\s*$/, ''))) && svg('nothing', true) === svg('rifle', true) && svg('toString', true) === svg('rifle', true) && svg('shotgun', true) === svg('shotgun', false)
-          && IC.kitIcon('smoke', 1, true).svg === IC.kitIcon('smoke', 1, false).svg && !K.kitGunCan(1, { ...K.KIT.members[1], weapon: 'shotgun', suppressed: true, shield: false }) && !K.kitGunCan(0, { ...K.KIT.members[0], weapon: 'shotgun' }),
+          && IC.kitIcon('smoke', 1, true).svg === IC.kitIcon('smoke', 1, false).svg && !K.kitGunCan(1, { ...K.KIT.members[1], weapon: 'shotgun', suppressed: true }) && !K.kitGunCan(0, { ...K.KIT.members[0], weapon: 'shotgun' }),
           'THE DRAWINGS: the can is added to the pistol and to the rifle (the gun under it is the same drawing; a gun the board does not know is the rifle); the shotgun has none to draw, nor has any tile that is not a gun; a shotgun in the hands is never a suppressed gun',
           `pistol ${svg('pistol', false).length} → ${svg('pistol', true).length} chars · rifle ${svg('rifle', false).length} → ${svg('rifle', true).length} · shotgun ${svg('shotgun', false).length} → ${svg('shotgun', true).length}`);
 

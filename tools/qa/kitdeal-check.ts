@@ -9,7 +9,7 @@
 // thing changed on a teammate's card makes the worn cards the player's own while any other change leaves the layout (so a smaller team still carries the
 // whole kit), a peek writes nothing, a size-specific layout never reaches the store unasked, and men put back on their shares are the named kit again. Of a
 // staged game: a team of four on The pass is the same run by digest with the deal on as off and its men carry the worn cards, smaller teams count what
-// they counted, and a mission's own issue — the long hall's shield man, a block that names only you — counts what it counted. Of the Team & kit screen (a
+// they counted, and a mission's own issue — the long hall's own block (it names nobody since the shield left the game), a block that names only you — counts what it counted. Of the Team & kit screen (a
 // headless DOM): the roster of four shows things on both Blue men and marks nobody changed. And the switch is a row of the two stands, in the knob
 // registry and in a recording's tables. It sets the switches it needs itself, so it asks the same on either stand. Looks at no picture: never seen on a GPU.
 import { readFileSync } from 'node:fs';
@@ -18,7 +18,6 @@ import { standUp, ROOT } from './headless.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const K = await import(`${ROOT}/src/game/kit.ts`);
-const { SHIELD } = await import(`${ROOT}/src/game/shield.ts`);
 const { WAND } = await import(`${ROOT}/src/game/wand.ts`);
 const { harnessProfile, FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
 
@@ -43,8 +42,8 @@ const stored = () => JSON.stringify(K.KIT.members);
 const pool = (n: number) => { const P = K.kitPool(n); return `${P.bangs}/${P.charges}/${P.frags}/${K.kitSmokes(n)}/${K.kitWalls(n)}`; };
 /** the kit table, its switches and the team size put back after `fn` */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const was = K.KIT.members.map((m: Card) => ({ ...m })), on = K.KIT.on, big = K.BIGSLOT.on, rule = K.SLOTS.on, deal = K.KITDEAL.on, issue = K.ISSUE.on, plate = SHIELD.on, team = K.kitTeam(), word = process.env.TPS_SHIELD;
-  try { return await fn(); } finally { K.KITDEAL.on = false; K.kitLoad(null, ''); K.SLOTS.on = rule; K.BIGSLOT.on = big; K.KIT.on = on; K.ISSUE.on = issue; SHIELD.on = plate; K.kitTeam(team); for (let i = 0; i < was.length; i++) K.KIT.members[i] = was[i]; K.KITDEAL.on = deal; if (word === undefined) delete process.env.TPS_SHIELD; else process.env.TPS_SHIELD = word; }
+  const was = K.KIT.members.map((m: Card) => ({ ...m })), on = K.KIT.on, big = K.BIGSLOT.on, rule = K.SLOTS.on, deal = K.KITDEAL.on, issue = K.ISSUE.on, team = K.kitTeam();
+  try { return await fn(); } finally { K.KITDEAL.on = false; K.kitLoad(null, ''); K.SLOTS.on = rule; K.BIGSLOT.on = big; K.KIT.on = on; K.ISSUE.on = issue; K.kitTeam(team); for (let i = 0; i < was.length; i++) K.KIT.members[i] = was[i]; K.KITDEAL.on = deal; }
 }
 /** one kit on a team of n, the deal as asked: the cards as worn and as the table holds them, the squad's count, who comes bare */
 function put(id: string, n: number, deal: boolean) {
@@ -132,11 +131,11 @@ export async function dealRun(): Promise<boolean> {
       const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
       const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`), { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`), { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
       const squad0 = NIGHTBREACH.squad, seed0 = ROOMCLEAR.seed, way0 = ROOMCLEAR.way;
-      const stage = async (file: string, squad: number, deal: boolean, o: { shield?: boolean; frames?: number; dealtFor?: number; block?: Record<string, Card> } = {}) => {
+      const stage = async (file: string, squad: number, deal: boolean, o: { frames?: number; dealtFor?: number; block?: Record<string, Card> } = {}) => {
         const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); if (o.block) (data.scenarios ??= {} as any).issue = { members: o.block } as any;
-        process.env.TPS_SHIELD = o.shield ? '1' : '0'; ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = squad;
+        ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = squad;
         const W: any = await hushed(() => standUp({ uploadEvery: 4, level: loadLevel(data), seed: 5 })), g = W.game;
-        SHIELD.on = !!o.shield; K.KIT.on = true; K.SLOTS.on = true; K.ISSUE.on = true; K.KITDEAL.on = false; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset(); K.KITDEAL.on = deal; if (o.dealtFor) K.kitTeam(o.dealtFor);
+        K.KIT.on = true; K.SLOTS.on = true; K.ISSUE.on = true; K.KITDEAL.on = false; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset(); K.KITDEAL.on = deal; if (o.dealtFor) K.kitTeam(o.dealtFor);
         const before = cards(), why = await hushed(() => g.roomClear.start(0)); await hushed(() => { for (let i = 0; i < (o.frames ?? 6); i++) W.step(1 / 60); });
         const men = g.orders.men('all', { down: true }) as any[];
         return { why, n: men.length, pool: `${g.doorTools.bangs} stun ${g.doorTools.charges} charges ${g.doorTools.frags} frags`, h: hashDigest(digestGame(g, true)) as string, before, worn: men.map(m => cardWords(K.kitOf(m) ?? {})).join(' | ') };
@@ -149,8 +148,8 @@ export async function dealRun(): Promise<boolean> {
         F.verdict(two.pool === two0.pool && one.pool === one0.pool && two.n === 2 && one.n === 1, 'THE SCREEN LEFT ON FOUR, THEN STAGED SMALLER: a pair and one man alone carry what that team always carried (the staging wears the cards for the men who came)', `worn of four before the pair's staging: ${two.before} · the pair ${two.pool} (was ${two0.pool}) · one man ${one.pool} (was ${one0.pool})`);
         const you = { '0': { frags: 2 } }, y20 = await stage('hall.json', 2, false, { block: you }), y2 = await stage('hall.json', 2, true, { block: you, dealtFor: 4 }), y30 = await stage('hall.json', 3, false, { block: you }), y3 = await stage('hall.json', 3, true, { block: you, dealtFor: 4 });
         F.verdict(y2.pool === y20.pool && y3.pool === y30.pool && y2.n === 2 && y3.n === 3, 'A MISSION\'S ISSUE THAT NAMES ONLY YOU (a block written over the long hall\'s for this line): a pair and a three count what they counted', `the pair ${y2.pool} (was ${y20.pool}) · three ${y3.pool} (was ${y30.pool})`);
-        const hall0 = await stage('hall.json', 4, false, { shield: true }), hall = await stage('hall.json', 4, true, { shield: true }), out0 = await stage('hall.json', 4, false), out = await stage('hall.json', 4, true);
-        F.verdict(hall.pool === hall0.pool && out.pool === out0.pool && hall0.pool !== out0.pool, 'A MISSION\'S OWN ISSUE (the long hall: its file trades the first teammate\'s charges and frags for the shield) counts what it counted, the shield in and out of the game', `the shield in: ${hall.pool} (was ${hall0.pool}) · out: ${out.pool} (was ${out0.pool})`);
+        const out0 = await stage('hall.json', 4, false), out = await stage('hall.json', 4, true);
+        F.verdict(out.pool === out0.pool && out.n === 4, 'A MISSION\'S OWN ISSUE (the long hall: its block names nobody since the shield left the game, so the four are staged in the plain issue under it) counts what it counted', `${out.pool} (was ${out0.pool}) · ${out.n} men`);
       } finally { NIGHTBREACH.squad = squad0; ROOMCLEAR.seed = seed0; ROOMCLEAR.way = way0; }
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });

@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 5199;
 const SIZES = (process.env.SIZES || '1353x770,1440x900,1728x1000,2200x1200,1200x760,1100x720,960x700').split(',').map(s => s.split('x').map(Number));
 const BREAK = process.env.KITLINE_BREAK === '1';
 // full cards, each legal under the pouches rule (four a man): you as issued (five things with the rifle), a wall charge beside door charge and stun (the shot's
-// Blue Two), four small things, a stun with two door charges (it was the shield: off in the page, `?shield`, and a planted one is dropped), three stun and a door charge
+// Blue Two), four small things, a stun with two door charges, three stun and a door charge
 const CARDS = { v: 2, members: [
   { smoke: 1, bangs: 1, frags: 1, shells: 1 },
   { bangs: 1, charges: 1, walls: 1 },

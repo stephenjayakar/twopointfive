@@ -37,8 +37,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `flinchFrom(dir)` (a duck off the rounds) vs `hitFrom(dir)` (knocked along the round), `anim.dazzle` (the blinded hunch for as long as `Guard.dazzledAt` holds — the trigger hand keeps the gun
   on its line so a blind burst still leaves; the hand over the eyes sits UNDER a brim / helmet rim: `MV.dazzle.handDrop / handOut / handRoll / handPole`, fitted to the cast's hats with the models part's cast-pose tool), `tossItem()` (the support-hand underhand bang toss; `throwItem()` stays the overhand), signal `'squeeze'` (the stack's set), fall variety at
   ragdollize. Poses feed the sim (rounds leave the drawn muzzle), so MOVES on is not bit-identical — the door tally (32 seeds) shows no measurable shift. TURN = `TURN` knobs + `WeaponDef.handling`
-  (`weapons.ts handlingOf(def, kit = 1)` = THE one place the weight is read: the row's number, else its class's — pistol 1, carbine 0.82, FN2000 0.8, rifle 0.7 —, else a carbine's; × `kit` for
-  what else is in his hands, e.g. a shield held up) + `Character.turn {on, h, k}` dealt each frame in game.ts (every armed AI man; not Sam, civilians, a held man or a
+  (`weapons.ts handlingOf(def)` = THE one place the weight is read: the row's number, else its class's — pistol 1, carbine 0.82, FN2000 0.8, rifle 0.7 —, else a carbine's) +
+  `Character.turn {on, h, k}` dealt each frame in game.ts (every armed AI man; not Sam, civilians, a held man or a
   showcase's cast): **between a man's updates `bodyYaw` / `aimYaw` hold the WEIGHED yaws; `c.turnBegin()` (updateGuard's second statement) puts the AI's WISH back so its own easings run wish to
   wish; `Character.update` → `turnWeigh` steps body and gun toward the wish (acceleration, a top rate × handling, a brake that lands on the point) and writes the weighed yaws back.** So: an easing
   of his yaw OUTSIDE his own update must start from `c.wantBody` (roomfight.ts applyWatch, dialogue.ts), and a facing / fire gate INSIDE his update must read `c.gunYaw` (guards.ts ×3, aim.ts) —
@@ -119,7 +119,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shut a room). Checkpoints carry `wound` + the layer's clock (`woundRestore`); a plain save waits while he is still sinking. `turnDrop()` = TURN let go of as he goes down.
   `WOUND` is in journal.ts's knob tables, `WOUND_STATS` beside it is not; `Guard.wound` is NOT in the digest. `__wounds` {on, knobs, stats, men()}, `__killGuard(i, 'wounded', zone, dir)`.
   QA: `probes.ts wounds` (zone / off / state / both / again / save / play; `WOUNDS_BREAK=1 … wounds-zone` must fail), strips `wounded-knee / wounded-leg / wounded-back`,
-  playthrough.ts `RunOut.wounds`. The clutch (MOVES second pass) can also HOLD A FOLD: `MOVES.fold` (trunk + head for as long as `anim.clutch` is up, a spring in `mvPost` — so not arms-only) is **0 = up with the wounds switch and only with it** (`character.ts FOLD_WITH.on`, which wounds.ts points at `WOUND.on`; wounds off, a staggered man's trunk is the base's frame for frame — `moves-kept` holds it), 1 = on by itself (`?fold`), -1 = never (`?fold=0`). A man carrying the gear build's shield (`anim.shield`, read through `handKept`; no such field on this base) gets no clutch arm and no fold, the sway alone.
+  playthrough.ts `RunOut.wounds`. The clutch (MOVES second pass) can also HOLD A FOLD: `MOVES.fold` (trunk + head for as long as `anim.clutch` is up, a spring in `mvPost` — so not arms-only) is **0 = up with the wounds switch and only with it** (`character.ts FOLD_WITH.on`, which wounds.ts points at `WOUND.on`; wounds off, a staggered man's trunk is the base's frame for frame — `moves-kept` holds it), 1 = on by itself (`?fold`), -1 = never (`?fold=0`).
 - **A man's condition on the figure** (`character.ts MV2.hurt / MV2.shaken`, the animator's `hurt`, `hurtSide`, `shaken`, `foldToo`; dealt every frame
   for the player, his men and the defenders alike by `condition.ts conditionPose` from `Game.dealWeapons`, nothing under a showcase; all inside the
   MOVES pass, so none of it on the frozen stand or with `?nomoves`). HURT (`mvPost`): a hunch he keeps (`pitch` 11°, head 9°, pelvis 2.5 cm), a lean
@@ -131,7 +131,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`sup.v` from a tenth under the flinch line to pinned), head down between the shoulders, sunk 10 cm, in fast and out over a second or two.
   FOLDED: `foldToo` raises the clutch's fold (`foldOn(too)`) for a staggered man with the wounds switch off, and deeper than the wounds' own
   (`MV2.clutch.fold.pitchToo` 34°). Under the fold and the blinded hunch the hurt and shaken looks give way by those weights (never two folds
-  added); a man with a shield (`handKept`) gets no hunch. All three springs are in `mvReset` and `mvLive`. THE GAZE STABILISER
+  added). All three springs are in `mvReset` and `mvLive`. THE GAZE STABILISER
   keeps the eye line level under a working body and stands aside for a stance or an aim, so with the gun CARRIED it took four fifths of both bows
   back out through the neck (hurt showed 4° of its 20°, shaken 6° of its 29°): its target elevation now goes down by what the two looks pose
   (`hurt.pitch + hurt.head`, `shaken.pitch + shaken.head`, each by its spring), so the head is bowed the same whatever the gun is doing (check line g). Measured headless on the bones

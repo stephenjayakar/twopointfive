@@ -1,4 +1,4 @@
-// ATTACHMENTS AGAINST THE MESH: every thing a man holds, wears or carries (rigProps' boxes, the belt torch, the shield, a hostage's tie), measured against the skinned
+// ATTACHMENTS AGAINST THE MESH: every thing a man holds, wears or carries (rigProps' boxes, the belt torch, a hostage's tie), measured against the skinned
 // mesh of the cast variant that carries it, in the poses the animator really makes. What tools/qa/pose-mesh.ts shows one sheet at a time, as numbers over the whole cast.
 //
 //   TPS_PROFILE=shipped bun run tools/qa/attach-mesh.ts [--variant <name,…>] [--loadout <name,…>] [--sit <name,…>] [--json <file>] [--md <file>] [--ply <dir>] [--inhand] [--list]
@@ -42,7 +42,6 @@ const GL: any = await import(`${ROOT}/src/anim/gltf.ts`);
 const HW: any = await import(`${ROOT}/src/game/handwork.ts`);
 const IH: any = await import(`${ROOT}/src/game/inhand.ts`).catch(() => null);   // (a tree from before the rule has no such module)
 if (IH) IH.INHAND.on = has('--inhand');
-const SH: any = await import(`${ROOT}/src/game/shield.ts`);
 const GE: any = await import(`${ROOT}/src/game/gear.ts`);
 const { skinVertices } = await import(`${ROOT}/src/render/meshbvh.ts`);
 const { sideOfTeam } = await import(`${ROOT}/src/game/charLook.ts`);
@@ -163,8 +162,6 @@ const LOADOUTS: Loadout[] = [
     build: x => { const b: Built = { boxes: [], groups: [] }; const k = x.c.anim.bigK ?? 0; const meta: any[] = []; const s = b.boxes.length; RP.bigBoxes(x.c, 'shotgun', k, b.boxes, RP.RIG, false, meta);
       const sub = (p: string) => meta.find(m => m.path === p)?.boxStart; b.groups.push({ label: `shotgun in the hands (k ${k.toFixed(2)})`, on: 'handR', start: s, count: b.boxes.length - s, grip: sub('carbine.grip'), left: sub('carbine.handguard'), hand: 'R' });
       add(b, 'own rifle hung in front', 'trunk', o => RP.hungBoxes(x.c, 'sc20k', o)); return b; } },
-  { name: 'mate-shield', say: 'a teammate with the shield on his left arm, the pistol in his right hand', who: isMate, arm: 'pistol', sits: ['carry', 'aim', 'aim-crouch', 'carry-walk'], mask: 'boxes', pre: x => { fakeGuard(x.c); },
-    build: x => { const b = rig(x, { goggles: true, nv: false, slot: 1, lightOn: false, isGuard: false }, undefined, false); add(b, 'shield', 'armL', o => SH.shieldBoxes(fakeGuard(x.c), o)); return b; } },
   { name: 'gd-pistol', say: 'a guard with his 9 mm drawn, the torch on his belt', who: isGuard, arm: 'pistol', sits: ['carry', 'carry-walk', 'aim', 'aim-walk', 'aim-crouch', 'aim-fire'],
     build: (x, sit) => { const b = rig(x, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: false, weapon: 'pistol' }, undefined, aiming(sit)); add(b, 'belt torch', 'hip', o => HW.beltTorch(x.c, o)); return b; } },
   { name: 'gd-torch', say: 'a guard on a calm patrol: the torch in his right fist, the sidearm on his thigh', who: isGuard, arm: 'torch', sits: ['idle', 'walk', 'torch-up'],
@@ -180,8 +177,6 @@ const LOADOUTS: Loadout[] = [
   { name: 'civ-bound', say: 'a hostage: the tie round her wrists', who: v => v.side === 'civilian', arm: null, sits: ['bound'],
     build: x => { const b: Built = { boxes: [], groups: [] }; add(b, 'wrist tie', 'hands', o => RP.wristTieBoxes(x.c, o)); return b; } },
 ];
-const shieldMen = new Map<any, any>();
-function fakeGuard(c: any) { let g = shieldMen.get(c); if (!g) { g = { char: c, state: 'patrol' }; SH.giveShield(g); shieldMen.set(c, g); } return g; }
 
 // --rig holster.out=0.13,goggles.adj.off.2=0.01 : try RIG numbers without editing the table (the run's first line says so)
 const tried: string[] = [];

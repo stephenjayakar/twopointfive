@@ -6,7 +6,7 @@
 //   cards-squad-refused Blue One's stun › pressed: his own pouches empty — taken (the name is from when the squad's seven were full and refused it)
 //   cards-traded        Red One's frag given up, Blue One's stun canisters in their pouches (two: the first press is taken too with no squad limit)
 //   cards-you-refused   › on your smoke row as issued
-//   cards-quiet · cards-loud   the two sets on everybody (the table's 'quiet' and 'stun' loadouts) · cards-shield  the table's 'shield' loadout
+//   cards-quiet · cards-loud   the two sets on everybody (the table's 'quiet' and 'stun' loadouts)
 //   cards-set-refused   Red Two quiet, Blue One two stun, Red Two back to as issued (refused while a squad limit had no room for it; taken with none)
 //   cards-saved-over    a kit saved outside the rule, read back: brought inside it, the cards say what was left behind
 //   cards-off           ?kit&noslots: the rule off — no meter, no costs, the Cans row
@@ -54,7 +54,6 @@ const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
       await page.evaluate(() => window.__kit.reset()); await page.click(next(0, 'weapon')); await says('your 40 mm row, no rifle', `${row(0, 'shells')} .kc-note`); await page.click(next(0, 'shells')); await box('cards-norifle'); await says('… a round asked for', `${row(0, 'shells')} .kc-note`);
       await page.evaluate(() => window.__kit.reset());
       for (const p of ['quiet', 'loud']) { await page.evaluate((p) => window.__kit.preset(p), p); await box(`cards-${p}`); }
-      R.notes.push('loadout shield: ' + JSON.stringify(await page.evaluate(() => window.__kit.loadout('shield')))); await box('cards-shield');
       { const wall = await page.evaluate(() => (window.__kit.reset(), window.__kit.loadout('wall'))); R.notes.push('loadout wall: ' + JSON.stringify(wall) + ' · wallHere ' + JSON.stringify(await page.evaluate(() => window.__kit.wallHere()))); if (wall === 'done') await box('cards-wall'); }
       // a set on one card the squad has no room for: Red Two quiet, Blue One takes the two pouches, Red Two back to As issued
       await page.evaluate(() => window.__kit.reset()); await page.click(`${card(2)} .kc-set[data-set="quiet"]`); await page.click(next(3, 'bangs')); await page.click(next(3, 'bangs')); await page.click(`${card(2)} .kc-set[data-set="issued"]`);
