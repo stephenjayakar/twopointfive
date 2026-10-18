@@ -24,6 +24,7 @@
 //
 // Not built (the answer page has them): the wedge, a 'looked' that decays into a timer on the strip, the guns of the men WITH Sam turning to the nearest unknown.
 // Nothing here runs unless the rescue is up; with RESCUE.flow and RESCUE.marks off it does nothing at all.
+import { SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Rescue } from './rescue';
@@ -86,8 +87,8 @@ export class RescueFlow {
   stats = { takes: 0, chained: 0, corridor: 0, overridden: 0, hotHolds: 0, unmanned: 0 };
   private regions = new Map<RegionId, Region>();
   /** the assignments the flow itself handed out (its covers, and the fall-in it sends a man back with): what tells the flow's man from one Sam posted */
-  private mine = new WeakSet<Assignment>();
-  private senseAt = 0; private turn = 0; private heard = new WeakSet<object>(); private built = false;
+  private mine = new SideSet<Assignment>();
+  private senseAt = 0; private turn = 0; private heard = new SideSet<object>(); private built = false;
   private room: Rect = { x0: 0, x1: 0, z0: 0, z1: 0 };
   /** where Sam last stood ON the corridor (a pass is a walk along it, not a place), and the side room he has just turned into off it */
   private corr: { x: number; t: number } | null = null;

@@ -28,6 +28,7 @@
 // side-steps or re-plans, the walk stands back for a moment and is re-laid from where that left him; twice, and the nav has him for good (`gaveUp`).
 // But for a point moved out from behind a leaf it changes no point of domination, and it changes no order and no gun: where the men end up and what they
 // do there is the door order's — but for the gun lowered at a leaf.
+import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { DoorOp } from './doortools';
@@ -112,14 +113,14 @@ function ptSeg(p: Vec3, a: Vec3, b: Vec3): number {
 export class DoorPath {
   walks = new Map<Guard, Walk>();
   /** per door order: the walk last let go, how many so far */
-  private lastOf = new WeakMap<DoorOp, { W: Walk | null; n: number; t: number }>();
+  private lastOf = new SideMap<DoorOp, { W: Walk | null; n: number; t: number }>();
   stats = { sent: 0, walked: 0, round: 0, noRound: 0, noLane: 0, late: 0, heldS: 0, capped: 0, yields: 0, gaveUp: 0, taken: 0, relaid: 0, turned: 0, moved: 0, waitS: 0, nav: 0, gunS: 0, guns: 0, gunAhead: 0, stepped: 0 };
   constructor(private g: Game) {}
   reset() { this.walks.clear(); this.lent.length = 0; }
 
   /** THE GUN: every teammate under one of Sam's orders, his long gun up at the shoulder — its line across an open leaf has it carried along his walk, or
    *  brought down (and kept down while it would cross). What it writes on his script is his for THIS frame's pose only: `after()` puts it back */
-  private low = new WeakSet<Guard>();
+  private low = new SideSet<Guard>();
   private lent: { gd: Guard; s: NonNullable<Guard['script']>; mine: Vec3; aimAt: Vec3 | null | undefined; face: number | null | undefined; strafe: boolean | undefined }[] = [];
   private guns(dt: number) {
     const K = DOORPATH, g = this.g; if (!K.gun) return;

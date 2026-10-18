@@ -24,6 +24,7 @@
 //             moving with the air where they enter the slab, dragged toward it as they fall (a drop answers a gust over ~0.9 s, as a real one does), so the streaks SLANT with
 //             the storm and swing with its gusts; the LATTICE far field is handed the same mean air (frame shear = −air ÷ 9 m/s, low-passed by the drops' own response) so near
 //             and far lean alike; births are thinned into drifting SHEETS (a value noise carried downwind) so curtains of denser rain cross the lot.
+import { SideMap } from '../math/side';
 import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
 import type { FollowCamera } from './camera';
@@ -122,7 +123,7 @@ interface RainState {
   shear: [number, number]; bandOff: [number, number]; air: [number, number]; shearInit: boolean;
 }
 export interface RainStatsCpu { active: boolean; why: string; radius: number; centre: [number, number]; areaOut: number; latticePerM2: number; target: number; capped: boolean; keep: number; fill: number; birthsPerSec: number; births: number; drips: number; edgesActive: number; edgesTotal: number; frames: number; totalBirths: number; totalDrips: number; }
-const states = new WeakMap<Game, RainState>();
+const states = new SideMap<Game, RainState>('rainFx.states');
 function stateOf(g: Game): RainState {
   let s = states.get(g);
   if (!s) { s = { seed: 0x5eed1e5, birthAcc: 0, dripAcc: 0, wasActive: false, edges: null, edgeBoxes: 0, job: null, serial: 1, pop: 0, popLog: [], clock: 0, lastC: null, dripLifeMax: 0, shear: [0, 0], bandOff: [0, 0], air: [0, 0], shearInit: false, stats: { active: false, why: 'off', radius: 0, centre: [0, 0], areaOut: 0, latticePerM2: 0, target: 0, capped: false, keep: 1, fill: 0, birthsPerSec: 0, births: 0, drips: 0, edgesActive: 0, edgesTotal: 0, frames: 0, totalBirths: 0, totalDrips: 0 } }; states.set(g, s); }

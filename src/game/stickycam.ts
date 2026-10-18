@@ -18,6 +18,7 @@
 //   key replays so: journal.ts).
 // No dice, no clock but the Game's, nothing read off the picture. STICKY.on: on in the page (?nosticky), off in the module and on the frozen stand
 // (TPS_STICKY=1) — off, no card row, no load on any rifle, no eye: the build as it was.
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { BoxFlag, makeBox, Box, MKEY } from '../scene/boxes';
 import type { Character } from './character';
@@ -72,7 +73,7 @@ const EYE_ID = 200;
 /** THE MISSION'S OWN ISSUE: a quiet mission whose link carries `cams=N` (quietfog.ts: the Cameras row under the fog lever) hands the player at least N
  *  for the visit, over whatever his card carries — written by scenarioRun.ts at the start and let go of at the quit, read by kit.ts where his card is put on
  *  him (every staging: a restart hands them again; a checkpoint's own count speaks over it). */
-const VISIT = new WeakMap<Game, number>();   // (per Game: two stood up in one process each keep their own)
+const VISIT = new SideMap<Game, number>('stickycam.VISIT');   // (per Game: two stood up in one process each keep their own)
 export const stickyVisit = (g: Game): number => (STICKY.on ? VISIT.get(g) ?? 0 : 0);
 export function stickyVisitSet(g: Game, n: number) { const k = Math.max(0, Math.min(STICKY.carry, Math.floor(n) || 0)); if (k) VISIT.set(g, k); else VISIT.delete(g); }
 

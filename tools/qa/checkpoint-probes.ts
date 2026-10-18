@@ -129,6 +129,7 @@ export async function stageRich(seed = 4471): Promise<{ W: any; notes: string[] 
   game.events.length = 0;
   if (game.clearing) { game.clearing.cancel(); game.clearing = null; for (const gd of game.guards) if (gd.state !== 'dead') { gd.state = 'patrol'; gd.awareness = 0; gd.lastKnown = null; } }   // (a pair the staging's alarm had clearing rooms is let go of like every other errand above: which second the body was found in is the level's walls' business, not this state's)
   game.teleportPlayer([16.5, 0, 22.5]); game.player.crouch = true; steps(W, DT); game.player.visibility = 0.02;
+  if (game.clearing) { game.clearing.cancel(); game.clearing = null; for (const gd of game.guards) if (gd.state !== 'dead') { gd.state = 'patrol'; gd.awareness = 0; gd.lastKnown = null; } }   // (and once more a frame on: the men put to patrol above END the alarm's episode on the next frame, and an episode that came to nothing deals the pair its rooms afresh — guards.ts updateEscalation — unless the floor was raised inside the last second and a half, which is which second a civilian rang it in)
   steps(W, 2.0);
   notes.push(`t ${game.time.toFixed(1)} s: ${game.guards.map((x: any) => `${x.callsign} ${x.state} ${x.awareness.toFixed(2)}`).join(', ')}; chronicle ${game.chronicle.events.length} rows; canSave: ${canSave(game) ?? 'yes'}`);
   return { W, notes };

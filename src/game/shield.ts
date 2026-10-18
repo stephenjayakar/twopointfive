@@ -19,6 +19,7 @@
 // row digests as it did before this file (tools/qa/shield-probes.ts shieldIdentity; the playthrough digests in rebuild/gear/shield/read-first.md).
 //
 // Nothing here reads another game module at load (the import-cycle rule): the tables below are plain literals.
+import { SideMap, SideSet, rollbackVar } from '../math/side';
 import { v3, lerp, type Vec3 } from '../math/vec';
 import { BoxFlag, makeBox, rayBox, type Box } from '../scene/boxes';
 import { isHostile, type Team } from './teams';
@@ -61,13 +62,14 @@ export const SHIELD = {
 /** counters for the probes and the tally (never read by the game) */
 export const SHIELD_STATS = { given: 0, stopped: 0, learned: 0, low: 0, retargets: 0, led: 0 };
 
-const CARRY = new WeakSet<Guard>();
+const CARRY = new SideSet<Guard>('shield.CARRY');
 /** how many shields have ever been handed out in this process: 0 = every query below is one compare */
 let given = 0;
+rollbackVar('shield.given', () => given, v => { given = v; });
 /** shooter → carrier → his lesson: when the first and the last of his rounds stopped in that man's shield, how many, and whether he now knows it */
-const SEEN = new WeakMap<Guard, WeakMap<Guard, { t0: number; last: number; n: number; known: boolean }>>();
+const SEEN = new SideMap<Guard, WeakMap<Guard, { t0: number; last: number; n: number; known: boolean }>>('shield.SEEN');
 /** shooter → the carrier he has come down under, and until when he stays down (the switch re-settles his aim once per carrier, never again) */
-const LOW = new WeakMap<Guard, { foe: Guard; until: number }>();
+const LOW = new SideMap<Guard, { foe: Guard; until: number }>('shield.LOW');
 
 /** Hand a man the shield (kit.ts kitStage, off his card; the probes directly). His animator carries the left arm for it from the next frame. */
 export function giveShield(gd: Guard) {
@@ -129,7 +131,7 @@ export function shieldCovers(carrier: Guard, from: Vec3, to: Vec3): boolean {
 export function shieldNote(g: Game, shooter: Guard | null, carrier: Guard) {
   SHIELD_STATS.stopped++;
   if (!shooter) return;
-  let m = SEEN.get(shooter); if (!m) SEEN.set(shooter, m = new WeakMap());
+  let m = SEEN.get(shooter); if (!m) SEEN.set(shooter, m = new SideMap());
   const r = m.get(carrier), t = g.time;
   if (!r || (!r.known && (t < r.t0 || t - r.last > SHIELD.learnGap))) m.set(carrier, { t0: t, last: t, n: 1, known: false });   // (a fresh lesson; t < t0: a checkpoint load took Game.time back)
   else { r.n++; r.last = t; }

@@ -1,6 +1,7 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { SideMap, SideSet, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
 import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
@@ -245,7 +246,7 @@ const MOTION_SPRINT = 1.6, MOTION_SPRINT_MS = 3.5, MOTION_NEAR_M = 2.5, MOTION_N
 
 /** Sam's velocity over the ground this frame, as anybody watching sees it: the displacement of his root since the frame before (not the pace he is asking of his
  *  legs — held against a desk or a leaf he 'sprints' on the spot; a teleport reads as one capped spike). Worked out once a frame, whoever asks first. */
-const groundTrack = new WeakMap<Game, { pos: Vec3; t: number; vel: Vec3 }>();
+const groundTrack = new SideMap<Game, { pos: Vec3; t: number; vel: Vec3 }>('guards.groundTrack');
 export function playerGroundVel(g: Game): Vec3 {
   const p = g.player.char.pos; let P = groundTrack.get(g);
   if (!P) { P = { pos: v3.copy(p), t: g.time, vel: [0, 0, 0] }; groundTrack.set(g, P); return P.vel; }
@@ -343,12 +344,12 @@ export function bodySeen(g: Game, gd: Guard, o: Guard, around: boolean | number 
 export const BODY_LIGHT = { lit: 0.22, litNear: 0.04, nearM: 2.0, farM: 5.0, smoke: 0.3 };
 export const BODY_LIGHT_DEFAULTS = { ...BODY_LIGHT };
 /** the body's light meter, per body (the light ON it is whoever's-looking-independent): eased reading + when; and the last irradiance behind it for the panel */
-const bodyMeters = new WeakMap<Guard, { vis: number; E: number; t: number }>();
+const bodyMeters = new SideMap<Guard, { vis: number; E: number; t: number }>('guards.bodyMeters');
 /** probe queries these tests may spend a frame between them (light points + smoke segments): they run inside the guards' update, AHEAD of Sam's own two meter
  *  queries in the probe's 32-slot frame, and a floor of bodies under three pairs of eyes must never crowd those out — past it a body keeps its eased reading /
  *  the CPU estimate and a pair its last transmittance for the frame */
 const BODY_PROBE_BUDGET = 6;
-const bodyProbeN = new WeakMap<Game, { t: number; n: number }>();
+const bodyProbeN = new SideMap<Game, { t: number; n: number }>('guards.bodyProbeN');
 function bodyProbeSlot(g: Game): boolean { let b = bodyProbeN.get(g); if (!b || b.t !== g.time) { b = { t: g.time, n: 0 }; bodyProbeN.set(g, b); } return b.n++ < BODY_PROBE_BUDGET; }
 /** What the meter reads at this body now (0‥1): probe query `bodyL<id>` at its trunk (its own capsules skipped), the CPU estimate until answered, eased at the meter's rate. */
 export function bodyVisibility(g: Game, o: Guard): number {
@@ -847,7 +848,7 @@ export function pairOf(g: Game): Pair | null {
   return { key: H, held, sam, heldAxis, centre: v3.lerp(sam, heldAxis, 0.5), facing: pc.bodyYaw, aim: [sam[0], pc.pos[1] + STANDOFF_AIM_Y, sam[2]], vel: v3.copy(pc.vel) };
 }
 /** holds already called in on the net (one call per hold, whoever sees it first), keyed by the hold itself; the floor's last standoff line (anybody's); each man's last line */
-const holdsCalled = new WeakSet<object>(); const floorBarkT = new WeakMap<Game, number>(); const lastBark = new WeakMap<Guard, string>();
+const holdsCalled = new SideSet<object>('guards.holdsCalled'); const floorBarkT = new SideMap<Game, number>('guards.floorBarkT'); const lastBark = new SideMap<Guard, string>('guards.lastBark');
 /** a checkpoint loaded (game/savestate.ts) puts Game.time BACK: the floor's standoff-bark clock must not sit in the future muting the lines */
 export function forgetGuardClocks(g: Game) { floorBarkT.delete(g); }
 /** The pair in this man's open view: either body's chest or head (they stand as one) inside canSee's cone and range with nothing solid between — no light asked
@@ -888,7 +889,7 @@ function pairSightRate(g: Game, gd: Guard, P: Pair, dist: number): number {
  *  `HELD_METER.movedM` since: the probe keeps a key's last answer for ever and ids are dealt again, so the last hold's light (or this hold's, a room ago) was read
  *  as this one's until the probe answered afresh, and the damp then carried it on for a third of a second. A pair re-met where it stood keeps its answer. */
 export const HELD_METER = { gapSecs: 0.5, movedM: 1 };
-const heldMeters = new WeakMap<object, { vis: number; t: number; at: Vec3 }>();
+const heldMeters = new SideMap<object, { vis: number; t: number; at: Vec3 }>('guards.heldMeters');
 function forgetHeldMeter(g: Game, gd: Guard) { const id = gd.char.id; g.lightForget(`heldC${id}`); g.lightForget(`heldH${id}`); }
 function heldVisibility(g: Game, P: Pair): number {
   const hd = P.held; let m = heldMeters.get(P.key); const now = g.time; if (!m || (now - m.t > HELD_METER.gapSecs && Math.hypot(m.at[0] - hd.char.pos[0], m.at[2] - hd.char.pos[2]) > HELD_METER.movedM)) { m = undefined; forgetHeldMeter(g, hd); }
@@ -1320,14 +1321,15 @@ const UNSTICK_REACH_M = 2.4, UNSTICK_STALL_SECS = 1.0, UNSTICK_DONE_M = 0.08, UN
 /** to: the free cell's centre; best: the nearest he has yet been to it; stallT: seconds OF STEPPING since that last improved (the leg may be dealt on the frame a
  *  hold ends and only walked once his stagger and his CONTACT beat are over — standing is not failing to get there) */
 interface UnstickLeg { to: Vec3; best: number; stallT: number; }
-const unstickLegs = new WeakMap<Guard, UnstickLeg>();
+const unstickLegs = new SideMap<Guard, UnstickLeg>('guards.unstickLegs');
 /** not before this game time does a man with nowhere at all to be put get looked at again (never met on this floor; the guard against a per-frame scan) */
-const unstickRetryAt = new WeakMap<Guard, number>();
+const unstickRetryAt = new SideMap<Guard, number>('guards.unstickRetryAt');
 /** men in Sam's arm as of their last update: the first frame back on their own feet gets the stranded check (the hand-back itself lives in player.ts) */
-const heldLastFrame = new WeakSet<Guard>();
+const heldLastFrame = new SideSet<Guard>('guards.heldLastFrame');
 /** QA counters (tools/qa: the unstick probe, the soak's smell line): side-steps begun, snaps made, and when / whom the last snap moved (the soak's one-frame
  *  displacement net lets that man through that frame, as it does its own teleports) */
 export const UNSTICK = { legs: 0, snaps: 0, lastSnapT: -1, lastSnapWho: null as Guard | null };
+rollbackRoot('guards.UNSTICK', UNSTICK);   // (the last snap's man and time are read by the same frame's sweep)
 /** Is the nav cell under (x, z) one no plan can leave: blocked itself and all four orthogonal neighbours blocked (the world's edge counting as blocked)? Five
  *  byte reads. A blocked cell with a free neighbour is NOT stranded — A* steps straight into the neighbour and the path's first point is its centre. */
 export function strandedAt(g: Game, x: number, z: number): boolean {
@@ -1495,7 +1497,7 @@ export const LIGHTS = { on: true, afterSecs: 2.5, hotSecs: 5, stepSecs: 4, tail:
    *  rules' again the frame he has no such man, the walk within a quarter of a second. The estimate is the CPU's direct light with no bounce and no moon: it errs toward calling HIM dark. No range limit, by measurement: held to the nine metres `litAt` is a sighting at, his light came up from the dark on the far man and the lens gave him away (624 against 653 of 864 teammates up over 432 night breaches). false = as it was: sent on
    *  past Sam at a man under a lamp, his light came up with the word and he walked at him with his gun down (the night breach's last hunt) */
   litMan: true };
-const litSeen = new WeakMap<Guard, { t: number; lit: boolean; A: unknown; tgt: unknown }>();
+const litSeen = new SideMap<Guard, { t: number; lit: boolean; A: unknown; tgt: unknown }>('guards.litSeen');
 /** is where he stands, what his gun is on, the man he has and the mark he is nearly at lit by the place itself (LIGHTS.litOff; asked twice a second per man,
  *  and again at once on a new order or a new man) */
 function litPlace(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>, tgt: Guard | null, pt: Vec3 | null): boolean {
@@ -1513,7 +1515,7 @@ function litPlace(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>, tgt: 
       if (dark(P[0], P[2])) { lit = false; break; } } }
   litSeen.set(gd, { t: g.time, lit, A, tgt: key }); return lit;
 }
-const darkSeen = new WeakMap<Guard, { t: number; dark: boolean }>();
+const darkSeen = new SideMap<Guard, { t: number; dark: boolean }>('guards.darkSeen');
 /** is what his gun is on dark, him lit (LIGHTS.lookDark; asked twice a second per man) */
 function looksIntoDark(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>): boolean {
   if (!LIGHTS.lookDark || !A || !A.arrived || !A.post || gd.muzzleDown || A.low || gd.visibility < LIGHTS.lookLit) return false;
@@ -1527,10 +1529,10 @@ function looksIntoDark(g: Game, gd: Guard, A: ReturnType<Game['orders']['of']>):
 }
 /** what the rule itself last made of his place, while that reading is fresh (QA: the probes judge a dark light by it) */
 export function placeLitSeen(g: Game, gd: Guard): boolean { const s = litSeen.get(gd); return LIGHTS.litOff && !!s && g.time - s.t >= 0 && g.time - s.t < 0.5 + 1e-6 && s.lit; }
-const litUntil = new WeakMap<Guard, number>();
+const litUntil = new SideMap<Guard, number>('guards.litUntil');
 /** is this man's weapon light this rule's to decide */
 export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!g.orders.of(gd); }
-const litManSeen = new WeakMap<Guard, { t: number; tgt: Guard; v: boolean }>();
+const litManSeen = new SideMap<Guard, { t: number; tgt: Guard; v: boolean }>('guards.litManSeen');
 /** LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark */
 function darkOnLitMan(g: Game, gd: Guard, tgt: Guard): boolean {
   const was = litManSeen.get(gd); if (was && was.tgt === tgt && g.time - was.t >= 0 && g.time - was.t < 0.25) return was.v;
@@ -1662,7 +1664,7 @@ export interface SearchPlan {
 }
 
 /** the doorway cells of every door: nav cell index → the door whose closed frame line runs through it (worked out once per level; doors do not move) */
-const doorCellsOf = new WeakMap<Game, Map<number, Door>>();
+const doorCellsOf = new SideMap<Game, Map<number, Door>>('guards.doorCellsOf');
 export function doorCells(g: Game): Map<number, Door> {
   let M = doorCellsOf.get(g); if (M) return M;
   M = new Map(); const nav = g.col.nav;
@@ -2607,7 +2609,7 @@ export function tickReloadBeat(g: Game, gd: Guard, dt: number) {
   if (R.out !== undefined && before < R.out && R.dur - gd.reloadT >= R.out) {
     const c = gd.char; const h = c.bones.handR ?? v3.add(c.pos, [0, 1.1, 0]); const d = c.gunDir;
     const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.vel[0] * 0.5 + d[0] * 0.3, -0.4, c.vel[2] * 0.5 + d[2] * 0.3], { fill: 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
-    it.onBounce = (sp, p) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 });
+    it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 });
   }
   if (gd.reloadT < 0) w.rearm();
 }
@@ -2841,7 +2843,7 @@ const CHECK_LOOK_SECS = 1.2, CHECK_CAP_SECS = 150;
 const PARTNER_UNSEEN_SECS = 20, PARTNER_SPOT_M = 2.5;
 
 export interface Rollcall { nextAt: number; stage: 'idle' | 'called' | 'asked'; t0: number; caller: Guard | null; missing: Guard | null; answered: boolean; checks: number; }
-const rollcalls = new WeakMap<Game, Rollcall>();
+const rollcalls = new SideMap<Game, Rollcall>('guards.rollcalls');
 /** A man who cannot answer the net: down (dead or out cold), or held with Sam's arm across his throat (Guard.held). Every radio-check predicate asks this, not
  *  'dead' — so a held man fails the sound-off exactly like a corpse: asked for by name while you hold him, somebody sent round his route toward you — and one
  *  let go answers again from the next frame (checkOnTick / the 'asked' stage drop him as they would a man walked onto alive). */
@@ -3279,6 +3281,7 @@ const MAX_SKINNED = 16;
 /** ids handed to units: clear of Sam's 1 and the staff's 10‥15, inside the owner byte */
 const UNIT_ID0 = 20, UNIT_ID1 = 250;
 let unitSerial = 0;
+rollbackVar('guards.unitSerial', () => unitSerial, v => { unitSerial = v; });
 const TEAM_TINT: Record<Team, Vec3> = { guard: [0.42, 0.36, 0.25], operative: [0.07, 0.09, 0.1], hostile: [0.36, 0.33, 0.24], player: [0.05, 0.06, 0.07], civilian: [0.75, 0.62, 0.08] };
 const TEAM_TINT2: Record<Team, Vec3> = { guard: [0.02, 0.02, 0.025], operative: [0.05, 0.07, 0.06], hostile: [0.09, 0.08, 0.05], player: [0.1, 0.32, 0.18], civilian: [0.05, 0.06, 0.1] };
 export function spawnUnit(g: Game, o: UnitOpts): Guard {
@@ -3339,7 +3342,7 @@ export interface EngageResult { outcome: 'cleared' | 'wiped' | 'timeout' | 'rese
 export interface Engagement { operatives: Guard[]; hostiles: Guard[]; t0: number; timeout: number; done: boolean; result: EngageResult | null; promise: Promise<EngageResult>;
   /** bookkeeping: the kills so far, rounds so far, who was alive last frame */
   kills: EngageResult['kills']; rounds: Partial<Record<Team, number>>; alive: Set<Guard>; resolve: (r: EngageResult) => void; }
-const engagements = new WeakMap<Game, Engagement>();
+const engagements = new SideMap<Game, Engagement>('guards.engagements');
 /** the engagement running on this game, if any (done or not — the last one stays readable until the next) */
 export function engagementOf(g: Game): Engagement | null { return engagements.get(g) ?? null; }
 /** Arm one man for the fight against `foes` (see engage): off any script and off his marks, alert, a staggered beat (+ `delay`: the caught side's surprise), his enemy chosen and fixed. */

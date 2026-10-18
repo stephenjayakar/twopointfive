@@ -45,6 +45,7 @@
 // ahead and behind and take nothing — `live` says what went uncovered), a room known clear does not lower its doors' weight, the men's lights stay as their order has them (dark under
 // 'fall in' in the room clear), nobody calls what he takes aloud (the rescue flow's own men still do).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3, wrapAngle, damp } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -246,17 +247,17 @@ export class Cover {
   /** who has stepped (or is stepping) to see through which open door */
   steps = new Map<Guard, CoverStep>();
   /** since when each man has stood · no step for him before · no step tried for this door before (game seconds: all three go with a restart — reset()) */
-  private stood = new WeakMap<Guard, number>(); private noStep = new WeakMap<Guard, number>(); private doorTry = new WeakMap<Opening, number>();
+  private stood = new SideMap<Guard, number>(); private noStep = new SideMap<Guard, number>(); private doorTry = new SideMap<Opening, number>();
   /** every change of hands: when, who, onto what (null: let go) — the probes' record (the newest 400) */
   log: { t: number; who: string; id: string | null }[] = [];
   private nav: object | null = null; private dealAt = 0;
   /** the way each man is going (baulked to a stop by the man ahead: the way he WAS going) */
-  private heading = new WeakMap<Guard, number>();
+  private heading = new SideMap<Guard, number>();
   private rear: Opening = { id: 'rear', kind: 'rear', at: [0, CHEST, 0], n: [0, 1], half: 1, door: null, pass: null, far: null };
   /** … and one per man whose eyes are spare on a mark (a stack's last man): the way HE came to it */
   private rears = new Map<Guard, Opening>();
   /** COVER.rearRead: what each such man's read last gave him (per order: a new Assignment reads afresh), when, and where he stood */
-  private reads = new WeakMap<Assignment, { t: number; at: Vec3; pick: Watchable | null }>();
+  private reads = new SideMap<Assignment, { t: number; at: Vec3; pick: Watchable | null }>();
   /** REAR.settle: the job the deal last took off each man, and when — his gun stays on it REAR.secs (poseFor) unless something else has him first */
   private kept = new Map<Guard, { J: CoverJob; t: number }>();
   /** COVER.backTurn: the men coming out of a back-pedal the deal let go of — the gun point carried in front of the body, when it began and the last frame it posed him */
@@ -264,7 +265,7 @@ export class Cover {
   constructor(private g: Game) { }
 
   /** nothing dealt, nothing known (a restart: Game.resetGuards) */
-  reset() { this.jobs.clear(); this.steps.clear(); this.stood = new WeakMap(); this.noStep = new WeakMap(); this.doorTry = new WeakMap(); this.rears.clear(); this.reads = new WeakMap(); this.kept.clear(); this.outs.clear(); this.live = []; this.men = []; this.dealAt = 0; for (const k of Object.keys(this.stats) as (keyof Cover['stats'])[]) this.stats[k] = 0; this.log.length = 0; }
+  reset() { this.jobs.clear(); this.steps.clear(); this.stood = new SideMap(); this.noStep = new SideMap(); this.doorTry = new SideMap(); this.rears.clear(); this.reads = new SideMap(); this.kept.clear(); this.outs.clear(); this.live = []; this.men = []; this.dealAt = 0; for (const k of Object.keys(this.stats) as (keyof Cover['stats'])[]) this.stats[k] = 0; this.log.length = 0; }
   of(gd: Guard): CoverJob | null { return this.jobs.get(gd) ?? null; }
   /** the opening his gun has been left on (REAR.settle), if it is */
   keptJob(gd: Guard): CoverJob | null { return this.kept.get(gd)?.J ?? null; }

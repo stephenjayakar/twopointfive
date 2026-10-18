@@ -56,6 +56,7 @@
 // ordering an operative under one of Sam's orders is not arbitrated; the stack's marks are geometry (stackPosts), not tactics.ts's authored clear-plan marks.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal, the order table is
 // built in the constructor.)
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
 import type { Team } from './teams';
@@ -441,7 +442,7 @@ export interface FightLease {
 
 /** a follower's latched word (ORDERS.wordFarM / wordHoldS), by the order it is of. Held HERE and not on the Assignment: nothing that copies, spreads, prints or
  *  compares an order's state can pick it up, and a new order starts without one. Written by the squad's tick alone (`followWord`), read by `shownThere` */
-const FOLLOW_WORD = new WeakMap<Assignment, { on: boolean; outT: number }>();
+const FOLLOW_WORD = new SideMap<Assignment, { on: boolean; outT: number }>('orders.FOLLOW_WORD');
 
 export class SquadOrders {
   readonly knobs = ORDERS;
@@ -475,7 +476,7 @@ export class SquadOrders {
   private view: { input: Input | null; cam: FollowCamera | null; canvas: View | null } = { input: null, cam: null, canvas: null };
   private hov: { x: number; y: number; t: number; v: OrderTarget } | null = null;   // hover()'s last answer, while the cursor rests   // this frame's cursor and camera, kept for the HUD's own look at what the cursor is on (hud() — never read by the simulation)
   private escUsed = false;  // Esc closed the menu since the last frame (Game.escape, from the page's key handler): that press is not the selector's as well
-  private ours = new WeakSet<Guard>();   // men whose Guard.pinned this module set (the fight seam): unpinned when their order goes
+  private ours = new SideSet<Guard>();   // men whose Guard.pinned this module set (the fight seam): unpinned when their order goes
   private acks = 0; private group = 0;
   private roster: Guard[] = [];
   private samP: Vec3 = [0, 0, 0]; private samT = -1; private samV = 0; private samDir: Vec3 = [0, 0, 1];   // Sam's speed over the ground, measured (fall in's pace: his own vel reads 0 under a teleporting harness)
@@ -1145,7 +1146,7 @@ export class SquadOrders {
     }
     return null;
   }
-  private asideMem = new WeakMap<Guard, { q: Vec3; t: number; dir: Vec3 }>();
+  private asideMem = new SideMap<Guard, { q: Vec3; t: number; dir: Vec3 }>();
   /** Sam's trail: a crumb every `crumb` metres he has moved, `trailM` metres of it kept (newest last) */
   private crumb(p: Vec3, men: Guard[]) {
     const T = this.trail, K = ORDERS, last = T[T.length - 1];
@@ -1161,7 +1162,7 @@ export class SquadOrders {
   /** doorway.ts STAND: stopped 'near enough' within a body and a bit of a man ahead of him in the file (or one on a post) — not his place: he walks on to his own */
   /** where the men ahead of him in the fall-in file are bound (doorway.ts doorwayOffLane: his place off a lane keeps clear of theirs) */
   /** (DOORMANNERS.watch) a back-pedalling walker's two clocks: until when he walks the plain way, when his way was last found again */
-  private backFix = new WeakMap<Assignment, { plain: number; path: number }>();
+  private backFix = new SideMap<Assignment, { plain: number; path: number }>();
   private ahead(gd: Guard, A: Assignment): Vec3[] { const out: Vec3[] = []; for (const [o, B] of this.asg) if (o !== gd && B.post === null && B.follow < A.follow && B.goal && o.state !== 'dead') out.push(B.goal); return out; }
   private onTop(gd: Guard, A: Assignment): boolean {
     for (const [o, B] of this.asg) if (o !== gd && o.state !== 'dead' && (B.post !== null || B.follow < A.follow) && flat(o.char.pos, gd.char.pos) < DOORMANNERS.apart) return true;
@@ -1182,7 +1183,7 @@ export class SquadOrders {
    *  walking to — left where it was by the half-metre slack — is in a frame or a swing: his place (`slot`: on the trail, or where he stands when that is
    *  near enough) if that is free, else the nearest clear floor. (2) He has stood `restSecs` where he is, in a frame's strip or a swing, short of his place (held behind the file, his way shut): he steps to
    *  the nearest clear floor, and that is his place until the file's has moved on a metre or four seconds are up. Never on a way round (`via`). */
-  private restOf = new WeakMap<Assignment, { x: number; z: number; t: number; step: Vec3 | null; until: number; from: Vec3; n: number; hold: Vec3 | null; holdFor: Vec3 }>();
+  private restOf = new SideMap<Assignment, { x: number; z: number; t: number; step: Vec3 | null; until: number; from: Vec3; n: number; hold: Vec3 | null; holdFor: Vec3 }>();
   private restClear(gd: Guard, A: Assignment, place: Vec3, trail: Vec3, stopped: boolean) {
     const g = this.g, K = DOORMANNERS, p = gd.char.pos, t = g.time;
     let R = this.restOf.get(A); if (!R) this.restOf.set(A, R = { x: p[0], z: p[2], t, step: null, until: 0, from: [0, 0, 0], n: 0, hold: null, holdFor: [0, 0, 0] });
@@ -1207,7 +1208,7 @@ export class SquadOrders {
   }
   /** doorway.ts SHORT: the seconds of one order's walk the PASS gate's holds may keep its stuck clocks from running — `heldCap` in all, so a frame that
    *  never clears still ends in "can't get through" */
-  private heldOf = new WeakMap<Assignment, { last: number; total: number }>();
+  private heldOf = new SideMap<Assignment, { last: number; total: number }>();
   private heldWait(A: Assignment): boolean {
     const t = this.g.time; let H = this.heldOf.get(A); if (!H) this.heldOf.set(A, H = { last: t, total: 0 });
     H.total += Math.min(Math.max(t - H.last, 0), 0.1); H.last = t;
@@ -1218,7 +1219,7 @@ export class SquadOrders {
    *  straight back onto it). Well short of his mark he first gets `stuckSecs` more (a wait behind a door a mate was working, or behind Sam in its mouth, is
    *  no shut way); still there, his mark goes to the nearest clear floor — on his mark's face of a frame he stands in — and he gives
    *  it up there. True = dealt with here; false = he is not in a doorway's way, or there is no such floor: as it was. */
-  private shortOf = new WeakMap<Assignment, { x: number; z: number; n: number; k: number }>();
+  private shortOf = new SideMap<Assignment, { x: number; z: number; n: number; k: number }>();
   private restShort(gd: Guard, A: Assignment, d: number): boolean {
     const g = this.g, p = gd.char.pos; if (!A.post || d < 1.0 || !doorwayInWay(g, p)) return false;   // (a stride from his mark he has as good as made it: the mark comes to him as ever — a jamb man's mark is by the frame on purpose)
     let R = this.shortOf.get(A); if (!R) this.shortOf.set(A, R = { x: p[0], z: p[2], n: 0, k: 0 });
@@ -1259,7 +1260,7 @@ export class SquadOrders {
    *  (a corner with no such floor) the same two asked with a bare body's width between places; and where the floor has none of it he STOPS SHORT — where
    *  he stands once he is within a stride or two of the place and a body's room from the others. One point per assignment, kept while his place and
    *  theirs stand and the point is off every door's frame and lane, so he walks to it once; a deal that found no floor is not searched again for a second */
-  private apartOf = new WeakMap<Assignment, { at: Vec3; q: Vec3 | null; t: number; m: number; short?: boolean }>();
+  private apartOf = new SideMap<Assignment, { at: Vec3; q: Vec3 | null; t: number; m: number; short?: boolean }>();
   private apartSlot(gd: Guard, A: Assignment, slot: Vec3): Vec3 {
     const g = this.g, m = ORDERS.fileApart, sam = g.player.char.pos, p = gd.char.pos, T = this.ahead(gd, A);
     for (const [o, B] of this.asg) if (o !== gd && o.state !== 'dead' && B.post !== null) T.push(B.goal ?? o.char.pos);   // (the men the manners' 'on top of a mate' counts: the file ahead, and anybody on a post)
@@ -1718,7 +1719,7 @@ export class SquadOrders {
     } finally { g.col.dynamicBoxes = leaves; }
     return both[key] = res;
   }
-  private worked = new WeakMap<Door, ({ jambless: boolean; marks: { pos: Vec3; walk: number; seen: number }[] } | null)[]>();
+  private worked = new SideMap<Door, ({ jambless: boolean; marks: { pos: Vec3; walk: number; seen: number }[] } | null)[]>();
   /** the marks teammates OUTSIDE `men` hold on this door under an order (theirs: nobody else is sent to stand on one) */
   heldOn(d: Door, men: Guard[], ignore: Guard[] = []): Vec3[] { return [...this.asg].filter(([gd, A]) => !men.includes(gd) && !ignore.includes(gd) && gd.state !== 'dead' && A.door === d && A.post !== null).map(([, A]) => A.post!); }
   /** … `n` of them for such a face, the best first by walk + ORDERS.workSeenM × seen: a body's room apart, clear of `taken` (Sam, marks teammates hold on this

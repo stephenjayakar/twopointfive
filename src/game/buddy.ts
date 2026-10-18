@@ -25,6 +25,7 @@
 // he planted in the caller's room with the caller up · `metOnWay` = the team stopped him first · `turnedBack` = the caller was down or gone before he got
 // there · `diedOnWay` · `noOne` = a call nobody could answer inside `again` · `secs` / `metres` = call to arrival, and the way walked, summed over arrivals.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { RoomFight } from './roomfight';
@@ -72,7 +73,7 @@ interface Man { had: boolean; callAt: number; calledT: number; calls: number; op
 interface Errand { caller: Def; buddy: Def; phase: 'beat' | 'run' | 'back'; goAt: number; spot: Vec3; home: Vec3; tries: number; stepT: number; t0: number; L: number }
 const newStats = () => ({ calls: 0, answered: 0, arrived: 0, metOnWay: 0, turnedBack: 0, diedOnWay: 0, short: 0, noOne: 0, secs: 0, metres: 0 });
 interface State { men: Map<Def, Man>; errands: Errand[]; stats: ReturnType<typeof newStats>; stale: boolean }
-const STATES = new WeakMap<Game, State>();
+const STATES = new SideMap<Game, State>('buddy.STATES');
 const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { men: new Map(), errands: [], stats: newStats(), stale: false }; STATES.set(g, s); } return s; };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);

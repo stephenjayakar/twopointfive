@@ -1,3 +1,4 @@
+import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3, clamp, lerp, wrapAngle } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
@@ -50,7 +51,7 @@ interface Hold { x: number; z: number; yaw: number; pitch: number; sh: number; a
 interface St { low: boolean; /** Game.time of the last answer */ t: number; /** Sam's low ready is this rule's */ mine: boolean; hold: Hold | null;
   /** seconds a man in a fight has had his settled gun in a panel */ wood: number; /** this frame's answer let the gun go that the last one held */ rose: boolean;
   /** his feet's own speed over the floor (Character.vel is the COMMANDED velocity: a man queued behind another has it and stands still): the last sample and when */ px: number; pz: number; vt: number; vx: number; vz: number }
-const ST = new WeakMap<Character, St>();
+const ST = new SideMap<Character, St>('gunwall.ST');
 const st = (c: Character): St => { let s = ST.get(c); if (!s) ST.set(c, s = { low: false, t: -1, mine: false, hold: null, wood: 0, rose: false, px: c.pos[0], pz: c.pos[2], vt: -1, vx: 0, vz: 0 }); return s; };
 
 const STAND_SH = 1.4, CROUCH_SH = 0.99;   // the gun shoulder's height standing / crouched (the mannequin's, measured): how far down he is, for the carriages' crouched numbers
@@ -66,7 +67,7 @@ const TELEPORT_M = 0.25;                    // further than this in a frame is n
 const BREACH_AIM_M = 1.4;                   // breachAim: how far along the raised gun's line, from the hand, the lock may stand (the gun's reach and a stride)
 const AT_IN = 0.03;                         // a muzzle laid ON the surface he aims at may stand this far into the test's line and stay up; deeper, the gun is in the wood whatever he aims at
 /** the floor's fight: when one was last seen, asked once a frame (GUNWALL.fightS) */
-const FIGHT = new WeakMap<Game, { t: number; until: number }>();
+const FIGHT = new SideMap<Game, { t: number; until: number }>('gunwall.FIGHT');
 function fightOn(g: Game): boolean {
   const K = GUNWALL; if (!(K.fightS > 0)) return false;
   let F = FIGHT.get(g); if (!F) FIGHT.set(g, F = { t: -1, until: -1 });

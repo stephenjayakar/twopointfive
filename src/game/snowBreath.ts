@@ -13,6 +13,7 @@
 //             opacity, and that it rises where dust settles.
 //   NOBODY    reads any of it: no eye, ear or foot, no step of the game. Its dice are its own (never Math.random, never the game's die), its clock is the frames'
 //             dt, and it files with its own seeds so that no other effect's births are dealt differently for it. tools/qa/snowbreath-check.ts.
+import { SideMap } from '../math/side';
 import { Vec3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
@@ -55,11 +56,11 @@ export const SNOWBREATH = {
 export interface BreathStats { active: boolean; why: string; men: number; shown: number; breaths: number; records: number; births: number; frames: number; /** records filed per man (Character.id) */ by: Record<number, number>; }
 interface Man { ph: number; pace: number; effort: number; n: number; left: number; gap: number; step: number; shows: boolean; }
 interface BreathState { seed: number; men: WeakMap<Character, Man>; stats: BreathStats; }
-const states = new WeakMap<Game, BreathState>();
+const states = new SideMap<Game, BreathState>('snowBreath.states');
 const fresh = (): BreathStats => ({ active: false, why: 'never run', men: 0, shown: 0, breaths: 0, records: 0, births: 0, frames: 0, by: {} });
 function stateOf(g: Game): BreathState {
   let s = states.get(g);
-  if (!s) { s = { seed: 0x0b7ea7b5, men: new WeakMap(), stats: fresh() }; states.set(g, s); }
+  if (!s) { s = { seed: 0x0b7ea7b5, men: new SideMap(), stats: fresh() }; states.set(g, s); }
   return s;
 }
 const mix = (x: number): number => { x = (x ^ 61) ^ (x >>> 16); x = (x + (x << 3)) >>> 0; x ^= x >>> 4; x = Math.imul(x, 0x27d4eb2d) >>> 0; x ^= x >>> 15; return x >>> 0; };
@@ -69,7 +70,7 @@ const h01 = (seed: number, a: number, b: number): number => mix((Math.imul(a + 1
 function recSeed(s: BreathState, id: number, breath: number, k: number): number { return mix((Math.imul(id + 1, 3266489917) ^ Math.imul(breath * 16 + k + 1, 668265263) ^ s.seed ^ 0xb4ea7) >>> 0); }
 export function breathStats(g: Game): BreathStats { return stateOf(g).stats; }
 /** reseed (probes / captures: same seed → the same breaths), every man's rhythm dealt again */
-export function seedBreath(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.men = new WeakMap(); s.stats = fresh(); }
+export function seedBreath(g: Game, n: number) { const s = stateOf(g); s.seed = n >>> 0; s.men = new SideMap(); s.stats = fresh(); }
 /** does breath steam here (the switch, on a level built for snow — it asks nothing of the lying snow's surface)? */
 export function breathOn(g: Game): boolean { return SNOW_LOOK.breath && snowLevel(levelNameOf(g.level)); }
 

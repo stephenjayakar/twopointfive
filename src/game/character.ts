@@ -1,5 +1,6 @@
 // Character = animated mannequin instance: locomotion/upper-body animation graph, procedural aim twist,
 // world placement, bone queries and RT proxy boxes — and, once dead, a ragdoll (ragdoll.ts) that poses the same skeleton.
+import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
@@ -210,6 +211,7 @@ const SWAP_RATE = 14;
 /** which of takedown.ts's hold halves the two layers show where the pose itself does not say (HoldPose / HeldPose .kill / .beats, which win): takedownTick writes
  *  them once a frame — a frame late, and one table for every Game — the kill from the hold as a move of its own · the choke's beats. Off = that phase drawn as it was. */
 export const HOLD_SHOW = { kill: false, beats: false };
+rollbackRoot('character.HOLD_SHOW', HOLD_SHOW);   // (written by takedownTick once a frame, read by the hold's layers on the next)
 /** the kill's eased clock (hdKc / heKc): after the hold's own by a spring this stiff, its target led by the spring's lag so the cut lands where HOLD.kill.hit
  *  says; back out of a cancelled one at the slower rate */
 const KILL_RATE = 40, KILL_BACK = 9;
@@ -358,7 +360,7 @@ function curve3(t: number, K: Keys3): Vec3 {
 /** sampleClip(clip, 0, false, out) for the clips the aim layer samples there every frame: that call writes fixed numbers (each track's first key, read off the clip alone —
  *  a sample never reads the pose it writes) into fixed slots, so they are found once per clip — sampled into a pose of NaNs: a slot still NaN afterwards is one the clip
  *  does not key — and replayed: the same floats into the same slots, the rest of `out` left as it stands, exactly as the sample leaves it. */
-const AT0 = new WeakMap<Clip, { at: Int32Array; v: Float32Array }>();
+const AT0 = new SideMap<Clip, { at: Int32Array; v: Float32Array }>('character.AT0'); AT0.asMemo();   // (read off the clip alone, a thing of the character file every game shares)
 function sampleAt0(clip: Clip, out: Pose) {
   let e = AT0.get(clip);
   if (!e) {

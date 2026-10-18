@@ -22,6 +22,7 @@
 // and one somebody is already swinging are nobody's to work. Nothing here runs with the one-way doors off (DOORWAY.oneWay — the harness's frozen runs), under
 // a showcase (Game.touring: its men are choreographed), or with HANDLE.on off: the build as it was, digest for digest.
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, clamp, damp, approachAngle, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import { DOORWAY, type Door } from './doors';
@@ -65,16 +66,16 @@ export const HANDLE_STATS = { bent: 0, lined: 0, pulls: 0, farPulls: 0, noSpot: 
 export const HANDLE_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 
 interface St { door: Door; side: 1 | -1; spot: Vec3; phase: 'thru' | 'go' | 'turn' | 'wait'; t: number; seen: number; way?: Vec3[]; at?: Vec3; atT?: number }
-const states = new WeakMap<Guard, St>();
+const states = new SideMap<Guard, St>('handleside.states');
 /** the leaf a man has in hand (one man a door), and when each man last gave a door up */
-const hands = new WeakMap<Door, Guard>();
-const rested = new WeakMap<Guard, { door: Door; until: number }>();
-const lined = new WeakMap<Guard, { door: Door; until: number }>();
+const hands = new SideMap<Door, Guard>('handleside.hands');
+const rested = new SideMap<Guard, { door: Door; until: number }>('handleside.rested');
+const lined = new SideMap<Guard, { door: Door; until: number }>('handleside.lined');
 /** a face's places: `stand` where a man works the handle from (`far`: at the long reach), `via` the two points of a walk through the opening's handle half
  *  from this face (square up, then beyond the frame) — null where the level leaves no floor for it */
 interface Spot { pos: Vec3; yaw: number; pull: boolean; far?: boolean }
 interface Face { stand: Spot | null; via: [Vec3, Vec3] | null }
-const faces = new WeakMap<Door, { col: unknown; swing: number; at: [Face | undefined, Face | undefined] }>();
+const faces = new SideMap<Door, { col: unknown; swing: number; at: [Face | undefined, Face | undefined] }>('handleside.faces');
 
 /** (not under a showcase: its men are choreographed to the frame, and no harness run plays one with the one-way doors on) */
 const live = (g: Game) => HANDLE.on && DOORWAY.oneWay && !g.touring;
@@ -182,7 +183,7 @@ export function handleGate(g: Game, gd: Guard, dt: number, speed: number, strafe
   const mine = gate(g, gd, dt, speed, strafe); if (mine) feet.set(gd, g.time); return mine;
 }
 /** when the gate last had each man's feet (game clock) — `handleHeld`'s memory, read by nothing in this file */
-const feet = new WeakMap<Guard, number>();
+const feet = new SideMap<Guard, number>('handleside.feet');
 /** did this file have his feet this frame or the last: on his way to a leaf's handle, working it, or stood off the swing of one a man of his is working — a
  *  read for whoever counts how long a man has been 'getting nowhere' (an order's stuck clock): time spent here is a door being opened, not a man stuck */
 export function handleHeld(g: Game, gd: Guard): boolean { const t = feet.get(gd); return t !== undefined && g.time >= t && g.time - t < 0.05; }
@@ -353,7 +354,7 @@ export function toolStep(g: Game, gd: Guard, pos: Vec3): boolean {
   if (flat(gd.char.pos, pos) > 0.6) return false;
   return stepTo(g, gd, pos, dt, 1.2, true);
 }
-const stepped = new WeakMap<Guard, number>();
+const stepped = new SideMap<Guard, number>('handleside.stepped');
 /** is a SHUT leaf to be stacked on from its latch jamb, whichever jamb a man is nearer (tactics.ts's doorway drill): the rule on, the leaf shut, and the
  *  floor past that jamb free for his stack (`stack`: where he would stand) */
 export function latchFirst(g: Game, d: Door, stack: Vec3): boolean { return live(g) && HANDLE.tools && d.isClosed() && !(d as { off?: boolean }).off && stands(g, stack, true) && !walled(g, handleAt(d), stack); }

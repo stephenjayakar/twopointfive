@@ -120,7 +120,7 @@ function bounceOff(v: Vec3, n: Vec3): Vec3 { const vn = v3.dot(v, n); const vN =
 function dud(g: Game, sh: Shell, at: Vec3, vel: Vec3, met: ShellEnd['met'], noise = HE40.dudNoise, who = 0) {
   const sp = v3.len(vel); if (sp > HE40.spentSpeedMax) vel = v3.scale(vel, HE40.spentSpeedMax / sp);
   const it = g.items.spawn('shell', v3.copy(at), vel, { who: sh.shooter.id, heading: v3.yawOf(vel) });
-  it.onBounce = (s, p) => { if (s > 1.0) g.audio.play('canisterBounce', p, Math.min(0.7, s / 8), { rate: 0.8 }); };   // its skitters after the slap: sound only (the slap was the event)
+  it.onBounce = (s, p, g) => { if (s > 1.0) g.audio.play('canisterBounce', p, Math.min(0.7, s / 8), { rate: 0.8 }); };   // its skitters after the slap: sound only (the slap was the event)
   g.audio.play('canisterBounce', at, 0.8, { rate: 0.7 }); clackFx(g, at);
   if (noise > 0) g.events.push({ kind: 'prop', pos: [at[0], 0, at[2]], time: g.time, loud: false, level: noise, who });
   if (sh.shooter.id === PLAYER_ID) g.msg(`40 mm — a dud: it met something ${sh.flown.toFixed(1)} m out, short of the ${HE40.armM} m it arms at`);

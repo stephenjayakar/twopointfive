@@ -6,6 +6,7 @@
 // behind whatever he stands at, a shift to cover when it will not stop — all behind Game.tune.suppression); Sam's own rounds open up with his (player.ts, the
 // one mechanical effect this lane gives him; his picture / mix / reticle are lane R4's, reading the same Player.sup). What the player learns by feel — two close
 // rounds put a man's head down for a second and a half — is literally the guards' rule with these constants.
+import { SideMap } from '../math/side';
 import { conditionSup } from './condition';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -135,7 +136,7 @@ export function noteRound(g: Game, shooter: Character, from: Vec3, to: Vec3, hit
 }
 
 /** the floor's 'he's got us pinned' clock, and each man's last line (never the same twice running) */
-const floorLineT = new WeakMap<Game, number>(); const floorBarkT = new WeakMap<Game, number>(); const lastLine = new WeakMap<Guard, string>();
+const floorLineT = new SideMap<Game, number>('suppression.floorLineT'); const floorBarkT = new SideMap<Game, number>('suppression.floorBarkT'); const lastLine = new SideMap<Guard, string>('suppression.lastLine');
 /** a checkpoint loaded (game/savestate.ts) puts Game.time BACK: the floor's line / bark clocks must not sit in the future muting everybody */
 export function forgetSuppressionClocks(g: Game) { floorLineT.delete(g); floorBarkT.delete(g); }
 export type SupMoment = 'flinch' | 'friendly' | 'pinned' | 'displace' | 'recover';

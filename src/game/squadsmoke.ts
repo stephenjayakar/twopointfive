@@ -25,6 +25,7 @@
 //
 // State is per Game in a WeakMap (as silent.ts keeps its own): nothing on the Game, nothing in the digest, nothing in a checkpoint (none is taken with a unit
 // on the floor). Probes: tools/qa/squadsmoke-probes.ts (`probes.ts squadsmoke`).
+import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -54,7 +55,7 @@ export const SQUADSMOKE = {
 };
 export const SMOKE_ORDER = 'smokeThere';
 interface State { /** what this staging brought · what is left of it */ brought: number; cans: number; noted: boolean; last: WeakMap<Guard, number>; }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('squadsmoke.states');
 export const SQUADSMOKE_STATS = { staged: 0, thrown: 0 };
 /** every can thrown on the order, newest last (QA; capped) */
 export const SQUADSMOKE_LOG: { t: number; who: string; from: Vec3; at: Vec3; land: Vec3; rest: Vec3; left: number }[] = [];
@@ -68,8 +69,8 @@ export function squadSmokeBrought(g: Game): number { return states.get(g)?.broug
  *  one or more. */
 export function squadSmokeStage(g: Game, cans: number) {
   const n = Math.max(0, Math.floor(cans) || 0); let s = states.get(g);
-  if (!s) { if (!n) return; states.set(g, s = { brought: 0, cans: 0, noted: false, last: new WeakMap() }); }   // (never a can on this Game: nothing kept, nothing registered)
-  s.brought = s.cans = n; s.last = new WeakMap(); SQUADSMOKE_STATS.staged++;
+  if (!s) { if (!n) return; states.set(g, s = { brought: 0, cans: 0, noted: false, last: new SideMap() }); }   // (never a can on this Game: nothing kept, nothing registered)
+  s.brought = s.cans = n; s.last = new SideMap(); SQUADSMOKE_STATS.staged++;
   const S = g.orders; S.unregister(SMOKE_ORDER);
   if (!n) return;
   const after = S.defs.findIndex(d => d.id === 'hold');   // (its place: straight under the floor's own four, above whatever a later part has added)
@@ -138,7 +139,7 @@ function row(g: Game): OrderDef {
       s.cans--; s.last.set(th.gd, g.time);
       // the door tools' own lines for a can (doortools.ts), with 'smoke': on its own fuse from the hand, as Sam's
       const it = g.items.spawn('smoke', th.from, th.sol.v0, { who: th.gd.char.id, heading: v3.yawOf(th.sol.v0) });
-      it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
+      it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
       th.gd.char.anim.tossItem(TOSS_QUICK); g.say(th.gd, 'smoke out.');
       S.log.push({ t: g.time, order: SMOKE_ORDER, who: [th.gd.callsign], target: `floor:${t.at[0].toFixed(1)},${t.at[2].toFixed(1)}` });   // (the squad's order log, in orders.ts's own words for a floor order: a `free` row is not logged there)
       SQUADSMOKE_STATS.thrown++; SQUADSMOKE_LOG.push({ t: g.time, who: th.gd.callsign, from: th.from, at: v3.copy(t.at), land: v3.copy(th.sol.land), rest: th.rest, left: s.cans }); if (SQUADSMOKE_LOG.length > 100) SQUADSMOKE_LOG.splice(0, 50);

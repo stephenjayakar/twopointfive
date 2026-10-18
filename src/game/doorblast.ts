@@ -19,6 +19,7 @@
 // (markings want an upright face) and the marks rounds left on it do not ride it down; a checkpoint taken while it flies files it already lying where it
 // will stop, so the load never hears it land.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
 import type { Game } from './game';
@@ -106,7 +107,7 @@ function freeSpot(g: Game, x: number, z: number, a: number, hu: number, hn: numb
 }
 /** in the air, once it is out of its frame: a slab that has come to cut into a static (a corner its rays passed either side of, a wall its toppling reached)
  *  is moved to the nearest clear spot and loses what speed it had into the thing */
-const wedged = new WeakMap<DoorSlab, number>();   // (a slab with no clear spot in reach: not searched for again for a quarter second of its own clock)
+const wedged = new SideMap<DoorSlab, number>('doorblast.wedged');   // (a slab with no clear spot in reach: not searched for again for a quarter second of its own clock)
 function unstick(g: Game, d: Door, S: DoorSlab) {
   const hu = d.leafH[0], hn = acrossOf(d, S.tip), y0 = 0.06, y1 = Math.max(0.3, 2 * S.p[1] - 0.06);
   if (S.t < (wedged.get(S) ?? 0) || !overlaps(g, S.p[0], S.p[2], S.a, hu, hn, y0, y1)) return;

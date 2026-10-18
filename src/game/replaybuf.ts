@@ -9,6 +9,7 @@
 //
 // The ring: `hz` samples a second of play, delta-coded between KEYFRAMES every `keySecs`; it is trimmed a keyframe at a time once it holds more than `seconds`
 // (so its head is always a keyframe and a file needs no state from before it).
+import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import type { CastRow, ManDo, ManPos, Sample, ReplayEvent, ReplayLine, ReplayFile, ReplayMap, DoorPos, ItemPos } from '../replay/format';
 import { PLAYER_NAME, REPLAY_VERSION, ERROR_MARK, RESTART_MARK, isErrorMark } from '../replay/format';
@@ -42,7 +43,7 @@ export class ReplayBuffer {
   on = true;
   broke = '';
   private samples: Sample[] = []; private events: ReplayEvent[] = []; private lines: ReplayLine[] = [];
-  private cast: CastRow[] = []; private idx = new WeakMap<object, number>(); private byId = new Map<number, number>();
+  private cast: CastRow[] = []; private idx = new SideMap<object, number>(); private byId = new Map<number, number>();
   private rows: (Row | null)[] = []; private live = new Set<number>();
   private doorKey: string[] = []; private camKey = ''; private aimKey = '';
   private lastSampleR = -1; private lastKeyR = -1; private lastT = 0;
@@ -164,7 +165,7 @@ export class ReplayBuffer {
       this.events.push(R);
     }
   }
-  private filed = new WeakSet<object>();
+  private filed = new SideSet<object>();
   private mark(text: string) { this.line('mark', text); }
   /** the page hit an error (ui/replaykey.ts): filed as a line at the play moment it came, so EVERY file made while the ring still holds that moment carries it —
    *  and none after: it is trimmed with the ring. All on the PLAY clock, never the wall's (a page whose frame loop has stopped, or a paused one, stands at one

@@ -22,6 +22,7 @@
 // (sliced from the jambs, its blind pocket banged) and then stepped into. What the squad's code learns, they have with no second edit. Everything else is
 // still theirs: when, where to, the file down the corridor, their senses, and the fight on contact (startDrill / phaseDrill).
 // QA: tools/qa/qrf-probes.ts (`probes.ts qrf`), soak.ts --loud-at; tools/qa/qrf-squad-check.ts (the squad's drill).
+import { SideSet } from '../math/side';
 import { QRF_TINT, QRF_TINT2 } from './consts';
 import { Vec3, v3, clamp, wrapAngle } from '../math/vec';
 import { TOSS_QUICK } from './character';
@@ -130,7 +131,7 @@ export class Qrf {
   lost = 0; gotSam = false; samWasDown = false;
   /** the trigger's memory: when a living staff man last had a report of SAM's at gunfire level in his ears (the hearing model's 80 m gate), and the level-1
    *  reports of anybody's since deployment (the perimeter tier's 'running gunfight') */
-  loudT = -1e9; shotsSince: number[] = []; heardEvents = new WeakSet<object>();
+  loudT = -1e9; shotsSince: number[] = []; heardEvents = new SideSet<object>();
   /** the silent net (tune.qrfSilent — see `silentNet`): when the whole shift was first off the net with Sam's gunfire in its memory (−1 = it is not), whether
    *  control's radio check has been said, and whether the request it led to was made or refused (once a night either way) */
   silentAt = -1; silentSaid = false; silentSpent = false;
@@ -662,7 +663,7 @@ function phaseBreach(g: Game, Q: Qrf, el: Guard[]) {
     const hand = lead.char.jointUnder('handL') ?? v3.add(lead.char.pos, [0, 1.3, 0]); const from: Vec3 = [hand[0], Math.max(0.9, hand[1]), hand[2]];
     const sol = g.items.solve(from, land, 9);
     const it = Q.can = g.items.spawn('flash', from, sol.v0, { fuse: 99, who: lead.char.id, heading: v3.yawOf(sol.v0) });   // (fuse 99: it goes on OUR count below)
-    it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
+    it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
     g.audio.play('throw', from, 0.7); lead.char.anim.tossItem(TOSS_QUICK); Q.bangs--; Q.canLandT = NaN;
     g.say(lead, 'bang out!'); note(Q, g, 'bang-out');
     // everybody's head off the doorway while it cooks

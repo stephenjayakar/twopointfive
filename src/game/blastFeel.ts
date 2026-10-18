@@ -31,6 +31,7 @@
 //
 // Hooks (one line each): combat.ts detonateStun → wallReport (true: this module played the report, the stun can's is not) · game.ts update → blastFeelTick ·
 // host/loop.ts stepFrame → cam.kickIn() / cam.kickOut() round the render.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Particles, EmitOpts, PKind } from '../render/particles';
 import type { FollowCamera } from './camera';
@@ -87,7 +88,7 @@ export function saveFeel() { try { localStorage.setItem(LS_KEY, JSON.stringify({
 interface Face { o: Vec3; d: Vec3; mask: number }
 interface Kick { t0: number; at: Vec3 }
 interface State { seen: SetWallCharge[]; queue: { at: number; run: () => void }[]; kicks: Kick[]; serial: number; last: number; list: unknown }
-const STATE = new WeakMap<Game, State>();
+const STATE = new SideMap<Game, State>('blastFeel.STATE');
 const stateOf = (g: Game): State => { let s = STATE.get(g); if (!s) { s = { seen: [], queue: [], kicks: [], serial: 1, last: -1, list: null }; STATE.set(g, s); } return s; };
 /** this module's own dice: a counter of its own through a hash (never the lane's, never Math.random) */
 const hashU = (n: number) => { let x = Math.imul(n ^ 0x51ed270b, 0x85ebca6b) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0xc2b2ae35) >>> 0; x ^= x >>> 13; return x >>> 0; };

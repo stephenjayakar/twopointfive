@@ -46,6 +46,7 @@
 // Habits (coop-door-open-habits): no dice · reads the player's STATE (crouch, wall, pace, sprint, light), never the camera or the screen · `lead` is the one
 // place that says which player · state is per Game in a WeakMap with a snapshot / restore pair below (no checkpoint is taken with a unit on the floor today).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Player } from './game';
@@ -92,7 +93,7 @@ interface State {
   /** the wall hold the followers' side was chosen for, and the side (along the hold's own tangent) */ hold: object | null; sgn: 1 | -1;
   /** why it is not live (QA, the summary) */ why: string;
 }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('unseen.states');
 const stateOf = (g: Game): State => { let S = states.get(g); if (!S) states.set(g, S = { t: -1e9, live: false, sneakT: -1e9, cueT: -1e9, hold: null, sgn: 1, why: 'never asked' }); return S; };
 /** which player the squad reads (one place: with a second player this asks whose squad it is) */
 const lead = (g: Game): Player => g.player;
@@ -140,8 +141,8 @@ export function unseenMan(g: Game, gd: Guard): boolean { return UNSEEN.on && mat
 const entering = (g: Game, gd: Guard) => !!g.doorTools?.ops.some(op => op.men.includes(gd));
 /** he is low because Sam is */
 /** no place on Sam's wall for this man right now (the face ends, the floor along it is shut): he goes down on a knee where the file has him rather than stand tall beside a man hugging a wall */
-const onWallAt = new WeakMap<Guard, number>();
-const kneelAt = new WeakMap<Guard, number>();
+const onWallAt = new SideMap<Guard, number>('unseen.onWallAt');
+const kneelAt = new SideMap<Guard, number>('unseen.kneelAt');
 const offWall = (g: Game, gd: Guard) => !!lead(g).wall && (onWallAt.get(gd) !== g.time || kneelAt.get(gd) === g.time);
 const lowNow = (g: Game, gd: Guard) => UNSEEN.crouch && (!!lead(g).crouch || (UNSEEN.wall && offWall(g, gd)));
 export function unseenLow(g: Game, gd: Guard): boolean { return unseenMan(g, gd) && lowNow(g, gd); }
@@ -164,7 +165,7 @@ export function unseenWallSlot(g: Game, gd: Guard, back: number, file: Guard[]):
   if (q) { UNSEEN_STATS.wallPlaces++; onWallAt.set(gd, g.time); placed.set(gd, lead(g).wall!); } else placed.delete(gd);
   return q;
 }
-const placed = new WeakMap<Guard, object>();
+const placed = new SideMap<Guard, object>('unseen.placed');
 /** the place just dealt was not taken after all (orders.ts: a doorway rule moved him off it) — he is in the open, so on a knee */
 export function unseenWallLost(gd: Guard) { onWallAt.delete(gd); placed.delete(gd); UNSEEN_STATS.wallLost++; }
 function wallSlot(g: Game, gd: Guard, back: number, file: Guard[]): Vec3 | null {

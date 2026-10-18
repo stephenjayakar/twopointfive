@@ -30,6 +30,7 @@
 // with the encounter. Deterministic: no dice of its own (a man's bark goes through g.say like any other).
 //
 // NOT here (other pieces'): who decides to shoot at cover or through a wall, who places a charge, doors off their hinges, glass.
+import { SideMap } from '../math/side';
 import { v3, type Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -159,7 +160,7 @@ export class WallReact {
   /** who rests his gun on which breach right now (defenders) */
   watching = new Map<Guard, Breach>();
   private last = -1; private lastEv = -1; private lastSweep = -1;
-  private movedT = new WeakMap<Guard, number>();
+  private movedT = new SideMap<Guard, number>();
   private unsub: (() => void) | null = null;
   constructor(private g: Game) {
     const W = g.destr?.walls; if (!W) return;
@@ -599,7 +600,7 @@ export class WallReact {
   }
 }
 
-const states = new WeakMap<Game, WallReact>();
+const states = new SideMap<Game, WallReact>('wallreact.states');
 /** this game's (made on first asking: by then the destruction engine stands) */
 export function wallReactOf(g: Game): WallReact { let s = states.get(g); if (!s) states.set(g, s = new WallReact(g)); return s; }
 /** game.ts, once a frame before the squad's books and the room fight: a return on its first lines with the switch off or nothing broken */

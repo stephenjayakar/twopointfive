@@ -12,6 +12,7 @@
 // Looks only: nothing in the simulation reads a variant (the CPU's hit capsules, the wet model and the ragdoll are the skeleton's), no dice are drawn, and with no cast loaded
 // (the mannequin: `?mannequin`, the QA harness, the native host under `--mannequin` / `TPS_MANNEQUIN=1` or with a dylib that does not draw the cast) every man's mask is 0 and he is drawn exactly as he always was. The choice is taken once per Character, the
 // first time the game knows his side.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
 import { castSide, castGoggles, castSuit, type CastVariant, type CastInfo } from '../anim/gltf';
@@ -19,13 +20,13 @@ import { LOOK, lookOffice, suitAs } from '../scene/look';   // (a leaf: no impor
 import { nvgWorn } from './nvg';
 import { activeScenario, teamOf } from './scenarioRun';   // (called inside sneakSuit only)
 
-const worn = new WeakMap<Character, CastVariant>();
+const worn = new SideMap<Character, CastVariant>('cast.worn');
 
 /** DRESSED FOR A BUILDING (scene/look.ts lookOffice: the look on, on the office family — the maintainer: "middle eastern enemies also don't make sense for the
  *  office level"): of the first cast's defenders, the ones a night shift or the men holding an office floor could be — a cap, a shirt, a chest rig — and not the
  *  field's straw hat, boonie, bandana, bandolier or vest top. By part NAME, so a cast without those parts loses nobody; a cast left with nobody keeps them all. */
 const FIELD_PARTS = ['hat_straw', 'hat_boonie', 'bandana', 'bandolier', 'tank_top'];
-const fieldBits = new WeakMap<string[], number>();
+const fieldBits = new SideMap<string[], number>('cast.fieldBits');
 export function officeDress(parts: string[], list: CastVariant[]): CastVariant[] {
   let bits = fieldBits.get(parts);
   if (bits === undefined) { bits = 0; parts.forEach((n, i) => { if (FIELD_PARTS.includes(n)) bits = (bits! | (1 << i)) >>> 0; }); fieldBits.set(parts, bits); }
@@ -58,7 +59,7 @@ export function castVariantOf(g: Game, c: Character): CastVariant | null {
   if (!rec.unit || trained || rec.team !== 'guard') worn.set(c, v);   // (a staff-side unit is asked again until he is `trained`: qrf.ts sets that a statement after it spawns him)
   return v;
 }
-const hasNvg = new WeakMap<CastVariant, boolean>();
+const hasNvg = new SideMap<CastVariant, boolean>('cast.hasNvg'); hasNvg.asMemo();   // (a pure function of the variant, a row of the cast every game shares)
 /** THE SNEAKING SUIT (scene/look.ts LOOK.suit; the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): who is
  *  drawn in it THIS frame — under the default look, on a mission that is not a squad's loud one (a quiet mission; the plain night, its showcase with it), Sam, and on a
  *  quiet mission as two his partner (a pair in two dresses read as two sides from above). Asked every frame, so a mission started or quit on a running page re-dresses

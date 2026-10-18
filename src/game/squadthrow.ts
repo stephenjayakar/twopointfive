@@ -46,6 +46,7 @@
 // warning as last read. None of it is in a checkpoint — none is taken with a unit on the floor, and all of it is seconds old at most. No dice of its own:
 // the thrown thing draws the game's die as any thrown item does (throwables.ts spawn). 'Nobody of ours in it' is asked AT THE THROW, of where each stands then.
 // Check: tools/qa/squadthrow-check.ts (`probes.ts squadthrow`).
+import { SideMap, rollbackVar } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import { v3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -123,7 +124,7 @@ interface Scratch { n: number; gen: number; seen: Int32Array; leaf: Int32Array; 
 interface State { last: WeakMap<Guard, number>; noted: unknown; shown: { t: number; text: string } | null; warn: { key: string; text: string } | null; warnFrag: { key: string; text: string } | null; caught: { key: string; t: number; who: string | null } | null;
   /** (lob) the men each row's search was last asked of, by `only`: the row's own question is put to the same men (rows, `ask`) */ asked: Map<SquadThrowKind, { key: string; men: Guard[] }>;
   walks: Map<Guard, Walk>; kept: Map<string, { key: string; t: number; th: SquadThrower | null; line: Vec3[] | null }>; scratch: Scratch | null; }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('squadthrow.states');
 export const SQUADTHROW_STATS = { thrown: 0, frags: 0, stuns: 0, refused: 0, walks: 0, walked: 0, gaveUp: 0, searches: 0, arcs: 0, ducks: 0, cells: 0 };
 /** every one thrown on the order, newest last (QA; capped) */
 export const SQUADTHROW_LOG: { t: number; kind: SquadThrowKind; who: string; from: Vec3; at: Vec3; land: Vec3; rest: Vec3 }[] = [];
@@ -169,6 +170,7 @@ function standThrow(g: Game, men: Guard[], at: Vec3, kind: SquadThrowKind, lob?:
 /** SQUADTHROW.duck: a man of ours on his feet at `p` is off this frag's line before it bursts — the spot his legs will be dealt when it is called (frag.ts
  *  fleeSpot, the squad's pace, `duckSecs` of the fuse in hand and `late` more) is one the burst has no line to him at, down behind it */
 let duckMates: { g: Game; gd: Guard; t: number; x: number; y: number; z: number; m: ReturnType<typeof fleeMates> } | null = null;
+rollbackVar('squadthrow.duckMates', () => duckMates, v => { duckMates = v; });   // (a memo keyed by the game's clock)
 function fragClears(g: Game, gd: Guard, p: Vec3, pts: Vec3[], late = 0, taken?: Vec3[]): boolean {
   const K = SQUADTHROW; if (!K.lob || !K.duck || !FRAG.fleeWise || gd.held || g.time < gd.staggerUntil || g.time < gd.dazzledUntil) return false;   // (the flee it counts on is the one that runs from where the thing will REST: frag.ts FRAG.fleeWise — without that rule nobody is counted on to duck)
   if (pts.some(L => flat(p, L) < K.duckMinM)) return false;   // (inside what it kills at nobody is asked to duck: a leg that fails there is a man dead, not a man hurt)
@@ -386,13 +388,13 @@ const samCalls = () => SQUADTHROW.lob && SQUADTHROW.samCall;
 export function squadFragOnSam(g: Game, rest: Vec3, at: Vec3): boolean { return !g.player.down && fragIn(g, fragPts(rest, at), g.player.char.pos); }
 /** … and never his call inside what it kills at (`duckMinM`: FRAG.lethalM and a metre): there it is refused as it always was */
 const samNear = (g: Game, pts: Vec3[]) => pts.some(L => flat(g.player.char.pos, L) < SQUADTHROW.duckMinM);
-function state(g: Game): State { let s = states.get(g); if (!s) states.set(g, s = { last: new WeakMap(), noted: null, shown: null, warn: null, warnFrag: null, caught: null, asked: new Map(), walks: new Map(), kept: new Map(), scratch: null }); return s; }
+function state(g: Game): State { let s = states.get(g); if (!s) states.set(g, s = { last: new SideMap(), noted: null, shown: null, warn: null, warnFrag: null, caught: null, asked: new Map(), walks: new Map(), kept: new Map(), scratch: null }); return s; }
 
 /** the thing leaves his hand: the count is taken already. The door tools' own lines for each (doortools.ts, the toss): the frag on its fuse from the hand, the canister on its own from where it lands */
 function throwIt(g: Game, gd: Guard, arc: Arc, kind: SquadThrowKind, at: Vec3) {
   const s = state(g), who = gd.char.id, heading = v3.yawOf(arc.sol.v0); s.last.set(gd, g.time); s.warn = s.warnFrag = null;
   const it = kind === 'frag' ? g.items.spawn('frag', arc.from, arc.sol.v0, { fuse: FRAG.orderFuse, who, heading }) : g.items.spawn('flash', arc.from, arc.sol.v0, { fuse: flashFuse(g), who, heading });
-  it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
+  it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
   gd.char.anim.tossItem(TOSS_QUICK); g.say(gd, kind === 'frag' ? 'frag out!' : WORDS.on ? 'bang out!' : 'bang out.');
   s.shown = { t: g.time, text: `${gd.callsign} · ${kind === 'frag' ? 'frag' : 'bang'} out` };
   SQUADTHROW_STATS.thrown++; if (kind === 'frag') SQUADTHROW_STATS.frags++; else SQUADTHROW_STATS.stuns++;

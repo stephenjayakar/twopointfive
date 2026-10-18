@@ -38,6 +38,7 @@
 // What is asked of the renderer goes through Game.sensors (the smoke between each operative / defender pair in reach, ≤ ROOMFIGHT.pairs segments a frame, keys
 // 'fightS<a>_<b>'); headless nothing answers and the air is clear. guards.ts reads it back through pairSmoke() for every AI-on-AI sight test.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideSet } from '../math/side';
 import { conditionSup } from './condition';
 import { Vec3, v3, clamp, lerp, damp, wrapAngle, approachAngle, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -359,7 +360,7 @@ export class RoomFight {
    *  either, a teammate looks as a hunting man looks (the sight gain's ×2.2, a sighting enough to shoot on — he has no 'alert' of his own under a script) */
   hotT = -100;
   /** hostile rounds of the last second: who fired, when (a teammate's cue to look) */
-  private reports: { by: Guard; t: number }[] = []; private heardEv = new WeakSet<object>();
+  private reports: { by: Guard; t: number }[] = []; private heardEv = new SideSet<object>();
   /** how fast the player is really getting anywhere (ROOMFIGHT.samTravel): each frame's displacement of his root, eased over about a quarter second — a
    *  shuffle on the spot nets nothing, a walk into a wall is no walk. `samFor` = s of frames behind the figure (under a quarter second: not known yet) */
   private samAt = { x: 0, z: 0, t: -Infinity }; private samV: [number, number] = [0, 0]; private samFor = 0;

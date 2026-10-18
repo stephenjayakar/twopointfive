@@ -18,6 +18,7 @@
 // path, no sound. Off = the snow as it was: nothing subscribes, nothing is stamped or filed.
 //
 // NEVER SEEN ON A GPU, never seen moving (the cloud has neither): every number below is a first guess for the maintainer's eye — `__snow.blast` on the console.
+import { SideMap, SideSet } from '../math/side';
 import type { Game } from './game';
 import type { Particles } from '../render/particles';
 import { clamp } from '../math/vec';
@@ -75,8 +76,8 @@ interface Live { x: number; z: number; size: number; hk: number; t: number; puff
 export interface SnowBlastStats { blasts: number; marked: number; craters: number; puffs: number; thrown: number; throwFrames: number; live: number; why: string; last: { x: number; z: number; size: number; hk: number } | null; dug: number }
 interface Dig { x: number; z: number; r: number; serial: number; t: number }
 interface State { live: Live[]; digs: Dig[]; restore: boolean; serial: number; turn: number; stats: SnowBlastStats }
-const states = new WeakMap<Game, State>();
-const hooked = new WeakSet<object>();
+const states = new SideMap<Game, State>('snowBlast.states');
+const hooked = new SideSet<object>('snowBlast.hooked');
 const stateOf = (g: Game): State => { let s = states.get(g); if (!s) { s = { live: [], digs: [], restore: false, serial: 0, turn: 0, stats: { blasts: 0, marked: 0, craters: 0, puffs: 0, thrown: 0, throwFrames: 0, live: 0, why: 'no blast yet', last: null, dug: 0 } }; states.set(g, s); } return s; };
 export const snowBlastStats = (g: Game): SnowBlastStats => { const s = stateOf(g); s.stats.live = s.live.length; return s.stats; };
 

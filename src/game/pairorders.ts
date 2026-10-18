@@ -26,6 +26,7 @@
 //   once a guard is suspicious. The stalk's own pace and crouch are knobs here until that part gives him a sneaking grade to read.
 //
 // No module-level table is built from another game module's exports (src/game is one import cycle): PAIR is a plain literal, the rows are made in seat().
+import { SideMap, rollbackRoot } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Input } from './input';
 import { v3, type Vec3 } from '../math/vec';
@@ -100,6 +101,7 @@ export const PAIR = {
 export const PAIR_STATS = { given: 0, marks: 0, taken: 0, blown: 0, called: 0, cancelled: 0, held: 0, dark: 0, lit: 0, watched: 0, anyway: 0 };
 /** what happened when (the probes read it; capped): 'mark:<man> on <foe>', 'now:…', 'set:…', 'go:<by>', 'watched:<foe> by <who>', 'clear:…', 'anyway:…', 'hands:…', 'down:…', 'blown:…', 'off:<why>', 'cancel:…', 'dark:…', 'lit:…' */
 export const PAIR_LOG: { t: number; what: string }[] = [];
+rollbackRoot('pairorders.PAIR_LOG', PAIR_LOG);   // (not a log alone: a lesson's `pair` step counts the rows filed since it began — lesson.ts)
 /** ?pairorders (=0: off) and the harness's PAIRORDERS — read at load, and again once the Game has read the stored team feel back (the flag is this visit's word) */
 function flags() {
   try { const q = new URLSearchParams(location.search); if (q.has('pairorders')) PAIR.on = q.get('pairorders') !== '0'; } catch { /* no page (the harness) */ }
@@ -131,15 +133,15 @@ interface Job {
 export class PairOrders {
   private jobs = new Map<Guard, Job>();
   /** where each defender MOSTLY looks (his facing eased over ~6 s: the back a takedown goes for) and whether he is glancing off it right now */
-  private habit = new WeakMap<Guard, [number, number]>();
-  private glance = new WeakMap<Guard, { on: boolean; endT: number; h0?: [number, number] }>();
+  private habit = new SideMap<Guard, [number, number]>();
+  private glance = new SideMap<Guard, { on: boolean; endT: number; h0?: [number, number] }>();
   /** seconds a defender has stood where he is (0 while he walks) · how far (rad) his look has lately swung off the way he mostly faces, standing */
-  private stood = new WeakMap<Guard, number>();
-  private swept = new WeakMap<Guard, number>();
-  private dark = new WeakMap<Guard, { checkT: number; litT: number; saidT: number }>();
+  private stood = new SideMap<Guard, number>();
+  private swept = new SideMap<Guard, number>();
+  private dark = new SideMap<Guard, { checkT: number; litT: number; saidT: number }>();
   private darkMemo = new Map<string, { t: number; spot: Vec3 | null }>();
   /** the way each man is on to a back, under pairup.ts oneEye (stalk keeps it while it reads unseen) */
-  private ways = new WeakMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
+  private ways = new SideMap<Guard, { to: Vec3; path: Vec3[]; t: number }>();
   private seated = false; private goSeated = false; private handsWas = false;
   constructor(private g: Game) {
     const S = g.orders; flags();
