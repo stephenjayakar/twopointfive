@@ -443,7 +443,8 @@ export class Overlay implements HudLike {
      *  where it was in the row's markup, so the count, the spares and the tags close up and nothing that reads the row's order moves. */
     const gunRow = (row: HTMLElement, f: Firearm) => {
       const D = f.def; const inMag = f.mag ?? 0;
-      const rounds = mk('span', 'rounds'); for (let i = 0; i < D.magCapacity; i++) rounds.appendChild(mk('i', i < inMag ? '' : 'spent')); if (f.chamber) rounds.appendChild(mk('i', 'chamber')); row.appendChild(rounds);
+      const per = D.magCapacity > 60 ? 5 : D.magCapacity > 34 ? 2 : 1;   // (a belt of a hundred, a magazine of forty: a pip stands for five rounds, for two — the line stays the length the thirty made it)
+      const rounds = mk('span', 'rounds'); for (let i = 0; i < Math.ceil(D.magCapacity / per); i++) rounds.appendChild(mk('i', i < Math.ceil(inMag / per) ? '' : 'spent')); if (f.chamber) rounds.appendChild(mk('i', 'chamber')); row.appendChild(rounds);
       row.appendChild(mk('span', '', `${inMag}${f.chamber ? '+1' : '+0'}`));
       const mags = mk('span', 'mags'); for (const r of f.spareSorted()) { const m = mk('span', 'mag'); const b = mk('b'); b.style.height = `${Math.round((r / D.magCapacity) * 100)}%`; m.appendChild(b); m.title = `${r} rounds`; mags.appendChild(m); } row.appendChild(mags);
     };

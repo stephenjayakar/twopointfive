@@ -178,7 +178,7 @@ function walledNow(g: Game, c: Character, up: GunUp, to: Vec3 | null, S: St, dt:
  *  fireShell's own test: a leaf latched and locked, no wedge at its foot, within the pattern's `latchM` of its latch edge — no slack on it: pressed to
  *  the leaf the pattern has no spread, and a gun kept up short of that band would spend its shell on a lock that holds), inside the gun's reach and a stride: that point, to hand to gunWalled as `to` with `deep`; else null. Asked of the gun's line and not of the
  *  cursor's point on the floor: pressed to a door, what he points at is mostly somewhere past it. Null with the rule off. */
-export function breachAim(g: Game, c: Character, B: PelletSpec['breach']): Vec3 | null {
+export function breachAim(g: Game, c: Character, B: NonNullable<PelletSpec['breach']>): Vec3 | null {
   if (!GUNWALL.on) return null;
   const M = raisedLine(c, 'aim', c.aimYaw), rd = v3.sub(M.b, M.a), L = v3.len(rd); if (L < 1e-3) return null;
   const dir = v3.scale(rd, 1 / L), h = g.col.raycast(M.a, dir, BREACH_AIM_M);

@@ -59,7 +59,7 @@ import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
-import { sideOutAlert, sideLocked } from './gunslots';   // (called inside startReloadBeat only)
+import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
@@ -121,7 +121,8 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
     const heardAt: Vec3 = [prop.via[0], 0, prop.via[2]];                       // where to go and look: the source if heard directly, else the doorway / corner it came through
     // a report below the gunshot line (level < 1: the suppressed pistol — playtest 08-09 — or a canister's pop / skitter): an odd noise worth a look, heard
     // out to ~7 m of open air per unit level along the same propagation (through a shut door far less), suspicion toward it, no radio, no 'shots fired'
-    if (e.kind === 'shot' && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
+    const odd = e.kind === 'shot' || (e.kind === 'guardShot' && quietHeard() && dStraight >= 0.1 && shotRelation(g, gd, e) === 'threat');   // (gunslots.ts: a quiet round from the other side's gun is the odd noise Sam's is — it used to reach nobody)
+    if (odd && !gunfire && d < 7 * carry * Math.max(0.3, (e.level ?? 0.6) / 0.6) * ear + 0.5) {
       gd.awareness = Math.max(gd.awareness, 0.5);
       const at = prop.direct ? v3.copy(e.pos) : heardAt;   // where he places it: the source through open air, the doorway / corner it came round otherwise — as every other noise below is placed (review A6.7: the routed pop used to hand him the shooter's exact feet through the wall)
       if (gd.state !== 'alert' || !gd.lastKnown || g.time - gd.lastSeenT > 1.0) gd.lastKnown = at;   // (a man fighting trusts his own eyes over an echo, as the gunfire branch below)

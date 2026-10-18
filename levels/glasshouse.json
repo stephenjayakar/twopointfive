@@ -515,7 +515,7 @@
     },
     "kitView": {
       "ways": [
-        { "span": [[30, 13.25], [30, 14.75]], "side": 1 },
+        { "door": "front", "ref": [20, 20.5] },
         { "door": "back", "side": 1, "keepLights": ["store"] }
       ]
     }

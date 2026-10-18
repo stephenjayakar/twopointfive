@@ -332,7 +332,7 @@
     },
     "kitView": {
       "ways": [
-        { "span": [[18.54, 24], [21.46, 24]], "light": { "porch": { "intensity": 0 } } }
+        { "door": "front", "light": { "porch": { "intensity": 0 } } }
       ]
     }
   }

@@ -26,9 +26,9 @@
 // lesson's page, a mission that issues its own kit. THE WEIGHT IS THE POUCHES RULE'S (kit.ts SLOTS): with that rule off a card's rows are free counts
 // that no table of weights was cut for, and nobody is weighed. Only the ROWS A CARD HAS weigh (kit.ts kitRows): a count kept on a card whose row is
 // switched off is carried by nobody.
-// GUNS AND SLOTS PLUG IN HERE: a gun weighs by its class (`gun`), and a card's guns are a LIST (gunsOf): the gun in his hands and the sidearm beside a long
-// gun. With one gun row the row weighs the list; with a Primary and a Secondary row (gunslots.ts) the long gun is the Primary's and the sidearm the
-// Secondary's. A new class of gun is one row of `gun`.
+// GUNS: a gun weighs what its own row says (weapons.ts `weightKg` and `bulk` → gunLoad), and a card's guns are a LIST (gunsOf): the gun in his hands and
+// the sidearm beside a long gun. With one gun row the row weighs the list; with a Primary and a Secondary row (gunslots.ts) the long gun is the
+// Primary's and the sidearm the Secondary's. A new gun brings its own two numbers; nothing here names one.
 //
 // ONE SWITCH, `KITLOAD.on` — ON in the page (host/profile.ts pageSwitches; `?nokitload` = the build before), OFF here and on the frozen harness stand
 // (`TPS_KITLOAD=1`; a FROZEN_HOLDS row, in the knob registry and a journal's tables: a recording from before the table replays with it off). Off = nobody's
@@ -48,15 +48,16 @@ export interface KitLoad { mob: number; con: number }
 export interface KitWorn extends KitLoad { refMob: number; refCon: number }
 /** what one thing takes off the two scores: [mobility, concealment] */
 type Cost = [number, number];
-export type GunClass = 'long' | 'shotgun' | 'pistol';
 
 export const KITLOAD = {
   on: false,
   // THE TWO SCORES PULL APART, on purpose: a long gun is mostly SHAPE (it costs hiding, little pace), what fills a pouch is mostly WEIGHT (it costs pace,
   // little hiding), and the big thing on the back is weight first. So "the long gun and empty pouches" is quick but seen, "the pistol and full pouches"
   // is hidden but slow, and neither bar says what the other does.
-  /** a gun by its class: a carbine or a rifle in the shoulder, the shotgun as a GUN (only with the big slot off: there it is his weapon row), a pistol */
-  gun: { long: [0.12, 0.42], shotgun: [0.12, 0.34], pistol: [0.03, 0.04] } as Record<GunClass, Cost>,
+  /** A GUN WEIGHS WHAT ITS ROW SAYS (weapons.ts `weightKg`, `bulk`: the data every gun carries for this): a point of mobility per kilogram, and of
+   *  concealment a pistol's worth for any gun + so much a step of bulk (0 a pistol … 4 a belt-fed gun). The issue carbine comes to about 0.14 / 0.38, a
+   *  pistol 0.03 / 0.04, the short gun between them 0.08 / 0.21, the belt-fed gun 0.28 / 0.72 */
+  gunKg: 0.035, gunBulk: [0.04, 0.17] as Cost,
   /** one of each small thing, by the card's field (about its real weight: a smoke can and a door charge are the heavy ones). A man's four pouches full
    *  cost his legs about three times what his long gun does: emptying them is a trade worth making without changing the gun */
   small: { smoke: [0.1, 0.02], bangs: [0.07, 0.02], frags: [0.08, 0.02], shells: [0.07, 0.01], charges: [0.1, 0.02], wand: [0.07, 0.02], cams: [0.04, 0.01] } as Record<string, Cost>,
@@ -75,20 +76,21 @@ export const KITLOAD = {
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.KITLOAD_BREAK ?? '') === '1'; } catch { return false; } })();
 
 // ------------------------------------------------------------ a card's scores
-const gunClass = (w: WeaponId | null): GunClass | null => { const c = w ? WEAPONS[w]?.cls : null; return !c ? null : c === 'pistol' ? 'pistol' : c === 'shotgun' ? 'shotgun' : 'long'; };
-/** the guns a card puts on member i, the one in his hands first: for you the pistol on the thigh beside a long gun; for a teammate the gun his card names
- *  and, where a card has a secondary slot (gunslots.ts), the sidearm beside a long gun */
-export function gunsOf(i: number, m: MemberKit): GunClass[] {
-  if (i === 0) return m.weapon === 'pistol' ? ['pistol'] : [m.weapon === 'shotgun' ? 'shotgun' : 'long', 'pistol'];
-  const hand = gunClass(kitGun(m)) ?? 'long', side = gunClass(kitSide(m)); return side ? [hand, side] : [hand];
+/** the guns a card puts on member i, the one in his hands first: beside a long gun, your pistol (you have always carried both), and a teammate's sidearm
+ *  where a card has a secondary slot (gunslots.ts) */
+export function gunsOf(i: number, m: MemberKit): WeaponId[] {
+  const hand = kitGun(m); if (m.weapon === 'pistol') return [hand];
+  const side = i === 0 ? kitGun({ ...m, weapon: 'pistol' }) : kitSide(m); return side ? [hand, side] : [hand];
 }
+/** what one gun takes off the two scores, by its row */
+export function gunLoad(w: WeaponId): KitLoad { const d = WEAPONS[w], K = KITLOAD; return d ? { mob: d.weightKg * K.gunKg, con: K.gunBulk[0] + d.bulk * K.gunBulk[1] } : { mob: 0, con: 0 }; }
 const add = (a: Cost, b: Cost | undefined, n = 1): Cost => (b ? [a[0] + b[0] * n, a[1] + b[1] * n] : a);
 /** what ONE row of member i's card takes off his two scores as the card stands (null: a row that weighs nothing — a fitting, a colour, a count of none) */
 export function loadShare(i: number, m: MemberKit, field: string): KitLoad | null {
   const K = KITLOAD; let c: Cost = [0, 0];
   if (field === 'weapon' || field === 'primary' || field === 'secondary') {   // (one gun row: every gun; two — gunslots.ts: the long gun on Primary, the sidearm on Secondary)
     const guns = gunsOf(i, m), long = m.weapon !== 'pistol';
-    for (const g of field === 'weapon' ? guns : field === 'primary' ? (long ? guns.slice(0, 1) : []) : long ? guns.slice(1) : guns) c = add(c, K.gun[g]);
+    for (const w of field === 'weapon' ? guns : field === 'primary' ? (long ? guns.slice(0, 1) : []) : long ? guns.slice(1) : guns) { const x = gunLoad(w); c = add(c, [x.mob, x.con]); }
   }
   else if (field === 'big') c = add(c, K.big[bigOf(m)]);
   else if (field === 'walls') c = add(c, K.big.wall, Math.max(0, m.walls | 0));   // (the big slot off: its own counted row)

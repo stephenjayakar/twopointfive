@@ -82,17 +82,20 @@ export async function kitloadTable(): Promise<boolean> {
       }
     }
     F.verdict(!worst, 'taking one thing off a card never lowers a score (every member, every thing)', worst || `${n} cases`);
-    const base = L.loadOf(1, card(1, {})), dressed = L.loadOf(1, card(1, { light: false, nvg: false, suppressed: false, suit: 'olive', trim: 'amber' }));
+    const base = L.loadOf(1, card(1, {})), dressed = L.loadOf(1, card(1, { light: false, nvg: false, suit: 'olive', trim: 'amber' }));
     F.verdict(base.mob === dressed.mob && base.con === dressed.con && L.loadShare(1, card(1, {}), 'suit') === null && L.loadShare(1, card(1, {}), 'light') === null,
-      'a fitting or a colour weighs nothing', `Red One as issued ${f2(base.mob)} / ${f2(base.con)} · with no light, no goggles, a bare muzzle, olive and amber ${f2(dressed.mob)} / ${f2(dressed.con)}`);
+      'a fitting or a colour weighs nothing', `Red One as issued ${f2(base.mob)} / ${f2(base.con)} · with no light, no goggles, olive and amber ${f2(dressed.mob)} / ${f2(dressed.con)}`);
     { // the guns: whatever rows a card has for them (one Weapon row, or a Primary and a Secondary — gunslots.ts), between them they weigh his guns once
       const GUNS = ['weapon', 'primary', 'secondary'], bad: string[] = [], said: string[] = [];
       for (let i = 0; i < K.KIT_MEMBERS; i++) for (const w of ['rifle', 'pistol']) {
         const m: any = card(i, { weapon: w }), fields = (K.kitRows(i) as any[]).map(r => r.field).filter(f => GUNS.includes(f)), guns = L.gunsOf(i, m) as string[];
-        const rows = fields.reduce((a, f) => { const x = L.loadShare(i, m, f); return x ? [a[0] + x.mob, a[1] + x.con] : a; }, [0, 0]), list = guns.reduce((a, g) => [a[0] + KITLOAD.gun[g][0], a[1] + KITLOAD.gun[g][1]], [0, 0]);
+        const rows = fields.reduce((a, f) => { const x = L.loadShare(i, m, f); return x ? [a[0] + x.mob, a[1] + x.con] : a; }, [0, 0]), list = guns.reduce((a, g) => { const x = L.gunLoad(g); return [a[0] + x.mob, a[1] + x.con]; }, [0, 0]);
         if (Math.abs(rows[0] - list[0]) > 1e-9 || Math.abs(rows[1] - list[1]) > 1e-9 || !guns.length) bad.push(`member ${i} ${w}: rows ${fields.join('+')} weigh ${f2(rows[0])} / ${f2(rows[1])}, his guns (${guns.join(', ')}) ${f2(list[0])} / ${f2(list[1])}`);
         if (i < 2) said.push(`${i ? 'Red One' : 'you'} ${w}: ${fields.join('+')} = ${guns.join(' + ')}`);
       }
+      { // a gun weighs what its own row says (weapons.ts weightKg, bulk): the short gun under the carbine under the belt-fed gun, a pistol under them all
+        const G = ['fiveseven', 'mp7', 'fn2000', 'mk12', 'mk46'].map(w => L.gunLoad(w)), up = G.every((x: any, k: number) => !k || (x.mob > G[k - 1].mob && x.con >= G[k - 1].con));
+        F.verdict(up && G[0].mob > 0 && G[4].con > G[2].con + 0.2 && G[1].con < G[2].con - 0.1, 'a gun weighs what its own row says: a pistol, the short gun, the issue carbine, the long rifle, the belt-fed gun — each heavier on the legs and no easier to hide than the one before', ['pistol', 'MP7', 'carbine', 'Mk 12', 'Mk 46'].map((n, k) => `${n} ${f2(G[k].mob)} / ${f2(G[k].con)}`).join(' · ')); }
       F.verdict(!bad.length, 'a card\'s gun rows — one, or a primary and a secondary — weigh his guns once between them (every member, with and without a long gun)', bad.join(' · ') || said.join(' · '));
     }
     K.SLOTS.on = false; const free = [0, 1].map(i => L.loadWorn(i, K.kitDefault(i))); K.SLOTS.on = true;
@@ -228,7 +231,8 @@ export async function kitloadCard(): Promise<boolean> {
       K.kitSet(0, 'weapon', 'pistol'); c.refresh(); const P = bars(host), now = L.loadOf(0, K.KIT.members[0]);
       F.verdict(P[0].fill === pct(R.mob) && P[1].fill === pct(R.con) && P[0].gain === pct(now.mob - R.mob) && P[1].gain === pct(now.con - R.con) && P.every(b => !b.loss) && now.mob > want.mob && now.con > want.con && P[0].ref === pct(R.mob), 'the guns row stepped to the pistol alone: both bars gain past the notch (green), which stays', P.map(b => `${b.k} grey ${b.fill} + gained ${b.gain}, notch ${b.ref}`).join(' · '));
       if (gunField === 'primary') { c.go(gun); const Q = bars(host);   // (two gun rows: the Primary row now carries none — its `one more` is the long gun, written through the row's own setter)
-        F.verdict(Q[0].more && Q[1].more && Q[0].part === pct(KITLOAD.gun.long[0]) && Q[1].part === pct(KITLOAD.gun.long[1]), 'the highlight on a Primary row that carries none: dashed, what the long gun would take', Q.map(b => `${b.k} one more ${b.part}${b.more ? ' dashed' : ''}`).join(' · ')); }
+        const m0 = K.KIT.members[0], upc: any = { ...m0 }; rows[gun].set(upc, K.kitPeek(0, 'primary', 1).value); const a0 = L.loadOf(0, m0), a1 = L.loadOf(0, upc), d = { mob: a0.mob - a1.mob, con: a0.con - a1.con };
+        F.verdict(Q[0].more && Q[1].more && d.con > 0.2 && Q[0].part === pct(d.mob) && Q[1].part === pct(d.con), 'the highlight on a Primary row that carries none: dashed, what the long gun would take', Q.map(b => `${b.k} one more ${b.part}${b.more ? ' dashed' : ''}`).join(' · ')); }
       K.KIT.members[0] = card(0, YOU.heavy); c.refresh(); { const Hv = bars(host), hv = L.loadOf(0, K.KIT.members[0]);
         F.verdict(Hv[0].loss && Hv[0].fill === pct(hv.mob) && Hv[0].gain === pct(R.mob - hv.mob), 'four smoke and the hammer: mobility falls under the notch, and what is lost is amber', Hv.map(b => `${b.k} grey ${b.fill} ${b.loss ? 'lost' : 'gained'} ${b.gain}`).join(' · ')); }
       KITLOAD.on = false; c.refresh();
