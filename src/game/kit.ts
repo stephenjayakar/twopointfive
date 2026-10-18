@@ -301,6 +301,79 @@ function costOf(m: MemberKit, t: SlotTable): number { let used = 0; for (const k
 let team = KIT_MEMBERS - 1;
 /** the teammates who come, of five cards */
 const coming = (cards: MemberKit[], n: number) => cards.slice(1, 1 + n);
+/** THE SQUAD'S KIT IS DEALT OVER THE MEN WHO COME (the maintainer, 10-18, over a team of four as issued: "as issued still has blue team pretty empty").
+ *  The issued kit and every named squad kit are written down as the first two teammates carry them, so with three or four coming the others stood there with
+ *  a gun and four empty pouches. On: while the teammates' counted small things (door charges, stun, frags, smoke) ARE the issue's or a named kit's, a team of
+ *  three or four WEARS them shared out — one at a time to the man with the fewest, a man without that thing first, Red and Blue by turns — so each pair has a
+ *  charge and a stun of its own. THE TABLE'S CARDS ARE NEVER REWRITTEN FOR IT: KIT.members and the store stay in the table's layout, and the deal is how they
+ *  are worn (kitWorn: what the roster and a card show, and the card a staged man carries). What the squad carries between them is a sum over the men who come
+ *  (kitPool), whoever holds what, so a run is the run it was. A change of one of those counts on a teammate's card is made to the cards AS WORN, and they
+ *  are then cards of the player's own, kept as they stand at every size (onWorn); any other row — a gun, a look, your own card — leaves the layout alone.
+ *  The big things, the wand, the guns and the looks stay on the man the kit names. Off (the module, the frozen stand; `?nokitdeal` in the page,
+ *  TPS_KITDEAL=1 raises it headless) = every card shown and staged as the table writes it. */
+export const KITDEAL = { on: false };
+/** `KITDEAL_BREAK=1` (the check's): the deal hands every thing back to the men the table names */
+const DEAL_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.KITDEAL_BREAK ?? '') === '1'; } catch { return false; } })();
+/** what is dealt, in the order it is handed out · who is handed to, in turn (Red One, Blue One, Red Two, Blue Two) */
+const DEALT = ['charges', 'bangs', 'frags', 'smoke'] as const, DEAL_TURN = [1, 3, 2, 4];
+const dealing = (): boolean => KITDEAL.on && ruleOn && KIT.on;
+/** the teammates' counted things, as one word · the issue's and every named kit's, in the table's layout (made once a table) */
+const dealWord = (cards: MemberKit[]) => cards.slice(1).map(c => DEALT.map(k => c[k]).join(',')).join('|');
+let dealKits: { t: SlotTable; kits: MemberKit[][]; words: Set<string> } | null = null;
+function dealTable(): { kits: MemberKit[][]; words: Set<string> } {
+  const t = SLOTS.table;
+  if (dealKits?.t !== t) { const kits = [ISSUED, ...t.loadouts.map(L => ISSUED.map((m, i) => ({ ...m, ...Object.fromEntries(DEALT.map(k => [k, L.counts[i][k] ?? 0])) })))]; dealKits = { t, kits, words: new Set(kits.map(dealWord)) }; }
+  return dealKits;
+}
+const dealNamed = (cards: MemberKit[]): boolean => dealTable().words.has(dealWord(cards));
+/** Five cards as `n` teammates carry them: the same things among the men who come, shared out (fewer than three: as they are; a thing with no room
+ *  anywhere: as they are). The sum over the men who come is the sum it was, whatever the cards. */
+function deal(cards: MemberKit[], t: SlotTable, n: number): MemberKit[] {
+  if (n < 3 || DEAL_BREAK) return cards;
+  const out = cards.map(c => ({ ...c })), men = DEAL_TURN.filter(i => i <= n), bag: (typeof DEALT[number])[] = [];
+  for (const k of DEALT) for (const i of men) { for (let c = out[i][k]; c > 0; c--) bag.push(k); out[i][k] = 0; }
+  const load = (i: number) => DEALT.reduce((x, k) => x + out[i][k], 0);   // (what he has been handed: nothing else of his card moves the deal, so a gun or a big thing changed on one card never shuffles the others)
+  for (const k of bag) {
+    const can = men.filter(i => out[i][k] < (t.items[k]?.max[i] ?? Infinity) && costOf(out[i], t) + priceOf(t.items[k]) <= t.pouches[i]); if (!can.length) return cards;
+    const to = can.reduce((a, b) => (load(b) < load(a) || (load(b) === load(a) && !out[b][k] && out[a][k] > 0) ? b : a));
+    out[to][k]++;
+  }
+  return out;
+}
+/** THE FIVE CARDS AS THE TEAM WEARS THEM: the table's cards, or — the deal on, three or four coming, the counted things a named kit's — those shared out.
+ *  The same array when nothing is dealt. */
+export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] { return dealing() && n >= 3 && dealNamed(cards) ? deal(cards, SLOTS.table, n) : cards; }
+/** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
+export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
+export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing() && team >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, team)[i] : issuedCard(i); }
+/** A CARD IS READ AND CHANGED AS IT IS WORN. `f` runs with the worn cards standing in the table (a teammate's card, while they are dealt), nothing written to
+ *  the store. A peek puts the table back. A change that was TAKEN (`taken`) is kept one of two ways: it moved a counted thing — the worn cards are now the
+ *  player's own and stay in the table as they stand; or it moved something else (a gun, a look, a big thing) — that is written onto the table's own cards and
+ *  their layout stays, so a smaller team still carries the whole kit. Cards of the player's own that come to WEAR as a named kit does (every man put back on
+ *  his share) are that kit again, in the table's layout (dealSettle). */
+function onWorn<T>(i: number, f: () => T, taken?: (r: T) => boolean): T {
+  const w = i > 0 ? kitWorn() : KIT.members;
+  if (w === KIT.members) { const r = f(); if (i > 0 && taken?.(r)) dealSettle(); return r; }
+  const was = KIT.members.slice(), s = store, back = () => { for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = was[j]; store = s; };
+  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = { ...w[j] }; store = null;
+  let r: T; try { r = f(); } catch (e) { back(); throw e; }
+  if (!taken?.(r)) { back(); return r; }
+  store = s;
+  if (KIT.members.some((c, j) => j > 0 && DEALT.some(k => c[k] !== w[j][k]))) { if (!dealSettle()) kitSave(); }
+  else {   // (nothing counted moved: the change goes onto the table's layout — unless it costs a pouch that man's card has not got there, and then the worn cards are kept, as a counted change keeps them)
+    const laid = KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, was[j][k]])) } : c));
+    if (illegal(laid, SLOTS.table) === null) for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = laid[j];
+    kitSave();
+  }
+  return r;
+}
+/** … true: the cards were put back in a named kit's layout, and kept */
+function dealSettle(): boolean {
+  if (!dealing() || team < 3 || dealNamed(KIT.members)) return false;
+  const laid = (kit: MemberKit[]) => KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, kit[j][k]])) } : c));
+  const kit = dealTable().kits.map(laid).find(cards => illegal(cards, SLOTS.table) === null && dealWord(deal(cards, SLOTS.table, team)) === dealWord(KIT.members)); if (!kit) return false;   // (…a layout a man's other things leave room for: a wand on Red One and the table's full card are a pouch too many)
+  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = kit[j]; kitSave(); return true;
+}
 /** the pouches the teammates who come fill between them · how many of one thing they carry */
 const squadUsed = (cards: MemberKit[], t: SlotTable, n: number) => coming(cards, n).reduce((s, c) => s + costOf(c, t), 0);
 const squadHas = (cards: MemberKit[], k: string, n: number) => coming(cards, n).reduce((s, c) => s + SLOT_AMOUNT[k](c), 0);
@@ -319,6 +392,10 @@ function illegal(cards: MemberKit[], t: SlotTable, n = KIT_MEMBERS - 1): string 
 }
 /** member i's card as a set makes it under a table (null: the rule off — the set of the build before it) */
 function setCard(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
+  return t && i > 0 && dealing() ? deal(ISSUED.map((_m, j) => setCardBase(j, p, t)), t, team)[i] : setCardBase(i, p, t);
+}
+/** … in the pair's layout (what the table says; KITDEAL shares it out over a bigger team) */
+function setCardBase(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
   const d = kitDefault(i);
   if (p === 'quiet') Object.assign(d, i === 0 ? { weapon: 'pistol', smoke: CAN_MIXES.smoke.smoke, bangs: CAN_MIXES.smoke.stun, suit: 'black', trim: 'black' } : { weapon: 'pistol', suppressed: true, light: false, nvg: true, suit: 'black', trim: 'black' });
   if (p === 'loud') Object.assign(d, i === 0 ? { weapon: 'rifle', smoke: CAN_MIXES.stun.smoke, bangs: CAN_MIXES.stun.stun, suit: 'olive', trim: 'amber' } : { weapon: 'rifle', suppressed: false, light: true, nvg: true, bangs: Math.min(BANGS_MAX, d.bangs + 1), suit: 'olive', trim: 'amber' });
@@ -368,13 +445,13 @@ function slotsCheck(raw: unknown): { table: SlotTable } | { why: string } {
   // (… BOTH WAYS THE BIG SLOT STANDS: the switch moves no run until a card is changed either)
   const was = bigOn; try { for (const way of [false, true]) { bigOn = way; const word = way ? ' with the big slot on' : '';
     const bad = illegal(ISSUED, table); if (bad) return { why: `${bad}: the issued kit must stay a legal fill${word}` };
-    for (const p of ['quiet', 'loud'] as const) { const why = illegal(ISSUED.map((_m, i) => setCard(i, p, table)), table); if (why) return { why: `the ${p} set (loadout "${SET_LOADOUT[p]}") is not a legal fill${word}: ${why}` }; } } } finally { bigOn = was; }
+    for (const p of ['quiet', 'loud'] as const) { const why = illegal(ISSUED.map((_m, i) => setCardBase(i, p, table)), table); if (why) return { why: `the ${p} set (loadout "${SET_LOADOUT[p]}") is not a legal fill${word}: ${why}` }; } } } finally { bigOn = was; }
   return { table };
 }
 /** the pouches `n` of one item fill (0 for an item the table does not price) */
 export function slotCost(item: string, n: number, t: SlotTable = SLOTS.table): number { return Math.max(0, n) * priceOf(t.items[item]); }
 /** Member i's pouches: used of total, and what fills them, a line per thing carried. */
-export function kitCost(i: number, m: MemberKit = KIT.members[i]): { used: number; total: number; free: number; lines: { item: string; n: number; pouches: number }[]; /** his big slot (BIGSLOT): filled of how many — null with the switch off */ big: { used: number; total: number } | null } {
+export function kitCost(i: number, m: MemberKit = kitShown(i)): { used: number; total: number; free: number; lines: { item: string; n: number; pouches: number }[]; /** his big slot (BIGSLOT): filled of how many — null with the switch off */ big: { used: number; total: number } | null } {
   const lines: { item: string; n: number; pouches: number }[] = [];
   for (const k of Object.keys(SLOT_AMOUNT)) { const n = SLOT_AMOUNT[k](m), p = slotCost(k, n); if (p) lines.push({ item: k, n, pouches: p }); }
   const used = costOf(m, SLOTS.table), total = SLOTS.table.pouches[i] ?? 0; return { used, total, free: total - used, lines, big: bigOn ? { used: bigUsed(m, SLOTS.table), total: SLOTS.table.big[i] ?? 1 } : null };
@@ -613,7 +690,7 @@ const rowCache = new Map<string, KitRow[]>();
 export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${shieldIn()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
 /** What a row costs member i's pouches as his card stands, and its rate in plain words ('a pouch each', 'the shield takes 2 pouches') — null for a row
  *  that is not a pouch (a light, a colour; a shield or a shotgun while the table prices it at nothing), and for every row while the rule is off. */
-export function kitRowCost(i: number, r: KitRow, m: MemberKit = KIT.members[i]): { pouches: number; rate: string } | null {
+export function kitRowCost(i: number, r: KitRow, m: MemberKit = kitShown(i)): { pouches: number; rate: string } | null {
   const it = r.item ? SLOTS.table.items[r.item] : undefined; if (!SLOTS.on || !r.item || !it || !priceOf(it)) return null;
   const p = it.pouches, rate = r.item === 'shield' ? `the shield takes ${pouchWords(p)}` : r.item === 'wand' ? `the wand takes ${pouchWords(p)}` : r.item === 'shotgun' ? (shieldOf(m) ? 'behind the shield he carries a pistol: no shells' : `the shotgun's shells take ${pouchWords(p)}`) : p === 1 ? 'a pouch each' : `${p} pouches each`;
   return { pouches: slotCost(r.item, SLOT_AMOUNT[r.item](m)), rate };
@@ -627,7 +704,7 @@ export function kitName(i: number): { title: string; sub: string } {
 /** a card in a line: 'AKS-74U · no light · goggles · 2 stun, 1 charge, 1 frag · olive drab'. Under the pouches rule the line names what fills a pouch — frags too, and your 40 mm
  *  rounds (none without the rifle: homeShells) — so its counts add up to the pouches shown beside it; with the rule off it is the line the build before had (no frags, no 40 mm: the rows fixture holds it) */
 export function kitWords(i: number): string {
-  const m = KIT.members[i], look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
+  const m = kitShown(i), look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
   const frags = SLOTS.on && m.frags ? `, ${m.frags} frag${m.frags === 1 ? '' : 's'}` : '';
   if (i === 0) return [gearText(YOU_GUNS[m.weapon]), `${m.smoke || 'no'} smoke, ${m.bangs || 'no'} stun${frags}${SLOTS.on && m.shells ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` /* (no-break spaces: the count never parts from '40 mm' where the strip wraps the line) */ : ''}${chargeRow(0) && m.charges ? `, ${m.charges} charge${m.charges === 1 ? '' : 's'}` : ''}${m.cams && camRow() ? `, ${m.cams}\u00a0cam${m.cams === 1 ? '' : 's'}` : ''}${m.wand && wandRow() ? ', wand' : ''}`, wallWords(0, m), bigWords(m), look].filter(Boolean).join(' · ');
   return [gearText(GUN_SHORT[kitGun(m)]), m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}`, wallWords(i, m), shieldOf(m) ? 'shield' : '', bigWords(m), look].filter(Boolean).join(' · ');
@@ -637,7 +714,7 @@ function bigWords(m: MemberKit): string { return bigOn && !shieldOf(m) && !m.wal
 /** the wall charges of a card's line: 'wall charge', '2 wall charges', or nothing (none carried, or no such row on his card) */
 function wallWords(i: number, m: MemberKit): string { return m.walls && wallRow(i) ? (m.walls === 1 ? 'wall charge' : `${m.walls} wall charges`) : ''; }
 /** member i's card differs from what he is issued (only the rows his card has) */
-export function kitChanged(i: number): boolean { const m = KIT.members[i], d = issuedCard(i); return kitRows(i).some(r => rowGet(r, m) !== rowGet(r, d)); }
+export function kitChanged(i: number): boolean { const m = kitShown(i), d = kitIssuedShown(i); return kitRows(i).some(r => rowGet(r, m) !== rowGet(r, d)); }
 
 /** why member i's card with one row set to `v` is refused — no room in his pouches, or in the squad's — or null: it fits (always null while the rule is off) */
 function overWhy(i: number, row: KitRow, v: KitValue): string | null { if (!SLOTS.on) return null; const m = { ...KIT.members[i] }; rowSet(row, m, v); return cardWhy(i, m); }
@@ -646,7 +723,8 @@ function rowOf(i: number, field: KitField): KitRow | undefined { return kitRows(
 /** What a step of one row of member i's card WOULD do, nothing written: the value it lands on — the next (dir +1) or the last (−1), wrapping — or, when that
  *  has no room in the pouches, `why` and the value as it stands. A COUNTED row is simply refused one more; stepped down off none it comes round to the most
  *  that fits. A row of CHOICES (a weapon) walks on past a choice with no room to the next that has, and says what it passed (`passed`). */
-export function kitPeek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } {
+export function kitPeek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } { return onWorn(i, () => peek(i, field, dir)); }
+function peek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } {
   const row = rowOf(i, field); if (!row) throw new Error(`kit: member ${i} has no '${field}' row`);
   const cur = rowGet(row, KIT.members[i]), n = row.values.length, at = Math.max(0, row.values.indexOf(cur)), counted = typeof row.values[0] === 'number';
   let why = '', passed = '';
@@ -661,19 +739,22 @@ export function kitPeek(i: number, field: KitField, dir: 1 | -1): { value: KitVa
 }
 /** Step one row of member i's card; kept. `ok` false: refused (`why`), nothing written. `passed`: a choice the step walked past, and why. */
 export function kitTry(i: number, field: KitField, dir: 1 | -1): { ok: boolean; value: KitValue; why: string; passed: string } {
-  const p = kitPeek(i, field, dir); if (p.why) return { ok: false, ...p };
-  rowSet(rowOf(i, field)!, KIT.members[i], p.value); KIT_NOTE[i] = ''; kitSave();
-  return { ok: true, ...p };
+  return onWorn(i, () => {
+    const p = peek(i, field, dir); if (p.why) return { ok: false, ...p };
+    rowSet(rowOf(i, field)!, KIT.members[i], p.value); KIT_NOTE[i] = ''; kitSave();
+    return { ok: true, ...p };
+  }, r => r.ok);
 }
 /** Step one row of member i's card to its next (dir +1) or last (−1) value, wrapping; kept. Returns the value the row now has (a step that would not fit his
  *  pouches is refused and the value is the one it had: kitTry says why). */
 export function kitStep(i: number, field: KitField, dir: 1 | -1): KitValue { return kitTry(i, field, dir).value; }
 /** Set one row outright (a click on a value); refused — false — for a value the row does not offer, or one his pouches have no room for. ('cans', a split of
  *  six by name, is taken for your card whichever way the rule stands: what the build before it called the row.) */
-export function kitSet(i: number, field: KitField, v: KitValue): boolean {
+export function kitSet(i: number, field: KitField, v: KitValue): boolean { return onWorn(i, () => setRow(i, field, v), ok => ok); }
+function setRow(i: number, field: KitField, v: KitValue): boolean {
   if (bigOn && (field === 'shield' || field === 'walls' || (field === 'weapon' && v === 'shotgun'))) {   // (BIGSLOT: a hand that still names the rows of the build before — a tool, a tally — is given the one big row)
     const now = bigOf(KIT.members[i]), mine: BigPick = field === 'shield' ? 'shield' : field === 'walls' ? 'wall' : 'shotgun';
-    return kitSet(i, 'big', v ? mine : now === mine ? 'none' : now); }
+    return setRow(i, 'big', v ? mine : now === mine ? 'none' : now); }
   const row = rowOf(i, field); if (!row || !row.values.includes(v)) return false;
   if (overWhy(i, row, v)) return false;
   rowSet(row, KIT.members[i], v); KIT_NOTE[i] = ''; kitSave(); return true;
@@ -693,16 +774,18 @@ export function kitPresetCard(i: number, p: KitPreset): MemberKit { return setCa
 /** Put a set on member i's card; kept. `ok` false: refused (`why`), nothing written — the squad's pouches have no room for it as the other cards stand (a
  *  teammate's card holds what this one gave up; kitPresetAll puts a set on everybody at once and is never refused). */
 export function kitPreset(i: number, p: KitPreset): { ok: boolean; why: string } {
-  const c = kitPresetCard(i, p), why = cardWhy(i, c); if (why) return { ok: false, why };
-  KIT.members[i] = c; KIT_NOTE[i] = ''; kitSave(); return { ok: true, why: '' };
+  return onWorn(i, () => {
+    const c = kitPresetCard(i, p), why = cardWhy(i, c); if (why) return { ok: false, why };
+    KIT.members[i] = c; KIT_NOTE[i] = ''; kitSave(); return { ok: true, why: '' };
+  }, r => r.ok);
 }
 /** why a press of a set on member i's card would be refused as the cards stand ('' = it would be taken) */
-export function kitPresetWhy(i: number, p: KitPreset): string { return cardWhy(i, kitPresetCard(i, p)) ?? ''; }
+export function kitPresetWhy(i: number, p: KitPreset): string { return onWorn(i, () => cardWhy(i, kitPresetCard(i, p)) ?? ''); }
 /** a set on all five at once (always a legal fill) */
-export function kitPresetAll(p: KitPreset) { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitPresetCard(i, p); KIT_NOTE[i] = ''; } kitSave(); }
+export function kitPresetAll(p: KitPreset) { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = setCardBase(i, p, SLOTS.on ? SLOTS.table : null); KIT_NOTE[i] = ''; } kitSave(); }   // (the table's layout: KITDEAL shares it out as it is worn)
 /** which set member i's card is, if it is exactly one */
 export function kitPresetOf(i: number): KitPreset | null {
-  const m = KIT.members[i];
+  const m = kitShown(i);
   return KIT_PRESETS.find(p => { const c = kitPresetCard(i, p.id); return kitRows(i).every(r => rowGet(r, c) === rowGet(r, m)); })?.id ?? null;
 }
 
@@ -714,7 +797,7 @@ const PASTE_BREAK = (() => { try { return String((globalThis as { process?: { en
  *  keeps what it had. His colours stay his own, as under a squad kit: the trim is how the men are told apart from above. A field his card has no row
  *  for is never written, so the card is one his own tiles could have made. */
 export function kitPasteCard(i: number, from: MemberKit): MemberKit {
-  const m = { ...KIT.members[i] };
+  const m = { ...kitShown(i) };
   if (PASTE_BREAK) return { ...from, suit: m.suit, trim: m.trim };
   for (const r of kitRows(i)) {
     if (r.field === 'suit' || r.field === 'trim') continue;
@@ -728,15 +811,18 @@ export function kitPasteCard(i: number, from: MemberKit): MemberKit {
 const rowsMoved = (i: number, a: MemberKit, b: MemberKit): KitField[] => kitRows(i).filter(r => rowGet(r, a) !== rowGet(r, b)).map(r => r.field);
 /** What a paste of `from` onto member i's card WOULD do, nothing written: the card it would make, the rows of his it would move (none: he wears it
  *  already) and why it would be refused as the cards stand ('' = taken) — cardWhy's reasons, as for a set. */
-export function kitPastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } {
+export function kitPastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } { return onWorn(i, () => pastePeek(i, from)); }
+function pastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } {
   const card = kitPasteCard(i, from);
   return { card, changed: rowsMoved(i, KIT.members[i], card), why: PASTE_BREAK ? '' : cardWhy(i, card) ?? '' };
 }
 /** Paste a copied card onto member i's; kept, in ONE write of his card. `ok` false: refused (`why`), nothing written. `changed`: the rows of his card it moved. */
 export function kitPaste(i: number, from: MemberKit): { ok: boolean; why: string; changed: KitField[] } {
-  const p = kitPastePeek(i, from); if (p.why) return { ok: false, why: p.why, changed: [] };
-  if (p.changed.length || PASTE_BREAK) { KIT.members[i] = p.card; KIT_NOTE[i] = ''; kitSave(); }
-  return { ok: true, why: '', changed: p.changed };
+  return onWorn(i, () => {
+    const p = pastePeek(i, from); if (p.why) return { ok: false, why: p.why, changed: [] };
+    if (p.changed.length || PASTE_BREAK) { KIT.members[i] = p.card; KIT_NOTE[i] = ''; kitSave(); }
+    return { ok: true, why: '', changed: p.changed };
+  }, r => r.ok && (r.changed.length > 0 || PASTE_BREAK));
 }
 /** member i already wears a copied card: a paste of it would move no row of his */
 export function kitWears(i: number, from: MemberKit): boolean { return !kitPastePeek(i, from).changed.length; }
@@ -941,8 +1027,9 @@ export function kitStage(g: Game, ops: Guard[]) {
   if (SLOTS.on) kitTeam(Math.min(ops.length, KIT_MEMBERS - 1));   // (the rule is held for the men who CAME: cards made legal for a smaller team on the loadout screen and then staged on a bigger one give up what does not fit — nothing while they are legal, as the issued kit always is)
   squadSmokeStage(g, kitSmokes(ops.length));   // (squadsmoke.ts: what the men who came carry, after the pouches rule has had its say, is the squad's smoke for this run)
   kitPlayer(g);
+  const worn = kitWorn(Math.min(ops.length, KIT_MEMBERS - 1));   // (KITDEAL: the cards as this team carries them — the counts below are sums, the same either way)
   ops.slice(0, KIT_MEMBERS - 1).forEach((gd, k) => {
-    const i = k + 1, m = bigOn ? bigHome(KIT.members[i], i) : KIT.members[i], d = ISSUED[i]; manOf.set(gd, { i, kit: { ...m } });   // (BIGSLOT: the shotgun is never his gun — a card set by hand with the pouches rule off, a mission's issue)
+    const i = k + 1, m = bigOn ? bigHome(worn[i], i) : worn[i], d = ISSUED[i]; manOf.set(gd, { i, kit: { ...m } });   // (BIGSLOT: the shotgun is never his gun — a card set by hand with the pouches rule off, a mission's issue)
     const gun = kitGun(m);
     // (only a card that CHANGED his gun writes one: as issued, the row the scenario handed him is his, whatever it is. The row is dealt off his route every
     // frame — game.ts — so the route is where it is written)

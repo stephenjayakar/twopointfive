@@ -116,7 +116,7 @@ import { TAKEDOWN, TAKEDOWN_STATS } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
-import { BIGSLOT } from '../game/kit';
+import { BIGSLOT, KITDEAL } from '../game/kit';
 import { SHIELD } from '../game/shield';
 import { BIG_STATS } from '../game/bigkit';
 import { SQUADTHROW } from '../game/squadthrow';
@@ -1845,6 +1845,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   }
   // (game/kit.ts BIGSLOT + game/bigkit.ts: one big slot a man — the breaching shotgun as kit, the dynamic hammer; on in the page, ?nobigslot)
   { const bs = panel.section('Big slot (breaching shotgun, hammer)', { open: false, summary: () => `${BIGSLOT.on ? 'on' : 'off'} · you carry ${game.player.bigKit === 'none' ? 'nothing big' : game.player.bigKit === 'shotgun' ? 'the breaching shotgun' : 'the hammer'} · locks: ${BIG_STATS.samShot} shot, ${BIG_STATS.samHammered} hammered by you; ${BIG_STATS.drawn} teammate draws, ${BIG_STATS.mateHammered} hammered by a teammate` });
+    panel.toggleBox(bs, 'squad kit dealt over who comes', () => KITDEAL.on, v => { KITDEAL.on = v; }, 'On (also off with ?nokitdeal): with three or four teammates the issued kit and each named squad kit are shared out among the men who come, a charge and a stun to each pair; the squad carries the same count. Off: the first two carry all of it and the others come with empty pouches. The stored cards never move: Team & kit shows the cards as worn at its next draw, and a mission stages them');
     panel.toggleBox(bs, 'one big slot a man', () => BIGSLOT.on, v => { BIGSLOT.on = v; }, 'THE switch (also ?nobigslot on the address). On: every kit card has one Big slot row — breaching shotgun, dynamic hammer, wall charge or (a teammate) the shield, one of them — and none of them costs a pouch; the shotgun is kit, not a gun: its man keeps his rifle. Off: the shotgun is a weapon row, a wall charge and a shield cost two pouches, nobody has a hammer. The cards on the loadout screen follow at their next draw; men already staged keep what they were staged with.');
     panel.select(bs, 'big slot ▸ on me now', ['none', 'shotgun', 'hammer'], () => (['none', 'shotgun', 'hammer'] as const).indexOf(game.player.bigKit), v => { game.player.bigKit = (['none', 'shotgun', 'hammer'] as const)[v] ?? 'none'; }, 'put the breaching shotgun or the hammer on you (or take it off) for this run without going through the loadout screen: at a door locked against you its row takes the boot\'s place. A restart puts back what your card says');
     panel.toggleBox(bs, 'the ballistic shield is in the game', () => SHIELD.on, v => { SHIELD.on = v; }, 'OFF in the page since 10-15 (?shield on the address = back for the visit): no card offers a shield, a stored card that says shield reads as a card without one (and is saved without it), a mission that issued one stages with the plain issue. On: a teammate\'s big slot offers it again — the cards follow at their next draw; men already staged keep what they were staged with');

@@ -933,6 +933,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   roster's chip carries the can, not looked at; the `?cards` screen's narrower tile not measured. THE MAINTAINER'S CALL, not taken: the quiet set still
   carries a frag (`setCard` builds it on the issued card). Never seen on a GPU; nobody has played it.
 
+- **The squad's kit is dealt over the men who come** (2026-10-18; the maintainer, over Team & kit on The pass with a team of four as issued: "as
+  issued still has blue team pretty empty"). The issued kit (`src/game/kit.ts ISSUED`) and every named squad kit (`src/game/slots.json` loadouts) are
+  written down as the FIRST TWO teammates carry them, so that a pair, a three and a four add up the same; with three or four coming the others stood
+  on the roster with a gun and `pouches 0 / 4`. No level deals a kit: the table is one for every mission (a level changes it only by
+  `scenarios.issue.members`, today the long hall's alone, or by `scenarios.roomClear.wallCharges`), so the fault was on every squad mission at +3 and
+  +4 under every kit. ON: the cards are WORN shared out (`kitWorn(n)`, `kitShown(i)`): while the teammates' counted small things (door charges, stun,
+  frags, smoke) are the issue's or a named kit's, `deal()` hands them one at a time to the man of those who come with the fewest, a man without that
+  thing first, Red and Blue by turns. As issued, of four: Red One 1 stun + 1 charge, Red Two 1 stun + 1 frag, Blue One 1 charge + 1 frag, Blue Two 1
+  stun, so each pair has a stun and a charge of its own. THE TABLE'S CARDS ARE NEVER REWRITTEN FOR IT: `KIT.members` and the store stay in the table's
+  layout; the deal is what the roster, a man's card and the drawn man show, and the card a staged man carries (`kitStage`, `kitOf`). The squad's count
+  is a sum over the men who come (`kitPool`), so it does not move at any size and a run is the run it was by digest; nothing in the simulation reads
+  which man holds a counted thing. A CHANGE BY HAND is made to the card as worn (`onWorn`): a counted thing changed on a teammate makes the worn cards
+  the player's own, kept as they stand at every size (so a smaller team then leaves behind what its men at home hold, as hand-made cards always did);
+  any other change (a gun, a look, a big thing, your own card) is written onto the table's cards and the layout stays, unless it costs a pouch that
+  man's card in the table has not got (a wand on Red One, full as issued): then the worn cards are kept too, so no stored card is ever over its
+  pouches; a refused change and a peek write nothing; men put back on their shares are the named kit again (`dealSettle`, only into a layout their
+  other things leave room for). A man's own set (As issued, Quiet, Loud) at three or four is HIS
+  SHARE of that kit, so Loud on a man of four may add no stun to him. A mission's own issue that changes a teammate's counts is not a named kit and is
+  worn as its file writes it. LEFT, the maintainer's calls: the Quiet kit of four still leaves Blue Two with a pistol and nothing else (three stun for
+  four men), and a four as issued fills 2, 2, 2 and 1 of its pouches (seven things, sixteen pouches) with every big slot empty: more than that is more
+  kit. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
+  page and on the shipped stand (`?nokitdeal`; the debugger's Big slot section, 'squad kit dealt over who comes'); in the knob registry and
+  `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off at any moment = every card shown and staged as the table writes it.
+  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 22 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
+  comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs`. The older card probes (`kit-*`,
+  `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
+  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. LISTING: `bun run
+  tools/qa/kit-audit.ts` (`--deal=off` for the cards before) prints every kit at every size and one row a mission. MEASURED: The pass, four, 240
+  frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall counts the same with the shield in and out;
+  60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
+  played it.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with

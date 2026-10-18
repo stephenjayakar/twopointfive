@@ -108,7 +108,7 @@ import { STEALTHPOSE } from '../game/stealthpose';
 import { GEAR, gearFromQuery } from '../game/gear';
 import { GUARD_EYE } from '../game/guards';
 import { wordsFromQuery } from '../game/words';
-import { kitLoad, KIT_SOLO, BIGSLOT } from '../game/kit';
+import { kitLoad, KIT_SOLO, BIGSLOT, KITDEAL } from '../game/kit';
 import { squadSenses } from '../game/enemysquads';
 import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
 import { MUSIC } from '../audio/pieces';
@@ -271,6 +271,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WAND.on = !q.has('nowand');   // the optical wand (game/wand.ts): a row of YOUR kit card and, carrying it, 'look under it' on a shut door's rows where the fog of war hides the room — ON in the page, ?nowand = no such row on the card or the door; off on the frozen stand (TPS_WAND=1). Before the kit is read (kitLoad): a stored card's wand is read through its row
   WAND.mate = !q.has('nowandmate');   // … and a TEAMMATE's card can carry one, which he uses ONLY on your order (game/wandorder.ts: a door's menu, V): ON in the page, ?nowandmate = yours alone, as it was; off on the frozen stand (TPS_WANDMATE=1)
   BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the shield, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
+  KITDEAL.on = !q.has('nokitdeal');   // the squad's kit dealt over the men who come (game/kit.ts KITDEAL): with three or four teammates the issued kit and every named squad kit are shared out among them — a charge and a stun to each pair — where the first two carried it all and the others showed empty pouches. The squad's count is the same at every size, so a run is the run it was. ?nokitdeal = the cards as they were
   BIGSLOT.moves = !q.has('nobigmoves');   // (…and of 10-15 evening: the hammer rides on a man's back, his gun is put away for it, it is wound up and swung as one move, and you take the row from where a stack stands and WALK to a free place beside either jamb — ?nobigmoves = the tools as they stood that morning)
   BIGSLOT.snug = !q.has('nobigsnug');   // (…and with the moves: his gun and the tool each stay in a hand while they are off him — the gun let go as his hands leave it, the tool changing between his back and his fist while the fist is there; ?nobigsnug = the first-pass shares, the tool drawn part way between the two. Looks, and how long your own gun and its light are away: about a sixth of a second more)
   BIGSLOT.shut = !q.has('nobigshut'); BIGSLOT.beside = !q.has('nobigbeside');   // (its two knobs of 10-15: the tools open any shut door, from beside the frame — each off = the build of 10-14's rule)
@@ -480,6 +481,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STICKY.mark': 'TPS_CAMMARK=1',
   'OWNCHARGE.on': 'TPS_OWNCHARGE=1',
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
+  'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',
   'CONDITION.on': 'TPS_CONDITION=1',
