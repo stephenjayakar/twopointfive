@@ -864,8 +864,11 @@ export class Rescue {
   letGo(gd: Guard) { const D = this.defs.get(gd); if (D) { D.released = true; D.crew = 'out'; } }
   /** the floor just outside the hostage room's main door (rescueflush.ts: which man is nearest it) */
   get outsidePoint(): Vec3 { return this.roomPoint('outside'); }
-  /** the floor a metre outside the hostage room's side door (rescueflush.ts: where a man sent round goes first); null on a level with none */
+  /** the floor a metre outside the hostage room's side door; null on a level with none */
   get sideOutside(): Vec3 | null { const n = this.data?.side?.door, d = n ? this.g.doors.byName(n) : undefined; return d ? this.outOf(d, this.bounds, 1.0) : null; }
+  /** THE WAY ROUND to the side door, as the team's own man is sent (entry: the door of the room it is taken from first, where the level names one, then the
+   *  floor outside the side door itself) — rescueflush.ts walks a man of theirs the same marks; empty on a level with no side door */
+  get sideWay(): Vec3[] { const o = this.sideOutside; return o ? [...(this.serverOut ? [v3.copy(this.serverOut)] : []), o] : []; }
   /** who holds the hostages right now: the living man of theirs in the office nearest a living hostage (null = nobody: the clock stands) */
   captor(): Guard | null {
     const B = this.bounds; let best: Guard | null = null, bd = 1e9;

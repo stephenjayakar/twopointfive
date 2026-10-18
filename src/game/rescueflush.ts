@@ -45,19 +45,19 @@ export const RESCUEFLUSH = {
   busySecs: 2,
   /** smoke between him and her thinner than this hides her from him (the bar guards.ts puts between two AI men) */
   smokeK: 0.3,
-  /** a man sent round to the side door has reached it inside this many metres of the floor outside it: he goes on in */
+  /** a man sent round has reached a mark of his way inside this many metres of it: on to the next, and from the side door in */
   atDoorM: 1.8,
 };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 type Goal = 'room' | 'side' | 'noise' | 'out';
-interface Sent { at: number; n: number; goal: Goal }
-export interface RescueFlushSnap { fellAt: number; nextAt: number; goneAt: number; count: number; sent: { id: number; at: number; n: number; goal: Goal }[]; barred: number[] }
+interface Sent { at: number; n: number; goal: Goal; via: Vec3[] }
+export interface RescueFlushSnap { fellAt: number; nextAt: number; goneAt: number; count: number; sent: { id: number; at: number; n: number; goal: Goal; via: number[][] }[]; barred: number[] }
 
 export class RescueFlush {
   /** when the room fell with the team loud (NaN: not yet) · when the next man is due · when one of them found the room empty (NaN: nobody has) · men sent so far */
   fellAt = NaN; nextAt = NaN; goneAt = NaN; count = 0;
-  /** every man sent, his last word's time, how many times, and where to */
+  /** every man sent, his last word's time, how many times, where to, and the marks still ahead of him on a way round (`via`: the first is where he walks now) */
   readonly sent = new Map<Guard, Sent>();
   /** the men a held lane has kept from going, each logged once */
   private readonly barred = new Set<Guard>();
@@ -119,9 +119,11 @@ export class RescueFlush {
     }
     // a man sent round has reached the side door: on through it, for them (no second word: it is the same errand)
     for (const [h, S] of this.sent) {
-      if (S.goal !== 'side' || h.state === 'dead' || h.held) continue; const door = R.sideOutside, to = this.pointOf('room', alive);
-      if (!door || !to || flat(h.char.pos, door) > K.atDoorM) continue;
-      S.goal = 'room'; if (g.time - h.lastSeenT >= K.busySecs && !h.sawFoeThisFrame) { h.lastKnown = v3.copy(to); h.path = []; h.pathGoal = null; R.note(`flush:through:${h.callsign}`); }
+      if (!S.via.length || h.state === 'dead' || h.held || flat(h.char.pos, S.via[0]) > K.atDoorM) continue;
+      if (g.time - h.lastSeenT < K.busySecs || h.sawFoeThisFrame) continue;   // (one of the team in his sights at the mark: the fight is his, the way round waits)
+      S.via.shift(); const to = S.via[0] ?? this.pointOf('room', alive); if (!to) continue;
+      h.lastKnown = v3.copy(to); h.path = []; h.pathGoal = null;
+      if (!S.via.length) { S.goal = 'room'; R.note(`flush:through:${h.callsign}`); }   // (at the side door: in by it)
     }
     if (g.time < this.nextAt) return;
     // the next man: never sent before the men who have been, then the nearest to where he would go
@@ -141,8 +143,8 @@ export class RescueFlush {
       // men go round, look and throw there) — so the way that is not held is the one he takes
       const n = this.sent.get(h)?.n ?? 0, a = this.goalOf(this.count, inRoom), b = this.goalOf(this.count + 1, inRoom);
       for (const goal of a === b ? [a] : [a, b]) {
-        const at = this.pointOf(goal, alive); if (!at || laneHolds(g, h, at) || laneWarns(g, h, at)) continue;
-        this.send(h, goal, at, n); this.barred.delete(h);
+        const via = goal === 'side' ? R.sideWay : [], at = via[0] ?? this.pointOf(goal, alive); if (!at || laneHolds(g, h, at) || laneWarns(g, h, at)) continue;
+        this.send(h, goal, at, n, via); this.barred.delete(h);
         this.nextAt = g.time + K.gapSecs; return;
       }
       if (!this.barred.has(h)) { this.barred.add(h); R.note(`flush:lane:${h.callsign}`); }
@@ -156,8 +158,7 @@ export class RescueFlush {
   }
   private pointOf(goal: Goal, alive: Guard[]): Vec3 | null {
     const R = this.R, S = R.data; if (!S) return null;
-    if (goal === 'side') { const o = R.sideOutside; if (o) return o; }   // (the floor outside the side door: `side.hold` is a point INSIDE the room, and the short way to it is the main door)
-    if (goal === 'room' || goal === 'side') {
+    if (goal === 'room' || goal === 'side') {   // (a man sent round walks rescue.sideWay first — tick(): the short way to a point IN the room is the main door)
       const B = R.bounds, v = alive.find(h => inBounds(h.char.pos, B));   // (where he knows they were kept: the room itself once they are not in it)
       return v ? [v.char.pos[0], 0, v.char.pos[2]] : B ? [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2] : null;
     }
@@ -165,14 +166,14 @@ export class RescueFlush {
     return R.ending.out;
   }
   /** let go to hunt it, as rescue.ts lets a roamer go to the noise; and his word on the net (the player's cue: it goes to the radio strip) */
-  private send(h: Guard, goal: Goal, at: Vec3, n: number) {
+  private send(h: Guard, goal: Goal, at: Vec3, n: number, via: Vec3[] = []) {
     const g = this.g, R = this.R, F = g.fight.defs.find(d => d.gd === h);
     R.letGo(h);
     h.hold = false; h.pinned = false;
     if (F) { F.mode = 'free'; F.freeAt = g.time; F.rallyAt = NaN; }
     if (h.script) endGuardScript(h, 'alert');
     h.state = 'alert'; h.awareness = 1; h.reactT = 0; h.lastKnown = v3.copy(at); h.path = []; h.pathGoal = null; resetChase(h);
-    this.sent.set(h, { at: g.time, n: n + 1, goal }); this.count++;
+    this.sent.set(h, { at: g.time, n: n + 1, goal, via: via.map(p => v3.copy(p)) }); this.count++;
     R.note(`flush:${goal}:${h.callsign}`);
     if (n > 0) return;   // (a man's second errand is not announced: one line a man)
     g.say(h, goal === 'room' ? w('it\'s gone quiet in there — I\'m going in for them!', 'it\'s gone quiet in there — i\'m going in for them!')
@@ -182,10 +183,10 @@ export class RescueFlush {
   }
 
   /** the state a save would hold (habit: its pair beside it; no checkpoint is reachable while a rescue is staged, so only the check calls these) */
-  snapshot(): RescueFlushSnap { return { fellAt: this.fellAt, nextAt: this.nextAt, goneAt: this.goneAt, count: this.count, sent: [...this.sent].map(([gd, s]) => ({ id: gd.char.id, at: s.at, n: s.n, goal: s.goal })), barred: [...this.barred].map(gd => gd.char.id) }; }
+  snapshot(): RescueFlushSnap { return { fellAt: this.fellAt, nextAt: this.nextAt, goneAt: this.goneAt, count: this.count, sent: [...this.sent].map(([gd, s]) => ({ id: gd.char.id, at: s.at, n: s.n, goal: s.goal, via: s.via.map(p => [...p]) })), barred: [...this.barred].map(gd => gd.char.id) }; }
   restore(s: RescueFlushSnap) {
     this.fellAt = s.fellAt; this.nextAt = s.nextAt; this.goneAt = s.goneAt; this.count = s.count; this.sent.clear(); this.barred.clear();
-    for (const r of s.sent) { const gd = this.R.hostiles.find(h => h.char.id === r.id); if (gd) this.sent.set(gd, { at: r.at, n: r.n, goal: r.goal }); }
+    for (const r of s.sent) { const gd = this.R.hostiles.find(h => h.char.id === r.id); if (gd) this.sent.set(gd, { at: r.at, n: r.n, goal: r.goal, via: (r.via ?? []).map(p => [p[0], p[1], p[2]] as Vec3) }); }
     for (const id of s.barred ?? []) { const gd = this.R.hostiles.find(h => h.char.id === id); if (gd) this.barred.add(gd); }
   }
 }
