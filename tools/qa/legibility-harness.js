@@ -19,7 +19,7 @@
     vending:   { look: [29.1, 1.0, 13.4], followYaw: 0, close: { yaw: 0.15, pitch: 0.45, dist: 5 }, tile: [760, 330, 300, 260] },          // both machines, front (they face south)
     vendingRefl:{ look: [29.1, 0.0, 14.6], followYaw: 0, close: { yaw: 0.1, pitch: 0.5, dist: 5.5 }, tile: [760, 420, 320, 240] },       // their image in the lino
     monitorRefl:{ look: [26.5, 0.95, 6.05], followYaw: 0, close: { yaw: 0.0, pitch: 0.72, dist: 2.6 }, tile: [655, 350, 470, 230] },     // the manager's dark screen mirroring his desk: the keyboard in the glass (reflections follow-up)
-    stoneDay:  { look: [8.6, 0.35, 19.2], followYaw: 0, close: { yaw: 3.1416, pitch: 0.38, dist: 4.2 }, tile: [980, 620, 440, 200] },     // cartons stood on the sunlit lobby stone (stageStoneDay() first: the breach's daylight, frozen, three cartons moved in)
+    stoneDay:  { look: [8.6, 0.35, 19.2], followYaw: 0, close: { yaw: 3.1416, pitch: 0.38, dist: 4.2 }, tile: [980, 620, 440, 200] },     // cartons stood on the sunlit lobby stone (stageStoneDay() first: the level's daylight, three cartons moved in)
     cabinets:  { look: [24.85, 0.7, 12.75], followYaw: 0, close: { yaw: 0.15, pitch: 0.6, dist: 3.5 }, tile: [820, 400, 200, 200] },      // the two filing cabinets against the corridor partition (drawers face south)
     papers:    { look: [15.4, 0.78, 14.5], followYaw: 0, close: { yaw: 0.3, pitch: 1.0, dist: 2.6 }, tile: [830, 440, 150, 120] },
     whiteboard:{ look: [9.0, 1.4, 4.4], followYaw: 0, close: { yaw: 0, pitch: 0.35, dist: 4.5 }, tile: [640, 330, 500, 200] },            // conference whiteboard (faces south)
@@ -74,11 +74,10 @@
     const summarise = (arr) => { const keys = new Set(); arr.forEach(f => Object.keys(f.passes).forEach(k => keys.add(k))); const out = {}; for (const k of keys) { const xs = arr.map(f => f.passes[k]).filter(x => x !== undefined); out[k] = { med: +med(xs).toFixed(3), p95: +p95(xs).toFixed(3) }; } out.sum = { med: +med(arr.map(f => f.sum)).toFixed(3), p95: +p95(arr.map(f => f.sum)).toFixed(3) }; out.union = { med: +med(arr.map(f => f.union)).toFixed(3), p95: +p95(arr.map(f => f.union)).toFixed(3) }; return out; };
     return { A: summarise(acc.A), B: summarise(acc.B), n: acc.A.length };
   }
-  /** the lobby by DAY with three cartons on the stone (reflections follow-up, view 'stoneDay'): the breach's daylight swapped in and its show frozen where it
-   *  stands (its update replaced — reload the page to get the night back), the first three cardboard props moved onto the stone. Idempotent. */
+  /** the lobby by DAY with three cartons on the stone (reflections follow-up, view 'stoneDay'): the level's daylight variant swapped in
+   *  (__daylight — the removed day showcase used to be started and frozen for this; __daylight(false) puts the night back), the first three cardboard props moved onto the stone. Idempotent. */
   async function stageStoneDay() {
-    if (!window.__breach.active) { window.__breach.start(); await __perf.render(4); }
-    window.__breach.update = () => null;
+    if (!window.__daylight()) { window.__daylight(true); await __perf.render(4); }
     window.__game.props.props.filter(p => p.def.kind === 'cardboard').slice(0, 3).forEach((p, i) => { p.x = 8.0 + i * 0.85; p.z = 19.4 - i * 0.35; p.yaw = 0.3 + i * 0.9; p.dirty = true; p.asleep = true; });
     await __perf.render(4);
   }

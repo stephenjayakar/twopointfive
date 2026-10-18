@@ -1,12 +1,12 @@
 // WAYS IN, LOOKED AT ON THE REAL PAGE: boot the page in headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's own recipe — SwiftShader, no
-// GPU) once per way into the build that is NOT a row of the scenario list — the plain start card, ?solo, ?loadout=, ?demo, ?breach, a ?levelFile= / ?level= with
+// GPU) once per way into the build that is NOT a row of the scenario list — the plain start card, ?solo, ?loadout=, a ?levelFile= / ?level= with
 // no scenario on it — and write down what the page itself says it opened: the card's buttons, the mission list's rows, the level, who is on the floor, whether a
 // scenario or a showcase is up, the console's errors, and what a stretch of the page's own loop does to it. A measuring tool: it edits nothing.
-//   node tools/qa/ways-in-look.cjs <outDir> [name=query[:kind] ...]      kind: plain (default) | card | show
+//   node tools/qa/ways-in-look.cjs <outDir> [name=query[:kind] ...]      kind: plain (default) | card
 //     plain   the card read, then closed (= Start), SECS of the page's loop, the state read again, one still
 //     card    plain, and before closing the card: MISSIONS clicked and the list's words kept (a still of each)
-//     show    a showcase URL: the loop run until the show hands back (the start card up again) or SHOW_CAP sim seconds; where it was every 10 s
-//   env: PORT (the dev server's, default 5199) · SIZE (960x540) · QUALITY (verylow) · SECS (20) · SHOW_CAP (300) · FRAMES (drawn frames a still, 2)
+//     (the `show` kind and the ?demo / ?breach jobs went with the two showcases)
+//   env: PORT (the dev server's, default 5199) · SIZE (960x540) · QUALITY (verylow) · SECS (20) · FRAMES (drawn frames a still, 2)
 //   With no jobs: the full round (JOBS below).
 // The smoke solver is switched off and its 15 pipelines' compile failures are counted as noise, exactly as page-look.cjs does and for its reason.
 // Slow by nature: a page takes a minute and a half to boot here, a drawn frame 5–15 s. Between stills the loop runs with the renderer stubbed out.
@@ -15,15 +15,15 @@ const fs = require('fs');
 const path = require('path');
 
 const outDir = process.argv[2] || 'ways-in-look';
-const JOBS = ['plain=:card', 'solo=solo', 'loadout=loadout=solo-night', 'demo=demo:show', 'breach=breach:show',
+const JOBS = ['plain=:card', 'solo=solo', 'loadout=loadout=solo-night',
   'kityard=levelFile=kit-yard.json', 'kityard-rc=levelFile=kit-yard.json&roomclear&squad4', 'testrooms=levelFile=test-rooms.json', 'testrooms-rc=levelFile=test-rooms.json&roomclear',
   'testrooms-rescue=levelFile=test-rooms.json&rescue', 'relief=level=relief', 'relief-file=levelFile=office-relief.json',
   'local=level=local', 'nofile=levelFile=no-such-level.json'];
 const jobs = (process.argv.length > 3 ? process.argv.slice(3) : JOBS).map(a => { const i = a.indexOf('='), name = i < 0 ? a : a.slice(0, i); let query = i < 0 ? '' : a.slice(i + 1), kind = 'plain';
-  const m = query.match(/:(plain|card|show)$/); if (m) { kind = m[1]; query = query.slice(0, -m[0].length); } return { name, query, kind }; });
+  const m = query.match(/:(plain|card)$/); if (m) { kind = m[1]; query = query.slice(0, -m[0].length); } return { name, query, kind }; });
 const PORT = process.env.PORT || 5199;
 const [W, H] = (process.env.SIZE || '960x540').split('x').map(Number);
-const QUALITY = process.env.QUALITY || 'verylow', SECS = Number(process.env.SECS || 20), SHOW_CAP = Number(process.env.SHOW_CAP || 300), FRAMES = Number(process.env.FRAMES || 2);
+const QUALITY = process.env.QUALITY || 'verylow', SECS = Number(process.env.SECS || 20), FRAMES = Number(process.env.FRAMES || 2);
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/, NOISE_MAX = 80;
 const T0 = Date.now(); const log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -49,7 +49,7 @@ const SNAP = () => {
     time: +g.time.toFixed(1), stage: g.mission && g.mission.stage, guards: g.guards.map(x => `${x.callsign}:${x.team}:${x.state}`), civilians: (g.civilians || []).length,
     doors: g.doors.list.length, statics: (g.world && g.world.statics || []).length, spawn: g.player.char.pos.map(v => +v.toFixed(1)),
     scenario: g.roomClear && g.roomClear.active ? 'roomclear' : g.nightBreach && g.nightBreach.active ? 'nightbreach' : g.rescue && g.rescue.active ? 'rescue' : null,
-    show: D && D.showing ? (D.frame && D.frame.program || true) : null, caption: D && D.frame && D.frame.caption || null, daylight: !!(g.level && g.level.daylight && document.body.classList.contains('breaching')),
+    show: D && D.showing ? (D.frame && D.frame.program || true) : null, caption: D && D.frame && D.frame.caption || null, daylight: !!(window.__daylight && window.__daylight()),
     fog: g.fogOfWar && g.fogOfWar.on, msg: g.message || null, bodyClass: document.body.className, down: g.player.down, fatal: txt(document.getElementById('fatal')) };
 };
 
@@ -71,7 +71,7 @@ const SNAP = () => {
       log(job.name, 'goto', url); await page.goto(url);
       const ready = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return { fatal: document.getElementById('fatal')?.textContent || '', pipelines: window.__boot?.pipelines }; });
       log(job.name, 'ready', JSON.stringify(ready)); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
-      await page.waitForTimeout(2500);   // (?demo starts its show a second and a half after boot)
+      await page.waitForTimeout(2500);
       await page.evaluate(() => { window.__smoke.params.enabled = false; });
       R.boot = await page.evaluate(SNAP); log(job.name, 'boot', JSON.stringify(R.boot)); await shot('boot');
       if (job.kind === 'card') {
@@ -83,19 +83,12 @@ const SNAP = () => {
         R.missions.clicked = clicked; log(job.name, 'missions', `${R.missions.links.length} links`); await shot('missions');
         await page.keyboard.press('Escape'); await page.waitForTimeout(200);
       }
-      if (job.kind === 'show') {
-        R.timeline = []; let threw = null, back = false;
-        for (let s = 0; s < SHOW_CAP && !threw && !back; s += 10) { threw = await page.evaluate(PLAY, 10); const z = await page.evaluate(SNAP); R.timeline.push({ t: z.time, show: z.show, menu: z.menu, caption: z.caption, guards: z.guards.length });
-          if (s === 30 || s === 90) { await page.evaluate(DRAW, FRAMES); await shot(`at${s + 10}`); }
-          back = !z.show && z.menu === 'start'; }
-        if (threw) R.errors.push('play threw: ' + threw);
-        R.end = await page.evaluate(SNAP); R.handedBack = back; log(job.name, 'show', JSON.stringify({ back, last: R.timeline[R.timeline.length - 1] })); await shot('end');
-      } else {
+      {
         if (R.boot.menu === 'start') await page.evaluate(() => window.__menu.close());   // (= the card's Start)
         let threw = await page.evaluate(PLAY, SECS); if (threw) R.errors.push('play threw: ' + threw);
         R.played = await page.evaluate(SNAP); log(job.name, 'played', JSON.stringify(R.played));
         await page.evaluate(DRAW, FRAMES); await shot('played');
-        if (job.name === 'solo') {   // the P key on a floor in play: it must start nothing (src/game/showkey.ts) — afterP.show stays null
+        if (job.name === 'solo') {   // the P key on a floor in play: it must start nothing (main.ts: P only stops a running tour) — afterP.show stays null
           await page.evaluate(() => { window.__input.pressed.add('KeyP'); }); threw = await page.evaluate(PLAY, 3); if (threw) R.errors.push('play threw (P): ' + threw);
           R.afterP = await page.evaluate(SNAP); log(job.name, 'after P', JSON.stringify({ show: R.afterP.show, menu: R.afterP.menu }));
         }

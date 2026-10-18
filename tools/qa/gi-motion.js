@@ -1,4 +1,4 @@
-// GI-IN-MOTION lane (docs/internal/gi-motion.md): the pane-side instrument that reproduces the two shots of the maintainer's 08-10 recording — 'still a bit too much
+// GI-IN-MOTION lane (docs/internal/gi-motion.md): the pane-side instrument that reproduces the first of the two shots of the maintainer's 08-10 recording — 'still a bit too much
 // noise in motion', analysed frame by frame as the INDIRECT term re-converging under camera / actor motion — and puts numbers on it. Dev only:
 //   `await import('/qa/gi-motion.js'); await __gim.boot()` on a `?paused&quality=<tier>&mute` boot of THIS lane's server (it pulls in perf-harness / perf-frames / sharp-harness).
 //
@@ -6,8 +6,8 @@
 //                                 (x 14–18) throws on the cubicle floor — the street lamp's warm pool + the moon, cut by the mullions' diagonal shadows — with the FOLLOW camera
 //                                 (released pin: damping 4, aim lead, yaw 160°, pitch 55°, dist 21 = the gameplay framing that shows the patch, the stripes, the desks and the
 //                                 unlit floor under the sill) panning after him. Static-in-world floor tiles: inside a dark stripe, the unlit floor by the wall, the unlit aisle.
-//   S2 'daylight stack'           `__breach.start()` stepped deterministically to the STACK shot (breach.ts shot 2: pinned low by the break room's west door) while Blue One walks
-//                                 the last metres along the wall — the wall behind him is lit by sun bounce + sky only; tile = that wall minus his silhouette ± 8 px.
+//   (S2 'daylight stack' — the day showcase's breach stepped to its stack shot, the sunlit wall behind Blue One — went with the showcase: there is no staged daylight scene to step to.
+//   docs/internal/gi-motion.md keeps its numbers.)
 // Per run: 24 consecutive OUTPUT frames read back losslessly (the offscreen target, exactly what was rendered — no re-render), the camera's unjittered view-projection per frame,
 // every actor's screen box per frame. Metrics per tile (a world-space quad sampled on a grid ≈ 1 output px apart, RE-PROJECTED EVERY FRAME through that frame's matrix, so
 // the surface is measured, not the pan): BLOTCH FLOW = per-point temporal sd of 8-bit luma over the sequence (mean over points), absolute and ÷ the tile's mean luma;
@@ -16,7 +16,7 @@
 // and 3 (direct only) for attribution. Everything under whatever engine.settings hold (variants = settings bundles, __gim.apply).
 //   __gim.boot({ framing })        framing 'ref' = 1280×720 CSS at dpr 2 (high: 1368×770 → 1777×1000, every lane's reference) | 'maint' = the maintainer's window (high: 788×770 → 1024×1000)
 //   __gim.apply(name | {…})        settings bundle over the boot defaults ('main', 'old', 'B', 'C', 'BC', … VARIANTS)
-//   __gim.s1(opts) / s2(opts)      run a scene → Seq (kept in __gim.seqs[key]); opts.view = 0 | 4 | 3 (composite / indirect only / direct only)
+//   __gim.s1(opts)                 run the scene → Seq (kept in __gim.seqs[key]); opts.view = 0 | 4 | 3 (composite / indirect only / direct only)
 //   __gim.metrics(seq)             per-tile numbers; __gim.crops(seq, tag) posts crops + boil maps + one annotated frame
 //   __gim.run(tag, { scenes, views, png })   fire-and-forget: apply → scenes × views → metrics + crops → docs/perf/gim-<tag>.json; poll __gim.busy / __gim.res[tag]
 (async () => {
@@ -155,11 +155,6 @@
       { name: 'litFloor', o: [14.3, 0.012, 22.5], u: [0.5, 0, 0], v: [0, 0, 0.5], note: 'CONTROL: fully lit floor west of Sam (direct-dominated)' },
       { name: 'sillWall', o: [16.7, 0.15, 23.935], u: [1.3, 0, 0], v: [0, 0.6, 0], note: "the south wall's inner face BELOW the window (faces north: the lamp cannot reach it) — lit by the floor pool's bounce: the GI-dominated tile" },
     ],
-    s2: [
-      { name: 'wall', o: [27.94, 0.25, 18.35], u: [0, 0, 1.9], v: [0, 1.55, 0], wallX: true, note: "the break room's west wall (x = 27.94 face) behind Blue One, from beside the door frame south; the two operatives' silhouettes ± 8 px excluded per frame" },
-      { name: 'wallHigh', o: [27.94, 1.35, 18.4], u: [0, 0, 1.8], v: [0, 0.7, 0], wallX: true, note: 'the upper band of that wall (over his head most frames: nearly nothing excluded)' },
-      { name: 'door', o: [27.95, 0.3, 17.15], u: [0, 0, 0.8], v: [0, 1.5, 0], wallX: true, note: 'the shut leaf in the same wall, north of the men (never occluded)' },
-    ],
   };
   /** fix a tile's sampling grid from frame 0's projection: ≈ 1 output px per sample along each edge (≥ 8) */
   function gridOf(tile, vp, w, h) {
@@ -282,7 +277,6 @@
   async function s1(opts = {}) {
     const { frames = 24, view = 0, settle = S1.settle, walk = 1, keep = true } = opts;
     const g = G(), cam = window.__cam; window.__menu?.close(); seed();
-    if (window.__breach?.active) window.__breach.stop();
     setView(view);
     g.puppet = null;
     window.__stage(null, { park: true, player: { pos: S1.start, yaw: Math.PI / 2, crouch: false, holstered: true, invisible: false } });
@@ -309,7 +303,7 @@
   /** S1 STILL control: the same view with Sam standing (invisible) and the camera pinned where the pan's middle frame had it — the metric's floor (what a still picture measures) */
   async function s1still(opts = {}) {
     const { frames = 24, view = 0, keep = true } = opts;
-    const g = G(); window.__menu?.close(); seed(); if (window.__breach?.active) window.__breach.stop();
+    const g = G(); window.__menu?.close(); seed();
     setView(view); g.puppet = null;
     window.__stage({ look: [16.9, 0, 22.35], yaw: S1.yaw, pitch: S1.pitch, dist: S1.dist }, { park: true, player: { pos: [10, 0, 12], yaw: 1.57, holstered: true, invisible: true } });
     window.__resetClock?.(); seed(true);
@@ -320,73 +314,19 @@
     endView();
     return seq;
   }
-  const S2 = { at: 496 };   // breach frame the take starts after (phase 'stack' from 436: Blue One walks the last metres along the wall through 496–520, planted by ~560)
-  /** S2: the breach from a FRESH boot (its cast draws on Math.random at hire; seeded here, phases zeroed) stepped to S2.at, then `frames`. view as s1. A second call in one page re-runs the show
-   *  (stop → start): close to, not bit-identical with, the first — use one boot per variant for the composite numbers, re-runs for the debug views. */
-  async function s2(opts = {}) {
-    const { frames = 24, view = 0, keep = true, at = S2.at } = opts;
-    const g = G(); window.__menu?.close(); seed();
-    if (window.__breach.active) { window.__breach.stop(); for (let i = 0; i < 5; i++) await gameStep(); }
-    setView(view); g.puppet = null;
-    window.__stage(null, {});
-    window.__resetClock?.(); seed(true);   // the same Math.random stream at the hire and the same jitter / dice sequence every run
-    window.__breach.start();
-    for (const gd of g.guards) gd.char.anim.phase = 0; g.player.char.anim.phase = 0; __perf.still();
-    for (let i = 0; i < at; i++) await gameStep();
-    const seq = { scene: 's2', view, w: 0, h: 0, frames: [], desc: describe(), phase0: window.__breach.drill?.phase, opPath: [] };
-    for (let f = 0; f < frames; f++) {
-      await gameStep();
-      const rec = await record(() => g.guards.slice(0, 2).map(gd => gd.char.pos)); seq.w = rec.fr.w; seq.h = rec.fr.h; seq.frames.push(rec); seq.opPath.push(g.guards[0].char.pos.map(r3));   // (the two operatives are in front of the wall; the three hostiles stand behind it, in the room — their boxes must not blank the wall)
-    }
-    seq.phase1 = window.__breach.drill?.phase;
-    window.__breach.stop(); for (let i = 0; i < 3; i++) await gameStep();
-    if (keep) I.seqs[`s2v${view}`] = seq;
-    endView();
-    return seq;
-  }
-
-  // ------------------------------------------------------------------ (A) the climb on THIS machine: measure the calm union per rung, then run the real ladder against those numbers
-  /** serialized calm-still union (med / p95) at each rung the climb can reach from the current preset: scales from the tier's start to 1.0, then gather ½, then vol ½ → [{ rung, scale, g3, v4, union, p95, passes }] */
-  async function costCurve(opts = {}) {
-    const { n = 30, warm = 10, extra = {} } = opts; const s = S(); const rows = [];
-    apply('main', extra); await __pf.stageStill(); await __perf.render(20);
-    const start = s.renderScale; const scales = []; for (let v = start; v < 1.0 + 1e-6; v = +(Math.min(1.0, Math.floor(v / 0.05 + 1e-6) * 0.05 + 0.05)).toFixed(2)) { scales.push(+v.toFixed(2)); if (v >= 1.0 - 1e-6) break; }
-    if (scales[scales.length - 1] < 1.0) scales.push(1.0);
-    const measure = async (label) => { await __perf.render(warm); const c = await window.__sh.cost(n, 4); rows.push({ rung: label, scale: s.renderScale, g3: s.gatherThird, v4: s.volQuarter, maxH: s.maxInternalHeight, res: `${E().width}×${E().height}→${E().outWidth}×${E().outHeight}`, union: c.unionMed, p95: c.unionP95, sum: c.sumMed, passes: c.passes }); };
-    for (const sc of scales) { s.renderScale = sc; await measure(`scale ${sc.toFixed(2)}`); }
-    if (s.gatherThird) { s.gatherThird = false; await measure('gather ½'); }
-    if (s.volQuarter) { s.volQuarter = false; await measure('vol ½'); }
-    apply('main', extra); await __perf.render(4);
-    return rows;
-  }
-  /** the REAL ladder (ui/quality.ts Quality.sample) driven window by window at `fps` with the union looked up from a costCurve() for whatever rung it stands on (+ `slack` ms for what a presented frame
-   *  adds over a serialized still) → the log of its changes and where it settles after `secs` */
-  function climbSim(curve, opts = {}) {
-    const { secs = 90, fps = 60, slack = 0.5 } = opts; const q = window.__quality, s = S();
-    const unionOf = () => { const r = curve.find(c => Math.abs(c.scale - s.renderScale) < 0.01 && c.g3 === s.gatherThird && c.v4 === s.volQuarter) ?? curve.filter(c => c.g3 === s.gatherThird && c.v4 === s.volQuarter).sort((a, b) => Math.abs(a.scale - s.renderScale) - Math.abs(b.scale - s.renderScale))[0] ?? curve[curve.length - 1]; return r.union + slack; };
-    const wasAuto = q.auto, wasAdaptive = q.adaptive, wasAllowed = q.climbAllowed, wasAim = s.ladderAim; q.auto = false; q.adaptive = true; q.climbAllowed = true; s.ladderAim = 0;   /* (the recorded climb curves are the as-now ladder's: ?aim=asnow; the page's default is hold 60 since 10-10) */ q.calib && (q.calib.done = true);   // (the harness boots under ?quality=, which holds the climb off for the visit — main.ts; the simulation is of a menu-pinned / auto machine, so allow it here and put the flag back)
-    apply('main'); q.apply(q.current);
-    const log = []; let last = '';
-    for (let w = 0; w < secs; w++) { const u = unionOf(); for (let i = 0; i < fps; i++) q.sample(1 / fps, u); const now = `${s.renderScale.toFixed(2)} g3 ${s.gatherThird} v4 ${s.volQuarter} maxH ${s.maxInternalHeight}`; if (now !== last) { log.push({ t: w + 1, state: now, union: u, note: q.lastChange }); last = now; } }
-    const settled = { scale: s.renderScale, gatherThird: s.gatherThird, volQuarter: s.volQuarter, maxH: s.maxInternalHeight, union: unionOf(), climb: q.climbState };
-    q.auto = wasAuto; q.adaptive = wasAdaptive; q.climbAllowed = wasAllowed; s.ladderAim = wasAim; apply('main'); q.apply(q.current);
-    return { settled, log };
-  }
-  async function save(name, obj) { const port = Number(window.__shotPort) || 5174; const r = await fetch(`http://localhost:${port}/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body: JSON.stringify(obj), headers: { 'Content-Type': 'application/json' } }); return r.status; }
-  const text = (m) => Object.entries(m.tiles).map(([n, t]) => t.error ? `${n}: ${t.error}` : `${n.padEnd(11)} L ${String(t.meanL).padStart(6)}  sd ${t.sdAbs} (${(t.sdRel * 100).toFixed(1)} %)  low ${t.sdLow}  |Δ| ${t.absDelta}  boil ${t.boil}  size ${t.sizePx} px  cov ${t.coverage}`).join('\n');
   const I = {
-    VARIANTS, TILES, FRAMINGS, S1, S2, seqs: {}, res: {}, busy: null, err: null,
-    boot, apply, describe, s1, s1still, s2, metrics: m => strip(metrics(m)), crops, pngs, save, gameStep, readback, projectVP, text, costCurve, climbSim,
-    /** ONE VARIANT, fire-and-forget: apply(variant) → for each scene: view 0 first (the composite — S2's first run of the boot), then the debug views → metrics + crops (+ pngs) → __gim.res[tag], docs/perf/gim-<tag>.json */
+    VARIANTS, TILES, FRAMINGS, S1, seqs: {}, res: {}, busy: null, err: null,
+    boot, apply, describe, s1, s1still, metrics: m => strip(metrics(m)), crops, pngs, save, gameStep, readback, projectVP, text, costCurve, climbSim,
+    /** ONE VARIANT, fire-and-forget: apply(variant) → for each scene: view 0 first (the composite), then the debug views → metrics + crops (+ pngs) → __gim.res[tag], docs/perf/gim-<tag>.json */
     run(tag, opts = {}) {
-      const { variant = 'main', extra = {}, scenes = ['s1', 's2'], views = [0, 'D', 4, 3], png = false, still = true, cropsFor = [0, 4, 3], prefix = 'gim', file = 'gim-' } = opts;   // (prefix / file: crops → <prefix>_<tag>_…, numbers → docs/perf/<file><tag>.json — a lane reusing this instrument keeps its own names)
+      const { variant = 'main', extra = {}, scenes = ['s1'], views = [0, 'D', 4, 3], png = false, still = true, cropsFor = [0, 4, 3], prefix = 'gim', file = 'gim-' } = opts;   // (prefix / file: crops → <prefix>_<tag>_…, numbers → docs/perf/<file><tag>.json — a lane reusing this instrument keeps its own names)
       I.busy = { tag, at: 'start' }; I.err = null;
       (async () => {
         try {
           const out = { tag, variant, extra, applied: apply(variant, extra), q: window.__quality?.current, framing, t0: performance.now(), scenes: {} };
           for (const sc of scenes) for (const v of views) {
             I.busy.at = `${sc} v${v}`;
-            const seq = sc === 's1' ? await s1({ view: v }) : await s2({ view: v });
+            if (sc !== 's1') { console.warn(`gi-motion: no scene '${sc}' (s1 is the only one since the day showcase went)`); continue; } const seq = await s1({ view: v });
             const m = metrics(seq); const key = `${sc}v${v}`;
             out.scenes[key] = { ...strip(m), samPath: seq.samPath, opPath: seq.opPath, camPan: seq.camPan, phase: [seq.phase0, seq.phase1] };
             if (cropsFor.includes(v)) out.scenes[key].crops = await crops(seq, tag, { m, prefix });

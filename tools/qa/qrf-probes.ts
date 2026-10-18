@@ -1,6 +1,6 @@
 // The 'qrf' probe family (run through probes.ts: `bun run tools/qa/probes.ts qrf | qrf-trigger | qrf-timeline | qrf-element | qrf-wave | qrf-reset | qrf-gating |
 // qrf-limits | qrf-perimeter [--verbose]`): the response to going loud (src/game/qrf.ts) — what calls it (a locked-down floor that has HEARD Sam's gunfire, or found
-// two men down; never the suppressed pistol's odd noise, never under the tour or the breach), the radio telegraph's timings, the west stair door (steel: locked
+// two men down; never the suppressed pistol's odd noise, never under the tour), the radio telegraph's timings, the west stair door (steel: locked
 // to Sam, no pick, a boot only rings off it; thrown open from the landing on arrival), the four-man element (spawned as ordered, files in, moves as one, stacks /
 // bangs / flows into the room holding the fix, fights on sight and re-forms when it goes cold), one wave a night, everything back as it was on a restart, the
 // renderer's character / light budgets held, and the perimeter tier (its three triggers, the outside posts taken facing the doors, the lot's lamps up and back,
@@ -247,9 +247,9 @@ export async function qrfReset() {
   return F.done();
 }
 
-// ================================================================ (f) never under the tour or the breach
+// ================================================================ (f) never under the tour
 export async function qrfGating() {
-  const F = family('qrf-gating: the showcase tour (its firefight stop fires real rounds on a floor it locks down) and the daytime breach never request the response team; nor does anything with the AI off');
+  const F = family('qrf-gating: the showcase tour (its firefight stop fires real rounds on a floor it locks down) never requests the response team; nor does anything with the AI off');
   { Math.random = seeded(61); const W = await standUp(); const { game, cam, input } = W; game.tune.qrfEta = 15;
     const { Demo } = await import(`${ROOT}/src/game/demo.ts`);
     const demo = new Demo(game, cam, W.smoke, input);
@@ -258,12 +258,6 @@ export async function qrfGating() {
     try { demo.start(); for (frames = 0; frames < 60 * 240 && demo.active; frames++) { const p = demo.update(DT); W.step(DT, p); if (game.qrf.state !== 'idle') everState = game.qrf.state; everUnits = Math.max(everUnits, units(game).length); escMax = Math.max(escMax, game.escalation); shots += game.events.filter((e: any) => e.time === game.time && (e.kind === 'shot' || e.kind === 'guardShot') && (e.level ?? 0) >= 1).length; } }
     catch (e: any) { exc = String(e?.stack ?? e).split('\n').slice(0, 2).join(' ⏎ '); }
     F.verdict(!exc && finished && everState === 'idle' && everUnits === 0, 'the tour, all stops to the hand-over: QRF idle throughout, no unit ever, no exception', `${exc || `${frames} frames`} · finished ${finished} · qrf ever ${everState} · units ever ${everUnits} · level-1 reports fired under it ${shots} · alarm peaked ${escMax}`); }
-  { Math.random = seeded(62); const W = await standUp(); const { game, cam, input } = W; game.tune.qrfEta = 15;
-    const { Breach } = await import(`${ROOT}/src/game/breach.ts`);
-    const breach = new Breach(game, cam, W.smoke, input); let everState = 'idle', qrfUnits = 0, exc = '', frames = 0;
-    try { breach.start(); while (breach.active && frames < 60 * 80) { const p = breach.update(DT); if (!breach.active) break; W.step(DT, p); frames++; if (game.qrf.state !== 'idle') everState = game.qrf.state; qrfUnits = Math.max(qrfUnits, game.qrf.men.length); } if (breach.active) breach.stop(); }
-    catch (e: any) { exc = String(e?.stack ?? e).split('\n').slice(0, 2).join(' ⏎ '); }
-    F.verdict(!exc && everState === 'idle' && qrfUnits === 0 && game.qrf.state === 'idle', 'the breach, run to its end: QRF idle throughout (its own five units are the breach\'s), idle after', `${exc || `${frames} frames`} · qrf ever ${everState} · qrf men ever ${qrfUnits} · after: ${game.qrf.state}, ${units(game).length} units`); }
   { const W = await fresh(63); const { game } = W; game.aiEnabled = false; goLoud(W); step(W, 60, 0.5);
     F.verdict(game.qrf.state === 'idle', 'AI off: lockdown + rifle fire → nothing', game.qrf.state); }
   return F.done();

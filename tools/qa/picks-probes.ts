@@ -176,7 +176,7 @@ export async function picksList(): Promise<boolean> {
   { const withFlags = L.find(p => (p.flags ?? []).length), h = withFlags ? P.pickHref(withFlags, '?mute') : null, left = h ? P.pickLeaveSearch(h) : '', lq = new URLSearchParams(left);
     const ok = !withFlags || (!lq.has('pick') && withFlags.flags.every((f: string) => !lq.has(f.split('=')[0])) && lq.has('difficulty') && lq.has('mute') && !!specOfQuery(lq));
     const same = ['?levelFile=depot.json&roomclear&squad4&pair', '?pair&pick=nothing', ''].every(u => P.pickLeaveSearch(u) === u);
-    const names = P.namesMission('?roomclear') && P.namesMission('?solo&mute') && P.namesMission('?demo') && !P.namesMission('?mute&quality=high') && !P.namesMission('?squad=3') && !P.namesMission('') && L.every(p => P.namesMission(P.pickHref(p, '')));
+    const names = P.namesMission('?roomclear') && P.namesMission('?solo&mute') && !P.namesMission('?demo') && !P.namesMission('?mute&quality=high') && !P.namesMission('?squad=3') && !P.namesMission('') && L.every(p => P.namesMission(P.pickHref(p, '')));
     F.verdict(ok && same && names, "the mission list opened off a pick's page builds its links from that page's URL WITHOUT the pick's name and its own switches (the difficulty the list shows stays); any other URL is handed over as it is; and a URL that names a mission, a pick's included, is told from one that does not",
       `${h ?? 'no row has switches'} → '${left}' · others untouched ${same} · names a mission ${names}`); }
   // ---- what no row of today's list does, held on a list made up for it: a row with a team size and switches of its own (a quiet pair), and the walk
@@ -222,7 +222,7 @@ export async function picksList(): Promise<boolean> {
 }
 
 // ───────────────────────────────────────────────────────────── card ─────────────────────────────────────────────────────────────
-const menuDeps = (W: any, extra: any = {}) => ({ engine: W.engine, game: W.game, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, startTour() {}, onStart() {}, ...extra });
+const menuDeps = (W: any, extra: any = {}) => ({ engine: W.engine, game: W.game, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true }, onStart() {}, ...extra });
 /** a localStorage for the length of `fn` (the harness has none): what the card keeps per machine */
 async function withStore<T>(fn: (store: Map<string, string>) => Promise<T> | T): Promise<T> {
   const G = globalThis as any, had = 'localStorage' in G, prev = G.localStorage, m = new Map<string, string>();
@@ -296,7 +296,7 @@ export async function picksCard(): Promise<boolean> {
           `after ${L[0].id}: ${nx?.textContent ?? 'none'} → ${loads[0] ?? 'no load'} · after the last: ${last?.textContent ?? 'none'} · ?roomclear: ${plain?.textContent ?? 'none'} · the pick's URL with no scenario up: ${notUp?.textContent ?? 'none'}`); }
       // ---- a page that is booting a mission: no rows on its cards
       { const loc = (globalThis as any).location, was = loc.search, seen: string[] = [];
-        for (const u of ['?levelFile=depot.json&roomclear&squad4&quality=high', P.pickHref(L[0], SEARCH), '?solo', '?demo']) { loc.search = u; menu.open('start'); const a = pickRowsOf(root).length, mp = buttonOf(root, 'Missions')?.cls.has('primary'); const bc = bootCard(); const b = pickRowsOf(root).length; bc.off(); seen.push(`${u}: ${a} / ${b}${mp ? '' : ' (Missions not primary)'}`); }
+        for (const u of ['?levelFile=depot.json&roomclear&squad4&quality=high', P.pickHref(L[0], SEARCH), '?solo']) { loc.search = u; menu.open('start'); const a = pickRowsOf(root).length, mp = buttonOf(root, 'Missions')?.cls.has('primary'); const bc = bootCard(); const b = pickRowsOf(root).length; bc.off(); seen.push(`${u}: ${a} / ${b}${mp ? '' : ' (Missions not primary)'}`); }
         loc.search = was;
         F.verdict(seen.every(x => / 0 \/ 0$/.test(x)), "a page whose URL names a mission (a pick's own included) carries no rows on its boot card or its start card: it is booting that mission, and Missions is the primary button as before", seen.join(' · ')); }
       // ---- the switch off

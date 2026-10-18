@@ -1,17 +1,20 @@
 // THE BENCHMARK (title ▸ Extras ▸ Benchmark, or ?bench on the game's address): one press, hands off, and the machine it ran on has said what the game costs it —
 // as a file for tuning the quality levels with, and as a text short enough to paste into a message from a machine nobody on the project can sit at.
-// What a run does, in order (Bench.tick is the whole of it):
-//   1. waits, the world held still, while auto quality finishes measuring the machine as it does behind the start card, then times that picture AS THE PAGE OPENED;
-//   2. THE SCENE: the level's loud showcase played live (the page hands it in: the office's day show — a door kicked, a room taken, a fight down the aisles,
-//      smoke), auto quality doing what it does in play: frames a second over the whole of it;
-//   3. at the scene's heavy moment (smoke up) the world is HELD STILL where it stands and that one picture is timed as it stood, then under each preset of auto's
-//      ladder from the bottom up — stopping where one runs under eight frames a second, the ones above it would only be slower — then, everything put back, with
-//      each heavy feature flipped alone: the F8 sweep's rows (ui/perfsweep.ts), one round;
-//   4. the scene plays out, and the card comes up: the GPU by name, the browser, the screen, the BOOT's timings (the freeze at load a person feels — ui/boot.ts),
-//      a line per window and the features that move the frame most. The whole take downloads as the F9 recorder's json (the same file tools/qa/perf-report.ts reads:
-//      its sweep events price every feature properly, and a 'bench' event carries everything on the card).
+// What a run does. It plays A SET OF SCENES (host/benchScenes.ts): real missions on their own floors, each taken by the hands-off player (host/handsoff.ts: the
+// game's own keys and cursor, the game's own camera) on a seed that names the deal and the dice. A level is a page load, so a run is one page per scene: the page
+// hands its lines to the next through the tab's own session store (the page's half: main.ts) and this module plays ONE page's part — a LEG (BenchLeg):
+//   1. waits, the world held still, while auto quality finishes measuring the machine; on the FIRST page it then times that picture AS THE PAGE OPENED;
+//   2. THE SCENE, live, auto quality doing what it does in play: frames a second over the whole of it. On every page but the last that is the page's part: its
+//      line is handed on and the next scene's page loads;
+//   3. on the LAST page, at the scene's heavy moment (rounds in the air, smoke up) the world is HELD STILL where it stands and that one picture is timed as it
+//      stood, then under each preset of auto's ladder from the bottom up — stopping where one runs under eight frames a second, the ones above it would only be
+//      slower — then, everything put back, with each heavy feature flipped alone: the F8 sweep's rows (ui/perfsweep.ts), one round;
+//   4. the scene plays out, and the card comes up: the GPU by name, the browser, the screen, the BOOT's timings of the first page (the freeze at load a person
+//      feels — ui/boot.ts), a line per window and the features that move the frame most. The last page's take downloads as the F9 recorder's json (the same
+//      file tools/qa/perf-report.ts reads: its sweep events price every feature properly, and a 'bench' event carries everything on the card, every scene's line).
 // NOTHING IS SENT ANYWHERE: the text sits in a box with a Copy button and the file lands in the browser's downloads. Esc stops a run and puts everything back.
-// ?bench=N = N seconds measured a window instead of four. A level whose script has no such show is timed on its opening picture alone.
+// ?bench=N = N seconds measured a window instead of four. With no leg handed in (a page of its own, a check) a run is the one page's: steps 1 to 4 on whatever
+// scene the page gives, or on its opening picture alone.
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
 import { AUTO_LADDER, type Quality, type QualityName } from './quality';
@@ -51,7 +54,7 @@ export interface BenchMachine {
   threads?: number; memoryGb?: number; screen?: [number, number]; view?: [number, number]; dpr: number; hz?: number; power?: string;
 }
 export interface BenchStep {
-  /** 'opened' = as the page opened · 'scene' = the showcase, live · 'held' = its heavy moment held still, as it stood · a preset's name (the same picture) */
+  /** 'opened' = as the page opened · 'scene:<id>' = that scene, live ('scene' in a run with no set) · 'held' = the last scene's heavy moment held still, as it stood · a preset's name (the same picture) */
   id: string; label: string;
   /** the quality it ran at, in the page's words ('auto (medium)', a preset's name), its render scale and the size drawn at */
   quality: string; scale: number; res: [number, number]; frames: number;
@@ -66,7 +69,24 @@ export interface BenchBoot { toCard: number; beforeScript: number; shaders: numb
 /** one heavy feature flipped alone on the held picture (a row of the F8 sweep): what the flip GIVES BACK a frame, ms — the GPU's time (null = no GPU timings) and the frame's.
  *  Negative = the flip costs. One round: a few tenths either way is noise (the take's own sweep events, read by tools/qa/perf-report.ts, say the same with the spread) */
 export interface BenchFeature { id: string; label: string; gpu: number | null; ms: number }
-export interface BenchResult { version: 1; at: string; commit?: string; query: string; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
+/** a scene of the run: its word and name, the mission's address it was played on, how it ended in the scene's own words, and its page's boot */
+export interface BenchSceneRun { id: string; name: string; query: string; end?: string; boot?: BenchBoot | null }
+/** `set` + `scenes`: which scenes the run played (absent = a file from before the scenes were floors: the one 'scene' line is the office's day showcase, and its
+ *  numbers are not read against a set's) */
+export interface BenchResult { version: 1; at: string; commit?: string; query: string; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
+/** ONE PAGE'S PART of a run over a set of scenes: what the pages before it measured, and how this page hands on */
+export interface BenchLeg {
+  /** the set's name, this page's scene, its place in the set (0 = the first page), the most seconds it plays */
+  set: string; scene: { id: string; name: string }; index: number; of: number; secs: number;
+  /** what the pages before this one measured and said: their lines, their notes, their scenes, the first page's boot, the times the tab was away */
+  steps: BenchStep[]; notes: string[]; scenes: BenchSceneRun[]; boot?: BenchBoot | null; away?: number;
+  /** not the last page: this page's lines with the earlier ones — the page keeps them and loads the next scene (a throw: they could not be kept — the run ends here) */
+  onward(next: Pick<BenchLeg, 'steps' | 'notes' | 'scenes' | 'boot' | 'away'>): void;
+  /** the run is over on this page (done, or stopped): nothing is carried further */
+  over(): void;
+  /** the card was closed, or the run was stopped with nothing to put on one: the page goes back to where the run was started */
+  closed?(): void;
+}
 
 const median = (a: number[]) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length & 1 ? s[m] : (s[m - 1] + s[m]) / 2; };
 const pct = (a: number[], p: number) => { if (!a.length) return 0; const s = [...a].sort((x, y) => x - y); return s[Math.min(s.length - 1, Math.ceil(p * s.length) - 1)]; };
@@ -100,7 +120,7 @@ export function benchBoot(b: BootSummary | null | undefined): BenchBoot | null {
 export function benchReport(r: BenchResult): string {
   const secs = (ms: number) => ms >= 950 ? `${(ms / 1000).toFixed(1)} s` : `${Math.round(ms)} ms`;
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
-  L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}`);
+  L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
@@ -122,6 +142,7 @@ export function benchReport(r: BenchResult): string {
     if (s.skipped) { L.push(`${s.label.padEnd(22)}not run: ${s.skipped}`); continue; }
     L.push(cols(s.label, `${s.quality} ×${s.scale.toFixed(2)}`, `${s.res[0]}×${s.res[1]}`, s.fps.toFixed(s.fps < 20 ? 1 : 0), `${s.ms.toFixed(1)} (${s.p95.toFixed(1)})`, s.gpu === null ? 'n/a' : s.gpu.toFixed(1), s.cpu.toFixed(1)));
   }
+  { const ends = (r.scenes ?? []).filter(s => s.end).map(s => `${s.id} ${s.end}`); if (ends.length) { L.push(''); row('floors', ends.join(' · ')); } }   // (how each fight went: two machines' numbers are of the same fight only where these agree)
   const top = r.steps.find(s => s.id === 'held' && s.top?.length)?.top ?? r.steps.find(s => s.top?.length)?.top;
   if (top) L.push('', `heaviest GPU passes, ms: ${top.map(([k, v]) => `${k} ${v.toFixed(1)}`).join(' · ')}`);
   if (r.features?.length) {   // the ten that move the frame most, either way (the file has them all)
@@ -207,13 +228,15 @@ export function benchView(keep?: () => boolean): BenchView | null {
 }
 
 
-/** the scene a run plays (the page's: a showcase of the level's script) */
+/** the scene this page plays (the page's: its mission taken by the hands-off player) */
 export interface BenchScene {
   /** start it: null = it runs, else why not */
   start(): string | null;
   active(): boolean; stop(): void;
-  /** its heavy moment is on the screen right now (smoke up) */
+  /** its heavy moment is on the screen right now (rounds in the air, smoke up) */
   heavy(): boolean;
+  /** how it ended, in a few words (asked once it is over) */
+  said?(): string;
 }
 /** the F8 sweep, as the benchmark drives it (the page's PerfSweep) */
 export interface BenchSweep { start(o: Partial<SweepOpts>): string; active(): boolean; flipped(): string; progress(): string; stop(why: string): void;
@@ -254,25 +277,30 @@ export class Bench {
   private plan: Phase[] = []; private at = -1; private steps: BenchStep[] = []; private notes: string[] = []; private features: BenchFeature[] | null = null;
   private t0 = 0; private frames = 0; private segT0 = 0; private segFrames = 0; private measuring = false; private from = 0; private measT0 = 0; private retries = 0; private away = 0;
   private sceneMs = 0; private sceneFrom: [number, number][] = []; private heavyAt = -1; private skip = new Set<number>(); private query = '';
+  /** this page's part of a run over a set (null: the run is this page's alone) · the scene was played · where its line goes among the steps */
+  private leg: BenchLeg | null = null; private played = false; private sceneAt = 0; private scenes: BenchSceneRun[] = []; private boot0: BenchBoot | null | undefined;
   private wins: Win[] = []; private winId = ''; private winFrom = 0; private winFirst = -1; private wasSettled = false;
   private machine: BenchMachine | null = null; private back: (() => void) | null = null; private setPreset: ((p: QualityName) => void) | null = null;
   private keys: ((e: KeyboardEvent) => void) | null = null;
+  /** the card of a run over pages is up */
+  private carded = false;
   constructor(private engine: Engine, private quality: Quality, private rec: PerfRecorder, private deps: BenchDeps = {}) {}
 
   get active(): boolean { return this.state !== 'idle'; }
   /** the world holds still (host/loop.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
    *  picture on every machine — and the presets and the features on the scene's heavy moment */
-  get freezing(): boolean { return this.active && this.state !== 'scene' && this.state !== 'tail'; }
+  get freezing(): boolean { return this.carded || (this.active && this.state !== 'scene' && this.state !== 'tail'); }
   /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (main.ts: no sample() while the world is held, and the boot's
    *  calibration, where the wait gave up on it, picks nothing in the middle of a window; it goes on in the scene) */
   get timing(): boolean { return this.state === 'opened' || this.state === 'held' || this.state === 'sweep'; }
   get progress(): string { return this.active ? this.state : this.last; }
 
-  start(o: Partial<BenchOpts> = {}): string {
+  start(o: Partial<BenchOpts> = {}, leg: BenchLeg | null = null): string {
     if (this.active) return 'already running';
     const no = this.rec.recording ? 'a recording is running' : this.deps.blocked?.() ?? null; if (no) return `not now: ${no}`;
     this.opts = { ...BENCH_DEFAULTS, ...o };
-    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = []; this.notes = []; this.features = null; this.away = 0;
+    this.leg = leg; this.played = false; this.sceneAt = 0; this.scenes = leg ? [...leg.scenes] : []; this.boot0 = leg && leg.index > 0 ? leg.boot : undefined;
+    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; this.features = null; this.away = leg?.away ?? 0;
     this.sceneFrom = []; this.heavyAt = -1; this.skip.clear(); this.wins = []; this.query = typeof location !== 'undefined' ? location.search : ''; this.winId = ''; this.sweeping = false;
     this.t0 = performance.now(); this.frames = 0;
     try { const f = this.deps.machine?.(); this.machine = f?.now ?? null; void f?.more.catch(() => {}); } catch { this.machine = null; }
@@ -295,6 +323,7 @@ export class Bench {
       if (this.frames < o.waitFrames || (this.quality.calibrating && waited < o.waitMs)) return;
       if (this.quality.calibrating) this.notes.push(`auto quality was still measuring after ${Math.round(waited / 1000)} s: "as it opened" is its starting point, not its pick`);
       this.rec.start('benchmark (ui/bench.ts): the opening picture held still, the scene live, its heavy moment held still under each preset and each sweep row; the bench event at the end carries the report', BENCH_FRAMES);
+      if (this.leg && this.leg.index > 0) { this.scene(); return; }   // (a later page of a set: its opening picture is not a line of the run)
       this.go('opened'); this.plan = [{ id: 'opened', preset: null }]; this.at = -1; this.next(); return;
     }
     if (!this.rec.recording) { this.finish('the recorder stopped', false); return; }
@@ -307,14 +336,14 @@ export class Bench {
         const S = this.deps.scene!, room = this.rec.framesLeft > 600;
         if (away) this.skip.add(this.rec.frameCount - 1); else this.sceneMs += rawDt * 1000;
         const t = this.sceneMs;
-        if (!S.active()) { this.sceneEnd(); if (this.state === 'scene') this.hold(); else this.finish('done', true); return; }   // (it ended before its heavy moment came: the picture it left is the one held)
-        if (!room || t >= o.sceneCapMs) { this.notes.push(room ? 'the scene was cut off: it ran past its time' : 'the scene was cut off: the recording was full'); this.sceneEnd(); try { S.stop(); } catch { /* */ } if (this.state === 'scene' && room) this.hold(); else this.finish('done', true); return; }
-        if (this.state === 'scene') {
+        if (!S.active()) { this.sceneEnd(); if (this.state !== 'scene') this.finish('done', true); else if (!this.handOn()) this.hold(); return; }   // (the last page's scene ended before its heavy moment came: the picture it left is the one held)
+        if (!room || t >= o.sceneCapMs) { this.notes.push(room ? 'the scene was cut off: it ran past its time' : 'the scene was cut off: the recording was full'); this.sceneEnd(); try { S.stop(); } catch { /* */ } if (this.state === 'scene' && this.handOn()) return; if (this.state === 'scene' && room) this.hold(); else this.finish('done', true); return; }
+        if (this.state === 'scene' && this.lastLeg) {
           if (this.heavyAt < 0 && S.heavy()) this.heavyAt = t;
           const late = this.heavyAt < 0 && t >= o.heavyCapMs; if (late) this.notes.push(`the scene's heavy moment had not come ${Math.round(t / 1000)} s in: the picture held is the one it showed then`);
           if (late || (this.heavyAt >= 0 && t - this.heavyAt >= o.heavyHoldMs)) { this.sceneEnd(); this.hold(); return; }
         }
-        this.say(this.state === 'scene' ? 0.08 + 0.3 * Math.min(1, t / o.heavyCapMs) : 0.92);
+        this.say(this.state === 'tail' ? 0.92 : this.lastLeg ? 0.08 + 0.3 * Math.min(1, t / o.heavyCapMs) : 0.05 + 0.9 * Math.min(1, t / (1000 * (this.leg?.secs ?? 240))));
         return;
       }
       case 'sweep': {
@@ -331,8 +360,10 @@ export class Bench {
   }
 
   private get settings(): Record<string, unknown> { return this.engine.settings as unknown as Record<string, unknown>; }
-  private say(frac: number): void { this.deps.view?.progress(`Benchmark ${Math.round(100 * frac)} % · Esc stops`); }
-  private labelOf(ph: Phase): string { return ph.preset ? PRESET_LABEL[ph.preset] ?? ph.preset : ph.id === 'opened' ? 'as it opened' : this.sceneFrom.length ? 'the scene held still' : 'held still'; }
+  /** the last page of a set, or a run that is one page's */
+  private get lastLeg(): boolean { return !this.leg || this.leg.index >= this.leg.of - 1; }
+  private say(frac: number): void { const L = this.leg; this.deps.view?.progress(`Benchmark ${Math.round(100 * (L ? (L.index + frac) / L.of : frac))} % · Esc stops`); }
+  private labelOf(ph: Phase): string { return ph.preset ? PRESET_LABEL[ph.preset] ?? ph.preset : ph.id === 'opened' ? 'as it opened' : this.played ? 'the scene held still' : 'held still'; }
 
   // ---- a timed window on a picture held still (the opening picture; the scene's heavy moment as it stood and under each preset)
   private next(): void {
@@ -365,10 +396,33 @@ export class Bench {
 
   // ---- the scene, live
   private scene(): void {
-    const S = this.deps.scene ?? null; let why: string | null = 'this level has no showcase to play';
-    if (S) try { why = S.start(); if (!why && !S.active()) why = 'the showcase did not start'; } catch (e) { why = String(e).slice(0, 80); }
-    if (why) { this.notes.push(`no scene was played (${why}): the opening picture stands in for it`); this.hold(); return; }
-    this.go('scene'); this.sceneMs = 0; this.heavyAt = -1; this.sceneFrom.push([this.rec.frameCount, -1]);
+    const S = this.deps.scene ?? null, L = this.leg; let why: string | null = 'this page has no scene to play';
+    if (S) try { why = S.start(); if (!why && !S.active()) why = 'the scene did not start'; } catch (e) { why = String(e).slice(0, 80); }
+    this.sceneAt = this.steps.length;
+    if (L) this.scenes.push({ id: L.scene.id, name: L.scene.name, query: this.query, boot: benchBoot(this.deps.boot?.() ?? null) });
+    if (why) { this.notes.push(L ? `${L.scene.name} was not played (${why})` : `no scene was played (${why}): the opening picture stands in for it`); if (!this.handOn()) this.hold(); return; }
+    this.go('scene'); this.played = true; this.sceneMs = 0; this.heavyAt = -1; this.sceneFrom.push([this.rec.frameCount, -1]);
+  }
+  /** the scene's line, off the frames of its live stretches, put where it was played among the steps (what it was drawn at is its own last frame's word: auto
+   *  quality runs under it); and how it ended, on its row of the run's scenes */
+  private sceneLine(L: BenchLeg | null = this.leg): void {
+    const fr: PerfFrame[] = []; for (const [a, b] of this.sceneFrom) for (let f = a; f < b; f++) if (!this.skip.has(f)) fr.push(this.rec.frameAt(f));
+    this.sceneFrom = []; this.skip.clear();
+    if (L && this.played) { const row = this.scenes[this.scenes.length - 1]; let said = ''; try { said = this.deps.scene?.said?.() ?? ''; } catch { /* */ } if (row && said) row.end = said; }
+    if (!fr.length) return;
+    const l = fr[fr.length - 1], name = L?.scene.name ?? 'the scene';
+    this.steps.splice(Math.min(this.sceneAt, this.steps.length), 0, { id: L ? `scene:${L.scene.id}` : 'scene', label: L ? name : 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
+    if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during ${name}: ${fr[0].preset} at its start, ${l.preset} at its end`);
+  }
+  /** not the last page of a set: this page's lines go on to the next scene's page (true: handed on — the veil stays up over the load) */
+  private handOn(): boolean {
+    const L = this.leg; if (!L || this.lastLeg) return false;
+    this.sceneEnd(); this.sceneLine();
+    this.go('idle'); this.last = 'next scene'; this.grabKeys(false);
+    if (this.rec.recording) this.rec.stop(false);
+    this.leg = null;
+    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); console.error(e); try { L.closed?.(); } catch { /* */ } }   // (the lines could not be carried: the veil comes down and the page goes back to where the run was started)
+    return true;
   }
   /** the live stretch that just ended (the scene is played in two: up to its heavy moment, and from there to its end) */
   private sceneEnd(): void { const l = this.sceneFrom[this.sceneFrom.length - 1]; if (l && l[1] < 0) l[1] = this.rec.frameCount; }
@@ -429,32 +483,30 @@ export class Bench {
   }
 
   private finish(why: string, done: boolean): void {
-    const timed = this.state !== 'waiting';
+    const timed = this.state !== 'waiting', L = this.leg; this.leg = null;
     if (this.sweeping) { this.sweeping = false; this.winId = ''; this.featuresOf();   // (cut off inside its sweep: the rows it got through are still priced, the one under way is not)
       try { this.deps.sweep?.stop('the benchmark stopped'); } catch { /* */ } }
     this.putBack();
     this.sceneEnd(); if (!done) try { if (this.deps.scene?.active()) this.deps.scene.stop(); } catch { /* */ }
     this.go('idle'); this.last = done ? 'done' : `stopped: ${why}`; this.grabKeys(false);
     const view = this.deps.view ?? null; view?.progress(null);
-    if (!timed) return;   // (stopped before anything was timed: nothing to show)
-    { const fr: PerfFrame[] = []; for (const [a, b] of this.sceneFrom) for (let f = a; f < b; f++) if (!this.skip.has(f)) fr.push(this.rec.frameAt(f));
-      if (fr.length) {   // the scene's line goes second, after the opening picture's; what it was drawn at is its own last frame's word (auto quality runs under it)
-        const l = fr[fr.length - 1];
-        this.steps.splice(Math.min(1, this.steps.length), 0, { id: 'scene', label: 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
-        if (fr[0].preset !== l.preset) this.notes.push(`auto quality moved during the scene: ${fr[0].preset} at its start, ${l.preset} at its end`);
-      } }
-    if (!this.steps.length) { if (this.rec.recording) this.rec.stop(false); return; }   // (stopped inside the first window: no number to show, and no file worth keeping)
+    try { L?.over(); } catch { /* */ }
+    const back = () => { this.carded = false; try { L?.closed?.(); } catch { /* */ } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
+    if (!timed && !this.steps.length) { back(); return; }   // (stopped before anything was timed: nothing to show)
+    this.sceneLine(L);
+    if (!this.steps.length || !timed) { if (this.rec.recording) this.rec.stop(false); if (!this.steps.length) { back(); return; } }   // (stopped inside the first window: no number to show, and no file worth keeping)
     if (this.away) this.notes.push(`the tab was away ${this.away} time${this.away > 1 ? 's' : ''} during the run: a window it hit was started over, a feature timed across it may be off`);
     { const hz = this.deps.hz?.() ?? 0; if (this.machine && hz > 0) this.machine.hz = hz; }
     if (!done) this.notes.push(`stopped early (${why})`);
     const timers = !!this.engine.timer?.enabled;
     if (!timers) this.notes.push('this browser gives no GPU timings: the frame time is the whole story here');
     const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
-      boot: benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
+      ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
     if (this.rec.recording) { this.rec.event('bench', JSON.stringify(res)); this.dump = this.rec.stop(); }   // (the take downloads here, as any F9 one does)
-    view?.show(this.report, () => {}, !!this.dump);
+    this.carded = !!L && !!view;   // (a scene's page: its fight is not left running, hands off and unwatched, under the card — the world holds until the card is closed)
+    view?.show(this.report, back, !!this.dump);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own
    *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (main.ts) */

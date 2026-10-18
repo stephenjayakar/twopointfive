@@ -29,7 +29,7 @@ export class AttentionViz {
     this.root.appendChild(g); return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const bc = document.body.classList, marks = bc.contains('blinded') || bc.contains('breaching') || bc.contains('attract') ? [] : attentionMarks(game);   // (hidden by the page under those, as every mark over a man is)
+    const bc = document.body.classList, marks = bc.contains('blinded') || bc.contains('attract') ? [] : attentionMarks(game);   // (hidden by the page under those, as every mark over a man is)
     // a point out of the view breaks the line there (never a chord across the gap)
     const path = (pts: Vec3[]) => {
       let d = '', run = 0;

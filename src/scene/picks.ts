@@ -153,8 +153,8 @@ export function pickRedirect(search: string, list: Pick[] = PICKS, scenarios: Sc
   const q = new URLSearchParams(search); if (!q.has(PICK_KEY) || specOfQuery(q) || SCENARIO_KEYS.some(k => q.has(k))) return null;
   const p = pickNamed(q.get(PICK_KEY), list); return p ? pickHref(p, search, list, scenarios, difficultyOf(search)) : null;   // (`?pick=1&difficulty=hard` typed by hand: the row at that difficulty)
 }
-/** the URL names something to play (a scenario, the solo night, a showcase): its page boots that, and the cards on it carry no rows */
-export function namesMission(search: string): boolean { const q = new URLSearchParams(search); return !!specOfQuery(q) || q.has(SOLO_KEY) || q.has('demo') || q.has('breach'); }
+/** the URL names something to play (a scenario, the solo night): its page boots that, and the cards on it carry no rows */
+export function namesMission(search: string): boolean { const q = new URLSearchParams(search); return !!specOfQuery(q) || q.has(SOLO_KEY); }
 /** a pick's page handing its URL to the MISSION LIST (ui/missions.ts builds every row's link from the page's query): the pick's name and its own switches
  *  (`pair`, `silentstart` …) come off, so a mission started off the list from a pick's page is not started with another row's switches. The difficulty, the
  *  hour and the weather stay: the list shows them and has its own rows for them. Any other URL: as it is */

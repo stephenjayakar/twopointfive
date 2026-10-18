@@ -61,7 +61,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
 | `breaker` | `{ pos, panel, led }` | box ids |
 | `beacons[]` | `{ id, pos, box }` | `box` = the dome, which MUST be a switchable's box (game.ts slaves the beam to it) |
-| `sky`, `daylight?` | `{ zenith, horizon }`; `{ sun(light), sky, groupsOn, groupsOff, lightsOff, haze, exposure }` | the breach showcase's daytime variant |
+| `sky`, `daylight?` | `{ zenith, horizon }`; `{ sun(light), sky, groupsOn, groupsOff, lightsOff, haze, exposure }` | the level's daytime variant (`lighting.ts setDaylight`, `__daylight`; the editor's 'day' view) |
 | `plans` | `{ roomClear[], breach? }` | `RoomClearPlan` / `BreachPlan` verbatim (see `scene/level.ts`) + `id`; `door` by id |
 
 Ids: `box_NNNN` for anonymous boxes, semantic ones where something points at the box (`fix_desk_lamp`, `sw_vending`,

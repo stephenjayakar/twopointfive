@@ -180,8 +180,8 @@ export async function pickerList(): Promise<boolean> {
     const plain = plainFog(Q('?roomclear')) === false && plainFog(Q('?rescue&fow')) === true && plainFog(Q('?fow&nofow')) === false && plainFog(Q('')) === false;
     F.verdict(bad.length === 0 && plain, 'fog of war by the URL as it always was: on under the room clear and the rescue, off under the night breach, ?fow / ?fogofwar force it on and ?nofow / ?nofogofwar off; with no scenario up only ?fow turns it on',
       cases.map(([t, on]) => `${t || "''"} → ${on ? 'on' : 'off'}`).join(' · ') + (bad.length ? ` — NOT: ${bad.map(c => c[0]).join(', ')}` : '')); }
-  { const e = L[0], a = pickSearch(e, '?demo&mute'), b = pickSearch(e, '?breach&quality=low'), c = pickSearch(e, '?level=relief&mute');
-    F.verdict(a === `${scenarioQuery(e)}&mute` && b === `${scenarioQuery(e)}&quality=low` && c === `${scenarioQuery(e)}&level=relief&mute`, "a row clicked on a showcase page's card does not carry ?demo / ?breach into the scenario (?level= does ride along)", `${a} · ${b} · ${c}`); }
+  { const e = L[0], a = pickSearch(e, '?solo&mute'), b = pickSearch(e, '?loadout=x&quality=low'), c = pickSearch(e, '?level=relief&mute');
+    F.verdict(a === `${scenarioQuery(e)}&mute` && b === `${scenarioQuery(e)}&quality=low` && c === `${scenarioQuery(e)}&level=relief&mute`, "a row clicked on another page's card does not carry that page's own keys (?solo, ?loadout=) into the scenario (?level= does ride along)", `${a} · ${b} · ${c}`); }
   return F.done();
 }
 
@@ -196,7 +196,7 @@ export async function pickerCard(): Promise<boolean> {
       const W = await quiet(() => standUp({ uploadEvery: 4 })); const g = W.game; g.godMode = true;
       let quits = 0;
       const deps: any = { engine: W.engine, game: g, quality: { auto: false, current: 'high', adaptive: true, lastChange: '' }, audio: { volume: { master: 1, sfx: 1, ambience: 1, music: 1 }, setVolumes() {} }, overlay: { showLightDots: true },
-        startTour() {}, onStart() {} };
+        onStart() {} };
       const menu = new Menu(deps);
       menu.setScenario({ current: () => runningScenario(g, null), quit: () => { quits++; quitScenario(g, false); menu.open('start'); } });   // (main.ts's quit minus its page glue: the URL, the camera cut)
       // ---- the start card

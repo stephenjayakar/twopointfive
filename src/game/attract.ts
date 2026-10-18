@@ -34,7 +34,7 @@ export class Attract {
   /** 0‥1 for the page's black veil (main.ts): up for a beat around every cut, as the tour's */
   fade = 0;
   idle = 0; shotI = -1; shotT = 0;
-  /** complete passes through the list this session (main.ts hands over to the showcase tour after the first) */
+  /** complete passes through the list this session (main.ts handed over to a showcase after the first while there was one; nothing reads it now but the hook) */
   loops = 0;
   readonly shots: Vantage[];
   private black = false;    // the opening beat: the veil has been at 1 for one presented frame (only then does anything behind it move)

@@ -48,11 +48,7 @@ const TAGLINE = 'a ray-traced stealth sandbox — every light, shadow and wisp o
 /** the title screen's line under the wordmark */
 const TITLE_LINE = 'Squad tactics and stealth. Every light, shadow and wisp of smoke is live.';
 const TITLE_FOOT = 'W S choose · Enter select · Esc back · ` the debugger';
-/** the two showcase buttons on the start / pause cards — OFF for now (the maintainer, 08-13: 'let's just actually disable both scenes for now (remove from main menu)'); ?demo, ?breach,
- *  the P key and __night / __breach still run them for us */
-export const SHOWCASE_BUTTONS = false;
-const START_NOTES = [...(SHOWCASE_BUTTONS ? ['New here? NIGHT SHOWCASE is three minutes through the office after dark — the renderer and the stealth systems — then hands you the floor. DAY SHOWCASE is the same office at ten in the morning: two operatives take a held room, then it goes loud — a firefight down the aisles, smoke, and out into the lot. Hands off, two minutes.'] : []),
- 
+const START_NOTES = [
   'MISSIONS lists every scenario and the solo night. START is the solo night straight in: reach the server room, pull the drive from the marked rack, leave by the fire exit.'];
 /** the note under the buttons when the card opens on the short list (ui/picks.ts): the rows above are the way in, the two buttons are everything else */
 /** the card's one button to the one starting page (ui/startpage.ts) */
@@ -61,7 +57,7 @@ const PICKS_NOTES = ['MISSIONS has every mission, with your own team, hour and w
 
 /** THE BOOT CARD: the start card's own layout — title, the three buttons DISABLED, the notes and the controls — up from the first tick of main.ts while the GPU process compiles
  *  the renderer's kernels in the background (engine.ts init), with a one-line status ('compiling shaders 40 / 97 …') main.ts rewrites as they resolve. Menu.open('start')
- *  re-renders the real card over it the moment everything is ready (the buttons come alive in place); `off()` clears it for boots that open no card (?demo / ?breach).
+ *  re-renders the real card over it the moment everything is ready (the buttons come alive in place); `off()` clears it for boots that open no card (?solo, a scenario).
  *  MISSIONS is live from the first tick: the list (ui/missions.ts) is its own layer and a pick is a page load, so it needs nothing of this page's renderer. */
 export function bootCard(): { status(text: string): void; off(): void } {
   menuTheme();
@@ -71,23 +67,20 @@ export function bootCard(): { status(text: string): void; off(): void } {
   const one = startPageWanted();   // THE ONE STARTING PAGE (ui/startpage.ts) is this build's way in: this is the TITLE SCREEN, PLAY its one button to that page
   const status = el('div', 'note bootstatus'), words = el('span'), fill = el('i'); words.textContent = 'starting the GPU…';
   { const bar = el('i', 'bbar'); bar.appendChild(fill); status.appendChild(words); status.appendChild(bar); }
-  const q = new URLSearchParams(typeof location !== 'undefined' ? location.search ?? '' : '');
-  const show = !one && startPageWanted('') ? q.has('demo') ? 'Night showcase' : q.has('breach') ? 'Day showcase' : '' : '';   // (a SHOWCASE's own page — a row of the title's Extras, or its URL typed: the title's look with the show named, no menu — it starts by itself and ends on the title)
-  if (one || show) {
+  if (one) {
     root.classList.add('title'); root.classList.remove('paused');
     card.appendChild(titleHead());
-    if (one) { const ta = titleActions(); card.appendChild(ta.actions); setTimeout(() => { if (!missionsBusy() && !optionsOpen() && (document.activeElement ?? document.body) === document.body) ta.play.focus(); }, 0); }   // (PLAY, OPTIONS and CONTROLS are live from the first tick: a deploy is a page load, and the controls need nothing of the renderer; Play has the focus from that tick too, as on the live title, so Enter is Play while the kernels still compile)
-    else { const a = el('div', 'actions'), h = el('div', 'xhead'); h.textContent = show; a.appendChild(h); card.appendChild(a); }
+    { const ta = titleActions(); card.appendChild(ta.actions); setTimeout(() => { if (!missionsBusy() && !optionsOpen() && (document.activeElement ?? document.body) === document.body) ta.play.focus(); }, 0); }   // (PLAY, OPTIONS and CONTROLS are live from the first tick: a deploy is a page load, and the controls need nothing of the renderer; Play has the focus from that tick too, as on the live title, so Enter is Play while the kernels still compile)
     card.appendChild(el('div', 'tfill'));
     card.appendChild(status);
-    const foot = el('div', 'foot'); foot.textContent = one ? TITLE_FOOT : 'Esc or P ends the show'; card.appendChild(foot);
+    const foot = el('div', 'foot'); foot.textContent = TITLE_FOOT; card.appendChild(foot);
   } else {
     root.classList.remove('title'); root.classList.remove('paused');
     const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TAGLINE}</div>`; card.appendChild(head);
     const picks = picksBlock(); if (picks) { card.appendChild(status); card.appendChild(picks.root); }   // THE SHORT LIST (ui/picks.ts): live from the first tick like MISSIONS — a pick is a page load too (the status line over the rows: they fill the card, and the line that says why Start is still grey has to be on screen)
     const actions = el('div', 'actions');
     actions.appendChild(button('Missions', () => { openList(); }, picks ? '' : 'primary'));
-    for (const [text, cls] of [['Start', ''], ...(SHOWCASE_BUTTONS ? [['Night showcase', ''], ['Day showcase', 'breach']] as const : [])] as const) { const b = button(text, () => { /* not yet */ }, cls) as HTMLButtonElement; b.disabled = true; actions.appendChild(b); }
+    { const b = button('Start', () => { /* not yet */ }) as HTMLButtonElement; b.disabled = true; actions.appendChild(b); }
     card.appendChild(actions);
     if (!picks) card.appendChild(status);
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
@@ -108,12 +101,11 @@ export function bootCard(): { status(text: string): void; off(): void } {
 
 /** the title screen's head and its main menu (the boot card and the real start card build the same screen) */
 function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHTML = `<div class="t1">two<b>point</b>six</div><div class="t2">${TITLE_LINE}</div>`; return head; }
-/** EXTRAS (the title screen's fourth entry: the maintainer, 10-11 — "the showcase and editor and whatever other tools we have … should all be linked in the main menu"): the two
- *  showcases and the tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files; the one-file
- *  build has no tool pages and lists none: `onePage`), a showcase's link is its own URL with the visitor's other flags kept (`showHref`). ON THE LIVE TITLE A SHOWCASE STARTS IN
- *  PLACE (Menu.title hands `TitleShows`: the old card's two buttons, statement for statement) — no page load, the click is the gesture the sound needs, and its end is the title
- *  again; the link is what a row is while the page still boots, in a new tab, or where this level's script has no such show (the link loads the office).
- *  What is listed and what is not, and why: rebuild/menus/tools.md. */
+/** EXTRAS (the title screen's fourth entry: the maintainer, 10-11 — "the showcase and editor and whatever other tools we have … should all be linked in the main menu"): the
+ *  tool pages, each a LINK — a tool is its own page (the `.html` names: the dev server forwards them to its routes, the build has them as files; the one-file build has no tool
+ *  pages and lists none: `onePage`); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
+ *  (Menu.title hands `TitleShows`) — no page load, the click is the gesture the sound needs; the link is what such a row is while the page still boots, or in a new tab.
+ *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
 /** the Tools row that hands over every kept replay (replay/keeper.ts keeps each run in this browser as it is played; replay/dumpui.ts packs them): it acts IN
  *  PLACE on any title — the boot card's too, it needs nothing of the game — and a small line under its name says what is kept and what a press did (no line while
  *  nothing is kept; its sentence is the row's tooltip, like every row's); its link is the viewer's list of them */
@@ -126,26 +118,23 @@ function dumpRow(a: HTMLAnchorElement): void {
   a.addEventListener('click', e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); void dumpNow({}, say); });
 }
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
-  { head: 'Showcases', rows: [
-    { id: 'night', label: 'Night showcase', line: 'The office after dark, one quiet way in. Hands off, three minutes.', href: '?demo' },
-    { id: 'day', label: 'Day showcase', line: 'The same office at ten in the morning: a held room taken, then it goes loud. Hands off, two minutes.', href: '?breach' } ] },
   { head: 'Tools', rows: [
     { id: 'editor', label: 'Level editor', line: 'Build and change levels, then play from where you stand.', href: 'workbench.html#mode=level' },
     { id: 'chars', label: 'Characters and effects', line: 'The cast, the kit in their hands, muzzle flash, smoke and tracers on a studio stage.', href: 'workbench.html#mode=chars' },
     { id: 'replay', label: 'Replays', line: 'The last minutes of a run as a map you can scrub. F7 keeps one while you play.', href: 'replay.html' },
     { id: 'sounds', label: 'Sounds', line: 'Every sound of the game on one page.', href: 'sounds.html' },
-    { id: 'bench', label: 'Benchmark', line: 'The day showcase, then each quality level and each heavy feature timed on this machine. Hands off, a few minutes; the numbers come as a text to copy and a file.', href: '?bench' },
+    { id: 'bench', label: 'Benchmark', line: 'Three floors played hands off, then each quality level timed on this machine. A text to copy and a file.', href: '?bench' },
     { id: 'dump', label: 'Hand over replays', line: DUMP_LINE, href: 'replay.html#kept' } ] },
 ];
-/** a showcase row's link: its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
+/** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
 function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }
 /** the one-file build (tools/build-one.ts marks its page): index.html is all there is, so the tool pages are not listed */
 const onePage = () => typeof document !== 'undefined' && !!document.querySelector?.('meta[name="tps-one-page"]');
-/** a showcase started in place, by its row's id: true = started (or refused aloud), false = not from here — the row's link loads it */
+/** a row started in place, by its id: true = started (or refused aloud), false = not from here — the row's link loads it */
 type TitleShows = Partial<Record<string, () => boolean>>;
 /** which page of the title's menu is up: the main one, or EXTRAS (kept through the boot card handing over to the real title) */
 let titleExtras = false;
-let titleShownAt = 0;   // (when the live title was last drawn: the Esc that ENDED a showcase drew it, and that same press must not also step its Extras list back)
+let titleShownAt = 0;   // (when the live title was last drawn: an Esc that ENDED a running programme drew it, and that same press must not also step its Extras list back)
 let titleAgain: (() => void) | null = null;   // (the live title's own 'Options closed' — the boot card's buttons, made before there was a Menu, reach it through here)
 function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTMLElement; play: HTMLElement } {
   const onOptionsClose = onClose ?? (() => titleAgain?.());
@@ -180,10 +169,8 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
   return { actions, get play() { return play; } };
 }
 
-export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio: AudioEngine; overlay: Overlay; startTour: () => void; stopTour?: () => void; onStart: () => void; focusGame?: () => void;
-  /** the daytime breach showcase (game/breach.ts) — absent when the level has no daylight variant / plan: no button then */
-  startBreach?: () => void;
-  /** the benchmark (ui/bench.ts): Extras ▸ Benchmark on the live title starts it in place */
+export interface MenuDeps { engine: Engine; game: Game; quality: Quality; audio: AudioEngine; overlay: Overlay; stopTour?: () => void; onStart: () => void; focusGame?: () => void;
+  /** the benchmark (ui/bench.ts): Extras ▸ Benchmark on the live title begins it (a page load of its first scene: ui/benchrun.ts) */
   startBench?: () => void;
   /** checkpoints (game/savestate.ts): load the stored slot `key` into the game — main.ts stops any show first and snaps the camera after; returns why not, or null */
   loadCheckpoint?: (key: string) => string | null;
@@ -239,7 +226,6 @@ export class Menu {
     const primary = picks?.focus ?? missions;   // (the rows never take the focus by themselves: only the one the keys had already walked to)
     actions.appendChild(missions);
     actions.appendChild(button('Start', () => this.close()));
-    this.showcases(actions);
     card.appendChild(actions);
     this.refused(card);
     for (const t of picks ? PICKS_NOTES : START_NOTES) { const n = el('div', 'note'); n.textContent = t; card.appendChild(n); }
@@ -257,12 +243,8 @@ export class Menu {
     card.appendChild(titleHead());
     this.refused(card);
     titleAgain = again; titleShownAt = typeof performance !== 'undefined' ? performance.now() : 0;
-    const has = (name: string) => g.director.armed && !!g.director.manifest?.programs.has(name);   // (this level's script has the show: the office. Elsewhere the row stays its link, which loads the office)
     const ta = titleActions(again, {
-      night: () => { if (!has('night')) return false; this.d.startTour(); return true; },   // (main.ts startNight: closes this card — Start's own onStart, so the sound comes up on this click — and a refusal is said and brings the title back)
-      day: () => { const sb = this.d.startBreach; if (!sb || !has('breach')) return false; this.d.stopTour?.(); sb(); if (!g.director.showing && !this.isOpen) this.open('start'); return true; },
-      bench: () => { const sb = this.d.startBench; if (!sb) return false; sb(); return true; } }), actions = ta.actions;   // (the day show's start closes the card and says a refusal only to the console: the title comes back then, as the night's does)
-    this.showcases(actions);
+      bench: () => { const sb = this.d.startBench; if (!sb) return false; sb(); return true; } }), actions = ta.actions;
     card.appendChild(actions);
     card.appendChild(el('div', 'tfill'));
     if (was) { const c = button(`Cheats on: ${was}`, () => openOptions({ tab: 'game', onClose: again })); c.className = 'cheats'; c.title = 'Options ▸ Game switches them'; card.appendChild(c); }
@@ -280,9 +262,8 @@ export class Menu {
     const actions = el('div', 'actions'), gap = () => actions.appendChild(el('div', 'gap'));
     const resume = button('Resume', () => this.close(), 'primary');
     actions.appendChild(resume);
-    this.showcases(actions);
     if (!scn || scn.saves) { const ck = this.checkpointButton(); if (ck) actions.appendChild(ck); }   // 'Restart from checkpoint (40 s ago)' when one is stored (game/savestate.ts) — under Resume here; on the down card it is THE default
-    actions.appendChild(button(scn ? 'Restart scenario' : 'Restart encounter', () => { this.d.stopTour?.(); this.d.game.restartEncounter(); this.close(); }));   // (a running tour / breach ends first: its beat must not keep puppeting the fresh encounter; under a scenario the restart stages it again)
+    actions.appendChild(button(scn ? 'Restart scenario' : 'Restart encounter', () => { this.d.stopTour?.(); this.d.game.restartEncounter(); this.close(); }));   // (a running tour or level-script program ends first: its beat must not keep puppeting the fresh encounter; under a scenario the restart stages it again)
     gap();
     actions.appendChild(button('Options', () => openOptions()));
     actions.appendChild(button('Run so far', () => { this.run = !this.run; this.render(); }, this.run ? 'on' : ''));
@@ -294,12 +275,6 @@ export class Menu {
     this.body = el('div', 'body');
     if (this.run) { card.classList.add('wide'); card.appendChild(this.body); renderDebrief(this.body, this.d.game); }   // the debrief of the run as it stands (nothing to press but 'copy summary': Resume / Restart are the card's own)
     setTimeout(() => { if (!missionsBusy() && !optionsOpen()) resume.focus(); }, 0);
-  }
-  /** the two showcase buttons (off: SHOWCASE_BUTTONS) */
-  private showcases(actions: HTMLElement) {
-    if (!SHOWCASE_BUTTONS) return;
-    actions.appendChild(button('Night showcase', () => { this.close(); this.d.startTour(); }));
-    if (this.d.startBreach) { const sb = this.d.startBreach; actions.appendChild(button('Day showcase', () => { this.d.stopTour?.(); this.close(); sb(); }, 'breach')); }   // (a running tour ends first; the breach itself refuses to start over one)
   }
   /** the URL named a scenario and its start() said no: the reason, where the player is looking */
   private refused(card: HTMLElement) { const why = this.d.scenario?.refused?.() ?? null; if (why) { const r = el('div', 'refused'); r.textContent = why; card.appendChild(r); } }
