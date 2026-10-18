@@ -52,7 +52,8 @@ export const WHISTLE = {
 export type WhistleKnobs = typeof WHISTLE;
 export const WHISTLE_DEFAULTS: WhistleKnobs = { ...WHISTLE };
 /** How the man who answers it CARRIES himself on the way over while it is still only a whistle to him (guards.ts, the suspicious branch, via whistleSoft): 'torch'
- *  = the torch comes up to shoulder height and goes where he looks (the animator's Idle_Torch_Loop over the walk); 'none' = the calm patrol's low carry, the beam
+ *  = the torch comes up to shoulder height and goes where he looks (the animator's Idle_Torch_Loop over the walk — in the hand that holds it with gunhand.ts
+ *  GUNHAND.whistle; the clip's own raised hand is the empty one); 'none' = the calm patrol's low carry, the beam
  *  swung up onto the spot from the hip. The one-line taste switch. Either way the pistol stays on his belt until something more than a whistle reaches him. */
 export const WHISTLE_SOFT_UPPER: UpperMode = 'torch';
 

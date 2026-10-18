@@ -11,7 +11,10 @@
 //     --md      a table, a row per level and a column per need, written to a file (the statement of how the levels stand)
 //   NEEDS_BREAK=1 bun run tools/qa/level-needs.ts    the red path: one level is given every gap this tool can see (in memory: nothing is written) and each
 //               must be found: exit 1 = every planted gap was found, 0 = one was MISSED (the line says which)
-//   run it on BOTH stands (TPS_PROFILE=shipped in front): the kit a man is issued is read through the game's own cards and pouches
+//   run it on BOTH stands (TPS_PROFILE=shipped in front): --run's own checks are the stand's. THE NEEDS THEMSELVES ARE ASKED OF THE PAGE AS IT OPENS on
+//               either stand (host/profile.ts pageSwitches with no flag and the kit read with nothing kept, as the shipped stand boots): a rule the
+//               frozen stand holds off would call a man bare whom no player sees bare. `KITDEAL_BREAK=1` in front shows the cards as the table
+//               writes them: red on every row that brings a third man
 // exit 0 = no FAIL · 1 = a FAIL (a NOTE never fails) · 2 = no such level, or an unknown need to skip
 // WHAT IS ASKED (the word in front is the need's name in the table and in the skill):
 //   generator   the file says which generator wrote it, and that generator is in the tree
@@ -32,7 +35,9 @@
 //   doorway     no painted band or other wall decal runs across a doorway
 //   roof        no DRAWN slab at ceiling height (the camera cannot see the room under it), and no more roofs than the rain reads (four)
 //   kit         as issued, at every team size the row offers, every man who comes carries something besides his gun. The issue is ONE table for five men
-//               (game/kit.ts): while it leaves a man bare this is red on every row that brings him, and the mend is that table's, not a level's.
+//               (game/kit.ts), worn shared out over the men who come (KITDEAL, kitWorn), a level's own cards written over the table's first as a
+//               staging does: were the table to leave a man bare this is red on every row that brings him, and the mend is that table's, not a
+//               level's. Bare = no pouch filled and nothing in the big slot.
 //               NOTES for what the issue is for on this floor: locked and steel doors against the door charges issued, frags issued where a frag on
 //               order is refused (a hostage, a man to take), a quiet mission's partner kitted as issued for a loud one
 //   said        docs/agents names the level (its file, its generator or a row's id) — that a write-up is THERE, not that it is good
@@ -43,9 +48,9 @@ const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const { setlistNames } = await import(`${ROOT}/src/audio/setlist.ts`);
 const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
-const { kitDefault, kitCost, kitTeam } = await import(`${ROOT}/src/game/kit.ts`);
+const { kitDefault, kitWorn, kitCost, kitTeam, kitLoad, bigOf, SLOTS, KIT_MEMBERS } = await import(`${ROOT}/src/game/kit.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-const { harnessProfile } = await import(`${ROOT}/src/host/profile.ts`);
+const { harnessProfile, pageSwitches } = await import(`${ROOT}/src/host/profile.ts`);
 
 interface Box { id: string; group?: string; c: number[]; h: number[]; yaw?: number; flags?: string[] }
 interface Light { id: string; kind: string; pos: number[]; group?: string }
@@ -58,7 +63,7 @@ interface LevelFile { meta?: { generator?: string }; boxes: Box[]; props?: { id:
 interface Row { id: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
   untuned?: boolean; offList?: boolean; defenders?: number; ways?: readonly string[]; squads?: boolean }
 /** the tables a level is registered in, as the tree has them (the red path hands a level its own, with every row taken out) */
-interface Tables { music(level: string, kind: string): boolean; still(id: string): boolean; picture(id: string): boolean; docs: string; /** the card member i is issued with n teammates coming (game/kit.ts kitDefault, the team's size set first) */ card(i: number, n: number): Card }
+interface Tables { music(level: string, kind: string): boolean; still(id: string): boolean; picture(id: string): boolean; docs: string; /** the five cards as n teammates wear them: the issue with a level's own cards (`block`, by place on the roster) written over it, then dealt over the men who come where the game deals them (game/kit.ts kitWorn, as a staging and ui/loadout.ts read them) */ cards(n: number, block: Record<string, Card>): Card[] }
 
 type Mark = 'PASS' | 'FAIL' | 'NOTE';
 interface Line { need: string; mark: Mark; text: string }
@@ -124,12 +129,14 @@ export function lampsOutside(L: LevelFile): string[] {
 /** KIT: who comes with nothing but his gun, as issued, at each size the row offers — the game's own issue cards, priced by the game's own pouches
  *  (game/kit.ts kitCost: a card that fills none carries nothing), with the level's own issue written over them where a staging would put it on
  *  (scenarios.issue's cards as written; never on a lesson's level, whose page plays the plain issue with the block unread) */
+const issueOf = (L: LevelFile): Record<string, Card> => (L.scenarios?.lesson ? {} : (L.scenarios?.issue?.members ?? {}) as Record<string, Card>);
 export function bareMen(L: LevelFile, e: Row, T: Tables): string[] {
-  const issue = L.scenarios?.lesson ? {} : (L.scenarios?.issue?.members ?? {}) as Record<string, Card>, out: string[] = [];
+  const issue = issueOf(L), out: string[] = [];
   for (const c of squadChoices(e) as { n: 0 | 1 | 2 | 3 | 4; ok: boolean }[]) {
     if (!c.ok || c.n === 0) continue;
     const names = (rosterOf(c.n) as { name: string }[]).map(m => m.name), bare: string[] = [];
-    for (let i = 1; i <= c.n; i++) if (!kitCost(i, { ...T.card(i, c.n), ...(issue[String(i)] ?? {}) }).lines.length) bare.push(names[i - 1] ?? `teammate ${i}`);
+    const worn = T.cards(c.n, issue);
+    for (let i = 1; i <= c.n; i++) if (kitCost(i, worn[i]).used === 0 && bigOf(worn[i]) === 'none') bare.push(names[i - 1] ?? `teammate ${i}`);   // (tools/qa/kitdeal-check.ts comesBare)
     if (bare.length) out.push(`you + ${c.n}: ${bare.join(', ')}`);
   }
   return out;
@@ -205,14 +212,15 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   // ---- the kit as issued
   const mates = (e: Row) => (squadChoices(e) as { n: number; ok: boolean }[]).some(c => c.ok && c.n > 0);   // (false: a row played alone, no teammate to ask)
   for (const e of rows) { if (!mates(e)) continue;
-    const bare = bareMen(L, e, T), walls = S.roomClear?.wallCharges;
-    say('kit', !bare.length, `${e.id}: ${bare.length ? `as issued, nothing but a gun on ${bare.join(' · ')}` : 'as issued, every man who comes carries something'}${walls ? ` (the level issues ${walls} wall charge${walls > 1 ? 's' : ''} to the squad's bag)` : ''}${S.issue && !lesson ? ' (the level issues its own cards)' : ''}`);
+    const bare = bareMen(L, e, T), walls = S.roomClear?.wallCharges, wrote = lesson ? 0 : Object.keys(S.issue?.members ?? {}).length;
+    const ownCards = !wrote ? '' : ' (the level issues its own cards)';
+    say('kit', !bare.length, `${e.id}: ${bare.length ? `as issued, nothing but a gun on ${bare.join(' · ')}` : 'as issued, every man who comes carries something'}${walls ? ` (the level issues ${walls} wall charge${walls > 1 ? 's' : ''} to the squad's bag)` : ''}${ownCards}`);
     // …and what the issue is FOR on this floor, to be said by whoever makes the level: none of it fails
-    const own = Array.from({ length: e.squad }, (_, k) => kitCost(k + 1, T.card(k + 1, e.squad)).lines as { item: string; n: number }[]), sum = (item: string) => own.reduce((s, l) => s + (l.find(x => x.item === item)?.n ?? 0), 0);
+    const worn = T.cards(e.squad, issueOf(L)), own = Array.from({ length: e.squad }, (_, k) => kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]), sum = (item: string) => own.reduce((s, l) => s + (l.find(x => x.item === item)?.n ?? 0), 0);
     if (e.kind === 'quiet' && e.squad > 0 && own[0]?.length) say('kit', 'note', `${e.id}: a quiet mission whose partner comes as issued for a loud one (${own[0].map(l => `${l.n} ${l.item}`).join(', ')}): nothing in the level says otherwise`);
     if ((e.kind === 'rescue' || S.snatch) && sum('frags')) say('kit', 'note', `${e.id}: ${sum('frags')} frags are issued where a frag on order is refused near ${S.snatch ? 'the man to take' : 'a hostage'}: say what the squad throws instead`); }
   { const locked = L.doors.filter(d => d.locked).length, steel = L.doors.filter(d => d.steel).length, squad = rows.filter(e => e.kind !== 'quiet' && mates(e));
-    if (squad.length && (locked || steel)) { const charges = Math.max(...squad.map(e => Array.from({ length: e.squad }, (_, k) => (kitCost(k + 1, T.card(k + 1, e.squad)).lines as { item: string; n: number }[]).find(x => x.item === 'charges')?.n ?? 0).reduce((a, n) => a + n, 0)));
+    if (squad.length && (locked || steel)) { const charges = Math.max(...squad.map(e => { const worn = T.cards(e.squad, issueOf(L)); return Array.from({ length: e.squad }, (_, k) => (kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]).find(x => x.item === 'charges')?.n ?? 0).reduce((a, n) => a + n, 0); }));
       say('kit', 'note', `${locked} locked and ${steel} steel of ${L.doors.length} doors, against ${charges} door charge${charges === 1 ? '' : 's'} as issued (steel takes no charge, hammer or shotgun): say how each is meant to be opened`); } }
   // ---- named in the write-ups
   if (rows.length) { const words = [`${name}.json`, `tools/levels/${name}.ts`, ...rows.map(e => e.id)], hit = words.find(w => new RegExp(`(^|[^\\w-])${w.replace(/[.\\/]/g, '\\$&')}($|[^\\w-])`, 'm').test(T.docs));
@@ -262,8 +270,10 @@ if (import.meta.main) {
   const every = files.filter(f => !f.endsWith('-gwot')), todo = names.length ? [...new Set(names)] : every;
   for (const n of todo) if (!files.includes(n)) { console.error(`no level file levels/${n}.json`); process.exit(2); }
   const menu = resolve(ROOT, 'public/assets/menu'), docsDir = resolve(ROOT, 'docs/agents'), stills = JSON.parse(readFileSync(resolve(menu, 'stills.json'), 'utf8')).stills as Record<string, unknown>;
+  if (harnessProfile() !== 'shipped') { pageSwitches(new URLSearchParams('')); kitLoad(null, ''); }   // (the page as it opens, on either stand: see the head of this file; the shipped stand booted so as tools/qa/headless.ts loaded)
+  if (!SLOTS.ok) { console.error('src/game/slots.json was refused as the game loaded it: no kit can be priced, so nothing here is said of a level'); process.exit(1); }
   const T: Tables = { music: (level, kind) => setlistNames(level, kind).own, still: id => Object.hasOwn(stills, id), picture: id => existsSync(resolve(menu, `${id}.jpg`)),
-    card: (i, n) => { const was = kitTeam(); kitTeam(n); try { return kitDefault(i); } finally { kitTeam(was); } },   // (the size first: an issue that is shared out over the men who come is read as shared)
+    cards: (n, block) => { const was = kitTeam(); kitTeam(n); try { return (kitWorn(n, Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...(block[String(j)] ?? {}) }))) as Card[]).map(m => ({ ...m })); } finally { kitTeam(was); } },
     docs: readdirSync(docsDir).filter(f => f.endsWith('.md')).map(f => readFileSync(resolve(docsDir, f), 'utf8')).join('\n') };
   const twinOf = (n: string) => files.includes(`${n}-gwot`) ? read(`${n}-gwot`) : null;
   console.log(`# what a level needs — ${BREAK ? 'the red path' : `${todo.length} level${todo.length > 1 ? 's' : ''}`}, the ${harnessProfile()} stand${SKIP.length ? ` (not asked: ${SKIP.join(', ')})` : ''}`);
@@ -277,8 +287,8 @@ if (import.meta.main) {
     L.boxes.push({ id: 'planted_dado', group: 'planted', c: along ? [d.hinge[0] + 0.12, 0.55, mid] : [mid, 0.55, d.hinge[1] + 0.12], h: along ? [0.004, 0.55, 2] : [2, 0.55, 0.004], flags: ['NoShadow'] });
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
     const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
-    const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0 };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
-    const lines = ask(name, L, null, [row], { music: () => false, still: () => false, picture: () => false, docs: '', card: i => ({ ...kitDefault(i), ...bareCard }) });
+    const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0, big: 'none' };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
+    const lines = ask(name, L, null, [row], { music: () => false, still: () => false, picture: () => false, docs: '', cards: () => Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...bareCard })) });
     /** what each planted gap must be found as: the mark, and every phrase its lines must carry */
     const WANT: Record<string, { mark: Mark; says: string[] }> = {
       generator: { mark: 'FAIL', says: ['not in the tree'] }, row: { mark: 'FAIL', says: ['no `place`', '`blurb` is 5 characters', '12 defenders', 'names 3 ways in', 'squads'] }, music: { mark: 'FAIL', says: ['no row'] },
