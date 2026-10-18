@@ -250,6 +250,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   WeakMap (`whistleMem(gd)`), `WHISTLE_STATS` / `WHISTLE_LOG` for QA, `whistleSummary` on the panel; knobs level / reachK / cooldown / twiceWindow in Tab ▸
   Sandbox, kept per machine (`saveWhistle`, localStorage `twopointsix.whistle`). QA: `probes.ts whistle` (reach open / far / shut vs open door with the
   propagation's numbers, nearest-only, twice, cooldown, alert cue, meter, torch kept, invisible), soak stimulus `whistle` (`--whistle-per-min`, 0 = the old schedule).
+- **The whistle's answer, torch up in the hand that holds it** (GUN HAND, `src/game/gunhand.ts` `GUNHAND.on` + key `whistle`; `character.ts` `torchUpLayer`,
+  the torch branch of `inHandWord`). THE FAULT: upper `'torch'` plays the library's `Idle_Torch_Loop`, keyed for a torch in the LEFT hand — an empty left fist
+  came up ahead of the chest while the torch, and the light placed off its lens, stayed in the hanging right hand. THE RULE: the clip gives the trunk and head
+  only (`torsoMask`); the left arm stays the legs' clip's; the right arm is solved to an overhand hold, the wrist 22 cm ahead of and 4 cm above its shoulder
+  joint, forearm up, the back of the hand to his right, so the torch lies level through the fist with the lens out of the little-finger side (thumb to the
+  lens, a forearm that high points it at the ceiling). Shoulder-relative: it rides the chest twist. Up and down on its own clock (`tuK`, 0.4 s, eased both
+  ends: at the carry weight's 9/s the hand turned 20° in a frame). The torch's boxes and the light are placed off the right wrist as ever (`rigTorchPos`), so
+  the light is now at the raised lens, about 1.47 m up and 0.35 m ahead of him, not at his thigh: what guards and the meter read off it moves with it. The
+  beam's line is unchanged (`torchCarryDir`). IN HAND's torch branch turns the fist's thumb line onto the torch's axis the short way; raised, the short way is
+  thumb to the TAIL (`anim.torchUp` > 0.5), and the turn stands down as the arm passes between the two carries. Other users of upper `'torch'`: none in the
+  game (calmtorch.ts reads `handCarry`, not the pose); the viewer's upper-body row `torch` shows the same layer. SWITCH: on in the page, `?gunhand=0` off, held off
+  on the frozen stand, `TPS_GUNHAND=1` raises it there; `whistle: false` under the switch = this move as it was. Off = the pose bit for bit (check line 8). Not
+  look-only: a run with it on is not the run with it off. CHECK: `bun run tools/qa/gunhand-whistle-check.ts` (probe `gunhand-whistle`, family `gunhand`),
+  `GUNHAND_BREAK=1` fails lines 3, 4 and 9; both stands the same numbers. MEASURED (bench: 4 sets — standing, walking, looking aside and down, walking and
+  looking aside — 360 settled frames; one game run, seed 760, the whistle-torch staging): rule off the left wrist 33.6 cm or more above the legs' clip's and
+  the right 47.7 cm or more under its shoulder, the light 68.7 cm from the raised fist; on, the left wrist within 4.9 cm of the legs' clip's (1.5 standing),
+  the right 4.0 cm above its shoulder and 16 cm or more ahead, the fist's hollow 1.2 cm from the torch's line with its thumb line 0.1° off it (IN HAND on),
+  the light 1.5 cm from the lens box; the hand the game reads turns 11.0° a frame at most, as drawn 14.1°; in the game, left wrist 51.4 cm under the gun
+  shoulder, right 4.0 above, his light 1.5 cm from the drawn lens. STILLS: `tools/qa/pose-mesh.ts defender_2 torch-up --inhand [--gunhand]`. Never seen on a
+  GPU or in play; nobody has judged the raise in motion, the fist against the jaw of each cast variant, or how the higher light reads in a room.
 
 <!-- was CLAUDE.md lines 2486–2549 -->
 - **A guard has one attention, and it can be taken** (`src/game/attention.ts`, table `ATTENTION`; `ATTENTION.on` — ON in the page, `?noattention` = the

@@ -11,6 +11,7 @@ import { hyp2, hyp3 } from '../math/vec';
 import { WALLSNAP } from './wallsnap';
 import { STEALTHPOSE, type StealthFeed } from './stealthpose';   // (read inside methods only: the game's one import cycle)
 import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
+import { GUNHAND } from './gunhand';   // (a leaf: the switch and its keys)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export type UpperMode = 'none' | 'relaxed' | 'aim' | 'torch';
@@ -1338,6 +1339,7 @@ export class CharacterAnimator {
   phase = 0;                 // normalized locomotion phase
   crouch = 0;
   private upperW = { relaxed: 0, aim: 0, torch: 0 };
+  private tuK = 0;   // GUNHAND.whistle: the raised torch's own clock, 0 down ‥ 1 up, linear (torchUpLayer eases it; 0 with the rule off)
   private shootT = -1; private hitT = -1; private reloadT = -1; private throwT = -1; private strikeT = -1;
   private steadyMean: [number, number] | null = null;   // MOVES.steady: the crouch cycle's own mean pelvis roll (rad) and hips' sideways set (m), measured once (steadyLayer)
   private crWalk = 0;   // the crouch walk's share of this frame's pose (crouch shown × the cycle's weight in it): what MOVES.steady levels
@@ -1775,6 +1777,9 @@ export class CharacterAnimator {
   get inThrow() { return this.throwT >= 0; }
   /** how much of the pistol's AIM clip the pose shows this frame, 0‥1 (the eased weight — `upper` flips on a frame): Character.inHandPass turns the gun hand onto the aim line by it */
   get aimShown(): number { return this.upperW.aim; }
+  /** GUNHAND.whistle (gunhand.ts): how far the torch is UP in the hand that holds it, 0‥1 — 0 with the rule off. Character.inHandPass reads which way round
+   *  the fist is on the torch by it: thumb to the lens in the low carry, thumb to the tail cap once it is raised */
+  get torchUp(): number { return this.tuK; }
   /** IN HAND (inhand.ts): nothing but the aim or the carry has the gun arm this frame — no hold, errand, swap, one-shot or look-only move over it. Character.inHandPass
    *  turns a pistol's or a torch's hand only then (and eases out otherwise): it does not fight a pose that has somewhere else to put that hand */
   get gunArmOwn(): boolean {
@@ -2028,7 +2033,10 @@ export class CharacterAnimator {
       }
     }
     if (this.upperW.relaxed > 0.003) { sampleClip(c.Pistol_Idle_Loop, this.idleT, true, this.pUpper); blendPose(this.pA, this.pUpper, this.upperW.relaxed, this.upperMask, this.pA); }
-    if (this.upperW.torch > 0.003) { sampleClip(c.Idle_Torch_Loop, this.idleT, true, this.pUpper); blendPose(this.pA, this.pUpper, this.upperW.torch, this.upperMask, this.pA); }
+    const tu = GUNHAND.on && GUNHAND.whistle;   // (gunhand.ts: the torch comes up in the hand that holds it)
+    this.tuK = tu ? clamp(this.tuK + (tgt.torch > 0 ? dt : -dt) / 0.4, 0, 1) : 0;
+    if (this.upperW.torch > 0.003) { sampleClip(c.Idle_Torch_Loop, this.idleT, true, this.pUpper); blendPose(this.pA, this.pUpper, this.upperW.torch, tu ? this.torsoMask : this.upperMask, this.pA); }   // (with the rule the clip's trunk and head only: of its arms the raised one is the EMPTY one)
+    if (this.tuK > 0) this.torchUpLayer(smoothstep(0, 1, this.tuK));
     // ---- deliberate movement / the crouch's centre of gravity (legs, pelvis, torso, arms) — over the finished locomotion and its clip arms, under every stance,
     //      one-shot and aim layer below (they read the feet where this leaves them, and pose the arms over these when they have them)
     if (Dl > 0.002 || pace > 0.002 || soft > 0.002 || armsIn > 0.003) this.sneakLayer(Dl, pace, soft, armsIn, surge);
@@ -4492,6 +4500,22 @@ export class CharacterAnimator {
     }
   }
 
+  /** THE TORCH UP IN THE HAND THAT HOLDS IT (GUNHAND.whistle, gunhand.ts; upper 'torch': a guard answering a whistle). The library's Idle_Torch_Loop is keyed for a
+   *  torch in the LEFT hand — a fist out ahead of the chest, thumb up — and ours is in the right, so its arms showed an empty fist raised and the torch left
+   *  hanging. With the rule the clip gives the trunk and the head only: the left arm stays the legs' clip's, and the right comes up to an overhand hold — the fist
+   *  ahead of its own shoulder, forearm up, the back of the hand out to his right, so the torch lies level through the fist with its lens out of the little-finger
+   *  side (the way a man holds a torch up to look along it; thumb to the lens, a forearm that high would point it at the ceiling). Shoulder-relative, so it rides
+   *  the chest twist as an arm does, and so does the light: the torch and its lens are placed off this wrist (rigProps.ts rigTorchPos). Up and down on a clock of
+   *  its own (`tuK`, 0.4 s, eased at both ends): the hand turns right over on the way, and at the carry weight's own rate that was 20° in a frame. */
+  private torchUpLayer(e: number) {
+    const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
+    pB.copy(pA); fk.run(pB);
+    const sh = fk.pos[nd.upperArmR], live0 = v3.copy(fk.pos[nd.handR]), rot0: Quat = [...fk.rot[nd.handR]] as Quat;
+    const wrist: Vec3 = [sh[0] - 0.07, sh[1] + 0.04, sh[2] + 0.22];
+    twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(live0, wrist, e), [-0.3, -1, 0], e, quat.nlerp(rot0, this.handRot(1, [0, 0.92, 0.38], [-1, 0.1, 0]), e));   // the elbow down and a little out
+    blendPose(pA, pB, smoothstep(0, 0.25, e), this.armROnly, pA);
+  }
+
   /** A HAND TO THE RADIO (radio(); rx): the left hand up to the handset clipped at his left collar, thumb on the switch, the head turned and tipped to it — while
    *  his line is on the net. The left arm and the head only: the right keeps whatever it has (a pistol stays up one-handed; a long gun's support hand comes off
    *  the fore-end and goes back, as for a tell). Shoulder-relative, so it rides the chest twist as an arm does. */
@@ -5221,12 +5245,14 @@ export class Character {
     const inF = (d: Vec3): Vec3 => [x[0] * d[0] + y[0] * d[1] + z[0] * d[2], x[1] * d[0] + y[1] * d[1] + z[1] * d[2], x[2] * d[0] + y[2] * d[1] + z[2] * d[2]];
     if (cur.kind === 'long') reach(true, v3.mad(R, inF(cur.by), K), hr);
     else {
-      let d: Quat;
+      let d: Quat, up = 1;
       if (cur.kind === 'pistol') { const kc = quat.rotate(hr, this.handRBore), tc = quat.rotate(hr, this.handRTop); d = quat.mul(quat.fromBasis(x, y, z), quat.conj(quat.fromBasis(v3.cross(tc, kc), tc, kc))); }
-      else d = quat.fromTo(v3.normalize(quat.rotate(hr, this.handRThumb)), v3.normalize(inF(cur.axis)));   // (the way a thing gripped in the fist points — the short way, the roll about it left as the clip has it)
+      else if (an.torchUp > 0) {   // (GUNHAND.whistle: the raised torch is held overhand — the thumb to its tail cap; the fist's turn stands down as the arm passes between the two carries)
+        d = quat.fromTo(v3.normalize(quat.rotate(hr, this.handRThumb)), v3.scale(v3.normalize(inF(cur.axis)), an.torchUp > 0.5 ? -1 : 1)); up = Math.abs(2 * an.torchUp - 1);
+      } else d = quat.fromTo(v3.normalize(quat.rotate(hr, this.handRThumb)), v3.normalize(inF(cur.axis)));   // (the way a thing gripped in the fist points — the short way, the roll about it left as the clip has it)
       if (d[3] < 0) d = [-d[0], -d[1], -d[2], -d[3]];
       const ang = 2 * Math.acos(Math.min(1, d[3]));
-      d = ang < 1e-4 ? [0, 0, 0, 1] : quat.slerp([0, 0, 0, 1], d, fire ? 1 : K * Math.min(1, INHAND.wrist * Math.PI / 180 / ang));
+      d = ang < 1e-4 ? [0, 0, 0, 1] : quat.slerp([0, 0, 0, 1], d, fire ? 1 : K * Math.min(1, INHAND.wrist * Math.PI / 180 / ang) * up);
       const rot = quat.normalize(quat.mul(d, hr));
       if (cur.kind === 'pistol') {
         ov[n.handR] = { rot };

@@ -6,6 +6,7 @@
 //   bun run tools/qa/pose-mesh.ts <variant> <situation> [--out <dir>] [--moves off] [--id N] [--no-props] [--tag <text>] [--at <secs>] [--set '<json>']
 //       → <dir>/<variant>__<situation>[__<tag>].ply + .json      (dir: ./pose-mesh-out unless given)
 //       --inhand: the hands posed to what he holds (src/game/inhand.ts, as the page has it): a pistol drawn in the hand, the hand put to a torch or a long gun
+//       --gunhand: the moves that keep to the free hand (src/game/gunhand.ts, as the page has it): torch-up brings the torch up in the hand that holds it
 //       --at: that much longer in the situation before the pose is taken (a gait at another point of its cycle);  --set '{"MOVES":{"steady":0}}': character.ts tables written over
 //       (and wallsnap.ts's: `--set '{"WALLSNAP":{"pose":false}}'` = the wall hold's poses as they were; WALLSNAP.on is raised for every situation, as the page has it)
 //       the wall hold: wall-crouch (parked), wall-sidle, wall-crouch-sidle, wall-crouch-sidle-l (the other way), wall-crouch-creep (half pace)
@@ -35,6 +36,8 @@ const CM: any = await import(`${ROOT}/src/render/charMaterials.ts`);
 const RP: any = await import(`${ROOT}/src/game/rigProps.ts`);
 const IH: any = await import(`${ROOT}/src/game/inhand.ts`).catch(() => null);   // (a tree from before the rule has no such module: --inhand is then nothing)
 const inhand = has('--inhand') && !!IH; if (IH) IH.INHAND.on = inhand;
+const GH: any = await import(`${ROOT}/src/game/gunhand.ts`).catch(() => null);   // (likewise: --gunhand is nothing in a tree from before that switch)
+if (GH) GH.GUNHAND.on = has('--gunhand');
 const { skinVertices } = await import(`${ROOT}/src/render/meshbvh.ts`);
 const { sideOfTeam } = await import(`${ROOT}/src/game/charLook.ts`);
 const DT = 1 / 60;

@@ -29,8 +29,10 @@
 //     the torch on a man's belt three quarters inside him (`belt`: handwork.ts beltTorch).
 //   · THE SWAP'S HAND (`belt`): the torch ↔ sidearm swap takes the hand to the torch's old place on the belt (the reach is in the pose the game reads); the
 //     drawn hand goes the rest of the way out to where the torch now hangs.
-//   LEFT ALONE, each with its reason, in docs/agents/player.md (IN HAND): the torch a whistle raises in the wrong hand, Sam's slung rifle through his radio pack (a pairing the page as it ships never stages),
+//   LEFT ALONE, each with its reason, in docs/agents/player.md (IN HAND): Sam's slung rifle through his radio pack (a pairing the page as it ships never stages),
 //   the breacher's two long tools, a shield's window at a crouched aim, the trigger hand through a long gun's reload (it plays the pistol's clip).
+//   (The torch a whistle raised in the wrong hand was on that list: mended as a rule of its own, gunhand.ts GUNHAND.whistle — the torch branch below reads which
+//   way round the fist is on it from the animator's `torchUp`.)
 //
 // LOOKS ONLY. The pass poses the SKELETON a second time, after `bones`, `gunDir` and `muzzle` have been read (as a sleeping body's breath does): the joint palette
 // the GPU is handed and the hand frames the DRAWER reads move; nothing the simulation reads does — the round, the flash, the laser, the light's pose, the hit

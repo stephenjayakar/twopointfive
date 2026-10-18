@@ -66,6 +66,7 @@
 //     wall-snap: wall-snap-engage wall-snap-release wall-snap-slide wall-snap-sweep
 //     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
 //     kitanim: kitanim-close kitanim-equip kitanim-harness kitanim-joints kitanim-midswap kitanim-nv kitanim-off kitanim-reload kitanim-sling   (Sam's hands carry his kit, the three magazine changes, the close-in carriage by distance — KITANIM.on; ~15 s)
+//     gunhand: gunhand-whistle   (a move keeps to the free hand — src/game/gunhand.ts: a whistle answered with the torch up in the hand that holds it)
 //     weapons: weapons-identity
 //     weather: weather-daylight weather-flash weather-off weather-scheduler weather-smoke weather-thunder
 //     wxkinds: wxkinds-default wxkinds-hearing wxkinds-journal wxkinds-roofs wxkinds-save wxkinds-sight wxkinds-url
@@ -2687,6 +2688,7 @@ if (on('headmark', 'ui', 'all')) await run('headmark', async () => (await import
 if (on('condition', 'all')) await run('condition', async () => (await import('./condition-check.ts')).conditionCheck());   // a man's condition (condition.ts): a blast that leaves a man standing leaves him hurt — pace and spread, the same of all three; one round still kills; CONDITION_BREAK=1 must fail
 if (on('condition-pose', 'condition', 'all')) await run('condition-pose', async () => (await import('./condition-pose-check.ts')).conditionPoseCheck());   // …and how each state shows on the figure (character.ts: the hurt man's hunch, step and hand, the tucked head under fire, the fold), on the bones
 if (on('inhand', 'kitanim', 'all')) await run('inhand', async () => (await import('./inhand-check.ts')).inhandCheck());   // a pistol is drawn in the hand that holds it and the hand turned onto the aim line (inhand.ts): the grip in the fist in every frame, both sides' pistols; the hold stays a hold; looks only (joints the game reads and the run's digest the same); INHAND_BREAK=1 must fail
+if (on('gunhand-whistle', 'gunhand', 'all')) await run('gunhand-whistle', async () => (await import('./gunhand-whistle-check.ts')).gunhandWhistleCheck());   // a guard answering a whistle brings the torch up in the hand that holds it (gunhand.ts GUNHAND.whistle): the left arm the legs' clip's, the right wrist at the shoulder, the torch in the fist, the light at its lens; GUNHAND_BREAK=1 must fail
 // ---------------------------------------------------------------- the hostage rescue playtest (rescue-probes.ts; game/rescue.ts behind ?rescue): 'rescue' = the family
 if (on('rescue-off', 'rescue', 'all')) await run('rescue-off', async () => (await import('./rescue-probes.ts')).rescueOff());
 if (on('rescue-stage', 'rescue', 'all')) await run('rescue-stage', async () => (await import('./rescue-probes.ts')).rescueStage());
