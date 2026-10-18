@@ -249,6 +249,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PICTURE.on = !q.has('nopicture');   // each man keeps his own picture of the fight (game/picture.ts): ON in the page — where he believes each enemy to be (seen, heard, told; it goes out of date), and the spot rules that ask it; ?nopicture = no memory kept and every spot picked as it was
   PICTURE.step = q.get('picstep') !== '0';   // (?picstep=0: a man keeps the place the squad chose for itself though he knows it is in an enemy's line, as it was — built on a lean while the maintainer was away: his call 1)
   PICTURE.shot = q.get('picshot') !== '0';   // (?picshot=0: a man who hears a colleague fire is handed the enemy's true place, as it was — his call 3)
+  PICTURE.run = q.get('picrun') !== '0';   // (?picrun=0: a man who drops his gun and runs plans his way round every enemy's true place, as it was)
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
   PLAN.on = !q.has('noplan');   // the squad's plan drawn on the floor (game/floorplan.ts): picture only, on on both stands; `?noplan` = nothing drawn
   CLOSE.on = !q.has('noclose');   // closer than ever (game/close.ts): the windows round a man drawn on the floor, the ready pose, the ways in from his sides, his front and over a chair — ON in the page; ?noclose = one way in, from behind, in words, as it was

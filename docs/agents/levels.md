@@ -179,3 +179,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   squad is issued (no hammer or shotgun opens steel, and nobody is issued a big-slot tool), whether frags can be ordered at all (never with a hostage,
   the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
   (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
+- **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
+  screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level
+  skill that goes through everything that's needed for a level based on what we've seen" · "seems like we miss a lot". `.claude/skills/level/SKILL.md` is
+  that list, in the order a level is made (before you touch anything · the idea · the file · rooms, doors, walls · lived-in rooms · light, hour, weather ·
+  the mission in the file · the team and its kit · what the player reads · measure it, then say it), every need with what was SEEN when it was learnt and
+  the command that checks it; what no tool can ask is marked by eye or by play. `bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…]
+  [--quiet] [--md f] [--json f]` asks the fifteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
+  kit picture · look · lived · floor · lamps · moon · doorway · roof · kit · said) of one level or all, in about a second, a look twin with its plain file.
+  The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
+  checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
+  quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
+  gaps in thirteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
+  (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
+  slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
+  comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
+  LEVELS STAND on build 8dbdb23, both stands the same: 464 PASS, 24 FAIL, 65 NOTE, and with `--run` 73 of 74 own checks exit 0. THE FAILS: `kit` on all
+  22 rows that take three or four (the issue is one table for five, `game/kit.ts ISSUED`: the squad's stuns, charges and frags ride on the first two
+  teammates, so Blue One at three and both blue men at four carry nothing; the long hall's own card and the two levels that issue wall charges do not
+  change it; ONE table's mend, the kit's, turns all 22 green and no level should patch it with a block of its own); `doorway` on the crossing (`box_0069`
+  across `gate_ne`) and the glasshouse (`box_0062` across `back`); and the one red own check, `map-check snatch --no-runs` (its footstep zone `hut` lies
+  outside the building rectangle and is never read). NOTES: 26 rows still `untuned`; no footstep map on block, block-squads, consulate and registry (the
+  office's shell) and on the records office (not the office's shell); lamps under open sky and off the photocell on crossing, depot, floodlit, lights-out,
+  quiet-relay and train-kit; rooms with fewer than three things in them on six levels; locked and steel doors against two door charges on eight; two
+  frags issued where a frag on order is refused on the three rescues and the snatch; a partner kitted as for a loud mission on five quiet rows; four
+  level files no mission plays. NOT MENDED HERE: each is its owner's. NOT IN A GATE: it is red today on the kit, so it is in no family and not in
+  all-quick; wire it in once it is green (`--skip kit` gives the exit code of the rest meanwhile). NOT ASKED BY IT: anything by eye or by play (the idea,
+  the five checks, light per room, sight lines at the starts, whether furniture reads from above, whether a picture looks like play), and `said` holds
+  only that a level is NAMED in these files. It stands no game up: nothing here was seen on a GPU or played.

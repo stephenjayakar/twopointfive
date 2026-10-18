@@ -26,7 +26,7 @@
 //     dialogue: dialogue-exchange dialogue-heard dialogue-intel dialogue-lint dialogue-none dialogue-radio dialogue-sawhurt dialogue-seed dialogue-shapes
 //     director: director-lint director-scheduler director-showcase-scan
 //     hands: hands-body hands-door hands-team hands-off hands-harness
-//     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-defuse work-off work-harness
+//     workthings: work-breaker work-four work-objective work-edges work-posted work-face work-held work-walk work-defuse work-off work-harness
 //     handwork: handwork-work handwork-radio handwork-swap handwork-off handwork-harness
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
@@ -2424,6 +2424,7 @@ if (on('work-edges', 'workthings', 'all')) await run('work-edges', async () => (
 if (on('work-posted', 'workthings', 'all')) await run('work-posted', async () => (await import('./workthings-probes.ts')).workPosted());   // the mains go: a man held on his post is not handed the errand and does not say he is going; a man who can walk still is
 if (on('work-face', 'workthings', 'all')) await run('work-face', async () => (await import('./workthings-probes.ts')).workFace());   // the other side's breaker errand goes to the panel's own face and re-arms it only with a line to it (the relay station: it was through the compound wall, or never)
 if (on('work-held', 'workthings', 'all')) await run('work-held', async () => (await import('./workthings-probes.ts')).workHeld());   // fire held, an unaware defender in sight of the panel: the man sent still throws the breaker, his partner's gun on that man
+if (on('work-walk', 'workthings', 'all')) await run('work-walk', async () => (await import('./workthings-probes.ts')).workWalk());   // a follower is not left standing on the walk of the man who comes to the breaker
 if (on('work-defuse', 'workthings', 'all')) await run('work-defuse', async () => (await import('./workthings-probes.ts')).workDefuse());   // a charge the run ended on (Sam down) is not called safe by the man at it
 if (on('work-off', 'workthings', 'all')) await run('work-off', async () => (await import('./workthings-probes.ts')).workOff());   // the switch off: the floor's menu, no such order
 if (on('work-harness', 'workthings', 'all')) await run('work-harness', async () => (await import('./workthings-probes.ts')).workHarness());   // the two stands, the page switch, the knob table
