@@ -57,6 +57,7 @@ import { SILENT, silentMan, squadSilent, silentReached, silentUrgent, quietGun }
 import { lightEstimateAt } from './guards';
 import { PAIRUP, keptOn } from './pairup';
 import { killGuard } from './combat';
+import { workComing } from './workthings';
 import { partnerBegin, partnerCancel, partnerFall } from './takedown';   // the partner's takedown as a move, and the man it lands on (takedown.ts): poses only
 
 export const SPOTTED = {
@@ -213,7 +214,7 @@ function hide(g: Game, gd: Guard, M: Man) {
   const p = gd.char.pos, K = SPOTTED, sam = g.player.char.pos, dSam = flat(p, sam);
   const seen = M.wary.filter(h => inLine(g, h, p, K.low)); M.eyes = seen.length ? seen.reduce((a, b) => flat(a.char.pos, p) <= flat(b.char.pos, p) ? a : b) : null; M.exposed = seen.length > 0 || M.wary.some(h => flat(h.char.pos, p) < K.earM);
   if (dSam > K.leashM) M.trail = true; else if (dSam < K.leashM * 0.45) M.trail = false;
-  if (M.trail) { M.spot = null; M.what = null; return; }
+  if (M.trail || ((!g.orders.samStopped || dSam > K.leashM * 0.45) && M.wary.some(h => workComing(g, gd, h)))) { M.spot = null; M.what = null; return; }   // (… or Sam is going on and a man is walking to the breaker over where he stands: workthings.ts)
   if (M.what === 'slip' && M.spot && (!M.wary.some(h => inLine(g, h, M.spot!, K.low)) || litAt(g, M.spot) < K.litAt)) return;   // (on his way to it, or on it: it stands while it is good)
   if (K.slip && seen.length && M.realT >= 0 && g.time - M.realT >= K.slipWait && litAt(g, p) >= K.litAt) {   // (never for a man who has not turned yet: moving is what he would see)
     let best: Vec3 | null = null, bs = Infinity;
