@@ -70,6 +70,10 @@ export const WORK = {
    *  is held and that man has noticed nobody): he works the thing, his partner's gun on the man if he has a partner (false: his muzzle stays on that man for
    *  as long as the hold stands, his chest turned off the thing, and it is never worked) */
   heldPass: true,
+  /** a following teammate does not wait, back off or stand still for a suspicious man who is walking to the breaker while he is stood within `walkM` (m)
+   *  of what is left of that man's walk and Sam is going on: he goes on after Sam (false: he waits where he is, as for any man who is looking, and is
+   *  walked into) */
+  offWalk: true, walkM: 2.5,
 };
 export const WORK_STATS = { given: 0, done: 0, moot: 0 };
 export const WORK_ORDER = 'work';
@@ -347,6 +351,28 @@ export function workHand(g: Game, c: Character): DoorPush | null { return g.work
 export function workPasses(g: Game, gd: Guard, h: Guard): boolean {
   if (!WORK.on || !WORK.heldPass || !g.work) return false;
   return g.work.atThing(gd) && silentHolds(g, gd, h);
+}
+/** sneak.ts's follower and spotted.ts's feet for a silent partner who is FOLLOWING, asked of each suspicious man that is his business: THE MAN IS WALKING
+ *  TO THE BREAKER AND HE IS STOOD ON THAT WALK. Their own answers to a man who is looking are to wait short of what he looks at for his back, to step back
+ *  the way they came, to kneel and stand still — right for a man who has stopped to listen, wrong for the man sent to the panel when the mains went
+ *  ('power's out — checking the breaker', said on the net): his walk ends at the panel the teammate has just thrown, and a man knelt on it is walked into
+ *  however still he is. So for THIS man, while Sam is going on, he is not held: he goes on after Sam (sneak.ts: across what he would have waited short
+ *  of; as low as Sam, and on a knee whenever the man has a line to him — spotted.ts's own). What is asked: the man carries the mains errand (lighting.ts
+ *  hands it out), is walking it (suspicious, his route's end the errand's own spot — not a patrol leg he has yet to leave, not a noise he turned off to),
+ *  and the teammate is within `walkM` of what is left of that walk — where the man stands, the corners of his route still ahead, the errand's spot — with
+ *  nothing solid between him and it (a man in the next room is not on it). A man on that errand whose walk passes nowhere near is waited for and frozen
+ *  for as before. False with the switch or `offWalk` off. */
+export function workComing(g: Game, gd: Guard, h: Guard): boolean {
+  if (!WORK.on || !WORK.offWalk || h.task?.kind !== 'breaker' || h.state !== 'suspicious') return false;
+  const p = gd.char.pos, end = h.task.pos, n = h.path.length; if (!h.pathGoal || flat(h.pathGoal, end) > 1) return false;
+  let a: ArrayLike<number> = h.char.pos;
+  for (let i = Math.min(h.pathI, n); i <= n; i++) {
+    const b: ArrayLike<number> = i < n ? h.path[i] : end, dx = b[0] - a[0], dz = b[2] - a[2], L2 = dx * dx + dz * dz;
+    const k = L2 > 1e-6 ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[2] - a[2]) * dz) / L2)) : 0, qx = a[0] + dx * k, qz = a[2] + dz * k;
+    if (Math.hypot(p[0] - qx, p[2] - qz) < WORK.walkM && !g.col.solidBlocked([p[0], 0.45, p[2]], [qx, 0.45, qz])) return true;
+    a = b;
+  }
+  return false;
 }
 /** a pose layer's read beside workHand: what that hand is doing and how far in (null whenever workHand is null) */
 export function workJob(g: Game, c: Character): WorkJob | null { return g.work && g.work.hand(c) ? g.work.job(c) : null; }

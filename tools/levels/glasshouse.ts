@@ -157,7 +157,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.partZ(18, 8.12, 12.94, 'whitewash', [{ a: 8.26, b: 9.46 }]);                             // store | lab: blank, the store's door at the back-wall end (where the camera sees it: the note at STORE_E)
   G.partZ(24, 8.12, 12.94, 'whitewash', [screen(8.5, 10.0, 1), { a: 10.4, b: 11.6 }]);       // lab | office: a pane and the office's door
   G.dado('x', 18, 17.6, 19.4, -1, 'paintGreen'); G.dado('x', 18, 20.6, 22.4, -1, 'paintGreen');   // the station's green, on the block round the front door (inside)
-  G.skirt('x', 8, 10, 30, -1); G.skirt('z', 10, 8, 18, -1); G.skirt('z', 30, 8, 18, 1);      // the damp foot of the blank walls, outside
+  G.skirt('x', 8, 10, 13.76, -1); G.skirt('x', 8, 14.74, 30, -1); G.skirt('z', 10, 8, 18, -1); G.skirt('z', 30, 8, 18, 1);      // the damp foot of the blank walls, outside (it stops at the back door's frame, 13.76‥14.74: a band run across a doorway reads as a slab standing in it)
 
   // ---- the seed racks: steel shelving stacked to the beams with sacked seed, down the store 1.9 m inside its lab door, from the back wall to 1.44 m short
   // of the wall the glasshouse is behind. KEPT, not furniture: it is why the store is blind. The lab's door is at the racks' closed end and the way round them
