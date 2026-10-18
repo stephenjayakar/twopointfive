@@ -1389,7 +1389,7 @@ export class CharacterAnimator {
   private rlT = -1; private rlB = { dur: 1.6, out: 0.43, in_: 1.04, rack: 1.36, pull: true, keep: -1, hand: false, fresh: 0.7 }; private rlSrc: ReloadBeat | null = null;
   /** GUN HAND (`longReload`): the long gun's reload carry — `k` the gun's share of LONG_RELOAD, `h` the head's; `ch` the carriage's channels with those shares
    *  taken (what longBody / longArms pose from while either is up; the springs themselves are never written). Both 0 with the switch off: the springs, to the bit. */
-  private rlc = { k: 0, h: 0, ch: null as { x: number }[] | null };
+  private rlc = { k: 0, h: 0, ch: null as { x: number }[] | null, at: -1, still: 0 };
   /** what that carry shows this frame (QA; nothing reads them) */
   rlShown = { carry: 0, head: 0 };
   // ---- KIT HANDLING (KIT above; dealt by game/kitanim.ts for Sam — a man nobody calls kitSwap on, hands a kit beat or feeds closeK has none of it)
@@ -1809,6 +1809,9 @@ export class CharacterAnimator {
   /** GUNHAND.whistle (gunhand.ts): how far the torch is UP in the hand that holds it, 0‥1 — 0 with the rule off. Character.inHandPass reads which way round
    *  the fist is on the torch by it: thumb to the lens in the low carry, thumb to the tail cap once it is raised */
   get torchUp(): number { return this.tuK; }
+  /** GUNHAND.longReload: his long gun is off its line and his eyes are down at its magazine well — not on his sights, whatever carriage it is in (guards.ts
+   *  canSeeChar and fogofwar.ts gazeOf ask before they lay his eye on his aim). False with the rule off. */
+  get atWell(): boolean { return Math.max(this.rlc.k, this.rlc.h) > 0.5; }
   /** IN HAND (inhand.ts): nothing but the aim or the carry has the gun arm this frame — no hold, errand, swap, one-shot or look-only move over it. Character.inHandPass
    *  turns a pistol's or a torch's hand only then (and eases out otherwise): it does not fight a pose that has somewhere else to put that hand */
   get gunArmOwn(): boolean {
@@ -1996,7 +1999,7 @@ export class CharacterAnimator {
     //      stances' rate — set straight AT the first carriage taken from nothing, morphing between them after — and the master weight following longGun itself
     let wLg = 0, lgWant: LongStance | null = null;
     if (this.longGun || this.lg.w.x > 0.002) {
-      const want: LongStance = this.thrOff && this.throwT >= 0 && this.throwT < THROW_DUR - 0.25 ? 'lowLong'   // (GUNHAND.throwFree: one hand on it while the other throws — the gun comes down to the low ready for the swing, and back up over the recovery as the aim does)
+      const want: LongStance = this.thrOff && this.throwT >= 0 && this.throwT < THROW_DUR - 0.25 && this.shootT < 0 ? 'lowLong'   // (GUNHAND.throwFree: one hand on it while the other throws — the gun comes down to the low ready for the swing, and back up over the recovery as the aim does; a round that leaves inside the swing has it in the shoulder, as every shot does)
         : this.longStance ?? (this.upper === 'aim' || this.shootT >= 0 ? 'shoulder' : held === 'lowReady' ? 'lowLong' : held === 'highReady' || held === 'stack' ? 'portLong' : 'patrolLong');
       const wLgWas = clamp(this.lg.w.x, 0, 1);
       const drew = this.longGun && (this.lg.seen === null || wLgWas < 1 && !this.lgArmedWas);   // the rising edge of longGun: a weapon put in the hands from nothing OR re-armed while the last draw's weight was still easing out (E-E, 2→1→2, a short wall hug — review 08-10 #14: it floated level off a hanging wrist for 9–16 frames)
@@ -3165,6 +3168,10 @@ export class CharacterAnimator {
         else if (this.rlT >= 0) { t = this.rlT; D = B.dur; }
       } else if (this.reloadT >= 0) { D = this.reloadDur; t = this.reloadT * (D / this.clips.Pistol_Reload.duration); out = D * 0.27; in_ = D * 0.65; }   // (no movement pass, no hand, nothing of a beat read: the clip's clock, which runs on under the carry, and rlBeat's own shares of it)
     }
+    // a beat that stands still (a guard's counts down only while he is at his fire: guards.ts tickReloadBeat — off his man it waits) or hands with other work (a
+    // signal, a tell, a throw, a strike, a tool: what takes the hand off the change in mvArms) puts the gun back on its carriage; it comes up again as the change goes on
+    C.still = t >= 0 && t === C.at ? C.still + dt : 0; C.at = t;
+    if (C.still > 0.25 || this.sigT >= 0 || this.tellT >= 0 || this.mvs.tsT >= 0 || this.throwT >= 0 || this.strikeT >= 0 || this.bigTool) t = -1;
     const tuck = want === 'lowLong' || want === 'patrolLong' ? clamp(this.gunWall, 0, 1) : 0;
     const kT = t >= 0 ? bump(t, 0, R.in, D - R.end - R.out, D - R.end) * (1 - tuck) : 0;
     const hT = t >= 0 ? bump(t, Math.max(0, out - R.headIn), Math.max(0.05, out - 0.05), Math.min(in_ + 0.1, D - R.end - R.headOut), Math.min(in_ + 0.1 + R.headOut, D - R.end)) : 0;

@@ -771,11 +771,11 @@ export function fragThrowTick(g: Game, dt: number) {
       if (g.time < Wd.until) continue;
       C.wind = null;
       let from: Vec3 = Wd.hand && flat(Wd.hand, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], Wd.hand[1], c.pos[2]], Wd.hand) ? Wd.hand : Wd.toward ? armRound(g, c.pos, Wd.toward) : [c.pos[0] + Math.sin(c.aimYaw) * 0.35, c.pos[1] + 1.5, c.pos[2] + Math.cos(c.aimYaw) * 0.35];
+      let sol = g.items.solve(from, Wd.at, 11);
       if (GUNHAND.on && GUNHAND.throwFree && !Wd.toward && c.anim.throwOff) {   // (gunhand.ts: thrown with the free hand, it leaves THAT hand — where the hand has the same arc to the same spot; from where it always did otherwise. The plain throw only: an arm round a corner is that rule's own point)
         const h = c.bones.handL;
-        if (h && flat(h, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], h[1], c.pos[2]], h) && lands(g.items.solve(h, Wd.at, 11), Wd.at, 2)) from = v3.copy(h);
+        if (h && flat(h, c.pos) < 1 && !g.col.solidBlocked([c.pos[0], h[1], c.pos[2]], h)) { const sh = g.items.solve(h, Wd.at, 11); if (lands(sh, Wd.at, 2)) { from = v3.copy(h); sol = sh; } }
       }
-      const sol = g.items.solve(from, Wd.at, 11);
       if (!lands(sol, Wd.at, 2) || !ownClear(g, gd, sol.land, true) || hostageNear(g, sol.land)) {   // (a mate has come into its reach, or he has lost the arc: it stays in his hand, he says so, and the floor's clock is as it was before he shouted)
         B.lastT = Wd.lastT; C.tryAt = g.time + 2; g.say(gd, w('no — holding it!', 'no — hold it!')); FRAG_STATS.held++; continue; }
       const it = g.items.spawn('frag', from, sol.v0, { fuse: F.defFuse, who: c.id, heading: v3.yawOf(sol.v0) });
@@ -855,9 +855,9 @@ function windUp(g: Game, B: DefBook, C: Carrier, head: Vec3, from: Vec3, aim: Ve
   }
   return null;
 }
-/** an arm round a corner: the hand half a pace from a man at `p` toward `to`, chest high (no arm goes through a wall: from where he stands, or not at all) */
 /** GUNHAND.throwFree, for the drawer (combat.ts guardKit): the grenade of a throw under way is still in his fist — swung, not yet let go */
 export function fragInFist(g: Game, gd: Guard): boolean { return !!defBooks.get(g)?.carriers.find(C => C.gd === gd)?.wind?.swung; }
+/** an arm round a corner: the hand half a pace from a man at `p` toward `to`, chest high (no arm goes through a wall: from where he stands, or not at all) */
 export function armRound(g: Game, p: Vec3, to: Vec3): Vec3 {
   const dx = to[0] - p[0], dz = to[2] - p[2], d = Math.hypot(dx, dz) || 1, out = Math.min(0.7, d), from: Vec3 = [p[0] + dx / d * out, p[1] + 1.5, p[2] + dz / d * out];
   return g.col.solidBlocked([p[0], p[1] + 1.5, p[2]], from) ? [p[0], p[1] + 1.5, p[2]] : from;

@@ -1055,9 +1055,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   always did). NOT CHANGED: who throws, the wind-up and release times, the scatter and the spot aimed at, the fuse. WHO IT REACHES: every caller of
   `throwItem` with a long gun up — defenders and responders with the carbine (frag.ts), a TEAMMATE at a lane's mouth putting a stun charge down it
   (lanes.ts `stun`: the swing only — that charge is in the air on the frame he starts, from his arm round the corner, as before), a defender's
-  grenade round a corner (`fragThrowAt`: the swing and the fist's grenade; it still leaves from the arm-round-the-corner point), and Sam's G quick
-  throw with the rifle up (a key the page has off; it leaves from the same point ahead of him). Teammates' ordered throws were already the support
-  hand's (`tossItem`), and Sam's slot throws have the rifle slung: neither is touched. Pistol men throw as they did. STANDS: off on the frozen stand
+  grenade round a corner (`fragThrowAt`: the swing and the fist's grenade; it still leaves from the arm-round-the-corner point). Teammates' ordered
+  throws were already the support hand's (`tossItem`), and Sam throws with the rifle on his back — the slots' throws, and the G quick throw, which
+  slings it first (player.ts): none is touched. A round that leaves inside the swing has the gun in the shoulder for it (`shootT` is asked before the
+  throw's low ready), as every shot does. Pistol men throw as they did. STANDS: off on the frozen stand
   (`TPS_GUNHAND=1` raises it; `FROZEN_HOLDS['GUNHAND.on']`), on in the page (`?gunhand=0`), journalled (a recording from before the table replays
   with it off). OFF = the build as it was: 1,920 frames of throws by a carbine man and a pistol man (standing, low ready, crouched, walking, the
   short one, the toss, re-triggered mid-swing) hash the same pose and bones as the commit before. CHECK: `bun run tools/qa/probes.ts gunhand-throw`

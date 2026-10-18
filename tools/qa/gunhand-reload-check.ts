@@ -23,7 +23,7 @@
 //   (12) a recording from before the key replays with it off, one that carries it keeps it; the page opens with it on and ?gunhand=0 puts it off.
 //
 //   bun run tools/qa/gunhand-reload-check.ts [--verbose]     (both stands: it raises the switch itself)
-//   GUNHAND_BREAK=1 …                                        (the rule left off for the 'on' lines: (3), (4), (5), (6), (9) and (10) must fail)
+//   GUNHAND_BREAK=1 …                                        (the rule left off for the 'on' lines: (3), (4), (5), (6), (9), (10) and (10b) must fail)
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 
@@ -164,6 +164,16 @@ export async function gunhandReloadCheck(): Promise<boolean> {
     { const p = play('operator', 'bullpup', POSES['low ready'], FN, 'own', ON, true, 1), b = body(p, FN);
       line(mx(b, r => r.gunOff) <= 1 && mx(b, r => r.carry) === 0 && mx(p, r => r.grip) <= 0.015 && at(p, FN.out).well <= 0.03 && mx(b, r => r.headOff) >= 10, '(10) against a wall (the low ready tucked): the muzzle keeps to its tuck, the hands do the change there, the head still goes down',
         `head ${f1(mx(b, r => r.headOff))}° · bore ${mx(b, r => r.gunOff).toFixed(2)}° off the tuck · palm off the grip ${cm(mx(p, r => r.grip))} cm · wrist off the well's mark ${cm(at(p, FN.out).well)} cm`); }
+
+    // (10b) a beat that stands still
+    { const m = man('defender', 'carbine'); POSES['on the aim'](m.c); for (let i = 0; i < 90; i++) step(m, ON, true);
+      const an = m.c.anim, deal = (t: number) => { an.reloadRow = AK; an.reloadAt = t; step(m, ON, true); };
+      an.reload(); let t = 0, up = 0; for (; t < 1.0; t += DT) { deal(t); up = Math.max(up, an.rlShown.carry); }
+      const well = an.atWell; for (let f = 0; f < 45; f++) deal(t);   // (off his man: guards.ts counts the beat down only at his fire sites — game.ts deals the same second every frame)
+      const still = an.rlShown.carry, stillHead = an.rlShown.head, eyes = an.atWell; let again = 0; for (; t < AK.dur; t += DT) { deal(t); again = Math.max(again, an.rlShown.carry); }
+      for (let f = 0; f < 6; f++) { an.reloadAt = -1; step(m, ON, true); }
+      line(up > 0.99 && well === true && still === 0 && stillHead === 0 && eyes === false && again > 0.99 && an.rlShown.carry === 0, '(10b) a beat that stands still (a guard off his man): the gun is back on its carriage and his head is up within three quarters of a second, his eyes are his sights\' again, and the carry comes back up when the change goes on',
+        `carry ${up.toFixed(2)} into the change (at the well: ${well}) · ${still.toFixed(2)} and head ${stillHead.toFixed(2)} after 0.75 s of a stopped beat (at the well: ${eyes}) · ${again.toFixed(2)} once it runs again · ${an.rlShown.carry.toFixed(2)} after it`); }
 
     // ------------------------------------------------------------ the game
     { const FNP: any = await import('./fn2000-probes.ts');

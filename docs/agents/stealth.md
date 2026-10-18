@@ -269,7 +269,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the right 4.0 cm above its shoulder and 16 cm or more ahead, the fist's hollow 1.2 cm from the torch's line with its thumb line 0.1° off it (IN HAND on),
   the light 1.5 cm from the lens box; the hand the game reads turns 11.0° a frame at most, as drawn 14.1°; in the game, left wrist 51.4 cm under the gun
   shoulder, right 4.0 above, his light 1.5 cm from the drawn lens. STILLS: `tools/qa/pose-mesh.ts defender_2 torch-up --inhand [--gunhand]`. Never seen on a
-  GPU or in play; nobody has judged the raise in motion, the fist against the jaw of each cast variant, or how the higher light reads in a room.
+  GPU or in play; nobody has judged the raise in motion, the fist against the jaw of each cast variant, or how the higher light reads in a room. LEFT: a
+  man whose torch was knocked out of his hand at a grab (`torchLostAt`) and who then answers a whistle still takes the torch upper (`handCarry` says torch),
+  so his empty right fist comes up — it was his empty left before.
 
 <!-- was CLAUDE.md lines 2486–2549 -->
 - **A guard has one attention, and it can be taken** (`src/game/attention.ts`, table `ATTENTION`; `ATTENTION.on` — ON in the page, `?noattention` = the

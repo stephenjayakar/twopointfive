@@ -74,7 +74,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   toward the gun from just before the empty comes out until the fresh one is seated; the trunk keeps the carriage's own blade and lean; then the carriage he came from. The
   clock is the support hand's own (`mvArms`): the game's beat where it deals one (a guard's `reloadT`, a room-fight teammate's `reloadUntil` — which never played a clip),
   else `reload()`'s — so the player, teammates, defenders and responders all do it, and `reloadArm` lands the magazine on the well where the gun now is (it works in the
-  trigger hand's frame). A low carriage tucked for a wall (`gunWall`) keeps its tuck: the hands do the change there. The gaze stabiliser stands down for the look at the
+  trigger hand's frame). A low carriage tucked for a wall (`gunWall`) keeps its tuck: the hands do the change there. A beat that stands still (a guard's counts down only at his fire sites — off his man it waits) puts the gun back on its carriage after a quarter second, and so do hands with other work (a signal, a tell, a throw, a strike, a tool); it comes up again as the change goes on. While the carry is more than half up his eyes are not on his sights (`anim.atWell`: guards.ts `canSeeChar` and fogofwar.ts `gazeOf` keep to his head). The gaze stabiliser stands down for the look at the
   well as it does for the clip. It changes the pose the game reads (the bore, the rail light, the head, the arms' hit capsules) for the length of a reload; durations, when
   the rounds are in and who may fire are untouched, and the gun is on its carriage on the frame the rounds are in. Tube-fed guns (`reloadMag` false) take the carry with
   the support hand left on the fore-end; with the movement pass off both hands stay on the gun, nothing changes the magazine and every gun takes the box row (`reloadBack`
@@ -83,7 +83,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   it (`kitanim-reload`, the rifle's tactical change, was red on the shipped stand until this). `moves-reload` and `moves-kept` compare a man changing a magazine with
   one who is not, to the bit: they hold the rule off (`tools/qa/moves-probes.ts gunhandOff`) and this check holds the hand at the well under the carry. Stands: ON in the page (`?gunhand=0`
   off), OFF in the module and on the frozen stand (`TPS_GUNHAND=1`); the journal carries the table. Check: `tools/qa/gunhand-reload-check.ts` (probe `gunhand-reload`,
-  family `gunhand`; `GUNHAND_BREAK=1` fails six of its twelve lines), the same bench numbers on both stands: over 19 reloads (the player's bullpup and issue carbine, a
+  family `gunhand`; `GUNHAND_BREAK=1` fails seven of its thirteen lines; line 10b is the beat that stands still), the same bench numbers on both stands: over 19 reloads (the player's bullpup and issue carbine, a
   room-fight teammate, a defender and a responder with the short carbine; low ready, on the aim, crouched, up a stair, walking, calm patrol, high port; 3264 frames) the
   palm is 1.0 cm off the drawn grip at worst (rule off 3.0‥3.6), the support wrist 2.0 cm off the magazine's mark at out and seat (rule off 7.1), the fastest frame
   4.5° (from the calm patrol's muzzle-down carry), the chest joint 0.0 cm off the carriage's (rule off 2.0), bore and trigger hand 0.00° / 0.0 cm off the figure that
