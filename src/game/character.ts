@@ -10,6 +10,7 @@ import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineG
 import { hyp2, hyp3 } from '../math/vec';
 import { WALLSNAP } from './wallsnap';
 import { STEALTHPOSE, type StealthFeed } from './stealthpose';   // (read inside methods only: the game's one import cycle)
+import { INHAND, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export type UpperMode = 'none' | 'relaxed' | 'aim' | 'torch';
@@ -1765,6 +1766,14 @@ export class CharacterAnimator {
   get throwing() { return this.throwT >= 0 && this.throwT < THROW_RELEASE + 0.05; }
   /** the throw one-shot is playing at all (wind-up through recovery) */
   get inThrow() { return this.throwT >= 0; }
+  /** how much of the pistol's AIM clip the pose shows this frame, 0‥1 (the eased weight — `upper` flips on a frame): Character.inHandPass turns the gun hand onto the aim line by it */
+  get aimShown(): number { return this.upperW.aim; }
+  /** IN HAND (inhand.ts): nothing but the aim or the carry has the gun arm this frame — no hold, errand, swap, one-shot or look-only move over it. Character.inHandPass
+   *  turns a pistol's or a torch's hand only then (and eases out otherwise): it does not fight a pose that has somewhere else to put that hand */
+  get gunArmOwn(): boolean {
+    return !(this.holdPose || this.heldPose || this.haul || this.lockpick || this.act || this.wound || this.kit !== null || this.sw.shown || this.hideHeldItem || this.throwT >= 0 || this.strikeT >= 0
+      || this.hitT >= 0 || this.reloadT >= 0 || this.sigT >= 0 || this.tellT >= 0 || this.mvBusy || this.mvs.tsT >= 0);
+  }
   /** seconds into the throw, −1 when not throwing (THROW_RELEASE is the instant the hand lets go) */
   get throwTime() { return this.throwT; }
   get shooting() { return this.shootT >= 0 && this.shootT < 0.35; }
@@ -5035,6 +5044,15 @@ export class Character {
   /** the right hand's own axes (hand-bone local): out of the back of the hand, and across the knuckles toward the thumb / index side — read off the rest pose
    *  (T-pose, palms down: back = model up squared to the fingers, thumb side = back × fingers); the fingers themselves run along the bone's local +Y */
   private handRBack: Vec3; private handRThumb: Vec3; private handLBack: Vec3; private handLThumb: Vec3;
+  /** IN HAND (inhand.ts): the frame a gun is rigid in, in the right hand bone's own axes — the wrist → middle knuckle line (the bore's) and the thumb side squared to it
+   *  (the gun's top): gripFrameR. Read off the rest pose. */
+  private handRBore: Vec3 = [0, 1, 0]; private handRTop: Vec3 = [0, 0, 1];
+  /** IN HAND, the drawer's word (combat.ts handProps, a frame behind as `anim.gripCan` is): what it has put in his right hand — inHandPass moves that hand for it */
+  inHand: InHandWord | null = null;
+  /** …the word the pass is showing (a new KIND of thing waits for the old one's turn to ease out), how far in it is (0 = the skeleton is as the animator posed
+   *  it), and the gun hand's rotation as the animator had it while the pass has turned it (handFrameR(true): what a game rule asks for) */
+  private inHandCur: InHandWord | null = null; inHandK = 0; private simHandR: Quat | null = null;
+  private inHandOv: (NodeOverride | undefined)[] | null = null;
   /** last frame's bones (and the dt between): the ragdoll is seeded with the body's own momentum — a guard shot mid-stride carries on forward as he folds */
   private prevBones: Record<string, Vec3> = {}; private prevDt = 0;
   /** …and last frame's joints UNDER the look-only arms (the animator's armsPre), on a frame they showed — null otherwise: what the ragdoll takes its momentum from */
@@ -5062,7 +5080,9 @@ export class Character {
     this.restChestInv = quat.conj(this.skel.globalRot[this.anim.nodes.spine3]);
     this.restHeadInv = quat.conj(this.skel.globalRot[this.anim.nodes.head]);
     { const hr = this.skel.globalRot[this.anim.nodes.handR], hi = quat.conj(hr); const f = v3.normalize(quat.rotate(hr, [0, 1, 0])); const b = v3.normalize(v3.mad([0, 1, 0], f, -f[1]));
-      this.handRBack = quat.rotate(hi, b); this.handRThumb = quat.rotate(hi, v3.cross(b, f)); }
+      this.handRBack = quat.rotate(hi, b); this.handRThumb = quat.rotate(hi, v3.cross(b, f));
+      const k = v3.sub(this.skel.nodePos(this.anim.nodes.middle1R), this.skel.nodePos(this.anim.nodes.handR));   // (the knuckle hangs off the hand bone by a fixed offset: one line in the hand's frame in every pose)
+      if (v3.len(k) > 1e-4) { this.handRBore = v3.normalize(quat.rotate(hi, k)); const t = v3.mad(this.handRThumb, this.handRBore, -v3.dot(this.handRThumb, this.handRBore)); if (v3.len(t) > 1e-3) this.handRTop = v3.normalize(t); } }
     { const hr = this.skel.globalRot[this.anim.nodes.handL], hi = quat.conj(hr); const f = v3.normalize(quat.rotate(hr, [0, 1, 0])); const b = v3.normalize(v3.mad([0, 1, 0], f, -f[1]));
       this.handLBack = quat.rotate(hi, b); this.handLThumb = quat.rotate(hi, v3.cross(f, b)); }
   }
@@ -5071,9 +5091,15 @@ export class Character {
   aimDir(): Vec3 { const cp = Math.cos(this.aimPitch); return [Math.sin(this.aimYaw) * cp, Math.sin(this.aimPitch), Math.cos(this.aimYaw) * cp]; }
   /** The right hand's frame in the WORLD as posed this frame: `fingers` wrist → knuckles, `back` out of the back of the hand, `thumb` across the knuckles toward
    *  the thumb / index side (back × fingers). What a thing gripped in the fist is laid out in — rigProps.knifeBoxes: the blade out of the thumb side. */
-  handFrameR(): { fingers: Vec3; back: Vec3; thumb: Vec3 } {
-    const r = quat.mul(quat.yaw(this.bodyYaw), this.skel.globalRot[this.anim.nodes.handR]);
+  handFrameR(sim = false): { fingers: Vec3; back: Vec3; thumb: Vec3 } {   // (`sim`: as the ANIMATOR posed it — a game rule's; without, as it is drawn: inhand.ts)
+    const r = quat.mul(quat.yaw(this.bodyYaw), sim && this.simHandR ? this.simHandR : this.skel.globalRot[this.anim.nodes.handR]);
     return { fingers: quat.rotate(r, [0, 1, 0]), back: quat.rotate(r, this.handRBack), thumb: quat.rotate(r, this.handRThumb) };
+  }
+  /** IN HAND (inhand.ts): the frame a gun in the right hand is RIGID in, in the world as the hand is DRAWN this frame — `bore` along the wrist → middle knuckle line,
+   *  `top` the thumb side squared to it. The drawer's (rigProps.pistolFrame): a pistol laid out in it is in the fist whatever the arm does. */
+  gripFrameR(): { bore: Vec3; top: Vec3 } {
+    const r = quat.mul(quat.yaw(this.bodyYaw), this.skel.globalRot[this.anim.nodes.handR]);
+    return { bore: quat.rotate(r, this.handRBore), top: quat.rotate(r, this.handRTop) };
   }
   /** How a gun carried on a kit errand lies off the right hand as posed, in the world: the turn from the hand's own frame to the one the errand asked of it
    *  before the wrist was held inside what a wrist bends (anim.kitLie). null = it lies as the hand does. The drawer's (rigProps.kitGunFrame). */
@@ -5116,6 +5142,65 @@ export class Character {
       if (pre) { this.skel.update(pre, this.world, this.anim.twists); this.simBones = this.joints({}); } else this.simBones = null; }
     this.skel.update(this.anim.pose, this.world, this.anim.twists);
     this.readBones(dt);
+    if (INHAND.on) this.inHandPass(dt); else { this.inHandK = 0; this.simHandR = this.inHandCur = null; }
+  }
+
+  /** IN HAND (inhand.ts): the hand that holds a thing put where that thing is and turned onto the line the simulation points it along. THE PICTURE ONLY: the
+   *  skeleton is posed a second time with those joints overridden, AFTER `bones`, `gunDir` and `muzzle` were read — the palette the GPU is handed and the hand
+   *  frames the drawer reads (handFrameR / handFrameL / gripFrameR) move; nothing the simulation reads does. By the drawer's word (`inHand`):
+   *    · a PISTOL: the gun hand's knuckle line onto gunDir by the aim clip's own weight, a support hand that is on the gun carried round with it;
+   *    · a TORCH: the fist's thumb line onto the beam and the arm re-solved so the fist is round the torch where the simulation has it;
+   *    · a LONG GUN: the trigger hand moved onto its grip.
+   *  It comes and goes at INHAND.rate while nothing else has the gun arm (anim.gunArmOwn); on a shot the pistol's hand is on the line at once, in full. */
+  private inHandPass(dt: number) {
+    const an = this.anim, n = an.nodes, sk = this.skel, W = this.inHand;
+    let cur = this.inHandCur; if (W && (!cur || this.inHandK <= 0 || cur.kind === W.kind)) cur = this.inHandCur = W;
+    if (!cur) { this.inHandK = 0; this.simHandR = null; return; }
+    const live = W !== null && W.kind === cur.kind, shown = !an.inThrow && !an.hideHeldItem && !an.kitBusy, fire = live && shown && cur.kind === 'pistol' && an.shooting;
+    const want = !live || !shown ? 0 : cur.kind === 'long' ? (an.longShown !== null ? 1 : 0) : fire ? 1 : !an.gunArmOwn ? 0 : cur.kind === 'torch' ? 1 : smoothstep(INHAND.from, INHAND.to, an.aimShown);
+    const step = dt > 0 ? INHAND.rate * dt : 1, K = this.inHandK = fire ? 1 : this.inHandK + clamp(want - this.inHandK, -step, step);   // (a dt-0 bake takes it as asked)
+    this.simHandR = null; if (K <= 0) { if (!live) this.inHandCur = null; return; }
+    const g0 = sk.globalRot[n.handR], hr: Quat = [g0[0], g0[1], g0[2], g0[3]], qi = quat.conj(quat.yaw(this.bodyYaw)), R = sk.nodePos(n.handR), L = sk.nodePos(n.handL);
+    // the line the thing lies along, model space, and the frame it is laid out in (rigProps frameFrom: z the line, y the world's up squared to it)
+    const z = v3.normalize(quat.rotate(qi, cur.kind === 'torch' ? cur.beam : cur.kind === 'long' || an.upper === 'aim' || an.shooting ? this.gunDir : this.aimDir()));
+    let y: Vec3 = [-z[0] * z[1], 1 - z[1] * z[1], -z[2] * z[1]]; if (v3.len(y) < 1e-3) return; y = v3.normalize(y); const x = v3.cross(y, z);   // (a line straight up or down has no top: the hand is left alone)
+    const inF = (d: Vec3): Vec3 => [x[0] * d[0] + y[0] * d[1] + z[0] * d[2], x[1] * d[0] + y[1] * d[1] + z[1] * d[2], x[2] * d[0] + y[2] * d[1] + z[2] * d[2]];
+    const ov = this.inHandOv ??= []; ov.length = 0;
+    /** an arm re-solved so its wrist is at `T` (the elbow kept on its side), the hand's rotation `rot` — over the skeleton's own output, not the pose (twoBoneIK
+     *  writes the pose, which the simulation's next frame starts from) */
+    const reach = (right: boolean, T: Vec3, rot: Quat) => {
+      const iS = right ? n.upperArmR : n.upperArmL, iE = right ? n.forearmR : n.forearmL, iH = right ? n.handR : n.handL;
+      const S = sk.nodePos(iS), E = sk.nodePos(iE), H = right ? R : L, l1 = v3.len(v3.sub(E, S)), l2 = v3.len(v3.sub(H, E)), st = v3.sub(T, S);
+      if (l1 < 1e-3 || l2 < 1e-3 || v3.len(st) < 1e-3) return;
+      const dist = clamp(v3.len(st), Math.abs(l1 - l2) + 0.01, (l1 + l2) * 0.998), dir = v3.normalize(st), a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+      let pole = v3.sub(E, S); pole = v3.mad(pole, dir, -v3.dot(pole, dir));
+      if (v3.len(pole) < 1e-4) { pole = v3.mad([0, -1, 0], dir, dir[1]); if (v3.len(pole) < 1e-4) pole = v3.mad([0, 0, -1], dir, dir[2]); }   // (a dead straight arm: the elbow goes down, squared to the reach)
+      pole = v3.normalize(pole);
+      const E2 = v3.mad(v3.mad(S, dir, a), pole, h), T2 = v3.mad(S, dir, dist);
+      ov[iS] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(E, S)), v3.normalize(v3.sub(E2, S))), sk.globalRot[iS])) };
+      ov[iE] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(H, E)), v3.normalize(v3.sub(T2, E2))), sk.globalRot[iE])), pos: E2 };
+      ov[iH] = { rot, pos: T2 };
+    };
+    if (cur.kind === 'long') reach(true, v3.mad(R, inF(cur.by), K), hr);
+    else {
+      let d: Quat;
+      if (cur.kind === 'pistol') { const kc = quat.rotate(hr, this.handRBore), tc = quat.rotate(hr, this.handRTop); d = quat.mul(quat.fromBasis(x, y, z), quat.conj(quat.fromBasis(v3.cross(tc, kc), tc, kc))); }
+      else d = quat.fromTo(v3.normalize(quat.rotate(hr, this.handRThumb)), v3.normalize(inF(cur.axis)));   // (the way a thing gripped in the fist points — the short way, the roll about it left as the clip has it)
+      if (d[3] < 0) d = [-d[0], -d[1], -d[2], -d[3]];
+      const ang = 2 * Math.acos(Math.min(1, d[3]));
+      d = ang < 1e-4 ? [0, 0, 0, 1] : quat.slerp([0, 0, 0, 1], d, fire ? 1 : K * Math.min(1, INHAND.wrist * Math.PI / 180 / ang));
+      const rot = quat.normalize(quat.mul(d, hr));
+      if (cur.kind === 'pistol') {
+        ov[n.handR] = { rot };
+        // the support hand, when it is on the gun: carried rigidly round the gun hand's wrist with the same turn, its arm re-solved to reach
+        const near = 1 - smoothstep(INHAND.both * 0.5, INHAND.both, v3.len(v3.sub(L, R)));
+        if (near > 0) { const dl = near < 1 ? quat.slerp([0, 0, 0, 1], d, near) : d; reach(false, v3.add(R, quat.rotate(dl, v3.sub(L, R))), quat.normalize(quat.mul(dl, sk.globalRot[n.handL]))); }
+      } else {   // the torch: the hollow of the turned fist onto the point of its body the simulation's wrist and beam put there
+        const hol = quat.rotate(rot, v3.mad([0, cur.fwd, 0], this.handRBack, -cur.palm));
+        reach(true, v3.mad(R, v3.sub(v3.sub(v3.add(R, inF(cur.at)), hol), R), K), rot);
+      }
+    }
+    this.simHandR = hr; sk.update(an.pose, this.world, an.twists, ov);
   }
 
   /** TURN: bodyYaw / aimYaw as the AI left them this frame are where he WANTS to face (its own easings run on, wish to wish — turnBegin); he comes round to
@@ -5198,6 +5283,7 @@ export class Character {
     // the moves' look-only arms (a reload's hand, the hand to the ribs, a hostage's tied wrists) are not what falls: the body is seeded from the pose under them and
     // from that pose's own momentum, so who lies where is the same with those layers on or off (they are let go of on the frame he dies)
     { const under = this.anim.underPose(); if (under) { this.anim.pose.copy(under); this.skel.update(this.anim.pose, this.world, this.anim.twists); this.readBones(0); } }   // (…and the gun arm under a torch ↔ sidearm swap: handwork.ts)
+    if (this.inHandK > 0) { this.skel.update(this.anim.pose, this.world, this.anim.twists); this.inHandK = 0; this.simHandR = this.inHandCur = null; }   // (inhand.ts: the look-only hands are let go of — the limbs the mesh drive starts from are the ones the particles were read off)
     this.anim.nvCancel();   // (a goggle flip he was in the middle of: the goggles are where the game says, not half way for as long as he lies there)
     this.alive = false; this.vel = [0, 0, 0];
     const n = this.anim.nodes, b = this.bones, pb = this.prevSim ?? this.prevBones, pdt = this.prevDt; const Y = quat.yaw(this.bodyYaw);

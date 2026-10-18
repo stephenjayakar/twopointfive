@@ -5,6 +5,7 @@
 //   bun run tools/qa/pose-mesh.ts list
 //   bun run tools/qa/pose-mesh.ts <variant> <situation> [--out <dir>] [--moves off] [--id N] [--no-props] [--tag <text>] [--at <secs>] [--set '<json>']
 //       → <dir>/<variant>__<situation>[__<tag>].ply + .json      (dir: ./pose-mesh-out unless given)
+//       --inhand: the hands posed to what he holds (src/game/inhand.ts, as the page has it): a pistol drawn in the hand, the hand put to a torch or a long gun
 //       --at: that much longer in the situation before the pose is taken (a gait at another point of its cycle);  --set '{"MOVES":{"steady":0}}': character.ts tables written over
 //       (and wallsnap.ts's: `--set '{"WALLSNAP":{"pose":false}}'` = the wall hold's poses as they were; WALLSNAP.on is raised for every situation, as the page has it)
 //       the wall hold: wall-crouch (parked), wall-sidle, wall-crouch-sidle, wall-crouch-sidle-l (the other way), wall-crouch-creep (half pace)
@@ -32,6 +33,8 @@ const CH: any = await import(`${ROOT}/src/game/character.ts`);
 const WS: any = await import(`${ROOT}/src/game/wallsnap.ts`);
 const CM: any = await import(`${ROOT}/src/render/charMaterials.ts`);
 const RP: any = await import(`${ROOT}/src/game/rigProps.ts`);
+const IH: any = await import(`${ROOT}/src/game/inhand.ts`).catch(() => null);   // (a tree from before the rule has no such module: --inhand is then nothing)
+const inhand = has('--inhand') && !!IH; if (IH) IH.INHAND.on = inhand;
 const { skinVertices } = await import(`${ROOT}/src/render/meshbvh.ts`);
 const { sideOfTeam } = await import(`${ROOT}/src/game/charLook.ts`);
 const DT = 1 / 60;
@@ -63,6 +66,10 @@ const SITS: Record<string, { say: string; go(x: Ctx): void }> = {
   'rifle-crouch': { say: 'the long gun shouldered, crouched', go: x => { x.arm('rifle'); x.c.anim.upper = 'aim'; x.c.anim.crouchTarget = 1; x.run(2); } },
   'pistol-carry': { say: 'the pistol out, lowered', go: x => { x.arm('pistol'); x.c.anim.upper = 'relaxed'; x.run(2); } },
   'pistol-aim': { say: 'the pistol up in both hands', go: x => { x.arm('pistol'); x.c.anim.upper = 'aim'; x.run(2); } },
+  'pistol-crouch': { say: 'the pistol up in both hands, crouched (a teammate on the rear of a sneaking pair)', go: x => { x.arm('pistol'); x.c.anim.upper = 'aim'; x.c.anim.crouchTarget = 1; x.run(2); } },
+  'pistol-crouch-walk': { say: 'the pistol up in both hands, crouched and moving at 1.2 m/s', go: x => { x.arm('pistol'); x.c.anim.upper = 'aim'; x.c.anim.crouchTarget = 1; x.walk(1.2); x.run(2.2); } },
+  'pistol-crouch-up': { say: 'the pistol coming up, crouched: 0.07 s after the aim was called from the low ready', go: x => { x.arm('pistol'); const a = x.c.anim; a.upper = 'none'; a.stance = 'lowReady'; a.crouchTarget = 1; x.run(2); a.upper = 'aim'; a.stance = 'none'; x.run(0.07); } },
+  'pistol-aside': { say: 'the pistol up in both hands, crouched, on a point 70 degrees to his left', go: x => { x.arm('pistol'); x.c.anim.upper = 'aim'; x.c.anim.crouchTarget = 1; x.c.aimYaw = x.c.bodyYaw + 70 * Math.PI / 180; x.run(2); } },
   'torch': { say: 'a calm patrol: the torch in the right fist at his side (no upper layer: the walk clip\'s own hand)', go: x => { x.arm('torch'); x.walk(1.2); x.run(2.3); } },
   'torch-up': { say: 'answering a whistle with the torch still in the hand (upper \'torch\': the Idle_Torch clip)', go: x => { x.arm('torch'); x.c.anim.upper = 'torch'; x.run(2); } },
   'can': { say: 'a canister in the right fist (Sam with a can selected)', go: x => { x.arm('can'); x.run(2); } },
@@ -130,6 +137,7 @@ const x: Ctx = {
   arm(kind) {
     const a = c.anim; held = kind === 'rifle' && !S.rifle ? null : kind;
     if (held === 'rifle') { a.longGun = true; a.longSteady = S.rifle === 'sc20k' ? 1 : 0; a.longGrip = S.rifle === 'sc20k' ? RP.sc20kGrip(undefined, has('--fit')) : RP.carbineGrip(); c.muzzleAhead = S.rifle === 'sc20k' ? RP.sc20kMuzzleAhead() : RP.carbineMuzzleAhead(); }
+    c.inHand = !inhand ? null : held === 'pistol' ? IH.IN_PISTOL : held === 'torch' ? RP.torchHold([0, 0, 1]) : held === 'rifle' && !has('--fit') ? RP.longHold(S.rifle) : null;   // (the drawer's words — combat.ts handProps deals them every frame; a patrol's beam lies level ahead of him: rigProps torchCarryDir)
     if (has('--fit')) a.gripCan = held === 'can';   // (--fit: held things drawn in the hand, as the page draws Sam's under kit handling — rigProps GRIPFIT)
     if (a.grip) a.grip[1] = held === 'can' || held === 'torch';   // (the hand pass's input — combat.ts handProps deals it for Sam's canister, game.ts for whatever a guard has in his hand; a tree without the pass has no such field)
   },
@@ -160,9 +168,9 @@ let propBoxes = 0; const notes: string[] = [];
 if (!has('--no-props')) {
   try {
     const out: any[] = [];
-    if (variant.side === 'operator') RP.rigBoxes(c, { goggles: c.anim.nvShown !== undefined, nv: false, ...(c.anim.nvShown !== undefined ? { nvK: c.anim.nvShown } : null), slot: held === 'pistol' ? 1 : 0, lightOn: false, isGuard: false, holster: held !== 'pistol', held: held === 'can' ? 'smoke' : null, rifle: held === 'rifle' ? 'hand' : null, ...(has('--fit') ? { fit: true } : null) }, out);
+    if (variant.side === 'operator') RP.rigBoxes(c, { goggles: c.anim.nvShown !== undefined, nv: false, ...(c.anim.nvShown !== undefined ? { nvK: c.anim.nvShown } : null), slot: held === 'pistol' ? 1 : 0, lightOn: false, isGuard: false, holster: held !== 'pistol', held: held === 'can' ? 'smoke' : null, rifle: held === 'rifle' ? 'hand' : null, ...(has('--fit') || (inhand && held !== 'rifle') ? { fit: true } : null), ...(inhand ? { inHand: true } : null) }, out);
     else if (variant.side === 'civilian') { if (c.anim.bound === 1) RP.wristTieBoxes?.(c, out); }   // (empty hands, nothing worn — but a bound hostage's wrist tie, combat.ts handProps)
-    else if (held === 'rifle' || held === 'pistol' || held === 'torch') RP.rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: held === 'torch', weapon: held === 'rifle' ? 'carbine' : 'pistol' }, out);
+    else if (held === 'rifle' || held === 'pistol' || held === 'torch') RP.rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: held === 'torch', ...(inhand && held === 'torch' ? { beamDir: [0, 0, 1] } : null), weapon: held === 'rifle' ? 'carbine' : 'pistol', ...(inhand && held === 'pistol' ? { inHand: true } : null) }, out);
     else RP.holsterBoxes(c, out, { slide: RP.RIG.guardPistol.slide, grip: RP.RIG.guardPistol.grip });
     for (const b of out) {
       const q: number[] = b.rot ?? [0, Math.sin(b.yaw / 2), 0, Math.cos(b.yaw / 2)], [qx, qy, qz, qw] = q;
