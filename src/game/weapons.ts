@@ -14,7 +14,7 @@ import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
 import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
 
-export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18';
+export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm';
 export type FireMode = 'semi' | 'auto' | 'burst';
 export type WeaponClass = 'pistol' | 'carbine' | 'rifle' | 'shotgun';
 /** what leaves a dying (or downed) hand that held it: a throwables.ts ItemKind (combat.ts dropFromHand) — 'rifle' has no body of its own until R2 gives it one */
@@ -263,7 +263,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.06 }, damage: 'oneShot', muzzleAhead: 0.26, rig: 'guardPistol', light: 'rail', drop: 'pistol', tracer: null,
     weightKg: 1.0, bulk: 0,
   },
-  // ---- switched off: rows from the design (§2 / §3), nothing constructs them. Each names what its lane still owes it. ----
+  // ---- rows from the design (§2 / §3). The AK-74M is switched off: nothing constructs it. The two after it are the defenders' own (gunroles.ts). Each names what its lane still owes it. ----
   // AK-74M-pattern rifle (415 mm barrel, brake): tighter, a smaller flash than the shorty (doc: light gain 1.1 — its own muzzleFx block when a setting wants it).
   ak74m: {
     id: 'ak74m', enabled: false, name: 'AK-74M rifle', short: 'AK-74M', calibre: '5.45×39 mm', cls: 'rifle',
@@ -274,14 +274,30 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     tracer: { every: 3, lastN: 3, color: [1.0, 0.42, 0.12] },
     weightKg: 3.6, bulk: 3,
   },
-  // AKMS-pattern (7.62×39): heavier report ('carbineHeavy'), looser, opens faster. Same debts.
+  // AKMS-pattern (7.62×39): looser than the short carbine and opening faster, two or three rounds a pull. A DEFENDER's rifle (gunroles.ts gunDeal: half a
+  // cast's riflemen, with the switch on — nothing else constructs one). A stand-in to look at and listen to: drawn as the short carbine, speaking with its
+  // report (the heavier voice the design names, 'carbineHeavy', is the sound pass's to make), the flame the bare pistol's card.
   akms: {
-    id: 'akms', enabled: false, name: 'AKMS rifle', short: 'AKMS', calibre: '7.62×39 mm', cls: 'rifle',
+    id: 'akms', enabled: true, name: 'AKMS rifle', short: 'AKMS', calibre: '7.62×39 mm', cls: 'rifle',
     magCapacity: 30, spareMags: Infinity, topUp: false, reload: { dur: 2.6, out: 0.7, in_: 1.7, rack: 2.2 },
     modes: ['auto', 'semi'], cd: 0.1, cdJitter: 0, burst: { min: 2, max: 3, interval: 0.1, gapMin: 0.9, gapMax: 1.6, spreadPerRound: 0.04, spreadCap: 0.16 }, auto: null,
-    report: { level: 1, loud: true, voice: 'carbineHeavy' }, suppressed: false, muzzleFx: 'pistolBare' /* stand-in: doc gain 1.3 */, propImpulse: 6,
+    report: { level: 1, loud: true, voice: 'carbineReport' /* stand-in: 'carbineHeavy' */ }, suppressed: false, muzzleFx: 'pistolBare' /* stand-in: doc gain 1.3 */, propImpulse: 6,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.04 }, damage: 'oneShot', muzzleAhead: 0.62, rig: 'carbine', light: 'none', drop: 'rifle', tracer: null,
     weightKg: 3.5, bulk: 3,
+  },
+  // PKM-pattern (7.62×54R, a hundred on the belt): THE DEFENDERS' BELT-FED GUN. One to a cast at most, on the post that looks down the longest line
+  // (gunroles.ts gunDeal — nothing else constructs one). What it is: strings of six to ten where a rifle fires two to four, half a second to a second
+  // apart, a belt that outlasts any push down its lane. What it costs the man behind it: the slowest gun on the floor to bring round (handling 0.45: come
+  // at him from the side), looser hands than a rifle's (base 0.05), and six and a half seconds standing there feeding it. Every round still puts a man
+  // down and no round does more: `oneShot`, as every row. A stand-in to look at and listen to: drawn as the short carbine, its report and flame.
+  pkm: {
+    id: 'pkm', enabled: true, name: 'PKM machine gun', short: 'PKM', calibre: '7.62×54 mm R', cls: 'rifle',
+    magCapacity: 100, spareMags: Infinity, topUp: false, reload: { dur: 6.5, out: 1.4, in_: 5.0, rack: 5.9 },
+    modes: ['auto'], cd: 0.1, cdJitter: 0, burst: { min: 6, max: 10, interval: 0.1, gapMin: 0.5, gapMax: 1.0, spreadPerRound: 0.012, spreadCap: 0.14 }, auto: null,
+    report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 6,
+    aiSpread: { base: 0.05, moveK: 0.03, moveCap: 0.12, rangeFrom: 10, rangeK: 0.004 }, damage: 'oneShot', muzzleAhead: 0.62, rig: 'carbine', light: 'none', drop: 'rifle',
+    tracer: { every: 5, lastN: 0, color: [1.0, 0.42, 0.12] },
+    handling: 0.45, weightKg: 11.0, bulk: 4,
   },
 };
 

@@ -47,6 +47,7 @@ import { civilianBodies } from './civilians';
 import { wallMenLive, thinLine, flightLen, WALLPEN } from './wallpen';
 import { roundEnergy, shotEnergy } from './glasspen';
 import { sideLocked } from './gunslots';   // (called inside the trigger only)
+import { gunString, gunStringGap } from './gunroles';   // (called inside the trigger only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export const COVERFIRE = {
@@ -307,7 +308,8 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
   fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(Cw.lay, 0, 1)) * supK + speed * P.shooterMoveK * 0.5 });
   O.rounds++; Cw.k++; if (g.fight) g.fight.stats.opRounds++;
-  O.next = Cw.next = g.time + (Cw.k % 2 === 0 ? Sk.shift[0] + simRandom() * (Sk.shift[1] - Sk.shift[0]) : Sk.pair);
+  const str = gunString(gd);   // (gunroles.ts: the belt-fed gun's string, the long rifle's one aimed round — 0 = the pair, as with its switch off)
+  O.next = Cw.next = g.time + (Cw.k % (str || 2) === 0 ? Sk.shift[0] + simRandom() * (Sk.shift[1] - Sk.shift[0]) : str ? gunStringGap(gd) : Sk.pair);
   return true;
 }
 

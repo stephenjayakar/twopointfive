@@ -49,6 +49,7 @@ import { kitStage } from './kit';
 import { teamStartsFallenIn } from './startfile';
 import { issueStage } from './issue';   // (type-only game imports: a level that issues its own wall charges — scenarios.roomClear.wallCharges)
 import { picketMarks, postPicket } from './pressure';
+import { gunDeal } from './gunroles';   // (called inside the staging only)
 import type { TeamStart } from '../scene/scenarios';
 import type { SquadSize } from './loadout';
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
@@ -276,6 +277,7 @@ export class NightBreach {
     if (pl.hasRifle) pl.slot = 'rifle'; pl.holstered = false;
     this.staged++; this.beatsSeen = 0; this.said.clear(); this.cut = true;
     this.layout?.staged?.();
+    gunDeal(g, this.hostiles.map((gd, i) => ({ gd, watch: posted[i].aimAt })));   // (gunroles.ts: the cast's guns off the table, once the floor's doors stand as the mission opens with them — nobody is touched and no die is drawn with its switch off)
     kitStage(g, this.ops);   // each member's kit and uniform (kit.ts): the cards onto the men just staged — nothing written on a teammate while every card is as issued (your own four counts are, under the pouches rule: kitPlayer)
     issueStage(g);   // a mission that issues its own wall charges (issue.ts): after the kit, so the cards' own count is known; a level without the field = nothing
     teamStartsFallenIn(g, this.ops);   // the team starts fallen in (startfile.ts): the menu's own 'fall in', unspoken — F's drill takes its pair off it as it always took an ordered man

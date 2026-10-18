@@ -113,7 +113,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
-  'CMDCHECK', 'GUNSLOTS'];
+  'CMDCHECK', 'GUNSLOTS', 'GUNROLES'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -126,6 +126,7 @@ import { PEEKSIGHT } from './peeksight';
 import { STICKY } from './stickycam';
 import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
+import { GUNROLES } from './gunroles';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
@@ -229,6 +230,8 @@ export function knobRegistry(): Record<string, object> {
     OWNCHARGE,
     // a primary and a secondary for every man (gunslots.ts): the card's two gun rows, a teammate's second gun, and the beats of his going to it when the primary runs dry
     GUNSLOTS,
+    // a gun used for what it is for (gunroles.ts): the defenders' deal off the weapons table, and the stack, the door, the cover's deal and the room fight's trigger by a man's gun
+    GUNROLES,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by
     SQUADTHROW,
     // the quick key is the squad's autopilot (autopilot.ts): on a door the men wait on they go in by the entry they pick; how long its plan is drawn

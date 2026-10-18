@@ -55,6 +55,7 @@ import { FRAG, fragFlee, fragReady, fragThrowAt, fragWinding, fragAway, armRound
 import { placeName } from './dialogue';
 import { CUES } from './cues';
 import { doorwayInWay } from './doorway';
+import { gunKeepsPost } from './gunroles';   // (called inside laneHolds only)
 
 export const LANES = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nolanes` holds it off) */
@@ -909,6 +910,7 @@ function ahead(g: Game, m: Uint8Array, gd: Guard, inside: boolean): Vec3 | null 
  *  none given = anything) lies at that lane's guns or down it — he keeps its mouth (a press that wants him sends him at the same guns by the same way). A fight
  *  somewhere else may have him: his way there is priced like any, and the gate stops him again if it lies down the lane. */
 export function laneHolds(g: Game, gd: Guard, to?: Vec3 | null): boolean {
+  if (gunKeepsPost(gd)) return true;   // (gunroles.ts: a defender with the belt-fed gun keeps the post he was dealt — false on its first test with the switch off)
   const st = states.get(g); if (!st || !(st.held.size || st.peek.size) || !live(g)) return false;
   const h = st.held.get(gd) ?? st.peek.get(gd); if (!h) return false; const L = st.lanes.find(x => x.id === h.lane); if (!L) return false;
   return !to || L.guns.some(m => flat(m, to) < LANES.fieldM + 4) || !!L.cells?.has(cellAt(g, to));

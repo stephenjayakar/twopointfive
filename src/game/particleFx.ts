@@ -238,6 +238,7 @@ const CASINGS: Partial<Record<WeaponId, CasingSpec>> = {
   aks74u:    { color: LACQUERED_STEEL, diameter: 0.010, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.45, 0.5], speed: 4.8, tink: 0.55 },   // AKs fling their empties hard, forward and right
   ak74m:     { color: LACQUERED_STEEL, diameter: 0.010, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.45, 0.5], speed: 4.8, tink: 0.55 },
   akms:      { color: LACQUERED_STEEL, diameter: 0.0113, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.45, 0.5], speed: 4.5, tink: 0.55 },
+  pkm:       { color: LACQUERED_STEEL, diameter: 0.0124, from: 'hand', ahead: 0.16, up: 0.05, right: -0.03, dir: [-1, 0.2, 0.1], speed: 3.6, tink: 0.5 },   // (a long rimmed case, out of the left of the feed cover)
   // (the guns a card's two slots offer — gunslots.ts: each ejects as the gun it is drawn as until it has a model of its own; the gas shotgun's hulls are owed with it)
   mk12:      { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.16, up: 0.07, right: 0.03, dir: [1, 0.5, 0.15], speed: 3.4, tink: 0.5 },
   mk46:      { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.16, up: 0.02, right: 0.03, dir: [1, -0.1, 0.1], speed: 3.0, tink: 0.45 },   // (down and right, out of the bottom of the feed tray)

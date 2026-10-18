@@ -73,6 +73,7 @@ import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
 import { gunWallIs } from './gunwall';
 import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside tickOp only)
+import { gunString, gunStringGap, gunStringGrow, gunBlindGap } from './gunroles';   // (called inside tickOp only)
 import { AIMCOST, feetHold } from './aimcost';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
@@ -687,7 +688,7 @@ export class RoomFight {
     if (!h.held) h.lastKnown = D.pt;
     if (B.broke) { if (g.tune.suppression) h.sup.downT = Math.max(h.sup.downT, 0.2); return; }   // head down (suppression.ts headDown: crouched, gun lowered) for as long as he cannot see
     if (!this.blindFire || B.n >= BLIND.rounds || g.time < B.next) return;
-    B.n++; B.next = g.time + BLIND.every;
+    B.n++; B.next = g.time + gunBlindGap(h, BLIND.every);   // (gunroles.ts: a dealt pistol fires at a pistol's rate; BLIND.every with its switch off)
     const c = h.char;
     if (h.held || g.time < h.staggerUntil || c.gunDir[1] < -BLIND.lowGun) return;
     if (g.tune.suppression && (h.sup.v >= SUPPRESSION.pinned || h.sup.latched || h.sup.downT > 0)) return;
@@ -1015,9 +1016,10 @@ export class RoomFight {
       O.reloadUntil = g.time + gd.weapon.def.reload.dur; this.speak(O, 'reloading.', 0); return; }
     const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
     const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
-    fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });
+    const str = gunString(gd);   // (gunroles.ts: a belt-fed gun's string, the Mk 12's single aimed round — 0: the controlled pair, as ever)
+    fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (str > 1 ? gunStringGrow(gd, O.n % str) : 0) + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });
     O.rounds++; O.n++; this.stats.opRounds++;
-    O.next = g.time + (O.n % 2 === 0 ? pick(S.shift) : S.pair);
+    O.next = g.time + (str ? (O.n % str === 0 ? pick(S.shift) : gunStringGap(gd)) : O.n % 2 === 0 ? pick(S.shift) : S.pair);
     if (gd.weapon.def.pellets) O.next = Math.max(O.next, g.time + gd.weapon.def.cd);   // (a pump gun: no controlled pair comes faster than its action is worked — shotgun.ts)
   }
   /** The muzzle onto a point: his script carries this module's overlay (GuardScript.over) while this holds — the runner aims at O.aim with the gun up, and, the

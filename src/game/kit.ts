@@ -605,7 +605,7 @@ const GUN_NOTE: Record<WeaponId, string> = {
   fiveseven: 'Five-seveN: the one gun the floor does not hear as gunfire',
   guard9mm: '9 mm service pistol: loud, single shots',
   m870: 'M870: no suppressor fits it — every shell is heard as gunfire',
-  ak74m: '', akms: '',
+  ak74m: '', akms: '', pkm: '',   // (the defenders' rows: no card offers one)
   // (gunslots.ts: what each pick is FOR, and its price, in a line)
   mk12: 'Mk 12: holds its group across a yard · single shots, slow to come round, no launcher',
   mp7: 'MP7: the floor does not hear it as gunfire · no reach past a room, no launcher',
@@ -615,7 +615,7 @@ const GUN_NOTE: Record<WeaponId, string> = {
   g18: 'Glock 18: a long magazine on automatic · loud, and it climbs',
 };
 /** the four guns in a card's words */
-const GUN_SHORT: Record<WeaponId, string> = { fn2000: 'FN2000', aks74u: 'AKS-74U', fiveseven: 'Five-seveN', guard9mm: '9 mm pistol', m870: 'M870 shotgun', ak74m: '', akms: '', mk12: 'Mk 12', mp7: 'MP7', mk46: 'Mk 46', m1014: 'M1014', hk45: 'HK45', g18: 'Glock 18' };
+const GUN_SHORT: Record<WeaponId, string> = { fn2000: 'FN2000', aks74u: 'AKS-74U', fiveseven: 'Five-seveN', guard9mm: '9 mm pistol', m870: 'M870 shotgun', ak74m: '', akms: '', mk12: 'Mk 12', mp7: 'MP7', mk46: 'Mk 46', m1014: 'M1014', hk45: 'HK45', g18: 'Glock 18', pkm: '' };
 const suitRow: KitRow = { field: 'suit', label: 'Suit', values: ['issued', ...Object.keys(SUITS)], word: v => v === 'issued' ? 'as issued' : SUITS[v as Exclude<SuitId, 'issued'>].label, note: () => 'looks only: nobody sees a colour' };
 const trimRow: KitRow = { field: 'trim', label: 'Trim', values: ['issued', ...Object.keys(TRIMS)], word: v => v === 'issued' ? 'as issued' : TRIMS[v as Exclude<TrimId, 'issued'>].label, note: m => m.trim === 'issued' ? 'the pair colour on a four (red, blue)' : 'the joints: how you tell him from above' };
 /** your guns row in the card's words · what the shotgun changes in a run, in a line (yours and a teammate's) */
