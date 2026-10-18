@@ -1151,7 +1151,7 @@ const BIGMOVE = {
  *  (bigkit.ts), so the stow never starts inside the rebound */
 export const bigRebound = (kind: 'hammer' | 'shotgun'): number => (kind === 'hammer' ? BIGMOVE.hammer.rebound : BIGMOVE.shotgun.kickIn + BIGMOVE.shotgun.kickOut);
 /** bigTool: his hands are off his own gun for it this frame (hideHeldItem) — from `hide` of the equip until `show` of the stow */
-function bigOff(B: { t: number; equip: number; stow: number; end: number; snug?: boolean }): boolean {
+export function bigOff(B: { t: number; equip: number; stow: number; end: number; snug?: boolean }): boolean {
   if (!(B.t >= 0)) return false;
   const S = B.snug ? BIGMOVE.snug : BIGMOVE;
   if (B.end >= 0 && B.t >= B.end) return (B.t - B.end) / Math.max(1e-3, B.stow) < S.show;
