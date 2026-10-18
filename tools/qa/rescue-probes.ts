@@ -63,7 +63,7 @@ const DEFAULTS = { ...RESCUE }, FLASH_ON = FLASH.on;
  *                          — and rounds stopping in glass for ONE scene of it, the captor's clock under the can (paneStops below: he is shot through the pane beside the door before the can goes off)
  *    rescue-flow-pass      DOORMANNERS.on (the nearer man 3.5 m from Sam)
  *    rescue-flow-states    DOORMANNERS.on · glass (the roamer behind the conference glazing is shot through the pane)
- *    rescue-flow-twodoor   DARKFOE.on ('F is a man short')
+ *    rescue-flow-twodoor   DARKFOE.on ('F is a man short') · RESCUEEND.on (its room's two men are the whole cast: down, the run is won cleared before 'the men up are the menu's again' is read)
  *    rescue-clock          RESCUEEND.on (its last scenes stand in a room with every man of theirs down: under the rule that is a run already won, cleared)
  *    rescue-orders         DOORMANNERS.on · DARKFOE.on · RESCUEEND.on (it asks for the old end by name: the room held holdSecs)
  *    rescue-set            DOORMANNERS.on · glass · MOVES.gait (one part of the moves, the page under TPS_MOVES=1,gait=0. With glass held and the gait on, the untrained

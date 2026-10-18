@@ -91,6 +91,16 @@ export async function rescueflushCheck(): Promise<boolean> {
         line(!words.length && !F.acts() && !F.shotAt.length && R.noiseAt === null, `(c) ${tag}: the room taken without a sound — nobody is sent and nobody is shot`,
           `flush lines ${words.length} · 'act' ${F.acts()} · shot ${F.shotAt.length} · the team's last loud thing: ${R.noiseAt ? 'one' : 'none'}`);
       }
+      { // (a): round by the side door and in — the man sent round alone (every other man of theirs put down the moment he is sent)
+        const F = await floor(id, seed, on, { loud: true }), { g, R } = F;
+        F.step(K.afterSecs + 4 * K.gapSecs + 2, () => F.lines(/^flush:side:/).length > 0);
+        const sent = F.lines(/^flush:side:/)[0], man = sent ? R.hostiles.find((h: any) => h.callsign === sent.what.split(':')[2]) : null;
+        if (man) for (const h of R.hostiles) if (h !== man && h.state !== 'dead') killGuard(g, h, [1, 0, 0], true, 'struck', 'player');
+        F.step(45, () => F.lines(/^flush:through:/).length > 0); const thr = F.lines(/^flush:through:/)[0];
+        F.step(25, () => F.shotAt.length > 0 || (!!man && F.inB(man.char.pos)));
+        line(!!man && !!thr && (F.shotAt.length > 0 || F.inB(man.char.pos)), `(a) ${tag}: the man sent round, alone, walks to the side door and goes in by it for them`,
+          `${sent ? sent.what : 'nobody sent round'} · ${thr ? `${thr.what} at ${f1(thr.t)} s` : 'never at the side door'} · ${man ? `he ended ${F.inB(man.char.pos) ? 'IN the room' : `at (${f1(man.char.pos[0])}, ${f1(man.char.pos[2])})`}, ${man.state}` : ''} · hostages shot ${F.shotAt.length}`);
+      }
       { // (d) (e): they're gone; the state's pair
         const F = await floor(id, seed, on, { loud: true, out: true, end: false }), { R } = F;
         F.step(90, () => F.shotAt.length > 0);
