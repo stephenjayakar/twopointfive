@@ -353,7 +353,7 @@ export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[]
 let dealOwn = false;
 /** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
 export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
-export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing() && team >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, team)[i] : issuedCard(i); }
+export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing() && team >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, team)[i] : { ...issuedCard(i) }; }
 /** A CARD IS READ AND CHANGED AS IT IS WORN. `f` runs with the worn cards standing in the table (a teammate's card, while they are dealt), nothing written to
  *  the store. A peek puts the table back. A change that was TAKEN (`taken`) is kept one of two ways: it moved a counted thing — the worn cards are now the
  *  player's own and stay in the table as they stand; or it moved something else (a gun, a look, a big thing) — that is written onto the table's own cards and

@@ -958,10 +958,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kit. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
   page and on the shipped stand (`?nokitdeal`; the debugger's Big slot section, 'squad kit dealt over who comes'); in the knob registry and
   `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off at any moment = every card shown and staged as the table writes it.
-  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 23 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
+  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 24 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
   comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs`. The older card probes (`kit-*`,
   `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
-  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. LISTING: `bun run
+  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. `bigslot-check.ts` run BY ITS
+  OWN FILE takes the same holds itself (the deal for its card part, the two gun rows for every part: it was red on the shipped stand alone while
+  green inside the gate), and now runs its `weight` part too. A MISSION'S ISSUE IS NOBODY'S OWN LAYOUT: `asIssued` holds the player's own-layout
+  mark off for the staging, so cards changed by hand never stage a mission's issue undealt (the check's hall line, red without it). LISTING: `bun run
   tools/qa/kit-audit.ts` (`--deal=off` for the cards before) prints every kit at every size and one row a mission. MEASURED: The pass, four, 240
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
