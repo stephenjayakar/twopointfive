@@ -49,7 +49,7 @@ import { gunIcon, kitIcon } from './kitIcons';
 /** the roster card's silhouette for the gun a man's card puts in his hands (kit.ts kitGun: a shield carrier's sidearm, the shotgun, else the rifle) */
 const GUN_ICON: Record<string, string> = { fn2000: 'rifle', aks74u: 'rifle', m870: 'shotgun' };
 /** a roster chip's drawings (the one page): beside whatever he carries a COUNT of, these rows; and the rows whose drawing is a narrow thing, cut to a square board so a line of them starts flush */
-const CHIP_SHOWS = new Set(['weapon', 'shield', 'wand', 'big']), CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells', 'shield']);
+const CHIP_SHOWS = new Set(['weapon', 'primary', 'shield', 'wand', 'big']), CHIP_NARROW = new Set(['smoke', 'bangs', 'frags', 'shells', 'shield']);
 const CHIP_GAP = 0.65, CHIP_IN = 0.18, CHIP_DIGIT = 0.46;   // a chip's icon row in icon heights: between two things, between a drawing and its count, one digit (startpage.ts's em values for the same)
 
 /** what the screen preps: a scenario's row (scene/scenarios.ts ScenarioEntry fits as it is), or the solo night (`kind: 'solo'`, squad 0) */
@@ -233,7 +233,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
         name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(GUN_ICON[kitGun(m)] ?? 'pistol', gunCanOf(i, m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
         { const ics = el('div', 'lo-ics'), K = m as unknown as Record<string, unknown>;   // (the same kit as drawings: the one page shows these in place of the words)
           let wide = 0;
-          for (const r of kitRows(i)) { const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[r.field]; if (v === 0 || v === false || v == null || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(r.field, v, r.field === 'weapon' && gunCanOf(i, m)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, a shield, the wand)
+          for (const r of kitRows(i)) { const f = r.field === 'primary' && m.weapon === 'pistol' ? 'secondary' : r.field;   // (no long gun brought: his sidearm is the gun the chip draws)
+            const v = r.field === 'big' ? (bigOf(m) === 'none' ? null : bigOf(m)) : K[f]; if (v === 0 || v === false || v == null || v === 'none' || !(typeof v === 'number' || CHIP_SHOWS.has(r.field))) continue; const I = kitIcon(f, v, (f === 'weapon' || f === 'primary' || f === 'secondary') && gunCanOf(i, m)); if (!I.svg) continue;   // (what differs from man to man: his gun, what he carries a count of, a shield, the wand)
             const narrow = CHIP_NARROW.has(r.field), c = el('span', narrow ? 'lo-ic n' : 'lo-ic'); c.innerHTML = narrow ? I.svg.replace('viewBox="0 0 64 32"', 'viewBox="16 0 32 32"') : I.svg; c.title = r.label; if (typeof v === 'number') c.appendChild(el('b', undefined, String(v)));
             wide += (ics.childElementCount ? CHIP_GAP : 0) + (narrow ? 1 : 2) + (typeof v === 'number' ? CHIP_IN + CHIP_DIGIT * String(v).length : 0); ics.appendChild(c); }
           widest = Math.max(widest, wide); s.appendChild(ics); }
