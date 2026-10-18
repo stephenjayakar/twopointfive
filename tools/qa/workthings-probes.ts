@@ -1,5 +1,5 @@
 // The `workthings` probes (src/game/workthings.ts: a teammate is sent to work the breaker, or the mission's thing) — `bun run tools/qa/probes.ts workthings`,
-// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-defuse / work-off / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
+// or one of work-breaker / work-four / work-objective / work-edges / work-posted / work-face / work-held / work-walk / work-defuse / work-off / work-harness. All headless on the real Game (nothing is drawn: the menu is read as the data
 // the panel is built from), every order given THROUGH THE INPUT as the page writes it — the harness cursor on the thing, then one-frame presses. WORK.on is
 // raised by the probe itself: the frozen stand holds it off (TPS_WORKTHINGS=1).
 //   work-breaker    the room clear's pair on the office: X with the cursor on the breaker panel lists the thing's own order on digit 1 where 'move there' is
@@ -17,13 +17,19 @@
 //   work-held       the squad's fire held and a defender who has noticed nobody stood in plain sight of the panel: the man sent still throws the breaker (his
 //                   partner's gun on that man, no round fired), his footfalls turn nobody at the panel, and the moment that man notices he is the squad's to shoot again. Asserts the fault with
 //                   WORK.heldPass off (his muzzle stays on the man, the mains stay on); WORKHELD_BREAK=1 leaves the rule off for the rule's own lines: must fail
+//   work-walk       a quiet level as two (levels/lights-out.json): the partner throws the breaker on order, a defender is sent to the panel, Sam calls 'fall in'
+//                   and walks on the way that man is coming. Asserts the fault with WORK.offWalk off (the follower waits for the man's back ON the man's
+//                   walk and is walked into: the alarm) and the rule with it on (he goes on after Sam, low, nobody roused, the mains put back by the man
+//                   sent); WORKWALK_BREAK=1 leaves the rule off for the rule's own lines: must fail
 //   work-off        the switch off: the menu on the panel is the floor's (or nothing), the order cannot be given, no thing is listed
 //   work-harness    the frozen stand holds it off, the page turns it on unless ?noworkthings, the table is a registered knob table a recording carries
 import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { WORK, WORK_STATS, workHand, workJob, breakerErrand, workPasses } = await import(`${ROOT}/src/game/workthings.ts`);
+const { WORK, WORK_STATS, workHand, workJob, breakerErrand, workPasses, workComing } = await import(`${ROOT}/src/game/workthings.ts`);
+const { SNEAK } = await import(`${ROOT}/src/game/sneak.ts`);
+const { SPOTTED } = await import(`${ROOT}/src/game/spotted.ts`);
 const { HOLDFIRE } = await import(`${ROOT}/src/game/holdfire.ts`);
 const { breakerResetNear } = await import(`${ROOT}/src/game/lighting.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
@@ -203,6 +209,55 @@ export const workHeld = () => keep(async () => {
   } finally { HOLDFIRE.on = hf0; }
 });
 
+/** A FOLLOWER IS NOT LEFT STANDING ON THE WALK OF THE MAN WHO COMES TO THE BREAKER (WORK.offWalk; workComing, asked by sneak.ts's follower where it would wait
+ *  short of a stretch that man is looking at or back off down the way he is coming, and by spotted.ts where it would stand him still). From a replay of play
+ *  (lights out, as two): the partner threw the breaker on order, 'fall in' was given a second later, Sam walked on past the man sent to the panel, and the
+ *  partner waited four metres from it for that man's back — on that man's walk — until the man reached him. Staged as that run went: the level's own mission,
+ *  the men's own senses (nobody is dazzled and Sam is not kept dark here), Sam moved along the taped way at a sneak's pace. */
+export const workWalk = () => keep(async () => {
+  console.log('\n=== work-walk: a follower is not left standing on the walk of the man who comes to the breaker ===');
+  const BREAK = !!process.env.WORKWALK_BREAK, sn0 = SNEAK.on, sp0 = SPOTTED.on;
+  const WAY = [[9.3, 16.7], [9.3, 14.8], [8.7, 12.1], [9.0, 9.3], [11.0, 8.0], [13.7, 7.4], [16.1, 7.4], [17.0, 8.5], [17.1, 10.0], [17.3, 12.5], [17.7, 14.6]];
+  try {
+    const arm = async (rule: boolean) => {
+      const R = await rig(g => startFromQuery(g, '?levelFile=lights-out.json&quiet&squad=1').why, true, 2, 'lights-out'); const { g, O, W } = R, pl = g.player, b: any = O.squad()[0];
+      SNEAK.on = true; SPOTTED.on = true; WORK.offWalk = rule; g.godMode = true;
+      const asked = (h: any) => { const w = WORK.offWalk; WORK.offWalk = true; try { return workComing(g, b, h); } finally { WORK.offWalk = w; } };   // (the geometry, whichever way the key is)
+      let at = [...WAY[0]], seg = 0, along = 0;
+      const step = (n = 1) => { const l = console.log; if (!VERBOSE) console.log = () => { }; try { for (let i = 0; i < n; i++) { pl.crouch = true; pl.char.pos[0] = at[0]; pl.char.pos[2] = at[1]; W.step(DT); } } finally { console.log = l; } };
+      if (!b) return { ok: false as const, why: `${R.why} no partner` };
+      g.teleportPlayer([at[0], 0, at[1]]); b.char.pos[0] = 9.9; b.char.pos[2] = 17.3; b.path = []; b.pathGoal = null; step(60);
+      const th = g.work.things().find((x: any) => x.kind === 'breaker'); if (!th?.stand) return { ok: false as const, why: 'no breaker to work' };
+      const gave = O.give('work', { kind: 'floor', at: th.stand, thing: th }, 'all'); for (let i = 0; i < 25 * 60 && !g.blackout.active; i++) step();
+      const t0 = g.time, man: any = g.guards.find((x: any) => x.task?.kind === 'breaker'); if (!g.blackout.active || !man) return { ok: false as const, why: `order ${gave} · mains ${g.blackout.active ? 'out' : 'on'} · errand ${man?.callsign ?? 'nobody'}` };
+      step(72); const fell = O.give('fallIn', { kind: 'floor', at: [9, 0, 17.5] }, 'all');
+      let still = 0, stillMax = 0, on = 0, off = 0, low = 0, roused: string | null = null, rousedT = -1, nearest = 1e9, fastest = 0, back = -1, never = true;
+      for (let f = 0; f < 26 * 60; f++) {
+        if (g.time - t0 > 5.2 && seg < WAY.length - 1) { along += 1.4 * DT;   // (as the tape: he waits five seconds for his partner, then goes at a sneak's pace)
+          for (let L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); seg < WAY.length - 1 && along >= L;) { along -= L; seg++; if (seg < WAY.length - 1) L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]); }
+          if (seg < WAY.length - 1) { const L = Math.hypot(WAY[seg + 1][0] - WAY[seg][0], WAY[seg + 1][1] - WAY[seg][1]), k = along / L; at = [WAY[seg][0] + (WAY[seg + 1][0] - WAY[seg][0]) * k, WAY[seg][1] + (WAY[seg + 1][1] - WAY[seg][1]) * k]; } else at = [...WAY[seg]]; }
+        step();
+        const v = Math.hypot(b.char.vel[0], b.char.vel[2]), coming = man.state !== 'dead' && asked(man), gap = flat(b.char.pos, pl.char.pos); fastest = Math.max(fastest, v);
+        if (coming) { on++; if (workComing(g, b, man)) never = false; if (b.char.anim.crouch > 0.5) low++; } else off++;
+        if (coming && v < 0.1 && gap > 3) { still += DT; stillMax = Math.max(stillMax, still); } else still = 0;
+        if (man.state !== 'dead') nearest = Math.min(nearest, flat(b.char.pos, man.char.pos));
+        if (!roused) { const h = g.guards.find((x: any) => x.team !== 'operative' && (x.state === 'alert' || x.state === 'search' || x.state === 'dead')); if (h) { roused = `${h.callsign} ${h.state}`; rousedT = g.time - t0; } }
+        if (back < 0 && !g.blackout.active) back = g.time - t0;
+      }
+      return { ok: true as const, why: `${gave} ${fell}`, man: man.callsign, stillMax, on, off, roused, rousedT, nearest, fastest, back, never, low, gap: flat(b.char.pos, pl.char.pos), partner: b.callsign, said: R.said };
+    };
+    const A = await arm(false);
+    verdict(A.ok, 'staged: lights out as two, the partner throws the breaker on order, a defender is sent to the panel, Sam calls fall in and walks on', A.ok ? `${A.partner} threw it · ${A.man} sent ('power's out — checking the breaker') · that man's walk passed within ${WORK.walkM} m of the partner on ${A.on} frames` : A.why);
+    if (!A.ok) return;
+    verdict(A.on > 60 && A.stillMax >= 2 && !!A.roused && A.never, 'THE FAULT, key off: the follower stood still on that man\'s walk with Sam gone on, and was walked into', `stood still on the walk ${f2(A.stillMax)} s (Sam over 3 m off) · ${A.roused ?? 'nobody roused'}${A.roused ? ` ${f2(A.rousedT)} s after the throw` : ''} · the man came within ${f2(A.nearest)} m · the key off is never asked true: ${A.never}`);
+    const B = await arm(!BREAK);
+    if (!B.ok) { verdict(false, 'staged again, key on', B.why); return; }
+    verdict(!B.roused && B.back > 0, 'key on: nobody is roused, and the man sent puts the mains back himself', `${B.roused ?? 'no defender alert, searching or down'} · mains back ${B.back > 0 ? `${f2(B.back)} s after the throw` : 'never'} · nearest the man came ${f2(B.nearest)} m`);
+    verdict(B.stillMax < 1 && B.gap < 3, 'key on: he does not stand on that walk with Sam gone on, and ends at Sam\'s shoulder', `longest still on the walk ${f2(B.stillMax)} s (key off ${f2(A.stillMax)}) · ${f2(B.gap)} m from Sam at the end`);
+    verdict(B.fastest <= ORDERS.brisk + 0.25 && A.fastest <= ORDERS.run + 0.25 && B.low >= B.on * 0.9, 'he never ran for it: a walk, low with Sam the whole of that walk', `fastest ${f2(B.fastest)} m/s (brisk ${ORDERS.brisk}) · low on ${B.low} of the ${B.on} frames on the walk`);
+    verdict(B.off > 60 && B.on > 60 && !B.never, 'the rule answered on that walk, and is the walk\'s: once that man is past him it is the build\'s own follower again', `frames on the walk ${B.on} · off it ${B.off} · asked true with the key on: ${!B.never}`);
+  } finally { SNEAK.on = sn0; SPOTTED.on = sp0; }
+});
 export const workFour = () => keep(async () => {
   console.log('\n=== work-four: the squad of four — one pair goes, the other is left as it was ===');
   const R = await rig(g => { g.fogOfWar.on = true; return g.roomClear.start(21); }, true, 4);
