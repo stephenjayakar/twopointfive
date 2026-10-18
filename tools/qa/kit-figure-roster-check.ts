@@ -100,6 +100,13 @@ for (const [what, file, query, n] of RUNS) {
     line(ok, `${what} (${on.rig}): the word is '${on.word}'${on.word === want ? '' : ` (the game says '${want}')`}, grip to the fist's hollow ${cm(off.gap)} cm without the rule → ${cm(on.gap)} cm` +
       (long ? ` · the gun ${on.gun === off.gun ? 'where it was' : 'MOVED'}, the trigger hand moved ${cm(handR)} cm, the hand on the fore-end ${(handL * 1000).toFixed(1)} mm${fitted ? ' (fitted into the hand by kit handling, as in the game)' : ''}`
         : ` · ${on.across.toFixed(1)}° across the hand, the gun moved ${cm(moved)} cm into it`)); }
+  // the hand on the fore-end is laid as the game lays it: yours by kit handling's fitted hold (player.ts), a teammate's by the plain one (game.ts) — his rifle is drawn unfitted
+  const { sc20kGrip } = await import(`${ROOT}/src/game/rigProps.ts`);
+  for (const [what, member, c] of [['you, the rifle', 0, card(0)], ['a teammate, the quiet rifle', 1, card(1, { weapon: 'rifle', suppressed: true })]] as [string, number, any][]) {
+    let got: any = null; INHAND.on = true;
+    figureHold(casts, { member, squad: 4, suit: false, look: lookDress(), card: c }, 0, (ch: any) => { got ??= ch.anim.longGrip; });
+    const fitted = member === 0 && fit, want = sc20kGrip(undefined, fitted), off = got ? len(sub(got.wrist, want.wrist)) : NaN;
+    line(!!got && off < 1e-6, `${what}: the hand on the fore-end is laid by the ${fitted ? 'fitted' : 'plain'} hold, as the game lays it (${got ? cm(off) + ' cm off it' : 'no long gun in his hands'})`); }
   knobsBack(knobs1);
 }
 console.log(failed ? `=== kit-figure-roster-check: FAIL ===` : `=== kit-figure-roster-check: ALL PASS (${checks}) ===`);

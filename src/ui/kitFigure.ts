@@ -328,7 +328,7 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   const rig = me ? (m.weapon === 'pistol' ? 'pistol' : 'sc20k') : WEAPONS[kitGun(m)].rig;
   const a = c.anim; a.phase = 0; a.trained = 1; a.upper = 'none'; a.stance = 'none';
   for (let i = 0; i < 30; i++) c.update(1 / 60);
-  if (rig === 'sc20k') { a.longGun = true; a.longSteady = 1; a.longGrip = sc20kGrip(undefined, fit); c.muzzleAhead = sc20kMuzzleAhead(); a.stance = 'lowReady'; }
+  if (rig === 'sc20k') { a.longGun = true; a.longSteady = 1; a.longGrip = sc20kGrip(undefined, me && fit); c.muzzleAhead = sc20kMuzzleAhead(); a.stance = 'lowReady'; }   // (the fitted hold is yours alone: a teammate's rifle is drawn unfitted, and the game lays his hand by the plain one)
   else if (rig === 'carbine') { a.longGun = true; a.longSteady = 0; a.longGrip = carbineGrip(); c.muzzleAhead = carbineMuzzleAhead(); a.stance = 'lowReady'; }
   else { a.upper = 'relaxed'; a.stance = FIGURE.pose.pistol; }   // (the pistol in both hands at the game's own low ready, as the rifle is: the relaxed carry points it across his chest)
   a.lookPitchExtra = FIGURE.pose.chin; a.lookYawExtra = FIGURE.pose.turn;

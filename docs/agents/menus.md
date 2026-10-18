@@ -171,9 +171,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   idle, the same on both stands unless said): a teammate's quiet rifle, loud rifle and shotgun 4.2 → 1.0 cm, the gun's boxes unmoved, the trigger wrist
   moved 4.8 cm, the other wrist 0.0 mm; a teammate's Five-seveN 2.4 → 1.7 cm (the gun 2.4 cm into the hand), his 9 mm 4.7 → 2.4 cm (4.4 cm); your pistol
   1.6 → 1.7 cm under kit handling (2.4 → 1.7 on the frozen stand); your rifle 1.0 cm either way under kit handling (4.2 → 1.0 on the frozen stand).
-  LEFT AS IT WAS: a teammate with the quiet rifle has his SUPPORT hand laid by `sc20kGrip(…, fit)`, the hold of your fitted rifle, while his rifle is drawn
-  unfitted — its wrist is 3.9 cm from where the game has a teammate's (`sc20kGrip()`, game.ts); nothing of IN HAND, and not touched here. The figure wears
-  no belt torch and no defender's holster (the rule's `belt` and `holsterOut` are defenders' things): nothing of those shows on it.
+  THE HAND ON THE FORE-END, MENDED WITH IT (no switch: the figure was wrong, on the shipped stand only): a teammate with the quiet rifle had his SUPPORT
+  hand laid by `sc20kGrip(…, fit)`, the hold of your fitted rifle, while his rifle is drawn unfitted — its wrist 3.9 cm from where the game has a
+  teammate's (`sc20kGrip()`, game.ts). Now the fitted hold is yours alone, as in the game (player.ts); two rows of the same check hold it (red before
+  the mend on the shipped stand, 3.9 cm). The figure wears no belt torch and no defender's holster (the rule's `belt` and `holsterOut` are defenders'
+  things): nothing of those shows on it.
   SEEN: one offline still of a teammate's rifle hand each way (the software view; the fist moves up onto the gun). NEVER SEEN ON A GPU, nor on the page,
   nor by the maintainer: whether the fist reads as closed round the grip, the pistols' new place in the hands, the idle in motion.
 - **The gear screen per level: the plan, the set loader, and the picture staged from them (10-15)**. The owner:
