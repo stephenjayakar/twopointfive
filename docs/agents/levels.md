@@ -170,6 +170,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TRAPPED_BREAK=1` exits 1; `probes.ts scenario-levels` ALL PASS on both stands. WHAT THE ROW STOPS ASKING THAT PASSED: the four took the floor by the
   front on shipped on seeds 0 and 2 (3 of 4 and 4 of 4 up). NOT A CLAIM THAT THE TRAP TRAPS: the level is `untuned`, and its owner's own tally has the
   front way winning most runs on shipped; whether the yard should cost more is the level's tuning, not this check's.
+- **A level does not deal the squad's kit; `bun run tools/qa/kit-audit.ts` lists what its mission gets** (2026-10-18). The issued kit and the named
+  squad kits are one table for every mission (`src/game/kit.ts`, `docs/agents/menus.md`: the squad's kit is dealt over the men who come). A level's
+  file adds to it in two ways only: `scenarios.issue.members` (a block of cards by place on the roster, the fields that differ, written against the
+  pair's layout; the Team & kit screen then shows no cards, and a level's issue card is put on as written)
+  and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
+  says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
+  squad is issued (no hammer or shotgun opens steel, and nobody is issued a big-slot tool), whether frags can be ordered at all (never with a hostage,
+  the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
+  (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
   screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level
   skill that goes through everything that's needed for a level based on what we've seen" · "seems like we miss a lot". `.claude/skills/level/SKILL.md` is
@@ -208,3 +217,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   unless said: export `--check`; `level-needs glasshouse` has no `doorway` line; `lived-check`, `level-lint`, `level-identity`, `door-size`, `kitview-plan`,
   `secondway`, the `glasshouse` probes, `scenario-levels`; one boot of the mission on the page with the software adapter (no page error, no band left
   across the doorway, the door there). NEVER SEEN ON A GPU and not played: that the wall's foot reads right either side of the frame is by the numbers.
+- **The level command's `kit` need reads the issue AS WORN, and the levels are green** (10-18; a tool and the skill only: no switch, no game code, no
+  level file). Since the squad's kit is dealt over the men who come (`game/kit.ts KITDEAL`, the bullet "A level does not deal the squad's kit" above),
+  `tools/qa/level-needs.ts` reads the five cards as a staging wears them: the issue, a level's own cards written over it, then `kitWorn(n, cards)` (dealt
+  only while the counted things are still the issue's, as the game deals them), and a man is bare with no pouch filled AND nothing in his big slot
+  (`kitdeal-check.ts comesBare`'s test). So a level whose own card changes a stun, a charge or a frag is red again at three and four unless it writes a
+  card for every man who comes. The needs are asked OF THE PAGE AS IT OPENS on either stand (`host/profile.ts pageSwitches` with no flag and `kitLoad`
+  with nothing kept, what the shipped stand boots with), because a rule the frozen stand holds off would call a man bare whom no player sees bare; a
+  refused `slots.json` stops the tool with that word. The stand still decides what `--run`'s own checks see. `KITDEAL_BREAK=1` in front is the need's own red path: the
+  cards as the table writes them, red on the 22 rows that bring a third man. A level's own cards are worn as written (the long hall's block
+  names nobody since the shield left the game: its four come in the plain issue). The skill's kit items say the same, and its kit picture item gains a rule from the kit figure's side: where a
+  `kitView` hide list names box ids, whoever shifts the level's box ids builds it again from the generator's box range in the same step. AS THE 36 LEVELS
+  STAND on build 1e1f943, both stands the same: 488 PASS, no FAIL, 65 NOTE (the two `doorway` reds and the snatch's footstep zone of the bullet above were
+  mended by their owners); `NEEDS_BREAK=1` exits 1 on both. With `--run` every one of the levels' own checks exits 0 on both stands. STILL NOT IN A GATE (its owner's call). NOT ASKED YET, each waiting on
+  its own work: a need for a level's response-team block, and one for a rescue that ends only on extraction or a full clear. Nothing here was seen on a
+  GPU or played, and nobody has gone through the 36 levels by eye against the skill's by-eye items.

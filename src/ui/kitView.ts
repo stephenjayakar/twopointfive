@@ -33,7 +33,7 @@
 // column it fades out under the tiles by the mask alone (the card's own ground shows: a third of its strength at the first tile's left edge, gone one
 // column's width on; no rule of a tile is touched) and runs on further right below them. It never takes a click or the keys. No
 // words, no colours of its own.
-import { KIT, kitRows } from '../game/kit';
+import { KIT, kitRows, kitWorn } from '../game/kit';
 import { kitViewWays } from './missions';
 import { kitViewQuietKind } from '../host/kitViewSet';   // (pure: the mission's kind, read off its link — the quiet picture's)
 
@@ -105,9 +105,9 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const onDisk = () => location.protocol === 'file:' || location.origin === 'null', postTo = () => (onDisk() ? '*' : location.origin);
   const from = (origin: string) => origin === location.origin || (onDisk() && origin === 'null');
   const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, postTo()); } catch { /* */ } };
-  const kitNow = (squad: number) => JSON.stringify({ members: KIT.members, squad });
+  const kitNow = (squad: number) => JSON.stringify({ members: kitWorn(squad), squad });   // (the cards as the team of that size wears them — game/kit.ts KITDEAL — which the picture's own table then wears as written: main.ts kitCards)
   /** the kit and the size, when they are not what the instance last had */
-  const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: KIT.members, squad: squadNow }); };
+  const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: kitWorn(squadNow), squad: squadNow }); };
   /** whose card is open and the tile under the highlight · off the step or on it — each told when it is not what the child last had */
   const says = () => { if (!frame || !up) return;
     if (KIT_VIEW.acts && sel && sel !== selSent) { selSent = sel; tell({ kv: 'sel', ...JSON.parse(sel) as object }); }

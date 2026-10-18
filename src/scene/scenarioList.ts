@@ -81,7 +81,7 @@ export const SCENARIOS: ScenarioEntry[] = [
   { id: 'hall-four', title: 'The long hall', kind: 'roomclear', squad: 4, level: 'hall.json', untuned: true, group: 'raids',
     place: 'One wing: a bare hall 23 metres long, four rooms off it', lean: 'loud', defenders: 7,
     only: 'The kit is issued: this one is played with the four.',
-    blurb: 'Two men in the dim far end cover the whole hall, and the one door in opens on it. The kit is issued.' },   // (its issue block still says Red One's shield — levels/hall.json — which a game with the shield in it hands him: shield.ts SHIELD.on, out of the page since 10-15)
+    blurb: 'Two men in the dim far end cover the whole hall, and the one door in opens on it. The kit is issued.' },
   // The glasshouse = glass is not cover: a floodlit forecourt, a glazed front and glass partitions with dark rooms behind (rounds pass panes: game/glasspen.ts), a blank back wall with the back door into the store; both starts are dark and out of sight.
   // FILED UNDER 'more', not 'ideas': the list's own rule is eight rows a group at most (probes.ts missions-list) and 'New ideas' holds eight — the owner's call which row moves.
   // The blurb is the premise and holds for both ways in (the sheet's 'Way in' row names them). The list deals the first way (beside the building: the lit glass is the player's own decision); the back lot is his pick on that row.

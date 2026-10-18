@@ -3,7 +3,7 @@
 //   PORT=5237 node tools/qa/kitload-page.cjs [outDir]        (a dev server on that port: PORT=5237 bun run tools/serve.ts)
 //   bars    a room clear's Team & kit screen as the page opens it (the one card it shows: yours): two bars, each inside the card, wide enough to read, with
 //           no digit; your issued card's two fills end on their notch
-//   step    your guns row stepped to the pistol alone: both fills grow past the notch
+//   step    your long gun's row stepped to the pistol alone: both fills grow past the notch
 //   off     the same screen under ?nokitload: no bar is shown
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the whole page) are written to outDir when one is given. Software adapter: not a GPU's picture.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -43,8 +43,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       'A ROOM CLEAR\'S TEAM & KIT SCREEN, as the page opens it: the card shows two bars, mobility then concealment, inside the card, a track wide enough to read, no digit', `${a.length} card(s) · ${say(a)}`);
     line(!!you && you.bars.every(b => Math.abs(b.fill - b.notch) <= 2 && b.fill > 4 && b.fill < b.track.w - 4), 'your issued card: each fill ends on its notch — the card the game is tuned on', you ? say([you]) : 'no card of yours');
 
-    // ── step: the guns row's next (rifle → pistol)
-    await page.evaluate(() => { const steps = document.querySelectorAll('#loadout .kc[data-member="0"] .kc-row[data-field="weapon"] .kc-step'); steps[steps.length - 1]?.click(); });
+    // ── step: the long gun's row's next (one gun row: rifle → pistol; a primary and a secondary: the primary → none)
+    await page.evaluate(() => { const steps = document.querySelectorAll('#loadout .kc[data-member="0"] .kc-row[data-field="weapon"] .kc-step, #loadout .kc[data-member="0"] .kc-row[data-field="primary"] .kc-step'); steps[steps.length - 1]?.click(); });
     await page.waitForTimeout(300); const b = await cards(page); await shot(page, 'kitload-step'); const now = b.find(c => c.member === '0');
     line(!!now && !!you && now.bars.length === 2 && now.bars.every((x, k) => x.fill > you.bars[k].fill + 4 && x.fill > x.notch + 4 && x.gain > 4 && !x.loss), 'YOUR GUNS ROW STEPPED to the pistol alone: both fills grow past the notch', now && you ? `${say([you])} → ${say([now])}` : 'no card of yours');
     line(errors.length === 0, 'no page error on that screen', errors.join(' | ') || 'none'); await page.close(); }

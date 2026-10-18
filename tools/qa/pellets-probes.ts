@@ -1,4 +1,4 @@
-// The 'pellets' family (`bun run tools/qa/probes.ts pellets | pellets-arm | pellets-rule | pellets-energy | pellets-shield | pellets-identity | pellets-red`):
+// The 'pellets' family (`bun run tools/qa/probes.ts pellets | pellets-arm | pellets-rule | pellets-energy | pellets-identity | pellets-red`):
 // A LOAD OF SHOT AND A PANE (src/game/glasspen.ts 'the shell rule', shotgun.ts, glassbreak.ts widen; rebuild/gear-and-glass/pellets.md) — a shell's nine pellets
 // leave one honest set of holes in glass. All headless, on the real game stood up with the glass parts ON (each probe raises them by name and the stand-up of the
 // next game puts them back), PASS / FAIL each with the numbers.
@@ -12,8 +12,6 @@
 //                      limit) is held to the same rule. Prints the table the page quotes: what a shell does to each glass at each range
 //   pellets-energy     GLASSPEN.energy.m870 is written down and means what the page says: one plain or toughened sheet square-on, never a second standing
 //                      one, never laminated; other rows untouched; a man behind plain glass is dropped by a shell, a man behind the laminated sidelight is not
-//   pellets-shield     shield.ts shieldLost: a round turned in glass on its way to a shield man's flank is logged on the bearing of the LEG it reached him on,
-//                      not the muzzle's; a round that crossed no glass logs as it always did
 //   pellets-identity   glass parts off, a shell at each pane = the word frozen on 0ee0094; glass on and no shotgun in anybody's hands (rifle rounds through
 //                      the same panes) = the word frozen on 0ee0094
 //   pellets-red        the red paths: with the rule switched off (GLASSPEN.shellR 0) the arm check DOES go red (nine blows at one point); the record
@@ -29,7 +27,6 @@ const GB_BREAK: number = GLASSBREAK.breakE.annealed;
 const { fireWeapon, armThrough } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { SHOTGUN_LAST, SHOTGUN_STATS } = await import(`${ROOT}/src/game/shotgun.ts`);
-const SH = await import(`${ROOT}/src/game/shield.ts`);
 const PM = await import(`${ROOT}/src/render/particles.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 
@@ -272,53 +269,6 @@ export const pelletsEnergy = guarded(async () => {
     if (L) { const man = S2.behind(L, 1.2); S2.step(2); o2 = shellAt(S2, L, v3.mad(L.p, L.out, 2) as Vec3, v3.mad(L.p, L.out, -6) as Vec3); up = man.state !== 'dead' && !(man.staggerUntil > S2.game.time); }
     if (L) verdict(up && o2!.through === 0, 'a man behind the laminated sidelight, one shell from 2 m: untouched', `through ${o2!.through} of ${o2!.met} on the pane · he is ${up ? 'standing' : 'hit'}`);
     else console.log('    (no laminated sheet with 2 m of floor off a face: not run)'); }
-  return done();
-});
-
-// ================================================================ pellets-shield
-export const pelletsShield = guarded(async () => {
-  const { verdict, done } = family('pellets-shield: a shield man found by a round that crossed glass is logged on the bearing of the leg that reached him');
-  // the turn in the glass made large so the two bearings are whole degrees apart (the shipped turn is a degree or two: the log rounds to one)
-  GLASSPEN.deflectDeg = 120; GLASSPEN.bendK = 0;
-  const S = await stage(61); const { game } = S; const X = S.pane('annealed', 3);
-  if (!X) { verdict(false, 'a plain pane with 3 m of floor', 'none'); return done(); }
-  const C = S.behind(X, 1.6); const tan: Vec3 = [X.out[2], 0, -X.out[0]];
-  C.team = 'hostile'; C.char.bodyYaw = C.char.aimYaw = Math.atan2(tan[0], tan[2]); C.char.update(0); C.char.update(DT);   // side on to the glass: the round comes at his flank, where no plate is
-  SH.giveShield(C); S.step(2);
-  const up = SH.plateUp(C), face = SH.shieldBox(C)?.yaw ?? NaN;
-  const rel = (from: Vec3, hit: Vec3) => { let d = (Math.atan2(from[0] - hit[0], from[2] - hit[2]) - face) * 180 / Math.PI; d = ((d + 540) % 360) - 180; return d; };
-  // find a rifle line through the pane whose turned last leg still finds him, the two bearings ≥ 4° apart
-  let pick: { from: Vec3; to: Vec3; path: any } | null = null;
-  for (let k = 0; k < 400 && !pick; k++) {
-    const u = ((k * 37) % 41 - 20) * 0.03, w = ((k * 13) % 9 - 4) * 0.03; const through: Vec3 = [X.p[0] + tan[0] * u, 1.2 + w, X.p[2] + tan[2] * u];
-    const from = v3.mad(through, X.out, 2.5) as Vec3; from[1] = 1.35; const d = v3.normalize(v3.sub(through, from)) as Vec3;
-    const path = PEN.roundPath(game, from, d, 60, 1.0); if (!path || path.cross.length !== 1 || path.cross[0].turnDeg < 6) continue;
-    const seg = path.segs[1]; const chest: Vec3 = [C.char.pos[0], 1.2, C.char.pos[2]]; const tc = v3.dot(v3.sub(chest, seg.o), seg.d); if (tc < 0.3) continue;
-    const miss = v3.len(v3.sub(v3.mad(seg.o, seg.d, tc), chest)); if (miss > 0.1) continue;
-    // (… and the two bearings the verdict below tells apart: a turn of 6° in a pane 2.5 m from the muzzle is under 4° seen from him, so the turn alone does not say)
-    const near = v3.mad(seg.o, seg.d, Math.max(0, tc - 0.2)) as Vec3; if (Math.abs(rel(from, near) - rel(seg.o, near)) < 4.5) continue;
-    if (SH.shieldStop(game, 'player', seg.o, seg.d, tc)) continue;
-    pick = { from, to: v3.mad(from, d, 8) as Vec3, path };
-  }
-  verdict(up && !!pick, 'staged: a shield man side on behind a plain pane, and a rifle line through it that the glass turns by 6° or more onto his flank (the turn made large for the test)', pick ? `turned ${f1(pick.path.cross[0].turnDeg)}° in pane ${X.bi}` : `plate up ${up} · no such line in 400 tried`);
-  if (pick) {
-    const last = SH.SHIELD_LOG[SH.SHIELD_LOG.length - 1]; S.fire(pick.from, pick.to, 'fn2000'); const row = SH.SHIELD_LOG[SH.SHIELD_LOG.length - 1];
-    const logged = !!row && row !== last && C.state === 'dead';   // (a new row: the log is a ring, its length says nothing once it is full)
-    // where it met him is the round's to know — the probe takes the last leg's closest point to his chest column, a hand short of it
-    const seg = pick.path.segs[1]; const tc = v3.dot(v3.sub([C.char.pos[0], 1.2, C.char.pos[2]], seg.o), seg.d); const near = v3.mad(seg.o, seg.d, Math.max(0, tc - 0.2)) as Vec3;
-    const legDeg = rel(seg.o, near), muzDeg = rel(pick.from, near);
-    verdict(logged, 'the round crossed the glass, found his body and the loss was logged', logged ? JSON.stringify(row) : `no new row · he is ${C.state}`);
-    if (logged) verdict(Math.abs(row.deg - legDeg) <= 1.5 && Math.abs(muzDeg - legDeg) >= 4 && Math.abs(row.deg - muzDeg) >= 2.5, 'the bearing logged is the last leg\'s (where the glass sent it from), not the muzzle\'s', `logged ${row.deg}° · last leg ${f1(legDeg)}° · muzzle to hit ${f1(muzDeg)}°`);
-    if (logged) verdict(Math.abs(row.dist - Math.hypot(pick.from[0] - near[0], pick.from[2] - near[2])) < 0.4, 'and the distance logged is still the muzzle\'s (how far it came)', `logged ${row.dist} m · muzzle to him ${f2(Math.hypot(pick.from[0] - near[0], pick.from[2] - near[2]))} m`);
-  }
-  // no glass on the way: the bearing is the muzzle's, as ever
-  { Object.assign(GLASSPEN, JSON.parse(JSON.stringify(PEN_SHIPPED))); const S2 = await stage(62); const g2 = S2.game; const C2 = g2.guards[0];
-    C2.team = 'hostile'; C2.char.pos = [7.5, 0, 14.2]; C2.char.bodyYaw = C2.char.aimYaw = 0; C2.char.update(0); C2.char.update(DT); SH.giveShield(C2); S2.step(2);
-    const f = SH.shieldBox(C2)?.yaw ?? NaN; const chest: Vec3 = [C2.char.pos[0], 1.2, C2.char.pos[2]]; let done2 = false, detail = 'no clear flank line';
-    for (const a of [90, -90, 120, -120, 150, -150, 180]) { const yaw = f + a * Math.PI / 180; const from: Vec3 = [chest[0] + Math.sin(yaw) * 2, 1.35, chest[2] + Math.cos(yaw) * 2]; if (g2.col.solidBlocked(from, chest)) continue;
-      const last = SH.SHIELD_LOG[SH.SHIELD_LOG.length - 1]; S2.fire(from, chest, 'fn2000'); const row = SH.SHIELD_LOG[SH.SHIELD_LOG.length - 1];
-      done2 = !!row && row !== last && Math.abs((((row.deg - a) + 540) % 360) - 180) <= 6; detail = `from ${a}° at 2 m: logged ${JSON.stringify(row)}`; break; }
-    verdict(done2, 'a round that crossed no glass logs the muzzle\'s bearing, as it always did', detail); }
   return done();
 });
 

@@ -243,7 +243,8 @@ export function gazeOf(c: Character): Vec3 {
   if (c.alive && c.anim.longShown === 'shoulder') {
     const ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw), gl = Math.hypot(c.gunDir[0], c.gunDir[2]);
     const lv = gl > 1e-6 ? (c.gunDir[0] * ax + c.gunDir[2] * az) / gl : 0;   // how level along his aim the bore lies, in plan
-    const t = Math.min(1, Math.max(0, (lv - GAZE_SIGHTS[0]) / (GAZE_SIGHTS[1] - GAZE_SIGHTS[0]))), w = t * t * (3 - 2 * t);
+    const t = Math.min(1, Math.max(0, (lv - GAZE_SIGHTS[0]) / (GAZE_SIGHTS[1] - GAZE_SIGHTS[0]))), rl = Math.min(1, Math.max(c.anim.rlShown.carry, c.anim.rlShown.head));   // (rl, gunhand.ts longReload: how far a magazine change has his gun off its line and his eyes down at the well — 0 with that rule off)
+    const w = t * t * (3 - 2 * t) * (1 - rl * rl * (3 - 2 * rl));   // (…by which the gaze goes back to his head, over the third of a second the gun and the head take: the cone swings, it does not jump)
     if (w > 0) { x += (ax - x) * w; z += (az - z) * w; const l = Math.hypot(x, z); if (l > 1e-6) { x /= l; z /= l; } else { x = ax; z = az; } }
   }
   return [x, 0, z];

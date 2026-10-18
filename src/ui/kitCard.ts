@@ -31,7 +31,7 @@
 //
 // The card owns its own CSS (one <style> on first use), so index.html needs nothing for it.
 import { gearText } from '../game/gear';   // (a kept note names the kit: worded as issued where it is shown)
-import { KIT, KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitDefault, kitGunCan, kitName, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, youGunsCan, type MemberKit } from '../game/kit';
+import { KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitGunCan, kitIssuedShown, kitName, kitRowCan, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitShown, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, youGunsCan, type MemberKit } from '../game/kit';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 import { kitNoise } from './kitNoise';
@@ -188,7 +188,7 @@ const el = (tag: string, cls: string, text = ''): HTMLElement => { const e = doc
 /** a mannequin tint (linear albedo) as a CSS colour, about as it reads under a lamp */
 export function tintCss(t: readonly number[]): string { const c = (x: number) => Math.round(255 * Math.pow(Math.min(1, Math.max(0, x * 1.6)), 1 / 2.2)); return `rgb(${c(t[0])},${c(t[1])},${c(t[2])})`; }
 /** A priced row's cost in the card's words. A counted row with some carried says what they fill and the rate ('2 pouches · a pouch each'); with none
- *  carried, and for a thing a man has one of or none (the shield, the wall charge, the shotgun), the rate alone ('a pouch each', 'the shield takes
+ *  carried, and for a thing a man has one of or none (the wall charge, the shotgun, the wand), the rate alone ('a pouch each', 'the wand takes
  *  2 pouches') — 'no pouch · a pouch each' read as free and priced at once, and '2 pouches · the wall charge takes 2 pouches' said it twice. */
 const costWords = (c: { pouches: number; rate: string }): string => c.pouches > 0 && /each$/.test(c.rate) ? `${c.pouches === 1 ? '1 pouch' : `${c.pouches} pouches`} · ${c.rate}` : c.rate;
 /** the figure's two colours: a chosen tint, or null = as issued (drawn as an outline: the scenario's own colours are the scenario's — the four's red and blue
@@ -210,7 +210,7 @@ const seen = new WeakSet<object>();
 /** Fill `host` with member i's card. */
 export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = {}): MemberCard {
   style();
-  const rows = kitRows(i), def = () => KIT.members[i], issued = kitDefault(i);
+  const rows = kitRows(i), def = () => kitShown(i);   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
   const root = el('div', 'kc'); root.setAttribute('data-member', String(i)); root.tabIndex = 0;
   // the head: a little figure in his two colours, who he is
   const head = el('div', 'kc-head'), fig = el('div', 'kc-fig'), suitBits: HTMLElement[] = [], trimBits: HTMLElement[] = [];
@@ -299,17 +299,17 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     }
     rows.forEach((r, k) => {
       const v = rowGet(r, m), e = rowEls[k], cost = kitRowCost(i, r, m), no = said && said.k === k ? said.why : '';
-      const can = r.field === 'weapon' && gunCanOf(i, m);   // (the gun on this row wears a suppressor: drawn with it, and your pistol alone named for it)
+      const gunRow = r.field === 'weapon' || r.field === 'primary' || r.field === 'secondary', can = gunRow && KIT_CAN.on && kitRowCan(i, m, r.field);   // (the gun on this row wears a suppressor: drawn with it, and your pistol alone named for it)
       const I = kitIcon(r.field, v, can), idle = !I.none && !!opts.idle?.(r.field);   // (carried, and of no use on this mission: the tile says so itself)
       // (the mission hands him more of it than his card carries: the tile shows what he will have — never on an idle tile, and only a count or a yes / no)
       const handed = KIT_LENT.on && !idle && (typeof v === 'number' || typeof v === 'boolean') ? Math.max(0, Math.floor(opts.lent?.(r.field) ?? 0)) : 0, lent = handed > (typeof v === 'number' ? v : v ? 1 : 0);
-      e.val.textContent = idle ? (typeof v === 'number' ? `${v} · ${IDLE_WORD}` : IDLE_WORD) : lent ? (typeof v === 'number' ? (v ? `${v} · ${LENT_WORD} ${handed}` : `${handed} · ${LENT_WORD}`) : LENT_WORD) : (can && i === 0 ? youGunsCan(v) : null) ?? r.word(v); e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
-      e.row.classList.toggle('idle', idle); e.row.classList.toggle('lent', lent); e.row.classList.toggle('zero', !lent && (typeof v === 'number' ? v === 0 : I.none && (r.field === 'big' || r.field === 'wand' || r.field === 'shield'))); e.row.setAttribute('data-noise', String(kitNoise(r.field, m, i)));   // (none of the thing carried — a count of none, an empty big slot, no wand, no shield; never a fitting switched off —; how loud it is in use — ui/kitNoise.ts: both are drawn on a quiet mission's gear screen only)
+      e.val.textContent = idle ? (typeof v === 'number' ? `${v} · ${IDLE_WORD}` : IDLE_WORD) : lent ? (typeof v === 'number' ? (v ? `${v} · ${LENT_WORD} ${handed}` : `${handed} · ${LENT_WORD}`) : LENT_WORD) : (can && i === 0 ? youGunsCan(v) : null) ?? r.word(v, m); e.note.textContent = '';   // (his own count stays in front where he carries some: an arrow pressed always moves what the tile reads)
+      e.row.classList.toggle('idle', idle); e.row.classList.toggle('lent', lent); e.row.classList.toggle('zero', !lent && (typeof v === 'number' ? v === 0 : I.none && (r.field === 'big' || r.field === 'wand' || r.field === 'primary'))); e.row.setAttribute('data-noise', String(kitNoise(r.field, m, i)));   // (none of the thing carried — a count of none, an empty big slot, no wand; never a fitting switched off —; how loud it is in use — ui/kitNoise.ts: both are drawn on a quiet mission's gear screen only)
       e.row.title = idle ? IDLE_WHY : lent ? LENT_WHY : '';
-      { const key = `${r.field}:${r.field === 'weapon' || r.field === 'big' ? v : ''}${can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
+      { const key = `${r.field}:${gunRow || r.field === 'big' ? v : ''}${can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
       if (no) e.note.textContent = no;
       else { if (cost && !(lent && !v)) e.note.append(el('span', 'kc-cost', costWords(cost)), ' · '); e.note.append(r.note(lent ? { ...m, [r.field]: typeof v === 'number' ? handed : true } : m)); }   // (lent: the row's line for a man who HAS it — how it is used, not 'none in your pouches' — and no pouch rate on a tile the mission alone fills: what it hands takes none)
-      e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, issued)); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
+      e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, kitIssuedShown(i))); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
       // an arrow whose step would not fit his pouches is dimmed and says why (it can still be pressed: the reason goes on the row)
       for (const [b, dir, word] of [[e.prev, -1, 'previous'], [e.next, 1, 'next']] as [HTMLElement, 1 | -1, string][]) { const why = SLOTS.on ? kitPeek(i, r.field, dir).why : ''; b.classList.toggle('off', !!why); b.title = why || word; }
     });

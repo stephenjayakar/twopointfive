@@ -14,7 +14,8 @@
 //   heard         a footfall's level is × loadHeardK before the floor has its say (floor.ts tread: one number for the mixer, the ears and the meter) — and
 //                 in the room fight's defenders' ears (pressure.ts teamBoots). Whether a step is a walk's or a run's is read off the pace he was ASKED
 //                 for (loadGait): a light man made quicker is not thereby running. Your flat-out sprint is boots on a floor whatever you carry
-// THE REFERENCE is each man's OWN CARD AS ISSUED (kit.ts kitDefault, as the kit rules stand): a card that scores what his issue scores is ×1 on all three,
+// THE REFERENCE is each man's OWN CARD AS ISSUED (kit.ts kitIssuedShown: as the kit rules stand, and as a team of three or four is dealt the issue —
+// KITDEAL): a card that scores what his issue scores is ×1 on all three,
 // exactly — so the game as it was tuned is the game an issued squad plays, by run digest, and "as issued is the kit table off" still holds. Lighter than
 // his issue pays, heavier costs; what a heavy card wins is the kit itself. (The price: two men issued differently are ×1 at different scores.)
 //
@@ -25,8 +26,9 @@
 // lesson's page, a mission that issues its own kit. THE WEIGHT IS THE POUCHES RULE'S (kit.ts SLOTS): with that rule off a card's rows are free counts
 // that no table of weights was cut for, and nobody is weighed. Only the ROWS A CARD HAS weigh (kit.ts kitRows): a count kept on a card whose row is
 // switched off is carried by nobody.
-// GUNS AND SLOTS PLUG IN HERE: a gun weighs by its class (`gun`), and a card's guns are a LIST (gunsOf) — today the one long gun or pistol a card's weapon
-// row puts in his hands, and for you the pistol on the thigh beside a long gun; a primary and a secondary slot is that list read off two rows.
+// GUNS AND SLOTS PLUG IN HERE: a gun weighs by its class (`gun`), and a card's guns are a LIST (gunsOf): the gun in his hands and the sidearm beside a long
+// gun. With one gun row the row weighs the list; with a Primary and a Secondary row (gunslots.ts) the long gun is the Primary's and the sidearm the
+// Secondary's. A new class of gun is one row of `gun`.
 //
 // ONE SWITCH, `KITLOAD.on` — ON in the page (host/profile.ts pageSwitches; `?nokitload` = the build before), OFF here and on the frozen harness stand
 // (`TPS_KITLOAD=1`; a FROZEN_HOLDS row, in the knob registry and a journal's tables: a recording from before the table replays with it off). Off = nobody's
@@ -35,8 +37,8 @@
 //
 // (src/game is one import cycle: the table below is plain literals; nothing here is built from another game module's exports at module load.)
 import type { Game, Guard } from './game';
-import { WEAPONS } from './weapons';
-import { SLOTS, bigOf, kitDefault, kitGun, kitRows, shieldIn, type MemberKit } from './kit';
+import { WEAPONS, type WeaponId } from './weapons';
+import { SLOTS, bigOf, kitGun, kitIssuedShown, kitRows, kitSide, type MemberKit } from './kit';
 import { clamp } from '../math/vec';
 import { SideMap } from '../math/side';
 
@@ -59,7 +61,7 @@ export const KITLOAD = {
    *  cost his legs about three times what his long gun does: emptying them is a trade worth making without changing the gun */
   small: { smoke: [0.1, 0.02], bangs: [0.07, 0.02], frags: [0.08, 0.02], shells: [0.07, 0.01], charges: [0.1, 0.02], wand: [0.07, 0.02], cams: [0.04, 0.01] } as Record<string, Cost>,
   /** the big thing on his back, by what the big slot's row calls it (kit.ts bigOf) */
-  big: { shotgun: [0.18, 0.1], hammer: [0.3, 0.1], wall: [0.24, 0.06], shield: [0.4, 0.2] } as Record<string, Cost>,
+  big: { shotgun: [0.18, 0.1], hammer: [0.3, 0.1], wall: [0.24, 0.06] } as Record<string, Cost>,
   /** how much of a point of mobility is pace: his legs are × 1 + (mobility − his issue's) × pace */
   pace: 0.4,
   /** … of a point of concealment is the notice he builds in an eye: × 1 − (concealment − his issue's) × seen; and a footfall's level, the same way */
@@ -73,19 +75,23 @@ export const KITLOAD = {
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.KITLOAD_BREAK ?? '') === '1'; } catch { return false; } })();
 
 // ------------------------------------------------------------ a card's scores
-/** the guns a card puts on member i: what is in his hands, and for you the pistol on the thigh beside a long gun */
+const gunClass = (w: WeaponId | null): GunClass | null => { const c = w ? WEAPONS[w]?.cls : null; return !c ? null : c === 'pistol' ? 'pistol' : c === 'shotgun' ? 'shotgun' : 'long'; };
+/** the guns a card puts on member i, the one in his hands first: for you the pistol on the thigh beside a long gun; for a teammate the gun his card names
+ *  and, where a card has a secondary slot (gunslots.ts), the sidearm beside a long gun */
 export function gunsOf(i: number, m: MemberKit): GunClass[] {
   if (i === 0) return m.weapon === 'pistol' ? ['pistol'] : [m.weapon === 'shotgun' ? 'shotgun' : 'long', 'pistol'];
-  const cls = WEAPONS[kitGun(m)]?.cls; return [cls === 'pistol' ? 'pistol' : cls === 'shotgun' ? 'shotgun' : 'long'];
+  const hand = gunClass(kitGun(m)) ?? 'long', side = gunClass(kitSide(m)); return side ? [hand, side] : [hand];
 }
 const add = (a: Cost, b: Cost | undefined, n = 1): Cost => (b ? [a[0] + b[0] * n, a[1] + b[1] * n] : a);
 /** what ONE row of member i's card takes off his two scores as the card stands (null: a row that weighs nothing — a fitting, a colour, a count of none) */
 export function loadShare(i: number, m: MemberKit, field: string): KitLoad | null {
   const K = KITLOAD; let c: Cost = [0, 0];
-  if (field === 'weapon') for (const g of gunsOf(i, m)) c = add(c, K.gun[g]);
+  if (field === 'weapon' || field === 'primary' || field === 'secondary') {   // (one gun row: every gun; two — gunslots.ts: the long gun on Primary, the sidearm on Secondary)
+    const guns = gunsOf(i, m), long = m.weapon !== 'pistol';
+    for (const g of field === 'weapon' ? guns : field === 'primary' ? (long ? guns.slice(0, 1) : []) : long ? guns.slice(1) : guns) c = add(c, K.gun[g]);
+  }
   else if (field === 'big') c = add(c, K.big[bigOf(m)]);
   else if (field === 'walls') c = add(c, K.big.wall, Math.max(0, m.walls | 0));   // (the big slot off: its own counted row)
-  else if (field === 'shield') c = add(c, m.shield && shieldIn() ? K.big.shield : undefined);   // (likewise)
   else if (field === 'wand') c = add(c, m.wand ? K.small.wand : undefined);
   else if (K.small[field]) c = add(c, K.small[field], Math.max(0, Number((m as unknown as Record<string, unknown>)[field]) | 0));
   return c[0] || c[1] ? { mob: c[0], con: c[1] } : null;
@@ -96,15 +102,16 @@ export function loadOf(i: number, m: MemberKit): KitLoad {
   for (const r of kitRows(i)) { const s = loadShare(i, m, r.field); if (s) { mob += s.mob; con += s.con; } }
   return { mob: clamp(1 - mob, 0, 1), con: clamp(1 - con, 0, 1) };
 }
-/** THE REFERENCE for member i: his own card AS ISSUED, as the kit rules stand (kit.ts kitDefault) — the man the game was tuned on. A card that scores what
- *  his issue scores is ×1 on all three, exactly */
-export function loadRef(i: number): KitLoad { return loadOf(i, kitDefault(i)); }   // (a rule that hands the issue out another way must be read here too, or an issued squad stops being ×1)
+/** THE REFERENCE for member i: his own card AS ISSUED, as the kit rules stand and as a team of `n` is dealt it (kit.ts kitIssuedShown: the issue shared out
+ *  over three or four; `n` left out = the team the loadout screen shows) — the man the game was tuned on. A card that scores what his issue scores is ×1
+ *  on all three, exactly */
+export function loadRef(i: number, n?: number): KitLoad { return loadOf(i, kitIssuedShown(i, n)); }
 /** (two sums of the same things in another order may differ in their last bit: a score within a hair of his reference IS it — ×1 exactly) */
 const snap = (x: number, r: number): number => (Math.abs(x - r) < 1e-9 ? r : x);
 /** what member i wears with the card `m` on him: its scores beside his reference's — null with the pouches rule off (nobody is weighed: the header) */
-export function loadWorn(i: number, m: MemberKit): KitWorn | null {
+export function loadWorn(i: number, m: MemberKit, n?: number): KitWorn | null {
   if (!SLOTS.on) return null;
-  const L = loadOf(i, m), R = loadRef(i); return { mob: snap(L.mob, R.mob), con: snap(L.con, R.con), refMob: R.mob, refCon: R.con };
+  const L = loadOf(i, m), R = loadRef(i, n); return { mob: snap(L.mob, R.mob), con: snap(L.con, R.con), refMob: R.mob, refCon: R.con };
 }
 /** what a man wearing `w` is × his reference: his legs' pace, the notice he builds in an eye, his footfall's level */
 export function loadPaceK(w: KitWorn): number { return Math.max(0.5, 1 + (w.mob - w.refMob) * KITLOAD.pace); }
@@ -117,8 +124,8 @@ const manLoad = new SideMap<Guard, KitWorn>('kitload.manLoad');
 /** YOUR card has just gone on this run's Player (kit.ts kitPlayer; null: it came off — kitShow — or the staging chose his kit itself): what it weighs is
  *  written on him whatever the switch says (it is his card's; the switch is whether the floor reads it) */
 export function loadWear(g: Game, m: MemberKit | null) { g.player.kitLoad = m ? loadWorn(0, m) : null; }
-/** member i's card has just gone on this teammate (kit.ts kitStage; null: the staging chose his kit itself) */
-export function loadMan(gd: Guard, i: number, m: MemberKit | null) { const w = m ? loadWorn(i, m) : null; if (w) manLoad.set(gd, w); else manLoad.delete(gd); }
+/** member i's card has just gone on this teammate, one of `n` who came (kit.ts kitStage; null: the staging chose his kit itself) */
+export function loadMan(gd: Guard, i: number, m: MemberKit | null, n?: number) { const w = m ? loadWorn(i, m, n) : null; if (w) manLoad.set(gd, w); else manLoad.delete(gd); }
 /** what the floor reads for this man — you (`'player'`) or a guard: null = nothing of his is touched (the switch off, a show, nothing weighed on him) */
 export function loadOn(g: Game, who: Guard | 'player'): KitWorn | null {
   if (!KITLOAD.on || BREAK || g.touring) return null;

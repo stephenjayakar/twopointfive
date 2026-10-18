@@ -1,8 +1,8 @@
 // COPY AND PASTE FOR LOADOUTS, ON THE REAL PAGE (the Team & kit step: ui/kitCard.ts KIT_CLIP — the two buttons, C and V — ui/loadout.ts — the keys from any
 // row, the roster's mark — game/kit.ts kitPaste). The maintainer, 10-15: "we should have copy and paste for loadouts".
 // The REAL page in headless Chromium, no WebGPU adapter (the start page is plain DOM, live from the first tick), with five cards planted in the store by
-// the big slot's own fields: a man's kit is copied by the key and pasted onto another by the key, onto you by the button, the kit of the man whose card says
-// shield onto you by Ctrl+C / Ctrl+V (the shield is out of the page: his card reads without it; on a `?shield` visit it is back and your big slot keeps its own); each time the store holds the kit, written ONCE, the tiles that moved flash, the men who wear the copied kit are marked on the roster,
+// the big slot's own fields: a man's kit is copied by the key and pasted onto another by the key, onto you by the button, the kit of a man with nothing in his big slot
+// onto you by Ctrl+C / Ctrl+V (your big slot is emptied with the rest: a paste hands over the whole card); each time the store holds the kit, written ONCE, the tiles that moved flash, the men who wear the copied kit are marked on the roster,
 // Copy is lit and Paste dim on their cards, and the tile the highlight was on has not moved. Then `?nokitcopy`: no buttons, and the keys do nothing.
 // And a mission whose level file issues its own kit: no cards, and the key line stops naming the two keys.
 //   node tools/qa/kitpaste-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · KITPASTE_BREAK=1 (the page opened ?nokitcopy throughout: must FAIL)
@@ -21,7 +21,7 @@ const CARDS = { v: 2, members: [
   { smoke: 1, bangs: 1, frags: 1, shells: 1 },
   { bangs: 2, charges: 1, frags: 1, big: 'hammer' },
   { bangs: 1, charges: 1, frags: 1 },
-  { shield: true, charges: 2 },
+  { charges: 2 },
   {},
 ] };
 let fails = 0; const errors = [];
@@ -49,7 +49,7 @@ async function open(browser, extra, mission = 'depot-four') {
   const shot = async name => { if (outDir) await page.screenshot({ path: path.join(outDir, `${name}${BREAK ? '-break' : ''}.png`) }).catch(() => {}); };
   return { ctx, page, read, pick, key, shot };
 }
-const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, shells: m?.shells, big: m?.big, shield: m?.shield, walls: m?.walls });
+const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, shells: m?.shells, big: m?.big, walls: m?.walls });
 
 (async () => {
   const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
@@ -76,14 +76,12 @@ const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smo
     await P.pick(0); await P.page.click('#missions.one #loadout .kc-clip[data-clip="paste"]', { timeout: 3000 }).catch(() => { /* no button (the break) */ }); await P.page.waitForTimeout(120); const d = await P.read(); await P.shot('paste-3-you');
     check(d.kit[0].bangs === 2 && d.kit[0].charges === 1 && d.kit[0].frags === 1 && d.kit[0].big === 'hammer' && d.kit[0].shells === 0 && d.kit[0].smoke === 0 && d.writes - c2.writes === 1 && J(d.marks) === '[0,1,4]',
       'the Paste button on your card: his kit is yours (your launcher round and smoke go: his card has none), one write, three men marked', `you ${J(kitOf(d.kit[0]))} · writes +${d.writes - c2.writes} · marks ${J(d.marks)}`);
-    // the card that says shield, by Ctrl+C / Ctrl+V onto you. The shield is out of the page since 10-15 (shield.ts SHIELD.on): where it is, a stored card
-    // that says shield reads as a card without one, an empty big slot, and that is what a paste hands over. Where the build still has it, see the next page.
-    await P.pick(3); await P.key('Control+KeyC'); const e0 = await P.read(); await P.pick(0); await P.key('Control+KeyV'); const e = await P.read(); await P.shot('paste-4-shield');
-    const shieldIn = /shield/.test(e0.big);   // (what his card's Big slot tile reads on this build's page)
-    check(J(e0.marks) === '[3]' && e.kit[0].charges === 2 && !e.kit[0].shield && e.kit[0].big === (shieldIn ? 'hammer' : 'none') && e.kit[0].bangs === 0 && e.writes - e0.writes === 1 && J(e.marks) === '[0,3]',
-      shieldIn ? 'Ctrl+C on the shield man, Ctrl+V on you: his two door charges, no shield (it is no tile of yours: your big slot keeps its hammer); you are marked as wearing it'
-        : 'Ctrl+C on the man whose stored card says shield, Ctrl+V on you (the shield is out of the page): his two door charges and the empty big slot his card shows; no shield is written; you are marked as wearing it',
-      `his Big slot tile reads '${e0.big}' · marks after copy ${J(e0.marks)} · you ${J(kitOf(e.kit[0]))} · writes +${e.writes - e0.writes} · marks ${J(e.marks)}`);
+    // a card with an empty big slot, by Ctrl+C / Ctrl+V onto you: the chord copies and pastes as the plain keys do, and the paste hands over the whole card —
+    // the hammer the last paste left in your big slot goes with the rest
+    await P.pick(3); await P.key('Control+KeyC'); const e0 = await P.read(); await P.pick(0); await P.key('Control+KeyV'); const e = await P.read(); await P.shot('paste-4-chord');
+    check(J(e0.marks) === '[3]' && d.kit[0].big === 'hammer' && e.kit[0].charges === 2 && e.kit[0].big === 'none' && e.kit[0].bangs === 0 && e.writes - e0.writes === 1 && J(e.marks) === '[0,3]',
+      'Ctrl+C on Blue One (two door charges, nothing in his big slot), Ctrl+V on you: his two door charges and his empty big slot (the hammer you had goes); you are marked as wearing it',
+      `his Big slot tile reads '${e0.big}', yours after '${e.big}' · marks after copy ${J(e0.marks)} · you ${J(kitOf(e.kit[0]))} · writes +${e.writes - e0.writes} · marks ${J(e.marks)}`);
     await P.ctx.close(); }
   { const P = await open(browser, BREAK ? '&nokitcopy' : '');   // the Cmd key of a Mac, and a board whose letters are not where QWERTY's are (events made by hand: no such board here)
     const down = init => P.page.evaluate(i => { (document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...i })); }, init).then(() => P.page.waitForTimeout(120));
@@ -99,13 +97,6 @@ const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smo
     await P.pick(3); await down({ key: 'v', code: 'Period' }); const f = await P.read();
     check(J(d.marks) === '[2]' && J(e.marks) === '[1,4]' && J(kitOf(f.kit[3])) === J(kitOf(f.kit[1])) && f.writes - e.writes === 1 && J(f.marks) === '[1,3,4]',
       'a Dvorak board: the key that types j (QWERTY\'s C) copies nothing; the keys that type c and v copy Red One and paste him onto Blue One', `marks after j ${J(d.marks)} · after c ${J(e.marks)} · after v ${J(f.marks)} · Blue One ${J(kitOf(f.kit[3]))} · writes +${f.writes - e.writes}`);
-    await P.ctx.close(); }
-  { const P = await open(browser, `&shield${BREAK ? '&nokitcopy' : ''}`);   // (?shield: the shield back for the visit — and no flag at all to a build from before it left)
-    await P.pick(1); await P.key('KeyC'); await P.pick(0); await P.key('KeyV'); const a = await P.read();
-    await P.pick(3); const b0 = await P.read(); await P.key('Control+KeyC'); await P.pick(0); const b1 = await P.read(); await P.key('Control+KeyV'); const b = await P.read(); await P.shot('paste-5-shield-in');
-    check(/shield/.test(b0.big) && a.kit[0].big === 'hammer' && b.kit[0].charges === 2 && !b.kit[0].shield && b.kit[0].big === 'hammer' && b.kit[0].bangs === 0 && b.writes - b1.writes === 1 && J(b.marks) === '[0,3]' && J(b.kit[3]) === J(b1.kit[3]),
-      '?shield, the shield man onto you: his two door charges, no shield (it is no tile of yours: your big slot keeps the hammer it had); his own card is not written; you are marked as wearing it',
-      `his Big slot tile reads '${b0.big}' · you before ${J(kitOf(a.kit[0]))} · you ${J(kitOf(b.kit[0]))} · writes +${b.writes - b1.writes} · marks ${J(b.marks)}`);
     await P.ctx.close(); }
   { const P = await open(browser, '&nokitcopy');
     const a = await P.read(); await P.pick(1); await P.key('KeyC'); await P.pick(4); await P.key('KeyV'); const b = await P.read();

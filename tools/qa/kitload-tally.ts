@@ -12,7 +12,7 @@ const L = await import(`${ROOT}/src/game/kitload.ts`);
 const { play } = await import('./playthrough.ts');
 const arg = (n: string, d: string) => { const i = process.argv.indexOf(`--${n}`); return i > 0 ? process.argv[i + 1] : d; };
 const squad = process.argv[2] ?? 'issued', scn = arg('scn', 'room-clear-four'), [s0, s1] = arg('seeds', '1-6').split('-').map(Number);
-const empty = { smoke: 0, bangs: 0, frags: 0, shells: 0, charges: 0, cams: 0, walls: 0, wand: false, shield: false, big: 'none' };
+const empty = { smoke: 0, bangs: 0, frags: 0, shells: 0, charges: 0, cams: 0, walls: 0, wand: false, big: 'none' };
 const cut = (f: (i: number) => Record<string, unknown>) => { for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = { ...K.kitDefault(i), ...f(i) }; };
 const SQUADS: Record<string, () => void> = {
   issued: () => {}, lean: () => cut(() => ({ ...empty, weapon: 'rifle' })), light: () => cut(() => ({ ...empty, weapon: 'pistol' })),

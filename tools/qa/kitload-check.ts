@@ -66,8 +66,10 @@ export async function kitloadTable(): Promise<boolean> {
     const say = (x: any) => `mobility ${f2(x.mob)} concealment ${f2(x.con)} (pace ×${f3(L.loadPaceK(worn(x)))}, seen ×${f3(L.loadSeenK(worn(x)))}, heard ×${f3(L.loadHeardK(worn(x)))})`;
     F.verdict(Math.abs(b.mob - R.mob) < 1e-9 && Math.abs(b.con - R.con) < 1e-9 && L.loadPaceK(worn(b)) === 1 && L.loadSeenK(worn(b)) === 1 && L.loadHeardK(worn(b)) === 1,
       'you as issued (the long gun, the pistol, one smoke, one stun, one frag, one 40 mm) are your own reference: ×1 on pace, notice and footfall', `issued: ${say(b)} · the reference: mobility ${f2(R.mob)} concealment ${f2(R.con)}`);
-    { let bad = ''; for (let i = 0; i < K.KIT_MEMBERS; i++) { const w = L.loadWorn(i, K.kitDefault(i)); if (!w || L.loadPaceK(w) !== 1 || L.loadSeenK(w) !== 1 || L.loadHeardK(w) !== 1) bad ||= `member ${i}`; }
-      F.verdict(!bad, 'every man as issued is ×1 against his own issue, exactly', bad || Array.from({ length: K.KIT_MEMBERS }, (_x, i) => { const r = L.loadRef(i); return `${i}: ${f2(r.mob)} / ${f2(r.con)}`; }).join(' · ')); }
+    { // (as the team WEARS the issue: kit.ts KITDEAL shares it out over three or four, and a pair carries it as the table writes it)
+      let bad = ''; const one = (w: any) => !!w && L.loadPaceK(w) === 1 && L.loadSeenK(w) === 1 && L.loadHeardK(w) === 1;
+      for (let i = 0; i < K.KIT_MEMBERS; i++) { if (!one(L.loadWorn(i, K.kitIssuedShown(i, 4), 4))) bad ||= `member ${i} of a four`; if (i <= 2 && !one(L.loadWorn(i, K.kitDefault(i), 2))) bad ||= `member ${i} of a pair`; }
+      F.verdict(!bad, 'every man as issued is ×1 against his own issue, exactly — a four as it is dealt the issue, a pair as the table writes it', bad || Array.from({ length: K.KIT_MEMBERS }, (_x, i) => { const r = L.loadRef(i); return `${i}: ${f2(r.mob)} / ${f2(r.con)}`; }).join(' · ')); }
     F.verdict(a.mob > b.mob && b.mob > c.mob && a.con > b.con && b.con > c.con && L.loadPaceK(worn(a)) > 1 && L.loadPaceK(worn(c)) < 1 && L.loadSeenK(worn(a)) < 1 && L.loadSeenK(worn(c)) > 1 && L.loadHeardK(worn(a)) < 1 && L.loadHeardK(worn(c)) > 1,
       'the pistol alone scores best on both and the long gun with full pouches worst; lighter is quicker, noticed more slowly and quieter', `light: ${say(a)}\n    heavy (four smoke, the hammer): ${say(c)}`);
     // one thing off any card never lowers a score, on every member, from a card filled as far as its rows go
@@ -83,6 +85,16 @@ export async function kitloadTable(): Promise<boolean> {
     const base = L.loadOf(1, card(1, {})), dressed = L.loadOf(1, card(1, { light: false, nvg: false, suppressed: false, suit: 'olive', trim: 'amber' }));
     F.verdict(base.mob === dressed.mob && base.con === dressed.con && L.loadShare(1, card(1, {}), 'suit') === null && L.loadShare(1, card(1, {}), 'light') === null,
       'a fitting or a colour weighs nothing', `Red One as issued ${f2(base.mob)} / ${f2(base.con)} · with no light, no goggles, a bare muzzle, olive and amber ${f2(dressed.mob)} / ${f2(dressed.con)}`);
+    { // the guns: whatever rows a card has for them (one Weapon row, or a Primary and a Secondary — gunslots.ts), between them they weigh his guns once
+      const GUNS = ['weapon', 'primary', 'secondary'], bad: string[] = [], said: string[] = [];
+      for (let i = 0; i < K.KIT_MEMBERS; i++) for (const w of ['rifle', 'pistol']) {
+        const m: any = card(i, { weapon: w }), fields = (K.kitRows(i) as any[]).map(r => r.field).filter(f => GUNS.includes(f)), guns = L.gunsOf(i, m) as string[];
+        const rows = fields.reduce((a, f) => { const x = L.loadShare(i, m, f); return x ? [a[0] + x.mob, a[1] + x.con] : a; }, [0, 0]), list = guns.reduce((a, g) => [a[0] + KITLOAD.gun[g][0], a[1] + KITLOAD.gun[g][1]], [0, 0]);
+        if (Math.abs(rows[0] - list[0]) > 1e-9 || Math.abs(rows[1] - list[1]) > 1e-9 || !guns.length) bad.push(`member ${i} ${w}: rows ${fields.join('+')} weigh ${f2(rows[0])} / ${f2(rows[1])}, his guns (${guns.join(', ')}) ${f2(list[0])} / ${f2(list[1])}`);
+        if (i < 2) said.push(`${i ? 'Red One' : 'you'} ${w}: ${fields.join('+')} = ${guns.join(' + ')}`);
+      }
+      F.verdict(!bad.length, 'a card\'s gun rows — one, or a primary and a secondary — weigh his guns once between them (every member, with and without a long gun)', bad.join(' · ') || said.join(' · '));
+    }
     K.SLOTS.on = false; const free = [0, 1].map(i => L.loadWorn(i, K.kitDefault(i))); K.SLOTS.on = true;
     F.verdict(free.every((w: unknown) => w === null) && L.loadWorn(0, card(0, YOU.light)) !== null, 'the weight is the pouches rule\'s: with that rule off nobody is weighed (free counts, no table of weights cut for them)', `rule off: ${JSON.stringify(free)} · rule on: weighed`);
   });
@@ -205,8 +217,8 @@ export async function kitloadCard(): Promise<boolean> {
         'your card as issued: two bars, mobility then concealment, each grey to its score — and that is the notch, nothing gained or lost on it', B.map(b => `${b.k} fill ${b.fill} notch ${b.ref} gain ${b.gain}`).join(' · '));
       F.verdict(B.every(b => !/[0-9]/.test(b.text)), 'no digit on the bars: a label and a bar each', B.map(b => `'${b.text}'`).join(' · '));
       // the highlighted row's share: the top row is the guns
-      const rows = K.kitRows(0) as any[], gun = rows.findIndex(r => r.field === 'weapon'); c.go(gun);
-      const G = bars(host), share = L.loadShare(0, K.KIT.members[0], 'weapon');
+      const rows = K.kitRows(0) as any[], gunField = rows.some(r => r.field === 'primary') ? 'primary' : 'weapon', gun = rows.findIndex(r => r.field === gunField); c.go(gun);   // (the long gun's row: Primary where a card has two gun rows)
+      const G = bars(host), share = L.loadShare(0, K.KIT.members[0], gunField);
       F.verdict(!!share && G[0].part === pct(share.mob) && G[1].part === pct(share.con) && share.mob > 0 && G.every(b => b.shown && !b.more), 'the highlight on the guns row: the outline past each bar\'s end is what the guns take', G.map(b => `${b.k} share ${b.part}`).join(' · '));
       { const big = rows.findIndex(r => r.field === 'big'); c.go(big); const H = bars(host), one = L.loadOf(0, { ...K.KIT.members[0], big: K.kitPeek(0, 'big', 1).value }), d = { mob: want.mob - one.mob, con: want.con - one.con };
         F.verdict(big >= 0 && d.mob > 0 && H[0].more && H[0].shown && H[0].part === pct(d.mob) && H[1].part === pct(d.con), 'the highlight on the big slot, which carries nothing: dashed, what the next thing there would take', H.map(b => `${b.k} one more ${b.part}${b.more ? ' dashed' : ''}`).join(' · ')); }
