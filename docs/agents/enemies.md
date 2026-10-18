@@ -626,6 +626,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SwiftShader, the renderer stubbed for the run as `panel-keys.cjs` does): `__qrf.request('panel')` → `drill:bangClear` … `drill-end:in`, a cast
   built, no console error but the favicon's 404; `?qrfsquad=0` → the switch false, no cast, `squeeze` / `flow`; the row is in the panel's DOM and its
   checkbox moves the switch. The entry was never drawn. Frame cost of an entry headless: within noise of the old drill (2.1 ms a step against 1.7–2.3).
+- **The response team is the level's own (`RESPONSE`, 2026-10-18; qrf.ts, `scenarios.response` — scene/scenarios.ts `ResponseData`).** The maintainer:
+  "let's make it part of the level design and always make sense (ideally w.r.t. the concept/design of the level) and not all levels should have it";
+  "having some randomization and modeling their knowledge based on what they've heard on the radio could make it really fun". BEFORE: the team was the
+  office's one stairwell by constant (`QRF_MARKS`), and it armed on no mission row at all (a quiet level has no door named `stairwell`; the squad kinds
+  are not `live`), only on the office's plain solo night. NOW a level has a team only where its file says so: WHY this place has one (a sentence, refused
+  if absent), the radio's words for the place and the team, one to three WAYS (four muster marks out of sight, a four-man fan inside, an optional door
+  they throw), `men` and `eta` as ranges, optional outside posts for the second lift, optional `sweep` places. WHICH LEVELS, and why: the office (its
+  block is the old constant, mark for mark: `levels/office.scenarios.ts`), `police-post` (a district post with a radio room; the army picket comes by
+  the main gate or the impound gate), `bazaar` (a street under curfew; the patrol comes up the street's open end or by either gate), `crossing` (a
+  border company's duty section, by either yard gate on the house's side). LEFT WITHOUT, ON PURPOSE: `quiet-relay` (a hilltop: nobody is within reach,
+  and its wired spot already brings its own men), `vault` (private hired guards who call nobody), `lights-out` (its one idea is the mains), `quiet-yard`
+  (the test map), every Training level, and so far every squad level (below). `response-check.ts`'s `WITH` list is the written-down answer.
+  A CALL IS DEALT (`RESPONSE.deal`): when the call goes out, three draws off the game's own die pick the way, how many (inside `men`) and how long
+  (inside `eta`, to 5 s) — after play began, so samestart.ts leaves it alone; a way with an enemy within `clearM` (12 m) of its muster is never dealt, and
+  ten seconds out one he has walked up to is given up for another ('change of plan' on the net). The panel's 'call QRF now' is the sandbox's numbers on
+  the first way. THE TEAM GOES ON WHAT WAS SAID (`RESPONSE.net`, needs `PICTURE.on`): control keeps THE NET'S WORD — per enemy, the freshest place a man
+  on the defenders' net held as an idea for the picture's `tellSecs` (he has said it) or was told — past the man who said it; a man in an arm or a
+  runner says nothing; a place since found empty adds nothing (the word only grows old). Where they go is that word, or the alarm's place when that was
+  raised later; control's rolling line carries the brief ('last word: one man, the duty room, a minute old' / 'no word on where'). The second lift
+  counts men FOUND down, not men who are. WITH NOTHING SAID, on a floor with no room plans (every quiet level), they walk the level's named places
+  (`sweep`, else the quiet spots and `places`) nearest first, each once every ninety seconds, and come back to the way in. THEIR ENEMY is whoever is
+  against them on the level by the shared sight test (a partner, a teammate), not Sam alone. BUDGET: with the switch on the team is spawned inside the
+  frame's sixteen skinned characters less civilians (the eight shadow capsules were the old gate: men past the eighth cast no shadow capsule); element
+  and outside posts together are never more than the block's `men[1]`. SWITCH: ON in the page (`?response=0`; `?responsedeal=0`, `?responsenet=0`;
+  the backtick panel's QRF section: three rows and a line saying this level's team), OFF in the module and on the frozen stand (`FROZEN_HOLDS
+  'RESPONSE.on'`, `TPS_RESPONSE=1`), in the knob registry and the journal (a recording without the table replays with it off). Off = the build as it
+  was: `probes.ts qrf` on the frozen stand is line for line what it was before the change. The net's word is in a save (`savestate.ts qrf.word`).
+  CHECK: `bun run tools/qa/response-check.ts` (`probes.ts response`, in the `qrf` family; 14 lines, both stands; `RESPONSE_BREAK=1` fails every line but
+  (1) and (2), which read files and floors); the block against the built floor is `qrf.ts checkResponse`. THE LEVEL FILES' FINGERPRINTS DID NOT MOVE (the block is words and marks).
+  MEASURED, headless, the shipped stand, god mode, a quiet mission gone loud by the real trigger (three rifle rounds heard, the floor locked down), eight
+  seeds a level, 200 s each: every run called its team (24 of 24), every team came in on its fan (24 of 24, the last man 1.8 to 3.6 s after the way in was thrown), and with the
+  player stood where he fired it made contact in 23 of 24; the deals over the eight seeds: the post 2 ways, 3 or 4 men, 50 to 85 s; the bazaar 3 ways, 2
+  to 4 men, 45 to 75 s; the crossing 2 ways, 3 or 4 men, 65 to 95 s. No spawn refused, nobody capped, never over sixteen characters. (In god mode the
+  fight never ends: a team that has him holds and fires for the rest of the run — not a measure of the fight.) Measured again after the review's fixes: the same counts. NOBODY HAS SEEN any of it on a GPU or played a run with a team on these levels: where the
+  marks sit in the picture, whether men stood up outside a gate can be seen arriving from inside, the radio lines' length on the HUD, and whether three
+  or four trained men on a solo quiet level is fair on hard are all unjudged. No arrival sound exists for a gate (the office's boots on the stairs are
+  its own).
 - **The calm torch check reads every frame, and holds the close rule's dark term for its raised-men line** (`tools/qa/calmtorch-check.ts`, 10-13; no game code moved). Two reds, neither the
   rule's: (1) FROZEN, 'night … no frame goes against the dwell', 22 frames, red on the build since the join with real-size doors (bisected: `ae9897b2`; green at the rule's own commit): the
   rule asks four times a second on a frame of its own and the check read every FIFTH frame, so a ONE-frame dip of Reyes's reading in the break room (137.60 s, lit → between → lit) fell on

@@ -91,6 +91,7 @@ import { DOZE } from '../game/doze';
 import { netQuietFromQuery } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
 import { PICTURE } from '../game/picture';
+import { RESPONSE } from '../game/qrf';
 import { RELOAD } from '../game/autoreload';
 import { SAMSTUN } from '../game/samstun';
 import { FRAG } from '../game/frag';
@@ -249,6 +250,9 @@ export function pageSwitches(q: URLSearchParams): void {
   PICTURE.on = !q.has('nopicture');   // each man keeps his own picture of the fight (game/picture.ts): ON in the page — where he believes each enemy to be (seen, heard, told; it goes out of date), and the spot rules that ask it; ?nopicture = no memory kept and every spot picked as it was
   PICTURE.step = q.get('picstep') !== '0';   // (?picstep=0: a man keeps the place the squad chose for itself though he knows it is in an enemy's line, as it was — built on a lean while the maintainer was away: his call 1)
   PICTURE.shot = q.get('picshot') !== '0';   // (?picshot=0: a man who hears a colleague fire is handed the enemy's true place, as it was — his call 3)
+  RESPONSE.on = q.get('response') !== '0';   // the response team is the level's own (game/qrf.ts RESPONSE): ON in the page — a level has a team only where its file says who comes and by which way, with its own words; ?response=0 = the office's one stairwell and the gate as they were
+  RESPONSE.deal = q.get('responsedeal') !== '0';   // (?responsedeal=0: every call gets the level's first answer — the first way in, its most men, the middle of its time)
+  RESPONSE.net = q.get('responsenet') !== '0';   // (?responsenet=0: the team goes on every living man's private fix the instant he has it, as it was)
   PICTURE.run = q.get('picrun') !== '0';   // (?picrun=0: a man who drops his gun and runs plans his way round every enemy's true place, as it was)
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
   PLAN.on = !q.has('noplan');   // the squad's plan drawn on the floor (game/floorplan.ts): picture only, on on both stands; `?noplan` = nothing drawn
@@ -402,6 +406,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'NETQUIET.on': 'TPS_NETQUIET=1',
   'ATTENTION.on': 'TPS_ATTENTION=1',
   'PICTURE.on': 'TPS_PICTURE=1',
+  'RESPONSE.on': 'TPS_RESPONSE=1',
   'RELOAD.auto': 'TPS_AUTORELOAD=1',
   'SAMSTUN.on': 'TPS_SAMSTUN=1',
   'TEAMTALLY.on': 'TPS_TEAMTALLY=1',

@@ -40,7 +40,7 @@
 // tools/qa/solo-night.ts on every deal); seen drawn once, on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from '../../src/scene/level';
-import type { LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
@@ -640,5 +640,28 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
-  return { level, ...(!VARIANT ? { scenarios: { quiet, places, kitView } as unknown as LevelScenarios } : {}), groups: trace.groups, surfaces, quiet };   // (a one-deal scratch file carries no block: its routes are one set's)
+  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — game/qrf.ts, tools/qa/response-check.ts): the town is under curfew and a patrol is never far.
+  // It walks in by the street's open end or by a gate; every mark is out past the row or a stride inside it (Character yaws: forward = [sin, 0, cos]).
+  const response: ResponseData = {
+    why: 'A market street in a town under curfew: the only armed men out at night are the patrol, and gunfire in the bazaar is the one thing they are out for.',
+    site: 'the bazaar', at: 'in the bazaar', team: 'the curfew patrol', tag: 'PATROL',
+    men: [2, 4], eta: [40, 80],
+    ways: [
+      { name: 'the open end of the street', coming: 'coming up the street from its open end', clear: 'nobody on the street past the tea house',
+        muster: [[1.2, 0, 17.2], [1.2, 0, 18.4], [2.4, 0, 17.2], [2.4, 0, 18.4]],
+        entry: [[6.6, 0, 17.8], [5.6, 0, 16.9], [5.6, 0, 18.6], [4.6, 0, 17.8]], entryFace: [Math.PI / 2, Math.PI / 2 + 0.7, Math.PI / 2 - 0.7, Math.PI / 2] },
+      { name: 'the street gate', door: 'gate_e', coming: 'coming in by the street gate', clear: 'nobody on the street past the garage',
+        muster: [[37.2, 0, 18.2], [37.2, 0, 19.3], [38.2, 0, 18.2], [38.2, 0, 19.3]],
+        entry: [[33.6, 0, 18.6], [34.4, 0, 17.6], [34.4, 0, 19.4], [35.0, 0, 18.6]], entryFace: [-Math.PI / 2, -Math.PI / 2 - 0.7, -Math.PI / 2 + 0.7, -Math.PI / 2] },
+      { name: 'the lane gate', door: 'gate_s', coming: 'coming in by the lane gate', clear: 'nobody behind the lorry',
+        muster: [[21.7, 0, 23.0], [22.8, 0, 23.0], [21.7, 0, 24.0], [22.8, 0, 24.0]],
+        entry: [[22.2, 0, 19.6], [23.2, 0, 20.2], [21.2, 0, 20.2], [22.2, 0, 20.9]], entryFace: [Math.PI, Math.PI - 0.8, Math.PI + 0.8, Math.PI] },
+    ],
+    posts: [
+      { name: 'outside the alley gate', pos: [20.25, 0, 2.6], yaw: 0, sweep: [[20.25, 1, 5.0], [14.0, 1, 2.6]] },
+      { name: 'the open end of the street', pos: [2.0, 0, 18.0], yaw: Math.PI / 2, sweep: [[8.0, 1, 18.0], [2.6, 1, 8.0]] },
+    ],
+    outside: [[38.8, 0, 1.2], [38.8, 0, 2.3]],
+  };
+  return { level, ...(!VARIANT ? { scenarios: { quiet, places, response, kitView } as unknown as LevelScenarios } : {}), groups: trace.groups, surfaces, quiet };   // (a one-deal scratch file carries no block: its routes are one set's)
 }

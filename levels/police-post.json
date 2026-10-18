@@ -1167,6 +1167,24 @@
       "ways": [
         { "door": "gate_n", "ref": [12.5, 1.8], "side": 1 }
       ]
+    },
+    "response": {
+      "why": "A district post with a radio room and an army picket down the road: shots here are heard on a net somebody answers, and the picket walks in by a gate.",
+      "site": "the post",
+      "at": "at the post",
+      "team": "the picket",
+      "tag": "PICKET",
+      "men": [3, 4],
+      "eta": [50, 90],
+      "ways": [
+        { "name": "the main gate", "coming": "coming in by the main gate", "clear": "nobody on the forecourt", "muster": [[20, 0, 25.7], [21, 0, 25.7], [20, 0, 26.7], [21, 0, 26.7]], "entry": [[20.3, 0, 21.3], [21.2, 0, 22.3], [19.4, 0, 22.3], [20.3, 0, 23.1]], "entryFace": [3.141592653589793, 2.3415926535897933, 3.941592653589793, 3.141592653589793] },
+        { "name": "the impound gate", "door": "gate_e", "coming": "coming in by the impound gate", "clear": "nobody among the seized trucks", "muster": [[37.4, 0, 13.7], [37.4, 0, 14.8], [38.4, 0, 13.7], [38.4, 0, 14.8]], "entry": [[33.4, 0, 14.2], [34.2, 0, 13.2], [34.2, 0, 15.3], [35, 0, 14.25]], "entryFace": [-1.5707963267948966, 3.141592653589793, 0, -1.5707963267948966] }
+      ],
+      "posts": [
+        { "name": "outside the main gate", "pos": [20.4, 0, 26.6], "yaw": 3.141592653589793, "sweep": [[20.4, 1, 22], [15, 1, 25.6]] },
+        { "name": "outside the impound gate", "pos": [37.8, 0, 14.25], "yaw": -1.5707963267948966, "sweep": [[34, 1, 14.25], [37.8, 1, 9]] }
+      ],
+      "outside": [[38.6, 0, 26.6], [39.2, 0, 25.4]]
     }
   }
 }

@@ -1182,6 +1182,25 @@
       "ways": [
         { "door": "gate_s", "ref": [22.4, 25.4], "side": -1 }
       ]
+    },
+    "response": {
+      "why": "A market street in a town under curfew: the only armed men out at night are the patrol, and gunfire in the bazaar is the one thing they are out for.",
+      "site": "the bazaar",
+      "at": "in the bazaar",
+      "team": "the curfew patrol",
+      "tag": "PATROL",
+      "men": [2, 4],
+      "eta": [40, 80],
+      "ways": [
+        { "name": "the open end of the street", "coming": "coming up the street from its open end", "clear": "nobody on the street past the tea house", "muster": [[1.2, 0, 17.2], [1.2, 0, 18.4], [2.4, 0, 17.2], [2.4, 0, 18.4]], "entry": [[6.6, 0, 17.8], [5.6, 0, 16.9], [5.6, 0, 18.6], [4.6, 0, 17.8]], "entryFace": [1.5707963267948966, 2.2707963267948967, 0.8707963267948966, 1.5707963267948966] },
+        { "name": "the street gate", "door": "gate_e", "coming": "coming in by the street gate", "clear": "nobody on the street past the garage", "muster": [[37.2, 0, 18.2], [37.2, 0, 19.3], [38.2, 0, 18.2], [38.2, 0, 19.3]], "entry": [[33.6, 0, 18.6], [34.4, 0, 17.6], [34.4, 0, 19.4], [35, 0, 18.6]], "entryFace": [-1.5707963267948966, -2.2707963267948967, -0.8707963267948966, -1.5707963267948966] },
+        { "name": "the lane gate", "door": "gate_s", "coming": "coming in by the lane gate", "clear": "nobody behind the lorry", "muster": [[21.7, 0, 23], [22.8, 0, 23], [21.7, 0, 24], [22.8, 0, 24]], "entry": [[22.2, 0, 19.6], [23.2, 0, 20.2], [21.2, 0, 20.2], [22.2, 0, 20.9]], "entryFace": [3.141592653589793, 2.3415926535897933, 3.941592653589793, 3.141592653589793] }
+      ],
+      "posts": [
+        { "name": "outside the alley gate", "pos": [20.25, 0, 2.6], "yaw": 0, "sweep": [[20.25, 1, 5], [14, 1, 2.6]] },
+        { "name": "the open end of the street", "pos": [2, 0, 18], "yaw": 1.5707963267948966, "sweep": [[8, 1, 18], [2.6, 1, 8]] }
+      ],
+      "outside": [[38.8, 0, 1.2], [38.8, 0, 2.3]]
     }
   }
 }
