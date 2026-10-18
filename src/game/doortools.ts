@@ -3357,8 +3357,8 @@ export class DoorTools {
     if (K.thrPie) {   // (both jamb men cut the opening, each on his own side of its middle: pieSet)
       const diag = (sg: -1 | 1, m: Vec3) => { const { q, from } = this.thrSpot(op, sg, m); return floor(from, q) ? q : null; };
       const pull = (sg: -1 | 1) => sg < 0 && this.leafOurs(d, op.side);   // (his mark is behind where that leaf stands: straight to his spot, as ever)
-      const lm = mark(lead), ld = diag(sgn, lm), lp = this.pieSet(op, lead, sgn, !ld ? [lm] : pull(sgn) || flat(ld, lm) <= 0.2 ? [ld] : [lm, ld], F ? [F.here] : []);
-      if (far && F) this.pieSet(op, far, F.fs, op.thrPre || pull(F.fs) || flat(mark(far), F.here) < 0.2 ? [F.here] : [mark(far), F.here], [lp[lp.length - 1]]);
+      const lm = mark(lead), ld = diag(sgn, lm), lp = this.pieSet(op, lead, sgn, ld ? [ld] : [lm], F ? [F.here] : []);
+      if (far && F) this.pieSet(op, far, F.fs, [F.here], [lp[lp.length - 1]]);
     }
     const sl = op.slice.get(lead)!, sf = K.thrPie && far ? op.slice.get(far) ?? null : null;
     const lit = (gd: Guard) => !(K.thrDark && nvgWorn(g, gd)) && (K.thrLight >= 2 || (K.thrLight === 1 && gd === (far ?? lead)));   // (one light on the door: the still gun's — the opener's own when he has the door alone)
