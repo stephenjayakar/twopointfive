@@ -102,6 +102,11 @@ export function tubeVis(g: Game, E: number): number {
   const sig = clamp(Math.log(1 + Math.max(E, 0) * k * gain) / Math.log(1 + gain), 0, 1);
   return sig > 0 ? g.visibilityOf(sig / k) * sig / (sig + NVG.noise) : 0;
 }
+/** The tube's PICTURE of a matte floor under irradiance `E`: 0‥1 of its range — the same curve as tubeVis above, before it is read back for a man's meter. */
+export function tubeSig(g: Game, E: number): number {
+  const S = g.engine.settings; const k = NVG.albedo / Math.PI * (S.exposure > 0 ? S.exposure : 1), gain = Math.max(S.nvGain > 0 ? S.nvGain : 1, 1);
+  return clamp(Math.log(1 + Math.max(E, 0) * k * gain) / Math.log(1 + gain), 0, 1);
+}
 
 const isMate = (gd: Guard) => gd.team === 'operative' && !!gd.unit && gd.state !== 'dead' && kitGoggles(gd);   // (kit.ts: a man whose card took his goggles off is no man of this file's)
 /** when the other side last gave the team reason to think it knows: the loudest thing a teammate's ears hold (roomfight.ts Op.hotT, a stager's hotT), a

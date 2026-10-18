@@ -356,6 +356,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.LIGHTWALL) LIGHTWALL.on = false;   // (a file from before weapon lights stopped at walls: its lights stood at their lenses, and the light estimate read them there)
   if (!k.tables.IRLIGHT) IRLIGHT.on = false;   // (a file from before the goggles carried an infrared light: its teammates' tubes saw a man by the light the meter read alone, and a room with none was 'too dark for the tube')
   if ((k.tables.IRLIGHT as Partial<typeof IRLIGHT> | undefined)?.auto === undefined) IRLIGHT.auto = false;   // (…and one from before the light burned only where it was too dark for the tube: its lights burned whenever the goggles were down)
+  if ((k.tables.IRLIGHT as Partial<typeof IRLIGHT> | undefined)?.meter === undefined) IRLIGHT.meter = false;   // (…and one from before the light put its dark places to the renderer's meter: it read no such answer, and its lights went by the CPU's estimate alone)
   if (!k.tables.AIRDUST) AIRDUST.on = false;   // (a file from before the weather's dust stood in the rooms by their openings: its eyes were cut by the leak under every roof)
   if ((k.tables.WALLCHARGE as { outer?: boolean } | undefined)?.outer === undefined) WALLCHARGE.outer = false;   // (a file from before a charge went on an outer wall: there it was refused in words)
   if ((k.tables.WALLCHARGE as { safe?: boolean } | undefined)?.safe === undefined) WALLCHARGE.safe = false;   // (…and from before its safety radius grew: the stand-off and the backblast reach as they were)
