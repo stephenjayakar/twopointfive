@@ -202,6 +202,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on mousehole 4 FAIL, exit 1. On the join: mousehole both ways 54 of 54, snatch and floodlit 27 of 27, the office 26 of 27 (the teammate's frag of
   (6), before its mend), depot way 1 26 of 27 (Sam's frag `kept` once; 8 of 8 on a repeat), the police post (quiet, Sam alone) 11 of 13: the wall
   charge and the camera at a yard gate, both excused. `kitview-levels.cjs` on mousehole way 1: 30 PASS of 30. The console said nothing on any.
+  SINCE THE TWO GUN TILES: the check also picks each man's `primary` and `secondary` tile (both play the gun's row), 31 picks a picture;
+  mousehole way 1 on that join 31 of 31.
   THE WHOLE SWEEP ON THE JOINS (every level with a block bar the lessons, 36 ways): every pick at work on mousehole, depot, glasshouse, barracks,
   killhouse, block-squads, compound, warehouse (both ways each), snatch, floodlit, the office, defuse, registry, the records' front; the misses are the
   excused ones named above (the long hall's big tools, the consulate's frag on order, the pass's wall charge and Sam's frag, the records' west wall
