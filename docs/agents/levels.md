@@ -10,7 +10,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   tools / the editor keep the LevelData as the document and use `indexLevelData` for id → index. To CHANGE the level while the legacy
   generator (`scene/officeGen.ts buildOfficeProcedural`) still exists: edit the generator, `bun run tools/level-export.ts`, commit both
   (the export refuses a file that does not reload to the same Level; `probes.ts level` = generator vs JSON 0 diffs + validator + round
-  trip, and `tools/level-export.ts --check` says stale/not). Hand edits to the JSON are legitimate but make `level-identity`'s "not stale"
+  trip, and `tools/level-export.ts --check` says stale/not; `level-identity` runs AS THE EXPORTER RUNS, on the engine's maths on every
+  stand — `tools/qa/headless.ts asExporter` — because the exporter raises no stand: under the game's own maths, `math/exact.ts`, the
+  generator's sin / cos round one quaternion's last bit another way, which it prints as a note and does not gate). Hand edits to the JSON are legitimate but make `level-identity`'s "not stale"
   line fail until the generator is retired (lane G1b) — say so when you do it. Flags in the file are names (`NoPrimary NoShadow Cutaway
   Gloss`); runtime bits (Emissive / AreaLit / Rot / Dynamic) are never authored. Unknown keys are validation ERRORS (one `KEYS` registry in
   levelData.ts feeds both the validator and the canonical form — adding a field = interface + KEYS + both directions in levelLoad.ts); the drill
