@@ -8,7 +8,8 @@
 //              simulation reaches Math.random, and the seed alone names the dice
 //   other seed a second seed plays a different half minute
 //   checkpoint on its own die, with nothing re-seeded: A (stepped on after the save) ≡ B (the same game, loaded) ≡ C (a fresh game on another seed, loaded) — the
-//              die's position rides the file
+//              die's position rides the file. On the SHIPPED stand the line is the die's alone (it stands after a load where the save left it; B ≡ C with rounds
+//              rolled): there the file leaves a man's aim track out on purpose, so A against B is reported, not held
 //   follow     a tool that puts its own die in Math.random's place (every older probe, a recording, a capture recipe) gets the game's dice from that moment, the own
 //              die standing still, and a save made then carries no die; put back, the own die resumes where it stood
 //   default    the harness with no seed asked for has no die of its own (every frozen digest was recorded on the tool's Math.random); TPS_SEED=n gives it one
@@ -36,10 +37,13 @@ function provoke(W: any): void {
   const yaw = gd.char.bodyYaw, at: [number, number, number] = [gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5];
   g.teleportPlayer(at);   // (3.5 m off his chest: noticed in any light)
 }
-/** `secs` of play digested twice a second; `at` = the frame Sam is put in front of the man (−1 never) */
-function run(W: any, secs: number, at: number): { rows: unknown[]; text: string } {
+/** `secs` of play digested twice a second; `at` = the frame Sam is put in front of the man (−1 never); `fire` = Sam draws (E) there and a second on fires for
+ *  two seconds (his rounds' spread comes off the die: a stand where being seen starts no fight inside the run still rolls) */
+function run(W: any, secs: number, at: number, fire = false): { rows: unknown[]; text: string } {
   const rows: unknown[] = [];
-  for (let f = 0, n = Math.round(secs / DT); f < n; f++) { if (f === at) provoke(W); W.step(DT); if ((f + 1) % 30 === 0) rows.push(digestGame(W.game, true)); }
+  for (let f = 0, n = Math.round(secs / DT); f < n; f++) { if (f === at) provoke(W);
+    if (fire && at >= 0) { const on = f >= at + 60 && f < at + 180; if (f === at) W.input.pressed.add('KeyE'); if (on && (f - at) % 10 === 0) W.input.clicked |= 1; W.input.buttons = on ? W.input.buttons | 1 : W.input.buttons & ~1; }
+    W.step(DT); if ((f + 1) % 30 === 0) rows.push(digestGame(W.game, true)); }
   return { rows, text: JSON.stringify(rows) };
 }
 const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < Math.max(a.length, b.length); i++) { const d = diffDigest(a[i], b[i], 3); if (d.length) return `first at ${((i + 1) / 2).toFixed(1)} s: ${d.join(' · ')}`; } return 'no row differs'; };
@@ -76,12 +80,25 @@ const firstDiff = (a: unknown[], b: unknown[]): string => { for (let i = 0; i < 
     //  first tick's input record is read through; with only `target` set the same game's lens still stood over the fight it had just left, and on the shipped stand,
     //  where Sam's body follows his aim, that showed in his yaw)
     const cut = (X: any): void => { const p = X.game.player.char.pos; X.cam.target = [p[0], p[1], p[2]]; X.cam.desired = [p[0], p[1], p[2]]; X.cam.rebuild(); };
-    cut(W); const A = run(W, 10, 60); const nA = g.dice.n;
-    loadState(g, JSON.parse(json)); cut(W); const B = run(W, 10, 60); const nB = g.dice.n;
-    Math.random = seeded(31337); const W2 = await standUp({ seed: 1 }); loadState(W2.game, JSON.parse(json)); cut(W2); const C = run(W2, 10, 60); const nC = W2.game.dice.n;
-    const ok = !!s.dice && A.text === B.text && B.text === C.text && nA === nB && nB === nC && nA > n0;
-    verdict(ok, 'checkpoint: A (stepped on) ≡ B (same game, loaded) ≡ C (fresh game on another seed, loaded) with nothing re-seeded', ok ? `saved at roll ${n0}; ${nA - n0} rolls in the next 10 s, the same in all three; ${A.rows.length} digests equal`
-      : `${s.dice ? '' : 'no die in the file · '}A/B ${A.text === B.text ? 'equal' : firstDiff(A.rows, B.rows)} · B/C ${B.text === C.text ? 'equal' : firstDiff(B.rows, C.rows)} · rolls ${n0} → ${nA} / ${nB} / ${nC}`);
+    // THE SHIPPED STAND: the opening rule finds the first man mid-beat, and a load restarts what the file leaves out on purpose (savestate.ts: a man's aim-settle
+    // track, the animator's own momentum — 'continue ≡ load is the harness's statement, not the page's'), so A and B part within seconds there whatever the die
+    // does; and being seen starts no fight inside ten seconds, so nothing rolls. What the die's place in the file promises is held there instead: the die stands
+    // after each load exactly where the save left it (word and count), Sam fires so rounds roll, and B ≡ C to the digest with the same rolls drawn.
+    const shipped = process.env.TPS_PROFILE === 'shipped', s0 = g.dice.s;
+    const stands = (X: any): boolean => X.game.dice.s === s0 && X.game.dice.n === n0;
+    cut(W); const A = run(W, 10, 60, shipped); const nA = g.dice.n;
+    loadState(g, JSON.parse(json)); const stoodB = stands(W); cut(W); const B = run(W, 10, 60, shipped); const nB = g.dice.n;
+    Math.random = seeded(31337); const W2 = await standUp({ seed: 1 }); loadState(W2.game, JSON.parse(json)); const stoodC = stands(W2); cut(W2); const C = run(W2, 10, 60, shipped); const nC = W2.game.dice.n;
+    const stood = stoodB && stoodC;
+    if (!shipped) {
+      const ok = !!s.dice && stood && A.text === B.text && B.text === C.text && nA === nB && nB === nC && nA > n0;
+      verdict(ok, 'checkpoint: A (stepped on) ≡ B (same game, loaded) ≡ C (fresh game on another seed, loaded) with nothing re-seeded', ok ? `saved at roll ${n0}; ${nA - n0} rolls in the next 10 s, the same in all three; ${A.rows.length} digests equal`
+        : `${s.dice ? '' : 'no die in the file · '}${stood ? '' : 'the die did not stand where the save left it after a load · '}A/B ${A.text === B.text ? 'equal' : firstDiff(A.rows, B.rows)} · B/C ${B.text === C.text ? 'equal' : firstDiff(B.rows, C.rows)} · rolls ${n0} → ${nA} / ${nB} / ${nC}`);
+    } else {
+      const ok = !!s.dice && stood && B.text === C.text && nB === nC && nB > n0 && nA > n0;
+      verdict(ok, 'checkpoint (the shipped stand): the die stands after a load where the save left it, and B (same game, loaded) ≡ C (fresh game on another seed, loaded) with nothing re-seeded',
+        `${s.dice ? '' : 'no die in the file · '}the die after each load ${stood ? 'is the save\'s, word and count' : 'is NOT the save\'s'} · B/C ${B.text === C.text ? `equal over ${B.rows.length} digests` : firstDiff(B.rows, C.rows)} · rolls ${n0} → ${nA} / ${nB} / ${nC} with Sam firing · NOT HELD on this stand, by the save's own word: A (stepped on) against B — ${A.text === B.text ? 'equal this time' : firstDiff(A.rows, B.rows)}`);
+    }
   } }
 
 // ---- follow
