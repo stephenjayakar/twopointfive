@@ -179,8 +179,13 @@ like that."
 - **The Team & kit picture** is the level's own `scenarios.kitView` block, the same to the byte in a look twin; name boxes
   by group, not by a generated `box_NNNN` id. Where a `hide` list does name box ids, whoever shifts the level's box ids
   builds that list again from the generator's box range in the same step (other typed lists are left): a generated id names
-  whatever box now holds that number. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>`; the page
-  by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`.
+  whatever box now holds that number. Every way's picture stands at a door the squad's tools can work: a door with a
+  leaf, not steel. Where the mission's own way in is a gate, a gap or a wall, write the first door behind it (`ref` says
+  which side the picture is taken from), or a set with a door in the wall the stack stands on. **seen** "some demos still
+  don't really do anything": a hammer, a shotgun, a charge or the wand picked on a span or a steel door played the gun's
+  row, and the picture stood still. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>` (fails a way that
+  anchors anywhere else); the page by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`, and every pick
+  doing its work by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-work.cjs`.
 
 ## 8. What the player reads
 
