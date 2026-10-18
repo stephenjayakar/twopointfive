@@ -79,6 +79,7 @@ const ptGap = (b: any, p: number[]): number => { const q = b.rot ?? [0, Math.sin
 /** the big slot's hammer as it is DRAWN on the man with this character id (rigProps.ts bigBoxes, by its tag): how many boxes, and the head's centre; `all` = every box the frame draws on anybody */
 const drawnTool = (g: any, id: number) => { const out: any[] = []; handProps(g, out); const mine = out.filter(b => b.name === BIG_TAG && b.owner === (id & 0xff)), head = mine.find(b => b.h[0] > 0.05); return { n: mine.length, head: head ? [...head.c] as number[] : null, all: out.length }; };
 const SIL = await import(`${ROOT}/src/game/silent.ts`);
+const { PACKSIDE } = await import(`${ROOT}/src/game/packside.ts`);   // (held off in this rig: these lines are about the tool across a BARE back — its place at a pack's side and the hand that goes there are packside-check.ts's, on both stands)
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { harnessProfile, FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
@@ -105,8 +106,8 @@ const stats = () => ({ ...BIG_STATS }) as Record<string, number>;
 const since = (a: Record<string, number>) => Object.fromEntries(Object.entries(BIG_STATS as Record<string, number>).map(([k, v]) => [k, v - a[k]])) as Record<string, number>;
 /** the kit table, its rules, the switch, the doors' frame rule, the silent order's switch and the dice as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, plate = SHIELD.on, shut = K.BIGSLOT.shut, beside = K.BIGSLOT.beside, moves = K.BIGSLOT.moves, snug = K.BIGSLOT.snug, weight = K.BIGSLOT.weight, solo = { ...K.KIT_SOLO }, way = { oneWay: DOORWAY.oneWay, frameHolds: DOORWAY.frameHolds }, hush = SIL.SILENT.on, rnd = Math.random;
-  try { return await fn(); } finally { K.kitLoad(null, ''); K.BIGSLOT.on = big; SHIELD.on = plate; K.BIGSLOT.shut = shut; K.BIGSLOT.beside = beside; K.BIGSLOT.moves = moves; K.BIGSLOT.snug = snug; K.BIGSLOT.weight = weight; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); Object.assign(DOORWAY, way); SIL.SILENT.on = hush; Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, big = K.BIGSLOT.on, plate = SHIELD.on, shut = K.BIGSLOT.shut, beside = K.BIGSLOT.beside, moves = K.BIGSLOT.moves, snug = K.BIGSLOT.snug, weight = K.BIGSLOT.weight, solo = { ...K.KIT_SOLO }, way = { oneWay: DOORWAY.oneWay, frameHolds: DOORWAY.frameHolds }, hush = SIL.SILENT.on, side = PACKSIDE.on, rnd = Math.random;
+  try { return await fn(); } finally { PACKSIDE.on = side; K.kitLoad(null, ''); K.BIGSLOT.on = big; SHIELD.on = plate; K.BIGSLOT.shut = shut; K.BIGSLOT.beside = beside; K.BIGSLOT.moves = moves; K.BIGSLOT.snug = snug; K.BIGSLOT.weight = weight; K.SLOTS.on = slots; K.KIT.on = on; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; Object.assign(K.KIT_SOLO, solo); Object.assign(DOORWAY, way); SIL.SILENT.on = hush; Math.random = rnd; }
 }
 
 // where Sam stands for the manager's door (his side of it is the side the squad works it from): the corridor, off the line of the opening
@@ -118,7 +119,7 @@ type Ev = { t: number; kind: string; weapon?: string; who?: number; loud: boolea
 async function rig(seed: number, o: { cards?: Record<number, Record<string, unknown>>; stage?: boolean; on?: boolean; old?: boolean; nomoves?: boolean; nosnug?: boolean; noweight?: boolean } = {}) {
   Math.random = seeded(0x51b6 + seed * 7919);
   Object.assign(DOORWAY, WAY0); Object.assign(K.KIT_SOLO, SOLO0); for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = K.kitDefault(i);   // (nothing of the game before this one: its frame rule, its cards)
-  const W: any = await hushed(() => standUp()); const game = W.game; K.BIGSLOT.on = o.on ?? true; K.BIGSLOT.shut = K.BIGSLOT.beside = !o.old; K.BIGSLOT.moves = !o.old && !o.nomoves; K.BIGSLOT.snug = !o.old && !o.nosnug && !SNUG_BROKEN; K.BIGSLOT.weight = !o.old && !o.nosnug && !o.noweight;   // (`old`: the knobs of 10-15 off — the tools as the build of 10-14 had them; `nomoves`: the evening's alone — the row inside the hand's reach, the one place, the punch)
+  const W: any = await hushed(() => standUp()); const game = W.game; PACKSIDE.on = false; K.BIGSLOT.on = o.on ?? true; K.BIGSLOT.shut = K.BIGSLOT.beside = !o.old; K.BIGSLOT.moves = !o.old && !o.nomoves; K.BIGSLOT.snug = !o.old && !o.nosnug && !SNUG_BROKEN; K.BIGSLOT.weight = !o.old && !o.nosnug && !o.noweight;   // (`old`: the knobs of 10-15 off — the tools as the build of 10-14 had them; `nomoves`: the evening's alone — the row inside the hand's reach, the one place, the punch)
   for (let i = 0; i < K.KIT_MEMBERS; i++) K.KIT.members[i] = { ...K.kitDefault(i), ...(o.cards?.[i] ?? {}) };
   game.godMode = true;
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(String(t)); msg(t); }; }   // (every line the HUD is handed)

@@ -154,6 +154,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `Player.nvAmount` (the tube's picture) eases to: on from the frame they start down, off once they are up. A kit change takes the arm from a flip (the goggles still arrive); a reload takes it faster (`KIT.nv.hand.clear`: the hand is the reload's before the magazine leaves); N again inside a nod carries the head on (`nod.carry`); `an.nvCancel()` lets a flip go when he goes down (`ragdollize`) or the part stops being live (a show: `kitNvEye`). `Player.nv` and everything that reads it are the key's; what is NOT nothing is his body as drawn — the left arm at his brow is in `Character.capsules()` for the 0.9 s of a hand flip (a tripwire could meet it) — so no checkpoint is written mid-flip (`an.nvBusy` → `playerBusy`). The probe's staged runs digest the same with the part on and off. `SLING_FRONT`, `SLING_REST`, `KIT.front`, `KIT.nv` and `NV_SWING` are FIRST-PASS numbers placed against the mesh offline, never seen in the
   renderer — they sit outside `RIG` until the viewer has had them. QA: `probes.ts kitanim` (off / equip / midswap / reload / close / harness / edges / joints / sling / nv) — its rig holds other parts' key rules at the frozen stand's values where the tables exist (a dry gun reloading itself off, the G quick throw on: `world()`), so on any stand it asks about the hands alone,
   `bun run tools/qa/kitanim-strip.ts` → docs/shots/kitanim/*.png (stick figures + prop boxes, before / after rows), `tools/qa/pose-mesh.ts` situations `sling-*` / `nv-*` on the mesh.
+- **PACK SIDE = a long thing on a back that wears a pack stands at the pack's side** (`src/game/packside.ts PACKSIDE`, the maintainer, 10-18, of Sam's slung rifle through his radio
+  and the breacher's back: "maybe we find a way to put equipment on the side of it? like a hammer would be on a strap to the side of a pack?"). Switch `PACKSIDE.on`: ON in the page
+  (`?packside=0` puts it off; Tab row 'packs ▸ back tools ride at the side'), OFF in the module and on the frozen stand (`FROZEN_HOLDS 'PACKSIDE.on'`, `TPS_PACKSIDE=1`), in the knob
+  registry and the journal (a recording from before the key replays with it off). LOOKS ONLY: boxes and a part mask; a run with it on digests as the run with it off. THE CAUSE: the
+  operators' back kit is worn mesh (`kit_*`, rigid on the chest joint) and the big slot's hammer / shotgun and Sam's slung rifle are boxes laid diagonally across a BARE back off the
+  back's own frame, so on a man with a pack they lay inside it (77 of 120 measured poses, to 8.5 cm deep; the slung rifle 5.2 cm into the radio). THE RULE: (1) with a `kit_*` part
+  worn, the tool stands UPRIGHT AT THE PACK'S RIGHT FACE — the hammer handle down, its head across just over the pack's top corner; the shotgun muzzle down, flat to the face — placed
+  in the mesh's BIND space off the pack's own extents (`packOf`, read off the part once a cast) and carried by the chest joint's skin matrix, the one the pack's vertices ride
+  (`rigProps.ts packSideBind` → `bigBoxes`); it turns about its top end, in the pack's upright plane only, until its lower end rests on the line of his back (`sidePitch`: the rearmost
+  of his trunk and seat under it, a few degrees — his own upper back is the limit); (2) a rifle across that back goes to the pack's LEFT the same way (`sc20kFrame` 'slung'); (3) THE
+  BREACHER'S MODELLED RAM IS WORN ONLY WHILE HE CARRIES NO REAL TOOL (`PACKSIDE.ram`, `cast.ts castParts` → `packMask`): with a hammer or a shotgun in his big slot he is drawn in the
+  small assault pack (the cast holds 32 parts, its cap: no new part); (4) the hand that takes the hammer's handle is DRAWN going to the same place, in the picture only
+  (`combat.ts hammerSide` → `CharacterAnimator.bigSide`, the chest joint's own space → `Character.packSidePass`, a two-bone override after `inHandPass`: the arm the
+  simulation reads, `bigLayer`'s, is the rule-off arm to the bit). The workbench holds the rule off unless `?packside=1` (its across-the-back gizmos would move nothing). A man with no pack (the sneaking suit, the mannequin) carries everything where he always did.
+  QA: `probes.ts packside` (`tools/qa/packside-check.ts`, 11 lines, both stands; `PACKSIDE_BREAK=1` fails (3) to (7)) samples every box of the tool each 1.5 cm against the SKINNED
+  worn mesh by ray parity, pack and body apart: five operators x hammer / shotgun x twelve poses + Sam's rifle alone and beside each tool — rule on, 0 samples inside any pack, the
+  worst into the man 1.3 cm (the hammer's head under the back of the helmet, the hydration-carrier man crouched), top end fixed against the pack's vertices to under a millimetre,
+  the fist 1.0 cm from the handle on the draw (0.7 cm across a bare back), his wrist as the game reads it identical on and off. `bigslot-check` holds the rule off: its lines
+  are about a bare back. NOT DONE / NOT SEEN: in a crouch the pack lies flat on a bent back and the tool lies along it — a long
+  handle stands out behind him (the pictures say so); with kit handling on and the rifle kept on his back, Sam's rifle still crosses the radio for a few frames as it is slung or
+  unslung (the hand goes over the right shoulder, the rifle rests at the pack's left); the kit figure draws no big tool and does not apply `packMask` (it shows the breacher's ram);
+  the swapped mask's fit is solved on first use, not with the cast's pre-solved set, and the worn mask is a frame behind a change of tool; `PACKSIDE`'s numbers are first-pass, placed against the mesh offline, judged on stills from the
+  offline pose tool only — never seen in the renderer, on a GPU, or played.
 - **IN HAND = what a man holds is in the hand that holds it** (`src/game/inhand.ts INHAND`, the maintainer, 10-18, of a teammate crouched on the rear with his sidearm out: "gun not
   aligned to hand for partner. we should do a pass for all the attachment points"). Switch `INHAND.on`: ON in the page (`?inhand=0` puts it off; Tab row 'in hand ▸ a pistol stays in the
   fist'), OFF in the module and on the frozen stand (`FROZEN_HOLDS 'INHAND.on'`, `TPS_INHAND=1`), in the knob registry and the journal (a recording from before the key replays with it
@@ -181,13 +204,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shot was taken in (lights-out, duo, the teammate's sidearm: 9.1 cm → 1.7 cm over 1080 frames; then the player's own pistol drawn, swapped for a can and back, reloaded, fired: the
   run's digest equal off and on). One seed. PAGE (software adapter): `PORT=<port> node tools/qa/inhand-page.cjs` — the switch on, the men shown told and posed, no page
   error; `?inhand=0` off. STILLS: `tools/qa/pose-mesh.ts <variant> pistol-crouch|pistol-crouch-up|pistol-aside|torch|rifle-aim … --inhand`. LEFT ALONE, measured: the
-  torch a whistle's soft answer raises is drawn in the hanging RIGHT hand while the clip lifts the LEFT (the light's origin is the right hand's: moving it is a rule change — or
-  `WHISTLE_SOFT_UPPER = 'none'`); Sam's slung rifle runs 5‥8 cm into his radio pack — only with the sneaking suit or kit handling switched off, or on the frozen stand (as the page ships a quiet mission wears the suit with no pack and a loud one hangs the rifle in front on its sling: cast.ts `sneakSuit`, kitanim.ts `kitSlingFront`); the breacher's kit mesh already carries a long tool and the hammer and
+  torch a whistle's soft answer raised was drawn in the hanging RIGHT hand while the clip lifted the LEFT (MENDED since, as a rule of its own that moves the light with the hand:
+  GUN HAND's `whistle` key, `docs/agents/stealth.md`); Sam's slung rifle runs 5‥8 cm into his radio pack — only with the sneaking suit or kit handling switched off, or on the frozen stand (as the page ships a quiet mission wears the suit with no pack and a loud one hangs the rifle in front on its sling: cast.ts `sneakSuit`, kitanim.ts `kitSlingFront`); the breacher's kit mesh already carries a long tool and the hammer and
   shotgun cross it; a shield's window lets the helmet 2.5 cm through at a crouched aim; a hammer between hands and back, and a teammate's rifle as it comes off (the big slot's own
   moves: MENDED since, the bullet 'stay in a hand on the way' below); a torch is beside the fist for the frames of the torch ↔ sidearm swap (the swap's reach for the belt is the animator's, game state, and goes to the torch's OLD place: the look-only
   pass draws the hand the 7.5 cm further out to where the torch now hangs — `anim.swapBelt`, check line 17: 1.4 cm from the old place, 1.7 cm from the new); through a long gun's
-  reload the TRIGGER hand and the body play the pistol's clip (the support arm does work the magazine change with the movement pass on: probes.ts `moves-reload`; with it off, the
-  frozen stand, it holds nothing); a defender throws overhand with the carbine in the throwing fist. THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
+  reload the TRIGGER hand and the body played the pistol's clip (MENDED since under `GUNHAND.longReload`: `docs/agents/anim.md`, *A long gun reloads with a move of its own* —
+  with that switch off, the frozen stand, it is as it was); a defender threw overhand with the carbine in the throwing fist (MENDED since under its own switch: `GUNHAND.throwFree`,
+  enemies.md 'A defender throws with his free hand' — IN HAND's long hold stays on the grip through that throw). THE VIEWER draws by the rule too (`src/viewer/runtime.ts` says the staged man's
   word as combat.ts does; the workbench raises the switch as the page does, `?inhand=0` there too; page line: `HALF=bench … inhand-page.cjs`), so a rig number fitted there is judged on
   the picture the game draws. The Team & kit figure (`src/ui/kitFigure.ts`) still draws without it. NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
   Workbench sheets of the skinned cast and by the numbers above.
@@ -540,3 +564,40 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   as Player (`defuse.ts restore`, `format.ts decode`); an old replay's LOG lines keep the old word. Checks that match the strings follow (`roomclear-ends`,
   `verdict-check`, `deathrecap-check`, `defuse-check`, `roomkeep-check`, `teams-player`, `verdict-look.cjs`; 12 panel-inventory rows reworded with `--reword`).
   Headless only, both stands; the title, the kit page and a room clear's down line read off the real page on the software adapter. Never seen on a GPU.
+- **A primary and a secondary for every man** (`src/game/gunslots.ts`, `GUNSLOTS.on`; the maintainer, 10-18: "also should we model more firearms? and separate
+  primary and secondary slots?"). On in the page (`?nogunslots` = the card of the build before), off in the module and on the frozen stand
+  (`FROZEN_HOLDS 'GUNSLOTS.on'`, `TPS_GUNSLOTS=1`); a recording from before the table replays with it off (`journal.ts applyKnobs`). It rides on the big
+  slot's card (`BIGSLOT`: the shotgun is kit there, never a man's gun): with that off the card is the build before's too. WHAT THERE WAS: you carried two
+  guns (the pistol on 1, the long gun on 2 — the swap the maintainer likes: "swapping the guns feels good") and a teammate ONE; his card had one Weapon row
+  and the sidearm on his thigh was drawn only. WHAT IT IS NOW: the card's one gun row is two — **Primary** (a long gun of `gunslots.ts PICKS`, or none: the
+  sidearm alone) and **Secondary** (a sidearm) — on every member's card, each a row of choices over its own field (`MemberKit.primary` / `.secondary`: a
+  pick id; `kit.ts buildRowsGuns`). WHETHER a long gun is brought stays in `MemberKit.weapon` ('pistol' = none), the one field every rule of the build
+  before reads (your launcher rounds stay home with no long gun, the kit figure's yaw, `kitPlayer`) and every older hand writes (the Quiet set, a mission's
+  issue card, `kitSet(i, 'weapon', …)` from a tool — taken as the Primary row's long gun / none): `primary` only says WHICH long gun, and the Primary row's
+  `none` is `weapon: 'pistol'` (one source of truth; nothing to keep in step). A pick names two `weapons.ts` rows:
+  the gun with a suppressor fitted and without (`pickRow`; a teammate's Suppressor row picks between them, both of yours wear one). `kitGun(m)` is the
+  primary's row (the secondary's with none), `kitSide(m)` the gun NOT in his hands, `kitSecond(m)` the secondary slot's row. A stored card from before the
+  slots is its gun field plus the issued picks (`kitSanitize` → `gunsHome`). A tile names the gun the card then hands him (`word(v, m)`: the bare row's
+  name with the suppressor off). TODAY THE TABLE HAS ONE PICK A SLOT (the issue
+  carbine, the issue pistol): the rows, the store and the second gun are in; the list of guns is the next step of the same goal.
+  **A teammate carries both.** `Guard.second` = the gun that is not in his hands (`sideStage`, from `kitStage`; none for a man whose gun is a pistol).
+  `GUNSLOTS.dry`: the round that empties his primary on a man within `near` (10 m) sends him to his sidearm instead of a magazine change — `out` 0.7 s
+  where the carbine's reload is 2.4 s — on both trigger paths (the fight AI: `guards.ts startReloadBeat` → `sideOutAlert`, the range = his man's last known
+  place; a room fight: `roomfight.ts tickOp`'s dry click → `sideOut`). `sideLocked` (his hands between guns: no round) is asked by all three triggers a
+  teammate has — the room fight's, cover fire's, the fight AI's fire site. The swap is written where the
+  big slot's shotgun writes its own (`route.weapon`: `game.ts` deals a man's row off his route every frame). The long gun hangs down his front on its
+  sling while the sidearm is out (`combat.ts hungSide` → `rigProps hungBoxes`). `sideTick` (every frame, `game.ts`): nobody in his eyes and no round from
+  it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.5 s); an empty
+  sidearm is never drawn. Past `near`, or with no
+  second gun, he reloads as he always has. You: nothing changes in your hands. No checkpoint slice: a floor with a spawned unit on it takes no
+  checkpoint (`savestate.ts canSave`), and every teammate is one.
+  UI: the two rows are drawn as their class of gun (`ui/kitIcons.ts` by `pickIcon`: the same three drawings; no long gun = an empty board), wear the can by
+  `kit.ts kitRowCan`, carry their own noise mark (`ui/kitNoise.ts`), and the kit view plays the gun's demo for either (`host/kitView.ts TILES`).
+  Check: `bun run tools/qa/gunslots-check.ts` (families `gunslots-card -mate -fight -off` in `probes.ts`, in `all-quick`), ALL PASS on both stands;
+  `GUNSLOTS_BREAK=1` fails all four families. Probes written against the one gun row (`bigslot- kitpaste- kitlent- kitcan- sticky-`) run with the
+  switch held off (`probes.ts GUN_ROW_AS_IT_WAS`); the card family has its own paste, set, issue-card and old-row verdicts under it. `gunslots-fight` is the measure: two teammates with a round each and three men five metres in front of them —
+  on, the third is down to a sidearm round 0.50 s after the guns ran dry; off, he was still standing twelve seconds later (one seed, one room).
+  `gunslots-off`: ten seconds of the staged room clear digest the same with the second guns carried and nobody dry. `TPS_GUNSLOTS=1` alone does nothing on a frozen run: `TPS_BIGSLOT=1` with it. NOT DONE HERE: more guns than the two (the Secondary row has one
+  value until then);
+  a swap ANIMATION on a teammate (his pose changes with the row in his hands, the equip sound plays, nothing is animated between); the dry man's sense
+  beyond range and sight (he does not weigh cover or a mate's line). Headless only; never seen on a GPU, never played.

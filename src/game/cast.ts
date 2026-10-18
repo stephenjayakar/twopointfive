@@ -19,6 +19,8 @@ import { castSide, castGoggles, castSuit, type CastVariant, type CastInfo } from
 import { LOOK, lookOffice, suitAs } from '../scene/look';   // (a leaf: no imports)
 import { nvgWorn } from './nvg';
 import { activeScenario, teamOf } from './scenarioRun';   // (called inside sneakSuit only)
+import { PACKSIDE, packMask } from './packside';   // (a leaf)
+import { bigCarried } from './bigkit';   // (called inside castParts only)
 
 const worn = new SideMap<Character, CastVariant>('cast.worn');
 
@@ -77,12 +79,13 @@ export function castParts(g: Game, c: Character): number {
   const v = castVariantOf(g, c); if (!v) return 0;
   const cast = c.ch.cast!;
   if (sneakSuit(g, c)) return castSuit(cast, v.mask);
+  const worn0 = PACKSIDE.on ? packMask(c.ch, v.mask, bigCarried(g, c) !== null) : v.mask;   // (packside.ts: a breacher who carries a real tool on his back wears the small pack, not his modelled ram — his variant's own mask with the switch off)
   let has = hasNvg.get(v);
   if (has === undefined) hasNvg.set(v, has = castGoggles(cast, v.mask, true) !== v.mask);
-  if (!has) return v.mask;                              // (a variant without goggles: a defender, a civilian)
+  if (!has) return worn0;                              // (a variant without goggles: a defender, a civilian)
   let boxes = c === g.player.char;                      // combat.ts handProps: Sam always wears the box goggles; a teammate when nvg.ts says he wears a pair
   if (!boxes) { const gd = g.guards.find(x => x.char === c); boxes = !!gd && nvgWorn(g, gd); }
-  return castGoggles(cast, v.mask, boxes);
+  return castGoggles(cast, worn0, boxes);
 }
 /** put a variant on a man by name (the viewer, the console: __cast.wear) — false when the cast has none by that name */
 export function castWear(c: Character, name: string): boolean {

@@ -73,11 +73,14 @@ import { STEALTHPOSE } from './stealthpose';
 import { STICKY } from './stickycam';
 import { CUES } from './cues';
 import { OWNCHARGE } from './owncharge';
+import { GUNSLOTS } from './gunslots';
 import { BIGSLOT, KITDEAL } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
 import { INHAND } from './inhand';
+import { GUNHAND } from './gunhand';
+import { PACKSIDE } from './packside';
 import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
@@ -264,11 +267,14 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (was.glass === undefined) LANES.glass = false; if (was.stopClear === undefined) LANES.stopClear = false; if (was.roused === undefined) LANES.roused = false;
     if (was.frag === undefined) LANES.frag = false; if (was.fragOwn === undefined) LANES.fragOwn = false; }   // (…and from before a man held on a lane threw his grenade down it: he never did — nor was he kept his own through its wind-up)
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
+  if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge and a shield were pouches, nobody carried a hammer)
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
+  if (!k.tables.GUNHAND) GUNHAND.on = false;   // (a file from before a move kept to the hand that is free: a whistle raised the empty fist, a defender threw with his carbine hand, a long gun reloaded on the pistol's clip)
+  if (!k.tables.PACKSIDE) PACKSIDE.on = false;   // (a file from before a long thing stood at the side of a man's pack: it lay across his back. Looks only: the run is the same either way)
   if (!k.tables.INHAND) INHAND.on = false;   // (a file from before a pistol was drawn in the hand: every gun was laid on the aim line from the wrist. Looks only: the run is the same either way)
   if (!k.tables.AUTOPILOT) AUTOPILOT.on = false;   // (a file from before the quick key was the squad's autopilot: B on a door the men were stacked on gave 'stack up' again)
   if (!k.tables.SQUADTHROW) SQUADTHROW.on = false;   // (a file from before teammates threw a frag or a stun canister on order: the floor's menu had no such row)
