@@ -24,6 +24,7 @@
 // rescue flow's authored cover marks; an uncleared opening no point was moved off gets no gun from this (room cover for everybody measured as a loss:
 // cover.ts COVER.inRoom).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideSet } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game } from './game';
 import type { Door } from './doors';
@@ -71,7 +72,7 @@ export class EntryPoints {
   stats = { pods: 0, risky: 0, moved: 0, kept: 0 };
   /** the newest moves: 'door · (x, z) → (x, z) · off <opening>' */
   log: string[] = [];
-  private movedSet = new WeakSet<Pod>();
+  private movedSet = new SideSet<Pod>();
   constructor(private g: Game) { }
 
   /** nothing known (a restart: Game.resetGuards) */

@@ -39,6 +39,7 @@
 // 'sparks bounce off surfaces' row: with that off it is the fountain it was).
 //
 // Hooks (one line each): game.ts update → blastLookTick · particleFx.ts bangFx → blastSparks. wallcharge.ts, combat.ts and destruction.ts are untouched.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Particles, EmitOpts, PKind } from '../render/particles';
 import type { RtLight } from '../render/lights';
@@ -146,7 +147,7 @@ export const DOOR_SPARKS = {
 /** a set charge as this module knows it: when it was set (the lamp's clock) and how much of the firing line's run the floor in front of it has room for */
 interface Seen { c: SetWallCharge; t0: number; run: number }
 interface State { seen: Seen[]; queue: { at: number; run: () => void }[]; serial: number; first: boolean; last: number }
-const STATE = new WeakMap<Game, State>();
+const STATE = new SideMap<Game, State>('blastLook.STATE');
 const stateOf = (g: Game): State => { let s = STATE.get(g); if (!s) { s = { seen: [], queue: [], serial: 1, first: false, last: -1 }; STATE.set(g, s); } return s; };
 /** this module's own dice: a counter of its own through a hash (never the lane's, never Math.random) */
 const hashU = (n: number) => { let x = Math.imul(n ^ 0x9e3779b9, 0x85ebca6b) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0xc2b2ae35) >>> 0; x ^= x >>> 13; return x >>> 0; };

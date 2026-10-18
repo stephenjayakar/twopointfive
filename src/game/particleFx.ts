@@ -6,6 +6,7 @@
 // that had them (muzzle powder, the stun charge, tracer embers) and nothing at the new ones. Nothing here draws from Math.random (the identity probes replay
 // rounds by it): the particles hash their own serial. The one sound it adds — a case landing — is scheduled off the shot on the CPU (the GPU cannot call
 // back), and is deliberately NOT a hearing event: the report it follows already is one, at the same spot, an order of magnitude louder.
+import { SideMap } from '../math/side';
 import { BoxFlag } from '../scene/boxes';
 import { Vec3, v3 } from '../math/vec';
 import { OFFICE_DATA } from '../scene/level';
@@ -240,7 +241,7 @@ const CASINGS: Partial<Record<WeaponId, CasingSpec>> = {
   fn2000:    { color: BRASS, diameter: 0.0095, from: 'muzzle', ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1], speed: 1.1, tink: 0.4 },  // forward ejection: the cases trundle out of the tube by the muzzle and drop
 };
 interface FxState { tinks: { t: number; pos: Vec3; rate: number }[]; n: number }
-const STATE = new WeakMap<Game, FxState>();
+const STATE = new SideMap<Game, FxState>('particleFx.STATE');
 const stateOf = (g: Game): FxState => { let s = STATE.get(g); if (!s) { s = { tinks: [], n: 0 }; STATE.set(g, s); } return s; };
 /** One spent case out of `shooter`'s gun of row `def`: ejected where and how the row says, carrying his stride, its rays blind to his own arm; and the sound of it
  *  landing, `tink` s later where it will roughly come down. */

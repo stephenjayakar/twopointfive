@@ -26,6 +26,7 @@
 // DOORMANNERS.on off = none of it runs: the build as it was, digest for digest (each rule has its own switch under it for an A/B). The night shift's staff (team
 // 'guard') are left as they were — the stealth game's frozen runs hold whatever the switch says.
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, clamp, damp, approachAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -136,7 +137,7 @@ interface St {
   /** FIGHT: seconds planted in an opening; the step under way, its deadline; no step before */
   funnelT: number; step: Vec3 | null; stepBy: number; stepRest: number;
 }
-const states = new WeakMap<Guard, St>();
+const states = new SideMap<Guard, St>('doorway.states');
 function stateOf(gd: Guard): St { let s = states.get(gd); if (!s) states.set(gd, s = { t: -1e9, heldT: 0, pass: -1e9, spot: null, door: null, side: 1, path: null, noSpot: -1e9, roundT: -1e9, funnelT: 0, step: null, stepBy: 0, stepRest: -1e9 }); return s; }
 export const DOORMANNERS_STATS = { held: 0, aside: 0, passed: 0, stepped: 0, round: 0, rest: 0, marks: 0, covered: 0, stepCover: 0, stepGlass: 0, roundOwn: 0 };
 export const DOORMANNERS_DEBUG: { log: ((s: string) => void) | null } = { log: null };

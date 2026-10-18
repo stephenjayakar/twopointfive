@@ -38,6 +38,7 @@
 // What the counts mean (`pressureStats`, tools/qa/playthrough.ts files them per run): a behaviour FIRED when a man acted on it; its cue is the call at that
 // moment; it LANDED when that man first had eyes on an enemy or an enemy on him; `lead` = seconds from HIS call to that (summed; ≥ 1 s = the cue came first);
 // `heard` = a teammate's own ears had that man's boots (roomfight.ts Op.stepBy) before he landed.
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -290,14 +291,14 @@ interface State {
   word: { t: number; p: Vec3 } | null; swept: number; look: { at: Vec3; goT: number; w: number; men: Def[] } | null; /** the men of the last look while any is still out · one of them went down out there · when the last look was called */ out: Def[] | null; lookLost: boolean; lookT: number;
   stats: ReturnType<typeof newStats>;
 }
-const STATES = new WeakMap<Game, State>();
-const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { presses: [], of: new Map(), outs: [], serial: 0, stale: false, think: new Map(), stay: new Map(), called: new Map(), stoodT: -100, sent: new Set(), doneAt: new Map(), last: new Map(), tried: new Map(), ear: new Map(), warn: null, told: new Map(), heard: [], evSeen: new WeakSet(), marks: new Map(), bangs: new WeakMap(), lastHeld: new Set(), word: null, swept: -Infinity, look: null, out: null, lookLost: false, lookT: -Infinity, stats: newStats() }; STATES.set(g, s); } return s; };
+const STATES = new SideMap<Game, State>('pressure.STATES');
+const stateOf = (g: Game): State => { let s = STATES.get(g); if (!s) { s = { presses: [], of: new Map(), outs: [], serial: 0, stale: false, think: new Map(), stay: new Map(), called: new Map(), stoodT: -100, sent: new Set(), doneAt: new Map(), last: new Map(), tried: new Map(), ear: new Map(), warn: null, told: new Map(), heard: [], evSeen: new SideSet(), marks: new Map(), bangs: new SideMap(), lastHeld: new Set(), word: null, swept: -Infinity, look: null, out: null, lookLost: false, lookT: -Infinity, stats: newStats() }; STATES.set(g, s); } return s; };
 
 /** PRESSURE.wayOut on a floor whose structure asks for it: the press forms up and holds the lost room's doors from back off them */
 const wayOut = (g: Game) => PRESSURE.wayOut && g.level.scenarios?.roomClear?.wayOut === true;
 /** the press forms up outside the doors before it goes (the `gather` row, or the way out) */
 const forms = (g: Game) => PRESSURE.gather || wayOut(g);
-const KITTED = new WeakSet<Guard>();   // PRESSURE.stuns: the men who have been handed theirs
+const KITTED = new SideSet<Guard>('pressure.KITTED');   // PRESSURE.stuns: the men who have been handed theirs
 const ROOM_CELLS = 500;   // past this a 'room' is open floor (roomfight.ts's own line between the two)
 const STAND_OFF_BAND = 7, STAND_OFF_TRIES = 10;   // PRESSURE.wayOut: how deep the band of floor past the can's reach is · how many of the nearest spots in it he walks the way to
 const PAIR_WAIT_SECS = 6;   // PRESSURE.byWay: a man waits this long at most for a mate to be ready (past the longest beat there is)
@@ -327,7 +328,7 @@ function target(F: RoomFight, D: Def): { T: Room; at: Vec3 } | null {
 }
 
 /** the pickets of this staging (PRESSURE.picket): a man posted outside his garrison's room knows it is his side's, wherever in it the noise is */
-const PICKETS = new WeakMap<Guard, Room>(), PICKET_WENT = new WeakSet<Guard>();
+const PICKETS = new SideMap<Guard, Room>('pressure.PICKETS'), PICKET_WENT = new SideSet<Guard>('pressure.PICKET_WENT');
 const PICKET_DOOR_M = 2.5;   // (a noise this near a door of his room is AT it)
 /** the room a picket hears fought over while he is still on his post: his garrison's, if the noise is in it or at a door of it. Once he has gone in he is a man
  *  like any other of the room he stands in */

@@ -35,6 +35,7 @@
 // HABITS (coop-door-open-habits): no dice; nothing read off the camera or the canvas (the target is orders.ts', from input); no graphics setting; no GPU
 // read; nothing asks for "the" player but orders.ts' own recipients; the state is one short record per man at work, dropped with his order — a checkpoint
 // is refused while a unit is on the floor (savestate.ts canSave), so there is nothing to snapshot.
+import { SideMap } from '../math/side';
 import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character, DoorPush } from './character';
@@ -113,7 +114,7 @@ function panelFace(g: Game): { face: Vec3; n: Vec3 } {
 /** lighting.ts's 'check the breaker' errand, read off the panel itself: `goal` where the man sent walks to, `mid` the middle of the reach he re-arms it
  *  from, `at` the point just off the panel's face that his chest needs a clear line to. */
 export interface BreakerErrand { goal: Vec3; mid: Vec3; at: Vec3; }
-const errands = new WeakMap<Game, { t: number; key: string; E: BreakerErrand | null }>();   // (derived from the level as it stands, asked again every second: nothing to save)
+const errands = new SideMap<Game, { t: number; key: string; E: BreakerErrand | null }>('workthings.errands');   // (derived from the level as it stands, asked again every second: nothing to save)
 /** lighting.ts setBlackout / breakerResetNear. Null: the fixed offsets and the bare radius, as they were (the switch or `ownFace` off, a show on the stage).
  *  The fixed spot is KEPT wherever a man can stand on it with a line to the panel (walls only: a door leaf swung across it for a moment does not move the
  *  errand), so every level it was right on walks and times as before; elsewhere it is the spot a teammate told to work the panel stands on (standFor),

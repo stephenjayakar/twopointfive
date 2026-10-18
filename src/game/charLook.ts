@@ -2,6 +2,7 @@
 // Sam the operators', the shift / the cell the defenders', the staff side's trained element (the QRF) the responders', everybody else the civilians' — and his
 // resolved rows + proxy colours, cached on the man until his tints, his side, his coat or a table change (a steady frame allocates nothing here).
 // One call a frame from game.ts's draw block, and only while settings.charMats is up: off, nothing here runs and every man is his two tints as ever.
+import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
 import type { Team } from './teams';
@@ -15,10 +16,10 @@ export function sideOfTeam(team: Team, trained = false): CharSide {
 }
 
 interface Look { ver: number; side: CharSide | null; suit: boolean; t: number[]; pal: Float32Array; prox: Vec3[] | null; proxWet: number; proxWhole: boolean; proxMask: number }
-const looks = new WeakMap<Character, Look>();
-const sides = new WeakMap<Character, CharSide>();
+const looks = new SideMap<Character, Look>('charLook.looks');
+const sides = new SideMap<Character, CharSide>('charLook.sides');
 /** the men drawn in the sneaking suit this frame (game/cast.ts sneakSuit): an operator's second set of rows */
-const suits = new WeakMap<Character, boolean>();
+const suits = new SideMap<Character, boolean>('charLook.suits');
 
 export interface CharLookFrame {
   /** the man's CHAR_MAT_FLOATS rows (anim/characters.ts setMaterials) */

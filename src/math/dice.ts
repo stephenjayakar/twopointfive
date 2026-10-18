@@ -6,6 +6,15 @@
 
 /** mulberry32: a small, fast, seedable uniform [0, 1) generator */
 export function mulberry32(a: number): () => number { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+/** a die a rollback snapshot can hold (game/rollback.ts): its whole state is the word `dice`, on an object, and nothing is captured — `mulberry32(seed)` keeps the same
+ *  word inside a closure, where no snapshot can read it or put it back, so a die that LIVES IN GAME STATE from tick to tick is one of these (a die made and spent
+ *  inside one call may stay a mulberry32). `roll(dieOf(seed))` gives the sequence `mulberry32(seed)` gives, draw for draw. */
+export interface Die { dice: number }
+export const dieOf = (seed: number): Die => ({ dice: seed | 0 });
+export function roll(d: Die): number { const a = d.dice = (d.dice + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+/** the same draw as a method of the record that carries the word: `rec.rnd = rollOn; rec.rnd()` — one function for every record, so a record put into another game
+ *  rolls its own die there (a closure over the record would go on rolling the first game's) */
+export function rollOn(this: Die): number { return roll(this); }
 /** a small stable string hash (FNV-1a, 32 bit): the same string gives the same number on every machine — what things DEALT by name, never rolled, are dealt off */
 export function hashStr(s: string): number { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; } return h >>> 0; }
 /** a die standing in for Math.random on the simulation's behalf, remembering the one it displaced */

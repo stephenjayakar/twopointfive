@@ -28,6 +28,7 @@
 // ONE switch, ATTENTION.on: ON in the page (?noattention = the build as it was), OFF here and on the frozen harness stand (TPS_ATTENTION=1; a FROZEN_HOLDS row).
 // With it off every export returns on its first line. No dice but the line pools (simRandom), no camera, no graphics setting; per-man state in a WeakMap with a
 // snapshot / restore pair (savestate.ts). Type-only game imports but for functions called inside functions (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
 import { isHostile } from './teams';
@@ -92,7 +93,7 @@ interface Mem {
   /** the happening he is hearing (things inside `sameSecs` of each other) has had its taking: it gets no second one however long it goes on */
   series: boolean;
 }
-const memOf = new WeakMap<Guard, Mem>();
+const memOf = new SideMap<Guard, Mem>('attention.memOf');
 function mem(gd: Guard): Mem { let M = memOf.get(gd); if (!M) { M = { hold: null, cand: null, lent: null, takes: [], tick: -1e9, toldAt: -1e9, line: -1, heardT: -1e9, lentOff: -1e9, owed: -1e9, series: false }; memOf.set(gd, M); } return M; }
 /** a hold nobody has ticked for this long is nobody's (a man handed to a script, grabbed, dead: updateGuard returns before the tick) */
 const STALE = 0.25;

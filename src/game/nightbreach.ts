@@ -33,6 +33,7 @@
 //
 // With the flag off none of this runs: Game.update's one call into tick() returns on its first line, and BreachDrill without `live` is the show's drill as it was.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
+import { rollbackVar } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, PairId } from './game';
 import type { Input } from './input';
@@ -136,6 +137,7 @@ export interface NightBreachLayout { name: string; defenders(): NightBreachMark[
 
 /** the team start NIGHTBREACH.samAt / samYaw were last written from (start()) */
 let applied: TeamStart | null = OFFICE_SCENARIOS.nightBreach.team;   // (the knobs above ARE the office's: a knob moved by hand before the first start on the office stays moved)
+rollbackVar('nightbreach.applied', () => applied, v => { applied = v; });   // (asked again by every staging, a restart inside a tick among them)
 
 export type NightBreachState = 'off' | 'staged' | 'stacking' | 'set' | 'going' | 'inside' | 'clear' | 'failed' | 'recalled';
 

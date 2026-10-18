@@ -39,6 +39,7 @@
 // What it is NOT: no man added, no hit point, no better aim, no dice of its own (the one roll is the round's own spread, drawn by fireWeapon for a burst from a corner), nothing an enemy could not have seen or been told. Only defenders in
 // a room fight (team 'hostile' units while the fight is live); never the night game, a show, or a teammate (he is under orders). `LANES.on` off = nothing here
 // runs = the build by run digest; the frozen harness stand holds it off (TPS_LANES=1).
+import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
 import type { Item } from './throwables';
@@ -197,9 +198,9 @@ interface State {
   /** rounds that passed a living man who had not noticed them yet (LANES.roused): counted if his senses have them inside `reactSecs`, else forgotten. Not saved */
   near: { gd: Guard; from: Vec3; at: Vec3; who: number; t: number }[];
 }
-const states = new WeakMap<Game, State>();
-const fresh = (): State => ({ lanes: [], serial: 0, mask: null, ver: 0, own: new WeakMap(), seen: new WeakSet(), banged: new WeakSet(), push: new Map(), flank: new Map(), flankOf: new Map(), dropped: new WeakSet(), failT: new WeakMap(), skip: false, held: new Map(), cans: [], roll: 0, due: [], look: new WeakMap(), post: new WeakMap(), backT: new WeakMap(), saidT: -100, t: -1, tickT: 0,
-  stats: { lanes: 0, known: 0, unknown: 0, held: 0, rerouted: 0, backedOut: 0, round: 0, stuns: 0, pushes: 0, lapsed: 0, peeks: 0, peekThere: 0, peekClear: 0, peekLost: 0, pins: 0, pinRounds: 0, pinLost: 0, sets: 0, goes: 0, frags: 0, fragLost: 0, fragKept: 0 }, peek: new Map(), reloads: new Map(), fragNo: new WeakMap(), near: [] });
+const states = new SideMap<Game, State>('lanes.states');
+const fresh = (): State => ({ lanes: [], serial: 0, mask: null, ver: 0, own: new SideMap(), seen: new SideSet(), banged: new SideSet(), push: new Map(), flank: new Map(), flankOf: new Map(), dropped: new SideSet(), failT: new SideMap(), skip: false, held: new Map(), cans: [], roll: 0, due: [], look: new SideMap(), post: new SideMap(), backT: new SideMap(), saidT: -100, t: -1, tickT: 0,
+  stats: { lanes: 0, known: 0, unknown: 0, held: 0, rerouted: 0, backedOut: 0, round: 0, stuns: 0, pushes: 0, lapsed: 0, peeks: 0, peekThere: 0, peekClear: 0, peekLost: 0, pins: 0, pinRounds: 0, pinLost: 0, sets: 0, goes: 0, frags: 0, fragLost: 0, fragKept: 0 }, peek: new Map(), reloads: new Map(), fragNo: new SideMap(), near: [] });
 const S = (g: Game): State => { let st = states.get(g); if (!st) { st = fresh(); states.set(g, st); } return st; };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -517,7 +518,7 @@ function stun(g: Game, st: State, L: Lane, at: Guard[]) {
   if (flat(sol.land, land) > 3 || flat(sol.land, L.from) > 4.5) return;   // (no arc from here: a wall, a lintel, too far)
   giveStuns(best, stunsOf(best) - 1); c.anim.throwItem(flat(c.pos, sol.land), Math.hypot(sol.v0[0], sol.v0[2]));
   const it = g.items.spawn('flash', from, sol.v0, { fuse: 0.7, who: c.id, heading: v3.yawOf(sol.v0) });
-  it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
+  it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
   g.audio.play('throw', from, 0.7);
   L.can = { who: c.id, t: g.time, land: v3.copy(sol.land) }; L.stunAt = g.time + K.stunGap; st.stats.stuns++;
   g.say(best, 'bang out — on me!', true); st.saidT = g.time;

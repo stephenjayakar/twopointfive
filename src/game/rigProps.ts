@@ -3,6 +3,7 @@
 // light, their carbine, Sam's SC-20K in his hands or slung across his back — lives in RIG, and rigBoxes() / rigLightPose() / carbineLightPose() / sc20kLightPose() turn it into the prop boxes and the lights' poses. The character viewer (the workbench: src/viewer/) drives the
 // same functions with sliders bound to RIG and its "copy constants" button emits the `export const RIG` statement below verbatim
 // (rigSource()), so tuning is: drag, copy, paste over the block, commit.
+import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { RtLight } from '../render/lights';
@@ -703,7 +704,7 @@ function carbineBoxes(c: Character, out: Box[], C: Rig['carbine'], lens: Vec3, m
   if (meta) { const G = C.gripL; const o = v3.mad(v3.mad(v3.mad(g.o, g.x, G.off[0]), g.y, G.off[1]), g.z, G.off[2]); meta.push({ path: 'carbine.gripL', label: 'support hand grip point (arrows only)', depth: 2, parent: g, frame: { ...g, o }, boxStart: out.length, boxCount: 0, getAdj: () => gripAdj(G) }); }
 }
 /** the grip point as an Adj for the gizmo: its `off` IS gripL.off (dragging writes it); the rings' rot is accepted and ignored */
-const gripAdjs = new WeakMap<object, Adj>();
+const gripAdjs = new SideMap<object, Adj>('rigProps.gripAdjs');
 function gripAdj(G: Rig['carbine']['gripL']): Adj { let a = gripAdjs.get(G); if (!a || a.off !== G.off) { a = { off: G.off, rot: [0, 0, 0] }; gripAdjs.set(G, a); } return a; }
 
 /** What the animator needs of RIG.carbine to put the support hand on the gun (character.ts CharacterAnimator.longGrip): the left wrist's point and its fingers /

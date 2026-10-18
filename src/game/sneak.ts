@@ -46,6 +46,7 @@
 // OFF (the default; `?sneak` / SNEAK=on / the panel's row turn it on): every function below returns on its first line and orders.ts's follower is the build's
 // own, frame for frame (the run digests agree). State is per Game in a WeakMap: nothing on the Game, in the digest or in a checkpoint. No dice.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
@@ -159,18 +160,18 @@ interface Man {
   /** the crumbs to this frame's goal, for sneakWay (null: none laid) */ way: Vec3[] | null;
 }
 /** when each door's leaf was last seen to move (read at the plan's rate, for the doors Sam is at) */
-const leafT = new WeakMap<object, { a: number; t: number }>();
+const leafT = new SideMap<object, { a: number; t: number }>('sneak.leafT');
 const leafMoved = (g: Game, d: { angle: number }): boolean => {
   let r = leafT.get(d); if (!r) leafT.set(d, r = { a: d.angle, t: -1e9 }); else if (Math.abs(r.a - d.angle) > 1e-4) { r.a = d.angle; r.t = g.time; } else if (g.time < r.t) r.t = -1e9;
   return g.time - r.t < SNEAK.doorSettle; };
 interface State { trail: Crumb[]; off: number; t: number; men: WeakMap<Guard, Man>; list: Man[]; live: boolean; /** Sam's meter over the estimate, eased up slowly (a flash is not the light of a place) */ amb: number }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('sneak.states');
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const DEG = Math.PI / 180;
 const note = (g: Game, gd: Guard, what: string) => { SNEAK_LOG.push({ t: g.time, who: gd.callsign, what, at: [gd.char.pos[0], gd.char.pos[2]] }); if (SNEAK_LOG.length > 300) SNEAK_LOG.splice(0, 100); };
 
 /** the sneak is live for the squad this frame: the switch, the silent order standing and unbroken, Sam on his feet, and no defender hunting (one read a frame) */
-const liveAt = new WeakMap<Game, { t: number; v: boolean }>();
+const liveAt = new SideMap<Game, { t: number; v: boolean }>('sneak.liveAt');
 export function sneakLive(g: Game): boolean {
   if (!SNEAK.on) return false;
   let L = liveAt.get(g); if (L && L.t === g.time) return L.v; if (!L) liveAt.set(g, L = { t: 0, v: false });
@@ -263,8 +264,8 @@ function crossCost(g: Game, eyes: Guard[], T: Crumb[], first: number, end: numbe
 }
 
 // ------------------------------------------------------------ the same eye, for a man who is NOT following (pairup.ts 'oneEye': pairorders.ts's stalk)
-const cellLit = new WeakMap<Game, Map<number, [number, number]>>();
-const keptLines = new WeakMap<Guard, { x: number; z: number; t: number; low: boolean; map: Map<number, number> }>();
+const cellLit = new SideMap<Game, Map<number, [number, number]>>('sneak.cellLit');
+const keptLines = new SideMap<Guard, { x: number; z: number; t: number; low: boolean; map: Map<number, number> }>('sneak.keptLines');
 /** how lit a nav cell is to a man low or upright on it: the same read as a crumb's (the meter's curve over the CPU's steady direct light at his chest and
  *  head, whoever's lamp it is), without the crumb's extra off Sam's own meter — nobody has stood there (sneakWalk adds the walker's own under SNEAK.stalkAmbient). Kept per cell for `age` seconds: two for pricing a route, a crumb's own 0.4 for
  *  the verdict on a walk (a carried torch sweeps onto a cell quicker than two seconds). */
@@ -375,8 +376,8 @@ function track(g: Game, S: State) {
 export function sneakTick(g: Game): State | null {
   if (!SNEAK.on) return null;
   let S = states.get(g);
-  if (!sneakLive(g)) { if (S && S.live) { S.live = false; S.trail.length = 0; S.men = new WeakMap(); S.list = []; S.amb = 0; } return null; }
-  if (!S) states.set(g, S = { trail: [], off: 0, t: -1e9, men: new WeakMap(), list: [], live: true, amb: 0 });
+  if (!sneakLive(g)) { if (S && S.live) { S.live = false; S.trail.length = 0; S.men = new SideMap(); S.list = []; S.amb = 0; } return null; }
+  if (!S) states.set(g, S = { trail: [], off: 0, t: -1e9, men: new SideMap(), list: [], live: true, amb: 0 });
   S.live = true; track(g, S); return S;
 }
 type Feet = { goal: Vec3 | null; speed: number; crouch: boolean; /** a move out of somebody's sight: not one the order's own holds may stop */ must?: boolean };

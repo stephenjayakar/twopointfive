@@ -11,14 +11,19 @@
 //
 // THE FIXED STEP (FIXEDSTEP below; engine groundwork for two-player co-op, nothing networked): with the switch on and the host saying this frame is a live one (LoopCtx.fixedStep —
 // main.ts: not a scripted __runFrames frame), the game is stepped in whole ticks of exactly 1 / hz whatever the display's rate: the frame's time goes into an accumulator
-// (planTicks), every tick is demo.update → attract.update → game.update → lights.update with the SAME dt, and a frame draws whatever the last tick left. So the simulation computes
+// (planTicks), every tick is demo.update → attract.update → game.update → lights.update → the camera's step with the SAME dt, and a frame draws whatever the last tick left. So the simulation computes
 // the same numbers on a 60, a 120 and a 144 Hz display (tools/qa/fixedstep-check.ts), which a variable step never can. One-frame input edges (a key press, a click, the wheel)
 // belong to exactly ONE tick: the first of the frame; a frame with no tick hands them to the next frame's first tick (the hotkeys have had their look and do not see them twice).
-// What stays per drawn frame on the display's own dt: the camera, the mixer, the smoke solver, the render. BETWEEN TICKS (host/tween.ts TWEEN, its own switch; LoopCtx.tween): a
-// frame that falls between two ticks is drawn between them — what moves (keyed boxes, the men, carried lights, where the camera is asked to look) at the blend of the tick
+// THE CAMERA STEPS WITH THE TICK (camStep below: the spectate yaw, the pitch ease, FollowCamera.step — after the tick's update, on the tick's dt): the next tick's input
+// record takes its view from it (game/cmd.ts sampleCmd: the walk keys' basis, the aim ray, the order menu's picks), so a camera eased by the display's frame time would
+// make two displays two games (tools/qa/tween-check.ts 'same hands'). A hand's turn of the camera (Ctrl + drag: Input.orbitDX) is given in the frame's first tick for
+// the same reason, owed to the next frame's by a frame that runs none; and the engine's view focus (what the wind is gathered round) is set after every tick, not once a
+// render. What stays per drawn frame on the display's own dt: the mixer, the smoke solver, the render, a
+// blast's kick. BETWEEN TICKS (host/tween.ts TWEEN, its own switch; LoopCtx.tween): a
+// frame that falls between two ticks is drawn between them — what moves (keyed boxes, the men, carried lights, the camera itself) at the blend of the tick
 // before the last and the last, a constant part of a tick behind the game (none on a display at the tick rate, never more than one: tween.ts phase), and never read back
 // by it: the blend hangs on the drawn objects from just before the host's render to just after. With that
-// switch off there is no interpolation: off 60 Hz the men move at 60 a second under a camera that moves at the display's rate, and on a frame of two ticks or more (a display
+// switch off there is no interpolation: off 60 Hz the men and the camera move at 60 a second on a display that draws more, and on a frame of two ticks or more (a display
 // under the tick rate, a hitch) a flash that lives one tick and was made in the frame's first is aged out by its second and never drawn (with it on, tween.ts draws it once).
 // The module's default is off = every statement below as it was; THE PAGE turns both on (host/profile.ts pageSwitches: ?fixedstep=0, ?tween=0).
 import { BACKKEY } from '../game/backkey';
@@ -38,7 +43,9 @@ export interface AttractLike { readonly active: boolean; update(dt: number): Vec
 /** the audio engine as the loop drives it (main.ts wraps AudioEngine: listener + update, and the score's intensity in the same call) */
 export interface LoopAudio { setListener(pos: Vec3, fwd: Vec3): void; update(dt: number, t: number): void; }
 /** the host's per-frame surface: the settings the loop writes (nvAmount / hitFlash) and the light set it ages */
-export interface LoopHost { readonly settings: Pick<RenderSettings, 'nvAmount' | 'hitFlash'>; readonly lights: { update(dt: number, t: number): void }; }
+export interface LoopHost { readonly settings: Pick<RenderSettings, 'nvAmount' | 'hitFlash'>; readonly lights: { update(dt: number, t: number): void };
+  /** the engine's: the look-at the wind is gathered round (the game reads it in the tick; a stand-in has none and the game falls back) */
+  viewFocus?: Vec3; }
 
 export interface LoopCtx {
   game: Game; input: Input; cam: FollowCamera; view: View;
@@ -47,7 +54,7 @@ export interface LoopCtx {
   /** this frame may be fixed-stepped (main.ts: a live frame, not a scripted __runFrames one — a script names its own dt). Absent = never: the loop as it was */
   fixedStep?(): boolean;
   /** the fixed step's own state, made by stepFrame on first use: time owed to the next tick, the last tick's scripted look-ats, the edges a tickless frame left */
-  fixed?: { acc: number; drift: number; demoPos: Vec3 | null; attractPos: Vec3 | null; owed: { pressed: string[]; clicked: number; wheel: number } | null };
+  fixed?: { acc: number; drift: number; demoPos: Vec3 | null; attractPos: Vec3 | null; owed: { pressed: string[]; clicked: number; wheel: number } | null; orbit: number };
   /** between two ticks of ONE drawn frame (the fixed step, a display under the tick rate or a hitch): what the host's draw does that the next tick reads — main.ts: the world's
    *  boxes packed into the grid its rays walk (engine.render does it once a frame; a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
    *  to the game (an expired speech bubble nulled: a replay makes it after EVERY update) */
@@ -132,19 +139,30 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   if (frozen) ctx.thaw = true; else if (ctx.thaw) { ctx.thaw = false; if (BACKKEY.tab) input.pressed.add('Paused'); }   // (game/backkey.ts: the first tick after the card is told the card was up — a held list or arc is let go unsent IN the tick, where a recording has it)
   ctx.afterFreeze?.(frozen);
   if (!frozen && input.wheelCtrl) cam.zoom(input.wheelCtrl);                 // Ctrl + wheel (or a pinch) zooms; the plain wheel is Sam's walking pace (player.ts)
-  if (!frozen && input.orbitDX) cam.rotate(input.orbitDX * 0.006);          // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)
+  const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.() && view.clientWidth > 0 && view.clientHeight > 0;
+  const orbit = !frozen && input.orbitDX ? input.orbitDX * 0.006 : 0;       // hold Ctrl and move the mouse to orbit (Q / E are the wall hold and the holster now)
+  if (orbit && !fixed) cam.rotate(orbit);                                  // (the fixed step turns the camera in the frame's first TICK, below: a turn on a frame with no tick would reach the next tick's record through the frame's own rebuild, and two displays would be two games)
   if (frozenKeys) { for (const k of frozenKeys) input.pressed.add(k); ctx.hotkeys?.(true); input.pressed.clear(); }   // frozen: the frame's presses were put away first (afterFreeze's still takes a zero-length game step with the hands off) and are handed back for this one look — F9 / F10 start a recording from the pause card
   else ctx.hotkeys?.(frozen);
 
   if (view.clientWidth > 0 && view.clientHeight > 0) {
     const demo = ctx.demo, attract = ctx.attract, D = game.director;
-    const fixed = !frozen && FIXEDSTEP.on && !!ctx.fixedStep?.();
     const tw = fixed && TWEEN.on ? ctx.tween : undefined;   // (drawing between ticks: only on a frame the fixed step runs)
     if (!tw && ctx.tween && !ctx.tween.stale) ctx.tween.rest();
-    const shotOf = !tw ? null : (dp: Vec3 | null, ap: Vec3 | null): Vec3 | null => { if (demo?.active && dp) return dp; const lk = D.showing ? D.frame?.look : null; return lk ? lk : attract?.active && !D.showing ? ap : null; };   // (a scripted look-at as a tick leaves it: the tour's / the level script's pinned shot / attract mode's)
     let demoPos: Vec3 | null, attractPos: Vec3 | null;
+    // the camera's own step: come round a spectated man, the pitch ease, the follow — once a frame on the frame's dt, or (the fixed step) once a TICK on the tick's:
+    // the input record takes its view from this camera (cmd.ts sampleCmd), so a camera eased by the display's frame time would make two displays two games
+    const camStep = (cdt: number, dp: Vec3 | null, ap: Vec3 | null, tick: boolean): Vec3 | null => {
+      const ds: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
+      const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
+      const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
+      const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
+      const aim = shot || game.spectate >= 0 ? null : game.aimPoint;
+      if (tick) cam.step(cdt, shot ?? follow, aim); else cam.update(cdt, shot ?? follow, aim);
+      return shot;
+    };
     if (!fixed) {
-      if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; }
+      if (ctx.fixed) { ctx.fixed.acc = 0; ctx.fixed.drift = 0; ctx.fixed.owed = null; if (!frozen && ctx.fixed.orbit) { cam.rotate(ctx.fixed.orbit); ctx.fixed.orbit = 0; } }   // (a hand's turn the fixed step still owed a tick)
       ctx.ticks = frozen ? 0 : 1;
       demoPos = frozen || !demo ? null : demo.update(dt);   // before the game step: the tour's scripted beats press keys / move the puppet's aim for THIS frame's update
       const showingBefore = !frozen && D.showing;   // a level-script showcase (the breach) has the frame: its drill, beats and camera run INSIDE the game step (director.tick) — attract stays out of it
@@ -152,21 +170,26 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       if (!frozen) ctx.beforeTick?.(dt);   // (outside the update's own timing: a hands-off player's thinking is not the game's)
       { const tU = performance.now(); if (!frozen) game.update(dt, input, cam, view); ctx.updateMs = performance.now() - tU; }
     } else {   // THE FIXED STEP: whole ticks of 1 / hz, each the old order's demo → attract → game with the same dt, the lights aged with the game (its men read them)
-      const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null };
+      const fx = ctx.fixed ??= { acc: 0, drift: 0, demoPos: null, attractPos: null, owed: null, orbit: 0 };
+      fx.orbit += orbit;
+      cam.frame();   // (before the ticks step the camera: 'previous' ← the matrix the last frame was drawn with)
       const fast = ctx.timeScale?.() ?? 1;   // (a clock run faster than the wall's asks for that many more ticks of a slow frame: the cap is against a stall, not against the scale)
       const plan = planTicks(fx.acc, ctx.vsyncDt?.() ?? dt, fast > 1 ? { ...FIXEDSTEP, maxTicks: Math.ceil(FIXEDSTEP.maxTicks * fast) } : FIXEDSTEP, fx.drift); fx.acc = plan.acc; fx.drift = plan.drift; ctx.ticks = plan.ticks;   // (the display's own frame time where the host has it: steadier than a clock read in the callback)
       const tdt = 1 / FIXEDSTEP.hz;
       if (fx.owed) { for (const k of fx.owed.pressed) input.pressed.add(k); input.clicked |= fx.owed.clicked; input.wheel += fx.owed.wheel; fx.owed = null; }   // (after the hotkeys above: they saw these last frame)
       const tU = performance.now(); let bt = 0;   // (bt: the ms the hands-off player's thinking took, outside the update's own timing as on the free step)
-      if (tw?.stale) tw.capture({ follow: game.followPos(), aim: game.aimPoint, shot: shotOf!(fx.demoPos, fx.attractPos) }, cam.pin);   // (the first tweened frame: what stands before its first tick is what that tick is blended FROM)
+      if (tw?.stale) tw.capture(cam);   // (the first tweened frame: what stands before its first tick is what that tick is blended FROM)
       for (let i = 0; i < plan.ticks; i++) {
         if (i) { input.endTick(); ctx.betweenTicks?.(); }   // a press, a click, the wheel: the first tick's alone; the host packs the world the last tick left (what a draw would have done)
+        else if (fx.orbit) { cam.rotate(fx.orbit); fx.orbit = 0; }   // the hand's turn of the camera since the last tick (a frame with no tick owes it to the next frame's first)
         fx.demoPos = demo ? demo.update(tdt) : null;
         fx.attractPos = fx.demoPos || D.showing || !attract ? null : attract.update(tdt);
         if (ctx.beforeTick) { const b0 = performance.now(); ctx.beforeTick(tdt); bt += performance.now() - b0; }
         game.update(tdt, input, cam, view);
         ctx.host.lights.update(tdt, ctx.time);
-        tw?.capture({ follow: game.followPos(), aim: game.aimPoint, shot: shotOf!(fx.demoPos, fx.attractPos) }, cam.pin);
+        camStep(tdt, demo?.active ? fx.demoPos : null, attract?.active && !(demo?.active && fx.demoPos) && !D.showing ? fx.attractPos : null, true);   // (after the tick, as a frame's follow comes after its update: the next tick's record reads it)
+        if (ctx.host.viewFocus) ctx.host.viewFocus = cam.focus;   // (what the wind is gathered round, read by the next tick: the engine sets it once a render — a second tick of one frame would read a focus a 60 Hz display never gave it)
+        tw?.capture(cam);
       }
       ctx.updateMs = performance.now() - tU - bt;
       if (!plan.ticks && (input.pressed.size || input.clicked || input.wheel)) fx.owed = { pressed: [...input.pressed], clicked: input.clicked, wheel: input.wheel };
@@ -175,30 +198,26 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
     const dshow: DirectorFrame | null = frozen ? null : D.showing ? D.frame : null;
     ctx.postUpdate?.(dshow);   // (the end card out with the drive)
     const blend = tw ? tw.phase(ctx.fixed!.acc * FIXEDSTEP.hz) : 1;   // (1 = the last tick as it is; below it, that far from the tick before the last to it: tween.ts phase — the time owed the next tick, less the lag the display's rate asks)
-    const shotNow: Vec3 | null = demoPos ?? (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the tour's / the level script's pinned shot / attract mode's
-    const shotPos = tw ? tw.at('shot', shotNow, blend) : shotNow;
-    const followPos = tw ? tw.at('follow', game.followPos(), blend)! : game.followPos();   // (between ticks the camera follows the man where he is DRAWN)
+    const shotPos: Vec3 | null = demoPos ?? (dshow ? dshow.look : null) ?? attractPos;   // a scripted look-at this frame: the tour's / the level script's pinned shot / attract mode's
     ctx.host.settings.nvAmount = game.player.nvAmount; ctx.host.settings.hitFlash = game.player.hitFlash;
     if (ctx.audio) {
       const lp = ((attract?.active ?? false) || !!dshow) && shotPos ? shotPos : game.player.char.pos;   // (a showcase parks Sam 30 m away outdoors exactly as attract does: listen from the shot, not from him — review 08-10 #3)
       ctx.audio.setListener([lp[0], lp[1] + 1.6, lp[2]], cam.forward); ctx.audio.update(dt, ctx.time);   // ← these two MUST stay statements: an 08-09 comment reshuffle swallowed them into the line above for three days (listener stuck at the lot corner, finished voices never released)
     }
     ctx.smoke?.update(dt);
-    { const spect = !shotPos && game.spectate >= 0; if (spect) cam.autoYaw(dt, followPos, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(dt, spect);   // spectating a guard: come round to the side he can be seen from,
-      const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!dshow || dshow.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, dt * 3); }   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
-    { const pin = cam.pin; if (tw && pin) cam.pin = tw.pinAt(pin, blend);   // (a framing a level script keys once a tick — a shot that tracks, swings, pushes in — is drawn between its last two)
-      try { cam.update(dt, shotPos ?? followPos, shotPos || game.spectate >= 0 ? null : tw ? tw.at('aim', game.aimPoint, blend) : game.aimPoint); } finally { cam.pin = pin; } }
+    if (!fixed) camStep(dt, demoPos, attractPos, false);   // (the fixed step stepped it with each tick above)
     if (ctx.hud) {
       const sh = showCaption(ctx); ctx.hud.setCaption(sh ? sh.caption : '', sh ? sh.sub : '');
       ctx.hud.setTimeline(demo?.active ? demo.chapters() : dshow ? D.chapters() : null, k => { if (demo?.active) demo.goto(k); });   // (the tour's stops are clickable; a level-script showcase's chapters are shown, not sought)
     }
     if (!fixed) ctx.host.lights.update(dt, ctx.time);
+    { const pose = tw ? tw.camAt(blend, cam) : null; if (pose) cam.drawIn(pose); }   // (between two ticks the camera is drawn between where they left it, as the men are: out again with the kick)
     cam.kickIn();   // a blast's camera kick (game/blastFeel.ts → FollowCamera.kick): in for the render and the HUD laid over it, out again before anything else reads the camera — a return with none
     try {
       if (tw) { try { tw.pose(blend); ctx.render(cam, ctx.time, dt, ctx.present()); } finally { tw.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and every tick, read the game's own)
       else ctx.render(cam, ctx.time, dt, ctx.present());
       ctx.hud?.update(game, cam, view); ctx.bubbles?.update(game, cam, view);
-    } finally { cam.kickOut(); }
+    } finally { cam.kickOut(); cam.drawOut(); }
   }
   input.endFrame();
 }

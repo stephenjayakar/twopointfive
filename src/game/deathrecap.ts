@@ -14,6 +14,7 @@
  *
  *  Seams: combat.ts fireWeapon → `recapRound` (the round that is about to land on a man: one line), game.ts `recapTick` (last in Game.step), ui/debrief.ts
  *  mounts the panel. */
+import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard, GameEvent } from './game';
 import type { Character } from './character';
 import type { Vec3 } from '../math/vec';
@@ -90,8 +91,8 @@ interface State {
   deaths: RecapDeath[]; due: { death: RecapDeath; at: number }[]; takes: RecapTake[];
   lost: Lost[]; /** the same men as the squad knows them: what lostLive hands out */ lostPub: LostMan[]; lostNext: number;
 }
-const states = new WeakMap<Game, State>();
-const fresh = (g: Game): State => ({ mission: g.mission, lastT: g.time, next: g.time, primed: false, overAt: Infinity, frames: [], spare: [], shots: [], seen: new WeakSet(), down: new Set(), rounds: new Map(), cast: new Map(), deaths: [], due: [], takes: [], lost: [], lostPub: [], lostNext: 0 });
+const states = new SideMap<Game, State>('deathrecap.states');
+const fresh = (g: Game): State => ({ mission: g.mission, lastT: g.time, next: g.time, primed: false, overAt: Infinity, frames: [], spare: [], shots: [], seen: new SideSet(), down: new Set(), rounds: new Map(), cast: new Map(), deaths: [], due: [], takes: [], lost: [], lostPub: [], lostNext: 0 });
 function stateOf(g: Game): State {
   let S = states.get(g);
   if (!S || S.mission !== g.mission || g.time < S.lastT) { S = fresh(g); states.set(g, S); }   // a restart or a load: that run's deaths are not this run's

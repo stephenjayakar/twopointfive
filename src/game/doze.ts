@@ -45,6 +45,7 @@
 // NEVER SEEN ON A GPU: the slump (character.ts `slump`), the chair under him, the 'z' and the '♪', the screen's light on a seated man's face and in the room,
 // the chair pulled up are numbers nobody has looked at. He makes NO SOUND yet: a breath or a
 // snore is the sound table's to add (dozeBreath below is its phase).
+import { SideMap } from '../math/side';
 import type { Game, Guard, LightTarget } from './game';
 import type { Prop } from './props';
 import type { Vec3 } from '../math/vec';
@@ -77,9 +78,9 @@ type Phase = 'no' | 'going' | 'down' | 'asleep' | 'work' | 'stir' | 'up' | 'spen
 /** one man's record. `no` = this wait was looked at and has no chair for him (asked once a wait) · `going` = on his way to the chair · `down` = seated, eyes
  *  open · `asleep` · `work` = at his screen, awake · `stir` = woken, coming round · `up` = risen at the end of his wait, a moment clear of the chair · `spent` = woken once: awake for the run */
 interface Doze { phase: Phase; wp: number; chair: Prop | null; mon: LightTarget | null; monWas: boolean; say: number; to: Vec3; at: Vec3; face: number; cx: number; cz: number; cyaw: number; t: number; seen: number; until: number; lit: number; ask: number; push: number; why: DozeWhy | null; wokeAt: number; }
-const GAMES = new WeakMap<Game, Map<Guard, Doze>>();
-const REC = new WeakMap<Guard, Doze>();
-const SAID = new WeakMap<Game, number[]>();
+const GAMES = new SideMap<Game, Map<Guard, Doze>>('doze.GAMES');
+const REC = new SideMap<Guard, Doze>('doze.REC');
+const SAID = new SideMap<Game, number[]>('doze.SAID');
 const TOUCH = new Int32Array(96);
 /** how far, and which way, a man will pull a chair up: every 5 cm offset inside `pullM`, nearest first (built on first use) */
 let PULLS: [number, number][] | null = null, PULLS_M = -1, PULLS_E = -1;   // (PULLS_E: sorted by lengths, so by the maths of the day — math/exact.ts)
@@ -112,7 +113,7 @@ function dark(D: Doze) { if (D.phase === 'work' && D.mon && !D.monWas) D.mon.on 
 /** the screens a man was got up from, or hauled away from, and LEFT LIT (he switched it on; nobody has switched it off), each with the game time it goes
  *  dark by itself (`idleSecs`: a screen nobody touches blanks) — sooner if the next man who sits to it gets up at the end of his wait: he switches it off
  *  as if it were his own. In the checkpoint. */
-const LEFT = new WeakMap<Game, Map<LightTarget, number>>();
+const LEFT = new SideMap<Game, Map<LightTarget, number>>('doze.LEFT');
 function leftLit(g: Game, D: Doze) { if (D.phase !== 'work' || !D.mon || D.monWas || !D.mon.on || D.mon.broken) return; let L = LEFT.get(g); if (!L) LEFT.set(g, L = new Map()); L.set(D.mon, g.time + DOZE.idleSecs); }
 function leftOff(g: Game) { const L = LEFT.get(g); if (!L) return; for (const t of L.keys()) t.on = false; LEFT.delete(g); }
 function leftTick(g: Game) { const L = LEFT.get(g); if (!L) return; if (!DOZE.on) { leftOff(g); return; }

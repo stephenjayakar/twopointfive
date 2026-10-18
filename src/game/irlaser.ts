@@ -33,6 +33,7 @@
 // NOT here: the IR ILLUMINATOR — a LIGHT only a tube sees by, on the same goggles. That one is irlight.ts (it retired nvg.ts's 'too dark for the tube, so white
 // light' for a man who carries one).
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Box } from '../scene/boxes';
 import type { Game, Guard } from './game';
@@ -65,7 +66,7 @@ let viewTube: boolean | null = null;
 export function irViewAs<T>(tube: boolean, fn: () => T): T { const was = viewTube; viewTube = tube; try { return fn(); } finally { viewTube = was; } }
 /** the infrared boxes made (combat.ts beamBoxes notes each): how a picture with the viewer's tube OFF leaves out the lines the step drew for its own.
  *  Picture only — nothing in the simulation asks. */
-const IR_MADE = new WeakSet<Box>();
+const IR_MADE = new SideSet<Box>('irlaser.IR_MADE');
 export function irNote(b: Box): Box { IR_MADE.add(b); return b; }
 export function irMade(b: Box): boolean { return IR_MADE.has(b); }
 /** the band of `gd`'s weapon laser this frame (combat.ts laserBoxes asks before it draws): 'visible' for every man without goggles and for everybody with

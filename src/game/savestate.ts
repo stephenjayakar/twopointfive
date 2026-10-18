@@ -73,6 +73,7 @@
 // refuses such a file too rather than pour it over a living man), a body (a man's or a civilian's) still falling, a man scripted or the lockdown pair clearing
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
+import { SideMap, rollbackVar, wallClock } from '../math/side';
 import { loadSandbox } from './sandbox';
 import { Vec3, v3, quat } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
@@ -168,7 +169,7 @@ export interface PlayerSnap {
 export type Bubble = { text: string; t: number; dur: number; radio: boolean };
 export type TaskSnap = { kind: 'breaker' | 'rack' | 'device'; pos: V3 } | { kind: 'checkOn'; pos: V3; who: number; wp: number; left: number; t0: number };
 export interface TalkSnap { stage: number; presses: number; said: string[]; saidN: [string, number][]; given: string[]; lastT: number; heldSince: number; abortT: number; script: string | null | undefined; }
-export interface RagSnap { x: number[]; rot: Q4; sleeping: boolean; }   // (sleeping false = a forced / harness file caught him mid-fall: he is laid at those particles and let go of, to fall from rest)
+export interface RagSnap { x: number[]; rot: Q4; sleeping: boolean; /** the trunk's rest shape is these particles' own on a load (Ragdoll.settleAt `own`); absent in a file from before it: the trunk is snapped to the fresh figure's stance, as it was */ own?: boolean; }   // (sleeping false = a forced / harness file caught him mid-fall: he is laid at those particles and let go of, to fall from rest)
 export interface GuardSnap {
   id: number; routeI: number; callsign: string; state: GuardState;
   pos: V3; vel: V3; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: number; animPhase: number;
@@ -313,7 +314,7 @@ export function levelFingerprint(g: Game): SaveState['level'] {
   const fp = { fp: hashStr(s).toString(16), boxes: nBox, routes: L.routes.length, doors: L.doors.length };
   fpCache.set(g.level, fp); return fp;
 }
-const fpCache = new WeakMap<object, SaveState['level']>();
+const fpCache = new SideMap<object, SaveState['level']>('savestate.fpCache');
 function firearmSnap(w: Firearm): FirearmSnap { return { id: w.def.id, chamber: w.chamber, mag: w.mag, spare: [...w.spare], shotsFired: w.shotsFired, mode: w.mode, bursts: w.bursts, lastBurstT: w.lastBurstT }; }
 /** …and back: a reload half done is simply not (see the head: autosave never catches one; a forced save leaves the well as it stood) */
 function firearmApply(w: Firearm, s: FirearmSnap) {
@@ -461,7 +462,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
       witness: deepClone(gd.witness), talk: { stage: gd.talk.stage, presses: gd.talk.presses, said: [...gd.talk.said], saidN: [...gd.talk.saidN], given: [...gd.talk.given], lastT: gd.talk.lastT, heldSince: -1, abortT: gd.talk.abortT, script: gd.talk.stage > 0 ? (peekScript(gd.talk)?.id ?? forcedScriptOf(gd.talk) ?? null) : undefined },
       bubble: gd.bubble && !gd.held ? { ...gd.bubble } : null,
       wet: [c.wet, c.beads, c.wetRain],
-      rag: dead && rag ? { x: Array.from(rag.x, x => Math.round(x * 1e4) / 1e4), rot: [rag.rot[0], rag.rot[1], rag.rot[2], rag.rot[3]], sleeping: rag.sleeping } : null,
+      rag: dead && rag ? { x: Array.from(rag.x, x => Math.round(x * 1e4) / 1e4), rot: [rag.rot[0], rag.rot[1], rag.rot[2], rag.rot[3]], sleeping: rag.sleeping, own: true } : null,
     };
   });
   // ---- the level's live state
@@ -585,7 +586,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   const items: Item[] = s.items.map(is => {
     const it = g.items.spawn(is.kind, is.pos, [0, 0, 0], { yaw: is.yaw, tumble: is.tumble, tumbleRate: 0, spin: 0, heading: is.heading, fill: is.fill, life: is.life, age: is.age, fired: !!is.fired, emitT: 0, who: is.who | 0, settled: true, fuse: 0, bounces: 1, radius: is.radius, restitution: is.restitution, friction: is.friction });
     it.vel = [0, 0, 0]; it.on = is.on >= 0 ? propsById[is.on] ?? null : null; it.onPose = is.onPose;
-    it.onBounce = (sp, p) => { if (sp >= 0.7) g.audio.play(is.kind === 'smoke' || is.kind === 'flash' ? 'canisterBounce' : 'magDrop', p, Math.min(1, sp / 3)); };   // (disturbed later, it clatters as any: nobody hears a checkpoint's items as fresh noise)
+    it.onBounce = (sp, p, g) => { if (sp >= 0.7) g.audio.play(is.kind === 'smoke' || is.kind === 'flash' ? 'canisterBounce' : 'magDrop', p, Math.min(1, sp / 3)); };   // (disturbed later, it clatters as any: nobody hears a checkpoint's items as fresh noise)
     return it;
   });
   // ---- Sam (restartEncounter made a fresh Player at the spawn with the rail light moved over; kit and place him)
@@ -645,7 +646,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
       c.update(0);
       if (S.wound) woundRestore(gd, S.wound);   // (a man down WOUNDED is a posed figure, never a ragdoll: wounds.ts lays him down again, already settled)
       else c.ragdollize(g.col, [Math.sin(c.bodyYaw), 0, Math.cos(c.bodyYaw)], true);
-      if (S.rag && S.rag.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(S.rag.x, S.rag.rot); if (S.rag.sleeping === false) c.ragdoll.wake(); }   // (a body the file caught still falling — only a forced / harness save can — falls on from rest where it was)
+      if (S.rag && S.rag.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(S.rag.x, S.rag.rot, S.rag.own === true); if (S.rag.sleeping === false) c.ragdoll.wake(); }   // (a body the file caught still falling — only a forced / harness save can — falls on from rest where it was)
       c.vel = [0, 0, 0]; gd.speed = 0; c.anim.speed = 0;
       c.update(0);
     } else c.update(0);
@@ -751,6 +752,7 @@ export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?
 
 // ================================================================================================================================ the controller (Game.saves)
 let runSerial = 0;
+rollbackVar('savestate.runSerial', () => runSerial, v => { runSerial = v; });
 /** the room region a floor point is in, for the autosave's 'first time in a room' trigger and its label: on a quiet mission the LEVEL's own places (chronicle.ts
  *  roomOf with the level: a bazaar has no 'lobby'); on the plain night the table it always read */
 function roomHere(g: Game, p: Vec3): string { return roomOf(p, g.quiet?.active ? g.level : undefined); }
@@ -775,7 +777,7 @@ export class Checkpoints {
   private missionRef: object | null = null; private stageRef: MissionStage = 'infiltrate'; private roomRef = ''; private dragRef: object | null = null;
   /** the last autosave written, while it can still be regretted (key + game time) */
   private lastAuto: { key: string; t: number } | null = null;
-  constructor(store?: SaveStore) {
+  constructor(store?: SaveStore) { wallClock(this, 'runId');   // (a run's name is made of the clock and a serial: never compared between two plays)
     this.store = store ?? (typeof localStorage !== 'undefined' ? localStore : memoryStore());
     try { if (typeof localStorage !== 'undefined' && localStorage.getItem(KEY_AUTOSAVE_ON) === '0') this.enabled = false; } catch { /* */ }
   }

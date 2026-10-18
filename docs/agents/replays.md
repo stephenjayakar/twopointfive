@@ -75,19 +75,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not a scripted `__runFrames` frame — a script's dt is still exactly what it names) the frame's time goes through `planTicks` (an accumulator; `snapDt` takes a frame time within
   0.4 ms of 1‥3 refreshes of a common display as exactly that, so 60 Hz is one tick a frame; the time the snap puts aside is kept in `drift`, leaking 1 % a frame, and handed back
   half a tick at a time — a display the list does not know keeps the wall's clock within half a percent; main.ts plans from the rAF timestamps, `LoopCtx.vsyncDt`) and the game runs WHOLE ticks of exactly 1/hz: per tick demo.update → attract.update →
-  game.update → lights.update (the men read ttl lights), `betweenTicks` (main.ts: the HUD's `hudExpireBubbles`, as a replay makes it after every update, then
+  game.update → lights.update (the men read ttl lights) → THE CAMERA'S STEP (below), `betweenTicks` (main.ts: the HUD's `hudExpireBubbles`, as a replay makes it after every update, then
   `engine.world.upload(true)` — `between`: the motion-identity map stays the last DRAWN frame's) between two ticks of one frame. The cap of `maxTicks` a frame is against a stall: a clock
   run faster than the wall's (`__timeScale` 2, `LoopCtx.timeScale`) may run that many more. One-frame input edges go to exactly one
-  tick (`Input.endTick`; a tickless frame owes them to the next frame's first tick, after the hotkeys). Per drawn frame on the display's dt still: camera, mixer, smoke solver,
-  render — and what a frame between two ticks DRAWS is the next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
+  tick (`Input.endTick`; a tickless frame owes them to the next frame's first tick, after the hotkeys). THE CAMERA STEPS ONCE A TICK on the tick's dt, after the tick's update
+  (`loop.ts camStep`: the spectate yaw, the pitch ease, `FollowCamera.step`; `FollowCamera.update` = `frame()` + `step()`, and a fixed frame calls `frame()` alone): the next
+  tick's `PlayerCmd` takes its view from it (the walk keys' basis, the aim ray, the menu's picks), so the same hands give the same records at 50, 60, 120 and 144 Hz and under
+  `W.step(1/60)` (tween-check 'same hands', a FREE camera turned and zoomed by hand: 480 records equal on each). A hand's TURN of the camera (Ctrl + drag, `Input.orbitDX`) is given in the frame's first tick and owed
+  to the next frame's by a frame that runs none (`ctx.fixed.orbit`: a yaw written on a tickless frame reached the next record through the frame's own rebuild); Ctrl + wheel only
+  moves `desiredDistance`, which the step alone reads. The engine's `viewFocus` (what the wind is gathered round, read in the tick) is set after every tick where the host has
+  one, not once a render. `FollowCamera.frame()` runs before the frame's ticks ('previous' = the matrix the last frame was DRAWN with: TAAU-off reprojection). Per drawn frame on the display's dt still: mixer, smoke solver, render, a blast's kick — and what a frame between two ticks DRAWS is the
+  next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
   `FIXEDSTEP_BREAK=1` must fail). A page tool that runs the live loop and counts on one update a frame of the frame's own dt opens the page with `?fixedstep=0`.
 - **Drawing between ticks** (`src/host/tween.ts TWEEN {on, snap 1.5 m, flashes, ease}`, class `Tween`, `LoopCtx.tween`; the module's default is off = the fixed step draws the
   last tick, as it did; **ON IN THE PAGE** (`?tween=0` / `?tween=off` = off; frozen stand off, `FROZEN_HOLDS` row `TWEEN.on`, `TPS_TWEEN=1`; `VISIT_OWN`, in no recording);
   Tab ▸ Frame ▸ 'draw between ticks'; acts only under the fixed step, on live frames): a frame that falls between two ticks draws what MOVES at the blend of the tick before
   the last and the last — keyed boxes (`Box.mkey`: door leaves, props, items, debris, what a man carries, devices: centre, yaw, quaternion, `dc`), the men (every joint
   matrix of the palette, by the man's id, into an array of tween.ts's own that only the GPU is handed: `CharacterRenderer.staged / ownerOf / drawJoints`) and the ends of
-  their shadow proxies, every light that stood in both ticks (position, direction, by the object), where the follow camera looks and its aim lead (`Tween.at`), and a
-  framing a level script pins tick by tick (`Tween.pinAt`: the Director's tracking / swinging shots). `capture()` at the end of every tick copies what stands;
+  their shadow proxies, every light that stood in both ticks (position, direction, by the object), and THE CAMERA: look-at, yaw (the short way), pitch and distance between
+  where its last two ticks' steps left it (`Tween.camAt` → `FollowCamera.drawIn` before the kick, `drawOut` after the render: the tick's own pose back to the bit, and
+  `prevViewProj` the matrix the frame was drawn with) — the follow camera and a framing a level script pins tick by tick alike; a look-at or distance that jumped past `snap`,
+  or an angle past 0.5 rad, in the tick is a cut and is drawn as the last tick has it (so the fastest part of a flight of more than about 23 m is drawn in 60 Hz steps), and a
+  camera written OUTSIDE the ticks since the last one (a show stopped by a key, a framing staged) is drawn as it stands; a pin set between ticks is taken up by the next tick. `capture(cam)` at the end of every tick copies what stands;
   `pose(a)` hangs blended arrays on the drawn objects right before the host's render and `unpose()` hangs the tick's own back by reference right after — the game's own
   state is never the blend when a tick runs. THE LAG (`Tween.phase`): the picture stands a CONSTANT part of a tick behind the game, the most any of the last 32 frames owed
   the next tick — NOTHING on a display at the tick rate (every frame is the last tick itself, nothing hung: the 60 Hz picture is the one the fixed step alone drew), half a
@@ -98,11 +107,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   LEFT AS THE TICK HAS THEM, so up to the lag AHEAD of the men they belong to on a frame between two ticks: boxes with no key — laser lines, tracers, sparks, one-tick
   effect boxes (a key set where a beam is made would let it be blended: `combat.ts beamBoxes`) — and the HUD's marks and bubbles (laid from the game's positions).
   And the GPU's sensor passes measure the POSED scene (they measure the picture, as ever; headless stand-ins read the tick). The engine replay viewer has its own loop:
-  not blended. `bun run tools/qa/tween-check.ts` on BOTH stands (stands / blend / even time / put back / same game / pin / flash / stale / off — the packed words the GPU
-  would be handed against the check's own record of the two ticks, at 50, 60, 120, 144 Hz, and 16 digests ≡ `W.step(1/60)` ≡ the blend off; `TWEEN_BREAK=1`: 'blend',
-  'even time', 'put back' fail). `node tools/qa/tween-page.cjs` (dev server on PORT): the real page's own loop on the software adapter — both on at the boot, the
+  not blended. `bun run tools/qa/tween-check.ts` on BOTH stands (stands / blend / even time / put back / same game / same hands / pin / flash / stale / off — the packed words the GPU
+  would be handed, and the camera the frame is drawn through, against the check's own record of the two ticks, at 50, 60, 120, 144 Hz, under a free camera; 16 digests and
+  480 input records ≡ `W.step(1/60)` ≡ the blend off; `TWEEN_BREAK=1` — the blend hung wrong and the camera eased by the frame's time again: 'blend', 'even time',
+  'put back', 'same hands' fail, and 'same game' and 'off' with them: under a free camera eased per frame the four displays play four different games). `node tools/qa/tween-page.cjs` (dev server on PORT): the real page's own loop on the software adapter — both on at the boot, the
   engine's render with the blend hung and no console / GPU error, the clock scaled to stand for a 120 and a 144 Hz display, the pause card, both switches live and
-  by URL. COST (headless, one loaded cloud CPU, a four-man room fight in the compound at 144 Hz: 5 drawn men, 257 dynamic boxes, 37 lights; the machine three times over-booked while it ran, so read them against the 4.5‥9.4 ms game update and the 0.7‥0.9 ms box + light pack of the same run): `capture` 0.15‥0.26 ms a tick (about 3 % of the update; paid at every rate), `pose` + `unpose` 0.24 ms a frame at 144 Hz, 0.10 at 120 Hz, nothing at 60 Hz once the lag has settled.
+  by URL, and THE SAME HANDS AT TWO PACES (`ONLY=paces` = that line alone; a page load is five to nine minutes on the software adapter): two loads, keys held and the cursor
+  parked before the first tick, the page's own loop at the wall's pace (1.07 ticks a frame) and with its clock scaled for a 144 Hz display (0.43) — the first 150 ticks'
+  input records the same text, 150 different views of the camera among them. COST (headless, one loaded cloud CPU, a four-man room fight in the compound at 144 Hz: 5 drawn men, 257 dynamic boxes, 37 lights; the machine three times over-booked while it ran, so read them against the 4.5‥9.4 ms game update and the 0.7‥0.9 ms box + light pack of the same run): `capture` 0.15‥0.26 ms a tick (about 3 % of the update; paid at every rate), `pose` + `unpose` 0.24 ms a frame at 144 Hz, 0.10 at 120 Hz, nothing at 60 Hz once the lag has settled.
   **Never seen on a GPU or on a display over 60 Hz: how it LOOKS is the maintainer's to judge.**
 - **The player's input is one plain record a tick** (`src/game/cmd.ts`; co-op groundwork, nothing networked): `Game.update(dt, input, cam, canvas)` — the signature every host and
   tool calls, unchanged — is now journal.frameStart → the director's injected keys → `sampleCmd()` (the host's live Input / camera / view copied into a `PlayerCmd`: keys held,
@@ -118,6 +130,60 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
   field, `mPerPx`, a blast's kick. The session journal's format is untouched (it files the raw camera and input before the sample).
+- **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
+  networked, NOTHING IN THE GAME CALLS IT: unused, the build is as it was — the 21 scripted play-throughs' digests on both stands are the ones from before it). Beside the
+  checkpoint (`savestate.ts`: a file with a schema a player keeps, refused in squad play and mid-action), not instead of it. `takeSnapshot(g)` walks everything the Game
+  reaches plus what `math/side.ts` lists, and keeps a shallow copy of each array, object, Map, Set and typed array: no schema, a new field on a Guard is in the next
+  snapshot. `takeSnapshot(g, since)` a tick later copies only what changed and shares the rest (a rollback ring's snapshot a tick). `restoreSnapshot(s)` writes the copies
+  back into the same objects (identities stand; the Game's host fields stay as they are NOW); `restoreSnapshot(s, other)` puts the state into ANOTHER Game on the same
+  level, walked side by side: an object the two games share (a module's constant row) stands for itself and is not written, a function is the other game's own closure
+  of the same code where one stands in the same slot (one function of the snapshot's is one function there), a field that is COMPUTED (a getter) is left to compute.
+  `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. NOT IN A SNAPSHOT: the host (`Game.engine` but for its CPU
+  box world and light set, the mixer, the smoke solver's GPU fields, the GPU light meter's readings in flight, the session journal), the character file, what a closure
+  captured, a MEMO table, and it is references, not bytes (it cannot be sent to another process as it is).
+  THE RULE FOR NEW GAME CODE (the static pass is red otherwise): no `new WeakMap` / `new WeakSet` in `src/game`, `src/scene`, `src/anim`, `src/math` — `SideMap` / `SideSet`
+  (the same calls, and listable), a table at the top of a module NAMED `'<file>.<variable>'`, one made inside a function unnamed; a module `let` the simulation writes is
+  `rollbackVar('<file>.<name>', get, set)`; a module-level Map / Set / array (typed ones too) / object it writes is `rollbackRoot('<file>.<name>', it)` (or a knob
+  table); anything else gets a row in `tools/qa/rollback-exempt.ts` with its class and why (TALLY a counter nothing reads back · CONFIG set at a scenario's start ·
+  SCRATCH dead by the end of the call · CACHE rebuilt from what it is keyed on · CONST). State never lives in a closure: A DIE KEPT IN STATE IS A `Die`
+  (`math/dice.ts`: `dieOf(seed)`, `roll(die)`, or a `rnd: rollOn` method beside a `dice` field — the same numbers as `mulberry32(seed)`), never a `mulberry32`
+  closure, whose word no snapshot can reach (civilians, the Director's run, the radio checks and the last stand were changed to it: same sequences). A named table that
+  is a pure function of its key — what a miss would compute, whichever game filled it — says so in the statement after it, `table.asMemo()` (two today:
+  `cast.hasNvg`, `character.AT0`): not state, held by no snapshot, compared by nothing. A field that holds a wall-clock reading is marked where its holder is made,
+  `wallClock(obj, 'ms')` (the props', the reach masks' and the rig fit's timers, the checkpoints' `runId`): kept and put back, never compared. `math/side.ts` imports
+  nothing, so a top-level `new SideMap(...)` is safe in the import cycle.
+  THE CHECK: `bun run tools/qa/rollback-check.ts` (the frozen stand) and `TPS_PROFILE=shipped bun run tools/qa/rollback-check.ts`; `ROLLBACK_BREAK=1` flips the lowest bit
+  of one moving man's position after every restore and the three 'plays on' lines must FAIL. It runs the static pass, then scripted solo and squad play-throughs
+  (`--scn`, default eight; `--seeds`), and at a moment every few seconds — and at the first frames that find a round in the air, a leaf swinging, a fuse burning, a man
+  falling — takes the game and holds, by the state word after every tick: put back = the word it was; the SAME game plays the next ticks as the unbroken run; THE RING (a
+  snapshot after every tick, each since the one before; the one eight ticks back put back) plays the eight again; a FRESH game (stood up on the same scenario and seed and stepped ONCE, so that what a game hangs on its host at its first step is its own) given the
+  snapshot plays the same ticks
+  (where the strict word parts, the two are gone through value for value, `stateAlike`: every number to the bit, but not WHICH object stands where — the first game
+  points at a module's constant the other had not reached; the line says how many moments passed that way); TWO GAMES: the other game's ticks leave the first game's
+  own state as it was (they share nothing live); and the whole run rolled back dozens of times ends on the digest and the state word of the run never touched. A FAIL
+  names the moment and the tick; `--why scn:seed:frame` prints the paths that differ. `--static` = the static pass alone (CLAUDE.md lists it); `--times scn:seed:frame`
+  = times and bytes at one frame; `RB_LAST_DUMP=<file>` on a `--one` run writes the last state's word per part, to find where two arms' last states differ.
+  MEASURED (headless, the cloud box, nothing else running; room-clear-four seed 1 at frame 600, median · least of 300): 29,000 objects and 6.5 MB a whole snapshot
+  (4.7 MB of typed arrays), 234 side tables; a whole take 54 · 43 ms; a tick of the game 10 · 7 ms; a take since the tick before 17 · 15 ms, 4,300 objects and 2.4 MB
+  of its own; eight ticks back put back 13 · 10 ms; A ROLLBACK OF EIGHT TICKS, put back and played again, 68 · 56 ms — IT DOES NOT FIT A 16.7 ms FRAME HERE: the
+  eight ticks alone are some 50 ms at this box's tick, and with a snapshot after each of them 214 ms. A take costs about two ticks; its cost is the walk over some 30,000
+  small objects (18,000 of them three-number arrays), not the bytes. What a rollback needs next is fewer, flatter objects (positions in typed arrays) or a tick that
+  is cheap enough — neither is in this change. RUN: the whole check on both stands, eleven scenarios (the default eight and pass-four, glasshouse-four,
+  snatch-four) on seed 1, capped at 45 s each: 153 moments on the frozen stand, 143 on the shipped one, every line PASS (a few fresh-game moments by `stateAlike`,
+  the line says how many); `ROLLBACK_BREAK=1` on night-breach and room-clear-four FAILS the same-game, ring and fresh-game lines on both stands, as it must. On the
+  merge with the build that carries the game's own maths and the CPU senses: night-breach, room-clear-four and mousehole-four on both stands, and room-clear-four
+  and hostage-rescue on the shipped stand with `TPS_CPUSENSE=1`, every line PASS. One seed only; other seeds and longer runs were not run.
+  KNOWN LIMITS, said plainly: module state is PER PROCESS, not per Game — the registered variables and containers (`guards.unitSerial`, `savestate.runSerial`,
+  `shield.given`, the wet tallies; the memos `enemysquads.CTX`, `squadthrow.duckMates`, `guards.UNSTICK` that name one game's men) are shared by every Game in the
+  process, so a snapshot is sound while ONE game ticks between its take and its restore (the check restores the first game before it steps the other); a server
+  that runs several games in a process wants them on the Game. Another Game object is never walked into, but a memo that names another game's man is. CONFIG rows are
+  safe only while a rolled-back window never spans a scenario's start or stop, and a snapshot is put back under the maths (`EXACT.on`) and senses (`SENSE.cpu`)
+  settings it was taken under. A game that has NEVER stepped, given a snapshot, keeps the first game's closures where it has none of its own (under `SENSE.cpu`:
+  the wrap on the smoke solver and `Sensors.own`, which then read the FIRST game's smoke and walls — the check's two-games line found it). A closure in state is
+  taken by its code: `Throwable.onBounce` still captures a can's
+  own `quiet` and kind, weather's dice and a few unsubscribe hooks are closures (the check prints every function in the state by where it hangs). `newRunId()` reads
+  the wall clock inside the tick (marked, never compared; a server would name the run). The static pass does not see a class instance at the top of a module, an
+  out-parameter, a class's `static` field. Never run on a GPU, and the page does not call any of it.
 - **The game's own maths** (`src/math/exact.ts`, switch `EXACT.on`; ON in the page, `?noexact` = the engine's own functions as before; OFF on the frozen stand,
   `TPS_EXACT=1` raises it; the shipped stand has it on, `TPS_EXACT=0` there = `?noexact`; engine groundwork, nothing networked): the language leaves the
   rounding of sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh and hypot to each engine, and they differ in the last place

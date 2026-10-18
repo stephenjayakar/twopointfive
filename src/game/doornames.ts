@@ -14,9 +14,10 @@
 // every door while the pass is off. ONE name a door: the squad's rows (orders.ts doorWords)
 // and a defender's call on the net (tactics.ts gateCall) both read it, so a door has one name on one HUD. Words only: nothing here is read by a rule.
 // A leaf of the import graph but for types; the names hang on the Door OBJECTS (a Game's own), so two Games in a process each have theirs.
+import { SideMap } from '../math/side';
 import type { Level } from '../scene/level';
 
-const SAID = new WeakMap<object, string>();
+const SAID = new SideMap<object, string>('doornames.SAID');
 const COMPASS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw', 'north', 'south', 'east', 'west']);
 /** two letters and a word all the same: the joining word of an id that names the two places a door is between ('kitchen_to_hall', said 'kitchen to hall door'
  *  on the squad's row; counted shorthand, a defender's call left that name for the nearest room's — two names for one door) */

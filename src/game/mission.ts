@@ -1,6 +1,7 @@
 // Mission thread: stage machine (infiltrate → drive → exfil), the drive pull, the rack check errand, debrief stats, objective text/marker.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { Input } from './input';
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
@@ -168,4 +169,4 @@ export function objectiveText(g: Game): string {
   if (s === 'done') { let t = doneLine.get(m); if (!t) { const D = debriefOf(g); t = `mission complete — ${fmtClock(m.stats.elapsed)} · ${D.rating} ${D.score}`; doneLine.set(m, t); } return t; }   // (worked out once per finished run, not sixty times a second: nothing on it can change any more)
   return 'mission failed — enter restarts it';
 }
-const doneLine = new WeakMap<object, string>();
+const doneLine = new SideMap<object, string>('mission.doneLine');

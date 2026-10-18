@@ -50,6 +50,7 @@
 // the floor). Probes: tools/qa/silent-probes.ts (`probes.ts silent`) — the QA harness stands the game up with SILENT.on false (src/host/standup.ts), so every
 // older menu probe sees the menu it was written against; that family turns it on.
 
+import { SideMap, SideSet } from '../math/side';
 import type { Game, Guard } from './game';
 import { fragRunning } from './frag';
 import type { OrderDef, SquadOrders } from './orders';
@@ -103,7 +104,7 @@ export const SILENT = {
 export const LOUD_ROWS = ['bangClear', 'bigClear', 'charge', 'thrBang', 'fragClear', 'wallCharge', 'fragThere', 'stunThere'];   // ('wallCharge': the charge's twin on a wall — wallcharge.ts)
 type By = 'order' | 'start' | 'api' | 'tool';
 interface State { cast: Guard[]; silent: boolean; since: number; hot: boolean; /** loud has reached them at some point since the order (it does not lapse as `hot` does) */ was?: boolean; booted?: WeakSet<Door>; }
-const states = new WeakMap<Game, State>();
+const states = new SideMap<Game, State>('silent.states');
 /** what changed it, newest last (QA; the panel's summary) */
 export const SILENT_LOG: { t: number; to: 'silent' | 'loud'; by: By }[] = [];
 export const SILENT_STATS = { silent: 0, loud: 0, locked: 0, picked: 0, booted: 0, held: 0, heldGlass: 0, compromised: 0, tools: 0 };
@@ -165,7 +166,7 @@ export function silentPick(g: Game): boolean { return SILENT.picks && SILENT.kic
  *  all, or a captor at his last warning — then it is the ordinary boot, with its ordinary line) */
 export function silentBoot(g: Game, d: Door): 'first' | 'again' | null {
   const s = states.get(g); if (!SILENT.bootWedged || !SILENT.kicks || !squadSilent(g) || !s?.was || urgent(g)) return null;
-  const said = (s.booted ??= new WeakSet()); if (said.has(d)) return 'again';
+  const said = (s.booted ??= new SideSet()); if (said.has(d)) return 'again';
   said.add(d); SILENT_STATS.booted++; return 'first';
 }
 /** the canisters stay in the kit */
@@ -224,7 +225,7 @@ function rows(g: Game): [OrderDef, OrderDef] {
       standsIn: { for: 'silent', when: () => squadSilent(g) }, issue: () => { setSilent(g, false, 'order'); } },
   ];
 }
-const seats = new WeakMap<Game, { on: boolean; goDigit: boolean }>();
+const seats = new SideMap<Game, { on: boolean; goDigit: boolean }>('silent.seats');
 /** The rows on the menu (off it with the switch off), on the first page's spare digit — which is the word's on a build that gives the word by a digit
  *  (DOORTOOLS.wordOnKey off): there the word keeps 5, as it had it, and these rows are reached by the wheel. Asked every frame; work only when that changes. */
 const loudWord = (w: string | null) => w ? `loud · ${w}` : 'loud';

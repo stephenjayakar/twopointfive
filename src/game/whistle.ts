@@ -14,6 +14,7 @@
 //     same half second) is not talked down to 'hello?' by it.
 // The player's side (whistleKey / tryWhistle): V, anywhere but down, once per `cooldown` seconds — the event, the sound meter's tick, the synthesized two-note
 // voice at his head (sfx.ts 'whistle'); no HUD line, it is diegetic. The knobs (WHISTLE) sit in Tab ▸ Sandbox and are kept per machine like the aim rows.
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
 import type { Input } from './input';
@@ -79,7 +80,7 @@ export interface WhistleMem {
   /** the last line he used from each pool (no saying the same one twice running) */
   lastLook: number; lastTwice: number;
 }
-const memOf = new WeakMap<Guard, WhistleMem>();
+const memOf = new SideMap<Guard, WhistleMem>('whistle.memOf');
 function mem(gd: Guard): WhistleMem {
   let M = memOf.get(gd);
   if (!M) { M = { respondedAt: NEVER, responses: 0, searches: 0, cues: 0, glances: 0, glanceUntil: -1, glanceAt: null, soft: false, softAt: NEVER, lastLook: -1, lastTwice: -1 }; memOf.set(gd, M); }
@@ -92,7 +93,7 @@ export function whistleMem(gd: Guard): Readonly<WhistleMem> | null { return memO
 
 // ---------------------------------------------------------------- the player's side
 export interface Blower { readyAt: number; blown: number; lastAt: number; }
-const blowerOf = new WeakMap<object, Blower>();   // keyed by the Player object: a restart's fresh Sam starts with a fresh breath
+const blowerOf = new SideMap<object, Blower>('whistle.blowerOf');   // keyed by the Player object: a restart's fresh Sam starts with a fresh breath
 function blower(g: Game): Blower { let B = blowerOf.get(g.player); if (!B) { B = { readyAt: -1, blown: 0, lastAt: -100 }; blowerOf.set(g.player, B); } return B; }
 /** module-wide counters for the QA soak (events blown, events resolved against the guards, men who answered / searched / took the cue / turned a head) */
 export const WHISTLE_STATS = { blown: 0, resolved: 0, heardBy: 0, answered: 0, searched: 0, cued: 0, glanced: 0, unanswered: 0 };
@@ -121,7 +122,7 @@ export function tryWhistle(g: Game): boolean {
  *  man's hearingCheck meets it, against every living man on the floor at that moment */
 interface Heard { d: number; at: Vec3; direct: boolean; carry: number; }
 interface Resolution { hearers: Map<Guard, Heard>; responder: Guard | null; answeredBy: Guard | null; t: number; }
-const resOf = new WeakMap<GameEvent, Resolution>();
+const resOf = new SideMap<GameEvent, Resolution>('whistle.resOf');
 /** the last few resolutions, newest last (QA: 'only one man answers', 'through the door nobody heard it') */
 export const WHISTLE_LOG: { t: number; pos: Vec3; hearers: string[]; responder: string | null; answered: string | null; search: boolean }[] = [];
 

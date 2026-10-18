@@ -229,7 +229,7 @@ export class BreachDrill {
           const from: Vec3 = [hand[0], Math.max(1.0, hand[1]), hand[2]];
           const sol = g.items.solve(from, P.toss.land, 9);
           const it = this.can = g.items.spawn('flash', from, sol.v0, { fuse: 99, who: b.char.id, heading: v3.yawOf(sol.v0) });   // (fuse 99: it goes off on OUR cue below, not the item's — see bang)
-          it.onBounce = (sp, p) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
+          it.onBounce = (sp, p, g) => g.audio.play('canisterBounce', p, Math.min(1, sp / 4));
           g.audio.play('throw', from, 0.7);
           this.tToss = t; this.beat('toss');
           // eyes off what is about to go off, muzzles nowhere near each other: #1's head and gun go down to the floor on his outside (the side away from the

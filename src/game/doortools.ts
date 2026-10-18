@@ -58,6 +58,7 @@
 //
 // With no operative on the floor nothing here runs (tick: a pass over the guard list and a return; the rows are orders.ts's, inert with it).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap, SideSet } from '../math/side';
 import { HOLDFIRE, holdFireOrder, holdFireOnMan } from './holdfire';   // (called / read inside blow / goMen / testStacks only)
 import { FRAG, exposedTo, fragRunning } from './frag';
 import { moraleBlast } from './morale';
@@ -679,7 +680,7 @@ export const offOf = (d: Door, p: Vec3, side: 1 | -1) => { const th = d.def.clos
 const isOpen = (d: Door) => !d.latched && Math.abs(d.angle) >= 0.6;
 const N4: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 /** is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them: a line straight up from head height that meets nothing) */
-const SKY = new WeakMap<object, { n: number; open: boolean }>();
+const SKY = new SideMap<object, { n: number; open: boolean }>('doortools.SKY');
 function underSky(g: Game, room: { cells: Set<number> }): boolean {
   const hit = SKY.get(room); if (hit && hit.n === room.cells.size) return hit.open;
   const nav = g.col.nav, cs = nav.cell, every = Math.max(1, Math.floor(room.cells.size / 64)); let k = 0, of = 0, sky = 0;
@@ -1353,7 +1354,7 @@ export class DoorTools {
     const w = (near.length ? ` · too close: ${near.join(', ')}` : '') + (far.length ? ` · behind the door: ${far.join(', ')}` : '');
     this.closeAt.set(c, { t: g.time, w }); return w;
   }
-  private closeAt = new WeakMap<SetCharge, { t: number; w: string }>();
+  private closeAt = new SideMap<SetCharge, { t: number; w: string }>();
   /** the face of this door the player could set a charge on by hand right now (null: none — the switch off, a show, his hands full of a body or a man, steel, off its hinges, open, a
    *  charge or a charge order already on it, nothing left in the count) */
   private samFace(d: Door): 1 | -1 | null {
@@ -1851,7 +1852,7 @@ export class DoorTools {
     const G = op.gate; if (!G) return false;
     return G.ops.some(o => o !== op && this.ops.includes(o) && isNaN(o.openT) && !(op.kind === 'bangClear' && o.kind === 'openClear') && ((o.phase === 'kick' && !o.kick?.gate) || (o.phase === 'stack' && this.willKick(o))));   // (a hand door waiting on the same boot is no boot)
   }
-  private gateAsked = new WeakSet<DoorOp>();
+  private gateAsked = new SideSet<DoorOp>();
   /** the lead on his way to the handle of an unlocked door (open(), handleside.ts toolSpot): there — or `kickCap` run out, and then from where he has got to, as
    *  it always was — he shoves it and goes back onto his jamb, like the boot's own man; on a word he waits there for it, the shove his crossing */
   private handStep(op: DoorOp, el: number) {
@@ -2149,7 +2150,7 @@ export class DoorTools {
         op.aim = into ? { at: into.at, from } : undefined; op.pass = pass;
         const it = op.frag ? g.items.spawn('frag', from, sol.v0, { fuse: FRAG.orderFuse, who: th.char.id, heading: v3.yawOf(sol.v0) })   // (a frag: on its OWN fuse from the hand — frag.ts; nobody is kept off its list)
           : g.items.spawn('flash', at0, v0, { fuse: 99, who: th.char.id, heading: v3.yawOf(v0) });   // (the long fuse: this op fires it — bang() — with the entry's own men kept off its list)
-        it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
+        it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
         th.char.anim.tossItem(TOSS_QUICK); g.say(th, op.frag ? 'frag out!' : WORDS.on ? 'bang out!' : 'bang out.'); if (op.frag) g.msg('frag out — stay off the door');
         if (into) this.beat(op, `can into the room · ${(-offOf(d, into.at, op.side)).toFixed(1)} m in, ${(alongOf(d, into.at) - W / 2).toFixed(1)} along · ${into.n} of ${into.of} places lit${pass ? ` · passed ${gap.toFixed(1)} m to the door` : ''}`);   // (its own beat, and BEFORE the toss: 'toss:<callsign>' is read by name, and as the last beat of its tick)
         op.can = it; op.tossT = t; op.threw = th; op.phase = 'fuse'; this.beat(op, `toss:${th.callsign}`);
@@ -2364,7 +2365,7 @@ export class DoorTools {
         const W = d.def.width, from = this.handAt(op, th), land = pick.at ?? this.landAt(op);
         const sol = g.items.solve(from, land, 9);
         const it = g.items.spawn('flash', from, sol.v0, { fuse: 99, who: th.char.id, heading: v3.yawOf(sol.v0) });   // (the long fuse: this op fires it — bang())
-        it.onBounce = (sp, q) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
+        it.onBounce = (sp, q, g) => g.audio.play('canisterBounce', q, Math.min(1, sp / 4));
         th.char.anim.tossItem(TOSS_QUICK); g.say(th, WORDS.on ? 'bang out!' : 'bang out.');
         // (the can that goes in first is cooked SHORT — `thrFirstIn` inside the frame line on its way to the pocket: every tenth of a second it flies is one a gun
         //  settled on the doorway has on the men at the jambs, and from there its flash still has the room)
@@ -2861,7 +2862,7 @@ export class DoorTools {
     this.assign(op, gd, { post: pod.pos, face: pod.face, watch: null, shy: null, thru: op.door, pace: this.g.orders.knobs.entry, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: true, going, there: 'holding the room' });
   }
   /** is this room's floor one the whole-room rule works (`flowOn`, and not past `flowMax`)? A room past the size is searched as before the rule — said once an order */
-  private bigSaid = new WeakSet<DoorOp>();
+  private bigSaid = new SideSet<DoorOp>();
   private flows(op: DoorOp, SR: RoomSearch): boolean {
     const K = DOORTOOLS; if (!K.flowOn) return false; if (!(K.flowMax > 0) || SR.pts.length <= K.flowMax) return true;
     if (!this.bigSaid.has(op)) { this.bigSaid.add(op); this.beat(op, `flow: no · a room of ${SR.pts.length} cells is looked over, not gone through (flowMax ${K.flowMax})`); }

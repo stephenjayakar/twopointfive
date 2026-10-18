@@ -42,6 +42,7 @@
 //                  round, or Sam down (the game's own down card follows). A restart of any kind stages it again.
 //
 // Nothing here runs unless start() was called: tick() returns on its first line, and with the scenario off the game is the game as it was.
+import { SideSet } from '../math/side';
 import { Vec3, v3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -240,7 +241,7 @@ export class Rescue {
   private capBy: Guard | null = null;
   private executed = new Set<Guard>(); private counted = new Set<Guard>();
   private securedAt = NaN; private step: RescueStep = 'waiting'; private barkAt = 0;
-  private noise: Vec3 | null = null; private heard = new WeakSet<object>(); private lastOrder: object | null = null;
+  private noise: Vec3 | null = null; private heard = new SideSet<object>(); private lastOrder: object | null = null;
   /** Hard's crew: when the captor called the assault on their net (NaN = not yet; Infinity = nobody was left to call it) */
   private alarmAt = NaN; private way: Vec3[] | null = null;
   private benched: Guard[] | null = null; private said = new Set<string>();
@@ -253,7 +254,7 @@ export class Rescue {
   private called = false;
   private searchT = new Map<Guard, number>(); private searchA = new Map<Guard, { A: Assignment; face: number | null; watch: Vec3 | null; there: string }>();
   /** the assignments the scenario itself gave (post()): such a man is as free for F as one falling in */
-  private auto = new WeakSet<object>();
+  private auto = new SideSet<object>();
   /** the corridor just outside the server room's door (roundBy) */
   private serverOut: Vec3 | null = null;
   constructor(private g: Game) { this.flow = new RescueFlow(g, this); }

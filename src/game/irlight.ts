@@ -33,6 +33,7 @@
 // Nothing is saved: the list is made again every frame from who has his goggles down, and a carrier's reading of his place (IRLIGHT.auto: when it last read
 // dark, how far his light has eased) is kept per Game and starts again after a load — a light inside its hold at the save is out or full at once. UNTUNED BY EYE: nothing here was seen on a GPU.
 // (src/game is one import cycle: nothing here is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, DEG } from '../math/vec';
 import type { RtLight } from '../render/lights';
 import type { Game, Guard } from './game';
@@ -67,7 +68,7 @@ const HEAD_Y = 1.62, LENS_AHEAD = 0.14, LENS_CLEAR = 0.3, LENS_R = 0.04;
 /** one carrier's reading of his place (IRLIGHT.auto): when his fan was last read, when anything last read dark, how much of his light burns, and as of when */
 interface Need { readT: number; darkT: number; k: number; t: number }
 interface Kit { sam: RtLight | null; men: Map<Guard, RtLight>; seen: Map<Guard, { t: number; E: number }>; need: Map<number, Need> }
-const kits = new WeakMap<Game, Kit>();
+const kits = new SideMap<Game, Kit>('irlight.kits');
 const kitOf = (g: Game): Kit => { let K = kits.get(g); if (!K) { K = { sam: null, men: new Map(), seen: new Map(), need: new Map() }; kits.set(g, K); } return K; };
 const lamp = (name: string, owner: number): RtLight => ({ name, group: 'infrared', kind: 1, pos: [0, -10, 0], dir: [0, 0, 1], color: [1, 1, 1], intensity: 0, range: IRLIGHT.reach,
   innerDeg: IRLIGHT.core, outerDeg: IRLIGHT.cone, radius: LENS_R, volumetric: 0, owner, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0 });   // (volumetric 0: no beam in the haze — at the tube's gain its own back-scatter would be all it showed)

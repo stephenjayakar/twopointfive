@@ -34,6 +34,7 @@
 // It only ever acts with MORALE.on as well. The switch is off in the module and on the frozen stand: every seam returns on its first line, no man is met.
 // Nothing here touches health, aim, skill or a reaction beat.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
+import { SideMap } from '../math/side';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
 import type { Character } from './character';
@@ -71,12 +72,12 @@ const ACTS: DarkDoorAct[] = ['none', 'balk', 'solo', 'come', 'with'];
 interface Fear { act: DarkDoorAct; t: number; door: number; side: 1 | -1; spot: Vec3 | null; at: boolean; other: Guard | null;
   called: boolean; callT: number; tried: Guard[]; left: number; told: boolean; lag: number;
   armed: number; armT: number; quits: { room: number; t: number }[]; pass: { door: number; until: number }[]; said: number; idle: number; ask: number; }
-const stateOf = new WeakMap<Guard, Fear>();
+const stateOf = new SideMap<Guard, Fear>('darkdoor.stateOf');
 interface Read { t: number; dark: boolean; share: number; mean: number }
 /** a room's reading, kept `askSecs`: by game and room number */
-const readsOf = new WeakMap<Game, Map<number, Read>>();
+const readsOf = new SideMap<Game, Map<number, Read>>('darkdoor.readsOf');
 /** a level's rooms as floor cells to read, dealt once a nav grid: room number → cell centres (x, z pairs) */
-const cellsOf = new WeakMap<object, Map<number, number[]>>();
+const cellsOf = new SideMap<object, Map<number, number[]>>('darkdoor.cellsOf');
 
 /** THE LINES (placeholders in the register the advisor's round set — the writing pass is the maintainer's). `say` = the lines that name nobody; `he` / `they`
  *  as morale.ts has them (words.ts: a scenario's defender under the pass is up against a team). call: as he stops, to the mate he calls. self: as he stops,

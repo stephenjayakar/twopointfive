@@ -37,6 +37,7 @@
 // orders.ts asks clearLineFeet() as it poses each man and clearLineLive() where it keeps its stuck clocks. State is a WeakMap here: nothing in a checkpoint or
 // the digest, and with the switch off every export returns on its first line.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { DoorOp } from './doortools';
@@ -127,7 +128,7 @@ interface Doing { what: What; spot: Vec3; of: Guard; t0: number; onT: number; un
 /** `restUntil`: the rule leaves him be until then (base behaviour: his order's legs) · `tryT`: nothing was found — the next look */
 interface Mem { since: number; seenT: number; saidT: number; said: string; doing: Doing | null; restUntil: number; tryT: number; /** masked without a break, on this man, since (the edge wait's clock) */ runT: number; runOf: Guard | null;
   /** when the friend in his line was last seen closing on the man (holdBehind) · where that friend stood the last time it was asked, and when */ leadT: number; leadP: [number, number, number] | null; leadOf: unknown; /** … and on which man (a lead seen on one man is not a lead on the next) */ leadFor: Guard | null }
-const mem = new WeakMap<Guard, Mem>();
+const mem = new SideMap<Guard, Mem>('clearline.mem');
 const memOf = (gd: Guard): Mem => { let M = mem.get(gd); if (!M) { M = { since: -100, seenT: -100, saidT: -100, said: '', doing: null, restUntil: -100, tryT: -100, runT: -100, runOf: null, leadT: -100, leadP: null, leadOf: null, leadFor: null }; mem.set(gd, M); } return M; };
 /** what a LIVING man is doing (a man who dropped mid-step holds no spot against the others and is not on the panel) */
 const liveDoing = (gd: Guard): Doing | null => (gd.state === 'dead' || !gd.script ? null : mem.get(gd)?.doing ?? null);   // (… nor a man the fight AI has: nothing of his is being walked)
@@ -167,7 +168,7 @@ function leads(g: Game, gd: Guard, M: Mem, by: 'player' | Guard, tgt: Guard, to:
 /** THE PLAYER IS ON THE MOVE (still): LEAD_V m/s or more of real displacement, any direction, now or inside the last `secs` seconds. Read off where he
  *  really got to between two asks a tenth of a second or more apart, by any masked man (the pace asked of his legs the first time and after a gap nobody
  *  was masked in: a walk into a wall is no walk). One record a game — every man reads the same commander. */
-const samAt = new WeakMap<Game, { p: [number, number, number]; moveT: number }>();
+const samAt = new SideMap<Game, { p: [number, number, number]; moveT: number }>('clearline.samAt');
 function samMoves(g: Game, secs: number): boolean {
   const t = g.time, f = g.player.char, S = samAt.get(g), asked = () => Math.hypot(f.vel[0], f.vel[2]) >= LEAD_V;
   if (!S || t < S.p[2]) { samAt.set(g, { p: [f.pos[0], f.pos[2], t], moveT: asked() ? t : -100 }); return asked(); }
@@ -176,7 +177,7 @@ function samMoves(g: Game, secs: number): boolean {
   return t - S.moveT < secs && t >= S.moveT;
 }
 /** the entry assignment each man was first seen on, per door order (`past`: he has been on his point since, or been sent on from it) */
-const entered = new WeakMap<Guard, { op: DoorOp; A: Assignment; past: boolean }>();
+const entered = new SideMap<Guard, { op: DoorOp; A: Assignment; past: boolean }>('clearline.entered');
 /** IS THIS MAN BETWEEN THE SHOVE AND HIS POINT ON A DOOR TOOL'S ORDER? Read off the door tools' own record of the order (doortools.ts DoorOp: nothing of
  *  theirs is written, nothing they pick or send is changed):
  *    before the men go     the can thrown and not yet burst (toss, fuse, a threshold's pocket), the wait behind a bang or a charge, a boot thrown
