@@ -232,12 +232,15 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   validator refuses a block without it. A level whose idea is that nobody comes (a hilltop relay, a private vault, a range on a clock) carries none, and
   with the switch on a level without the block has no team whatever doors it has. `{ why, site, at, team, tag?, ways[{ name, door?, muster[4], entry[4],
   entryFace[4], coming?, clear?, stairs? }], men?: [fewest, most], eta?: [shortest, longest], posts?[{ name, pos, yaw, sweep[2] }], outside?: Vec3[],
-  sweep?[{ name, pos }] }`. `site` / `at` / `team` / `tag` are the radio's words ('the post', 'at the post', 'the picket', `PICKET` → PICKET-1); a way is
+  sweep?[{ name, pos }], raid?: { room? } }`. `site` / `at` / `team` / `tag` are the radio's words ('the post', 'at the post', 'the picket', `PICKET` → PICKET-1); a way is
   where four men are stood up out of sight (`muster`, outside the wall or behind the named `door`), the fan they take inside it (`entry` + the yaw each
   faces), and its two radio phrases; `stairs` = it is a stairwell (boots on the stairs, the door rings). `men` 2‥4 and `eta` 15‥240 s are RANGES: each
   call is dealt one way, one size and one time off the game's own die (`RESPONSE.deal`; a way an enemy stands at the muster of is never dealt). `posts` +
   `outside` are the second lift's places outside the ways out (absent: none); the element and the posts together are never more than `men[1]`. `sweep`
-  is where they look with nothing said on the net, on a floor with no room plans (absent: the quiet block's spots and `places`' areas). No compass words
+  is where they look with nothing said on the net, on a floor with no room plans (absent: the quiet block's spots and `places`' areas). `raid?: { room? }`
+  = the team answers a SQUAD'S ROOM CLEAR on this level and nothing else (`RESPONSE.raid`): it stands with the defenders, is counted inside the eleven,
+  has no `posts`, and is asked for by a living defender of `room` (a `roomClear` room id: where the set or the telephone is; absent: any defender) six
+  seconds after he first hears gunfire — those men down first, nobody calls. A block without `raid` answers a quiet night gone loud, never a raid. No compass words
   in a way's name. The block is words and marks only: it does not move the level's fingerprint. Checks: `bun run tools/qa/response-check.ts` (which
   levels carry one — its `WITH` list is the written-down answer — every block against its built floor, a call played through on each).
 - `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads

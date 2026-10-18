@@ -50,7 +50,7 @@
 // Only the old demo's kit (src/scene/officeGen.ts officeKit: its walls, doors, furniture, lights, palette and markings). Units: meters. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import * as MD from '../../src/scene/markingDefaults';
@@ -75,6 +75,26 @@ export const DEPOT_ROOMS: Record<'duty' | 'a' | 'wash' | 'battery' | 'generator'
   yard: { x0: 4.12, x1: 23.88, z0: 9.62, z1: 18.38 },
   east: { x0: 24.12, x1: 35.88, z0: 15.12, z1: 23.88 },
   aerials: { x0: 29.62, x1: 35.88, z0: 4.12, z1: 14.88 },
+};
+
+/** THE DEPOT'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — `bun run tools/qa/response-check.ts` stands every mark on the
+ *  built floor). A raid's team: it stands with the defenders. WHY HERE: the signals hut is this level's one problem already — the answer the floor is cut for
+ *  is round the back to the hut and the mains — and a motor pool's trucks are out on the road with an escort the hut talks to. So the hut is also what
+ *  calls: gunfire its men hear, and a few seconds to say so, brings the escort back to one of the depot's own two gates. The hut taken first, nobody calls. */
+export const RESPONSE: ResponseData = {
+  why: 'A motor pool has trucks out on the road at night with an armed escort, and the signals hut is what talks to them: gunfire the hut hears brings the escort back to one of the depot\'s own two gates. The hut taken first (the level\'s own answer, round the back) and nobody calls.',
+  site: 'the depot', at: 'at the depot', team: 'the convoy escort', tag: 'ESCORT', men: [2, 3], eta: [50, 90],
+  raid: { room: 'comms' },
+  ways: [
+    // the main gate: no leaf, the road outside it — in on the lit yard's mouth
+    { name: 'the main gate', coming: 'coming in by the main gate', clear: 'nobody in the gateway',
+      muster: [[1.6, 0, 14], [1.6, 0, 12.9], [1.6, 0, 15.1], [0.7, 0, 14]],
+      entry: [[7.4, 0, 14], [6.4, 0, 13], [6.4, 0, 15], [5.4, 0, 14]], entryFace: [Math.PI / 2, Math.PI / 2 - 0.8, Math.PI / 2 + 0.8, Math.PI / 2] },
+    // the back gate: the leaf in the east wall, onto the east yard
+    { name: 'the back gate', door: 'back_gate', coming: 'coming in by the back gate', clear: 'nobody by the back gate',
+      muster: [[37.6, 0, 17.4], [37.6, 0, 16.2], [37.6, 0, 18.6], [38.7, 0, 17.4]],
+      entry: [[32.6, 0, 17.4], [33.8, 0, 16.4], [33.8, 0, 18.4], [34.8, 0, 17.4]], entryFace: [-Math.PI / 2, -Math.PI / 2 + 0.8, -Math.PI / 2 - 0.8, -Math.PI / 2] },
+  ],
 };
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
@@ -468,6 +488,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // the yard and its floodlight through it. The second is the back gate's leaf in the east wall.
   // (the picture's lamp is hung on the wall at the stack's end of the opening: left to be measured it hangs over the anchor's middle, which on a gap is open air)
   scenarios.kitView = { ways: [{ span: [[4, 12.5], [4, 15.5]], side: -1, light: { porch: { offset: [1.7, 0.67, 2.4], aim: [3.2, 1.6, 0], fixture: { at: [1.7, 0.17, 2.27], half: [0.17, 0.045, 0.05], glow: 5 } } } }, { door: 'back_gate' }] };
+  scenarios.response = RESPONSE;
   scenarios.places = { areas: [
     { name: 'yard', bounds: { ...R.yard } }, { name: 'east yard', bounds: { ...R.east } }, { name: 'aerial park', bounds: { ...R.aerials } },
     { name: 'duty office', bounds: { ...R.duty } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'battery room', bounds: { ...R.battery } },

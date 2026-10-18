@@ -101,6 +101,13 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
         { const kv = data.scenarios?.kitView, wkv = was.scenarios?.kitView;
           if (JSON.stringify(kv) !== JSON.stringify(wkv)) { console.log(`  (the gear screen's block, scenarios.kitView, is not ${base}'s: ${wkv === undefined ? 'new' : kv === undefined ? 'gone' : 're-tuned'} since — picture only, not held to the base)`);
             if (kv !== undefined) (was.scenarios ??= {}).kitView = JSON.parse(JSON.stringify(kv)); else { delete was.scenarios.kitView; if (!Object.keys(was.scenarios).length && data.scenarios === undefined) delete was.scenarios; } } }
+        // (THE RESPONSE TEAM'S BLOCK — scenarios.response, src/game/qrf.ts: who comes for the level, by which ways in, where they stand. A rule does read it, but
+        //  furniture cannot change a key of it and levels are given one side by side on branches, so it takes no new base revision either. The base's block is
+        //  read as today's and said so; every place it names is still asked in 2 below, against the floor as it is now, and tools/qa/response-check.ts holds
+        //  the block itself: its ways, its doors, its marks on floor a man can stand on)
+        { const rs = data.scenarios?.response, wrs = was.scenarios?.response;
+          if (JSON.stringify(rs) !== JSON.stringify(wrs)) { console.log(`  (the response team's block, scenarios.response, is not ${base}'s: ${wrs === undefined ? 'new' : rs === undefined ? 'gone' : 're-tuned'} since — not held to the base)`);
+            if (rs !== undefined) (was.scenarios ??= {}).response = JSON.parse(JSON.stringify(rs)); else { delete was.scenarios.response; if (!Object.keys(was.scenarios).length && data.scenarios === undefined) delete was.scenarios; } } }
         // (the exporter numbers generated box ids by place in the list, so every box after the lived ones — the dressing, the look's decals — has another NUMBER than it
         //  had; nothing names those boxes — export.ts refuses a kept thing that does — so past the first lived box the ids are not compared)
         const first = data.boxes.findIndex((b: any) => isLived(b.group)), noId = (l: any[]) => first < 0 ? l : l.map((b, i) => i < first ? b : { ...b, id: undefined });

@@ -796,7 +796,7 @@ export function validateLevelData(d: LevelData): string[] {
         const R = S.response, w = 'scenarios.response';
         if (!isObj(R)) err(w, 'must be an object');
         else {
-          known(w, R, ['why', 'site', 'at', 'team', 'tag', 'ways', 'men', 'eta', 'posts', 'outside', 'sweep']);
+          known(w, R, ['why', 'site', 'at', 'team', 'tag', 'ways', 'men', 'eta', 'posts', 'outside', 'sweep', 'raid']);
           for (const k of ['why', 'site', 'at', 'team']) if (!isStr(R[k])) err(`${w}.${k}`, 'a non-empty string');
           if (R.tag !== undefined && !(isStr(R.tag) && /^[A-Z]{2,8}$/.test(R.tag))) err(`${w}.tag`, 'two to eight capital letters');
           const pair = (k: string, lo: number, hi: number) => { const v = R[k]; if (v !== undefined && !(isVec(v, 2) && v[0] >= lo && v[1] <= hi && v[0] <= v[1] && Number.isInteger(v[0]) && Number.isInteger(v[1]))) err(`${w}.${k}`, `[fewest, most], whole numbers inside ${lo}‥${hi}`); };
@@ -813,6 +813,13 @@ export function validateLevelData(d: LevelData): string[] {
           if (R.outside !== undefined && !(Array.isArray(R.outside) && R.outside.every((p: unknown) => isVec(p)))) err(`${w}.outside`, 'Vec3[]');
           if (R.sweep !== undefined) recs(`${w}.sweep`, R.sweep).forEach((p: any, i) => { const pw = `${w}.sweep[${i}]`; if (!isObj(p)) return; known(pw, p, ['name', 'pos']); if (!isStr(p.name) || !isVec(p.pos)) err(pw, 'name, pos Vec3'); });
           if (Array.isArray(R.posts) && R.posts.length && !(Array.isArray(R.outside) && R.outside.length >= 2)) err(`${w}.outside`, 'posts want at least two marks to stand their own men up on');
+          if (R.raid !== undefined) {   // (a raid's team: the level must have a room clear to raid, and the room that calls must be one of its rooms)
+            if (!isObj(R.raid)) err(`${w}.raid`, 'must be an object');
+            else { known(`${w}.raid`, R.raid, ['room']);
+              if (!isObj(S.roomClear)) err(`${w}.raid`, 'a raid stands over a room clear: the level has no scenarios.roomClear');
+              else if (R.raid.room !== undefined && !(Array.isArray(S.roomClear.rooms) && S.roomClear.rooms.some((r: any) => r?.id === R.raid.room))) err(`${w}.raid.room`, `'${String(R.raid.room)}' is not a scenarios.roomClear room id`);
+              if (Array.isArray(R.posts) && R.posts.length) err(`${w}.posts`, 'a raid\'s team has no second lift: no posts'); }
+          }
         }
       }
       if (S.places !== undefined) {   // (scene/scenarios.ts PlacesData: the floor nobody holds, by name — words only)

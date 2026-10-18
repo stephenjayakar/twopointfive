@@ -167,7 +167,7 @@ export const RESPONSE: ResponseData = {
       entry: [[7.4, 0, 6.3], [6.2, 0, 5.6], [8.3, 0, 5.6], [7.4, 0, 5.0]], entryFace: [0, -0.5, 0.5, 0] },
     { name: 'the impound yard gate', door: 'gate_ne', coming: 'coming in by the impound yard', clear: 'nobody among the crates',
       muster: [[37.3, 0, 6.8], [37.3, 0, 7.8], [38.4, 0, 6.8], [38.4, 0, 7.8]],
-      entry: [[32.6, 0, 7.2], [33.0, 0, 6.0], [32.6, 0, 8.6], [33.6, 0, 7.2]], entryFace: [-Math.PI / 2, Math.PI, 0, -Math.PI / 2] },
+      entry: [[32.6, 0, 7.2], [33.6, 0, 6.0], [32.6, 0, 8.6], [33.6, 0, 7.2]], entryFace: [-Math.PI / 2, Math.PI, 0, -Math.PI / 2] },
   ],
   // the second lift: two men who stand outside the gates the pair would leave by
   posts: [
@@ -178,7 +178,7 @@ export const RESPONSE: ResponseData = {
   // the level has no named floor beyond its three rooms: what a section sent here would walk round and look at
   sweep: [
     { name: 'the records room', pos: [16.0, 0, 6.8] }, { name: 'the customs office', pos: [22.0, 0, 6.8] }, { name: 'the impound', pos: [27.8, 0, 8.6] },
-    { name: 'the forecourt', pos: [20.5, 0, 10.6] }, { name: 'the impound yard', pos: [32.6, 0, 6.0] }, { name: 'the lane', pos: [20.5, 0, 17.0] },
+    { name: 'the forecourt', pos: [20.5, 0, 10.6] }, { name: 'the impound yard', pos: [32.6, 0, 7.6] }, { name: 'the lane', pos: [20.5, 0, 17.0] },
     { name: 'the boom hut', pos: [6.2, 0, 18.0] }, { name: 'the lorry park', pos: [16.0, 0, 21.5] }, { name: 'the shed', pos: [33.0, 0, 21.5] },
   ],
 };

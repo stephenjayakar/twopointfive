@@ -426,6 +426,11 @@ export interface ResponseData {
   /** WHERE THEY LOOK WITH NO WORD TO GO ON, on a floor with no room plans: the places a team sent here would walk to and look at, by name (free floor each).
    *  Absent: the quiet block's spots and scenarios.places' areas, by their middles */
   sweep?: { name: string; pos: Vec3 }[];
+  /** A SQUAD'S RAID ON THIS PLACE BRINGS THEM (game/qrf.ts RESPONSE.raid): the team stands with the defenders against the squad and is counted inside the
+   *  eleven; it is asked for by a defender who heard gunfire and has lived a few seconds since to say so — a man of `room` (a scenarios.roomClear room id:
+   *  where this place's set, or its telephone, is) or, with no room named, any of them. Those men down first, nobody calls. A block with `raid` answers
+   *  raids only; one without answers a quiet night gone loud, never a raid */
+  raid?: { room?: string };
 }
 export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData }
 

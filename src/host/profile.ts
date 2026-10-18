@@ -254,6 +254,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PICTURE.shot = q.get('picshot') !== '0';   // (?picshot=0: a man who hears a colleague fire is handed the enemy's true place, as it was — his call 3)
   RESPONSE.on = q.get('response') !== '0';   // the response team is the level's own (game/qrf.ts RESPONSE): ON in the page — a level has a team only where its file says who comes and by which way, with its own words; ?response=0 = the office's one stairwell and the gate as they were
   RESPONSE.deal = q.get('responsedeal') !== '0';   // (?responsedeal=0: every call gets the level's first answer — the first way in, its most men, the middle of its time)
+  RESPONSE.raid = q.get('responseraid') !== '0';   // (?responseraid=0: no squad's raid ever brings a level's team, as it was)
   RESPONSE.net = q.get('responsenet') !== '0';   // (?responsenet=0: the team goes on every living man's private fix the instant he has it, as it was)
   PICTURE.run = q.get('picrun') !== '0';   // (?picrun=0: a man who drops his gun and runs plans his way round every enemy's true place, as it was)
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)

@@ -202,7 +202,7 @@ export const RESPONSE: ResponseData = {
       entry: [[20.3, 0, 21.3], [21.2, 0, 22.3], [19.4, 0, 22.3], [20.3, 0, 23.1]], entryFace: [Math.PI, Math.PI - 0.8, Math.PI + 0.8, Math.PI] },
     { name: 'the impound gate', door: 'gate_e', coming: 'coming in by the impound gate', clear: 'nobody among the seized trucks',
       muster: [[37.4, 0, 13.7], [37.4, 0, 14.8], [38.4, 0, 13.7], [38.4, 0, 14.8]],
-      entry: [[33.4, 0, 14.2], [34.2, 0, 13.2], [34.2, 0, 15.3], [35.0, 0, 14.25]], entryFace: [-Math.PI / 2, Math.PI, 0, -Math.PI / 2] },
+      entry: [[33.4, 0, 14.2], [33.5, 0, 13.1], [34.2, 0, 15.3], [35.0, 0, 14.25]], entryFace: [-Math.PI / 2, Math.PI, 0, -Math.PI / 2] },
   ],
   // the second lift, if the first is shot to pieces: two men who do not come in — they stand outside the gates he would leave by
   posts: [

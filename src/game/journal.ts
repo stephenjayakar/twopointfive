@@ -339,6 +339,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)
   if (!k.tables.RESPONSE) RESPONSE.on = false;   // (a file from before the response team was the level's own: the office's one stairwell, the sandbox's two numbers, the floor's fix)
+  else if (typeof (k.tables.RESPONSE as Partial<typeof RESPONSE>).raid !== 'boolean') RESPONSE.raid = false;   // (…or from before a squad's raid could bring a level's team: its raids brought nobody)
   if (!k.tables.PICTURE) PICTURE.on = false;   // (a file from before each man kept his own picture of the fight: nobody remembered where an enemy had been, and every spot was picked without one)
   else { const p = k.tables.PICTURE as Partial<typeof PICTURE>;
     if (p.wall === undefined) PICTURE.wall = false;   // (…and one from before the wall charge's stand-off asked the pictures: who was known was the fog's record alone)

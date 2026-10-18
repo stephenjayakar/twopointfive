@@ -1179,7 +1179,7 @@ function evacuationCheck(g: Game) {
   if (!CIV.evacuateOnQrf || !g.qrf || g.qrf.state === 'idle') return;
   const F = floorOf(g);
   const movable = g.civilians.filter(cv => cv.state !== 'dead' && !cv.held && cv.civ!.state !== 'gone' && cv.civ!.state !== 'evacuate');
-  if (!F.evacTold) { F.evacTold = true; if (movable.length) { const RW = responseWords(g); control(g, movable[0], RW ? `anybody who is not ours, clear out of ${RW.site} — ${RW.team} is coming in` : w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
+  if (!F.evacTold) { F.evacTold = true; if (movable.length) { const RW = away(g) ? responseWords(g) : null; control(g, movable[0], RW ? `anybody who is not ours, clear out of ${RW.site} — ${RW.team} is coming in` : w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
   for (const cv of movable) {
     const C = cv.civ!; if (C.state === 'phone' && C.talkT < CIV.phoneSecs) continue;   // she finishes the call
     endTask(cv); C.riseT = 0; cv.char.anim.act = null;

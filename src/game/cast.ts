@@ -52,7 +52,7 @@ export function castVariantOf(g: Game, c: Character): CastVariant | null {
   const pick = (list: CastVariant[], skip = 0) => list.length > skip ? list[skip + c.id % (list.length - skip)] : list[c.id % list.length];
   const defenders = () => { const d = castSide(cast, 'defender'); return lookOffice() ? officeDress(cast.parts, d) : d; };
   if (!rec) return pick(defenders());   // (a body the game holds no record of this frame: dressed as the staff, and asked again next frame)
-  const trained = rec.trained && rec.team === 'guard';
+  const trained = rec.trained && (rec.team === 'guard' || (rec.team === 'hostile' && !!g.qrf?.owns(rec)));   // (…and a raid's team, the defenders' side: qrf.ts RESPONSE.raid)
   // a teammate by his PLACE among the team as staged, not by his id: a rescue stands its captors up first, which moved every teammate's id — and so his face —
   // by their count (three on the office and the registry, six on the consulate). A show's cast keeps the deal by id its beats were looked at with.
   const place = rec.team === 'operative' && rec.unit && !g.touring ? g.guards.filter(x => x.unit && x.team === 'operative').indexOf(rec) : -1;

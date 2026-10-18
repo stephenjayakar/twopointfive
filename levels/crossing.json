@@ -1145,7 +1145,7 @@
       "eta": [60, 100],
       "ways": [
         { "name": "the customs yard gate", "door": "gate_n", "coming": "coming in by the customs yard", "clear": "nobody in the yard beside records", "muster": [[7.2, 0, 2.8], [8.3, 0, 2.8], [7.2, 0, 1.8], [8.3, 0, 1.8]], "entry": [[7.4, 0, 6.3], [6.2, 0, 5.6], [8.3, 0, 5.6], [7.4, 0, 5]], "entryFace": [0, -0.5, 0.5, 0] },
-        { "name": "the impound yard gate", "door": "gate_ne", "coming": "coming in by the impound yard", "clear": "nobody among the crates", "muster": [[37.3, 0, 6.8], [37.3, 0, 7.8], [38.4, 0, 6.8], [38.4, 0, 7.8]], "entry": [[32.6, 0, 7.2], [33, 0, 6], [32.6, 0, 8.6], [33.6, 0, 7.2]], "entryFace": [-1.5707963267948966, 3.141592653589793, 0, -1.5707963267948966] }
+        { "name": "the impound yard gate", "door": "gate_ne", "coming": "coming in by the impound yard", "clear": "nobody among the crates", "muster": [[37.3, 0, 6.8], [37.3, 0, 7.8], [38.4, 0, 6.8], [38.4, 0, 7.8]], "entry": [[32.6, 0, 7.2], [33.6, 0, 6], [32.6, 0, 8.6], [33.6, 0, 7.2]], "entryFace": [-1.5707963267948966, 3.141592653589793, 0, -1.5707963267948966] }
       ],
       "posts": [
         { "name": "outside the lorry park gate", "pos": [15.75, 0, 25.7], "yaw": 3.141592653589793, "sweep": [[15.75, 1, 23], [10, 1, 25.5]] },
@@ -1157,7 +1157,7 @@
         { "name": "the customs office", "pos": [22, 0, 6.8] },
         { "name": "the impound", "pos": [27.8, 0, 8.6] },
         { "name": "the forecourt", "pos": [20.5, 0, 10.6] },
-        { "name": "the impound yard", "pos": [32.6, 0, 6] },
+        { "name": "the impound yard", "pos": [32.6, 0, 7.6] },
         { "name": "the lane", "pos": [20.5, 0, 17] },
         { "name": "the boom hut", "pos": [6.2, 0, 18] },
         { "name": "the lorry park", "pos": [16, 0, 21.5] },

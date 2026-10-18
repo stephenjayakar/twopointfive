@@ -39,10 +39,11 @@ import type { ResponseData, ResponsePost } from '../scene/scenarios';
 import type { Door } from './doors';
 import type { Item } from './throwables';
 import { radioHand } from './handwork';
-import { spawnUnit, despawnUnit, escalationOf, hearingCheck, canSee, canSeeChar, sightGain, sightGainOn, bodyInView, pointInView, standoffPerceive, resetChase, bodyPos, bubbleSecs } from './guards';
+import { MAX_SKINNED, spawnUnit, despawnUnit, escalationOf, hearingCheck, canSee, canSeeChar, sightGain, sightGainOn, bodyInView, pointInView, standoffPerceive, resetChase, bodyPos, bubbleSecs } from './guards';
 import { hostileTo, foeChar } from './teams';
 import { PICTURE, ideasOf } from './picture';
 import { runnerOwns } from './runner';
+import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import { order, endGuardScript, inBounds } from './squad';
 import { sideOf } from './orders';
 import type { DoorOp } from './doortools';
@@ -101,15 +102,34 @@ export const RESPONSE = {
   /** no way is dealt whose muster an enemy stands inside this many metres of when the call goes out (nobody is stood up at his elbow); a dealt time is to
    *  the nearest `etaStep` s; the net's word is read this often (s) */
   clearM: 12, etaStep: 5, wordSecs: 0.5,
+  /** A SQUAD'S RAID BRINGS THE LEVEL'S TEAM TOO, where its block says so (ResponseData.raid): the team stands with the defenders, and is asked for by a
+   *  defender of the block's room who heard gunfire and has lived `callSecs` since to say so — those men down first, nobody calls. Off: no raid ever
+   *  brings a team, as it was (`?responseraid=0`) */
+  raid: true, callSecs: 6,
 };
-/** the skinned characters one frame draws (guards.ts MAX_SKINNED): with RESPONSE.on the team is stood up inside THIS, less the civilians — the men past the
- *  eighth character have no shadow proxy (guards.ts spawnUnit's `budget`) */
-const ALL_CHARS = 16;
 /** one way in, with the level's words, as the code below reads it — the dealt way of the level's block, or (the switch off) the office's constant above */
 interface Marks { door: string | null; name: string; muster: readonly Vec3[]; entry: readonly Vec3[]; entryFace: readonly number[]; coming: string; clear: string | null; stairs: boolean;
   posts: readonly ResponsePost[]; outside: readonly Vec3[]; site: string; at: string; team: string; tag: string; }
 /** this level's block (null: it has none — with RESPONSE.on, no team) */
 export function responseOf(g: Game): ResponseData | null { return g.level.scenarios?.response ?? null; }
+/** A RAID ON A PLACE THAT HAS A TEAM TO CALL (RESPONSE.raid): a squad's room clear under way on a level whose block carries `raid`. The team is then the
+ *  DEFENDERS' (side 'hostile': the squad's enemies and Sam's), counted inside the eleven a squad ever faces, and it has no second lift */
+function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid; }
+/** the side the team stands on: the shift's — or, in a raid, the defenders' */
+const sideOfTeam = (g: Game): 'guard' | 'hostile' => raid(g) ? 'hostile' : 'guard';
+/** a raid: the men who can call it in — the living defenders of the block's room (where the set is), any defender when it names none; never the team itself */
+function callers(g: Game): Guard[] {
+  const R = responseOf(g), id = R?.raid?.room, nb = g.nightBreach;
+  const room = id ? g.roomClear?.rooms.find(r => r.def.id === id) : null;
+  const of: readonly Guard[] = room ? room.defenders : id ? [] : nb?.hostiles ?? [];
+  return of.filter(x => x.state !== 'dead' && !x.held && !runnerOwns(x) && g.guards.includes(x));
+}
+/** a raid: the man who makes the call now — a caller who heard gunfire himself and has lived `callSecs` since (null: nobody has, yet or ever) */
+function raidVoice(g: Game): Guard | null { const Q = g.qrf; return callers(g).find(x => g.time - (Q.heardAt.get(x) ?? Infinity) >= RESPONSE.callSecs) ?? null; }
+/** a raid: is the team up (stood at its way in, or on the floor, a man of it living)? The structure is not taken while it is (roomclear.ts) */
+export function responseUp(g: Game): boolean { const Q = g.qrf; return !!Q && raid(g) && (Q.state === 'arriving' || Q.state === 'deployed') && Q.men.some(m => m.state !== 'dead' && g.guards.includes(m)); }
+/** …and its name on the net, for the line that says so */
+export function responseTeam(g: Game): string { return responseOf(g)?.team ?? 'the response team'; }
 function marksOf(g: Game): Marks | null {
   const Q = g.qrf;
   if (Q.marks && Q.marksOn === RESPONSE.on && Q.marksWay === Q.way) return Q.marks;
@@ -124,9 +144,10 @@ function marksOf(g: Game): Marks | null {
   Q.marks = M; Q.marksOn = RESPONSE.on; Q.marksWay = Q.way;
   return M;
 }
-/** how many more men the floor can be given: the eight that cast shadows, as it was — or, the team the level's own, the frame's skinned characters */
-function roomFor(g: Game): number { return (RESPONSE.on ? ALL_CHARS - g.civilians.length : CHAR_BUDGET) - 1 - g.guards.length; }
-const budgetOf = (g: Game) => RESPONSE.on ? { budget: ALL_CHARS - g.civilians.length } : {};
+/** how many more men the floor can be given: the eight that cast shadows, as it was — or, the team the level's own, the skinned characters one frame draws
+ *  (guards.ts MAX_SKINNED) less the civilians: the men past the eighth character have no shadow proxy (guards.ts spawnUnit's `budget`) */
+function roomFor(g: Game): number { const n = (RESPONSE.on ? MAX_SKINNED - g.civilians.length : CHAR_BUDGET) - 1 - g.guards.length; return raid(g) ? Math.min(n, SQUAD_MAX_MEN - g.nightBreach.hostiles.length - g.qrf.men.length) : n; }   // (a raid: never more than the eleven a squad ever faces, the garrison as staged and the team together)
+const budgetOf = (g: Game) => RESPONSE.on ? { budget: MAX_SKINNED - g.civilians.length } : {};
 /** the most men this level's response may ever have on the floor, element and outside posts together (the level's `men`; the sandbox's two numbers without) */
 function mostMen(g: Game): number { const R = RESPONSE.on ? responseOf(g) : null; return R?.men ? R.men[1] : 8; }
 
@@ -188,7 +209,7 @@ export class Qrf {
   lost = 0; gotSam = false; samWasDown = false;
   /** the trigger's memory: when a living staff man last had a report of SAM's at gunfire level in his ears (the hearing model's 80 m gate), and the level-1
    *  reports of anybody's since deployment (the perimeter tier's 'running gunfight') */
-  loudT = -1e9; shotsSince: number[] = []; heardEvents = new SideSet<object>();
+  loudT = -1e9; /** a raid: when a man who can call first heard gunfire (−1e9: not yet) */ raidT = -1e9; /** …and when each such man first heard it: the call is his to make `callSecs` after that */ heardAt = new Map<Guard, number>(); shotsSince: number[] = []; heardEvents = new SideSet<object>();
   /** the silent net (tune.qrfSilent — see `silentNet`): when the whole shift was first off the net with Sam's gunfire in its memory (−1 = it is not), whether
    *  control's radio check has been said, and whether the request it led to was made or refused (once a night either way) */
   silentAt = -1; silentSaid = false; silentSpent = false;
@@ -278,12 +299,13 @@ function staffVoice(g: Game): Guard | null {
 }
 function bodiesFound(g: Game): number { let n = 0; for (const x of g.guards) if (!x.unit && x.state === 'dead' && x.found) n++; return n; }
 /** the run is Sam's to answer for (not the tour, not the breach's daylight, somebody home in the guards' heads, Sam on his feet) */
-function live(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g.touring && !isDaylight(g) && !g.player.down && !g.nightBreach?.active && !g.rescue?.active && hasResponse(g); }
+function live(g: Game): boolean { if (raid(g)) return g.aiEnabled && !g.quietUtility && !g.touring && !g.player.down && hasResponse(g);   // (a raid: day or night, the squad's run itself)
+  return g.aiEnabled && !g.quietUtility && !g.touring && !isDaylight(g) && !g.player.down && !g.nightBreach?.active && !g.rescue?.active && hasResponse(g); }
 /** THIS LEVEL HAS A RESPONSE TEAM: the marks above are the office's stairwell. A level that carries its own places (a quiet mission: its file's scenarios.quiet
  *  — scene/scenarios.ts) has the team only if it has the team's door (a floor built round the office's west stair, landing and all); without it there is nobody
  *  to send — no request, no radio promise, no men stood on another building's coordinates. Every other level: as it always was. */
 export function hasResponse(g: Game): boolean {
-  if (RESPONSE.on) { const R = responseOf(g); return !!R && R.ways.some(y => !y.door || !!g.doors.byName(y.door)); }   // (the level's own: no block, no team — whatever doors it has)
+  if (RESPONSE.on) { const R = responseOf(g); return !!R && (!R.raid || raid(g)) && R.ways.some(y => !y.door || !!g.doors.byName(y.door)); }   // (the level's own: no block, no team — whatever doors it has)
   return !g.level.scenarios?.quiet || !!g.doors.byName(QRF_MARKS.door);
 }
 /** … and, for the panel's buttons: is there a way in to stand a team on (the switch off: the stair door — the gate above passes any level without a quiet block) */
@@ -292,13 +314,13 @@ function alive(Q: Qrf, g: Game): Guard[] { return Q.men.filter(m => m.state !== 
 /** the floor's freshest fix on Sam: the man (staff or response) who had eyes on him last and still holds a fix, else the alarm's own place */
 function bestFix(g: Game): { pos: Vec3; t: number } | null {
   let best: Guard | null = null;
-  for (const x of g.guards) if (x.state !== 'dead' && x.team === 'guard' && x.lastKnown && x.lastSeenT > (best?.lastSeenT ?? -1e9)) best = x;
+  for (const x of g.guards) if (x.state !== 'dead' && x.team === sideOfTeam(g) && x.lastKnown && x.lastSeenT > (best?.lastSeenT ?? -1e9)) best = x;
   if (best && best.lastSeenT > -50) return { pos: v3.copy(best.lastKnown!), t: best.lastSeenT };
   if (g.alarm.placed) return { pos: v3.copy(g.alarm.pos), t: g.alarm.raisedAt };
   return best?.lastKnown ? { pos: v3.copy(best.lastKnown), t: -100 } : null;
 }
 /** RESPONSE.net — is this man on the defenders' net: one of the team's side, up, not in an arm, not a runner (picture.ts onNet's rule for the staff) */
-function onTheirNet(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.civ && x.state !== 'dead' && !x.held && !runnerOwns(x); }
+function onTheirNet(g: Game, x: Guard): boolean { return x.team === sideOfTeam(g) && !x.civ && x.state !== 'dead' && !x.held && !runnerOwns(x) && (!raid(g) || g.qrf.men.includes(x) || callers(g).includes(x)); }   // (a raid: control hears the men at the set — what the rest know reaches it only by being told to them, picture.ts — and the team itself)
 const netRule = (g: Game) => RESPONSE.on && RESPONSE.net && PICTURE.on && !g.touring;
 /** RESPONSE.net — control keeps what is SAID: every `wordSecs`, each idea a man on the net has held for the picture's `tellSecs` (he has said it) or was
  *  told (somebody did) is the net's word of that enemy if it is the freshest; a place since found empty adds nothing and takes nothing away (the last
@@ -377,13 +399,13 @@ export function requestQrf(g: Game, reason: QrfReason): boolean {
   Q.way = D.way; Q.size = RESPONSE.on ? D.men : -1; if (RESPONSE.on) note(Q, g, `dealt:way ${D.way}:men ${D.men}:eta ${D.eta}`);
   const M = marksOf(g)!;
   Q.state = 'requested'; Q.reason = reason; Q.requestedAt = g.time; Q.arriveAt = g.time + Math.max(12, D.eta); Q.answered = Q.said30 = Q.said10 = false;
-  const sp = staffVoice(g); const n = bodiesFound(g);
+  const rd = raid(g), sp = rd ? raidVoice(g) ?? callers(g)[0] ?? null : staffVoice(g); const n = bodiesFound(g);
   if (!RESPONSE.on) {
     const line = reason === 'bodies' ? `control, ${sp?.callsign ?? 'two-six'} — ${n >= 2 ? `${n} men down` : 'men down'} on two-six and whoever did it is still up here. we need the response team` : reason === 'gunfire' ? `control, ${sp?.callsign ?? 'two-six'} — shots fired on two-six${w('', ', automatic fire')}. this is past us — get the response team up here` : `control, ${sp?.callsign ?? 'two-six'} — send the response team up to two-six. now`;
     if (sp) radio(g, sp, line); else if (reason === 'silent') controlRow(g, 'all stations, control — shots reported on two-six and nobody up there is answering. response team, go'); else control(g, 'two-six has gone quiet with an alarm up — response team, go');
   } else {
     const who = sp?.callsign ?? M.site;
-    const line = reason === 'bodies' ? `control, ${who} — ${n >= 2 ? `${n} men down` : 'men down'} ${M.at} and whoever did it is still here. we need ${M.team}` : reason === 'gunfire' ? `control, ${who} — shots fired ${M.at}. this is past us — send ${M.team}` : `control, ${who} — send ${M.team} to ${M.site}. now`;
+    const line = reason === 'bodies' ? `control, ${who} — ${n >= 2 ? `${n} men down` : 'men down'} ${M.at} and whoever did it is still here. we need ${M.team}` : reason === 'gunfire' ? (rd ? `control, ${who} — we are being hit ${M.at}. send ${M.team}` : `control, ${who} — shots fired ${M.at}. this is past us — send ${M.team}`) : `control, ${who} — send ${M.team} to ${M.site}. now`;
     if (sp) radio(g, sp, line); else if (reason === 'silent') controlRow(g, `all stations, control — shots reported ${M.at} and nobody there is answering. ${M.team}, go`); else control(g, `${M.site} has gone quiet with an alarm up — ${M.team}, go`);
   }
   note(Q, g, `request:${reason}`);
@@ -436,11 +458,14 @@ function silentNet(g: Game, Q: Qrf): boolean {
 /** Once a frame from game.ts (after the guards and the alarm). */
 export function updateQrf(g: Game, dt: number) {
   const Q = g.qrf; if (!Q) return;
+  const rd = raid(g);
+  if (rd && g.roomClear?.end && (Q.state === 'requested' || Q.state === 'inbound')) { note(Q, g, 'called-off:the run is over'); const log = Q.log; Object.assign(Q, new Qrf()); Q.log = log; return; }   // (a raid over — taken or lost — with the team still on the road: it never arrives)
   // ---- the trigger's memory: Sam's reports at gunfire level that reached a living staff man's ears this frame (the hearing model's rule for gunfire: 80 m straight)
   for (const e of g.events) {   // (each report once, whichever frame it was filed on: a round let go between two updates carries the earlier stamp)
     if ((e.level ?? 0) < 1 || (e.kind !== 'shot' && e.kind !== 'guardShot') || Q.heardEvents.has(e)) continue;
     Q.heardEvents.add(e);
-    if (e.kind === 'shot') { for (const x of g.guards) if (!x.unit && x.state !== 'dead' && !x.held && v3.dist(e.pos, x.char.pos) <= 80) { Q.loudT = g.time; break; } }
+    if (e.kind === 'shot' && !rd) { for (const x of g.guards) if (!x.unit && x.state !== 'dead' && !x.held && v3.dist(e.pos, x.char.pos) <= 80) { Q.loudT = g.time; break; } }
+    else if (rd) { for (const x of callers(g)) if (v3.dist(e.pos, x.char.pos) <= 80) { Q.loudT = g.time; if (!Q.heardAt.has(x)) Q.heardAt.set(x, g.time); if (Q.raidT < -1e8) { Q.raidT = g.time; note(Q, g, `raid-heard:${x.callsign}`); } } }   // (a raid: anybody's gunfire, in the ears of each man who can call it in — the first of it he hears starts HIS `callSecs`)
     if (Q.state === 'deployed' && g.time - Q.deployedAt > SETTLE_IN_SECS) Q.shotsSince.push(g.time);   // (the gunfight that counts toward the compound's lockdown is one the team is on the floor and IN — not the exchange they walked in on)
   }
   while (Q.shotsSince.length && g.time - Q.shotsSince[0] > GUNFIGHT_WINDOW) Q.shotsSince.shift();
@@ -448,6 +473,10 @@ export function updateQrf(g: Game, dt: number) {
   if (Q.state === 'idle') {
     if (!g.tune.qrf || !live(g) || !g.tune.qrfSilent) { Q.silentAt = -1; Q.silentSaid = false; }   // (the silent net's clock runs only while the rule could act: a run not live for a stretch starts it afresh, cue first)
     if (!g.tune.qrf || !live(g)) return;
+    if (rd) {   // a raid: a man who can call has heard gunfire and lived `callSecs` to say so — the men at the set down first, nobody calls
+      if (!g.roomClear?.end && g.time - Q.loudT < LOUD_MEMORY_SECS && raidVoice(g) && !requestQrf(g, 'gunfire')) { Q.raidT = -1e9; Q.heardAt.clear(); }   // (asked and refused — no room on the floor for even a pair: the next gunfire he hears is a new call to make)
+      return;
+    }
     if (g.tune.qrfSilent && silentNet(g, Q)) return;
     if (escalationOf(g) < 2) return;
     if (g.time - Q.loudT < LOUD_MEMORY_SECS) requestQrf(g, 'gunfire');
@@ -488,7 +517,7 @@ function arriving(g: Game, Q: Qrf, quiet: boolean) {
   for (let i = 0; i < n; i++) {
     let gd: Guard;
     const at = i === 0 && door ? toolSpot(g, door, g.doors.side(door, M.muster[0]), M.muster[0])?.pos ?? M.muster[0] : M.muster[i];   // (handleside.ts: #1 is the man on the bar — at the handle of a leaf that opens toward the landing, clear of its swing)
-    try { gd = spawnUnit(g, { team: 'guard', pos: at as Vec3, yaw, weapon: 'aks74u', name: `${M.tag}-${i + 1}`, light: true, tint: [...QRF_TINT], tint2: [...QRF_TINT2], ...budgetOf(g) }); }
+    try { gd = spawnUnit(g, { team: sideOfTeam(g), pos: at as Vec3, yaw, weapon: 'aks74u', name: `${M.tag}-${i + 1}`, light: true, tint: [...QRF_TINT], tint2: [...QRF_TINT2], ...budgetOf(g) }); }
     catch (e) { note(Q, g, `spawn-failed:${i}:${String((e as Error)?.message ?? e).slice(0, 40)}`); break; }
     gd.trained = true; gd.hold = false; gd.state = 'search'; gd.awareness = HUNT_AWARENESS; gd.foe = 'player';
     gd.heardUpTo = g.eventSeq;
@@ -565,7 +594,7 @@ function tickMen(g: Game, Q: Qrf, dt: number) {
   if (!el.length) { if (Q.phase !== 'fight') { dropDrill(Q); Q.phase = 'fight'; note(Q, g, 'wiped'); } return; }   // (dropDrill: a can of theirs still in a dead hand goes on its own short fuse, not never)
   if (Q.state === 'arriving') {   // on the landing: ears open (deaf to before they existed), nothing else — behind the office's shut steel door
     let seer: Guard | null = null; for (const m of el) if (perceiveScripted(g, Q, m, dt) && !seer) seer = m;
-    if (RESPONSE.on && seer) { note(Q, g, 'seen-at-the-muster'); deploy(g, Q, g.quietUtility || g.touring); toFight(g, Q, el, seer); }   // (a level's muster is open ground: a man who sees his enemy from it does not stand out the ten seconds)
+    if (RESPONSE.on && seer && !marksOf(g)?.door) { note(Q, g, 'seen-at-the-muster'); deploy(g, Q, g.quietUtility || g.touring); toFight(g, Q, el, seer); }   // (a level's muster is open ground: a man who sees his enemy from it does not stand out the ten seconds)
     return; }
   switch (Q.phase) {
     case 'file': phaseFile(g, Q, el); break;
@@ -681,7 +710,7 @@ const sectorPoint = (p: Vec3, yaw: number, d = 5, y = 1.0): Vec3 => [p[0] + Math
  *  rooms by walking distance from the fix, skipping any called clear lately (theirs or the shift's) unless the fix is inside it. `fresh`: re-read the floor's fix first. */
 function pickTarget(g: Game, Q: Qrf, el: Guard[], fresh: boolean) {
   const bf = fixOf(g);
-  if (bf && (fresh || !Q.fix || bf.t > Q.fixT)) { Q.fix = bf.pos; Q.fixT = Math.max(Q.fixT, bf.t); }
+  if (bf && ((fresh && !(netRule(g) && Q.fix && bf.t < Q.fixT - 1e-6)) || !Q.fix || bf.t > Q.fixT)) { Q.fix = bf.pos; Q.fixT = Math.max(Q.fixT, bf.t); }   // (RESPONSE.net: a word older than what they last had themselves does not take them back)
   const fix: Vec3 = Q.fix ?? (RESPONSE.on ? v3.copy(marksOf(g)?.entry[0] ?? el[0].char.pos) : [20, 0, 11.1]);   // (nothing at all to go on: the middle of the corridor, and the rooms off it)
   const plans = g.level.clearPlans ?? [];
   const rooms = new Map<string, RoomClearPlan[]>();
@@ -745,7 +774,8 @@ function sweepNext(g: Game, Q: Qrf, from: Vec3, fix: Vec3): Target | null {
 function sweepPlaces(g: Game): { name: string; pos: Vec3 }[] {
   const S = g.level.scenarios; if (S?.response?.sweep?.length) return S.response.sweep;
   const mid = (b: { x0: number; x1: number; z0: number; z1: number }): Vec3 => [(b.x0 + b.x1) / 2, 0, (b.z0 + b.z1) / 2];
-  return [...(S?.quiet?.spots ?? []).map(s => ({ name: s.place, pos: mid(s.area) })), ...(S?.places?.areas ?? []).map(a => ({ name: a.name, pos: mid(a.bounds) }))];
+  return [...(S?.quiet?.spots ?? []).map(s => ({ name: s.place, pos: mid(s.area) })), ...(raid(g) ? g.roomClear?.rooms ?? [] : []).filter(r => !r.defenders.some(h => h.state !== 'dead' && !runnerOwns(h))).map(r => ({ name: r.def.name, pos: mid(r.def.bounds) })),
+    ...(S?.places?.areas ?? []).map(a => ({ name: a.name, pos: mid(a.bounds) }))];   // (a raid: a held room whose men have all gone quiet is a place to look — one that still answers is not walked through)
 }
 /** THE LEVEL'S BLOCK AGAINST ITS BUILT FLOOR (tools/qa/response-check.ts runs it on every level file that has one): a way's door is a door of the level;
  *  its four muster marks and four fan marks stand on free floor a body's width apart; each man's walk from his muster mark to his fan mark is a short one,
@@ -983,7 +1013,7 @@ function phaseFlow(g: Game, Q: Qrf, el: Guard[]) {
  *  floor at the jambs, the door gone: the element's own drill takes the room, as with the switch off. */
 function startDrill(g: Game, Q: Qrf, el: Guard[]): boolean {
   const T = Q.target!, P = T.plan!, d = g.doors.byName(P.door); if (!d) return false;
-  const C = Q.cast ??= squadCast(g, { mine: gd => Q.men.includes(gd), team: 'guard', ring: EVERY_KEY });
+  const C = Q.cast ??= squadCast(g, { mine: gd => Q.men.includes(gd), team: sideOfTeam(g), ring: EVERY_KEY });
   C.tools.sync(); C.tools.bangs = Q.bangs; C.tools.charges = 0; C.tools.frags = 0; C.tools.lights = true;   // (sync first: a roster that has changed — a man peeled off to the perimeter — starts the tools afresh, counts and all)
   const inside = !!Q.fix && !!P.bounds && inBounds(Q.fix, P.bounds);
   const kind = !inside ? 'threshold' : Q.bangs > 0 ? 'bangClear' : 'openClear';
@@ -1077,7 +1107,7 @@ function advance(Q: Qrf, m: Guard): boolean { const w = Q.wps.get(m); if (!w || 
 
 // ================================================================ tier 2: the compound locked down round him
 function maybePerimeter(g: Game, Q: Qrf) {
-  if (!g.tune.perimeter || !live(g) || Q.perim) return;
+  if (!g.tune.perimeter || !live(g) || Q.perim || raid(g)) return;   // (a raid: one team, no second lift)
   if (RESPONSE.on && !marksOf(g)?.posts.length) return;   // (this place has no second tier)
   const down = g.guards.filter(x => x.team === 'guard' && x.state === 'dead' && (!netRule(g) || x.found)).length;   // (RESPONSE.net: men they have FOUND down, not men who are)
   const why = Q.lost > 0 ? (RESPONSE.on ? 'one of ours down' : 'a QRF man down') : down >= DOWN_FOR_PERIMETER ? `${down} men down` : Q.shotsSince.length >= GUNFIGHT_SHOTS ? 'a running gunfight' : null;
