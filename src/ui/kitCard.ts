@@ -25,7 +25,7 @@
 //
 // The card owns its own CSS (one <style> on first use), so index.html needs nothing for it.
 import { gearText } from '../game/gear';   // (a kept note names the kit: worded as issued where it is shown)
-import { KIT, KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitDefault, kitGunCan, kitName, kitRowCan, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, youGunsCan, type MemberKit } from '../game/kit';
+import { KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitGunCan, kitIssuedShown, kitName, kitRowCan, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitShown, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, youGunsCan, type MemberKit } from '../game/kit';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 import { kitNoise } from './kitNoise';
@@ -191,7 +191,7 @@ const seen = new WeakSet<object>();
 /** Fill `host` with member i's card. */
 export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = {}): MemberCard {
   style();
-  const rows = kitRows(i), def = () => KIT.members[i], issued = kitDefault(i);
+  const rows = kitRows(i), def = () => kitShown(i);   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
   const root = el('div', 'kc'); root.setAttribute('data-member', String(i)); root.tabIndex = 0;
   // the head: a little figure in his two colours, who he is
   const head = el('div', 'kc-head'), fig = el('div', 'kc-fig'), suitBits: HTMLElement[] = [], trimBits: HTMLElement[] = [];
@@ -273,7 +273,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       { const key = `${r.field}:${gunRow || r.field === 'big' ? v : ''}${can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
       if (no) e.note.textContent = no;
       else { if (cost && !(lent && !v)) e.note.append(el('span', 'kc-cost', costWords(cost)), ' · '); e.note.append(r.note(lent ? { ...m, [r.field]: typeof v === 'number' ? handed : true } : m)); }   // (lent: the row's line for a man who HAS it — how it is used, not 'none in your pouches' — and no pouch rate on a tile the mission alone fills: what it hands takes none)
-      e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, issued)); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
+      e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, kitIssuedShown(i))); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
       // an arrow whose step would not fit his pouches is dimmed and says why (it can still be pressed: the reason goes on the row)
       for (const [b, dir, word] of [[e.prev, -1, 'previous'], [e.next, 1, 'next']] as [HTMLElement, 1 | -1, string][]) { const why = SLOTS.on ? kitPeek(i, r.field, dir).why : ''; b.classList.toggle('off', !!why); b.title = why || word; }
     });

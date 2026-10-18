@@ -1296,6 +1296,11 @@ export class CharacterAnimator {
   /** the drawer's word back (combat.ts handProps, a frame behind): something else lies across his back, the tool rides this many metres further off it
    *  (rigProps bigClearOf; 0 = nothing under it) — the hand that goes for the handle reaches that far */
   bigClear = 0;
+  /** PACK SIDE (packside.ts; combat.ts handProps says it, as `bigClear`): the hammer stands at the side of the pack he wears — its grip point and its handle's
+   *  line (butt → head) in the CHEST JOINT's own space, where the drawer has it. null = across his back, as ever */
+  bigSide: { o: Vec3; z: Vec3 } | null = null;
+  /** … how much of the right fist's place this frame is the hammer's place on his back, 0‥1 (bigLayer), and how far up the handle from its frame's origin the fist holds it */
+  bigAtBack = 0; bigGrab = 0;
   /** THE BALLISTIC SHIELD (shield.ts giveShield): his left forearm carries a plate in front of the shoulders — the shield layer below puts that arm on its handle
    *  and the pistol hand out past the plate's right edge, over whatever the pose had them doing. False for everybody no card hands one: nothing runs.
    *  shieldCarry: where the plate is in the shoulders' own frame (shield.ts writes its SHIELD numbers here — this file reads no game table): its centre ahead of
@@ -2179,7 +2184,7 @@ export class CharacterAnimator {
     }
     // ---- THE BIG SLOT'S TOOL (bigTool; BIGMOVE): the hammer or the breaching shotgun in both hands, over every arm pose and one-shot above — the game's own beat,
     //      on the game's clock. Nothing of it for a man whose bigTool is null: not a number read, his pose what it was to the bit
-    if (this.bigTool) this.bigLayer(this.bigTool, y, -p * 0.35); else { this.bigK = 0; this.bigUnder = false; }
+    this.bigAtBack = 0; if (this.bigTool) this.bigLayer(this.bigTool, y, -p * 0.35); else { this.bigK = 0; this.bigUnder = false; }
     // ---- MOVES: the reactions that take the whole upper body WITH the weapon (the trunk turned rigidly under the arms, so the hands stay on the gun): the flinch,
     //      the hit, the stun charge's hunch (+ its forearm over the eyes) — and the support hand's toss
     if (MOVES.on > 0.5) {
@@ -4884,6 +4889,9 @@ export class CharacterAnimator {
       let L = mixL(U, woundL, wind);
       if (sw > 0) L = mixL(mixL(L, overL, es), mixL(overL, blowL, es), es);   // over the top and down into it
       backR = fist(1, backL.g, backL.d, sR); held = fist(1, L.g, L.d, sR);
+      // (packside.ts: how much of the fist's place this frame is the tool's place ON HIS BACK, and how far up the handle it holds it — Character.packSidePass carries the DRAWN hand from there to the side of his pack)
+      { let wb = (1 - eb) * (1 - hit); if (stowing) wb += (1 - wb) * e3(us / M.put); wb *= (1 - wind) * (sw > 0 ? (1 - es) * (1 - es) : 1);
+        this.bigAtBack = ue < M.grab ? e3(ue / M.grab) : stowing && us > M.put ? 1 - e3((us - M.put) / (1 - M.put)) : wb; this.bigGrab = R.headAt - H.grabAt; }
       leftOn = (wr: Vec3) => { const g = v3.mad(v3.mad(wr, held.f!, G.fwd), held.b!, -G.palm); return fist(0, v3.mad(g, L.d, -R.hands), L.d, sL); };
     } else { const S = M.shotgun, C = RIG.carbine, adj = C.adj?.off ?? [0, 0, 0], LG = carbineGrip(), A = KIT.apex;
       backR = { at: v3.add(sR, dirT(A.at)), rot: this.handRot(1, dirT(A.fing), dirT(A.back)) };   // (the rifle's own place over the shoulder: the fist there, the muzzle down his back)
@@ -5167,7 +5175,40 @@ export class Character {
       if (pre) { this.skel.update(pre, this.world, this.anim.twists); this.simBones = this.joints({}); } else this.simBones = null; }
     this.skel.update(this.anim.pose, this.world, this.anim.twists);
     this.readBones(dt);
-    if (INHAND.on) this.inHandPass(dt); else { this.inHandK = 0; this.simHandR = this.inHandCur = null; }
+    if (INHAND.on) this.inHandPass(dt); else { this.inHandK = 0; this.simHandR = this.inHandCur = null; if (this.inHandOv) this.inHandOv.length = 0; }
+    if (this.anim.bigSide && this.anim.bigAtBack > 0) this.packSidePass();
+  }
+
+  /** PACK SIDE (packside.ts): the hand that goes for the hammer on his back goes to it AT THE SIDE OF HIS PACK, where the drawer has it. THE PICTURE ONLY, as
+   *  inHandPass is and after it: the animator takes the fist to the tool's place across a bare back (bigLayer — the pose the game reads, so it stays); the drawn
+   *  fist is carried the rest of the way, rigidly with the handle's line from that place to the pack's side, by how much of its place this frame is the back's
+   *  (`anim.bigAtBack`). `bones`, `gunDir` and `muzzle` were read before it; the pose is not written. */
+  private packSidePass() {
+    const an = this.anim, n = an.nodes, sk = this.skel, b = this.bones, sd = an.bigSide!, w = an.bigAtBack;
+    if (!(b.hips && b.spine2 && b.thighL && b.thighR && b.upperArmL && b.upperArmR)) return;
+    const qi = quat.conj(quat.yaw(this.bodyYaw));
+    const old = bigBackOf(b.hips, b.spine2, b.thighL, b.thighR, b.upperArmL, b.upperArmR, BIGRIG.hammer.back, an.bigClear);   // where the simulation's fist went: across his back (the world, as the drawer had it before the rule)
+    const g0 = quat.rotate(qi, v3.sub(v3.mad(old.o, old.z, an.bigGrab), this.pos)), d0 = quat.rotate(qi, old.z);
+    const r3 = sk.globalRot[n.spine3], d1 = quat.rotate(r3, sd.z), g1 = v3.mad(v3.add(sk.nodePos(n.spine3), quat.rotate(r3, sd.o)), d1, an.bigGrab);   // … and where the tool is: the chest joint's own space (combat.ts hammerSide)
+    let q = quat.fromTo(v3.normalize(d0), v3.normalize(d1)); if (w < 1) q = quat.slerp([0, 0, 0, 1], q, w);
+    const R = sk.nodePos(n.handR), g = sk.globalRot[n.handR], ov = this.inHandOv ??= [];
+    this.reachOv(ov, true, v3.add(v3.lerp(g0, g1, w), quat.rotate(q, v3.sub(R, g0))), quat.normalize(quat.mul(q, [g[0], g[1], g[2], g[3]])));
+    sk.update(an.pose, this.world, an.twists, ov);
+  }
+  /** an arm re-solved so its wrist is at `T` (the elbow kept on its side), the hand's rotation `rot` — over the skeleton's own output into `ov`, not the pose
+   *  (twoBoneIK writes the pose, which the simulation's next frame starts from) */
+  private reachOv(ov: (NodeOverride | undefined)[], right: boolean, T: Vec3, rot: Quat) {
+    const n = this.anim.nodes, sk = this.skel, iS = right ? n.upperArmR : n.upperArmL, iE = right ? n.forearmR : n.forearmL, iH = right ? n.handR : n.handL;
+    const S = sk.nodePos(iS), E = sk.nodePos(iE), H = sk.nodePos(iH), l1 = v3.len(v3.sub(E, S)), l2 = v3.len(v3.sub(H, E)), st = v3.sub(T, S);
+    if (l1 < 1e-3 || l2 < 1e-3 || v3.len(st) < 1e-3) return;
+    const dist = clamp(v3.len(st), Math.abs(l1 - l2) + 0.01, (l1 + l2) * 0.998), dir = v3.normalize(st), a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+    let pole = v3.sub(E, S); pole = v3.mad(pole, dir, -v3.dot(pole, dir));
+    if (v3.len(pole) < 1e-4) { pole = v3.mad([0, -1, 0], dir, dir[1]); if (v3.len(pole) < 1e-4) pole = v3.mad([0, 0, -1], dir, dir[2]); }   // (a dead straight arm: the elbow goes down, squared to the reach)
+    pole = v3.normalize(pole);
+    const E2 = v3.mad(v3.mad(S, dir, a), pole, h), T2 = v3.mad(S, dir, dist);
+    ov[iS] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(E, S)), v3.normalize(v3.sub(E2, S))), sk.globalRot[iS])) };
+    ov[iE] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(H, E)), v3.normalize(v3.sub(T2, E2))), sk.globalRot[iE])), pos: E2 };
+    ov[iH] = { rot, pos: T2 };
   }
 
   /** IN HAND (inhand.ts): the hand that holds a thing put where that thing is and turned onto the line the simulation points it along. THE PICTURE ONLY: the
@@ -5184,21 +5225,7 @@ export class Character {
     this.simHandR = null;
     const g0 = sk.globalRot[n.handR], hr: Quat = [g0[0], g0[1], g0[2], g0[3]], R = sk.nodePos(n.handR), L = sk.nodePos(n.handL);
     const ov = this.inHandOv ??= []; ov.length = 0;
-    /** an arm re-solved so its wrist is at `T` (the elbow kept on its side), the hand's rotation `rot` — over the skeleton's own output, not the pose (twoBoneIK
-     *  writes the pose, which the simulation's next frame starts from) */
-    const reach = (right: boolean, T: Vec3, rot: Quat) => {
-      const iS = right ? n.upperArmR : n.upperArmL, iE = right ? n.forearmR : n.forearmL, iH = right ? n.handR : n.handL;
-      const S = sk.nodePos(iS), E = sk.nodePos(iE), H = right ? R : L, l1 = v3.len(v3.sub(E, S)), l2 = v3.len(v3.sub(H, E)), st = v3.sub(T, S);
-      if (l1 < 1e-3 || l2 < 1e-3 || v3.len(st) < 1e-3) return;
-      const dist = clamp(v3.len(st), Math.abs(l1 - l2) + 0.01, (l1 + l2) * 0.998), dir = v3.normalize(st), a = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
-      let pole = v3.sub(E, S); pole = v3.mad(pole, dir, -v3.dot(pole, dir));
-      if (v3.len(pole) < 1e-4) { pole = v3.mad([0, -1, 0], dir, dir[1]); if (v3.len(pole) < 1e-4) pole = v3.mad([0, 0, -1], dir, dir[2]); }   // (a dead straight arm: the elbow goes down, squared to the reach)
-      pole = v3.normalize(pole);
-      const E2 = v3.mad(v3.mad(S, dir, a), pole, h), T2 = v3.mad(S, dir, dist);
-      ov[iS] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(E, S)), v3.normalize(v3.sub(E2, S))), sk.globalRot[iS])) };
-      ov[iE] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(H, E)), v3.normalize(v3.sub(T2, E2))), sk.globalRot[iE])), pos: E2 };
-      ov[iH] = { rot, pos: T2 };
-    };
+    const reach = (right: boolean, T: Vec3, rot: Quat) => this.reachOv(ov, right, T, rot);
     this.inHandWord(dt, cur, hr, R, L, ov, reach);
     // THE SWAP'S HAND AT HIS BELT: the animator takes it to where the torch hung before the rule moved the torch outside his clothes (the reach is in the pose the
     // game reads, so it stays); the drawn hand goes the rest of the way out to the torch
