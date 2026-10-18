@@ -588,10 +588,12 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   table's layout against a reference that is the dealt issue (the page changes a counted thing on the cards as worn, so there the others stay ×1). CHECK: `probes.ts kitload` (`tools/qa/kitload-check.ts`; `KITLOAD_BREAK=1` fails 8), both stands; the real page:
   `tools/qa/kitload-page.cjs`; squads counted: `tools/qa/kitload-tally.ts`. MEASURED (headless, one seed): you with the pistol alone walk 1.82 m/s against 1.55 as issued
   and 1.31 with four smoke and the hammer; sprint 5.11 / 4.70 / 4.34; a walking step 0.102 / 0.156 / 0.168; a guard at 6 m builds notice at 0.34 / 0.48 / 0.51 a second.
-  COUNTED ON THE BASE BEFORE THE TWO GUN ROWS AND THE KIT DEAL JOINED (shipped stand, the scripted player, each squad with the rule on and held off): room-clear-four, 12 seeds — issued 12 taken, 39 of 48 men up, 54 s (on = off);
-  every pouch full + hammers 11 / 32 / 78 s on against 12 / 38 / 55 s off; rifles with empty pouches 9 / 29 / 55 s on against 11 / 32 / 50 s off; pistols only 11 / 30 /
-  65 s on against 9 / 32 / 64 s off. rescue-registry, 6 seeds — issued 6; heavy 5 on, 6 off; pistols 2 on, 0 off. A full load now costs tempo and men; going light does
-  not win a loud room (its reason is pace and notice, measured only as rates: no scripted quiet player). A handful of seeds says which way, not how much.
+  A light teammate asked for 2.2 m/s gets 2.4, one with four pouches and the hammer 1.77.
+  COUNTED (shipped stand, the scripted player, each squad with the rule on and held off by `TPS_KITLOAD=0`; room-clear-four, seeds 1‥6, on the build with the two gun
+  rows and the kit deal): issued 6 taken, 20 of 24 men up, 60.8 s — on and off the same run; every pouch full + hammers 6 / 19 / 69.9 s on against 6 / 17 / 62.8 s off;
+  pistols only 4 / 12 / 44.8 s on against 4 / 15 / 72.8 s off. Before the gun rows and the deal joined, 12 seeds leaned the same way (a full load: 78 s on against 55 s
+  off, 32 men up against 38; rescue-registry over 6: heavy 5 taken on, 6 off; pistols 2 on, 0 off). A full load costs tempo; going light is quicker and does not
+  win a loud room (its reason is pace and notice, measured only as rates: no scripted quiet player). A handful of seeds says which way, not how much.
   KNOWN SHAPES: two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
   four's issue is near even — mobility 0.67‥0.78, concealment 0.50‥0.52); a light player out-walks a silent squad's
   cap; what is thrown or set never lightens a man; a suppressor, a light, goggles and a suit weigh nothing. Never seen on a GPU; nobody has played it.

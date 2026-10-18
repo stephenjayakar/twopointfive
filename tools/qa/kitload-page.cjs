@@ -1,6 +1,6 @@
 // WHAT A CARD WEIGHS, ON THE REAL PAGE (src/ui/kitCard.ts, the two bars; src/game/kitload.ts; tools/qa/kitload-check.ts asks the same of a headless DOM):
 // headless Chromium on the software WebGPU adapter (tools/qa/wand-page.cjs's recipe), at 1280 × 720, the issued card planted in the store.
-//   PORT=5237 node tools/qa/kitload-page.cjs [outDir]        (a dev server on that port: PORT=5237 bun run tools/serve.ts)
+//   PORT=5237 [PARTS=screen|walk] node tools/qa/kitload-page.cjs [outDir]        (a dev server on that port: PORT=5237 bun run tools/serve.ts)
 //   bars    a room clear's Team & kit screen as the page opens it (the one card it shows: yours): two bars, each inside the card, wide enough to read, with
 //           no digit; your issued card's two fills end on their notch
 //   step    your long gun's row stepped to the pistol alone: both fills grow past the notch
@@ -15,9 +15,11 @@ const KIT = JSON.stringify({ v: 2, members: [{ weapon: 'rifle', smoke: 1, bangs:
 let KIT_NOW = KIT;   // (the card planted in the store before a page opens)
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
+  const launch = () => chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let browser = await launch(), failed = false;
+  const PARTS = (process.env.PARTS || 'screen,walk').split(',');   // (PARTS=walk: the staged walk alone)
   const line = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   const open = async (q) => {
+    if (!browser.isConnected()) browser = await launch();   // (the software adapter's browser can die between two long boots: a fresh one)
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
@@ -39,7 +41,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   const shot = async (page, name) => { if (OUT) await page.screenshot({ path: path.join(OUT, `${name}.png`), timeout: 120000 }).catch(e => console.log(`    (no still: ${String(e).slice(0, 80)})`)); };
 
   // ── bars
-  { const { page, errors } = await open(`loadout=${MISSION}`);
+  if (PARTS.includes('screen')) { const { page, errors } = await open(`loadout=${MISSION}`);
     const a = await cards(page); await shot(page, 'kitload-bars'); const you = a.find(c => c.member === '0');
     line(a.length >= 1 && !!you && a.every(c => c.bars.length === 2 && c.bars[0].k === 'mob' && c.bars[1].k === 'con' && c.bars.every(b => inside(b.box, c.box) && b.track.w >= 40 && b.track.h >= 3 && !/[0-9]/.test(b.text))),
       'A ROOM CLEAR\'S TEAM & KIT SCREEN, as the page opens it: the card shows two bars, mobility then concealment, inside the card, a track wide enough to read, no digit', `${a.length} card(s) · ${say(a)}`);
@@ -52,17 +54,17 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     line(errors.length === 0, 'no page error on that screen', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── off
-  { const { page, errors } = await open(`loadout=${MISSION}&nokitload`);
+  if (PARTS.includes('screen')) { const { page, errors } = await open(`loadout=${MISSION}&nokitload`);
     const c = await cards(page);
     line(c.length >= 1 && c.every(x => x.bars.length === 0), 'UNDER ?nokitload the same screen shows no bar', say(c));
     line(errors.length === 0, 'no page error under ?nokitload', errors.join(' | ') || 'none'); await page.close(); }
 
   // ── walk: the card on the floor of a staged room clear — the same light card with the rule on and under ?nokitload
-  { const walk = async (q) => { const { page, errors } = await open(q);
+  if (PARTS.includes('walk')) { const walk = async (q) => { const { page, errors } = await open(q);
       const r = await page.evaluate(async () => { const g = window.__game, p = g.player, c = p.char; let best = 0;
         for (const key of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) for (let f = 0; f < 24; f++) { const x = c.pos[0], z = c.pos[2]; await window.__runFrames(1, 1 / 60, [key], false); best = Math.max(best, Math.hypot(c.pos[0] - x, c.pos[2] - z) * 60); }
         return { best, load: p.kitLoad || null, team: g.guards.filter(m => m.team === 'operative' && m.state !== 'dead').length, long: !!p.hasRifle }; });
-      await page.close(); return { ...r, errors }; };
+      await page.close().catch(() => {}); await Promise.race([browser.close(), new Promise(res => setTimeout(res, 15000))]).catch(() => {}); return { ...r, errors }; };   // (a browser a walk: closed here, opened afresh by the next)
     const LIGHT = JSON.stringify({ v: 2, members: [{ weapon: 'pistol', smoke: 0, bangs: 0, frags: 0, shells: 0, wand: false, cams: 0 }] });
     const plant = KIT_NOW; KIT_NOW = LIGHT; const on = await walk('roomclear&squad4'), off = await walk('roomclear&squad4&nokitload'); KIT_NOW = plant;
     const say = (r) => `${r.best.toFixed(2)} m/s at best · ${r.load ? `mobility ${r.load.mob.toFixed(2)} against his issue's ${r.load.refMob.toFixed(2)}` : 'nothing weighed on him'} · ${r.team} teammates · ${r.long ? 'a long gun' : 'no long gun'}`;

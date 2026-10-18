@@ -28,5 +28,5 @@ for (let seed = s0; seed <= (s1 ?? s0); seed++) {
   console.log(`${scn}:${seed} ${squad} ${r.end} ${r.t} s · team ${r.team}/${r.of} · hostiles left ${r.hostiles}/${r.hostilesOf}`);
 }
 const scores = K.KIT.members.map((m: unknown, i: number) => { const s = L.loadOf(i, m); return `${s.mob.toFixed(2)}/${s.con.toFixed(2)}`; });
-console.log(`KITLOAD-TALLY ${JSON.stringify({ squad, rule: L.KITLOAD.on, scn, seeds: `${s0}-${s1 ?? s0}`, runs: n, won, up, of, meanSecs: n ? +(secs / n).toFixed(1) : 0, errors, scores })}`);
+console.log(`KITLOAD-TALLY ${JSON.stringify({ squad, rule: process.env.TPS_KITLOAD !== '0' && L.KITLOAD.on, scn, seeds: `${s0}-${s1 ?? s0}`, runs: n, won, up, of, meanSecs: n ? +(secs / n).toFixed(1) : 0, errors, scores })}`);
 process.exit(errors ? 1 : 0);
