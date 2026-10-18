@@ -10,6 +10,13 @@
 // it's actually too dark to see?") stands Sam where the scenario starts him, the team round him, and keeps three: `auto` (goggles down, the page as it
 // opens: no light burns where the tube shows the place by its own light), `forced` (the rule off: every light burning, at today's power) and `was` (the rule
 // off at the old power). Asked: none uploaded under the rule and the place still shows; the old flood whiter than today's.
+// MODE=vault (the maintainer's shot of 10-18: the vault's strongroom, its own bulb off, plain in the goggles round a pool of his flood — "still feels like the
+// IR light here is unnecessary") stands Sam in the strongroom, its door open as he left it, and keeps three: `auto` (goggles down, the page as it opens:
+// what the CPU calls dark is put to the renderer's meter, IRLIGHT.meter), `shut` (the same with the door shut: told, not asked — how much comes through a
+// shut door is this adapter's and this quality's) and `cpu` (that switch off: the CPU's direct-light estimate alone, to which the room is black). Asked: the
+// page as it opens burns no light there; with the switch off his burns; on again it is out; with every answer planted dark it burns again.
+// The room mode holds IRLIGHT.meter OFF: its stills are of the flood itself, and the renderer reads the depot's 'dark' room well over the line through its
+// open door.
 // Asked of them: the tube's picture of the room is brighter with the light than without (the mean of the frame's middle); the light meter in the room — the
 // renderer's own probe pass, asked at the room's middle and on Sam — reads the same with the light and without; the frame after the goggles come up is the
 // bare-eyed frame it was; the Tab panel has its rows; no console error.
@@ -27,16 +34,16 @@ const FRAMES = Number(process.env.FRAMES || 4);
 const MODE = process.env.MODE || 'room';
 let STAGED = null;
 const ROOM = (process.env.ROOM || '26.5,12.3').split(',').map(Number), DOOR = (process.env.DOOR || '25.8,10.4').split(',').map(Number);
-const QUERY = process.env.QUERY || (MODE === 'yard' ? 'levelFile=pass.json&roomclear&squad4&difficulty=hard' : 'levelFile=depot.json&roomclear=1&squad4&difficulty=hard&pick=depot');
+const QUERY = process.env.QUERY || (MODE === 'vault' ? 'levelFile=vault.json&quiet&difficulty=hard&quietfog=cones' : MODE === 'yard' ? 'levelFile=pass.json&roomclear&squad4&difficulty=hard' : 'levelFile=depot.json&roomclear=1&squad4&difficulty=hard&pick=depot');
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(); const log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 fs.mkdirSync(outDir, { recursive: true });
 
 // in the page: ask the meter at the room's middle, draw n frames one at a time (each waited for), read the last one back; the mean of the frame's middle third
-const DRAW = async ({ n, room }) => {
+const DRAW = async ({ n, room, dt }) => {
   const dev = window.__engine.device, g = window.__game;
   const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
-  for (let i = 0; i < n; i++) { g.lightQuery('irlightRoom', [room[0], 1.2, room[1]], 0); window.__runFrames(1, 1 / 600); await dev.queue.onSubmittedWorkDone(); await yieldMacro(); }
+  for (let i = 0; i < n; i++) { g.lightQuery('irlightRoom', [room[0], 1.2, room[1]], 0); window.__runFrames(1, dt || 1 / 600); await dev.queue.onSubmittedWorkDone(); await yieldMacro(); }
   g.lightQuery('irlightRoom', [room[0], 1.2, room[1]], 0);
   window.__engine.render(window.__cam, g.time, 1 / 60, false); const fr = await window.__engine.readbackFrame(); if (!fr) return { err: 'no frame' };
   await dev.queue.onSubmittedWorkDone(); await yieldMacro();
@@ -73,26 +80,43 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
     const cutSet = await page.evaluate(async (secs) => { const P = window.__cut?.programs, r = P?.swap ? P.ready : null; if (!r) return 'none';
       return await Promise.race([Promise.resolve(r).then(ok => ok ? 'ready' : 'failed', () => 'failed'), new Promise(done => setTimeout(() => done('timed out'), secs * 1000))]); }, 300).catch(e => 'threw: ' + e.message);
     log('cut programs', cutSet);
-    const staged = await page.evaluate(({ room, door, yard }) => {
+    const staged = await page.evaluate(({ room, door, yard, vault }) => {
       window.__menu.close(); window.__smoke.params.enabled = false;
       const g = window.__game, K = window.__knobs.registry().IRLIGHT; g.godMode = true; g.aiEnabled = false;
+      if (vault) { window.__stage({ look: [21.5, 1.0, 13], yaw: 0.5, pitch: 1.05, dist: 17 }, { player: { pos: [21.4, 0, 11.6], yaw: 0.35 } }); window.__mouse(innerWidth / 2, innerHeight / 2);
+        return { irlight: K ? { ...K } : null, squad: window.__orders.squad().length, exposure: window.__engine.settings.exposure, nvGain: window.__engine.settings.nvGain, fog: g.fogOfWar.on, sam: [21.4, 11.6], room: [21.5, 14],
+          bulb: (window.__engine.lights.lights.find(l => l.name === 'bulb_strong') || {}).enabled ?? null, doorShut: g.doors.list.filter(d => d.def.name === 'strongroom').map(d => Math.abs(d.angle ?? 0) < 0.05) }; }
       if (yard) { const c = g.player.char; door = [c.pos[0], c.pos[2]]; room = [c.pos[0] + Math.sin(c.aimYaw) * 3, c.pos[2] + Math.cos(c.aimYaw) * 3];
         window.__stage({ look: [door[0], 1.0, door[1]], yaw: 0, pitch: 1.25, dist: 15 }, { player: { pos: [door[0], 0, door[1]], yaw: c.aimYaw } }); window.__mouse(innerWidth / 2, innerHeight / 2);
         return { irlight: K ? { ...K } : null, squad: window.__orders.squad().length, exposure: window.__engine.settings.exposure, nvGain: window.__engine.settings.nvGain, fog: g.fogOfWar.on, sam: door, room }; }
       window.__stage({ look: [room[0], 1.0, room[1]], yaw: 0, pitch: 1.25, dist: 15 }, { player: { pos: [door[0], 0, door[1]], yaw: Math.atan2(room[0] - door[0], room[1] - door[1]), invisible: true } });
       window.__mouse(innerWidth / 2, innerHeight / 2);
-      return { irlight: K ? { ...K } : null, squad: window.__orders.squad().length, exposure: window.__engine.settings.exposure, nvGain: window.__engine.settings.nvGain, fog: g.fogOfWar.on }; }, { room: ROOM, door: DOOR, yard: MODE === 'yard' }); notes.push('staged: ' + JSON.stringify(staged)); STAGED = staged; if (staged.room) { ROOM[0] = staged.room[0]; ROOM[1] = staged.room[1]; }   // (the yard: the meter is asked three metres ahead of where the scenario starts him)
+      return { irlight: K ? { ...K } : null, squad: window.__orders.squad().length, exposure: window.__engine.settings.exposure, nvGain: window.__engine.settings.nvGain, fog: g.fogOfWar.on }; }, { room: ROOM, door: DOOR, yard: MODE === 'yard', vault: MODE === 'vault' }); notes.push('staged: ' + JSON.stringify(staged)); STAGED = staged; if (staged.room) { ROOM[0] = staged.room[0]; ROOM[1] = staged.room[1]; }   // (the yard: the meter is asked three metres ahead of where the scenario starts him)
     log(notes[notes.length - 1]);
     const set = (o) => page.evaluate((o) => { const g = window.__game, K = window.__knobs.registry().IRLIGHT; if (o.nv !== undefined) g.player.nv = o.nv; delete o.nv; Object.assign(K, o); }, o);
-    const NOW = { power: staged.irlight.power, core: staged.irlight.core, dip: staged.irlight.dip, auto: staged.irlight.auto }, WAS = { power: 30, core: 40, dip: 11, auto: false };
+    const NOW = { power: staged.irlight.power, core: staged.irlight.core, dip: staged.irlight.dip, auto: staged.irlight.auto, meter: staged.irlight.meter }, WAS = { power: 30, core: 40, dip: 11, auto: false };
     const who = () => page.evaluate(() => { const g = window.__game, ir = window.__engine.lights.ir; return { burning: ir.length, sam: ir.some(l => l.owner === g.player.char.id), gogglesDown: window.__orders.squad().filter(x => ir.some(l => l.owner === x.char.id)).map(x => x.callsign) }; });
-    if (MODE === 'yard') {
+    if (MODE === 'vault') {
+      // (the renderer answers only in a drawn frame, and the rule waits a quarter second of the game's clock for an answer: the goggles are brought down
+      //  over DRAWN sixtieths — a page draws every frame — then three seconds are played on the answers it has, and the still is drawn)
+      const door = (open) => page.evaluate((open) => { const d = window.__game.doors.list.find(d => d.def.name === 'strongroom'); if (!d) return null; d.locked = false; d.latched = !open; d.angle = open ? 1.4 * (d.swing || 1) : 0; d.vel = 0; if (d.place) d.place(); return +d.angle.toFixed(2); }, open);
+      const answers = () => page.evaluate(() => { const g = window.__game, id = g.player.char.id; const out = [g.lightAt('playerChest')]; for (let i = 0; i < 6; i++) out.push(g.lightAt(`irl${id}:${i}`)); return out.map(E => E === undefined ? null : +E.toFixed(5)); });
+      const down = async () => { await set({ nv: false }); await play(1); await set({ nv: true }); await page.evaluate(DRAW, { n: 16, room: ROOM, dt: 1 / 60 }); const first = await who(); await play(3); return { first, after: await who(), answers: await answers() }; };
+      await set({ on: true }); R.door = await door(true); await page.evaluate(DRAW, { n: 3, room: ROOM });
+      R.openDown = await down(); await save('auto', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
+      await door(false); await page.evaluate(DRAW, { n: 3, room: ROOM }); R.shutDown = await down(); await save('shut', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
+      await door(true); await page.evaluate(DRAW, { n: 3, room: ROOM });
+      await set({ meter: false }); await play(1); R.cpuWho = await who(); await save('cpu', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
+      await set({ meter: true }); await page.evaluate(DRAW, { n: 3, room: ROOM, dt: 1 / 60 }); await play(3); R.backWho = await who();
+      await page.evaluate(() => { const g = window.__game, at = g.lightAt; window.__irlAt = at; g.lightAt = k => k.startsWith('irl') || k === 'playerChest' ? 0 : at(k); }); await play(1); R.darkWho = await who();
+      await page.evaluate(() => { window.__game.lightAt = window.__irlAt; }); await set({ ...NOW, nv: false });
+    } else if (MODE === 'yard') {
       await set({ nv: true, on: true }); await play(3); R.autoWho = await who(); await save('auto', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
       await set({ auto: false }); await play(1); R.forcedWho = await who(); await save('forced', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
       await set({ ...WAS }); await play(1); await save('was', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
       await set({ ...NOW, nv: false });
     } else {
-    await set({ nv: false, on: true }); await play(2); await save('bare', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
+    await set({ nv: false, on: true, meter: false }); await play(2); await save('bare', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
     await set({ nv: true, on: false }); await play(1.5); await save('tube', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
     await set({ on: true }); await play(1); R.irWho = await who(); await save('ir', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
     await set({ nv: false }); await play(1.5); await save('bare2', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
@@ -107,7 +131,16 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
   // ---- the lines
   const lines = []; const ok = (pass, label, detail) => { lines.push(`- ${pass ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); return pass; };
   let all = true; const B = R.bare, T = R.tube, I = R.ir, B2 = R.bare2, near = (a, b, tol) => a != null && b != null && Math.abs(a - b) <= tol * Math.max(Math.abs(a), Math.abs(b), 1e-3) + 1e-4;
-  if (MODE === 'yard') { const A = R.auto, Fd = R.forced, Wd = R.was;
+  if (MODE === 'vault') { const A = R.auto, C = R.cpu, Sh = R.shutDown, Op = R.openDown;
+    if (!A || !C || A.err || C.err || !Op || !Sh) all = ok(false, 'the stills', JSON.stringify(R)) && all;
+    else {
+      all = ok(STAGED.bulb === false && Op.answers[0] != null, 'the strongroom\'s own bulb is off and the renderer answers there', `bulb enabled: ${STAGED.bulb} · the door at ${R.door} rad · Sam's own meter ${Op.answers[0]} W/m², the room's middle ${A.meterRoom} · the dark points of his fan put to it: ${Op.answers.slice(1, 6).filter(x => x != null).join(' ') || 'none answered'}`) && all;
+      all = ok(A.tube && !Op.first.sam && !Op.after.sam && A.irInList === 0 && A.irUploaded === 0, 'the page as it opens, the door open: no infrared light burns there', `as the goggles came down: ${Op.first.burning} burning · three seconds on: ${Op.after.burning} · in the still ${A.irInList} burning, ${A.irUploaded} uploaded · the middle of the frame (0‥255) ${A.mid}`) && all;
+      lines.push(`- TOLD — the door shut (not asked: what comes through a shut door is this adapter's and this quality's)\n    as the goggles came down: ${Sh.first.burning} burning · three seconds on: ${Sh.after.burning} · Sam's own meter ${Sh.answers[0]} W/m², his fan's dark points ${Sh.answers.slice(1, 6).filter(x => x != null).join(' ') || 'none answered'} · the middle of the frame ${(R.shut || {}).mid} · in the still ${(R.shut || {}).irInList} burning`);
+      all = ok(R.cpuWho.sam && C.irUploaded > 0, 'the switch off (the CPU\'s direct-light estimate alone, as it was): his light burns', `${JSON.stringify(R.cpuWho)} · uploaded ${C.irUploaded} · the middle of the frame ${C.mid}`) && all;
+      all = ok(!R.backWho.sam && R.darkWho.sam, 'the switch on again: out; every answer planted dark: it burns', `on again ${JSON.stringify(R.backWho)} · planted dark ${JSON.stringify(R.darkWho)}`) && all;
+    }
+  } else if (MODE === 'yard') { const A = R.auto, Fd = R.forced, Wd = R.was;
     if (!A || !Fd || !Wd || A.err || Fd.err || Wd.err) all = ok(false, 'three stills', JSON.stringify(R)) && all;
     else {
       all = ok(A.tube && A.irUploaded === 0 && A.irInList === 0 && Fd.irUploaded > 0, 'where the tube shows the place by its own light no infrared light burns', `goggles down, the page as it opens: ${A.irInList} burning, ${A.irUploaded} uploaded · the rule off: ${Fd.irUploaded} uploaded (${JSON.stringify(R.forcedWho)})`) && all;
