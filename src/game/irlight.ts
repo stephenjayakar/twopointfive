@@ -22,8 +22,11 @@
 //     an infrared light, so it still cannot answer its own question. So the CPU's rule stays the FIRST word — where it calls a place light nothing more is
 //     asked — and the renderer gets the LAST one on what the CPU calls dark: the floor under him (Sam's and a teammate's own meters, asked every frame as
 //     it is; the wand's lens asks its own) and a spread of up to IRL_METER.slots of the dark points his fan found, asked through the sensors' seam
-//     (Game.lightQuery) on his beat and read every frame. A point is dark when what the PICTURE has there is under the same line (NVG.blackAt): the
-//     CPU's direct light + the meter's bounce × settings.indirectScale (the meter's bounce is physical; the picture's is scaled — fgather.wgsl). The same
+//     (Game.lightQuery) on his beat and read every frame. A point is dark when the PICTURE of it is under IRLIGHT.show of the tube's range: the CPU's
+//     direct light + the meter's bounce × settings.indirectScale (the meter's bounce is physical; the picture's is scaled — fgather.wgsl) through the
+//     tube's curve (nvg.ts tubeSig). A line of its own, and higher than NVG.blackAt: that one is where a MAN is lost to a goggled eye, about 0.035 of
+//     the range, and direct light is either well over it or nothing; bounce is every value between, and floor at 0.05 of the range is grain to the
+//     player (the strongroom with its door shut, on the software adapter). Under this branch the CPU's first word is asked by the same line. The same
 //     count decides: the floor under him, or FAN_NEED of the points. A point not yet answered waits IRL_METER.wait (no light: a light that came on by
 //     the CPU's word and went out by the renderer's two frames on would blink for its whole hold every time the goggles came down in such a room), then
 //     takes the CPU's word. Where no renderer answers at all — headless, the senses on the CPU (sense.ts), a page before its first frame: Sam's own
@@ -52,7 +55,7 @@ import { Vec3, v3, clamp, DEG } from '../math/vec';
 import type { RtLight } from '../render/lights';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
-import { nvgDown, tubeVis, nvgPlaceLight, NVG } from './nvg';
+import { nvgDown, tubeVis, tubeSig, nvgPlaceLight, NVG } from './nvg';
 import { wandEye, WAND } from './wand';
 import { SENSE } from './sense';
 
@@ -66,6 +69,9 @@ export const IRLIGHT = {
   /** auto: the place is read off the renderer's light meter, bounced light and all, where it answers (the page turns it on: src/host/profile.ts;
    *  ?noirmeter). off = by the CPU's estimate of the direct light alone, to which a room lit only round a door frame is black */
   meter: false,
+  /** meter: the least the tube's picture must make of a floor (0‥1 of its range) for his light to stay out. The maintainer's strongroom read about 0.3 in
+   *  his shot; 0.05 is grain. Never judged on a real GPU */
+  show: 0.1,
   /** auto: s the light stays on after the last reading that found floor too dark for the tube (NVG.blackAt, by the place's own light) */
   hold: 1.5,
   /** how bright the flood reads THROUGH THE TUBE: on-axis intensity × the picture's exposure. 8 (it was 30, and five of them at once put a lot at the tube's
@@ -123,12 +129,12 @@ function fanDark(g: Game, at: Vec3, yaw: number): boolean {
 export const IRL_METER = { slots: 5, wait: 0.25 };
 const skey = (key: number, i: number) => `irl${key}:${i}`;
 const forget = (g: Game, key: number) => { for (let i = 0; i <= IRL_METER.slots; i++) g.lightForget(skey(key, i)); };
-/** every point of his fan the CPU calls dark, in the fan's order: x, z and the CPU's light there (no way out at the second: the renderer is asked about a spread of them) */
+/** every point of his fan the CPU's direct light leaves under the picture's line (IRLIGHT.show), in the fan's order: x, z and the CPU's light there (no way out at the second: the renderer is asked about a spread of them) */
 function fanDarks(g: Game, at: Vec3, yaw: number): number[] {
   const eye: Vec3 = [at[0], 1.5, at[2]], out: number[] = [];
   for (const off of FAN_DEG) {
     const fx = Math.sin(yaw + off * DEG), fz = Math.cos(yaw + off * DEG);
-    for (const r of FAN_M) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break; const E = nvgPlaceLight(g, P); if (tubeVis(g, E) < NVG.blackAt) out.push(P[0], P[2], E); }
+    for (const r of FAN_M) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break; const E = nvgPlaceLight(g, P); if (tubeSig(g, E) < IRLIGHT.show) out.push(P[0], P[2], E); }
   }
   return out;
 }
@@ -136,7 +142,7 @@ function fanDarks(g: Game, at: Vec3, yaw: number): number[] {
 function shownDark(g: Game, cpu: number, E: number | undefined): boolean | undefined {
   if (E === undefined || !Number.isFinite(E)) return undefined;
   const s = g.engine.settings.indirectScale;
-  return tubeVis(g, cpu + (s >= 0 ? s : 1) * Math.max(E - cpu, 0)) < NVG.blackAt;
+  return tubeSig(g, cpu + (s >= 0 ? s : 1) * Math.max(E - cpu, 0)) < IRLIGHT.show;
 }
 /** his reading is over (goggles up, gone, the light off): what he asked of the renderer is forgotten with it */
 const drop = (g: Game, kit: Kit, key: number) => { const N = kit.need.get(key); if (!N) return; if (N.since.some(t => t !== Infinity)) forget(g, key); kit.need.delete(key); };
@@ -158,7 +164,7 @@ function burn(g: Game, kit: Kit, key: number, at: Vec3, yaw: number, each: boole
     if (beat) dark = dark || (!each && darkAt(g, at[0], at[2])) || fanDark(g, at, yaw);
   } else {
     // ---- the CPU's word: the floor under him, and on his beat the dark points of his fan — a spread of them is put to the renderer
-    if (each || beat) { const E = nvgPlaceLight(g, [at[0], 1.2, at[2]]); N.own = tubeVis(g, E) < NVG.blackAt ? E : -1; }
+    if (each || beat) { const E = nvgPlaceLight(g, [at[0], 1.2, at[2]]); N.own = tubeSig(g, E) < IRLIGHT.show ? E : -1; }
     if (beat) {
       const D = fanDarks(g, at, yaw), n = D.length / 3, take = n < FAN_NEED ? 0 : Math.min(n, S); N.pts.length = 0;
       for (let i = 0; i < S; i++) {

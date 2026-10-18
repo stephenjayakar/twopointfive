@@ -260,8 +260,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `irOnMan` (a CPU estimate of the infrared light on the man looked at: the shader's falloff, window and cone, one segment test) to the light the meter
   reads on him, for a GOGGLED TEAMMATE'S eye only; nvg.ts `readPlace`'s `black` (too dark for the tube, so the white light comes on) retires
   (`irCarried`) — goggled teammates no longer put a white light on because a room has no light of its own; doortools.ts `thrTube` counts floor a jamb
-  man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (seven: on the
-  goggles / the team carries one too / only where it is too dark / by the light the picture has / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
+  man's gun is across as seen when his own flood would show a man there (`irShowsAt`). Rows: Tab ▸ Sandbox ▸ Team feel ▸ 'IR light ▸ …' (eight: on the
+  goggles / the team carries one too / only where it is too dark / by the light the picture has / floor must show at least / power / half angle / reach; teamfeel.ts `KEPT.IRLIGHT`) + `irLightSummary`. QA `probes.ts irlight` (irl-list: 21
   scenarios — a lamp per pair of goggles down, at the brow, the upload's bits for a bare and a tube picture, never out under a tube frame, the shader's
   text · irl-unseen: a held-door play of 2,160 frames a scenario, Sam's goggles down, the light on and off — the game digest, every man's awareness /
   irradiance / visibility, every camera, the light list and the light estimate on the lit floor identical frame for frame; `IRLIGHT_BREAK=1` puts the
@@ -330,10 +330,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   light of this file answers its own question) gets the LAST word on what the CPU calls dark: the floor under him by the meter key that already reads
   it every frame (`playerChest`, a teammate's `unitC<id>`; the wand's lens asks its own) and a spread of up to five (`IRL_METER.slots`) of the dark
   points his fan found, asked through `Game.lightQuery` on his beat under his own keys (`irl<id>:<slot>`) and read every frame (one read sequence a
-  frame: the sensors' journal writes its key list at every change of it). A point is dark when what the PICTURE has there is under the same line
-  (`NVG.blackAt`): the CPU's direct light + the meter's bounce × `settings.indirectScale` (0.35 — the meter's bounce is physical, the picture's is
-  scaled in fgather.wgsl; an answer of 0.004 W/m² is over the line as the meter has it and under it in the picture). The same count decides (his own
-  floor, or two of the points). A point not yet answered waits `IRL_METER.wait` (0.25 s, no light), then takes the CPU's word; the first reading that
+  frame: the sensors' journal writes its key list at every change of it). A point is dark when the PICTURE of it is under `IRLIGHT.show` (0.1 of the
+  tube's range; row 'IR light ▸ floor must show at least'): the CPU's direct light + the meter's bounce × `settings.indirectScale` (0.35 — the meter's
+  bounce is physical, the picture's is scaled in fgather.wgsl) through the tube's curve (`nvg.ts tubeSig`). A line of its own, higher than
+  `NVG.blackAt` (where a MAN is lost to a goggled eye, about 0.035 of the range): direct light is well over that or nothing, bounce is every value
+  between, and floor at 0.05 of the range is grain to the player; the maintainer's strongroom read about 0.3 in his shot. Under this branch the
+  CPU's first word is asked by the same line. The same count decides (his own floor, or two of the points). A point not yet answered waits `IRL_METER.wait` (0.25 s, no light), then takes the CPU's word; the first reading that
   is decided still puts his light at full or out at once. WHERE NO RENDERER ANSWERS — headless, `SENSE.cpu`, a page before its first frame (Sam's own
   meter has no answer) — the CPU's rule is the whole rule at once, so HEADLESS NOTHING MOVES on either stand: every tally and digest is the build's.
   KNOWN EDGES: the meter also has carried white light, so a torch on the floor he looks at puts his light out a hold later; `irShowsAt` and nvg.ts

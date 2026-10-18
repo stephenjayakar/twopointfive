@@ -107,7 +107,7 @@ const PLAY = (secs) => { const e = window.__engine, real = e.render; let threw =
       await door(false); await page.evaluate(DRAW, { n: 3, room: ROOM }); R.shutDown = await down(); await save('shut', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
       await door(true); await page.evaluate(DRAW, { n: 3, room: ROOM });
       await set({ meter: false }); await play(1); R.cpuWho = await who(); await save('cpu', await page.evaluate(DRAW, { n: FRAMES, room: ROOM }));
-      await set({ meter: true }); await page.evaluate(DRAW, { n: 3, room: ROOM, dt: 1 / 60 }); await play(3); R.backWho = await who();
+      await set({ meter: true }); await page.evaluate(DRAW, { n: 20, room: ROOM, dt: 1 / 60 }); await play(3); R.backWho = await who();   // (twenty drawn sixtieths: his next beat puts the dark points to the renderer, and it must be drawn to answer)
       await page.evaluate(() => { const g = window.__game, at = g.lightAt; window.__irlAt = at; g.lightAt = k => k.startsWith('irl') || k === 'playerChest' ? 0 : at(k); }); await play(1); R.darkWho = await who();
       await page.evaluate(() => { window.__game.lightAt = window.__irlAt; }); await set({ ...NOW, nv: false });
     } else if (MODE === 'yard') {

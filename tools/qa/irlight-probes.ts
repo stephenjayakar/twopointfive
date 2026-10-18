@@ -35,8 +35,8 @@
 //               — not one frame of his light, nor of a teammate's, and with the switch off the same answers and it burns (the build before); it answers
 //               'dark' — burning inside a tenth of a second and at full at once; it answers Sam's own meter and nothing else (a starved probe) — no
 //               light until IRL_METER.wait, then the CPU's word; it answers nothing at all (headless as it is) or the senses are on the CPU (SENSE.cpu)
-//               — nothing asked and the CPU's word at once, the rule as it was. The bounce is the PICTURE's: an answer over the line by itself and
-//               under it × settings.indirectScale is dark, and with the scale at 1 it is not. Where the CPU calls the place light nothing is asked.
+//               — nothing asked and the CPU's word at once, the rule as it was. The line is the PICTURE's (IRLIGHT.show of the tube's range) and so is
+//               the bounce: an answer over the line by itself and under it × settings.indirectScale is dark, and with the scale at 1 it is not. Where the CPU calls the place light nothing is asked.
 //               What a carrier asks is bounded (IRL_METER.slots a beat) and forgotten with his goggles. The stands, the FROZEN_HOLDS row and a
 //               recording from before the key. Its red path: IRMETER_BREAK=1 holds the switch off where this probe turns it on, and it must FAIL.
 //               irl-auto and the four before it hold this switch OFF (headless it changes nothing: no renderer answers).
@@ -229,7 +229,7 @@ export const irlOff = guarded(async () => {
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
     F.verdict(on > 0 && L.ir.length === 0, 'flipped in play it takes hold inside a frame', `on: ${on} burning two frames later · off: ${L.ir.length} the next frame`);
     reset(); }
-  { const rows = ['on', 'team', 'auto', 'meter', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto', 'meter'].every(k => TFM.feelRange('IRLIGHT', k) === null);
+  { const rows = ['on', 'team', 'auto', 'meter', 'show', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto', 'meter'].every(k => TFM.feelRange('IRLIGHT', k) === null);
     F.verdict(kept.length === rows.length && sw, 'the Team feel rows are kept per machine (teamfeel.ts)', `${kept.join(', ')} · on / team / auto are switches: ${sw}`); }
   { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRLIGHT;
     const want = frozen || word !== undefined ? word === '1' : true;
@@ -322,7 +322,7 @@ export const irlAuto = guarded(async () => {
 });
 
 // ---------------------------------------------------------------- irl-meter: the renderer's word on what the CPU calls dark
-const E_LIT = 0.05, E_DARK = 0, E_EDGE = 0.004;   // (W/m² the planted renderer answers: 0.05 × the picture's bounce scale reads well over NVG.blackAt through the tube; 0.004 is over the line as the meter has it and under it × 0.35)
+const E_LIT = 0.2, E_DARK = 0, E_EDGE = 0.015;   // (W/m² the planted renderer answers: 0.2 × the picture's bounce scale is about a third of the tube's range, well over IRLIGHT.show; 0.015 is over that line as the meter has it and under it × 0.35)
 export const irlMeter = guarded(async () => {
   const F = family('irl-meter: what the CPU calls dark is put to the renderer\'s meter');
   const BRK = !!process.env.IRMETER_BREAK, D: number = NVM.NVG.blackAt, WAIT: number = ILM.IRL_METER.wait, SLOTS: number = ILM.IRL_METER.slots; const SNS: any = (await import(`${ROOT}/src/game/sense.ts`)).SENSE;
@@ -366,8 +366,9 @@ export const irlMeter = guarded(async () => {
         if (C.black && (C.first < 0 || C.first > 0.1 || Math.abs(C.k0 - 1) > 1e-6)) fails.push(`the renderer answers dark: ${C.first < 0 ? 'no light in a second' : 'first light ' + f2(C.first) + ' s after his goggles at ' + f2(C.k0) + ' of full'}`);
         // (d) the picture's bounce: an answer over the line as the meter has it, under it × the picture's scale, is dark — and is not with the scale at 1
         own = E_EDGE; plant = E_EDGE; const G1 = await fresh(dark, 40); g.engine.settings.indirectScale = 1; const G2 = await fresh(dark, 130); g.engine.settings.indirectScale = scale0;
-        const overAlone = NVM.tubeVis(g, E_EDGE) >= D, underScaled = NVM.tubeVis(g, E_EDGE * scale0) < D, tail = G2.burn;   // (G2 starts inside the hold of G1's light: only that it is OUT by the end is asked)
-        if (G1.black && G2.black && overAlone && underScaled && (!G1.burn || !!samLit())) fails.push(`an answer of ${E_EDGE} W/m² (tube ${f2(NVM.tubeVis(g, E_EDGE))} alone, ${f2(NVM.tubeVis(g, E_EDGE * scale0))} × the picture's bounce scale ${scale0}): ${G1.burn ? '' : 'no light at the picture\'s scale; '}${samLit() ? 'still burning with the scale at 1 (' + tail + ' frames)' : ''}`);
+        const overAlone = NVM.tubeSig(g, E_EDGE) >= IRLIGHT.show, underScaled = NVM.tubeSig(g, E_EDGE * scale0) < IRLIGHT.show, tail = G2.burn;   // (G2 starts inside the hold of G1's light: only that it is OUT by the end is asked)
+        if (!overAlone || !underScaled) fails.push(`${E_EDGE} W/m² is not on both sides of the line: ${f2(NVM.tubeSig(g, E_EDGE))} alone, ${f2(NVM.tubeSig(g, E_EDGE * scale0))} scaled, the line ${IRLIGHT.show}`);
+        if (G1.black && G2.black && overAlone && underScaled && (!G1.burn || !!samLit())) fails.push(`an answer of ${E_EDGE} W/m² (${f2(NVM.tubeSig(g, E_EDGE))} of the tube's range alone, ${f2(NVM.tubeSig(g, E_EDGE * scale0))} × the picture's bounce scale ${scale0}; the line ${IRLIGHT.show}): ${G1.burn ? '' : 'no light at the picture\'s scale; '}${samLit() ? 'still burning with the scale at 1 (' + tail + ' frames)' : ''}`);
         // (e) the renderer answers Sam's own meter 'lit' and none of the fan's points (starved): nothing until the wait is over, then the CPU's word
         meterOn(); own = E_LIT; plant = undefined; const N = await fresh(dark, 60);
         if (N.black && N.asks && (N.firstQ < WAIT - 0.02 || N.firstQ > WAIT + 0.1)) fails.push(`the fan's points never answered: first light ${N.firstQ < 0 ? 'never' : f2(N.firstQ) + ' s'} after his first question (the wait is ${WAIT} s, then the CPU's word)`);
