@@ -15,6 +15,7 @@ import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand } from './handwork';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
+import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
 import { rackDist, tally } from './mission';
 import { quietWords } from './quiet';   // (called inside buildInteractables only)
 import { chronicle, chronKey, chronDoor, chronThrown, chronGrab } from './chronicle';
@@ -373,6 +374,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (pl.sprinting && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); }
     let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : (pl.crouch ? T.playerCrouch : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
+    maxSpeed = samLoadPace(g, maxSpeed, pl.sprinting);   // (kitload.ts: what his card weighs — a light one's legs are quicker, a heavy one's slower, a sprint by part of it; as asked with its switch off or no card on him)
     if (pl.sprinting) maxSpeed *= sprintDoorPace(g, pl);   // (sprintdoor.ts: his hand is ripping a door round toward him — the run waits for it; 1 otherwise)
     pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
     if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
@@ -611,8 +613,8 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   // a body all tread here; the level is the gait's × the floor's (floor.ts tread: carpet 0.6, stone 1.1 … — one number for the mixer, the guards and the meter)
   const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase;
   if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5))) {   // either crossing of the half-cycle: the cycle runs backwards while backpedalling
-    const base = pl.sprinting ? 1 : pl.crouch ? 0.125 : speed > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
-    const loud = tread(g, c.pos, base, true);
+    const base = pl.sprinting ? 1 : pl.crouch ? 0.125 : loadGait(g, 'player', speed) > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
+    const loud = tread(g, c.pos, pl.sprinting ? base : base * loadHeard(g, 'player'), true);   // (kitload.ts: × what his card rattles and weighs; 1 with its switch off — and a flat-out sprint is boots on a floor whatever he carries)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
     wetFootfall(g, pl.stepPhase < 0.5);   // in from the rain: a wet print under the foot that landed, for his next few steps (wet.ts — a decal, seen by the player only; nothing without decals or a dry man)
   }
@@ -1319,7 +1321,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     }
     const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
     const f = c.forward(); const back = ml > 0 && mx * f[0] + mz * f[2] < -0.3;   // into the rear half: hauling him backwards
-    const maxSpeed = ml === 0 ? 0 : (back ? HOLD_PACE_BACK : HOLD_PACE) * pl.pace * (g.puppet?.walk ?? 1);
+    const maxSpeed = samLoadPace(g, ml === 0 ? 0 : (back ? HOLD_PACE_BACK : HOLD_PACE) * pl.pace * (g.puppet?.walk ?? 1));   // (kitload.ts: what his card weighs, as his walk)
     pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
     if (ml > 0) c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; else c.vel = v3.scale(c.vel, Math.exp(-14 * dt));
     const bx = c.pos[0], bz = c.pos[2];
@@ -1359,7 +1361,7 @@ function holdTail(g: Game, dt: number, speed: number) {
   poseGunLight(g);
   const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase;
   if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5))) {
-    const loud = tread(g, c.pos, 0.26, true);   // (the dragging shuffle: retimed like the walk, and on the floor it is on like every step)
+    const loud = tread(g, c.pos, 0.26 * loadHeard(g, 'player'), true);   // (the dragging shuffle: retimed like the walk, and on the floor it is on like every step)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
   }
 }

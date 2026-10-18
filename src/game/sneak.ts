@@ -57,6 +57,7 @@ import { lightEstimateAt, GUARD_EYE, eyeContact, escalationOf, KEEN, type Eye } 
 import { hostileTo } from './teams';
 import { dozeAsleep } from './doze';
 import { workComing } from './workthings';
+import { loadCross } from './kitload';   // (what the sneaking man's card makes of a crossing's price: his shape over his pace)
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
 export const SNEAK = {
@@ -497,7 +498,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
             const tooLong = len > K.crossM, waited = M.mode === 'wait' && M.waitT >= 0 ? g.time - M.waitT : 0;
             // looked at, but a step or two of dim light at range costs a watcher next to nothing: what the crossing would ADD to each looker's awareness, by
             // the eye's own arithmetic on the read of each step, with a margin — inside `budget` he goes (and a man Sam has just stirred has none to spare)
-            const cheap = end >= 0 && watched && !tooLong && crossCost(g, eyes, T, first, end) <= K.budget;
+            const cheap = end >= 0 && watched && !tooLong && crossCost(g, eyes, T, first, end) * loadCross(g, gd) <= K.budget;
             const walked = onWalk && ex(first, lowWalk).seen && (!by || coming.includes(by));
             if (end >= 0 && (walked || cheap || (!watched && (!tooLong || (K.patience > 0 && waited >= K.patience))))) { mode = 'cross'; from = first; to = end; }
             else if (!walked) { mode = 'wait'; why = watched ? (lit ? 'lit' : 'near') : !ex(first, lowWalk).seen ? 'door' : end < 0 ? 'open' : 'long'; }

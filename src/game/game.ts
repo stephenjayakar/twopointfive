@@ -183,6 +183,7 @@ import { GlassBreak, loadGlassBreak } from './glassbreak';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
+import type { KitWorn } from './kitload';
 import type { Wound } from './wounds';
 import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
 import { WORLD } from '../scene/world';
@@ -366,6 +367,8 @@ export class Player {
   wand = false; wanding: Wanding | null = null;
   /** the breaching shotgun or the hammer in his big slot (kit.ts BIGSLOT, his card's; bigkit.ts: a row of a door locked against him). 'none' as built. */
   bigKit: BigKit = 'none';
+  /** what his card weighs (kitload.ts: its mobility and concealment beside his reference's, written where his card goes on him — kit.ts kitPlayer; null: nothing weighed on him, nothing of his is touched) */
+  kitLoad: KitWorn | null = null;
   /** the sticky cameras he has sent, in flight and stuck (stickycam.ts; how many are left to send rides his rifle: Rifle.cams) */
   cams: StickyCam[] = [];
   /** the last id a camera of his was given (stickycam.ts fireCam: one up each, never reused in a run) */

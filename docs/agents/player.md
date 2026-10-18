@@ -504,3 +504,29 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   as Player (`defuse.ts restore`, `format.ts decode`); an old replay's LOG lines keep the old word. Checks that match the strings follow (`roomclear-ends`,
   `verdict-check`, `deathrecap-check`, `defuse-check`, `roomkeep-check`, `teams-player`, `verdict-look.cjs`; 12 panel-inventory rows reworded with `--reword`).
   Headless only, both stands; the title, the kit page and a room clear's down line read off the real page on the software adapter. Never seen on a GPU.
+- **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
+  door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
+  nothing on him: `gun` by class (long / shotgun / pistol), `small` by the card's field, `big` by what the big slot carries. The columns pull apart on purpose: a long gun
+  is shape (0.12 mobility, 0.42 concealment), a full pouch is weight (0.07‥0.10 mobility, 0.01‥0.02 concealment), a hammer 0.30 / 0.10. HIS REFERENCE IS HIS OWN CARD AS
+  ISSUED (`loadRef(i)` = `kitDefault(i)`): a card that scores what his issue scores is ×1 exactly, so an issued squad plays as it was tuned, by run digest. WHAT A SCORE
+  DOES: pace × (1 + Δmobility × `pace` 0.4) — yours (walk, crouch-walk, drag, hold; a sprint keeps `sprint` 0.5 of it) and a teammate's, ONCE a leg (`guards.ts teamLegs`:
+  followPath, stepAlongPath, a scripted man's strafe and settle; `teamPace` stays a cap that may be asked twice; never past `paceTop` 2.4 m/s), and a teammate's muzzle
+  and pick-up by the same factor (`teamTurn`, `teamLean`); the notice he builds in an eye × (1 − Δconcealment × `seen` 0.6) (`sightGain`, `sightGainOn`, the hold's
+  `pairSightRate`; the point-blank floor stands whole); a footfall × (1 − Δconcealment × `heard` 0.7) in the mixer, the step event and the room fight's defenders' ears
+  (`pressure.ts teamBoots`) — the walk-or-run level is read off the pace he was ASKED for (`loadGait`), and your flat-out sprint is not scaled. The search's reckoning of
+  how far you can have run (`floodFrom`) and the sneak's price of a crossing (`sneak.ts`, `loadCross`) read the same factors. WEIGHED ONCE, AT STAGING (`kit.ts kitPlayer`
+  → `Player.kitLoad`, in a checkpoint with its reference while the switch is on; `kitStage` → the `kitload.manLoad` side table): a rule flipped later, or a replay on
+  another stand, does not re-weigh a man. NOBODY IS WEIGHED with the pouches rule off (`?noslots`: free counts no table was cut for), on a lesson's page, on a mission that
+  issues its own kit, in a showcase, or who has no card (defenders, civilians). THE CARD (`ui/kitCard.ts`, beside the pouches): two bars, no number — grey to the notch
+  (his issue), green for what the card has gained on it, amber for what it has lost; the highlighted row outlined on the bar (what it takes), dashed on a row that carries
+  none (what one more would take). SWITCH `KITLOAD.on`: ON in the page (`?nokitload`; Tab ▸ 'Kit weight'), OFF in the module and on the frozen stand
+  (`'KITLOAD.on': 'TPS_KITLOAD=1'`), in the registry and `JOURNAL_KNOBS`. WHEN A RULE DEALS THE ISSUE ANOTHER WAY (the kit deal over four): `loadRef` must read the card
+  as dealt, or an issued squad stops being ×1. CHECK: `probes.ts kitload` (`tools/qa/kitload-check.ts`; `KITLOAD_BREAK=1` fails 8), both stands; the real page:
+  `tools/qa/kitload-page.cjs`; squads counted: `tools/qa/kitload-tally.ts`. MEASURED (headless, one seed): you with the pistol alone walk 1.82 m/s against 1.55 as issued
+  and 1.31 with four smoke and the hammer; sprint 5.11 / 4.70 / 4.34; a walking step 0.102 / 0.156 / 0.168; a guard at 6 m builds notice at 0.34 / 0.48 / 0.51 a second.
+  COUNTED (shipped stand, the scripted player, each squad with the rule on and held off): room-clear-four, 12 seeds — issued 12 taken, 39 of 48 men up, 54 s (on = off);
+  every pouch full + hammers 11 / 32 / 78 s on against 12 / 38 / 55 s off; rifles with empty pouches 9 / 29 / 55 s on against 11 / 32 / 50 s off; pistols only 11 / 30 /
+  65 s on against 9 / 32 / 64 s off. rescue-registry, 6 seeds — issued 6; heavy 5 on, 6 off; pistols 2 on, 0 off. A full load now costs tempo and men; going light does
+  not win a loud room (its reason is pace and notice, measured only as rates: no scripted quiet player). A handful of seeds says which way, not how much.
+  KNOWN SHAPES: two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody); a light player out-walks a silent squad's
+  cap; what is thrown or set never lightens a man; a suppressor, a light, goggles and a suit weigh nothing. Never seen on a GPU; nobody has played it.

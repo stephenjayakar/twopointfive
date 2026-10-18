@@ -75,7 +75,7 @@
 // does — in the FILE, never in the running game: saving is read-only).
 import { SideMap, rollbackVar, wallClock } from '../math/side';
 import { loadSandbox } from './sandbox';
-import { Vec3, v3, quat } from '../math/vec';
+import { Vec3, v3, quat, clamp } from '../math/vec';
 import { Game, Guard, Player, KIT_ORDER } from './game';
 import { WAND } from './wand';
 import { quietWand } from './quietfog';   // (called inside saveState / loadState only)
@@ -83,6 +83,7 @@ import { STICKY, stickyFlying, stickyLeft, stickySnapshot, stickyRestore, type S
 import { OWNCHARGE } from './owncharge';
 import { BIGSLOT } from './kit';
 import type { BigKit } from './kit';
+import { KITLOAD, type KitWorn } from './kitload';
 import type { QuietSnap } from './quiet';
 import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
@@ -155,6 +156,7 @@ export interface PlayerSnap {
   slot: SlotKind; throwKind: ThrowKind; canisters: number; flashbangs: number; /** frag grenades (absent in a file from before them: the issue stands) */ frags?: number;
   /** the optical wand is on him (wand.ts; written only while its switch is on — absent = the file does not say, and a load leaves what the staging put on him) */ wand?: boolean;
   /** the breaching shotgun or the hammer in his big slot (kit.ts BIGSLOT; written only while its switch is on — absent = the file does not say, as the wand's) */ bigKit?: BigKit;
+  /** what his card weighs (kitload.ts: its two scores and his reference's — written while its switch is on, null for a man with nothing weighed; absent = the file does not say) */ kitLoad?: KitWorn | null;
   /** HIS OWN CHARGES, a man alone (owncharge.ts; written only while its switch is on and nobody of his is on the floor — a checkpoint is refused with a unit up
    *  anyway): what the door tools' bag and the wall charge still hold for him, `doors` = the door charges that stand set ([door index, face]: put back on their
    *  doors by a load), `spent` = what his hands have taken from the bag this run. A WALL charge set and not blown is not saved, so it is back in the counts.
@@ -421,7 +423,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
   // ---- Sam
   const player: PlayerSnap = {
     pos: c3(pc.pos), bodyYaw: pc.bodyYaw, aimYaw: pc.aimYaw, aimPitch: pc.aimPitch, crouch: pl.crouch, holstered: pl.holstered,
-    slot: pl.slot, throwKind: pl.throwKind, canisters: pl.canisters + (pl.pendingThrow?.kind === 'smoke' ? 1 : 0), flashbangs: pl.flashbangs + (pl.pendingThrow?.kind === 'flash' ? 1 : 0), frags: pl.frags + (pl.pendingThrow?.kind === 'frag' ? 1 : 0), ...(WAND.on && !quietWand(g) ? { wand: pl.wand } : {}),   /* (quietfog.ts: a wand the MISSION lent is not the file's to say — a load leaves what the staging put on him) */ ...(BIGSLOT.on ? { bigKit: pl.bigKit } : {}), ...ownCharges(g),   // (a can not yet out of the hand goes back on the belt, as cancelActions has it)
+    slot: pl.slot, throwKind: pl.throwKind, canisters: pl.canisters + (pl.pendingThrow?.kind === 'smoke' ? 1 : 0), flashbangs: pl.flashbangs + (pl.pendingThrow?.kind === 'flash' ? 1 : 0), frags: pl.frags + (pl.pendingThrow?.kind === 'frag' ? 1 : 0), ...(WAND.on && !quietWand(g) ? { wand: pl.wand } : {}),   /* (quietfog.ts: a wand the MISSION lent is not the file's to say — a load leaves what the staging put on him) */ ...(BIGSLOT.on ? { bigKit: pl.bigKit } : {}), ...(KITLOAD.on ? { kitLoad: pl.kitLoad ? { ...pl.kitLoad } : null } : {}), ...ownCharges(g),   // (a can not yet out of the hand goes back on the belt, as cancelActions has it)
     pistol: { ...firearmSnap(pl.pistol), lightOn: pl.pistol.lightOn }, rifle: { ...firearmSnap(pl.rifle), lightOn: pl.rifle.lightOn, attIdx: pl.rifle.attIdx, rings: pl.rifle.rings, ringCd: pl.rifle.ringCd, shells: pl.rifle.shells, ...(STICKY.on ? { cams: pl.rifle.attachments.includes('cam') ? stickyLeft(pl) : -1 } : {}), ...(pl.rifle.def.id !== 'fn2000' ? { gun: pl.rifle.def.id } : {}) },
     ...(STICKY.on && pl.cams.some(c => !c.vel) ? { cams: stickySnapshot(pl) } : {}), ...(STICKY.on && pl.camSeq > 0 ? { camSeq: pl.camSeq } : {}),
     ocpCharge: pl.ocp.charge, hasRifle: pl.hasRifle, rifleGone: pl.rifleGone, ocpHinted: pl.ocpHinted, equipT: pl.equipT,
@@ -595,7 +597,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     pc.pos = c3(P.pos); pl.safe = [P.pos[0], 0, P.pos[2]]; pc.vel = [0, 0, 0]; pc.bodyYaw = fin(P.bodyYaw); pc.aimYaw = fin(P.aimYaw); pc.aimPitch = fin(P.aimPitch);
     pl.crouch = !!P.crouch; pc.anim.crouchTarget = pl.crouch ? 1 : 0; pc.anim.phase = fin(P.animPhase);
     pl.holstered = !!P.holstered; pl.slot = (KIT_ORDER as readonly string[]).includes(P.slot) ? P.slot : 'pistol'; if (pl.slot === 'rifle' && !pl.hasRifle) pl.slot = 'pistol';
-    pl.throwKind = P.throwKind === 'flash' ? 'flash' : 'smoke'; pl.canisters = Math.max(0, P.canisters | 0); pl.flashbangs = Math.max(0, P.flashbangs | 0); if (typeof P.frags === 'number') pl.frags = Math.max(0, P.frags | 0); if (typeof P.wand === 'boolean') pl.wand = WAND.on && (P.wand || quietWand(g));   /* (…and a file that says none never takes the mission's own off him) */ if (P.bigKit !== undefined) pl.bigKit = BIGSLOT.on && (P.bigKit === 'shotgun' || P.bigKit === 'hammer') ? P.bigKit : 'none'; ownChargesBack(g, P.own);   // (a file that says: his, while the switch stands; one from before the wand, or made with it off, says nothing and the card just staged stands)
+    pl.throwKind = P.throwKind === 'flash' ? 'flash' : 'smoke'; pl.canisters = Math.max(0, P.canisters | 0); pl.flashbangs = Math.max(0, P.flashbangs | 0); if (typeof P.frags === 'number') pl.frags = Math.max(0, P.frags | 0); if (typeof P.wand === 'boolean') pl.wand = WAND.on && (P.wand || quietWand(g));   /* (…and a file that says none never takes the mission's own off him) */ if (P.bigKit !== undefined) pl.bigKit = BIGSLOT.on && (P.bigKit === 'shotgun' || P.bigKit === 'hammer') ? P.bigKit : 'none'; if (P.kitLoad !== undefined) { const w = P.kitLoad, n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? clamp(x, 0, 1) : null), q = w ? [n(w.mob), n(w.con), n(w.refMob), n(w.refCon)] : []; pl.kitLoad = w && q.every(x => x !== null) ? { mob: q[0]!, con: q[1]!, refMob: q[2]!, refCon: q[3]! } : null; }   /* (kitload.ts: what his card weighed as the file has it, his reference with it — a file that says nothing leaves what the staging put on him) */ ownChargesBack(g, P.own);   // (a file that says: his, while the switch stands; one from before the wand, or made with it off, says nothing and the card just staged stands)
     firearmApply(pl.pistol, P.pistol); pl.pistol.lightOn = !!P.pistol.lightOn;
     { const id = P.rifle.gun && WEAPONS[P.rifle.gun] ? P.rifle.gun : 'fn2000'; if (pl.rifle.def.id !== id) pl.rifle = new Rifle(WEAPONS[id]); }   // (the long gun the file was saved with: its tube is not a magazine of thirty)
     if (typeof P.rifle.cams === 'number') stickyRestore(pl, P.cams, P.rifle.cams >= 0 ? P.rifle.cams : undefined, P.camSeq);   // (before the load's index is read: 'cam' is on the rifle's list only once issued)

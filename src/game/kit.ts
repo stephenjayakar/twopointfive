@@ -65,6 +65,7 @@ import { STICKY, stickyIssue, stickyVisit } from './stickycam';   // (read insid
 import { WAND } from './wand';   // (read inside a row's builder, a card's cost and kitPlayer only — never as this module loads)
 import { OWNCHARGE } from './owncharge';   // (your own door and wall charges: read inside a row's builder, the squad's count and a staging only — never as this module loads)
 import { SQUADSMOKE, squadSmokeStage } from './squadsmoke';   // (read inside a row's note / called inside kitStage only)
+import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitShow / kitStage only)
 import slotsData from './slots.json' with { type: 'json' };   // (plain data: no game module is behind it)
 
 export type KitWeapon = 'rifle' | 'pistol' | 'shotgun';
@@ -892,6 +893,7 @@ export function kitPlayer(g: Game) {
   pl.wand = (m.wand && wandRow()) || (WAND.on && quietWand(g));   // (the optical wand in a pouch: wand.ts — a card as issued carries none, so nothing changes on him; quietfog.ts: a quiet mission under the fog that hands out cameras hands him one too — even on a card whose gun has no launcher for them)
   if (m.suit !== 'issued') pl.char.tint = [...SUITS[m.suit].tint] as Vec3;
   if (m.trim !== 'issued') pl.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
+  loadWear(g, issuing ? null : m);   // (kitload.ts: what this card weighs — not where the staging chose his kit itself: a lesson's page, a mission's own issue)
   kitAlone(g);
 }
 /** NOBODY CAME WITH YOU (the plain night, a quiet mission alone, a squad's mission at team size none) and your own charges are switched on (owncharge.ts): the
@@ -927,7 +929,7 @@ export function kitFresh(g: Game) { if (KIT_SOLO.on && !g.touring && !g.director
 /** a showcase is about to start on this Player (main.ts): his card comes off — what he carried before it is his again */
 export function kitShow(g: Game) {
   const pl = g.player, was = issuedPlayer.get(pl); if (!was) return;
-  pl.hasRifle = was.rifle; pl.rifle = was.gun; pl.slot = was.slot; pl.canisters = was.smoke; pl.flashbangs = was.stun; pl.frags = was.frags; pl.rifle.shells = was.shells; stickyIssue(pl, Math.max(0, was.cams), was.cams >= 0); pl.wand = was.wand; pl.bigKit = was.big; pl.char.tint = [...was.tint] as Vec3; pl.char.tint2 = [...was.tint2] as Vec3; issuedPlayer.delete(pl);
+  pl.hasRifle = was.rifle; pl.rifle = was.gun; pl.slot = was.slot; pl.canisters = was.smoke; pl.flashbangs = was.stun; pl.frags = was.frags; pl.rifle.shells = was.shells; stickyIssue(pl, Math.max(0, was.cams), was.cams >= 0); pl.wand = was.wand; pl.bigKit = was.big; pl.char.tint = [...was.tint] as Vec3; pl.char.tint2 = [...was.tint2] as Vec3; issuedPlayer.delete(pl); loadWear(g, null);
 }
 /** A SCENARIO HAS JUST STAGED ITS TEAM (`ops` in staging order: member 1 first): each man's card onto him, yours onto you, and the squad's counted stun
  *  canisters and charges moved by what the cards changed. Called once per staging, after the cast stands and Sam is on his mark; every restart stages again
@@ -942,7 +944,7 @@ export function kitStage(g: Game, ops: Guard[]) {
   squadSmokeStage(g, kitSmokes(ops.length));   // (squadsmoke.ts: what the men who came carry, after the pouches rule has had its say, is the squad's smoke for this run)
   kitPlayer(g);
   ops.slice(0, KIT_MEMBERS - 1).forEach((gd, k) => {
-    const i = k + 1, m = bigOn ? bigHome(KIT.members[i], i) : KIT.members[i], d = ISSUED[i]; manOf.set(gd, { i, kit: { ...m } });   // (BIGSLOT: the shotgun is never his gun — a card set by hand with the pouches rule off, a mission's issue)
+    const i = k + 1, m = bigOn ? bigHome(KIT.members[i], i) : KIT.members[i], d = ISSUED[i]; manOf.set(gd, { i, kit: { ...m } }); loadMan(gd, i, issuing ? null : m);   // (kitload.ts: what his card weighs, as yours in kitPlayer)   // (BIGSLOT: the shotgun is never his gun — a card set by hand with the pouches rule off, a mission's issue)
     const gun = kitGun(m);
     // (only a card that CHANGED his gun writes one: as issued, the row the scenario handed him is his, whatever it is. The row is dealt off his route every
     // frame — game.ts — so the route is where it is written)

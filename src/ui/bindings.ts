@@ -117,6 +117,7 @@ import { STEALTHPOSE } from '../game/stealthpose';
 import { WAND, wandSummary } from '../game/wand';
 import { PEEKSIGHT } from '../game/peeksight';
 import { BIGSLOT } from '../game/kit';
+import { KITLOAD, loadPaceK, loadSeenK, loadHeardK } from '../game/kitload';
 import { SHIELD } from '../game/shield';
 import { BIG_STATS } from '../game/bigkit';
 import { SQUADTHROW } from '../game/squadthrow';
@@ -1843,6 +1844,11 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(sp, 'wand: squat at the door', () => STEALTHPOSE.cable, v => { STEALTHPOSE.cable = v; }, 'looking under a door he is drawn squatting, head bowed to the gap, one arm low at it (his head really is that much lower while he looks); off = the lock work\'s kneel', true);
     panel.slider(sp, 'sway ▸ cycle (s)', 1.2, 4, 0.1, () => STEALTHPOSE.swaySecs, v => { STEALTHPOSE.swaySecs = v; }, 'seconds for the crouch idle\'s weight to go to one foot and back');
     panel.slider(sp, 'rise ▸ arms (s)', 0.3, 1.5, 0.05, () => STEALTHPOSE.riseSecs, v => { STEALTHPOSE.riseSecs = v; }, 'how long the arms take to come up after the hips');
+  }
+  // (game/kitload.ts: what a man carries is his pace, the notice he builds and his footfall; on in the page, ?nokitload)
+  { const pct = (k: number) => `${k >= 1 ? '+' : '−'}${Math.round(Math.abs(k - 1) * 100)}%`;
+    const kl = panel.section('Kit weight (mobility, concealment)', { open: false, summary: () => { const L = game.player.kitLoad; return `${KITLOAD.on ? 'on' : 'off'} · ${L ? `your card: pace ${pct(loadPaceK(L))}, seen ${pct(loadSeenK(L))}, heard ${pct(loadHeardK(L))} against the issued card` : 'nothing weighed on you: nothing of yours is touched'}`; } });
+    panel.toggleBox(kl, 'lighter kit moves faster and hides better', () => KITLOAD.on, v => { KITLOAD.on = v; }, 'THE switch (also ?nokitload on the address). On: the gun, every full pouch and the big slot each take a little off a man\'s mobility and concealment; a card lighter than the man\'s own issue walks and runs quicker, is noticed more slowly and treads more quietly, a heavier one the other way — you and every teammate (a teammate still never sprints). Off: nobody\'s card is read, as before');
   }
   // (game/kit.ts BIGSLOT + game/bigkit.ts: one big slot a man — the breaching shotgun as kit, the dynamic hammer; on in the page, ?nobigslot)
   { const bs = panel.section('Big slot (breaching shotgun, hammer)', { open: false, summary: () => `${BIGSLOT.on ? 'on' : 'off'} · you carry ${game.player.bigKit === 'none' ? 'nothing big' : game.player.bigKit === 'shotgun' ? 'the breaching shotgun' : 'the hammer'} · locks: ${BIG_STATS.samShot} shot, ${BIG_STATS.samHammered} hammered by you; ${BIG_STATS.drawn} teammate draws, ${BIG_STATS.mateHammered} hammered by a teammate` });
