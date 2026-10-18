@@ -352,6 +352,8 @@ export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[]
  *  they come to read as a named kit's (Blue One's last canister given up on purpose is not the Quiet kit to share out again). Kept with the store; dropped when
  *  a squad kit is put on by name, the cards are reset, or they settle back into a kit (dealSettle). */
 let dealOwn = false;
+/** … read, or put back as a recording had it (runtape.ts: who wears what moves a run once a card weighs — kitload.ts) */
+export function kitOwn(v?: boolean): boolean { if (v !== undefined) dealOwn = v; return dealOwn; }
 /** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
 export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
 export function kitIssuedShown(i: number, n = team): MemberKit { return i > 0 && dealing() && n >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, n)[i] : issuedCard(i); }   // (`n`: the men who come — a staging's own count, kitload.ts)

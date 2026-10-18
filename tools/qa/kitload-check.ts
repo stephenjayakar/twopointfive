@@ -136,6 +136,8 @@ export async function kitloadYou(): Promise<boolean> {
       `a walking step's level — light ${f3(a.first)} · issued ${f3(b.first)} · heavy ${f3(c.first)} · light with the switch off ${f3(off.first)}`);
     // the notice a guard's eye builds of him: one game, the card changed on him and put on again
     const R = await night(3, YOU.issued, true), g = R.g, gd = g.guards.find((x: any) => x.state !== 'dead'); g.aiEnabled = false; R.step(10);
+    { const was = KITLOAD.on; KITLOAD.on = true; const at = [1.2, 2.0000005, 2.2, 3.1].map(v => L.loadGait(g, 'player', v)); KITLOAD.on = was;
+      F.verdict(!!g.player.kitLoad && at.join() === [1.2, 2.0000005, 2.2, 3.1].join(), 'your issue on you: the walk-or-run question reads your speed itself (×1 is the build as it was, to the last bit)', `asked at 1.2, 2.0000005, 2.2, 3.1 → ${at.join(', ')}`); }
     const gain = (you: Record<string, unknown>, d: number) => { K.KIT.members[0] = card(0, you); K.kitPlayer(g); g.player.visibility = 0.6; gd.smokeTrans = 1; return Gd.sightGain(g, gd, d) as number; };
     const far = [gain(YOU.light, 6), gain(YOU.issued, 6), gain(YOU.heavy, 6)], near = [gain(YOU.light, 1), gain(YOU.issued, 1), gain(YOU.heavy, 1)];
     F.verdict(far[0] < far[1] * 0.97 && far[2] > far[1] * 1.03, 'a guard\'s eye at 6 m, the same light on you: its notice builds more slowly on a light card and faster on a heavy one', `awareness a second — light ${f3(far[0])} · issued ${f3(far[1])} · heavy ${f3(far[2])}`);
@@ -225,6 +227,8 @@ export async function kitloadCard(): Promise<boolean> {
       // a row stepped: the bars move with it (the guns row to the pistol alone)
       K.kitSet(0, 'weapon', 'pistol'); c.refresh(); const P = bars(host), now = L.loadOf(0, K.KIT.members[0]);
       F.verdict(P[0].fill === pct(R.mob) && P[1].fill === pct(R.con) && P[0].gain === pct(now.mob - R.mob) && P[1].gain === pct(now.con - R.con) && P.every(b => !b.loss) && now.mob > want.mob && now.con > want.con && P[0].ref === pct(R.mob), 'the guns row stepped to the pistol alone: both bars gain past the notch (green), which stays', P.map(b => `${b.k} grey ${b.fill} + gained ${b.gain}, notch ${b.ref}`).join(' · '));
+      if (gunField === 'primary') { c.go(gun); const Q = bars(host);   // (two gun rows: the Primary row now carries none — its `one more` is the long gun, written through the row's own setter)
+        F.verdict(Q[0].more && Q[1].more && Q[0].part === pct(KITLOAD.gun.long[0]) && Q[1].part === pct(KITLOAD.gun.long[1]), 'the highlight on a Primary row that carries none: dashed, what the long gun would take', Q.map(b => `${b.k} one more ${b.part}${b.more ? ' dashed' : ''}`).join(' · ')); }
       K.KIT.members[0] = card(0, YOU.heavy); c.refresh(); { const Hv = bars(host), hv = L.loadOf(0, K.KIT.members[0]);
         F.verdict(Hv[0].loss && Hv[0].fill === pct(hv.mob) && Hv[0].gain === pct(R.mob - hv.mob), 'four smoke and the hammer: mobility falls under the notch, and what is lost is amber', Hv.map(b => `${b.k} grey ${b.fill} ${b.loss ? 'lost' : 'gained'} ${b.gain}`).join(' · ')); }
       KITLOAD.on = false; c.refresh();

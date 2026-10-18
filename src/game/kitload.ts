@@ -144,8 +144,9 @@ export function loadPace(g: Game, gd: Guard, speed: number): number {
   return Math.min(speed * loadPaceK(w), Math.max(speed, KITLOAD.paceTop));
 }
 /** the speed he would be doing with his issue on him, for the question "is this step a walk's or a run's" (asked of the pace he was ASKED for, not of
- *  what his card made of it; a hair under, so that the walk's most times his factor does not read as a run; his speed itself for a man with nothing weighed) */
-export function loadGait(g: Game, who: Guard | 'player', speed: number): number { const w = loadOn(g, who); return w ? speed / loadPaceK(w) - 1e-6 : speed; }
+ *  what his card made of it; a hair under, so that the walk's most times his factor does not read as a run; his speed itself for a man with nothing weighed.
+ *  Asked wherever a rule reads a teammate's speed against a pace: a footfall's level, the leaf he shoulders at a run — game.ts) */
+export function loadGait(g: Game, who: Guard | 'player', speed: number): number { const w = loadOn(g, who), k = w ? loadPaceK(w) : 1; return k === 1 ? speed : speed / k - 1e-6; }   // (×1 — his issue on him — is his speed itself: the build as it was)
 /** × the notice this man builds in an eye that has him (`'player'` or a guard: 1 for a man with nothing weighed on him) */
 export function loadSeen(g: Game, who: Guard | 'player'): number { const w = loadOn(g, who); return w ? loadSeenK(w) : 1; }
 /** × a footfall's level, his */

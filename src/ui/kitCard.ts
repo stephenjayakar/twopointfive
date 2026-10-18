@@ -290,7 +290,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       load.classList.toggle('off', !KITLOAD.on);
       if (KITLOAD.on) { const L = loadOf(i, m), R = loadRef(i), row = cur < rows.length ? rows[cur] : null, S: KitLoad | null = row ? loadShare(i, m, row.field) : null, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
         // (a row that carries none: what ONE MORE would take — the step the right arrow would make, weighed on a copy of the card; nothing where that step has no room)
-        let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const up = loadOf(i, { ...m, [row.field]: p.value } as MemberKit); if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
+        let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const c = { ...m } as MemberKit; if (row.set) row.set(c, p.value); else (c as unknown as Record<string, unknown>)[row.field] = p.value; const up = loadOf(i, c);   /* (a row with a setter of its own writes other fields: the Primary row's long gun is `weapon`) */ if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
         for (const b of bars) { const v = L[b.k], r = R[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
           b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
           b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';

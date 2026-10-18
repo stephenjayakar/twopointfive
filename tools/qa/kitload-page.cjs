@@ -5,12 +5,14 @@
 //           no digit; your issued card's two fills end on their notch
 //   step    your long gun's row stepped to the pistol alone: both fills grow past the notch
 //   off     the same screen under ?nokitload: no bar is shown
+//   walk    a room clear staged in the page with the pistol alone: your card is weighed and your walk is quicker than the same card's under ?nokitload
 // exit 0 = all of it, with no page error · 1 = otherwise. Stills (the whole page) are written to outDir when one is given. Software adapter: not a GPU's picture.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', MISSION = process.env.MISSION || 'room-clear-four';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const KIT = JSON.stringify({ v: 2, members: [{ weapon: 'rifle', smoke: 1, bangs: 1, frags: 1, shells: 1, wand: false, cams: 0 }] });
+let KIT_NOW = KIT;   // (the card planted in the store before a page opens)
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
@@ -19,7 +21,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-    await page.addInitScript((k) => { try { if (!sessionStorage.getItem('kitload.planted')) { localStorage.setItem('twopointsix.kit', k); sessionStorage.setItem('kitload.planted', '1'); } } catch { } }, KIT);
+    await page.addInitScript((k) => { try { if (!sessionStorage.getItem('kitload.planted')) { localStorage.setItem('twopointsix.kit', k); sessionStorage.setItem('kitload.planted', '1'); } } catch { } }, KIT_NOW);
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&${q}`);
     const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; });
     if (fatal) errors.push('fatal: ' + fatal);
@@ -54,6 +56,18 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     const c = await cards(page);
     line(c.length >= 1 && c.every(x => x.bars.length === 0), 'UNDER ?nokitload the same screen shows no bar', say(c));
     line(errors.length === 0, 'no page error under ?nokitload', errors.join(' | ') || 'none'); await page.close(); }
+
+  // ── walk: the card on the floor of a staged room clear — the same light card with the rule on and under ?nokitload
+  { const walk = async (q) => { const { page, errors } = await open(q);
+      const r = await page.evaluate(async () => { const g = window.__game, p = g.player, c = p.char; let best = 0;
+        for (const key of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) for (let f = 0; f < 24; f++) { const x = c.pos[0], z = c.pos[2]; await window.__runFrames(1, 1 / 60, [key], false); best = Math.max(best, Math.hypot(c.pos[0] - x, c.pos[2] - z) * 60); }
+        return { best, load: p.kitLoad || null, team: g.guards.filter(m => m.team === 'operative' && m.state !== 'dead').length, long: !!p.hasRifle }; });
+      await page.close(); return { ...r, errors }; };
+    const LIGHT = JSON.stringify({ v: 2, members: [{ weapon: 'pistol', smoke: 0, bangs: 0, frags: 0, shells: 0, wand: false, cams: 0 }] });
+    const plant = KIT_NOW; KIT_NOW = LIGHT; const on = await walk('roomclear&squad4'), off = await walk('roomclear&squad4&nokitload'); KIT_NOW = plant;
+    const say = (r) => `${r.best.toFixed(2)} m/s at best · ${r.load ? `mobility ${r.load.mob.toFixed(2)} against his issue's ${r.load.refMob.toFixed(2)}` : 'nothing weighed on him'} · ${r.team} teammates · ${r.long ? 'a long gun' : 'no long gun'}`;
+    line(!!on.load && on.load.mob > on.load.refMob + 0.1 && !on.long && on.team === 4 && off.best > 0.5 && on.best > off.best * 1.08 && on.best < off.best * 1.4, 'A ROOM CLEAR STAGED IN THE PAGE with the pistol alone and empty pouches: your card is weighed, lighter than your issue, and your walk is quicker than the same card\'s under ?nokitload', `on: ${say(on)} · ?nokitload: ${say(off)}`);
+    line(on.errors.length === 0 && off.errors.length === 0, 'no page error on either run', [...on.errors, ...off.errors].join(' | ') || 'none'); }
 
   await Promise.race([browser.close(), new Promise(r => setTimeout(r, 15000))]);   // (the software adapter's browser can hang on its way out: the verdict does not wait for it)
   console.log(failed ? '=== kitload-page: FAILURES above ===' : '=== kitload-page: ALL PASS ==='); process.exit(failed ? 1 : 0);

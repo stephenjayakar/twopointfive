@@ -575,14 +575,17 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   and pick-up by the same factor (`teamTurn`, `teamLean`); the notice he builds in an eye × (1 − Δconcealment × `seen` 0.6) (`sightGain`, `sightGainOn`, the hold's
   `pairSightRate`; the point-blank floor stands whole); a footfall × (1 − Δconcealment × `heard` 0.7) in the mixer, the step event and the room fight's defenders' ears
   (`pressure.ts teamBoots`) — the walk-or-run level is read off the pace he was ASKED for (`loadGait`), and your flat-out sprint is not scaled. The search's reckoning of
-  how far you can have run (`floodFrom`) and the sneak's price of a crossing (`sneak.ts`, `loadCross`) read the same factors. WEIGHED ONCE, AT STAGING (`kit.ts kitPlayer`
+  how far you can have run (`floodFrom`), the sneak's price of a crossing and of a stalk (`sneak.ts`, `loadCross`: × what the walk ADDS to an eye, never what the eye
+  already holds), the spot a man is dealt to run from a grenade (`frag.ts fragTick`, `squadthrow.ts fragClears`: planned on the legs his card leaves him) and a
+  camera's lens (`devices.ts lensGain`) read the same factors; a teammate shoulders a leaf at a run by the pace he was ASKED for (`game.ts`, `loadGait`), so a light
+  man at 2.3 m/s opens doors as he did. A RUN TAPE says whose layout the cards are (`runtape.ts kitNow` `own`, `kit.ts kitOwn`): who wears what moves a run now. WEIGHED ONCE, AT STAGING (`kit.ts kitPlayer`
   → `Player.kitLoad`, in a checkpoint with its reference while the switch is on; `kitStage` → the `kitload.manLoad` side table): a rule flipped later, or a replay on
   another stand, does not re-weigh a man. NOBODY IS WEIGHED with the pouches rule off (`?noslots`: free counts no table was cut for), on a lesson's page, on a mission that
   issues its own kit, in a showcase, or who has no card (defenders, civilians). THE CARD (`ui/kitCard.ts`, beside the pouches): two bars, no number — grey to the notch
   (his issue), green for what the card has gained on it, amber for what it has lost; the highlighted row outlined on the bar (what it takes), dashed on a row that carries
   none (what one more would take). SWITCH `KITLOAD.on`: ON in the page (`?nokitload`; Tab ▸ 'Kit weight'), OFF in the module and on the frozen stand
   (`'KITLOAD.on': 'TPS_KITLOAD=1'`), in the registry and `JOURNAL_KNOBS`. A harness that writes a teammate's card into `KIT.members` by hand on a team of three or four leaves the OTHER men in the
-  table's layout against a reference that is the dealt issue (the page changes a counted thing on the cards as worn, so there the others stay ×1). CHECK: `probes.ts kitload` (`tools/qa/kitload-check.ts`; `KITLOAD_BREAK=1` fails 9), both stands; the real page:
+  table's layout against a reference that is the dealt issue (the page changes a counted thing on the cards as worn, so there the others stay ×1). CHECK: `probes.ts kitload` (`tools/qa/kitload-check.ts`; `KITLOAD_BREAK=1` fails 8), both stands; the real page:
   `tools/qa/kitload-page.cjs`; squads counted: `tools/qa/kitload-tally.ts`. MEASURED (headless, one seed): you with the pistol alone walk 1.82 m/s against 1.55 as issued
   and 1.31 with four smoke and the hammer; sprint 5.11 / 4.70 / 4.34; a walking step 0.102 / 0.156 / 0.168; a guard at 6 m builds notice at 0.34 / 0.48 / 0.51 a second.
   COUNTED ON THE BASE BEFORE THE TWO GUN ROWS AND THE KIT DEAL JOINED (shipped stand, the scripted player, each squad with the rule on and held off): room-clear-four, 12 seeds — issued 12 taken, 39 of 48 men up, 54 s (on = off);
