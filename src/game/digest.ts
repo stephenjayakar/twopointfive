@@ -81,28 +81,39 @@ export { mulberry32 } from '../math/dice';
 const RB_F64 = new Float64Array(1), RB_U32 = new Uint32Array(RB_F64.buffer);
 export const RAW_BITS_SEED = 0x811c9dc5;
 type RawMan = { pos: number[]; vel?: number[]; bodyYaw: number; aimYaw: number; aimPitch?: number };
-export function rawBits(g: Game, from: number = RAW_BITS_SEED): number {
+export function rawBits(g: Game, from: number = RAW_BITS_SEED): number { return rawWalk(g, from, null); }
+/** the same walk taken apart: one word per kind of thing (each from the seed, not chained) — two games whose bits part are asked WHICH part */
+export function rawBitsParts(g: Game): Record<string, number> { const P: Record<string, number> = {}; rawWalk(g, RAW_BITS_SEED, P); return P; }
+function rawWalk(g: Game, from: number, parts: Record<string, number> | null): number {
   let h = from >>> 0;
   const num = (x: number) => { RB_F64[0] = x; h = Math.imul(h ^ RB_U32[0], 0x01000193) >>> 0; h = Math.imul(h ^ RB_U32[1], 0x01000193) >>> 0; };
   const str = (s: string) => { for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 0x01000193) >>> 0; };
   const man = (c: RawMan) => { for (let k = 0; k < 3; k++) { num(c.pos[k]); num(c.vel?.[k] ?? 0); } num(c.bodyYaw); num(c.aimYaw); num(c.aimPitch ?? 0); };
+  const cut = (name: string) => { if (parts) { parts[name] = h; h = RAW_BITS_SEED; } };
   const G = g as unknown as { time: number; player: { char: RawMan; visibility?: number; noise?: number }; guards: { char: RawMan; awareness?: number; state: unknown; wait?: number }[];
     civilians?: { char: RawMan; state: unknown }[]; doors: { list: { angle: number }[] }; props: { props: { x: number; z: number; yaw: number }[] }; items: { items: { pos: number[] }[] };
     destr?: { debris?: { chunks?: { box: { c: number[] } }[] } }; events: unknown[]; eventSeq?: number };
-  num(G.time); man(G.player.char); num(G.player.visibility ?? 0); num(G.player.noise ?? 0);
-  for (const gd of G.guards) { man(gd.char); num(gd.awareness ?? 0); str(String(gd.state)); num(gd.wait ?? 0); }
-  for (const cv of G.civilians ?? []) { man(cv.char); str(String(cv.state)); }
-  for (const d of G.doors.list) num(d.angle);
-  for (const p of G.props.props) { num(p.x); num(p.z); num(p.yaw); }
-  for (const it of G.items.items) for (let k = 0; k < 3; k++) num(it.pos[k]);
-  for (const c of G.destr?.debris?.chunks ?? []) for (let k = 0; k < 3; k++) num(c.box.c[k]);
-  num(G.events.length); num(G.eventSeq ?? 0);
+  num(G.time); cut('clock'); man(G.player.char); cut('sam'); num(G.player.visibility ?? 0); num(G.player.noise ?? 0); cut('samSeenHeard');
+  for (const gd of G.guards) { man(gd.char); num(gd.awareness ?? 0); str(String(gd.state)); num(gd.wait ?? 0); } cut('men');
+  for (const cv of G.civilians ?? []) { man(cv.char); str(String(cv.state)); } cut('civilians');
+  for (const d of G.doors.list) num(d.angle); cut('doors');
+  for (const p of G.props.props) { num(p.x); num(p.z); num(p.yaw); } cut('props');
+  for (const it of G.items.items) for (let k = 0; k < 3; k++) num(it.pos[k]); cut('items');
+  for (const c of G.destr?.debris?.chunks ?? []) for (let k = 0; k < 3; k++) num(c.box.c[k]); cut('debris');
+  num(G.events.length); num(G.eventSeq ?? 0); cut('events');
   return h;
 }
-/** fold the raw bits after every step of `g` from now on (its `update` is wrapped on the instance): `words` gets the chained word every `every` steps */
-export function chainBits(g: Game, every = 30): { words: string[]; steps: number; word: number; stop(): void } {
+/** Sam's own numbers after a step, by name (SAM_ROW) — what a tool prints of the step two runs first part on */
+export const SAM_ROW = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'bodyYaw', 'aimYaw', 'aimPitch', 'visibility', 'noise', 'aimX', 'aimY', 'aimZ'] as const;
+export function samRow(g: Game): number[] {
+  const c = g.player.char as unknown as { pos: number[]; vel?: number[]; bodyYaw: number; aimYaw: number; aimPitch?: number }, pl = g.player as unknown as { visibility?: number; noise?: number }, v = c.vel ?? [0, 0, 0], a = g.aimPoint ?? [0, 0, 0];
+  return [c.pos[0], c.pos[1], c.pos[2], v[0], v[1], v[2], c.bodyYaw, c.aimYaw, c.aimPitch ?? 0, pl.visibility ?? 0, pl.noise ?? 0, a[0], a[1], a[2]];
+}
+/** fold the raw bits after every step of `g` from now on (its `update` is wrapped on the instance): `words` gets the chained word every `every` steps, and
+ *  `parts` the walk taken apart (rawBitsParts) and `sam` his own numbers (samRow) for each of the first `detail` steps */
+export function chainBits(g: Game, every = 30, detail = 0): { words: string[]; steps: number; word: number; parts: Record<string, number>[]; sam: number[][]; stop(): void } {
   const own = Object.prototype.hasOwnProperty.call(g, 'update'), was = g.update;
-  const C = { words: [] as string[], steps: 0, word: RAW_BITS_SEED, stop() { if (own) g.update = was; else delete (g as { update?: unknown }).update; } };
-  g.update = function (this: Game, ...a: Parameters<Game['update']>) { const r = was.apply(this, a); C.word = rawBits(this, C.word); if (++C.steps % every === 0) C.words.push(C.word.toString(36)); return r; } as Game['update'];
+  const C = { words: [] as string[], steps: 0, word: RAW_BITS_SEED, parts: [] as Record<string, number>[], sam: [] as number[][], stop() { if (own) g.update = was; else delete (g as { update?: unknown }).update; } };
+  g.update = function (this: Game, ...a: Parameters<Game['update']>) { const r = was.apply(this, a); C.word = rawBits(this, C.word); if (C.steps < detail) { C.parts.push(rawBitsParts(this)); C.sam.push(samRow(this)); } if (++C.steps % every === 0) C.words.push(C.word.toString(36)); return r; } as Game['update'];
   return C;
 }
