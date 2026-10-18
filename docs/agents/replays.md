@@ -75,19 +75,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   not a scripted `__runFrames` frame — a script's dt is still exactly what it names) the frame's time goes through `planTicks` (an accumulator; `snapDt` takes a frame time within
   0.4 ms of 1‥3 refreshes of a common display as exactly that, so 60 Hz is one tick a frame; the time the snap puts aside is kept in `drift`, leaking 1 % a frame, and handed back
   half a tick at a time — a display the list does not know keeps the wall's clock within half a percent; main.ts plans from the rAF timestamps, `LoopCtx.vsyncDt`) and the game runs WHOLE ticks of exactly 1/hz: per tick demo.update → attract.update →
-  game.update → lights.update (the men read ttl lights), `betweenTicks` (main.ts: the HUD's `hudExpireBubbles`, as a replay makes it after every update, then
+  game.update → lights.update (the men read ttl lights) → THE CAMERA'S STEP (below), `betweenTicks` (main.ts: the HUD's `hudExpireBubbles`, as a replay makes it after every update, then
   `engine.world.upload(true)` — `between`: the motion-identity map stays the last DRAWN frame's) between two ticks of one frame. The cap of `maxTicks` a frame is against a stall: a clock
   run faster than the wall's (`__timeScale` 2, `LoopCtx.timeScale`) may run that many more. One-frame input edges go to exactly one
-  tick (`Input.endTick`; a tickless frame owes them to the next frame's first tick, after the hotkeys). Per drawn frame on the display's dt still: camera, mixer, smoke solver,
-  render — and what a frame between two ticks DRAWS is the next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
+  tick (`Input.endTick`; a tickless frame owes them to the next frame's first tick, after the hotkeys). THE CAMERA STEPS ONCE A TICK on the tick's dt, after the tick's update
+  (`loop.ts camStep`: the spectate yaw, the pitch ease, `FollowCamera.step`; `FollowCamera.update` = `frame()` + `step()`, and a fixed frame calls `frame()` alone): the next
+  tick's `PlayerCmd` takes its view from it (the walk keys' basis, the aim ray, the menu's picks), so the same hands give the same records at 50, 60, 120 and 144 Hz and under
+  `W.step(1/60)` (tween-check 'same hands', a FREE camera turned and zoomed by hand: 480 records equal on each). A hand's TURN of the camera (Ctrl + drag, `Input.orbitDX`) is given in the frame's first tick and owed
+  to the next frame's by a frame that runs none (`ctx.fixed.orbit`: a yaw written on a tickless frame reached the next record through the frame's own rebuild); Ctrl + wheel only
+  moves `desiredDistance`, which the step alone reads. The engine's `viewFocus` (what the wind is gathered round, read in the tick) is set after every tick where the host has
+  one, not once a render. `FollowCamera.frame()` runs before the frame's ticks ('previous' = the matrix the last frame was DRAWN with: TAAU-off reprojection). Per drawn frame on the display's dt still: mixer, smoke solver, render, a blast's kick — and what a frame between two ticks DRAWS is the
+  next bullet's. `bun run tools/qa/fixedstep-check.ts` (plan / ticks / edges / same game at 60, 120, 144, 50 Hz ≡ W.step(1/60) with the camera pinned / off;
   `FIXEDSTEP_BREAK=1` must fail). A page tool that runs the live loop and counts on one update a frame of the frame's own dt opens the page with `?fixedstep=0`.
+  `?kitview`'s picture never takes the fixed step (`main.ts` `fixedStep`): `host/kitView.ts` stands its men round every update from the loop's two once-a-frame hooks, so it keeps one
+  update a drawn frame under its own pacer (`tools/qa/kitview-page.cjs` failed its door-tool rows with ticks unattended: a man 0.8 m past the door's line).
 - **Drawing between ticks** (`src/host/tween.ts TWEEN {on, snap 1.5 m, flashes, ease}`, class `Tween`, `LoopCtx.tween`; the module's default is off = the fixed step draws the
   last tick, as it did; **ON IN THE PAGE** (`?tween=0` / `?tween=off` = off; frozen stand off, `FROZEN_HOLDS` row `TWEEN.on`, `TPS_TWEEN=1`; `VISIT_OWN`, in no recording);
   Tab ▸ Frame ▸ 'draw between ticks'; acts only under the fixed step, on live frames): a frame that falls between two ticks draws what MOVES at the blend of the tick before
   the last and the last — keyed boxes (`Box.mkey`: door leaves, props, items, debris, what a man carries, devices: centre, yaw, quaternion, `dc`), the men (every joint
   matrix of the palette, by the man's id, into an array of tween.ts's own that only the GPU is handed: `CharacterRenderer.staged / ownerOf / drawJoints`) and the ends of
-  their shadow proxies, every light that stood in both ticks (position, direction, by the object), where the follow camera looks and its aim lead (`Tween.at`), and a
-  framing a level script pins tick by tick (`Tween.pinAt`: the Director's tracking / swinging shots). `capture()` at the end of every tick copies what stands;
+  their shadow proxies, every light that stood in both ticks (position, direction, by the object), and THE CAMERA: look-at, yaw (the short way), pitch and distance between
+  where its last two ticks' steps left it (`Tween.camAt` → `FollowCamera.drawIn` before the kick, `drawOut` after the render: the tick's own pose back to the bit, and
+  `prevViewProj` the matrix the frame was drawn with) — the follow camera and a framing a level script pins tick by tick alike; a look-at or distance that jumped past `snap`,
+  or an angle past 0.5 rad, in the tick is a cut and is drawn as the last tick has it (so the fastest part of a flight of more than about 23 m is drawn in 60 Hz steps), and a
+  camera written OUTSIDE the ticks since the last one (a show stopped by a key, a framing staged) is drawn as it stands; a pin set between ticks is taken up by the next tick. `capture(cam)` at the end of every tick copies what stands;
   `pose(a)` hangs blended arrays on the drawn objects right before the host's render and `unpose()` hangs the tick's own back by reference right after — the game's own
   state is never the blend when a tick runs. THE LAG (`Tween.phase`): the picture stands a CONSTANT part of a tick behind the game, the most any of the last 32 frames owed
   the next tick — NOTHING on a display at the tick rate (every frame is the last tick itself, nothing hung: the 60 Hz picture is the one the fixed step alone drew), half a
@@ -98,11 +109,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   LEFT AS THE TICK HAS THEM, so up to the lag AHEAD of the men they belong to on a frame between two ticks: boxes with no key — laser lines, tracers, sparks, one-tick
   effect boxes (a key set where a beam is made would let it be blended: `combat.ts beamBoxes`) — and the HUD's marks and bubbles (laid from the game's positions).
   And the GPU's sensor passes measure the POSED scene (they measure the picture, as ever; headless stand-ins read the tick). The engine replay viewer has its own loop:
-  not blended. `bun run tools/qa/tween-check.ts` on BOTH stands (stands / blend / even time / put back / same game / pin / flash / stale / off — the packed words the GPU
-  would be handed against the check's own record of the two ticks, at 50, 60, 120, 144 Hz, and 16 digests ≡ `W.step(1/60)` ≡ the blend off; `TWEEN_BREAK=1`: 'blend',
-  'even time', 'put back' fail). `node tools/qa/tween-page.cjs` (dev server on PORT): the real page's own loop on the software adapter — both on at the boot, the
+  not blended. `bun run tools/qa/tween-check.ts` on BOTH stands (stands / blend / even time / put back / same game / same hands / pin / flash / stale / off — the packed words the GPU
+  would be handed, and the camera the frame is drawn through, against the check's own record of the two ticks, at 50, 60, 120, 144 Hz, under a free camera; 16 digests and
+  480 input records ≡ `W.step(1/60)` ≡ the blend off; `TWEEN_BREAK=1` — the blend hung wrong and the camera eased by the frame's time again: 'blend', 'even time',
+  'put back', 'same hands' fail, and 'same game' and 'off' with them: under a free camera eased per frame the four displays play four different games). `node tools/qa/tween-page.cjs` (dev server on PORT): the real page's own loop on the software adapter — both on at the boot, the
   engine's render with the blend hung and no console / GPU error, the clock scaled to stand for a 120 and a 144 Hz display, the pause card, both switches live and
-  by URL. COST (headless, one loaded cloud CPU, a four-man room fight in the compound at 144 Hz: 5 drawn men, 257 dynamic boxes, 37 lights; the machine three times over-booked while it ran, so read them against the 4.5‥9.4 ms game update and the 0.7‥0.9 ms box + light pack of the same run): `capture` 0.15‥0.26 ms a tick (about 3 % of the update; paid at every rate), `pose` + `unpose` 0.24 ms a frame at 144 Hz, 0.10 at 120 Hz, nothing at 60 Hz once the lag has settled.
+  by URL, and THE SAME HANDS AT TWO PACES (`ONLY=paces` = that line alone; a page load is five to nine minutes on the software adapter): two loads, keys held and the cursor
+  parked before the first tick, the page's own loop at the wall's pace (1.07 ticks a frame) and with its clock scaled for a 144 Hz display (0.43) — the first 150 ticks'
+  input records the same text, 150 different views of the camera among them. COST (headless, one loaded cloud CPU, a four-man room fight in the compound at 144 Hz: 5 drawn men, 257 dynamic boxes, 37 lights; the machine three times over-booked while it ran, so read them against the 4.5‥9.4 ms game update and the 0.7‥0.9 ms box + light pack of the same run): `capture` 0.15‥0.26 ms a tick (about 3 % of the update; paid at every rate), `pose` + `unpose` 0.24 ms a frame at 144 Hz, 0.10 at 120 Hz, nothing at 60 Hz once the lag has settled.
   **Never seen on a GPU or on a display over 60 Hz: how it LOOKS is the maintainer's to judge.**
 - **The player's input is one plain record a tick** (`src/game/cmd.ts`; co-op groundwork, nothing networked): `Game.update(dt, input, cam, canvas)` — the signature every host and
   tool calls, unchanged — is now journal.frameStart → the director's injected keys → `sampleCmd()` (the host's live Input / camera / view copied into a `PlayerCmd`: keys held,

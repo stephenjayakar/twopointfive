@@ -40,8 +40,11 @@ export class FollowCamera {
     this.pin = { look: v3.copy(p.look), yaw: p.yaw, pitch: clamp(p.pitch, -PIN_PITCH_MAX, PIN_PITCH_MAX), dist: Math.max(this.near + 0.05, p.dist) };
     return this.pin;
   }
-  update(dt: number, follow: Vec3, aimPoint: Vec3 | null) {
-    m4.copy(this.prevViewProj, this.kickDrawn ?? this.viewProj); this.kickDrawn = null;   // once per frame (rebuild() may run again later in the frame); a kicked frame's 'previous' is the matrix that frame was DRAWN with
+  update(dt: number, follow: Vec3, aimPoint: Vec3 | null) { this.frame(); this.step(dt, follow, aimPoint); }
+  /** update()'s two halves, for a host that steps the camera with the game and draws at its own rate (host/loop.ts under the fixed step). `frame()`, once a drawn
+   *  frame: 'previous' ← the matrix the last frame was DRAWN with. `step()`, once a game tick: the follow itself. */
+  frame() { m4.copy(this.prevViewProj, this.kickDrawn ?? this.viewProj); this.kickDrawn = null; }   // (rebuild() may run again later in the frame; a kicked or posed frame's 'previous' is the matrix that frame was DRAWN with)
+  step(dt: number, follow: Vec3, aimPoint: Vec3 | null) {
     if (this.pin) { const P = this.pin; this.desired = v3.copy(P.look); this.target = v3.copy(P.look); this.yaw = P.yaw; this.pitch = P.pitch; this.distance = this.desiredDistance = P.dist; this.rebuild(); return; }
     let d: Vec3 = v3.copy(follow);
     if (aimPoint) d = v3.lerp(follow, aimPoint, this.aimLead);
@@ -59,9 +62,24 @@ export class FollowCamera {
   kick: Vec3 | null = null;
   private kickHeld: Vec3 | null = null; private kickDrawn: Float32Array | null = null; private kickVP = m4.create();
   /** the look-at WITHOUT the kick, whenever asked — what the renderer hands on to things that feed back into play (engine.viewFocus → the wind, the smoke solver's schedule) */
-  get focus(): Vec3 { return this.kickHeld ?? this.target; }
+  get focus(): Vec3 { return this.drawHeld?.target ?? this.kickHeld ?? this.target; }
   kickIn() { const k = this.kick; if (!k || this.kickHeld) return; this.kickHeld = this.target; this.target = v3.add(this.target, k); this.rebuild(); }
   kickOut() { const t = this.kickHeld; if (!t) return; m4.copy(this.kickVP, this.viewProj); this.kickDrawn = this.kickVP; this.kickHeld = null; this.target = t; this.rebuild(); }
+
+  /** A PICTURE-ONLY POSE (host/tween.ts, drawing between ticks: the camera stood between where its last two ticks left it): look-at, angles and distance for the
+   *  frame's render and the HUD laid over it, the tick's own put back by drawOut() — to the bit, as with the kick. The loop calls drawIn() before kickIn() and
+   *  drawOut() after kickOut(). */
+  private drawHeld: { target: Vec3; yaw: number; pitch: number; distance: number } | null = null; private drawVP = m4.create();
+  drawIn(p: { target: Vec3; yaw: number; pitch: number; distance: number }) {
+    if (this.drawHeld) return;
+    this.drawHeld = { target: this.target, yaw: this.yaw, pitch: this.pitch, distance: this.distance };
+    this.target = [p.target[0], p.target[1], p.target[2]]; this.yaw = p.yaw; this.pitch = p.pitch; this.distance = p.distance; this.rebuild();
+  }
+  drawOut() {
+    const h = this.drawHeld; if (!h) return;
+    if (!this.kickDrawn) { m4.copy(this.drawVP, this.viewProj); this.kickDrawn = this.drawVP; }   // (a kick on top of the pose already left the matrix the frame was drawn with)
+    this.drawHeld = null; this.target = h.target; this.yaw = h.yaw; this.pitch = h.pitch; this.distance = h.distance; this.rebuild();
+  }
 
   rebuild() {
     const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch), cy = Math.cos(this.yaw), sy = Math.sin(this.yaw);
