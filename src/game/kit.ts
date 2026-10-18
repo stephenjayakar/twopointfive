@@ -357,7 +357,12 @@ export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing()
  *  his share) are that kit again, in the table's layout (dealSettle). */
 function onWorn<T>(i: number, f: () => T, taken?: (r: T) => boolean): T {
   const w = i > 0 ? kitWorn() : KIT.members;
-  if (w === KIT.members) { const word = dealWord(KIT.members), r = f(); if (i > 0 && taken?.(r)) { if (dealing() && team >= 3 && dealWord(KIT.members) !== word) { dealOwn = true; if (!dealSettle()) kitSave(); } else dealSettle(); } return r; }
+  if (w === KIT.members) {
+    if (!(i > 0 && dealing() && team >= 3)) return f();
+    const word = dealWord(KIT.members), s = store; store = null; let r: T; try { r = f(); } finally { store = s; }   // (cards already the player's own, or no kit's: one write, after the mark below)
+    if (taken?.(r)) { if (dealWord(KIT.members) !== word) dealOwn = true; if (!dealSettle()) kitSave(); }
+    return r;
+  }
   const was = KIT.members.slice(), s = store, back = () => { for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = was[j]; store = s; };
   for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = { ...w[j] }; store = null;
   let r: T; try { r = f(); } catch (e) { back(); throw e; }
