@@ -28,7 +28,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 // 9fb5b67a1: the join of those two steps. The check holds EVERY level against ONE base, and each of the two holds only its own level's change, so the base
 // is the first commit that carries both; a later step that changes a level's own part on purpose goes in front of it the same way.
 // 150575169: the glasshouse's back wall foot cut at the back door's frame (the same: one box more, no other level's own part moved).
-const BASE_REVS = ['150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+// 113556864: the join that first carries the glasshouse's step with the two before it (one base for every level, as above).
+const BASE_REVS = ['113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
 /** roomclear.ts propGap, repeated (this tool imports nothing of src/game): the floor distance from a point to a prop's yawed footprint */
 function propGap(p: { home: [number, number, number]; hx: number; hz: number }, at: number[]): number {
