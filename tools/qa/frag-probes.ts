@@ -619,6 +619,21 @@ export const fragOwn = guardedOrder(async () => {
 });
 
 // ---------------------------------------------------------------- the defenders' own frags (FRAG.defenders — frag.ts fragThrowTick)
+/** frag-theirs' corridor, staged for another check (gunhand-throw-check.ts): the carrier at its east end, alert on two of the team bunched ten metres west of
+ *  him, the rest of his side out of it, nobody hurt by rounds; `carbine` = he is dealt the carbine before anything moves. The caller steps it. */
+export async function theirsCorridor(seed: number, carbine: boolean) {
+  const { fragCarriers } = await import(`${ROOT}/src/game/frag.ts`);
+  const CAR = [27, 0, 17.6], T1 = [17, 0, 17.4], T2 = [17.9, 0, 18.3], SAMP = [16.4, 0, 18.4];
+  const d0 = FRAG_DEFAULTS.defenders; FRAG_DEFAULTS.defenders = true; let R!: Awaited<ReturnType<typeof orderRig>>; try { R = await orderRig(seed, 'breakroom_w'); } finally { FRAG_DEFAULTS.defenders = d0; }
+  const g = R.game; FRAG.defenders = true; g.godMode = true;
+  R.step(2); const deal: any[] = fragCarriers(g); const C = deal[0] ?? R.hostiles[0];
+  if (carbine) { if (C.unit) C.carbine = true; else g.tune.carbineGuards = 'all'; }
+  for (const h of R.hostiles) if (h !== C) R.put(h, [2 + R.hostiles.indexOf(h) * 1.5, 0, 2]);
+  for (const x of [C, ...R.ops]) x.god = true;
+  R.put(C, CAR, T1); R.put(R.ops[0], T1, CAR); R.put(R.ops[1], T2, CAR); g.teleportPlayer(SAMP);
+  C.state = 'alert'; C.awareness = 1; C.lastKnown = [...T1]; C.lastSeenT = g.time;
+  return { R, g, C, restore: () => { Object.assign(FRAG, JSON.parse(JSON.stringify(FRAG_DEFAULTS))); Object.assign(DOORTOOLS, JSON.parse(JSON.stringify(DT_DEFAULTS))); Object.assign(ROOMCLEAR, RC_DEFAULTS); } };
+}
 /** frag-theirs: a few defenders carry one; a carrier with two of the team bunched in his view shouts, takes his second, and throws it with the whole fuse on;
  *  the team hears the cue and is off it when it goes; a player who moves on the cue lives where one who stands may not; switched off, nobody throws. */
 export const fragTheirs = guardedOrder(async () => {

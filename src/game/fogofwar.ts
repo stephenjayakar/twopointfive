@@ -240,7 +240,7 @@ export function fieldNear(): number { return FOG.cone ? FOG.coneNearM : FOG.near
  *  showed and a 120° cone would: all of it to one side of his aim. */
 export function gazeOf(c: Character): Vec3 {
   const h = c.headDir(); let x = h[0], z = h[2]; const hl = Math.hypot(x, z); if (hl > 1e-6) { x /= hl; z /= hl; } else { x = Math.sin(c.bodyYaw); z = Math.cos(c.bodyYaw); }
-  if (c.alive && c.anim.longShown === 'shoulder') {
+  if (c.alive && c.anim.longShown === 'shoulder' && !c.anim.atWell) {   // (atWell: a magazine change under way — his eyes are down at the gun, gunhand.ts)
     const ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw), gl = Math.hypot(c.gunDir[0], c.gunDir[2]);
     const lv = gl > 1e-6 ? (c.gunDir[0] * ax + c.gunDir[2] * az) / gl : 0;   // how level along his aim the bore lies, in plan
     const t = Math.min(1, Math.max(0, (lv - GAZE_SIGHTS[0]) / (GAZE_SIGHTS[1] - GAZE_SIGHTS[0]))), w = t * t * (3 - 2 * t);

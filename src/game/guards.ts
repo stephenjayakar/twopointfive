@@ -1223,7 +1223,7 @@ export function canSeeChar(g: Game, gd: Guard, pc: Character, isPlayer: boolean)
     const c = gd.char, ax = Math.sin(c.gunYaw), az = Math.cos(c.gunYaw);   // (gunYaw: aimYaw — or, turning under weight, where the gun has got to)
     let lv = c.gunDir[0] * ax + c.gunDir[2] * az;   // how level along his aim the bore lies, in plan
     const lift = c.anim.sightsLift; if (lift > 0) { const gh = Math.hypot(c.gunDir[0], c.gunDir[2]); if (gh > 1e-6) lv *= Math.cos(lift) - c.gunDir[1] / gh * Math.sin(lift); }   // (character.ts MOVES.entryEyes: the entry dip's own pitch put back — the question asked of his gun line as if it were not down past a friend; 0 unless that switch is on and he is dipped)
-    if (c.anim.longShown === 'shoulder' && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans); }
+    if (c.anim.longShown === 'shoulder' && !c.anim.atWell && lv > SIGHTS_COS) { E.look = [ax, 0, az]; E.halfDeg = Math.min(E.halfDeg, ROOMFIGHT.sightsDeg); r = eyeContact(g, E, pc, false, g.time < gd.dazzledUntil || pairGripped(g, gd) || dozeAsleep(gd), gd.smokeTrans); }
   }
   if (!isPlayer && r.visible && pairSmoke(g, gd.char, pc) < 0.3) r.visible = false;   // an AI man lost in a plume, by the same line as Sam (roomfight.ts marches the pair's segment; 1 = clear wherever it does not)
   return r;
