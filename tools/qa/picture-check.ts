@@ -163,7 +163,7 @@ export async function pictureCheck(): Promise<boolean> {
     { let found = false, tried = 0; PICTURE.tellSecs = 1e9;
       search: for (const m of s.cells) for (const t1 of s.cells) { if (flat(m, t1) < 6 || flat(m, t1) > 10 || !s.sees(t1, m)) continue; if (++tried > 300) break search;
         s.pins.clear(); A.char.pos[0] = m[0]; A.char.pos[2] = m[2]; pictureReset(g); const c0 = coverFrom(g, A, t1) as Vec3 | null; if (!c0) continue;
-        const t2 = s.cells.find(q => flat(q, c0) > 3 && flat(q, c0) < 12 && flat(q, t1) > 4 && !s.col.segmentBlocked([q[0], 1.6, q[2]], [c0[0], 0.7, c0[2]])); if (!t2) continue;
+        const t2 = s.cells.find(q => flat(q, c0) > 3 && flat(q, c0) < 12 && flat(q, t1) > 4 && flat(q, m) > 2 && !s.col.segmentBlocked([q[0], 1.6, q[2]], [c0[0], 0.7, c0[2]])); if (!t2) continue;
         pictureTell(g, A, H2, t1); pictureTell(g, A, H3, t2); const c1 = coverFrom(g, A, t1) as Vec3 | null; if (!c1 || flat(c1, c0) < 0.3) continue;
         const e0 = exposedAt(g, A, c0, true), e1 = exposedAt(g, A, c1, true); PICTURE.cover = false; const cOff = coverFrom(g, A, t1) as Vec3 | null; PICTURE.cover = true;
         found = true; line(e0 > 0.15 && e1 <= 0.15 && !!cOff && flat(cOff, c0) < 0.01, 'cover: a pinned man whose cover from the shooter is in a second known enemy\'s line shifts to a place hidden from both; the rule off, the place as it was',

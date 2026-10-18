@@ -249,11 +249,12 @@ export function holdingCover(g: Game, gd: Guard): boolean { return g.tune.suppre
  *  and that no colleague stands on or is heading for. Preference order, first fit (coverSpot's pattern); a dozen path plans at most. null = nothing: he stays down. */
 export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
   // (picture.ts PICTURE.cover: the man whose rounds came in is one of several he knows of — the first fit hidden from EVERY one of them is taken; the first
-  // fit of all, the place as it was dealt, is kept meanwhile and is his if there is no such place. One pass, the same dozen plans.)
+  // fit of all, the place as it was dealt, is kept meanwhile and is his if there is no such place. One pass, the same dozen plans. With both rules on, a
+  // place that STOPS the shooter's round but is in another known man's line is kept over one a round goes through: the place as wallpen.ts alone deals it.)
   const all = PICTURE.on && PICTURE.cover && ideasOf(g, gd).length > 1; let asWas: Vec3 | null = null;
   // (wallpen.ts WALLPEN.men: rounds go through thin walls — a place hidden from the gun only by things its round goes through is kept the same way, and a
   // place behind something that STOPS a round is taken first; no such place: the hidden one is his, as it always was)
-  const hard = wallMenLive(g); let soft = false, wasOpen = false;
+  const hard = wallMenLive(g); let soft = false, wasOpen = false, keptThin = false;
   const S = SUPPRESSION, nav = g.col.nav, c = gd.char, from = c.pos; const dbg = SUPPRESSION_DEBUG.log;
   const T: Vec3 = [threat[0], 1.15, threat[2]]; const d0 = v3.distXZ(from, threat);
   const away = Math.atan2(from[0] - threat[0], from[2] - threat[2]);   // bearing shooter → him: 0 = straight on back, ±π/2 = square off the line
@@ -265,7 +266,7 @@ export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
     if (!g.col.segmentBlocked(T, [p[0], 0.9, p[2]])) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): open to him crouched`); continue; }   // not cover: a crouched chest there is in the open from where the rounds come
     const thin = hard && !!thinLine(g, T, [p[0], 0.9, p[2]], topEnergy(), 0);   // (wallpen.ts: a rifle round from where the rounds come gets to a chest there — hidden, not covered)
     if (thin && asWas) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): a round goes through what hides it`); continue; }
-    const open = all && exposedAt(g, gd, p, true) > 0.15; if (open && asWas) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): in another known enemy's line`); continue; }
+    const open = all && exposedAt(g, gd, p, true) > 0.15; if (open && asWas && !keptThin) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): in another known enemy's line`); continue; }
     let taken = false; for (const o of g.guards) if (o !== gd && o.state !== 'dead' && (v3.distXZ(o.char.pos, p) < 0.9 || (o.sup.cover && v3.distXZ(o.sup.cover, p) < 1.2))) { taken = true; break; }
     if (taken) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): a colleague's`); continue; }
     if (++plans > 12) { dbg?.('  cover: out of path plans'); return asWas; }
@@ -273,8 +274,8 @@ export function coverFrom(g: Game, gd: Guard, threat: Vec3): Vec3 | null {
     let L = 0, q: Vec3 = from, toward = false; for (const w of path) { L += v3.distXZ(q, w); q = w; if (v3.distXZ(w, threat) < d0 - 1.5) toward = true; }
     if (L > 2.5 * r + 2 || toward) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): ${toward ? 'the way there runs at him' : `path ${L.toFixed(1)} m for ${r} m`}`); continue; }
     const end = path[path.length - 1]; if (v3.distXZ(end, p) > 0.6) { dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): path stops ${v3.distXZ(end, p).toFixed(2)} m short`); continue; }
-    if (thin) { asWas = [end[0], 0, end[2]]; soft = true; dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): kept, a round goes through what hides it`); continue; }
-    if (open) { wasOpen = true; asWas = [end[0], 0, end[2]]; dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): kept, in another known enemy's line`); continue; }
+    if (thin) { asWas = [end[0], 0, end[2]]; soft = true; keptThin = true; dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): kept, a round goes through what hides it`); continue; }
+    if (open) { wasOpen = true; asWas = [end[0], 0, end[2]]; keptThin = false; dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): kept, in another known enemy's line`); continue; }
     dbg?.(`  cover cand (${p[0].toFixed(1)}, ${p[2].toFixed(1)}): TAKEN (${(da * 57.3).toFixed(0)}° off straight-back, ${r} m, path ${L.toFixed(1)} m)`);
     if (soft) WALLPEN_STATS.harder++; if (wasOpen) PICTURE_STATS.moved++;
     return [end[0], 0, end[2]];
