@@ -132,6 +132,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   word then does what the row said — `thenOnWord`, `Threshold.wordStep`: F after row 1 steps in with no can), F is still the word (with `PLANLAY.on`, the page, a row picked with 'wait for my word' on is first LAID — squad.md 'X is where the plan is laid' — and F sends it; from there it is this), and a can asked for at a held door is ONE can (`thrCans`). So an older 'X, 5, 4, then 1 or 2'
   path in this file is the switch OFF; every older threshold probe runs on the frozen stand and is unchanged. `bun run tools/qa/doortest-check.ts`
   (`probes.ts doortest`, in family `doortools`; both stands; `DOORTEST_BREAK=1` must fail). Never seen on a GPU or played by anybody.
+- **Jamb men slice a doorway before they call it held; a man on a cut leans** (the maintainer's tape and note, 10-18: the pair told to 'clear from
+  outside' stood on its two diagonals, said "holding on the door" with 21 of 47 cells unseen and a man dead centre 2.5 m in, in the wedge neither diagonal
+  shows, and was shot stepping in; "men should try to pie from the outside as much as they can before considering their job done", and "some element of
+  leaning to the AI (but probably not our movement for now)"). TWO switches, each ON in the page, OFF in the module and on the frozen stand, a
+  `FROZEN_HOLDS` row, a standup pin, a debugger toggle ('jamb men slice a doorway', 'a slicing man leans'), and a journal line (a recording from before
+  either key replays with it off): `DOORTOOLS.thrPie` (`?thrpie=0`, `TPS_THRPIE=1`) and `DOORTOOLS.thrLean` (`?thrlean=0`, `TPS_THRLEAN=1`; it does
+  nothing without thrPie). **thrPie**: in the hold (`case 'thr'`) BOTH jamb men walk cuts (`pieSet`: his diagonal first, stood square exactly as with
+  the rule off, then the stations of `thrPieArc` further toward the middle of the opening, never across the frame line, none within `thrPieApart` of the
+  other man; the hinge man of a leaf that stands on the team's face — `thrPull` — has no edge and takes none). A cut is taken only if it still shows
+  floor no muzzle has been across (`pieNext`, asked of the room search with the same light test the hold counts by, from a kneeling eye for a knee cut),
+  its clock starts when his hips are on it (or `PIE_WAIT` after), a man in his sight keeps him on the angle that shows him, and 'holding · on your word'
+  waits for both men to be done (still inside `thrCap`). Three manners from the play-through's death records: a man who shows while he is stepping to
+  a cut stops him where he is; a man in his sight with no round at him — the jamb across his own bore, `RoomFight.noShot` — brings the gun round after
+  the eye (`PIE_GUN`: a hand toward the middle, three times at most, then the cut is given up for the one before, beat 'no shot from the cut'); when
+  the hold moves on or ends mid-cut nobody is left leaned or on a knee (`pieOff`). **thrLean** (teammates only; the player's movement is untouched):
+  on a cut his hips stop `thrLeanM` short of the station and his head and gun go the rest of the way (`CharacterAnimator.lean`, `LEAN_POSE` in
+  character.ts — a roll through the spine with the head levelled; carried by `GuardScript.lean`, written by orders.ts only while he is on his mark);
+  what he sees is asked from his head bone (`lineTo`), so the picture and the model agree; the cuts that look down the door's own line (`thrKneeIn`)
+  are taken on a knee. `bun run tools/qa/thrpie-check.ts` (`probes.ts thrpie`, in family `doortools`; both stands; `THRPIE_BREAK=1` must fail): the
+  tape's door staged, off = as it was (both men still on their diagonals, the man in the middle never seen); on = both men stood on every cut they
+  were sent to and were done before the door was called held, the man in the middle seen and dropped from outside, nobody lost, 8 cells unseen against
+  24 of 51 (frozen; 8 against 19 of 47 shipped) and the door called held 0.1–0.15 s later; nobody's hips or head near the frame line; the lean in the bones
+  (head 0.14 m to one side, 0.15–0.19 m to the other, past his hips; in the door runs 0.2–0.3 m toward the middle against 0–0.18 square); knees only
+  with the lean; the word given mid-cut leaves nobody bent; the journal and the page flags. RUN 10-18: that check and its break word on both stands;
+  families threshold, thresholdmenu, doortools, foursquad, doortest on both stands and doormenu on the shipped stand, all green (the shipped
+  `orderkeys` family is red by 30 lines with both switches off too: not this rule's); knobs-check, rollback-check --static, dice-check, both
+  typechecks, the build. MEASURED, and it is NOT a gain there: the scripted play-through, `TPS_PROFILE=shipped PT_TOOL=hold`, 21 scenarios × seeds
+  1–8 (167 paired runs): teammates up 287 of 588 with both switches on against 303 with both off (−0.10 ± 0.09 a run: inside the noise), wipes 44
+  against 43, the five pair scenarios 64 against 61 of 80. Why it is no gain: a man seen from a cut is an even duel through an open door with no can
+  thrown, and the scripted commander bangs most held rooms anyway; before the three manners above it was 275 against 293 on the same runs, with 17
+  deaths (against 4) of a man on his killer with the jamb across his own line in the six scenarios read. Those three manners have no staged check of
+  their own: they are read from the play-through's death records only. Never seen on a GPU — the lean and the knee have been seen by nobody — and
+  nobody has played it.
 - **A pair halted on a door the other pair is charging steps back off it** (`DOORTOOLS.haltBack`, 10-13: ON in the page — `?haltback=0` — OFF in the
   module and on the frozen stand, `TPS_HALTBACK=1`; a `FROZEN_HOLDS` row, the pin lists, a debugger toggle next to the two above; journal: a recording whose
   DOORTOOLS row has no such key replays with it off). The fault, found by `pairs-probes.ts` on the played rules: the step back to rear security is asked
