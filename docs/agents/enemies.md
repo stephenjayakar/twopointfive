@@ -1072,3 +1072,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   same man throws 1.02 s after his shout either way, the bursts 5 to 10 cm apart, the grenade starts 0 cm from the left hand and is in that fist
   17 frames. NEVER SEEN ON A GPU OR IN PLAY: poses and boxes measured headless; how a left-handed overhand reads from above, and the gun's low
   ready beside it, nobody has looked at. The run with the switch on is not the run with it off (it changes the pose the game reads).
+- **The men left alive on a rescue come for the hostages** (2026-10-18; `src/game/rescueflush.ts`, `RESCUEFLUSH.on` — ON in the page, `?norescueflush`; OFF in
+  the module and on the frozen stand, `TPS_RESCUEFLUSH=1`; a debugger toggle). The maintainer: "remaining enemies should try to flush you out and/or kill the
+  hostage when loud". WHAT WAS THERE: the captor's clock passed to a man of theirs only if he happened to stand in the hostage room; with the room the team's,
+  the men alive elsewhere stayed where the fight had left them. THE RULE, once the team has been LOUD (`rescue.noiseAt`) and THE ROOM HAS FALLEN (every man
+  posted in it down or held): `afterSecs` later the nearest man of theirs outside says so on their net and goes for the hostages, and every `gapSecs` the
+  next one follows — the first by the room's main door, the second by its side door where the level has one (two ways at once: he is sent to the floor OUTSIDE that door, `rescue.sideOutside`, and on in from
+  there), in turn; each is let go as
+  a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets) and a man at the mouth of
+  a lane the team's guns hold is not sent down it (`laneHolds` / `laneWarns`; the path is priced by the lanes as any walk is): he takes the turn's other way
+  if that one is not held, else he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
+  in his sights is sent again `againSecs` after his last word. THEY'RE GONE: the first to stand in the room and find no hostage says so, and from then on they
+  go to the team's last loud thing and to the way out, in turn. THE GUN ON HER: a man of theirs inside `reachM` of a living hostage with a line a ROUND can fly (`shotBlocked`: a
+  pane that stops a round is a wall to this) and no smoke hiding her (`Game.sensors.segment`, under `smokeK`; headless the air is clear) HAS
+  her, as the man standing in the room always did (rescue.ts `captor()` → `flush.holder`); one who came for her is `killSecs` from turning his gun on her,
+  then `RESCUE.aimSecs` from the round — the same act, broken the same ways, and broken too if she leaves his line before the round (`act:broken`). Lines
+  (their net, said once per errand): "it's gone quiet in there — I'm going in for them!" · "going round — I'll take the other door!" · "they're gone —
+  they're moving them! cut them off!" · "on the way out — they don't leave with them!" · "moving on that noise — keep them boxed in!". Never: a man added,
+  more health, a response from outside, a place he has not heard or guarded (the room, a noise his side heard, the door the team came in by). SEAMS:
+  rescue.ts `tick()` (`flush.tick()`), `captor()`, `clock()`, `letGo()`, `outsidePoint`. OFF = THE BUILD AS IT WAS (the check's (f)). CHECK: `bun run
+  tools/qa/probes.ts rescueflush` (`RESCUEFLUSH_SEEDS=1,2,3`), per mission: they come (first word at `afterSecs`, the second by the side door) · the gun on
+  her · not when quiet · they're gone (hostages stood at the way out: the room found empty, men sent on, one shot out there by a man outside the room) ·
+  the state's pair · off; `RESCUEFLUSH_BREAK=1` fails. NOT asked by the check: that a held corridor turns a man round — the two tests are the lanes' own (`laneHolds` / `laneWarns`), and the check's floor has no
+  team on it to hold one.
+  MEASURED: `rescueflush` 24 of 24 lines on both stands, 72 of 72 on seeds 1,2,3; `RESCUEFLUSH_BREAK=1` 18 of 21 FAIL on both (its three 'not when quiet'
+  lines pass by design). In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
+  three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
+  played it; whether two men by two doors READS as a flush, and whether three seconds is fair warning, is a question for play.

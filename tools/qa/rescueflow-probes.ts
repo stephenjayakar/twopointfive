@@ -242,7 +242,7 @@ async function sideRig(seed: number, knobs: Record<string, unknown> = {}) {
 }
 const beat = (T: any, what: string) => T.at(what);
 
-export const flowTwoDoor = staged(['DARKFOE.on'], async () => {
+export const flowTwoDoor = staged(['DARKFOE.on', 'RESCUEEND.on'], async () => {
   const F = family('rescue-flow-twodoor: the hostage room through both doors on one F');
   if (process.env.GATEHAND_BREAK) DOORTOOLS.gateHand = false;   // (GATEHAND_BREAK=1: the side door's man steps to its handle only after the boot beside him has landed, as it was — where leaves are worked from the handle the two leaves are then a walk apart and the line below must go red)
   // where doors open one way a can is not thrown at a leaf (DOORTOOLS.bangWay) and a SHOVED leaf is two tenths of a second longer getting out of its can's way

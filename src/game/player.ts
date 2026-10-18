@@ -54,6 +54,7 @@ import { whistleKey } from './whistle';
 import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './wand';
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
+import { rescueEndRows } from './rescueend';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
 import type { CloseKind } from './close';
@@ -2055,6 +2056,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       }
     }
     wallChargeRows(g, p, busy, row, offer);   // a breaching charge on a partition, by hand (wallcharge.ts — nothing unless its switch and the destruction's are up)
+    rescueEndRows(g, p, busy, row, offer);   // a rescue's hostages: on your feet — with me / stay here (rescueend.ts — nothing unless a rescue is up with its switch on)
     defuseRows(g, p, busy || !!g.wallCharge?.setting, row, offer);   // a defuse mission's live charges (defuse.ts — nothing on a level without the block)
     stickyRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a stuck sticky camera of his own, taken back (stickycam.ts — nothing unless STICKY.take is up)
     // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
