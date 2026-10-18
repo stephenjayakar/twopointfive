@@ -584,3 +584,29 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Played as shipped, before against after: straight in, 12 seeds, the same 12 runs (lost at about 25 s, by design); the back gate covered first (`PT_SNATCH=cover`),
   24 seeds, won 24 and 66 of 96 men up both ways, two seeds a different length (0.1 s and 13 s). The level's own part moved, so `lived-check`'s base list names
   this step. Headless only: nobody has heard it.
+- **A rescue is won out, or cleared** (2026-10-18; `src/game/rescueend.ts`, `RESCUEEND.on` — ON in the page, `?norescueend`; OFF in the module and on the frozen
+  stand, `TPS_RESCUEEND=1`; the Hostage rescue rows' toggle in the debugger). The maintainer: "the hostage rescue missions should have you safely extract the
+  hostage or fully clear the map." WHAT WAS THERE: the hostage room taken and held `RESCUE.holdSecs` (15 s) ended the run a win, with men of theirs alive
+  elsewhere and nowhere to go. THE RULE, on all three rescues (office, registry, consulate; no level data changed): the run is WON two ways and by nothing else.
+  OUT: every hostage still alive stands inside `outM` of the WAY OUT, having been led there. The way out is the team's own way in (`scenarios.rescue.team.sam`,
+  the mark Sam is staged on). A hostage is led by a row on her once nobody of theirs has her: Space, 'on your feet — with me' — every living hostage gets up
+  and follows whoever said it (civilians.ts `hostageLead` / `follow`: her own legs and the nav grid, a walk that becomes a run when she has fallen behind,
+  `gapM` + `gapStepM` a head behind); the same row then reads 'stay here' and puts them down where they stand. While one of theirs has them the row is there and dead ('one of them has a gun on
+  her'). A click with the hands empty beside a hostage is no blow (game.ts: her row is a guard's row, the takedown's pick skips a hostage). CLEARED: nobody of theirs is left (every man of the
+  cast down, or run off with his gun dropped) for `clearSecs`; a man in Sam's arm is still a man. LOST is as it was (every hostage dead, one hit by the team's
+  own round, the player down). The room taken is still said and logged ('secured'); its line reads 'hostage room secured — bring them out, or clear the
+  building', the objective row points at the nearest hostage and then, once they are on their feet, at the way out ('bring them out the way you came in'); the
+  end's why is '2 of 2 hostages out' or '2 of 2 hostages alive · building cleared'. SEAMS: rescue.ts `outcome()` (asks `ending.won()`; the 15 s hold only
+  with the switch off), `objective()`, `tick()`, `end()`; rescue.ts `captor()` / `clock()` count only hostages still IN the room for the man standing in
+  it (a hostage walked out is had by line and reach alone: the flush's bullet in `enemies.md`); a hostage on her feet killed by a grenade of THEIRS is theirs
+  ('killed', frag.ts's `killerId`), not the team's own fire; the objective keeps the clock's step while a man has one of them again; player.ts `buildInteractables` (`rescueEndRows`); game.ts
+  `Verb` 'lead' | 'stay'; civilians.ts `Civ.lead / leadGap`. The scripted commander (`tools/qa/playthrough.ts playRescue`) waits for a clear and else leads
+  them out. OFF = THE BUILD AS IT WAS: nothing asked, no row, the hold ends it (the check's (g); the frozen stand's rescue probes unchanged). CHECK:
+  `bun run tools/qa/probes.ts rescueend` (`RESCUEEND_SEEDS=1,2,3`), per mission: not before · the row and the word · no blow on a click · out · stay · cleared ·
+  the state's pair · off; `RESCUEEND_BREAK=1` fails every line. Page: `PORT=<p> node tools/qa/rescueend-page.cjs`. MEASURED: `rescueend` 24 of 24 lines on the frozen stand (the check raises the rule) and on the shipped one, 72 of 72 on seeds
+  1,2,3; `RESCUEEND_BREAK=1` 24 of 24 FAIL on both. The old `rescue` family, 13 probes, passes on both stands (rescue-clock, rescue-orders and
+  rescue-flow-twodoor name the rule among those their scenes were staged without: `rescue-probes.ts`). PLAYED as shipped (`ships.ts`, `PT_HUNT=first`,
+  seeds 1–4, against the build before it): office 4 of 4 rescued both ways (38 s → 64 s: the walk out), registry 4 of 4 (42 s → 29 s: its three men
+  down is a clear), consulate 2 rescued and 2 lost both ways (the same two seeds, lost at 55 s with the rule absent too); no run stalled. Per-player state: the leader
+  is kept as a character, never read off `Game.player` after the press. UNTUNED: `outM` 3.5, `clearSecs` 1.5 are first numbers. Headless only: nobody has
+  played it, nothing of it has been seen on a GPU (the row's marker, the hostages on their feet behind Sam, the objective's arrow).
