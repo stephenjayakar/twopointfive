@@ -7,7 +7,7 @@
 //               on) — having been led there. A hostage is led by a row on her once nobody of theirs has her (rescue.ts captor() null): Space, 'on your
 //               feet — with me': every living hostage gets up and follows whoever said it (civilians.ts hostageLead: the civilians' own legs and the nav
 //               grid, a walk that becomes a run when she has fallen behind); the same row then reads 'stay here' and puts them down where they stand.
-//     CLEARED   nobody of theirs is left on the floor: every man of the cast down, or run off with his gun dropped (runner.ts), for `clearSecs`.
+//     CLEARED   nobody of theirs is left on the floor: every man hostile to the team down, or run off with his gun dropped (runner.ts), for `clearSecs`.
 //               A man in Sam's arm is still a man: put him down first.
 //   LOST is as it was: every hostage dead, one hit by the team's own round, the player down.
 //   THE ROOM taken is still said and logged ('secured'), and the line that said to hold it says what is asked now; it is let go of ('unsecured') only by
@@ -23,6 +23,7 @@ import type { Character } from './character';
 import type { Rescue } from './rescue';
 import { hostageLead } from './civilians';
 import { runnerFled } from './runner';
+import { hostileTo } from './teams';
 
 export const RESCUEEND = {
   on: false,
@@ -57,8 +58,9 @@ export class RescueEnd {
   reset() { this.lead = null; this.led = false; this.clearAt = NaN; }
   /** the way out: the mark the team was staged on */
   get out(): Vec3 | null { const T = this.R.data?.team; return T ? [T.sam[0], 0, T.sam[2]] : null; }
-  /** the men of theirs still to be dealt with: not down, and not run off with the gun dropped */
-  left(): Guard[] { return this.R.hostiles.filter(h => h.state !== 'dead' && !runnerFled(h)); }
+  /** the men of theirs still to be dealt with: not down, and not run off with the gun dropped. EVERY man on the floor hostile to the team, not the rescue's
+   *  cast alone: a team another rule has brought in is counted the moment it stands on the floor (one called and not yet arrived is that rule's to add here) */
+  left(): Guard[] { return this.g.guards.filter(h => !h.civ && hostileTo(h, 'player') && h.state !== 'dead' && !runnerFled(h)); }
   private alive(): Guard[] { return this.R.hostages.filter(h => h.state !== 'dead'); }
   /** a word can be given to the hostages: the rule is up, the run is on, and nobody of theirs has them */
   private get free(): boolean { const R = this.R; return RESCUEEND.on && R.active && !R.result && !R.captor(); }
