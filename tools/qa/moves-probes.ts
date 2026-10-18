@@ -33,6 +33,11 @@ const DT = 1 / 60, cm = (m: number) => (m * 100).toFixed(1) + ' cm', deg = (r: n
 const dist = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const keep = { ...CH.MOVES };
 const restore = () => Object.assign(CH.MOVES, keep);
+// GUN HAND's long reload (gunhand.ts `longReload`, on on the shipped stand) carries the gun and the trigger hand through a long gun's magazine change: a man
+// changing one no longer reads the same as a man who is not, which is what moves-reload and moves-kept hold of the support arm's layer. Those two run with it
+// held off (the pose this layer was recorded over); the carry has its own check, with the hand at the well where the gun then is (gunhand-reload-check.ts).
+const { GUNHAND } = await import(`${ROOT}/src/game/gunhand.ts`);
+const gunhandOff = () => { const was = GUNHAND.on; GUNHAND.on = false; return () => { GUNHAND.on = was; }; };
 let gltf: any = null;
 async function man(trained: number, o: { aim?: boolean; speed?: number; steady?: number } = {}) {
   gltf ??= await loadCharacter();
@@ -215,6 +220,7 @@ const gunFrame = (c: any) => { const d = c.gunDir as V3, g = c.gunUnder() as V3,
 const inGun = (c: any, p: V3): V3 => { const F = gunFrame(c), r: V3 = [p[0] - c.bones.handR[0], p[1] - c.bones.handR[1], p[2] - c.bones.handR[2]]; const dot = (a: V3) => a[0] * r[0] + a[1] * r[1] + a[2] * r[2]; return [dot(F.x), dot(F.u), dot(F.d)]; };
 export async function movesReload(): Promise<boolean> {
   const F = family('moves-reload: the long gun\'s magazine change on the support arm — and nothing the fight reads moved');
+  const gunhandBack = gunhandOff();
   try {
     CH.MOVES.on = 1;
     const run = async (trained: number, back: boolean, beat: any, clip: number, on: number, long = true) => {
@@ -262,11 +268,12 @@ export async function movesReload(): Promise<boolean> {
       F.verdict(atIn < 0.05 && back < 0.02 && fullBack > 0.05 && c.anim.mv2Shown.reload === 0, 'a top-up (a round still chambered): the fresh one seated and the hand straight back to the gun — the handle is not run', `at the well ${cm(atIn)} when it seats · at 2.0 s (where an empty gun racks) the hand is ${cm(back)} from the gun hold (want < 2; ${cm(fullBack)} on a full change, on the handle) · the layer out by the end`); }
     { const beat = { dur: 1.6, out: 0.38, in_: 1.02, rack: 1.38 }; const a = await run(0.12, false, beat, 1.6, 1, false), b = await run(0.12, false, beat, 1.6, 0, false); let same = 0; for (let i = 0; i < a.length; i++) if (a[i].all === b[i].all) same++;
       F.verdict(same === a.length, 'a sidearm\'s reload is the clip as it was (the layer is the long gun\'s)', `${same} of ${a.length} frames identical, whole pose`); }
-  } finally { restore(); }
+  } finally { gunhandBack(); restore(); }
   return F.done();
 }
 export async function movesKept(): Promise<boolean> {
   const F = family('moves-kept: wrists behind the back, hands on the head, a hand to the ribs — arms only');
+  const gunhandBack = gunhandOff();
   try {
     CH.MOVES.on = 1; gltf ??= await loadCharacter();
     const civ = async (bound: number) => { const c: any = new CH.Character(gltf, { id: 1, tint: [1, 1, 1], tint2: [1, 1, 1], pos: [0, 0, 0], yaw: 0 }); c.anim.phase = 0; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.crouchTarget = 1; c.anim.trained = 0.5;
@@ -329,7 +336,7 @@ export async function movesKept(): Promise<boolean> {
         } finally { CH.FOLD_WITH.on = keepWith; }
       }
     }
-  } finally { restore(); }
+  } finally { gunhandBack(); restore(); }
   return F.done();
 }
 export async function movesEntry(): Promise<boolean> {

@@ -67,6 +67,7 @@ import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
 import { INHAND } from '../game/inhand';
+import { GUNHAND } from '../game/gunhand';
 import { PACKSIDE } from '../game/packside';
 import { PLANLAY } from '../game/planlay';
 import { START } from '../game/startfile';
@@ -213,6 +214,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CONDITION.on = !q.has('nocondition');   // a man's condition (game/condition.ts): a blast that leaves a man standing leaves him HURT — no faster than a walk, wider rounds — the same of the player, his men and the defenders; one round still puts anyone down. ?nocondition = nobody is ever hurt
   PACKSIDE.on = q.get('packside') !== '0';   // a hammer, a breaching shotgun or a slung rifle on a man who wears a pack stands strapped upright at the pack's side and moves with it; a breacher who carries a real tool wears the small pack, not his modelled ram (game/packside.ts). Looks only. ?packside=0 = across the back and through the pack, as it was
   INHAND.on = q.get('inhand') !== '0';   // a pistol is drawn in the hand that holds it, and the hand is turned onto the line the gun points (game/inhand.ts): a man crouched with his sidearm out no longer has it floating over his fists, nor a gun that reaches the aim before the arms do. Looks only. ?inhand=0 = every gun laid on the aim line from the wrist, as it was
+  GUNHAND.on = q.get('gunhand') !== '0';   // a move keeps to the hand that is free (game/gunhand.ts): the torch hand comes up for a whistle, a man with a long gun throws with his other hand, a long gun reloads with the trigger hand on the grip. ?gunhand=0 = as it was
   SAMSTUN.on = !q.has('nosamstun');   // a blast does to the player what it does to anybody (game/samstun.ts): a frag that leaves him up roots him with his gun down, a stun canister whites his picture out — ON in the page; ?nosamstun = a flinch and ringing ears, as it was
   TEAMTALLY.on = !q.has('noteamtally') && q.get('teamtally') !== '0';   // a partner's men are on Sam's card on a quiet mission as two (game/teamtally.ts): his round a kill, his takedown a knockout, with their timeline rows — ON in the page; ?noteamtally = only the player's own are counted, as it was
   RECAP.on = !q.has('norecap');   // every death explains itself (game/deathrecap.ts + ui/recap.ts): the end card shows who shot whom, from where. Reads only, so it is on on every stand too; ?norecap = the card as it was
@@ -488,6 +490,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',
   'CONDITION.on': 'TPS_CONDITION=1',
+  'GUNHAND.on': 'TPS_GUNHAND=1',
   'INHAND.on': 'TPS_INHAND=1',
   'PACKSIDE.on': 'TPS_PACKSIDE=1',
   'PLANLAY.on': 'TPS_PLANLAY=1',
