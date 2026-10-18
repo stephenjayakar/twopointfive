@@ -31,8 +31,8 @@
 //     wand: wand-kit wand-tile wand-look wand-costs wand-doors wand-mate wand-off
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
-//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-off
-//     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-wiring
+//     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
+//     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
 //     kitcan: kitcan-tiles
@@ -2443,6 +2443,7 @@ if (on('handwork-harness', 'handwork', 'all')) await run('handwork-harness', asy
 if (on('gunslots-card', 'gunslots', 'kit', 'all')) await run('gunslots-card', async () => (await import('./gunslots-check.ts')).gunslotsCard());     // two gun rows where the one stood, the old gun field following, a card from before them, off = the rows before
 if (on('gunslots-mate', 'gunslots', 'all')) await run('gunslots-mate', async () => (await import('./gunslots-check.ts')).gunslotsMate());            // a staged teammate's second gun, out when dry and near, back and reloaded when nobody is in front of him
 if (on('gunslots-fight', 'gunslots', 'all')) await run('gunslots-fight', async () => (await import('./gunslots-check.ts')).gunslotsFight());         // two men dry at five metres: the third man goes down to a sidearm inside the reload
+if (on('gunslots-guns', 'gunslots', 'all')) await run('gunslots-guns', async () => (await import('./gunslots-check.ts')).gunslotsGuns());             // the guns the two rows offer, each set apart by a measure: reach, who hears it, the turn, the feed; a fight with each
 if (on('gunslots-off', 'gunslots', 'all')) await run('gunslots-off', async () => (await import('./gunslots-check.ts')).gunslotsOff());               // off = the same run by digest, the stands' row, the registry, a recording from before it
 // THE PLAYER CARRIES AND SETS CHARGES LIKE THE SQUAD (src/game/owncharge.ts; tools/qa/owncharge-check.ts raises the switch itself, so it asks the same on either stand; OWNCHARGE_BREAK=1 must fail)
 if (on('owncharge-kit', 'owncharge', 'kit', 'all')) await run('owncharge-kit', async () => (await import('./owncharge-check.ts')).ownchargeKit());       // the two rows on your card with the switch, the teammates' prices, the squad's count, the store, no squad cap on wall charges
@@ -2457,6 +2458,7 @@ if (on('bigslot-you', 'bigslot', 'all')) await run('bigslot-you', async () => (a
 if (on('bigslot-mate', 'bigslot', 'doortools', 'all')) await run('bigslot-mate', async () => (await import('./bigslot-check.ts')).bigMate());      // a teammate's shotgun off its sling and back, his hammer, the face the leaf opens toward
 if (on('bigslot-shut', 'bigslot', 'doortools', 'all')) await run('bigslot-shut', async () => (await import('./bigslot-check.ts')).bigShut());      // any shut door, from beside the frame, the door ends open; the squad's row on H
 if (on('bigslot-moves', 'bigslot', 'doortools', 'all')) await run('bigslot-moves', async () => (await import('./bigslot-check.ts')).bigMoves());    // BIGSLOT.moves: the row from the stack's distance, the walk to a place beside the frame, the tool drawn and swung, the tail
+if (on('bigslot-weight', 'bigslot', 'doortools', 'all')) await run('bigslot-weight', async () => (await import('./bigslot-check.ts')).bigWeight());   // BIGSLOT.weight: the tool changes hands with the weight of a gun swap — your gun to its place by hand first, the tool out and back in a long gun's time; BIGWEIGHT_BREAK=1 must fail
 if (on('bigslot-wiring', 'bigslot', 'all')) await run('bigslot-wiring', async () => (await import('./bigslot-check.ts')).bigWiring());             // the stands' row and word, the registry, the journal's tables, slots.json
 // COPY AND PASTE FOR LOADOUTS (src/game/kit.ts kitPaste; tools/qa/kitpaste-check.ts sets the card's rules itself, each way, so it asks the same on either stand; KITPASTE_BREAK=1 must fail)
 if (on('kitpaste-fit', 'kitpaste', 'kit', 'all')) await run('kitpaste-fit', async () => (await import('./kitpaste-check.ts')).pasteFit());         // any man's card onto any man's: a legal squad, a card of his own tiles, one write

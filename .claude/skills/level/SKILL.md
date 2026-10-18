@@ -149,7 +149,10 @@ like that."
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
-  stands): the pattern of the glasshouse, the pass, the depot.
+  stands): the pattern of the glasshouse, the pass, the depot. A check that holds the file against the generator that
+  wrote it runs the generator as the exporter does (`asExporter` in `tools/qa/headless.ts`): the page's own sin and cos
+  round a last bit another way than the file was written with. **seen** the `level-identity` probe red on the shipped stand
+  for that and nothing else. Whether a file is stale is `export.ts <name> --check`'s question, not such a check's.
 
 ## 7. The team and its kit
 
@@ -179,8 +182,13 @@ like that."
 - **The Team & kit picture** is the level's own `scenarios.kitView` block, the same to the byte in a look twin; name boxes
   by group, not by a generated `box_NNNN` id. Where a `hide` list does name box ids, whoever shifts the level's box ids
   builds that list again from the generator's box range in the same step (other typed lists are left): a generated id names
-  whatever box now holds that number. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>`; the page
-  by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`.
+  whatever box now holds that number. Every way's picture stands at a door the squad's tools can work: a door with a
+  leaf, not steel. Where the mission's own way in is a gate, a gap or a wall, write the first door behind it (`ref` says
+  which side the picture is taken from), or a set with a door in the wall the stack stands on. **seen** "some demos still
+  don't really do anything": a hammer, a shotgun, a charge or the wand picked on a span or a steel door played the gun's
+  row, and the picture stood still. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>` (fails a way that
+  anchors anywhere else); the page by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`, and every pick
+  doing its work by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-work.cjs`.
 
 ## 8. What the player reads
 

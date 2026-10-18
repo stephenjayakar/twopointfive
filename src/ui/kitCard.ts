@@ -261,6 +261,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       const sq = i > 0 && i <= kitTeam() ? squadCost() : null; squadN.textContent = sq ? `squad ${sq.used} / ${sq.total}` : '';
       squadN.classList.toggle('full', !!sq && sq.used >= sq.total && c.used < c.total);   // (room in his own pouches and none in the squad's: the squad's count is why his arrows are dimmed, so it is the one lit)
     }
+    const issuedShown = kitIssuedShown(i);   // (one deal a refresh, not one a row)
     rows.forEach((r, k) => {
       const v = rowGet(r, m), e = rowEls[k], cost = kitRowCost(i, r, m), no = said && said.k === k ? said.why : '';
       const gunRow = r.field === 'weapon' || r.field === 'primary' || r.field === 'secondary', can = gunRow && KIT_CAN.on && kitRowCan(i, m, r.field);   // (the gun on this row wears a suppressor: drawn with it, and your pistol alone named for it)
@@ -273,7 +274,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       { const key = `${r.field}:${gunRow || r.field === 'big' ? v : ''}${can ? ':can' : ''}`; if (e.drawn !== key) { e.drawn = key; e.ico.innerHTML = I.svg; } e.ico.classList.toggle('none', I.none && !lent); }
       if (no) e.note.textContent = no;
       else { if (cost && !(lent && !v)) e.note.append(el('span', 'kc-cost', costWords(cost)), ' · '); e.note.append(r.note(lent ? { ...m, [r.field]: typeof v === 'number' ? handed : true } : m)); }   // (lent: the row's line for a man who HAS it — how it is used, not 'none in your pouches' — and no pouch rate on a tile the mission alone fills: what it hands takes none)
-      e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, kitIssuedShown(i))); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
+      e.row.classList.toggle('sel', cur === k); e.row.classList.toggle('changed', v !== rowGet(r, issuedShown)); e.row.classList.toggle('refused', !!no); e.row.classList.toggle('pasted', flash.has(r.field)); e.row.classList.toggle('pasted2', flash.has(r.field) && flashes % 2 === 0);
       // an arrow whose step would not fit his pouches is dimmed and says why (it can still be pressed: the reason goes on the row)
       for (const [b, dir, word] of [[e.prev, -1, 'previous'], [e.next, 1, 'next']] as [HTMLElement, 1 | -1, string][]) { const why = SLOTS.on ? kitPeek(i, r.field, dir).why : ''; b.classList.toggle('off', !!why); b.title = why || word; }
     });

@@ -1234,7 +1234,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     if (staged?.hole) { holeShots++; d.mendGlass(); game.glassBreak.reset(); (game.destr as unknown as { clearMoving?(): void }).clearMoving?.(); game.shards.reset(); game.repairLights(); poolSync(); return; }
     game.decals.clear(); d.mendGlass(); game.glassBreak.reset(); game.destr.reset(); game.shards.reset(); game.props.reset(); dropProps(plan); game.repairLights();
     if (fixture && !W.statics.includes(fixture)) W.addStatic(fixture); poolSync(); };
-  const burst = (B: Beat): { n: number; gap: number } => { const pl = game.player, def = (B.man ? B.man.weapon.def : pl.slot === 'rifle' ? pl.rifle.def : pl.pistol.def) as { id: string; pellets?: number }, k = def.pellets ? 2 : !B.man && pl.slot !== 'rifle' || /fiveseven|guard9mm/.test(def.id) ? 1 : 0; return { n: K.fireN[k], gap: K.fireGap[k] }; };
+  const burst = (B: Beat): { n: number; gap: number } => { const pl = game.player, def = (B.man ? B.man.weapon.def : pl.slot === 'rifle' ? pl.rifle.def : pl.pistol.def) as { id: string; cls: string; pellets?: unknown }, k = def.pellets ? 2 : !B.man && pl.slot !== 'rifle' || def.cls === 'pistol' ? 1 : 0; return { n: K.fireN[k], gap: K.fireGap[k] }; };
   const fireLine = (B: Beat, S: Staged): Fire | null => {
     const men: V2[] = [...S.order.filter(g => g !== B.man).map(g => homeOf(S, g).p), ...(B.man ? [S.sam] : [])], nav = game.col.nav, eye = 1.35, aH = along(S, B.home), oH = outOf(S, B.home);
     const near = (P: V2, m: number) => men.some(q => Math.hypot(q[0] - P[0], q[1] - P[1]) < m);
@@ -1976,7 +1976,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const T = costOn() ? KIT_VIEW_QUIET.cost.turn : 0;   // (under a loud row's cost ALL of him comes round to the door, at the cost's own rate: the game turns his chest and gun to an aim under `torso` off his feet and leaves the feet — he stood twisted, a stride's pose — so his body's channel is asked for the door too)
     if (T > 0 && staged) G.body.want = yawTo(game.player.char.pos, staged.at([0, 0, 0]));
     chanTick(G.body, Math.max(K.bodyRate, T) * R, dt); chanTick(G.aim, Math.max(K.gunRate, T) * R, dt); };
-  const SHORT = /fiveseven|guard9mm/;   // the pistols' rows (the rest are long guns)
+  const SHORT = /fiveseven|guard9mm|hk45|g18/;   // the pistols' rows (the rest are long guns)
   /** a teammate's gun written live: his hands' errand now (the animator's own kit swap: the right hand over the shoulder and back), the model at its far point */
   const swapGun = (man: Guard, id: string) => {
     const had = swaps.find(x => x.man === man); if (had) { had.id = id; return; }   // (a new pick before the write only changes what is written)
