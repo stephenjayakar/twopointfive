@@ -38,6 +38,7 @@ import { SQUAD_MAX_MEN } from '../scene/scenarios';
 import type { Door } from './doors';
 import { frameOf } from './guards';
 import { runnerFled } from './runner';   // (asked inside tick only)
+import { responseUp, responseTeam } from './qrf';   // (asked inside tick only: a raid's team still up)
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { inBounds } from './squad';
 import { squadsStage, squadsStop, squadsTick } from './enemysquads';
@@ -255,7 +256,7 @@ export class RoomClearScenario {
   /** what happened when, on the game clock: 'staged:<seed>/<attempt>', 'cleared:<room>', 'lost:<room>', 'pair:down', 'end:taken' / 'end:wiped' — what the probes
    *  and a tally read */
   log: { t: number; what: string }[] = [];
-  private pairSaid = false; private entrySaid = false;
+  private pairSaid = false; private entrySaid = false; private teamSaid = false;
   /** (words.ts) rooms that came clear and have not been called yet, and when the one line for them is due: a garrison that dies in ANOTHER room empties its own rooms on
    *  one frame, and each used to get a line of its own — four in 0.4 s */
   private clearDue: StructureRoom[] = []; private clearAt = NaN;
@@ -297,7 +298,7 @@ export class RoomClearScenario {
   stop() { if (this.active) this.g.nightBreach.stop(); this.clear(); }
   /** Stage it afresh (the knobs re-read; with `reroll` the next placement of the seed). */
   restage() { if (this.active) this.g.nightBreach.restage(); }
-  private clear() { squadsStop(this.g); this.rooms = []; this.placement = []; this.end = null; this.endAt = NaN; this.endWhy = ''; this.endSay = 'team wiped'; this.pairSaid = this.entrySaid = false; this.obj = null; this.clearDue = []; this.clearAt = NaN; }
+  private clear() { squadsStop(this.g); this.rooms = []; this.placement = []; this.end = null; this.endAt = NaN; this.endWhy = ''; this.endSay = 'team wiped'; this.pairSaid = this.entrySaid = this.teamSaid = false; this.obj = null; this.clearDue = []; this.clearAt = NaN; }
   private note(what: string) { this.log.push({ t: this.g.time, what }); if (this.log.length > 400) this.log.splice(0, 100); }
 
   /** the night breach's staging asks who the defenders are (NightBreachLayout.defenders): this staging's placement, the break room's men marked as the drill's.
@@ -354,8 +355,9 @@ export class RoomClearScenario {
     if (!this.entrySaid && nb.state === 'failed') { this.entrySaid = true; if (pairUp > 0 && play) g.msg(`point man down at the door — the ${this.drillRoom()?.name ?? 'room'} is yours to take`); }   // (the drill's entry is off with a man still up: he holds where he stands — nightbreach.ts)
     if (this.end) return;
     if (g.player.down) this.finish('wiped', 'player down');   // (first: the last defender and Sam down inside one frame is no win — the mission has failed and the down card is coming)
-    else if (live.length === 0) this.finish('taken', `${this.rooms.length} rooms clear, ${nb.ops.length ? `${pairUp} of ${nb.ops.length} teammates up` : 'alone'}`);
+    else if (live.length === 0 && !responseUp(g)) this.finish('taken', `${this.rooms.length} rooms clear, ${nb.ops.length ? `${pairUp} of ${nb.ops.length} teammates up` : 'alone'}`);
     else if (K.pairOnly && pairUp === 0 && nb.ops.length) this.finish('wiped', nb.ops.length > 2 ? 'the squad down' : 'the pair down');
+    else if (live.length === 0 && !this.teamSaid) { this.teamSaid = true; this.obj = null; this.note('team-up'); if (K.announce) g.msg(`rooms clear — ${responseTeam(g)} still on the ground`); }   // (qrf.ts RESPONSE.raid: the place is not taken while the team it called is up — said once, and it stays on the objective row)
   }
   /** A man the night breach adopted after the staging (stress.ts — extra enemies) is this structure's too: a row of the placement and a man of his room, so the
    *  room is not clear and the structure not taken while he is up. After nightBreach.adopt, the same frame (tick holds while the two lists differ in length). */
@@ -393,7 +395,7 @@ export class RoomClearScenario {
     const spot = next ? null : hint?.spots[0] ?? null;   // (laststand.ts `places`: nobody named a room still held, and one of them named a place that is no room of the list — the marker goes there)
     const text = this.end === 'taken' ? 'structure taken — shift+enter stages it again'
       : this.end === 'wiped' ? `${this.endSay} — ${this.g.player.down ? 'enter' : 'shift+enter'} stages it again`
-      : 'objective ▸ clear the structure: ' + this.rooms.map(r => (ticks && r.cleared ? '✓ ' : '') + (said(r) ? `[${r.def.name}]` : r.def.name)).join(' · ') + (hint?.spots ?? []).map(s => ` · [${s.name}]`).join('');
+      : 'objective ▸ clear the structure: ' + this.rooms.map(r => (ticks && r.cleared ? '✓ ' : '') + (said(r) ? `[${r.def.name}]` : r.def.name)).join(' · ') + (hint?.spots ?? []).map(s => ` · [${s.name}]`).join('') + (this.teamSaid ? ` · [${responseTeam(this.g)}]` : '');
     this.obj = { text, pos: this.end ? null : next ? [(next.x0 + next.x1) / 2, 0, (next.z0 + next.z1) / 2] : spot ? [spot.pos[0], 0, spot.pos[2]] : null, ticks, hint: hk };
     return this.obj;
   }

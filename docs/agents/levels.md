@@ -33,7 +33,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/levels/<name>.ts` → `bun run tools/levels/export.ts <name>` → `levels/<name>.json` (`test-rooms` = the tiny test level), played with
   `?levelFile=<name>.json&roomclear[&squad4]` / `&rescue`, headless `standUp({ level })`. QA: `bun run tools/qa/scenario-level-probes.ts levels/<name>.json`
   (data checks — validate, `checkStructure`, `checkRescue`, the route — then each scenario staged, walked and finished under a plain scripted player) and
-  `probes.ts scenario-levels` (that on test-rooms). Still office-only by constant: weather INTERIOR / ANNEX, chronicle ROOMS, QRF_MARKS, NEED_SPOTS, CIV_SPOTS,
+  `probes.ts scenario-levels` (that on test-rooms). Still office-only by constant: weather INTERIOR / ANNEX, chronicle ROOMS, QRF_MARKS (only with `RESPONSE` off — on, the team's places are the level's own `scenarios.response`: enemies.md), NEED_SPOTS, CIV_SPOTS,
   the rescue flow's +x corridor.
 - **The default look = 2010s GWOT** (`src/scene/look.ts`, `LOOK.on`: ON in the page — `?look=plain` (or `?look=0|off`, `?nolook`) = every level and man as before; OFF in the module and on
   the frozen harness stand, `TPS_LOOK=1`; one of `FROZEN_HOLDS`' rows, in the knob registry; what the game looks like as a whole, as rules to hold new work to: `STYLE.md` at the repo root). LOOK ONLY: headless no run differs by it (on the page the repainted walls bounce other light into the GPU meter, so a sighting can differ between a level's two files). LEVELS: `LOOK_LEVELS` names the levels that have a SECOND FILE

@@ -3,7 +3,7 @@
 // (scene/level.ts withOfficeScript), so levels/office.json itself is unchanged; a level made after this one carries the same block in its own file.
 // Plain literals and type-only imports: nothing here is built from another module's exports (src/game is one import cycle — this is imported at its top).
 import type { Vec3 } from '../src/math/vec';
-import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData } from '../src/scene/scenarios';
+import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData } from '../src/scene/scenarios';
 
 /** the night breach: Sam beside the pair on the breach plan's approach marks, in the cubicles' south aisle, facing east down it */
 const NIGHT_BREACH: NightBreachData = {
@@ -105,4 +105,23 @@ const RESCUE: RescueData = {
  *  room's, past the last man). Everything else is measured (src/host/kitViewPlan.ts). */
 const KIT_VIEW: KitViewData = { ways: [{ door: 'server', ref: [17.6, 11.1], hide: ['box_0120', 'box_0121', 'box_0380', 'box_0390'], slots: [null, null, null, [15.0, 11.56, 90]], roomLights: 1, pane: false }] };
 
-export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW };
+/** THE RESPONSE TEAM (game/qrf.ts, RESPONSE.on): the building's own. The marks are qrf.ts QRF_MARKS number for number — the landing behind the steel stair
+ *  door, the fan just inside it, the four outside posts of the lot and where the gate's own men are stood up — and the words are the lines the office always
+ *  had. One way in: the floor has one stair. A run is dealt three or four men, a minute to a minute and a half out. */
+const RESPONSE: ResponseData = {
+  why: 'One floor of a guarded building at night: the night shift is three men, and the building\'s own response team waits floors below, a stair away.',
+  site: 'two-six', at: 'on two-six', team: 'the response team', tag: 'QRF',
+  ways: [{ name: 'the west stairwell', door: 'stairwell', stairs: true, coming: 'coming up the west stairs', clear: 'nobody west of the lobby arch',
+    muster: [[3.1, 0, 11.25], [2.25, 0, 11.25], [3.1, 0, 10.3], [2.25, 0, 10.3]],
+    entry: [[6.7, 0, 11.2], [5.9, 0, 10.55], [5.9, 0, 11.8], [5.4, 0, 11.25]], entryFace: [Math.PI / 2, 2.4, 0.75, Math.PI / 2] }],
+  men: [3, 4], eta: [60, 90],
+  posts: [
+    { name: 'fire exit', pos: [38.9, 0, 24.2], yaw: -2.48, sweep: [[36.15, 1.0, 19.9], [36.15, 1.0, 21.5]] },
+    { name: 'break-room door', pos: [27.4, 0, 25.7], yaw: 1.95, sweep: [[30.9, 1.0, 24.15], [32.4, 1.0, 24.15]] },
+    { name: 'lobby front', pos: [2.3, 0, 20.6], yaw: Math.PI / 2, sweep: [[3.9, 1.0, 17.6], [3.9, 1.0, 22.4]] },
+    { name: 'south lot', pos: [17.4, 0, 26.4], yaw: Math.PI, sweep: [[14.5, 1.2, 24.15], [23.5, 1.2, 24.15]] },
+  ],
+  outside: [[38.6, 0, 26.6], [37.4, 0, 26.9], [38.8, 0, 25.4], [37.2, 0, 25.6]],
+};
+
+export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW, response: RESPONSE };
