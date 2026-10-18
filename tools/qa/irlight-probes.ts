@@ -1,6 +1,6 @@
 // The 'irlight' family: AN INFRARED LIGHT ON THE GOGGLES (the maintainer, 10-15: "maybe we should model IR lights on the nvg so even totally dark rooms are
 // visible. and we can assume enemies never have nvg"). The rule is game/irlight.ts; this family is its check. Run through probes.ts:
-//   bun run tools/qa/probes.ts irlight | irl-list | irl-unseen | irl-team | irl-off | irl-auto          (both stands: TPS_PROFILE=shipped in front for the page's)
+//   bun run tools/qa/probes.ts irlight | irl-list | irl-unseen | irl-team | irl-off | irl-auto | irl-meter          (both stands: TPS_PROFILE=shipped in front for the page's)
 // PASS / FAIL each, all headless (the Game of headless.ts stood up on each scenario's own level, started as a click on its row starts it — bang-tally.ts
 // stage()). NOTHING IS DRAWN: how a room reads through the tube under the flood is not judged here and has never been seen on a GPU; the GPU's light meter is
 // not run (headless it is the CPU stand-in). What is held is the mechanism: which lights exist, in which list, with which bits, and who reads them.
@@ -28,6 +28,18 @@
 //               one. One light on open floor never reads past the tube's hot shoulder beyond arm's length (the brightness that was asked down). Its red
 //               path: IRAUTO_BREAK=1 calls every place dark, and this probe must FAIL. The other four probes hold the rule OFF: they check a light that
 //               burns whenever the goggles are down.
+//   irl-meter   WHAT THE CPU CALLS DARK IS PUT TO THE RENDERER'S METER (IRLIGHT.meter; the maintainer, 10-18, of a strongroom with its own bulb off: "still
+//               feels like the IR light here is unnecessary" — the CPU's estimate has no bounced light, so every room with no lamp of its own was black
+//               to the rule). No renderer here: its answers are PLANTED through the hooks the harness swaps (Game.lightAt), and what is held is who
+//               decides. Every scenario, Sam stood on floor the CPU's estimate calls black, his goggles brought down afresh: the renderer answers 'lit'
+//               — not one frame of his light, nor of a teammate's, and with the switch off the same answers and it burns (the build before); it answers
+//               'dark' — burning inside a tenth of a second and at full at once; it answers Sam's own meter and nothing else (a starved probe) — no
+//               light until IRL_METER.wait, then the CPU's word; it answers nothing at all (headless as it is) or the senses are on the CPU (SENSE.cpu)
+//               — nothing asked and the CPU's word at once, the rule as it was. The line is the PICTURE's (IRLIGHT.show of the tube's range) and so is
+//               the bounce: an answer over the line by itself and under it × settings.indirectScale is dark, and with the scale at 1 it is not. Where the CPU calls the place light nothing is asked.
+//               What a carrier asks is bounded (IRL_METER.slots a beat) and forgotten with his goggles. The stands, the FROZEN_HOLDS row and a
+//               recording from before the key. Its red path: IRMETER_BREAK=1 holds the switch off where this probe turns it on, and it must FAIL.
+//               irl-auto and the four before it hold this switch OFF (headless it changes nothing: no renderer answers).
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT, standUp } from './headless.ts';
@@ -40,7 +52,7 @@ const ILM: any = await import(`${ROOT}/src/game/irlight.ts`);
 const LTM: any = await import(`${ROOT}/src/render/lights.ts`);
 const TFM: any = await import(`${ROOT}/src/game/teamfeel.ts`);
 const IRLIGHT = ILM.IRLIGHT;
-const AUTO_AT_LOAD: boolean = IRLIGHT.auto;
+const AUTO_AT_LOAD: boolean = IRLIGHT.auto, METER_AT_LOAD: boolean = IRLIGHT.meter;
 const ON_AT_LOAD: boolean = IRLIGHT.on;   // (what the stand left it at as the harness loaded: the shipped stand writes the page's switches once, then — profile.ts shippedBoot)
 
 const DT = 1 / 60;
@@ -64,7 +76,7 @@ const headOf = (c: any): number[] => c.bones.head ?? [c.pos[0], c.pos[1] + 1.62,
 const f2 = (x: number) => x.toFixed(2);
 /** a scenario as its row starts it with the light as asked, the team fallen in on Sam, Sam's goggles as asked, four seconds on */
 async function settled(id: string, on: boolean, team: boolean, nv: boolean, auto = false) {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = auto; g.player.nv = nv;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = auto; IRLIGHT.meter = false; g.player.nv = nv;
   await quiet(() => g.orders.give('fallIn', g.orders.targetAt(g.player.char.pos), 'all')); step(240);
   return S;
 }
@@ -123,7 +135,7 @@ export const irlList = guarded(async () => {
 // ---------------------------------------------------------------- irl-unseen / irl-team: the same held-door play
 interface Play { hash: string; frames: number; irFrames: number; irMax: number; flood: number; awMax: number; black: number; white: number; gog: number; shots: number; down: number }
 async function play(id: string, on: boolean, team: boolean, nv: boolean): Promise<Play | null> {
-  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = false; g.player.nv = nv;
+  const S: any = await quiet(() => stage(id, 1)); const { g, step } = S; const O = g.orders; IRLIGHT.on = on; IRLIGHT.team = team; IRLIGHT.auto = false; IRLIGHT.meter = false; g.player.nv = nv;
   const L = g.engine.lights, foes = g.guards.filter((x: any) => x.team === 'hostile'), H = fnv();
   const R: Play = { hash: '', frames: 0, irFrames: 0, irMax: 0, flood: 0, awMax: 0, black: 0, white: 0, gog: 0, shots: 0, down: 0 };
   const shots0 = foes.reduce((n: number, x: any) => n + x.weapon.shotsFired, 0);
@@ -217,7 +229,7 @@ export const irlOff = guarded(async () => {
     IRLIGHT.on = true; step(2); const on = L.ir.length; IRLIGHT.on = false; step(1);
     F.verdict(on > 0 && L.ir.length === 0, 'flipped in play it takes hold inside a frame', `on: ${on} burning two frames later · off: ${L.ir.length} the next frame`);
     reset(); }
-  { const rows = ['on', 'team', 'auto', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto'].every(k => TFM.feelRange('IRLIGHT', k) === null);
+  { const rows = ['on', 'team', 'auto', 'meter', 'show', 'power', 'cone', 'reach'], kept = rows.filter(k => TFM.feelRange('IRLIGHT', k) !== undefined), sw = ['on', 'team', 'auto', 'meter'].every(k => TFM.feelRange('IRLIGHT', k) === null);
     F.verdict(kept.length === rows.length && sw, 'the Team feel rows are kept per machine (teamfeel.ts)', `${kept.join(', ')} · on / team / auto are switches: ${sw}`); }
   { const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRLIGHT;
     const want = frozen || word !== undefined ? word === '1' : true;
@@ -306,5 +318,91 @@ export const irlAuto = guarded(async () => {
     IRLIGHT.auto = frozen ? !want : want; await quiet(() => standUp());
     F.verdict(IRLIGHT.auto === want && (frozen || AUTO_AT_LOAD === want), frozen ? 'standUp() on the frozen stand puts IRLIGHT.auto to what TPS_IRAUTO says (unset: off — the light of every check written before the rule)' : 'the shipped stand has the rule on from the moment the harness loads, as the page does', `as the harness loaded: ${AUTO_AT_LOAD} · after standUp: ${IRLIGHT.auto} · TPS_IRAUTO ${word ?? 'unset'} · TPS_PROFILE ${process.env.TPS_PROFILE ?? 'unset'}`);
     DEFAULTS.auto = IRLIGHT.auto; }
+  return F.done();
+});
+
+// ---------------------------------------------------------------- irl-meter: the renderer's word on what the CPU calls dark
+const E_LIT = 0.2, E_DARK = 0, E_EDGE = 0.015;   // (W/m² the planted renderer answers: 0.2 × the picture's bounce scale is about a third of the tube's range, well over IRLIGHT.show; 0.015 is over that line as the meter has it and under it × 0.35)
+export const irlMeter = guarded(async () => {
+  const F = family('irl-meter: what the CPU calls dark is put to the renderer\'s meter');
+  const BRK = !!process.env.IRMETER_BREAK, D: number = NVM.NVG.blackAt, WAIT: number = ILM.IRL_METER.wait, SLOTS: number = ILM.IRL_METER.slots; const SNS: any = (await import(`${ROOT}/src/game/sense.ts`)).SENSE;
+  const meterOn = () => { IRLIGHT.meter = !BRK; };   // (the red path: the switch held off — the rule never hears the renderer)
+  let asked = 0, askedMost = 0, litAsked = 0; const cpuWas = SNS.cpu;
+  try {
+  for (const id of IDS) {
+    const S = await settled(id, true, true, true, true); const { g, step } = S; const L = g.engine.lights, pl = g.player, fails: string[] = [], said: string[] = [];
+    g.godMode = true; const X = g.engine.settings.exposure > 0 ? g.engine.settings.exposure : 1, scale0 = g.engine.settings.indirectScale;
+    const samLit = () => L.ir.find((l: any) => l.owner === pl.char.id);
+    const cands: number[][] = [[...pl.char.pos], ...doorsOf(S).map((e: any) => [e.at[0], 0, e.at[2]]), ...g.guards.filter((x: any) => x.team === 'hostile').map((x: any) => [x.char.pos[0], 0, x.char.pos[2]])];
+    const dark = cands.find(P => tubeAt(g, P[0], P[2]) < D * 0.8), lit = cands.find(P => leastSeen(g, P, D * 1.2) >= D * 1.2);
+    // ---- the hooks: what the renderer answers (undefined = nothing, as headless) to Sam's own meter, to the team's own meters and to this rule's keys; what the rule asks and forgets
+    let own: number | undefined, plant: number | undefined; let frameAsks = 0, firstAsk = -1, forgot = 0;
+    const at0 = g.lightAt, q0 = g.lightQuery, f0 = g.lightForget;
+    g.lightAt = (k: string) => k.startsWith('irl') ? plant : k === 'playerChest' || k.startsWith('unitC') ? (own ?? at0(k)) : at0(k);
+    g.lightQuery = (k: string, pos: any, skip?: number) => { if (k.startsWith('irl')) { frameAsks++; if (firstAsk < 0 && k.startsWith(`irl${pl.char.id}:`)) firstAsk = g.time; } q0(k, pos, skip); };
+    g.lightForget = (k: string) => { if (k.startsWith('irl')) forgot++; f0(k); };
+    /** his goggles up, stood at P, his goggles down afresh, `n` frames on: how many frames his light burned, when it first did after his goggles were down
+     *  (and after HIS first question, where he asked one), its strength then, and the most asked in a frame */
+    const fresh = async (P: number[], n: number) => { pl.nv = false; step(40); await quiet(() => g.teleportPlayer(P)); firstAsk = -1; pl.nv = true; let burn = 0, first = -1, firstQ = -1, k0 = 0, most = 0, mateBurn = 0, sum = 0, black = true, downAt = -1;
+      for (let f = 0; f < n; f++) { frameAsks = 0; step(); most = Math.max(most, frameAsks); sum += frameAsks; black &&= tubeAt(g, pl.char.pos[0], pl.char.pos[2]) < D; if (downAt < 0 && pl.nvAmount > 0.5) downAt = g.time;
+        const l = samLit(); if (l) { burn++; if (first < 0) { first = downAt < 0 ? 0 : g.time - downAt; firstQ = firstAsk < 0 ? -1 : g.time - firstAsk; k0 = l.intensity * X / IRLIGHT.power; } }
+        if (f > 100) mateBurn += L.ir.filter((l: any) => l.owner !== pl.char.id).length; }   // (a teammate lit by the CPU's word before the switch came on is out its hold and its fade later: 2 s, and 40 frames went before these)
+      return { burn, first, firstQ, k0, most, mateBurn, mean: sum / n, black, asks: firstAsk >= 0 }; };
+    if (dark) {
+      // (a) the renderer answers 'lit' on floor the CPU calls black: no light, not for a frame — Sam's or a teammate's
+      meterOn(); own = E_LIT; plant = E_LIT; const A = await fresh(dark, 180);
+      if (A.black) { asked++; askedMost = Math.max(askedMost, A.most);
+        const carriers = 1 + mates(g).filter((x: any) => NVM.nvgDown(g, x)).length;
+        if (!A.asks) fails.push('the rule on, the renderer answering, and it was never asked');
+        if (A.burn) fails.push(`the renderer answers lit (${E_LIT} W/m²) on floor the CPU calls black: his light burned ${A.burn} frames of 180`);
+        if (A.mateBurn) fails.push(`…and a teammate's burned (${A.mateBurn} light-frames) with every answer lit`);
+        if (A.most > SLOTS * carriers || A.mean > carriers * SLOTS * 4 / 60 + 0.5) fails.push(`asked ${A.most} points in one frame, ${f2(A.mean)} a frame (${carriers} carriers, ${SLOTS} a beat each)`);
+        said.push(`renderer lit on CPU-black floor at ${dark[0].toFixed(1)},${dark[2].toFixed(1)}: 0 frames of light, ${A.most} asked at most in a frame (${f2(A.mean)} a frame)`);
+        // (b) the switch off, the same answers: it burns — the build before
+        IRLIGHT.meter = false; const B = await fresh(dark, 60);
+        if (B.black && (!B.burn || B.asks)) fails.push(`the switch off: ${B.burn ? '' : 'his light does not burn on CPU-black floor'}${B.asks ? ' the renderer is still asked' : ''}`);
+        // (c) the renderer answers 'dark': burning inside a tenth of a second of his goggles, at full at once
+        meterOn(); own = E_DARK; plant = E_DARK; const C = await fresh(dark, 60);
+        if (C.black && (C.first < 0 || C.first > 0.1 || Math.abs(C.k0 - 1) > 1e-6)) fails.push(`the renderer answers dark: ${C.first < 0 ? 'no light in a second' : 'first light ' + f2(C.first) + ' s after his goggles at ' + f2(C.k0) + ' of full'}`);
+        // (d) the picture's bounce: an answer over the line as the meter has it, under it × the picture's scale, is dark — and is not with the scale at 1
+        own = E_EDGE; plant = E_EDGE; const G1 = await fresh(dark, 40); g.engine.settings.indirectScale = 1; const G2 = await fresh(dark, 130); g.engine.settings.indirectScale = scale0;
+        const overAlone = NVM.tubeSig(g, E_EDGE) >= IRLIGHT.show, underScaled = NVM.tubeSig(g, E_EDGE * scale0) < IRLIGHT.show, tail = G2.burn;   // (G2 starts inside the hold of G1's light: only that it is OUT by the end is asked)
+        if (!overAlone || !underScaled) fails.push(`${E_EDGE} W/m² is not on both sides of the line: ${f2(NVM.tubeSig(g, E_EDGE))} alone, ${f2(NVM.tubeSig(g, E_EDGE * scale0))} scaled, the line ${IRLIGHT.show}`);
+        if (G1.black && G2.black && overAlone && underScaled && (!G1.burn || !!samLit())) fails.push(`an answer of ${E_EDGE} W/m² (${f2(NVM.tubeSig(g, E_EDGE))} of the tube's range alone, ${f2(NVM.tubeSig(g, E_EDGE * scale0))} × the picture's bounce scale ${scale0}; the line ${IRLIGHT.show}): ${G1.burn ? '' : 'no light at the picture\'s scale; '}${samLit() ? 'still burning with the scale at 1 (' + tail + ' frames)' : ''}`);
+        // (e) the renderer answers Sam's own meter 'lit' and none of the fan's points (starved): nothing until the wait is over, then the CPU's word
+        meterOn(); own = E_LIT; plant = undefined; const N = await fresh(dark, 60);
+        if (N.black && N.asks && (N.firstQ < WAIT - 0.02 || N.firstQ > WAIT + 0.1)) fails.push(`the fan's points never answered: first light ${N.firstQ < 0 ? 'never' : f2(N.firstQ) + ' s'} after his first question (the wait is ${WAIT} s, then the CPU's word)`);
+        // (f) the renderer answers nothing at all (headless as it is): nothing asked, the CPU's word at once
+        own = undefined; plant = E_LIT; const H = await fresh(dark, 30);
+        if (H.black && (H.asks || H.first < 0 || H.first > 0.1 || Math.abs(H.k0 - 1) > 1e-6)) fails.push(`no renderer: ${H.asks ? 'it was asked; ' : ''}${H.first < 0 ? 'no light' : 'first light ' + f2(H.first) + ' s after his goggles at ' + f2(H.k0) + ' of full'}`);
+        // (g) the senses on the CPU: the same
+        SNS.cpu = true; own = E_LIT; plant = E_LIT; const P = await fresh(dark, 30); SNS.cpu = cpuWas;
+        if (P.black && (P.asks || !P.burn)) fails.push(`the senses on the CPU: ${P.asks ? 'the renderer was asked' : ''}${P.burn ? '' : ' no light on CPU-black floor'}`);
+        said.push(`switch off: burning · renderer dark: light ${f2(C.first)} s on at full · ${E_EDGE} W/m²: dark at the picture's scale, light at 1 · points unanswered: light ${f2(N.firstQ)} s after the question · no renderer / senses on the CPU: nothing asked, light at once`);
+        // (h) goggles up: what he asked is forgotten
+        meterOn(); own = E_LIT; plant = E_LIT; const U = await fresh(dark, 30); forgot = 0; pl.nv = false; step(40);
+        if (U.asks && forgot < 1) fails.push('goggles up: nothing he asked of the renderer was forgotten'); }   // (asked of a stand where he did ask: one nudged onto floor with fewer than two dark points in his fan asks nothing)
+    }
+    if (lit) {   // (i) where the CPU calls every floor he could look at light, nothing is asked whatever the renderer would say
+      meterOn(); own = E_DARK; plant = E_DARK; const G = await fresh(lit, 60);
+      if (leastSeen(g, pl.char.pos, D * 1.2) >= D * 1.2) { litAsked++; if (G.burn || G.asks) fails.push(`floor the CPU calls light: ${G.asks ? 'the renderer was asked' : ''}${G.burn ? ' his light burned' : ''}`); else said.push('CPU-lit floor: nothing asked, no light'); } }
+    g.lightAt = at0; g.lightQuery = q0; g.lightForget = f0; g.engine.settings.indirectScale = scale0;
+    F.verdict(!fails.length, `${id}: the renderer's answers planted, Sam's goggles brought down afresh`, fails.slice(0, 6).join('; ') || said.join(' · ') || 'no floor the CPU calls black among Sam\'s start, the doors and the enemies\' spots');
+    reset(); SNS.cpu = cpuWas;
+  }
+  } finally { SNS.cpu = cpuWas; }
+  F.verdict(asked > 0 && litAsked > 0, 'not vacuous: floor the CPU calls black and floor it calls light were both found, and the renderer was asked about the black', `black in ${asked} of ${IDS.length} scenarios, light in ${litAsked} · the most asked in one frame: ${askedMost}`);
+  { const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`); const JOURNAL: any = await import(`${ROOT}/src/game/journal.ts`);
+    const frozen = !process.env.TPS_PROFILE || process.env.TPS_PROFILE === 'frozen', word = process.env.TPS_IRMETER;
+    const want = frozen || word !== undefined ? word === '1' : true;
+    IRLIGHT.meter = frozen ? !want : want; const S: any = await quiet(() => stage(IDS[0], 1)); const stood = IRLIGHT.meter;
+    const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(S.g)));
+    IRLIGHT.meter = true; const carries = snap().tables.IRLIGHT?.meter === true; const old = snap(); delete old.tables.IRLIGHT.meter; await quiet(() => JOURNAL.applyKnobs(S.g, old)); const without = IRLIGHT.meter;
+    const own = snap(); own.tables.IRLIGHT.meter = true; IRLIGHT.meter = false; await quiet(() => JOURNAL.applyKnobs(S.g, own)); const withIt = IRLIGHT.meter;
+    const row = (FROZEN_HOLDS as any)['IRLIGHT.meter'], kept = TFM.feelRange('IRLIGHT', 'meter') === null;
+    F.verdict(stood === want && (frozen || METER_AT_LOAD === want) && typeof row === 'string' && /TPS_IRMETER=1/.test(row) && carries && without === false && withIt === true && kept,
+      frozen ? 'the frozen stand holds the switch off (TPS_IRMETER=1 raises it); a recording from before the key replays with it off; the Team feel row is kept' : 'the shipped stand has the switch on from the moment the harness loads, as the page does; a recording from before the key replays with it off; the Team feel row is kept',
+      `as the harness loaded: ${METER_AT_LOAD} · after standUp: ${stood} · TPS_IRMETER ${word ?? 'unset'} · FROZEN_HOLDS row: ${row ?? 'none'} · the journal carries the key: ${carries}; applyKnobs without it → ${without}, with it on → ${withIt} · kept by teamfeel.ts: ${kept}`);
+    IRLIGHT.meter = stood; }
   return F.done();
 });

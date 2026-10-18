@@ -15,6 +15,23 @@
 //     from that reading until IRLIGHT.hold seconds after the last dark one (a look swept past a dark doorway does not blink it), then eases out.
 //     Everywhere the tube shows the place by its own light the illuminator is out: a moonlit yard, a lit corridor. Off = it burns whenever the goggles are
 //     down, as it did.
+//   BY THE LIGHT THE PICTURE HAS (IRLIGHT.meter; the maintainer, 10-18, of a strongroom with its bulb off, its floor under his flood and the room round it
+//     plain in the goggles: "still feels like the IR light here is unnecessary"). The estimate above is the CPU's: direct light only. A room with no lamp
+//     of its own is 0 to it, and yet the tube — which makes a picture of a thousandth of a lit room's light — shows that room by what comes round the door
+//     frame and off the walls. The renderer's light meter has that bounce (probe.wgsl: shadowed direct light + the radiance cache) and is given nothing by
+//     an infrared light, so it still cannot answer its own question. So the CPU's rule stays the FIRST word — where it calls a place light nothing more is
+//     asked — and the renderer gets the LAST one on what the CPU calls dark: the floor under him (Sam's and a teammate's own meters, asked every frame as
+//     it is; the wand's lens asks its own) and a spread of up to IRL_METER.slots of the dark points his fan found, asked through the sensors' seam
+//     (Game.lightQuery) on his beat and read every frame. A point is dark when the PICTURE of it is under IRLIGHT.show of the tube's range: the CPU's
+//     direct light + the meter's bounce × settings.indirectScale (the meter's bounce is physical; the picture's is scaled — fgather.wgsl) through the
+//     tube's curve (nvg.ts tubeSig). A line of its own, and higher than NVG.blackAt: that one is where a MAN is lost to a goggled eye, about 0.035 of
+//     the range, and direct light is either well over it or nothing; bounce is every value between, and floor at 0.05 of the range is grain to the
+//     player (the strongroom with its door shut, on the software adapter). Under this branch the CPU's first word is asked by the same line. The same
+//     count decides: the floor under him, or FAN_NEED of the points. A point not yet answered waits IRL_METER.wait (no light: a light that came on by
+//     the CPU's word and went out by the renderer's two frames on would blink for its whole hold every time the goggles came down in such a room), then
+//     takes the CPU's word. Where no renderer answers at all — headless, the senses on the CPU (sense.ts), a page before its first frame: Sam's own
+//     meter has no answer — the CPU's rule is the whole rule, at once, exactly as it was. So his light burns in a room that is sealed and unlit, and
+//     not in one the picture already shows. Off = the CPU's estimate decides everywhere, as it did.
 //   WHAT IT IS. A real light: a wide spot at his brow along the way he faces, tipped a little to the floor, shadowed by every wall, leaf and body like any other.
 //     Its strength is said as what the TUBE makes of it (IRLIGHT.power: on-axis intensity × the picture's exposure — the tube counts exposed luminance, so the
 //     flood reads the same through it at every hour and on every Brightness setting), not as a wattage.
@@ -38,8 +55,9 @@ import { Vec3, v3, clamp, DEG } from '../math/vec';
 import type { RtLight } from '../render/lights';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
-import { nvgDown, tubeVis, nvgPlaceLight, NVG } from './nvg';
+import { nvgDown, tubeVis, tubeSig, nvgPlaceLight, NVG } from './nvg';
 import { wandEye, WAND } from './wand';
+import { SENSE } from './sense';
 
 export const IRLIGHT = {
   /** off = no infrared light on anybody's goggles (the page turns it on: src/host/profile.ts; ?noirlight) */
@@ -48,6 +66,12 @@ export const IRLIGHT = {
   team: true,
   /** it burns only where the goggles alone show too little (the page turns it on: src/host/profile.ts; ?noirauto). off = whenever the goggles are down */
   auto: false,
+  /** auto: the place is read off the renderer's light meter, bounced light and all, where it answers (the page turns it on: src/host/profile.ts;
+   *  ?noirmeter). off = by the CPU's estimate of the direct light alone, to which a room lit only round a door frame is black */
+  meter: false,
+  /** meter: the least the tube's picture must make of a floor (0‥1 of its range) for his light to stay out. The maintainer's strongroom read about 0.3 in
+   *  his shot; 0.05 is grain. Never judged on a real GPU */
+  show: 0.1,
   /** auto: s the light stays on after the last reading that found floor too dark for the tube (NVG.blackAt, by the place's own light) */
   hold: 1.5,
   /** how bright the flood reads THROUGH THE TUBE: on-axis intensity × the picture's exposure. 8 (it was 30, and five of them at once put a lot at the tube's
@@ -66,7 +90,10 @@ export const IRLIGHT = {
 const WAND_KEY = -1;
 const HEAD_Y = 1.62, LENS_AHEAD = 0.14, LENS_CLEAR = 0.3, LENS_R = 0.04;
 /** one carrier's reading of his place (IRLIGHT.auto): when his fan was last read, when anything last read dark, how much of his light burns, and as of when */
-interface Need { readT: number; darkT: number; k: number; t: number }
+/** …and under IRLIGHT.meter: `fresh`: no reading of his has been decided yet (the first one that is puts his light at full or out at once) · `t0`: when
+ *  the reading began · `own`: the CPU's light on the floor under him where it calls that dark (−1: it does not) · `pts`: the dark points of his fan the
+ *  renderer is asked about, x, z and the CPU's light at each · `since`: when each slot was first asked (Infinity: not in use; the last is the wand's own floor) */
+interface Need { readT: number; darkT: number; k: number; t: number; fresh: boolean; t0: number; own: number; pts: number[]; since: number[] }
 interface Kit { sam: RtLight | null; men: Map<Guard, RtLight>; seen: Map<Guard, { t: number; E: number }>; need: Map<number, Need> }
 const kits = new SideMap<Game, Kit>('irlight.kits');
 const kitOf = (g: Game): Kit => { let K = kits.get(g); if (!K) { K = { sam: null, men: new Map(), seen: new Map(), need: new Map() }; kits.set(g, K); } return K; };
@@ -97,23 +124,68 @@ function fanDark(g: Game, at: Vec3, yaw: number): boolean {
   }
   return false;
 }
+/** THE RENDERER'S WORD ON WHAT THE CPU CALLS DARK (IRLIGHT.meter; see the head). `slots`: the most fan points one carrier asks about on a beat (the probe
+ *  has 64 places a frame for everybody) · `wait`: s an unanswered point is waited for before the CPU's word stands */
+export const IRL_METER = { slots: 5, wait: 0.25 };
+const skey = (key: number, i: number) => `irl${key}:${i}`;
+const forget = (g: Game, key: number) => { for (let i = 0; i <= IRL_METER.slots; i++) g.lightForget(skey(key, i)); };
+/** every point of his fan the CPU's direct light leaves under the picture's line (IRLIGHT.show), in the fan's order: x, z and the CPU's light there (no way out at the second: the renderer is asked about a spread of them) */
+function fanDarks(g: Game, at: Vec3, yaw: number): number[] {
+  const eye: Vec3 = [at[0], 1.5, at[2]], out: number[] = [];
+  for (const off of FAN_DEG) {
+    const fx = Math.sin(yaw + off * DEG), fz = Math.cos(yaw + off * DEG);
+    for (const r of FAN_M) { const P: Vec3 = [eye[0] + fx * r, 1.2, eye[2] + fz * r]; if (g.col.segmentBlocked(eye, P)) break; const E = nvgPlaceLight(g, P); if (tubeSig(g, E) < IRLIGHT.show) out.push(P[0], P[2], E); }
+  }
+  return out;
+}
+/** Is a place the CPU calls dark (its direct light `cpu`) dark in the PICTURE, by the renderer's answer `E`? undefined: no answer yet. */
+function shownDark(g: Game, cpu: number, E: number | undefined): boolean | undefined {
+  if (E === undefined || !Number.isFinite(E)) return undefined;
+  const s = g.engine.settings.indirectScale;
+  return tubeSig(g, cpu + (s >= 0 ? s : 1) * Math.max(E - cpu, 0)) < IRLIGHT.show;
+}
+/** his reading is over (goggles up, gone, the light off): what he asked of the renderer is forgotten with it */
+const drop = (g: Game, kit: Kit, key: number) => { const N = kit.need.get(key); if (!N) return; if (N.since.some(t => t !== Infinity)) forget(g, key); kit.need.delete(key); };
 /** How much of his light burns this frame, 0‥1 (1 with IRLIGHT.auto off: whenever the goggles are down). `key`: the carrier's own (a second one for Sam's
- *  wand: the lens looks at another place, read afresh); `at` / `yaw`: where his flood starts and looks; `each`: the floor under him is asked every frame
+ *  wand: the lens looks at another place, read afresh); `at` / `yaw`: where his flood starts and looks; `each`: the floor under him is read every frame
  *  (Sam: the picture is his), not only with the fan. The fan is read every READ_EVERY s of the game's clock, each carrier on his own beat. A dark reading
  *  and his light is on — at full on the first reading after his goggles come down, eased in over FADE_IN after a later one — until IRLIGHT.hold after the
- *  last, then eased out over FADE_OUT. */
-function burn(g: Game, kit: Kit, key: number, at: Vec3, yaw: number, each: boolean): number {
-  if (!IRLIGHT.auto) { kit.need.delete(key); return 1; }
-  let N = kit.need.get(key); const born = !N || N.t > g.time;
-  if (!N || born) { N = { readT: -Infinity, darkT: -Infinity, k: 0, t: g.time }; kit.need.set(key, N); }
-  let dark = each && darkAt(g, at[0], at[2]);
-  if (g.time - N.readT >= READ_EVERY) {
-    N.readT = born ? g.time - (Math.abs(key) * 0.6180339887 % 1) * READ_EVERY : g.time;   // (the first reading is at once; the beat after it is his own, so five men's fans do not all fall on one frame)
-    dark = dark || (!each && darkAt(g, at[0], at[2])) || fanDark(g, at, yaw);
+ *  last, then eased out over FADE_OUT. `live`: the renderer answers and is asked (IRLIGHT.meter; see the head) — then `ownKey` is the meter key that
+ *  already reads the floor under him (null: none, the wand — it asks its own). */
+function burn(g: Game, kit: Kit, key: number, at: Vec3, yaw: number, each: boolean, live: boolean, ownKey: string | null): number {
+  if (!IRLIGHT.auto) { drop(g, kit, key); return 1; }
+  let N = kit.need.get(key); const born = !N || N.t > g.time, S = IRL_METER.slots;
+  if (!N || born) { if (N) forget(g, key); N = { readT: -Infinity, darkT: -Infinity, k: 0, t: g.time, fresh: true, t0: g.time, own: -1, pts: [], since: new Array(S + 1).fill(Infinity) }; kit.need.set(key, N); }
+  const beat = g.time - N.readT >= READ_EVERY;
+  let dark = false, pending = false;
+  if (!live) {   // the CPU's rule, whole
+    if (N.pts.length || N.own >= 0 || N.since.some(t => t !== Infinity)) { forget(g, key); N.pts.length = 0; N.own = -1; N.since.fill(Infinity); }
+    dark = each && darkAt(g, at[0], at[2]);
+    if (beat) dark = dark || (!each && darkAt(g, at[0], at[2])) || fanDark(g, at, yaw);
+  } else {
+    // ---- the CPU's word: the floor under him, and on his beat the dark points of his fan — a spread of them is put to the renderer
+    if (each || beat) { const E = nvgPlaceLight(g, [at[0], 1.2, at[2]]); N.own = tubeSig(g, E) < IRLIGHT.show ? E : -1; }
+    if (beat) {
+      const D = fanDarks(g, at, yaw), n = D.length / 3, take = n < FAN_NEED ? 0 : Math.min(n, S); N.pts.length = 0;
+      for (let i = 0; i < S; i++) {
+        if (i >= take) { if (N.since[i] !== Infinity) { g.lightForget(skey(key, i)); N.since[i] = Infinity; } continue; }   // (a slot out of use: its answer is of another place when it is used again)
+        const j = 3 * (take === n ? i : Math.round(i * (n - 1) / (take - 1))); N.pts.push(D[j], D[j + 1], D[j + 2]);
+        g.lightQuery(skey(key, i), [D[j], 1.2, D[j + 1]]); if (N.since[i] === Infinity) N.since[i] = g.time;
+      }
+    }
+    if (!ownKey && N.own >= 0) { g.lightQuery(skey(key, S), [at[0], 1.2, at[2]]); if (N.since[S] === Infinity) N.since[S] = g.time; }
+    // ---- the renderer's: every key read every frame, in use or not (one read sequence a frame: the sensors' journal writes its key list at each change of it)
+    const word = (cpu: number, E: number | undefined, since: number, used: boolean): boolean => {
+      if (!used) return false; const d = shownDark(g, cpu, E); if (d !== undefined) return d;
+      if (g.time - since < IRL_METER.wait) { pending = true; return false; } return true; };
+    dark = word(Math.max(N.own, 0), g.lightAt(ownKey ?? skey(key, S)), ownKey ? N.t0 : N.since[S], N.own >= 0);
+    let n = 0; for (let i = 0; i < S; i++) { const used = 3 * i < N.pts.length; if (word(used ? N.pts[3 * i + 2] : 0, g.lightAt(skey(key, i)), N.since[i], used)) n++; }
+    dark = dark || n >= FAN_NEED;
   }
+  if (beat) N.readT = born ? g.time - (Math.abs(key) * 0.6180339887 % 1) * READ_EVERY : g.time;   // (the first reading is at once; the beat after it is his own, so five men's fans do not all fall on one frame)
   if (dark) N.darkT = g.time;
   const on = g.time - N.darkT < IRLIGHT.hold, dt = Math.max(g.time - N.t, 0); N.t = g.time;
-  N.k = born ? (on ? 1 : 0) : clamp(N.k + (on ? dt / FADE_IN : -dt / FADE_OUT), 0, 1);
+  if (N.fresh) { N.k = on ? 1 : 0; N.fresh = pending; } else N.k = clamp(N.k + (on ? dt / FADE_IN : -dt / FADE_OUT), 0, 1);
   return N.k;
 }
 
@@ -126,25 +198,27 @@ const out = (L: RtLight | null | undefined) => { if (L) { L.enabled = false; L.s
 /** Once a frame from Game.update, after everybody has moved and the doors have swung: the list of infrared lights (LightSet.ir) made again from whose goggles are down. */
 export function irLightTick(g: Game) {
   const list = g.engine.lights.ir, K = kits.get(g);
-  if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); K.men.clear(); K.seen.clear(); K.need.clear(); } return; }
+  if (!IRLIGHT.on) { if (list.length) list.length = 0; if (K) { out(K.sam); K.men.clear(); K.seen.clear(); for (const id of [...K.need.keys()]) drop(g, K, id); } return; }
   const kit = K ?? kitOf(g); list.length = 0; kit.seen.clear();
   /** his light posed, and in the list if any of it burns (auto: only where his place is too dark for the tube) */
-  const lit = (L: RtLight, key: number, at: Vec3, yaw: number, each: boolean) => { const k = burn(g, kit, key, at, yaw, each); if (k > 0) { L.intensity *= k; L.peakIntensity = L.intensity; list.push(L); } else out(L); };
+  // (the renderer is asked only where it answers: Sam's own meter — asked every frame, game.ts lightMeter — has an answer. Headless it never has)
+  const live = IRLIGHT.auto && IRLIGHT.meter && !SENSE.cpu && g.lightAt('playerChest') !== undefined;
+  const lit = (L: RtLight, key: number, at: Vec3, yaw: number, each: boolean, ownKey: string | null) => { const k = burn(g, kit, key, at, yaw, each, live, ownKey); if (k > 0) { L.intensity *= k; L.peakIntensity = L.intensity; list.push(L); } else out(L); };
   const sc = g.player.char;
   if (samOn(g)) {
     const L = kit.sam ??= lamp('ir_sam', sc.id); pose(g, L, sc);
     // (the wand under a door, his goggles down — WAND.nv: the picture he is given is the lens's, so the flood is the lens's too, level along its look — and
     // the place read is the one the lens looks into, from a stride past the leaf)
     const eye = WAND.nv ? wandEye(g) : null; if (eye) { L.pos = v3.copy(eye.pos); L.dir = [eye.look[0], 0, eye.look[2]]; }
-    if (eye) { kit.need.delete(sc.id); lit(L, WAND_KEY, [eye.pos[0] + eye.look[0] * 0.7, 0, eye.pos[2] + eye.look[2] * 0.7], Math.atan2(eye.look[0], eye.look[2]), true); }
-    else { kit.need.delete(WAND_KEY); lit(L, sc.id, sc.pos, sc.aimYaw, true); }
-  } else { out(kit.sam); kit.need.delete(sc.id); kit.need.delete(WAND_KEY); }
-  if (!IRLIGHT.team) { kit.men.clear(); for (const id of kit.need.keys()) if (id !== sc.id && id !== WAND_KEY) kit.need.delete(id); return; }
-  for (const gd of kit.men.keys()) if (!g.guards.includes(gd)) { kit.men.delete(gd); kit.need.delete(gd.char.id); }
+    if (eye) { drop(g, kit, sc.id); lit(L, WAND_KEY, [eye.pos[0] + eye.look[0] * 0.7, 0, eye.pos[2] + eye.look[2] * 0.7], Math.atan2(eye.look[0], eye.look[2]), true, null); }
+    else { drop(g, kit, WAND_KEY); lit(L, sc.id, sc.pos, sc.aimYaw, true, 'playerChest'); }
+  } else { out(kit.sam); drop(g, kit, sc.id); drop(g, kit, WAND_KEY); }
+  if (!IRLIGHT.team) { kit.men.clear(); for (const id of kit.need.keys()) if (id !== sc.id && id !== WAND_KEY) drop(g, kit, id); return; }
+  for (const gd of kit.men.keys()) if (!g.guards.includes(gd)) { kit.men.delete(gd); drop(g, kit, gd.char.id); }
   for (const gd of g.guards) {
-    if (gd.state === 'dead' || !nvgDown(g, gd)) { out(kit.men.get(gd)); kit.need.delete(gd.char.id); continue; }
+    if (gd.state === 'dead' || !nvgDown(g, gd)) { out(kit.men.get(gd)); drop(g, kit, gd.char.id); continue; }
     let L = kit.men.get(gd); if (!L) { L = lamp(`ir_${gd.char.id}`, gd.char.id); kit.men.set(gd, L); }
-    pose(g, L, gd.char); lit(L, gd.char.id, gd.char.pos, gd.char.aimYaw, false);
+    pose(g, L, gd.char); lit(L, gd.char.id, gd.char.pos, gd.char.aimYaw, false, `unitC${gd.char.id}`);   // (his own meter's chest key: guards.ts meterOf)
   }
 }
 
