@@ -192,7 +192,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   for (const [x, z] of [[4, 13.0], [4, 16.2], [36, 13.0], [36, 16.2], [4, 4], [36, 4], [4, 24], [12.9, 24], [22, 24]] as const) G.pier(x, z);
   // the two vehicle gates: sheet steel, shut and chained for the night (statics: nobody comes in by the road)
   for (const x of [4, 36]) { add({ c: [x, 1.1, 13.82], h: [0.035, 1.1, 0.8], ...G.M.paintGreen }); add({ c: [x, 1.1, 15.38], h: [0.035, 1.1, 0.8], ...G.M.paintGreen }); add({ c: [x, 2.24, 14.6], h: [0.05, 0.04, 1.6], ...G.M.iron }); }
-  G.skirt('x', 24, 4, 15.2, -1); G.skirt('x', 24, 16.6, 29.8, -1); G.skirt('z', 4, 4.2, 12.9, 1); G.skirt('z', 36, 4.2, 12.9, -1);
+  G.skirt('x', 24, 4, 15.2, -1); G.skirt('x', 24, 16.6, 29.8, -1); G.skirt('z', 4, 4.2, 12.9, 1); G.skirt('z', 36, 4.2, 6.76, -1); G.skirt('z', 36, 7.74, 12.9, -1);   // (the east wall's foot stops at the yard gate's frame either side: it ran across the opening)
 
   // ---------------- the kerb wall between the road and the customs side (block, 2.4 m): the west gap, the lane's mouth, the fence door ----------------
   grp('walls.kerb');
@@ -401,7 +401,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [12.45, 2.2, 23.25], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 14, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
-  const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: ['box_0304', 'box_0305', 'box_0306', 'box_0307', 'box_0308', 'box_0309', 'box_0310', 'box_0311', 'box_0312', 'box_0313', 'box_0314'], add: kitAdd }] };
+  const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: ['box_0305', 'box_0306', 'box_0307', 'box_0308', 'box_0309', 'box_0310', 'box_0311', 'box_0312', 'box_0313', 'box_0314', 'box_0315'], add: kitAdd }] };
   return { level, scenarios: { quiet: QUIET, kitView }, groups: trace.groups, surfaces };
 }
 
