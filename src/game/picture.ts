@@ -81,6 +81,12 @@ export const PICTURE = {
    *  is, and keeps his own word of the man when that is the newer (a fix he works from, or with none his own idea). A shooter with no idea of his man, or a
    *  show (no pictures kept): as it was. A shooter with eyes on his man gives the same place to a fifth of a second (off = the true place, as it was) */
   shot: true,
+  /** THE MAN WHO DROPS HIS GUN AND RUNS GOES BY HIS OWN PICTURE (runner.ts known; the maintainer, of the next all-seeing read to go: "keep" — off = as it
+   *  was): his way out was planned round every living enemy's TRUE place, through any wall — the floor he may reach, the outside nobody has a line to,
+   *  the corner farthest from them, the look ahead for a man in his way. With this each is reckoned from the men he KNOWS of, where he believes each to be
+   *  (believedOf: not a place he has seen empty, not an idea older than `staleSecs`); a man he knows nothing of turns him only once he sees him. The
+   *  world's own rule keeps the truth: he leaves the floor only when no enemy truly has a line to him */
+  run: true,
   /** the floor view of one man's picture (ui/pictureviz.ts): 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas */
   show: 'off' as 'off' | 'cursor' | 'all',
   /** the view's reach round the man (m) */
@@ -107,7 +113,7 @@ interface State { men: Map<Guard, Pic>; sam: Pic; tellT: number; done: WeakSet<o
 const STATES = new SideMap<Game, State>('picture.STATES');
 function stateOf(g: Game): State { let S = STATES.get(g); if (!S) { S = { men: new Map(), sam: { owner: null, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: -1e9 }, tellT: -1e9, done: new SideSet(), view: null, viewT: -1e9 }; STATES.set(g, S); } return S; }
 function picOf(S: State, gd: Guard, now: number): Pic { let P = S.men.get(gd); if (!P) { P = { owner: gd, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: now + (S.men.size % 8) * PICTURE.lookSecs / 8 }; S.men.set(gd, P); } return P; }
-export const PICTURE_STATS = { looks: 0, seen: 0, heard: 0, told: 0, fixes: 0, lost: 0, downs: 0, forgot: 0, asks: 0, lines: 0, /** a rule's pick the picture changed */ moved: 0, /** a colleague's shots heard with the shooter's own idea of his man to go by (PICTURE.shot; one a hearer), those a metre or more from the true place, and those the hearer kept his own newer word over */ shotPlaced: 0, shotOff: 0, shotKept: 0, /** steps taken off a place in a believed line (PICTURE.step: the file's men, a wall charge's stand-off marks dealt again) */ stepped: 0, /** stack asks answered with a one-hand file (menu re-reads included), and those on the hinge hand */ filed: 0, filedHinge: 0 };
+export const PICTURE_STATS = { looks: 0, seen: 0, heard: 0, told: 0, fixes: 0, lost: 0, downs: 0, forgot: 0, asks: 0, lines: 0, /** a rule's pick the picture changed */ moved: 0, /** a colleague's shots heard with the shooter's own idea of his man to go by (PICTURE.shot; one a hearer), those a metre or more from the true place, and those the hearer kept his own newer word over */ shotPlaced: 0, shotOff: 0, shotKept: 0, /** ways a running man planned from his own picture (PICTURE.run), and those planned on a picture that was not the truth (an enemy he did not know of, or one a metre or more from where he believed him) */ ran: 0, ranOff: 0, /** steps taken off a place in a believed line (PICTURE.step: the file's men, a wall charge's stand-off marks dealt again) */ stepped: 0, /** stack asks answered with a one-hand file (menu re-reads included), and those on the hinge hand */ filed: 0, filedHinge: 0 };
 export function pictureReset(g: Game) { STATES.delete(g); }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);

@@ -27,6 +27,9 @@
 //       it; nobody else moves; the rule off, every mark stays;
 //   (s) A COLLEAGUE'S SHOT: a man who hears a colleague fire places the enemy where the SHOOTER believes him, as old as that word is; his own newer fix he keeps;
 //       the rule off, the true place;
+//   (t) THE MAN WHO DROPS HIS GUN AND RUNS (runner.ts, PICTURE.run): his way is the same with an enemy he knows nothing of standing on it as with nobody
+//       there; a man he was TOLD is there turns it, though nobody stands there; a word gone stale, or a place he has seen empty, turns nothing; the rule
+//       off, the unseen man's TRUE place turns it, as it was;
 //   (m) WALL CHARGE: with the fog of war on and no record of a man, the stand-off's known enemies (wallcharge.ts knownFoes) have him where a teammate's
 //       picture has him; the rule off, or an idea older than the stand-off counts, he is not known.
 // PICTURE_BREAK=1 = the switch left off where the lines want it on: they are asked all the same and must fail.   exit 0 = all hold · 1 = one does not
@@ -326,8 +329,40 @@ export async function pictureCheck(): Promise<boolean> {
           'a colleague\'s shot: the man who hears it places the enemy where the SHOOTER believes him to be, not where he is, and that word is as old as the shooter\'s; his own newer fix he keeps; the shooter with no idea of him, or the rule off: as it was',
           `the shooter believes his man at ${at(X)}, the man stands at ${at(tr)} · the hearer's fix: ${kOn.at ? at(kOn.at) : 'none'}, ${f1(kOn.age)} s old · rule off: ${kOff.at ? at(kOff.at) : 'none'} · the shooter's word 30 s old: ${kOld.at ? at(kOld.at) : 'none'}, the fix ${f1(kOld.age)} s old, the hearer's idea ${f1(ideaAge)} s · the hearer with his own fix at ${at(Y)} 5 s old: ${kKeep.at ? at(kKeep.at) : 'none'}, ${f1(kKeep.age)} s · his own 60 s old: ${kTake.at ? at(kTake.at) : 'none'} · no fix, his own idea of the man at ${at(Y)} 1 s old: works from ${kOwn.at ? at(kOwn.at) : 'none'}, his idea ${ownOk ? 'kept' : 'WRITTEN OVER'} · the shooter has seen the place empty, the hearer with nothing: goes to ${kLost.at ? at(kLost.at) : 'none'}, ${lostOk ? 'no idea made of it' : 'AN IDEA MADE OF IT'} · no idea: ${kNone.at ? at(kNone.at) : 'none'}`); }
       Object.assign(PICTURE, JSON.parse(JSON.stringify(was.pic)), { on: ON }); }
+    // (t) the man who drops his gun and runs plans his way from his own picture
+    { const { RUNNER, runnerBreak, runnerOf, runnerRestore } = await import(`${ROOT}/src/game/runner.ts`); const { MORALE } = await import(`${ROOT}/src/game/morale.ts`); const sw = { r: RUNNER.on, m: MORALE.on };
+      try { let found = false;
+        for (const seed of [3, 4, 5, 6]) { const t = await stand(seed, ON), G: any = t.g, M = places(t); if (!M) continue; RUNNER.on = MORALE.on = true; PICTURE.tellSecs = 1e9;
+          const h = t.R.hostiles[0] as any, others = t.R.hostiles.slice(1) as any[], ops = t.R.up as any[], samFar: Vec3 = [M.far[M.far.length - 1][0], 0, M.far[M.far.length - 1][2]];
+          t.pins.clear(); others.forEach((gd, i) => t.hold(gd, [500 + 3 * i, 0, 500], [497 + 3 * i, 0, 500])); ops.forEach((gd, i) => t.hold(gd, M.far[i % (M.far.length - 1)], M.far[(i + 1) % (M.far.length - 1)]));
+          /** one run to the frame the gun leaves his hand: the rule on or off, Sam at `sam`, the man TOLD of Sam at `told` (`age` s old, `lost` = a place he has since seen empty) — the phase, where he is going and the way he planned */
+          const go = (o: { rule: boolean; sam?: Vec3; told?: Vec3; age?: number; lost?: boolean }) => {
+            runnerRestore(G, undefined); t.hold(h, M.h, M.a); G.teleportPlayer(o.sam ?? samFar); t.step(0.3); pictureReset(G); t.step(0);
+            if (o.told) { pictureTell(G, h, 'player', o.told, o.age ?? 0); if (o.lost) { const I = ideaOf(G, h, 'player'); if (I) I.lost = true; } }
+            PICTURE.run = o.rule; PICTURE_STATS.ran = PICTURE_STATS.ranOff = 0; t.pins.delete(h); const took = runnerBreak(G, h);
+            for (let i = 0; i < 90 && !runnerOf(h)?.fled; i++) t.step(1 / 60);
+            const S = runnerOf(h) as any, path = (h.path as Vec3[]).map(q => [q[0], 0, q[2]] as Vec3), goal = S?.goal as Vec3 | null, knew = (ideasOf(G, h) as any[]).length;
+            let len = 0, a: number[] = M.h; for (const q of path) { len += flat(a, q); a = q; }
+            const nearTo = (q: number[]) => { let d = flat(M.h, q), a: number[] = M.h; for (const b of path) { const L = flat(a, b) || 1e-6, k = Math.max(0, Math.min(1, ((q[0] - a[0]) * (b[0] - a[0]) + (q[2] - a[2]) * (b[2] - a[2])) / (L * L))); d = Math.min(d, flat(q, [a[0] + (b[0] - a[0]) * k, 0, a[2] + (b[2] - a[2]) * k])); a = b; } return d; };
+            PICTURE.run = true;
+            return { took, fled: !!S?.fled, phase: S?.phase as string, goal, path, len, knew, nearTo, ran: PICTURE_STATS.ran as number, off: PICTURE_STATS.ranOff as number,
+              sig: `${S?.phase} ${goal ? at(goal) : '-'} ${path.map(at).join('')}` }; };
+          const base = go({ rule: true }), baseOff = go({ rule: false }); if (!base.fled || base.path.length < 2) continue;
+          // a place ON his way he has no line to from where he breaks, four metres or more along it, where a true enemy turns the old rule's way
+          const cands: Vec3[] = []; { let a: number[] = M.h, L = 0; for (const b of base.path) { const d = flat(a, b), n = Math.max(1, Math.round(d)); for (let k = 1; k <= n; k++) { const q: Vec3 = [a[0] + (b[0] - a[0]) * k / n, 0, a[2] + (b[2] - a[2]) * k / n]; if (L + d * k / n >= 4 && !t.either(q, M.h) && !t.nav.isBlocked(q[0], q[2]) && ops.every(m => !t.either(q, m.char.pos))) cands.push(q); } L += d; a = b; } }
+          for (const p of cands.filter((_, i) => i % 2 === 0).slice(0, 4)) {
+            const offAt = go({ rule: false, sam: p }); if (offAt.sig === baseOff.sig) continue;   // (the old rule itself has no other way here: nothing to tell apart)
+            const onAt = go({ rule: true, sam: p }), told = go({ rule: true, told: p }), stale = go({ rule: true, told: p, age: PICTURE.staleSecs + 10 }), lost = go({ rule: true, told: p, lost: true }), toldOff = go({ rule: false, told: p });
+            found = true; const m1 = (x: number) => x.toFixed(1), says = (r: typeof base) => `${r.phase} to ${r.goal ? at(r.goal) : 'nowhere'}, ${m1(r.len)} m, ${m1(r.nearTo(p))} m from the place at its nearest`;
+            line(base.took && onAt.fled && onAt.knew === 0 && onAt.sig === base.sig && onAt.ran > 0 && onAt.off > 0 && offAt.sig !== baseOff.sig && told.sig !== base.sig && told.knew === 1 && stale.sig === base.sig && lost.sig === base.sig && toldOff.sig === baseOff.sig && toldOff.ran === 0,
+              'a runner: the man who drops his gun and runs plans his way from the men HE knows of — an enemy he knows nothing of on his way turns nothing, a man he was told is there turns it though nobody is, a stale word or a place seen empty turns nothing; the rule off, the true places, as it was',
+              `seed ${seed}, he breaks at ${at(M.h)}, the place on his way ${at(p)} (no line from him) · nobody known: ${says(base)} · Sam truly there, unknown to him: ${says(onAt)}${onAt.sig === base.sig ? ' (the same way)' : ' (ANOTHER WAY)'}, ${onAt.off} of ${onAt.ran} plans on a picture that was not the truth · told Sam is there (he is not): ${says(told)} · that word ${PICTURE.staleSecs + 10} s old: ${stale.sig === base.sig ? 'the same way' : 'ANOTHER WAY'} · the place seen empty: ${lost.sig === base.sig ? 'the same way' : 'ANOTHER WAY'} · rule off, Sam truly there: ${says(offAt)}${offAt.sig !== baseOff.sig ? ' (another way)' : ''}; told only: ${toldOff.sig === baseOff.sig ? 'the same way as with nobody' : 'ANOTHER WAY'}`);
+            break; }
+          if (found) break; }
+        if (!found) line(false, 'a runner: a place to stage it', 'no seed of four gave a place on his way, out of his sight, that turns the old rule\'s way');
+      } finally { RUNNER.on = sw.r; MORALE.on = sw.m; Object.assign(PICTURE, JSON.parse(JSON.stringify(was.pic)), { on: ON }); } }
     // (j) the memory alone moves nothing
-    { const run = async (on: boolean) => { const t = await stand(5, on); Object.assign(PICTURE, { standoff: false, cover: false, wall: false, flee: false, fallback: false, stack: false, step: false, shot: false }); const M = places(t)!; const [a, b] = t.R.up as any[], h = t.R.hostiles[0]; let d = '';
+    { const run = async (on: boolean) => { const t = await stand(5, on); Object.assign(PICTURE, { standoff: false, cover: false, wall: false, flee: false, fallback: false, stack: false, step: false, shot: false, run: false }); const M = places(t)!; const [a, b] = t.R.up as any[], h = t.R.hostiles[0]; let d = '';
         for (const gd of t.g.guards) gd.god = false; t.pins.clear();
         t.hold(a, M.a, M.h); t.hold(b, M.b, M.h); t.hold(h, M.h, M.a); t.pins.clear();   // (staged, then left to the game: a fight with the picture watching it)
         for (let i = 0; i < 600; i++) { if (i === 120) t.g.events.push({ kind: 'guardShot', pos: [M.h2[0], 0, M.h2[2]], time: t.g.time, loud: true, level: 1, who: h.char.id }); t.step(1 / 60); if (i % 60 === 59) d += hashDigest(digestGame(t.g, true)) + ' '; }
