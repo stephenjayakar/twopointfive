@@ -94,6 +94,7 @@ import { DOZE } from '../game/doze';
 import { NETQUIET } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
 import { PICTURE } from '../game/picture';
+import { RESPONSE } from '../game/qrf';
 import { RELOAD } from '../game/autoreload';
 import { SAMSTUN } from '../game/samstun';
 import { TEAMTALLY } from '../game/teamtally';
@@ -268,6 +269,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_NETQUIET')) NETQUIET.on = String((globalThis as any).process?.env?.TPS_NETQUIET ?? '') === '1';   // the net goes quiet (src/game/netquiet.ts): off, so a check nobody answers and a body found shake nobody, no line of its is said, no man whips to a noise and the last man holds his room as he did, as every frozen digest and tally was made; `TPS_NETQUIET=1` turns it on (it needs TPS_MORALE=1 to do anything)
     if (pinned('TPS_ATTENTION')) ATTENTION.on = String((globalThis as any).process?.env?.TPS_ATTENTION ?? '') === '1';   // a guard's attention can be taken (src/game/attention.ts): off, so a wary man sweeps the room with his whole eye, no hold narrows it and no mark is drawn, as every frozen digest and tally was
     if (pinned('TPS_PICTURE')) PICTURE.on = String((globalThis as any).process?.env?.TPS_PICTURE ?? '') === '1';   // each man's own picture of the fight (src/game/picture.ts): off, so no man keeps a memory of where his enemies were and every spot is picked as every frozen digest and tally had it
+    if (pinned('TPS_RESPONSE')) RESPONSE.on = String((globalThis as any).process?.env?.TPS_RESPONSE ?? '') === '1';   // the response team is the level's own (src/game/qrf.ts RESPONSE): off, so the team is the office's one stairwell behind the gate every frozen digest and tally was made on
     if (pinned('TPS_OUTERWALL')) WALLCHARGE.outer = String((globalThis as any).process?.env?.TPS_OUTERWALL ?? '') === '1';   // a wall charge on an OUTER wall (src/game/wallcharge.ts outerWall): off, so every outer wall is refused in words as in every frozen probe; TPS_OUTERWALL=1 = on
     if (pinned('TPS_WALLSAFE')) WALLCHARGE.safe = String((globalThis as any).process?.env?.TPS_WALLSAFE ?? '') === '1';   // the wall charge's larger safety radius (src/game/wallcharge.ts safeRadius): off, so the squad stands off where it did and the blast reaches the door charge's 1.6 m on its own side, as in every frozen probe; TPS_WALLSAFE=1 = on (the shipped default)
     if (pinned('TPS_PALL')) CHAOS.pall.on = String((globalThis as any).process?.env?.TPS_PALL ?? '') === '1';   // a blast's pall (src/game/destruction.ts CHAOS.pall): off, so the frozen stand's blasts raise the dust they were recorded with

@@ -113,7 +113,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
-  'CMDCHECK', 'GUNSLOTS'];
+  'CMDCHECK', 'GUNSLOTS',
+  // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
+  'RESPONSE'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -158,6 +160,7 @@ import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
 import { PICTURE } from './picture';
+import { RESPONSE } from './qrf';
 import { RELOAD } from './autoreload';
 import { QUICKTHROW } from './quickthrow';
 import { FRIENDS } from './friends';
@@ -278,6 +281,8 @@ export function knobRegistry(): Record<string, object> {
     ATTENTION,
     // each man's own picture of the fight (picture.ts): where he believes each enemy to be and how old that is, what he counts safe, the rules that ask it
     PICTURE,
+    // the response team is the level's own (qrf.ts): which levels have one, what a run is dealt, what the team goes on — who comes, where and when read these
+    RESPONSE,
     // hands that do the work (handwork.ts): the keypad's, the breaker's and the drive's clocks and Sam's plant at them read its switch
     HANDWORK,
     TAKEDOWN,

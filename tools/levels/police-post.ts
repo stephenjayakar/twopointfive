@@ -88,7 +88,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
 import type { SurfacesData } from '../../src/scene/levelData';
-import type { LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import { officeKit, normalize3, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART, type GwotMat } from '../../src/scene/gwotKit';
 import type { MarkFace, MarkPal } from '../../src/scene/markings';
@@ -190,6 +190,28 @@ export const QUIET: QuietData = {
 /** QUIET_VARIANT=spot,patrolSet,start — CHECKING ONLY: that deal, with level.routes cut down to the one set, written to levels/police-post-v<spot><set><start>.json
  *  (a scratch file, not committed) so the scripted player can be run against one deal. Unset = the committed file: spot 0, start 0, all six routes. */
 const VARIANT = process.env.QUIET_VARIANT ? process.env.QUIET_VARIANT.split(',').map(x => Number(x) || 0) : null;
+/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
+ *  stride inside it; yaws are Character yaws (forward = [sin, 0, cos]: Math.PI looks up the plan, toward the building). */
+export const RESPONSE: ResponseData = {
+  why: 'A district post with a radio room and an army picket down the road: shots here are heard on a net somebody answers, and the picket walks in by a gate.',
+  site: 'the post', at: 'at the post', team: 'the picket', tag: 'PICKET',
+  men: [3, 4], eta: [50, 90],
+  ways: [
+    { name: 'the main gate', coming: 'coming in by the main gate', clear: 'nobody on the forecourt',
+      muster: [[20.0, 0, 25.7], [21.0, 0, 25.7], [20.0, 0, 26.7], [21.0, 0, 26.7]],
+      entry: [[20.3, 0, 21.3], [21.2, 0, 22.3], [19.4, 0, 22.3], [20.3, 0, 23.1]], entryFace: [Math.PI, Math.PI - 0.8, Math.PI + 0.8, Math.PI] },
+    { name: 'the impound gate', door: 'gate_e', coming: 'coming in by the impound gate', clear: 'nobody among the seized trucks',
+      muster: [[37.4, 0, 13.7], [37.4, 0, 14.8], [38.4, 0, 13.7], [38.4, 0, 14.8]],
+      entry: [[33.4, 0, 14.2], [33.5, 0, 13.1], [34.2, 0, 15.3], [35.0, 0, 14.25]], entryFace: [-Math.PI / 2, Math.PI, 0, -Math.PI / 2] },
+  ],
+  // the second lift, if the first is shot to pieces: two men who do not come in — they stand outside the gates he would leave by
+  posts: [
+    { name: 'outside the main gate', pos: [20.4, 0, 26.6], yaw: Math.PI, sweep: [[20.4, 1, 22.0], [15.0, 1, 25.6]] },
+    { name: 'outside the impound gate', pos: [37.8, 0, 14.25], yaw: -Math.PI / 2, sweep: [[34.0, 1, 14.25], [37.8, 1, 9.0]] },
+  ],
+  outside: [[38.6, 0, 26.6], [39.2, 0, 25.4]],
+};
+
 export const NAME = VARIANT ? `police-post-v${VARIANT[0]}${VARIANT[1] ?? 0}${VARIANT[2] ?? 0}` : 'police-post';
 
 export function build(): { level: Level; scenarios?: LevelScenarios; groups: string[]; surfaces: SurfacesData; quiet: QuietData } {
@@ -736,6 +758,6 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   };
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the north gate from outside the wall (the second start's side), the motor
   // pool's two pickups under their canopy behind it.
-  const scenarios = !VARIANT ? { quiet: QUIET, places: PLACES, kitView: { ways: [{ door: 'gate_n', ref: [12.5, 1.8], side: 1 }] } } as LevelScenarios : undefined;
+  const scenarios = !VARIANT ? { quiet: QUIET, places: PLACES, response: RESPONSE, kitView: { ways: [{ door: 'gate_n', ref: [12.5, 1.8], side: 1 }] } } as LevelScenarios : undefined;
   return { level, ...(scenarios ? { scenarios } : {}), groups: trace.groups, surfaces, quiet: QUIET };
 }

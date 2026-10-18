@@ -1134,6 +1134,35 @@
       "ways": [
         { "door": "gate_s", "ref": [15.9, 25.9], "side": -1, "hide": ["box_0305", "box_0306", "box_0307", "box_0308", "box_0309", "box_0310", "box_0311", "box_0312", "box_0313", "box_0314", "box_0315"], "add": { "boxes": [{ "id": "kv_pole", "group": "kv.lamp", "c": [12.45, 1.2, 23.8], "h": [0.035, 1.2, 0.035], "material": "galv" }, { "id": "kv_arm", "group": "kv.lamp", "c": [12.45, 2.38, 23.52], "h": [0.025, 0.025, 0.3], "material": "galv" }, { "id": "kv_fix", "group": "kv.lamp", "c": [12.45, 2.3, 23.25], "h": [0.06, 0.06, 0.06], "material": "plasticWhite", "emissive": [40, 24, 7], "flags": ["NoShadow"] }, { "id": "kv_boom_post", "group": "kv.boom", "c": [12.2, 0.55, 23.15], "h": [0.09, 0.55, 0.09], "material": "paintRust" }, { "id": "kv_boom_arm", "group": "kv.boom", "c": [12.2, 1.02, 22.2], "h": [0.04, 0.04, 1], "material": "paintCream", "flags": ["NoShadow"] }, { "id": "kv_boom_band0", "group": "kv.boom", "c": [12.2, 1.02, 22.8], "h": [0.045, 0.045, 0.14], "material": "prodRed", "flags": ["NoShadow"] }, { "id": "kv_boom_band1", "group": "kv.boom", "c": [12.2, 1.02, 22.2], "h": [0.045, 0.045, 0.14], "material": "prodRed", "flags": ["NoShadow"] }, { "id": "kv_boom_band2", "group": "kv.boom", "c": [12.2, 1.02, 21.6], "h": [0.045, 0.045, 0.14], "material": "prodRed", "flags": ["NoShadow"] }, { "id": "kv_boom_rest", "group": "kv.boom", "c": [12.2, 0.45, 21.3], "h": [0.05, 0.45, 0.05], "material": "paintRust" }], "lamps": [{ "id": "kv_bulb", "kind": "point", "pos": [12.45, 2.2, 23.25], "dir": [0, -1, 0], "color": [1, 0.62, 0.22], "intensity": 14, "range": 7, "innerDeg": 0, "outerDeg": 180, "group": "kv", "enabled": true, "volumetric": 0.05, "radius": 0.06, "mains": false, "fixture": "kv_fix" }] } }
       ]
+    },
+    "response": {
+      "why": "A border post: the company that mans it sleeps in its lines up the road, with a duty section dressed and a telephone to the customs house.",
+      "site": "the crossing",
+      "at": "at the crossing",
+      "team": "the duty section",
+      "tag": "SECTION",
+      "men": [3, 4],
+      "eta": [60, 100],
+      "ways": [
+        { "name": "the customs yard gate", "door": "gate_n", "coming": "coming in by the customs yard", "clear": "nobody in the yard beside records", "muster": [[7.2, 0, 2.8], [8.3, 0, 2.8], [7.2, 0, 1.8], [8.3, 0, 1.8]], "entry": [[7.4, 0, 6.3], [6.2, 0, 5.6], [8.3, 0, 5.6], [7.4, 0, 5]], "entryFace": [0, -0.5, 0.5, 0] },
+        { "name": "the impound yard gate", "door": "gate_ne", "coming": "coming in by the impound yard", "clear": "nobody among the crates", "muster": [[37.3, 0, 6.8], [37.3, 0, 7.8], [38.4, 0, 6.8], [38.4, 0, 7.8]], "entry": [[32.6, 0, 7.2], [33.6, 0, 6], [32.6, 0, 8.6], [33.6, 0, 7.2]], "entryFace": [-1.5707963267948966, 3.141592653589793, 0, -1.5707963267948966] }
+      ],
+      "posts": [
+        { "name": "outside the lorry park gate", "pos": [15.75, 0, 25.7], "yaw": 3.141592653589793, "sweep": [[15.75, 1, 23], [10, 1, 25.5]] },
+        { "name": "outside the wicket", "pos": [37.6, 0, 17.75], "yaw": -1.5707963267948966, "sweep": [[35, 1, 17.75], [37.6, 1, 21]] }
+      ],
+      "outside": [[38.6, 0, 26.8], [39.2, 0, 25.6]],
+      "sweep": [
+        { "name": "the records room", "pos": [16, 0, 6.8] },
+        { "name": "the customs office", "pos": [22, 0, 6.8] },
+        { "name": "the impound", "pos": [27.8, 0, 8.6] },
+        { "name": "the forecourt", "pos": [20.5, 0, 10.6] },
+        { "name": "the impound yard", "pos": [32.6, 0, 7.6] },
+        { "name": "the lane", "pos": [20.5, 0, 17] },
+        { "name": "the boom hut", "pos": [6.2, 0, 18] },
+        { "name": "the lorry park", "pos": [16, 0, 21.5] },
+        { "name": "the shed", "pos": [33, 0, 21.5] }
+      ]
     }
   }
 }
