@@ -29,7 +29,9 @@
 //     reach, the outside he picks, the corner and the wall he turns his face to are all reckoned from HIS OWN PICTURE — the men he has seen, heard fire or
 //     been told of, each where he believes him to be, a place he has since seen empty or an idea gone stale left out. A man he knows nothing of bars no
 //     way of his until he sees him: then the look ahead sends him another way, as above. What the WORLD decides stays the truth: he is taken off the
-//     floor only when no enemy truly has a line to him, and is low while one has.
+//     floor only when no enemy truly has a line to him, and is low while one has — and stopped outside with a man's eyes on him he looks about him and
+//     has that man (a line runs both ways), so he goes on to floor that man cannot see. From the drop on he is off his side's net in the picture too
+//     (picture.ts onNet), as netquiet.ts and enemysquads.ts have him.
 //   · GONE: out, and no enemy with a line to him for `goneSecs`, a spawned unit is taken out of the world (guards.ts despawnUnit). A man of the level's own
 //     roster is never removed (a checkpoint is poured over that roster): he stays low where he got to. With no way out he goes to the reachable corner
 //     farthest from every enemy and stays low there, his face to the wall, silent, still fled — and looks again for a way out every `retrySecs`, until
@@ -53,7 +55,7 @@ import { isHostile } from './teams';
 import { MORALE, moraleOf, rungOf, moraleRelease, sawLeaderFall } from './morale';
 import { digInOrder } from './digin';
 import { w } from './words';
-import { PICTURE, PICTURE_STATS, believedOf } from './picture';
+import { PICTURE, PICTURE_STATS, ideasOf, pictureTell, type Who } from './picture';
 
 /** the switch and its numbers: off in the module, raised by the page (host/profile.ts pageSwitches; ?norunner = a broken man stays and changes his magazine, as
  *  he did) and by the shipped stand; the harness's frozen stand leaves it off (TPS_RUNNER=1 turns it on — and it needs TPS_MORALE=1 beside it). Metres:
@@ -111,22 +113,24 @@ function reacts(g: Game, gd: Guard): boolean {
 }
 /** a living armed man of his own side, on the floor and on his feet: somebody to run to, somebody to tell */
 const mateOf = (g: Game, gd: Guard, o: Guard) => o !== gd && ours(o) && o.team === gd.team && !o.held && !stateOf.has(o);
-/** an enemy as a run reckons with him: where he is on the floor, and the eye over it */
-interface Foe { pos: Vec3; eye: Vec3 }
-const foeAt = (c: Character): Foe => ({ pos: c.pos, eye: headOf(c) });
+/** an enemy as a run reckons with him: where he is on the floor, the eye over it, and who he is */
+interface Foe { pos: Vec3; eye: Vec3; who: Who }
+const foeAt = (c: Character, who: Who): Foe => ({ pos: c.pos, eye: headOf(c), who });
 /** his enemies on the floor: the player (the one there is, asked as a side) and every living man of a side hostile to his */
 function foes(g: Game, gd: Guard): Foe[] {
-  const out: Foe[] = []; if (isHostile(gd.team, 'player') && !g.player.down) out.push(foeAt(g.player.char));
-  for (const o of g.guards) if (o.state !== 'dead' && isHostile(gd.team, o.team)) out.push(foeAt(o.char));
+  const out: Foe[] = []; if (isHostile(gd.team, 'player') && !g.player.down) out.push(foeAt(g.player.char, 'player'));
+  for (const o of g.guards) if (o.state !== 'dead' && isHostile(gd.team, o.team)) out.push(foeAt(o.char, o));
   return out;
 }
 /** is a run planned from the man's own picture (PICTURE.run; a show keeps no pictures) */
 const byPicture = (g: Game) => PICTURE.on && PICTURE.run && !g.touring;
 /** THE ENEMIES A RUN IS PLANNED ROUND: as it was, every one of them where he truly stands (`foes`); with PICTURE.run, the men HE knows of, each where he
- *  believes him to be (picture.ts believedOf: a place he has since seen empty and an idea gone stale are nobody) */
+ *  believes him to be — every idea his picture still holds (it forgets at `forgetSecs`: a man low in his corner with his face to the wall does not take
+ *  the man who cornered him for gone the moment the idea is no longer fresh) but a place he has since seen empty */
 function known(g: Game, gd: Guard): Foe[] {
   if (!byPicture(g)) return foes(g, gd);
-  return believedOf(g, gd).map(at => ({ pos: at, eye: [at[0], PICTURE.eyeH, at[2]] as Vec3 }));
+  const out: Foe[] = []; for (const I of ideasOf(g, gd)) if (!I.lost && g.time - I.t < PICTURE.forgetSecs) out.push({ pos: I.at, eye: [I.at[0], PICTURE.eyeH, I.at[2]], who: I.who });
+  return out;
 }
 /** the nearest enemy plainly in his eyes inside `closeM` — morale.ts's own test and bar (the sight test, the sight-gain line the room fight's walk breaks off
  *  on); nobody for a man with magnesium in his eyes */
@@ -163,7 +167,7 @@ function start(g: Game, gd: Guard, from: Vec3) {
 export function runnerBreak(g: Game, gd: Guard): boolean {
   if (!RUNNER.on || !MORALE.on || !ours(gd) || spoken(g, gd) || !reacts(g, gd) || stateOf.has(gd)) return false;
   let from: Vec3 = gd.lastKnown ?? gd.char.pos, bd = Infinity;
-  for (const e of foes(g, gd)) { const d = flat(e.pos, gd.char.pos); if (d < bd) { bd = d; from = e.pos; } }
+  for (const e of known(g, gd)) { const d = flat(e.pos, gd.char.pos); if (d < bd) { bd = d; from = e.pos; } }
   start(g, gd, from); return true;
 }
 
@@ -323,10 +327,14 @@ function step(g: Game, gd: Guard, S: Run, dt: number) {
     else if (flat(m.char.pos, S.goal!) > 1.5) route(g, gd, S, m.char.pos, E);
   } else if (S.phase === 'out') {
     S.isOut = outside(g, c.pos);
-    if (S.isOut) { S.unseen = (byPicture(g) ? foes(g, gd) : E).some(e => lineTo(g, e, c.pos)) ? 0 : S.unseen + dt;   // (the world's rule, not his: a TRUE enemy's line)
+    if (S.isOut) {
+      // (the world's rule, not his: he leaves the floor when no TRUE enemy has a line to him)
+      const eyes = byPicture(g) ? foes(g, gd).filter(e => lineTo(g, e, c.pos)) : null; S.unseen = (eyes ? eyes.length > 0 : E.some(e => lineTo(g, e, c.pos))) ? 0 : S.unseen + dt;
       if (S.unseen >= K.goneSecs) { gone(g, gd, S); return; }
-      // out, there, and an enemy's eyes still on him: every `retrySecs` he looks wider for floor nobody has a line to, and goes on to it
-      if (S.unseen === 0 && S.script.arrived && S.t >= K.retrySecs) { S.t = 0; const F = flood(g, gd, E, K.askWide); if (F.hidden && F.out && flat(F.out, c.pos) > 1) route(g, gd, S, F.out, E); } }
+      // out, there, and an enemy's eyes still on him: every `retrySecs` he looks wider for floor nobody has a line to, and goes on to it. (PICTURE.run: stopped
+      // in the open he looks about him, and a line runs both ways — the men who have him are men he now knows of, where they stand)
+      if (S.unseen === 0 && S.script.arrived && S.t >= K.retrySecs) { S.t = 0; let E2 = E; if (eyes) { for (const e of eyes) pictureTell(g, gd, e.who, e.pos); E2 = known(g, gd); }
+        const F = flood(g, gd, E2, K.askWide); if (F.hidden && F.out && flat(F.out, c.pos) > 1) route(g, gd, S, F.out, E2); } }
     else if (stuck || S.script.arrived) { S.tries++; toLow(g, gd, S, flood(g, gd, E).corner, E); }   // (a way that would not let him through — a door that will not open: one try spent)
     else if (barred) { const F = flood(g, gd, E); if (!(F.out && route(g, gd, S, F.out, E))) toLow(g, gd, S, F.corner, E); }   // (another way out, or the corner — and no try spent: the man in the way may walk on)
   } else if (!S.isOut) {   // low, in his corner or on his way to it

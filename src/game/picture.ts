@@ -22,7 +22,7 @@ import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
 import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt } from './guards';
-import { runnerFled } from './runner';
+import { runnerFled, runnerOwns } from './runner';
 import { squadOf } from './enemysquads';
 import { PLAYER_ID } from './consts';
 
@@ -84,9 +84,14 @@ export const PICTURE = {
   /** THE MAN WHO DROPS HIS GUN AND RUNS GOES BY HIS OWN PICTURE (runner.ts known; the maintainer, of the next all-seeing read to go: "keep" — off = as it
    *  was): his way out was planned round every living enemy's TRUE place, through any wall — the floor he may reach, the outside nobody has a line to,
    *  the corner farthest from them, the look ahead for a man in his way. With this each is reckoned from the men he KNOWS of, where he believes each to be
-   *  (believedOf: not a place he has seen empty, not an idea older than `staleSecs`); a man he knows nothing of turns him only once he sees him. The
-   *  world's own rule keeps the truth: he leaves the floor only when no enemy truly has a line to him */
+   *  (every idea he still holds but a place he has seen empty); a man he knows nothing of turns him only once he sees him. The world's own rule keeps
+   *  the truth: he leaves the floor only when no enemy truly has a line to him — and stopped outside with a man's eyes on him he has that man. A man
+   *  that file has is off his side's net here too (`onNet`): he is told nothing and calls nothing, as netquiet.ts and enemysquads.ts have him */
   run: true,
+  /** pinned cover with rounds passing thin walls (suppression.ts coverFrom, wallpen.ts): with no place hidden from every man he knows of, a place that
+   *  STOPS the shooter's round though another known man has a line to it is kept over one the round goes through (off = whichever came first, as it
+   *  was). A mend with a key so that a recording from before it replays as it played; no flag, no toggle */
+  coverHard: true,
   /** the floor view of one man's picture (ui/pictureviz.ts): 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas */
   show: 'off' as 'off' | 'cursor' | 'all',
   /** the view's reach round the man (m) */
@@ -219,6 +224,7 @@ function hear(g: Game, S: State) {
 function onNet(g: Game, a: Pic, b: Pic): boolean {
   if (a === b || !b.owner) return false;   // (nobody tells Sam: the player's picture is the screen)
   const B = b.owner; if (!fighter(B) || B.held) return false;
+  if (PICTURE.run && (runnerOwns(B) || (!!a.owner && runnerOwns(a.owner)))) return false;   // (runner.ts: a man who has dropped his gun and run is off the net, as netquiet.ts and enemysquads.ts have him — what he tells his mates he shouts, that file's own tell)
   if (!a.owner) return B.team === 'operative';   // Sam's eyes are on the squad's radio
   const A = a.owner; if (!fighter(A) || A.held || A.team !== B.team) return false;
   if (A.team !== 'hostile') return true;   // the squad's radio, the staff's
