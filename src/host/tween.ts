@@ -1,12 +1,13 @@
 // DRAWING BETWEEN TICKS (TWEEN below; the other half of host/loop.ts FIXEDSTEP — engine groundwork for two-player co-op, nothing networked). The fixed step runs the game in
-// whole ticks of 1 / hz; a display that is not at that rate draws frames that fall BETWEEN two ticks, and a picture that shows only 'the last tick' moves the men at 60 a
-// second under a camera that moves at the display's rate. With this switch on, a frame drawn `a` of the way from tick N−1 to tick N (a = the time the loop owes the next
+// whole ticks of 1 / hz; a display that is not at that rate draws frames that fall BETWEEN two ticks, and a picture that shows only 'the last tick' moves the men and the
+// camera at 60 a second whatever the display draws. With this switch on, a frame drawn `a` of the way from tick N−1 to tick N (a = the time the loop owes the next
 // tick ÷ the tick, 0 ≤ a < 1) shows what MOVES at the blend of those two ticks:
 //
 //   boxes with a motion identity (Box.mkey: door leaves, props, items, debris, what a man carries, devices)   centre, yaw, quaternion and drawn centre (Box.dc)
 //   the men            every joint matrix of the palette the g-buffer skins with, and the ends of their shadow proxies (BoxWorld.capsuleData), matched by the man's id
 //   lights             position and direction of every light that stood in both ticks (a carried torch, a weapon light, the sun over the hour), matched by the object
-//   the camera's asks  where the follow camera looks and its aim lead (tracks the loop names: `at`), and a framing a level script pins tick by tick (`pinAt`)
+//   the camera         under the fixed step the loop steps the camera once a TICK (the input record takes its view from it); a frame draws it between where its last
+//                      two ticks left it (`camAt` → FollowCamera.drawIn / drawOut): look-at, yaw, pitch, distance — the follow camera, and a framing a level script pins
 //
 // and everything else as the last tick left it: boxes with no key (sparks, tracers, laser lines, one-tick effect boxes), colours, intensities, which lights and boxes exist.
 // WHAT STILL READS THE TICK: the HUD's marks and bubbles (laid from the game's own positions after the blend is taken down) and the unkeyed boxes above — on a frame
@@ -49,11 +50,11 @@ interface Snap {
   lights: Map<RtLight, number>; lf: Float64Array;
   men: Map<number, number>; joints: Float32Array; menN: number;
   caps: Float64Array; capOwner: number[]; capN: number;
-  at: Map<string, Vec3>; pin: Float64Array; hasPin: boolean;
+  cam: Float64Array; hasCam: boolean;
 }
-/** a pinned framing (game/camera.ts FollowCamera.pin) */
-export interface TweenPin { look: Vec3; yaw: number; pitch: number; dist: number }
-const newSnap = (): Snap => ({ n: 0, key: new Map(), box: new Float64Array(256 * BS), dc: new Float64Array(256 * 3), lights: new Map(), lf: new Float64Array(64 * 6), men: new Map(), joints: new Float32Array(0), menN: 0, caps: new Float64Array(0), capOwner: [], capN: 0, at: new Map(), pin: new Float64Array(6), hasPin: false });
+/** the camera's pose (game/camera.ts FollowCamera: what rebuild() makes its matrices from) */
+export interface TweenCam { target: Vec3; yaw: number; pitch: number; distance: number }
+const newSnap = (): Snap => ({ n: 0, key: new Map(), box: new Float64Array(256 * BS), dc: new Float64Array(256 * 3), lights: new Map(), lf: new Float64Array(64 * 6), men: new Map(), joints: new Float32Array(0), menN: 0, caps: new Float64Array(0), capOwner: [], capN: 0, cam: new Float64Array(6), hasCam: false });
 const CAPS = BoxWorld.CAPS_PER_CHAR, CW = CAPS * 8;   // records a man, and his words: 8 floats a record (ends at 0‥2 and 4‥6)
 const ENDS = [0, 1, 2, 4, 5, 6];   // a record's two ends
 const WINDOW = 32;   // frames `phase()` looks back over
@@ -105,9 +106,8 @@ export class Tween {
   }
 
   /** THE END OF A TICK (and once before the first tick after `rest()`): what stands now becomes the tick the next frames blend TO, what stood becomes the one they blend from.
-   *  `at` = the loop's own tracks (where the camera is asked to look, its aim lead — null = no such ask this tick); `pin` = the camera's pinned framing, if a script
-   *  holds one. Reads only; copies everything it keeps. */
-  capture(at?: Record<string, Vec3 | null | undefined>, pin?: TweenPin | null): void {
+   *  `cam` = the camera as that tick's step left it. Reads only; copies everything it keeps. */
+  capture(cam?: TweenCam | null): void {
     const S = this.prev; this.prev = this.cur; this.cur = S; this.stale = false; this.have = Math.min(2, this.have + 1);
     const W = this.host.world, dyn = W.dynamics;
     // ---- keyed boxes
@@ -150,30 +150,26 @@ export class Tween {
       for (let w = 0; w < words; w++) S.caps[w] = W.capsuleData[w];
       S.capOwner.length = cn; for (let c = 0; c < cn; c++) S.capOwner[c] = W.capsuleU32[c * CW + 7] & 0xff;
       S.capN = cn; }
-    // ---- the loop's tracks
-    S.at.clear();
-    if (at) for (const k in at) { const v = at[k]; if (v) S.at.set(k, [v[0], v[1], v[2]]); }
-    S.hasPin = !!pin; if (pin) { const f = S.pin; f[0] = pin.look[0]; f[1] = pin.look[1]; f[2] = pin.look[2]; f[3] = pin.yaw; f[4] = pin.pitch; f[5] = pin.dist; }
+    // ---- the camera
+    S.hasCam = !!cam; if (cam) { const f = S.cam; f[0] = cam.target[0]; f[1] = cam.target[1]; f[2] = cam.target[2]; f[3] = cam.yaw; f[4] = cam.pitch; f[5] = cam.distance; }
   }
 
-  /** a pinned framing at blend `a`: between the framings the last two ticks left (a shot that tracks, swings or pushes in is keyed once a tick), else `now` — no pin on
-   *  either tick, or a cut (the look-at or the distance jumped past `snap`, or the camera came round more than half a radian in the tick) */
-  pinAt(now: TweenPin, a: number): TweenPin {
+  private camOut: TweenCam = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0 };
+  /** the camera at blend `a`: between where the last two ticks' steps left it, or null = as it stands (nothing to blend from, or a cut: the look-at or the distance
+   *  jumped past `snap`, or it came round or tipped more than half a radian in the tick — a new shot, a restart, a pin; or `now`, the camera as it stands, is no longer
+   *  where the last tick left it: something outside the ticks has written it since — a show stopped by a key, a framing staged — and that is the newest word).
+   *  The object is this file's own, reused. */
+  camAt(a: number, now?: TweenCam): TweenCam | null {
     const P = this.prev, C = this.cur;
-    if (this.have < 2 || a >= 1 || !P.hasPin || !C.hasPin) return now;
-    const p = P.pin, c = C.pin, snap = TWEEN.snap;
+    if (this.have < 2 || a >= 1 || !P.hasCam || !C.hasCam) return null;
+    const p = P.cam, c = C.cam, snap = TWEEN.snap;
+    if (now && (now.target[0] !== c[0] || now.target[1] !== c[1] || now.target[2] !== c[2] || now.yaw !== c[3] || now.pitch !== c[4] || now.distance !== c[5])) return null;
     let dy = (c[3] - p[3]) % (2 * Math.PI); if (dy > Math.PI) dy -= 2 * Math.PI; else if (dy < -Math.PI) dy += 2 * Math.PI;
-    if (Math.hypot(c[0] - p[0], c[1] - p[1], c[2] - p[2]) > snap || Math.abs(c[5] - p[5]) > snap || Math.abs(dy) > 0.5 || Math.abs(c[4] - p[4]) > 0.5) return now;
-    if (now.look[0] !== c[0] || now.look[1] !== c[1] || now.look[2] !== c[2] || now.yaw !== c[3] || now.pitch !== c[4] || now.dist !== c[5]) return now;   // (pinned anew since the tick: a script's __stage)
-    return { look: [p[0] + (c[0] - p[0]) * a, p[1] + (c[1] - p[1]) * a, p[2] + (c[2] - p[2]) * a], yaw: p[3] + dy * a, pitch: p[4] + (c[4] - p[4]) * a, dist: p[5] + (c[5] - p[5]) * a };
-  }
-
-  /** the loop's track `name` at blend `a`: between the last two ticks' values while both stand within `snap`, else `now` (what the last tick says) */
-  at(name: string, now: Vec3 | null, a: number): Vec3 | null {
-    if (!now || this.have < 2 || a >= 1) return now;
-    const p = this.prev.at.get(name), c = this.cur.at.get(name); if (!p || !c) return now;
-    if (Math.hypot(c[0] - p[0], c[1] - p[1], c[2] - p[2]) > TWEEN.snap) return now;
-    return [p[0] + (c[0] - p[0]) * a, p[1] + (c[1] - p[1]) * a, p[2] + (c[2] - p[2]) * a];
+    if (Math.hypot(c[0] - p[0], c[1] - p[1], c[2] - p[2]) > snap || Math.abs(c[5] - p[5]) > snap || Math.abs(dy) > 0.5 || Math.abs(c[4] - p[4]) > 0.5) return null;
+    const o = this.camOut, t = o.target;
+    t[0] = p[0] + (c[0] - p[0]) * a; t[1] = p[1] + (c[1] - p[1]) * a; t[2] = p[2] + (c[2] - p[2]) * a;
+    o.yaw = p[3] + dy * a; o.pitch = p[4] + (c[4] - p[4]) * a; o.distance = p[5] + (c[5] - p[5]) * a;
+    return o;
   }
 
   /** RIGHT BEFORE THE HOST'S RENDER: hang the blend at `a` (0 = the tick before the last, 1 = the last: nothing hung) on what the render reads. Always paired with `unpose()`. */
