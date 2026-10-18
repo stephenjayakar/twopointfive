@@ -126,6 +126,12 @@ export interface RunTape {
   recipe: { seed: number | null; search: string; levelFile?: string; scenario: string | null; env: unknown; knobs: unknown; stand?: 'page' | 'shipped' | 'frozen'; words?: Record<string, string>; tables?: Record<string, unknown>; kit?: { on: boolean; members: unknown[] } };
   /** [count, dt] runs · [f, css w, css h, px w, px h] · [f, mask, …changed of: look-at x y z, yaw, pitch, distance, aspect, fov, aim lead] · [f, input] */
   dt: [number, number][]; view: number[][]; cam: TapeVal[][]; input: [number, TapeInput][];
+  /** THE LENS, where it was not the pose's: a row for every step whose view matrices were NOT what its nine camera numbers build (camera.ts rebuild) — the host
+   *  wrote the pose after the camera last rebuilt (a card closing, an orbit, the tour's pan, a tool) and the step's cursor ray was read off the matrices as they stood.
+   *  [f, yaw] = the pose's own with this yaw in place of its own (the usual case: a yaw written a frame ahead of its matrices); [f, …view-projection 16, …its inverse
+   *  16, eye x y z, forward x y z] = the matrices themselves. A step with no row: the pose's own. PRESENT, if empty, on every tape made since: absent = a tape from
+   *  before it, where tapewalk.ts guesses the yaw of an orbit's step and knows nothing of the rest */
+  lens?: TapeVal[][];
   /** the sensor reads: `keys` by index; a row = [f, the step's read sequence as key indices (null: as the step before), values] — values in full with a
    *  sequence, else [position, value, …] for the ones that changed. null = no answer yet; 'nan' / 'inf' / '-inf' / '-0' as words. `f32`: a plain number among
    *  the VALUES is a 32-bit float written to nine significant digits (what the renderer hands back; read it with Math.fround: exact, and half the text), a

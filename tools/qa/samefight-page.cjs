@@ -25,6 +25,9 @@ const SCRIPT = [
   [90, 60, ['KeyW'], [0.5, 0.2], 1], [60, 60, ['KeyA'], [0.3, 0.5], 1], [60, 120, ['KeyW', 'KeyA'], [0.5, 0.3], 0], [120, 60, ['KeyW'], [0.55, 0.25], 1], [90, 60, ['KeyS'], [0.5, 0.7], 1],
   [120, 60, [], [0.5, 0.3], 1], [90, 30, ['KeyW'], [0.45, 0.3], 0], [180, 60, ['KeyW', 'KeyD'], [0.6, 0.35], 1], [120, 60, [], [0.5, 0.5], 0],
 ];
+// (SAMEFIGHT_QUIET=1: nobody at the seat fires — on the software adapter a firefight draws at seconds a step; SAMEFIGHT_ROWS=n: the first n rows only)
+if (process.env.SAMEFIGHT_QUIET === '1') for (const r of SCRIPT) r[4] = 0;
+if (process.env.SAMEFIGHT_ROWS) SCRIPT.length = Math.max(1, Math.min(SCRIPT.length, Number(process.env.SAMEFIGHT_ROWS) | 0));
 const RUNS = { compound: 'levelFile=compound.json&roomclear&squad4', rescue: 'rescue', night: 'solo' };
 const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
 (async () => {
@@ -42,23 +45,23 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
     const P = await page.evaluate(async ({ script, every }) => {
       await window.__ready; try { window.__menu && window.__menu.close(); } catch { /* */ }
       console.log('[samefight] the page is up'); let row = 0;
-      const g = window.__game, inp = window.__input, cv = document.getElementById('view'), C = window.__digest.chain(30);
+      const g = window.__game, inp = window.__input, cv = document.getElementById('view'), C = window.__digest.chain(30, 120);
       const before = { events: g.events.length, up: g.guards.filter(x => x.state !== 'dead').length };
       for (const [n, hz, keys, cur, buttons] of script) {
         inp.mouseX = cur[0] * cv.clientWidth; inp.mouseY = cur[1] * cv.clientHeight; if (buttons & ~inp.buttons) inp.clicked |= buttons & ~inp.buttons; inp.buttons = buttons;
         console.log(`[samefight] row ${++row} of ${script.length}`);
-        for (let k = 0; k < n; k += every) { window.__runFrames(Math.min(every, n - k), 1 / hz, keys); await new Promise(r => setTimeout(r, 0)); }   // (a draw every `every` steps: the probe answers, the smoke runs — the GPU's values reach the game and its tape)
+        for (let k = 0; k < n; k += every) { window.__runFrames(Math.min(every, n - k), 1 / hz, keys, false); await new Promise(r => setTimeout(r, 0)); }   // (a draw every `every` steps: the probe answers, the smoke runs — the GPU's values reach the game and its tape)
       }
       inp.buttons = 0; C.stop();
       const file = window.__replay.file('samefight'), reg = window.__knobs.registry();
-      return { fatal: document.getElementById('fatal')?.textContent || '', words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: reg.EXACT && reg.EXACT.on, sense: reg.SENSE ? reg.SENSE.cpu : undefined,
+      return { fatal: document.getElementById('fatal')?.textContent || '', parts: C.parts, sam: C.sam, words: C.words, steps: C.steps, file, seed: g.dice ? g.dice.seed : null, exact: reg.EXACT && reg.EXACT.on, sense: reg.SENSE ? reg.SENSE.cpu : undefined,
         gpuReads: g.sensors.stats.reads, fixed: g.seat.fixed, fixedCmds: g.seat.fixedCmds, checked: reg.CMDCHECK && reg.CMDCHECK.on, events: g.events.length - before.events, down: before.up - g.guards.filter(x => x.state !== 'dead').length, men: g.guards.length, time: g.time, playerUp: g.player.char.health > 0 };
     }, { script: SCRIPT, every: DRAW }).catch(e => ({ fatal: String(e && e.stack || e).slice(0, 600) }));
     await page.close();
     const secs = ((Date.now() - t0) / 1000).toFixed(0);
     if (P.fatal || !P.file) { line(false, `${name}: the page did not play (${P.fatal || 'no replay file: the buffer is off'})${errors.length ? ' · ' + errors.join(' ; ').slice(0, 400) : ''}`); continue; }
     if (P.checked) line(P.fixed === 0, `${name}: the page's own records are honest ones — the record check (src/game/cmd.ts) put ${P.fixed} thing(s) right in ${P.fixedCmds} record(s)`);
-    line(!errors.length, `${name}: the page played ${P.steps} steps (${P.time.toFixed(1)} s of game, ${secs} s of wall) with no page error — seed ${P.seed}, ${P.men} men, ${P.events} events, ${P.down} down, own maths ${P.exact ? 'on' : 'OFF'}${P.sense === undefined ? '' : `, senses on the ${P.sense ? 'CPU' : 'GPU'}`}${errors.length ? ' — ' + errors.join(' ; ').slice(0, 500) : ''}`);
+    line(!errors.length, `${name}: the page played ${P.steps} steps (${P.time.toFixed(1)} s of game, ${secs} s of wall) with no page error — seed ${P.seed}, ${P.men} men, ${P.events} events, ${P.down} down, own maths ${P.exact ? 'on' : 'OFF'}, ${((P.file.rerun || {}).lens || []).length} step(s) on a lens that was not its pose's${P.sense === undefined ? '' : `, senses on the ${P.sense ? 'CPU' : 'GPU'}`}${errors.length ? ' — ' + errors.join(' ; ').slice(0, 500) : ''}`);
     const path = join(dir, `${name}.replay.json`); writeFileSync(path, JSON.stringify(P.file));
     const r = spawnSync('bun', ['run', 'tools/qa/samefight-rerun.ts', path, String(P.steps), '30'], { cwd: ROOT, encoding: 'utf8', maxBuffer: 1 << 26, env: { ...process.env, TPS_PROFILE: '', TPS_EXACT: '' } });
     const l = (r.stdout || '').split('\n').find(x => x.startsWith('SAMEFIGHT ')), H = l ? JSON.parse(l.slice(10)) : null;
@@ -67,6 +70,14 @@ const picked = (arg('runs') || 'compound,rescue').split(',').filter(Boolean);
     const same = P.words.length > 0 && P.words.length === H.words.length && k === P.words.length;
     if (H.ownSenses && H.ownSenses.on && H.ownSenses.differ) failed = true;
     line(same, `${name}: the tape re-run under bun is the page's fight to the bit — ${same ? `${P.words.length} words over ${P.steps} steps equal` : `${k} of ${P.words.length} words equal: the bits part in the half second ending at step ${(k + 1) * 30} (the re-run chained ${H.steps} steps of ${H.ticks})`} · held against the trace: ${H.compared} samples, worst ${Number(H.worst).toFixed(2)} m${H.drift ? `, drift ${H.drift}` : ''}${H.unjournaled ? ` · ${H.unjournaled} read(s) the page never made` : ''}${H.ownSenses && H.ownSenses.on ? ` · the re-run answered ${H.ownSenses.reads} reads itself, ${H.ownSenses.differ} not what the page's game had read` : ''}${H.warnings && H.warnings.length ? ` · ${H.warnings.length} note(s): ${H.warnings[0].slice(0, 160)}` : ''} (file: ${path})`);
+    if (!same && P.parts && H.parts) {   // which kind of thing parted first, in the steps both sides kept apart (digest.ts rawBitsParts), and Sam's own numbers there
+      const n = Math.min(P.parts.length, H.parts.length); let i = 0; const off = j => Object.keys(P.parts[j]).filter(q => P.parts[j][q] !== H.parts[j][q]);
+      while (i < n && !off(i).length) i++;
+      if (i >= n) console.log(`    the first ${n} steps are equal part for part`);
+      else { const n2 = x => x === null || x === undefined || x !== x ? 'nan' : x === 0 ? '0' : String(x), a = P.sam[i] || [], b = H.sam[i] || [];   // (through text neither a NaN nor a zero's sign survives: held as words)
+        console.log(`    first apart at step ${i + 1}: ${off(i).join(', ')}${i + 1 < n ? ` · the step after: ${off(i + 1).join(', ')}` : ''}`);
+        console.log(`    Sam there: ${(H.samNames || []).map((q, j) => n2(a[j]) === n2(b[j]) ? '' : `${q} page ${n2(a[j])} / re-run ${n2(b[j])}`).filter(Boolean).join(' · ') || 'the same on both'}`); }
+    }
   }
   await browser.close();
   console.log(failed ? '=== samefight-page: FAILED ===' : '=== samefight-page: ALL PASS ===');
