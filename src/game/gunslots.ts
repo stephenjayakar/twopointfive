@@ -20,7 +20,7 @@ export const GUNSLOTS = {
   /** seconds from the dry click to the sidearm on his man: the long gun let go onto its sling, the pistol out of the holster and up */
   out: 0.7,
   /** seconds with nobody in front of him before the sidearm goes back, and the seconds that takes on top of the primary's own reload */
-  lull: 1.6, back: 0.5,
+  lull: 1.6, back: 0.65,   // (as long as your own swap back to the long gun: no quicker hands than yours)
   /** a TEAMMATE's round below the gunshot line (a suppressed pistol, the MP7) is the odd noise yours is to a man of the other side near enough to hear it
    *  (guards.ts hearingCheck). Off: only your own quiet rounds were ever heard — a teammate's reached nobody, however near. */
   heard: true,
