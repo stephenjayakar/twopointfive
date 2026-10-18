@@ -27,6 +27,7 @@ import { Doors } from './doors';
 import { PLAYER_ID } from './consts';
 import { handworkOn, padHands } from './handwork';
 import { eyeContact, raiseEscalation, escalationOf } from './guards';
+import { loadSeen } from './kitload';
 import type { Eye } from './guards';
 import { beamBoxes } from './combat';
 import { chronicle, chronicleN, roomOf } from './chronicle';
@@ -169,7 +170,7 @@ function sensing(g: Game): boolean { return g.aiEnabled && !g.quietUtility && !g
  *  chest (the same 0.3‥0.8 ramp). 1.0 = plainly lit, close, clear air. */
 export function lensGain(g: Game, dist: number, range: number, smokeTrans: number): number {
   const light = g.player.visibility; const distF = clamp(1 - (dist - 3) / Math.max(1, range - 3), 0.2, 1);
-  return Math.pow(light, 1.5) * distF * (g.player.crouch ? 0.75 : 1) * clamp((smokeTrans - 0.3) / 0.5, 0, 1);
+  return Math.pow(light, 1.5) * distF * (g.player.crouch ? 0.75 : 1) * clamp((smokeTrans - 0.3) / 0.5, 0, 1) * loadSeen(g, 'player');   // (kitload.ts: a lens is an eye — what he carries is the shape on the monitor too)
 }
 /** the lens's look direction at yaw / pitch (Character convention: forward = [sin yaw, 0, cos yaw]; pitch < 0 looks down) */
 export function lensDir(yaw: number, pitch: number): Vec3 { const cp = Math.cos(pitch); return [Math.sin(yaw) * cp, Math.sin(pitch), Math.cos(yaw) * cp]; }

@@ -183,6 +183,8 @@ import { GlassBreak, loadGlassBreak } from './glassbreak';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
+import type { KitWorn } from './kitload';
+import { loadGait } from './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
 import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
 import { WORLD } from '../scene/world';
@@ -366,6 +368,8 @@ export class Player {
   wand = false; wanding: Wanding | null = null;
   /** the breaching shotgun or the hammer in his big slot (kit.ts BIGSLOT, his card's; bigkit.ts: a row of a door locked against him). 'none' as built. */
   bigKit: BigKit = 'none';
+  /** what his card weighs (kitload.ts: its mobility and concealment beside his reference's, written where his card goes on him — kit.ts kitPlayer; null: nothing weighed on him, nothing of his is touched) */
+  kitLoad: KitWorn | null = null;
   /** the sticky cameras he has sent, in flight and stuck (stickycam.ts; how many are left to send rides his rifle: Rifle.cams) */
   cams: StickyCam[] = [];
   /** the last id a camera of his was given (stickycam.ts fireCam: one up each, never reused in a run) */
@@ -1840,7 +1844,7 @@ export class Game {
     const pl = this.player; const pc = pl.char;
     const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch, keys: pl.keys, run: sprintDoorRun(this, pl) };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
     const contacts: DoorContact[] = own ? [own] : [];
-    for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && g.speed > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
+    for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
     const woundedAt: { g: Guard; at: Vec3; x: number; z: number }[] = [];   // (a copy of where his BODY is — the hips of a man on his back lie a stride behind his feet — so what a leaf does to it can be put through the walls before it is his: below, after doors.update)
     for (const g of this.guards) if (g.wound) { const h = g.wound.pose === 'back' ? g.char.bones.hips : null, at: Vec3 = h ? [h[0], g.char.pos[1], h[2]] : v3.copy(g.char.pos); woundedAt.push({ g, at, x: at[0], z: at[2] }); contacts.push({ pos: at, radius: 0.3, bash: false, who: g.char.id, quiet: true, weak: true }); }   // a man down WOUNDED (wounds.ts — posed, no ragdoll) is in a doorway what a body is: the closer does not latch through him, a leaf somebody pushes moves him aside
     civilianDoorContacts(this, contacts);   // the cleaner / the late worker push leaves like anybody standing (no key: a locked one is a wall to them) — civilians.ts

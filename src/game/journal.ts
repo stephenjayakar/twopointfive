@@ -102,6 +102,7 @@ import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
+import { KITLOAD } from './kitload';
 import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
 import { RESCUEFLUSH } from './rescueflush';
@@ -339,6 +340,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
   if (!k.tables.SQUADDEAL) SQUADDEAL.on = false;   // (a file from before a level with no squads block was handed squads cut from its rooms: its defenders were one pool)
   if (!k.tables.STAYASK) STAYASK.on = false;   // (a file from before squads that stay in their rooms missed a silent room: nobody asked after another squad there, and nobody went)
+  if (!k.tables.KITLOAD) KITLOAD.on = false;   // (a file from before a card's weight was a man's pace, notice and footfall: every man moved, was seen and was heard the same whatever he carried)
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
