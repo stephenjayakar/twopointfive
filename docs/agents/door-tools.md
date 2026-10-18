@@ -144,7 +144,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   floor no muzzle has been across (`pieNext`, asked of the room search with the same light test the hold counts by, from a kneeling eye for a knee cut),
   its clock starts when his hips are on it (or `PIE_WAIT` after), a man in his sight keeps him on the angle that shows him, and 'holding · on your word'
   waits for both men to be done (still inside `thrCap`). Three manners from the play-through's death records: a man who shows while he is stepping to
-  a cut stops him where he is; a man in his sight with no round at him — the jamb across his own bore, `RoomFight.noShot` — brings the gun round after
+  a cut stops him where he is, and he goes on to the cut once nobody is in his sight; a man in his sight with no round at him — the jamb across his own bore, `RoomFight.noShot` — brings the gun round after
   the eye (`PIE_GUN`: a hand toward the middle, three times at most, then the cut is given up for the one before, beat 'no shot from the cut'); when
   the hold moves on or ends mid-cut nobody is left leaned or on a knee (`pieOff`). **thrLean** (teammates only; the player's movement is untouched):
   on a cut his hips stop `thrLeanM` short of the station and his head and gun go the rest of the way (`CharacterAnimator.lean`, `LEAN_POSE` in
@@ -153,7 +153,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   are taken on a knee. `bun run tools/qa/thrpie-check.ts` (`probes.ts thrpie`, in family `doortools`; both stands; `THRPIE_BREAK=1` must fail): the
   tape's door staged, off = as it was (both men still on their diagonals, the man in the middle never seen); on = both men stood on every cut they
   were sent to and were done before the door was called held, the man in the middle seen and dropped from outside, nobody lost, 8 cells unseen against
-  24 of 51 (frozen; 8 against 19 of 47 shipped) and the door called held 0.1–0.15 s later; nobody's hips or head near the frame line; the lean in the bones
+  24 of 51 (frozen; 8 against 19 of 47 shipped) and the door called held about a second later; nobody's hips or head near the frame line; the lean in the bones
   (head 0.14 m to one side, 0.15–0.19 m to the other, past his hips; in the door runs 0.2–0.3 m toward the middle against 0–0.18 square); knees only
   with the lean; the word given mid-cut leaves nobody bent; the journal and the page flags. RUN 10-18: that check and its break word on both stands;
   families threshold, thresholdmenu, doortools, foursquad, doortest on both stands and doormenu on the shipped stand, all green (the shipped
