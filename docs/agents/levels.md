@@ -243,3 +243,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a door that is not steel (`docs/level-format.md`; `kitview-plan.ts` section C fails any other, `kitview-work.cjs` holds the page to it), the skill's kit
   picture item says so, with what to write where a mission's own way in is a gate, a gap or a wall. `--run` already runs `kitview-plan` for a level, so the
   level command is red on such a way with no change to it. On build d2ec4b7, both stands: 488 PASS, no FAIL, 65 NOTE.
+- **The level skill says how a check holds a file against its generator** (10-18; the skill's words only). The skill's "a check of its own" item now says
+  such a check runs the generator as the exporter does (`tools/qa/headless.ts asExporter`), since under the page's own maths a generator's sin / cos round a
+  last bit another way than the file was written with (the `level-identity` probe was red on the shipped stand for that alone), and that staleness is
+  `export.ts <name> --check`'s question. `tools/qa/level-needs.ts` needed nothing: it runs no generator in its own process, and `--run`'s export check is a
+  fresh process that raises no stand. On build 956661a, both stands: 488 PASS, no FAIL, 65 NOTE.

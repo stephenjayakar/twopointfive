@@ -149,7 +149,10 @@ like that."
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
-  stands): the pattern of the glasshouse, the pass, the depot.
+  stands): the pattern of the glasshouse, the pass, the depot. A check that holds the file against the generator that
+  wrote it runs the generator as the exporter does (`asExporter` in `tools/qa/headless.ts`): the page's own sin and cos
+  round a last bit another way than the file was written with. **seen** the `level-identity` probe red on the shipped stand
+  for that and nothing else. Whether a file is stale is `export.ts <name> --check`'s question, not such a check's.
 
 ## 7. The team and its kit
 
