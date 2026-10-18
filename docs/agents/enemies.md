@@ -654,7 +654,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'RESPONSE.on'`, `TPS_RESPONSE=1`), in the knob registry and the journal (a recording without the table replays with it off). Off = the build as it
   was: `probes.ts qrf` on the frozen stand is line for line what it was before the change. The net's word is in a save (`savestate.ts qrf.word`).
   CHECK: `bun run tools/qa/response-check.ts` (`probes.ts response`, in the `qrf` family; lines (1) to (14) for this, both stands; `RESPONSE_BREAK=1` fails every line but
-  (1) and (2), which read files and floors); the block against the built floor is `qrf.ts checkResponse`. THE LEVEL FILES' FINGERPRINTS DID NOT MOVE (the block is words and marks).
+  (1) and (2), which read files and floors); the block against the built floor is `qrf.ts checkResponse`. THE LEVEL FILES' FINGERPRINTS DID NOT MOVE (the block is words and marks). `tools/qa/lived-check.ts` reads a level's block as today's (not held to a base revision, like the gear picture) and still asks every place it names against the room's furniture.
   MEASURED, headless, the shipped stand, god mode, a quiet mission gone loud by the real trigger (three rifle rounds heard, the floor locked down), eight
   seeds a level, 200 s each: every run called its team (24 of 24), every team came in on its fan (24 of 24, the last man 1.8 to 3.6 s after the way in was thrown), and with the
   player stood where he fired it made contact in 23 of 24; the deals over the eight seeds: the post 2 ways, 3 or 4 men, 50 to 85 s; the bazaar 3 ways, 2
@@ -691,7 +691,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (2 or 3, 55 to 90 s) came in 8 of 8, always by the back gate (the squad stood at the main one) and met the squad 8 of 8 — it lost every man in 5 runs
   and put all four teammates down in 3; the records office's desk called 5 of 8 (in the other three the desk man came out and was shot inside his six
   seconds), the patrol (2, 55 to 90 s, both ways dealt) came in 5 of 5. No spawn refused, never over sixteen characters. Before the review's last fixes
-  (the call is each man's own six seconds; the net is the set and the team); the check's lines ran after them. NOBODY HAS SEEN OR PLAYED IT: whether six seconds is a
+  (the call is each man's own six seconds; the net is the set and the team); the check's lines ran after them. THE REAL PAGE, on the software adapter (never a GPU): the depot under `?roomclear&squad=4` booted with every pipeline built and no console or page error (the dev server has no favicon: its 404 is the one line); called through the page's hook, the escort stood up on the defenders' side, was dealt away from the main gate to the back gate when the squad stood at the first, came in and swept the yard. NOBODY HAS SEEN OR PLAYED IT: whether six seconds is a
   window a player can use, whether two or three more men at 50 to 90 s is fair on the depot on hard, whether the squad's rear men are shot in the back at
   the gate they came in by, and how the radio lines read on the HUD in a firefight are all unjudged. The headless squad stands at its start line: no
   measurement here is of a played raid.
