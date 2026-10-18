@@ -183,7 +183,7 @@ export function kitTick(g: Game, late = false) {
   // a gun leaving the hand takes its magazine change with it (the rifle's is dropped by updatePlayer's own rule; the pistol's when a can takes its place)
   if (pl.kitWas === 'pistol' && pl.pistol.reloading) { pl.pistol.cancelReload(); an.cancelReload(); }
   an.kitFront = kitSlingFront(g);
-  const secs = an.kitSwap(pl.kitWas, cur, { r: c.bones.handR, l: c.bones.handL, ...c.handFrameR() }, same);
+  const secs = an.kitSwap(pl.kitWas, cur, { r: c.bones.handR, l: c.bones.handL, ...c.handFrameR(true) }, same);   // (true: the hand as the animator posed it — inhand.ts's look-only turn is not a place an errand starts from)
   if (secs > 0) {
     if (cur === 'pistol' || cur === 'rifle') pl.equipT = Math.max(0, secs - KITANIM.early);   // nothing leaves a gun that is not up yet — and no longer than that (asked back for mid-way, it is up sooner)
     KITANIM_STATS.swaps++; if (pl.kitWas) KITANIM_STATS.stows[pl.kitWas]++; if (cur) KITANIM_STATS.draws[cur]++;

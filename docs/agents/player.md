@@ -154,6 +154,40 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `Player.nvAmount` (the tube's picture) eases to: on from the frame they start down, off once they are up. A kit change takes the arm from a flip (the goggles still arrive); a reload takes it faster (`KIT.nv.hand.clear`: the hand is the reload's before the magazine leaves); N again inside a nod carries the head on (`nod.carry`); `an.nvCancel()` lets a flip go when he goes down (`ragdollize`) or the part stops being live (a show: `kitNvEye`). `Player.nv` and everything that reads it are the key's; what is NOT nothing is his body as drawn — the left arm at his brow is in `Character.capsules()` for the 0.9 s of a hand flip (a tripwire could meet it) — so no checkpoint is written mid-flip (`an.nvBusy` → `playerBusy`). The probe's staged runs digest the same with the part on and off. `SLING_FRONT`, `SLING_REST`, `KIT.front`, `KIT.nv` and `NV_SWING` are FIRST-PASS numbers placed against the mesh offline, never seen in the
   renderer — they sit outside `RIG` until the viewer has had them. QA: `probes.ts kitanim` (off / equip / midswap / reload / close / harness / edges / joints / sling / nv) — its rig holds other parts' key rules at the frozen stand's values where the tables exist (a dry gun reloading itself off, the G quick throw on: `world()`), so on any stand it asks about the hands alone,
   `bun run tools/qa/kitanim-strip.ts` → docs/shots/kitanim/*.png (stick figures + prop boxes, before / after rows), `tools/qa/pose-mesh.ts` situations `sling-*` / `nv-*` on the mesh.
+- **IN HAND = what a man holds is in the hand that holds it** (`src/game/inhand.ts INHAND`, the maintainer, 10-18, of a teammate crouched on the rear with his sidearm out: "gun not
+  aligned to hand for partner. we should do a pass for all the attachment points"). Switch `INHAND.on`: ON in the page (`?inhand=0` puts it off; Tab row 'in hand ▸ a pistol stays in the
+  fist'), OFF in the module and on the frozen stand (`FROZEN_HOLDS 'INHAND.on'`, `TPS_INHAND=1`), in the knob registry and the journal (a recording from before the key replays with it
+  off). LOOKS ONLY — every man, both sides. THE CAUSE: a pistol was laid out from the wrist joint along `Character.gunDir` (the analytic aim line in an aim) with its top to the world's
+  up, so the gun stood where the simulation points and the hand where the clip put it: fine standing still, 3.5‥5 cm off the palm and 17‥22° across the hand in a crouched aim, 8‥9.5 cm
+  and ~50° for the 0.2 s an aim takes to come up or let go (and through a guard's reload and his torch ↔ sidearm swap). THE RULE: (1) the drawer lays a PISTOL out in the hand bone's own
+  frame (`Character.gripFrameR`, `rigProps.ts pistolFrame`, `RigOpts.inHand`, with `GRIPFIT.pistol`; the 9 mm moved by `GRIPFIT.guardPistol` to where the fitted Glock sits; a teammate's
+  kit takes Sam's `fit`); (2) `Character.inHandPass` poses the SKELETON a second time after `bones` / `gunDir` / `muzzle` were read (as `breathe` does): the gun hand is turned at the
+  wrist onto the simulation's line by `from`‥`to` of the aim clip's weight (`anim.aimShown`), never more than `wrist`°, and a support hand within `both` m is carried round with it, its
+  arm re-solved. The drawer says what is in his right hand a frame behind (`Character.inHand`, an `InHandWord`: pistol / torch / long; as `anim.gripCan` is). IT STANDS DOWN while
+  anything else has the gun arm (`anim.gunArmOwn`: reload, blow, flinch, throw, kit errand, swap, hold, signal, a look-only move) and comes and goes at `rate` /s, never in a frame —
+  bar a SHOT: the hand is on the line at once and in full, so the flash leaves the drawn barrel. A game rule that starts from the hand's frame asks for it as the animator posed it
+  (`handFrameR(true)`: kit handling's errands, kitanim.ts). THE PASS OVER THE REST (measured on the worn mesh of all 14 cast variants × loadouts × poses, 809 groups —
+  `tools/qa/attach-mesh.ts [--inhand]`; and per frame of 24 played missions, 120 thousand frames — `tools/qa/attach-play.ts`): where the simulation places a thing's light or muzzle
+  the THING stays and the HAND goes to it. A calm patrol's TORCH stood 8‥12 cm beside his fist (`INHAND.torch`: the fist's thumb line turned along it and the right arm re-solved so
+  the fist is round its body — `rigProps.torchHold`; torch, lens and light untouched); a teammate's rifle and a defender's carbine had the grip 4.2 cm short of the palm
+  (`INHAND.long`: the trigger hand moved onto it — `rigProps.longHold`, `GRIPFIT.long` the other way round; gun, muzzle, weapon light and the hand on the fore-end untouched; Sam's own
+  rifle keeps kit handling's fit, and gets this only with that off); a defender's holster a third inside his long shirt (`holsterOut` 3 cm, defenders only); the torch on a belt three
+  quarters inside the man (`belt`, `handwork.ts beltTorch`). A man who dies is let go of first (`ragdollize`). CHECK: `bun run tools/qa/inhand-check.ts` (probe `inhand`, family
+  `kitanim`; 16 lines, both stands; `INHAND_BREAK=1` must fail): bench scripts for both sides' pistols (grip to the fist's hollow 1.7 cm a teammate's / 2.4 cm a defender's at worst, was
+  8‥9; on the simulation's line to 2.6° once the aim shows — the 9 mm's own rake; the two-hand hold's spacing and both arms' bone lengths unchanged to the millimetre; the rule adds
+  under 8° a frame to either hand through aims, a reload, a flinch, a blow and a kit errand; a shot from a crouched low ready: bore 2.6° off the round's line and the grip in the fist,
+  was 8 cm out of it; a fifth of a second into anything that takes the arm the hand is the animator's own to 0.1°), torch (the fist's hollow to its line 12.4 cm → 1.2, its boxes
+  bit-equal), long guns (4.2 → 1.0 cm, boxes and fore-end hand bit-equal), every joint the game reads / gunDir / muzzle the same in every frame of every script, and the mission the
+  shot was taken in (lights-out, duo, the teammate's sidearm: 9.1 cm → 1.7 cm over 1080 frames; then the player's own pistol drawn, swapped for a can and back, reloaded, fired: the
+  run's digest equal off and on). One seed. PAGE (software adapter): `PORT=<port> node tools/qa/inhand-page.cjs` — the switch on, the men shown told and posed, no page
+  error; `?inhand=0` off. STILLS: `tools/qa/pose-mesh.ts <variant> pistol-crouch|pistol-crouch-up|pistol-aside|torch|rifle-aim … --inhand`. LEFT ALONE, measured: the
+  torch a whistle's soft answer raises is drawn in the hanging RIGHT hand while the clip lifts the LEFT (the light's origin is the right hand's: moving it is a rule change — or
+  `WHISTLE_SOFT_UPPER = 'none'`); Sam's slung rifle runs 5‥8 cm into his radio pack (not in the sneaking suit); the breacher's kit mesh already carries a long tool and the hammer and
+  shotgun cross it; a shield's window lets the helmet 2.5 cm through at a crouched aim; a hammer between hands and back, and a teammate's rifle as it comes off (the big slot's own
+  moves); the hand of the torch ↔ sidearm swap reaches for the belt torch's OLD place, 6 cm inside where it now hangs (the reach is the animator's: game state), and a torch is beside
+  the fist for the frames of that swap; every long gun reloads on the pistol's clip, the support hand holding nothing; a defender throws overhand with the carbine in the throwing fist.
+  The viewer and the Team & kit figure draw without the rule (the viewer's RIG numbers are tuned in the frames they always were). NEVER SEEN ON A GPU OR IN PLAY: judged on Blender
+  Workbench sheets of the skinned cast and by the numbers above.
 - **The rifle family's probes read the page's rules where they are live** (`tools/qa/fn2000-probes.ts`, 10-16; tests only, no game code). `kit-slots`, `rifle-cadence`,
   `rifle-reload` and `rifle-slot` pinned the old kit's beats and were red on the SHIPPED stand. Now: a kit change carried by hand is waited out (`kitWait`: `stage()`, kit-slots'
   `settle`, rifle-slot's `run`; one that never ends is a FAIL or a throw) and where the rifle is drawn / what the animator holds is not asked mid-change (`kitMid`: never the bare

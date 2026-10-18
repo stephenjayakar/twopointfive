@@ -108,6 +108,7 @@ import { SPOTTED, SPOTTED_DEFAULTS, saveSpotted, spottedSummary } from '../game/
 import { PLAN } from '../game/floorplan';
 import { CLOSE, closeSummary, closeSeat, closeUnseat, closeSeated } from '../game/close';
 import { KITANIM, kitSummary } from '../game/kitanim';
+import { INHAND } from '../game/inhand';
 import { KIT, THROW_BY } from '../game/character';
 import { HANDS, handsSummary } from '../game/hands';
 import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
@@ -1895,6 +1896,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(kt, 'reload ▸ empty / dry / tactical', () => KITANIM.reload, v => { KITANIM.reload = v; }, 'the three magazine changes alone; off = the weapon row\'s one reload', true);
     panel.toggleBox(kt, 'close-in ▸ by distance', () => KITANIM.close, v => { KITANIM.close = v; }, 'closer than ever: the carriage deepens and the knife hand travels to the hilt as you close; the hands keep moving when you stand still. Off = one pose inside the mode.', true);
     panel.toggleBox(kt, 'grips ▸ things sit in his hands', () => KITANIM.grips, v => { KITANIM.grips = v; }, 'the can in the fist, the guns\' grips in the palm, the foregrip in the fingers, a magazine across the palm. Picture only. Off = every held thing off the wrist joint as before.', true);
+    panel.toggleBox(kt, 'in hand ▸ a pistol stays in the fist', () => INHAND.on, v => { INHAND.on = v; }, 'every man: a pistol is drawn in the hand that holds it, and the hand turns onto the line it points. Picture only. Off = laid on the aim line from the wrist, as before.', true);
     panel.toggleBox(kt, 'night vision ▸ by hand or a nod', () => KITANIM.nv, v => { KITANIM.nv = v; }, 'N: the left hand flips the goggles down / up when it is free; with the hands busy (the rifle up, the pistol at the aim, a man in his arm, a reload) a nod of the head does it. The picture changes as they reach his eyes. Off = they jump on the key', true);
     panel.select(kt, 'rifle sling', ['by the mission', 'in front', 'on his back'], () => KITANIM.sling, v => { KITANIM.sling = v as 0 | 1 | 2; }, 'where the rifle lives when it is not in your hands. By the mission: a squad\'s loud mission lets it down on its sling in FRONT (quicker both ways), a quiet mission and the solo night put it across your BACK. Or force either.');
     panel.slider(kt, 'early click (s)', 0, 0.6, 0.05, () => KITANIM.clickKeep, v => { KITANIM.clickKeep = v; }, 'a left click this long before a drawn gun is up is kept and fires the moment it is. 0 = a click during a draw is dropped, as it was');

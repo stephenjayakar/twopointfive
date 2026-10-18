@@ -8,6 +8,7 @@ import { Vec3, Quat, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { RtLight } from '../render/lights';
 import { Character } from './character';
+import type { InHandWord } from './inhand';
 import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
 
 /** A stick-shaped part laid along a direction from an anchor point: it spans [l0, l1] metres along the direction; the box is
@@ -422,13 +423,21 @@ export const GRIPFIT = {
   long: [-0.031, 0, 0.037] as Vec3,
   fore: { back: 0.062, lift: 0.011, down: 0.015 },
   mag: { fwd: 0.095, palm: 0.028, side: 0.03 },
+  /** the 9 mm a defender (or a teammate without a can on his) holds, IN HAND only (inhand.ts — RigOpts.inHand): its group was fitted on the old frame 2.6 cm further out of the
+   *  palm and 3.5 cm shorter along the fingers than the fitted Glock sits; this puts its grip where that one's is, in the group's own axes */
+  guardPistol: [-0.026, -0.005, 0.035] as Vec3,
+  /** a torch, IN HAND only: where in the fist its body is held — m along the fingers from the wrist, m out of the palm (rigProps.torchHold → Character.inHandPass) */
+  torch: { fwd: 0.1, palm: 0.036 },
 };
 /** a gun group's frame moved by a GRIPFIT shift (in its own axes) */
 function fitFrame(g: Frame, d: Vec3): Frame { return { ...g, o: v3.mad(v3.mad(v3.mad(g.o, g.x, d[0]), g.y, d[1]), g.z, d[2]) }; }
 /** The hand frame the pistol group lives in: origin at the wrist, z along the bore (char.gunDir), y up out of the top of the slide
  *  (−gunUnder), x sideways. */
-function pistolFrame(c: Character, hand: Vec3, P: { adj?: Adj }): { handF: Frame; g: Frame } {
-  const handF: Frame = frameFrom(hand, c.gunDir, v3.scale(c.gunUnder(), -1));
+function pistolFrame(c: Character, hand: Vec3, P: { adj?: Adj }, inHand = false): { handF: Frame; g: Frame } {
+  // (`inHand` — inhand.ts, RigOpts.inHand: the frame is the HAND's own as it is drawn this frame — the bore along its knuckle line, the top its thumb side — so the gun
+  //  is rigid in the fist; character.ts inHandPass turns that hand onto the aim line while he aims, which puts a settled aim's gun where gunDir has it)
+  const hf = inHand ? c.gripFrameR() : null;
+  const handF: Frame = hf ? frameFrom(hand, hf.bore, hf.top) : frameFrom(hand, c.gunDir, v3.scale(c.gunUnder(), -1));
   return { handF, g: applyAdj(handF, P.adj) };
 }
 
@@ -476,6 +485,11 @@ export interface RigOpts {
   rifleLight?: boolean;
   /** player: held things are drawn IN the hand (GRIPFIT above; kitanim.ts KITANIM.grips). Absent = every box where it always was */
   fit?: boolean;
+  /** IN HAND (inhand.ts): a pistol in his right hand is laid out in the hand's own frame (Character.gripFrameR; both kits' pistols) instead of along gunDir from
+   *  the wrist. (A torch and a long gun are drawn where they always were: there the hand goes to the thing — Character.inHand.) Absent = as it always was */
+  inHand?: boolean;
+  /** guards: metres further out from the thigh the holster is drawn (inhand.ts INHAND.holsterOut — the defenders' long shirt hid a third of it). Absent = where it always was */
+  holsterOut?: number;
   /** player: kit handling under way (KitDraw below; game/kitanim.ts fills it off the animator's swap / magazine change). Absent = every box as it always was */
   kit?: KitDraw;
   /** the 2010s carbine drawn all black (stock, grip, handguard, post, laser box) instead of dark earth: a man in the sneaking suit (combat.ts handProps asks
@@ -554,12 +568,12 @@ function kitBoxes(c: Character, o: RigOpts, out: Box[], rig: Rig, meta?: RigNode
   const hand = c.bones.handR; curOwner = c.id & 0xff;
   if (!o.isGuard) {
     if (hand && o.slot === 1) {
-      const P = rig.pistol; const pf = pistolFrame(c, hand, P), handF = pf.handF; let g = pf.g;
+      const P = rig.pistol; const pf = pistolFrame(c, hand, P, !!o.inHand), handF = pf.handF; let g = pf.g;
       if (o.kit) {   // (kit handling: the gun rides the hand's own frame, and the last of the way to / first of the way from the holster it is carried between the two)
         g = kitGunFrame(c, hand, P, g, o.kit.roll ?? 0); if (o.fit) g = fitFrame(g, GRIPFIT.pistol);
         const th = c.bones.thighR, kn = c.bones.shinR, hp = c.bones.hips;
         if ((o.kit.pistol ?? 0) > 0 && th && kn && hp) g = mixFrame(g, holsterFrameOf(th, kn, hp, c.forward(), rig.holster), o.kit.pistol!);
-      } else if (o.fit) g = fitFrame(g, GRIPFIT.pistol);
+      } else if (o.fit || o.inHand) g = fitFrame(g, GRIPFIT.pistol);   // (inHand: laid out in the hand's frame it is IN the hand only with the fit — whatever kit handling's own switch says)
       const hk = o.kit?.pistol ?? 0;   // (kit handling: how far it is into the holster — its parts go over to how the holstered gun hangs (holsterBoxes: no adjustments but the hung grip's rake, no rail light), so the last frame in the hand's errand IS the first on the thigh)
       if (hk > 0) {
         segAt(out, g, P.slide, mixAdj(P.slide.adj, undefined, hk), COL.gun, NO_GLOW); segAt(out, g, P.grip, mixAdj(P.grip.adj, GRIP_HUNG, hk), COL.gun, NO_GLOW); segAt(out, g, P.suppressor, mixAdj(P.suppressor.adj, undefined, hk), COL.can, NO_GLOW);
@@ -584,23 +598,24 @@ function kitBoxes(c: Character, o: RigOpts, out: Box[], rig: Rig, meta?: RigNode
     return;
   }
   if (!hand) return;
+  const HR = o.holsterOut ? { ...rig.holster, out: rig.holster.out + o.holsterOut } : undefined;   // (inhand.ts: a holster worn over a long shirt stands further off the thigh)
   if (o.weapon === 'carbine' || o.weapon === 'sc20k') {                       // a long gun in both hands in every state; riflemen wear the sidearm too, and it never leaves the thigh
     if (o.hang) hungBoxes(c, o.weapon, out, rig, false, meta);   // (his hands are on the big slot's tool: the long gun on its sling down his front, dark)
     else if (o.weapon === 'sc20k') sc20kBoxes(c, out, rig.sc20k, 'hand', o.lightOn && o.lensColor ? v3.scale(o.lensColor, rig.sc20k.lensGlow) : [0, 0, 0], meta, rifleM4(rig));
     else carbineBoxes(c, out, rig.carbine, o.lightOn && o.lensColor ? v3.scale(o.lensColor, rig.carbine.lensGlow) : [0, 0, 0], meta);
-    if (o.holster !== false) holsterBoxes(c, out, { slide: rig.guardPistol.slide, grip: rig.guardPistol.grip }, meta);
+    if (o.holster !== false) holsterBoxes(c, out, { slide: rig.guardPistol.slide, grip: rig.guardPistol.grip }, meta, HR);
     return;
   }
-  if (o.hang) { if (o.holster !== false) holsterBoxes(c, out, { slide: rig.guardPistol.slide, grip: rig.guardPistol.grip }, meta); return; }   // (… a sidearm: on his thigh)
+  if (o.hang) { if (o.holster !== false) holsterBoxes(c, out, { slide: rig.guardPistol.slide, grip: rig.guardPistol.grip }, meta, HR); return; }   // (… a sidearm: on his thigh)
   const lens: Vec3 = o.lightOn && o.lensColor ? v3.scale(o.lensColor, rig.torch.lensGlow) : [0, 0, 0];
   if (o.torch && c.alive) {                                                     // torch carried in the hand (the spot light sits at its lens)
     const handF = frameFrom(hand, o.beamDir ?? c.gunDir); const g = applyAdj(handF, rig.torch.adj);
     if (meta) meta.push({ path: 'torch', label: 'hand torch (group + light)', depth: 1, parent: handF, frame: g, boxStart: out.length, boxCount: 2, getAdj: adjOf(rig.torch, 'adj') });
     seg(out, g, rig.torch.body, COL.torch, undefined, meta, 'torch.body', 'body', 2);
     seg(out, g, rig.torch.lens, COL.lensBody, lens, meta, 'torch.lens', 'lens', 2);
-    if (o.holster !== false) holsterBoxes(c, out, { slide: rig.guardPistol.slide, grip: rig.guardPistol.grip }, meta);   // torch in hand → the sidearm is on his thigh
+    if (o.holster !== false) holsterBoxes(c, out, { slide: rig.guardPistol.slide, grip: rig.guardPistol.grip }, meta, HR);   // torch in hand → the sidearm is on his thigh
   } else {                                                                      // drawn pistol with a weapon light (a body keeps the gun, unlit)
-    const { handF, g } = pistolFrame(c, hand, rig.guardPistol);
+    const pf = pistolFrame(c, hand, rig.guardPistol, !!o.inHand), handF = pf.handF, g = o.inHand ? fitFrame(pf.g, GRIPFIT.guardPistol) : pf.g;
     if (meta) meta.push({ path: 'guardPistol', label: 'guard pistol (group + light)', depth: 1, parent: handF, frame: g, boxStart: out.length, boxCount: c.alive ? 3 : 2, getAdj: adjOf(rig.guardPistol, 'adj') });
     seg(out, g, rig.guardPistol.slide, COL.gun, undefined, meta, 'guardPistol.slide', 'slide', 2);
     seg(out, g, rig.guardPistol.grip, COL.gun, undefined, meta, 'guardPistol.grip', 'grip', 2);
@@ -843,6 +858,18 @@ export function sc20kGrip(rig: Rig = RIG, fit = false): { wrist: Vec3; fingers: 
   const G = longGripOf(rig.sc20k.adj, rig.sc20k.gripL); if (!fit) return G;
   const d = GRIPFIT.long, F = GRIPFIT.fore;   // (GRIPFIT: the gun as drawn has moved in the trigger hand, and the post belongs in the hook of this hand's fingers)
   return { wrist: v3.mad(v3.mad(v3.mad(v3.add(G.wrist, d), G.fingers, -F.back), G.back, -F.lift), v3.normalize(v3.cross(G.fingers, G.back)), -F.down), fingers: G.fingers, back: G.back };
+}
+/** IN HAND (inhand.ts): what the look-only hand pass is told of a long gun in his hands — how far its pistol grip is from where his palm is, in the trigger
+ *  hand's gun frame (x his left, y the gun's top, z the bore). The gun, its muzzle and its light stay where the simulation has them; the HAND goes those few
+ *  centimetres. The same measured shift a fitted rifle is drawn by (GRIPFIT.long), the other way round. */
+export function longHold(weapon: 'carbine' | 'sc20k', rig: Rig = RIG): InHandWord {
+  const g = applyAdj({ o: [0, 0, 0], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, weapon === 'sc20k' ? rig.sc20k.adj : rig.carbine.adj), d = GRIPFIT.long;
+  return { kind: 'long', by: v3.scale(v3.mad(v3.mad(v3.scale(g.x, d[0]), g.y, d[1]), g.z, d[2]), -1) };
+}
+/** …and of a torch: the line its beam leaves along, and in that beam's frame the point of its body his fist goes round (the group's own origin, from the wrist) and the way its body lies */
+export function torchHold(beam: Vec3, rig: Rig = RIG): InHandWord {
+  const g = applyAdj({ o: [0, 0, 0], x: [1, 0, 0], y: [0, 1, 0], z: [0, 0, 1] }, rig.torch.adj);
+  return { kind: 'torch', beam, at: g.o, axis: g.z, fwd: GRIPFIT.torch.fwd, palm: GRIPFIT.torch.palm };
 }
 /** how far ahead of the wrist along the bore its muzzle is — the far face of the suppressor (Character.muzzleAhead while it is in the hands; the row says 0.52 too) */
 export function sc20kMuzzleAhead(rig: Rig = RIG): number { return muzzleAheadOf(rig.sc20k.adj, rig.sc20k.suppressor); }
