@@ -227,12 +227,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'hut', mat: 'stone', x0: 29, z0: 6.6, x1: 31.76, z1: 10.4 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the level's own south gate, where the team starts. Its two
-  // blue leaves stand folded open, so the way is anchored on the opening between the gate piers, and the courtyard and the house's front are seen through it.
-  // The stack is on the wall west of the gate (`side`), where the two earth-filled baskets outside the wall stand: they are out of this picture (`hide`: the
-  // camera's own test takes them out whichever side the stack is on), and with them the rest of what lies outside the wall.
-  // (the picture's lamp is hung on the gate pier at the stack's end of the opening: left to be measured it hangs over the anchor's middle, which on a gap is open air)
-  scenarios.kitView = { ways: [{ span: [[14.72, 23], [17.28, 23]], side: -1, hide: ['outside'], light: { porch: { offset: [1.61, 0.77, 2.38], aim: [3.2, 1.6, 0], fixture: { at: [1.61, 0.27, 2.25], half: [0.17, 0.045, 0.05], glow: 5 } } } }] };
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the team starts at the level's own south gate, whose two
+  // blue leaves stand folded open. A picture anchored on that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the
+  // wand, a bang or a frag on order all stood idle), so the way is the door the gate leads to: the house's front door across the courtyard. What stands in
+  // the camera's way is worked out and sunk by the plan.
+  scenarios.kitView = { ways: [{ door: 'front' }] };
   return { level, scenarios, groups: trace.groups, surfaces };
 }
 function norm(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }

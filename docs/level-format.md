@@ -282,6 +282,11 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   'wall' only the wall charge plays (the wall is stood again under the dissolve after it); every row that works a leaf — a door charge, the wand, a
   teammate's bang or frag order, the big tool — plays the GUN's there. Throws and the spot a round is put on are held to the floor measured behind the
   anchor (`inside`). The stack's `hand` mirrors the child's own framing (door / left / right) — a way whose stack falls on the right needs nothing said.
+  EVERY WAY ANCHORS ON A DOOR THAT IS NOT STEEL (10-18; tools/qa/kitview-plan.ts section C fails any other way, tools/qa/kitview-work.cjs holds the page
+  to it): a pick whose kit works a leaf — the hammer, the breaching shotgun, a door charge, the wand, a bang or a frag on order — played the gun's row on a
+  span or a steel door, and on a blank wall the gun only scanned: the picture stood still for that pick. A mission whose own way in is a gate, a gap or a
+  wall writes the first door behind it (`ref`: the side the picture is taken from, when that door is another way's too), or a set with a door in the wall
+  the stack stands on (mousehole's `ward`: the wall charge still opens the wall beside the door — `KIT_VIEW_LOOP.wallAt` is measured along the stack's wall).
   ANY KIND of mission may carry a block: a way on a set is always staged as a room clear of the set; a level's own way is staged by the mission's own
   kind (room clear, rescue, night breach; a quiet mission and the solo night with their own men: Sam alone, or Sam and his partner). Only a level
   with no block shows the standing man.
