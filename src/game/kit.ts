@@ -342,7 +342,11 @@ function deal(cards: MemberKit[], t: SlotTable, n: number): MemberKit[] {
 }
 /** THE FIVE CARDS AS THE TEAM WEARS THEM: the table's cards, or — the deal on, three or four coming, the counted things a named kit's — those shared out.
  *  The same array when nothing is dealt. */
-export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] { return dealing() && n >= 3 && dealNamed(cards) ? deal(cards, SLOTS.table, n) : cards; }
+export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] { return dealing() && n >= 3 && !(dealOwn && cards === KIT.members) && dealNamed(cards) ? deal(cards, SLOTS.table, n) : cards; }
+/** THE TABLE'S CARDS ARE THE PLAYER'S OWN LAYOUT: a counted thing was changed by hand on a team of three or four, so the cards are worn as written even where
+ *  they come to read as a named kit's (Blue One's last canister given up on purpose is not the Quiet kit to share out again). Kept with the store; dropped when
+ *  a squad kit is put on by name, the cards are reset, or they settle back into a kit (dealSettle). */
+let dealOwn = false;
 /** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
 export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
 export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing() && team >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, team)[i] : issuedCard(i); }
@@ -353,26 +357,26 @@ export function kitIssuedShown(i: number): MemberKit { return i > 0 && dealing()
  *  his share) are that kit again, in the table's layout (dealSettle). */
 function onWorn<T>(i: number, f: () => T, taken?: (r: T) => boolean): T {
   const w = i > 0 ? kitWorn() : KIT.members;
-  if (w === KIT.members) { const r = f(); if (i > 0 && taken?.(r)) dealSettle(); return r; }
+  if (w === KIT.members) { const word = dealWord(KIT.members), r = f(); if (i > 0 && taken?.(r)) { if (dealing() && team >= 3 && dealWord(KIT.members) !== word) { dealOwn = true; if (!dealSettle()) kitSave(); } else dealSettle(); } return r; }
   const was = KIT.members.slice(), s = store, back = () => { for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = was[j]; store = s; };
   for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = { ...w[j] }; store = null;
   let r: T; try { r = f(); } catch (e) { back(); throw e; }
   if (!taken?.(r)) { back(); return r; }
   store = s;
-  if (KIT.members.some((c, j) => j > 0 && DEALT.some(k => c[k] !== w[j][k]))) { if (!dealSettle()) kitSave(); }
+  if (KIT.members.some((c, j) => j > 0 && DEALT.some(k => c[k] !== w[j][k]))) { dealOwn = true; if (!dealSettle()) kitSave(); }
   else {   // (nothing counted moved: the change goes onto the table's layout — unless it costs a pouch that man's card has not got there, and then the worn cards are kept, as a counted change keeps them)
     const laid = KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, was[j][k]])) } : c));
-    if (illegal(laid, SLOTS.table) === null) for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = laid[j];
+    if (illegal(laid, SLOTS.table) === null) for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = laid[j]; else dealOwn = true;
     kitSave();
   }
   return r;
 }
 /** … true: the cards were put back in a named kit's layout, and kept */
 function dealSettle(): boolean {
-  if (!dealing() || team < 3 || dealNamed(KIT.members)) return false;
+  if (!dealing() || team < 3 || (dealNamed(KIT.members) && !dealOwn)) return false;
   const laid = (kit: MemberKit[]) => KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, kit[j][k]])) } : c));
   const kit = dealTable().kits.map(laid).find(cards => illegal(cards, SLOTS.table) === null && dealWord(deal(cards, SLOTS.table, team)) === dealWord(KIT.members)); if (!kit) return false;   // (…a layout a man's other things leave room for: a wand on Red One and the table's full card are a pouch too many)
-  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = kit[j]; kitSave(); return true;
+  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = kit[j]; dealOwn = false; kitSave(); return true;
 }
 /** the pouches the teammates who come fill between them · how many of one thing they carry */
 const squadUsed = (cards: MemberKit[], t: SlotTable, n: number) => coming(cards, n).reduce((s, c) => s + costOf(c, t), 0);
@@ -548,7 +552,7 @@ function loadoutCards(id: string, looks?: MemberKit[]): MemberKit[] | string {
  *  squad kit row): null = done and kept, else why not — no such loadout, a tool of it this build has no row for, or (a table edited by hand) not a legal fill. */
 export function kitLoadout(id: string): string | null {
   const cards = loadoutCards(id, KIT.members); if (typeof cards === 'string') return cards;
-  for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = ''; } kitSave(); return null;
+  for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = ''; } dealOwn = false; kitSave(); return null;
 }
 /** the squad kits a press can put on, in the order the screen lists them: as issued, then the table's loadouts this build can carry (none while the rule is off) */
 export function kitLoadouts(): { id: string; name: string }[] {
@@ -557,6 +561,7 @@ export function kitLoadouts(): { id: string; name: string }[] {
 /** which of them the five cards are now, colours aside (null: a mix of your own) */
 export function kitLoadoutOf(): string | null {
   const same = (id: string) => { const cards = loadoutCards(id, KIT.members); return typeof cards !== 'string' && cards.every((c, i) => JSON.stringify(c) === JSON.stringify({ ...c, ...KIT.members[i] })); };
+  if (dealOwn && dealing() && team >= 3) return null;   // (cards of the player's own layout are no named kit on a team that would wear one shared out)
   return kitLoadouts().find(l => same(l.id))?.id ?? null;
 }
 
@@ -782,7 +787,7 @@ export function kitPreset(i: number, p: KitPreset): { ok: boolean; why: string }
 /** why a press of a set on member i's card would be refused as the cards stand ('' = it would be taken) */
 export function kitPresetWhy(i: number, p: KitPreset): string { return onWorn(i, () => cardWhy(i, kitPresetCard(i, p)) ?? ''); }
 /** a set on all five at once (always a legal fill) */
-export function kitPresetAll(p: KitPreset) { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = setCardBase(i, p, SLOTS.on ? SLOTS.table : null); KIT_NOTE[i] = ''; } kitSave(); }   // (the table's layout: KITDEAL shares it out as it is worn)
+export function kitPresetAll(p: KitPreset) { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = setCardBase(i, p, SLOTS.on ? SLOTS.table : null); KIT_NOTE[i] = ''; } dealOwn = false; kitSave(); }   // (the table's layout: KITDEAL shares it out as it is worn)
 /** which set member i's card is, if it is exactly one */
 export function kitPresetOf(i: number): KitPreset | null {
   const m = kitShown(i);
@@ -871,8 +876,8 @@ export function kitLoad(s: Store | null, search = '') {
   const q = new URLSearchParams(search);
   store = s; KIT.on = !q.has('nokit'); SLOTS.on = SLOTS.ok && !q.has('noslots'); team = KIT_MEMBERS - 1;
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; }
-  kept0 = null; keptWand = [];
-  try { const raw = s?.getItem(KIT_LS); if (raw) { const j = JSON.parse(raw) as { members?: unknown[] }; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = kitSanitize(i, j.members?.[i]);
+  kept0 = null; keptWand = []; dealOwn = false;
+  try { const raw = s?.getItem(KIT_LS); if (raw) { const j = JSON.parse(raw) as { members?: unknown[]; own?: unknown }; dealOwn = j.own === true; for (let i = 0; i < KIT_MEMBERS; i++) KIT.members[i] = kitSanitize(i, j.members?.[i]);
       kept0 = keptOf(j.members?.[0]);
       keptWand = (j.members ?? []).map((r, i) => i > 0 && !!r && typeof r === 'object' && (r as { wand?: unknown }).wand === true);
       { const m = KIT.members[0], other: Record<typeof COUNTS0[number], number> = ruleOn ? BUILT : ISSUED[0], now = issuedCard(0); if (COUNTS0.every(k => m[k] === other[k])) for (const k of COUNTS0) m[k] = now[k]; }   // (as issued the other way the rule stands = as issued)
@@ -929,9 +934,9 @@ function keptOf(raw: unknown): typeof kept0 {
 let keptWand: boolean[] = [];
 function keptNow(): { charges?: number; walls?: number } { const k: { charges?: number; walls?: number } = {}; if (kept0?.charges && !chargeRow(0)) k.charges = kept0.charges; if (kept0?.walls && !wallRow(0)) k.walls = kept0.walls; return k; }
 /** (your card also carries `cans` — the split of six its two counts are, where they are one — for a build from before the pouches rule reading this store) */
-export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, members: KIT.members.map((m, i) => (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : wandRow(i) ? (keptWand[i] = m.wand, m) : keptWand[i] ? { ...m, wand: true } : m)) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
+export function kitSave() { try { store?.setItem(KIT_LS, JSON.stringify({ v: 2, ...(dealOwn ? { own: true } : {}), members: KIT.members.map((m, i) => (i === 0 ? { ...m, ...keptNow(), cans: mixOf(m) ?? 'issued' } : wandRow(i) ? (keptWand[i] = m.wand, m) : keptWand[i] ? { ...m, wand: true } : m)) })); } catch { /* a full or forbidden store: the table still holds for this visit */ } }
 /** every card back as issued (and the store's copy) */
-export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; kitSave(); }
+export function kitReset() { for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = kitDefault(i); KIT_NOTE[i] = ''; } kept0 = null; keptWand = []; dealOwn = false; kitSave(); }
 // slots.json, checked once as this module loads (after the issued table above, which the check reads; nothing of another game module is touched)
 { const c = slotsCheck(slotsData); if ('table' in c) SLOTS.table = c.table; else { SLOTS.ok = SLOTS.on = false; SLOTS.why = c.why; console.error(`kit: slots.json refused — ${c.why}. The pouches rule is off: every row is free.`); } }
 

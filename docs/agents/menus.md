@@ -949,14 +949,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   any other change (a gun, a look, a big thing, your own card) is written onto the table's cards and the layout stays, unless it costs a pouch that
   man's card in the table has not got (a wand on Red One, full as issued): then the worn cards are kept too, so no stored card is ever over its
   pouches; a refused change and a peek write nothing; men put back on their shares are the named kit again (`dealSettle`, only into a layout their
-  other things leave room for). A man's own set (As issued, Quiet, Loud) at three or four is HIS
+  other things leave room for). Cards kept as the player's own are marked so (`dealOwn`, saved as `own` in the store, dropped by a squad kit put on by
+  name or a reset): they are worn as written even where they come to read as a kit's table (Blue One's last canister given up on purpose), and the
+  squad kit row then names no kit. The Team & kit picture is sent the worn cards and wears them as written (`ui/kitView.ts`, `main.ts kitCards`). A man's own set (As issued, Quiet, Loud) at three or four is HIS
   SHARE of that kit, so Loud on a man of four may add no stun to him. A mission's own issue that changes a teammate's counts is not a named kit and is
   worn as its file writes it. LEFT, the maintainer's calls: the Quiet kit of four still leaves Blue Two with a pistol and nothing else (three stun for
   four men), and a four as issued fills 2, 2, 2 and 1 of its pouches (seven things, sixteen pouches) with every big slot empty: more than that is more
   kit. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
   page and on the shipped stand (`?nokitdeal`; the debugger's Big slot section, 'squad kit dealt over who comes'); in the knob registry and
   `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off at any moment = every card shown and staged as the table writes it.
-  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 22 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
+  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 23 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
   comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs`. The older card probes (`kit-*`,
   `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
   holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. LISTING: `bun run
