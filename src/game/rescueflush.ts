@@ -115,7 +115,7 @@ export class RescueFlush {
     // one of them stands in the room and nobody is there to shoot: they have been taken out
     if (isNaN(this.goneAt) && !inRoom) {
       const by = R.hostiles.find(h => h.state !== 'dead' && !h.held && inBounds(h.char.pos, B));
-      if (by) { this.goneAt = g.time; R.note(`flush:gone:${by.callsign}`); g.say(by, 'they\'re gone — they\'re moving them! cut them off!', true); this.nextAt = Math.min(this.nextAt, g.time + 1); for (const s of this.sent.values()) s.at = -1e9; }
+      if (by) { this.goneAt = g.time; R.note(`flush:gone:${by.callsign}`); g.say(by, 'the hostages are gone — they\'re moving them! cut them off!', true); this.nextAt = Math.min(this.nextAt, g.time + 1); for (const s of this.sent.values()) s.at = -1e9; }
     }
     // a man sent round has reached the side door: on through it, for them (no second word: it is the same errand)
     for (const [h, S] of this.sent) {
@@ -178,7 +178,7 @@ export class RescueFlush {
     if (n > 0) return;   // (a man's second errand is not announced: one line a man)
     g.say(h, goal === 'room' ? w('it\'s gone quiet in there — I\'m going in for them!', 'it\'s gone quiet in there — i\'m going in for them!')
       : goal === 'side' ? w('going round — I\'ll take the other door!', 'going round — i\'ll take the other door!')
-      : goal === 'out' ? 'on the way out — they don\'t leave with them!'
+      : goal === 'out' ? 'on the way out — they don\'t leave with the hostages!'
       : 'moving on that noise — keep them boxed in!', true);
   }
 
