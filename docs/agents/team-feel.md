@@ -342,6 +342,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `readPlace` still go by the CPU (a man in a bounce-lit room is read by his own meter, which has the bounce); up to five more probe places a
   carrier on his beat, only where the CPU finds dark (the probe has 64 a frame); in the page the fan no longer stops at its second dark reading
   (it needs them all to pick a spread), 0.4‥0.8 ms a carrier a beat as measured headless before. Row: 'IR light ▸ by the light the picture has'.
+  QA `probes.ts irl-meter` (21 scenarios; no renderer headless, so its answers are PLANTED through the swapped `Game.lightAt`: on floor the CPU calls
+  black with Sam's goggles brought down afresh — answered lit: not one frame of his light or a teammate's, and with the switch off it burns; answered
+  dark: burning the frame his goggles are down, at full; 0.015 W/m²: dark at the picture's bounce scale, light with the scale at 1; the fan's points
+  never answered: light 0.27 s after his question; nothing answered at all, or `SENSE.cpu`: nothing asked, light at once; floor the CPU calls light:
+  nothing asked; at most ten points asked in a frame; forgotten with his goggles; the stand, the row, a recording without the key): black floor in
+  11 scenarios, light in 7 (8 shipped). ALL PASS on both stands; `IRMETER_BREAK=1` (the switch held off) RED on both, 11 lines each. The family: 112
+  verdicts on each stand, the three of the frozen stand with all three words raised 50; `nvg` 188 on each; `IRAUTO_BREAK=1` and `IRLIGHT_BREAK=1`
+  still red (shipped). The five older irlight probes hold the switch off. HEADLESS NOTHING MOVES, checked: four scenarios, 900 frames each on the
+  shipped stand, goggles down, the switch on and off — the same game digest and the same count of burning lights (2,719‥4,492 light-frames). Page
+  check, software adapter (very low, 640×360), `MODE=vault node tools/qa/irlight-page.cjs <out>` (the maintainer's address, Sam in the middle of the
+  strongroom, its bulb off): ALL PASS for who decides — the line at 0.02 and the renderer's answers put his light out where the switch off burns it;
+  at 0.4 it burns; every answer planted dark and it burns. TOLD, not asked: on that adapter at that quality his light STILL BURNS there at the line
+  as it ships, door open or shut — the dark points of his fan read 0.011‥0.025 W/m² at the meter, 0.05‥0.09 of the range in the picture (grain),
+  while the floor under him in the door's light reads 0.34. The maintainer's own shot reads about 0.3 over that floor (80 of 255 where the lamp-lit
+  counting room reads 202 for a computed 0.78‥0.90, and 100 in a court whose floor has no direct light at all): his GPU's picture has several
+  times the bounce the software adapter's very low has, and by the picture's line his room is light. NOT RUN: the page check's yard and room modes
+  after this change, a tour, a soak, an entry tally. NEVER SEEN ON A GPU, and only a player can judge: whether the meter on his GPU reads that room
+  as his picture shows it (if his light still burns there, lower 'floor must show at least'), a light that comes on for the darker half of a room
+  as he turns, and a torch beam crossing dark floor putting his light out for a moment.
 - **Silent or loud, on Sam's word** (`src/game/silent.ts`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
   quietly, no flashlight, etc."; scope page rebuild/silent-order/scope.md): the squad's POSTURE, one order — `go silent` on **X, 5** of the
   floor's menu and of a man's (under the header 'the whole squad'; a door's menu keeps 5 for the door tools; the order fits any target through `give`), the row

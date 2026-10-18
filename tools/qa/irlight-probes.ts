@@ -380,8 +380,8 @@ export const irlMeter = guarded(async () => {
         if (P.black && (P.asks || !P.burn)) fails.push(`the senses on the CPU: ${P.asks ? 'the renderer was asked' : ''}${P.burn ? '' : ' no light on CPU-black floor'}`);
         said.push(`switch off: burning · renderer dark: light ${f2(C.first)} s on at full · ${E_EDGE} W/m²: dark at the picture's scale, light at 1 · points unanswered: light ${f2(N.firstQ)} s after the question · no renderer / senses on the CPU: nothing asked, light at once`);
         // (h) goggles up: what he asked is forgotten
-        meterOn(); own = E_LIT; plant = E_LIT; await fresh(dark, 30); forgot = 0; pl.nv = false; step(40);
-        if (!BRK && forgot < 1) fails.push('goggles up: nothing he asked of the renderer was forgotten'); }
+        meterOn(); own = E_LIT; plant = E_LIT; const U = await fresh(dark, 30); forgot = 0; pl.nv = false; step(40);
+        if (U.asks && forgot < 1) fails.push('goggles up: nothing he asked of the renderer was forgotten'); }   // (asked of a stand where he did ask: one nudged onto floor with fewer than two dark points in his fan asks nothing)
     }
     if (lit) {   // (i) where the CPU calls every floor he could look at light, nothing is asked whatever the renderer would say
       meterOn(); own = E_DARK; plant = E_DARK; const G = await fresh(lit, 60);
