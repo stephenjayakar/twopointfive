@@ -10,7 +10,8 @@ import { CanisterParams } from '../smoke/types';
 import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { Item } from './throwables';
 import * as fx from './effects';
-import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, RIG } from './rigProps';
+import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
+import { sideLocal } from './packside';   // (a leaf)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
@@ -433,6 +434,7 @@ function handPropsRaw(g: Game, out: Box[]) {
   const fit = KITANIM.on && KITANIM.grips && !g.touring; an.gripCan = fit && held !== null;   // (kitanim.ts: held things drawn IN the hand — rigProps GRIPFIT)
   const bigS = bigCarried(g, pl.char);   // (bigkit.ts: the hammer or the breaching shotgun in his big slot — on his back, or in his hands for its beat (the animator's bigK; his own gun is then away through `busy` above); null with the switch off: nothing below is added)
   const bigOver = rifle === 'slung' && !(KITANIM.on && kitSlingFront(g));   // (his rifle lies ACROSS HIS BACK under it this frame — not in his hands, not on its sling in front: only then does the tool ride clear of anything)
+  an.bigSide = bigS === 'hammer' ? hammerSide(pl.char) : null;   // (packside.ts: he wears a pack — the hammer stands at its side, and the DRAWN hand is carried there: Character.packSidePass)
   an.bigClear = bigS === 'hammer' && bigOver ? bigClearOf(pl.char, 'hammer') : 0;   // (the hand that goes for the handle reaches where the drawer has it — character.ts bigLayer)
   const inHand = INHAND.on && !pl.down;   // (inhand.ts: his pistol is laid out in the hand's own frame, and the figure is told what its right hand holds — a frame behind, as gripCan is: its look-only pass turns that hand onto the aim line; a rifle drawn without kit handling's fit has the hand moved onto its grip instead)
   pl.char.inHand = !inHand ? null : pistolInHand ? IN_PISTOL : rifle === 'hand' && !fit && INHAND.long ? longHold('sc20k') : null;
@@ -446,11 +448,18 @@ function handPropsRaw(g: Game, out: Box[]) {
   }
   for (const cv of civiliansShown(g)) { const an = cv.char.anim; if (an.bound === 1 && an.mv2Shown.bound > 0.6 && cv.state !== 'dead' && !g.fogOfWar.hidden(cv)) wristTieBoxes(cv.char, out); }   // a hostage's wrists are tied (rigProps.ts): the strap, while the pose shows them crossed behind her
 }
+/** PACK SIDE (packside.ts): where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's own space — the drawer's
+ *  place (rigProps.ts packSideBind) said to the hand that is DRAWN going for it (Character.packSidePass). null: no pack, or the switch off */
+export function hammerSide(c: Game['player']['char']): { o: Vec3; z: Vec3 } | null {
+  const p = packSideBind(c, 'hammer'); if (!p) return null;
+  const l = sideLocal(c.ch, p); return l ? { o: l.o, z: l.z } : null;
+}
 /** what ONE guard / unit carries and wears, as boxes (handPropsRaw's row for him — it only reads him) */
 function guardProps(g: Game, gd: Guard, out: Box[]) {
   const big = bigCarried(g, gd.char);   // (bigkit.ts: a teammate's big slot — null for everybody else and with the switch off: his row as it always was)
   if (!big) { guardKit(g, gd, out, false); return; }
   const an = gd.char.anim, alive = gd.state !== 'dead';
+  an.bigSide = big === 'hammer' ? hammerSide(gd.char) : null;
   guardKit(g, gd, out, alive && an.bigTool !== null && an.hideHeldItem);   // (the hammer in his hands: his own gun hangs down his front — the animator's own word for when his hands are off it)
   // … then the tool itself, LAST of his boxes (the motion keys of the parts above are their ordinals). The shotgun OUT (bigkit.ts gunUp) is already the gun in his
   // hands, drawn above as his weapon: the gun he put down for it hangs down his front, and no second shotgun rides his back

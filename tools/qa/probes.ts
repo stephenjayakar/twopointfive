@@ -35,6 +35,7 @@
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
 //     kitcan: kitcan-tiles
+//     kitdeal: kitdeal-cards kitdeal-run kitdeal-screen kitdeal-stands
 //     noshield: noshield-stands noshield-card noshield-staged noshield-tape
 //     takedown: takedown-harness takedown-rules takedown-off takedown-moves takedown-partner takedown-breathe takedown-lower takedown-kill takedown-beats
 //     stealthpose: stealthpose-harness stealthpose-off stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
@@ -137,6 +138,11 @@ const CARDS_AS_THEY_WERE = /^(kit|pouch|shield|shotgun|squadsmoke)(-|$)/;   // (
 // and a wand row (wand.ts WAND). Each has a check of its own for its row. So all four are held off for this probe on EVERY stand, as the frozen stand holds
 // them — unless whoever runs the tool set the word himself.
 const CARD_AS_IT_WAS = /^pouch-table$/;
+// THE CARDS IN THE TABLE'S LAYOUT. These probes read a teammate's card of a team of three or four as the table writes it — Red One full as issued, the Blue
+// men empty — to press a pouch too many, to trade one across two cards, to count a stored card. Since the squad's kit is dealt over the men who come (src/game/
+// kit.ts KITDEAL, on in the page) a card reads as it is WORN, and that is kitdeal-check.ts's to hold, on both stands, with a seeded walk of presses of its own.
+// So the deal is held off for these on EVERY stand, as the frozen stand holds it — unless whoever runs the tool set the word himself.
+const DEAL_AS_IT_WAS = /^(kit|pouch|shield|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
 // THE BALLISTIC SHIELD is out of the page since 10-15 (src/game/shield.ts SHIELD.on, off on the shipped stand; tools/qa/noshield-check.ts). The probes that put
 // one on a card — the card's own, the shield's, the level's issue — were written with it in the game: they hold it in on EVERY stand, as the frozen stand has it.
 const SHIELD_AS_IT_WAS = /^(kit|kitpaste|pouch|shield|shotgun|squadsmoke|issue)(-|$)/;   // (kitpaste: its 'a shield man onto you' case)
@@ -147,11 +153,12 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const SOLO = (await import(`${ROOT}/src/game/kit.ts`)).KIT_SOLO, soloOn = SOLO.on;   // (…and so is 'the plain night wears your card' (kit.ts KIT_SOLO.on, a flag of the visit in no knob table): a probe that starts a quiet mission alone raises it by the page's own question (kitSoloIf), and left up it put your card on every plain game stood up after it — kit-solo went red behind the sticky family in one run)
   const layHeld = ROWS_AS_THEY_WERE.test(name) && process.env.TPS_PLANLAY === undefined; if (layHeld) process.env.TPS_PLANLAY = '0';
   const bigHeld = CARDS_AS_THEY_WERE.test(name) && process.env.TPS_BIGSLOT === undefined; if (bigHeld) { process.env.TPS_BIGSLOT = '0'; (await import(`${ROOT}/src/game/kit.ts`)).BIGSLOT.on = false; }   // (…and off now, for a probe that reads the cards before it stands a game up; knobsBack puts the table back)
+  const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
   const plateHeld = SHIELD_AS_IT_WAS.test(name) && process.env.TPS_SHIELD === undefined; if (plateHeld) { process.env.TPS_SHIELD = '1'; (await import(`${ROOT}/src/game/shield.ts`)).SHIELD.on = true; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (plateHeld) delete process.env.TPS_SHIELD; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
+  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (plateHeld) delete process.env.TPS_SHIELD; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2450,6 +2457,11 @@ if (on('kitpaste-cases', 'kitpaste', 'kit', 'all')) await run('kitpaste-cases', 
 if (on('kitlent-tiles', 'kitlent', 'kit', 'all')) await run('kitlent-tiles', async () => (await import('./kitlent-check.ts')).lentTiles());   // the cameras and the wand a quiet mission under the fog hands you, on your own tiles
 // A SUPPRESSED GUN IS DRAWN AND NAMED AS ONE ON THE KIT CARD (src/ui/kitCard.ts KIT_CAN, src/ui/kitIcons.ts; tools/qa/kitcan-check.ts sets its switches itself; KITCAN_BREAK=1 must fail)
 if (on('kitcan-tiles', 'kitcan', 'kit', 'all')) await run('kitcan-tiles', async () => (await import('./kitcan-check.ts')).canTiles());   // the can on the guns tile and the roster's drawing, your pistol alone named for it
+// THE SQUAD'S KIT IS DEALT OVER THE MEN WHO COME (src/game/kit.ts KITDEAL; tools/qa/kitdeal-check.ts sets its switches itself; KITDEAL_BREAK=1 must fail)
+if (on('kitdeal-cards', 'kitdeal', 'kit', 'all')) await run('kitdeal-cards', async () => (await import('./kitdeal-check.ts')).dealCards());   // nobody of three or four comes bare, the squad's count is the count it was
+if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the same run by digest; cards dealt for four staged smaller; a mission's own issue
+if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
+if (on('kitdeal-stands', 'kitdeal', 'kit', 'all')) await run('kitdeal-stands', async () => (await import('./kitdeal-check.ts')).dealStands());   // the two stands, the registry, a recording's tables
 // THE BALLISTIC SHIELD IS OUT OF THE PAGE (src/game/shield.ts SHIELD.on, src/game/kit.ts shieldIn; tools/qa/noshield-check.ts sets the switch itself, so it asks the same on either stand; NOSHIELD_BREAK=1 must fail)
 if (on('noshield-stands', 'noshield', 'all')) await run('noshield-stands', async () => (await import('./noshield-check.ts')).noshieldStands());        // in on the frozen stand, out on the shipped; the word, the registry, the journal's tables
 if (on('noshield-card', 'noshield', 'kit', 'all')) await run('noshield-card', async () => (await import('./noshield-check.ts')).noshieldCard());        // no card offers one; a stored card that says shield is a card without
@@ -2692,6 +2704,7 @@ if (on('inhand', 'kitanim', 'all')) await run('inhand', async () => (await impor
 if (on('gunhand-whistle', 'gunhand', 'all')) await run('gunhand-whistle', async () => (await import('./gunhand-whistle-check.ts')).gunhandWhistleCheck());   // a guard answering a whistle brings the torch up in the hand that holds it (gunhand.ts GUNHAND.whistle): the left arm the legs' clip's, the right wrist at the shoulder, the torch in the fist, the light at its lens; GUNHAND_BREAK=1 must fail
 if (on('gunhand-throw', 'gunhand', 'all')) await run('gunhand-throw', async () => (await import('./gunhand-throw-check.ts')).gunhandThrowCheck());   // a man with a long gun in his hands throws with the hand that is not on its grip (gunhand.ts throwFree): the gun stays in the trigger hand, lowered; the can in the hand that throws
 if (on('gunhand-reload', 'gunhand', 'all')) await run('gunhand-reload', async () => (await import('./gunhand-reload-check.ts')).gunhandReloadCheck());   // a long gun reloads with a move of its own (gunhand.ts GUNHAND.longReload): the trigger hand on the grip in every frame, the support hand at the well where the gun now is, the gun to the reload carry and back by the last frame, the head to the well; the clip's clock, the reload's length and the frame the rounds are in as they were; GUNHAND_BREAK=1 must fail it
+if (on('packside', 'kitanim', 'all')) await run('packside', async () => (await import('./packside-check.ts')).packsideCheck());   // a long thing on a back that wears a pack stands at the pack's side and moves with it (packside.ts): hammer, shotgun and Sam's slung rifle against the worn mesh, five operators, twelve poses; the breacher's ram gives way to a real tool; looks only
 // ---------------------------------------------------------------- the hostage rescue playtest (rescue-probes.ts; game/rescue.ts behind ?rescue): 'rescue' = the family
 if (on('rescue-off', 'rescue', 'all')) await run('rescue-off', async () => (await import('./rescue-probes.ts')).rescueOff());
 if (on('rescue-stage', 'rescue', 'all')) await run('rescue-stage', async () => (await import('./rescue-probes.ts')).rescueStage());

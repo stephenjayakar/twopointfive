@@ -10,6 +10,7 @@ import { RtLight } from '../render/lights';
 import { Character } from './character';
 import type { InHandWord } from './inhand';
 import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
+import { packOf, sideBind, sideSkinned, sidePitch, sidePitched, chestJoint, type SidePlace } from './packside';   // (a leaf — called inside the box builders only: a long thing at the side of the pack he wears)
 
 /** A stick-shaped part laid along a direction from an anchor point: it spans [l0, l1] metres along the direction; the box is
  *  `thick` (half width, sideways) × `tall` (half height). The box is fully oriented along the direction (Box.rot, see seg()). */
@@ -813,6 +814,7 @@ function slingSwing(c: Character, cf: Frame, o: Vec3, z: Vec3): number {
 export function slingRestWant(c: Character): number { return slungBase(c, SLING_FRONT, true).want; }
 function sc20kFrame(c: Character, S: Rig['sc20k'], where: 'hand' | 'slung', front = false, rest?: number): { parent: Frame; g: Frame } {
   if (where === 'hand') { const { handF, g } = pistolFrame(c, c.bones.handR ?? c.muzzle, S); return { parent: handF, g }; }
+  if (!front) { const side = packSide(c, 'rifle'); if (side) return { parent: side, g: side }; }   // (packside.ts: across a back that wears a pack it stands at the pack's left side instead)
   const P: Rig['sc20k']['slung'] = front ? SLING_FRONT : S.slung, { o, z, cf } = slungBase(c, P, front, rest);
   const out = front ? 1 : -1; let x = v3.mad(v3.scale(cf.z, out), z, -out * v3.dot(cf.z, z));                              // the outward normal of the side it lies on (the back: −z of the back frame; the chest, in front: +z) squared to the bore: the rifle's across axis — side flat on the back
   if (v3.len(x) < 1e-3) x = cf.x; x = v3.normalize(x); x = rotAxis(x, z, P.roll * Math.PI / 180);
@@ -965,6 +967,26 @@ export function bigClearOf(c: Character, kind: 'hammer' | 'shotgun', rig: Rig = 
   const P = rig.sc20k.slung, s = slungBase(c, P, false), out = P.off[2] - v3.dot(v3.sub(s.o, s.cf.o), s.cf.z);
   return BIGRIG.clear[kind] + (Math.abs(out) < 1e-6 ? 0 : out);
 }
+/** PACK SIDE (packside.ts), the drawer's half: the sizes of the thing the rule stands at a pack's side, read off the tables that draw it — the hammer's
+ *  handle and head; a long gun's butt end, its half thickness on the face that lies on the pack (the shotgun, on the pack's right, its bare left face; the
+ *  rifle, on the pack's left, the face its weapon light stands on) and how far its top (the sight on a rifle) stands over the bore */
+export function packSideDims(what: 'hammer' | 'shotgun' | 'rifle', rig: Rig = RIG): { grip?: number; thick: number; head?: Vec3; rear?: number; top?: number; len: number } {
+  if (what === 'hammer') { const H = BIGRIG.hammer; return { grip: H.headAt, thick: H.handle.thick, head: [H.head.thick, H.head.tall, (H.head.l1 - H.head.l0) / 2], len: H.headAt - H.handle.l0 }; }
+  if (what === 'shotgun') { const C = rig.carbine; return { rear: -C.stockTop.l0, thick: Math.max(C.receiver.thick, C.handguard.thick), top: C.receiver.tall + (C.receiver.adj?.off[1] ?? 0), len: C.muzzle.l1 - C.stockTop.l0 }; }
+  const S = rig.sc20k, M = rifleM4(rig), O = M ? M.optic : S.optic;
+  return { rear: -(M ? M.butt.l0 : S.butt.l0), thick: Math.max(S.hull.thick, -(S.light.adj?.off[0] ?? 0) + S.lens.thick), top: (O.adj?.off[1] ?? 0) + O.tall, len: S.suppressor.l1 - (M ? M.butt.l0 : S.butt.l0) };
+}
+/** … and the place itself, in the bind space of the mesh he wears, turned about its top end to lie along his back as he is posed (null with the switch off
+ *  or no pack worn: across his back, as ever) */
+export function packSideBind(c: Character, what: 'hammer' | 'shotgun' | 'rifle', rig: Rig = RIG): SidePlace | null {
+  const e = packOf(c.ch, c.parts); if (!e) return null;
+  const p = sideBind(e, what, packSideDims(what, rig)); return sidePitched(p, sidePitch(c.ch, p, c.skel.jointData));
+}
+/** … carried into the world by the chest joint's skin matrix, as the pack's own vertices are */
+function packSide(c: Character, what: 'hammer' | 'shotgun' | 'rifle', rig: Rig = RIG): Frame | null {
+  const p = packSideBind(c, what, rig); if (!p) return null;
+  const j = chestJoint(c.ch); return j < 0 ? null : sideSkinned(p, c.skel.jointData, j * 16);
+}
 /** the tag on the big slot's hammer's boxes (Box.name): nothing in the game reads it — the strips and the checks tell them by it */
 export const BIG_TAG = 'big';
 /** Where a thing across the back is, off six joints in whatever ONE space they are given in (slungBase's own construction, without its fallbacks: the world for
@@ -984,9 +1006,10 @@ export function bigBackOf(hips: Vec3, mid: Vec3, thL: Vec3, thR: Vec3, uaL: Vec3
 export function bigBoxes(c: Character, kind: 'hammer' | 'shotgun', k: number, out: Box[], rig: Rig = RIG, clear = false, meta?: MetaSink) {
   const b = c.bones; if (!(b.hips && b.spine2 && b.thighL && b.thighR && b.upperArmL && b.upperArmR)) return;
   curOwner = c.id & 0xff;
-  const P = kind === 'hammer' ? BIGRIG.hammer.back : BIGRIG.shotgun.back, bk = bigBackOf(b.hips, b.spine2, b.thighL, b.thighR, b.upperArmL, b.upperArmR, P, clear ? bigClearOf(c, kind, rig) : 0);
-  let x = v3.mad(v3.scale(bk.cf.z, -1), bk.z, v3.dot(bk.cf.z, bk.z)); x = rotAxis(v3.len(x) < 1e-3 ? bk.cf.x : v3.normalize(x), bk.z, P.roll * Math.PI / 180);   // (sc20kFrame's: the back's outward normal squared to the line, turned `roll` about it)
-  const onBack = applyAdj({ o: bk.o, x, y: v3.cross(bk.z, x), z: bk.z }, P.adj);
+  const across = (): Frame => { const P = kind === 'hammer' ? BIGRIG.hammer.back : BIGRIG.shotgun.back, bk = bigBackOf(b.hips!, b.spine2!, b.thighL!, b.thighR!, b.upperArmL!, b.upperArmR!, P, clear ? bigClearOf(c, kind, rig) : 0);
+    let x = v3.mad(v3.scale(bk.cf.z, -1), bk.z, v3.dot(bk.cf.z, bk.z)); x = rotAxis(v3.len(x) < 1e-3 ? bk.cf.x : v3.normalize(x), bk.z, P.roll * Math.PI / 180);   // (sc20kFrame's: the back's outward normal squared to the line, turned `roll` about it)
+    return applyAdj({ o: bk.o, x, y: v3.cross(bk.z, x), z: bk.z }, P.adj); };
+  const onBack = packSide(c, kind, rig) ?? across();   // (packside.ts: he wears a pack — the tool stands at its right side and moves with it)
   let g = onBack; const hand = b.handR;
   if (k > 0 && hand) {
     if (kind === 'hammer') { const H = c.handFrameR(), K = BIGRIG.hammer.grip;

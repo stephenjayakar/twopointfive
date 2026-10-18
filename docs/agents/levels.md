@@ -170,6 +170,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TRAPPED_BREAK=1` exits 1; `probes.ts scenario-levels` ALL PASS on both stands. WHAT THE ROW STOPS ASKING THAT PASSED: the four took the floor by the
   front on shipped on seeds 0 and 2 (3 of 4 and 4 of 4 up). NOT A CLAIM THAT THE TRAP TRAPS: the level is `untuned`, and its owner's own tally has the
   front way winning most runs on shipped; whether the yard should cost more is the level's tuning, not this check's.
+- **A level does not deal the squad's kit; `bun run tools/qa/kit-audit.ts` lists what its mission gets** (2026-10-18). The issued kit and the named
+  squad kits are one table for every mission (`src/game/kit.ts`, `docs/agents/menus.md`: the squad's kit is dealt over the men who come). A level's
+  file adds to it in two ways only: `scenarios.issue.members` (a block of cards by place on the roster, the fields that differ, written against the
+  pair's layout; the Team & kit screen then shows no cards, and a card that hands out the shield is dropped whole while the shield is out of the game)
+  and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
+  says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
+  squad is issued (no hammer or shotgun opens steel, and nobody is issued a big-slot tool), whether frags can be ordered at all (never with a hostage,
+  the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
+  (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
   screen where the blue pair carried a rifle and nothing else: "as issued still has blue team pretty empty" · "i think we should make something like a level
   skill that goes through everything that's needed for a level based on what we've seen" · "seems like we miss a lot". `.claude/skills/level/SKILL.md` is

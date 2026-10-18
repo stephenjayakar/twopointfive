@@ -42,7 +42,7 @@ import { WAND } from '../game/wand';         // (likewise)
 import { hourLive, hourIdOf } from '../game/hours';
 import { weatherOfSearch } from '../game/weatherKinds';
 import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterOf, sizeWords, kitAsIssued, lessonNote, issueNote, type SquadSize, type SquadChoice, type LoadoutKind } from '../game/loadout';
-import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, shieldIn, kitIssueCards, kitDefault, type MemberKit, kitGun, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRows, kitSmokes, kitTeam, kitWalls, kitWords, squadCost } from '../game/kit';
+import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, shieldIn, kitIssueCards, kitDefault, type MemberKit, kitGun, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitPool, kitRows, kitShown, kitSmokes, kitTeam, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
 import { gunIcon, kitIcon } from './kitIcons';
@@ -229,7 +229,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       const name = el('div', 'lo-name', N.title); s.appendChild(name);
       s.appendChild(el('div', 'lo-role', N.sub));
       if (here && cardsOn()) {   // his kit in a line, and his suit on the figure (kit.ts: the table the card under the slots changes)
-        const m = KIT.members[i]; if (m.suit !== 'issued') fig.style.color = tintCss(SUITS[m.suit].tint);
+        const m = kitShown(i); if (m.suit !== 'issued') fig.style.color = tintCss(SUITS[m.suit].tint);
         name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(GUN_ICON[kitGun(m)] ?? 'pistol', gunCanOf(i, m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
         { const ics = el('div', 'lo-ics'), K = m as unknown as Record<string, unknown>;   // (the same kit as drawings: the one page shows these in place of the words)
           let wide = 0;
@@ -272,7 +272,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   const S: LoadoutScreen = {
     entry, root, rows: [], sel: 0, squadRows,
     get squad() { return squad; }, get open() { return open; }, get member() { return member; }, get card() { return kitCard; },
-    worn() { const k = missionKit?.[String(member)], w = k ? { ...kitDefault(member), ...k } as MemberKit : issuedOnly || !KIT.on || !KIT.members[member] ? kitDefault(member) : KIT.members[member];
+    worn() { const card = (j: number) => { const k = missionKit?.[String(j)]; return k ? { ...kitDefault(j), ...k } as MemberKit : issuedOnly || !KIT.on || !KIT.members[j] ? kitDefault(j) : KIT.members[j]; }, w = (missionKit || issuedOnly || !KIT.on ? kitWorn(squad, KIT.members.map((_c, j) => card(j))) : kitWorn(squad))[member];   // (as the staging will have him: kit.ts KITDEAL shares a named kit out over three or four)
       const cams = KIT_LENT.on ? lentNow('cams') : 0, wand = KIT_LENT.on && lentNow('wand') > 0;   // (… and what the mission hands him over it: the man drawn beside the card carries what the tile says he will have)
       return cams > w.cams || (wand && !w.wand) ? { ...w, cams: Math.max(w.cams, cams), wand: w.wand || wand } : w; },
     setSquad(n) { const c: SquadChoice | undefined = choices[n]; if (!c || !c.ok) { note.textContent = c?.note ?? ''; note.className = 'lo-note off'; return false; } const was = squad; squad = n; if (was !== n) { kitTeam(n); const same = member <= n; member = Math.min(member, n); mountCard(same); drawSlots(); } S.paint(); return true; },
