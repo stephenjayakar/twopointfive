@@ -270,6 +270,21 @@ export const DOORTOOLS = {
    *  the hinge half of the opening, his line still crossing the latch-jamb man's inside — and 'clear from outside' skips its stations beyond that jamb. */
   thrPull: true, thrPullAt: [0.45, 1.8],
   thrStill: [0.45, 1.2], thrArc: [[-0.45, 1.2], [0.25, 1.8]], thrMin: 4, thrQuiet: 2, thrCap: 25, thrBangs: 2, thrPocket: 12, thrShotM: 8, thrThrowM: 5, thrFlashM: 7, thrTurn: 0.5, thrNext: 0.3, thrCover: true, thrSlice: false, thrLight: 1, thrIn: 4,
+  /** THE JAMB MEN SLICE THE DOORWAY BEFORE THEY CALL IT HELD (`thrPie`, on in the page; false = as it was: a diagonal each, held still — the maintainer, 10-18, of
+   *  a pair that said 'holding on the door' with a defender stood square in front of it, in the wedge neither diagonal shows: "when externally clearing, men
+   *  should try to pie from the outside as much as they can before considering their job done"). Each jamb man — both at once, each on his own side of the
+   *  door's middle — takes his own mark's thin slice, his diagonal, and then the cuts of `thrPieArc` ([metres in from his own jamb's edge of the opening,
+   *  metres off the frame line]: every one a few degrees more of the room past his own jamb), the muzzle on the ground each opens and then the middle of what
+   *  it shows, at `slicePace`, resting `sliceLook` on each; a man in his sight keeps him on the angle that shows him. A cut that would show no floor the
+   *  search has not had a muzzle across is not walked — he is done when none of his is left — and the hold is not quiet, nor 'holding on the door' said,
+   *  until both are. No station is nearer than `thrPieApart` to the other man's, and none is over the frame line. Then each holds the middle of what his
+   *  last station shows.
+   *  `thrLean` (on in the page; false = square on every station): THE MAN CUTTING LEANS — his hips stop `thrLeanM` short of the station, back along the
+   *  wall, and his head and gun go the rest of the way (character.ts anim.lean: the eye IS the head bone, so what he sees and what sees him is what the
+   *  picture shows; a right-handed man leaned to his left has his head out before his muzzle) — and THE CUTS THAT LOOK DOWN THE DOOR'S OWN LINE, where a
+   *  man covering the door from inside is looking (a station further in than `thrKneeIn` from his jamb's edge), are taken ON A KNEE. The teammates' only:
+   *  nothing of the player's own movement. */
+  thrPie: false, thrPieArc: [[-0.2, 1.4], [-0.05, 1.6], [0.08, 1.8]], thrPieApart: 0.65, thrLean: false, thrLeanM: 0.15, thrKneeIn: -0.1,
   /** THE ROOM'S OTHER DOORS ARE HELD (`thrDoors`; false = every man on the short crossing sector his shallow point gave him, as it was). The stage ends hard
    *  on the entry wall: in a long room that leaves its other ways in a room's length off, in nobody's sector — and the depot's crew room showed what that
    *  costs (thirty-two seeds: its far door, twelve metres down a dark lane from four men standing in the room's own light, let a man in unseen to shoot the
@@ -592,7 +607,7 @@ export interface DoorOp {
   /** each man's point of domination once he has been sent in, and when he got onto it */
   pod: Map<Guard, { pos: Vec3; face: number }>; onPod: Map<Guard, number>;
   /** clear from outside: each man's stations, the one he is on, and since when he has held it with nobody in his sight */
-  slice: Map<Guard, { pts: Vec3[]; looks: Vec3[][]; i: number; j: number; t: number; ahead: Guard | null }>;
+  slice: Map<Guard, { pts: Vec3[]; looks: Vec3[][]; i: number; j: number; t: number; ahead: Guard | null; pie?: { eyes: Vec3[]; lean: number; knee: boolean[]; fin: boolean } }>;
   /** who crossed the frame line into the far side, and when (the first is 'the first man through') */
   crossed: Map<Guard, number>;
   /** the entry: each man's corners to check, the one he is on, and since when his muzzle has been on it (NaN: not yet) · the room's floor being looked over
@@ -2282,18 +2297,25 @@ export class DoorTools {
         const SR = op.search ?? null;
         if (SR) { if (t >= T.losT && !T.told) { T.losT = t + 0.5; for (const m of T.jamb) SR.los.delete(m); }   // (the leaf is still swinging, a man still settling: his lines are asked again twice a second)
           this.look(op, SR, T.jamb, (m, i) => !!m.flashlight?.enabled || this.thrLitCell(T, SR, i) || (K.thrTube && nvgDown(g, m) && (this.thrTubeCell(T, SR, i) || irShowsAt(g, m, SR.pts[i])))); }   // (floor a man's gun is across in the dark is floor nobody has seen)
-        const gd = op.lead, s = op.slice.get(gd), A = op.mine.get(gd); let done = !s || !A;
-        if (s && A) {
+        let done = true;
+        for (const gd of K.thrPie ? [...T.jamb] : [op.lead]) { const s = op.slice.get(gd), A = op.mine.get(gd); if (!s || !A) continue;
+          const P = s.pie; if (P?.fin) continue;
+          let fin = false;
           if (flat(gd.char.pos, s.pts[s.i]) > 0.5 && !A.arrived) s.t = NaN;
           else { if (isNaN(s.t) || g.fight.contact(gd) || g.fight.engaged(gd)) s.t = t;   // a man in his sight: he stays on the angle that shows him
             const looks = s.looks[s.i];
             if (t - s.t < K.sliceLook) { /* resting on this angle */ }
             else if (s.j < looks.length - 1) { s.j++; s.t = t; A.watch = looks[s.j]; A.face = yawTo(gd.char.pos, looks[s.j]); }
-            else if (s.i < s.pts.length - 1) { s.i++; s.j = 0; s.t = NaN;
-              this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], s.looks[s.i][0]), watch: s.looks[s.i][0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: K.thrLight >= 2 || (K.thrLight === 1 && T.jamb.length < 2), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), going: `slicing · ${name}`, there: s.i >= s.pts.length - 1 ? `holding the threshold · ${name}` : `slicing · ${name}` }); }
-            else { done = true;
-              if (!T.sliced) { T.sliced = true; A.watch = looks[looks.length >> 1]; A.face = yawTo(gd.char.pos, A.watch); this.beat(op, `${K.thrSlice ? 'sliced' : 'set'}${SR ? ` · ${SR.left} of ${SR.pts.length} cells unseen` : ''}`); } } }   // (… and holds the middle of what his last station shows)
+            else { const next = !P ? (s.i < s.pts.length - 1 ? s.i + 1 : -1) : this.pieNext(op, s);   // (thrPie: the next cut that still shows floor nobody's muzzle has been across — none: he is done)
+              if (next >= 0) { s.i = next; s.j = 0; s.t = NaN; const last = s.i >= s.pts.length - 1;
+                this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], s.looks[s.i][0]), watch: s.looks[s.i][0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: P ? A.search : K.thrLight >= 2 || (K.thrLight === 1 && T.jamb.length < 2), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(P?.lean ? { lean: P.lean, crouch: P.knee[s.i] } : {}), going: `slicing · ${name}`, there: last ? `holding the threshold · ${name}` : `slicing · ${name}` }); }
+              else { fin = true;
+                if (P) { P.fin = true; const mid = looks[looks.length >> 1];   // (thrPie: … and he stands square where his last cut left his hips, on the middle of what it shows)
+                  this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], mid), watch: mid, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, going: `holding the threshold · ${name}`, there: `holding the threshold · ${name}` }); }
+                else if (!T.sliced) { T.sliced = true; A.watch = looks[looks.length >> 1]; A.face = yawTo(gd.char.pos, A.watch); this.beat(op, `${K.thrSlice ? 'sliced' : 'set'}${SR ? ` · ${SR.left} of ${SR.pts.length} cells unseen` : ''}`); } } } }   // (… and holds the middle of what his last station shows)
+          if (!fin) done = false;
         }
+        if (done && K.thrPie && !T.sliced && T.jamb.some(m => op.slice.get(m)?.pie)) { T.sliced = true; this.beat(op, `sliced${SR ? ` · ${SR.left} of ${SR.pts.length} cells unseen` : ''}`); }
         if (!T.hold && this.lastCall(op)) {   // (DOORTOOLS.thrLast: no hold — a can now, whatever the pockets say, and in behind it)
           if (!op.lastHold) { op.lastHold = true; op.lastTossed = T.tossed; this.beat(op, 'last warning · no hold'); }
           T.force = true; this.toPockets(op); break; }
@@ -2763,7 +2785,7 @@ export class DoorTools {
   }
   /** has `gd` a line from where he stands to cell `i` (asked once per cell per place he stands) */
   private lineTo(SR: RoomSearch, gd: Guard, i: number): boolean {
-    const p = gd.char.pos; let L = SR.los.get(gd);
+    const p = DOORTOOLS.thrLean && gd.script?.lean ? gd.char.bones.head ?? gd.char.pos : gd.char.pos; let L = SR.los.get(gd);   // (a man leaned round an edge looks from where his head is)
     if (!L || flat(L.at, p) > 0.35) { L = { at: v3.copy(p), ok: new Int8Array(SR.pts.length).fill(-1) }; SR.los.set(gd, L); }
     if (L.ok[i] < 0) L.ok[i] = this.g.col.segmentBlocked([L.at[0], 1.55, L.at[2]], SR.pts[i]) ? 0 : 1;
     return L.ok[i] === 1;
@@ -3171,6 +3193,35 @@ export class DoorTools {
 
   // ------------------------------------------------------------ clear from outside
   /** what a station shows through the frame: the line past the far jamb, the middle, the line past the near jamb (where the next step opens new ground) */
+  /** DOORTOOLS.thrPie: the next of this man's cuts that still shows floor no muzzle has been across (−1: none — he has had all the outside will give him).
+   *  With no search model on the room every cut is walked. */
+  private pieNext(op: DoorOp, s: { pts: Vec3[]; i: number; pie?: { eyes: Vec3[] } }): number {
+    const K = DOORTOOLS, SR = op.search ?? null, col = this.g.col, E = s.pie!.eyes;
+    for (let k = s.i + 1; k < s.pts.length; k++) { if (!SR) return k; const e: Vec3 = [E[k][0], 1.55, E[k][2]];
+      for (let i = 0; i < SR.pts.length; i++) { if (SR.looked[i]) continue; const q = SR.pts[i], dx = q[0] - e[0], dz = q[2] - e[2];
+        if (dx * dx + dz * dz <= K.lookM * K.lookM && !col.segmentBlocked(e, q)) return k; } }
+    return -1;
+  }
+  /** DOORTOOLS.thrPie: a jamb man's stations — `first` (where he stands, or his mark: the thinnest slice there is), his diagonal, then the cuts of thrPieArc
+   *  further in than those, each with floor under it and a clear step from the one before, none within thrPieApart of `off` (the other man's places). Each
+   *  is where his EYE goes; with thrLean his hips stop thrLeanM short of it, back along his own wall. */
+  private pieSet(op: DoorOp, gd: Guard, sgn: -1 | 1, first: Vec3[], off: Vec3[]): Vec3[] {
+    const g = this.g, K = DOORTOOLS, d = op.door, W = d.def.width, nav = g.col.nav, lm = K.thrLean ? K.thrLeanM : 0;
+    const inOf = (p: Vec3) => sgn < 0 ? alongOf(d, p) : W - alongOf(d, p);   // metres in from his own jamb's edge of the opening
+    const at = (a: number, B: number): Vec3 => doorPt(d, sgn < 0 ? a : W - a, B, op.side);
+    const eyes: Vec3[] = [...first], pts: Vec3[] = first.map((e, k) => k === 0 || !lm ? e : at(inOf(e) - lm, offOf(d, e, op.side)));
+    const floor = (from: Vec3, p: Vec3) => !nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([from[0], 0.45, from[2]], [p[0], 0.45, p[2]]);
+    if (!(this.leafOurs(d, op.side) && sgn < 0)) for (const [a, B0] of K.thrPieArc) { const B = B0 * K.sliceBack, prev = pts[pts.length - 1];   // (thrPull: the hinge man stands past the leaf's free end already, in front of his half)
+      if (a <= inOf(eyes[eyes.length - 1]) + 0.05) continue;
+      const e = at(a, B), p = at(a - lm, B);
+      if (!floor(prev, p) || off.some(o => flat(o, p) < K.thrPieApart)) continue;
+      eyes.push(e); pts.push(p); }
+    const fwd = v3.sub(doorPt(d, W / 2, 1, -op.side as 1 | -1), doorPt(d, W / 2, 0, op.side)), inw = v3.sub(at(1, 0), at(0, 0));   // into the room · toward the door's middle from his jamb
+    const lean = lm ? Math.sign(inw[0] * -fwd[2] + inw[2] * fwd[0]) : 0;   // (his right hand, facing in, is (−fz, fx): + = the middle is to his right)
+    const looks = eyes.map((e, k) => { const l = this.sliceLooks(op, e, sgn); return k === 0 || l.length < 3 ? l : [l[2], l[1]]; });   // (a cut: the ground it opens — the line past his own jamb — then the middle)
+    op.slice.set(gd, { pts, looks, i: 0, j: 0, t: NaN, ahead: null, pie: { eyes, lean, knee: eyes.map((e, k) => k > 0 && inOf(e) > K.thrKneeIn), fin: false } });
+    return pts;
+  }
   private sliceLooks(op: DoorOp, p: Vec3, sgn: -1 | 1): Vec3[] {
     const K = DOORTOOLS, d = op.door, W = d.def.width, into = -op.side as 1 | -1;
     const near = sgn < 0 ? K.sliceEdge : W - K.sliceEdge, far = W - near;
@@ -3286,12 +3337,19 @@ export class DoorTools {
     else { const { q, from } = this.thrSpot(op, sgn, pts[0]); if (floor(from, q)) pts[0] = q; }   // (no slice: his own jamb's diagonal, as the far man's)
     const looks = pts.map((q, i) => { const l = this.sliceLooks(op, q, sgn); return !K.thrSlice ? [l[l.length >> 1]] : i === 0 || l.length < 3 ? l : [l[2], l[1], l[2]]; });   // (a step is taken with the muzzle on the ground it opens — the line past his own jamb — then the middle, and back)
     op.slice.set(lead, { pts, looks, i: 0, j: 0, t: NaN, ahead: null });
+    if (K.thrPie) {   // (both jamb men cut the opening, each on his own side of its middle: pieSet)
+      const diag = (sg: -1 | 1, m: Vec3) => { const { q, from } = this.thrSpot(op, sg, m); return floor(from, q) ? q : null; };
+      const lm = mark(lead), ld = diag(sgn, lm), lp = this.pieSet(op, lead, sgn, ld && flat(ld, lm) > 0.2 ? [lm, ld] : [lm], F ? [F.here] : []);
+      if (far && F) this.pieSet(op, far, F.fs, op.thrPre || flat(mark(far), F.here) < 0.2 ? [F.here] : [mark(far), F.here], [lp[lp.length - 1]]);
+    }
+    const sl = op.slice.get(lead)!, sf = far ? op.slice.get(far) ?? null : null;
     const lit = (gd: Guard) => !(K.thrDark && nvgWorn(g, gd)) && (K.thrLight >= 2 || (K.thrLight === 1 && gd === (far ?? lead)));   // (one light on the door: the still gun's — the opener's own when he has the door alone)
     // (the step onto the diagonals — as the leaf swings; or, a can going in first, behind its burst: thrOut)
     const out = () => {
-    if (op.men.includes(lead)) this.assign(op, lead, { post: pts[0], face: yawTo(pts[0], looks[0][0]), watch: looks[0][0], stance: 'none', upper: 'aim', light, search: lit(lead), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), going: K.thrSlice ? `slicing · ${name}` : `on the jamb · ${name}`, there: pts.length > 1 ? `slicing · ${name}` : `holding the jamb · ${name}` });
+    if (op.men.includes(lead)) this.assign(op, lead, { post: sl.pts[0], face: yawTo(sl.pts[0], sl.looks[0][0]), watch: sl.looks[0][0], stance: 'none', upper: 'aim', light, search: lit(lead), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(sl.pie?.lean ? { lean: sl.pie.lean } : {}), going: K.thrSlice || sl.pie ? `slicing · ${name}` : `on the jamb · ${name}`, there: sl.pts.length > 1 ? `slicing · ${name}` : `holding the jamb · ${name}` });
     // the far jamb's man: one step out onto his diagonal, his muzzle down the middle of what it shows — and there he stays
-    if (far && F && op.men.includes(far)) { const fs = F.fs, here = F.here;
+    if (far && sf && op.men.includes(far)) this.assign(op, far, { post: sf.pts[0], face: yawTo(sf.pts[0], sf.looks[0][0]), watch: sf.looks[0][0], stance: 'none', upper: 'aim', light, search: lit(far), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(sf.pie?.lean ? { lean: sf.pie.lean } : {}), going: `slicing · ${name}`, there: sf.pts.length > 1 ? `slicing · ${name}` : `holding the jamb · ${name}` });
+    else if (far && F && op.men.includes(far)) { const fs = F.fs, here = F.here;
       const l = this.sliceLooks(op, here, fs), mid = l[l.length >> 1];
       this.assign(op, far, { post: here, face: yawTo(here, mid), watch: mid, stance: 'none', upper: 'aim', light, search: lit(far), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), going: `on the jamb · ${name}`, there: `holding the jamb · ${name}` }); } };
     const first = !op.thrPre && this.canFirst(op); if (!first) out();
@@ -3299,7 +3357,7 @@ export class DoorTools {
     op.thr = { jamb, pods, quietT: t, evT: t, contact: new Set(), up: g.guards.filter(x => x.state !== 'dead' && x.team === 'hostile'), down: 0, sliced: false, thrower: null, tossed: 0, nextT: 0, aim: null, from: null, banged: null, handed: false, losT: 0, litC: null, hold: !!op.thrHold, told: false, force: false, first: first ? 'can' : null, out: first ? out : null };
     if (pods.length) this.searchOf(op, pods[0].pos);
     op.phase = first ? 'pocket' : 'thr'; op.t0 = t; if (first) op.thr.nextT = t + (op.kick && !isNaN(op.kick.t) ? K.tossAfterKick : K.tossAfterOpen);   // (a can first goes in on the shove or the boot, as a bang and clear's does: every tenth of a second the leaf stands open before it is one a settled gun in there has on the jambs)
-    this.beat(op, `threshold · ${hi(lead) ? 'latch' : 'hinge'} jamb ${lead.callsign} ${K.thrSlice ? 'slices' : 'holds'} · ${far ? `${hi(far) ? 'latch' : 'hinge'} jamb ${far.callsign} holds` : op.lastStack ? 'the other jamb not waited for' : 'no floor at the other jamb'}${op.rear.size ? ` · rear ${[...op.rear].map(m => m.callsign).join(', ')}` : ''}${op.thrHold ? ' · to hold' : ''}${first ? ' · a can first' : ''}`);
+    this.beat(op, `threshold · ${hi(lead) ? 'latch' : 'hinge'} jamb ${lead.callsign} ${K.thrSlice || K.thrPie ? 'slices' : 'holds'} · ${far ? `${hi(far) ? 'latch' : 'hinge'} jamb ${far.callsign} ${K.thrPie ? 'slices' : 'holds'}` : op.lastStack ? 'the other jamb not waited for' : 'no floor at the other jamb'}${op.rear.size ? ` · rear ${[...op.rear].map(m => m.callsign).join(', ')}` : ''}${op.thrHold ? ' · to hold' : ''}${first ? ' · a can first' : ''}`);
     g.say(lead, 'working it from the door.');
   }
   /** DOORTOOLS.thrFirst: does this door get a can before anybody shows in its opening — the kit has one, the stage may spend it, no teammate is in there,

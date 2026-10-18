@@ -426,6 +426,9 @@ interface StanceShape {
  *  its ankle, a flat palm ≈ 0.04 off its wrist — so 'back on the wall' is hips ≈ 0.12 and chest ≈ 0.16 off the plane, and the JOINTS' line up the back leans a
  *  few degrees toward the room while the flesh line is plumb against the plaster. The hands are always free here: the game holsters the pistol for the hold. */
 const WALL_GAIT_REST = 0.55;   // the step clock at rest: the left sole near the end of its bearing, the right just down — the feet apart, each on its own side (either way he looks)
+/** anim.lean at 1: `deg` ° of side-bend over spine1‥3 (the head goes about a hand and a half across, the gun with it), `level` of it taken back out at the
+ *  neck and head, eased at `rate` /s */
+export const LEAN_POSE = { deg: 28, level: 0.5, rate: 9 };
 export const WALL_POSE = {
   /** hips joint off the plane (m): parked standing (the seat a finger off the plaster), parked crouched, sidling (the walking legs want the pelvis nearer them) */
   back: [0.135, 0.125, 0.21] as [number, number, number],
@@ -1209,6 +1212,11 @@ export class CharacterAnimator {
   /** 'wall' only, 0…1: peeking round the wall's end on stackSide — the upper body leans out along the wall past the edge, the pelvis shifts onto the lead foot,
    *  the chest comes round a little (the neck's extra crane is the controller's lookYawExtra); the gun goes with the chest. Ramped by the controller, eased here too. */
   wallPeek = 0;
+  /** A LEAN round an edge with the gun up, −1‥1 (+ = toward his own right): the trunk side-bent over hips that stay where they are, so the head and the gun
+   *  go past a jamb his hips are still behind (LEAN_POSE; doortools.ts thrLean — a teammate cutting a doorway from outside). The AI's only: the player's own
+   *  look round a wall's end is the 'wall' stance's wallPeek. 0 = nothing of it, his pose what it was to the bit. Eased here. */
+  lean = 0;
+  private leanSm = 0;
   /** WALLSNAP (wallsnap.ts; all four stand at their rest values with the switch off, and then nothing below reads differently): `wallTake` = the take's progress
    *  0‥1 while he is being eased onto the wall (−1 = none) — the feet stay where they stood in the world and STEP onto the hold's spots one after the other instead
    *  of sliding there under the blend; `wallHit` = the landing's settle 0‥1 (the pelvis dips, the head tips back toward the plaster); `stanceOut` = the rate the
@@ -2180,6 +2188,14 @@ export class CharacterAnimator {
     // ---- THE BIG SLOT'S TOOL (bigTool; BIGMOVE): the hammer or the breaching shotgun in both hands, over every arm pose and one-shot above — the game's own beat,
     //      on the game's clock. Nothing of it for a man whose bigTool is null: not a number read, his pose what it was to the bit
     if (this.bigTool) this.bigLayer(this.bigTool, y, -p * 0.35); else { this.bigK = 0; this.bigUnder = false; }
+    // ---- A LEAN round an edge (anim.lean): the trunk rolled about the figure's fore-aft line over spine1‥3, the arms and the gun with it — the bore keeps its
+    //      heading and goes across with the head — and the neck and head brought part of the way back so the eyes stay near level
+    if (this.lean !== 0 || this.leanSm !== 0) {
+      const L = LEAN_POSE, want = clamp(this.lean, -1, 1); this.leanSm += (want - this.leanSm) * Math.min(1, L.rate * dt); if (want === 0 && Math.abs(this.leanSm) < 0.01) this.leanSm = 0;
+      const r = this.leanSm * L.deg * DEGR;
+      if (r !== 0) { this.turn(this.pA, this.nodes.spine1, qRoll(r * 0.3)); this.turn(this.pA, this.nodes.spine2, qRoll(r * 0.35)); this.turn(this.pA, this.nodes.spine3, qRoll(r * 0.35));
+        this.turn(this.pA, this.nodes.neck, qRoll(-r * L.level * 0.5)); this.turn(this.pA, this.nodes.head, qRoll(-r * L.level * 0.5)); }
+    }
     // ---- MOVES: the reactions that take the whole upper body WITH the weapon (the trunk turned rigidly under the arms, so the hands stay on the gun): the flinch,
     //      the hit, the stun charge's hunch (+ its forearm over the eyes) — and the support hand's toss
     if (MOVES.on > 0.5) {
