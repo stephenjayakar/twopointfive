@@ -20,7 +20,7 @@
 import type { GltfCharacter, CastInfo, CastVariant } from '../anim/gltf';
 import { castSide, castSuit, castGoggles, castFile, loadGltfCast } from '../anim/gltf';
 import { Character } from '../game/character';
-import { rigBoxes, gogglesBoxes, sc20kGrip, sc20kMuzzleAhead, carbineGrip, carbineMuzzleAhead, RIG, type RigNodeMeta } from '../game/rigProps';
+import { rigBoxes, gogglesBoxes, sc20kGrip, sc20kMuzzleAhead, carbineGrip, carbineMuzzleAhead, longHold, RIG, type RigNodeMeta } from '../game/rigProps';
 import { charSlots, writeCharPalette, CHAR_MAT_FLOATS } from '../render/charMaterials';
 import { SUITS, TRIMS, kitGun, type MemberKit } from '../game/kit';
 import { rosterOf, type SquadSize } from '../game/loadout';
@@ -29,6 +29,7 @@ import { operatorAt } from '../game/cast';
 import { WEAPONS } from '../game/weapons';
 import { SHIELD } from '../game/shield';
 import { KITANIM } from '../game/kitanim';
+import { INHAND, IN_PISTOL, type InHandWord } from '../game/inhand';
 import { CLOSE } from '../game/close';
 import { GEAR } from '../game/gear';
 import { LOOK, lookDress, setLookPlace } from '../scene/look';
@@ -153,6 +154,8 @@ interface Fig {
   word: string;
   /** the cast's vertices he wears, in coarse order; then 24 a box */
   uv: Uint32Array; nBody: number; nBodyTri: number; flip: number; boxes: () => Bx[]; nBox: number;
+  /** the game's own boxes for what he holds and wears, before the screen's dress, with the drawer's names for them (a measuring hook: figureHold) */
+  rigged: () => { bx: Box[]; meta: RigNodeMeta[] };
   /** coarse: points, normals, triangles, a paint a triangle (an index into `mats`, three floats each) */
   CP: Float32Array; CN: Float32Array; cI: Uint32Array; cM: Uint16Array; mats: Float32Array; matGround: number;
   /** lumels: nL over him (each a weighted mix of three coarse points), then nG on the ground; `corner` = a coarse point's own lumel */
@@ -325,11 +328,18 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   const rig = me ? (m.weapon === 'pistol' ? 'pistol' : 'sc20k') : WEAPONS[kitGun(m)].rig;
   const a = c.anim; a.phase = 0; a.trained = 1; a.upper = 'none'; a.stance = 'none';
   for (let i = 0; i < 30; i++) c.update(1 / 60);
-  if (rig === 'sc20k') { a.longGun = true; a.longSteady = 1; a.longGrip = sc20kGrip(undefined, fit); c.muzzleAhead = sc20kMuzzleAhead(); a.stance = 'lowReady'; }
+  if (rig === 'sc20k') { a.longGun = true; a.longSteady = 1; a.longGrip = sc20kGrip(undefined, me && fit); c.muzzleAhead = sc20kMuzzleAhead(); a.stance = 'lowReady'; }   // (the fitted hold is yours alone: a teammate's rifle is drawn unfitted, and the game lays his hand by the plain one)
   else if (rig === 'carbine') { a.longGun = true; a.longSteady = 0; a.longGrip = carbineGrip(); c.muzzleAhead = carbineMuzzleAhead(); a.stance = 'lowReady'; }
   else { a.upper = 'relaxed'; a.stance = FIGURE.pose.pistol; }   // (the pistol in both hands at the game's own low ready, as the rifle is: the relaxed carry points it across his chest)
   a.lookPitchExtra = FIGURE.pose.chin; a.lookYawExtra = FIGURE.pose.turn;
   if (shield) a.shield = true;
+  // IN HAND (game/inhand.ts): the word the game's drawer says of his right hand, row for row (combat.ts: handPropsRaw for you, guardKit for a teammate) — said before
+  // the pose is baked, so the figure's own look-only pass has the hand where the game's has it: a long gun stays put and the trigger hand goes onto its grip (yours
+  // is drawn fitted into the hand by kit handling instead, as in the game), a pistol is laid out in the hand's own frame. Off (`?inhand=0`): no word, the figure as it was.
+  const hold: InHandWord | null = !INHAND.on ? null
+    : me ? (rig === 'pistol' ? IN_PISTOL : !fit && INHAND.long ? longHold('sc20k') : null)
+    : rig === 'sc20k' || rig === 'carbine' ? (INHAND.long ? longHold(rig) : null) : IN_PISTOL;
+  c.inHand = hold;
   for (let i = 0; i < 100; i++) c.update(1 / 60);
   c.pos = [0, 0, 0]; c.update(0);
 
@@ -351,12 +361,16 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
 
   // what is bolted to him: the game's own boxes for the gun, the holster, the goggles — asked again every frame, where his hands are then
   const suitOn = ask.suit, pouchSlim = ask.suit && !!ch.cast;
-  const boxes = (): Bx[] => {
+  const rigged = (): { bx: Box[]; meta: RigNodeMeta[] } => {
     const bx: Box[] = [], meta: RigNodeMeta[] = [];
-    if (me) rigBoxes(c, { goggles: !suitOn || !ch.cast, nv: false, slot: rig === 'pistol' ? 1 : 0, lightOn: false, isGuard: false, holster: true, held: null, knife: false, rifle: rig === 'sc20k' ? 'hand' : null, rifleBlack: suitOn, rifleLight: false, ...(CLOSE.on ? { sheath: true } : null), ...(fit ? { fit } : null) }, bx, RIG, meta);
+    if (me) rigBoxes(c, { goggles: !suitOn || !ch.cast, nv: false, slot: rig === 'pistol' ? 1 : 0, lightOn: false, isGuard: false, holster: true, held: null, knife: false, rifle: rig === 'sc20k' ? 'hand' : null, rifleBlack: suitOn, rifleLight: false, ...(CLOSE.on ? { sheath: true } : null), ...(fit ? { fit } : null), ...(INHAND.on ? { inHand: true } : null) }, bx, RIG, meta);
     else if (rig === 'sc20k') rigBoxes(c, { goggles: m.nvg, nv: false, slot: 0, lightOn: false, isGuard: false, holster: true, rifle: 'hand', rifleBlack: suitOn, rifleLight: false }, bx, RIG, meta);
-    else if (rig === 'pistol') rigBoxes(c, { goggles: m.nvg, nv: false, slot: 1, lightOn: false, isGuard: false }, bx, RIG, meta);
-    else { rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: false, weapon: rig === 'carbine' ? 'carbine' : 'pistol' }, bx, RIG, meta); if (m.nvg) gogglesBoxes(c, false, bx, RIG.goggles); }
+    else if (rig === 'pistol') rigBoxes(c, { goggles: m.nvg, nv: false, slot: 1, lightOn: false, isGuard: false, ...(hold ? { inHand: true, ...(INHAND.fit ? { fit: true } : null) } : null) }, bx, RIG, meta);
+    else { rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: false, weapon: rig === 'carbine' ? 'carbine' : 'pistol', ...(hold === IN_PISTOL ? { inHand: true } : null) }, bx, RIG, meta); if (m.nvg) gogglesBoxes(c, false, bx, RIG.goggles); }
+    return { bx, meta };
+  };
+  const boxes = (): Bx[] => {
+    const { bx, meta } = rigged();
     const out: Bx[] = dress(bx, meta, suitOn); if (shield) plate(c, out, tint2); pouches(c, m, out, pouchSlim);
     return out;
   };
@@ -368,7 +382,7 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
     gs = day ? Math.min(FIGURE.day.groundCloud, FIGURE.day.ground * 0.83 / Math.max(0.2, Math.sin(day.sun.elevDeg * Math.PI / 180))) : 0,
     gk = day ? gs + (FIGURE.day.groundCloud - gs) * gc : G.night, matGround = paint(gp[0] * gk, gp[1] * gk, gp[2] * gk);   // (by day the whole ground is in the sun: held down, or he stands on a white disc)
 
-  const F = { key, ch, c, top: FIGURE.tall, lead: yawOf(ask) !== FIGURE.yaw ? FIGURE.lead : 0, word: '', uv: new Uint32Array(uv), nBody, nBodyTri, flip: 1, boxes: nBox ? boxes : () => [], nBox,
+  const F = { key, ch, c, top: FIGURE.tall, lead: yawOf(ask) !== FIGURE.yaw ? FIGURE.lead : 0, word: '', uv: new Uint32Array(uv), nBody, nBodyTri, flip: 1, boxes: nBox ? boxes : () => [], nBox, rigged,
     CP: new Float32Array(nC * 3), CN: new Float32Array(nC * 3), cI: new Uint32Array(cI), cM: new Uint16Array(cM), mats: new Float32Array(mats), matGround } as Fig;
   Object.assign(F, lightOf(ask.hour, ask.cloud, yawOf(ask) - FIGURE.yaw));
   coarse(F, true);
@@ -698,7 +712,7 @@ function raster(M: Fig, B: Buf, yaw: number, frame: number): void {
 
 // ------------------------------------------------------------ the mount
 
-const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, SHIELD.on]);
+const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, SHIELD.on, INHAND.on && [INHAND.long, INHAND.fit]]);
 const yawOf = (a: FigureAsk) => (a.card.shield && a.member > 0 && SHIELD.on ? FIGURE.yawShield : a.card.weapon === 'pistol' ? FIGURE.yawPistol : FIGURE.yaw);
 /** a frame of his life: the game's animator stepped, his surface moved with it */
 function live1(M: Fig, dt: number): void { if (dt > 0) ownDie(() => M.c.update(dt * FIGURE.pace)); coarse(M); }
@@ -802,5 +816,16 @@ export function figureMotion(casts: { own: GltfCharacter; other?: GltfCharacter 
       prev.set(M.CP); off.push(a); step.push(b);
     }
     return { off, step };
+  } finally { cast = was[0]; other = was[1]; otherAsked = was[2]; }
+}
+
+/** What he holds and the hand that holds it, without a page (a measuring hook for tools/qa/kit-figure-roster-check.ts: nothing on the page calls it): the figure as the screen
+ *  builds it, his idle played for `secs`, then per step `each` is handed the posed figure and the game's own boxes for his kit (the drawer's names in `meta`). */
+export function figureHold(casts: { own: GltfCharacter; other?: GltfCharacter | null }, ask: FigureAsk, secs: number, each: (c: Character, bx: Box[], meta: RigNodeMeta[]) => void, hz = 30): boolean {
+  const was = [cast, other, otherAsked] as const; cast = casts.own; other = casts.other ?? null; otherAsked = true;
+  try {
+    const M = build(ask, 'offline'); if (!M) return false;
+    for (let t = 0, T = Math.round(secs * hz); t <= T; t++) { if (t) live1(M, 1 / hz); const r = M.rigged(); each(M.c, r.bx, r.meta); }
+    return true;
   } finally { cast = was[0]; other = was[1]; otherAsked = was[2]; }
 }
