@@ -22,7 +22,7 @@ import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import { isHostile } from './teams';
 import { canSee, canSeeChar, sightGain, sightGainOn, pointInView, bodyPos, lightEstimateAt } from './guards';
-import { runnerFled } from './runner';
+import { runnerFled, runnerOwns } from './runner';
 import { squadOf } from './enemysquads';
 import { PLAYER_ID } from './consts';
 
@@ -81,6 +81,17 @@ export const PICTURE = {
    *  is, and keeps his own word of the man when that is the newer (a fix he works from, or with none his own idea). A shooter with no idea of his man, or a
    *  show (no pictures kept): as it was. A shooter with eyes on his man gives the same place to a fifth of a second (off = the true place, as it was) */
   shot: true,
+  /** THE MAN WHO DROPS HIS GUN AND RUNS GOES BY HIS OWN PICTURE (runner.ts known; the maintainer, of the next all-seeing read to go: "keep" — off = as it
+   *  was): his way out was planned round every living enemy's TRUE place, through any wall — the floor he may reach, the outside nobody has a line to,
+   *  the corner farthest from them, the look ahead for a man in his way. With this each is reckoned from the men he KNOWS of, where he believes each to be
+   *  (every idea he still holds but a place he has seen empty); a man he knows nothing of turns him only once he sees him. The world's own rule keeps
+   *  the truth: he leaves the floor only when no enemy truly has a line to him — and stopped outside with a man's eyes on him he has that man. A man
+   *  that file has is off his side's net here too (`onNet`): he is told nothing and calls nothing, as netquiet.ts and enemysquads.ts have him */
+  run: true,
+  /** pinned cover with rounds passing thin walls (suppression.ts coverFrom, wallpen.ts): with no place hidden from every man he knows of, a place that
+   *  STOPS the shooter's round though another known man has a line to it is kept over one the round goes through (off = whichever came first, as it
+   *  was). A mend with a key so that a recording from before it replays as it played; no flag, no toggle */
+  coverHard: true,
   /** the floor view of one man's picture (ui/pictureviz.ts): 'off' · 'cursor' = the fighter nearest the aim point · 'all' = every teammate's ideas */
   show: 'off' as 'off' | 'cursor' | 'all',
   /** the view's reach round the man (m) */
@@ -107,7 +118,7 @@ interface State { men: Map<Guard, Pic>; sam: Pic; tellT: number; done: WeakSet<o
 const STATES = new SideMap<Game, State>('picture.STATES');
 function stateOf(g: Game): State { let S = STATES.get(g); if (!S) { S = { men: new Map(), sam: { owner: null, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: -1e9 }, tellT: -1e9, done: new SideSet(), view: null, viewT: -1e9 }; STATES.set(g, S); } return S; }
 function picOf(S: State, gd: Guard, now: number): Pic { let P = S.men.get(gd); if (!P) { P = { owner: gd, ideas: new Map(), downs: new Map(), heard: new Map(), lookT: now + (S.men.size % 8) * PICTURE.lookSecs / 8 }; S.men.set(gd, P); } return P; }
-export const PICTURE_STATS = { looks: 0, seen: 0, heard: 0, told: 0, fixes: 0, lost: 0, downs: 0, forgot: 0, asks: 0, lines: 0, /** a rule's pick the picture changed */ moved: 0, /** a colleague's shots heard with the shooter's own idea of his man to go by (PICTURE.shot; one a hearer), those a metre or more from the true place, and those the hearer kept his own newer word over */ shotPlaced: 0, shotOff: 0, shotKept: 0, /** steps taken off a place in a believed line (PICTURE.step: the file's men, a wall charge's stand-off marks dealt again) */ stepped: 0, /** stack asks answered with a one-hand file (menu re-reads included), and those on the hinge hand */ filed: 0, filedHinge: 0 };
+export const PICTURE_STATS = { looks: 0, seen: 0, heard: 0, told: 0, fixes: 0, lost: 0, downs: 0, forgot: 0, asks: 0, lines: 0, /** a rule's pick the picture changed */ moved: 0, /** a colleague's shots heard with the shooter's own idea of his man to go by (PICTURE.shot; one a hearer), those a metre or more from the true place, and those the hearer kept his own newer word over */ shotPlaced: 0, shotOff: 0, shotKept: 0, /** ways a running man planned from his own picture (PICTURE.run), and those planned on a picture that was not the truth (an enemy he did not know of, or one a metre or more from where he believed him) */ ran: 0, ranOff: 0, /** steps taken off a place in a believed line (PICTURE.step: the file's men, a wall charge's stand-off marks dealt again) */ stepped: 0, /** stack asks answered with a one-hand file (menu re-reads included), and those on the hinge hand */ filed: 0, filedHinge: 0 };
 export function pictureReset(g: Game) { STATES.delete(g); }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -213,6 +224,7 @@ function hear(g: Game, S: State) {
 function onNet(g: Game, a: Pic, b: Pic): boolean {
   if (a === b || !b.owner) return false;   // (nobody tells Sam: the player's picture is the screen)
   const B = b.owner; if (!fighter(B) || B.held) return false;
+  if (PICTURE.run && (runnerOwns(B) || (!!a.owner && runnerOwns(a.owner)))) return false;   // (runner.ts: a man who has dropped his gun and run is off the net, as netquiet.ts and enemysquads.ts have him — what he tells his mates he shouts, that file's own tell)
   if (!a.owner) return B.team === 'operative';   // Sam's eyes are on the squad's radio
   const A = a.owner; if (!fighter(A) || A.held || A.team !== B.team) return false;
   if (A.team !== 'hostile') return true;   // the squad's radio, the staff's

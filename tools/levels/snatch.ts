@@ -216,8 +216,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ] },
   };
   // ---- what is underfoot (game/floor.ts): the yard is 'asphalt' (the nearest the six have to earth), the house's beaten floor stone, the rugs carpet
+  // `building` is the whole world, so the plan is all zones (first match wins), as on the floodlit yard: a zone is read only inside it, and with the house's
+  // own rectangle here the gate hut's zone, out in the side yard, was never read (its floor sounded as the yard's).
   const surfaces: SurfacesData = {
-    building: { x0: 12, x1: 26, z0: 8, z1: 18 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
+    building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
     zones: [
       { id: 'main_rug', mat: 'carpet', x0: 14.9, z0: 14.4, x1: 17.9, z1: 16.6 },
       { id: 'his_rug', mat: 'carpet', x0: 20.6, z0: 9.3, x1: 23.8, z1: 11.7 },

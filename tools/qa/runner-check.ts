@@ -52,6 +52,7 @@ export async function runnerCheck(): Promise<boolean> {
   const { DARKDOOR } = await import(`${ROOT}/src/game/darkdoor.ts`); const wasDoor = DARKDOOR.on;
   const { RUNNER, RUNNER_STATS, runnerOf, runnerFled, runnerOwns, runnerLines, runnerSummary, runnerBreak } = await import(`${ROOT}/src/game/runner.ts`);
   const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
+  const { pictureTell } = await import(`${ROOT}/src/game/picture.ts`);
   const { FRAG, blast } = await import(`${ROOT}/src/game/frag.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { HE40 } = await import(`${ROOT}/src/game/he40.ts`);
@@ -116,7 +117,7 @@ export async function runnerCheck(): Promise<boolean> {
     const guns = () => g.items.items.filter((it: any) => it.who === T.char.id && (it.kind === 'rifle' || it.kind === 'pistol'));
     /** the player stood `m` metres in front of him, on his line to the hole, lit */
     const front = (m: number) => { const tp = T.char.pos, l = flat(tp, hole) || 1, at: V3 = [tp[0] + (hole[0] - tp[0]) / l * m, 0, tp[2] + (hole[2] - tp[2]) / l * m]; g.teleportPlayer(at); vis = 1; return at; };
-    const away = () => { g.teleportPlayer([yard[0], 0, yard[2]]); vis = 0.05; };
+    const away = () => { g.teleportPlayer([yard[0], 0, yard[2]]); vis = 0.05; pictureTell(g, T, 'player', g.player.char.pos); };   // (a player who walked back out would have been WATCHED going: under picture.ts PICTURE.run the man plans by where he believes him, and a teleport is nothing he could have seen)
     let dry = false, outT = NaN;   // (outT: the game clock on the frame his change began — morale.ts's shout that he is out)
     if (bait) {
       const a = doorPt(d, d.def.width / 2, 1.2, side, 1.3), b = doorPt(d, d.def.width / 2, 0, side, 1.3), k = 4 / Math.max(1e-3, flat(a, b));

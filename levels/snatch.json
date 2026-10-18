@@ -95,7 +95,7 @@
     "rugMadder": { "albedo": [0.1, 0.03, 0.035], "rough": 0.95 }
   },
   "surfaces": {
-    "building": { "x0": 12, "x1": 26, "z0": 8, "z1": 18 },
+    "building": { "x0": 0, "x1": 40, "z0": 0, "z1": 28 },
     "grassEdge": 0,
     "inside": "asphalt",
     "outside": "asphalt",
