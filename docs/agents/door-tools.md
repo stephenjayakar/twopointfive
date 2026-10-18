@@ -155,12 +155,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   were sent to and were done before the door was called held, the man in the middle seen and dropped from outside, nobody lost, 8 cells unseen against
   24 of 51 (frozen; 8 against 19 of 47 shipped) and the door called held about a second later; nobody's hips or head near the frame line; the lean in the bones
   (head 0.14 m to one side, 0.15–0.19 m to the other, past his hips; in the door runs 0.2–0.3 m toward the middle against 0–0.18 square); knees only
-  with the lean; the word given mid-cut leaves nobody bent; the journal and the page flags. RUN 10-18: that check and its break word on both stands;
-  families threshold, thresholdmenu, doortools, foursquad, doortest on both stands and doormenu on the shipped stand, all green (the shipped
+  with the lean; the word given mid-cut leaves nobody bent; the journal and the page flags. RUN 10-18, on the build head merged in: that check and its break word on both stands;
+  families threshold, thresholdmenu, doortools, foursquad, doortest on both stands and doormenu on the shipped stand, all green; one boot of the real
+  page on the software adapter, no page errors (the shipped
   `orderkeys` family is red by 30 lines with both switches off too: not this rule's); knobs-check, rollback-check --static, dice-check, both
   typechecks, the build. MEASURED, and it is NOT a gain there: the scripted play-through, `TPS_PROFILE=shipped PT_TOOL=hold`, 21 scenarios × seeds
   1–8 (167 paired runs): teammates up 287 of 588 with both switches on against 303 with both off (−0.10 ± 0.09 a run: inside the noise), wipes 44
-  against 43, the five pair scenarios 64 against 61 of 80. Why it is no gain: a man seen from a cut is an even duel through an open door with no can
+  against 43, the five pair scenarios 64 against 61 of 80 (that run was before the second read's mends — a stopped man goes on to his cut — and
+  the merge of the build head; after both, six of the scenarios again, four of them that tally's worst and two its best, 48 runs: 53 against 72 of
+  176 up, deaths at the door 80 against 62 — in the hard fours it COSTS men, in the pairs and the kill house it saves some). Why it is no gain: a man seen from a cut is an even duel through an open door with no can
   thrown, and the scripted commander bangs most held rooms anyway; before the three manners above it was 275 against 293 on the same runs, with 17
   deaths (against 4) of a man on his killer with the jamb across his own line in the six scenarios read. Those three manners have no staged check of
   their own: they are read from the play-through's death records only. Never seen on a GPU — the lean and the knee have been seen by nobody — and
