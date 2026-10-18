@@ -586,7 +586,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   teammate has — the room fight's, cover fire's, the fight AI's fire site. The swap is written where the
   big slot's shotgun writes its own (`route.weapon`: `game.ts` deals a man's row off his route every frame). The long gun hangs down his front on its
   sling while the sidearm is out (`combat.ts hungSide` → `rigProps hungBoxes`). `sideTick` (every frame, `game.ts`): nobody in his eyes and no round from
-  it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.5 s); an empty
+  it for `lull` (1.6 s) → the sidearm goes back TOPPED OFF and the primary comes up RELOADED, his hands busy for its reload + `back` (0.65 s, as long as your own swap back to the long gun); an empty
   sidearm is never drawn. Past `near`, or with no
   second gun, he reloads as he always has. You: the swap in your hands is as it was (1 your secondary, 2 your primary); which two guns they are is
   your card's (the next bullet). No checkpoint slice: a floor with a spawned unit on it takes no
