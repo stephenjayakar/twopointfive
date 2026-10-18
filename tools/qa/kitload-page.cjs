@@ -47,8 +47,8 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       'A ROOM CLEAR\'S TEAM & KIT SCREEN, as the page opens it: the card shows two bars, mobility then concealment, inside the card, a track wide enough to read, no digit', `${a.length} card(s) · ${say(a)}`);
     line(!!you && you.bars.every(b => Math.abs(b.fill - b.notch) <= 2 && b.fill > 4 && b.fill < b.track.w - 4), 'your issued card: each fill ends on its notch — the card the game is tuned on', you ? say([you]) : 'no card of yours');
 
-    // ── step: the long gun's row's next (one gun row: rifle → pistol; a primary and a secondary: the primary → none)
-    await page.evaluate(() => { const steps = document.querySelectorAll('#loadout .kc[data-member="0"] .kc-row[data-field="weapon"] .kc-step, #loadout .kc[data-member="0"] .kc-row[data-field="primary"] .kc-step'); steps[steps.length - 1]?.click(); });
+    // ── step: the long gun's row to no long gun (one gun row: its next, rifle → pistol; a primary and a secondary: the Primary row's previous, the issue carbine → none)
+    await page.evaluate(() => { const row = f => document.querySelectorAll(`#loadout .kc[data-member="0"] .kc-row[data-field="${f}"] .kc-step`), two = row('primary'), one = row('weapon'); if (two.length) two[0].click(); else one[one.length - 1]?.click(); });   // (the row's values end in `none`: one step back from the issue carbine)
     await page.waitForTimeout(300); const b = await cards(page); await shot(page, 'kitload-step'); const now = b.find(c => c.member === '0');
     line(!!now && !!you && now.bars.length === 2 && now.bars.every((x, k) => x.fill > you.bars[k].fill + 4 && x.fill > x.notch + 4 && x.gain > 4 && !x.loss), 'YOUR GUNS ROW STEPPED to the pistol alone: both fills grow past the notch', now && you ? `${say([you])} → ${say([now])}` : 'no card of yours');
     line(errors.length === 0, 'no page error on that screen', errors.join(' | ') || 'none'); await page.close(); }

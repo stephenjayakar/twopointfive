@@ -1,6 +1,6 @@
 // THE BIG SLOT (src/game/kit.ts BIGSLOT — every card has ONE big slot beside its pouches: the wall charge, the breaching shotgun, the dynamic
 // hammer; src/game/bigkit.ts — the last two on a locked door: yours a row in the boot's place, a teammate's on a door order), headless:
-//   bun run tools/qa/bigslot-check.ts [card|off|you|mate|shut|moves|wiring]      (BIGKIT_BREAK=1 = the tools do nothing to a lock: every 'the lock is gone' line must fail)
+//   bun run tools/qa/bigslot-check.ts [card|off|you|mate|shut|moves|weight|wiring]      (BIGKIT_BREAK=1 = the tools do nothing to a lock: every 'the lock is gone' line must fail)
 // The maintainer, 10-14: "you have a single big slot on the bottom that can fit larger kit items and then smaller pouches for other stuff" · "i do think we
 // should change the breaching shotgun to not take up a primary weapon slot" · "and then we should also add a dynamic hammer".
 //   card    the switch on: one 'big' row a card, the weapon row a rifle or a pistol, no wall charge row; no step of the row puts two big
@@ -814,8 +814,16 @@ export async function bigMoves(): Promise<boolean> {
 export async function bigslotCheck(only?: string): Promise<boolean> {
   console.log(`bigslot-check on the ${STAND.toUpperCase()} stand${STAND === 'frozen' ? ' (the switch is held off there: the check raises it itself)' : ' (TPS_PROFILE=shipped: the page as it opens)'}${BROKEN ? ' — BIGKIT_BREAK=1: the tools do nothing to a lock, the lock lines below must FAIL' : ''}`);
   let ok = true;
-  const parts: [string, () => Promise<boolean>][] = [['card', bigCard], ['off', bigOff], ['you', bigYou], ['mate', bigMate], ['shut', bigShut], ['moves', bigMoves], ['wiring', bigWiring]];
-  for (const [name, fn] of parts) if (!only || only === name) ok = (await fn()) && ok;
+  const parts: [string, () => Promise<boolean>][] = [['card', bigCard], ['off', bigOff], ['you', bigYou], ['mate', bigMate], ['shut', bigShut], ['moves', bigMoves], ['weight', bigWeight], ['wiring', bigWiring]];
+  // THE HOLDS THE RUNNER GIVES THESE PARTS (probes.ts GUN_ROW_AS_IT_WAS, DEAL_AS_IT_WAS), taken by the file itself so that it reads the same run alone as inside the
+  // gate: every part reads the card's one gun row (the two gun rows are gunslots-check.ts's), and the card part reads a teammate's card in the table's layout (the
+  // deal over the men who come is kitdeal-check.ts's). Held on EVERY stand, word and table both (a game stood up inside a part reads the word) — unless whoever runs
+  // the file set the word himself.
+  const holds: [string, { on: boolean }, (part: string) => boolean][] = [['TPS_GUNSLOTS', (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS, () => true], ['TPS_KITDEAL', K.KITDEAL, part => part === 'card']];
+  for (const [name, fn] of parts) if (!only || only === name) {
+    const mine = holds.filter(([word, , of]) => process.env[word] === undefined && of(name)).map(([word, table]) => { const was = table.on; process.env[word] = '0'; table.on = false; return { word, table, was }; });
+    try { ok = (await fn()) && ok; } finally { for (const h of mine) { delete process.env[h.word]; h.table.on = h.was; } }
+  }
   console.log(`\nbigslot-check (${STAND} stand): ${ok ? 'ALL PASS' : 'FAILED'}`);
   return ok;
 }
