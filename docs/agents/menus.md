@@ -179,15 +179,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   for every draw as in Sam's row, the wand on his staged card for the row; asked with `whyNot` first, so a refusal is not said aloud every step; mark
   `through` off `WANDORDER_STATS.live`). (4) HIS GOGGLES' TILE plays the quarter turn that shows him (`TILES.nvg`), as his suit's does: worn kit, and
   no order lowers them (nvg.ts). (5) The quiet rows say their work for a check: `lit` (the beam swept through the opening), `turn`.
+  (6) A TEAMMATE'S FRAG AFTER A CHARGE AT A LOCKED DOOR: the leaf hung again under the dissolve is the level's own locked door again (`Door.reset`), frag
+  and clear halts at a handle that does not turn, and the row ended `lost` in a second — at the office about one pick in eight (whenever nothing had
+  unlocked the leaf in between). `byOrder` unlocks the way-in door first, as every other row that works it does: 14 of 14 after.
   THE CHECK: `node tools/qa/kitview-work.cjs` (env in its header; needs `bun run dev` on PORT) picks every tile of Sam's card and a teammate's and
   every thing the big slot holds, and reads the FIRST row begun for the pick (after a wall's opening charge or a gun's swap): AT WORK = the pick's own
   thing with its work mark; the gun's row instead, or its own row to no mark, is IDLE and red. `SETS=1` says what a squad kit set and a member's set
   play (not judged: a set has no row). `KITWORK_BREAK=1` (the big slot told empty under the pick) must exit 1. EXCUSED, said as a pass: Sam's wall
   charge when he is ALONE (the picture's wall charge is the squad's order). Exit 2 on an unknown pick name.
+  A pick idle on its first pick is picked twice more: idle again on either is red; at work both times is a pass that says it MISSED ITS FIRST TURN
+  ONCE and is counted in the tally (Sam's frag that came back off the leaf and was taken away, `kept`: once in some twenty throws here, on the depot's
+  hut door). Also EXCUSED: the sticky camera where the way in opens on a yard (12 m of open floor or more behind the leaf: `camReach` finds no wall to
+  stick it to — every level whose picture stands at its yard gate). An idle turn of a door order prints the order's stages and the leaf's angle;
+  `REPEAT=n` plays the picks n times on one boot.
   MEASURED AFTER (the real page, headless Chromium on the software adapter, the clock at 2, one turn a pick, 27 picks a picture and 13 with Sam
-  alone): every pick AT WORK on mousehole ways 1 and 2, depot way 1, glasshouse way 1, snatch, floodlit, the office (Sam and 4) and the vault quiet
-  with one teammate; the vault quiet with Sam alone 12 of 13, the wall charge the one excused. `KITWORK_BREAK=1` on mousehole: 4 FAIL, exit 1. The
-  console said nothing on any. The other levels' ways rest on `kitview-plan`'s row (a leaf that is not steel on every way) until they are run.
+  alone): before the join with the build's head, every pick AT WORK on mousehole ways 1 and 2, depot way 1, glasshouse way 1, snatch, floodlit, the
+  office (Sam and 4) and the vault quiet with one teammate; the vault quiet with Sam alone 12 of 13, the wall charge the one excused; `KITWORK_BREAK=1`
+  on mousehole 4 FAIL, exit 1. On the join: mousehole both ways 54 of 54, snatch and floodlit 27 of 27, the office 26 of 27 (the teammate's frag of
+  (6), before its mend), depot way 1 26 of 27 (Sam's frag `kept` once; 8 of 8 on a repeat), the police post (quiet, Sam alone) 11 of 13: the wall
+  charge and the camera at a yard gate, both excused. `kitview-levels.cjs` on mousehole way 1: 30 PASS of 30. The console said nothing on any.
   NOT DONE, SAID ON THE PAGE'S LIST: the 40 mm is shouldered and never fired (the round arms 8 m out); a squad kit set has no demo of its own; the
   ballistic shield's tile is on the page only under `?shield` and is not picked by the check; the quiet picture still plays the loud answers (an open
   call with the kit figure's owner, not decided here).

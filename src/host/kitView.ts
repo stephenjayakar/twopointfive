@@ -1295,9 +1295,11 @@ export function kitViewStart(d: KitViewDeps): KitView {
       if (!B.rose && wallAngle(S, B.char.aimYaw) >= K.wallMin * R + 0.5 * R && wallAngle(S, B.ch.v) >= K.wallMin * R + 0.5 * R) { B.rose = true; own(B.pitch!, 0, K.gunRate * R, K.riseSecs); }
       chanTick(B.pitch!, K.gunRate * R, stepDt);
       return quiet(B, S); } };
-  /** a teammate's door order with a can in it, cut before anybody goes in: the mark is the door tools' own count */
+  /** a teammate's door order with a can in it, cut before anybody goes in: the mark is the door tools' own count (the way-in door unlocked first, as every
+   *  row that works it does: a leaf hung again after a charge is the level's own LOCKED door again — Door.reset — and frag and clear halts at a handle that
+   *  does not turn: the row ended 'lost' in a second, about one pick in eight at the office) */
   const byOrder = (word: string, stat: 'bangs' | 'frags', after: number, damage: Row['damage'], give: (B: Beat, S: Staged) => string | null): Row => ({ door: 'none', damage, loud: true, leaf: true, rest: damage === 'none' ? K.restCan : K.hold, cap: 10,
-    start: (B, S) => { B.base = tools().stats[stat]; const why = give(B, S); if (why === null && stat === 'bangs') spareSam(true); return why; },   // (his stun: Sam is spared it as the stack is — spareSam)
+    start: (B, S) => { B.base = tools().stats[stat]; unlock(S); const why = give(B, S); if (why === null && stat === 'bangs') spareSam(true); return why; },   // (his stun: Sam is spared it as the stack is — spareSam)
     tick: (B, S) => { const op = tools().ops.find(o => o.door === S.door), gone = !op || op.phase === 'enter';   // (the order is over, or has gone on to the entry: the room behind the door is not this picture's)
       if (isNaN(B.markT) && tools().stats[stat] > B.base) mark(B, word);
       if (isNaN(B.markT)) { if (gone) B.marks.push('lost'); return gone ? 'done' : 'on'; }
