@@ -27,8 +27,10 @@
 //     alone). The gun, its muzzle and the light on it stay put; the trigger hand is moved those 4 cm onto the grip (rigProps.longHold).
 //   · WORN: a defender's holster stood a third inside his long shirt (`holsterOut` m further off the thigh, defenders only: the others' clothes are tight) and
 //     the torch on a man's belt three quarters inside him (`belt`: handwork.ts beltTorch).
-//   LEFT ALONE, each with its reason, in docs/agents/player.md (IN HAND): the torch a whistle raises in the wrong hand, Sam's slung rifle through his radio pack,
-//   the breacher's two long tools, a shield's window at a crouched aim, the hand that reaches for the belt torch's old place on a swap.
+//   · THE SWAP'S HAND (`belt`): the torch ↔ sidearm swap takes the hand to the torch's old place on the belt (the reach is in the pose the game reads); the
+//     drawn hand goes the rest of the way out to where the torch now hangs.
+//   LEFT ALONE, each with its reason, in docs/agents/player.md (IN HAND): the torch a whistle raises in the wrong hand, Sam's slung rifle through his radio pack (a pairing the page as it ships never stages),
+//   the breacher's two long tools, a shield's window at a crouched aim, the trigger hand through a long gun's reload (it plays the pistol's clip).
 //
 // LOOKS ONLY. The pass poses the SKELETON a second time, after `bones`, `gunDir` and `muzzle` have been read (as a sleeping body's breath does): the joint palette
 // the GPU is handed and the hand frames the DRAWER reads move; nothing the simulation reads does — the round, the flash, the laser, the light's pose, the hit
@@ -61,4 +63,8 @@ export const IN_PISTOL: InHandWord = { kind: 'pistol' };
  *  `torch`: the fist is turned onto a torch's beam and put round its body · `long`: the trigger hand of every man's long gun is moved onto its grip ·
  *  `holsterOut`: m further off the thigh a defender's holster is drawn (a third of it was inside his long shirt) · `belt`: the torch on a man's belt hangs outside
  *  his clothes (handwork.ts beltTorch: three quarters of it was inside him) */
+/** the torch on a man's belt, m off his hips to his right and ahead: `was` where it hung (three quarters inside him), `at` where `belt` hangs it — and how far the
+ *  swap's hand is drawn out to meet it (Character.inHandPass) */
+export const BELT_TORCH = { was: [0.15, 0.115], at: [0.21, 0.16] };
+
 export const INHAND = { on: false, from: 0.3, to: 0.92, wrist: 55, both: 0.34, rate: 9, fit: true, torch: true, long: true, holsterOut: 0.03, belt: true };

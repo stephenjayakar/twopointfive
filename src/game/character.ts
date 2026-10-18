@@ -10,7 +10,7 @@ import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineG
 import { hyp2, hyp3 } from '../math/vec';
 import { WALLSNAP } from './wallsnap';
 import { STEALTHPOSE, type StealthFeed } from './stealthpose';   // (read inside methods only: the game's one import cycle)
-import { INHAND, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
+import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 export type UpperMode = 'none' | 'relaxed' | 'aim' | 'torch';
@@ -1442,7 +1442,7 @@ export class CharacterAnimator {
    *  hysteresis, the chest's squaring to the thing, which hand works and whether the other is on it too, the weight shown; the swap's clock (t < 0: none), what it
    *  goes from and to, and what the rule last said; the radio hand's time left and weight */
   private wk = { last: null as WorkPose | null, fed: false, after: 0, wL: new Spring(), wR: new Spring(), okL: false, okR: false, tw: new Spring(), main: 1 as 0 | 1, two: false, none: false, shown: 0 };
-  private sw = { cur: undefined as CarryKind | undefined, from: null as CarryKind, to: null as CarryKind, t: -1, dur: 1, shown: false, wait: -1 };
+  private sw = { cur: undefined as CarryKind | undefined, from: null as CarryKind, to: null as CarryKind, t: -1, dur: 1, shown: false, wait: -1, belt: 0 };
   /** the pose with the right arm as it stood UNDER the swap, on a frame the swap moved it (null otherwise): what the muzzle and the bore are read off (Character.update),
    *  so a line of fire and a round's start are where they are with the swap off — the hand's trip past the belt is for the eye */
   handPre: Pose | null = null; private swBuf: Pose | null = null; private handBuf: Pose | null = null; private underBuf: Pose | null = null;
@@ -2068,7 +2068,7 @@ export class CharacterAnimator {
       if (K.last) { const sq = K.fed && wSt * wl < 0.5 && this.toModelP(K.last.p)[2] > 0.1 ? 1 : 0; const tw = clamp(K.tw.step(sq, sq ? 24 : 14, dt), 0, 1);
         if (tw > 0.003) { const yk = y0 * (1 - tw * (1 - this.upperW.aim)); if (Math.abs(yk) < Math.abs(y)) { y = yk; headKeep *= 1 - tw; } } }
       else { K.tw.x = K.tw.v = 0; }
-      const S = this.sw, want = bake ? S.cur : this.carry; if (!bake) this.carry = undefined; S.shown = false;
+      const S = this.sw, want = bake ? S.cur : this.carry; if (!bake) this.carry = undefined; S.shown = false; S.belt = 0;
       if (bake) { /* as it stood */ }
       else if (want === undefined) { S.cur = undefined; S.t = S.wait = -1; }
       else if (S.cur === undefined) { S.cur = want; S.t = S.wait = -1; }
@@ -4343,6 +4343,8 @@ export class CharacterAnimator {
   swapHeld(rule: CarryKind): CarryKind { const S = this.sw; if (S.t < 0) return rule && S.cur && S.cur !== rule ? S.cur : rule;   // (the rule changed after this frame's pose was taken: the move starts next frame, from what he has)
     const a = S.t / S.dur; return a < SWAP.away ? S.from : a < SWAP.take ? null : S.to; }
   /** the swap's progress 0‥1 (−1: none running) and what it goes to */
+  /** how far the swap's hand is at the torch on his belt this frame, 0‥1 (swapLayer; for the eye: Character.inHandPass draws the hand out to where the torch hangs) */
+  get swapBelt(): number { return this.sw.belt; }
   swapInfo(): { a: number; to: CarryKind; pending: boolean } { const S = this.sw; return { a: S.t < 0 ? -1 : S.t / S.dur, to: S.to, pending: S.wait >= 0 }; }
 
   /** THE TORCH ↔ SIDEARM SWAP — a small layer over the right arm, not an animation: the hand goes down to the belt (the torch hangs there) and the holster on the
@@ -4360,7 +4362,7 @@ export class CharacterAnimator {
     const hp = fk.pos[nd.hips], th = fk.pos[nd.thighR];
     const belt = un([hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), hol = un([th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]);   // the wrist over the torch's ring at the front of the right hip · over the sidearm's grip on the thigh
     const first = S.to === 'weapon' ? belt : hol, second = S.to === 'weapon' ? hol : belt, k = smoothstep(SWAP.away - 0.04, SWAP.take, a);
-    const P = v3.lerp(first, second, k);
+    const P = v3.lerp(first, second, k); S.belt = e * (S.to === 'weapon' ? 1 - k : k);
     pB.copy(pA); fk.run(pB);
     const live0 = v3.copy(fk.pos[nd.handR]), rot0: Quat = [...fk.rot[nd.handR]] as Quat;
     this.turn(pB, nd.shoulderR, qRoll(4 * DEGR * e)); fk.run(pB);   // (the shoulder drops a little with the reach down)
@@ -5155,16 +5157,9 @@ export class Character {
   private inHandPass(dt: number) {
     const an = this.anim, n = an.nodes, sk = this.skel, W = this.inHand;
     let cur = this.inHandCur; if (W && (!cur || this.inHandK <= 0 || cur.kind === W.kind)) cur = this.inHandCur = W;
-    if (!cur) { this.inHandK = 0; this.simHandR = null; return; }
-    const live = W !== null && W.kind === cur.kind, shown = !an.inThrow && !an.hideHeldItem && !an.kitBusy, fire = live && shown && cur.kind === 'pistol' && an.shooting;
-    const want = !live || !shown ? 0 : cur.kind === 'long' ? (an.longShown !== null ? 1 : 0) : fire ? 1 : !an.gunArmOwn ? 0 : cur.kind === 'torch' ? 1 : smoothstep(INHAND.from, INHAND.to, an.aimShown);
-    const step = dt > 0 ? INHAND.rate * dt : 1, K = this.inHandK = fire ? 1 : this.inHandK + clamp(want - this.inHandK, -step, step);   // (a dt-0 bake takes it as asked)
-    this.simHandR = null; if (K <= 0) { if (!live) this.inHandCur = null; return; }
-    const g0 = sk.globalRot[n.handR], hr: Quat = [g0[0], g0[1], g0[2], g0[3]], qi = quat.conj(quat.yaw(this.bodyYaw)), R = sk.nodePos(n.handR), L = sk.nodePos(n.handL);
-    // the line the thing lies along, model space, and the frame it is laid out in (rigProps frameFrom: z the line, y the world's up squared to it)
-    const z = v3.normalize(quat.rotate(qi, cur.kind === 'torch' ? cur.beam : cur.kind === 'long' || an.upper === 'aim' || an.shooting ? this.gunDir : this.aimDir()));
-    let y: Vec3 = [-z[0] * z[1], 1 - z[1] * z[1], -z[2] * z[1]]; if (v3.len(y) < 1e-3) return; y = v3.normalize(y); const x = v3.cross(y, z);   // (a line straight up or down has no top: the hand is left alone)
-    const inF = (d: Vec3): Vec3 => [x[0] * d[0] + y[0] * d[1] + z[0] * d[2], x[1] * d[0] + y[1] * d[1] + z[1] * d[2], x[2] * d[0] + y[2] * d[1] + z[2] * d[2]];
+    const belt = INHAND.belt ? an.swapBelt : 0;   // (the swap's hand at the torch on his belt: drawn out to where the torch now hangs — below)
+    this.simHandR = null;
+    const g0 = sk.globalRot[n.handR], hr: Quat = [g0[0], g0[1], g0[2], g0[3]], R = sk.nodePos(n.handR), L = sk.nodePos(n.handL);
     const ov = this.inHandOv ??= []; ov.length = 0;
     /** an arm re-solved so its wrist is at `T` (the elbow kept on its side), the hand's rotation `rot` — over the skeleton's own output, not the pose (twoBoneIK
      *  writes the pose, which the simulation's next frame starts from) */
@@ -5181,6 +5176,26 @@ export class Character {
       ov[iE] = { rot: quat.normalize(quat.mul(quat.fromTo(v3.normalize(v3.sub(H, E)), v3.normalize(v3.sub(T2, E2))), sk.globalRot[iE])), pos: E2 };
       ov[iH] = { rot, pos: T2 };
     };
+    this.inHandWord(dt, cur, hr, R, L, ov, reach);
+    // THE SWAP'S HAND AT HIS BELT: the animator takes it to where the torch hung before the rule moved the torch outside his clothes (the reach is in the pose the
+    // game reads, so it stays); the drawn hand goes the rest of the way out to the torch
+    if (belt > 0) { const h = ov[n.handR]; reach(true, v3.mad(h?.pos ?? R, [BELT_TORCH.was[0] - BELT_TORCH.at[0], 0, BELT_TORCH.at[1] - BELT_TORCH.was[1]], belt), h?.rot ?? hr); }
+    if (ov.length) { this.simHandR = hr; sk.update(an.pose, this.world, an.twists, ov); }
+  }
+
+  /** what the hand does for the thing it holds (inHandPass): the overrides for this frame into `ov`, none when the pass has nothing to say */
+  private inHandWord(dt: number, cur: InHandWord | null, hr: Quat, R: Vec3, L: Vec3, ov: (NodeOverride | undefined)[], reach: (right: boolean, T: Vec3, rot: Quat) => void) {
+    const an = this.anim, n = an.nodes, sk = this.skel, W = this.inHand;
+    if (!cur) { this.inHandK = 0; return; }
+    const live = W !== null && W.kind === cur.kind, shown = !an.inThrow && !an.hideHeldItem && !an.kitBusy, fire = live && shown && cur.kind === 'pistol' && an.shooting;
+    const want = !live || !shown ? 0 : cur.kind === 'long' ? (an.longShown !== null ? 1 : 0) : fire ? 1 : !an.gunArmOwn ? 0 : cur.kind === 'torch' ? 1 : smoothstep(INHAND.from, INHAND.to, an.aimShown);
+    const step = dt > 0 ? INHAND.rate * dt : 1, K = this.inHandK = fire ? 1 : this.inHandK + clamp(want - this.inHandK, -step, step);   // (a dt-0 bake takes it as asked)
+    if (K <= 0) { if (!live) this.inHandCur = null; return; }
+    const qi = quat.conj(quat.yaw(this.bodyYaw));
+    // the line the thing lies along, model space, and the frame it is laid out in (rigProps frameFrom: z the line, y the world's up squared to it)
+    const z = v3.normalize(quat.rotate(qi, cur.kind === 'torch' ? cur.beam : cur.kind === 'long' || an.upper === 'aim' || an.shooting ? this.gunDir : this.aimDir()));
+    let y: Vec3 = [-z[0] * z[1], 1 - z[1] * z[1], -z[2] * z[1]]; if (v3.len(y) < 1e-3) return; y = v3.normalize(y); const x = v3.cross(y, z);   // (a line straight up or down has no top: the hand is left alone)
+    const inF = (d: Vec3): Vec3 => [x[0] * d[0] + y[0] * d[1] + z[0] * d[2], x[1] * d[0] + y[1] * d[1] + z[1] * d[2], x[2] * d[0] + y[2] * d[1] + z[2] * d[2]];
     if (cur.kind === 'long') reach(true, v3.mad(R, inF(cur.by), K), hr);
     else {
       let d: Quat;
@@ -5200,7 +5215,6 @@ export class Character {
         reach(true, v3.mad(R, v3.sub(v3.sub(v3.add(R, inF(cur.at)), hol), R), K), rot);
       }
     }
-    this.simHandR = hr; sk.update(an.pose, this.world, an.twists, ov);
   }
 
   /** TURN: bodyYaw / aimYaw as the AI left them this frame are where he WANTS to face (its own easings run on, wish to wish — turnBegin); he comes round to

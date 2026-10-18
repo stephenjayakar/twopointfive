@@ -20,12 +20,14 @@
 //   (14) worn: a defender's holster stands 3 cm further off his thigh, the torch on his belt outside his shirt (both where they were with the rule off);
 //   (15) a SHOT: fired as the gun comes up from a crouched low ready, the drawn gun is on the round's line and in the hand on the frame it fires;
 //   (16) it STANDS DOWN: through a reload, a flinch, a blow and a kit errand the gun hand is the animator's own again within a fifth of a second.
+//   (17) THE SWAP'S HAND: as a guard's hand goes to his belt for the torch ↔ sidearm swap, the drawn hand is over the torch where it now hangs — as near it as
+//        it was to the torch's old place — and the hand the game reads has not moved.
 // THE GAME (the mission the maintainer's shot was taken in, a teammate with his sidearm, the player walked about standing and crouched):
 //   (9) the teammate's pistol is in his hand in every frame he holds it; (10) the run is the same run with the rule off and on (the game's own digest) — the player's own pistol drawn, aimed, swapped for a can and back, reloaded and fired on the way;
 //   (11) a recording from before the key replays with it off, one that carries it keeps it; the page opens with it on and ?inhand=0 puts it off.
 //
 //   bun run tools/qa/inhand-check.ts [--verbose]        (both stands: it raises the switch itself)
-//   INHAND_BREAK=1 …                                    (the rule left off for the 'on' lines: (3), (9), (12), (13), (14) and (15) must fail)
+//   INHAND_BREAK=1 …                                    (the rule left off for the 'on' lines: (3), (9), (12), (13), (14), (15) and (17) must fail)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -215,6 +217,16 @@ export async function inhandCheck(): Promise<boolean> {
     { const say: string[] = []; let ok = true;
       for (const [k, rs] of Object.entries(busyOn)) { let since = 0, worst = 0, n = 0; for (const r of rs) { since = r.busy ? since + 1 : 0; if (since > 12) { n++; worst = Math.max(worst, r.apart); } } ok &&= n >= 5 && worst <= 1; say.push(`${k} ${worst.toFixed(2)}° (${n})`); }
       line(ok, '(16) it stands down: a fifth of a second into a reload, a flinch, a blow or a kit errand the gun hand is the animator\'s own again (to 1°)', `the gun hand off the animator's, worst (frames): ${say.join(' · ')}`); }
+
+    // (17) the swap's hand at the belt
+    { const HW: any = await import(`${ROOT}/src/game/handwork.ts`); const A = man('defender'), B = man('defender'); let sim = true, at = 0, a0 = 9, b1 = 9, moved = 0, n = 0;
+      const step = (carry: 'torch' | 'weapon') => { for (const [m, rule] of [[A, false], [B, ON]] as [Man, boolean][]) { INHAND.on = rule; m.c.inHand = null; m.c.anim.carry = carry; m.c.update(DT); } };
+      const torchAt = (m: Man, rule: boolean): V3 => { INHAND.on = rule; const out: any[] = []; HW.beltTorch(m.c, out); return out[0].c; }, flat = (a: V3, b: V3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+      for (let i = 0; i < 40; i++) step('torch');
+      for (const carry of ['weapon', 'torch'] as const) for (let i = 0; i < 70; i++) { step(carry); sim &&= simOf(A.c) === simOf(B.c);
+        const k = A.c.anim.swapBelt; if (k > 0.9) { n++; const wa = wristOf(A.c), wb = wristOf(B.c), da = flat(wa, torchAt(A, false)), db = flat(wb, torchAt(B, ON)); if (k > at) { at = k; } a0 = Math.min(a0, da); b1 = Math.min(b1, db); moved = Math.max(moved, flat(wa, wb)); } }
+      line(n >= 6 && sim && moved >= 0.05 && b1 <= a0 + 0.01, '(17) the swap\'s hand: as a guard\'s hand goes to his belt, the drawn hand is over the torch where it now hangs, as near it as it was to the torch\'s old place; the hand the game reads has not moved',
+        `over the torch (level distance, at its nearest): rule off ${f1(a0 * 100)} cm · on ${f1(b1 * 100)} cm · the drawn hand out by ${f1(moved * 100)} cm · ${n} frames at the belt, both ways · what the game reads ${sim ? 'equal' : 'DIFFERS'}`); }
 
     // ------------------------------------------------------------ the game
     const level = () => loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels/lights-out.json'), 'utf8')));
