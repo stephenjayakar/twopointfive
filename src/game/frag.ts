@@ -40,6 +40,7 @@ import { bangScorch } from './marks';
 import { gpuFx, bangFx } from './particleFx';
 import { teamOfId, type Team } from './teams';
 import { fightLive } from './roomfight';
+import { loadPace, loadPaceOn } from './kitload';
 import { PACE, canSee, canSeeChar, crossesDoor, frameOf } from './guards';   // (crossesDoor: asked inside fleeByDoor only)
 import type { Door } from './doors';
 import { lanePenalty } from './lanes';       // (asked inside fleeByDoor only)
@@ -676,9 +677,10 @@ export function fragTick(g: Game, _dt: number) {
       }
       const speed = conditionPace(g, gd, gd.team === 'operative' && PACE.on ? Math.min(F.runSpeed, PACE.max) : F.runSpeed);   // (a teammate never sprints: the spot is one HIS legs make)
       const acc = gd.team === 'operative' && PACE.on && gd.speed < speed * 0.6 ? PACE.accel : Infinity, W = wise ? { path: wise.path, keep: keep?.goal ?? null, not, apart: F.fleeApart ? takenBy(g, L, gd, dz) : undefined } : undefined;
-      let spot = fleeSpot(g, c, dz, speed, it.fuse, acc, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);
+      const legs = loadPace(g, gd, speed), pick = acc * loadPaceOn(g, gd);   // (kitload.ts: the spot is one the legs his CARD leaves him make — the leg itself is asked for at `speed`, and the path scales it)
+      let spot = fleeSpot(g, c, dz, legs, it.fuse, pick, W, gd); L.fleeAt.set(gd, v3.copy(dz)); L.dealT.set(gd, g.time); L.via?.delete(gd);
       // (FRAG.fleeDoor: the straight leg leaves him in its line — or there is none: out by an open doorway his legs make, to a spot beside it the burst has no line to)
-      if (W && F.fleeDoor && (!spot || exposedTo(g, [dz[0], dz[1] + F.lift, dz[2]], spot, [spot[0], 1.15, spot[2]]) > 0 || inMouth(g, spot))) { const out = fleeByDoor(g, c, dz, speed, it.fuse, acc, W, gd); if (out) { if (out.goal !== keep?.goal) FRAG_STATS.byDoor++; spot = out.goal; if (out.via) (L.via ?? (L.via = new Set())).add(gd); } }
+      if (W && F.fleeDoor && (!spot || exposedTo(g, [dz[0], dz[1] + F.lift, dz[2]], spot, [spot[0], 1.15, spot[2]]) > 0 || inMouth(g, spot))) { const out = fleeByDoor(g, c, dz, legs, it.fuse, pick, W, gd); if (out) { if (out.goal !== keep?.goal) FRAG_STATS.byDoor++; spot = out.goal; if (out.via) (L.via ?? (L.via = new Set())).add(gd); } }
       if (keep && spot === keep.goal) { L.flee.set(gd, keep); continue; }   // (the leg he has: his path and his stride are left as they are)
       L.flee.set(gd, spot ? { goal: spot, speed, upper: 'none', crouch: false } : { goal: null, upper: 'none', crouch: true });
       gd.path = []; gd.pathGoal = null; if (!L.counted.has(gd)) { L.counted.add(gd); FRAG_STATS.fled++; }

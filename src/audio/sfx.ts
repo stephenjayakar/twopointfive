@@ -9,6 +9,8 @@ export type SfxName =
   | 'stairDoor' | 'stairBoots' | 'casingTink' | 'thunderNear' | 'thunderFar' | 'glassCrack' | 'glassTinkle' | 'glassShatter' | 'glassCrunch'
   | 'padBeep' | 'padOpen' | 'alarmChirp'   // devices (game/devices.ts): a keypad key, the pad accepting the code, a tripwire's emitter chirping as it reports
   | 'wallCrack' | 'wallThump' | 'wallDebris'   // a wall charge going off (game/blastFeel.ts)
+  | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (game/gunlook.ts), and the pump gun's
+  | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (game/gunreload.ts)
   | 'chairRoll';   // a chair coasting on its castors (game/props.ts CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
 
 type Gen = (t: number, i: number, sr: number, rnd: () => number, state: Float32Array) => number;
@@ -44,6 +46,10 @@ export const HEARD: Partial<Record<SfxName, number>> = {
   lightOff: 0.059, deny: 0.059, doorCreak: 0.061, doorBang: 0.11, doorLatch: 0.098, doorBash: 0.117, doorRattle: 0.082, lockPick: 0.045, lockOpen: 0.125, lockBreak: 0.196, powerDown: 0.083,
   powerUp: 0.068, radio: 0.146, stunBang: 0.249, propThud: 0.102, propScrape: 0.05, chairRoll: 0.04, stairDoor: 0.128, stairBoots: 0.096, chokeStrain: 0.059, whipThud: 0.09, murmur: 0.052, heldProtest: 0.064, padBeep: 0.073,
   padOpen: 0.108, alarmChirp: 0.123, magOut: 0.096, equip: 0.062, nvOn: 0.119, nvOff: 0.124,
+  // (the guns of the two slots and their feeding: no table before them to keep a level from — each set by hand against the four reports and the handling voices above:
+  //  the two shotguns a little over the bare pistol, the belt gun and the Glock 18 a little under it (their rounds stack), the MP7 and the HK45 under every other gun)
+  mk12Suppressed: 0.118, mp7Suppressed: 0.086, mk46Report: 0.268, m1014Report: 0.31, m870Report: 0.3, hk45Suppressed: 0.08, g18Report: 0.268,
+  beltCoverUp: 0.09, beltBoxOff: 0.075, beltBoxOn: 0.11, beltLay: 0.09, beltCoverDown: 0.15, chargeLmg: 0.17, shellIn: 0.105, boltDrop: 0.18,
 };
 /** one voice: run, levelled to its HEARD number, and CUT WHERE IT ENDS (`dur` is room to work in — the mixer holds a voice's slot for its buffer's whole length, so a
  *  buffer does not carry silence behind the sound) */
@@ -195,6 +201,113 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       v.ring(0.032, [[420, 0.03, 1], [980, 0.02, 0.7], [2100, 0.012, 0.4]], 0.001, 0.4, 0.3, d); v.ring(0.068, BOLT, 0.0004, 0.6, 0.5, d);
       v.add(c, 0.5); v.add(d); peakTo(v.out); v.drive(1.2);
     }),
+    // ---- THE GUNS A CARD'S TWO SLOTS OFFER (game/gunlook.ts: each row's own voice, read with that switch on). FIRST TAKES, written blind: nobody has heard one.
+    // Mk 12: the same 5.56 as the rifle above from eighteen inches of barrel through a longer can — the powder is burnt before the baffles get it, so less gas hisses
+    // out and what is left is lower, rounder and longer: a 'thump' with a chest to it, both of the can's colours an octave-third down, the round's crack off the walls
+    // a little later (it leaves faster), the rifle buffer bottoming 38 ms in and the bolt home at 82. One at a time, 0.3 s apart.
+    mk12Suppressed: make(ctx, 'mk12Suppressed', 0.55, 3121, v => {
+      const d = v.layer(), c = v.layer();
+      v.hiss(0, 3000, 14000, 0.0001, 0.0013, 1.0, c); v.slaps(c, [[4.6, 0.5, 8000], [10.8, -0.34, 6000], [18.5, 0.22, 4500], [29, -0.12, 3200]]);
+      v.blast(0.0005, 0.0009, 0.6, d);
+      v.hiss(0, 450, 2000, 0.0006, 0.012, 1.6, d); v.hiss(0, 450, 2000, 0.0006, 0.085, 0.3, d);
+      v.hiss(0, 640, 860, 0.0005, 0.022, 0.9, d); v.hiss(0, 1650, 2050, 0.0005, 0.012, 0.4, d);
+      v.hiss(0, 120, 520, 0.0006, 0.022, 1.3, d); v.ring(0, [[72, 0.12, 1]], 0.004, 0.75, 0, d);
+      v.slaps(d, [[5.5, 0.25, 4500], [10.5, -0.18, 3200], [19, 0.13, 2400]]);
+      v.ring(0.038, [[330, 0.035, 1], [800, 0.024, 0.7], [1750, 0.014, 0.4]], 0.0012, 0.4, 0.3, d);
+      v.ring(0.082, BOLT, 0.0005, 0.6, 0.5, d); v.ring(0.082, [[240, 0.03, 1]], 0.002, 0.25, 0, d);
+      v.add(c, 0.45); v.add(d); peakTo(v.out); v.drive(1.15);
+    }),
+    // MP7: 4.6 mm through its can — the smallest, driest, highest of the long guns: a 'tk' with next to no chest (nothing under 350 Hz), the little round's crack
+    // faint behind it, a small can's two high colours, and a light bolt back 14 ms in and home at 34. Fifteen a second (one every 4/60 s) overlap into a tight purr:
+    // each round is over inside its own period but the leak of gas and a sixth of a second of room, which is the floor the string rides on. Not gunfire to the floor (level 0.8) and not meant to sound like it.
+    mp7Suppressed: make(ctx, 'mp7Suppressed', 0.26, 3137, v => {
+      const d = v.layer();
+      v.hiss(0, 4000, 14000, 0.0001, 0.0009, 0.5, d);
+      v.blast(0, 0.0005, 0.25, d);
+      v.hiss(0, 1500, 4200, 0.0003, 0.004, 1.6, d); v.hiss(0, 1500, 4200, 0.0003, 0.03, 0.4, d);
+      v.hiss(0, 2050, 2500, 0.0003, 0.008, 0.8, d); v.hiss(0, 4400, 5200, 0.0003, 0.005, 0.45, d);
+      v.hiss(0, 350, 1000, 0.0004, 0.006, 0.6, d);
+      v.slaps(d, [[3.4, 0.28, 8000], [8.1, -0.18, 6000], [15, 0.1, 4000]]);
+      v.ring(0.014, [[1500, 0.012, 1], [3400, 0.009, 0.8], [5600, 0.006, 0.5]], 0.0005, 0.3, 0.6, d);
+      v.ring(0.034, [[1250, 0.014, 1], [2900, 0.01, 0.8], [4700, 0.007, 0.6], [7400, 0.004, 0.3]], 0.0004, 0.5, 0.6, d);
+      v.add(peakTo(d)); v.drive(1.05);
+      v.tail(0.005, [[300, 1200, 0.2, 0.06], [1200, 3000, 0.14, 0.05], [3000, 6000, 0.07, 0.04]], 0.006);                          // what a room keeps of it: the floor a string of them never falls under
+    }),
+    // Mk 46: a bare 5.56 from a long barrel behind a flash hider — the round's crack and ONE hard front (no second fat one: the short rifle's fireball bark is not in
+    // it), flatter and brighter — and the gun's own machinery in every round: the carrier against its buffer 24 ms in, a link falling free, the bolt home on the next
+    // round at 56. Twelve a second (one every 5/60 s) overlap into a hammering chug; the room's tail is kept short and thin so a string of them does not stack into mud.
+    mk46Report: make(ctx, 'mk46Report', 0.85, 3163, v => {
+      const d = v.layer();
+      v.hiss(0, 3500, 15000, 0.0001, 0.001, 1.1, d);
+      v.blast(0.0035, 0.0004, 1.5, d); v.hiss(0.0035, 1500, 9000, 0.0002, 0.0025, 1.6, d);
+      v.hiss(0.0035, 500, 1800, 0.0003, 0.003, 1.7, d); v.hiss(0.0035, 500, 1800, 0.0003, 0.016, 0.4, d); v.hiss(0.0035, 1800, 5500, 0.0003, 0.006, 1.5, d);
+      v.drive(1.8, peakTo(d));
+      v.slaps(d, [[2.9, 0.55, 8000], [6.4, -0.46, 6000], [11, 0.38, 4800], [16.5, -0.32, 3800], [24, 0.25, 3000], [35, -0.19, 2400], [50, 0.14, 1900], [70, -0.1, 1500]]);
+      v.ring(0.0035, ROOM, 0.004, 0.16, 0, d);
+      v.ring(0.024, [[520, 0.03, 1], [1300, 0.022, 0.8], [2500, 0.014, 0.5]], 0.0008, 0.16, 0.5, d); v.hiss(0.024, 150, 600, 0.001, 0.01, 0.2, d);
+      knock(v, 0.03, 3500, 9000, 0.0012, 0.1, d); v.ring(0.034, [[4100, 0.01, 1], [6300, 0.007, 0.7], [8800, 0.004, 0.4]], 0.0003, 0.07, 0.3, d);
+      v.ring(0.056, BOLT, 0.0004, 0.2, 0.5, d);
+      v.add(d); v.tail(0.012, [[80, 300, 0.45, 0.13], [300, 1500, 0.35, 0.16], [1500, 4500, 0.22, 0.14], [4500, 11000, 0.12, 0.05]], 0.012);
+    }),
+    // M1014: twelve gauge from eighteen inches — the biggest, lowest, fattest report on the floor: two wide fronts (no rifle's crack: the shot is barely supersonic and
+    // there is an ounce of it), a roar under a kilohertz, real weight under 200 Hz, nine slaps, the room's low modes pushed hard and a long tail that goes dark — then
+    // the gas action: the bolt back 45 ms in and slamming home at 62.
+    m1014Report: make(ctx, 'm1014Report', 1.5, 3181, v => {
+      const d = v.layer();
+      v.blast(0, 0.0016, 1.6, d); v.blast(0.002, 0.003, 1.0, d);
+      v.hiss(0, 250, 5000, 0.0003, 0.006, 2.4, d); v.hiss(0, 2000, 9000, 0.0002, 0.003, 0.9, d);
+      v.hiss(0, 180, 900, 0.0004, 0.008, 2.0, d); v.hiss(0, 180, 900, 0.0004, 0.045, 0.6, d);
+      v.hiss(0, 60, 220, 0.001, 0.05, 0.9, d);
+      v.drive(2.0, peakTo(d));
+      v.slaps(d, [[3.3, 0.6, 6000], [7.6, -0.5, 4500], [13.4, 0.42, 3600], [19.6, -0.36, 2900], [29, 0.3, 2300], [42, -0.24, 1800], [60, 0.19, 1400], [86, -0.14, 1100], [120, 0.1, 900]]);
+      v.ring(0, ROOM, 0.006, 0.3, 0, d); v.ring(0, [[44, 0.22, 1]], 0.006, 0.2, 0, d);
+      v.ring(0.045, [[380, 0.04, 1], [900, 0.03, 0.8], [1900, 0.02, 0.5]], 0.001, 0.1, 0.4, d);
+      clack(v, 0.062, 450, 3800, 0.03, 0.16, d); v.hiss(0.062, 120, 500, 0.001, 0.016, 0.14, d);
+      v.add(d); v.tail(0.014, [[50, 250, 1.0, 0.18], [250, 1200, 0.7, 0.22], [1200, 4000, 0.36, 0.14], [4000, 10000, 0.18, 0.05]], 0.018);
+    }),
+    // the pump gun of the big slot: the same twelve gauge from a short breaching barrel — more bark (the powder still burning at the muzzle), a little less under
+    // it — and NO action in the shot: a hand works it after. The fore-end hauled back along the tube (the bolt unlocking, the hull out) 0.30 s in, and run forward
+    // to lock at 0.48: two heavy clacks, the hollow magazine tube rattling under each. The row's 0.9 s between shells has room for it.
+    m870Report: make(ctx, 'm870Report', 1.3, 3187, v => {
+      const d = v.layer(), TUBE: Mode[] = [[210, 0.06, 0.8], [470, 0.045, 1], [1150, 0.025, 0.5], [2300, 0.012, 0.25]];
+      v.blast(0, 0.0013, 1.6, d); v.blast(0.0015, 0.0024, 0.9, d);
+      v.hiss(0, 300, 6000, 0.0003, 0.006, 2.0, d); v.hiss(0, 1500, 9000, 0.0002, 0.004, 1.1, d);
+      v.hiss(0, 220, 1100, 0.0004, 0.008, 1.9, d); v.hiss(0, 220, 1100, 0.0004, 0.035, 0.55, d);
+      v.hiss(0, 70, 240, 0.001, 0.04, 1.2, d);
+      v.drive(2.0, peakTo(d));
+      v.slaps(d, [[3.3, 0.6, 6500], [7.6, -0.5, 5000], [13.4, 0.42, 3900], [19.6, -0.36, 3100], [29, 0.3, 2400], [42, -0.24, 1900], [60, 0.19, 1500], [86, -0.14, 1200], [120, 0.1, 950]]);
+      v.ring(0, ROOM, 0.006, 0.32, 0, d);
+      v.hiss(0.25, 900, 3600, 0.035, 0.012, 0.05, d); clack(v, 0.3, 380, 3600, 0.03, 0.2, d); v.ring(0.3, TUBE, 0.0015, 0.07, 0, d); v.hiss(0.3, 110, 480, 0.001, 0.016, 0.12, d);
+      knock(v, 0.335, 1400, 4200, 0.003, 0.06, d);                                                        // the hull leaving
+      v.hiss(0.43, 900, 3600, 0.035, 0.01, 0.05, d); clack(v, 0.48, 320, 4200, 0.034, 0.26, d); v.ring(0.48, vary(v, TUBE, 3, 0.03), 0.0015, 0.08, 0, d); v.hiss(0.48, 100, 450, 0.001, 0.018, 0.16, d);
+      v.add(d); v.tail(0.014, [[55, 250, 0.9, 0.2], [250, 1200, 0.65, 0.2], [1200, 4000, 0.36, 0.15], [4000, 10000, 0.18, 0.06]], 0.018);
+    }),
+    // HK45: a subsonic .45 through a big can — no crack at all (nothing breaks the sound barrier), a soft low 'pff' with a thud under it, softer at its onset and
+    // lower in both of the can's colours than the pistol at the top of this table — and then mostly the slide, which is nearly as loud as the shot: a heavier one,
+    // back 30 ms in and home at 68. The quietest gun there is.
+    hk45Suppressed: make(ctx, 'hk45Suppressed', 0.32, 3203, v => {
+      const d = v.layer(), SL45: Mode[] = [[880, 0.03, 1], [2100, 0.022, 0.8], [3500, 0.014, 0.6], [5600, 0.009, 0.3]];
+      v.blast(0, 0.0014, 0.3, d);
+      v.hiss(0, 500, 1700, 0.0006, 0.009, 1.5, d); v.hiss(0, 500, 1700, 0.0006, 0.05, 0.3, d);
+      v.hiss(0, 800, 1050, 0.0006, 0.016, 0.8, d); v.hiss(0, 1900, 2350, 0.0006, 0.01, 0.4, d);
+      v.hiss(0, 130, 520, 0.0006, 0.018, 1.3, d); v.ring(0, [[88, 0.09, 1]], 0.004, 0.7, 0, d);
+      v.slaps(d, [[3.1, 0.26, 5000], [7.4, -0.18, 3600], [14.2, 0.12, 2600]]);
+      v.ring(0.03, SL45, 0.0007, 0.55, 0.7, d); v.ring(0.068, SL45, 0.0006, 0.8, 0.7, d); v.ring(0.068, [[330, 0.035, 1]], 0.002, 0.3, 0, d);
+      v.add(peakTo(d)); v.drive(1.05);
+    }),
+    // Glock 18: the bare 9 mm of this table with everything that stacks cut short — twenty a second (one every 3/60 s) have to overlap into a ripping snarl, so the
+    // room is six slaps and a quarter second of tail, its low modes halved; the crack and the bark are whole, the compensator's cuts spit a band of their own, and
+    // the slide is a light fast one: back 12 ms in, home at 30.
+    g18Report: make(ctx, 'g18Report', 0.5, 3217, v => {
+      const d = v.layer();
+      v.blast(0, 0.00035, 1.0, d); v.hiss(0, 400, 9000, 0.0002, 0.003, 1.5, d); v.hiss(0, 3000, 14000, 0.0001, 0.002, 0.9, d);
+      v.hiss(0, 550, 2000, 0.0003, 0.003, 2.0, d); v.hiss(0, 550, 2000, 0.0003, 0.012, 0.4, d);
+      v.hiss(0, 2400, 5200, 0.0002, 0.004, 0.6, d);
+      v.drive(1.5, peakTo(d));
+      v.slaps(d, [[3.1, 0.55, 7000], [7.3, -0.45, 5500], [12.9, 0.36, 4200], [18.4, -0.27, 3400], [27, 0.19, 2600], [39, -0.12, 2000]]);
+      v.ring(0, ROOM, 0.004, 0.08, 0, d); v.ring(0.012, SLIDE, 0.0005, 0.09, 0.7, d); v.ring(0.03, SLIDE, 0.0004, 0.13, 0.7, d);
+      v.add(d); v.tail(0.008, [[90, 350, 0.28, 0.08], [350, 1800, 0.24, 0.13], [1800, 4500, 0.16, 0.1], [4500, 11000, 0.09, 0.06]], 0.008);
+    }),
     // the launcher under the fore-end (launcher.ts; slowed, the 40 mm): the pin, the round uncorking, the tube's own air column knocked once — a 'thoonk', dead in a
     // twentieth of a second — and a puff of propellant. Near silent: a 'prop' event at 0.45, not gunfire
     launcher: make(ctx, 'launcher', 0.32, 217, v => {
@@ -238,6 +351,73 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
         v.ring(at, cluster(v, 320, 1500, 6, 0.016), 0.0012, 0.3 * a);
         if (k < 2) knock(v, at + 0.004 + 0.003 * v.u(), 1800, 5000, 0.0015, 0.1 * a); }
       v.hiss(0.262, 200, 1400, 0.004, 0.02, 0.2);
+    }),
+    // ---- A BELT UNDER A FEED COVER, SHELLS ONE AT A TIME (game/gunreload.ts plays these by name). FIRST TAKES, written blind: nobody has heard one.
+    // the feed cover up: its two latches pressed (two ticks a hundredth apart), the cover swung up on its hinge with the feed pawls hanging loose in it, and the
+    // hollow sheet-steel knock of it stopping upright
+    beltCoverUp: make(ctx, 'beltCoverUp', 0.42, 3229, v => {
+      v.ring(0, LATCH, 0.0005, 0.7, 0.6); v.ring(0.014, vary(v, LATCH, 3, 0.04), 0.0005, 0.55, 0.6); v.hiss(0, 150, 700, 0.001, 0.012, 0.3);
+      v.hiss(0.05, 700, 3200, 0.05, 0.05, 0.16);
+      for (let k = 0; k < 3; k++) knock(v, 0.09 + 0.035 * k + 0.01 * v.u(), 2500, 7000, 0.0012, 0.12);
+      clack(v, 0.24, 400, 2800, 0.05, 0.6); v.hiss(0.24, 120, 500, 0.001, 0.018, 0.35);
+    }),
+    // the empty belt box off: nylon rasping over the hand, its clip let go of the rail under the receiver, the little weight of it coming away, and the last few
+    // loose links of the old belt ticking off the tray
+    beltBoxOff: make(ctx, 'beltBoxOff', 0.46, 3251, v => {
+      v.hiss(0, 800, 4500, 0.05, 0.04, 0.3);
+      knock(v, 0.1, 900, 3500, 0.003, 0.7); v.ring(0.1, cluster(v, 700, 2800, 6, 0.014), 0.0008, 0.2); v.hiss(0.1, 100, 450, 0.002, 0.016, 0.4);
+      v.hiss(0.14, 600, 3000, 0.03, 0.05, 0.2);
+      for (let k = 0; k < 4; k++) { const at = 0.2 + 0.05 * k + 0.02 * v.u(), f = 3800 + 2600 * v.u(); v.ring(at, [[f, 0.012, 1], [f * 1.43, 0.008, 0.6], [f * 2.2, 0.005, 0.3]], 0.0003, 0.22 * Math.pow(0.8, k), 0.4); }
+    }),
+    // a full one on: slid along the rail, the clip snapping over — heavier, a hundred rounds' weight stopping against the gun and the belt shifting inside the box
+    beltBoxOn: make(ctx, 'beltBoxOn', 0.5, 3253, v => {
+      v.hiss(0, 500, 2600, 0.06, 0.03, 0.3);
+      clack(v, 0.13, 500, 3200, 0.02, 0.9); v.hiss(0.13, 80, 400, 0.002, 0.022, 0.8);
+      knock(v, 0.136, 2400, 6000, 0.001, 0.3);
+      for (let k = 0; k < 6; k++) knock(v, 0.17 + 0.03 * k + 0.012 * v.u(), 500 + 400 * v.u(), 2200, 0.004, 0.2 * Math.pow(0.78, k));
+      v.hiss(0.17, 150, 900, 0.01, 0.06, 0.15);
+    }),
+    // the belt laid in: its first rounds drawn across the feed tray — links and brass on steel, eight small contacts in a third of a second, no two alike — and the
+    // first round pressed against the cartridge stop
+    beltLay: make(ctx, 'beltLay', 0.55, 3257, v => {
+      v.hiss(0, 900, 4000, 0.04, 0.08, 0.14);
+      for (let k = 0; k < 8; k++) { const at = 0.02 + 0.04 * k + 0.014 * v.u(), f = 2600 + 3200 * v.u(), a = 0.5 + 0.5 * v.u();
+        v.ring(at, [[f, 0.02, 1], [f * 1.012, 0.02, 0.8], [f * 1.9, 0.01, 0.4]], 0.0004, 0.3 * a, 0.4); knock(v, at, 800, 3000, 0.002, 0.3 * a); }
+      knock(v, 0.38, 600, 3200, 0.004, 0.8); v.ring(0.38, cluster(v, 500, 3000, 7, 0.02), 0.0008, 0.25); v.hiss(0.38, 140, 600, 0.001, 0.014, 0.3);
+    }),
+    // the cover slapped shut with the flat of the hand: the loudest of them — a flat heavy clack with weight under it, both latches catching a hundredth behind,
+    // the belt's hanging end rattling once
+    beltCoverDown: make(ctx, 'beltCoverDown', 0.32, 3259, v => {
+      v.hiss(0, 200, 1500, 0.003, 0.006, 0.4);                                                           // the palm on it
+      knock(v, 0.006, 300, 5000, 0.006, 1.0); v.ring(0.006, cluster(v, 350, 3000, 10, 0.03), 0.0006, 0.45, 0.2); v.hiss(0.006, 90, 450, 0.001, 0.02, 0.8);
+      v.ring(0.016, LATCH, 0.0004, 0.5, 0.6); v.ring(0.021, vary(v, LATCH, 3, 0.04), 0.0004, 0.4, 0.6);
+      for (let k = 0; k < 3; k++) { const f = 3400 + 2400 * v.u(); v.ring(0.06 + 0.035 * k, [[f, 0.012, 1], [f * 1.5, 0.007, 0.5]], 0.0003, 0.1 * Math.pow(0.6, k), 0.3); }
+    }),
+    // the cocking handle: hauled back against a heavy spring — the scrape rising as it loads — to its stop, then run forward home (the bolt stays back: it fires
+    // from there)
+    chargeLmg: make(ctx, 'chargeLmg', 0.5, 3271, v => {
+      v.hiss(0, 600, 3500, 0.12, 0.012, 0.35); v.hiss(0.03, 180, 700, 0.09, 0.02, 0.2);
+      clack(v, 0.16, 350, 3600, 0.03, 1.0); v.hiss(0.16, 100, 480, 0.001, 0.02, 0.7); v.ring(0.16, [[260, 0.05, 1], [610, 0.035, 0.6]], 0.002, 0.2);
+      v.hiss(0.25, 800, 4000, 0.06, 0.01, 0.25);
+      clack(v, 0.34, 700, 5000, 0.018, 0.6); v.hiss(0.34, 150, 600, 0.001, 0.012, 0.3);
+    }),
+    // one shell thumbed into the tube: the plastic hull pushed against the shell latch, past it (a click), and stopping on the one ahead with the hollow tube and its
+    // spring under it. Played once a shell, a third of a second apart: one buffer, so the caller deals each play's rate (0.94‥1.06, off the shell's place in the tube: gunreload.ts shellRate) and no two neighbours are the same.
+    shellIn: make(ctx, 'shellIn', 0.24, 3299, v => {
+      v.hiss(0, 900, 3500, 0.03, 0.012, 0.3); v.hiss(0, 150, 600, 0.02, 0.02, 0.2);
+      v.ring(0.055, [[1050, 0.02, 1], [1900, 0.014, 0.8], [3100, 0.009, 0.5]], 0.0005, 0.6, 0.6);
+      clack(v, 0.085, 420, 3000, 0.02, 0.8); v.hiss(0.085, 110, 500, 0.001, 0.018, 0.5);
+      v.ring(0.085, [[190, 0.07, 0.8], [430, 0.05, 1], [980, 0.03, 0.5]], 0.002, 0.25);
+      v.hiss(0.1, 1200, 3200, 0.004, 0.02, 0.1);                                                          // the spring taking it up
+    }),
+    // the bolt release hit with the thumb and a heavy bolt run home on a shell: the button's tick, the shell scraped out of the lifter and up the ramp, and the slam —
+    // the lowest, heaviest clack in the handling voices
+    boltDrop: make(ctx, 'boltDrop', 0.32, 3301, v => {
+      v.ring(0, [[1700, 0.008, 1], [3200, 0.006, 0.7]], 0.0004, 0.25, 0.5);
+      v.hiss(0.008, 900, 4200, 0.004, 0.01, 0.3);
+      clack(v, 0.034, 300, 4200, 0.035, 1.0); v.hiss(0.034, 100, 500, 0.001, 0.02, 0.8);
+      v.ring(0.034, [[560, 0.04, 1], [1400, 0.028, 0.8], [2500, 0.016, 0.5], [3900, 0.01, 0.3]], 0.0005, 0.4, 0.3);
+      v.hiss(0.05, 1400, 3600, 0.003, 0.03, 0.08);                                                        // the recoil spring singing after it
     }),
     // holster / sling: cloth over the gun, the retention snapping, a swivel's tick
     equip: make(ctx, 'equip', 0.2, 83, v => {

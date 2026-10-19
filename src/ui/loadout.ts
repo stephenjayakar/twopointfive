@@ -233,7 +233,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       s.appendChild(el('div', 'lo-role', N.sub));
       if (here && cardsOn()) {   // his kit in a line, and his suit on the figure (kit.ts: the table the card under the slots changes)
         const m = kitShown(i); if (m.suit !== 'issued') fig.style.color = tintCss(SUITS[m.suit].tint);
-        name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(gunIconOf(kitGun(m)), rowCan(i, m, m.weapon === 'pistol' ? 'secondary' : 'primary')); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
+        name.classList.toggle('changed', kitChanged(i)); { const g = el('div', 'lo-gun'); g.innerHTML = gunIcon(gunIconOf(kitGun(m)), rowCan(i, m, m.weapon === 'pistol' ? 'secondary' : 'primary'), kitGun(m)); s.appendChild(g); } s.appendChild(el('div', 'lo-sum', kitWords(i)));
         { const ics = el('div', 'lo-ics'), K = m as unknown as Record<string, unknown>;   // (the same kit as drawings: the one page shows these in place of the words)
           let wide = 0;
           for (const r of kitRows(i)) { const f = r.field === 'primary' && m.weapon === 'pistol' ? 'secondary' : r.field;   // (no long gun brought: his sidearm is the gun the chip draws)

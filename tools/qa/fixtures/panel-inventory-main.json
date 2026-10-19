@@ -5649,13 +5649,13 @@
   "extra": ""
  },
  {
-  "path": "Sandbox ▸ QRF (going loud)",
+  "path": "Stealth ▸ QRF (office night: the response to gunfire)",
   "kind": "slider",
   "label": "QRF ▸ ETA s",
   "min": 15,
   "max": 180,
   "step": 5,
-  "title": "seconds from the request to the stair door going (the telegraph: control's answer, thirty seconds, ten seconds)",
+  "title": "seconds from the request to the stair door going (the telegraph: control's answer, thirty seconds, ten seconds). A level whose file gives its own range deals inside that instead: the line under these rows says what this level gets; 'call QRF now' always uses this row",
   "def": false,
   "extra": ""
  },
@@ -5666,7 +5666,7 @@
   "min": 2,
   "max": 4,
   "step": 1,
-  "title": "men in the element (capped by the renderer's eight-character shadow budget: the player + the three staff + four is exactly it)",
+  "title": "men in the element (capped by the renderer's eight-character shadow budget: the player + the three staff + four is exactly it). A level whose file gives its own range deals inside that instead; 'call QRF now' always uses this row",
   "def": false,
   "extra": ""
  },
