@@ -30,6 +30,8 @@
 //   (18) the raid rule off, or a block that does not say `raid` (the office under a room clear, or under a hostage rescue): the same gunfire calls nobody
 //   (19) a restage mid-response: the team's men are gone with the cast, nothing is owed from the run before
 //   (20) a team still on the road when the last defender falls never arrives: the place is taken and the call is called off
+//   (21) the records office's raid: the way in decides it — from the lot the desk is the first man met (a call, or the desk down inside its six seconds); from the
+//        other way in the desk calls the patrol. With it every level on the WITH list has a call played through by its own mission
 // RESPONSE_BREAK=1 = the switch left off for the 'on' lines (and on for the 'off' lines): every line but (1) and (2), which read files and floors, must fail.
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -41,6 +43,7 @@ const Qm = await import(`${ROOT}/src/game/qrf.ts`);
 const { RESPONSE, QRF_MARKS, requestQrf, resetQrf, checkResponse, hasResponse, responseWordSnapshot, responseWordRestore } = Qm;
 const { PICTURE, ideasOf } = await import(`${ROOT}/src/game/picture.ts`);
 const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
+const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { raiseEscalation } = await import(`${ROOT}/src/game/guards.ts`);
 
 type Vec3 = [number, number, number];
@@ -54,10 +57,11 @@ function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; le
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await f(); } finally { console.log = log; } }
 const text = (file: string) => readFileSync(resolve(ROOT, 'levels', file), 'utf8');
 /** a level stood up with the switch as the line wants it; `q` starts its mission */
-async function stand(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1') {
+async function stand(file: string | null, seed: number, on: boolean, q: string | null = '?quiet=1', way = 0) {
   Math.random = seeded(0x7e5 + seed * 7919);
   const W: any = await hushed(() => standUp({ uploadEvery: 4, seed, ...(file ? { level: loadLevel(parseLevelData(text(file))) } : {}) }));
   const g = W.game; RESPONSE.on = on; RESPONSE.deal = true; RESPONSE.net = true; RESPONSE.raid = true; PICTURE.on = true;
+  if (way) ROOMCLEAR.way = way;   // (the room clear's way in: 2 = the level's first other start)
   if (q && (g.level.scenarios?.quiet || /roomclear|rescue/.test(q))) await hushed(() => startFromQuery(g, q));
   g.godMode = true; g.aiEnabled = true; g.tune.qrf = true; g.tune.perimeter = false;
   for (let i = 0; i < 20; i++) W.step(DT);
@@ -271,6 +275,24 @@ export async function responseCheck(): Promise<boolean> {
     const end = g.roomClear.end, off = notes(g).some(n => n.startsWith('called-off')); steps(W, 100);
     line(asked && end === 'taken' && off && Q.state === 'idle' && Q.men.length === 0, '(20) the escort still on the road when the last defender falls: the depot is taken, the call is called off, and nobody walks in afterwards',
       `${asked ? 'called' : 'never called'} · every defender down three seconds later: ${end ?? 'still going'} · ${off ? 'called off' : 'not called off'} · a hundred seconds on: the response ${Q.state}, ${Q.men.length} of them on the floor`); }
+
+  // ---- (21) the records office: the way in decides it (every level with a block has a call played by its own mission)
+  { const tale: string[] = []; let honest = true, ok = false, got = 'never called';
+    // from the dark lot the desk is the first man the pair meets: each start is a call, or the desk down inside its six seconds and nobody called
+    for (const seed of [21, 22, 23]) { const W = await stand('records.json', seed, ON, RAIDS['records.json']); const g = W.game, Q = g.qrf, desk = hutOf(g); goLoud(W);
+      const asked = steps(W, 14, () => Q.state !== 'idle'), up = desk.filter((h: any) => h.state !== 'dead').length;
+      tale.push(`the lot, start ${seed}: ${asked ? 'the desk called' : up ? 'no call, a desk man still up' : 'the desk down inside its six seconds, nobody called'}`); if (!asked && up) honest = false; }
+    // from the other way in (the dark west side, on the records room's own door) the desk hears it and lives to say so
+    { const W = await stand('records.json', 21, ON, RAIDS['records.json'], 2); const g = W.game, Q = g.qrf, rx = tapRadio(g), R = g.level.scenarios.response; goLoud(W);
+      const asked = steps(W, 14, () => Q.state !== 'idle'), ask = rx.find(l => /we are being hit/.test(l.text))?.text ?? ''; steps(W, 120, () => Q.state === 'arriving');
+      const D = dealOf(g), men = Q.men as any[], y = D ? R.ways[D.way] : null;
+      const side = men.length > 0 && men.every(m => m.team === 'hostile' && m.callsign.startsWith(R.tag + '-')), eleven = g.nightBreach.hostiles.length + men.length;
+      const apart = y ? Math.min(...squadOf(g).map(p => flat(p, y.muster[0]))) : 0;
+      ok = asked && g.roomClear.way === 1 && /the records office/.test(ask) && /the night patrol/.test(ask) && side && men.length >= R.men[0] && men.length <= R.men[1] && eleven <= 11 && apart >= RESPONSE.clearM;
+      if (asked) got = `"${ask.slice(0, 70)}" · ${men.length} came (${men.map(m => `${m.callsign} ${m.team}`).join(', ') || 'nobody'}) by ${y?.name ?? '—'}, ${f1(apart)} m from the nearest of the pair · enemies in all ${eleven}`; }
+    ROOMCLEAR.way = 0;
+    line(honest && ok, '(21) a raid on the records office: from the lot the night desk is the first man met, and a start is a call or the desk down inside its six seconds; from the other way in a man of the desk asks for the patrol, and it comes on the defenders\' side, two men, by a way neither of the pair stands at, inside the eleven',
+      `${tale.join(' · ')} · the other way in: ${got}`); }
 
   Object.assign(RESPONSE, was); PICTURE.on = picWas;
   console.log(`\n=== response-check: ${all ? 'ALL PASS' : 'SOME FAILED'} ===`);

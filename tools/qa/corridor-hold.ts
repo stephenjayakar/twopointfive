@@ -64,7 +64,7 @@ function put(name: string, o: Record<string, unknown>, undo: (() => void)[]) {
 }
 
 /** the player's own hold: where Sam stands · he shoots what he has a line to */
-export interface SamHold { at: [number, number] | null; shoot: boolean; leave?: { t: number; at: [number, number] } | null }
+export interface SamHold { at: [number, number] | null; shoot: boolean; leave?: { t: number; at: [number, number] } | null; /** rows put `t` seconds into the hold (and put back as it ends): the same fight up to there, a rule changed from there */ flip?: { t: number; set: Record<string, Record<string, unknown>> } | null }
 export async function holdRun(scn: string, seed: number, secs = SECS, set = SET, trace = TRACE, hold: SamHold = { at: SAM, shoot: SHOOT, leave: LEAVE }): Promise<HoldRun> {
   const E = (SCENARIOS as any[]).find(e => e.id === scn); if (!E) throw new Error(`no squad mission '${scn}' (${(SCENARIOS as any[]).map(e => e.id).join(' ')})`);
   const out: HoldRun = { scn, seed, secs, hostiles: 0, kills: [], walkIns: [], fed: 0, afterLoss: 0, teamDown: 0, team: 0, samHits: 0, stops: { held: 0, door: 0, shot: 0 }, notes: [] };
@@ -110,9 +110,10 @@ export async function holdRun(scn: string, seed: number, secs = SECS, set = SET,
     if (!NOHIT) { let best: any = null, bd = Infinity; for (const h of foes()) { const D = fight.defs?.find((d: any) => d.gd === h); if (!D?.room) continue; const d = flat(h.char.pos, sam); if (d < bd) { bd = d; best = h; } }
       if (best) { hitAt = [best.char.pos[0], 1, best.char.pos[2]]; out.notes.push(`first hit: ${best.callsign} ${at(best.char.pos)}`); const d = [best.char.pos[0] - sam[0], 0, best.char.pos[2] - sam[2]], l = Math.hypot(d[0], d[2]) || 1;
         home.delete(best); g.events.push({ kind: 'shot', pos: [sam[0], 1, sam[2]], time: g.time, loud: true, level: 1, who: g.player.char.id } as any); killGuard(g, best, [d[0] / l, 0, d[2] / l], false, 'shot', 'player'); was.set(best, { p: hitAt, line: false, up: false }); out.hostiles--; } }
-    let t0 = g.time, nextNoise = 1, downSeen = 0, k = 0, hf = 0, seenAt = new Map<any, number>(), nextShot = 0, left = false;
+    let t0 = g.time, nextNoise = 1, downSeen = 0, k = 0, hf = 0, seenAt = new Map<any, number>(), nextShot = 0, left = false, flipped = false;
     for (let f = 0; f < secs * 60; f++) {
       const t = g.time - t0;
+      if (hold.flip && !flipped && t >= hold.flip.t) { flipped = true; for (const [n, o] of Object.entries(hold.flip.set)) put(n, o, undo); say(`  ${t.toFixed(1).padStart(6)}  ○ rows put: ${JSON.stringify(hold.flip.set)}`); }
       if (hold.leave && !left && t >= hold.leave.t) { left = true; g.teleportPlayer([hold.leave.at[0], 0, hold.leave.at[1]]); seenAt.clear(); say(`  ${t.toFixed(1).padStart(6)}  ○ Sam leaves the hold for (${hold.leave.at[0]}, ${hold.leave.at[1]})`); }
       if (hold.shoot) {   // Sam's rifle: the nearest man he has had a line of fire to for a third of a second
         const pc = g.player.char; let tgt: any = null, td = Infinity;

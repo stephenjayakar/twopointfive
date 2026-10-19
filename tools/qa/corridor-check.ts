@@ -19,7 +19,11 @@
 //   5  nothing was added: the same number of defenders stand in both arms, and the off arm ran none of the rule
 //   6  a look round the corner (the records office, the hold of the maintainer's own replay: Sam outside the west wall shooting what comes out of the records
 //      door, placement 1631): while he stays, a man comes to the corner for a look, finds him still on it and gets back alive — the lane stands
+//      (THE FLOOR AS DEALT, 10-18: with squads from the rooms — squaddeal.ts, on in the page — the office's four are one squad and come to the hit room
+//      together, so the lane this hold opens is the TEAM's, down the front door, and the look is taken at that door; line 14 is about how they get there)
 //   7  the same hold, Sam gone from it after 30 s: a look finds the lane empty and it is forgotten
+//      (played with squads from the rooms held off — `AS_WRITTEN`: only Sam can leave a hold here, and on the floor as dealt the guns the lane knows
+//      are the team's, which stay. The floor this line was written on.)
 //   8  held at two angles (150 s a hold): a man goes round as far as where the guns would first see him and sets there, and fire comes from a
 //      corner. Asked of `PIN_HOLDS` in turn: `PIN_FLOOR` holds must show all three (a man set, a man sent to his corner, a round fired from it) — it
 //      stops at the second that does, or once the floor is out of reach. Why not one hold: it stood on one seed of the old block until the squad's own
@@ -27,6 +31,10 @@
 //      NEVER SHOWS IT (10-13: one hall, and every way to the hall's far side crosses it in the guns' sight for 30 m — `round()` says "no way round" on
 //      all twelve holds), so the line is asked of the two charges (`defuse-four`: seeds 7, 8, 10 of 1‥12 show it on the page's stand) and the glasshouse
 //      (seed 7). A quarter of a floor's holds showing it is what there is; the floor is there so a real drop reads red more often than not.
+//      PLAYED WITH SQUADS FROM THE ROOMS HELD OFF (10-18, `AS_WRITTEN`): on the two charges as dealt the garrison is two squads that come to a hit room
+//      together and dig in on their squad's word, and there is seldom a man left to send round — 1 of 19 holds set a man on a lane's other side (seed 12
+//      of 1‥19, the page's stand). The line still asks the mechanism, on the floor it was read on; that the dealt floors seldom show it is said in the
+//      area file (docs/agents/enemies.md, the covered lanes), not hidden here.
 //      Two clauses hold SWITCHES, not behaviour: `goes` 0 on every hold played = `LANES.pinGo` ships off (nothing else counts a run-in), and one
 //      hold with `LANES.pin` off sets nobody and sends nobody to a corner
 //   9  a magazine change the rule started behind a corner is counted down ONCE: with the guard code counting the same reload (a man with his head down
@@ -38,21 +46,33 @@
 //  11  a rifle's lane knows the floor its rounds reach THROUGH A PANE (`LANES.glass`: the lane's own lines are asked at the energy of the gun that opened
 //      it; a man stopped 'out of the guns' line' behind the records hall's pane was shot through it); with the key off the pane hides that floor
 //      (10 and 11 alone: `--mends`, ~10 s)
-//  12  a grenade down the lane that pins him (`LANES.frag`, 10-13): in one of line 8's holds a man held on a lane who carries a grenade throws it, and it
+//  12  a grenade down the lane that pins him (`LANES.frag`, 10-13): in one of `FRAG_HOLDS` (the floor as dealt) a man held on a lane who carries a grenade throws it, and it
 //      bursts within `FRAG_NEAR` m of where one of the team stood (the team here may get off it, and Sam cannot be hurt: the line asks where it burst, not
 //      who it hit); nobody is lost throwing one on the holds played; and the same hold with that key off: no man held on a lane throws. `FRAG_HOLDS` are
-//      asked only if none of line 8's holds shows one. (The floor deals one defender in three a grenade, three a floor — frag.ts — so a hold with no
+//      asked in turn until one shows it (until 10-18 the line rode line 8's holds; those are now played as written). (The floor deals one defender in three a grenade, three a floor — frag.ts — so a hold with no
 //      carrier held on a lane shows none: of the two charges' seeds 1‥24 on the page's stand, 18 show one.)
 //  13  his own while he throws (`LANES.fragOwn`, 10-15): a man who has shouted for a lane is not walked off his arc by the dig-in inside the wind-up's second
 //      (the room fight plants a man who has arrived, the dig-in adopts a planted man and sends him to its cover: he then kept the grenade and said so).
 //      `OWN_HOLDS` in turn, each cut short just past the throw, until one shows it: with the key off a lane grenade stays in a hand; on, that grenade
-//      leaves it and none stays. THE OFF ARM IS ABOUT THE BASE: it needs a hold where the dig-in takes a thrower inside his second — 2 of the two
+//      leaves it (one more away than off) and none stays. THE OFF ARM IS ABOUT THE BASE: it needs a hold where the dig-in takes a thrower inside his second — 2 of the two
 //      charges' seeds 1‥24 on the page's stand of 10-15 (10 and 12). A later step that moves those two fights reds this line with the rule intact: play
-//      `corridor-hold.ts --scn defuse-four --seeds 1-24 --secs 150 --level hard --set '{"LANES":{"fragOwn":false}}'` and re-pick from `fragKept`
-// CORRIDOR_BREAK=1 = the 'on' arm played with the switch left off: lines 2‥4 and 6‥13 must FAIL (exit 1).
-// Lines 6 to 13 are always asked of the page's stand (TPS_PROFILE=shipped): run from the frozen stand (probes.ts) they are played in a child of this file
+//      `corridor-hold.ts --scn defuse-four --seeds 1-24 --secs 150 --level hard --set '{"LANES":{"fragOwn":false},"SQUADDEAL":{"on":false}}'` and re-pick
+//      from `fragKept`. RE-PICKED 10-18 and PLAYED `AS_WRITTEN` since: steps since 10-15 had moved both fights with squads held off too (of seeds 1‥24
+//      only 6 and 11 keep a grenade, and 6's is not the dig-in's doing), and on the two charges as dealt no hold shows the fault at all (0 of 12, seeds
+//      1‥6 and 13‥18: there the dig-in is the squad's word). THE ON ARM since then is the off arm's own fight with the key put on partway
+//      (corridor-hold.ts `flip`, `OWN_HOLDS`' fourth number): the key changes the fight from the hold's first lane grenade on, so two whole runs no
+//      longer meet at the same shout — seed 11's kept grenade is its second
+//  14  the doorway drill is asked again (`LANES.drill`, 10-18): line 6's hold on the floor as dealt. The first man lost in the front door marks it for the
+//      drill AND opens the lane, and the drill took the next men in the second before the lane was called: with the key off a second man (and a third) is
+//      lost slicing the same door `LATE` s or more after the first, the lane long called (45 s played); on, line 6's own run loses nobody after the
+//      first, and men are stopped short of the lane.
+//      THE OFF ARM IS ABOUT THE BASE, as line 13's is: a step that keeps the drill off that door some other way reds this line with the rule intact
+// CORRIDOR_BREAK=1 = the 'on' arm played with the switch left off: lines 2‥4 and 6‥14 must FAIL (exit 1).
+// (Lines 7, 8 and 13 are played on the page's stand with ONE row of it put off, `SQUADDEAL.on` — each says why: they ask the rule's mechanism on the floor
+// it was read on, and no longer say what the page's own dealt floors do. Lines 6, 12 and 14 are the floors as the page deals them.)
+// Lines 6 to 14 are always asked of the page's stand (TPS_PROFILE=shipped): run from the frozen stand (probes.ts) they are played in a child of this file
 // (`--look`), since on the frozen stand nobody is sent at the lane and so nobody is held at its mouth to look (and no round passes glass).
-// Exit 0 = all pass, 1 = a FAIL or an error. ~4 min on a quiet four-core box (three holds an arm; a red line 8 plays up to four holds: a minute more; line 13 two short holds, four when its first no longer shows the fault). Checked headless only: the team here cannot be flashed blind the way a player is on the page.
+// Exit 0 = all pass, 1 = a FAIL or an error. ~6 min on a quiet four-core box (three holds an arm; a red line 8 plays up to four holds: a minute more; line 13 two short holds, four when its first no longer shows the fault). Checked headless only: the team here cannot be flashed blind the way a player is on the page.
 import type { HoldRun } from './corridor-hold';
 if (import.meta.main) process.env.TPS_PROFILE ??= 'shipped';   // (run by name: the page's stand; under probes.ts the runner's own — the check holds on both)
 const { holdRun } = await import('./corridor-hold');
@@ -61,19 +81,25 @@ const argv = import.meta.main ? process.argv.slice(2) : [], flag = (n: string) =
 const seeds = (flag('--seeds') ?? '5,7,12').split(',').map(Number), SECS = Number(flag('--secs') ?? 100), SCN = flag('--scn') ?? 'block-squads';
 const BREAK = process.env.CORRIDOR_BREAK === '1';
 /** line 8's holds, in the order asked (four that showed it when the list was made: 10-13, on the rebuilt floors and with `LANES.frag` in — the grenade
- *  moves these fights, and the list before it showed none), and how many of them must show it */
+ *  moves these fights, and the list before it showed none; played `AS_WRITTEN` since 10-18, where 16, 22 and 23 still show it), and how many of them must show it */
 const PIN_HOLDS: [string, number][] = [['defuse-four', 16], ['defuse-four', 22], ['defuse-four', 23], ['defuse-four', 11]], PIN_FLOOR = 2;
-/** line 12: more holds to ask if none of line 8's shows a grenade · how near where one of the team stood it must burst, m */
-const FRAG_HOLDS: [string, number][] = [['defuse-four', 3], ['defuse-four', 14], ['defuse-four', 9]], FRAG_NEAR = 5;
-/** line 13's holds: scenario, seed, seconds (the shout comes at 31 s on the first, 96 s on the second, on the page's stand of 10-15) */
-const OWN_HOLDS: [string, number, number][] = [['defuse-four', 12, 45], ['defuse-four', 10, 110]];
+/** line 12's holds, the floor as dealt, in the order asked (16 and 22 showed it on the build of 10-18) · how near where one of the team stood it must burst, m */
+const FRAG_HOLDS: [string, number][] = [['defuse-four', 16], ['defuse-four', 22], ['defuse-four', 3], ['defuse-four', 4]], FRAG_NEAR = 5;
+/** lines 7, 8 and 13: the floor those holds were read on — the one row `SQUADDEAL.on` (squads from the rooms, squaddeal.ts) put off for the run, so a level
+ *  whose file names no squads is one pool; holdRun puts every row back as the run ends */
+const AS_WRITTEN = { SQUADDEAL: { on: false } };
+/** line 13's holds: scenario, seed, seconds, and when the on arm's key goes on (seed 11, the build of 10-18, `AS_WRITTEN`: the hold's second lane grenade is
+ *  shouted at 56 s and the dig-in has the man a tenth of a second later) */
+const OWN_HOLDS: [string, number, number, number][] = [['defuse-four', 11, 70, 40]];
+/** line 14: a loss this long after the hold's first is a loss AFTER the lane was called (lanes.ts `callSecs` is 0.9), s */
+const LATE = 2;
 const stat = (r: HoldRun, k: string) => Number((r.lanes as Record<string, number> | undefined)?.[k] ?? 0);
 
 /** lines 6 and 7: the corner look on the records office hold (the page's stand) */
 async function lookLines(check: (ok: boolean, what: string) => void): Promise<void> {
   const LOOK = { LANES: { on: !BREAK } }, at: [number, number] = [9.6, 22.6];
   const stay = await holdRun('records-pair', 1631, 110, LOOK, false, { at, shoot: true });
-  const gone = await holdRun('records-pair', 1631, 200, LOOK, false, { at, shoot: true, leave: { t: 30, at: [14, 27.5] } });
+  const gone = await holdRun('records-pair', 1631, 200, { ...LOOK, ...AS_WRITTEN }, false, { at, shoot: true, leave: { t: 30, at: [14, 27.5] } });
   for (const r of [stay, gone]) if (r.error) console.log(`  ERROR ${r.scn}:${r.seed} ${r.error}`);
   console.log(`  records office, Sam on the west wall: stays — looks ${stat(stay, 'peeks')}, found him there ${stat(stay, 'peekThere')}, found it clear ${stat(stay, 'peekClear')}, lost on a look ${stat(stay, 'peekLost')}, ${stay.kills.length} of ${stay.hostiles} down · leaves at 30 s — looks ${stat(gone, 'peeks')}, found it clear ${stat(gone, 'peekClear')}, lanes still known ${stat(gone, 'live')}`);
   check(!stay.error && stat(stay, 'peekThere') >= 1 && stat(stay, 'peekClear') === 0 && stat(stay, 'peekLost') === 0 && stat(stay, 'live') >= 1, 'a look round the corner finds the guns still on it, costs nobody, and the lane stands');
@@ -81,33 +107,33 @@ async function lookLines(check: (ok: boolean, what: string) => void): Promise<vo
   const shows = (r: HoldRun) => !r.error && stat(r, 'sets') >= 1 && stat(r, 'pins') >= 1 && stat(r, 'pinRounds') >= 1;
   const played: HoldRun[] = [];
   for (const [scn, seed] of PIN_HOLDS) {
-    const r = await holdRun(scn, seed, 150, LOOK, false); played.push(r);
+    const r = await holdRun(scn, seed, 150, { ...LOOK, ...AS_WRITTEN }, false); played.push(r);
     if (r.error) { console.log(`  ERROR ${r.scn}:${r.seed} ${r.error}`); break; }
     const n = played.filter(shows).length;
     if (n >= PIN_FLOOR || n + PIN_HOLDS.length - played.length < PIN_FLOOR) break;
   }
   const shown = played.filter(shows), bad = played.some(r => r.error), ran = played.reduce((a, r) => a + stat(r, 'goes'), 0);
-  const one = bad ? null : await holdRun((shown[0] ?? played[0]).scn, (shown[0] ?? played[0]).seed, 150, { LANES: { on: !BREAK, pin: false } }, false);
+  const one = bad ? null : await holdRun((shown[0] ?? played[0]).scn, (shown[0] ?? played[0]).seed, 150, { LANES: { on: !BREAK, pin: false }, ...AS_WRITTEN }, false);
   if (one?.error) console.log(`  ERROR ${one.scn}:${one.seed} ${one.error}`);
   console.log(`  two angles, holds played: ${played.map(r => `${r.scn} ${r.seed} — set ${stat(r, 'sets')}, sent to a corner ${stat(r, 'pins')}, rounds from it ${stat(r, 'pinRounds')}, firers lost ${stat(r, 'pinLost')}, ${r.kills.length} of ${r.hostiles} down`).join(' · ')} · sent in under it on any hold ${ran}${one ? ` · ${one.scn} ${one.seed} with that off: set ${stat(one, 'sets')}, sent to a corner ${stat(one, 'pins')}, ${one.kills.length} of ${one.hostiles} down` : ''}`);
   check(!bad && shown.length >= PIN_FLOOR && ran === 0 && !!one && !one.error && stat(one, 'sets') === 0 && stat(one, 'pins') === 0, `held at two angles: in ${shown.length} of ${played.length} holds played a man sets on the lane's other side and fire comes from a corner (${PIN_FLOOR} wanted of ${PIN_HOLDS.length} at most), nobody is sent in; off, neither`);
-  // line 12: a grenade down the lane (asked of the holds line 8 has just played, then of FRAG_HOLDS)
-  const threw = (r: HoldRun) => !r.error && stat(r, 'frags') >= 1 && (r.frags?.bursts ?? []).some(b => b.lane && b.teamM <= FRAG_NEAR), asked = [...played];
+  // line 12: a grenade down the lane (asked of FRAG_HOLDS, the floor as dealt, until one shows it)
+  const threw = (r: HoldRun) => !r.error && stat(r, 'frags') >= 1 && (r.frags?.bursts ?? []).some(b => b.lane && b.teamM <= FRAG_NEAR), asked: HoldRun[] = [];
   for (const [scn, seed] of FRAG_HOLDS) {
-    if (bad || asked.some(threw)) break;
+    if (asked.some(threw)) break;
     const r = await holdRun(scn, seed, 150, LOOK, false); asked.push(r);
     if (r.error) { console.log(`  ERROR ${r.scn}:${r.seed} ${r.error}`); break; }
   }
-  const fr = asked.find(threw) ?? null, lost = asked.reduce((a, r) => a + stat(r, 'fragLost'), 0);
+  const fr = asked.find(threw) ?? null, lost = [...played, ...asked].reduce((a, r) => a + stat(r, 'fragLost'), 0);   // (nobody lost throwing: line 8's holds count too)
   const dry = fr ? await holdRun(fr.scn, fr.seed, 150, { LANES: { on: !BREAK, frag: false } }, false) : null;
   if (dry?.error) console.log(`  ERROR ${dry.scn}:${dry.seed} ${dry.error}`);
   console.log(`  a grenade down the lane, holds asked: ${asked.map(r => `${r.scn} ${r.seed} — thrown by a man held on a lane ${stat(r, 'frags')}, lost throwing ${stat(r, 'fragLost')}, bursts of theirs ${(r.frags?.bursts ?? []).map(b => `${b.teamM} m from where the team stood${b.lane ? ' (his)' : ''}`).join(', ') || 'none'}`).join(' · ')}${dry ? ` · ${dry.scn} ${dry.seed} with that off: thrown by a man held on a lane ${stat(dry, 'frags')}` : ''}`);
   check(!!fr && lost === 0 && !!dry && !dry.error && stat(dry, 'frags') === 0, `a grenade down the lane: a man held on a lane who carries one throws it, and it bursts within ${FRAG_NEAR} m of where the team stood (${asked.filter(threw).length} of ${asked.length} holds asked), nobody lost throwing; off, he never throws`);
   // line 13: from his shout to the throw he is the lane rule's
   let own = false, ownErr = false; const tried: string[] = [];
-  for (const [scn, seed, secs] of OWN_HOLDS) {
-    const off = await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false } }, false), base = !off.error && stat(off, 'fragKept') >= 1;
-    const on = base || BREAK ? await holdRun(scn, seed, secs, LOOK, false) : null;   // (a hold whose off arm no longer shows the fault says nothing: not played on)
+  for (const [scn, seed, secs, from] of OWN_HOLDS) {
+    const off = await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false }, ...AS_WRITTEN }, false), base = !off.error && stat(off, 'fragKept') >= 1;
+    const on = base || BREAK ? await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false }, ...AS_WRITTEN }, false, { at: null, shoot: false, flip: { t: from, set: { LANES: { fragOwn: true } } } }) : null;   // (the off arm's own fight up to `from`, the key on from there: the same shout, asked both ways)   // (a hold whose off arm no longer shows the fault says nothing: not played on)
     for (const r of [off, on]) if (r?.error) { console.log(`  ERROR ${r.scn}:${r.seed} ${r.error}`); ownErr = true; }
     tried.push(`${scn} ${seed} (${secs} s) — off: away ${stat(off, 'frags')}, stayed in a hand ${stat(off, 'fragKept')}${on ? ` · on: away ${stat(on, 'frags')}, stayed ${stat(on, 'fragKept')}` : ' · on: not played'}`);
     if (ownErr) break;
@@ -115,6 +141,12 @@ async function lookLines(check: (ok: boolean, what: string) => void): Promise<vo
   }
   console.log(`  his own while he throws, holds asked: ${tried.join(' · ')}`);
   check(own && !ownErr, `his own while he throws: a man who has shouted for a lane is not walked off his arc before the grenade leaves his hand (off: the dig-in takes him and it stays in his hand)`);
+  // line 14: the doorway drill is asked again once the lane is called (line 6's run is the on arm)
+  const once = await holdRun('records-pair', 1631, 45, { LANES: { on: !BREAK, drill: false } }, false, { at, shoot: true });
+  if (once.error) console.log(`  ERROR ${once.scn}:${once.seed} ${once.error}`);
+  const late = (r: HoldRun) => r.kills.filter(k => k.t > r.kills[0].t + LATE).length;   // (men lost after the first by more than the time a lane takes to be called)
+  console.log(`  the drill asked again, the records office as dealt: asked once — ${once.kills.length} of ${once.hostiles} down in 45 s, ${late(once)} of them after the lane was called, stopped short ${stat(once, 'held')} · asked again — ${stay.kills.length} of ${stay.hostiles} down in 110 s, ${late(stay)} after the call, stopped short ${stat(stay, 'held')}`);
+  check(!once.error && !stay.error && late(once) >= 1 && late(stay) === 0 && stat(stay, 'held') >= 1, `the doorway drill is asked again: a man it took before the lane was called does not slice the door into it (off: a second man is lost in the same door after the call)`);
   await reloadLine(check);
   await mendLines(check);
 }
