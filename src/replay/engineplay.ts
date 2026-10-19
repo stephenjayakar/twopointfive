@@ -55,6 +55,7 @@ import { clamp, DEG } from '../math/vec';
 import { Input } from '../game/input';
 import type { Game } from '../game/game';
 import type { LoopCtx } from '../host/loop';
+import type { Tween, TweenCam } from '../host/tween';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
@@ -70,6 +71,27 @@ export const PLAYTAPE = 'playtape';
 const TOL = 0.15;
 /** steps run and not drawn in one frame at most (a slow display plays slow, it does not spiral) · milliseconds of a frame a seek may take */
 const BURST = 6, SEEK_MS = 14;
+/** THE PACES THE BAR OFFERS, slowest first ([ and ] step along them). Under 1 a tape step lasts several frames of the display, and where the page draws between
+ *  ticks (host/tween.ts TWEEN; `?tween=0` = off) the picture is drawn BETWEEN the tape's last two steps instead of standing still until the next: the men, what
+ *  they carry, doors, lights and the recorded camera move every frame. Only the picture: the steps a slow replay runs are the steps a fast one runs, in order.
+ *  On a tape of uneven steps (one from before the fixed step) a step's movement is shown over the NEXT step's length: unbroken, and a little off the pace. */
+export const SPEEDS = [0.25, 0.5, 1, 2, 4];
+const SPEED_NAME = ['¼×', '½×', '1×', '2×', '4×'];
+/** ONE FRAME'S STEPS: `wall` seconds of the display at `speed`, on top of the time already `owed`, from step `f` of a tape whose step n starts at `tAt[n]` → how
+ *  many steps this frame runs and the time still owed after them. A frame runs no more than BURST × speed steps (a slow display plays slow, it does not spiral),
+ *  and one that hits that cap owes nothing after it. */
+export function paceFrame(owed: number, wall: number, speed: number, f: number, ticks: number, tAt: ArrayLike<number>): { n: number; owed: number } {
+  owed += wall * speed; let n = 0;
+  while (n < BURST * speed && f + n < ticks && owed >= tAt[f + n + 1] - tAt[f + n]) { owed -= tAt[f + n + 1] - tAt[f + n]; n++; }
+  if (n >= BURST * speed) owed = 0;
+  return { n, owed };
+}
+/** HOW FAR A SLOW FRAME STANDS BETWEEN THE LAST TWO STEPS: the time owed the next step ÷ that step's length, 0 (the step before the last) up to, never at, 1 (the
+ *  last). A frame drawn right after a step starts from the step before it, so the picture moves on from where the frame before left it and never jumps ahead:
+ *  the picture reaches a step as the next one runs, whatever the two steps' lengths. */
+export function slowBlend(owed: number, next: number): number { const a = next > 0 && !SLOMO_BREAK ? owed / next : 1; return a >= 1 ? 1 - 1e-6 : a > 0 ? a : 0; }
+/** `SLOMO_BREAK=1` (tools/qa/slomo-check.ts's): a slow frame stands on the last step, as the paces above 1 always have */
+const SLOMO_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SLOMO_BREAK ?? '') === '1'; } catch { return false; } })();
 /** the free camera: the keys that slide it · its tilt and zoom limits · metres it may be taken from the recorded look-at point · pixels a press may travel and still be a click · where a seek backwards keeps it */
 const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PITCH_MAX = 89 * DEG, DIST_MIN = 3, DIST_MAX = 60, FAR_M = 80, DRAG_PX = 5, CAM_KEEP = 'twopointsix.tapecam', SHOT_S = 1;
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
@@ -138,6 +160,8 @@ export class TapePlay {
   readonly tape: RunTape | null; readonly D: Decoded | null;
   /** steps run so far = the next step to run */
   f = 0; playing = false; ended = false; speed = 1; seekTo = -1;
+  /** the length of the last step run (s): a slow frame's picture is that much of it behind the game's clock */
+  private lastDt = 0;
   /** the first step is owed to the still the page opens on (set where the tape attaches; never under the harness's `paused`) */
   private poster = false;
   private host: TapeHost | null = null;
@@ -146,7 +170,7 @@ export class TapePlay {
   private walk: TapeWalk | null = null;
   private byN = new Map<number, number>(); private tAt: Float64Array = new Float64Array(1); private simTime = 0; private owed = 0; private first = true;
   private compared = 0; private drift: TapeState['drift'] = null; private worst: TapeState['worst'] = null; private fp: TapeState['fp'] = 'unknown';
-  private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speed: HTMLButtonElement; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
+  private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speeds: HTMLButtonElement[]; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
   /** the map's floor, drawn once a size · the trace sample the run last stood on (its clock is the rounds' clock) · the cast's names by character id */
   private floors = new Map<HTMLCanvasElement, { c: HTMLCanvasElement; W: number; H: number; dpr: number; fit: MapFit }>(); private lastSi = -1; private names = new Map<number, string>();
   private noting: { pos: [number, number] | null; f: number; was: boolean } | null = null; private audioWas: boolean | null = null;
@@ -204,17 +228,17 @@ export class TapePlay {
     const c = (this.tape.recipe.env as { canister?: Plain } | null)?.canister; if (c && h.smoke?.params) Object.assign(h.smoke.params, c);
     const walk = this.walk!; g.sensors.read = (key: string): number | undefined => walk.read(key);   // (the tape's answer for this step's k-th read of the key; a read the tape never made = the last value, counted)
     this.build();
-    try { const k = sessionStorage.getItem(CAM_KEEP); sessionStorage.removeItem(CAM_KEEP); const o = k ? JSON.parse(k) as { src: string; free?: Partial<TapeView>; nofog?: boolean; nv?: boolean } : null; if (o && o.src === this.src) { if (o.nofog) this.nofog = true; if (typeof o.nv === 'boolean') { this.nvView = o.nv; this.nvK = o.nv ? 1 : 0; this.nvTrack = false; } if (o.free) { this.camSet(o.free); if (new URLSearchParams(location.search).has('at')) this.ui?.big.remove(); } } } catch { /* no store, or not ours: the recording's camera */ }
+    try { const k = sessionStorage.getItem(CAM_KEEP); sessionStorage.removeItem(CAM_KEEP); const o = k ? JSON.parse(k) as { src: string; free?: Partial<TapeView>; nofog?: boolean; nv?: boolean; speed?: number } : null; if (o && o.src === this.src) { if (o.nofog) this.nofog = true; if (typeof o.speed === 'number' && SPEEDS.includes(o.speed)) this.speed = o.speed; if (typeof o.nv === 'boolean') { this.nvView = o.nv; this.nvK = o.nv ? 1 : 0; this.nvTrack = false; } if (o.free) { this.camSet(o.free); if (new URLSearchParams(location.search).has('at')) this.ui?.big.remove(); } } } catch { /* no store, or not ours: the recording's camera */ }
     const at = Number(new URLSearchParams(location.search).get('at')); if (Number.isFinite(at) && at > 0) this.seekTo = Math.min(this.tape.ticks, Math.floor(at));
     this.poster = !new URLSearchParams(location.search).has('paused');
-    (window as unknown as { __tape: unknown }).__tape = { play: () => this.play(), pause: () => this.pause(), run: (n: number, draw = true) => this.run(n, draw), seek: (f: number) => this.seek(f), note: (text: string, pos: [number, number] | null = null) => this.addNote(text, pos, this.f),
+    (window as unknown as { __tape: unknown }).__tape = { play: () => this.play(), pause: () => this.pause(), run: (n: number, draw = true) => this.run(n, draw), seek: (f: number) => this.seek(f), speed: (x?: number) => this.speedSet(x), note: (text: string, pos: [number, number] | null = null) => this.addNote(text, pos, this.f),
       cam: (p: Partial<TapeView> | null) => this.camSet(p), get view() { return me.view(); }, map: (open?: boolean) => this.mapOpen(open), fog: (on?: boolean) => this.fogSet(on), nv: (on?: boolean | null) => this.nvSet(on),
       get state() { return me.state(); }, get file() { return me.F; }, get notes() { return me.F?.notes ?? []; } };
   }
   state(): TapeState { return { f: this.f, ticks: this.tape?.ticks ?? 0, playing: this.playing, ended: this.ended, seeking: this.seekTo > this.f, speed: this.speed, compared: this.compared, unjournaled: this.walk?.unjournaled ?? 0, free: !!this.free, fog: !this.nofog, nv: this.nvView, tube: this.tube(), map: !!this.ui && !this.ui.modal.hidden, drift: this.drift, worst: this.worst, notes: this.F?.notes.length ?? 0, id: this.id, fp: this.fp, refuse: this.refuse }; }
 
   // ------------------------------------------------------------------------------------------------------------------------ one step of the tape
-  private stepOne(): number {
+  private stepOne(played = false): number {
     const h = this.host!, g = h.game, T = this.tape!, W = this.walk!, f = this.f, I = this.simInput, cam = this.simCam, cv = this.simView;
     if (this.first) { this.first = false; const rc = T.recipe, kn = rc.knobs as { tune?: Plain } | null; this.tables(); g.fogOfWar.pageLook(); if (kn?.tune) K.assignDeep(g.tune as never, kn.tune); }   // (the last word over what the boot wrote after the staging: this machine's sandbox row, its kept feel rows)
     for (const [, kind, data] of W.outside()) {
@@ -224,12 +248,14 @@ export class TapePlay {
       else if (kind === 'table') { const [name, src] = data as [string, unknown]; const Tb = (K.knobsPlayed() as Record<string, Plain>)[name]; if (Tb && plain(src)) put(Tb, src); if (name === 'FOG') g.fogOfWar.pageLook(); }
       else if (kind === 'kit') this.kitOf(data); }
     h.pre?.(); this.env(h.engine.settings);
+    const tw = played ? this.slow() : null; if (tw?.stale) this.blendEnd(tw);   // (a slow replay's first step: what stands before it is what its picture is drawn FROM)
     const dt = W.step(cv, I);
     W.layCamera(cam);   // (tapewalk.ts: the pose, and the matrices the page's step read, as tools/qa/rerun.ts lays them)
     try { g.update(dt, I, cam, cv as unknown as HTMLCanvasElement); } catch (e) { W.failed(); throw e; }
     W.done();
     if (g.mission.debrief) g.mission.debrief = false;   // (the page's own line after a step: the end card's flag is taken — the card itself is not opened over a replay)
-    this.simTime += dt; h.engine.lights.update(dt, this.simTime); this.f = f + 1;
+    this.simTime += dt; h.engine.lights.update(dt, this.simTime); this.f = f + 1; this.lastDt = dt;
+    if (tw) this.blendEnd(tw); else { const lt = h.loop.tween; if (lt && !lt.stale) lt.rest(); }   // (a step no slow frame will draw between — a seek, a script's, a faster pace — ends the blend: nothing is ever drawn across it)
     this.hold(f + 1); return dt;
   }
   /** the men's places against the trace's sample of this step (rerun.ts's compare) */
@@ -262,9 +288,8 @@ export class TapePlay {
         while (this.f < this.seekTo && this.f < T.ticks && performance.now() - t0 < SEEK_MS) { const dt = this.stepOne(); h.smoke?.update(dt); this.between(); }
         if (this.f >= this.seekTo || this.f >= T.ticks) this.seekDone();
       } else if (this.playing) {
-        this.owed += wallDt * this.speed; let n = 0;
-        while (n < BURST * this.speed && this.f < T.ticks && this.owed >= this.tAt[this.f + 1] - this.tAt[this.f]) { this.owed -= this.tAt[this.f + 1] - this.tAt[this.f]; if (n) this.between(); simDt += this.stepOne(); n++; }
-        if (n >= BURST * this.speed) this.owed = 0;
+        const P = paceFrame(this.owed, wallDt, this.speed, this.f, T.ticks, this.tAt); this.owed = P.owed;
+        for (let n = 0; n < P.n; n++) { if (n) this.between(); simDt += this.stepOne(true); }
       }
       if (this.f >= T.ticks && !this.ended) { this.ended = true; this.playing = false; this.seekDone(); }
     }
@@ -292,7 +317,13 @@ export class TapePlay {
     const h = this.host!, L = h.loop, g = h.game, cam = h.cam;
     // the picture's camera: the tape's pose for the NEXT step (= the camera the recording drew this step with), the window's own aspect (engine.render sets it)
     // …or wherever the viewer has put it (`free`): the page's camera only — the game's own was laid from the tape in stepOne and is never this one
-    const v = this.view();
+    // A SLOW REPLAY IS DRAWN BETWEEN ITS STEPS (SPEEDS above): this frame's place between the last two, the recorded camera's too, and the picture's own clocks (the
+    // smoke, the particles, the shaders' time) run on the frame's share of the pace instead of standing for the frames a step lasts. The mixer keeps the steps' clock.
+    // Paused, the picture stands where it is, between the two; a script's steps (`run`), a seek and the tape's end are drawn on the step itself.
+    const T = this.tape, tw = this.slow(), blent = !!tw && !tw.stale, a = blent && tw!.have >= 2 && T && this.f < T.ticks ? slowBlend(this.owed, this.tAt[this.f + 1] - this.tAt[this.f]) : 1;
+    if (!tw) { const lt = L.tween; if (lt && !lt.stale) lt.rest(); }   // (the pace is up again: the men's palette on the GPU is the last step's)
+    const pdt = blent && this.playing ? wall * this.speed : dt, tPic = a < 1 ? L.time - (1 - a) * this.lastDt : L.time;
+    const v = this.view(a < 1 ? tw!.camAt(a) : null);
     cam.pin = { look: v.look, yaw: v.yaw, pitch: v.pitch, dist: v.dist }; cam.fov = v.fov; cam.kick = this.simCam.kick;
     // the tube: the run's own value frame for frame until the viewer asks otherwise; then eased on the wall's clock (paused too), and back onto the run's
     const want = this.nvView, to = want === null ? g.player.nvAmount : want ? 1 : 0;
@@ -301,21 +332,41 @@ export class TapePlay {
     const tube = want === null && this.nvTrack ? null : this.nvK > 0.5;
     L.host.settings.nvAmount = this.nvK; L.host.settings.hitFlash = g.player.hitFlash;
     if (L.audio) { const p = g.player.char.pos; L.audio.setListener([p[0], p[1] + 1.6, p[2]], cam.forward); L.audio.update(dt, L.time); }
-    L.smoke?.update(dt);
+    L.smoke?.update(pdt);
     cam.update(dt, g.followPos(), null);
     L.hud?.setCaption('', ''); L.hud?.setTimeline(null, () => { /* */ });
     cam.kickIn();
     try { g.fogLift(this.nofog, tube, g.viewPx(cam, h.canvas));   // (the fog taken off the picture and its HUD, the infrared lines the viewer's tube shows or does not, and laser lines / tracers re-fit to THIS picture's pixel — the step sized them for the recording's view — for this draw only; Game.fogBack puts the step's own lists back)
-      L.render(cam, L.time, dt, L.present()); L.hud?.update(g, cam, h.canvas); L.bubbles?.update(g, cam, h.canvas); }
+      if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own; at 1 — the tape's end — it hands the men's palette back)
+      else L.render(cam, L.time, pdt, L.present());
+      L.hud?.update(g, cam, h.canvas); L.bubbles?.update(g, cam, h.canvas); }
     finally { g.fogBack(); cam.kickOut(); }
     this.mapDraw();
   }
   // ------------------------------------------------------------------------------------------------------------------------ the picture's camera, off the player's view
   /** the framing the next drawn frame takes: the recording's, or the viewer's own */
-  private view(): TapeView & { fov: number } {
-    const c = this.walk?.camNext() ?? [10, 0, 15, 0, 0, 21, 16 / 9, 0.5, 0.18], F = this.free, at: Vec3 = [c[0], c[1], c[2]];
-    return F ? { look: F.look ? [F.look[0], F.look[1], F.look[2]] : at, yaw: F.yaw, pitch: F.pitch, dist: F.dist, fov: c[7] } : { look: at, yaw: c[3], pitch: c[4], dist: c[5], fov: c[7] };
+  private view(between: TweenCam | null = null): TapeView & { fov: number } {
+    const c = this.walk?.camNext() ?? [10, 0, 15, 0, 0, 21, 16 / 9, 0.5, 0.18], F = this.free, B = between, at: Vec3 = B ? [B.target[0], B.target[1], B.target[2]] : [c[0], c[1], c[2]];
+    return F ? { look: F.look ? [F.look[0], F.look[1], F.look[2]] : at, yaw: F.yaw, pitch: F.pitch, dist: F.dist, fov: c[7] } : { look: at, yaw: B ? B.yaw : c[3], pitch: B ? B.pitch : c[4], dist: B ? B.distance : c[5], fov: c[7] };
   }
+  /** the recorded camera as the next drawn frame would take it: one end of a slow frame's blend (tween.ts capture) */
+  private camPose(): TweenCam | null { const c = this.walk?.camNext(); return c ? { target: [c[0], c[1], c[2]], yaw: c[3], pitch: c[4], distance: c[5] } : null; }
+  /** one end of a slow frame's blend: what stands now AS THE PICTURE SHOWS IT — with the fog off the picture, the men and things the fog leaves out too (they
+   *  are drawn, so they are drawn between the steps like everybody else). Between two steps, as a draw's own lift is. */
+  private blendEnd(tw: Tween): void {
+    const g = this.host!.game;
+    if (this.nofog && g.fogOfWar.active) { g.fogLift(true); try { tw.capture(this.camPose()); } finally { g.fogBack(); } } else tw.capture(this.camPose());
+  }
+  /** the page's drawing between ticks, when this replay plays slow enough to need it — null = every frame draws the last step as it is (a pace of 1 or more, a seek
+   *  under way). Not the page's own switch (TWEEN.on): that is the recording's word for its own frames, and a slow replay's frames are the viewer's. */
+  private slow(): Tween | null { const tw = this.host?.loop.tween; return tw && this.speed < 1 && this.seekTo < 0 ? tw : null; }
+  /** the pace: one of SPEEDS (absent = as it is; anything else = the nearest) → the pace now */
+  private speedSet(x?: number): number {
+    if (typeof x === 'number' && Number.isFinite(x) && x > 0) { let best = SPEEDS[0]; for (const s of SPEEDS) if (Math.abs(Math.log(s / x)) < Math.abs(Math.log(best / x))) best = s; if (best !== this.speed) { this.speed = best; this.paint(); } }
+    return this.speed;
+  }
+  /** [ and ]: one pace slower / faster, stopping at the ends */
+  private speedStep(dir: number): void { const i = SPEEDS.indexOf(this.speed); this.speedSet(SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, (i < 0 ? SPEEDS.indexOf(1) : i) + dir))]); }
   /** take the camera from the recording, as it stands this frame */
   private take(): NonNullable<TapePlay['free']> { if (!this.free) { const v = this.view(); this.free = { look: null, yaw: v.yaw, pitch: v.pitch, dist: v.dist }; this.paint(); } return this.free; }
   /** a look-at point kept within reach of the recorded one (a camera flung off the level is a lost camera) */
@@ -374,7 +425,7 @@ export class TapePlay {
   pause(): void { this.playing = false; this.paint(); }
   /** forward = run there unseen; back = the page again from that step (a run cannot be un-played) */
   seek(f: number): void { if (!this.tape) return; f = Math.max(0, Math.min(this.tape.ticks, Math.floor(f))); if (f > this.f) { this.seekTo = f; this.ui?.big.remove(); } else if (f < this.f) this.again(f); }
-  private again(f: number): void { const q = new URLSearchParams(location.search); if (f > 0) q.set('at', String(f)); else q.delete('at'); this.playing = false; try { if (this.free || this.nofog || this.nvView !== null) sessionStorage.setItem(CAM_KEEP, JSON.stringify({ src: this.src, free: this.free ?? undefined, nofog: this.nofog, nv: this.nvView ?? undefined })); } catch { /* */ } void this.saving.finally(() => location.replace(location.pathname + '?' + q.toString())); }   // (a note still on its way to the shelf is kept first)
+  private again(f: number): void { const q = new URLSearchParams(location.search); if (f > 0) q.set('at', String(f)); else q.delete('at'); this.playing = false; try { if (this.free || this.nofog || this.nvView !== null || this.speed !== 1) sessionStorage.setItem(CAM_KEEP, JSON.stringify({ src: this.src, free: this.free ?? undefined, nofog: this.nofog, nv: this.nvView ?? undefined, speed: this.speed })); } catch { /* */ } void this.saving.finally(() => location.replace(location.pathname + '?' + q.toString())); }   // (a note still on its way to the shelf is kept first)
 
   // ------------------------------------------------------------------------------------------------------------------------ notes (the file's own: the 2D viewer shows them)
   private saving: Promise<unknown> = Promise.resolve(); private shelving: Promise<number | null> | null = null; private unkept = false;
@@ -447,6 +498,7 @@ export class TapePlay {
     const t = e.target as HTMLElement | null; if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || (t.tagName === 'TEXTAREA' && t.getAttribute('aria-label') !== 'game input'))) return;
     e.stopImmediatePropagation(); if (!this.tape || !this.ui) return;   // (before the page stands the keys do nothing)
     if (e.code === 'Space') { e.preventDefault(); if (!e.repeat) { if (this.playing) this.pause(); else this.play(); } }
+    else if (e.code === 'BracketLeft') this.speedStep(-1); else if (e.code === 'BracketRight') this.speedStep(+1);
     else if (e.code === 'KeyN' && !e.repeat) { e.preventDefault(); this.noteOpen(null); }
     else if (FLY.has(e.code)) this.held.add(e.code);
     else if (e.code === 'KeyC' && !e.repeat) this.camSet(null);
@@ -468,6 +520,7 @@ export class TapePlay {
 #tapebar .seg button{border:0;border-left:1px solid rgba(233,226,214,.28);border-radius:0;color:rgba(233,226,214,.45)}
 #tapebar .seg button:first-child{border-left:0}
 #tapebar .seg button:hover{color:var(--m-accent,#e8833a)}
+#tapebar .pace button{padding:5px 6px;min-width:1.5em;text-align:center}
 #tapebar .seg button.on{color:var(--m-accent,#e8833a);background:rgba(232,131,58,.16);box-shadow:inset 0 -2px 0 var(--m-accent,#e8833a)}
 #tapebar .gap{width:1px;align-self:stretch;margin:2px 2px;background:rgba(233,226,214,.14)}
 #tapebar .pp{min-width:1.2em;text-align:center}
@@ -518,7 +571,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
       const end = (e: PointerEvent, seek: boolean): void => { if (e.pointerId !== scrub) return; scrub = -1; try { line.releasePointerCapture(e.pointerId); } catch { /* */ } ghost.hidden = true; if (seek) { done = true; go(e); setTimeout(() => { done = false; }, 0); } };
       line.addEventListener('pointerup', e => end(e, true)); line.addEventListener('pointercancel', e => end(e, false));
       line.onclick = e => { if (done) { done = false; return; } go(e); }; }   // (a click with no press before it — a script's — seeks too)
-    const speed = el('button', '', '1×'); speed.onclick = () => { this.speed = this.speed >= 4 ? 1 : this.speed * 2; this.paint(); };
+    const pace = el('div', 'seg pace'), speeds = SPEEDS.map((s, i) => { const b = el('button', '', SPEED_NAME[i]); b.title = s < 1 ? '[ slower · ] faster — slow motion' : '[ slower · ] faster'; b.onclick = () => { b.blur(); this.speedSet(s); }; pace.append(b); return b; });
     const note = el('button', '', 'Note'); note.title = 'N — or click the picture'; note.onclick = () => this.noteOpen(null);
     const save = el('button', 'save', 'Save ↓'); save.title = 'download this replay, your notes in it'; save.onclick = () => { save.blur(); void this.saveFile().then(name => { if (!name) return; save.textContent = 'Saved ✓'; setTimeout(() => { save.textContent = 'Save ↓'; }, 2500); }, () => { /* */ }); };
     let map: HTMLAnchorElement | null = null;
@@ -528,7 +581,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
     const fog = el('button', '', 'Fog'); fog.title = 'F'; fog.hidden = true; fog.onclick = () => this.fogSet();
     const nv = el('button', '', 'NV'); nv.title = 'V'; nv.onclick = () => this.nvSet();
     // three groups, left to right: the run (play, pace, clock, the line) · what the picture shows (lit = on) · what leaves a mark or the page
-    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, speed, time, line, seg, el('i', 'gap'), note, save, ...(map ? [map] : []), say);
+    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, save, ...(map ? [map] : []), say);
     const big = el('div'); big.id = 'tapebig'; big.append(el('b', '', '▶'), el('span', '', `${F.level.scenario || F.level.file || 'the night'} · ${clock(this.tAt[T.ticks])}`)); big.onclick = () => this.play();
     const box = el('div'); box.id = 'tapenote'; box.hidden = true; const field = el('input'); field.type = 'text'; field.maxLength = 400; box.append(field);
     const mini = el('canvas'); mini.id = 'tapemap'; mini.title = 'M'; { const [w, h2] = mapSize(F.map.bounds, 236, 176, 6); mini.style.width = `${w}px`; mini.style.height = `${h2}px`; document.documentElement.style.setProperty('--tape-map', `${w}px`); } mini.onclick = () => this.mapOpen(true);
@@ -541,7 +594,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
     // a click on the picture = a note at that spot of the floor
     const h = this.host!; this.mouse(h.canvas);
     h.canvas.addEventListener('click', e => { if (this.dragged) { this.dragged = false; return; } if (this.noting || !this.tape) return; const r = h.canvas.getBoundingClientRect(); const p = h.cam.groundPoint((e.clientX - r.left) / Math.max(1, r.width), (e.clientY - r.top) / Math.max(1, r.height)); this.noteOpen(p ? [p[0], p[2]] : null); });
-    this.ui = { bar, play, time, line, fill, parted, ticks, speed, view, fog, nv, note, map, say, big, box, field, marks, ghost, mini, modal, large };
+    this.ui = { bar, play, time, line, fill, parted, ticks, speeds, view, fog, nv, note, map, say, big, box, field, marks, ghost, mini, modal, large };
     this.ticks(); this.lay(); this.paint();
   }
   /** a moment of the file's TRACE (seconds from its start) on the tape's clock: the sample at or before it gives the step, the rest is counted on */
@@ -620,7 +673,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
     const seeking = this.seekTo > this.f, d = this.drift, fogged = !!this.host?.game.fogOfWar.active;   // (the switch is on the bar only while the run is under the fog)
     const said = seeking ? '…' : this.unkept ? 'note not kept: no shelf in this browser' : d ? `off the recording from ${clock(this.tAt[Math.min(d.f, T.ticks)])}` : this.compared ? 'as recorded' : '';
     const sig = `${this.playing}|${this.ended}|${Math.round(now * 10)}|${this.speed}|${said}|${!!this.free}|${this.nofog}|${fogged}|${this.nvView}|${this.tube()}`; if (sig === this.painted) return; this.painted = sig;
-    u.play.textContent = this.ended ? '↺' : this.playing ? '❚❚' : '▶'; u.time.textContent = `${clock(now)} / ${clock(end)}`; u.fill.style.width = `${100 * now / end}%`; u.speed.textContent = `${this.speed}×`; u.view.classList.toggle('on', !this.free); u.fog.hidden = !fogged; u.fog.classList.toggle('off', this.nofog); u.fog.classList.toggle('on', !this.nofog); u.nv.classList.toggle('on', this.tube());
+    u.play.textContent = this.ended ? '↺' : this.playing ? '❚❚' : '▶'; u.time.textContent = `${clock(now)} / ${clock(end)}`; u.fill.style.width = `${100 * now / end}%`; u.speeds.forEach((b, i) => b.classList.toggle('on', SPEEDS[i] === this.speed)); u.view.classList.toggle('on', !this.free); u.fog.hidden = !fogged; u.fog.classList.toggle('off', this.nofog); u.fog.classList.toggle('on', !this.nofog); u.nv.classList.toggle('on', this.tube());
     u.parted.hidden = !d; if (d) u.parted.style.left = `${100 * this.tAt[Math.min(d.f, T.ticks)] / end}%`;
     u.say.textContent = said; u.say.className = seeking ? 'say' : d || this.unkept ? 'say off' : 'say ok'; u.say.title = d ? `${d.who} stood ${Number.isFinite(d.metres) ? d.metres.toFixed(2) + ' m' : 'nowhere'} from where the recording had him (step ${d.f})` : '';
   }

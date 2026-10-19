@@ -344,6 +344,7 @@ window.addEventListener('keydown', e => {
   else if (e.code === 'ArrowRight') { e.preventDefault(); step(+1, e.shiftKey); } else if (e.code === 'ArrowLeft') { e.preventDefault(); step(-1, e.shiftKey); }
   else if (e.code === 'KeyF') fit(); else if (e.code === 'KeyN') { e.preventDefault(); noteAt(null); } else if (e.code === 'Escape') { sel = null; ($<HTMLDetailsElement>('keys')).open = false; }
   else if (e.code === 'Home') seek(0); else if (e.code === 'End') seek(end());
+  else if (e.code === 'BracketLeft' || e.code === 'BracketRight') { const sp = $<HTMLSelectElement>('speed'); sp.selectedIndex = Math.max(0, Math.min(sp.options.length - 1, sp.selectedIndex + (e.code === 'BracketLeft' ? -1 : 1))); speed = Number(sp.value) || 1; }   // (one pace slower / faster, as on the engine replay's bar)
 });
 function togglePlay() { if (!D) return; if (!playing && cur >= end() - 1e-3) cur = 0; playing = !playing; }
 $('play').onclick = () => togglePlay();
