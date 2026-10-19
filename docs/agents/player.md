@@ -650,8 +650,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   (his issue), green for what the card has gained on it, amber for what it has lost; the highlighted row outlined on the bar (what it takes), dashed on a row that carries
   none (what one more would take). SWITCH `KITLOAD.on`: ON in the page (`?nokitload`; Tab ▸ 'Kit weight'), OFF in the module and on the frozen stand
   (`'KITLOAD.on': 'TPS_KITLOAD=1'`), in the registry and `JOURNAL_KNOBS`. A harness that writes a teammate's card into `KIT.members` by hand on a team of three or four leaves the OTHER men in the
-  table's layout against a reference that is the dealt issue (the page changes a counted thing on the cards as worn, so there the others stay ×1). CHECK: `probes.ts kitload` (`tools/qa/kitload-check.ts`; `KITLOAD_BREAK=1` fails 8), both stands; the real page:
-  `tools/qa/kitload-page.cjs`; squads counted: `tools/qa/kitload-tally.ts`. MEASURED (headless, one seed): you with the pistol alone walk 1.83 m/s against 1.55 as issued
+  table's layout against a reference that is the dealt issue (the page changes a counted thing on the cards as worn, so there the others stay ×1). CHECK: `probes.ts kitload` (`tools/qa/kitload-check.ts`; `KITLOAD_BREAK=1` fails 9), both stands; the real page:
+  `tools/qa/kitload-page.cjs` (`PARTS=screen` passes on the software adapter; its `walk` part, a staged room, has never finished there inside 25 minutes, so the walk is the headless check's alone); squads counted: `tools/qa/kitload-tally.ts`. MEASURED (headless, one seed): you with the pistol alone walk 1.83 m/s against 1.55 as issued
   and 1.31 with four smoke and the hammer; sprint 5.13 / 4.70 / 4.34; a walking step 0.107 / 0.156 / 0.168; a guard at 6 m builds notice at 0.35 / 0.48 / 0.51 a second.
   A light teammate asked for 2.2 m/s gets 2.4, one with four pouches and the hammer 1.77.
   COUNTED (shipped stand, the scripted player, each squad with the rule on and held off by `TPS_KITLOAD=0`; room-clear-four, seeds 1‥6, on the build with the two gun
