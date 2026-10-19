@@ -47,6 +47,7 @@ import { hearPath } from './weather';
 import { w, WORDS } from './words';
 import { doorWords } from './orders';   // (call-time only: what a door is called — one name on one HUD)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { gunKeepsPost } from './gunroles';   // (call-time only)
 import { laneCovers } from './lanes';   // (call-time only: is this spot in a lane his side knows is covered)
 
 export const DIGIN = {
@@ -699,6 +700,7 @@ export function digInTick(rf: unknown, def: unknown, _dt: number) {
       if (D.noiseAt && D.noiseOut && g.time - D.noiseT < 6 && D.noiseT > M.knowT) { know = D.noiseAt; t = D.noiseT; }
       else if (st.fix && st.fix.room !== D.room && st.fix.t > M.knowT && g.time - st.fix.t > 0.8 && g.time - st.fix.t < 8) { know = st.fix.at; t = st.fix.t; }
       if (!know) return;
+      if (gunKeepsPost(gd)) { M.knowT = t; return; }   // (gunroles.ts: the belt-fed gun was posted on the floor's longest line and stays on it — heard, and let lie; false with that switch off)
       if (!DIGIN.keeper && !DIGIN.stay && DIGIN.reachM <= 0 && pressKeeps(g, D)) { M.knowT = t; return; }   // (DIGIN.keeper off: the press's keeper does not start on his room — heard, and let lie)
       M.know = v3.copy(know); M.knowT = t; M.phase = 'think'; M.until = g.time + paced(DIGIN.think); DIGIN_STATS.heard++;
       M.far = DIGIN.reachM > 0 && wayTo(F, gd.char.pos, know) > DIGIN.reachM; if (M.far) DIGIN_STATS.far++;   // too far to join that fight in time: his room is his job

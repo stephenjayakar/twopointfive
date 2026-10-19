@@ -76,6 +76,7 @@ import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig 
 import { sneakFollow, sneakWay, sneaking, sneakLow, sneakPost, sneakTick, sneakWord } from './sneak';
 import { unseenMan, unseenLow, unseenFollow, unseenPost, unseenWallSlot, unseenWallLost } from './unseen';
 import { roomKept } from './rearwatch';
+import { gunFileCost, gunFileRanks } from './gunroles';   // (called inside pair only)
 import { pairUp } from './pairup';
 import { spottedFeet } from './spotted';
 import { wallTarget, wallRows } from './wallcharge';
@@ -392,6 +393,8 @@ export interface Assignment {
   spare?: boolean; from?: Vec3;
   /** pairorders.ts: the man of the other side this order is about · he walks it, and holds it, on a knee (undefined: standing, as every other order) */
   foe?: Guard; crouch?: boolean;
+  /** doortools.ts thrLean: he stands leaned this far toward his own right (−1‥1; character.ts anim.lean), head and gun past an edge his hips are behind (undefined: square) */
+  lean?: number;
   /** roomfit.ts: the place and the watch a 'move' dealt him — taken up as he comes onto his mark, looked at again while he stands (undefined: none) */
   fit?: Fit;
   /** ORDERS.walkTries: his walk runs at a door nobody of the team has tried — the door and the face he comes to it by, the stack mark he was dealt on it,
@@ -502,13 +505,13 @@ export class SquadOrders {
       { id: 'stack', key: 1, label: 'stack up', targets: ['door'], ack: ['stacking up.', 'on the door.'], valid: (S, t, men) => {
         if (t.kind !== 'door') return false;
         const posts = S.stackPostsWait(t.door, t.side, men); if (!posts) return S.noRoomWords('no room on that door.', () => S.stackPostsWait(t.door, t.side, men));   // (ORDERS.inWay: … or that it is Sam who is in the way, where it is)
-        for (const [gd, p] of S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0))) { const w = S.reach(gd, p); if (w) return w; }
+        for (const [gd, p] of S.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0), t.door.frameCentre)) { const w = S.reach(gd, p); if (w) return w; }
         return true;
       }, issue: (S, men, t) => {
         if (t.kind !== 'door') return 'no door';
         const posts = S.stackPostsWait(t.door, t.side, men); if (!posts) return S.noRoomWords('no room to stack on that door', () => S.stackPostsWait(t.door, t.side, men));
         const name = doorWords(t.door);
-        S.pair(men, posts.map(p => p.pos), posts.map(p => p.group ?? 0)).forEach(([gd, p]) => { const P = posts.find(x => x.pos === p)!;
+        S.pair(men, posts.map(p => p.pos), posts.map(p => p.group ?? 0), t.door.frameCentre).forEach(([gd, p]) => { const P = posts.find(x => x.pos === p)!;
           S.assign(gd, { order: 'stack', post: P.pos, face: P.face, watch: [t.door.frameCentre[0], 1.05, t.door.frameCentre[2]], door: t.door, shy: t.door, stance: P.lead ? 'stack' : 'highReady', upper: 'none', move: { stance: 'none', upper: 'aim' }, stackSide: P.stackSide, going: `stacking · ${name}`, there: `stacked · ${name}`, setLine: 'set.' }); });
         S.spareRear(men, t.door, null);
       } },
@@ -1114,7 +1117,7 @@ export class SquadOrders {
       } else A.low = false;
       // (who has the follower's feet: spotted.ts's freeze / slip / step when it gives a spot — a defender is suspicious of the pair, or has it —, else the sneak's
       //  step along Sam's trail, else the order's own goal; low if any of the three says low. A take / dark job (pairorders.ts) is not a follower: spotted only kneels him.) Then clearline.ts's step to a clear line of fire when a friend masks his shot (null with its switch off).
-      order(gd, { goal: sp?.goal ?? cl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light });
+      order(gd, { goal: sp?.goal ?? cl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light, ...(A.lean || gd.script?.lean ? { lean: A.lean && A.post && flat(gd.char.pos, A.post) < 0.6 ? A.lean : 0 } : {}) });   // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
       if (sGoal && !sp?.goal && !cl?.goal) sneakWay(g, gd, sGoal);
     }
     for (const A of this.asg.values()) {   // 'set.': once, from the last man on, when everybody the order sent is on his mark
@@ -1956,7 +1959,7 @@ export class SquadOrders {
     let out: Map<Guard, { door: Door; side: 1 | -1; post: StackPost }> | null = null; const at: { door: Door; side: 1 | -1; men: Guard[] }[] = [];
     for (const gd of men) { const L = this.walkTry(gd, to); if (!L) continue; const k = at.find(x => x.door === L.door && x.side === L.side); if (k) k.men.push(gd); else at.push({ ...L, men: [gd] }); }
     for (const { door, side, men } of at) { const posts = this.stackPostsWait(door, side, men); if (!posts) return this.noRoomWords('no room on that door.', () => this.stackPostsWait(door, side, men));
-      for (const [gd, p] of this.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0))) (out ??= new Map()).set(gd, { door, side, post: posts.find(x => x.pos === p)! }); }
+      for (const [gd, p] of this.pair(men, posts.map(x => x.pos), posts.map(x => x.group ?? 0), door.frameCentre)) (out ??= new Map()).set(gd, { door, side, post: posts.find(x => x.pos === p)! }); }
     return out;
   }
   /** … a man of them sent: to his stack mark on that door, in the stack's carriage, still on his 'move' — and 'moving' by the HUD, on his mark too — until
@@ -2002,19 +2005,19 @@ export class SquadOrders {
   /** men to spots, the pairing that walks the least in all (two men: both ways tried; three or four: every way tried, and — where `groups` says which spots
    *  belong together: a jamb's file, a rank — each PAIR of the squad kept in one group before any walking is saved; otherwise each man in turn his nearest free
    *  spot) */
-  pair(men: Guard[], spots: Vec3[], groups?: number[]): [Guard, Vec3][] {
+  pair(men: Guard[], spots: Vec3[], groups?: number[], front?: Vec3): [Guard, Vec3][] {   // (`front`: the frame a STACK's marks stand on — gunroles.ts: a room gun's man nearer it than a long gun's; nothing with that switch off)
     if (men.length > 2 && men.length <= 4 && spots.length >= men.length) {
-      const n = men.length, used = spots.map(() => false), cur: number[] = []; let best: number[] = [], bc = Infinity;
+      const n = men.length, used = spots.map(() => false), cur: number[] = [], gr = front ? gunFileRanks(men) : null; let best: number[] = [], bc = Infinity;
       const ids = this.pairs().map(id => men.map((gd, i) => this.pairOf(gd) === id ? i : -1).filter(i => i >= 0)).filter(l => l.length > 1);
       const rec = (i: number, walk: number) => {
-        if (i === n) { let c = walk; if (groups) for (const l of ids) c += 1000 * (new Set(l.map(m => groups[cur[m]])).size - 1); if (c < bc) { bc = c; best = [...cur]; } return; }
+        if (i === n) { let c = walk; if (groups) for (const l of ids) c += 1000 * (new Set(l.map(m => groups[cur[m]])).size - 1); if (gr) c += gunFileCost(gr, cur.map(j => spots[j]), front!); if (c < bc) { bc = c; best = [...cur]; } return; }
         for (let j = 0; j < spots.length; j++) { if (used[j]) continue; used[j] = true; cur[i] = j; rec(i + 1, walk + flat(men[i].char.pos, spots[j])); used[j] = false; }
       };
       rec(0, 0);
       if (best.length === n) return men.map((gd, i) => [gd, spots[best[i]]] as [Guard, Vec3]);   // (none found — a position that is not a number: the plain rule below)
     }
-    if (men.length === 2 && spots.length === 2) { const d = (i: number, j: number) => flat(men[i].char.pos, spots[j]);
-      return d(0, 0) + d(1, 1) <= d(0, 1) + d(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
+    if (men.length === 2 && spots.length === 2) { const d = (i: number, j: number) => flat(men[i].char.pos, spots[j]), gr = front ? gunFileRanks(men) : null, gc = (a: number, b: number) => gr ? gunFileCost(gr, [spots[a], spots[b]], front!) : 0;
+      return d(0, 0) + d(1, 1) + gc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
     const left = [...spots]; return men.map(gd => { let bi = 0; left.forEach((s, i) => { if (flat(gd.char.pos, s) < flat(gd.char.pos, left[bi])) bi = i; }); return [gd, left.length > 1 ? left.splice(bi, 1)[0] : left[0]] as [Guard, Vec3]; });
   }
 

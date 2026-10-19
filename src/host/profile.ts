@@ -65,7 +65,9 @@ import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { GUNSLOTS } from '../game/gunslots';
 import { GUNLOOK } from '../game/gunlook';
+import { GUNROLES } from '../game/gunroles';
 import { SQUADTHROW } from '../game/squadthrow';
+import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
 import { INHAND } from '../game/inhand';
@@ -174,6 +176,8 @@ export function pageSwitches(q: URLSearchParams): void {
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
+  DOORTOOLS.thrPie = q.get('thrpie') !== '0';   // a room worked from the threshold: both jamb men cut the opening toward its middle, a few degrees a step, until the outside shows no more floor — and only then 'holding on the door' (game/doortools.ts pieSet / pieNext): ON in the page; ?thrpie=0 = a diagonal each, held still, as it was
+  DOORTOOLS.thrLean = q.get('thrlean') !== '0';   // … and the man cutting leans (head and gun past the edge, hips behind it) and takes the cuts that look down the door's own line on a knee (character.ts anim.lean): ON in the page; ?thrlean=0 = square on every station
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
   DOORTOOLS.wordNoCan = q.get('wordnocan') !== '0';   // the word (F) at a door held from outside steps the men in with NO can; a can goes in only when asked ('bang and clear' given to the holding men): ON in the page; ?wordnocan=0 = the word bangs the blind pockets first, as it was (acts with the one-order outside clear)
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
@@ -278,9 +282,12 @@ export function pageSwitches(q: URLSearchParams): void {
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
   GUNLOOK.on = !q.has('nogunlook');   // each gun its own look, sound and reload (game/gunlook.ts): the Mk 12, MP7, Mk 46, M1014, HK45 and Glock 18 drawn as themselves, each with its own report, flame and way of being fed. ?nogunlook = each drawn and heard as the issue gun it stood in for
+  GUNLOOK.shells = !q.has('nogunshells');   // (…and of 10-19: a tube gun is fed a shell at a time in time and in the books — the M1014 and the pump gun take a lead, so long a shell and a tail, each shell in the gun as it is heard; ?nogunshells = the row's one length and the tube booked at its end)
+  GUNROLES.on = !q.has('nogunroles');   // a gun is used for what it is for (game/gunroles.ts): a cast of defenders is dealt an AKMS, one belt-fed PKM for a lane or a big cast and a few pistols off the squad's table, and a teammate's place in the stack, his turn at the door, the opening he covers and his trigger follow the gun in his hands. ?nogunroles = every defender the short carbine and every teammate as with the issue carbine
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
+  SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
   SQUADTHROW.lob = q.get('throwlob') !== '0';   // … and a man WORKS HIS THROW OUT (game/throwplan.ts): where the one straight arc has no answer he flies a few throws first — flat and hard, a slow lob, off a wall by the spot — and takes the one that goes off by it. ?throwlob=0 = the straight arc or nothing, as it was (and the two rules below off with it); inert on the frozen stand, where the order itself is off
   SQUADTHROW.duck = q.get('throwduck') !== '0';   // … a man of ours who will be off a frag's line before it bursts is not a reason to refuse it (the squad steps off its own frag when it is called: frag.ts fragFlee). ?throwduck=0 = anybody of ours it has a line to refuses it where he stands, as it was
   SQUADTHROW.samCall = q.get('samcall') !== '0';   // … and a frag that reaches the player alone is his call: thrown, and the row names him (' · too close: you'). ?samcall=0 = refused 'you are in it.', as it was
@@ -457,6 +464,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
+  'DOORTOOLS.thrPie': 'TPS_THRPIE=1',
+  'DOORTOOLS.thrLean': 'TPS_THRLEAN=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
   'DOORTOOLS.wordNoCan': 'TPS_WORDNOCAN=1',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
@@ -504,9 +513,11 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'OWNCHARGE.on': 'TPS_OWNCHARGE=1',
   'GUNSLOTS.on': 'TPS_GUNSLOTS=1 (rides on the card of the big slot: TPS_BIGSLOT=1 with it)',
   'GUNLOOK.on': 'TPS_GUNLOOK=1 (nothing to see without a man who carries one of the guns: TPS_GUNSLOTS=1 and TPS_BIGSLOT=1 with it)',
+  'GUNROLES.on': 'TPS_GUNROLES=1',
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
+  'SQUAD40.on': 'TPS_SQUAD40=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',
   'CONDITION.on': 'TPS_CONDITION=1',
   'GUNHAND.on': 'TPS_GUNHAND=1',

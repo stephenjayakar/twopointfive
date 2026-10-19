@@ -150,6 +150,7 @@ import { DoorTools } from './doortools';
 import { squadSmokeKey } from './squadsmoke';
 import { wandOrderKey } from './wandorder';
 import { squadThrowKey } from './squadthrow';
+import { squad40Tick } from './squad40';
 import { PairOrders } from './pairorders';
 import { pairUpApply } from './pairup';
 import { WallCharge } from './wallcharge';
@@ -419,7 +420,7 @@ export type GuardState = 'patrol' | 'suspicious' | 'alert' | 'search' | 'dead';
 /** One frame's worth of orders for a scripted guard (see squad.ts). goal: walk there (nav path) at `speed` (m/s, default guard walk); face: body
  *  yaw to hold once planted (or while `strafe`); aimAt: where the gun / torch / eyes point; stance + stackSide + crouch feed the animator's tactical
  *  layers; upper: 'aim' draws the pistol, 'torch' carries the torch; arrived is written back by the runner each frame. */
-export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number | null; strafe?: boolean; aimAt?: Vec3 | null; stance?: Stance; stackSide?: -1 | 1; crouch?: boolean; upper?: 'aim' | 'torch' | 'relaxed' | 'none'; light?: boolean; arrived?: boolean;
+export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number | null; strafe?: boolean; aimAt?: Vec3 | null; stance?: Stance; stackSide?: -1 | 1; crouch?: boolean; lean?: number; upper?: 'aim' | 'torch' | 'relaxed' | 'none'; light?: boolean; arrived?: boolean;
   /** weapons free on the men in front of him: the runner's muzzle discipline (squad.ts — a colleague in the line puts the gun down) is off for this man. The breach
    *  showcase's operatives carry it while they engage the room (breach.ts): until the guards have SIDES every man in Game.guards is a 'colleague', the opposition
    *  included, and an operative could not so much as cover the man he is about to shoot. The teams lane replaces this with sides in colleagueInLine. */
@@ -1519,6 +1520,7 @@ export class Game {
     wandOrderKey(this, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)
     this.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
     if (squadThrowKey(this, input)) this.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
+    squad40Tick(this);   // (a teammate's 40 mm on order — squad40.ts: its row on the throws' page kept in step, a man turning to his shot; a map read and a return unless a teammate's card brought a round)
     updateInteract(this, dt, input);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
     trackPlayer(this, dt);   // the aim-settle model, Sam's half (aim.ts): what the reticle is on is known now; his feet are last frame's, a frame is nothing to a 0.8 s settle — the fire sites in updatePlayer / updateHold read it below
     this.threatTick();
@@ -1668,7 +1670,7 @@ export class Game {
         // the second pass (MOVES.reload / clutch / entry): where his magazine is, a man folded by a blast or a ring and not blind with it, a friend's back before his muzzle
         an.reloadBack = long === 'sc20k' && !GEAR.on; an.reloadMag = !(def as { pellets?: unknown }).pellets; an.clutch = gd.state !== 'dead' && this.time < gd.staggerUntil && !(this.time < gd.dazzledUntil) ? 1 : 0;
         if (MOVES.on > 0.5) {   // …and the reload HE is in, by the clock that owns it: his own beat (guards.ts — it stands still while he is off his man) or the room fight's for a teammate (roomfight.ts reloadUntil, which plays no clip: the gun stays up and the hand does the change)
-          const R = def.reload, fo = gd.reloadT < 0 && gd.state !== 'dead' ? this.fight.opOf(gd) : null;
+          const R = gd.weapon.reloadRow, fo = gd.reloadT < 0 && gd.state !== 'dead' ? this.fight.opOf(gd) : null;   // (the row his beat is on: the gun's own, or a tube gun's by the shell — gunreload.ts feedBegin)
           an.reloadRow = R; an.reloadAt = gd.state === 'dead' ? -1 : gd.reloadT >= 0 ? R.dur - gd.reloadT : fo && fo.reloadUntil > this.time ? Math.max(0, R.dur - (fo.reloadUntil - this.time)) : -1;
         }
         an.dip = MOVES.on > 0.5 && MOVES.entry > 0.5 && cb && !show && !gd.held && gd.state !== 'dead' && gd.team === 'operative' && !this.fight.busy(gd, 1.5) && !this.fight.contact(gd) && friendBeforeMuzzle(this, gd) ? 1 : 0;   // (not the showcases' casts: their muzzles are choreographed; and never a man with somebody to shoot, or eyes on one — the gun is where the fight wants it)

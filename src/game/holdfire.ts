@@ -59,7 +59,7 @@ export const HOLDFIRE = {
   stackWait: true,
 };
 /** the orders that mean fire, by id (doortools.ts, wallcharge.ts, squadthrow.ts — by NAME: a row from a part not in the tree lifts the day it lands) */
-export const LIFT_ORDERS: readonly string[] = ['openClear', 'bigClear', 'bangClear', 'fragClear', 'charge', 'threshold', 'thresholdHold', 'outside', 'thrStep', 'thrBang', 'thrWord', 'go', 'wallCharge', 'fragThere', 'stunThere'];
+export const LIFT_ORDERS: readonly string[] = ['openClear', 'bigClear', 'bangClear', 'fragClear', 'charge', 'threshold', 'thresholdHold', 'outside', 'thrStep', 'thrBang', 'thrWord', 'go', 'wallCharge', 'fragThere', 'stunThere', 'shellThere'];
 /** … of which these lift when they GO OFF, not when they are given (doortools.ts / wallcharge.ts blow): a set charge is a squad waiting on the trigger */
 export const BLOW_ORDERS: readonly string[] = ['charge', 'wallCharge'];
 /** … and the posture row that lifts when it takes a SILENT squad out of silent (silent.ts's row, by NAME) */

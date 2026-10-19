@@ -55,6 +55,7 @@ import { FRAG, fragFlee, fragReady, fragThrowAt, fragWinding, fragAway, armRound
 import { placeName } from './dialogue';
 import { CUES } from './cues';
 import { doorwayInWay } from './doorway';
+import { gunKeepsPost } from './gunroles';   // (called inside laneHolds only)
 
 export const LANES = {
   /** the whole rule. Module default OFF (the frozen stand); the page raises it (src/host/profile.ts pageSwitches; `?nolanes` holds it off) */
@@ -138,6 +139,13 @@ export const LANES = {
    *  their arc; that place is then never asked again by him). On = roomfight.ts keeps dig-in's hands off him until the grenade has left his hand or stayed in
    *  it (`laneThrows`: a second and a half at most; that file's once-a-frame bookkeeping for HIM waits that long too). Off = the build before it. */
   fragOwn: true,
+  /** THE DOORWAY DRILL IS ASKED AGAIN (10-18: with every level's defenders in squads the men come to a hit room together, on the fight's own chase, and
+   *  the doorway drill takes them at the door a mate has just dropped in — in the second before anybody has called the lane. The drill asked this rule once,
+   *  as it took a man, and never again: on the maintainer's own hold of the records office two more men then sliced the same door into a lane their side had
+   *  called six seconds before, one after the other). On = a man the drill has, who has not yet committed, is asked again each frame: his jamb, the
+   *  station he is slicing to, or the floor past the doorway in a lane his side knows of, and the drill lets him go — this rule's gate then has him like any
+   *  man whose way lies down it. A charge about to go in on those guns still goes (`laneDoor`'s own clause). Off = asked once, as it was. */
+  drill: true,
   /** lanes a side keeps at once */
   max: 6,
 };
@@ -909,6 +917,7 @@ function ahead(g: Game, m: Uint8Array, gd: Guard, inside: boolean): Vec3 | null 
  *  none given = anything) lies at that lane's guns or down it — he keeps its mouth (a press that wants him sends him at the same guns by the same way). A fight
  *  somewhere else may have him: his way there is priced like any, and the gate stops him again if it lies down the lane. */
 export function laneHolds(g: Game, gd: Guard, to?: Vec3 | null): boolean {
+  if (gunKeepsPost(gd)) return true;   // (gunroles.ts: a defender with the belt-fed gun keeps the post he was dealt — false on its first test with the switch off)
   const st = states.get(g); if (!st || !(st.held.size || st.peek.size) || !live(g)) return false;
   const h = st.held.get(gd) ?? st.peek.get(gd); if (!h) return false; const L = st.lanes.find(x => x.id === h.lane); if (!L) return false;
   return !to || L.guns.some(m => flat(m, to) < LANES.fieldM + 4) || !!L.cells?.has(cellAt(g, to));
@@ -933,6 +942,13 @@ export function laneDoor(g: Game, gd: Guard, far: Vec3, centre: Vec3, can: boole
   if (!LANES.on) return false; const st = states.get(g); if (!st || !st.lanes.length || !live(g) || !mine(g, gd) || pushing(g, st, gd) || flanking(g, st, gd)) return false;
   const L = laneOn(g, st, far, gd); if (!L) return false;
   return !(can && L.guns.some(m => flat(m, centre) < LANES.bangM + 2.5));
+}
+/** tactics.ts runGate (`LANES.drill`, asked there): the two questions tryEngage asked as the drill took him, asked again while it has him this side of the
+ *  doorway — `at` is his jamb, the handle's place he is stepping to, or the station he is slicing to. True = the drill lets him go (said in the log) */
+export function laneDrill(g: Game, gd: Guard, at: Vec3, far: Vec3, centre: Vec3, can: boolean): boolean {
+  if (!laneCovers(g, gd, at) && !laneDoor(g, gd, far, centre, can)) return false;
+  note(g, gd, 'the doorway drill has him at a doorway in a lane his side knows of: it lets him go');
+  return true;
 }
 /** tactics.ts tryEngage: this spot is in the line of guns his side knows of — no place to stack on a doorway (the jamb the holders see through the opening) */
 export function laneCovers(g: Game, gd: Guard, p: Vec3): boolean {

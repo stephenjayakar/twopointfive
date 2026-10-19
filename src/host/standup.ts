@@ -51,7 +51,9 @@ import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { GUNSLOTS } from '../game/gunslots';
 import { GUNLOOK } from '../game/gunlook';
+import { GUNROLES } from '../game/gunroles';
 import { SQUADTHROW } from '../game/squadthrow';
+import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
 import { INHAND } from '../game/inhand';
@@ -295,6 +297,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_UNDERFOOT')) UNDERFOOT.on = String((globalThis as any).process?.env?.TPS_UNDERFOOT ?? '') === '1';   // a walker's feet are asked from where the walk grid's bake begins (src/scene/collision.ts UNDERFOOT): off, a thing 0.2 m high stops them, as every frozen digest was made
     if (pinned('TPS_STALKAMBIENT')) SNEAK.stalkAmbient = String((globalThis as any).process?.env?.TPS_STALKAMBIENT ?? '') === '1';   // the stalk's light takes the walker's own meter over the estimate (src/game/sneak.ts sneakWalk): off, the estimate alone, as every frozen probe of the pair read it; TPS_STALKAMBIENT=1 raises it
     if (pinned('TPS_DOORTEST')) DOORTOOLS.testDoor = String((globalThis as any).process?.env?.TPS_DOORTEST ?? '') === '1';   // an entry order halts at a door found locked or wedged (src/game/doortools.ts haltAt): off, so every frozen probe's entry goes straight to its boot; TPS_DOORTEST=1 raises it
+    if (pinned('TPS_THRPIE')) DOORTOOLS.thrPie = String((globalThis as any).process?.env?.TPS_THRPIE ?? '') === '1';   // the jamb men slice the doorway before they call it held (src/game/doortools.ts pieSet): off, so every frozen threshold holds its two diagonals still; TPS_THRPIE=1 raises it
+    if (pinned('TPS_THRLEAN')) DOORTOOLS.thrLean = String((globalThis as any).process?.env?.TPS_THRLEAN ?? '') === '1';   // … leaning, the cuts down the door's own line on a knee: off with it; TPS_THRLEAN=1 raises it
     if (pinned('TPS_OUTSIDEPLAIN')) DOORTOOLS.outsidePlain = String((globalThis as any).process?.env?.TPS_OUTSIDEPLAIN ?? '') === '1';   // 'clear from outside' as one order, no threshold pages: off, the menu every frozen probe presses; TPS_OUTSIDEPLAIN=1
     if (pinned('TPS_WORDNOCAN')) DOORTOOLS.wordNoCan = String((globalThis as any).process?.env?.TPS_WORDNOCAN ?? '') === '1';   // the word at a door held from outside spends no can (src/game/doortools.ts wordSteps): off, the word bangs the pockets as every frozen probe has it; acts with TPS_OUTSIDEPLAIN=1
     if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
@@ -325,6 +329,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_OWNCHARGE')) OWNCHARGE.on = String((globalThis as any).process?.env?.TPS_OWNCHARGE ?? '') === '1';   // the player's own charges (src/game/owncharge.ts): off, so your card has no charge rows and no door offers 'set a charge'
     if (pinned('TPS_GUNSLOTS')) GUNSLOTS.on = String((globalThis as any).process?.env?.TPS_GUNSLOTS ?? '') === '1';   // a primary and a secondary for every man (src/game/gunslots.ts): off, so a card has its one gun row and a teammate one gun
     if (pinned('TPS_GUNLOOK')) GUNLOOK.on = String((globalThis as any).process?.env?.TPS_GUNLOOK ?? '') === '1';   // each gun its own look, sound and reload (src/game/gunlook.ts): off, so every row is drawn, heard and fed as its stand-in
+    if (pinned('TPS_GUNROLES')) GUNROLES.on = String((globalThis as any).process?.env?.TPS_GUNROLES ?? '') === '1';   // a gun used for what it is for (src/game/gunroles.ts): off, so every defender carries the short carbine and no stack, entry, cover deal or trigger reads a man's gun
     if (pinned('TPS_PLANLAY')) PLANLAY.on = String((globalThis as any).process?.env?.TPS_PLANLAY ?? '') === '1';   // X is where the plan is laid (src/game/planlay.ts): off, so 'wait for my word' is the four's door tools' row on every frozen probe; TPS_PLANLAY=1 raises it
     if (pinned('TPS_CONDITION')) CONDITION.on = String((globalThis as any).process?.env?.TPS_CONDITION ?? '') === '1';   // a man's condition (src/game/condition.ts): off, so a blast that leaves a man up folds him for its seconds and then he is as he was, as every frozen probe, digest and tally was recorded
     if (pinned('TPS_PACKSIDE')) PACKSIDE.on = String((globalThis as any).process?.env?.TPS_PACKSIDE ?? '') === '1';   // a long thing on a back that wears a pack stands at the pack's side (src/game/packside.ts): off, so every back box and part mask is what every frozen probe read; looks only, no digest moves either way
@@ -332,6 +337,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_GUNHAND')) GUNHAND.on = String((globalThis as any).process?.env?.TPS_GUNHAND ?? '') === '1';   // a move keeps to the hand that is free (src/game/gunhand.ts): off, so every pose a frozen probe read is the pose it read
     if (pinned('TPS_AUTOPILOT')) AUTOPILOT.on = String((globalThis as any).process?.env?.TPS_AUTOPILOT ?? '') === '1';   // B is the squad's autopilot (src/game/autopilot.ts): off, so the quick key is the target's first row on every frozen probe; TPS_AUTOPILOT=1 raises it
     if (pinned('TPS_SQUADTHROW')) SQUADTHROW.on = String((globalThis as any).process?.env?.TPS_SQUADTHROW ?? '') === '1';   // frags and stun canisters thrown on order (src/game/squadthrow.ts): off, so the floor's menu has no 'throw' row
+    if (pinned('TPS_SQUAD40')) SQUAD40.on = String((globalThis as any).process?.env?.TPS_SQUAD40 ?? '') === '1';   // a teammate's 40 mm grenade fired on order (src/game/squad40.ts): off, so the throws' page has no such row whatever a card carries
     if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge is pouches, and nobody carries a hammer
     if (pinned('TPS_KITDEAL')) KITDEAL.on = String((globalThis as any).process?.env?.TPS_KITDEAL ?? '') === '1';   // the squad's kit dealt over the men who come (src/game/kit.ts KITDEAL): off, so with three or four teammates the first two carry all of it
     if (pinned('TPS_PEEKSIGHT')) PEEKSIGHT.on = String((globalThis as any).process?.env?.TPS_PEEKSIGHT ?? '') === '1';   // a peek round the end of a wall lifts the fog (src/game/peeksight.ts): off, so the fog's eye stays over his feet

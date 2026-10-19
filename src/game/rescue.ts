@@ -71,6 +71,7 @@ import { CUES } from './cues';
 import type { RescueData, Rect, TeamStart } from '../scene/scenarios';
 import { OFFICE_SCENARIOS } from '../../levels/office.scenarios';   // (plain literals with type-only imports: safe at the top of the game's import cycle)
 import { SAMESTART } from './samestart';   // (a leaf)
+import { gunDeal } from './gunroles';   // (called inside the staging only)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging
@@ -398,6 +399,7 @@ export class Rescue {
       gd.hold = true; gd.pinned = true; this.hostiles.push(gd);
       this.defs.set(gd, { role: c.role, inRoom: c.inRoom, mark: c.mark, learned: NaN, set: false, sawFoe: false, released: false, burst: { until: -1, n: 0, next: 0 }, k, crew: '', look: null, spot: null, noise0: null });
     });
+    gunDeal(g, this.hostiles.map((gd, k) => ({ gd, watch: cast[k].mark.aimAt, hostage: cast[k].role === 'captor' })));   // (gunroles.ts: the cast's guns off the table — nobody is touched and no die is drawn with its switch off)
     const capSet = K.start === 'hot' && K.captorSet; if (capSet) this.defs.get(this.hostiles[0])!.set = true;
     // the team at the lobby arch: the pair calm where they stand until an order moves them, Sam with the rifle in his hands
     const yaw = S.team.opsYaw ?? Math.PI / 2, at: Vec3[] = [K.opsAt[0], K.opsAt[1]];
