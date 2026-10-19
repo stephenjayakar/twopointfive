@@ -66,6 +66,7 @@ import { OWNCHARGE } from '../game/owncharge';
 import { GUNSLOTS } from '../game/gunslots';
 import { GUNLOOK } from '../game/gunlook';
 import { SQUADTHROW } from '../game/squadthrow';
+import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
 import { INHAND } from '../game/inhand';
@@ -281,6 +282,7 @@ export function pageSwitches(q: URLSearchParams): void {
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
+  SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
   SQUADTHROW.lob = q.get('throwlob') !== '0';   // … and a man WORKS HIS THROW OUT (game/throwplan.ts): where the one straight arc has no answer he flies a few throws first — flat and hard, a slow lob, off a wall by the spot — and takes the one that goes off by it. ?throwlob=0 = the straight arc or nothing, as it was (and the two rules below off with it); inert on the frozen stand, where the order itself is off
   SQUADTHROW.duck = q.get('throwduck') !== '0';   // … a man of ours who will be off a frag's line before it bursts is not a reason to refuse it (the squad steps off its own frag when it is called: frag.ts fragFlee). ?throwduck=0 = anybody of ours it has a line to refuses it where he stands, as it was
   SQUADTHROW.samCall = q.get('samcall') !== '0';   // … and a frag that reaches the player alone is his call: thrown, and the row names him (' · too close: you'). ?samcall=0 = refused 'you are in it.', as it was
@@ -507,6 +509,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',
+  'SQUAD40.on': 'TPS_SQUAD40=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',
   'CONDITION.on': 'TPS_CONDITION=1',
   'GUNHAND.on': 'TPS_GUNHAND=1',

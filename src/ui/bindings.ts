@@ -124,6 +124,7 @@ import { BIGSLOT, KITDEAL } from '../game/kit';
 import { KITLOAD, loadPaceK, loadSeenK, loadHeardK } from '../game/kitload';
 import { BIG_STATS } from '../game/bigkit';
 import { SQUADTHROW } from '../game/squadthrow';
+import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
 import { PLANLAY, layClear } from '../game/planlay';
 import { STICKY, stickyIssue, stickySummary } from '../game/stickycam';
@@ -1305,6 +1306,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(TF.kit, 'throw order ▸ frag where men can duck', () => SQUADTHROW.duck, v => { SQUADTHROW.duck = v; }, 'On (?throwduck=0 for off): a teammate who can be off the frag\'s line before it bursts — the spot his legs are dealt when "frag out!" is called, at the squad\'s pace — is not a reason to refuse it. A man with nowhere to go still refuses it, by name. Off: anybody of ours it has a line to refuses it where he stands, as it was.');
     panel.toggleBox(TF.kit, 'throw order ▸ a frag near you is your call', () => SQUADTHROW.samCall, v => { SQUADTHROW.samCall = v; }, 'On (?samcall=0 for off): a frag that reaches only YOU is thrown all the same and the row says " · too close: you". Off: refused "you are in it.", as it was.');
     panel.toggleBox(TF.kit, 'throw order ▸ drawn on the ground', () => SQUADTHROW.draw, v => { SQUADTHROW.draw = v; }, 'On: while the throw page is up on a spot, and from the order until the thing leaves his hand, the thrower is ringed in his pair\'s colour with his walk and the arc drawn on the ground. Picture only.');
+    panel.toggleBox(TF.kit, 'teammates fire 40 mm on order', () => SQUAD40.on, v => { SQUAD40.on = v; }, 'THE switch (also ?nosquad40 on the address). On: while a teammate\'s card carries 40 mm grenades the throw page (X on a spot of floor, then G) has a third row, "40 mm there": a man with a round, the launcher under his gun and an armed shot to the spot turns to it and fires. Never where one of ours is inside the burst. Off: no such row.');
     feelRows('FLASH', [
       { k: 'on', label: 'flashbang ▸ blinds and folds a room', title: 'in a scenario a stun canister blinds every man its fireball has a line to for seconds and FOLDS him (rooted, gun down, no round) for the first of them; a man round a corner inside the concussion distance gets half. Off = the night game\'s canister: a short dazzle, and a watched door still gets its blind burst' },
       { k: 'secs.0', label: 'bang ▸ blind near s', title: 'blind at the can (s) — seconds without sight for a man at the canister' },

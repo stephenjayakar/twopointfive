@@ -7,7 +7,7 @@
 //   - short of that it is a DUD: a quarter-kilo slug that slaps into whatever it met, clatters down and lies there inert (a 'shell' item — throwables.ts), a
 //     noise the room goes to look at. Into a man it is the ring's body hit: he folds for a moment, then he is alert and knows the side it came from.
 // Impartial like the blast: his own side, the unarmed and Sam himself are judged by where they stand when it bursts. Never hit points; no dice of its own (the
-// blast's one hashed roll aside). Sam's only: nobody else is handed one. Rounds in flight live on Game.shells; game.ts steps them beside the rings.
+// blast's one hashed roll aside). Sam's, and a teammate's on order (squad40.ts: the same round by `fireShell`). Rounds in flight live on Game.shells; game.ts steps them beside the rings.
 //
 // (No top-level statement here uses another game module's export: src/game is one import cycle — see CLAUDE.md.)
 import { Vec3, v3, quat } from '../math/vec';
