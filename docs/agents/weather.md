@@ -850,11 +850,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fourth roof is packed to 0.2 m rounded outward, so some of its walls' faces stay hidden (the barracks: 3 of 33) and a strip of yard up to 0.2 m at
   such a wall's foot is as it was; the rim of a roof that stands on no wall (quiet-relay's shelter) shows streaks 0.2 m in; a ray that ends on a far
   wall's top over the building shows only the rain it met before the roofs' columns; `snow-check walls` still reads the rain's old line in
-  `rainFragment` (kept, one line below the new one). SEEN, ONE FRAME EACH WAY (`tools/qa/weather-look.cjs`, software adapter, low quality, the depot's
-  room clear in a downpour, a yard with an outer wall and its door behind it, the first frame): with `?norainwalls` the rain's haze and streaks end in a
-  hard line at the wall's foot and the wall is clean; without it they carry on over the wall's face and the door, and the room past the wall's top is
-  as clean as before. Both pages built 118 pipelines, none failed. NOT SEEN: a later frame, moving, close in, a wall's top, the particle rain's drops
-  at a wall, a third or fourth roof's wall; never on a GPU.
+  `rainFragment` (kept, one line below the new one). SEEN, TWO VIEWS EACH WAY (`tools/qa/weather-look.cjs`, software adapter, low quality, 960 wide, the depot's
+  room clear in a downpour, the north hut's south wall from the lit yard at 14 m, the eighth frame): with `?norainwalls` the rain's haze and streaks
+  end in a hard line at the wall's foot and the wall is clean; without it streaks and haze carry on over the wall's face and the door in it and over
+  the wall's top. New against old, by pixels: the yard 0 differ; the wall's face 1,948 and 4,152 brighter; the wall's top about a third differ; the
+  partitions' tops inside 0 of 3,981; the room's floor 0 of 35,869. Both pages built 118 pipelines, none failed, no console error. NOT SEEN: a splash
+  ring at this size (so "rings on open ground only" rests on the check's reading of the text), an open doorway, moving, close in, the particle
+  rain's drops at a wall, a third or fourth roof's wall, any other level; never on a GPU.
 - **A man who has been sprinting breathes hard** (the maintainer, 10-19: "characters should breathe more forcefully when sprinting (e.g. on snow
   levels)"). The game has TWO breaths and no third: the steam on a snow level (`snowBreath.ts`) and the chest (`character.ts lifeLayer`); there is NO
   breath sound and none was added. Both already rose a little with effort; `character.ts HARDBREATH` makes it read. **Steam** (snow levels, every man in

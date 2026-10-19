@@ -91,6 +91,7 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
+import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
@@ -109,6 +110,7 @@ import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
+import { LIGHTSWITCH } from '../game/lightswitch';
 import { kitSoloStand } from '../game/kit';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
@@ -256,6 +258,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_AUTORELOAD')) RELOAD.auto = String((globalThis as any).process?.env?.TPS_AUTORELOAD ?? '') === '1';   // a dry gun reloads itself (src/game/autoreload.ts): off, so a dry gun waits for R as every frozen probe, digest and scripted player expects; `TPS_AUTORELOAD=1` turns it on
     if (pinned('TPS_QUICKTHROW')) QUICKTHROW.on = String((globalThis as any).process?.env?.TPS_QUICKTHROW ?? '') !== '0';   // the G quick throw (src/game/quickthrow.ts): ON here — the page plays without it, but the frozen probes and a recorded session press G (the soak does not); `TPS_QUICKTHROW=0` takes it away
     if (pinned('TPS_FRIENDS')) FRIENDS.noSnap = String((globalThis as any).process?.env?.TPS_FRIENDS ?? '') === '1';   // the reticle passes over men of the player's own side (src/game/friends.ts): off, so a scripted cursor near a teammate snaps as every frozen probe and digest saw it; `TPS_FRIENDS=1` = as the page
+    if (pinned('TPS_LIGHTSWITCH')) LIGHTSWITCH.on = String((globalThis as any).process?.env?.TPS_LIGHTSWITCH ?? '') === '1';   // a room's wall switch (src/game/lightswitch.ts): off, so no level has a plate, Space has no row for one and no light-out says where a hand was, as every frozen probe and digest saw it; `TPS_LIGHTSWITCH=1` = as the page
     if (pinned('TPS_FRIENDLYFIRE')) FRIENDLYFIRE.on = String((globalThis as any).process?.env?.TPS_FRIENDLYFIRE ?? '') === '1';   // a round of Sam's side finds the men of Sam's side (src/game/friendlyfire.ts): off, so a scripted player's round passes a teammate and a teammate's passes him, as every frozen probe and digest saw it; `TPS_FRIENDLYFIRE=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page
     if (pinned('TPS_QUIETFOG')) QUIETFOG.on = String((globalThis as any).process?.env?.TPS_QUIETFOG ?? '') === '1';   // quiet missions under the fog of war (src/game/quietfog.ts): off, so a quiet mission's query reads no rung of the fog lever, as every frozen run was made
@@ -275,6 +278,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SQUADDEAL')) SQUADDEAL.on = String((globalThis as any).process?.env?.TPS_SQUADDEAL ?? '') === '1';   // squads from the rooms (src/game/squaddeal.ts): off, so a level with no squads block is one pool, as every frozen digest and tally was made
     if (pinned('TPS_STAYASK')) STAYASK.on = String((globalThis as any).process?.env?.TPS_STAYASK ?? '') === '1';   // squads that stay in their rooms still miss a silent room (src/game/stayask.ts): off, so nobody on such a floor asks after another squad, as every frozen digest and tally was made
     if (pinned('TPS_KITLOAD')) KITLOAD.on = String((globalThis as any).process?.env?.TPS_KITLOAD ?? '') === '1';   // lighter kit moves faster and hides better (src/game/kitload.ts): off, so nobody's pace, notice or footfall reads his card, as every frozen digest and tally was made
+    if (pinned('TPS_SNATCHOUT')) SNATCHOUT.on = String((globalThis as any).process?.env?.TPS_SNATCHOUT ?? '') === '1';   // how a snatch ends (src/game/snatchout.ts): off, so the house taken with the man in hand ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEEND')) RESCUEEND.on = String((globalThis as any).process?.env?.TPS_RESCUEEND ?? '') === '1';   // how a rescue is won (src/game/rescueend.ts): off, so the hostage room held fifteen seconds ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEFLUSH')) RESCUEFLUSH.on = String((globalThis as any).process?.env?.TPS_RESCUEFLUSH ?? '') === '1';   // the men left alive come for the hostages (src/game/rescueflush.ts): off, so they stay where the fight left them, as every frozen digest and tally was made
     if (pinned('TPS_RESCUECHECK')) RESCUECHECK.on = String((globalThis as any).process?.env?.TPS_RESCUECHECK ?? '') === '1';   // the rescue's men check in (src/game/rescuecheck.ts): off, so nobody of a rescue's cast misses a man taken quietly, as every frozen digest and tally was made

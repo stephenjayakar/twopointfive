@@ -454,6 +454,21 @@ export function gwotKit(host: GwotHost) {
     else if (opts.load === 'sacks') { for (const [lx, lz, y] of [[-0.9, -0.3, 0], [-0.9, 0.32, 0], [-1.7, 0, 0], [-1.2, 0.02, 0.2]] as const) b(lx, lz, 0.83 + y, 1.03 + y, 0.38, 0.25, M.sack); }
     else if (opts.load === 'crates') { b(-1.0, -0.3, 0.83, 1.13, 0.45, 0.2, M.olive); b(-1.0, 0.3, 0.83, 1.13, 0.45, 0.2, M.olive); b(-1.9, 0, 0.83, 1.13, 0.2, 0.45, M.coyote); }
   };
+  /** COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is
+   *  local (−3.2, 0): where a man is put in) */
+  const van = (x: number, z: number, yaw = 0, body: GwotMat = 'truckWhite') => {
+    const b = piece(x, z, yaw), P = M[body];
+    for (const sx of [-1.45, 1.5]) for (const sz of [-1, 1]) b(sx, sz * 0.8, 0, 0.74, 0.37, 0.13, M.rubber);
+    b(0, 0, 0.3, 0.86, 2.4, 0.9, P);                                                        // the body, sill to waistline
+    b(2.43, 0, 0.36, 0.58, 0.05, 0.9, M.plasticBlack); b(-2.43, 0, 0.3, 0.44, 0.05, 0.9, M.plasticBlack);   // bumper, the rear step
+    b(2.0, 0, 0.86, 1.06, 0.4, 0.86, P);                                                    // bonnet
+    b(1.3, 0, 0.86, 1.1, 0.4, 0.9, P); b(1.3, 0, 1.1, 1.62, 0.36, 0.84, M.glassDark); b(1.22, 0, 1.62, 1.95, 0.34, 0.86, P);   // the cab: doors, glass, the roof's brow
+    b(-0.5, 0, 0.86, 1.95, 1.4, 0.9, P);                                                    // the load box
+    for (const sz of [-1, 1]) b(-2.15, sz * 0.87, 0.86, 1.95, 0.25, 0.03, P);               // the open bay: its sides, roof, the dark inside
+    b(-2.15, 0, 1.89, 1.95, 0.25, 0.9, P); b(-1.89, 0, 0.86, 1.89, 0.02, 0.84, M.plasticBlack); b(-2.15, 0, 0.86, 0.88, 0.25, 0.84, M.plasticBlack);
+    for (const sz of [-1, 1]) b(-2.77, sz * 1.1, 0.5, 1.9, 0.42, 0.025, P, {}, sz * 0.5);   // the two back doors, swung out
+    for (const sz of [-1, 1]) { b(2.43, sz * 0.66, 0.62, 0.76, 0.03, 0.16, M.plasticWhite); b(-2.41, sz * 0.86, 0.9, 1.2, 0.02, 0.04, M.truckRed); }
+  };
   /** COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X */
   const motorbike = (x: number, z: number, yaw = 0, tank: GwotMat = 'truckRed') => {
     const b = piece(x, z, yaw);
@@ -537,7 +552,7 @@ export function gwotKit(host: GwotHost) {
     // stores & cover
     drum, drums, drumDown, jerryCan, gasBottle, crates, sacks, sandbags, hesco, jersey, tWall, tyres, blocks, woodPile,
     // machines & vehicles
-    generator, waterTank, pump, pickup, motorbike, handcart, stall, container, satDish, bush,
+    generator, waterTank, pump, pickup, van, motorbike, handcart, stall, container, satDish, bush,
     // lights
     wire, bulb, lantern, tube, floodLight,
   };

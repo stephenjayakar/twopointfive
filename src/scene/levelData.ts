@@ -765,7 +765,8 @@ export function validateLevelData(d: LevelData): string[] {
         const N = S.snatch, w = 'scenarios.snatch';
         if (!isObj(N)) err(w, 'must be an object');
         else {
-          known(w, N, ['man', 'exits']);
+          known(w, N, ['man', 'exits', 'van']);
+          if (N.van !== undefined && !(isObj(N.van) && isStr(N.van.name) && isVec(N.van.pos))) err(`${w}.van`, 'name, pos Vec3');
           if (S.roomClear === undefined) err(w, 'a snatch runs over a room clear: the level needs scenarios.roomClear');
           const m = N.man;
           if (!isObj(m) || !isStr(m.name) || !isVec(m.pos) || !isNum(m.face) || !isVec(m.tint)) err(`${w}.man`, 'name, pos Vec3, face, tint Vec3');

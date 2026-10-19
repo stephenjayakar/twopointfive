@@ -107,6 +107,22 @@ export async function wallKillCheck(): Promise<boolean> {
         console.log = () => { }; let offOld = false; try { applyKnobs(g, old); offOld = WALLKILL.on === false; applyKnobs(g, snap); offOld &&= WALLKILL.on === true; } finally { console.log = log; }
         verdict(has && offOld && typeof FROZEN_HOLDS['WALLKILL.on'] === 'string' && /TPS_WALLKILL=1/.test(FROZEN_HOLDS['WALLKILL.on']), 'a recording carries the switch, one from before the key replays with it off, and the frozen stand holds it off by name',
           `in the file ${has} · off for an old file ${offOld} · FROZEN_HOLDS ${FROZEN_HOLDS['WALLKILL.on']}`); } }
+    // (7) the squad's own charge: the setter's word waits until the charge he set cannot kill him
+    { const { rig } = (await import('./outerwall-probes.ts')) as any, { WALL_ORDER, wallTarget } = await import(`${ROOT}/src/game/wallcharge.ts`);
+      const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+      const run = async (rule: boolean) => { console.log = () => { }; try { const R = await rig('mousehole-four', 1), g = R.game, C = R.C, O = g.orders; raise(rule); C.setCarried(5);
+          let op: any = null; for (const x of [12, 12.6, 11.4, 13.2, 10.8, 13.8, 10.2]) { const p: Vec3 = [x, 0, 7.0]; O.give(WALL_ORDER, wallTarget(g, p, { kind: 'floor', at: O.freeSpot(p) ?? p }), 'all'); op = C.ops[0]; if (op) break; }
+          if (!op) return null; const lead = op.lead, at = () => flat(lead.char.pos, wallPt(op.wall, 0, 0)); let saidT = NaN, saidM = NaN; const say0 = g.say.bind(g);
+          g.say = (gd: any, text: string, ...a: any[]) => { if (text === 'charge set.' && isNaN(saidT)) { saidT = g.time; saidM = at(); } return say0(gd, text, ...a); };
+          if (!R.until(() => C.set.length === 1, 60)) return null; const setT = g.time, setM = at();
+          R.until(() => !isNaN(saidT) || op.phase === 'armed', 30); const res = !isNaN(saidT) ? C.blow(C.nearest()) : null; R.step();
+          return { setM, saidM, wait: saidT - setT, dead: lead.state === 'dead', lost: res?.lost ?? -1, who: lead.callsign as string };
+        } finally { console.log = log; } };
+      const on = await run(true), off = await run(false);
+      if (!on || !off) verdict(false, 'the ward\'s four set a charge on the wall when told', 'the order was not taken or the charge never went on');
+      else verdict(on.setM < nearM && on.saidM >= nearM && on.wait > 0.2 && !on.dead && on.lost === 0 && off.setM < nearM && off.saidM < nearM && Math.abs(off.wait) < 0.05 && !off.dead,
+        'the man the squad sends to set it says "charge set." once he is past the reach that kills, and a press on his word loses nobody; with the rule off he says it with his hands on it, as before',
+        `${on.who}: ${f(on.setM)} m from the charge as it goes on; rule on, his word ${f(on.wait)} s later at ${f(on.saidM)} m (kills inside ${nearM}), blown on the word: dead ${on.dead}, of ours lost ${on.lost} · rule off: his word ${f(off.wait)} s after at ${f(off.saidM)} m, blown on it: dead ${off.dead}`); }
   } finally { knobsBack(knobs0); DESTRUCTION.on = destr0; console.log = log; }
   console.log(`=== wallkill: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

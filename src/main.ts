@@ -84,6 +84,7 @@ import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpot
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
+import { LIGHTSWITCH, LIGHTSWITCH_STATS, wallSwitches, switchLit } from './game/lightswitch';
 import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad40Of, squad40Plans, squad40Stage, squad40Summary } from './game/squad40';
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
@@ -95,6 +96,7 @@ import { verdictKey, recordOf, tryStarted, runEnded, APPROACHES, type MissionRec
 import { watchMissionRows } from './ui/verdictRows';
 import { SOLO_ID } from './scene/picks';
 import { SNATCH, checkSnatch } from './game/snatch';
+import { SNATCHOUT } from './game/snatchout';
 import { SCENARIOS, ALL_MISSIONS, TRAINING_MISSIONS, pickSearch, quitSearch } from './scene/scenarioList';
 import { COVER } from './game/cover';
 import { ROOMFIT } from './game/roomfit';
@@ -429,7 +431,7 @@ async function main() {
   if (q.has('nopar')) PAR.on = false;   // ?nopar: a par level plays as its room clear alone — no clock (game/par.ts reads only: the run is the same either way)
   if (q.has('noissue')) ISSUE.on = false;   // ?noissue: a mission that issues kit of its own (scenarios.issue — game/kit.ts kitIssue) is staged with the cards this machine keeps
   if (q.has('nosnatch')) SNATCH.on = false;   // ?nosnatch: a snatch level plays as its room clear alone (game/snatch.ts)
-  (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game) };
+  (window as any).__snatch = { knobs: SNATCH, get man() { return game.snatch.man; }, get end() { return game.snatch.end; }, get log() { return game.snatch.log; }, summary: () => game.snatch.summary(), check: () => checkSnatch(game), out: SNATCHOUT, get exfil() { return game.snatch.out; } };
   if (q.has('nolesson')) LESSON.on = false;   // ?nolesson: a Training level plays as its mission alone — no step lines (game/lesson.ts; the lesson only ever reads the game, so the run is the same either way)
   (window as any).__lesson = { get on() { return LESSON.on; }, set on(v: boolean) { LESSON.on = v; }, get step() { return game.lesson.step; }, get i() { return game.lesson.i; }, summary: () => game.lesson.summary(), log: game.lesson.log, stats: LESSON_STATS, check: () => checkLesson(game) };   // a training lesson (game/lesson.ts): the step that is up, the level's block against its floor
   kitSoloIf(game, q.has('solo') || !game.quiet.active);   // the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
@@ -1005,6 +1007,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__planlay = { knobs: PLANLAY, stats: PLANLAY_STATS, get laid() { return game.orders.lay.laid; }, get kept() { return game.orders.lay.kept; }, summary: () => laySummary(game), send: () => laySend(game), clear: () => layClear(game) };
   (window as any).__autopilot = { knobs: AUTOPILOT, stats: AUTOPILOT_STATS, pick: (at: [number, number, number]) => autoPick(game, game.orders.targetAt(at)) };
   (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => squadThrowPlans(game), plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
+  (window as any).__lightswitch = { knobs: LIGHTSWITCH, stats: LIGHTSWITCH_STATS, list: () => wallSwitches(game), lit: (i: number) => { const sw = wallSwitches(game)[i]; return sw ? switchLit(sw) : null; } };   // a room's wall switches (game/lightswitch.ts): tools/qa/lightswitch-page.cjs reads the plates and works one through the page's own Space
   (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => squad40Plans(game), summary: () => squad40Summary(game),
     stage: (rounds: number[]) => squad40Stage(game, game.orders.squad().map((gd, i) => [gd, rounds[i] ?? 0] as const)) };   // a teammate's 40 mm grenade on order (game/squad40.ts)
   (window as any).__fight = game.fight;   // the room fight (game/roomfight.ts): .summary() / .log / .stats / .knobs / .skill (FIGHT_SKILL) / .watchOf(guard) / .teamSees(guard)

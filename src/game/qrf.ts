@@ -115,7 +115,9 @@ interface Marks { door: string | null; name: string; muster: readonly Vec3[]; en
 export function responseOf(g: Game): ResponseData | null { return g.level.scenarios?.response ?? null; }
 /** A RAID ON A PLACE THAT HAS A TEAM TO CALL (RESPONSE.raid): a squad's room clear under way on a level whose block carries `raid`. The team is then the
  *  DEFENDERS' (side 'hostile': the squad's enemies and Sam's), counted inside the eleven a squad ever faces, and it has no second lift */
-function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid; }
+function raid(g: Game): boolean { return RESPONSE.on && RESPONSE.raid && !!g.nightBreach?.active && !g.rescue?.active && !!responseOf(g)?.raid && (!g.level.scenarios?.snatch || !!g.snatch?.out.on); }   // (a snatch level's block answers only the snatch that ends in the van — snatchout.ts: with that rule off the level is as it was, and nobody comes)
+/** a raid is over: the room clear has ended — except on a snatch that ends in the van (snatchout.ts), where the house taken ends nothing while the man is still to be driven off */
+const raidOver = (g: Game): boolean => g.snatch?.out.ruled ? !!g.snatch.end || g.roomClear?.end === 'wiped' : !!g.roomClear?.end;
 /** the side the team stands on: the shift's — or, in a raid, the defenders' */
 const sideOfTeam = (g: Game): 'guard' | 'hostile' => raid(g) ? 'hostile' : 'guard';
 /** a raid: the men who can call it in — the living defenders of the block's room (where the set is), any defender when it names none; never the team itself */
@@ -460,7 +462,7 @@ function silentNet(g: Game, Q: Qrf): boolean {
 export function updateQrf(g: Game, dt: number) {
   const Q = g.qrf; if (!Q) return;
   const rd = raid(g);
-  if (rd && g.roomClear?.end && (Q.state === 'requested' || Q.state === 'inbound')) { note(Q, g, 'called-off:the run is over'); const log = Q.log; Object.assign(Q, new Qrf()); Q.log = log; return; }   // (a raid over — taken or lost — with the team still on the road: it never arrives)
+  if (rd && raidOver(g) && (Q.state === 'requested' || Q.state === 'inbound')) { note(Q, g, 'called-off:the run is over'); const log = Q.log; Object.assign(Q, new Qrf()); Q.log = log; return; }   // (a raid over — taken or lost — with the team still on the road: it never arrives)
   // ---- the trigger's memory: Sam's reports at gunfire level that reached a living staff man's ears this frame (the hearing model's rule for gunfire: 80 m straight)
   for (const e of g.events) {   // (each report once, whichever frame it was filed on: a round let go between two updates carries the earlier stamp)
     if ((e.level ?? 0) < 1 || (e.kind !== 'shot' && e.kind !== 'guardShot') || Q.heardEvents.has(e)) continue;
@@ -475,7 +477,7 @@ export function updateQrf(g: Game, dt: number) {
     if (!g.tune.qrf || !live(g) || !g.tune.qrfSilent) { Q.silentAt = -1; Q.silentSaid = false; }   // (the silent net's clock runs only while the rule could act: a run not live for a stretch starts it afresh, cue first)
     if (!g.tune.qrf || !live(g)) return;
     if (rd) {   // a raid: a man who can call has heard gunfire and lived `callSecs` to say so — the men at the set down first, nobody calls
-      if (!g.roomClear?.end && g.time - Q.loudT < LOUD_MEMORY_SECS && raidVoice(g) && !requestQrf(g, 'gunfire')) { Q.raidT = -1e9; Q.heardAt.clear(); }   // (asked and refused — no room on the floor for even a pair: the next gunfire he hears is a new call to make)
+      if (!raidOver(g) && g.time - Q.loudT < LOUD_MEMORY_SECS && raidVoice(g) && !requestQrf(g, 'gunfire')) { Q.raidT = -1e9; Q.heardAt.clear(); }   // (asked and refused — no room on the floor for even a pair: the next gunfire he hears is a new call to make)
       return;
     }
     if (g.tune.qrfSilent && silentNet(g, Q)) return;
