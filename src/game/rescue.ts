@@ -51,6 +51,7 @@ import type { FollowCamera } from './camera';
 import type { RoomClearPlan } from '../scene/level';
 import type { DoorOp, DoorGate } from './doortools';
 import { sideOf, doorIdWords } from './orders';
+import { doorWrittenName } from './doornames';
 import type { Assignment } from './orders';
 import { spawnUnit, despawnUnit, resetChase } from './guards';
 import { PRESSURE } from './pressure';   // (read inside defenders() only: Hard's master switch — nothing of pressure.ts is touched at load)
@@ -149,7 +150,7 @@ let applied: TeamStart | null = OFFICE_SCENARIOS.rescue.team;   // (the knobs ab
 /** THE OFFICE'S side-door marks, under the name its probes import them by (the game reads the level's own: Rescue.data.side) */
 export const SIDE_MARKS = { stack: OFFICE_SCENARIOS.rescue.side!.stack as Vec3[], standoff: OFFICE_SCENARIOS.rescue.side!.standoff as Vec3[] };
 const NUMBER = ['no', 'one', 'two', 'three', 'four', 'five', 'six'];
-const doorName = (id: string) => doorIdWords(id);   // (orders.ts doorWords, by id)
+const doorName = (g: Game, id: string) => { const d = g.doors.byName(id); return (d && doorWrittenName(d)) ?? doorIdWords(id); };   // (orders.ts doorWords, by id — or the name its level wrote for it)
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const yawTo = v3.yawTo, wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 /** the door tools' orders that end with a man holding a point inside a room · how fast a man pans his light across the hostage room looking for somebody (search()) */
@@ -847,7 +848,7 @@ export class Rescue {
     const O = this.g.orders, S = this.data; if (!S) return; let first = true;
     for (const e of E.ops) for (const o of e.op.men) {
       if (o.state === 'dead' || O.of(o) !== e.op.mine.get(o)) continue;   // (re-ordered since: he is on Sam's order, not ours to post)
-      if ((!e.side && first) || !S.side) { first = false; this.post(o, this.roomPoint('hold'), doorName(S.room.door)); } else this.post(o, v3.copy(S.side.hold), doorName(S.side.door));   // (a room with one door: everybody's gun on it)
+      if ((!e.side && first) || !S.side) { first = false; this.post(o, this.roomPoint('hold'), doorName(this.g, S.room.door)); } else this.post(o, v3.copy(S.side.hold), doorName(this.g, S.side.door));   // (a room with one door: everybody's gun on it)
     }
   }
 

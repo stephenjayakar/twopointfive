@@ -251,6 +251,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else { const ws = k.tables.WALLSNAP as Partial<typeof WALLSNAP>; if (ws.alongDeg === undefined) WALLSNAP.alongDeg = 0; if (ws.stackDraw === undefined) WALLSNAP.stackDraw = false; if (ws.pose === undefined) WALLSNAP.pose = false; }   // (…and one from before 10-10's two rules: the stick's along / away as it was, the rifle drawn on the wall waiting for the step off)
   { const rw = k.tables.REARWATCH as Partial<typeof REARWATCH> | undefined; if (rw && rw.roomLast === undefined) REARWATCH.roomLast = false; }   // (a file from before a room keeper waited for the men on their way out of the room: freed the moment they had come by him)
   if (!k.tables.GUNWALL) GUNWALL.on = false;   // (a file from before a raised gun came down at a wall: its men kept theirs up, and fired or did not by that)
+  if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.doors === undefined) WORDS.doors = false;   // (a file from before a level could name its own doors: every door called what it was)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
