@@ -163,6 +163,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   compound's pair on FROZEN, on 'finished' (dealt seed 1 to the 240 s cap, the compound's own known line), which this rule does not touch. CHECK:
   `PAIRTEAM_BREAK=1` asks every pair again and the compound's pair on shipped exits 1. Records and the office: PASS, still asked, both stands for records.
   `probes.ts scenario-levels` ALL PASS on both stands.
+- **The level check's rescue player leads the hostages out** (`tools/qa/scenario-level-probes.ts` `Walk.leadOut`, 10-19; tests only, no switch). Its Sam
+  walked to the door, pressed F and then only held the room. With the page's ending up (`RESCUEEND`: a held room ends nothing) and the covered lanes stopping
+  the man the flush sends short of the room, nothing was left to end the run: on the shipped stand `scenario-levels-rescue` (the test level) stalled at its
+  150 s cap on all six seeds, and the frozen stand, where the 15 s hold still ends it, stayed green. Now, 8 s after the room is the team's (`LEAD_AFTER`), he
+  walks to the nearest hostage, takes her row and walks them to the way in, asking again every 5 s; with the ending off he holds as before. MEASURED, shipped
+  stand: the test level 6 of 6 rescued, both hostages out at 40 s (it was 6 of 6 stalled); the registry (3 seeds, cleared at 26 to 28 s) and the consulate
+  (its own two red lines, the staging count and seed 2's walk) are line for line what they were on the build before. Frozen: unchanged (5 rescued, seed 3
+  lost). The stall was the check's player, not a man who never comes: he is sent 4 s after the room falls and waits at a corner short of the lane, and this
+  player (god mode, kept near unseen, never firing) neither met him nor left. Never seen on a GPU, never played.
 - **The pass is the fifth `TRAPPED` row of the level check** (`tools/qa/scenario-level-probes.ts`, 10-14, on build 583bb5a9; tests only, no switch). Its own
   sentence (`missions.md`, 'A level made for snow: the pass') makes the white, lit yard between the lorry and the doors the problem, watched through glass
   from two sides, with the answers round the back (the kitchen's `back` door, way 2) or with the mains cut; this commander walks way 1 across that yard.
