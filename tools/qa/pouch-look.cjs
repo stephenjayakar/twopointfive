@@ -41,6 +41,7 @@ const BASE = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&cards`;
   const R = { errors: [], noise: 0, notes: [] };
   const open = async (q, sel, store) => {
     const page = await browser.newPage({ viewport: { width: 1400, height: 1000 }, deviceScaleFactor: 1 });
+    page.setDefaultTimeout(SHOT_MS);   // (a click waits for the element to hold still over two frames: as slow as a still on this adapter, and Playwright's own 30 s ends the run)
     page.on('console', x => { const t = x.type(), s = x.text(); if (t !== 'error' || /Failed to load resource/.test(s)) return; if (NOISE.test(s) && R.noise < 200) R.noise++; else R.errors.push(`${q}: ${s.slice(0, 300)}`); });
     page.on('pageerror', x => R.errors.push(`${q} pageerror: ` + String(x && x.stack || x).slice(0, 500)));
     if (store !== undefined) await page.addInitScript((s) => { try { if (s === null) localStorage.removeItem('twopointsix.kit'); else localStorage.setItem('twopointsix.kit', s); } catch {} }, store);
