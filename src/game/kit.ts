@@ -662,9 +662,12 @@ const GUN_NOTE: Record<WeaponId, string> = {
   m1014: 'M1014: a room, as fast as the trigger is pulled · opens no lock, no reach, no launcher',
   hk45: 'HK45: the quietest gun there is · a short magazine, a slower hand',
   g18: 'Glock 18: a long magazine on automatic · loud, and it climbs',
+  // (the issue carbine and the issue pistol with the suppressor off: the same gun, heard)
+  mk18bare: 'FN2000 without its suppressor: a bright flash and the hard report',
+  g19bare: 'Five-seveN without its suppressor: every round is heard as gunfire',
 };
 /** the four guns in a card's words */
-const GUN_SHORT: Record<WeaponId, string> = { fn2000: 'FN2000', aks74u: 'AKS-74U', fiveseven: 'Five-seveN', guard9mm: '9 mm pistol', m870: 'M870 shotgun', ak74m: '', akms: '', mk12: 'Mk 12', mp7: 'MP7', mk46: 'Mk 46', m1014: 'M1014', hk45: 'HK45', g18: 'Glock 18', pkm: '' };
+const GUN_SHORT: Record<WeaponId, string> = { fn2000: 'FN2000', aks74u: 'AKS-74U', fiveseven: 'Five-seveN', guard9mm: '9 mm pistol', m870: 'M870 shotgun', ak74m: '', akms: '', mk12: 'Mk 12', mp7: 'MP7', mk46: 'Mk 46', m1014: 'M1014', hk45: 'HK45', g18: 'Glock 18', pkm: '', mk18bare: 'FN2000', g19bare: 'Five-seveN' };
 const suitRow: KitRow = { field: 'suit', label: 'Suit', values: ['issued', ...Object.keys(SUITS)], word: v => v === 'issued' ? 'as issued' : SUITS[v as Exclude<SuitId, 'issued'>].label, note: () => 'looks only: nobody sees a colour' };
 const trimRow: KitRow = { field: 'trim', label: 'Trim', values: ['issued', ...Object.keys(TRIMS)], word: v => v === 'issued' ? 'as issued' : TRIMS[v as Exclude<TrimId, 'issued'>].label, note: m => m.trim === 'issued' ? 'the pair colour on a four (red, blue)' : 'the joints: how you tell him from above' };
 /** your guns row in the card's words · what the shotgun changes in a run, in a line (yours and a teammate's) */
@@ -792,7 +795,10 @@ export function kitWords(i: number): string {
   const m = kitShown(i), look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
   const frags = SLOTS.on && m.frags ? `, ${m.frags} frag${m.frags === 1 ? '' : 's'}` : '';
   if (i === 0) return [gunsOn() ? (m.weapon === 'pistol' ? `${gearText(pickWord(m.secondary))} only` : `${gearText(pickWord(m.primary))} + ${gearText(pickWord(m.secondary))}`) : gearText(YOU_GUNS[m.weapon]), `${m.smoke || 'no'} smoke, ${m.bangs || 'no'} stun${frags}${SLOTS.on && m.shells ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` /* (no-break spaces: the count never parts from '40 mm' where the strip wraps the line) */ : ''}${chargeRow(0) && m.charges ? `, ${m.charges} charge${m.charges === 1 ? '' : 's'}` : ''}${m.cams && camRow() ? `, ${m.cams}\u00a0cam${m.cams === 1 ? '' : 's'}` : ''}${m.wand && wandRow() ? ', wand' : ''}`, wallWords(0, m), bigWords(m), look].filter(Boolean).join(' · ');
-  return [gearText(GUN_SHORT[kitGun(m)]) + (kitSide(m) ? ` + ${gearText(GUN_SHORT[kitSide(m)!])}` : ''), m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}`, wallWords(i, m), bigWords(m), look].filter(Boolean).join(' · ');
+  // (gunslots.ts: a gun with its suppressor off is the same gun by name — the line says so in words, as it says 'no light'; until that key the bare gun's
+  //  own name said it)
+  const bare = gunsOn() && GUNSLOTS.bare && !m.suppressed && (kitGun(m) !== kitGun({ ...m, suppressed: true }) || kitSide(m) !== kitSide({ ...m, suppressed: true })) ? 'no suppressor' : '';
+  return [gearText(GUN_SHORT[kitGun(m)]) + (kitSide(m) ? ` + ${gearText(GUN_SHORT[kitSide(m)!])}` : ''), bare, m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}`, wallWords(i, m), bigWords(m), look].filter(Boolean).join(' · ');
 }
 /** the big slot's shotgun or hammer of a card's line (BIGSLOT; the wall charge has its own words) */
 function bigWords(m: MemberKit): string { return bigOn && !m.walls && m.big !== 'none' ? BIG_WORD[m.big] : ''; }

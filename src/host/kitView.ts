@@ -1983,7 +1983,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const T = costOn() ? KIT_VIEW_QUIET.cost.turn : 0;   // (under a loud row's cost ALL of him comes round to the door, at the cost's own rate: the game turns his chest and gun to an aim under `torso` off his feet and leaves the feet — he stood twisted, a stride's pose — so his body's channel is asked for the door too)
     if (T > 0 && staged) G.body.want = yawTo(game.player.char.pos, staged.at([0, 0, 0]));
     chanTick(G.body, Math.max(K.bodyRate, T) * R, dt); chanTick(G.aim, Math.max(K.gunRate, T) * R, dt); };
-  const SHORT = /fiveseven|guard9mm|hk45|g18/;   // the pistols' rows (the rest are long guns)
+  const SHORT = /fiveseven|guard9mm|hk45|g18|g19bare/;   // the pistols' rows (the rest are long guns)
   /** a teammate's gun written live: his hands' errand now (the animator's own kit swap: the right hand over the shoulder and back), the model at its far point */
   const swapGun = (man: Guard, id: string) => {
     const had = swaps.find(x => x.man === man); if (had) { had.id = id; return; }   // (a new pick before the write only changes what is written)

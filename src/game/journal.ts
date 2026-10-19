@@ -279,6 +279,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
   if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
   else if ((k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).heard === undefined) GUNSLOTS.heard = false;   // (…and from before a teammate's quiet round was heard: it reached nobody)
+  if (k.tables.GUNSLOTS && (k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).bare === undefined) GUNSLOTS.bare = false;   // (…and from before a bare carbine was the same gun: it was the AKS-74U row)
   if (!k.tables.GUNLOOK) GUNLOOK.on = false;   // (a file from before each gun had its own look: every row was its stand-in — its muzzle, its flash and its reload's beats the stand-in's)
   else if ((k.tables.GUNLOOK as Partial<typeof GUNLOOK>).shells === undefined) GUNLOOK.shells = false;   // (…or from before a tube gun was fed by the shell: its reload was the row's one length, the tube booked at its end)
   if (!k.tables.GUNROLES) GUNROLES.on = false;   // (a file from before the defenders drew from the table: every one of them carried the short carbine, and no stack, entry or trigger read a man's gun)

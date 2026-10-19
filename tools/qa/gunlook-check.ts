@@ -49,6 +49,8 @@ async function kept<T>(fn: () => Promise<T>): Promise<T> {
 const ISSUE = ['mk18', 'g19'];
 /** TWO GUNS, ONE KIND OF EMPTY — said why: the same cartridge leaves the same brass. Every other pair's casing rows differ in what they hold. */
 const SAME_CASE: [string, string, string][] = [
+  ['fn2000', 'mk18bare', 'the same gun with its suppressor off'],
+  ['fiveseven', 'g19bare', 'the same gun with its suppressor off'],
   ['g18', 'guard9mm', 'both 9 mm: the same case out of the same slide'],
 ];
 /** the rows the two slots can hand out, by pick: [pick, row] — the row with his can on where the pick has one, and the bare row where that is another */
