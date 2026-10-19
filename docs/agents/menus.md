@@ -1098,7 +1098,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stand (`?nokittree`); in the knob registry and `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off = the card of the
   build before, row for row: one Suppressor row for both a teammate's guns, your guns always suppressed, five sponge rounds with every launcher, the
   two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`, `-mate40`; 31 lines on both
-  stands, `KITTREE_BREAK=1` fails 17 on the frozen stand and 18 on the shipped one); the real page, `PORT=<port> node tools/qa/kittree-page.cjs` (20
+  stands, `KITTREE_BREAK=1` fails 18 on the frozen stand and 19 on the shipped one); the real page, `PORT=<port> node tools/qa/kittree-page.cjs` (20
   lines: bars, tiles under their gun, sponge none on a loud mission and the mission's five on a quiet one, the one Reset, the row of kits alone, and
   at 1000, 1180, 1353, 1440 and 1512 px wide nothing cut and nothing run into; `KITTREE_BREAK=1` fails 4); a deploy off the card,
   `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,
