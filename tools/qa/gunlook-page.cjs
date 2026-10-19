@@ -5,7 +5,9 @@
 //   on     the page opens with the switch on: every man's figure is told his gun's model, his muzzle is that model's; you fire a round and change the belt
 //          — the feed cover is up inside the change, the gun is full after it — and half a second of play draws with no page error
 //   off    the same page with ?nogunlook: the switch off, no figure told anything, the same play with no page error
-// exit 0 = both, with no page error · 1 = otherwise. ONLY=on|off runs one. STILLS=1 with an outDir: each man close, and you with the cover up — minutes
+//   shells the shells key (GUNLOOK.shells) with the M1014 in YOUR hands: one shell and a whole tube each take their own time, the trigger breaks the
+//          feeding off and fires; the same page with ?nogunshells: one shell takes the row's whole length again
+// exit 0 = both, with no page error · 1 = otherwise. ONLY=on|off|shells runs one. STILLS=1 with an outDir: each man close, and you with the cover up — minutes
 // each on the SOFTWARE adapter, and the mission is at night: they show that the frame draws, little of a gun (tools/qa/gunlook-sheet.ts is the picture).
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
@@ -14,6 +16,7 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
 const man = (primary, secondary) => ({ weapon: 'rifle', suppressed: true, primary, secondary, smoke: 0, bangs: 1, frags: 0, shells: 0, charges: 0, walls: 0, big: 'none' });
 const KIT = JSON.stringify({ v: 2, own: true, members: [man('mk46', 'g18'), man('mk12', 'hk45'), man('mp7', 'g18'), man('m1014', 'hk45'), man('mk18', 'g19')] });
 const WANT = { you: 'mk46', mates: ['mk12', 'mp7', 'm1014'] };
+const KIT_TUBE = JSON.stringify({ v: 2, own: true, members: [man('m1014', 'hk45'), man('mk12', 'hk45'), man('mp7', 'g18'), man('mk46', 'g18'), man('mk18', 'g19')] });
 if (OUT) fs.mkdirSync(OUT, { recursive: true });
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 const DRAW = async (n) => {
@@ -29,11 +32,11 @@ const DRAW = async (n) => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }); let failed = false;
   const line = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
   console.log('\n=== gunlook-page: on the real page every man is drawn as the gun his card hands him; with ?nogunlook nobody is ===');
-  const open = async (q) => {
+  const open = async (q, kit = KIT) => {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }); const errors = [];
     page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|smoke|storage textures/i.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-    await page.addInitScript(k => { try { localStorage.setItem('twopointsix.kit', k); } catch { } }, KIT);
+    await page.addInitScript(k => { try { localStorage.setItem('twopointsix.kit', k); } catch { } }, kit);
     await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&squad4=17&nocutboxes${q}`, { timeout: 600000 });
     const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; });
     if (fatal) errors.push('fatal: ' + fatal);
@@ -55,7 +58,26 @@ const DRAW = async (n) => {
     w.mag = 0; w.chamber = 0; window.__input.pressed.add('KeyR'); window.__glStep(1, ['KeyR']); let fed = null, frames = 0;
     for (let f = 0; f < 60 * 9 && (w.reloading || f < 5); f++) { window.__glStep(1); frames++; fed = fed ?? an.feed; }
     return { full, after, shots, fed, frames, mag: w.mag + w.chamber, reloading: !!w.reloading, dur: w.def.reload.dur }; };
-  if (ONLY !== 'off') {
+  // the M1014 in your hands, by the shell: one shell into a gun one short, a whole tube from empty, then the trigger pressed with one shell in and two to go
+  const shells = () => { const g = window.__game, pl = g.player, w = pl.rifle, an = pl.char.anim; pl.slot = 'rifle'; pl.holstered = false; window.__mouse(900, 300); window.__glStep(45);
+    const set = (tube, ch) => { w.cancelReload(); an.cancelReload(); w.mag = tube; w.chamber = ch; window.__glStep(2); window.__input.pressed.add('KeyR'); let f = 0; for (; f < 90 && !w.reloading; f++) window.__glStep(1, f ? [] : ['KeyR']); };
+    const run = (tube, ch) => { set(tube, ch); const t0 = g.time; let steps = 0, was = w.mag + w.chamber; for (let f = 0; f < 600 && w.reloading; f++) { window.__glStep(1); const r = w.mag + w.chamber; if (r !== was) { steps++; was = r; } }
+      return { secs: +(g.time - t0).toFixed(2), rounds: w.mag + w.chamber, steps }; };
+    const one = run(6, 1), all = run(0, 0);
+    set(4, 1); window.__glStep(50); const mid = w.mag + w.chamber, shots0 = w.shotsFired; window.__click(0); window.__glStep(3);
+    return { gun: w.def.id, knob: window.__knobs?.registry?.().GUNLOOK?.shells, one, all, broke: { mid, fired: w.shotsFired - shots0, reloading: !!w.reloading, rounds: w.mag + w.chamber }, row: w.def.reload.dur }; };
+  if (!ONLY || ONLY === 'shells') {
+    { const { page, errors } = await open('', KIT_TUBE); log('shells: ready'); const S = await page.evaluate(shells);
+      line(S.gun === 'm1014' && S.knob === true && Math.abs(S.one.secs - 1.46) < 0.12 && S.one.rounds === 8 && Math.abs(S.all.secs - 3.62) < 0.12 && S.all.rounds === 7 && S.all.steps === 7,
+        'on the page the M1014 in your hands is fed by the shell: one shell takes about a second and a half, a whole tube from empty about 3.6 s, the rounds in it going up one at a time', JSON.stringify(S));
+      line(S.broke.mid === 6 && S.broke.fired === 1 && !S.broke.reloading && S.broke.rounds === 5, 'the trigger pressed with one shell in and two to go lets the reload go and fires', JSON.stringify(S.broke));
+      await page.evaluate(() => window.__glStep(30)); line(errors.length === 0, 'no page error feeding it by the shell', errors.slice(0, 4).join(' · ') || 'none'); await page.close(); }
+    { const { page, errors } = await open('&nogunshells', KIT_TUBE); log('shells off: ready'); const S = await page.evaluate(shells);
+      line(S.knob === false && Math.abs(S.one.secs - S.row) < 0.12 && S.one.rounds === 8 && S.one.steps === 1 && S.broke.fired === 0,
+        'the same page with ?nogunshells: the key is off, one shell takes the row\'s whole length, booked in one step, and the trigger does not break it off', JSON.stringify(S));
+      await page.evaluate(() => window.__glStep(30)); line(errors.length === 0, 'no page error with the key off', errors.slice(0, 4).join(' · ') || 'none'); await page.close(); }
+  }
+  if (!ONLY || ONLY === 'on') {
     const { page, errors } = await open(''); log('on: ready');
     const L = await page.evaluate(look);
     line(L.knob === true && L.you.up && L.you.gun === 'mk46' && L.you.look?.hand === 'mk46' && L.you.look?.side === 'g18' && L.mates.length >= 3 && WANT.mates.every((id, i) => L.mates[i]?.gun === id && L.mates[i].look?.hand === id && !!L.mates[i].look?.side) && new Set([L.you.ahead, ...L.mates.slice(0, 3).map(m => m.ahead)]).size === 4,
@@ -69,7 +91,7 @@ const DRAW = async (n) => {
     await page.evaluate(() => window.__glStep(30));
     line(errors.length === 0, 'no page error with the six guns on the floor, fired, fed and drawn', errors.slice(0, 4).join(' · ') || 'none'); await page.close();
   }
-  if (ONLY !== 'on') {
+  if (!ONLY || ONLY === 'off') {
     const { page, errors } = await open('&nogunlook'); log('off: ready');
     const L = await page.evaluate(look);
     line(L.knob === false && L.you.gun === 'mk46' && L.you.look === null && L.mates.every(m => m.look === null), 'the same page with ?nogunlook: the switch is off, the same guns are carried and no figure is told a model', JSON.stringify(L));

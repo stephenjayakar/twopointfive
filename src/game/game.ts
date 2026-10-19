@@ -1668,7 +1668,7 @@ export class Game {
         // the second pass (MOVES.reload / clutch / entry): where his magazine is, a man folded by a blast or a ring and not blind with it, a friend's back before his muzzle
         an.reloadBack = long === 'sc20k' && !GEAR.on; an.reloadMag = !(def as { pellets?: unknown }).pellets; an.clutch = gd.state !== 'dead' && this.time < gd.staggerUntil && !(this.time < gd.dazzledUntil) ? 1 : 0;
         if (MOVES.on > 0.5) {   // …and the reload HE is in, by the clock that owns it: his own beat (guards.ts — it stands still while he is off his man) or the room fight's for a teammate (roomfight.ts reloadUntil, which plays no clip: the gun stays up and the hand does the change)
-          const R = def.reload, fo = gd.reloadT < 0 && gd.state !== 'dead' ? this.fight.opOf(gd) : null;
+          const R = gd.weapon.reloadRow, fo = gd.reloadT < 0 && gd.state !== 'dead' ? this.fight.opOf(gd) : null;   // (the row his beat is on: the gun's own, or a tube gun's by the shell — gunreload.ts feedBegin)
           an.reloadRow = R; an.reloadAt = gd.state === 'dead' ? -1 : gd.reloadT >= 0 ? R.dur - gd.reloadT : fo && fo.reloadUntil > this.time ? Math.max(0, R.dur - (fo.reloadUntil - this.time)) : -1;
         }
         an.dip = MOVES.on > 0.5 && MOVES.entry > 0.5 && cb && !show && !gd.held && gd.state !== 'dead' && gd.team === 'operative' && !this.fight.busy(gd, 1.5) && !this.fight.contact(gd) && friendBeforeMuzzle(this, gd) ? 1 : 0;   // (not the showcases' casts: their muzzles are choreographed; and never a man with somebody to shoot, or eyes on one — the gun is where the fight wants it)

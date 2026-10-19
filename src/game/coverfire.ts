@@ -36,6 +36,7 @@ import { chaosOf } from './destruction';
 import { wallBreakOn, WALLS, WALL_STATS } from './wallbreak';
 import { isHostile, foeCrouched, foeDown } from './teams';
 import { shotOrigin, burstTrigger, roundPastColleague, tickReloadBeat, startReloadBeat } from './guards';
+import { feedBegin } from './gunreload';   // (called inside the fire gate only: the row a dry man's reload runs on)
 import { fireWeapon } from './combat';
 import { AIM } from './aim';
 import { guardFireMods, SUPPRESSION } from './suppression';
@@ -302,7 +303,7 @@ export function coverOp(g: Game, O: OpLike, dt: number, speed: number, point: (t
   const settle = Math.max(P.settleSecs, 1e-3) * clamp(dist / Math.max(P.rangeRef, 0.1), P.nearK, 1) * Sk.settleK;
   Cw.lay = !g.tune.aimModel ? (on ? 1 : 0) : on ? Math.min(1, Cw.lay + dt / settle) : Math.max(0, Cw.lay - P.loseRate * dt);
   if (!on || Cw.lay < P.acquireMin - 1e-9 || g.time < Cw.next || g.time < O.next || g.time < O.reloadUntil || sideLocked(g, gd)) return true;   // (O.next: the room fight's own gap since his last round at a man)
-  if (!gd.weapon.fire()) { O.reloadUntil = g.time + gd.weapon.def.reload.dur; g.say(gd, 'reloading.'); return true; }
+  if (!gd.weapon.fire()) { O.reloadUntil = g.time + feedBegin(gd.weapon).dur; g.say(gd, 'reloading.'); return true; }
   const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * Sk.spreadK;
   const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
   fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(Cw.lay, 0, 1)) * supK + speed * P.shooterMoveK * 0.5 });

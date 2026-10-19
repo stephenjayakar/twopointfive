@@ -72,6 +72,7 @@ import { simRandom } from '../math/dice';
 import { canSee, canSeeChar, eyeContact, GUARD_EYE, sightGain, sightGainOn, hearingCheck, lightEstimateAt, tickReloadBeat } from './guards';
 import type { Eye } from './guards';
 import { fireWeapon } from './combat';
+import { feedBegin } from './gunreload';
 import { isHostile, teamOfId } from './teams';
 import { w } from './words';
 
@@ -404,8 +405,9 @@ function round(g: Game, gd: Guard, S: Mind, dt: number, every: number, of: 'dust
  *  waits on it, and on a gun with nothing in it) — said in THIS file's words, shouted — stretched to `reloadSecs` */
 function runDry(g: Game, gd: Guard, S: Mind) {
   const c = gd.char; begin(S, 'reload');
+  const row = gd.reloadT < 0 ? feedBegin(gd.weapon) : gd.weapon.reloadRow;   // (gunreload.ts: the gun's own row, as ever — a tube gun's by the shell under that key)
   if (gd.reloadT < 0) { gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); }
-  gd.reloadT = Math.max(gd.reloadT, gd.weapon.def.reload.dur, MORALE.reloadSecs);
+  gd.reloadT = Math.max(gd.reloadT, row.dur, MORALE.reloadSecs);
   bark(g, gd, S, 'out', false, true); MORALE_STATS.reloads++;
 }
 /** a bait taken: the first is the rest of the magazine, the second `baitShort` rounds, the third a word. A STEADY man's is `baitShort` rounds, twice and no

@@ -15,10 +15,18 @@ import type { MuzzleFxKey } from './effects';
 
 export const GUNLOOK = {
   on: false,
+  /** A TUBE GUN IS FED A SHELL AT A TIME IN TIME AND IN THE BOOKS (gunreload.ts shellPlan; rides on `on`): a reload takes its row's `reload.shell` seconds —
+   *  a lead, so long a shell, a tail — for the shells that go in, and each shell is in the gun the moment it is heard, so a reload cut short keeps what was fed.
+   *  Off (`?nogunshells`, a recording from before the key): the row's one length whatever goes in, and the whole tube booked at its end, as before. */
+  shells: true,
 };
+/** `GUNSHELLS_BREAK=1` (tools/qa/gunreload-check.ts): the key is never on — a tube gun's reload is the row's one length again, and the check's lines fail */
+const SHELLS_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GUNSHELLS_BREAK ?? '') === '1'; } catch { return false; } })();
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GUNLOOK_BREAK ?? '') === '1'; } catch { return false; } })();
 /** the switch, as every reader asks it (GUNLOOK_BREAK=1: off whatever the table says) */
 export const gunLookOn = (): boolean => GUNLOOK.on && !BREAK;
+/** …and the shells key under it */
+export const gunShellsOn = (): boolean => GUNLOOK.on && !BREAK && GUNLOOK.shells && !SHELLS_BREAK;
 /** what a row has of its own, while the switch is on — null: its stand-in fields (rig, report.voice, muzzleFx) are the gun */
 export const gunOwn = (def: WeaponDef): NonNullable<WeaponDef['own']> | null => gunLookOn() ? def.own ?? null : null;
 /** the voice its report is played with (combat.ts fireWeapon) */

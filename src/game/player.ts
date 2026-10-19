@@ -58,7 +58,7 @@ import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
-import { feedDeal, feedPlan, feedPlay } from './gunreload';
+import { feedDeal, feedPlan, feedPlay, shellPlan } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
 import type { CloseKind } from './close';
 import { wetFootfall } from './wet';
@@ -238,11 +238,24 @@ function armRifle(g: Game, inHands: boolean, carriage: LongStance | null) {
   if (inHands) { an.longGrip = (own ? modelGrip(own, fit) : null) ?? sc20kGrip(undefined, fit); pl.char.muzzleAhead = (own ? modelMuzzleAhead(own) : null) ?? sc20kMuzzleAhead(); }   // (kitanim.ts grips: the support hand follows the gun as it is drawn in his hands — rigProps GRIPFIT)
   else pl.char.muzzleAhead = pl.pistol.def.muzzleAhead;
 }
+/** THE TRIGGER PRESSED OVER A TUBE GUN BEING FED BY THE SHELL (gunlook.ts GUNLOOK.shells; null without the key, or nothing to break off): what was fed is in
+ *  the gun, so the feeding stops there. 'fire': a round is chambered — the reload is let go and this press fires. 'bolt': rounds in the tube and none chambered
+ *  (a pump gun broken off, or a reload a sprint cut short) — the bolt or the pump is run on them, its own short beat, and the NEXT press fires. */
+function shellBreak(g: Game): 'fire' | 'bolt' | null {
+  const pl = g.player, rifle = pl.rifle, c = pl.char, feeding = rifle.reloading && rifle.shellFed;
+  if (rifle.reloading ? !feeding : !shellPlan(rifle)) return null;
+  if (rifle.chamber === 1 || (rifle.infinite && rifle.mag !== null)) { if (!feeding) return null; rifle.cancelReload(); c.anim.cancelReload(); return 'fire'; }   // (Firearm.canFire's own question, less the reload)
+  if (!rifle.mag) return null;   // nothing in it yet: the dry click, and the feeding goes on
+  if (feeding && rifle.feedN === 0) return 'bolt';   // (the bolt run itself: a second press does not start it over)
+  if (c.anim.kitBusy || !pl.rifleUp || (pl.wall && pl.wall.kind !== 'stack')) return null;   // (reloadInHand's own gates: where no reload may begin the feeding is not thrown away for one)
+  if (feeding) { rifle.cancelReload(); c.anim.cancelReload(); }
+  return reloadInHand(g, false, true) ? 'bolt' : null;
+}
 /** RELOAD THE GUN IN HIS HANDS — the one way a reload starts for the player (the R key calls it; anything else that wants him reloading — a rule that reloads an
  *  empty gun by itself — calls it too, so there is one beat, one set of sounds and one animation). Which reload it is comes off the gun's own state (a round
  *  still chambered or not, the magazine dry or not). Returns true when a reload BEGAN; false = nothing happened (no gun up, sprinting, on the wall with the
  *  pistol, already reloading, magazine full, or no spare — the last one says so on the HUD). `sprinting` = the sprint is held with a direction this frame. */
-export function reloadInHand(g: Game, sprinting = false): boolean {
+export function reloadInHand(g: Game, sprinting = false, boltOnly = false): boolean {
   const pl = g.player, c = pl.char, gun = pl.pistol, rifle = pl.rifle;
   if (c.anim.kitBusy || (KITANIM.on && pl.equipT > 0)) return false;   // (kitanim.ts: the gun is not in his hands yet — or is on its way out of them, or still on his thigh through the swing of the throw that handed the slot to it)
   if (pl.pistolUp && !sprinting && !pl.wall) {   // (on the wall or holstered the pistol is on his thigh: nothing to reload in the hand)
@@ -258,17 +271,23 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
   }
   if (pl.rifleUp && !sprinting && (!pl.wall || pl.wall.kind === 'stack')) {   // the rifle in the hands: the same staged beat off its row (2.4 s: the empty out of the well behind the grip at 0.5 — its black thirty, 'mag' fill 3 — the fullest spare in at 1.5, the charging handle at 2.0)
     const rackIt = rifle.chamber === 0;   // (the moves' support hand: a round still up the pipe and the handle is left alone — weapons.ts racks only an empty chamber)
-    const plan = kitReload(g, rifle, true);
+    // A TUBE GUN BY THE SHELL (gunreload.ts shellPlan, the GUNLOOK.shells key; null without it, and then every line below is the line it was): the beat is made
+    // for the shells that go in, and each is booked as it is heard. `boltOnly` (shellBreak below): none goes in — the round in the tube is chambered.
+    const sp = shellPlan(rifle, false, boltOnly ? 0 : Infinity);
+    if (sp?.idle) { if (rifle.spare.length === 0 && !boltOnly) g.msg(`no more shells for the ${rifle.def.short}`); return false; }
+    const plan = sp ? null : kitReload(g, rifle, true);
     // EACH GUN FED ITS OWN WAY (gunreload.ts; null with gunlook.ts off or a row with no model, and then every line below is the line it was): `own` = a belt gun's or
     // a tube gun's own sounds on this beat, played as the weapon's clock passes each (Firearm's cues) IN PLACE of the three a magazine change makes; `drop` = what an
     // empty one leaving the gun is drawn as (null: nothing falls). The beat, the books and the dice are the weapon's, untouched.
-    const fp = feedPlan(rifle, plan?.row ?? rifle.def.reload), own = fp?.cues ?? null, belt = fp?.drop === 5;
+    const fp = feedPlan(rifle, sp?.row ?? plan?.row ?? rifle.def.reload, sp ? { n: sp.n, pull: sp.pull } : undefined), own = fp?.cues ?? null, belt = fp?.drop === 5;
     if (rifle.startReload({
       magOut: (rounds, dropped) => { if (!own) g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets && fp?.drop !== null) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: fp?.drop ?? 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: belt ? 0.6 : 0.8 }); } },
       magIn: () => { if (!own) g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }); },
       rack: () => { if (!own) g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }); },
       cue: i => { if (own) feedPlay(g, c.pos, own[i]); },
-    }, plan?.row, fp?.times)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
+    }, sp?.row ?? plan?.row, fp?.times, sp ? { times: sp.times, port: sp.port } : undefined)) {
+      if (sp) { c.anim.reload(sp.row.dur, sp.row); if (sp.n) g.msg(`reloading the ${rifle.def.short}`); return true; }
+      if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
     if (rifle.spare.length === 0) g.msg(rifle.def.pellets ? `no more shells for the ${rifle.def.short}` : `no spare magazines for the ${rifle.def.short}`);
     return false;
   }
@@ -539,7 +558,9 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     const pull = rifle.automatic ? input.lmb() || input.lmbHit() : input.lmbHit();
     if (pull && !walled && pl.fireCd <= 1e-4 && pl.equipT <= 0) {   // (1e-4: 0.1 s is six sixtieths exactly — the float dust of six subtractions must not cost the string a seventh frame; the guards' burst clock does the same)
       const grow = rifle.autoSpread;   // (this round's share of the string's growth, read before it is booked)
-      if (rifle.fire()) {
+      const broke = input.lmbHit() ? shellBreak(g) : null;   // (the shells key: the press breaks off a tube gun's feeding and fires what is chambered — or runs the bolt on what is in the tube)
+      if (broke === 'bolt') pl.fireCd = 0.1;
+      else if (rifle.fire()) {
         pl.fireCd = rifle.automatic ? rifle.def.auto!.interval : rifle.def.cd; pl.lastFireT = g.time; rifle.autoFired();
         const pt = g.puppet?.target && g.puppet.target.state !== 'dead' ? g.puppet.target : null;
         const tgt: Vec3 = pt ? v3.add(pt.char.pos, [0, 1.25, 0]) : g.aimTarget ? v3.copy(g.aimTarget.pos) : g.aimGuard ? (g.aimGuard.wound && g.aimSnap ? v3.copy(g.aimSnap) : v3.add(g.aimGuard.char.pos, [0, 1.25, 0])) : freeAim(g);   // as the pistol's: the fixture, the man, or level along the cursor's heading

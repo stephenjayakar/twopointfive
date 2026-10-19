@@ -699,7 +699,10 @@ export const reloadMarks = (back: boolean) => back ? MV2.reload.back : MV2.reloa
 /** a weapon's reload beat as the animator takes it (weapons.ts WeaponDef.reload is one): seconds to the magazine out / the fresh one in / the handle; `rack: null` = no handle this time */
 /** (`keep` s: the old magazine has rounds in it and is PUT AWAY at this time, not dropped — the hand goes by the dump pouch on its way to a fresh one; `hand`:
  *  the support hand works this change on a PISTOL too — both dealt by game/kitanim.ts, absent = as it was) */
-export interface ReloadBeat { dur: number; out?: number; in_?: number; rack?: number | null; keep?: number; hand?: boolean }
+export interface ReloadBeat { dur: number; out?: number; in_?: number; rack?: number | null; keep?: number; hand?: boolean;
+  /** the beat is taken as it stands, none of the magazine change's floors (gunreload.ts shellPlan: a tube gun's reload made for the shells that go in — one
+   *  shell is home 0.36 s after the hand gets there, and its own stations keep the hand's path in order) */
+  exact?: boolean }
 /** WOUNDS (game/wounds.ts): the two poses a man down and out of the fight is played in. `clip` = the library clip whose way down it is; `rate` = its speed;
  *  `hold` = the stretch of the clip (s) he is held in, breathed across at `breath` rad/s; `in` = s the layer takes over the graph; `head` = degrees his chin
  *  comes toward his chest once he is down (on his back: his head up off the floor, looking at it). */
@@ -1725,6 +1728,7 @@ export class CharacterAnimator {
    *  is still chambered, so the handle is left alone */
   private rlBeat(b: ReloadBeat) {
     const B = this.rlB, D = Math.max(0.3, b.dur);
+    if (b.exact && b.out !== undefined && b.in_ !== undefined) { B.out = b.out; B.in_ = b.in_; B.pull = b.rack !== null && b.rack !== undefined; B.rack = b.rack ?? D; B.dur = D; B.hand = false; B.keep = -1; B.fresh = (B.out + B.in_) * 0.5; return; }
     B.out = Math.max(0.15, b.out ?? D * 0.27); B.in_ = Math.max(B.out + 0.6, b.in_ ?? D * 0.65); B.pull = b.rack !== null; B.rack = Math.max(B.in_ + 0.2, b.rack ?? D * 0.85); B.dur = Math.max(D, B.pull ? B.rack + 0.25 : B.in_ + 0.5);
     B.hand = b.hand === true; B.keep = b.keep !== undefined ? clamp(b.keep, B.out + 0.25, B.in_ - 0.4) : -1;
     B.fresh = B.keep >= 0 ? B.keep + (B.in_ - B.keep) * 0.3 : B.hand ? B.out + (B.in_ - B.out) * 0.4 : (B.out + B.in_) * 0.5;   // when the hand is at the fresh magazines
