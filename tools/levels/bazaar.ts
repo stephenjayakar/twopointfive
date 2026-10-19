@@ -378,9 +378,9 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
       // (hand-set: the mark is OUTSIDE the north wall, by its west end, in the dark. The mud wall is between it and everything that walks — the west round's line
       //  down the gable (x 2.9) never has a line to it — so a player may stand here and watch both torches go round twice before he moves. It was (3.0, 10.0),
       //  against the gable ON the west round's line: he walked over it 36 s in.)
-      { sam: [6.2, 0, 2.6], samYaw: 0, name: 'behind the north wall, at its west end' },
-      { sam: [20.4, 0, 1.8], samYaw: 0, name: 'outside the north gate' },
-      { sam: [22.4, 0, 25.4], samYaw: Math.PI, name: 'outside the south gate' },
+      { sam: [6.2, 0, 2.6], samYaw: 0, name: 'behind the alley wall, by the gable' },
+      { sam: [20.4, 0, 1.8], samYaw: 0, name: 'outside the alley gate' },
+      { sam: [22.4, 0, 25.4], samYaw: Math.PI, name: 'outside the lane gate' },
     ],
     spots: [
       { place: 'the money changer\'s office', area: OFFICE, door: 'hawala_office', holder: 'the safe', rackIndex: 0, front: [28.7, 1.0, 8.82], halfW: 0.35 },
@@ -388,9 +388,9 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
       { place: 'the garage', area: GARAGE, door: 'garage_front', holder: 'the steel cabinet', rackIndex: 2, front: [35.0, 1.0, 8.77], halfW: 0.5 },
     ],
     exits: [
-      { name: 'the east gate', door: 'gate_e', x: 36.0, z: 18.9, out: [1, 0], halfW: 1.2 },
-      { name: 'the north gate', door: 'gate_n', x: 20.4, z: 4.0, out: [0, -1], halfW: 1.2 },
-      { name: 'the south gate', door: 'gate_s', x: 22.4, z: 22.0, out: [0, 1], halfW: 1.2 },
+      { name: 'the street gate', door: 'gate_e', x: 36.0, z: 18.9, out: [1, 0], halfW: 1.2 },
+      { name: 'the alley gate', door: 'gate_n', x: 20.4, z: 4.0, out: [0, -1], halfW: 1.2 },
+      { name: 'the lane gate', door: 'gate_s', x: 22.4, z: 22.0, out: [0, 1], halfW: 1.2 },
     ],
     patrols: SETS,
     needs: {

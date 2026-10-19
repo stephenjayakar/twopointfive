@@ -149,7 +149,7 @@ export function build() {
   const quiet: QuietData = {
     thing: 'the ration book',
     radioCheck: false,   // no radio check on this shift: a reader slower than the net's ninety seconds found the posts the lines name empty
-    starts: [{ name: 'the west track', sam: [5.2, 0, 14.0], samYaw: HALF }],
+    starts: [{ name: 'the track', sam: [5.2, 0, 14.0], samYaw: HALF }],
     spots: [{ place: 'the cook\'s store', area: { ...HUT }, door: 'hut', holder: 'the blue trunk', rackIndex: 0, front, halfW: 0.3 }],
     exits: [EXIT_E, EXIT_W],
     patrols: [['north', 'south', 'east']],

@@ -192,7 +192,7 @@ export function build() {
   const front: [number, number, number] = [30.0, 1.0, 19.2];
   const quiet: QuietData = {
     thing: 'the fuel ledger',
-    starts: [{ name: 'the west track', sam: [5.2, 0, 14.0], samYaw: HALF }],
+    starts: [{ name: 'the track', sam: [5.2, 0, 14.0], samYaw: HALF }],
     spots: [{ place: 'the power house', area: { ...HUT }, door: 'hut', holder: 'the green trunk', rackIndex: 0, front, halfW: 0.3 }],
     exits: [EXIT_E, EXIT_W],
     patrols: [['lane']],

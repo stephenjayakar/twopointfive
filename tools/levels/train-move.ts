@@ -176,7 +176,7 @@ export function build() {
   const front: [number, number, number] = [27.0, 1.0, 9.6];
   const quiet: QuietData = {
     thing: 'the vehicle log',
-    starts: [{ name: 'the west track', sam: [2.6, 0, 14.0], samYaw: HALF }],
+    starts: [{ name: 'the track', sam: [2.6, 0, 14.0], samYaw: HALF }],
     spots: [{ place: 'the dispatcher\'s hut', area: { ...HUT }, door: 'hut', holder: 'the grey trunk', rackIndex: 0, front, halfW: 0.3, wired: true }],   // (wired: the lesson's last beat IS the man who comes to look — 'He will come to look. Hide…'; game/takecheck.ts)
     exits: [EXIT_E],
     patrols: [['yard']],

@@ -1118,8 +1118,8 @@
         { "name": "armoury", "bounds": { "x0": 23.31, "x1": 27.19, "z0": 4.12, "z1": 8.19 } },
         { "name": "bunks 4", "bounds": { "x0": 19.31, "x1": 25.19, "z0": 19.81, "z1": 23.88 } },
         { "name": "wash room", "bounds": { "x0": 30.31, "x1": 35.88, "z0": 19.81, "z1": 23.88 } },
-        { "name": "north gallery", "bounds": { "x0": 12.31, "x1": 35.88, "z0": 8.31, "z1": 10.63 } },
-        { "name": "south gallery", "bounds": { "x0": 12.31, "x1": 35.88, "z0": 17.37, "z1": 19.69 } },
+        { "name": "armoury gallery", "bounds": { "x0": 12.31, "x1": 35.88, "z0": 8.31, "z1": 10.63 } },
+        { "name": "wash room gallery", "bounds": { "x0": 12.31, "x1": 35.88, "z0": 17.37, "z1": 19.69 } },
         { "name": "yard", "bounds": { "x0": 12.37, "x1": 35.88, "z0": 10.87, "z1": 17.13 } }
       ]
     },
@@ -1130,6 +1130,12 @@
       ]
     },
     "doorNames": [
+      { "door": "n1", "name": "bunks 1 door" },
+      { "door": "n2", "name": "bunks 2 door" },
+      { "door": "n12", "name": "bunks 1 to 2 door" },
+      { "door": "n3", "name": "armoury door" },
+      { "door": "s2", "name": "bunks 4 door" },
+      { "door": "s4", "name": "wash room door" },
       { "door": "n_yard", "name": "yard door by bunks 2" },
       { "door": "s_yard", "name": "yard door by bunks 4" },
       { "door": "ng_w", "name": "fire door by bunks 1" },

@@ -38,8 +38,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const quiet: QuietData = {
     thing: 'the ledger',
     starts: [
-      { name: 'the west gate', sam: [5.6, 0, 14.0], samYaw: Math.PI / 2, mate: [4.6, 0, 14.8] },
-      { name: 'the south gate', sam: [20.0, 0, 24.4], samYaw: Math.PI, mate: [21.0, 0, 25.2] },
+      { name: 'the foot gate', sam: [5.6, 0, 14.0], samYaw: Math.PI / 2, mate: [4.6, 0, 14.8] },
+      { name: 'the road gate', sam: [20.0, 0, 24.4], samYaw: Math.PI, mate: [21.0, 0, 25.2] },
     ],
     spots: [
       { place: 'the radio room', area: { ...RADIO }, door: 'n_e', holder: 'the grey cabinet', rackIndex: 0, front: [23.0, 1.0, 10.6], halfW: 0.3 },
@@ -47,19 +47,19 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { place: 'the store', area: { ...STORE }, door: 's_n', holder: 'the far shelf', rackIndex: 2, front: [27.4, 1.0, 21.1], halfW: 0.6 },
     ],
     exits: [
-      { name: 'the west gate', door: 'gate_w', x: 7.2, z: 14.0, out: [-1, 0] },
-      { name: 'the south gate', door: 'gate_s', x: 20.0, z: 22.8, out: [0, 1] },
+      { name: 'the foot gate', door: 'gate_w', x: 7.2, z: 14.0, out: [-1, 0] },
+      { name: 'the road gate', door: 'gate_s', x: 20.0, z: 22.8, out: [0, 1] },
     ],
     patrols: [['yard', 'bunkhouse'], ['yard', 'store'], ['bunkhouse', 'store'], ['yard', 'bunkhouse', 'store']],
     needs: {
       smoke: { name: 'the south wall', pos: [11.2, 0, 20.8], face: Math.PI / 2 },
       water: { name: 'the tap in the bunks', pos: [11.4, 0, 11.0], face: -Math.PI / 2 },
     },
-    wayouts: [{ name: 'the south gate', pos: [20.0, 0, 24.2], face: 0 }],
+    wayouts: [{ name: 'the road gate', pos: [20.0, 0, 24.2], face: 0 }],
   };
   // the level's own mission in the shape every level file carries: the first spot, the first exit (the plain night on this floor; a quiet run deals its own)
   level.playerSpawn = [5.6, 0, 14.0];
   level.mission = { serverRoom: { ...RADIO }, entryDoor: 'n_e', rack: { index: 0, front: [23.0, 1.0, 10.6], halfW: 0.3 }, exfilDoor: 'gate_w', exfilX: 7.2, exfilZ: 14.0, exfilOut: [-1, 0] };
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the west gate from the first start's side.
-  return { level, scenarios: { quiet, kitView: { ways: [{ door: 'gate_w', ref: [5.6, 14.0], side: -1 }] }, doorNames: [{ door: 'gate_w', name: 'foot gate' }, { door: 'gate_s', name: 'road gate' }, { door: 'n_w', name: 'bunk room door' }, { door: 'n_e', name: 'radio room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: Y.groups, surfaces: Y.surfaces };
+  return { level, scenarios: { quiet, kitView: { ways: [{ door: 'gate_w', ref: [5.6, 14.0], side: -1 }] }, doorNames: [{ door: 'nm', name: 'bunk room to radio room door' }, { door: 'gate_w', name: 'foot gate' }, { door: 'gate_s', name: 'road gate' }, { door: 'n_w', name: 'bunk room door' }, { door: 'n_e', name: 'radio room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: Y.groups, surfaces: Y.surfaces };
 }
