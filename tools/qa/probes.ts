@@ -32,6 +32,7 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
+//     kittree: kittree-rows kittree-guns kittree-sponge kittree-off kittree-mate40
 //     gunlook: gunlook-own gunlook-hands gunlook-bare gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
 //     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes gunroles-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
@@ -105,7 +106,7 @@ const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
 const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'weapons-identity', 'teams-identity', 'tactics-identity', 'needs-identity', 'civilians-identity', 'wind-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'glasspen-off', 'pellets-identity', 'director-scheduler',
-  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'gunslots', 'gunroles', 'gunlook', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
+  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'gunslots', 'gunroles', 'gunlook', 'kittree', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
 const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
@@ -151,6 +152,12 @@ const CARD_AS_IT_WAS = /^pouch-table$/;
 // kit.ts KITDEAL, on in the page) a card reads as it is WORN, and that is kitdeal-check.ts's to hold, on both stands, with a seeded walk of presses of its own.
 // So the deal is held off for these on EVERY stand, as the frozen stand holds it — unless whoever runs the tool set the word himself.
 const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
+// THE CARD'S ROWS IN THE ORDER THEY HAD. These probes read where a row stands on a card ('the last of your kit rows') and which tiles a mission leaves idle —
+// the card before it was laid out as a tree (src/game/kittree.ts KITTREE, on in the page: what rides on a gun under it, your light and goggles as rows). The
+// tree's rows are kittree-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the frozen stand holds it — unless whoever
+// runs the tool set the word himself. The same for the probe of a bare gun's drawing, which takes the suppressor off BOTH of a teammate's guns by the
+// one row his card had (under the tree that row is his primary's alone, and his sidearm's is `sideCan`).
+const ROWS_BEFORE_THE_TREE = /^(wand-kit|wand-tile|gunlook-bare)$/;
 // …and the deal's key `more` (kit.ts KITDEAL.more, on in the page: a team of three or four as issued is LENT a big tool each pair) for the probes written
 // of a four whose big slots stand empty: a locked door that such a four picks, boots or is refused at is, with a lent shotgun or hammer, a door the tool
 // takes — and that is kitdeal-check.ts's and bigslot-check.ts's to hold. The same for the probes that read a door's tools page row for row against the
@@ -165,12 +172,13 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const layHeld = ROWS_AS_THEY_WERE.test(name) && process.env.TPS_PLANLAY === undefined; if (layHeld) process.env.TPS_PLANLAY = '0';
   const bigHeld = CARDS_AS_THEY_WERE.test(name) && process.env.TPS_BIGSLOT === undefined; if (bigHeld) { process.env.TPS_BIGSLOT = '0'; (await import(`${ROOT}/src/game/kit.ts`)).BIGSLOT.on = false; }   // (…and off now, for a probe that reads the cards before it stands a game up; knobsBack puts the table back)
   const gunHeld = GUN_ROW_AS_IT_WAS.test(name) && process.env.TPS_GUNSLOTS === undefined; if (gunHeld) { process.env.TPS_GUNSLOTS = '0'; (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS.on = false; }   // (as the big slot's line above)
+  const treeHeld = ROWS_BEFORE_THE_TREE.test(name) && process.env.TPS_KITTREE === undefined; if (treeHeld) { process.env.TPS_KITTREE = '0'; (await import(`${ROOT}/src/game/kittree.ts`)).KITTREE.on = false; }
   const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
   const moreHeld = MORE_AS_IT_WAS.test(name) && process.env.TPS_KITMORE === undefined; if (moreHeld) { process.env.TPS_KITMORE = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.more = false; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (moreHeld) delete process.env.TPS_KITMORE; if (gunHeld) delete process.env.TPS_GUNSLOTS; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
+  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (moreHeld) delete process.env.TPS_KITMORE; if (gunHeld) delete process.env.TPS_GUNSLOTS; if (treeHeld) delete process.env.TPS_KITTREE; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2454,6 +2462,12 @@ if (on('gunslots-mate', 'gunslots', 'all')) await run('gunslots-mate', async () 
 if (on('gunslots-fight', 'gunslots', 'all')) await run('gunslots-fight', async () => (await import('./gunslots-check.ts')).gunslotsFight());         // two men dry at five metres: the third man goes down to a sidearm inside the reload
 if (on('gunslots-guns', 'gunslots', 'all')) await run('gunslots-guns', async () => (await import('./gunslots-check.ts')).gunslotsGuns());             // the guns the two rows offer, each set apart by a measure: reach, who hears it, the turn, the feed; a fight with each
 if (on('gunslots-off', 'gunslots', 'all')) await run('gunslots-off', async () => (await import('./gunslots-check.ts')).gunslotsOff());               // off = the same run by digest, the stands' row, the registry, a recording from before it
+// THE GEAR SCREEN AS A TREE (src/game/kittree.ts; tools/qa/kittree-check.ts raises the switch itself, so it asks the same on either stand; KITTREE_BREAK=1 must fail)
+if (on('kittree-rows', 'kittree', 'kit', 'all')) await run('kittree-rows', async () => (await import('./kittree-check.ts')).kittreeRows());       // one list of rows for every man, what rides on a gun under it, a row the card has not is not there to step
+if (on('kittree-guns', 'kittree', 'all')) await run('kittree-guns', async () => (await import('./kittree-check.ts')).kittreeGuns());              // a suppressor per gun as deployed and as staged, guns that have no choice, the four bars
+if (on('kittree-sponge', 'kittree', 'all')) await run('kittree-sponge', async () => (await import('./kittree-check.ts')).kittreeSponge());        // sponge rounds: none as issued, five on a quiet run, a pouch each; your light and goggles rows
+if (on('kittree-off', 'kittree', 'all')) await run('kittree-off', async () => (await import('./kittree-check.ts')).kittreeOff());                 // off = the rows and the run before; stands row, registry, page flag, an old recording
+if (on('kittree-mate40', 'kittree', 'all')) await run('kittree-mate40', async () => (await import('./kittree-check.ts')).kittreeMate40());       // a teammate's 40 mm: the row where his round can be fired, the pouch, the staged round
 // THE PLAYER CARRIES AND SETS CHARGES LIKE THE SQUAD (src/game/owncharge.ts; tools/qa/owncharge-check.ts raises the switch itself, so it asks the same on either stand; OWNCHARGE_BREAK=1 must fail)
 if (on('owncharge-kit', 'owncharge', 'kit', 'all')) await run('owncharge-kit', async () => (await import('./owncharge-check.ts')).ownchargeKit());       // the two rows on your card with the switch, the teammates' prices, the squad's count, the store, no squad cap on wall charges
 if (on('owncharge-door', 'owncharge', 'doortools', 'all')) await run('owncharge-door', async () => (await import('./owncharge-check.ts')).ownchargeDoor());   // alone: the card's count, the row, set / broken off / handed back / blown, a restart, one more row on a lock
