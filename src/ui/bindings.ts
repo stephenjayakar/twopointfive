@@ -91,6 +91,7 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
+import { CARLAMPS } from '../game/carlamps';
 import { FIRELINE } from '../game/fireline';
 import { START } from '../game/startfile';
 import { HOLDFIRE, holdFireSummary } from '../game/holdfire';
@@ -2057,6 +2058,8 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.toggleBox(pd, 'G quick throw', () => QUICKTHROW.on, v => { QUICKTHROW.on = v; }, 'G throws a canister at the cursor without selecting it first (also ?quickthrow on the address = on). Off as shipped: a can is thrown from its own slot, 3 / 4 / 5, with a click')
   panel.toggleBox(pd, 'no aim ring on teammates', () => FRIENDS.noSnap, v => { FRIENDS.noSnap = v; }, 'the reticle never snaps to a man of your own side: no ring on a teammate, and the aim stays where the cursor is (also ?friendsnap on the address = off). Off = it takes any man near the cursor, as it did');
   panel.toggleBox(pd, 'light switches', () => LIGHTSWITCH.on, v => { LIGHTSWITCH.on = v; }, 'a switch on the wall beside a door of every room with lights of its own: Space at it puts the room out or back, and a calm defender who saw it go dark comes and puts it back (also ?lightswitch=0 on the address = off). Off = no plates, as it was');
+  panel.toggleBox(pd, 'car lamps break (reloads)', () => CARLAMPS.on, v => { if (typeof location === 'undefined') { game.msg('car lamps: in the page only (?carlamps=0)'); return; } const q = new URLSearchParams(location.search); if (v) q.delete('carlamps'); else q.set('carlamps', '0'); location.search = q.toString(); },
+    'a parked vehicle\'s head and tail lamps can be shot out, lit or not: the glass breaks and a lit one goes dark. The lamps are found when a level is stood up, so this reloads the page with ?carlamps=0 on the address (off = no lamp is a target, as it was) or without it');
   panel.toggleBox(pd, 'friendly fire', () => FRIENDLYFIRE.on, v => { FRIENDLYFIRE.on = v; }, 'your rounds hit your own teammates, and theirs would hit you: they do not fire with you or a mate anywhere their round could go (also ?nofriendlyfire on the address = off). Off = rounds pass through your own side, as they did');
   panel.toggleBox(pd, 'teammates wait off your line of fire', () => FIRELINE.on, v => { FIRELINE.on = v; }, 'a teammate walking on an order stops short of the lane you are firing down and crosses when you stop; after a few seconds he goes round behind you if there is a way (also ?nofireline on the address = off). A man already in your line is not moved, and nothing stops your round. Nothing with friendly fire off. Off = an order walks him through your fire, as it did');
   panel.toggleBox(pd, 'gun lowers off a teammate', () => FRIENDS.lowReady, v => { FRIENDS.lowReady = v; }, 'muzzle discipline for you: a raised gun with a teammate (or a hostage) in its line comes to the low ready while nobody is in a fight, and no round leaves it until the line is clear; it is up again the moment the floor goes loud (also ?nomuzzle on the address = off)');

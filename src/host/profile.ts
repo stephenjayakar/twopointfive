@@ -116,6 +116,7 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
+import { CARLAMPS } from '../game/carlamps';
 import { FIRELINE } from '../game/fireline';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
@@ -245,6 +246,7 @@ export function pageSwitches(q: URLSearchParams): void {
   QUICKTHROW.on = q.has('quickthrow') && q.get('quickthrow') !== '0';   // the G quick throw (game/quickthrow.ts): GONE from the page — a can is thrown from its slot with a click; ?quickthrow = back for the visit
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
   LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
+  CARLAMPS.on = q.get('carlamps') !== '0';   // a parked vehicle's lamps can be shot out, head and tail, lit or not (game/carlamps.ts): ON in the page; ?carlamps=0 = no lamp is a target, as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   FIRELINE.on = !(q.has('nofireline') && q.get('nofireline') !== '0');   // a teammate walking on an order waits short of the lane you are firing down and crosses when you stop (game/fireline.ts): ON in the page; ?nofireline = an order walks him through your fire, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
@@ -467,6 +469,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
   'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
   'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
+  'CARLAMPS.on': 'TPS_CARLAMPS=1',
   'FIRELINE.on': 'TPS_FIRELINE=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',

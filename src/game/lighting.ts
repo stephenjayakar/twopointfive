@@ -14,6 +14,7 @@ import { isHostile } from './teams';
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
+import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A WEAPON LIGHT STOPS AT A WALL. A man's light is a light AT ITS LENS — on the carbine's handguard, under the pistol's rail, at the hand torch's glass — and a man
@@ -99,6 +100,7 @@ export function updateTargets(g: Game, dt: number) {
       if (s > 1.15) f *= (Math.sin(time * 90) > 0 ? 0.15 : 1);
     }
     t.factor = f;
+    if (t.lens) carLampPaint(g, t);   // (carlamps.ts: a broken vehicle lamp's box painted dark, a whole one as the level has it)
     if (t.kind === 'breaker') { const e: Vec3 = t.broken ? [0, 0, 0] : bo.active ? [5, 0.3, 0.1] : [0.3, 4, 0.6]; for (const bi of t.boxes) g.engine.world.statics[bi].emissive = e; continue; }
     if (t.kind === 'analytic' && t.light) { t.light.enabled = f > 0.001; t.light.intensity = t.baseIntensity * f; }
     if (t.areaLights) { const es = g.engine.settings.emissiveScale; for (const al of t.areaLights) { al.light.enabled = f > 0.001; al.light.intensity = al.light.peakIntensity = al.base * f * es; } }
@@ -140,6 +142,7 @@ export function endBlackout(g: Game) {
 }
 
 export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'shot', swAt?: Vec3) {
+  if (deadLamp(t)) return;   // (carlamps.ts: a vehicle's lens that was dark already — nothing went out for anybody to see)
   g.events.push({ kind: 'lightOut', pos: [t.pos[0], 0, t.pos[2]], time: g.time, loud: false, from: v3.copy(t.pos), cause, ...(swAt ? { swAt: v3.copy(swAt) } : null) });   // (from: the fixture itself, up where it hangs — what a man's eye needs a line to before a light going out is a thing he SAW: guards.ts lightOutSeen)
 }
 
@@ -147,7 +150,7 @@ export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'sho
  *  so), or the man the ring sits on IF a light of his is burning (his torch on patrol, his weapon light drawn: electronics like any fixture). A man with no light
  *  on is nothing to the OCP: no affordance on the ring (overlay.ts), and the right button does nothing there (player.ts) — not a click, not a line, not a charge. */
 export function ocpable(g: Game): boolean {
-  if (g.aimTarget) return true;
+  if (g.aimTarget) return !deadLamp(g.aimTarget);   // (carlamps.ts: a vehicle's lens that burns nothing is glass, not electronics)
   const gd = g.aimGuard;
   return !!gd && gd.state !== 'dead' && gd.flashlight.enabled && g.time >= gd.lightDeadUntil;
 }

@@ -197,6 +197,14 @@ export function fixtureShatterFx(g: Game, t: { pos: Vec3; kind: string; boxes: n
   emitDust(P, v3.add(at, [0, -0.05, 0]), [0, -1, 0], 6, { shape: 'puff', speed: 0.5, speedJit: 0.5, lift: -0.4, life: 2.4, lifeJit: 0.3, size: 0.16, sizeJit: 0.35, posJit: spread * 0.7, color: [0.92, 0.92, 0.9] });   // the tube's powder, sinking
   P.emit('spark', v3.add(at, [0, 0.02, 0]), v3.normalize([away[0] * 0.8, -0.55, away[2] * 0.8]), PFX.tubeSparks, { speed: 5.5, speedJit: 0.65, spread: 1.15, life: 0.4, lifeJit: 0.5, size: 0.002 });   // the ballast arcing over — fast, thin and thrown out past the fixture (fixtureBreak.ts FIXLOOK.spark has why: at 3.2 m/s straight down they were fat dots from the play camera)
 }
+/** A VEHICLE'S LAMP shot out (carlamps.ts; `from` = the muzzle): the lens's own glass off the face of the body, back toward whoever broke it and down onto the
+ *  ground, in the lens's colour — no powder, no ballast, no sparks (a ceiling tube's shower thrown away from the round would go into the bodywork). */
+export function lensShatterFx(g: Game, t: { pos: Vec3; lens?: Vec3 }, from: Vec3) {
+  const P = gpuFx(g); if (!P) return;
+  const out = v3.normalize([from[0] - t.pos[0], 0, from[2] - t.pos[2]]);
+  const L = t.lens ?? [0.9, 0.9, 0.9];
+  P.emit('debris', v3.mad(t.pos, out, 0.05), [out[0] * 0.6, -0.5, out[2] * 0.6], PFX.bulbShards, { speed: 1.4, speedJit: 0.8, spread: 0.9, life: 25, lifeJit: 0.3, size: 0.005, sizeJit: 0.7, aspect: 1.8, posJit: 0.08, color: [0.3 + L[0] * 0.65, 0.3 + L[1] * 0.65, 0.3 + L[2] * 0.65] });
+}
 /** The BREAKER shot (a permanent blackout): a hard burst of sparks out of the panel's face and a cough of black smoke-dust — the box arcs as it dies. */
 export function breakerSparkFx(g: Game, at: Vec3, from: Vec3) {
   const P = gpuFx(g); if (!P) return;
