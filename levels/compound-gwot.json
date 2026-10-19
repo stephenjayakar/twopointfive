@@ -1444,11 +1444,11 @@
         { "name": "pantry", "bounds": { "x0": 18.56, "x1": 21.44, "z0": 6.62, "z1": 11.44 } },
         { "name": "corridor", "bounds": { "x0": 13.12, "x1": 32.88, "z0": 11.56, "z1": 14.44 } },
         { "name": "spare room", "bounds": { "x0": 28.56, "x1": 32.88, "z0": 14.56, "z1": 18.88 } },
-        { "name": "west yard", "bounds": { "x0": 4.12, "x1": 12.88, "z0": 8.62, "z1": 19.12 } },
+        { "name": "side yard", "bounds": { "x0": 4.12, "x1": 12.88, "z0": 8.62, "z1": 19.12 } },
         { "name": "back strip", "bounds": { "x0": 9.62, "x1": 12.88, "z0": 4.12, "z1": 8.62 } },
         { "name": "back strip", "bounds": { "x0": 12.88, "x1": 33, "z0": 4.12, "z1": 6.38 } },
-        { "name": "east alley", "bounds": { "x0": 33.12, "x1": 35.88, "z0": 4.12, "z1": 23.88 } },
-        { "name": "east alley", "bounds": { "x0": 30.62, "x1": 33.12, "z0": 19.12, "z1": 23.88 } },
+        { "name": "alley", "bounds": { "x0": 33.12, "x1": 35.88, "z0": 4.12, "z1": 23.88 } },
+        { "name": "alley", "bounds": { "x0": 30.62, "x1": 33.12, "z0": 19.12, "z1": 23.88 } },
         { "name": "forecourt", "bounds": { "x0": 10.5, "x1": 30.62, "z0": 19.12, "z1": 23.88 } }
       ]
     },
@@ -1460,6 +1460,7 @@
       ]
     },
     "doorNames": [
+      { "door": "p_back", "name": "pantry back door" },
       { "door": "c_n", "name": "spare room door" },
       { "door": "hall_n", "name": "corridor-side front hall door" },
       { "door": "p_s", "name": "corridor-side pantry door" },

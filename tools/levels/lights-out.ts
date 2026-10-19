@@ -57,10 +57,10 @@ const PLACES = { areas: [
   { name: 'wood store', bounds: { x0: 16.12, x1: 18.1, z0: 16.9, z1: 19.2 } },
   { name: 'lane', bounds: { x0: 16.12, x1: 21.0, z0: 13.2, z1: 19.2 } },
   { name: 'cook fire', bounds: { x0: 21.0, x1: 30.0, z0: 19.2, z1: 21.88 } },
-  { name: 'east strip', bounds: { x0: 30.0, x1: 31.88, z0: 6.12, z1: 21.88 } },
-  { name: 'north side', bounds: { x0: 16.12, x1: 30.0, z0: 6.12, z1: 13.2 } },
+  { name: 'back strip', bounds: { x0: 30.0, x1: 31.88, z0: 6.12, z1: 21.88 } },
+  { name: 'window side', bounds: { x0: 16.12, x1: 30.0, z0: 6.12, z1: 13.2 } },
   { name: 'outer yard', bounds: { x0: 8.12, x1: 15.88, z0: 6.12, z1: 21.88 } },
-  { name: 'west track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'east track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
+  { name: 'front track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'back track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
 ] };
 
 /** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): a bespoke set on the yard's west gate
@@ -194,9 +194,9 @@ export function build() {
   const front = LIGHTS.safeFront;
   const quiet: QuietData = {
     thing: 'the radio codebook',
-    starts: [{ name: 'the west track', sam: [5.2, 0, 14.0], samYaw: HALF, mate: [4.4, 0, 14.9] }],
+    starts: [{ name: 'the front track', sam: [5.2, 0, 14.0], samYaw: HALF, mate: [4.4, 0, 14.9] }],
     spots: [{ place: 'the back room', area: { ...BACK }, door: 'inner', holder: 'the strongbox', rackIndex: 0, front, halfW: 0.35 }],
-    exits: [EXIT_E, EXIT_W],
+    exits: [{ ...EXIT_E, name: 'the back gate' }, { ...EXIT_W, name: 'the generator shed gate' }],   // (the ground's two gates, by this level's own names for them)
     patrols: [['north', 'east', 'cook'], ['north_b', 'east_b', 'cook_b']],
   };
   return T.finish({

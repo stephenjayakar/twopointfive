@@ -354,7 +354,8 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       for (const [b, dir, word] of [[e.prev, -1, 'previous'], [e.next, 1, 'next']] as [HTMLElement, 1 | -1, string][]) { const why = SLOTS.on ? kitPeek(i, r.field, dir).why : ''; b.classList.toggle('off', !!why); b.title = why || word; }
     });
     sets.classList.toggle('sel', cur === rows.length);
-    setEls.forEach((b, k) => { const why = SLOTS.on ? kitPresetWhy(i, presets[k].id) : ''; b.classList.toggle('on', presets[k].id === base); b.classList.toggle('pick', k === pick); b.classList.toggle('off', !!why); b.title = why || presets[k].line; });
+    const lone = presets.length === 1;   // (KITTREE: the one set is a reset — a button, not a tab that is picked: dim while the card is as issued, as Paste is with nothing to change)
+    setEls.forEach((b, k) => { const why = SLOTS.on ? kitPresetWhy(i, presets[k].id) : '', is = presets[k].id === base; b.classList.toggle('on', is && !lone); b.classList.toggle('pick', k === pick); b.classList.toggle('off', !!why || (is && lone)); b.title = why || presets[k].line; });
     if (clipEls) { const C = KIT_CLIP.card, p = C ? kitPastePeek(i, C) : null, same = !!p && !p.changed.length, why = p && !same ? p.why : '', whose = i ? 'his' : 'your';   // (Copy lit: this card IS the copied kit; Paste dim: nothing copied, nothing it would change, or no room)
       clipEls[0].classList.toggle('on', same); clipEls[0].title = `copy ${whose} kit (C)`;
       clipEls[1].classList.toggle('off', !C || same || !!why); clipEls[1].title = why || (!C ? 'nothing copied yet' : same ? `${i ? 'he wears' : 'you wear'} the copied kit` : `the copied kit onto ${i ? 'him' : 'you'}, ${whose} colours kept (V)`); }

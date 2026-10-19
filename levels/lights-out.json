@@ -431,24 +431,24 @@
         { "name": "wood store", "bounds": { "x0": 16.12, "x1": 18.1, "z0": 16.9, "z1": 19.2 } },
         { "name": "lane", "bounds": { "x0": 16.12, "x1": 21, "z0": 13.2, "z1": 19.2 } },
         { "name": "cook fire", "bounds": { "x0": 21, "x1": 30, "z0": 19.2, "z1": 21.88 } },
-        { "name": "east strip", "bounds": { "x0": 30, "x1": 31.88, "z0": 6.12, "z1": 21.88 } },
-        { "name": "north side", "bounds": { "x0": 16.12, "x1": 30, "z0": 6.12, "z1": 13.2 } },
+        { "name": "back strip", "bounds": { "x0": 30, "x1": 31.88, "z0": 6.12, "z1": 21.88 } },
+        { "name": "window side", "bounds": { "x0": 16.12, "x1": 30, "z0": 6.12, "z1": 13.2 } },
         { "name": "outer yard", "bounds": { "x0": 8.12, "x1": 15.88, "z0": 6.12, "z1": 21.88 } },
-        { "name": "west track", "bounds": { "x0": 0, "x1": 8.12, "z0": 0, "z1": 28 } },
-        { "name": "east track", "bounds": { "x0": 31.88, "x1": 40, "z0": 0, "z1": 28 } }
+        { "name": "front track", "bounds": { "x0": 0, "x1": 8.12, "z0": 0, "z1": 28 } },
+        { "name": "back track", "bounds": { "x0": 31.88, "x1": 40, "z0": 0, "z1": 28 } }
       ]
     },
     "quiet": {
       "thing": "the radio codebook",
       "starts": [
-        { "name": "the west track", "sam": [5.2, 0, 14], "samYaw": 1.5707963267948966, "mate": [4.4, 0, 14.9] }
+        { "name": "the front track", "sam": [5.2, 0, 14], "samYaw": 1.5707963267948966, "mate": [4.4, 0, 14.9] }
       ],
       "spots": [
         { "place": "the back room", "area": { "x0": 24.62, "x1": 29.88, "z0": 13.319999999999999, "z1": 19.08 }, "door": "inner", "holder": "the strongbox", "rackIndex": 0, "front": [27.4, 1, 14.18], "halfW": 0.35 }
       ],
       "exits": [
-        { "name": "the east gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
-        { "name": "the west gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
+        { "name": "the back gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
+        { "name": "the generator shed gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
       ],
       "patrols": [["north", "east", "cook"], ["north_b", "east_b", "cook_b"]]
     },

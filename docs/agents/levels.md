@@ -295,3 +295,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the side yard gate'. NOT DONE: no other row was read on a page, nothing was seen on a GPU or played; the names are words by the generators' notes, and whether each reads right from above is the maintainer's
   eye. LEFT, the same class but not door names: a quiet level's `exits` and `starts` and some `places` areas are still named by bearings ('the east gate',
   'the west track', 'north strip'), and the debrief's map marks print an exit's name.
+- **An exit, an area and a door no longer read by a bearing or by letters** (2026-10-19; level data, no switch: the names are the files' own words, and the
+  door names ride the door names key as before). The words check's two owed lists (`PLACES_OWED` 56 names in 20 files, `LETTERS_OWED` 23 doors in 10) are
+  EMPTY. A quiet mission's way out is called by its gate's written door name: bazaar the street / alley / lane gate; crossing the customs yard gate, the
+  impound yard gate, the lorry park gate, the tea stall wicket, the ditch wicket; police post the impound / motor pool / side yard gate; relay the dish / track /
+  back strip gate; quiet yard the foot / road gate; the training ground the track gate and the far gate (`train-ground.ts EXIT_W` / `EXIT_E`), which lights-out
+  and the vault take with their own names (the back gate, the generator shed gate; the counting room gate, the kitchen court gate). A START or a civilian's way
+  out that names the same gate or track follows it (crossing, quiet yard, police post, bazaar 'outside the alley gate', relay 'the track' and 'the slope',
+  lights-out and vault 'the front track' / 'the back track', the lessons 'the track'). AREAS: barracks armoury gallery / wash room gallery; compound side yard,
+  alley; depot back yard; lights-out back strip, window side, front track, back track; police post side yard; vault counting room gateway, kitchen court
+  gateway, narrow strip, shack side, front yard, back yard, front track, back track; warehouse service corridor, staff corridor. DOORS (`scenarios.doorNames`
+  rows): barracks bunks 1 / bunks 2 / bunks 4 / armoury / wash room door and 'bunks 1 to 2 door'; compound 'pantry back door'; crossing 'customs office to
+  impound door'; quiet yard 'bunk room to radio room door' (the look yard 'guest room to sleeping room door'); the orders lesson's yellow house / green house
+  / armoury / kitchen door; warehouse 'locker room to break room door'. Twins take their plain file's names. Checked: in the 22 level files that moved, every
+  changed line is a name; with the key up 23 doors read new words and no other door's name changed (a scratch run over every file, before and after);
+  `probes.ts words` 67 PASS on both stands and `DOORNAMES_BREAK=1` red; lived-check 407 on both with this step's commit in front of its base; level-names,
+  level-lint, kitview-plan, quiet-check, lesson-check, the debrief, quiet, missions and depot families green. LEFT, still a bearing, not on any owed list: the
+  compound's `ways` on the mission list (`scenarioList.ts`), a `needs` place ('the south wall' on the quiet yard, 'the east gate' on the crossing), route ids a
+  defender's line may say, and the office's own 'north side' words. Nobody has read a renamed line on a GPU page.
