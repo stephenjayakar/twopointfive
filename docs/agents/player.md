@@ -654,7 +654,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   keeps every other field, getters included), and `gunslots.ts PICKS` hands them out as the picks' `bare` — until them a bare carbine was the defenders'
   AKS-74U row and a bare pistol their sidearm (`bareWas`, what the key off still gives). The tile and a man's line name the gun the same either way.
   Checked: `gunslots-guns` THE SAME GUN, BARE and `gunslots-off`'s second journal verdict, both stands. Drawn with the suppressed row's rig (whether the
-  can is drawn is the look's); never seen or heard.
+  can is drawn is the look's: with `GUNLOOK` on it is not — "A gun with its suppressor off is drawn without one", below); never seen or heard.
 - **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
   nothing on him: a gun by ITS OWN ROW's `weightKg` and `bulk` (`weapons.ts`; `gunLoad`: `gunKg` 0.035 of mobility a kilogram, `gunBulk` 0.04 of concealment + 0.17 a
@@ -697,7 +697,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   recording from before the table replays with it off (`journal.ts applyKnobs`). WHAT A ROW NAMES: `weapons.ts WeaponDef.own = { model, voice, flame }` beside its
   stand-in fields (`rig`, `report.voice`, `muzzleFx`), read only through `gunlook.ts gunOwn / voiceOf / flameOf`. NO PLAY NUMBER MOVED. MODELS: `LONG_MODELS` /
   `PISTOL_MODELS`, part tables in the group's own axes (the trigger hand, the sling and the holster stay where the group has them); `Character.gunLook
-  { hand, long, side }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you, `ui/kitFigure.ts` for its figure) and read by `rigProps.ts`
+  { hand, long, side, bareLong, bareSide }` is dealt each step (`game.ts` for a teammate, `player.ts armRifle` for you, `ui/kitFigure.ts` for its figure) and read by `rigProps.ts`
   (in the hands, slung, hung down the front, holstered; the roster chip and the card's icon are `ui/kitIcons.ts OWN_GUN`). The big slot's pump gun (`m870`) is a
   model too, with a 12 gauge's voice; its muzzle and hand are where the short rifle's were. THREE THINGS THE SIMULATION READS, only of a man who carries one of the
   rows: his MUZZLE is the model's far face (ahead of the wrist: Mk 12 0.70 m, Mk 46 0.62, M1014 0.56, MP7 0.40 — the stand-ins were 0.52, 0.52, 0.50 and, on you,
@@ -718,12 +718,26 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
   sidearm the whole feed is mimed with only its first sound; with the shells key OFF the books still take the whole tube out at the row's `out` and put it back at `in_`, so a
-  shell-fed reload CANCELLED part way leaves the tube empty however many were heard going in (on, the next bullet); a teammate with the bare Mk 18 is still
-  drawn as the defenders' short rifle; a gun dropped on the floor is the old item; a long reload's feeding is the support arm INSIDE `gunhand.ts longReload` (the carriage and the trigger hand are that move's; a
+  shell-fed reload CANCELLED part way leaves the tube empty however many were heard going in (on, the next bullet); a teammate with the bare Mk 18 has its own bullet below; a gun dropped on the floor is the old item; a long reload's feeding is the support arm INSIDE `gunhand.ts longReload` (the carriage and the trigger hand are that move's; a
   branch per feed was not agreed with that rule's owner); at the side of a pack (`packside.ts`) a model stands where the stand-in does, by the STAND-IN's sizes
   (`rigProps.ts packSideDims`): butts level, the far end 0.18 m lower on the Mk 12, 0.10 on the Mk 46, 0.06 on the M1014, 0.16 higher on the MP7, and the Mk 46's
   belt box on the face that lies to the pack, never looked at; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
   share an origin (`gunlook-own` is red the day one is tuned alone). Every number is a first one. NEVER SEEN ON A GPU, NEVER HEARD, NEVER PLAYED.
+- **A gun with its suppressor off is drawn without one** (`gunlook.ts GunLook.bareLong / bareSide`, `rigProps.ts`; 10-19; rides on `GUNLOOK.on`, no key
+  of its own: picture only, nothing a run digest reads). The issue guns' bare rows (`weapons.ts mk18bare`, `g19bare`: the same gun, the suppressed row's
+  rig) have no model of their own, so `gunLookOf` says of a man's long gun and of his sidearm whether it is BARE: a row with no `own.model`, not
+  `suppressed`, on one of the two groups that draw a can (`sc20k`, `pistol`). The drawer then leaves the can off: on the long gun a BARE BARREL stands where
+  the can was (`rigProps.ts BARE_BARREL`, a finger thick, the same length, so the muzzle the simulation fires from is where it was: the row's 0.52) — in his
+  hands, slung and hung down his front; on the pistol nothing is drawn ahead of the slide, in his hand, on his thigh (`holsterBoxes` asks, so every caller
+  is covered) and on a man down, and its rail light is drawn back under the slide, its body ending at the slide's face (it was laid out under the can; the
+  light itself — its pose, its beam — is where it was). Today only a teammate's card can have the suppressor off (your two guns always wear theirs), and the
+  kit figure is told the same way. Off (`?nogunlook`, the frozen stand, `GUNLOOK_BREAK=1`): the bare rows drawn with the can, the build before. CHECK, both
+  stands: `tools/qa/gunlook-check.ts bare` (`probes.ts gunlook-bare`, in the `gunlook` family): the card hands out the two bare rows and the figure is told;
+  with the long gun in his hands exactly the two cans are gone and one barrel has come, as far along the gun as the can was (measured from the part drawn
+  before it, so the pose does not matter); with the pistol in his hand exactly its can is gone; his sidearm out and the long gun hung: the barrel, no can on
+  either; a man down with a bare pistol on his thigh shows no can; off, bare and suppressed are drawn the same in each of those. KNOWN: a bare barrel as long as the can was is
+  longer than a real one (the muzzle is the row's); the bare pistol's flash is where the row's muzzle is, 5 cm ahead of the slide's face; no picture was drawn
+  of either. NEVER SEEN ON A GPU.
 - **A tube gun is fed a shell at a time, in time and in the books** (`GUNLOOK.shells`, a key that rides on `GUNLOOK.on`; `gunreload.ts shellPlan` /
   `feedBegin`, `weapons.ts Firearm.feedShell`; 10-19; the numbers are the guns goal's). The M1014 and the big slot's pump gun carry `reload.shell` on their
   rows: `{ lead, each, tail, bolt }` = 0.4 / 0.36 / 0.7 / 0.4 s and 0.4 / 0.35 / 0.7 / 0.4 s. A reload of n shells is `lead + n × each + tail` long (one shell
