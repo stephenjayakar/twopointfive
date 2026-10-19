@@ -393,6 +393,8 @@ export interface Assignment {
   spare?: boolean; from?: Vec3;
   /** pairorders.ts: the man of the other side this order is about · he walks it, and holds it, on a knee (undefined: standing, as every other order) */
   foe?: Guard; crouch?: boolean;
+  /** doortools.ts thrLean: he stands leaned this far toward his own right (−1‥1; character.ts anim.lean), head and gun past an edge his hips are behind (undefined: square) */
+  lean?: number;
   /** roomfit.ts: the place and the watch a 'move' dealt him — taken up as he comes onto his mark, looked at again while he stands (undefined: none) */
   fit?: Fit;
   /** ORDERS.walkTries: his walk runs at a door nobody of the team has tried — the door and the face he comes to it by, the stack mark he was dealt on it,
@@ -1115,7 +1117,7 @@ export class SquadOrders {
       } else A.low = false;
       // (who has the follower's feet: spotted.ts's freeze / slip / step when it gives a spot — a defender is suspicious of the pair, or has it —, else the sneak's
       //  step along Sam's trail, else the order's own goal; low if any of the three says low. A take / dark job (pairorders.ts) is not a follower: spotted only kneels him.) Then clearline.ts's step to a clear line of fire when a friend masks his shot (null with its switch off).
-      order(gd, { goal: sp?.goal ?? cl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light });
+      order(gd, { goal: sp?.goal ?? cl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light, ...(A.lean || gd.script?.lean ? { lean: A.lean && A.post && flat(gd.char.pos, A.post) < 0.6 ? A.lean : 0 } : {}) });   // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
       if (sGoal && !sp?.goal && !cl?.goal) sneakWay(g, gd, sGoal);
     }
     for (const A of this.asg.values()) {   // 'set.': once, from the last man on, when everybody the order sent is on his mark

@@ -139,6 +139,13 @@ export const LANES = {
    *  their arc; that place is then never asked again by him). On = roomfight.ts keeps dig-in's hands off him until the grenade has left his hand or stayed in
    *  it (`laneThrows`: a second and a half at most; that file's once-a-frame bookkeeping for HIM waits that long too). Off = the build before it. */
   fragOwn: true,
+  /** THE DOORWAY DRILL IS ASKED AGAIN (10-18: with every level's defenders in squads the men come to a hit room together, on the fight's own chase, and
+   *  the doorway drill takes them at the door a mate has just dropped in — in the second before anybody has called the lane. The drill asked this rule once,
+   *  as it took a man, and never again: on the maintainer's own hold of the records office two more men then sliced the same door into a lane their side had
+   *  called six seconds before, one after the other). On = a man the drill has, who has not yet committed, is asked again each frame: his jamb, the
+   *  station he is slicing to, or the floor past the doorway in a lane his side knows of, and the drill lets him go — this rule's gate then has him like any
+   *  man whose way lies down it. A charge about to go in on those guns still goes (`laneDoor`'s own clause). Off = asked once, as it was. */
+  drill: true,
   /** lanes a side keeps at once */
   max: 6,
 };
@@ -935,6 +942,13 @@ export function laneDoor(g: Game, gd: Guard, far: Vec3, centre: Vec3, can: boole
   if (!LANES.on) return false; const st = states.get(g); if (!st || !st.lanes.length || !live(g) || !mine(g, gd) || pushing(g, st, gd) || flanking(g, st, gd)) return false;
   const L = laneOn(g, st, far, gd); if (!L) return false;
   return !(can && L.guns.some(m => flat(m, centre) < LANES.bangM + 2.5));
+}
+/** tactics.ts runGate (`LANES.drill`, asked there): the two questions tryEngage asked as the drill took him, asked again while it has him this side of the
+ *  doorway — `at` is his jamb, the handle's place he is stepping to, or the station he is slicing to. True = the drill lets him go (said in the log) */
+export function laneDrill(g: Game, gd: Guard, at: Vec3, far: Vec3, centre: Vec3, can: boolean): boolean {
+  if (!laneCovers(g, gd, at) && !laneDoor(g, gd, far, centre, can)) return false;
+  note(g, gd, 'the doorway drill has him at a doorway in a lane his side knows of: it lets him go');
+  return true;
 }
 /** tactics.ts tryEngage: this spot is in the line of guns his side knows of — no place to stack on a doorway (the jamb the holders see through the opening) */
 export function laneCovers(g: Game, gd: Guard, p: Vec3): boolean {
