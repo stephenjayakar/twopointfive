@@ -251,7 +251,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   still restage the room under the dissolve: his sidearm is dealt at staging. CHECKS: `kit-figure-roster-check.ts` has nine rows for it (34 lines on
   both stands; seven of them are red on the figure before this); `kitview-work.cjs` has the picks `sam.suppressed`, `sam.sideCan`, `sam.light`,
   `sam.nvg`, `sam.rings`, `mate.sideCan`; `kitview-page.cjs` has one row for the sponge rounds (its own row, the load on the tube, nothing in the
-  air). NOT DONE: a teammate's 40 mm tile has no row of its own in the picture (the gun's row plays); the sponge round is never seen to fly.
+  air), and its rows about a teammate's loud rifle take either row a card's unsuppressed issue rifle is (`aks74u`, or `mk18bare` under
+  `GUNSLOTS.bare`: no tracer spec, the suppressed gun's reach, a round kept in the chamber), where four of them had gone red on the build. NOT DONE: a teammate's 40 mm tile has no row of its own in the picture (the gun's row plays); the sponge round is never seen to fly.
   Never seen on a GPU.
 - **The gear screen per level: the plan, the set loader, and the picture staged from them (10-15)**. The owner:
   "can we make it nicely abstracted so tweaks to one of them don't require churn elsewhere?" / "feel free to make a bespoke set for the gear screen …
