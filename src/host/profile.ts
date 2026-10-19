@@ -188,6 +188,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
   DOORTOOLS.thrPie = q.get('thrpie') !== '0';   // a room worked from the threshold: both jamb men cut the opening toward its middle, a few degrees a step, until the outside shows no more floor — and only then 'holding on the door' (game/doortools.ts pieSet / pieNext): ON in the page; ?thrpie=0 = a diagonal each, held still, as it was
   DOORTOOLS.thrLean = q.get('thrlean') !== '0';   // … and the man cutting leans (head and gun past the edge, hips behind it) and takes the cuts that look down the door's own line on a knee (character.ts anim.lean): ON in the page; ?thrlean=0 = square on every station
+  DOORTOOLS.thrPieOne = q.get('thrpieone') !== '0';   // … ONE man cuts: the lead walks the cuts square while the far jamb's man holds his diagonal, then leans once from his last cut; nobody kneels (the maintainer, 10-19, of the two of them cutting and kneeling in step). ON in the page; ?thrpieone=0 = both men cut, leaned on every cut, a knee on the cuts down the door's line, as it was
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
   DOORTOOLS.wordNoCan = q.get('wordnocan') !== '0';   // the word (F) at a door held from outside steps the men in with NO can; a can goes in only when asked ('bang and clear' given to the holding men): ON in the page; ?wordnocan=0 = the word bangs the blind pockets first, as it was (acts with the one-order outside clear)
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
@@ -492,6 +493,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
   'DOORTOOLS.thrPie': 'TPS_THRPIE=1',
   'DOORTOOLS.thrLean': 'TPS_THRLEAN=1',
+  'DOORTOOLS.thrPieOne': 'TPS_THRPIEONE=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
   'DOORTOOLS.wordNoCan': 'TPS_WORDNOCAN=1',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
