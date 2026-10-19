@@ -25,6 +25,9 @@ export const GUNSLOTS = {
   /** a TEAMMATE's round below the gunshot line (a suppressed pistol, the MP7) is the odd noise yours is to a man of the other side near enough to hear it
    *  (guards.ts hearingCheck). Off: only your own quiet rounds were ever heard — a teammate's reached nobody, however near. */
   heard: true,
+  /** a pick with its suppressor off is THE SAME GUN without it (weapons.ts mk18bare, g19bare: its name, magazine, handling and look; the report and flame of
+   *  a bare one). Off: the old card's meaning — a carbine with no suppressor was the defenders' AKS-74U row, a pistol with none their sidearm. */
+  bare: true,
 };
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.GUNSLOTS_BREAK ?? '') === '1'; } catch { return false; } })();
 /** GUNSLOTS_BREAK=1 (the check's break path): the card keeps its one gun row and nobody is handed a second gun */
@@ -38,15 +41,15 @@ const SEEN_SECS = 0.5;
 export type GunSlot = 'primary' | 'secondary';
 /** One thing a gun row offers: the rows of weapons.ts it is with a suppressor fitted (`can`) and without (`bare`) — null where it cannot be had that way
  *  (the card's Suppressor row then changes nothing on it). */
-export interface GunPick { id: string; slot: GunSlot; can: WeaponId | null; bare: WeaponId | null }
+export interface GunPick { id: string; slot: GunSlot; can: WeaponId | null; bare: WeaponId | null; /** the row `bare` was before the gun had one of its own (GUNSLOTS.bare off) */ bareWas?: WeaponId }
 /** (plain words only: nothing of another game module is read as this loads) */
 const PICKS: GunPick[] = [
-  { id: 'mk18', slot: 'primary', can: 'fn2000', bare: 'aks74u' },   // (the issue carbine: the two rows a teammate's Weapon + Suppressor rows have always meant)
+  { id: 'mk18', slot: 'primary', can: 'fn2000', bare: 'mk18bare', bareWas: 'aks74u' },   // (the issue carbine — `bareWas`: the two rows a teammate's Weapon + Suppressor rows had always meant)
   { id: 'mk12', slot: 'primary', can: 'mk12', bare: null },   // reach
   { id: 'mp7', slot: 'primary', can: 'mp7', bare: null },   // quiet and quick
   { id: 'mk46', slot: 'primary', can: null, bare: 'mk46' },   // volume
   { id: 'm1014', slot: 'primary', can: null, bare: 'm1014' },   // the room
-  { id: 'g19', slot: 'secondary', can: 'fiveseven', bare: 'guard9mm' },
+  { id: 'g19', slot: 'secondary', can: 'fiveseven', bare: 'g19bare', bareWas: 'guard9mm' },
   { id: 'hk45', slot: 'secondary', can: 'hk45', bare: null },   // the quietest
   { id: 'g18', slot: 'secondary', can: null, bare: 'g18' },   // a fight in the holster
 ];
@@ -56,7 +59,7 @@ export const gunPick = (id: unknown): GunPick | null => PICKS.find(p => p.id ===
 /** what a slot's row steps through, in order (a primary may be left at home) — only picks with a row this build may construct */
 export function gunPicks(slot: GunSlot): string[] { const ids = PICKS.filter(p => p.slot === slot && [p.can, p.bare].some(w => w && WEAPONS[w].enabled)).map(p => p.id); return slot === 'primary' ? [...ids, NO_PRIMARY] : ids; }
 /** the weapons.ts row a pick is on a card with / without the suppressor (the other one where it cannot be had that way, or this build does not hand that row out) */
-export function pickRow(id: unknown, suppressed: boolean): WeaponId | null { const p = gunPick(id); if (!p) return null; return (suppressed ? [p.can, p.bare] : [p.bare, p.can]).find(w => w && WEAPONS[w].enabled) ?? null; }
+export function pickRow(id: unknown, suppressed: boolean): WeaponId | null { const p = gunPick(id); if (!p) return null; const bare = GUNSLOTS.bare ? p.bare : p.bareWas ?? p.bare; return (suppressed ? [p.can, bare] : [bare, p.can]).find(w => w && WEAPONS[w].enabled) ?? null; }
 /** the pick's name on its tile: its row's short name, as the card would hand it to him */
 export function pickWord(id: unknown, suppressed = true): string { if (id === NO_PRIMARY) return 'none'; const w = pickRow(id, suppressed); return w ? WEAPONS[w].short : String(id); }
 /** which of the card's gun drawings stands for a pick (ui/kitIcons.ts), by its row's class — null: none carried */

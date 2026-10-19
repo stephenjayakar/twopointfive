@@ -248,6 +248,8 @@ const CASINGS: Partial<Record<WeaponId, CasingSpec>> = {
   g18:       { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.8, -0.2], speed: 3.0, tink: 0.5 },
   m1014:     { color: HULL, diameter: 0.02, from: 'hand', ahead: 0.14, up: 0.07, right: 0.03, dir: [1, 0.35, 0.1], speed: 2.6, tink: 0.5 },   // (gunlook.ts, with that switch on: a red hull out of the port on the right, fat and slow — off, the gas shotgun drops nothing, as it did)
   fn2000:    { color: BRASS, diameter: 0.0095, from: 'muzzle', ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1], speed: 1.1, tink: 0.4 },  // forward ejection: the cases trundle out of the tube by the muzzle and drop
+  mk18bare:  { color: BRASS, diameter: 0.0095, from: 'muzzle', ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1], speed: 1.1, tink: 0.4 },   // (the same gun, its suppressor off)
+  g19bare:   { color: BRASS, diameter: 0.008,  from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.9, -0.25], speed: 2.6, tink: 0.5 },
 };
 /** the empty a row's gun throws, or null: nothing (a row with none; the gas shotgun's hull with gunlook.ts off — it dropped nothing before it had a look of its own) */
 export function casingOf(def: WeaponDef): CasingSpec | null { const C = CASINGS[def.id]; return !C || (def.id === 'm1014' && !gunLookOn()) ? null : C; }

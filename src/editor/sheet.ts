@@ -10,7 +10,7 @@ import type { Tools } from './tools';
 import { FACE_NAMES } from './geom';
 
 const DEGf = 180 / Math.PI;
-const WEAPONS = ['', 'guard9mm', 'aks74u', 'ak74m', 'akms', 'fn2000', 'fiveseven', 'm870', 'mk12', 'mp7', 'mk46', 'm1014', 'hk45', 'g18'];   // (game/weapons.ts WeaponId, every row)
+const WEAPONS = ['', 'guard9mm', 'aks74u', 'ak74m', 'akms', 'fn2000', 'fiveseven', 'm870', 'mk12', 'mp7', 'mk46', 'm1014', 'hk45', 'g18', 'mk18bare', 'g19bare'];   // (game/weapons.ts WeaponId, every row)
 
 export interface SheetHost { ed: Editor; tools: Tools; frame: () => void; rebuild: () => void }
 
