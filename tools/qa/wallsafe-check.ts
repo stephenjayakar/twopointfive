@@ -22,19 +22,20 @@ type Vec3 = [number, number, number];
 const FRESH = ['room-clear-four', 'block-squads'];
 export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
   const { rig, outerSites, partition } = (await import('./outerwall-probes.ts')) as any;
-  const { WALLCHARGE, WALL_ORDER, wallTarget, chargeIndoors, safeRadius, wallPt, wallOff } = await import(`${ROOT}/src/game/wallcharge.ts`);
+  const { WALLCHARGE, WALLKILL, WALL_ORDER, wallTarget, chargeIndoors, safeRadius, wallPt, wallOff } = await import(`${ROOT}/src/game/wallcharge.ts`);
   const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { SAMSTUN } = await import(`${ROOT}/src/game/samstun.ts`);
   const BREAK = process.env.WALLSAFE_BREAK === '1', ON = !BREAK; let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]), f2 = (x: number) => x.toFixed(2), at = (p: number[]) => `(${p[0].toFixed(1)}, ${p[2].toFixed(1)})`;
-  const was = { rnd: Math.random, sw: DESTRUCTION.on, wc: JSON.parse(JSON.stringify(WALLCHARGE)) };
+  const was = { rnd: Math.random, sw: DESTRUCTION.on, wc: JSON.parse(JSON.stringify(WALLCHARGE)) , wk: WALLKILL.on as boolean };
   console.log('\n=== wallsafe: the wall charge\'s safety radius, larger and larger again indoors ===');
   try {
     for (const scn of scns) {
       console.log(`  — ${scn}`);
       const R = await rig(scn, 5), g = R.game, C = R.C, pl = g.player, col = g.col; R.kit();
+      WALLKILL.on = false;   // (this check holds the safety radius's OWN numbers and stages men at the charge for them: who the charge kills there on the shipped stand is WALLKILL's, held by its own check `wallkill`)
       const src = (W: any): Vec3 => wallPt(W, 0, 0.5, 1.1), lined = (W: any, q: number[]) => !col.solidBlocked(src(W), [q[0], 1.1, q[2]]);
       /** a free place on the charge's side `d` metres from it with a line to it (along the wall either way, straight back, or between), not within 0.8 m of `not` */
       const place = (W: any, d: number, not: number[][] = []): Vec3 | null => { const k = Math.SQRT1_2 * d;
@@ -178,7 +179,7 @@ export async function wallsafeCheck(scns = FRESH): Promise<boolean> {
           `stood off clear of it, the men start for the hole on the blast: the ${WALLCHARGE.afterBlow} s beat is the time before anybody is AT the hole, and their walk is longer than that`, `0.3 s after the blast · as it was: ${told(off)} · now: ${told(on)}`);
       }
     }
-  } finally { Object.assign(WALLCHARGE, was.wc); DESTRUCTION.on = was.sw; Math.random = was.rnd; }
+  } finally { Object.assign(WALLCHARGE, was.wc); WALLKILL.on = was.wk; DESTRUCTION.on = was.sw; Math.random = was.rnd; }
   console.log(`=== wallsafe: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
