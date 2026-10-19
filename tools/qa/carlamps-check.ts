@@ -12,6 +12,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { CARLAMPS, CARLAMPS_STATS, VEHICLE_GROUP, findCarLamps, deadLamp, carLampsTape } = await import(`${ROOT}/src/game/carlamps.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
+const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
@@ -134,10 +135,13 @@ export async function carlampsCheck(): Promise<boolean> {
       CARLAMPS.on = true; const old = snap(); delete old.tables.CARLAMPS; carLampsTape(old.tables); const tapeOff = CARLAMPS.on === false;
       CARLAMPS.on = true; carLampsTape(snap().tables); const tapeOn = CARLAMPS.on === true;
       const called = ['src/replay/engineplay.ts', 'tools/qa/rerun.ts'].filter(f => !/carLampsTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
+      if (!/TPS_CARLAMPS = .*CARLAMPS\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');   // (a session file's own replay stands its game up on the file's word)
+      // … and the level is the same level to a checkpoint or a recording with the lamps for targets or without
+      const fpOn = levelFingerprint(game).fp as string, fpOff = levelFingerprint(off.game).fp as string;
       CARLAMPS.on = true; J.applyKnobs(game, old); const before = CARLAMPS.on;
       CARLAMPS.on = true; const recOn = snap(); CARLAMPS.on = false; J.applyKnobs(game, recOn); const kept = CARLAMPS.on;
-      line(tapeOff && tapeOn && called.length === 0 && before === false && kept === true && PR.FROZEN_HOLDS['CARLAMPS.on'] === 'TPS_CARLAMPS=1' && SE.STAND_ENV.includes('TPS_CARLAMPS'), '8 a recording from before the table has the switch put down before its level is stood up (both players call for it), one made with it on keeps it; the stands\' list has the row and the word',
-        `a tape without the table, before the build: ${tapeOff ? 'down' : 'UP'} · with it: ${tapeOn ? 'up' : 'DOWN'} · not calling: ${called.join(', ') || 'none'} · applyKnobs without the table: ${before} · recorded on: ${kept} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['CARLAMPS.on'] ?? 'no row'} · STAND_ENV ${SE.STAND_ENV.includes('TPS_CARLAMPS')}`); }
+      line(fpOn === fpOff && tapeOff && tapeOn && called.length === 0 && before === false && kept === true && PR.FROZEN_HOLDS['CARLAMPS.on'] === 'TPS_CARLAMPS=1' && SE.STAND_ENV.includes('TPS_CARLAMPS'), '8 the level\'s fingerprint is the same with the lamps for targets as without; a recording from before the table has the switch put down before its level is stood up (the two tape players and the session replay each see to it), one made with it on keeps it; the stands\' list has the row and the word',
+        `fingerprint ${fpOn} with, ${fpOff} without · a tape without the table, before the build: ${tapeOff ? 'down' : 'UP'} · with it: ${tapeOn ? 'up' : 'DOWN'} · not calling: ${called.join(', ') || 'none'} · applyKnobs without the table: ${before} · recorded on: ${kept} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['CARLAMPS.on'] ?? 'no row'} · STAND_ENV ${SE.STAND_ENV.includes('TPS_CARLAMPS')}`); }
   } catch (e) { console.log(`- FAIL — the check threw\n    ${e instanceof Error ? e.stack : String(e)}`); all = false; }
   finally { Object.assign(CARLAMPS, was); Object.assign(CARLAMPS_STATS, stats0); Math.random = rnd; }
   console.log(`=== carlamps: ${all ? 'ALL PASS' : 'FAIL'} ===`);

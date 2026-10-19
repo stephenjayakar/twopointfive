@@ -106,6 +106,7 @@ import { attachFlashlight, rollcallState, escalationOf, forgetGuardClocks } from
 import { forgetSuppressionClocks } from './suppression';
 import { glassState } from './glass';
 import { isDaylight, setDaylight, updateTargets } from './lighting';
+import { lampGlass } from './carlamps';
 import { needsSnapshot, needsRestore } from './needs';
 import { gunWallSnapshot, gunWallRestore } from './gunwall';
 import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
@@ -313,7 +314,9 @@ export function levelFingerprint(g: Game): SaveState['level'] {
   const L = g.level; const nBox = g.destr?.walls?.authored ?? L.boxes.length;   // (the AUTHORED statics only: wall breaking appends pieces to the list at runtime — the level is still the level)
   let geo = 0x811c9dc5;   // + every static's centre and half-extents to the centimetre: a re-export that MOVES geometry under the same names and counts is another level to a checkpoint
   for (let i = 0; i < nBox; i++) for (const v of [L.boxes[i].c[0], L.boxes[i].c[1], L.boxes[i].c[2], L.boxes[i].h[0], L.boxes[i].h[1], L.boxes[i].h[2]]) { geo ^= Math.round(v * 100) & 0xffffffff; geo = Math.imul(geo, 0x01000193) >>> 0; }
-  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.length}|${L.props.length}|${geo.toString(16)}`;
+  const s = `${nBox}|${L.doors.map(d => d.name).join(',')}|${L.routes.map(r => `${r.name}:${r.points.length}`).join(',')}|${g.targets.reduce((n, t) => n + (lampGlass(t) ? 0 : 1), 0)}|${L.props.length}|${geo.toString(16)}`;
+  // (the count of light targets is the LEVEL's own: a vehicle's lamps — carlamps.ts — are made of the level's boxes by a rule that can be off, and a target is
+  //  poured back by name, so a checkpoint or a recording from before that rule, or from a page with it off, is still this level's)
   const fp = { fp: hashStr(s).toString(16), boxes: nBox, routes: L.routes.length, doors: L.doors.length };
   fpCache.set(g.level, fp); return fp;
 }
