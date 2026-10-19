@@ -1154,9 +1154,9 @@
     "quiet": {
       "thing": "the sat phone",
       "starts": [
-        { "sam": [6.2, 0, 2.6], "samYaw": 0, "name": "behind the north wall, at its west end" },
-        { "sam": [20.4, 0, 1.8], "samYaw": 0, "name": "outside the north gate" },
-        { "sam": [22.4, 0, 25.4], "samYaw": 3.141592653589793, "name": "outside the south gate" }
+        { "sam": [6.2, 0, 2.6], "samYaw": 0, "name": "behind the alley wall, by the gable" },
+        { "sam": [20.4, 0, 1.8], "samYaw": 0, "name": "outside the alley gate" },
+        { "sam": [22.4, 0, 25.4], "samYaw": 3.141592653589793, "name": "outside the lane gate" }
       ],
       "spots": [
         { "place": "the money changer's office", "area": { "x0": 24.06, "x1": 29.88, "z0": 8.12, "z1": 11.94 }, "door": "hawala_office", "holder": "the safe", "rackIndex": 0, "front": [28.7, 1, 8.82], "halfW": 0.35 },
@@ -1164,9 +1164,9 @@
         { "place": "the garage", "area": { "x0": 30.12, "x1": 35.88, "z0": 8.12, "z1": 15.88 }, "door": "garage_front", "holder": "the steel cabinet", "rackIndex": 2, "front": [35, 1, 8.77], "halfW": 0.5 }
       ],
       "exits": [
-        { "name": "the east gate", "door": "gate_e", "x": 36, "z": 18.75, "out": [1, 0], "halfW": 1.2 },
-        { "name": "the north gate", "door": "gate_n", "x": 20.25, "z": 4, "out": [0, -1], "halfW": 1.2 },
-        { "name": "the south gate", "door": "gate_s", "x": 22.25, "z": 22, "out": [0, 1], "halfW": 1.2 }
+        { "name": "the street gate", "door": "gate_e", "x": 36, "z": 18.75, "out": [1, 0], "halfW": 1.2 },
+        { "name": "the alley gate", "door": "gate_n", "x": 20.25, "z": 4, "out": [0, -1], "halfW": 1.2 },
+        { "name": "the lane gate", "door": "gate_s", "x": 22.25, "z": 22, "out": [0, 1], "halfW": 1.2 }
       ],
       "patrols": [["roundW", "roundE", "lorry", "counter", "teahouse"], ["roundW", "roundE", "counter", "garage", "watchman"], ["roundW", "roundE", "teahouse", "garage", "watchman"]],
       "needs": { "coffee": { "name": "the samovar", "pos": [5.2, 0, 14.4], "face": -1.5707963267948966 }, "smoke": { "name": "the pallets in the alley", "pos": [13.7, 0, 7.2], "face": 3.141592653589793 }, "water": { "name": "the standpipe", "pos": [17.1, 0, 11.4], "face": -1.5707963267948966 }, "stretch": { "name": "the street", "pos": [24.5, 0, 18.9], "face": 1.5707963267948966, "loop": [[24.5, 0, 18.9], [28, 0, 18.8], [28, 0, 19.6], [21, 0, 19], [13, 0, 18.6]] } },

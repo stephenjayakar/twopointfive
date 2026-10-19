@@ -45,10 +45,10 @@ export const VAULT = {
 const PLACES = { areas: [
   { name: 'counting room', bounds: { x0: 13.12, x1: 18.88, z0: 9.12, z1: 16.88 } }, { name: 'guard shack', bounds: { x0: 14.12, x1: 17.48, z0: 19.12, z1: 21.48 } },
   { name: 'kitchen court', bounds: { x0: 24.12, x1: 27.88, z0: 12.62, z1: 16.88 } },
-  { name: 'west gateway', bounds: { x0: 5.6, x1: 10.0, z0: 11.6, z1: 16.4 } }, { name: 'east gateway', bounds: { x0: 30.0, x1: 34.4, z0: 11.6, z1: 16.4 } },
-  { name: 'north strip', bounds: { x0: 12.9, x1: 24.1, z0: 6.12, z1: 8.88 } }, { name: 'south side', bounds: { x0: 12.9, x1: 28.1, z0: 17.12, z1: 21.88 } },
-  { name: 'west yard', bounds: { x0: 8.12, x1: 12.9, z0: 6.12, z1: 21.88 } }, { name: 'east yard', bounds: { x0: 24.1, x1: 31.88, z0: 6.12, z1: 21.88 } },
-  { name: 'west track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'east track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
+  { name: 'counting room gateway', bounds: { x0: 5.6, x1: 10.0, z0: 11.6, z1: 16.4 } }, { name: 'kitchen court gateway', bounds: { x0: 30.0, x1: 34.4, z0: 11.6, z1: 16.4 } },
+  { name: 'narrow strip', bounds: { x0: 12.9, x1: 24.1, z0: 6.12, z1: 8.88 } }, { name: 'shack side', bounds: { x0: 12.9, x1: 28.1, z0: 17.12, z1: 21.88 } },
+  { name: 'front yard', bounds: { x0: 8.12, x1: 12.9, z0: 6.12, z1: 21.88 } }, { name: 'back yard', bounds: { x0: 24.1, x1: 31.88, z0: 6.12, z1: 21.88 } },
+  { name: 'front track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'back track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
 ] };
 
 export function build() {
@@ -155,9 +155,9 @@ export function build() {
   const front = VAULT.safeFront;
   const quiet: QuietData = {
     thing: 'the hawala ledger',
-    starts: [{ name: 'the west track', sam: [5.2, 0, 14.0], samYaw: HALF }, { name: 'the east track', sam: [34.8, 0, 14.0], samYaw: -HALF }],
+    starts: [{ name: 'the front track', sam: [5.2, 0, 14.0], samYaw: HALF }, { name: 'the back track', sam: [34.8, 0, 14.0], samYaw: -HALF }],
     spots: [{ place: 'the strongroom', area: { ...STRONG }, door: 'strongroom', holder: 'the safe', rackIndex: 0, front, halfW: 0.35 }],
-    exits: [EXIT_W, EXIT_E],
+    exits: [{ ...EXIT_W, name: 'the counting room gate' }, { ...EXIT_E, name: 'the kitchen court gate' }],   // (the ground's two gates, by this level's own names for them)
     patrols: [['counting', 'yard_round', 'south'], ['counting_b', 'yard_round_b', 'south_b']],
   };
   return T.finish({

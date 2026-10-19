@@ -31,8 +31,8 @@ export const HALF = Math.PI / 2;
 /** where a lesson starts unless it says otherwise: on the road outside the west gate, facing it */
 export const START_W: Vec3 = [5.6, 0, 14.0];
 /** the two gates as a quiet mission's ways out (scenarios.quiet.exits) */
-export const EXIT_W = { name: 'the west gate', door: 'gate_w', x: 7.2, z: 14.0, out: [-1, 0] as [number, number] };
-export const EXIT_E = { name: 'the east gate', door: 'gate_e', x: 32.8, z: 14.0, out: [1, 0] as [number, number] };
+export const EXIT_W = { name: 'the track gate', door: 'gate_w', x: 7.2, z: 14.0, out: [-1, 0] as [number, number] };
+export const EXIT_E = { name: 'the far gate', door: 'gate_e', x: 32.8, z: 14.0, out: [1, 0] as [number, number] };
 
 type WallKind = 'mud' | 'mudLight' | 'render' | 'block';
 export interface HutDoor { name: string; side: 'n' | 's' | 'e' | 'w'; /** where the opening STARTS along the wall (x for n / s, z for e / w); it is 1.2 m wide */ at: number; extra?: Partial<LevelDoorDef> }

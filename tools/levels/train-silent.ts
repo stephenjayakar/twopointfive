@@ -157,7 +157,7 @@ export function build() {
   const quiet: QuietData = {
     thing: 'the radio codes',
     radioCheck: false,   // no radio check on this shift: a reader slower than the net's ninety seconds found the posts the lines name empty
-    starts: [{ name: 'the west track', sam: [5.2, 0, 14.0], samYaw: HALF, mate: [4.1, 0, 14.9] }],
+    starts: [{ name: 'the track', sam: [5.2, 0, 14.0], samYaw: HALF, mate: [4.1, 0, 14.9] }],
     spots: [{ place: 'the watch house', area: { ...HUT }, door: 'hut', holder: 'the red trunk', rackIndex: 0, front, halfW: 0.3 }],
     exits: [EXIT_E, EXIT_W],
     patrols: [['post', 'door', 'gate']],

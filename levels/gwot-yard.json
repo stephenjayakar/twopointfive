@@ -645,6 +645,7 @@
   },
   "scenarios": {
     "doorNames": [
+      { "door": "nm", "name": "guest room to sleeping room door" },
       { "door": "gate_w", "name": "foot gate" },
       { "door": "n_w", "name": "guest room door" },
       { "door": "n_e", "name": "sleeping room door" },

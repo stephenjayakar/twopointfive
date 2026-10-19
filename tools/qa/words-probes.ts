@@ -258,41 +258,11 @@ const DOORS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 96 door
  *  (quiet.ts brief `outs`, snatch.ts, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
  *  HUD has no compass. These are the level files' own words (scenarios.quiet.exits / .snatch.exits / .places.areas): each is renamed in its level's
  *  generator and comes OFF this list in the same change. `'<file>.json': "exit '<name>' · area '<name>'"`, as the census prints it. */
-const PLACES_OWED: Record<string, string> = {   // (10-19: 20 files, 56 names)
-  'barracks-gwot.json': "area 'north gallery' · area 'south gallery'",
-  'barracks.json': "area 'north gallery' · area 'south gallery'",
-  'bazaar.json': "exit 'the east gate' · exit 'the north gate' · exit 'the south gate'",
-  'compound-gwot.json': "area 'east alley' · area 'west yard'",
-  'compound.json': "area 'east alley' · area 'west yard'",
-  'crossing.json': "exit 'the east wicket' · exit 'the east yard gate' · exit 'the north gate' · exit 'the south gate' · exit 'the west wicket'",
-  'depot-gwot.json': "area 'east yard'",
-  'depot.json': "area 'east yard'",
-  'lights-out.json': "area 'east strip' · area 'east track' · area 'north side' · area 'west track' · exit 'the east gate' · exit 'the west gate'",
-  'police-post.json': "area 'west yard' · exit 'the east gate' · exit 'the north gate' · exit 'the west gate'",
-  'quiet-relay.json': "exit 'the east gate' · exit 'the north gate' · exit 'the west gate'",
-  'quiet-yard.json': "exit 'the south gate' · exit 'the west gate'",
-  'train-hands.json': "exit 'the east gate' · exit 'the west gate'",
-  'train-kit.json': "exit 'the east gate' · exit 'the west gate'",
-  'train-lights.json': "exit 'the east gate' · exit 'the west gate'",
-  'train-move.json': "exit 'the east gate'",
-  'train-silent.json': "exit 'the east gate' · exit 'the west gate'",
-  'vault.json': "area 'east gateway' · area 'east track' · area 'east yard' · area 'north strip' · area 'south side' · area 'west gateway' · area 'west track' · area 'west yard' · exit 'the east gate' · exit 'the west gate'",
-  'warehouse-gwot.json': "area 'north corridor' · area 'west corridor'",
-  'warehouse.json': "area 'north corridor' · area 'west corridor'",
-};
+const PLACES_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 56 names of 20 files that stood here are renamed in their levels' own generators, each by what stands there —
+};                                               //  a gate by its door's written name, an area by its rooms; one that turns up named by a bearing goes red here until its level renames it)
 /** …AND FOR A DOOR STILL CALLED BY LETTERS (line 8): its id is its author's shorthand, no room names it and its level has written it no name, so the
  *  row reads the id's words ('p back door', 'n1 door'), or a name that says a word twice. A scenarios.doorNames row mends each. `'<file>.json': 'id id'`. */
-const LETTERS_OWED: Record<string, string> = {   // (10-19: 10 files, 23 doors)
-  'barracks-gwot.json': 'n1 n12 n2 n3 s2 s4',
-  'barracks.json': 'n1 n12 n2 n3 s2 s4',
-  'compound-gwot.json': 'p_back',
-  'compound.json': 'p_back',
-  'crossing.json': 'off_imp',
-  'gwot-yard.json': 'nm',
-  'quiet-yard.json': 'nm',
-  'train-orders.json': 'hut_a hut_b hut_c hut_d',
-  'warehouse-gwot.json': 'lb',
-  'warehouse.json': 'lb',
+const LETTERS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 23 doors of 10 files that stood here have a written name in their levels' scenarios.doorNames)
 };
 export const wordsDoorNames = guarded(async () => {
   const F = family('words-doornames: a level names its own doors where the rooms cannot, and no door\'s name carries a bearing');

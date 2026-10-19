@@ -1111,9 +1111,9 @@
     "quiet": {
       "thing": "the manifest",
       "starts": [
-        { "name": "the south gate", "sam": [15.9, 0, 25.9], "samYaw": 3.141592653589793, "mate": [17, 0, 26.3] },
-        { "name": "the east wicket", "sam": [37.9, 0, 17.9], "samYaw": -1.5707963267948966, "mate": [38.4, 0, 19] },
-        { "name": "the west wicket", "sam": [2.1, 0, 21.9], "samYaw": 1.5707963267948966, "mate": [1.6, 0, 23] }
+        { "name": "the lorry park gate", "sam": [15.9, 0, 25.9], "samYaw": 3.141592653589793, "mate": [17, 0, 26.3] },
+        { "name": "the ditch wicket", "sam": [37.9, 0, 17.9], "samYaw": -1.5707963267948966, "mate": [38.4, 0, 19] },
+        { "name": "the tea stall wicket", "sam": [2.1, 0, 21.9], "samYaw": 1.5707963267948966, "mate": [1.6, 0, 23] }
       ],
       "spots": [
         { "place": "the customs office", "area": { "x0": 19.06, "x1": 24.94, "z0": 4.12, "z1": 9.38 }, "door": "office", "holder": "the office safe", "rackIndex": 0, "front": [23.4, 1, 4.78], "halfW": 0.3 },
@@ -1121,11 +1121,11 @@
         { "place": "the impound", "area": { "x0": 25.06, "x1": 30.88, "z0": 4.12, "z1": 9.38 }, "door": "impound", "holder": "the property locker", "rackIndex": 2, "front": [29.4, 1, 4.75], "halfW": 0.4 }
       ],
       "exits": [
-        { "name": "the north gate", "door": "gate_n", "x": 7.75, "z": 4, "out": [0, -1] },
-        { "name": "the south gate", "door": "gate_s", "x": 15.75, "z": 24, "out": [0, 1] },
-        { "name": "the east wicket", "door": "gate_e", "x": 36, "z": 17.75, "out": [1, 0] },
-        { "name": "the east yard gate", "door": "gate_ne", "x": 36, "z": 7.25, "out": [1, 0] },
-        { "name": "the west wicket", "door": "gate_w", "x": 4, "z": 21.75, "out": [-1, 0] }
+        { "name": "the customs yard gate", "door": "gate_n", "x": 7.75, "z": 4, "out": [0, -1] },
+        { "name": "the lorry park gate", "door": "gate_s", "x": 15.75, "z": 24, "out": [0, 1] },
+        { "name": "the ditch wicket", "door": "gate_e", "x": 36, "z": 17.75, "out": [1, 0] },
+        { "name": "the impound yard gate", "door": "gate_ne", "x": 36, "z": 7.25, "out": [1, 0] },
+        { "name": "the tea stall wicket", "door": "gate_w", "x": 4, "z": 21.75, "out": [-1, 0] }
       ],
       "patrols": [["laneW", "laneE", "boom", "east", "clerk"], ["laneW", "laneE", "boom", "east", "yard", "south"], ["laneW", "laneE", "boom", "south", "clerk", "yard"]],
       "needs": { "coffee": { "name": "the kettle in the boom hut", "pos": [6.2, 0, 19.1], "face": -1.5707963267948966 }, "smoke": { "name": "the east gate", "pos": [35.3, 0, 15.9], "face": 3.141592653589793 } }
@@ -1165,6 +1165,7 @@
       ]
     },
     "doorNames": [
+      { "door": "off_imp", "name": "customs office to impound door" },
       { "door": "gate_n", "name": "customs yard gate" },
       { "door": "gate_ne", "name": "impound yard gate" },
       { "door": "gate_s", "name": "lorry park gate" },
