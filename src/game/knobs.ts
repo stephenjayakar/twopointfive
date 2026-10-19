@@ -107,7 +107,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'KITLOAD',
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'KITLOAD', 'SQUAD40',
   // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
   'EXACT',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
@@ -130,6 +130,7 @@ import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
 import { GUNLOOK } from './gunlook';
 import { SQUADTHROW } from './squadthrow';
+import { SQUAD40 } from './squad40';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
 import { INHAND } from './inhand';
@@ -240,6 +241,8 @@ export function knobRegistry(): Record<string, object> {
     GUNLOOK,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by
     SQUADTHROW,
+    // a teammate's 40 mm grenade fired on order (squad40.ts): whether the throws' page has the row, and what counts as a shot
+    SQUAD40,
     // the quick key is the squad's autopilot (autopilot.ts): on a door the men wait on they go in by the entry they pick; how long its plan is drawn
     AUTOPILOT,
     // the order menu's 'wait for my word' row lays an order: nobody moves until the word's key sends the plan; a restart puts it back (planlay.ts)

@@ -3134,6 +3134,8 @@ if (on('squadthrow', 'squadorders', 'all')) await run('squadthrow', async () => 
 if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-walk', async () => (await import('./squadthrow-walk-check.ts')).squadthrowWalkCheck());
 // a man with no straight arc works a throw out — other paces, a bank — and a frag is thrown where the men can duck (squadthrow-lob-check.ts; SQUADTHROW.lob / duck / samCall)
 if (on('squadthrow-lob', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-lob', async () => (await import('./squadthrow-lob-check.ts')).squadthrowLobCheck());
+// a teammate whose card carries 40 mm grenades fires one on order (squad40-check.ts; game/squad40.ts — X on the floor, G, then 3): also in family 'squadorders'
+if (on('squad40', 'squadorders', 'all')) await run('squad40', async () => (await import('./squad40-check.ts')).squad40Check());
 // the squad's plan drawn on the floor (plan-check.ts; game/floorplan.ts — ways, marks, fans, the menu's rings; our own men only): also in family 'squadorders'
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
 // B is the squad's autopilot: on a door the men wait on they go in by the entry they pick; its plan is drawn for its own time (autopilot-check.ts; AUTOPILOT.on)

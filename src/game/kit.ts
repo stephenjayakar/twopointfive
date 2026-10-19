@@ -64,6 +64,7 @@ import { STICKY, stickyIssue, stickyVisit } from './stickycam';   // (read insid
 import { WAND } from './wand';   // (read inside a row's builder, a card's cost and kitPlayer only — never as this module loads)
 import { OWNCHARGE } from './owncharge';   // (your own door and wall charges: read inside a row's builder, the squad's count and a staging only — never as this module loads)
 import { SQUADSMOKE, squadSmokeStage } from './squadsmoke';   // (read inside a row's note / called inside kitStage only)
+import { squad40Stage } from './squad40';   // (called inside kitStage only)
 import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitShow / kitStage only)
 import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import slotsData from './slots.json' with { type: 'json' };   // (plain data: no game module is behind it)
@@ -1063,7 +1064,7 @@ export function kitStage(g: Game, ops: Guard[]) {
   if (issuedPage && !issuing) return asIssued(() => kitStage(g, ops));   // (a lesson's page: every man staged with the issue cards — kitIssuedPage)
   if (kitIssue(g, () => kitStage(g, ops))) return;   // (a mission that issues its own kit: kitIssue)
   KIT_STAGED.n++; KIT_STAGED.ops = ops.slice(0, KIT_MEMBERS - 1);
-  if (!KIT.on) { squadSmokeStage(g, 0); return; }   // (squadsmoke.ts: the squad's smoke is set on EVERY staging — none with the table off)
+  if (!KIT.on) { squadSmokeStage(g, 0); squad40Stage(g, []); return; }   // (squadsmoke.ts: the squad's smoke is set on EVERY staging — none with the table off; squad40.ts: the teammates' 40 mm rounds likewise)
   if (SLOTS.on) kitTeam(Math.min(ops.length, KIT_MEMBERS - 1));   // (the rule is held for the men who CAME: cards made legal for a smaller team on the loadout screen and then staged on a bigger one give up what does not fit — nothing while they are legal, as the issued kit always is)
   squadSmokeStage(g, kitSmokes(ops.length));   // (squadsmoke.ts: what the men who came carry, after the pouches rule has had its say, is the squad's smoke for this run)
   kitPlayer(g);
@@ -1082,6 +1083,7 @@ export function kitStage(g: Game, ops: Guard[]) {
     if (m.suit !== 'issued') gd.char.tint = [...SUITS[m.suit].tint] as Vec3;
     if (m.trim !== 'issued') gd.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
   });
+  squad40Stage(g, ops.slice(0, KIT_MEMBERS - 1).map(gd => [gd, manOf.get(gd)?.kit.shells ?? 0] as const));   // (squad40.ts: the 40 mm rounds each teammate's card carries are his to fire on order — none on a card as issued, so nothing is kept)
   // the squad's counted stun canisters and charges: what the men who came carry (kitPool — the number the loadout screen showed before Deploy)
   const n = Math.min(ops.length, KIT_MEMBERS - 1), pool = kitPool(n);
   if (n && (pool.bangs !== DOORTOOLS.bangs || pool.charges !== DOORTOOLS.charges || pool.frags !== FRAG.squad)) {
