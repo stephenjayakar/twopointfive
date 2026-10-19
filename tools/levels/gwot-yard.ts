@@ -166,5 +166,5 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
   };
   // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the yard has no mission of its own, so this is its one block
-  return { level, scenarios: { doorNames: [{ door: 'gate_w', name: 'foot gate' }, { door: 'n_w', name: 'guest room door' }, { door: 'n_e', name: 'sleeping room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: trace.groups, surfaces };
+  return { level, scenarios: { doorNames: [{ door: 'nm', name: 'guest room to sleeping room door' }, { door: 'gate_w', name: 'foot gate' }, { door: 'n_w', name: 'guest room door' }, { door: 'n_e', name: 'sleeping room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: trace.groups, surfaces };
 }

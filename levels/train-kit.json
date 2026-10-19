@@ -509,14 +509,14 @@
     "quiet": {
       "thing": "the range book",
       "starts": [
-        { "name": "the west gate", "sam": [9.6, 0, 14.6], "samYaw": 1.5707963267948966 }
+        { "name": "the track gate", "sam": [9.6, 0, 14.6], "samYaw": 1.5707963267948966 }
       ],
       "spots": [
         { "place": "the armourer's hut", "area": { "x0": 25.720000000000002, "x1": 30.48, "z0": 16.52, "z1": 21.08 }, "door": "hut", "holder": "the olive trunk", "rackIndex": 0, "front": [29.6, 1, 19], "halfW": 0.3 }
       ],
       "exits": [
-        { "name": "the east gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
-        { "name": "the west gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
+        { "name": "the far gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
+        { "name": "the track gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
       ],
       "patrols": [["north", "hut"]]
     },

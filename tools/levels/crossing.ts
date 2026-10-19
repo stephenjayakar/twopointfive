@@ -128,9 +128,9 @@ export const CROSSING_ROUTES: PatrolRoute[] = [
 export const QUIET: QuietData = {
   thing: 'the manifest',
   starts: [
-    { name: 'the south gate', sam: [15.9, 0, 25.9], samYaw: Math.PI, mate: [17.0, 0, 26.3] },
-    { name: 'the east wicket', sam: [37.9, 0, 17.9], samYaw: -Math.PI / 2, mate: [38.4, 0, 19.0] },
-    { name: 'the west wicket', sam: [2.1, 0, 21.9], samYaw: Math.PI / 2, mate: [1.6, 0, 23.0] },
+    { name: 'the lorry park gate', sam: [15.9, 0, 25.9], samYaw: Math.PI, mate: [17.0, 0, 26.3] },
+    { name: 'the ditch wicket', sam: [37.9, 0, 17.9], samYaw: -Math.PI / 2, mate: [38.4, 0, 19.0] },
+    { name: 'the tea stall wicket', sam: [2.1, 0, 21.9], samYaw: Math.PI / 2, mate: [1.6, 0, 23.0] },
   ],
   spots: [
     { place: 'the customs office', area: R.office, door: 'office', holder: 'the office safe', rackIndex: 0, front: [23.4, 1.0, 4.78], halfW: 0.3 },
@@ -138,11 +138,11 @@ export const QUIET: QuietData = {
     { place: 'the impound', area: R.impound, door: 'impound', holder: 'the property locker', rackIndex: 2, front: [29.4, 1.0, 4.75], halfW: 0.4 },
   ],
   exits: [
-    { name: 'the north gate', door: 'gate_n', x: 7.9, z: 4.0, out: [0, -1] },
-    { name: 'the south gate', door: 'gate_s', x: 15.9, z: 24.0, out: [0, 1] },
-    { name: 'the east wicket', door: 'gate_e', x: 36.0, z: 17.9, out: [1, 0] },
-    { name: 'the east yard gate', door: 'gate_ne', x: 36.0, z: 7.0, out: [1, 0] },
-    { name: 'the west wicket', door: 'gate_w', x: 4.0, z: 21.9, out: [-1, 0] },
+    { name: 'the customs yard gate', door: 'gate_n', x: 7.9, z: 4.0, out: [0, -1] },
+    { name: 'the lorry park gate', door: 'gate_s', x: 15.9, z: 24.0, out: [0, 1] },
+    { name: 'the ditch wicket', door: 'gate_e', x: 36.0, z: 17.9, out: [1, 0] },
+    { name: 'the impound yard gate', door: 'gate_ne', x: 36.0, z: 7.0, out: [1, 0] },
+    { name: 'the tea stall wicket', door: 'gate_w', x: 4.0, z: 21.9, out: [-1, 0] },
   ],
   patrols: [
     ['laneW', 'laneE', 'boom', 'east', 'clerk'],              // 0 — the road walked, the clerk in: nobody north of the road but him
@@ -436,7 +436,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
   // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —
   // the two gates the duty section comes by as RESPONSE names them, the rest by what stands outside or which wall the leaf is in
-  const doorNames = [{ door: 'gate_n', name: 'customs yard gate' }, { door: 'gate_ne', name: 'impound yard gate' }, { door: 'gate_s', name: 'lorry park gate' }, { door: 'gate_w', name: 'tea stall wicket' }, { door: 'gate_e', name: 'ditch wicket' }, { door: 'fence_e', name: 'kerb wall door' }, { door: 'hut_e', name: 'boom hut back door' }, { door: 'rec_w', name: 'records yard door' }, { door: 'imp_e', name: 'impound yard door' }, { door: 'shed_w', name: 'shed door' }];
+  const doorNames = [{ door: 'off_imp', name: 'customs office to impound door' }, { door: 'gate_n', name: 'customs yard gate' }, { door: 'gate_ne', name: 'impound yard gate' }, { door: 'gate_s', name: 'lorry park gate' }, { door: 'gate_w', name: 'tea stall wicket' }, { door: 'gate_e', name: 'ditch wicket' }, { door: 'fence_e', name: 'kerb wall door' }, { door: 'hut_e', name: 'boom hut back door' }, { door: 'rec_w', name: 'records yard door' }, { door: 'imp_e', name: 'impound yard door' }, { door: 'shed_w', name: 'shed door' }];
   return { level, scenarios: { quiet: QUIET, response: RESPONSE, kitView, doorNames }, groups: trace.groups, surfaces };
 }
 
