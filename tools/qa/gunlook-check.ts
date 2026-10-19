@@ -20,6 +20,7 @@ import { sfxContext } from '../../src/audio/backend';
 const GL = await import(`${ROOT}/src/game/gunlook.ts`);
 const { GUNLOOK, LONG_MODELS, PISTOL_MODELS, MODEL_POINTS } = GL;
 const { GUNSLOTS, gunPicks, pickRow, sideOut } = await import(`${ROOT}/src/game/gunslots.ts`);
+const { treeOn } = await import(`${ROOT}/src/game/kittree.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const fx = await import(`${ROOT}/src/game/effects.ts`);
@@ -176,20 +177,27 @@ export async function gunlookBare(): Promise<boolean> {
     const stage = async (on: boolean) => {
       const R: any = await hushed(() => rig(17, { stage: false })); raise(on); const g = R.game, at = g.player.char.pos;
       const op: any = spawnUnit(g, { team: 'operative', pos: [at[0] + 1.5, 0, at[2] + 1], yaw: 0, name: 'Op0', light: false });
-      const shot = (suppressed: boolean, long: boolean) => {
-        K.KIT.members[1] = K.kitDefault(1); K.kitSet(1, 'primary', long ? 'mk18' : 'none'); K.kitSet(1, 'secondary', 'g19'); K.KIT.members[1].suppressed = suppressed; K.KIT.members[1].sideCan = suppressed /* (the gear tree's card: his sidearm's suppressor is a row of its own — kittree.ts) */; K.kitStage(g, [op]);
+      // (a card's suppressor rows: ONE for both of his guns before the gear tree — kittree.ts KITTREE — and one a gun under it: `suppressed` his primary's, `sideCan` his secondary's)
+      const card = (i: number, suppressed: boolean, long: boolean, sideCan: boolean) => { K.KIT.members[i] = K.kitDefault(i); K.kitSet(i, 'primary', long ? 'mk18' : 'none'); K.kitSet(i, 'secondary', 'g19'); K.KIT.members[i].suppressed = suppressed; K.KIT.members[i].sideCan = sideCan; };
+      const shot = (suppressed: boolean, long: boolean, sideCan = suppressed) => {
+        card(1, suppressed, long, sideCan); K.kitStage(g, [op]);
         for (let i = 0; i < 20; i++) R.step();
         return { row: op.weapon.def.id as string, side: (op.second?.gun?.def?.id ?? null) as string | null, look: op.char.gunLook ? { ...op.char.gunLook } : null, ...boxes() };
       };
-      const boxes = () => { const out: any[] = []; handProps(g, out); const mine = out.filter(b => b.owner === (op.char.id & 0xff)), hs = mine.map(b => sig(b.h)), i = hs.findIndex(x => x === can || x === barrel);
+      const boxes = (c: any = op.char) => { const out: any[] = []; handProps(g, out); const mine = out.filter(b => b.owner === (c.id & 0xff)), hs = mine.map(b => sig(b.h)), i = hs.findIndex(x => x === can || x === barrel);
         // (`off`: how far the middle of his long gun's can — or of the barrel that stands for it — is from the middle of the gun part drawn before it: a length on the gun, the same in any pose)
         const d = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
         return { hs, off: i > 0 ? d(mine[i].c, mine[i - 1].c) : NaN, by: i > 0 ? hs[i - 1] : '' }; };
-      const res: any = { longCan: shot(true, true), longBare: shot(false, true), sideCan: shot(true, false), sideBare: shot(false, false) };
+      // (the order matters: a card whose gun rows are as issued leaves him the gun he has — kit.ts kitStage — so the sidearm's row alone is taken off while he still holds the gun he came with)
+      const res: any = { tree: treeOn(), longCan: shot(true, true), sideOnly: shot(true, true, false), longOnly: shot(false, true, true), longBare: shot(false, true), sideCan: shot(true, false), sideBare: shot(false, false) };   // (sideOnly, longOnly: a suppressor row a gun — the gear tree)
       // … the bare card again: his sidearm out with the long gun hung down his front, then the man down with the long gun on the floor
       shot(false, true); res.drew = sideOut(g, op, 3); for (let i = 0; i < 5; i++) R.step(); res.hung = { row: op.weapon.def.id, ...boxes() };
       K.kitStage(g, [op]); for (let i = 0; i < 20; i++) R.step(); killGuard(g, op, [1, 0, 0]); for (let i = 0; i < 30; i++) R.step(); res.down = { state: op.state, ...boxes() };
-      K.KIT.members[1] = K.kitDefault(1); return res;
+      // … and YOU: your card with both off, then both on (before the tree both of yours always wore theirs)
+      const you = (cans: boolean) => { card(0, cans, true, cans); K.kitPlayer(g); const pl = g.player; pl.slot = 'rifle'; pl.holstered = false; for (let i = 0; i < 40; i++) R.step();
+        return { row: pl.rifle.def.id as string, side: pl.pistol.def.id as string, up: pl.rifleUp as boolean, look: pl.char.gunLook ? { ...pl.char.gunLook } : null, ...boxes(pl.char) }; };
+      res.youBare = you(false); res.youCan = you(true);
+      K.KIT.members[0] = K.kitDefault(0); K.KIT.members[1] = K.kitDefault(1); return res;
     };
     const can = segSig(RIG.sc20k.suppressor), barrel = segSig(RIG.sc20k.suppressor, BARE_BARREL, BARE_BARREL), pcan = segSig(RIG.pistol.suppressor), count = (hs: string[], x: string) => hs.filter(y => y === x).length;
     const On = await stage(true), Off = await stage(false);
@@ -208,6 +216,20 @@ export async function gunlookBare(): Promise<boolean> {
       && count(Off.hung.hs, can) === 1 && count(Off.hung.hs, pcan) === 1 && count(Off.down.hs, pcan) === 1,
       'his sidearm out and the long gun hung down his front: the barrel still, no can on either; the man down with his pistol on his thigh: no can — and with the switch off the cans are drawn in both, as before',
       `hung (drew ${On.drew}, in hand ${On.hung.row}): barrels ${count(On.hung.hs, barrel)}, long cans ${count(On.hung.hs, can)}, pistol cans ${count(On.hung.hs, pcan)} · down (${On.down.state}): ${On.down.hs.length} boxes, pistol cans ${count(On.down.hs, pcan)} · off: hung ${count(Off.hung.hs, can)} + ${count(Off.hung.hs, pcan)} cans, down ${count(Off.down.hs, pcan)}`);
+    { const T = On.tree as boolean, goneS = less(On.longCan.hs, On.sideOnly.hs), cameS = less(On.sideOnly.hs, On.longCan.hs), goneL = less(On.longCan.hs, On.longOnly.hs), cameL = less(On.longOnly.hs, On.longCan.hs);
+      const said = `the sidearm's row off: ${On.sideOnly.row} + ${On.sideOnly.side}, gone ${goneS.join(' | ') || 'nothing'}, come ${cameS.join(' | ') || 'nothing'} · the long gun's off: ${On.longOnly.row} + ${On.longOnly.side}, gone ${goneL.join(' | ') || 'nothing'}, come ${cameL.join(' | ') || 'nothing'}`;
+      if (T) F.verdict(On.sideOnly.row === 'fn2000' && On.sideOnly.side === 'g19bare' && On.sideOnly.look?.bareSide === true && !On.sideOnly.look?.bareLong && J(goneS) === J([pcan]) && cameS.length === 0
+        && On.longOnly.row === 'mk18bare' && On.longOnly.side === 'fiveseven' && On.longOnly.look?.bareLong === true && !On.longOnly.look?.bareSide && J(goneL) === J([can]) && J(cameL) === J([barrel]),
+        'the gear tree, a suppressor row a gun: the sidearm\'s alone off — the pistol on his thigh has lost its can and the long gun keeps its own; the long gun\'s alone off — a barrel for its can and the pistol keeps its own', said);
+      else F.verdict(On.sideOnly.row === 'fn2000' && On.sideOnly.side === 'fiveseven' && goneS.length === 0 && cameS.length === 0 && On.longOnly.row === 'mk18bare' && On.longOnly.side === 'g19bare' && J(On.longOnly.hs) === J(On.longBare.hs),
+        'no gear tree on this stand: the card\'s one suppressor row is both guns\' (a row of the sidearm\'s own changes nothing)', said);
+      const Y = On.youBare, Z = On.youCan, n = (r: any) => `${r.row} + ${r.side}: barrels ${count(r.hs, barrel)}, long cans ${count(r.hs, can)}, pistol cans ${count(r.hs, pcan)}`;
+      const worn = (r: any) => r.row === 'fn2000' && r.side === 'fiveseven' && count(r.hs, barrel) === 0 && count(r.hs, can) === 1 && count(r.hs, pcan) === 1;
+      if (T) F.verdict(Y.up && Y.row === 'mk18bare' && Y.side === 'g19bare' && Y.look?.bareLong === true && Y.look?.bareSide === true && count(Y.hs, barrel) === 1 && count(Y.hs, can) === 0 && count(Y.hs, pcan) === 0 && worn(Z),
+        'the gear tree, YOUR card with both suppressors off: the bare rows in your hands and on your thigh, a barrel for the long gun\'s can and no can on the pistol; with both on, both drawn', `off: ${n(Y)} · on: ${n(Z)}`);
+      else F.verdict(Y.up && worn(Y) && worn(Z), 'no gear tree on this stand: both of YOUR guns wear their suppressors whatever the card\'s row says, and are drawn with them', `off: ${n(Y)} · on: ${n(Z)}`);
+      F.verdict(Off.sideOnly.look === null && J(Off.sideOnly.hs) === J(Off.longCan.hs) && J(Off.longOnly.hs) === J(Off.longCan.hs) && J(Off.youBare.hs) === J(Off.youCan.hs),
+        'with the switch off those are drawn can on too: either gun\'s own row off on his card, and both off on yours', `his: ${J(Off.sideOnly.hs) === J(Off.longCan.hs)}, ${J(Off.longOnly.hs) === J(Off.longCan.hs)} · yours: ${J(Off.youBare.hs) === J(Off.youCan.hs)}`); }
     F.verdict(Off.longBare.row === 'mk18bare' && Off.sideBare.row === 'g19bare' && Off.longBare.look === null && J(Off.longBare.hs) === J(Off.longCan.hs) && J(Off.sideBare.hs) === J(Off.sideCan.hs) && J(Off.longCan.hs) === J(On.longCan.hs),
       'with the switch off the bare rows are drawn as the build before drew them — the can on — and a suppressed gun is drawn the same with the switch on or off', `off, bare against can on: long ${J(Off.longBare.hs) === J(Off.longCan.hs)}, pistol ${J(Off.sideBare.hs) === J(Off.sideCan.hs)} · the can on, switch on against off: ${J(Off.longCan.hs) === J(On.longCan.hs)}`);
   });
