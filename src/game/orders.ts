@@ -89,6 +89,7 @@ import { PICTURE, PICTURE_STATS, anyIdea, exposedFor, pictureQuiet, pictureStep 
 import { stackLinePace } from './stackline';
 import { handleHeld } from './handleside';
 import { clearLineFeet, clearLineLive } from './clearline';
+import { fireLineFeet, fireLineLive, fireLineTick } from './fireline';
 import { fitSpots, fitGroups, fitTick, type Fit } from './roomfit';   // (used inside the 'move' order only: nothing of roomfit.ts is touched at load)
 import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { doorSaidName } from './doornames';   // (a leaf: a shorthand door id's said name)
@@ -968,6 +969,7 @@ export class SquadOrders {
   tick() {
     const g = this.g, K = ORDERS;
     this.sync();
+    fireLineTick(g);   // (fireline.ts: is the player firing — asked once, before any man is posed)
     if (!this.asg.size) return;
     if (!this.active) { this.clear(); return; }   // a show has taken the floor
     const sam = g.player.char;
@@ -999,7 +1001,7 @@ export class SquadOrders {
         else if (!A.post) A.viaT = A.viaFor = undefined; }   // back on his order (we took him, or the fight AI let go of him itself) — by the way an order walks him (cleared.ts), from wherever the fight left him
       if (this.ours.delete(gd)) gd.pinned = false;
       const def = this.defs.find(x => x.id === A.order); if (def?.tick) { def.tick(this, gd, A); if (this.asg.get(gd) !== A) continue; }   // (it re-assigned him: his new order's turn is next frame)
-      let speed = K.brisk, face = A.face, d: number, sGoal: Vec3 | null = null, low = false, stepping = false, keep = false;
+      let speed = K.brisk, face = A.face, d: number, sGoal: Vec3 | null = null, low = false, stepping = false, keep = false, must = false;
       if (A.post === null) {   // fall in: his place back along the trail; a fresh leg whenever it has moved half a metre
         const p = gd.char.pos, toSam = flat(p, sam.pos), stopped = this.samStopped;
         const backM = this.backOf(A.follow) + (stopped ? this.clearBack(A.follow) : 0);
@@ -1038,7 +1040,7 @@ export class SquadOrders {
         if (A.via.length && !st && !near && !aside) { let q = A.via[0]; for (let i = 1; i < A.via.length; i++) { d += flat(q, A.via[i]); q = A.via[i]; } d += flat(q, slot); }   // (on a way round: his pace and 'in place' are by the whole walk left, not by the next corner)
         speed = aside ? K.brisk : st ? K.onto : Math.max(K.walk, Math.min(K.run, this.samV + K.gain * (d - 0.3)));
         const sn = aside ? null : sneakFollow(g, gd, backM, this.samV, stopped, speed);   // (sneak.ts: the silent squad's follower, low in Sam's own steps, waiting short of a lit stretch somebody is looking at — null with its switch off)
-        if (sn) { speed = sn.speed; low = sn.crouch; if (sn.goal) { sGoal = sn.goal; d = flat(p, sn.goal); } }
+        if (sn) { must = !!sn.must; speed = sn.speed; low = sn.crouch; if (sn.goal) { sGoal = sn.goal; d = flat(p, sn.goal); } }
         else { const un = aside ? null : unseenFollow(g, gd, this.samV, d, K.walk, speed);   // (unseen.ts: a squad nobody has found, Sam sneaking — low with him, at his pace plus what closes the gap; null with its switch off)
           if (un) { speed = un.speed; low = un.crouch; } else low = sneakLow(g, gd) || unseenLow(g, gd); }   // Sam's own pace plus what closes the gap: no gear changes
         if (ps?.low && d < 0.5) low = true;   // (picture.ts: the cover he stepped to hides a man on a knee)
@@ -1049,7 +1051,7 @@ export class SquadOrders {
         //  did; null with its switch off or nothing set. Never out of Sam's way, never a man the sneak has mid-crossing; at the pace he steps aside at — the
         //  silent squad and a squad nobody has found at a walk, low with Sam)
         const wb = aside || sn?.must ? null : g.wallCharge?.clearOf(gd, () => keep ? p : sGoal ?? st ?? (near ? p : slot)) ?? null;
-        if (wb) { if (flat(wb, A.goal) > 0.05) A.goal = [wb[0], 0, wb[2]]; sGoal = null; keep = false; d = flat(p, wb); low = sneakLow(g, gd) || unseenLow(g, gd);
+        if (wb) { must = true; if (flat(wb, A.goal) > 0.05) A.goal = [wb[0], 0, wb[2]]; sGoal = null; keep = false; d = flat(p, wb); low = sneakLow(g, gd) || unseenLow(g, gd);
           speed = sneaking(g, gd) || unseenMan(g, gd) ? (low ? K.onto : K.walk) : K.brisk; }
         if (!aside && !sn?.must && g.fight.short(gd)) speed = 0;   // (guards.ts LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — he does not close on him; stepping out of Sam's own way still comes first)
         // stopped: the first man looks on past Sam (never swinging with his reticle), the rest back the way they came
@@ -1067,7 +1069,7 @@ export class SquadOrders {
         const short = g.fight.short(gd);   // (LIGHTS.litMan, roomfight.ts holdShort: in the dark on a lit man with Sam in his line — his walk waits, and so do the clocks that would call a standing man stuck)
         if (short) { speed = 0; A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }
         else if (DOORMANNERS.on && DOORMANNERS.shortClear && (doorwayHeld(g, gd) || handleHeld(g, gd)) && this.heldWait(A)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (doorway.ts SHORT: held at a frame for a man in it or beyond it, or by the handle rule for the man working the leaf, is a wait, not a shut way — the clocks that would call him stuck start when the hold ends)
-        if (clearLineLive(g, gd)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (clearline.ts: off his mark on purpose, for a line to the man a friend masks — nobody calls him stuck)
+        if (clearLineLive(g, gd) || fireLineLive(g, gd)) { A.movedT = A.markT = g.time; A.mark[0] = p[0]; A.mark[2] = p[2]; }   // (clearline.ts: off his mark on purpose, for a line to the man a friend masks — nobody calls him stuck)
         // has he MOVED (his commanded speed says nothing: a man grinding on a wall is still told to walk) — at all in the last second, beside his mark; 30 cm in
         // the last `stuckSecs`, short of it
         if (flat(p, A.anchor) > 0.05) { A.anchor[0] = p[0]; A.anchor[2] = p[2]; A.movedT = g.time; }
@@ -1109,6 +1111,7 @@ export class SquadOrders {
       if (cl && A.post === null && this.aside(gd)) cl = null;   // (stepping out of Sam's own way still comes first)
       if (cl && sp) cl = null;   // (…and so does the silent partner's rule: whenever spotted.ts has his feet, his gun or his knee, this rule neither moves nor turns him)
       if (cl) { face = cl.face; strafe = cl.strafe; }
+      const fl = sp?.goal || sp?.speed !== undefined || cl ? null : fireLineFeet(g, gd, keep ? null : sGoal ?? A.goal, speed, stepping || must);   // (fireline.ts: the player is firing down a lane his next steps would cross — he waits short of it, or walks a way round; null with its switch off)
       if (pose.upper === 'aim' || pose.stance === 'stack') {   // Sam in the line of his gun: the muzzle comes down until he is clear of it
         const p = gd.char.pos, yaw = watch ? yawTo(p, watch) : gd.char.bodyYaw, fx = Math.sin(yaw), fz = Math.cos(yaw), len = watch ? flat(p, watch) : 5;
         const inLine = (q: Vec3) => { const sx = q[0] - p[0], sz = q[2] - p[2], along = sx * fx + sz * fz; return along > 0.15 && along < len && Math.abs(sx * fz - sz * fx) < (A.low ? K.laneOut : K.laneIn); };
@@ -1117,8 +1120,8 @@ export class SquadOrders {
       } else A.low = false;
       // (who has the follower's feet: spotted.ts's freeze / slip / step when it gives a spot — a defender is suspicious of the pair, or has it —, else the sneak's
       //  step along Sam's trail, else the order's own goal; low if any of the three says low. A take / dark job (pairorders.ts) is not a follower: spotted only kneels him.) Then clearline.ts's step to a clear line of fire when a friend masks his shot (null with its switch off).
-      order(gd, { goal: sp?.goal ?? cl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light, ...(A.lean || gd.script?.lean ? { lean: A.lean && A.post && flat(gd.char.pos, A.post) < 0.6 ? A.lean : 0 } : {}) });   // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
-      if (sGoal && !sp?.goal && !cl?.goal) sneakWay(g, gd, sGoal);
+      order(gd, { goal: sp?.goal ?? cl?.goal ?? fl?.goal ?? (keep ? null : sGoal ?? A.goal), speed: sp?.speed ?? cl?.speed ?? fl?.speed ?? speed, face, strafe, aimAt: watch, stance: pose.stance, upper: pose.upper, stackSide: A.stackSide, crouch: (A.crouch ?? false) || low || !!sp?.crouch || !!cl?.crouch, hot: false, light: A.light, ...(A.lean || gd.script?.lean ? { lean: A.lean && A.post && flat(gd.char.pos, A.post) < 0.6 ? A.lean : 0 } : {}) });   // (the lean is written only where one is asked or one is to be taken off: a script patch keeps what it is not told. He leans on his mark, not on the walk to it)
+      if (sGoal && !sp?.goal && !cl?.goal && !fl?.goal) sneakWay(g, gd, sGoal);
     }
     for (const A of this.asg.values()) {   // 'set.': once, from the last man on, when everybody the order sent is on his mark
       if (!A.setLine || A.setSaid || !A.arrived) continue;
