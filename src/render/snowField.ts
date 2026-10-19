@@ -59,6 +59,9 @@ export interface SnowField {
   hard: Float32Array;
   /** the hills as baked, kept from the first dig on (digSnowField: every dig is asked of these, so asking twice changes nothing; restoreSnowField puts them back) */
   base?: Float32Array;
+  /** the digs KEPT (digSnowField with `keep`): each one's place and what stood solid in its reach the last time its texels were walked — eight numbers a box:
+   *  index, centre, half sizes, yaw — and how many walks were made. The notes are the FIELD's: a field built anew has none, a restore drops them. */
+  kept?: { x: number; z: number; r: number; seed: number; stood: number[] }[]; walks?: number;
   stats: { mounds: number; lays: number; bare: number; roofs: number; quads: number; maxMound: number };
 }
 
@@ -226,20 +229,32 @@ export function buildSnowField(level: Level, opts: { wind?: readonly [number, nu
  *  to itself by 1.5 × r, on a ragged outline (the bake's own noise, turned by `seed`), always reckoned from the hill AS BAKED (asked twice, nothing more is dug) — but never under a snow box that still STANDS there solid (a drift,
  *  a bank nothing took: it is still what a boot meets, and the box would show through as a box): each keeps a hill of the bake's own shape, never higher
  *  than the hill as baked. `boxes` = the level's, as they are now. Returns the texels changed ([x0, z0, x1, z1], inclusive) or
- *  null when no hill stood there. The mesh is left as it is: a corner with nothing on it dives under the ground (snow.wgsl vsSnow). */
-export function digSnowField(f: SnowField, boxes: readonly Box[], x: number, z: number, r: number, seed = 0): [number, number, number, number] | null {
+ *  null when no hill stood there. The mesh is left as it is: a corner with nothing on it dives under the ground (snow.wgsl vsSnow).
+ *  `keep` = a dig that will be asked again (game/snowBlast.ts asks one every frame of its window): the field keeps a note of what stood solid in its reach when
+ *  its texels were last walked. A dig is a function of that alone (the hill as baked, the place, the seed) and only ever lowers, so asked again with the same
+ *  boxes standing it could not lower a texel, and the texels are not walked (null; f.walks counts the walks made). A box taken since, moved or cut is a new answer. */
+export function digSnowField(f: SnowField, boxes: readonly Box[], x: number, z: number, r: number, seed = 0, keep = false): [number, number, number, number] | null {
   const ox = WORLD.min[0], oz = WORLD.min[2], R = r * 1.5 + 0.3;
   const x0 = Math.max(0, Math.floor((x - R - ox) * SNOW_RES)), x1 = Math.min(f.w - 1, Math.ceil((x + R - ox) * SNOW_RES));
   const z0 = Math.max(0, Math.floor((z - R - oz) * SNOW_RES)), z1 = Math.min(f.h - 1, Math.ceil((z + R - oz) * SNOW_RES));
   if (x1 < x0 || z1 < z0) return null;
   // what still stands solid in reach: its top (and a finger) is the floor of the dig on its footprint and a texel round it, as the bake held the hill over it
-  const stand: Box[] = [];
+  const stand: Box[] = [], at: number[] = [];
   for (let i = 0; i < boxes.length && i < f.statics; i++) {
     const b = boxes[i]; if (i === f.slab || (b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) || snowPaintOf(b) !== 'snow') continue;
     const top = b.c[1] + b.h[1]; if (top < 0.03 || b.c[1] - b.h[1] > 0.06) continue;
     const e = Math.hypot(b.h[0], b.h[2]) + R; if (Math.abs(b.c[0] - x) > e || Math.abs(b.c[2] - z) > e) continue;
-    stand.push(b);
+    stand.push(b); at.push(i);
   }
+  if (keep) {
+    const notes = f.kept ?? (f.kept = []); let note = notes.find(n => n.x === x && n.z === z && n.r === r && n.seed === seed);
+    let same = !!note && note.stood.length === stand.length * 8;
+    for (let k = 0; same && k < stand.length; k++) { const b = stand[k], s = note!.stood, o = k * 8; same = s[o] === at[k] && s[o + 1] === b.c[0] && s[o + 2] === b.c[1] && s[o + 3] === b.c[2] && s[o + 4] === b.h[0] && s[o + 5] === b.h[1] && s[o + 6] === b.h[2] && s[o + 7] === b.yaw; }
+    if (same) return null;
+    if (!note) { note = { x, z, r, seed, stood: [] }; notes.push(note); if (notes.length > 32) notes.shift(); }   // (a note dropped is a walk made again: the same field)
+    note.stood = stand.flatMap((b, k) => [at[k], b.c[0], b.c[1], b.c[2], b.h[0], b.h[1], b.h[2], b.yaw]);
+  }
+  f.walks = (f.walks ?? 0) + 1;
   const pad = 1.6 / SNOW_RES; let any = false; const d: [number, number, number, number] = [x1, z1, x0, z0];
   const base = f.base ?? (f.base = f.mound.slice());
   for (let tz = z0; tz <= z1; tz++) for (let tx = x0; tx <= x1; tx++) {
@@ -268,7 +283,7 @@ export function digSnowField(f: SnowField, boxes: readonly Box[], x: number, z: 
 /** the hills as they were baked (a restart: nothing was ever dug). True = something was put back (all of it is to be handed over again). */
 export function restoreSnowField(f: SnowField): boolean {
   if (!f.base) return false;
-  f.mound.set(f.base); f.base = undefined;
+  f.mound.set(f.base); f.base = undefined; f.kept = undefined;
   for (let i = 0; i < f.mound.length; i++) f.data[i * 4] = toHalf(f.mound[i]);
   return true;
 }

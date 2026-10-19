@@ -548,7 +548,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   skirt on a wandering line — a flat step with a cliff at the box's edge read as the box drawn again in the first software still), never higher than
   the hill as baked. So a frag on a bank changes almost nothing but the prints; a charge whose hole takes a bank's tall tiers leaves the low foot's
   own 0.18 m of smooth snow across the sill (the mouth rule leaves the 0.16 m foot: it stops nobody); everything taken, the hill goes to the ground. Asked again each frame for `digS`
-  1.5 s (the mouth may take the box a frame after the blast), it re-sends one rect of the field's texture (no rebake: a full bake is 230‥280 ms; the
+  1.5 s (the mouth may take the box a frame after the blast; the field's texels are WALKED only on the dig's first frame and when what stands solid in its
+  reach changed, `digSnowField`'s `keep` and the field's own notes, `field.walks`: asked again with the same boxes standing a dig cannot lower a texel, so
+  the field is the same to the byte, held by `snowblast-check`'s `kept` line against a twin walked every frame: two digs that overlap, a bank cut short, a
+  bank taken, a restart, a field built anew. Walking every frame cost 0.2 to 1.2 ms a frame for a frag's pan on the pass and 2 to
+  11 ms for the widest pan, headless on a cloud core, and grew with the square of `dig`), it re-sends one rect of the field's texture (no rebake: a full bake is 230‥280 ms; the
   mesh is left, a corner with nothing on it dives under the ground), and a restart stands every hill again. Check: `snowblast-check`'s `dig` line,
   red under `SNOWBLAST_BREAK=1`, both stands. A checkpoint does not carry a dig (picture only). TRIED AND TAKEN BACK (10-15): making every snow tier
   over 0.19 m a ghost box so that no lying snow stops feet — the baked field stayed byte for byte, but both played seeds of the pass's room clear went
