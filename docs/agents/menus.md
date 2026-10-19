@@ -193,8 +193,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stick it to — the police post's gate), and a teammate's frag on a RESCUE (the order is refused with hostages on the floor: the consulate). The big slot's shotgun and hammer on the LONG HALL (the level
   issues its own kit — `kitIssue` — and a card's big slot never reaches the men: `Player.bigKit` stays 'none', no `bigClear` order), and the wall charge
   at the records' WEST door (too short a stretch of wall beside it). The PASS: the wall charge (no floor behind the gate set's wall) and Sam's frag
-  (the wicket opens on the yard: its burst always has a line to him, and it is taken away). The BLOCK: Sam's wand at the kitchen door, NOT EXPLAINED
-  (never offered to him there; a teammate's works). `DEBUG_EVAL='<expression of g>'` samples the game through a pick's turn. An idle turn of a door order prints the order's stages and the leaf's angle;
+  (the wicket opens on the yard: its burst always has a line to him, and it is taken away). (7) THE WAND AFTER THE CAMERA
+  (found by the wand's owner with `DEBUG_EVAL`, mended here): the sticky camera's row leaves the leaf held at `camWide`; picked next, `wandRow` walked
+  Sam to his post inside the leaf's arc, the leaf came round to him, went back and stayed, and the door never offered the wand (the block's kitchen
+  door in the table's order, the crossing's and the bazaar's gates). The row now pulls the leaf HOME first (phase `shut`, `wandShut` s at most) with
+  him out of its sweep — where he stands if `wandClear` clear of it, else his own place — and only then walks him to its foot. Real page after:
+  the block way 1 31 of 31 with no excuse, the crossing's and the bazaar's gates 9 of 9 (charges, camera, wand, three times round), mousehole way 1
+  31 of 31. `DEBUG_EVAL='<expression of g>'` samples the game through a pick's turn. An idle turn of a door order prints the order's stages and the leaf's angle;
   `REPEAT=n` plays the picks n times on one boot.
   MEASURED AFTER (the real page, headless Chromium on the software adapter, the clock at 2, one turn a pick, 27 picks a picture and 13 with Sam
   alone): before the join with the build's head, every pick AT WORK on mousehole ways 1 and 2, depot way 1, glasshouse way 1, snatch, floodlit, the
@@ -207,8 +212,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE WHOLE SWEEP ON THE JOINS (every level with a block bar the lessons, 36 ways): every pick at work on mousehole, depot, glasshouse, barracks,
   killhouse, block-squads, compound, warehouse (both ways each), snatch, floodlit, the office, defuse, registry, the records' front; the misses are the
   excused ones named above (the long hall's big tools, the consulate's frag on order, the pass's wall charge and Sam's frag, the records' west wall
-  charge, the block's wand for Sam, a quiet man alone's wall charge, the camera at the police post's and lights-out's gates). A first turn missed once:
-  Sam's wand at the crossing's and the bazaar's gate, his frag at the depot's hut door, his gun on the long hall's first pick after the boot.
+  charge, the block's wand for Sam (mended since: (7)), a quiet man alone's wall charge, the camera at the police post's and lights-out's gates). A first turn missed once:
+  Sam's wand at the crossing's and the bazaar's gate (the same fault: (7)), his frag at the depot's hut door, his gun on the long hall's first pick after the boot.
   NOT DONE, SAID ON THE PAGE'S LIST: the 40 mm is shouldered and never fired (the round arms 8 m out); a squad kit set has no demo of its own; the quiet picture still plays the loud answers (an open
   call with the kit figure's owner, not decided here).
   NEVER SEEN ON A GPU: every picture named above as changed (mousehole's door in the ward's wall and its lintel, the four re-anchored ways), the
