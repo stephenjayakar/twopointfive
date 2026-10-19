@@ -1518,7 +1518,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
           // (NOBODY INSIDE ITS REACH as it goes: the men still walking off are waited for — `wallLate` s past the clock at most, then the charge is taken down unblown)
           const pl = game.player.char.pos, inIt = S.kind !== 'wall' ? 0 : Math.max(V.standClear ? 0 : 1, S.order.filter(g => WC.blastShare(c.wall, g.char.pos) > 0).length + (WC.blastShare(c.wall, pl) > 0 ? 1 : 0));   // (a SPAN's charge: by a door the stack's own stand-off is the row as it was)
           if (inIt) { if (game.time - B.pt < K.wallClear + K.wallLate) return 'on'; const no = `${inIt} of the team could not stand clear of the wall charge`; wallKept(S, B, no); V.refused = `walls: ${no}`; B.marks.push('kept', 'down'); return 'done'; }
-          const r = WC.blow(c); if (r) { mark(B, 'blow');
+          const r = WC.blow(c, false); if (r) { mark(B, 'blow');   // (the plan's own clock, no press of the player's: wallcharge.ts WALLKILL is not asked)
             const H = r.hole ? (WC as unknown as { holeAt?(w: unknown): { du: number } | null }).holeAt?.(c.wall) ?? null : null, al = spanAl(H ? H.du : 0);
             if (r.hole && onSpan(al)) B.marks.push('hole');
             else if (B.prelude) shutWall.set(S.plan, r.hole ? `the wall charge's hole opened ${Math.abs(al).toFixed(2)} m from the span's middle: not on the span` : 'the wall charge opened no hole in this wall'); }
