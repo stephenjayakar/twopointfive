@@ -378,6 +378,9 @@ export class RoomFight {
   // ================================================================ what the other parts call
   /** an operative's muzzle is on a man (or coming onto him) — breach.ts: his sweep waits */
   engaged(gd: Guard): boolean { return !!this.ops.find(o => o.gd === gd)?.tgt; }
+  /** seconds he has been ON his man with no round at him from where he stands — a jamb across his bore, his gun in a wall (blockT) —: doortools.ts thrPie
+   *  asks it of a man on a cut, who brings the gun round after the eye */
+  noShot(gd: Guard): number { const O = this.ops.find(o => o.gd === gd); return O?.tgt ? O.blockT : 0; }   // (no man, no count: blockT is not run down once he has let the man go)
   /** an operative is on a man, turning to one, or lost one inside the last `secs` — rescueflow.ts: not the moment to hand him his next errand */
   busy(gd: Guard, secs: number): boolean { const O = this.ops.find(o => o.gd === gd); return !!O && (!!O.tgt || !!O.turn || this.g.time - O.lostAt < secs); }
   /** an operative has a living hostile in his sight right now (target or not) */

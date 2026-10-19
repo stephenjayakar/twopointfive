@@ -162,7 +162,7 @@ export const KIT_VIEW_LOOP = {
   /** a set charge is blown once its man is clear ('armed'), or this long after it was set · a blown door / a frag's room: the row runs on this long after its mark */
   clearSecs: 1.5, aftermath: 1.6,
   /** THE OPTICAL WAND: where Sam is walked to in front of the shut door [along the wall toward the stack, out from its line] (inside his reach of the leaf: the
-   *  look's own spot, half a metre off its middle, is the game's) · seconds the lens is turned to each side once it is through. THE STICKY CAMERA: he steps to [m along the wall from the door's middle, on his own side · out from its line] (nearer square to the door than a throw's half step: a line that slants in meets the pushed leaf) · its line
+   *  look's own spot, half a metre off its middle, is the game's) · seconds the lens is turned to each side once it is through · a leaf the row before left wide is pulled home first, for this long at most (s), him this far clear of its sweep (m). THE STICKY CAMERA: he steps to [m along the wall from the door's middle, on his own side · out from its line] (nearer square to the door than a throw's half step: a line that slants in meets the pushed leaf) · its line
    *  through the open door is the one of this many across the opening that meets a wall nearest the door, no nearer than … m inside its line, within … m ·
    *  the launcher's button is waited for this long (s) · seconds it is looked at once stuck · the leaf is pushed this far round for it (rad: past square to the wall — a camera that meets a LEAF drops to the floor under it, stickycam.ts) and a line passes no nearer the leaf so stood than … m. THE 40 MM: the launcher shouldered down the wall AWAY from the
    *  stack, this many deg out into the yard (the one quiet row that asks more than `maxOff`: never through this door — the round arms 8 m out) · seconds held
@@ -171,7 +171,7 @@ export const KIT_VIEW_LOOP = {
    *  back under the dissolve (m) · A WALL LEFT OPEN: after this many bursts fired through the kept hole the room is staged again under the dissolve (mend()) ·
    *  Sam's half step home onto what the charge threw down is given up within this of his slot (m: tidy() — tools/qa/kitview-levels.cjs holds him to it) ·
    *  a wall charge waits this long past `wallClear` for the last man to be out of its reach, then comes down unblown (s) */
-  wandPost: [0, 0.8], wandPan: 0.8, camPost: [0.15, 1.5], camRays: 9, camIn: 0.3, camReach: 12, camAsk: 1.5, camHold: 1.2, camWide: 1.75, camClear: 0.25, shellYard: 20, shellHold: 1.2, wallAt: [2.6, 3.1, 2.1, 3.6, 1.6, 4.1], wallClear: 5, wallOff: 0.35, holeBursts: 3, samGive: 0.5, wallLate: 5,
+  wandPost: [0, 0.8], wandPan: 0.8, wandShut: 3, wandClear: 0.45, camPost: [0.15, 1.5], camRays: 9, camIn: 0.3, camReach: 12, camAsk: 1.5, camHold: 1.2, camWide: 1.75, camClear: 0.25, shellYard: 20, shellHold: 1.2, wallAt: [2.6, 3.1, 2.1, 3.6, 1.6, 4.1], wallClear: 5, wallOff: 0.35, holeBursts: 3, samGive: 0.5, wallLate: 5,
   /** IDLE LIFE: a man in no row lets his gun wander to these angles off his rest aim in turn (deg; each man starts further down the list) · seconds between
    *  two of them, in turn · seconds each ease takes · the height his eyes are put at (m) */
   scanDeg: [5, -4, 3, -6, 4, -3, 6, -5], scanGap: [3.4, 4.6, 3.9, 4.3, 3.1, 4.8, 3.6], scanEase: 1.4, scanY: 1.2,
@@ -1373,13 +1373,20 @@ export function kitViewStart(d: KitViewDeps): KitView {
    *  leaf with both hands at its foot, the lens is through after the game's own 1.5 s, his cursor turns it to one side and the other, and he is walked home
    *  (which pulls it). Nothing to undo: a cut is the fog off and the walk home — both end the look by the game's own rule */
   const cursor = (p: Vec3) => { const q = cam.project([p[0], 0, p[2]], view.clientWidth, view.clientHeight); if (q[2]) { input.mouseX = q[0]; input.mouseY = q[1]; } };
-  const wandRow: Row = { door: 'shut', damage: 'none', leaf: true, rest: K.restQuiet, cap: 10,
+  const wandRow: Row = { door: 'shut', damage: 'none', leaf: true, rest: K.restQuiet, cap: 13,
     start: (B, S) => { const G = S.at([K.wandPost[0], K.wandPost[1], 0]), pl = game.player;
       if (!d.tiles(0).includes('wand')) return 'no wand on this card'; if (S.door!.def.steel) return 'steel: no gap under it'; if (S.door!.off) return 'no leaf to look under'; if (game.col.nav.isBlocked(G[0], G[2])) return 'no room at the door';
       wandWas = pl.wand; pl.wand = true; fogUp = true; game.fogOfWar.viewer = true; game.fogOfWar.on = true;   // (a tile's thing plays with the tile off too: carried for the row)
-      B.post = [G[0], G[2]]; to(B, 'go'); game.puppet = { goal: [G[0], 0, G[2]], aim: null, throwAt: null, walk: K.samWalk }; return null; },
+      B.post = [G[0], G[2]];
+      // (A LEAF LEFT WIDE by the row before — the sticky camera's holds it at `camWide`: his post is in its arc, and walked there at once he stood in its
+      //  way; it came round to him, went back and stayed, and the door never offered the wand. So it is pulled HOME first, with him out of its sweep —
+      //  where he stands if that is clear of it, else his own place, as tidy() has it between rows — and only then is he walked to its foot)
+      if (Math.abs(S.door!.angle - S.shut) >= 0.03) { const D = S.door!.def, clear = Math.hypot(pl.char.pos[0] - D.hinge[0], pl.char.pos[2] - D.hinge[1]) > D.width + K.wandClear, w = clear ? [pl.char.pos[0], pl.char.pos[2]] : S.sam;
+        to(B, 'shut'); game.puppet = { goal: [w[0], 0, w[1]], aim: null, throwAt: null, walk: K.samWalk }; return null; }
+      to(B, 'go'); game.puppet = { goal: [G[0], 0, G[2]], aim: null, throwAt: null, walk: K.samWalk }; return null; },
     tick: (B, S) => { const pl = game.player, el = game.time - B.pt, W = pl.wanding, ajar = Math.abs(S.door!.angle - S.shut) >= 0.03;
-      if (ajar && (B.phase === 'go' || B.phase === 'ask')) game.doors.pullTo(S.door!, B.char.id);   // (picked from a row that had the leaf open: pulled to under his walk — the wand goes under a leaf shut home)
+      if (ajar && (B.phase === 'shut' || B.phase === 'go' || B.phase === 'ask')) game.doors.pullTo(S.door!, B.char.id);   // (picked from a row that had the leaf open: pulled to before his walk, and again under it — the wand goes under a leaf shut home)
+      if (B.phase === 'shut') { if (ajar && el < K.wandShut) return 'on'; to(B, 'go'); game.puppet = { goal: [B.post![0], 0, B.post![1]], aim: null, throwAt: null, walk: K.samWalk }; return 'on'; }
       if (B.phase === 'go') { if ((flat(pl.char.pos, B.post!) > 0.15 || ajar) && el < 2) return 'on'; game.puppet = null; to(B, 'ask'); return 'on'; }
       if (B.phase === 'ask') {   // (the row is on offer the frame after he is let go; the tap once, again only if it did not take)
         if (W) { B.marks.push('knee'); to(B, 'feed'); return 'on'; } if (el >= K.ownAsk) { B.marks.push('kept'); V.refused = 'wand: the door never offered it'; return 'done'; }

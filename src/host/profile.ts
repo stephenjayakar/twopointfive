@@ -174,6 +174,8 @@ export function pageSwitches(q: URLSearchParams): void {
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
+  DOORTOOLS.thrPie = q.get('thrpie') !== '0';   // a room worked from the threshold: both jamb men cut the opening toward its middle, a few degrees a step, until the outside shows no more floor — and only then 'holding on the door' (game/doortools.ts pieSet / pieNext): ON in the page; ?thrpie=0 = a diagonal each, held still, as it was
+  DOORTOOLS.thrLean = q.get('thrlean') !== '0';   // … and the man cutting leans (head and gun past the edge, hips behind it) and takes the cuts that look down the door's own line on a knee (character.ts anim.lean): ON in the page; ?thrlean=0 = square on every station
   DOORTOOLS.outsidePlain = q.get('outsideplain') !== '0';   // 'clear from outside' is ONE order on the door tools' row 4 — hold the door from outside — and going in is a second order (rows 1 / 2), one can at most: ON in the page; ?outsideplain=0 = the threshold's pages as they were
   DOORTOOLS.wordNoCan = q.get('wordnocan') !== '0';   // the word (F) at a door held from outside steps the men in with NO can; a can goes in only when asked ('bang and clear' given to the holding men): ON in the page; ?wordnocan=0 = the word bangs the blind pockets first, as it was (acts with the one-order outside clear)
   SEENWALK.on = q.get('seenwalk') !== '0';   // the walk an order gives a man keeps off lit floor that a room nobody has cleared has a sight line to, through glass as through anything an eye sees through (game/seenwalk.ts): ON in the page; ?seenwalk=0 = the walks as they were
@@ -458,6 +460,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
+  'DOORTOOLS.thrPie': 'TPS_THRPIE=1',
+  'DOORTOOLS.thrLean': 'TPS_THRLEAN=1',
   'DOORTOOLS.outsidePlain': 'TPS_OUTSIDEPLAIN=1',
   'DOORTOOLS.wordNoCan': 'TPS_WORDNOCAN=1',
   'DOORTOOLS.bangInto': 'TPS_BANGINTO=1',
