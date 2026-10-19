@@ -113,7 +113,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
-  'CMDCHECK', 'GUNSLOTS', 'GUNLOOK',
+  'CMDCHECK', 'GUNSLOTS', 'GUNLOOK', 'GUNROLES',
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
   'RESPONSE'];
 import { GUNWALL } from './gunwall';
@@ -129,6 +129,7 @@ import { STICKY } from './stickycam';
 import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
 import { GUNLOOK } from './gunlook';
+import { GUNROLES } from './gunroles';
 import { SQUADTHROW } from './squadthrow';
 import { SQUAD40 } from './squad40';
 import { AUTOPILOT } from './autopilot';
@@ -239,6 +240,8 @@ export function knobRegistry(): Record<string, object> {
     GUNSLOTS,
     // each gun its own look, sound and reload (gunlook.ts): which model, voice and flame a row is, where its muzzle is, how it is fed
     GUNLOOK,
+    // a gun used for what it is for (gunroles.ts): the defenders' deal off the weapons table, and the stack, the door, the cover's deal and the room fight's trigger by a man's gun
+    GUNROLES,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by
     SQUADTHROW,
     // a teammate's 40 mm grenade fired on order (squad40.ts): whether the throws' page has the row, and what counts as a shot

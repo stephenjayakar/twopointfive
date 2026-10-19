@@ -626,8 +626,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   25 m standing still — Mk 12 0.11 m, Mk 18 0.25, Mk 46 0.38 (0.13 kneeling), MP7 0.40; a teammate's — Mk 12 1.1 m, Mk 46 2.8, Mk 18 3.4, MP7 6.5; the
   farthest listener one round turns down a clear line — HK45 5 m, Glock 19 7 m, MP7 9 m, every other gun the whole line as gunfire; a teammate's MP7
   round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
-  of their own; defenders drawing from the list; a teammate USING a gun for what it is for (the Mk 46 man does not hold lanes, the Mk 12 man does not
-  hang back); tuning by play. Never seen on a GPU, never fired by a person.
+  of their own; tuning by play. Never seen on a GPU, never fired by a person. (Defenders drawing from the list, and a man using a gun for what
+  it is for, are `gunroles.ts`: `docs/agents/enemies.md`, GUNROLES.)
 - **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
   nothing on him: a gun by ITS OWN ROW's `weightKg` and `bulk` (`weapons.ts`; `gunLoad`: `gunKg` 0.035 of mobility a kilogram, `gunBulk` 0.04 of concealment + 0.17 a
