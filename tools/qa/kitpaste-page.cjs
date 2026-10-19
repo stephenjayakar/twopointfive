@@ -41,7 +41,7 @@ async function open(browser, extra, mission = 'depot-four') {
   const read = () => page.evaluate(k => { const q = (s, r = document) => [...r.querySelectorAll(s)], lo = '#missions.one #loadout';
     const btn = id => document.querySelector(`${lo} .kc-clip[data-clip="${id}"]`), box = e => { const r = e?.getBoundingClientRect(); return r ? { top: Math.round(r.top), left: Math.round(r.left), right: Math.round(r.right), w: Math.round(r.width) } : null; };
     return { kit: JSON.parse(localStorage.getItem(k) || '{}').members ?? [], writes: window.__kitWrites, marks: q(`${lo} .lo-slot.clip`).map(s => +s.getAttribute('data-slot')), glyphs: q(`${lo} .lo-slot .lo-clip svg`).length,
-      member: +(document.querySelector(`${lo} .kc`)?.getAttribute('data-member') ?? -1), sets3: q(`${lo} .kc-set`).length, copy: btn('copy') ? { on: btn('copy').classList.contains('on'), ...box(btn('copy')) } : null, paste: btn('paste') ? { off: btn('paste').classList.contains('off'), ...box(btn('paste')) } : null,
+      member: +(document.querySelector(`${lo} .kc`)?.getAttribute('data-member') ?? -1), sets3: q(`${lo} .kc-set`).length, tree: !!document.querySelector(`${lo} .kc.kc-tree`), copy: btn('copy') ? { on: btn('copy').classList.contains('on'), ...box(btn('copy')) } : null, paste: btn('paste') ? { off: btn('paste').classList.contains('off'), ...box(btn('paste')) } : null,
       sets: q(`${lo} .kc-set[data-set]`).map(box), flash: q(`${lo} .kc-row.pasted`).map(r => r.getAttribute('data-field')), sel: document.querySelector(`${lo} .kc.focus .kc-row.sel`)?.getAttribute('data-field') ?? null,
       big: document.querySelector(`${lo} .kc-row[data-field="big"] .kc-val`)?.textContent ?? '', said: document.querySelector(`${lo} .kc-words.refused`)?.textContent ?? '', legend: document.querySelector(`${lo} [data-row="actions"]`)?.getAttribute('data-what') ?? '', head: box(document.querySelector(`${lo} .kc-head`)) }; }, KEY);
   const pick = async i => { await page.click(`#missions.one #loadout .lo-slot[data-slot="${i}"]`); await page.waitForTimeout(80); };
@@ -55,8 +55,9 @@ const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smo
   const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
   { const P = await open(browser, BREAK ? '&nokitcopy' : '');
     const a = await P.read(); await P.shot('paste-0-open');
-    check(!!a.copy && !!a.paste && a.sets.length === 3 && a.sets3 === 3 && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[2].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1),
-      'the card has Copy and Paste at the end of the sets\' line, on that one line, clear of the pouches', `sets ${J(a.sets)} · copy ${J(a.copy)} · paste ${J(a.paste)} · pouches ${J(a.head)}`);
+    const N = a.tree ? 1 : 3;   // (the card laid out as a tree — src/game/kittree.ts KITTREE, on in the page — has the one reset where the three sets stood: the named kits are the screen's row)
+    check(!!a.copy && !!a.paste && a.sets.length === N && a.sets3 === N && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[N - 1].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1),
+      'the card has Copy and Paste at the end of the sets\' line, on that one line, clear of the pouches', `${N} set${N === 1 ? '' : 's'} · sets ${J(a.sets)} · copy ${J(a.copy)} · paste ${J(a.paste)} · pouches ${J(a.head)}`);
     check(!!a.paste && a.paste.off && !a.copy.on && a.marks.length === 0, 'nothing copied yet: Paste is dim, Copy is not lit, nobody on the roster is marked', `paste off ${a.paste?.off} · copy on ${a.copy?.on} · marks ${J(a.marks)}`);
     check(/C copy/.test(a.legend) && /V paste/.test(a.legend), 'the key line names the two keys', a.legend);
     // copy Red One by the key, from the roster's row
@@ -100,8 +101,9 @@ const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smo
     await P.ctx.close(); }
   { const P = await open(browser, '&nokitcopy');
     const a = await P.read(); await P.pick(1); await P.key('KeyC'); await P.pick(4); await P.key('KeyV'); const b = await P.read();
-    check(!a.copy && !a.paste && a.sets.length === 3 && a.sets3 === 3 && b.writes === a.writes && b.marks.length === 0 && J(b.kit) === J(a.kit) && !/copy/.test(a.legend),
-      '?nokitcopy: no Copy, no Paste, the three sets as they were; C and V write nothing and mark nobody; the key line as it was', `buttons ${a.copy ? 'there' : 'none'} · writes +${b.writes - a.writes} · marks ${J(b.marks)} · ${a.legend}`);
+    const N = a.tree ? 1 : 3;
+    check(!a.copy && !a.paste && a.sets.length === N && a.sets3 === N && b.writes === a.writes && b.marks.length === 0 && J(b.kit) === J(a.kit) && !/copy/.test(a.legend),
+      '?nokitcopy: no Copy, no Paste, the sets as they were; C and V write nothing and mark nobody; the key line as it was', `buttons ${a.copy ? 'there' : 'none'} · writes +${b.writes - a.writes} · marks ${J(b.marks)} · ${a.legend}`);
     await P.ctx.close(); }
   { const P = await open(browser, '', 'hall-four');   // (its level file issues its own kit: the cards go once the file has come)
     await P.page.waitForFunction(() => !document.querySelector('#missions.one #loadout .kc'), null, { timeout: 20000 }).catch(() => {}); await P.page.waitForTimeout(200);
