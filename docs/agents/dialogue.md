@@ -159,6 +159,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   made-up level with the key up and down; a written name says no bearing and begins with no 'the'; no two doors of a level called the same; the doors
   still called by a bearing are exactly the owed list; the office stood up, the row and a line that names the door another way, key up and down; the two
   stands' row, the word either way and an old recording). `DOORNAMES_BREAK=1` reads the names with the key down and is red (the office's two owed again),
-  on both stands. NOT TOUCHED: the debrief's timeline names a kicked or picked door by its id's words (`chronicle.ts chronDoor`), and the office's men say
+  on both stands. The debrief's timeline reads the same name since (`chronicle.ts eventText`, worded when the row is read: `menus.md`). NOT TOUCHED: the office's men say
   'break room west door' of a door nobody wrote a name for — there is none left on the office. On the real page (headless Chromium, the software adapter, the office's room clear, the orders' menu opened on that door, the page's text read): 'ON
   CUBICLES-SIDE BREAK ROOM DOOR', and with `?doornames=0` 'ON BREAK ROOM WEST DOOR'; no console or page error on either. Its text, not its pixels: never seen on a GPU.
+- **The same rule's two other lists (10-19, in `words-doornames`).** With every door named, the check holds two more lists that must shrink, and a level
+  file that gets a new name of either kind is red: `PLACES_OWED` — a quiet mission's or a snatch's EXIT and a level's AREA still named by a bearing
+  ('the east gate', 'north gallery'): an exit's name is on the objective's line and the debrief's map (`quiet.ts` brief `outs`, `snatch.ts`,
+  `ui/debrief.ts`), an area's is in the men's lines the strip prints and on the debrief's timeline (`dialogue.ts roomName`, `chronicle.ts`). 56 names in 20
+  files; they are the level files' own words (`scenarios.quiet.exits` / `.snatch.exits` / `.places.areas`), renamed in each level's generator. Not on the
+  list: a start's name (printed nowhere but a debug summary), a `from` (only ever read to make a door's name, and a bearing there is dropped), a civilian's
+  way out and a need's stand (looked up by name, not shown). `LETTERS_OWED` — a door still called by its id's letters because nothing names it ('p back
+  door', 'n1 door', 'lb door'): 23 doors in 10 files, a `scenarios.doorNames` row each. `DOORNAMES_CENSUS=1` in front of the check prints all three lists
+  as they now are, ready to paste; under `DOORNAMES_BREAK=1` both new lists read as empty and both lines are red, on both stands. THE REAR MAN'S ROW
+  (`rearwatch.ts`, 'holding · …') now reads the door's one name through `doorWords` with the words switch on — it built its own from the raw id and said
+  'gen door door' of the bazaar's `gen_door`; a status row is in no digest (`digest.ts` has no `going`), so it needed no key. Headless; no row seen on a page.
+

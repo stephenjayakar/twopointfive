@@ -457,6 +457,10 @@
       "ways": [
         { "door": "front", "ref": [11, 13.25], "side": -1, "hide": ["box_0135", "box_0136", "box_0137", "fix_lamp_porch", "box_0170", "box_0171", "box_0172", "box_0173", "box_0174", "box_0175", "box_0176", "box_0177", "box_0178", "box_0179"], "keepLights": ["count"] }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "counting room gate" },
+      { "door": "gate_e", "name": "kitchen court gate" }
+    ]
   }
 }

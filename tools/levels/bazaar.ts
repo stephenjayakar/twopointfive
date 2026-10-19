@@ -663,5 +663,5 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     ],
     outside: [[38.8, 0, 1.2], [38.8, 0, 2.3]],
   };
-  return { level, ...(!VARIANT ? { scenarios: { quiet, places, response, kitView } as unknown as LevelScenarios } : {}), groups: trace.groups, surfaces, quiet };   // (a one-deal scratch file carries no block: its routes are one set's)
+  return { level, ...(!VARIANT ? { scenarios: { quiet, places, response, kitView, doorNames: [{ door: 'gate_e', name: 'street gate' }, { door: 'gate_s', name: 'lane gate' }, { door: 'gate_n', name: 'alley gate' }] } as unknown as LevelScenarios } : {}), groups: trace.groups, surfaces, quiet };   // (a one-deal scratch file carries no block: its routes are one set's)
 }

@@ -1458,6 +1458,14 @@
         { "door": "gate_w", "roomLights": 1 },
         { "door": "cn_gate", "set": "north", "pane": false }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "c_n", "name": "spare room door" },
+      { "door": "hall_n", "name": "corridor-side front hall door" },
+      { "door": "p_s", "name": "corridor-side pantry door" },
+      { "door": "yard_sw", "name": "forecourt to side yard door" },
+      { "door": "gate_w", "name": "side yard gate" },
+      { "door": "gate_n", "name": "back gate" }
+    ]
   }
 }

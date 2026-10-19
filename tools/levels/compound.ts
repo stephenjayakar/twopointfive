@@ -844,7 +844,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'east alley', bounds: { x0: 33.12, x1: 35.88, z0: 4.12, z1: 23.88 } }, { name: 'east alley', bounds: { x0: 30.62, x1: 33.12, z0: 19.12, z1: 23.88 } },
     { name: 'forecourt', bounds: { x0: 10.5, x1: 30.62, z0: 19.12, z1: 23.88 } },
   ] };
-  const scenarios: LevelScenarios = { roomClear, places, kitView: COMPOUND_KITVIEW };
+  // what a row calls the doors no room of the structure names (scenarios.doorNames — game/doornames.ts; no bearing in a name)
+  const doorNames = [{ door: 'c_n', name: 'spare room door' }, { door: 'hall_n', name: 'corridor-side front hall door' }, { door: 'p_s', name: 'corridor-side pantry door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'gate_n', name: 'back gate' }];
+  const scenarios: LevelScenarios = { roomClear, places, kitView: COMPOUND_KITVIEW, doorNames };
   // ---------------- what is underfoot (game/floor.ts: which step sounds, and how far it carries to their ears) ----------------
   // `building` is everything inside the perimeter wall and its base is the YARD: packed earth, which the six materials have no word for — 'asphalt' is the
   // nearest (hard, a little under lino; 'grass' would hand the team a silent approach the picture does not promise). Over it: the house's tiled floor and the

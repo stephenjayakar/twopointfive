@@ -434,7 +434,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   if (lorryPark1 - lorryPark0 !== 11) throw new Error(`crossing: the gear screen's way hides the 11 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
   const lorryParkOut = Array.from({ length: lorryPark1 - lorryPark0 }, (_, k) => `box_${String(lorryPark0 + k).padStart(4, '0')}`);
   const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
-  return { level, scenarios: { quiet: QUIET, response: RESPONSE, kitView }, groups: trace.groups, surfaces };
+  // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so each is named by what it is known by above —
+  // the two gates the duty section comes by as RESPONSE names them, the rest by what stands outside or which wall the leaf is in
+  const doorNames = [{ door: 'gate_n', name: 'customs yard gate' }, { door: 'gate_ne', name: 'impound yard gate' }, { door: 'gate_s', name: 'lorry park gate' }, { door: 'gate_w', name: 'tea stall wicket' }, { door: 'gate_e', name: 'ditch wicket' }, { door: 'fence_e', name: 'kerb wall door' }, { door: 'hut_e', name: 'boom hut back door' }, { door: 'rec_w', name: 'records yard door' }, { door: 'imp_e', name: 'impound yard door' }, { door: 'shed_w', name: 'shed door' }];
+  return { level, scenarios: { quiet: QUIET, response: RESPONSE, kitView, doorNames }, groups: trace.groups, surfaces };
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------

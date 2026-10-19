@@ -78,6 +78,9 @@ export const BARRACKS_ROOMS: Record<'galley' | 'hall' | 'duty' | 'bunks1' | 'bun
 // and carton (group `exterior`) were cut by the frame's edges, so they step out.
 const BARRACKS_KITVIEW: KitViewData = { ways: [{ door: 's_end', hide: ['exterior'], roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }, { door: 'k_out', roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }] };
 
+/** what a row calls the doors no room of the structure names (scenarios.doorNames — game/doornames.ts; no bearing in a name): the yard's and the galleries' own doors,
+ *  each by the bunk room it is beside */
+const DOOR_NAMES = [{ door: 'n_yard', name: 'yard door by bunks 2' }, { door: 's_yard', name: 'yard door by bunks 4' }, { door: 'ng_w', name: 'fire door by bunks 1' }, { door: 'sg_w', name: 'fire door by bunks 3' }, { door: 'sg_e', name: 'fire door by bunks 5' }, { door: 's_end', name: 'outer door by the wash room' }];
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), C = OFFICE_PALETTE as Record<string, Vec3>, H = WORLD.ceilingY, R = BARRACKS_ROOMS;
@@ -724,5 +727,5 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
   const places: PlacesData = { areas: [{ name: 'duty office', bounds: { ...R.duty } }, { name: 'bunks 1', bounds: { ...R.bunks1 } }, { name: 'bunks 2', bounds: { ...R.bunks2 } }, { name: 'armoury', bounds: { ...R.arms } }, { name: 'bunks 4', bounds: { ...R.bunks4 } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'north gallery', bounds: { ...R.ngal } }, { name: 'south gallery', bounds: { ...R.sgal } }, { name: 'yard', bounds: { ...R.yard } }] };
-  return { level, scenarios: { roomClear, places, kitView: BARRACKS_KITVIEW }, groups: trace.groups, surfaces };
+  return { level, scenarios: { roomClear, places, kitView: BARRACKS_KITVIEW, doorNames: DOOR_NAMES }, groups: trace.groups, surfaces };
 }

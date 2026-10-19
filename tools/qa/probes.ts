@@ -19,7 +19,7 @@
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
-//     debrief: debrief-dom debrief-rooms debrief-run debrief-score
+//     debrief: debrief-dom debrief-doorname debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
@@ -32,7 +32,7 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
-//     gunlook: gunlook-own gunlook-hands gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
+//     gunlook: gunlook-own gunlook-hands gunlook-bare gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
 //     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes gunroles-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
@@ -2463,6 +2463,7 @@ if (on('owncharge-off', 'owncharge', 'all')) await run('owncharge-off', async ()
 // EACH GUN ITS OWN LOOK, SOUND AND FLAME (src/game/gunlook.ts; tools/qa/gunlook-check.ts raises the switch itself, so it asks the same on either stand; GUNLOOK_BREAK=1 must fail)
 if (on('gunlook-own', 'gunlook', 'kit', 'all')) await run('gunlook-own', async () => (await import('./gunlook-check.ts')).gunlookOwn());           // every row a slot hands out: a model, a voice, a flame and a casing row, no two guns sharing one
 if (on('gunlook-hands', 'gunlook', 'all')) await run('gunlook-hands', async () => (await import('./gunlook-check.ts')).gunlookHands());             // a teammate and you with each gun: told, drawn and heard as that gun; off = the stand-in
+if (on('gunlook-bare', 'gunlook', 'all')) await run('gunlook-bare', async () => (await import('./gunlook-check.ts')).gunlookBare());               // a gun with its suppressor off: a bare barrel where the can was, nothing ahead of the pistol's slide
 if (on('gunlook-off', 'gunlook', 'all')) await run('gunlook-off', async () => (await import('./gunlook-check.ts')).gunlookOff());                   // off = the same run by digest, the stands' row, the registry, a recording from before it
 if (on('gunreload', 'gunlook', 'kitanim', 'all')) await run('gunreload', async () => (await import('./gunreload-check.ts')).gunreloadCheck());              // how each is fed: the belt under its cover, shells one at a time, a magazine up a grip — as long as it was, the gun's own sounds
 if (on('gunshells', 'gunlook', 'kitanim', 'all')) await run('gunshells', async () => (await import('./gunreload-check.ts')).gunreloadShells());             // the shells key: a tube gun fed a shell at a time, in time and in the books (GUNSHELLS_BREAK=1 must fail)
@@ -2568,6 +2569,7 @@ if (on('teams-despawn', 'teams', 'all')) await run('teams-despawn', async () => 
 // ---------------------------------------------------------------- the run's chronicle + the debrief card made of it (debrief-probes.ts): 'debrief' = the family
 if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (await import('./debrief-probes.ts')).debriefRun());
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
+if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)

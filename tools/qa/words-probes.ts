@@ -247,35 +247,52 @@ export const wordsFrag = guarded(async () => {
  *    3 · THE LIST OF WHAT IS OWED: the doors still called by a bearing are exactly DOORS_OWED below, door for door. A door that gets a name comes OFF the
  *        list in the same change (the line is red until it does), and no door not on it is ever called by one.
  *        `DOORNAMES_BREAK=1` reads the names with the key down: the office's two are owed again and the line must be red
+ *    7, 8 · the same list for an exit or an area a screen prints, and for a door still called by its id's letters (PLACES_OWED, LETTERS_OWED below;
+ *        under the break word both lists read as empty and both lines must be red)
  *    4 · the office stood up: the squad's row, a rear man's 'holding ·' and the response team's 'stack on …' say the one name with the key up, and what
  *        they said with it down
  *    5 · the two stands' row and word, and a recording from before the key */
-const DOORS_OWED: Record<string, string> = {   // (10-19: 25 files, 96 doors, by id — the levels' own to name; the office's two are named)
-  'barracks-gwot.json': 'n_yard ng_w s_end s_yard sg_e sg_w',
-  'barracks.json': 'n_yard ng_w s_end s_yard sg_e sg_w',
-  'bazaar.json': 'gate_e gate_n gate_s',
-  'compound-gwot.json': 'c_n gate_n gate_w hall_n p_s yard_sw',
-  'compound.json': 'c_n gate_n gate_w hall_n p_s yard_sw',
-  'crossing.json': 'fence_e gate_e gate_n gate_ne gate_s gate_w hut_e imp_e rec_w shed_w',
-  'gwot-yard.json': 'gate_w n_e n_w s_n s_w',
-  'kit-yard.json': 'gate_s gate_w',
-  'lights-out.json': 'gate_e gate_w',
-  'police-post.json': 'gate_e gate_n gate_w hut_w shed_e side_e store_e yard_sw',
-  'quiet-relay.json': 'gate_e gate_n gate_s gate_w',
-  'quiet-yard.json': 'gate_s gate_w n_e n_w s_n s_w',
-  'registry-gwot.json': 'stacks_w',
-  'registry.json': 'stacks_w',
-  'test-rooms.json': 'a ab b c',
-  'train-hands.json': 'gate_e gate_w',
-  'train-kit.json': 'gate_e gate_w',
-  'train-lights.json': 'gate_e gate_w',
-  'train-move.json': 'gate_e gate_w',
-  'train-orders.json': 'gate_e gate_w hut_b_east',
-  'train-pairs.json': 'gate_e gate_w hut_s hut_w store_n',
-  'train-silent.json': 'gate_e gate_w',
-  'vault.json': 'gate_e gate_w',
-  'warehouse-gwot.json': 'b_s l_s p_s',
-  'warehouse.json': 'b_s l_s p_s',
+const DOORS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 96 doors of 25 files that stood here are named in their levels' own generators — scenarios.doorNames; a door that
+};                                              //  turns up called by a bearing goes red here until its level names it: `'<file>.json': 'id id'`, as the census prints it)
+/** THE SAME RULE FOR A PLACE A SCREEN PRINTS (line 7): a quiet mission's or a snatch's exit is on the objective's line and the debrief's map
+ *  (quiet.ts brief `outs`, snatch.ts, ui/debrief.ts), an area's name is in the men's lines the strip prints and on the debrief's timeline (dialogue.ts roomName, chronicle.ts) — and the
+ *  HUD has no compass. These are the level files' own words (scenarios.quiet.exits / .snatch.exits / .places.areas): each is renamed in its level's
+ *  generator and comes OFF this list in the same change. `'<file>.json': "exit '<name>' · area '<name>'"`, as the census prints it. */
+const PLACES_OWED: Record<string, string> = {   // (10-19: 20 files, 56 names)
+  'barracks-gwot.json': "area 'north gallery' · area 'south gallery'",
+  'barracks.json': "area 'north gallery' · area 'south gallery'",
+  'bazaar.json': "exit 'the east gate' · exit 'the north gate' · exit 'the south gate'",
+  'compound-gwot.json': "area 'east alley' · area 'west yard'",
+  'compound.json': "area 'east alley' · area 'west yard'",
+  'crossing.json': "exit 'the east wicket' · exit 'the east yard gate' · exit 'the north gate' · exit 'the south gate' · exit 'the west wicket'",
+  'depot-gwot.json': "area 'east yard'",
+  'depot.json': "area 'east yard'",
+  'lights-out.json': "area 'east strip' · area 'east track' · area 'north side' · area 'west track' · exit 'the east gate' · exit 'the west gate'",
+  'police-post.json': "area 'west yard' · exit 'the east gate' · exit 'the north gate' · exit 'the west gate'",
+  'quiet-relay.json': "exit 'the east gate' · exit 'the north gate' · exit 'the west gate'",
+  'quiet-yard.json': "exit 'the south gate' · exit 'the west gate'",
+  'train-hands.json': "exit 'the east gate' · exit 'the west gate'",
+  'train-kit.json': "exit 'the east gate' · exit 'the west gate'",
+  'train-lights.json': "exit 'the east gate' · exit 'the west gate'",
+  'train-move.json': "exit 'the east gate'",
+  'train-silent.json': "exit 'the east gate' · exit 'the west gate'",
+  'vault.json': "area 'east gateway' · area 'east track' · area 'east yard' · area 'north strip' · area 'south side' · area 'west gateway' · area 'west track' · area 'west yard' · exit 'the east gate' · exit 'the west gate'",
+  'warehouse-gwot.json': "area 'north corridor' · area 'west corridor'",
+  'warehouse.json': "area 'north corridor' · area 'west corridor'",
+};
+/** …AND FOR A DOOR STILL CALLED BY LETTERS (line 8): its id is its author's shorthand, no room names it and its level has written it no name, so the
+ *  row reads the id's words ('p back door', 'n1 door'), or a name that says a word twice. A scenarios.doorNames row mends each. `'<file>.json': 'id id'`. */
+const LETTERS_OWED: Record<string, string> = {   // (10-19: 10 files, 23 doors)
+  'barracks-gwot.json': 'n1 n12 n2 n3 s2 s4',
+  'barracks.json': 'n1 n12 n2 n3 s2 s4',
+  'compound-gwot.json': 'p_back',
+  'compound.json': 'p_back',
+  'crossing.json': 'off_imp',
+  'gwot-yard.json': 'nm',
+  'quiet-yard.json': 'nm',
+  'train-orders.json': 'hut_a hut_b hut_c hut_d',
+  'warehouse-gwot.json': 'lb',
+  'warehouse.json': 'lb',
 };
 export const wordsDoorNames = guarded(async () => {
   const F = family('words-doornames: a level names its own doors where the rooms cannot, and no door\'s name carries a bearing');
@@ -317,19 +334,27 @@ export const wordsDoorNames = guarded(async () => {
     const OS = (await import(`${ROOT}/levels/office.scenarios.ts`)).OFFICE_SCENARIOS;
     for (let i = files.length - 1; i >= 0; i--) if (!Array.isArray(files[i].L.doors)) files.splice(i, 1);   // (a lint list, a look file: not a level)
     for (const f of files) if (/^office/.test(f.file) && !f.L.scenarios) { f.L = { ...f.L, scenarios: OS }; f.office = true; }
-    const bad: string[] = [], twins: string[] = [], owed: Record<string, string> = {}; let written = 0, doorsN = 0;
+    const bad: string[] = [], twins: string[] = [], owed: Record<string, string> = {}, places: Record<string, string> = {}, letters: Record<string, string> = {}; let written = 0, doorsN = 0;
     for (const { file, L, office } of files) {
       const ids: string[] = (L.doors ?? []).map((d: any) => d.name ?? d.id);
       for (const r of L.scenarios?.doorNames ?? []) { written++; if (bearing(r.name)) bad.push(`${file} ${r.door}: '${r.name}' says a bearing`); if (/^the\s/i.test(r.name)) bad.push(`${file} ${r.door}: '${r.name}' begins with 'the'`); }
       const ds = ids.map(id => ({ def: { name: id } })); N.nameDoors(L, office, ds); const names = ds.map(d => O.doorWords(d)); doorsN += ids.length;
       names.forEach((n, i) => { if (names.indexOf(n) !== i) twins.push(`${file}: two doors called '${n}'`); });
       const k = ids.filter((_id, i) => bearing(names[i])).sort().join(' '); if (k) owed[file] = k;
+      const S = L.scenarios ?? {}, pl = [...(S.quiet?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.snatch?.exits ?? []).map((x: any) => `exit '${x.name}'`), ...(S.places?.areas ?? []).map((a: any) => `area '${a.name}'`)];
+      const pk = [...new Set(pl.filter(bearing))].sort().join(' · '); if (pk) places[file] = pk;
+      const lk = office ? '' : ids.filter((id, i) => (N.shorthandId(id) && names[i] === O.doorIdWords(id)) || /\b(\w+) \1\b/.test(names[i])).sort().join(' '); if (lk) letters[file] = lk;
     }
     F.verdict(files.length >= 30 && written >= 2 && !bad.length, 'every written name says no bearing and reads as a row does (no \'the\')', bad.slice(0, 8).join(' · ') || `${written} written names in ${files.length} level files`);
     F.verdict(!twins.length, 'no two doors of a level are called the same', twins.slice(0, 8).join(' · ') || `${doorsN} doors, each level's all apart`);
     const diff = [...new Set([...Object.keys(owed), ...Object.keys(DOORS_OWED)])].sort().filter(f => (owed[f] ?? '') !== (DOORS_OWED[f] ?? '')).map(f => `${f}: now [${owed[f] ?? ''}], on the list [${DOORS_OWED[f] ?? ''}]`);
     F.verdict(!diff.length, 'the doors still called by a bearing are exactly the list of what is owed, door for door (a door named comes off it; no other door gets one)', diff.join(' · ') || `${Object.keys(owed).length} files owed, ${Object.values(owed).reduce((a, b) => a + b.split(' ').length, 0)} doors · the office: ${files.filter(f => f.office).map(f => f.file).join(' ')} none`);
-    if (process.env.DOORNAMES_CENSUS) console.log(Object.entries(owed).map(([f, k]) => `  '${f}': '${k}',`).join('\n'));
+    const against = (now: Record<string, string>, list: Record<string, string>) => [...new Set([...Object.keys(now), ...Object.keys(list)])].sort().filter(f => (now[f] ?? '') !== (list[f] ?? '')).map(f => `${f}: now [${now[f] ?? ''}], on the list [${list[f] ?? ''}]`);
+    const count = (o: Record<string, string>, by: string) => Object.values(o).reduce((a, b) => a + b.split(by).length, 0);
+    const pd = against(places, process.env.DOORNAMES_BREAK ? {} : PLACES_OWED), ld = against(letters, process.env.DOORNAMES_BREAK ? {} : LETTERS_OWED);   // (the break path: the lists read as empty — every name owed is one too many)
+    F.verdict(!pd.length, 'the exits and areas a screen prints that are still named by a bearing are exactly the list of what is owed (one renamed comes off it; no other gets one)', pd.join(' · ') || `${Object.keys(places).length} files owed, ${count(places, ' · ')} names`);
+    F.verdict(!ld.length, 'the doors still called by their id\'s letters, or by a name that says a word twice, are exactly the list of what is owed', ld.join(' · ') || `${Object.keys(letters).length} files owed, ${count(letters, ' ')} doors`);
+    if (process.env.DOORNAMES_CENSUS) { const show = (t: string, o: Record<string, string>, q: string) => console.log(`${t}\n${Object.entries(o).map(([f, k]) => `  '${f}': ${q}${k}${q},`).join('\n')}`); show('DOORS_OWED', owed, '\''); show('PLACES_OWED', places, '"'); show('LETTERS_OWED', letters, '\''); }
   } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   finally { Object.assign(WORDS, was); }
   return F.done();
