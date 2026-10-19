@@ -42,6 +42,9 @@ export async function friendsCheck(): Promise<boolean> {
   let foeAlert = false, aimAt: number[] = chest(mate);
   const BEYOND = [22, 0.02, 17.6];   // a point of floor beyond the teammate on Sam's line to him: the cursor there lays the gun's own line through him
   const idle = (n: number, click = false) => { for (let i = 0; i < n; i++) { hold(); W.cursorAt(aimAt as any); if (click && i === 0) input.clicked |= 1; R.step(); } };
+  /** the gun's own heading come round to the cursor's bearing (a degree), or `max` frames: with the aim's weight on (aimweight.ts, the page's stand) a swing
+   *  from one side to the other takes longer than the few frames an eased aim did, and a line asked mid-swing is asked of a gun that is not on it yet */
+  const settle = (max = 120) => { for (let i = 0; i < max; i++) { idle(1); const want = Math.atan2(aimAt[0] - c.pos[0], aimAt[2] - c.pos[2]); let d = c.aimYaw - want; d = Math.atan2(Math.sin(d), Math.cos(d)); if (Math.abs(d) < 0.0175) return i + 1; } return max; };
   game.teleportPlayer(A); idle(30);
   const rifleUp = () => { if (!pl.rifleUp) { input.pressed.add('Digit2'); idle(1); if (!pl.rifleUp) { input.pressed.add('KeyE'); idle(1); } idle(90); } };
   const pistolUp = () => { if (!pl.pistolUp) { input.pressed.add('Digit1'); idle(1); if (!pl.pistolUp) { input.pressed.add('KeyE'); idle(1); } idle(90); } };
@@ -64,10 +67,10 @@ export async function friendsCheck(): Promise<boolean> {
       const friends = living.filter((g: any) => !hostileTo(g, 'player'));
       line(passed.length === friends.length && passed.every((g: any) => friends.includes(g)) && friends.length === R.ops.length, 'the rule passes over the men of his own side and nobody else', `${passed.length} passed over of ${living.length} living · ${friends.length} not hostile to him (the squad is ${R.ops.length})`); }
     // (4) the rifle, a teammate in the line, calm
-    { FRIENDS.noSnap = true; FRIENDS.lowReady = !brk; calm(); aimAt = BEYOND; idle(20); const low = pl.friendLow, car = carriage(); const fight = friendsInFight(game);
+    { FRIENDS.noSnap = true; FRIENDS.lowReady = !brk; calm(); aimAt = BEYOND; const swing = settle(); idle(20); const low = pl.friendLow, car = carriage(); const fight = friendsInFight(game);
       const n0 = pl.rifle.shotsFired; msgs.length = 0; pl.fireCd = 0; idle(1, true); idle(5); const fired = pl.rifle.shotsFired - n0;
       line(!fight && low && c.anim.upper === 'none' && c.anim.longStance === 'lowLong' && fired === 0 && msgs.some(m => m.includes('is in your line') && m.includes(mate.callsign)),
-        'the rifle up, a teammate three metres ahead in its line, nobody in a fight: the low ready, and a click fires nothing and names him', `in a fight ${fight} · lowered ${low} · ${car} · rounds on the click ${fired} · ${JSON.stringify(msgs.slice(-2))}`); }
+        'the rifle up, a teammate three metres ahead in its line, nobody in a fight: the low ready, and a click fires nothing and names him', `in a fight ${fight} · lowered ${low} · ${car} · rounds on the click ${fired} · the gun came round in ${swing} frames · ${JSON.stringify(msgs.slice(-2))}`); }
     // (4b) the cursor ON him: the free aim lands on the floor beyond him as the lens sees it, the gun's own line passes beside him — it is down all the same
     { calm(); aimAt = [A[0] + 0.5, 1.2, A[2] - 6]; idle(40); const up0 = !pl.friendLow; aimAt = chest(mate); idle(20); const low = pl.friendLow;
       const dx = Math.sin(c.aimYaw), dz = Math.cos(c.aimYaw), h = mate.char.bones.hips ?? mate.char.pos, off = Math.abs((h[0] - c.pos[0]) * dz - (h[2] - c.pos[2]) * dx);
