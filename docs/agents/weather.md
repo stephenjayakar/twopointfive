@@ -786,3 +786,67 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     dry to the eye), not the rim.
   - **Never seen on a GPU.** The flakes' birth, step and splat are WGSL the harness cannot run: the page was booted on the software adapter (it compiles, no
     validation errors) and stills taken there. Nobody has seen flakes past the rim moving, or how the fall reads against the black outside the level.
+- **A splash is the same splash at every zoom** (the scene prelude's `const RAIN_SCALE`, `src/render/frame.ts rainScaleConfig`; the maintainer, 10-19, three
+  zooms of one yard: "the low res rain isn't scale invariant"). WHAT IT WAS: the ring a landing drop throws up (`volumetrics.wgsl splashAt`: a 2 cm ring on
+  outdoor ground, 60 ms long) is drawn in the volumetric pass, its line never thinner than that pass's texel AT THE GROUND (28° lens, divisor 2 or 4: about
+  2 cm at the follow distance, 4 to 8 cm pulled back) — and at full brightness however wide that made it. Pulled back every ring was a soft square blob a
+  texel or two across as bright as a ring, the lit ground carried up to 17 times the splash light it does close in, and the blobs grew in the world as
+  the camera rose. THE RULE: drawn wider than its own 6 mm line (`SPLASH_W`) a ring keeps its LIGHT, not its brightness — dimmer by the footprint it gained,
+  down to the floor where it fills its own 9 cm cell (`SPLASH_FILL` 0.056: only the pixel's own cell is asked). What the lattice's streaks always did
+  (`RAIN_W / halfW`); they are untouched, and so is the particle rain (drawn at the page's own resolution, fixed in the world already). HELD WHICH WAY: in
+  the WORLD — a splash is a few centimetres of light at any zoom; pulled back the rings read as a faint shimmer on lit ground, not as blobs. Close in (the
+  texel under 6 mm) nothing changes. SWITCH: on by default, `?norainscale` at boot = the rings as they were; picture only (no game table, nothing in a
+  recording, the same on both stands). Check: `rainscale` (family `weather`; it lifts the scalar lines of `splashAt` out of the shader's text and runs them
+  over a floor of rings as the texel grows: close in identical, 0.9 to 40 cm within a fifth of the close-in light where it grew past tenfold, the floor
+  constant, the boot flag; `RAINSCALE_BREAK=1`). No shader runs in that check. LEFT AS IT IS: a far streak is still at least two texels wide (its light
+  is right, its width is the pass's). SEEN, ONE STILL EACH WAY (`tools/qa/weather-look.cjs`, software adapter, low quality, the snatch level's room
+  clear in a downpour, the camera pulled back to 42 m, the eighth frame): with `?norainscale` the yard's lit ground is strewn with square blobs a pass
+  texel wide; without it the same ground is smooth and wet, no blobs. The page booted with 118 pipelines, none failed, both ways. A second pair at
+  12 m over the east yard: both ways the rings are still soft squares 15 to 25 pixels wide (the pass's texel at low quality on a 960-wide page), fewer and
+  dimmer with the rule on (6% of the picture's pixels 8 levels or more brighter without it, one pixel the other way) — the rule dims a ring by the
+  footprint it gained, it does not make the pass finer. NOT SEEN: moving, on a GPU, at a higher quality's two-pixel texel, or how much of the rain's read
+  at a distance the blobs had been carrying — if pulled back it now reads too dry, the streaks are the place to add, not the rings.
+- **Rain shows in front of a wall's outer face** (the maintainer, 10-19, a depot's yard in the rain: "rain isn't showing up on top of walls properly").
+  CAUSE: the rain's readability rule hides it from every pixel whose SURFACE is indoors, and indoors was the roofs' bare rectangles
+  (`volumetrics.wgsl outdoorsXZ` for the lattice rain, `particles_common.wgsl rainOutdoors` for the particle rain's splat) — a level's own roof is its
+  ceiling slab grown by 6 cm (`weather.ts ROOF_PAD`), over the walls — so every outer wall's face, the door in it and the wall's top showed no rain and
+  the streaks over the yard stopped dead at the wall behind them. The snow had the same flaw (10-15, `flakeHidden`); it was mended for snow only. THE
+  RULE: is the point UNDER the roofs — `common.wgsl wxUnderRoof(p)`: inside them, and so are the four corners of a square `WX_WALL_IN` 0.2 m about it
+  (so the seam where two slabs of one building meet is under the roof, which the snow's rectangle-by-rectangle rule gets wrong: a claim for its
+  owner). `volumetrics.wgsl` (c) and `particles_draw.wgsl rainFragment` (`rainOverWall`: that, inside the world's rim) ask it beside the old test.
+  Asked of the level's OWN roofs only (`WX_KINDS` and the packed words not 0): the office family's two rectangles lie on its walls' centre lines, its
+  outer faces were never hidden, and the rule stands down there. Rooms stay dry to the eye; a partition's top inside stays dry (unlike the snow's
+  rule); an outer wall's top shows rain over its outer 0.2 m. Splash rings are drawn on open ground only, by the OLD test (`if (depth < 1.0 &&
+  outdoorsXZ(Pend.xz))`): none on a doorway's floor, none on a wall. **Switch**: picture only, no game table — the scene prelude's `const RAIN_WALLS`
+  (`render/frame.ts rainWallsConfig`, on), `?norainwalls` at boot = as it was; nothing for a recording to carry, both stands alike. **Check**: `bun run
+  tools/qa/probes.ts rainwalls` (family `weather`), 4 lines; the rule written again in the check and the shader's function held to it by its text;
+  asked over every level's roofs as the renderer has them. The depot: 19 outer walls, every outer face shown, every inner face and the floor 10 cm
+  inside dry. All 50 levels: 663 outer walls (the bare rectangles hid every face), 657 faces shown, 663 inner faces dry; ground newly in front of
+  the rain with nothing standing on it 13.7 m² in all, most on quiet-relay 3.1 m². `RAINWALLS_BREAK=1` fails 2 on both stands. KNOWN LEFT: a third or
+  fourth roof is packed to 0.2 m rounded outward, so some of its walls' faces stay hidden (the barracks: 3 of 33) and a strip of yard up to 0.2 m at
+  such a wall's foot is as it was; the rim of a roof that stands on no wall (quiet-relay's shelter) shows streaks 0.2 m in; a ray that ends on a far
+  wall's top over the building shows only the rain it met before the roofs' columns; `snow-check walls` still reads the rain's old line in
+  `rainFragment` (kept, one line below the new one). SEEN, TWO VIEWS EACH WAY (`tools/qa/weather-look.cjs`, software adapter, low quality, 960 wide, the depot's
+  room clear in a downpour, the north hut's south wall from the lit yard at 14 m, the eighth frame): with `?norainwalls` the rain's haze and streaks
+  end in a hard line at the wall's foot and the wall is clean; without it streaks and haze carry on over the wall's face and the door in it and over
+  the wall's top. New against old, by pixels: the yard 0 differ; the wall's face 1,948 and 4,152 brighter; the wall's top about a third differ; the
+  partitions' tops inside 0 of 3,981; the room's floor 0 of 35,869. Both pages built 118 pipelines, none failed, no console error. NOT SEEN: a splash
+  ring at this size (so "rings on open ground only" rests on the check's reading of the text), an open doorway, moving, close in, the particle
+  rain's drops at a wall, a third or fourth roof's wall, any other level; never on a GPU.
+- **A man who has been sprinting breathes hard** (the maintainer, 10-19: "characters should breathe more forcefully when sprinting (e.g. on snow
+  levels)"). The game has TWO breaths and no third: the steam on a snow level (`snowBreath.ts`) and the chest (`character.ts lifeLayer`); there is NO
+  breath sound and none was added. Both already rose a little with effort; `character.ts HARDBREATH` makes it read. **Steam** (snow levels, every man in
+  the open): effort rises in `up` 2.5 s of running (was 4) and falls over `down` 14 s (12); blown, a breath comes every `every` 0.95 s (1.3), is `puffs`
+  4 records long (3) of `count` 9 puffs (5), thrown at `jet` 3.2 × the calm speed (1.3 ×), `size` 2.0 × as big (1.5 ×), and carries `carry` 0.85 of the
+  runner's own speed (0.6) so it trails behind him. **Chest** (anywhere): `chestAmp` 4.2 (2.6) at `chestRate` 0.9 Hz (0.62), up in `chestUp` 2.5 s (4),
+  down over `chestDown` 12 s (8). At rest or at a walk, nothing changes. Teammates never sprint, so this is the player and whoever runs (a defender
+  running to a post steams the same); a teammate at his fastest walk (2.2 m/s) is a seventh of the way to blown in steam, his chest at rest. **Switch**: `HARDBREATH.on` — ON in the page (`?hardbreath=0`), OFF in the module and on the frozen stand
+  (`TPS_HARDBREATH=1`; shipped pins it off with `TPS_HARDBREATH=0`); registry + `JOURNAL_KNOBS`, a recording from before the key replays with it off.
+  The chest moves bones, so it is a sim change behind the switch; the steam is picture only. **Check**: `bun run tools/qa/probes.ts hardbreath`
+  (families `snow`, `weather`), 7 lines on both stands; `HARDBREATH_BREAK=1` fails 4 on both. MEASURED, one stand (the pass, seed 7), rule on / off: a
+  10 s sprint at 4.7 m/s — breaths 9 / 6, records a breath 4 / 3, puffs a record 9 / 5, thrown 2.24 / 0.91 m/s, size 0.170 / 0.128 m, carried 4.00 /
+  2.82 m/s; blown after 2.9 / 3.9 s; 3 to 9 s after a 6 s sprint, records 11 / 6; the chest's own share of neck over hips 15.5 / 9.4 mm; one run
+  digest with nobody running. WHAT IT DOES NOT DO: the chest's breath is gated out under a stance or a hold as before (a man with his gun up shows
+  little of it), and 15 mm is small from the game's camera — the steam is what reads. With the rule on, four rows of the scene panel's SNOWBREATH table (`everyHard`, `hardK`, `effortUp`, `effortDown`) and the workbench's two winded
+  sliders (`LIFE.breathRateRun` / `breathAmpRun`) are read by nothing; HARDBREATH has no panel row, and the workbench does not raise the switch (it
+  shows the old chest). NOT SEEN: anything of it in a picture, here or on a GPU; no tally over seeds (a tour or soak was not run).

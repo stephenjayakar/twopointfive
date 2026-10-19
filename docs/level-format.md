@@ -343,7 +343,9 @@ Play it with `?levelFile=<name>.json&roomclear[=seed][&squad4]` or `&rescue` (th
 team has to take alive, laid over the level's room clear. `man {name, pos, face, tint, tint2?, points?, wait?}` = who he is and the marks he keeps to while the
 floor is quiet; `exits [{name, pos}]` = the ways off the floor he runs for once it is loud, his NEAREST by walking first (the export's check says so if it is
 not) — on one, he is gone and the mission is failed. At least two, so one can be covered while the team goes in by another. `levels/snatch.json` is the level
-built for it; `bun run tools/qa/snatch-check.ts` holds the rules.
+built for it; `bun run tools/qa/snatch-check.ts` holds the rules. `van? {name, pos}` = the team's own vehicle by its way in, `pos` the spot at its open doors:
+while `SNATCHOUT.on` (`src/game/snatchout.ts`) the man, once tied, is led there by the player and the mission is won when he is in it, the house taken or
+not (`bun run tools/qa/snatchout-check.ts`). Without the key the snatch ends as it did.
 
 ## For the editor lane (G1b) — the API to build on
 

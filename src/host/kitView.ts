@@ -83,7 +83,7 @@ import { samBigSpot } from '../game/bigkit';   // (asked inside a row's start on
 import { BIG_ORDER } from '../game/doortools';   // (a name, read inside a row only)
 import { FIXLOOK } from '../game/fixtureBreak';   // (a leaf table: written inside the quiet gun's row only — the dead lamp's arcing lead is held off for that row)
 import { WAND_ORDER, WANDORDER_STATS } from '../game/wandorder';   // (a name and a tally, read inside a row only)
-import { kitOf } from '../game/kit';   // (asked inside a row's start only: the card a staged teammate carries)
+import { kitOf, kitTreeOn } from '../game/kit';   // (asked inside a row's start only: the card a staged teammate carries · is the card laid out as a tree — your light a row of yours)
 import { exposedTo } from '../game/frag';   // (asked inside a row's tick only: has a burst THERE a line to Sam — the game's own reckoning, glass that it would break counted open)
 
 /** THE LIGHT, one table (a way's `light` in the level file lies over it, key by key). Every place is door-relative — [along the wall toward the stack, out
@@ -339,7 +339,7 @@ export function kitViewPoolTarget(light: RtLight, box: number, glow: Vec3, inten
   return { name: 'kitview_porch', group: 'kitview', kind: 'analytic', pos: [light.pos[0], light.pos[1], light.pos[2]], light, boxes: box >= 0 ? [box] : [], baseEmissive: [glow[0], glow[1], glow[2]], baseIntensity: intensity,
     on: true, broken: false, disabledUntil: -1, fluorescentFlicker: false, factor: 1, mains: false, interactive: true, stagger: 0 } as LightTarget;
 }
-const COUNTS = ['bangs', 'frags', 'smoke', 'charges', 'walls', 'cams', 'shells'];
+const COUNTS = ['bangs', 'frags', 'smoke', 'charges', 'walls', 'cams', 'shells', 'rings'];
 
 /** this page was opened as the picture (`?kitview`) · … and LIVE (no `&stillkit`): the loop */
 export const kitViewOn: boolean = (() => { try { return /[?&]kitview(=|&|$)/.test(location.search); } catch { return false; } })();
@@ -1175,6 +1175,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
     const c = cards[0] ?? {}, pl = game.player, mine = d.tiles(0), one = (k: string) => Math.max(num(c[k]), k === f ? 1 : 0);
     const has = (k: string) => mine.includes(k) || k === f;   // (the tile being played: he is handed one for it whatever his card says — the picture's own game only)
     if (has('smoke')) pl.canisters = one('smoke'); if (has('bangs')) pl.flashbangs = one('bangs'); if (has('frags')) pl.frags = one('frags'); if (has('shells')) pl.rifle.shells = one('shells');
+    if (has('rings') && pl.rifle.attachments.includes('ring')) pl.rifle.rings = one('rings');   // (the sponge rounds: a row of the tree's card — kittree.ts; with it off no card has the tile and nothing is written)
     if (has('cams') && one('cams') > 0 && pl.rifle.attachments.includes('ring')) { pl.rifle.cams = one('cams'); if (!pl.rifle.attachments.includes('cam')) pl.rifle.attachments.push('cam'); }   // (stickycam.ts stickyIssue's own two writes: a card at 0 has no such load on the tube, and its tile's demo plays all the same)
   };
 
@@ -1421,7 +1422,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** what Sam had in his hands as a launcher's row begins — the hand a row cut this very frame still owes him (finish() pressed its key: it has not landed, and
    *  is not let land — this row wants the rifle up, and puts that hand back as IT ends) */
   const handWas = (): string => { const h = handDue || game.player.slot; if (handDue) { input.pressed.delete(handDue === 'rifle' ? 'Digit2' : 'Digit1'); handDue = ''; } return h; };
-  const tube = (load: 'cam' | 'he40'): boolean => { const pl = game.player;
+  const tube = (load: 'cam' | 'he40' | 'ring'): boolean => { const pl = game.player;
     if (!pl.rifleUp) { input.pressed.add('Digit2'); return false; } if (pl.equipT > 0) return false; if (pl.rifle.attachment === load) return true;
     input.pressed.add('Digit2'); return false; };
   /** A STICKY CAMERA (calls 5; Sam's alone — stickycam.ts): the same half step and hand on the leaf as a throw, the rifle up with the camera on its tube (his
@@ -1456,13 +1457,16 @@ export function kitViewStart(d: KitViewDeps): KitView {
       return el >= K.camHold ? 'done' : 'on'; } };
   /** THE 40 MM (calls 5; Sam's alone): never through this door — the round arms 8 m out and the room behind it is shorter: a dud would read as a bug. The
    *  launcher is SHOULDERED and not fired: the rifle up with the 40 mm on its tube (his own key), his aim eased round — muzzle at the ground — down the wall
-   *  AWAY from the stack and a little out into the yard, brought up to the shoulder there, held, lowered and eased back. No round leaves the tube: nothing to undo */
-  const shellRow: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 12,
-    start: (B, S) => { const pl = game.player, a = K.shellYard * R; if (!pl.hasRifle || !pl.rifle.attachments.includes('he40')) return 'no launcher on this card';
+   *  AWAY from the stack and a little out into the yard, brought up to the shoulder there, held, lowered and eased back. No round leaves the tube: nothing to undo.
+   *  THE SPONGE ROUNDS (kittree.ts: a row of the tree's card) are the same row with that load on the tube — shouldered and not sent either: a man of his own
+   *  team stands along that wall, and a round that meets a head puts its man out cold */
+  const tubeRow = (load: 'he40' | 'ring'): Row => ({ door: 'shut', damage: 'none', rest: K.restQuiet, cap: 12,
+    start: (B, S) => { const pl = game.player, a = K.shellYard * R; if (!pl.hasRifle || !pl.rifle.attachments.includes(load)) return 'no launcher on this card';
       B.quiet = true; B.hTo = 0; B.hand = handWas(); B.legs = [{ yaw: yawOf([-S.s[0] * Math.cos(a) + S.n[0] * Math.sin(a), -S.s[1] * Math.cos(a) + S.n[1] * Math.sin(a)]), cap: K.gunRate * R, minT: -1, hold: K.shellHold }];
       tubeWas = pl.rifle.attIdx; samStand(S); return null; },
-    tick: (B, S) => { if (B.phase !== 'down') { if (!B.rose && tube('he40')) { B.rose = true; B.marks.push('up'); } B.hTo = B.rose && B.leg === 0 && arrived(B.ch) ? 1.3 : 0; }   // (round with the muzzle DOWN — the shorter way round is across the wall, and a fourth man stands on it behind him — and up to the shoulder only once it points down the wall)
-      return quiet(B, S); } };
+    tick: (B, S) => { if (B.phase !== 'down') { if (!B.rose && tube(load)) { B.rose = true; B.marks.push('up'); } B.hTo = B.rose && B.leg === 0 && arrived(B.ch) ? 1.3 : 0; }   // (round with the muzzle DOWN — the shorter way round is across the wall, and a fourth man stands on it behind him — and up to the shoulder only once it points down the wall)
+      return quiet(B, S); } });
+  const shellRow = tubeRow('he40'), ringRow = tubeRow('ring');
   /** THE WALL CHARGE (calls 5: "the walk-off IS the demo"): the squad's own order, given to the STACK's men together (a man alone is refused: a mate
    *  too close to that wall; the fourth man, across the door behind Sam, is left out of it and stands) — on the stack's own wall, at the first of `wallAt` the order's own test passes. One man sets it (the game's 2 s, his
    *  hands on it), the rest peel off along the wall, he follows; blown once all are stood off — by the wall charge's own trigger — and before anybody goes in
@@ -1518,7 +1522,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
           // (NOBODY INSIDE ITS REACH as it goes: the men still walking off are waited for — `wallLate` s past the clock at most, then the charge is taken down unblown)
           const pl = game.player.char.pos, inIt = S.kind !== 'wall' ? 0 : Math.max(V.standClear ? 0 : 1, S.order.filter(g => WC.blastShare(c.wall, g.char.pos) > 0).length + (WC.blastShare(c.wall, pl) > 0 ? 1 : 0));   // (a SPAN's charge: by a door the stack's own stand-off is the row as it was)
           if (inIt) { if (game.time - B.pt < K.wallClear + K.wallLate) return 'on'; const no = `${inIt} of the team could not stand clear of the wall charge`; wallKept(S, B, no); V.refused = `walls: ${no}`; B.marks.push('kept', 'down'); return 'done'; }
-          const r = WC.blow(c); if (r) { mark(B, 'blow');
+          const r = WC.blow(c, false); if (r) { mark(B, 'blow');   // (the plan's own clock, no press of the player's: wallcharge.ts WALLKILL is not asked)
             const H = r.hole ? (WC as unknown as { holeAt?(w: unknown): { du: number } | null }).holeAt?.(c.wall) ?? null : null, al = spanAl(H ? H.du : 0);
             if (r.hole && onSpan(al)) B.marks.push('hole');
             else if (B.prelude) shutWall.set(S.plan, r.hole ? `the wall charge's hole opened ${Math.abs(al).toFixed(2)} m from the span's middle: not on the span` : 'the wall charge opened no hole in this wall'); }
@@ -1739,7 +1743,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
         if (!isNaN(B.markT)) return game.time - B.markT >= K.aftermath ? 'done' : 'on';
         if (c) { if (B.phase !== 'set') { to(B, 'set'); B.marks.push('set'); } if (game.time - B.pt >= K.clearSecs || tools().ops.some(o => o.kind === 'charge' && o.door === S.door && o.phase === 'armed')) tools().trigger(c); }
         return 'on'; } }, sam: ownCharge },
-    wand: { mate: wandMate, sam: wandRow }, cams: { sam: camRow }, shells: { sam: shellRow }, walls: { mate: wallRow, sam: wallRow }, bigtool: { mate: bigMate, sam: bigSam },
+    wand: { mate: wandMate, sam: wandRow }, cams: { sam: camRow }, shells: { sam: shellRow }, rings: { sam: ringRow }, walls: { mate: wallRow, sam: wallRow }, bigtool: { mate: bigMate, sam: bigSam },
     // suit, trim: one eased quarter turn — the quarter that shows the camera his front (out from the wall) — and back
     turn: (() => { const row: Row = { door: 'shut', damage: 'none', rest: K.restQuiet, cap: 10,
       start: (B, S) => { const a = B.yaw + K.turnDeg * R, b = B.yaw - K.turnDeg * R, y = Math.sin(a) * S.n[0] + Math.cos(a) * S.n[1] >= Math.sin(b) * S.n[0] + Math.cos(b) * S.n[1] ? a : b;
@@ -1750,7 +1754,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   /** THE TILES, ONE table: a tile's field → the thing it plays, by the card it is on — a field not here plays the row of its own name (null: none — the gun,
    *  then the light). A field whose VALUE names the demo is one line here (`big`: the big slot's tile, the wall charge's row while a wall charge is what is in it):
    *  the highlight is kept as the tile's FIELD (`hiF`) and read through this table again at every kit message */
-  const TILES: Record<string, (card: Record<string, unknown>) => string | null> = { weapon: () => 'weapon', primary: () => 'weapon', secondary: () => 'weapon', suppressed: () => 'weapon', suit: () => 'turn', trim: () => 'turn', nvg: () => 'turn',
+  const TILES: Record<string, (card: Record<string, unknown>) => string | null> = { weapon: () => 'weapon', primary: () => 'weapon', secondary: () => 'weapon', suppressed: () => 'weapon', sideCan: () => 'weapon', suit: () => 'turn', trim: () => 'turn', nvg: () => 'turn',
     big: c => num(c.walls) > 0 ? 'walls' : c.big === 'shotgun' || c.big === 'hammer' ? 'bigtool' : null };   // (THE BIG SLOT, read as kit.ts bigOf reads the card: a wall charge in it plays the wall charge's row, the breaching shotgun and the hammer the tool's own on the door — nothing in it has none)
   const thing = (f: unknown, i = who): string | null => typeof f !== 'string' ? null : Object.hasOwn(TILES, f) ? TILES[f](cards[i] ?? {}) : Object.hasOwn(BEATS, f) && f !== 'turn' && f !== 'swap' ? f : null;
   // (THE BIG SLOT — kit.ts BIGSLOT, the card's last tile, field `big`: what is in the open card's slot is the card read as kit.ts bigOf reads it — `walls` over 0, else `big` 'shotgun' | 'hammer' | 'none'. A change of it under the highlight comes as a `kit` message, not a `sel`: the kit message reads `hi` again)
@@ -1838,7 +1842,7 @@ export function kitViewStart(d: KitViewDeps): KitView {
   const litter = () => { const I = game.items.items as unknown as { age: number }[]; for (let i = I.length - 1; i >= 0; i--) if (I[i].age > K.litter) I.splice(i, 1); while (I.length > 5) I.shift(); };
   const begin = (S: Staged, f: string): void => {
     const man = actor(), k = man ? S.order.indexOf(man) : -1; if (man && k < 0) { restUntil = game.time + 1; return; }
-    if (f === 'light' && man && cards[who]?.light !== true) f = 'weapon';   // (no light fitted: the gun comes up dark — the toggle is the tile's job)
+    if (f === 'light' && (man || kitTreeOn()) && cards[who]?.light !== true) f = 'weapon';   // (no light fitted: the gun comes up dark — the toggle is the tile's job. Yours is a row only on the tree's card: before it you always had one)
     if (!BEATS[f]?.[man ? 'mate' : 'sam']) f = 'weapon';
     const qRow = Q ? QUIET_BEATS[f]?.[man ? 'mate' : 'sam'] : undefined;   // (the quiet picture's row for this thing, where it has one)
     const c = man ? man.char : game.player.char, H = man ? homeOf(S, man) : { p: S.sam, yaw: S.samYaw };

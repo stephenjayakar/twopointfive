@@ -17,6 +17,7 @@ import { SideMap } from '../math/side';
 import { Vec3, clamp } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
+import { HARDBREATH } from './character';   // (read inside the update only)
 import type { Particles } from '../render/particles';
 import { gpuFx } from './particleFx';
 import { SNOW_LOOK, snowLevel } from './weatherKinds';
@@ -54,7 +55,7 @@ export const SNOWBREATH = {
 };
 
 export interface BreathStats { active: boolean; why: string; men: number; shown: number; breaths: number; records: number; births: number; frames: number; /** records filed per man (Character.id) */ by: Record<number, number>; }
-interface Man { ph: number; pace: number; effort: number; n: number; left: number; gap: number; step: number; shows: boolean; }
+interface Man { ph: number; pace: number; effort: number; n: number; left: number; /** records this breath is filed as */ of: number; gap: number; step: number; shows: boolean; }
 interface BreathState { seed: number; men: WeakMap<Character, Man>; stats: BreathStats; }
 const states = new SideMap<Game, BreathState>('snowBreath.states');
 const fresh = (): BreathStats => ({ active: false, why: 'never run', men: 0, shown: 0, breaths: 0, records: 0, births: 0, frames: 0, by: {} });
@@ -76,7 +77,7 @@ export function breathOn(g: Game): boolean { return SNOW_LOOK.breath && snowLeve
 
 function manOf(s: BreathState, c: Character): Man {
   let m = s.men.get(c);
-  if (!m) { m = { ph: h01(s.seed, c.id, 1), pace: 1 + SNOWBREATH.everyJit * (2 * h01(s.seed, c.id, 2) - 1), effort: 0, n: 0, left: 0, gap: 0, step: 0, shows: false }; s.men.set(c, m); }
+  if (!m) { m = { ph: h01(s.seed, c.id, 1), pace: 1 + SNOWBREATH.everyJit * (2 * h01(s.seed, c.id, 2) - 1), effort: 0, n: 0, left: 0, of: Math.max(1, Math.round(SNOWBREATH.puffs)), gap: 0, step: 0, shows: false }; s.men.set(c, m); }
   return m;
 }
 /** is this man's breath to be seen: alive, his head up off the ground, the open sky over it? (the fog of war and the dead are the caller's: they are asked of the Guard) */
@@ -95,33 +96,33 @@ export function updateSnowBreath(g: Game, dt: number) {
   if (why) { S.active = false; S.why = why; S.men = 0; S.shown = 0; return; }
   if (!(dt > 0)) return;
   S.active = true; S.why = P ? 'breathing' : 'breathing, nothing filed (no GPU particles)'; S.frames++;   // (with no pool the rhythm still runs — a headless played run walks every read this makes of the game — and files nothing)
-  let men = 0, shown = 0;
+  let men = 0, shown = 0; const HB = HARDBREATH.on ? HARDBREATH : null;   // (character.ts: blown, a man's breath is thrown harder, bigger and more often — off = this table's own numbers)
   const one = (c: Character, seen: boolean) => {
     const m = manOf(st, c); men++;
     // his wind: up while he runs, back slowly once he stops
     const want = clamp((Math.hypot(c.vel[0], c.vel[2]) - K.runLo) / Math.max(0.01, K.runHi - K.runLo), 0, 1);
-    m.effort = want > m.effort ? Math.min(want, m.effort + dt / Math.max(0.1, K.effortUp)) : Math.max(want, m.effort - dt / Math.max(0.1, K.effortDown));
-    const every = Math.max(0.3, (K.every + (K.everyHard - K.every) * m.effort) * m.pace * (0.9 + 0.2 * h01(st.seed, c.id, 16 + m.n)));
+    m.effort = want > m.effort ? Math.min(want, m.effort + dt / Math.max(0.1, HB ? HB.up : K.effortUp)) : Math.max(want, m.effort - dt / Math.max(0.1, HB ? HB.down : K.effortDown));
+    const every = Math.max(0.3, (K.every + ((HB ? HB.every : K.everyHard) - K.every) * m.effort) * m.pace * (0.9 + 0.2 * h01(st.seed, c.id, 16 + m.n)));
     m.shows = seen && shows(g, c); if (m.shows) shown++;
     // the rhythm runs whether or not it shows (a man who steps out from under a roof is in mid breath, not at the start of one)
     m.ph += dt / every;
-    if (m.ph >= 1) { m.ph = m.ph >= 2 ? 0 : m.ph - 1; m.n++; m.left = Math.max(1, Math.round(K.puffs)); m.gap = 0; m.step = Math.min(K.out, every * 0.4) / m.left; if (m.shows) S.breaths++; }
+    if (m.ph >= 1) { m.ph = m.ph >= 2 ? 0 : m.ph - 1; m.n++; m.of = m.left = Math.max(1, Math.round(K.puffs + (HB ? (HB.puffs - K.puffs) * m.effort : 0))); m.gap = 0; m.step = Math.min(K.out, every * 0.4) / m.left; if (m.shows) S.breaths++; }
     if (m.left <= 0) return;
     m.gap -= dt; if (m.gap > 0) return;
     m.gap += m.step; m.left--;
     if (!m.shows || !P) return;
-    const hard = 1 + (K.hardK - 1) * m.effort;
+    const hard = 1 + ((HB ? HB.size : K.hardK) - 1) * m.effort, carry = HB ? K.carry + (HB.carry - K.carry) * m.effort : K.carry;
     // where the head faces, as a heading and a pitch: the heading the skull's own (his body's if he looks straight down), the pitch held inside `pitch` — a man bowed
     // over his gun breathes out ahead of him, not into his collar
     const hd = c.headDir(); const head = c.bones.head!; const hl = Math.hypot(hd[0], hd[2]);
     const fx = hl > 0.2 ? hd[0] / hl : Math.sin(c.bodyYaw), fz = hl > 0.2 ? hd[2] / hl : Math.cos(c.bodyYaw);
     const py = clamp(hd[1], K.pitch[0], K.pitch[1]); const ph = Math.sqrt(Math.max(0, 1 - py * py));
     const f: Vec3 = [fx * ph, py, fz * ph];
-    const tail = 1 - 0.3 * (1 - (m.left + 1) / Math.max(1, Math.round(K.puffs)));   // (the last of a breath leaves slower than the first)
+    const tail = 1 - 0.3 * (1 - (m.left + 1) / (HB ? m.of : Math.max(1, Math.round(K.puffs))));   // (the last of a breath leaves slower than the first)
     const dl = Math.hypot(f[0], f[1] - K.down, f[2]) || 1;
-    const n = P.emit('dust', [head[0] + fx * K.mouthAhead, head[1] - K.mouthDown, head[2] + fz * K.mouthAhead], [f[0] / dl, (f[1] - K.down) / dl, f[2] / dl], Math.max(1, Math.round(K.count)), {
-      shape: 'cone', speed: K.speed * tail * (1 + 0.3 * m.effort), speedJit: 0.35, spread: K.spread, life: K.life, lifeJit: K.lifeJit, size: K.size * hard, sizeJit: K.sizeJit, posJit: 0.012,
-      vadd: [c.vel[0] * K.carry, 0, c.vel[2] * K.carry], owner: c.id, color: K.color, steam: clamp(K.opacity * hard, 0, 1), seed: recSeed(st, c.id, m.n, m.left) });
+    const n = P.emit('dust', [head[0] + fx * K.mouthAhead, head[1] - K.mouthDown, head[2] + fz * K.mouthAhead], [f[0] / dl, (f[1] - K.down) / dl, f[2] / dl], Math.max(1, Math.round(K.count + (HB ? (HB.count - K.count) * m.effort : 0))), {
+      shape: 'cone', speed: K.speed * tail * (1 + (HB ? HB.jet - 1 : 0.3) * m.effort), speedJit: 0.35, spread: K.spread, life: K.life, lifeJit: K.lifeJit, size: K.size * hard, sizeJit: K.sizeJit, posJit: 0.012,
+      vadd: [c.vel[0] * carry, 0, c.vel[2] * carry], owner: c.id, color: K.color, steam: clamp(K.opacity * hard, 0, 1), seed: recSeed(st, c.id, m.n, m.left) });
     if (n > 0) { S.records++; S.births += n; S.by[c.id] = (S.by[c.id] ?? 0) + 1; }
   };
   one(g.player.char, true);

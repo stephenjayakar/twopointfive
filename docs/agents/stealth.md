@@ -658,3 +658,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fight does NOT own them (its switch off, the sandbox's AI off, a director run) the night mission turned every calm defender to his mark each frame, the man
   in the arm too: his chest stayed on the mark while Sam turned, up to 171 degrees off. On = a held man is skipped there. Check: `probes.ts holdturn` (family
   `grab`; `HOLDTURN_BREAK=1` fails): a half circle each way and a flick, rule off 171.6 degrees off, rule on 0.0. NOT SEEN on a GPU.
+- **Wall switches** (`LIGHTSWITCH`, `src/game/lightswitch.ts`; ON in the page, `?lightswitch=0` puts it off; OFF in the module and on the frozen stand,
+  `TPS_LIGHTSWITCH=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal — a recording from before the table replays with none; a Tab row,
+  'light switches'). The maintainer, 10-19: "we should have light switches for rooms!" · "probably don't want to go TOO ham on this but it should feel good".
+  No level file carries one: the plates are found from the level as it stands — on the room's own wall beside each door (the latch side first, 0.85 m past
+  the jamb so that standing at it the door is out of reach and the tap is the switch's; 1.2 m up; never on glass, a leaf's sweep, or anything that does not
+  stand above a door's head — a breaker panel, a locker), at most two a circuit of a room, and where the door's wall gives no place (a glass front) on the
+  room's nearest plain wall. A plate works the room's MAINS lights that hang overhead or are lamps (analytic lights, ceiling panels and tubes; not screens,
+  signs, vending machines, exit lights, lamps outside), split by the level's own lighting groups where one flood-filled room carries several.
+  **The hand**: a row of Sam's (kind `switch`, verbs `lightsOff` / `lightsOn`, reads 'switch · on' / 'switch · off'), under a door's rows when both are in
+  reach; Space, no hold, no sound the hearing model carries; the fixtures change on the frame through `LightTarget.on`, so the light estimate, the meter and
+  the picture all follow (`lighting.ts updateTargets`), and a tube put back strikes like one (`strike`). 'On' puts back what the hand put out; in a room no
+  hand put out, the room as authored — all of it where the level left the whole room dark. **The men**: each burning fixture put out raises the 'lightOut' a
+  shot one does, with `swAt` = the floor before the plate: a defender who SAW it go (a line to the fixture) comes to the switch, and the small-things memory
+  files it there. A calm defender at the switch of a room the LEVEL had lit puts it back, `guardSecs` (1.5) after the hand at the soonest, once, and says so;
+  never in a fight, asleep, blind, scripted, under a blackout, and never a room the level left dark. **State**: `LightTarget.handOff` (the game time a hand
+  put it out; saved as `TargetSnap.hand` only when set); a 'lightOut' event keeps its `swAt` in a save. A plate goes with its wall when the wall is blown and
+  is back with it on a load (asked after when the geometry serial moves). `window.__lightswitch` on the page (knobs, stats, the plates, lit).
+  Check: `probes.ts lightswitch` (family `player`; `LIGHTSWITCH_BREAK=1` fails), both stands: the office by hand (the row, the tap, the light estimate under
+  the manager's lamp 16.26 to 0.00 and back, the authored-dark break room struck on and left alone by a defender when Sam puts it out again, the door keeping
+  the tap in the overlap, a defender put 2.5 m off who has the room lit 2.07 s after the tap and flips it once, a checkpoint, a restart, a wall blown from
+  behind a plate, the switch off, a 600-frame digest the same on as off) and every level file (50 levels, 490 plates, each on plain wall with floor in a
+  hand's reach). One seed; no tally was measured — nobody has played it, and it has NEVER been seen on a GPU: the plate, its rocker, the amber pilot that
+  shows a dark room's switch, the hand at the plate, and how a room reads going dark are all unseen. `tools/qa/lightswitch-page.cjs` boots the real page on
+  the software adapter, on and with `?lightswitch=0`. Not built: a teammate sent to a switch on an order; a defender on a mark leaving it for the switch; a
+  switch for rooms whose only lights no plate found (the office lobby's circuit; two rooms of 176 across the levels keep a circuit with no plate).

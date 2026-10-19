@@ -107,7 +107,7 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
             gd.awareness = Math.min(0.28, gd.awareness + 0.18); glanceToward(g, gd, e.pos, 1.8); small(e.pos); chronHeard(g, gd, e);
             if (!e.announced && gd.state === 'patrol') { e.announced = true; g.say(gd, OCP_MUTTER[(gd.char.id + Math.floor(g.time)) % OCP_MUTTER.length], false); }
           }
-        } else { gd.awareness = 0.4; gd.lastKnown = v3.copy(e.pos); gd.reactT = 0.8; small(e.pos); chronHeard(g, gd, e); }   // shot dark, or he was already on edge: over he comes to the patch that went out
+        } else { gd.awareness = 0.4; gd.lastKnown = v3.copy(e.swAt ?? e.pos); gd.reactT = 0.8; small(e.swAt ?? e.pos); chronHeard(g, gd, e); }   // shot dark, or he was already on edge: over he comes to the patch that went out (put out at a wall switch — lightswitch.ts: to the switch)
       }
       continue;
     }   // SEEN, not heard: a light dying near him whose fixture (or the patch of floor under it) his eye has a line to — not one going out in the next office through the wall (review A6.3) — remembered with the small things

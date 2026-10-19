@@ -57,7 +57,9 @@ import { wallBreakOn, WALLS } from './wallbreak';
 import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
 import { surfOf } from './particleFx';
-import { killGuard, detonateStun } from './combat';
+import { killGuard, detonateStun, hitPlayer } from './combat';
+import { chronHit } from './chronicle';
+import { civiliansShown } from './civilians';   // (called inside blow only)
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { isHostile } from './teams';
@@ -218,6 +220,21 @@ export const WALLCHARGE_DEFAULTS = JSON.parse(JSON.stringify(WALLCHARGE)) as typ
  *      inside which a man behind the wall is killed still needs the line and is as it was; no health number is touched.
  *  OFF here and on the frozen stand (TPS_WALLSHOT=1); ON in the page (?wallshot=0). Check: tools/qa/wallshot-check.ts (WALLSHOT_BREAK=1). */
 export const WALLSHOT = { on: false, pall: 0.75, staggerSecs: 3.5, stunSecs: [8.0, 4.0] as [number, number], roomM: 12, oursSecs: 2.0 };
+/** A WALL CHARGE KILLS WHOEVER STANDS AT IT (the maintainer, 10-19, god mode off, 0.9 m from his own charge when he blew it and told only 'you were too
+ *  close': "blowing a wall charge with me right next to it should kill me"). A blast does to the player what it does to anyone, so with `on` the rule is one
+ *  rule for every man on the floor — the player, ours, the defenders, a civilian who is in the building:
+ *    on the charge's OWN side, nearer than `nearM` with a line to it: killed, dead as a frag leaves a man (he was blind for the safety radius's seconds — a
+ *      teammate, a defender — or rocked and blind — the player; a civilian was not asked about at all);
+ *    BEHIND a wall it opened, nearer than DOORTOOLS.knockM with a line to the hole: down as a defender there always was (the charge's knock: 'struck') — now
+ *      the player too (he was blind a second or two), a civilian, and one of ours whatever the team's size (on a team of more than two he was blind a second
+ *      or two; on a team of two he already went down);
+ *    past that reach one of ours behind the wall is blind as one of ours, whatever the team's size (on a team of two he took the defenders' longer stun and fold).
+ *  The player goes down as a round puts him down (combat.ts hitPlayer: his one hit): never in god mode, never the tour's scripted player. A man with god mode
+ *  of his own (Guard.god) is passed over. WHO BLOWS IT: the player's trigger and his order's release — and a plan's own clock (host/kitView.ts), which is no
+ *  press of his: that caller says so (`pressed` false) and its blast is the blast as it was. With the safety radius on (the page) the trigger's row names who
+ *  is too close and who is behind the wall before he presses it. No hit points anywhere: nobody takes more or fewer rounds.
+ *  OFF here and on the frozen stand (TPS_WALLKILL=1); ON in the page (?wallkill=0). Check: tools/qa/wallkill-check.ts (WALLKILL_BREAK=1). */
+export const WALLKILL = { on: false, nearM: 1.5 };
 /** the menu page the wall's fifth row opens */
 export const WALL_PAGE = 'walltools';
 /** the order's id (orders.ts give / Assignment.order) */
@@ -239,6 +256,8 @@ export interface WallOp {
   wall: WallSpot; men: Guard[]; lead: Guard; phase: Phase; t0: number;
   /** where the setter stands · when he began setting it (NaN: not yet) */
   spot: Vec3; setT: number;
+  /** WALLKILL: the setter's 'charge set.' is owed — said once he is `nearM` off the charge he set, not with his hands still on it (absent: said, or the rule off) */
+  owes?: boolean;
   /** the assignments this order handed out (a man whose assignment is no longer this one has been re-ordered: he is not ours) · each man's stand-off mark */
   mine: Map<Guard, Assignment>; post: Map<Guard, Vec3>; from: Map<Guard, Vec3>;
   /** the hole as it opened: its centre along the wall (metres from the charge) and half its width — null until the blast */
@@ -909,12 +928,14 @@ export class WallCharge {
         if (!this.chargeOn(W)) {
           const paid = this.take(); if (paid < 0) { g.say(lead, this.noneWords()); this.end(op, 'no charges'); break; }
           this.set.push({ wall: W, t, by: lead.callsign, paid, ...(this.freeSet ? { free: true } : {}) }); g.audio.play('lockPick', wallPt(W, 0, 0, K.height), 0.6); g.destr.furn.warm(); }
-        g.say(lead, 'charge set.'); this.beat(op, 'set');
+        if (WALLKILL.on) op.owes = true; else g.say(lead, 'charge set.');   // (WALLKILL: his word is what sends a thumb to the trigger, and at the wall the charge kills him — he says it once he is clear of it, below)
+        this.beat(op, 'set');
         this.standOff(op, lead); op.phase = 'standoff'; op.t0 = t;
         break;
       }
       case 'standoff': {
         if (!this.chargeOn(W)) { this.end(op, 'the charge is gone'); break; }
+        if (op.owes && flat(lead.char.pos, wallPt(W, 0, 0)) >= WALLKILL.nearM) { op.owes = false; g.say(lead, 'charge set.'); }   // (a man who cannot get that far says only the call below)
         if (!op.men.every(gd => op.mine.get(gd)!.arrived) && this.waiting(op, el)) break;
         // (WALLCHARGE.safe: said by the man who calls it, once, where the floor left them inside the radius)
         g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall — ${DOORTOOLS.blowKey.replace('Key', '')} blows it`);
@@ -1022,7 +1043,7 @@ export class WallCharge {
   // ------------------------------------------------------------ the blast
   /** Sam's trigger on one charge (F, the menu's 'blow the charge', a probe): the wall opened through the engine's blast entry point, the stun charge's report
    *  and flash with nobody on its list, the door charge's rule for the men near it — and the squad that set it goes in behind it */
-  blow(c: SetWallCharge | null = this.nearest()): { hole: boolean; knocked: number; stunned: number; backblast: number } | null {
+  blow(c: SetWallCharge | null = this.nearest(), pressed = true): { hole: boolean; knocked: number; stunned: number; backblast: number; lost: number } | null {
     if (!c) return null; const g = this.g, K = DOORTOOLS, W = c.wall, i = this.set.indexOf(c); if (i < 0) return null; this.set.splice(i, 1);
     holdFireOrder(g, 'wallCharge', { blown: true });   // (holdfire.ts: a charge starts the fight when it GOES, not when it is set)
     const T = thick(W), at = chargeAt(W);
@@ -1041,37 +1062,51 @@ export class WallCharge {
     const R = safeRadius(g, W), nearSecs = (d: number) => WALLCHARGE.safe ? lerp(WALLCHARGE.safeSecs[0], WALLCHARGE.safeSecs[1], clamp(d / R.reach, 0, 1)) : K.backblastSecs;   // (the charge's own side: the safety radius — off, the door charge's two numbers)
     const xz = wallPt(W, 0, 0), out = wallPt(W, 0, 0.5, 1.1), inn = wallPt(W, hole ? hole.du : 0, -(T + 0.45), 1.1);
     const SH = WALLSHOT.on ? WALLSHOT : null, room = SH && hole ? roomBeyond(g, W, hole.du, T) : 0;   // (WALLSHOT: the room the hole opens into, 0 = none to name)
+    const WK = WALLKILL.on && pressed ? WALLKILL : null, away = (p: Vec3) => v3.normalize([p[0] - xz[0], 0.15, p[2] - xz[2]]); let lost = 0, samDown = false;   // (WALLKILL: ours it killed · the player with them)
     for (const gd of [...g.guards]) {
-      if (gd.state === 'dead') continue;
-      const p = gd.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz), chest: Vec3 = [p[0], 1.1, p[2]];
+      if (gd.state === 'dead' || (WK && gd.god)) continue;
+      const p = gd.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz), chest: Vec3 = [p[0], 1.1, p[2]], ours = gd.team === 'operative';
       const lined = dist <= K.stunM && !g.col.solidBlocked(far ? inn : out, chest), inRoom = !!room && far && gd.team !== 'operative' && dist <= SH!.roomM && g.cleared.roomAt(p) === room;
       if ((far && !hole) || (!lined && !inRoom)) continue;   // (a wall that held is still a wall to the men behind it)
-      if (!far) { if (dist < R.reach) { this.dazzle(gd, nearSecs(dist), inn); if (gd.team === 'operative') backblast++; else stunned++; } continue; }   // too near the charge on its own side
+      if (!far) {   // too near the charge on its own side (WALLKILL: at it, he is killed)
+        if (WK && dist < WK.nearM) { killGuard(g, gd, away(p), false, 'shot', 'player', `${gd.callsign ?? 'a man'} down — at the charge when it went`); if (ours) lost++; else knocked++; }
+        else if (dist < R.reach) { this.dazzle(gd, nearSecs(dist), inn); if (ours) backblast++; else stunned++; }
+        continue; }
       if (!lined) { this.shock(gd, SH!.staggerSecs, inn); stunned++; continue; }   // (WALLSHOT: in the room with no line to the hole — the shock, not the flash)
-      if (gd.team === 'operative' && g.orders.big) { this.dazzle(gd, SH ? SH.oursSecs : K.backblastSecs, inn); backblast++; continue; }   // (one of ours past the wall: the order is refused while he is there — gone in since, he is dazzled, not felled)
-      if (dist < K.knockM) { const dir = v3.normalize([p[0] - xz[0], 0.15, p[2] - xz[2]]); killGuard(g, gd, dir, false, 'struck', 'player', `${gd.callsign ?? 'a man'} down — behind the wall when it went`); knocked++; }
+      if (ours && (WK ? dist >= K.knockM : g.orders.big)) { this.dazzle(gd, SH ? SH.oursSecs : K.backblastSecs, inn); backblast++; continue; }   // (one of ours past the wall: the order is refused while he is there — gone in since, he is dazzled, not felled; WALLKILL: inside knockM he is killed as anyone is, and past it he is dazzled as one of ours whatever the team's size)
+      if (dist < K.knockM) { killGuard(g, gd, away(p), false, 'struck', 'player', `${gd.callsign ?? 'a man'} down — behind the wall when it went`); if (ours && WK) lost++; else knocked++; }
       else { const ss = SH ? SH.stunSecs : K.stunSecs; this.dazzle(gd, lerp(ss[0], ss[1], clamp(dist / K.stunM, 0, 1)), inn); gd.staggerUntil = Math.max(gd.staggerUntil, g.time + (SH ? SH.staggerSecs : K.staggerSecs)); gd.weapon.burst = null; stunned++; }
     }
+    // (WALLKILL: a civilian in the building is a man on the floor too — at the charge, or behind the wall inside knockM, with the same line; the rest of the
+    //  blast was never hers and is not now)
+    if (WK) for (const cv of [...civiliansShown(g)]) { if (cv.state === 'dead' || cv.god) continue; const p = cv.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz);
+      if ((far && !hole) || dist >= (far ? K.knockM : WK.nearM) || g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) continue;
+      killGuard(g, cv, away(p), false, far ? 'struck' : 'shot', 'player', `${cv.callsign ?? 'a civilian'} down — ${far ? 'behind the wall' : 'at the charge'} when it went`); knocked++; }
+    // (WALLKILL: the player at the charge, or behind the wall it opened inside knockM, with the line a man there needs — killed as a round kills him; the
+    //  rocked hands and the blind seconds below are a living man's)
+    if (WK && !g.player.down && !g.godMode && !g.puppet && !g.touring) { const pl = g.player, p = pl.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz);
+      if (!(far && !hole) && dist < (far ? K.knockM : WK.nearM) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) { hitPlayer(g, away(p)); pl.hitFlash = 1; chronHit(g, 'the wall charge'); samDown = pl.down; } }
     const sam = WALLCHARGE.safe && !g.player.down ? this.blastShare(W, g.player.char.pos, R) : 0; if (sam > 0) this.samCaught(sam, xz);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there — on the charge's own side inside the reach with a line to it, blind the
     //  seconds a teammate there gets; beyond a wall it opened, inside stunM with a line, dazzled and never felled, as one of ours beyond a blown door is)
     if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring) { const p = g.player.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz);
       if (!(far && !hole) && dist < (far ? K.stunM : R.reach) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) dazzlePlayer(g, far ? (SH ? SH.oursSecs : K.backblastSecs) : nearSecs(dist), inn); }
-    this.lastBlow = { reach: R.reach, indoors: R.indoors, sam };
+    this.lastBlow = { reach: R.reach, indoors: R.indoors, sam, lost, samDown };
     if (hole) moraleBlast(g, inn, PLAYER_ID);   // (morale.ts: the men past the wall it opened are shaken by it — a return on its first line with the switch off)
-    this.stats.blown++; if (hole) this.stats.holes++; else this.stats.duds++; this.stats.knocked += knocked; this.stats.stunned += stunned; this.stats.backblast += backblast;
-    g.msg(`charge blown — the wall${hole ? '' : ' · it held'}${knocked ? ` · ${knocked} down` : ''}${stunned ? ` · ${stunned} stunned` : ''}${backblast ? ` · ${backblast} of yours too close` : ''}${sam > 0 ? ' · you were too close' : ''}`);
-    this.note(`blow wall ${W.index}: ${hole ? `hole ${(hole.half * 2).toFixed(2)} m` : 'no hole'} knocked ${knocked} stunned ${stunned} backblast ${backblast}`);
+    this.stats.blown++; if (hole) this.stats.holes++; else this.stats.duds++; this.stats.knocked += knocked + lost; this.stats.stunned += stunned; this.stats.backblast += backblast;
+    g.msg(`charge blown — the wall${hole ? '' : ' · it held'}${knocked ? ` · ${knocked} down` : ''}${stunned ? ` · ${stunned} stunned` : ''}${lost ? ` · ${lost} of yours down` : ''}${backblast ? ` · ${backblast} of yours too close` : ''}${sam > 0 ? ' · you were too close' : ''}`);
+    this.note(`blow wall ${W.index}: ${hole ? `hole ${(hole.half * 2).toFixed(2)} m` : 'no hole'} knocked ${knocked} stunned ${stunned} backblast ${backblast}${WK ? ` lost ${lost}${samDown ? ' · the player down' : ''}` : ''}`);
     for (const op of [...this.ops]) if (sameWall(op.wall, W) && (op.phase === 'place' || op.phase === 'standoff' || op.phase === 'armed')) {   // the squad that set it goes in behind it
-      if (!hole) { g.say(op.lead, 'no way through.'); this.end(op, 'no hole'); continue; }
+      if (!hole) { const up = op.lead.state !== 'dead' ? op.lead : op.men.find(m => m.state !== 'dead'); if (up) g.say(up, 'no way through.'); this.end(op, 'no hole'); continue; }   // (the lead, or — WALLKILL: the charge took him at the wall — whoever of his is left)
       op.hole = hole; op.phase = 'wait'; op.t0 = g.time;
       if (WALLCHARGE.brace) for (const gd of op.men) { if (gd.state === 'dead' || g.orders.of(gd) !== op.mine.get(gd)) continue; if (g.time >= gd.dazzledUntil) gd.char.anim.flinch(); if (!op.mine.get(gd)?.spare) this.standOff(op, gd); }   // (the start at the blast; then round to the wall)
       this.beat(op, `blow · hole ${(hole.half * 2).toFixed(2)} m · ${knocked} down ${stunned} stunned`);
     }
-    return { hole: !!hole, knocked, stunned, backblast };
+    return { hole: !!hole, knocked, stunned, backblast, lost };
   }
-  /** the last charge blown: the reach it had on its own side, whether that side was indoors, and Sam's share of it (0: he was clear) — for the panel and the checks */
-  lastBlow: { reach: number; indoors: boolean; sam: number } | null = null;
+  /** the last charge blown: the reach it had on its own side, whether that side was indoors, and Sam's share of it (0: he was clear, or it killed him) — for the
+   *  panel and the checks · WALLKILL: how many of ours it killed, and whether it killed the player */
+  lastBlow: { reach: number; indoors: boolean; sam: number; lost: number; samDown: boolean } | null = null;
   /** SAM INSIDE THE REACH WHEN IT WENT (WALLCHARGE.safe; `k`: his share, 1 at the wall): what the game already has for a man rocked by something — he is
    *  knocked along the blast (the animator's hit), the frame flashes as on a hit, no round and no throw leaves his hands for samSecs (Player.fireCd: the beat
    *  every fire site already honours, kept by a checkpoint), and his aim is open by suppression's own scalar until it drains. The camera's kick and the ring

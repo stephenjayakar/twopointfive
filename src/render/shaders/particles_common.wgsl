@@ -213,6 +213,12 @@ fn rainOutdoors(p: vec2f) -> bool {
   return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w)
       && p.x > WORLD_MIN.x + 0.25 && p.y > WORLD_MIN.z + 0.25 && p.x < WORLD_MAX.x - 0.25 && p.y < WORLD_MAX.z - 0.25;
 }
+/** RAIN OVER A WALL'S FACE (the prelude's RAIN_WALLS): is surface point P one the rain shows in front of though its ground point is inside a roof's rectangle — not
+ *  UNDER the roof (common.wgsl wxUnderRoof), and inside the world's rim as rainOutdoors asks. */
+fn rainOverWall(P: vec3f) -> bool {
+  let p = P.xz;
+  return !wxUnderRoof(p) && p.x > WORLD_MIN.x + 0.25 && p.y > WORLD_MIN.z + 0.25 && p.x < WORLD_MAX.x - 0.25 && p.y < WORLD_MAX.z - 0.25;
+}
 /** SNOW PAST THE LEVEL'S RIM (game/weatherKinds.ts SNOW_LOOK.past; the maintainer, of a view by the pass's edge: "snowfall missing from bottom left of image"). A flake
  *  high in the air is drawn well off its own ground, toward the camera's foot: with the rim on the camera's side, the flakes that would show over the near part of
  *  the picture are in the air PAST the rim, and none was ever there (births, the step and the splat all kept to the world's rectangle). snowPast() = how many metres

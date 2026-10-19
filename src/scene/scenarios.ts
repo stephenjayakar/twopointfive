@@ -258,6 +258,10 @@ export interface SnatchData {
   man: { name: string; pos: Vec3; face: number; tint: Vec3; tint2?: Vec3; points?: Vec3[]; wait?: number[] };
   /** the WAYS OFF THE FLOOR he runs for once it is loud (nearest first by walking): a spot beyond a gate or an outside door — on it, he is gone */
   exits: { name: string; pos: Vec3 }[];
+  /** THE WAY HE IS TAKEN OFF THE FLOOR (game/snatchout.ts, while its switch is up): the team's own vehicle by its way in — `pos` is the spot at its open doors a
+   *  man is put in from. Tied, he is led there by the player and the mission is won the moment he is in it, the house taken or not. Without the key, or with the
+   *  switch off, the snatch ends as it did: the house taken with him in hand. */
+  van?: { name: string; pos: Vec3 };
 }
 
 /** A DEFUSE mission's overlay on a room clear (game/defuse.ts): timed charges in rooms of the structure, all on ONE clock. A charge is made safe by a man

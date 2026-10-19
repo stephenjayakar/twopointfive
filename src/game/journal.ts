@@ -41,7 +41,7 @@ import type { SimDie } from '../math/dice';
 import type { GameDigest } from './digest';
 import { knobsNamed, assignDeep, JOURNAL_KNOBS } from './knobs';   // THE list of knob tables (knobs.ts): it imports the tables' modules in the order this file always did
 import { WALLS, WALLS_DEFAULTS } from './wallbreak';
-import { WALLCHARGE, WALLSHOT } from './wallcharge';
+import { WALLCHARGE, WALLSHOT, WALLKILL } from './wallcharge';
 import { CHAOS } from './destruction';   // (used inside applyKnobs only: src/game is one import cycle)
 import { DOORTOOLS } from './doortools';
 import { ORDERS } from './orders';
@@ -89,7 +89,7 @@ import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
 import { GUNHOLD } from './gunhold';
-import { HOLD, THROW_BY } from './character';
+import { HOLD, THROW_BY, HARDBREATH } from './character';
 import { STACKROOM } from './stackroom';
 import { START } from './startfile';
 import { HOLDFIRE } from './holdfire';
@@ -109,6 +109,7 @@ import { STAYASK } from './stayask';
 import { KITLOAD } from './kitload';
 import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
+import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from './sense';
@@ -128,6 +129,7 @@ import { AIMCOST } from './aimcost';
 import { QUICKTHROW } from './quickthrow';
 import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
+import { LIGHTSWITCH } from './lightswitch';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY } from './doors';
@@ -285,6 +287,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.GUNLOOK) GUNLOOK.on = false;   // (a file from before each gun had its own look: every row was its stand-in — its muzzle, its flash and its reload's beats the stand-in's)
   else if ((k.tables.GUNLOOK as Partial<typeof GUNLOOK>).shells === undefined) GUNLOOK.shells = false;   // (…or from before a tube gun was fed by the shell: its reload was the row's one length, the tube booked at its end)
   if (!k.tables.GUNROLES) GUNROLES.on = false;   // (a file from before the defenders drew from the table: every one of them carried the short carbine, and no stack, entry or trigger read a man's gun)
+  else if ((k.tables.GUNROLES as Partial<typeof GUNROLES>).captor === undefined) GUNROLES.captor = true;   // (…or from the day the man with a hostage in his hand was dealt a pistol with the rest: the key did not exist and he was)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge was pouches, nobody carried a hammer)
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
@@ -336,6 +339,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.AIMCOST as Partial<typeof AIMCOST> | undefined)?.flankAt === undefined) AIMCOST.flankAt = 1e9;   // (…and one from before the standoff's flank round waited for still feet: it went the frame the line was his)
   if (!k.tables.RELOAD) RELOAD.auto = false;   // (a file from before a dry gun reloaded itself: its player pressed R, and its frames have no reload he did not ask for)
   if (!k.tables.QUICKTHROW) QUICKTHROW.on = true;   // (a file from before the G quick throw left the page: its G presses threw)
+  if (!k.tables.LIGHTSWITCH) LIGHTSWITCH.on = false;   // (a file from before a room's lights had a switch on the wall: no plates, no row, nobody at one)
   if (!k.tables.FRIENDLYFIRE) FRIENDLYFIRE.on = false;   // (a file from before a round of his side found the men of his side)
   if (!k.tables.FRIENDS) { FRIENDS.noSnap = false; FRIENDS.lowReady = false; }   // (a file from before the reticle passed over his own side and his gun came down off a teammate)
   if (!k.tables.BACKKEY) BACKKEY.tab = false;   // (a file from before Tab backed out of a list: a Tab in its ticks did nothing)
@@ -359,6 +363,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
+  if (!k.tables.SNATCHOUT) SNATCHOUT.on = false;   // (a file from before a snatch ended with the man in the van: the house taken with him in hand ended it)
   if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
   if (typeof (k.tables.RESCUEFLUSH as { lanesChoose?: boolean } | undefined)?.lanesChoose !== 'boolean') RESCUEFLUSH.lanesChoose = false;   // (…and one from before the covered lanes only chose a man's door: a man they warned off was kept back)
   if (!k.tables.RESCUEFLUSH) RESCUEFLUSH.on = false;   // (a file from before the men left alive on a rescue came for the hostages: they stayed where the fight left them)
@@ -458,6 +463,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.GLASS as { bothFaces?: boolean } | undefined)?.bothFaces === undefined) GLASS.bothFaces = false;   // (…and from before a pane's crash was heard from both its faces: only from the point the round met it)
   if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
   if (!k.tables.WALLSHOT) WALLSHOT.on = false;   // (a file from before a wall shot's smoke was thinned and its shock filled the room: its charges' pall and stun were the build's own)
+  if (!k.tables.WALLKILL) WALLKILL.on = false;   // (a file from before a wall charge killed the man standing at it: its blasts dazzled him, and spared the player and a big team's men behind the wall)
+  if (!k.tables.HARDBREATH) HARDBREATH.on = false;   // (a file from before a blown man breathed harder: his chest heaved by the life layer's own numbers)
   if (!k.tables.WALLCHARGE) WALLCHARGE.on = false;   // (a file from before the wall charge: its menus and Sam's rows were the build's without it)
   if (!k.tables.WALLS) assignDeep(WALLS as unknown as Record<string, unknown>, WALLS_DEFAULTS as unknown as Record<string, unknown>);
   if (typeof (k.tables.HANDS as { carryRide?: number } | undefined)?.carryRide !== 'number') { const Hn = knobTables().HANDS as { carryRide?: number } | undefined; if (Hn) Hn.carryRide = 0; }   // (a recording from before a carried body's limbs rode its carrier: they trail him as they did then)

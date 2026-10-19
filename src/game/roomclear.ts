@@ -371,7 +371,7 @@ export class RoomClearScenario {
   private finish(end: RoomClearEnd, why: string) {
     this.end = end; this.endAt = this.g.time; this.endWhy = why; this.obj = null; this.note(`end:${end}`);
     this.endSay = w(end === 'wiped' && this.g.player.down && this.g.nightBreach.ops.some(o => o.state !== 'dead') ? 'player down' : 'team wiped', 'team wiped');
-    const loose = end === 'taken' && this.g.snatch?.active && !this.g.snatch.end && !this.g.snatch.inHand ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
+    const loose = end === 'taken' && this.g.snatch?.active && this.g.snatch.owes ? this.g.snatch.objective()?.text.replace(/^objective ▸ /, '') : null;   // (a snatch level, snatch.ts: the house is the team's and the man is not — it is not over)
     // (a defuse mission whose charge has gone off stays FAILED — defuse.ts: the house taken after that is said as what it is, never as a win)
     if (end === 'taken' && this.g.defuse?.active && this.g.defuse.end === 'failed') { this.g.msg(`the house is taken, too late — a charge went off: the mission stays failed. Shift+Enter stages it again`); return; }
     this.g.msg(loose ? `structure taken — ${why}. not over: ${loose}` : end === 'taken' ? `structure taken — ${why}. Shift+Enter stages it again` : this.endSay === 'player down' ? 'player down. Enter stages it again' : `team wiped — ${why}. ${this.g.player.down ? 'Enter' : 'Shift+Enter'} stages it again`);

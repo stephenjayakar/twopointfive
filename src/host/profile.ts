@@ -25,7 +25,7 @@ import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../game/destructionSwitch
 import { FURN } from '../game/furnblast';
 import { SNOWBOG } from '../game/snowBog';
 import { WALLREACT } from '../game/wallreact';
-import { WALLCHARGE, WALLSHOT } from '../game/wallcharge';
+import { WALLCHARGE, WALLSHOT, WALLKILL } from '../game/wallcharge';
 import { CHAOS } from '../game/destruction';
 import { CASTOR } from '../game/props';
 import { DOORTOOLS } from '../game/doortools';
@@ -52,7 +52,7 @@ import { LANES } from '../game/lanes';
 import { HAULHOME } from '../game/digin';
 import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
-import { HOLD, THROW_BY } from '../game/character';
+import { HOLD, THROW_BY, HARDBREATH } from '../game/character';
 import { CLOSE } from '../game/close';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
@@ -93,6 +93,7 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
+import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
@@ -113,6 +114,7 @@ import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
+import { LIGHTSWITCH } from '../game/lightswitch';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
@@ -165,6 +167,8 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLCHARGE.outOfFire = q.get('standfire') !== '0';   // the men who stand off a wall charge take the safe marks no enemy the team knows of can shoot first, then the least under that fire (game/wallcharge.ts underFire; known = the fog's own record: in the picture now, or seen in the last 30 s where he was last seen — and, with the men's own pictures on (PICTURE.wall; ?nopicture off), anybody one of them saw, heard or was told of in that time; acts with the safety radius; ?standfire=0 = the nearest safe marks whatever looks at them, as it was)
   WALLCHARGE.menClear = q.get('menclear') !== '0';   // a man on 'fall in' whose place is in the line of a charge set on a wall, nearer than its stand-off distance, walks to a stand-off mark and keeps it until his place is clear (game/wallcharge.ts clearOf; ?menclear=0 = he keeps his place in the file, in the blast or not; acts with the larger safety radius)
   WALLSHOT.on = q.get('wallshot') !== '0';   // a wall shot's smoke is thinner and its shock fills the room it opens (game/wallcharge.ts WALLSHOT): ON in the page, ?wallshot=0 = the charge as it was
+  WALLKILL.on = q.get('wallkill') !== '0';   // a wall charge kills whoever stands at it when it goes, the player among them (game/wallcharge.ts WALLKILL): ON in the page, ?wallkill=0 = dazzled and rocked as it was
+  HARDBREATH.on = q.get('hardbreath') !== '0';   // a man who has run breathes hard: the chest heaves deeper and quicker, the steam on a snow level is thrown harder, bigger and more often (game/character.ts HARDBREATH): ON in the page, ?hardbreath=0 = the breath as it was
   WALLCHARGE.farFurn = q.get('wallfurn') !== '0';   // furniture against a wall's far face is no 'no floor behind it' (game/wallcharge.ts mouthAfter: a cot stood against the wall inside goes with the wall): ON in the page; ?wallfurn=0 = refused there as it was
   CASTOR.on = q.get('chairroll') !== '0';   // an office chair rolls and coasts on its castors (game/props.ts CASTOR): ON in the page; ?chairroll=0 = it stops like any other furniture, as it was
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
@@ -236,6 +240,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RECAP.liveArrows = q.get('recaparrows') === '1';   // …with nothing DRAWN for the way it came from: no arrow on his row, no stroke on the ground at him ("we shouldn't show the arrows, feels unrealistic"); ?recaparrows=1 = both drawn, as they were
   QUICKTHROW.on = q.has('quickthrow') && q.get('quickthrow') !== '0';   // the G quick throw (game/quickthrow.ts): GONE from the page — a can is thrown from its slot with a click; ?quickthrow = back for the visit
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
+  LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
@@ -259,6 +264,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADDEAL.on = !q.has('nosquaddeal');   // squads from the rooms (game/squaddeal.ts): a level whose file names no squads is handed some cut from its rooms, so a loud way in and a quiet one each draw their own move there too — ON in the page; ?nosquaddeal = such a level's defenders are one pool, as they were
   STAYASK.on = !q.has('nostayask');   // squads that stay in their rooms still miss a room that goes silent (game/stayask.ts): on a floor where every squad stays (the block, Mousehole) the net's roll call runs and the nearest squad sends one man to the silent rooms — ON in the page; ?nostayask = nobody there asks after another squad, as it was
   KITLOAD.on = !q.has('nokitload');   // lighter kit moves faster and hides better (game/kitload.ts): what a man's card carries gives him a mobility and a concealment score, and they are his legs' pace, the notice he builds in an eye and his footfall — you and every teammate; an issued card plays as it did — ON in the page; ?nokitload = nobody's card is read, as it was
+  SNATCHOUT.on = !q.has('nosnatchout'); SNATCHOUT.hold = !q.has('nosnatchhold');   // how a snatch ends (game/snatchout.ts): tied, the man is led by the player (Space on him: on your feet — with me) to the team's van by its way in, and in it the mission is won, the house taken or not; the squad covers the walk out by bounds, unasked — ON in the page; ?nosnatchout = the house taken with him in hand wins it, as it was (and nobody answers the gunfire: qrf.ts); ?nosnatchhold = the squad does only what it is told
   RESCUEEND.on = !q.has('norescueend');   // how a rescue is won (game/rescueend.ts): the hostages led out the way the team came in (Space on one: on your feet — with me), or nobody of theirs left on the floor — ON in the page; ?norescueend = the room held fifteen seconds wins it, as it was
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
@@ -406,6 +412,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
   'WALLSHOT.on': 'TPS_WALLSHOT=1',
+  'WALLKILL.on': 'TPS_WALLKILL=1',
+  'HARDBREATH.on': 'TPS_HARDBREATH=1',
   'FIXEDSTEP.on': 'TPS_FIXEDSTEP=1 (read only by a tool that steps through host/loop.ts stepFrame: the harness\'s own W.step names its dt)',
   'TWEEN.on': 'TPS_TWEEN=1 (the picture between two ticks: the same)',
   'REARWATCH.room': 'TPS_ROOMKEEP=1',
@@ -433,6 +441,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'KITLOAD.on': 'TPS_KITLOAD=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
   'RESCUEEND.on': 'TPS_RESCUEEND=1',
+  'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'EXACT.on': 'TPS_EXACT=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
@@ -452,6 +461,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRIENDS.noSnap': 'TPS_FRIENDS=1',
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
   'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
+  'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
   'WALLCHARGE.farFurn': 'TPS_WALLFURN=1',

@@ -70,6 +70,13 @@ export const PLAYTAPE = 'playtape';
 const TOL = 0.15;
 /** steps run and not drawn in one frame at most (a slow display plays slow, it does not spiral) · milliseconds of a frame a seek may take */
 const BURST = 6, SEEK_MS = 14;
+/** THE PACES A REPLAY PLAYS AT, slow motion first. A pace is how fast the tape's steps are fed to the game and nothing else: a step is
+ *  the recorded step whatever the pace — its inputs, its length, its sounds and what it is compared with — so slow motion is each recorded frame held for longer,
+ *  not a finer run. `replay.html`'s list is the same five (`probes.ts cardreplay` holds the two together). */
+export const TAPE_SPEEDS = [0.25, 0.5, 1, 2, 4];
+export const speedName = (s: number): string => s === 0.25 ? '¼×' : s === 0.5 ? '½×' : `${s}×`;
+/** One pace slower (`dir` < 0) or faster than `s`; the ends hold, and a pace off the list counts as 1×. */
+export const speedStep = (s: number, dir: number): number => { const i = TAPE_SPEEDS.indexOf(s); return TAPE_SPEEDS[clamp((i < 0 ? TAPE_SPEEDS.indexOf(1) : i) + Math.sign(dir), 0, TAPE_SPEEDS.length - 1)]; };
 /** the free camera: the keys that slide it · its tilt and zoom limits · metres it may be taken from the recorded look-at point · pixels a press may travel and still be a click · where a seek backwards keeps it */
 const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PITCH_MAX = 89 * DEG, DIST_MIN = 3, DIST_MAX = 60, FAR_M = 80, DRAG_PX = 5, CAM_KEEP = 'twopointsix.tapecam', SHOT_S = 1;
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
@@ -146,7 +153,7 @@ export class TapePlay {
   private walk: TapeWalk | null = null;
   private byN = new Map<number, number>(); private tAt: Float64Array = new Float64Array(1); private simTime = 0; private owed = 0; private first = true;
   private compared = 0; private drift: TapeState['drift'] = null; private worst: TapeState['worst'] = null; private fp: TapeState['fp'] = 'unknown';
-  private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speed: HTMLButtonElement; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
+  private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speed: HTMLButtonElement; slow: HTMLButtonElement; fast: HTMLButtonElement; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
   /** the map's floor, drawn once a size · the trace sample the run last stood on (its clock is the rounds' clock) · the cast's names by character id */
   private floors = new Map<HTMLCanvasElement, { c: HTMLCanvasElement; W: number; H: number; dpr: number; fit: MapFit }>(); private lastSi = -1; private names = new Map<number, string>();
   private noting: { pos: [number, number] | null; f: number; was: boolean } | null = null; private audioWas: boolean | null = null;
@@ -204,11 +211,11 @@ export class TapePlay {
     const c = (this.tape.recipe.env as { canister?: Plain } | null)?.canister; if (c && h.smoke?.params) Object.assign(h.smoke.params, c);
     const walk = this.walk!; g.sensors.read = (key: string): number | undefined => walk.read(key);   // (the tape's answer for this step's k-th read of the key; a read the tape never made = the last value, counted)
     this.build();
-    try { const k = sessionStorage.getItem(CAM_KEEP); sessionStorage.removeItem(CAM_KEEP); const o = k ? JSON.parse(k) as { src: string; free?: Partial<TapeView>; nofog?: boolean; nv?: boolean } : null; if (o && o.src === this.src) { if (o.nofog) this.nofog = true; if (typeof o.nv === 'boolean') { this.nvView = o.nv; this.nvK = o.nv ? 1 : 0; this.nvTrack = false; } if (o.free) { this.camSet(o.free); if (new URLSearchParams(location.search).has('at')) this.ui?.big.remove(); } } } catch { /* no store, or not ours: the recording's camera */ }
+    try { const k = sessionStorage.getItem(CAM_KEEP); sessionStorage.removeItem(CAM_KEEP); const o = k ? JSON.parse(k) as { src: string; free?: Partial<TapeView>; nofog?: boolean; nv?: boolean; speed?: number } : null; if (o && o.src === this.src) { if (o.nofog) this.nofog = true; if (typeof o.speed === 'number') this.speedSet(o.speed); if (typeof o.nv === 'boolean') { this.nvView = o.nv; this.nvK = o.nv ? 1 : 0; this.nvTrack = false; } if (o.free) { this.camSet(o.free); if (new URLSearchParams(location.search).has('at')) this.ui?.big.remove(); } } } catch { /* no store, or not ours: the recording's camera */ }
     const at = Number(new URLSearchParams(location.search).get('at')); if (Number.isFinite(at) && at > 0) this.seekTo = Math.min(this.tape.ticks, Math.floor(at));
     this.poster = !new URLSearchParams(location.search).has('paused');
     (window as unknown as { __tape: unknown }).__tape = { play: () => this.play(), pause: () => this.pause(), run: (n: number, draw = true) => this.run(n, draw), seek: (f: number) => this.seek(f), note: (text: string, pos: [number, number] | null = null) => this.addNote(text, pos, this.f),
-      cam: (p: Partial<TapeView> | null) => this.camSet(p), get view() { return me.view(); }, map: (open?: boolean) => this.mapOpen(open), fog: (on?: boolean) => this.fogSet(on), nv: (on?: boolean | null) => this.nvSet(on),
+      cam: (p: Partial<TapeView> | null) => this.camSet(p), get view() { return me.view(); }, map: (open?: boolean) => this.mapOpen(open), fog: (on?: boolean) => this.fogSet(on), nv: (on?: boolean | null) => this.nvSet(on), speed: (to: number) => this.speedSet(to),
       get state() { return me.state(); }, get file() { return me.F; }, get notes() { return me.F?.notes ?? []; } };
   }
   state(): TapeState { return { f: this.f, ticks: this.tape?.ticks ?? 0, playing: this.playing, ended: this.ended, seeking: this.seekTo > this.f, speed: this.speed, compared: this.compared, unjournaled: this.walk?.unjournaled ?? 0, free: !!this.free, fog: !this.nofog, nv: this.nvView, tube: this.tube(), map: !!this.ui && !this.ui.modal.hidden, drift: this.drift, worst: this.worst, notes: this.F?.notes.length ?? 0, id: this.id, fp: this.fp, refuse: this.refuse }; }
@@ -370,11 +377,13 @@ export class TapePlay {
     h.loop.time = this.simTime; if (draw && h.canvas.clientWidth > 0 && h.canvas.clientHeight > 0) this.draw(dt); else this.between();
     this.paint(); return this.state();
   }
+  /** The pace the tape plays at from here on: one of `TAPE_SPEEDS`, anything else is not taken. Nothing a step reads. */
+  speedSet(to: number): number { if (TAPE_SPEEDS.includes(to) && to !== this.speed) { this.speed = to; this.paint(); } return this.speed; }
   play(): void { if (this.ended) { this.again(0); return; } if (!this.tape) return; this.host?.audio.start(); this.playing = true; this.ui?.big.remove(); this.paint(); }
   pause(): void { this.playing = false; this.paint(); }
   /** forward = run there unseen; back = the page again from that step (a run cannot be un-played) */
   seek(f: number): void { if (!this.tape) return; f = Math.max(0, Math.min(this.tape.ticks, Math.floor(f))); if (f > this.f) { this.seekTo = f; this.ui?.big.remove(); } else if (f < this.f) this.again(f); }
-  private again(f: number): void { const q = new URLSearchParams(location.search); if (f > 0) q.set('at', String(f)); else q.delete('at'); this.playing = false; try { if (this.free || this.nofog || this.nvView !== null) sessionStorage.setItem(CAM_KEEP, JSON.stringify({ src: this.src, free: this.free ?? undefined, nofog: this.nofog, nv: this.nvView ?? undefined })); } catch { /* */ } void this.saving.finally(() => location.replace(location.pathname + '?' + q.toString())); }   // (a note still on its way to the shelf is kept first)
+  private again(f: number): void { const q = new URLSearchParams(location.search); if (f > 0) q.set('at', String(f)); else q.delete('at'); this.playing = false; try { if (this.free || this.nofog || this.nvView !== null || this.speed !== 1) sessionStorage.setItem(CAM_KEEP, JSON.stringify({ src: this.src, free: this.free ?? undefined, nofog: this.nofog, nv: this.nvView ?? undefined, speed: this.speed })); } catch { /* */ } void this.saving.finally(() => location.replace(location.pathname + '?' + q.toString())); }   // (a note still on its way to the shelf is kept first)
 
   // ------------------------------------------------------------------------------------------------------------------------ notes (the file's own: the 2D viewer shows them)
   private saving: Promise<unknown> = Promise.resolve(); private shelving: Promise<number | null> | null = null; private unkept = false;
@@ -453,6 +462,9 @@ export class TapePlay {
     else if (e.code === 'KeyM' && !e.repeat) this.mapOpen();
     else if (e.code === 'KeyF' && !e.repeat) { this.fogSet(); }
     else if (e.code === 'KeyV' && !e.repeat) { this.nvSet(); }
+    // (the pace by the CHARACTER the key types, not where the key sits: `-` and `+` are other keys on other keyboards; `=` and `_` are the same two unshifted / shifted on this one)
+    else if ((e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') && !e.repeat) this.speedSet(speedStep(this.speed, -1));
+    else if ((e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') && !e.repeat) this.speedSet(speedStep(this.speed, 1));
     else if (e.code === 'Escape' && !this.ui.modal.hidden) { e.preventDefault(); this.mapOpen(false); }
     else if (e.code === 'ArrowRight' && !e.repeat) { let f = this.f; const to = this.tAt[this.f] + 10; while (f < this.tape.ticks && this.tAt[f] < to) f++; this.seek(f); }
     else if (e.code === 'ArrowLeft' && !e.repeat) { let f = this.f; const to = this.tAt[this.f] - 10; while (f > 0 && this.tAt[f] > to) f--; this.seek(f); }
@@ -469,6 +481,9 @@ export class TapePlay {
 #tapebar .seg button:first-child{border-left:0}
 #tapebar .seg button:hover{color:var(--m-accent,#e8833a)}
 #tapebar .seg button.on{color:var(--m-accent,#e8833a);background:rgba(232,131,58,.16);box-shadow:inset 0 -2px 0 var(--m-accent,#e8833a)}
+#tapebar .pace button{min-width:.8em;text-align:center;color:inherit}
+#tapebar .pace .x{min-width:1.7em;font-variant-numeric:tabular-nums}
+#tapebar .pace button.end{color:rgba(233,226,214,.25);cursor:default}
 #tapebar .gap{width:1px;align-self:stretch;margin:2px 2px;background:rgba(233,226,214,.14)}
 #tapebar .pp{min-width:1.2em;text-align:center}
 #tapebar .save{min-width:5.4em;text-align:center}
@@ -518,7 +533,10 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
       const end = (e: PointerEvent, seek: boolean): void => { if (e.pointerId !== scrub) return; scrub = -1; try { line.releasePointerCapture(e.pointerId); } catch { /* */ } ghost.hidden = true; if (seek) { done = true; go(e); setTimeout(() => { done = false; }, 0); } };
       line.addEventListener('pointerup', e => end(e, true)); line.addEventListener('pointercancel', e => end(e, false));
       line.onclick = e => { if (done) { done = false; return; } go(e); }; }   // (a click with no press before it — a script's — seeks too)
-    const speed = el('button', '', '1×'); speed.onclick = () => { this.speed = this.speed >= 4 ? 1 : this.speed * 2; this.paint(); };
+    // the pace: slower · what it is now (lit off 1×; a click is 1× again) · faster
+    const speed = el('button', 'x', '1×'), slow = el('button', '', '−'), fast = el('button', '', '+'), pace = el('div', 'seg pace'); pace.append(slow, speed, fast);
+    slow.title = '-'; fast.title = '+';   // (each lets go of the keyboard once pressed: Enter on a button that kept it would press it again)
+    slow.onclick = () => { slow.blur(); this.speedSet(speedStep(this.speed, -1)); }; fast.onclick = () => { fast.blur(); this.speedSet(speedStep(this.speed, 1)); }; speed.onclick = () => { speed.blur(); this.speedSet(1); };
     const note = el('button', '', 'Note'); note.title = 'N — or click the picture'; note.onclick = () => this.noteOpen(null);
     const save = el('button', 'save', 'Save ↓'); save.title = 'download this replay, your notes in it'; save.onclick = () => { save.blur(); void this.saveFile().then(name => { if (!name) return; save.textContent = 'Saved ✓'; setTimeout(() => { save.textContent = 'Save ↓'; }, 2500); }, () => { /* */ }); };
     let map: HTMLAnchorElement | null = null;
@@ -528,7 +546,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
     const fog = el('button', '', 'Fog'); fog.title = 'F'; fog.hidden = true; fog.onclick = () => this.fogSet();
     const nv = el('button', '', 'NV'); nv.title = 'V'; nv.onclick = () => this.nvSet();
     // three groups, left to right: the run (play, pace, clock, the line) · what the picture shows (lit = on) · what leaves a mark or the page
-    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, speed, time, line, seg, el('i', 'gap'), note, save, ...(map ? [map] : []), say);
+    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, save, ...(map ? [map] : []), say);
     const big = el('div'); big.id = 'tapebig'; big.append(el('b', '', '▶'), el('span', '', `${F.level.scenario || F.level.file || 'the night'} · ${clock(this.tAt[T.ticks])}`)); big.onclick = () => this.play();
     const box = el('div'); box.id = 'tapenote'; box.hidden = true; const field = el('input'); field.type = 'text'; field.maxLength = 400; box.append(field);
     const mini = el('canvas'); mini.id = 'tapemap'; mini.title = 'M'; { const [w, h2] = mapSize(F.map.bounds, 236, 176, 6); mini.style.width = `${w}px`; mini.style.height = `${h2}px`; document.documentElement.style.setProperty('--tape-map', `${w}px`); } mini.onclick = () => this.mapOpen(true);
@@ -541,7 +559,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
     // a click on the picture = a note at that spot of the floor
     const h = this.host!; this.mouse(h.canvas);
     h.canvas.addEventListener('click', e => { if (this.dragged) { this.dragged = false; return; } if (this.noting || !this.tape) return; const r = h.canvas.getBoundingClientRect(); const p = h.cam.groundPoint((e.clientX - r.left) / Math.max(1, r.width), (e.clientY - r.top) / Math.max(1, r.height)); this.noteOpen(p ? [p[0], p[2]] : null); });
-    this.ui = { bar, play, time, line, fill, parted, ticks, speed, view, fog, nv, note, map, say, big, box, field, marks, ghost, mini, modal, large };
+    this.ui = { bar, play, time, line, fill, parted, ticks, speed, slow, fast, view, fog, nv, note, map, say, big, box, field, marks, ghost, mini, modal, large };
     this.ticks(); this.lay(); this.paint();
   }
   /** a moment of the file's TRACE (seconds from its start) on the tape's clock: the sample at or before it gives the step, the rest is counted on */
@@ -620,7 +638,7 @@ body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
     const seeking = this.seekTo > this.f, d = this.drift, fogged = !!this.host?.game.fogOfWar.active;   // (the switch is on the bar only while the run is under the fog)
     const said = seeking ? '…' : this.unkept ? 'note not kept: no shelf in this browser' : d ? `off the recording from ${clock(this.tAt[Math.min(d.f, T.ticks)])}` : this.compared ? 'as recorded' : '';
     const sig = `${this.playing}|${this.ended}|${Math.round(now * 10)}|${this.speed}|${said}|${!!this.free}|${this.nofog}|${fogged}|${this.nvView}|${this.tube()}`; if (sig === this.painted) return; this.painted = sig;
-    u.play.textContent = this.ended ? '↺' : this.playing ? '❚❚' : '▶'; u.time.textContent = `${clock(now)} / ${clock(end)}`; u.fill.style.width = `${100 * now / end}%`; u.speed.textContent = `${this.speed}×`; u.view.classList.toggle('on', !this.free); u.fog.hidden = !fogged; u.fog.classList.toggle('off', this.nofog); u.fog.classList.toggle('on', !this.nofog); u.nv.classList.toggle('on', this.tube());
+    u.play.textContent = this.ended ? '↺' : this.playing ? '❚❚' : '▶'; u.time.textContent = `${clock(now)} / ${clock(end)}`; u.fill.style.width = `${100 * now / end}%`; u.speed.textContent = speedName(this.speed); u.speed.classList.toggle('on', this.speed !== 1); u.slow.classList.toggle('end', this.speed <= TAPE_SPEEDS[0]); u.fast.classList.toggle('end', this.speed >= TAPE_SPEEDS[TAPE_SPEEDS.length - 1]); u.view.classList.toggle('on', !this.free); u.fog.hidden = !fogged; u.fog.classList.toggle('off', this.nofog); u.fog.classList.toggle('on', !this.nofog); u.nv.classList.toggle('on', this.tube());
     u.parted.hidden = !d; if (d) u.parted.style.left = `${100 * this.tAt[Math.min(d.f, T.ticks)] / end}%`;
     u.say.textContent = said; u.say.className = seeking ? 'say' : d || this.unkept ? 'say off' : 'say ok'; u.say.title = d ? `${d.who} stood ${Number.isFinite(d.metres) ? d.metres.toFixed(2) + ' m' : 'nowhere'} from where the recording had him (step ${d.f})` : '';
   }

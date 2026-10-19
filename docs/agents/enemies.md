@@ -358,7 +358,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   min, will not report unless a guard finds her), `choke` / `whip` = KO, as is the takedown; a round kills (combat.ts killGuard → `civilianDown` for any `gd.civ`). Chronicle kinds
   `civilianSpotted / Reported / Complied / KO / Killed`, SCORE −15 reported (first-hand causes only) / −10 KO / −40 killed, badge 'unseen by civilians' (id unseenStaff), the card's
   civilian block; `tune.civilianKillFails` (off) fails the mission on a kill instead. Hidden under the tour / breach / quietUtility (`civiliansOnFloor`); cleared
-  off the floor ('evacuate' to the exits) when the QRF is called. A calm civilian is no prop contact and yields to guards (they never feel her); frightened she
+  off the floor ('evacuate' to the exits) when the QRF is called (never the man a snatch came for: `evacuationCheck` leaves `g.snatch.isMan` where he is). A calm civilian is no prop contact and yields to guards (they never feel her); frightened she
   shoves furniture like anybody. `CIV_SPOTS` phones / exits are constants with a headless check (TODO(LevelData)). Knobs `CIV` + `tune.civilians /
   civilianKillFails` + `CIV.greet` (persisted `twopointsix.civilians`; Tab ▸ Sandbox ▸ civilians rows: on, kill fails, greetings, 'panic the cleaner', 'send
   her to the phone', summary); `__civ` {list, panic(i, 'panic'|'phone'), set, knobs, stats, log, spots, check, summary}. QA: `probes.ts civilians` (spots /
@@ -713,9 +713,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   men down first and nobody calls, whatever is fired afterwards: the response is something play can stop. WHICH LEVELS, and why: `depot` (a motor pool
   with trucks out on the road under escort; the signals hut is what talks to them, and going round the back to the hut and the mains was already the
   level's answer: the convoy escort, 2 or 3, by the main gate or the back gate) and `records` (a night desk with a telephone in the front office, 'the
-  first room on a quiet floor': the night patrol, 2, off the street or round the back lane). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
+  first room on a quiet floor': the night patrol, 2, off the street or round the back lane) and `snatch` (the village guard, 2, by the back gate or round
+  the wall to the front gate, 20–40 s after the call: ONLY under `SNATCHOUT.on` — docs/agents/missions.md, *a snatch ends in the van* — where it is what the
+  squad holds off while the player walks the man out; the house falling does not call it off there, only the snatch's own end does (`raidOver`). Two is all
+  the sixteen figures leave on that floor: eight defenders, the four, the man). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
   (its block answers a quiet night; they stay as tuned), block-squads / warehouse / compound / barracks (at eleven: nobody is left to come), registry and
-  consulate (the hostage clock is the pressure), snatch / defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
+  consulate (the hostage clock is the pressure), defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
   and it is not this), pass (a snowed-in road). `block` (a telephone exchange, eight men) and `hall` (a police barracks wing) would suit one and have
   none yet: the maintainer's call. WHAT THE TEAM DOES: as on a quiet level, on the net's word — in a raid the net is the men at the set and the team itself (what another
   defender knows reaches control only by being told to a man at the set: `PICTURE`'s tell); with
@@ -1188,8 +1191,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaf is `place()`d first, or a line is measured through a door the staging has just shut): each man's line is a ray from his mark the way he is posted
   to look, 40 m at most. ONE BELT-FED GUN (`pkm`, a new row: 100 on the belt, strings of 6 to 10, handling 0.45, 6.5 s to feed, 7.5 kg and bulk 4 for the kit's score, which weighs no defender today) to a cast at most, to
   the longest line, and only when that line is a lane (`beltLane` 15 m with `beltMin` 5 men) or the cast is a big one (`beltSquad` 10); A PISTOL
-  (`guard9mm`) to the man with a hostage in his other hand, and to at most a quarter of a cast (`pistolMax`) among men whose line is under `pistolNear`
-  4 m; the rest half AKMS (`akms`, now enabled: two or three a pull, looser, 7.62) and half the short carbine as before. Every row is `oneShot` and there is
+  (`guard9mm`) to at most a quarter of a cast (`pistolMax`) among men whose line is under `pistolNear` 4 m; THE MAN WITH A HOSTAGE IN HIS HAND IS NOT
+  DEALT (`captor`, off: he keeps the gun his rescue gave him; see the mend below); the rest half AKMS (`akms`, now enabled: two or three a pull, looser, 7.62) and half the short carbine as before. Every row is `oneShot` and there is
   no health to raise: nobody is harder to put down. THE DRAWS come off each man's own mark (a hash of where he stands and which man he is), so a restart
   deals the same guns (`samestart.ts`); with that switch off one number off the game's die salts them. Today's missions on the page's stand: a belt-fed
   gun in 7 of 21 (depot, floodlit and the long hall by their lane; the block with squads, warehouse, compound and barracks by their size), none in the
@@ -1205,7 +1208,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`gunBlindGap`: a pistol a round a pull, not twelve in 1.2 s). A squad of issue carbines stacks, enters and fires exactly as with the switch off.
   NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
   the belt-fed man still falls back or takes cover when the squad is in his room (the room fight's own moves are not gated).
-  Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 22 lines on each stand (it raises the
+  Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 23 lines on each stand (it raises the
   switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
   digest the same off and on with nobody dealt and the cards as issued.
   MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
@@ -1214,6 +1217,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on its four seeds 13, 2, 1, 0 before and 14, 24, 30, 0 after (god mode counts them; men lost 2.50 → 2.75). The solo night's soak (page's stand, seeds
   1, 2, 3, twelve minutes): all pass, and its report is the same file as before but for the wall clock (no cast is dealt there). The tour on the frozen
   stand: 3 of 3 before and after (it is red 0 of 3 on the page's stand before this change and after: old reds, not this rule's).
+  THE MEND OF 10-19 (`captor`). For a day the man holding the hostage was dealt a pistol with the rest, and `rescue-set` on the page's stand went red on
+  it: over its six seeds a set hostage room cost the entering pair 7 of 12 men (5 of 12 alive) where it had cost none, and the room was lost on one seed.
+  One gun did it: with only the captor back on his carbine the line passes with the old numbers (secured 6/6, pair 12/12, blind rounds 0 / 0 / 60, first
+  man in 0.6 / 0.6 / 1.5 s); no AKMS, no near-post pistols or `use` off each left it red. Traced on seed 13: with the pistol up he has a man of the
+  stack in his eye 4.7 s before the boot and fires a round every 0.9 s at the men outside his door; with the carbine he does not see them until they are
+  in. (The line holds `DOORMANNERS`, `MOVES.gait` and the glass rule off; the same six runs with those on, as the page opens, ended 2 of 2 up either
+  way — but nobody ships on that.) So he is not dealt: what that man carries and does is the rescue's. `captor` on is the pistol again; a recording of
+  that one day (the table without the key) replays with it on (`journal.ts`). The check's deal family asks both (23 lines a stand now).
+  The same gun was behind the doorway's `threshold-last` losing a man on registry seed 32 with guns dealt: it passes on the page's stand with the deal on
+  again, and the hold that probe carried for it is gone. Run after the mend, both stands: `gunroles-check` 23 lines, `GUNROLES_BREAK=1` red in all
+  five families, the `rescue` gate 132 lines; `rescue-set` and `threshold-last` on the page's stand. No tour, soak or tally was run on the mend.
   NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
   looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
   drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
