@@ -201,6 +201,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   0.3 s after his grenade was away, walking back from the lane's edge), defenders down 77 → 79 of 168, teammates down 29 → 31 of 96; 4 of the 24 holds differ in who died. The same
   day, same build, twelve holds, the whole rule off against on: picked off 66 → 37 of 84, walked in after a loss and died 41 → 15, teammates down 22 → 9 of 48. Headless only,
   plus one boot of the real page on the software adapter (`shipped-page.cjs`, plain and the compound: no row differs) — never seen on a GPU, nobody has watched a throw.
+  THE DOORWAY DRILL IS ASKED AGAIN (`LANES.drill`, 10-18, a mend after the rule was called done, built while the maintainer was away: his to keep or flip). `SQUADDEAL` (10-17)
+  cuts every level's defenders into squads, so on a level whose file names none the men now come to a hit room together, on the fight's own chase, and `tactics.ts`'s doorway
+  drill takes them at the door a mate has just dropped in. The loss that marks that doorway also opens the lane, but the lane is called about a second later, and the drill
+  asked this rule once, as it took a man (`tryEngage`), and never again: on the records office hold (`records-pair`, seed 1631, Sam shooting from the maintainer's own spot)
+  two more men then sliced the same door into a lane their side had called, 7 and 9 s after the first — 3 of 4 down. Now `runGate` asks `lanes.ts laneDrill` every frame
+  for a man it has who has not committed (phases stack / wait / stacked / open / slice): his jamb, the handle he is walking to, the station he is slicing to, or the floor past
+  the doorway in a lane his side knows of, and the drill lets him go (`releaseGate`) — this rule's own gate then has him like any man whose way lies down the lane (stopped
+  short, a look, round, a charge). Left alone: a man whose charge is about to go in on those guns (`laneDoor`'s clause; his own, his mate's or his lead's), a second whose lead
+  has thrown or gone in, the lead's thrower. One fight-log note ('the doorway drill has him at a doorway in a lane his side knows of: it lets him go'), no spoken line, no HUD
+  line. SWITCH: module default true like `frag` and `pin`, inert wherever `LANES.on` is off, so the FROZEN stand runs none of it; on the page Tab ▸ Enemy AI ▸ Covered lanes ▸
+  all knobs ▸ 'lanes ▸ door drill asked again'; headless `--set '{"LANES":{"drill":false}}'`; a recording from before the key replays with it off (`journal.ts applyKnobs`). No
+  URL flag and no FROZEN_HOLDS row of its own, as `frag` and `pin` have none. CHECK: `corridor-check.ts` line 14 (the records office hold as dealt, 45 s: key off a defender is
+  lost more than 2 s after the first; on, in line 6's own 110 s hold, none is, and a man is stopped short of the lane; `CORRIDOR_BREAK=1` reds it; from `probes.ts` in the check's child, on the page's
+  stand). Its off arm is about the BASE, as line 13's is.
+  THE CHECK WAS RE-STAGED WITH IT (10-18). `probes.ts corridor` had been red on the build since the squad deal went in: lines 7, 8 and 13 are about fights the deal no longer
+  deals on those floors (a second man coming alone to a lane's corner; two angles on a lane; the dig-in taking a thrower), so they are now played on the page's stand with ONE
+  row of it put off (`AS_WRITTEN` = `SQUADDEAL.on` false, by the hold's `--set`, read at staging and undone at the run's end); line 12's grenade is asked on the floor as dealt
+  (`FRAG_HOLDS`, four holds at the most, no longer only when line 8 is red); line 13's on arm is its off arm with the key put on part way (corridor-hold.ts `flip`;
+  `OWN_HOLDS` is now the two charges seed 11, 70 s, the key on from 40 s), because the key changes the fight from the hold's first lane grenade on and two whole runs no
+  longer meet at the same shout. WHAT THE SQUAD DEAL COSTS THIS RULE'S SECOND ANGLE: `LANES.pin`'s two angles came in 3 of 12 holds before the deal and in 1 of 19 on dealt
+  floors (the two charges, seed 12) — men who arrive together take the doorway drill or the lane's look, seldom two corners. Nobody has decided whether that step should be
+  dealt a second man again.
+  MEASURED (hard, the page's stand, headless, this tree on the build of 10-18 with the levels' own response teams in): the records office hold, seed 1631 — key off 3 of 4
+  down, 2 of them after the lane was called; on 1 of 4, 8 stops short of the lane, 3 looks (2 found him there). The two charges as dealt, seeds 1‥12, 150 s a hold — the whole
+  rule off: 60 of 84 defenders down, 31 walked in after a loss and died, 9 of 48 teammates down; the rule on with this key off: 47, 16, 3; with it on: 40, 9, 4. Twelve holds:
+  the teammates' 3 against 4 is inside the seeds. CHECKED: `corridor-check.ts` ALL PASS on both stands, `CORRIDOR_BREAK=1` reds lines 2‥4 and 6‥14; `gate.sh tactics` as it was
+  (its one red is on `expected-red.ts`: `tactics-identity` reads what the untouched build read, on both stands). Headless only, plus one boot of the real page
+  on the software adapter (`shipped-page.cjs`) — never seen on a GPU, nobody has watched a man let go at a door, and nobody has played a hold since the key went in.
   State is per Game (a WeakMap), reset with the guards, saved as the optional checkpoint slice `lanes` (a man's errand round, a burst and its volley clock are not: after a load they are dealt again). Tab ▸ Enemy AI ▸ 'Covered lanes'.
   MEASURED (hard, the shipped stand; record on the page): the team of four standing where The block (OLD floor) starts it for 150 s and shooting what comes, 12 seeds — defenders picked off 78 → 31 of
   84, walked in after a loss and died 50 → 10, the team lost 7 → 2 of 48; a team that MOVES (playthrough.ts's commander, six squad missions × 8 seeds, rule on against off) — won 30 against
