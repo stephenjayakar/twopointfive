@@ -7,6 +7,7 @@
 //                  (b) restartEncounter empties it (timeline, path, counters) and the tour's flag keeps it empty;
 //   debrief-rooms  (c) roomOf() names thirteen known points right (the eight rooms + the four sides of the grounds) and the level's spawn / rack / exfil marks;
 //   debrief-doorname (c2) a kicked, picked or keyed door's row calls it what its level calls it (WORDS.doors), worded when the row is read;
+//   debrief-charge (c3) the rows a wall charge makes are worded as a charge's (no 'shot dead', no 'round');
 //   debrief-score  (d) the score only ever goes down: from 300 random records, bumping any one count never raises it; a clean record scores ≥ 90 (GHOST); a kill
 //                      costs more than a knockout; the bands are ordered;
 //   debrief-dom    (e) the card builds headlessly on a small fake DOM off a finished run: rating + score, the stats grid, eight chips, a timeline row per entry,
@@ -283,6 +284,29 @@ export async function debriefDoorName() {
   const ok = fails.length === 0;
   verdictLine(ok, "(c2) the office's break room door off the cubicles, kicked, picked and keyed: the name its level wrote with the key up (this stand's own keys first), and the SAME rows as they always read with the key down, the words pass off or no game behind the row; a door nobody named reads as it did; a written name is the whole name", 'breakroom_w · storage · a made-up level', fails);
   console.log(`=== debrief-doorname: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
+  return ok;
+}
+
+// ================================================================ (c3) a charge's rows say a charge
+/** The rows a wall charge makes (wallcharge.ts WALLKILL: a man at the charge when it went, the player with them) are worded as a charge's, not a gun's:
+ *  nobody was 'shot dead' and a charge has no 'round'. Every other kill and down row reads as it did. No game needed: the rows' own words. */
+export async function debriefCharge() {
+  console.log("\n=== debrief-charge: a man the wall charge took is not 'shot dead', and the player is not down to its 'round' ===");
+  const fails: string[] = [], ev = (kind: string, data: any): any => ({ t: 0, kind, room: '', pos: [0, 0, 0], data });
+  const want = (got: string, exp: string, what: string) => { if (got !== exp) fails.push(`${what}: '${got}' (want '${exp}')`); };
+  want(CH.eventText(ev('kill', { who: 'Tango 2', weapon: 'a wall charge' })), 'Tango 2 killed — the wall charge', 'a man at the charge');
+  want(CH.eventText(ev('down', { by: 'the wall charge' })), 'DOWN — the wall charge', 'the player at the charge');
+  want(CH.eventText(ev('kill', { who: 'Tango 2', weapon: 'knife' })), 'Tango 2 killed — the knife', 'the knife, as it read');
+  want(CH.eventText(ev('kill', { who: 'Tango 2', weapon: 'a round' })), 'Tango 2 shot dead (a round)', 'a round, as it read');
+  want(CH.eventText(ev('down', { by: 'Tango 2' })), "DOWN — Tango 2's round", "a man's round, as it read");
+  want(CH.eventText(ev('down', { by: '' })), 'DOWN', 'nobody named, as it read');
+  // the words the charge files its rows under are still the ones worded here (chronicle.ts chronDown's test of the line · wallcharge.ts's chronHit)
+  { const { readFileSync } = await import('node:fs'), wc = readFileSync(`${ROOT}/src/game/wallcharge.ts`, 'utf8'), ch = readFileSync(`${ROOT}/src/game/chronicle.ts`, 'utf8');
+    if (!wc.includes("chronHit(g, 'the wall charge')")) fails.push("wallcharge.ts no longer files the player's row as 'the wall charge'");
+    if (!ch.includes("? 'a wall charge' :")) fails.push("chronicle.ts chronDown no longer names the weapon 'a wall charge'"); }
+  const ok = fails.length === 0;
+  verdictLine(ok, "(c3) a man at the wall charge reads 'killed — the wall charge' and the player 'DOWN — the wall charge'; the knife, a round, a man's round and a nameless down read as they did; the charge still files its rows under those words", 'the rows\' own words', fails);
+  console.log(`=== debrief-charge: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }
 
