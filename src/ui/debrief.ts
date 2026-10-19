@@ -74,7 +74,7 @@ export function renderDebrief(into: HTMLElement, game: Game, actions: HTMLElemen
   const tlHead = el('div', 'gtitle db-tlhead'); tlHead.textContent = `timeline · ${C.events.length} entr${C.events.length === 1 ? 'y' : 'ies'}${C.dropped ? ` (${C.dropped} more not kept)` : ''}`; left.appendChild(tlHead);
   const tl = el('div', 'db-timeline'); left.appendChild(tl);
   if (!C.events.length) { const e0 = el('div', 'ev empty'); e0.textContent = 'nothing yet — nobody has noticed a thing'; tl.appendChild(e0); }
-  for (const e of C.events) { const row = el('div', `ev k-${e.kind}${e.kind === 'alarm' && !e.data.up ? ' down' : ''}`); const t = el('i'); t.textContent = fmtMMSS(e.t); const r = el('u'); r.textContent = e.room; const x = el('span'); x.textContent = eventText(e); row.append(t, r, x); tl.appendChild(row); }
+  for (const e of C.events) { const row = el('div', `ev k-${e.kind}${e.kind === 'alarm' && !e.data.up ? ' down' : ''}`); const t = el('i'); t.textContent = fmtMMSS(e.t); const r = el('u'); r.textContent = e.room; const x = el('span'); x.textContent = eventText(e, game); row.append(t, r, x); tl.appendChild(row); }
   // map + legend
   if (!recapIn) mountRecap(right, game);   // every death explains itself (ui/recap.ts): who shot whom, from where — nothing while the run is still on. Over the map unless the verdict's slot took it
   right.appendChild(buildMap(game, C.events, V));
@@ -135,7 +135,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
   mark('◎', 'rack', M.rack.front[0], M.rack.front[2], QW ? `${QW.holder} — ${QW.thing}` : `rack ${M.rack.index + 1} — the drive`);
   if (QW) { for (const X of game.quiet.exits) { const ex = game.doors.byName(X.door)?.frameCentre ?? [X.x, 0, X.z]; mark('⇥', 'exit', ex[0], ex[2], X.name); } }
   else { const ex = game.doors.byName(M.exfilDoor)?.frameCentre; if (ex) mark('⇥', 'exit', ex[0], ex[2], 'the fire exit'); }
-  for (const e of events) { if (!pinned(e)) continue; const p = PIN[e.kind]!; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = fmtEvent(e); place(pin, e.pos[0], e.pos[2]); }
+  for (const e of events) { if (!pinned(e)) continue; const p = PIN[e.kind]!; const pin = el('i', `pin ${p.cls}`); pin.textContent = p.glyph; pin.title = fmtEvent(e, game); place(pin, e.pos[0], e.pos[2]); }
   if (V) for (const m of V.men) { if (!m.downPos || (m.human && !squadVerdict(V))) continue; const x = el('i', `vfell t-${m.tone ?? 'mate'}`); x.textContent = m.state === 'dead' ? '✕' : m.state === 'wounded' ? '✚' : 'z'; x.title = fellWords(m); place(x, m.downPos[0], m.downPos[1]); }   // (where each man of the team fell; not a `mark`: the three marks are the level's)
   // the room under the cursor
   box.title = 'the floor';

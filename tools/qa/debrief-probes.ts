@@ -6,6 +6,7 @@
 //                      shot out, a canister thrown, the mission walked to its end — that comes out GHOST with the quiet badges lit and the end card asked for;
 //                  (b) restartEncounter empties it (timeline, path, counters) and the tour's flag keeps it empty;
 //   debrief-rooms  (c) roomOf() names thirteen known points right (the eight rooms + the four sides of the grounds) and the level's spawn / rack / exfil marks;
+//   debrief-doorname (c2) a kicked, picked or keyed door's row calls it what its level calls it (WORDS.doors), worded when the row is read;
 //   debrief-score  (d) the score only ever goes down: from 300 random records, bumping any one count never raises it; a clean record scores ≥ 90 (GHOST); a kill
 //                      costs more than a knockout; the bands are ordered;
 //   debrief-dom    (e) the card builds headlessly on a small fake DOM off a finished run: rating + score, the stats grid, eight chips, a timeline row per entry,
@@ -228,6 +229,63 @@ export async function debriefRooms() {
   return ok;
 }
 
+// ================================================================ (c2) a door row calls its door what its level calls it
+/** The timeline names a kicked, picked or keyed door by the name its level wrote for it, as the squad's rows do (chronicle.ts eventText with the game behind
+ *  the row → doornames.ts doorWrittenName, WORDS.doors): the office's break room door off the cubicles is 'the cubicles-side break room door' on the card.
+ *  The row holds only the id and is worded when it is READ: the SAME rows read as they always did once the key is down, with the words pass off, or with no
+ *  game behind them, and so does a door nobody named. First the stand's own keys (the frozen stand: every row as it was; the shipped one: the name), then
+ *  the keys set by hand. `DOORNAMES_BREAK=1` asks for the name with the key down: must fail. */
+export async function debriefDoorName() {
+  console.log('\n=== debrief-doorname: a kicked, picked or keyed door is called on the card what its level calls it ===');
+  const { WORDS } = await import(`${ROOT}/src/game/words.ts`), N = await import(`${ROOT}/src/game/doornames.ts`);
+  const W = await standUp(), g = W.game, fails: string[] = [], was = { on: WORDS.on, doors: WORDS.doors };
+  const want = (got: string, exp: string, what: string) => { if (got !== exp) fails.push(`${what}: '${got}' (want '${exp}')`); };
+  const NAME = 'cubicles-side break room door';
+  try {
+    const named = g.doors.byName('breakroom_w'), plain = g.doors.byName('storage');
+    if (!named || !plain) fails.push(`the office has no door 'breakroom_w' / 'storage'`);
+    else {
+      const kick = CH.chronDoor(g, 'doorKicked', named), pick = CH.chronDoor(g, 'lockPicked', named), other = CH.chronDoor(g, 'doorKicked', plain);
+      const ev = (kind: string, data: any): any => ({ t: 0, kind, room: '', pos: [0, 0, 0], data });
+      const keyed = ev('codeEntered', { door: 'breakroom_w' }), told = ev('codeLearned', { door: 'breakroom_w', how: 'told', from: 'Alpha' }), heard = ev('codeLearned', { door: 'breakroom_w', how: 'overheard' });
+      if (!kick || !pick || !other) fails.push('chronDoor made no row (the mission is not live?)');
+      else {
+        want(JSON.stringify(kick.data), '{"door":"breakroom w"}', "the row's data (the id's words as ever: nothing in it to go stale)");
+        // the stand's own keys, untouched
+        want(CH.eventText(kick, g), was.on && was.doors ? `kicked in the ${NAME}` : 'kicked in the breakroom w door', `this stand's own keys (words ${was.on}, door names ${was.doors})`);
+        // the keys up
+        WORDS.on = true; WORDS.doors = !process.env.DOORNAMES_BREAK;
+        want(CH.eventText(kick, g), `kicked in the ${NAME}`, 'key up, the named door kicked');
+        want(CH.eventText(pick, g), `picked the lock on the ${NAME}`, 'key up, the named door picked');
+        want(CH.eventText(keyed, g), `keyed the code — the ${NAME}`, 'key up, its code keyed');
+        want(CH.eventText(told, g), `Alpha gave up the code to the ${NAME}`, 'key up, its code told');
+        want(CH.eventText(heard, g), `overheard the code to the ${NAME}`, 'key up, its code overheard');
+        want(CH.fmtEvent(kick, g).split(' · ').pop()!, `kicked in the ${NAME}`, "key up, the pin's hover line");
+        want(CH.eventText(other, g), 'kicked in the storage door', 'key up, a door nobody named');
+        want(CH.eventText(kick), 'kicked in the breakroom w door', "key up, no game behind the row: the id's words");
+        // the SAME rows with the key down (a page reopened with ?doornames=0 on a loaded checkpoint), then with the words pass off: every row as it was
+        const asWas = (what: string) => {
+          want(CH.eventText(kick, g), 'kicked in the breakroom w door', `${what}, kicked`); want(CH.eventText(pick, g), "picked the breakroom w door's lock", `${what}, picked`);
+          want(CH.eventText(keyed, g), 'keyed the code — the breakroom w door', `${what}, keyed`); want(CH.eventText(told, g), 'Alpha gave up the breakroom w code', `${what}, told`);
+          want(CH.eventText(heard, g), 'overheard the breakroom w code', `${what}, overheard`); want(CH.eventText(other, g), 'kicked in the storage door', `${what}, a door nobody named`); };
+        WORDS.doors = false; asWas('key down');
+        WORDS.on = false; WORDS.doors = true; asWas('the words pass off');
+      }
+      // a written name is the whole name (no ' door' added to a gate, no possessive hung on it): a made-up level's doors
+      WORDS.on = true; WORDS.doors = true;
+      const ds = ['gate_n', 'dd'].map(id => ({ def: { name: id } })), stub: any = { doors: { byName: (n: string) => ds.find(d => d.def.name === n) } };
+      N.nameDoors({ scenarios: { doorNames: [{ door: 'gate_n', name: 'yard gate' }, { door: 'dd', name: 'double doors' }] } } as any, false, ds);
+      want(CH.eventText(ev('doorKicked', { door: 'gate n' }), stub), 'kicked in the yard gate', "a written name that is no 'door'");
+      want(CH.eventText(ev('lockPicked', { door: 'dd' }), stub), 'picked the lock on the double doors', "a written name that ends in 's'");
+      want(CH.eventText(ev('doorKicked', { door: 'gone' }), stub), 'kicked in the gone door', "a door the level does not have: the id's words");
+    }
+  } finally { WORDS.on = was.on; WORDS.doors = was.doors; }
+  const ok = fails.length === 0;
+  verdictLine(ok, "(c2) the office's break room door off the cubicles, kicked, picked and keyed: the name its level wrote with the key up (this stand's own keys first), and the SAME rows as they always read with the key down, the words pass off or no game behind the row; a door nobody named reads as it did; a written name is the whole name", 'breakroom_w · storage · a made-up level', fails);
+  console.log(`=== debrief-doorname: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
+  return ok;
+}
+
 // ================================================================ (d) the score's shape
 export async function debriefScore() {
   console.log('\n=== debrief-score: the score only ever goes down; clean ≥ 90; a kill costs more than a knockout; bands ordered ===');
@@ -301,6 +359,14 @@ export async function debriefDom() {
     { const btns = by('btn'); const copy = btns.find(b => b.cls.has('db-copy')); if (!root.all(e => e === (btnA as any)).length) fails.push("the host's button was not placed"); if (!copy) fails.push('no copy-summary button'); else { try { copy.onclick?.(); await new Promise(r => setTimeout(r, 5)); } catch (e) { fails.push(`copy button threw: ${e}`); } if (ui.copyText !== D.summary) fails.push('copyText is not the summary line'); if (copied && copied !== D.summary) fails.push(`clipboard got "${copied}"`); notes.push(`copy → ${copied ? 'clipboard' : 'fallback line'}: "${ui.copyText.slice(0, 60)}…"`); } }
     // and the 'run so far' shape off a fresh world (empty timeline row, sofar title)
     { const W2 = await standUp(); const host2 = new El('DIV'); renderDebrief(host2 as any, W2.game); const root2: El = host2.children[0]; const empty = root2.all(e => e.cls.has('empty')); const t1 = root2.all(e => e.cls.has('db-t1'))[0]?.textContent; if (empty.length !== 1 || t1 !== 'run so far') fails.push(`fresh world: ${empty.length} empty-row(s), title '${t1}'`); notes.push(`fresh: '${t1}', ${root2.all(e => e.cls.has('pin')).length} pins`); }
+    // and the card's own readers word a door row with the game behind it (ui/debrief.ts: the timeline's row and the map pin's hover line — debrief-doorname has the words' rules)
+    { const { WORDS } = await import(`${ROOT}/src/game/words.ts`), was = { on: WORDS.on, doors: WORDS.doors };
+      try { const W3 = await standUp(), d = W3.game.doors.byName('breakroom_w'); WORDS.on = true; WORDS.doors = !process.env.DOORNAMES_BREAK; if (d) CH.chronDoor(W3.game, 'doorKicked', d);
+        const host3 = new El('DIV'); renderDebrief(host3 as any, W3.game); const root3: El = host3.children[0];
+        const row = root3.all(e => e.cls.has('k-doorKicked'))[0]?.textContent ?? '', pin = root3.all(e => e.cls.has('pin')).map(p => p.title).find(t => /kicked/.test(t)) ?? '';
+        if (!row.endsWith('kicked in the cubicles-side break room door') || !pin.endsWith('kicked in the cubicles-side break room door')) fails.push(`a named door kicked, on the card: row "${row}" · pin "${pin}" (want both to end 'kicked in the cubicles-side break room door')`);
+        notes.push(`door row: ${row.slice(-44)}`); }
+      finally { WORDS.on = was.on; WORDS.doors = was.doors; } }
   } catch (e: any) { fails.push(`building the card threw: ${e?.stack ?? e}`); }
   finally { if (hadDoc) G.document = prevDoc; else delete G.document; try { Object.defineProperty(G, 'navigator', { value: prevNav, configurable: true, writable: true }); } catch { /* leave it */ } }
   const ok = fails.length === 0;

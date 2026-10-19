@@ -159,6 +159,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   made-up level with the key up and down; a written name says no bearing and begins with no 'the'; no two doors of a level called the same; the doors
   still called by a bearing are exactly the owed list; the office stood up, the row and a line that names the door another way, key up and down; the two
   stands' row, the word either way and an old recording). `DOORNAMES_BREAK=1` reads the names with the key down and is red (the office's two owed again),
-  on both stands. NOT TOUCHED: the debrief's timeline names a kicked or picked door by its id's words (`chronicle.ts chronDoor`), and the office's men say
+  on both stands. The debrief's timeline reads the same name since (`chronicle.ts eventText`, worded when the row is read: `menus.md`). NOT TOUCHED: the office's men say
   'break room west door' of a door nobody wrote a name for — there is none left on the office. On the real page (headless Chromium, the software adapter, the office's room clear, the orders' menu opened on that door, the page's text read): 'ON
   CUBICLES-SIDE BREAK ROOM DOOR', and with `?doornames=0` 'ON BREAK ROOM WEST DOOR'; no console or page error on either. Its text, not its pixels: never seen on a GPU.

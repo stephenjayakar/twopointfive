@@ -15,6 +15,7 @@ import { PLAYER_ID } from './consts';
 import { BUILDING } from './floor';   // (a leaf: the office building's footprint — everything outside it is the grounds: the car park south and east, the verge north and west)
 import { gearText, plainShort } from './gear';   // (a leaf: the kit's names as issued, where a row is worded)
 import { missionLive } from './mission';
+import { doorWrittenName } from './doornames';   // (a leaf: the name a level wrote for a door — one name on one card)
 import type { Level } from '../scene/level';
 import { isOffice, levelRects, ownPlace } from './dialogue';
 
@@ -437,7 +438,7 @@ export function summaryLine(c: RunCounts, score: number, word: string, badges: B
 }
 
 /** One timeline row in words: '02:14 · corridor · heard: a door kicked in · Kowalski investigates'. */
-export function fmtEvent(e: ChronEvent): string { return `${fmtMMSS(e.t)} · ${e.room} · ${eventText(e)}`; }
+export function fmtEvent(e: ChronEvent, g?: Game): string { return `${fmtMMSS(e.t)} · ${e.room} · ${eventText(e, g)}`; }
 const STAGE_NAME = ['calm', 'heightened', 'lockdown'];
 const CAUSE: Record<string, string> = { sight: 'eyes on you', sound: 'heard it', radio: 'over the net', body: 'a body', held: 'a man held', search: 'the search found nobody', missing: 'a man missing', hostage: 'a man held', device: 'security had you on camera', civilian: 'a civilian told them', time: 'the clock ran out' };
 /** what frightened a civilian, in the timeline's words (civilians.ts CivCause) */
@@ -446,7 +447,13 @@ const CIV_CAUSE: Record<string, string> = { sam: 'saw you', gun: 'saw you, gun i
 const NEED_WORDS: Record<string, string> = { coffee: 'a coffee at the break-room counter', smoke: 'a smoke outside the fire exit', water: 'water at the cooler', stretch: 'a stretch round the lobby' };
 /** …and on a level whose places are its own (the row carries `own` and the stand's name — needs.ts) */
 const NEED_SHORT: Record<string, string> = { coffee: 'a coffee', smoke: 'a smoke', water: 'water', stretch: 'a stretch' };
-export function eventText(e: ChronEvent): string {
+/** The name a door row's door was WRITTEN (doornames.ts doorWrittenName: its level's own name for it, the squad's rows' word — only while the words pass
+ *  and WORDS.doors are up), asked of the game the card is drawn for WHEN THE ROW IS READ: the row itself holds only the door's id, so a checkpoint loaded
+ *  or a key flipped says what the squad's rows now say. Undefined = the row reads its id's words as it always did: no written name, a key down, a door the
+ *  level does not have, or no game behind the row (a tool printing a timeline). A written name is the whole name: it need not end in 'door' ('yard gate'). */
+function doorWritten(door: unknown, g?: Game): string | undefined { const id = String(door), d = g?.doors.byName(id) ?? g?.doors.byName(id.replace(/ /g, '_')); return d ? doorWrittenName(d) : undefined; }
+/** a row's words. `g`: the game the row is of, where the reader has it (the card: ui/debrief.ts) — only a door's name is asked of it. */
+export function eventText(e: ChronEvent, g?: Game): string {
   const d = e.data; const n = Number(d.n) || 1;
   switch (e.kind) {
     case 'objective': return String(d.text);
@@ -468,8 +475,8 @@ export function eventText(e: ChronEvent): string {
     case 'ko': return d.method === 'wounded' ? `${d.who} shot — down wounded, out of the fight` : `${d.who} out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : 'the takedown'}`;
     case 'kill': return d.weapon === 'knife' ? `${d.who} killed — the knife` : `${d.who} shot dead (${gearText(String(d.weapon))})`;
     case 'bodyFound': return `${d.by} found ${d.who} ${d.wounded ? 'shot and breathing' : d.breathing ? 'out cold' : 'dead'}${d.civilian ? ' — the floor goes up hard' : ''}`;
-    case 'doorKicked': return `kicked in the ${d.door} door`;
-    case 'lockPicked': return `picked the ${d.door} door's lock`;
+    case 'doorKicked': { const w = doorWritten(d.door, g); return w ? `kicked in the ${w}` : `kicked in the ${d.door} door`; }
+    case 'lockPicked': { const w = doorWritten(d.door, g); return w ? `picked the lock on the ${w}` : `picked the ${d.door} door's lock`; }   // (no possessive on a name its level wrote: 'double doors', 'door to the yard')
     case 'hit': return `hit${d.by ? ` — ${d.by}'s round` : ''}`;
     case 'down': return `DOWN${d.by ? ` — ${d.by}'s round` : ''}`;
     case 'needBreak': return d.what === 'left' ? `${d.who} left his route — ${d.own ? `${NEED_SHORT[String(d.kind)] ?? d.kind} (${d.to})` : NEED_WORDS[String(d.kind)] ?? d.kind}` : d.what === 'back' ? `${d.who} back on his route (${d.away} s away)` : `${d.who}'s ${d.kind} break broken off (${d.why})`;
@@ -482,8 +489,8 @@ export function eventText(e: ChronEvent): string {
     case 'cameraAlarm': return `camera ${d.n} had you long enough — the floor goes up`;
     case 'laserTripped': return `${d.by === 'player' ? 'broke' : d.by === 'body' ? 'the body you hauled broke' : `a thrown ${d.by === 'flash' ? 'stun' : d.by} broke`} the ${e.room} beam${d.sent ? ` — ${d.sent} sent` : ''}`;
     case 'deviceDown': return `${String(d.device).replace(/_/g, ' ')} shot dead${d.sent ? ` — ${d.sent} sent to it` : ''}`;
-    case 'codeLearned': return d.how === 'told' ? `${d.from} gave up the ${String(d.door).replace(/_/g, ' ')} code` : `overheard the ${String(d.door).replace(/_/g, ' ')} code${d.from ? ` (${d.from})` : ''}`;
-    case 'codeEntered': return `keyed the code — the ${String(d.door).replace(/_/g, ' ')} door`;
+    case 'codeLearned': { const w = doorWritten(d.door, g), code = w ? `code to the ${w}` : `${String(d.door).replace(/_/g, ' ')} code`; return d.how === 'told' ? `${d.from} gave up the ${code}` : `overheard the ${code}${d.from ? ` (${d.from})` : ''}`; }
+    case 'codeEntered': return `keyed the code — the ${doorWritten(d.door, g) ?? `${String(d.door).replace(/_/g, ' ')} door`}`;
     case 'checkpoint': return `checkpoint ${d.what === 'load' ? 'loaded' : 'saved'}${d.label ? ` (${d.label})` : ''}`;
   }
   return e.kind;
