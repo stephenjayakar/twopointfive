@@ -1182,6 +1182,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A wall charge's rows on the debrief say a charge (10-19, rides `WALLKILL`).** A man at the charge when it went read 'shot dead (a wall charge)' and
   the player 'DOWN — the wall charge's round'. `chronicle.ts eventText` now words them 'killed — the wall charge' and 'DOWN — the wall charge' (a `by`
   that ends in 'charge' takes no 'round'); the rows' data is as the charge files it, every other kill and down row reads as it did, and the end card's
-  own line ('by the wall charge') needed nothing. Both rows exist only with `WALLKILL` up, so its switch is theirs. NOT MENDED: the knock a charge gives
-  through a wall is still filed and read as 'the takedown' (its method is in the row's data, on the frozen stand too). Check
+  own line ('by the wall charge') needed nothing. Both rows exist only with `WALLKILL` up, so its switch is theirs. THE KNOCK THROUGH THE WALL (older than
+  `WALLKILL`, on both stands): a man or a civilian knocked out behind the wall it opened was filed and read as 'the takedown'. `chronDown` and
+  `civilians.ts` now file the row's `method` as 'charge' from the charge's own line ('… behind the wall when it went') and the row reads 'out cold —
+  the wall charge'. That is a row's data and words only (no tally, no digest: a digest holds a row's kind and time), and a Training lesson's
+  'downed how: takedown' step no longer counts a charge's knock. A checkpoint saved before keeps its 'takedown' rows. Check
   `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.
