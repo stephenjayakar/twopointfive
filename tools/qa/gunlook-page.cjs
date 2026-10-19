@@ -73,8 +73,8 @@ const DRAW = async (n) => {
       line(S.broke.mid === 6 && S.broke.fired === 1 && !S.broke.reloading && S.broke.rounds === 5, 'the trigger pressed with one shell in and two to go lets the reload go and fires', JSON.stringify(S.broke));
       await page.evaluate(() => window.__glStep(30)); line(errors.length === 0, 'no page error feeding it by the shell', errors.slice(0, 4).join(' · ') || 'none'); await page.close(); }
     { const { page, errors } = await open('&nogunshells', KIT_TUBE); log('shells off: ready'); const S = await page.evaluate(shells);
-      line(S.knob === false && Math.abs(S.one.secs - S.row) < 0.12 && S.one.rounds === 8 && S.one.steps === 1 && S.broke.fired === 0,
-        'the same page with ?nogunshells: the key is off, one shell takes the row\'s whole length, booked in one step, and the trigger does not break it off', JSON.stringify(S));
+      line(S.knob === false && Math.abs(S.one.secs - S.row) < 0.12 && S.one.rounds === 8 && S.broke.mid === 1 && S.broke.fired === 0 && S.broke.reloading,
+        'the same page with ?nogunshells: the key is off, one shell takes the row\'s whole length with the tube out of the books until its end, and the trigger does not break it off', JSON.stringify(S));
       await page.evaluate(() => window.__glStep(30)); line(errors.length === 0, 'no page error with the key off', errors.slice(0, 4).join(' · ') || 'none'); await page.close(); }
   }
   if (!ONLY || ONLY === 'on') {
