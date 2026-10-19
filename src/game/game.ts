@@ -69,7 +69,7 @@ import { charLookFrame, charSides } from './charLook';
 import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
-import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead } from './rigProps';
+import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
 import { updateMission } from './mission';
@@ -101,6 +101,8 @@ import type { Haul, DoorMove } from './hands';
 import type { Wanding } from './wand';
 import { samBigStart } from './bigkit';
 import { sideTick } from './gunslots';   // (called inside the update only)
+import { gunLookOf, gunLookOn } from './gunlook';   // (called inside the update only)
+import { feedDeal } from './gunreload';   // (the same)
 import type { StickyCam } from './stickycam';
 import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
@@ -1643,7 +1645,7 @@ export class Game {
       // too); flipping the knob re-deals live. Under 'none' nothing here touches anybody: the floor is exactly what it was. A spawned unit (teams: the showcase's
       // operatives and hostiles) is dealt nothing — he carries what he was spawned with, off his own one-point route's row — and a row that is itself Sam's
       // FN2000 arms the animator's long gun the same way with the bullpup's own grip point (guards.ts rigOf 'sc20k').
-      const deal = this.tune.carbineGuards; let grip: ReturnType<typeof carbineGrip> | null = null, grip20k: ReturnType<typeof sc20kGrip> | null = null;
+      const deal = this.tune.carbineGuards; let grip: ReturnType<typeof carbineGrip> | null = null, grip20k: ReturnType<typeof sc20kGrip> | null = null, gripOwn: Record<string, { G: ReturnType<typeof modelGrip>; a: number | null }> | null = null;
       const show = this.touring || this.director.showing;
       for (const gd of this.guards) {
         if (!gd.unit) gd.carbine = deal === 'all' || (deal === 'reyes' && gd.callsign === 'Reyes');
@@ -1653,6 +1655,12 @@ export class Game {
         const long = longRigOf(gd), cb = long !== null; const an = gd.char.anim; const def = gd.weapon.def;   // (long: WHICH long gun — the FN2000 in an operative's hands has its own grip point and muzzle, guards.ts longRigOf)
         if (an.longGun !== cb) { an.longGun = cb; an.longSteady = long === 'sc20k' ? 1 : 0; gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : cb && def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead; }   // (longSteady: a man handed Sam's bullpup — the breach's operatives — carries it as player.ts armRifle has Sam carry it, the gun riding his shoulders' mean line at a run instead of pumping with the run clip's arms (character.ts LONG_STEADY); the carbine men keep theirs as the poses pass left them, 0 — carbine-probes (4) places the trigger hand by the unsteadied carriage)
         if (long === 'sc20k') an.longGrip = grip20k ??= sc20kGrip(); else if (cb) an.longGrip = grip ??= carbineGrip();
+        if (gunLookOn() || gd.char.gunLook) {   // (gunlook.ts: which of his guns are drawn as models of their own — and one in his hands has its own support-hand point and its own muzzle. Nothing with the switch off)
+          const had = gd.char.gunLook?.hand ?? null, look = gd.char.gunLook = gunLookOf(gd.char.gunLook, def, gd.second?.gun.def ?? null, gd.slung?.out ? gd.slung.own.def : null), m = cb ? look?.hand ?? null : null;
+          if (m) { const M = (gripOwn ??= {})[m] ??= { G: modelGrip(m), a: modelMuzzleAhead(m) }; if (M.G) an.longGrip = M.G; if (M.a !== null) gd.char.muzzleAhead = M.a; }
+          else if (had && cb) gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead;   // (the switch put down under a man with a model in his hands: his muzzle is the stand-in's again, as the line above deals it)
+          feedDeal(an, cb ? gd.weapon : null, true);   // (gunreload.ts: … and how its support hand feeds it, dealt every frame as `reloadMag` below is — a man's reload is a beat, so always as a gun run dry)
+        }
         // the motion pass (character.ts MOVES — nothing reads these with it off): how drilled each side moves, and a blinded man held bent away from the charge
         an.trained = gd.team === 'operative' ? 1 : gd.trained ? 0.75 : gd.team === 'civilian' ? 0.5 : 0.12;
         swapFeed(gd, inHand(gd), !cb);   // (handwork.ts: a change between the torch and the sidearm is a move of the hand — nothing with it off)

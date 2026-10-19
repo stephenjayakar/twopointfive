@@ -3,9 +3,9 @@
 // borrow one — those rows are how the borrowing sounds. Gains and rates are copied from the call sites each group's comment names; a number that moves there wants moving here.
 import type { SfxName } from '../audio/sfx';
 
-export type Group = 'guns' | 'kit' | 'feet' | 'doors' | 'hands' | 'things' | 'glass' | 'blasts' | 'voices' | 'weather';
+export type Group = 'guns' | 'newguns' | 'kit' | 'feet' | 'doors' | 'hands' | 'things' | 'glass' | 'blasts' | 'voices' | 'weather';
 export const GROUPS: { id: Group; name: string }[] = [
-  { id: 'guns', name: 'Guns' }, { id: 'kit', name: 'Kit' }, { id: 'feet', name: 'Feet' }, { id: 'doors', name: 'Doors and locks' }, { id: 'hands', name: 'Hands and bodies' },
+  { id: 'guns', name: 'Guns' }, { id: 'newguns', name: 'New guns: reports and reloads (first takes)' }, { id: 'kit', name: 'Kit' }, { id: 'feet', name: 'Feet' }, { id: 'doors', name: 'Doors and locks' }, { id: 'hands', name: 'Hands and bodies' },
   { id: 'things', name: 'Lights, furniture, devices' }, { id: 'glass', name: 'Glass' }, { id: 'blasts', name: 'Blasts' }, { id: 'voices', name: 'Voices and radio' }, { id: 'weather', name: 'Weather' },
 ];
 
@@ -46,6 +46,27 @@ export const SOUNDS: Record<SfxName, Sound> = {
   casingTink: { group: 'guns', what: 'one spent case lands', gain: 0.16, rate: [0.85, 1.25], also: [{ what: 'brass from a burst', gain: 0.16, rate: [0.85, 1.25], burst: { n: 6, every: 0.11 } }] },
   bulletImpact: { group: 'guns', what: 'a round hits a wall', gain: 0.8, also: [{ what: 'a burst into a wall', gain: 0.8, burst: { n: 6, every: 0.1 } }] },
   bodyHit: { group: 'guns', what: 'a round hits a man', gain: 0.8, also: [{ what: 'a sponge round to the head (slowed)', gain: 0.6, rate: 0.75 }, { what: 'the takedown blow (slowed)', gain: 0.55, rate: 0.8 }] },
+
+  // ---- the guns a card's two slots offer, each its own report (combat.ts fireWeapon through gunlook.ts voiceOf: the row's own voice at gain 1; the bursts are each
+  //      row's own cadence — weapons.ts), and how they are fed (gunreload.ts: the times in the two whole reloads are the rows' own beats). FIRST TAKES ----
+  mk12Suppressed: { group: 'newguns', what: 'the Mk 12, suppressed', gain: 1, also: [{ what: 'three rounds', gain: 1, burst: { n: 3, every: 0.3 } }] },
+  mp7Suppressed: { group: 'newguns', what: 'the MP7, suppressed', gain: 1, also: [{ what: 'a burst on auto', gain: 1, burst: { n: 10, every: 4 / 60 } }, { what: 'three single rounds', gain: 1, burst: { n: 3, every: 0.2 } }] },
+  mk46Report: { group: 'newguns', what: 'the Mk 46, one round', gain: 1, also: [{ what: 'a string off the belt', gain: 1, burst: { n: 12, every: 5 / 60 } }, { what: 'a short burst', gain: 1, burst: { n: 5, every: 5 / 60 } }] },
+  m1014Report: { group: 'newguns', what: 'the M1014, one shell', gain: 1, also: [{ what: 'four shells as fast as it fires', gain: 1, burst: { n: 4, every: 0.28 } }] },
+  m870Report: { group: 'newguns', what: 'the pump shotgun: a shell, then the pump', gain: 1, also: [{ what: 'two shells', gain: 1, burst: { n: 2, every: 0.9 } }] },
+  hk45Suppressed: { group: 'newguns', what: 'the HK45, suppressed', gain: 1, also: [{ what: 'three rounds', gain: 1, burst: { n: 3, every: 0.3 } }] },
+  g18Report: { group: 'newguns', what: 'the Glock 18, one round', gain: 1, also: [{ what: 'a burst on auto', gain: 1, burst: { n: 10, every: 3 / 60 } }, { what: 'three single rounds', gain: 1, burst: { n: 3, every: 0.2 } }] },
+  beltCoverUp: { group: 'newguns', what: 'the Mk 46: feed cover up', gain: 0.8, also: [
+    { what: 'the Mk 46 fed a new belt, all of it', gain: 0.8, plus: [{ name: 'beltBoxOff', gain: 0.8, after: 0.7 }, { name: 'magDrop', gain: 0.45, rate: 0.8, after: 1.2 }, { name: 'beltBoxOn', gain: 0.85, after: 2.5 }, { name: 'beltLay', gain: 0.8, after: 3.9 }, { name: 'beltCoverDown', gain: 0.9, after: 4.4 }, { name: 'chargeLmg', gain: 0.9, after: 4.9 }] }] },
+  beltBoxOff: { group: 'newguns', what: 'the Mk 46: the empty belt box off', gain: 0.8 },
+  beltBoxOn: { group: 'newguns', what: 'the Mk 46: a full belt box on', gain: 0.85 },
+  beltLay: { group: 'newguns', what: 'the Mk 46: the belt laid in the tray', gain: 0.8 },
+  beltCoverDown: { group: 'newguns', what: 'the Mk 46: feed cover slapped shut', gain: 0.9 },
+  chargeLmg: { group: 'newguns', what: 'the Mk 46: cocking handle', gain: 0.9 },
+  shellIn: { group: 'newguns', what: 'one shell thumbed into the tube', gain: 0.8, rate: [0.94, 1.06], also: [
+    { what: 'four shells, one at a time', gain: 0.8, rate: [0.94, 1.06], burst: { n: 4, every: 0.33 } },
+    { what: 'an empty M1014: one in the port, the bolt, then three in the tube', gain: 0.6, rate: 0.94, plus: [{ name: 'boltDrop', gain: 0.9, after: 0.3 }, { name: 'shellIn', gain: 0.8, rate: 1.0, after: 0.75 }, { name: 'shellIn', gain: 0.8, rate: 1.08, after: 1.08 }, { name: 'shellIn', gain: 0.8, rate: 0.94, after: 1.41 }] }] },
+  boltDrop: { group: 'newguns', what: 'the M1014: bolt release, the bolt home', gain: 0.9 },
 
   // ---- kit (player.ts, lighting.ts, combat.ts throwables) ----
   equip: { group: 'kit', what: 'drawing or stowing a weapon', gain: 0.45, flat: true },
