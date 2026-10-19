@@ -848,5 +848,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   2.82 m/s; blown after 2.9 / 3.9 s; 3 to 9 s after a 6 s sprint, records 11 / 6; the chest's own share of neck over hips 15.5 / 9.4 mm; one run
   digest with nobody running. WHAT IT DOES NOT DO: the chest's breath is gated out under a stance or a hold as before (a man with his gun up shows
   little of it), and 15 mm is small from the game's camera — the steam is what reads. With the rule on, four rows of the scene panel's SNOWBREATH table (`everyHard`, `hardK`, `effortUp`, `effortDown`) and the workbench's two winded
-  sliders (`LIFE.breathRateRun` / `breathAmpRun`) are read by nothing; HARDBREATH has no panel row, and the workbench does not raise the switch (it
+  sliders (`LIFE.breathRateRun` / `breathAmpRun`) are read by nothing (the panel dims its four while the rule is on and lists the rule's eight steam numbers in their place: `probes.ts scenetweak`, verdict `breath`); HARDBREATH's switch has no panel row, and the workbench does not raise the switch (it
   shows the old chest). NOT SEEN: anything of it in a picture, here or on a GPU; no tally over seeds (a tour or soak was not run).
