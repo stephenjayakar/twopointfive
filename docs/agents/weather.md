@@ -799,4 +799,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   recording, the same on both stands). Check: `rainscale` (family `weather`; it lifts the scalar lines of `splashAt` out of the shader's text and runs them
   over a floor of rings as the texel grows: close in identical, 0.9 to 40 cm within a fifth of the close-in light where it grew past tenfold, the floor
   constant, the boot flag; `RAINSCALE_BREAK=1`). No shader runs in that check. LEFT AS IT IS: a far streak is still at least two texels wide (its light
-  is right, its width is the pass's).
+  is right, its width is the pass's). SEEN, ONE STILL EACH WAY (`tools/qa/weather-look.cjs`, software adapter, low quality, the snatch level's room
+  clear in a downpour, the camera pulled back to 42 m, the eighth frame): with `?norainscale` the yard's lit ground is strewn with square blobs a pass
+  texel wide; without it the same ground is smooth and wet, no blobs. The page booted with 118 pipelines, none failed, both ways. A second pair at
+  12 m over the east yard: both ways the rings are still soft squares 15 to 25 pixels wide (the pass's texel at low quality on a 960-wide page), fewer and
+  dimmer with the rule on (6% of the picture's pixels 8 levels or more brighter without it, one pixel the other way) — the rule dims a ring by the
+  footprint it gained, it does not make the pass finer. NOT SEEN: moving, on a GPU, at a higher quality's two-pixel texel, or how much of the rain's read
+  at a distance the blobs had been carrying — if pulled back it now reads too dry, the streaks are the place to add, not the rings.
