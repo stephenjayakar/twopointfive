@@ -107,7 +107,7 @@ export const wordsHostage = guarded(async () => withWords(true, async () => {
     const n0 = L.said.length; L.secs(4);
     const after = L.said.slice(n0), rel = after.find(s => hs.has(s.who) && D.HOSTAGE_LINES.secured.includes(s.text)), ack = after.find(s => !hs.has(s.who) && D.HOSTAGE_LINES.team.includes(s.text));
     F.verdict(!!rel && !!ack && ack.t > rel.t + 1, 'the room is the team\'s: one of them speaks, a teammate answers a beat later', `${rel ? `${rel.who}: '${rel.text}'` : 'no hostage line'} · ${ack ? `${ack.who} +${(ack.t - (rel?.t ?? ack.t)).toFixed(1)} s: '${ack.text}'` : 'no answer'}`);
-    const more = (() => { const n = L.said.length; L.secs(20, () => !!R.result); return L.said.slice(n).filter(s => hs.has(s.who)); })();
+    const more = (() => { const n = L.said.length; if (R.result) L.secs(6); else L.secs(20, () => !!R.result); return L.said.slice(n).filter(s => hs.has(s.who)); })();   // (the result already in — the shipped stand's ending: a fixed stretch, not one step)
     F.verdict(!more.length && !T.bad, 'and then they are quiet: the room is held', more.map(s => s.text).join(' | ') || `state ${R.state}`);
   }
   return F.done();
