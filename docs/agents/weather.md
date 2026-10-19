@@ -786,3 +786,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     dry to the eye), not the rim.
   - **Never seen on a GPU.** The flakes' birth, step and splat are WGSL the harness cannot run: the page was booted on the software adapter (it compiles, no
     validation errors) and stills taken there. Nobody has seen flakes past the rim moving, or how the fall reads against the black outside the level.
+- **A splash is the same splash at every zoom** (the scene prelude's `const RAIN_SCALE`, `src/render/frame.ts rainScaleConfig`; the maintainer, 10-19, three
+  zooms of one yard: "the low res rain isn't scale invariant"). WHAT IT WAS: the ring a landing drop throws up (`volumetrics.wgsl splashAt`: a 2 cm ring on
+  outdoor ground, 60 ms long) is drawn in the volumetric pass, its line never thinner than that pass's texel AT THE GROUND (28° lens, divisor 2 or 4: about
+  2 cm at the follow distance, 4 to 8 cm pulled back) — and at full brightness however wide that made it. Pulled back every ring was a soft square blob a
+  texel or two across as bright as a ring, the lit ground carried up to 17 times the splash light it does close in, and the blobs grew in the world as
+  the camera rose. THE RULE: drawn wider than its own 6 mm line (`SPLASH_W`) a ring keeps its LIGHT, not its brightness — dimmer by the footprint it gained,
+  down to the floor where it fills its own 9 cm cell (`SPLASH_FILL` 0.056: only the pixel's own cell is asked). What the lattice's streaks always did
+  (`RAIN_W / halfW`); they are untouched, and so is the particle rain (drawn at the page's own resolution, fixed in the world already). HELD WHICH WAY: in
+  the WORLD — a splash is a few centimetres of light at any zoom; pulled back the rings read as a faint shimmer on lit ground, not as blobs. Close in (the
+  texel under 6 mm) nothing changes. SWITCH: on by default, `?norainscale` at boot = the rings as they were; picture only (no game table, nothing in a
+  recording, the same on both stands). Check: `rainscale` (family `weather`; it lifts the scalar lines of `splashAt` out of the shader's text and runs them
+  over a floor of rings as the texel grows: close in identical, 0.9 to 40 cm within a fifth of the close-in light where it grew past tenfold, the floor
+  constant, the boot flag; `RAINSCALE_BREAK=1`). No shader runs in that check. LEFT AS IT IS: a far streak is still at least two texels wide (its light
+  is right, its width is the pass's).
