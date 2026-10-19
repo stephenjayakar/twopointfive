@@ -2302,6 +2302,7 @@ export class DoorTools {
         const T = op.thr!; if (d.quietT > -1 && isOpen(d)) d.quietT = -1;
         this.thrMen(op); this.thrWatch(op);
         if (T.stepOwed && !this.wordOwed(op)) break;   // (the word's step in, owed while men who ran from a grenade were out: paid — the order is in its next stage)
+        if (K.thrPie && K.thrPieOne && K.thrLight === 1 && T.jamb.length && !T.jamb.some(m => op.mine.get(m)?.search)) { const m = T.jamb[0], A = op.mine.get(m); if (A && !(K.thrDark && nvgWorn(g, m))) A.search = true; }   // (thrPieOne: the door's one light was the cutting man's, and he is down — the man left on the door carries it)
         for (const m of T.jamb) { const A = op.mine.get(m); if (!A) continue; if (K.thrDark && K.thrLight > 0 && !A.search && m === (T.jamb[1] && !(op.slice.get(T.jamb[0])?.pie && !op.slice.get(T.jamb[1])) ? T.jamb[1] : T.jamb[0]) && nvgBlack(g, m)) A.search = true;   // (a dark hold whose goggles show the still gun nothing: his light after all)
           if (A.search) A.searchT = t; }   // (a light on the door burns for the whole hold: the light rule lets a searching man's lapse otherwise)
         const SR = op.search ?? null;
@@ -2322,7 +2323,7 @@ export class DoorTools {
               const at = s.pts[s.i], q: Vec3 = [at[0] + P.inw[0] * PIE_GUN.step, 0, at[2] + P.inw[2] * PIE_GUN.step], other = T.jamb.find(m => m !== gd && m.state !== 'dead'), os = other ? op.slice.get(other) : undefined;
               const ok = P.gun < PIE_GUN.most && !g.col.nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([at[0], 0.45, at[2]], [q[0], 0.45, q[2]]) && !(other && (flat(other.char.pos, q) < K.thrPieApart || (!!os && flat(os.pts[os.i], q) < K.thrPieApart)));
               P.gunAt = t;
-              if (ok || s.i > 0) { if (ok) { P.gun++; s.pts[s.i] = q; } else { s.i--; P.gun = 0; P.fin = true; P.to = null; }   // (on his diagonal there is no cut before it to give this one up for: he stays)
+              if (ok || s.i > 0) { if (ok) { P.gun++; s.pts[s.i] = q; } else { if (P.home) { s.i = 0; P.homed = true; } else s.i--; P.gun = 0; P.fin = true; P.to = null; }   // (on his diagonal there is no cut before it to give this one up for: he stays · thrPieOne: the cut before may be in front of the opening — he gives it up for his own diagonal)
               const l = s.looks[s.i], w = ok ? A.watch ?? l[0] : l[l.length >> 1];
               this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], w), watch: w, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(ok && P.lean && s.i > 0 ? { lean: P.lean, crouch: P.knee[s.i] } : {}), going: ok ? `slicing · ${name}` : `holding the threshold · ${name}`, there: ok ? `slicing · ${name}` : `holding the threshold · ${name}` });
               if (!ok) { this.beat(op, `no shot from the cut · ${gd.callsign} back`); continue; } } }
@@ -2333,12 +2334,12 @@ export class DoorTools {
               done = false; continue; }
             if (t - s.t < (P?.endOn && !P.homed ? K.thrLeanLook : K.sliceLook)) { /* resting on this angle (thrPieOne: … or held out on his one lean) */ }
             else if (s.j < looks.length - 1) { s.j++; s.t = t; A.watch = looks[s.j]; A.face = yawTo(gd.char.pos, looks[s.j]); }
-            else { const next = !P ? (s.i < s.pts.length - 1 ? s.i + 1 : -1) : P.homed ? -1 : this.pieNext(op, gd, s);   // (thrPie: the next cut that still shows floor nobody's muzzle has been across — none: he is done)
+            else { const next = !P ? (s.i < s.pts.length - 1 ? s.i + 1 : -1) : P.homed || P.endOn ? -1 : this.pieNext(op, gd, s);   // (thrPie: the next cut that still shows floor nobody's muzzle has been across — none: he is done)
               if (next >= 0) { s.i = next; s.j = 0; s.t = NaN; if (P) { P.at = t; P.gun = 0; P.on = false; P.to = null; } const last = s.i >= s.pts.length - 1;
                 this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], s.looks[s.i][0]), watch: s.looks[s.i][0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: P ? A.search : K.thrLight >= 2 || (K.thrLight === 1 && T.jamb.length < 2), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(P?.lean ? { lean: P.lean, crouch: P.knee[s.i] } : {}), going: `slicing · ${name}`, there: last ? `holding the threshold · ${name}` : `slicing · ${name}` }); }
               else if (P && P.end && !P.endOn && s.i > 0) { P.endOn = true; s.t = t; T.losT = Math.min(T.losT, t + 0.3);   // (thrPieOne: his cuts are done — the one lean, from where the last left his hips, toward the line past his own jamb; his lines are asked again once his head is out)
                 this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], looks[0]), watch: looks[0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, lean: P.end, going: `slicing · ${name}`, there: `slicing · ${name}` }); }
-              else if (P && P.home && !P.homed && s.i > 0) { P.homed = true; s.i = 0; s.j = 0; s.t = NaN; P.at = t; P.gun = 0; P.on = false; P.to = null; const mid = s.looks[0][s.looks[0].length >> 1];   // (thrPieOne: … and back to his own diagonal — the door is held from beside it by both, and they go in from there together)
+              else if (P && P.home && !P.homed && s.i > 0) { P.homed = true; s.i = 0; s.j = s.looks[0].length - 1; s.t = NaN; P.at = t; P.gun = 0; P.on = false; P.to = null; const mid = s.looks[0][s.looks[0].length >> 1];   // (thrPieOne: … and back to his own diagonal — the door is held from beside it by both, and they go in from there together)
                 this.assign(op, gd, { post: s.pts[0], face: yawTo(s.pts[0], mid), watch: mid, stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, going: `holding the threshold · ${name}`, there: `holding the threshold · ${name}` }); }
               else { fin = true;
                 if (P) { P.fin = true; const mid = looks[looks.length >> 1];   // (thrPie: … and he stands square where his last cut left his hips, on the middle of what it shows)
