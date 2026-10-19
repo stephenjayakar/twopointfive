@@ -297,7 +297,7 @@ export function chronKey(g: Game, gd: Guard) { return chronicle(g, 'keyTaken', {
 /** combat.ts killGuard, by the player's hand: shot dead ('kill', with what) or out cold ('ko': the takedown's cross, the choke, the pistol-whip, a ring to the head —
  *  told apart the way killGuard's own log line is: `how` + the caller's line). */
 export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) {
-  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
+  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : /at the charge when it went$/.test(line ?? '') ? 'a wall charge' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
   const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : 'takedown';
   return chronicle(g, 'ko', { who: gd.callsign, method }, gd.char.pos);
 }
