@@ -11,7 +11,7 @@
 import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 
-const { KITTREE, bareOf } = await import(`${ROOT}/src/game/kittree.ts`);
+const { KITTREE } = await import(`${ROOT}/src/game/kittree.ts`);
 const { GUNSLOTS, gunPicks, pickRow } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -103,10 +103,10 @@ export async function kittreeGuns(): Promise<boolean> {
     K.kitSet(0, 'suppressed', false); K.kitPlayer(g); const a = { long: g.player.rifle.def, side: g.player.pistol.def };
     issue(); K.kitSet(0, 'sideCan', false); K.kitPlayer(g); const b = { long: g.player.rifle.def, side: g.player.pistol.def };
     const say = (d: any) => `${d.id}${d.suppressed ? ' (suppressed' : ' (bare'}, ${d.report.voice} ${f2(d.report.level)})`, louder = (x: any, than: any) => x.report.level > than.report.level || (x.report.voice !== than.report.voice && x.report.loud);
-    F.verdict(full.long.suppressed && full.side.suppressed && a.long.id === full.long.id && !a.long.suppressed && louder(a.long, full.long) && a.side === full.side
-      && b.long === full.long && b.side.id === full.side.id && !b.side.suppressed && louder(b.side, full.side),
+    F.verdict(full.long.suppressed && full.side.suppressed && a.long.short === full.long.short && !a.long.suppressed && louder(a.long, full.long) && a.side === full.side
+      && b.long === full.long && b.side.short === full.side.short && !b.side.suppressed && louder(b.side, full.side),
       'your card: the suppressor off one gun is that same gun with a bare muzzle and a gunshot\'s report, the other untouched', `as issued ${say(full.long)} + ${say(full.side)}\n    off the primary: ${say(a.long)} + ${say(a.side)}\n    off the sidearm: ${say(b.long)} + ${say(b.side)}`);
-    F.verdict(a.long.magCapacity === full.long.magCapacity && a.long.short === full.long.short && !/suppressed/i.test(a.long.name) && bareOf(full.long) === a.long && bareOf(a.long) === a.long, 'the bare gun is the row it was — its short name, its magazine — made once, and its long name no longer says suppressed', `${full.long.name} → ${a.long.name}, ${a.long.magCapacity} rounds`);
+    F.verdict(a.long.magCapacity === full.long.magCapacity && a.long.short === full.long.short && !/suppressed/i.test(a.long.name) && a.long === WEAPONS[pickRow(K.KIT.members[0].primary, false)] && b.side === WEAPONS[pickRow(K.KIT.members[0].secondary, false)], 'the bare gun is the pick\'s own bare row, the one a teammate\'s card makes of it — its short name, its magazine — and its long name does not say suppressed', `${full.long.name} → ${a.long.name}, ${a.long.magCapacity} rounds`);
     // a teammate: a suppressed carbine with a bare sidearm behind it, and the other way about
     const ops = [spawnUnit(g, { team: 'operative', pos: [at[0] + 1, 0, at[2] + 1], yaw: 0, name: 'Op', light: false })];
     issue(); K.kitSet(1, 'sideCan', false); K.kitStage(g, ops); const m1 = { hand: (ops[0] as any).weapon.def, back: WEAPONS[(ops[0] as any).second?.id] };

@@ -1080,8 +1080,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the tube (`KitRow.has`) sponge rounds (`rings`, a row for the first time), 40 mm grenades and sticky cameras. A suppressor row on a gun that has no
   choice reads what it is and has no arrows (`KitRow.fixed`), and its flag is put back on when the gun leaves the card (`homeCans`): a paste or a kit
   never carries an 'off' nobody could see. YOUR card has the suppressor, light and goggles rows a teammate's always had, and you deploy with them: a
-  suppressor off is the same gun with a bare muzzle (`bareOf`: the report of the unsuppressed gun of its class, until the guns' table has bare rows of
-  its own), no light is a dead L, no goggles a dead N and no goggles drawn (`kitYouLight`, `kitYouNvg`, asked every frame, so a checkpoint cannot bring
+  suppressor off is the same gun with a bare muzzle (the pick's own bare row, `gunslots.ts PICKS`: the row a teammate's card makes of it), no light is
+  a dead L, no goggles a dead N and no goggles drawn (`kitYouLight`, `kitYouNvg`, asked every frame, so a checkpoint cannot bring
   one back). SPONGE ROUNDS are a count, none as issued; a quiet or solo mission hands you `KITTREE.lend` (5) over your card as it hands its cameras
   (`kitRingsLent`; the tile reads `5 · mission's`), so a stealth run starts with the five every launcher used to carry and a loud one with none. ONE
   PLACE FOR NAMED KITS (the maintainer's tap, 'Squad row only'): the card's row of sets is one `Reset` beside Copy and Paste, and the screen's row of

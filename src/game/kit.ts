@@ -67,7 +67,7 @@ import { SQUADSMOKE, squadSmokeStage } from './squadsmoke';   // (read inside a 
 import { squad40Here, squad40Stage } from './squad40';   // (called inside kitStage and a row's builder only)
 import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitShow / kitStage only)
 import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY, type GunSlot } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
-import { KITTREE, treeOn, bareOf } from './kittree';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
+import { KITTREE, treeOn } from './kittree';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import slotsData from './slots.json' with { type: 'json' };   // (plain data: no game module is behind it)
 
 export type KitWeapon = 'rifle' | 'pistol' | 'shotgun';
@@ -217,12 +217,11 @@ export function kitSlotCan(m: MemberKit, slot: GunSlot): boolean { const w = pic
 export function kitSide(m: MemberKit): WeaponId | null { return m.weapon === 'pistol' ? null : kitSecond(m); }
 /** the row in a card's secondary slot (null with the switch off: the card has no such slot) */
 export function kitSecond(m: MemberKit): WeaponId | null { return gunsOn() ? pickRow(m.secondary, treeUp() ? m.sideCan : m.suppressed) : null; }
-/** KITTREE: the gun in a slot of member i's card as he would deploy with it — the weapons.ts row his card makes it (yours with the suppressor off: the same
- *  gun, bare — kittree.ts bareOf), or null: no long gun brought */
+/** KITTREE: the gun in a slot of member i's card as he would deploy with it — the weapons.ts row his card makes it (a suppressor taken off is the same
+ *  gun, bare: the pick's own bare row, gunslots.ts PICKS — yours as a teammate's), or null: no long gun brought */
 export function kitSlotDef(i: number, m: MemberKit, slot: GunSlot): WeaponDef | null {
   if (slot === 'primary' && m.weapon === 'pistol') return null;
-  if (i === 0) { const w = pickRow(m[slot], true); return !w ? null : treeUp() && canChoice(m[slot]) && !kitSlotCan(m, slot) ? bareOf(WEAPONS[w]) : WEAPONS[w]; }
-  const w = pickRow(m[slot], slot === 'primary' || !treeUp() ? m.suppressed : m.sideCan); return w ? WEAPONS[w] : null;
+  const tree = treeUp(), w = pickRow(m[slot], i === 0 && !tree ? true /* (both of yours wore it) */ : slot === 'primary' || !tree ? m.suppressed : m.sideCan); return w ? WEAPONS[w] : null;
 }
 /** the gun on member i's row `field` wears a suppressor (the one gun row, or either slot's: both of yours do) */
 export function kitRowCan(i: number, m: MemberKit, field: string): boolean { if (field === 'weapon') return kitGunCan(i, m); if (treeUp()) return field === 'primary' ? m.weapon !== 'pistol' && kitSlotCan(m, 'primary') : field === 'secondary' && kitSlotCan(m, 'secondary'); const w = field === 'primary' ? (m.weapon === 'pistol' ? null : pickRow(m.primary, i === 0 || m.suppressed)) : field === 'secondary' ? pickRow(m.secondary, i === 0 || m.suppressed) : null; return !!w && WEAPONS[w].suppressed; }
@@ -1157,7 +1156,7 @@ export function kitPlayer(g: Game) {
   pl.bigKit = bigOn && !m.walls ? m.big : 'none';   // (the breaching shotgun or the hammer in your big slot: bigkit.ts — a card as issued carries neither, so nothing changes on him)
   if (m.weapon === 'pistol' && pl.hasRifle) { pl.hasRifle = false; if (pl.slot === 'rifle') pl.slot = 'pistol'; }   // (this Player only: Game.fn2000 — what the next plain night's Player is built with — is not ours)
   if (gunsOn()) { const long = pickRow(m.primary, true), side = pickRow(m.secondary, true), tree = treeUp();   // (gunslots.ts: the two guns your card picks — both of yours wear the can where the pick has one; the issue pair is the pair you were built with: nothing made)
-    // (kittree.ts: each of your guns has its own suppressor — one taken off is the same gun with a bare muzzle, bareOf; the gun you were built with is kept while it is the card's)
+    // (kittree.ts: each of your guns has its own suppressor — one taken off is the same gun with a bare muzzle, the pick's bare row; the gun you were built with is kept while it is the card's)
     const mine = (w: WeaponId, slot: GunSlot): WeaponDef => (tree ? kitSlotDef(0, m, slot) ?? WEAPONS[w] : WEAPONS[w]);
     if (long && pl.hasRifle && (tree ? pl.rifle.def !== mine(long, 'primary') : pl.rifle.def.id !== long)) pl.rifle = new Rifle(mine(long, 'primary'));
     if (side && (tree ? pl.pistol.def !== mine(side, 'secondary') : pl.pistol.def.id !== side)) pl.pistol = new Pistol(mine(side, 'secondary')); }
