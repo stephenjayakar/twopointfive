@@ -1051,12 +1051,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITTREE=1`; it reads only with `GUNSLOTS` and `BIGSLOT` up), ON in the page and on the shipped
   stand (`?nokittree`); in the knob registry and `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off = the card of the
   build before, row for row: one Suppressor row for both a teammate's guns, your guns always suppressed, five sponge rounds with every launcher, the
-  two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`; 24 lines on both
+  two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`; 25 lines on both
   stands, `KITTREE_BREAK=1` fails 17 on the frozen stand and 18 on the shipped one); the real page, `PORT=<port> node tools/qa/kittree-page.cjs` (19
   lines: bars, tiles under their gun, sponge none on a loud mission and the mission's five on a quiet one, the one Reset, the row of kits alone, and
   at 1000, 1180, 1353, 1440 and 1512 px wide nothing cut and nothing run into; `KITTREE_BREAK=1` fails 4); a deploy off the card,
   `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,
-  `wand-tile`) hold the tree off on every stand (`probes.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`. LEFT, the
+  `wand-tile`) hold the tree off on every stand (`probes.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`; `loadout-screen`
+  reads 'bare' in a man's line where it read the old row's name, and `kitpaste-page.cjs` counts the one Reset on a tree card. A MAN'S LINE under his
+  name (`kitWords`) names his guns by their picks under the tree, with `bare` after one whose suppressor the card has taken off. LEFT, the
   maintainer's calls: a sponge round costs a pouch and on a quiet run buys nothing over the lent five; the Quiet kit names no sponge; which four
   bars, and their scale (untuned, nobody has compared guns by them in play); a bare Mk 18 in a teammate's hands is the old unsuppressed row, in yours
   the suppressed row with a bare report; the empty sponge load is still a stop on the launcher's cycle. NOT DONE: the player's suppressor is still
