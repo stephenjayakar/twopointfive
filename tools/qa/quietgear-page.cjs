@@ -19,8 +19,10 @@ const read = () => { const root = document.getElementById('missions'), go = docu
   const b = await chromium.launch({ args: ['--no-sandbox'] }), errs = [];
   const open = async (q, shot, press) => { const p = await b.newPage({ viewport: { width: 1440, height: 900 } }); p.on('pageerror', e => errs.push(`${q}: ${e.message}`));
     await p.goto(`http://localhost:${PORT}/?${q}&mute&paused&quality=verylow`, { waitUntil: 'domcontentloaded' }); await p.waitForSelector('#loadout .lo-kit .kc-row', { timeout: 30000 });
-    if (press) await p.evaluate(t => { const x = [...document.querySelectorAll('#loadout .kc-set')].find(e => e.textContent.trim().toLowerCase() === t); if (x) x.click(); }, press);
-    await p.waitForTimeout(300); const r = await p.evaluate(read);
+    // (the quiet kit's button: the card's own 'Quiet set', or under the card as a tree, where a card keeps no sets, 'Quiet' on the one row of named kits)
+    const pressed = press ? await p.evaluate(t => { const is = (e, c, w) => e.classList.contains(c) && e.textContent.trim().toLowerCase() === w, sets = [...document.querySelectorAll('#loadout .kc-set, #loadout .lo-set')],
+      x = sets.find(e => is(e, 'kc-set', t)) ?? sets.find(e => is(e, 'lo-set', t.split(' ')[0])); if (x) x.click(); return x ? x.textContent.trim() : ''; }, press) : '';
+    await p.waitForTimeout(300); const r = await p.evaluate(read); r.pressed = pressed;
     if (outDir) { fs.mkdirSync(outDir, { recursive: true }); await p.addStyleTag({ content: '#fatal { display: none !important; }' }); await p.screenshot({ path: `${outDir}/${shot}.png` }); }
     await p.close(); return r; };
   const clear = c => { const m = /rgba\(([^)]+)\)/.exec(c); return c === 'transparent' || (!!m && +m[1].split(',')[3] < 0.3); };   // (hollow: no fill, or a faint one)
@@ -32,7 +34,7 @@ const read = () => { const root = document.getElementById('missions'), go = docu
   check(q.bigWide === false && q.zero.includes('big'), 'an empty big slot is a tile like the rest', `big wider than a tile: ${q.bigWide} · none carried: ${q.zero.join(' ') || '(nothing)'}`);
   const s = await open('loadout=vault-quiet', 'quiet-set', 'quiet set');
   const guns = s.noise.weapon ?? Math.max(s.noise.primary ?? 0, s.noise.secondary ?? 0);   // (one Guns row, or the two gun slots' rows: the loudest gun the card puts in his hands)
-  check(guns === 1, 'the quiet set\'s gun is the quietest', `guns step ${guns} with the quiet set on (the suppressed pistol's report is not loud)`);
+  check(!!s.pressed && guns === 1, 'the quiet set\'s gun is the quietest', `pressed '${s.pressed || '(no such button)'}': guns step ${guns} with the quiet set on (the suppressed pistol's report is not loud)`);
   const k = await open('loadout=vault-quiet&kitloud', 'kitloud');
   check(!k.quiet && !clear(k.goBg) && k.marks.length === 0 && k.accent === k.base, '`kitloud` is the screen as it was', `root quiet ${k.quiet} · Deploy's fill ${k.goBg} · marks ${k.marks.length}`);
   const o = await open('loadout=solo-night', 'solo');

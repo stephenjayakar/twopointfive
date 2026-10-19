@@ -155,7 +155,7 @@ const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand
 // THE CARD'S ROWS IN THE ORDER THEY HAD. These probes read where a row stands on a card ('the last of your kit rows') and which tiles a mission leaves idle —
 // the card before it was laid out as a tree (src/game/kittree.ts KITTREE, on in the page: what rides on a gun under it, your light and goggles as rows). The
 // tree's rows are kittree-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the frozen stand holds it — unless whoever
-// runs the tool set the word himself. (The probe of a bare gun's drawing, gunlook-bare, was held here too; it reads the tree's row a gun itself now.)
+// runs the tool set the word himself.
 const ROWS_BEFORE_THE_TREE = /^(wand-kit|wand-tile)$/;
 // …and the deal's key `more` (kit.ts KITDEAL.more, on in the page: a team of three or four as issued is LENT a big tool each pair) for the probes written
 // of a four whose big slots stand empty: a locked door that such a four picks, boots or is refused at is, with a lent shotgun or hammer, a door the tool
