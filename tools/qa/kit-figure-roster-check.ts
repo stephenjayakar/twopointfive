@@ -19,7 +19,7 @@ const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { castVariantOf } = await import(`${ROOT}/src/game/cast.ts`);
-const { castSide } = await import(`${ROOT}/src/anim/gltf.ts`);
+const { castSide, castGoggles } = await import(`${ROOT}/src/anim/gltf.ts`);
 const { rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
 const { figureMan } = await import(`${ROOT}/src/ui/kitFigure.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -32,6 +32,7 @@ const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 const { GUNLOOK, longModel, pistolModel } = await import(`${ROOT}/src/game/gunlook.ts`);
 const { GUNSLOTS } = await import(`${ROOT}/src/game/gunslots.ts`);
 const { BIGSLOT } = await import(`${ROOT}/src/game/kit.ts`);
+const { KITTREE } = await import(`${ROOT}/src/game/kittree.ts`);
 
 const brk = process.env.ROSTER_BREAK === '1';
 let failed = false, checks = 0;
@@ -130,6 +131,28 @@ for (const [what, file, query, n] of RUNS) {
     figureHold(casts, { member, squad: 4, suit: false, look: lookDress(), card: c }, 0, (ch: any) => { got ??= ch.anim.longGrip; });
     const fitted = member === 0 && fit, want = id ? modelGrip(id, fitted) : sc20kGrip(undefined, fitted), off = got && want ? len(sub(got.wrist, want.wrist)) : NaN;
     line(!!got && off < 1e-6, `${what}: the hand on the fore-end is laid by the ${id ? "model's " : ''}${fitted ? 'fitted' : 'plain'} hold, as the game lays it (${got ? cm(off) + ' cm off it' : 'no long gun in his hands'})`); }
+  // THE CARD AS A TREE (kittree.ts): each gun has its own suppressor and your goggles are a row — the standing man wears what that card's man deploys with
+  // (a can taken off: the same gun with a bare muzzle, gunlook.ts bareLong / bareSide; goggles left at home: none on his head). Off: both of yours wear it
+  { const read = (member: number, c: any) => { let r: any = null;
+      figureHold(casts, { member, squad: 4, suit: false, look: lookDress(), card: c }, 0, (ch: any, _bx: any[], meta: any[]) => { r ??= { long: !!ch.gunLook?.bareLong, side: !!ch.gunLook?.bareSide, gog: meta.some(x => /^goggles\./.test(x.path)), parts: ch.parts }; });
+      return r; };
+    const said = (r: any) => (r ? `long gun ${r.long ? 'bare' : 'with its can'}, sidearm ${r.side ? 'bare' : 'with its can'}, goggles ${r.gog ? 'worn' : 'none'}` : 'no figure');
+    const T0 = [KITTREE.on, GUNSLOTS.bare]; INHAND.on = true; GUNLOOK.on = true; GUNSLOTS.on = true; GUNSLOTS.bare = true; BIGSLOT.on = true;
+    const ROWS: [string, number, any, boolean, boolean, boolean][] = [
+      ['you, as issued', 0, {}, false, false, true], ['you, the long gun\'s suppressor off', 0, { suppressed: false }, true, false, true], ['you, the sidearm\'s suppressor off', 0, { sideCan: false }, false, true, true],
+      ['you, the goggles left at home', 0, { nvg: false }, false, false, false], ['you, the pistol alone with its suppressor off', 0, { weapon: 'pistol', sideCan: false }, false, true, true],
+      ['a teammate, the sidearm\'s suppressor off', 1, { suppressed: true, sideCan: false, nvg: true }, false, true, true], ['a teammate, the long gun\'s suppressor off', 2, { suppressed: false, sideCan: true, nvg: true }, true, false, true],
+    ];
+    KITTREE.on = true;
+    for (const [what, member, o, long, side, gog] of ROWS) { const r = read(member, card(member, { weapon: 'rifle', primary: 'mk18', secondary: 'g19', suppressed: true, sideCan: true, ...o }));
+      line(!!r && r.long === long && r.side === side && r.gog === gog, `the card as a tree — ${what}: ${said(r)}${r && (r.long !== long || r.side !== side || r.gog !== gog) ? ` (the mission's man: long gun ${long ? 'bare' : 'with its can'}, sidearm ${side ? 'bare' : 'with its can'}, goggles ${gog ? 'worn' : 'none'})` : ''}`); }
+    { const own = casts.own?.cast, v = own ? figureMan(own, 0) : null, has = !!v && castGoggles(own, v.mask, true) !== castGoggles(own, v.mask, false);   // (the cast's own goggles are a part of his mesh: off with the row too)
+      const on = read(0, card(0, { nvg: true })), off = read(0, card(0, { nvg: false }));
+      line(!!on && !!off && (has ? on.parts !== off.parts : on.parts === off.parts), `the card as a tree — you, the goggles left at home: ${has ? `the cast's own goggles are ${on && off && on.parts !== off.parts ? 'off his head with them' : 'STILL DRAWN'}` : 'this cast has no goggles part of its own (the boxes are all of them)'}`); }
+    KITTREE.on = false;
+    { const r = read(0, card(0, { weapon: 'rifle', primary: 'mk18', secondary: 'g19', suppressed: false, sideCan: false, nvg: false }));
+      line(!!r && !r.long && !r.side && r.gog, `the tree off — you, whatever the card's three flags say: ${said(r)} (both of yours wear the suppressor, the goggles are yours)`); }
+    KITTREE.on = T0[0]; GUNSLOTS.bare = T0[1]; }
   knobsBack(knobs1);
 }
 console.log(failed ? `=== kit-figure-roster-check: FAIL ===` : `=== kit-figure-roster-check: ALL PASS (${checks}) ===`);
