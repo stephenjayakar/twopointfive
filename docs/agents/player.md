@@ -730,12 +730,16 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the can was (`rigProps.ts BARE_BARREL`, a finger thick, the same length, so the muzzle the simulation fires from is where it was: the row's 0.52) — in his
   hands, slung and hung down his front; on the pistol nothing is drawn ahead of the slide, in his hand, on his thigh (`holsterBoxes` asks, so every caller
   is covered) and on a man down, and its rail light is drawn back under the slide, its body ending at the slide's face (it was laid out under the can; the
-  light itself — its pose, its beam — is where it was). Today only a teammate's card can have the suppressor off (your two guns always wear theirs), and the
-  kit figure is told the same way. Off (`?nogunlook`, the frozen stand, `GUNLOOK_BREAK=1`): the bare rows drawn with the can, the build before. CHECK, both
+  light itself — its pose, its beam — is where it was). Whose gun can be bare is the card's: before the gear tree (`kittree.ts KITTREE`) one row takes the suppressor off both of a teammate's guns and your two
+  always wear theirs; under it each gun has its own row (`suppressed` the primary's, `sideCan` the secondary's) and your card has them too — your figure is
+  told by the same rows (`player.ts`), so your bare gun is drawn bare. The kit figure is told the same way. Off (`?nogunlook`, the frozen stand, `GUNLOOK_BREAK=1`): the bare rows drawn with the can, the build before. CHECK, both
   stands: `tools/qa/gunlook-check.ts bare` (`probes.ts gunlook-bare`, in the `gunlook` family): the card hands out the two bare rows and the figure is told;
   with the long gun in his hands exactly the two cans are gone and one barrel has come, as far along the gun as the can was (measured from the part drawn
   before it, so the pose does not matter); with the pistol in his hand exactly its can is gone; his sidearm out and the long gun hung: the barrel, no can on
-  either; a man down with a bare pistol on his thigh shows no can; off, bare and suppressed are drawn the same in each of those. KNOWN: a bare barrel as long as the can was is
+  either; a man down with a bare pistol on his thigh shows no can; under the tree either gun's row alone off bares that gun and leaves the other its can, and your
+  card with both off puts the bare rows and the bare drawing on you (no tree on the stand: a sidearm row of its own changes nothing, yours stay suppressed —
+  the check asks the stand which it is, `kittree.ts treeOn`, so it runs alone or through the runner with the tree either way); off, bare and suppressed are
+  drawn the same in each of those. KNOWN: a bare barrel as long as the can was is
   longer than a real one (the muzzle is the row's); the bare pistol's flash is where the row's muzzle is, 5 cm ahead of the slide's face; no picture was drawn
   of either. NEVER SEEN ON A GPU.
 - **A tube gun is fed a shell at a time, in time and in the books** (`GUNLOOK.shells`, a key that rides on `GUNLOOK.on`; `gunreload.ts shellPlan` /
