@@ -238,6 +238,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   things): nothing of those shows on it.
   SEEN: one offline still of a teammate's rifle hand each way (the software view; the fist moves up onto the gun). NEVER SEEN ON A GPU, nor on the page,
   nor by the maintainer: whether the fist reads as closed round the grip, the pistols' new place in the hands, the idle in motion.
+- **The picture and the standing man follow the tree card's new rows** (2026-10-19; `src/host/kitView.ts`, `src/ui/kitFigure.ts`; no switch of its
+  own: it follows `KITTREE`, and with that off no card has these tiles and the man is drawn as before). THE STANDING MAN read both of his guns by
+  one flag (yours: always suppressed; a teammate's: his `suppressed` for both) and drew your goggles whatever the card said: under the tree the check
+  found five of the six cards it tries drawn wrong. He now reads each slot's gun from the game's own `kit.ts kitSlotDef` (a can taken off is the
+  same gun, bare: `gunlook.ts bareLong` / `bareSide`) and your goggles from your `nvg` row, as `combat.ts` does through `kitYouNvg`. THE PICTURE: the
+  secondary's suppressor (`sideCan`) plays the gun's row, as `secondary` and `suppressed` do; SPONGE ROUNDS (`rings`, yours alone) play the
+  launcher's row with that load on the tube (`tubeRow('ring')`, the 40 mm's row by another load: shouldered down the wall away from the stack and
+  NOT sent, because a teammate stands along that wall and a round to the head puts a man out cold); `rings` is a COUNT, written to the picture's
+  own rifle. Your `suppressed`, `light` and `nvg` rows were already the gun's, the light's and the turn's; a card of yours with NO light now plays the gun's
+  row dark on the light's tile, as a teammate's always did (it swept a beam he does not carry). A teammate's `sideCan` (and his goggles)
+  still restage the room under the dissolve: his sidearm is dealt at staging. CHECKS: `kit-figure-roster-check.ts` has nine rows for it (34 lines on
+  both stands; seven of them are red on the figure before this); `kitview-work.cjs` has the picks `sam.suppressed`, `sam.sideCan`, `sam.light`,
+  `sam.nvg`, `sam.rings`, `mate.sideCan`; `kitview-page.cjs` has one row for the sponge rounds (its own row, the load on the tube, nothing in the
+  air). NOT DONE: a teammate's 40 mm tile has no row of its own in the picture (the gun's row plays); the sponge round is never seen to fly.
+  Never seen on a GPU.
 - **The gear screen per level: the plan, the set loader, and the picture staged from them (10-15)**. The owner:
   "can we make it nicely abstracted so tweaks to one of them don't require churn elsewhere?" / "feel free to make a bespoke set for the gear screen …
   it should then just show off the vibe of the level / be recognizable". `src/host/kitViewPlan.ts` measures a way in from the level's own boxes (the
