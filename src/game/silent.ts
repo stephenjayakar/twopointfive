@@ -101,7 +101,7 @@ export const SILENT = {
   stackSet: false,
 };
 /** the rows that are loud whatever the posture (doortools.ts ids): marked on the menu while silent, and given, they end it */
-export const LOUD_ROWS = ['bangClear', 'bigClear', 'charge', 'thrBang', 'fragClear', 'wallCharge', 'fragThere', 'stunThere'];   // ('wallCharge': the charge's twin on a wall — wallcharge.ts)
+export const LOUD_ROWS = ['bangClear', 'bigClear', 'charge', 'thrBang', 'fragClear', 'wallCharge', 'fragThere', 'stunThere', 'shellThere'];   // ('shellThere': a teammate's 40 mm on order — squad40.ts) ('wallCharge': the charge's twin on a wall — wallcharge.ts)
 type By = 'order' | 'start' | 'api' | 'tool';
 interface State { cast: Guard[]; silent: boolean; since: number; hot: boolean; /** loud has reached them at some point since the order (it does not lapse as `hot` does) */ was?: boolean; booted?: WeakSet<Door>; }
 const states = new SideMap<Game, State>('silent.states');

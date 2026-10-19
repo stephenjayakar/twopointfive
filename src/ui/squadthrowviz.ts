@@ -7,6 +7,7 @@ import type { Vec3 } from '../math/vec';
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import { SQUADTHROW, squadThrowPlans } from '../game/squadthrow';
+import { SQUAD40, squad40Plans } from '../game/squad40';
 import { FRAG } from '../game/frag';
 import { planDrawsThrows } from '../game/floorplan';
 
@@ -31,7 +32,8 @@ export class SquadThrowViz {
     this.root.appendChild(g); return E;
   }
   update(game: Game, cam: FollowCamera, w: number, h: number, edge: number) {
-    const plans = SQUADTHROW.draw && SQUADTHROW.on && !planDrawsThrows() ? squadThrowPlans(game) : [];   // (the floor plan draws them itself while it is on: ui/planfloor.ts)
+    const throws = SQUADTHROW.draw && SQUADTHROW.on && !planDrawsThrows() ? squadThrowPlans(game) : [];   // (the floor plan draws them itself while it is on: ui/planfloor.ts)
+    const plans = SQUAD40.draw ? [...throws, ...squad40Plans(game)] : throws;   // (a teammate's 40 mm on order — game/squad40.ts: who fires, the arc, where it goes off; empty unless a card brought a round)
     // one path per part: a point out of the view BREAKS the line there (never a chord across the gap), and a ring the view's edge cuts keeps the part of it in view
     const path = (pts: Vec3[] | undefined, closed: boolean) => {
       if (!pts || pts.length < 2) return '';
@@ -58,7 +60,7 @@ export class SquadThrowViz {
       set(E, 'walk', walking ? path(P.walk, false) : ''); set(E, 'spot', ring(walking ? P.from : null, 0.2));
       set(E, 'arc', path(P.points, false));
       set(E, 'land', ring(P.land, 0.3));
-      const frag = P.kind === 'frag';
+      const frag = P.kind !== 'stun';   // (a frag's burst — and a 40 mm round's, which is the same one)
       set(E, 'kill', ring(frag ? P.land : null, FRAG.lethalM, BIG)); set(E, 'wound', ring(frag ? P.land : null, FRAG.woundM, BIG));
     }
     for (let i = plans.length; i < this.shown; i++) this.els[i].g.style.display = 'none';

@@ -124,6 +124,7 @@ import { BIGSLOT, KITDEAL } from '../game/kit';
 import { KITLOAD, loadPaceK, loadSeenK, loadHeardK } from '../game/kitload';
 import { BIG_STATS } from '../game/bigkit';
 import { SQUADTHROW } from '../game/squadthrow';
+import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
 import { PLANLAY, layClear } from '../game/planlay';
 import { STICKY, stickyIssue, stickySummary } from '../game/stickycam';
@@ -1305,6 +1306,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     panel.toggleBox(TF.kit, 'throw order ▸ frag where men can duck', () => SQUADTHROW.duck, v => { SQUADTHROW.duck = v; }, 'On (?throwduck=0 for off): a teammate who can be off the frag\'s line before it bursts — the spot his legs are dealt when "frag out!" is called, at the squad\'s pace — is not a reason to refuse it. A man with nowhere to go still refuses it, by name. Off: anybody of ours it has a line to refuses it where he stands, as it was.');
     panel.toggleBox(TF.kit, 'throw order ▸ a frag near you is your call', () => SQUADTHROW.samCall, v => { SQUADTHROW.samCall = v; }, 'On (?samcall=0 for off): a frag that reaches only YOU is thrown all the same and the row says " · too close: you". Off: refused "you are in it.", as it was.');
     panel.toggleBox(TF.kit, 'throw order ▸ drawn on the ground', () => SQUADTHROW.draw, v => { SQUADTHROW.draw = v; }, 'On: while the throw page is up on a spot, and from the order until the thing leaves his hand, the thrower is ringed in his pair\'s colour with his walk and the arc drawn on the ground. Picture only.');
+    panel.toggleBox(TF.kit, 'teammates fire 40 mm on order', () => SQUAD40.on, v => { SQUAD40.on = v; }, 'THE switch (also ?nosquad40 on the address). On: while a teammate\'s card carries 40 mm grenades the throw page (X on a spot of floor, then G) has a third row, "40 mm there": a man with a round, the launcher under his gun and an armed shot to the spot turns to it and fires. Never where one of ours is inside the burst. Off: no such row.');
     feelRows('FLASH', [
       { k: 'on', label: 'flashbang ▸ blinds and folds a room', title: 'in a scenario a stun canister blinds every man its fireball has a line to for seconds and FOLDS him (rooted, gun down, no round) for the first of them; a man round a corner inside the concussion distance gets half. Off = the night game\'s canister: a short dazzle, and a watched door still gets its blind burst' },
       { k: 'secs.0', label: 'bang ▸ blind near s', title: 'blind at the can (s) — seconds without sight for a man at the canister' },
@@ -1641,6 +1643,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
       { k: 'glass', adv: true, kind: 'toggle', label: 'lanes ▸ rifle lanes go through glass', title: 'a lane remembers the gun that made it, and the floor it covers is asked through panes that gun shoots through. Off = every lane asked as a sidearm\'s: a pane hides the floor behind it' },
       { k: 'stopClear', adv: true, kind: 'toggle', label: 'lanes ▸ no stop in a line of fire', title: 'a man stopped short of a covered lane is never left standing in a doorway or where one of its guns has a line to him, and looks at the lane\'s first floor on his own walk. Off = stopped where he first meets it, as it was' },
       { k: 'roused', adv: true, kind: 'toggle', label: 'lanes ▸ only rounds he notices count', title: 'a round passing a man costs his side nothing unless he notices it inside a third of a second: it rattles him, he hears the shot, or he was roused already. Off = any round past a living man counts' },
+      { k: 'drill', adv: true, kind: 'toggle', label: 'lanes ▸ door drill asked again', title: 'a man the doorway drill has taken is asked again, until he goes through, whether his side has since called a lane on that doorway; if so the drill lets him go and he is stopped short of it. Off = asked once, as the drill takes him' },
       { k: 'fragOwn', adv: true, kind: 'toggle', label: 'lanes ▸ his own while he throws', title: 'from his shout to the throw, a man putting a grenade down a covered lane is not taken by the dig-in (which walked him off his arc: he then kept it and said so). Off = it may take him' },
     ]);
     panel.text(ln, () => `lanes: ${lanesSummary(game)}`);
