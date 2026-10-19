@@ -13,11 +13,13 @@ import { rig } from './doortools-probes.ts';
 const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { KITTREE } = await import(`${ROOT}/src/game/kittree.ts`);
-const { WEAPONS, Rifle, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
+const { WEAPONS, Rifle, Firearm, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
 const { rifleSpread } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { hearPath } = await import(`${ROOT}/src/game/weather.ts`);
 const LOAD = await import(`${ROOT}/src/game/kitload.ts`);
+const { GUNLOOK } = await import(`${ROOT}/src/game/gunlook.ts`);
+const GR = await import(`${ROOT}/src/game/gunreload.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -103,6 +105,15 @@ export async function gunslotsMate(): Promise<boolean> {
     const back0 = GUNSLOTS_STATS.back; let backAt = -1; const t1 = g.time; for (let i = 0; i < 60 * 4 && backAt < 0; i++) { R.step(); if (!gd.second.out) backAt = g.time - t1; }
     const full = gd.weapon === primary && primary.mag + primary.chamber >= primary.def.magCapacity && side.roundsReady > 0 && gd.second.gun === side && sideHung(gd) === null && sideLocked(g, gd);
     F.verdict(backAt > GUNSLOTS.lull - 0.1 && backAt < GUNSLOTS.lull + 0.2 && full && GUNSLOTS_STATS.back === back0 + 1 && gd.route.weapon === primary.def.id, `nobody in front of him for ${f2(GUNSLOTS.lull)} s: the sidearm goes back topped off, the primary is in his hands reloaded, and his hands are busy for the reload`, `back after ${f2(backAt)} s · in hand ${gd.weapon.def.id} ${primary.mag}+${primary.chamber} · sidearm ${side.roundsReady} · locked ${sideLocked(g, gd)}`);
+    // a belt-fed gun taken up again is HEARD fed, every sound of it on the beat his hands are busy for (gunreload.ts under gunlook.ts; a magazine gun's is one clack)
+    { const look0 = GUNLOOK.on, m: any = ops[1], heard = (on: boolean) => {
+        GUNLOOK.on = on; m.route.weapon = 'mk46'; m.weapon = new Firearm(WEAPONS.mk46); m.reloadT = -1; m.second.out = false; m.second.lock = -100; m.weapon.chamber = 0; m.weapon.mag = 0;
+        if (!sideOut(g, m, 4)) return null; for (let i = 0; i < 60 * 4 && m.second.out; i++) R.step();
+        const a: any[] = []; R.W.audioLog = a; for (let i = 0; i < 60 * 9 && sideLocked(g, m); i++) R.step(); R.W.audioLog = null;
+        return a.map((e: any) => e.name as string); };
+      const def = WEAPONS.mk46, on = heard(true), cues = (GR.feedCues(def, GR.beatOf(def.reload, true), def.magCapacity, true) ?? []).map((c: any) => c.sfx as string), off = heard(false); GUNLOOK.on = look0;
+      const count = (a: string[], n: string) => a.filter(x => x === n).length, all = !!on && cues.length >= 3 && ([...new Set(cues)] as string[]).every(n => count(on, n) >= count(cues as string[], n));
+      F.verdict(all && !!off && !off.some(n => cues.includes(n) && n !== 'magOut'), 'a belt-fed gun taken up again after the sidearm is heard fed: each of its own sounds comes on the beat (with the guns\' own looks off, the one clack as before)', `its feed: ${cues.join(' ')} · heard while his hands were busy: ${on ? on.filter(n => cues.includes(n)).join(' ') || 'NONE' : 'no swap'} · looks off: ${off ? off.filter(n => n !== 'footstep').join(' ') || 'none of them' : 'no swap'}`); }
     // a man whose card brings no long gun has nothing behind his pistol
     K.KIT.members[2].weapon = 'pistol'; K.kitStage(g, ops);
     F.verdict(WEAPONS[ops[1].weapon.def.id].cls === 'pistol' && ops[1].second === null && !sideOut(g, ops[1], 3), 'a man whose card leaves the primary at home carries his sidearm alone', `in hand ${ops[1].weapon.def.id} · second ${ops[1].second}`);
