@@ -2987,6 +2987,7 @@ if (on('sneak-door', 'sneak', 'all')) await run('sneak-door', async () => (await
 if (on('sneak-post', 'sneak', 'all')) await run('sneak-post', async () => (await import('./sneak-probes.ts')).sneakPost());
 if (on('sneak-scope', 'sneak', 'all')) await run('sneak-scope', async () => (await import('./sneak-probes.ts')).sneakScope());
 if (on('sneak-off', 'sneak', 'all')) await run('sneak-off', async () => (await import('./sneak-probes.ts')).sneakOff());
+if (on('sneak-noisewalk', 'sneak', 'all')) await run('sneak-noisewalk', async () => (await import('./noisewalk-check.ts')).noisewalkCheck());   // a follower is not left standing on the walk of a man who comes to a sound (SNEAK.noiseWalk; NOISEWALK_BREAK=1 must fail)
 // ---------------------------------------------------------------- a silent partner, half-noticed or caught (spotted-probes.ts; game/spotted.ts)
 if (on('spotted-suspicious', 'spotted', 'all')) await run('spotted-suspicious', async () => (await import('./spotted-probes.ts')).spottedSuspicious());
 if (on('spotted-slip', 'spotted', 'all')) await run('spotted-slip', async () => (await import('./spotted-probes.ts')).spottedSlip());

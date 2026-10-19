@@ -173,6 +173,7 @@ export function pageSwitches(q: URLSearchParams): void {
   COVER.backTurn = q.get('backturn') !== '0';   // a man walking backwards whose opening the deal lets go of comes out of it on his feet: the path kept, his body turning to the way he goes (game/cover.ts turnOut): ?backturn=0 = he walks forward along a body still turned to the rear, a quarter of a metre the wrong way, as he did
   UNDERFOOT.on = q.get('underfoot') !== '0';   // what the walk grid calls floor, feet cross (scene/collision.ts): a walker is stopped by what the grid's bake calls blocked and by nothing lower — the bottom layer of a pile of sacks a wall charge left in its own hole no longer holds the men ordered through it: ?underfoot=0 = a thing 0.2 m high stops feet the grid routes across
   SNEAK.stalkAmbient = q.get('stalkambient') !== '0';   // the partner's way to a man's back is read by the light his OWN meter shows on him over the CPU's estimate (the moon, the bounce), as Sam's crumbs carry Sam's (game/sneak.ts sneakWalk): ON in the page; ?stalkambient=0 = the estimate alone, as it was — a moonlit yard read as dark
+  SNEAK.noiseWalk = q.get('noisewalk') !== '0';   // a follower is not left standing on the walk of a man who comes to a sound (game/sneak.ts sneakComing; the breaker man's manners, workthings.ts workComing, for any suspicious man on his way to a place he heard something): ON in the page; ?noisewalk=0 = the breaker man alone, as it was
   DOORTOOLS.testDoor = q.get('doortest') !== '0';   // an entry order HALTS at a door that turns out locked or wedged, the lead says so, and the same row again boots it; a plain 'stack up' tries the handle (game/doortools.ts haltAt / testStacks): ON in the page; ?doortest=0 = straight to the boot as it was
   DOORTOOLS.thrPie = q.get('thrpie') !== '0';   // a room worked from the threshold: both jamb men cut the opening toward its middle, a few degrees a step, until the outside shows no more floor — and only then 'holding on the door' (game/doortools.ts pieSet / pieNext): ON in the page; ?thrpie=0 = a diagonal each, held still, as it was
   DOORTOOLS.thrLean = q.get('thrlean') !== '0';   // … and the man cutting leans (head and gun past the edge, hips behind it) and takes the cuts that look down the door's own line on a knee (character.ts anim.lean): ON in the page; ?thrlean=0 = square on every station
@@ -458,6 +459,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'COVER.backTurn': 'TPS_BACKTURN=1',
   'UNDERFOOT.on': 'TPS_UNDERFOOT=1',
   'SNEAK.stalkAmbient': 'TPS_STALKAMBIENT=1',
+  'SNEAK.noiseWalk': 'TPS_NOISEWALK=1',
   'DOORTOOLS.testDoor': 'TPS_DOORTEST=1',
   'DOORTOOLS.thrPie': 'TPS_THRPIE=1',
   'DOORTOOLS.thrLean': 'TPS_THRLEAN=1',
