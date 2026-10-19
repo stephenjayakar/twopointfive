@@ -445,6 +445,7 @@ fn rainFragment(v: VOut) -> FOut {
   if (dep < 1.0) {
     let Pend = worldFromDepth(v.pos.xy, dep);
     if (snowNow()) { if (flakeHidden(Pend)) { discard; } }   // (snow: the surface is UNDER a roof, not merely inside its rectangle — a wall's outer face and its top take the snow that falls in front of them: particles_common.wgsl flakeHidden)
+    else if (RAIN_WALLS && rainOverWall(Pend)) { }   // (RAIN_WALLS: a wall's outer face, the door in it and the wall's top take the rain that falls in front of them — common.wgsl wxUnderRoof)
     else if (!rainOutdoors(Pend.xz)) { discard; }   // the lattice's readability rule, kept: a pixel whose surface is INDOORS shows no rain, even the outdoor drops the ray meets over the roof line on its way — the rooms stay dry to the eye
     zs = distance(Pend, frame.camPos);
   }
