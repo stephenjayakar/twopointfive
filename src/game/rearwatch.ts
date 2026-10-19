@@ -53,8 +53,8 @@ import type { DoorOp } from './doortools';
 import type { Opening } from './cover';
 import { COVER } from './cover';
 import type { Assignment } from './orders';
-import { sideOf } from './orders';
-import { doorWrittenName } from './doornames';   // (a leaf: the name a level wrote for a door)
+import { sideOf, doorWords } from './orders';
+import { WORDS } from './words';   // (a leaf: the dialogue pass's one switch)
 import { stackRoomProbe } from './stackroom';
 
 export const REARWATCH = {
@@ -298,7 +298,7 @@ function roomKeepTick(g: Game, B: Book): void {
       const queue = K.roomLast && rest.some(x => { const X = S.of(x); return !!X && X.post === null && g.fight.roomAt(X.goal) !== R.room; });
       if (R.behind.length && !queue && R.behind.every(x => x.state === 'dead' || !rest.includes(x) || walk(x) < dm - 0.3)) { let_(m, 'the last man has passed him'); continue; }
       if (g.time - R.outT >= K.roomSecs) { REARWATCH_STATS.roomLate++; let_(m, 'on the clock'); continue; } }
-    A.follow = 1e3; A.going = `holding · ${o.door ? doorWrittenName(o.door) ?? o.door.def.name.replace(/_/g, ' ') + ' door' : o.id}`;   // (the last place in the file — orders.ts numbers the file again each frame; a man who was last stays last once he is let go)
+    A.follow = 1e3; A.going = `holding · ${o.door ? WORDS.on ? doorWords(o.door) : o.door.def.name.replace(/_/g, ' ') + ' door' : o.id}`;   // (the door's one name, as the squad's rows say it: a row on the HUD, in no digest)   // (the last place in the file — orders.ts numbers the file again each frame; a man who was last stays last once he is let go)
   }
 }
 /** how far it is from `a` to `b` on foot: the straight line when nothing stands in it, else the nav grid's path (no way: the straight line and a room's worth) */

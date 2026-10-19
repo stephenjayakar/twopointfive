@@ -193,11 +193,15 @@ export const pistolModel = (id: GunModelId | null | undefined): PistolModel | nu
 /** WHICH MODELS ARE ON A MAN (Character.gunLook; written by the simulation each step — game.ts for a teammate, player.ts for you — and by the kit screen for
  *  its figure; read by rigProps.ts): `hand` the gun in his hands, `long` his long gun (wherever it is: in his hands, slung, hung down his front), `side` his
  *  sidearm (in his hand or on his thigh). null each: that gun is drawn as its rig group always drew it. */
-export interface GunLook { hand: GunModelId | null; long: GunModelId | null; side: GunModelId | null }
+export interface GunLook { hand: GunModelId | null; long: GunModelId | null; side: GunModelId | null;
+  /** his long gun / his sidearm is a row WITH ITS SUPPRESSOR OFF that has no model of its own (weapons.ts mk18bare, g19bare: the same gun, drawn by the group
+   *  that draws it with the can on): rigProps.ts leaves the can off — a bare barrel to the same muzzle on the long gun, nothing ahead of the slide on the pistol */
+  bareLong?: boolean; bareSide?: boolean }
 /** … from the rows he carries: the one in his hands and the other one (null: none) */
 export function gunLookOf(into: GunLook | null, inHands: WeaponDef | null, other: WeaponDef | null, third: WeaponDef | null = null): GunLook | null {
   if (!gunLookOn()) return null;
-  const L = into ?? { hand: null, long: null, side: null }; L.hand = inHands?.own?.model ?? null; L.long = null; L.side = null;
-  for (const d of [third, other, inHands]) { if (!d) continue; const m = d.own?.model ?? null; if (d.cls === 'pistol') L.side = m; else if (!(d === inHands && third && d.id === 'm870')) L.long = m; }   // (the big slot's pump gun in his hands is not his long gun: that one, `third`, is on its sling)   // (the big slot's pump gun is nobody's long gun: his own hangs down his front while it is out)
+  const L = into ?? { hand: null, long: null, side: null }; L.hand = inHands?.own?.model ?? null; L.long = null; L.side = null; L.bareLong = false; L.bareSide = false;
+  for (const d of [third, other, inHands]) { if (!d) continue; const m = d.own?.model ?? null, bare = !m && !d.suppressed && (d.rig === 'sc20k' || d.rig === 'pistol');   // (bare: the two groups that draw a can, on a row that says it has none)
+    if (d.cls === 'pistol') { L.side = m; L.bareSide = bare; } else if (!(d === inHands && third && d.id === 'm870')) { L.long = m; L.bareLong = bare; } }   // (the big slot's pump gun in his hands is not his long gun: that one, `third`, is on its sling)   // (the big slot's pump gun is nobody's long gun: his own hangs down his front while it is out)
   return L;
 }
