@@ -60,7 +60,7 @@ export const SCENARIOS: ScenarioEntry[] = [
   // ---- new ideas, one a mission (group 'ideas'): a room clear with one overlay module keyed on a block of the level file
   { id: 'snatch-four', title: 'The snatch', kind: 'roomclear', squad: 4, level: 'snatch.json', group: 'clock', untuned: true,
     place: 'A small walled house, four rooms, a hut on the back gate', lean: 'loud', defenders: 8,
-    blurb: 'One unarmed man to take alive. The first shot, or the sight of you, sends him running for the back gate. Through it he is gone.' },
+    blurb: 'One unarmed man to take alive and walk out to your van. The first shot, or the sight of you, sends him running for the back gate. Through it he is gone.' },   // (the van: how a snatch ends since game/snatchout.ts; with that switch off the house taken is still the end and the van only stands there)
   // ONE IDEA (group 'ideas'): two timed charges on one clock (game/defuse.ts, the level's scenarios.defuse block), a wing apart, each workshop with a door
   // from its wing and a back door from outside. The blurb is the premise, not the answer (how to split is the player's to find). Four only (`only`): the mission IS two pairs' worth of work.
   { id: 'defuse-four', title: 'The two charges', kind: 'roomclear', squad: 4, level: 'defuse.json', group: 'clock', untuned: true,
