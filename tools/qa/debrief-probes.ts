@@ -300,12 +300,21 @@ export async function debriefCharge() {
   want(CH.eventText(ev('kill', { who: 'Tango 2', weapon: 'a round' })), 'Tango 2 shot dead (a round)', 'a round, as it read');
   want(CH.eventText(ev('down', { by: 'Tango 2' })), "DOWN — Tango 2's round", "a man's round, as it read");
   want(CH.eventText(ev('down', { by: '' })), 'DOWN', 'nobody named, as it read');
+  // the knock a charge gives through the wall it opened is the charge's, not a takedown: the row's method, filed from the line the charge says
+  want(CH.eventText(ev('ko', { who: 'Tango 2', method: 'charge' })), 'Tango 2 out cold — the wall charge', 'a man behind the wall');
+  want(CH.eventText(ev('civilianKO', { who: 'Ines', label: 'cleaner', method: 'charge' })), 'Ines (the cleaner) out cold — the wall charge — a CIVILIAN', 'a civilian behind the wall');
+  want(CH.eventText(ev('ko', { who: 'Tango 2', method: 'takedown' })), 'Tango 2 out cold — the takedown', 'the takedown, as it read');
+  { const W = await standUp(), g = W.game, gd = g.guards.find((x: any) => x.state !== 'dead' && !x.civ && x.team !== 'operative');
+    if (!gd) fails.push('no man to file a row for');
+    else { const viaCharge = CH.chronDown(g, gd, 'struck', `${gd.callsign} down — behind the wall when it went`), byHand = CH.chronDown(g, gd, 'struck', `${gd.callsign} out cold`);
+      want(String(viaCharge?.data.method), 'charge', "chronDown, the charge's own line"); want(String(byHand?.data.method), 'takedown', 'chronDown, a blow by hand'); } }
   // the words the charge files its rows under are still the ones worded here (chronicle.ts chronDown's test of the line · wallcharge.ts's chronHit)
   { const { readFileSync } = await import('node:fs'), wc = readFileSync(`${ROOT}/src/game/wallcharge.ts`, 'utf8'), ch = readFileSync(`${ROOT}/src/game/chronicle.ts`, 'utf8');
     if (!wc.includes("chronHit(g, 'the wall charge')")) fails.push("wallcharge.ts no longer files the player's row as 'the wall charge'");
-    if (!ch.includes("? 'a wall charge' :")) fails.push("chronicle.ts chronDown no longer names the weapon 'a wall charge'"); }
+    if (!ch.includes("? 'a wall charge' :")) fails.push("chronicle.ts chronDown no longer names the weapon 'a wall charge'");
+    if (!wc.includes('behind the wall when it went`')) fails.push("wallcharge.ts no longer says 'behind the wall when it went' of the man it knocks through the wall"); }
   const ok = fails.length === 0;
-  verdictLine(ok, "(c3) a man at the wall charge reads 'killed — the wall charge' and the player 'DOWN — the wall charge'; the knife, a round, a man's round and a nameless down read as they did; the charge still files its rows under those words", 'the rows\' own words', fails);
+  verdictLine(ok, "(c3) a man at the wall charge reads 'killed — the wall charge', the player 'DOWN — the wall charge', a man or a civilian knocked out behind the wall 'out cold — the wall charge'; the knife, a round, a man's round, a nameless down and a takedown read as they did; the charge still files its rows under those words", 'the rows\' own words', fails);
   console.log(`=== debrief-charge: ${ok ? 'ALL PASS' : 'FAILURES above'} ===`);
   return ok;
 }
