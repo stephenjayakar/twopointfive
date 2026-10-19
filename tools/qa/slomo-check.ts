@@ -1,5 +1,5 @@
-// THE REPLAY'S PACES (src/replay/engineplay.ts SPEEDS: ¼× ½× 1× 2× 4× on the bar, [ and ] step along them). The steps a frame runs and where a slow frame stands
-// between the last two are two small functions with no page under them (paceFrame, slowBlend); this holds them:
+// A REPLAY'S PACES UNDER THE PICTURE (src/replay/engineplay.ts TAPE_SPEEDS: ¼× ½× 1× 2× 4×). The steps a frame runs, and where a slow frame is drawn between the
+// tape's last two steps, are two small functions with no page under them (paceFrame, slowBlend); this holds them:
 //   · at 1×, 2× and 4× a frame runs the steps it ran before there was a pace under 1 (the loop as it stood, kept here, on uneven frames and mixed step lengths),
 //   · at every pace the tape's steps are run in order, none skipped or run twice, and a second of the display plays `pace` seconds of the tape,
 //   · at ¼× and ½× the picture moves on EVERY frame, never backwards and never past the last step run — on a tape of even steps by the display's time × the pace
@@ -7,9 +7,10 @@
 //   · a frozen second of the display runs a capped burst and owes nothing after it; the end of the tape runs nothing.
 // SLOMO_BREAK=1 makes a slow frame stand on the last step (the picture then moves one frame in four at ¼×): 'the picture moves on every frame' must fail.
 //   bun run tools/qa/slomo-check.ts          exit 0 = all pass · 1 = a line failed
-// The player itself (the bar, the keys, the men drawn between two steps, a tape played slow and then to its end) is the real page's: engine-replay-page.cjs `slow`.
+// The player itself (the men drawn between two steps, a tape played slow and then to its end) is the real page's: engine-replay-page.cjs `between`; the bar
+// and its keys are that tool's `slow` and probes.ts cardreplay.
 import { ROOT } from './headless.ts';
-const { SPEEDS, paceFrame, slowBlend } = await import(`${ROOT}/src/replay/engineplay.ts`) as { SPEEDS: number[]; paceFrame: (owed: number, wall: number, speed: number, f: number, ticks: number, tAt: ArrayLike<number>) => { n: number; owed: number }; slowBlend: (owed: number, next: number) => number };
+const { TAPE_SPEEDS: SPEEDS, paceFrame, slowBlend } = await import(`${ROOT}/src/replay/engineplay.ts`) as { TAPE_SPEEDS: number[]; paceFrame: (owed: number, wall: number, speed: number, f: number, ticks: number, tAt: ArrayLike<number>) => { n: number; owed: number }; slowBlend: (owed: number, next: number) => number };
 let bad = 0; const line = (ok: boolean, label: string, detail = '') => { if (!ok) bad++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${label}${detail ? '  — ' + detail : ''}`); };
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 /** a tape's step times: `even` = every step a sixtieth; else a mix of step lengths, as a recording made on an uneven display carries */

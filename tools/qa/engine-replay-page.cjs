@@ -14,9 +14,11 @@
 //           to what the run has = as played again); the player's goggles are never written; a seek back keeps it; the run drawn so is still the recording's
 //   map     the bar's line marked from the trace and dragged to scrub; the corner map drawn from the running game, opened large (click, M), a click on it
 //           sends the picture's camera to that floor point; the run still the recording's
-//   slow    the bar's paces under 1 (¼× ½×; [ and ] step along the five, `__tape.speed`): a step lasts several frames and the frames between are drawn BETWEEN
-//           the tape's last two steps (host/tween.ts), the men the lifted fog shows too; the picture only — played slow, then fast to its end, the run is
-//           still the recording's; a seek back keeps the pace
+//   slow    the bar's pace (− · the reading · +, the keys - and +): slow motion is the recording's own steps fed more slowly — the game's clock a quarter
+//           as fast at ¼× — kept over a seek back, and the run slowed and sped on the way ends as recorded
+//   between under 1× the picture is drawn BETWEEN the tape's last two steps (host/tween.ts): at ¼× a step lasts four frames and every frame is further along,
+//           the men the lifted fog shows too; paused it stands where it is; a script's steps, 1× and faster draw the step itself; played so and then to
+//           its end the run is still the recording's
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 // exit 0 = all of it with no page error · 1 = otherwise. ONLY=record,play,… runs fewer; FILE=<path to a replay .json[.gz]> walks that file instead of recording
 // one (its drift is REPORTED, not judged: a tape of another build may part).
@@ -484,25 +486,62 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     await page.close();
   }
 
-  // ── slow: the paces under 1. Most frames here pack the world and draw nothing (the software adapter's draw is most of a minute); what the blend hung on the
-  //    drawn things is read where the render would read it. Two frames are drawn for real.
+  // ── slow: the bar's pace (− · what it is now · +, the keys - and +). Slow motion is the recording's own steps fed more slowly: the game's clock moves a
+  //    quarter as fast at ¼×, the pace is kept over a seek back (a page load), and a run slowed and sped on the way still ends as the recording did.
   if (want('slow')) {
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
+    const paced = () => { const T = window.__tape, E = window.__engine, g = window.__game, pace = document.querySelector('#tapebar .pace'), b = pace ? [...pace.querySelectorAll('button')] : [];
+      const look = () => ({ speed: T.state.speed, read: b[1]?.textContent, lit: !!b[1]?.classList.contains('on'), slowEnd: !!b[0]?.classList.contains('end'), fastEnd: !!b[2]?.classList.contains('end') });
+      // (frames PACKED, not drawn — see `map` — at a sixtieth of a second each: what the pace feeds is read off the game's own clock)
+      const fed = n => { const drawIt = E.render, f0 = T.state.f, t0 = g.time; E.render = () => { E.world.upload(); }; try { for (let i = 0; i < n; i++) window.__runFrames(1, 1 / 60); } finally { E.render = drawIt; } return { frames: n, steps: T.state.f - f0, game: +(g.time - t0).toFixed(4) }; };
+      return { T, b, look, fed, key: (key, code) => window.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true })) }; };
+    const A = await page.evaluate(`(() => { const { T, b, look, fed, key } = (${paced})(); if (!T || typeof T.speed !== 'function') return { why: 'no __tape.speed on the page' }; if (b.length !== 3) return { why: 'no pace group on the bar' };
+      const out = { first: look() }; b[0].click(); out.half = look(); b[0].click(); out.quarter = look(); b[0].click(); out.floor = look();
+      T.play(); out.q = fed(240);
+      // (the keys by the character typed: = and + where this keyboard has them, then a + that sits where this keyboard has its minus, and a minus on another key still: two other keyboards)
+      key('=', 'Equal'); key('+', 'Equal'); key('=', 'Equal'); key('+', 'NumpadAdd'); key('+', 'Minus'); out.four = look(); out.x4 = fed(30);
+      key('-', 'Slash'); out.two = look(); b[1].focus(); b[1].click(); out.one = look(); out.x1 = fed(60);
+      T.pause(); out.off = T.speed(3); b[0].focus(); b[0].click(); out.keep = look(); out.focus = b.includes(document.activeElement); out.state = T.state; return out; })()`);
+    let B = {};
+    if (!A.why) {
+      const nav = page.waitForNavigation({ timeout: NAV }).catch(e => console.log('    (no page load on the seek back: ' + String(e).slice(0, 120) + ')'));
+      await page.evaluate(() => { setTimeout(() => window.__tape.seek(60), 0); }); await nav;
+      await page.waitForFunction(() => !!window.__ready && !!window.__game && !!window.__audio && !!window.__tape, null, { timeout: 600000 });
+      B = await page.evaluate(`(async () => { await window.__ready; window.__testVisible = true; window.__heard = window.__heard || []; const { T, look, fed } = (${paced})();
+        const tick = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
+        let n = 0; const E = window.__engine, drawIt = E.render; E.render = () => { E.world.upload(); };
+        try { while ((T.state.seeking || T.state.f < 60) && n++ < 4000) { window.__runFrames(1, 1 / 60); await tick(); } } finally { E.render = drawIt; }
+        const out = { kept: look(), f: T.state.f, search: location.search }; T.play(); out.h = fed(60); T.pause(); T.run(0, true); await E.device.queue.onSubmittedWorkDone(); return out; })()`);
+      await shot(page, 'engine-replay-slow');
+    }
+    const R = A.why ? {} : await walk(page), s = R.state || {}, at = rec?.pos && R.pos ? Math.hypot(R.pos[0] - rec.pos[0], R.pos[2] - rec.pos[2]) : null;
+    const is = (l, speed, read, lit, slowEnd, fastEnd) => !!l && l.speed === speed && l.read === read && l.lit === lit && l.slowEnd === slowEnd && l.fastEnd === fastEnd;
+    const near = (r, speed) => !!r && (FILE ? r.steps > 0 : Math.abs(r.game - r.frames / 60 * speed) <= 0.035 && Math.abs(r.steps - r.frames * speed) <= 1);   // (a file's steps are whatever its page ran at, and whether it parts is reported, not judged)
+    const barOk = !A.why && is(A.first, 1, '1×', false, false, false) && is(A.half, 0.5, '½×', true, false, false) && is(A.quarter, 0.25, '¼×', true, true, false) && is(A.floor, 0.25, '¼×', true, true, false)
+      && is(A.four, 4, '4×', true, false, true) && is(A.two, 2, '2×', true, false, false) && is(A.one, 1, '1×', false, false, false) && A.off === 1 && is(A.keep, 0.5, '½×', true, false, false) && A.focus === false;
+    const paceOk = !A.why && near(A.q, 0.25) && near(A.x4, 4) && near(A.x1, 1) && (FILE || (!A.state.drift && A.state.unjournaled === 0)) && /[?&]at=60(&|$)/.test(B.search || '') && B.f >= 60 && B.f < A.state.f && is(B.kept, 0.5, '½×', true, false, false) && near(B.h, 0.5);
+    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && (at === null || at < 0.01);
+    line(barOk && !errors.length, 'the bar’s pace steps from ¼× to 4× by its − and + and the keys, holds at the ends, and a click on the reading is 1× again', A.why ? A.why : `${['first', 'half', 'quarter', 'floor', 'four', 'two', 'one', 'keep'].map(k => `${k} ${JSON.stringify(A[k])}`).join(' · ')} · a pace off the list asked: ${A.off} · a pressed button still holds the keyboard: ${A.focus}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(paceOk && runOk && !errors.length, 'slow motion feeds the recording’s own steps more slowly, the pace is kept over a seek back, and the run slowed and sped on the way is still the recording’s', A.why ? A.why : `¼× ${JSON.stringify(A.q)} · 4× ${JSON.stringify(A.x4)} · 1× ${JSON.stringify(A.x1)} · after the seek back (from step ${A.state.f}) the page ${B.search} stands on step ${B.f}: ${JSON.stringify(B.kept)} · ½× ${JSON.stringify(B.h)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · unjournaled ${s.unjournaled}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
+    await page.close();
+  }
+
+  // ── refuse: no run tape
+  // ── between: under 1× the picture is drawn BETWEEN the tape's last two steps (engineplay.ts slowBlend, host/tween.ts). Most frames here pack the world and draw nothing (the software adapter's draw is most of a minute); what the blend hung on the
+  //    drawn things is read where the render would read it. Two frames are drawn for real.
+  if (want('between')) {
     const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
     const A = await page.evaluate(async () => {
       const T = window.__tape, e = window.__engine, g = window.__game, FS = window.__fixedstep; if (!T || typeof T.speed !== 'function') return { why: 'no __tape.speed on the page' };
       const tick = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
-      const key = code => window.dispatchEvent(new KeyboardEvent('keydown', { code, bubbles: true, cancelable: true }));
-      const bar = () => { const b = [...document.querySelectorAll('#tapebar .pace button')]; return { names: b.map(x => x.textContent), lit: b.filter(x => x.classList.contains('on')).map(x => x.textContent) }; };
-      const out = { bar0: bar(), keys: [] };
-      for (const k of ['BracketLeft', 'BracketLeft', 'BracketLeft', 'BracketRight', 'BracketRight', 'BracketRight', 'BracketRight', 'BracketRight']) { key(k); T.run(0, false); out.keys.push([T.state.speed, bar().lit.join()]); }
-      { const b = [...document.querySelectorAll('#tapebar .pace button')].find(x => x.textContent === '½×'); if (b) b.click(); T.run(0, false); out.click = [T.state.speed, bar().lit.join()]; }
+      const out = {};
       // the men's shadow proxies as the render is handed them (the blend rides on them: tween.ts pose) and as the step left them
       const sig = () => { const d = e.world.capsuleData, n = Math.min(d.length, 8 * 8 * e.world.charCount); let h = 0; for (let i = 0; i < n; i++) h = (h * 31 + Math.round(d[i] * 1e5)) | 0; return h; };
       const real = e.render; let seen = null; e.render = () => { seen = { a: FS.drew ? FS.drew.a : null, men: FS.drew ? FS.drew.men : 0, boxes: FS.drew ? FS.drew.boxes : 0, sig: sig() }; e.world.upload(); };
       const frames = (n) => { const rows = []; for (let i = 0; i < n; i++) { seen = null; const f0 = T.state.f; window.__runFrames(1, 1 / 60); rows.push({ stepped: T.state.f - f0, ...(seen || {}), after: sig() }); } return rows; };
       try {
-        T.run(150, false);   // (to where the men are moving: scripted steps, no slow frame between them)
-        T.speed(0.25); T.play(); out.f0 = T.state.f; out.quarter = frames(48); out.f1 = T.state.f;
+        T.speed(0.5); T.run(150, false);   // (to where the men are moving: a script's steps, at a slow pace too, leave no blend behind them)
+        out.before = FS.drew === null; T.speed(0.25); T.play(); out.f0 = T.state.f; out.quarter = frames(48); out.f1 = T.state.f;
         out.hid = g.fogOfWar.active ? g.guards.filter(x => g.fogOfWar.hidden(x)).length : 0;   // (men the fog leaves out of the picture: with it off they are drawn, so they are drawn between the steps too)
         T.fog(false); out.bare = frames(16); T.fog(true); frames(8);
         T.speed(0.5); out.half = frames(16); out.f2 = T.state.f;
@@ -518,26 +557,17 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       return out;
     });
     const s = A.s || {}, Q = A.quarter || [], H = A.half || [], Bz = A.bare || [];
-    const paces = !A.why && A.bar0.names.join(' ') === '¼× ½× 1× 2× 4×' && A.bar0.lit.join() === '1×' && A.keys.map(k => k[0]).join() === '0.5,0.25,0.25,0.5,1,2,4,4' && A.keys.every(k => k[1] === ({ 0.25: '¼×', 0.5: '½×', 1: '1×', 2: '2×', 4: '4×' })[k[0]]) && A.click[0] === 0.5 && A.click[1] === '½×';
     // at ¼×: a step every fourth frame; once two steps stand, every frame is drawn between them (a < 1), further along on each frame until the next step
     const qSteps = Q.reduce((n, r) => n + r.stepped, 0), hSteps = H.reduce((n, r) => n + r.stepped, 0), posed = Q.filter(r => r.a !== null && r.a < 1);
     let rising = 0, falls = 0; for (let i = 1; i < Q.length; i++) { const p = Q[i - 1], c = Q[i]; if (p.a === null || c.a === null || p.a >= 1 || c.a >= 1) continue; if (c.stepped) continue; if (c.a > p.a) rising++; else falls++; }
     const pictures = new Set(posed.map(r => r.sig)).size, moved = Q.filter((r, i) => i > 0 && !r.stepped && r.after !== Q[i - 1].after).length, menMin = posed.length ? Math.min(...posed.map(r => r.men)) : 0;
     const bareMen = Math.max(0, ...Bz.map(r => r.men || 0)), fogMen = Math.max(0, ...Q.map(r => r.men || 0)), counts = FILE ? qSteps >= 1 && hSteps >= 1 : qSteps >= 11 && qSteps <= 13 && Q.every(r => r.stepped <= 1) && hSteps >= 7 && hSteps <= 9;   // (a file's steps may be of any length: only the recorded quarter minute's are counted)
-    const slowOk = !A.why && counts && posed.length >= (FILE ? 8 : 40) && rising >= (FILE ? 4 : 24) && falls === 0 && menMin >= 1 && pictures >= (FILE ? 4 : 30) && moved === 0
+    const slowOk = !A.why && A.before && counts && posed.length >= (FILE ? 8 : 40) && rising >= (FILE ? 4 : 24) && falls === 0 && menMin >= 1 && pictures >= (FILE ? 4 : 30) && moved === 0
       && Bz.filter(r => r.a !== null && r.a < 1).length >= 12 && A.one.every(r => r.a === null && (FILE || r.stepped === 1)) && A.stood.stepped === 0 && A.stood.same && A.stood.on && A.ran.rested && (A.hid === 0 || bareMen > fogMen) && A.drawn.a !== null && A.drawn.a < 1 && A.drawn.men >= 1;
     const runOk = !A.why && s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && !A.fatal;
-    line(paces && !errors.length, 'the bar has five paces, ¼× to 4×, the one playing lit; [ and ] step along them and stop at the ends; a click picks one', A.why ? A.why : `the bar ${A.bar0.names.join(' ')} (lit ${A.bar0.lit.join()}) · [ [ [ ] ] ] ] ] gave ${A.keys.map(k => k[1]).join(' ')} · a click on ½× gave ${A.click[1]}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    line(slowOk && !errors.length, 'at ¼× a step lasts four frames and each frame between is drawn further along between the last two steps, the men with it (those the lifted fog shows too); paused it stands where it is; scripted steps and 1× draw the step itself', A.why ? A.why : `¼×: ${qSteps} steps in ${Q.length} frames, ${posed.length} drawn between two steps (further along on ${rising}, back on ${falls}), ${pictures} different pictures of the men, at least ${menMin} men blended, the step's own proxies changed by ${moved} frames with no step · fog off: ${Bz.filter(r => r.a !== null && r.a < 1).length} of ${Bz.length} between, ${bareMen} men blended against ${fogMen} under it (${A.hid} hidden by the fog then) · ½×: ${hSteps} steps in ${H.length} frames · drawn for real: ${JSON.stringify(A.drawn)} · paused: ${JSON.stringify(A.stood)} · after a script's two steps: ${JSON.stringify(A.ran)} · 1×: ${JSON.stringify(A.one.map(r => [r.stepped, r.a]))}`);
+    line(slowOk && !errors.length, 'at ¼× a step lasts four frames and each frame between is drawn further along between the last two steps, the men with it (those the lifted fog shows too); paused it stands where it is; scripted steps and 1× draw the step itself', A.why ? A.why : `150 scripted steps at ½× left no blend: ${A.before ? 'yes' : 'NO'} · ¼×: ${qSteps} steps in ${Q.length} frames, ${posed.length} drawn between two steps (further along on ${rising}, back on ${falls}), ${pictures} different pictures of the men, at least ${menMin} men blended, the step's own proxies changed by ${moved} frames with no step · fog off: ${Bz.filter(r => r.a !== null && r.a < 1).length} of ${Bz.length} between, ${bareMen} men blended against ${fogMen} under it (${A.hid} hidden by the fog then) · ½×: ${hSteps} steps in ${H.length} frames · drawn for real: ${JSON.stringify(A.drawn)} · paused: ${JSON.stringify(A.stood)} · after a script's two steps: ${JSON.stringify(A.ran)} · 1×: ${JSON.stringify(A.one.map(r => [r.stepped, r.a]))}`);
     line(runOk && !errors.length, 'played slow, with the fog on and off, then fast to its end, the run is the recording’s', A.why ? A.why : `${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · worst ${s.worst ? (+s.worst.metres).toFixed(3) + ' m' : '–'}${A.fatal ? ' · FATAL ' + A.fatal.slice(0, 120) : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    await shot(page, 'slow-bar');
-    if (!A.why) {   // a look back is a page load (the cam section's): the pace is still the one picked
-      const nav = page.waitForNavigation({ timeout: NAV }).catch(e => console.log('    (no page load on the seek back: ' + String(e).slice(0, 120) + ')'));
-      await page.evaluate(() => { window.__tape.speed(0.25); setTimeout(() => window.__tape.seek(60), 0); }); await nav;
-      await page.waitForFunction(() => !!window.__ready && !!window.__game && !!window.__tape && !!document.querySelector('#tapebar .pace button'), null, { timeout: 600000 });
-      const K = await page.evaluate(async () => { await window.__ready; const T = window.__tape; T.run(0, false); return { speed: T.state.speed, lit: [...document.querySelectorAll('#tapebar .pace button.on')].map(x => x.textContent).join() }; });
-      line(K.speed === 0.25 && K.lit === '¼×' && !errors.length, 'a seek back (a page load) keeps the pace', `${K.speed}× · lit ${K.lit}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    }
+    await shot(page, 'engine-replay-between');
     await page.close();
   }
 
@@ -556,7 +586,6 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     await page.close();
   }
 
-  // ── refuse: no run tape
   if (want('refuse') && !FILE && fileText) {
     const F = JSON.parse(fileText); delete F.rerun; F.savedAt += 'x';
     await ctx.route('**/qa-bare.json', r => r.fulfill({ contentType: 'application/json', body: JSON.stringify(F) }));
