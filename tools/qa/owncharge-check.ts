@@ -15,7 +15,9 @@
 //           man inside the knock reach down, the room's other man blind and folded); told the charge row on that door the squad stands off with nobody at
 //           the lock and nothing more spent, and F sends them in behind it
 //   save    alone: a checkpoint's player slice carries the counts with a set charge back in them, a load puts them back; no slice with the switch off
-//   off     the switch off, and the switch on with charges carried and never used: the same run by digest; the two stands' row and the registry
+//   off     the switch off, and the switch on with charges carried and never used: the same run by digest (WHERE THE BUILD HAS THE KIT'S WEIGHT —
+//           kitload.ts — that pair is asked with the weight held off, a carried charge being weight on your legs, and the switch on with none carried
+//           with the weight as the stand has it); the two stands' row and the registry
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises the switch itself. Nothing here looks at a picture.
 import { standUp, ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
@@ -24,6 +26,8 @@ const { OWNCHARGE } = await import(`${ROOT}/src/game/owncharge.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 /** the kit's one big slot, where the build has one (undefined before it: every card is a row a thing) */
 const BIG: { on: boolean } | undefined = (K as any).BIGSLOT;
+/** the kit's weight, where the build has it (kitload.ts KITLOAD; undefined before it): what a card carries is its man's pace, a charge on yours too */
+const LOAD: { on: boolean } | undefined = (await import(`${ROOT}/src/game/kitload.ts`).catch(() => null) as any)?.KITLOAD;
 const { DOORTOOLS, doorPt } = await import(`${ROOT}/src/game/doortools.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const SAVE = await import(`${ROOT}/src/game/savestate.ts`);
@@ -45,8 +49,8 @@ const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const isOpen = (d: any) => !d.latched && Math.abs(d.angle) >= 0.6;
 /** the kit table, its rules and the switch as they stood, put back after `fn` (the store the table writes to is left on nothing) */
 async function kept<T>(fn: () => Promise<T> | T): Promise<T> {
-  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, own = OWNCHARGE.on, big = BIG?.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
-  try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; OWNCHARGE.on = own; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
+  const cards = K.KIT.members.map((m: any) => ({ ...m })), on = K.KIT.on, slots = K.SLOTS.on, own = OWNCHARGE.on, big = BIG?.on, load = LOAD?.on, solo = { ...K.KIT_SOLO }, rnd = Math.random;
+  try { return await fn(); } finally { K.kitLoad(null, ''); if (BIG) BIG.on = !!big; if (LOAD) LOAD.on = !!load; for (let i = 0; i < cards.length; i++) K.KIT.members[i] = cards[i]; K.KIT.on = on; K.SLOTS.on = slots; OWNCHARGE.on = own; Object.assign(K.KIT_SOLO, solo); Math.random = rnd; }
 }
 const fields = (i: number) => K.kitRows(i).map((r: any) => r.field as string);
 /** a member's pouches emptied (the cans, the grenades, the charges): room for what a check puts on him */
@@ -259,8 +263,11 @@ export async function ownchargeSave(): Promise<boolean> {
 export async function ownchargeOff(): Promise<boolean> {
   const F = family('owncharge-off: the switch off, or charges carried and never set, is the same run');
   await kept(async () => {
-    const run = async (on: boolean) => {
-      const R: any = await hushed(() => rig(17, { stage: false })); OWNCHARGE.on = on; const g = R.game; g.godMode = false; K.KIT.on = true; K.KIT.members[0].charges = on ? 2 : 0; K.kitSolo(g);
+    // (kitload.ts: a charge on your card is weight, and weight is your legs' pace — so 'carried and never used' is the same run only with the weight held
+    //  off, the first pair; with the weight as the stand has it the pair is the switch on and NOTHING carried, the second)
+    const weighed = !!LOAD?.on;
+    const run = async (on: boolean, n = on ? 2 : 0, weigh = false) => {
+      const R: any = await hushed(() => rig(17, { stage: false })); OWNCHARGE.on = on; if (LOAD) LOAD.on = weigh && weighed; const g = R.game; g.godMode = false; K.KIT.on = true; K.KIT.members[0].charges = n; K.kitSolo(g);
       const a = R.door('breakroom_w'), b = R.door('manager'); shut(a); shut(b); const seen = new Set<string>(); const hashes: string[] = [];
       for (let i = 0; i < 900; i++) {   // a stand at each of two shut doors (one of them locked), a walk off between: the rows are read, nothing is picked
         if (i === 0) g.teleportPlayer(doorPt(a, a.def.width / 2, 0.75, faceToward(a, [20, 0, 18.9]))); if (i === 450) g.teleportPlayer(doorPt(b, b.def.width / 2, 0.75, 1));
@@ -270,7 +277,9 @@ export async function ownchargeOff(): Promise<boolean> {
       return { hashes, rows: [...seen].sort().join(' '), n: R.D.charges };
     };
     const off = await run(false), on = await run(!BREAK);
-    F.verdict(J(off.hashes) === J(on.hashes) && on.rows.includes('charge') && !off.rows.includes('charge'), 'fifteen seconds at two shut doors and walking off them: the row is offered with the switch on, never used — and the run digests the same', `off: ${off.hashes.join(' ')} · rows ${off.rows}\n    on:  ${on.hashes.join(' ')} · rows ${on.rows} (carried ${on.n})`);
+    F.verdict(J(off.hashes) === J(on.hashes) && on.rows.includes('charge') && !off.rows.includes('charge'), `fifteen seconds at two shut doors and walking off them: the row is offered with the switch on, never used — and the run digests the same${LOAD ? ' (the kit\'s weight held off: two charges on a card are two charges\' weight)' : ''}`, `off: ${off.hashes.join(' ')} · rows ${off.rows}\n    on:  ${on.hashes.join(' ')} · rows ${on.rows} (carried ${on.n})`);
+    if (LOAD) { const off2 = await run(false, 0, true), on2 = await run(true, 0, true);
+      F.verdict(J(off2.hashes) === J(on2.hashes) && !on2.rows.includes('charge'), 'the kit\'s weight as the stand has it: the switch on with no charge carried is the same run as the switch off — what a carried charge costs your pace is the weight\'s rule, not this switch\'s', `weight ${weighed ? 'on' : 'off on this stand'} · off: ${off2.hashes.join(' ')}\n    on:  ${on2.hashes.join(' ')} · rows ${on2.rows} (carried ${on2.n})`); }
     const reg = knobRegistry(), page = /OWNCHARGE\.on = !q\.has\('noowncharge'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
     F.verdict('OWNCHARGE.on' in FROZEN_HOLDS && reg.OWNCHARGE === OWNCHARGE && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?noowncharge', `frozen hold: ${FROZEN_HOLDS['OWNCHARGE.on']} · registered ${reg.OWNCHARGE === OWNCHARGE} · pageSwitches writes it: ${page}`);
   });

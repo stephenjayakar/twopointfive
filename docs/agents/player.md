@@ -331,7 +331,9 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   slots"): slots.json's `maxPerSquad` is deleted — data, NOT switched, so on both stands — and the pouches are the only limit (two each, two a man). `scenarios.roomClear.wallCharges` still
   RAISES the squad's count (issue.ts), never lowers it. QA: `bun run tools/qa/owncharge-check.ts [kit|door|squad|save|off]` (`probes.ts owncharge`; `owncharge-kit` also under `kit`,
   `-door` / `-squad` under `doortools`; in all-quick; both stands; `OWNCHARGE_BREAK=1` must fail), `PORT=<dev server> node tools/qa/owncharge-page.cjs [outDir]` (the real page on the software adapter: the card's two rows, a shut door's row, set by hand, F; `?noowncharge`). The Sam-alone lines of wallcharge-probes.ts / outerwall-probes.ts hold the switch off (they
-  were written on the old bag). Page: rebuild/player-charges/read-first.md. Never seen on a GPU or played by anybody; the stand-off numbers are the squad's, untuned for a hand.
+  were written on the old bag). A CARRIED CHARGE WEIGHS (`kitload.ts`, the kit's weight, on in the page): two on your card slow your legs by that rule, so
+  `owncharge-off` asks 'carried and never set is the same run' with the weight held off, and with the weight as the stand has it asks the switch on
+  with none carried against the switch off. Page: rebuild/player-charges/read-first.md. Never seen on a GPU or played by anybody; the stand-off numbers are the squad's, untuned for a hand.
 - **One big slot a man, and small pouches** (`src/game/kit.ts BIGSLOT`, `src/game/bigkit.ts`, slots.json v9; ONE switch `BIGSLOT.on`: ON in the page — `?nobigslot` = the cards
   as they were — OFF in the module and on the frozen stand, `TPS_BIGSLOT=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table
   replays with it off — an F10 journal carries the switch and no kit cards; an F7 run tape carries the cards whole (`runtape.ts kitNow`), `big` among them; Tab ▸ 'Big slot (breaching shotgun, hammer)': the switch, what is on you now, blows / beat / wind-up / draw). The
