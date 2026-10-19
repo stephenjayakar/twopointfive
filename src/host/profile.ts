@@ -53,7 +53,7 @@ import { LANES } from '../game/lanes';
 import { HAULHOME } from '../game/digin';
 import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
-import { HOLD, THROW_BY } from '../game/character';
+import { HOLD, THROW_BY, HARDBREATH } from '../game/character';
 import { CLOSE } from '../game/close';
 import { PLAN } from '../game/floorplan';
 import { KITANIM } from '../game/kitanim';
@@ -167,6 +167,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLCHARGE.menClear = q.get('menclear') !== '0';   // a man on 'fall in' whose place is in the line of a charge set on a wall, nearer than its stand-off distance, walks to a stand-off mark and keeps it until his place is clear (game/wallcharge.ts clearOf; ?menclear=0 = he keeps his place in the file, in the blast or not; acts with the larger safety radius)
   WALLSHOT.on = q.get('wallshot') !== '0';   // a wall shot's smoke is thinner and its shock fills the room it opens (game/wallcharge.ts WALLSHOT): ON in the page, ?wallshot=0 = the charge as it was
   WALLKILL.on = q.get('wallkill') !== '0';   // a wall charge kills whoever stands at it when it goes, the player among them (game/wallcharge.ts WALLKILL): ON in the page, ?wallkill=0 = dazzled and rocked as it was
+  HARDBREATH.on = q.get('hardbreath') !== '0';   // a man who has run breathes hard: the chest heaves deeper and quicker, the steam on a snow level is thrown harder, bigger and more often (game/character.ts HARDBREATH): ON in the page, ?hardbreath=0 = the breath as it was
   WALLCHARGE.farFurn = q.get('wallfurn') !== '0';   // furniture against a wall's far face is no 'no floor behind it' (game/wallcharge.ts mouthAfter: a cot stood against the wall inside goes with the wall): ON in the page; ?wallfurn=0 = refused there as it was
   CASTOR.on = q.get('chairroll') !== '0';   // an office chair rolls and coasts on its castors (game/props.ts CASTOR): ON in the page; ?chairroll=0 = it stops like any other furniture, as it was
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
@@ -409,6 +410,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'BACKKEY.tab': 'TPS_TABBACK=1',
   'WALLSHOT.on': 'TPS_WALLSHOT=1',
   'WALLKILL.on': 'TPS_WALLKILL=1',
+  'HARDBREATH.on': 'TPS_HARDBREATH=1',
   'FIXEDSTEP.on': 'TPS_FIXEDSTEP=1 (read only by a tool that steps through host/loop.ts stepFrame: the harness\'s own W.step names its dt)',
   'TWEEN.on': 'TPS_TWEEN=1 (the picture between two ticks: the same)',
   'REARWATCH.room': 'TPS_ROOMKEEP=1',

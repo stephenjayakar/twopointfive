@@ -175,6 +175,22 @@ fn wxRoofed(p: vec2f) -> bool {
   if (!r && frame.cardCfg.z != 0u) { r = wxInRect(wxRect(frame.cardCfg.z), p); }
   return r;
 }
+/** RAIN OVER A WALL'S FACE (the scene prelude's RAIN_WALLS; the maintainer, 10-19, a depot's yard in the rain: "rain isn't showing up on top of walls properly").
+ *  The rain's readability rule hides it from every pixel whose SURFACE is not outdoors, and asked that of the roofs' bare rectangles — a level's own roof is its
+ *  ceiling slab grown by centimetres, over the walls — so the walls' OUTER FACES, the doors in them and the walls' tops counted as indoors: the streaks fell over
+ *  the yard and stopped dead at the wall behind it. Is ground point p UNDER the roofs: WX_WALL_IN or more inside them on every side — the four corners of a square
+ *  that wide about it are all roofed (so the seam where two slabs of one building meet is under the roof, as either slab is). Asked of the level's OWN roofs only:
+ *  the office's two rectangles (no kind in force) lie on its walls' centre lines, its outer faces were never hidden, and drawn in they would let the rain into the
+ *  rooms' edges. volumetrics.wgsl (c) and particles_draw.wgsl rainFragment ask it. The rooms stay dry to the eye as before; a partition's top inside is under the
+ *  roof (the snow's own rule, particles_common.wgsl flakeHidden, opens every wall's top and each rectangle by itself). */
+const WX_WALL_IN: f32 = 0.2;   // m
+fn wxUnderRoof(p: vec2f) -> bool {
+  if (!wxRoofed(p)) { return false; }
+  if (!WX_KINDS) { return true; }
+  if (frame.cardCfg.y == 0u) { return true; }
+  let d = WX_WALL_IN;
+  return wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d));
+}
 struct WxFog { sigma: f32, H: f32, leak: f32, gain: f32, tint: vec3f };
 fn wxFog() -> WxFog {
   let w = frame.cardCfg.w;

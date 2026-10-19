@@ -89,7 +89,7 @@ import { PLANLAY } from './planlay';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
 import { GUNHOLD } from './gunhold';
-import { HOLD, THROW_BY } from './character';
+import { HOLD, THROW_BY, HARDBREATH } from './character';
 import { STACKROOM } from './stackroom';
 import { START } from './startfile';
 import { HOLDFIRE } from './holdfire';
@@ -460,6 +460,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.WALLPEN) WALLPEN.on = false;   // (a file from before rounds went through thin walls and doors — it carries no such table: its rounds stop in the first built thing they meet, as they were recorded)
   if (!k.tables.WALLSHOT) WALLSHOT.on = false;   // (a file from before a wall shot's smoke was thinned and its shock filled the room: its charges' pall and stun were the build's own)
   if (!k.tables.WALLKILL) WALLKILL.on = false;   // (a file from before a wall charge killed the man standing at it: its blasts dazzled him, and spared the player and a big team's men behind the wall)
+  if (!k.tables.HARDBREATH) HARDBREATH.on = false;   // (a file from before a blown man breathed harder: his chest heaved by the life layer's own numbers)
   if (!k.tables.WALLCHARGE) WALLCHARGE.on = false;   // (a file from before the wall charge: its menus and Sam's rows were the build's without it)
   if (!k.tables.WALLS) assignDeep(WALLS as unknown as Record<string, unknown>, WALLS_DEFAULTS as unknown as Record<string, unknown>);
   if (typeof (k.tables.HANDS as { carryRide?: number } | undefined)?.carryRide !== 'number') { const Hn = knobTables().HANDS as { carryRide?: number } | undefined; if (Hn) Hn.carryRide = 0; }   // (a recording from before a carried body's limbs rode its carrier: they trail him as they did then)

@@ -238,6 +238,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   things): nothing of those shows on it.
   SEEN: one offline still of a teammate's rifle hand each way (the software view; the fist moves up onto the gun). NEVER SEEN ON A GPU, nor on the page,
   nor by the maintainer: whether the fist reads as closed round the grip, the pistols' new place in the hands, the idle in motion.
+- **The picture and the standing man follow the tree card's new rows** (2026-10-19; `src/host/kitView.ts`, `src/ui/kitFigure.ts`; no switch of its
+  own: it follows `KITTREE`, and with that off no card has these tiles and the man is drawn as before). THE STANDING MAN read both of his guns by
+  one flag (yours: always suppressed; a teammate's: his `suppressed` for both) and drew your goggles whatever the card said: under the tree the check
+  found five of the six cards it tries drawn wrong. He now reads each slot's gun from the game's own `kit.ts kitSlotDef` (a can taken off is the
+  same gun, bare: `gunlook.ts bareLong` / `bareSide`) and your goggles from your `nvg` row, as `combat.ts` does through `kitYouNvg`. THE PICTURE: the
+  secondary's suppressor (`sideCan`) plays the gun's row, as `secondary` and `suppressed` do; SPONGE ROUNDS (`rings`, yours alone) play the
+  launcher's row with that load on the tube (`tubeRow('ring')`, the 40 mm's row by another load: shouldered down the wall away from the stack and
+  NOT sent, because a teammate stands along that wall and a round to the head puts a man out cold); `rings` is a COUNT, written to the picture's
+  own rifle. Your `suppressed`, `light` and `nvg` rows were already the gun's, the light's and the turn's; a card of yours with NO light now plays the gun's
+  row dark on the light's tile, as a teammate's always did (it swept a beam he does not carry). A teammate's `sideCan` (and his goggles)
+  still restage the room under the dissolve: his sidearm is dealt at staging. CHECKS: `kit-figure-roster-check.ts` has nine rows for it (34 lines on
+  both stands; seven of them are red on the figure before this); `kitview-work.cjs` has the picks `sam.suppressed`, `sam.sideCan`, `sam.light`,
+  `sam.nvg`, `sam.rings`, `mate.sideCan`; `kitview-page.cjs` has one row for the sponge rounds (its own row, the load on the tube, nothing in the
+  air), and its rows about a teammate's loud rifle take either row a card's unsuppressed issue rifle is (`aks74u`, or `mk18bare` under
+  `GUNSLOTS.bare`: no tracer spec, the suppressed gun's reach, a round kept in the chamber), where four of them had gone red on the build. NOT DONE: a teammate's 40 mm tile has no row of its own in the picture (the gun's row plays); the sponge round is never seen to fly.
+  Never seen on a GPU.
 - **The gear screen per level: the plan, the set loader, and the picture staged from them (10-15)**. The owner:
   "can we make it nicely abstracted so tweaks to one of them don't require churn elsewhere?" / "feel free to make a bespoke set for the gear screen …
   it should then just show off the vibe of the level / be recognizable". `src/host/kitViewPlan.ts` measures a way in from the level's own boxes (the
@@ -785,7 +801,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   → counts + `stealthScore` (100 minus SCORE's price list — every term only subtracts; probes hold monotonicity) + `ratingOf` (BANDS: GHOST ≥ 90 · SHADOW ≥ 70 ·
   OPERATIVE ≥ 40 · ASSAULT) + `badgesOf` (BADGE knobs) + the summary line; `fmtEvent` words a row. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on `mission.debrief` — raised on exfil AND `DOWN_CARD_SECS` after Sam drops — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
-  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / score / dom), soak's 'leak chronicle' invariant.
+  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / score / dom), soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
 - **The start card's sandbox row** (ui/menu.ts `sandboxRow`, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot): god mode ·
@@ -1163,3 +1179,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   west door'), and the card has no compass. Check `bun run tools/qa/probes.ts debrief-doorname` (families `debrief`, `words`: the stand's own keys
   first, then the keys by hand; `DOORNAMES_BREAK=1` asks for the name with the key down and is red) and a line of `debrief-dom` (the card on the fake
   DOM: the row and the pin), both stands. Only the office's two break room doors have written names so far, so that is where it shows.
+- **A wall charge's rows on the debrief say a charge (10-19, rides `WALLKILL`).** A man at the charge when it went read 'shot dead (a wall charge)' and
+  the player 'DOWN — the wall charge's round'. `chronicle.ts eventText` now words them 'killed — the wall charge' and 'DOWN — the wall charge' (a `by`
+  that ends in 'charge' takes no 'round'); the rows' data is as the charge files it, every other kill and down row reads as it did, and the end card's
+  own line ('by the wall charge') needed nothing. Both rows exist only with `WALLKILL` up, so its switch is theirs. NOT MENDED: the knock a charge gives
+  through a wall is still filed and read as 'the takedown' (its method is in the row's data, on the frozen stand too). Check
+  `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.

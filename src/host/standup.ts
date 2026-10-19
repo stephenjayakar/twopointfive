@@ -117,7 +117,7 @@ import { DOORSHOT } from '../game/doorblast';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
-import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY } from '../game/character';
+import { HOLD, MOVES, TURN, TURN_FEEL, THROW_BY, HARDBREATH } from '../game/character';
 import { WOUND } from '../game/wounds';
 import { DOORSTAY, DOORWAY } from '../game/doors';
 import { FollowCamera } from '../game/camera';
@@ -234,6 +234,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_TABBACK')) BACKKEY.tab = String((globalThis as any).process?.env?.TPS_TABBACK ?? '') === '1';   // Esc is only the pause and Tab backs out (src/game/backkey.ts): off on the frozen stand, where a Tab in the tick does nothing
     if (pinned('TPS_WALLSHOT')) WALLSHOT.on = String((globalThis as any).process?.env?.TPS_WALLSHOT ?? '') === '1';   // a wall shot's thinner smoke and its room-wide shock (src/game/wallcharge.ts WALLSHOT): off on the frozen stand, where a charge's pall and stun are the ones every tally was recorded on
     if (pinned('TPS_WALLKILL')) WALLKILL.on = String((globalThis as any).process?.env?.TPS_WALLKILL ?? '') === '1';   // a wall charge kills whoever stands at it, the player among them (src/game/wallcharge.ts WALLKILL): off on the frozen stand, where the man at the charge was dazzled
+    if (pinned('TPS_HARDBREATH')) HARDBREATH.on = String((globalThis as any).process?.env?.TPS_HARDBREATH ?? '') === '1';   // a man who has run breathes hard, chest and steam (src/game/character.ts HARDBREATH): off on the frozen stand, where a blown man's chest heaved by the life layer's own numbers
     if (pinned('TPS_FIXEDSTEP')) FIXEDSTEP.on = String((globalThis as any).process?.env?.TPS_FIXEDSTEP ?? '') === '1';   // the fixed 60 Hz game step (src/host/loop.ts): off on the frozen stand — a tool that steps through stepFrame gets one update a frame on the frame's own time, as every frozen digest was recorded
     if (pinned('TPS_TWEEN')) TWEEN.on = String((globalThis as any).process?.env?.TPS_TWEEN ?? '') === '1';   // drawing between ticks (src/host/tween.ts): off on the frozen stand — picture only, and only under the line above
     if (pinned('TPS_HOLDYAW')) HOLD.oneFacing = String((globalThis as any).process?.env?.TPS_HOLDYAW ?? '') === '1';   // a held man keeps the hold's facing: off on the frozen stand (its showcase digests were recorded with the marks turning him)
