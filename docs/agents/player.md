@@ -169,9 +169,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`combat.ts hammerSide` → `CharacterAnimator.bigSide`, the chest joint's own space → `Character.packSidePass`, a two-bone override after `inHandPass`: the arm the
   simulation reads, `bigLayer`'s, is the rule-off arm to the bit; the pass keeps `simHandR` as `inHandPass` does, so `handFrameR(true)` — what a kit swap starts from — is the
   animator's hand, and `ragdollize` lets the override go). The workbench holds the rule off unless `?packside=1` (its across-the-back gizmos would move nothing). A man with no pack (the sneaking suit, the mannequin) carries everything where he always did.
-  QA: `probes.ts packside` (`tools/qa/packside-check.ts`, 11 lines, both stands; `PACKSIDE_BREAK=1` fails (3) to (7)) samples every box of the tool each 1.5 cm against the SKINNED
+  QA: `probes.ts packside` (`tools/qa/packside-check.ts`, 12 lines, both stands; `PACKSIDE_BREAK=1` fails (3) to (7)) samples every box of the tool each 1.5 cm against the SKINNED
   worn mesh by ray parity, pack and body apart: five operators x hammer / shotgun x twelve poses + Sam's rifle alone and beside each tool — rule on, 0 samples inside any pack, the
   worst into the man 1.3 cm (the hammer's head under the back of the helmet, the hydration-carrier man crouched), top end fixed against the pack's vertices to under a millimetre,
+  each long gun's own model (gunlook.ts) slung there in the stand-in's place: 0 samples into the radio, him or the tool, five models x 36 poses (line 5b),
   the fist 1.0 cm from the handle on the draw (0.7 cm across a bare back), his wrist as the game reads it identical on and off. `bigslot-check` holds the rule off: its lines
   are about a bare back. NOT DONE / NOT SEEN: in a crouch the pack lies flat on a bent back and the tool lies along it — a long
   handle stands out behind him (the pictures say so); with kit handling on and the rifle kept on his back, Sam's rifle still crosses the radio for a few frames as it is slung or
@@ -611,7 +612,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   breacher). Secondaries: **Glock 19** (issue: `fiveseven` / bare `guard9mm`) · **HK45** THE QUIETEST (report 0.45, 8 rounds, slower) · **Glock 18** (33
   on automatic, loud; Z with it selected is its selector). New row fields: `hands` (your cone's multipliers by row — `player.ts rifleSpread`), `launcher:
   false` (`Rifle`: no ring, no 40 mm, no camera tube; `kit.ts tubed(m)` homes the shells and the cameras and the card says which gun has one), `weightKg`
-  and `bulk` (DATA for the kit's mobility and concealment score: nothing reads them yet). YOUR GUNS ARE YOUR CARD'S: `kitPlayer` builds `pl.rifle` /
+  and `bulk` (the kit's mobility and concealment score reads them: `kitload.ts gunLoad`, the bullet below; this check's WHAT IT WEIGHS verdict steps every pick on your card and a teammate's — the sidearm alone ×1.05 pace / ×0.77 notice against the issue card, the MP7 ×1.02 / ×0.90, the Mk 12 ×0.98 / ×1.10, the Mk 46 ×0.94 / ×1.20). YOUR GUNS ARE YOUR CARD'S: `kitPlayer` builds `pl.rifle` /
   `pl.pistol` from the two picks (`Pistol` takes a row; the issue pair is the pair you were built with — nothing is made), the pistol's fire site reads an
   automatic sear as the rifle's does (only on a row with `auto`: the issue pistol's path is the one it was), a checkpoint restores the sidearm by its id.
   A pick is `{ can, bare }`: the row with the suppressor on and with it off — the new ones exist one way only, so a teammate's Suppressor row changes
@@ -626,7 +627,7 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   farthest listener one round turns down a clear line — HK45 5 m, Glock 19 7 m, MP7 9 m, every other gun the whole line as gunfire; a teammate's MP7
   round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
   of their own; defenders drawing from the list; a teammate USING a gun for what it is for (the Mk 46 man does not hold lanes, the Mk 12 man does not
-  hang back); the weight in any score; tuning by play. Never seen on a GPU, never fired by a person.
+  hang back); tuning by play. Never seen on a GPU, never fired by a person.
 - **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
   nothing on him: a gun by ITS OWN ROW's `weightKg` and `bulk` (`weapons.ts`; `gunLoad`: `gunKg` 0.035 of mobility a kilogram, `gunBulk` 0.04 of concealment + 0.17 a
@@ -682,7 +683,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/gunlook-check.ts` (`own`: every row a slot hands out names a model, a voice, a flame and a casing row, no two guns share one — by name and by what is
   in them — and what two guns may share is said in the file; `hands`: a teammate and you with every pick are told, drawn and heard as that gun, off = the
   stand-in; `off`: ten seconds of the staged room clear digest the same with the switch off and on, seed 17, cards as issued) and `tools/qa/gunreload-check.ts`;
-  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale) and
+  `probes.ts gunlook` runs both; `GUNLOOK_BREAK=1` fails them. The kit figure's own check (`tools/qa/kit-figure-roster-check.ts`) has a pose per model: the fist on the
+  model's pistol grip (its `is: 'grip'` part) under that check's own rows, the hand on the fore-end by the model's hold, and the model the one drawn. PICTURES WITHOUT A GPU: `tools/qa/gunlook-plates.ts` (every model flat, side and top, one scale) and
   `tools/qa/gunlook-sheet.ts` (the kit figure with each gun, software-drawn; `--off` the before); `tools/qa/gunlook-page.cjs` boots the real page with all six on
   a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his

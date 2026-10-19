@@ -46,8 +46,9 @@ export const MODEL_POINTS: Record<GunModelId, { well: Vec3; cover?: Vec3; box?: 
 export type ModelCol = 'black' | 'metal' | 'steel' | 'poly' | 'furn' | 'brass' | 'shell' | 'cloth' | 'torch' | 'lens';
 /** One box of a model: a stick part along its frame's z in the group's axes (rigProps.ts Seg: l0‥l1 along z, half extents `thick` across and `tall` up, its own
  *  adjustment), what it is made of, and what it is — `mag`: left out while the magazine / the belt box is off the gun (gunreload.ts reloadShow, the player's
- *  KitDraw.noMag); `cover`: swung up about the model's `hinge` while the feed cover is lifted; `lens`: lit with his light's colour while the light is on. */
-export interface ModelPart { s: Seg; col: ModelCol; is?: 'mag' | 'cover' | 'lens' }
+ *  KitDraw.noMag); `cover`: swung up about the model's `hinge` while the feed cover is lifted; `lens`: lit with his light's colour while the light is on;
+ *  `grip`: the pistol grip his trigger hand is on (nothing in the game reads it: the kit figure's check finds the fist's place by it). */
+export interface ModelPart { s: Seg; col: ModelCol; is?: 'mag' | 'cover' | 'lens' | 'grip' }
 /** A long gun's model. `ahead`: the far face of its foremost part along the bore from the group's origin — its muzzle (rigProps.ts modelMuzzleAhead adds the
  *  group's own offset from the wrist). `gripL`: where the support hand takes it, in the group's axes — the left wrist's point and the directions its fingers
  *  point / the back of the hand faces (as RIG.carbine.gripL); `post`: that hand is a fist round a vertical post (the fitted hold of the issue carbine's) rather
@@ -80,7 +81,7 @@ export const LONG_MODELS: Partial<Record<GunModelId, LongModel>> = {
       { s: { l0: -0.075, l1: 0.115, thick: 0.017, tall: 0.036, adj: { off: [0, -0.012, 0], rot: [0, 0, 0] } }, col: 'black' },      // upper + lower receiver
       { s: { l0: -0.31, l1: -0.075, thick: 0.016, tall: 0.029, adj: { off: [0, -0.022, 0], rot: [0, 0, 0] } }, col: 'black' },      // the fixed stock: solid from the receiver to the pad
       { s: { l0: 0, l1: 0.09, thick: 0.011, tall: 0.03, adj: { off: [0, -0.045, 0.075], rot: [80, 0, 0] } }, col: 'metal', is: 'mag' },   // twenty rounds: a box half the carbine's
-      { s: GRIP, col: 'furn' },
+      { s: GRIP, col: 'furn', is: 'grip' },
       { s: { l0: 0.115, l1: 0.40, thick: 0.021, tall: 0.021, adj: { off: [0, -0.002, 0], rot: [0, 0, 0] } }, col: 'furn' },         // the free-floated handguard, painted
       { s: { l0: 0.40, l1: 0.47, thick: 0.009, tall: 0.009 }, col: 'metal' },                                                       // the barrel between the tube and the can
       { s: { l0: 0.47, l1: 0.61, thick: 0.019, tall: 0.019 }, col: 'metal' },                                                       // the can (its far face: the muzzle)
@@ -104,7 +105,7 @@ export const LONG_MODELS: Partial<Record<GunModelId, LongModel>> = {
       { s: { l0: -0.255, l1: -0.11, thick: 0.004, tall: 0.005, adj: { off: [0.014, 0.004, 0], rot: [0, 0, 0] } }, col: 'metal' },   // the stock's two rods, out: daylight between them from above
       { s: { l0: -0.255, l1: -0.11, thick: 0.004, tall: 0.005, adj: { off: [-0.014, 0.004, 0], rot: [0, 0, 0] } }, col: 'metal' },
       { s: { l0: -0.27, l1: -0.255, thick: 0.018, tall: 0.034, adj: { off: [0, -0.012, 0], rot: [0, 0, 0] } }, col: 'black' },      // … and its plate
-      { s: { l0: 0, l1: 0.095, thick: 0.015, tall: 0.019, adj: { off: [0, -0.045, -0.015], rot: [108, 0, 0] } }, col: 'black' },    // the grip: fat, the magazine goes up through it
+      { s: { l0: 0, l1: 0.095, thick: 0.015, tall: 0.019, adj: { off: [0, -0.045, -0.015], rot: [108, 0, 0] } }, col: 'black', is: 'grip' },    // the grip: fat, the magazine goes up through it
       { s: { l0: 0.09, l1: 0.2, thick: 0.011, tall: 0.014, adj: { off: [0, -0.045, -0.015], rot: [108, 0, 0] } }, col: 'metal', is: 'mag' },   // forty rounds, out of the grip's foot
       { s: { l0: 0.16, l1: 0.31, thick: 0.017, tall: 0.017 }, col: 'metal' },                                                       // the can (its far face: the muzzle)
       { s: { l0: -0.09, l1: 0.15, thick: 0.009, tall: 0.004, adj: { off: [0, 0.027, 0], rot: [0, 0, 0] } }, col: 'black' },         // the top rail
@@ -124,7 +125,7 @@ export const LONG_MODELS: Partial<Record<GunModelId, LongModel>> = {
       { s: { l0: -0.06, l1: 0.13, thick: 0.030, tall: 0.011, adj: { off: [0, 0.033, 0], rot: [0, 0, 0] } }, col: 'black', is: 'cover' },   // the feed cover: a slab wider than the receiver, the tell from above
       { s: { l0: -0.02, l1: 0.07, thick: 0.015, tall: 0.016, adj: { off: [0, 0.060, 0], rot: [0, 0, 0] } }, col: 'metal', is: 'cover' },   // the sight riding it (it lifts with the cover)
       { s: { l0: -0.31, l1: -0.10, thick: 0.015, tall: 0.032, adj: { off: [0, -0.02, 0], rot: [0, 0, 0] } }, col: 'poly' },         // the fixed stock
-      { s: GRIP, col: 'poly' },
+      { s: GRIP, col: 'poly', is: 'grip' },
       { s: { l0: -0.005, l1: 0.125, thick: 0.034, tall: 0.045, adj: { off: [0.022, -0.092, 0], rot: [0, 0, 0] } }, col: 'cloth', is: 'mag' },   // the belt box: under the receiver, proud of its left
       { s: { l0: 0.03, l1: 0.09, thick: 0.010, tall: 0.034, adj: { off: [0.034, -0.018, 0], rot: [0, 0, 0] } }, col: 'brass', is: 'mag' },    // the belt, up out of the box into the tray
       { s: { l0: 0.14, l1: 0.33, thick: 0.024, tall: 0.022, adj: { off: [0, -0.012, 0], rot: [0, 0, 0] } }, col: 'black' },         // the railed handguard
@@ -144,7 +145,7 @@ export const LONG_MODELS: Partial<Record<GunModelId, LongModel>> = {
       { s: { l0: -0.09, l1: 0.13, thick: 0.018, tall: 0.03, adj: { off: [0, -0.01, 0], rot: [0, 0, 0] } }, col: 'black' },          // the receiver
       { s: { l0: -0.31, l1: -0.09, thick: 0.012, tall: 0.017, adj: { off: [0, -0.016, 0], rot: [0, 0, 0] } }, col: 'black' },       // the stock's tube
       { s: { l0: -0.325, l1: -0.305, thick: 0.016, tall: 0.045, adj: { off: [0, -0.022, 0], rot: [0, 0, 0] } }, col: 'poly' },      // … and its pad
-      { s: GRIP, col: 'poly' },
+      { s: GRIP, col: 'poly', is: 'grip' },
       { s: { l0: 0.13, l1: 0.47, thick: 0.0095, tall: 0.0095 }, col: 'metal' },                                                     // the barrel (its far face: the muzzle)
       { s: { l0: 0.13, l1: 0.41, thick: 0.0105, tall: 0.0105, adj: { off: [0, -0.024, 0], rot: [0, 0, 0] } }, col: 'metal' },       // the magazine tube under it
       { s: { l0: 0.13, l1: 0.31, thick: 0.019, tall: 0.027, adj: { off: [0, -0.012, 0], rot: [0, 0, 0] } }, col: 'black' },         // the fore-end round both
@@ -161,7 +162,7 @@ export const LONG_MODELS: Partial<Record<GunModelId, LongModel>> = {
     parts: [
       { s: { l0: -0.09, l1: 0.12, thick: 0.018, tall: 0.03, adj: { off: [0, -0.01, 0], rot: [0, 0, 0] } }, col: 'steel' },          // the receiver
       { s: { l0: -0.31, l1: -0.07, thick: 0.015, tall: 0.026, adj: { off: [0, -0.028, 0], rot: [0, 0, 0] } }, col: 'poly' },        // the stock
-      { s: GRIP, col: 'poly' },
+      { s: GRIP, col: 'poly', is: 'grip' },
       { s: { l0: 0.12, l1: 0.37, thick: 0.0095, tall: 0.0095 }, col: 'steel' },                                                     // the barrel
       { s: { l0: 0.37, l1: 0.41, thick: 0.013, tall: 0.013 }, col: 'metal' },                                                       // the stand-off device (its far face: the muzzle)
       { s: { l0: 0.12, l1: 0.34, thick: 0.0105, tall: 0.0105, adj: { off: [0, -0.024, 0], rot: [0, 0, 0] } }, col: 'steel' },       // the magazine tube

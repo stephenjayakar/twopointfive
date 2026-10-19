@@ -419,7 +419,7 @@ export type GuardState = 'patrol' | 'suspicious' | 'alert' | 'search' | 'dead';
 /** One frame's worth of orders for a scripted guard (see squad.ts). goal: walk there (nav path) at `speed` (m/s, default guard walk); face: body
  *  yaw to hold once planted (or while `strafe`); aimAt: where the gun / torch / eyes point; stance + stackSide + crouch feed the animator's tactical
  *  layers; upper: 'aim' draws the pistol, 'torch' carries the torch; arrived is written back by the runner each frame. */
-export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number | null; strafe?: boolean; aimAt?: Vec3 | null; stance?: Stance; stackSide?: -1 | 1; crouch?: boolean; upper?: 'aim' | 'torch' | 'relaxed' | 'none'; light?: boolean; arrived?: boolean;
+export interface GuardScript { goal: Vec3 | null; speed?: number; face?: number | null; strafe?: boolean; aimAt?: Vec3 | null; stance?: Stance; stackSide?: -1 | 1; crouch?: boolean; lean?: number; upper?: 'aim' | 'torch' | 'relaxed' | 'none'; light?: boolean; arrived?: boolean;
   /** weapons free on the men in front of him: the runner's muzzle discipline (squad.ts — a colleague in the line puts the gun down) is off for this man. The breach
    *  showcase's operatives carry it while they engage the room (breach.ts): until the guards have SIDES every man in Game.guards is a 'colleague', the opposition
    *  included, and an operative could not so much as cover the man he is about to shoot. The teams lane replaces this with sides in colleagueInLine. */
@@ -1528,7 +1528,7 @@ export class Game {
     if (this.player.cams.length) updateStickies(this, dt);   // … and his sticky cameras (stickycam.ts)
     if (this.shells.length) updateShells(this, dt);   // … and the 40 mm rounds (he40.ts), likewise
     this.searchProbeN = 0;   // (this frame's budget of searchers' light queries starts again: guards.ts searchProbes)
-    this.dealWeapons();
+    this.dealWeapons(dt);
     this.director.tick(dt, null, null);   // the level script (director.ts): its drills sequenced, triggers read off last frame's settled world + this frame's events, beats resumed, a showcase's camera pinned — before anybody moves on an order; a return on its first line when no program runs
     this.pair.input(input);        // (pairorders.ts: F is the MARK while the partner waits on it — before anybody else reads it; a return on its first line otherwise)
     this.wallCharge.input(input);   // (a set wall charge nearer Sam than any door's has his F first — wallcharge.ts)
@@ -1637,7 +1637,7 @@ export class Game {
     }
   }
   /** the carbine dealt by the sandbox knob, and every man's animator armed with what is then in his hands */
-  private dealWeapons() {
+  private dealWeapons(dt = 0) {
     { // rifles: deal the carbine by the sandbox knob — Guard.carbine, and with it the WEAPON: a dealt man carries the AKS-74U row (weapons.ts: bursts, thirty to a
       // box, the report, the rifle that drops), a man dealt out of it his route's row again (a fresh gun either way; a corpse keeps what he died with) — and arm each
       // man's animator with what is then in his hands (guards.ts rigOf: that, or a row that is itself a long gun) — the long-gun solve, the support hand's grip point
@@ -1651,7 +1651,7 @@ export class Game {
         if (!gd.unit) gd.carbine = deal === 'all' || (deal === 'reyes' && gd.callsign === 'Reyes');
         const want: WeaponId = gd.carbine ? 'aks74u' : (gd.route.weapon ?? 'guard9mm');
         if (gd.state !== 'dead' && gd.weapon.def.id !== want) { gd.weapon = new Firearm(WEAPONS[want]); gd.reloadT = -1; }
-        if (gd.second) sideTick(this, gd);   // (gunslots.ts: a teammate's sidearm goes back once nobody is in front of him)
+        if (gd.second) sideTick(this, gd, dt);   // (gunslots.ts: a teammate's sidearm goes back once nobody is in front of him)
         const long = longRigOf(gd), cb = long !== null; const an = gd.char.anim; const def = gd.weapon.def;   // (long: WHICH long gun — the FN2000 in an operative's hands has its own grip point and muzzle, guards.ts longRigOf)
         if (an.longGun !== cb) { an.longGun = cb; an.longSteady = long === 'sc20k' ? 1 : 0; gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : cb && def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead; }   // (longSteady: a man handed Sam's bullpup — the breach's operatives — carries it as player.ts armRifle has Sam carry it, the gun riding his shoulders' mean line at a run instead of pumping with the run clip's arms (character.ts LONG_STEADY); the carbine men keep theirs as the poses pass left them, 0 — carbine-probes (4) places the trigger hand by the unsteadied carriage)
         if (long === 'sc20k') an.longGrip = grip20k ??= sc20kGrip(); else if (cb) an.longGrip = grip ??= carbineGrip();
