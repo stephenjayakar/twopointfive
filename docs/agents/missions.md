@@ -576,7 +576,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The registry's level check compares the file with the generator before the wrecking dressing** (2026-10-17; tests only): `tools/qa/registry-probes.ts
   registryLevel` loaded the file with `{ lived: true }` alone, so on the SHIPPED stand (where the dressing switch is on) the loader's added dressing boxes made
   `probes.ts registry-level` 1 FAIL (569 boxes against 664). It now loads with `{ lived: true, dressing: false }`: the generator's level against the file as
-  written, on every stand. Run: 6 PASS on frozen and on shipped. `registry-walk` is still red on shipped (four followers: one man never enters the copy room).
+  written, on every stand. Run: 6 PASS on frozen and on shipped. `registry-walk` was red on shipped that day (four followers: one man never
+  entered the copy room); the doors' own mend of the doorway turned it green the same day, the check unchanged.
 - **The snatch's gate hut sounds as its own floor** (2026-10-18; level data, no switch). `tools/levels/snatch.ts` `surfaces.building` was the house's rectangle, and a
   footstep zone is read only inside it, so the hut's zone out in the side yard was never read: the hut sounded as the yard ('asphalt', loud 0.9), not the 'stone'
   (1.1) it is drawn as. `building` is now the whole world, as on the floodlit yard, so the plan is all zones; nothing else underfoot changes. Check: `bun run
@@ -610,3 +611,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   down is a clear), consulate 2 rescued and 2 lost both ways (the same two seeds, lost at 55 s with the rule absent too); no run stalled. Per-player state: the leader
   is kept as a character, never read off `Game.player` after the press. UNTUNED: `outM` 3.5, `clearSecs` 1.5 are first numbers. Headless only: nobody has
   played it, nothing of it has been seen on a GPU (the row's marker, the hostages on their feet behind Sam, the objective's arrow).
+- **The level check's rescue part counts the level's own cast, and says a man in the player's way as a note** (2026-10-19; tests only, no switch:
+  `tools/qa/scenario-level-probes.ts`). Two lines were red on `bun run tools/qa/scenario-level-probes.ts levels/consulate.json --only rescue`, neither the
+  level's. (1) STAGED asked for the captor, the door man and the game's one roamer (3); the consulate mans its own cast (`rescue.cast.roamers` 3 of five marks,
+  one `rescue.guards` man: 6, as `consulate-stage` has always asked). The line now counts by role off `Rescue.cast()`: the level's room guards on their marks in
+  the room, so many roamers as its cast mans (or the game's one), each on a roamer mark. (2) WALKED, shipped stand, seeds 2, 6, 14 and 17 of the
+  first nineteen: the door man comes down the corridor and stands 0.6 m in front of the scripted player, who is never seen and never fires; his body keeps his
+  team's guns off the man (the friend in the line; six seconds on seed 2, the one traced), the walk gives up 4 to 6 m short of the post, F is pressed from there. That is not the level's floor:
+  `Walk.inWay` names a living man of theirs within a metre on the side he walks to, and WALKED prints the meeting as a NOTE on its line and fails only on a stop
+  with nobody there. NOTHING the player does changed (a first try that had him step aside moved how runs ended and was dropped): the runs' seconds are the
+  same before and after on both stands. Run: consulate 5 PASS on both stands (gwot twin on shipped), registry 5 PASS on both, `probes.ts scenario-levels`
+  ALL PASS on both (20); `STAGECAST_BREAK=1` fails STAGED on both stands, `WALKMET_BREAK=1` fails WALKED on shipped (on frozen nobody meets him, so that word
+  changes nothing there). No family runs the consulate through this file: it is the level's own task line, typed. NOT from this: the test level's stall on shipped in the
+  rescue part ended with the rescue ending's own step (the scripted player leads the hostages out), joined under this one. What the six seconds say about a teammate
+  behind a friend in a corridor is the squad's to read, under a player who would have fired or been shot.
