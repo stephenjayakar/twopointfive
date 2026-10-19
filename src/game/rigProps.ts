@@ -574,7 +574,7 @@ function kitBoxes(c: Character, o: RigOpts, out: Box[], rig: Rig, meta?: RigNode
   const hand = c.bones.handR; curOwner = c.id & 0xff;
   if (!o.isGuard) {
     if (hand && o.slot === 1) {
-      const PM = pistolLookOf(c, true), P = PM ? pistolAs(rig.pistol, PM) : rig.pistol, pcol = PM ? modelCol(PM.frame, false) : COL.gun, ccol = PM?.canCol ? modelCol(PM.canCol, false) : COL.can;
+      const PM = pistolLookOf(c, true), P = PM ? pistolAs(rig.pistol, PM) : rig.pistol, pcol = PM ? modelCol(PM.frame, false) : COL.gun, ccol = PM?.canCol ? modelCol(PM.canCol, false) : COL.can, bareSide = !!c.gunLook?.bareSide;   // (bareSide: the issue pistol with its suppressor off — gunlook.ts)
       const pid = PM ? c.gunLook!.hand as WeaponId : null, pshow = pid ? reloadShow(c, pid) : null;   // (gunreload.ts: its magazine is out of the grip while the change has it out, and the fresh one is in his support hand)   // (gunlook.ts: his sidearm is a model of its own — its slide, grip and can in this group, a long magazine out of the grip's foot)
       const pf = pistolFrame(c, hand, P, !!o.inHand), handF = pf.handF; let g = pf.g;
       if (o.kit) {   // (kit handling: the gun rides the hand's own frame, and the last of the way to / first of the way from the holster it is carried between the two)
@@ -582,18 +582,19 @@ function kitBoxes(c: Character, o: RigOpts, out: Box[], rig: Rig, meta?: RigNode
         const th = c.bones.thighR, kn = c.bones.shinR, hp = c.bones.hips;
         if ((o.kit.pistol ?? 0) > 0 && th && kn && hp) g = mixFrame(g, holsterFrameOf(th, kn, hp, c.forward(), rig.holster), o.kit.pistol!);
       } else if (o.fit || o.inHand) g = fitFrame(g, GRIPFIT.pistol);   // (inHand: laid out in the hand's frame it is IN the hand only with the fit — whatever kit handling's own switch says)
+      const railBack = !PM && bareSide ? Math.max(0, P.rail.l1 + (P.rail.adj?.off[2] ?? 0) - P.slide.l1) : 0;   // (the rail light was laid out under the can: with the can off its body is drawn back to end at the slide's face — the light itself is where it was)
       const hk = o.kit?.pistol ?? 0;   // (kit handling: how far it is into the holster — its parts go over to how the holstered gun hangs (holsterBoxes: no adjustments but the hung grip's rake, no rail light), so the last frame in the hand's errand IS the first on the thigh)
       if (hk > 0) {
-        segAt(out, g, P.slide, mixAdj(P.slide.adj, undefined, hk), COL.gun, NO_GLOW); segAt(out, g, P.grip, mixAdj(P.grip.adj, GRIP_HUNG, hk), pcol, NO_GLOW); if (!PM || PM.can) segAt(out, g, P.suppressor, mixAdj(P.suppressor.adj, undefined, hk), ccol, NO_GLOW);
+        segAt(out, g, P.slide, mixAdj(P.slide.adj, undefined, hk), COL.gun, NO_GLOW); segAt(out, g, P.grip, mixAdj(P.grip.adj, GRIP_HUNG, hk), pcol, NO_GLOW); if (PM ? PM.can : !bareSide) segAt(out, g, P.suppressor, mixAdj(P.suppressor.adj, undefined, hk), ccol, NO_GLOW);
         if (PM?.mag) segAt(out, g, PM.mag, mixAdj(P.grip.adj, GRIP_HUNG, hk), COL.darkMetal, NO_GLOW);
-        if (hk < 0.5) seg(out, { ...g, o: v3.mad(g.o, g.y, -P.rail.under) }, P.rail, COL.torch);
+        if (hk < 0.5) seg(out, { ...g, o: v3.mad(v3.mad(g.o, g.y, -P.rail.under), g.z, -railBack) }, P.rail, COL.torch);
       } else {
-      if (meta) meta.push({ path: 'pistol', label: 'pistol (group + rail light)', depth: 1, parent: handF, frame: g, boxStart: out.length, boxCount: o.lightOn ? 5 : 4, getAdj: adjOf(P, 'adj') });
+      if (meta) meta.push({ path: 'pistol', label: 'pistol (group + rail light)', depth: 1, parent: handF, frame: g, boxStart: out.length, boxCount: (o.lightOn ? 5 : 4) - (!PM && bareSide ? 1 : 0), getAdj: adjOf(P, 'adj') });
       seg(out, g, P.slide, COL.gun, undefined, meta, 'pistol.slide', 'slide + frame', 2);
       seg(out, g, P.grip, pcol, undefined, meta, 'pistol.grip', 'grip', 2);
-      if (!PM || PM.can) seg(out, g, P.suppressor, ccol, undefined, meta, 'pistol.suppressor', 'suppressor', 2);
+      if (PM ? PM.can : !bareSide) seg(out, g, P.suppressor, ccol, undefined, meta, 'pistol.suppressor', 'suppressor', 2);
       if (PM?.mag && !o.kit?.noMag && !pshow?.noMag) segAt(out, g, PM.mag, P.grip.adj, COL.darkMetal, NO_GLOW);
-      const under: Frame = { ...g, o: v3.mad(g.o, g.y, -P.rail.under) };          // rail light under the slide; lit lens when on
+      const under: Frame = { ...g, o: v3.mad(v3.mad(g.o, g.y, -P.rail.under), g.z, -railBack) };          // rail light under the slide; lit lens when on
       seg(out, under, P.rail, COL.torch, undefined, meta, 'pistol.rail', 'rail light body', 2);
       if (o.lightOn) seg(out, applyAdj(under, P.rail.adj), P.lens, COL.lensBody, P.lens.glow, meta, 'pistol.lens', 'rail light lens (lit)', 2);   // the lens rides on the rail body (its adj), then its own
       }
@@ -695,11 +696,12 @@ export function holsterBoxes(c: Character, out: Box[], parts: { slide: Seg; grip
   const g = frameFrom(anchor, down, fwd);   // z down the thigh, y = body forward → the grip (−y, raked toward −z) points back and up, as holstered
   const gg = applyAdj(g, H.adj);
   const HM = pistolLookOf(c, false);   // (gunlook.ts: the sidearm on his thigh is a model of its own — slide, grip, its can if it has one, then a long magazine)
-  if (meta) meta.push({ path: 'holster', label: 'holstered sidearm (thigh)', depth: 1, parent: g, frame: gg, boxStart: out.length, boxCount: (HM ? HM.can : parts.suppressor) ? 3 : 2, getAdj: adjOf(H, 'adj') });   // the group owns the boxes (the parts reuse the hand gun's Segs — nothing of their own to adjust here)
+  const can = c.gunLook?.bareSide ? undefined : parts.suppressor;   // (… or the issue pistol with its suppressor off: asked here, so every caller — a man down too — draws none)
+  if (meta) meta.push({ path: 'holster', label: 'holstered sidearm (thigh)', depth: 1, parent: g, frame: gg, boxStart: out.length, boxCount: (HM ? HM.can : can) ? 3 : 2, getAdj: adjOf(H, 'adj') });   // the group owns the boxes (the parts reuse the hand gun's Segs — nothing of their own to adjust here)
   if (HM) { segAt(out, gg, HM.slide, undefined, COL.gun, NO_GLOW); segAt(out, gg, HM.grip, GRIP_HUNG, modelCol(HM.frame, false), NO_GLOW); if (HM.can) segAt(out, gg, HM.can, undefined, HM.canCol ? modelCol(HM.canCol, false) : COL.can, NO_GLOW); if (HM.mag) segAt(out, gg, HM.mag, GRIP_HUNG, COL.darkMetal, NO_GLOW); return; }
   segAt(out, gg, parts.slide, undefined, COL.gun, NO_GLOW);   // (the hand gun's Segs with the holster's own adjustments in place of theirs: none, the hung grip's rake, none)
   segAt(out, gg, parts.grip, GRIP_HUNG, COL.gun, NO_GLOW);
-  if (parts.suppressor) segAt(out, gg, parts.suppressor, undefined, COL.can, NO_GLOW);
+  if (can) segAt(out, gg, can, undefined, COL.can, NO_GLOW);
 }
 const GRIP_HUNG: Adj = { off: [0, -0.024, 0.05], rot: [108, 0, 0] };
 
@@ -882,6 +884,9 @@ function sc20kFrame(c: Character, S: Rig['sc20k'], where: 'hand' | 'slung', fron
   const base: Frame = { o, x, y: v3.cross(z, x), z };
   return { parent: base, g: applyAdj(base, P.adj) };
 }
+/** the can's place as a bare barrel (gunlook.ts GunLook.bareLong): the same length to the same muzzle, a finger thick */
+export const BARE_BARREL = 0.008;
+function bareBarrel(can: Seg): Seg { return { ...can, thick: BARE_BARREL, tall: BARE_BARREL }; }
 /** Sam's SC-20K (see the Rig doc): eleven oriented boxes — the polymer hull, buttpad, grip, fore-end and foregrip; the darker can, box, rail and optic; the light body
  *  and its lens (lit with `lens`, zero = dark) — off the right hand ('hand') or across the back ('slung'). The support hand's grip point is a node of its own (no
  *  boxes) so the gizmo can drag it, as the carbine's is. Standalone-safe: stamps the boxes with THIS character. */
@@ -903,7 +908,7 @@ export function sc20kBoxes(c: Character, out: Box[], S: Rig['sc20k'] = RIG.sc20k
   if (!kit?.noMag || meta) seg(out, g, M ? M.mag : S.mag, metal, undefined, meta, k + '.mag', M ? 'magazine (ahead of the grip)' : 'magazine (behind the grip)', 2, SC20K_TAG);
   seg(out, g, S.grip, furn, undefined, meta, 'sc20k.grip', 'pistol grip', 2, SC20K_TAG);
   seg(out, g, M ? M.fore : S.fore, furn, undefined, meta, k + '.fore', M ? 'handguard' : 'fore-end', 2, SC20K_TAG);
-  seg(out, g, S.suppressor, metal, undefined, meta, 'sc20k.suppressor', M ? 'suppressor' : 'integral suppressor', 2, SC20K_TAG);
+  seg(out, g, c.gunLook?.bareLong ? bareBarrel(S.suppressor) : S.suppressor, metal, undefined, meta, 'sc20k.suppressor', M ? 'suppressor' : 'integral suppressor', 2, SC20K_TAG);   // (gunlook.ts: the same gun with its suppressor off — a bare barrel where the can was, to the same muzzle)
   seg(out, g, M ? M.rail : S.rail, M ? COL.anodised : COL.darkMetal, undefined, meta, k + '.rail', 'top rail', 2, SC20K_TAG);
   seg(out, g, M ? M.optic : S.optic, metal, undefined, meta, k + '.optic', M ? 'sight' : 'sight block', 2, SC20K_TAG);
   seg(out, g, S.foregrip, furn, undefined, meta, 'sc20k.foregrip', 'foregrip (vertical post)', 2, SC20K_TAG);
