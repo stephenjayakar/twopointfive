@@ -25,7 +25,7 @@ import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../game/destructionSwitch
 import { FURN } from '../game/furnblast';
 import { SNOWBOG } from '../game/snowBog';
 import { WALLREACT } from '../game/wallreact';
-import { WALLCHARGE } from '../game/wallcharge';
+import { WALLCHARGE, WALLSHOT } from '../game/wallcharge';
 import { CHAOS } from '../game/destruction';
 import { CASTOR } from '../game/props';
 import { DOORTOOLS } from '../game/doortools';
@@ -160,6 +160,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLCHARGE.hung = q.get('hungcharge') !== '0';   // a wall charge set where something hangs on the wall (a notice board) takes it and the wall: it is no shield to the wall, and goes in pieces (game/wallcharge.ts hung; ?hungcharge=0 = the charge is a dud there, as it was)
   WALLCHARGE.outOfFire = q.get('standfire') !== '0';   // the men who stand off a wall charge take the safe marks no enemy the team knows of can shoot first, then the least under that fire (game/wallcharge.ts underFire; known = the fog's own record: in the picture now, or seen in the last 30 s where he was last seen — and, with the men's own pictures on (PICTURE.wall; ?nopicture off), anybody one of them saw, heard or was told of in that time; acts with the safety radius; ?standfire=0 = the nearest safe marks whatever looks at them, as it was)
   WALLCHARGE.menClear = q.get('menclear') !== '0';   // a man on 'fall in' whose place is in the line of a charge set on a wall, nearer than its stand-off distance, walks to a stand-off mark and keeps it until his place is clear (game/wallcharge.ts clearOf; ?menclear=0 = he keeps his place in the file, in the blast or not; acts with the larger safety radius)
+  WALLSHOT.on = q.get('wallshot') !== '0';   // a wall shot's smoke is thinner and its shock fills the room it opens (game/wallcharge.ts WALLSHOT): ON in the page, ?wallshot=0 = the charge as it was
   WALLCHARGE.farFurn = q.get('wallfurn') !== '0';   // furniture against a wall's far face is no 'no floor behind it' (game/wallcharge.ts mouthAfter: a cot stood against the wall inside goes with the wall): ON in the page; ?wallfurn=0 = refused there as it was
   CASTOR.on = q.get('chairroll') !== '0';   // an office chair rolls and coasts on its castors (game/props.ts CASTOR): ON in the page; ?chairroll=0 = it stops like any other furniture, as it was
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
@@ -390,6 +391,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'HOLD.dropGun': 'TPS_HOLDDROP=1',
   'HOLD.oneFacing': 'TPS_HOLDYAW=1',
   'BACKKEY.tab': 'TPS_TABBACK=1',
+  'WALLSHOT.on': 'TPS_WALLSHOT=1',
   'FIXEDSTEP.on': 'TPS_FIXEDSTEP=1 (read only by a tool that steps through host/loop.ts stepFrame: the harness\'s own W.step names its dt)',
   'TWEEN.on': 'TPS_TWEEN=1 (the picture between two ticks: the same)',
   'REARWATCH.room': 'TPS_ROOMKEEP=1',
