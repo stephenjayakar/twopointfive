@@ -1078,7 +1078,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in a man's hands each time it is asked (a sidearm out after a dry primary does not change whose man he is).
   THE DEAL (`gunDeal`, called once by `nightbreach.ts` and `rescue.ts` when the cast stands and the floor's doors are as the mission opens with them — every
   leaf is `place()`d first, or a line is measured through a door the staging has just shut): each man's line is a ray from his mark the way he is posted
-  to look, 40 m at most. ONE BELT-FED GUN (`pkm`, a new row: 100 on the belt, strings of 6 to 10, handling 0.45, 6.5 s to feed, 11 kg) to a cast at most, to
+  to look, 40 m at most. ONE BELT-FED GUN (`pkm`, a new row: 100 on the belt, strings of 6 to 10, handling 0.45, 6.5 s to feed, 7.5 kg and bulk 4 for the kit's score, which weighs no defender today) to a cast at most, to
   the longest line, and only when that line is a lane (`beltLane` 15 m with `beltMin` 5 men) or the cast is a big one (`beltSquad` 10); A PISTOL
   (`guard9mm`) to the man with a hostage in his other hand, and to at most a quarter of a cast (`pistolMax`) among men whose line is under `pistolNear`
   4 m; the rest half AKMS (`akms`, now enabled: two or three a pull, looser, 7.62) and half the short carbine as before. Every row is `oneShot` and there is

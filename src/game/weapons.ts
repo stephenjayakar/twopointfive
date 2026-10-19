@@ -297,7 +297,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'carbineReport' }, suppressed: false, muzzleFx: 'carbine', propImpulse: 6,
     aiSpread: { base: 0.05, moveK: 0.03, moveCap: 0.12, rangeFrom: 10, rangeK: 0.004 }, damage: 'oneShot', muzzleAhead: 0.62, rig: 'carbine', light: 'none', drop: 'rifle',
     tracer: { every: 5, lastN: 0, color: [1.0, 0.42, 0.12] },
-    handling: 0.45, weightKg: 11.0, bulk: 4,
+    handling: 0.45, weightKg: 7.5, bulk: 4,
   },
 };
 
