@@ -77,6 +77,10 @@ export async function kittreeRows(): Promise<boolean> {
       F.verdict(off === false && home === true && back === true && p.ok && K.kitSlotCan(K.KIT.members[1], 'primary') && K.kitSlotCan(K.KIT.members[2], 'primary'), `a flag holds only while its gun has the choice: yours off, the gun left home and brought again, is on; Red One's ${none} pasted onto Red Two, both back on the Mk 18, both suppressed`,
         `yours: ${off} → home ${home} → back ${back} · Red One ${K.KIT.members[1].suppressed}, Red Two ${K.KIT.members[2].suppressed}`); }
     else F.verdict(false, 'a primary no suppressor fits is on offer', (gunPicks('primary') as string[]).join(' '));
+    // the line under a man's name says which gun is bare, by the names his tiles read
+    issue(); K.kitSet(1, 'suppressed', false); const w1 = K.kitWords(1); K.kitSet(1, 'suppressed', true); K.kitSet(1, 'sideCan', false); const w2 = K.kitWords(1); K.kitSet(0, 'suppressed', false); const w0 = K.kitWords(0); issue(); const wi = [K.kitWords(0), K.kitWords(1)];
+    F.verdict(/Mk 18 bare \+ Glock 19(?! bare)/.test(w1) && /Mk 18 \+ Glock 19 bare/.test(w2) && /Mk 18 bare \+ Glock 19(?! bare)/.test(w0) && wi.every(w => /Mk 18 \+ Glock 19/.test(w) && !/bare/.test(w)), 'the line under a name follows a suppressor taken off: that gun reads bare, the other does not, and as issued neither does — for you as for a teammate',
+      `Red One, primary off: '${w1}' · sidearm off: '${w2}' · you, primary off: '${w0}' · as issued: '${wi[1]}'`);
     // the row of kits for a man alone: the kits that differ on HIS card, put on his card and nobody else's
     const slotsWas = K.SLOTS.on; K.SLOTS.on = K.SLOTS.ok;   // (the named kits are the pouches' table's: on a stand that holds the pouches off the row has the one)
     issue(); K.kitSet(1, 'bangs', 0); const mateWas = J(K.KIT.members[1]), all = K.kitLoadouts().map((l: any) => l.id), mine = K.kitLoadouts(0).map((l: any) => l.id), other = mine.find((id: string) => id !== 'issued');
