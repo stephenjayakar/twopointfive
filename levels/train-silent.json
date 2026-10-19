@@ -453,14 +453,14 @@
       "thing": "the radio codes",
       "radioCheck": false,
       "starts": [
-        { "name": "the west track", "sam": [5.2, 0, 14], "samYaw": 1.5707963267948966, "mate": [4.1, 0, 14.9] }
+        { "name": "the track", "sam": [5.2, 0, 14], "samYaw": 1.5707963267948966, "mate": [4.1, 0, 14.9] }
       ],
       "spots": [
         { "place": "the watch house", "area": { "x0": 24.720000000000002, "x1": 28.48, "z0": 7.12, "z1": 10.48 }, "door": "hut", "holder": "the red trunk", "rackIndex": 0, "front": [27.55, 1, 8.6], "halfW": 0.3 }
       ],
       "exits": [
-        { "name": "the east gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
-        { "name": "the west gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
+        { "name": "the far gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
+        { "name": "the track gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
       ],
       "patrols": [["post", "door", "gate"]]
     },

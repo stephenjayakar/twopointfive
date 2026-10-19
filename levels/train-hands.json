@@ -561,14 +561,14 @@
       "thing": "the ration book",
       "radioCheck": false,
       "starts": [
-        { "name": "the west track", "sam": [5.2, 0, 14], "samYaw": 1.5707963267948966 }
+        { "name": "the track", "sam": [5.2, 0, 14], "samYaw": 1.5707963267948966 }
       ],
       "spots": [
         { "place": "the cook's store", "area": { "x0": 23.12, "x1": 27.88, "z0": 7.32, "z1": 11.88 }, "door": "hut", "holder": "the blue trunk", "rackIndex": 0, "front": [27, 1, 9.6], "halfW": 0.3 }
       ],
       "exits": [
-        { "name": "the east gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
-        { "name": "the west gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
+        { "name": "the far gate", "door": "gate_e", "x": 32.8, "z": 14.25, "out": [1, 0] },
+        { "name": "the track gate", "door": "gate_w", "x": 7.2, "z": 14.25, "out": [-1, 0] }
       ],
       "patrols": [["north", "south", "east"]]
     },

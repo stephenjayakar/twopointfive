@@ -609,6 +609,10 @@
     "doorNames": [
       { "door": "gate_w", "name": "track gate" },
       { "door": "gate_e", "name": "far gate" },
+      { "door": "hut_a", "name": "yellow house door" },
+      { "door": "hut_b", "name": "green house door" },
+      { "door": "hut_c", "name": "armoury door" },
+      { "door": "hut_d", "name": "kitchen door" },
       { "door": "hut_b_east", "name": "green house side door" }
     ]
   }

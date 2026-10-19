@@ -154,7 +154,7 @@ export function build() {
   const front: [number, number, number] = [29.6, 1.0, 19.0];
   const quiet: QuietData = {
     thing: 'the range book',
-    starts: [{ name: 'the west gate', sam: [9.6, 0, 14.6], samYaw: HALF }],
+    starts: [{ name: 'the track gate', sam: [9.6, 0, 14.6], samYaw: HALF }],
     spots: [{ place: "the armourer's hut", area: { ...HUT }, door: 'hut', holder: 'the olive trunk', rackIndex: 0, front, halfW: 0.3 }],
     exits: [EXIT_E, EXIT_W],
     patrols: [['north', 'hut']],

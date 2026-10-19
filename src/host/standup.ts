@@ -20,7 +20,7 @@ import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
-import { WALLCHARGE, WALLSHOT } from '../game/wallcharge';
+import { WALLCHARGE, WALLSHOT, WALLKILL } from '../game/wallcharge';
 import { CHAOS } from '../game/destruction';
 import { WALLREACT } from '../game/wallreact';
 import { CASTOR } from '../game/props';
@@ -52,6 +52,7 @@ import { OWNCHARGE } from '../game/owncharge';
 import { GUNSLOTS } from '../game/gunslots';
 import { GUNLOOK } from '../game/gunlook';
 import { GUNROLES } from '../game/gunroles';
+import { KITTREE } from '../game/kittree';
 import { SQUADTHROW } from '../game/squadthrow';
 import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
@@ -232,6 +233,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_HOLDDROP')) HOLD.dropGun = String((globalThis as any).process?.env?.TPS_HOLDDROP ?? '') === '1';   // a held man drops his gun: off on the frozen stand (its hold probes and digests were recorded with the gun in his fist)
     if (pinned('TPS_TABBACK')) BACKKEY.tab = String((globalThis as any).process?.env?.TPS_TABBACK ?? '') === '1';   // Esc is only the pause and Tab backs out (src/game/backkey.ts): off on the frozen stand, where a Tab in the tick does nothing
     if (pinned('TPS_WALLSHOT')) WALLSHOT.on = String((globalThis as any).process?.env?.TPS_WALLSHOT ?? '') === '1';   // a wall shot's thinner smoke and its room-wide shock (src/game/wallcharge.ts WALLSHOT): off on the frozen stand, where a charge's pall and stun are the ones every tally was recorded on
+    if (pinned('TPS_WALLKILL')) WALLKILL.on = String((globalThis as any).process?.env?.TPS_WALLKILL ?? '') === '1';   // a wall charge kills whoever stands at it, the player among them (src/game/wallcharge.ts WALLKILL): off on the frozen stand, where the man at the charge was dazzled
     if (pinned('TPS_FIXEDSTEP')) FIXEDSTEP.on = String((globalThis as any).process?.env?.TPS_FIXEDSTEP ?? '') === '1';   // the fixed 60 Hz game step (src/host/loop.ts): off on the frozen stand — a tool that steps through stepFrame gets one update a frame on the frame's own time, as every frozen digest was recorded
     if (pinned('TPS_TWEEN')) TWEEN.on = String((globalThis as any).process?.env?.TPS_TWEEN ?? '') === '1';   // drawing between ticks (src/host/tween.ts): off on the frozen stand — picture only, and only under the line above
     if (pinned('TPS_HOLDYAW')) HOLD.oneFacing = String((globalThis as any).process?.env?.TPS_HOLDYAW ?? '') === '1';   // a held man keeps the hold's facing: off on the frozen stand (its showcase digests were recorded with the marks turning him)
@@ -335,6 +337,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_DOORNAMES')) WORDS.doors = String((globalThis as any).process?.env?.TPS_DOORNAMES ?? '') === '1';   // a door called what its level calls it (src/game/doornames.ts, scenarios.doorNames): off, so every frozen probe's row and call names a door as it did; `TPS_DOORNAMES=1` raises it
     if (pinned('TPS_OWNCHARGE')) OWNCHARGE.on = String((globalThis as any).process?.env?.TPS_OWNCHARGE ?? '') === '1';   // the player's own charges (src/game/owncharge.ts): off, so your card has no charge rows and no door offers 'set a charge'
     if (pinned('TPS_GUNSLOTS')) GUNSLOTS.on = String((globalThis as any).process?.env?.TPS_GUNSLOTS ?? '') === '1';   // a primary and a secondary for every man (src/game/gunslots.ts): off, so a card has its one gun row and a teammate one gun
+    if (pinned('TPS_KITTREE')) KITTREE.on = String((globalThis as any).process?.env?.TPS_KITTREE ?? '') === '1';   // the gear screen as a tree (src/game/kittree.ts): off, so a card has the rows of the build before and every launcher its five sponge rounds
     if (pinned('TPS_GUNLOOK')) GUNLOOK.on = String((globalThis as any).process?.env?.TPS_GUNLOOK ?? '') === '1';   // each gun its own look, sound and reload (src/game/gunlook.ts): off, so every row is drawn, heard and fed as its stand-in
     if (pinned('TPS_GUNROLES')) GUNROLES.on = String((globalThis as any).process?.env?.TPS_GUNROLES ?? '') === '1';   // a gun used for what it is for (src/game/gunroles.ts): off, so every defender carries the short carbine and no stack, entry, cover deal or trigger reads a man's gun
     if (pinned('TPS_PLANLAY')) PLANLAY.on = String((globalThis as any).process?.env?.TPS_PLANLAY ?? '') === '1';   // X is where the plan is laid (src/game/planlay.ts): off, so 'wait for my word' is the four's door tools' row on every frozen probe; TPS_PLANLAY=1 raises it

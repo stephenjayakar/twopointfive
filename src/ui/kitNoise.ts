@@ -14,7 +14,7 @@ export type KitNoise = 0 | 1 | 2 | 3;
 const gun = (id: WeaponId): KitNoise => (WEAPONS[id]?.report.loud ? 2 : 1);
 /** Sam's guns as his card names them (kit.ts YOU_GUNS: the long gun and the suppressed pistol; the mark is the louder of what the pick puts in his hands). */
 const SAM: Record<string, WeaponId> = { rifle: 'fn2000', pistol: 'fiveseven', shotgun: 'm870' };
-const FIXED: Record<string, KitNoise> = { smoke: 1, cams: 1, bangs: 2, charges: 2, walls: 2, frags: 3, shells: 3 };
+const FIXED: Record<string, KitNoise> = { smoke: 1, cams: 1, rings: 1, bangs: 2, charges: 2, walls: 2, frags: 3, shells: 3 };
 
 /** The step for the card's row `field` as member `i`'s card `m` stands (a count of none still has its step: it is what the thing WOULD do). */
 export function kitNoise(field: string, m: MemberKit, i: number): KitNoise {

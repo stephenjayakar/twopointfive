@@ -148,7 +148,7 @@ export async function missionsScreen(): Promise<boolean> {
         // (the same start rule on = two buttons and K steps way 2, back to the level's own; off = 'Dealt' is the third and K reaches way=any. WAYROW_BREAK=1 asks for the other stand's row: the line must FAIL)
         const same = SAMESTART.on !== (process.env.WAYROW_BREAK === '1'), dealt = same ? '' : ' | Dealt';
         const stepped = same ? !hasWay(h2) && h3.endsWith('&way=2') && !hasWay(h3b) : h2.endsWith('&way=any') && !hasWay(h3) && h3b.endsWith('&way=any');
-        F.verdict(CP >= 0 && s0 === `the west gate* | the north gate${dealt}` && !hasWay(h0) && s1 === `the west gate | the north gate*${dealt}` && h1.endsWith('&way=2') && go1 === h1 && stepped
+        F.verdict(CP >= 0 && s0 === `the side yard gate* | the back gate${dealt}` && !hasWay(h0) && s1 === `the side yard gate | the back gate*${dealt}` && h1.endsWith('&way=2') && go1 === h1 && stepped
           && h4.endsWith('&way=2') && others === 0 && sSolo === '' && rowSolo === 'none' && tSolo && !hasWay(hSolo) && leak === 0 && kept.endsWith('&way=2') && !hasWay(back) && quitWay === '?mute' && !hasWay(overWay),
           (same ? "the Way in row: on the compound it names both gates and no 'Dealt' (every mission starts the same way), the level's own lit and nothing on the link; K steps it (way=2, back to none; Shift+K the other way) and a click picks; only"
             : "the Way in row: on the compound it names both gates and 'Dealt', the level's own lit and nothing on the link; K steps it (way=2, way=any, back to none; Shift+K the other way) and a click picks; only")

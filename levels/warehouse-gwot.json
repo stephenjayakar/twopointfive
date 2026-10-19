@@ -1437,8 +1437,8 @@
         { "name": "plant room", "bounds": { "x0": 4.12, "x1": 9.94, "z0": 4.12, "z1": 7.94 } },
         { "name": "locker room", "bounds": { "x0": 10.06, "x1": 16.94, "z0": 4.12, "z1": 7.94 } },
         { "name": "break room", "bounds": { "x0": 17.06, "x1": 24.94, "z0": 4.12, "z1": 7.94 } },
-        { "name": "north corridor", "bounds": { "x0": 4.12, "x1": 35.88, "z0": 8.06, "z1": 10.94 } },
-        { "name": "west corridor", "bounds": { "x0": 10.06, "x1": 12.94, "z0": 10.94, "z1": 23.88 } }
+        { "name": "service corridor", "bounds": { "x0": 4.12, "x1": 35.88, "z0": 8.06, "z1": 10.94 } },
+        { "name": "staff corridor", "bounds": { "x0": 10.06, "x1": 12.94, "z0": 10.94, "z1": 23.88 } }
       ]
     },
     "kitView": {
@@ -1448,6 +1448,7 @@
       ]
     },
     "doorNames": [
+      { "door": "lb", "name": "locker room to break room door" },
       { "door": "p_s", "name": "plant room door" },
       { "door": "l_s", "name": "locker room door" },
       { "door": "b_s", "name": "break room door" }

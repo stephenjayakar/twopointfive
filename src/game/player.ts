@@ -24,7 +24,7 @@ import { fireWeapon, killGuard, dropFromHand, flashFuse } from './combat';
 import { FRAG, FRAG_STATS } from './frag';
 import { kickScuff } from './marks';
 import { hammerBlows } from './bigkit';
-import { BIGSLOT } from './kit';
+import { BIGSLOT, kitYouLight, kitYouNvg } from './kit';   // (the two asked at the two keys and each frame beside them: a card that left your light or your goggles at home — kittree.ts)
 import { lockPoint } from './shotgun';
 import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop, samBigLeadOf } from './bigkit';
 import { samSpread } from './suppression';
@@ -359,7 +359,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   { const nowIn = pl.gunInHand(); if (nowIn !== wasIn && (nowIn === rifle || wasIn === rifle)) { pl.equipT = RIFLE_EQUIP_SECS; if (wasIn === rifle && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); } if (wasIn === gun && gun.reloading) { gun.cancelReload(); c.anim.cancelReload(); } } }   // the rifle came off the sling or went back on it (a digit / E): the beat with nothing to fire, and a reload in the hand that changed is abandoned
   if (KITANIM.on || pl.kitWas !== undefined || c.anim.closeK >= 0) kitTick(g);   // (kitanim.ts: the hands' errands when what he carries changed — on the key's own frame — and the close-in mode's distance; let go of once the switch is off)
   if (KITANIM.on || pl.kitOwed >= 0) kitClick(g, input);   // (kitanim.ts: a click made in the last moments of a draw is kept for the frame the gun is up)
-  if (input.hit('KeyL')) { const lit = pl.rifleSel ? rifle : gun; lit.lightOn = !lit.lightOn; g.audio.play('click', c.muzzle, 0.6); }   // the light of the gun the kit has selected (its switch is under the thumb of the hand it is in)
+  if (input.hit('KeyL') && kitYouLight(pl)) { const lit = pl.rifleSel ? rifle : gun; lit.lightOn = !lit.lightOn; g.audio.play('click', c.muzzle, 0.6); }   // the light of the gun the kit has selected (its switch is under the thumb of the hand it is in)
   if (input.hit('KeyZ') && (pl.rifleSel || (pl.slot === 'pistol' && gun.def.modes.length > 1))) {   // the selector (a property of the rifle: in the hands or slung) — what the LEFT button fires; the attachment on the right is its own thing. (A sidearm with two sears — gunslots.ts — has one too, with it selected.)
     const sel = pl.rifleSel ? rifle : gun;
     if (sel.def.modes.length > 1) { const m = sel.cycleMode(); g.msg(`${sel.def.short}: ${m.toUpperCase()}${m === 'auto' ? ' — hold the trigger' : ' — one round a click'}`); g.audio.play('click', c.muzzle, 0.7); }
@@ -1254,7 +1254,9 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
  *  and the picture follows them to his eyes; off, the picture follows the switch as ever. `input` null = no key is read this frame, the ease alone. */
 function nvKey(g: Game, input: Input | null, dt: number) {
   const pl = g.player;
-  if (input?.hit('KeyN')) { pl.nv = !pl.nv; g.audio.play(pl.nv ? 'nvOn' : 'nvOff', null, 0.7); g.msg(pl.nv ? 'night vision on' : 'night vision off'); kitNv(g); }
+  if (pl.nv && !kitYouNvg(pl)) pl.nv = false;   // (kittree.ts: no goggles on your card — whatever switched them on, a save read back included, there is nothing to look through)
+  if (!kitYouLight(pl) && (pl.rifle.lightOn || pl.pistol.lightOn)) { pl.rifle.lightOn = false; pl.pistol.lightOn = false; }   // (… and no light fitted)
+  if (input?.hit('KeyN') && kitYouNvg(pl)) { pl.nv = !pl.nv; g.audio.play(pl.nv ? 'nvOn' : 'nvOff', null, 0.7); g.msg(pl.nv ? 'night vision on' : 'night vision off'); kitNv(g); }
   const eye = kitNvEye(g); pl.nvAmount = damp(pl.nvAmount, eye ? 1 : 0, eye ? 5 : 9, dt);
 }
 
@@ -1274,7 +1276,7 @@ function nvKey(g: Game, input: Input | null, dt: number) {
  *  under the arm (a reset, a round in him from somebody, the tour) just ends it. */
 export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera) {
   const pl = g.player, c = pl.char, H = pl.holding!, gd = H.g, hc = gd.char; let gun = H.variant === 'gun';
-  if (gun && input.hit('KeyL')) { pl.pistol.lightOn = !pl.pistol.lightOn; g.audio.play('click', c.muzzle, 0.6); }                                       // (the light's switch is under the thumb of the hand the gun is in)
+  if (gun && input.hit('KeyL') && kitYouLight(pl)) { pl.pistol.lightOn = !pl.pistol.lightOn; g.audio.play('click', c.muzzle, 0.6); }                                       // (the light's switch is under the thumb of the hand the gun is in)
   nvKey(g, input, dt);   // (with a man in his arm the goggles are a flick of the head — kitanim.ts plays the nod)
   if (!g.onFloor(gd) || gd.state === 'dead' || gd.held?.by !== 'player') { dropHold(g); c.update(dt); return; }   // reset from under the arm (P, the panel), or put down in it by somebody's round: nothing left to hold
   H.t += dt; H.swapT += dt; pl.fireCd -= dt;

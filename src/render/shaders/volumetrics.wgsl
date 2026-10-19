@@ -52,6 +52,8 @@ const RAIN_LEN: f32 = 0.30;     // streak length (m)
 const RAIN_PERIOD: f32 = 2.2;   // drop spacing down one column (m)
 const RAIN_W: f32 = 0.006;      // physical half-width credited to a streak (its energy); DRAWN max(this, 0.6 texel) wide
 const RAIN_GAIN: f32 = 0.11;    // fraction of the irradiance at the streak scattered toward the eye — by eye: a metre under a sodium head streaks glare, at the ground they read against the lit asphalt, under the moon alone they are a faint grain
+const SPLASH_W: f32 = 0.006;     // a splash ring's own line width (m): DRAWN max(this, a texel) wide
+const SPLASH_FILL: f32 = 0.056; // the light of a ring's own line over that of its whole 9 cm cell lit for the ring's life (RAIN_SCALE's floor; measured: tools/qa/rainscale-check.ts)
 const SPLASH_GAIN: f32 = 0.05;  // the same for the crown a drop throws up where it lands (a ring growing over 60 ms on outdoor ground)
 
 fn outdoorsXZ(p: vec2f) -> bool { if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } } let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
@@ -147,8 +149,14 @@ fn splashAt(P: vec3f) -> f32 {
   let ctr = (q + 0.35 + 0.3 * vec2f(hash13(vec3f(q, 8.1)), hash13(vec3f(q.yx, 5.9)))) * cs;   // (kept 3 cm inside its cell: only the pixel's own cell is asked, so a ring must not run out of it)
   let r = 0.006 + age * 0.3;                                           // the ring runs out at 0.3 m/s to 2.4 cm
   let d = abs(distance(P.xz, ctr) - r);
-  let w = max(0.006, distance(P, frame.camPos) * 2.0 * frame.post.w * frame.lossyCfg.y / frame.screen.y);   // ring line width: a texel at this distance (thinner aliases between the interleaved texels), 6 mm at least
-  return (1.0 - smoothstep(0.0, w, d)) * (1.0 - age / 0.06);
+  let w = max(SPLASH_W, distance(P, frame.camPos) * 2.0 * frame.post.w * frame.lossyCfg.y / frame.screen.y);   // ring line width: a texel at this distance (thinner aliases between the interleaved texels), 6 mm at least
+  // RAIN_SCALE: drawn wider than its own line the ring keeps its LIGHT, not its brightness — dimmer by the footprint it gained (the line's two sides, less what
+  // of the inner side has no room inside the ring), as a streak is by RAIN_W / halfW. With the camera pulled back a texel is many centimetres at the ground
+  // and every ring was a blob that wide at a ring's full brightness. Exactly 1 where the texel is no wider than the line. (SPLASH_FILL: only the pixel's own
+  // cell is asked, so a ring drawn wider than its cell stops gaining footprint there — the floor is the share of its cell a ring's own line covers.)
+  var keepE = 1.0;
+  if (RAIN_SCALE && w > SPLASH_W) { let i0 = max(r - SPLASH_W, 0.0); let i1 = max(r - w, 0.0); keepE = ((r + SPLASH_W) * (r + SPLASH_W) - i0 * i0) / ((r + w) * (r + w) - i1 * i1); keepE = min(1.0, sqrt(keepE * keepE + SPLASH_FILL * SPLASH_FILL)); }
+  return (1.0 - smoothstep(0.0, w, d)) * (1.0 - age / 0.06) * keepE;
 }
 
 // (b′) FLAG_FROXEL_VOL: the smoke march of the K > 0 path — the same per-domain stretches front to back, the same step (never finer than ~3 texels across at that

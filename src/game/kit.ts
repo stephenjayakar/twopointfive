@@ -53,7 +53,7 @@
 import { SideMap, SideSet } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
-import { Firearm, Pistol, Rifle, WEAPONS, type WeaponId } from './weapons';
+import { Firearm, Pistol, Rifle, WEAPONS, type WeaponDef, type WeaponId } from './weapons';
 import { gearText } from './gear';   // (a leaf: the kit's names as issued — applied where a row's words are asked for, never as this module loads)
 import { HE40 } from './he40';   // (read inside a row's note only: src/game is one import cycle)
 import { DOORTOOLS } from './doortools';   // (read inside kitPool only: nothing of it is touched at load)
@@ -64,9 +64,10 @@ import { STICKY, stickyIssue, stickyVisit } from './stickycam';   // (read insid
 import { WAND } from './wand';   // (read inside a row's builder, a card's cost and kitPlayer only — never as this module loads)
 import { OWNCHARGE } from './owncharge';   // (your own door and wall charges: read inside a row's builder, the squad's count and a staging only — never as this module loads)
 import { SQUADSMOKE, squadSmokeStage } from './squadsmoke';   // (read inside a row's note / called inside kitStage only)
-import { squad40Stage } from './squad40';   // (called inside kitStage only)
+import { squad40Here, squad40Stage } from './squad40';   // (called inside kitStage and a row's builder only)
 import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitShow / kitStage only)
-import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
+import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY, type GunSlot } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
+import { KITTREE, treeOn } from './kittree';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import slotsData from './slots.json' with { type: 'json' };   // (plain data: no game module is behind it)
 
 export type KitWeapon = 'rifle' | 'pistol' | 'shotgun';
@@ -100,7 +101,8 @@ export interface MemberKit {
   frags: number;
   /** the wall charge: one or none (a teammate's alone, and only in a build whose wall charge counts what the cards carry — wallHere) */
   walls: number;
-  /** you: 40 mm grenades for the FN2000's launcher (he40.ts; weapons.ts LAUNCHER40.rounds as issued). Teammates carry none: the field is 0 and has no row. */
+  /** you: 40 mm grenades for the FN2000's launcher (he40.ts; weapons.ts LAUNCHER40.rounds as issued). A teammate: none as issued, and a row only where his
+   *  round can be fired — the card as a tree and the order in the build (mateShells; squad40.ts: X on the floor, G, 3) — else 0 and no row. */
   shells: number;
   suit: SuitId; trim: TrimId;
   /** the optical wand rides in a pouch (wand.ts — a look under a shut door before anybody opens it). A teammate's card has the row only under `WAND.mate`, and he uses it only on your order (wandorder.ts); else false, and no row. */
@@ -114,6 +116,12 @@ export interface MemberKit {
   /** THE TWO GUN SLOTS (gunslots.ts GUNSLOTS): a pick of its table each — the long gun ('none': the sidearm alone) and the sidearm. With the switch on these
    *  are the card's two gun rows and `weapon` follows the primary ('pistol' with none, else 'rifle'); with it off they are carried, inert. */
   primary: string; secondary: string;
+  /** THE SECONDARY'S OWN SUPPRESSOR (kittree.ts KITTREE: each gun has its own — `suppressed` is then the primary's alone, yours too). Off: carried, inert
+   *  (a teammate's one Suppressor row is both his guns', and both of yours wear theirs). */
+  sideCan: boolean;
+  /** sponge rounds for the launcher (launcher.ts; KITTREE: a counted row under the gun that has the tube — none as issued, and a quiet or solo mission
+   *  hands you its own over the card). Off: carried, inert (every launcher has its five). */
+  rings: number;
 }
 export const KIT_MEMBERS = 5;
 /** the store's key (JSON { v: 2, members: [...] }; v is written for a reader, never read) */
@@ -126,8 +134,12 @@ const ISSUED_FRAGS = [1, 1, 1, 0, 0];
 /** … and the 40 mm rounds: yours alone, one */
 const ISSUED_SHELLS = [1, 0, 0, 0, 0];
 export const SHELLS_MAX = 4;
+/** … and a teammate's, where his card has the row (mateShells): one round, fired on your order */
+export const SHELLS_MATE_MAX = 1;
 /** the most sticky cameras a card of yours holds (stickycam.ts STICKY.carry is the same three, said there for the rifle; STICKY.max is how many WATCH at once) */
 export const CAMS_MAX = 3;
+/** the most sponge rounds a card holds (kittree.ts KITTREE.rings is the same five, said there for the switch; the launcher's own: weapons.ts LAUNCHER.rings) */
+export const RINGS_MAX = 5;
 /** (YOUR card is the issue UNDER THE POUCHES RULE: a teammate's four pouches, one of each of your four things — slots.json v6. With the rule off your
  *  card as issued is BUILT below: kitDefault) */
 const ISSUED: MemberKit[] = ([
@@ -136,7 +148,7 @@ const ISSUED: MemberKit[] = ([
   { weapon: 'rifle', suppressed: true, light: true, nvg: true, bangs: 1, charges: 1, smoke: 0, suit: 'issued', trim: 'issued' },
   { weapon: 'rifle', suppressed: true, light: true, nvg: true, bangs: 0, charges: 0, smoke: 0, suit: 'issued', trim: 'issued' },
   { weapon: 'rifle', suppressed: true, light: true, nvg: true, bangs: 0, charges: 0, smoke: 0, suit: 'issued', trim: 'issued' },
-] as Omit<MemberKit, 'frags' | 'shells' | 'walls' | 'wand' | 'cams' | 'big' | 'primary' | 'secondary'>[]).map((m, i) => ({ ...m, frags: ISSUED_FRAGS[i], shells: ISSUED_SHELLS[i], walls: 0, wand: false, cams: 0, big: 'none' as BigKit, primary: 'mk18', secondary: 'g19' }));   // (the two picks in plain words — gunslots.ts PICKS: nothing of that module is read as this one loads)
+] as Omit<MemberKit, 'frags' | 'shells' | 'walls' | 'wand' | 'cams' | 'big' | 'primary' | 'secondary' | 'sideCan' | 'rings'>[]).map((m, i) => ({ ...m, frags: ISSUED_FRAGS[i], shells: ISSUED_SHELLS[i], walls: 0, wand: false, cams: 0, big: 'none' as BigKit, primary: 'mk18', secondary: 'g19', sideCan: true, rings: 0 }));   // (the two picks in plain words — gunslots.ts PICKS: nothing of that module is read as this one loads)
 export const FRAGS_MAX = 3;
 /** WHAT A Player IS BUILT WITH (game.ts Player: canisters 4, flashbangs 2 — CAN_MIXES.issued below, the issued split of six —, frags FRAG.issue, the rifle's
  *  LAUNCHER40.rounds; literals here: src/game is one import cycle): the kit of the plain night with no scenario, of the harness and of a Training lesson, and
@@ -190,17 +202,29 @@ export const SMOKE_MATE_MAX = 2;
 
 /** the weapons.ts row a card's two fields name (you: the long gun's row, or the pistol's when that is all you bring) */
 export function kitGun(m: MemberKit): WeaponId {
-  if (gunsOn()) { const w = pickRow(m.weapon === 'pistol' ? m.secondary : m.primary, m.suppressed); if (w) return w; }   // (gunslots.ts: his primary's row — his sidearm's with no long gun brought)
+  if (gunsOn()) { const w = m.weapon === 'pistol' ? pickRow(m.secondary, treeUp() ? m.sideCan : m.suppressed) : pickRow(m.primary, m.suppressed); if (w) return w; }   // (gunslots.ts: his primary's row — his sidearm's with no long gun brought)
   return m.weapon === 'shotgun' ? 'm870' : m.weapon === 'rifle' ? (m.suppressed ? 'fn2000' : 'aks74u') : (m.suppressed ? 'fiveseven' : 'guard9mm'); }
 
 /** the card has two gun rows (gunslots.ts GUNSLOTS, on the big slot's card: the shotgun is kit there, never a man's gun) */
 const gunsOn = (): boolean => bigOn && GUNSLOTS.on && !gunsBroken();   // (`bigOn` first: false as this module loads, so nothing of gunslots.ts is asked then — slotsCheck below runs homeShells)
+/** … and it is laid out as a tree, the same rows for every man (kittree.ts KITTREE: on the two gun slots' card) */
+const treeUp = (): boolean => gunsOn() && treeOn();
+/** KITTREE: a slot's pick comes with its suppressor on or off (the table has it both ways) — else the gun is as it is made */
+const canChoice = (id: unknown): boolean => { const a = pickRow(id, true), b = pickRow(id, false); return !!a && !!b && a !== b; };
+/** KITTREE: the gun in a slot of a card wears its suppressor (his own flag where the pick has the choice, else as the gun is made) */
+export function kitSlotCan(m: MemberKit, slot: GunSlot): boolean { const w = pickRow(m[slot], slot === 'primary' ? m.suppressed : m.sideCan); return !!w && WEAPONS[w].suppressed; }
 /** the gun a card's man carries that is NOT in his hands — his sidearm's row — or null: no long gun brought (the sidearm is his gun), the switch off */
 export function kitSide(m: MemberKit): WeaponId | null { return m.weapon === 'pistol' ? null : kitSecond(m); }
 /** the row in a card's secondary slot (null with the switch off: the card has no such slot) */
-export function kitSecond(m: MemberKit): WeaponId | null { return gunsOn() ? pickRow(m.secondary, m.suppressed) : null; }
+export function kitSecond(m: MemberKit): WeaponId | null { return gunsOn() ? pickRow(m.secondary, treeUp() ? m.sideCan : m.suppressed) : null; }
+/** KITTREE: the gun in a slot of member i's card as he would deploy with it — the weapons.ts row his card makes it (a suppressor taken off is the same
+ *  gun, bare: the pick's own bare row, gunslots.ts PICKS — yours as a teammate's), or null: no long gun brought */
+export function kitSlotDef(i: number, m: MemberKit, slot: GunSlot): WeaponDef | null {
+  if (slot === 'primary' && m.weapon === 'pistol') return null;
+  const tree = treeUp(), w = pickRow(m[slot], i === 0 && !tree ? true /* (both of yours wore it) */ : slot === 'primary' || !tree ? m.suppressed : m.sideCan); return w ? WEAPONS[w] : null;
+}
 /** the gun on member i's row `field` wears a suppressor (the one gun row, or either slot's: both of yours do) */
-export function kitRowCan(i: number, m: MemberKit, field: string): boolean { if (field === 'weapon') return kitGunCan(i, m); const w = field === 'primary' ? (m.weapon === 'pistol' ? null : pickRow(m.primary, i === 0 || m.suppressed)) : field === 'secondary' ? pickRow(m.secondary, i === 0 || m.suppressed) : null; return !!w && WEAPONS[w].suppressed; }
+export function kitRowCan(i: number, m: MemberKit, field: string): boolean { if (field === 'weapon') return kitGunCan(i, m); if (treeUp()) return field === 'primary' ? m.weapon !== 'pistol' && kitSlotCan(m, 'primary') : field === 'secondary' && kitSlotCan(m, 'secondary'); const w = field === 'primary' ? (m.weapon === 'pistol' ? null : pickRow(m.primary, i === 0 || m.suppressed)) : field === 'secondary' ? pickRow(m.secondary, i === 0 || m.suppressed) : null; return !!w && WEAPONS[w].suppressed; }
 /** a card's two picks are ones the table offers. WHETHER a long gun is brought stays where every rule of the build before reads it — `weapon`
  *  ('pistol': none) — so a set, an issue card or a tool that writes that field alone is still right; `primary` only says WHICH long gun. */
 const gunsHome = (m: MemberKit): MemberKit => { const long = gunPicks('primary').filter(p => p !== NO_PRIMARY), side = gunPicks('secondary'); if (!long.includes(m.primary)) m.primary = long[0] ?? ''; if (!side.includes(m.secondary)) m.secondary = side[0] ?? ''; return m; };
@@ -216,28 +240,29 @@ export interface SlotLoadout { id: string; name: string; counts: Record<string, 
  *  only). unknown: tools priced that this build has no row for (a hammer; the wall charge before the build that has it) — carried, priced for nobody. */
 export interface SlotTable { v: number; pouches: number[]; /** big[i]: member i's big slots (BIGSLOT; a table that names none: one each) */ big: number[]; squad: number | null; items: Record<string, SlotItem>; unknown: string[]; loadouts: SlotLoadout[] }
 /** slots.json's tool ids → the card's field */
-const SLOT_FIELD: Record<string, string> = { smoke: 'smoke', stun: 'bangs', frag: 'frags', shell40: 'shells', doorCharge: 'charges', wallCharge: 'walls', shotgun: 'shotgun', wand: 'wand', stickyCam: 'cams', hammer: 'hammer' };
+const SLOT_FIELD: Record<string, string> = { smoke: 'smoke', stun: 'bangs', frag: 'frags', shell40: 'shells', doorCharge: 'charges', wallCharge: 'walls', shotgun: 'shotgun', wand: 'wand', stickyCam: 'cams', hammer: 'hammer', sponge: 'rings' };
 /** how much of each priced thing a card carries (a count; the shotgun is one or none) */
 const SLOT_AMOUNT: Record<string, (m: MemberKit) => number> = {
   smoke: m => m.smoke, bangs: m => m.bangs, frags: m => m.frags, shells: m => m.shells, charges: m => m.charges, walls: m => m.walls,
   shotgun: m => (bigOn ? (m.big === 'shotgun' ? 1 : 0) : m.weapon === 'shotgun' ? 1 : 0),   // (BIGSLOT: the shotgun is what is in the big slot, never the gun)
   hammer: m => (bigOn && m.big === 'hammer' ? 1 : 0),
   cams: m => (m.cams && STICKY.on ? m.cams : 0),   // (sticky cameras, yours alone: nothing while their switch is off — and an issued card carries none, so this table is never asked the switch as the module loads)
+  rings: m => (m.rings && treeUp() ? m.rings : 0),   // (sponge rounds, a row of the tree's card: nothing while its switch is off — and an issued card carries none, so the switch is never asked as the module loads)
   wand: m => (m.wand && WAND.on ? 1 : 0),   // (the optical wand, yours or a teammate's: nothing while its switch is off; a teammate's card carries one only where its row is — kitLoad never reads one onto it otherwise — and an issued card, which carries none, never asks the switch: this table is read as the module loads)
 };
 /** … and how a card is put to `n` of one (`d` = what he is issued: a shotgun given up is the issued gun again) */
 const SLOT_PUT: Record<string, (m: MemberKit, n: number, d: MemberKit) => void> = {
   smoke: (m, n) => { m.smoke = n; }, bangs: (m, n) => { m.bangs = n; }, frags: (m, n) => { m.frags = n; }, shells: (m, n) => { m.shells = n; }, charges: (m, n) => { m.charges = n; }, walls: (m, n) => { m.walls = n; },
-  wand: (m, n) => { m.wand = n > 0; }, cams: (m, n) => { m.cams = n; }, shotgun: (m, n, d) => { if (bigOn) { if (n > 0) m.big = 'shotgun'; else if (m.big === 'shotgun') m.big = 'none'; } else if (n > 0) m.weapon = 'shotgun'; else if (m.weapon === 'shotgun') m.weapon = d.weapon; },
+  wand: (m, n) => { m.wand = n > 0; }, cams: (m, n) => { m.cams = n; }, rings: (m, n) => { m.rings = n; }, shotgun: (m, n, d) => { if (bigOn) { if (n > 0) m.big = 'shotgun'; else if (m.big === 'shotgun') m.big = 'none'; } else if (n > 0) m.weapon = 'shotgun'; else if (m.weapon === 'shotgun') m.weapon = d.weapon; },
   hammer: (m, n) => { if (!bigOn) return; if (n > 0) m.big = 'hammer'; else if (m.big === 'hammer') m.big = 'none'; },
 };
 /** one of a thing, in a card's words */
-const SLOT_WORD: Record<string, string> = { smoke: 'smoke canister', bangs: 'stun canister', frags: 'frag', shells: 'launcher grenade', charges: 'door charge', walls: 'wall charge', shotgun: 'shotgun', wand: 'optical wand', cams: 'sticky camera', hammer: 'hammer' };
+const SLOT_WORD: Record<string, string> = { smoke: 'smoke canister', bangs: 'stun canister', frags: 'frag', shells: 'launcher grenade', charges: 'door charge', walls: 'wall charge', shotgun: 'shotgun', wand: 'optical wand', cams: 'sticky camera', hammer: 'hammer', rings: 'sponge round' };
 /** the most of each a card's row can hold whatever a table says — [you, a teammate]; 0 = no such row on his card. A table's most-a-man is never read above
  *  these (kitPlayer and the rows would not deliver it). */
-const OWN_MAX: Record<string, [number, number]> = { smoke: [SMOKE_MAX, SMOKE_MATE_MAX], bangs: [STUN_MAX, BANGS_MAX], frags: [FRAGS_MAX, FRAGS_MAX - 1], shells: [SHELLS_MAX, 0], charges: [CHARGES_MAX, CHARGES_MAX], walls: [WALLS_MAX, WALLS_MAX], shotgun: [1, 1], wand: [1, 1], cams: [CAMS_MAX, 0], hammer: [1, 1] };
+const OWN_MAX: Record<string, [number, number]> = { smoke: [SMOKE_MAX, SMOKE_MATE_MAX], bangs: [STUN_MAX, BANGS_MAX], frags: [FRAGS_MAX, FRAGS_MAX - 1], shells: [SHELLS_MAX, SHELLS_MATE_MAX], charges: [CHARGES_MAX, CHARGES_MAX], walls: [WALLS_MAX, WALLS_MAX], shotgun: [1, 1], wand: [1, 1], cams: [CAMS_MAX, 0], hammer: [1, 1], rings: [RINGS_MAX, 0] };
 /** what an over-budget kit gives up first (kitFitAll) */
-const TRIM = ['shells', 'smoke', 'frags', 'charges', 'bangs', 'cams', 'wand', 'walls', 'shotgun', 'hammer'];
+const TRIM = ['rings', 'shells', 'smoke', 'frags', 'charges', 'bangs', 'cams', 'wand', 'walls', 'shotgun', 'hammer'];
 /** … and of the big things on a card over its big slot: what the card does NOT show goes first (bigOf: a wall charge before the rest) */
 const BIG_TRIM = ['hammer', 'shotgun', 'walls'];
 /** which of the table's loadouts a set's counts are: Quiet is its 'quiet', Loud its 'stun' (stun heavy — one more stun canister on every man, the set of the
@@ -304,7 +329,14 @@ const kindOf = (i: number) => (i === 0 ? 'you' : 'mate');
 /** your card's long gun has the launcher under it (the 40 mm rounds and the cameras go by its tube): the rifle — and, under the two gun slots, a primary
  *  whose row has one (weapons.ts `launcher`: the issue carbine alone) */
 const tubed = (m: MemberKit): boolean => m.weapon === 'rifle' && !(gunsOn() && WEAPONS[pickRow(m.primary, true) ?? 'fn2000'].launcher === false);
-const homeShells = (m: MemberKit): MemberKit => { if (!tubed(m)) { m.shells = 0; if (m.cams && STICKY.on) m.cams = 0; /* (the cameras go by the same tube; with their switch off the count is inert and kept — and an issued card carries none, so the switch is never asked as this module loads: slotsCheck below runs then) */ } return m; };
+/** KITTREE: a suppressor's flag holds a value only while its gun has the choice — the suppressor of a gun left at home, or of one made with it or that
+ *  none fits, sits where it is issued (on). So two cards that read alike are alike, a paste of a Mk 46's card takes nobody's suppressor off, and a
+ *  flag never comes back from under a gun that had no say in it. (An issued card has both on: nothing is asked of the switch as this module loads.) */
+/** KITTREE: a teammate's card has the 40 mm row — the card is a tree and his round can be fired in this build (squad40.ts squad40Here). The table still
+ *  says how many (slots.json shell40: none while it names you alone). */
+const mateShells = (): boolean => treeUp() && squad40Here();
+const homeCans = (m: MemberKit): MemberKit => { if ((!m.suppressed || !m.sideCan) && treeUp()) { if (m.weapon === 'pistol' || !canChoice(m.primary)) m.suppressed = true; if (!canChoice(m.secondary)) m.sideCan = true; } return m; };
+const homeShells = (m: MemberKit): MemberKit => { homeCans(m); if (!tubed(m)) { m.shells = 0; if (m.rings && treeUp()) m.rings = 0;   /* (KITTREE: the sponge rounds too — an issued card carries none, so the switch is never asked as this module loads) */ if (m.cams && STICKY.on) m.cams = 0; /* (the cameras go by the same tube; with their switch off the count is inert and kept — and an issued card carries none, so the switch is never asked as this module loads: slotsCheck below runs then) */ } return m; };
 /** the pouches a card fills */
 function costOf(m: MemberKit, t: SlotTable): number { let used = 0; for (const k of Object.keys(SLOT_AMOUNT)) used += SLOT_AMOUNT[k](m) * priceOf(t.items[k]); return used; }
 /** HOW MANY TEAMMATES COME (members 1..team): the men the squad's pouches are counted over — the table's rule. Four until somebody says otherwise (the
@@ -491,7 +523,7 @@ function slotsCheck(raw: unknown): { table: SlotTable } | { why: string } {
     items[f] = { id: t.id, pouches: t.pouches, max: Array.from({ length: KIT_MEMBERS }, (_x, i) => { const own = OWN_MAX[f][i ? 1 : 0], most = mx[kindOf(i)] as number | undefined; return who.includes(kindOf(i)) ? Math.min(own, most ?? own) : 0; }), ...(t.maxPerSquad !== undefined ? { squadMax: t.maxPerSquad } : {}), ...(t.big === true ? { big: true } : {}) };
   }
   if (!(r.tools as { big?: unknown }[]).some(t => t.big !== undefined)) for (const f of BIG_TRIM) if (items[f]) items[f].big = true;   // (a table from before the big slot marks nothing big: the four things the slot is for are)
-  const absent = Object.keys(SLOT_FIELD).filter(id => !items[SLOT_FIELD[id]] && id !== 'wallCharge' && id !== 'wand' && id !== 'stickyCam' && id !== 'hammer'); /* (a table from before the wall charge, the optical wand, the sticky cameras or the hammer prices none: no row) */ if (absent.length) return { why: `"tools" does not price ${absent.join(', ')}: every tool this build carries has a price (0 = not a pouch)` };
+  const absent = Object.keys(SLOT_FIELD).filter(id => !items[SLOT_FIELD[id]] && id !== 'wallCharge' && id !== 'wand' && id !== 'stickyCam' && id !== 'hammer' && id !== 'sponge'); /* (a table from before the wall charge, the optical wand, the sticky cameras, the hammer or the sponge rounds prices none: no row) */ if (absent.length) return { why: `"tools" does not price ${absent.join(', ')}: every tool this build carries has a price (0 = not a pouch)` };
   const loadouts: SlotLoadout[] = [];
   for (const L of (Array.isArray(r.loadouts) ? r.loadouts : []) as { id?: unknown; name?: unknown; members?: unknown; cards?: Record<string, unknown> }[]) {
     if (!L || typeof L.id !== 'string' || !Array.isArray(L.members)) return { why: 'every loadout has an "id" and "members": a card of counts for each of the five' };
@@ -611,17 +643,22 @@ function loadoutCards(id: string, looks?: MemberKit[]): MemberKit[] | string {
 }
 /** Put one of the table's named loadouts on all five cards — or 'issued', the issued kit — keeping each man's colours (the tallies; the loadout screen's
  *  squad kit row): null = done and kept, else why not — no such loadout, a tool of it this build has no row for, or (a table edited by hand) not a legal fill. */
-export function kitLoadout(id: string): string | null {
+export function kitLoadout(id: string, only?: number): string | null {
   const cards = loadoutCards(id, KIT.members); if (typeof cards === 'string') return cards;
+  // (`only`: that man's card of the kit and nobody else's — the row of kits pressed by a man going alone must not rewrite four cards he cannot see)
+  if (only !== undefined) return onWorn(only, () => { const why = cardWhy(only, cards[only]); if (why) return why; KIT.members[only] = cards[only]; KIT_NOTE[only] = ''; kitSave(); return null; }, r => r === null);
   for (let i = 0; i < KIT_MEMBERS; i++) { KIT.members[i] = cards[i]; KIT_NOTE[i] = ''; } dealOwn = false; kitSave(); return null;
 }
 /** the squad kits a press can put on, in the order the screen lists them: as issued, then the table's loadouts this build can carry (none while the rule is off) */
-export function kitLoadouts(): { id: string; name: string }[] {
+export function kitLoadouts(only?: number): { id: string; name: string }[] {
+  if (only !== undefined) { const seen = new Set<string>(), mine = (id: string) => { const c = loadoutCards(id); return typeof c === 'string' ? '' : JSON.stringify({ ...c[only], suit: '', trim: '' }); };   // (for one man: the kits that put a different card on HIM, the first of each)
+    return kitLoadouts().filter(l => { const k = mine(l.id); if (!k || seen.has(k)) return false; seen.add(k); return true; }); }
   return [{ id: 'issued', name: 'As issued' }, ...(SLOTS.on ? SLOTS.table.loadouts.filter(L => !loadoutMissing(L).length && typeof loadoutCards(L.id) !== 'string').map(L => ({ id: L.id, name: L.name })) : [])];
 }
 /** which of them the five cards are now, colours aside (null: a mix of your own) */
-export function kitLoadoutOf(): string | null {
-  const same = (id: string) => { const cards = loadoutCards(id, KIT.members); return typeof cards !== 'string' && cards.every((c, i) => JSON.stringify(c) === JSON.stringify({ ...c, ...KIT.members[i] })); };
+export function kitLoadoutOf(only?: number): string | null {
+  const same = (id: string) => { const cards = loadoutCards(id, KIT.members); return typeof cards !== 'string' && cards.every((c, i) => (only !== undefined && i !== only) || JSON.stringify(c) === JSON.stringify({ ...c, ...KIT.members[i] })); };
+  if (only !== undefined) return kitLoadouts(only).find(l => same(l.id))?.id ?? null;
   if (dealOwn && dealing() && team >= 3) return null;   // (cards of the player's own layout are no named kit on a team that would wear one shared out)
   return kitLoadouts().find(l => same(l.id))?.id ?? null;
 }
@@ -642,7 +679,16 @@ export interface KitRow {
   item?: string;
   /** a row that is not one field of the card reads and writes it itself ('cans') */
   get?(m: MemberKit): KitValue; set?(m: MemberKit, v: KitValue): void;
+  /** KITTREE: the gun row this one hangs under — a thing that rides on that gun, drawn beneath its tile (the light: under the gun in his hands) */
+  under?: GunSlot | ((m: MemberKit) => GunSlot);
+  /** KITTREE: the card has the row as it stands (absent: always) — not the suppressor of a gun left at home, not a launcher's load on a gun with no tube */
+  has?(m: MemberKit): boolean;
+  /** KITTREE: why the row cannot be stepped as the card stands ('' or absent: it can) — a gun made with its suppressor, or one none fits */
+  fixed?(m: MemberKit): string;
 }
+/** a row is on a card as it stands (KitRow.has) · the gun row it hangs under there, if any (KitRow.under) */
+export const rowHas = (r: KitRow, m: MemberKit): boolean => !r.has || r.has(m);
+export const rowUnder = (r: KitRow, m: MemberKit): GunSlot | null => (typeof r.under === 'function' ? r.under(m) : r.under ?? null);
 /** a row's value on a card */
 export function rowGet(r: KitRow, m: MemberKit): KitValue { return r.get ? r.get(m) : (m as unknown as Record<string, KitValue>)[r.field]; }
 function rowSet(r: KitRow, m: MemberKit, v: KitValue) { if (r.set) r.set(m, v); else (m as unknown as Record<string, KitValue>)[r.field] = v; if (SLOTS.on && r.field === 'weapon') homeShells(m); }
@@ -678,7 +724,7 @@ const YOU_GUNS_CAN: Partial<Record<KitWeapon, string>> = { pistol: 'Suppressed F
 export function youGunsCan(v: KitValue): string | null { const w = YOU_GUNS_CAN[v as KitWeapon]; return w ? gearText(w) : null; }
 /** the gun in member i's hands wears a suppressor (weapons.ts `suppressed`): both of yours whatever the card's field says (no row of your card writes it, and
  *  the game hands you the suppressed pair), a teammate's by his Suppressor row, never the shotgun */
-export function kitGunCan(i: number, m: MemberKit): boolean { return i === 0 ? m.weapon !== 'shotgun' : WEAPONS[kitGun(m)].suppressed; }
+export function kitGunCan(i: number, m: MemberKit): boolean { return treeUp() ? kitSlotCan(m, m.weapon === 'pistol' ? 'secondary' : 'primary') : i === 0 ? m.weapon !== 'shotgun' : WEAPONS[kitGun(m)].suppressed; }
 const SHOTGUN_NOTE = 'drops a man across a room, poor down a corridor; shoots a lock off its door';
 /** the split of six a card's two canister counts are, if they are one */
 const mixOf = (m: MemberKit): CanMix | null => (Object.keys(CAN_MIXES) as CanMix[]).find(k => CAN_MIXES[k].smoke === m.smoke && CAN_MIXES[k].stun === m.bangs) ?? null;
@@ -717,7 +763,7 @@ function bigRow(i: number): KitRow {
     get: m => bigOf(m), set: (m, v) => { m.walls = v === 'wall' ? 1 : 0; m.big = v === 'shotgun' || v === 'hammer' ? v : 'none'; } };
 }
 function buildRows(i: number): KitRow[] {
-  if (bigOn) return gunsOn() ? buildRowsGuns(i) : buildRowsBig(i);
+  if (bigOn) return treeUp() ? buildRowsTree(i) : gunsOn() ? buildRowsGuns(i) : buildRowsBig(i);
   if (i === 0) return [
     { field: 'weapon', item: 'shotgun', label: 'Guns', values: ['rifle', 'pistol', 'shotgun'], word: v => gearText(YOU_GUNS[v as KitWeapon]),
       note: m => m.weapon === 'rifle' ? 'the rifle is heard as gunfire; the pistol is not' : (m.weapon === 'shotgun' ? SHOTGUN_NOTE : gearText('no rifle, no ring launcher: nothing you fire reads as gunfire')) + (SLOTS.on ? ' · the 40 mm rounds stay home with the rifle' : '') },
@@ -772,10 +818,35 @@ function buildRowsGuns(i: number): KitRow[] {
     get: m => gunsHome(m).secondary, set: (m, v) => { m.secondary = String(v); } };
   return buildRowsBig(i).flatMap(r => (r.field === 'weapon' ? [primary, secondary] : [r]));
 }
+/** THE ROWS AS A TREE (kittree.ts KITTREE): ONE list for every man, yours too, in one order — each gun with what rides on it under it (its own
+ *  suppressor, the light, what the launcher fires), then what fills the pouches, what is worn, the big slot. The rows of the gun slots' card (above) are
+ *  kept where a card of that kind had one — word for word, so a count's price and its most are the table's as they were —; the ones a card of that kind
+ *  never had (your suppressors, light and goggles; the sponge rounds) are made here. A launcher's load is on a card only where the table gives that man
+ *  some (a teammate: none until he can fire them). */
+function buildRowsTree(i: number): KitRow[] {
+  const base = buildRowsGuns(i), by = (f: KitField) => base.find(r => r.field === f);
+  const you = i === 0, long = (m: MemberKit) => m.weapon !== 'pistol';
+  const canRow = (slot: GunSlot): KitRow => { const f = slot === 'primary' ? 'suppressed' as const : 'sideCan' as const;
+    return { field: f, label: 'Suppressor', under: slot, values: [true, false], word: yesNo('on', 'off'), has: m => slot === 'secondary' || long(m),
+      fixed: m => (canChoice(m[slot]) ? '' : `${gearText(pickWord(m[slot]))}: ${kitSlotCan(m, slot) ? 'made with it' : 'none fits it'}`),
+      note: m => (kitSlotCan(m, slot) ? (slot === 'secondary' || WEAPONS[pickRow(m.primary, true) ?? 'fn2000'].report.level < 1 ? 'the floor does not hear it as gunfire' : 'a small flash · still heard as gunfire') : 'a bright flash, the hard report'),
+      get: m => kitSlotCan(m, slot), set: (m, v) => { if (canChoice(m[slot])) m[f] = !!v; } }; };   // (a gun with no choice writes nothing: a paste of its card leaves the other man's flag his own)
+  const light: KitRow = { ...(by('light') ?? { field: 'light', label: 'Weapon light', values: [true, false], word: yesNo('fitted', 'none'), note: (m: MemberKit) => (m.light ? 'on L' : 'none: L does nothing') }), under: m => (long(m) ? 'primary' : 'secondary') };
+  const nvg: KitRow = by('nvg') ?? { field: 'nvg', label: 'Night vision', values: [true, false], word: yesNo('goggles', 'none'), note: m => (m.nvg ? 'on N' : 'bare eyes: N does nothing') };
+  const tube = (r: KitRow | undefined): KitRow[] => (r && r.values.length > 1 ? [{ ...r, under: 'primary', has: tubed }] : []);   // (a most of none: not his to carry — no row)
+  const rings: KitRow = { field: 'rings', item: 'rings', label: 'Sponge rounds', values: upTo(slotMax('rings', i, OWN_MAX.rings[you ? 0 : 1])), word: v => String(v),
+    note: m => (m.rings ? '2 with the rifle up, then the right button: out cold to the head, doubled over anywhere else' : 'none for the launcher') };
+  const shells = by('shells') ?? { field: 'shells', item: 'shells', label: '40 mm grenades', values: upTo(mateShells() ? slotMax('shells', i, OWN_MAX.shells[1]) : 0), word: (v: KitValue) => String(v), note: (m: MemberKit) => (m.shells ? 'fired on your order' : 'none for his launcher') } as KitRow;   // (a teammate's: yours is the row above — by('shells'))
+  const rest = (['smoke', 'bangs', 'frags', 'charges', 'wand'] as KitField[]).flatMap(f => by(f) ?? []);
+  // (the gun's own name whichever way its suppressor stands — that is the row under it — and its line says which way that is, by this gun's own flag)
+  const gun = (f: 'primary' | 'secondary'): KitRow => { const b = by(f)!; return { ...b, word: v => gearText(pickWord(v)),
+    note: m => (f === 'primary' && !long(m) ? b.note(m) : `${gearText(pickWord(m[f]))}${kitSlotCan(m, f) ? ' (suppressed)' : ''}`), set: (m, v) => { b.set!(m, v); homeCans(m); } }; };
+  return [gun('primary'), canRow('primary'), light, ...tube(rings), ...tube(shells), ...tube(by('cams')), gun('secondary'), canRow('secondary'), ...rest, nvg, by('suit')!, by('trim')!, by('big')!];
+}
 /** (built once per member, per way the rule stands, per table: a counted row's values are the table's `max`) */
 const rowCache = new Map<string, KitRow[]>();
 /** the rows of member i's card, top to bottom */
-export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${gunsOn()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
+export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${gunsOn()}:${treeUp()}:${mateShells()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
 /** What a row costs member i's pouches as his card stands, and its rate in plain words ('a pouch each', 'the wand takes 2 pouches') — null for a row
  *  that is not a pouch (a light, a colour; a shotgun while the table prices it at nothing), and for every row while the rule is off. */
 export function kitRowCost(i: number, r: KitRow, m: MemberKit = kitShown(i)): { pouches: number; rate: string } | null {
@@ -794,18 +865,20 @@ export function kitName(i: number): { title: string; sub: string } {
 export function kitWords(i: number): string {
   const m = kitShown(i), look = [m.suit !== 'issued' ? SUITS[m.suit].label : '', m.trim !== 'issued' ? `${TRIMS[m.trim].label} trim` : ''].filter(Boolean).join(', ');
   const frags = SLOTS.on && m.frags ? `, ${m.frags} frag${m.frags === 1 ? '' : 's'}` : '';
-  if (i === 0) return [gunsOn() ? (m.weapon === 'pistol' ? `${gearText(pickWord(m.secondary))} only` : `${gearText(pickWord(m.primary))} + ${gearText(pickWord(m.secondary))}`) : gearText(YOU_GUNS[m.weapon]), `${m.smoke || 'no'} smoke, ${m.bangs || 'no'} stun${frags}${SLOTS.on && m.shells ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` /* (no-break spaces: the count never parts from '40 mm' where the strip wraps the line) */ : ''}${chargeRow(0) && m.charges ? `, ${m.charges} charge${m.charges === 1 ? '' : 's'}` : ''}${m.cams && camRow() ? `, ${m.cams}\u00a0cam${m.cams === 1 ? '' : 's'}` : ''}${m.wand && wandRow() ? ', wand' : ''}`, wallWords(0, m), bigWords(m), look].filter(Boolean).join(' · ');
+  // (KITTREE: a gun by its pick's name, as its tile reads — 'bare' after one whose suppressor the card has taken off)
+  const gun = (slot: GunSlot) => `${gearText(pickWord(m[slot]))}${canChoice(m[slot]) && !kitSlotCan(m, slot) ? ' bare' : ''}`, guns = () => (m.weapon === 'pistol' ? `${gun('secondary')} only` : `${gun('primary')} + ${gun('secondary')}`);
+  if (i === 0) return [treeUp() ? guns() : gunsOn() ? (m.weapon === 'pistol' ? `${gearText(pickWord(m.secondary))} only` : `${gearText(pickWord(m.primary))} + ${gearText(pickWord(m.secondary))}`) : gearText(YOU_GUNS[m.weapon]), `${m.smoke || 'no'} smoke, ${m.bangs || 'no'} stun${frags}${SLOTS.on && m.shells ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` /* (no-break spaces: the count never parts from '40 mm' where the strip wraps the line) */ : ''}${m.rings && treeUp() ? `, ${m.rings}\u00a0sponge` : ''}${chargeRow(0) && m.charges ? `, ${m.charges} charge${m.charges === 1 ? '' : 's'}` : ''}${m.cams && camRow() ? `, ${m.cams}\u00a0cam${m.cams === 1 ? '' : 's'}` : ''}${m.wand && wandRow() ? ', wand' : ''}`, wallWords(0, m), bigWords(m), look].filter(Boolean).join(' · ');
   // (gunslots.ts: a gun with its suppressor off is the same gun by name — the line says so in words, as it says 'no light'; until that key the bare gun's
   //  own name said it)
-  const bare = gunsOn() && GUNSLOTS.bare && !m.suppressed && (kitGun(m) !== kitGun({ ...m, suppressed: true }) || kitSide(m) !== kitSide({ ...m, suppressed: true })) ? 'no suppressor' : '';
-  return [gearText(GUN_SHORT[kitGun(m)]) + (kitSide(m) ? ` + ${gearText(GUN_SHORT[kitSide(m)!])}` : ''), bare, m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}`, wallWords(i, m), bigWords(m), look].filter(Boolean).join(' · ');
+  const bare = !treeUp() /* (the tree's line says it gun by gun: above) */ && gunsOn() && GUNSLOTS.bare && !m.suppressed && (kitGun(m) !== kitGun({ ...m, suppressed: true }) || kitSide(m) !== kitSide({ ...m, suppressed: true })) ? 'no suppressor' : '';
+  return [treeUp() ? guns() : gearText(GUN_SHORT[kitGun(m)]) + (kitSide(m) ? ` + ${gearText(GUN_SHORT[kitSide(m)!])}` : ''), bare, m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}${m.shells && mateShells() ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` : ''}`, wallWords(i, m), bigWords(m), look].filter(Boolean).join(' · ');
 }
 /** the big slot's shotgun or hammer of a card's line (BIGSLOT; the wall charge has its own words) */
 function bigWords(m: MemberKit): string { return bigOn && !m.walls && m.big !== 'none' ? BIG_WORD[m.big] : ''; }
 /** the wall charges of a card's line: 'wall charge', '2 wall charges', or nothing (none carried, or no such row on his card) */
 function wallWords(i: number, m: MemberKit): string { return m.walls && wallRow(i) ? (m.walls === 1 ? 'wall charge' : `${m.walls} wall charges`) : ''; }
 /** member i's card differs from what he is issued (only the rows his card has) */
-export function kitChanged(i: number): boolean { const m = kitShown(i), d = kitIssuedShown(i); return kitRows(i).some(r => rowGet(r, m) !== rowGet(r, d)); }
+export function kitChanged(i: number): boolean { const m = kitShown(i), d = kitIssuedShown(i); return kitRows(i).some(r => rowHas(r, m) && rowGet(r, m) !== rowGet(r, d)); }
 
 /** why member i's card with one row set to `v` is refused — no room in his pouches, or in the squad's — or null: it fits (always null while the rule is off) */
 function overWhy(i: number, row: KitRow, v: KitValue): string | null { if (!SLOTS.on) return null; const m = { ...KIT.members[i] }; rowSet(row, m, v); return cardWhy(i, m); }
@@ -818,6 +891,7 @@ export function kitPeek(i: number, field: KitField, dir: 1 | -1): { value: KitVa
 function peek(i: number, field: KitField, dir: 1 | -1): { value: KitValue; why: string; passed: string } {
   const row = rowOf(i, field); if (!row) throw new Error(`kit: member ${i} has no '${field}' row`);
   const cur = rowGet(row, KIT.members[i]), n = row.values.length, at = Math.max(0, row.values.indexOf(cur)), counted = typeof row.values[0] === 'number';
+  { const stuck = !rowHas(row, KIT.members[i]) ? `no ${row.label.toLowerCase()} on this card as it stands` : row.fixed?.(KIT.members[i]); if (stuck) return { value: cur, why: stuck, passed: '' }; }   // (KITTREE: a thing of a gun not brought, or of one with no tube; a gun made with its suppressor, or one none fits)
   let why = '', passed = '';
   for (let k = 1; k < n; k++) {
     const to = row.values[(((at + dir * k) % n) + n) % n], w = overWhy(i, row, to);
@@ -848,6 +922,7 @@ function setRow(i: number, field: KitField, v: KitValue): boolean {
     return setRow(i, 'big', v ? mine : now === mine ? 'none' : now); }
   if (field === 'weapon' && gunsOn() && (v === 'rifle' || v === 'pistol')) return setRow(i, 'primary', v === 'pistol' ? NO_PRIMARY : gunsHome(KIT.members[i]).primary);   // (GUNSLOTS: the same for the one gun row — a long gun or none)
   const row = rowOf(i, field); if (!row || !row.values.includes(v)) return false;
+  if ((!rowHas(row, KIT.members[i]) || row.fixed?.(KIT.members[i])) && v !== rowGet(row, KIT.members[i])) return false;
   if (overWhy(i, row, v)) return false;
   rowSet(row, KIT.members[i], v); KIT_NOTE[i] = ''; kitSave(); return true;
 }
@@ -878,7 +953,7 @@ export function kitPresetAll(p: KitPreset) { for (let i = 0; i < KIT_MEMBERS; i+
 /** which set member i's card is, if it is exactly one */
 export function kitPresetOf(i: number): KitPreset | null {
   const m = kitShown(i);
-  return KIT_PRESETS.find(p => { const c = kitPresetCard(i, p.id); return kitRows(i).every(r => rowGet(r, c) === rowGet(r, m)); })?.id ?? null;
+  return KIT_PRESETS.find(p => { const c = kitPresetCard(i, p.id); return kitRows(i).every(r => (!rowHas(r, c) && !rowHas(r, m)) || rowGet(r, c) === rowGet(r, m)); })?.id ?? null;
 }
 
 /** `KITPASTE_BREAK=1` (the check's): a paste writes the copied card as it is, unfitted and unasked */
@@ -900,7 +975,7 @@ export function kitPasteCard(i: number, from: MemberKit): MemberKit {
   return SLOTS.on ? homeShells(m) : m;
 }
 /** the rows of member i's card that read differently on two cards of his */
-const rowsMoved = (i: number, a: MemberKit, b: MemberKit): KitField[] => kitRows(i).filter(r => rowGet(r, a) !== rowGet(r, b)).map(r => r.field);
+const rowsMoved = (i: number, a: MemberKit, b: MemberKit): KitField[] => kitRows(i).filter(r => (rowHas(r, a) || rowHas(r, b)) && rowGet(r, a) !== rowGet(r, b)).map(r => r.field);   // (a row neither card has — KITTREE — moved nothing)
 /** What a paste of `from` onto member i's card WOULD do, nothing written: the card it would make, the rows of his it would move (none: he wears it
  *  already) and why it would be refused as the cards stand ('' = taken) — cardWhy's reasons, as for a set. */
 export function kitPastePeek(i: number, from: MemberKit): { card: MemberKit; changed: KitField[]; why: string } { return onWorn(i, () => pastePeek(i, from)); }
@@ -951,6 +1026,16 @@ export function kitSanitize(i: number, raw: unknown): MemberKit {
   // whether a long gun is brought at all is the `weapon` field the loop above read, as it always was.
   { if (gunsOn() && (R.weapon === 'rifle' || R.weapon === 'pistol')) card.weapon = R.weapon;   // (the loop reads rows, and the gun field has none of its own here)
     if (typeof R.primary === 'string') card.primary = R.primary; if (typeof R.secondary === 'string') card.secondary = R.secondary; gunsHome(card); }
+  // THE TREE'S TWO SUPPRESSORS (kittree.ts): rows that read the gun, not the field, so not read by the loop above. A card from before them: a teammate's
+  // one row was both his guns' (his sidearm keeps what it had); YOURS had no such row, nor a light's or the goggles' — whatever a set of the build before
+  // left in those fields was inert — so yours from before the tree keeps the suppressors, the light and the goggles you are issued.
+  // With the switch off a card written under it keeps what the tree wrote (carried, inert), so a visit with ?nokittree loses nothing.
+  { const before = typeof R.sideCan !== 'boolean', flag = (k: 'suppressed' | 'light' | 'nvg') => { if (typeof R[k] === 'boolean') card[k] = R[k] as boolean; };
+    if (!before) { card.sideCan = R.sideCan as boolean; flag('suppressed');
+      if (!treeUp()) { if (int(R.rings, 1)) card.rings = Math.min(R.rings, RINGS_MAX); if (i === 0) { flag('light'); flag('nvg'); } } }
+    else if (treeUp()) { if (i === 0) { const d = kitDefault(0); card.suppressed = d.suppressed; card.sideCan = d.sideCan; card.light = d.light; card.nvg = d.nvg; }
+      else if (typeof R.suppressed === 'boolean') { card.suppressed = R.suppressed; card.sideCan = R.suppressed; } }
+    homeCans(card); }
   if (i === 0 && R.wand === true && !wandRow()) card.wand = true;   // (the optical wand on a visit with its row off — ?nowand: kept on the card, inert (no pouch, no words, nothing on him: each of those asks the switch), so the next change of any row does not write the store without it)
   return card;
 }
@@ -972,7 +1057,7 @@ export function kitLoad(s: Store | null, search = '') {
       kept0 = keptOf(j.members?.[0]);
       keptWand = (j.members ?? []).map((r, i) => i > 0 && !!r && typeof r === 'object' && (r as { wand?: unknown }).wand === true);
       { const m = KIT.members[0], other: Record<typeof COUNTS0[number], number> = ruleOn ? BUILT : ISSUED[0], now = issuedCard(0); if (COUNTS0.every(k => m[k] === other[k])) for (const k of COUNTS0) m[k] = now[k]; }   // (as issued the other way the rule stands = as issued)
-      if (SLOTS.on) kitFitAll(KIT.members).forEach((left, i) => { if (left.length) KIT_NOTE[i] = i === 0 && KIT.members[0].weapon !== 'rifle' && left.length === 1 && left[0].includes(SLOT_WORD.shells) ? `No FN2000 in your saved kit: ${left[0]} left behind.` : `Your saved kit was over the ${bigOn && !/canister|frag|grenade|door charge|camera|wand/.test(left.join()) ? 'big slot' : 'pouches'}: ${left.join(', ')} left behind.`; }); } }
+      if (SLOTS.on) kitFitAll(KIT.members).forEach((left, i) => { if (left.length) KIT_NOTE[i] = i === 0 && KIT.members[0].weapon !== 'rifle' && left.length === 1 && left[0].includes(SLOT_WORD.shells) ? `No FN2000 in your saved kit: ${left[0]} left behind.` : `Your saved kit was over the ${bigOn && !/canister|frag|grenade|door charge|camera|wand|sponge/.test(left.join()) ? 'big slot' : 'pouches'}: ${left.join(', ')} left behind.`; }); } }
   catch { /* an unreadable store: as issued */ }
 }
 /** A PAGE THAT PLAYS THE KIT AS ISSUED (a Training level's load — main.ts, game/loadout.ts kitAsIssued): a lesson's steps ask for the issue kit's own things,
@@ -1043,7 +1128,18 @@ export function kitPistol(gd: Guard): boolean { return manOf.has(gd) && gd.weapo
 export function kitBig(gd: Guard): BigKit { const m = bigOn ? manOf.get(gd)?.kit : undefined; return m && !m.walls ? m.big : 'none'; }
 
 /** what a Player carried before his card went on (kitShow gives it back) */
-const issuedPlayer = new SideMap<object, { rifle: boolean; gun: Rifle; side: Pistol; slot: Game['player']['slot']; smoke: number; stun: number; frags: number; shells: number; wand: boolean; big: BigKit; /** sticky cameras for the tube, −1 = that load was not on his rifle */ cams: number; tint: Vec3; tint2: Vec3 }>('kit.issuedPlayer');
+const issuedPlayer = new SideMap<object, { rifle: boolean; gun: Rifle; side: Pistol; slot: Game['player']['slot']; smoke: number; stun: number; frags: number; shells: number; rings: number; wand: boolean; big: BigKit; /** sticky cameras for the tube, −1 = that load was not on his rifle */ cams: number; tint: Vec3; tint2: Vec3 }>('kit.issuedPlayer');
+/** KITTREE: what your card took off you — the weapon light (L is dead), the goggles (N is dead). Asked by player.ts at the two keys; nobody without a
+ *  card on him has an entry (a Player as built has both). */
+const youBare = new SideMap<object, { light: boolean; nvg: boolean }>('kit.youBare');
+export const kitYouLight = (pl: object): boolean => !youBare.get(pl)?.light;
+export const kitYouNvg = (pl: object): boolean => !youBare.get(pl)?.nvg;
+/** KITTREE: a run that is played quietly — a quiet mission, or the plain night alone off the loadout screen: the mission hands you its sponge rounds */
+const stealthRun = (g: Game): boolean => !!g.quiet?.active || (KIT_SOLO.on && !g.guards.some(gd => !!gd.unit && gd.team === 'operative'));
+/** the sponge rounds a mission of this kind hands you over your card (the loadout screen's tile shows them as the mission's) */
+export const kitRingsLent = (stealth: boolean, m?: MemberKit): number => (treeUp() && stealth && (!m || tubed(m)) ? KITTREE.lend : 0);
+/** the card is the tree (ui/loadout.ts: the squad's row of kits is then the one list of named kits, at every team size) */
+export const kitTreeOn = (): boolean => treeUp();
 /** YOUR card onto the fresh Player (a scenario's staging calls kitStage, which calls this; a plain night's start may call it by itself): the rifle left at
  *  home, your four counts, the two colours. A count is written where the card differs from WHAT A PLAYER IS BUILT WITH (BUILT — not from the issue card:
  *  under the pouches rule you are issued one of each, fewer than a Player's own; and the same literals the build before compared with, so with the rule off
@@ -1054,19 +1150,28 @@ export function kitPlayer(g: Game) {
   if (issuedPage && !issuing) return asIssued(() => kitPlayer(g));   // (a lesson's page: the issue card, whatever the table holds — kitIssuedPage)
   if (kitIssue(g, () => kitPlayer(g))) return;   // (a mission that issues its own kit: kitIssue)
   const m = KIT.members[0], pl = g.player;
-  if (!issuedPlayer.has(pl)) issuedPlayer.set(pl, { rifle: pl.hasRifle, gun: pl.rifle, side: pl.pistol, slot: pl.slot, smoke: pl.canisters, stun: pl.flashbangs, frags: pl.frags, shells: pl.rifle.shells, wand: pl.wand, big: pl.bigKit, cams: pl.rifle.attachments.includes('cam') ? pl.rifle.cams : -1, tint: [...pl.char.tint] as Vec3, tint2: [...pl.char.tint2] as Vec3 });
+  if (!issuedPlayer.has(pl)) issuedPlayer.set(pl, { rifle: pl.hasRifle, gun: pl.rifle, side: pl.pistol, slot: pl.slot, smoke: pl.canisters, stun: pl.flashbangs, frags: pl.frags, shells: pl.rifle.shells, rings: pl.rifle.rings, wand: pl.wand, big: pl.bigKit, cams: pl.rifle.attachments.includes('cam') ? pl.rifle.cams : -1, tint: [...pl.char.tint] as Vec3, tint2: [...pl.char.tint2] as Vec3 });
   const counts = !(issuedPage && issuing);   // (a lesson's page: his counts stay the Player's own — kitIssuedPage; a mission's own issue writes them like any card)
   if (bigOn) bigHome(m, 0);   // (BIGSLOT: the shotgun is never your gun — a card set by hand, a mission's issue)
   pl.bigKit = bigOn && !m.walls ? m.big : 'none';   // (the breaching shotgun or the hammer in your big slot: bigkit.ts — a card as issued carries neither, so nothing changes on him)
   if (m.weapon === 'pistol' && pl.hasRifle) { pl.hasRifle = false; if (pl.slot === 'rifle') pl.slot = 'pistol'; }   // (this Player only: Game.fn2000 — what the next plain night's Player is built with — is not ours)
-  if (gunsOn()) { const long = pickRow(m.primary, true), side = pickRow(m.secondary, true);   // (gunslots.ts: the two guns your card picks — both of yours wear the can where the pick has one; the issue pair is the pair you were built with: nothing made)
-    if (long && pl.hasRifle && pl.rifle.def.id !== long) pl.rifle = new Rifle(WEAPONS[long]);
-    if (side && pl.pistol.def.id !== side) pl.pistol = new Pistol(WEAPONS[side]); }
+  if (gunsOn()) { const long = pickRow(m.primary, true), side = pickRow(m.secondary, true), tree = treeUp();   // (gunslots.ts: the two guns your card picks — both of yours wear the can where the pick has one; the issue pair is the pair you were built with: nothing made)
+    // (kittree.ts: each of your guns has its own suppressor — one taken off is the same gun with a bare muzzle, the pick's bare row; the gun you were built with is kept while it is the card's)
+    const mine = (w: WeaponId, slot: GunSlot): WeaponDef => (tree ? kitSlotDef(0, m, slot) ?? WEAPONS[w] : WEAPONS[w]);
+    if (long && pl.hasRifle && (tree ? pl.rifle.def !== mine(long, 'primary') : pl.rifle.def.id !== long)) pl.rifle = new Rifle(mine(long, 'primary'));
+    if (side && (tree ? pl.pistol.def !== mine(side, 'secondary') : pl.pistol.def.id !== side)) pl.pistol = new Pistol(mine(side, 'secondary')); }
   if (m.weapon === 'shotgun' && pl.hasRifle && pl.rifle.def.id !== 'm870') pl.rifle = new Rifle(WEAPONS.m870);   // (the shotgun rides where the FN2000 did: slot 2, in the hands or slung, the same keys — its row has no ring launcher)
   if (counts && (m.smoke !== BUILT.smoke || m.bangs !== BUILT.bangs)) { pl.canisters = m.smoke; pl.flashbangs = m.bangs; if ((pl.slot === 'smoke' && !pl.canisters) || (pl.slot === 'flash' && !pl.flashbangs)) pl.slot = 'pistol'; }   // (the split of six he is built with — the card as issued with the rule off — nothing is written)
   if (counts && m.frags !== BUILT.frags) { pl.frags = m.frags; if (pl.slot === 'frag' && !pl.frags) pl.slot = 'pistol'; }
   if (counts && m.shells !== BUILT.shells && pl.rifle.attachments.includes('he40')) pl.rifle.shells = Math.min(m.shells, SHELLS_MAX);   // (what the rifle was built with — its own LAUNCHER40.rounds — not written; the shotgun in the rifle's slot has no launcher and takes none)
   if (counts && camRow() && pl.hasRifle) stickyIssue(pl, tubed(m) ? Math.max(m.cams, stickyVisit(g)) : 0);   // (sticky cameras: the launcher's third load, on his rifle only when the card carries one or the mission hands some — stickyVisit; a card as issued carries none, so nothing changes on him)
+  if (treeUp()) {   // (kittree.ts: the sponge rounds are your card's — none as issued — and a stealth mission hands you its own over the card; your light and goggles are rows)
+    if (counts && pl.rifle.attachments.includes('ring')) { const rf = pl.rifle; rf.rings = Math.min(RINGS_MAX, Math.max(m.rings, stealthRun(g) ? KITTREE.lend : 0));
+      if (!rf.rings && rf.attachment === 'ring') { const k = rf.attachments.findIndex(a => (a === 'he40' ? rf.shells > 0 : a === 'cam' ? rf.cams > 0 : false)); if (k >= 0) rf.attIdx = k; } }   // (nothing for the tube's first load: the right button is on the first one he does carry)
+    youBare.set(pl, { light: !m.light, nvg: !m.nvg });
+    if (!m.light) { pl.rifle.lightOn = false; pl.pistol.lightOn = false; }
+    if (!m.nvg) pl.nv = false;
+  }
   pl.wand = (m.wand && wandRow()) || (WAND.on && quietWand(g));   // (the optical wand in a pouch: wand.ts — a card as issued carries none, so nothing changes on him; quietfog.ts: a quiet mission under the fog that hands out cameras hands him one too — even on a card whose gun has no launcher for them)
   if (m.suit !== 'issued') pl.char.tint = [...SUITS[m.suit].tint] as Vec3;
   if (m.trim !== 'issued') pl.char.tint2 = [...TRIMS[m.trim].tint] as Vec3;
@@ -1106,7 +1211,7 @@ export function kitFresh(g: Game) { if (KIT_SOLO.on && !g.touring && !g.director
 /** a showcase is about to start on this Player (main.ts): his card comes off — what he carried before it is his again */
 export function kitShow(g: Game) {
   const pl = g.player, was = issuedPlayer.get(pl); if (!was) return;
-  pl.hasRifle = was.rifle; pl.rifle = was.gun; pl.pistol = was.side; pl.slot = was.slot; pl.canisters = was.smoke; pl.flashbangs = was.stun; pl.frags = was.frags; pl.rifle.shells = was.shells; stickyIssue(pl, Math.max(0, was.cams), was.cams >= 0); pl.wand = was.wand; pl.bigKit = was.big; pl.char.tint = [...was.tint] as Vec3; pl.char.tint2 = [...was.tint2] as Vec3; issuedPlayer.delete(pl); loadWear(g, null);
+  pl.hasRifle = was.rifle; pl.rifle = was.gun; pl.pistol = was.side; pl.slot = was.slot; pl.canisters = was.smoke; pl.flashbangs = was.stun; pl.frags = was.frags; pl.rifle.shells = was.shells; if (treeUp()) pl.rifle.rings = was.rings; youBare.delete(pl); stickyIssue(pl, Math.max(0, was.cams), was.cams >= 0); pl.wand = was.wand; pl.bigKit = was.big; pl.char.tint = [...was.tint] as Vec3; pl.char.tint2 = [...was.tint2] as Vec3; issuedPlayer.delete(pl); loadWear(g, null);
 }
 /** A SCENARIO HAS JUST STAGED ITS TEAM (`ops` in staging order: member 1 first): each man's card onto him, yours onto you, and the squad's counted stun
  *  canisters and charges moved by what the cards changed. Called once per staging, after the cast stands and Sam is on his mark; every restart stages again

@@ -297,7 +297,7 @@ export function chronKey(g: Game, gd: Guard) { return chronicle(g, 'keyTaken', {
 /** combat.ts killGuard, by the player's hand: shot dead ('kill', with what) or out cold ('ko': the takedown's cross, the choke, the pistol-whip, a ring to the head —
  *  told apart the way killGuard's own log line is: `how` + the caller's line). */
 export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) {
-  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
+  if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : /at the charge when it went$/.test(line ?? '') ? 'a wall charge' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
   const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : 'takedown';
   return chronicle(g, 'ko', { who: gd.callsign, method }, gd.char.pos);
 }
@@ -473,12 +473,12 @@ export function eventText(e: ChronEvent, g?: Game): string {
     case 'interrogated': return d.civilian ? `questioned ${d.who} — ${d.gave ? `${d.she ?? 'she'} gave up ${INTEL[String(d.gave)] ?? d.gave}` : `nothing more in ${d.her ?? 'her'}`}` : `questioned ${d.who} — ${d.gave ? `he gave up ${INTEL[String(d.gave)] ?? d.gave}` : Number(d.stage) >= 4 ? 'nothing left in him' : 'nothing useful yet'}`;
     case 'keyTaken': return `took ${d.who}'s key`;
     case 'ko': return d.method === 'wounded' ? `${d.who} shot — down wounded, out of the fight` : `${d.who} out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : 'the takedown'}`;
-    case 'kill': return d.weapon === 'knife' ? `${d.who} killed — the knife` : `${d.who} shot dead (${gearText(String(d.weapon))})`;
+    case 'kill': return d.weapon === 'knife' ? `${d.who} killed — the knife` : d.weapon === 'a wall charge' ? `${d.who} killed — the wall charge` : `${d.who} shot dead (${gearText(String(d.weapon))})`;   // (wallcharge.ts WALLKILL: a man at the charge when it went was not shot)
     case 'bodyFound': return `${d.by} found ${d.who} ${d.wounded ? 'shot and breathing' : d.breathing ? 'out cold' : 'dead'}${d.civilian ? ' — the floor goes up hard' : ''}`;
     case 'doorKicked': { const w = doorWritten(d.door, g); return w ? `kicked in the ${w}` : `kicked in the ${d.door} door`; }
     case 'lockPicked': { const w = doorWritten(d.door, g); return w ? `picked the lock on the ${w}` : `picked the ${d.door} door's lock`; }   // (no possessive on a name its level wrote: 'double doors', 'door to the yard')
     case 'hit': return `hit${d.by ? ` — ${d.by}'s round` : ''}`;
-    case 'down': return `DOWN${d.by ? ` — ${d.by}'s round` : ''}`;
+    case 'down': return `DOWN${d.by ? ` — ${/charge$/.test(String(d.by)) ? d.by : `${d.by}'s round`}` : ''}`;   // (a charge has no round: 'the wall charge' — wallcharge.ts WALLKILL)
     case 'needBreak': return d.what === 'left' ? `${d.who} left his route — ${d.own ? `${NEED_SHORT[String(d.kind)] ?? d.kind} (${d.to})` : NEED_WORDS[String(d.kind)] ?? d.kind}` : d.what === 'back' ? `${d.who} back on his route (${d.away} s away)` : `${d.who}'s ${d.kind} break broken off (${d.why})`;
     case 'civilianSpotted': return `${d.who} ${CIV_CAUSE[String(d.cause)] ?? 'saw you'}`;
     case 'civilianReported': return d.how === 'phone' ? `${d.who} rang it in — ${CIV_CAUSE[String(d.cause)] ?? d.cause}${d.sent ? ` — ${d.sent} sent` : ''}` : d.how === 'outside' ? `${d.who} got out and control rang the floor${d.sent ? ` — ${d.sent} sent` : ''}` : `${d.who} told ${d.to} — ${CIV_CAUSE[String(d.cause)] ?? d.cause}${d.how === 'found' ? ' (he found her hiding)' : ''}`;
