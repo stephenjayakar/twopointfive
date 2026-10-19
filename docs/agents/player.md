@@ -679,7 +679,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   falls), a full box on, the belt laid, the cover shut, the handle run on an empty chamber, on the row's own stages (0.54 / 1.2 / 3.18 / 4.4 / 4.9 / 5.4 s of its
   6 s; the kit's scaled beat on the shipped stand); the M1014 and the pump gun fed ONE SHELL AT A TIME, a trip of the hand and a `shellIn` each, the M1014 begun
   empty taking its first in the port with the bolt dropped on it; the magazine guns as ever with a magazine of their own size in the hand and on the floor, the
-  MP7's hand at the foot of its pistol grip. A reload is as long as it was, to the frame, and the same rounds end up in the same places. CHECKS, both stands:
+  MP7's hand at the foot of its pistol grip. A reload is as long as it was, to the frame, and the same rounds end up in the same places — but for the two tube
+  guns under the shells key (the next bullet). CHECKS, both stands:
   `tools/qa/gunlook-check.ts` (`own`: every row a slot hands out names a model, a voice, a flame and a casing row, no two guns share one — by name and by what is
   in them — and what two guns may share is said in the file; `hands`: a teammate and you with every pick are told, drawn and heard as that gun, off = the
   stand-in; `off`: ten seconds of the staged room clear digest the same with the switch off and on, seed 17, cards as issued) and `tools/qa/gunreload-check.ts`;
@@ -688,10 +689,37 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/gunlook-sheet.ts` (the kit figure with each gun, software-drawn; `--off` the before); `tools/qa/gunlook-page.cjs` boots the real page with all six on
   a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
-  sidearm the whole feed is mimed with only its first sound; the books still take the whole tube out at the row's `out` and put it back at `in_`, so a shell-fed
-  reload CANCELLED part way leaves the tube empty however many were heard going in (the row's books: the guns goal's); a teammate with the bare Mk 18 is still
+  sidearm the whole feed is mimed with only its first sound; with the shells key OFF the books still take the whole tube out at the row's `out` and put it back at `in_`, so a
+  shell-fed reload CANCELLED part way leaves the tube empty however many were heard going in (on, the next bullet); a teammate with the bare Mk 18 is still
   drawn as the defenders' short rifle; a gun dropped on the floor is the old item; a long reload's feeding is the support arm INSIDE `gunhand.ts longReload` (the carriage and the trigger hand are that move's; a
   branch per feed was not agreed with that rule's owner); at the side of a pack (`packside.ts`) a model stands where the stand-in does, by the STAND-IN's sizes
   (`rigProps.ts packSideDims`): butts level, the far end 0.18 m lower on the Mk 12, 0.10 on the Mk 46, 0.06 on the M1014, 0.16 higher on the MP7, and the Mk 46's
   belt box on the face that lies to the pack, never looked at; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
   share an origin (`gunlook-own` is red the day one is tuned alone). Every number is a first one. NEVER SEEN ON A GPU, NEVER HEARD, NEVER PLAYED.
+- **A tube gun is fed a shell at a time, in time and in the books** (`GUNLOOK.shells`, a key that rides on `GUNLOOK.on`; `gunreload.ts shellPlan` /
+  `feedBegin`, `weapons.ts Firearm.feedShell`; 10-19; the numbers are the guns goal's). The M1014 and the big slot's pump gun carry `reload.shell` on their
+  rows: `{ lead, each, tail, bolt }` = 0.4 / 0.36 / 0.7 / 0.4 s and 0.4 / 0.35 / 0.7 / 0.4 s. A reload of n shells is `lead + n × each + tail` long (one shell
+  1.46 s, seven from empty 3.62 s on the M1014; 1.45 s and six 3.2 s on the pump gun; the rows' old stages stand for the key off), n = the room in the tube, no
+  more than he carries. EACH SHELL IS BOOKED AS IT IS HEARD, out of the fewest loose ones he carries: a reload cancelled, sprinted out of or broken off keeps what
+  went in. The M1014 begun with nothing in it takes its first in the port — chambered, the bolt dropped on it, no bolt run in the tail; any other gun with an
+  empty chamber has its bolt or pump run inside the tail (`bolt`). THE TRIGGER BREAKS THE FEEDING OFF (`player.ts shellBreak`): a round chambered — the reload is
+  let go and that press fires; rounds in the tube and nothing chambered (a pump gun cut short) — the press runs the pump, 0.4 s, nothing fired, and the next
+  press fires; with nothing in it yet the press is the dry click and the feeding goes on. R with a full tube and an empty chamber is the same short run. A
+  TEAMMATE AND A DEFENDER: every clock that waits a reload out (`guards.ts startReloadBeat`, the room fight's and the covering fire's `reloadUntil`,
+  `morale.ts runDry`) begins it with `feedBegin`, so the beat is as long as the shells that go in and each is in his gun as his beat passes it (`gunreload.ts
+  feedTick` books them; his spares are bottomless as ever, and the first shell is the round he may fire, so a beat dropped part way never leaves him a gun
+  that cannot shoot — his fire sites only ask whether there is a round in it); the beat still ends in `rearm()`. He only ever begins one dry, so on the
+  shipped stand a teammate's M1014 beat is 3.62 s where it was 3.6 and the pump gun's 3.2 s as it was. The animator takes such a beat AS IT STANDS
+  (`character.ts ReloadBeat.exact`: none of the magazine change's floors — one shell is home 0.36 s after the hand gets there). SWITCH: ON with the look in the
+  page; `?nogunshells` = the row's one length and the tube booked at its end, the build before it; the frozen stand holds `GUNLOOK` off and the key rides on it
+  (no word raises the look without the key; a check that wants the old reload sets `GUNLOOK.shells = false`, as `gunreload-check.ts raise()` does for its three
+  older families); a recording from before the key replays with it off (`journal.ts applyKnobs`). CHECK, both stands: `tools/qa/gunreload-check.ts`
+  `gunreload-shells` (`probes.ts gunshells`, in the `gunlook` and `kitanim` families; `GUNSHELLS_BREAK=1` fails it): every count from one shell to a whole tube
+  on both guns takes its time to within two frames and each shell goes into the gun on the frame it is heard; the end is the old reload's end; a reload let go
+  after three keeps three and he carries three fewer; the pump on the trigger, then the shot; unlimited ammunition fires as it did; loose shells one by one; a
+  teammate's beat for a dry gun and for one four shells up; a beat dropped part way; the key off; the page's flag and an old recording. The room fight's and
+  the covering fire's clocks are READ IN THE SOURCE by that check, not run. KNOWN: the door's shotgun (`doortools.ts`) and the long gun taken up after the
+  sidearm (`gunslots.ts`) still fill at once and wait the row's length — both only ever from dry, a whole tube, so the time is the same to 0.02 s; a man's plan
+  lives on his gun, and a gun put away mid-beat keeps it until his next beat begins (every beat begins clean); the HUD's spare count for a tube gun is the
+  row's "magazines", now shrinking a shell at a time. MEASURED: the check's own lines; the tour, three runs a stand. NEVER SEEN ON A GPU, NEVER HEARD, NEVER
+  PLAYED: whether 0.36 s a shell reads right, and whether the trigger breaking off is wanted, are the maintainer's.
