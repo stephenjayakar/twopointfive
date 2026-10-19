@@ -68,6 +68,7 @@ import { SAMSTUN, dazzlePlayer } from './samstun';
 import { chargeHands } from './handwork';
 import { moraleBlast } from './morale';
 import { messWall } from './floormess';
+import { gunLast } from './gunroles';   // (called inside enter only)
 import { PICTURE, PICTURE_STATS, knownPlaces } from './picture';   // (called inside knownFoes and repick only)
 
 export const WALLCHARGE = {
@@ -952,7 +953,7 @@ export class WallCharge {
   private enter(op: WallOp) {
     const g = this.g, S = g.orders, nav = g.col.nav, K = WALLCHARGE, W = op.wall, H = op.hole!, T = thick(W), t = g.time;
     const mouth = wallPt(W, H.du, -(T + K.mouthIn)), free = (q: Vec3) => !nav.isBlocked(q[0], q[2]), seen = (q: Vec3) => !g.col.solidBlocked([mouth[0], 0.45, mouth[2]], [q[0], 0.45, q[2]]);
-    const men = [...op.men].sort((a, b) => flat(a.char.pos, mouth) - flat(b.char.pos, mouth)), pods: Pod[] = [], into = yawTo(wallPt(W, 0, 0), wallPt(W, 0, -1));
+    const men = gunLast([...op.men].sort((a, b) => flat(a.char.pos, mouth) - flat(b.char.pos, mouth))), pods: Pod[] = [], into = yawTo(wallPt(W, 0, 0), wallPt(W, 0, -1));
     for (let i = 0; i < men.length; i++) { const [lat, deep] = K.pods[i % K.pods.length]; let got: Vec3 | null = null;
       for (const strict of [true, false]) { for (const k of [1, 0.6, 0.3, -1, -0.6, 0]) { for (const dd of [0, 0.6, -0.5, 1.2]) { const q = wallPt(W, H.du + lat * k, -(T + Math.max(0.8, deep + dd))); if (free(q) && seen(q) && !(strict && this.inFrame(q, K.offFramePod)) && !pods.some(o => flat(o.pos, q) < 0.7)) { got = q; break; } } if (got) break; } if (got) break; }   // (a point in one of the room's doorways only when the room has no other floor for him)
       if (got) pods.push({ pos: got, face: this.lookFrom(got, into, yawTo(mouth, got)) }); }

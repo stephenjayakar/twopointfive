@@ -59,7 +59,7 @@ export type PaneType = 'annealed' | 'tempered' | 'laminated';
 export const GLASSPEN = {
   on: true,
   /** a round's energy at the muzzle by weapon row (1 = a 5.56 rifle round), and by class for a row not listed */
-  energy: { fn2000: 1.0, ak74m: 1.0, akms: 1.1, aks74u: 0.9, fiveseven: 0.6, guard9mm: 0.5,
+  energy: { fn2000: 1.0, ak74m: 1.0, akms: 1.1, pkm: 1.3, aks74u: 0.9, fiveseven: 0.6, guard9mm: 0.5,
     /** ONE PELLET of 00 buck (weapons.ts m870, nine a shell): a 3.5 g soft lead ball at about 370 m/s — half a 9 mm round's energy on half its weight behind
      *  the same width, and round where the 9 mm is jacketed: it gets through ONE sheet of plain or toughened glass met near square-on (0.20 / 0.14 left of it:
      *  still a pellet beyond — past 56° off a plain pane's normal, 27° off a toughened one's, it is spent in the sheet), never a second standing one, and
