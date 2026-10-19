@@ -148,8 +148,8 @@ export const QUIET: QuietData = {
     // HAND-SET (the first of each list IS the mission; the others stay reachable by ?quiet=N): the west track. The west gate is dark inside; the short walk east from it
     // runs onto the lit face in the picket's eye; the block's west corner is the place to wait; the alley behind the blast wall is the partner's long way round; the
     // shed and its breaker are the other answer, a few strides south under lamp_west
-    { name: 'the west track', sam: [1.8, 0, 16.6], samYaw: Math.PI / 2, mate: [1.8, 0, 17.8] },
-    { name: 'the north slope', sam: [24.6, 0, 1.8], samYaw: 0, mate: [25.8, 0, 1.6] },
+    { name: 'the track', sam: [1.8, 0, 16.6], samYaw: Math.PI / 2, mate: [1.8, 0, 17.8] },
+    { name: 'the slope', sam: [24.6, 0, 1.8], samYaw: 0, mate: [25.8, 0, 1.6] },
     { name: 'the road', sam: [35.2, 0, 27.1], samYaw: -Math.PI / 2, mate: [36.4, 0, 27.2] },
   ],
   spots: [
@@ -158,9 +158,9 @@ export const QUIET: QuietData = {
     { place: 'the bunk hut', area: R.bunk, door: 'bunk', holder: 'the steel locker', rackIndex: 2, front: [4.77, 1.0, 6.5], halfW: 0.3 },
   ],
   exits: [
-    { name: 'the east gate', door: 'gate_e', x: 36.0, z: 11.9, out: [1, 0] },
-    { name: 'the west gate', door: 'gate_w', x: 4.0, z: 13.9, out: [-1, 0] },
-    { name: 'the north gate', door: 'gate_n', x: 22.9, z: 4.0, out: [0, -1] },
+    { name: 'the dish gate', door: 'gate_e', x: 36.0, z: 11.9, out: [1, 0] },
+    { name: 'the track gate', door: 'gate_w', x: 4.0, z: 13.9, out: [-1, 0] },
+    { name: 'the back strip gate', door: 'gate_n', x: 22.9, z: 4.0, out: [0, -1] },
     { name: 'the wicket', door: 'gate_s', x: 20.0, z: 24.0, out: [0, 1] },
   ],
   patrols: [

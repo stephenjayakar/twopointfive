@@ -121,7 +121,7 @@ const PLACES = { areas: [
   { name: 'cells', bounds: R.cells }, { name: 'corridor', bounds: R.corridor }, { name: 'duty room', bounds: R.duty }, { name: 'bunk room', bounds: R.bunk }, { name: 'store', bounds: R.store },
   { name: 'generator shed', bounds: R.shed }, { name: 'gate hut', bounds: R.hut }, { name: 'motor pool', bounds: { x0: 4.12, x1: 8.9, z0: 4.12, z1: 9.2 } },
   { name: 'mast', bounds: { x0: 22.5, x1: 27.5, z0: 4.12, z1: 7.88 } },
-  { name: 'back strip', bounds: { x0: 9, x1: 31.1, z0: 4.12, z1: 7.88 } }, { name: 'west yard', bounds: { x0: 4.12, x1: 12.88, z0: 9.3, z1: 19.4 } },
+  { name: 'back strip', bounds: { x0: 9, x1: 31.1, z0: 4.12, z1: 7.88 } }, { name: 'side yard', bounds: { x0: 4.12, x1: 12.88, z0: 9.3, z1: 19.4 } },
   { name: 'forecourt', bounds: { x0: 9.6, x1: 31, z0: 18.62, z1: 23.88 } }, { name: 'impound', bounds: { x0: 31.12, x1: 35.88, z0: 4.12, z1: 23.88 } },
 ] };
 
@@ -164,9 +164,9 @@ export const POST_ROUTES: PatrolRoute[] = [
 export const QUIET: QuietData = {
   thing: 'the case file',
   starts: [
-    { sam: [2.0, 0, 19.4], samYaw: Math.PI / 2, name: 'the west gate' },
-    { sam: [12.5, 0, 1.8], samYaw: 0, name: 'the north wall' },
-    { sam: [38.0, 0, 18.6], samYaw: Math.PI, name: 'the east wall' },
+    { sam: [2.0, 0, 19.4], samYaw: Math.PI / 2, name: 'the side yard gate' },
+    { sam: [12.5, 0, 1.8], samYaw: 0, name: 'the motor pool wall' },
+    { sam: [38.0, 0, 18.6], samYaw: Math.PI, name: 'the impound wall' },
   ],
   spots: [
     { place: 'the armoury', area: R.armoury, door: 'armoury_side', holder: 'the evidence locker', rackIndex: 0, front: [20.5, 1.0, 8.77], halfW: 0.3 },
@@ -174,9 +174,9 @@ export const QUIET: QuietData = {
     { place: 'the radio room', area: R.radio, door: 'radio', holder: 'the radio table', rackIndex: 2, front: [25.0, 1.0, 8.92], halfW: 0.3 },
   ],
   exits: [
-    { name: 'the east gate', door: 'gate_e', x: 36.0, z: 14.4, out: [1, 0] },
-    { name: 'the north gate', door: 'gate_n', x: 9.9, z: 4.0, out: [0, -1] },
-    { name: 'the west gate', door: 'gate_w', x: 4.0, z: 16.9, out: [-1, 0] },
+    { name: 'the impound gate', door: 'gate_e', x: 36.0, z: 14.4, out: [1, 0] },
+    { name: 'the motor pool gate', door: 'gate_n', x: 9.9, z: 4.0, out: [0, -1] },
+    { name: 'the side yard gate', door: 'gate_w', x: 4.0, z: 16.9, out: [-1, 0] },
   ],
   patrols: [
     ['yard', 'gate', 'corridor', 'generator', 'desk'],     // 0 — the first deal: the yard walked, a man to and from the shed; the store and the bunk room empty for most of a minute at a time
