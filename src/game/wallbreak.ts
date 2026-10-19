@@ -51,6 +51,7 @@ import { cutBoxesOn } from '../scene/cut';
 import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
 import { messOpened } from './floormess';
+import { leafRound } from './doorblast';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -610,7 +611,7 @@ export class WallBreak {
   round(who: number, hitP: Vec3, dir: Vec3, index: number, def: WeaponDef, chaos: number) {
     const g = this.g; if (!wallBreakOn(g)) return;
     const w = (def.cls === 'pistol' ? WALLS.pistolK : 1) * chaos * 2;
-    if (index >= 1e6) return;   // a door leaf: the doors' own
+    if (index >= 1e6) { leafRound(g, index, who, hitP, dir, w); return; }   // a door leaf: the doors' own (doorblast.ts DOORSHOT — the same weight a cell here takes)
     const B = this.owner.get(index); if (!B || B.hard) return;   // (a hard wall — one a breaching charge was set on — scars like the structure it is)
     WALL_STATS.rounds++;
     let [ix, iy, iz] = this.cellAt(B, v3.mad(hitP, dir, 0.02), g.col.boxes[index]);

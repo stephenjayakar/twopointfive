@@ -45,7 +45,7 @@ import { WOUND } from './wounds';
 import { DOORPATH } from './doorpath';
 import { FOG } from './fogofwar';
 import { DOORWAY, DOORSTAY } from './doors';
-import { DOORBLAST } from './doorblast';
+import { DOORBLAST, DOORSHOT } from './doorblast';
 import { HANDLE } from './handleside';
 import { DOORMANNERS } from './doorway';
 import { OPENING } from './opening';
@@ -115,7 +115,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
   'CMDCHECK', 'GUNSLOTS', 'GUNLOOK', 'GUNROLES', 'KITTREE',
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
-  'RESPONSE'];
+  'RESPONSE',
+  // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
+  'DOORSHOT'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -209,7 +211,7 @@ export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,
