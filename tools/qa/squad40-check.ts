@@ -120,10 +120,15 @@ export async function squad40Check(): Promise<boolean> {
 
       // ───── a man whose gun is on the spot already fires at once ─────
       R.step(Math.ceil(60 * 3));   // (the tube closed again)
-      O.of(who).face = yawTo(who.char.pos, spot); O.of(who).watch = [spot[0], 1.2, spot[2]]; R.step(90);   // (his hold now looks that way)
+      O.of(who).face = yawTo(who.char.pos, spot); O.of(who).watch = [spot[0], 1.2, spot[2]]; O.of(who).upper = 'aim'; R.step(90);   // (his hold now covers that way, gun at his shoulder)
+      // (a teammate stood in his line is no shot — asked below: here they are stood behind him)
+      { const q = who.char.pos, dl = dist(q, spot), ux = (spot[0] - q[0]) / dl, uz = (spot[2] - q[2]) / dl; let k = 0;
+        for (const m of R.team) { if (m === who) continue; const ax = (m.char.pos[0] - q[0]) * ux + (m.char.pos[2] - q[2]) * uz, off = Math.abs((m.char.pos[0] - q[0]) * uz - (m.char.pos[2] - q[2]) * ux);
+          if (ax > -0.3 && off < 1) { k++; place(m, [q[0] - ux * 1.2 * k, 0, q[2] - uz * 1.2 * k], yawTo(q, spot)); } }
+        R.step(2); }
       const log1 = SQUAD40_LOG.length, was = O.of(who)?.order; R.pageAt(spot); R.press('Digit3');
       const now = SQUAD40_LOG.length === log1 + 1, M = SQUAD40_LOG.at(-1);
-      verdict(now && !M.turned && O.of(who)?.order === was && S40.squad40Left(game) === 0, 'his gun already on the spot: the round goes on the frame of the pick and he is never taken off his order', `fired on the pick ${now} (turned ${M?.turned}) · his order ${was} → ${O.of(who)?.order} · left ${S40.squad40Left(game)}`);
+      verdict(now && !M.turned && O.of(who)?.order === was && S40.squad40Left(game) === 0, 'his gun already up and on the spot: the round goes on the frame of the pick and he is never taken off his order', `fired on the pick ${now} (turned ${M?.turned}) · his order ${was} → ${O.of(who)?.order} · left ${S40.squad40Left(game)}`);
       R.until(() => HE40_LOG.length > he0 + 1, 3); R.step(30);
       // ───── none left ─────
       const spent = page(R, spot), sr = spent[2], gave = O.give(SHELL_THERE, O.targetAt(spot)); R.esc();
@@ -167,6 +172,9 @@ export async function squad40Check(): Promise<boolean> {
         const inLine = [q[0] + (far[0] - q[0]) * 2 / d, 0, q[2] + (far[2] - q[2]) * 2 / d];
         R.sam(inLine); const wLine = why(R, far, [sh]); R.sam(sam0);
         verdict(wLine === 'no shot from here.', 'the player stood in the line of the shot, clear of its burst: that man has no shot — a round in flight stops on him', `${sh.callsign} ${p2(q)} → ${p2(far)} (${f1(d)} m) · Sam at ${p2(inLine)} · row for him: ${wLine}`);
+        // a teammate in the same place: the round in flight would pass him — the plan does not fire through a friend's back
+        place(mate, inLine, yawTo(inLine, far)); R.step(2); const wBack = why(R, far, [sh]); place(mate, mate0); R.step(2);
+        verdict(wBack === 'no shot from here.' && why(R, far, [sh]) === null, 'a teammate stood two metres in front of the tube: that man has no shot — and one again with the line clear', `${mate.callsign} at ${p2(inLine)} · row for ${sh.callsign}: ${wBack}`);
       } else console.log('- NOTE — no live spot on the office far enough to stand the player in the line and clear of the burst: that line is not asked here');
       // the men addressed carry none (another man does)
       const wNone = why(R, spot, [mate]);
