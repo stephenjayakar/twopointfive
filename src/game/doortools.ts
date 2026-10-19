@@ -294,6 +294,9 @@ export const DOORTOOLS = {
   thrPieOne: false,
   /** … the seconds that one lean is held (a cut's own look is `sliceLook`: too short to be seen, or to be sure his lines are asked with his head out) */
   thrLeanLook: 1.1,
+  /** … and his cuts go on ACROSS the opening, to see what the second man's cuts used to: [the fraction of the opening's width in from his own jamb's edge
+   *  (never nearer than 0.08 m to the far edge), metres back from the door], after the cuts of `thrPieArc`. The man holding stands nearer the wall than these */
+  thrPieArcOne: [[0.5, 1.9], [0.92, 1.8]] as [number, number][],
   /** THE ROOM'S OTHER DOORS ARE HELD (`thrDoors`; false = every man on the short crossing sector his shallow point gave him, as it was). The stage ends hard
    *  on the entry wall: in a long room that leaves its other ways in a room's length off, in nobody's sector — and the depot's crew room showed what that
    *  costs (thirty-two seeds: its far door, twelve metres down a dark lane from four men standing in the room's own light, let a man in unseen to shoot the
@@ -3248,7 +3251,8 @@ export class DoorTools {
     const at = (a: number, B: number): Vec3 => doorPt(d, sgn < 0 ? a : W - a, B, op.side);
     const floor = (from: Vec3, p: Vec3) => !nav.isBlocked(p[0], p[2]) && !g.col.solidBlocked([from[0], 0.45, from[2]], [p[0], 0.45, p[2]]);
     const eyes: Vec3[] = [...first], pts: Vec3[] = []; for (const [k, e] of first.entries()) { const q = k === 0 || !lm ? e : at(inOf(e) - lm, offOf(d, e, op.side)); pts.push(q === e || floor(pts[k - 1], q) ? q : e); }
-    if (!pull) for (const [a, B0] of K.thrPieArc) { const B = B0 * K.sliceBack, prev = pts[pts.length - 1];
+    const arc = K.thrPieOne ? [...K.thrPieArc, ...K.thrPieArcOne.map(([f, B]) => [Math.min(f * W, W - 0.08), B])] : K.thrPieArc;
+    if (!pull) for (const [a, B0] of arc) { const B = B0 * K.sliceBack, prev = pts[pts.length - 1];
       if (a <= inOf(eyes[eyes.length - 1]) + 0.05) continue;
       const e = at(a, B), p = at(a - (K.thrPieOne ? 0 : lm), B);   // (thrPieOne: square on every cut — the one lean comes after the last)
       if (!floor(prev, p) || off.some(o => flat(o, p) < K.thrPieApart)) continue;
