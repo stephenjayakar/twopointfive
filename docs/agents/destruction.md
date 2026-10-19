@@ -775,10 +775,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stepping in from the far face: furniture against the wall is no floor to the room map; open floor is no room) is shocked: with a line to the hole,
   folded `staggerSecs` 3.5 s (it was `DOORTOOLS.staggerSecs` 2.0) and blind `stunSecs` 8 · 4 s at the wall · at 8 m (it was 6 · 2.5); with NO line, or
   past 8 m, where he was untouched, folded the same 3.5 s out to `roomM` 12 m and not blinded (the flash needs the line). One of ours and the player
-  beyond the wall with a line: blind `oursSecs` 2.0 s (it was 1.5), never folded. The reach inside which a man behind the wall is killed is as it was and
-  needs the line; nothing here touches health. SWITCH: ON in the page (`?wallshot=0`), OFF in the module and on the frozen stand (`TPS_WALLSHOT=1`); its
+  beyond the wall with a line: blind `oursSecs` 2.0 s (it was 1.5), never folded (one of a team of TWO beyond the wall takes what a defender there takes, as
+  he always did, so the longer numbers are his too). The reach inside which a man behind the wall is killed is as it was and needs the line; nothing here
+  touches health. The room map is asked once BEFORE the blast, so that a map nobody had built yet is not flooded through the new hole (a map first built
+  on a floor that already has holes, a restored one, can still name no room: then only the lined men are shocked, as before). SWITCH: ON in the page (`?wallshot=0`), OFF in the module and on the frozen stand (`TPS_WALLSHOT=1`); its
   own table in the registry and the journal, a recording from before the key replays with it off. Check: `wallshot` (family `wallcharge`; his first,
   second and third walls on a fresh stand of his level: the lined man's numbers by the table, a man with no line folded where he was untouched, furniture
-  against the far face, the next room untouched, ours and the player the same seconds, the pall's emitters each at 0.75 with the blast's other emitters
+  against the far face and that man rooted to the end of his fold with the game running, a lined man inside the killing reach killed either way, the
+  room's reach drawn in, the next room untouched, ours and the player the same seconds, the pall's emitters each at 0.75 with the blast's other emitters
   unchanged, the switch in a recording; `WALLSHOT_BREAK=1`), both stands. NOT MEASURED: no tally over seeds (how often a room taken through a wall costs
   a man before and after), and the seconds are a first setting for the maintainer's play, not a tuned one.

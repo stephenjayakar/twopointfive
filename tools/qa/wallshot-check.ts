@@ -25,7 +25,7 @@ export async function wallShotCheck(): Promise<boolean> {
   type Man = { who: string; at?: Vec3 };
   /** a charge on the wall by `at`, set from `from`, the named men stood where asked first; blown as F blows it. What each man and the player then carry, and
    *  every emitter the blast asked of the solver (`pall`: by the pall's own call). */
-  const shot = async (rule: boolean, at: Vec3, from: Vec3, men: Man[], sam?: Vec3) => { raise(rule); console.log = () => { };
+  const shot = async (rule: boolean, at: Vec3, from: Vec3, men: Man[], sam?: Vec3, opt: { tune?: () => void; watch?: string } = {}) => { raise(rule); opt.tune?.(); console.log = () => { };
     try { const W: any = await standUp({ level: loadLevel(parseLevelData(data)), seed: 1 }); raise(rule); const g = W.game; g.godMode = true; g.tune.chaos = 0.5;
       await startFromQuery(g, new URLSearchParams('roomclear&squad4')); raise(rule); g.aiEnabled = false; for (let i = 0; i < 4; i++) W.step(1 / 60);
       const emits: any[] = []; let inPall = false; const pe = g.destr.pallEmit.bind(g.destr); g.destr.pallEmit = (...a: any[]) => { inPall = true; try { return pe(...a); } finally { inPall = false; } };
@@ -36,27 +36,32 @@ export async function wallShotCheck(): Promise<boolean> {
       const w = wallAt(g, at, from); if (!w || !w.ok) return null;
       g.wallCharge.set.push({ wall: w, t: g.time, by: 'probe', paid: 0 }); const res: any = g.wallCharge.blow(g.wallCharge.set[g.wallCharge.set.length - 1]);
       const row = (who: string) => { const gd = of(who), p = gd.char.pos; return { who, dead: gd.state === 'dead', blind: Math.max(0, gd.dazzledUntil - g.time), folded: Math.max(0, gd.staggerUntil - g.time), room: g.cleared.roomAt(p), dist: Math.hypot(p[0] - w.u, p[2] - at[2]), state: gd.state as string }; };
-      return { g, hole: !!res?.hole, men: men.map(m => row(m.who)), sam: Math.max(0, g.player.dazzledUntil - g.time), pall: emits.filter(e => e.pall), rest: emits.filter(e => !e.pall), big: !!g.orders.big };
+      const rows = men.map(m => row(m.who)), samT = Math.max(0, g.player.dazzledUntil - g.time); let walked = -1, state = '';
+      if (opt.watch) { const gd = of(opt.watch), p0 = [...gd.char.pos], until = gd.staggerUntil - 0.1; g.aiEnabled = true; walked = 0; while (g.time < until) { W.step(1 / 60); walked = Math.max(walked, Math.hypot(gd.char.pos[0] - p0[0], gd.char.pos[2] - p0[2])); } state = gd.state; }
+      return { g, hole: !!res?.hole, walked, state, men: rows, sam: samT, pall: emits.filter(e => e.pall), rest: emits.filter(e => !e.pall), big: !!g.orders.big };
     } finally { console.log = log; } };
-  const K = DOORTOOLS, S = WALLSHOT;
+  const K = DOORTOOLS, S = WALLSHOT, roomM0: number = WALLSHOT.roomM;
   try {
     // (1) his first wall: the one man in the room, where his run had him, a line to the hole
-    { const at: Vec3 = [12.7, 0, 7.0], from: Vec3 = [12.7, 0, 6.0], men: Man[] = [{ who: 'Tango 1', at: [13.6, 0, 9.8] }];
+    { const at: Vec3 = [12.7, 0, 7.0], from: Vec3 = [12.7, 0, 6.0], men: Man[] = [{ who: 'Tango 1', at: [13.6, 0, 9.8] }, { who: 'Tango 9', at: [12.7, 0, 8.4] }];
       const on = await shot(true, at, from, men), off = await shot(false, at, from, men);
       if (!on || !off) verdict(false, 'the long wall takes a charge where his first was set', 'no wall place or no such man there: the level changed, and this check needs its site again');
       else { const a = on.men[0], b = off.men[0], t = a.dist / K.stunM, wantOn = lerp(S.stunSecs[0], S.stunSecs[1], t), wantOff = lerp(K.stunSecs[0], K.stunSecs[1], t);
         verdict(on.hole && off.hole && !a.dead && !b.dead && near(a.folded, S.staggerSecs) && near(a.blind, wantOn, 0.1) && near(b.folded, K.staggerSecs) && near(b.blind, wantOff, 0.1) && a.folded > b.folded + 1 && a.blind > b.blind + 1 && a.state === b.state,
           'his first room: the man with a line to the hole is folded and blind longer with the rule on, by the table\'s own numbers; with it off he gets what he got in the run; he is no more hurt either way',
-          `${f(a.dist)} m from the charge · rule on: folded ${f(a.folded)} s (the table ${S.staggerSecs}), blind ${f(a.blind)} s (${f(wantOn)}) · rule off: folded ${f(b.folded)} s (${K.staggerSecs}), blind ${f(b.blind)} s (${f(wantOff)}) · he is '${a.state}' / '${b.state}'`); } }
+          `${f(a.dist)} m from the charge · rule on: folded ${f(a.folded)} s (the table ${S.staggerSecs}), blind ${f(a.blind)} s (${f(wantOn)}) · rule off: folded ${f(b.folded)} s (${K.staggerSecs}), blind ${f(b.blind)} s (${f(wantOff)}) · he is '${a.state}' / '${b.state}'`);
+        const k1 = on.men[1], k0 = off.men[1];
+        verdict(k1.dist < K.knockM && k1.dead && k0.dead, 'the reach that kills is as it was: a man with a line inside it, behind the wall when it goes, is killed with the rule on as with it off',
+          `${f(k1.dist)} m from the charge (the reach ${K.knockM} m): dead ${k1.dead} / ${k0.dead} (rule on / off)`); } }
     // (1b) his second wall: the room's own furniture stands against its far face (no floor to the room map for a metre in), and one of its men, at his own
     //      post, has no line to the hole
     { const at: Vec3 = [19.2, 0, 7.0], from: Vec3 = [19.2, 0, 6.0], men: Man[] = [{ who: 'Tango 3' }, { who: 'Tango 2' }];
-      const on = await shot(true, at, from, men), off = await shot(false, at, from, men);
+      const on = await shot(true, at, from, men, undefined, { watch: 'Tango 3' }), off = await shot(false, at, from, men);
       if (!on || !off) verdict(false, 'the long wall takes a charge where his second was set', 'no wall place or no such man there: the level changed, and this check needs its site again');
       else { const [c1, l1] = on.men, [c0, l0] = off.men;
-        verdict(on.hole && off.hole && c1.room > 0 && c1.room === l1.room && near(c0.folded, 0) && near(c0.blind, 0) && near(c1.folded, S.staggerSecs) && near(c1.blind, 0) && near(l1.folded, S.staggerSecs) && near(l0.folded, K.staggerSecs),
-          'his second room, furniture against the wall\'s far face: the room is still named, and its man with no line to the hole, untouched with the rule off, is folded with it on',
-          `the man with no line ${f(c1.dist)} m off (room ${c1.room}): folded ${f(c1.folded)} s / ${f(c0.folded)} s, blind ${f(c1.blind)} s / ${f(c0.blind)} s (rule on / off) · the room's lined man: folded ${f(l1.folded)} s / ${f(l0.folded)} s`); } }
+        verdict(on.hole && off.hole && c1.room > 0 && c1.room === l1.room && near(c0.folded, 0) && near(c0.blind, 0) && near(c1.folded, S.staggerSecs) && near(c1.blind, 0) && near(l1.folded, S.staggerSecs) && near(l0.folded, K.staggerSecs) && on.walked >= 0 && on.walked < 0.05 && on.state !== 'patrol',
+          'his second room, furniture against the wall\'s far face: the room is still named, and its man with no line to the hole, untouched with the rule off, is folded with it on — and with the game running on he stands rooted through it, alerted',
+          `the man with no line ${f(c1.dist)} m off (room ${c1.room}): folded ${f(c1.folded)} s / ${f(c0.folded)} s, blind ${f(c1.blind)} s / ${f(c0.blind)} s (rule on / off) · the room's lined man: folded ${f(l1.folded)} s / ${f(l0.folded)} s · the game run on to the end of his fold: he moved ${f(on.walked)} m, '${on.state}'`); } }
     // (2) his third wall: a room with a corner the hole cannot see. A man there, a man with a line, a man in the next room, one of ours and the player beyond the wall
     { const at: Vec3 = [24.9, 0, 7.0], from: Vec3 = [24.9, 0, 6.0];
       const men: Man[] = [{ who: 'Tango 5', at: [26.2, 0, 9.8] }, { who: 'Tango 6', at: [22.25, 0, 10.75] }, { who: 'Tango 2', at: [20.3, 0, 9.8] }, { who: 'Blue Two', at: [25.6, 0, 9.4] }], sam: Vec3 = [24.4, 0, 9.6];
@@ -78,6 +83,9 @@ export async function wallShotCheck(): Promise<boolean> {
         verdict(on.big && near(o1.blind, S.oursSecs) && near(o0.blind, K.backblastSecs) && near(o1.folded, 0) && near(on.sam, S.oursSecs) && near(off.sam, K.backblastSecs),
           'ours and the player the same: one of ours beyond the wall with a line is blind the same seconds as the player standing there, both by the table, and neither is folded',
           `one of ours ${f(o1.dist)} m off: blind ${f(o1.blind)} s / ${f(o0.blind)} s (rule on / off; the tables ${S.oursSecs} / ${K.backblastSecs}), folded ${f(o1.folded)} s · the player: blind ${f(on.sam)} s / ${f(off.sam)} s`);
+        const short = await shot(true, at, from, men, sam, { tune: () => { WALLSHOT.roomM = Math.max(1, c1.dist - 1); } }), cs = short?.men[1]; WALLSHOT.roomM = roomM0;
+        verdict(!!cs && c1.dist < roomM0 && near(cs.folded, 0) && near(short!.men[0].folded, S.staggerSecs), 'the room\'s shock has a reach: with the table\'s reach drawn in short of the corner man he is untouched again, the lined man folded as before',
+          `the reach ${roomM0} m, the corner man ${f(c1.dist)} m off: folded ${f(c1.folded)} s · the reach set to ${f(Math.max(1, c1.dist - 1))} m: folded ${f(cs?.folded ?? -1)} s, the lined man ${f(short?.men[0].folded ?? -1)} s`);
         // (3) the pall: the same cloud asked at the table's share of its density, nothing else the blast asks of the solver changed
         const shape = (E: any[]) => JSON.stringify(E.map(e => [e.kind, +e.radius.toFixed(4), +e.ttl.toFixed(4), +e.speed.toFixed(4)])), dens = (E: any[]) => E.reduce((a, e) => a + e.density, 0);
         const ratio = off.pall.length ? Math.max(...on.pall.map((e: any, i: number) => Math.abs(e.density / off.pall[i].density - S.pall))) : 9, plain = (E: any[]) => JSON.stringify(E.map(e => [e.kind, e.radius, e.density, e.ttl]));
