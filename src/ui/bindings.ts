@@ -90,6 +90,7 @@ import { RELOAD } from '../game/autoreload';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
+import { LIGHTSWITCH } from '../game/lightswitch';
 import { START } from '../game/startfile';
 import { HOLDFIRE, holdFireSummary } from '../game/holdfire';
 import { SAMESTART } from '../game/samestart';
@@ -2054,6 +2055,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   });
   panel.toggleBox(pd, 'G quick throw', () => QUICKTHROW.on, v => { QUICKTHROW.on = v; }, 'G throws a canister at the cursor without selecting it first (also ?quickthrow on the address = on). Off as shipped: a can is thrown from its own slot, 3 / 4 / 5, with a click')
   panel.toggleBox(pd, 'no aim ring on teammates', () => FRIENDS.noSnap, v => { FRIENDS.noSnap = v; }, 'the reticle never snaps to a man of your own side: no ring on a teammate, and the aim stays where the cursor is (also ?friendsnap on the address = off). Off = it takes any man near the cursor, as it did');
+  panel.toggleBox(pd, 'light switches', () => LIGHTSWITCH.on, v => { LIGHTSWITCH.on = v; }, 'a switch on the wall beside a door of every room with lights of its own: Space at it puts the room out or back, and a calm defender who saw it go dark comes and puts it back (also ?lightswitch=0 on the address = off). Off = no plates, as it was');
   panel.toggleBox(pd, 'friendly fire', () => FRIENDLYFIRE.on, v => { FRIENDLYFIRE.on = v; }, 'your rounds hit your own teammates, and theirs would hit you: they do not fire with you or a mate anywhere their round could go (also ?nofriendlyfire on the address = off). Off = rounds pass through your own side, as they did');
   panel.toggleBox(pd, 'gun lowers off a teammate', () => FRIENDS.lowReady, v => { FRIENDS.lowReady = v; }, 'muzzle discipline for you: a raised gun with a teammate (or a hostage) in its line comes to the low ready while nobody is in a fight, and no round leaves it until the line is clear; it is up again the moment the floor goes loud (also ?nomuzzle on the address = off)');
   panel.toggleBox(pd, 'doors stay where they are left', () => DOORSTAY.on, v => { DOORSTAY.on = v; }, 'no door has a closer: an opened leaf stands at the angle it was left until a hand (push / pull / ease), a body walking into it, a boot or a blast moves it — for you and for every man on the floor. A keyed door opened with its key stands open with the bolt thrown, and locks again only once somebody pulls it to — the staff pull their own keyed doors to behind them. The showcases keep their closers. Off = every leaf swings to and latches two seconds after the last hand leaves it, as before (the doors a level authored with no closer still stay). ?doorclosers from boot', true);

@@ -105,6 +105,7 @@ import { gunLookOf, gunLookOn } from './gunlook';   // (called inside the update
 import { feedDeal } from './gunreload';   // (the same)
 import type { StickyCam } from './stickycam';
 import { updateStickies, stickyBoxes, takeCam } from './stickycam';
+import { lightSwitchTick, lightSwitchReset, switchAct, switchBoxes } from './lightswitch';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
 import { throwCount, toggleDrag, teleportPlayer, startPicking, startWand, startKick, settlePlayer, startGrab, freeHeld, settleHeld, takeKey, pickHover, EASE_RATE, EASE_MAX } from './player';
 import type { WallHold, Hold } from './player';
@@ -204,6 +205,8 @@ export interface LightTarget {
   mains: boolean;                  // fed from the breaker (drops in a blackout); false for street lighting, exit signs, UPS-fed LEDs, beacons
   interactive: boolean;            // can be aimed at / OCP'd / shot as a fixture (server LEDs are scenery: too many, too small, pure UI noise)
   stagger: number;                 // restrike delay for this fixture's contactor group when the mains come back
+  /** the game time a hand put it out at its wall switch (lightswitch.ts; meaningful only while `on` is false): 'lights on' puts these back, and a defender at the switch does */
+  handOff?: number;
   areaLights?: { light: RtLight; base: number }[];   // analytic area lights standing in for a flat emissive fixture's emission (smooth direct light + soft shadows instead of cascade rays finding a small bright box)
 }
 
@@ -211,7 +214,7 @@ export interface LightTarget {
  *  ('shot' / 'guardShot' out of combat.ts fireWeapon) also says which weapons.ts row fired it and the segment it actually flew, muzzle → where it stopped (from / to):
  *  nothing in the hearing model reads those — a report is a report — they are for whoever reasons about ROUNDS (the QA soak; suppression). whistle: Sam's low whistle
  *  (V, whistle.ts) — the nearest calm man who hears it comes for a look, twice and he searches; level WHISTLE.level, at his feet, who = the player. */
-export interface GameEvent { announced?: boolean; kind: 'shot' | 'lightOut' | 'guardShot' | 'step' | 'door' | 'kick' | 'bang' | 'prop' | 'whistle' | 'glass'; pos: Vec3; time: number; loud: boolean; level?: number; id?: number; who?: number; weapon?: WeaponId; from?: Vec3; to?: Vec3; cause?: 'ocp' | 'shot'; blind?: boolean; /** a 'prop' knock made to be looked at (a ring's clack): attention.ts — it reaches a calm man and he goes to look at IT */ lure?: boolean; /** a 'bang' that was a fragmentation grenade (frag.ts blast), not a stun charge */ frag?: boolean; /** a 'bang' that was a door or wall CHARGE borrowing the canister's report (combat.ts detonateStun `borrowed`): read only for what a man who hears it SAYS */ charge?: boolean; /** a 'glass' event under GLASS.bothFaces (glass.ts glassEvent): a point just off each face of the pane, which the crash is heard from as well as from `pos` */ ears?: [Vec3, Vec3]; }   // (cause, lightOut only: the OCP's spell — the light dims out and comes back — or a fixture SHOT dark; guards.ts hearingCheck weighs them differently)
+export interface GameEvent { announced?: boolean; kind: 'shot' | 'lightOut' | 'guardShot' | 'step' | 'door' | 'kick' | 'bang' | 'prop' | 'whistle' | 'glass'; pos: Vec3; time: number; loud: boolean; level?: number; id?: number; who?: number; weapon?: WeaponId; from?: Vec3; to?: Vec3; cause?: 'ocp' | 'shot'; /** a 'lightOut' a hand made at a wall switch: the floor before the plate — where a man who saw it comes to (lightswitch.ts) */ swAt?: Vec3; blind?: boolean; /** a 'prop' knock made to be looked at (a ring's clack): attention.ts — it reaches a calm man and he goes to look at IT */ lure?: boolean; /** a 'bang' that was a fragmentation grenade (frag.ts blast), not a stun charge */ frag?: boolean; /** a 'bang' that was a door or wall CHARGE borrowing the canister's report (combat.ts detonateStun `borrowed`): read only for what a man who hears it SAYS */ charge?: boolean; /** a 'glass' event under GLASS.bothFaces (glass.ts glassEvent): a point just off each face of the pane, which the crash is heard from as well as from `pos` */ ears?: [Vec3, Vec3]; }   // (cause, lightOut only: the OCP's spell — the light dims out and comes back — or a fixture SHOT dark; guards.ts hearingCheck weighs them differently)
 export type ThrowKind = 'smoke' | 'flash' | 'frag';
 /** What a slot of the kit holds — the item Player.slot has SELECTED (in the hand, or holstered / slung with E): the Five-seveN, the FN2000, a smoke canister, a stun
  *  canister. Every rule about "what is in his hand" reads the kind, never a digit; the digit keys and the kit column's order and numbering are KIT_ORDER's alone
@@ -225,7 +228,7 @@ export const KIT_ORDER: readonly SlotKind[] = ['pistol', 'rifle', 'smoke', 'flas
  *  bar in the row / the ring round the reticle while a sustained verb runs (`running`: that row IS the running verb — a lock being picked, a leaf being eased,
  *  the choke, the drive coming out). 'held' = the man in Sam's arm (player.ts Hold): his rows are the only rows while he is held. 'cancel' = the selector's
  *  bottom row while it is open (interact.ts): letting go of Space on it does nothing. */
-export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'objective' | 'held' | 'breaker' | 'wall' | 'cam' | 'cancel'; pos: Vec3; line1: string; line2: string; inReach: boolean; off: boolean; progress?: number; target?: LightTarget; door?: Door; guard?: Guard; verb?: Verb; running?: boolean;
+export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'objective' | 'held' | 'breaker' | 'wall' | 'cam' | 'switch' | 'cancel'; pos: Vec3; line1: string; line2: string; inReach: boolean; off: boolean; progress?: number; target?: LightTarget; door?: Door; guard?: Guard; verb?: Verb; running?: boolean;
   /** a man's row with the close-in windows on (close.ts): the way in Sam's spot gives — the click and the grab that follow make that move */
   close?: CloseKind;
   /** a door's row that is listed PAST the list's cap, under the rows Space had before it (the big slot's tool on an unlocked door — bigkit.ts; a charge by hand
@@ -235,7 +238,7 @@ export interface Interactable { kind: 'light' | 'door' | 'body' | 'guard' | 'obj
  *  push / ease (silent, sustained), an open one's pull, a lock's pick (sustained) / kick / rattle (the handle tried, crouched), a keyed lock's unlock; the grab
  *  of a man from behind; the held man's question / choke (sustained) / pistol-whip (sustained); a body's drag / drop; the rack's drive (sustained); the mains
  *  thrown / re-armed by hand; and the selector's own cancel. */
-export type Verb = 'push' | 'pull' | 'ease' | 'unlock' | 'pick' | 'kick' | 'rattle' | 'code' | 'nocode' | 'wand' | 'breach' | 'hammer' | 'grab' | 'question' | 'choke' | 'whip' | 'comply' | 'drag' | 'drop' | 'drive' | 'breakerOff' | 'breakerOn' | 'charge' | 'defuse' | 'takeCam' | 'lead' | 'stay' | 'cancel';   // lead / stay: a rescue's hostage told to get up and follow, or to stay where she stands (rescueend.ts);   // takeCam: a stuck sticky camera of his own taken back onto the launcher (stickycam.ts);   // comply: a held CIVILIAN told to get down and stay quiet — lets her go, cowering (civilians.ts);   // code / nocode: a keypad door's pad — the code entered (sustained, devices.ts) / the pad tried without one (a deny beep)
+export type Verb = 'push' | 'pull' | 'ease' | 'unlock' | 'pick' | 'kick' | 'rattle' | 'code' | 'nocode' | 'wand' | 'breach' | 'hammer' | 'grab' | 'question' | 'choke' | 'whip' | 'comply' | 'drag' | 'drop' | 'drive' | 'breakerOff' | 'breakerOn' | 'charge' | 'defuse' | 'takeCam' | 'lightsOff' | 'lightsOn' | 'lead' | 'stay' | 'cancel';   // lightsOff / lightsOn: a room's wall switch (lightswitch.ts);   // lead / stay: a rescue's hostage told to get up and follow, or to stay where she stands (rescueend.ts);   // takeCam: a stuck sticky camera of his own taken back onto the launcher (stickycam.ts);   // comply: a held CIVILIAN told to get down and stay quiet — lets her go, cowering (civilians.ts);   // code / nocode: a keypad door's pad — the code entered (sustained, devices.ts) / the pad tried without one (a deny beep)
 
 // ---------------------------------------------------------------- mission
 /** The one mission thread: insert (the spawn) → reach the server room → pull the drive from one rack (F, a few seconds within reach) → out through the
@@ -1422,6 +1425,8 @@ export class Game {
 
   /** Level as authored: every switch / group back to its initial on-off, every door back to its authored angle and lock (picked / kicked locks re-lock). */
   private initialOn: Map<LightTarget, boolean> | null = null;
+  /** was this fixture's switch on in the level as authored (lightswitch.ts: what 'lights on' puts a room back to) */
+  authoredOn(t: LightTarget): boolean { return this.initialOn?.get(t) ?? t.on; }
   resetLevelState() {
     if (this.initialOn) for (const [t, on] of this.initialOn) t.on = on;
     for (const d of this.doors.list) d.reset();
@@ -1452,7 +1457,7 @@ export class Game {
     this.cues?.reset(); holdFireReset(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)
     this.fogOfWar?.reset();   // (fog of war: its memory of who was seen and its turn at the probe belong to the encounter that just ended)
-    this.resetGuards(); this.repairLights(); this.resetLevelState(); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
+    this.resetGuards(); this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
@@ -1473,7 +1478,7 @@ export class Game {
   toggleTarget(t: LightTarget) { return toggleTarget(this, t); }
   setBlackout(seconds: number, cause: 'ocp' | 'shot' | 'debug' | 'hand') { return setBlackout(this, seconds, cause); }
   endBlackout() { return endBlackout(this); }
-  lightEvent(t: LightTarget, cause: 'ocp' | 'shot' = 'shot') { return lightEvent(this, t, cause); }
+  lightEvent(t: LightTarget, cause: 'ocp' | 'shot' = 'shot', swAt?: Vec3) { return lightEvent(this, t, cause, swAt); }
   ocp(t: LightTarget | null) { return ocp(this, t); }
   toggleDrag(which?: Guard) { return toggleDrag(this, which); }
 
@@ -1586,6 +1591,7 @@ export class Game {
     this.destr.update(dt); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
     this.airDust.update(dt);   // the weather's dust in the rooms (airDust.ts): through the openings as the doors and the walls stand this frame — before the guards' eyes ask the air
     this.events = this.events.filter(e => this.time - e.time < 0.5);
+    lightSwitchTick(this);   // a room's wall switch (lightswitch.ts — a return on its first line with its switch off): a defender at one puts a room back, before the fixtures are written
     updateTargets(this, dt);
     updateDevices(this, dt);   // the level's cameras / tripwires / the code being keyed (devices.ts): after the targets (this frame's power / OCP / broken state) and everybody's movement
     this.weather.update(dt, cam.yaw);   // the storm (weather.ts): strokes into / out of the light set, thunder due, the wet lot, the frame's rain numbers — after the fixtures, before the meter's queries below
@@ -1695,6 +1701,7 @@ export class Game {
     this.moths.boxes(this.dynBoxes);    // the moths (moths.ts): a dozen fluttering NoShadow specks under the lit sodium lamps at night, none by day / lamp out / in a gale
     if (this.rings.length) ringBoxes(this, this.dynBoxes);
     if (this.player.cams.length) stickyBoxes(this, this.dynBoxes);
+    switchBoxes(this, this.dynBoxes);   // the rooms' wall switches (lightswitch.ts — none with its switch off)
     if (this.shells.length) shellBoxes(this, this.dynBoxes);
     // world size of one internal pixel at the look-at depth (thin props — the lasers, the tracer streaks — widen to stay ≥ ~1 px and dim by the same factor). Under sharp direct's DECOUPLED
     // jitter the raster that draws them is the un-jittered OUTPUT one, where a line thinner than a pixel is not integrated into a faint continuous one by the jitter but drawn dashed:
@@ -1882,6 +1889,7 @@ export class Game {
     }
     breakerTick(this, dt);
     if (act?.kind === 'cam' && verb === 'takeCam') takeCam(this, pl);   // a stuck sticky camera taken back (stickycam.ts — a row only with STICKY.take up)
+    if (act?.kind === 'switch' && verb) switchAct(this, pl, verb);   // a room's wall switch (lightswitch.ts — a row only with its switch up)
     // A living guard from behind: his one row GRABS him — an arm round his throat with the hands empty, the pistol to his head with it drawn (player.ts startGrab /
     // updateHold — questions, the choke / the whip are HIS rows from then on). The silent takedown is the other hand's business (Chaos Theory's melee): a LEFT
     // CLICK with the hands empty — holstered, E — on the man in reach behind, whatever the panel highlights; with the pistol drawn a click is a round (updatePlayer

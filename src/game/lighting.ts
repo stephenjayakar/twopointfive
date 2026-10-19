@@ -139,8 +139,8 @@ export function endBlackout(g: Game) {
   for (const gd of g.guards) if (gd.task?.kind === 'breaker') gd.task = null;
 }
 
-export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'shot') {
-  g.events.push({ kind: 'lightOut', pos: [t.pos[0], 0, t.pos[2]], time: g.time, loud: false, from: v3.copy(t.pos), cause });   // (from: the fixture itself, up where it hangs — what a man's eye needs a line to before a light going out is a thing he SAW: guards.ts lightOutSeen)
+export function lightEvent(g: Game, t: LightTarget, cause: 'ocp' | 'shot' = 'shot', swAt?: Vec3) {
+  g.events.push({ kind: 'lightOut', pos: [t.pos[0], 0, t.pos[2]], time: g.time, loud: false, from: v3.copy(t.pos), cause, ...(swAt ? { swAt: v3.copy(swAt) } : null) });   // (from: the fixture itself, up where it hangs — what a man's eye needs a line to before a light going out is a thing he SAW: guards.ts lightOutSeen)
 }
 
 /** Is there something under the reticle the OCP would act on right now? The snapped fixture / breaker (Game.aimTarget — even one that is off: pressing then says
