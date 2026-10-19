@@ -1222,6 +1222,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in. (The line holds `DOORMANNERS`, `MOVES.gait` and the glass rule off; the same six runs with those on, as the page opens, ended 2 of 2 up either
   way — but nobody ships on that.) So he is not dealt: what that man carries and does is the rescue's. `captor` on is the pistol again; a recording of
   that one day (the table without the key) replays with it on (`journal.ts`). The check's deal family asks both (23 lines a stand now).
+  The same gun was behind the doorway's `threshold-last` losing a man on registry seed 32 with guns dealt: it passes on the page's stand with the deal on
+  again, and the hold that probe carried for it is gone. Run after the mend, both stands: `gunroles-check` 23 lines, `GUNROLES_BREAK=1` red in all
+  five families, the `rescue` gate 132 lines; `rescue-set` and `threshold-last` on the page's stand. No tour, soak or tally was run on the mend.
   NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
   looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
   drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
