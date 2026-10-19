@@ -1201,6 +1201,11 @@
         { "name": "the open end of the street", "pos": [2, 0, 18], "yaw": 1.5707963267948966, "sweep": [[8, 1, 18], [2.6, 1, 8]] }
       ],
       "outside": [[38.8, 0, 1.2], [38.8, 0, 2.3]]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_e", "name": "street gate" },
+      { "door": "gate_s", "name": "lane gate" },
+      { "door": "gate_n", "name": "alley gate" }
+    ]
   }
 }

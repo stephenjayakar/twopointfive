@@ -30,7 +30,8 @@ const ROOT = resolve(import.meta.dir, '../..');
 // 150575169: the glasshouse's back wall foot cut at the back door's frame (the same: one box more, no other level's own part moved).
 // 113556864: the join that first carries the glasshouse's step with the two before it (one base for every level, as above).
 // 105ddc056: the join that carries the long hall's two files without the ballistic shield (its issue block is empty; no other level's own part moved).
-const BASE_REVS = ['105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
+// f48b54d8d: the door names (scenarios.doorNames in 25 files: words a row reads, no box, door, mark or route moved).
+const BASE_REVS = ['f48b54d8d', '105ddc056', '113556864', '150575169', '9fb5b67a1', 'fcae91f17', '6b2c35201', 'b6c0aff16'];
 const BASE_REV = BASE_REVS.find(r => spawnSync('git', ['-C', ROOT, 'merge-base', '--is-ancestor', r, 'HEAD']).status === 0) ?? BASE_REVS[0];
 /** roomclear.ts propGap, repeated (this tool imports nothing of src/game): the floor distance from a point to a prop's yawed footprint */
 function propGap(p: { home: [number, number, number]; hx: number; hz: number }, at: number[]): number {

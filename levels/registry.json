@@ -826,6 +826,9 @@
       "ways": [
         { "door": "rg_front", "set": "front", "pane": false }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "stacks_w", "name": "lobby-side stacks door" }
+    ]
   }
 }

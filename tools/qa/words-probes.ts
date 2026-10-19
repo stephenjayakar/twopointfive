@@ -250,33 +250,8 @@ export const wordsFrag = guarded(async () => {
  *    4 · the office stood up: the squad's row, a rear man's 'holding ·' and the response team's 'stack on …' say the one name with the key up, and what
  *        they said with it down
  *    5 · the two stands' row and word, and a recording from before the key */
-const DOORS_OWED: Record<string, string> = {   // (10-19: 25 files, 96 doors, by id — the levels' own to name; the office's two are named)
-  'barracks-gwot.json': 'n_yard ng_w s_end s_yard sg_e sg_w',
-  'barracks.json': 'n_yard ng_w s_end s_yard sg_e sg_w',
-  'bazaar.json': 'gate_e gate_n gate_s',
-  'compound-gwot.json': 'c_n gate_n gate_w hall_n p_s yard_sw',
-  'compound.json': 'c_n gate_n gate_w hall_n p_s yard_sw',
-  'crossing.json': 'fence_e gate_e gate_n gate_ne gate_s gate_w hut_e imp_e rec_w shed_w',
-  'gwot-yard.json': 'gate_w n_e n_w s_n s_w',
-  'kit-yard.json': 'gate_s gate_w',
-  'lights-out.json': 'gate_e gate_w',
-  'police-post.json': 'gate_e gate_n gate_w hut_w shed_e side_e store_e yard_sw',
-  'quiet-relay.json': 'gate_e gate_n gate_s gate_w',
-  'quiet-yard.json': 'gate_s gate_w n_e n_w s_n s_w',
-  'registry-gwot.json': 'stacks_w',
-  'registry.json': 'stacks_w',
-  'test-rooms.json': 'a ab b c',
-  'train-hands.json': 'gate_e gate_w',
-  'train-kit.json': 'gate_e gate_w',
-  'train-lights.json': 'gate_e gate_w',
-  'train-move.json': 'gate_e gate_w',
-  'train-orders.json': 'gate_e gate_w hut_b_east',
-  'train-pairs.json': 'gate_e gate_w hut_s hut_w store_n',
-  'train-silent.json': 'gate_e gate_w',
-  'vault.json': 'gate_e gate_w',
-  'warehouse-gwot.json': 'b_s l_s p_s',
-  'warehouse.json': 'b_s l_s p_s',
-};
+const DOORS_OWED: Record<string, string> = {   // (10-19: NONE OWED. The 96 doors of 25 files that stood here are named in their levels' own generators — scenarios.doorNames; a door that
+};                                              //  turns up called by a bearing goes red here until its level names it: `'<file>.json': 'id id'`, as the census prints it)
 export const wordsDoorNames = guarded(async () => {
   const F = family('words-doornames: a level names its own doors where the rooms cannot, and no door\'s name carries a bearing');
   const N = await import(`${ROOT}/src/game/doornames.ts`), O = await import(`${ROOT}/src/game/orders.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), JR = await import(`${ROOT}/src/game/journal.ts`);

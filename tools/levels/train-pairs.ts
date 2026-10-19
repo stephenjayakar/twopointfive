@@ -138,7 +138,7 @@ export function build() {
     // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the ground's west gate from the track outside it, the
     // garden beyond the wall. The lesson starts the team INSIDE that gate, so `ref` says which side the picture is taken from; the wash bench outside the wall
     // stands where the card switch walks beside the stack, and is out of this picture (`hide`).
-    scenarios: { roomClear, lesson, places: { areas: [{ name: 'garden', bounds: { ...YARD } }] }, kitView: { ways: [{ door: 'gate_w', ref: [5, 14.25], hide: ['lived.beyond'] }] } },
+    scenarios: { roomClear, lesson, places: { areas: [{ name: 'garden', bounds: { ...YARD } }] }, doorNames: [{ door: 'hut_w', name: 'red door' }, { door: 'hut_s', name: 'blue door' }, { door: 'store_n', name: 'grain store door' }], kitView: { ways: [{ door: 'gate_w', ref: [5, 14.25], hide: ['lived.beyond'] }] } },
   });
   furnish(T);
   return out;

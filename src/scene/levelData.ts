@@ -1023,6 +1023,11 @@ export function serializeLevelData(data: LevelData): string {
       lines.push(`  ${JSON.stringify(k)}: {`);
       oks.forEach((x, i) => {
         const sc = o[x], fs = Object.keys(sc).filter(f => sc[f] !== undefined);
+        // (a block that is itself a list — doorNames, a row a door: one record per line; written as an object's fields it came back keyed '0', '1' and the validator refused it)
+        if (Array.isArray(sc)) { const rows = sc as unknown[], l2 = i === oks.length - 1 ? '' : ',';
+          if (!rows.length) lines.push(`    ${JSON.stringify(x)}: []${l2}`);
+          else { lines.push(`    ${JSON.stringify(x)}: [`); rows.forEach((y, n) => lines.push(`      ${compact(y)}${n === rows.length - 1 ? '' : ','}`)); lines.push(`    ]${l2}`); }
+          return; }
         lines.push(`    ${JSON.stringify(x)}: {`);
         fs.forEach((f, j) => {
           const e = sc[f], l3 = j === fs.length - 1 ? '' : ',';
