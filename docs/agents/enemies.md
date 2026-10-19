@@ -1148,9 +1148,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   posted in it down or held): `afterSecs` later the nearest man of theirs outside says so on their net and goes for the hostages, and every `gapSecs` the
   next one follows — the first by the room's main door, the second by its side door where the level has one (two ways at once: he is sent to the floor OUTSIDE that door, `rescue.sideOutside`, and on in from
   there), in turn; each is let go as
-  a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets) and a man at the mouth of
-  a lane the team's guns hold is not sent down it (`laneHolds` / `laneWarns`; the path is priced by the lanes as any walk is): he takes the turn's other way
-  if that one is not held, else he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
+  a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets). THE COVERED LANES ONLY
+  CHOOSE HIS DOOR (`RESCUEFLUSH.lanesChoose`, 10-19, the mend below): the floor outside his turn's door in the line of guns his side knows of and the other
+  door's not (`laneCovers`), he takes the other ('flush:lane:<name>', once a man); nobody is kept back for being warned off; his walk is priced and gated by
+  the lanes as any walk is, and a man they already hold at a corridor's mouth is not taken off it for what lies at that corridor's guns (`laneHolds(g, gd,
+  to)`, as the press and the rally ask it) — he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
   in his sights is sent again `againSecs` after his last word. THEY'RE GONE: the first to stand in the room and find no hostage says so, and from then on they
   go to the team's last loud thing and to the way out, in turn. THE GUN ON HER: a man of theirs inside `reachM` of a living hostage with a line a ROUND can fly (`shotBlocked`: a
   pane that stops a round is a wall to this) and no smoke hiding her (`Game.sensors.segment`, under `smokeK`; headless the air is clear) HAS
@@ -1163,9 +1165,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rescue.ts `tick()` (`flush.tick()`), `captor()`, `clock()`, `letGo()`, `outsidePoint`. OFF = THE BUILD AS IT WAS (the check's (f)). CHECK: `bun run
   tools/qa/probes.ts rescueflush` (`RESCUEFLUSH_SEEDS=1,2,3`), per mission: they come (first word at `afterSecs`, the second by the side door) · the gun on
   her · not when quiet · they're gone (hostages stood at the way out: the room found empty, men sent on, one shot out there by a man outside the room) ·
-  the state's pair · off; `RESCUEFLUSH_BREAK=1` fails. NOT asked by the check: that a held corridor turns a man round — the two tests are the lanes' own (`laneHolds` / `laneWarns`), and the check's floor has no
-  team on it to hold one.
-  MEASURED: `rescueflush` 24 of 24 lines on both stands, 72 of 72 on seeds 1,2,3; `RESCUEFLUSH_BREAK=1` 18 of 21 FAIL on both (its three 'not when quiet'
-  lines pass by design). In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
+  the state's pair · off · a lane known at both doors keeps nobody back · a lane on the main door's floor alone sends the first man by the side door (both
+  with a lane planted through the lanes' own save, `lanesRestore`); `RESCUEFLUSH_BREAK=1` fails, `RESCUEFLUSH_BREAK=lanes` (`lanesChoose` off) fails those
+  last two alone. NOT asked by the check: what a man sent DOES at a corridor the team's guns hold — that is the lanes' own (`probes.ts lanes` / `corridor`),
+  and the check's floor has no team on it to hold one.
+  THE MEND OF 10-19 (`lanesChoose`: module default true, inert wherever `RESCUEFLUSH.on` is off, so the frozen stand needs no word; a recording whose
+  RESCUEFLUSH row has no such key replays with it off — `journal.ts applyKnobs`; no URL flag and no debugger row: off is the stall below). AS BUILT ON 10-18
+  the rule asked `laneHolds` / `laneWarns` about the spot it sent a man TO. For the room that spot is a hostage, which is where the team's guns are, and
+  `laneWarns` is true within 16 m of a known lane's guns: once their side knew of ANY lane (the entry fight nearly always opens one) both doors were
+  barred and no man was ever sent. With the new ending that was a rescue that never ended by the clear. Found by the held-corridor work with
+  `rescue-tally.ts` on the shipped stand. THE TALLIES' PLAYERS LEARNED THE PAGE'S ENDING with it (`rescue-tally.ts` `Run.hold()` / `leadOut()`, used by
+  the office tally's `finish()` and the registry tally's; a plain step on the frozen stand): the room held `LEAD_AFTER` 20 s with no man of theirs shown and
+  nothing said on their net (a man's first word, 'they're gone'), Sam leads the hostages out with the real keys, asking again every 5 s until the word has
+  taken. MEASURED 10-19, shipped stand, `rescue-tally.ts --styles flow --seeds 1-8`: the build before the mend, 3 clean and 5 stalled at the 149 s cap (no
+  man sent in those five: 'flush:lane' and nothing after); the mend with the old tally player, 4 clean and 4 stalled (the man is sent, is stopped short by
+  the lanes' own gate at a corner by the side door and held there, and nobody leads the hostages out); the mend and the tally player that leads them out,
+  8 of 8 clean — 4 cleared at 34 to 66 s (he came and was shot) and 4 out at 63 to 94 s (he was held by the lane; the team walked out past him). NOT
+  SEEN: a man the lanes hold who then contests the walk out — in those four he did not; whether he should is the lanes' rule and a question for play.
+  MEASURED: `rescueflush` 30 of 30 lines on both stands, 90 of 90 on seeds 1,2,3 (shipped); `RESCUEFLUSH_BREAK=1` 24 of 27 FAIL on both (its three 'not when quiet'
+  lines pass by design); `RESCUEFLUSH_BREAK=lanes` 6 FAIL, the two lane lines on each mission. In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
   three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
   played it; whether two men by two doors READS as a flush, and whether three seconds is fair warning, is a question for play.
