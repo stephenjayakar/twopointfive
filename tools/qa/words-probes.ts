@@ -102,9 +102,9 @@ export const wordsHostage = guarded(async () => withWords(true, async () => {
     for (const h of R.hostiles) if (h.state !== 'dead') killGuard(T.game, h, [1, 0, 0], false, 'shot', 'player');
     const B = R.bounds, mid = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], op = R.ops[0]; op.char.pos[0] = mid[0]; op.char.pos[2] = mid[2];
     // (how a rescue is won now — rescueend.ts, up on the shipped stand: nobody of theirs left on the floor is the win `clearSecs` 1.5 s later, sooner than the
-    //  teammate's beat. What is asked here is the exchange in a room that is the team's, so the ending's own wait is held off while it is listened for.)
-    const RE = (await import(`${ROOT}/src/game/rescueend.ts`)).RESCUEEND, clearWas = RE.clearSecs; RE.clearSecs = 1e9;
-    const n0 = L.said.length; L.secs(6, () => !!R.result); RE.clearSecs = clearWas;
+    //  teammate's beat at 2.4 s. The answer is said all the same, after the result and before the end card (rescue.ts voices() runs on) — so the listening
+    //  does not stop at the result, as it once did: it runs the beat out.)
+    const n0 = L.said.length; L.secs(4);
     const after = L.said.slice(n0), rel = after.find(s => hs.has(s.who) && D.HOSTAGE_LINES.secured.includes(s.text)), ack = after.find(s => !hs.has(s.who) && D.HOSTAGE_LINES.team.includes(s.text));
     F.verdict(!!rel && !!ack && ack.t > rel.t + 1, 'the room is the team\'s: one of them speaks, a teammate answers a beat later', `${rel ? `${rel.who}: '${rel.text}'` : 'no hostage line'} · ${ack ? `${ack.who} +${(ack.t - (rel?.t ?? ack.t)).toFixed(1)} s: '${ack.text}'` : 'no answer'}`);
     const more = (() => { const n = L.said.length; L.secs(20, () => !!R.result); return L.said.slice(n).filter(s => hs.has(s.who)); })();

@@ -69,7 +69,7 @@ import { charLookFrame, charSides } from './charLook';
 import { placeholderTints, TINTS_AS_IS } from '../render/charMaterials';
 import { updateRainFx, rainSummary } from './rainFx';
 import { updateSnowBreath } from './snowBreath';
-import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead } from './rigProps';
+import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
 import { updateMission } from './mission';
@@ -101,6 +101,8 @@ import type { Haul, DoorMove } from './hands';
 import type { Wanding } from './wand';
 import { samBigStart } from './bigkit';
 import { sideTick } from './gunslots';   // (called inside the update only)
+import { gunLookOf, gunLookOn } from './gunlook';   // (called inside the update only)
+import { feedDeal } from './gunreload';   // (the same)
 import type { StickyCam } from './stickycam';
 import { updateStickies, stickyBoxes, takeCam } from './stickycam';
 import { breakerStart, breakerTick, swapFeed, teamWorkHand } from './handwork';
@@ -183,6 +185,8 @@ import { GlassBreak, loadGlassBreak } from './glassbreak';
 import { GlassShards, loadShards } from './shards';
 import { kitFresh } from './kit';
 import type { BigKit } from './kit';
+import type { KitWorn } from './kitload';
+import { loadGait } from './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
 import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
 import { WORLD } from '../scene/world';
@@ -366,6 +370,8 @@ export class Player {
   wand = false; wanding: Wanding | null = null;
   /** the breaching shotgun or the hammer in his big slot (kit.ts BIGSLOT, his card's; bigkit.ts: a row of a door locked against him). 'none' as built. */
   bigKit: BigKit = 'none';
+  /** what his card weighs (kitload.ts: its mobility and concealment beside his reference's, written where his card goes on him — kit.ts kitPlayer; null: nothing weighed on him, nothing of his is touched) */
+  kitLoad: KitWorn | null = null;
   /** the sticky cameras he has sent, in flight and stuck (stickycam.ts; how many are left to send rides his rifle: Rifle.cams) */
   cams: StickyCam[] = [];
   /** the last id a camera of his was given (stickycam.ts fireCam: one up each, never reused in a run) */
@@ -1639,7 +1645,7 @@ export class Game {
       // too); flipping the knob re-deals live. Under 'none' nothing here touches anybody: the floor is exactly what it was. A spawned unit (teams: the showcase's
       // operatives and hostiles) is dealt nothing — he carries what he was spawned with, off his own one-point route's row — and a row that is itself Sam's
       // FN2000 arms the animator's long gun the same way with the bullpup's own grip point (guards.ts rigOf 'sc20k').
-      const deal = this.tune.carbineGuards; let grip: ReturnType<typeof carbineGrip> | null = null, grip20k: ReturnType<typeof sc20kGrip> | null = null;
+      const deal = this.tune.carbineGuards; let grip: ReturnType<typeof carbineGrip> | null = null, grip20k: ReturnType<typeof sc20kGrip> | null = null, gripOwn: Record<string, { G: ReturnType<typeof modelGrip>; a: number | null }> | null = null;
       const show = this.touring || this.director.showing;
       for (const gd of this.guards) {
         if (!gd.unit) gd.carbine = deal === 'all' || (deal === 'reyes' && gd.callsign === 'Reyes');
@@ -1649,6 +1655,12 @@ export class Game {
         const long = longRigOf(gd), cb = long !== null; const an = gd.char.anim; const def = gd.weapon.def;   // (long: WHICH long gun — the FN2000 in an operative's hands has its own grip point and muzzle, guards.ts longRigOf)
         if (an.longGun !== cb) { an.longGun = cb; an.longSteady = long === 'sc20k' ? 1 : 0; gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : cb && def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead; }   // (longSteady: a man handed Sam's bullpup — the breach's operatives — carries it as player.ts armRifle has Sam carry it, the gun riding his shoulders' mean line at a run instead of pumping with the run clip's arms (character.ts LONG_STEADY); the carbine men keep theirs as the poses pass left them, 0 — carbine-probes (4) places the trigger hand by the unsteadied carriage)
         if (long === 'sc20k') an.longGrip = grip20k ??= sc20kGrip(); else if (cb) an.longGrip = grip ??= carbineGrip();
+        if (gunLookOn() || gd.char.gunLook) {   // (gunlook.ts: which of his guns are drawn as models of their own — and one in his hands has its own support-hand point and its own muzzle. Nothing with the switch off)
+          const had = gd.char.gunLook?.hand ?? null, look = gd.char.gunLook = gunLookOf(gd.char.gunLook, def, gd.second?.gun.def ?? null, gd.slung?.out ? gd.slung.own.def : null), m = cb ? look?.hand ?? null : null;
+          if (m) { const M = (gripOwn ??= {})[m] ??= { G: modelGrip(m), a: modelMuzzleAhead(m) }; if (M.G) an.longGrip = M.G; if (M.a !== null) gd.char.muzzleAhead = M.a; }
+          else if (had && cb) gd.char.muzzleAhead = long === 'sc20k' ? sc20kMuzzleAhead() : def.rig !== 'carbine' ? carbineMuzzleAhead() : def.muzzleAhead;   // (the switch put down under a man with a model in his hands: his muzzle is the stand-in's again, as the line above deals it)
+          feedDeal(an, cb ? gd.weapon : null, true);   // (gunreload.ts: … and how its support hand feeds it, dealt every frame as `reloadMag` below is — a man's reload is a beat, so always as a gun run dry)
+        }
         // the motion pass (character.ts MOVES — nothing reads these with it off): how drilled each side moves, and a blinded man held bent away from the charge
         an.trained = gd.team === 'operative' ? 1 : gd.trained ? 0.75 : gd.team === 'civilian' ? 0.5 : 0.12;
         swapFeed(gd, inHand(gd), !cb);   // (handwork.ts: a change between the torch and the sidearm is a move of the hand — nothing with it off)
@@ -1840,7 +1852,7 @@ export class Game {
     const pl = this.player; const pc = pl.char;
     const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch, keys: pl.keys, run: sprintDoorRun(this, pl) };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
     const contacts: DoorContact[] = own ? [own] : [];
-    for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && g.speed > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
+    for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
     const woundedAt: { g: Guard; at: Vec3; x: number; z: number }[] = [];   // (a copy of where his BODY is — the hips of a man on his back lie a stride behind his feet — so what a leaf does to it can be put through the walls before it is his: below, after doors.update)
     for (const g of this.guards) if (g.wound) { const h = g.wound.pose === 'back' ? g.char.bones.hips : null, at: Vec3 = h ? [h[0], g.char.pos[1], h[2]] : v3.copy(g.char.pos); woundedAt.push({ g, at, x: at[0], z: at[2] }); contacts.push({ pos: at, radius: 0.3, bash: false, who: g.char.id, quiet: true, weak: true }); }   // a man down WOUNDED (wounds.ts — posed, no ragdoll) is in a doorway what a body is: the closer does not latch through him, a leaf somebody pushes moves him aside
     civilianDoorContacts(this, contacts);   // the cleaner / the late worker push leaves like anybody standing (no key: a locked one is a wall to them) — civilians.ts

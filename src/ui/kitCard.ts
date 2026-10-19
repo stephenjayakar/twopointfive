@@ -8,6 +8,12 @@
 // press; a row of choices that walked past one with no room says which and why the same way; a set the squad has no room for is dimmed and, pressed, says
 // why under the rows.
 //
+// WHAT THE CARD WEIGHS (game/kitload.ts, on unless ?nokitload; under the pouches rule only): two bars beside the pouches, mobility and concealment — each
+// full for a man with nothing on him, shorter for every thing on his card, redrawn as a row is stepped. Shown, not told: no number; a notch on each bar is
+// where his issued card stands (the man the game was tuned on), grey up to it, GREEN for what this card has gained on it and AMBER for what it has lost
+// under it; and the highlighted row is outlined on the bar — what its thing takes (leave it behind and the bar grows to there), or, dashed, what one more
+// of a thing he carries none of would take.
+//
 // THE MOUSE does everything: a click on an arrow steps the row, on a set presses it, anywhere on the card takes the keys to it.
 // THE KEYS (no key is held, no digit is read): W / S or up / down move the highlighted row (the last 'row' is the sets), A / D or left / right change its
 // value (on the sets: pick one), Enter or Space confirm (a row: its next value; the sets: press the picked one), Esc hands back to whoever mounted the card
@@ -29,6 +35,7 @@ import { KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitGun
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 import { kitNoise } from './kitNoise';
+import { KITLOAD, loadOf, loadRef, loadShare, type KitLoad } from '../game/kitload';
 
 export interface MemberCardOpts {
   /** Esc on the card */
@@ -125,6 +132,17 @@ const CSS = `
 .kc .kc-pips i.on { background: var(--m-accent-hi); box-shadow: none; }
 .kc .kc-pips i.big { width: 19px; margin-left: 4px; }
 .kc .kc-pouch b { font-weight: 600; color: var(--m-bright); letter-spacing: 0.04em; }
+.kc .kc-load { display: flex; flex-direction: column; gap: 3px; flex: 0 0 100%; order: 10; margin-top: 2px; }
+.kc .kc-load.off { display: none; }
+.kc .kc-bar { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.kc .kc-bar-t { position: relative; display: block; flex: 0 0 96px; height: 7px; box-shadow: inset 0 0 0 1px rgba(var(--m-edge),0.6); }
+.kc .kc-bar-t i { position: absolute; top: 0; bottom: 0; display: block; }
+.kc .kc-bar-t .fill { left: 0; background: rgba(var(--m-edge),0.9); }
+.kc .kc-bar-t .gain { background: #8fc98a; }
+.kc .kc-bar-t .gain.loss { background: #f0b76a; }
+.kc .kc-bar-t .part { top: -1px; bottom: -1px; box-shadow: inset 0 0 0 1px var(--m-bright); }
+.kc .kc-bar-t .part.more { box-shadow: none; border-left: 1px dashed var(--m-bright); border-bottom: 1px dashed var(--m-bright); border-top: 1px dashed var(--m-bright); }
+.kc .kc-bar-t .ref { top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--m-bright); }
 .kc .kc-row { padding: 4px 6px 5px; margin: 0 -6px; border-left: 2px solid transparent; border-radius: 2px; cursor: default; }
 .kc.focus .kc-row.sel, .kc.focus .kc-sets.sel { border-left-color: var(--m-accent-hi); background: rgba(var(--m-hover-rgb),0.45); }
 .kc .kc-ico { display: none; }
@@ -179,6 +197,7 @@ function lookOf(m: MemberKit): { suit: string | null; trim: string | null } {
   return { suit: m.suit === 'issued' ? null : tintCss(SUITS[m.suit].tint), trim: m.trim === 'issued' ? null : tintCss(TRIMS[m.trim].tint) };
 }
 
+const LOAD_TIP = { mob: 'mobility — the notch is his issue', con: 'concealment — the notch is his issue' };
 const POUCH_TIP = 'what he carries of the breaching tools and the throwables comes out of these: one grenade-sized thing to a pouch, two pouches for a big thing';
 const POUCH_TIP_BIG = 'one grenade-sized thing to a pouch; one big thing — a shotgun, a hammer, a wall charge — in the big slot';
 const UP = new Set(['KeyW', 'ArrowUp', 'w', 'W']), DOWN = new Set(['KeyS', 'ArrowDown', 's', 'S']), LEFT = new Set(['KeyA', 'ArrowLeft', 'a', 'A']), RIGHT = new Set(['KeyD', 'ArrowRight', 'd', 'D']);
@@ -202,6 +221,15 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   const pouch = el('div', 'kc-pouch'), pips = el('span', 'kc-pips'), pouchN = el('b', ''), squadN = el('span', 'kc-squad');
   squadN.title = 'what the teammates who come carry between them: one more on his card is one fewer on another';
   pouch.append(el('span', '', 'Pouches'), pouchN, squadN, pips); pouch.title = POUCH_TIP;
+  // … and what the card weighs (game/kitload.ts): a bar each for mobility and concealment — its fill up to the issued card's notch in grey, what the card has
+  // gained on the notch in green or lost under it in amber, and the highlighted row outlined: what it takes (drop it and the bar grows to there), or, on a
+  // row that carries none, dashed, what one more would take
+  const load = el('span', 'kc-load'), bars = (['mob', 'con'] as const).map(k => {
+    const bar = el('span', 'kc-bar'), track = el('span', 'kc-bar-t'), fill = el('i', 'fill'), gain = el('i', 'gain'), part = el('i', 'part'), ref = el('i', 'ref');
+    bar.setAttribute('data-load', k); bar.title = LOAD_TIP[k]; track.append(fill, gain, part, ref); bar.append(el('span', 'kc-bar-l', k === 'mob' ? 'Mobility' : 'Concealment'), track);
+    load.appendChild(bar); return { k, bar, fill, gain, part, ref };
+  });
+  pouch.appendChild(load);
   who.append(title, sub, pouch); head.append(fig, who); root.appendChild(head);
   // the rows
   let cur = 0, pick = Math.max(0, KIT_PRESETS.findIndex(p => p.id === kitPresetOf(i))), focused = false;
@@ -259,6 +287,14 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       pouch.title = c.big ? POUCH_TIP_BIG : POUCH_TIP;
       pouchN.textContent = `${c.used} / ${c.total}`;
       const sq = i > 0 && i <= kitTeam() ? squadCost() : null; squadN.textContent = sq ? `squad ${sq.used} / ${sq.total}` : '';
+      load.classList.toggle('off', !KITLOAD.on);
+      if (KITLOAD.on) { const L = loadOf(i, m), R = loadRef(i), row = cur < rows.length ? rows[cur] : null, S: KitLoad | null = row ? loadShare(i, m, row.field) : null, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
+        // (a row that carries none: what ONE MORE would take — the step the right arrow would make, weighed on a copy of the card; nothing where that step has no room)
+        let M: KitLoad | null = null; if (row && !S) { const p = kitPeek(i, row.field, 1); if (!p.why) { const c = { ...m } as MemberKit; if (row.set) row.set(c, p.value); else (c as unknown as Record<string, unknown>)[row.field] = p.value; const up = loadOf(i, c);   /* (a row with a setter of its own writes other fields: the Primary row's long gun is `weapon`) */ if (up.mob < L.mob || up.con < L.con) M = { mob: L.mob - up.mob, con: L.con - up.con }; } }
+        for (const b of bars) { const v = L[b.k], r = R[b.k], lo = Math.min(v, r), s = S?.[b.k] ?? 0, more = M?.[b.k] ?? 0;
+          b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(v - r)); b.gain.classList.toggle('loss', v < r);
+          b.part.classList.toggle('more', !s && more > 0); b.part.style.left = pct(s ? v : v - more); b.part.style.width = pct(s ? Math.min(s, 1 - v) : more); b.part.style.display = s || more ? '' : 'none';
+          b.ref.style.left = pct(r); b.bar.setAttribute('data-score', v.toFixed(3)); b.bar.setAttribute('data-share', s.toFixed(3)); b.bar.setAttribute('data-more', more.toFixed(3)); } }
       squadN.classList.toggle('full', !!sq && sq.used >= sq.total && c.used < c.total);   // (room in his own pouches and none in the squad's: the squad's count is why his arrows are dimmed, so it is the one lit)
     }
     const issuedShown = kitIssuedShown(i);   // (one deal a refresh, not one a row)

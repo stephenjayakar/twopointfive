@@ -57,6 +57,7 @@ import { lightEstimateAt, GUARD_EYE, eyeContact, escalationOf, KEEN, type Eye } 
 import { hostileTo } from './teams';
 import { dozeAsleep } from './doze';
 import { workComing } from './workthings';
+import { loadCross } from './kitload';   // (what the sneaking man's card makes of a crossing's price: his shape over his pace)
 const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, x));
 
 export const SNEAK = {
@@ -251,7 +252,7 @@ function eyeRate(g: Game, h: Guard, lit: number, dist: number, keen: number, low
   let rate = g.tune.detectRate * Math.pow(lit, 1.5) * clamp(1 - (dist - 3) / 13, 0.2, 1) * (low ? 0.75 : 1) * keen; if (dist < 1.8) rate = Math.max(rate, 3.5);
   return h.state === 'alert' || h.state === 'search' ? rate * 2.2 : rate;
 }
-function crossCost(g: Game, eyes: Guard[], T: Crumb[], first: number, end: number): number {
+function crossCost(g: Game, eyes: Guard[], T: Crumb[], first: number, end: number, card = 1): number {   // (`card`: kitload.ts loadCross — × what the crossing adds, never what an eye already holds)
   let worst = 0; const wide = SNEAK.coneDeg * SNEAK.skill, keen = escalationOf(g) >= 1 ? KEEN : 1;
   for (const h of eyes) {
     let add = 0; const E = eyeFor(h, wide);
@@ -259,7 +260,7 @@ function crossCost(g: Game, eyes: Guard[], T: Crumb[], first: number, end: numbe
       const r = eyeContact(g, E, standIn(T[k].p, true), false, false, 1); if (!r.visible) continue;
       add += eyeRate(g, h, litAt(g, T[k], true), r.dist, keen) * Math.max(0.4, flat(T[k].p, T[Math.min(T.length - 1, k + 1)].p)) / SNEAK.crossPace;
     }
-    if (add > 0) worst = Math.max(worst, h.awareness + SNEAK.margin * add);
+    if (add > 0) worst = Math.max(worst, h.awareness + SNEAK.margin * add * card);
   }
   return worst;
 }
@@ -345,7 +346,7 @@ export function sneakWalk(g: Game, gd: Guard, low: boolean, habit?: (h: Guard) =
             for (let k = 0; k < m.looks.length; k++) { if (!inCone(m, k, false, x, z, pc)) continue;
               if (rate < 0) { const d = line(m, x, z, pc, true); if (d < 0) break; if (lit < 0) lit = litOf(x, z, 0.4);
                 if (d >= SNEAK.nearM && lit < SNEAK.litAt) break;   // (not SEEN as the sneak reads a step — dim, and not at his elbow: it is not priced, as the follower would not stop for it)
-                rate = eyeRate(g, m.h, lit, d, keen, low); }
+                rate = eyeRate(g, m.h, lit, d, keen, low) * loadCross(g, gd); }   // (kitload.ts: what his card makes of the notice he builds and of the time he is in it)
               add[q][k] += rate * dt; } } }
         a = b; }
       let worst = 0; W.by = null;
@@ -497,7 +498,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
             const tooLong = len > K.crossM, waited = M.mode === 'wait' && M.waitT >= 0 ? g.time - M.waitT : 0;
             // looked at, but a step or two of dim light at range costs a watcher next to nothing: what the crossing would ADD to each looker's awareness, by
             // the eye's own arithmetic on the read of each step, with a margin — inside `budget` he goes (and a man Sam has just stirred has none to spare)
-            const cheap = end >= 0 && watched && !tooLong && crossCost(g, eyes, T, first, end) <= K.budget;
+            const cheap = end >= 0 && watched && !tooLong && crossCost(g, eyes, T, first, end, loadCross(g, gd)) <= K.budget;
             const walked = onWalk && ex(first, lowWalk).seen && (!by || coming.includes(by));
             if (end >= 0 && (walked || cheap || (!watched && (!tooLong || (K.patience > 0 && waited >= K.patience))))) { mode = 'cross'; from = first; to = end; }
             else if (!walked) { mode = 'wait'; why = watched ? (lit ? 'lit' : 'near') : !ex(first, lowWalk).seen ? 'door' : end < 0 ? 'open' : 'long'; }
