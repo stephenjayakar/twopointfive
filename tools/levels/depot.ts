@@ -490,7 +490,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   scenarios.kitView = { ways: [{ door: 'a_s' }, { door: 'back_gate' }] };
   scenarios.response = RESPONSE;
   scenarios.places = { areas: [
-    { name: 'yard', bounds: { ...R.yard } }, { name: 'east yard', bounds: { ...R.east } }, { name: 'aerial park', bounds: { ...R.aerials } },
+    { name: 'yard', bounds: { ...R.yard } }, { name: 'back yard', bounds: { ...R.east } }, { name: 'aerial park', bounds: { ...R.aerials } },
     { name: 'duty office', bounds: { ...R.duty } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'battery room', bounds: { ...R.battery } },
     { name: 'generator room', bounds: { ...R.generator } }, { name: 'tyre store', bounds: { ...R.tyres } }, { name: 'bay', bounds: { ...R.bay } },
   ] };

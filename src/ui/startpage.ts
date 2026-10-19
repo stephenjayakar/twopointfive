@@ -215,7 +215,8 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-pouch:has(.kc-load:not(.off)) { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
 #missions.one #loadout .lo-kit .kc-load { flex: 0 0 100%; gap: 3px; margin: 0; }
 #missions.one #loadout .lo-kit .kc-bar { justify-content: flex-end; gap: 8px; line-height: 9px; }
-#missions.one #loadout .lo-kit .kc-bar-t { flex: 0 0 176px; height: 6px; }
+#missions.one #loadout .lo-kit .kc-head { min-width: 0; }
+#missions.one #loadout .lo-kit .kc-bar-t { flex: 0 1 176px; min-width: 40px; height: 6px; }   /* (the track gives way in a narrow window: its label stays in the head's own column, clear of the sets' row beside it) */
 #missions.one #loadout .lo-kit .kc-words { display: none; }
 #missions.one #loadout .lo-kit .kc-words.refused, #missions.one #loadout .lo-kit .kc-note { display: none; grid-column: auto; grid-row: auto; position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; padding: 0; border: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-words.refused { display: block; color: #e8c15a; background: var(--m-base); z-index: 1; }
@@ -235,6 +236,32 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc:has(.kc-row.refused) .kc-row:not(.refused) > .kc-note { display: none !important; }   /* (a refusal's reason outranks the row pointed at, which outranks the row the keys are on) */
 #missions.one #loadout .lo-kit .kc-sets { grid-column: 1 / 3; grid-row: 1; justify-content: flex-start; align-self: end; margin: 0 0 4px; padding: 0; border: 0; background: none; gap: 2px; }
 #missions.one #loadout .lo-kit .kc.focus .kc-sets.sel { background: none; }
+/* THE CARD AS A TREE (game/kittree.ts): each gun is a tile with what it is good at drawn beside its name (ui/gunStats.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
+#missions.one #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] { grid-column: 1 / 3; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { flex: 0 0 auto; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 40%); align-items: center; min-height: 76px; box-sizing: border-box; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row .kc-ico { height: 44px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row .kc-val { font-size: 20px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row { grid-template-columns: 48px minmax(0, 1fr); }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row .kc-ico { height: 32px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 4px; margin: 0; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1 / -1; grid-row: auto; margin-top: 6px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats.off { display: none; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 9px/9px var(--m-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-soft); }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex: 0 0 76px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-t { flex: 1 1 auto; height: 5px; box-shadow: none; background: rgba(var(--m-edge),0.16); }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-t .fill { background: var(--m-text); }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 6px; margin: 0 0 0 13px; padding: 0 0 0 9px; border: 0; border-left: 2px solid rgba(var(--m-edge),0.28); }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-kids { grid-template-columns: minmax(0, 1fr); }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids:empty { display: none; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: 30px minmax(0, 1fr); column-gap: 8px; padding: 5px 6px 5px 8px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-ico { height: 22px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-label { font-size: 9px; letter-spacing: 0.14em; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-val { font-size: 13px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-row.none:not(.lent) .kc-val { color: var(--m-dim); }
+#missions.one #loadout .lo-kit .kc-tree .kc-row.fixed .kc-val { color: var(--m-soft); }
+@media (max-width: 1480px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] .kc-kids { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* (three across cuts '40 MM GRENADES' short under about 1400) */
+@media (max-width: 1180px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row, #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: minmax(0, 1fr); } #missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 2; } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1; } #missions.one #loadout .lo-kit .kc-tree .kc-kids { margin-left: 6px; padding-left: 6px; } #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex-basis: 64px; } }
 /* DEPLOY: the one filled block on the page */
 #missions.one #loadout .lo-actions { position: sticky; bottom: 0; z-index: 4; margin: 14px calc(-1 * var(--pg)) 0; padding: 10px var(--pg); border: 0; border-top: 1px solid var(--line); border-radius: 0; background: var(--m-base); }
 #missions.one #loadout .lo-actions::before { content: attr(data-what); margin-right: auto; font: 11px/1.4 var(--m-mono); letter-spacing: 0.04em; color: var(--m-dim); }
@@ -289,6 +316,7 @@ const CSS = `
 @media (max-width: 1100px) { #missions.one .mgname { font-size: 10px; letter-spacing: 0.05em; } #missions.one.tiles.pane-list #loadout .lo-btn.primary, #missions.one.tiles.pane-list #loadout .lo-btn.sp-next { font-size: 14px; letter-spacing: 0.06em; } }
 @media (max-width: 1180px) { #missions.one .msheet { grid-template-columns: minmax(0, 1fr) 236px; column-gap: 22px; } #missions.one #loadout .lo-kit .kc-ico { display: none; } #missions.one #loadout .lo-kit .kc-row { grid-template-columns: minmax(0, 1fr); } #missions.one #loadout .lo-name { font-size: 13px; letter-spacing: 0.04em; } #missions.one #loadout .lo-slot { padding-left: 8px; padding-right: 8px; } #missions.one .mtitle { font-size: 14px; } #missions.one .mrow { grid-template-columns: minmax(0, 1fr) auto auto 4px; } }
 @media (max-width: 900px) { #missions.one.pane-list .msheet { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; } #missions.one .mrail { grid-column: 1; grid-row: 2; padding-top: 18px; } #missions.one .onehost { grid-row: 3; } #missions.one.pane-loadout .onehost { grid-row: 2; } #missions.one .mmap { display: none; } #missions.one .mbody { grid-template-columns: minmax(190px, 230px) minmax(0, 1fr); } #missions.one .mt { width: auto; margin: 0; padding: 0; } #missions.one #loadout .lo-kit .kc { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; } #missions.one #loadout .lo-kit .kc-head, #missions.one #loadout .lo-kit .kc-sets { grid-column: 1 / -1; grid-row: auto; justify-content: flex-start; } #missions.one #loadout .lo-kit .kc-sets { order: -1; } }
+@media (max-height: 920px) { #missions.one #loadout .lo-kit .kc-tree { padding-bottom: 12px; } #missions.one #loadout .lo-kit .kc-tree .kc-row { padding-top: 5px; padding-bottom: 5px; } #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { min-height: 64px; } #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { padding-top: 3px; padding-bottom: 3px; } }   /* (the tree is three rows of tiles taller than the card before it: on a laptop's window its last tile, the big slot, sat under the footer until the sheet was scrolled) */
 @media (max-height: 740px) { #missions.one #loadout .lo-kit .kc-row { padding-top: 6px; padding-bottom: 6px; } #missions.one #loadout .lo-slots { margin-top: 12px; } #missions.one #loadout .lo-kit { margin-top: 14px; } }
 @media (max-width: 720px) { #missions.one.pane-loadout .onefig { display: none; } #missions.one .mbody { grid-template-columns: minmax(0, 1fr); } #missions.one .mlist { border-right: 0; } #missions.one .mt { display: none; } }
 @media (max-width: 900px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) 250px; } #missions.one .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-left: 10px; padding-right: 10px; } }

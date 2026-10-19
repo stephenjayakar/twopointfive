@@ -705,8 +705,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
-  scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'north corridor', bounds: { ...R.ncorr } }, { name: 'west corridor', bounds: { ...R.wcorr } }] };
+  scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'service corridor', bounds: { ...R.ncorr } }, { name: 'staff corridor', bounds: { ...R.wcorr } }] };
   scenarios.kitView = WAREHOUSE_KITVIEW;
-  scenarios.doorNames = [{ door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
+  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
   return { level, scenarios, groups: trace.groups, surfaces };
 }
