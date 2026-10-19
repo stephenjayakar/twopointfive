@@ -145,6 +145,19 @@ like that."
   the hostage room that a hostage can walk. First numbers, and whether the way out stays the way in is the maintainer's
   open call. **seen** "the hostage rescue missions should have you safely extract the hostage or fully clear the map."
   **check** `bun run tools/qa/probes.ts rescueend` (the mission's `out` line walks them there).
+- **`response` · Who comes when it goes loud is this level's own answer.** A response team comes only where the file
+  carries `scenarios.response` (`docs/level-format.md`): who, by which ways, how many and how soon as ranges, the
+  radio's words, and a `why` that says in a sentence who would plausibly come here. A block with a `raid` key answers a
+  squad's room clear and nothing else; one without answers a quiet night gone loud and no squad mission, so give the
+  level a row its block answers. A level whose idea is that nobody comes carries no block and says so: a line in
+  `NOBODY_COMES` (`tools/qa/level-needs.ts`: the level, and why in a few words), and its name with the reason in the
+  response team's write-up (`docs/agents/enemies.md`). A look twin carries its plain file's block. **seen** the office's
+  stairwell team by constant on every floor; the maintainer: "let's make it part of the level design and always make
+  sense (ideally w.r.t. the concept/design of the level) and not all levels should have it". **check** the need (a block
+  has its `why`, a twin the same block, a row it answers; no block and no line in the table is a NOTE; both is a FAIL);
+  `bun run tools/qa/response-check.ts` (about 90 s: every block against its built floor once the level is in that file's
+  `WITH` list; a call is played through only on the levels its lines name, so a new block's first call is yours to play
+  or to add a line for).
 - **A quiet level**: the `quiet` block (starts, spots, exits, patrols), `mission` equal to `spots[0]` / `exits[0]`; every
   guard a man with a job; `wired: true` only where the holder really is on an alarm (**seen** "predictably getting a guard
   to come by when you pull the objective is a bit contrived"); a dark way exists and the short way crosses light; no deal

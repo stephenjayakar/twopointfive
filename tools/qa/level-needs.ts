@@ -40,6 +40,10 @@
 //               level's. Bare = no pouch filled and nothing in the big slot.
 //               NOTES for what the issue is for on this floor: locked and steel doors against the door charges issued, frags issued where a frag on
 //               order is refused (a hostage, a man to take), a quiet mission's partner kitted as issued for a loud one
+//   response    a level has a response team only where its file says so (scenarios.response, game/qrf.ts). With the block: its `why` is a sentence, a look
+//               twin carries the same block, and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
+//               below with its reason, or it has not answered (a NOTE). In both is a FAIL. Not asked of a lesson. The block against the built floor,
+//               and a call played through, are tools/qa/response-check.ts's
 //   said        docs/agents names the level (its file, its generator or a row's id) — that a write-up is THERE, not that it is good
 import { resolve } from 'node:path';
 import { readdirSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
@@ -50,6 +54,7 @@ const { LOOK_LEVELS } = await import(`${ROOT}/src/scene/look.ts`);
 const { squadChoices, rosterOf } = await import(`${ROOT}/src/game/loadout.ts`);
 const { kitDefault, kitWorn, kitCost, kitTeam, kitLoad, bigOf, SLOTS, KIT_MEMBERS } = await import(`${ROOT}/src/game/kit.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
+const { OFFICE_SCENARIOS } = await import(`${ROOT}/levels/office.scenarios.ts`) as { OFFICE_SCENARIOS: { response?: unknown } };
 const { harnessProfile, pageSwitches } = await import(`${ROOT}/src/host/profile.ts`);
 
 interface Box { id: string; group?: string; c: number[]; h: number[]; yaw?: number; flags?: string[] }
@@ -59,7 +64,7 @@ interface Bounds { x0: number; x1: number; z0: number; z1: number }
 type Card = Record<string, unknown>;
 interface LevelFile { meta?: { generator?: string }; boxes: Box[]; props?: { id: string; x: number; z: number }[]; lights: Light[]; doors: Door[]; surfaces?: unknown;
   scenarios?: { roomClear?: { starts?: unknown[]; squads?: unknown[]; wallCharges?: number; rooms?: { name: string; bounds?: Bounds }[] }; rescue?: { room?: { name: string; bounds?: Bounds } };
-    quiet?: { starts?: unknown[]; spots?: { place: string; area?: Bounds }[] }; places?: { areas?: { name: string; bounds: Bounds }[] }; lesson?: unknown; snatch?: unknown; kitView?: unknown; issue?: { members: Record<string, Card> } } }
+    quiet?: { starts?: unknown[]; spots?: { place: string; area?: Bounds }[] }; places?: { areas?: { name: string; bounds: Bounds }[] }; lesson?: unknown; snatch?: unknown; kitView?: unknown; response?: { why?: unknown; team?: unknown; raid?: unknown }; issue?: { members: Record<string, Card> } } }
 interface Row { id: string; title: string; kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet'; squad: number; level?: string; group?: string; only?: string; place?: string; blurb?: string;
   untuned?: boolean; offList?: boolean; defenders?: number; ways?: readonly string[]; squads?: boolean }
 /** the tables a level is registered in, as the tree has them (the red path hands a level its own, with every row taken out) */
@@ -67,7 +72,7 @@ interface Tables { music(level: string, kind: string): boolean; still(id: string
 
 type Mark = 'PASS' | 'FAIL' | 'NOTE';
 interface Line { need: string; mark: Mark; text: string }
-export const NEEDS = ['generator', 'mission', 'row', 'music', 'picture', 'kit picture', 'look', 'lived', 'floor', 'lamps', 'moon', 'doorway', 'roof', 'kit', 'said'] as const;
+export const NEEDS = ['generator', 'mission', 'row', 'music', 'picture', 'kit picture', 'look', 'lived', 'floor', 'lamps', 'moon', 'doorway', 'roof', 'kit', 'response', 'said'] as const;
 
 /** the cap on the men who hold a floor (the balance rule: eleven) */
 const DEFENDERS_MAX = 11;
@@ -126,6 +131,17 @@ export function lampsOutside(L: LevelFile): string[] {
     && Math.abs(x - b.c[0]) <= b.h[0] + COVER.pad && Math.abs(z - b.c[2]) <= b.h[2] + COVER.pad);
   return L.lights.filter(l => l.kind !== 'dir' && l.group !== 'exterior' && !covered(l.pos[0], l.pos[1], l.pos[2])).map(l => `${l.id} (group ${l.group ?? 'none'})`);
 }
+/** NOBODY COMES HERE, ON PURPOSE: the levels with a mission row and no response team, each with why in a few words (the long form is the response
+ *  team's two bullets of docs/agents/enemies.md). A level with neither a `scenarios.response` block nor a line here has not answered. `block` and
+ *  `hall` are in neither on purpose: either would suit a team and has none yet, the maintainer's call. */
+export const NOBODY_COMES: Record<string, string> = {
+  'quiet-relay': 'a hilltop, nobody within reach, and its wired spot brings its own men', vault: 'private hired guards who call nobody', 'lights-out': 'its one idea is the mains',
+  'quiet-yard': 'the test map', 'block-squads': 'at eleven, nobody is left to come', warehouse: 'at eleven, nobody is left to come', compound: 'at eleven, nobody is left to come',
+  barracks: 'at eleven, nobody is left to come', registry: 'the hostage clock is the pressure', consulate: 'the hostage clock is the pressure', snatch: 'it has its own clock',
+  defuse: 'it has its own clock', killhouse: 'it has its own clock', floodlit: 'one idea, and it is not this', mousehole: 'one idea, and it is not this',
+  glasshouse: 'one idea, and it is not this', pass: 'a snowed-in road' };
+/** a `why` shorter than this is not a sentence (the same 40 as response-check.ts's file line) */
+const WHY_MIN = 40;
 /** KIT: who comes with nothing but his gun, as issued, at each size the row offers — the game's own issue cards, priced by the game's own pouches
  *  (game/kit.ts kitCost: a card that fills none carries nothing), with the level's own issue written over them where a staging would put it on
  *  (scenarios.issue's cards as written; never on a lesson's level, whose page plays the plain issue with the block unread) */
@@ -222,6 +238,18 @@ export function ask(name: string, L: LevelFile, twin: LevelFile | null, rows: Ro
   { const locked = L.doors.filter(d => d.locked).length, steel = L.doors.filter(d => d.steel).length, squad = rows.filter(e => e.kind !== 'quiet' && mates(e));
     if (squad.length && (locked || steel)) { const charges = Math.max(...squad.map(e => { const worn = T.cards(e.squad, issueOf(L)); return Array.from({ length: e.squad }, (_, k) => (kitCost(k + 1, worn[k + 1]).lines as { item: string; n: number }[]).find(x => x.item === 'charges')?.n ?? 0).reduce((a, n) => a + n, 0); }));
       say('kit', 'note', `${locked} locked and ${steel} steel of ${L.doors.length} doors, against ${charges} door charge${charges === 1 ? '' : 's'} as issued (steel takes no charge, hammer or shotgun): say how each is meant to be opened`); } }
+  // ---- a response team, or none on purpose
+  if (rows.length && !lesson) {
+    const R = name === 'office' ? OFFICE_SCENARIOS.response as NonNullable<LevelFile['scenarios']>['response'] : S.response, none = NOBODY_COMES[name];
+    if (R) { const why = typeof R.why === 'string' ? R.why.trim() : '', raid = !!R.raid;
+      say('response', why.length > WHY_MIN, `a response team comes here (${typeof R.team === 'string' ? R.team : 'no `team` word'}; it answers ${raid ? 'a squad\'s room clear and nothing else' : 'a quiet night gone loud'}): ${why.length > WHY_MIN ? 'the file says why' : `its \`why\` is not a sentence (over ${WHY_MIN} characters)`}`);
+      if (none !== undefined) say('response', false, `NOBODY_COMES says nobody comes here ('${none}') and the file carries a response block: one of the two is stale`);
+      // (game/qrf.ts live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
+      if (!(raid ? rows.some(e => e.kind === 'nightbreach' || e.kind === 'roomclear') : name === 'office' || rows.some(e => e.kind === 'quiet')))
+        say('response', 'note', `the block answers ${raid ? 'a squad\'s room clear' : 'a quiet night gone loud'} and no row of this level is one (${rows.map(e => `${e.id}: ${e.kind}`).join(', ')}): nobody would ever be called`);
+      if (twin) { const same = JSON.stringify(twin.scenarios?.response) === JSON.stringify(R); say('response', same, same ? 'the look twin carries the same block' : 'the look twin\'s response block is not the plain file\'s'); } }
+    else if (twin?.scenarios?.response) say('response', false, 'the look twin carries a response block and the plain file none');
+    else say('response', none !== undefined ? true : 'note', none !== undefined ? `nobody comes here, on purpose: ${none}` : `no scenarios.response block, and ${name} is not in NOBODY_COMES (tools/qa/level-needs.ts): say whether a team comes here, or that nobody does on purpose`); }
   // ---- named in the write-ups
   if (rows.length) { const words = [`${name}.json`, `tools/levels/${name}.ts`, ...rows.map(e => e.id)], hit = words.find(w => new RegExp(`(^|[^\\w-])${w.replace(/[.\\/]/g, '\\$&')}($|[^\\w-])`, 'm').test(T.docs));
     say('said', !!hit, hit ? `docs/agents names it ('${hit}')` : `docs/agents names neither ${words.join(', ')}`); }
@@ -268,6 +296,7 @@ if (import.meta.main) {
   const names = argv.filter((a, i) => !a.startsWith('--') && !VALUED.includes(argv[i - 1])).map(a => plainOf(a.replace(/^levels\//, '').replace(/\.json$/, '')));
   const files = readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).map(f => f.slice(0, -5)).sort();
   const every = files.filter(f => !f.endsWith('-gwot')), todo = names.length ? [...new Set(names)] : every;
+  for (const n of Object.keys(NOBODY_COMES)) if (!every.includes(n) || !rowsOf(n).length) { console.error(`NOBODY_COMES names '${n}', which is no level with a mission row: take the line out`); process.exit(1); }
   for (const n of todo) if (!files.includes(n)) { console.error(`no level file levels/${n}.json`); process.exit(2); }
   const menu = resolve(ROOT, 'public/assets/menu'), docsDir = resolve(ROOT, 'docs/agents'), stills = JSON.parse(readFileSync(resolve(menu, 'stills.json'), 'utf8')).stills as Record<string, unknown>;
   if (harnessProfile() !== 'shipped') { pageSwitches(new URLSearchParams('')); kitLoad(null, ''); }   // (the page as it opens, on either stand: see the head of this file; the shipped stand booted so as tools/qa/headless.ts loaded)
@@ -281,22 +310,27 @@ if (import.meta.main) {
   if (BREAK) {
     // one level with every gap this tool can see, planted in memory: each must come back, in the words that say it was THIS gap
     const name = 'hall', L = structuredClone(read(name)), e = rowsOf(name)[0], d = L.doors[0], along = Math.abs(Math.sin(d.closedDir)) > 0.5, mid = d.hinge[along ? 1 : 0] + d.width * (along ? Math.sin(d.closedDir) : Math.cos(d.closedDir)) / 2;
-    L.meta!.generator = 'tools/levels/not-there.ts'; delete L.surfaces; delete L.scenarios!.kitView; delete L.scenarios!.issue;
+    L.meta!.generator = 'tools/levels/not-there.ts'; delete L.surfaces; delete L.scenarios!.kitView; delete L.scenarios!.issue; delete L.scenarios!.response;
     L.boxes = L.boxes.filter(b => STRUCTURE.test(b.group ?? '')); L.props = [];
     const slab = roofBand(L).find(b => has(b, 'NoPrimary')); if (slab) slab.flags = slab.flags!.filter(f => f !== 'NoPrimary');
     L.boxes.push({ id: 'planted_dado', group: 'planted', c: along ? [d.hinge[0] + 0.12, 0.55, mid] : [mid, 0.55, d.hinge[1] + 0.12], h: along ? [0.004, 0.55, 2] : [2, 0.55, 0.004], flags: ['NoShadow'] });
     L.lights.push({ id: 'planted_lamp', kind: 'spot', pos: [1, 3, 1], group: 'yard' }, { id: 'planted_sun', kind: 'dir', pos: [0, 0, 0], group: 'exterior' });
     const row: Row = { ...e, id: 'planted-row', place: undefined, blurb: 'short', defenders: 12, ways: ['one', 'two', 'three'], squads: !e.squads, only: undefined };
     const bareCard = { bangs: 0, charges: 0, smoke: 0, frags: 0, walls: 0, shells: 0, big: 'none' };   // (the kit's gap is PLANTED, whatever the issue table gives: every man's card emptied)
-    const lines = ask(name, L, null, [row], { music: () => false, still: () => false, picture: () => false, docs: '', cards: () => Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...bareCard })) });
+    const planted: Tables = { music: () => false, still: () => false, picture: () => false, docs: '', cards: () => Array.from({ length: KIT_MEMBERS }, (_, j) => ({ ...kitDefault(j), ...bareCard })) };
+    const lines = ask(name, L, null, [row], planted);
+    // (the response need's reds want a block: the same level again with a `why` of one word, under the name of a level NOBODY_COMES holds, beside a look twin whose block is another's)
+    const blocked = structuredClone(L), other = structuredClone(L); blocked.scenarios!.response = { why: 'because', team: 'the planted team', raid: {} }; other.scenarios!.response = { why: 'because', team: 'another team' };
+    const blockLines = [...ask('vault', blocked, other, [{ ...row, kind: 'quiet' }], planted), ...ask(name, other, blocked, [row], planted)].filter(l => l.need === 'response' && l.mark !== 'PASS');
     /** what each planted gap must be found as: the mark, and every phrase its lines must carry */
     const WANT: Record<string, { mark: Mark; says: string[] }> = {
       generator: { mark: 'FAIL', says: ['not in the tree'] }, row: { mark: 'FAIL', says: ['no `place`', '`blurb` is 5 characters', '12 defenders', 'names 3 ways in', 'squads'] }, music: { mark: 'FAIL', says: ['no row'] },
       picture: { mark: 'FAIL', says: ['planted-row.jpg'] }, 'kit picture': { mark: 'FAIL', says: ['no scenarios.kitView'] }, lived: { mark: 'FAIL', says: ['is bare'] }, floor: { mark: 'NOTE', says: ['no `surfaces`'] },
       lamps: { mark: 'NOTE', says: ['planted_lamp'] }, moon: { mark: 'FAIL', says: ['2 directional'] }, doorway: { mark: 'FAIL', says: ['planted_dado'] }, roof: { mark: 'FAIL', says: ['drawn slab'] },
-      kit: { mark: 'FAIL', says: ['you + 1: ', 'you + 4: '] }, said: { mark: 'FAIL', says: ['names neither'] } };
+      kit: { mark: 'FAIL', says: ['you + 1: ', 'you + 4: '] }, response: { mark: 'NOTE', says: ['is not in NOBODY_COMES'] }, said: { mark: 'FAIL', says: ['names neither'] } };
     const missed = Object.entries(WANT).flatMap(([need, w]) => { const text = lines.filter(l => l.need === need && l.mark === w.mark).map(l => l.text).join('\n'); return w.says.filter(s => !text.includes(s)).map(s => `${need} ('${s}')`); });
-    for (const l of lines) if (l.mark !== 'PASS') console.log(`- ${l.mark} — ${name} (planted) · ${l.need}: ${l.text}`);
+    for (const says of ['is not a sentence', 'is not the plain file', 'one of the two is stale', 'a squad\'s room clear and no row', 'a quiet night gone loud and no row']) if (!blockLines.some(l => l.text.includes(says))) missed.push(`response ('${says}')`);
+    for (const l of [...lines, ...blockLines]) if (l.mark !== 'PASS') console.log(`- ${l.mark} — ${name} (planted) · ${l.need}: ${l.text}`);
     for (const m of missed) console.log(`- MISSED — a planted gap was not found: ${m}`);
     console.log(missed.length ? `\nthe red path is GREEN on ${missed.length} planted gap(s): this tool cannot see them` : `\nall the gaps planted in ${Object.keys(WANT).length} needs were found (exit 1, as the red path must)`);
     process.exit(missed.length ? 0 : 1);
