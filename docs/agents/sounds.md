@@ -235,3 +235,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first shell dropped in the port 0.6); the belt change's times are the Mk 46 row's beats, by hand. CHECKED: every one finite, under full scale, no longer than
   declared and at its level at 48 and 44.1 kHz; `gunfire-table-check`, `sound-takes-check`, `audio-render` and `sounds-page.cjs` (every row and every other use plays, nothing on
   the console) ALL PASS. FIRST TAKES, WRITTEN BLIND: NOBODY HAS HEARD ONE. `sound-sheet.ts` says of `mp7Suppressed` 'colour never moves' (as it does of `rifleSuppressed`).
+- **A lane's light scales with the playback speed (2026-10-19).** `src/replay/soundlanes.ts ring(dur)` = `max(0.15, dur) × tape.speed`: the light is timed on the tape's clock and the sound
+  plays at wall speed, so a 1 s sound is lit 4 tape seconds at 4× and a quarter at ¼× (before, it went out early at 2× / 4× and would have hung on at ¼× / ½×). A speed changed while a
+  sound rings is not followed. Check: `tools/qa/soundlanes-page.cjs` ("a lane stays lit as long as its sound is heard at any playback speed"). Headless only, never seen on a GPU.

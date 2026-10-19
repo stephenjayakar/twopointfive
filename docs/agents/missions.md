@@ -666,3 +666,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   changes nothing there). No family runs the consulate through this file: it is the level's own task line, typed. NOT from this: the test level's stall on shipped in the
   rescue part ended with the rescue ending's own step (the scripted player leads the hostages out), joined under this one. What the six seconds say about a teammate
   behind a friend in a corridor is the squad's to read, under a player who would have fired or been shot.
+- **The snatch's card names the van** (2026-10-19; words only, no switch). The row's blurb said 'One unarmed man to take alive.'; since the snatch ends with him
+  in the team's van (`snatchout.ts`, above) it says 'to take alive and walk out to your van', so the sheet sets up the walk out the maintainer expected when he
+  played it. 152 characters (the list's rule is 160). With `?nosnatchout` the old end is back and the card still names the van: it stands at the gate either
+  way. Checked: `probes.ts missions-list` and `missions-screen` on both stands, the src typecheck. Nobody has read it on a page.

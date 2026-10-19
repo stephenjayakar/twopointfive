@@ -39,6 +39,7 @@ import { WX_OWN, SNOW, SNOW_LOOK } from '../game/weatherKinds';
 import { AIR_SIM } from '../game/airSim';
 import { GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
+import { DOORSHOT } from '../game/doorblast';
 import { DOORPATH } from '../game/doorpath';
 import { COVERFIRE } from '../game/coverfire';
 import { LIGHTWALL } from '../game/lighting';
@@ -115,6 +116,7 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
+import { FIRELINE } from '../game/fireline';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
@@ -214,6 +216,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
+  DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
   WALLPEN.on = q.get('wallpen') !== '0';   // a round carries on through thin walls and wooden door leaves with the energy it has left (game/wallpen.ts: plasterboard partitions, fabric and wood screens, a leaf that is not steel — by the glass rule's energy, a toll by stuff and the length of its path through): ON in the page; ?wallpen=0 = a round stops in the first built thing it meets, as it did
   WALLCHARGE.on = !q.has('nowallcharge'); if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
   // each man of a room entry walks a real path through the door (doorpath.ts) — clear of the leaf, one tight file: ON in the page; ?nodoorpath = the entry as it
@@ -242,6 +245,7 @@ export function pageSwitches(q: URLSearchParams): void {
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
   LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
+  FIRELINE.on = !(q.has('nofireline') && q.get('nofireline') !== '0');   // a teammate walking on an order waits short of the lane you are firing down and crosses when you stop (game/fireline.ts): ON in the page; ?nofireline = an order walks him through your fire, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
   QUIETFOG.def = q.get('quietdef') === 'off' || q.get('quietdef') === '0' ? 'off' : 'team';   // WHERE a quiet mission starts (the maintainer's pick, 10-13): under the fog, lifted round you and your partner, the mission's sticky cameras handed out — a bare quiet link is that. ?quietdef=off = it starts with every guard shown, as it did
@@ -462,6 +466,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
   'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
   'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
+  'FIRELINE.on': 'TPS_FIRELINE=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
   'WALLCHARGE.farFurn': 'TPS_WALLFURN=1',
@@ -523,6 +528,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIR_SIM.on': 'TPS_AIR=1 (a picture only, and the harness has no field to feed: it changes what the game would hand one)',
   'GLASS.bothFaces': 'TPS_GLASSEARS=1',
   'WALLPEN.on': 'TPS_WALLPEN=1',
+  'DOORSHOT.on': 'TPS_DOORSHOT=1',
   'HANDS.on': 'TPS_HANDS=1',
   'WORK.on': 'TPS_WORKTHINGS=1',
   'WAND.on': 'TPS_WAND=1',

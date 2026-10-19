@@ -298,7 +298,7 @@ export function chronKey(g: Game, gd: Guard) { return chronicle(g, 'keyTaken', {
  *  told apart the way killGuard's own log line is: `how` + the caller's line). */
 export function chronDown(g: Game, gd: Guard, how: DownKind, line?: string) {
   if (how === 'shot') return chronicle(g, 'kill', { who: gd.callsign, weapon: /^knife/.test(line ?? '') ? 'knife' : /at the charge when it went$/.test(line ?? '') ? 'a wall charge' : (g.player.gunInHand() ? plainShort(g.player.gunInHand()!.def) : 'a round') }, gd.char.pos);   // (the knife: close.ts's lethal blow, told by its line as the ring and the whip are)
-  const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : 'takedown';
+  const method = how === 'wounded' ? 'wounded' : how === 'choked' ? 'choke' : /^ring/.test(line ?? '') ? 'ring' : /whip/.test(line ?? '') ? 'whip' : /behind the wall when it went$/.test(line ?? '') ? 'charge' : 'takedown';   // ('charge': wallcharge.ts's knock through the wall it opened — nobody's hands were on him)
   return chronicle(g, 'ko', { who: gd.callsign, method }, gd.char.pos);
 }
 /** guards.ts: a body discovered — walked onto (bodyInView) or watched going down (the standoff's end): whose, by whom, and found breathing or not. */
@@ -472,7 +472,7 @@ export function eventText(e: ChronEvent, g?: Game): string {
     case 'grab': return `grabbed ${d.who} from behind`;
     case 'interrogated': return d.civilian ? `questioned ${d.who} — ${d.gave ? `${d.she ?? 'she'} gave up ${INTEL[String(d.gave)] ?? d.gave}` : `nothing more in ${d.her ?? 'her'}`}` : `questioned ${d.who} — ${d.gave ? `he gave up ${INTEL[String(d.gave)] ?? d.gave}` : Number(d.stage) >= 4 ? 'nothing left in him' : 'nothing useful yet'}`;
     case 'keyTaken': return `took ${d.who}'s key`;
-    case 'ko': return d.method === 'wounded' ? `${d.who} shot — down wounded, out of the fight` : `${d.who} out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : 'the takedown'}`;
+    case 'ko': return d.method === 'wounded' ? `${d.who} shot — down wounded, out of the fight` : `${d.who} out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : d.method === 'charge' ? 'the wall charge' : 'the takedown'}`;
     case 'kill': return d.weapon === 'knife' ? `${d.who} killed — the knife` : d.weapon === 'a wall charge' ? `${d.who} killed — the wall charge` : `${d.who} shot dead (${gearText(String(d.weapon))})`;   // (wallcharge.ts WALLKILL: a man at the charge when it went was not shot)
     case 'bodyFound': return `${d.by} found ${d.who} ${d.wounded ? 'shot and breathing' : d.breathing ? 'out cold' : 'dead'}${d.civilian ? ' — the floor goes up hard' : ''}`;
     case 'doorKicked': { const w = doorWritten(d.door, g); return w ? `kicked in the ${w}` : `kicked in the ${d.door} door`; }
@@ -483,7 +483,7 @@ export function eventText(e: ChronEvent, g?: Game): string {
     case 'civilianSpotted': return `${d.who} ${CIV_CAUSE[String(d.cause)] ?? 'saw you'}`;
     case 'civilianReported': return d.how === 'phone' ? `${d.who} rang it in — ${CIV_CAUSE[String(d.cause)] ?? d.cause}${d.sent ? ` — ${d.sent} sent` : ''}` : d.how === 'outside' ? `${d.who} got out and control rang the floor${d.sent ? ` — ${d.sent} sent` : ''}` : `${d.who} told ${d.to} — ${CIV_CAUSE[String(d.cause)] ?? d.cause}${d.how === 'found' ? ' (he found her hiding)' : ''}`;
     case 'civilianComplied': return `told ${d.who} to stay down — and let her go`;
-    case 'civilianKO': return `${d.who} (the ${d.label}) out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : 'the takedown'} — a CIVILIAN`;
+    case 'civilianKO': return `${d.who} (the ${d.label}) out cold — ${d.method === 'choke' ? 'choked out' : d.method === 'whip' ? 'pistol-whipped' : d.method === 'ring' ? gearText('a ring to the head') : d.method === 'charge' ? 'the wall charge' : 'the takedown'} — a CIVILIAN`;
     case 'civilianKilled': return `${d.who} (the ${d.label}) KILLED (${gearText(String(d.weapon))}) — a civilian`;
     case 'cameraSpotted': return `camera ${d.n} called you in${d.sent ? ` — ${d.sent} sent to look` : ''}`;
     case 'cameraAlarm': return `camera ${d.n} had you long enough — the floor goes up`;

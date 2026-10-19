@@ -111,10 +111,12 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
+import { FIRELINE } from '../game/fireline';
 import { kitSoloStand } from '../game/kit';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
+import { DOORSHOT } from '../game/doorblast';
 import { FRAG } from '../game/frag';
 import { HOUR, applyHour } from '../game/hours';
 import { DOORPATH } from '../game/doorpath';
@@ -260,6 +262,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_FRIENDS')) FRIENDS.noSnap = String((globalThis as any).process?.env?.TPS_FRIENDS ?? '') === '1';   // the reticle passes over men of the player's own side (src/game/friends.ts): off, so a scripted cursor near a teammate snaps as every frozen probe and digest saw it; `TPS_FRIENDS=1` = as the page
     if (pinned('TPS_LIGHTSWITCH')) LIGHTSWITCH.on = String((globalThis as any).process?.env?.TPS_LIGHTSWITCH ?? '') === '1';   // a room's wall switch (src/game/lightswitch.ts): off, so no level has a plate, Space has no row for one and no light-out says where a hand was, as every frozen probe and digest saw it; `TPS_LIGHTSWITCH=1` = as the page
     if (pinned('TPS_FRIENDLYFIRE')) FRIENDLYFIRE.on = String((globalThis as any).process?.env?.TPS_FRIENDLYFIRE ?? '') === '1';   // a round of Sam's side finds the men of Sam's side (src/game/friendlyfire.ts): off, so a scripted player's round passes a teammate and a teammate's passes him, as every frozen probe and digest saw it; `TPS_FRIENDLYFIRE=1` = as the page
+    if (pinned('TPS_FIRELINE')) FIRELINE.on = String((globalThis as any).process?.env?.TPS_FIRELINE ?? '') === '1';   // a teammate on an order waits short of the lane the player is firing down (src/game/fireline.ts): off, so an ordered man walks through a scripted player's fire as every frozen probe, digest and tally saw him; `TPS_FIRELINE=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page
     if (pinned('TPS_QUIETFOG')) QUIETFOG.on = String((globalThis as any).process?.env?.TPS_QUIETFOG ?? '') === '1';   // quiet missions under the fog of war (src/game/quietfog.ts): off, so a quiet mission's query reads no rung of the fog lever, as every frozen run was made
     if (pinned('TPS_QUIETDEF')) QUIETFOG.def = String((globalThis as any).process?.env?.TPS_QUIETDEF ?? '') === 'team' ? 'team' : 'off';   // where a quiet mission starts (src/game/quietfog.ts): 'off', every guard shown, as every frozen quiet digest and tally was played — the page starts one under the fog
@@ -332,6 +335,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_OWNROOFS')) WX_OWN.roofs = String((globalThis as any).process?.env?.TPS_OWNROOFS ?? '') === '1';   // a level's own night storm under that level's own roofs (src/game/weather.ts syncRoofs): off, so every level is rained on by the office's two rectangles as in every frozen probe; TPS_OWNROOFS=1 raises it
     if (pinned('TPS_WXWIND')) WX_OWN.wind = String((globalThis as any).process?.env?.TPS_WXWIND ?? '') === '1';   // … and that storm's WIND roof by roof (src/game/wind.ts syncField): off, so three or four roofs keep the storm out of their bounding box — no wind in a yard, for a flake or for smoke — as in every frozen probe; TPS_WXWIND=1 raises it
     if (pinned('TPS_GLASSEARS')) GLASS.bothFaces = String((globalThis as any).process?.env?.TPS_GLASSEARS ?? '') === '1';   // a pane's crash heard from both its faces (src/game/glass.ts glassEvent, guards.ts glassHeard): off, so a window shot from outside is heard only from the shooter's side of it, as in every frozen probe; TPS_GLASSEARS=1 raises it
+    if (pinned('TPS_DOORSHOT')) DOORSHOT.on = String((globalThis as any).process?.env?.TPS_DOORSHOT ?? '') === '1';   // gunfire splinters a door leaf apart (src/game/doorblast.ts DOORSHOT): off, so a leaf hangs whatever is fired into it, as in every frozen probe, digest and tally; TPS_DOORSHOT=1 raises it
     if (pinned('TPS_WALLPEN')) WALLPEN.on = String((globalThis as any).process?.env?.TPS_WALLPEN ?? '') === '1';   // rounds through thin walls and doors (src/game/wallpen.ts): off, so a round stops in the first built thing it meets, as in every frozen probe, digest and tally; TPS_WALLPEN=1 raises it
     if (pinned('TPS_TAKEDOWN')) TAKEDOWN.on = String((globalThis as any).process?.env?.TPS_TAKEDOWN ?? '') === '1';   // takedowns as moves (src/game/takedown.ts): off, so a man taken down falls and lies as every stored digest has him
     if (pinned('TPS_STEALTHPOSE')) STEALTHPOSE.on = String((globalThis as any).process?.env?.TPS_STEALTHPOSE ?? '') === '1';   // stealth poses (src/game/stealthpose.ts): off, so his arms and head are where every stored digest has them

@@ -138,10 +138,10 @@ const opens = (c: DoorContact, d: Door) => !!c.key || (!!c.keys && c.keys.has(d.
 /** rattle: the lever tried against a thrown bolt · pick: one click of the pick working · unlock: the cylinder going over and the bolt drawing · kick: a boot through the lock */
 export type DoorSound = 'creak' | 'bang' | 'latch' | 'bash' | 'rattle' | 'pick' | 'unlock' | 'kick' | 'clang' | 'thud';   // clang: a boot on a steel door that does not give (DoorDef.steel) · thud: a boot at the face a shut door opens toward — the frame takes it (DOORWAY.frameHolds)
 export interface DoorEvent { door: Door; sound: DoorSound; pos: Vec3; who: number; level: number; }
-/** A leaf OFF ITS HINGES (doorblast.ts — a blast tore it out of its frame): the loose slab. `p` its centre, `v` its velocity, `a` the world angle of its width axis
+/** A leaf OFF ITS HINGES (doorblast.ts — a blast tore it out of its frame, or gunfire took it apart: DOORSHOT): the loose slab. `p` its centre, `v` its velocity, `a` the world angle of its width axis
  *  (what closedDir + angle was when it went, turned since by `spin`), `tip` 0 (upright) ‥ π/2 (flat on the floor) with its top fallen toward `side` of that axis
  *  (+1 = the CCW normal (−sin a, cos a)), `rest` once it lies still — from then on its box is an ordinary flat yaw-only box and nothing steps it. */
-export interface DoorSlab { p: Vec3; v: Vec3; a: number; spin: number; tip: number; tipV: number; side: 1 | -1; rest: boolean; landed: boolean; who: number; t: number; /** the angle the door READS as while off (±π/2: wide open, the way the leaf left) */ ang: number; }
+export interface DoorSlab { p: Vec3; v: Vec3; a: number; spin: number; tip: number; tipV: number; side: 1 | -1; rest: boolean; landed: boolean; who: number; t: number; /** the angle the door READS as while off (±π/2: wide open, the way the leaf left) */ ang: number; /** doorblast.ts DOORSHOT: gunfire took the leaf apart and this is its lock rail, lying — half width, half length, and where on it the handles are (absent: the whole leaf) */ bits?: [number, number, number, number]; }
 
 export class Door {
   angle: number; vel = 0; quietT = 10; latched: boolean; lastWho = -1; sinceBash = 10; closing = false;
@@ -186,6 +186,8 @@ export class Door {
    *  of sight, sound, shot or smoke bake meets), update() leaves it alone, no verb moves it, and to everything that reads a door's state it is one standing wide
    *  open with its lock gone (`angle` ±OFF_ANGLE, unlatched, lockBroken): an open doorway. reset() hangs it again. */
   off = false; slab: DoorSlab | null = null;
+  /** doorblast.ts DOORSHOT: the rounds' work this leaf has taken, in the wall engine's unit — one count for the whole leaf. reset() clears it. */
+  shot = 0;
   /** the hung leaf's half extents and markings (the slab at rest lies under other ones — doorblast.ts; reset() and the fog's remembered leaf put these back) */
   readonly leafH: Vec3; readonly leafMarks: Box['marks'];
   creakArmed = true;
@@ -219,6 +221,7 @@ export class Door {
   dir(): [number, number] { const a = this.def.closedDir + this.angle; return [Math.cos(a), Math.sin(a)]; }
   /** Back to the level as authored: angle, latch, lock, and everything the encounter did to it (pick progress, a kicked lock, a guard having noticed it). */
   reset() {
+    this.shot = 0;
     if (this.off) { this.off = false; this.slab = null; this.box.h = this.leafH; this.box.marks = this.leafMarks; this.box.rot = undefined; for (const hb of this.handleBoxes) hb.rot = undefined; }   // hung again, as authored
     this.angle = clamp(this.sided(this.def.angle ?? 0), this.minA, this.maxA);   // (one-way: a leaf authored standing open the way it is not dealt stands as wide the way it is — as setSwing left it)
     this.vel = 0; this.latched = Math.abs(this.angle) < 1e-3; this.closing = false; this.swept = false; this.quietT = 10; this.sinceBash = 10; this.creakArmed = true; this.lastWho = -1;   // (lastWho too: the fresh encounter's first bang / latch is nobody's yet — it used to keep the last man of the encounter before, review B7.12)
@@ -650,11 +653,11 @@ export class Doors {
   blaster: ((at: Vec3, tearM: number, who: number) => Door[]) | null = null;
   /** a noise of d's that is not a leaf's own doing (doorblast.ts: the frame letting go = a 'kick', the slab landing = a 'bang') — heard and played as any other */
   sound(d: Door, sound: DoorSound, pos: Vec3, who: number, level: number) { this.emit({ door: d, sound, pos, who, level }); }
-  /** told of every leaf that comes off, by whatever road (a blast through blast() above, a charge set on the leaf): `fn(door, who)` on the frame it leaves its
+  /** told of every leaf that comes off, by whatever road (a blast through blast() above, a charge set on the leaf, gunfire: doorblast.ts DOORSHOT): `fn(door, who, cause)` on the frame it leaves its
    *  frame — for a change feed, a tally, the AI. Returns the unsubscribe. */
-  onTorn(fn: (d: Door, who: number) => void): () => void { this.tornSubs.push(fn); return () => { const i = this.tornSubs.indexOf(fn); if (i >= 0) this.tornSubs.splice(i, 1); }; }
-  torn(d: Door, who: number) { for (const fn of [...this.tornSubs]) fn(d, who); }
-  private tornSubs: ((d: Door, who: number) => void)[] = [];
+  onTorn(fn: (d: Door, who: number, cause: 'blast' | 'fire') => void): () => void { this.tornSubs.push(fn); return () => { const i = this.tornSubs.indexOf(fn); if (i >= 0) this.tornSubs.splice(i, 1); }; }
+  torn(d: Door, who: number, cause: 'blast' | 'fire' = 'blast') { for (const fn of [...this.tornSubs]) fn(d, who, cause); }
+  private tornSubs: ((d: Door, who: number, cause: 'blast' | 'fire') => void)[] = [];
 
   /** Insert approach/exit points where a path crosses a doorway so characters take doors head-on and clear the
    *  swung leaf before turning (the leaf can stand perpendicular to the wall at its stop). */

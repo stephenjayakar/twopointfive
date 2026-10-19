@@ -663,3 +663,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   figure's head and muzzle are where the simulation reads them, and a man under fire now tucks 10 cm. Six of those replayed with `looks` false
   equal the switch-off digest run for run; with `ownCalm` false, the switch-on one. NOT SEEN, NOT PLAYED: nothing
   of this on a GPU; nobody has played a mission with a hurt man in it; `hurtPace` and `hurtSup` are first numbers.
+- **Off the line of his fire** (`src/game/fireline.ts FIRELINE {on, fireS 1, reloadS 0.7, paceS 2.5, paceK 1.5, lapseS 2.5, spread 0.06, clearM 0.25, shortM 1.4,
+  keepM 0.4, gapM 1, lookM 6, cue, cueS 0.35, maxS 4, againS 2, wayMoreM 10, berthM 0.4, edgeM 0.15, reachM 40}`: on in the page, `?nofireline`; frozen
+  stand off, `TPS_FIRELINE=1` — and nothing without friendly fire, so a frozen run wants `TPS_FRIENDLYFIRE=1` beside it; a `FROZEN_HOLDS` row, in the knob
+  registry and a journal's tables; Tab ▸ Player, doors & props ▸ "teammates wait off your line of fire"). The maintainer's card: "a teammate about to cross
+  your line while you are firing waits a beat short of it and crosses when you stop." A teammate WALKING on an order (a mark, the file behind Sam, a
+  regroup) whose way comes into the lane of the player's fire stops `shortM` short of it (`gapM` off its side when he comes at it on the slant; in the
+  room, when a doorway is between him and it), says "your line — holding." once, and walks on when the fire stops. FIRING = a round off the gun in the
+  player's hands inside `fireS`, counted off the gun once a frame (`fireLineTick`: a launcher's load is no round), through a reload begun in the string
+  and `reloadS` after, and through slow aimed fire (two rounds inside `paceS`: the lane outlasts the last by `paceK` × their gap). THE LANE is the round's
+  own, as `friendlyfire.ts friendInCone` reasons: from the player's back along the gun, `FRIENDLYFIRE.bodyM` + `clearM` either side, widening by
+  `FRIENDLYFIRE.coneK` × `spread`, as far as a round flies through what it pierces. After `maxS` he looks (every `againS`) for a way to his place that
+  keeps out of the lane, goes through no doorway and is at most `wayMoreM` longer — behind the player, as a rule — and walks it at the order's pace; with
+  none he waits on. NEVER: a round stopped, bent or passed; the player's gun touched; a man already in the lane moved (he walks on out; one waiting whom
+  the gun swings ONTO stands where he is, to the ceiling); a man in a fight of his own (`g.fight.busy`), past the stack on a door order, on a wall
+  charge, in a doorway, stepping out of Sam's way or mid-crossing for the silent squad, or one an enemy HE KNOWS OF has a line to (`picture.ts
+  exposedAt`; with that off, his own contact) — that man goes on, into the fire if his order says so. Nobody runs. The seam is `orders.ts` (the tick,
+  the pose, the stuck clocks); the room fight's own lane hold (`roomfight.ts friendInLine` / `holdShort` / `sideStep`) and `clearline.ts` are not read or
+  changed: a teammate held behind a player who is shooting down a corridor is still that older rule's. State: two named side tables, in a rollback
+  snapshot and in no checkpoint. CHECK `bun run tools/qa/fireline-check.ts` (also `probes.ts fireline`, under `orders`): 14 lines on the room clear's
+  floor with real clicks, both stands, `FIRELINE_BREAK=1` fails ten of them on the frozen stand and nine on the shipped; `PORT=… node tools/qa/fireline-page.cjs` is the same stage on the real page
+  (software adapter), with `?nofireline` beside it. MEASURED: on the build this was cut from. Rule off on the frozen stand, 21 of 21 play-through run digests (every scenario, seed 1)
+  equal the build without the change. The neighbours' families (`orders foursquad pairs roomfight lineoffire friendlyfire friends doortools threshold`):
+  frozen all green (583 lines); shipped 583 green and three probes red — `pairs-hold` (on the expected-red list), `lineoffire-entry` and
+  `threshold-hold`, the last two red on the same line on the build without the change. Paired play-throughs (`playthrough.ts`, shipped, 21 scenarios ×
+  seeds 1–4, on against `TPS_FIRELINE=0`): the same run for run and no wait begun — that tool's player never fires, so it shows no cost and does NOT
+  show the rule working; the staged check and the page check are what show it. NOT SEEN, NOT PLAYED: nothing of this on a GPU; nobody has
+  played it; the numbers are first numbers; a door order past its stack, a wall charge, a doorway, and the gun swung onto a waiting man
+  are read in the module and not staged; an opening with no door in it has no frame for him to wait short of; the wait is at the order layer, so a man no order poses (a drill, the fight's own legs) is not
+  held.

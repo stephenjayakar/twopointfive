@@ -294,13 +294,13 @@ function glassAcrossArm(g: Game, c: Character, dir: Vec3) {
 }
 /** fireWeapon, `through`, under the destruction's switch AND the aimed-fire piece's (COVERFIRE.on — with it off a round fired pressed to a partition counts
  *  nothing, as on the engine's own build): the static between the gun shoulder and the muzzle takes the round as the wall engine counts one
- *  (wallbreak.ts WallBreak.round — a breakable it has indexed, at the cell the arm crosses; concrete, steel, a leaf, a pane: nothing, as ever). The same
+ *  (wallbreak.ts WallBreak.round — a breakable it has indexed, at the cell the arm crosses; a wooden leaf as the doors count one, doorblast.ts DOORSHOT; concrete, steel, a pane: nothing, as ever). The same
  *  raycast as the pane's above; no mark, no dust — the round is still nobody's beyond the panel. */
 function wallAcrossArm(g: Game, c: Character, def: WeaponDef) {
   const chaos = chaosOf(g); if (chaos <= 0) return;
   const from = c.bones.upperArmR ?? v3.add(c.pos, [0, 1.4, 0]); const d = v3.sub(c.muzzle, from); const L = v3.len(d); if (L < 1e-3) return;
   const rd = v3.scale(d, 1 / L); const h = g.col.raycast(from, rd, L);
-  if (h && h.index < 1e6) g.destr.walls.round(c.id, v3.mad(from, rd, h.t), rd, h.index, def, chaos);
+  if (h) g.destr.walls.round(c.id, v3.mad(from, rd, h.t), rd, h.index, def, chaos);
 }
 /** The pistol itself poked out through a panel — the gun shoulder and the muzzle on opposite sides of a static or of a leaf standing (as good as) shut: a man
  *  pressed to a door has the reach to put his muzzle out of its far face, and a bore that starts beyond the wood sees nothing of it. fireWeapon puts that round
