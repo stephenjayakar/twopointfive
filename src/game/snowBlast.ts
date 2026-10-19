@@ -48,7 +48,7 @@ export const SNOWBLAST = {
   clodR: 0.1,         // m: the biggest clod's radius
   // ---- the dig: the standing snow about it (snowField.ts digSnowField)
   dig: 1.5,           // × the pan's radius: a hill is dug to nothing this far out (and is itself again half as far on); 0 = hills are left standing
-  digS: 1.5,          // s the dig is asked again each frame (a charge's hole takes the bank's foot a frame or more after the blast: what stood solid then no longer does)
+  digS: 1.5,          // s the dig is asked again each frame (a charge's hole takes the bank's foot a frame or more after the blast: what stood solid then no longer does); the texels are walked again only when what stands there changed
   // ---- the throw: near grains (they must be running: SNOW_LOOK.grains and wind enough to have any lying)
   throwS: 0.14,       // s the blast goes on taking lying grains
   throwShare: 0.5,    // the share of all lying grains it takes over that time
@@ -92,14 +92,16 @@ export function attachSnowBlast(g: Game) {
 /** a restart: nothing is left in the air (the prints' map is cleared by its own owner) */
 export function clearSnowBlast(g: Game) { const s = states.get(g); if (s) { s.live.length = 0; s.turn = 0; s.digs.length = 0; s.restore = true; } }
 /** Once a frame, late (game.ts, beside the prints): the hills a blast dug out. Returns the field's texels that changed, for the g-buffer, or null. A dig is asked
- *  again each frame for SNOWBLAST.digS: the snow box that stood solid under the hill when the blast went off may be taken a frame or more later. */
+ *  again each frame for SNOWBLAST.digS: the snow box that stood solid under the hill when the blast went off may be taken a frame or more later. Asked again with
+ *  the same boxes standing it could not lower a texel, so the field's texels are walked only on a dig's first frame and when what stands in its reach changed
+ *  (snowField.ts digSnowField `keep`, the field's own notes): the field is the same field to the byte, and a wide dig costs its walk once, not every frame. */
 export function stepSnowDigs(g: Game, dt: number): [number, number, number, number] | null {
   const s = states.get(g), F = g.snowField; if (!s || !F) return null;
   let out: [number, number, number, number] | null = null;
   if (s.restore) { s.restore = false; if (restoreSnowField(F)) out = [0, 0, F.w - 1, F.h - 1]; }
   if (!s.digs.length) return out;
   for (const d of s.digs) {
-    const r = digSnowField(F, g.level.boxes, d.x, d.z, d.r, d.serial);
+    const r = digSnowField(F, g.level.boxes, d.x, d.z, d.r, d.serial, true);
     if (r) { s.stats.dug++; out = out ? [Math.min(out[0], r[0]), Math.min(out[1], r[1]), Math.max(out[2], r[2]), Math.max(out[3], r[3])] : r; }
     d.t += Math.max(dt, 1e-4);
   }
