@@ -1,6 +1,6 @@
 // A GUN IS USED FOR WHAT IT IS FOR, AND THE DEFENDERS DRAW FROM THE SAME TABLE (src/game/gunroles.ts GUNROLES; `GUNROLES_BREAK=1` must fail every family)
 //   deal    seven missions over three seeds: every defender carries a row of the table, one belt-fed gun at most and only on a lane or in a big cast, on
-//           the longest line; a pistol only with a hostage in the other hand or on a near post, a quarter of a cast at most; every row puts a man down
+//           the longest line; a pistol only on a near post, a quarter of a cast at most; the man with a hostage in his hand keeps his own gun; every row puts a man down
 //           with one round and is put down by one; the same seed deals the same guns, another seed others
 //   entry   four on a door with an MP7, an issue carbine, a Mk 12 and a Mk 46: the MP7 on the mark at the frame and first through, the two long guns on the
 //           rear marks and last; the same four with issue carbines stack and go as with the switch off
@@ -83,9 +83,12 @@ export async function gunrolesDeal(): Promise<boolean> {
   const withBelt = casts.filter(c => c.men.some(m => m.gun === 'pkm'));
   F.verdict(beltOk.every(Boolean) && withBelt.length > 0 && withBelt.length < casts.length, `one belt-fed gun to a cast at most, on the post with the longest line, and only where that line is a lane (${K.beltLane} m, ${K.beltMin} men or more) or the cast is a big one (${K.beltSquad} men): some casts have one, some have none`, `${withBelt.length} of ${casts.length} casts · with: ${[...new Set(withBelt.map(c => c.id))].join(', ')} · without: ${[...new Set(casts.filter(c => !withBelt.includes(c)).map(c => c.id))].join(', ')}\n    ${withBelt.slice(0, 4).map(c => `${c.id} s${c.seed}: ${c.men.find(m => m.gun === 'pkm')!.name} on ${c.men.find(m => m.gun === 'pkm')!.line} m of ${c.men.length} men`).join(' · ')}`);
   // the pistols
-  const pist = casts.map(c => { const p = c.men.filter(m => m.gun === 'guard9mm'); return p.every(m => m.captor || m.line < K.pistolNear + 0.51) && p.filter(m => !m.captor).length <= Math.floor(c.men.length * K.pistolMax) && c.men.filter(m => m.captor).every(m => m.gun === 'guard9mm'); });
-  const captors = casts.flatMap(c => c.men.filter(m => m.captor)), farPistol = Math.max(0, ...casts.flatMap(c => c.men.filter(m => m.gun === 'guard9mm' && !m.captor).map(m => m.line)));
-  F.verdict(pist.every(Boolean) && captors.length > 0, `a pistol only for a man with a hostage in his other hand, or on a post watching something within ${K.pistolNear} m — a quarter of a cast at most, and never on a long line`, `${count('guard9mm')} pistols · ${captors.length} of them captors' · the longest line a pistol was dealt on: ${f2(farPistol)} m`);
+  const pist = casts.map(c => { const p = c.men.filter(m => m.gun === 'guard9mm'); return p.every(m => !m.captor && m.line < K.pistolNear + 0.51) && p.length <= Math.floor(c.men.length * K.pistolMax); });
+  const captors = casts.flatMap(c => c.men.filter(m => m.captor)), farPistol = Math.max(0, ...casts.flatMap(c => c.men.filter(m => m.gun === 'guard9mm').map(m => m.line)));
+  F.verdict(pist.every(Boolean), `a pistol only on a post watching something within ${K.pistolNear} m — a quarter of a cast at most, and never on a long line`, `${count('guard9mm')} pistols · the longest line a pistol was dealt on: ${f2(farPistol)} m`);
+  // the man with a hostage in his hand: not dealt (the gun his scenario gave him), a pistol only with the `captor` key
+  const keyed = await withSwitch(true, async () => { const o: string[] = []; for (const id of ['hostage-rescue', 'rescue-consulate']) o.push(...(await stage(id, 1)).men.filter(m => m.captor).map(m => m.gun)); return o; }, { captor: true });
+  F.verdict(captors.length > 0 && captors.every(m => m.gun === 'aks74u') && keyed.length > 0 && keyed.every(g => g === 'guard9mm'), 'the man with a hostage in his hand is not dealt: he keeps the short carbine his rescue gave him — a pistol only with the `captor` key', `${captors.length} such men over the rescues' casts: ${[...new Set(captors.map(m => m.gun))].join(' ')} · with the key: ${keyed.join(' ')}`);
   // the same seed, another seed
   const again = await withSwitch(true, async () => (await stage('warehouse-four', 2)).men.map(m => m.gun));
   const first = casts.find(c => c.id === 'warehouse-four' && c.seed === 2)!.men.map(m => m.gun), other = casts.find(c => c.id === 'warehouse-four' && c.seed === 3)!.men.map(m => m.gun);
@@ -214,7 +217,8 @@ export async function gunrolesOff(): Promise<boolean> {
   const reg = knobRegistry(), page = /GUNROLES\.on = !q\.has\('nogunroles'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
   F.verdict('GUNROLES.on' in FROZEN_HOLDS && reg.GUNROLES === GUNROLES && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?nogunroles', `frozen hold: ${(FROZEN_HOLDS as any)['GUNROLES.on']} · registered ${reg.GUNROLES === GUNROLES} · pageSwitches writes it: ${page}`);
   const R: any = await hushed(() => rig(17, { stage: false })); GUNROLES.on = true; const snap = knobsSnapshot(R.game); const has = !!snap.tables.GUNROLES; delete snap.tables.GUNROLES; applyKnobs(R.game, snap); const after = GUNROLES.on; Object.assign(GUNROLES, DEFAULTS);
-  F.verdict(has && after === false, 'a recording carries the table, and one from before it replays with the switch off', `carried ${has} · after a file without it: on = ${after}`);
+  GUNROLES.on = true; const snap2 = knobsSnapshot(R.game); const carries = (snap2.tables.GUNROLES as any)?.captor === false; delete (snap2.tables.GUNROLES as any).captor; applyKnobs(R.game, snap2); const day = GUNROLES.captor; Object.assign(GUNROLES, DEFAULTS);   // (a file of the day the hostage holder was dealt a pistol: the table without the key)
+  F.verdict(has && after === false && carries && day === true, 'a recording carries the table, and one from before it replays with the switch off — one from the day the man with a hostage was dealt a pistol replays with him dealt one', `carried ${has} · after a file without it: on = ${after} · the captor key carried ${carries} · after a file without the key: captor = ${day}`);
   return F.done();
 }
 

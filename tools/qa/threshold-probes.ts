@@ -783,10 +783,7 @@ export const thresholdLast = guarded(async () => {
   //  teammates to a roamer at their backs before anybody crosses, rule or no rule — and the captor's clock, which that stand deals to the second (samestart.ts: 35 s,
   //  his last step at 28.4 s, after the entry is over on either seed), set to 24 s: his last step at 19.6 s, while the pair is still walking to the stack, as the
   //  frozen stand's shortest-dealt seeds have it)
-  // (… and the cast's guns as they were when these two seeds were picked — every defender the short carbine, gunroles.ts held off: dealt off the table,
-  //  registry seed 32 loses one of the pair with the rule and nobody without it; a two-seed pairing says nothing about the guns, and which seeds this
-  //  line should stand on with them dealt is its owner's to pick)
-  const SHIPPED = process.env.TPS_PROFILE === 'shipped', clock: Record<string, Record<string, unknown>> = SHIPPED ? { RESCUE: { resolveSecs: 24 }, GUNROLES: { on: false } } : {}, drop = SHIPPED ? ['PT_DESTR'] : [];
+  const SHIPPED = process.env.TPS_PROFILE === 'shipped', clock: Record<string, Record<string, unknown>> = SHIPPED ? { RESCUE: { resolveSecs: 24 } } : {}, drop = SHIPPED ? ['PT_DESTR'] : [];
   const [on, off] = await Promise.all([playthrough({ PT_TOOL: 'threshold' }, SEEDS, { ...clock, DOORTOOLS: { thrLast: true } }, scn, drop), playthrough({ PT_TOOL: 'threshold' }, SEEDS, { ...clock, DOORTOOLS: { thrLast: false } }, scn, drop)]);
   const thr = (r: any) => (r.entries ?? []).find((e: any) => e.tool === 'threshold'), shot = (r: any) => (r.clock?.log ?? []).filter((x: [number, string]) => /^executed/.test(x[1])).length;
   const round = (r: any) => r.clock ? r.clock.t0 + r.clock.secs + RESCUE.aimSecs : NaN, num = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
