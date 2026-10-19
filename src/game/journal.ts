@@ -74,6 +74,7 @@ import { STICKY } from './stickycam';
 import { CUES } from './cues';
 import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
+import { GUNLOOK } from './gunlook';
 import { BIGSLOT, KITDEAL } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
@@ -102,6 +103,7 @@ import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
+import { KITLOAD } from './kitload';
 import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
 import { RESCUEFLUSH } from './rescueflush';
@@ -272,6 +274,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
   if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
   else if ((k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).heard === undefined) GUNSLOTS.heard = false;   // (…and from before a teammate's quiet round was heard: it reached nobody)
+  if (!k.tables.GUNLOOK) GUNLOOK.on = false;   // (a file from before each gun had its own look: every row was its stand-in — its muzzle, its flash and its reload's beats the stand-in's)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge was pouches, nobody carried a hammer)
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
@@ -340,6 +343,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
   if (!k.tables.SQUADDEAL) SQUADDEAL.on = false;   // (a file from before a level with no squads block was handed squads cut from its rooms: its defenders were one pool)
   if (!k.tables.STAYASK) STAYASK.on = false;   // (a file from before squads that stay in their rooms missed a silent room: nobody asked after another squad there, and nobody went)
+  if (!k.tables.KITLOAD) KITLOAD.on = false;   // (a file from before a card's weight was a man's pace, notice and footfall: every man moved, was seen and was heard the same whatever he carried)
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
@@ -407,7 +411,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof k.flags.stalkAmbient === 'boolean') SNEAK.stalkAmbient = k.flags.stalkAmbient;   // (a recording's own tables did not carry SNEAK when this key came, so it rides with the flags as well, as the fog does: made with the stalk's light taking the walker's own meter, it replays so)
   else if ((k.tables.SNEAK as { stalkAmbient?: boolean } | undefined)?.stalkAmbient === undefined) SNEAK.stalkAmbient = false;   // (…and a file from before the key: the estimate alone, as it was; a run tape that carries the key writes its own value back right after this)
   { const dt = k.tables.DOORTOOLS as { testDoor?: boolean; outsidePlain?: boolean; haltBack?: boolean; threatFirst?: boolean; openAir?: boolean; flowMax?: number; bangWay?: boolean; threatStuck?: number; openHand?: boolean; behindSam?: boolean } | undefined;   // (…from before an entry halted at a door found shut, before 'clear from outside' was one plain order, before the first man in kept his gun on a known threat, and before yards and very large rooms were left unswept: each as it was)
-    if (dt?.testDoor === undefined) DOORTOOLS.testDoor = false; if (dt?.outsidePlain === undefined) DOORTOOLS.outsidePlain = false; if ((dt as { wordNoCan?: boolean } | undefined)?.wordNoCan === undefined) DOORTOOLS.wordNoCan = false; if ((dt as { bangInto?: boolean } | undefined)?.bangInto === undefined) DOORTOOLS.bangInto = false;
+    if (dt?.testDoor === undefined) DOORTOOLS.testDoor = false; if ((dt as { thrPie?: boolean } | undefined)?.thrPie === undefined) DOORTOOLS.thrPie = false; if ((dt as { thrLean?: boolean } | undefined)?.thrLean === undefined) DOORTOOLS.thrLean = false; if (dt?.outsidePlain === undefined) DOORTOOLS.outsidePlain = false; if ((dt as { wordNoCan?: boolean } | undefined)?.wordNoCan === undefined) DOORTOOLS.wordNoCan = false; if ((dt as { bangInto?: boolean } | undefined)?.bangInto === undefined) DOORTOOLS.bangInto = false;
     if (dt?.haltBack === undefined) DOORTOOLS.haltBack = false;   // (…and from before a pair halted on a door the other pair is charging stepped back off it: it stays stacked where it halted, as it was. A recording that carries the key keeps its own.)
     if (typeof k.flags.behindSam === 'boolean') DOORTOOLS.behindSam = k.flags.behindSam;   // (a recording's own tables did not carry DOORTOOLS then either: this key rides with the flags too, so a recording made with it on replays on)
     else if (dt?.behindSam === undefined) DOORTOOLS.behindSam = false;   // (…and a file from before Sam beyond a door kept the squad's own stun can in the kit: the word at a held door banged its pockets wherever he stood)

@@ -187,12 +187,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that list, in the order a level is made (before you touch anything · the idea · the file · rooms, doors, walls · lived-in rooms · light, hour, weather ·
   the mission in the file · the team and its kit · what the player reads · measure it, then say it), every need with what was SEEN when it was learnt and
   the command that checks it; what no tool can ask is marked by eye or by play. `bun run tools/qa/level-needs.ts [name …] [--run] [--jobs 4] [--skip need,…]
-  [--quiet] [--md f] [--json f]` asks the fifteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
-  kit picture · look · lived · floor · lamps · moon · doorway · roof · kit · said) of one level or all, in about a second, a look twin with its plain file.
+  [--quiet] [--md f] [--json f]` asks the sixteen needs a file can answer about what stands AROUND a level (generator · mission · row · music · picture ·
+  kit picture · look · lived · floor · lamps · moon · doorway · roof · kit · response · said) of one level or all, in about a second, a look twin with its plain file.
   The floor itself stays `tools/qa/map-check.ts`'s (structure, size, nav, the scripted runs): `--run` runs that with `--no-runs` and the level's other own
   checks as they stand (export `--check`, level-lint, door-size, second-way-check, lived-check, kitview-plan, level-names-check, floor-order-check,
   quiet-check, lesson-check), four at a time: about 13 s for one level, 90 to 120 s for all. Exit 1 on a FAIL; a NOTE never fails. `NEEDS_BREAK=1` plants
-  gaps in thirteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
+  gaps in fourteen needs on one level in memory (the kit's by emptying every card, whatever the issue table gives) and must find each by its own words
   (exit 1; a MISSED one exits 0). THREE NEEDS ARE NEW CHECKS: `doorway` (a wall decal across a door's opening: the dado rule had no check), `roof` (a drawn
   slab in `weather.ts roofsOf`'s band: the floodlit shed's), `kit` (as issued, through the game's own cards and pouches, at every size the row offers, who
   comes with nothing but a gun; the team's size is set before a card is read, so an issue shared out over the men who come is read as shared). AS THE 36
@@ -232,7 +232,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `kitView` hide list names box ids, whoever shifts the level's box ids builds it again from the generator's box range in the same step. AS THE 36 LEVELS
   STAND on build 1e1f943, both stands the same: 488 PASS, no FAIL, 65 NOTE (the two `doorway` reds and the snatch's footstep zone of the bullet above were
   mended by their owners); `NEEDS_BREAK=1` exits 1 on both. With `--run` every one of the levels' own checks exits 0 on both stands. STILL NOT IN A GATE (its owner's call). NOT ASKED YET, each waiting on
-  its own work: a need for a level's response-team block, and one for a rescue that ends only on extraction or a full clear. Nothing here was seen on a
+  its own work: a need for a level's response-team block (asked since: the bullet at the foot), and one for a rescue that ends only on extraction or a full clear. Nothing here was seen on a
   GPU or played, and nobody has gone through the 36 levels by eye against the skill's by-eye items.
 - **The level skill after the shield left the game** (10-18; the skill's words only). Its kit item said a level's own card that hands out a tool the game
   has switched off is dropped whole; with the ballistic shield cut, a card that still says `shield` is REFUSED as the file loads, in words
@@ -252,3 +252,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cleared"). Its mission section gains one item for whoever lays out a rescue: the team's start mark (`scenarios.rescue.team.sam`) is where the hostages are
   led to, so it wants standing room and a way back a hostage can walk; said as the game is now, since the way out being the way in is an open call. No need
   was added to `tools/qa/level-needs.ts`: `probes.ts rescueend` walks each rescue's hostages out. On build ab96d87, both stands: 488 PASS, no FAIL, 65 NOTE.
+- **The level skill asks whether a response team comes (`response`, the sixteenth need of `tools/qa/level-needs.ts`).** The rule and which levels have a
+  team are `docs/agents/enemies.md`'s ("The response team is the level's own", "A squad's raid brings a level's team too") and `docs/level-format.md`'s
+  (`response`): nothing of them is said again here. The need only asks that a level with a mission row has ANSWERED, from files, standing no floor up.
+  WITH a `scenarios.response` block (the office's is `levels/office.scenarios.ts`'s): its `why` is a sentence (over 40 characters, as
+  `response-check.ts` asks), and a look twin carries the same block word for word, else FAIL; and a NOTE when no row of the level is one the block
+  answers (`qrf.ts live()`: a `raid` block is called only inside a squad's clear that is no rescue, any other only outside every squad mission; the
+  office's plain night is no row). WITHOUT one: the level has a line in the tool's own table `NOBODY_COMES` (level, and why nobody comes in a few
+  words; the long form stays the two bullets of enemies.md), else a NOTE, never a FAIL: a new level is asked, not stopped. In the table AND carrying
+  a block is a FAIL (one is stale); a name in the table that is no level with a row stops the tool. Lessons are not asked. The need first read the
+  enemies.md lists as prose and a review showed that passing levels on any word after the list (a level with its block deleted among them): hence a
+  table. `block` and `hall` are in neither on purpose, so they are the need's two NOTEs: enemies.md says either would suit a team and has none yet,
+  the maintainer's call. Marks, ways and a call played through stay `bun run tools/qa/response-check.ts`'s (about 90 s, so not in `--run`); it plays
+  calls on the levels its lines name, not on every level of its `WITH` list. `NEEDS_BREAK=1` plants the unanswered level, then a block with a
+  one-word `why` under a name the table holds beside a twin with another block, with rows neither kind of block answers: three FAILs and three NOTEs
+  it must find. On build d5382d5, both stands: 513 PASS, no FAIL, 67 NOTE (27 lines of this need: 6 levels with a why, 2 twins, 17 levels in the
+  table, 2 NOTEs). Read from files only: no call was played by this need, and nothing here was seen on a GPU.

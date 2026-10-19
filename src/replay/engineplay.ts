@@ -178,8 +178,8 @@ export class TapePlay {
     this.kitOf(rc.kit);
   }
   private kitOf(k: unknown): void {
-    const c = k as { on?: boolean; members?: unknown[] } | undefined; if (!c || !Array.isArray(c.members)) return;
-    Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, c.members![i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards);
+    const c = k as { on?: boolean; members?: unknown[]; own?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
+    Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, c.members![i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards);
   }
   /** what the simulation reads off the ENGINE, as the recording's engine had it (journal.ts EnvSnap) — before the game is built, and again every step (a quality preset rewrites the debris cap) */
   env(settings: Record<string, unknown>): void { const e = this.tape?.recipe.env; if (e) J.applyEnvSettings(settings as never, e as never); }

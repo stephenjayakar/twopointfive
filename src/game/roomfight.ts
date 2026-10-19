@@ -72,6 +72,7 @@ import { shotEnergy } from './glasspen';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
 import { gunWallIs } from './gunwall';
+import { feedDeal, feedTick } from './gunreload';   // (called inside tickOp only)
 import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside tickOp only)
 import { AIMCOST, feetHold } from './aimcost';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -377,6 +378,9 @@ export class RoomFight {
   // ================================================================ what the other parts call
   /** an operative's muzzle is on a man (or coming onto him) — breach.ts: his sweep waits */
   engaged(gd: Guard): boolean { return !!this.ops.find(o => o.gd === gd)?.tgt; }
+  /** seconds he has been ON his man with no round at him from where he stands — a jamb across his bore, his gun in a wall (blockT) —: doortools.ts thrPie
+   *  asks it of a man on a cut, who brings the gun round after the eye */
+  noShot(gd: Guard): number { const O = this.ops.find(o => o.gd === gd); return O?.tgt ? O.blockT : 0; }   // (no man, no count: blockT is not run down once he has let the man go)
   /** an operative is on a man, turning to one, or lost one inside the last `secs` — rescueflow.ts: not the moment to hand him his next errand */
   busy(gd: Guard, secs: number): boolean { const O = this.ops.find(o => o.gd === gd); return !!O && (!!O.tgt || !!O.turn || this.g.time - O.lostAt < secs); }
   /** an operative has a living hostile in his sight right now (target or not) */
@@ -917,6 +921,7 @@ export class RoomFight {
     const g = this.g, gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative;
     gd.skill = S;
     if (gd.state === 'dead') { O.tgt = null; O.turn = null; O.step = null; this.restore(O); return; }
+    if (O.reloadUntil > 0) { const now = gd.weapon.def.reload.dur - (O.reloadUntil - g.time); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true); feedTick(g, c, gd.weapon.def, now - dt, now); }   // (gunreload.ts: his gun's own feeding heard on this clock, the hand's stations dealt — nothing with gunlook.ts off. This reload never dropped anything and does not now)
     if (O.reloadUntil > 0 && g.time >= O.reloadUntil) { gd.weapon.rearm(); O.reloadUntil = 0; }
     if (O.tgt) sideSeen(g, gd);   // (gunslots.ts: a man in front of him — a sidearm that is out stays out)
     // a mate down in his view: said once

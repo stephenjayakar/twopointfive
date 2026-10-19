@@ -118,8 +118,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   every 'they' / 'them' left is the team, as in every other defender line. Words only: said by the same man at the same moment, no draw moved. Left as read:
   "I'm going in for them!" (either reading is true of what he does). ALSO FOUND, the same day: `words-hostage` was RED on the shipped stand at the build head (green on
   frozen) — its line 'the room is the team's: one of them speaks, a teammate answers a beat later' kills every man of theirs to make the room the team's, and
-  under the new ending (`RESCUEEND.on`: nobody of theirs left = won `clearSecs` 1.5 s later) the run was over before the teammate's answer at +2.4 s. The check
-  now holds that wait off while it listens (the exchange in a taken room is what it asks). WHAT A PLAYER GETS IS UNCHANGED AND NOT MENDED: when the kill that
-  clears the building is also the one that makes the room the team's, she asks "Is it over?" and the end card comes 1.5 s later with the teammate's answer
-  never said — a claim put to the rescue's owner (hold the cleared ending until the answer has had its beat, or leave the card as the answer). After it
+  under the new ending (`RESCUEEND.on`: nobody of theirs left = won `clearSecs` 1.5 s later) the result came before the teammate's answer at +2.4 s. THE RED
+  WAS THE CHECK'S, NOT THE GAME'S: its listening stopped at the result. The answer is said all the same (`rescue.ts voices()` runs on after the result; the
+  rescue's owner measured it on three levels: she asks at once, the result at +1.5 s, his answer at +2.4 s, the end card at +3.5 s over the rest of his
+  bubble), and the check now listens the beat out and hears it on both stands. A first note here said the answer was never said in play: that was wrong.
+  Left for play: whether the card coming over his line reads well (a presentation call in the debrief's file, nobody is building it). After it
   `probes.ts words` (8) and `rescueflush` are ALL PASS on both stands. Read, not heard; never seen on a GPU.
+- **Read 10-19, left as they are: the office's response lines keep 'the west stairwell' and 'nobody west of the lobby arch'.** The office names its
+  own places with bearings all through (the same team says 'south lot' and 'stack on the break room west door', the handler 'Fire exit, east end.', the held
+  worker 'They come up the west stairs.'), and men who work a building speak that way: the lines fit who says them. The no-compass rule is for what the
+  player steers by: a row on the HUD, a door's name on the squad's menu. A rewording was built and taken back out, for a reason the next session needs:
+  A BUBBLE'S TEXT IS IN THE RUN DIGEST (digest.ts folds it to length + hash, and a held civilian's bubble stays up by its length), so changing a line that is said
+  under a switch that already exists makes every recording in which it was said replay to a different digest. A changed line is therefore a key of its own
+  that the journal carries (journal.ts, as `ORDERS.inWay` was), or it is a line no recording can hold yet. Taking the bearings out of the office's speech is
+  that kind of job, over a dozen lines and two door labels, and nobody has asked for it. Also read that day, all fit: the levels' own response lines (site,
+  team, tag and way phrases; no other level's `response` block says a bearing: seven files read). The hostage check's last line ('and then they are quiet')
+  listened one step on the shipped stand, where the result is already in: it now listens six seconds there.

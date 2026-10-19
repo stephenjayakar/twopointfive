@@ -59,10 +59,12 @@ import { coverSeen, coverBlind } from './coverfire';
 import { GLASS } from './glass';
 import { shotEnergy } from './glasspen';
 import { kitPistol } from './kit';
+import { feedDeal, feedDrop, feedStarts, feedTick } from './gunreload';   // (called inside the reload beat only)
 import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called inside startReloadBeat only)
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
+import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A/B switches for the AI passes (the QA probes flip them to print before / after off the same build; play never touches them): motion acuity in the sight
@@ -285,7 +287,7 @@ export function sightGain(g: Game, gd: Guard, dist: number): number {
   const T = g.tune; const light = g.player.visibility; const distF = distTerm(dist);
   const moving = AI_TUNE.motionAcuity ? motionFactor(g, gd, dist) : (Math.hypot(g.player.char.vel[0], g.player.char.vel[2]) > 2 ? 1.5 : 1);   // (the switch is the QA table's before / after; play runs the acuity)
   let rate = T.detectRate * Math.pow(light, 1.5) * distF * (g.player.crouch ? 0.75 : 1) * moving * clamp((gd.smokeTrans - 0.3) / 0.5, 0, 1) * (escalationOf(g) >= 1 ? KEEN : 1);   // (an alarmed floor is actually looking: a quarter quicker on the uptake)
-  rate *= attentionSideK(g, gd, g.player.char.pos);   // (attention.ts: 1 — but for a man whose attention is on a thing, of somebody outside what he is looking at; the point-blank floor below stands whole)
+  rate *= attentionSideK(g, gd, g.player.char.pos) * loadSeen(g, 'player');   // (attention.ts: 1 — but for a man whose attention is on a thing, of somebody outside what he is looking at; kitload.ts: what his card makes of his shape — 1 with its switch off or no card on him; the point-blank floor below stands whole)
   if (dist < 1.8) rate = Math.max(rate, 3.5 * closeNearK(g, gd, dist));   // (close.ts: 1 unless its switch is on — then a shape at his elbow in the DARK is not seen for being near)
   if (gd.state === 'alert' || gd.state === 'search') rate *= 2.2;
   return rate;
@@ -300,7 +302,7 @@ export function sightGainOn(g: Game, gd: Guard, o: Guard, dist: number): number 
   const moving = AI_TUNE.motionAcuity ? motionCore(gd, o.char.pos, v, light, dist) : (Math.hypot(v[0], v[2]) > 2 ? 1.5 : 1);
   const smoke = pairSmoke(g, gd.char, o.char);   // the smoke between them thins the sight of him as it does of Sam, in the same place in the formula (roomfight.ts marches the pair; 1 = clear / not marched)
   let rate = T.detectRate * Math.pow(light, 1.5) * distF * (o.char.anim.crouch > 0.5 ? 0.75 : 1) * moving * (smoke < 1 ? clamp((smoke - 0.3) / 0.5, 0, 1) : 1) * (escalationOf(g) >= 1 ? KEEN : 1);
-  rate *= attentionSideK(g, gd, o.char.pos);   // (attention.ts, as for Sam: the partner beside him in a quiet two is seen by the same held eye)
+  rate *= attentionSideK(g, gd, o.char.pos) * loadSeen(g, o);   // (attention.ts, as for Sam: the partner beside him in a quiet two is seen by the same held eye; kitload.ts, as for Sam: a teammate's card — 1 for a man no staging put a card on)
   if (dist < 1.8) rate = Math.max(rate, 3.5);
   if (gd.state === 'alert' || gd.state === 'search') rate *= 2.2;
   return rate;
@@ -879,7 +881,7 @@ export const PAIR_LEGIBLE = 3;
 function pairSightRate(g: Game, gd: Guard, P: Pair, dist: number): number {
   const light = Math.max(g.player.visibility, heldVisibility(g, P));
   const distF = distTerm(dist);
-  let rate = g.tune.detectRate * Math.pow(light, 1.5) * distF * clamp((gd.smokeTrans - 0.3) / 0.5, 0, 1) * (escalationOf(g) >= 1 ? KEEN : 1) * PAIR_LEGIBLE;   // (two men struggling upright, one of them in uniform, are a far easier read than one dark figure keeping still)
+  let rate = g.tune.detectRate * Math.pow(light, 1.5) * distF * clamp((gd.smokeTrans - 0.3) / 0.5, 0, 1) * (escalationOf(g) >= 1 ? KEEN : 1) * PAIR_LEGIBLE * loadSeen(g, 'player');   // (two men struggling upright, one of them in uniform, are a far easier read than one dark figure keeping still)
   if (dist < 1.8) rate = Math.max(rate, 3.5);
   if (gd.state === 'alert' || gd.state === 'search') rate *= 2.2;
   return rate;
@@ -1008,7 +1010,7 @@ function standoffBark(g: Game, gd: Guard, moment: StandoffMoment, force: boolean
 /** Side-step / back-pedal along the current nav path (followPath's tolerances and easing, but the body is not turned to it — the standoff keeps his chest to the
  *  pair — and no stuck side-step of its own: notGettingAnywhere watches the leg). True once the path is consumed. */
 export function stepAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean {
-  const c = gd.char; speed = conditionPace(g, gd, speed);   // (condition.ts: a hurt man's legs, whoever asks for them)
+  const c = gd.char; speed = teamLegs(g, gd, conditionPace(g, gd, speed));   // (condition.ts: a hurt man's legs, whoever asks for them; kitload.ts: × a teammate's card, inside that cap)
   if (unstickFirst(g, gd, dt)) return false;   // (a side-step off a stranded cell first, as followPath: un-stick)
   while (gd.pathI < gd.path.length) {
     const wp = gd.path[gd.pathI]; const dx = wp[0] - c.pos[0], dz = wp[2] - c.pos[2]; const d = Math.hypot(dx, dz);
@@ -1565,18 +1567,22 @@ export function teamLit(g: Game, gd: Guard): boolean {
 export function teamPaced(g: Game, gd: Guard): boolean { return PACE.on && gd.team === 'operative' && !!gd.unit && fightLive(g); }
 /** the speed his legs may be asked for (PACE.max for the team; anybody else: as asked) */
 export function teamPace(g: Game, gd: Guard, speed: number): number { return conditionPace(g, gd, silentPace(g, gd, teamPaced(g, gd) ? Math.min(speed, PACE.max) : speed)); }   // (… and a SILENT squad's walk under that: silent.ts)
+/** the speed his legs GET for a leg asked at `speed` (already teamPace's): × what his card weighs (kitload.ts) — on top of the caps, which so scale with the
+ *  man (a light man is the quieter one too). teamPace is a cap and may be asked twice; this is a factor — ONE call a leg, where the leg is walked
+ *  (followPath, stepAlongPath, a scripted man's strafe and settle). As asked for a man with nothing weighed on him */
+export function teamLegs(g: Game, gd: Guard, speed: number): number { return loadPace(g, gd, speed); }
 /** where his muzzle is this frame, wanting yaw `to`: the team's comes round at PACE.turn, and round his FRONT (eased against the body's own yaw, inside the
  *  runner's twist limit: the short way to a point behind him lies across his back, where the limit would hold the gun on the wrong shoulder); anybody else's is on it */
 export function teamTurn(g: Game, gd: Guard, to: number, dt: number): number {
   const c = gd.char; if (!(PACE.turn > 0) || !teamPaced(g, gd)) return to;
-  const rel = wrapAngle(c.aimYaw - c.bodyYaw), want = clamp(wrapAngle(to - c.bodyYaw), -1.5, 1.5), step = PACE.turn * dt;
+  const rel = wrapAngle(c.aimYaw - c.bodyYaw), want = clamp(wrapAngle(to - c.bodyYaw), -1.5, 1.5), step = PACE.turn * loadPaceOn(g, gd) * dt;   // (kitload.ts: a heavy man's muzzle comes round the slower)
   return c.bodyYaw + (Math.abs(want - rel) <= step ? want : rel + Math.sign(want - rel) * step);
 }
 /** his speed this frame, having been `was` last frame: the team picks pace up at PACE.accel at most */
-export function teamLean(g: Game, gd: Guard, was: number, dt: number) { if (gd.speed > was && teamPaced(g, gd)) gd.speed = Math.min(gd.speed, was + PACE.accel * dt); }
+export function teamLean(g: Game, gd: Guard, was: number, dt: number) { if (gd.speed > was && teamPaced(g, gd)) gd.speed = Math.min(gd.speed, was + PACE.accel * loadPaceOn(g, gd) * dt); }   // (kitload.ts: … and by what he carries)
 
 export function followPath(g: Game, gd: Guard, dt: number, speed: number): boolean { // returns true when arrived
-  const c = gd.char; speed = teamPace(g, gd, speed);
+  const c = gd.char; speed = teamLegs(g, gd, teamPace(g, gd, speed));   // (… × his card: kitload.ts, here and nowhere above — a caller hands in the pace it asks for)
   if (unstickFirst(g, gd, dt)) return false;   // a side-step off a stranded cell comes first (un-stick, above); the frame it ends the goal is planned afresh and walked from here on
   if (g.tune.tactics && !runnerFled(gd) && doorGate(g, gd, dt, speed)) return false;   // pursuit tactics (tactics.ts): a kill-zone doorway ahead on this path — he stacks on the jamb, calls it, waits for a second man and they take it as a drill; the gate has his feet meanwhile (false at once for everybody else)
   if (LANES.on && !runnerFled(gd) && laneGate(g, gd)) return false;   // a lane that cost them (lanes.ts): his way lies down floor his side knows a gun covers — re-planned at the lane's price, and with no way round he is stopped short of it (false at once for everybody but a room fight's defenders with a lane known)
@@ -1683,7 +1689,7 @@ export function doorCells(g: Game): Map<number, Door> {
  *  seconds, a kick a gunshot's worth of noise: neither is vanishing). `keyed` (a guard's own walk): doors cost nothing and stop nobody. Not expanded past `maxM`
  *  metres of path. secs / metres per cell, Infinity = not reached. */
 function floodFrom(g: Game, from: Vec3, maxM: number, keyed = false): { secs: Float32Array; metres: Float32Array } {
-  const nav = g.col.nav, W = nav.W, H = nav.H, N = W * H, cs = nav.cell; const sprint = Math.max(1, g.tune.playerSprint);
+  const nav = g.col.nav, W = nav.W, H = nav.H, N = W * H, cs = nav.cell; const sprint = Math.max(1, g.tune.playerSprint * loadSprintOn(g));   // (kitload.ts: as fast as his card lets him run)
   const secs = new Float32Array(N).fill(Infinity), metres = new Float32Array(N).fill(Infinity); const closed = new Uint8Array(N);
   const DC = doorCells(g);
   let sx = Math.floor(from[0] / cs), sz = Math.floor(from[2] / cs);
@@ -2387,14 +2393,14 @@ export function updateGuard(g: Game, gd: Guard, dt: number) {
   if (gd.muzzleEvalT !== g.time) muzzleCheck(g, gd, upper === 'aim' ? (aimAt ?? aimAhead(c)) : null, dt);
   if (!gd.pinned) gunWallCheck(g, gd, upper === 'aim' ? 'aim' : null, aimAt, dt, gd.state === 'alert');   // …and a wall inside the raised gun's reach does the same (gunwall.ts; nothing with its switch off)
   const lowered = gd.muzzleDown || duck || staggered;   // the gun down: for a colleague in the line, with his own head down under fire (suppression), or doubled over a ring airfoil — the same low ready ('lowLong' on the carbine, the animator's mapping)
-  c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
+  c.anim.speed = moveSpeed; c.anim.upper = lowered ? 'none' : upper; c.anim.crouchTarget = crouch; c.anim.lean = 0; c.anim.stance = lowered ? 'lowReady' : 'none';   // (the tactical stances the AI holds by itself: muzzle down for a colleague, head down under fire — otherwise none and standing, and a script that just ended must not leave one on him)
   gunWallPose(g, c);
   c.anim.reverse = moveSpeed > 0.2 && c.vel[0] * Math.sin(c.bodyYaw) + c.vel[2] * Math.cos(c.bodyYaw) < -0.3 * moveSpeed;   // moving against his facing (the standoff's back-off and side-step round the ring keep his chest to the pair): the cycle plays backwards, as the player's back-pedal does — and worked out afresh every frame, so nothing (a hold that ended mid-haul) leaves it stuck on him
   c.update(dt);
   attachFlashlight(g, gd, dt);
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
   if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) {
-    const loud = tread(g, c.pos, moveSpeed > 2 ? 0.8 : silentStep(g, gd) ?? 0.33, false);   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
+    const loud = tread(g, c.pos, (loadGait(g, gd, moveSpeed) > 2 ? 0.8 : silentStep(g, gd) ?? 0.33) * loadHeard(g, gd), false);   // (kitload.ts: a teammate's card — the gait he was asked for, × what he rattles)   // (walking steps carry the walk clip's retime — 1.06 m/s natural, ~1.4x the steps per metre — at the old per-second loudness: 0.45 x 0.73; the run's cadence is unchanged; × the floor he is on, floor.ts — presentation only, nobody hears a guard)
     if (!staff) g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud, who: c.id });   // …but a UNIT's footfall is a sound in the world for the side that hunts him (teams: hearingCheck stepIsThreat) — the staff's stay presentation, as ever
   }
 }
@@ -2598,7 +2604,9 @@ export function inHand(gd: Guard): 'torch' | 'weapon' | null {
 /** The magazine is empty: he stands there changing it for the row's reload.dur (the beat the fire sites count down — no round leaves meanwhile), says so, and the
  *  slide-back clack plays at him. */
 export function startReloadBeat(g: Game, gd: Guard) { if (gd.second && sideOutAlert(g, gd)) return;   // (gunslots.ts: a teammate dry on a man close in front of him goes to his sidearm — no magazine change yet)
-  const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); g.audio.play('magOut', c.pos, 0.5); g.say(gd, 'reloading!'); }
+  const c = gd.char; gd.reloadT = gd.weapon.def.reload.dur; gd.weapon.burst = null; c.anim.reload(); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true);
+  if (!feedStarts(gd.weapon.def)) g.audio.play('magOut', c.pos, 0.5);   // (gunreload.ts: a belt gun's or a tube gun's first sound is its own, on its beat — tickReloadBeat. The clack as ever with gunlook.ts off)
+  g.say(gd, 'reloading!'); }
 /** …counted down each frame he could otherwise fire; the frame it runs out the gun is simply full again (his spares are bottomless) and the NEXT frame may fire.
  *  A row that stages its reload (reload.out — the long guns; the sidearm's beat is one undivided 1.7 s and drops nothing) lets the empty go the frame the beat
  *  crosses `out`: a rifleman's thirty-round box clatters down out of the receiver (a 'mag' item with fill 2: throwables draws the long bakelite box) — physical,
@@ -2606,10 +2614,13 @@ export function startReloadBeat(g: Game, gd: Guard) { if (gd.second && sideOutAl
 export function tickReloadBeat(g: Game, gd: Guard, dt: number) {
   const w = gd.weapon, R = w.def.reload; const before = R.dur - gd.reloadT;
   gd.reloadT -= dt;
-  if (R.out !== undefined && before < R.out && R.dur - gd.reloadT >= R.out) {
+  // EACH GUN FED ITS OWN WAY (gunreload.ts; nothing with gunlook.ts off or a row with no model): the sounds of his gun's own feeding as his beat passes them, the
+  // hand's stations dealt to his animator, and what falls drawn as what it is — nothing at all out of a tube gun (`drop` null; undefined = the box that always fell)
+  const drop = feedDrop(w.def); feedDeal(gd.char.anim, gd.char.anim.longGun ? w : null, true); feedTick(g, gd.char, w.def, before, R.dur - gd.reloadT);
+  if (R.out !== undefined && drop !== null && before < R.out && R.dur - gd.reloadT >= R.out) {
     const c = gd.char; const h = c.bones.handR ?? v3.add(c.pos, [0, 1.1, 0]); const d = c.gunDir;
-    const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.vel[0] * 0.5 + d[0] * 0.3, -0.4, c.vel[2] * 0.5 + d[2] * 0.3], { fill: 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
-    it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 });
+    const it = g.items.spawn('mag', [h[0] + d[0] * 0.12, Math.max(0.3, h[1] - 0.1), h[2] + d[2] * 0.12], [c.vel[0] * 0.5 + d[0] * 0.3, -0.4, c.vel[2] * 0.5 + d[2] * 0.3], { fill: drop ?? 2, who: c.id, heading: c.aimYaw, yaw: c.aimYaw });
+    it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: drop === 5 ? 0.6 : 0.8 });
   }
   if (gd.reloadT < 0) w.rearm();
 }
