@@ -54,6 +54,7 @@ import { WORDS } from './words';
 import { watchedPlace } from './dialogue';
 import { DOORMANNERS } from './doorway';
 import { rearPinOf, rearSees, roomKept } from './rearwatch';
+import { gunLane } from './gunroles';   // (called inside tick only)
 import { watchablesAt, type Watchable } from './roomfit';
 
 /** The knobs (__game.cover.knobs). */
@@ -504,7 +505,7 @@ export class Cover {
       return pool.map(L => { if (!L.can.includes(gd)) return 0;
         const turn = Math.abs(wrapAngle(yawTo(p, L.o.at) - gd.char.aimYaw)), behind = gd !== last && behindOf(gd, L.o.at);
         // (never nothing: the least thing he can take beats standing with his gun down beside an opening nobody has)
-        return Math.max(0.05, 10 * L.w * (behind ? K.behindK : 1) - 0.25 * flat(p, L.o.at) / K.reach - 0.35 * turn / Math.PI + (J && J.o === L.o ? K.sticky : 0)); }); });
+        return Math.max(0.05, 10 * L.w * (behind ? K.behindK : 1) - 0.25 * flat(p, L.o.at) / K.reach - 0.35 * turn / Math.PI + (J && J.o === L.o ? K.sticky : 0) + gunLane(gd, flat(p, L.o.at), K.reach)); }); });   // (gunroles.ts: the far opening is a long gun's before it is a pistol's — 0 with its switch off, and for a rifle)
     const used = pool.map(() => false), cur: number[] = []; let best: number[] = hands.map(() => -1), bs = -Infinity;
     const rec = (i: number, s: number) => {
       if (i === hands.length) { if (s > bs + 1e-9) { bs = s; best = [...cur]; } return; }
