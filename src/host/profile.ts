@@ -533,6 +533,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STEALTHPOSE.on': 'TPS_STEALTHPOSE=1',
   'GEAR.on': 'TPS_GEAR=1',
   'WORDS.on': 'TPS_WORDS=1',
+  'WORDS.doors': 'TPS_DOORNAMES=1',
   'UNSEEN.on': 'TPS_UNSEEN=1',
   'HOLDFIRE.on': 'TPS_HOLDFIRE=1',
   'SILENT.stackSet': 'TPS_SILENTSET=1',

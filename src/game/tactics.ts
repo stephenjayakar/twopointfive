@@ -49,7 +49,7 @@ import { sideShotEnergy } from './glasspen';
 import { detonateStun } from './combat';
 import { placeName, isOffice, ownPlace } from './dialogue';
 import { WORDS } from './words';
-import { doorSaidName, shorthandId } from './doornames';
+import { doorSaidName, doorWrittenName, shorthandId } from './doornames';
 import { doorWords } from './orders';
 import { SUPPRESSION } from './suppression';
 import { lookSince } from './pressure';
@@ -787,11 +787,12 @@ function gateCall(g: Game, gd: Guard, G: Gate) {
   // 'this door' of one no named floor is beside; and a defender's callsign is the player's label for him, no name for the net: teams.ts spokenName)
   const dn = doorLabel(G.door), own = WORDS.on && !isOffice(g.level), at = own ? ownPlace(g.level, G.door.frameCentre) : null;
   const said = own ? doorSaidName(G.door) ?? (shorthandId(G.door.def.name) ? null : doorWords(G.door)) : null;   // (ONE name a door: the squad's own words for it where its id reads as words or doornames.ts names it — the room nearest its frame is only the fallback, and was the wrong room's name for a door between two)
-  const door = !own ? `the ${dn} door` : said ? `the ${said}` : at && at.d < 1.5 ? `${at.rect.name} door` : 'this door';
+  const wrote = !own ? doorWrittenName(G.door) : undefined;   // (the office: its men say a door its level has named by that name, as the squad's row does — one name a door)
+  const door = !own ? wrote ? `the ${wrote}` : `the ${dn} door` : said ? `the ${said}` : at && at.d < 1.5 ? `${at.rect.name} door` : 'this door';
   const vm = rec.victim ? g.guards.find(o => o.callsign === rec.victim) : null, victim = vm ? spokenName(vm) : rec.victim;
   const line = rec.why === 'rounds' ? `taking rounds through ${door} — nobody through it, on the wall with me`
-    : rec.why === 'press' ? `they're in there — ${own ? door : `${dn} door`}, stack on me, charge first`
-    : victim ? `${victim}'s down in ${door}way — hold short of it, stack on me` : `man down at ${door} — hold, don't go through`;
+    : rec.why === 'press' ? `they're in there — ${own ? door : wrote ?? `${dn} door`}, stack on me, charge first`
+    : victim ? `${victim}'s down in ${WORDS.doors && !/door$/.test(door) ? door : `${door}way`} — hold short of it, stack on me` : `man down at ${door} — hold, don't go through`;
   g.say(gd, line, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.7);
   // the summons
   let best: Guard | null = null, bd = SUMMON_M;

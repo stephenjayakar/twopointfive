@@ -2753,6 +2753,7 @@ if (on('words-lint', 'words', 'all')) await run('words-lint', async () => (await
 if (on('words-hostage', 'words', 'all')) await run('words-hostage', async () => (await import('./words-probes.ts')).wordsHostage());
 if (on('words-off', 'words', 'all')) await run('words-off', async () => (await import('./words-probes.ts')).wordsOff());
 if (on('words-routes', 'words', 'all')) await run('words-routes', async () => (await import('./words-probes.ts')).wordsRoutes());   // every level's patrol routes are said as plain words
+if (on('words-doornames', 'words', 'all')) await run('words-doornames', async () => (await import('./words-probes.ts')).wordsDoorNames());   // a level names its own doors where the rooms cannot (scenarios.doorNames, WORDS.doors), and the list of doors still called by a bearing
 if (on('words-doors', 'words', 'all')) await run('words-doors', async () => (await import('./words-probes.ts')).wordsDoors());   // a shorthand door id is said by the rooms it joins, one name a door (doornames.ts)
 if (on('words-frag', 'words', 'all')) await run('words-frag', async () => (await import('./words-probes.ts')).wordsFrag());   // a refused squad frag says who is in it: hostages, the snatch's man by name, a civilian
 if (on('words-log', 'words', 'all')) await run('words-log', async () => (await import('./words-probes.ts')).wordsLog());   // the log's own rows: a teammate by name, a line filed once, one CONTACT a second
