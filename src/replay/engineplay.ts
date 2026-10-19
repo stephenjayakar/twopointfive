@@ -323,10 +323,11 @@ export class TapePlay {
     // …or wherever the viewer has put it (`free`): the page's camera only — the game's own was laid from the tape in stepOne and is never this one
     // A SLOW REPLAY IS DRAWN BETWEEN ITS STEPS (slowBlend above): this frame's place between the last two, the recorded camera's too, and the picture's own clocks
     // (the smoke, the particles, the shaders' time) run on the frame's share of the pace instead of standing for the frames a step lasts. The mixer keeps the
-    // steps' clock. Paused, the picture stands where it is, between the two; a script's steps (`run`), a seek and the tape's end are drawn on the step itself.
-    const T = this.tape, tw = this.slow(), blent = !!tw && !tw.stale, a = blent && tw!.have >= 2 && T && this.f < T.ticks ? slowBlend(this.owed, this.tAt[this.f + 1] - this.tAt[this.f]) : 1;
-    if (!tw) { const lt = L.tween; if (lt && !lt.stale) lt.rest(); }   // (the pace is up again: the men's palette on the GPU is the last step's)
-    const pdt = blent && this.playing ? wall * this.speed : dt, tPic = a < 1 ? L.time - (1 - a) * this.lastDt : L.time;
+    // steps' clock. A replay that STANDS — paused, a note being typed, at its end — rests ON its step, as a script's steps (`run`) and a seek do: the picture is
+    // then what a note is stamped with, what a click on the floor reads and what the map shows. Playing on, the picture starts from that step: it never steps back.
+    const T = this.tape, tw = this.playing ? this.slow() : null, blent = !!tw && !tw.stale, a = blent && tw!.have >= 2 && T && this.f < T.ticks ? slowBlend(this.owed, this.tAt[this.f + 1] - this.tAt[this.f]) : 1;
+    if (!tw) { const lt = L.tween; if (lt && !lt.stale) lt.rest(); }   // (standing, or the pace is up again: the men's palette on the GPU is the last step's)
+    const pdt = blent ? wall * this.speed : dt, tPic = a < 1 ? L.time - (1 - a) * this.lastDt : L.time;
     const v = this.view(a < 1 ? tw!.camAt(a) : null);
     cam.pin = { look: v.look, yaw: v.yaw, pitch: v.pitch, dist: v.dist }; cam.fov = v.fov; cam.kick = this.simCam.kick;
     // the tube: the run's own value frame for frame until the viewer asks otherwise; then eased on the wall's clock (paused too), and back onto the run's
@@ -341,7 +342,7 @@ export class TapePlay {
     L.hud?.setCaption('', ''); L.hud?.setTimeline(null, () => { /* */ });
     cam.kickIn();
     try { g.fogLift(this.nofog, tube, g.viewPx(cam, h.canvas));   // (the fog taken off the picture and its HUD, the infrared lines the viewer's tube shows or does not, and laser lines / tracers re-fit to THIS picture's pixel — the step sized them for the recording's view — for this draw only; Game.fogBack puts the step's own lists back)
-      if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own; at 1 — the tape's end — it hands the men's palette back)
+      if (blent) { try { tw!.pose(a); L.render(cam, tPic, pdt, L.present()); } finally { tw!.unpose(); } }   // (the blend hangs on the drawn things for the render alone: the HUD below, and the next step, read the game's own)
       else L.render(cam, L.time, pdt, L.present());
       L.hud?.update(g, cam, h.canvas); L.bubbles?.update(g, cam, h.canvas); }
     finally { g.fogBack(); cam.kickOut(); }

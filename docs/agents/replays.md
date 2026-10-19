@@ -398,8 +398,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   under `Game.fogLift` / `fogBack`, so the men the lifted fog shows are blended too), `draw()` poses at `slowBlend(owed, next step's length)` for the render
   alone and un-poses before the HUD. The men, what they carry, doors, carried lights and the recorded camera move on every frame; the smoke, the particles
   and the shaders' clock are handed the frame's share of the pace (`wall × pace`) instead of a whole step every fourth frame. The picture runs one step
-  behind the game, as it does in live play. Paused, it stands where it is; a script's `run(n)`, a seek and the tape's end rest the blend and draw the step
-  itself. ONLY THE PICTURE: the steps run are `paceFrame`'s — the loop as it stood, moved into a function — the same steps in the same order at any pace.
+  behind the game, as it does in live play. A replay that STANDS — paused, a note being typed, at its end — rests ON its step, as a script's `run(n)` and a seek do: a note's
+  step, a click's spot on the floor and the map are that picture's; playing on starts from the step, never from before it. ONLY THE PICTURE: the steps run are `paceFrame`'s — the loop as it stood, moved into a function — the same steps in the same order at any pace.
   NO SWITCH: at 1× and faster nothing changed (held frame for frame against the old loop), and the page's `TWEEN.on` is not asked — that word is the
   recording's own (it rides the tape's query); a slow replay's frames are the viewer's. NOT DONE: sounds (as above); a tape of uneven steps (one from
   before the fixed step) shows each step's movement over the NEXT step's length — unbroken, a little off the pace; 1× on a 120 Hz display still moves the
