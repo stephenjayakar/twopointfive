@@ -44,7 +44,7 @@ export const SCENARIOS: ScenarioEntry[] = [
   { id: 'warehouse-four', title: 'The warehouse', kind: 'roomclear', squad: 4, level: 'warehouse.json', ways: ['the south-west corner', 'the south-east corner'], untuned: true, group: 'strongholds',
     place: 'A racked hall, a loading dock, a ring of small rooms', lean: 'loud', defenders: 11, squads: true,
     blurb: 'Eleven hold a building that is a ring: whichever door you fight at, someone can walk round to your back.' },
-  { id: 'compound-four', title: 'The compound', kind: 'roomclear', squad: 4, level: 'compound.json', ways: ['the west gate', 'the north gate'], untuned: true, group: 'strongholds',
+  { id: 'compound-four', title: 'The compound', kind: 'roomclear', squad: 4, level: 'compound.json', ways: ['the side yard gate', 'the back gate'], untuned: true, group: 'strongholds',
     place: 'A walled yard, a house of eight rooms, three outbuildings', lean: 'loud', defenders: 11, squads: true,
     blurb: 'Eleven behind a wall. Three gates, two dark. Two open windows on the dark sides. The breaker is in the pantry nobody holds.' },
   { id: 'barracks-four', title: 'The barracks', kind: 'roomclear', squad: 4, level: 'barracks.json', ways: ['the south-east corner', 'the galley back door'], untuned: true, group: 'strongholds',

@@ -126,6 +126,14 @@ export async function cardReplayCheck(): Promise<boolean> {
     const was = cold('background:rgba(5,9,11,0.94);font:10px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;color:#79d69a;'), now = [roads[0], roads[2]].map(([name, text]) => [name, cold(text)] as const);
     verdict(was.length === 3 && now.every(([, bad]) => bad.length === 0), 'the F7 tag and the replay bar hold no mint green, no cool black and no typeface by name',
       `the old tag read by the same scan: ${was.join(' · ')} · now ${now.map(([name, bad]) => `${name}: ${bad.join(' ') || 'none'}`).join(' · ')}`);
+    // THE REPLAY'S PACES (engineplay.ts TAPE_SPEEDS): slow motion is on the list, a step either way is one pace and the ends hold; and the map viewer's own
+    // list (replay.html's <select id="speed">) offers the same paces under the same names, 1× the one it opens on
+    { const { TAPE_SPEEDS, speedStep, speedName } = await import(`${ROOT}/src/replay/engineplay.ts`); const S = TAPE_SPEEDS as number[];
+      const down = S.map(v => speedStep(v, -1)), up = S.map(v => speedStep(v, 1)), list = /<select id="speed"[^>]*>(.*?)<\/select>/s.exec(readFileSync(`${ROOT}/replay.html`, 'utf8'))?.[1] ?? '';
+      const opts = [...list.matchAll(/<option value="([^"]+)"( selected)?>([^<]*)<\/option>/g)].map(m => ({ v: Number(m[1]), first: !!m[2], name: m[3] }));
+      verdict(S.map(speedName).join(' ') === '¼× ½× 1× 2× 4×' && down.join() === [S[0], ...S.slice(0, -1)].join() && up.join() === [...S.slice(1), S[S.length - 1]].join() && speedStep(3, -1) === 0.5 && speedStep(3, 1) === 2
+        && opts.map(o => o.v).join() === S.join() && opts.map(o => o.name).join(' ') === S.map(speedName).join(' ') && opts.filter(o => o.first).map(o => o.v).join() === '1',
+        'a replay plays at ¼× ½× 1× 2× 4× in the game and in the map viewer alike, one pace a step and the ends hold', `named ${S.map(speedName).join(' ')} · a step down ${down.join(' ')} · a step up ${up.join(' ')} · off the list (3): down ${speedStep(3, -1)} up ${speedStep(3, 1)} · the map viewer's list ${opts.map(o => o.name + (o.first ? ' (opens on)' : '')).join(' ')}`); }
     verdict(card && wired && keyToo && toEngine, "the end card has a Replay button only when the page hands it a viewer, armed like the card's other buttons; Shift+F7 goes the same road, and the card's press goes where the viewer's 'Play in engine' goes",
       `menu.ts debrief(): ${card} · main.ts wiring: ${wired} · the key: ${keyToo} · the engine page's address: ${toEngine}`); }
   console.log(`=== cardreplay: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
