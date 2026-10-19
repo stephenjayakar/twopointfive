@@ -815,4 +815,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   centimetre): he stood 0.94 m from the charge, indoors, 0.81 of the blast's share — with the rule off the log's line is the one he got, with it on he is
   down on the blast's step. NOT MEASURED: no tally over seeds (the soak's bot blows no wall charge it stands at); a civilian and a `god` man at the charge
   are in the code and not in the check; never seen on a GPU or played — the body thrown and the down card are the round's own. `nearM` is a first setting
-  for the maintainer's play.
+  for the maintainer's play. THE SETTER'S WORD (10-19, a claim measured by another lane on five walls: the man the squad sends to set a charge stands
+  0.5 m from it as it goes on and takes 1.1 to 1.2 s to pass 1.5 m; a press on his "charge set." killed him five times of five): with the rule on he
+  says "charge set." once he is `nearM` from the charge he set (`WallOp.owes`, said in the stand-off phase; a man who cannot get that far says only
+  the call), not with his hands on it. The trigger refuses nothing and the row's TOO CLOSE is as it was. Rule off: his word on the frame it is set, as
+  before. Check line 12 of `wallkill` (the ward's four: 0.53 m as it goes on, his word 1.15 s later at 1.50 m, blown on the word nobody lost;
+  `WALLKILL_BREAK=1` now fails 7). The squad never blows a wall charge itself: `blow()` is called by the player's trigger, by the order's row released
+  again on a set charge, and by a plan's clock (which does not ask this rule).
