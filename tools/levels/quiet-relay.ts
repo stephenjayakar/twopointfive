@@ -453,7 +453,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [4.75, 2.2, 11.8], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 13, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
   const kitView: KitViewData = { ways: [{ door: 'gate_w', ref: [1.8, 16.6], side: -1, add: kitAdd }] };
-  return { level, scenarios: { quiet: QUIET, kitView }, groups: trace.groups, surfaces };
+  // what a row calls the four ways through the wall (scenarios.doorNames — game/doornames.ts; no bearing in a name): by what is outside or just inside each
+  const doorNames = [{ door: 'gate_s', name: 'wicket' }, { door: 'gate_w', name: 'track gate' }, { door: 'gate_n', name: 'back strip gate' }, { door: 'gate_e', name: 'dish gate' }];
+  return { level, scenarios: { quiet: QUIET, kitView, doorNames }, groups: trace.groups, surfaces };
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------

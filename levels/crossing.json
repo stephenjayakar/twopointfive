@@ -1163,6 +1163,18 @@
         { "name": "the lorry park", "pos": [16, 0, 21.5] },
         { "name": "the shed", "pos": [33, 0, 21.5] }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_n", "name": "customs yard gate" },
+      { "door": "gate_ne", "name": "impound yard gate" },
+      { "door": "gate_s", "name": "lorry park gate" },
+      { "door": "gate_w", "name": "tea stall wicket" },
+      { "door": "gate_e", "name": "ditch wicket" },
+      { "door": "fence_e", "name": "kerb wall door" },
+      { "door": "hut_e", "name": "boom hut back door" },
+      { "door": "rec_w", "name": "records yard door" },
+      { "door": "imp_e", "name": "impound yard door" },
+      { "door": "shed_w", "name": "shed door" }
+    ]
   }
 }

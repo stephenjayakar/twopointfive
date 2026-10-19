@@ -617,6 +617,10 @@
       "ways": [
         { "door": "tm_gate", "set": "pool", "side": -1, "pane": false }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "track gate" },
+      { "door": "gate_e", "name": "far gate" }
+    ]
   }
 }

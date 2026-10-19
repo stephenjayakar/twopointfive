@@ -457,6 +457,10 @@
       "ways": [
         { "door": "lo_gate", "set": "shed", "side": -1, "pane": false }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "generator shed gate" },
+      { "door": "gate_e", "name": "back gate" }
+    ]
   }
 }

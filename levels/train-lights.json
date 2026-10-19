@@ -542,6 +542,10 @@
       "ways": [
         { "door": "tl_gate", "set": "power", "side": -1, "pane": false }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "track gate" },
+      { "door": "gate_e", "name": "far gate" }
+    ]
   }
 }

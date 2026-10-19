@@ -707,5 +707,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // the debrief calls a spot that is no room of the structure
   scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'north corridor', bounds: { ...R.ncorr } }, { name: 'west corridor', bounds: { ...R.wcorr } }] };
   scenarios.kitView = WAREHOUSE_KITVIEW;
+  scenarios.doorNames = [{ door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
   return { level, scenarios, groups: trace.groups, surfaces };
 }

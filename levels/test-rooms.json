@@ -224,6 +224,12 @@
         { "pos": [16.4, 0, 9.6], "aimAt": [14.6, 1.1, 12.9] }
       ],
       "flow": { "corridor": { "x0": 10.12, "x1": 29.88, "z0": 13.06, "z1": 15.34 }, "regions": [{ "id": "a", "door": null, "rect": { "x0": 10.12, "x1": 18.94, "z0": 8.12, "z1": 12.94 } }, { "id": "c", "door": null, "rect": { "x0": 17.06, "x1": 29.88, "z0": 15.46, "z1": 21.88 } }], "route": [{ "id": "a", "name": "west room", "short": "west", "region": "a", "kind": "door", "door": "a", "at": [14.6, 0, 13], "mark": [13.7, 0, 14.75], "watch": [14.6, 1.05, 13], "half": 0.55, "north": true, "call": "door left.", "side": "left", "look": 0.4 }, { "id": "c", "name": "south room", "short": "south", "region": "c", "kind": "door", "door": "c", "at": [20, 0, 15.4], "mark": [19.1, 0, 13.65], "watch": [20, 1.05, 15.4], "half": 0.55, "north": false, "call": "door right.", "side": "right", "look": 0.4 }], "hold": { "ahead": 9, "xMax": 28, "z": 14.2 } }
-    }
+    },
+    "doorNames": [
+      { "door": "a", "name": "room A door" },
+      { "door": "b", "name": "room B door" },
+      { "door": "c", "name": "room C door" },
+      { "door": "ab", "name": "A to B door" }
+    ]
   }
 }

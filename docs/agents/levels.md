@@ -178,7 +178,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pair's layout; the Team & kit screen then shows no cards, and a level's issue card is put on as written)
   and `scenarios.roomClear.wallCharges` (wall charges of its own, whatever the cards carry: nobody is issued one). The listing's row for a mission
   says the sizes it offers, whether the cards can be changed there, the level's own kit, its locked and steel doors against the two door charges a
-  squad is issued (no hammer or shotgun opens steel, and nobody is issued a big-slot tool), whether frags can be ordered at all (never with a hostage,
+  squad is issued (no hammer or shotgun opens steel, and only a team of three or four as issued is lent a big-slot tool: `KITDEAL.more`, menus.md), whether frags can be ordered at all (never with a hostage,
   the man a snatch came for or a civilian in the blast: `squadthrow.ts`), and whether the Team & kit picture has a place for each way in
   (`scenarios.kitView.ways`). A listing, not a gate: it always exits 0.
 - **THE LEVEL SKILL AND ITS ONE COMMAND** (10-18; tools and a list only: no switch, no game code, no level file touched). The maintainer, on a Team & kit
@@ -268,3 +268,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   one-word `why` under a name the table holds beside a twin with another block, with rows neither kind of block answers: three FAILs and three NOTEs
   it must find. On build d5382d5, both stands: 513 PASS, no FAIL, 67 NOTE (27 lines of this need: 6 levels with a why, 2 twins, 17 levels in the
   table, 2 NOTEs). Read from files only: no call was played by this need, and nothing here was seen on a GPU.
+- **Every door a row called by a bearing has a name of its own** (10-19; level data under `WORDS.doors`, the dialogue file's bullet has the switch and its
+  words; no new switch here). `scenarios.doorNames` is written in 25 level files, 96 doors, and `words-probes.ts DOORS_OWED` is empty: a door that turns up
+  called by a bearing is red there until its level names it. WHERE A NAME COMES FROM: the level's own generator, by what the level already knows the door
+  by. A gate the response block names keeps that name ('customs yard gate', 'impound gate', 'street gate': one name a door); another gate is named by what
+  stands outside or just inside it ('lorry park gate', 'tea stall wicket', 'motor pool gate', 'dish gate'); a room's door by the room ('spare room door',
+  'corridor-side pantry door', in the made names' own style); a door of several in one wall by the room beside it ('fire door by bunks 3'); a lesson's door
+  by what the lesson's line calls it ('red door', 'blue door', 'grain store door'). THE TRAINING GROUND (`train-ground.ts finish`) names its two gates in
+  one place, 'track gate' and 'far gate', for every level built on it; a level that writes its own row for a gate keeps it (lights-out, the vault). A look
+  twin takes its plain file's names. THE LEVEL WRITER could not write the block: `serializeLevelData` took every scenario block for an object and wrote a
+  list as fields keyed '0', '1', which the validator refused on the read back; a block that is a list is written as a list now (no file without one
+  changes). Each of the 25 files differs from the build before by its `doorNames` block and nothing else (read back and compared), so no fingerprint
+  moves; `lived-check`'s base moved to this step. CHECKED, both stands unless said: `words` (9 probes; `DOORNAMES_BREAK=1` red), `level`, `quiet`,
+  `registry`, `picks`, `journal`, `response`, `vault`, `lights-out`, `secondway`, `missions`, `lived-check` 407, `lesson-check` 73, `quiet-check`,
+  `kitview-plan`, `level-names-check`, `level-needs` (no FAIL), both typechecks. NOT MINE AND RED ON THE BUILD BEFORE TOO, shipped stand only:
+  `scenario-levels-rescue` (the test rooms' rescue stalls on all six seeds), `checkpoint-autosave`, `checkpoint-civilians`. ONE ROW READ ON THE PAGE (the compound's four, the software adapter, no page error): a man's row says 'on
+  the side yard gate'. NOT DONE: no other row was read on a page, nothing was seen on a GPU or played; the names are words by the generators' notes, and whether each reads right from above is the maintainer's
+  eye. LEFT, the same class but not door names: a quiet level's `exits` and `starts` and some `places` areas are still named by bearings ('the east gate',
+  'the west track', 'north strip'), and the debrief's map marks print an exit's name.

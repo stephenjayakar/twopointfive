@@ -114,6 +114,9 @@ export const POST_ROOMS: Record<'cells' | 'armoury' | 'radio' | 'office' | 'corr
 const R = POST_ROOMS;
 /** the level's own names for the floor no spot is in (scenarios.places: a radio line, a checkpoint row and the debrief say WHERE by these — rooms first,
  *  then the yards; a point in two is the first listed). THE MAST and THE IMPOUND are the two a man would say on the radio. */
+/** what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so the gates are named by what is behind them
+ *  (the impound's as RESPONSE names it) and the outbuildings' and the block's own outside doors by what they are */
+const DOOR_NAMES = [{ door: 'gate_e', name: 'impound gate' }, { door: 'gate_n', name: 'motor pool gate' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'side_e', name: 'corridor end door' }, { door: 'store_e', name: 'store back door' }, { door: 'shed_e', name: 'generator shed door' }, { door: 'hut_w', name: 'gate hut door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }];
 const PLACES = { areas: [
   { name: 'cells', bounds: R.cells }, { name: 'corridor', bounds: R.corridor }, { name: 'duty room', bounds: R.duty }, { name: 'bunk room', bounds: R.bunk }, { name: 'store', bounds: R.store },
   { name: 'generator shed', bounds: R.shed }, { name: 'gate hut', bounds: R.hut }, { name: 'motor pool', bounds: { x0: 4.12, x1: 8.9, z0: 4.12, z1: 9.2 } },
@@ -758,6 +761,6 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   };
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the north gate from outside the wall (the second start's side), the motor
   // pool's two pickups under their canopy behind it.
-  const scenarios = !VARIANT ? { quiet: QUIET, places: PLACES, response: RESPONSE, kitView: { ways: [{ door: 'gate_n', ref: [12.5, 1.8], side: 1 }] } } as LevelScenarios : undefined;
+  const scenarios = !VARIANT ? { quiet: QUIET, places: PLACES, response: RESPONSE, kitView: { ways: [{ door: 'gate_n', ref: [12.5, 1.8], side: 1 }] }, doorNames: DOOR_NAMES } as LevelScenarios : undefined;
   return { level, ...(scenarios ? { scenarios } : {}), groups: trace.groups, surfaces, quiet: QUIET };
 }

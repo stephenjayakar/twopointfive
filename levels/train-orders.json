@@ -605,6 +605,11 @@
       "ways": [
         { "door": "gate_w", "ref": [5, 14.25] }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "track gate" },
+      { "door": "gate_e", "name": "far gate" },
+      { "door": "hut_b_east", "name": "green house side door" }
+    ]
   }
 }
