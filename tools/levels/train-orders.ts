@@ -165,7 +165,7 @@ export function build() {
     mission: { serverRoom: { ...C }, entryDoor: 'hut_c', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate_e', exfilX: EXIT_E.x, exfilZ: EXIT_E.z, exfilOut: EXIT_E.out },
     // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the ground's west gate from the track outside it, the
     // street beyond the wall. The lesson starts the pair a few steps INSIDE that gate, so `ref` says which side the picture is taken from.
-    scenarios: { roomClear, lesson, places: { areas: [{ name: 'street', bounds: { ...YARD } }] }, kitView: { ways: [{ door: 'gate_w', ref: [5, 14.25] }] } },
+    scenarios: { roomClear, lesson, places: { areas: [{ name: 'street', bounds: { ...YARD } }] }, doorNames: [{ door: 'hut_b_east', name: 'green house side door' }], kitView: { ways: [{ door: 'gate_w', ref: [5, 14.25] }] } },
   });
   furnish(T);
   return out;

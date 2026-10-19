@@ -14,7 +14,7 @@
 //           stalls ·  hesco      the road: gravel, barriers, a technical
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
@@ -26,7 +26,7 @@ export const NOTES = 'The GWOT kit\'s showroom: a walled compound with every pie
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;
 
-export function build(): { level: Level; groups: string[]; surfaces: SurfacesData } {
+export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
   const K = officeKit(trace), G = gwotKit(gwotOfOffice(K)), P = GWOT_PALETTE, H = WORLD.ceilingY;
   const { grp, add, slab, doorFrame, lights, switchables } = K;
@@ -165,5 +165,6 @@ export function build(): { level: Level; groups: string[]; surfaces: SurfacesDat
       { id: 'store', mat: 'stone', x0: 24, z0: 16, x1: 32, z1: 22 },
     ],
   };
-  return { level, groups: trace.groups, surfaces };
+  // what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the yard has no mission of its own, so this is its one block
+  return { level, scenarios: { doorNames: [{ door: 'gate_w', name: 'foot gate' }, { door: 'n_w', name: 'guest room door' }, { door: 'n_e', name: 'sleeping room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: trace.groups, surfaces };
 }

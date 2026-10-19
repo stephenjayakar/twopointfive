@@ -453,6 +453,13 @@
       "ways": [
         { "door": "gate_w", "ref": [5, 14.25], "hide": ["lived.beyond"] }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "track gate" },
+      { "door": "gate_e", "name": "far gate" },
+      { "door": "hut_w", "name": "red door" },
+      { "door": "hut_s", "name": "blue door" },
+      { "door": "store_n", "name": "grain store door" }
+    ]
   }
 }

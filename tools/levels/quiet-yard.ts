@@ -61,5 +61,5 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   level.playerSpawn = [5.6, 0, 14.0];
   level.mission = { serverRoom: { ...RADIO }, entryDoor: 'n_e', rack: { index: 0, front: [23.0, 1.0, 10.6], halfW: 0.3 }, exfilDoor: 'gate_w', exfilX: 7.2, exfilZ: 14.0, exfilOut: [-1, 0] };
   // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the west gate from the first start's side.
-  return { level, scenarios: { quiet, kitView: { ways: [{ door: 'gate_w', ref: [5.6, 14.0], side: -1 }] } }, groups: Y.groups, surfaces: Y.surfaces };
+  return { level, scenarios: { quiet, kitView: { ways: [{ door: 'gate_w', ref: [5.6, 14.0], side: -1 }] }, doorNames: [{ door: 'gate_w', name: 'foot gate' }, { door: 'gate_s', name: 'road gate' }, { door: 'n_w', name: 'bunk room door' }, { door: 'n_e', name: 'radio room door' }, { door: 's_n', name: 'store door' }, { door: 's_w', name: 'store side door' }] }, groups: Y.groups, surfaces: Y.surfaces };
 }

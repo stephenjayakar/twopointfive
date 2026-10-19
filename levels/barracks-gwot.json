@@ -1550,6 +1550,14 @@
         { "door": "s_end", "hide": ["exterior"], "roomLights": 1, "light": { "porch": { "intensity": 12, "color": [0.82, 0.9, 1] }, "fill": { "intensity": 3, "aim": [1.6, 0.8, 0.9] } } },
         { "door": "k_out", "roomLights": 1, "light": { "porch": { "intensity": 12, "color": [0.82, 0.9, 1] }, "fill": { "intensity": 3, "aim": [1.6, 0.8, 0.9] } } }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "n_yard", "name": "yard door by bunks 2" },
+      { "door": "s_yard", "name": "yard door by bunks 4" },
+      { "door": "ng_w", "name": "fire door by bunks 1" },
+      { "door": "sg_w", "name": "fire door by bunks 3" },
+      { "door": "sg_e", "name": "fire door by bunks 5" },
+      { "door": "s_end", "name": "outer door by the wash room" }
+    ]
   }
 }
