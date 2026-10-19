@@ -24,7 +24,7 @@ import { fireWeapon, killGuard, dropFromHand, flashFuse } from './combat';
 import { FRAG, FRAG_STATS } from './frag';
 import { kickScuff } from './marks';
 import { hammerBlows } from './bigkit';
-import { BIGSLOT, kitYouLight, kitYouNvg } from './kit';   // (the two asked at a key press only: a card that left your light or your goggles at home — kittree.ts)
+import { BIGSLOT, kitYouLight, kitYouNvg } from './kit';   // (the two asked at the two keys and each frame beside them: a card that left your light or your goggles at home — kittree.ts)
 import { lockPoint } from './shotgun';
 import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop, samBigLeadOf } from './bigkit';
 import { samSpread } from './suppression';
@@ -1233,6 +1233,8 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
  *  and the picture follows them to his eyes; off, the picture follows the switch as ever. `input` null = no key is read this frame, the ease alone. */
 function nvKey(g: Game, input: Input | null, dt: number) {
   const pl = g.player;
+  if (pl.nv && !kitYouNvg(pl)) pl.nv = false;   // (kittree.ts: no goggles on your card — whatever switched them on, a save read back included, there is nothing to look through)
+  if (!kitYouLight(pl) && (pl.rifle.lightOn || pl.pistol.lightOn)) { pl.rifle.lightOn = false; pl.pistol.lightOn = false; }   // (… and no light fitted)
   if (input?.hit('KeyN') && kitYouNvg(pl)) { pl.nv = !pl.nv; g.audio.play(pl.nv ? 'nvOn' : 'nvOff', null, 0.7); g.msg(pl.nv ? 'night vision on' : 'night vision off'); kitNv(g); }
   const eye = kitNvEye(g); pl.nvAmount = damp(pl.nvAmount, eye ? 1 : 0, eye ? 5 : 9, dt);
 }

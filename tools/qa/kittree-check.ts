@@ -70,6 +70,20 @@ export async function kittreeRows(): Promise<boolean> {
     // no long gun: the light hangs under the sidearm, the primary's suppressor is gone
     issue(); K.kitSet(1, 'primary', 'none'); const alone = shape(1);
     F.verdict(under(alone, 'light') === 'secondary' && !alone.some(x => x.startsWith('suppressed<')), 'the pistol alone: the light is under the sidearm and no row is left for a gun not brought', alone.join(' '));
+    // a suppressor's flag holds only while its gun has the choice: off, then the gun left at home, is on again; a paste of a gun that takes none takes nobody's off
+    issue(); K.kitSet(0, 'suppressed', false); const off = K.KIT.members[0].suppressed; K.kitSet(0, 'primary', 'none'); const home = K.KIT.members[0].suppressed; K.kitSet(0, 'primary', 'mk18'); const back = K.kitSlotCan(K.KIT.members[0], 'primary');
+    const none = (gunPicks('primary') as string[]).find(id => id !== 'none' && !pickRow(id, true) || (id !== 'none' && WEAPONS[pickRow(id, true)]?.suppressed === false));
+    issue(); if (none) { K.kitSet(1, 'primary', none); const p = K.kitPaste(2, K.KIT.members[1]); K.kitSet(1, 'primary', 'mk18'); K.kitSet(2, 'primary', 'mk18');
+      F.verdict(off === false && home === true && back === true && p.ok && K.kitSlotCan(K.KIT.members[1], 'primary') && K.kitSlotCan(K.KIT.members[2], 'primary'), `a flag holds only while its gun has the choice: yours off, the gun left home and brought again, is on; Red One's ${none} pasted onto Red Two, both back on the Mk 18, both suppressed`,
+        `yours: ${off} → home ${home} → back ${back} · Red One ${K.KIT.members[1].suppressed}, Red Two ${K.KIT.members[2].suppressed}`); }
+    else F.verdict(false, 'a primary no suppressor fits is on offer', (gunPicks('primary') as string[]).join(' '));
+    // the row of kits for a man alone: the kits that differ on HIS card, put on his card and nobody else's
+    const slotsWas = K.SLOTS.on; K.SLOTS.on = K.SLOTS.ok;   // (the named kits are the pouches' table's: on a stand that holds the pouches off the row has the one)
+    issue(); K.kitSet(1, 'bangs', 0); const mateWas = J(K.KIT.members[1]), all = K.kitLoadouts().map((l: any) => l.id), mine = K.kitLoadouts(0).map((l: any) => l.id), other = mine.find((id: string) => id !== 'issued');
+    const why = other ? K.kitLoadout(other, 0) : 'no kit of his own', now = K.kitLoadoutOf(0);
+    F.verdict(mine[0] === 'issued' && mine.length >= 2 && mine.length <= all.length && why === null && now === other && J(K.KIT.members[1]) === mateWas, 'alone, the row lists the kits that put a different card on you, and a press writes your card only: a teammate\'s own card is as he left it',
+      `all: ${all.join(' ')} · for you: ${mine.join(' ')} · put on '${other}': ${why ?? 'taken'}, the row reads '${now}' · Red One untouched: ${J(K.KIT.members[1]) === mateWas}`);
+    K.SLOTS.on = slotsWas; issue();
   });
   return F.done();
 }
@@ -155,6 +169,14 @@ export async function kittreeOff(): Promise<boolean> {
     F.verdict(J(a.hashes) === J(b.hashes) && a.rings === 5 && c.rings === 0, 'ten seconds of the staged room clear, switch off: the same run twice, five sponge rounds in the launcher as ever; on, a loud room clear starts with none', `off: ${a.hashes.join(' ')} (${a.rings} rounds)\n    off: ${b.hashes.join(' ')}\n    on:  ${c.hashes.join(' ')} (${c.rings} rounds)`);
     const reg = knobRegistry(), page = /KITTREE\.on = !q\.has\('nokittree'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
     F.verdict('KITTREE.on' in FROZEN_HOLDS && reg.KITTREE === KITTREE && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?nokittree', `frozen hold: ${FROZEN_HOLDS['KITTREE.on']} · registered ${reg.KITTREE === KITTREE} · pageSwitches writes it: ${page}`);
+    // a card in the store: one written under the tree keeps its fields through a visit with the switch off; yours from before the tree is as issued in them
+    raise(false); const kept0 = K.kitSanitize(0, { ...K.kitDefault(0), suppressed: false, sideCan: false, light: false, nvg: false, rings: 3 });
+    raise(true); const read0 = K.kitSanitize(0, JSON.parse(J(kept0))), d0 = K.kitDefault(0) as any, old: any = { ...d0, suppressed: false, light: false, nvg: false }; delete old.sideCan; delete old.rings; const old0 = K.kitSanitize(0, old);
+    const oldMate: any = { ...K.kitDefault(1), suppressed: false }; delete oldMate.sideCan; delete oldMate.rings; const old1 = K.kitSanitize(1, oldMate);
+    F.verdict(kept0.sideCan === false && kept0.rings === 3 && kept0.light === false && read0.suppressed === false && read0.sideCan === false && read0.light === false && read0.nvg === false
+      && old0.suppressed === true && old0.sideCan === true && old0.light === true && old0.nvg === true && old1.suppressed === false && old1.sideCan === false,
+      'the store: a card written under the tree comes through a visit with the switch off whole; your card from before the tree has its suppressors, light and goggles as issued; a teammate\'s one old Suppressor row is both his guns\'',
+      `through off: ${J({ suppressed: read0.suppressed, sideCan: read0.sideCan, light: read0.light, nvg: read0.nvg, rings: kept0.rings })} · yours from before: ${J({ suppressed: old0.suppressed, sideCan: old0.sideCan, light: old0.light, nvg: old0.nvg })} · Red One from before: ${J({ suppressed: old1.suppressed, sideCan: old1.sideCan })}`);
     const R: any = await hushed(() => rig(17, { stage: false })); KITTREE.on = true; const snap = knobsSnapshot(R.game); const has = !!snap.tables.KITTREE; delete snap.tables.KITTREE; applyKnobs(R.game, snap);
     F.verdict(has && KITTREE.on === false, 'a recording carries the table, and one from before it replays with the switch off', `carried ${has} · after a file without it: on = ${KITTREE.on}`);
   });

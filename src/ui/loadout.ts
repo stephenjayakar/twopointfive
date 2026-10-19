@@ -193,7 +193,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
     return [typeof c.weapon === 'string' ? c.weapon : '', n('bangs') ? `${n('bangs')} stun` : '', pl(n('charges'), 'charge'), pl(n('frags'), 'frag'), n('smoke') ? `${n('smoke')} smoke` : '', pl(n('walls'), 'wall charge'), pl(n('shells'), 'shell'), pl(n('cams'), 'sticky camera'), c.wand === true ? 'optical wand' : ''].filter(Boolean).join(' · '); };
   const issueWho = () => { const R = rosterOf(squad), who: string[] = []; for (let i = 0; i <= squad; i++) { const c = missionKit?.[String(i)]; if (!c) continue; const what = c.weapon === 'shotgun' ? 'the shotgun' : ''; if (what) who.push(`${i === 0 ? 'you carry' : `${R[i - 1].name} carries`} ${what}`); } return who.join(', '); };
   const squadKits = () => (loadoutHooks.memberCard && KIT.on && SLOTS.on && (entry.kind !== 'solo' || oneList) && !issuedOnly ? kitLoadouts() : []);
-  const putKit = (id: string) => { const why = kitLoadout(id); mountCard(true); drawSlots(); S.paint(); if (why) { note.textContent = why; note.className = 'lo-note off'; } };
+  const alone = () => (oneList && !squad ? 0 : undefined);   // (a man going alone: the row is HIS kit — the kits that differ on his card, put on his card alone; kit.ts)
+  const putKit = (id: string) => { const why = kitLoadout(id, alone()); mountCard(true); drawSlots(); S.paint(); if (why) { note.textContent = why; note.className = 'lo-note off'; } };
   for (const L of squadKits()) {
     const b = el('button', 'lo-set', L.name) as HTMLButtonElement; b.type = 'button'; b.setAttribute('data-kit', L.id); b.title = L.id === 'issued' ? 'every man as he is issued (colours kept)' : `${L.name}: this loadout on all five cards (colours kept)`;
     b.onclick = () => { if (!squad && !oneList) return; S.sel = Math.max(0, S.rows.findIndex(r => r.el === kitsRow)); kitPick = kitBtns.findIndex(k => k.id === L.id); putKit(L.id); };
@@ -316,7 +317,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       const sq = cardsOn() ? squadCost() : null; squadP.textContent = squad && sq ? `Squad pouches ${sq.used} / ${sq.total}` : '';
       const P = kitPool(squad), own = kitWalls(squad), W = Math.max(own, issued), sm = kitSmokes(squad), walls = W ? `${W} wall charge${W === 1 ? '' : 's'}${issued > own ? ' (issued for this mission)' : ''}` : '';
       pool.textContent = issuedOnly ? (missionKit && issued ? `${squad ? 'Squad carries' : 'You carry'} · ${issued} wall charge${issued === 1 ? '' : 's'} (issued for this mission)` : '') : squad ? `Squad carries · ${P.bangs} stun · ${P.charges} charge${P.charges === 1 ? '' : 's'} · ${P.frags} frag${P.frags === 1 ? '' : 's'}${walls ? ` · ${walls}` : ''}${sm ? ` · ${sm} smoke` : ''}` : issued ? `You carry · ${walls}` : '';   // (smoke: named only when a card carries one — squadsmoke.ts)
-      if (kitBtns.length > 1) { const now = kitLoadoutOf(); kitBtns.forEach((k, n) => { k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you go alone: no squad to kit' : now ? '' : 'a mix of your own'; }
+      if (kitBtns.length > 1) { const now = kitLoadoutOf(alone()), mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); if (mine && !mine.has(kitBtns[kitPick].id)) kitPick = 0;
+        kitBtns.forEach((k, n) => { k.b.style.display = mine && !mine.has(k.id) ? 'none' : ''; k.b.classList.toggle('on', k.id === now); k.b.classList.toggle('pick', n === kitPick && (squad > 0 || oneList)); k.b.setAttribute('aria-pressed', k.id === now ? 'true' : 'false'); k.b.disabled = !squad && !oneList; }); kitsOwn.textContent = !squad && !oneList ? 'you go alone: no squad to kit' : now ? '' : 'a mix of your own'; }
       paintLevers();
       { const nf = lookSig(); if (nf !== fogWas) { fogWas = nf; kitCard?.refresh(); } }   // (the optical wand and the sticky cameras look into the fog of war: on a mission without one a tile that carries one says 'no use here' — the card's own `idle` — and it can still be carried; the fog lever moved = the card drawn again)
       S.rows.forEach((r, i) => r.el.classList.toggle('sel', i === S.sel));
@@ -346,8 +348,8 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
   };
   const rowsNow = (): LoadoutRow[] => [
     { el: teamRow, change: dir => S.step(dir) },
-    ...(kitBtns.length > 1 && !missionKit ? [{ el: kitsRow, change: (dir: 1 | -1) => { if (!squad && !oneList) return; kitPick = Math.min(kitBtns.length - 1, Math.max(0, kitPick + dir)); S.paint(); }, confirm: () => { if (squad || oneList) putKit(kitBtns[kitPick].id); },
-      enter: () => { const at = kitBtns.findIndex(k => k.id === kitLoadoutOf()); if (at >= 0) kitPick = at; } }] as LoadoutRow[] : []),
+    ...(kitBtns.length > 1 && !missionKit ? [{ el: kitsRow, change: (dir: 1 | -1) => { if (!squad && !oneList) return; const mine = alone() === undefined ? null : new Set(kitLoadouts(0).map(l => l.id)); for (let k = kitPick + dir; k >= 0 && k < kitBtns.length; k += dir) if (!mine || mine.has(kitBtns[k].id)) { kitPick = k; break; } S.paint(); }, confirm: () => { if (squad || oneList) putKit(kitBtns[kitPick].id); },
+      enter: () => { const at = kitBtns.findIndex(k => k.id === kitLoadoutOf(alone())); if (at >= 0) kitPick = at; } }] as LoadoutRow[] : []),
     ...(cardsOn() ? [
       { el: slots, change: (dir: 1 | -1) => S.pick(member + dir), confirm: () => S.move(1) },
       { el: kitHost, key: (code: string, repeat: boolean) => kitCard?.key({ key: code, code, repeat }) ?? false, enter: (dir: 1 | -1) => kitCard?.go(dir > 0 ? 0 : 99) },

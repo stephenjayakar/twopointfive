@@ -215,7 +215,8 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-pouch:has(.kc-load:not(.off)) { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
 #missions.one #loadout .lo-kit .kc-load { flex: 0 0 100%; gap: 3px; margin: 0; }
 #missions.one #loadout .lo-kit .kc-bar { justify-content: flex-end; gap: 8px; line-height: 9px; }
-#missions.one #loadout .lo-kit .kc-bar-t { flex: 0 0 176px; height: 6px; }
+#missions.one #loadout .lo-kit .kc-head { min-width: 0; }
+#missions.one #loadout .lo-kit .kc-bar-t { flex: 0 1 176px; min-width: 40px; height: 6px; }   /* (the track gives way in a narrow window: its label stays in the head's own column, clear of the sets' row beside it) */
 #missions.one #loadout .lo-kit .kc-words { display: none; }
 #missions.one #loadout .lo-kit .kc-words.refused, #missions.one #loadout .lo-kit .kc-note { display: none; grid-column: auto; grid-row: auto; position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; padding: 0; border: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-words.refused { display: block; color: #e8c15a; background: var(--m-base); z-index: 1; }
@@ -246,7 +247,7 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 4px; margin: 0; }
 #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1 / -1; grid-row: auto; margin-top: 6px; }
 #missions.one #loadout .lo-kit .kc-tree .kc-stats.off { display: none; }
-#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar { justify-content: space-between; gap: 10px; font: 600 9px/9px var(--m-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-soft); }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-stat { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 600 9px/9px var(--m-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex: 0 0 76px; }
 #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-t { flex: 1 1 auto; height: 5px; box-shadow: none; background: rgba(var(--m-edge),0.16); }
 #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-t .fill { background: var(--m-text); }
@@ -258,6 +259,8 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-label { font-size: 9px; letter-spacing: 0.14em; }
 #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-val { font-size: 13px; }
 #missions.one #loadout .lo-kit .kc-tree .kc-row.none:not(.lent) .kc-val { color: var(--m-dim); }
+#missions.one #loadout .lo-kit .kc-tree .kc-row.fixed .kc-val { color: var(--m-soft); }
+@media (max-width: 1480px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] .kc-kids { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* (three across cuts '40 MM GRENADES' short under about 1400) */
 @media (max-width: 1180px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row, #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: minmax(0, 1fr); } #missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 2; } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1; } #missions.one #loadout .lo-kit .kc-tree .kc-kids { margin-left: 6px; padding-left: 6px; } #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex-basis: 64px; } }
 /* DEPLOY: the one filled block on the page */
 #missions.one #loadout .lo-actions { position: sticky; bottom: 0; z-index: 4; margin: 14px calc(-1 * var(--pg)) 0; padding: 10px var(--pg); border: 0; border-top: 1px solid var(--line); border-radius: 0; background: var(--m-base); }

@@ -6,7 +6,7 @@
 //   · the suppressor and the light are tiles INSIDE their gun's box, under its tile and set in from it — on your card and on a teammate's;
 //   · the Sponge rounds tile reads none on a loud mission and the mission's five on a quiet one;
 //   · a card has one set (the reset) and the row of kits is drawn, live, for a man alone;
-//   · in a narrow window the weight bars stay clear of the sets' row and each gun's name is whole.
+//   · at five window widths (1000 to 1512) the weight bars stay clear of the sets' row and each gun's name and every tile under a gun is whole.
 //   node tools/qa/kittree-page.cjs [outDir]      env: PORT (the dev server's, default 5199) · KITTREE_BREAK=1 (the page with ?nokittree: must FAIL)
 // PASS / FAIL lines, exit 1 on a FAIL or a page error. Software adapter: nothing here has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -32,7 +32,7 @@ const read = () => {
   const kits = document.querySelector('#missions.one #loadout .lo-kits');
   return { tree: kc.classList.contains('kc-tree'), guns, sets: [...kc.querySelectorAll('.kc-set')].map(b => b.textContent),
     sponge: sponge ? { val: sponge.querySelector('.kc-val')?.textContent ?? '', lent: sponge.classList.contains('lent'), shown: sponge.getBoundingClientRect().height > 0 } : null,
-    kits: kits ? { shown: kits.getBoundingClientRect().height > 0, label: kits.querySelector('.lo-label')?.textContent ?? '', live: [...kits.querySelectorAll('.lo-set')].filter(b => !b.disabled).length } : null };
+    kits: kits ? { shown: kits.getBoundingClientRect().height > 0, label: kits.querySelector('.lo-label')?.textContent ?? '', live: [...kits.querySelectorAll('.lo-set')].filter(b => !b.disabled && b.getBoundingClientRect().width > 0).length } : null };
 };
 
 (async () => {
@@ -75,18 +75,20 @@ const read = () => {
     // alone: the row of kits is still there to press
     await page.click('#missions.one #loadout .lo-size >> nth=0').catch(() => {}); await page.waitForTimeout(300);
     const alone = await page.evaluate(read);
-    check(!!alone?.kits?.shown && alone.kits.live > 1, 'alone: the row of kits is drawn and live', `kits row ${alone?.kits?.shown ? 'drawn' : 'not drawn'}, ${alone?.kits?.live ?? 0} live`);
+    await shot(page, 'kittree-alone');
+    check(!!alone?.kits?.shown && alone.kits.live > 1 && alone.kits.live <= (you?.kits?.live ?? 0), 'alone: the row of kits is drawn and live, with the kits that differ on your own card', `kits row ${alone?.kits?.shown ? 'drawn' : 'not drawn'}, ${alone?.kits?.live ?? 0} live (${you?.kits?.live ?? 0} with four)`);
     await ctx.close(); }
   // narrow windows: the head's two bars (what the card weighs) stay clear of the sets' row beside them
-  for (const W of [1000, 1180, 1353]) { const { ctx, page } = await open('depot-four', W, 760);
+  for (const W of [1000, 1180, 1353, 1440, 1512]) { const { ctx, page } = await open('depot-four', W, 760);
     const m = await page.evaluate(() => { const kc = document.querySelector('#missions.one #loadout .lo-kit .kc'), R = (e) => e.getBoundingClientRect();
       const btn = [...kc.querySelectorAll('.kc-sets button')].map(R).filter(r => r.width > 0), lab = [...kc.querySelectorAll('.kc-head .kc-bar-l, .kc-head .kc-pouch > *')].map(R).filter(r => r.width > 0);
       const hit = btn.some(b => lab.some(l => l.left < b.right - 0.5 && l.right > b.left + 0.5 && l.top < b.bottom - 0.5 && l.bottom > b.top + 0.5));
       const guns = [...kc.querySelectorAll('.kc-gun > .kc-row')].map(g => { const r = R(g), v = R(g.querySelector('.kc-val')), l = R(g.querySelector('.kc-label')); return { cut: g.querySelector('.kc-val').scrollWidth > g.querySelector('.kc-val').clientWidth + 1, in: v.left >= r.left && v.right <= r.right + 0.5 && l.width > 30 }; });
-      return { hit, sets: Math.max(...btn.map(b => b.right)), head: Math.min(...lab.map(l => l.left)), guns, over: document.documentElement.scrollWidth - innerWidth }; });
+      const cut = [...kc.querySelectorAll('.kc-kids .kc-row')].filter(k => R(k).height > 0).filter(k => ['.kc-label', '.kc-val'].some(q => { const e = k.querySelector(q); return !!e && e.scrollWidth > e.clientWidth + 1; })).map(k => k.getAttribute('data-field'));
+      return { hit, cut, sets: Math.max(...btn.map(b => b.right)), head: Math.min(...lab.map(l => l.left)), guns, over: document.documentElement.scrollWidth - innerWidth }; });
     await shot(page, `kittree-${W}`);
     check(!m.hit, `${W} px wide: the weight bars and the pouches do not run into the sets' row`, `sets end at ${m.sets.toFixed(0)}, the head starts at ${m.head.toFixed(0)}`);
-    check(m.guns.length === 2 && m.guns.every(g => g.in && !g.cut) && m.over <= 0, `${W} px wide: each gun's name is whole on its tile and the page does not scroll sideways`, `${m.guns.map(g => `${g.in ? 'in' : 'OUT'}${g.cut ? ' CUT' : ''}`).join(' · ')} · ${m.over} px over`);
+    check(m.guns.length === 2 && m.guns.every(g => g.in && !g.cut) && m.over <= 0 && m.cut.length === 0, `${W} px wide: each gun's name and every tile under a gun is whole, and the page does not scroll sideways`, `${m.guns.map(g => `${g.in ? 'in' : 'OUT'}${g.cut ? ' CUT' : ''}`).join(' · ')} · cut under a gun: ${m.cut.join(', ') || 'none'} · ${m.over} px over`);
     await ctx.close(); }
   // a quiet mission: the mission hands you the launcher's five
   { const { ctx, page } = await open('vault-quiet');

@@ -1024,6 +1024,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
   played it.
+- **The gear screen is a tree, the same for every man** (`src/game/kittree.ts KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `ui/gunStats.ts`; the
+  maintainer on Team & kit, 10-19: "have some way of distinguishing different guns (some stats?), attachments like silencer should be per gun", "should
+  be symmetric between self and teammates (e.g. 40mm should work for squad)", "sponge should show up, should only be part of stealth builds by default",
+  "ideally rifle attachments should be hierarchical under the rifle", "weird that we have both per person defaults (as issued, quiet set, etc.) and
+  then squad kits too"). With the switch on a card is ONE list of rows for you and a teammate. Each gun is a box: its tile, FOUR BARS of what it is
+  good at (Reach, Volume, Handling, Quiet: `gunStats(def)` read off its `weapons.ts` row, no number shown), and under it, set in off a rule, what
+  rides on it (`KitRow.under`): its own suppressor (`suppressed` the primary's, `sideCan` the secondary's, new), the weapon light, and on a gun with
+  the tube (`KitRow.has`) sponge rounds (`rings`, a row for the first time), 40 mm grenades and sticky cameras. A suppressor row on a gun that has no
+  choice reads what it is and has no arrows (`KitRow.fixed`), and its flag is put back on when the gun leaves the card (`homeCans`): a paste or a kit
+  never carries an 'off' nobody could see. YOUR card has the suppressor, light and goggles rows a teammate's always had, and you deploy with them: a
+  suppressor off is the same gun with a bare muzzle (`bareOf`: the report of the unsuppressed gun of its class, until the guns' table has bare rows of
+  its own), no light is a dead L, no goggles a dead N and no goggles drawn (`kitYouLight`, `kitYouNvg`, asked every frame, so a checkpoint cannot bring
+  one back). SPONGE ROUNDS are a count, none as issued; a quiet or solo mission hands you `KITTREE.lend` (5) over your card as it hands its cameras
+  (`kitRingsLent`; the tile reads `5 · mission's`), so a stealth run starts with the five every launcher used to carry and a loud one with none. ONE
+  PLACE FOR NAMED KITS (the maintainer's tap, 'Squad row only'): the card's row of sets is one `Reset` beside Copy and Paste, and the screen's row of
+  kits (labelled `Kit`) is shown and live at every team size; alone it lists the kits that put a different card on YOU and a press writes your card
+  only (`kitLoadout(id, only)`, `kitLoadouts(only)`, `kitLoadoutOf(only)`). A stored card from before the tree: yours takes its suppressors, light and
+  goggles as issued, a teammate's one Suppressor row is both his guns'; a card written under the tree keeps its new fields through a visit with the
+  switch off. NOT IN IT YET: a teammate's 40 mm (he has no launcher to fire one: its own part of the goal). SWITCH: `KITTREE.on`, OFF in the module and
+  on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITTREE=1`; it reads only with `GUNSLOTS` and `BIGSLOT` up), ON in the page and on the shipped
+  stand (`?nokittree`); in the knob registry and `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off = the card of the
+  build before, row for row: one Suppressor row for both a teammate's guns, your guns always suppressed, five sponge rounds with every launcher, the
+  two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`; 24 lines on both
+  stands, `KITTREE_BREAK=1` fails 17 on the frozen stand and 18 on the shipped one); the real page, `PORT=<port> node tools/qa/kittree-page.cjs` (19
+  lines: bars, tiles under their gun, sponge none on a loud mission and the mission's five on a quiet one, the one Reset, the row of kits alone, and
+  at 1000, 1180, 1353, 1440 and 1512 px wide nothing cut and nothing run into; `KITTREE_BREAK=1` fails 4); a deploy off the card,
+  `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,
+  `wand-tile`) hold the tree off on every stand (`probes.ts ROWS_BEFORE_THE_TREE`), as `gunslots-check.ts` does in its own `raise`. LEFT, the
+  maintainer's calls: a sponge round costs a pouch and on a quiet run buys nothing over the lent five; the Quiet kit names no sponge; which four
+  bars, and their scale (untuned, nobody has compared guns by them in play); a bare Mk 18 in a teammate's hands is the old unsuppressed row, in yours
+  the suppressed row with a bare report; the empty sponge load is still a stop on the launcher's cycle. NOT DONE: the player's suppressor is still
+  DRAWN when the card has it off (the guns' look), the Team & kit figure does not know `sideCan` / `rings` (`host/kitView.ts`), a bare gun weighs
+  what it did suppressed and sponge rounds weigh nothing (`kitload`). Never seen on a GPU; nobody has played it.
 - **The scene tweak panel (`?tweak`, a ONE OFF tool, 10-15) is not the debugger and not a menu of the game's** (`src/ui/sceneTweak.ts` the panel and its
   bookkeeping, `src/ui/sceneLayers.ts` the list, `src/render/shaderTune.ts` the shader half; the maintainer on a night clip of the snow pass: "could you make
   a one off UI for tweaking a scene like this? i'm curious what all the "layers" are for the effects and what variables we can configure"). Any link with

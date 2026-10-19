@@ -151,6 +151,11 @@ const CARD_AS_IT_WAS = /^pouch-table$/;
 // kit.ts KITDEAL, on in the page) a card reads as it is WORN, and that is kitdeal-check.ts's to hold, on both stands, with a seeded walk of presses of its own.
 // So the deal is held off for these on EVERY stand, as the frozen stand holds it — unless whoever runs the tool set the word himself.
 const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
+// THE CARD'S ROWS IN THE ORDER THEY HAD. These probes read where a row stands on a card ('the last of your kit rows') and which tiles a mission leaves idle —
+// the card before it was laid out as a tree (src/game/kittree.ts KITTREE, on in the page: what rides on a gun under it, your light and goggles as rows). The
+// tree's rows are kittree-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the frozen stand holds it — unless whoever
+// runs the tool set the word himself.
+const ROWS_BEFORE_THE_TREE = /^(wand-kit|wand-tile)$/;
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND']];
 async function run(name: string, fn: () => unknown): Promise<boolean> {
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
@@ -159,6 +164,7 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const layHeld = ROWS_AS_THEY_WERE.test(name) && process.env.TPS_PLANLAY === undefined; if (layHeld) process.env.TPS_PLANLAY = '0';
   const bigHeld = CARDS_AS_THEY_WERE.test(name) && process.env.TPS_BIGSLOT === undefined; if (bigHeld) { process.env.TPS_BIGSLOT = '0'; (await import(`${ROOT}/src/game/kit.ts`)).BIGSLOT.on = false; }   // (…and off now, for a probe that reads the cards before it stands a game up; knobsBack puts the table back)
   const gunHeld = GUN_ROW_AS_IT_WAS.test(name) && process.env.TPS_GUNSLOTS === undefined; if (gunHeld) { process.env.TPS_GUNSLOTS = '0'; (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS.on = false; }   // (as the big slot's line above)
+  const treeHeld = ROWS_BEFORE_THE_TREE.test(name) && process.env.TPS_KITTREE === undefined; if (treeHeld) { process.env.TPS_KITTREE = '0'; (await import(`${ROOT}/src/game/kittree.ts`)).KITTREE.on = false; }
   const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }

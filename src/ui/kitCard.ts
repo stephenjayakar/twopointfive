@@ -183,9 +183,11 @@ const CSS = `
 .kc .kc-kids { margin: 0 0 3px 7px; padding-left: 5px; border-left: 1px solid rgba(var(--m-edge),0.3); }
 .kc .kc-stats { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
 .kc .kc-stats.off { display: none; }
-.kc .kc-stats .kc-bar { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-soft); }
+.kc .kc-stats .kc-stat { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-soft); }
 .kc .kc-stats .kc-bar-t { flex: 0 0 112px; height: 6px; }
 .kc.kc-tree .kc-row.none .kc-val { color: var(--m-dim); }
+.kc.kc-tree .kc-row.fixed .kc-step { visibility: hidden !important; }
+.kc.kc-tree .kc-row.fixed .kc-val { color: var(--m-soft); }
 .kc .kc-words { margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 10.5px; color: var(--m-soft); min-height: 28px; }
 `;
 function style() {
@@ -219,15 +221,15 @@ const seen = new WeakSet<object>();
 /** Fill `host` with member i's card. */
 export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = {}): MemberCard {
   style();
-  const rows = kitRows(i), def = () => kitShown(i);
+  const rows = kitRows(i), def = () => kitShown(i);   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
   /** the card as a tree (game/kittree.ts KITTREE: its rows say what hangs under which gun): the guns' tiles are boxes with their things under them, a row
    *  the card has not got as it stands is not drawn and the keys step over it, and the sets are the one reset (the squad's row has the named kits) */
-  const tree = rows.some(r => r.under !== undefined), presets = tree ? KIT_PRESETS.filter(p => p.id === 'issued') : KIT_PRESETS;
+  const tree = rows.some(r => r.under !== undefined), presets = tree ? KIT_PRESETS.filter(p => p.id === 'issued').map(p => ({ ...p, label: 'Reset', line: 'this man as he is issued' })) : KIT_PRESETS;   // (not 'As issued' a second time: that is a kit of the squad's row)
   const guns: Partial<Record<GunSlot, { kids: HTMLElement }>> = {};
   /** the rows the card has as it stands, in the order they are drawn: a gun, then what hangs under it */
   const seq = (m: MemberKit): number[] => { if (!tree) return rows.map((_r, k) => k); const out: number[] = [];
     rows.forEach((r, k) => { if (r.under !== undefined || !rowHas(r, m)) return; out.push(k); if (r.field === 'primary' || r.field === 'secondary') rows.forEach((c, j) => { if (c.under !== undefined && rowHas(c, m) && rowUnder(c, m) === r.field) out.push(j); }); });
-    return out; };   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
+    return out; };
   const root = el('div', tree ? 'kc kc-tree' : 'kc'); root.setAttribute('data-member', String(i)); root.tabIndex = 0;
   // the head: a little figure in his two colours, who he is
   const head = el('div', 'kc-head'), fig = el('div', 'kc-fig'), suitBits: HTMLElement[] = [], trimBits: HTMLElement[] = [];
@@ -273,7 +275,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     const slot = tree && (r.field === 'primary' || r.field === 'secondary') ? r.field as GunSlot : null;
     let stats: { box: HTMLElement; bars: { id: typeof GUN_STATS[number]['id']; bar: HTMLElement; fill: HTMLElement; gain: HTMLElement; ref: HTMLElement }[] } | null = null;
     if (slot) { const box = el('div', 'kc-gun'), kids = el('div', 'kc-kids'), sb = el('div', 'kc-stats'); box.setAttribute('data-gun', slot);
-      stats = { box: sb, bars: GUN_STATS.map(S => { const bar = el('span', 'kc-bar'), track = el('span', 'kc-bar-t'), fill = el('i', 'fill'), gain = el('i', 'gain'), ref = el('i', 'ref'); bar.setAttribute('data-stat', S.id); bar.title = S.tip; track.append(fill, gain, ref); bar.append(el('span', 'kc-bar-l', S.label), track); sb.appendChild(bar); return { id: S.id, bar, fill, gain, ref }; }) };
+      stats = { box: sb, bars: GUN_STATS.map(S => { const bar = el('span', 'kc-stat'), track = el('span', 'kc-bar-t'), fill = el('i', 'fill'), gain = el('i', 'gain'), ref = el('i', 'ref'); bar.setAttribute('data-stat', S.id); bar.title = S.tip; track.append(fill, gain, ref); bar.append(el('span', 'kc-bar-l', S.label), track); sb.appendChild(bar); return { id: S.id, bar, fill, gain, ref }; }) };
       row.appendChild(sb); box.append(row, kids); root.appendChild(box); guns[slot] = { kids }; }
     else if (r.under === undefined) root.appendChild(row);
     return { row, val, note, prev, next, ico, drawn: '', slot, stats };
@@ -299,14 +301,14 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
 
   let told = 0;   // (the row onSelect was last told of)
   function draw() {
-    if (cur !== told) { told = cur; opts.onSelect?.(i, rows[cur]?.field ?? null); }
     const m = def(), look = lookOf(m), base = kitPresetOf(i);
-    if (tree) {   // what hangs under which gun as the card stands; a highlight left on a row the card no longer has goes to the row before it
+    if (tree) { const S = seq(m); if (cur < rows.length && !S.includes(cur)) cur = [...S].reverse().find(k => k < cur) ?? S[0] ?? 0; }   // (a highlight left on a row the card no longer has goes to the row before it — before anybody is told of it)
+    if (cur !== told) { told = cur; opts.onSelect?.(i, rows[cur]?.field ?? null); }
+    if (tree) {   // what hangs under which gun as the card stands
       const now = rows.map((r, k) => (r.under !== undefined ? `${k}>${rowHas(r, m) ? rowUnder(r, m) : ''}` : '')).join();
       if (now !== hung) { hung = now; for (const slot of ['primary', 'secondary'] as const) { const kids = guns[slot]?.kids; if (!kids) continue; let any = false;
         rows.forEach((r, k) => { if (r.under === undefined) return; const here = rowHas(r, m) && rowUnder(r, m) === slot; if (here) { kids.appendChild(rowEls[k].row); any = true; } });
         kids.style.display = any ? '' : 'none'; } }
-      const S = seq(m); if (cur < rows.length && !S.includes(cur)) cur = [...S].reverse().find(k => k < cur) ?? S[0] ?? 0;
     }
     for (const b of suitBits) { b.style.background = look.suit ?? ''; b.classList.toggle('issued', !look.suit); }
     for (const b of trimBits) { b.style.background = look.trim ?? ''; b.classList.toggle('issued', !look.trim); }
@@ -333,7 +335,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     rows.forEach((r, k) => {
       const v = rowGet(r, m), e = rowEls[k], cost = kitRowCost(i, r, m), no = said && said.k === k ? said.why : '';
       if (tree) { const has = rowHas(r, m); e.row.style.display = has ? '' : 'none'; if (!has) { if (r.under !== undefined) e.row.remove?.(); return; }   // (not on the card as it stands: not drawn, not hung anywhere)
-        e.row.classList.toggle('none', v === false || v === 0);
+        e.row.classList.toggle('none', v === false || v === 0); e.row.classList.toggle('fixed', !!r.fixed?.(m));   // (a gun made with its suppressor, or one none fits: the tile has no arrows)
         if (e.slot && e.stats) { const d = kitSlotDef(i, m, e.slot), d0 = kitSlotDef(i, issuedShown, e.slot); e.stats.box.classList.toggle('off', !d);   // (what this gun is good at, beside the gun he is issued: the notch)
           if (d) { const now = gunStats(d), was = d0 ? gunStats(d0) : now, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
             for (const b of e.stats.bars) { const a = now[b.id], z = was[b.id], lo = Math.min(a, z); b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(a - z)); b.gain.classList.toggle('loss', a < z); b.ref.style.left = pct(z); b.bar.setAttribute('data-score', a.toFixed(3)); } } } }

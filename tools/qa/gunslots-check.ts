@@ -36,8 +36,8 @@ const BREAK = process.env.GUNSLOTS_BREAK === '1';
 const raise = (on = true) => { GUNSLOTS.on = on; K.BIGSLOT.on = true; K.KITDEAL.on = false; KITTREE.on = false; };   // (… and the card's rows as the two slots wrote them: laid out as a tree — kittree.ts — they are kittree-check.ts's to hold)
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
-  const was = { ...GUNSLOTS }, big = K.BIGSLOT.on, deal = K.KITDEAL.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);
-  try { return await fn(); } finally { Object.assign(GUNSLOTS, was); K.BIGSLOT.on = big; K.KITDEAL.on = deal; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
+  const was = { ...GUNSLOTS }, big = K.BIGSLOT.on, deal = K.KITDEAL.on, kit = K.KIT.on, tree = KITTREE.on, cards = JSON.stringify(K.KIT.members);
+  try { return await fn(); } finally { Object.assign(GUNSLOTS, was); KITTREE.on = tree; K.BIGSLOT.on = big; K.KITDEAL.on = deal; K.KIT.on = kit; K.KIT.members.splice(0, K.KIT.members.length, ...JSON.parse(cards)); }
 }
 const fields = (i: number) => K.kitRows(i).map((r: any) => r.field);
 const row = (i: number, f: string) => K.kitRows(i).find((r: any) => r.field === f);
