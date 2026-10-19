@@ -621,7 +621,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `Walk.inWay` names a living man of theirs within a metre on the side he walks to, and WALKED prints the meeting as a NOTE on its line and fails only on a stop
   with nobody there. NOTHING the player does changed (a first try that had him step aside moved how runs ended and was dropped): the runs' seconds are the
   same before and after on both stands. Run: consulate 5 PASS on both stands (gwot twin on shipped), registry 5 PASS on both, `probes.ts scenario-levels`
-  ALL PASS on frozen; `STAGECAST_BREAK=1` fails STAGED on both stands, `WALKMET_BREAK=1` fails WALKED on shipped (on frozen nobody meets him, so that word
-  changes nothing there). No family runs the consulate through this file: it is the level's own task line, typed. NOT from this: on shipped the test level
-  still stalls in the rescue part until the scripted player leads the hostages out (the rescue ending's own step). What the six seconds say about a teammate
+  ALL PASS on both (20); `STAGECAST_BREAK=1` fails STAGED on both stands, `WALKMET_BREAK=1` fails WALKED on shipped (on frozen nobody meets him, so that word
+  changes nothing there). No family runs the consulate through this file: it is the level's own task line, typed. NOT from this: the test level's stall on shipped in the
+  rescue part ended with the rescue ending's own step (the scripted player leads the hostages out), joined under this one. What the six seconds say about a teammate
   behind a friend in a corridor is the squad's to read, under a player who would have fired or been shot.
