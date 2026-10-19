@@ -30,7 +30,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the teammates read `layout.team`; the two used to part when another Game's start had written the knobs since). On a second way in the objective marker stands
   on the held room NEAREST that start (`firstOpen`; the level's own order was written from its own start), and the debrief's insertion pin is
   `roomClear.startAt`. A PAGE CAPTURE of one of these levels stands the team on the structure's own start unless its query asks otherwise (`&way=2`, `&way=any`). A line of a level's blurb or pick that says where the team stands must hold for
-  every way in. The second starts: compound = the north gate · barracks = the galley's back door · warehouse = the dark off the south-east corner, up the lit
+  every way in. The second starts: compound = the back gate (the list's word since 10-19, as the level names it: `gate_n` 'back gate'; the first is `gate_w` 'side yard gate') · barracks = the galley's back door · warehouse = the dark off the south-east corner, up the lit
   loading apron at both dock doors · depot = outside the east gate (the list's back gate), an arm's length from the store's hatch · the block (both files) = the loading hall's south end, on the tool crib's
   door · records = the dark west side, on the records room's own outside door.
 - **Training lessons** (`src/game/lesson.ts`, `Game.lesson`, `__lesson`; rows in `scenarioList.ts TRAINING_MISSIONS` — a third table beside `SCENARIOS` / `QUIET_MISSIONS`, `group: 'training'`; block
