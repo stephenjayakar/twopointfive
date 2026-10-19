@@ -124,4 +124,7 @@ const RESPONSE: ResponseData = {
   outside: [[38.6, 0, 26.6], [37.4, 0, 26.9], [38.8, 0, 25.4], [37.2, 0, 25.6]],
 };
 
-export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW, response: RESPONSE };
+/** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (game/doornames.ts, WORDS.doors): their ids end in a bearing and the HUD has no
+ *  compass, so each is named by what it is taken from, as another level's doors are */
+const DOOR_NAMES = [{ door: 'breakroom_n', name: 'corridor-side break room door' }, { door: 'breakroom_w', name: 'cubicles-side break room door' }];
+export const OFFICE_SCENARIOS: LevelScenarios & { nightBreach: NightBreachData; roomClear: StructureData; rescue: RescueData } = { nightBreach: NIGHT_BREACH, roomClear: STRUCTURE, rescue: RESCUE, kitView: KIT_VIEW, response: RESPONSE, doorNames: DOOR_NAMES };

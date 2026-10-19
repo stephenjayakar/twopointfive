@@ -125,7 +125,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Left for play: whether the card coming over his line reads well (a presentation call in the debrief's file, nobody is building it). After it
   `probes.ts words` (8) and `rescueflush` are ALL PASS on both stands. Read, not heard; never seen on a GPU.
 - **Read 10-19, left as they are: the office's response lines keep 'the west stairwell' and 'nobody west of the lobby arch'.** The office names its
-  own places with bearings all through (the same team says 'south lot' and 'stack on the break room west door', the handler 'Fire exit, east end.', the held
+  own places with bearings all through (the same team says 'south lot', the handler 'Fire exit, east end.', the held
   worker 'They come up the west stairs.'), and men who work a building speak that way: the lines fit who says them. The no-compass rule is for what the
   player steers by: a row on the HUD, a door's name on the squad's menu. A rewording was built and taken back out, for a reason the next session needs:
   A BUBBLE'S TEXT IS IN THE RUN DIGEST (digest.ts folds it to length + hash, and a held civilian's bubble stays up by its length), so changing a line that is said
@@ -134,3 +134,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that kind of job, over a dozen lines and two door labels, and nobody has asked for it. Also read that day, all fit: the levels' own response lines (site,
   team, tag and way phrases; no other level's `response` block says a bearing: seven files read). The hostage check's last line ('and then they are quiet')
   listened one step on the shipped stand, where the result is already in: it now listens six seconds there.
+- **A level names its own doors where the rooms cannot (10-19, `WORDS.doors`).** The squad's rows, the hover words, 'covering …' and '… is locked.' read a
+  door's name through `orders.ts doorWords`; `doornames.ts` makes that name from the rooms only for a door the room clear structure lists, so every other
+  door with a bearing in its id read 'gate north door', 'fence east door', 'break room west door': a compass word on a HUD that has no compass. A default
+  without the bearing cannot work (the crossing's five gates would all be 'gate door'), and renaming ids moves the level fingerprint and every plan that
+  holds one. So the level says the name: `scenarios.doorNames`, rows of `{ door, name }`, the name as a row reads it ('yard gate', no 'the';
+  `scene/scenarios.ts LevelScenarios`, `KEYS.scenarios` and a rule in `levelData.ts` — a door the level has, once, 1 to 40 characters; the editor's
+  `scenarioRefs` knows the slot, so a rename follows and a delete is refused; `docs/level-format.md`). Not in the fingerprint (door ids, routes, boxes).
+  `doornames.ts nameDoors` hangs three things on the Door at construction: the made name as it was, the written name, and the made names as they come out
+  BESIDE the written ones (a 'second hall door' is a 'hall door' once the first is a 'loading door'). `doorSaidName` gives written, then made-beside, WHILE
+  THE KEY IS UP, and the old made name with it down: the key is asked when a name is read, not when the game is built (the harness writes its switches after
+  the Game is made). ONE NAME A DOOR: `doorWrittenName(d)` (the written name, key up, else undefined) is read first by the lines that named a door some other
+  way — a rear man's 'holding ·' row (`rearwatch.ts`), the rescue's held-door label (`rescue.ts doorName`), the response team's 'stack on …' and 'by the …'
+  (`qrf.ts doorSaid`), and the office's own men on the net (`tactics.ts gateCall`; another level's men already read `doorSaidName`). A door with no written
+  name says in each of those exactly what it said. A written name need not end in 'door': gateCall's '…down in the <door>way' drops the 'way' then.
+  THE KEY: ON in the page, `?doornames=0` = every door called what it was; OFF in the module and on the frozen stand, `TPS_DOORNAMES=1` raises it (read only
+  with the words switch on); `FROZEN_HOLDS` row, `STAND_ENV` word, the stand's pinned line; it rides the WORDS table in a recording, and one from before the
+  key replays with it down (`journal.ts applyKnobs`) — a door's name is said in bubbles and a bubble's text is in the run digest. What the key does NOT hold:
+  a name written into a level file LATER changes what a recording made on that level in between replays to, like any other change to a level's scenario
+  data (none of it is in the fingerprint). NAMED SO FAR: the office's two (`levels/office.scenarios.ts`: 'corridor-side break room door', 'cubicles-side
+  break room door', by what each is taken from — the same words the rooms rule would make if the office were not left out of it). OWED: 96 doors in 25 level
+  files, door for door in `tools/qa/words-probes.ts DOORS_OWED` — the levels' own to write; a door named comes off the list in the same change
+  (`DOORNAMES_CENSUS=1` in front of the check prints the list as it now is). Check `bun run tools/qa/probes.ts words-doornames` (6 lines: the lookup on a
+  made-up level with the key up and down; a written name says no bearing and begins with no 'the'; no two doors of a level called the same; the doors
+  still called by a bearing are exactly the owed list; the office stood up, the row and a line that names the door another way, key up and down; the two
+  stands' row, the word either way and an old recording). `DOORNAMES_BREAK=1` reads the names with the key down and is red (the office's two owed again),
+  on both stands. NOT TOUCHED: the debrief's timeline names a kicked or picked door by its id's words (`chronicle.ts chronDoor`), and the office's men say
+  'break room west door' of a door nobody wrote a name for — there is none left on the office. On the real page (headless Chromium, the software adapter, the office's room clear, the orders' menu opened on that door, the page's text read): 'ON
+  CUBICLES-SIDE BREAK ROOM DOOR', and with `?doornames=0` 'ON BREAK ROOM WEST DOOR'; no console or page error on either. Its text, not its pixels: never seen on a GPU.

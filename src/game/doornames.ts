@@ -9,15 +9,23 @@
 // A place it is taken from whose own name is a bearing ('north corridor', 'east side') is left out — the HUD has no compass — and the file's order tells such
 // doors apart. A whole compass word in an id ('records_west', 'staff_east') is shorthand like a compass letter: the door is named by its rooms.
 // An id of two places with 'to' between them ('kitchen_to_hall') reads as words too: 'to' is two letters and a word all the same.
+// WHERE THAT RULE HAS NOTHING TO GO ON (a door the structure does not list, a level with no structure, the office) the level may say the name itself:
+// scenarios.doorNames, a row a door: its id and its name (words.ts WORDS.doors; `?doornames=0` = the names as they were). A written name wins, and the made
+// names beside it are told apart as if it had always been called that.
 // An id that already reads as words ('radio_room', 'fire_exit', 'bunks', 'back_1') keeps them, as does every door the structure does not list,
 // the office (its ids have their own table: orders.ts DOOR_SAID, dialogue.ts DOOR_NAMES), a Training lesson's level (its lines name its doors themselves) and
 // every door while the pass is off. ONE name a door: the squad's rows (orders.ts doorWords)
 // and a defender's call on the net (tactics.ts gateCall) both read it, so a door has one name on one HUD. Words only: nothing here is read by a rule.
 // A leaf of the import graph but for types; the names hang on the Door OBJECTS (a Game's own), so two Games in a process each have theirs.
 import { SideMap } from '../math/side';
+import { WORDS } from './words';   // (a leaf)
 import type { Level } from '../scene/level';
 
 const SAID = new SideMap<object, string>('doornames.SAID');
+/** …the name its level wrote for it (scenarios.doorNames), and the made names as they come out beside the written ones (a door told apart from another
+ *  by 'second' is not, once the other has a name of its own). Read while WORDS.doors is up: all three hang on the Door at construction, the key is asked
+ *  when a name is READ (the harness writes its switches after the Game is made). */
+const WRITTEN = new SideMap<object, string>('doornames.WRITTEN'), SAID_UP = new SideMap<object, string>('doornames.SAID_UP');
 const COMPASS = new Set(['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw', 'north', 'south', 'east', 'west']);
 /** two letters and a word all the same: the joining word of an id that names the two places a door is between ('kitchen_to_hall', said 'kitchen to hall door'
  *  on the squad's row; counted shorthand, a defender's call left that name for the nearest room's — two names for one door) */
@@ -34,12 +42,12 @@ const bare = (s: string) => s.replace(/^the\s+/i, '');
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
 
 /** the said name of every shorthand door the level's structure lists, by door id (a pure function of the level's data; exported for the checks) */
-export function doorNamesOf(level: Level, ids: readonly string[]): Map<string, string> {
+export function doorNamesOf(level: Level, ids: readonly string[], written?: ReadonlyMap<string, string>): Map<string, string> {
   const out = new Map<string, string>(), rooms = level.scenarios?.roomClear?.rooms ?? [];
   if (!rooms.length || level.scenarios?.lesson) return out;
   const made: { id: string; name: string }[] = [];
   for (const id of ids) {
-    if (!shorthandId(id)) continue;
+    if (written?.has(id) || !shorthandId(id)) continue;   // (a door its level has named is not made a name)
     const of = rooms.filter(r => r.doors.some(d => d.id === id)); if (!of.length) continue;
     const R = of[0], A = bare(R.name);
     if (of.length > 1) { made.push({ id, name: `${A} to ${bare(of[1].name)} door` }); continue; }
@@ -48,7 +56,7 @@ export function doorNamesOf(level: Level, ids: readonly string[]): Map<string, s
     made.push({ id, name: plain ? `${A} door` : from === 'outside' ? `outer ${A} door` : / side$/.test(from) ? `${from} ${A} door` : /[\s\d]/.test(from) ? `${A} door from ${from}` : `${from}-side ${A} door` });
   }
   // two doors that still read the same are told apart in the file's order; a name another door's own id already reads as is told apart the same way
-  const taken = new Set(ids.filter(id => !made.some(m => m.id === id)).map(id => `${id.replace(/_/g, ' ')} door`));
+  const taken = new Set(ids.filter(id => !made.some(m => m.id === id)).map(id => written?.get(id) ?? `${id.replace(/_/g, ' ')} door`));
   for (const m of made) {
     const same = made.filter(o => o.name === m.name);
     out.set(m.id, same.length > 1 || taken.has(m.name) ? `${ORDINALS[Math.min(same.indexOf(m) + (taken.has(m.name) ? 1 : 0), ORDINALS.length - 1)]} ${m.name}` : m.name);
@@ -56,11 +64,24 @@ export function doorNamesOf(level: Level, ids: readonly string[]): Map<string, s
   return out;
 }
 
-/** Game construction: hang each listed door's said name on its Door (nothing for the office, or a level with no structure) */
-export function nameDoors(level: Level, office: boolean, doors: readonly { def: { name: string } }[]) {
-  if (office) return;
-  const names = doorNamesOf(level, doors.map(d => d.def.name));
-  for (const d of doors) { const n = names.get(d.def.name); if (n) SAID.set(d, n); }
+/** (WORDS.doors) the names the level gives its own doors (scenarios.doorNames), for the doors the rule above cannot name: one the structure does not list,
+ *  a level with no structure, the office, a lesson's yard. A written name wins over a made one. Exported for the checks. */
+export function authoredDoorNames(level: Level, ids: readonly string[]): Map<string, string> {
+  const out = new Map<string, string>();
+  for (const r of level.scenarios?.doorNames ?? []) { const n = typeof r?.name === 'string' ? bare(r.name.trim()) : ''; if (n && ids.includes(r.door) && !out.has(r.door)) out.set(r.door, n); }
+  return out;
 }
-/** the name nameDoors gave this door (undefined: its id's own words stand) */
-export function doorSaidName(d: object): string | undefined { return SAID.get(d); }
+/** Game construction: hang each named door's names on its Door (a made name: nothing for the office, or a level with no structure) */
+export function nameDoors(level: Level, office: boolean, doors: readonly { def: { name: string } }[]) {
+  const ids = doors.map(d => d.def.name), written = authoredDoorNames(level, ids), none = new Map<string, string>();
+  const names = office ? none : doorNamesOf(level, ids), up = office ? none : written.size ? doorNamesOf(level, ids, written) : names;
+  for (const d of doors) {
+    const id = d.def.name, n = names.get(id), u = up.get(id), wr = written.get(id);
+    if (n) SAID.set(d, n); if (u) SAID_UP.set(d, u); if (wr) WRITTEN.set(d, wr);
+  }
+}
+/** the name its LEVEL wrote for this door, while that key is up (undefined: none written, or the key down). For a line that named a door some other way
+ *  before the key — a man's 'holding ·' row, the response team's 'stack on …' — and must say the one name where there is one, and its old words where not */
+export function doorWrittenName(d: object): string | undefined { return WORDS.on && WORDS.doors ? WRITTEN.get(d) : undefined; }
+/** the name nameDoors gave this door — its level's written one first, with that key up (undefined: its id's own words stand) */
+export function doorSaidName(d: object): string | undefined { return WORDS.doors ? WRITTEN.get(d) ?? SAID_UP.get(d) : SAID.get(d); }

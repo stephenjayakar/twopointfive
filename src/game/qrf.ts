@@ -53,6 +53,7 @@ import { isDaylight, setGroup } from './lighting';
 import { roomName } from './dialogue';
 import { doorLabel } from './tactics';
 import { WORDS, w } from './words';
+import { doorWrittenName } from './doornames';   // (a leaf: the name a level wrote for a door)
 import { TRAINED } from './aim';
 import { tally, missionLive } from './mission';
 import { isBreathing } from './game';
@@ -282,7 +283,7 @@ function control(g: Game, text: string) { g.msg('radio: CONTROL — ' + text); g
 /** … and with a row in the run's timeline (the silent net's two lines: with nobody of the shift left to say why the team came, the debrief would not know) */
 function controlRow(g: Game, text: string) { control(g, text); chronicle(g, 'radio', { who: 'CONTROL', text: text.length > 96 ? text.slice(0, 94) + '…' : text }); }
 /** a plan's door as the element says it: the shift's own words for it (tactics.ts doorLabel: 'break room west', not 'breakroom w') — the bare id with the words switch off */
-function doorSaid(g: Game, name: string): string { const d = WORDS.on ? g.doors.byName(name) : undefined; return d ? doorLabel(d) : name.replace(/_/g, ' '); }
+function doorSaid(g: Game, name: string): string { const d = WORDS.on ? g.doors.byName(name) : undefined; return (d && doorWrittenName(d)) ?? `${d ? doorLabel(d) : name.replace(/_/g, ' ')} door`; }   // (…or the name its level wrote for it, as the squad's row says it: doornames.ts)
 /** a response man's radio line: his bubble if he is on screen, and the net's log line under his callsign (guards.ts say would file a unit's radio under his name
  *  without the 'radio:' the HUD keys on — these men ARE on the shift's net) */
 function radio(g: Game, gd: Guard | null | undefined, text: string) {
@@ -753,7 +754,7 @@ function pickTarget(g: Game, Q: Qrf, el: Guard[], fresh: boolean) {
   Q.target = next;
   startMove(g, Q, el);
   const lead = el[0];
-  radio(g, lead, next.kind === 'room' ? `element moving — ${next.room}, by the ${doorSaid(g, next.plan!.door)} door`
+  radio(g, lead, next.kind === 'room' ? `element moving — ${next.room}, by the ${doorSaid(g, next.plan!.door)}`
     : sweep ? (bf ? `nothing here — element moving on, ${next.room}` : `nothing on the net — element sweeping, ${next.room}`)
     : netRule(g) && !bf ? `nothing on the net — element clearing from ${marksOf(g)?.name ?? 'the door'}` : `element moving — ${next.room}, on the last ${netRule(g) ? 'word' : 'fix'}`);
   note(Q, g, `target:${next.kind}:${next.room}${sweep ? ':sweep' : ''}`);
@@ -902,7 +903,7 @@ function stackMarksFor(g: Game, P: RoomClearPlan, n: number): Vec3[] {
 function startStack(g: Game, Q: Qrf, el: Guard[]) {
   const P = Q.target!.plan!; Q.phase = 'stack'; Q.phaseT = 0; Q.stackMarks = stackMarksFor(g, P, el.length); Q.shovedAt = NaN; Q.can = null;
   el.forEach((m, i) => route(Q, m, [Q.stackMarks[i]], { speed: 1.7 - i * 0.08, face: P.stackFace[Math.min(i, 1)], stance: i === 0 ? 'stack' : 'highReady', stackSide: P.stackSide, upper: 'none', aimAt: v3.copy(P.stackAim[Math.min(i, 1)]), crouch: false, strafe: false }));
-  radio(g, el[0], `stack on the ${doorSaid(g, P.door)} door — ${Q.target!.room}`); note(Q, g, `stack:${Q.target!.room}`);
+  radio(g, el[0], `stack on the ${doorSaid(g, P.door)} — ${Q.target!.room}`); note(Q, g, `stack:${Q.target!.room}`);
 }
 function phaseStack(g: Game, Q: Qrf, el: Guard[]) {
   for (const m of el) advance(Q, m);
@@ -1020,7 +1021,7 @@ function startDrill(g: Game, Q: Qrf, el: Guard[]): boolean {
   const op = C.tools.order(kind, el, d, sideOf(d, P.stack[0]));
   if (typeof op === 'string') { Q.bangs = C.tools.bangs; note(Q, g, `drill-no:${op}`); return false; }
   Q.op = op; Q.opBeat = 0; Q.drills++; Q.phase = 'drill'; Q.phaseT = 0; Q.can = null; Q.canLandT = NaN;
-  radio(g, el[0], `stack on the ${doorSaid(g, P.door)} door — ${T.room}`); note(Q, g, `stack:${T.room}`); note(Q, g, `drill:${kind}`);
+  radio(g, el[0], `stack on the ${doorSaid(g, P.door)} — ${T.room}`); note(Q, g, `stack:${T.room}`); note(Q, g, `drill:${kind}`);
   return true;
 }
 /** the entry let go of (contact, a reset, its end): every man off the cast's orders where he stands, the tools emptied — a can they had not yet thrown back in the element's pool */

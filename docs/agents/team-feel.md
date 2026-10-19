@@ -408,6 +408,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   ON in the page (`?stalkambient=0`), OFF in the module and on the frozen stand (`TPS_STALKAMBIENT=1`); a `FROZEN_HOLDS` row; journal: the key rides in a recording's `flags` (its tables never carry `SNEAK`) — no flag = off, a flag = as recorded. QA `probes.ts pairup-one-eye` (d): six lines, green on both stands, `STALKAMBIENT_BREAK=1` fails two (the roofed line and the lamp-pool lag line are labelled controls; the lag line fails on the rule as it was before the lower-of-two).
   Measured on that one tape, re-run by hand on its own input (no seeds, no tally): rule off he walks and Novak is alert at 1:38.0; rule on `stalk()` is exposed by Novak at 1:35.7 / 1:36.6 (cost 2.27 / 1.55 against 0.12) and from the order on he holds at (22.9, 20.4), 'waiting · Novak is looking across the way to Reyes'. At 1:37.4 the rest of the way is already out of Novak's view (cost 0).
   LIMITS: it is the light of where he STANDS — from under a roof's edge or a wall's moon shadow the yard ahead still reads dark until his meter rises (one stalk read, 0.3 s, later); a per-cell CPU moon by the collision's shadow test disagreed with the taped meter at his own spot, so none is used. Nobody has played it; never seen on a GPU.
+- **A follower is not left standing on the walk of a man who comes to a sound** (`sneak.ts sneakComing`, `SNEAK.noiseWalk`, `noiseWalkM` 2.5, 10-19; a
+  claim left by the breaker mend, `WORK.offWalk` in squad.md: "the same hole stands for any suspicious man who walks to a noise where the follower waits").
+  The sneak's follower waits short of a stretch a defender is looking at until that man's back is turned; a man WALKING at him never turns it, and the
+  follower was walked into. ON in the page (`?noisewalk=0` off; the debugger panel's row 'off the walk of a man coming to a sound'), OFF in the module and
+  on the frozen stand (`TPS_NOISEWALK=1` raises it; `TPS_NOISEWALK=0` puts it off on the shipped one); SNEAK is a journal table, and a recording from
+  before the key replays with it off. Off = the build as it was (`sneakComing` is then `workComing` alone, asked where that was asked). With it on, a man
+  counts when he is suspicious, has no errand, no body to see to, is not held to a post or in Sam's arm, has none of them in view this moment (a sighting
+  inside `SPOTTED.freshSecs`: that is spotted.ts's to answer, still and low), is still on his route, the route ends at the place he means to look at, and
+  what is left of it passes inside `noiseWalkM` of the teammate with nothing solid between. For THAT man the breaker man's manners hold: while Sam is going
+  on the follower crosses after him instead of waiting, does not keep him as a remembered looker, does not back off down the way he is coming, and is not
+  stood still by spotted.ts's freeze. With the key on, ANOTHER man's eyes are asked on their own (the read of a step names only the first looker it
+  meets): a second man watching the stretch, or the follower where he stands, holds him as before — for the breaker man's walk too. NOT counted: a man
+  on an errand other than the breaker (a device, a rack, a colleague's route), the found-body script, a man who has arrived and is looking round.
+  KNOWN, not built: no test of how far off the man still is (a lit stretch is crossed now for a meeting ten seconds away); the crossing follows Sam's
+  steps wherever they go; `noiseWalkM` is wider than the eye's near field (`nearM` 2.1). QA `probes.ts sneak-noisewalk` (`tools/qa/noisewalk-check.ts`,
+  8 lines, green on both stands; `NOISEWALK_BREAK=1` fails 3 on both): the breaker check's own stage (lights out as two, the mains thrown, Sam walks
+  on) with ONE thing staged by hand — the errand taken off the man sent to the panel and his interest kept up as a whistle keeps it, so he walks there
+  as a man who heard something (one sound alone lets a man talk himself out of it inside about ten metres). Key off: the follower stood still on the
+  walk 2.6 s (frozen) / 3.4 s (shipped) and the man was alert 11.2 / 11.7 s after the throw; key on: nobody roused, the man passed 2.0 m off, the
+  follower low on 581 of 585 frames and at Sam's shoulder at the end, the game's own asking answered yes 53 times. RUN beside it, green on both stands:
+  the families `sneak`, `spotted`, `workthings`, `pair`, `pairup`, the `lights-out` run; knobs, rollback (static) and dice checks. MEASURED: the paired
+  sneak (`tools/qa/pair-sneak.ts`, shipped stand, records-pair and room-clear-pair, seeds 433-480, arm pair), key on against off: all 96 pairs identical
+  by run digest — on those two levels the scripted sneak never meets the case, so the tally says the key costs nothing there and nothing about what it
+  gains. One stage, in the dark, one seed; the lit case has no check. Never seen on a GPU; nobody has played it.
 - **A squad nobody has found sneaks when Sam sneaks** (`src/game/unseen.ts`, 10-10; the maintainer: "if we're not compromised and i'm sneaking around to get into a better
   position, my teammates should do the same"; page rebuild/teammates-sneak/read-first.md). NO ORDER: a LOUD squad reads the player. Sam sneaks = not
   sprinting and (crouched, or on a wall hold, or pace ≤ `paceAt`), `linger` 1.5 s after he stops; the squad is FOUND = `g.fight.hotFor` any living squad man (a shot, a bang or

@@ -205,6 +205,19 @@ export const WALLCHARGE = {
   samSecs: [2.0, 0.6] as [number, number], samSup: 0.5,
 };
 export const WALLCHARGE_DEFAULTS = JSON.parse(JSON.stringify(WALLCHARGE)) as typeof WALLCHARGE;
+/** A WALL SHOT, FELT (the maintainer, 10-19, of a room taken through a blown wall: "the smoke after a wall shot makes it too hard -- we should probably (1) turn
+ *  down its density a little and (2) make it so everyone in the room gets more of a shock"). With `on`:
+ *  (1) the charge's pall (destruction.ts CHAOS.pall.wall) is asked at `pall` of its density, the picture's dust thinned with it: the hole reads sooner. Only the
+ *      wall charge's: a grenade's pall and the charge's borrowed report are as they were.
+ *  (2) EVERY defender in the room the hole opens into is shocked. One with a line to the hole, as before, but longer: folded (rooted, no round) `staggerSecs`
+ *      (it was DOORTOOLS.staggerSecs, 2.0) and blind `stunSecs` at the wall · at stunM (it was DOORTOOLS.stunSecs, 6.0 · 2.5). One with NO line to the hole,
+ *      or past stunM, who was untouched: folded the same `staggerSecs` (the shock wave fills the room; the flash needs the line, so his eyes are his own) —
+ *      out to `roomM` from the charge, so that a hole into a long hall or the open air does not fold a man a street away.
+ *      One of ours and the player beyond the wall, with a line: blind `oursSecs` (it was DOORTOOLS.backblastSecs, 1.5) — a blast does to the player what it
+ *      does to anyone (one of a team of TWO beyond the wall takes what a defender there takes, as he always did: the longer numbers are his too). The reach
+ *      inside which a man behind the wall is killed still needs the line and is as it was; no health number is touched.
+ *  OFF here and on the frozen stand (TPS_WALLSHOT=1); ON in the page (?wallshot=0). Check: tools/qa/wallshot-check.ts (WALLSHOT_BREAK=1). */
+export const WALLSHOT = { on: false, pall: 0.75, staggerSecs: 3.5, stunSecs: [8.0, 4.0] as [number, number], roomM: 12, oursSecs: 2.0 };
 /** the menu page the wall's fifth row opens */
 export const WALL_PAGE = 'walltools';
 /** the order's id (orders.ts give / Assignment.order) */
@@ -302,6 +315,12 @@ export function safeRadius(g: Game, W: WallSpot): { standoff: number; reach: num
 
 /** THE WALL AT A POINT (the cursor's, a probe's): the full-height unrotated wall whose footprint the point is on (within pickM) — a partition the engine can
  *  open (`ok`), or structure, with the word for what it is. `from`: whose side the charge goes on (default Sam's). Null: no wall there. */
+/** the room a hole in `W` at `du` opens into (0: none — open floor, a doorway): the first room a point beyond the far face stands in, stepping in from the
+ *  face (what stands against the wall is no floor to the room map) and a pace to either hand. WALLSHOT's. */
+function roomBeyond(g: Game, W: WallSpot, du: number, T: number): number {
+  for (let d = 0.45; d <= 1.95; d += 0.25) for (const s of [0, 0.5, -0.5]) { const r = g.cleared.roomAt(wallPt(W, du + s, -(T + d))); if (r) return r; }
+  return 0;
+}
 export function wallAt(g: Game, at: Vec3, from: Vec3 = g.player.char.pos): WallSpot | null {
   const walls = g.destr?.walls; if (!walls) return null;
   const boxes = g.col.boxes, K = WALLCHARGE, n = Math.min(walls.authored, boxes.length), skip = BoxFlag.Glass | BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Dynamic;
@@ -1009,9 +1028,10 @@ export class WallCharge {
     const T = thick(W), at = chargeAt(W);
     const breach = W.outer && WALLCHARGE.outer && g.destr.walls.adopt(W.index) ? { breach: W.index } : null;   // (an outer wall: the engine takes it on now, and this blast alone opens it — WALLCHARGE.outer)
     const hung = WALLCHARGE.hung ? { hung: { wall: W.index, r: WALLCHARGE.hungM } } : null;   // (what hangs on the wall under the charge — a notice board — is the charge's too: WALLCHARGE.hung)
+    if (WALLSHOT.on) g.cleared.roomAt(at);   // (WALLSHOT names the room beyond by the room map: built, if nobody has asked it yet, on the floor as it is BEFORE this hole joins two of its rooms)
     g.destr.blast(at, { who: PLAYER_ID, chaos: false, ...breach, ...hung });   // (the walls, the cover by it, the doors' and the glass's own lists; its dust and clutter are the stun charge's call below — once)
     const hole = this.holeAt(W);
-    g.destr.pallWall(wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), W.alongX ? [1, 0, 0] : [0, 0, 1], T, !!hole, W.outer ? 'concrete' : 'drywall');   // the charge's PALL (destruction.ts CHAOS.pall: nothing with the rule off)
+    g.destr.pallWall(wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), W.alongX ? [1, 0, 0] : [0, 0, 1], T, !!hole, W.outer ? 'concrete' : 'drywall', WALLSHOT.on ? WALLSHOT.pall : 1);   // the charge's PALL (destruction.ts CHAOS.pall: nothing with the rule off)
     messWall(g, wallPt(W, hole ? hole.du : 0, 0, 0), wallN(W), T, !!hole);   // …and what it leaves on the floor (floormess.ts CHAOS.mess: nothing with the rule off)
     const it = g.items.spawn('flash', wallPt(W, 0, 0.15, 0.5), [0, 0, 0], { fuse: 99, who: PLAYER_ID }); it.fired = true;
     const all = g.guards, last = g.messages[g.messages.length - 1]; g.guards = []; try { detonateStun(g, it, true); } finally { g.guards = all; }
@@ -1020,20 +1040,23 @@ export class WallCharge {
     let knocked = 0, stunned = 0, backblast = 0;
     const R = safeRadius(g, W), nearSecs = (d: number) => WALLCHARGE.safe ? lerp(WALLCHARGE.safeSecs[0], WALLCHARGE.safeSecs[1], clamp(d / R.reach, 0, 1)) : K.backblastSecs;   // (the charge's own side: the safety radius — off, the door charge's two numbers)
     const xz = wallPt(W, 0, 0), out = wallPt(W, 0, 0.5, 1.1), inn = wallPt(W, hole ? hole.du : 0, -(T + 0.45), 1.1);
+    const SH = WALLSHOT.on ? WALLSHOT : null, room = SH && hole ? roomBeyond(g, W, hole.du, T) : 0;   // (WALLSHOT: the room the hole opens into, 0 = none to name)
     for (const gd of [...g.guards]) {
       if (gd.state === 'dead') continue;
       const p = gd.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz), chest: Vec3 = [p[0], 1.1, p[2]];
-      if (dist > K.stunM || (far && !hole) || g.col.solidBlocked(far ? inn : out, chest)) continue;   // (a wall that held is still a wall to the men behind it)
+      const lined = dist <= K.stunM && !g.col.solidBlocked(far ? inn : out, chest), inRoom = !!room && far && gd.team !== 'operative' && dist <= SH!.roomM && g.cleared.roomAt(p) === room;
+      if ((far && !hole) || (!lined && !inRoom)) continue;   // (a wall that held is still a wall to the men behind it)
       if (!far) { if (dist < R.reach) { this.dazzle(gd, nearSecs(dist), inn); if (gd.team === 'operative') backblast++; else stunned++; } continue; }   // too near the charge on its own side
-      if (gd.team === 'operative' && g.orders.big) { this.dazzle(gd, K.backblastSecs, inn); backblast++; continue; }   // (one of ours past the wall: the order is refused while he is there — gone in since, he is dazzled, not felled)
+      if (!lined) { this.shock(gd, SH!.staggerSecs, inn); stunned++; continue; }   // (WALLSHOT: in the room with no line to the hole — the shock, not the flash)
+      if (gd.team === 'operative' && g.orders.big) { this.dazzle(gd, SH ? SH.oursSecs : K.backblastSecs, inn); backblast++; continue; }   // (one of ours past the wall: the order is refused while he is there — gone in since, he is dazzled, not felled)
       if (dist < K.knockM) { const dir = v3.normalize([p[0] - xz[0], 0.15, p[2] - xz[2]]); killGuard(g, gd, dir, false, 'struck', 'player', `${gd.callsign ?? 'a man'} down — behind the wall when it went`); knocked++; }
-      else { this.dazzle(gd, lerp(K.stunSecs[0], K.stunSecs[1], clamp(dist / K.stunM, 0, 1)), inn); gd.staggerUntil = Math.max(gd.staggerUntil, g.time + K.staggerSecs); gd.weapon.burst = null; stunned++; }
+      else { const ss = SH ? SH.stunSecs : K.stunSecs; this.dazzle(gd, lerp(ss[0], ss[1], clamp(dist / K.stunM, 0, 1)), inn); gd.staggerUntil = Math.max(gd.staggerUntil, g.time + (SH ? SH.staggerSecs : K.staggerSecs)); gd.weapon.burst = null; stunned++; }
     }
     const sam = WALLCHARGE.safe && !g.player.down ? this.blastShare(W, g.player.char.pos, R) : 0; if (sam > 0) this.samCaught(sam, xz);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there — on the charge's own side inside the reach with a line to it, blind the
     //  seconds a teammate there gets; beyond a wall it opened, inside stunM with a line, dazzled and never felled, as one of ours beyond a blown door is)
     if (SAMSTUN.on && !g.player.down && !g.puppet && !g.touring) { const p = g.player.char.pos, far = wallOff(W, p) < -T / 2, dist = flat(p, xz);
-      if (!(far && !hole) && dist < (far ? K.stunM : R.reach) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) dazzlePlayer(g, far ? K.backblastSecs : nearSecs(dist), inn); }
+      if (!(far && !hole) && dist < (far ? K.stunM : R.reach) && !g.col.solidBlocked(far ? inn : out, [p[0], 1.1, p[2]])) dazzlePlayer(g, far ? (SH ? SH.oursSecs : K.backblastSecs) : nearSecs(dist), inn); }
     this.lastBlow = { reach: R.reach, indoors: R.indoors, sam };
     if (hole) moraleBlast(g, inn, PLAYER_ID);   // (morale.ts: the men past the wall it opened are shaken by it — a return on its first line with the switch off)
     this.stats.blown++; if (hole) this.stats.holes++; else this.stats.duds++; this.stats.knocked += knocked; this.stats.stunned += stunned; this.stats.backblast += backblast;
@@ -1074,6 +1097,14 @@ export class WallCharge {
     return best;
   }
   /** flash-blind (doortools.ts dazzle, to the letter) */
+  /** WALLSHOT: the shock with no flash — folded `secs` (rooted, gun down, no round) with his eyes his own, and he knows where it came from (what the frag's
+   *  wound and the dazzle beside this do to a man's reaction, awareness and path) */
+  private shock(gd: Guard, secs: number, at: Vec3) {
+    const g = this.g;
+    gd.staggerUntil = Math.max(gd.staggerUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs); gd.weapon.burst = null;
+    gd.awareness = Math.max(gd.awareness, 0.6); if (gd.state !== 'alert') gd.lastKnown = v3.copy(at);
+    gd.path = []; gd.pathGoal = null; gd.speed = 0; gd.char.anim.hit();
+  }
   private dazzle(gd: Guard, secs: number, at: Vec3) {
     const g = this.g;
     gd.dazzledUntil = Math.max(gd.dazzledUntil, g.time + secs); gd.reactT = Math.max(gd.reactT, secs);

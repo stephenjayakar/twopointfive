@@ -20,7 +20,7 @@ import { LIGHTWALL } from '../game/lighting';
 import { IRLIGHT } from '../game/irlight';
 import { AIRDUST } from '../game/airDust';
 import { WALLSNAP } from '../game/wallsnap';
-import { WALLCHARGE } from '../game/wallcharge';
+import { WALLCHARGE, WALLSHOT } from '../game/wallcharge';
 import { CHAOS } from '../game/destruction';
 import { WALLREACT } from '../game/wallreact';
 import { CASTOR } from '../game/props';
@@ -108,6 +108,7 @@ import { SPRINTDOOR } from '../game/sprintdoor';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
+import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { kitSoloStand } from '../game/kit';
 import { glassPenHarness } from '../game/glasspen';
 import { glassFxForced, GLASS } from '../game/glass';
@@ -230,6 +231,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SWEEP')) HARD.sweep = String((globalThis as any).process?.env?.TPS_SWEEP ?? '') === '1';   // hard's defenders go and look when the team goes quiet (src/game/pressure.ts goLook, src/game/enemysquads.ts lookOut): off, so every frozen hard digest and tally plays the garrison that holds where the noise left it
     if (pinned('TPS_HOLDDROP')) HOLD.dropGun = String((globalThis as any).process?.env?.TPS_HOLDDROP ?? '') === '1';   // a held man drops his gun: off on the frozen stand (its hold probes and digests were recorded with the gun in his fist)
     if (pinned('TPS_TABBACK')) BACKKEY.tab = String((globalThis as any).process?.env?.TPS_TABBACK ?? '') === '1';   // Esc is only the pause and Tab backs out (src/game/backkey.ts): off on the frozen stand, where a Tab in the tick does nothing
+    if (pinned('TPS_WALLSHOT')) WALLSHOT.on = String((globalThis as any).process?.env?.TPS_WALLSHOT ?? '') === '1';   // a wall shot's thinner smoke and its room-wide shock (src/game/wallcharge.ts WALLSHOT): off on the frozen stand, where a charge's pall and stun are the ones every tally was recorded on
     if (pinned('TPS_FIXEDSTEP')) FIXEDSTEP.on = String((globalThis as any).process?.env?.TPS_FIXEDSTEP ?? '') === '1';   // the fixed 60 Hz game step (src/host/loop.ts): off on the frozen stand — a tool that steps through stepFrame gets one update a frame on the frame's own time, as every frozen digest was recorded
     if (pinned('TPS_TWEEN')) TWEEN.on = String((globalThis as any).process?.env?.TPS_TWEEN ?? '') === '1';   // drawing between ticks (src/host/tween.ts): off on the frozen stand — picture only, and only under the line above
     if (pinned('TPS_HOLDYAW')) HOLD.oneFacing = String((globalThis as any).process?.env?.TPS_HOLDYAW ?? '') === '1';   // a held man keeps the hold's facing: off on the frozen stand (its showcase digests were recorded with the marks turning him)
@@ -251,6 +253,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_AUTORELOAD')) RELOAD.auto = String((globalThis as any).process?.env?.TPS_AUTORELOAD ?? '') === '1';   // a dry gun reloads itself (src/game/autoreload.ts): off, so a dry gun waits for R as every frozen probe, digest and scripted player expects; `TPS_AUTORELOAD=1` turns it on
     if (pinned('TPS_QUICKTHROW')) QUICKTHROW.on = String((globalThis as any).process?.env?.TPS_QUICKTHROW ?? '') !== '0';   // the G quick throw (src/game/quickthrow.ts): ON here — the page plays without it, but the frozen probes and a recorded session press G (the soak does not); `TPS_QUICKTHROW=0` takes it away
     if (pinned('TPS_FRIENDS')) FRIENDS.noSnap = String((globalThis as any).process?.env?.TPS_FRIENDS ?? '') === '1';   // the reticle passes over men of the player's own side (src/game/friends.ts): off, so a scripted cursor near a teammate snaps as every frozen probe and digest saw it; `TPS_FRIENDS=1` = as the page
+    if (pinned('TPS_FRIENDLYFIRE')) FRIENDLYFIRE.on = String((globalThis as any).process?.env?.TPS_FRIENDLYFIRE ?? '') === '1';   // a round of Sam's side finds the men of Sam's side (src/game/friendlyfire.ts): off, so a scripted player's round passes a teammate and a teammate's passes him, as every frozen probe and digest saw it; `TPS_FRIENDLYFIRE=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page
     if (pinned('TPS_QUIETFOG')) QUIETFOG.on = String((globalThis as any).process?.env?.TPS_QUIETFOG ?? '') === '1';   // quiet missions under the fog of war (src/game/quietfog.ts): off, so a quiet mission's query reads no rung of the fog lever, as every frozen run was made
     if (pinned('TPS_QUIETDEF')) QUIETFOG.def = String((globalThis as any).process?.env?.TPS_QUIETDEF ?? '') === 'team' ? 'team' : 'off';   // where a quiet mission starts (src/game/quietfog.ts): 'off', every guard shown, as every frozen quiet digest and tally was played — the page starts one under the fog
@@ -297,6 +300,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_BACKTURN')) COVER.backTurn = String((globalThis as any).process?.env?.TPS_BACKTURN ?? '') === '1';   // a back-pedalling man the deal lets go of keeps his path while his body comes round (src/game/cover.ts turnOut): off, he walks forward along his body, as every frozen digest was made
     if (pinned('TPS_UNDERFOOT')) UNDERFOOT.on = String((globalThis as any).process?.env?.TPS_UNDERFOOT ?? '') === '1';   // a walker's feet are asked from where the walk grid's bake begins (src/scene/collision.ts UNDERFOOT): off, a thing 0.2 m high stops them, as every frozen digest was made
     if (pinned('TPS_STALKAMBIENT')) SNEAK.stalkAmbient = String((globalThis as any).process?.env?.TPS_STALKAMBIENT ?? '') === '1';   // the stalk's light takes the walker's own meter over the estimate (src/game/sneak.ts sneakWalk): off, the estimate alone, as every frozen probe of the pair read it; TPS_STALKAMBIENT=1 raises it
+    if (pinned('TPS_NOISEWALK')) SNEAK.noiseWalk = String((globalThis as any).process?.env?.TPS_NOISEWALK ?? '') === '1';   // a follower is not left standing on the walk of a man who comes to a sound (src/game/sneak.ts sneakComing): off, the breaker man alone, as every frozen probe of the pair read it; TPS_NOISEWALK=1 raises it
     if (pinned('TPS_DOORTEST')) DOORTOOLS.testDoor = String((globalThis as any).process?.env?.TPS_DOORTEST ?? '') === '1';   // an entry order halts at a door found locked or wedged (src/game/doortools.ts haltAt): off, so every frozen probe's entry goes straight to its boot; TPS_DOORTEST=1 raises it
     if (pinned('TPS_THRPIE')) DOORTOOLS.thrPie = String((globalThis as any).process?.env?.TPS_THRPIE ?? '') === '1';   // the jamb men slice the doorway before they call it held (src/game/doortools.ts pieSet): off, so every frozen threshold holds its two diagonals still; TPS_THRPIE=1 raises it
     if (pinned('TPS_THRLEAN')) DOORTOOLS.thrLean = String((globalThis as any).process?.env?.TPS_THRLEAN ?? '') === '1';   // … leaning, the cuts down the door's own line on a knee: off with it; TPS_THRLEAN=1 raises it
@@ -327,6 +331,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_HANDWORK')) HANDWORK.on = String((globalThis as any).process?.env?.TPS_HANDWORK ?? '') === '1';   // hands that do the work (src/game/handwork.ts): off, so the breaker flips on the frame, a code runs on its old clock and Sam is not planted at the rack — as every frozen probe and digest read them; `TPS_HANDWORK=1` turns it on
     if (pinned('TPS_HANDS')) HANDS.on = String((globalThis as any).process?.env?.TPS_HANDS ?? '') === '1';   // hands on the world (src/game/hands.ts): off, so a body is the ankle drag on its old clock and a door row flings the leaf, as every frozen probe and digest read them; `TPS_HANDS=1` turns it on (the shipped default)
     if (pinned('TPS_WORDS')) WORDS.on = String((globalThis as any).process?.env?.TPS_WORDS ?? '') === '1';   // the dialogue pass (src/game/words.ts): off, so every man says what he said in every frozen probe, digest and session fixture (a bubble's time is its length); `TPS_WORDS=1` turns it on (the shipped default)
+    if (pinned('TPS_DOORNAMES')) WORDS.doors = String((globalThis as any).process?.env?.TPS_DOORNAMES ?? '') === '1';   // a door called what its level calls it (src/game/doornames.ts, scenarios.doorNames): off, so every frozen probe's row and call names a door as it did; `TPS_DOORNAMES=1` raises it
     if (pinned('TPS_OWNCHARGE')) OWNCHARGE.on = String((globalThis as any).process?.env?.TPS_OWNCHARGE ?? '') === '1';   // the player's own charges (src/game/owncharge.ts): off, so your card has no charge rows and no door offers 'set a charge'
     if (pinned('TPS_GUNSLOTS')) GUNSLOTS.on = String((globalThis as any).process?.env?.TPS_GUNSLOTS ?? '') === '1';   // a primary and a secondary for every man (src/game/gunslots.ts): off, so a card has its one gun row and a teammate one gun
     if (pinned('TPS_KITTREE')) KITTREE.on = String((globalThis as any).process?.env?.TPS_KITTREE ?? '') === '1';   // the gear screen as a tree (src/game/kittree.ts): off, so a card has the rows of the build before and every launcher its five sponge rounds

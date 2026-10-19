@@ -58,6 +58,7 @@ import { SAMSTUN, staggerPlayer, dazzlePlayer } from './samstun';
 import { recapRound } from './deathrecap';
 import { wallReport } from './blastFeel';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { ffLive, ffBody, ffSide, ffUnpressed, ffNote, ffPast } from './friendlyfire';   // (called inside fireWeapon only)
 import { holdFireShot } from './holdfire';   // (called inside fireWeapon only)
 import { sneakSuit } from './cast';   // (called inside handProps only: the sneaking suit's rifle is drawn black)
 
@@ -101,23 +102,28 @@ function nearLamp(t: LightTarget, legs: readonly RoundLeg[], slack: number): boo
  *  his jaw, inside his own body cylinder's reach: bodyHit's contact rule would put it in him). SIDES (teams.ts): a round can find any character of a side HOSTILE
  *  to the shooter's — Sam and the man in his arm for the staff, exactly as it was; hostile units for an operative and the other way about — and passes through
  *  everybody else as it always passed through a colleague (discipline keeps those rounds in, not luck; Sam's own rounds pass through an operative the same way). */
+function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): number {
+  const tc = (sg ? foeChar(g, sg) : null) ?? g.player.char;   // (off the man he is firing at: Sam for the staff — the expression it always was — his hostile man for a unit)
+  const tv = Math.hypot(tc.vel[0], tc.vel[2]); const range = v3.dist(shooter.pos, tc.pos); const S = def.aiSpread;
+  return S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
+}
 export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
   if (!isPlayer && shooter.anim.bigTool) bigFired(g, shooter);   // (bigkit.ts, BIGSLOT.moves: a teammate with the hammer out who fires — it is on his back at once)
   const sgTeam: Team = isPlayer ? 'player' : sg?.team ?? 'guard';
   const def = o.weapon ?? firearmOf(g, shooter, isPlayer).def; let spread = o.spread ?? 0;
   const pel = o.pellet ?? null;
+  // FRIENDLY FIRE (friendlyfire.ts, behind FRIENDLYFIRE.on — off = `ffOn` false and every statement it guards is the one it was): a round of Sam's side finds
+  // the men of Sam's side, and a teammate does not press with a friend anywhere this round could go
+  const ffOn = ffLive(g), ffOurs = ffOn && (isPlayer || ffSide(sg));
+  if (ffOurs && !isPlayer && !pel && ffUnpressed(g, sg, shooter.muzzle, target, spread + (o.steady ? 0 : aiWide(g, sg, shooter, def)) + (def.pellets ? def.pellets.cone * 2 : 0), def)) return;
   if (def.pellets && !pel) { fireShell(g, shooter, target, isPlayer, o, def); return; }   // a shotgun (shotgun.ts): one pull is a shell — every pellet comes back through here
   const lead = !pel || pel.i === 0, third = !pel || pel.i % 3 === 0;   // (a pellet that is not the shell's first: no second flash, report or event — and every third is the round that rattles a man and heats the room)
   if (lead) shooter.anim.fire();
   if (isPlayer && lead) { tally(g, 'shots'); holdFireShot(g, shooter); }   // (holdfire.ts: a player's own round starts the fight for his squad — a return on its first line with the switch off)
   const muzzle = v3.copy(shooter.muzzle);
   let dir = v3.normalize(v3.sub(target, muzzle));
-  if (!isPlayer && !o.steady) { // guards are imperfect shots: wider when the target is moving fast or far away (their first rounds tend to go wide, then they settle) — the row's numbers, his hands
-    const tc = (sg ? foeChar(g, sg) : null) ?? g.player.char;   // (off the man he is firing at: Sam for the staff — the expression it always was — his hostile man for a unit)
-    const tv = Math.hypot(tc.vel[0], tc.vel[2]); const range = v3.dist(shooter.pos, tc.pos); const S = def.aiSpread;
-    spread += S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
-  }
+  if (!isPlayer && !o.steady) spread += aiWide(g, sg, shooter, def);   // guards are imperfect shots: wider when the target is moving fast or far away (their first rounds tend to go wide, then they settle) — the row's numbers, his hands
   if (spread > 0) dir = v3.normalize([dir[0] + (simRandom() - 0.5) * spread, dir[1] + (simRandom() - 0.5) * spread, dir[2] + (simRandom() - 0.5) * spread]);
   if (pel && lead) pel.dir = dir;
   // 1-frame emissive flash card (visible flame), boxes only — the row's flame (effects.ts muzzleFx)
@@ -160,9 +166,9 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (pen) for (const s of pen.segs) { const h = g.props.raycast(s.o, s.d, s.len); if (h) { ph = { ...h, t: s.t0 + h.t }; break; } }   // (the first piece of furniture on any leg, at its distance along the path)
   const contact = (c: Character) => { const h = c.bones.hips ?? c.pos; return (!st0 || st0.t > Math.hypot(h[0] - muzzle[0], h[2] - muzzle[2])) && (armPanes > 0 || contactClear(g, shooter, c)); };   // (armPanes: the panel between the two chests is the glass his muzzle is already through — glasspen.ts)
   /** where the round enters this man, in metres of its path, or −1 — one straight test as ever, or leg by leg through the glass */
-  const scan = (c: Character): number => {
-    if (!pen) return bodyHit(c, muzzle, dir, tHit, contact);
-    for (let k = 0; k < pen.segs.length; k++) { const s = pen.segs[k]; if (s.t0 >= tHit) break; const t = bodyHit(c, s.o, s.d, Math.min(s.len, tHit - s.t0), k === 0 ? contact : () => s.o[1] <= (c.bones.headTop?.[1] ?? c.pos[1] + 1.8)); if (t >= 0) return s.t0 + t; }   // (a later leg born INSIDE a man — he stands against the far face of the pane — is in him there; not one born over his crown: bodyHit's contact column is padded for a muzzle pressed DOWN onto a crouched man, which a round off the glass is not)
+  const scan = (c: Character, own = false): number => {   // (own, friendlyfire.ts: a man of the shooter's own side — the entering hit only, a muzzle past his shoulder is past him)
+    if (!pen) return bodyHit(c, muzzle, dir, tHit, own ? false : contact);
+    for (let k = 0; k < pen.segs.length; k++) { const s = pen.segs[k]; if (s.t0 >= tHit) break; const t = bodyHit(c, s.o, s.d, Math.min(s.len, tHit - s.t0), k === 0 ? (own ? false : contact) : () => s.o[1] <= (c.bones.headTop?.[1] ?? c.pos[1] + 1.8)); if (t >= 0) return s.t0 + t; }   // (a later leg born INSIDE a man — he stands against the far face of the pane — is in him there; not one born over his crown: bodyHit's contact column is padded for a muzzle pressed DOWN onto a crouched man, which a round off the glass is not)
     return -1;
   };   // a contact shot (the muzzle already inside him, bodyHit) counts only with nothing solid nearer along the bore than his middle and no panel between the two chests
   // The man in Sam's arm (player.ts Hold — the human shield): a colleague's round meets whichever of the two bodies it reaches first (from in front of the pair that
@@ -171,7 +177,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   // muzzle discipline is what keeps those rounds in, not luck.
   const held = g.player.holding?.g ?? null; let hostageHit = false;
   if (through) { /* into the panel at the muzzle: nobody beyond it */ }
-  else if (isPlayer) { for (const gd of g.guards) { if (gd === held || !isHostile('player', gd.team)) continue; const t = scan(gd.char); if (t >= 0 && t < tHit) { tHit = t; hitGuard = gd; } }   // (teams: a man of Sam's own side is as transparent to his round as a colleague is to a guard's)
+  else if (isPlayer) { for (const gd of g.guards) { const own = !isHostile('player', gd.team); if (gd === held || (own && !(ffOn && ffBody(gd)))) continue; const t = scan(gd.char, own); if (t >= 0 && t < tHit) { tHit = t; hitGuard = gd; } }   // (teams: a man of Sam's own side is as transparent to his round as a colleague is to a guard's)
     for (const cv of civilianBodies(g)) { const t = scan(cv.char); if (t >= 0 && t < tHit) { tHit = t; hitGuard = cv; } } }   // …and a CIVILIAN standing in the way of it is flesh like anybody (civilians.ts: the men's own rounds pass her as they pass a colleague — discipline, not luck, keeps those in)
   else {
     const tH = held && held.state !== 'dead' && held.char !== shooter ? scan(held.char) : -1;
@@ -181,6 +187,10 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
     for (const od of g.guards) {   // teams: every living man of a side hostile to the shooter's is a body this round can find — none for the staff (no AI side is their enemy: the loop finds nobody and their colleagues stay transparent, as ever)
       if (od === held || od.state === 'dead' || !od.char.alive || od.char === shooter || !isHostile(sgTeam, od.team) || od.god) continue;   // (god: a showcase cast's net — game.ts Guard.god — the round passes him as it passes a colleague)
       const to = scan(od.char); if (to >= 0 && to < tHit) { tHit = to; hitGuard = od; hostageHit = false; playerHit = false; }
+    }
+    if (ffOurs) {   // (friendlyfire.ts: a teammate's round is a round to Sam and to the other teammates too — his care, above, is what keeps it out of them)
+      if (!g.player.down) { const tS = scan(g.player.char, true); if (tS >= 0 && tS < tHit) { tHit = tS; playerHit = true; hitGuard = null; hostageHit = false; } }
+      for (const od of g.guards) { if (od === held || od.char === shooter || !ffBody(od)) continue; const to = scan(od.char, true); if (to >= 0 && to < tHit) { tHit = to; hitGuard = od; hostageHit = false; playerHit = false; } }
     }
   }
   if (ph && !hitGuard && !playerHit) tHit = ph.t;
@@ -206,13 +216,16 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (!hitGuard && !playerHit && !through) { if (ph && ph.t <= tHit + 1e-3) impactFx(g, hitP, dir, { n: ph.n, prop: ph.prop }, def); else if (st) impactFx(g, hitP, dir, { n: st.n, index: st.index }, def); }
   if (!hitGuard && !playerHit && !through && third) g.destr.round(shooter, hitP, dir, ph && ph.t <= tHit + 1e-3 ? { n: ph.n, prop: ph.prop, box: ph.box } : st ? { n: st.n, index: st.index } : { n: [0, 1, 0] }, def);   // DESTRUCTION (destruction.ts, behind tune.chaos — a return at 0): the beaten zone's heat and what this round does on top of the hole and the puff — paper up, dust into the smoke, a dent / shred / crack, things off the desk, a tile off the ceiling
   if (def.tracer && g.tune.tracers) g.tracers.round(firearmOf(g, shooter, isPlayer), def, muzzle, pen ? v3.normalize(v3.sub(hitP, muzzle)) : dir, pen ? v3.dist(muzzle, hitP) : tHit, hitGuard || playerHit ? 'flesh' : st || ph || through ? 'solid' : 'none', shooter.id);   // tracers (R6, tracers.ts): the row lights every third round and the last three of the box, counted off the gun that fired it — a streak travelling this same segment over the next few frames with a small light on its head, an ember where it stopped in geometry. A pistol row never asks (tracer null: not one instruction more than before); the flag off, nobody does
+  if (ffOurs && (playerHit || (hitGuard && !hitGuard.civ && !isHostile('player', hitGuard.team)))) ffNote(sg, isPlayer, playerHit);
+  if (ffOn && isPlayer && lead) ffPast(g, muzzle, hitP, hitGuard?.char ?? null);
   recapRound(g, playerHit ? g.player.char : hitGuard?.char, playerHit ? g.player.down : hitGuard?.state === 'dead', shooter, muzzle, hitP, def, o.blind);   // deathrecap.ts: the round about to land on a man, for the end card (reads only)
   const manDown = !hitGuard ? null : () => {   // (by 'guard': the held man, above — the only colleague a guard's round ever tests — or, teams, an enemy AI man)
     const wasUp = hitGuard.state !== 'dead';
     if (wasUp && hitGuard.civ) g.snatch?.roundOn(hitGuard, sg);   // (snatch.ts: whose round found the man the team came for — the tally's, nothing else reads it)
     const foeLine = sg && isHostile(sg.team, hitGuard.team) ? `${hitGuard.callsign} down — ${sg.callsign}'s round` : undefined;   // (teams: not 'hit by his own side' — he was the other side's to hit)
+    const ownHit = ffOurs && !hitGuard.civ && !isHostile('player', hitGuard.team);   // (friendlyfire.ts: a man of Sam's side by a round of Sam's side — the log says whose)
     const does = roundDoes(g, hitGuard, v3.dist(v3.mad(muzzle, dir, tHit), hitP) < 1e-6 ? muzzle : v3.mad(hitP, dir, -tHit), dir, tHit, hostageHit, isPlayer);   // WOUNDS (wounds.ts): where it landed decides — 'shot' is the only answer with the switch off. (Its line is the muzzle's for a straight round, as ever; for a round that has changed direction on its way — through glass, in a build where one can: `dir` and `tHit` are then its last leg's and its whole path's — it is taken BACK from where the round stopped, so the stretch of the man that is measured is the one it went into)
-    if (does !== 'none') killGuard(g, hitGuard, dir, false, does === 'shot' ? 'shot' : 'wounded', isPlayer ? 'player' : 'guard', does !== 'shot' ? (foeLine ? `${hitGuard.callsign} hit, down and breathing — ${sg!.callsign}'s round` : `${hitGuard.callsign} down — wounded, out of the fight`) : foeLine, does === 'shot' ? undefined : does);
+    if (does !== 'none') killGuard(g, hitGuard, dir, false, does === 'shot' ? 'shot' : 'wounded', isPlayer ? 'player' : 'guard', does !== 'shot' ? (foeLine ? `${hitGuard.callsign} hit, down and breathing — ${sg!.callsign}'s round` : ownHit ? `${hitGuard.callsign} hit, down and breathing — ${isPlayer ? 'your' : `${sg!.callsign}'s`} round` : `${hitGuard.callsign} down — wounded, out of the fight`) : foeLine ?? (ownHit && !isPlayer ? `${hitGuard.callsign} down — ${sg!.callsign}'s round` : undefined), does === 'shot' ? undefined : does);
     g.audio.play('bodyHit', hitP, 0.8);
     if (wasUp) hitGuard.killerId = shooter.id;   // (whose round it was, for the engagement's record — guards.ts tickEngagement)
     if (hostageHit) { const sh = sg; if (sh && sh.state !== 'dead') hostageHitBark(g, sh, hitGuard); }   // '…christ — I hit him': whoever fired it says so (the shot itself has everybody's ears; the hold drops from under Sam next frame — updateHold — and the men watching find the body there and then)
@@ -340,7 +353,7 @@ export function killGuard(g: Game, gd: Guard, dir: Vec3, quiet = false, how: Dow
   if (gd.state === 'dead') return;
   gd.script = null;   // (his lockdown role — leader / post — deliberately stays on the corpse: the others only re-deal once they KNOW, see superviseLockdown)
   const held = inHand(gd);   // what is in the hand as he goes (guards.ts): the torch on a calm patrol, his drawn weapon otherwise (alarmed floor, or any other state) — nothing if the torch already went at the grab
-  if (by === 'player') { tally(g, how === 'shot' ? 'kills' : 'knockouts'); chronDown(g, gd, how, line); }   // (a man dropped by his own side's round or by the world is on nobody's card — nor on the debrief's timeline)
+  if (by === 'player') { if (!(ffLive(g) && !isHostile('player', gd.team))) tally(g, how === 'shot' ? 'kills' : 'knockouts'); chronDown(g, gd, how, line); }   // (a man dropped by his own side's round or by the world is on nobody's card — nor on the debrief's timeline)
   witnessKill(g, gd, how, by);   // whoever has it in view remembers seeing it done, and to whom (before his state flips: the observers are the OTHER living men)
   moraleManDown(g, gd);   // (shaken, morale.ts — a return on its first line with the switch off: a squad's leader down is a standing dread on its green men, and a shock to the ones who see him go)
   netQuietFall(g, gd);   // (the net goes quiet, netquiet.ts — a return on its first line with the switch off: a mate seen to fall shakes the men who saw it, more with no enemy in their view)

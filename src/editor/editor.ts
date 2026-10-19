@@ -47,6 +47,7 @@ export function scenarioRefs(S: unknown, kind: 'door' | 'route'): { o: any; k: s
     for (const v of Object.values(t)) if (v && typeof v === 'object') test(v, where, depth + 1);
   };
   for (const t of arr(B.lesson?.steps)) test(t?.done, `scenarios.lesson step '${t?.id}'`);
+  for (const r of arr(B.doorNames)) at(r, 'door', `scenarios.doorNames (it is called '${r?.name}')`);
   return out;
 }
 /** one line per part of a `scenarios` block (the level sheet's read-only section and its count line: no editor tool edits the block) */

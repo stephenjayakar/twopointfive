@@ -766,3 +766,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   headless, his site only: of 14 sacks in the two piles by the hole, 4 bottom ones were left before and none are now; the bank at the wall's foot (top 0.17 m)
   stays. Across the levels every small floor thing with a top at 0.2 m is the bottom of such a pile (read off the level files, 10 levels have them). Nobody
   has seen the hole on a GPU or played it.
+- **A wall shot's smoke is thinner and its shock fills the room** (`WALLSHOT`, `src/game/wallcharge.ts`; the maintainer, 10-19, of rooms on the mousehole
+  taken through blown walls: "the smoke after a wall shot makes it too hard -- we should probably (1) turn down its density a little and (2) make it so
+  everyone in the room gets more of a shock"). WHAT HIS RUN SHOWED (his replay walked headless, exact): the one man in the first room, 3 m from the
+  charge, was folded 2.0 s and blind 4.7 s, came up inside the pall and shot the first man at the hole 2.7 s after the blast. THE RULE: (1) the charge's
+  pall is asked at `pall` 0.75 of its density (`CHAOS.pall.wall.density` 0.8 → 0.6; a trailing `gain` on `pallWall`, the picture's own dust count scaled
+  with it; a grenade's pall and the charge's borrowed report untouched). (2) Every DEFENDER in the room the hole opens into (`cleared.roomAt`, found by
+  stepping in from the far face: furniture against the wall is no floor to the room map; open floor is no room) is shocked: with a line to the hole,
+  folded `staggerSecs` 3.5 s (it was `DOORTOOLS.staggerSecs` 2.0) and blind `stunSecs` 8 · 4 s at the wall · at 8 m (it was 6 · 2.5); with NO line, or
+  past 8 m, where he was untouched, folded the same 3.5 s out to `roomM` 12 m and not blinded (the flash needs the line). One of ours and the player
+  beyond the wall with a line: blind `oursSecs` 2.0 s (it was 1.5), never folded (one of a team of TWO beyond the wall takes what a defender there takes, as
+  he always did, so the longer numbers are his too). The reach inside which a man behind the wall is killed is as it was and needs the line; nothing here
+  touches health. The room map is asked once BEFORE the blast, so that a map nobody had built yet is not flooded through the new hole (a map first built
+  on a floor that already has holes, a restored one, can still name no room: then only the lined men are shocked, as before). SWITCH: ON in the page (`?wallshot=0`), OFF in the module and on the frozen stand (`TPS_WALLSHOT=1`); its
+  own table in the registry and the journal, a recording from before the key replays with it off. Check: `wallshot` (family `wallcharge`; his first,
+  second and third walls on a fresh stand of his level: the lined man's numbers by the table, a man with no line folded where he was untouched, furniture
+  against the far face and that man rooted to the end of his fold with the game running, a lined man inside the killing reach killed either way, the
+  room's reach drawn in, the next room untouched, ours and the player the same seconds, the pall's emitters each at 0.75 with the blast's other emitters
+  unchanged, the switch in a recording; `WALLSHOT_BREAK=1`), both stands. MEASURED ON THE PAGE (`tools/qa/pall-page.cjs` on-charge, the block's
+  wall, software adapter, verylow, one run with `?wallshot=0` and two without): the line THROUGH THE HOLE read hidden (under 0.3) 2.75 s before and 2.25 and
+  2.5 s now (0.02 → 0.06 a second after the blast, 0.13 → 0.22 two seconds after); along the wall on the charge's side 2.0 s before, 1.5 s now. So a lined
+  man, who came up at 2.0 s inside a hole still hidden, now comes up at 3.5 s, a second after it reads again. Runs differ by a quarter second. NOT
+  MEASURED: no tally over seeds (how often a room taken through a wall costs a man before and after); never seen on a GPU or played; the seconds are a
+  first setting for the maintainer's play, not a tuned one.
