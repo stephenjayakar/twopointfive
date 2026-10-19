@@ -91,6 +91,7 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
+import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
@@ -274,6 +275,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SQUADDEAL')) SQUADDEAL.on = String((globalThis as any).process?.env?.TPS_SQUADDEAL ?? '') === '1';   // squads from the rooms (src/game/squaddeal.ts): off, so a level with no squads block is one pool, as every frozen digest and tally was made
     if (pinned('TPS_STAYASK')) STAYASK.on = String((globalThis as any).process?.env?.TPS_STAYASK ?? '') === '1';   // squads that stay in their rooms still miss a silent room (src/game/stayask.ts): off, so nobody on such a floor asks after another squad, as every frozen digest and tally was made
     if (pinned('TPS_KITLOAD')) KITLOAD.on = String((globalThis as any).process?.env?.TPS_KITLOAD ?? '') === '1';   // lighter kit moves faster and hides better (src/game/kitload.ts): off, so nobody's pace, notice or footfall reads his card, as every frozen digest and tally was made
+    if (pinned('TPS_SNATCHOUT')) SNATCHOUT.on = String((globalThis as any).process?.env?.TPS_SNATCHOUT ?? '') === '1';   // how a snatch ends (src/game/snatchout.ts): off, so the house taken with the man in hand ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEEND')) RESCUEEND.on = String((globalThis as any).process?.env?.TPS_RESCUEEND ?? '') === '1';   // how a rescue is won (src/game/rescueend.ts): off, so the hostage room held fifteen seconds ends it, as every frozen digest and tally was made
     if (pinned('TPS_RESCUEFLUSH')) RESCUEFLUSH.on = String((globalThis as any).process?.env?.TPS_RESCUEFLUSH ?? '') === '1';   // the men left alive come for the hostages (src/game/rescueflush.ts): off, so they stay where the fight left them, as every frozen digest and tally was made
     if (pinned('TPS_RESCUECHECK')) RESCUECHECK.on = String((globalThis as any).process?.env?.TPS_RESCUECHECK ?? '') === '1';   // the rescue's men check in (src/game/rescuecheck.ts): off, so nobody of a rescue's cast misses a man taken quietly, as every frozen digest and tally was made
