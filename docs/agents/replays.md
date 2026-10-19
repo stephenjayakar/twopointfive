@@ -381,3 +381,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   menus' literal after it for a page without the sheet. What a map DRAWS (its inks, the player's dot) is untouched. The map viewer (`replay.html`) is its
   own page and was not in this. CHECK: `probes.ts cardreplay` scans both files' colour literals and typefaces (hue 75° to 190°, a near-black tinted green or
   blue, a typeface by name) and must find all three in the tag as it was; `hud-look-check.ts` reads the page's sheet, not these files.
+- **A replay plays in slow motion** (10-19, the maintainer: "we should also have slomo playback speed in replays"). The map viewer (`replay.html`) had ¼× to
+  4× in its list from the start; the replay IN THE GAME (`replay/engineplay.ts`, the bar) only went 1× · 2× · 4× on one button. Its pace is now a group of
+  three on the bar, after play: `−` · what it is now · `+`, over `TAPE_SPEEDS` = ¼× ½× 1× 2× 4×. One pace a press, the ends hold (the end's button goes
+  dim), the reading is lit off 1× and a click on it is 1× again; keys `-` and `+` (read by the character typed, `=` and `_` with them; the number pad's too). The pace is kept over a seek
+  back (a page load) with the camera, in the same `sessionStorage` row. NO SWITCH: nothing a step reads. A pace is only how much of the wall's time
+  `frame()` owes the tape (`owed += wallDt * speed`), so slow motion is each RECORDED step held for longer — its inputs, length, sounds and what it is
+  compared with are the tape's; smoke and effects slow with it because the draw is handed the step's own dt. It is not a finer run: a tape recorded at 60
+  steps a second shows 15 pictures a second at ¼×, and a sound is not pitched down. `__tape.speed(v)` sets it for a tool (a pace off the list is not
+  taken). CHECK: `probes.ts cardreplay` (the list, one pace a step, the ends, the map viewer's list the same five); `ONLY=record,slow` of
+  `tools/qa/engine-replay-page.cjs` (the bar's three, the keys, the game's clock against the wall's at ¼× 4× 1×, the pace kept over a seek back, the run
+  to its end as recorded). Seen on the software adapter only: never on a GPU, and nobody has judged how ¼× reads in a real fight.
