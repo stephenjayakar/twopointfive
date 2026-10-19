@@ -292,6 +292,8 @@ export const DOORTOOLS = {
    *  what it shows, as with `thrPie` off. When the lead has no cut left that shows him new floor he LEANS, once (with `thrLean`), from where his last cut
    *  left his hips — head and gun round the edge at the ground the lean opens — for one look, then stands square and the door is called. Nobody kneels. */
   thrPieOne: false,
+  /** … the seconds that one lean is held (a cut's own look is `sliceLook`: too short to be seen, or to be sure his lines are asked with his head out) */
+  thrLeanLook: 1.1,
   /** THE ROOM'S OTHER DOORS ARE HELD (`thrDoors`; false = every man on the short crossing sector his shallow point gave him, as it was). The stage ends hard
    *  on the entry wall: in a long room that leaves its other ways in a room's length off, in nobody's sector — and the depot's crew room showed what that
    *  costs (thirty-two seeds: its far door, twelve metres down a dark lane from four men standing in the room's own light, let a man in unseen to shoot the
@@ -2297,7 +2299,7 @@ export class DoorTools {
         const T = op.thr!; if (d.quietT > -1 && isOpen(d)) d.quietT = -1;
         this.thrMen(op); this.thrWatch(op);
         if (T.stepOwed && !this.wordOwed(op)) break;   // (the word's step in, owed while men who ran from a grenade were out: paid — the order is in its next stage)
-        for (const m of T.jamb) { const A = op.mine.get(m); if (!A) continue; if (K.thrDark && K.thrLight > 0 && !A.search && m === (T.jamb[1] ?? T.jamb[0]) && nvgBlack(g, m)) A.search = true;   // (a dark hold whose goggles show the still gun nothing: his light after all)
+        for (const m of T.jamb) { const A = op.mine.get(m); if (!A) continue; if (K.thrDark && K.thrLight > 0 && !A.search && m === (T.jamb[1] && !(op.slice.get(T.jamb[0])?.pie && !op.slice.get(T.jamb[1])) ? T.jamb[1] : T.jamb[0]) && nvgBlack(g, m)) A.search = true;   // (a dark hold whose goggles show the still gun nothing: his light after all)
           if (A.search) A.searchT = t; }   // (a light on the door burns for the whole hold: the light rule lets a searching man's lapse otherwise)
         const SR = op.search ?? null;
         if (SR) { if (t >= T.losT && !T.told) { T.losT = t + 0.5; for (const m of T.jamb) SR.los.delete(m); }   // (the leaf is still swinging, a man still settling: his lines are asked again twice a second)
@@ -2326,12 +2328,12 @@ export class DoorTools {
               s.pts[s.i] = P.to; P.to = null; P.on = false; P.gun = 0; P.at = t; s.j = 0; s.t = NaN;
               this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], looks[0]), watch: looks[0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(P.lean ? { lean: P.lean, crouch: P.knee[s.i] } : {}), going: `slicing · ${name}`, there: `slicing · ${name}` });
               done = false; continue; }
-            if (t - s.t < K.sliceLook) { /* resting on this angle */ }
+            if (t - s.t < (P?.endOn ? K.thrLeanLook : K.sliceLook)) { /* resting on this angle (thrPieOne: … or held out on his one lean) */ }
             else if (s.j < looks.length - 1) { s.j++; s.t = t; A.watch = looks[s.j]; A.face = yawTo(gd.char.pos, looks[s.j]); }
             else { const next = !P ? (s.i < s.pts.length - 1 ? s.i + 1 : -1) : this.pieNext(op, gd, s);   // (thrPie: the next cut that still shows floor nobody's muzzle has been across — none: he is done)
               if (next >= 0) { s.i = next; s.j = 0; s.t = NaN; if (P) { P.at = t; P.gun = 0; P.on = false; P.to = null; } const last = s.i >= s.pts.length - 1;
                 this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], s.looks[s.i][0]), watch: s.looks[s.i][0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: P ? A.search : K.thrLight >= 2 || (K.thrLight === 1 && T.jamb.length < 2), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), ...(P?.lean ? { lean: P.lean, crouch: P.knee[s.i] } : {}), going: `slicing · ${name}`, there: last ? `holding the threshold · ${name}` : `slicing · ${name}` }); }
-              else if (P && P.end && !P.endOn && s.i > 0) { P.endOn = true; s.t = t;   // (thrPieOne: his cuts are done — the one lean, from where the last left his hips, at the ground it opens)
+              else if (P && P.end && !P.endOn && s.i > 0) { P.endOn = true; s.t = t; T.losT = Math.min(T.losT, t + 0.3);   // (thrPieOne: his cuts are done — the one lean, from where the last left his hips, toward the line past his own jamb; his lines are asked again once his head is out)
                 this.assign(op, gd, { post: s.pts[s.i], face: yawTo(s.pts[s.i], looks[0]), watch: looks[0], stance: 'none', upper: 'aim', light: this.lights ?? NIGHTBREACH.opLights, search: A.search, lean: P.end, going: `slicing · ${name}`, there: `slicing · ${name}` }); }
               else { fin = true;
                 if (P) { P.fin = true; const mid = looks[looks.length >> 1];   // (thrPie: … and he stands square where his last cut left his hips, on the middle of what it shows)
@@ -3379,7 +3381,7 @@ export class DoorTools {
       if (far && F && !K.thrPieOne) this.pieSet(op, far, F.fs, [F.here], [lp[lp.length - 1]]);   // (thrPieOne: the far man has no cuts — his diagonal, held, below)
     }
     const sl = op.slice.get(lead)!, sf = K.thrPie && far ? op.slice.get(far) ?? null : null;
-    const lit = (gd: Guard) => !(K.thrDark && nvgWorn(g, gd)) && (K.thrLight >= 2 || (K.thrLight === 1 && gd === (far ?? lead)));   // (one light on the door: the still gun's — the opener's own when he has the door alone)
+    const lit = (gd: Guard) => !(K.thrDark && nvgWorn(g, gd)) && (K.thrLight >= 2 || (K.thrLight === 1 && gd === (K.thrPie && K.thrPieOne ? lead : far ?? lead)));   // (one light on the door: the still gun's — the opener's own when he has the door alone; thrPieOne: the one man cutting carries it, a cut shows him nothing in the dark otherwise)
     // (the step onto the diagonals — as the leaf swings; or, a can going in first, behind its burst: thrOut)
     const out = () => {
     if (op.men.includes(lead)) this.assign(op, lead, { post: sl.pts[0], face: yawTo(sl.pts[0], sl.looks[0][0]), watch: sl.looks[0][0], stance: 'none', upper: 'aim', light, search: lit(lead), ...(K.slicePace > 0 ? { pace: K.slicePace } : {}), going: K.thrSlice || sl.pie ? `slicing · ${name}` : `on the jamb · ${name}`, there: sl.pts.length > 1 ? `slicing · ${name}` : `holding the jamb · ${name}` });
