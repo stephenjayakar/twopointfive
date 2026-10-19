@@ -223,6 +223,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   longer meet at the same shout. WHAT THE SQUAD DEAL COSTS THIS RULE'S SECOND ANGLE: `LANES.pin`'s two angles came in 3 of 12 holds before the deal and in 1 of 19 on dealt
   floors (the two charges, seed 12) — men who arrive together take the doorway drill or the lane's look, seldom two corners. Nobody has decided whether that step should be
   dealt a second man again.
+  10-19: line 13 is also played with the defenders' gun deal held off (`AS_ARMED` = `GUNROLES.on` false): as dealt, seed 11's off arm no longer keeps a grenade (away 2, kept 0),
+  so the line was red with the rule intact on the build that brought the gun roles in. Lines 7 and 8 are green with the gun roles on and are left as dealt.
   MEASURED (hard, the page's stand, headless, this tree on the build of 10-18 with the levels' own response teams in): the records office hold, seed 1631 — key off 3 of 4
   down, 2 of them after the lane was called; on 1 of 4, 8 stops short of the lane, 3 looks (2 found him there). The two charges as dealt, seeds 1‥12, 150 s a hold — the whole
   rule off: 60 of 84 defenders down, 31 walked in after a loss and died, 9 of 48 teammates down; the rule on with this key off: 47, 16, 3; with it on: 40, 9, 4. Twelve holds:

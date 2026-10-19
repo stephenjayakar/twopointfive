@@ -62,6 +62,8 @@
 //      1‥6 and 13‥18: there the dig-in is the squad's word). THE ON ARM since then is the off arm's own fight with the key put on partway
 //      (corridor-hold.ts `flip`, `OWN_HOLDS`' fourth number): the key changes the fight from the hold's first lane grenade on, so two whole runs no
 //      longer meet at the same shout — seed 11's kept grenade is its second
+//      AND WITH THE GUN DEAL HELD OFF (10-19, `AS_ARMED`): the defenders' gun roles change who carries what here, and as dealt seed 11 keeps no grenade
+//      (re-pick with `"GUNROLES":{"on":false}` in the set above as well)
 //  14  the doorway drill is asked again (`LANES.drill`, 10-18): line 6's hold on the floor as dealt. The first man lost in the front door marks it for the
 //      drill AND opens the lane, and the drill took the next men in the second before the lane was called: with the key off a second man (and a third) is
 //      lost slicing the same door `LATE` s or more after the first, the lane long called (45 s played); on, line 6's own run loses nobody after the
@@ -88,6 +90,9 @@ const FRAG_HOLDS: [string, number][] = [['defuse-four', 16], ['defuse-four', 22]
 /** lines 7, 8 and 13: the floor those holds were read on — the one row `SQUADDEAL.on` (squads from the rooms, squaddeal.ts) put off for the run, so a level
  *  whose file names no squads is one pool; holdRun puts every row back as the run ends */
 const AS_WRITTEN = { SQUADDEAL: { on: false } };
+/** …and line 13 with the defenders' gun deal held off too (`GUNROLES`, 10-19): who carries what on the two charges decides whether the dig-in ever meets a
+ *  thrower inside his wind-up — as dealt, seed 11's off arm no longer shows it (away 2, none kept). Lines 7 and 8 are green as dealt and stay so */
+const AS_ARMED = { GUNROLES: { on: false } };
 /** line 13's holds: scenario, seed, seconds, and when the on arm's key goes on (seed 11, the build of 10-18, `AS_WRITTEN`: the hold's second lane grenade is
  *  shouted at 56 s and the dig-in has the man a tenth of a second later) */
 const OWN_HOLDS: [string, number, number, number][] = [['defuse-four', 11, 70, 40]];
@@ -132,8 +137,8 @@ async function lookLines(check: (ok: boolean, what: string) => void): Promise<vo
   // line 13: from his shout to the throw he is the lane rule's
   let own = false, ownErr = false; const tried: string[] = [];
   for (const [scn, seed, secs, from] of OWN_HOLDS) {
-    const off = await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false }, ...AS_WRITTEN }, false), base = !off.error && stat(off, 'fragKept') >= 1;
-    const on = base || BREAK ? await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false }, ...AS_WRITTEN }, false, { at: null, shoot: false, flip: { t: from, set: { LANES: { fragOwn: true } } } }) : null;   // (the off arm's own fight up to `from`, the key on from there: the same shout, asked both ways)   // (a hold whose off arm no longer shows the fault says nothing: not played on)
+    const off = await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false }, ...AS_WRITTEN, ...AS_ARMED }, false), base = !off.error && stat(off, 'fragKept') >= 1;
+    const on = base || BREAK ? await holdRun(scn, seed, secs, { LANES: { on: !BREAK, fragOwn: false }, ...AS_WRITTEN, ...AS_ARMED }, false, { at: null, shoot: false, flip: { t: from, set: { LANES: { fragOwn: true } } } }) : null;   // (the off arm's own fight up to `from`, the key on from there: the same shout, asked both ways)   // (a hold whose off arm no longer shows the fault says nothing: not played on)
     for (const r of [off, on]) if (r?.error) { console.log(`  ERROR ${r.scn}:${r.seed} ${r.error}`); ownErr = true; }
     tried.push(`${scn} ${seed} (${secs} s) — off: away ${stat(off, 'frags')}, stayed in a hand ${stat(off, 'fragKept')}${on ? ` · on: away ${stat(on, 'frags')}, stayed ${stat(on, 'fragKept')}` : ' · on: not played'}`);
     if (ownErr) break;
