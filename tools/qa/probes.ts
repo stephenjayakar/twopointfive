@@ -55,7 +55,7 @@
 //     needs: needs-determinism needs-frozen-up needs-identity needs-interrupts needs-one-away needs-telegraph
 //     particles: particles-determinism particles-off particles-queue particles-sites
 //     perf: perf-cards perf-flags perf-texpool
-//     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad
+//     qrf: qrf-element qrf-gating qrf-limits qrf-perimeter qrf-reset qrf-timeline qrf-trigger qrf-wave qrfsquad response
 //     sdfrig: sdfrig-fit sdfrig-pack sdfrig-presets
 //     cast: cast-loader cast-file cast-fit cast-game cast-look cast-beam   (the look switch: both files, OFF = today's masks, one digest under either look;  a statured man's laser leaves his drawn muzzle;  the operators' and defenders' meshes: the loader's contract, the shipped file, each variant's proxy fit, the game on it)
 //     selector: selector-input selector-noise selector-rows selector-sustained
@@ -3273,6 +3273,7 @@ if (on('qrf-gating', 'qrf', 'all')) await run('qrf-gating', async () => (await i
 if (on('qrf-limits', 'qrf', 'all')) await run('qrf-limits', async () => (await import('./qrf-probes.ts')).qrfLimits());
 if (on('qrf-perimeter', 'qrf', 'all')) await run('qrf-perimeter', async () => (await import('./qrf-probes.ts')).qrfPerimeter());
 if (on('qrfsquad', 'qrf', 'all')) await run('qrfsquad', async () => (await import('./qrf-squad-check.ts')).qrfSquadCheck());   // the element takes a room by the squad's own door and room code (tune.qrfSquad, squadcast.ts): raises the switch itself — both stands; QRFSQUAD_BREAK=1 must fail
+if (on('response', 'qrf', 'all')) await run('response', async () => (await import('./response-check.ts')).responseCheck());   // the response team is the level's own (qrf.ts RESPONSE, scenarios.response): which levels have one, where it comes in, what a call is dealt, what the net told it; raises the switch itself, so it holds on both stands
 // ---------------------------------------------------------------- the level-design devices (devices-probes.ts): 'devices' = the family — cameras, keypads, tripwires, the editor's device verbs, the guards' sight digest
 if (on('devices-camera', 'devices', 'all')) await run('devices-camera', async () => (await import('./devices-probes.ts')).devicesCamera());
 if (on('devices-keypad', 'devices', 'all')) await run('devices-keypad', async () => (await import('./devices-probes.ts')).devicesKeypad());

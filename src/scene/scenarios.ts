@@ -384,7 +384,55 @@ export interface KitViewWay {
  *  the team's side of its anchor (no team start of the level means anything on a set). */
 export interface KitViewSet { boxes: BoxData[]; doors?: DoorData[]; lights?: LightData[]; ref: [number, number] }
 export interface KitViewData { ways: KitViewWay[]; /** the bespoke sets a way may name (`set`) */ sets?: { [name: string]: KitViewSet } }
-export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData }
+/** THE RESPONSE TEAM (game/qrf.ts, behind its switch RESPONSE.on): the men who come from OUTSIDE the level once its own net has called for them. It is part
+ *  of a level's design, not a rule of the game: a level carries this block only where somebody would plausibly come (`why` says who, in the level's own
+ *  terms), and a level without it has no team — nothing is promised on its radio and nobody is stood up. Every point is floor (y 0). Checked against the
+ *  built floor by game/qrf.ts checkResponse (tools/qa/response-check.ts): free cells, a walk from every muster to its fan and on into the level, the door a
+ *  way names. A way's `name` is spoken on the net and drawn on the HUD's radio strip: no compass word in a new one. */
+export interface ResponseWay {
+  /** the way in as their net says it, with its article ('the main gate', 'the west stairwell') */
+  name: string;
+  /** the door they come through, thrown open as they arrive (absent: an open way — a gap in a wall, a road — they walk in by) */
+  door?: string;
+  /** where the men are stood up ten seconds before they come, in element order (#1 nearest the way in), out of sight of the floor: four marks */
+  muster: Vec3[];
+  /** the fan they take just inside, in the same order, and the way each man faces there (Character yaw: 0 south, π/2 east) */
+  entry: Vec3[]; entryFace: number[];
+  /** how control says they are coming ('coming up the west stairs'; absent: 'coming in by <name>') */
+  coming?: string;
+  /** who is told to stay clear as they come in ('nobody west of the lobby arch'; absent: nothing is added) */
+  clear?: string;
+  /** boots on stairs through the door before it goes (the office's stairwell); absent or false: no such sound */
+  stairs?: boolean;
+}
+/** an outside post of the lockdown tier: where a man stands, the way he faces, and the stretch of wall his light sweeps (two points, y ≈ 1) */
+export interface ResponsePost { name: string; pos: Vec3; yaw: number; sweep: [Vec3, Vec3] }
+export interface ResponseData {
+  /** WHY THIS PLACE HAS ONE, in a sentence of the level's own design: who they are and where they come from. Words for the level's write-up and its
+   *  checks (the game never reads it); a block without it is refused */
+  why: string;
+  /** the place as control addresses it ('two-six', 'the post') and with its preposition ('on two-six', 'at the post') */
+  site: string; at: string;
+  /** the team as the net names it, with its article ('the response team', 'the army picket'), and the stem of its men's callsigns ('QRF' → QRF-1; absent: 'QRF') */
+  team: string; tag?: string;
+  /** the ways in, the usual one first. A run is dealt one (RESPONSE.deal); a level may give only one */
+  ways: ResponseWay[];
+  /** how many come, fewest and most (2‥4; absent: the sandbox's number) and seconds from the call to the way in, shortest and longest (absent: the sandbox's).
+   *  A run is dealt one of each from the game's own die; the level's first answer (deal off, or a call from the panel): the most men, the middle of the time */
+  men?: [number, number]; eta?: [number, number];
+  /** the lockdown past the team (a man of theirs down, three of the floor's found down, a running gunfight): the outside posts in the order they are manned,
+   *  and where its own men are stood up when the character budget has room. Absent or empty: this place has no second tier */
+  posts?: ResponsePost[]; outside?: Vec3[];
+  /** WHERE THEY LOOK WITH NO WORD TO GO ON, on a floor with no room plans: the places a team sent here would walk to and look at, by name (free floor each).
+   *  Absent: the quiet block's spots and scenarios.places' areas, by their middles */
+  sweep?: { name: string; pos: Vec3 }[];
+  /** A SQUAD'S RAID ON THIS PLACE BRINGS THEM (game/qrf.ts RESPONSE.raid): the team stands with the defenders against the squad and is counted inside the
+   *  eleven; it is asked for by a defender who heard gunfire and has lived a few seconds since to say so — a man of `room` (a scenarios.roomClear room id:
+   *  where this place's set, or its telephone, is) or, with no room named, any of them. Those men down first, nobody calls. A block with `raid` answers
+   *  raids only; one without answers a quiet night gone loud, never a raid */
+  raid?: { room?: string };
+}
+export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData }
 
 /** THE MISSION LIST'S GROUPS (ui/missions.ts draws a heading per group — the maintainer, 10-10: 'we can build out a few levels in groups. a tutorial group
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A

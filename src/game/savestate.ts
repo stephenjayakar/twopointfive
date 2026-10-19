@@ -117,6 +117,7 @@ import { powerOutSnapshot, powerOutRestore, type PowerOutSnap } from './powerout
 import { rescueCheckSnapshot, rescueCheckRestore, type RescueCheckSnap } from './rescuecheck';
 import { attentionSnapshot, attentionRestore, type AttentionSnap } from './attention';
 import { pictureSnapshot, pictureRestore, type PictureSnap } from './picture';
+import { RESPONSE, responseWordSnapshot, responseWordRestore, type ResponseWordSnap } from './qrf';
 import { gearText } from './gear';
 import type { NeedsSnap } from './needs';
 import { whistleSnapshot, whistleRestore } from './whistle';
@@ -228,7 +229,7 @@ export interface SaveState {
   defuse?: DefuseSnap;
   player: PlayerSnap; guards: GuardSnap[]; items: ItemSnap[]; doors: DoorSnap[]; props: PropSnap[]; propsTime: number; targets: TargetSnap[];
   devices: DevicesSnap | null; mission: Mission; chronicle: ChronSnap; events: GameEvent[]; messages: { text: string; t: number }[];
-  rollcall: RollcallSnap; needs: NeedsSnap; whistle: WhistleSnap; tactics: TacticsSnap; dialogue: DialogueSnap; weather: WeatherSnap | null; qrf: { loudT: number };
+  rollcall: RollcallSnap; needs: NeedsSnap; whistle: WhistleSnap; tactics: TacticsSnap; dialogue: DialogueSnap; weather: WeatherSnap | null; qrf: { loudT: number; word?: ResponseWordSnap[] };
   /** the cleaner / the late worker (civilians.ts CivSnap) — absent in a file from before the slice: the fresh ones stay on their marks, ears set right */
   civilians?: CivSnap | null;
   /** WALL BREAKING (wallbreak.ts WallsSave): which cells of which partitions / cover are gone, the damage the rest carry, the leaves' — absent = the level as
@@ -510,7 +511,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9 },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -691,7 +692,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   g.clearedAt = new Map(s.clearedAt ?? []); g.clearRooms = s.clearRooms | 0; g.clearing = null;
   { const R = rollcallState(g), S = s.rollcall; R.nextAt = fin(S.nextAt, -1); R.stage = S.stage === 'called' || S.stage === 'asked' ? S.stage : 'idle'; R.t0 = fin(S.t0); R.caller = S.caller >= 0 ? G[S.caller] ?? null : null; R.missing = S.missing >= 0 ? G[S.missing] ?? null : null; R.answered = !!S.answered; R.checks = S.checks | 0;
     if (R.stage !== 'idle' && (!R.caller || R.caller.state === 'dead')) { R.stage = 'idle'; R.missing = null; } }
-  if (g.qrf) g.qrf.loudT = fin(s.qrf?.loudT, -1e9);
+  if (g.qrf) { g.qrf.loudT = fin(s.qrf?.loudT, -1e9); responseWordRestore(g, s.qrf?.word); }   // (…and what was said on the net of where he is — qrf.ts RESPONSE.net; a file without it: nothing said yet)
   // ---- the mission and its chronicle
   { const M = s.mission; const stage: MissionStage = M.stage === 'drive' || M.stage === 'exfil' ? M.stage : 'infiltrate';   // (canLoad has refused 'failed' / 'done'; anything else unknown in a hand-made file is the start, not a guess)
     g.mission = { stage, t0: fin(M.t0), driveT: -1, pulled: !!M.pulled, alarmOn: !!M.alarmOn, sweepAt: fin(M.sweepAt, -1), spottedT: fin(M.spottedT, -100), debrief: false, downCardAt: -1, handsOn: !!M.handsOn, stats: { ...M.stats } }; }
