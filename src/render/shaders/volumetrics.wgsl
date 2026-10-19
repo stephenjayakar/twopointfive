@@ -670,7 +670,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
                       // in it: a torch beam is a smooth gradient the history serves well, and marking it reactive handed the resolve the raw internal-resolution march instead — measured, reverted.)
   if ((frame.flags & FLAG_VOLUMETRICS) != 0u && !behindSmoke && (frame.weatherA.x > 0.0 || max(frame.weatherB.x, max(frame.weatherB.y, frame.weatherB.z)) > 0.0)) {
     let Pend = ro + rd * tSurf;
-    if (depth >= 1.0 || outdoorsXZ(Pend.xz)) {
+    if (depth >= 1.0 || outdoorsXZ(Pend.xz) || (RAIN_WALLS && !wxUnderRoof(Pend.xz))) {   // (RAIN_WALLS: a wall's outer face and its top are not under the roof — common.wgsl wxUnderRoof)
       // the ray's stretch through the rain slab 0 ≤ y ≤ top …
       let top = frame.weatherB.w;
       var ta = 0.0; var tb = tSurf;
@@ -708,7 +708,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         // the lit sky of a stroke: the thin haze along the outdoor stretch glows with it (isotropic; no march — the sky is everywhere at once)
         wx += frame.weatherB.xyz * (frame.hazeDensity * 4.0 * outLen);
         // the crown where a drop lands on the lot, lit like a streak there
-        if (depth < 1.0) { let sp = splashAt(Pend); if (sp > 0.0) { var keepS = 1.0; if (frame.weatherE.w > 0.0) { keepS = rainNearKeep(Pend.xz); } wx += rainLight(Pend + vec3f(0.0, 0.03, 0.0), -rd) * (SPLASH_GAIN * sp) * keepS; } }   // (particle rain: its drops splash where they land — the lattice's rings there kept by the same share; exactly 1 without it)
+        if (depth < 1.0 && outdoorsXZ(Pend.xz)) { let sp = splashAt(Pend); if (sp > 0.0) { var keepS = 1.0; if (frame.weatherE.w > 0.0) { keepS = rainNearKeep(Pend.xz); } wx += rainLight(Pend + vec3f(0.0, 0.03, 0.0), -rd) * (SPLASH_GAIN * sp) * keepS; } }   // (particle rain: its drops splash where they land — the lattice's rings there kept by the same share; exactly 1 without it)
         var wxT = wx * T;
         if (wxAirOn) { wxT *= sqrt(Tair); }   // (no weather = the two statements as they were: a software sqrt(1) is not always 1)
         inscatter += wxT;
