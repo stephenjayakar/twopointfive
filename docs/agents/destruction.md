@@ -784,8 +784,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   against the far face and that man rooted to the end of his fold with the game running, a lined man inside the killing reach killed either way, the
   room's reach drawn in, the next room untouched, ours and the player the same seconds, the pall's emitters each at 0.75 with the blast's other emitters
   unchanged, the switch in a recording; `WALLSHOT_BREAK=1`), both stands. MEASURED ON THE PAGE (`tools/qa/pall-page.cjs` on-charge, the block's
-  wall, software adapter, verylow, one run with `?wallshot=0` and two without): the line THROUGH THE HOLE read hidden (under 0.3) 2.75 s before and 2.25 and
+  wall, software adapter, verylow, two runs with `?wallshot=0` and two without): the line THROUGH THE HOLE read hidden (under 0.3) 2.75 s both times before and 2.25 and
   2.5 s now (0.02 → 0.06 a second after the blast, 0.13 → 0.22 two seconds after); along the wall on the charge's side 2.0 s before, 1.5 s now. So a lined
   man, who came up at 2.0 s inside a hole still hidden, now comes up at 3.5 s, a second after it reads again. Runs differ by a quarter second. NOT
   MEASURED: no tally over seeds (how often a room taken through a wall costs a man before and after); never seen on a GPU or played; the seconds are a
   first setting for the maintainer's play, not a tuned one.
+- **A wall charge kills whoever stands at it** (`WALLKILL {on, nearM 1.5}`, `src/game/wallcharge.ts blow`; the maintainer, 10-19, a room clear on the kill
+  house on hard, god mode off, standing 0.9 m from a charge he had set on a wall when he pressed the trigger — the log said 'you were too close' and he walked
+  on: "blowing a wall charge with me right next to it should kill me"). A blast does to the player what it does to anyone, so it is ONE rule for every man on
+  the floor (the player, ours, the defenders, a civilian who is in the building): on the charge's OWN side nearer than `nearM` with a line to it he is killed
+  — dead as a frag leaves a man (`'shot'`; he was blind 3–1 s by the safety radius, the player rocked and blind with him); BEHIND a wall it opened, nearer
+  than `DOORTOOLS.knockM` 2.0 m with a line to the hole, he goes down as a defender there always did (the charge's knock, `'struck'`) — now the player too
+  (he was blind 2.0 s), and one of ours whatever the team's size (a big team's man was blind 2.0 s; a team of two's already went down); past that reach one
+  of ours behind the wall is blind as one of ours whatever the team's size (on a team of two he took a defender's 8–4 s and its fold: the claim nobody had
+  built — the WALLSHOT bullet's 'one of a team of TWO' sentence is true only with this off). The player goes down as a round puts him down (`hitPlayer`, his
+  one hit): never in god mode, never the tour's scripted player; a man with `Guard.god` is passed over. Past `nearM` the safety radius is as it was. A wall
+  that held is still a wall to the men behind it. WHO BLOWS IT: the player's trigger and his order's release — and a plan's own clock
+  (`host/kitView.ts`), which is no press of his: that caller passes `pressed` false and its blast is the blast as it was (its own gate waits for the charge's
+  side to be clear on a wall way and asks nothing of who is behind the wall: the plan's owner's to decide). With the safety radius on (the page) the
+  trigger's row names who is too close and who is behind the wall before the press. On the debrief a man killed at the charge is a kill by 'a wall charge'
+  (`chronicle.ts chronDown`, told by the line); the knock behind the wall is filed as it always was (a knockout, a 'takedown' on the timeline: not mended
+  here). The lead killed at a wall that held does not say 'no way through.': whoever of his is left does. THE DOOR CHARGE IS UNTOUCHED (its own side
+  dazzles inside 1.6 m, the player beyond it is dazzled). SWITCH: ON in the page (`?wallkill=0`), OFF in the module and on the frozen stand
+  (`TPS_WALLKILL=1`); `FROZEN_HOLDS`, `STAND_ENV`, the `pinned` line, its table in the registry and the journal (a recording from before the key replays
+  with it off). Check: `wallkill` (family `wallcharge`; the mousehole's long wall on a fresh stand each time: the player 0.9 m from his own charge down
+  and still down 0.75 s on, up in god mode, up and blind by the radius 1.9 m back; one of ours and a defender at the charge dead where they were blind;
+  the player, one of ours and a defender behind the wall inside 2 m down by the one knock; one of ours past it blind 2.0 s on a team of four and of two; a
+  wall that held; the plan's clock; the switch in a recording — 11 lines; `WALLKILL_BREAK=1` fails 6), both stands. `wallsafe` holds this rule off in its
+  own stand (it stages men 0.9 m from the charge for the radius's own numbers). MEASURED: his own tape walked headless to the blast (drift under a
+  centimetre): he stood 0.94 m from the charge, indoors, 0.81 of the blast's share — with the rule off the log's line is the one he got, with it on he is
+  down on the blast's step. NOT MEASURED: no tally over seeds (the soak's bot blows no wall charge it stands at); a civilian and a `god` man at the charge
+  are in the code and not in the check; never seen on a GPU or played — the body thrown and the down card are the round's own. `nearM` is a first setting
+  for the maintainer's play.

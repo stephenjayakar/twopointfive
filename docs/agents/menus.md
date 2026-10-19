@@ -785,7 +785,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   → counts + `stealthScore` (100 minus SCORE's price list — every term only subtracts; probes hold monotonicity) + `ratingOf` (BANDS: GHOST ≥ 90 · SHADOW ≥ 70 ·
   OPERATIVE ≥ 40 · ASSAULT) + `badgesOf` (BADGE knobs) + the summary line; `fmtEvent` words a row. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on `mission.debrief` — raised on exfil AND `DOWN_CARD_SECS` after Sam drops — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
-  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / score / dom), soak's 'leak chronicle' invariant.
+  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / charge / score / dom), soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
 - **The start card's sandbox row** (ui/menu.ts `sandboxRow`, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot): god mode ·
@@ -1163,3 +1163,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   west door'), and the card has no compass. Check `bun run tools/qa/probes.ts debrief-doorname` (families `debrief`, `words`: the stand's own keys
   first, then the keys by hand; `DOORNAMES_BREAK=1` asks for the name with the key down and is red) and a line of `debrief-dom` (the card on the fake
   DOM: the row and the pin), both stands. Only the office's two break room doors have written names so far, so that is where it shows.
+- **A wall charge's rows on the debrief say a charge (10-19, rides `WALLKILL`).** A man at the charge when it went read 'shot dead (a wall charge)' and
+  the player 'DOWN — the wall charge's round'. `chronicle.ts eventText` now words them 'killed — the wall charge' and 'DOWN — the wall charge' (a `by`
+  that ends in 'charge' takes no 'round'); the rows' data is as the charge files it, every other kill and down row reads as it did, and the end card's
+  own line ('by the wall charge') needed nothing. Both rows exist only with `WALLKILL` up, so its switch is theirs. NOT MENDED: the knock a charge gives
+  through a wall is still filed and read as 'the takedown' (its method is in the row's data, on the frozen stand too). Check
+  `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.
