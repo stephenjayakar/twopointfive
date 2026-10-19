@@ -201,6 +201,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   0.3 s after his grenade was away, walking back from the lane's edge), defenders down 77 → 79 of 168, teammates down 29 → 31 of 96; 4 of the 24 holds differ in who died. The same
   day, same build, twelve holds, the whole rule off against on: picked off 66 → 37 of 84, walked in after a loss and died 41 → 15, teammates down 22 → 9 of 48. Headless only,
   plus one boot of the real page on the software adapter (`shipped-page.cjs`, plain and the compound: no row differs) — never seen on a GPU, nobody has watched a throw.
+  THE DOORWAY DRILL IS ASKED AGAIN (`LANES.drill`, 10-18, a mend after the rule was called done, built while the maintainer was away: his to keep or flip). `SQUADDEAL` (10-17)
+  cuts every level's defenders into squads, so on a level whose file names none the men now come to a hit room together, on the fight's own chase, and `tactics.ts`'s doorway
+  drill takes them at the door a mate has just dropped in. The loss that marks that doorway also opens the lane, but the lane is called about a second later, and the drill
+  asked this rule once, as it took a man (`tryEngage`), and never again: on the records office hold (`records-pair`, seed 1631, Sam shooting from the maintainer's own spot)
+  two more men then sliced the same door into a lane their side had called, 7 and 9 s after the first — 3 of 4 down. Now `runGate` asks `lanes.ts laneDrill` every frame
+  for a man it has who has not committed (phases stack / wait / stacked / open / slice): his jamb, the handle he is walking to, the station he is slicing to, or the floor past
+  the doorway in a lane his side knows of, and the drill lets him go (`releaseGate`) — this rule's own gate then has him like any man whose way lies down the lane (stopped
+  short, a look, round, a charge). Left alone: a man whose charge is about to go in on those guns (`laneDoor`'s clause; his own, his mate's or his lead's), a second whose lead
+  has thrown or gone in, the lead's thrower. One fight-log note ('the doorway drill has him at a doorway in a lane his side knows of: it lets him go'), no spoken line, no HUD
+  line. SWITCH: module default true like `frag` and `pin`, inert wherever `LANES.on` is off, so the FROZEN stand runs none of it; on the page Tab ▸ Enemy AI ▸ Covered lanes ▸
+  all knobs ▸ 'lanes ▸ door drill asked again'; headless `--set '{"LANES":{"drill":false}}'`; a recording from before the key replays with it off (`journal.ts applyKnobs`). No
+  URL flag and no FROZEN_HOLDS row of its own, as `frag` and `pin` have none. CHECK: `corridor-check.ts` line 14 (the records office hold as dealt, 45 s: key off a defender is
+  lost more than 2 s after the first; on, in line 6's own 110 s hold, none is, and a man is stopped short of the lane; `CORRIDOR_BREAK=1` reds it; from `probes.ts` in the check's child, on the page's
+  stand). Its off arm is about the BASE, as line 13's is.
+  THE CHECK WAS RE-STAGED WITH IT (10-18). `probes.ts corridor` had been red on the build since the squad deal went in: lines 7, 8 and 13 are about fights the deal no longer
+  deals on those floors (a second man coming alone to a lane's corner; two angles on a lane; the dig-in taking a thrower), so they are now played on the page's stand with ONE
+  row of it put off (`AS_WRITTEN` = `SQUADDEAL.on` false, by the hold's `--set`, read at staging and undone at the run's end); line 12's grenade is asked on the floor as dealt
+  (`FRAG_HOLDS`, four holds at the most, no longer only when line 8 is red); line 13's on arm is its off arm with the key put on part way (corridor-hold.ts `flip`;
+  `OWN_HOLDS` is now the two charges seed 11, 70 s, the key on from 40 s), because the key changes the fight from the hold's first lane grenade on and two whole runs no
+  longer meet at the same shout. WHAT THE SQUAD DEAL COSTS THIS RULE'S SECOND ANGLE: `LANES.pin`'s two angles came in 3 of 12 holds before the deal and in 1 of 19 on dealt
+  floors (the two charges, seed 12) — men who arrive together take the doorway drill or the lane's look, seldom two corners. Nobody has decided whether that step should be
+  dealt a second man again.
+  10-19: line 13 is also played with the defenders' gun deal held off (`AS_ARMED` = `GUNROLES.on` false): as dealt, seed 11's off arm no longer keeps a grenade (away 2, kept 0),
+  so the line was red with the rule intact on the build that brought the gun roles in. Lines 7 and 8 are green with the gun roles on and are left as dealt.
+  MEASURED (hard, the page's stand, headless, this tree on the build of 10-18 with the levels' own response teams in): the records office hold, seed 1631 — key off 3 of 4
+  down, 2 of them after the lane was called; on 1 of 4, 8 stops short of the lane, 3 looks (2 found him there). The two charges as dealt, seeds 1‥12, 150 s a hold — the whole
+  rule off: 60 of 84 defenders down, 31 walked in after a loss and died, 9 of 48 teammates down; the rule on with this key off: 47, 16, 3; with it on: 40, 9, 4. Twelve holds:
+  the teammates' 3 against 4 is inside the seeds. CHECKED: `corridor-check.ts` ALL PASS on both stands, `CORRIDOR_BREAK=1` reds lines 2‥4 and 6‥14; `gate.sh tactics` as it was
+  (its one red is on `expected-red.ts`: `tactics-identity` reads what the untouched build read, on both stands). Headless only, plus one boot of the real page
+  on the software adapter (`shipped-page.cjs`) — never seen on a GPU, nobody has watched a man let go at a door, and nobody has played a hold since the key went in.
   State is per Game (a WeakMap), reset with the guards, saved as the optional checkpoint slice `lanes` (a man's errand round, a burst and its volley clock are not: after a load they are dealt again). Tab ▸ Enemy AI ▸ 'Covered lanes'.
   MEASURED (hard, the shipped stand; record on the page): the team of four standing where The block (OLD floor) starts it for 150 s and shooting what comes, 12 seeds — defenders picked off 78 → 31 of
   84, walked in after a loss and died 50 → 10, the team lost 7 → 2 of 48; a team that MOVES (playthrough.ts's commander, six squad missions × 8 seeds, rule on against off) — won 30 against
@@ -1141,6 +1171,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   same man throws 1.02 s after his shout either way, the bursts 5 to 10 cm apart, the grenade starts 0 cm from the left hand and is in that fist
   17 frames. NEVER SEEN ON A GPU OR IN PLAY: poses and boxes measured headless; how a left-handed overhand reads from above, and the gun's low
   ready beside it, nobody has looked at. The run with the switch on is not the run with it off (it changes the pose the game reads).
+- **Defenders are dealt guns off the squad's table, and a gun is used for what it is for** (`src/game/gunroles.ts`, `GUNROLES.on`; the maintainer,
+  10-18: "also should we model more firearms?"). On in the page (`?nogunroles` = the build before), off in the module and on the frozen stand
+  (`FROZEN_HOLDS 'GUNROLES.on'`, `TPS_GUNROLES=1`); a recording from before the table replays with it off. No state of its own: a role is read off the gun
+  in a man's hands each time it is asked (a sidearm out after a dry primary does not change whose man he is).
+  THE DEAL (`gunDeal`, called once by `nightbreach.ts` and `rescue.ts` when the cast stands and the floor's doors are as the mission opens with them — every
+  leaf is `place()`d first, or a line is measured through a door the staging has just shut): each man's line is a ray from his mark the way he is posted
+  to look, 40 m at most. ONE BELT-FED GUN (`pkm`, a new row: 100 on the belt, strings of 6 to 10, handling 0.45, 6.5 s to feed, 7.5 kg and bulk 4 for the kit's score, which weighs no defender today) to a cast at most, to
+  the longest line, and only when that line is a lane (`beltLane` 15 m with `beltMin` 5 men) or the cast is a big one (`beltSquad` 10); A PISTOL
+  (`guard9mm`) to the man with a hostage in his other hand, and to at most a quarter of a cast (`pistolMax`) among men whose line is under `pistolNear`
+  4 m; the rest half AKMS (`akms`, now enabled: two or three a pull, looser, 7.62) and half the short carbine as before. Every row is `oneShot` and there is
+  no health to raise: nobody is harder to put down. THE DRAWS come off each man's own mark (a hash of where he stands and which man he is), so a restart
+  deals the same guns (`samestart.ts`); with that switch off one number off the game's die salts them. Today's missions on the page's stand: a belt-fed
+  gun in 7 of 21 (depot, floodlit and the long hall by their lane; the block with squads, warehouse, compound and barracks by their size), none in the
+  office's room clear, the night breach, the three rescues, records, the four-room block, snatch, defuse, killhouse, mousehole, glasshouse or the pass.
+  WHAT A GUN IS FOR (keys `entry` `lanes` `strings` `post`, all under `use`): ranks room (MP7, M1014) before rifle and pistol before reach (Mk 12) and belt
+  (Mk 46, PKM). `orders.ts pair()` takes the frame a stack stands on and prices a long gun nearer it than a room gun (`fileCost`, under the pairs-together
+  cost); `doortools.ts firstIn` and the threshold's first man pick among the room guns' men (`gunFirst`; the log beat `first:<callsign> · his gun is the
+  room's` when the gun, not the room seen, decided); `enter()` and `wallcharge.ts enter()` send the Mk 12 and Mk 46 men last (`gunTurn`, `gunLast`);
+  `cover.ts`'s deal adds `gunLane` (± `laneK` 0.6 by distance: the far opening to the long gun, away from a man with a pistol alone, half that for an
+  MP7); `roomfight.ts tickOp` and `coverfire.ts`'s trigger fire the Mk 46 in strings of its row's own length at its own rate and the Mk 12 one aimed round
+  a beat (`gunString`; the pair for every other gun); the belt-fed DEFENDER is not taken from his line (`gunKeepsPost`: `lanes.ts laneHolds` answers true
+  for him, so no rally, press, errand or dark hunt, and `digin.ts` lets a noise next door lie); a blinded defender fires blind at his own gun's rate
+  (`gunBlindGap`: a pistol a round a pull, not twelve in 1.2 s). A squad of issue carbines stacks, enters and fires exactly as with the switch off.
+  NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
+  the belt-fed man still falls back or takes cover when the squad is in his room (the room fight's own moves are not gated).
+  Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 22 lines on each stand (it raises the
+  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
+  digest the same off and on with nobody dealt and the cards as issued.
+  MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
+  room-clear-four, depot-four, warehouse-four and killhouse-four over seeds 1 to 4, sixteen floors): taken 15 → 16, clean 6 → 8, wiped 3 → 3, men lost a
+  floor 1.88 → 2.06, seconds 97.0 → 96.1 — too few floors to call a move either way. Where the belt-fed gun shows is the depot's lane: rounds that hit Sam
+  on its four seeds 13, 2, 1, 0 before and 14, 24, 30, 0 after (god mode counts them; men lost 2.50 → 2.75). The solo night's soak (page's stand, seeds
+  1, 2, 3, twelve minutes): all pass, and its report is the same file as before but for the wall clock (no cast is dealt there). The tour on the frozen
+  stand: 3 of 3 before and after (it is red 0 of 3 on the page's stand before this change and after: old reds, not this rule's).
+  NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
+  looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
+  drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
 - **The men left alive on a rescue come for the hostages** (2026-10-18; `src/game/rescueflush.ts`, `RESCUEFLUSH.on` — ON in the page, `?norescueflush`; OFF in
   the module and on the frozen stand, `TPS_RESCUEFLUSH=1`; a debugger toggle). The maintainer: "remaining enemies should try to flush you out and/or kill the
   hostage when loud". WHAT WAS THERE: the captor's clock passed to a man of theirs only if he happened to stand in the hostage room; with the room the team's,
@@ -1148,9 +1215,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   posted in it down or held): `afterSecs` later the nearest man of theirs outside says so on their net and goes for the hostages, and every `gapSecs` the
   next one follows — the first by the room's main door, the second by its side door where the level has one (two ways at once: he is sent to the floor OUTSIDE that door, `rescue.sideOutside`, and on in from
   there), in turn; each is let go as
-  a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets) and a man at the mouth of
-  a lane the team's guns hold is not sent down it (`laneHolds` / `laneWarns`; the path is priced by the lanes as any walk is): he takes the turn's other way
-  if that one is not held, else he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
+  a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets). THE COVERED LANES ONLY
+  CHOOSE HIS DOOR (`RESCUEFLUSH.lanesChoose`, 10-19, the mend below): the floor outside his turn's door in the line of guns his side knows of and the other
+  door's not (`laneCovers`), he takes the other ('flush:lane:<name>', once a man); nobody is kept back for being warned off; his walk is priced and gated by
+  the lanes as any walk is, and a man they already hold at a corridor's mouth is not taken off it for what lies at that corridor's guns (`laneHolds(g, gd,
+  to)`, as the press and the rally ask it) — he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
   in his sights is sent again `againSecs` after his last word. THEY'RE GONE: the first to stand in the room and find no hostage says so, and from then on they
   go to the team's last loud thing and to the way out, in turn. THE GUN ON HER: a man of theirs inside `reachM` of a living hostage with a line a ROUND can fly (`shotBlocked`: a
   pane that stops a round is a wall to this) and no smoke hiding her (`Game.sensors.segment`, under `smokeK`; headless the air is clear) HAS
@@ -1163,9 +1232,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rescue.ts `tick()` (`flush.tick()`), `captor()`, `clock()`, `letGo()`, `outsidePoint`. OFF = THE BUILD AS IT WAS (the check's (f)). CHECK: `bun run
   tools/qa/probes.ts rescueflush` (`RESCUEFLUSH_SEEDS=1,2,3`), per mission: they come (first word at `afterSecs`, the second by the side door) · the gun on
   her · not when quiet · they're gone (hostages stood at the way out: the room found empty, men sent on, one shot out there by a man outside the room) ·
-  the state's pair · off; `RESCUEFLUSH_BREAK=1` fails. NOT asked by the check: that a held corridor turns a man round — the two tests are the lanes' own (`laneHolds` / `laneWarns`), and the check's floor has no
-  team on it to hold one.
-  MEASURED: `rescueflush` 24 of 24 lines on both stands, 72 of 72 on seeds 1,2,3; `RESCUEFLUSH_BREAK=1` 18 of 21 FAIL on both (its three 'not when quiet'
-  lines pass by design). In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
+  the state's pair · off · a lane known at both doors keeps nobody back · a lane on the main door's floor alone sends the first man by the side door (both
+  with a lane planted through the lanes' own save, `lanesRestore`); `RESCUEFLUSH_BREAK=1` fails, `RESCUEFLUSH_BREAK=lanes` (`lanesChoose` off) fails those
+  last two alone. NOT asked by the check: what a man sent DOES at a corridor the team's guns hold — that is the lanes' own (`probes.ts lanes` / `corridor`),
+  and the check's floor has no team on it to hold one.
+  THE MEND OF 10-19 (`lanesChoose`: module default true, inert wherever `RESCUEFLUSH.on` is off, so the frozen stand needs no word; a recording whose
+  RESCUEFLUSH row has no such key replays with it off — `journal.ts applyKnobs`; no URL flag and no debugger row: off is the stall below). AS BUILT ON 10-18
+  the rule asked `laneHolds` / `laneWarns` about the spot it sent a man TO. For the room that spot is a hostage, which is where the team's guns are, and
+  `laneWarns` is true within 16 m of a known lane's guns: once their side knew of ANY lane (the entry fight nearly always opens one) both doors were
+  barred and no man was ever sent. With the new ending that was a rescue that never ended by the clear. Found by the held-corridor work with
+  `rescue-tally.ts` on the shipped stand. THE TALLIES' PLAYERS LEARNED THE PAGE'S ENDING with it (`rescue-tally.ts` `Run.hold()` / `leadOut()`, used by
+  the office tally's `finish()` and the registry tally's; a plain step on the frozen stand): the room held `LEAD_AFTER` 20 s with no man of theirs shown and
+  nothing said on their net (a man's first word, 'they're gone'), Sam leads the hostages out with the real keys, asking again every 5 s until the word has
+  taken. MEASURED 10-19, shipped stand, `rescue-tally.ts --styles flow --seeds 1-8`: the build before the mend, 3 clean and 5 stalled at the 149 s cap (no
+  man sent in those five: 'flush:lane' and nothing after); the mend with the old tally player, 4 clean and 4 stalled (the man is sent, is stopped short by
+  the lanes' own gate at a corner by the side door and held there, and nobody leads the hostages out); the mend and the tally player that leads them out,
+  no run stalled: 6 clean — 3 cleared at 28 to 64 s (he came and was shot) and 3 out at 64 to 66 s (the team walked them out) — and 2 lost with Sam down
+  in the corridor at 68 and 75 s, shot by the last man on the walk out. `crawl` and `rush` on the same seeds are what they are on the build before it
+  (crawl 0 of 8 clean with Sam down in 6, before the room has fallen: the same on an untouched copy of that build), and `registry-probes.ts tally --seeds
+  1-4` ends every run of its seven styles. Sixteen-seed and thirty-two-seed tallies were NOT run. Whether a man the lanes hold should contest the walk out
+  more or less than that is the lanes' rule and a question for play.
+  MEASURED: `rescueflush` 30 of 30 lines on both stands, 90 of 90 on seeds 1,2,3 (shipped); `RESCUEFLUSH_BREAK=1` 24 of 27 FAIL on both (its three 'not when quiet'
+  lines pass by design); `RESCUEFLUSH_BREAK=lanes` 6 FAIL, the two lane lines on each mission. In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
   three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
   played it; whether two men by two doors READS as a flush, and whether three seconds is fair warning, is a question for play.

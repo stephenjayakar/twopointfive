@@ -11,7 +11,7 @@
 // The picks ride on the big slot's card (kit.ts BIGSLOT: the shotgun is kit there, never a man's gun): with that switch off the card is the build before's too.
 import type { Game, Guard } from './game';
 import { Firearm, WEAPONS, type WeaponId } from './weapons';
-import { beatOf, feedCues, feedDeal, feedOf, feedPlay } from './gunreload';   // (called inside sideTick only)
+import { feedDeal, feedOf, feedTick } from './gunreload';   // (called inside sideTick only)
 
 export const GUNSLOTS = {
   on: false,
@@ -94,15 +94,20 @@ export const sideLocked = (g: Game, gd: Guard): boolean => !!gd.second && g.time
 export function sideHung(gd: Guard): 'carbine' | 'sc20k' | null { const s = gd.second; if (!s?.out || gd.state === 'dead') return null; const r = s.gun.def.rig; return r === 'carbine' || r === 'sc20k' ? r : null; }
 /** … every frame, each man (game.ts, where his row is dealt): nobody in front of him for `lull` seconds — the sidearm goes back and the primary comes up
  *  reloaded (the sidearm topped off too), his hands busy for its reload and `back` more. A dead man keeps what he fell with. */
-export function sideTick(g: Game, gd: Guard) {
-  const s = gd.second; if (!s?.out || gd.state === 'dead' || gd.slung?.out) return;
+export function sideTick(g: Game, gd: Guard, dt = 0) {
+  const s = gd.second; if (!s || gd.state === 'dead') return;
+  if (!s.out) {   // (the long gun just taken up again, his hands busy for its reload: its own feeding is heard on that beat — gunreload.ts; nothing for a magazine gun)
+    if (dt > 0 && g.time < s.lock) { const def = gd.weapon.def, now = g.time - (s.lock - def.reload.dur - GUNSLOTS.back); feedTick(g, gd.char, def, now - dt, now); }
+    return;
+  }
+  if (gd.slung?.out) return;
   if (gd.weapon.shotsFired !== s.shots || (gd.state === 'alert' && g.time - gd.lastSeenT < SEEN_SECS)) { s.shots = gd.weapon.shotsFired; s.t = g.time; }   // (a round from it, or his man in his eyes: somebody is in front of him)
   if (g.time - s.t < GUNSLOTS.lull || g.time < s.lock) return;
   swap(gd); s.out = false; gd.weapon.rearm(); s.gun.rearm(); s.lock = g.time + gd.weapon.def.reload.dur + GUNSLOTS.back; GUNSLOTS_STATS.back++;   // (both topped off in the lull: the sidearm never comes out empty)
-  // (gunreload.ts: a long gun with a model of its own is taken up on its row's own beat, the hand at that gun's stations — and where it is a belt or a tube gun the
-  //  one sound here is its first, not a magazine's. The rest of its sounds have no clock here: this is hands busy, the gun already full. As it was with gunlook.ts off)
-  const def = gd.weapon.def, F = feedOf(def), first = F && F.kind !== 'mag' ? feedCues(def, beatOf(def.reload, true), def.magCapacity, true)?.[0] : null;
+  // (gunreload.ts: a long gun with a model of its own is taken up on its row's own beat, the hand at that gun's stations — and a belt or a tube gun's sounds
+  //  are its own, each on that beat: the frames above. A magazine gun's one clack is here. As it was with gunlook.ts off)
+  const def = gd.weapon.def, F = feedOf(def);
   feedDeal(gd.char.anim, def.cls === 'pistol' ? null : gd.weapon, true);   // (the gun just taken up: the animator's own `longGun` is still the sidearm's this frame)
   gd.char.anim.reload(def.reload.dur, F ? def.reload : undefined); g.audio.play('equip', gd.char.pos, 0.45);
-  if (first) feedPlay(g, gd.char.pos, first, 0.7); else g.audio.play('magOut', gd.char.pos, 0.5);
+  if (!F || F.kind === 'mag') g.audio.play('magOut', gd.char.pos, 0.5);
 }

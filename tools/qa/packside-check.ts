@@ -13,6 +13,7 @@
 //       of the tool is inside the pack he wears — and it is still ON the pack: its nearest face no further than a strap from the pack's side;
 //   (4) rule on, CLEAR OF THE MAN: no sample is deeper inside his body, his arms, his helmet or his legs than a strap's give;
 //   (5) Sam in his kit with the rifle on his back: the rifle is clear of the radio and of him, and of the tool on the pack's other side;
+//   (5b) … and so is each long gun drawn as a model of its own (gunlook.ts), which stands there by the stand-in's sizes;
 //   (6) the BREACHER: carrying a real tool he is drawn without his modelled ram, in the small pack; carrying none he keeps it; rule off he keeps it always;
 //   (7) it MOVES WITH THE PACK: through a walk, a crouch and an aim swung across him the tool's top end keeps its place against the pack's own vertices and
 //       no box slides across the pack's face, to a millimetre — while its lower end swings in to lie along his back;
@@ -172,6 +173,19 @@ export async function packsideCheck(): Promise<boolean> {
       const ap = mx(a, x => x.r.pack.deep), bp = mx(b, x => x.r.pack.deep), bb = mx(b, x => x.r.body.deep), bc = mx(b, x => x.cross); const drawn = rows.every(x => x.r.samples > 500), far = mx(b, x => x.r.near);
       line(drawn && far.r.near <= 0.05 && bp.r.pack.deep <= 0.003 && bb.r.body.deep <= 0.015 && bc.cross <= 0.002 && (BREAK || ap.r.pack.deep > 0.03), '(5) Sam in his kit with the rifle on his back: clear of the radio, of him and of the tool on the pack\'s other side',
         `${rows.length} cases, the rifle drawn in ${drawn ? 'all' : 'NOT ALL'} (${rows[0].r.samples} samples) · rule on: off the radio's faces at most ${cm(far.r.near)} cm (${far.tag}), into the radio ${cm(bp.r.pack.deep)} cm (${bp.tag}), into him ${cm(bb.r.body.deep)} cm (${bb.r.body.at}, ${bb.tag}), into the tool ${cm(bc.cross)} cm (${bc.tag}) · rule off: into the radio ${cm(ap.r.pack.deep)} cm, ${ap.r.pack.n} of ${ap.r.samples} samples (${ap.tag})`); }
+    // (5b) each long gun drawn as its own model (gunlook.ts), slung on that back. The model stands where the stand-in does, by the stand-in's sizes
+    //      (rigProps.ts packSideDims): this line is what says that is enough. Sam alone: only the player's rifle goes across his back — a teammate's hangs in front.
+    { const GK: any = await import(`${ROOT}/src/game/gunlook.ts`), was = GK.GUNLOOK.on; GK.GUNLOOK.on = true; PACKSIDE.on = ON;
+      const ids = Object.keys(GK.LONG_MODELS), rows: { id: string; r: Read; cross: number; tag: string }[] = [];
+      for (const id of ids) for (const v of [ops[0]]) for (const kind of [null, 'hammer', 'shotgun'] as const) for (const s of SITS) { const { c, run } = man(v); c.parts = maskOf(v, kind !== null); s.go(c, run); c.pos = [0, 0, 0]; c.gunLook = { hand: null, long: id, side: null }; c.update(0);
+        const o: any[] = []; RP.rigBoxes(c, { goggles: false, nv: false, slot: 0, lightOn: false, isGuard: false, rifle: 'slung' }, o, RP.RIG); const rf = o.filter(b => b.name === RP.GUNMODEL_TAG), r = read(c, c.parts, rf); let cross = 0;
+        if (kind) { const tb = tool(c, kind, true), S: V3[] = []; for (const b of rf) samples(b, S); for (const p of S) for (const b of tb) cross = Math.max(cross, -sdBox(b, p)); }
+        rows.push({ id, r, cross, tag: `${id} ${v.name} ${kind ?? 'alone'} ${s.name}` }); }
+      GK.GUNLOOK.on = was;
+      const mx = (xs: typeof rows, f: (x: typeof rows[0]) => number) => xs.reduce((w, x) => (f(x) > f(w) ? x : w), xs[0]);
+      const per = ids.map(id => { const xs = rows.filter(x => x.id === id), p = mx(xs, x => x.r.pack.deep), b = mx(xs, x => x.r.body.deep), n = mx(xs, x => x.r.near), c = mx(xs, x => x.cross); return { id, p, b, n, c, drawn: xs.every(x => x.r.samples > 300) }; });
+      line(ids.length >= 3 && per.every(k => k.drawn && k.n.r.near <= 0.05 && k.p.r.pack.deep <= 0.003 && k.b.r.body.deep <= 0.015 && k.c.cross <= 0.002), '(5b) the same with each long gun drawn as its own model: every one clear of the radio, of him and of the tool on the pack\'s other side',
+        `${rows.length} cases · ` + per.map(k => `${k.id}${k.drawn ? '' : ' NOT DRAWN'}: off the radio's faces at most ${cm(k.n.r.near)} cm, into the radio ${cm(k.p.r.pack.deep)} cm, into him ${cm(k.b.r.body.deep)} cm (${k.b.r.body.at}, ${k.b.tag.split(' ').slice(1).join(' ')}), into the tool ${cm(k.c.cross)} cm`).join(' · ')); }
     // (6) the breacher
     { const br = ops.find((v: any) => v.parts.includes('kit_breacher')), bit = (n: string) => (1 << cast.parts.indexOf(n)) >>> 0, ram = bit('kit_breacher'), pack = bit('kit_rifleman');
       PACKSIDE.on = ON; const withTool = maskOf(br, true), without = maskOf(br, false); PACKSIDE.on = false; const offTool = maskOf(br, true);

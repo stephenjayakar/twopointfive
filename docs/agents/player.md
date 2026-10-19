@@ -35,6 +35,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lower it), nothing solid between — or, the aim free, the cursor on his body — while nobody is in a fight (`friendsInFight`: inside `quietS` of Sam's last round or of the last loud thing in a
   living teammate's ears, or a man hostile to him alert / searching). Down at once, up `upSecs` after; never on the wall hold, with a man held or hauled, under a show / puppet. State
   `Player.friendLow / friendT`, not saved. Never played by anybody.
+- **Friendly fire** (`src/game/friendlyfire.ts FRIENDLYFIRE {on, coneK 0.75, bodyM 0.34, sureM 0.2, care, words, nearM 0.6}`: on in the page, `?nofriendlyfire`; frozen stand off,
+  `TPS_FRIENDLYFIRE=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables; Tab ▸ Player, doors & props ▸ 'friendly fire'; `probes.ts friendlyfire` =
+  tools/qa/friendlyfire-check.ts, also under `player`: 13 lines, passes on both stands, `FRIENDLYFIRE_BREAK=1` — the bodies without the care — fails 7 on each). Until this rule a round found
+  only men of a side hostile to the shooter's. On, for Sam's side (Sam and his operatives; never the night staff, a defender, a civilian or a show's cast): (1) BODIES — combat.ts `fireWeapon`
+  scans the men of the shooter's own side too (`ffBody`: living, on his feet): Sam's round into a teammate does what a defender's round does to him (wounds.ts decides by where it landed;
+  the log's '<callsign> down — your round', or '<callsign> hit, down and breathing — your round'; a mate's round names the mate), a teammate's round finds Sam and the other teammates the
+  same way. Only the ENTERING hit counts on a man of his own side (a muzzle already past a mate's shoulder is past him). A teammate he downs is not a kill or a knockout on the card. God mode
+  keeps Sam's own body out of it and nothing else: his rounds still down a teammate. (2) THE CARE — `friendInCone`: a teammate does not press with a friend anywhere his round COULD go — the
+  cone `coneK` × the spread the round is about to be given, a body `bodyM` wide, as far as the round flies through what it pierces (glass; a thin wall or a leaf while wallpen is live), past
+  the man he is on unless the round cannot miss that man (`sureM`); asked of the friend's middle, head and both edges of his column; no foreknowledge of the die. Two seams: the room fight's
+  gate (roomfight.ts `tickOp`, beside its own `friendInLine`: the same hold, side step and letting go; `sideStep` vets a spot with the cone too) and `fireWeapon` itself for every other place a
+  teammate's round is born (`ffUnpressed`: not pressed, counted; a lock shell at arm's length is exempt). (3) WORDS — `ffPast`: a teammate the player's lead round passes within `nearM` of
+  his head or chest says suppression.ts's 'watch your fire!' lines on their own clocks. The reticle was already enemies-only (friends.ts `noSnap`, above; civilians were never in its
+  loops) — the check sweeps the cursor over a teammate and a defender to say so. The low ready (above) is kept: out of a fight his gun still comes down off a teammate. MEASURED (headless,
+  the shipped stand, hard, a scripted commander who never fires; 8 squad missions × seeds 1-5, 40 runs an arm): on — 0 rounds of a teammate's into a friend in 268 room-fight rounds, the
+  cone held 28 frames that the lane had not (all in the pair's room clear), 0 unpressed; off, and on without the care — 272 rounds, 0 into a friend either, the two arms the same to the
+  last digit: these missions never put a friend in a teammate's round as it was, so the play does not show the care working — the staged check does (care off: the round goes into Sam, into
+  the mate). Ends, men up and hostiles left are the same in all three arms (25 of 40 won, 61 of 130 up); seven of eight missions are the same to the last digit on and off. The real page on
+  the software adapter: one click at a teammate three metres off downs him and names Sam's round; with `?nofriendlyfire` five rounds pass through him. NOT DONE: the net in `fireWeapon`
+  returns after its caller has spent the round (cover fire, the fight AI's own trigger: the count is not given back); teammates do not keep out of SAM's line of fire; defenders among
+  themselves and the squad's rounds past a hostage are as they were. Never seen on a GPU, never played by anybody.
 - **A blast does to the player what it does to anybody** (`src/game/samstun.ts SAMSTUN {on, blindRoots, fade}`: on in the page, `?nosamstun`; frozen stand off, `TPS_SAMSTUN=1`; a `FROZEN_HOLDS` row, in the
   knob registry and a journal's tables; `probes.ts samstun` = a guard and Sam the same distance from one blast). Two stamps on `Player`, the Guard's own names: `staggerUntil` (frag.ts `blast` on a
   'wounded' player — written whatever the switch says, under `FRAG.samStun` — and a defender's stun canister in a room fight) = feet rooted (`samRooted` before the walk keys), the gun at the low
@@ -169,9 +190,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`combat.ts hammerSide` → `CharacterAnimator.bigSide`, the chest joint's own space → `Character.packSidePass`, a two-bone override after `inHandPass`: the arm the
   simulation reads, `bigLayer`'s, is the rule-off arm to the bit; the pass keeps `simHandR` as `inHandPass` does, so `handFrameR(true)` — what a kit swap starts from — is the
   animator's hand, and `ragdollize` lets the override go). The workbench holds the rule off unless `?packside=1` (its across-the-back gizmos would move nothing). A man with no pack (the sneaking suit, the mannequin) carries everything where he always did.
-  QA: `probes.ts packside` (`tools/qa/packside-check.ts`, 11 lines, both stands; `PACKSIDE_BREAK=1` fails (3) to (7)) samples every box of the tool each 1.5 cm against the SKINNED
+  QA: `probes.ts packside` (`tools/qa/packside-check.ts`, 12 lines, both stands; `PACKSIDE_BREAK=1` fails (3) to (7)) samples every box of the tool each 1.5 cm against the SKINNED
   worn mesh by ray parity, pack and body apart: five operators x hammer / shotgun x twelve poses + Sam's rifle alone and beside each tool — rule on, 0 samples inside any pack, the
   worst into the man 1.3 cm (the hammer's head under the back of the helmet, the hydration-carrier man crouched), top end fixed against the pack's vertices to under a millimetre,
+  each long gun's own model (gunlook.ts) slung there in the stand-in's place: 0 samples into the radio, him or the tool, five models x 36 poses (line 5b),
   the fist 1.0 cm from the handle on the draw (0.7 cm across a bare back), his wrist as the game reads it identical on and off. `bigslot-check` holds the rule off: its lines
   are about a bare back. NOT DONE / NOT SEEN: in a crouch the pack lies flat on a bent back and the tool lies along it — a long
   handle stands out behind him (the pictures say so); with kit handling on and the rifle kept on his back, Sam's rifle still crosses the radio for a few frames as it is slung or
@@ -625,8 +647,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   25 m standing still — Mk 12 0.11 m, Mk 18 0.25, Mk 46 0.38 (0.13 kneeling), MP7 0.40; a teammate's — Mk 12 1.1 m, Mk 46 2.8, Mk 18 3.4, MP7 6.5; the
   farthest listener one round turns down a clear line — HK45 5 m, Glock 19 7 m, MP7 9 m, every other gun the whole line as gunfire; a teammate's MP7
   round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
-  of their own; defenders drawing from the list; a teammate USING a gun for what it is for (the Mk 46 man does not hold lanes, the Mk 12 man does not
-  hang back); tuning by play. Never seen on a GPU, never fired by a person.
+  of their own; tuning by play. Never seen on a GPU, never fired by a person. (Defenders drawing from the list, and a man using a gun for what
+  it is for, are `gunroles.ts`: `docs/agents/enemies.md`, GUNROLES.)
 - **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
   nothing on him: a gun by ITS OWN ROW's `weightKg` and `bulk` (`weapons.ts`; `gunLoad`: `gunKg` 0.035 of mobility a kilogram, `gunBulk` 0.04 of concealment + 0.17 a
@@ -659,7 +681,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   pistols only 4 / 12 / 44.8 s on against 4 / 15 / 72.8 s off. Before the gun rows and the deal joined, 12 seeds leaned the same way (a full load: 78 s on against 55 s
   off, 32 men up against 38; rescue-registry over 6: heavy 5 taken on, 6 off; pistols 2 on, 0 off). A full load costs tempo; going light is quicker and does not
   win a loud room (its reason is pace and notice, measured only as rates: no scripted quiet player). A handful of seeds says which way, not how much.
-  KNOWN SHAPES: two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
+  KNOWN SHAPES: a door charge you carry weighs on you though you are issued none, set or not (`owncharge-off` holds the weight off in both its runs to ask of the
+  row alone); two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
   four's issue is near even — mobility 0.65‥0.76, concealment 0.54‥0.56); a light player out-walks a silent squad's
   cap; what is thrown or set never lightens a man; a light, goggles and a suit weigh nothing, and a suppressor only where the gun's suppressed row is a heavier row of its own. Never seen on a GPU; nobody has played it.
 - **Each gun its own look, sound and reload** (`src/game/gunlook.ts`, `GUNLOOK.on`; `src/game/gunreload.ts`; 10-18). The six guns the two slots offer beside the issue
@@ -678,7 +701,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   falls), a full box on, the belt laid, the cover shut, the handle run on an empty chamber, on the row's own stages (0.54 / 1.2 / 3.18 / 4.4 / 4.9 / 5.4 s of its
   6 s; the kit's scaled beat on the shipped stand); the M1014 and the pump gun fed ONE SHELL AT A TIME, a trip of the hand and a `shellIn` each, the M1014 begun
   empty taking its first in the port with the bolt dropped on it; the magazine guns as ever with a magazine of their own size in the hand and on the floor, the
-  MP7's hand at the foot of its pistol grip. A reload is as long as it was, to the frame, and the same rounds end up in the same places. CHECKS, both stands:
+  MP7's hand at the foot of its pistol grip. A reload is as long as it was, to the frame, and the same rounds end up in the same places — but for the two tube
+  guns under the shells key (the next bullet). CHECKS, both stands:
   `tools/qa/gunlook-check.ts` (`own`: every row a slot hands out names a model, a voice, a flame and a casing row, no two guns share one — by name and by what is
   in them — and what two guns may share is said in the file; `hands`: a teammate and you with every pick are told, drawn and heard as that gun, off = the
   stand-in; `off`: ten seconds of the staged room clear digest the same with the switch off and on, seed 17, cards as issued) and `tools/qa/gunreload-check.ts`;
@@ -687,10 +711,37 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   `tools/qa/gunlook-sheet.ts` (the kit figure with each gun, software-drawn; `--off` the before); `tools/qa/gunlook-page.cjs` boots the real page with all six on
   a team of four. NOT DONE / KNOWN: the HK45 is hard to tell from the issue pistol at the game's distance (a darker, fatter can and a tan grip are all it has);
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
-  sidearm the whole feed is mimed with only its first sound; the books still take the whole tube out at the row's `out` and put it back at `in_`, so a shell-fed
-  reload CANCELLED part way leaves the tube empty however many were heard going in (the row's books: the guns goal's); a teammate with the bare Mk 18 is still
+  sidearm the whole feed is mimed with only its first sound; with the shells key OFF the books still take the whole tube out at the row's `out` and put it back at `in_`, so a
+  shell-fed reload CANCELLED part way leaves the tube empty however many were heard going in (on, the next bullet); a teammate with the bare Mk 18 is still
   drawn as the defenders' short rifle; a gun dropped on the floor is the old item; a long reload's feeding is the support arm INSIDE `gunhand.ts longReload` (the carriage and the trigger hand are that move's; a
   branch per feed was not agreed with that rule's owner); at the side of a pack (`packside.ts`) a model stands where the stand-in does, by the STAND-IN's sizes
   (`rigProps.ts packSideDims`): butts level, the far end 0.18 m lower on the Mk 12, 0.10 on the Mk 46, 0.06 on the M1014, 0.16 higher on the MP7, and the Mk 46's
   belt box on the face that lies to the pack, never looked at; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
   share an origin (`gunlook-own` is red the day one is tuned alone). Every number is a first one. NEVER SEEN ON A GPU, NEVER HEARD, NEVER PLAYED.
+- **A tube gun is fed a shell at a time, in time and in the books** (`GUNLOOK.shells`, a key that rides on `GUNLOOK.on`; `gunreload.ts shellPlan` /
+  `feedBegin`, `weapons.ts Firearm.feedShell`; 10-19; the numbers are the guns goal's). The M1014 and the big slot's pump gun carry `reload.shell` on their
+  rows: `{ lead, each, tail, bolt }` = 0.4 / 0.36 / 0.7 / 0.4 s and 0.4 / 0.35 / 0.7 / 0.4 s. A reload of n shells is `lead + n × each + tail` long (one shell
+  1.46 s, seven from empty 3.62 s on the M1014; 1.45 s and six 3.2 s on the pump gun; the rows' old stages stand for the key off), n = the room in the tube, no
+  more than he carries. EACH SHELL IS BOOKED AS IT IS HEARD, out of the fewest loose ones he carries: a reload cancelled, sprinted out of or broken off keeps what
+  went in. The M1014 begun with nothing in it takes its first in the port — chambered, the bolt dropped on it, no bolt run in the tail; any other gun with an
+  empty chamber has its bolt or pump run inside the tail (`bolt`). THE TRIGGER BREAKS THE FEEDING OFF (`player.ts shellBreak`): a round chambered — the reload is
+  let go and that press fires; rounds in the tube and nothing chambered (a pump gun cut short) — the press runs the pump, 0.4 s, nothing fired, and the next
+  press fires; with nothing in it yet the press is the dry click and the feeding goes on. R with a full tube and an empty chamber is the same short run. A
+  TEAMMATE AND A DEFENDER: every clock that waits a reload out (`guards.ts startReloadBeat`, the room fight's and the covering fire's `reloadUntil`,
+  `morale.ts runDry`) begins it with `feedBegin`, so the beat is as long as the shells that go in and each is in his gun as his beat passes it (`gunreload.ts
+  feedTick` books them; his spares are bottomless as ever, and the first shell is the round he may fire, so a beat dropped part way never leaves him a gun
+  that cannot shoot — his fire sites only ask whether there is a round in it); the beat still ends in `rearm()`. He only ever begins one dry, so on the
+  shipped stand a teammate's M1014 beat is 3.62 s where it was 3.6 and the pump gun's 3.2 s as it was. The animator takes such a beat AS IT STANDS
+  (`character.ts ReloadBeat.exact`: none of the magazine change's floors — one shell is home 0.36 s after the hand gets there). SWITCH: ON with the look in the
+  page; `?nogunshells` = the row's one length and the tube booked at its end, the build before it; the frozen stand holds `GUNLOOK` off and the key rides on it
+  (no word raises the look without the key; a check that wants the old reload sets `GUNLOOK.shells = false`, as `gunreload-check.ts raise()` does for its three
+  older families); a recording from before the key replays with it off (`journal.ts applyKnobs`). CHECK, both stands: `tools/qa/gunreload-check.ts`
+  `gunreload-shells` (`probes.ts gunshells`, in the `gunlook` and `kitanim` families; `GUNSHELLS_BREAK=1` fails it): every count from one shell to a whole tube
+  on both guns takes its time to within two frames and each shell goes into the gun on the frame it is heard; the end is the old reload's end; a reload let go
+  after three keeps three and he carries three fewer; the pump on the trigger, then the shot; unlimited ammunition fires as it did; loose shells one by one; a
+  teammate's beat for a dry gun and for one four shells up; a beat dropped part way; the key off; the page's flag and an old recording. The room fight's and
+  the covering fire's clocks are READ IN THE SOURCE by that check, not run. KNOWN: the door's shotgun (`doortools.ts`) and the long gun taken up after the
+  sidearm (`gunslots.ts`) still fill at once and wait the row's length — both only ever from dry, a whole tube, so the time is the same to 0.02 s; a man's plan
+  lives on his gun, and a gun put away mid-beat keeps it until his next beat begins (every beat begins clean); the HUD's spare count for a tube gun is the
+  row's "magazines", now shrinking a shell at a time. MEASURED: the check's own lines; the tour, three runs a stand. NEVER SEEN ON A GPU, NEVER HEARD, NEVER
+  PLAYED: whether 0.36 s a shell reads right, and whether the trigger breaking off is wanted, are the maintainer's.

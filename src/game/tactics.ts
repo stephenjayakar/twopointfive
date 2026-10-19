@@ -43,13 +43,13 @@ import { wallReactReplan } from './wallreact';
 import type { RoomClearPlan } from '../scene/level';
 import { goTo, followPath, pieDoorway, PIE_EYES_SECS, dropToSearch, resetChase, pointInView, bodyPos, doorCells, crossesDoor, frameOf, notGettingAnywhere, chaseFix } from './guards';
 import { conditionPace } from './condition';
-import { laneCovers, laneDoor } from './lanes';
+import { LANES, laneCovers, laneDoor, laneDrill } from './lanes';
 import { isHostile, teamOfId, foeDown, spokenName, defenderWords } from './teams';
 import { sideShotEnergy } from './glasspen';
 import { detonateStun } from './combat';
 import { placeName, isOffice, ownPlace } from './dialogue';
 import { WORDS } from './words';
-import { doorSaidName, shorthandId } from './doornames';
+import { doorSaidName, doorWrittenName, shorthandId } from './doornames';
 import { doorWords } from './orders';
 import { SUPPRESSION } from './suppression';
 import { lookSince } from './pressure';
@@ -787,11 +787,12 @@ function gateCall(g: Game, gd: Guard, G: Gate) {
   // 'this door' of one no named floor is beside; and a defender's callsign is the player's label for him, no name for the net: teams.ts spokenName)
   const dn = doorLabel(G.door), own = WORDS.on && !isOffice(g.level), at = own ? ownPlace(g.level, G.door.frameCentre) : null;
   const said = own ? doorSaidName(G.door) ?? (shorthandId(G.door.def.name) ? null : doorWords(G.door)) : null;   // (ONE name a door: the squad's own words for it where its id reads as words or doornames.ts names it — the room nearest its frame is only the fallback, and was the wrong room's name for a door between two)
-  const door = !own ? `the ${dn} door` : said ? `the ${said}` : at && at.d < 1.5 ? `${at.rect.name} door` : 'this door';
+  const wrote = !own ? doorWrittenName(G.door) : undefined;   // (the office: its men say a door its level has named by that name, as the squad's row does — one name a door)
+  const door = !own ? wrote ? `the ${wrote}` : `the ${dn} door` : said ? `the ${said}` : at && at.d < 1.5 ? `${at.rect.name} door` : 'this door';
   const vm = rec.victim ? g.guards.find(o => o.callsign === rec.victim) : null, victim = vm ? spokenName(vm) : rec.victim;
   const line = rec.why === 'rounds' ? `taking rounds through ${door} — nobody through it, on the wall with me`
-    : rec.why === 'press' ? `they're in there — ${own ? door : `${dn} door`}, stack on me, charge first`
-    : victim ? `${victim}'s down in ${door}way — hold short of it, stack on me` : `man down at ${door} — hold, don't go through`;
+    : rec.why === 'press' ? `they're in there — ${own ? door : wrote ?? `${dn} door`}, stack on me, charge first`
+    : victim ? `${victim}'s down in ${WORDS.doors && !/door$/.test(door) ? door : `${door}way`} — hold short of it, stack on me` : `man down at ${door} — hold, don't go through`;
   g.say(gd, line, true); g.audio.play('radio', gd.char.bones.head ?? gd.char.pos, 0.7);
   // the summons
   let best: Guard | null = null, bd = SUMMON_M;
@@ -881,6 +882,16 @@ function runGate(g: Game, gd: Guard, G: Gate, dt: number): boolean {
   if (!hunting) { releaseGate(g, gd, G, `now ${gd.state}`); return true; }
   if (now - G.t0 > GATE_CAP_SECS) { releaseGate(g, gd, G, 'out of time'); return true; }
   if (G.rec.until <= now && (G.phase === 'stack' || G.phase === 'wait' || G.phase === 'stacked')) { releaseGate(g, gd, G, 'the doorway is plain again'); return true; }
+  // (lanes.ts LANES.drill: the loss that marked this doorway opens a lane his side calls a second later — after the gate took him. Until he commits — the
+  // charge thrown, the doorway crossed — he is asked again each frame, the frame he would commit included. A second whose lead has thrown or gone, and
+  // the man who is to throw the charge the lead's wait settled on, are the drill's: they go with it)
+  if (LANES.on && LANES.drill && (G.phase === 'stack' || G.phase === 'wait' || G.phase === 'stacked' || G.phase === 'open' || G.phase === 'slice')) {
+    const LG = G.role === 'second' && G.lead ? S(g).gates.get(G.lead) ?? null : null, mate = G.role === 'lead' ? gateMate(g, G, 'second', gd) : null;
+    const going = !!LG && (LG.phase === 'toss' || LG.phase === 'bang' || LG.phase === 'cross' || (LG.action === 'toss' && LG.thrower === gd));
+    const can = stunsOf(gd) > 0 || (!!mate && stunsOf(mate.gd) > 0) || (!!LG && !!G.lead && stunsOf(G.lead) > 0);   // (a charge of theirs goes in first: his own, or the stacked mate's)
+    const at = G.phase === 'slice' && G.slicePts.length ? G.slicePts[Math.min(G.sliceI, G.slicePts.length - 1)] : G.phase === 'open' && G.hs ? G.hs.pos : G.spot;
+    if (!going && laneDrill(g, gd, at, doorPt(d, d.def.width / 2, 1.2, -G.side as 1 | -1), d.frameCentre, can)) { releaseGate(g, gd, G, 'a lane his side knows of is on it'); return true; }
+  }
   gd.stallRef = null; gd.alertStallT = 0; gd.chaseT = 0;   // (standing here on purpose: the branches' no-headway watchdogs are not to read it as a wedge)
   G.t += dt;
   const inside: Vec3 = doorPt(d, d.def.width / 2, -1.0, G.side, 1.1);   // a metre into the room through the middle: what a stacked man's muzzle rests on

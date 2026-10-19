@@ -72,9 +72,11 @@ import { shotEnergy } from './glasspen';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
 import { gunWallIs } from './gunwall';
-import { feedDeal, feedTick } from './gunreload';   // (called inside tickOp only)
+import { feedBegin, feedDeal, feedTick } from './gunreload';   // (called inside tickOp only)
 import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside tickOp only)
+import { gunString, gunStringGap, gunStringGrow, gunBlindGap } from './gunroles';   // (called inside tickOp only)
 import { AIMCOST, feetHold } from './aimcost';
+import { friendInCone, ffHeld } from './friendlyfire';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** The module's switches and the few numbers that are not a side's. */
@@ -691,7 +693,7 @@ export class RoomFight {
     if (!h.held) h.lastKnown = D.pt;
     if (B.broke) { if (g.tune.suppression) h.sup.downT = Math.max(h.sup.downT, 0.2); return; }   // head down (suppression.ts headDown: crouched, gun lowered) for as long as he cannot see
     if (!this.blindFire || B.n >= BLIND.rounds || g.time < B.next) return;
-    B.n++; B.next = g.time + BLIND.every;
+    B.n++; B.next = g.time + gunBlindGap(h, BLIND.every);   // (gunroles.ts: a dealt pistol fires at a pistol's rate; BLIND.every with its switch off)
     const c = h.char;
     if (h.held || g.time < h.staggerUntil || c.gunDir[1] < -BLIND.lowGun) return;
     if (g.tune.suppression && (h.sup.v >= SUPPRESSION.pinned || h.sup.latched || h.sup.downT > 0)) return;
@@ -921,7 +923,7 @@ export class RoomFight {
     const g = this.g, gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative;
     gd.skill = S;
     if (gd.state === 'dead') { O.tgt = null; O.turn = null; O.step = null; this.restore(O); return; }
-    if (O.reloadUntil > 0) { const now = gd.weapon.def.reload.dur - (O.reloadUntil - g.time); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true); feedTick(g, c, gd.weapon.def, now - dt, now); }   // (gunreload.ts: his gun's own feeding heard on this clock, the hand's stations dealt — nothing with gunlook.ts off. This reload never dropped anything and does not now)
+    if (O.reloadUntil > 0) { const now = gd.weapon.reloadRow.dur - (O.reloadUntil - g.time); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true); feedTick(g, c, gd.weapon.def, now - dt, now, undefined, gd.weapon); }   // (gunreload.ts: his gun's own feeding heard on this clock, the hand's stations dealt — nothing with gunlook.ts off. This reload never dropped anything and does not now)
     if (O.reloadUntil > 0 && g.time >= O.reloadUntil) { gd.weapon.rearm(); O.reloadUntil = 0; }
     if (O.tgt) sideSeen(g, gd);   // (gunslots.ts: a man in front of him — a sidearm that is out stays out)
     // a mate down in his view: said once
@@ -1013,16 +1015,19 @@ export class RoomFight {
     if (!clearShot(g, c, to)) { const head = hc.bones.head ?? v3.add(hc.pos, [0, 1.6, 0]); if (clearShot(g, c, head)) to = head; else if (!coverSeen(g, gd, h, chest)) { O.heldForLine++; O.blockT += dt; this.walkOn(O); return; } }   // (coverfire.ts: no line, and what blocks it is breakable and worth the rounds — they go into it)
     O.blockT = 0;
     if (silentGlassHolds(g, gd, h, c, to)) { const M = O.meters.get(h); if (M) { if (M.glassT === undefined || g.time - M.glassT > GLASS_LOOK) this.speak(O, 'eyes on, behind glass. holding.', 8); M.glassT = g.time; } return; }   // (silent.ts: the round would have to break a pane on its way to a man who has raised no alarm — held, the gun on him, said once a hold; glassT on HIS meter of that man: … who is not a man to stay on while there is anybody he may shoot — the scoring above)
-    const inLine = this.friendInLine(c.muzzle, to, gd);
+    const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
+    const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
+    const str = gunString(gd);   // (gunroles.ts: a belt-fed gun's string, the Mk 12's single aimed round — 0: the controlled pair, as ever)
+    const wide = hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (str > 1 ? gunStringGrow(gd, O.n % str) : 0) + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5;   // (how wide this round would be thrown: asked of here so that the care below can ask about the round as it would fly)
+    let inLine = this.friendInLine(c.muzzle, to, gd);
+    if (!inLine) { inLine = friendInCone(g, gd, c.muzzle, to, wide + (gd.weapon.def.pellets ? gd.weapon.def.pellets.cone * 2 : 0), undefined, hc); if (inLine) ffHeld(); }   // (friendlyfire.ts, a return of null with the switch off: a friend anywhere this round could go — past his man, at the edge of its spread — holds it as one in the lane does)
     if (inLine) { O.heldForFriend++; this.stats.heldForFriend++; O.lineT += dt; if (inLine === 'player') this.holdShort(O); if (!clearLineBlocked(g, gd, h, to, inLine)) this.sideStep(O, to, speed); this.letGo(O); return; }
     O.lineT = 0;
     if (!gd.weapon.fire()) { if (sideOut(g, gd, dist)) return;   // (gunslots.ts: dry on a man close in front of him — his sidearm, not a magazine change)
-      O.reloadUntil = g.time + gd.weapon.def.reload.dur; this.speak(O, 'reloading.', 0); return; }
-    const R = gd.weapon.def.aiSpread; const hands = (R.base + Math.max(0, dist - R.rangeFrom) * R.rangeK) * S.spreadK;
-    const supK = g.tune.suppression && conditionSup(g, gd, gd.sup.v) >= SUPPRESSION.flinch ? 1.6 : 1;
-    fireWeapon(g, c, to, false, { steady: true, spread: hands * lerp(P.unsettledK, 1, clamp(O.track, 0, 1)) * supK + (AIMCOST.move && !g.touring ? Math.max(speed, O.feetSm ?? 0) * AIMCOST.moveK : speed) * P.shooterMoveK * 0.5 });
+      O.reloadUntil = g.time + feedBegin(gd.weapon).dur; this.speak(O, 'reloading.', 0); return; }
+    fireWeapon(g, c, to, false, { steady: true, spread: wide });
     O.rounds++; O.n++; this.stats.opRounds++;
-    O.next = g.time + (O.n % 2 === 0 ? pick(S.shift) : S.pair);
+    O.next = g.time + (str ? (O.n % str === 0 ? pick(S.shift) : gunStringGap(gd)) : O.n % 2 === 0 ? pick(S.shift) : S.pair);
     if (gd.weapon.def.pellets) O.next = Math.max(O.next, g.time + gd.weapon.def.cd);   // (a pump gun: no controlled pair comes faster than its action is worked — shotgun.ts)
   }
   /** The muzzle onto a point: his script carries this module's overlay (GuardScript.over) while this holds — the runner aims at O.aim with the gun up, and, the
@@ -1145,7 +1150,7 @@ export class RoomFight {
       const p: Vec3 = [c.pos[0] + dz / L * w, 0, c.pos[2] - dx / L * w];
       if (!this.spotFree(p, gd) || this.funnelOf(p) || g.col.solidBlocked([c.pos[0], 0.45, c.pos[2]], [p[0], 0.45, p[2]])) continue;
       const from: Vec3 = [p[0], 1.4, p[2]];
-      if (g.col.shotBlocked(from, to, 0.02, shotEnergy(g, gd.char, gd.weapon.def)) || this.friendInLine(from, to, gd)) continue;
+      if (g.col.shotBlocked(from, to, 0.02, shotEnergy(g, gd.char, gd.weapon.def)) || this.friendInLine(from, to, gd) || friendInCone(g, gd, from, to, 0.08)) continue;   // (friendlyfire.ts, null with the switch off: nor a spot whose round would still have a friend in its cone)
       this.stepTo(O, p, false, { speed: 2.2, strafe: true, face: c.bodyYaw }); O.stepUntil = g.time + 2; O.lineT = 0; this.stats.stepped++; this.note(gd, why);
       return true;
     }
