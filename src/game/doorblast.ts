@@ -86,6 +86,9 @@ export const DOORSHOT = {
   strips: 4, lengths: 3, uneven: 0.6, chunks: 11,
   /** m/s a piece leaves at along the round's way (lo, hi) · across it (±) · up (lo, hi) · its tumble (rad/s) */
   fly: [1.0, 3.2], side: 1.1, up: [0.2, 1.8], spin: 9,
+  /** every piece leaves already going over, its top the way the round went: tipped this far (rad: lo, hi) and toppling at this rate (rad/s: lo, hi) — a
+   *  plank let go dead upright comes down on its end and the debris solver, rightly, lets it stand there */
+  tilt: [0.15, 0.45], topple: [2, 5],
   /** splinters thrown on through, and back toward the gun, when it goes, at these m/s · the most a round sheds from a leaf past half its toll */
   chips: [60, 24], chipV: [4, 2.5], shed: 8,
   /** the middle of the gradient: finger-long slivers thrown on through when it goes (how many, m/s) */
@@ -279,9 +282,11 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
     for (let j = 0; j + 1 < ys.length; j++) {
       const ly = (ys[j] + ys[j + 1]) / 2 * H / 2, sl = (ys[j + 1] - ys[j]) / 2 * H / 2;
       if (!rail && Math.abs(handleX - lx) <= sw && Math.abs(handleY - ly) <= sl) { const mx = Math.max(0, sw - 0.065), my = Math.max(0, sl - 0.03); rail = [sw, sl, clamp(handleX - lx, -mx, mx), clamp(handleY - ly, -my, my)]; railX = lx; continue; }   // (the levers whole on the piece, not hanging off its cut edge)
-      const r1 = R(k++), r2 = R(k++), r3 = R(k++), sp = lerp(K.fly[0], K.fly[1], r1), sd = (r2 - 0.5) * 2 * K.side;
-      const f = { ...d.box, c: [cx + ux * lx, H / 2 + 0.01 + ly, cz + uz * lx] as Vec3, h: [sw, sl, T / 2] as Vec3, yaw, rot: undefined, marks: undefined };
-      const v: Vec3 = [dx * sp + ux * sd, lerp(K.up[0], K.up[1], r3), dz * sp + uz * sd], w: Vec3 = [(r1 - 0.5) * K.spin, (r2 - 0.5) * 0.6 * K.spin, (r3 - 0.5) * K.spin];
+      const r1 = R(k++), r2 = R(k++), r3 = R(k++), sp = lerp(K.fly[0], K.fly[1], r1); let sd = (r2 - 0.5) * 2 * K.side;
+      if (sd * lx > 0 && Math.abs(lx) > hw * 0.4) sd *= -0.5;   // (a piece by a jamb goes in toward the opening, not into the frame beside it)
+      const top = fly * lerp(K.topple[0], K.topple[1], r2);   // (about the leaf's width axis: its top the way the round left)
+      const f = { ...d.box, c: [cx + ux * lx, H / 2 + 0.01 + ly, cz + uz * lx] as Vec3, h: [sw, sl, T / 2] as Vec3, yaw, rot: quat.mul(quat.axisAngle([ux, 0, uz], fly * lerp(K.tilt[0], K.tilt[1], r3)), quat.yaw(yaw)), marks: undefined };
+      const v: Vec3 = [dx * sp + ux * sd, lerp(K.up[0], K.up[1], r3), dz * sp + uz * sd], w: Vec3 = [(r1 - 0.5) * K.spin + ux * top, (r2 - 0.5) * 0.6 * K.spin, (r3 - 0.5) * K.spin + uz * top];
       const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who) ?? null : null;
       if (got) { DOORSHOT_STATS.chunks++; got.level = land.level; got.sfx = land.sfx; g.destr.breaks.retag(got, 'wood'); g.destr.breaks.dress(got); }   // (wood whatever its paint: a snapped end, not a clean rectangle)
       else { DOORSHOT_STATS.demoted++; if (P) P.emit('debris', f.c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), 14, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(albedo), owner: who }); }
