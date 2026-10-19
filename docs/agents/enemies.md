@@ -358,7 +358,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   min, will not report unless a guard finds her), `choke` / `whip` = KO, as is the takedown; a round kills (combat.ts killGuard → `civilianDown` for any `gd.civ`). Chronicle kinds
   `civilianSpotted / Reported / Complied / KO / Killed`, SCORE −15 reported (first-hand causes only) / −10 KO / −40 killed, badge 'unseen by civilians' (id unseenStaff), the card's
   civilian block; `tune.civilianKillFails` (off) fails the mission on a kill instead. Hidden under the tour / breach / quietUtility (`civiliansOnFloor`); cleared
-  off the floor ('evacuate' to the exits) when the QRF is called. A calm civilian is no prop contact and yields to guards (they never feel her); frightened she
+  off the floor ('evacuate' to the exits) when the QRF is called (never the man a snatch came for: `evacuationCheck` leaves `g.snatch.isMan` where he is). A calm civilian is no prop contact and yields to guards (they never feel her); frightened she
   shoves furniture like anybody. `CIV_SPOTS` phones / exits are constants with a headless check (TODO(LevelData)). Knobs `CIV` + `tune.civilians /
   civilianKillFails` + `CIV.greet` (persisted `twopointsix.civilians`; Tab ▸ Sandbox ▸ civilians rows: on, kill fails, greetings, 'panic the cleaner', 'send
   her to the phone', summary); `__civ` {list, panic(i, 'panic'|'phone'), set, knobs, stats, log, spots, check, summary}. QA: `probes.ts civilians` (spots /
@@ -713,9 +713,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   men down first and nobody calls, whatever is fired afterwards: the response is something play can stop. WHICH LEVELS, and why: `depot` (a motor pool
   with trucks out on the road under escort; the signals hut is what talks to them, and going round the back to the hut and the mains was already the
   level's answer: the convoy escort, 2 or 3, by the main gate or the back gate) and `records` (a night desk with a telephone in the front office, 'the
-  first room on a quiet floor': the night patrol, 2, off the street or round the back lane). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
+  first room on a quiet floor': the night patrol, 2, off the street or round the back lane) and `snatch` (the village guard, 2, by the back gate or round
+  the wall to the front gate, 20–40 s after the call: ONLY under `SNATCHOUT.on` — docs/agents/missions.md, *a snatch ends in the van* — where it is what the
+  squad holds off while the player walks the man out; the house falling does not call it off there, only the snatch's own end does (`raidOver`). Two is all
+  the sixteen figures leave on that floor: eight defenders, the four, the man). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
   (its block answers a quiet night; they stay as tuned), block-squads / warehouse / compound / barracks (at eleven: nobody is left to come), registry and
-  consulate (the hostage clock is the pressure), snatch / defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
+  consulate (the hostage clock is the pressure), defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
   and it is not this), pass (a snowed-in road). `block` (a telephone exchange, eight men) and `hall` (a police barracks wing) would suit one and have
   none yet: the maintainer's call. WHAT THE TEAM DOES: as on a quiet level, on the net's word — in a raid the net is the men at the set and the team itself (what another
   defender knows reaches control only by being told to a man at the set: `PICTURE`'s tell); with

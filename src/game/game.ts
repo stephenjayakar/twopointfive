@@ -1888,7 +1888,7 @@ export class Game {
     // fired it), so you holster first. One gate for both (buildInteractables' inReach).
     { const free = !pl.takedown && !pl.down && !pl.holding && !samStaggered(this) && !pl.breakerMove;   // (samstun.ts: folded by a blast, no takedown and no grab; handwork.ts: his hand is on the breaker's lever for its half second — committed, like a kick; never set with that switch off)
       const two = closeLethal(this), knife = input.lmbHit(), blow = knife || (two && input.rmbHit());   // (close.ts: with the two-button blow live the left click is the knife and the right click the knockout; else the left click is the knockout and the right nothing)
-      const clicked = pl.holstered && blow ? (this.nearby.find(it => it.kind === 'guard' && it.inReach && !(it.guard && this.rescue?.isHostage(it.guard))) ?? null) : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
+      const clicked = pl.holstered && blow ? (this.nearby.find(it => it.kind === 'guard' && it.inReach && !(it.guard && (this.rescue?.isHostage(it.guard) || this.snatch?.out.owns(it.guard)))) ?? null) : null, viaClick = clicked?.guard ?? null;   // click, hands empty: the man in reach
       if (viaClick && free) startTakedown(this, viaClick, clicked!.close, two && knife && !viaClick.civ);   // (close: the way in his row offered — close.ts, undefined with its switch off)
       else if (act?.kind === 'guard' && verb === 'grab' && act.guard && free) startGrab(this, act.guard, act.close);
     }

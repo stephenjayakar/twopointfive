@@ -14,12 +14,12 @@
 //   z 18 │         └─────front─────┴────────────┘       │
 //        │                courtyard                     │
 //   z 23 └────────────────┤ south gate ├────────────────┘
-//                          the team starts here (x 16, z 25.4)
+//              [the van]▸  the team starts here (x 16, z 25.4)
 //
 // Built from the 2010s kit (src/scene/gwotKit.ts): flat colours, boxes only. Regenerate: bun run tools/levels/export.ts snatch
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
@@ -30,6 +30,26 @@ export const NAME = 'snatch';
 export const NOTES = 'The snatch: a house in a walled yard, eight men around one unarmed man to take alive; two doors of his wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
 /** the kit's palette goes into the file's `materials` (tools/levels/export.ts) */
 export const MATERIALS = GWOT_MATERIALS;
+
+/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THE HOUSE GOES LOUD. It answers the snatch that ends in the van and nothing
+ *  else (qrf.ts raid: with game/snatchout.ts off the level is as it was, and nobody comes). Any man of the house who hears the gunfire and lives six seconds
+ *  calls; they come by the yard's own two gates — the back gate he runs for, or up the outside of the wall to the front gate, where the team's van stands —
+ *  never the one a man of the team is standing at. Two men: the floor's budget of figures has room for no more beside eight in the house (a call for
+ *  the maintainer: a bigger party means fewer men in the rooms). */
+export const RESPONSE: ResponseData = {
+  why: 'The man the team came for keeps the village below in guns, and the house has a radio: gunfire any of its men lives to report brings the village\'s own guard up the hill to one of the yard\'s two gates, to take him back before he is driven off. The house silenced inside six seconds, or the man in the van before they are up, and they find nobody.',
+  site: 'the house', at: 'at the house', team: 'the village guard', tag: 'VILLAGE', men: [2, 2], eta: [20, 40],
+  raid: {},
+  ways: [
+    { name: 'the back gate', coming: 'coming in by the back gate', clear: 'nobody in the back gate',
+      muster: [[36.5, 0, 5.25], [36.5, 0, 4.2], [36.5, 0, 6.3], [37.6, 0, 5.25]],
+      entry: [[30.4, 0, 5.2], [29.4, 0, 4.4], [29.2, 0, 5.7], [28.2, 0, 5.0]], entryFace: [-Math.PI / 2, -Math.PI / 2 + 0.8, -Math.PI / 2 - 0.8, -Math.PI / 2] },
+    { name: 'the front gate', coming: 'coming round the wall to the front gate', clear: 'nobody outside the front gate',
+      muster: [[36.2, 0, 25.6], [36.2, 0, 24.6], [36.2, 0, 26.6], [37.3, 0, 25.6]],
+      entry: [[24.8, 0, 25.2], [25.8, 0, 24.5], [25.8, 0, 26.1], [26.8, 0, 25.2]], entryFace: [-Math.PI / 2, -Math.PI / 2 + 0.8, -Math.PI / 2 - 0.8, -Math.PI / 2] },
+  ],
+  sweep: [{ name: 'his room', pos: [22.0, 0, 10.6] }, { name: 'the courtyard', pos: [16.0, 0, 20.4] }, { name: 'the front gate', pos: [16.0, 0, 24.4] }],
+};
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
   const trace: GeneratorTrace = { groups: [] };
@@ -117,6 +137,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('outside');
   G.bush(4.6, 20.4); G.bush(35.2, 21.0, 1.2); G.bush(3.6, 6.2, 0.9); G.bush(24.0, 1.4, 1.1); G.rubble(35.4, 9.2, 1.0, 8, 'block');
   G.hesco(11.6, 24.4, 2, 0); G.jersey(21.4, 25.6, 1, 0.4);
+  G.van(10.2, 26.5, Math.PI, 'truckTan');                                                                  // the team's own van, tail to the track it came up: where he is put (scenarios.snatch.van)
 
   // ---- lights: a bulb in the rooms the guards use, his lantern, a floodlight over the courtyard, the moon; the side yard is lit by the generator's lamp; the back alley, the hut and the back gate behind it are dark ----
   grp('lights');
@@ -209,6 +230,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     snatch: {
       man: { name: 'Daoud', pos: [23.2, 0, 10.7], face: -HALF, tint: [0.66, 0.62, 0.52], tint2: [0.3, 0.27, 0.22], points: [[23.2, 0, 10.7], [20.6, 0, 11.6]], wait: [45, 20] },
       exits: [{ name: 'the back gate', pos: [33.4, 0, 5.25] }, { name: 'the front gate', pos: [16, 0, 24.6] }],
+      van: { name: 'the van', pos: [13.4, 0, 26.5] },
     },
     places: { areas: [
       { name: 'the courtyard', bounds: { x0: 7.2, x1: 31.8, z0: 18.2, z1: 22.8 } }, { name: 'the back alley', bounds: { x0: 7.2, x1: 26, z0: 3.2, z1: 7.8 } },
@@ -232,6 +254,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // wand, a bang or a frag on order all stood idle), so the way is the door the gate leads to: the house's front door across the courtyard. What stands in
   // the camera's way is worked out and sunk by the plan.
   scenarios.kitView = { ways: [{ door: 'front' }] };
+  scenarios.response = RESPONSE;
   return { level, scenarios, groups: trace.groups, surfaces };
 }
 function norm(v: Vec3): Vec3 { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }

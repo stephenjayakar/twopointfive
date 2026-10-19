@@ -57,6 +57,7 @@ import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './w
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
 import { rescueEndRows } from './rescueend';
+import { snatchOutRows } from './snatchout';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
 import { feedDeal, feedPlan, feedPlay, shellPlan } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
@@ -2042,6 +2043,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     for (const gd of civilianBodies(g)) {   // the CIVILIANS (civilians.ts): the same arm from close behind her — from any side once she is crouched in a corner — and the same click with the hands empty puts her down quiet (a civilian: it costs). Never one running (you would have to catch her first) or already talking to a guard two metres off.
       if (pl.takedown || g.fogOfWar.hidden(gd)) continue; const cv = gd.civ!;
       if (g.rescue?.isHostage(gd)) continue;   // a hostage of the rescue playtest (rescue.ts): nobody to grab — she stays down where she is
+      if (g.snatch?.out.owns(gd)) continue;   // a snatch's man, tied and to be led out (snatchout.ts): his row is the word, not the arm
       const gp = gd.char.pos; const dx = p[0] - gp[0], dz = p[2] - gp[2]; const dd = Math.hypot(dx, dz);
       if (dd >= 2.4) continue;
       const cg = closeLive(g) ? closeCivGate(g, gd, p) : null;   // (close.ts: her own rule, but for the wider rear of one sat at a desk)
@@ -2092,6 +2094,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       }
     }
     wallChargeRows(g, p, busy, row, offer);   // a breaching charge on a partition, by hand (wallcharge.ts — nothing unless its switch and the destruction's are up)
+    snatchOutRows(g, p, busy, row, offer);   // a snatch's man once tied: on your feet — with me / stay here (snatchout.ts — nothing unless its switch is up and the level has a van)
     rescueEndRows(g, p, busy, row, offer);   // a rescue's hostages: on your feet — with me / stay here (rescueend.ts — nothing unless a rescue is up with its switch on)
     defuseRows(g, p, busy || !!g.wallCharge?.setting, row, offer);   // a defuse mission's live charges (defuse.ts — nothing on a level without the block)
     stickyRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a stuck sticky camera of his own, taken back (stickycam.ts — nothing unless STICKY.take is up)

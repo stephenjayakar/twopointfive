@@ -109,6 +109,7 @@ import { STAYASK } from './stayask';
 import { KITLOAD } from './kitload';
 import { RESCUECHECK } from './rescuecheck';
 import { RESCUEEND } from './rescueend';
+import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from './sense';
@@ -359,6 +360,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
+  if (!k.tables.SNATCHOUT) SNATCHOUT.on = false;   // (a file from before a snatch ended with the man in the van: the house taken with him in hand ended it)
   if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
   if (typeof (k.tables.RESCUEFLUSH as { lanesChoose?: boolean } | undefined)?.lanesChoose !== 'boolean') RESCUEFLUSH.lanesChoose = false;   // (…and one from before the covered lanes only chose a man's door: a man they warned off was kept back)
   if (!k.tables.RESCUEFLUSH) RESCUEFLUSH.on = false;   // (a file from before the men left alive on a rescue came for the hostages: they stayed where the fight left them)

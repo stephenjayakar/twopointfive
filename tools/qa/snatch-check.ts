@@ -12,6 +12,7 @@ export async function snatchCheck(): Promise<boolean> {
   const { standUp, ROOT } = await import('./headless.ts');
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { SNATCH, checkSnatch } = await import(`${ROOT}/src/game/snatch.ts`);
+  const { SNATCHOUT } = await import(`${ROOT}/src/game/snatchout.ts`);
   const { killGuard, fireWeapon } = await import(`${ROOT}/src/game/combat.ts`), { blast } = await import(`${ROOT}/src/game/frag.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
   const { snatchLines } = await import(`${ROOT}/src/game/dialogue.ts`);
@@ -27,7 +28,7 @@ export async function snatchCheck(): Promise<boolean> {
   /** a Game on `file`, the room clear (the pair) staged; Sam cannot be hurt; `harmless` = the defenders taken off the floor's fight (held where they stand, no AI of theirs runs) */
   async function stage(file = 'snatch.json') {
     const W: any = await quiet(() => standUp({ uploadEvery: 4, level: levelOf(file), seed: 7 }));
-    const g = W.game; g.godMode = true;
+    const g = W.game; g.godMode = true; SNATCHOUT.on = false;   // (these lines ask for the man's own rules and the end as it was — the house taken with him in hand; the end in the van is tools/qa/snatchout-check.ts's)
     const why = await quiet(() => g.roomClear.start(1)); if (why) throw new Error(`the room clear did not start on ${file}: ${why}`);
     const light = { sam: null as number | null };   // (Sam's meter, held at this while set: headless nothing answers for it — the pair's is the game's own CPU estimate where they stand)
     const step = (secs: number, until?: () => boolean) => quiet(() => { for (let i = 0; i < Math.round(secs * 60); i++) { if (light.sam !== null) g.player.visibility = light.sam; W.step(1 / 60); const b = g.snatch?.man?.bubble?.text; if (b) said.add(b); if (until?.()) return true; } return !until; });

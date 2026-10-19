@@ -93,6 +93,7 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
+import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
@@ -258,6 +259,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADDEAL.on = !q.has('nosquaddeal');   // squads from the rooms (game/squaddeal.ts): a level whose file names no squads is handed some cut from its rooms, so a loud way in and a quiet one each draw their own move there too — ON in the page; ?nosquaddeal = such a level's defenders are one pool, as they were
   STAYASK.on = !q.has('nostayask');   // squads that stay in their rooms still miss a room that goes silent (game/stayask.ts): on a floor where every squad stays (the block, Mousehole) the net's roll call runs and the nearest squad sends one man to the silent rooms — ON in the page; ?nostayask = nobody there asks after another squad, as it was
   KITLOAD.on = !q.has('nokitload');   // lighter kit moves faster and hides better (game/kitload.ts): what a man's card carries gives him a mobility and a concealment score, and they are his legs' pace, the notice he builds in an eye and his footfall — you and every teammate; an issued card plays as it did — ON in the page; ?nokitload = nobody's card is read, as it was
+  SNATCHOUT.on = !q.has('nosnatchout'); SNATCHOUT.hold = !q.has('nosnatchhold');   // how a snatch ends (game/snatchout.ts): tied, the man is led by the player (Space on him: on your feet — with me) to the team's van by its way in, and in it the mission is won, the house taken or not; the squad covers the walk out by bounds, unasked — ON in the page; ?nosnatchout = the house taken with him in hand wins it, as it was (and nobody answers the gunfire: qrf.ts); ?nosnatchhold = the squad does only what it is told
   RESCUEEND.on = !q.has('norescueend');   // how a rescue is won (game/rescueend.ts): the hostages led out the way the team came in (Space on one: on your feet — with me), or nobody of theirs left on the floor — ON in the page; ?norescueend = the room held fifteen seconds wins it, as it was
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
@@ -432,6 +434,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'KITLOAD.on': 'TPS_KITLOAD=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
   'RESCUEEND.on': 'TPS_RESCUEEND=1',
+  'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'EXACT.on': 'TPS_EXACT=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
