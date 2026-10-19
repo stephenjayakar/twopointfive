@@ -171,7 +171,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/shutdoor.ts K': 'CONST · never written: the scan\'s one write is a comment\'s `K.open = doortools.ts isOpen` (shutdoor.ts:7)',
   'src/game/shutdoor.ts SHUTDOOR_STATS': 'TALLY · counted in shutdoor.ts; no read in src/game, src/scene or src/anim',
   'src/game/silent.ts SILENT_STATS': 'TALLY · counted in silent.ts (122-205); no read in src/game, src/scene or src/anim',
-  'src/game/sneak.ts SNEAK_STATS': 'TALLY · counted in sneak.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/sneak.ts:576)',
+  'src/game/sneak.ts SNEAK_STATS': 'TALLY · counted in sneak.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/sneak.ts:610)',
   'src/game/snowFx.ts markKicked': 'TALLY · += in snowFx.ts:291; read only through marksKicked() by the page\'s __snow hook (main.ts:1325) and tools/qa/snowmarks-check.ts',
   'src/game/snowTracks.ts sheets': 'SCRATCH · the two blank sheets a mark is pressed into (snowTracks.ts:152), kept zero between stamps; remade only when the track map\'s size differs',
   'src/game/spotted.ts SPOTTED_STATS': 'TALLY · counted in spotted.ts; no read in src/game, src/scene or src/anim',

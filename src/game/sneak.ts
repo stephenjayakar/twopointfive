@@ -138,7 +138,7 @@ try { const o = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); if (
 try { const q = new URLSearchParams(location.search); if (q.has('sneak')) SNEAK.on = q.get('sneak') !== '0'; } catch { /* no page (the harness) */ }
 try { const e = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SNEAK; if (e) SNEAK.on = e !== '0' && e.toLowerCase() !== 'off'; } catch { /* no process (the page) */ }
 
-export const SNEAK_STATS = { waits: 0, waitS: 0, crossings: 0, shade: 0, backOffs: 0, asides: 0, cues: 0, /** frames a man coming to a sound was read as walking over a follower (SNEAK.noiseWalk) */ noiseWalks: 0 };
+export const SNEAK_STATS = { waits: 0, waitS: 0, crossings: 0, shade: 0, backOffs: 0, asides: 0, cues: 0, /** times a man coming to a sound was read as walking over a follower (SNEAK.noiseWalk) */ noiseWalks: 0 };
 /** what he did, newest last (QA; the panel's summary) */
 export const SNEAK_LOG: { t: number; who: string; what: string; at: [number, number] }[] = [];
 
@@ -202,11 +202,13 @@ const POSTED = ['move', 'cover'];   // (never a stack or a door tool's marks: th
 /** a crouched, sneaking teammate's footfall — null: silent's own (silent.ts silentStep asks first) */
 export function sneakStep(g: Game, gd: Guard): number | null { return SNEAK.on && SNEAK.step > 0 && gd.char.anim.crouch > 0.5 && sneaking(g, gd) ? SNEAK.step : null; }
 /** is this man walking over where the teammate stands — the man sent to the breaker (workthings.ts workComing), or, under SNEAK.noiseWalk, any suspicious man
- *  on his way to a sound: no errand, no body to see to, not held to his post, his route's end the place he means to look at, and what is left of that
- *  route inside `noiseWalkM` of the teammate with nothing solid between (where the man stands, the corners still ahead, the place itself) */
+ *  on his way to a sound: no errand, no body to see to, not held to his post or in Sam's arm, none of them in his view this moment, still on the walk,
+ *  his route's end the place he means to look at, and what is left of that route inside `noiseWalkM` of the teammate with nothing solid between (where the man stands, the corners still ahead, the place itself) */
 export function sneakComing(g: Game, gd: Guard, h: Guard): boolean {
   if (workComing(g, gd, h)) return true;
-  if (!SNEAK.noiseWalk || h.state !== 'suspicious' || h.task || h.bodyDuty || h.hold || !h.lastKnown || !h.pathGoal || flat(h.pathGoal, h.lastKnown) > 1) return false;
+  if (!SNEAK.on || !SNEAK.noiseWalk || h.state !== 'suspicious' || h.task || h.bodyDuty || h.hold || h.held || !h.lastKnown || !h.pathGoal || flat(h.pathGoal, h.lastKnown) > 1) return false;
+  if (h.pathI >= h.path.length) return false;   // (arrived and looking round, or no route to it: nobody is walking)
+  if (g.time >= h.sightT && g.time - h.sightT < SPOTTED.freshSecs) return false;   // (he has one of them in view, however faintly: that is spotted.ts's to answer — still, low — not a walk to a sound)
   const p = gd.char.pos, end = h.lastKnown, n = h.path.length; let a: ArrayLike<number> = h.char.pos;
   for (let i = Math.min(h.pathI, n); i <= n; i++) {
     const b: ArrayLike<number> = i < n ? h.path[i] : end, dx = b[0] - a[0], dz = b[2] - a[2], L2 = dx * dx + dz * dz;
@@ -504,6 +506,9 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
       //  way he is coming, is being walked into: he goes on after Sam across what he would have waited short of. Another man's eyes on the stretch, the
       //  line of a door Sam is at, Sam stood still with him at his place: each holds him as before. SNEAK.noiseWalk: a man coming to a sound is that man too)
       const coming = eyes.filter(h => sneakComing(g, gd, h)), onWalk = coming.length > 0 && (rem > gap + 0.5 || !stopped);
+      // (SNEAK.noiseWalk: … and ANOTHER man's eyes are asked on their own — the read of a step names one looker, the first it meets)
+      const elseEyes = K.noiseWalk && onWalk ? eyes.filter(h => !coming.includes(h)) : [];
+      const othersOn = (a: number, b: number): boolean => { if (elseEyes.length) for (let k = a; k <= b; k++) if (exposure(g, elseEyes, T[k], true).watched) return true; return false; };
       if (eyes.length) {
         if (rem > gap + 0.5 || !stopped) {
           // walking: the next stretch of the trail, read a step at a time for the posture he walks in
@@ -521,7 +526,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
             // looked at, but a step or two of dim light at range costs a watcher next to nothing: what the crossing would ADD to each looker's awareness, by
             // the eye's own arithmetic on the read of each step, with a margin — inside `budget` he goes (and a man Sam has just stirred has none to spare)
             const cheap = end >= 0 && watched && !tooLong && crossCost(g, eyes, T, first, end, loadCross(g, gd)) <= K.budget;
-            const walked = onWalk && ex(first, lowWalk).seen && (!by || coming.includes(by));
+            const walked = onWalk && ex(first, lowWalk).seen && (!by || coming.includes(by)) && !othersOn(first, last);
             if (end >= 0 && (walked || cheap || (!watched && (!tooLong || (K.patience > 0 && waited >= K.patience))))) { mode = 'cross'; from = first; to = end; }
             else if (!walked) { mode = 'wait'; why = watched ? (lit ? 'lit' : 'near') : !ex(first, lowWalk).seen ? 'door' : end < 0 ? 'open' : 'long'; }
             // (what he saw, kept: the looker, and the steps it was — a door swinging shut between them does not un-see it)
@@ -544,7 +549,7 @@ export function sneakFollow(g: Game, gd: Guard, back: number, samV: number, stop
         }
         // CAUGHT: he is seen where he stands (his own bones, his own meter — whatever the read of the crumbs said): looked at, or stood still in it → the same
         // nearest dark step, either way along the trail, low. Not twice inside a few seconds: a man hopping about a doorway is worse than one low and still in it.
-        if (mode !== 'stand' && !(onWalk && (!here.by || coming.includes(here.by))) && (here.watched || (here.seen && (mode === 'wait' || stopped))) && (g.time - M.hideT > K.hideGap || g.time < M.hideT)) {
+        if (mode !== 'stand' && !(onWalk && (!here.by || coming.includes(here.by)) && !(elseEyes.length && exposureOf(g, elseEyes, gd).watched)) && (here.watched || (here.seen && (mode === 'wait' || stopped))) && (g.time - M.hideT > K.hideGap || g.time < M.hideT)) {
           const k = dark(i, true, true, true); if (k >= 0) { stand = k; mode = 'back'; } else if ((side = aside(true, true))) mode = 'back'; }
         // (stood aside and not seen there: he keeps the spot while he waits, or while Sam stands — the trail's own steps are the seen ones)
         if (!side && M.side && (mode === 'wait' || (mode === 'walk' && stopped && rem <= gap + K.sideM + 0.5)) && K.side && flat(M.side, T[i].p) < K.sideM + 1 && sideOk(M.side, crouchOut(mode), 0)) side = M.side;
