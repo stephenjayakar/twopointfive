@@ -90,6 +90,18 @@ let fails = 0; const verdict = (ok, label, detail) => { if (!ok) fails++; consol
     verdict(air.on.force === true && same(air.on, true) && air.off.force === false && same(air.off, false) && /switched off: .*Snow in one air/.test(air.off.text) && air.back.force === air.on.force && air.back.grains === air.on.grains && air.b1 === air.b0 + 1 && !air.gpu.length,
       'oneair — the switch is live: what nothing reads is dimmed, either way; the blast button tells the snow one blast', `opened in force ${air.on.force} (grains dimmed ${air.on.grains}, wisps speedK ${air.on.speedK}, liftLo ${air.on.liftLo}) · off: in force ${air.off.force}, grains dimmed ${air.off.grains}, liftLo ${air.off.liftLo} · on again: ${air.back.force} · blasts ${air.b0} → ${air.b1} (${air.why}) · GPU errors ${air.gpu.length}${air.gpu.length ? ': ' + air.gpu[0] : ''}`); }
 
+  // ---- 4c: a blown man's breath (the hard breath rule, on as the page opens): the rule's `blown` rows are lit and the breath's own four dimmed; the rule put
+  //      off in the page's own table (window.__knobs), the other way round; put back, as it opened
+  const breath = await page.evaluate(async () => { const T = window.__tweak, H = window.__knobs.registry().HARDBREATH, was = H.on; const dim = r => window.__row('Breath', r).classList.contains('idle');
+    const soft = ['everyHard', 'hardK', 'effortUp', 'effortDown'], hard = ['blown every', 'blown puffs', 'blown count', 'blown jet', 'blown size', 'blown carry', 'blown in', 'wind back in'];
+    const read = () => { T.refresh(true); return { soft: soft.map(dim), hard: hard.map(dim), rest: ['every', 'puffs', 'opacity'].map(dim) }; };
+    const on = read(); H.on = !was; await window.__frames(2); const off = read(); H.on = was; await window.__frames(2); const back = read();
+    return { was, on, off, back, note: window.__row('Breath', 'blown jet').title, gpu: window.__gpuErrs.slice() }; });
+  { const all = (a, v) => a.every(x => x === v), ok = (o, rule) => all(o.soft, rule) && all(o.hard, !rule) && all(o.rest, false);
+    verdict(breath.was === true && ok(breath.on, true) && ok(breath.off, false) && ok(breath.back, true) && /thrown/.test(breath.note) && !breath.gpu.length,
+      'breath — a blown man breathes by the hard breath rule\'s rows while it is on and by the breath\'s own four with it off: the rows nothing reads are the dimmed ones, either way',
+      `opened with the rule ${breath.was ? 'on' : 'OFF'}: the four dimmed ${all(breath.on.soft, true)}, the rule's eight lit ${all(breath.on.hard, false)} · rule off: the four lit ${all(breath.off.soft, false)}, the eight dimmed ${all(breath.off.hard, true)} · put back: ${ok(breath.back, true) ? 'as it opened' : 'NOT BACK'} · hover on blown jet: ${JSON.stringify(breath.note.slice(0, 60))} · GPU errors ${breath.gpu.length}`); }
+
   // ---- 5: a switch mutes live; `none` and `all`
   const sw = await page.evaluate(async () => { const box = window.__layer('Blown wisps').querySelector('input[type=checkbox]'); const was = window.__snow.wisps.opacity; box.click(); const off = window.__snow.wisps.opacity; await window.__frames(1); box.click();
     const btn = t => [...document.querySelectorAll('#stweak .sthead button')].find(b => b.textContent === t);

@@ -34,7 +34,8 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
   const FX = await import(`${ROOT}/src/game/snowFx.ts`);
   const { SNOWTRACKS } = await import(`${ROOT}/src/game/snowTracks.ts`);
-  const { SNOWBREATH } = await import(`${ROOT}/src/game/snowBreath.ts`);
+  const { SNOWBREATH, updateSnowBreath, seedBreath } = await import(`${ROOT}/src/game/snowBreath.ts`);
+  const { HARDBREATH } = await import(`${ROOT}/src/game/character.ts`);
   const { SNOWBLAST, snowBlastStats } = await import(`${ROOT}/src/game/snowBlast.ts`);
   const { SNOWMARKS } = await import(`${ROOT}/src/game/snowMarks.ts`);
   const { SNOW_SURF } = await import(`${ROOT}/src/render/snowField.ts`);
@@ -49,7 +50,7 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
   const ENV = ['TPS_SNOW', 'TPS_SNOWLOOK', 'TPS_SNOWWISPS', 'TPS_SNOWTRACKS', 'TPS_SNOWGLOW', 'TPS_SNOWSPARKLE', 'TPS_SNOWBREATH', 'TPS_SNOWGRAINS', 'TPS_SNOWBLAST', 'TPS_SNOWAIR', 'TPS_SNOWMARKS', 'TPS_AIR'] as const;
   const was = { snow: SNOW.on, look: { ...SNOW_LOOK }, air: AIR_SIM.on, env: ENV.map(k => process.env[k]) };
   const TABLES: Record<string, Record<string, unknown>> = { SNOWFX: FX.SNOWFX, SNOWWISPS: FX.SNOWWISPS, SNOWGRAINS: FX.SNOWGRAINS, SNOWTRACKS, SNOWBLAST, SNOWMARKS, SNOWBREATH, SNOW_SURF, AIR };
-  const snap = () => JSON.stringify(TABLES);
+  const snap = () => JSON.stringify({ ...TABLES, HARDBREATH });   // (the hard breath rule's table rides the snapshot; only its steam numbers are rows — its chest numbers move bones)
   const shader = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8');
 
   /** a game stood up on the pass in snow with every snow piece raised, and the engine the page would hand the list: the stand-in plus the few members the rows write */
@@ -115,6 +116,28 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
       verdict(on0 && r0 && off && r1 && mode && back && /switched off: .*Snow in one air/.test(txt) && b1 === b0 + 1 && b2 === b1 && SNOW_LOOK.blast && snap() === before, 'oneair — the switch is live and no layer of `none`; the rows nothing reads are the dimmed ones, either way; the button sets one blast off',
         `opened ${on0 ? 'on' : 'OFF'} (in force: ${act0}) · rows ${r0 ? 'agree' : 'DISAGREE'} · off: ${off ? 'not in force' : 'STILL IN FORCE'}, rows ${r1 ? 'agree' : 'DISAGREE'} · reset: ${back ? 'as it opened' : 'NOT BACK'} · blasts told ${b0} → ${b1} (${why1}), with its switch off ${b2}`); }
 
+    // ---- breath: a blown man's steam reads the hard breath rule's numbers with the rule on and the breath table's own four with it off; the rows nothing
+    //      reads are the dimmed ones, and a dimmed row moved changes no record the emitter files (a recording stand-in for the particle pool, as hardbreath-check.ts)
+    { const { BREATH_SOFT, BREATH_HARD } = await import(`${ROOT}/src/ui/sceneLayers.ts`); const hb0 = HARDBREATH.on, look0 = SNOW_LOOK.breath;
+      const row = (id: string) => { const v = vars.find(x => x.id === id); if (!v) throw new Error(`no row ${id}`); return v; };
+      const soft = BREATH_SOFT.map((k: string) => row(`SNOWBREATH.${k}`)), hard = BREATH_HARD.map((k: string) => row(`HARDBREATH.${k}`)), rest = ['every', 'puffs', 'count', 'carry', 'size'].map(k => row(`SNOWBREATH.${k}`));
+      const c = R.g.player.char, e = R.g.engine as any;
+      /** ten seconds of the player held at a sprint, the rule where `on` says: every record his breath files, as one string */
+      const fly = (on: boolean) => { const recs: string[] = []; const P: any = { emit(_k: string, _p: number[], _d: number[], count: number, o: any) { if (o.owner === c.id) recs.push(`${count}:${o.steam}:${o.size}:${o.speed.toFixed(5)}:${o.vadd.map((v: number) => v.toFixed(4)).join(',')}`); return count; } };
+        const had = { p: e.particles, gp: e.settings.gpuParticles, v: [c.vel[0], c.vel[2]] }; seedBreath(R.g, 1);
+        try { for (let i = 0; i < 600; i++) { c.vel[0] = 4.7; c.vel[2] = 0; e.particles = P; e.settings.gpuParticles = true; SNOW_LOOK.breath = true; HARDBREATH.on = on; updateSnowBreath(R.g, DT); } }
+        finally { e.particles = had.p; e.settings.gpuParticles = had.gp; c.vel[0] = had.v[0]; c.vel[2] = had.v[1]; }
+        return recs.length + '|' + recs.join('|'); };
+      const moved = (rows: any[], on: boolean) => { rows.forEach(v => T.moveVar(v, v.def === v.max ? v.min : v.max)); try { return fly(on); } finally { T.resetAll(layers); } };
+      let dims = true, a = '', b = '', a1 = '', a2 = '', b1 = '', b2 = '';
+      try {
+        for (const on of [true, false]) { HARDBREATH.on = on; if (!soft.every((v: any) => !!v.idle?.() === on) || !hard.every((v: any) => !!v.idle?.() === !on) || rest.some((v: any) => v.idle?.())) dims = false; }
+        a = fly(true); b = fly(false); a1 = moved(soft, true); a2 = moved(hard, true); b1 = moved(soft, false); b2 = moved(hard, false);
+      } finally { HARDBREATH.on = hb0; SNOW_LOOK.breath = look0; seedBreath(R.g, 1); }
+      const filed = a.length > 2 && b.length > 2;
+      verdict(dims && filed && a !== b && a1 === a && a2 !== a && b1 !== b && b2 === b && snap() === before, 'breath — a blown man\'s steam: the rows the hard breath rule leaves unread are the dimmed ones, either way, and a dimmed row moved files the same records',
+        `rows ${dims ? 'agree' : 'DISAGREE'} · ten seconds at a sprint, records ${a.split('|')[0]} with the rule on / ${b.split('|')[0]} off · rule on: the breath's four moved ${a1 === a ? 'change nothing' : 'CHANGE THE STEAM'}, the rule's eight moved ${a2 !== a ? 'change it' : 'CHANGE NOTHING'} · rule off: the four ${b1 !== b ? 'change it' : 'CHANGE NOTHING'}, the eight ${b2 === b ? 'change nothing' : 'CHANGE THE STEAM'}`); }
+
     // ---- mute
     { const L = layers.find(x => x.id === 'grains'); const v = L.vars.find((x: any) => x.id === 'SNOWGRAINS.opacity'); const d = FX.SNOWGRAINS.opacity;
       L.on.set(false); const off = FX.SNOWGRAINS.opacity, shown = v.get(), txt = T.tweakText(layers, 'pass');
@@ -155,7 +178,8 @@ export async function sceneTweakCheck(o: { verbose?: boolean } = {}): Promise<bo
     { let pressed = true; const run = async (tweak: boolean, seed: number) => {
         const X = await rig(seed); const Ls = sceneLayers(X.eng, X.g) as any[]; let n = 0;
         // (the numbers first, and a blast told off the panel's button while its switch still stands; then every hand switch)
-        if (tweak) for (const L of Ls) for (const v of L.vars) if (!v.play) { T.moveVar(v, v.def === v.max ? v.min : v.max); n++; }
+        // (… but the blast dig's seconds to their SHORT end: at the long end a dig fifty metres wide is asked again every frame of the run, minutes of it on a slow box)
+        if (tweak) for (const L of Ls) for (const v of L.vars) if (!v.play) { T.moveVar(v, v.id === 'SNOWBLAST.digS' ? v.min : v.def === v.max ? v.min : v.max); n++; }
         X.step(60); if (tweak) { const b0 = snowBlastStats(X.g).blasts; Ls.find(L => L.id === 'blast').act.run(); if (snowBlastStats(X.g).blasts !== b0 + 1) pressed = false; }
         X.step(40); if (tweak) for (const L of Ls) if (L.on && !L.on.reloads && !L.on.play) L.on.set(!L.on.get());
         X.step(200); const d = hashDigest(digestGame(X.g));

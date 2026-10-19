@@ -1156,7 +1156,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `TweakLayer.idle`, asked each refresh; `readWhen` throws on a row it cannot find): with the SWITCH on, the Blown grains layer and the blast's `throwS` /
     `throwShare` / `out` / `up` (the grains stand down on the switch, in force or not); with one air IN FORCE (`oneAirActive`: the switch and a field to
     ride), the wisps' `speedK` / `gustLen` / `gustPow`; not in force, the flakes' `airLow` / `airHigh` / `airLift` / `skid`, the wisps' `liftLo` / `liftHi` /
-    `dropK`, the blast's `flakes` / `flakeUp` / `flakeLife`. A dimmed row still moves and still copies. `Blast marks` (Ground, wherever snow lies) is the
+    `dropK`, the blast's `flakes` / `flakeUp` / `flakeLife`. A BLOWN MAN'S BREATH (10-19): while the hard breath rule is on (`character.ts HARDBREATH`,
+    `?hardbreath=0`) the steam reads the rule's numbers, so the Breath layer lists both sets and dims the one nothing reads — the breath table's
+    `everyHard` / `hardK` / `effortUp` / `effortDown` with the rule on, the rule's eight steam numbers (`blown every` … `wind back in`: `HARDBREATH.every`,
+    `puffs`, `count`, `jet`, `size`, `carry`, `up`, `down`; lists `BREATH_SOFT` / `BREATH_HARD` in sceneLayers.ts) with it off. The rule's switch and its
+    four chest numbers are no rows: they move bones. The check's `breath` verdict runs the steam's emitter against a recording stand-in for the pool,
+    rule on and off: a dimmed set moved files the same records, a lit one does not; the page check flips the rule in the page's own table
+    (`window.__knobs`) and reads the rows both ways. The blast's `dig` / `digS` rows are held to 3 × and 5 s (the dig is asked again every frame for
+    `digS`, and at the table's own 4 × reach a dig fifty metres wide cost 0.2 to 1.3 s a frame, measured headless); the check's digest run sends `digS`
+    to its short end for the same reason (it was one to thirteen minutes of the run). A dimmed row still moves and still copies. `Blast marks` (Ground, wherever snow lies) is the
     SNOWBLAST table, its switch `SNOW_LOOK.blast` live (a blast reads it as it goes off), and the one BUTTON on the panel (`TweakLayer.act`): `blast` calls
     `snowBlastAt` three metres ahead of the player — the snow marked as a frag there would, no blast, no sound; the check's digest run presses it with the
     switch on. `FLAKE_WALL_IN` is a ⟳ row of Falling flakes (the CPU's copy of it in snowFx.ts is a check's, nothing in the page reads it). The check's
