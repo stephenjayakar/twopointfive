@@ -177,7 +177,7 @@ export async function gunlookBare(): Promise<boolean> {
       const R: any = await hushed(() => rig(17, { stage: false })); raise(on); const g = R.game, at = g.player.char.pos;
       const op: any = spawnUnit(g, { team: 'operative', pos: [at[0] + 1.5, 0, at[2] + 1], yaw: 0, name: 'Op0', light: false });
       const shot = (suppressed: boolean, long: boolean) => {
-        K.KIT.members[1] = K.kitDefault(1); K.kitSet(1, 'primary', long ? 'mk18' : 'none'); K.kitSet(1, 'secondary', 'g19'); K.KIT.members[1].suppressed = suppressed; K.kitStage(g, [op]);
+        K.KIT.members[1] = K.kitDefault(1); K.kitSet(1, 'primary', long ? 'mk18' : 'none'); K.kitSet(1, 'secondary', 'g19'); K.KIT.members[1].suppressed = suppressed; K.KIT.members[1].sideCan = suppressed /* (the gear tree's card: his sidearm's suppressor is a row of its own — kittree.ts) */; K.kitStage(g, [op]);
         for (let i = 0; i < 20; i++) R.step();
         return { row: op.weapon.def.id as string, side: (op.second?.gun?.def?.id ?? null) as string | null, look: op.char.gunLook ? { ...op.char.gunLook } : null, ...boxes() };
       };
