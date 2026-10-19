@@ -112,7 +112,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const up = upper === 'aim' || stance === 'highReady' || stance === 'stack';
   muzzleCheck(g, gd, up && !s.hot ? (aim ?? aimAhead(c)) : null, dt);   // (hot: weapons free on the men in front of him — the breach's operatives on the room they take, until the guards have sides: game.ts GuardScript.hot)
   gunWallCheck(g, gd, upper === 'aim' ? 'aim' : up ? 'port' : null, aim ?? null, dt, !!s.over);   // …and so does a wall, a jamb or a leaf inside the raised gun's reach (gunwall.ts; weapons free or not, and with a man in his sights — `over` — only a gun that is IN it; nothing with its switch off)
-  c.anim.speed = moveSpeed; c.anim.upper = gd.muzzleDown ? 'none' : upper; c.anim.crouchTarget = s.crouch ? 1 : 0;
+  c.anim.speed = moveSpeed; c.anim.upper = gd.muzzleDown ? 'none' : upper; c.anim.crouchTarget = s.crouch ? 1 : 0; c.anim.lean = s.lean ?? 0;
   c.anim.stance = gd.muzzleDown ? 'lowReady' : stance; c.anim.stackSide = s.stackSide ?? 1; c.anim.lookYawExtra = 0;   // (the AI's leader-glance / wait-sweep neck twist must not freeze on him for the length of the script)
   gunWallPose(g, c);
   c.update(dt);
@@ -127,7 +127,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
  *  A man who died under a script (killGuard leaves it on him) is only unhooked — the AI must never be handed a corpse as a patrol. */
 export function endGuardScript(gd: Guard, state: 'patrol' | 'suspicious' | 'alert' | 'search' = 'patrol') {
   gd.script = null; if (gd.state === 'dead') return;
-  gd.char.anim.stance = 'none'; gd.muzzleDown = false; gd.char.anim.crouchTarget = 0; gd.char.anim.reverse = false; gd.state = state; gd.path = []; gd.pathGoal = null;   // (the AI never plays the cycle backwards, so it never clears it either; the muzzle it works out afresh next frame)
+  gd.char.anim.stance = 'none'; gd.muzzleDown = false; gd.char.anim.crouchTarget = 0; gd.char.anim.lean = 0; gd.char.anim.reverse = false; gd.state = state; gd.path = []; gd.pathGoal = null;   // (the AI never plays the cycle backwards, so it never clears it either; the muzzle it works out afresh next frame)
   if (state === 'patrol') { gd.awareness = 0; gd.reactT = 0; gd.searchT = 0; gd.lastKnown = null; gd.bodyDuty = null; }   // (an awareness left over from the drill would tip a 'patrol' straight into 'huh?'; a calm man has no body on his mind)
 }
 
