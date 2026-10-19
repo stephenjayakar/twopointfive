@@ -27,7 +27,7 @@ const line = (m: Card) => cardWords(m).replace(/ \+ /g, ', ').replace(/^nothing$
 K.KIT.on = true; K.SLOTS.on = true; K.BIGSLOT.on = true; K.KITDEAL.more = MORE; K.kitLoad(null, '');   // (the page's stand for these rows: the pouches rule and the big slot on)
 const kits = K.kitLoadouts() as { id: string; name: string }[];
 const out: string[] = [];
-out.push(`# Who carries what`, '', `The squad's kit dealt over the men who come: **${DEAL ? 'on' : 'off'}**. Pouches are out of four a man; ${MORE ? 'of three or four as issued, Red One is lent the breaching shotgun and Blue One the hammer for the big slot (a pair is issued neither)' : 'nobody is issued anything for his big slot'}.`, '');
+out.push(`# Who carries what`, '', `The squad's kit dealt over the men who come: **${DEAL ? 'on' : 'off'}**. Pouches are out of four a man; ${MORE ? 'of three or four as issued, Red Two is lent the breaching shotgun and, of four, Blue Two the hammer for the big slot (a pair is issued neither)' : 'nobody is issued anything for his big slot'}.`, '');
 out.push('## Every squad kit at every team size', '', '| Squad kit | Team | Squad carries (stun / charges / frags / smoke / wall) | Each teammate (pouches used) | Comes with nothing |', '|---|---|---|---|---|');
 const bareAt: Record<string, string[]> = {};
 for (const L of kits) for (const n of [1, 2, 3, 4]) {
@@ -50,7 +50,7 @@ for (const s of ALL_MISSIONS as any[]) {
   const ways = Math.max(1, (s.ways ?? []).length), kv = (sc.kitView?.ways ?? []).length;
   out.push(`| ${s.title}${s.offList ? ' (off the list)' : ''} | ${s.kind} | ${s.squad ? `+${s.squad}` : 'alone'} | ${sizes} | ${cards} | ${own} | ${locked} / ${steel} of ${doors.length} | ${noFrag} | ${kv >= ways ? 'yes' : kv ? `${kv} of ${ways} ways in` : 'no'} |`);
   if (s.kind === 'rescue') notes.push(`${s.title}: the two frags of the issued kit cannot be ordered into a room with a hostage in it.`);
-  if (locked > 2 && s.kind !== 'quiet') notes.push(`${s.title}: ${locked} locked doors and two door charges as issued; the rest are the pick's, the boot's or a big-slot tool's${MORE ? ': of three or four as issued Red One carries the breaching shotgun and Blue One the hammer, a pair is issued neither' : ', and nobody is issued one'}.`);
+  if (locked > 2 && s.kind !== 'quiet') notes.push(`${s.title}: ${locked} locked doors and two door charges as issued; the rest are the pick's, the boot's or a big-slot tool's${MORE ? ': of three or four as issued Red Two carries the breaching shotgun and, of four, Blue Two the hammer; a pair is issued neither' : ', and nobody is issued one'}.`);
   if (steel) notes.push(`${s.title}: ${steel} steel door${steel === 1 ? '' : 's'}: no hammer or shotgun opens one.`);
   if (s.kind === 'quiet' && s.squad > 0 && s.group !== 'training') notes.push(`${s.title}: a quiet mission whose partner comes as issued, with ${partner} on his card.`);
 }

@@ -152,8 +152,10 @@ const CARD_AS_IT_WAS = /^pouch-table$/;
 const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
 // …and the deal's key `more` (kit.ts KITDEAL.more, on in the page: a team of three or four as issued is LENT a big tool each pair) for the probes written
 // of a four whose big slots stand empty: a locked door that such a four picks, boots or is refused at is, with a lent shotgun or hammer, a door the tool
-// takes — and that is kitdeal-check.ts's and bigslot-check.ts's to hold. Held off on every stand, word and table, unless whoever runs the tool set the word.
-const MORE_AS_IT_WAS = /^(frameholds-tools)$/;
+// takes — and that is kitdeal-check.ts's and bigslot-check.ts's to hold. The same for the probes that read a door's tools page row for row against the
+// pair's: with a tool in the squad the page has the big slot's row on its own key, and the walk that reads that page as the page opens it, in every
+// scenario, is orderkeys-walk. Held off on every stand, word and table, unless whoever runs the tool set the word.
+const MORE_AS_IT_WAS = /^(frameholds-tools|doortest|doormenu-rows|thresholdmenu-rows|shutdoor-menu|silent-pick|silent-tools|silent-boot|pressorders-squad4|pressorders-nightbreach4)$|^kitpaste(-|$)/;   // (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line)
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND']];
 async function run(name: string, fn: () => unknown): Promise<boolean> {
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;

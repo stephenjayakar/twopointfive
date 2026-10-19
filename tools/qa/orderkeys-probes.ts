@@ -55,8 +55,10 @@ const LIST: Scn[] = [
   ...SCENARIOS.map((e: any) => ({ name: e.title as string, query: scenarioQuery(e) as string, level: e.level as string | undefined, squad: e.squad as 2 | 4 })),
   { name: 'Night breach with the four (typed, not on the list)', query: '?nightbreach&squad4', squad: 4 },
 ];
-/** the keys of the left hand an order may be on: its own four letters and the digits it reaches off W A S D */
-const LETTERS = ['X', 'T', 'B', 'F', 'G'];   // (G: the door tools' frag row — the key beside F, where the page's five digits are taken)
+/** the keys an order may be on: its own four letters, the digits it reaches off W A S D, and the two letters a full page spills onto */
+const LETTERS = ['X', 'T', 'B', 'F', 'G', 'H'];   // (G: the door tools' frag row — the key beside F, where the page's five digits are taken.
+// H: the big slot's row on that same page and squad smoke's on the floor's — one key past G and a stretch from W A S D, which is an open call
+// with the maintainer, not this walk's to refuse. No walk met it before a team of four was lent a tool as issued — KITDEAL.more, menus.md.)
 const leftKey = (k: string) => LETTERS.includes(k) || (/^[1-9]$/.test(k) && Number(k) <= ORDER_DIGITS);
 const nameOf = (code: string) => code.replace(/^Key|^Digit/, '');
 
@@ -288,7 +290,7 @@ export const orderkeysFour = guarded(async () => {
     if (door) { near(); const M = R.openX(), toolsKey = M?.rows.find((r: any) => r.opens)?.key; R.press(`Digit${toolsKey}`); R.press(`Digit${readPage(O).wait?.digit}`); const on0 = O.menu?.onWord === true;
       R.press('Escape'); const first = O.menu === M && M.page === null, said = (O.hud().menu?.rows ?? []).flatMap((r: any) => r.opts).find((o: any) => /▸/.test(o.text))?.text ?? '';
       R.press(`Digit${toolsKey}`); const kept = O.menu === M && M.page !== null && M.onWord === true; R.press(ORDERS.key); const gone = !O.menu; R.atDoor(door); const M2 = R.openX(), fresh = !!M2 && M2.onWord === false; if (O.menu) R.press(ORDERS.key);
-      const good = on0 && first && /on my word: ON$/.test(said) && kept && gone && fresh; ok &&= good;
+      const good = on0 && first && /on my word: ON(?:$| · )/.test(said) && kept && gone && fresh; ok &&= good;   // (the row goes on to name the big slot's key when the squad carries a tool)
       out.push(`wait ON, Esc back, ${toolsKey} again: ${first ? `first page reads "${said}"` : 'NOT BACK ON THE FIRST PAGE'} → ${kept ? 'still ON on the tools page' : 'WAIT WAS DROPPED'} · a new menu starts ${fresh ? 'off' : 'ON'}`); }
     const high = R.pressed.filter(c => /^Digit/.test(c) && !(Number(c.slice(5)) >= 1 && Number(c.slice(5)) <= ORDER_DIGITS));
     verdict(ok && high.length === 0, `${scn.name} (${scn.query}): a tool given to wait and then sent, three ways, without a digit above ${ORDER_DIGITS}`, `${door ? `door ${door.def.name}` : 'NO DOOR'} · digits pressed above ${ORDER_DIGITS}: ${high.length}\n    ${out.join('\n    ')}`);

@@ -322,8 +322,11 @@ const coming = (cards: MemberKit[], n: number) => cards.slice(1, 1 + n);
  *  The big things, the wand, the guns and the looks stay on the man the kit names (but for the tools `more` lends, below). Off (the module, the frozen stand; `?nokitdeal` in the page,
  *  TPS_KITDEAL=1 raises it headless) = every card shown and staged as the table writes it.
  *  `more` (with the deal; the maintainer's pick of 10-18, "a tool each pair"; OFF here and on the frozen stand, TPS_KITMORE=1; `?nokitmore` in the page):
- *  A TEAM OF THREE OR FOUR IS LENT A BIG TOOL EACH PAIR — Red One wears the breaching shotgun and Blue One the hammer in a big slot that stands empty,
- *  pouches as they were — so a locked door is theirs to take with the big slot's row. THE TOOLS ARE WORN, NEVER WRITTEN (lend, below): no card of the table
+ *  A TEAM OF THREE OR FOUR IS LENT A BIG TOOL EACH PAIR — Red Two wears the breaching shotgun and Blue Two the hammer in a big slot that stands empty,
+ *  pouches as they were — so a locked door is theirs to take with the big slot's row. THE PAIR'S SECOND MAN, NOT ITS FIRST: the man on the lock has the
+ *  tool in his hands when the door goes, and it is his mate who must be first through with a gun up (measured — menus.md: the tool on the pair's first man
+ *  lost ten men in eight runs at one door where the second man's lost two); so of three, where Blue One comes alone, only Red Two is lent one.
+ *  THE TOOLS ARE WORN, NEVER WRITTEN (lend, below): no card of the table
  *  or the store holds one, so a pair comes as it always did and the key off is the deal alone at once. A big thing put on that man by hand is his instead,
  *  written as ever; his slot EMPTIED by hand is marked on his card (`bare`) and stays empty until something is put in it. No named squad kit but the issue
  *  is lent one (each says what its men carry), and cards made the player's own out of such a kit keep its empty slots (the same mark).
@@ -335,7 +338,7 @@ const envIs = (name: string): boolean => { try { return String((globalThis as { 
 /** `KITMORE_BREAK=1` (the check's): nobody is lent a tool and nobody is handed the canister */
 const MORE_BREAK = envIs('KITMORE_BREAK');
 /** who is lent which big tool, of the men who come */
-const DEAL_TOOL: [number, 'shotgun' | 'hammer'][] = [[1, 'shotgun'], [3, 'hammer']];
+const DEAL_TOOL: [number, 'shotgun' | 'hammer'][] = [[2, 'shotgun'], [4, 'hammer']];
 const moreOn = (): boolean => KITDEAL.more && !MORE_BREAK;
 /** `KITDEAL_BREAK=1` (the check's): the deal hands every thing back to the men the table names */
 const DEAL_BREAK = envIs('KITDEAL_BREAK');
