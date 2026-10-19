@@ -64,7 +64,7 @@ import { STICKY, stickyIssue, stickyVisit } from './stickycam';   // (read insid
 import { WAND } from './wand';   // (read inside a row's builder, a card's cost and kitPlayer only — never as this module loads)
 import { OWNCHARGE } from './owncharge';   // (your own door and wall charges: read inside a row's builder, the squad's count and a staging only — never as this module loads)
 import { SQUADSMOKE, squadSmokeStage } from './squadsmoke';   // (read inside a row's note / called inside kitStage only)
-import { squad40Stage } from './squad40';   // (called inside kitStage only)
+import { squad40Here, squad40Stage } from './squad40';   // (called inside kitStage and a row's builder only)
 import { loadWear, loadMan } from './kitload';   // (called inside kitPlayer / kitShow / kitStage only)
 import { GUNSLOTS, gunPicks, gunsBroken, pickRow, pickWord, sideStage, NO_PRIMARY, type GunSlot } from './gunslots';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
 import { KITTREE, treeOn, bareOf } from './kittree';   // (read inside a row's builder, a card's gun and a staging only — never as this module loads)
@@ -101,7 +101,8 @@ export interface MemberKit {
   frags: number;
   /** the wall charge: one or none (a teammate's alone, and only in a build whose wall charge counts what the cards carry — wallHere) */
   walls: number;
-  /** you: 40 mm grenades for the FN2000's launcher (he40.ts; weapons.ts LAUNCHER40.rounds as issued). Teammates carry none: the field is 0 and has no row. */
+  /** you: 40 mm grenades for the FN2000's launcher (he40.ts; weapons.ts LAUNCHER40.rounds as issued). A teammate: none as issued, and a row only where his
+   *  round can be fired — the card as a tree and the order in the build (mateShells; squad40.ts: X on the floor, G, 3) — else 0 and no row. */
   shells: number;
   suit: SuitId; trim: TrimId;
   /** the optical wand rides in a pouch (wand.ts — a look under a shut door before anybody opens it). A teammate's card has the row only under `WAND.mate`, and he uses it only on your order (wandorder.ts); else false, and no row. */
@@ -131,6 +132,8 @@ const ISSUED_FRAGS = [1, 1, 1, 0, 0];
 /** … and the 40 mm rounds: yours alone, one */
 const ISSUED_SHELLS = [1, 0, 0, 0, 0];
 export const SHELLS_MAX = 4;
+/** … and a teammate's, where his card has the row (mateShells): one round, fired on your order */
+export const SHELLS_MATE_MAX = 1;
 /** the most sticky cameras a card of yours holds (stickycam.ts STICKY.carry is the same three, said there for the rifle; STICKY.max is how many WATCH at once) */
 export const CAMS_MAX = 3;
 /** the most sponge rounds a card holds (kittree.ts KITTREE.rings is the same five, said there for the switch; the launcher's own: weapons.ts LAUNCHER.rings) */
@@ -256,7 +259,7 @@ const SLOT_PUT: Record<string, (m: MemberKit, n: number, d: MemberKit) => void> 
 const SLOT_WORD: Record<string, string> = { smoke: 'smoke canister', bangs: 'stun canister', frags: 'frag', shells: 'launcher grenade', charges: 'door charge', walls: 'wall charge', shotgun: 'shotgun', wand: 'optical wand', cams: 'sticky camera', hammer: 'hammer', rings: 'sponge round' };
 /** the most of each a card's row can hold whatever a table says — [you, a teammate]; 0 = no such row on his card. A table's most-a-man is never read above
  *  these (kitPlayer and the rows would not deliver it). */
-const OWN_MAX: Record<string, [number, number]> = { smoke: [SMOKE_MAX, SMOKE_MATE_MAX], bangs: [STUN_MAX, BANGS_MAX], frags: [FRAGS_MAX, FRAGS_MAX - 1], shells: [SHELLS_MAX, 0], charges: [CHARGES_MAX, CHARGES_MAX], walls: [WALLS_MAX, WALLS_MAX], shotgun: [1, 1], wand: [1, 1], cams: [CAMS_MAX, 0], hammer: [1, 1], rings: [RINGS_MAX, 0] };
+const OWN_MAX: Record<string, [number, number]> = { smoke: [SMOKE_MAX, SMOKE_MATE_MAX], bangs: [STUN_MAX, BANGS_MAX], frags: [FRAGS_MAX, FRAGS_MAX - 1], shells: [SHELLS_MAX, SHELLS_MATE_MAX], charges: [CHARGES_MAX, CHARGES_MAX], walls: [WALLS_MAX, WALLS_MAX], shotgun: [1, 1], wand: [1, 1], cams: [CAMS_MAX, 0], hammer: [1, 1], rings: [RINGS_MAX, 0] };
 /** what an over-budget kit gives up first (kitFitAll) */
 const TRIM = ['rings', 'shells', 'smoke', 'frags', 'charges', 'bangs', 'cams', 'wand', 'walls', 'shotgun', 'hammer'];
 /** … and of the big things on a card over its big slot: what the card does NOT show goes first (bigOf: a wall charge before the rest) */
@@ -328,6 +331,9 @@ const tubed = (m: MemberKit): boolean => m.weapon === 'rifle' && !(gunsOn() && W
 /** KITTREE: a suppressor's flag holds a value only while its gun has the choice — the suppressor of a gun left at home, or of one made with it or that
  *  none fits, sits where it is issued (on). So two cards that read alike are alike, a paste of a Mk 46's card takes nobody's suppressor off, and a
  *  flag never comes back from under a gun that had no say in it. (An issued card has both on: nothing is asked of the switch as this module loads.) */
+/** KITTREE: a teammate's card has the 40 mm row — the card is a tree and his round can be fired in this build (squad40.ts squad40Here). The table still
+ *  says how many (slots.json shell40: none while it names you alone). */
+const mateShells = (): boolean => treeUp() && squad40Here();
 const homeCans = (m: MemberKit): MemberKit => { if ((!m.suppressed || !m.sideCan) && treeUp()) { if (m.weapon === 'pistol' || !canChoice(m.primary)) m.suppressed = true; if (!canChoice(m.secondary)) m.sideCan = true; } return m; };
 const homeShells = (m: MemberKit): MemberKit => { homeCans(m); if (!tubed(m)) { m.shells = 0; if (m.rings && treeUp()) m.rings = 0;   /* (KITTREE: the sponge rounds too — an issued card carries none, so the switch is never asked as this module loads) */ if (m.cams && STICKY.on) m.cams = 0; /* (the cameras go by the same tube; with their switch off the count is inert and kept — and an issued card carries none, so the switch is never asked as this module loads: slotsCheck below runs then) */ } return m; };
 /** the pouches a card fills */
@@ -783,7 +789,7 @@ function buildRowsTree(i: number): KitRow[] {
   const tube = (r: KitRow | undefined): KitRow[] => (r && r.values.length > 1 ? [{ ...r, under: 'primary', has: tubed }] : []);   // (a most of none: not his to carry — no row)
   const rings: KitRow = { field: 'rings', item: 'rings', label: 'Sponge rounds', values: upTo(slotMax('rings', i, OWN_MAX.rings[you ? 0 : 1])), word: v => String(v),
     note: m => (m.rings ? '2 with the rifle up, then the right button: out cold to the head, doubled over anywhere else' : 'none for the launcher') };
-  const shells = by('shells') ?? { field: 'shells', item: 'shells', label: '40 mm grenades', values: upTo(slotMax('shells', i, OWN_MAX.shells[you ? 0 : 1])), word: (v: KitValue) => String(v), note: (m: MemberKit) => (m.shells ? 'fired on your order' : 'none for his launcher') } as KitRow;
+  const shells = by('shells') ?? { field: 'shells', item: 'shells', label: '40 mm grenades', values: upTo(mateShells() ? slotMax('shells', i, OWN_MAX.shells[1]) : 0), word: (v: KitValue) => String(v), note: (m: MemberKit) => (m.shells ? 'fired on your order' : 'none for his launcher') } as KitRow;   // (a teammate's: yours is the row above — by('shells'))
   const rest = (['smoke', 'bangs', 'frags', 'charges', 'wand'] as KitField[]).flatMap(f => by(f) ?? []);
   // (the gun's own name whichever way its suppressor stands — that is the row under it — and its line says which way that is, by this gun's own flag)
   const gun = (f: 'primary' | 'secondary'): KitRow => { const b = by(f)!; return { ...b, word: v => gearText(pickWord(v)),
@@ -793,7 +799,7 @@ function buildRowsTree(i: number): KitRow[] {
 /** (built once per member, per way the rule stands, per table: a counted row's values are the table's `max`) */
 const rowCache = new Map<string, KitRow[]>();
 /** the rows of member i's card, top to bottom */
-export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${gunsOn()}:${treeUp()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
+export function kitRows(i: number): KitRow[] { const key = `${i}:${SLOTS.on}:${wallHere()}:${WAND.on}:${WAND.mate}:${OWNCHARGE.on}:${STICKY.on}:${bigOn}:${gunsOn()}:${treeUp()}:${mateShells()}`; let r = rowCache.get(key); if (!r) rowCache.set(key, r = buildRows(i)); return r; }
 /** What a row costs member i's pouches as his card stands, and its rate in plain words ('a pouch each', 'the wand takes 2 pouches') — null for a row
  *  that is not a pouch (a light, a colour; a shotgun while the table prices it at nothing), and for every row while the rule is off. */
 export function kitRowCost(i: number, r: KitRow, m: MemberKit = kitShown(i)): { pouches: number; rate: string } | null {
@@ -815,7 +821,7 @@ export function kitWords(i: number): string {
   // (KITTREE: a gun by its pick's name, as its tile reads — 'bare' after one whose suppressor the card has taken off)
   const gun = (slot: GunSlot) => `${gearText(pickWord(m[slot]))}${canChoice(m[slot]) && !kitSlotCan(m, slot) ? ' bare' : ''}`, guns = () => (m.weapon === 'pistol' ? `${gun('secondary')} only` : `${gun('primary')} + ${gun('secondary')}`);
   if (i === 0) return [treeUp() ? guns() : gunsOn() ? (m.weapon === 'pistol' ? `${gearText(pickWord(m.secondary))} only` : `${gearText(pickWord(m.primary))} + ${gearText(pickWord(m.secondary))}`) : gearText(YOU_GUNS[m.weapon]), `${m.smoke || 'no'} smoke, ${m.bangs || 'no'} stun${frags}${SLOTS.on && m.shells ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` /* (no-break spaces: the count never parts from '40 mm' where the strip wraps the line) */ : ''}${m.rings && treeUp() ? `, ${m.rings}\u00a0sponge` : ''}${chargeRow(0) && m.charges ? `, ${m.charges} charge${m.charges === 1 ? '' : 's'}` : ''}${m.cams && camRow() ? `, ${m.cams}\u00a0cam${m.cams === 1 ? '' : 's'}` : ''}${m.wand && wandRow() ? ', wand' : ''}`, wallWords(0, m), bigWords(m), look].filter(Boolean).join(' · ');
-  return [treeUp() ? guns() : gearText(GUN_SHORT[kitGun(m)]) + (kitSide(m) ? ` + ${gearText(GUN_SHORT[kitSide(m)!])}` : ''), m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}`, wallWords(i, m), bigWords(m), look].filter(Boolean).join(' · ');
+  return [treeUp() ? guns() : gearText(GUN_SHORT[kitGun(m)]) + (kitSide(m) ? ` + ${gearText(GUN_SHORT[kitSide(m)!])}` : ''), m.light ? 'light' : 'no light', m.nvg ? 'goggles' : 'no goggles', `${m.bangs} stun, ${m.charges} charge${m.charges === 1 ? '' : 's'}${frags}${m.smoke ? `, ${m.smoke} smoke` : ''}${m.shells && mateShells() ? `, ${m.shells}\u00a0×\u00a040\u00a0mm` : ''}`, wallWords(i, m), bigWords(m), look].filter(Boolean).join(' · ');
 }
 /** the big slot's shotgun or hammer of a card's line (BIGSLOT; the wall charge has its own words) */
 function bigWords(m: MemberKit): string { return bigOn && !m.walls && m.big !== 'none' ? BIG_WORD[m.big] : ''; }

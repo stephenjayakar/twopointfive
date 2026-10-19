@@ -1047,12 +1047,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kits (labelled `Kit`) is shown and live at every team size; alone it lists the kits that put a different card on YOU and a press writes your card
   only (`kitLoadout(id, only)`, `kitLoadouts(only)`, `kitLoadoutOf(only)`). A stored card from before the tree: yours takes its suppressors, light and
   goggles as issued, a teammate's one Suppressor row is both his guns'; a card written under the tree keeps its new fields through a visit with the
-  switch off. NOT IN IT YET: a teammate's 40 mm (he has no launcher to fire one: its own part of the goal). SWITCH: `KITTREE.on`, OFF in the module and
+  switch off. A TEAMMATE'S 40 mm: his card has the `40 mm grenades` tile under his primary where yours is, none as issued and one at
+  most (`SHELLS_MATE_MAX`; `slots.json shell40` names a teammate with a most of 1, a pouch), only where the round can be fired: the card a tree and
+  the order in the build (`mateShells` = the tree and `squad40.ts squad40Here`; the order is X on a spot of floor, G, 3, switch `SQUAD40.on`,
+  `?nosquad40`). A primary with nothing under its barrel takes the tile and the round off the card (`homeShells`), his line under his name says
+  `1 × 40 mm`, and `kitStage` hands the round to `squad40Stage` as it always did. No sponge round and no sticky camera for a teammate.
+  SWITCH: `KITTREE.on`, OFF in the module and
   on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITTREE=1`; it reads only with `GUNSLOTS` and `BIGSLOT` up), ON in the page and on the shipped
   stand (`?nokittree`); in the knob registry and `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off = the card of the
   build before, row for row: one Suppressor row for both a teammate's guns, your guns always suppressed, five sponge rounds with every launcher, the
-  two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`; 25 lines on both
-  stands, `KITTREE_BREAK=1` fails 17 on the frozen stand and 18 on the shipped one); the real page, `PORT=<port> node tools/qa/kittree-page.cjs` (19
+  two rows of sets. CHECK: `bun run tools/qa/kittree-check.ts` (`probes.ts kittree`: `kittree-rows`, `-guns`, `-sponge`, `-off`, `-mate40`; 31 lines on both
+  stands, `KITTREE_BREAK=1` fails 17 on the frozen stand and 18 on the shipped one); the real page, `PORT=<port> node tools/qa/kittree-page.cjs` (20
   lines: bars, tiles under their gun, sponge none on a loud mission and the mission's five on a quiet one, the one Reset, the row of kits alone, and
   at 1000, 1180, 1353, 1440 and 1512 px wide nothing cut and nothing run into; `KITTREE_BREAK=1` fails 4); a deploy off the card,
   `tools/qa/kittree-deploy-page.cjs` (two mission boots on the software adapter, slow). The older card probes that read a row's place (`wand-kit`,

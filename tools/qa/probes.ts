@@ -32,7 +32,7 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
-//     kittree: kittree-rows kittree-guns kittree-sponge kittree-off
+//     kittree: kittree-rows kittree-guns kittree-sponge kittree-off kittree-mate40
 //     gunlook: gunlook-own gunlook-hands gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
 //     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes gunroles-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
@@ -2459,6 +2459,7 @@ if (on('kittree-rows', 'kittree', 'kit', 'all')) await run('kittree-rows', async
 if (on('kittree-guns', 'kittree', 'all')) await run('kittree-guns', async () => (await import('./kittree-check.ts')).kittreeGuns());              // a suppressor per gun as deployed and as staged, guns that have no choice, the four bars
 if (on('kittree-sponge', 'kittree', 'all')) await run('kittree-sponge', async () => (await import('./kittree-check.ts')).kittreeSponge());        // sponge rounds: none as issued, five on a quiet run, a pouch each; your light and goggles rows
 if (on('kittree-off', 'kittree', 'all')) await run('kittree-off', async () => (await import('./kittree-check.ts')).kittreeOff());                 // off = the rows and the run before; stands row, registry, page flag, an old recording
+if (on('kittree-mate40', 'kittree', 'all')) await run('kittree-mate40', async () => (await import('./kittree-check.ts')).kittreeMate40());       // a teammate's 40 mm: the row where his round can be fired, the pouch, the staged round
 // THE PLAYER CARRIES AND SETS CHARGES LIKE THE SQUAD (src/game/owncharge.ts; tools/qa/owncharge-check.ts raises the switch itself, so it asks the same on either stand; OWNCHARGE_BREAK=1 must fail)
 if (on('owncharge-kit', 'owncharge', 'kit', 'all')) await run('owncharge-kit', async () => (await import('./owncharge-check.ts')).ownchargeKit());       // the two rows on your card with the switch, the teammates' prices, the squad's count, the store, no squad cap on wall charges
 if (on('owncharge-door', 'owncharge', 'doortools', 'all')) await run('owncharge-door', async () => (await import('./owncharge-check.ts')).ownchargeDoor());   // alone: the card's count, the row, set / broken off / handed back / blown, a restart, one more row on a lock

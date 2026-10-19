@@ -4,6 +4,7 @@
 // The REAL page in headless Chromium, no WebGPU adapter (the start page is plain DOM, live from the first tick):
 //   · each gun's tile is drawn with four bars, and another gun on the row draws other bars;
 //   · the suppressor and the light are tiles INSIDE their gun's box, under its tile and set in from it — on your card and on a teammate's;
+//   · a teammate's card has the 40 mm tile yours has, none as issued, one after a press;
 //   · the Sponge rounds tile reads none on a loud mission and the mission's five on a quiet one;
 //   · a card has one set (the reset) and the row of kits is drawn, live, for a man alone;
 //   · at five window widths (1000 to 1512) the weight bars stay clear of the sets' row and each gun's name and every tile under a gun is whole.
@@ -72,6 +73,11 @@ const read = () => {
     const mate = await page.evaluate(read); await shot(page, 'kittree-mate');
     check(!!mate?.tree && hung(gun(mate, 'primary'), 'suppressed') && hung(gun(mate, 'primary'), 'light') && hung(gun(mate, 'secondary'), 'sideCan') && gun(mate, 'primary').bars.length === 4,
       'a teammate\'s card is laid out the same: his guns\' bars, each gun\'s suppressor and the light under it', (mate?.guns ?? []).map(g => `${g.slot} ${g.name}: ${g.kids.map(k => k.field).join(', ')}`).join(' · '));
+    // his 40 mm: a tile under his primary like yours, none as issued, one after a press (he fires it on your order: game/squad40.ts)
+    { const sh = (c) => gun(c, 'primary')?.kids.find(k => k.field === 'shells'), was = sh(mate);
+      await page.evaluate(q => document.querySelector(q)?.click(), `${KIT} .kc-gun[data-gun="primary"] .kc-row[data-field="shells"] .kc-step:last-of-type`); await page.waitForTimeout(250);
+      const after = await page.evaluate(read), now = sh(after); await shot(page, 'kittree-mate-40mm');
+      check(!!was && hung(gun(mate, 'primary'), 'shells') && /^0$/.test(was.val.trim()) && !!now && /^1$/.test(now.val.trim()), 'a teammate\'s card has the 40 mm tile under his primary, where yours is: none as issued, one after a press', `as issued '${was?.val ?? 'no tile'}' → '${now?.val ?? 'no tile'}'`); }
     // alone: the row of kits is still there to press
     await page.click('#missions.one #loadout .lo-size >> nth=0').catch(() => {}); await page.waitForTimeout(300);
     const alone = await page.evaluate(read);

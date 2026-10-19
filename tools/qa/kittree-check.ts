@@ -188,7 +188,43 @@ export async function kittreeOff(): Promise<boolean> {
   return F.done();
 }
 
+// ───────────────────────────────────────────────────────────── a teammate's 40 mm
+/** "should be symmetric between self and teammates (e.g. 40mm should work for squad)": a teammate's card has the 40 mm row where his round can be fired (the
+ *  tree, and the order in the build: squad40.ts — X on the floor, G, 3), and the round his card carries is the round he is staged with */
+export async function kittreeMate40(): Promise<boolean> {
+  const F = family('kittree-mate40: a teammate\'s card has the 40 mm row where his round can be fired, and brings the round');
+  const S40 = await import(`${ROOT}/src/game/squad40.ts`), sqWas = S40.SQUAD40.on, slotsWas = K.SLOTS.on;
+  const maxOf = () => K.SLOTS.table.items.shells?.max as number[] | undefined, max0 = maxOf()?.slice();
+  const up = () => { raise(true); K.SLOTS.on = K.SLOTS.ok; S40.SQUAD40.on = true; };
+  await kept(async () => { try {
+    up(); issue(); const asWritten = max0 ? max0.slice(1) : [];
+    // the table: how many a teammate may carry, as the file writes it
+    F.verdict(asWritten.length > 0 && asWritten.every(n => n === 1), 'the pouches table lets every teammate carry one 40 mm grenade (slots.json shell40)', `a teammate's most, by man: ${asWritten.join(' ') || 'no such item'}`);
+    { const m = maxOf(); if (m) for (let i = 1; i < m.length; i++) m[i] = Math.max(m[i], 1); }   // (the lines below hold the card's own rules whatever the file says: the one number squad40-check.ts raises too)
+    const r1 = row(1, 'shells'), mate = shape(1), you = shape(0);
+    F.verdict(!!r1 && r1.values.join() === '0,1' && mate.includes('shells<primary') && you.includes('shells<primary') && K.KIT.members[1].shells === 0, 'Red One\'s card has a 40 mm row under his primary, where yours is: none or one, none as issued',
+      `his row: ${r1 ? r1.values.join(' ') : 'none'} · his card: ${mate.join(' ')} · as issued ${K.KIT.members[1].shells}`);
+    // one taken: a pouch, and his line says it (a stun canister left behind for the room in his pouches)
+    K.kitSet(1, 'bangs', 1); const c0 = K.kitCost(1).used, t = K.kitTry(1, 'shells', 1), c1 = K.kitCost(1).used, w = K.kitWords(1), top = (row(1, 'shells')?.values ?? []).slice(-1)[0];
+    F.verdict(t.ok && K.KIT.members[1].shells === 1 && c1 === c0 + 1 && /40\u00a0mm/.test(w) && top === 1, 'one taken costs him a pouch and the line under his name says it; one is the most his row offers',
+      `pouches ${c0} → ${c1} · '${w}' · the row's most: ${top}`);
+    // a primary with no tube: the row leaves the card and the round with it
+    const noTube = (gunPicks('primary') as string[]).find(id => id !== 'none' && WEAPONS[pickRow(id, true) ?? pickRow(id, false)]?.launcher === false);
+    if (noTube) K.kitSet(1, 'primary', noTube); const bare = shape(1), left = K.KIT.members[1].shells; K.kitSet(1, 'primary', 'mk18');
+    F.verdict(!!noTube && !bare.some(x => x.startsWith('shells')) && left === 0, 'a primary with nothing under its barrel: the row leaves his card and the round with it', `${noTube}: ${bare.join(' ')} · rounds ${left}`);
+    // the row is there only where the round can be fired
+    S40.SQUAD40.on = false; const noOrder = !!row(1, 'shells'); S40.SQUAD40.on = true; raise(false); K.SLOTS.on = K.SLOTS.ok; const noTree = rows(1).some(r => r.field === 'shells'); up();
+    F.verdict(!noOrder && !noTree && !!row(1, 'shells'), 'no order in the build, or the card not a tree: no such row on a teammate\'s card', `order off: ${noOrder ? 'A ROW' : 'no row'} · tree off: ${noTree ? 'A ROW' : 'no row'}`);
+    // staged: the round on his card is his to fire, and nobody else has one
+    const R: any = await hushed(() => rig(17)); up(); { const m = maxOf(); if (m) for (let i = 1; i < m.length; i++) m[i] = Math.max(m[i], 1); } issue(); K.kitSet(1, 'bangs', 1); K.kitSet(1, 'shells', 1);
+    const g = R.game, team: any[] = g.nightBreach.ops; K.kitStage(g, team); const got = team.map(gd => S40.squad40Of(g, gd) as number);
+    F.verdict(team.length >= 1 && got[0] === 1 && got.slice(1).every(n => n === 0), 'staged: the man whose card carries the round has it to fire on your order, and nobody else does',
+      `rounds by man: ${got.join(' ')}`);
+  } finally { const m = maxOf(); if (m && max0) m.splice(0, m.length, ...max0); S40.SQUAD40.on = sqWas; K.SLOTS.on = slotsWas; } });
+  return F.done();
+}
+
 if (import.meta.main) {
-  const all = [await kittreeRows(), await kittreeGuns(), await kittreeSponge(), await kittreeOff()];
+  const all = [await kittreeRows(), await kittreeGuns(), await kittreeSponge(), await kittreeOff(), await kittreeMate40()];
   process.exit(all.every(Boolean) ? 0 : 1);
 }
