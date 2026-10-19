@@ -267,7 +267,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.LANES as Partial<typeof LANES>).pin === undefined) LANES.pin = false;   // (…and one from before a lane was held at two angles with fire: nobody set on its other side, nobody fired from a corner)
   if (k.tables.LANES) { const was = k.tables.LANES as Partial<typeof LANES>;   // (…and from before a lane knew its gun, where its men may stop, and which rounds a man noticed: each key it lacks is off)
     if (was.glass === undefined) LANES.glass = false; if (was.stopClear === undefined) LANES.stopClear = false; if (was.roused === undefined) LANES.roused = false;
-    if (was.frag === undefined) LANES.frag = false; if (was.fragOwn === undefined) LANES.fragOwn = false; }   // (…and from before a man held on a lane threw his grenade down it: he never did — nor was he kept his own through its wind-up)
+    if (was.frag === undefined) LANES.frag = false; if (was.fragOwn === undefined) LANES.fragOwn = false;
+    if (was.drill === undefined) LANES.drill = false; }   // (…and from before a man held on a lane threw his grenade down it: he never did — nor was he kept his own through its wind-up, nor was a man the doorway drill had taken asked again)
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
   if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
   else if ((k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).heard === undefined) GUNSLOTS.heard = false;   // (…and from before a teammate's quiet round was heard: it reached nobody)
