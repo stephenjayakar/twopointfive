@@ -15,7 +15,7 @@
 //   four     shut) → WALKED (door by door under a plain scripted commander — the order menu's own calls, as tools/qa/roomclear-tally.ts gives them: 'open and
 //            clear' on a cold floor, 'bang and clear' once it is loud, then the room walked, then its other doors; teammates must get INTO a room on their own
 //            feet — which rooms were entered over the seeds is printed, not asked: a room emptied from its doorway is never walked into) → FINISHED (the scenario's own end: 'taken' or 'wiped', inside the cap, no exception). `four` is the same with NIGHTBREACH.squad 4.
-//   rescue   per seed: STAGED (the pair, the hostages, the captor, the door man and a roamer on the level's marks) → WALKED (Sam on his own feet — keys, the nav
+//   rescue   per seed: STAGED (the pair, the hostages, the captor, the door man, the level's own room guards and its roamers — the game's one, or so many as the level's own cast mans — on the level's marks) → WALKED (Sam on his own feet — keys, the nav
 //            grid's path — from the team's start to a post short of the hostage room's door; the clock starts; the route's openings are passed where the level
 //            has a flow) → F (the hostage room's entry, the key itself) → FINISHED (the scenario's own result: rescued clean / costly, or lost).
 //   Over the seeds each scenario must also come off at least once ('taken' / 'rescued'): a level nobody can win on is a FAIL.
@@ -285,6 +285,8 @@ class Walk {
   g: any; R: any; O: any; I: any; cam: any; t = 0; goal: Vec3 | null = null; trace: string[] = []; lastF = -100; presses = 0;
   /** every line the scenario's log has had since this player took over, kept here as it grows (Rescue.log trims itself from the front) */
   notes: string[] = []; private lastNote: any = null;
+  /** who stopped the last walk that gave up: a living man of theirs in his way, '' when it was the floor (`inWay`) */
+  met = '';
   constructor(public W: any, public cap: number, public verbose: boolean) { this.g = W.game; this.R = this.g.rescue; this.O = this.g.orders; this.I = W.input; this.cam = W.cam; }
   say(s: string) { const line = `${f1(this.t).padStart(6)}  ${s}`; this.trace.push(line); if (this.verbose) console.log(line); }
   get pos(): Vec3 { return this.g.player.char.pos; }
@@ -304,21 +306,31 @@ class Walk {
   /** walk to `p` along the nav path; a fresh path when he has stopped getting anywhere (the pair in a doorway), given up after `max` seconds */
   go(p: Vec3, max = 40, again = 0): boolean {
     const path: Vec3[] = this.g.col.nav.findPath(this.pos, p) ?? [p]; if (!path.length || flat(path[path.length - 1], p) > 0.05) path.push(p);
-    const t0 = this.t; let mark = [...this.pos], markT = this.t;
+    const t0 = this.t; let mark = [...this.pos], markT = this.t; if (!again) this.met = '';
     for (const wp of path) {
       this.goal = [wp[0], 0, wp[2]];
       while (flat(this.pos, wp) > (wp === path[path.length - 1] ? 0.35 : 0.6)) {
         this.step(); if (this.t - t0 > max) { this.goal = null; return false; }
-        if (flat(this.pos, mark) > 0.25) { mark = [...this.pos]; markT = this.t; } else if (this.t - markT > 1.2) { this.goal = null; return again < 3 ? this.go(p, max - (this.t - t0), again + 1) : false; }
+        if (flat(this.pos, mark) > 0.25) { mark = [...this.pos]; markT = this.t; } else if (this.t - markT > 1.2) { this.goal = null; if (again < 3) return this.go(p, max - (this.t - t0), again + 1); this.met = this.inWay(wp); return false; }
       }
     }
     this.goal = null; return true;
   }
+  /** the living man of theirs who stands in Sam's way — within a metre of him, on the side he is walking to — or '' when it is the floor that stopped him. This
+   *  player is never seen and never fires: a defender who walks up to him stands there, and Sam's own body keeps his team's guns off the man. That is not the
+   *  level's floor, so WALKED says it as a note and does not fail on it (WALKMET_BREAK=1: nobody ever is in his way — the consulate's second seed on the
+   *  shipped stand must fail WALKED). Nothing he does changes: he gives up where he did before, and F is pressed from there. */
+  inWay(to: Vec3): string {
+    if (process.env.WALKMET_BREAK === '1') return '';
+    const o = this.pos, dx = to[0] - o[0], dz = to[2] - o[2], L = Math.hypot(dx, dz) || 1;
+    const h = up(this.R.hostiles).filter((x: any) => flat(x.char.pos, o) < 1 && ((x.char.pos[0] - o[0]) * dx + (x.char.pos[2] - o[2]) * dz) / L > 0.2).sort((a: any, b: any) => flat(a.char.pos, o) - flat(b.char.pos, o))[0];
+    return h?.callsign ?? '';
+  }
   F() { this.I.pressed.add('KeyF'); this.presses++; this.lastF = this.t; this.say('F — the hostage room'); this.step(); }
 }
-interface RescueOut { seed: number; staged: string[]; state: string; grade: string; why: string; t: number; walkedTo: number; walkedM: number; clock: boolean; passed: string[]; route: string[]; order: string; hostages: string; pair: string; presses: number; note: string }
+interface RescueOut { seed: number; staged: string[]; state: string; grade: string; why: string; t: number; walkedTo: number; walkedM: number; clock: boolean; passed: string[]; route: string[]; order: string; hostages: string; pair: string; presses: number; note: string; met: string }
 async function playRescue(file: string, seed: number, cap: number, verbose: boolean): Promise<RescueOut> {
-  const out: RescueOut = { seed, staged: [], state: 'error', grade: '', why: '', t: 0, walkedTo: NaN, walkedM: 0, clock: false, passed: [], route: [], order: '', hostages: '', pair: '', presses: 0, note: '' };
+  const out: RescueOut = { seed, staged: [], state: 'error', grade: '', why: '', t: 0, walkedTo: NaN, walkedM: 0, clock: false, passed: [], route: [], order: '', hostages: '', pair: '', presses: 0, note: '', met: '' };
   let P: Walk | null = null, R: any = null;
   try {
     const W: any = await quiet(!verbose, () => stand(file, seed)); const g = W.game, S = g.level.scenarios.rescue; R = g.rescue;
@@ -333,7 +345,16 @@ async function playRescue(file: string, seed: number, cap: number, verbose: bool
       if (R.ops.length !== 2) bad.push(`${R.ops.length} teammates, not 2`); R.ops.forEach((o: any, i: number) => near(o.callsign, o.char.pos, S.team.ops[i]));
       near('Sam', g.player.char.pos, S.team.sam);
       if (R.hostages.length !== S.hostages.length) bad.push(`${R.hostages.length} hostages, not ${S.hostages.length}`); R.hostages.forEach((h: any, i: number) => { near(`hostage ${i + 1}`, h.char.pos, S.hostages[i].pos); if (!inRect(h.char.pos, B)) bad.push(`hostage ${i + 1} is outside the room`); });
-      const want = 2 + Math.min(RESCUE.roamers, S.roamers.length); if (R.hostiles.length !== want) bad.push(`${R.hostiles.length} of theirs, not ${want}`);
+      // (theirs, by role: the captor, the door man, the level's own room guards on their marks in the room, and so many roamers as the level's own cast mans — the
+      //  consulate's three of five — or the game's one, each on a roamer mark. STAGECAST_BREAK=1 asks for the old three, and the consulate's line must fail)
+      const old = process.env.STAGECAST_BREAK === '1', guards = old ? 0 : S.guards?.length ?? 0, roam = S.cast && !old ? Math.max(0, Math.min(S.roamers.length, Math.round(S.cast.roamers))) : Math.min(RESCUE.roamers, S.roamers.length);
+      const of = (role: string) => R.cast().filter((c: any) => c.role === role), want = 2 + guards + roam;
+      if (R.hostiles.length !== want) bad.push(`${R.hostiles.length} of theirs, not ${want}`);
+      else {
+        if (of('guard').length !== guards) bad.push(`${of('guard').length} room guards, not ${guards}`); if (of('roamer').length !== roam) bad.push(`${of('roamer').length} roamers, not ${roam}`);
+        of('guard').slice(0, guards).forEach((c: any, i: number) => { near(`room guard ${i + 1}`, c.gd.char.pos, S.guards[i].pos); if (!inRect(c.gd.char.pos, B)) bad.push(`room guard ${i + 1} is outside the room`); });
+        for (const c of of('roamer')) if (!S.roamers.some((m: any) => flat(c.gd.char.pos, m.pos) <= 0.6)) bad.push(`${c.gd.callsign} stands on no roamer mark`);
+      }
       if (R.hostiles[0]) { near('the captor', R.hostiles[0].char.pos, S.captor.pos); if (!inRect(R.hostiles[0].char.pos, B)) bad.push('the captor is outside the room'); }
       if (R.hostiles[1]) near('the door man', R.hostiles[1].char.pos, (RESCUE.doorMan === 'inside' ? S.doorMan.inside : S.doorMan.outside).pos);
       for (const id of [S.room.door, ...(S.side ? [S.side.door] : [])]) if (Math.abs(g.doors.byName(id).angle) > 0.05) bad.push(`door '${id}' is open at the staging`);
@@ -345,7 +366,7 @@ async function playRescue(file: string, seed: number, cap: number, verbose: bool
       const raw: Vec3 = [c[0] + n[0] * 1.3 + u[0] * sg * 2.6, 0, c[2] + n[1] * 1.3 + u[1] * sg * 2.6], post: Vec3 = g.orders.freeSpot(raw) ?? raw;
       P = new Walk(W, cap, verbose); const from = [...P.pos];
       try {
-        P.step(20); P.say(`Sam walks to (${f1(post[0])}, ${f1(post[2])})`); P.go(post, 40); out.walkedTo = flat(P.pos, post); out.walkedM = flat(P.pos, from);
+        P.step(20); P.say(`Sam walks to (${f1(post[0])}, ${f1(post[2])})`); P.go(post, 40); out.met = P.met; out.walkedTo = flat(P.pos, post); out.walkedM = flat(P.pos, from);
         P.F(); out.order = P.notes.filter(w => w.startsWith('order:')).pop() ?? 'none';
         for (;;) {   // the end game any player would play with what is left: the room still theirs and nobody on the door → F again; the room empty of them and of us → the pair sent in
           const held = up(R.hostiles).some((h: any) => inRect(h.char.pos, B));
@@ -373,9 +394,9 @@ export async function scenarioRescue(file: string, o: Opts = {}): Promise<boolea
   const seeds = o.seeds ?? [1, 2, 3], runs: RescueOut[] = [];
   for (const s of seeds) { const r = await playRescue(file, s, o.cap ?? 150, !!o.trace); runs.push(r); console.log(`    seed ${s}: ${r.state}${r.grade ? ` (${r.grade})` : ''}${r.why ? ` — ${r.why}` : ''} at ${f1(r.t)} s · hostages ${r.hostages} · pair ${r.pair} · passed ${r.passed.join(', ') || 'nothing'} · ${r.order} · F ×${r.presses}${r.note ? ` · ${r.note}` : ''}`); }
   const n = runs.length, errors = runs.filter(r => r.state === 'error'), unstaged = runs.filter(r => r.staged.length), ended = runs.filter(r => r.state === 'rescued' || r.state === 'lost'), won = runs.filter(r => r.state === 'rescued');
-  F.verdict(!errors.length && !unstaged.length, "staged on every seed: the pair, Sam, the hostages, the captor and the door man on the level's marks, the room's doors shut", errors.length ? errors.map(r => `seed ${r.seed}: ${r.note}`).join(' · ') : unstaged.length ? unstaged.map(r => `seed ${r.seed}: ${r.staged.join(', ')}`).join(' · ') : `${n} of ${n} seeds`);
-  const short = runs.filter(r => r.state !== 'error' && !(r.walkedTo < 0.8)), noClock = runs.filter(r => r.state !== 'error' && !r.clock), route = runs[0]?.route ?? [], unpassed = runs.filter(r => r.state !== 'error' && route.length > 0 && !r.passed.length);
-  F.verdict(!errors.length && !short.length && !noClock.length && !unpassed.length, `walked: Sam reached the post by the door on his own feet, the captor's clock started${route.length ? ', the route saw him pass its openings' : ''}`, short.length ? short.map(r => `seed ${r.seed}: stopped ${f1(r.walkedTo)} m short of the post`).join(' · ') : noClock.length ? `the clock never started on seed ${noClock.map(r => r.seed).join(', ')}` : unpassed.length ? `no opening of the route was passed on seed ${unpassed.map(r => r.seed).join(', ')}` : `metres walked: ${runs.map(r => f1(r.walkedM)).join(' / ')}${route.length ? ` · openings passed: ${runs.map(r => r.passed.join('+') || '—').join(' / ')} of ${route.join(', ')}` : ' · no flow on this level'}`);
+  F.verdict(!errors.length && !unstaged.length, "staged on every seed: the pair, Sam, the hostages, the captor, the door man and the level's own room guards and roamers on the level's marks, the room's doors shut", errors.length ? errors.map(r => `seed ${r.seed}: ${r.note}`).join(' · ') : unstaged.length ? unstaged.map(r => `seed ${r.seed}: ${r.staged.join(', ')}`).join(' · ') : `${n} of ${n} seeds`);
+  const far = runs.filter(r => r.state !== 'error' && !(r.walkedTo < 0.8)), short = far.filter(r => !r.met), met = far.filter(r => r.met), noClock = runs.filter(r => r.state !== 'error' && !r.clock), route = runs[0]?.route ?? [], unpassed = runs.filter(r => r.state !== 'error' && route.length > 0 && !r.passed.length);
+  F.verdict(!errors.length && !short.length && !noClock.length && !unpassed.length, `walked: Sam reached the post by the door on his own feet, the captor's clock started${route.length ? ', the route saw him pass its openings' : ''}`, short.length ? short.map(r => `seed ${r.seed}: stopped ${f1(r.walkedTo)} m short of the post`).join(' · ') : noClock.length ? `the clock never started on seed ${noClock.map(r => r.seed).join(', ')}` : unpassed.length ? `no opening of the route was passed on seed ${unpassed.map(r => r.seed).join(', ')}` : `metres walked: ${runs.map(r => f1(r.walkedM)).join(' / ')}${route.length ? ` · openings passed: ${runs.map(r => r.passed.join('+') || '—').join(' / ')} of ${route.join(', ')}` : ' · no flow on this level'}${met.length ? ` · NOTE ${met.map(r => `seed ${r.seed}: ${r.met} stood in his way ${f1(r.walkedTo)} m short of the post (this player is never seen and never fires; F was pressed from there)`).join(' · ')}` : ''}`);
   const noOrder = runs.filter(r => r.state !== 'error' && !/^order:(bang|go|stack)/.test(r.order));
   F.verdict(!errors.length && !noOrder.length, 'F is taken as the order on the hostage room', noOrder.length ? noOrder.map(r => `seed ${r.seed}: ${r.order}`).join(' · ') : runs.map(r => r.order).join(' / '));
   F.verdict(ended.length === n, "finished: every seed ran to the scenario's own result inside the cap, no exception", `rescued ${won.length} (${runs.filter(r => r.grade === 'clean').length} clean, ${runs.filter(r => r.grade === 'costly').length} costly) · lost ${ended.length - won.length} · stalled ${runs.filter(r => r.state === 'stalled').length} · error ${errors.length} — seconds: ${runs.map(r => f1(r.t)).join(' / ')}`);
