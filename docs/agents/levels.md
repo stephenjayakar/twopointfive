@@ -313,3 +313,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   level-lint, kitview-plan, quiet-check, lesson-check, the debrief, quiet, missions and depot families green. LEFT, still a bearing, not on any owed list: the
   compound's `ways` on the mission list (`scenarioList.ts`), a `needs` place ('the south wall' on the quiet yard, 'the east gate' on the crossing), route ids a
   defender's line may say, and the office's own 'north side' words. Nobody has read a renamed line on a GPU page.
+- **The level skill after the van and the wall switches** (10-19; the skill's words only, no need added to `tools/qa/level-needs.ts`). Its mission section
+  gains an item for a snatch (`scenarios.snatch`: the man, two exits or more, and `van`, where the mission is now won: `docs/agents/missions.md`, *a snatch
+  ends in the van*; checks `snatch-check.ts` and `snatchout-check.ts`). Its light section gains one for the wall switches (`docs/agents/stealth.md`, *Wall
+  switches*): no file places a plate, so what a level owes is plain wall beside its doors and lighting groups that are its circuits; check `probes.ts
+  lightswitch`. The snatch level's response block came with the van, and its line left the command's table of levels where nobody comes in the same
+  step (not by this one). On build 9f632e9, both stands: 513 PASS, no FAIL, 67 NOTE; both red paths red. Nothing of either was seen on a GPU or played here.

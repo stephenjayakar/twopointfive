@@ -119,6 +119,14 @@ like that."
 - **A thin moon wants lamps outside.** **seen** "lighting looks very flat here for some reason, not like the other night
   rainy levels": a thin moon and no lamp. Lamps at the start marks stay under the goggles' line.
 - **Light is balance, said per room**: which rooms ship lit, which lamp is the decision; a dark held room punishes the squad.
+- **A room's mains lights have a switch on the wall, and no file places it.** The plate is found from the level as it
+  stands: on the room's own wall beside each door, the latch side first, 0.85 m past the jamb and 1.2 m up, never on
+  glass, in a leaf's sweep or behind anything lower than a door's head. So leave that strip of wall plain where you can.
+  It works the lights that hang overhead and the lamps (not screens, signs or lamps outside), split by the level's own
+  lighting groups, so a big room on two circuits wants two groups. A room you ship dark can be struck on by the player
+  and is left dark by its defenders. **seen** "we should have light switches for rooms!"; two rooms of 176 keep a
+  circuit no plate was found for. **check** `bun run tools/qa/probes.ts lightswitch` (every level file: each plate on
+  plain wall with floor in a hand's reach). Never seen on a GPU.
 - **Starts are dark and unseen**: nobody sees the team on its start marks, through a pane either; the first stack is in no
   roamer's line. **seen** a start on the road in front of the glass, in six marks' sight.
 - **The headless light meter has no moon and no bounce.** A mark "dark" headless can be 57 % lit on the page. Hide marks
@@ -164,6 +172,13 @@ like that."
   is a walk and none is shut, over all deals; a long stand faces the right way on lap one. For a pair, the second man has
   a job the numbers show. **check** `bun run tools/qa/quiet-check.ts <name>.json`, `quiet-light.ts <name>`, `takecheck-check.ts`,
   `TPS_PROFILE=shipped bun run tools/qa/solo-night.ts --level <name>.json --quiet`.
+- **A snatch**: the `snatch` block over the level's room clear (`docs/level-format.md`): the man and the marks he keeps
+  to; at least two `exits` he runs for once it is loud, his nearest by walking first, so one can be covered while the
+  team goes in by another; and `van`, the team's own vehicle by its way in, `pos` the spot at its open doors. As the
+  game is now the mission is won when the tied man is in the van, the house taken or not, so the van wants a way back
+  from wherever he can be caught that a led man can walk, and room at its doors. The van itself is the look kit's piece
+  (`van` in `src/scene/gwotKit.ts`). **seen** the maintainer, playing it: "like maybe we need to get him to a van near
+  our infil". **check** `bun run tools/qa/snatch-check.ts`, `bun run tools/qa/snatchout-check.ts`.
 - **A lesson**: a line names the key and what to do, in 96 characters, no compass word; a step never passes by itself and
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
