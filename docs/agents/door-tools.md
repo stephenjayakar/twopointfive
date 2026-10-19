@@ -138,7 +138,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   leaning to the AI (but probably not our movement for now)"). TWO switches, each ON in the page, OFF in the module and on the frozen stand, a
   `FROZEN_HOLDS` row, a standup pin, a debugger toggle ('jamb men slice a doorway', 'a slicing man leans'), and a journal line (a recording from before
   either key replays with it off): `DOORTOOLS.thrPie` (`?thrpie=0`, `TPS_THRPIE=1`) and `DOORTOOLS.thrLean` (`?thrlean=0`, `TPS_THRLEAN=1`; it does
-  nothing without thrPie). **thrPie**: in the hold (`case 'thr'`) BOTH jamb men walk cuts (`pieSet`: his diagonal first, stood square exactly as with
+  nothing without thrPie). **thrPie**: in the hold (`case 'thr'`) BOTH jamb men walk cuts (the page now has ONE man cutting: `thrPieOne`, the bullet after this one) (`pieSet`: his diagonal first, stood square exactly as with
   the rule off, then the stations of `thrPieArc` further toward the middle of the opening, never across the frame line, none within `thrPieApart` of the
   other man; the hinge man of a leaf that stands on the team's face — `thrPull` — has no edge and takes none). A cut is taken only if it still shows
   floor no muzzle has been across (`pieNext`, asked of the room search with the same light test the hold counts by, from a kneeling eye for a knee cut),
@@ -168,6 +168,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   deaths (against 4) of a man on his killer with the jamb across his own line in the six scenarios read. Those three manners have no staged check of
   their own: they are read from the play-through's death records only. Never seen on a GPU — the lean and the knee have been seen by nobody — and
   nobody has played it.
+- **One man slices, the other holds; one lean, no knee** (`DOORTOOLS.thrPieOne`, `?thrpieone=0`, `TPS_THRPIEONE=1`; does nothing without thrPie;
+  ON in the page, OFF in the module and on the frozen stand, a `FROZEN_HOLDS` row, a standup pin, the debugger toggle 'one man slices, the other
+  holds', and a recording from before the key replays with it off). The maintainer on the two-man slice: "really only one guy should be doing it.
+  one guy holds one angle while the other pies and then does the lean? looks a bit silly now where the two of them synchronize their crouch and lean
+  together. also i think we should just do the lean, not the crouch." With the key: only the LEAD gets a pie record (`toThreshold`); the far man
+  takes the no-slice branch — one step onto his diagonal, his gun on the opening, still. The lead's cuts are stood SQUARE: his hips where a leaning
+  man's stop (`thrLeanM` short of the station, never in front of the opening), his eye over them, no lean and no knee on any cut. When no cut shows
+  new floor he LEANS ONCE from the last cut he took, toward the ground it opens (`pie.end` / `endOn`, held `thrLeanLook` 1.1 s, the lines re-asked
+  with his head out; no cut is asked for after it), then stands square there as a two-man slice ends. The door's one light (`thrLight` 1) is the
+  cutting man's, and the man left on the door takes it if he goes down. TRIED AND TAKEN OUT: his cuts carried on across the opening, and a walk
+  back to his diagonal after the lean — they put a man in front of an open door (the open-by-hand check went red on it) and made the hold 4 s longer.
+  KNOWN, not built: the lead drops and the far man (no cuts) becomes the lead: nobody slices, as with thrPie off; one man sees his side of the room
+  only, where two saw both. `tools/qa/thrpie-check.ts` (`probes.ts thrpie`; `THRPIEONE_BREAK=1` must fail, both stands): the arms `one`, `oneDeep`
+  (every cut walked), `oneSq` (lean off), `oneWord` (the word on the lean). RUN 10-19 on both stands: 9 of 9, the break word fails 2
+  (`THRPIE_BREAK=1` 6); the staged door is called at 10.3 s frozen / 10.2 s shipped (both cutting 8.9 / 8.7), 8 of 51 / 8 of 47 cells unseen with
+  the lean — as both cutting — and 12 / 10 with the lean off (slice off 24 / 19): the lean is what shows the last of it; his hips never nearer than
+  0.09 m to his jamb's edge of the opening, the lean held 66 frames with his head 0.24 m past his hips; the far man strayed 0.00–0.02 m; nobody
+  below a stand. Families threshold, doortools, thresholdmenu, foursquad, doortest, doormenu and `qrfsquad` green on both stands (shipped
+  doortools with `openhand`), the panel inventory on both, knobs-check, rollback-check --static, dice-check, both typechecks, the build, one boot of
+  the page on the software adapter. MEASURED, the scripted play-through three ways (`TPS_PROFILE=shipped PT_TOOL=hold`, 19 scenarios × seeds 1–8,
+  146 runs paired three ways; two of the runs were cut short by their clock and their last scenarios are not in it): one man cutting 239 of 504
+  teammates up, 40 wipes; two cutting (`TPS_THRPIEONE=0`) 241, 37 wipes; the slice off (`TPS_THRPIE=0`) 260, 39 wipes — one against two −0.01 ±
+  0.10 a run (no difference), either slice against none −0.13 / −0.14 ± 0.10 a run (it looks like a cost of some 20 men in 504 and is not outside the
+  noise). STAGED, one hard door, and there it is plain: a pair holding the depot's crew room door from outside, the page's stand, 16 seeds, until
+  the door is called or both are down — one man cutting 16 of 32 up, 7 pairs lost; two cutting 16 of 32, 6 pairs lost; the slice off 27 of 32,
+  1 pair lost; and the same with the defenders' dealt guns held off (`TPS_GUNROLES=0`): 18, 15 and 26 of 32 (5, 6 and 0 pairs lost). That is the
+  duel through the open door a man on a cut starts; threshold-hold's two-doors stage stands with the slice held off for it. Never seen on a GPU —
+  the one lean has been seen by nobody — and nobody has played it.
 - **A pair halted on a door the other pair is charging steps back off it** (`DOORTOOLS.haltBack`, 10-13: ON in the page — `?haltback=0` — OFF in the
   module and on the frozen stand, `TPS_HALTBACK=1`; a `FROZEN_HOLDS` row, the pin lists, a debugger toggle next to the two above; journal: a recording whose
   DOORTOOLS row has no such key replays with it off). The fault, found by `pairs-probes.ts` on the played rules: the step back to rear security is asked
