@@ -167,7 +167,7 @@ export function build() {
     // its lens, the counting room behind the wall (from the west gate the picture's column holds a bare wall: the house is five metres in). Out of the
     // picture, by the ids the export gives them: the porch lamp (its pole and head stand in the camera's line) and the bike parked where the file forms.
     // The counting room's bulb is left lit (the picture puts a level's own lights out): without it the room behind the wall is a black hole.
-    scenarios: { quiet, places: PLACES, kitView: { ways: [{ door: 'front', ref: [11, 13.25], side: -1, hide: ['box_0135', 'box_0136', 'box_0137', 'fix_lamp_porch',
+    scenarios: { quiet, places: PLACES, doorNames: [{ door: 'gate_w', name: 'counting room gate' }, { door: 'gate_e', name: 'kitchen court gate' }], kitView: { ways: [{ door: 'front', ref: [11, 13.25], side: -1, hide: ['box_0135', 'box_0136', 'box_0137', 'fix_lamp_porch',
       'box_0170', 'box_0171', 'box_0172', 'box_0173', 'box_0174', 'box_0175', 'box_0176', 'box_0177', 'box_0178', 'box_0179'], keepLights: ['count'] }] } },
     level: { devices },
   });

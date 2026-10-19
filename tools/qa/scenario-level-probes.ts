@@ -40,6 +40,8 @@ const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/lev
 const { ROOMCLEAR, checkStructure } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`);
 const { RESCUE, checkRescue } = await import(`${ROOT}/src/game/rescue.ts`);
+const { RESCUEEND } = await import(`${ROOT}/src/game/rescueend.ts`);
+const { INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 
 type Vec3 = [number, number, number];
@@ -315,7 +317,25 @@ class Walk {
     this.goal = null; return true;
   }
   F() { this.I.pressed.add('KeyF'); this.presses++; this.lastF = this.t; this.say('F — the hostage room'); this.step(); }
+  /** the room is the team's and the page's ending is up (`RESCUEEND`: holding it ends nothing): Sam walks to the nearest living hostage, takes the row on her
+   *  that gets them all on their feet, and walks them to the way out — false when no row came up or he did not get there (asked again by the caller) */
+  leadOut(): boolean {
+    const R = this.R, nav = this.g.col.nav;
+    if (!R.ending.lead) {
+      for (const h of up(R.hostages).sort((a: any, b: any) => flat(a.char.pos, this.pos) - flat(b.char.pos, this.pos))) {
+        const p = h.char.pos, dx = this.pos[0] - p[0], dz = this.pos[2] - p[2], L = Math.hypot(dx, dz) || 1, q = nav.nearestFreePoint(p[0] + dx / L * 1.1, p[2] + dz / L * 1.1) ?? p;   // (free floor beside her, on his side of her)
+        this.go([q[0], 0, q[2]], 4 + flat(this.pos, q) / 1.2);
+        if (this.until(() => this.g.selectVerb('guard', 'lead'), 0.8)) { this.I.pressed.add(INTERACT_KEY); this.step(2); }
+        if (R.ending.lead) break;
+      }
+      if (!R.ending.lead) { this.say('(no row on a hostage yet: nobody is led)'); return false; }
+      this.say('Sam gets the hostages on their feet and makes for the way in');
+    }
+    const out = R.ending.out; return !!out && this.go(out, 90);
+  }
 }
+/** the room held this long (s) before Sam leads the hostages out, where the page's ending is up */
+const LEAD_AFTER = 8;
 interface RescueOut { seed: number; staged: string[]; state: string; grade: string; why: string; t: number; walkedTo: number; walkedM: number; clock: boolean; passed: string[]; route: string[]; order: string; hostages: string; pair: string; presses: number; note: string }
 async function playRescue(file: string, seed: number, cap: number, verbose: boolean): Promise<RescueOut> {
   const out: RescueOut = { seed, staged: [], state: 'error', grade: '', why: '', t: 0, walkedTo: NaN, walkedM: 0, clock: false, passed: [], route: [], order: '', hostages: '', pair: '', presses: 0, note: '' };
@@ -347,12 +367,15 @@ async function playRescue(file: string, seed: number, cap: number, verbose: bool
       try {
         P.step(20); P.say(`Sam walks to (${f1(post[0])}, ${f1(post[2])})`); P.go(post, 40); out.walkedTo = flat(P.pos, post); out.walkedM = flat(P.pos, from);
         P.F(); out.order = P.notes.filter(w => w.startsWith('order:')).pop() ?? 'none';
-        for (;;) {   // the end game any player would play with what is left: the room still theirs and nobody on the door → F again; the room empty of them and of us → the pair sent in
+        let securedT = NaN, leadT = -1e9;
+        for (;;) {   // the end game any player would play with what is left: the room still theirs and nobody on the door → F again; the room empty of them and of us → the pair sent in; the room the team's and the page's ending up (holding it ends nothing) → a few seconds for whoever is coming, then the hostages led out
           const held = up(R.hostiles).some((h: any) => inRect(h.char.pos, B));
           if (R.mode !== 'door' && P.t - P.lastF > 3 && R.state !== 'secured') {
             if (held) P.F();
             else if (!P.ops.some((m: any) => inRect(m.char.pos, B))) { P.lastF = P.t; const at = g.orders.freeSpot([(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2]); if (at && P.ops.length) { g.orders.give('move', { kind: 'floor', at }, 'all'); P.say('order move → the hostage room'); } else if (!P.ops.length) P.go([(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], 12); }
           }
+          if (R.state !== 'secured') securedT = NaN; else if (isNaN(securedT)) securedT = P.t;
+          if (RESCUEEND.on && P.t - securedT >= LEAD_AFTER && P.t - leadT >= 5 && !(R.ending.lead && R.ending.out && flat(P.pos, R.ending.out) < 1.5)) { leadT = P.t; P.leadOut(); }
           P.step(6);
         }
       } catch (e) { if (!(e instanceof Done)) throw e; out.state = e.end; out.why = e.why; }

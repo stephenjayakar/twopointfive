@@ -109,6 +109,8 @@ export interface MemberKit {
   wand: boolean;
   /** you: sticky cameras for the rifle's launcher (stickycam.ts — each one sent to a wall is one more eye on the fog of war). None as issued; none without the rifle. Teammates carry none: 0, and no row. */
   cams: number;
+  /** his big slot was EMPTIED BY HAND on a team of three or four (KITDEAL.more): the deal lends him no tool. Absent on every other card; a big thing put in the slot drops it. */
+  bare?: true;
   /** the big slot's breaching shotgun or hammer (BIGSLOT, bigkit.ts): kit, a door tool — the man keeps his gun. 'none' as issued; inert with the switch off. */
   big: BigKit;
   /** THE TWO GUN SLOTS (gunslots.ts GUNSLOTS): a pick of its table each — the long gun ('none': the sidearm alone) and the sidearm. With the switch on these
@@ -349,13 +351,31 @@ const coming = (cards: MemberKit[], n: number) => cards.slice(1, 1 + n);
  *  three or four WEARS them shared out — one at a time to the man with the fewest, a man without that thing first, Red and Blue by turns — so each pair has a
  *  charge and a stun of its own. THE TABLE'S CARDS ARE NEVER REWRITTEN FOR IT: KIT.members and the store stay in the table's layout, and the deal is how they
  *  are worn (kitWorn: what the roster and a card show, and the card a staged man carries). What the squad carries between them is a sum over the men who come
- *  (kitPool), whoever holds what, so a run is the run it was. A change of one of those counts on a teammate's card is made to the cards AS WORN, and they
+ *  (kitPool), whoever holds what, so a run is the run it was (its key `more`, below, adds one canister under the Quiet kit of four). A change of one of those counts on a teammate's card is made to the cards AS WORN, and they
  *  are then cards of the player's own, kept as they stand at every size (onWorn); any other row — a gun, a look, your own card — leaves the layout alone.
- *  The big things, the wand, the guns and the looks stay on the man the kit names. Off (the module, the frozen stand; `?nokitdeal` in the page,
- *  TPS_KITDEAL=1 raises it headless) = every card shown and staged as the table writes it. */
-export const KITDEAL = { on: false };
+ *  The big things, the wand, the guns and the looks stay on the man the kit names (but for the tools `more` lends, below). Off (the module, the frozen stand; `?nokitdeal` in the page,
+ *  TPS_KITDEAL=1 raises it headless) = every card shown and staged as the table writes it.
+ *  `more` (with the deal; the maintainer's pick of 10-18, "a tool each pair"; OFF here and on the frozen stand, TPS_KITMORE=1; `?nokitmore` in the page):
+ *  A TEAM OF THREE OR FOUR IS LENT A BIG TOOL EACH PAIR — Red Two wears the breaching shotgun and Blue Two the hammer in a big slot that stands empty,
+ *  pouches as they were — so a locked door is theirs to take with the big slot's row. THE PAIR'S SECOND MAN, NOT ITS FIRST: the man on the lock has the
+ *  tool in his hands when the door goes, and it is his mate who must be first through with a gun up (measured — menus.md: the tool on the pair's first man
+ *  lost ten men in eight runs at one door where the second man's lost two); so of three, where Blue One comes alone, only Red Two is lent one.
+ *  THE TOOLS ARE WORN, NEVER WRITTEN (lend, below): no card of the table
+ *  or the store holds one, so a pair comes as it always did and the key off is the deal alone at once. A big thing put on that man by hand is his instead,
+ *  written as ever; his slot EMPTIED by hand is marked on his card (`bare`) and stays empty until something is put in it. No named squad kit but the issue
+ *  is lent one (each says what its men carry), and cards made the player's own out of such a kit keep its empty slots (the same mark).
+ *  And NOBODY COMES WITH A GUN ALONE: a man the deal leaves with nothing counted is handed one stun canister more (the Quiet kit of four: its three
+ *  canisters left Blue Two his pistol) — THE ONE THING THAT MOVES THE SQUAD'S COUNT: kitPool reads the cards as worn, and holds it. */
+export const KITDEAL = { on: false, more: false };
+/** a word of the checks' in the environment (`<NAME>_BREAK=1`: the rule's broken path, which its check must fail on) */
+const envIs = (name: string): boolean => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name] ?? '') === '1'; } catch { return false; } };
+/** `KITMORE_BREAK=1` (the check's): nobody is lent a tool and nobody is handed the canister */
+const MORE_BREAK = envIs('KITMORE_BREAK');
+/** who is lent which big tool, of the men who come */
+const DEAL_TOOL: [number, 'shotgun' | 'hammer'][] = [[2, 'shotgun'], [4, 'hammer']];
+const moreOn = (): boolean => KITDEAL.more && !MORE_BREAK;
 /** `KITDEAL_BREAK=1` (the check's): the deal hands every thing back to the men the table names */
-const DEAL_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.KITDEAL_BREAK ?? '') === '1'; } catch { return false; } })();
+const DEAL_BREAK = envIs('KITDEAL_BREAK');
 /** what is dealt, in the order it is handed out · who is handed to, in turn (Red One, Blue One, Red Two, Blue Two) */
 const DEALT = ['charges', 'bangs', 'frags', 'smoke'] as const, DEAL_TURN = [1, 3, 2, 4];
 const dealing = (): boolean => KITDEAL.on && ruleOn && KIT.on;
@@ -380,11 +400,29 @@ function deal(cards: MemberKit[], t: SlotTable, n: number): MemberKit[] {
     const to = can.reduce((a, b) => (load(b) < load(a) || (load(b) === load(a) && !out[b][k] && out[a][k] > 0) ? b : a));
     out[to][k]++;
   }
+  if (moreOn()) for (const i of men) {   // (nobody comes with a gun alone — while the squad may carry one more)
+    const it = t.items.bangs; if (load(i) || !it || out[i].bangs >= it.max[i] || costOf(out[i], t) + priceOf(it) > t.pouches[i] || (it.squadMax !== undefined && squadHas(out, 'bangs', n) >= it.squadMax)) continue;
+    out[i].bangs++;
+  }
   return out;
 }
+/** `more`: FIVE CARDS WITH THE TOOLS THIS TEAM IS LENT — the same array when nobody is. A man is lent his tool while three or four come, his big slot is
+ *  empty and not emptied by hand, his card may carry it, and the cards may be lent at all (lendable — asked of `of`, the cards in the table's layout). */
+function lend(cards: MemberKit[], t: SlotTable, n: number, of: MemberKit[], mine: boolean): MemberKit[] {
+  if (!moreOn() || !bigOn || n < 3 || !lendable(of, mine)) return cards;
+  let out = cards;
+  for (const [i, tool] of DEAL_TOOL) if (i <= n && bigOf(cards[i]) === 'none' && !cards[i].bare && (t.items[tool]?.max[i] ?? 0) > 0 && (t.big[i] ?? 1) > 0) { if (out === cards) out = cards.slice(); out[i] = { ...cards[i], big: tool }; }
+  return out;
+}
+/** …the teammates' counted things are the ISSUE's — or the cards are the player's own (`mine`) and no named kit's: a named squad kit says what its men
+ *  carry, and so does a mission's issue that writes its own counts */
+const lendable = (of: MemberKit[], mine: boolean): boolean => dealWord(of) === dealWord(dealTable().kits[0]) || (mine && !dealNamed(of));
 /** THE FIVE CARDS AS THE TEAM WEARS THEM: the table's cards, or — the deal on, three or four coming, the counted things a named kit's — those shared out.
  *  The same array when nothing is dealt. */
-export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] { return dealing() && n >= 3 && !(dealOwn && cards === KIT.members) && dealNamed(cards) ? deal(cards, SLOTS.table, n) : cards; }
+export function kitWorn(n = team, cards: MemberKit[] = KIT.members): MemberKit[] {
+  if (!dealing() || n < 3) return cards;
+  return lend(!(dealOwn && cards === KIT.members) && dealNamed(cards) ? deal(cards, SLOTS.table, n) : cards, SLOTS.table, n, cards, cards === KIT.members && !issuing);
+}
 /** THE TABLE'S CARDS ARE THE PLAYER'S OWN LAYOUT: a counted thing was changed by hand on a team of three or four, so the cards are worn as written even where
  *  they come to read as a named kit's (Blue One's last canister given up on purpose is not the Quiet kit to share out again). Kept with the store; dropped when
  *  a squad kit is put on by name, the cards are reset, or they settle back into a kit (dealSettle). */
@@ -393,39 +431,45 @@ let dealOwn = false;
 export function kitOwn(v?: boolean): boolean { if (v !== undefined) dealOwn = v; return dealOwn; }
 /** member i's card as he wears it (what the roster and his card show) · and what he is issued, as he would wear that */
 export function kitShown(i: number): MemberKit { return kitWorn()[i]; }
-export function kitIssuedShown(i: number, n = team): MemberKit { return i > 0 && dealing() && n >= 3 ? deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, n)[i] : { ...issuedCard(i) }; }   // (`n`: the men who come — a staging's own count, kitload.ts)
+export function kitIssuedShown(i: number, n = team): MemberKit { return i > 0 && dealing() && n >= 3 ? lend(deal(ISSUED.map((_m, j) => ({ ...issuedCard(j) })), SLOTS.table, n), SLOTS.table, n, ISSUED, false)[i] : { ...issuedCard(i) }; }   // (`n`: the men who come — a staging's own count, kitload.ts)
 /** A CARD IS READ AND CHANGED AS IT IS WORN. `f` runs with the worn cards standing in the table (a teammate's card, while they are dealt), nothing written to
  *  the store. A peek puts the table back. A change that was TAKEN (`taken`) is kept one of two ways: it moved a counted thing — the worn cards are now the
  *  player's own and stay in the table as they stand; or it moved something else (a gun, a look, a big thing) — that is written onto the table's own cards and
  *  their layout stays, so a smaller team still carries the whole kit. Cards of the player's own that come to WEAR as a named kit does (every man put back on
  *  his share) are that kit again, in the table's layout (dealSettle). */
 function onWorn<T>(i: number, f: () => T, taken?: (r: T) => boolean): T {
-  const w = i > 0 ? kitWorn() : KIT.members;
-  if (w === KIT.members) {
-    if (!(i > 0 && dealing() && team >= 3)) return f();
-    const word = dealWord(KIT.members), s = store; store = null; let r: T; try { r = f(); } finally { store = s; }   // (cards already the player's own, or no kit's: one write, after the mark below)
-    if (taken?.(r)) { if (dealWord(KIT.members) !== word) dealOwn = true; if (!dealSettle()) kitSave(); }
-    return r;
-  }
-  const was = KIT.members.slice(), s = store, back = () => { for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = was[j]; store = s; };
-  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = { ...w[j] }; store = null;
+  if (!(i > 0 && dealing() && team >= 3)) return f();
+  const now = kitWorn(), was = KIT.members.slice(), w = now === KIT.members ? was : now, s = store, back = () => { for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = was[j]; store = s; };
+  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = { ...w[j] };   // (the cards as worn stand in the table while `f` runs)
+  store = null;
   let r: T; try { r = f(); } catch (e) { back(); throw e; }
   if (!taken?.(r)) { back(); return r; }
   store = s;
-  if (KIT.members.some((c, j) => j > 0 && DEALT.some(k => c[k] !== w[j][k]))) { dealOwn = true; if (!dealSettle()) kitSave(); }
-  else {   // (nothing counted moved: the change goes onto the table's layout — unless it costs a pouch that man's card has not got there, and then the worn cards are kept, as a counted change keeps them)
-    const laid = KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, was[j][k]])) } : c));
-    if (illegal(laid, SLOTS.table) === null) for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = laid[j]; else dealOwn = true;
-    kitSave();
+  // a counted thing moved: the cards as worn are the player's own. Nothing counted moved: the change goes onto the table's layout — unless it costs a pouch that man's card has not got there, and then the worn cards are kept, as a counted change keeps them
+  const counted = KIT.members.some((c, j) => j > 0 && DEALT.some(k => c[k] !== w[j][k]));
+  const laid = counted ? null : KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, was[j][k]])) } : c));
+  const own = !laid || illegal(laid, SLOTS.table) !== null; let kept = laid && !own ? laid : KIT.members.slice();
+  if (moreOn() && bigOn) {
+    // the big slots as the change left them: a slot emptied by hand is marked — and so are the empty slots of cards that leave a named kit here, which lent them nothing; a slot filled drops the mark
+    const leaving = own && !dealOwn && !lendable(was, true);
+    kept = kept.map((c, j) => { if (!DEAL_TOOL.some(([k]) => k === j)) return c; const mark = bigOf(c) === 'none' && (!!c.bare || bigOf(w[j]) !== 'none' || leaving); if (!!c.bare === mark) return c; const { bare: _b, ...rest } = c; return mark ? { ...rest, bare: true as const } : rest; });
+    // …and a tool he is only lent is never written: where his card holds the very tool the deal would lend him, and the table's did not, the slot is written empty
+    const bare = kept.map((c, j) => (DEAL_TOOL.some(([k, tool]) => k === j && c.big === tool && !c.walls && bigOf(was[j]) === 'none') ? { ...c, big: 'none' as const } : c)), lent = lend(bare, SLOTS.table, team, bare, true);
+    kept = kept.map((c, j) => (lent[j] !== bare[j] ? bare[j] : c));
   }
+  if (own) dealOwn = true;
+  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = kept[j];
+  if (!dealSettle()) kitSave();
   return r;
 }
 /** … true: the cards were put back in a named kit's layout, and kept */
 function dealSettle(): boolean {
   if (!dealing() || team < 3 || (dealNamed(KIT.members) && !dealOwn)) return false;
   const laid = (kit: MemberKit[]) => KIT.members.map((c, j) => (j ? { ...c, ...Object.fromEntries(DEALT.map(k => [k, kit[j][k]])) } : c));
-  const kit = dealTable().kits.map(laid).find(cards => illegal(cards, SLOTS.table) === null && dealWord(deal(cards, SLOTS.table, team)) === dealWord(KIT.members)); if (!kit) return false;   // (…a layout a man's other things leave room for: a wand on Red One and the table's full card are a pouch too many)
-  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = kit[j]; dealOwn = false; kitSave(); return true;
+  const worn = lend(KIT.members, SLOTS.table, team, KIT.members, true), same = (a: MemberKit[]) => dealWord(a) === dealWord(KIT.members) && a.every((c, j) => !j || bigOf(c) === bigOf(worn[j]));   // (`more`: never into a layout that would lend a man a tool, or stop lending him one — the men wear what they wore)
+  const kit = dealTable().kits.map(laid).find(cards => illegal(cards, SLOTS.table) === null && same(lend(deal(cards, SLOTS.table, team), SLOTS.table, team, cards, false))); if (!kit) return false;   // (…a layout a man's other things leave room for: a wand on Red One and the table's full card are a pouch too many)
+  const named = lendable(kit, false) ? kit : kit.map(c => { if (!c.bare) return c; const { bare: _b, ...rest } = c; return rest; });   // (a named kit lends nothing: the mark its men were given on leaving it says nothing more)
+  for (let j = 1; j < KIT_MEMBERS; j++) KIT.members[j] = named[j]; dealOwn = false; kitSave(); return true;
 }
 /** the pouches the teammates who come fill between them · how many of one thing they carry */
 const squadUsed = (cards: MemberKit[], t: SlotTable, n: number) => coming(cards, n).reduce((s, c) => s + costOf(c, t), 0);
@@ -445,7 +489,8 @@ function illegal(cards: MemberKit[], t: SlotTable, n = KIT_MEMBERS - 1): string 
 }
 /** member i's card as a set makes it under a table (null: the rule off — the set of the build before it) */
 function setCard(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
-  return t && i > 0 && dealing() ? deal(ISSUED.map((_m, j) => setCardBase(j, p, t)), t, team)[i] : setCardBase(i, p, t);
+  if (!(t && i > 0 && dealing())) return setCardBase(i, p, t);
+  const base = ISSUED.map((_m, j) => setCardBase(j, p, t)); return lend(deal(base, t, team), t, team, base, false)[i];   // (As issued, of three or four, with the tool he is lent)
 }
 /** … in the pair's layout (what the table says; KITDEAL shares it out over a bigger team) */
 function setCardBase(i: number, p: KitPreset, t: SlotTable | null): MemberKit {
@@ -913,7 +958,7 @@ export function kitPresetOf(i: number): KitPreset | null {
 }
 
 /** `KITPASTE_BREAK=1` (the check's): a paste writes the copied card as it is, unfitted and unasked */
-const PASTE_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.KITPASTE_BREAK ?? '') === '1'; } catch { return false; } })();
+const PASTE_BREAK = envIs('KITPASTE_BREAK');
 /** COPY AND PASTE (the maintainer, 10-15: "we should have copy and paste for loadouts"; ui/kitCard.ts holds the copied card and draws the two buttons).
  *  Member i's card as another man's card makes it: every ROW of his own card takes the copied card's value where his row offers it, a count over his row's
  *  most comes down to it, and a row that cannot show the copied value at all (your cans as one of four splits, the pouches rule off)
@@ -973,6 +1018,7 @@ export function kitSanitize(i: number, raw: unknown): MemberKit {
   // charge and big thing are each taken where his row offers them — a card holding two of them is brought to one by kitFitAll, which says what stayed
   // behind — and a card whose GUN is the shotgun (the build before's) is his issued gun with the shotgun in the big slot. Off: `big` is kept, inert.
   if (R.big === 'shotgun' || R.big === 'hammer') card.big = R.big;
+  if (i > 0 && R.bare === true) card.bare = true;   // (KITDEAL.more: his big slot emptied by hand — inert while nothing would be lent him)
   if (bigOn) { const offers = rows.find(r => r.field === 'big')?.values ?? [];
     if (card.big !== 'none' && !offers.includes(card.big)) card.big = 'none';
     if (int(R.walls, 1) && offers.includes('wall')) card.walls = Math.min(R.walls, WALLS_MAX);
@@ -1216,8 +1262,9 @@ export function kitWalls(n: number): number { if (!KIT.on) return 0; let w = 0; 
  *  three and a four carry exactly the game's count (nothing is written), and one man alone carries his own two and one. Table off (?nokit): the game's count. */
 export function kitPool(n: number, issued = { bangs: DOORTOOLS.bangs, charges: DOORTOOLS.charges }): { bangs: number; charges: number; frags: number } {
   let b = issued.bangs, c = issued.charges, f = FRAG.squad;   // (the frags the same way: frag.ts FRAG.squad, one each on members 1 and 2)
+  const worn = KIT.on ? kitWorn(n) : KIT.members;   // (KITDEAL: the same sum however the cards are shared out — but for the one canister its key `more` hands a man who came with nothing)
   if (KIT.on) for (let i = 1; i < KIT_MEMBERS; i++) {
-    if (i <= n) { b += KIT.members[i].bangs - ISSUED[i].bangs; c += KIT.members[i].charges - ISSUED[i].charges; f += KIT.members[i].frags - ISSUED_FRAGS[i]; }
+    if (i <= n) { b += worn[i].bangs - ISSUED[i].bangs; c += worn[i].charges - ISSUED[i].charges; f += worn[i].frags - ISSUED_FRAGS[i]; }
     else { b -= ISSUED[i].bangs; c -= ISSUED[i].charges; f -= ISSUED_FRAGS[i]; }
   }
   if (KIT.on && chargeRow(0)) c += KIT.members[0].charges;   // (what YOU carry is in the squad's one count: owncharge.ts — you are issued none, so a card as issued adds nothing)

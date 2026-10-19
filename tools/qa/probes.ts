@@ -19,7 +19,7 @@
 //     carbine: carbine-fire carbine-rig
 //     charmats: charmats-cast charmats-off charmats-shader charmats-slots charmats-tables
 //     civilians: civilians-comply civilians-determinism civilians-hearing civilians-identity civilians-phone civilians-scoring civilians-sight civilians-spots
-//     debrief: debrief-dom debrief-rooms debrief-run debrief-score
+//     debrief: debrief-dom debrief-doorname debrief-rooms debrief-run debrief-score
 //     decals: decals-follow decals-identity decals-off decals-ring decals-sites
 //     destruction: destruction-bounds destruction-caps destruction-determinism destruction-dust destruction-hearing destruction-identity destruction-impulses destruction-reset destruction-screen destruction-sheet
 //     devices: devices-camera devices-editor devices-keypad devices-laser devices-vision
@@ -39,7 +39,7 @@
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
 //     kitcan: kitcan-tiles
-//     kitdeal: kitdeal-cards kitdeal-run kitdeal-screen kitdeal-stands
+//     kitdeal: kitdeal-cards kitdeal-more kitdeal-run kitdeal-screen kitdeal-stands
 //     noshield: noshield-gone noshield-card noshield-staged noshield-tape
 //     takedown: takedown-harness takedown-rules takedown-off takedown-moves takedown-partner takedown-breathe takedown-lower takedown-kill takedown-beats
 //     stealthpose: stealthpose-harness stealthpose-off stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
@@ -157,6 +157,12 @@ const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand
 // tree's rows are kittree-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the frozen stand holds it — unless whoever
 // runs the tool set the word himself.
 const ROWS_BEFORE_THE_TREE = /^(wand-kit|wand-tile)$/;
+// …and the deal's key `more` (kit.ts KITDEAL.more, on in the page: a team of three or four as issued is LENT a big tool each pair) for the probes written
+// of a four whose big slots stand empty: a locked door that such a four picks, boots or is refused at is, with a lent shotgun or hammer, a door the tool
+// takes — and that is kitdeal-check.ts's and bigslot-check.ts's to hold. The same for the probes that read a door's tools page row for row against the
+// pair's: with a tool in the squad the page has the big slot's row on its own key, and the walk that reads that page as the page opens it, in every
+// scenario, is orderkeys-walk. Held off on every stand, word and table, unless whoever runs the tool set the word.
+const MORE_AS_IT_WAS = /^(frameholds-tools|doortest|doormenu-rows|thresholdmenu-rows|shutdoor-menu|silent-pick|silent-tools|silent-boot|pressorders-squad4|pressorders-nightbreach4)$|^kitpaste(-|$)/;   // (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line)
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND']];
 async function run(name: string, fn: () => unknown): Promise<boolean> {
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
@@ -167,10 +173,11 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const gunHeld = GUN_ROW_AS_IT_WAS.test(name) && process.env.TPS_GUNSLOTS === undefined; if (gunHeld) { process.env.TPS_GUNSLOTS = '0'; (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS.on = false; }   // (as the big slot's line above)
   const treeHeld = ROWS_BEFORE_THE_TREE.test(name) && process.env.TPS_KITTREE === undefined; if (treeHeld) { process.env.TPS_KITTREE = '0'; (await import(`${ROOT}/src/game/kittree.ts`)).KITTREE.on = false; }
   const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
+  const moreHeld = MORE_AS_IT_WAS.test(name) && process.env.TPS_KITMORE === undefined; if (moreHeld) { process.env.TPS_KITMORE = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.more = false; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (gunHeld) delete process.env.TPS_GUNSLOTS; if (treeHeld) delete process.env.TPS_KITTREE; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
+  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (moreHeld) delete process.env.TPS_KITMORE; if (gunHeld) delete process.env.TPS_GUNSLOTS; if (treeHeld) delete process.env.TPS_KITTREE; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2496,6 +2503,7 @@ if (on('kitlent-tiles', 'kitlent', 'kit', 'all')) await run('kitlent-tiles', asy
 if (on('kitcan-tiles', 'kitcan', 'kit', 'all')) await run('kitcan-tiles', async () => (await import('./kitcan-check.ts')).canTiles());   // the can on the guns tile and the roster's drawing, your pistol alone named for it
 // THE SQUAD'S KIT IS DEALT OVER THE MEN WHO COME (src/game/kit.ts KITDEAL; tools/qa/kitdeal-check.ts sets its switches itself; KITDEAL_BREAK=1 must fail)
 if (on('kitdeal-cards', 'kitdeal', 'kit', 'all')) await run('kitdeal-cards', async () => (await import('./kitdeal-check.ts')).dealCards());   // nobody of three or four comes bare, the squad's count is the count it was
+if (on('kitdeal-more', 'kitdeal', 'kit', 'all')) await run('kitdeal-more', async () => (await import('./kitdeal-check.ts')).dealMore());   // KITDEAL.more: a tool each pair as issued, nobody with a gun alone (KITMORE_BREAK=1 must fail)
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the same run by digest; cards dealt for four staged smaller; a mission's own issue
 if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 if (on('kitdeal-stands', 'kitdeal', 'kit', 'all')) await run('kitdeal-stands', async () => (await import('./kitdeal-check.ts')).dealStands());   // the two stands, the registry, a recording's tables
@@ -2573,6 +2581,7 @@ if (on('teams-despawn', 'teams', 'all')) await run('teams-despawn', async () => 
 // ---------------------------------------------------------------- the run's chronicle + the debrief card made of it (debrief-probes.ts): 'debrief' = the family
 if (on('debrief-run', 'debrief', 'all')) await run('debrief-run', async () => (await import('./debrief-probes.ts')).debriefRun());
 if (on('debrief-rooms', 'debrief', 'all')) await run('debrief-rooms', async () => (await import('./debrief-probes.ts')).debriefRooms());
+if (on('debrief-doorname', 'debrief', 'words', 'all')) await run('debrief-doorname', async () => (await import('./debrief-probes.ts')).debriefDoorName());   // a kicked or picked door is called on the card what its level calls it (WORDS.doors)
 if (on('debrief-score', 'debrief', 'all')) await run('debrief-score', async () => (await import('./debrief-probes.ts')).debriefScore());
 if (on('debrief-dom', 'debrief', 'all')) await run('debrief-dom', async () => (await import('./debrief-probes.ts')).debriefDom());
 // ---------------------------------------------------------------- 'breach' = the family (breach-probes.ts): what stays of the removed daytime breach showcase's checks — the daylight variant's round trip (here) and clear-doctrine (below)

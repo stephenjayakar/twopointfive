@@ -1045,6 +1045,11 @@
         { "door": "staff", "roomLights": 1 },
         { "door": "dock_s", "slots": [null, [36.82, 21.9, -180], [36.82, 23, -180], [36.82, 24.1, -180]], "hide": ["box_0738", "box_0739", "box_0740", "box_0741", "box_0313", "box_0315"], "roomLights": 1, "light": { "porch": { "intensity": 7, "color": [1, 0.86, 0.7] }, "fill": { "offset": [1.5, -2.6, 2.8], "aim": [1.5, -2.6, 0], "intensity": 2, "radius": 0.6 } } }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "p_s", "name": "plant room door" },
+      { "door": "l_s", "name": "locker room door" },
+      { "door": "b_s", "name": "break room door" }
+    ]
   }
 }

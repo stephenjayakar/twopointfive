@@ -219,6 +219,10 @@
         { "id": "store", "name": "Store", "rooms": ["store"], "rally": [26.4, 0, 19.2], "barricade": ["s_w"], "mayLeave": false },
         { "id": "late", "name": "Late", "arrive": { "door": "gate_s", "spawn": [[19.4, 0, 24.6], [20.6, 0, 24.6]], "men": 2 } }
       ]
-    }
+    },
+    "doorNames": [
+      { "door": "gate_w", "name": "foot gate" },
+      { "door": "gate_s", "name": "road gate" }
+    ]
   }
 }

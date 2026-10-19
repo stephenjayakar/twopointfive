@@ -158,5 +158,5 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'store', mat: 'carpet', x0: 22, z0: 16, x1: 32, z1: 22 },
     ],
   };
-  return { level, scenarios: { roomClear }, groups: trace.groups, surfaces };
+  return { level, scenarios: { roomClear, doorNames: [{ door: 'gate_w', name: 'foot gate' }, { door: 'gate_s', name: 'road gate' }] }, groups: trace.groups, surfaces };
 }

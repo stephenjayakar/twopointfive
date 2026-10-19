@@ -785,7 +785,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   → counts + `stealthScore` (100 minus SCORE's price list — every term only subtracts; probes hold monotonicity) + `ratingOf` (BANDS: GHOST ≥ 90 · SHADOW ≥ 70 ·
   OPERATIVE ≥ 40 · ASSAULT) + `badgesOf` (BADGE knobs) + the summary line; `fmtEvent` words a row. The card is `ui/debrief.ts renderDebrief(host, game, actions)`
   (menu.ts: mode 'debrief' on `mission.debrief` — raised on exfil AND `DOWN_CARD_SECS` after Sam drops — plus the pause card's *Run so far* tab; CSS `#menu .db-*`);
-  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / score / dom), soak's 'leak chronicle' invariant.
+  the map is a canvas at nav-grid resolution + percent-placed DOM pins (PIN table). QA: `probes.ts debrief` (run / rooms / doorname / score / dom), soak's 'leak chronicle' invariant.
 
 <!-- was CLAUDE.md lines 1735–1757 -->
 - **The start card's sandbox row** (ui/menu.ts `sandboxRow`, `SANDBOX_LS` = localStorage `twopointsix.sandbox`, applied by main.ts `loadSandbox` at boot): god mode ·
@@ -1013,19 +1013,60 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   name or a reset): they are worn as written even where they come to read as a kit's table (Blue One's last canister given up on purpose), and the
   squad kit row then names no kit. The Team & kit picture is sent the worn cards and wears them as written (`ui/kitView.ts`, `main.ts kitCards`). A man's own set (As issued, Quiet, Loud) at three or four is HIS
   SHARE of that kit, so Loud on a man of four may add no stun to him. A mission's own issue that changes a teammate's counts is not a named kit and is
-  worn as its file writes it. LEFT, the maintainer's calls: the Quiet kit of four still leaves Blue Two with a pistol and nothing else (three stun for
-  four men), and a four as issued fills 2, 2, 2 and 1 of its pouches (seven things, sixteen pouches) with every big slot empty: more than that is more
-  kit. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
+  worn as its file writes it. A TOOL EACH PAIR (`KITDEAL.more`, 10-18; the maintainer's pick on the card that asked whether a four should carry more
+  as issued: "A tool each pair"): a team of three or four is LENT a big tool each pair, Red Two the breaching shotgun and Blue Two the hammer, in a
+  big slot that stands empty; pouches as the deal gave them. THE PAIR'S SECOND MAN CARRIES IT, NOT ITS FIRST (so of three, where Blue One comes
+  alone, only Red Two is lent one). The card the maintainer picked on said Red One and Blue One, and that was built first and MEASURED WORSE THAN NO
+  TOOL (the shipped stand, the office room clear, the blue pair told 'open and clear' at the manager's door with red stacked on it, seeds 1 to 8):
+  with the hammer on Blue One the pair lost 10 men of 16 and was wiped twice, where with no tool it lost 4 and with the hammer on Blue Two it lost 2
+  and went in every time. Why: `doortools.ts toGun` sends the order's lead to the lock when he carries the tool, the door goes with the hammer still
+  in his hands, and the second man waits on the lead for the threat in the doorway ('until the first man has it'), so nobody fires for a second.
+  With the tool on the second man the lead keeps his gun up and has that threat down inside 0.3 s. STILL OPEN, the door tools' own: a carrier who
+  is also the order's lead (the tool put on him by hand, or the second man standing on the latch jamb) goes in as before; no rule yet hands the lead
+  to his mate. THE TOOLS ARE WORN, NEVER WRITTEN (`lend`, applied where the cards are worn: `kitWorn`,
+  `kitIssuedShown`, a man's own As issued set): no card of the table or the store ever holds one, not after another row is changed, not after a
+  counted thing is (`onWorn` writes a slot empty where it holds the very tool the deal would lend back), so one or two teammates come as they did and
+  the key off is the deal alone at once. A big thing put on that man by hand is his, written, at every size. HIS SLOT EMPTIED BY HAND IS MARKED ON
+  HIS CARD (`MemberKit.bare`, kept in the store, dropped when something is put in the slot): the lent tool stepped off, or a thing put on by hand and
+  cleared again, leaves the slot empty until he is given something, and moves nothing a smaller team carries (a first pass kept it by making the
+  cards the player's own, which halved a pair's grenades and wrote the other man's tool; and a cleared slot showed the lent tool at once). WHICH CARDS
+  ARE LENT (`lendable`): the teammates' counted things are the issue's, or the cards are the player's own and no named kit's. NO NAMED SQUAD KIT IS
+  LENT ONE (each says what its men carry, and the Quiet kit's men would pay for a loud tool they keep slung), cards that leave a named kit by a
+  counted change keep its empty slots (the same mark, dropped again when they settle back into it), and a mission's issue that writes its own counts
+  is worn as its file writes it; a mission's plain issue lends them (the long hall). `dealSettle` never settles into a layout that would lend a man
+  a tool or stop lending him one. What it gives the four: the big slot's row on a door's tools (H) and a lock taken by the shotgun where the lead
+  booted it. NOBODY COMES WITH A GUN ALONE, the same key: a man the deal leaves with nothing counted is handed one stun canister more (while his
+  pouches and the table's most-a-man and most-a-squad allow), which `kitPool` (it now reads the cards as worn) counts: only the Quiet kit of four has
+  such a man, so it carries four stun where it carried three. THAT ONE CANISTER IS THE ONLY THING OF THE DEAL THAT MOVES THE SQUAD'S COUNT. SWITCH OF
+  ITS OWN: `KITDEAL.more`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITMORE=1`; reads only with the deal and the big
+  slot on), ON in the page and on the shipped stand (`?nokitmore`; the debugger's Big slot section, 'a tool each pair as issued'); a recording
+  whose KITDEAL table has no such key replays with it off (`journal.ts applyKnobs`). Its check is the `kitdeal-more` family and the lines it adds to
+  the run, the screen and the stands (`KITMORE_BREAK=1` fails 13 on both stands); the older families hold the key off and ask of the deal alone, but
+  for the seeded walk, which now walks the whole rule and reads the big row after every press. MEASURED (the shipped stand, the office room clear,
+  four as issued, the manager's door locked against Sam, seeds 8, 9, 10, the same on each): 'open and clear' takes the lock in 14.6 s with the
+  shotgun drawn once and no boot, where the key off it took the same 14.6 s with one boot; the big slot's own row takes it in 14.2 s where the key
+  off there is no such row; both door charges are still carried either way. (So the tool buys no time at a door a boot opens: it buys the doors a
+  boot is refused at, and a lead who goes in with his gun up.) Not measured as issued: a door locked on the face it opens toward (the boot's
+  refusal, the tools' answer: `bigslot-shut` asks it with cards set by hand). PROBES WRITTEN FOR A FOUR WITH EMPTY BIG SLOTS are held to that on
+  every stand by the runner (`probes.ts MORE_AS_IT_WAS`: the word and the table, unless whoever runs the tool set the word himself), as the deal's
+  own older probes are: `frameholds-tools`, `doortest`, `silent-pick`, `silent-boot` (a locked or wedged door such a four boots is one the tool
+  takes), the ones that read a door's tools page row for row against the pair's or count its rows by their digits (`doormenu-rows`,
+  `thresholdmenu-rows`, `shutdoor-menu`, `silent-tools`, `pressorders-squad4`, `pressorders-nightbreach4`), and `kitpaste` (its squads' big slots
+  are the table's; a paste over a lent tool is a `kitdeal-more` line); the page as it opens is walked, in every scenario, by `orderkeys-walk`. ONE THING THE PLAYER NOW MEETS ON EVERY DOOR, OF FOUR: the big slot's row is on H, a key of its own beside G, since the
+  page's five digits are taken; `orderkeys` knows the key now (it never met the row: nobody was issued a tool). The maintainer's call whether H
+  is near enough to the left hand.
+  STILL LEFT: a four as issued fills 2, 2, 2 and 1 of its sixteen pouches. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
   page and on the shipped stand (`?nokitdeal`; the debugger's Big slot section, 'squad kit dealt over who comes'); in the knob registry and
   `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off at any moment = every card shown and staged as the table writes it.
-  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 24 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
-  comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs`. The older card probes (`kit-*`,
+  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 39 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
+  comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs` (with `more`: the roster's lines
+  name the two tools, the staged four have the big row, `?nokitmore` is the deal alone). The older card probes (`kit-*`,
   `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
   holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. `bigslot-check.ts` run BY ITS
   OWN FILE takes the same holds itself (the deal for its card part, the two gun rows for every part: it was red on the shipped stand alone while
   green inside the gate), and now runs its `weight` part too. A MISSION'S ISSUE IS NOBODY'S OWN LAYOUT: `asIssued` holds the player's own-layout
   mark off for the staging, so cards changed by hand never stage a mission's issue undealt (the check's hall line, red without it). LISTING: `bun run
-  tools/qa/kit-audit.ts` (`--deal=off` for the cards before) prints every kit at every size and one row a mission. MEASURED: The pass, four, 240
+  tools/qa/kit-audit.ts` (`--deal=off` for the cards before, `--more=off` for the deal alone) prints every kit at every size and one row a mission. MEASURED: The pass, four, 240
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
   played it.
@@ -1109,3 +1150,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     forming and kick numbers are SNOWTRACKS rows of Boot prints, the puff's motes WISP_MOTE_* rows of Blown wisps: all came by themselves. The panel step
     after it added only the layer's hover line and reaches held to what the comments say (0‥1 rows, whole-number rows); the check's `notes` verdict is now
     red on a layer with no hover line, so the next layer added by another hand cannot lack one.
+- **The debrief calls a door what its level calls it (10-19, rides `WORDS.doors`).** A kicked, picked or keyed door's row was worded from the door's
+  id ('kicked in the breakroom w door') while the squad's rows said the name its level wrote (`scenarios.doorNames`, `doornames.ts`). Now
+  `chronicle.ts eventText(e, g)` and `fmtEvent(e, g)` take the game the row is of, and a door row asks `doorWrittenName` of that door WHEN THE ROW IS
+  READ: 'kicked in the cubicles-side break room door', 'picked the lock on the …', 'keyed the code — the …', '… gave up the code to the …' (the written
+  name is the whole name: no ' door' added to a 'yard gate', no possessive hung on 'double doors'). The row's DATA is untouched (the id, as ever): nothing
+  in a checkpoint, a recording or a digest moves, and a row from before, a loaded checkpoint or a flipped key all read by the keys as they are now. No
+  written name, the key down (`?doornames=0`), the words pass off (`?oldwords`), or no game behind the row (a tool printing a timeline with
+  `fmtEvent(e)`): the line exactly as it was. So the frozen stand reads as it did (`TPS_WORDS=1 TPS_DOORNAMES=1` raise it), and the door names key is the
+  switch: off = the card as it was. The card's two readers pass the game (`ui/debrief.ts`: the timeline's row, the map pin's hover line). NOT DONE: a
+  door with only a MADE name ('hall-side mess door') still reads its id on the card: `doorWords` would also spell an unnamed door's bearing out ('vault
+  west door'), and the card has no compass. Check `bun run tools/qa/probes.ts debrief-doorname` (families `debrief`, `words`: the stand's own keys
+  first, then the keys by hand; `DOORNAMES_BREAK=1` asks for the name with the key down and is red) and a line of `debrief-dom` (the card on the fake
+  DOM: the row and the pin), both stands. Only the office's two break room doors have written names so far, so that is where it shows.

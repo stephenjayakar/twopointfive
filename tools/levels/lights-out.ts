@@ -202,7 +202,7 @@ export function build() {
   return T.finish({
     spawn: [5.2, 0, 14.0], routes,
     mission: { serverRoom: { ...BACK }, entryDoor: 'inner', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_e', exfilX: EXIT_E.x, exfilZ: EXIT_E.z, exfilOut: EXIT_E.out },
-    scenarios: { quiet, places: PLACES, kitView: LIGHTS_OUT_KITVIEW },
+    scenarios: { quiet, places: PLACES, kitView: LIGHTS_OUT_KITVIEW, doorNames: [{ door: 'gate_w', name: 'generator shed gate' }, { door: 'gate_e', name: 'back gate' }] },
     level: { devices },
   });
 }

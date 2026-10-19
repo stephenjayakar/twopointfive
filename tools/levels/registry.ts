@@ -459,5 +459,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // THE FLOOR, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): this level has no room-clear structure, so without
   // these a line that says where ('holding …') had only the OFFICE's words for it — the captor 'holding the server room' in the registrar's office
   scenarios.places = { areas: [{ name: "registrar's office", bounds: { ...R.office } }, { name: 'reading room', bounds: { ...R.reading } }, { name: 'copy room', bounds: { ...R.copy } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'gallery', bounds: { ...R.gallery } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'stacks', bounds: { ...R.stacks } }, { name: 'sorting room', bounds: { ...R.sorting } }] };
+  scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
   return { level, scenarios, groups: trace.groups };
 }

@@ -157,5 +157,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       },
     },
   };
+  scenarios.doorNames = [{ door: 'a', name: 'room A door' }, { door: 'b', name: 'room B door' }, { door: 'c', name: 'room C door' }, { door: 'ab', name: 'A to B door' }];   // (doorNames: what a row calls the doors no room of the level names — game/doornames.ts; no bearing in a name)
   return { level, scenarios, groups: trace.groups };
 }
