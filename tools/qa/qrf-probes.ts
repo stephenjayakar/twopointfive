@@ -10,6 +10,7 @@ const { v3, wrapAngle } = await import(`${ROOT}/src/math/vec.ts`);
 const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
 const { raiseEscalation, spawnUnit, units, lightEstimateAt } = guardsMod;
 const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
+const { DOORWAY } = await import(`${ROOT}/src/game/doors.ts`);
 const qrfMod = await import(`${ROOT}/src/game/qrf.ts`);
 const { QRF_MARKS, requestQrf, callPerimeter, RESPONSE } = qrfMod;
 const { startKick } = await import(`${ROOT}/src/game/player.ts`);
@@ -98,15 +99,17 @@ export async function qrfTrigger() {
       // from the landing: use() swings it into the corridor (Sam moved off first — stood at the kick spot his body stops the leaf at half a radian, as it should); and the nav grid joins the landing to the corridor through the doorway
       game.teleportPlayer([9.0, 0, 11.2]); step(W, 2);
       game.doors.use(d, [3.0, 0, 11.25], 20); step(W, 30);
-      const opened = d.angle < -0.5;
+      // (with doors that open one way — DOORWAY.oneWay, the page's stand — a keyed door is hung away from its cylinder's face, the corridor's: the stair door opens onto
+      //  the landing, and a hand there brings it round toward the man. Open is then open on its own side, not swung into the corridor)
+      const oneWay = DOORWAY.oneWay, opened = oneWay ? d.angle * d.swing > 0.5 : d.angle < -0.5;
       const path = game.col.nav.findPath([2.25, 0, 11.25], [8, 0, 11.1]);
-      if (!opened) f.push(`use() from the landing: angle ${f2(d.angle)} (want swung east, negative)`);
+      if (!opened) f.push(`use() from the landing: angle ${f2(d.angle)} (want ${oneWay ? 'open on the side it is hung to, the landing\'s' : 'swung east, negative'})`);
       if (!path) f.push('no nav path landing → corridor');
       for (const [i, p] of QRF_MARKS.landing.entries()) if (game.col.nav.isBlocked(p[0], p[2])) f.push(`landing mark ${i} on a blocked cell`);
       for (const [i, p] of QRF_MARKS.entry.entries()) if (game.col.nav.isBlocked(p[0], p[2])) f.push(`entry mark ${i} on a blocked cell`);
       void ev0;
     }
-    F.verdict(f.length === 0, '(6) the stair door: steel, bolted, keyed to nobody\'s key; Sam locked out with kick + rattle rows and no pick; the kick is a loud door noise and nothing gives; opens from the landing into the corridor; landing ↔ corridor walkable; every mark on a free cell', f.join(' · ') || `rows [kick, rattle], clang heard as a level-1 door noise, bolt intact; use() from the landing swung it to ${f2(d.angle)}; nav path ${'yes'}`); }
+    F.verdict(f.length === 0, '(6) the stair door: steel, bolted, keyed to nobody\'s key; Sam locked out with kick + rattle rows and no pick; the kick is a loud door noise and nothing gives; opens from the landing; landing ↔ corridor walkable; every mark on a free cell', f.join(' · ') || `rows [kick, rattle], clang heard as a level-1 door noise, bolt intact; use() from the landing swung it to ${f2(d.angle)}; nav path ${'yes'}`); }
   return F.done();
 }
 
