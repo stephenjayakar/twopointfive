@@ -1169,6 +1169,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   same man throws 1.02 s after his shout either way, the bursts 5 to 10 cm apart, the grenade starts 0 cm from the left hand and is in that fist
   17 frames. NEVER SEEN ON A GPU OR IN PLAY: poses and boxes measured headless; how a left-handed overhand reads from above, and the gun's low
   ready beside it, nobody has looked at. The run with the switch on is not the run with it off (it changes the pose the game reads).
+- **Defenders are dealt guns off the squad's table, and a gun is used for what it is for** (`src/game/gunroles.ts`, `GUNROLES.on`; the maintainer,
+  10-18: "also should we model more firearms?"). On in the page (`?nogunroles` = the build before), off in the module and on the frozen stand
+  (`FROZEN_HOLDS 'GUNROLES.on'`, `TPS_GUNROLES=1`); a recording from before the table replays with it off. No state of its own: a role is read off the gun
+  in a man's hands each time it is asked (a sidearm out after a dry primary does not change whose man he is).
+  THE DEAL (`gunDeal`, called once by `nightbreach.ts` and `rescue.ts` when the cast stands and the floor's doors are as the mission opens with them — every
+  leaf is `place()`d first, or a line is measured through a door the staging has just shut): each man's line is a ray from his mark the way he is posted
+  to look, 40 m at most. ONE BELT-FED GUN (`pkm`, a new row: 100 on the belt, strings of 6 to 10, handling 0.45, 6.5 s to feed, 7.5 kg and bulk 4 for the kit's score, which weighs no defender today) to a cast at most, to
+  the longest line, and only when that line is a lane (`beltLane` 15 m with `beltMin` 5 men) or the cast is a big one (`beltSquad` 10); A PISTOL
+  (`guard9mm`) to the man with a hostage in his other hand, and to at most a quarter of a cast (`pistolMax`) among men whose line is under `pistolNear`
+  4 m; the rest half AKMS (`akms`, now enabled: two or three a pull, looser, 7.62) and half the short carbine as before. Every row is `oneShot` and there is
+  no health to raise: nobody is harder to put down. THE DRAWS come off each man's own mark (a hash of where he stands and which man he is), so a restart
+  deals the same guns (`samestart.ts`); with that switch off one number off the game's die salts them. Today's missions on the page's stand: a belt-fed
+  gun in 7 of 21 (depot, floodlit and the long hall by their lane; the block with squads, warehouse, compound and barracks by their size), none in the
+  office's room clear, the night breach, the three rescues, records, the four-room block, snatch, defuse, killhouse, mousehole, glasshouse or the pass.
+  WHAT A GUN IS FOR (keys `entry` `lanes` `strings` `post`, all under `use`): ranks room (MP7, M1014) before rifle and pistol before reach (Mk 12) and belt
+  (Mk 46, PKM). `orders.ts pair()` takes the frame a stack stands on and prices a long gun nearer it than a room gun (`fileCost`, under the pairs-together
+  cost); `doortools.ts firstIn` and the threshold's first man pick among the room guns' men (`gunFirst`; the log beat `first:<callsign> · his gun is the
+  room's` when the gun, not the room seen, decided); `enter()` and `wallcharge.ts enter()` send the Mk 12 and Mk 46 men last (`gunTurn`, `gunLast`);
+  `cover.ts`'s deal adds `gunLane` (± `laneK` 0.6 by distance: the far opening to the long gun, away from a man with a pistol alone, half that for an
+  MP7); `roomfight.ts tickOp` and `coverfire.ts`'s trigger fire the Mk 46 in strings of its row's own length at its own rate and the Mk 12 one aimed round
+  a beat (`gunString`; the pair for every other gun); the belt-fed DEFENDER is not taken from his line (`gunKeepsPost`: `lanes.ts laneHolds` answers true
+  for him, so no rally, press, errand or dark hunt, and `digin.ts` lets a noise next door lie); a blinded defender fires blind at his own gun's rate
+  (`gunBlindGap`: a pistol a round a pull, not twelve in 1.2 s). A squad of issue carbines stacks, enters and fires exactly as with the switch off.
+  NOT BUILT, on purpose: no gun holds its fire for range (a man who will not shoot reads as dumb; range is the rows' own spread and the cover's deal);
+  the belt-fed man still falls back or takes cover when the squad is in his room (the room fight's own moves are not gated).
+  Check: `bun run tools/qa/gunroles-check.ts` (families `gunroles-deal -entry -fight -lanes -off`, in `all-quick`), 22 lines on each stand (it raises the
+  switch by the stand's own word before a floor is stood up); `GUNROLES_BREAK=1` fails every family. `gunroles-off`: ten seconds of the staged room clear
+  digest the same off and on with nobody dealt and the cards as issued.
+  MEASURED (headless, before = the commit this was built on, after = this one). The mission tally (`command-tally.ts --hands b`, the page's stand,
+  room-clear-four, depot-four, warehouse-four and killhouse-four over seeds 1 to 4, sixteen floors): taken 15 → 16, clean 6 → 8, wiped 3 → 3, men lost a
+  floor 1.88 → 2.06, seconds 97.0 → 96.1 — too few floors to call a move either way. Where the belt-fed gun shows is the depot's lane: rounds that hit Sam
+  on its four seeds 13, 2, 1, 0 before and 14, 24, 30, 0 after (god mode counts them; men lost 2.50 → 2.75). The solo night's soak (page's stand, seeds
+  1, 2, 3, twelve minutes): all pass, and its report is the same file as before but for the wall clock (no cast is dealt there). The tour on the frozen
+  stand: 3 of 3 before and after (it is red 0 of 3 on the page's stand before this change and after: old reds, not this rule's).
+  NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
+  looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
+  drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
 - **The men left alive on a rescue come for the hostages** (2026-10-18; `src/game/rescueflush.ts`, `RESCUEFLUSH.on` — ON in the page, `?norescueflush`; OFF in
   the module and on the frozen stand, `TPS_RESCUEFLUSH=1`; a debugger toggle). The maintainer: "remaining enemies should try to flush you out and/or kill the
   hostage when loud". WHAT WAS THERE: the captor's clock passed to a man of theirs only if he happened to stand in the hostage room; with the room the team's,

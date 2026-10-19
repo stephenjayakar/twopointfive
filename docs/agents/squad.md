@@ -280,6 +280,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `SQUADTHROW_BREAK=1` must fail); `tools/qa/orderkeys-probes.ts` walks a page whose opener sits on a letter. NOT built: a throw at a DOOR or through one (the door tools' 'frag and clear' / 'bang
   and clear' are that), smoke (squadsmoke.ts has its own row), any defender's answer to it beyond what a blast already does. Never seen on a GPU or
   played by anybody.
+- **A teammate fires a 40 mm grenade on order** (`src/game/squad40.ts`, `SQUAD40.on`: on in the page, `?nosquad40` off; off in the module and on the frozen stand, `TPS_SQUAD40=1` raises it; Team feel
+  'teammates fire 40 mm on order'; the maintainer on the gear screen, 10-19: "should be symmetric between self and teammates (e.g. 40mm should work for squad)"). Until here the launcher's
+  high-explosive round was the player's alone. THE KEYS: X on a spot of FLOOR, **G** (the throws' page), then **3** = '40 mm there · N left' (`shellThere`; the row that opens the page then reads
+  'throw · frag N · bang N · 40 mm N ▸'). With the throws' switch off there is no page and so no row. THE ROW IS THERE ONLY WHILE A
+  TEAMMATE'S CARD BROUGHT A ROUND: kit.ts `kitStage` hands `squad40Stage` each man's `MemberKit.shells` at every staging; with none carried nothing is kept for the Game, nothing is registered
+  and a run digests as before on either stand. The card's own row (and slots.json's `who` / `maxPerMan` for `shell40`) is the kit screen's; `squad40Here()` is what a card asks ('does a
+  teammate's 40 mm work in this build': the switch on and not broken — as `wallHere()` is the wall charge's). THE COUNT IS EACH MAN'S OWN, not a bag: a round rides in the pouch of the man whose
+  tube it goes down, a man down takes his with him, and the row and the squad block ('40 mm N') show what the men on their feet carry. WHO FIRES: of the men the menu goes to, one with a round,
+  a long gun in his hands whose weapons.ts row has the launcher (`launcher !== false`, not a pistol, not a shotgun: his sidearm up = no shot), a hand free (`squadHandFree`, squadthrow.ts
+  `handsBusy`), `LAUNCHER40.cd` since his last, and A SHOT: he40.ts `shellSolve` from his tube (0.55 m ahead of him toward the spot, 1.35 m up or 0.3 under his head) goes off within `nearM` 1.2
+  of the spot having flown `HE40.armM` + `armSlack` 0.5 — the solve stops on the player, a civilian, a hostage, the man to take alive (= no shot: a round in flight stops on them) and on a man
+  of the other side the player can see (= it goes off on HIM, if armed there). To the plan a TEAMMATE in the line is a body too (the round in flight would pass him: nobody fires through a friend's back). A man whose gun is on the spot is asked first, then the
+  nearest. HE POINTS IT FIRST: a man whose gun is UP (a fight, or an order with it at his shoulder) and whose `aimYaw` is within
+  `aimRad` 0.2 of the spot fires on the frame of the pick and keeps what he was doing (the fight too); anybody else is turned to it — lent from his order by squadthrow.ts `squadLend` (only a
+  man `mayWalk` passes: no drill, door tool or fight has him), an assignment under the row's id with the spot as `watch`, the round when his gun is on it (up `raiseSecs` 0.35 at least) and the floor still says yes (`aimSecs`
+  2 at most), then `squadHandBack`. NOBODY WALKS FOR IT. THE ROUND is he40.ts `fireShell` and nothing else — the same fuze, the same frag.ts `blast` on whoever stands in it, the player too —
+  under the firer's id; he calls 'forty out!'; the squad block names it for `shownSecs` ('Red Two · 40 mm out'); the order is on `orders.log` under its own id. SENSE, asked as the menu is read
+  and again as the round goes, nothing spent on a refusal: 'no 40 mm left.' · 'none with them.' (the men addressed carry none, another man does) · 'not ready.' (the men who carry one have no
+  launcher in a free hand, a tube still open, or are not ours to turn) · 'too close to arm.' · 'no shot from here.' · NEVER ONTO ITS OWN — anybody of ours with a line inside `FRAG.woundM` +
+  `reachSlack` 0.5 of where it goes off OR of the spot it is sent at (a man of the other side it would stop on may have stepped out of its line; squadthrow.ts `squadFragCatches` with its new
+  `burst` argument: nobody is counted on to duck a round that goes off as it lands, the player included — no 'too close: you' call as a frag has) = refused by name, the frag row's own words
+  with 'no 40 mm.' for 'no frag.'; a man whose round would have one of ours in it is passed over for the next man with a shot (read in the code only: the office has no place to stage it).
+  The menu's re-reads are kept 0.3 s per asker (the row's two questions); the picture keeps nothing: a drawn frame writes no state. A SILENT squad:
+  the row is one of silent.ts `LOUD_ROWS` and holdfire.ts `LIFT_ORDERS`. THE PICTURE: ui/squadthrowviz.ts draws `squad40Plans` (who fires, the arc, where it goes off, the burst's two radii) for
+  the highlighted row and while a man turns (`SQUAD40.draw`). squadthrow.ts changed for it, behaviour as it was: `handsBusy` / `mayWalk` exported, the walk's borrow-and-return lifted out as
+  `squadLend` / `squadHandBack` (which now takes the walk-back policy), the floor-order log line as `squadLogRow`, `fragIn` takes a reach. `bun run tools/qa/squad40-check.ts` (`probes.ts squad40`, also inside `squadorders`; 22 lines, both stands — it raises the switch and
+  gives a teammate's card its rounds itself, raising the pouches table's most-a-teammate for the run; `SQUAD40_BREAK=1` breaks the order in the module and must fail). On the page: `PORT=5199 node tools/qa/squad40-page.cjs` (a dev server on that port; the software adapter: the page as it opens with a
+  round staged by `__squad40.stage` — X, G, 3 and the man fires — and the same under `?nosquad40`). Measured once, headless,
+  the office with the four holding by the start: the row was live on 23 of 811 floor spots (594 no shot, 192 too close) — indoors it is a round for a hall or a yard. KNOWN, left as it is: a body the fog hides is not in the plan (it is not in the player's own reticle either), so a round can go off on a man nobody saw, short of the spot; in contact only a
+  man whose gun is already on the spot fires (the fight is not asked to give a man up: 'not ready.'); a turn that ends in a refusal has already taken a silent squad loud (as a walk to a throw
+  does). NOT built: the 40 mm row of a TEAMMATE's card and the pouches table that lets him carry one (the kit screen's: until then no card in the page brings a round, and the row is never there); a teammate's
+  ring airfoil or sticky camera on order (the tube and the borrow are here; each needs its own solve and sense), a walk to a shot, any defender's answer beyond what a blast does. Nobody has
+  seen it on a GPU or played it.
 - **A door an enemy opens is looked at** (`ROOMFIGHT.doorEars`, on; `doorLookSecs` 3.5; Team feel 'team ▸ looks at a door an enemy opens' / 'door look ▸ s', kept per machine; off = nobody
   turns for a door, as it was; pinned off in threshold-probes.ts's identity and the nvg digests; the barricaded rooms goal's trace of the compound on hard, once its garage door `g_e` opened
   outward: a defender pulled it from outside, stood at its jamb three seconds and shot three of four in the back — the man kept on that door had no line to the jamb, the man with a line never
