@@ -36,7 +36,7 @@
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
 //     kitcan: kitcan-tiles
-//     kitdeal: kitdeal-cards kitdeal-run kitdeal-screen kitdeal-stands
+//     kitdeal: kitdeal-cards kitdeal-more kitdeal-run kitdeal-screen kitdeal-stands
 //     noshield: noshield-gone noshield-card noshield-staged noshield-tape
 //     takedown: takedown-harness takedown-rules takedown-off takedown-moves takedown-partner takedown-breathe takedown-lower takedown-kill takedown-beats
 //     stealthpose: stealthpose-harness stealthpose-off stealthpose-idle stealthpose-walk stealthpose-rise stealthpose-creep stealthpose-cable stealthpose-standdown
@@ -149,6 +149,10 @@ const CARD_AS_IT_WAS = /^pouch-table$/;
 // kit.ts KITDEAL, on in the page) a card reads as it is WORN, and that is kitdeal-check.ts's to hold, on both stands, with a seeded walk of presses of its own.
 // So the deal is held off for these on EVERY stand, as the frozen stand holds it — unless whoever runs the tool set the word himself.
 const DEAL_AS_IT_WAS = /^(kit|pouch|shotgun|squadsmoke)(-|$)|^(bigslot-card|wand-mate)$/;
+// …and the deal's key `more` (kit.ts KITDEAL.more, on in the page: a team of three or four as issued is LENT a big tool each pair) for the probes written
+// of a four whose big slots stand empty: a locked door that such a four picks, boots or is refused at is, with a lent shotgun or hammer, a door the tool
+// takes — and that is kitdeal-check.ts's and bigslot-check.ts's to hold. Held off on every stand, word and table, unless whoever runs the tool set the word.
+const MORE_AS_IT_WAS = /^(frameholds-tools)$/;
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND']];
 async function run(name: string, fn: () => unknown): Promise<boolean> {
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
@@ -158,10 +162,11 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const bigHeld = CARDS_AS_THEY_WERE.test(name) && process.env.TPS_BIGSLOT === undefined; if (bigHeld) { process.env.TPS_BIGSLOT = '0'; (await import(`${ROOT}/src/game/kit.ts`)).BIGSLOT.on = false; }   // (…and off now, for a probe that reads the cards before it stands a game up; knobsBack puts the table back)
   const gunHeld = GUN_ROW_AS_IT_WAS.test(name) && process.env.TPS_GUNSLOTS === undefined; if (gunHeld) { process.env.TPS_GUNSLOTS = '0'; (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS.on = false; }   // (as the big slot's line above)
   const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
+  const moreHeld = MORE_AS_IT_WAS.test(name) && process.env.TPS_KITMORE === undefined; if (moreHeld) { process.env.TPS_KITMORE = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.more = false; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (gunHeld) delete process.env.TPS_GUNSLOTS; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
+  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (moreHeld) delete process.env.TPS_KITMORE; if (gunHeld) delete process.env.TPS_GUNSLOTS; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2469,6 +2474,7 @@ if (on('kitlent-tiles', 'kitlent', 'kit', 'all')) await run('kitlent-tiles', asy
 if (on('kitcan-tiles', 'kitcan', 'kit', 'all')) await run('kitcan-tiles', async () => (await import('./kitcan-check.ts')).canTiles());   // the can on the guns tile and the roster's drawing, your pistol alone named for it
 // THE SQUAD'S KIT IS DEALT OVER THE MEN WHO COME (src/game/kit.ts KITDEAL; tools/qa/kitdeal-check.ts sets its switches itself; KITDEAL_BREAK=1 must fail)
 if (on('kitdeal-cards', 'kitdeal', 'kit', 'all')) await run('kitdeal-cards', async () => (await import('./kitdeal-check.ts')).dealCards());   // nobody of three or four comes bare, the squad's count is the count it was
+if (on('kitdeal-more', 'kitdeal', 'kit', 'all')) await run('kitdeal-more', async () => (await import('./kitdeal-check.ts')).dealMore());   // KITDEAL.more: a tool each pair as issued, nobody with a gun alone (KITMORE_BREAK=1 must fail)
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the same run by digest; cards dealt for four staged smaller; a mission's own issue
 if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 if (on('kitdeal-stands', 'kitdeal', 'kit', 'all')) await run('kitdeal-stands', async () => (await import('./kitdeal-check.ts')).dealStands());   // the two stands, the registry, a recording's tables
