@@ -709,17 +709,18 @@ export class Destruction {
     PALL_STATS.emitters++; return true;
   }
   /** A WALL CHARGE'S PALL: `p` on the wall's face at the charge (the floor), `n` off that face toward the charge's side, `t` along the wall, the wall `thick` m,
-   *  `through` whether the blast opened a way through (the far side's part goes only then). Called once by the charge (wallcharge.ts blow). */
-  pallWall(p: Vec3, n: Vec3, t: Vec3, thick: number, through: boolean, surf: Surf = 'drywall') {
+   *  `through` whether the blast opened a way through (the far side's part goes only then); `gain` on the density asked of the solver and on the picture's own
+   *  dust with it (the charge's WALLSHOT.pall: 1 = the table's own). Called once by the charge (wallcharge.ts blow). */
+  pallWall(p: Vec3, n: Vec3, t: Vec3, thick: number, through: boolean, surf: Surf = 'drywall', gain = 1) {
     if (!this.pallTake(true)) return; const K = CHAOS.pall, R = K.wall, tint = dustTint(surf), P = gpuFx(this.g);
     for (const side of [1, -1]) {
       if (side < 0 && !through) break; const N = side > 0 ? R.near : R.far, base = v3.mad(p, n, side > 0 ? 0.08 : -(thick + 0.08)), nn = v3.scale(n, side); let took = 0;
       if (K.solver) for (let k = 0; k < N; k++) {
         const j = this.pallHash(p, k * 2 + (side > 0 ? 0 : 41)), j2 = this.pallHash(p, k * 2 + (side > 0 ? 1 : 42)), du = N > 1 ? (k / (N - 1) - 0.5) * 2 * R.spread : 0;
         const pos: Vec3 = [base[0] + nn[0] * R.out * (0.6 + 0.8 * j2) + t[0] * du, 0.45 + 1.1 * j, base[2] + nn[2] * R.out * (0.6 + 0.8 * j2) + t[2] * du];
-        if (this.pallEmit(R, [base[0] + nn[0] * 0.1, 1.0, base[2] + nn[2] * 0.1], pos, v3.normalize([nn[0] + t[0] * du * 0.35, 0.3, nn[2] + t[2] * du * 0.35]), j2, tint)) took++;
+        if (this.pallEmit(R, [base[0] + nn[0] * 0.1, 1.0, base[2] + nn[2] * 0.1], pos, v3.normalize([nn[0] + t[0] * du * 0.35, 0.3, nn[2] + t[2] * du * 0.35]), j2, tint, gain)) took++;
       }
-      const count = R.dust[side > 0 ? 0 : 1];   // (the picture's own layer goes with the solver's part or — its part switched off — alone; never over a solver that took none of it: a cloud nobody is hidden by)
+      const count = Math.round(R.dust[side > 0 ? 0 : 1] * gain);   // (the picture's own layer goes with the solver's part or — its part switched off — alone; never over a solver that took none of it: a cloud nobody is hidden by)
       if (P && count > 0 && (took > 0 || !K.solver)) PALL_STATS.dust += emitDust(P, [base[0] + nn[0] * 0.3, 0.9, base[2] + nn[2] * 0.3], v3.normalize([nn[0], 0.25, nn[2]]), count, { shape: 'puff', speed: R.dustSpeed, speedJit: 0.7, lift: 0.12, life: R.dustLife, lifeJit: 0.35, size: R.dustSize, sizeJit: 0.4, posJit: 0.6, color: v3.scale(tint, 0.8) });
     }
   }

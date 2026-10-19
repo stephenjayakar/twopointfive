@@ -25,7 +25,7 @@
 // WHAT IT CANNOT SAY. No GPU: no light meter (the estimate has no bounce light), no smoke, no feel. A bot's reaction time and dead-centre cursor are not a
 // person's. The numbers order the styles against each other on game logic; how hard it should be is a call for a person at the keys.
 import { standUp, ROOT } from './headless.ts';
-const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
+const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`), { RESCUEEND } = await import(`${ROOT}/src/game/rescueend.ts`);
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { roomOf } = await import(`${ROOT}/src/game/chronicle.ts`);
@@ -33,6 +33,9 @@ const { PLAYER_ID, INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 
 type Vec3 = [number, number, number];
 const DT = 1 / 60;
+/** the page's ending (rescueend.ts): seconds the taken room is held with nobody of theirs shown and nothing said on their net before the scripted player
+ *  leads the hostages out (a man who has just said he is coming is waited for: a player hears him too) */
+const LEAD_AFTER = 20;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f1 = (x: number | undefined | null) => (x !== undefined && x !== null && Number.isFinite(x) ? x.toFixed(1) : '—');
@@ -219,6 +222,38 @@ export class Run {
     return d.lockBroken || Math.abs(d.angle) > 0.4;
   }
 
+  /** THE ENDING AS THE PAGE HAS IT (rescueend.ts, its switch up — the page's stand; never asked on the frozen one, where the room held ends the run): the
+   *  room taken ends nothing there, so Sam does what the objective row asks of a player — up to the nearest hostage, Space ('on your feet — with me'), and
+   *  back to the way in with them behind him. His eyes and his trigger stay his own on the walk (step()); a run won cleared on the way is won cleared */
+  leadOut(): boolean {
+    const R = this.R, nav = this.g.col.nav;
+    if (!R.ending.lead) {
+      const up = R.hostages.filter((h: any) => h.state !== 'dead').sort((a: any, b: any) => flat(a.char.pos, this.pos) - flat(b.char.pos, this.pos));
+      for (const h of up) { const p = h.char.pos, dx = this.pos[0] - p[0], dz = this.pos[2] - p[2], L = Math.hypot(dx, dz) || 1;
+        const q = nav.nearestFreePoint(p[0] + dx / L * 1.1, p[2] + dz / L * 1.1) ?? p;   // (free floor beside her, on his side of her)
+        this.go([q[0], 0, q[2]], { max: 4 + flat(this.pos, q) / 1.2 });
+        if (this.until(() => this.g.selectVerb('guard', 'lead'), 0.8)) { this.I.pressed.add(INTERACT_KEY); this.step(2); }
+        if (R.ending.lead) break; }
+      if (!R.ending.lead) { this.say('(no row on a hostage yet: nobody is led)'); return false; }
+      this.say('Sam gets the hostages on their feet and makes for the way in');
+    }
+    const out = R.ending.out; return !!out && this.go(out, { max: 90, dodge: true });
+  }
+  private quiet = NaN; private heldT = -1e9; private leadT = -1e9; private cueSeen = 0; private cueT = -1e9; private cued = new Set<string>();
+  /** ONE STEP OF THE ROOM HELD (finish(), on either floor). On the frozen stand that is all there is to do: the hold ends the run. With the page's ending
+   *  up he waits for whoever is coming — `LEAD_AFTER` s with no man of theirs shown and nothing SAID on their net (a man's first word, and 'they're gone':
+   *  the lines the radio strip carries; a man's later errands are not announced and are not waited on) — and then leads the hostages out, asking again
+   *  every few seconds until the word has taken and he stands at the way in */
+  hold() {
+    const R = this.R; if (!RESCUEEND.on) { this.step(); return; }
+    for (; this.cueSeen < R.log.length; this.cueSeen++) { const l = R.log[this.cueSeen], m = /^flush:(?:(?:room|side|noise|out):(.+)|gone:)/.exec(l.what); if (!m) continue;
+      if (m[1] !== undefined) { if (this.cued.has(m[1])) continue; this.cued.add(m[1]); } this.cueT = l.t; }
+    if (this.t - this.heldT > 1 || this.defenders.some((h: any) => this.shown(h))) this.quiet = this.t;   // (the room only just the team's again, or a man of theirs on the picture)
+    this.heldT = this.t;
+    const out = R.ending.out, there = !!R.ending.lead && !!out && flat(this.pos, out) < 1.5;
+    if (!there && this.t - this.quiet >= LEAD_AFTER && this.g.time - this.cueT >= LEAD_AFTER && this.t - this.leadT >= 5) { this.leadT = this.t; this.leadOut(); } else this.step();
+  }
+
   // ── the commander ──
   floorT(p: Vec3) { const s = this.O.freeSpot(p); return s ? { kind: 'floor', at: s } : null; }
   doorT(name: string) { const d = this.door(name); return { kind: 'door', at: [d.frameCentre[0], 0, d.frameCentre[2]], door: d, side: sideOf(d, this.pos) }; }
@@ -252,7 +287,7 @@ export class Run {
     let self = false;
     for (;;) {
       const R = this.R, ops = this.ops;
-      if (R.state === 'secured') { this.step(); continue; }
+      if (R.state === 'secured') { this.hold(); continue; }
       if (!ops.length && !self) { self = this.solo = true; this.say('the pair are down — Sam takes the room himself'); }
       if (self) { this.shootOnMove = true; if (!inBox(this.pos, OFFICE)) { this.watch = null; this.go(AT.doorFront, { max: 20 }); if (!this.kick('manager')) this.wait(0.5); this.go(AT.in1, { max: 6 }); this.go(AT.in2, { max: 6 }); } this.watch = [27.5, 1.1, 7.2]; this.wait(1); continue; }
       if (!this.onTheDoor && this.t - this.lastF > 3) {

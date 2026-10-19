@@ -56,7 +56,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `volumes[]` | `{ id, kind hide\|utility\|trigger, floor?, c, h, yaw?, notes? }` | none yet |
 | `devices[]` | camera / keypad / laser union | the level-design devices (`game/devices.ts`) — see *Devices* below |
 | `vents[]?` | `{ id, floor?, pos, dir, speed, spread, reach, size?, period?, duty?, phase?, mains?, notes? }` | HVAC supply vents (`game/wind.ts`) — see *Vents* below; optional block, absent = still air indoors |
-| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
+| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
 | `breaker` | `{ pos, panel, led }` | box ids |
@@ -243,6 +243,12 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   seconds after he first hears gunfire — those men down first, nobody calls. A block without `raid` answers a quiet night gone loud, never a raid. No compass words
   in a way's name. The block is words and marks only: it does not move the level's fingerprint. Checks: `bun run tools/qa/response-check.ts` (which
   levels carry one — its `WITH` list is the written-down answer — every block against its built floor, a call played through on each).
+- `doorNames` — WHAT A DOOR IS CALLED where its id cannot say it (`game/doornames.ts`, switch key `WORDS.doors`): `[{ door, name }]`, a row a door. `door`
+  is a door id of this level, at most once; `name` is 1 to 40 characters, written as the squad's row reads it ('yard gate', 'records side door': no 'the',
+  no bearing — the HUD has no compass). It is for a door whose id carries a bearing or a letter and that the room clear structure does not list, or a
+  level with no structure; a door with no row keeps the name it had. Every line that names the door then says this name. Words only: it does not move the
+  level's fingerprint. Checks: the validator (the door exists, once, the name's length) and `bun run tools/qa/probes.ts words-doornames` (no bearing, no
+  two doors of a level called the same, and the list of doors still owed a name — a door named here comes off `DOORS_OWED` in the same change).
 - `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
   it, and a level without the block shows the menu's standing man as before): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
   `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked
