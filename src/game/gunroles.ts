@@ -5,9 +5,12 @@
 // is dealt from weapons.ts WEAPONS as it is staged (gunDeal, called by nightbreach.ts and rescue.ts once the men stand on their marks), by the game's own die:
 //   · ONE BELT-FED GUN (the PKM row) at most, to the man whose post looks down the longest line — if that line is a LANE (`beltLane` metres of clear floor from
 //     his mark toward what he watches, in a cast of `beltMin` men or more) or the cast is a BIG one (`beltSquad` men). Neither: nobody has one.
-//   · A PISTOL for the men who would carry one: a man with a hostage in his other hand (the rescue's captor), and — one in `pistolShare`, a quarter of the
-//     cast at most (`pistolMax`) — a man whose post watches something within `pistolNear` metres (a door at arm's length, a closet). Never the man on the
-//     long line.
+//   · A PISTOL for the men who would carry one: one in `pistolShare`, a quarter of the cast at most (`pistolMax`), of the men whose post watches something
+//     within `pistolNear` metres (a door at arm's length, a closet). Never the man on the long line.
+//   · THE MAN WITH A HOSTAGE IN HIS HAND IS NOT DEALT (`captor` off): he keeps the gun his scenario gave him. He was dealt a pistol for a day (10-18), and a
+//     set hostage room then cost the entering pair 7 of 12 men over six seeds where it had cost none (rescue-probes.ts rescue-set, the page's stand): with a
+//     pistol up he had the men stacking on his door in his eye before the boot, and shot them there. What that man carries and does is the rescue's to say;
+//     `captor` on is the pistol again, for whoever tunes that room with it.
 //   · THE RIFLES: each other man an AKMS (`akms` of them, by the die) or the short carbine he always had.
 // A die is drawn for every man whatever he is then given, so one man's gun never moves the next man's. Nobody is harder to put down: every row is `oneShot`.
 //
@@ -47,6 +50,8 @@ export const GUNROLES = {
   /** a pistol: a post watching something within this (m) · the share of such men who carry one · and of a whole cast at most this share (the man with a
    *  hostage in his hand is not counted) */
   pistolNear: 4, pistolShare: 0.5, pistolMax: 0.25,
+  /** the man with a hostage in his hand is dealt a pistol too (the head comment: off, he keeps the gun his scenario gave him) */
+  captor: false,
   /** a gun used for what it is for (the head comment): the stack's marks and the turn through the door · the cover's deal · the room fight's strings ·
    *  a belt-fed defender keeping his post */
   use: true, entry: true, lanes: true, strings: true, post: true,
@@ -104,6 +109,7 @@ export function gunDeal(g: Game, men: DealMan[]): { gd: Guard; gun: WeaponId; li
   const near = men.map((_m, i) => i).filter(i => i !== belt && !men[i].hostage && line[i] < K.pistolNear && draws[i][0] < K.pistolShare).sort((a, b) => draws[a][0] - draws[b][0] || a - b);
   const pistol = new Set(near.slice(0, Math.floor(men.length * K.pistolMax)));
   const out = men.map((m, i) => {
+    if (m.hostage && !K.captor) return { gd: m.gd, gun: m.gd.weapon.def.id, line: line[i] };   // (not dealt: the gun his scenario gave him)
     const gun: WeaponId = i === belt ? 'pkm' : m.hostage || pistol.has(i) ? 'guard9mm' : draws[i][1] < K.akms ? 'akms' : 'aks74u';
     gunHand(m.gd, gun); const got = m.gd.weapon.def.id;
     GUNROLES_STATS.dealt++; if (got === 'pkm') GUNROLES_STATS.belt++; else if (got === 'guard9mm') GUNROLES_STATS.pistol++; else if (got === 'akms') GUNROLES_STATS.akms++;

@@ -93,6 +93,7 @@ import { STAYASK } from '../game/stayask';
 import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
 import { RESCUEEND } from '../game/rescueend';
+import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
@@ -113,6 +114,7 @@ import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
+import { LIGHTSWITCH } from '../game/lightswitch';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
@@ -237,6 +239,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RECAP.liveArrows = q.get('recaparrows') === '1';   // …with nothing DRAWN for the way it came from: no arrow on his row, no stroke on the ground at him ("we shouldn't show the arrows, feels unrealistic"); ?recaparrows=1 = both drawn, as they were
   QUICKTHROW.on = q.has('quickthrow') && q.get('quickthrow') !== '0';   // the G quick throw (game/quickthrow.ts): GONE from the page — a can is thrown from its slot with a click; ?quickthrow = back for the visit
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
+  LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
@@ -260,6 +263,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SQUADDEAL.on = !q.has('nosquaddeal');   // squads from the rooms (game/squaddeal.ts): a level whose file names no squads is handed some cut from its rooms, so a loud way in and a quiet one each draw their own move there too — ON in the page; ?nosquaddeal = such a level's defenders are one pool, as they were
   STAYASK.on = !q.has('nostayask');   // squads that stay in their rooms still miss a room that goes silent (game/stayask.ts): on a floor where every squad stays (the block, Mousehole) the net's roll call runs and the nearest squad sends one man to the silent rooms — ON in the page; ?nostayask = nobody there asks after another squad, as it was
   KITLOAD.on = !q.has('nokitload');   // lighter kit moves faster and hides better (game/kitload.ts): what a man's card carries gives him a mobility and a concealment score, and they are his legs' pace, the notice he builds in an eye and his footfall — you and every teammate; an issued card plays as it did — ON in the page; ?nokitload = nobody's card is read, as it was
+  SNATCHOUT.on = !q.has('nosnatchout'); SNATCHOUT.hold = !q.has('nosnatchhold');   // how a snatch ends (game/snatchout.ts): tied, the man is led by the player (Space on him: on your feet — with me) to the team's van by its way in, and in it the mission is won, the house taken or not; the squad covers the walk out by bounds, unasked — ON in the page; ?nosnatchout = the house taken with him in hand wins it, as it was (and nobody answers the gunfire: qrf.ts); ?nosnatchhold = the squad does only what it is told
   RESCUEEND.on = !q.has('norescueend');   // how a rescue is won (game/rescueend.ts): the hostages led out the way the team came in (Space on one: on your feet — with me), or nobody of theirs left on the floor — ON in the page; ?norescueend = the room held fifteen seconds wins it, as it was
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
@@ -436,6 +440,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'KITLOAD.on': 'TPS_KITLOAD=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
   'RESCUEEND.on': 'TPS_RESCUEEND=1',
+  'SNATCHOUT.on': 'TPS_SNATCHOUT=1',
   'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'EXACT.on': 'TPS_EXACT=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
@@ -455,6 +460,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRIENDS.noSnap': 'TPS_FRIENDS=1',
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
   'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
+  'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
   'WALLCHARGE.farFurn': 'TPS_WALLFURN=1',

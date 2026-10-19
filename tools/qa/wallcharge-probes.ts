@@ -250,8 +250,9 @@ async function probeSquad(scn: string): Promise<boolean> {
   if (!op) return F.done();
   const W = op.wall, cp = chargePt(W);
   const setOk = R.until(() => C.set.length === 1, 45), tSet = game.time, lead = op.lead;
-  F.verdict(setOk && D.charges === c0 - WALLCHARGE.cost && flat(lead.char.pos, op.spot) < WALLCHARGE.setNear && R.spoke.some(s => s.who === lead.callsign && s.text === 'charge set.'), 'a man sets it at the wall: on the wall after setSecs, one charge out of the bag, \'charge set.\'',
-    `${lead.callsign} at ${at(lead.char.pos)} (${f2(flat(lead.char.pos, op.spot))} m off his spot) · charges ${c0} → ${D.charges} · ${R.beats(op)}`);
+  const setAt = at(lead.char.pos), setOff = flat(lead.char.pos, op.spot), word = R.until(() => R.spoke.some(s => s.who === lead.callsign && s.text === 'charge set.'), 4);   // (wallcharge.ts WALLKILL: his word comes once he is clear of the charge — with the rule off, on the frame it is set and nothing is stepped here)
+  F.verdict(setOk && D.charges === c0 - WALLCHARGE.cost && setOff < WALLCHARGE.setNear && word, 'a man sets it at the wall: on the wall after setSecs, one charge out of the bag, \'charge set.\'',
+    `${lead.callsign} at ${setAt} (${f2(setOff)} m off his spot) · charges ${c0} → ${D.charges} · ${R.beats(op)}`);
   const armed = R.until(() => op.phase === 'armed', 45);
   const dists = R.up.map((m: any) => ({ m, d: flat(m.char.pos, cp), off: wallOff(W, m.char.pos) }));
   F.verdict(armed && dists.every(x => x.d >= WALLCHARGE.standoff[WALLCHARGE.standoff.length - 1] - 0.35 && x.off > 0) && R.spoke.some(s => s.text === 'stood off. your call.') && R.said.some(s => /charge set on the wall — F blows it/.test(s)),

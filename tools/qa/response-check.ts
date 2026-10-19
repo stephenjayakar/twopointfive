@@ -49,9 +49,9 @@ const { raiseEscalation } = await import(`${ROOT}/src/game/guards.ts`);
 type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.RESPONSE_BREAK === '1';
 /** the levels that have a team, and nobody else (a level added to this list has its reason in its file's `why` and in docs/agents/enemies.md) */
-const WITH = ['bazaar.json', 'crossing.json', 'depot-gwot.json', 'depot.json', 'police-post.json', 'records-gwot.json', 'records.json'];
+const WITH = ['bazaar.json', 'crossing.json', 'depot-gwot.json', 'depot.json', 'police-post.json', 'records-gwot.json', 'records.json', 'snatch.json'];
 /** …of them, the ones whose team answers a squad's raid (ResponseData.raid), with the mission that raids them */
-const RAIDS: Record<string, string> = { 'depot.json': '?roomclear&squad=4', 'depot-gwot.json': '?roomclear&squad=4', 'records.json': '?roomclear&squad=2', 'records-gwot.json': '?roomclear&squad=2' };
+const RAIDS: Record<string, string> = { 'depot.json': '?roomclear&squad=4', 'depot-gwot.json': '?roomclear&squad=4', 'records.json': '?roomclear&squad=2', 'records-gwot.json': '?roomclear&squad=2', 'snatch.json': '?roomclear&squad=4' };
 const f1 = (x: number) => x.toFixed(1), flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]), at = (p: number[]) => `${f1(p[0])},${f1(p[2])}`;
 function seeded(a: number) { return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log; console.log = () => {}; try { return await f(); } finally { console.log = log; } }

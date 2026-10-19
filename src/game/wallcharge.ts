@@ -256,6 +256,8 @@ export interface WallOp {
   wall: WallSpot; men: Guard[]; lead: Guard; phase: Phase; t0: number;
   /** where the setter stands · when he began setting it (NaN: not yet) */
   spot: Vec3; setT: number;
+  /** WALLKILL: the setter's 'charge set.' is owed — said once he is `nearM` off the charge he set, not with his hands still on it (absent: said, or the rule off) */
+  owes?: boolean;
   /** the assignments this order handed out (a man whose assignment is no longer this one has been re-ordered: he is not ours) · each man's stand-off mark */
   mine: Map<Guard, Assignment>; post: Map<Guard, Vec3>; from: Map<Guard, Vec3>;
   /** the hole as it opened: its centre along the wall (metres from the charge) and half its width — null until the blast */
@@ -926,12 +928,14 @@ export class WallCharge {
         if (!this.chargeOn(W)) {
           const paid = this.take(); if (paid < 0) { g.say(lead, this.noneWords()); this.end(op, 'no charges'); break; }
           this.set.push({ wall: W, t, by: lead.callsign, paid, ...(this.freeSet ? { free: true } : {}) }); g.audio.play('lockPick', wallPt(W, 0, 0, K.height), 0.6); g.destr.furn.warm(); }
-        g.say(lead, 'charge set.'); this.beat(op, 'set');
+        if (WALLKILL.on) op.owes = true; else g.say(lead, 'charge set.');   // (WALLKILL: his word is what sends a thumb to the trigger, and at the wall the charge kills him — he says it once he is clear of it, below)
+        this.beat(op, 'set');
         this.standOff(op, lead); op.phase = 'standoff'; op.t0 = t;
         break;
       }
       case 'standoff': {
         if (!this.chargeOn(W)) { this.end(op, 'the charge is gone'); break; }
+        if (op.owes && flat(lead.char.pos, wallPt(W, 0, 0)) >= WALLKILL.nearM) { op.owes = false; g.say(lead, 'charge set.'); }   // (a man who cannot get that far says only the call below)
         if (!op.men.every(gd => op.mine.get(gd)!.arrived) && this.waiting(op, el)) break;
         // (WALLCHARGE.safe: said by the man who calls it, once, where the floor left them inside the radius)
         g.say(lead, (op.close || WALLCHARGE.safe) && op.men.some(m => this.blastShare(W, m.char.pos, undefined, false) > 0) ? "can't get clear of it. your call." : 'stood off. your call.'); g.msg(`charge set on the wall — ${DOORTOOLS.blowKey.replace('Key', '')} blows it`);
