@@ -50,36 +50,42 @@ async function open(browser, extra, mission = 'depot-four') {
   return { ctx, page, read, pick, key, shot };
 }
 const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, shells: m?.shells, big: m?.big, walls: m?.walls });
+// A TOOL EACH PAIR (game/kit.ts KITDEAL.more, on as the page opens): of four, Blue Two is LENT the hammer. So on his card the hammer is worn before a paste of
+// Red One's kit and after it, its tile does not move, and the store leaves his slot to the deal: a tool a man is only lent is never written, by a paste either.
+// `?nokitmore` (the first part is run a second time on it): nobody is lent one, the hammer is written with the rest and four tiles move.
+const counted = m => J({ ...kitOf(m), big: '' });
 
 (async () => {
   const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
-  { const P = await open(browser, BREAK ? '&nokitcopy' : '');
+  for (const more of [true, false]) { const P = await open(browser, (BREAK ? '&nokitcopy' : '') + (more ? '' : '&nokitmore')), chk = (ok, label, detail) => check(ok, label + (more ? '' : ' [?nokitmore]'), detail);
+    if (!more) P.shot = async () => {};
     const a = await P.read(); await P.shot('paste-0-open');
-    check(!!a.copy && !!a.paste && a.sets.length === 3 && a.sets3 === 3 && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[2].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1),
+    chk(!!a.copy && !!a.paste && a.sets.length === 3 && a.sets3 === 3 && a.copy.top === a.sets[0].top && a.paste.top === a.sets[0].top && a.copy.left > a.sets[2].right && a.paste.left >= a.copy.right && (!a.head || a.paste.right <= a.head.left + 1),
       'the card has Copy and Paste at the end of the sets\' line, on that one line, clear of the pouches', `sets ${J(a.sets)} · copy ${J(a.copy)} · paste ${J(a.paste)} · pouches ${J(a.head)}`);
-    check(!!a.paste && a.paste.off && !a.copy.on && a.marks.length === 0, 'nothing copied yet: Paste is dim, Copy is not lit, nobody on the roster is marked', `paste off ${a.paste?.off} · copy on ${a.copy?.on} · marks ${J(a.marks)}`);
-    check(/C copy/.test(a.legend) && /V paste/.test(a.legend), 'the key line names the two keys', a.legend);
+    chk(!!a.paste && a.paste.off && !a.copy.on && a.marks.length === 0, 'nothing copied yet: Paste is dim, Copy is not lit, nobody on the roster is marked', `paste off ${a.paste?.off} · copy on ${a.copy?.on} · marks ${J(a.marks)}`);
+    chk(/C copy/.test(a.legend) && /V paste/.test(a.legend), 'the key line names the two keys', a.legend);
     // copy Red One by the key, from the roster's row
     await P.pick(1); const w0 = (await P.read()).writes; await P.key('KeyC'); const b = await P.read(); await P.shot('paste-1-copied');
-    check(!!b.copy && b.copy.on && b.paste.off && J(b.marks) === '[1]' && b.glyphs === 1 && b.writes === w0 && J(b.kit.map(kitOf)) === J(a.kit.map(kitOf)),
+    chk(!!b.copy && b.copy.on && b.paste.off && J(b.marks) === '[1]' && b.glyphs === 1 && b.writes === w0 && J(b.kit.map(kitOf)) === J(a.kit.map(kitOf)),
       'C on Red One: Copy is lit and Paste dim on his card (he wears it), his chip is marked, and no card or store is written', `copy on ${b.copy?.on} · marks ${J(b.marks)} · writes +${b.writes - w0}`);
     // paste onto Blue Two by the key
     await P.pick(4); const c0 = await P.read(); await P.key('KeyV'); const c = await P.read(); await P.shot('paste-2-pasted');
-    check(!!c0.copy && !c0.copy.on && !c0.paste.off, 'on Blue Two\'s card, before: Copy is not lit and Paste is live', `copy on ${c0.copy?.on} · paste off ${c0.paste?.off}`);
-    check(J(kitOf(c.kit[4])) === J(kitOf(c.kit[1])) && c.kit[4].big === 'hammer' && c.kit[4].bangs === 2 && c.writes - c0.writes === 1,
-      'V on Blue Two: the store holds Red One\'s kit on him, the hammer in his big slot, in ONE write', `Blue Two ${J(kitOf(c.kit[4]))} · writes +${c.writes - c0.writes}`);
-    check(J([...c.flash].sort()) === J(['bangs', 'big', 'charges', 'frags']) && J(c.marks) === '[1,4]' && c.copy.on && c.paste.off && c.member === 4 && c.sel === c0.sel,
-      'the four tiles that moved flash, his chip is marked beside Red One\'s, Copy is lit and Paste dim, and the highlight is where it was', `flash ${c.flash.join(' ')} · marks ${J(c.marks)} · highlighted tile ${c0.sel} → ${c.sel}`);
+    chk(!!c0.copy && !c0.copy.on && !c0.paste.off, 'on Blue Two\'s card, before: Copy is not lit and Paste is live', `copy on ${c0.copy?.on} · paste off ${c0.paste?.off}`);
+    chk(counted(c.kit[4]) === counted(c.kit[1]) && c.kit[4].big === (more ? 'none' : 'hammer') && /hammer/i.test(c.big) && (more ? /hammer/i.test(c0.big) : !/hammer/i.test(c0.big)) && c.kit[4].bangs === 2 && c.writes - c0.writes === 1,
+      (more ? 'V on Blue Two: he wears Red One\'s kit, the hammer in his big slot as before the paste; the store holds the counts, in ONE write, and leaves his slot to the deal that lends him that hammer'
+        : 'V on Blue Two: the store holds Red One\'s kit on him, the hammer in his big slot, in ONE write'), `Blue Two ${J(kitOf(c.kit[4]))} · his Big slot tile '${c0.big}' → '${c.big}' · writes +${c.writes - c0.writes}`);
+    chk(J([...c.flash].sort()) === J(more ? ['bangs', 'charges', 'frags'] : ['bangs', 'big', 'charges', 'frags']) && J(c.marks) === '[1,4]' && c.copy.on && c.paste.off && c.member === 4 && c.sel === c0.sel,
+      (more ? 'the three tiles that moved flash (his Big slot tile read the hammer already)' : 'the four tiles that moved flash') + ', his chip is marked beside Red One\'s, Copy is lit and Paste dim, and the highlight is where it was', `flash ${c.flash.join(' ')} · marks ${J(c.marks)} · highlighted tile ${c0.sel} → ${c.sel}`);
     await P.key('KeyV'); const c2 = await P.read();
-    check(c2.writes === c.writes && J(c2.kit) === J(c.kit), 'V again: nothing to change, nothing written', `writes +${c2.writes - c.writes}`);
+    chk(c2.writes === c.writes && J(c2.kit) === J(c.kit), 'V again: nothing to change, nothing written', `writes +${c2.writes - c.writes}`);
     // paste onto you by the button
     await P.pick(0); await P.page.click('#missions.one #loadout .kc-clip[data-clip="paste"]', { timeout: 3000 }).catch(() => { /* no button (the break) */ }); await P.page.waitForTimeout(120); const d = await P.read(); await P.shot('paste-3-you');
-    check(d.kit[0].bangs === 2 && d.kit[0].charges === 1 && d.kit[0].frags === 1 && d.kit[0].big === 'hammer' && d.kit[0].shells === 0 && d.kit[0].smoke === 0 && d.writes - c2.writes === 1 && J(d.marks) === '[0,1,4]',
+    chk(d.kit[0].bangs === 2 && d.kit[0].charges === 1 && d.kit[0].frags === 1 && d.kit[0].big === 'hammer' && d.kit[0].shells === 0 && d.kit[0].smoke === 0 && d.writes - c2.writes === 1 && J(d.marks) === '[0,1,4]',
       'the Paste button on your card: his kit is yours (your launcher round and smoke go: his card has none), one write, three men marked', `you ${J(kitOf(d.kit[0]))} · writes +${d.writes - c2.writes} · marks ${J(d.marks)}`);
     // a card with an empty big slot, by Ctrl+C / Ctrl+V onto you: the chord copies and pastes as the plain keys do, and the paste hands over the whole card —
     // the hammer the last paste left in your big slot goes with the rest
     await P.pick(3); await P.key('Control+KeyC'); const e0 = await P.read(); await P.pick(0); await P.key('Control+KeyV'); const e = await P.read(); await P.shot('paste-4-chord');
-    check(J(e0.marks) === '[3]' && d.kit[0].big === 'hammer' && e.kit[0].charges === 2 && e.kit[0].big === 'none' && e.kit[0].bangs === 0 && e.writes - e0.writes === 1 && J(e.marks) === '[0,3]',
+    chk(J(e0.marks) === '[3]' && d.kit[0].big === 'hammer' && e.kit[0].charges === 2 && e.kit[0].big === 'none' && e.kit[0].bangs === 0 && e.writes - e0.writes === 1 && J(e.marks) === '[0,3]',
       'Ctrl+C on Blue One (two door charges, nothing in his big slot), Ctrl+V on you: his two door charges and his empty big slot (the hammer you had goes); you are marked as wearing it',
       `his Big slot tile reads '${e0.big}', yours after '${e.big}' · marks after copy ${J(e0.marks)} · you ${J(kitOf(e.kit[0]))} · writes +${e.writes - e0.writes} · marks ${J(e.marks)}`);
     await P.ctx.close(); }
@@ -89,8 +95,8 @@ const kitOf = m => ({ bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smo
     await P.pick(1); await down({ key: 'c', code: 'KeyC', metaKey: true }); const a = await P.read();
     await P.pick(4); await down({ key: 'v', code: 'KeyV', metaKey: true }); const b = await P.read();
     await P.pick(2); await down({ key: 'c', code: 'KeyC' }); const c = await P.read();
-    check(J(a.marks) === '[1]' && J(kitOf(b.kit[4])) === J(kitOf(b.kit[1])) && b.kit[4].big === 'hammer' && b.writes - a.writes === 1 && J(c.marks) === '[2]',
-      'Cmd+C on Red One, Cmd+V on Blue Two, no keyup for either letter: copied, pasted in one write; and a plain C after them still copies (Red Two)', `marks ${J(a.marks)} → ${J(b.marks)} → ${J(c.marks)} · Blue Two ${J(kitOf(b.kit[4]))} · writes +${b.writes - a.writes}`);
+    check(J(a.marks) === '[1]' && counted(b.kit[4]) === counted(b.kit[1]) && b.kit[4].big === 'none' && /hammer/i.test(b.big) && b.writes - a.writes === 1 && J(c.marks) === '[2]',   // (Blue Two's slot is the deal's: above)
+      'Cmd+C on Red One, Cmd+V on Blue Two, no keyup for either letter: copied, pasted in one write; and a plain C after them still copies (Red Two)', `marks ${J(a.marks)} → ${J(b.marks)} → ${J(c.marks)} · Blue Two ${J(kitOf(b.kit[4]))}, his Big slot tile '${b.big}' · writes +${b.writes - a.writes}`);
     // a Dvorak board: C and V go by the LETTER on the key (c is where QWERTY has I, v where it has the full stop; QWERTY's C key types j)
     await P.pick(1); await down({ key: 'j', code: 'KeyC' }); const d = await P.read();
     await down({ key: 'c', code: 'KeyI' }); const e = await P.read();
