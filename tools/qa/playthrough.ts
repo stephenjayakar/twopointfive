@@ -230,6 +230,7 @@ const { knobRegistry, knobsCopy, knobsBack } = await import(`${ROOT}/src/game/kn
 const { DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);   // (doors stay where they are left: --set '{"DOORSTAY":{"on":false}}' = every leaf with its closer, as before the switch)
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { RESCUEEND } = await import(`${ROOT}/src/game/rescueend.ts`);
+const { SNATCHOUT } = await import(`${ROOT}/src/game/snatchout.ts`);
 const { DIGIN, DIGIN_STATS, DIGIN_LOG, DIGIN_SHUT, digInSet } = await import(`${ROOT}/src/game/digin.ts`);
 const { PRESSURE, pressureStats } = await import(`${ROOT}/src/game/pressure.ts`);
 const { DRILLED } = await import(`${ROOT}/src/game/roomfight.ts`);
@@ -1021,6 +1022,24 @@ function snatchTake(P: Player) {
     P.until(() => !!S.end || S.inHand, 6);
   }
 }
+/** A SNATCH THAT ENDS IN THE VAN (src/game/snatchout.ts — SNATCHOUT.on and the level's block names one): the man in hand, the commander walks to him, gives him
+ *  the word and walks him to the van's doors. He gives the squad NO order on the way: what it does then is its own (the bounds — `--set SNATCHOUT.hold=false` puts
+ *  them off for a paired run). True = the rooms are no longer his to work */
+function snatchOut(P: Player): boolean {
+  const g = P.g, S = g.snatch, X = S?.out; if (!S?.active || !X?.ruled || S.end || !S.inHand) return false;
+  const V = X.van as Vec3;
+  for (let k = 0; k < 4 && !S.end && !g.player.down; k++) {
+    if (!X.lead) {
+      const p = S.man.char.pos, q = P.free([p[0], 0, p[2]]) ?? p, stop0 = P.stop; P.stop = () => !!S.end || flat(P.pos, S.man.char.pos) < 1.8; P.go(q, 40); P.stop = stop0;
+      if (!X.word(g.player.char)) { P.wait(1); continue; }
+      P.say(`snatch: ${S.man.civ.name} on his feet at ${at(S.man.char.pos)} — to the van ${at(V)}, ${P.hostiles.filter((h: any) => h.state !== 'dead').length} of theirs still up`);
+    }
+    const to: Vec3 = P.free([V[0] + 1.4, 0, V[2] - 0.5]) ?? V, stop0 = P.stop; P.stop = () => !!S.end; P.go(to, 120); P.stop = stop0;
+    P.until(() => !!S.end, 8);
+  }
+  P.say(`snatch: ${S.end ?? 'no end'} — ${S.why || 'still running'} · ${X.bounds} bound${X.bounds === 1 ? '' : 's'} · team ${P.upAll.length}`);
+  return true;
+}
 /** between rooms: the man is loose and has stopped (hands up, or gone to ground in a corner with both ways out held) — he is the next thing done, before
  *  the next room: left alone he runs again */
 function snatchSecure(P: Player) {
@@ -1089,7 +1108,7 @@ function playRooms(P: Player) {
   P.fallIn(); P.wait(1.5);
   if (BREAKER) { cutMains(P); P.fallIn(); P.wait(1.5); }
   for (let round = 0; round < 24; round++) {
-    snatchSecure(P);
+    snatchSecure(P); if (snatchOut(P)) return;
     if (!P.up.length && P.upAll.length) { snatchTake(P); if (!P.up.length) { P.wait(2); continue; } }   // (a snatch: his own pair is down and the man is loose — he goes for him alone, then the posted pair is his)
     let held = heldRooms(P).filter(h => (tried.get(h.room) ?? 0) < 3);
     if (!held.length) break;
@@ -1111,10 +1130,10 @@ function playRooms(P: Player) {
     if (WAIT > 0 && P.up.length && heldRooms(P).length) { P.say(`(waits ${WAIT} s before the next room)`); P.wait(WAIT); }
   }
   // whoever is left is not at home: walk the rooms with the team behind until the scenario ends or time runs out
-  snatchTake(P);
+  snatchTake(P); if (snatchOut(P)) return;
   const rooms = [...new Set(g.fight.defs.map((d: any) => d.room).filter((r: any) => r && r.entries.length && r.cells.size <= 500))] as any[];
   for (let lap = 0; lap < 3; lap++) {
-    snatchTake(P);
+    snatchTake(P); if (snatchOut(P)) return;
     const sweep = () => { for (const room of rooms) { const e = room.entries[0]; const p = P.free([e.at[0] - e.out[0] * 2, 0, e.at[2] - e.out[1] * 2]); if (p) { P.say(`sweep → ${e.door.def.name}`); P.go(p, 40); P.wait(3); } } };
     if (!HUNT_FIRST) sweep();
     // … and a man who has left the rooms altogether (out on the open floor, back on his rounds): the team is walked to where he is, as a player hunting the
@@ -1654,7 +1673,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   if (P && WOUND.on) out.wounds = { team: P.team.filter((m: any) => m.wound).length, hostiles: P.hostiles.filter((h: any) => h.wound).length, zones: { ...WOUND_STATS.byZone }, again: WOUND_STATS.again, finished: WOUND_STATS.finished };
   if (BREAKER) (out as any).breaker = [...MAINS];
   if (P) { if (P.g.level.scenarios?.par) { const R = P.g.par?.result(); (out as any).par = R ? { secs: +R.secs.toFixed(1), lost: R.lost, total: +R.total.toFixed(1), medal: R.medal } : { medal: null, on: !!P.g.par?.data }; }   // (a par level — game/par.ts: the run's time, its penalty and its medal; medal null = no time: wiped, stalled, or the par switched off)
-    if (WALL) (out as any).wall = WALL.wallTally(P); out.t = +P.t.toFixed(1); out.team = P.atEnd?.team ?? P.upAll.length; if (P.g.snatch?.man) { const S = P.g.snatch; (out as any).snatch = { plan: SNATCH_PLAN || 'front', end: S.end, why: S.why, lost: S.lost, killer: S.killer, handsUp: S.handsUp, tied: S.tied, state: S.man.civ.state, times: S.times, stats: S.stats, log: S.log.slice(-12) }; } out.hostiles = P.atEnd?.hostiles ?? P.hostiles.filter((h: any) => h.state !== 'dead').length; out.orders = P.orders; out.refused = P.refused; out.smells = P.watch.smells; out.deaths = P.watch.deaths; out.other = P.watch.otherStats; P.watch.aloneClose(); out.alone = P.watch.alone; out.upSecs = Math.round(P.watch.upSecs); out.aloneSecs = Math.round(P.watch.aloneSecs); out.rooms = P.rooms; out.entry = { ...P.g.entry.stats }; if (TOOL) out.thr = P.thr; if (TECH) (out as any).tech = TECH; out.entries = P.tally.close(); out.kills = P.tally.kills; out.losses = P.tally.losses; out.bangs = P.bangs0 - P.D.bangs; if (HOLD) out.told = P.told;
+    if (WALL) (out as any).wall = WALL.wallTally(P); out.t = +P.t.toFixed(1); out.team = P.atEnd?.team ?? P.upAll.length; if (P.g.snatch?.man) { const S = P.g.snatch; (out as any).snatch = { plan: SNATCH_PLAN || 'front', van: S.out.ruled ? { in: S.out.inAt, led: S.out.led, bounds: S.out.bounds, hold: SNATCHOUT.hold, qrf: P.g.qrf?.state ?? null, qrfMen: P.g.qrf?.men.length ?? 0, qrfDown: P.g.qrf?.men.filter((m: any) => m.state === 'dead').length ?? 0, qrfWay: P.g.level.scenarios.response?.ways[P.g.qrf?.way ?? 0]?.name ?? null, left: P.hostiles.filter((h: any) => h.state !== 'dead').length } : null, end: S.end, why: S.why, lost: S.lost, killer: S.killer, handsUp: S.handsUp, tied: S.tied, state: S.man.civ.state, times: S.times, stats: S.stats, log: S.log.slice(-12) }; } out.hostiles = P.atEnd?.hostiles ?? P.hostiles.filter((h: any) => h.state !== 'dead').length; out.orders = P.orders; out.refused = P.refused; out.smells = P.watch.smells; out.deaths = P.watch.deaths; out.other = P.watch.otherStats; P.watch.aloneClose(); out.alone = P.watch.alone; out.upSecs = Math.round(P.watch.upSecs); out.aloneSecs = Math.round(P.watch.aloneSecs); out.rooms = P.rooms; out.entry = { ...P.g.entry.stats }; if (TOOL) out.thr = P.thr; if (TECH) (out as any).tech = TECH; out.entries = P.tally.close(); out.kills = P.tally.kills; out.losses = P.tally.losses; out.bangs = P.bangs0 - P.D.bangs; if (HOLD) out.told = P.told;
     if (P.kind === 'rescue') { const H = (P.g.rescue.hostages ?? []).map((h: any) => h.gd ?? h); out.hostages = [H.filter((h: any) => h.state !== 'dead').length, H.length];
       const R = P.g.rescue; if (Number.isFinite(R.t0)) out.clock = { t0: +(+R.t0).toFixed(2), secs: +(+R.resolveSecs).toFixed(2), log: (R.log as { t: number; what: string }[]).filter(x => /^(step|act|executed|teamfire|secured|unsecured|clear|crew)/.test(x.what) || (RPLAY === 'split' && x.what.startsWith('split:'))).map(x => [+x.t.toFixed(2), x.what] as [number, string]) }; }
     if (TIMES && P.ms.length) { const a = Float64Array.from(P.ms).sort(), at = (q: number) => +a[Math.min(a.length - 1, Math.floor(q * a.length))].toFixed(3), by: Record<string, [number, number]> = {}; P.ms.forEach((m, i) => { const k = String(P!.msAlive[i]); const b = by[k] ??= [0, 0]; b[0]++; b[1] += m; }); for (const b of Object.values(by)) b[1] = +(b[1] / b[0]).toFixed(3);

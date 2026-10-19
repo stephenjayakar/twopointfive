@@ -163,8 +163,9 @@ async function probeSquad(scn: string): Promise<boolean> {
   if (!op) return F.done();
   const W = op.wall, cp: Vec3 = wallPt(W, 0, 0, 1.05);
   const setOk = R.until(() => C.set.length === 1, 45), lead = op.lead;
-  F.verdict(setOk && R.spent(c0, k0) && R.spoke.some(s => s.who === lead.callsign && s.text === 'charge set.') && !game.destr.walls.breakableAt(W.index), 'a man sets it on the wall: the charge out of the bag, \'charge set.\' — and the wall is still structure (nothing is the engine\'s yet)',
-    `${lead.callsign} at ${at(lead.char.pos)} · charges ${c0} → ${D.charges}${k0 !== null ? ` · carried ${k0} → ${C.carried}` : ''} · engine: ${game.destr.walls.breakableAt(W.index) ? 'ADOPTED EARLY' : 'not its wall yet'}`);
+  const spentOk = R.spent(c0, k0), setAt = at(lead.char.pos), word = R.until(() => R.spoke.some(s => s.who === lead.callsign && s.text === 'charge set.'), 4);   // (wallcharge.ts WALLKILL: his word comes once he is clear of the charge — with the rule off, on the frame it is set and nothing is stepped here)
+  F.verdict(setOk && spentOk && word && !game.destr.walls.breakableAt(W.index), 'a man sets it on the wall: the charge out of the bag, \'charge set.\' — and the wall is still structure (nothing is the engine\'s yet)',
+    `${lead.callsign} at ${setAt} · charges ${c0} → ${D.charges}${k0 !== null ? ` · carried ${k0} → ${C.carried}` : ''} · engine: ${game.destr.walls.breakableAt(W.index) ? 'ADOPTED EARLY' : 'not its wall yet'}`);
   const armed = R.until(() => op.phase === 'armed', 45);
   const dists = R.up.map((m: any) => ({ m, d: flat(m.char.pos, cp), off: wallOff(W, m.char.pos) }));
   F.verdict(armed && dists.every(x => x.d >= WALLCHARGE.standoff[WALLCHARGE.standoff.length - 1] - 0.35 && x.off > 0), 'the squad stands off on the charge\'s side, two metres or more from it', dists.map(x => `${x.m.callsign} ${f2(x.d)} m`).join(' · '));
