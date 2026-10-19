@@ -21,9 +21,8 @@ import { castSide, castSuit, castGoggles, castFile, loadGltfCast } from '../anim
 import { Character } from '../game/character';
 import { rigBoxes, gogglesBoxes, sc20kGrip, sc20kMuzzleAhead, carbineGrip, carbineMuzzleAhead, longHold, modelGrip, modelMuzzleAhead, RIG, type RigNodeMeta } from '../game/rigProps';
 import { gunLookOf, gunLookOn } from '../game/gunlook';
-import { pickRow } from '../game/gunslots';
 import { charSlots, writeCharPalette, CHAR_MAT_FLOATS } from '../render/charMaterials';
-import { SUITS, TRIMS, kitGun, kitSecond, type MemberKit } from '../game/kit';
+import { SUITS, TRIMS, kitGun, kitSecond, kitSlotDef, kitTreeOn, type MemberKit } from '../game/kit';
 import { rosterOf, type SquadSize } from '../game/loadout';
 import { SQUAD4 } from '../game/nightbreach';
 import { operatorAt } from '../game/cast';
@@ -301,9 +300,11 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   if (m.suit !== 'issued' && SUITS[m.suit]) tint = SUITS[m.suit].tint;
   if (m.trim !== 'issued' && TRIMS[m.trim]) tint2 = TRIMS[m.trim].tint;
   const c = new Character(ch, { id, tint, tint2, pos: [0, 0, 0], yaw: 0 });
+  // (kittree.ts: with the card laid out as a tree your goggles are a row of yours too — left at home, nothing is worn, as in the mission: combat.ts kitYouNvg)
+  const gog = me ? !kitTreeOn() || m.nvg : m.nvg;
   if (ch.cast) {   // (game/cast.ts's deal: Sam the first operator, a teammate one of the rest by his place on the roster — `operatorAt`, the game's own)
     const v = figureMan(ch.cast, ask.member);
-    if (v) c.parts = ask.suit ? castSuit(ch.cast, v.mask) : castGoggles(ch.cast, v.mask, me || m.nvg); }
+    if (v) c.parts = ask.suit ? castSuit(ch.cast, v.mask) : castGoggles(ch.cast, v.mask, gog); }
   // the gun his card names, as the game hands it out (kit.ts kitGun, kitPlayer; guards.ts rigOf)
   const fit = KITANIM.on && KITANIM.grips;
   const rig = me ? (m.weapon === 'pistol' ? 'pistol' : 'sc20k') : WEAPONS[kitGun(m)].rig;
@@ -313,8 +314,9 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   else if (rig === 'carbine') { a.longGun = true; a.longSteady = 0; a.longGrip = carbineGrip(); c.muzzleAhead = carbineMuzzleAhead(); a.stance = 'lowReady'; }
   else { a.upper = 'relaxed'; a.stance = FIGURE.pose.pistol; }   // (the pistol in both hands at the game's own low ready, as the rifle is: the relaxed carry points it across his chest)
   { // (gunlook.ts: the guns his card names drawn as the models they are — the one in his hands and the one on his thigh — with the support hand and the muzzle a model has of its own, as the game deals them)
-    const can = me || m.suppressed, two = kitSecond(m) !== null, hRow = two ? pickRow(m.weapon === 'pistol' ? m.secondary : m.primary, can) ?? kitGun(m) : kitGun(m), oRow = two && m.weapon !== 'pistol' ? pickRow(m.secondary, can) : null;
-    c.gunLook = gunLookOf(null, WEAPONS[hRow], oRow ? WEAPONS[oRow] : null);
+    // (each slot's gun as the game deals it — kit.ts kitSlotDef: its own suppressor on or off under the tree, yours as a teammate's; before it both of yours wore one and a teammate's two went by his one flag)
+    const two = kitSecond(m) !== null, hDef = (two ? kitSlotDef(ask.member, m, m.weapon === 'pistol' ? 'secondary' : 'primary') : null) ?? WEAPONS[kitGun(m)], oDef = two && m.weapon !== 'pistol' ? kitSlotDef(ask.member, m, 'secondary') : null;
+    c.gunLook = gunLookOf(null, hDef, oDef);
     const own = a.longGun ? c.gunLook?.hand ?? null : null, G = own ? modelGrip(own, me && fit) : null, ahead = own ? modelMuzzleAhead(own) : null;
     if (G) a.longGrip = G; if (ahead !== null) c.muzzleAhead = ahead; }
   a.lookPitchExtra = FIGURE.pose.chin; a.lookYawExtra = FIGURE.pose.turn;
@@ -348,7 +350,7 @@ function buildOf(ch: GltfCharacter, ask: FigureAsk, key: string, look: boolean):
   const suitOn = ask.suit, pouchSlim = ask.suit && !!ch.cast;
   const rigged = (): { bx: Box[]; meta: RigNodeMeta[] } => {
     const bx: Box[] = [], meta: RigNodeMeta[] = [];
-    if (me) rigBoxes(c, { goggles: !suitOn || !ch.cast, nv: false, slot: rig === 'pistol' ? 1 : 0, lightOn: false, isGuard: false, holster: true, held: null, knife: false, rifle: rig === 'sc20k' ? 'hand' : null, rifleBlack: suitOn, rifleLight: false, ...(CLOSE.on ? { sheath: true } : null), ...(fit ? { fit } : null), ...(INHAND.on ? { inHand: true } : null) }, bx, RIG, meta);
+    if (me) rigBoxes(c, { goggles: (!suitOn || !ch.cast) && gog, nv: false, slot: rig === 'pistol' ? 1 : 0, lightOn: false, isGuard: false, holster: true, held: null, knife: false, rifle: rig === 'sc20k' ? 'hand' : null, rifleBlack: suitOn, rifleLight: false, ...(CLOSE.on ? { sheath: true } : null), ...(fit ? { fit } : null), ...(INHAND.on ? { inHand: true } : null) }, bx, RIG, meta);
     else if (rig === 'sc20k') rigBoxes(c, { goggles: m.nvg, nv: false, slot: 0, lightOn: false, isGuard: false, holster: true, rifle: 'hand', rifleBlack: suitOn, rifleLight: false }, bx, RIG, meta);
     else if (rig === 'pistol') rigBoxes(c, { goggles: m.nvg, nv: false, slot: 1, lightOn: false, isGuard: false, ...(hold ? { inHand: true, ...(INHAND.fit ? { fit: true } : null) } : null) }, bx, RIG, meta);
     else { rigBoxes(c, { goggles: false, nv: false, slot: 1, lightOn: false, isGuard: true, torch: false, weapon: rig === 'carbine' ? 'carbine' : 'pistol', ...(hold === IN_PISTOL ? { inHand: true } : null) }, bx, RIG, meta); if (m.nvg) gogglesBoxes(c, false, bx, RIG.goggles); }
@@ -697,7 +699,7 @@ function raster(M: Fig, B: Buf, yaw: number, frame: number): void {
 
 // ------------------------------------------------------------ the mount
 
-const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, INHAND.on && [INHAND.long, INHAND.fit], gunLookOn()]);
+const sigOf = (a: FigureAsk) => JSON.stringify([a.member, a.squad, a.suit, a.look, a.hour ?? 'night', a.hour && a.hour !== 'night' ? a.cloud ?? 0 : 0, a.card, LOOK.on, GEAR.on, CLOSE.on, KITANIM.on && KITANIM.grips, INHAND.on && [INHAND.long, INHAND.fit], gunLookOn(), kitTreeOn()]);
 const yawOf = (a: FigureAsk) => (a.card.weapon === 'pistol' ? FIGURE.yawPistol : FIGURE.yaw);
 /** a frame of his life: the game's animator stepped, his surface moved with it */
 function live1(M: Fig, dt: number): void { if (dt > 0) ownDie(() => M.c.update(dt * FIGURE.pace)); coarse(M); }

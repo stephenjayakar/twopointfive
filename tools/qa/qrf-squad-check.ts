@@ -78,10 +78,12 @@ export async function qrfSquadCheck(): Promise<boolean> {
   { const W = await called(42, [30, 0, 11.2], !BREAK); const { game } = W; const Q = game.qrf;
     let done = false, kind = '', room = '';
     for (let f = 0; f < 60 * 150 && !done; f++) { hideSam(game); W.step(DT); watchSquad(game); if (Q.op) { kind = Q.op.kind; room = Q.target.room; } done = beats(Q).includes('drill-end:in'); }
-    const B = beats(Q), set = B.find((b: string) => /^drill:set · \d+ of \d+ cells unseen/.test(b)) ?? '', m = /set · (\d+) of (\d+)/.exec(set);
-    const jambs = B.some((b: string) => /^drill:threshold · latch jamb .* holds/.test(b)), iSet = B.indexOf(set), iCross = B.findIndex((b: string) => /^drill:cross:/.test(b)), stepIn = B.some((b: string) => /^drill:step in/.test(b));
+    // (the jamb men either hold a diagonal each — 'holds', then 'set · N of M' and the floor seen during the hold — or, with the doorway cut on (DOORTOOLS.thrPie, the page's
+    //  stand), cut the opening toward its middle first — 'slices', then 'sliced · N of M' with the floor already seen. Either way: less floor unseen, before anybody crosses)
+    const B = beats(Q), set = B.find((b: string) => /^drill:(set|sliced) · \d+ of \d+ cells unseen/.test(b)) ?? '', m = /(?:set|sliced) · (\d+) of (\d+)/.exec(set), cut = /^drill:sliced/.test(set);
+    const jambs = B.some((b: string) => /^drill:threshold · latch jamb .* (holds|slices)/.test(b)), iSet = B.indexOf(set), iCross = B.findIndex((b: string) => /^drill:cross:/.test(b)), stepIn = B.some((b: string) => /^drill:step in/.test(b));
     const held = B.find((b: string) => /^drill:held .* (\d+) of \d+ cells unseen/.test(b)) ?? '', h = /(\d+) of \d+ cells unseen/.exec(held), iHeld = B.indexOf(held);
-    const sliced = !!m && !!h && Number(h[1]) < Number(m[1]) && iHeld >= 0 && (iCross < 0 || iHeld < iCross);
+    const sliced = !!m && !!h && iHeld >= 0 && (iCross < 0 || iHeld < iCross) && (cut ? Number(m[1]) < Number(m[2]) && Number(h[1]) <= Number(m[1]) && iSet < iHeld : Number(h[1]) < Number(m[1]));
     const ok = kind === 'threshold' && jambs && sliced && stepIn && done;
     line(ok, '(4) a room that does not hold the fix: the threshold — jambs held, floor seen from outside before anybody crosses, then the step in, the room taken', `order ${kind || '—'} on ${room || '—'} · jambs held ${jambs} · ${set.replace(/^drill:/, '') || 'never set'} → ${held.replace(/^drill:/, '') || 'never held'} · less unseen before the first man crossed ${sliced} · stepped in ${stepIn} · taken ${done}`); }
 
