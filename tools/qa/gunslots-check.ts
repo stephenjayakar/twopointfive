@@ -12,6 +12,7 @@ import { rig } from './doortools-probes.ts';
 
 const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
+const { KITTREE } = await import(`${ROOT}/src/game/kittree.ts`);
 const { WEAPONS, Rifle, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
 const { rifleSpread } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
@@ -32,7 +33,7 @@ const J = (o: unknown) => JSON.stringify(o), f2 = (x: number) => (Number.isFinit
 const BREAK = process.env.GUNSLOTS_BREAK === '1';
 /** the switch as the page has it, with the big slot it rides on (the frozen stand pins both off as it stands a game up: raised after) — and every card as
  *  the table writes it (kit.ts KITDEAL off: what a team of three or four is dealt is kitdeal-check.ts's to hold) */
-const raise = (on = true) => { GUNSLOTS.on = on; K.BIGSLOT.on = true; K.KITDEAL.on = false; };
+const raise = (on = true) => { GUNSLOTS.on = on; K.BIGSLOT.on = true; K.KITDEAL.on = false; KITTREE.on = false; };   // (… and the card's rows as the two slots wrote them: laid out as a tree — kittree.ts — they are kittree-check.ts's to hold)
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
   const was = { ...GUNSLOTS }, big = K.BIGSLOT.on, deal = K.KITDEAL.on, kit = K.KIT.on, cards = JSON.stringify(K.KIT.members);

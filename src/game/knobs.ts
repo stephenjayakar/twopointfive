@@ -113,7 +113,7 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
-  'CMDCHECK', 'GUNSLOTS', 'GUNLOOK',
+  'CMDCHECK', 'GUNSLOTS', 'GUNLOOK', 'KITTREE',
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
   'RESPONSE'];
 import { GUNWALL } from './gunwall';
@@ -129,6 +129,7 @@ import { STICKY } from './stickycam';
 import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
 import { GUNLOOK } from './gunlook';
+import { KITTREE } from './kittree';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
@@ -238,6 +239,8 @@ export function knobRegistry(): Record<string, object> {
     GUNSLOTS,
     // each gun its own look, sound and reload (gunlook.ts): which model, voice and flame a row is, where its muzzle is, how it is fed
     GUNLOOK,
+    // the gear screen as a tree (kittree.ts): one list of rows for every man — each gun's own suppressor, your light and goggles, the sponge rounds a card carries and a quiet mission hands out
+    KITTREE,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by
     SQUADTHROW,
     // the quick key is the squad's autopilot (autopilot.ts): on a door the men wait on they go in by the entry they pick; how long its plan is drawn

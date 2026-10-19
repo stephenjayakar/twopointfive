@@ -31,7 +31,9 @@
 //
 // The card owns its own CSS (one <style> on first use), so index.html needs nothing for it.
 import { gearText } from '../game/gear';   // (a kept note names the kit: worded as issued where it is shown)
-import { KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitGunCan, kitIssuedShown, kitName, kitRowCan, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitShown, kitTeam, kitTry, kitWears, kitWords, rowGet, squadCost, youGunsCan, type MemberKit } from '../game/kit';
+import { KIT_NOTE, KIT_PRESETS, SLOTS, SUITS, TRIMS, kitChanged, kitCost, kitGunCan, kitIssuedShown, kitName, kitRowCan, kitPeek, kitPaste, kitPastePeek, kitPreset, kitPresetOf, kitPresetWhy, kitRowCost, kitRows, kitShown, kitTeam, kitTry, kitWears, kitSlotDef, kitWords, rowGet, rowHas, rowUnder, squadCost, youGunsCan, type MemberKit } from '../game/kit';
+import type { GunSlot } from '../game/gunslots';
+import { GUN_STATS, gunStats } from './gunStats';
 import { menuTheme } from './theme';
 import { kitIcon } from './kitIcons';
 import { kitNoise } from './kitNoise';
@@ -177,6 +179,13 @@ const CSS = `
 .kc .kc-row.pasted { animation: kc-pasted 0.8s ease-out; }
 .kc .kc-row.pasted.pasted2 { animation-name: kc-pasted2; }   /* (the same flash under a second name: a paste straight after a paste plays again) */
 @media (prefers-reduced-motion: reduce) { .kc .kc-row.pasted { animation: none; } }
+/* THE CARD AS A TREE (game/kittree.ts KITTREE): each gun's tile with what rides on it under it, and what the gun is good at drawn on the tile (ui/gunStats.ts) */
+.kc .kc-kids { margin: 0 0 3px 7px; padding-left: 5px; border-left: 1px solid rgba(var(--m-edge),0.3); }
+.kc .kc-stats { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
+.kc .kc-stats.off { display: none; }
+.kc .kc-stats .kc-bar { font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--m-soft); }
+.kc .kc-stats .kc-bar-t { flex: 0 0 112px; height: 6px; }
+.kc.kc-tree .kc-row.none .kc-val { color: var(--m-dim); }
 .kc .kc-words { margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06); font-size: 10.5px; color: var(--m-soft); min-height: 28px; }
 `;
 function style() {
@@ -210,8 +219,16 @@ const seen = new WeakSet<object>();
 /** Fill `host` with member i's card. */
 export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = {}): MemberCard {
   style();
-  const rows = kitRows(i), def = () => kitShown(i);   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
-  const root = el('div', 'kc'); root.setAttribute('data-member', String(i)); root.tabIndex = 0;
+  const rows = kitRows(i), def = () => kitShown(i);
+  /** the card as a tree (game/kittree.ts KITTREE: its rows say what hangs under which gun): the guns' tiles are boxes with their things under them, a row
+   *  the card has not got as it stands is not drawn and the keys step over it, and the sets are the one reset (the squad's row has the named kits) */
+  const tree = rows.some(r => r.under !== undefined), presets = tree ? KIT_PRESETS.filter(p => p.id === 'issued') : KIT_PRESETS;
+  const guns: Partial<Record<GunSlot, { kids: HTMLElement }>> = {};
+  /** the rows the card has as it stands, in the order they are drawn: a gun, then what hangs under it */
+  const seq = (m: MemberKit): number[] => { if (!tree) return rows.map((_r, k) => k); const out: number[] = [];
+    rows.forEach((r, k) => { if (r.under !== undefined || !rowHas(r, m)) return; out.push(k); if (r.field === 'primary' || r.field === 'secondary') rows.forEach((c, j) => { if (c.under !== undefined && rowHas(c, m) && rowUnder(c, m) === r.field) out.push(j); }); });
+    return out; };   // (the card as he wears it: kit.ts KITDEAL shares a named kit out over a team of three or four)
+  const root = el('div', tree ? 'kc kc-tree' : 'kc'); root.setAttribute('data-member', String(i)); root.tabIndex = 0;
   // the head: a little figure in his two colours, who he is
   const head = el('div', 'kc-head'), fig = el('div', 'kc-fig'), suitBits: HTMLElement[] = [], trimBits: HTMLElement[] = [];
   for (const c of ['a a1', 'a a2', 'l l1', 'l l2', 'b', 'h']) { const b = el('i', c); suitBits.push(b); fig.appendChild(b); }
@@ -232,7 +249,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   pouch.appendChild(load);
   who.append(title, sub, pouch); head.append(fig, who); root.appendChild(head);
   // the rows
-  let cur = 0, pick = Math.max(0, KIT_PRESETS.findIndex(p => p.id === kitPresetOf(i))), focused = false;
+  let cur = 0, pick = Math.max(0, presets.findIndex(p => p.id === kitPresetOf(i))), focused = false, hung = '';
   /** the row whose last step was refused, and why (shown on it until the next press anywhere on the card) */
   let said: { k: number; why: string } | null = null;
   /** the rows the last paste moved: they flash once (cleared by the card's next change), under one of two names by turns so that the next paste plays again */
@@ -240,7 +257,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   const changed = (moved?: ReadonlySet<string>) => { said = null; flash = moved ?? new Set(); if (moved) flashes++; draw(); opts.onChange?.(i); };
   const step = (k: number, dir: 1 | -1) => { cur = k; const r = kitTry(i, rows[k].field, dir); if (!r.ok) { said = { k, why: r.why }; draw(); } else { changed(); if (r.passed) { said = { k, why: `passed ${r.passed}` }; draw(); } } };
   /** a set pressed: taken, or refused with the reason under the rows (the squad has no room for it as the other cards stand) */
-  const press = (k: number) => { cur = rows.length; pick = k; const r = kitPreset(i, KIT_PRESETS[k].id); if (r.ok) changed(); else { said = { k: rows.length, why: `${KIT_PRESETS[k].label}: ${r.why}` }; draw(); } };
+  const press = (k: number) => { cur = rows.length; pick = k; const r = kitPreset(i, presets[k].id); if (r.ok) changed(); else { said = { k: rows.length, why: `${presets[k].label}: ${r.why}` }; draw(); } };
   const rowEls = rows.map((r, k) => {
     const row = el('div', 'kc-row'); row.setAttribute('data-field', r.field);
     const line = el('div', 'kc-line'), label = el('span', 'kc-label', r.label), prev = el('button', 'kc-step', '‹'), val = el('span', 'kc-val'), next = el('button', 'kc-step', '›'), note = el('div', 'kc-note');
@@ -250,12 +267,20 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     prev.onclick = (ev) => { ev?.stopPropagation?.(); step(k, -1); }; next.onclick = (ev) => { ev?.stopPropagation?.(); step(k, 1); };
     row.onclick = () => { if (cur !== k || said) { cur = k; said = null; draw(); } };
     const ico = el('div', 'kc-ico');   // (the thing's silhouette — ui/kitIcons.ts; shown where the card is laid out as tiles: the loadout)
-    line.append(label, prev, val, next); row.append(ico, line, note); root.appendChild(row);
-    return { row, val, note, prev, next, ico, drawn: '' };
+    line.append(label, prev, val, next); row.append(ico, line, note);
+    // (the tree: a gun's tile stands in a box with its things under it — hung there at each draw, since the light goes with the gun in his hands — and wears
+    // four bars of what the gun is good at; any other row is the card's own child, as every row of the flat card is)
+    const slot = tree && (r.field === 'primary' || r.field === 'secondary') ? r.field as GunSlot : null;
+    let stats: { box: HTMLElement; bars: { id: typeof GUN_STATS[number]['id']; bar: HTMLElement; fill: HTMLElement; gain: HTMLElement; ref: HTMLElement }[] } | null = null;
+    if (slot) { const box = el('div', 'kc-gun'), kids = el('div', 'kc-kids'), sb = el('div', 'kc-stats'); box.setAttribute('data-gun', slot);
+      stats = { box: sb, bars: GUN_STATS.map(S => { const bar = el('span', 'kc-bar'), track = el('span', 'kc-bar-t'), fill = el('i', 'fill'), gain = el('i', 'gain'), ref = el('i', 'ref'); bar.setAttribute('data-stat', S.id); bar.title = S.tip; track.append(fill, gain, ref); bar.append(el('span', 'kc-bar-l', S.label), track); sb.appendChild(bar); return { id: S.id, bar, fill, gain, ref }; }) };
+      row.appendChild(sb); box.append(row, kids); root.appendChild(box); guns[slot] = { kids }; }
+    else if (r.under === undefined) root.appendChild(row);
+    return { row, val, note, prev, next, ico, drawn: '', slot, stats };
   });
   // the sets
   const sets = el('div', 'kc-sets');
-  const setEls = KIT_PRESETS.map((p, k) => {
+  const setEls = presets.map((p, k) => {
     const b = el('button', 'kc-set', p.label); b.setAttribute('data-set', p.id); b.title = p.line; b.tabIndex = -1;
     b.onclick = () => press(k);
     sets.appendChild(b); return b;
@@ -276,6 +301,13 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
   function draw() {
     if (cur !== told) { told = cur; opts.onSelect?.(i, rows[cur]?.field ?? null); }
     const m = def(), look = lookOf(m), base = kitPresetOf(i);
+    if (tree) {   // what hangs under which gun as the card stands; a highlight left on a row the card no longer has goes to the row before it
+      const now = rows.map((r, k) => (r.under !== undefined ? `${k}>${rowHas(r, m) ? rowUnder(r, m) : ''}` : '')).join();
+      if (now !== hung) { hung = now; for (const slot of ['primary', 'secondary'] as const) { const kids = guns[slot]?.kids; if (!kids) continue; let any = false;
+        rows.forEach((r, k) => { if (r.under === undefined) return; const here = rowHas(r, m) && rowUnder(r, m) === slot; if (here) { kids.appendChild(rowEls[k].row); any = true; } });
+        kids.style.display = any ? '' : 'none'; } }
+      const S = seq(m); if (cur < rows.length && !S.includes(cur)) cur = [...S].reverse().find(k => k < cur) ?? S[0] ?? 0;
+    }
     for (const b of suitBits) { b.style.background = look.suit ?? ''; b.classList.toggle('issued', !look.suit); }
     for (const b of trimBits) { b.style.background = look.trim ?? ''; b.classList.toggle('issued', !look.trim); }
     title.classList.toggle('changed', kitChanged(i));
@@ -300,6 +332,11 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     const issuedShown = kitIssuedShown(i);   // (one deal a refresh, not one a row)
     rows.forEach((r, k) => {
       const v = rowGet(r, m), e = rowEls[k], cost = kitRowCost(i, r, m), no = said && said.k === k ? said.why : '';
+      if (tree) { const has = rowHas(r, m); e.row.style.display = has ? '' : 'none'; if (!has) { if (r.under !== undefined) e.row.remove?.(); return; }   // (not on the card as it stands: not drawn, not hung anywhere)
+        e.row.classList.toggle('none', v === false || v === 0);
+        if (e.slot && e.stats) { const d = kitSlotDef(i, m, e.slot), d0 = kitSlotDef(i, issuedShown, e.slot); e.stats.box.classList.toggle('off', !d);   // (what this gun is good at, beside the gun he is issued: the notch)
+          if (d) { const now = gunStats(d), was = d0 ? gunStats(d0) : now, pct = (x: number) => `${Math.round(Math.min(1, Math.max(0, x)) * 1000) / 10}%`;
+            for (const b of e.stats.bars) { const a = now[b.id], z = was[b.id], lo = Math.min(a, z); b.fill.style.width = pct(lo); b.gain.style.left = pct(lo); b.gain.style.width = pct(Math.abs(a - z)); b.gain.classList.toggle('loss', a < z); b.ref.style.left = pct(z); b.bar.setAttribute('data-score', a.toFixed(3)); } } } }
       const gunRow = r.field === 'weapon' || r.field === 'primary' || r.field === 'secondary', can = gunRow && KIT_CAN.on && kitRowCan(i, m, r.field);   // (the gun on this row wears a suppressor: drawn with it, and your pistol alone named for it)
       const I = kitIcon(r.field, v, can), idle = !I.none && !!opts.idle?.(r.field);   // (carried, and of no use on this mission: the tile says so itself)
       // (the mission hands him more of it than his card carries: the tile shows what he will have — never on an idle tile, and only a count or a yes / no)
@@ -315,12 +352,12 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
       for (const [b, dir, word] of [[e.prev, -1, 'previous'], [e.next, 1, 'next']] as [HTMLElement, 1 | -1, string][]) { const why = SLOTS.on ? kitPeek(i, r.field, dir).why : ''; b.classList.toggle('off', !!why); b.title = why || word; }
     });
     sets.classList.toggle('sel', cur === rows.length);
-    setEls.forEach((b, k) => { const why = SLOTS.on ? kitPresetWhy(i, KIT_PRESETS[k].id) : ''; b.classList.toggle('on', KIT_PRESETS[k].id === base); b.classList.toggle('pick', k === pick); b.classList.toggle('off', !!why); b.title = why || KIT_PRESETS[k].line; });
+    setEls.forEach((b, k) => { const why = SLOTS.on ? kitPresetWhy(i, presets[k].id) : ''; b.classList.toggle('on', presets[k].id === base); b.classList.toggle('pick', k === pick); b.classList.toggle('off', !!why); b.title = why || presets[k].line; });
     if (clipEls) { const C = KIT_CLIP.card, p = C ? kitPastePeek(i, C) : null, same = !!p && !p.changed.length, why = p && !same ? p.why : '', whose = i ? 'his' : 'your';   // (Copy lit: this card IS the copied kit; Paste dim: nothing copied, nothing it would change, or no room)
       clipEls[0].classList.toggle('on', same); clipEls[0].title = `copy ${whose} kit (C)`;
       clipEls[1].classList.toggle('off', !C || same || !!why); clipEls[1].title = why || (!C ? 'nothing copied yet' : same ? `${i ? 'he wears' : 'you wear'} the copied kit` : `the copied kit onto ${i ? 'him' : 'you'}, ${whose} colours kept (V)`); }
     const noSet = said && said.k === rows.length ? said.why : ''; words.classList.toggle('refused', !!noSet);
-    words.textContent = noSet || (i === 0 ? `${kitWords(0)}. ${m.weapon === 'rifle' ? 'Both your guns are suppressed' : m.weapon === 'shotgun' ? 'Your pistol is suppressed, the shotgun is not' : 'Your pistol is suppressed'}; your light is on L, your goggles on N.` : kitWords(i)) + (KIT_NOTE[i] ? ` ${gearText(KIT_NOTE[i])}` : '');
+    words.textContent = noSet || (i === 0 && !tree ? `${kitWords(0)}. ${m.weapon === 'rifle' ? 'Both your guns are suppressed' : m.weapon === 'shotgun' ? 'Your pistol is suppressed, the shotgun is not' : 'Your pistol is suppressed'}; your light is on L, your goggles on N.` : kitWords(i)) + (KIT_NOTE[i] ? ` ${gearText(KIT_NOTE[i])}` : '');
     root.classList.toggle('focus', focused);
   }
   function key(e: KeyLike): boolean {
@@ -330,14 +367,15 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     const up = is(UP, e), down = is(DOWN, e), left = is(LEFT, e), right = is(RIGHT, e), ok = is(OK, e), back = is(BACK, e);
     if (!(up || down || left || right || ok || back)) return false;
     if (back) { if (!opts.onBack) return false; seen.add(e); if (!e.repeat) opts.onBack(); return true; }
-    if (up && cur === 0 || down && cur === rows.length) { if (said) { said = null; draw(); } return false; }   // (an edge: the host's to walk on from)
+    const S = [...seq(def()), rows.length], at = Math.max(0, S.indexOf(cur));   // (the rows the card has as it stands, then the sets)
+    if (up && at === 0 || down && at === S.length - 1) { if (said) { said = null; draw(); } return false; }   // (an edge: the host's to walk on from)
     seen.add(e);
     if (e.repeat) return true;   // (a key held down is one press: nothing here repeats)
     if (said) said = null;
-    if (up) cur--; else if (down) cur++;
+    if (up) cur = S[at - 1]; else if (down) cur = S[at + 1];
     else if (cur < rows.length) { step(cur, left ? -1 : 1); return true; }
     else if (ok) { press(pick); return true; }
-    else pick = Math.min(KIT_PRESETS.length - 1, Math.max(0, pick + (left ? -1 : 1)));
+    else pick = Math.min(presets.length - 1, Math.max(0, pick + (left ? -1 : 1)));
     draw(); return true;
   }
   const setFocus = (on: boolean, tell: boolean) => { if (focused === on) return; focused = on; draw(); if (on && tell) opts.onFocus?.(i); };
@@ -353,7 +391,7 @@ export function memberCard(host: HTMLElement, i: number, opts: MemberCardOpts = 
     blur() { said = null; setFocus(false, false); draw(); },
     at: () => cur, key,
     go(k) { cur = Math.min(rows.length, Math.max(0, Math.round(k))); said = null; draw(); },
-    refresh() { said = null; const p = KIT_PRESETS.findIndex(x => x.id === kitPresetOf(i)); if (p >= 0) pick = p; draw(); },   // (the picked set follows a card that was made a set elsewhere)
+    refresh() { said = null; const p = presets.findIndex(x => x.id === kitPresetOf(i)); if (p >= 0) pick = p; draw(); },   // (the picked set follows a card that was made a set elsewhere)
     copy, paste,
     destroy() { liveCards.delete(me); host.innerHTML = ''; },
   };

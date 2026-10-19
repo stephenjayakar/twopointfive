@@ -235,6 +235,30 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc:has(.kc-row.refused) .kc-row:not(.refused) > .kc-note { display: none !important; }   /* (a refusal's reason outranks the row pointed at, which outranks the row the keys are on) */
 #missions.one #loadout .lo-kit .kc-sets { grid-column: 1 / 3; grid-row: 1; justify-content: flex-start; align-self: end; margin: 0 0 4px; padding: 0; border: 0; background: none; gap: 2px; }
 #missions.one #loadout .lo-kit .kc.focus .kc-sets.sel { background: none; }
+/* THE CARD AS A TREE (game/kittree.ts): each gun is a tile with what it is good at drawn beside its name (ui/gunStats.ts), and what rides on that gun hangs under it as smaller tiles off one rule: the primary two columns wide, the secondary the third */
+#missions.one #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="primary"] { grid-column: 1 / 3; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { flex: 0 0 auto; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 40%); align-items: center; min-height: 76px; box-sizing: border-box; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row .kc-ico { height: 44px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row .kc-val { font-size: 20px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row { grid-template-columns: 48px minmax(0, 1fr); }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row .kc-ico { height: 32px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; gap: 4px; margin: 0; }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1 / -1; grid-row: auto; margin-top: 6px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats.off { display: none; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar { justify-content: space-between; gap: 10px; font: 600 9px/9px var(--m-head); letter-spacing: 0.16em; text-transform: uppercase; color: var(--m-soft); }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex: 0 0 76px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-t { flex: 1 1 auto; height: 5px; box-shadow: none; background: rgba(var(--m-edge),0.16); }
+#missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-t .fill { background: var(--m-text); }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px 6px; margin: 0 0 0 13px; padding: 0 0 0 9px; border: 0; border-left: 2px solid rgba(var(--m-edge),0.28); }
+#missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-kids { grid-template-columns: minmax(0, 1fr); }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids:empty { display: none; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: 30px minmax(0, 1fr); column-gap: 8px; padding: 5px 6px 5px 8px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-ico { height: 22px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-label { font-size: 9px; letter-spacing: 0.14em; }
+#missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-val { font-size: 13px; }
+#missions.one #loadout .lo-kit .kc-tree .kc-row.none:not(.lent) .kc-val { color: var(--m-dim); }
+@media (max-width: 1180px) { #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { grid-template-columns: minmax(0, 1fr) minmax(0, 44%); } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] > .kc-row, #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { grid-template-columns: minmax(0, 1fr); } #missions.one #loadout .lo-kit .kc-tree .kc-stats { grid-column: 2; } #missions.one #loadout .lo-kit .kc-tree .kc-gun[data-gun="secondary"] .kc-stats { grid-column: 1; } #missions.one #loadout .lo-kit .kc-tree .kc-kids { margin-left: 6px; padding-left: 6px; } #missions.one #loadout .lo-kit .kc-tree .kc-stats .kc-bar-l { flex-basis: 64px; } }
 /* DEPLOY: the one filled block on the page */
 #missions.one #loadout .lo-actions { position: sticky; bottom: 0; z-index: 4; margin: 14px calc(-1 * var(--pg)) 0; padding: 10px var(--pg); border: 0; border-top: 1px solid var(--line); border-radius: 0; background: var(--m-base); }
 #missions.one #loadout .lo-actions::before { content: attr(data-what); margin-right: auto; font: 11px/1.4 var(--m-mono); letter-spacing: 0.04em; color: var(--m-dim); }
