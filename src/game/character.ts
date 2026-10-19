@@ -272,6 +272,17 @@ export const RUN_LINGER = {
 };
 /** gaze stabiliser: target eye-line elevation below level per gait (°), the share of the pitch error taken out, and of the fast yaw wobble */
 export const GAZE_EL = { stand: 4, crouch: 9, sprint: 12 }; export const GAZE = { keep: 0.8, yawDamp: 0.7 };   // walk / crouch = the clips' MEASURED natural ground speed (tools/qa/gait.ts: the planted toe's backward velocity — 1.06 and 0.72 m/s; the old 1.45 / 1.05 skated the planted foot 37 % / 46 % of every stride); jog / sprint sit near their clips' excursion-matched speeds already
+/** A MAN WHO HAS RUN BREATHES HARD, AND IT SHOWS (the maintainer, 10-19: "characters should breathe more forcefully when sprinting (e.g. on snow levels)").
+ *  The game had two breaths and no third: the chest's (the life layer below) and, on a snow level, the steam off the mouth (snowBreath.ts). There is no breath
+ *  SOUND and none is made here. With `on`, both of the two are stronger with effort — a sprint, and the while after it — and neither is touched at rest:
+ *    THE CHEST (lifeLayer): blown he heaves `chestAmp` × the resting turn at `chestRate` Hz (it was LIFE.breathAmpRun 2.6 at breathRateRun 0.62), is blown in
+ *      `chestUp` s of a run past 3.2 m/s (it was 4) and has his wind back in `chestDown` s (it was 8). Running, the gait still carries the chest as it did.
+ *    THE STEAM (snowBreath.ts, picture only): blown he breathes every `every` s (it was SNOWBREATH.everyHard 1.3), each breath `puffs` records of `count`
+ *      puffs (3 of 5) thrown at `jet` × the resting speed (1.3) and `size` × its size (hardK 1.5; its opacity is full from half effort either way), leaving with `carry` of his own velocity (0.6);
+ *      blown in `up` s (effortUp 4), his wind back in `down` s (effortDown 12). Each is the resting number at effort 0 and this one at 1, straight between.
+ *  Effort is what it was: his ground speed and nothing else (no stamina exists and none is made); a teammate never sprints: at his fastest walk (2.2 m/s, a little over where effort begins) his steam is a seventh of the way to blown, and his chest's is the resting one (it wants 3.2 m/s).
+ *  OFF here and on the frozen stand (TPS_HARDBREATH=1); ON in the page (?hardbreath=0). Check: tools/qa/hardbreath-check.ts (HARDBREATH_BREAK=1). */
+export const HARDBREATH = { on: false, chestAmp: 4.2, chestRate: 0.9, chestUp: 2.5, chestDown: 12, every: 0.95, puffs: 4, count: 9, jet: 3.2, size: 2.0, carry: 0.85, up: 2.5, down: 14 };
 /** The life layer's and the foot lock's amplitudes and timings — fields, so the gait lab (src/gaitlab.ts, /gait) can turn them with the figure in view.
  *  `on` scales the whole life layer (0 = the pose as the clips have it); every default here is the authored value. */
 export const LIFE = {
@@ -3016,8 +3027,9 @@ export class CharacterAnimator {
     // 'standing' below asks both the commanded speed and this; a jump of more than half a metre in a frame is a teleport — the feet re-lock where they land
     let teleported = false;
     { const pp = L.prevPos, P0 = this.posIn; if (!Number.isFinite(pp[0])) { L.prevPos = v3.copy(P0); } else { const d = hyp2(P0[0] - pp[0], P0[2] - pp[2]); teleported = d > 0.5; L.rootV = dt > 0 && !teleported ? damp(L.rootV, Math.min(d / dt, 8), 14, dt) : teleported ? 0 : L.rootV; L.prevPos = v3.copy(P0); } }
-    L.exert = clamp(L.exert + (s > 3.2 ? dt / 4 : -dt / 8), 0, 1);
-    const bRate = lerp(LIFE.breathRate, LIFE.breathRateRun, L.exert), bAmp = lerp(LIFE.breathAmp, LIFE.breathAmpRun, L.exert) * lerp(1, 0.35, clamp(s / 2, 0, 1)) * LIFE.on;   // running, the gait's own motion carries the chest
+    const HB = HARDBREATH.on ? HARDBREATH : null;   // (blown he heaves deeper, quicker and for longer: off = the four numbers as they were)
+    L.exert = clamp(L.exert + (s > 3.2 ? dt / (HB ? HB.chestUp : 4) : -dt / (HB ? HB.chestDown : 8)), 0, 1);
+    const bRate = lerp(LIFE.breathRate, HB ? HB.chestRate : LIFE.breathRateRun, L.exert), bAmp = lerp(LIFE.breathAmp, HB ? HB.chestAmp : LIFE.breathAmpRun, L.exert) * lerp(1, 0.35, clamp(s / 2, 0, 1)) * LIFE.on;   // running, the gait's own motion carries the chest
     L.breath = (L.breath + dt * bRate * 2 * Math.PI) % (2 * Math.PI);
     const accel = dt > 0 ? (s - L.prevS) / dt : 0; L.prevS = s; L.accel = damp(L.accel, clamp(accel, -12, 12), 10, dt);
     L.mass.step(clamp(-L.accel * LIFE.massGain, -LIFE.massBack, LIFE.massFwd) * LIFE.on, 9, dt);            // fore-aft pelvis offset target: back under acceleration, forward (carrying on) under braking
