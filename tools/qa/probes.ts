@@ -32,7 +32,7 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
-//     gunlook: gunlook-own gunlook-hands gunlook-off (+ the gunreload family: how each is fed)
+//     gunlook: gunlook-own gunlook-hands gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
@@ -2457,6 +2457,7 @@ if (on('gunlook-own', 'gunlook', 'kit', 'all')) await run('gunlook-own', async (
 if (on('gunlook-hands', 'gunlook', 'all')) await run('gunlook-hands', async () => (await import('./gunlook-check.ts')).gunlookHands());             // a teammate and you with each gun: told, drawn and heard as that gun; off = the stand-in
 if (on('gunlook-off', 'gunlook', 'all')) await run('gunlook-off', async () => (await import('./gunlook-check.ts')).gunlookOff());                   // off = the same run by digest, the stands' row, the registry, a recording from before it
 if (on('gunreload', 'gunlook', 'kitanim', 'all')) await run('gunreload', async () => (await import('./gunreload-check.ts')).gunreloadCheck());              // how each is fed: the belt under its cover, shells one at a time, a magazine up a grip — as long as it was, the gun's own sounds
+if (on('gunshells', 'gunlook', 'kitanim', 'all')) await run('gunshells', async () => (await import('./gunreload-check.ts')).gunreloadShells());             // the shells key: a tube gun fed a shell at a time, in time and in the books (GUNSHELLS_BREAK=1 must fail)
 // ONE BIG SLOT A CARD, AND ITS TWO TOOLS ON A LOCK (src/game/kit.ts BIGSLOT, src/game/bigkit.ts; tools/qa/bigslot-check.ts raises the switch itself, so it asks the same on either stand; BIGKIT_BREAK=1 must fail)
 if (on('bigslot-card', 'bigslot', 'kit', 'all')) await run('bigslot-card', async () => (await import('./bigslot-check.ts')).bigCard());             // one big row a card, the shotgun off the weapon row, never two big things, never a pouch; old stores
 if (on('bigslot-off', 'bigslot', 'all')) await run('bigslot-off', async () => (await import('./bigslot-check.ts')).bigOff());                      // the switch off: no row, nobody carries either, the same run by digest
@@ -2780,6 +2781,7 @@ if (on('doortools-edges', 'doortools', 'all')) await run('doortools-edges', asyn
 if (on('doortools-lights', 'doortools', 'all')) await run('doortools-lights', async () => (await import('./doortools-probes.ts')).doortoolsLights());
 if (on('doortools-firstman', 'doortools', 'all')) await run('doortools-firstman', async () => (await import('./doortools-probes.ts')).doortoolsFirstMan());
 if (on('doortest', 'doortools', 'all')) await run('doortest', async () => (await import('./doortest-check.ts')).doortestCheck());   // a door found shut halts the order and the same row then kicks it · a kick from beside the door · 'clear from outside' is one order (DOORTEST_BREAK=1 must fail)
+if (on('thrpie', 'doortools', 'all')) await run('thrpie', async () => (await import('./thrpie-check.ts')).thrpieCheck());   // the jamb men slice a doorway before they call it held · the man cutting leans, the cuts down the door's own line on a knee (doortools.ts thrPie / thrLean; THRPIE_BREAK=1 must fail)
 if (on('threatfirst', 'doortools', 'all')) await run('threatfirst', async () => (await import('./threatfirst-check.ts')).threatfirstCheck());   // an entry's first man keeps his gun on where his own men's senses put an enemy in the room (THREATFIRST_BREAK=1 must fail)
 if (on('kickglass', 'doortools', 'all')) await run('kickglass', () => runScript('kickglass-check.ts'));   // no boot from beside a latch jamb in front of glass (DOORWAY.kickGlass): every door of every level, both faces
 if (on('openhand', 'doortools', 'all')) await run('openhand', async () => (await import('./openhand-check.ts')).openhandCheck());   // a bang / frag order on a door standing open (held from outside first) walks nobody across the front of the opening (OPENHAND_BREAK=1 must fail)

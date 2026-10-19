@@ -263,8 +263,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a block is a FAIL (one is stale); a name in the table that is no level with a row stops the tool. Lessons are not asked. The need first read the
   enemies.md lists as prose and a review showed that passing levels on any word after the list (a level with its block deleted among them): hence a
   table. `block` and `hall` are in neither on purpose, so they are the need's two NOTEs: enemies.md says either would suit a team and has none yet,
-  the maintainer's call. Marks, ways and a call played through stay `bun run tools/qa/response-check.ts`'s (about 90 s, so not in `--run`); it plays
-  calls on the levels its lines name, not on every level of its `WITH` list. `NEEDS_BREAK=1` plants the unanswered level, then a block with a
+  the maintainer's call. Marks, ways and a call played through stay `bun run tools/qa/response-check.ts`'s (about 90 s, so not in `--run`); each
+  level of its `WITH` list has a call played by a line of its own (records since its line 21), so a new block wants a new line there. `NEEDS_BREAK=1` plants the unanswered level, then a block with a
   one-word `why` under a name the table holds beside a twin with another block, with rows neither kind of block answers: three FAILs and three NOTEs
   it must find. On build d5382d5, both stands: 513 PASS, no FAIL, 67 NOTE (27 lines of this need: 6 levels with a why, 2 twins, 17 levels in the
   table, 2 NOTEs). Read from files only: no call was played by this need, and nothing here was seen on a GPU.

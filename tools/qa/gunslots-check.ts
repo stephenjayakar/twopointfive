@@ -12,10 +12,13 @@ import { rig } from './doortools-probes.ts';
 
 const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
-const { WEAPONS, Rifle, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
+const { WEAPONS, Rifle, Firearm, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
 const { rifleSpread } = await import(`${ROOT}/src/game/player.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { hearPath } = await import(`${ROOT}/src/game/weather.ts`);
+const LOAD = await import(`${ROOT}/src/game/kitload.ts`);
+const { GUNLOOK } = await import(`${ROOT}/src/game/gunlook.ts`);
+const GR = await import(`${ROOT}/src/game/gunreload.ts`);
 const { spawnUnit } = await import(`${ROOT}/src/game/guards.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { knobRegistry } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -101,6 +104,15 @@ export async function gunslotsMate(): Promise<boolean> {
     const back0 = GUNSLOTS_STATS.back; let backAt = -1; const t1 = g.time; for (let i = 0; i < 60 * 4 && backAt < 0; i++) { R.step(); if (!gd.second.out) backAt = g.time - t1; }
     const full = gd.weapon === primary && primary.mag + primary.chamber >= primary.def.magCapacity && side.roundsReady > 0 && gd.second.gun === side && sideHung(gd) === null && sideLocked(g, gd);
     F.verdict(backAt > GUNSLOTS.lull - 0.1 && backAt < GUNSLOTS.lull + 0.2 && full && GUNSLOTS_STATS.back === back0 + 1 && gd.route.weapon === primary.def.id, `nobody in front of him for ${f2(GUNSLOTS.lull)} s: the sidearm goes back topped off, the primary is in his hands reloaded, and his hands are busy for the reload`, `back after ${f2(backAt)} s · in hand ${gd.weapon.def.id} ${primary.mag}+${primary.chamber} · sidearm ${side.roundsReady} · locked ${sideLocked(g, gd)}`);
+    // a belt-fed gun taken up again is HEARD fed, every sound of it on the beat his hands are busy for (gunreload.ts under gunlook.ts; a magazine gun's is one clack)
+    { const look0 = GUNLOOK.on, m: any = ops[1], heard = (on: boolean) => {
+        GUNLOOK.on = on; m.route.weapon = 'mk46'; m.weapon = new Firearm(WEAPONS.mk46); m.reloadT = -1; m.second.out = false; m.second.lock = -100; m.weapon.chamber = 0; m.weapon.mag = 0;
+        if (!sideOut(g, m, 4)) return null; for (let i = 0; i < 60 * 4 && m.second.out; i++) R.step();
+        const a: any[] = []; R.W.audioLog = a; for (let i = 0; i < 60 * 9 && sideLocked(g, m); i++) R.step(); R.W.audioLog = null;
+        return a.map((e: any) => e.name as string); };
+      const def = WEAPONS.mk46, on = heard(true), cues = (GR.feedCues(def, GR.beatOf(def.reload, true), def.magCapacity, true) ?? []).map((c: any) => c.sfx as string), off = heard(false); GUNLOOK.on = look0;
+      const count = (a: string[], n: string) => a.filter(x => x === n).length, all = !!on && cues.length >= 3 && ([...new Set(cues)] as string[]).every(n => count(on, n) >= count(cues as string[], n));
+      F.verdict(all && !!off && !off.some(n => cues.includes(n) && n !== 'magOut'), 'a belt-fed gun taken up again after the sidearm is heard fed: each of its own sounds comes on the beat (with the guns\' own looks off, the one clack as before)', `its feed: ${cues.join(' ')} · heard while his hands were busy: ${on ? on.filter(n => cues.includes(n)).join(' ') || 'NONE' : 'no swap'} · looks off: ${off ? off.filter(n => n !== 'footstep').join(' ') || 'none of them' : 'no swap'}`); }
     // a man whose card brings no long gun has nothing behind his pistol
     K.KIT.members[2].weapon = 'pistol'; K.kitStage(g, ops);
     F.verdict(WEAPONS[ops[1].weapon.def.id].cls === 'pistol' && ops[1].second === null && !sideOut(g, ops[1], 3), 'a man whose card leaves the primary at home carries his sidearm alone', `in hand ${ops[1].weapon.def.id} · second ${ops[1].second}`);
@@ -223,6 +235,22 @@ export async function gunslotsGuns(): Promise<boolean> {
         'IN THE HANDS: the Mk 46 comes round slowest and the MP7 nearly like a pistol; the Mk 46 runs three magazines\' worth and takes over twice as long to feed; the Glock 18 holds twice the issue pistol and the HK45 less; the M1014 cycles in under half the pump\'s time',
         `turn weight (1 = a pistol): ${[...longs, ...sides].map(id => `${id} ${f2(turn(id))}`).join(' · ')}\n    rounds · seconds of trigger · reload: ${[...longs, ...sides].map(id => { const r = runs(id); return `${id} ${r.n} · ${f2(r.secs)} · ${f2(r.feed)}`; }).join(' | ')}`);
       F.verdict(Object.values(WEAPONS).every((d: any) => d.damage === 'oneShot') && Object.values(D).every((d: any) => d.weightKg > 0 && d.bulk >= 0), 'never by hit points: every row\'s round does what every round does; each row says what it weighs and how bulky it is', Object.entries(D).map(([id, d]) => `${id} ${d.weightKg} kg / ${d.bulk}`).join(' · ')); }
+    // WHAT IT WEIGHS — the card's two scores (kitload.ts reads each gun's own weightKg and bulk): every pick stepped on your card and a teammate's
+    { const lines: string[] = []; let ok = true; const slots0 = K.SLOTS.on; K.SLOTS.on = true;   // (a man is weighed under the pouches rule only: kitload.ts)
+      for (const i of [0, 1]) {
+        const card = (primary: string, secondary = 'g19') => ({ ...K.kitDefault(i), weapon: primary === 'none' ? 'pistol' : 'rifle', primary: primary === 'none' ? 'mk18' : primary, secondary, suppressed: true });
+        const of = (primary: string, secondary?: string) => LOAD.loadOf(i, card(primary, secondary)) as { mob: number; con: number };
+        const none = of('none'), L = Object.fromEntries(longs.map((id: string) => [id, of(id)])) as Record<string, { mob: number; con: number }>;
+        const lighter = (a: string, b: string) => L[a].mob > L[b].mob - 1e-9 && L[a].con > L[b].con - 1e-9 && (L[a].mob > L[b].mob + 0.01 || L[a].con > L[b].con + 0.01);
+        const rows = !!LOAD.loadShare(i, card('mk18'), 'primary') && !!LOAD.loadShare(i, card('mk18'), 'secondary') && !LOAD.loadShare(i, card('none'), 'primary');
+        const side = of('mk18', 'hk45').mob < of('mk18', 'g19').mob - 1e-6;
+        const w = (id: string) => LOAD.loadWorn(i, card(id)), pace = (id: string) => { const x = w(id); return x ? LOAD.loadPaceK(x) : 1; }, seen = (id: string) => { const x = w(id); return x ? LOAD.loadSeenK(x) : 1; };
+        ok &&= rows && side && longs.every((id: string) => none.mob > L[id].mob + 0.01 && none.con > L[id].con + 0.1) && lighter('mp7', 'mk18') && lighter('mk18', 'm1014') && lighter('m1014', 'mk12') && lighter('mk12', 'mk46')
+          && pace('none') > pace('mp7') && pace('mp7') > pace('mk18') && pace('mk18') > pace('mk46') && seen('none') < seen('mp7') && seen('mp7') < seen('mk18') && seen('mk18') < seen('mk46');
+        lines.push(`${i ? 'a teammate' : 'you'} (mobility / concealment · pace × · notice ×): none ${f2(none.mob)} / ${f2(none.con)} · ${f2(pace('none'))} · ${f2(seen('none'))} | ${longs.map((id: string) => `${id} ${f2(L[id].mob)} / ${f2(L[id].con)} · ${f2(pace(id))} · ${f2(seen(id))}`).join(' | ')} | HK45 beside the Mk 18: mobility ${f2(of('mk18', 'hk45').mob)}`);
+      }
+      K.SLOTS.on = slots0;
+      F.verdict(ok, 'WHAT IT WEIGHS: on the card\'s two scores the sidearm alone is lightest and best hidden, then the MP7, the Mk 18, the M1014, the Mk 12, and the Mk 46 last on both; the Primary and the Secondary row each carry their own gun\'s share; a man\'s pace and the notice he draws follow', lines.join('\n    ')); }
     // IN A FIGHT — two teammates with each primary (then each sidearm alone), three men five metres in front of them: the fight is finished with that gun
     { const rows: string[] = []; let all = true;
       for (const pick of [...longs.map((id: string) => ({ primary: id, secondary: sides[0], alone: false })), ...sides.map((id: string) => ({ primary: longs[0], secondary: id, alone: true }))]) {

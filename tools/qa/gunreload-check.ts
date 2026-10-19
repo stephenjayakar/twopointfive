@@ -9,6 +9,11 @@
 //             with it; a tube gun's hand makes a trip a shell; the MP7's hand goes to the foot of the grip, the belt gun's over the top then under
 //   mate      a teammate with each of the four long guns a card can hand him, his own reload beat: as long as it was, full after it, the gun's own sounds
 //             on his clock (always as a gun run dry), his empty drawn as what it is, the cover up on him too; and the room fight's clock plays the same list
+//   shells    THE SHELLS KEY (gunlook.ts GUNLOOK.shells; `GUNSHELLS_BREAK=1` must fail; held OFF for the three families above, which are the build before
+//             it): the M1014 and the pump gun reloaded in your hands take a lead, so long a shell and a tail — one, three and a whole tube; each shell is in
+//             the gun the frame it is heard; the end is the end the old reload came to; a reload cancelled after three keeps three, and the shells he carries
+//             are three fewer; the trigger breaks the feeding off — a chambered round fires that press, a pump gun with nothing chambered runs its pump first;
+//             loose shells are counted one by one; a teammate's beat is as long as the shells that go in; off, the row's one length again
 // Run it on both stands (plain, and TPS_PROFILE=shipped): it raises GUNLOOK, the gun slots and the big slot itself. Nothing here looks at a picture or
 // hears a sound: the names that WOULD have played (headless.ts audioLog), the boxes that would have been drawn, where the wrists are.
 import { ROOT } from './headless.ts';
@@ -24,6 +29,7 @@ const KN: any = await import(`${ROOT}/src/game/knobs.ts`);
 const { WEAPONS, Rifle, Pistol } = await import(`${ROOT}/src/game/weapons.ts`);
 const { MOVES } = await import(`${ROOT}/src/game/character.ts`);
 const { spawnUnit, startReloadBeat, tickReloadBeat } = await import(`${ROOT}/src/game/guards.ts`);
+const { applyKnobs, knobsSnapshot } = await import(`${ROOT}/src/game/journal.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
 function family(title: string): { verdict: Verdict; done: () => boolean } {
@@ -36,7 +42,7 @@ const DT = 1 / 60, AIM = [27.5, 1.2, 11.5];
 /** a joint of the DRAWN skeleton, world */
 const drawn = (c: any, node: number): number[] => { const w = c.world, p = c.skel.nodePos(node); return [w[0] * p[0] + w[4] * p[1] + w[8] * p[2] + w[12], w[1] * p[0] + w[5] * p[1] + w[9] * p[2] + w[13], w[2] * p[0] + w[6] * p[1] + w[10] * p[2] + w[14]]; };
 /** the switch as the page has it, with the slots a card's own guns ride on (the frozen stand pins them off as it stands a game up: raised after) */
-const raise = (on: boolean) => { GUNLOOK.on = on; GUNSLOTS.on = true; K.BIGSLOT.on = true; K.KITDEAL.on = false; };
+const raise = (on: boolean, shells = false) => { GUNLOOK.on = on; GUNLOOK.shells = shells; GUNSLOTS.on = true; K.BIGSLOT.on = true; K.KITDEAL.on = false; };   // (shells: the key of a tube gun by the shell — off for every family but its own, which are the build before it)
 /** every table and card put back as found */
 async function kept<T>(fn: () => Promise<T>): Promise<T> {
   const knobs = KN.knobsCopy(), cards = JSON.stringify(K.KIT.members);
@@ -155,6 +161,116 @@ function judgeHands(F: { verdict: Verdict }, off: Record<string, Run>, on: Recor
       `left wrist off the trigger wrist, along the fist's line: MP7 ${f2(fm.z)} m (and ${f2(fm.y)} m up) · Mk 12 ${f2(zk)} m · MP7 switch off ${f2(z0)} m · Mk 46 above the trigger wrist: cover ${f2(yc)} m, box ${f2(yb)} m`); }
 }
 
+// ------------------------------------------------------------------ the shells key
+/** the two rows' numbers, written out here (the guns' own call): seconds to the shells, a shell, the finish, and the bolt inside the finish */
+const SHELL: Record<'m1014' | 'm870', { lead: number; each: number; tail: number; bolt: number; cap: number; rack: string }> = {
+  m1014: { lead: 0.4, each: 0.36, tail: 0.7, bolt: 0.4, cap: 7, rack: 'boltDrop' }, m870: { lead: 0.4, each: 0.35, tail: 0.7, bolt: 0.4, cap: 6, rack: 'rack' } };
+interface SRun { began: boolean; secs: number; mag: number; chamber: number; carried: number; spare: number[]; fired: number; canFire: boolean; shells: { t: number; rounds: number; before: number }[]; foley: { name: string; t: number }[]; trips: number; reloading: boolean }
+/** one reload of a tube gun in your hands: the gun set to `tube` + `chamber` (and `spare`, the loose shells he carries), the R key (`key` false: no key — what
+ *  the trigger does to a gun as it stands), every frame until the weapon says it is done or `act` ends it: 'cancel' = let go as a sprint lets it go, 'fire' =
+ *  the trigger pressed on the next frame. `gun`: carry on with the gun of the run before. */
+function shellRun(W: any, id: 'm1014' | 'm870', tube: number, chamber: number, o: { spare?: number[]; key?: boolean; gun?: any; pre?: (gun: any) => void; act?: (heard: number, t: number) => 'cancel' | 'fire' | null } = {}): SRun & { gun: any } {
+  const g = W.game, pl = g.player, I = W.input, c = pl.char, def = WEAPONS[id];
+  const gun = o.gun ?? new Rifle(def); pl.rifle = gun;
+  if (!o.gun) { for (let f = 0; f < 40; f++) { W.cursorAt(AIM); W.step(DT); } gun.cancelReload(); c.anim.cancelReload(); gun.mag = tube; gun.chamber = chamber; if (o.spare) gun.spare = [...o.spare]; o.pre?.(gun); }
+  const a: any[] = []; W.audioLog = a; const t0 = g.time, fired0 = gun.shotsFired, shells: SRun['shells'] = []; let seen = 0, secs = -1, began = false, trips = 0, held = false, press = o.key === false, was = (gun.mag ?? 0) + gun.chamber;
+  if (o.key !== false) I.pressed.add('KeyR');
+  for (let f = 0; f < 700 && secs < 0; f++) {
+    W.cursorAt(AIM); if (press) { I.buttons |= 1; I.clicked |= 1; } W.step(DT); if (press) { I.buttons = 0; press = false; }
+    began ||= gun.reloading;
+    const bx: any[] = []; GR.reloadHandBoxes(c, id, bx); if (bx.length > 0 && !held) trips++; held = bx.length > 0;
+    const sh = a.filter(e => e.name === 'shellIn'); while (seen < sh.length) { shells.push({ t: sh[seen].t - t0, rounds: (gun.mag ?? 0) + gun.chamber, before: was }); seen++; } was = (gun.mag ?? 0) + gun.chamber;
+    const act = gun.reloading ? o.act?.(seen, g.time - t0) : null;
+    if (act === 'cancel') { gun.cancelReload(); c.anim.cancelReload(); secs = g.time - t0; }
+    else if (act === 'fire') press = true;
+    else if (!gun.reloading && (began || f > 30)) secs = g.time - t0;
+  }
+  W.audioLog = null;
+  return { gun, began, secs, mag: gun.mag ?? -1, chamber: gun.chamber, carried: gun.spare.reduce((x: number, y: number) => x + y, 0), spare: [...gun.spare].sort((x: number, y: number) => y - x), fired: gun.shotsFired - fired0, canFire: gun.canFire(), shells,
+    foley: a.filter(e => FOLEY.has(e.name)).map(e => ({ name: e.name as string, t: e.t - t0 })), trips, reloading: gun.reloading };
+}
+export async function gunreloadShells(): Promise<boolean> {
+  let all = true;
+  await kept(async () => {
+    const F = family('gunreload-shells: a tube gun is fed a shell at a time, in time and in the books');
+    const IDS = ['m1014', 'm870'] as const, secsOf = (id: 'm1014' | 'm870', n: number) => SHELL[id].lead + n * SHELL[id].each + SHELL[id].tail, tol = 2.5 * DT;
+    const W: any = await hushed(() => FNP.stage(2002)); raise(true, true); MOVES.on = 1;
+    // the rows
+    { const got = IDS.map(id => WEAPONS[id].reload), others = Object.values(WEAPONS as Record<string, any>).filter(d => d.reload.shell && d.id !== 'm1014' && d.id !== 'm870').map(d => d.id);
+      const same = J([got[0].dur, got[0].out, got[0].in_, got[0].rack, got[1].dur, got[1].out, got[1].in_, got[1].rack]) === J([3.6, 0.4, 2.9, 3.3, 3.2, 0.4, 2.5, 2.9]);
+      F.verdict(IDS.every((id, i) => J(got[i].shell) === J({ lead: SHELL[id].lead, each: SHELL[id].each, tail: SHELL[id].tail, bolt: SHELL[id].bolt }) && WEAPONS[id].magCapacity === SHELL[id].cap) && others.length === 0 && same,
+        'the two tube guns\' rows carry the guns\' own numbers for a shell at a time, no other row does, and their old stages stand as they stood', IDS.map((id, i) => `${id}: ${J(got[i].shell)}`).join(' · ') + ` · other rows with a shell beat: ${others.join(', ') || 'none'} · old stages as they were: ${same}`); }
+    // the time, and each shell in the gun as it is heard
+    const runs: Record<string, SRun> = {};
+    for (const id of IDS) for (let n = 1; n <= SHELL[id].cap; n++) runs[`${id} ${n}`] = n === SHELL[id].cap ? shellRun(W, id, 0, 0) : shellRun(W, id, SHELL[id].cap - n, 1);
+    { const ks = Object.keys(runs), nOf = (k: string) => +k.split(' ')[1], idOf = (k: string) => k.split(' ')[0] as 'm1014' | 'm870';
+      const bad = ks.filter(k => !(runs[k].began && Math.abs(runs[k].secs - secsOf(idOf(k), nOf(k))) <= tol));
+      F.verdict(bad.length === 0, 'a reload takes the lead, so long a shell and the tail: every count from one shell to a whole tube from empty', ks.map(k => `${k}: ${f2(runs[k].secs)} s (wants ${f2(secsOf(idOf(k), nOf(k)))})`).join(' · ') + (bad.length ? `\n    NOT ITS TIME: ${bad.join(', ')}` : ''));
+      const late = ks.filter(k => { const S = SHELL[idOf(k)], r = runs[k], n0 = nOf(k) === S.cap ? 0 : S.cap - nOf(k) + 1;
+        return !(r.shells.length === nOf(k) && r.shells.every((e, i) => Math.abs(e.t - (S.lead + (i + 1) * S.each)) <= tol && e.rounds === n0 + i + 1 && e.before === n0 + i)); });
+      F.verdict(late.length === 0, 'every shell is heard at its own moment and goes INTO the gun on that frame, not the one before: the rounds in it go up by one a shell', ks.map(k => `${k}: ${runs[k].shells.map(e => `${f2(e.t)}→${e.rounds}`).join(' ')}`).join('\n    ') + (late.length ? `\n    NOT SO: ${late.join(', ')}` : ''));
+      const tr = ks.filter(k => runs[k].trips !== nOf(k));
+      F.verdict(tr.length === 0, 'the hand makes one trip with a shell in its fingers for every shell, on the beat the weapon is on', ks.map(k => `${k}: ${runs[k].trips} trips`).join(' · '));
+      const ends = ks.filter(k => { const S = SHELL[idOf(k)], r = runs[k], empty = nOf(k) === S.cap; return !(r.chamber === 1 && r.mag === (empty ? S.cap - 1 : S.cap) && r.carried === 3 * S.cap - nOf(k)); });
+      const heard = IDS.every(id => { const r = runs[`${id} ${SHELL[id].cap}`], nm = r.foley.map(e => e.name); return J(nm) === J(ownList(id, true, SHELL[id].cap)); });
+      F.verdict(ends.length === 0 && heard, 'it ends where the old reload ended: from empty a tube less one and one chambered (the M1014\'s first shell in the port with the bolt dropped on it, the pump gun\'s pump run at the end), topped up to full, the shells he carries fewer by what went in', ks.map(k => `${k}: ${runs[k].mag}+${runs[k].chamber}, carries ${runs[k].carried}`).join(' · ') + ` · heard from empty as the gun's own list: ${heard}`); }
+    // a reload cut short keeps what was fed
+    { const a = shellRun(W, 'm1014', 0, 0, { act: n => n >= 3 ? 'cancel' : null }), b = shellRun(W, 'm870', 0, 0, { act: n => n >= 3 ? 'cancel' : null });
+      F.verdict(a.mag + a.chamber === 3 && a.carried === 18 && a.canFire && b.mag === 3 && b.chamber === 0 && b.carried === 15 && !b.canFire,
+        'a reload let go after three shells keeps three, and he carries three fewer: the M1014 has one of them chambered and may fire; the pump gun has three in the tube and nothing chambered', `M1014: ${a.mag}+${a.chamber}, carries ${a.carried}, may fire ${a.canFire} · pump gun: ${b.mag}+${b.chamber}, carries ${b.carried}, may fire ${b.canFire}`);
+      const b2 = shellRun(W, 'm870', 0, 0, { gun: b.gun, key: false }), b3 = shellRun(W, 'm870', 0, 0, { gun: b.gun, key: false });
+      F.verdict(b2.began && Math.abs(b2.secs - SHELL.m870.bolt) <= tol && J(b2.foley.map(e => e.name)) === J(['rack']) && b2.fired === 0 && b2.mag === 2 && b2.chamber === 1 && b3.fired === 1,
+        'the trigger on that pump gun runs the pump on what is in the tube — its own short beat, nothing fired — and the next press fires', `the first press: ${f2(b2.secs)} s (wants ${f2(SHELL.m870.bolt)}), heard ${b2.foley.map(e => e.name).join(' ') || 'nothing'}, fired ${b2.fired}, then ${b2.mag}+${b2.chamber} · the second press fired ${b3.fired}`);
+      const inf = shellRun(W, 'm870', 3, 0, { key: false, pre: gun => { gun.infinite = true; } });
+      F.verdict(inf.fired === 1 && !inf.began, 'with unlimited ammunition on, the press on a pump gun with nothing chambered fires as it always did: no pump run is put in its way', `fired ${inf.fired}, a reload began: ${inf.began}`);
+      const a2 = shellRun(W, 'm1014', 0, 0, { gun: a.gun });
+      F.verdict(a2.began && Math.abs(a2.secs - secsOf('m1014', 5)) <= tol && a2.mag === 7 && a2.chamber === 1 && a2.carried === 13, 'R on the M1014 again feeds only the room that is left: five shells\' time, full, and five fewer carried', `${f2(a2.secs)} s (wants ${f2(secsOf('m1014', 5))}), ${a2.mag}+${a2.chamber}, carries ${a2.carried}`); }
+    // the trigger breaks it off
+    { const r = shellRun(W, 'm1014', 4, 1, { act: n => n >= 1 ? 'fire' : null });
+      F.verdict(r.fired === 1 && !r.reloading && r.shells.length === 1 && r.mag + r.chamber === 5 && r.secs < SHELL.m1014.lead + SHELL.m1014.each + 4 * DT,
+        'the trigger pressed while he feeds a gun with a round chambered lets the reload go and fires that press: one shell in, one round out', `fired ${r.fired}, ${r.shells.length} shell in, ${r.mag}+${r.chamber} after, over at ${f2(r.secs)} s`); }
+    // loose shells
+    { const r = shellRun(W, 'm1014', 2, 1, { spare: [1, 1] }), none = shellRun(W, 'm1014', 0, 0, { gun: r.gun });
+      F.verdict(r.began && r.shells.length === 2 && Math.abs(r.secs - secsOf('m1014', 2)) <= tol && r.mag === 4 && r.carried === 0 && !none.began,
+        'with two loose shells left two go in, in two shells\' time, and R after that begins nothing', `${r.shells.length} in over ${f2(r.secs)} s (wants ${f2(secsOf('m1014', 2))}), ${r.mag}+${r.chamber}, carries ${r.carried} · R again began a reload: ${none.began}`); }
+    // the key off under the switch: the row's one length, the tube booked at its end
+    { GUNLOOK.shells = false; const r = shellRun(W, 'm1014', 4, 1); GUNLOOK.shells = true;
+      F.verdict(r.began && Math.abs(r.secs - WEAPONS.m1014.reload.dur) <= tol && r.shells.length === 3 && r.shells.every((e, i) => e.rounds === (i < r.shells.length - 1 ? 1 : 8)) && r.mag === 7,
+        'with the key off (the switch still on) three shells take the row\'s whole length and are booked together at its end, as before the key', `${f2(r.secs)} s (the row ${f2(WEAPONS.m1014.reload.dur)}), rounds in the gun as each was heard: ${r.shells.map(e => e.rounds).join(' ')}`); }
+    // a teammate's beat, and a clock that only counts
+    { const R: any = await hushed(() => rig(17, { stage: false })); raise(true, true); MOVES.on = 1; const g = R.game; K.KIT.on = true; g.guards.length = 0;
+      K.KIT.members[1] = K.kitDefault(1); K.kitSet(1, 'primary', 'm1014');
+      const p = g.player.char.pos, ops = [spawnUnit(g, { team: 'operative', pos: [p[0] + 1, 0, p[2] + 1], yaw: 0, name: 'Op0', light: false })]; K.kitStage(g, ops); for (let f = 0; f < 30; f++) R.step();
+      const gd: any = ops[0], w = gd.weapon, beat = (tube: number, chamber: number) => { w.rearm(); w.mag = tube; w.chamber = chamber; const a: any[] = []; R.W.audioLog = a; startReloadBeat(g, gd); const len = gd.reloadT; let mid = -1, ticks = 0;
+        while (gd.reloadT >= 0 && ticks < 900) { tickReloadBeat(g, gd, DT); ticks++; R.step(); if (mid < 0 && a.filter(e => e.name === 'shellIn').length >= 3) mid = (w.mag ?? 0) + w.chamber; }
+        R.W.audioLog = null; return { len, ticks, mid, full: (w.mag ?? 0) + w.chamber, shells: a.filter(e => e.name === 'shellIn').length }; };
+      const dry = beat(0, 0), part = beat(4, 1);
+      const w2 = new Rifle(WEAPONS.m870); w2.mag = 0; w2.chamber = 0; const row = GR.feedBegin(w2), heard: string[] = [], g2 = { audio: { play: (n: string) => { heard.push(n); } } };
+      for (let t = 0; t < row.dur + 0.1; t += DT) GR.feedTick(g2, { pos: [0, 0, 0] }, w2.def, t, t + DT, 0.7, w2);
+      // a beat dropped part way (his gun put away, his fight reset): what went in shoots, the next beat is for the room that is left, and with the key off it is the row's again with nothing of the old plan on the gun
+      const w3 = new Rifle(WEAPONS.m870); w3.mag = 0; w3.chamber = 0; GR.feedBegin(w3); for (let t = 0; t < 1.5; t += DT) GR.feedTick({ audio: { play: () => {} } }, { pos: [0, 0, 0] }, w3.def, t, t + DT, 0.7, w3);
+      const cut = { rounds: (w3.mag ?? 0) + w3.chamber, fires: w3.canFire() }, again = GR.feedBegin(w3).dur; GUNLOOK.shells = false; const offRow = GR.feedBegin(w3), stale = w3.shellFed || w3.reloadRow !== w3.def.reload; GUNLOOK.shells = true;
+      F.verdict(cut.rounds === 3 && cut.fires && Math.abs(again - secsOf('m870', 4)) < 1e-6 && offRow === w3.def.reload && !stale,
+        'a beat dropped after three shells leaves him a gun that shoots with three in it; his next beat is for the room left in the tube, four shells; and with the key off it is the row\'s own with nothing of the old plan left on the gun',
+        `after the drop: ${cut.rounds} in it, may fire ${cut.fires} · the next beat ${f2(again)} s (wants ${f2(secsOf('m870', 4))}) · key off: the row's own ${offRow === w3.def.reload}, an old plan on the gun ${stale}`);
+      // every clock that waits a reload out asks the gun (read off the source: the room fight's and the covering fire's are not run here)
+      const src = async (f: string) => await Bun.file(`${ROOT}/src/game/${f}`).text(), [rf, cf, gs, mo, gm] = await Promise.all(['roomfight.ts', 'coverfire.ts', 'guards.ts', 'morale.ts', 'game.ts'].map(src));
+      const sites = { 'the room fight begins': /O\.reloadUntil = g\.time \+ feedBegin\(gd\.weapon\)\.dur/.test(rf), 'the room fight ticks': /gd\.weapon\.reloadRow\.dur/.test(rf) && !/weapon\.def\.reload\.dur/.test(rf), 'covering fire': /O\.reloadUntil = g\.time \+ feedBegin\(gd\.weapon\)\.dur/.test(cf) && !/weapon\.def\.reload\.dur/.test(cf),
+        'a guard\'s beat': /gd\.reloadT = feedBegin\(gd\.weapon\)\.dur/.test(gs), 'the long burst run dry': /feedBegin\(gd\.weapon\)/.test(mo) && !/weapon\.def\.reload\.dur/.test(mo), 'the teammate\'s hands': /const R = gd\.weapon\.reloadRow/.test(gm) };
+      F.verdict(Object.values(sites).every(Boolean), 'every clock that waits a man\'s reload out begins it by the gun as it stands and reads the beat off the gun (read in the source)', Object.entries(sites).map(([k, v]) => `${k}: ${v}`).join(' · '));
+      F.verdict(w.def.id === 'm1014' && Math.abs(dry.len - secsOf('m1014', 7)) < 1e-6 && dry.shells === 7 && dry.mid === 3 && dry.full === 8 && Math.abs(part.len - secsOf('m1014', 3)) < 1e-6 && part.shells === 3 && part.full === 8
+        && Math.abs(row.dur - secsOf('m870', 6)) < 1e-6 && J(heard) === J(ownList('m870', true, 6)) && w2.mag === 5 && w2.chamber === 1,
+        'a teammate\'s beat is as long as the shells that go in — a dry M1014 the whole tube\'s time with three in it after the third is heard, one four shells up three shells\' time — and full after it; a clock that only counts (the room fight\'s) books and plays the pump gun\'s six and its pump',
+        `dry: ${f2(dry.len)} s, ${dry.shells} shells, ${dry.mid} in it after the third, ${dry.full} after · four up: ${f2(part.len)} s, ${part.shells} shells, ${part.full} after · the counting clock: ${f2(row.dur)} s, ${heard.join(' ')}, ${w2.mag}+${w2.chamber} in it`);
+      // the page's flag, and a recording from before the key
+      const page = /GUNLOOK\.shells = !q\.has\('nogunshells'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
+      GUNLOOK.on = true; GUNLOOK.shells = true; const snap = knobsSnapshot(g); const had = snap.tables.GUNLOOK?.shells === true; delete snap.tables.GUNLOOK.shells; applyKnobs(g, snap); const old = GUNLOOK.shells, kept = GUNLOOK.on;
+      F.verdict(page && had && old === false && kept === true, 'the page writes the key on unless ?nogunshells, a session\'s record carries it, and a recording from before the key replays with it off (the switch as the recording had it)', `the page writes it: ${page} · in the record: ${had} · after an old record: shells ${old}, the switch ${kept}`); }
+    all = F.done() && all;
+  });
+  return all;
+}
+
 export async function gunreloadCheck(): Promise<boolean> {
   let all = true;
   await kept(async () => {
@@ -195,5 +311,5 @@ export async function gunreloadCheck(): Promise<boolean> {
   return all;
 }
 
-if (import.meta.main) { let ok = false; try { ok = await gunreloadCheck(); } catch (e) { console.log(`- FAIL — gunreload-check threw\n    ${(e as Error).stack ?? (e as Error).message}`); }
+if (import.meta.main) { let ok = false; try { ok = await gunreloadCheck(); ok = await gunreloadShells() && ok; } catch (e) { console.log(`- FAIL — gunreload-check threw\n    ${(e as Error).stack ?? (e as Error).message}`); }
   console.log(`\n=== gunreload-check: ${ok ? 'ALL PASS' : 'FAILED'} ===`); process.exit(ok ? 0 : 1); }
