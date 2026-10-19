@@ -14,10 +14,12 @@
 // How a change is written: `w(now, was)` where the line is READ (never in a table built as a module loads: the switch is the page's, set after the modules load).
 // Off = the build as it was, word for word. A LEAF: nothing of the game is imported here (src/game is one import cycle).
 
-export const WORDS = { on: false };
+/** `doors`: a door's said name may be the level's own (scenarios.doorNames, read by doornames.ts) — a key of its own, because a door's name is said in
+ *  bubbles and a bubble's text is in the run digest: a recording from before the key replays with it off (journal.ts). Read only while `on`. */
+export const WORDS = { on: false, doors: false };
 
 /** the page's one rule for the switch: on unless the address says `?oldwords` */
-export function wordsFromQuery(q: URLSearchParams) { WORDS.on = !q.has('oldwords'); }
+export function wordsFromQuery(q: URLSearchParams) { WORDS.on = !q.has('oldwords'); WORDS.doors = q.get('doornames') !== '0'; }
 
 /** a line (or a pool, or any value a line is picked by) as the pass has it — `was` with the switch off */
 export function w<T>(now: T, was: T): T { return WORDS.on ? now : was; }

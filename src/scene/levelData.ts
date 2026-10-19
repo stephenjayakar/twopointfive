@@ -237,7 +237,7 @@ export const KEYS = {
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
-  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response', 'doorNames'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ validation
@@ -792,6 +792,15 @@ export function validateLevelData(d: LevelData): string[] {
             if (!isStr(d.id) || !isStr(d.name)) err(dw, 'id, name: non-empty strings'); else if (ids.has(d.id)) err(dw, `id '${show(d.id)}' used twice`); ids.add(d.id);
             if (!isVec(d.pos)) err(`${dw}.pos`, 'Vec3'); if (!(Array.isArray(d.n) && d.n.length === 2 && d.n.every((x: unknown) => isNum(x)))) err(`${dw}.n`, '[x, z]'); else if (Math.abs(Math.hypot(d.n[0], d.n[1]) - 1) > 0.01) err(`${dw}.n`, 'a unit normal out of the face a man works'); });
         }
+      }
+      if (S.doorNames !== undefined) {   // (scene/scenarios.ts: what a door is called where its id cannot say it — game/doornames.ts; the words' own rules are probes.ts words-doornames's)
+        const w = 'scenarios.doorNames', seen = new Set<string>();
+        if (!Array.isArray(S.doorNames)) err(w, 'must be an array of { door, name }');
+        else S.doorNames.forEach((r: any, i: number) => { const rw = `${w}[${i}]`;
+          if (!isObj(r)) { err(rw, 'must be an object: { door, name }'); return; }
+          known(rw, r, ['door', 'name']); doorOk(`${rw}.door`, r.door);
+          if (isStr(r.door)) { if (seen.has(r.door)) err(`${rw}.door`, `door '${r.door}' is named twice`); seen.add(r.door); }
+          if (!isStr(r.name) || !r.name.trim() || r.name.length > 40) err(`${rw}.name`, 'must be a name of 1 to 40 characters'); });
       }
       if (S.response !== undefined) {   // (scene/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are game/qrf.ts checkResponse's)
         const R = S.response, w = 'scenarios.response';

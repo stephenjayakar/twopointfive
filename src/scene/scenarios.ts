@@ -432,7 +432,13 @@ export interface ResponseData {
    *  raids only; one without answers a quiet night gone loud, never a raid */
   raid?: { room?: string };
 }
-export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData }
+export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; snatch?: SnatchData; defuse?: DefuseData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData;
+  /** WHAT A DOOR IS CALLED where its id cannot say it (game/doornames.ts, words.ts WORDS.doors): a row a door — its id and the name on the squad's rows
+   *  and in a defender's call, written as it is read there ('yard gate', 'records side door': no 'the'). For a door whose id carries a bearing or a letter
+   *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level
+   *  called the same (probes.ts words-doornames holds both, and the list of doors still owed a name); a door the level has, once (the validator). A door
+   *  with no row keeps the name it had. Words only: not in the level's fingerprint. */
+  doorNames?: { door: string; name: string }[] }
 
 /** THE MISSION LIST'S GROUPS (ui/missions.ts draws a heading per group — the maintainer, 10-10: 'we can build out a few levels in groups. a tutorial group
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A

@@ -35,6 +35,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lower it), nothing solid between — or, the aim free, the cursor on his body — while nobody is in a fight (`friendsInFight`: inside `quietS` of Sam's last round or of the last loud thing in a
   living teammate's ears, or a man hostile to him alert / searching). Down at once, up `upSecs` after; never on the wall hold, with a man held or hauled, under a show / puppet. State
   `Player.friendLow / friendT`, not saved. Never played by anybody.
+- **Friendly fire** (`src/game/friendlyfire.ts FRIENDLYFIRE {on, coneK 0.75, bodyM 0.34, sureM 0.2, care, words, nearM 0.6}`: on in the page, `?nofriendlyfire`; frozen stand off,
+  `TPS_FRIENDLYFIRE=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables; Tab ▸ Player, doors & props ▸ 'friendly fire'; `probes.ts friendlyfire` =
+  tools/qa/friendlyfire-check.ts, also under `player`: 13 lines, passes on both stands, `FRIENDLYFIRE_BREAK=1` — the bodies without the care — fails 7 on each). Until this rule a round found
+  only men of a side hostile to the shooter's. On, for Sam's side (Sam and his operatives; never the night staff, a defender, a civilian or a show's cast): (1) BODIES — combat.ts `fireWeapon`
+  scans the men of the shooter's own side too (`ffBody`: living, on his feet): Sam's round into a teammate does what a defender's round does to him (wounds.ts decides by where it landed;
+  the log's '<callsign> down — your round', or '<callsign> hit, down and breathing — your round'; a mate's round names the mate), a teammate's round finds Sam and the other teammates the
+  same way. Only the ENTERING hit counts on a man of his own side (a muzzle already past a mate's shoulder is past him). A teammate he downs is not a kill or a knockout on the card. God mode
+  keeps Sam's own body out of it and nothing else: his rounds still down a teammate. (2) THE CARE — `friendInCone`: a teammate does not press with a friend anywhere his round COULD go — the
+  cone `coneK` × the spread the round is about to be given, a body `bodyM` wide, as far as the round flies through what it pierces (glass; a thin wall or a leaf while wallpen is live), past
+  the man he is on unless the round cannot miss that man (`sureM`); asked of the friend's middle, head and both edges of his column; no foreknowledge of the die. Two seams: the room fight's
+  gate (roomfight.ts `tickOp`, beside its own `friendInLine`: the same hold, side step and letting go; `sideStep` vets a spot with the cone too) and `fireWeapon` itself for every other place a
+  teammate's round is born (`ffUnpressed`: not pressed, counted; a lock shell at arm's length is exempt). (3) WORDS — `ffPast`: a teammate the player's lead round passes within `nearM` of
+  his head or chest says suppression.ts's 'watch your fire!' lines on their own clocks. The reticle was already enemies-only (friends.ts `noSnap`, above; civilians were never in its
+  loops) — the check sweeps the cursor over a teammate and a defender to say so. The low ready (above) is kept: out of a fight his gun still comes down off a teammate. MEASURED (headless,
+  the shipped stand, hard, a scripted commander who never fires; 8 squad missions × seeds 1-5, 40 runs an arm): on — 0 rounds of a teammate's into a friend in 268 room-fight rounds, the
+  cone held 28 frames that the lane had not (all in the pair's room clear), 0 unpressed; off, and on without the care — 272 rounds, 0 into a friend either, the two arms the same to the
+  last digit: these missions never put a friend in a teammate's round as it was, so the play does not show the care working — the staged check does (care off: the round goes into Sam, into
+  the mate). Ends, men up and hostiles left are the same in all three arms (25 of 40 won, 61 of 130 up); seven of eight missions are the same to the last digit on and off. The real page on
+  the software adapter: one click at a teammate three metres off downs him and names Sam's round; with `?nofriendlyfire` five rounds pass through him. NOT DONE: the net in `fireWeapon`
+  returns after its caller has spent the round (cover fire, the fight AI's own trigger: the count is not given back); teammates do not keep out of SAM's line of fire; defenders among
+  themselves and the squad's rounds past a hostage are as they were. Never seen on a GPU, never played by anybody.
 - **A blast does to the player what it does to anybody** (`src/game/samstun.ts SAMSTUN {on, blindRoots, fade}`: on in the page, `?nosamstun`; frozen stand off, `TPS_SAMSTUN=1`; a `FROZEN_HOLDS` row, in the
   knob registry and a journal's tables; `probes.ts samstun` = a guard and Sam the same distance from one blast). Two stamps on `Player`, the Guard's own names: `staggerUntil` (frag.ts `blast` on a
   'wounded' player — written whatever the switch says, under `FRAG.samStun` — and a defender's stun canister in a room fight) = feet rooted (`samRooted` before the walk keys), the gun at the low
@@ -666,7 +687,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   pistols only 4 / 12 / 44.8 s on against 4 / 15 / 72.8 s off. Before the gun rows and the deal joined, 12 seeds leaned the same way (a full load: 78 s on against 55 s
   off, 32 men up against 38; rescue-registry over 6: heavy 5 taken on, 6 off; pistols 2 on, 0 off). A full load costs tempo; going light is quicker and does not
   win a loud room (its reason is pace and notice, measured only as rates: no scripted quiet player). A handful of seeds says which way, not how much.
-  KNOWN SHAPES: two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
+  KNOWN SHAPES: a door charge you carry weighs on you though you are issued none, set or not (`owncharge-off` holds the weight off in both its runs to ask of the
+  row alone); two men issued differently are ×1 at different scores (the maintainer's call: one yardstick for everybody; with the deal and a sidearm each a
   four's issue is near even — mobility 0.65‥0.76, concealment 0.54‥0.56); a light player out-walks a silent squad's
   cap; what is thrown or set never lightens a man; a light, goggles and a suit weigh nothing, and a suppressor only where the gun's suppressed row is a heavier row of its own. Never seen on a GPU; nobody has played it.
 - **Each gun its own look, sound and reload** (`src/game/gunlook.ts`, `GUNLOOK.on`; `src/game/gunreload.ts`; 10-18). The six guns the two slots offer beside the issue
