@@ -2,8 +2,8 @@
 //
 // THE SEAM. Whatever sets a blast off calls ONE thing about doors: `g.doors.blast(at, tearM, who)` (doors.ts — it lands in doorBlast below). `tearM` is the
 // blast's own number: the distance inside which it takes an ordinary interior leaf out of its frame (DOORBLAST.tearM is the table the callers read: a stun
-// canister 0 = never, a frag 1.5 m). A charge SET ON a leaf is contact: doortools.ts blow() calls tearOff itself. A boot, a shoulder, a round, a breaching
-// shotgun at the lock never come here: they leave the leaf hung (doors.ts kickIn) — but for ONE boot, the player's at a full run at the face a shut leaf opens
+// canister 0 = never, a frag 1.5 m). A charge SET ON a leaf is contact: doortools.ts blow() calls tearOff itself. A boot, a shoulder, a breaching
+// shotgun at the lock never come here: they leave the leaf hung (doors.ts kickIn; rounds enough take a wooden one apart their own way: DOORSHOT below) — but for ONE boot, the player's at a full run at the face a shut leaf opens
 // toward (sprintdoor.ts; player.ts updateKick calls tearOff): the leaf can only go where that boot sends it by leaving its frame. Steel doors do not come off.
 //
 // WHAT COMING OFF IS. Door.off: the leaf's own box becomes a loose SLAB — it leaves the frame away from the blast, its foot dragging, topples top-first (or, with
@@ -25,6 +25,11 @@ import { BoxFlag } from '../scene/boxes';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
+import { WALLS } from './wallbreak';
+import { FURN_BREAK } from './furnblast';
+import { hash01 } from './debris';
+import { gpuFx } from './particleFx';
+import { civiliansShown } from './civilians';
 
 /** the angle a door off its hinges reads as (doors.ts Door.off): wide open, whatever its own swing limits were */
 export const OFF_ANGLE = Math.PI / 2;   // (doors.ts Doors.update holds an off door at ±this, whatever is written onto it)
@@ -59,6 +64,37 @@ export const DOORBLAST = {
 export const DOORBLAST_STATS = { blasts: 0, torn: 0, landed: 0, back: 0, nudged: 0, nudgeMax: 0, laid: 0 };
 export const DOORBLAST_LOG: string[] = [];
 const note = (g: Game, s: string) => { DOORBLAST_LOG.push(`${g.time.toFixed(2)}s ${s}`); if (DOORBLAST_LOG.length > 200) DOORBLAST_LOG.shift(); };
+
+/** GUNFIRE SPLINTERS A WOODEN LEAF APART (the maintainer, 10-19: 'doors should splinter apart on sustained gunfire (at least no slower than drywall)').
+ *  THE COUNT is the wall engine's own: wallbreak.ts WallBreak.round hands every round that met a leaf to `leafRound` with the weight a wall's cell would
+ *  have taken for it (a rifle round 1 at chaos 0.5, a pistol round WALLS.pistolK of that; of a shotgun's pellets the ones the walls are handed), and the
+ *  leaf stands `leafTough()` of it — plasterboard's own number, or wood's if that were ever less — ONE count for the whole leaf, wherever on it and on
+ *  whichever face the rounds land, so a door never asks for more rounds than the same aim at drywall, and gives whole where drywall keeps its sill. A
+ *  round that goes on through (wallpen.ts) counts as one that stops; so does one fired with the gun pressed through the leaf (combat.ts wallAcrossArm).
+ *  Past half its toll the leaf sheds splinters with every round. Then it goes IN PIECES, by the destruction's own gradient: strips along the grain cut
+ *  to uneven lengths and thrown the way the round was going as rigid debris (the pool's own cap: what it refuses goes as splinters), each TAGGED WOOD and
+ *  dressed by the break table (breakTable.ts retag + dress: a snapped end, a splinter's taper, a board's torn corners — a door's paint would otherwise
+ *  read as masonry or sheet metal), then slivers, then dust-fine splinters; where the cuts fall goes by where the last round struck, so no two doors break alike. What is left is
+ *  the LOCK RAIL lying by the frame with the handles on it — the leaf's own box, so to every reader this is a door off its hinges (Door.off: an open
+ *  doorway to sight, shots, sound, smoke, the AI and every door order; reset() hangs it; a checkpoint files the rail where it lies and a leaf's count
+ *  while it hangs). A steel door never does; nor does a leaf already off. Lives only where walls break (wallBreakOn: the destruction switch, never
+ *  under a showcase). */
+export const DOORSHOT = {
+  /** THE SWITCH (Tab ▸ Player & weapons ▸ Player, doors & props; ?doorshot=0): off = no round ever does more than mark a leaf, as it was */
+  on: false,
+  /** the pieces: strips across the leaf × lengths up it, how uneven the cuts are (0‥1), and how many go as rigid pieces (past it, splinters) */
+  strips: 4, lengths: 3, uneven: 0.6, chunks: 11,
+  /** m/s a piece leaves at along the round's way (lo, hi) · across it (±) · up (lo, hi) · its tumble (rad/s) */
+  fly: [1.0, 3.2], side: 1.1, up: [0.2, 1.8], spin: 9,
+  /** splinters thrown on through, and back toward the gun, when it goes, at these m/s · the most a round sheds from a leaf past half its toll */
+  chips: [60, 24], chipV: [4, 2.5], shed: 8,
+  /** the middle of the gradient: finger-long slivers thrown on through when it goes (how many, m/s) */
+  slivers: [22, 3.2],
+  /** how loud the leaf going is — a 'kick' at the door, blamed on whoever fired the round: the door's own crack and dust, and to the floor's ears a door
+   *  going in (guards.ts hearingCheck answers a kick floor-wide; the debrief files 'a door kicked in'), however quiet the gun was */
+  level: 0.8,
+};
+export const DOORSHOT_STATS = { rounds: 0, splintered: 0, chunks: 0, demoted: 0 };
 
 /** the lift that keeps the resting slab's underside off the floor plane (no z-fight, and a ray along the floor is not born inside it) */
 const LIFT = 0.005;
@@ -165,6 +201,16 @@ function reaches(g: Game, d: Door, at: Vec3): boolean {
   return false;
 }
 
+/** Sam's hands come off a leaf that has left its frame: easing it, picking its lock, keying its pad — there is no lock left to finish (a pick run on would
+ *  file 'lock picked') */
+function handsOff(g: Game, d: Door) {
+  const pl = g.player;
+  if (pl.easing === d) pl.easing = null;
+  if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
+  if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
+  if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+}
+
 /** THE LEAF COMES OFF: out of its frame away from `from` (where the blast was), thrown `k` (0‥1) of DOORBLAST.speed; `who` is blamed for the crack of it and for
  *  the slam when it lands. False (and nothing done) with the switch off, for a steel door, and for one already off. */
 export function tearOff(g: Game, d: Door, from: Vec3, who: number, k = 1): boolean {
@@ -184,17 +230,78 @@ export function tearOff(g: Game, d: Door, from: Vec3, who: number, k = 1): boole
   let dx = nx, dz = nz;
   if (!back) { const rx = cx - from[0], rz = cz - from[2], rl = Math.hypot(rx, rz); if (rl > 0.05) { dx += 0.35 * rx / rl; dz += 0.35 * rz / rl; const l = Math.hypot(dx, dz); dx /= l; dz /= l; } }   // a little of the blast's own bearing
   const sp = lerp(K.speed[0], K.speed[1], clamp(k, 0, 1)) * (back ? 0.7 : 1);
-  d.off = true; d.angle = fly * OFF_ANGLE; d.vel = 0; d.latched = false; d.closing = false; d.passers = 0; d.quietT = 10; d.sinceBash = 10; d.creakArmed = false;
+  d.off = true; d.angle = fly * OFF_ANGLE; d.vel = 0; d.latched = false; d.closing = false; d.passers = 0; d.quietT = 10; d.sinceBash = 10; d.creakArmed = false; d.shot = 0;
   d.slab = { p: [cx, support(d, 0), cz], v: [dx * sp, K.up, dz * sp], a, spin: back ? 0 : fly * K.spin, tip: 0, tipV: back ? 0 : K.tip, side: (back ? -fly : fly) as 1 | -1, rest: false, landed: false, who, t: 0, ang: d.angle };
-  { const pl = g.player;   // Sam's hands come off it: easing it, picking its lock, keying its pad — there is no lock left to finish (a pick run on would file 'lock picked')
-    if (pl.easing === d) pl.easing = null;
-    if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
-    if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
-    if (pl.wanding?.door === d) wandDrop(pl); }   // (wand.ts: the cable was under that leaf)
+  handsOff(g, d);
   DOORBLAST_STATS.torn++; if (back) DOORBLAST_STATS.back++;
   note(g, `${d.def.name} off its hinges · k ${k.toFixed(2)} · ${back ? `no room ahead (${ahead.toFixed(2)} m): falls back` : `${ahead.toFixed(2)} m ahead`}`);
   poseSlab(d);
   g.doors.torn(d, who);
+  return true;
+}
+
+/** the rounds' work a leaf stands, in the wall engine's unit (WALLS.tough: rifle rounds into one cell at chaos 0.5): never more than plasterboard's */
+export function leafTough(): number { return Math.min(WALLS.tough.drywall ?? 6, WALLS.tough.wood ?? 9); }
+
+/** A ROUND MET A LEAF (DOORSHOT): dynamic box `index − 1e6`, at `hitP`, going `dir`, worth `w` of a wall cell's toll — WallBreak.round calls it for every
+ *  round that stopped in, or went on through, a door leaf. Nothing with the switch off, for a steel door, for one off its hinges (its box is the rail). */
+export function leafRound(g: Game, index: number, who: number, hitP: Vec3, dir: Vec3, w: number) {
+  const K = DOORSHOT; if (!K.on) return;
+  const b = g.col.dynamicBoxes[index - 1e6]; if (!b) return;
+  const d = g.doors.list.find(x => x.box === b); if (!d || d.off || d.def.steel) return;
+  d.shot += w; DOORSHOT_STATS.rounds++;
+  const share = d.shot / leafTough();
+  if (share >= 1) { splinter(g, d, dir, who, hitP); return; }
+  if (share > 0.5) { const P = gpuFx(g), l = Math.hypot(dir[0], dir[1], dir[2]) || 1;   // (past half its toll: every round takes splinters out of its far face)
+    if (P) P.emit('debris', [hitP[0] + dir[0] / l * (d.thick + 0.02), hitP[1], hitP[2] + dir[2] / l * (d.thick + 0.02)], [dir[0] / l, dir[1] / l, dir[2] / l], Math.round(K.shed * Math.min(1, share)), { speed: K.chipV[1], speedJit: 0.7, spread: 0.9, life: 16, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(d.box.albedo), owner: who }); }
+}
+
+/** THE LEAF GOES IN PIECES, the way a round travelling `dir` sends it; `who` is blamed for the crack of it and for what its pieces hit. False (and nothing
+ *  done) with the switch off, for a steel door, and for one already off. `at`: where the round struck (the cuts fall by it; absent: by the door alone). */
+export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): boolean {
+  const K = DOORSHOT; if (!K.on || d.off || d.def.steel) return false;
+  const [hx, hz] = d.def.hinge, W = d.def.width, H = d.height, T = d.thick, a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a);
+  const cx = hx + ux * (W * 0.5 + 0.01), cz = hz + uz * (W * 0.5 + 0.01), hw = d.leafH[0], albedo = d.box.albedo, yaw = d.box.yaw;
+  const fly = (dir[2] * ux - dir[0] * uz >= 0 ? 1 : -1) as 1 | -1, nx = -uz * fly, nz = ux * fly;   // the face the round left by (+1: the CCW side) and the normal out of it
+  let dx = dir[0], dz = dir[2]; { const l = Math.hypot(dx, dz); if (l < 0.2) { dx = nx; dz = nz; } else { dx = 0.6 * dx / l + 0.4 * nx; dz = 0.6 * dz / l + 0.4 * nz; const m = Math.hypot(dx, dz); dx /= m; dz /= m; } }   // (a round that ran along the leaf still sends it off its face)
+  // the frame lets go, as for a leaf torn off (tearOff): the lock is matchwood
+  if (!d.lockBroken) d.noticed = false;
+  d.locked = false; d.lockBroken = true; d.pick = 0; d.picking = false; d.rattleT = 0; d.lastWho = who;
+  g.doors.sound(d, 'kick', d.pos, who, K.level);
+  // the cuts: strips along the grain (across the leaf), each to uneven lengths; the piece the handles are on is the lock rail and stays the leaf's own box
+  const struck = at ? Math.floor(((at[0] - hx) * ux + (at[2] - hz) * uz) * 16) * 7 + Math.floor(at[1] * 16) * 31 : 0;
+  const seed = g.doors.list.indexOf(d) * 977 + 131 + struck, R = (k: number) => hash01((seed + k) * 2654435761);
+  const cuts = (n: number, salt: number): number[] => { const c = [-1]; for (let j = 1; j < n; j++) c.push(-1 + 2 * (j + (R(salt + j) - 0.5) * K.uneven) / n); c.push(1); return c; };
+  const xs = cuts(Math.max(1, K.strips), 10), handleX = (W - 0.14) - (W * 0.5 + 0.01), handleY = 1.0 - (H / 2 + 0.01);
+  let left = K.chunks, rail: [number, number, number, number] | null = null, railX = 0, k = 100; const P = gpuFx(g), land = FURN_BREAK.wood.land;
+  for (let i = 0; i + 1 < xs.length; i++) {
+    const ys = cuts(Math.max(1, K.lengths), 20 + i * 8), lx = (xs[i] + xs[i + 1]) / 2 * hw, sw = (xs[i + 1] - xs[i]) / 2 * hw;
+    for (let j = 0; j + 1 < ys.length; j++) {
+      const ly = (ys[j] + ys[j + 1]) / 2 * H / 2, sl = (ys[j + 1] - ys[j]) / 2 * H / 2;
+      if (!rail && Math.abs(handleX - lx) <= sw && Math.abs(handleY - ly) <= sl) { const mx = Math.max(0, sw - 0.065), my = Math.max(0, sl - 0.03); rail = [sw, sl, clamp(handleX - lx, -mx, mx), clamp(handleY - ly, -my, my)]; railX = lx; continue; }   // (the levers whole on the piece, not hanging off its cut edge)
+      const r1 = R(k++), r2 = R(k++), r3 = R(k++), sp = lerp(K.fly[0], K.fly[1], r1), sd = (r2 - 0.5) * 2 * K.side;
+      const f = { ...d.box, c: [cx + ux * lx, H / 2 + 0.01 + ly, cz + uz * lx] as Vec3, h: [sw, sl, T / 2] as Vec3, yaw, rot: undefined, marks: undefined };
+      const v: Vec3 = [dx * sp + ux * sd, lerp(K.up[0], K.up[1], r3), dz * sp + uz * sd], w: Vec3 = [(r1 - 0.5) * K.spin, (r2 - 0.5) * 0.6 * K.spin, (r3 - 0.5) * K.spin];
+      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who) ?? null : null;
+      if (got) { DOORSHOT_STATS.chunks++; got.level = land.level; got.sfx = land.sfx; g.destr.breaks.retag(got, 'wood'); g.destr.breaks.dress(got); }   // (wood whatever its paint: a snapped end, not a clean rectangle)
+      else { DOORSHOT_STATS.demoted++; if (P) P.emit('debris', f.c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), 14, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(albedo), owner: who }); }
+    }
+  }
+  if (P) P.emit('debris', [cx, H * 0.5, cz], v3.normalize([dx, 0.3, dz]), K.slivers[0], { speed: K.slivers[1], speedJit: 0.6, spread: 0.9, life: 20, lifeJit: 0.3, size: 0.028, sizeJit: 0.5, aspect: 5, color: v3.copy(albedo), owner: who });
+  if (P) for (const [s, n, sp] of [[1, K.chips[0], K.chipV[0]], [-1, K.chips[1], K.chipV[1]]]) P.emit('debris', [cx, H * 0.55, cz], v3.normalize([dx * s, 0.25, dz * s]), n, { speed: sp, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(albedo), owner: who });
+  // what is left: the lock rail, lying where it dropped a little the round's way — clear of every static, or laid in its own doorway
+  const bits: [number, number, number, number] = rail ?? [hw / Math.max(1, K.strips), H / 2 / Math.max(1, K.lengths), 0, 0], y0 = 0.06, y1 = 0.3; let ra = a + (R(7) - 0.5) * 0.8;
+  let px = cx + ux * railX + dx * 0.3, pz = cz + uz * railX + dz * 0.3;
+  if (overlaps(g, px, pz, ra, bits[0], bits[1], y0, y1)) { const to = freeSpot(g, px, pz, ra, bits[0], bits[1], y0, y1, 0.9); if (to) { px = to[0]; pz = to[1]; } else { [px, , pz] = d.frameCentre; ra = d.def.closedDir; } }
+  d.off = true; d.angle = fly * OFF_ANGLE; d.vel = 0; d.latched = false; d.closing = false; d.passers = 0; d.quietT = 10; d.sinceBash = 10; d.creakArmed = false; d.shot = 0;
+  d.slab = { p: [px, T / 2 + LIFT, pz], v: [0, 0, 0], a: ra, spin: 0, tip: HALF_PI, tipV: 0, side: fly, rest: true, landed: true, who, t: 0, ang: d.angle, bits };
+  handsOff(g, d);
+  DOORSHOT_STATS.splintered++;
+  note(g, `${d.def.name} splintered by gunfire · ${DOORSHOT_STATS.chunks} pieces so far`);
+  poseSlab(d);
+  // a body asleep against the leaf slides down now that it is gone (a sleeping ragdoll never looks; game.ts updateDoors wakes them only for a leaf that moved in its own step)
+  for (const ch of [g.player.char, ...g.guards.map(o => o.char), ...civiliansShown(g).map(o => o.char)]) { const rag = ch.ragdoll; if (!rag?.sleeping) continue; const h = ch.bones.hips ?? ch.pos; if (Math.hypot(h[0] - hx, h[2] - hz) < W + 1.2 || Math.hypot(h[0] - px, h[2] - pz) < bits[1] + 0.8) rag.wake(); }
+  g.doors.torn(d, who, 'fire');
   return true;
 }
 
@@ -262,9 +369,11 @@ export function poseSlab(d: Door) {
   const ux = Math.cos(S.a), uz = Math.sin(S.a), lx = (W - 0.14) - (W * 0.5 + 0.01), ly = 1.0 - (d.height / 2 + 0.01), lz = T / 2 + 0.03;
   b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a;
   if (S.landed) {   // (flat — sliding out or at rest)
-    b.rot = undefined; b.marks = undefined; b.h = [d.leafH[0], T / 2, d.height / 2]; b.c = [S.p[0], T / 2 + LIFT, S.p[2]];
+    const hw = S.bits ? S.bits[0] : d.leafH[0], hl = S.bits ? S.bits[1] : d.height / 2;   // (bits: the lock rail of a leaf gunfire splintered — DOORSHOT)
+    b.rot = undefined; b.marks = undefined; b.h = [hw, T / 2, hl]; b.c = [S.p[0], T / 2 + LIFT, S.p[2]];
     const tx = -uz * S.side, tz = ux * S.side;   // where its top fell
-    for (const hb of d.handleBoxes) { hb.rot = undefined; hb.yaw = -S.a; hb.c = [S.p[0] + ux * lx + tx * ly, T + LIFT + 0.03, S.p[2] + uz * lx + tz * ly]; }
+    const kx = S.bits ? S.bits[2] : lx, ky = S.bits ? S.bits[3] : ly;   // (the handles stay where they are screwed to the piece)
+    for (const hb of d.handleBoxes) { hb.rot = undefined; hb.yaw = -S.a; hb.c = [S.p[0] + ux * kx + tx * ky, T + LIFT + 0.03, S.p[2] + uz * kx + tz * ky]; }
     return;
   }
   const q = quat.mul(quat.axisAngle([ux, 0, uz], S.side * S.tip), quat.yaw(-S.a));
@@ -273,13 +382,13 @@ export function poseSlab(d: Door) {
 }
 
 /** CHECKPOINTS (savestate.ts): a door off its hinges is filed LYING WHERE IT COMES TO REST — a slab still in the air is run on, on a copy, to where it lands */
-export interface SlabSnap { x: number; z: number; a: number; side: 1 | -1; who: number; }
+export interface SlabSnap { x: number; z: number; a: number; side: 1 | -1; who: number; /** DOORSHOT: the lock rail of a leaf that went in pieces — its half width and half length, and where on it the handles are (absent: the whole leaf) */ bits?: [number, number, number, number]; }
 export function slabSnapshot(g: Game, d: Door): SlabSnap | null {
   const S0 = d.slab; if (!d.off || !S0) return null;
   const S: DoorSlab = { ...S0, p: [S0.p[0], S0.p[1], S0.p[2]], v: [S0.v[0], S0.v[1], S0.v[2]] };
   for (let i = 0; i < 480 && !S.rest; i++) stepSlab(g, d, S, 1 / 60, true);
   const r = (x: number) => Math.round(x * 1e4) / 1e4;
-  return { x: r(S.p[0]), z: r(S.p[2]), a: r(S.a), side: S.side, who: S.who };
+  return { x: r(S.p[0]), z: r(S.p[2]), a: r(S.a), side: S.side, who: S.who, ...(S.bits ? { bits: [r(S.bits[0]), r(S.bits[1]), r(S.bits[2]), r(S.bits[3])] as [number, number, number, number] } : {}) };
 }
 export function slabRestore(d: Door, s: SlabSnap, angleSign = 1) {
   const fin = (x: unknown, f = 0) => typeof x === 'number' && Number.isFinite(x) ? x : f;
@@ -288,6 +397,7 @@ export function slabRestore(d: Door, s: SlabSnap, angleSign = 1) {
   d.angle = (angleSign < 0 ? -1 : 1) * OFF_ANGLE;
   d.slab = { p: [fin(s.x, d.frameCentre[0]), 0, fin(s.z, d.frameCentre[2])], v: [0, 0, 0], a: fin(s.a, d.def.closedDir), spin: 0, tip: HALF_PI, tipV: 0, side, rest: true, landed: true, who: fin(s.who, -1), t: 0, ang: d.angle };
   d.slab.p[1] = support(d, HALF_PI);
+  if (Array.isArray(s.bits) && fin(s.bits[0]) > 0 && fin(s.bits[1]) > 0) { const bw = Math.min(d.leafH[0], fin(s.bits[0])), bl = Math.min(d.height / 2, fin(s.bits[1])); const mx = Math.max(0, bw - 0.065), my = Math.max(0, bl - 0.03); d.slab.bits = [bw, bl, clamp(fin(s.bits[2]), -mx, mx), clamp(fin(s.bits[3]), -my, my)]; }
   poseSlab(d);
 }
 

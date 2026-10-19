@@ -1191,9 +1191,9 @@ export class Game {
     this.col.dynamicBoxes = this.doors.leafBoxes();
     this.doors.blaster = (at, tearM, who) => doorBlast(this, at, tearM, who);   // the doors' side of a blast (doorblast.ts): a leaf inside its reach comes off its hinges
     // …and where the build carries the destruction goal's change feed, a torn leaf is a row in it (kind 'door': ONE feed of what the level no longer is)
-    this.doors.onTorn((d, who) => {
+    this.doors.onTorn((d, who, cause) => {
       const c = d.frameCentre, r = d.def.width / 2 + 0.1;
-      (this.destr as unknown as { walls?: { note?: (row: object) => unknown } }).walls?.note?.({ kind: 'door', cause: 'blast', id: this.doors.list.indexOf(d), name: d.def.name,
+      (this.destr as unknown as { walls?: { note?: (row: object) => unknown } }).walls?.note?.({ kind: 'door', cause, id: this.doors.list.indexOf(d), name: d.def.name,
         pos: [c[0], c[1], c[2]], rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r], opened: [], walkable: true, sight: true, dead: true, who });
     });
     this.devices = new Devices(this);   // cameras + emitters join `targets` (before initialOn below captures the authored switch states); a keypad finds its door
