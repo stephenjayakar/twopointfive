@@ -39,6 +39,7 @@ import { GEAR, gearText, ringTag } from './gear';   // (a leaf: the kit's names 
 import { samAim, AIM, AIM_HOOKS, SNAP_PX } from './aim';
 import { AIMCOST } from './aimcost';
 import { ocpable, lensClear } from './lighting';
+import { deadLamp } from './carlamps';
 import { breachAim, gunWalled, gunWallPose, gunWallStance } from './gunwall';
 import { friendNoSnap, friendOnRay, samOffFriend } from './friends';
 import { samStaggered, samRooted, samBlind, samStunPose } from './samstun';
@@ -1930,6 +1931,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
   const offer = (it: Interactable, verbs: Interactable[]) => { if (verbs.length) { it.line2 = verbs.map(v => v.line2).join('  ·  '); things.push({ it, verbs }); } list.push(it); };
   for (const t of g.targets) {
     if (t.broken || !t.interactive) continue;
+    if (deadLamp(t)) { list.push({ kind: 'light', pos: t.pos, line1: t.name, line2: 'click  shoot', inReach: true, off: true, target: t }); continue; }   // (carlamps.ts: a vehicle's lens that burns nothing — not 'off', and nothing for the OCP)
     list.push({ kind: 'light', pos: t.pos, line1: `${t.name}${t.factor > 0 ? '' : ' (off)'}`, line2: 'right-click  OCP (the pistol\'s)  ·  click  shoot', inReach: true, off: t.factor <= 0, target: t });
   }
   if (!pl.down && pl.holding) {

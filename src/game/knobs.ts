@@ -117,7 +117,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
-  'DOORSHOT'];
+  'DOORSHOT',
+  // a parked vehicle's lamps are light targets (carlamps.ts CARLAMPS): a recording made with it on has them on its floor, one from before has none
+  'CARLAMPS'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -174,6 +176,7 @@ import { QUICKTHROW } from './quickthrow';
 import { FRIENDS } from './friends';
 import { FRIENDLYFIRE } from './friendlyfire';
 import { LIGHTSWITCH } from './lightswitch';
+import { CARLAMPS } from './carlamps';
 import { FIRELINE } from './fireline';
 import { SAMSTUN } from './samstun';
 import { RECAP } from './deathrecap';
@@ -233,6 +236,8 @@ export function knobRegistry(): Record<string, object> {
     FRIENDLYFIRE,
     // a room's wall switch (lightswitch.ts): the plates, Sam's row, a defender who puts a room back
     LIGHTSWITCH,
+    // a parked vehicle's lamps can be shot out (carlamps.ts): the switch, the broken lens's paint, how a lamp box is told from the level
+    CARLAMPS,
     // off the line of his fire (fireline.ts): whether a teammate on an order waits short of the lane the player is firing down, how long, and the way round — where every ordered man walks reads them
     FIRELINE,
     // a sprint into a door has weight (sprintdoor.ts): the switch, what a shoulder through it keeps of his run, how the leaf leaves him, the boot (or the handle) at the face it opens toward — where the player is a second later reads them

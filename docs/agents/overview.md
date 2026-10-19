@@ -58,7 +58,9 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
   the level breaks) · slots.json (the kit screen's pouch costs, data) · bigkit.ts (the big slot's breaching shotgun and dynamic hammer on a shut door: the row, the
   places beside the frame, the walk, the beat's clock and its tail — the pose is character.ts `bigTool`, the prop rigProps.ts `bigBoxes`; the card rule is kit.ts `BIGSLOT`) ·
   lightswitch.ts (a room's lights have a switch on the wall by its door: the plates found from the level, Sam's row, a defender who puts a room back —
-  `docs/agents/stealth.md`, 'Wall switches').
+  `docs/agents/stealth.md`, 'Wall switches') ·
+  carlamps.ts (a parked vehicle's head and tail lamps found in the level's boxes and made light targets a round breaks, lit or not —
+  `docs/agents/stealth.md`, 'A parked vehicle's lamps').
 
 <!-- was CLAUDE.md lines 507–619 -->
 ## Architecture map

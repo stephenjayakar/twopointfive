@@ -48,7 +48,8 @@ import { laserBand, laserOn, irViewer, irNote, irViewAs, paintsOwn, samLaserBoxe
 import { thinNote, thinAir } from './thinline';
 import { drawnBeam } from './stature';
 import { bulletMark, bangScorch, staticSurface } from './marks';
-import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, breakerSparkFx } from './particleFx';
+import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, lensShatterFx, breakerSparkFx } from './particleFx';
+import { lampGlass, deadLamp, CARLAMPS_STATS } from './carlamps';   // a vehicle's lamp is glass a round breaks, lit or not (a leaf)
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
 import { fireShell, pelletDrops, pelletEnd, type Shell } from './shotgun';
@@ -243,11 +244,13 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
     const legs: RoundLeg[] | null = !AIMCOST.lamp || g.touring ? null : !pen ? [{ o: muzzle, d: flown, end: tHit }] : pen.segs.filter(s => s.t0 <= tHit).map(s => ({ o: s.o, d: s.d, end: Math.min(s.len, tHit - s.t0) }));
     const shootOut = (t: LightTarget) => {
       if (t.kind === 'breaker') { g.engine.lights.flash(t.pos, [0.6, 0.7, 1], 10, 5, 0.2, 0); g.audio.play('lightBreak', t.pos, 1); g.setBlackout(Infinity, 'shot'); t.broken = true; breakerSparkFx(g, t.pos, muzzle); return; }   // (+ the panel arcing over: GPU particles, nothing with them off)
-      t.broken = true; g.msg(`shot out ${t.name}`); g.lightEvent(t); chronLightShot(g, t); g.engine.lights.flash(t.pos, [0.7, 0.8, 1], 6, 4, 0.12, 0); g.audio.play('lightBreak', t.pos, 1); if (t.kind !== 'device') fixtureShatterFx(g, t, muzzle);   // (+ the tube's glass and phosphor showering down: GPU particles; a camera / an emitter dies with its own sparks in devices.ts)
+      if (lampGlass(t)) CARLAMPS_STATS.shot++;
+      if (deadLamp(t)) { t.broken = true; g.msg(`shot out ${t.name}`); g.audio.play('lightBreak', t.pos, 0.8); lensShatterFx(g, t, muzzle); return; }   // (carlamps.ts: a lens that was dark already — the glass and the sound, no arc and no light gone out)
+      t.broken = true; g.msg(`shot out ${t.name}`); g.lightEvent(t); chronLightShot(g, t); g.engine.lights.flash(t.pos, [0.7, 0.8, 1], 6, 4, 0.12, 0); g.audio.play('lightBreak', t.pos, 1); if (lampGlass(t)) lensShatterFx(g, t, muzzle); else if (t.kind !== 'device') fixtureShatterFx(g, t, muzzle);   // (+ the tube's glass and phosphor showering down: GPU particles; a camera / an emitter dies with its own sparks in devices.ts)
     };
     if (legs) {
       const stIx = st && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1;
-      const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on);
+      const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t));   // (a vehicle's lamp is glass whether it burns or not)
       const own = (t: LightTarget) => t.kind === 'breaker' ? g.level.breaker.boxes : t.boxes;   // (the breaker's target lists its LED alone: a round into the panel is a round into the breaker)
       let got = stIx >= 0 ? g.targets.find(t => live(t) && own(t).includes(stIx)) : undefined;   // the thing the round STOPPED in first, whatever else its line passed
       if (!got) for (const t of g.targets) {
@@ -258,7 +261,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
       }
       if (got) { AIMCOST_STATS.lampHits++; shootOut(got); }
     } else for (const t of g.targets) {
-      if (t.broken || !t.interactive || t.factor <= 0 && !t.on) continue;   // scenery (rack LEDs / glow strips) cannot be shot out
+      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out
       const slack = t.kind === 'breaker' ? 0.08 : 0.3; let dist = -1;
       if (!pen) {
         const toT = v3.sub(t.pos, muzzle); const depth = v3.dot(toT, flown);
@@ -268,7 +271,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
         for (const s of pen.segs) { if (s.t0 > tHit) break; const end = Math.min(s.len, tHit - s.t0); const toT = v3.sub(t.pos, s.o); const depth = v3.dot(toT, s.d); if (depth > end + slack) continue; const d = v3.len(v3.sub(toT, v3.scale(s.d, clamp(depth, 0, end)))); if (dist < 0 || d < dist) dist = d; }
         if (dist < 0) continue;
       }
-      const rad = t.kind === 'emissive' ? 0.45 : t.kind === 'breaker' ? 0.4 : 0.3;
+      const rad = lampGlass(t) ? 0.2 : t.kind === 'emissive' ? 0.45 : t.kind === 'breaker' ? 0.4 : 0.3;   // (a vehicle's lamp is a hand's breadth of glass on a body: a round into the bodywork is not one into it)
       if (dist < rad) { shootOut(t); break; }
     }
   } else if (DESTRUCTION.on && !through) {

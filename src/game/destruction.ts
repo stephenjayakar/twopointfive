@@ -41,7 +41,8 @@ import type { Game, LightTarget } from './game';
 import type { WeaponDef } from './weapons';
 import type { Prop } from './props';
 import type { Character } from './character';
-import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, type Surf } from './particleFx';
+import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
+import { lampGlass } from './carlamps';
 import { Debris, hash01, type ChunkKind } from './debris';
 import { PLAYER_ID, NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
@@ -832,15 +833,15 @@ export class Destruction {
   // ---------------------------------------------------------------- fixtures under fire (the loud levels: the destruction switch on)
   /** a fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel — never the breaker (a blackout stays somebody's decision), never a
    *  device (cameras and beam emitters die by devices.ts's own rules), never scenery, never one already dead */
-  private fixtureLive(t: LightTarget): boolean { return !t.broken && t.interactive && (t.kind === 'emissive' || t.kind === 'analytic') && (t.on || t.factor > 0); }
+  private fixtureLive(t: LightTarget): boolean { return !t.broken && t.interactive && (t.kind === 'emissive' || t.kind === 'analytic') && (t.on || t.factor > 0 || lampGlass(t)); }   // (carlamps.ts: a vehicle's lamp is glass whether it burns or not — the same word the player's own round is given, combat.ts)
   /** put `t` out: the light target's own broken bit (updateTargets takes its light and its emissive the same frame; guards with a line to it notice — lighting.ts
    *  lightEvent), the tube's glass coming down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Returns whether it went. */
   private killFixture(t: LightTarget, from: Vec3, why: string, force = false): boolean {
     const g = this.g; const L = CHAOS.loud;
     if (this.fixtureCount >= L.fixturesPerEncounter || (!force && g.time - this.lastFixtureT < L.fixtureGapSecs)) { DESTR_STATS.fixturesRefused++; return false; }
-    if (!this.breakTarget(t)) return false;
+    if (!this.breakTarget(t)) { if (lampGlass(t) && t.broken) { g.audio.play('lightBreak', t.pos, 0.8); lensShatterFx(g, t, from); dlog(g, `lens ${t.name} broken (${why})`); } return false; }   // (carlamps.ts: a vehicle's dark lens — its glass and its sound, and no light gone out: not counted, nobody told)
     this.fixtureCount++; this.lastFixtureT = g.time; DESTR_STATS.fixtures++; dlog(g, `fixture ${t.name} out (${why})`);
-    g.engine.lights.flash(t.pos, [0.7, 0.8, 1], 6, 4, 0.12, 0); g.audio.play('lightBreak', t.pos, 1); fixtureShatterFx(g, t, from);
+    g.engine.lights.flash(t.pos, [0.7, 0.8, 1], 6, 4, 0.12, 0); g.audio.play('lightBreak', t.pos, 1); if (lampGlass(t)) lensShatterFx(g, t, from); else fixtureShatterFx(g, t, from);
     return true;
   }
   /** A round that is NOT the player's flew muzzle → muzzle + dir × tHit and stopped in static `index` (combat.ts fireWeapon, only with the switch on — the player's own

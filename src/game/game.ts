@@ -161,6 +161,7 @@ import { registerShutDoor } from './shutdoor';
 import { spawnCivilians, resetCivilians, updateCivilians, civiliansShown, civilianDoorContacts, civilianAnswer, civiliansSummary, loadCivTune, civilianSeated, civilianPushesProps } from './civilians';
 import type { Civ } from './civilians';
 import { updateTargets } from './lighting';
+import { carLampTargets, VEHICLE_GROUP } from './carlamps';   // a parked vehicle's lamps are light targets a round breaks (nothing with CARLAMPS down)
 import { setBlackout, endBlackout, lightEvent, ocp, setGroup, toggleTarget, repairLights, lensRecheck } from './lighting';
 import { stepMat } from './floor';
 import type { FloorMat } from './floor';
@@ -208,6 +209,8 @@ export interface LightTarget {
   /** the game time a hand put it out at its wall switch (lightswitch.ts; meaningful only while `on` is false): 'lights on' puts these back, and a defender at the switch does */
   handOff?: number;
   areaLights?: { light: RtLight; base: number }[];   // analytic area lights standing in for a flat emissive fixture's emission (smooth direct light + soft shadows instead of cascade rays finding a small bright box)
+  /** a vehicle lamp's own paint as the level has it (carlamps.ts: a broken one is painted dark, a mended one painted this again) */
+  lens?: Vec3;
 }
 
 /** kick: a door kicked in — carries through the floor and is answered like a shot (guards.ts hearingCheck); every other door noise is 'door' with a level. A round
@@ -1116,10 +1119,11 @@ export class Game {
       const b = level.boxes[sw.boxes[0]];
       this.targets.push({ name: sw.name, group: sw.group, kind: 'emissive', pos: v3.copy(b.c), boxes: sw.boxes, baseEmissive: v3.copy(sw.baseEmissive), baseIntensity: 0, on: sw.on, broken: false, disabledUntil: -1, fluorescentFlicker: !!sw.flicker, factor: sw.on ? 1 : 0, mains: sw.mains !== false, stagger: staggerOf(sw.group), interactive: sw.group !== 'server_leds' && sw.group !== 'server_glow' });
     }
+    for (const t of carLampTargets(level.boxes)) this.targets.push(t);   // (carlamps.ts: the lamps of the level's cars and pickups, one target each — no die drawn, none on the mains)
     // flat emissive fixtures (ceiling panels, monitors, logo, TV, vending fronts, exit signs) light the scene through analytic one-sided area
     // lights; their boxes keep glowing on screen but rays ignore the emissive term (BoxFlag.AreaLit) — kills small-emitter aliasing in the cascades
     for (const t of this.targets) {
-      if (t.kind !== 'emissive' || t.group === 'server_leds' || t.group === 'emergency') continue;
+      if (t.kind !== 'emissive' || t.group === 'server_leds' || t.group === 'emergency' || t.group === VEHICLE_GROUP) continue;   // (a vehicle's lamp keeps the picture it had: no area light is stood in for it)
       for (const bi of t.boxes) {
         const b = level.boxes[bi]; const h = b.h;
         const thin = h[0] <= h[1] && h[0] <= h[2] ? 0 : h[1] <= h[2] ? 1 : 2; if (h[thin] > 0.06) continue;

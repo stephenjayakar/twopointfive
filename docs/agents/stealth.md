@@ -683,3 +683,37 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shows a dark room's switch, the hand at the plate, and how a room reads going dark are all unseen. `tools/qa/lightswitch-page.cjs` boots the real page on
   the software adapter, on and with `?lightswitch=0`. Not built: a teammate sent to a switch on an order; a defender on a mark leaving it for the switch; a
   switch for rooms whose only lights no plate found (the office lobby's circuit; two rooms of 176 across the levels keep a circuit with no plate).
+- **A parked vehicle's lamps can be shot out** (`CARLAMPS`, `src/game/carlamps.ts`, 10-19; the maintainer, from a play test: "taillights in cars
+  should be able to be shot up, and headlights and all that"). ON in the page, `?carlamps=0` puts it off; OFF in the module and on the frozen stand,
+  `TPS_CARLAMPS=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal. THE SWITCH IS READ ONCE, WHEN THE GAME IS BUILT: the stand writes
+  its word before `new Game` (standup.ts), a recording from before the table has it put down before its level is stood up (`carLampsTape`, called
+  by `replay/engineplay.ts tables()` and `tools/qa/rerun.ts tables()`; `applyKnobs` says the same afterwards), and the debugger's row 'car lamps
+  break (reloads)' reloads the page with the word on the address. Every level's cars, pickups, van and lorry are plain boxes, and no lamp was in a
+  switchable: a round did nothing to one. With the switch up each lamp box becomes a light target of its own (group `vehicle`, kind `emissive`,
+  off the mains, stagger 0 so no die is drawn, no stand-in area light, `interactive` so the reticle takes it like a fixture). The level files are
+  not touched: a lamp is FOUND by what the generators write (half size, paint or glow, and its twin across the vehicle — `findCarLamps`), so a
+  generator that moves or repaints a lamp has to move its row in `sigs()`; the check counts every level file against a pinned table, which
+  catches a known file losing a lamp and NOT a new level whose vehicle's lamps the finder misses (add its row to the table when a level gains a
+  vehicle). Only the plain car's tail lamps glow (56 of 198 lamps across the level files); every head lamp and every lamp of a pickup, the van
+  and the lorry is a dead lens as authored. A glowing lamp dies like any fixture (glow gone, the flash, a `lightEvent` for whoever had a line to
+  it). A dead lens is glass all the same (`lampGlass`, asked by the player's round in combat.ts AND by destruction.ts `fixtureLive`, so a blast
+  or anybody's round breaks one too): the glass and the sound, no flash and NO light event (`deadLamp`; lighting.ts `lightEvent` says nothing
+  for one, destruction counts none against the encounter's cap). The glass is `particleFx.ts lensShatterFx` (the lens's colour, off the body
+  toward the shooter and down; a ceiling tube's shower and ballast sparks are not used). The reticle's row for a dead lens reads its name and
+  'click shoot' — not '(off)', and the OCP has no affordance on it (`ocpable`); a glowing tail lamp takes the OCP like any light. A broken
+  lamp's box is painted dark every frame from the target's `broken` bit (`carLampPaint`, in `updateTargets`' own pass; the level's paint rides
+  on the target as `lens`), so a restart, a load or a step back is followed and a save or a snapshot needs nothing new. Under the old
+  near-is-a-hit rule (AIMCOST.lamp off, a show on the stage) a lamp takes a round within 0.2 m, not a fixture's 0.45. Known costs with it on: a
+  checkpoint or a recording's level fingerprint from before the switch is another floor's (the count of light targets is in it: an old
+  checkpoint is refused; an old recording is played with the switch down, above); each vehicle adds four dots to what the reticle can take.
+  `window.__carlamps` on the page (knobs, stats, list). Check: `probes.ts carlamps` (family `player`; `CARLAMPS_BREAK=1` fails), both stands,
+  and the shipped stand with its word down: all 27 level files with a vehicle against the pinned counts (100 head, 98 tail, 56 glowing); the
+  office by hand — eight lamps as targets beside the level's 65, unchanged and in order; a real round into a tail lamp (out, dark, one light
+  event) and into a head lamp (broken, dark, no event); a round from behind the car's own body breaks nothing; mended, both painted as authored;
+  switch off, no target and the same round leaves the box as it was; ten seconds of the office night with the lamps and nobody shooting one is
+  the same run by digest as without, but for the four dark head lamps' rows in the digest's list of lights not burning; the stand's word and an
+  old recording's tables. `tools/qa/carlamps-page.cjs` boots the real page on the software adapter, on and with `?carlamps=0`, and breaks a
+  tail and a head lamp with the page's own cursor and trigger. One seed, one level by hand. NOBODY HAS SEEN IT: no lamp, glass or dark lens on a
+  GPU, and nobody has played it. Not measured: a blast or a defender's round breaking a lens (read, not run). Not built: the GWOT vehicles'
+  lamps do not glow (authored dead), so shooting one changes paint only; exit signs added in level scripts, lit door plates, the generator's
+  running lamp, the mast light and the radio dial are still nothing to a round.

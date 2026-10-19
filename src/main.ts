@@ -85,6 +85,7 @@ import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
 import { LIGHTSWITCH, LIGHTSWITCH_STATS, wallSwitches, switchLit } from './game/lightswitch';
+import { CARLAMPS, CARLAMPS_STATS, VEHICLE_GROUP } from './game/carlamps';
 import { SQUAD40, SQUAD40_STATS, SQUAD40_LOG, squad40Left, squad40Brought, squad40Of, squad40Plans, squad40Stage, squad40Summary } from './game/squad40';
 import { squadSmokeStage } from './game/squadsmoke';   // (the same: game/kit.ts has loaded it)
 import { checkQuiet } from './game/quiet';
@@ -1008,6 +1009,7 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
   (window as any).__autopilot = { knobs: AUTOPILOT, stats: AUTOPILOT_STATS, pick: (at: [number, number, number]) => autoPick(game, game.orders.targetAt(at)) };
   (window as any).__squadthrow = { knobs: SQUADTHROW, stats: SQUADTHROW_STATS, plans: () => squadThrowPlans(game), plan: (at: [number, number, number], kind: 'frag' | 'stun', who: 'all' | 'red' | 'blue' = 'all') => squadThrowPlan(game, game.orders.men(who), at, kind, true) };   // teammates' throws on order (game/squadthrow.ts): .plans() = what the overlay draws (who, his walk, the arc), .plan(at, kind) = who would throw there and from where
   (window as any).__lightswitch = { knobs: LIGHTSWITCH, stats: LIGHTSWITCH_STATS, list: () => wallSwitches(game), lit: (i: number) => { const sw = wallSwitches(game)[i]; return sw ? switchLit(sw) : null; } };   // a room's wall switches (game/lightswitch.ts): tools/qa/lightswitch-page.cjs reads the plates and works one through the page's own Space
+  (window as any).__carlamps = { knobs: CARLAMPS, stats: CARLAMPS_STATS, list: () => game.targets.filter(t => t.group === VEHICLE_GROUP) };   // a parked vehicle's lamps as light targets (game/carlamps.ts): what the level gave and how many a round has met
   (window as any).__squad40 = { knobs: SQUAD40, stats: SQUAD40_STATS, log: SQUAD40_LOG, left: () => squad40Left(game), brought: () => squad40Brought(game), of: (i: number) => squad40Of(game, game.orders.squad()[i]), plans: () => squad40Plans(game), summary: () => squad40Summary(game),
     stage: (rounds: number[]) => squad40Stage(game, game.orders.squad().map((gd, i) => [gd, rounds[i] ?? 0] as const)) };   // a teammate's 40 mm grenade on order (game/squad40.ts)
   (window as any).__fight = game.fight;   // the room fight (game/roomfight.ts): .summary() / .log / .stats / .knobs / .skill (FIGHT_SKILL) / .watchOf(guard) / .teamSees(guard)
