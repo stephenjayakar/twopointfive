@@ -33,6 +33,7 @@ import { fireRing, ringSolve, ringAimPoint } from './launcher';
 import { fireShell, shellSolve, shellAimPoint, shellBodies, arcArmed, HE40 } from './he40';
 import { LAUNCHER, LAUNCHER40 } from './weapons';
 import { STICKY, camAimPoint, camSolve, fireCam, stickyRows } from './stickycam';
+import { switchRows } from './lightswitch';
 import type { Rifle, RifleAttachment } from './weapons';
 import { GEAR, gearText, ringTag } from './gear';   // (a leaf: the kit's names as issued, applied to the lines that name it)
 import { samAim, AIM, AIM_HOOKS, SNAP_PX } from './aim';
@@ -2095,6 +2096,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
     rescueEndRows(g, p, busy, row, offer);   // a rescue's hostages: on your feet — with me / stay here (rescueend.ts — nothing unless a rescue is up with its switch on)
     defuseRows(g, p, busy || !!g.wallCharge?.setting, row, offer);   // a defuse mission's live charges (defuse.ts — nothing on a level without the block)
     stickyRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a stuck sticky camera of his own, taken back (stickycam.ts — nothing unless STICKY.take is up)
+    switchRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a room's wall switch (lightswitch.ts — nothing unless LIGHTSWITCH is up): under a door's rows, over a wall's
     // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
     const marker = (d: Door) => list.find(x => x.door === d) ?? { kind: 'door' as const, pos: d.pos, line1: 'door', line2: '', inReach: true, off: false, door: d };
     if (pl.picking) { const d = pl.picking; rows = [running(marker(d), 'pick', `picking… ${Math.min(99, Math.round(d.pick * 100))}%  ·  Space or a step breaks off (the lock keeps it a moment)`, d.pick)]; }
@@ -2148,7 +2150,7 @@ export function cancelRow(g: Game): Interactable { const p = g.player.char.pos; 
  *  in reach before out of reach, then by what MATTERS (a man you could grab is perishable and decisive; a door will still be there), then nearest.
  *  Lower = higher up the list. Within one thing its verbs keep the order buildInteractables gave them; MAX_NEAR rows in all, so a man to grab beside a shut
  *  door reads [grab · push · ease] and the door's third verb (if it had one) would be the row that falls off. */
-export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch)
+export const INTERACT_PRIORITY: Record<Interactable['kind'], number> = { guard: 0, held: 0, body: 1, objective: 2, door: 3, light: 9, breaker: 2.5, switch: 3.2, wall: 9.5, cam: 9.6, cancel: 10 };   // (wall: a partition's 'breach with a charge' row ranks last — it never takes one of the MAX_NEAR rows from a door, a body or a switch)
 export function interactOrder(p: Vec3): (a: Interactable, b: Interactable) => number {
   const dd = (it: Interactable) => { let d = v3.distXZ(it.pos, p); if (it.door) d = Math.min(d, v3.distXZ(it.door.frameCentre, p)); return d; };
   return (a, b) => (a.inReach !== b.inReach ? (a.inReach ? -1 : 1) : (INTERACT_PRIORITY[a.kind] - INTERACT_PRIORITY[b.kind]) || dd(a) - dd(b));
