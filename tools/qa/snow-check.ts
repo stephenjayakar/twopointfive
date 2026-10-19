@@ -139,23 +139,24 @@ export async function snowCheck(o: { verbose?: boolean } = {}): Promise<boolean>
       const { snowing } = await import(`${ROOT}/src/game/snowFx.ts`); for (let i = 0; i < 5; i++) updateSnowFx(off.g, DT, { distance: 21, target: [20, 0, 14] } as any); snowConfig.on = cfgWas;
       verdict(snowing(R.g) === true && snowing(off.g) === false && m2.recs.length === 0 && coldBorn === 0 && offBorn === 0, 'flakes — none off the pass, none on a page not opened for snow, none with the particle rain off', `the pass: snowing ${snowing(R.g)} · compound.json: snowing ${snowing(off.g)}, ${m2.recs.length} records · the pass with the shader half not built: ${coldBorn} records (${coldWhy}) · with the particle rain switched off: ${offBorn}`); }
     // ---- walls: snow shows in front of a roofed building's outer wall as in front of a man at its foot (the surface is hidden only UNDER the roof)
-    { const { flakeHidden, FLAKE_WALL_IN } = await import(`${ROOT}/src/game/snowFx.ts`); const roofs: number[][] = A.wx.roofs ?? []; const CY = WORLD.ceilingY;
+    { const { flakeHidden, flakeHiddenUnder, FLAKE_WALL_IN } = await import(`${ROOT}/src/game/snowFx.ts`); const roofs: number[][] = A.wx.roofs ?? []; const CY = WORLD.ceilingY;
       const raw = JSON.parse(readFileSync(resolve(ROOT, 'levels', 'pass.json'), 'utf8')); const old = (x: number, z: number) => roofs.some(R => x >= R[0] && z >= R[1] && x <= R[2] && z <= R[3]);
-      let walls = 0, outerOpen = 0, innerDry = 0, topOpen = 0, oldHid = 0;
+      let walls = 0, outerOpen = 0, innerDry = 0, topOpen = 0, oldHid = 0, underOk = 0;   // (underOk: the same three asked of the rule with SNOW_LOOK.under on — snowunder-check has the seam and the inner tops)
       for (const R of roofs) for (const b of raw.boxes as { c: number[]; h: number[] }[]) { const c = b.c, h = b.h; if (h[1] < 1 || c[1] + h[1] < CY - 0.01) continue;
         const x0 = c[0] - h[0], x1 = c[0] + h[0], z0 = c[2] - h[2], z1 = c[2] + h[2]; let o: number[] | null = null, i: number[] | null = null;
         if (h[0] < 0.2 && h[2] > 0.3 && z0 >= R[1] - 0.2 && z1 <= R[3] + 0.2) { if (Math.abs(x0 - R[0]) < 0.15) { o = [x0, c[2]]; i = [x1, c[2]]; } else if (Math.abs(x1 - R[2]) < 0.15) { o = [x1, c[2]]; i = [x0, c[2]]; } }
         if (!o && h[2] < 0.2 && h[0] > 0.3 && x0 >= R[0] - 0.2 && x1 <= R[2] + 0.2) { if (Math.abs(z0 - R[1]) < 0.15) { o = [c[0], z0]; i = [c[0], z1]; } else if (Math.abs(z1 - R[3]) < 0.15) { o = [c[0], z1]; i = [c[0], z0]; } }
         if (!o || !i) continue; { const L = Math.hypot(o[0] - i[0], o[1] - i[1]) || 1; if (old(o[0] + (o[0] - i[0]) / L * 0.4, o[1] + (o[1] - i[1]) / L * 0.4)) continue; }   // (a partition between two roofed rooms is nobody's outer wall)
         walls++;
-        if (!flakeHidden(roofs, o[0], 1.5, o[1], CY)) outerOpen++; if (flakeHidden(roofs, i[0], 1.5, i[1], CY)) innerDry++; if (!flakeHidden(roofs, c[0], c[1] + h[1], c[2], CY)) topOpen++; if (old(o[0], o[1])) oldHid++; }
+        if (!flakeHidden(roofs, o[0], 1.5, o[1], CY)) outerOpen++; if (flakeHidden(roofs, i[0], 1.5, i[1], CY)) innerDry++; if (!flakeHidden(roofs, c[0], c[1] + h[1], c[2], CY)) topOpen++; if (old(o[0], o[1])) oldHid++;
+        if (!flakeHiddenUnder(roofs, o[0], 1.5, o[1], CY) && flakeHiddenUnder(roofs, i[0], 1.5, i[1], CY) && !flakeHiddenUnder(roofs, c[0], c[1] + h[1], c[2], CY)) underOk++; }
       const mid = roofs.map(R => flakeHidden(roofs, (R[0] + R[2]) / 2, 0, (R[1] + R[3]) / 2, CY)), yard = flakeHidden(roofs, 20, 0, 16, CY);
       const read = (f: string) => readFileSync(resolve(ROOT, 'src/render/shaders', f), 'utf8'); const common = read('particles_common.wgsl'), draw = read('particles_draw.wgsl');
       const num = Number(/const FLAKE_WALL_IN: f32 = ([0-9.]+);/.exec(common)?.[1]);
       const text = num === FLAKE_WALL_IN && /if \(snowNow\(\)\) \{ if \(flakeHidden\(Pend\)\) \{ discard; \} \}/.test(draw) && /else if \(!rainOutdoors\(Pend\.xz\)\) \{ discard; \}/.test(draw) && /if \(P\.y > CEIL_Y - 0\.05\) \{ return false; \}/.test(common);
-      verdict(A.wx.kind === 'snow' && roofs.length >= 1 && walls >= 8 && outerOpen === walls && innerDry === walls && topOpen === walls && oldHid === walls && mid.every(Boolean) && !yard && text,
+      verdict(A.wx.kind === 'snow' && roofs.length >= 1 && walls >= 8 && outerOpen === walls && innerDry === walls && topOpen === walls && underOk === walls && oldHid === walls && mid.every(Boolean) && !yard && text,
         'walls — snow shows in front of a building\'s outer wall and over its top, and the rooms stay dry to the eye',
-        `${roofs.length} roof(s), ${walls} outer walls of the pass: outer face in the open ${outerOpen}, inner face under the roof ${innerDry}, top in the open ${topOpen} (the bare rectangle hid the outer face of ${oldHid}) · each roof's middle hidden: ${mid.join(' ')} · the yard hidden: ${yard} · the shader carries the same ${FLAKE_WALL_IN} m and keeps the rain's rule for rain: ${text}`); }
+        `${roofs.length} roof(s), ${walls} outer walls of the pass: outer face in the open ${outerOpen}, inner face under the roof ${innerDry}, top in the open ${topOpen}, all three with the roofs asked as one (SNOW_LOOK.under) ${underOk} (the bare rectangle hid the outer face of ${oldHid}) · each roof's middle hidden: ${mid.join(' ')} · the yard hidden: ${yard} · the shader carries the same ${FLAKE_WALL_IN} m and keeps the rain's rule for rain: ${text}`); }
     // ---- save
     { const snap = A.wx.snapshot(); const T = await rig('pass.json', false, 'overcast'); const was0 = T.wx.kind, no = T.wx.refuses(snap); T.wx.restore(snap);
       verdict(snap.kind === 'snow' && was0 === 'overcast' && no === null && T.wx.kind === 'snow' && T.wx.snowRate > 0, 'save — a checkpoint made in snow carries the kind and puts it back', `the snapshot's kind ${snap.kind} · a game standing in ${was0} takes it (${no ?? 'not refused'}): ${T.wx.kind}, snowfall ${T.wx.snowRate}`); }

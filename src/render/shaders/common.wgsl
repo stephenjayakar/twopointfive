@@ -182,7 +182,7 @@ fn wxRoofed(p: vec2f) -> bool {
  *  that wide about it are all roofed (so the seam where two slabs of one building meet is under the roof, as either slab is). Asked of the level's OWN roofs only:
  *  the office's two rectangles (no kind in force) lie on its walls' centre lines, its outer faces were never hidden, and drawn in they would let the rain into the
  *  rooms' edges. volumetrics.wgsl (c) and particles_draw.wgsl rainFragment ask it. The rooms stay dry to the eye as before; a partition's top inside is under the
- *  roof (the snow's own rule, particles_common.wgsl flakeHidden, opens every wall's top and each rectangle by itself). */
+ *  roof (the snow's own rule is particles_common.wgsl flakeHidden: under the prelude's SNOW_UNDER it asks the roofs as one too, and opens a top only near their edge). */
 const WX_WALL_IN: f32 = 0.2;   // m
 fn wxUnderRoof(p: vec2f) -> bool {
   if (!wxRoofed(p)) { return false; }

@@ -13,7 +13,7 @@
 // A NEW LAYER is one `layers.push({ … })` below; a new number in a table that is already listed needs nothing.
 import type { Engine } from '../engine';
 import type { Game } from '../game/game';
-import { FrameFlags } from '../render/frame';
+import { FrameFlags, snowLookConfig } from '../render/frame';
 import { SHADER_TUNE, shaderConsts } from '../render/shaderTune';
 import { compositeText } from '../render/passes';
 import { particleTexts } from '../render/particles';
@@ -81,6 +81,7 @@ const HAND: Record<string, string> = {
   'tune.flashInner': 'the cone\'s bright core, degrees from its axis to where it starts to fall off',
   'weather.wind[1]': 'the weather\'s wind vector: flakes, blown snow, dust and smoke outdoors all ride it',
   'FLAKE_WALL_IN': 'm: how far inside a roof\'s edge a surface must be before no flake is drawn in front of it (a wall\'s outer face and its top take the snow)',
+  'FLAKE_TOP_IN': 'm: a top at the ceiling takes the snow only this near the roofs\' edge — an outer wall\'s; a partition\'s top deeper inside is under the roof (with ?snowunder=0 nothing reads it)',
   'WIND.stormK': '× the weather\'s wind outdoors (0 = dead calm)',
   'WIND.stormGustAmp': 'how hard the storm gusts: its speed swings by this share either way',
   'WIND.stormGustPeriod': 's: how long one gust and its lull take',
@@ -223,9 +224,10 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
     { const vars = [
         mk('weather.snowRate', 'snowfall', 'src/game/weatherKinds.ts WEATHER_PRESETS.snow', () => W.snowRate, v => { W.snowRate = v; }, { min: 0.01, max: 2, step: 0.01 }, 'how hard it snows (the weather\'s own number: 1 = SNOWFX.perM2 flakes over a square metre). The flakes alone thin with it; it stops short of none, where the game stands the wisps, grains and all of the snow down with it (snowFx.ts snowing) — the layer\'s switch is the way to see the scene without flakes'),
         ...table('SNOWFX', SNOWFX, FX, { rows: { size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, shutter: { max: 0.1, step: 0.0005 }, minPx: { max: 4, step: 0.05 }, maxPx: { max: 12, step: 0.1 }, iso: { max: 1 }, fwdK: { max: 1 }, fwdG: { max: 0.99 }, brightJit: { max: 1 }, sheetAmp: { max: 0.95 }, skid: { max: 1, step: 0.01 }, perM2: { step: 0.1 }, past: { max: 30, step: 0.5 } } }),
-        ...part(/^FLAKE_/, { FLAKE_WALL_IN: { max: 0.5, step: 0.01 } }),
+        ...part(/^FLAKE_/, { FLAKE_WALL_IN: { max: 0.5, step: 0.01 }, FLAKE_TOP_IN: { max: 1.5, step: 0.05 } }),
       ];
       readWhen(vars, ['SNOWFX.airLow', 'SNOWFX.airHigh', 'SNOWFX.airLift', 'SNOWFX.skid'], oneAir);
+      readWhen(vars, ['FLAKE_TOP_IN'], () => snowLookConfig.under);   // (the shaders this page compiled: nothing reads the row with ?snowunder=0)
       readWhen(vars, ['SNOWFX.past'], () => SNOW_LOOK.past);   // (the snow past the level's rim: nothing reads the metres with ?snowpast=0)
       layers.push({ id: 'flakes', name: 'Falling flakes', group: 'Air', vars, on: muting(vars, ['SNOWFX.gain', 'SNOWFX.skyK']), build: rebuildPart, stat: () => { const s = snowStats(game); return s.active ? `${Math.round(s.pop)} in the air` : s.why; } }); }
     // (ONE SNOW IN ONE AIR: read every frame, so its switch is live — but only on a page whose particle shaders were built to read the wind sim)

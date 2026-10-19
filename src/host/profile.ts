@@ -211,6 +211,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.oneAir = q.get('snowair') !== '0';   // … and its snow is ONE SNOW IN ONE AIR: the flakes fall through the simulated wind among the walls, a wisp is snow that wind lifts where it is fast enough, and the grains are no layer of their own (game/snowFx.ts oneAirOn, particles.wgsl snowAir; picture only): ON in the page; ?snowair=0 = flakes on the plain storm wind, wisps in gust patches, grains near the view, as they were
   SNOWBOG.on = q.get('snowbog') !== '0';   // thrown things bog down in lying snow: a grenade that comes down on a snow level's open ground keeps little of its bounce and its slide (game/snowBog.ts; PLAY, not picture): ON in the page; ?snowbog=0 = it bounces and skids there as on a floor
   SNOW_LOOK.marks = q.get('snowmarks') !== '0';   // … every thing that moves over the snow marks it, and a mark forms and kicks loose snow up by how hard it was made (game/snowMarks.ts, snowTracks.ts stampMark; picture only): ON in the page; ?snowmarks=0 = boots and blasts alone mark it, whole at once
+  SNOW_LOOK.under = q.get('snowunder') !== '0';   // a flake is hidden from what is under the roofs, whichever slab, and from a partition's top inside (weatherKinds.ts SNOW_LOOK.under; picture only): ?snowunder=0 = each roof's rectangle by itself and every top at the ceiling open, as it was
   SNOW_LOOK.past = q.get('snowpast') !== '0';   // … and its snow goes on falling past the level's rim, so a view by the edge is snowed across (game/snowFx.ts flakeOpen; picture only): ON in the page; ?snowpast=0 = no flake past the world's rectangle
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
@@ -522,6 +523,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNOWBOG.on': 'TPS_SNOWBOG=1 (acts only on a snow level: with TPS_SNOW=1)',
   'SNOW_LOOK.marks': 'TPS_SNOWMARKS=1 (shows only on a snow level: with TPS_SNOW=1; it wants the prints: TPS_SNOWTRACKS=1)',
   'SNOW_LOOK.past': 'TPS_SNOWPAST=1 (shows only on a snow level: with TPS_SNOW=1)',
+  'SNOW_LOOK.under': 'TPS_SNOWUNDER=1 (a prelude const of the page: nothing headless draws it; shows only on a snow level, TPS_SNOW=1)',
   'SNOW_LOOK.blast': 'TPS_SNOWBLAST=1 (shows only on a snow level: with TPS_SNOW=1; the crater wants the prints: TPS_SNOWTRACKS=1; the throw wants the grains: TPS_SNOWGRAINS=1)',
   'AIR_SIM.on': 'TPS_AIR=1 (a picture only, and the harness has no field to feed: it changes what the game would hand one)',
   'GLASS.bothFaces': 'TPS_GLASSEARS=1',
