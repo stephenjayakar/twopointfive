@@ -153,6 +153,8 @@ const SUP_LINES: Record<SupMoment, Partial<Record<string, string[]>>> = {
 /** One suppression line from this man if the clocks allow (his own barkSecs, the floor's floorBarkSecs — `force` skips both: the shift is worth saying) and never
  *  over his own radio line of a moment ago. A line held back is kept `pending` for a couple of seconds and said then if it still applies (updateSuppression),
  *  so a man pinned the instant after his own hostage call still gets to say so. Never the line he said last. */
+/** friendlyfire.ts: a teammate with the PLAYER's round going past him says what a man says of a colleague's — the same lines, on the same clocks */
+export function watchYourFire(g: Game, gd: Guard): boolean { return supBark(g, gd, 'friendly'); }
 function supBark(g: Game, gd: Guard, moment: SupMoment, force = false): boolean {
   const S = SUPPRESSION, sup = gd.sup, now = g.time;
   const held = (!force && (now - sup.barkT < S.barkSecs || now - (floorBarkT.get(g) ?? -100) < S.floorBarkSecs)) || (!!gd.bubble?.radio && now - gd.bubble.t < 2.5);

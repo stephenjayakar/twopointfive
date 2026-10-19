@@ -111,6 +111,7 @@ import { SPRINTDOOR } from '../game/sprintdoor';
 import { AIMCOST } from '../game/aimcost';
 import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
+import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
@@ -233,6 +234,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RECAP.liveArrows = q.get('recaparrows') === '1';   // …with nothing DRAWN for the way it came from: no arrow on his row, no stroke on the ground at him ("we shouldn't show the arrows, feels unrealistic"); ?recaparrows=1 = both drawn, as they were
   QUICKTHROW.on = q.has('quickthrow') && q.get('quickthrow') !== '0';   // the G quick throw (game/quickthrow.ts): GONE from the page — a can is thrown from its slot with a click; ?quickthrow = back for the visit
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
+  FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
   QUIETFOG.def = q.get('quietdef') === 'off' || q.get('quietdef') === '0' ? 'off' : 'team';   // WHERE a quiet mission starts (the maintainer's pick, 10-13): under the fog, lifted round you and your partner, the mission's sticky cameras handed out — a bare quiet link is that. ?quietdef=off = it starts with every guard shown, as it did
@@ -445,6 +447,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'QUICKTHROW.on': 'TPS_QUICKTHROW=0',   // (the one row the FROZEN stand has on and the page does not: the word takes it away)
   'FRIENDS.noSnap': 'TPS_FRIENDS=1',
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
+  'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
   'WALLCHARGE.farFurn': 'TPS_WALLFURN=1',
