@@ -688,5 +688,8 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the Glock 18's long magazine is mostly hidden by the hands; a teammate's reload is always shown as a gun run dry, and when he takes his long gun up after his
   sidearm the whole feed is mimed with only its first sound; the books still take the whole tube out at the row's `out` and put it back at `in_`, so a shell-fed
   reload CANCELLED part way leaves the tube empty however many were heard going in (the row's books: the guns goal's); a teammate with the bare Mk 18 is still
-  drawn as the defenders' short rifle; a gun dropped on the floor is the old item; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
+  drawn as the defenders' short rifle; a gun dropped on the floor is the old item; a long reload's feeding is the support arm INSIDE `gunhand.ts longReload` (the carriage and the trigger hand are that move's; a
+  branch per feed was not agreed with that rule's owner); at the side of a pack (`packside.ts`) a model stands where the stand-in does, by the STAND-IN's sizes
+  (`rigProps.ts packSideDims`): butts level, the far end 0.18 m lower on the Mk 12, 0.10 on the Mk 46, 0.06 on the M1014, 0.16 higher on the MP7, and the Mk 46's
+  belt box on the face that lies to the pack, never looked at; `rigProps.ts modelGrip` and `gunreload.ts GROUP` assume the two long groups
   share an origin (`gunlook-own` is red the day one is tuned alone). Every number is a first one. NEVER SEEN ON A GPU, NEVER HEARD, NEVER PLAYED.
