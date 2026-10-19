@@ -2,6 +2,8 @@
 // The REAL page in headless Chromium on the software adapter (the mission has to boot, so this one wants WebGPU): four cards planted in the store by the big
 // slot's own fields, C on Red One and V on Blue Two on Team & kit, then the Deploy button — a page load of the mission's own URL — and the mission is read:
 // the four are staged, Blue Two's card in the mission is Red One's (the hammer in his big slot; his colours his own), the squad's count is the cards' sum,
+// (A TOOL EACH PAIR, game/kit.ts KITDEAL.more, on as the page opens: of four Blue Two is LENT that hammer, so the store and the table leave his slot to the
+// deal — a tool a man is only lent is never written, by a paste either — and what he WEARS is read off his card's line.)
 // nothing fatal and no console error. SLOW: about eight minutes on a quiet four-core box (the software adapter compiles the pipelines twice).
 //   node tools/qa/kitpaste-deploy-page.cjs      env: PORT (the dev server's, default 5199) · KITPASTE_BREAK=1 (the page opened ?nokitcopy: nothing is pasted, must FAIL)
 // PASS / FAIL lines, exit 1 on a FAIL. Nothing here has been seen on a GPU: the staged men are read off the kit table, not looked at.
@@ -15,6 +17,7 @@ const CARDS = { v: 2, members: [{ smoke: 1, bangs: 1, frags: 1, shells: 1 }, { b
 const T = 900000, J = JSON.stringify;
 let fails = 0;
 const check = (ok, label, detail) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
+const counted = m => J({ ...carried(m), big: '' });
 const carried = m => ({ weapon: m?.weapon, suppressed: m?.suppressed, light: m?.light, nvg: m?.nvg, bangs: m?.bangs, charges: m?.charges, frags: m?.frags, smoke: m?.smoke, big: m?.big, walls: m?.walls });
 
 (async () => {
@@ -32,8 +35,8 @@ const carried = m => ({ weapon: m?.weapon, suppressed: m?.suppressed, light: m?.
   await press('#missions.one #loadout .lo-slot[data-slot="1"]'); await page.waitForTimeout(300); await page.keyboard.press('KeyC'); await page.waitForTimeout(300);
   await press('#missions.one #loadout .lo-slot[data-slot="4"]'); await page.waitForTimeout(300); const s0 = await stored(); await page.keyboard.press('KeyV'); await page.waitForTimeout(800);
   const s = await stored(), picture = await page.evaluate(() => !!document.querySelector('iframe.kv'));   // (the door picture behind the tiles, ui/kitView.ts: said, not asked — it is the kit figure's)
-  check(J(carried(s[4])) === J(carried(s[1])) && s[4]?.big === 'hammer' && s[4]?.bangs === 2 && J(carried(s0[4])) !== J(carried(s[4])),
-    'Team & kit: C on Red One (olive), V on Blue Two (navy, amber trim) — the store holds Red One\'s kit on him', `Blue Two before ${J(carried(s0[4]))} · after ${J(carried(s[4]))} · the door picture ${picture ? 'was up' : 'was not up'} under the paste`);
+  check(counted(s[4]) === counted(s[1]) && s[4]?.big === 'none' && s[4]?.bangs === 2 && J(carried(s0[4])) !== J(carried(s[4])),
+    'Team & kit: C on Red One (olive), V on Blue Two (navy, amber trim) — the store holds Red One\'s counts on him, his big slot left to the deal that lends him the hammer', `Blue Two before ${J(carried(s0[4]))} · after ${J(carried(s[4]))} · the door picture ${picture ? 'was up' : 'was not up'} under the paste`);
   const from = page.url();
   await press('#missions.one #loadout [data-act="deploy"]'); await page.waitForFunction(u => location.href !== u, from);
   check(/roomclear/.test(page.url()) && /squad4/.test(page.url()) && !/loadout=/.test(page.url()), 'Deploy is a page load of the mission\'s own URL', page.url());
@@ -42,8 +45,8 @@ const carried = m => ({ weapon: m?.weapon, suppressed: m?.suppressed, light: m?.
     return { fatal: document.getElementById('fatal')?.textContent || '', ops: (K.staged?.ops ?? []).map(g => g.callsign ?? g.name), cards: K.KIT.members, why: K.legal(), words: K.words(), pool: K.pool(4) }; });
   const sum = f => R.cards.slice(1).reduce((n, m) => n + (m[f] || 0), 0);
   check(!R.fatal && R.ops.length === 4 && R.why == null, 'the mission is up: four men staged, the squad a legal one, nothing fatal', `staged ${R.ops.join(', ')} · ${R.why ?? 'legal'} · fatal '${R.fatal}'`);
-  check(J(carried(R.cards[4])) === J(carried(R.cards[1])) && R.cards[4]?.big === 'hammer' && /hammer/.test(R.words[4] ?? '') && R.cards[4]?.suit === 'navy' && R.cards[4]?.trim === 'amber' && R.cards[1]?.suit === 'olive',
-    'in the mission Blue Two carries Red One\'s kit, the hammer in his big slot, in his own colours', `Red One: ${R.words[1]} · Blue Two: ${R.words[4]} (suit ${R.cards[4]?.suit}, trim ${R.cards[4]?.trim})`);
+  check(counted(R.cards[4]) === counted(R.cards[1]) && R.cards[4]?.big === 'none' && /hammer/.test(R.words[4] ?? '') && /hammer/.test(R.words[1] ?? '') && R.cards[4]?.suit === 'navy' && R.cards[4]?.trim === 'amber' && R.cards[1]?.suit === 'olive',
+    'in the mission Blue Two carries Red One\'s kit, the hammer in his big slot (lent him: his card\'s line names it, the table does not hold it), in his own colours', `Red One: ${R.words[1]} · Blue Two: ${R.words[4]} (suit ${R.cards[4]?.suit}, trim ${R.cards[4]?.trim})`);
   check(R.pool.bangs === sum('bangs') && R.pool.charges === sum('charges') && R.pool.frags === sum('frags') && R.pool.bangs === 5,
     'the squad\'s count on the door tools is the four cards\' sum, the pasted one in it', `pool ${J(R.pool)} · cards ${sum('bangs')} stun, ${sum('charges')} charges, ${sum('frags')} frags`);
   check(errors.length === 0, 'no console or page error on either page', errors.join(' | ') || 'none');
