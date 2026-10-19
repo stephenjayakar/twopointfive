@@ -107,13 +107,15 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
-  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT',
+  'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'KITLOAD',
   // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
   'EXACT',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
-  'CMDCHECK', 'GUNSLOTS'];
+  'CMDCHECK', 'GUNSLOTS', 'GUNLOOK',
+  // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
+  'RESPONSE'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -126,6 +128,7 @@ import { PEEKSIGHT } from './peeksight';
 import { STICKY } from './stickycam';
 import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
+import { GUNLOOK } from './gunlook';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
 import { CONDITION } from './condition';
@@ -148,7 +151,10 @@ import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
+import { KITLOAD } from './kitload';
 import { RESCUECHECK } from './rescuecheck';
+import { RESCUEEND } from './rescueend';
+import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
@@ -156,6 +162,7 @@ import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
 import { PICTURE } from './picture';
+import { RESPONSE } from './qrf';
 import { RELOAD } from './autoreload';
 import { QUICKTHROW } from './quickthrow';
 import { FRIENDS } from './friends';
@@ -229,6 +236,8 @@ export function knobRegistry(): Record<string, object> {
     OWNCHARGE,
     // a primary and a secondary for every man (gunslots.ts): the card's two gun rows, a teammate's second gun, and the beats of his going to it when the primary runs dry
     GUNSLOTS,
+    // each gun its own look, sound and reload (gunlook.ts): which model, voice and flame a row is, where its muzzle is, how it is fed
+    GUNLOOK,
     // teammates' frags and stun canisters thrown on order (squadthrow.ts): whether the floor's menu has the rows, and the arc a frag is aimed by
     SQUADTHROW,
     // the quick key is the squad's autopilot (autopilot.ts): on a door the men wait on they go in by the entry they pick; how long its plan is drawn
@@ -261,6 +270,9 @@ export function knobRegistry(): Record<string, object> {
     // squads that stay in their rooms still miss a room that goes silent (stayask.ts): the net's ask on a floor where every squad stays, and the one man who goes
     STAYASK,
     RESCUECHECK,
+    // lighter kit moves faster and hides better (kitload.ts): the switch, what each thing on a card takes off the two scores, and what a point of each is worth in pace, notice and footfall
+    KITLOAD,
+    RESCUEEND, RESCUEFLUSH,
     // the game's own maths (math/exact.ts EXACT.on: a setter — writing it puts the functions in Math's place or takes them out)
     EXACT,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
@@ -275,6 +287,8 @@ export function knobRegistry(): Record<string, object> {
     ATTENTION,
     // each man's own picture of the fight (picture.ts): where he believes each enemy to be and how old that is, what he counts safe, the rules that ask it
     PICTURE,
+    // the response team is the level's own (qrf.ts): which levels have one, what a run is dealt, what the team goes on — who comes, where and when read these
+    RESPONSE,
     // hands that do the work (handwork.ts): the keypad's, the breaker's and the drive's clocks and Sam's plant at them read its switch
     HANDWORK,
     TAKEDOWN,

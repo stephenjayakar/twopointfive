@@ -11,7 +11,7 @@ const guardsMod = await import(`${ROOT}/src/game/guards.ts`);
 const { raiseEscalation, spawnUnit, units, lightEstimateAt } = guardsMod;
 const { fireWeapon, killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const qrfMod = await import(`${ROOT}/src/game/qrf.ts`);
-const { QRF_MARKS, requestQrf, callPerimeter } = qrfMod;
+const { QRF_MARKS, requestQrf, callPerimeter, RESPONSE } = qrfMod;
 const { startKick } = await import(`${ROOT}/src/game/player.ts`);
 const { inBounds } = await import(`${ROOT}/src/game/squad.ts`);
 
@@ -43,6 +43,7 @@ async function fresh(seed: number, opts: { eta?: number; perimeter?: boolean } =
   const W = await standUp(); const { game } = W;
   game.godMode = true; game.aiEnabled = true; game.tune.qrfEta = opts.eta ?? 20; game.tune.perimeter = opts.perimeter ?? false; game.tune.qrf = true; game.tune.qrfSize = 4;
   game.tune.qrfSquad = false;   // (this family measures the element's OWN drill on the level's marks — on either stand; the squad's code under it is qrf-squad-check.ts)
+  RESPONSE.on = false;   // (… and the team as the office's one stairwell on the sandbox's two numbers, in the office's words — on either stand; the level's own team is response-check.ts. The runner puts the table back)
   step(W, 20, 0.05);
   return W;
 }

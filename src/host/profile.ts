@@ -64,6 +64,7 @@ import { STICKY } from '../game/stickycam';
 import { CUES } from '../game/cues';
 import { OWNCHARGE } from '../game/owncharge';
 import { GUNSLOTS } from '../game/gunslots';
+import { GUNLOOK } from '../game/gunlook';
 import { SQUADTHROW } from '../game/squadthrow';
 import { AUTOPILOT } from '../game/autopilot';
 import { CONDITION } from '../game/condition';
@@ -86,7 +87,10 @@ import { DARKFOE } from '../game/darkfoe';
 import { POWEROUT } from '../game/powerout';
 import { SQUADDEAL } from '../game/squaddeal';
 import { STAYASK } from '../game/stayask';
+import { KITLOAD } from '../game/kitload';
 import { RESCUECHECK } from '../game/rescuecheck';
+import { RESCUEEND } from '../game/rescueend';
+import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
@@ -94,6 +98,7 @@ import { DOZE } from '../game/doze';
 import { netQuietFromQuery } from '../game/netquiet';
 import { ATTENTION } from '../game/attention';
 import { PICTURE } from '../game/picture';
+import { RESPONSE } from '../game/qrf';
 import { RELOAD } from '../game/autoreload';
 import { SAMSTUN } from '../game/samstun';
 import { FRAG } from '../game/frag';
@@ -245,6 +250,9 @@ export function pageSwitches(q: URLSearchParams): void {
   POWEROUT.on = !q.has('nopowerout');   // the lights go out and somebody goes to put them back on (game/powerout.ts): a mission's defenders who see the lights die say so on their net and send their nearest free men to the breaker, lamps lit — ON in the page; ?nopowerout = they stand in the dark for as long as the team takes, as they did
   SQUADDEAL.on = !q.has('nosquaddeal');   // squads from the rooms (game/squaddeal.ts): a level whose file names no squads is handed some cut from its rooms, so a loud way in and a quiet one each draw their own move there too — ON in the page; ?nosquaddeal = such a level's defenders are one pool, as they were
   STAYASK.on = !q.has('nostayask');   // squads that stay in their rooms still miss a room that goes silent (game/stayask.ts): on a floor where every squad stays (the block, Mousehole) the net's roll call runs and the nearest squad sends one man to the silent rooms — ON in the page; ?nostayask = nobody there asks after another squad, as it was
+  KITLOAD.on = !q.has('nokitload');   // lighter kit moves faster and hides better (game/kitload.ts): what a man's card carries gives him a mobility and a concealment score, and they are his legs' pace, the notice he builds in an eye and his footfall — you and every teammate; an issued card plays as it did — ON in the page; ?nokitload = nobody's card is read, as it was
+  RESCUEEND.on = !q.has('norescueend');   // how a rescue is won (game/rescueend.ts): the hostages led out the way the team came in (Space on one: on your feet — with me), or nobody of theirs left on the floor — ON in the page; ?norescueend = the room held fifteen seconds wins it, as it was
+  RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
   EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
@@ -254,6 +262,10 @@ export function pageSwitches(q: URLSearchParams): void {
   PICTURE.on = !q.has('nopicture');   // each man keeps his own picture of the fight (game/picture.ts): ON in the page — where he believes each enemy to be (seen, heard, told; it goes out of date), and the spot rules that ask it; ?nopicture = no memory kept and every spot picked as it was
   PICTURE.step = q.get('picstep') !== '0';   // (?picstep=0: a man keeps the place the squad chose for itself though he knows it is in an enemy's line, as it was — built on a lean while the maintainer was away: his call 1)
   PICTURE.shot = q.get('picshot') !== '0';   // (?picshot=0: a man who hears a colleague fire is handed the enemy's true place, as it was — his call 3)
+  RESPONSE.on = q.get('response') !== '0';   // the response team is the level's own (game/qrf.ts RESPONSE): ON in the page — a level has a team only where its file says who comes and by which way, with its own words; ?response=0 = the office's one stairwell and the gate as they were
+  RESPONSE.deal = q.get('responsedeal') !== '0';   // (?responsedeal=0: every call gets the level's first answer — the first way in, its most men, the middle of its time)
+  RESPONSE.raid = q.get('responseraid') !== '0';   // (?responseraid=0: no squad's raid ever brings a level's team, as it was)
+  RESPONSE.net = q.get('responsenet') !== '0';   // (?responsenet=0: the team goes on every living man's private fix the instant he has it, as it was)
   PICTURE.run = q.get('picrun') !== '0';   // (?picrun=0: a man who drops his gun and runs plans his way round every enemy's true place, as it was)
   if (q.has('picture')) PICTURE.show = q.get('picture') === 'all' ? 'all' : 'cursor';   // (?picture = the floor shows the picture of the man under the cursor; ?picture=all = every teammate's ideas)
   PLAN.on = !q.has('noplan');   // the squad's plan drawn on the floor (game/floorplan.ts): picture only, on on both stands; `?noplan` = nothing drawn
@@ -267,6 +279,7 @@ export function pageSwitches(q: URLSearchParams): void {
   HANDS.on = !q.has('nohands');   // hands on the world (game/hands.ts): a body is taken up from the end he is at with both hands and laid down again, a door comes round under his hand with him stepped clear of it — ON in the page; ?nohands = bodies snap to the ankle drag and doors are flung, as they were
   OWNCHARGE.on = !q.has('noowncharge');   // the player's own charges (game/owncharge.ts): charge rows on YOUR kit card, 'set a charge' on a shut door, a man alone carries his card's charges only. ?noowncharge = as it was
   GUNSLOTS.on = !q.has('nogunslots');   // a primary and a secondary for every man (game/gunslots.ts): the card's one gun row is two — Primary and Secondary — and a teammate carries both, going to his sidearm when the primary runs dry on a man close in front of him. ?nogunslots = one gun row, and nobody but you has a second gun
+  GUNLOOK.on = !q.has('nogunlook');   // each gun its own look, sound and reload (game/gunlook.ts): the Mk 12, MP7, Mk 46, M1014, HK45 and Glock 18 drawn as themselves, each with its own report, flame and way of being fed. ?nogunlook = each drawn and heard as the issue gun it stood in for
   PLANLAY.on = !q.has('noplanlay');   // X is where the plan is laid (game/planlay.ts): 'wait for my word' is under every order menu, an order picked with it on is laid — nobody moves — and F sends the plan; Enter puts it back. ON in the page, ?noplanlay = the row is the four's door tools' alone and the men walk to the door at once, as it was; off on the frozen stand (TPS_PLANLAY=1 raises it)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
@@ -403,13 +416,17 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'POWEROUT.on': 'TPS_POWEROUT=1',
   'SQUADDEAL.on': 'TPS_SQUADDEAL=1',
   'STAYASK.on': 'TPS_STAYASK=1',
+  'KITLOAD.on': 'TPS_KITLOAD=1',
   'RESCUECHECK.on': 'TPS_RESCUECHECK=1',
+  'RESCUEEND.on': 'TPS_RESCUEEND=1',
+  'RESCUEFLUSH.on': 'TPS_RESCUEFLUSH=1',
   'EXACT.on': 'TPS_EXACT=1',
   'CMDCHECK.on': 'TPS_CMDCHECK=1',
   'DOZE.on': 'TPS_DOZE=1',
   'NETQUIET.on': 'TPS_NETQUIET=1',
   'ATTENTION.on': 'TPS_ATTENTION=1',
   'PICTURE.on': 'TPS_PICTURE=1',
+  'RESPONSE.on': 'TPS_RESPONSE=1',
   'RELOAD.auto': 'TPS_AUTORELOAD=1',
   'SAMSTUN.on': 'TPS_SAMSTUN=1',
   'TEAMTALLY.on': 'TPS_TEAMTALLY=1',
@@ -490,6 +507,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'STICKY.mark': 'TPS_CAMMARK=1',
   'OWNCHARGE.on': 'TPS_OWNCHARGE=1',
   'GUNSLOTS.on': 'TPS_GUNSLOTS=1 (rides on the card of the big slot: TPS_BIGSLOT=1 with it)',
+  'GUNLOOK.on': 'TPS_GUNLOOK=1 (nothing to see without a man who carries one of the guns: TPS_GUNSLOTS=1 and TPS_BIGSLOT=1 with it)',
   'BIGSLOT.on': 'TPS_BIGSLOT=1',
   'KITDEAL.on': 'TPS_KITDEAL=1 (reads only with the pouches rule on: SLOTS=on)',
   'SQUADTHROW.on': 'TPS_SQUADTHROW=1',

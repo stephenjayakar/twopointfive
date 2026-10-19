@@ -69,7 +69,7 @@
 // In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. NOT SEEN ON A GPU: laid out on paper, checked headless, one still on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
@@ -153,6 +153,34 @@ export const QUIET: QuietData = {
     coffee: { name: 'the kettle in the boom hut', pos: [6.2, 0, 19.1], face: -Math.PI / 2 },
     smoke: { name: 'the east gate', pos: [35.3, 0, 15.9], face: Math.PI },
   },
+};
+
+/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
+ *  they come on foot from the house's side, by one of its two yard gates. Character yaws (forward = [sin, 0, cos]: 0 looks down the plan, toward the road). */
+export const RESPONSE: ResponseData = {
+  why: 'A border post: the company that mans it sleeps in its lines up the road, with a duty section dressed and a telephone to the customs house.',
+  site: 'the crossing', at: 'at the crossing', team: 'the duty section', tag: 'SECTION',
+  men: [3, 4], eta: [60, 100],
+  ways: [
+    { name: 'the customs yard gate', door: 'gate_n', coming: 'coming in by the customs yard', clear: 'nobody in the yard beside records',
+      muster: [[7.2, 0, 2.8], [8.3, 0, 2.8], [7.2, 0, 1.8], [8.3, 0, 1.8]],
+      entry: [[7.4, 0, 6.3], [6.2, 0, 5.6], [8.3, 0, 5.6], [7.4, 0, 5.0]], entryFace: [0, -0.5, 0.5, 0] },
+    { name: 'the impound yard gate', door: 'gate_ne', coming: 'coming in by the impound yard', clear: 'nobody among the crates',
+      muster: [[37.3, 0, 6.8], [37.3, 0, 7.8], [38.4, 0, 6.8], [38.4, 0, 7.8]],
+      entry: [[32.6, 0, 7.2], [33.6, 0, 6.0], [32.6, 0, 8.6], [33.6, 0, 7.2]], entryFace: [-Math.PI / 2, Math.PI, 0, -Math.PI / 2] },
+  ],
+  // the second lift: two men who stand outside the gates the pair would leave by
+  posts: [
+    { name: 'outside the lorry park gate', pos: [15.75, 0, 25.7], yaw: Math.PI, sweep: [[15.75, 1, 23.0], [10.0, 1, 25.5]] },
+    { name: 'outside the wicket', pos: [37.6, 0, 17.75], yaw: -Math.PI / 2, sweep: [[35.0, 1, 17.75], [37.6, 1, 21.0]] },
+  ],
+  outside: [[38.6, 0, 26.8], [39.2, 0, 25.6]],
+  // the level has no named floor beyond its three rooms: what a section sent here would walk round and look at
+  sweep: [
+    { name: 'the records room', pos: [16.0, 0, 6.8] }, { name: 'the customs office', pos: [22.0, 0, 6.8] }, { name: 'the impound', pos: [27.8, 0, 8.6] },
+    { name: 'the forecourt', pos: [20.5, 0, 10.6] }, { name: 'the impound yard', pos: [32.6, 0, 7.6] }, { name: 'the lane', pos: [20.5, 0, 17.0] },
+    { name: 'the boom hut', pos: [6.2, 0, 18.0] }, { name: 'the lorry park', pos: [16.0, 0, 21.5] }, { name: 'the shed', pos: [33.0, 0, 21.5] },
+  ],
 };
 
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
@@ -406,7 +434,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   if (lorryPark1 - lorryPark0 !== 11) throw new Error(`crossing: the gear screen's way hides the 11 boxes of the lorry park's crates and tyres and the two calls laid ${lorryPark1 - lorryPark0}`);
   const lorryParkOut = Array.from({ length: lorryPark1 - lorryPark0 }, (_, k) => `box_${String(lorryPark0 + k).padStart(4, '0')}`);
   const kitView: KitViewData = { ways: [{ door: 'gate_s', ref: [15.9, 25.9], side: -1, hide: lorryParkOut, add: kitAdd }] };
-  return { level, scenarios: { quiet: QUIET, kitView }, groups: trace.groups, surfaces };
+  return { level, scenarios: { quiet: QUIET, response: RESPONSE, kitView }, groups: trace.groups, surfaces };
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------

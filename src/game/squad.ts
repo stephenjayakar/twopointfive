@@ -13,8 +13,9 @@ import type { Door } from './doors';
 import type { RoomClearPlan } from '../scene/level';
 import { KICK_IMPACT } from './character';
 import { tread } from './floor';
+import { loadGait, loadHeard } from './kitload';
 import { kickDustFx } from './particleFx';
-import { goTo, followPath, teamPace, teamLean, teamTurn, teamPaced, PACE, lightRuled, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
+import { goTo, followPath, teamPace, teamLegs, teamLean, teamTurn, teamPaced, PACE, lightRuled, attachFlashlight, hearingCheck, canSee, sightGain, bodyInView, escalationOf, doorTamper, nearKnownBody, muzzleCheck, aimAhead } from './guards';
 import { gunWallCheck, gunWallPose } from './gunwall';
 import { kickScuff } from './marks';
 import { DOORMANNERS, doorwayGate } from './doorway';
@@ -56,6 +57,7 @@ function strafeAlongPath(g: Game, gd: Guard, dt: number, speed: number): boolean
 export function runGuardScript(g: Game, gd: Guard, dt: number) {
   const s = gd.script!; const c = gd.char;
   const speed = teamPace(g, gd, s.speed ?? g.tune.guardWalk);   // (a teammate's legs: guards.ts PACE — never more than a purposeful walk, whatever the order or the drill asks)
+  const legs = teamLegs(g, gd, speed);   // (… × his card, for the legs walked HERE — the strafe and the settle; followPath weighs its own: kitload.ts)
   let fightFace = s.over && s.over.walk && s.over.face !== null ? s.over.face : null;
   if (fightFace !== null) { const w = walkWatch.get(gd), t = g.time;
     if (!w || t < w.t || t - w.t > 3 || Math.hypot(c.pos[0] - w.x, c.pos[2] - w.z) > 0.25) walkWatch.set(gd, { x: c.pos[0], z: c.pos[2], t });
@@ -68,13 +70,13 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
     if (!home) {
       goTo(g, gd, s.goal);
       if (gd.pathI >= gd.path.length) home = true;   // the path (kept by goTo while the goal stands) has already run out short of the spot — its last point is a cell centre, and a goal in a blocked cell resolves to the nearest free one: finish straight, on foot
-      else { const done = strafing ? strafeAlongPath(g, gd, dt, speed) : followPath(g, gd, dt, speed); moveSpeed = gd.speed; home = done && gd.pathI >= gd.path.length; }
+      else { const done = strafing ? strafeAlongPath(g, gd, dt, legs) : followPath(g, gd, dt, speed); moveSpeed = gd.speed; home = done && gd.pathI >= gd.path.length; }
     }
     if (home) {
       let w = settleWatch.get(gd); if (!w || w.goal !== s.goal) { w = { goal: s.goal, best: planar, t: 0 }; settleWatch.set(gd, w); }
       if (planar < w.best - 0.01) { w.best = planar; w.t = 0; } else if ((w.t += dt) > 3.6) { w.best = planar; w.t = 0; }   // (stuck: stand — and give it another short go every few seconds in case whatever was in the way has moved)
       if (planar > 0.04 && w.t < 0.6) {   // the last half metre: ease straight onto the mark without turning to it (a settle / side-step, feet still cycling), slowing into it
-        const was = gd.speed; gd.speed = damp(gd.speed, Math.min(speed, Math.max(0.35, planar * 2.2)), 6, dt); teamLean(g, gd, was, dt);
+        const was = gd.speed; gd.speed = damp(gd.speed, Math.min(legs, Math.max(0.35, planar * 2.2)), 6, dt); teamLean(g, gd, was, dt);
         const step = Math.min(planar, gd.speed * dt); c.pos[0] += dx / planar * step; c.pos[2] += dz / planar * step;
         c.vel = [dx / planar * gd.speed, 0, dz / planar * gd.speed]; moveSpeed = gd.speed;
         if (planar > FACE_WITHIN && !strafing) farLeg = Math.atan2(dx, dz);
@@ -117,7 +119,7 @@ export function runGuardScript(g: Game, gd: Guard, dt: number) {
   attachFlashlight(g, gd);
   if (s.light === false && !lightRuled(g, gd)) gd.flashlight.enabled = false;   // (after attachFlashlight, which decides the light for a live man and would switch it straight back on)
   const prevPhase = gd.stepPhase; gd.stepPhase = c.anim.phase;
-  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, moveSpeed > 2 ? 0.8 : silentStep(g, gd) ?? 0.45, false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
+  if (moveSpeed > 0.4 && ((prevPhase < 0.5) !== (gd.stepPhase < 0.5))) tread(g, c.pos, (loadGait(g, gd, moveSpeed) > 2 ? 0.8 : silentStep(g, gd) ?? 0.45) * loadHeard(g, gd), false);   // (presentation only, on the floor he is on — floor.ts, as the AI's own tread)
   s.arrived = arrived;
 }
 

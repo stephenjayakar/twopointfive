@@ -10,6 +10,9 @@ import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineG
 import { hyp2, hyp3 } from '../math/vec';
 import { WALLSNAP } from './wallsnap';
 import { STEALTHPOSE, type StealthFeed } from './stealthpose';   // (read inside methods only: the game's one import cycle)
+import type { GunLook } from './gunlook';
+import { feedPath, feedLive, type FeedKey } from './gunreload';   // (read inside methods only: the game's one import cycle)
+import type { GunModelId } from './weapons';
 import { INHAND, BELT_TORCH, InHandWord } from './inhand';   // (a leaf: the switch and its numbers)
 import { GUNHAND } from './gunhand';   // (a leaf: the switch and its keys)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -1393,6 +1396,10 @@ export class CharacterAnimator {
    *  room-fight teammate's): seconds into `reloadRow`, −1 = none. The hand then shows that beat and nothing else: one clock, the game's. Without it (Sam, the viewer)
    *  the hand runs on reload()'s own. */
   reloadAt = -1; reloadRow: ReloadBeat | null = null;
+  /** EACH GUN FED ITS OWN WAY (gunreload.ts feedDeal, every frame beside `reloadMag`; null with gunlook.ts GUNLOOK off or a row with no model, and then nothing
+   *  below is read): the model of the long gun in his hands — where the support hand's stations are and what it does at them (a belt box, shells one at a time,
+   *  the MP7's magazine up the grip) — and what this reload puts in: `feedN` rounds, `feedPort` = begun with nothing in the gun. */
+  feed: GunModelId | null = null; feedN = 0; feedPort = false;
   private rlT = -1; private rlB = { dur: 1.6, out: 0.43, in_: 1.04, rack: 1.36, pull: true, keep: -1, hand: false, fresh: 0.7 }; private rlSrc: ReloadBeat | null = null;
   /** GUN HAND (`longReload`): the long gun's reload carry — `k` the gun's share of LONG_RELOAD, `h` the head's; `ch` the carriage's channels with those shares
    *  taken (what longBody / longArms pose from while either is up; the springs themselves are never written). Both 0 with the switch off: the springs, to the bit. */
@@ -1783,6 +1790,12 @@ export class CharacterAnimator {
     if (!(this.mv2Shown.reload > 0.5)) return null;
     const B = this.rlB, t = this.mv2.rlAt;
     return { out: t >= B.out && t < B.in_, hand: (B.keep >= 0 && t >= B.out && t < B.keep) || (t >= B.fresh + 0.04 && t < B.in_) };
+  }
+  /** the change the support hand is SHOWING, as its beat and where it is on it (gunreload.ts reloadShow / reloadHandBoxes work a gun's own feeding out from this
+   *  and nothing else: no state of their own). null = no change shown. */
+  get feedClock(): { t: number; dur: number; out: number; in_: number; rack: number; pull: boolean; keep: number; fresh: number } | null {
+    if (!(this.mv2Shown.reload > 0.5)) return null;
+    const B = this.rlB; return { t: this.mv2.rlAt, dur: B.dur, out: B.out, in_: B.in_, rack: B.rack, pull: B.pull, keep: B.keep, fresh: B.fresh };
   }
   /** (MOVES: the hand's own clock stops where it is and the arm eases back to the gun from there — mvArms) */
   cancelReload() { this.reloadT = -1; this.rlT = -1; }
@@ -2447,7 +2460,7 @@ export class CharacterAnimator {
       if (this.reloadAt >= 0 && this.reloadRow) { if (this.rlSrc !== this.reloadRow) { this.rlBeat(this.reloadRow); this.rlSrc = this.reloadRow; } n.rlAt = this.reloadAt; this.rlT = -1; live = true; }
       else if (this.rlT >= 0) { n.rlAt = this.rlT; live = true; this.rlT += dt; if (this.rlT > this.rlB.dur) this.rlT = -1; }
       const pist = this.rlB.hand && !this.longGun && this.reloadT >= 0;   // (KIT: a pistol's change the game handed a `hand` beat — the support hand works it over the reload clip's raised gun, for as long as that clip runs)
-      const want = live && (pist || (mvOn('reload') && this.longGun && this.reloadMag)) && !busy && this.throwT < 0 && this.strikeT < 0 && !this.bigTool ? 1 : 0;   // (stopped short — cancelled, the gun re-dealt, a throw: the arm eases back from where the hand was)
+      const want = live && (pist || (mvOn('reload') && this.longGun && (this.reloadMag || (this.feed !== null && feedLive())))) && !busy && this.throwT < 0 && this.strikeT < 0 && !this.bigTool ? 1 : 0;   // (stopped short — cancelled, the gun re-dealt, a throw: the arm eases back from where the hand was)
       if (want > 0 || n.rw.x !== 0) { n.rw.step(want, MV2.reload.rate, dt); if (want === 0 && n.rw.x < 0.01) n.rw.x = n.rw.v = 0; }
       const D = this.rlB.dur, w = bump(n.rlAt, 0, 0.1, D - 0.24, D - 0.02) * clamp(n.rw.x, 0, 1) * free * (pist ? 1 : smoothstep(0.3, 0.9, clamp(this.lg.w.x, 0, 1)));
       o.reload = w > 0.003 ? w : 0; if (o.reload > 0) { if (pist) this.pistolReloadArm(n.rlAt, w); else this.reloadArm(n.rlAt, w); } }
@@ -2475,7 +2488,9 @@ export class CharacterAnimator {
     return this.mv2Mask[both ? 1 : 0];
   }
   private reloadArm(t: number, w: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, B = this.rlB, R = MV2.reload, K = this.reloadBack ? R.back : R.box, T = clamp(this.trained, 0, 1);
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, B = this.rlB, R = MV2.reload, T = clamp(this.trained, 0, 1);
+    const own = this.feed ? feedPath(this.feed, B, this.feedN, this.feedPort) : null;   // (a gun fed its own way — gunreload.ts: the hand's stations, or a magazine gun's own marks; null with that switch off)
+    const K = own && 'marks' in own ? own.marks ?? R.box : this.reloadBack ? R.back : R.box;
     pB.copy(pA); fk.run(pB);
     // the gun's frame where the trigger hand has it NOW (the clip's raised gun, the carriage it comes back down to): the support hand works on the weapon as drawn
     const pR = fk.pos[nd.handR], d = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR));
@@ -2490,6 +2505,7 @@ export class CharacterAnimator {
     if (GUNHAND.on && GUNHAND.longReload && this.longGun) { const l = v3.sub(fk.pos[nd.thighL], fk.pos[nd.thighR]), hl = v3.normalize(v3.mad(l, F.up, -v3.dot(l, F.up))), hf = v3.cross(hl, F.up), H = fk.pos[nd.hips];
       hk = p => v3.mad(v3.mad(v3.mad(H, hl, p[0]), F.up, p[1]), hf, p[2]); }
     const pouch = T > 0.5 ? tk(fk.pos[nd.spine2], R.pouch[1]) : hk(R.pouch[0]);
+    if (own && 'keys' in own) { this.feedArm(t, w, own.keys, at, dir, pouch, F, cur, rot0); return; }
     const o = B.out, i = B.in_, r = B.rack, D = B.dur, h = (o + i) * 0.5;
     const mag = at(K.mag), strip = at(K.strip), hd = at(K.handle), pl = at(K.pull);
     // the empty comes straight down out of the well and is let go there (`strip`: a hand's width under it — dropped, not thrown); the fresh one comes up from under.
@@ -2510,6 +2526,25 @@ export class CharacterAnimator {
     twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, p, fl > 0 ? lw(R.pole, FL.pole, fl) : R.pole, R.poleW, this.handRot(0, f, b));
     const grip = kp >= 0 ? Math.max(bump(t, o - 0.12, o - 0.02, kp - 0.02, kp + 0.06), bump(t, fr, fr + 0.08, i + 0.04, i + 0.12)) : bump(t, o - 0.12, o - 0.02, i + 0.04, i + 0.12), hook = B.pull ? bump(t, r - 0.14, r - 0.04, r + 0.14, r + 0.22) : 0, c = (k: number) => lerp(0.3, k, Math.max(grip, hook));
     this.hand(pB, 0, [c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1 - grip));
+    const wr = bump(t, 0, 0.12, D - 0.26, D - 0.05); if (wr < 0.999) { fk.run(pB); setModelRot(pB, nd.handL, quat.slerp(rot0, fk.rot[nd.handL], wr), fk.parentRot(pB, nd.handL)); }
+    blendPose(pA, pB, w, this.armMask(false), pA);
+  }
+  /** A GUN FED ITS OWN WAY (gunreload.ts feedPath: a belt gun's cover, box and tray; a tube gun's shells, a trip each): the support hand through `keys` — a wrist
+   *  station each, in the gun's frame as reloadArm has it (`at`, `dir`), or at the pouch — and back to where it was. The same solve, mask and ease as the
+   *  magazine change; the trigger hand, the gun and the body are not touched. */
+  private feedArm(t: number, w: number, keys: readonly FeedKey[], at: (p: readonly number[]) => Vec3, dir: (p: readonly number[]) => Vec3, pouch: Vec3, F: { left: Vec3; up: Vec3; fwd: Vec3 }, cur: Vec3, rot0: Quat) {
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, R = MV2.reload, D = this.rlB.dur, n = keys.length;
+    if (n < 2) return;
+    // the hand: round a thing from its front (fingers across it, palm toward him) · flat on top of the gun (fingers across it, the back of the hand up) · fingers down into the pouch
+    const fs = { mag: dir([-1, 0.15, 0.1]), top: dir([-1, 0, 0.15]), pouch: v3.mad(v3.mad(v3.scale(F.up, -0.9), F.left, -0.3), F.fwd, 0.1) }, bs = { mag: dir([0.1, -0.35, 1]), top: dir([0.1, 1, 0.1]), pouch: v3.mad(F.fwd, F.left, 0.3) };
+    const P: [number, Vec3][] = [[0, cur]], Fk: [number, Vec3][] = [], Bk: [number, Vec3][] = [];
+    for (const k of keys) { P.push([k.t, k.at === 'pouch' ? pouch : at(k.at)]); Fk.push([k.t, fs[k.how]]); Bk.push([k.t, bs[k.how]]); }
+    const end = keys[n - 1].t; if (end + 0.1 < D - 0.3) P.push([D - 0.3, P[P.length - 1][1]]); P.push([Math.max(D - 0.03, end + 0.02), cur]);   // (the hand rests where its last work was until the weapon is nearly done, then back to the gun)
+    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, curve3(t, P), R.pole, R.poleW, this.handRot(0, curve3(t, Fk), curve3(t, Bk)));
+    let g = t <= keys[0].t ? keys[0].grip * smoothstep(keys[0].t - 0.12, keys[0].t, t) : keys[n - 1].grip * (1 - smoothstep(end, end + 0.12, t));
+    for (let i = 0; i + 1 < n; i++) if (t > keys[i].t && t <= keys[i + 1].t) { g = lerp(keys[i].grip, keys[i + 1].grip, (t - keys[i].t) / (keys[i + 1].t - keys[i].t)); break; }
+    const c = (k: number) => lerp(0.3, k, g);
+    this.hand(pB, 0, [c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, g), 0.1 * (1 - g));
     const wr = bump(t, 0, 0.12, D - 0.26, D - 0.05); if (wr < 0.999) { fk.run(pB); setModelRot(pB, nd.handL, quat.slerp(rot0, fk.rot[nd.handL], wr), fk.parentRot(pB, nd.handL)); }
     blendPose(pA, pB, w, this.armMask(false), pA);
   }
@@ -3157,7 +3192,7 @@ export class CharacterAnimator {
     return D;
   }
   /** which row of LONG_RELOAD this gun's carry takes (`reloadBack` is the second movement pass's input: nobody's with that pass off) */
-  private rlRow() { return this.reloadBack && MOVES.on > 0.5 ? LONG_RELOAD.back : LONG_RELOAD.box; }
+  private rlRow() { return this.reloadBack && MOVES.on > 0.5 && !(this.feed !== null && feedLive()) ? LONG_RELOAD.back : LONG_RELOAD.box; }   // (a gun with a model of its own is never the bullpup: gunreload.ts)
   /** the carriage's channels as they are posed: the springs' own — or, while a reload carry is up (GUN HAND), those with its share of LONG_RELOAD taken */
   private lgChannels(): readonly { x: number }[] { const C = this.rlc; return (C.k > 0 || C.h > 0) && C.ch ? C.ch : this.lg.ch; }
   /** GUN HAND (`longReload`), once a frame after the carriage's springs: how much of the reload carry (LONG_RELOAD) the long gun shows, and the channels with it
@@ -5168,6 +5203,9 @@ export class Character {
   private handRBore: Vec3 = [0, 1, 0]; private handRTop: Vec3 = [0, 0, 1];
   /** IN HAND, the drawer's word (combat.ts handProps, a frame behind as `anim.gripCan` is): what it has put in his right hand — inHandPass moves that hand for it */
   inHand: InHandWord | null = null;
+  /** GUN LOOKS (gunlook.ts GUNLOOK): which of his guns are drawn as models of their own — written each step by whoever deals his guns (game.ts for a
+   *  teammate, player.ts for the player, the kit screen for its figure), read by rigProps.ts. null (the switch off, or nobody wrote it): every gun as its group draws it */
+  gunLook: GunLook | null = null;
   /** …the word the pass is showing (a new KIND of thing waits for the old one's turn to ease out), how far in it is (0 = the skeleton is as the animator posed
    *  it), and the gun hand's rotation as the animator had it while the pass has turned it (handFrameR(true): what a game rule asks for) */
   private inHandCur: InHandWord | null = null; inHandK = 0; private simHandR: Quat | null = null;

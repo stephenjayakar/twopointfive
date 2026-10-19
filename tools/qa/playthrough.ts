@@ -229,6 +229,7 @@ const { openFloor } = await import(`${ROOT}/src/game/doortools.ts`);
 const { knobRegistry, knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);   // THE list of knob tables: what --set reaches and what a run puts back
 const { DOORSTAY } = await import(`${ROOT}/src/game/doors.ts`);   // (doors stay where they are left: --set '{"DOORSTAY":{"on":false}}' = every leaf with its closer, as before the switch)
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
+const { RESCUEEND } = await import(`${ROOT}/src/game/rescueend.ts`);
 const { DIGIN, DIGIN_STATS, DIGIN_LOG, DIGIN_SHUT, digInSet } = await import(`${ROOT}/src/game/digin.ts`);
 const { PRESSURE, pressureStats } = await import(`${ROOT}/src/game/pressure.ts`);
 const { DRILLED } = await import(`${ROOT}/src/game/roomfight.ts`);
@@ -1211,6 +1212,15 @@ function playRescue(P: Player) {
   P.until(() => R.state === 'secured', 60);
   const inside: Vec3 = P.free([(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2]) ?? [c[0] - n[0] * 2, 0, c[2] - n[1] * 2];
   P.say('Sam walks into the hostage room'); P.go(inside, 40);
+  // THE END AS THE RULE HAS IT (src/game/rescueend.ts — RESCUEEND.on): the room held ends nothing. He holds it while the men left alive come to him (the
+  // floor cleared is the win), then gives the hostages the word, calls the team in and walks them back the way he came in.
+  if (RESCUEEND.on && !R.result) {
+    P.until(() => !!R.result || R.ending.left().length === 0, 25);
+    if (!R.result && R.ending.left().length && R.ending.word(g.player.char)) {
+      P.orders++; P.say('on your feet — with me: the hostages follow Sam'); P.fallIn();
+      P.go(R.ending.out, 90);
+    }
+  }
   P.wait(120);
 }
 

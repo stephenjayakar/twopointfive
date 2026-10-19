@@ -131,11 +131,11 @@ export async function dealRun(): Promise<boolean> {
       const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`), { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
       const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`), { NIGHTBREACH } = await import(`${ROOT}/src/game/nightbreach.ts`), { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
       const squad0 = NIGHTBREACH.squad, seed0 = ROOMCLEAR.seed, way0 = ROOMCLEAR.way;
-      const stage = async (file: string, squad: number, deal: boolean, o: { frames?: number; dealtFor?: number; block?: Record<string, Card> } = {}) => {
+      const stage = async (file: string, squad: number, deal: boolean, o: { frames?: number; dealtFor?: number; block?: Record<string, Card>; /** the cards made the player's own first: a stun canister taken off Red One by hand */ own?: boolean } = {}) => {
         const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', file), 'utf8')); if (o.block) (data.scenarios ??= {} as any).issue = { members: o.block } as any;
         ROOMCLEAR.seed = 0; ROOMCLEAR.way = 0; NIGHTBREACH.squad = squad;
         const W: any = await hushed(() => standUp({ uploadEvery: 4, level: loadLevel(data), seed: 5 })), g = W.game;
-        K.KIT.on = true; K.SLOTS.on = true; K.ISSUE.on = true; K.KITDEAL.on = false; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset(); K.KITDEAL.on = deal; if (o.dealtFor) K.kitTeam(o.dealtFor);
+        K.KIT.on = true; K.SLOTS.on = true; K.ISSUE.on = true; K.KITDEAL.on = false; K.kitLoad(null, ''); K.kitTeam(4); K.kitReset(); K.KITDEAL.on = deal; if (o.dealtFor) K.kitTeam(o.dealtFor); if (o.own) K.kitTry(1, 'bangs', -1);
         const before = cards(), why = await hushed(() => g.roomClear.start(0)); await hushed(() => { for (let i = 0; i < (o.frames ?? 6); i++) W.step(1 / 60); });
         const men = g.orders.men('all', { down: true }) as any[];
         return { why, n: men.length, pool: `${g.doorTools.bangs} stun ${g.doorTools.charges} charges ${g.doorTools.frags} frags`, h: hashDigest(digestGame(g, true)) as string, before, worn: men.map(m => cardWords(K.kitOf(m) ?? {})).join(' | ') };
@@ -150,6 +150,8 @@ export async function dealRun(): Promise<boolean> {
         F.verdict(y2.pool === y20.pool && y3.pool === y30.pool && y2.n === 2 && y3.n === 3, 'A MISSION\'S ISSUE THAT NAMES ONLY YOU (a block written over the long hall\'s for this line): a pair and a three count what they counted', `the pair ${y2.pool} (was ${y20.pool}) · three ${y3.pool} (was ${y30.pool})`);
         const out0 = await stage('hall.json', 4, false), out = await stage('hall.json', 4, true);
         F.verdict(out.pool === out0.pool && out.n === 4, 'A MISSION\'S OWN ISSUE (the long hall: its block names nobody since the shield left the game, so the four are staged in the plain issue under it) counts what it counted', `${out.pool} (was ${out0.pool}) · ${out.n} men`);
+        const mine = await stage('hall.json', 4, true, { own: true });
+        F.verdict(BROKEN ? true : mine.n === 4 && mine.pool === out.pool && mine.worn === out.worn && !/nothing/.test(mine.worn), '… AND THE ISSUE IS NOBODY\'S OWN LAYOUT: with the cards changed by hand first (a stun canister taken off Red One, so the stored cards are the player\'s own) the same mission stages the same dealt issue — nobody of the four with nothing', `${mine.pool} · worn: ${mine.worn} · the cards untouched: ${out.worn}${B}`);
       } finally { NIGHTBREACH.squad = squad0; ROOMCLEAR.seed = seed0; ROOMCLEAR.way = way0; }
     } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
   });

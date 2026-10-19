@@ -56,7 +56,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `volumes[]` | `{ id, kind hide\|utility\|trigger, floor?, c, h, yaw?, notes? }` | none yet |
 | `devices[]` | camera / keypad / laser union | the level-design devices (`game/devices.ts`) — see *Devices* below |
 | `vents[]?` | `{ id, floor?, pos, dir, speed, spread, reach, size?, period?, duty?, phase?, mains?, notes? }` | HVAC supply vents (`game/wind.ts`) — see *Vents* below; optional block, absent = still air indoors |
-| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
+| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
 | `breaker` | `{ pos, panel, led }` | box ids |
@@ -174,7 +174,8 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   halfW? }], patrols?: string[][], needs?, phones?, wayouts?, radioCheck? }` (`radioCheck: false` = this shift keeps no radio check: nobody is sent round a silent man's route; absent = the game's) — a run's seed deals ONE start, ONE spot and ONE patrol set (route names; at most six a set);
   every exit is open on every run and faces any way (`out` = the unit vector pointing out through it). `needs` / `phones` / `wayouts` are the level's own places
   for the shift's errands and a frightened civilian: on a level that carries this block the office's tables (needs.ts NEED_SPOTS, civilians.ts CIV_SPOTS, the
-  response team's stairwell, the storm's two roofs, the footstep map) are NOT read — the level's own, or that thing off. The file's `mission` stays as the
+  response team's stairwell, the storm's two roofs, the footstep map) are NOT read — the level's own, or that thing off (the response team: the level's own
+  `response` block below, or no team). The file's `mission` stays as the
   validator wants it (equal to `spots[0]` / `exits[0]`, with `exfil.out`): it is what the plain `&solo` boot reads. `?levelFile=<name>.json&quiet[=pin][&squad=1]`.
   Checks: `bun run tools/qa/quiet-check.ts <name>.json` (the block against the built floor, every deal started), `tools/qa/solo-night.ts --level <name>.json
   --quiet [N] [--squad 1]` (the scripted player to the debrief), `probes.ts quiet` on `levels/quiet-yard.json` (generator `tools/levels/quiet-yard.ts` = the
@@ -225,6 +226,23 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   the player's alone — the validator refuses them elsewhere; with the pouches rule off nothing trims a count; a card that still says `shield` is refused in words — the ballistic shield left the game on 10-18). Every staging on that level wears the issue card with those
   fields over it, whatever kit the machine keeps, and the kept kit is not written; `?noissue` (`ISSUE.on` false) = the kept kit as on any level. Today:
   `levels/hall.json`, whose block is empty since the shield went (`members: {}`: every man on the plain issue, no visit to the loadout screen).
+- `response` — THIS LEVEL HAS A RESPONSE TEAM (`game/qrf.ts`, switch `RESPONSE`; `scene/scenarios.ts ResponseData`): who comes when the place goes loud, by
+  which ways, and what they are called on the net. A LEVEL DESIGN DECISION, NOT A DEFAULT: a level carries the block only where somebody would plausibly
+  come (a post with a radio room and a picket down the road, a street under curfew, a border company's lines) and `why` says so in a sentence — the
+  validator refuses a block without it. A level whose idea is that nobody comes (a hilltop relay, a private vault, a range on a clock) carries none, and
+  with the switch on a level without the block has no team whatever doors it has. `{ why, site, at, team, tag?, ways[{ name, door?, muster[4], entry[4],
+  entryFace[4], coming?, clear?, stairs? }], men?: [fewest, most], eta?: [shortest, longest], posts?[{ name, pos, yaw, sweep[2] }], outside?: Vec3[],
+  sweep?[{ name, pos }], raid?: { room? } }`. `site` / `at` / `team` / `tag` are the radio's words ('the post', 'at the post', 'the picket', `PICKET` → PICKET-1); a way is
+  where four men are stood up out of sight (`muster`, outside the wall or behind the named `door`), the fan they take inside it (`entry` + the yaw each
+  faces), and its two radio phrases; `stairs` = it is a stairwell (boots on the stairs, the door rings). `men` 2‥4 and `eta` 15‥240 s are RANGES: each
+  call is dealt one way, one size and one time off the game's own die (`RESPONSE.deal`; a way an enemy stands at the muster of is never dealt). `posts` +
+  `outside` are the second lift's places outside the ways out (absent: none); the element and the posts together are never more than `men[1]`. `sweep`
+  is where they look with nothing said on the net, on a floor with no room plans (absent: the quiet block's spots and `places`' areas). `raid?: { room? }`
+  = the team answers a SQUAD'S ROOM CLEAR on this level and nothing else (`RESPONSE.raid`): it stands with the defenders, is counted inside the eleven,
+  has no `posts`, and is asked for by a living defender of `room` (a `roomClear` room id: where the set or the telephone is; absent: any defender) six
+  seconds after he first hears gunfire — those men down first, nobody calls. A block without `raid` answers a quiet night gone loud, never a raid. No compass words
+  in a way's name. The block is words and marks only: it does not move the level's fingerprint. Checks: `bun run tools/qa/response-check.ts` (which
+  levels carry one — its `WITH` list is the written-down answer — every block against its built floor, a call played through on each).
 - `kitView` — THE TEAM AT THE DOOR, the start page's Team & kit picture (`src/host/kitView.ts`, `src/ui/kitView.ts`; picture only — no rule of the game reads
   it, and a level without the block shows the menu's standing man as before): `{ ways[], sets? }`, indexed as the team starts are (`[0]` = the room clear's own
   `team`, `[k]` = its `starts[k − 1]`; never more ways than starts). A way needs only `door` (a door id): the men's slots, the camera and the lamps are worked

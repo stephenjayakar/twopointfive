@@ -72,6 +72,7 @@ import { shotEnergy } from './glasspen';
 import { hearPath, airTrans } from './weather';
 import { CLEARLINE, clearLineBlocked } from './clearline';
 import { gunWallIs } from './gunwall';
+import { feedDeal, feedTick } from './gunreload';   // (called inside tickOp only)
 import { sideOut, sideSeen, sideLocked } from './gunslots';   // (called inside tickOp only)
 import { AIMCOST, feetHold } from './aimcost';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -920,6 +921,7 @@ export class RoomFight {
     const g = this.g, gd = O.gd, c = gd.char, S = FIGHT_SKILL.operative;
     gd.skill = S;
     if (gd.state === 'dead') { O.tgt = null; O.turn = null; O.step = null; this.restore(O); return; }
+    if (O.reloadUntil > 0) { const now = gd.weapon.def.reload.dur - (O.reloadUntil - g.time); feedDeal(c.anim, c.anim.longGun ? gd.weapon : null, true); feedTick(g, c, gd.weapon.def, now - dt, now); }   // (gunreload.ts: his gun's own feeding heard on this clock, the hand's stations dealt — nothing with gunlook.ts off. This reload never dropped anything and does not now)
     if (O.reloadUntil > 0 && g.time >= O.reloadUntil) { gd.weapon.rearm(); O.reloadUntil = 0; }
     if (O.tgt) sideSeen(g, gd);   // (gunslots.ts: a man in front of him — a sidearm that is out stays out)
     // a mate down in his view: said once

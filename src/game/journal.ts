@@ -74,6 +74,7 @@ import { STICKY } from './stickycam';
 import { CUES } from './cues';
 import { OWNCHARGE } from './owncharge';
 import { GUNSLOTS } from './gunslots';
+import { GUNLOOK } from './gunlook';
 import { BIGSLOT, KITDEAL } from './kit';
 import { SQUADTHROW } from './squadthrow';
 import { AUTOPILOT } from './autopilot';
@@ -102,7 +103,10 @@ import { DARKFOE } from './darkfoe';
 import { POWEROUT } from './powerout';
 import { SQUADDEAL } from './squaddeal';
 import { STAYASK } from './stayask';
+import { KITLOAD } from './kitload';
 import { RESCUECHECK } from './rescuecheck';
+import { RESCUEEND } from './rescueend';
+import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
@@ -110,6 +114,7 @@ import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
 import { PICTURE } from './picture';
+import { RESPONSE } from './qrf';
 import { RELOAD } from './autoreload';
 import { SAMSTUN } from './samstun';
 import { SEENWALK } from './seenwalk';
@@ -269,6 +274,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.OWNCHARGE) OWNCHARGE.on = false;   // (a file from before the player's own charges: his card had no charge rows, no door offered 'set a charge')
   if (!k.tables.GUNSLOTS) GUNSLOTS.on = false;   // (a file from before the two gun slots: a card had one gun row and a teammate one gun)
   else if ((k.tables.GUNSLOTS as Partial<typeof GUNSLOTS>).heard === undefined) GUNSLOTS.heard = false;   // (…and from before a teammate's quiet round was heard: it reached nobody)
+  if (!k.tables.GUNLOOK) GUNLOOK.on = false;   // (a file from before each gun had its own look: every row was its stand-in — its muzzle, its flash and its reload's beats the stand-in's)
   if (!k.tables.BIGSLOT) BIGSLOT.on = false;   // (a file from before the big slot: the shotgun was a man's gun, a wall charge was pouches, nobody carried a hammer)
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
@@ -336,12 +342,17 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.POWEROUT) POWEROUT.on = false;   // (a file from before a mission's defenders answered a blackout: nobody of theirs walked to the breaker, and the dark was no word to anybody)
   if (!k.tables.SQUADDEAL) SQUADDEAL.on = false;   // (a file from before a level with no squads block was handed squads cut from its rooms: its defenders were one pool)
   if (!k.tables.STAYASK) STAYASK.on = false;   // (a file from before squads that stay in their rooms missed a silent room: nobody asked after another squad there, and nobody went)
+  if (!k.tables.KITLOAD) KITLOAD.on = false;   // (a file from before a card's weight was a man's pace, notice and footfall: every man moved, was seen and was heard the same whatever he carried)
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
+  if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
+  if (!k.tables.RESCUEFLUSH) RESCUEFLUSH.on = false;   // (a file from before the men left alive on a rescue came for the hostages: they stayed where the fight left them)
   if (!k.tables.RESCUECHECK) RESCUECHECK.on = false;   // (a file from before a rescue's men checked in by radio: a man of theirs taken without a sound was missed by nobody)
   if (!k.tables.NETQUIET) NETQUIET.on = false;   // (a file from before the net went quiet: a check nobody answered shook nobody, no man whipped to a noise, and the last man held his room standing)
   if (!k.tables.ATTENTION) ATTENTION.on = false;   // (a file from before a guard's attention could be taken: its wary men swept the room with their whole eye, and nothing wore off)
+  if (!k.tables.RESPONSE) RESPONSE.on = false;   // (a file from before the response team was the level's own: the office's one stairwell, the sandbox's two numbers, the floor's fix)
+  else if (typeof (k.tables.RESPONSE as Partial<typeof RESPONSE>).raid !== 'boolean') RESPONSE.raid = false;   // (…or from before a squad's raid could bring a level's team: its raids brought nobody)
   if (!k.tables.PICTURE) PICTURE.on = false;   // (a file from before each man kept his own picture of the fight: nobody remembered where an enemy had been, and every spot was picked without one)
   else { const p = k.tables.PICTURE as Partial<typeof PICTURE>;
     if (p.wall === undefined) PICTURE.wall = false;   // (…and one from before the wall charge's stand-off asked the pictures: who was known was the fog's record alone)
