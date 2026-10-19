@@ -1573,7 +1573,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
   const out: RunOut & { trace: string[] } = { scn, seed, end: 'error', why: '', t: 0, team: 0, of: 0, hostiles: 0, hostilesOf: 0, orders: 0, refused: [], smells: [], rooms: 0, note: '', trace: [] };
   let P: Player | null = null, cuesOn = true, clOn = false;
   MAINS.length = 0; mainsOut = false;
-  const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); const ff0 = { ...FF };   // (friendly fire: this run's own share of the tally, on `ff` below)
+  const { FRIENDLYFIRE_STATS: FF } = await import('../../src/game/friendlyfire.ts'); const ff0 = { ...FF }; const { FIRELINE_STATS: FL } = await import('../../src/game/fireline.ts'); const fl0 = { ...FL };   // (friendly fire: this run's own share of the tally, on `ff` below)
   // (--set reaches the feel tables, the rescue's own, and the harder defenders: THE SWITCH as the game's own row sets it — --set '{"DIFFICULTY":{"level":"hard"}}'
   // (game/difficulty.ts; HARD = what hard is beside both switches on, set first; HARD_AT = hard's own rows on one level, by its structure's name:
   // '{"HARD_AT":{"the block":{}},"DIFFICULTY":{"level":"hard"}}' = the build's hard there) — and then the two tables under it, row by row, over whatever the level wrote)
@@ -1679,6 +1679,7 @@ async function playRun(scn: string, seed: number, cap: number, verbose: boolean,
     { const sq = squadsReport(P.g); if (sq.length) { out.squads = sq; if (verbose) for (const q of sq) for (const e of q.events) console.log(`${e.t.toFixed(1).padStart(6)}     squad · ${q.name} ${e.what} (${e.n} at home): ${e.why}`); } }
     if (dug || out.squads) { out.digin = { ...DIGIN_STATS }; (out as any).diginShut = { ...DIGIN_SHUT };   // (DIGIN.shutOpen's own counts: doors pushed home, held, pulled again, other doors gone to, let be)
       if (verbose) for (const l of DIGIN_LOG) console.log(`${l.t.toFixed(1).padStart(6)}     dig-in · ${l.who}: ${l.what}`); } }
+  (out as any).fl = { holds: FL.holds - fl0.holds, heldS: +(FL.heldS - fl0.heldS).toFixed(2), ways: FL.ways - fl0.ways, noWay: FL.noWay - fl0.noWay, enemy: FL.enemy - fl0.enemy };   // (fireline.ts: waits begun short of the player's lane of fire, their seconds, ways round taken, looks that found none, frames a wait was not kept for an enemy's line)
   { const st = (P as any)?.g?.fight?.stats; (out as any).ff = { samOnMate: FF.samOnMate - ff0.samOnMate, mateOnMate: FF.mateOnMate - ff0.mateOnMate, mateOnSam: FF.mateOnSam - ff0.mateOnSam, unpressed: FF.unpressed - ff0.unpressed, held: FF.held - ff0.held, rounds: st?.opRounds ?? 0, heldLane: st?.heldForFriend ?? 0 }; }   // (friendlyfire.ts: rounds of the team's side that went into its own side, rounds not pressed for a friend in the cone, gate frames held for the cone alone — beside the team's rounds and the frames its own lane held)
   return out;
 }

@@ -96,6 +96,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/frag.ts FRAG_LOG': 'TALLY · counted in frag.ts; no read in src/game, src/scene or src/anim',
   'src/game/frag.ts FRAG_STATS': 'TALLY · counted in frag.ts; read only by fragStatsReset (187); 388 is a comment in a type',
   'src/game/frag.ts FRAG_WHY': 'TALLY · counted in frag.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/frag.ts:187, game/frag.ts:781)',
+  'src/game/fireline.ts FIRELINE_STATS': 'TALLY · counted in fireline.ts; no read in src/game, src/scene or src/anim',
   'src/game/friendlyfire.ts FRIENDLYFIRE_STATS': 'TALLY · counted in friendlyfire.ts; no read in src/game, src/scene or src/anim',
   'src/game/friends.ts FRIENDS_STATS': 'TALLY · counted in friends.ts; no read in src/game, src/scene or src/anim',
   'src/game/furnblast.ts FURN_LOG': 'TALLY · counted in furnblast.ts; no read in src/game, src/scene or src/anim',
