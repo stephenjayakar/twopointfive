@@ -28,7 +28,7 @@ import { readFileSync } from 'node:fs';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, armThrough } = await import(`${ROOT}/src/game/combat.ts`);
 const { GUNWALL } = await import(`${ROOT}/src/game/gunwall.ts`);
-const { DOORBLAST } = await import(`${ROOT}/src/game/doorblast.ts`);
+const { DOORBLAST, DOORSHOT } = await import(`${ROOT}/src/game/doorblast.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
 const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
 const WB = await import(`${ROOT}/src/game/wallbreak.ts`);
@@ -307,13 +307,17 @@ export async function wallbreakSeams(): Promise<boolean> {
   const fc = d.frameCentre as Vec3; const at: Vec3 = [fc[0] + 0.5, 0.3, fc[2] + 0.5];
   // (1) nothing of mine touches a leaf: a default charge half a metre off the frame, then a magazine into the leaf (no stepping in between: the doors' own closer is not what is measured).
   //     The doors' OWN answer to a blast (doorblast.ts: a leaf off its hinges, on the shipped stand) is held off for this one call — it is the door owner's, and its count is `doors`.
+  //     So is the doors' own answer to the rounds (doorblast.ts DOORSHOT: the engine hands each round that met a leaf to leafRound, and the leaf goes in pieces on the count that opens
+  //     plasterboard): held off for the magazine — with it off, the hand-off itself must leave every leaf and keep as it was.
   const s0 = leafState(game), k0 = keepState(game);
   const doorBlast = DOORBLAST.on; DOORBLAST.on = false;
   const res0 = game.destr.blast(at, { who: PLAYER_ID }); const s1 = leafState(game);
   DOORBLAST.on = doorBlast;
   const nx = Math.sin(d.def.closedDir), nz = -Math.cos(d.def.closedDir); const nav = game.col.nav; let from: Vec3 = [fc[0] + nx * 1.5, 0, fc[2] + nz * 1.5];
   if (nav.blocked[nav.idx(Math.floor(from[0] / nav.cell), Math.floor(from[2] / nav.cell))]) from = [fc[0] - nx * 1.5, 0, fc[2] - nz * 1.5];
+  const doorShot = DOORSHOT.on; DOORSHOT.on = false;
   fire(W, from, [fc[0], 1.1, fc[2]], 12, 2);
+  DOORSHOT.on = doorShot;
   F.verdict(s1 === s0 && keepState(game) === k0 && res0.doors === 0 && !game.destr.walls.changes.some((c: any) => c.kind === 'door'), 'a charge by a door and 12 rounds into its leaf change no leaf from here', `${d.def.name}: locked / lockBroken / angle / vel of all ${game.doors.list.length} leaves untouched by the blast, every keep whole after the magazine; blast → ${JSON.stringify(res0)}; no 'door' row filed by the engine`);
   // (2) the call list, in order, before the walls are judged
   const pick = pickWall(game); if (!pick) { console.log('- NOTE — no partition with floor both sides on this level: the call order is not checked here'); return F.done(); }

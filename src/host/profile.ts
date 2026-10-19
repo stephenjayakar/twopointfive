@@ -39,6 +39,7 @@ import { WX_OWN, SNOW, SNOW_LOOK } from '../game/weatherKinds';
 import { AIR_SIM } from '../game/airSim';
 import { GLASS } from '../game/glass';
 import { WALLPEN } from '../game/wallpen';
+import { DOORSHOT } from '../game/doorblast';
 import { DOORPATH } from '../game/doorpath';
 import { COVERFIRE } from '../game/coverfire';
 import { LIGHTWALL } from '../game/lighting';
@@ -115,6 +116,7 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { FRIENDS } from '../game/friends';
 import { FRIENDLYFIRE } from '../game/friendlyfire';
 import { LIGHTSWITCH } from '../game/lightswitch';
+import { FIRELINE } from '../game/fireline';
 import { HANDWORK } from '../game/handwork';
 import { TAKEDOWN } from '../game/takedown';
 import { STEALTHPOSE } from '../game/stealthpose';
@@ -210,10 +212,12 @@ export function pageSwitches(q: URLSearchParams): void {
   SNOW_LOOK.oneAir = q.get('snowair') !== '0';   // … and its snow is ONE SNOW IN ONE AIR: the flakes fall through the simulated wind among the walls, a wisp is snow that wind lifts where it is fast enough, and the grains are no layer of their own (game/snowFx.ts oneAirOn, particles.wgsl snowAir; picture only): ON in the page; ?snowair=0 = flakes on the plain storm wind, wisps in gust patches, grains near the view, as they were
   SNOWBOG.on = q.get('snowbog') !== '0';   // thrown things bog down in lying snow: a grenade that comes down on a snow level's open ground keeps little of its bounce and its slide (game/snowBog.ts; PLAY, not picture): ON in the page; ?snowbog=0 = it bounces and skids there as on a floor
   SNOW_LOOK.marks = q.get('snowmarks') !== '0';   // … every thing that moves over the snow marks it, and a mark forms and kicks loose snow up by how hard it was made (game/snowMarks.ts, snowTracks.ts stampMark; picture only): ON in the page; ?snowmarks=0 = boots and blasts alone mark it, whole at once
+  SNOW_LOOK.under = q.get('snowunder') !== '0';   // a flake is hidden from what is under the roofs, whichever slab, and from a partition's top inside (weatherKinds.ts SNOW_LOOK.under; picture only): ?snowunder=0 = each roof's rectangle by itself and every top at the ceiling open, as it was
   SNOW_LOOK.past = q.get('snowpast') !== '0';   // … and its snow goes on falling past the level's rim, so a view by the edge is snowed across (game/snowFx.ts flakeOpen; picture only): ON in the page; ?snowpast=0 = no flake past the world's rectangle
   SNOW_LOOK.blast = q.get('snowblast') !== '0';   // … and a blast over lying snow craters it, throws the loose snow and shoves the simulated wind (game/snowBlast.ts; picture only): ON in the page; ?snowblast=0 = a blast leaves the snow as it lay
   SNOW_LOOK.breath = q.get('snowbreath') !== '0';   // … and the men's breath steams in its cold (game/snowBreath.ts; picture only): ON in the page; ?snowbreath=0 = no breath shows
   GLASS.bothFaces = q.get('glassears') !== '0';   // a pane's crash is heard from BOTH its faces (game/glass.ts glassEvent, guards.ts glassHeard: a window shot out from the yard reached the men in the room behind it only round by the front door): ON in the page; ?glassears=0 = heard only from the point the round met it, as it was
+  DOORSHOT.on = q.get('doorshot') !== '0';   // sustained gunfire splinters a wooden door leaf apart, on the count that opens drywall (game/doorblast.ts DOORSHOT): ON in the page; ?doorshot=0 = a round only marks a leaf, as it did
   WALLPEN.on = q.get('wallpen') !== '0';   // a round carries on through thin walls and wooden door leaves with the energy it has left (game/wallpen.ts: plasterboard partitions, fabric and wood screens, a leaf that is not steel — by the glass rule's energy, a toll by stuff and the length of its path through): ON in the page; ?wallpen=0 = a round stops in the first built thing it meets, as it did
   WALLCHARGE.on = !q.has('nowallcharge'); if (q.get('wallmenu') === 'direct') WALLCHARGE.menu = 'direct';   // the wall charge's own switch (game/wallcharge.ts; it also needs the destruction's) · ?wallmenu=direct: X, 5 instead of X, 5, 3
   // each man of a room entry walks a real path through the door (doorpath.ts) — clear of the leaf, one tight file: ON in the page; ?nodoorpath = the entry as it
@@ -242,6 +246,7 @@ export function pageSwitches(q: URLSearchParams): void {
   FRIENDS.noSnap = !(q.has('friendsnap') && q.get('friendsnap') !== '0');   // the reticle never takes a man of the player's own side (game/friends.ts): ON in the page; ?friendsnap = it snaps to anybody, as it did
   LIGHTSWITCH.on = q.get('lightswitch') !== '0';   // a room's lights have a switch on the wall beside its door: Space at it puts the room's lights out or back, and a calm defender who saw them go comes to the switch and puts them back (game/lightswitch.ts): ON in the page; ?lightswitch=0 = no plates and no row, as it was
   FRIENDLYFIRE.on = !(q.has('nofriendlyfire') && q.get('nofriendlyfire') !== '0');   // a round of your side finds the men of your side, and a teammate does not press with a friend where his round could go (game/friendlyfire.ts): ON in the page; ?nofriendlyfire = your rounds and theirs pass through your own side, as they did
+  FIRELINE.on = !(q.has('nofireline') && q.get('nofireline') !== '0');   // a teammate walking on an order waits short of the lane you are firing down and crosses when you stop (game/fireline.ts): ON in the page; ?nofireline = an order walks him through your fire, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
   QUIETFOG.def = q.get('quietdef') === 'off' || q.get('quietdef') === '0' ? 'off' : 'team';   // WHERE a quiet mission starts (the maintainer's pick, 10-13): under the fog, lifted round you and your partner, the mission's sticky cameras handed out — a bare quiet link is that. ?quietdef=off = it starts with every guard shown, as it did
@@ -462,6 +467,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'FRIENDS.lowReady': 'TPS_MUZZLE=1',
   'FRIENDLYFIRE.on': 'TPS_FRIENDLYFIRE=1',
   'LIGHTSWITCH.on': 'TPS_LIGHTSWITCH=1',
+  'FIRELINE.on': 'TPS_FIRELINE=1',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
   'WALLCHARGE.farFurn': 'TPS_WALLFURN=1',
@@ -519,10 +525,12 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SNOWBOG.on': 'TPS_SNOWBOG=1 (acts only on a snow level: with TPS_SNOW=1)',
   'SNOW_LOOK.marks': 'TPS_SNOWMARKS=1 (shows only on a snow level: with TPS_SNOW=1; it wants the prints: TPS_SNOWTRACKS=1)',
   'SNOW_LOOK.past': 'TPS_SNOWPAST=1 (shows only on a snow level: with TPS_SNOW=1)',
+  'SNOW_LOOK.under': 'TPS_SNOWUNDER=1 (a prelude const of the page: nothing headless draws it; shows only on a snow level, TPS_SNOW=1)',
   'SNOW_LOOK.blast': 'TPS_SNOWBLAST=1 (shows only on a snow level: with TPS_SNOW=1; the crater wants the prints: TPS_SNOWTRACKS=1; the throw wants the grains: TPS_SNOWGRAINS=1)',
   'AIR_SIM.on': 'TPS_AIR=1 (a picture only, and the harness has no field to feed: it changes what the game would hand one)',
   'GLASS.bothFaces': 'TPS_GLASSEARS=1',
   'WALLPEN.on': 'TPS_WALLPEN=1',
+  'DOORSHOT.on': 'TPS_DOORSHOT=1',
   'HANDS.on': 'TPS_HANDS=1',
   'WORK.on': 'TPS_WORKTHINGS=1',
   'WAND.on': 'TPS_WAND=1',

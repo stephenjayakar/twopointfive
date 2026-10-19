@@ -548,7 +548,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   skirt on a wandering line — a flat step with a cliff at the box's edge read as the box drawn again in the first software still), never higher than
   the hill as baked. So a frag on a bank changes almost nothing but the prints; a charge whose hole takes a bank's tall tiers leaves the low foot's
   own 0.18 m of smooth snow across the sill (the mouth rule leaves the 0.16 m foot: it stops nobody); everything taken, the hill goes to the ground. Asked again each frame for `digS`
-  1.5 s (the mouth may take the box a frame after the blast), it re-sends one rect of the field's texture (no rebake: a full bake is 230‥280 ms; the
+  1.5 s (the mouth may take the box a frame after the blast; the field's texels are WALKED only on the dig's first frame and when what stands solid in its
+  reach changed, `digSnowField`'s `keep` and the field's own notes, `field.walks`: asked again with the same boxes standing a dig cannot lower a texel, so
+  the field is the same to the byte, held by `snowblast-check`'s `kept` line against a twin walked every frame: two digs that overlap, a bank cut short, a
+  bank taken, a restart, a field built anew. Walking every frame cost 0.2 to 1.2 ms a frame for a frag's pan on the pass and 2 to
+  11 ms for the widest pan, headless on a cloud core, and grew with the square of `dig`), it re-sends one rect of the field's texture (no rebake: a full bake is 230‥280 ms; the
   mesh is left, a corner with nothing on it dives under the ground), and a restart stands every hill again. Check: `snowblast-check`'s `dig` line,
   red under `SNOWBLAST_BREAK=1`, both stands. A checkpoint does not carry a dig (picture only). TRIED AND TAKEN BACK (10-15): making every snow tier
   over 0.19 m a ghost box so that no lying snow stops feet — the baked field stayed byte for byte, but both played seeds of the pass's room clear went
@@ -786,6 +790,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     dry to the eye), not the rim.
   - **Never seen on a GPU.** The flakes' birth, step and splat are WGSL the harness cannot run: the page was booted on the software adapter (it compiles, no
     validation errors) and stills taken there. Nobody has seen flakes past the rim moving, or how the fall reads against the black outside the level.
+- **No snow shows under the roofs, whichever slab** (10-19; switch `SNOW_LOOK.under`: ON in the page, `?snowunder=0`; OFF in the module and frozen,
+  `TPS_SNOWUNDER=1`, shows only with `TPS_SNOW=1`; picture only). Two finds of a review of `flakeHidden` (the splat's test: is the surface behind a flake's
+  pixel one that shows no snow in front of it):
+  - THE SEAM. The old rule drew each roof's rectangle in by 0.2 m (`FLAKE_WALL_IN`, about a wall's thickness) BY ITSELF, so where two slabs of one building
+    meet the strip between the two drawn-in rectangles was open: on the pass 1.43 m² along the wall between the back building and the east one, 0.69 m² of
+    it bare floor along that wall's foot and 0.10 m² the floor of the doorway in it (the rest is the wall's own top and faces). Now `flakeUnder(p, d)` asks
+    the roofs as ONE (`common.wgsl wxRoofed`): the point and its four corners at `d` all roofed, as the rain's `wxUnderRoof` does. For one rectangle that is
+    the old drawing-in to the centimetre.
+  - THE TOPS. Every top at the ceiling was open, so a partition deep inside a building took the snow like an outer wall: 1.96 m² of top half a metre or more
+    inside the pass's roofs. Now a top is open only within `FLAKE_TOP_IN` (0.5 m, a build row under Falling flakes, dimmed with the switch off; `snowFx.ts`
+    has the same number) of the roofs' edge. WHY HALF A METRE: the outer walls' tops must stay. Dry top on the pass against the number: 0.2 m 11.3 m² (9.1 of
+    it outer walls'), 0.3 m 2.7 (0.6), 0.4 m 2.05 (none), 0.5 m 1.96 (none): from 0.4 m up it is the partitions alone, and 0.5 leaves a level with a
+    thicker wall 10 cm. What stands ABOVE the ceiling's plane is in the open, as it was.
+  - NOTHING ELSE MOVES. Over the pass's whole plan at the floor, 4 cm apart (700,000 points), the two rules differ at 894, all of them on the seam, none
+    newly open. `snowFx.ts flakeUnder / flakeHiddenUnder` are the CPU's copy; nothing in the game reads them (the checks do).
+  - LIMITS. The rule asks FIVE points, not the whole square: a gap in the roofs narrower than twice the inset that falls between the corners is not seen
+    (a slot under a metre wide between two slabs of one building would dry a top at its mouth). None on a level today: the check asks the rule against
+    every point of the square and finds no difference on the pass. `SNOW_UNDER` is a prelude const the page compiles in, like the glow and the sparkle: it
+    does not flip live, and a recording replayed in a page opened the other way keeps that page's picture (the table follows the recording, the shaders do not).
+  - CHECK `tools/qa/snowunder-check.ts` (probe `snowunder`, families snow / weather): stands (with the page's own word), prelude, seam, same, tops (the whole
+    top of each of the 29 walls with open sky beside them stays open, and would with the number 5 cm less), text (the old rule's lines held whole after the new
+    branch). `SNOWUNDER_BREAK=1` fails four lines on both stands. `snow-check`'s walls line asks its three of both rules.
+  - **Never seen on a GPU.** The splat is WGSL the harness cannot run; the lines ask the CPU's copy and hold the shader to it by its text, and the page was
+    booted on the software adapter. Nobody has looked at that wall's foot and doorway, or at a partition's top from above, in falling snow.
 - **A splash is the same splash at every zoom** (the scene prelude's `const RAIN_SCALE`, `src/render/frame.ts rainScaleConfig`; the maintainer, 10-19, three
   zooms of one yard: "the low res rain isn't scale invariant"). WHAT IT WAS: the ring a landing drop throws up (`volumetrics.wgsl splashAt`: a 2 cm ring on
   outdoor ground, 60 ms long) is drawn in the volumetric pass, its line never thinner than that pass's texel AT THE GROUND (28° lens, divisor 2 or 4: about
@@ -848,5 +876,5 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   2.82 m/s; blown after 2.9 / 3.9 s; 3 to 9 s after a 6 s sprint, records 11 / 6; the chest's own share of neck over hips 15.5 / 9.4 mm; one run
   digest with nobody running. WHAT IT DOES NOT DO: the chest's breath is gated out under a stance or a hold as before (a man with his gun up shows
   little of it), and 15 mm is small from the game's camera — the steam is what reads. With the rule on, four rows of the scene panel's SNOWBREATH table (`everyHard`, `hardK`, `effortUp`, `effortDown`) and the workbench's two winded
-  sliders (`LIFE.breathRateRun` / `breathAmpRun`) are read by nothing; HARDBREATH has no panel row, and the workbench does not raise the switch (it
+  sliders (`LIFE.breathRateRun` / `breathAmpRun`) are read by nothing (the panel dims its four while the rule is on and lists the rule's eight steam numbers in their place: `probes.ts scenetweak`, verdict `breath`); HARDBREATH's switch has no panel row, and the workbench does not raise the switch (it
   shows the old chest). NOT SEEN: anything of it in a picture, here or on a GPU; no tally over seeds (a tour or soak was not run).

@@ -41,7 +41,7 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
   const SB = await import(`${ROOT}/src/game/snowBlast.ts`);
   const { SNOWBLAST, snowBlastAt, snowBlastStats } = SB;
   const { TRACK_RES, SNOWTRACKS } = await import(`${ROOT}/src/game/snowTracks.ts`);
-  const { snowFieldAt, snowPaintOf } = await import(`${ROOT}/src/render/snowField.ts`);
+  const { snowFieldAt, snowPaintOf, digSnowField } = await import(`${ROOT}/src/render/snowField.ts`);
   const { AIR_SIM, updateAirSim, airPuffs } = await import(`${ROOT}/src/game/airSim.ts`);
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
@@ -158,13 +158,45 @@ export async function snowBlastCheck(o: { verbose?: boolean } = {}): Promise<boo
       const near: number[] = []; let farI = -1; if (ok0) for (let i = 0; i < F.mound.length; i++) { const x = WORLD.min[0] + (i % F.w + 0.5) / 10, z = WORLD.min[2] + (Math.floor(i / F.w) + 0.5) / 10, d = Math.hypot(x - P[0], z - P[2]); if (d < 0.4) near.push(i); if (d > 6 && (farI < 0 || F.mound[i] > F.mound[farI])) farI = i; }
       const baked = ok0 ? F.mound.slice() : new Float32Array(0), over = () => { let n = 0; if (ok0) for (let i = 0; i < baked.length; i++) if (F.mound[i] > baked[i]) n++; return n; }, most = () => ok0 ? Math.max(...near.map(i => F.mound[i])) : NaN;
       const m0 = ok0 ? F.mound[pI] : NaN, top0 = tier ? tier.c[1] + tier.h[1] : NaN, far0 = ok0 ? F.mound[farI] : NaN, h0 = fh(); let rects = 0; const gb = g.engine?.gbuffer; if (gb) { const o = gb.setSnowFieldRect?.bind(gb); gb.setSnowFieldRect = (f: any, r: any) => { rects++; o?.(f, r); }; }
-      const did = snowBlastAt(g, P, R0); B.step(1); const m1 = ok0 ? F.mound[pI] : NaN, over1 = over();
-      const taken = bx.filter((o, i) => snowBox(o, i) && inPlan(o, P[0], P[2], 2.5)); for (const o of taken) o.flags |= 3; B.step(1); const m2 = most(), h2 = fh(), dug2 = S.dug, over2 = over();   // (the bank taken, as furnblast.ts takes what stands in a hole's mouth: hidden, no ray's and no body's)
-      B.step(12); const dug3 = S.dug, h3 = fh(), far1 = ok0 ? F.mound[farI] : NaN, half = ok0 ? F.data[pI * 4] : -1;
+      // THE SAME FIELD AS A DIG WALKED EVERY FRAME: a twin of the field, dug with no note kept each frame of the run below (snowField.ts digSnowField `keep`; the `kept` line has the harder cases)
+      const twin: any = ok0 ? { ...F, mound: F.mound.slice(), data: F.data.slice(), base: undefined, kept: undefined, walks: 0 } : null; let same = 0, frames = 0;
+      const walkTwin = () => { if (!twin || !S.last) return; frames++; digSnowField(twin, bx, S.last.x, S.last.z, S.last.size * SB.SNOWBLAST.dig, 1); let eq = true; for (let i = 0; i < twin.mound.length && eq; i++) eq = twin.mound[i] === F.mound[i] && twin.data[i * 4] === F.data[i * 4]; if (eq) same++; };
+      const walked0 = F?.walks ?? 0;
+      const did = snowBlastAt(g, P, R0); B.step(1); walkTwin(); const m1 = ok0 ? F.mound[pI] : NaN, over1 = over();
+      const taken = bx.filter((o, i) => snowBox(o, i) && inPlan(o, P[0], P[2], 2.5)); for (const o of taken) o.flags |= 3; B.step(1); walkTwin(); const m2 = most(), h2 = fh(), dug2 = S.dug, over2 = over();   // (the bank taken, as furnblast.ts takes what stands in a hole's mouth: hidden, no ray's and no body's)
+      for (let k = 0; k < 12; k++) { B.step(1); walkTwin(); } const dug3 = S.dug, h3 = fh(), far1 = ok0 ? F.mound[farI] : NaN, half = ok0 ? F.data[pI * 4] : -1, walked = (F?.walks ?? 0) - walked0;
       for (const o of taken) o.flags &= ~3; SB.clearSnowBlast(g); B.step(1); const m4 = ok0 ? F.mound[pI] : NaN, h4 = fh();
-      verdict(ok0 && did === true && m0 > 0.3 && top0 > 0.3 && m1 >= top0 && m1 <= m0 && over1 === 0 && taken.length > 0 && m2 === 0 && half === 0 && dug2 >= 1 && over2 === 0 && h3 === h2 && dug3 === dug2 && far1 === far0 && far0 > 0.2 && m4 === m0 && h4 === h0 && (!gb || rects >= 2),
+      verdict(ok0 && did === true && m0 > 0.3 && top0 > 0.3 && m1 >= top0 && m1 <= m0 && over1 === 0 && taken.length > 0 && m2 === 0 && half === 0 && dug2 >= 1 && over2 === 0 && h3 === h2 && dug3 === dug2 && far1 === far0 && far0 > 0.2 && m4 === m0 && h4 === h0 && (!gb || rects >= 2) && frames === 14 && same === frames && walked === 2,
         'dig — a blast in a bank never bares a snow box that still stands; the bank taken, its hill goes to the ground; nothing is ever raised; a restart stands it again',
-        `${ok0 ? `a blast on the bank at (${P[0].toFixed(1)}, ${P[2].toFixed(1)}), its box ${top0.toFixed(2)} m` : 'NO bank found'}: the hill over it ${m0.toFixed(2)} m → ${m1.toFixed(2)} m on the blast's frame (the box still stands) · ${taken.length} snow boxes taken: the highest texel within 0.4 m ${m2.toFixed(3)} m (the middle's half ${half}; ${dug2} digs) · texels over the baked hill: ${over1} then ${over2} · asked 12 frames more: ${h3 === h2 && dug3 === dug2 ? 'not a texel moved, nothing handed over' : `IT MOVED (${dug3 - dug2} digs)`} · a hill ${far0.toFixed(2)} m high over 6 m off: ${far1 === far0 ? 'as it was' : far1.toFixed(2)} · after a restart ${m4.toFixed(2)} m, the field ${h4 === h0 ? 'as baked' : 'NOT as baked'}${gb ? ` · ${rects} rects handed to the g-buffer` : ' · (no g-buffer on this stand)'}`); }
+        `${ok0 ? `a blast on the bank at (${P[0].toFixed(1)}, ${P[2].toFixed(1)}), its box ${top0.toFixed(2)} m` : 'NO bank found'}: the hill over it ${m0.toFixed(2)} m → ${m1.toFixed(2)} m on the blast's frame (the box still stands) · ${taken.length} snow boxes taken: the highest texel within 0.4 m ${m2.toFixed(3)} m (the middle's half ${half}; ${dug2} digs) · texels over the baked hill: ${over1} then ${over2} · asked 12 frames more: ${h3 === h2 && dug3 === dug2 ? 'not a texel moved, nothing handed over' : `IT MOVED (${dug3 - dug2} digs)`} · the field against a twin walked every one of ${frames} frames: the same to the byte on ${same}, its own texels walked ${walked} times (the blast's frame, the frame the bank went) · a hill ${far0.toFixed(2)} m high over 6 m off: ${far1 === far0 ? 'as it was' : far1.toFixed(2)} · after a restart ${m4.toFixed(2)} m, the field ${h4 === h0 ? 'as baked' : 'NOT as baked'}${gb ? ` · ${rects} rects handed to the g-buffer` : ' · (no g-buffer on this stand)'}`); }
+    // ---- kept: a dig asked again walks the field's texels only when what stands in its reach changed, and the field is the one a walk every frame makes
+    { const B = await rig('pass.json', true); B.step(3); const g = B.g, F: any = g.snowField, bx: any[] = g.level.boxes; const { restoreSnowField } = await import(`${ROOT}/src/render/snowField.ts`);
+      const snowBox = (b: any, i: number) => i !== F?.slab && !(b.flags & 3) && snowPaintOf(b) === 'snow' && b.c[1] - b.h[1] <= 0.06 && b.c[1] + b.h[1] >= 0.03;
+      const tier = F ? bx.filter((b, i) => snowBox(b, i) && b.c[1] + b.h[1] > 0.3 && snowFieldAt(F, b.c[0], b.c[2]).mound > 0.3).sort((p, q) => q.h[0] * q.h[2] - p.h[0] * p.h[2])[0] : null;
+      const ok0 = !!F && !!tier, P = tier ? [tier.c[0], tier.c[2]] : [0, 0];
+      // two digs that overlap, on and beside the bank; the twin is walked every frame with no note
+      const digs = [[P[0], P[1], 1.6, 1], [P[0] + 1.1, P[1] - 0.4, 2.1, 2]];
+      let twin: any = ok0 ? { ...F, mound: F.mound.slice(), data: F.data.slice(), base: undefined, kept: undefined, walks: 0 } : null; let live: any = F;
+      const same = () => { for (let i = 0; i < live.mound.length; i++) if (twin.mound[i] !== live.mound[i] || twin.data[i * 4] !== live.data[i * 4]) return false; return true; };
+      const frame = () => { let ok = true; for (const d of digs) { digSnowField(live, bx, d[0], d[1], d[2], d[3], true); digSnowField(twin, bx, d[0], d[1], d[2], d[3]); } ok = same(); return ok; };
+      let good = 0, n = 0; const run = (k: number) => { for (let i = 0; i < k; i++) { n++; if (frame()) good++; } };
+      const w = () => live.walks ?? 0; const steps: string[] = []; let was = ok0 ? w() : 0; const mark = (name: string) => { steps.push(`${name} ${w() - was}`); was = w(); };
+      const h1 = tier ? tier.h[1] : 0, c1 = tier ? tier.c[1] : 0, fl = tier ? tier.flags : 0; let lowered = 0, dugAgain = false, fresh = false;
+      if (ok0) {
+        run(4); mark('four frames');                                                              // 2: each dig's first frame
+        const before = live.mound.slice(); tier.h[1] = h1 / 2; tier.c[1] = c1 - h1 / 2; run(3); mark('the bank cut to half its height');   // a box cut in place: both digs reach it
+        for (let i = 0; i < before.length; i++) if (live.mound[i] < before[i]) lowered++;
+        tier.flags |= 3; run(3); mark('the bank taken');
+        restoreSnowField(live); restoreSnowField(twin); const baked = live.mound.slice(); run(3); mark('a restart, the same digs asked');   // the notes went with the restore: the hills are dug again
+        dugAgain = live.mound.some((v: number, i: number) => v < baked[i]);
+        restoreSnowField(live); restoreSnowField(twin); live = { ...live, mound: live.mound.slice(), data: live.data.slice(), base: undefined, kept: undefined, walks: 0 }; was = 0; run(3); mark('a field built anew');
+        fresh = live.mound.some((v: number, i: number) => v < baked[i]);
+        tier.h[1] = h1; tier.c[1] = c1; tier.flags = fl; restoreSnowField(F);
+      }
+      const walks = steps.map(s => +s.split(' ').pop()!);
+      verdict(ok0 && n === 16 && good === n && walks.join() === '2,2,2,2,2' && lowered > 0 && dugAgain && fresh,
+        'kept — a dig asked again walks the field only when what stands in its reach changed, and the field is the one a walk every frame makes',
+        `${ok0 ? `two digs that overlap on the bank at (${P[0].toFixed(1)}, ${P[1].toFixed(1)})` : 'NO bank found'}, asked ${n} frames beside a twin walked every frame: the same field to the byte on ${good} · walks of the field's texels: ${steps.join(' · ')} (the twin: ${twin?.walks ?? 0}) · the cut bank lowered ${lowered} texels more · after a restart the hills are dug again: ${dugAgain} · on a field built anew: ${fresh}`); }
     // ---- throw, puff, air
     { const B = await rig('pass.json', true); B.step(3); const pool = mk(); fly(B, pool, 20, Y);   // (the grains are up and filed before the blast)
       const n0 = pool.recs.length; const r = fly(B, pool, 40, Y, (i) => { if (i === 0) snowBlastAt(B.g, Y, R0); });

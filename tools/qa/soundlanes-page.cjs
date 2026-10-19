@@ -391,6 +391,10 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   line(!reset.trim || !reset.trim.take, 'picking the game\'s own take puts the mixer back', reset.text);
   const noCopy = await page.evaluate(() => { window.__sndlanes.paint(); const c = document.querySelector('#sndl .hd .copy'); return !c || c.getBoundingClientRect().width === 0; });
   line(noCopy && / none$/.test(reset.text), 'with the picks gone "copy picks" is gone too', reset.text);
+  // a lane's light is timed on the tape's clock while its sound plays at wall speed: the lit stretch scales with the playback speed
+  { const sp = await page.evaluate(() => { const L = window.__sndlanes, T = L.tape, was = T.speed, out = []; for (const s of [4, 0.25, 1]) { T.speed = s; out.push(L.ring(1), L.ring(0)); } T.speed = was; return out; });
+    const near = (x, y) => Math.abs(x - y) < 1e-9;
+    line(near(sp[0], 4) && near(sp[1], 0.6) && near(sp[2], 0.25) && near(sp[3], 0.0375) && near(sp[4], 1) && near(sp[5], 0.15), 'a lane stays lit as long as its sound is heard at any playback speed (a 1 s sound: 4 tape seconds at 4×, a quarter at ¼×)', sp.map(x => +x.toFixed(4)).join(' · ')); }
   line(!errors.length, 'no page errors', errors.slice(0, 3).join(' | '));
   // 4b. a NARROW window (800 px), six checkpoints and the card up: the head wraps instead of running off the edge, the card takes at most 45 % of the dock, the lanes
   //     keep their place, the card is one scroller as tall as the dock's body, and no text of the dock is under 11 px

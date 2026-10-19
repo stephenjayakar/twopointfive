@@ -324,6 +324,9 @@ export class SoundLanes {
     const e: Ev = { f, n, heard, gain, dur, mix }; at.push(e); this.count[n]++; if (!this.dirty) this.late.push(e);
     return n;
   }
+  /** how long a lane stays lit for a sound `dur` seconds long, in TAPE seconds: the light is timed on the tape's clock and the sound plays at wall speed, so at 4× a
+   *  one-second sound is four tape seconds long and at ¼× a quarter of one (at least 0.15 s on the wall, so a click is seen) */
+  private ring(dur: number) { return Math.max(0.15, dur) * this.tape.speed; }
   private heard(a: SoundAsk) {
     if (this.mute) return;
     const f = Math.min(this.tape.f, this.tAt.length - 1);
@@ -334,7 +337,7 @@ export class SoundLanes {
     const at = this.byStep.get(f) as (Ev[] & { was?: Ev[] }) | undefined, old = at?.was?.[at.length];
     const same = old && this.names[old.n] === a.name && a.heard === 0 ? old : null;
     const n = this.add(f, a.name, same ? old!.heard : a.heard, a.gain, a.dur || same?.dur || 0, a.mix ?? same?.mix);
-    if (a.heard === 2) this.lit[n] = Math.max(this.lit[n], this.tAt[f] + Math.max(0.15, a.dur));
+    if (a.heard === 2) this.lit[n] = Math.max(this.lit[n], this.tAt[f] + this.ring(a.dur));
     this.unsaved++;
   }
   private keep() {

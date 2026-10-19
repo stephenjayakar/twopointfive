@@ -92,7 +92,11 @@ export const SNOW = { on: false };
 // would show over the picture's near part are ones in the air past the rim, and there were none: flakes were born, kept and drawn only inside the world's
 // rectangle. With it the flakes' space is the view's disc out to SNOWFX.past m past the rim (game/snowFx.ts flakeOpen; particles_common.wgsl snowPast /
 // flakeOpen). Nothing lies out there: the ground past the rim stays the dark it is. ?snowpast=0, TPS_SNOWPAST=1. Picture only.
-export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, grains: false, blast: false, oneAir: false, marks: false, past: false };
+// `under` (10-19, a review of the rule that hides a flake from a surface under a roof): the rule drew each roof's rectangle in by itself, so the seam where two slabs
+// of one building meet was open to snow in the doorways on it, and it opened EVERY wall's top, the partitions' inside a building too. With this on a surface is
+// under the roofs when it is a wall's thickness inside them on every side, whichever slab, and a top takes the snow only near the roofs' edge: the outer walls'
+// (particles_common.wgsl flakeHidden, the prelude's SNOW_UNDER; ?snowunder=0, TPS_SNOWUNDER=1). Picture only.
+export const SNOW_LOOK = { on: false, wisps: false, tracks: false, glow: false, sparkle: false, breath: false, grains: false, blast: false, oneAir: false, marks: false, past: false, under: false };
 export const SNOW_LEVELS: readonly string[] = ['pass'];
 /** is the level called `name` (LevelData.name; a file's name without '.json') one built for snow — and the switch on? */
 export function snowLevel(name: string | null | undefined): boolean { return SNOW.on && !!name && SNOW_LEVELS.includes(name); }

@@ -255,9 +255,21 @@ fn rainRoofed(P: vec3f) -> bool {
  *  The rooms stay dry to the eye as before; the world's rim as before. game/snowFx.ts flakeHidden is this function on the CPU (tools/qa/snow-check.ts walls). */
 const FLAKE_WALL_IN: f32 = 0.2;   // m (snowFx.ts FLAKE_WALL_IN: the same number)
 fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN && p.y >= R.y + FLAKE_WALL_IN && p.x <= R.z - FLAKE_WALL_IN && p.y <= R.w - FLAKE_WALL_IN; }
+/** UNDER THE ROOFS, WHICHEVER SLAB (the prelude's SNOW_UNDER, game/weatherKinds.ts SNOW_LOOK.under). flakeRectIn draws each roof's rectangle in by itself, so on the
+ *  line where two slabs of one building meet neither's holds and a strip two insets wide was open to snow: the floor along that wall's foot, the floor of a doorway in
+ *  it; and flakeHidden opened EVERY top
+ *  at the ceiling, the partitions' deep inside a building as the outer walls'. Is ground point p under the roofs by d: roofed, and the four corners of a square 2 d
+ *  wide about it all roofed (common.wgsl wxRoofed: any of the level's roofs) — for a rectangle alone that is flakeRectIn to the letter. A top takes the snow only
+ *  within FLAKE_TOP_IN of the roofs' edge: an outer wall's (a quarter metre thick under a roof that overhangs it by centimetres, so the wall's own inset would dry
+ *  its inner half). What stands ABOVE the ceiling's plane (nothing does today) is in the open, as it was. FIVE POINTS, not the whole square: a gap in the roofs
+ *  narrower than 2 d that falls between the corners is not seen (none on a level today). game/snowFx.ts flakeUnder / flakeHiddenUnder are these on the CPU
+ *  (tools/qa/snowunder-check.ts asks them against the whole square). */
+const FLAKE_TOP_IN: f32 = 0.5;   // m (snowFx.ts FLAKE_TOP_IN: the same number)
+fn flakeUnder(p: vec2f, d: f32) -> bool { return wxRoofed(p) && wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d)); }
 fn flakeHidden(P: vec3f) -> bool {
   let q = P.xz;
   if (snowPast() <= 0.0 && !(q.x > WORLD_MIN.x + 0.25 && q.y > WORLD_MIN.z + 0.25 && q.x < WORLD_MAX.x - 0.25 && q.y < WORLD_MAX.z - 0.25)) { return true; }   // (with the snow falling past the rim, the ground's last quarter metre shows it as the rest does)
+  if (SNOW_UNDER) { if (P.y > CEIL_Y + 0.05 || !flakeUnder(q, FLAKE_WALL_IN)) { return false; } return P.y <= CEIL_Y - 0.05 || flakeUnder(q, FLAKE_TOP_IN); }
   if (P.y > CEIL_Y - 0.05) { return false; }
   var r = flakeRectIn(frame.weatherC, q) || flakeRectIn(frame.weatherD, q);
   if (WX_KINDS) { if (frame.cardCfg.y != 0u) { r = r || flakeRectIn(wxRect(frame.cardCfg.y), q) || flakeRectIn(wxRect(frame.cardCfg.z), q); } }

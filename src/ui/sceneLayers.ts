@@ -13,7 +13,7 @@
 // A NEW LAYER is one `layers.push({ … })` below; a new number in a table that is already listed needs nothing.
 import type { Engine } from '../engine';
 import type { Game } from '../game/game';
-import { FrameFlags } from '../render/frame';
+import { FrameFlags, snowLookConfig } from '../render/frame';
 import { SHADER_TUNE, shaderConsts } from '../render/shaderTune';
 import { compositeText } from '../render/passes';
 import { particleTexts } from '../render/particles';
@@ -24,6 +24,7 @@ import { SNOWBLAST, snowBlastAt, snowBlastStats } from '../game/snowBlast';
 import { SNOWTRACKS, TRACK_RES } from '../game/snowTracks';
 import { SNOWMARKS } from '../game/snowMarks';
 import { SNOWBREATH, breathStats } from '../game/snowBreath';
+import { HARDBREATH } from '../game/character';   // (read inside a row's own closure only)
 import { AIR_SIM, airSimStats } from '../game/airSim';
 import { SNOW_LOOK, snowLevel } from '../game/weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
@@ -47,8 +48,20 @@ function mk(id: string, label: string, src: string, get: () => number, set: (v: 
   const def = get(); const a = reach(def);
   return { id, label: r.label ?? label, src, get, set, def, min: r.min ?? a.min, max: r.max ?? Math.max(a.max, r.min ?? a.min), step: r.step ?? a.step, when: r.when, play: r.play, note: note ?? SCENE_NOTES[id] ?? HAND[id] ?? HAND[id.replace(/\[\d\]$/, '')] };
 }
+/** A blown man's steam (snowBreath.ts updateSnowBreath): the breath table's own numbers for it, read only with the hard breath rule off, and the rule's
+ *  numbers that are read in their place while it is on (character.ts HARDBREATH; its chest numbers move bones and are no row here). */
+export const BREATH_SOFT = ['everyHard', 'hardK', 'effortUp', 'effortDown'] as const;
+export const BREATH_HARD = ['every', 'puffs', 'count', 'jet', 'size', 'carry', 'up', 'down'] as const;
 /** hover text for the numbers whose table carries no comment of their own (ui/sceneNotes.ts has the rest, generated from the tables) */
 const HAND: Record<string, string> = {
+  'HARDBREATH.every': 's between breaths when blown',
+  'HARDBREATH.puffs': 'records a breath when blown (at rest: puffs)',
+  'HARDBREATH.count': 'puffs a record when blown (at rest: count)',
+  'HARDBREATH.jet': '× how fast the steam is thrown when blown',
+  'HARDBREATH.size': '× size and opacity when blown',
+  'HARDBREATH.carry': 'how much of his own pace the steam leaves with when blown (at rest: carry)',
+  'HARDBREATH.up': 's of running until he is blown',
+  'HARDBREATH.down': 's to get his wind back',
   'SNOWFX.sizeJit': 'how much flakes differ in size (0 = all alike)',
   'SNOWFX.minPx': 'a flake is never drawn thinner than this many pixels (thinner, it is drawn this wide and dimmed by as much)',
   'SNOWFX.maxPx': 'a flake is never drawn wider than this many pixels, however near the lens',
@@ -68,6 +81,7 @@ const HAND: Record<string, string> = {
   'tune.flashInner': 'the cone\'s bright core, degrees from its axis to where it starts to fall off',
   'weather.wind[1]': 'the weather\'s wind vector: flakes, blown snow, dust and smoke outdoors all ride it',
   'FLAKE_WALL_IN': 'm: how far inside a roof\'s edge a surface must be before no flake is drawn in front of it (a wall\'s outer face and its top take the snow)',
+  'FLAKE_TOP_IN': 'm: a top at the ceiling takes the snow only this near the roofs\' edge — an outer wall\'s; a partition\'s top deeper inside is under the roof (with ?snowunder=0 nothing reads it)',
   'WIND.stormK': '× the weather\'s wind outdoors (0 = dead calm)',
   'WIND.stormGustAmp': 'how hard the storm gusts: its speed swings by this share either way',
   'WIND.stormGustPeriod': 's: how long one gust and its lull take',
@@ -89,7 +103,7 @@ const ABOUT: Record<string, string> = {
   oneair: 'One snow in one air: the flakes fall through the wind sim among the walls, a wisp is snow that wind lifts where it is fast enough, and there are no grains of their own. Off: flakes on the open wind, wisps in gusts, grains near the view.',
   wisps: 'Long low streaks of snow the wind lifts off the ground and carries along it.',
   grains: 'Fine snow picked up off the ground near the view and carried on the air around walls and men. Not drawn while the snow is one snow in one air.',
-  breath: 'Steam off each man\'s breath in the cold: more and faster when he has been running.',
+  breath: 'Steam off each man\'s breath in the cold: more and faster when he has been running. A blown man breathes by the `blown` rows while the hard breath rule is on (the page as it opens), and by everyHard, hardK, effortUp and effortDown with ?hardbreath=0: the rows nothing reads are dimmed.',
   air: 'The moving air the grains and smoke ride: a small wind simulation around the buildings.',
   storm: 'The weather\'s wind: its direction, strength and gusting. Flakes, blown snow and smoke outdoors ride it.',
   fog: 'How the parts of the level your team cannot see are shaded: how dark, how grey.',
@@ -195,7 +209,7 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
     if (SNOW_LOOK.tracks) { const vars = table('SNOWMARKS', SNOWMARKS, 'src/game/snowMarks.ts', { when: 'next', rows: { mess: { max: 1, step: 0.01 }, itemMess: { max: 1, step: 0.01 }, rollDeep: { max: 1, step: 0.01 } } });
       layers.push({ id: 'marks', name: 'Things mark the snow', group: 'Ground', vars, on: { mode: true, get: () => SNOW_LOOK.marks, set: on => { SNOW_LOOK.marks = on; } },
         stat: () => { const T = game.snowTracks; return T ? `${T.marks} marks${T.forming.length ? ` · ${T.forming.length} forming` : ''}` : ''; } }); }
-    { const vars = table('SNOWBLAST', SNOWBLAST, 'src/game/snowBlast.ts', { when: 'next', rows: { floor: { min: 0.6, max: 1, step: 0.01 }, rim: { min: 0.25 }, lobe: { max: 1 }, rag: { max: 0.5, step: 0.005 }, rays: { step: 1, max: 40 }, clods: { step: 1, max: 200 }, puff: { step: 1, max: 100 }, flakes: { step: 1, max: 600 }, throwShare: { max: 0.98, step: 0.01 } } });
+    { const vars = table('SNOWBLAST', SNOWBLAST, 'src/game/snowBlast.ts', { when: 'next', rows: { floor: { min: 0.6, max: 1, step: 0.01 }, rim: { min: 0.25 }, lobe: { max: 1 }, rag: { max: 0.5, step: 0.005 }, rays: { step: 1, max: 40 }, clods: { step: 1, max: 200 }, puff: { step: 1, max: 100 }, flakes: { step: 1, max: 600 }, dig: { max: 3, step: 0.05 }, digS: { max: 5, step: 0.1 }, throwShare: { max: 0.98, step: 0.01 } } });
       readWhen(vars, ['SNOWBLAST.throwS', 'SNOWBLAST.throwShare', 'SNOWBLAST.out', 'SNOWBLAST.up'], grainsRun);
       readWhen(vars, ['SNOWBLAST.flakes', 'SNOWBLAST.flakeUp', 'SNOWBLAST.flakeLife'], oneAir);
       // (the switch is read by every blast as it goes off: live, so the layer stands on a page opened with it off too. The button marks the snow three metres ahead of you as a frag there would — no blast, no sound, nothing the game reads)
@@ -210,9 +224,10 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
     { const vars = [
         mk('weather.snowRate', 'snowfall', 'src/game/weatherKinds.ts WEATHER_PRESETS.snow', () => W.snowRate, v => { W.snowRate = v; }, { min: 0.01, max: 2, step: 0.01 }, 'how hard it snows (the weather\'s own number: 1 = SNOWFX.perM2 flakes over a square metre). The flakes alone thin with it; it stops short of none, where the game stands the wisps, grains and all of the snow down with it (snowFx.ts snowing) — the layer\'s switch is the way to see the scene without flakes'),
         ...table('SNOWFX', SNOWFX, FX, { rows: { size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, shutter: { max: 0.1, step: 0.0005 }, minPx: { max: 4, step: 0.05 }, maxPx: { max: 12, step: 0.1 }, iso: { max: 1 }, fwdK: { max: 1 }, fwdG: { max: 0.99 }, brightJit: { max: 1 }, sheetAmp: { max: 0.95 }, skid: { max: 1, step: 0.01 }, perM2: { step: 0.1 }, past: { max: 30, step: 0.5 } } }),
-        ...part(/^FLAKE_/, { FLAKE_WALL_IN: { max: 0.5, step: 0.01 } }),
+        ...part(/^FLAKE_/, { FLAKE_WALL_IN: { max: 0.5, step: 0.01 }, FLAKE_TOP_IN: { max: 1.5, step: 0.05 } }),
       ];
       readWhen(vars, ['SNOWFX.airLow', 'SNOWFX.airHigh', 'SNOWFX.airLift', 'SNOWFX.skid'], oneAir);
+      readWhen(vars, ['FLAKE_TOP_IN'], () => snowLookConfig.under);   // (the shaders this page compiled: nothing reads the row with ?snowunder=0)
       readWhen(vars, ['SNOWFX.past'], () => SNOW_LOOK.past);   // (the snow past the level's rim: nothing reads the metres with ?snowpast=0)
       layers.push({ id: 'flakes', name: 'Falling flakes', group: 'Air', vars, on: muting(vars, ['SNOWFX.gain', 'SNOWFX.skyK']), build: rebuildPart, stat: () => { const s = snowStats(game); return s.active ? `${Math.round(s.pop)} in the air` : s.why; } }); }
     // (ONE SNOW IN ONE AIR: read every frame, so its switch is live — but only on a page whose particle shaders were built to read the wind sim)
@@ -228,6 +243,10 @@ export function sceneLayers(engine: Engine, game: Game): TweakLayer[] {
     if (SNOW_LOOK.grains) { const vars = [...table('SNOWGRAINS', SNOWGRAINS, FX, { rows: { max: { when: 'next', max: 6000, step: 50 }, size: { when: 'next' }, sizeJit: { when: 'next', max: 1 }, opacity: { max: 2, step: 0.01 }, wispsKeep: { max: 1 }, radius: { max: 30, step: 0.5 }, tail: { max: 1, step: 0.01 }, dash: { max: 15, step: 0.1 } } }), ...part(/^GRAIN_/)];
       layers.push({ id: 'grains', name: 'Blown grains', group: 'Air', vars, on: muting(vars, ['SNOWGRAINS.opacity']), build: rebuildPart, idle: () => SNOW_LOOK.oneAir, stat: () => { const s = grainStats(game); return s.active ? `${Math.round(s.pop)} · air ${s.u0.toFixed(2)} m/s` : s.why; } }); }
     if (SNOW_LOOK.breath) { const vars = table('SNOWBREATH', SNOWBREATH, 'src/game/snowBreath.ts', { when: 'next', rows: { opacity: { max: 2, step: 0.01 }, pitch: { min: -1, max: 1, step: 0.01 }, color: { max: 1.5, step: 0.01 }, puffs: { step: 1, max: 8 }, count: { step: 1, max: 20 } } });
+      // (a blown man: with the hard breath rule on the steam reads the rule's own numbers, off the breath table's four — both are rows, the unread ones dimmed)
+      vars.push(...table('HARDBREATH', HARDBREATH, 'src/game/character.ts', { only: BREATH_HARD, when: 'next', rows: { every: { label: 'blown every', max: 3, step: 0.01 }, puffs: { label: 'blown puffs', step: 1, max: 8 }, count: { label: 'blown count', step: 1, max: 20 },
+        jet: { label: 'blown jet', max: 10, step: 0.05 }, size: { label: 'blown size', max: 5, step: 0.05 }, carry: { label: 'blown carry', max: 1, step: 0.01 }, up: { label: 'blown in', max: 10, step: 0.1 }, down: { label: 'wind back in', max: 60, step: 0.5 } } }));
+      readWhen(vars, BREATH_SOFT.map(k => `SNOWBREATH.${k}`), () => !HARDBREATH.on); readWhen(vars, BREATH_HARD.map(k => `HARDBREATH.${k}`), () => HARDBREATH.on);
       layers.push({ id: 'breath', name: 'Breath', group: 'Air', vars, on: muting(vars, ['SNOWBREATH.opacity']), stat: () => { const s = breathStats(game); return s.active ? `${s.shown} of ${s.men} men steaming` : s.why; } }); }
   }
   if (AIR_SIM.on) layers.push({ id: 'air', name: 'Wind sim', group: 'Air', on: { mode: true, get: () => S.airSim, set: on => { S.airSim = on; } },
