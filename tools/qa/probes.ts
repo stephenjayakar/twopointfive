@@ -32,7 +32,8 @@
 //     sticky: sticky-kit sticky-fly sticky-fog sticky-save sticky-ways sticky-default sticky-take sticky-wand sticky-off
 //     owncharge: owncharge-kit owncharge-door owncharge-squad owncharge-save owncharge-off
 //     gunslots: gunslots-card gunslots-mate gunslots-fight gunslots-guns gunslots-off
-//     gunlook: gunlook-own gunlook-hands gunlook-off (+ the gunreload family: how each is fed)
+//     gunlook: gunlook-own gunlook-hands gunlook-off (+ the gunreload family: how each is fed; gunshells: a tube gun by the shell)
+//     gunroles: gunroles-deal gunroles-entry gunroles-fight gunroles-lanes gunroles-off
 //     bigslot: bigslot-card bigslot-off bigslot-you bigslot-mate bigslot-shut bigslot-moves bigslot-weight bigslot-wiring
 //     kitpaste: kitpaste-fit kitpaste-cases
 //     kitlent: kitlent-tiles
@@ -104,7 +105,7 @@ const KNOWN = new Set<string>(['all', 'all-quick']);
 /** 'all-quick' = the union of the gate lists a lane is told to run before handing back (CLAUDE.md: perf · player (incl. selector) · doors · qrf · checkpoints · journal · ui + every identity
  *  card) — some twenty minutes where 'all' is hours; a dispatch line rides it when any of its names is one of these families / probes. `sh tools/qa/gate.sh all-quick` is the one-word gate. */
 const QUICK = new Set(['perf', 'player', 'doors', 'qrf', 'checkpoints', 'journal', 'ui', 'weapons-identity', 'teams-identity', 'tactics-identity', 'needs-identity', 'civilians-identity', 'wind-identity', 'decals-identity', 'destruction-identity', 'level-identity', 'glassbreak-off', 'glasspen-off', 'pellets-identity', 'director-scheduler',
-  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'gunslots', 'gunlook', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
+  'roomclear', 'threshold', 'silent', 'lineoffire', 'doorpath', 'kit', 'missions', 'depot', 'registry', 'shipped', 'close', 'heldclicks', 'farsight', 'farcalm', 'look', 'kitanim', 'hands', 'roomfit', 'words', 'workthings', 'handwork', 'wand', 'owncharge', 'gunslots', 'gunroles', 'gunlook', 'bigslot', 'noshield', 'takedown', 'stealthpose', 'sticky']);   // (… and, second line, the REBUILD's families: the room clear, the threshold, the silent order, lines of fire, the door walk, the kit, the missions list with its as-shipped gate, the two levels with a run of their own, and the two-stands check; + close: the close-in mode near a guard, on in the page; + words: the dialogue pass's lint, the hostages' voice and its switch off)
 // (first line: + glass-break's switch-off identity and the Director's idle identity, landed after the list froze — wave-4 review)
 /** The probes that failed this invocation (by name), the count run, and how many of those produced anything checkable (a boolean, a PASS / FAIL line, a banner). */
 const FAILED: string[] = []; let RAN = 0, CHECKED = 0; const RAN_NAMES: string[] = [], RAN_CHECKED = new Set<string>();
@@ -2457,6 +2458,13 @@ if (on('gunlook-own', 'gunlook', 'kit', 'all')) await run('gunlook-own', async (
 if (on('gunlook-hands', 'gunlook', 'all')) await run('gunlook-hands', async () => (await import('./gunlook-check.ts')).gunlookHands());             // a teammate and you with each gun: told, drawn and heard as that gun; off = the stand-in
 if (on('gunlook-off', 'gunlook', 'all')) await run('gunlook-off', async () => (await import('./gunlook-check.ts')).gunlookOff());                   // off = the same run by digest, the stands' row, the registry, a recording from before it
 if (on('gunreload', 'gunlook', 'kitanim', 'all')) await run('gunreload', async () => (await import('./gunreload-check.ts')).gunreloadCheck());              // how each is fed: the belt under its cover, shells one at a time, a magazine up a grip — as long as it was, the gun's own sounds
+if (on('gunshells', 'gunlook', 'kitanim', 'all')) await run('gunshells', async () => (await import('./gunreload-check.ts')).gunreloadShells());             // the shells key: a tube gun fed a shell at a time, in time and in the books (GUNSHELLS_BREAK=1 must fail)
+// A GUN IS USED FOR WHAT IT IS FOR, AND THE DEFENDERS DRAW FROM THE SAME TABLE (src/game/gunroles.ts; tools/qa/gunroles-check.ts raises the switch itself by the stand's own word; GUNROLES_BREAK=1 must fail)
+if (on('gunroles-deal', 'gunroles', 'all')) await run('gunroles-deal', async () => (await import('./gunroles-check.ts')).gunrolesDeal());         // seven missions over three seeds: rows of the table, one belt-fed gun at most and only on a lane or in a big cast, pistols near or with a hostage, one round each
+if (on('gunroles-entry', 'gunroles', 'all')) await run('gunroles-entry', async () => (await import('./gunroles-check.ts')).gunrolesEntry());      // four on a door: the MP7 at the frame and first through, the Mk 12 and the Mk 46 on the rear marks and last; issue carbines as off
+if (on('gunroles-fight', 'gunroles', 'all')) await run('gunroles-fight', async () => (await import('./gunroles-check.ts')).gunrolesFight());      // string length by gun: a defender's PKM against the carbines, a teammate's Mk 46 and Mk 12 against the pair
+if (on('gunroles-lanes', 'gunroles', 'all')) await run('gunroles-lanes', async () => (await import('./gunroles-check.ts')).gunrolesLanes());      // the belt-fed defender is not taken from his gun's place; the far opening is worth more to the long gun, less to a pistol
+if (on('gunroles-off', 'gunroles', 'all')) await run('gunroles-off', async () => (await import('./gunroles-check.ts')).gunrolesOff());            // off = the same run by digest, the stands' row, the registry, the page's flag, a recording from before it
 // ONE BIG SLOT A CARD, AND ITS TWO TOOLS ON A LOCK (src/game/kit.ts BIGSLOT, src/game/bigkit.ts; tools/qa/bigslot-check.ts raises the switch itself, so it asks the same on either stand; BIGKIT_BREAK=1 must fail)
 if (on('bigslot-card', 'bigslot', 'kit', 'all')) await run('bigslot-card', async () => (await import('./bigslot-check.ts')).bigCard());             // one big row a card, the shotgun off the weapon row, never two big things, never a pouch; old stores
 if (on('bigslot-off', 'bigslot', 'all')) await run('bigslot-off', async () => (await import('./bigslot-check.ts')).bigOff());                      // the switch off: no row, nobody carries either, the same run by digest
@@ -3134,6 +3142,8 @@ if (on('squadthrow', 'squadorders', 'all')) await run('squadthrow', async () => 
 if (on('squadthrow-walk', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-walk', async () => (await import('./squadthrow-walk-check.ts')).squadthrowWalkCheck());
 // a man with no straight arc works a throw out — other paces, a bank — and a frag is thrown where the men can duck (squadthrow-lob-check.ts; SQUADTHROW.lob / duck / samCall)
 if (on('squadthrow-lob', 'squadthrow', 'squadorders', 'all')) await run('squadthrow-lob', async () => (await import('./squadthrow-lob-check.ts')).squadthrowLobCheck());
+// a teammate whose card carries 40 mm grenades fires one on order (squad40-check.ts; game/squad40.ts — X on the floor, G, then 3): also in family 'squadorders'
+if (on('squad40', 'squadorders', 'all')) await run('squad40', async () => (await import('./squad40-check.ts')).squad40Check());
 // the squad's plan drawn on the floor (plan-check.ts; game/floorplan.ts — ways, marks, fans, the menu's rings; our own men only): also in family 'squadorders'
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
 // B is the squad's autopilot: on a door the men wait on they go in by the entry they pick; its plan is drawn for its own time (autopilot-check.ts; AUTOPILOT.on)
