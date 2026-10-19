@@ -1180,8 +1180,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taken. MEASURED 10-19, shipped stand, `rescue-tally.ts --styles flow --seeds 1-8`: the build before the mend, 3 clean and 5 stalled at the 149 s cap (no
   man sent in those five: 'flush:lane' and nothing after); the mend with the old tally player, 4 clean and 4 stalled (the man is sent, is stopped short by
   the lanes' own gate at a corner by the side door and held there, and nobody leads the hostages out); the mend and the tally player that leads them out,
-  8 of 8 clean — 4 cleared at 34 to 66 s (he came and was shot) and 4 out at 63 to 94 s (he was held by the lane; the team walked out past him). NOT
-  SEEN: a man the lanes hold who then contests the walk out — in those four he did not; whether he should is the lanes' rule and a question for play.
+  no run stalled: 6 clean — 3 cleared at 28 to 64 s (he came and was shot) and 3 out at 64 to 66 s (the team walked them out) — and 2 lost with Sam down
+  in the corridor at 68 and 75 s, shot by the last man on the walk out. `crawl` and `rush` on the same seeds are what they are on the build before it
+  (crawl 0 of 8 clean with Sam down in 6, before the room has fallen: the same on an untouched copy of that build), and `registry-probes.ts tally --seeds
+  1-4` ends every run of its seven styles. Sixteen-seed and thirty-two-seed tallies were NOT run. Whether a man the lanes hold should contest the walk out
+  more or less than that is the lanes' rule and a question for play.
   MEASURED: `rescueflush` 30 of 30 lines on both stands, 90 of 90 on seeds 1,2,3 (shipped); `RESCUEFLUSH_BREAK=1` 24 of 27 FAIL on both (its three 'not when quiet'
   lines pass by design); `RESCUEFLUSH_BREAK=lanes` 6 FAIL, the two lane lines on each mission. In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
   three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
