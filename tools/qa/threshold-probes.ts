@@ -490,7 +490,10 @@ export const thresholdHold = guarded(async () => {
     verdict(typeof a === 'string' && typeof b === 'string' && c === 'no bangs left.' && e === c && ph === 'thr' && ok2 === true, 'a follow-up that cannot be done is refused in words — what a menu row greys with: nothing being worked from the threshold (thresholdTell → a reason; canThresholdThen → the same); and, holding with an empty kit, \'bang\' is refused, the order left on its jambs, while \'step\' is still offered',
       `nothing held: thresholdTell('step') → '${a}' · canThresholdThen('bang') → '${b}' · holding with no cans: canThresholdThen('bang') → '${c}' · thresholdTell('bang') → '${e}' · the order still in '${ph}' · canThresholdThen('step') → ${ok2}`); }
   // the four, two doors of one room on ONE word: blue holding the threshold of one, red on a plain stack on another
-  { const R = await stage('depot-four', 1), g = R.g, D = R.D, O = R.O, room = heldEntries(R).map(x => x.room).find((rm: any) => rm.entries.length >= 2);
+  // (the jamb men on their diagonals, the slice held off — DOORTOOLS.thrPie, which the next stand-up writes again: with the defenders' guns dealt off the table
+  //  the crew room wins the duel a slicing man opens through this door on most seeds, both of blue are down before the hold is called, and the stage never
+  //  asks its question, which is the word across two doors and not the duel at the jamb. That duel is counted in door-tools.md, the slice's bullets)
+  { const R = await stage('depot-four', 1), g = R.g, D = R.D, O = R.O, room = heldEntries(R).map(x => x.room).find((rm: any) => rm.entries.length >= 2); DOORTOOLS.thrPie = false;
     // (which two doors: any two of one held room. Blue's is the crew room's `a_s` where the floor has it — both depots do — and red's is that room's `a_w` on the
     //  corridor depot, else the room's first OTHER door (the motor-pool depot: `a_e`) — never a place in the entries' order, which could be blue's own door)
     const eB = room ? room.entries.find((x: any) => x.door.def.name === 'a_s') ?? room.entries[0] : null;
