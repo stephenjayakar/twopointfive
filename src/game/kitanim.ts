@@ -34,7 +34,10 @@ import type { Input } from './input';
 import { CLOSE } from './close';   // (read inside functions only — the game's one import cycle)
 import { activeScenario } from './scenarioRun';   // (the same)
 import { slingRestWant } from './rigProps';   // (the same)
+import { feedOf, reloadShow } from './gunreload';   // (the same)
 import { samWork } from './handwork';   // (the same: while his hands are at work on a thing the work has them)
+import { samBigCarry, bigWeighed } from './bigkit';   // (the same)
+import { bigOff, type Character } from './character';   // (the same)
 
 export type ReloadKind = 'empty' | 'dry' | 'tactical';
 type BeatRow = { dur: number; out: number; in_: number; rack?: number; keep?: number };
@@ -114,11 +117,16 @@ export function kitNvEye(g: Game): boolean {
 
 /** What the game's own rules put in Sam's right hand this frame (the drawer's rules, combat.ts handProps, said once): the pistol up, the rifle in the hands, a
  *  can of the selected kind, the knife of a man held with the hands empty — or nothing. */
+/** a pose has his hands off his own gun: the animator's word, as it stood after its last update — and, the big slot's tool with BIGSLOT.weight on
+ *  (bigkit.ts), the word it WILL give this frame, read off the beat's record as it stands now (character.ts bigOff): the kit's draw then starts the frame the
+ *  tool lets go of his hands, not one later with the gun shown in them for a frame between */
+function handsOff(an: Character['anim']): boolean { return an.bigTool && bigWeighed() ? bigOff(an.bigTool) : an.hideHeldItem; }
 export function kitInHand(g: Game): KitItem | null {
   const pl = g.player, an = pl.char.anim;
   if (pl.down) return null;
   if (pl.holding) return pl.holding.variant === 'arm' && !an.holdGunSide ? 'knife' : pl.pistolUp ? 'pistol' : null;
-  if (an.hideHeldItem) return null;
+  if (handsOff(an)) return null;
+  if (samBigCarry(g)) return null;   // (bigkit.ts BIGSLOT.weight: the big slot's tool is asked for — his gun goes to its place by hand before the hand goes for the tool)
   if (pl.pistolUp) return 'pistol';
   if (pl.rifleUp) return 'rifle';
   const k = pl.canisterSel;
@@ -161,11 +169,12 @@ export function kitTick(g: Game, late = false) {
   // ---- equip / put away
   if (!on || !KITANIM.equip) { if (an.kitBusy) an.kitCancel(); pl.kitWas = undefined; return; }
   an.kitRest = kitSlingRest(g) ?? 0;   // (a rifle hanging in front: the hand's errands go to where it lies this frame — on his thighs in a crouch)
-  if (!an.kitBusy && pl.equipT > KITANIM.plainLock) pl.equipT = KITANIM.plainLock;   // (an errand something else took the arms from — a hit, a throw: the gun is in his hands at once, and its lock-out is no longer the errand's)
+  if (!an.kitBusy && !an.bigTool && pl.equipT > KITANIM.plainLock) pl.equipT = KITANIM.plainLock;   // (an errand something else took the arms from — a hit, a throw: the gun is in his hands at once, and its lock-out is no longer the errand's)
   const cur = kitInHand(g), sel = pl.canisterSel;
   // something else has his arms, or the item is not his to carry about: no errand — the kit is where the game says, and what was in the hand is forgotten
   // (the WALL hold is not on the list: taking a wall with the pistol up, coming off one, E on the stack — the hand carries the gun there as anywhere, the wall's own arms taking over once it is away)
-  const hard = pl.down || !!pl.holding || !!pl.takedown || !!pl.dragging || !!pl.kick || !!pl.picking || !!pl.wanding || !!pl.coding || !!samWork(g) || an.inThrow, quiet = hard || an.hideHeldItem;
+  const carry = samBigCarry(g);   // (bigkit.ts BIGSLOT.weight: the tool's beat begins with this hand's own errand — the gun to its place — and the beat does not take the arm from it)
+  const hard = pl.down || !!pl.holding || !!pl.takedown || !!pl.dragging || (!!pl.kick && !carry) || !!pl.picking || !!pl.wanding || !!pl.coding || !!samWork(g) || an.inThrow, quiet = hard || (handsOff(an) && !carry);
   if (pl.kitWas === undefined || quiet) {
     if (quiet && an.kitBusy) an.kitCancel();
     // (a can thrown: the next one is FETCHED once the arm is back; a held man just let go of: the knife stays in the fist while the hold's pose lets go of
@@ -243,7 +252,9 @@ export function kitShow(g: Game, v: { pistolInHand: boolean; rifle: 'hand' | 'sl
   }
   if (KITANIM.reload) {
     const rs = an.reloadShow, long = v.rifle === 'hand';
-    if (rs && (v.pistolInHand || (long && !pl.rifle.def.pellets))) { kit ??= {}; kit.noMag = rs.out && long; kit.magL = rs.hand ? (long ? 'rifle' : 'pistol') : null; }
+    if (rs && (v.pistolInHand || (long && !pl.rifle.def.pellets))) { kit ??= {}; kit.noMag = rs.out && long; kit.magL = rs.hand ? (long ? 'rifle' : 'pistol') : null;
+      // (gunreload.ts: a gun with a model of its own carries its OWN thing in the hand — reloadHandBoxes — never the two kinds' box too; and its magazine / belt box is off the gun when ITS feeding says so)
+      const def = long ? pl.rifle.def : pl.pistol.def; if (feedOf(def)) { kit.magL = null; kit.noMag = long && (reloadShow(pl.char, def.id)?.noMag ?? false); } }
   }
   return kit;
 }

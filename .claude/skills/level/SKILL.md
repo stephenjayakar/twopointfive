@@ -139,6 +139,25 @@ like that."
   `tyres bunks radio`. Same check.
 - **It ends.** **seen** "the two loud tutorial missions don't have termination conditions". **check**
   `bun run tools/qa/missions-gate.ts` (every row, two seeds, ends as shipped).
+- **On a rescue the way in is the way out, as the game is now**: a rescue is won when every living hostage has been led
+  to within 3.5 m of the mark the team starts on (`scenarios.rescue.team.sam`), or when the floor is cleared; holding the
+  hostage room no longer ends it. So the start wants room for the team and the hostages to stand, and a way back from
+  the hostage room that a hostage can walk. First numbers, and whether the way out stays the way in is the maintainer's
+  open call. **seen** "the hostage rescue missions should have you safely extract the hostage or fully clear the map."
+  **check** `bun run tools/qa/probes.ts rescueend` (the mission's `out` line walks them there).
+- **`response` · Who comes when it goes loud is this level's own answer.** A response team comes only where the file
+  carries `scenarios.response` (`docs/level-format.md`): who, by which ways, how many and how soon as ranges, the
+  radio's words, and a `why` that says in a sentence who would plausibly come here. A block with a `raid` key answers a
+  squad's room clear and nothing else; one without answers a quiet night gone loud and no squad mission, so give the
+  level a row its block answers. A level whose idea is that nobody comes carries no block and says so: a line in
+  `NOBODY_COMES` (`tools/qa/level-needs.ts`: the level, and why in a few words), and its name with the reason in the
+  response team's write-up (`docs/agents/enemies.md`). A look twin carries its plain file's block. **seen** the office's
+  stairwell team by constant on every floor; the maintainer: "let's make it part of the level design and always make
+  sense (ideally w.r.t. the concept/design of the level) and not all levels should have it". **check** the need (a block
+  has its `why`, a twin the same block, a row it answers; no block and no line in the table is a NOTE; both is a FAIL);
+  `bun run tools/qa/response-check.ts` (about 90 s: every block against its built floor once the level is in that file's
+  `WITH` list; a call is played through only on the levels its lines name, so a new block's first call is yours to play
+  or to add a line for).
 - **A quiet level**: the `quiet` block (starts, spots, exits, patrols), `mission` equal to `spots[0]` / `exits[0]`; every
   guard a man with a job; `wired: true` only where the holder really is on an alarm (**seen** "predictably getting a guard
   to come by when you pull the objective is a bit contrived"); a dark way exists and the short way crosses light; no deal
@@ -149,7 +168,10 @@ like that."
   never becomes impossible; a line arrives with its prompt, inside reach; checked at a reader's pace on the shipped stand.
   **check** `bun run tools/qa/lesson-gate.ts <name>`.
 - **A level whose idea leans on geometry gets a check of its own** (`tools/qa/<name>-check.ts`, a `_BREAK` path, both
-  stands): the pattern of the glasshouse, the pass, the depot.
+  stands): the pattern of the glasshouse, the pass, the depot. A check that holds the file against the generator that
+  wrote it runs the generator as the exporter does (`asExporter` in `tools/qa/headless.ts`): the page's own sin and cos
+  round a last bit another way than the file was written with. **seen** the `level-identity` probe red on the shipped stand
+  for that and nothing else. Whether a file is stale is `export.ts <name> --check`'s question, not such a check's.
 
 ## 7. The team and its kit
 
@@ -179,8 +201,13 @@ like that."
 - **The Team & kit picture** is the level's own `scenarios.kitView` block, the same to the byte in a look twin; name boxes
   by group, not by a generated `box_NNNN` id. Where a `hide` list does name box ids, whoever shifts the level's box ids
   builds that list again from the generator's box range in the same step (other typed lists are left): a generated id names
-  whatever box now holds that number. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>`; the page
-  by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`.
+  whatever box now holds that number. Every way's picture stands at a door the squad's tools can work: a door with a
+  leaf, not steel. Where the mission's own way in is a gate, a gap or a wall, write the first door behind it (`ref` says
+  which side the picture is taken from), or a set with a door in the wall the stack stands on. **seen** "some demos still
+  don't really do anything": a hammer, a shotgun, a charge or the wand picked on a span or a steel door played the gun's
+  row, and the picture stood still. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>` (fails a way that
+  anchors anywhere else); the page by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`, and every pick
+  doing its work by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-work.cjs`.
 
 ## 8. What the player reads
 

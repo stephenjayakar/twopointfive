@@ -10,11 +10,13 @@ import { FollowCamera } from './camera';
 import { Doors, Door, DOORWAY } from './doors';
 import { RAG } from './ragdoll';
 import { ThrowSolution } from './throwables';
-import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle } from './rigProps';
+import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle, modelGrip, modelMuzzleAhead } from './rigProps';
+import { gunLookOf } from './gunlook';   // (called inside armRifle only)
 import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand } from './handwork';
 import type { SamWork } from './handwork';
 import { tread } from './floor';
+import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
 import { rackDist, tally } from './mission';
 import { quietWords } from './quiet';   // (called inside buildInteractables only)
 import { chronicle, chronKey, chronDoor, chronThrown, chronGrab } from './chronicle';
@@ -24,7 +26,7 @@ import { kickScuff } from './marks';
 import { hammerBlows } from './bigkit';
 import { BIGSLOT } from './kit';
 import { lockPoint } from './shotgun';
-import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop } from './bigkit';
+import { samBig, samBigTick, bigSide, samBigSpot, samBigFar, samBigWalk, samBigPose, samBigTailTick, samBigEnded, samBigDrop, samBigLeadOf } from './bigkit';
 import { samSpread } from './suppression';
 import { isHurt } from './condition';   // (a hurt man does not sprint: Shift is not a run for him, so it lets go of nothing either)
 import { fireRing, ringSolve, ringAimPoint } from './launcher';
@@ -54,7 +56,9 @@ import { whistleKey } from './whistle';
 import { WAND, WAND_STATS, wandOffered, wandFits, wandTurn, wandDrop } from './wand';
 import { wallChargeRows } from './wallcharge';
 import { defuseRows } from './defuse';
+import { rescueEndRows } from './rescueend';
 import { closeLive, CLOSE, closeRows, closeCivGate, closeCivOffer, closeTick, closeBlow, closeAt, closeKindOf, closeStation, closeNoise, closeTook, closeSeated, closeUnseat } from './close';
+import { feedDeal, feedPlan, feedPlay } from './gunreload';
 import { KITANIM, kitTick, kitClick, kitReload, kitReloadNote, kitGunUp, kitNv, kitNvEye } from './kitanim';
 import type { CloseKind } from './close';
 import { wetFootfall } from './wet';
@@ -228,7 +232,10 @@ function poseGunLight(g: Game) {
 function armRifle(g: Game, inHands: boolean, carriage: LongStance | null) {
   const pl = g.player, an = pl.char.anim;
   an.longGun = inHands; an.longStance = inHands ? carriage : null; an.longSteady = 1; an.reloadBack = !GEAR.on;   /* (the 2010s carbine's magazine is ahead of the grip: the carbine's marks) */ an.reloadMag = !(pl.rifle.def as { pellets?: unknown }).pellets;   // (a pump shotgun in the rifle's slot has no magazine to change)
-  if (inHands) { an.longGrip = sc20kGrip(undefined, KITANIM.on && KITANIM.grips && !g.touring); pl.char.muzzleAhead = sc20kMuzzleAhead(); }   // (kitanim.ts grips: the support hand follows the gun as it is drawn in his hands — rigProps GRIPFIT)
+  feedDeal(an, inHands ? pl.rifle : null);   // (gunreload.ts: a gun with a model of its own is fed its own way — a belt box, shells one at a time, a magazine up the grip. Nothing with gunlook.ts off)
+  pl.char.gunLook = gunLookOf(pl.char.gunLook, inHands ? pl.rifle.def : pl.pistol.def, inHands ? pl.pistol.def : pl.rifle.def);   // (gunlook.ts: which of his two guns are drawn as models of their own — null with the switch off)
+  const own = inHands ? pl.char.gunLook?.hand ?? null : null, fit = KITANIM.on && KITANIM.grips && !g.touring;   // (… and a model in his hands has its own support-hand point and its own muzzle)
+  if (inHands) { an.longGrip = (own ? modelGrip(own, fit) : null) ?? sc20kGrip(undefined, fit); pl.char.muzzleAhead = (own ? modelMuzzleAhead(own) : null) ?? sc20kMuzzleAhead(); }   // (kitanim.ts grips: the support hand follows the gun as it is drawn in his hands — rigProps GRIPFIT)
   else pl.char.muzzleAhead = pl.pistol.def.muzzleAhead;
 }
 /** RELOAD THE GUN IN HIS HANDS — the one way a reload starts for the player (the R key calls it; anything else that wants him reloading — a rule that reloads an
@@ -240,8 +247,9 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
   if (c.anim.kitBusy || (KITANIM.on && pl.equipT > 0)) return false;   // (kitanim.ts: the gun is not in his hands yet — or is on its way out of them, or still on his thigh through the swing of the throw that handed the slot to it)
   if (pl.pistolUp && !sprinting && !pl.wall) {   // (on the wall or holstered the pistol is on his thigh: nothing to reload in the hand)
     const plan = kitReload(g, gun, false);   // (kitanim.ts: the change this gun's state calls for — empty / dry / tactical — on its own beat; null = the row's, as ever)
+    const fill = feedPlan(gun, plan?.row ?? gun.def.reload)?.drop ?? 0;   // (gunreload.ts: a pistol with a model of its own drops ITS magazine — the Glock 18's long one. 0, the box as ever, with that switch off)
     if (gun.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill: 0, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
       magIn: () => g.audio.play('magIn', c.pos, 0.8),
       rack: () => g.audio.play('rack', c.pos, 0.8),
     }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(); g.msg('reloading'); return true; }
@@ -251,11 +259,16 @@ export function reloadInHand(g: Game, sprinting = false): boolean {
   if (pl.rifleUp && !sprinting && (!pl.wall || pl.wall.kind === 'stack')) {   // the rifle in the hands: the same staged beat off its row (2.4 s: the empty out of the well behind the grip at 0.5 — its black thirty, 'mag' fill 3 — the fullest spare in at 1.5, the charging handle at 2.0)
     const rackIt = rifle.chamber === 0;   // (the moves' support hand: a round still up the pipe and the handle is left alone — weapons.ts racks only an empty chamber)
     const plan = kitReload(g, rifle, true);
+    // EACH GUN FED ITS OWN WAY (gunreload.ts; null with gunlook.ts off or a row with no model, and then every line below is the line it was): `own` = a belt gun's or
+    // a tube gun's own sounds on this beat, played as the weapon's clock passes each (Firearm's cues) IN PLACE of the three a magazine change makes; `drop` = what an
+    // empty one leaving the gun is drawn as (null: nothing falls). The beat, the books and the dice are the weapon's, untouched.
+    const fp = feedPlan(rifle, plan?.row ?? rifle.def.reload), own = fp?.cues ?? null, belt = fp?.drop === 5;
     if (rifle.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: 0.8 }); } },
-      magIn: () => g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }),
-      rack: () => g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }),
-    }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
+      magOut: (rounds, dropped) => { if (!own) g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets && fp?.drop !== null) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: fp?.drop ?? 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: belt ? 0.6 : 0.8 }); } },
+      magIn: () => { if (!own) g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }); },
+      rack: () => { if (!own) g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }); },
+      cue: i => { if (own) feedPlay(g, c.pos, own[i]); },
+    }, plan?.row, fp?.times)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(rifle.def.reload.dur, rackIt ? rifle.def.reload : { ...rifle.def.reload, rack: null }); g.msg(`reloading the ${rifle.def.short}`); return true; }
     if (rifle.spare.length === 0) g.msg(rifle.def.pellets ? `no more shells for the ${rifle.def.short}` : `no spare magazines for the ${rifle.def.short}`);
     return false;
   }
@@ -374,6 +387,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
     if (pl.sprinting && rifle.reloading) { rifle.cancelReload(); c.anim.cancelReload(); }
     let maxSpeed = ml === 0 ? 0 : pl.sprinting ? T.playerSprint : pl.dragging ? (pl.haul ? haulSpeed(g) : T.playerCrouch * 0.6) : (pl.crouch ? T.playerCrouch : T.playerWalk) * pl.pace;   // hauling 80 kg along the floor is slow; the wheel-set pace scales the walk and the crouch-walk alike (the rifle in the shoulder costs no pace: the aim model's moving / settle terms are what the move costs him)
     if (g.puppet?.walk !== undefined && ml > 0) maxSpeed *= g.puppet.walk;
+    maxSpeed = samLoadPace(g, maxSpeed, pl.sprinting);   // (kitload.ts: what his card weighs — a light one's legs are quicker, a heavy one's slower, a sprint by part of it; as asked with its switch off or no card on him)
     if (pl.sprinting) maxSpeed *= sprintDoorPace(g, pl);   // (sprintdoor.ts: his hand is ripping a door round toward him — the run waits for it; 1 otherwise)
     pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
     if (ml > 0) { c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; } else { c.vel = v3.scale(c.vel, Math.exp(-14 * dt)); }
@@ -614,8 +628,8 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   // a body all tread here; the level is the gait's × the floor's (floor.ts tread: carpet 0.6, stone 1.1 … — one number for the mixer, the guards and the meter)
   const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase;
   if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5))) {   // either crossing of the half-cycle: the cycle runs backwards while backpedalling
-    const base = pl.sprinting ? 1 : pl.crouch ? 0.125 : speed > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
-    const loud = tread(g, c.pos, base, true);
+    const base = pl.sprinting ? 1 : pl.crouch ? 0.125 : loadGait(g, 'player', speed) > 2 ? 0.6 : 0.26;   // (crouch / walk per-step levels carry the clips' retiming — 0.72 / 1.06 m/s natural, so ~1.4x the steps per metre — at the old per-SECOND loudness: 0.18 x 0.69, 0.35 x 0.73; what a guard accumulates over a stretch of floor is unchanged)
+    const loud = tread(g, c.pos, pl.sprinting ? base : base * loadHeard(g, 'player'), true);   // (kitload.ts: × what his card rattles and weighs; 1 with its switch off — and a flat-out sprint is boots on a floor whatever he carries)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
     wetFootfall(g, pl.stepPhase < 0.5);   // in from the rain: a wet print under the foot that landed, for his next few steps (wet.ts — a decal, seen by the player only; nothing without decals or a dry man)
   }
@@ -1322,7 +1336,7 @@ export function updateHold(g: Game, dt: number, input: Input, cam: FollowCamera)
     }
     const ml = Math.hypot(mx, mz); if (ml > 0) { mx /= ml; mz /= ml; }
     const f = c.forward(); const back = ml > 0 && mx * f[0] + mz * f[2] < -0.3;   // into the rear half: hauling him backwards
-    const maxSpeed = ml === 0 ? 0 : (back ? HOLD_PACE_BACK : HOLD_PACE) * pl.pace * (g.puppet?.walk ?? 1);
+    const maxSpeed = samLoadPace(g, ml === 0 ? 0 : (back ? HOLD_PACE_BACK : HOLD_PACE) * pl.pace * (g.puppet?.walk ?? 1));   // (kitload.ts: what his card weighs, as his walk)
     pl.speedSm = damp(pl.speedSm, maxSpeed, maxSpeed > pl.speedSm ? 6 : 12, dt);
     if (ml > 0) c.vel = [mx * pl.speedSm, 0, mz * pl.speedSm]; else c.vel = v3.scale(c.vel, Math.exp(-14 * dt));
     const bx = c.pos[0], bz = c.pos[2];
@@ -1362,7 +1376,7 @@ function holdTail(g: Game, dt: number, speed: number) {
   poseGunLight(g);
   const prevPhase = pl.stepPhase; pl.stepPhase = c.anim.phase;
   if (speed > 0.4 && ((prevPhase < 0.5) !== (pl.stepPhase < 0.5))) {
-    const loud = tread(g, c.pos, 0.26, true);   // (the dragging shuffle: retimed like the walk, and on the floor it is on like every step)
+    const loud = tread(g, c.pos, 0.26 * loadHeard(g, 'player'), true);   // (the dragging shuffle: retimed like the walk, and on the floor it is on like every step)
     g.events.push({ kind: 'step', pos: v3.copy(c.pos), time: g.time, loud: false, level: loud }); pl.noise = Math.max(pl.noise, loud);
   }
 }
@@ -1740,7 +1754,8 @@ export function startKick(g: Game, d: Door, run = false, tool?: 'shotgun' | 'ham
   pl.doorKickTail = false;
   const beside = tool ? samBigSpot(g, d, c.pos, tool) : null;
   const spot = beside ?? (run ? null : sideKickSpot(g, d, c.pos)) ?? g.doors.kickSpot(d, c.pos);   // taken ONCE, off the leaf as it stands now: a man coming through with his key mid-kick swings the leaf, and a spot re-read off the swinging leaf orbited the hinge with it — reeling the planted kicker through the doorway (or at 20 fps through the wall beside it)
-  if (tool) { pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: 0, n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
+  if (tool) { const lead = BIGSLOT.moves ? samBigLeadOf(g) : 0;
+    pl.kick = { door: d, spot: spot.pos, yaw: spot.yaw, tool: { kind: tool, side: bigSide(d, c.pos), t: -lead, ...(lead > 0 ? { lead } : {}), n: 0, need: hammerBlows(g, d, c.pos), next: BIGSLOT.moves ? Infinity : tool === 'hammer' ? BIGSLOT.windup : BIGSLOT.draw, done: -1,
     ...(BIGSLOT.moves ? { moves: { arrived: false, at: beside?.at ?? lockPoint(d, bigSide(d, c.pos)), blows: [], end: -1, ...(beside?.via ? { via: beside.via } : {}) } } : {}) } }; return; }   // (bigkit.ts: the big slot's tool on the lock in the boot's place — the same planted beat, no leg thrown)
   pl.kick = run ? { door: d, spot: spot.pos, yaw: spot.yaw, run: true } : { door: d, spot: spot.pos, yaw: spot.yaw }; c.anim.kickDoor();   // (run — sprintdoor.ts: the boot at a sprint, at the face the leaf opens toward)
 }
@@ -2054,6 +2069,7 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       }
     }
     wallChargeRows(g, p, busy, row, offer);   // a breaching charge on a partition, by hand (wallcharge.ts — nothing unless its switch and the destruction's are up)
+    rescueEndRows(g, p, busy, row, offer);   // a rescue's hostages: on your feet — with me / stay here (rescueend.ts — nothing unless a rescue is up with its switch on)
     defuseRows(g, p, busy || !!g.wallCharge?.setting, row, offer);   // a defuse mission's live charges (defuse.ts — nothing on a level without the block)
     stickyRows(g, pl, busy || !!g.wallCharge?.setting || !!g.defuse?.working, row, offer);   // a stuck sticky camera of his own, taken back (stickycam.ts — nothing unless STICKY.take is up)
     // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters

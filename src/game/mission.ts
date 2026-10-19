@@ -36,7 +36,7 @@ export function debriefRows(s: MissionStats): [string, string][] {
     ['blackout', s.blackout ? 'used' : 'no'],
   ];
   if (s.keys > 0) rows.push(['keys taken off them', String(s.keys)]);
-  if (s.qrf >= 1) rows.push(['response team', `QRF on the floor at ${fmtClock(s.qrfAt)}${s.qrf >= 2 ? ' · exfil under perimeter lockdown' : ''}`]);   // (game/qrf.ts: it went loud enough for the response team — and, at 2, for the compound to be locked down round him)
+  if (s.qrf >= 1) rows.push(['response team', s.qrfWho ? `${s.qrfWho} came in at ${fmtClock(s.qrfAt)}${s.qrf >= 2 ? ' · out under a lockdown' : ''}` : `QRF on the floor at ${fmtClock(s.qrfAt)}${s.qrf >= 2 ? ' · exfil under perimeter lockdown' : ''}`]);   // (game/qrf.ts: it went loud enough for the response team — and, at 2, for the compound to be locked down round him)
   return rows;
 }
 

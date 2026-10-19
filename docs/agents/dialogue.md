@@ -110,3 +110,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   only trace); a hidden defender's quiet spoken line is still nothing; teammates' ears count but the row does not say whose. The
   rule asks who is hostile to the player, not which mission: the night staff's shouts under a quiet mission's fog are rows too — NOT measured (the 24 runs are loud
   missions) and nobody has played it.
+
+- **On a defender's net 'they' and 'them' are the team; the hostages are named** (10-18, read against the hostage rescue's ending, `src/game/rescueflush.ts`). Two of
+  its radio lines used the two words for the hostages and for the team in one breath — "they're gone — they're moving them! cut them off!" and "on the way out
+  — they don't leave with them!" — which on the strip, with no picture, takes a second read. Now "the hostages are gone — they're moving them! cut them off!"
+  and "on the way out — they don't leave with the hostages!": the hostages are named once (the defenders' net already says "moving to the hostage door!") and
+  every 'they' / 'them' left is the team, as in every other defender line. Words only: said by the same man at the same moment, no draw moved. Left as read:
+  "I'm going in for them!" (either reading is true of what he does). ALSO FOUND, the same day: `words-hostage` was RED on the shipped stand at the build head (green on
+  frozen) — its line 'the room is the team's: one of them speaks, a teammate answers a beat later' kills every man of theirs to make the room the team's, and
+  under the new ending (`RESCUEEND.on`: nobody of theirs left = won `clearSecs` 1.5 s later) the result came before the teammate's answer at +2.4 s. THE RED
+  WAS THE CHECK'S, NOT THE GAME'S: its listening stopped at the result. The answer is said all the same (`rescue.ts voices()` runs on after the result; the
+  rescue's owner measured it on three levels: she asks at once, the result at +1.5 s, his answer at +2.4 s, the end card at +3.5 s over the rest of his
+  bubble), and the check now listens the beat out and hears it on both stands. A first note here said the answer was never said in play: that was wrong.
+  Left for play: whether the card coming over his line reads well (a presentation call in the debrief's file, nobody is building it). After it
+  `probes.ts words` (8) and `rescueflush` are ALL PASS on both stands. Read, not heard; never seen on a GPU.

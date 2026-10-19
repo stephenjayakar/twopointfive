@@ -78,8 +78,8 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     if (!plain(src.EXACT)) (reg.EXACT as { on: boolean }).on = false;
     if (!plain(src.SENSE)) (reg.SENSE as { cpu: boolean }).cpu = false; if (!plain(src.CMDCHECK)) (reg.CMDCHECK as { on: boolean }).on = false; };   // (a tape from before the game's own maths: the engine's functions, said before the level and the game are built — as the page's player does, src/replay/engineplay.ts tables())
   const Kt = await import(`${ROOT}/src/game/kit.ts`);
-  const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
-    Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, (c.members as unknown[])[i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards); };
+  const kitOf = (k: unknown) => { const c = k as { on?: unknown; members?: unknown; own?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
+    Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, (c.members as unknown[])[i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards); };
   let g: Headless['game'];
   /** the tables and the game's tune just before and just after journal.ts applyKnobs (which, beside the tape's own keys, writes the older value of some keys a file lacks) */
   const knobsWere: unknown[] = [], knobShot = (): unknown => JSON.parse(JSON.stringify({ ...reg, tune: g.tune }));

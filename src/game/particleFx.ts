@@ -17,6 +17,7 @@ import type { Character } from './character';
 import type { Door } from './doors';
 import type { Prop } from './props';
 import type { WeaponDef, WeaponId } from './weapons';
+import { gunLookOn } from './gunlook';   // (called inside casingFx only)
 import * as fx from './effects';
 import { blastSparks } from './blastLook';
 
@@ -231,6 +232,7 @@ export function emberFx(P: Particles, at: Vec3, dir: Vec3, o: { count: number; s
 /** How a row ejects: from the port by the hand (`ahead` m down the bore from the wrist, `up`, `right`) or — the FN2000 — out of the tube at the front, right of the
  *  muzzle; thrown along `dir` in the gun's frame [right, up, forward] at `speed`; the case's colour and diameter; when it is heard landing. */
 interface CasingSpec { color: Vec3; diameter: number; from: 'hand' | 'muzzle'; ahead: number; up: number; right: number; dir: Vec3; speed: number; tink: number; }
+const HULL: Vec3 = [0.55, 0.06, 0.04];   // a 12 gauge's red plastic hull
 const BRASS: Vec3 = [0.72, 0.5, 0.16], LACQUERED_STEEL: Vec3 = [0.2, 0.19, 0.12];   // 5.7 / 9 mm / 5.56: brass; the AKs' 5.45 and 7.62 as issued: lacquered steel, dull olive
 const CASINGS: Partial<Record<WeaponId, CasingSpec>> = {
   fiveseven: { color: BRASS, diameter: 0.008,  from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.9, -0.25], speed: 2.6, tink: 0.5 },
@@ -245,8 +247,11 @@ const CASINGS: Partial<Record<WeaponId, CasingSpec>> = {
   mp7:       { color: BRASS, diameter: 0.0075, from: 'hand', ahead: 0.10, up: 0.06, right: 0.02, dir: [1, 0.7, -0.1], speed: 3.0, tink: 0.5 },
   hk45:      { color: BRASS, diameter: 0.012,  from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.8, -0.2], speed: 2.6, tink: 0.5 },
   g18:       { color: BRASS, diameter: 0.0095, from: 'hand', ahead: 0.07, up: 0.055, right: 0.02, dir: [1, 0.8, -0.2], speed: 3.0, tink: 0.5 },
+  m1014:     { color: HULL, diameter: 0.02, from: 'hand', ahead: 0.14, up: 0.07, right: 0.03, dir: [1, 0.35, 0.1], speed: 2.6, tink: 0.5 },   // (gunlook.ts, with that switch on: a red hull out of the port on the right, fat and slow — off, the gas shotgun drops nothing, as it did)
   fn2000:    { color: BRASS, diameter: 0.0095, from: 'muzzle', ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1], speed: 1.1, tink: 0.4 },  // forward ejection: the cases trundle out of the tube by the muzzle and drop
 };
+/** the empty a row's gun throws, or null: nothing (a row with none; the gas shotgun's hull with gunlook.ts off — it dropped nothing before it had a look of its own) */
+export function casingOf(def: WeaponDef): CasingSpec | null { const C = CASINGS[def.id]; return !C || (def.id === 'm1014' && !gunLookOn()) ? null : C; }
 interface FxState { tinks: { t: number; pos: Vec3; rate: number }[]; n: number }
 const STATE = new SideMap<Game, FxState>('particleFx.STATE');
 const stateOf = (g: Game): FxState => { let s = STATE.get(g); if (!s) { s = { tinks: [], n: 0 }; STATE.set(g, s); } return s; };
@@ -254,7 +259,7 @@ const stateOf = (g: Game): FxState => { let s = STATE.get(g); if (!s) { s = { ti
  *  landing, `tink` s later where it will roughly come down. */
 export function casingFx(g: Game, shooter: Character, def: WeaponDef) {
   const P = gpuFx(g); if (!P) return;
-  const C = CASINGS[def.id]; if (!C) return;
+  const C = casingOf(def); if (!C) return;
   const F = fx.muzzleFrame(shooter.muzzle, shooter.gunDir);   // z = bore, y = up out of the receiver, x = the shooter's LEFT (right-handed, +Z south)
   const right = v3.scale(F.x, -1);
   const base = C.from === 'hand' ? (shooter.bones.handR ?? shooter.muzzle) : shooter.muzzle;

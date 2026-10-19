@@ -64,6 +64,7 @@ import { WORDS } from './words';
 import { squadArcTo, squadHandFree } from './squadsmoke';
 import { workHand } from './workthings';
 import { bodyPos, PACE } from './guards';
+import { loadPace, loadPaceOn } from './kitload';
 import { conditionPace } from './condition';
 import { PICTURE_STATS } from './picture';
 import { throwTo, throwWalls, throwFlight, throwHits } from './throwplan';   // (called inside the searches only: src/game is one import cycle)
@@ -182,7 +183,7 @@ function fragClears(g: Game, gd: Guard, p: Vec3, pts: Vec3[], late = 0, taken?: 
   const rest: Vec3 = [L[0], L[1] - 0.25, L[2]], M = duckMates;
   const apart = !FRAG.fleeApart ? undefined : M && M.g === g && M.gd === gd && M.t === g.time && M.x === rest[0] && M.y === rest[1] && M.z === rest[2] ? M.m : (duckMates = { g, gd, t: g.time, x: rest[0], y: rest[1], z: rest[2], m: fleeMates(g, gd, rest) }).m;
   const PS = PICTURE_STATS, asks = PS.asks, lines = PS.lines, movedN = PS.moved;
-  const spot = fleeSpot(g, { pos: p }, rest, speed, FRAG.orderFuse - K.duckSecs - late, PACE.on ? PACE.accel : Infinity, { path: [], keep: null, apart }, FRAG.fleeApart ? gd : undefined);
+  const spot = fleeSpot(g, { pos: p }, rest, loadPace(g, gd, speed), FRAG.orderFuse - K.duckSecs - late, PACE.on ? PACE.accel * loadPaceOn(g, gd) : Infinity,   /* (kitload.ts: the legs his card leaves him, as the deal itself asks — frag.ts fragTick) */ { path: [], keep: null, apart }, FRAG.fleeApart ? gd : undefined);
   PS.asks = asks; PS.lines = lines; PS.moved = movedN;
   if (!spot || fragIn(g, pts, spot, 1.15)) return false;
   // … and one nobody of ours stands on or is going to (`taken`: the spots dealt to the men asked before him): two men to one corner is one man left out in it

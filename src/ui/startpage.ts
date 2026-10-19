@@ -211,6 +211,11 @@ const CSS = `
 #missions.one #loadout .lo-kit .kc-pips { flex: 0 0 auto; order: 9; }
 #missions.one #loadout .lo-kit .kc-pips i { border-radius: 0; }
 #missions.one #loadout .lo-kit .kc-pips i.on { background: var(--m-text); }
+/* what the card weighs (game/kitload.ts): its two bars on two lines of their own under the pouches, one track under the other, in the head's own column */
+#missions.one #loadout .lo-kit .kc-pouch:has(.kc-load:not(.off)) { flex-wrap: wrap; justify-content: flex-end; row-gap: 4px; }
+#missions.one #loadout .lo-kit .kc-load { flex: 0 0 100%; gap: 3px; margin: 0; }
+#missions.one #loadout .lo-kit .kc-bar { justify-content: flex-end; gap: 8px; line-height: 9px; }
+#missions.one #loadout .lo-kit .kc-bar-t { flex: 0 0 176px; height: 6px; }
 #missions.one #loadout .lo-kit .kc-words { display: none; }
 #missions.one #loadout .lo-kit .kc-words.refused, #missions.one #loadout .lo-kit .kc-note { display: none; grid-column: auto; grid-row: auto; position: absolute; left: 0; right: 0; bottom: 4px; margin: 0; padding: 0; border: 0; min-height: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; line-height: 18px; color: var(--m-soft); }
 #missions.one #loadout .lo-kit .kc-words.refused { display: block; color: #e8c15a; background: var(--m-base); z-index: 1; }

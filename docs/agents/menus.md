@@ -158,6 +158,66 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   MEASURED AT THE JOIN (10-15, the software adapter, the render stubbed, three full runs): a teammate's smoke at rest 0.81 to 0.82 m inside on the front way, 0.99 to 1.02 m on the west; Sam's smoke 1.08 to 1.32 m; Sam's stun 1.08 to 1.36 m on either way; first motion 2 to 33 ms after a pick; after a cut that left men off their slots Sam's gun row began 0.57 s (the shield's number two), 1.25 to 1.8 s (his charge: hands on, set, blown) later with nobody over 0.35 m off his slot — before `homing()` it began on the next frame with a man 0.96 to 1.23 m off; his charge picked from his smoke began on the next frame (it was 2.1 s); a charge kept: the next row 1.7 s after (it was 6.0 s); Sam staggered by his own frag 0 times.
   MEASURED IN THE CHECK (10-14, one page at a time, the software adapter with the render stubbed, both ways, one run each of the final tree plus three earlier of one way): first motion 6 to 22 ms after a pick; the fastest aim yaw of any man on any frame 150°/s, body 100°/s; the lit beam no nearer the wall's line than 51° (front) / 56° (west); Sam's smoke at rest 1.31 m inside, a teammate's 1.02 to 1.05 m, Sam's stun 1.12 m (front) and 1.33 to 1.38 m (west: close under the row's 1.4 — `samStunM` 0.24; 0.2 gave 1.06 on the front, 0.35 gave 1.59); a teammate's door charge 6.3 s, his frag 4.6 to 5.5 s, his stun by the door tools' own order about 5 to 8 s (over the 2.5 s asked for a bang: the order's own stack and kick); 5 dissolves a page, none without its copy; the gun's swap written 0.58 s after the pick. Sam's leaf for a throw is 1.3 rad (`wideSam`), not the 0.9 asked: at 0.9 his line from across the door met the leaf and the can stopped 0.58 m in.
   NO CHECK FOR: a page left live for hours, the loop at the page's real 12 / 90 frames, `pause` under a beat or a dissolve, a kit message under a dissolve, a restage that throws, a beat that ends `cap`, `lost` or `shut` (`kept`: Sam's charge only), a refused order, a suppressor's swap, the trim, Sam's charge with `?noowncharge` or picked from his light or stun, Sam's marker light after a NEW gun (with the big slot on no change of his card builds one), Sam truly caught by his own frag (0 staggers counted here: nothing was moved), the goggles, the fourth man's step round Sam, a second teammate's card opened mid-swap, a frag burst two steps before a cut (counted, the row's tick not yet run: the frame after the burst IS checked), a wait left running across a card switch (`waitT`, reset in `pick()`), the wait running out, a man down under a beat, a way-in door that IS locked, any level but the records office, the pacer on a real 120 Hz display, the copy of a WebGPU canvas on a real adapter (`dissolve.cuts` counts a copy that could not be had: the work is then done as a cut), the white rectangle. KNOWN: under a beat of Sam's own `Game.puppet` takes every teammate's order away, so a man off his slot stands where he is until Sam's beat ends — Sam's row now waits for walks under way (8), 4 s at most (and `fight.live` is false under it: roomfight.ts — the goggles' draw rule); the gun and light rows start on arrival, not on the last leg of the walk. NEVER SEEN ON A GPU, AND NEVER WATCHED IN MOTION ANYWHERE: all of it — the rotation, the hands' move on a gun change, the dissolve, the eased aim, the light through the door, the 60 cap. The check's numbers are positions, yaws and counters, not a picture.
+- **Every pick's picture shows its kit at work** (2026-10-18; the maintainer, of the picture beside the cards on Mousehole with the hammer picked: "some
+  demos still don't really do anything (e.g. dynamic hammer here)"; `src/host/kitView.ts`, five levels' `kitView` blocks through their generators,
+  `tools/qa/kitview-work.cjs`, a row of `tools/qa/kitview-plan.ts`). NO NEW SWITCH: picture only (the `?kitview` child page), both stands the same;
+  `src/game` not edited.
+  THE CAUSE, MEASURED (the real page, headless Chromium on the software adapter, the render stood in for): a row that works a LEAF — the hammer, the
+  breaching shotgun, a door charge, the wand, a teammate's bang or frag on order, Sam's sticky camera — is refused where the way's anchor has none
+  ('no leaf at this way in') or is steel ('steel: it holds'), and `begin()` plays the GUN's row instead; on a blank wall with no pane the gun's row
+  only raises and scans. BEFORE, picks idle of 27: mousehole way 1 (a wall span) 16, glasshouse way 1 (a wall span) 16, snatch (an open gate) 13,
+  mousehole way 2 (a steel fire exit) 9, the office's door 2 (a teammate's wand and goggles, which had no row). `kitview-levels.cjs` passes that
+  fallback ("the GUN's row with the reason kept: said, and a pass"), which is why nothing was red.
+  WHAT CHANGED. (1) EVERY WAY ANCHORS ON A DOOR THAT IS NOT STEEL (docs/level-format.md says the rule; `kitview-plan` section C fails any other way,
+  `KITPLAN_BREAK=1` reads every door as steel): mousehole's `ward` set has a side door `mh_side` in the wall the stack stands on, both ways anchor on
+  it, and the wall charge still opens the wall beside it; glasshouse way 1 is the `front` door seen from the forecourt (`ref`; the gun has its pane
+  there); floodlit and snatch are the `front` door the open gate leads to; depot way 1 is the first hut's door `a_s`. The span code stays (a level
+  may still be planned on one: the dry run) but no shipped way is a span. (2) THE FIRST TURN: a pick that cut a row of Sam's began with his OLD card
+  (`samCardDue` was applied in `before()` only while no row of his was up, and `direct()` cuts and begins in one step) — his hammer or shotgun, just
+  put in the big slot, ended 'big: the door never offered it' and only the loop's second turn worked. `direct()` now puts the owed card on him before
+  `begin()`. (3) A TEAMMATE'S WAND has a row (`wandMate`: the squad's own `wandLook` order to him alone, the fog the game's for its length and lifted
+  for every draw as in Sam's row, the wand on his staged card for the row; asked with `whyNot` first, so a refusal is not said aloud every step; mark
+  `through` off `WANDORDER_STATS.live`). (4) HIS GOGGLES' TILE plays the quarter turn that shows him (`TILES.nvg`), as his suit's does: worn kit, and
+  no order lowers them (nvg.ts). (5) The quiet rows say their work for a check: `lit` (the beam swept through the opening), `turn`.
+  (6) A TEAMMATE'S FRAG AFTER A CHARGE AT A LOCKED DOOR: the leaf hung again under the dissolve is the level's own locked door again (`Door.reset`), frag
+  and clear halts at a handle that does not turn, and the row ended `lost` in a second — at the office about one pick in eight (whenever nothing had
+  unlocked the leaf in between). `byOrder` unlocks the way-in door first, as every other row that works it does: 14 of 14 after.
+  THE CHECK: `node tools/qa/kitview-work.cjs` (env in its header; needs `bun run dev` on PORT) picks every tile of Sam's card and a teammate's and
+  every thing the big slot holds, and reads the FIRST row begun for the pick (after a wall's opening charge or a gun's swap): AT WORK = the pick's own
+  thing with its work mark; the gun's row instead, or its own row to no mark, is IDLE and red. `SETS=1` says what a squad kit set and a member's set
+  play (not judged: a set has no row). `KITWORK_BREAK=1` (the big slot told empty under the pick) must exit 1. EXCUSED, said as a pass: Sam's wall
+  charge when he is ALONE (the picture's wall charge is the squad's order). Exit 2 on an unknown pick name.
+  A pick idle on its first pick is picked twice more: idle again on either is red; at work both times is a pass that says it MISSED ITS FIRST TURN
+  ONCE and is counted in the tally (Sam's frag that came back off the leaf and was taken away, `kept`: once in some twenty throws here, on the depot's
+  hut door). Also EXCUSED: the sticky camera where the way in opens on a yard (12 m of open floor or more behind the leaf: `camReach` finds no wall to
+  stick it to — the police post's gate), and a teammate's frag on a RESCUE (the order is refused with hostages on the floor: the consulate). The big slot's shotgun and hammer on the LONG HALL (the level
+  issues its own kit — `kitIssue` — and a card's big slot never reaches the men: `Player.bigKit` stays 'none', no `bigClear` order), and the wall charge
+  at the records' WEST door (too short a stretch of wall beside it). The PASS: the wall charge (no floor behind the gate set's wall) and Sam's frag
+  (the wicket opens on the yard: its burst always has a line to him, and it is taken away). (7) THE WAND AFTER THE CAMERA
+  (found by the wand's owner with `DEBUG_EVAL`, mended here): the sticky camera's row leaves the leaf held at `camWide`; picked next, `wandRow` walked
+  Sam to his post inside the leaf's arc, the leaf came round to him, went back and stayed, and the door never offered the wand (the block's kitchen
+  door in the table's order, the crossing's and the bazaar's gates). The row now pulls the leaf HOME first (phase `shut`, `wandShut` s at most) with
+  him out of its sweep — where he stands if `wandClear` clear of it, else his own place — and only then walks him to its foot. Real page after:
+  the block way 1 31 of 31 with no excuse, the crossing's and the bazaar's gates 9 of 9 (charges, camera, wand, three times round), mousehole way 1
+  31 of 31. `DEBUG_EVAL='<expression of g>'` samples the game through a pick's turn. An idle turn of a door order prints the order's stages and the leaf's angle;
+  `REPEAT=n` plays the picks n times on one boot.
+  MEASURED AFTER (the real page, headless Chromium on the software adapter, the clock at 2, one turn a pick, 27 picks a picture and 13 with Sam
+  alone): before the join with the build's head, every pick AT WORK on mousehole ways 1 and 2, depot way 1, glasshouse way 1, snatch, floodlit, the
+  office (Sam and 4) and the vault quiet with one teammate; the vault quiet with Sam alone 12 of 13, the wall charge the one excused; `KITWORK_BREAK=1`
+  on mousehole 4 FAIL, exit 1. On the join: mousehole both ways 54 of 54, snatch and floodlit 27 of 27, the office 26 of 27 (the teammate's frag of
+  (6), before its mend), depot way 1 26 of 27 (Sam's frag `kept` once; 8 of 8 on a repeat), the police post (quiet, Sam alone) 11 of 13: the wall
+  charge and the camera at a yard gate, both excused. `kitview-levels.cjs` on mousehole way 1: 30 PASS of 30. The console said nothing on any.
+  SINCE THE TWO GUN TILES: the check also picks each man's `primary` and `secondary` tile (both play the gun's row), 31 picks a picture;
+  mousehole way 1 on that join 31 of 31.
+  THE WHOLE SWEEP ON THE JOINS (every level with a block bar the lessons, 36 ways): every pick at work on mousehole, depot, glasshouse, barracks,
+  killhouse, block-squads, compound, warehouse (both ways each), snatch, floodlit, the office, defuse, registry, the records' front; the misses are the
+  excused ones named above (the long hall's big tools, the consulate's frag on order, the pass's wall charge and Sam's frag, the records' west wall
+  charge, the block's wand for Sam (mended since: (7)), a quiet man alone's wall charge, the camera at the police post's and lights-out's gates). A first turn missed once:
+  Sam's wand at the crossing's and the bazaar's gate (the same fault: (7)), his frag at the depot's hut door, his gun on the long hall's first pick after the boot.
+  NOT DONE, SAID ON THE PAGE'S LIST: the 40 mm is shouldered and never fired (the round arms 8 m out); a squad kit set has no demo of its own; the quiet picture still plays the loud answers (an open
+  call with the kit figure's owner, not decided here).
+  NEVER SEEN ON A GPU: every picture named above as changed (mousehole's door in the ward's wall and its lintel, the four re-anchored ways), the
+  teammate's wand row, the goggles' turn. Stills were drawn on the software adapter only.
 - **The standing man holds his gun as the mission's man does** (2026-10-18; `src/ui/kitFigure.ts`, the picked man the start page draws by itself: under
   `?oldfigure` and wherever the live picture is not up). He was laid out without IN HAND (`src/game/inhand.ts INHAND`, docs/agents/player.md): the figure
   poses a `Character` of its own and never said the drawer's word, so a teammate's rifle or carbine had its pistol grip 4.2 cm short of the palm and his
@@ -958,10 +1018,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kit. SWITCH: `KITDEAL.on`, OFF in the module and on the frozen stand (a `FROZEN_HOLDS` row, `TPS_KITDEAL=1`, reads only with `SLOTS=on`), ON in the
   page and on the shipped stand (`?nokitdeal`; the debugger's Big slot section, 'squad kit dealt over who comes'); in the knob registry and
   `JOURNAL_KNOBS`, and a recording from before the table replays with it off. Off at any moment = every card shown and staged as the table writes it.
-  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 23 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
+  CHECK: `bun run tools/qa/kitdeal-check.ts` (`probes.ts kitdeal`, also in `kit`; 24 lines on both stands, `KITDEAL_BREAK=1` fails 3 on both: nobody
   comes bare, a pair a door, the roster of four); the real page: `PORT=<port> node tools/qa/kitdeal-page.cjs`. The older card probes (`kit-*`,
   `pouch-*`, `squadsmoke-*`, `bigslot-card`, `wand-mate`) press a pouch too many on the table's own layout at four, so `probes.ts DEAL_AS_IT_WAS`
-  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. LISTING: `bun run
+  holds the deal off for them on every stand; the worn cards are this check's, with 3000 seeded presses of its own. `bigslot-check.ts` run BY ITS
+  OWN FILE takes the same holds itself (the deal for its card part, the two gun rows for every part: it was red on the shipped stand alone while
+  green inside the gate), and now runs its `weight` part too. A MISSION'S ISSUE IS NOBODY'S OWN LAYOUT: `asIssued` holds the player's own-layout
+  mark off for the staging, so cards changed by hand never stage a mission's issue undealt (the check's hall line, red without it). LISTING: `bun run
   tools/qa/kit-audit.ts` (`--deal=off` for the cards before) prints every kit at every size and one row a mission. MEASURED: The pass, four, 240
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has

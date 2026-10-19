@@ -89,6 +89,21 @@ export const muzzleFx = {
   // muzzle: the doc's card (h [0.03, 0.03, 0.09], emissive [60, 34, 12]) a hand down the bore, and the light × 1.2 before the row's suppressedGain (× 0.45) takes it
   // to ≈ 0.55 of a bare pistol's over 8 m — the doc's "flashGain 0.55". UNTUNED — grade in the viewer (Sam ▸ rifle: shouldered, K) and paste back here.
   sc20k: { cardAhead: 0.09, cardHalf: [0.03, 0.03, 0.09], cardEmissive: [60, 34, 12], lightGain: 1.2 } as MuzzleFx,
+  // THE GUNS A CARD'S TWO SLOTS OFFER, each its own flame (gunlook.ts GUNLOOK: read through flameOf — with that switch off each fires the block its row's
+  // `muzzleFx` names, as it did). UNTUNED, every one: first numbers set against the four above, never seen on a GPU — grade in the viewer and paste back.
+  // Mk 12: 5.56 from eighteen inches through a can — the powder is burnt before the baffles get it: less flame than the short carbine's can lets by, and darker
+  mk12: { cardAhead: 0.07, cardHalf: [0.024, 0.024, 0.07], cardEmissive: [44, 24, 8], lightGain: 1.0 } as MuzzleFx,
+  // MP7: 4.6 mm through its can — the least there is to see of any long gun: a pistol can's wisp, a hair longer
+  mp7: { cardAhead: 0.05, cardHalf: [0.016, 0.016, 0.05], cardEmissive: [34, 19, 7], lightGain: 0.85 } as MuzzleFx,
+  // Mk 46: a bare 5.56 behind a slotted flash hider — the flame split thin and wide rather than the short rifle's ball, but there is one every twelfth of a second:
+  // the string strobes his end of the room
+  mk46: { cardAhead: 0.11, cardHalf: [0.05, 0.022, 0.085], cardEmissive: [95, 52, 16], lightGain: 1.45, lightRange: 10 } as MuzzleFx,
+  // M1014: an ounce of shot out of a bare eighteen-inch tube — a fat, round, orange ball, slower burning than a rifle's and the brightest flash on the floor
+  m1014: { cardAhead: 0.15, cardHalf: [0.06, 0.06, 0.11], cardEmissive: [120, 58, 14], lightGain: 2.0, lightRange: 11 } as MuzzleFx,
+  // HK45: subsonic .45 through a big can — next to nothing: the dimmest thing a gun here shows
+  hk45: { cardAhead: 0.045, cardHalf: [0.016, 0.016, 0.035], cardEmissive: [26, 14, 5], lightGain: 0.7 } as MuzzleFx,
+  // Glock 18: the bare 9 mm's flame, and out of the compensator cuts a lick of it straight up — taller than it is wide; twenty a second, it reads as one flicker
+  g18: { cardAhead: 0.08, cardHalf: [0.026, 0.042, 0.07], cardEmissive: [95, 52, 16], lightGain: 1.1 } as MuzzleFx,
 };
 export type MuzzleFxKey = keyof typeof muzzleFx;
 /** shared by every card: warm paper-white albedo (it is only ever seen emitting) and one frame and a bit of life */

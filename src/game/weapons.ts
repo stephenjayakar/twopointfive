@@ -19,6 +19,8 @@ export type FireMode = 'semi' | 'auto' | 'burst';
 export type WeaponClass = 'pistol' | 'carbine' | 'rifle' | 'shotgun';
 /** what leaves a dying (or downed) hand that held it: a throwables.ts ItemKind (combat.ts dropFromHand) — 'rifle' has no body of its own until R2 gives it one */
 export type DropKind = 'pistol' | 'rifle';
+/** a gun's own model (gunlook.ts MODELS: the parts it is drawn as, over the group its row's `rig` names) */
+export type GunModelId = 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'm870' | 'hk45' | 'g18';
 /** A GUARD's hands on it (combat.ts fireWeapon): ± half of ( base + min(moveCap, Sam's ground speed · moveK) + max(0, range − rangeFrom) · rangeK ) per axis on the unit
  *  direction — wider at a man moving fast or far off, so the first rounds tend to go wide and then they settle. Sam's own rounds go where they are sent. */
 export interface AiSpread { base: number; moveK: number; moveCap: number; rangeFrom: number; rangeK: number; }
@@ -108,6 +110,10 @@ export interface WeaponDef {
   /** what it weighs loaded, kilograms, and how much of it there is to hide and to get through a door with (0 a pistol … 4 a belt-fed gun): DATA for the kit's
    *  mobility and concealment score — nothing in this file reads them */
   weightKg: number; bulk: number;
+  /** ITS OWN (gunlook.ts, while GUNLOOK is on — off, the stand-in fields above are the gun): the model it is drawn as (a gunlook.ts MODELS key, laid out in the
+   *  group `rig` names: the trigger hand, the sling and the holster are that group's), the voice of its report (an audio/sfx.ts name; absent: `report.voice`)
+   *  and its flame (an effects.ts muzzleFx key; absent: `muzzleFx`). How it is fed is gunreload.ts's row for its id. Never a play number. */
+  own?: { model: GunModelId; voice?: string; flame?: MuzzleFxKey };
 }
 
 /** The service-pistol spread every guard's hands have had since the first firefight (combat.ts fireWeapon's old literal line): 0.05 + min(0.06, v·0.014) + max(0, range − 8)·0.006. */
@@ -190,11 +196,13 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle', tracer: null,
     pellets: { n: 9, cone: 0.06, dropM: 8, need: 4, breach: { reachM: 2, latchM: 0.5, need: 4 } },
     weightKg: 3.4, bulk: 3,
+    own: { model: 'm870', voice: 'm870Report' },   // (drawn as the pump gun it is, with a 12 gauge's report and the pump worked after it; its flame stays the block above)
   },
   // ---- THE GUNS A CARD'S TWO SLOTS OFFER BESIDE THE ISSUE PAIR (gunslots.ts PICKS; the maintainer, 10-18: "should we model more firearms?"). Each is set apart
   // by something felt in play — reach, who hears it, how it comes round, how long it runs and how long it takes to feed — and NEVER by what a round does to a
-  // man (damage 'oneShot', every row). Nothing constructs one unless a card picks it. Every one of them is drawn and heard as a gun the game already has (its
-  // rig, voice and muzzleFx name the stand-in): a model, a report and a reload of its own are owed to each. UNTUNED: nobody has fired one on a GPU.
+  // man (damage 'oneShot', every row). Nothing constructs one unless a card picks it. Each row's rig, voice and muzzleFx name a STAND-IN (a gun the game
+  // already had: what it is drawn and heard as with gunlook.ts GUNLOOK off), and its `own` the model, report and flame it has with that switch on; how each is
+  // fed is gunreload.ts's. UNTUNED: nobody has fired one on a GPU.
   // Mk 12 SPR-pattern (5.56, the long barrel, a can, a magnified sight): REACH. Semi only and a slower cadence, twenty to a magazine, tight in the hands
   // standing still (hands.still) and in a teammate's (aiSpread: half the carbine's base, the fall-off starting twice as far out) — and it comes round like the
   // long thing it is (handling 0.62), opens up badly on the move, and has nothing under its barrel.
@@ -205,6 +213,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'rifleSuppressed' }, suppressed: true, muzzleFx: 'sc20k', propImpulse: 5,
     aiSpread: { base: 0.018, moveK: 0.02, moveCap: 0.08, rangeFrom: 16, rangeK: 0.003 }, damage: 'oneShot', muzzleAhead: 0.52, rig: 'sc20k', light: 'handguard', drop: 'rifle', tracer: null,
     handling: 0.62, hands: { still: 0.45, moving: 1.4 }, launcher: false, weightKg: 5.0, bulk: 3,
+    own: { model: 'mk12', voice: 'mk12Suppressed', flame: 'mk12' },
   },
   // MP7-pattern (4.6×30, a can): QUIET AND QUICK. The one long gun the floor does not hear as gunfire (level 0.8: an odd noise, heard a third farther off than
   // the suppressed pistol's 0.6), forty to a magazine at 900 a minute, in the hands like a pistol (handling 0.95) and the steadiest thing there is on the move
@@ -216,6 +225,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 0.8, loud: false, voice: 'pistolSuppressed' }, suppressed: true, muzzleFx: 'pistolSuppressed', propImpulse: 3,
     aiSpread: { base: 0.045, moveK: 0.008, moveCap: 0.03, rangeFrom: 7, rangeK: 0.012 }, damage: 'oneShot', muzzleAhead: 0.40, rig: 'sc20k', light: 'handguard', drop: 'rifle', tracer: null,
     handling: 0.95, hands: { still: 1.6, moving: 0.7 }, launcher: false, weightKg: 2.3, bulk: 1,
+    own: { model: 'mp7', voice: 'mp7Suppressed', flame: 'mp7' },
   },
   // Mk 46-pattern light machine gun (5.56, a hundred on the belt): VOLUME. It runs three times as long as a magazine and a string of it barely opens — a lane
   // held, heads kept down (suppression.ts counts its rounds like any) — and everything else about it is the price: half a pistol's turn (handling 0.5), a wide
@@ -229,6 +239,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     aiSpread: { base: 0.05, moveK: 0.03, moveCap: 0.12, rangeFrom: 10, rangeK: 0.004 }, damage: 'oneShot', muzzleAhead: 0.52, rig: 'sc20k', light: 'none', drop: 'rifle',
     tracer: { every: 5, lastN: 0, color: [1.0, 0.25, 0.12] },
     handling: 0.5, hands: { still: 1.5, moving: 2.4, crouch: 0.5 }, launcher: false, weightKg: 8.0, bulk: 4,
+    own: { model: 'mk46', voice: 'mk46Report', flame: 'mk46' },
   },
   // M1014-pattern (a gas-operated 12 gauge): THE ROOM. A fighting shotgun, not the big slot's door tool — seven in the tube as fast as the trigger is pulled
   // (0.28 s where the pump takes 0.9), a tighter pattern that carries a man's end two metres farther (dropM 10) — and it opens no lock (no `breach`: the
@@ -241,6 +252,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.035 }, damage: 'oneShot', muzzleAhead: 0.50, rig: 'carbine', light: 'handguard', drop: 'rifle', tracer: null,
     pellets: { n: 9, cone: 0.045, dropM: 10, need: 4 },
     handling: 0.72, launcher: false, weightKg: 3.9, bulk: 3,
+    own: { model: 'm1014', voice: 'm1014Report', flame: 'm1014' },
   },
   // HK45-pattern (.45, subsonic, a can): THE QUIETEST GUN. Heard three quarters as far as the issue pistol (level 0.45 against 0.6) — and eight to a magazine
   // where that holds ten or fifteen, a slower hand between rounds.
@@ -251,6 +263,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 0.45, loud: false, voice: 'pistolSuppressed' }, suppressed: true, muzzleFx: 'pistolSuppressed', propImpulse: 5,
     aiSpread: AI_PISTOL_SPREAD, damage: 'oneShot', muzzleAhead: 0.26, rig: 'pistol', light: 'rail', drop: 'pistol', tracer: null,
     weightKg: 1.2, bulk: 0,
+    own: { model: 'hk45', voice: 'hk45Suppressed', flame: 'hk45' },
   },
   // Glock 18-pattern (9 mm, the long magazine, no can): A FIGHT IN THE HOLSTER. Thirty-three rounds at 1200 a minute under a held trigger — the sidearm that
   // finishes a room when the long gun is dry — and it is loud like any bare gun, climbs fast (the string's cone is twice the carbine's), and gives up
@@ -262,6 +275,7 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     report: { level: 1, loud: true, voice: 'pistolLoud' }, suppressed: false, muzzleFx: 'pistolBare', propImpulse: 6,
     aiSpread: { ...AI_PISTOL_SPREAD, base: 0.06 }, damage: 'oneShot', muzzleAhead: 0.26, rig: 'guardPistol', light: 'rail', drop: 'pistol', tracer: null,
     weightKg: 1.0, bulk: 0,
+    own: { model: 'g18', voice: 'g18Report', flame: 'g18' },
   },
   // ---- rows from the design (§2 / §3). The AK-74M is switched off: nothing constructs it. The two after it are the defenders' own (gunroles.ts). Each names what its lane still owes it. ----
   // AK-74M-pattern rifle (415 mm barrel, brake): tighter, a smaller flash than the shorty (doc: light gain 1.1 — its own muzzleFx block when a setting wants it).
@@ -315,7 +329,9 @@ export const HANDLING_BY_CLASS: Record<WeaponClass, number> = { pistol: 1, carbi
 export function handlingOf(def: WeaponDef): number { return def.handling ?? HANDLING_BY_CLASS[def.cls] ?? HANDLING_BY_CLASS.carbine; }
 
 /** Callbacks for the beats of the staged reload (player.ts plays the foley and drops the empty on them). */
-export interface ReloadEvents { magOut?(rounds: number, dropped: boolean): void; magIn?(rounds: number): void; rack?(): void; done?(): void; }
+export interface ReloadEvents { magOut?(rounds: number, dropped: boolean): void; magIn?(rounds: number): void; rack?(): void; done?(): void;
+  /** the reload's own extra beats (startReload's `cues`, gunreload.ts: a feed cover up, a shell in): the i-th has come */
+  cue?(i: number): void; }
 
 /** One weapon being carried: its row, a chamber, the seated magazine, the spares, and the staged reload. */
 export class Firearm {
@@ -329,6 +345,12 @@ export class Firearm {
   /** this reload's own beat, when whoever started it handed one (startReload's `beat`: a tactical change keeps the old magazine and takes longer over it, an
    *  empty gun's is the quick one — game/kitanim.ts); null = the row's, as ever */
   private beat: WeaponDef['reload'] | null = null;
+  /** extra moments inside the reload under way, seconds on its clock in order (startReload's `cues` — gunreload.ts: what a belt or a tube of shells is heard
+   *  doing between the stages; none = every reload as it always was), and how many have come */
+  private cues: readonly number[] | null = null; private cueI = 0;
+  /** what the reload last begun PUTS IN, for whoever shows it (gunreload.ts; the books are update()'s, as ever): the rounds the gun gains, and whether it was
+   *  begun with nothing in it at all (a tube gun's first shell then goes straight into the port) */
+  feedN = 0; feedPort = false;
   /** the beat the reload under way (or the next plain one) runs on */
   get reloadRow(): WeaponDef['reload'] { return this.beat ?? this.def.reload; }
   shotsFired = 0;
@@ -381,15 +403,16 @@ export class Firearm {
    *  while a round is chambered on a row that racks its chambered round OUT of the magazine (a guard's twelve all told, never thirteen) */
   get magRoom() { return this.def.magCapacity - (this.def.topUp ? 0 : this.chamber); }
   /** Begin a reload if it makes sense (have a spare that improves things). Returns false if refused. */
-  startReload(ev: ReloadEvents = {}, beat?: WeaponDef['reload']): boolean {
+  startReload(ev: ReloadEvents = {}, beat?: WeaponDef['reload'], cues?: readonly number[]): boolean {
     if (this.reloading) return false;
     if (this.spare.length === 0 && !this.bottomless) return false;
     const best = Math.min(this.spare.length ? Math.max(...this.spare) : this.def.magCapacity, this.magRoom);
     if (this.mag !== null && this.mag >= best && this.chamber === 1) return false;   // nothing to gain
-    this.reloadT = 0; this.stage = 0; this.ev = ev; this.beat = beat ?? null;
+    this.reloadT = 0; this.stage = 0; this.ev = ev; this.beat = beat ?? null; this.cues = cues && cues.length ? cues : null; this.cueI = 0;
+    this.feedN = Math.max(0, best - (this.mag ?? 0)); this.feedPort = this.chamber === 0 && !this.mag;
     return true;
   }
-  cancelReload() { this.reloadT = -1; this.stage = 0; this.beat = null; }
+  cancelReload() { this.reloadT = -1; this.stage = 0; this.beat = null; this.cues = null; }
   /** A full magazine seated and a round chambered (the row's way: topped up or racked out of it), any reload or burst forgotten — how a guard's reload beat ends
    *  (guards.ts) and how the QA probes stand a man up with a fresh gun. */
   rearm() { this.cancelReload(); this.burst = null; this.autoIdx = 0; this.chamber = 1; this.mag = this.def.magCapacity - (this.def.topUp ? 0 : 1); }
@@ -401,6 +424,7 @@ export class Firearm {
     if (!this.reloading) return;
     this.reloadT += dt;
     const t = this.reloadT, R = this.beat ?? this.def.reload;
+    if (this.cues) while (this.cueI < this.cues.length && t >= this.cues[this.cueI]) this.ev.cue?.(this.cueI++);
     if (this.stage < 1 && t >= (R.out ?? R.dur)) {
       // magazine out: empties are dropped on the floor, partials go back to storage (nothing to do if the well is already empty,
       // e.g. a reload that was cancelled by sprinting after the old magazine came out)
@@ -426,7 +450,7 @@ export class Firearm {
       if (this.chamber === 0 && this.mag !== null && this.mag > 0) { this.mag--; this.chamber = 1; this.ev.rack?.(); }
       this.stage = 3;
     }
-    if (t >= R.dur) { this.reloadT = -1; this.stage = 0; this.beat = null; this.ev.done?.(); }
+    if (t >= R.dur) { this.reloadT = -1; this.stage = 0; this.beat = null; this.cues = null; this.ev.done?.(); }
   }
 }
 

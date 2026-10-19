@@ -79,7 +79,7 @@ import { toolSpot, toolStep } from './handleside';
 import { SHOTGUN, breachSpot, carriesBreacher } from './shotgun';
 import { WEAPONS } from './weapons';
 import { BIGSLOT, kitBig } from './kit';   // (the big slot's switch and what a staged teammate carries in it: asked inside the lock stage only)
-import { carriesHammer, gunUp, gunDown, hammerBlow, bigBroken, hammerOut, hammerIn, hammerOutTick, bigWind, bigSwing } from './bigkit';
+import { carriesHammer, gunUp, gunDown, hammerBlow, bigBroken, hammerOut, hammerIn, hammerOutTick, bigWind, bigSwing, bigOutBy } from './bigkit';
 import { SILENT, squadSilent, silentUrgent, silentNoBoot, silentPick, silentBoot, silentCompromised, silentEase, silentNoCans, silentTool, SILENT_STATS } from './silent';
 import { doorPlan } from './roomclear';
 import { NIGHTBREACH } from './nightbreach';
@@ -1535,7 +1535,7 @@ export class DoorTools {
     const H = BIGSLOT.moves ? hammerOut(g, by, G.at) : null, tell = (at: number) => { if (H) { const rel = t - H.t0; H.blows = H.blows.filter(b => b <= rel); H.blows.push(at - H.t0); } };
     const on = flat(c.pos, k.pos) < 0.4 && Math.abs(wrapAngle(c.bodyYaw - yawTo(c.pos, G.at))) < 0.35;
     if (!on) { if (t - op.t0 >= K.kickCap + SHOTGUN.aimCap) this.gunOff(op, 'never got onto the lock'); return; }
-    if (G.nextT === 0) { G.nextT = (H ? Math.max(t, H.t0 + BIGSLOT.equip) : t) + bigWind(); op.t0 = t; tell(G.nextT); return; }   // (the wind-up is silent, and done before any word)
+    if (G.nextT === 0) { G.nextT = (H ? Math.max(t, H.t0 + bigOutBy('hammer')) : t) + bigWind(); op.t0 = t; tell(G.nextT); return; }   // (the wind-up is silent, and done before any word)
     if (op.word && op.kind !== 'bangClear') { op.hold = 2; if (H && t > G.nextT - WORD_LEAD) { G.nextT = t + WORD_LEAD; tell(G.nextT); } return; }   // (the word has others to wait for: nothing is heard before it — his first blow lands on it, the lock gives a beat after; the moves: held wound up, the swing let go on the word)
     if (t < G.nextT) return;
     G.n++; G.nextT = t + bigSwing(); op.t0 = t;

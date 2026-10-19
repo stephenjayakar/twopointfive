@@ -13,6 +13,7 @@ import * as fx from './effects';
 import { rigBoxes, holsterBoxes, gogglesBoxes, wristTieBoxes, bigBoxes, bigClearOf, hungBoxes, longHold, torchHold, freeCanBoxes, packSideBind, RIG } from './rigProps';
 import { sideLocal } from './packside';   // (a leaf)
 import { sideHung } from './gunslots';   // (called inside handProps only)
+import { voiceOf, flameOf } from './gunlook';   // (called inside fireWeapon only)
 import { bigCarried, bigFired } from './bigkit';   // (called inside handProps only: the big slot's tool a man carries — null with its switch off)
 import { tally } from './mission';
 import { chronShot, chronLightShot, chronDown, chronHit } from './chronicle';
@@ -120,7 +121,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (spread > 0) dir = v3.normalize([dir[0] + (simRandom() - 0.5) * spread, dir[1] + (simRandom() - 0.5) * spread, dir[2] + (simRandom() - 0.5) * spread]);
   if (pel && lead) pel.dir = dir;
   // 1-frame emissive flash card (visible flame), boxes only — the row's flame (effects.ts muzzleFx)
-  const M = fx.muzzleFx[def.muzzleFx];
+  const M = fx.muzzleFx[flameOf(def)];   // (gunlook.ts: a row with a flame of its own, while that switch is on — else the row's muzzleFx, as ever)
   if (lead) g.fx.push({ box: makeBox({ c: v3.mad(muzzle, dir, M.cardAhead), h: v3.copy(M.cardHalf), yaw: v3.yawOf(dir), albedo: v3.copy(fx.muzzleCard.albedo), emissive: v3.copy(M.cardEmissive), flags: BoxFlag.Dynamic | BoxFlag.NoShadow }), ttl: fx.muzzleCard.ttl });   // (copies: makeBox keeps the arrays it is given, and the row's numbers are nobody's to bend)
   // --- gas + light + powder: the graded shot from effects.ts — bore jet thrown down the barrel, two side-port puffs, the warm wisp that curls off
   // the barrel for seconds (tracks the muzzle, plus the small ejection-port curl), a narrow cone of spark streaks and the brief ~2000 K flash.
@@ -132,7 +133,7 @@ export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: 
   if (lead) for (const L of fx.spawnShot(g.smoke, gpu ? null : g.sparks, muzzle, dir, { seed: g.fxSeed++, lightGain: M.lightGain * (def.suppressed ? fx.shot.suppressedGain : 1), lightRange: M.lightRange, track, eject: port }))
     g.engine.lights.flash(L.pos, L.color, L.intensity, L.range, L.ttl, shooter.id);
   if (gpu && lead) { muzzleSparksFx(g, muzzle, dir, shooter); casingFx(g, shooter, def); }   // + the spent case out of the port (heard landing half a second on: particleFx.ts)
-  if (lead) g.audio.play(def.report.voice, muzzle, 1);
+  if (lead) g.audio.play(voiceOf(def), muzzle, 1);   // (gunlook.ts: … and a voice of its own)
   // --- hit scan
   let tHit = 60; let hitGuard: Guard | null = null; let playerHit = false;
   const st0 = g.col.raycast(muzzle, dir, tHit); if (st0) tHit = st0.t;   // statics + door leaves

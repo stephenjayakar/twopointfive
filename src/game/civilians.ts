@@ -29,6 +29,7 @@ import type { Game, DownKind, DownBy } from './game';
 import { Guard } from './game';
 import type { PatrolRoute, CivilianDef, CivilianTask } from '../scene/level';
 import type { DialoguePick } from './dialogue';
+import { responseWords } from './qrf';
 import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, SNATCH_LINES, hashStr, roomName, isOffice } from './dialogue';
 import type { HostageMoment } from './dialogue';
 import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -148,6 +149,9 @@ export interface Civ {
   reportTo: Guard | null; talkT: number; reported: boolean; phoned: boolean; acked: boolean;
   /** the corner: where, told to stay (until when), whether she has got up and run from it once, seconds a man has stood by her */
   cowerAt: Vec3 | null; complied: boolean; complyUntil: number; refled: boolean; foundT: number; foundBy: Guard | null; foundLineAt: number; foundTold: boolean;
+  /** a rescue's hostage told to get up and come (hostageLead — rescueend.ts): whom she follows (null: nobody — she is down where she was put), and how far behind
+   *  him she stops. Not in the civilians' own snapshot: no checkpoint is reachable with a rescue staged, and rescueend.ts restore() gives the word again */
+  lead: Character | null; leadGap: number;
   /** her voice: when she last screamed (what the men and the other civilian hear), whimper clock, greeting clocks */
   screamAt: number; whimperAt: number; greetAt: number; lastLineAt: number;
   /** the men told of THIS fright already (a scream heard, her seen running), by alarm serial */
@@ -342,6 +346,7 @@ function makeCivilian(g: Game, def: CivilianDef, i: number): Guard {
     target: null, retargetAt: -1, badTargets: new Set(), freezeUntil: -1, pinTarget: false,
     reportTo: null, talkT: 0, reported: false, phoned: false, acked: false,
     cowerAt: null, complied: false, complyUntil: -1, refled: false, foundT: 0, foundBy: null, foundLineAt: -1, foundTold: false,
+    lead: null, leadGap: 0,
     screamAt: -1e9, whimperAt: -1e9, greetAt: -1e9, lastLineAt: -1e9, told: new SideMap(), knownBodies: new SideSet(), intelN: 0, outsideCallAt: -1, vis: 0,
     dice: hashStr(`civdice:${def.name}`) | 0, rnd: rollOn, log: [],   // (the sequence mulberry32(dice) gives)
   };
@@ -527,14 +532,14 @@ function updateOne(g: Game, gd: Guard, dt: number) {
     case 'flee': case 'evacuate': move = flee(g, gd, dt); break;
     case 'report': report(g, gd, dt); break;
     case 'phone': phone(g, gd, dt); break;
-    case 'cower': ({ move, crouch } = cower(g, gd, dt)); break;
+    case 'cower': ({ move, crouch } = C.lead ? follow(g, gd, dt) : cower(g, gd, dt)); break;   // (a rescue's hostage on her feet behind the man who came for her: hostageLead)
   }
   if ((C.state as CivState) === 'gone') return;   // (the run just took her out of the door)
   // ---- the figure: pace, crouch, nothing in the hands, no stance; the pose; the sound of her feet (nobody's event — a civilian's step is the building's own noise)
   c.aimYaw = approachAngle(c.aimYaw, c.bodyYaw, 6 * dt); c.aimPitch = damp(c.aimPitch, 0, 4, dt);
   c.anim.speed = move; c.anim.upper = 'none'; c.anim.stance = 'none'; c.anim.crouchTarget = crouch; c.anim.reverse = false; c.anim.deliberate = 0;
   // (the moves' second pass — character.ts MOVES.bound, arms only: a hostage down with her wrists tied behind her, hands on the head for anybody told to stay down)
-  c.anim.bound = C.state === 'cower' && move === 0 ? (g.rescue?.isHostage(gd) || g.snatch?.isTied(gd) ? 1 : C.complied && g.time < C.complyUntil ? 2 : 0) : 0;
+  c.anim.bound = C.state === 'cower' && move === 0 && !C.lead ? (g.rescue?.isHostage(gd) || g.snatch?.isTied(gd) ? 1 : C.complied && g.time < C.complyUntil ? 2 : 0) : 0;
   c.update(dt);
   stepSound(g, gd, move);
   // ---- solidity: the statics and the slab; she gives way to the men, to Sam and to the other civilian (they never feel her: the shift's feet are the shift's) —
@@ -956,6 +961,29 @@ function toCower(g: Game, gd: Guard, complied: boolean) {
   CIV_STATS.cowered++; if (complied) CIV_STATS.complied++;
   setState(g, gd, 'cower');
 }
+/** A RESCUE'S HOSTAGE ON HER FEET (rescueend.ts — nobody else calls this): she follows `lead` on the civilians' own legs, stopping `gap` behind him, or
+ *  (null) goes down again where she stands. Her state stays the told cower it was (nothing frightens her off it, nobody grabs her, she reports to nobody):
+ *  the one branch in updateOne walks her instead of keeping her in the corner. */
+export function hostageLead(g: Game, gd: Guard, lead: Character | null, gap: number) {
+  const C = gd.civ; if (!C || gd.state === 'dead' || C.state !== 'cower') return;
+  C.lead = lead; C.leadGap = gap; gd.path = []; gd.pathGoal = null; gd.stallRef = null;
+  if (!lead) C.cowerAt = v3.copy(gd.char.pos);   // (down where she stands: cower() scuttles nobody back to the room)
+}
+/** the walk behind him: the nav grid's way to where he stands, re-planned as he moves (goTo's own 0.75 m), a run once she has fallen behind, a stop inside her gap */
+function follow(g: Game, gd: Guard, dt: number): { move: number; crouch: number } {
+  const C = gd.civ!, c = gd.char, L = C.lead!; let move = 0;
+  const d = v3.distXZ(L.pos, c.pos), going = gd.path.length > 0;
+  c.anim.act = null; c.anim.lookYawExtra = 0;
+  if (d > C.leadGap + (going ? 0 : 0.6)) {   // (0.6 m of slack before she starts again: no shuffle at his heels)
+    if (gd.path.length || Math.floor(g.time * 2) !== Math.floor((g.time - dt) * 2)) goTo(g, gd, L.pos);   // (with no way to him the search is asked again twice a second, not every frame)
+    followPath(g, gd, dt, d > C.leadGap + 2.2 ? CIV.runSpeed : Math.max(CIV.walkSpeed, Math.min(CIV.runSpeed, 1.4 + (d - C.leadGap))));
+    move = gd.speed;
+  } else {
+    gd.path = []; gd.pathGoal = null; gd.speed = damp(gd.speed, 0, 10, dt); c.vel = [0, 0, 0];
+    c.bodyYaw = approachAngle(c.bodyYaw, Math.atan2(L.pos[0] - c.pos[0], L.pos[2] - c.pos[2]), 3 * dt);
+  }
+  return { move, crouch: 0 };
+}
 function cower(g: Game, gd: Guard, dt: number): { move: number; crouch: number } {
   const C = gd.civ!, c = gd.char, pl = g.player; let move = 0;
   const spot = C.cowerAt ?? c.pos; const d = v3.distXZ(spot, c.pos);
@@ -1178,7 +1206,7 @@ function evacuationCheck(g: Game) {
   if (!CIV.evacuateOnQrf || !g.qrf || g.qrf.state === 'idle') return;
   const F = floorOf(g);
   const movable = g.civilians.filter(cv => cv.state !== 'dead' && !cv.held && cv.civ!.state !== 'gone' && cv.civ!.state !== 'evacuate');
-  if (!F.evacTold) { F.evacTold = true; if (movable.length) { control(g, movable[0], w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
+  if (!F.evacTold) { F.evacTold = true; if (movable.length) { const RW = away(g) ? responseWords(g) : null; control(g, movable[0], RW ? `anybody who is not ours, clear out of ${RW.site} — ${RW.team} is coming in` : w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
   for (const cv of movable) {
     const C = cv.civ!; if (C.state === 'phone' && C.talkT < CIV.phoneSecs) continue;   // she finishes the call
     endTask(cv); C.riseT = 0; cv.char.anim.act = null;

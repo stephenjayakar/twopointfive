@@ -28,7 +28,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from '../../src/scene/level';
-import type { LevelScenarios, StructureData } from '../../src/scene/scenarios';
+import type { LevelScenarios, StructureData, ResponseData } from '../../src/scene/scenarios';
 import * as K from '../../src/scene/levelKit';
 import { livedPieces, INK, h01 } from './livedPieces';
 
@@ -96,8 +96,25 @@ export const RECORDS_STRUCTURE: StructureData = {
 /** the parked car's boxes, by the ids the export writes (body, cabin, roof, wheels, lamps): what the front door's kit view takes out of ITS picture — it stands
  *  between that camera and the men. (tools/qa/kitview-page.cjs holds each id to a box of the car's footprint: a level edit that renumbers them is red there.) */
 const CAR = ['box_0212', 'box_0213', 'box_0214', 'box_0215', 'box_0216', 'box_0217', 'box_0218', 'box_0219', 'box_0220', 'box_0221', 'box_0222'];
+/** THE RECORDS OFFICE'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — `bun run tools/qa/response-check.ts` stands every mark
+ *  on the built floor). A raid's team: it stands with the defenders. WHY HERE: the front office is 'the first room on a QUIET floor' — a night desk, a lamp,
+ *  a screen, and a telephone. Gunfire the desk hears, and a few seconds to dial, is a patrol car on its way; the desk taken first and quietly, from the dark
+ *  lot, and nobody calls. Two men, never more: this is the pair's level. */
+export const RESPONSE: ResponseData = {
+  why: 'A records office in town at night, with a night desk in the front office and a telephone on it: gunfire the desk hears is a call, and a patrol car comes, off the street or round by the back lane. The desk taken first and quietly (the first room, from the dark lot) and nobody calls.',
+  site: 'the records office', at: 'at the records office', team: 'the night patrol', tag: 'UNIT', men: [2, 2], eta: [50, 90],
+  raid: { room: 'front' },
+  ways: [
+    { name: 'the street', coming: 'coming in off the street', clear: 'nobody on the street side',
+      muster: [[37.6, 0, 15.3], [37.6, 0, 14.1], [37.6, 0, 16.5], [38.6, 0, 15.3]],
+      entry: [[32.4, 0, 15.3], [33.4, 0, 14.4], [33.4, 0, 16.2], [34.4, 0, 15.3]], entryFace: [-Math.PI / 2, -Math.PI / 2 + 0.8, -Math.PI / 2 - 0.8, -Math.PI / 2] },
+    { name: 'the back lane', coming: 'coming round by the back lane', clear: 'nobody in the back yard',
+      muster: [[20.5, 0, 1.6], [19.4, 0, 1.6], [21.6, 0, 1.6], [20.5, 0, 0.7]],
+      entry: [[20.5, 0, 5.4], [19.5, 0, 4.5], [21.5, 0, 4.5], [21.0, 0, 2.6]], entryFace: [0, 0.8, -0.8, 0] },
+  ],
+};
 /** what the playtest scenarios take from this level: the room clear (pair or four). No rescue, no night breach: it is not their level. */
-export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE,
+export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE, response: RESPONSE,
   // the floor nobody holds, by name (scene/scenarios.ts PlacesData — words only): what a line on their net calls a spot that is no room of the structure
   places: { areas: [{ name: RECORDS_ROOMS.hall.name, bounds: { ...RECORDS_ROOMS.hall.bounds } }] },
   // the start page's picture of the team at the way-in door (scene/scenarios.ts KitViewData, src/host/kitView.ts; picture only), per way in as the starts are:

@@ -218,3 +218,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `target`; the selected row's name is kept for the visit (`sessionStorage` `sounds.sel`, written in `select()`, read where the rows are built) so Back lands on the row that was left, in view.
   Votes and notes were already saved on every change (`localStorage`, and the page's `db` when published), so leaving costs nothing. Check: `tools/qa/sounds-page.cjs` ("no replay link opens a
   new tab", "back on the page, the row that was selected is selected again and in view"). Headless only.
+- **The new guns' reports and reload sounds (10-18)** (`src/audio/sfx.ts`, fifteen rows; the rows of `weapons.ts` name them in `own.voice`, read through `gunlook.ts voiceOf` only with
+  `GUNLOOK` on; the feeding sounds are `gunreload.ts`'s to play). REPORTS, each built as the four older ones are (a front, bands of noise, slaps, the room, the action's steel):
+  `mk12Suppressed` (5.56 from a long barrel through a longer can: lower and rounder than `rifleSuppressed`, centroid 0.85 kHz against 1.6, buffer at 38 ms, bolt at 82),
+  `mp7Suppressed` (the smallest and highest: nothing under 350 Hz, a light bolt at 14 / 34 ms, a sixth of a second of room so fifteen a second keep a floor — a string dips 28 dB
+  between rounds), `mk46Report` (one hard front, no fireball's second one, the carrier, a link and the bolt in every round, a short thin tail: twelve a second dip 21 dB),
+  `m1014Report` (two wide fronts, no crack, 39 % of it under 150 Hz, the gas action at 45 / 62 ms, a second of dark tail), `m870Report` (the same shell from a short barrel with
+  more bark, NO action in the shot, then the pump by hand: back at 0.30 s, forward at 0.48, the hollow tube under both — the row's 0.9 s between shells holds it), `hk45Suppressed`
+  (no crack, a low soft front, then a heavy slide at 30 / 68 ms nearly as loud as the shot: the quietest gun), `g18Report` (the bare 9 mm with what stacks cut short — six slaps,
+  a quarter second of tail, a fast slide at 12 / 30 ms: twenty a second dip 17 dB). FEEDING: `beltCoverUp`, `beltBoxOff`, `beltBoxOn`, `beltLay`, `beltCoverDown`, `chargeLmg`
+  (the Mk 46's belt change, in that order), `shellIn` (one shell into a tube: ONE buffer, so each play is dealt its rate — 0.94‥1.06, off the shell's place in the tube, `gunreload.ts shellRate` — and no two neighbours are the same) and `boltDrop`.
+  LEVELS (`HEARD`) are set by hand against the older rows, there being no table before them: the two shotguns just over the bare pistol, the belt gun and the Glock 18 just
+  under it, the MP7 and the HK45 under every other gun. None is in `sfxWas.ts`, so `?oldsounds` plays these too. ON THE LISTENING PAGE (`src/sounds/catalog.ts`): a group of
+  their own, 'New guns: reports and reloads (first takes)', second on the page — each report alone and as a string at its row's cadence, each feeding sound alone, the whole belt
+  change on the `beltCoverUp` row, four shells and an empty M1014's reload on the `shellIn` row. The gains of the feeding rows there are the game's own (`gunreload.ts feedCues`: 0.8 to 0.9, the
+  first shell dropped in the port 0.6); the belt change's times are the Mk 46 row's beats, by hand. CHECKED: every one finite, under full scale, no longer than
+  declared and at its level at 48 and 44.1 kHz; `gunfire-table-check`, `sound-takes-check`, `audio-render` and `sounds-page.cjs` (every row and every other use plays, nothing on
+  the console) ALL PASS. FIRST TAKES, WRITTEN BLIND: NOBODY HAS HEARD ONE. `sound-sheet.ts` says of `mp7Suppressed` 'colour never moves' (as it does of `rifleSuppressed`).

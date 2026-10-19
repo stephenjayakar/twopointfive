@@ -626,6 +626,75 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   SwiftShader, the renderer stubbed for the run as `panel-keys.cjs` does): `__qrf.request('panel')` → `drill:bangClear` … `drill-end:in`, a cast
   built, no console error but the favicon's 404; `?qrfsquad=0` → the switch false, no cast, `squeeze` / `flow`; the row is in the panel's DOM and its
   checkbox moves the switch. The entry was never drawn. Frame cost of an entry headless: within noise of the old drill (2.1 ms a step against 1.7–2.3).
+- **The response team is the level's own (`RESPONSE`, 2026-10-18; qrf.ts, `scenarios.response` — scene/scenarios.ts `ResponseData`).** The maintainer:
+  "let's make it part of the level design and always make sense (ideally w.r.t. the concept/design of the level) and not all levels should have it";
+  "having some randomization and modeling their knowledge based on what they've heard on the radio could make it really fun". BEFORE: the team was the
+  office's one stairwell by constant (`QRF_MARKS`), and it armed on no mission row at all (a quiet level has no door named `stairwell`; the squad kinds
+  are not `live`), only on the office's plain solo night. NOW a level has a team only where its file says so: WHY this place has one (a sentence, refused
+  if absent), the radio's words for the place and the team, one to three WAYS (four muster marks out of sight, a four-man fan inside, an optional door
+  they throw), `men` and `eta` as ranges, optional outside posts for the second lift, optional `sweep` places. WHICH LEVELS, and why: the office (its
+  block is the old constant, mark for mark: `levels/office.scenarios.ts`), `police-post` (a district post with a radio room; the army picket comes by
+  the main gate or the impound gate), `bazaar` (a street under curfew; the patrol comes up the street's open end or by either gate), `crossing` (a
+  border company's duty section, by either yard gate on the house's side). LEFT WITHOUT, ON PURPOSE: `quiet-relay` (a hilltop: nobody is within reach,
+  and its wired spot already brings its own men), `vault` (private hired guards who call nobody), `lights-out` (its one idea is the mains), `quiet-yard`
+  (the test map), every Training level, and every squad level but the two a raid brings a team to (the next bullet). `response-check.ts`'s `WITH` list is the written-down answer.
+  A CALL IS DEALT (`RESPONSE.deal`): when the call goes out, three draws off the game's own die pick the way, how many (inside `men`) and how long
+  (inside `eta`, to 5 s) — after play began, so samestart.ts leaves it alone; a way with an enemy within `clearM` (12 m) of its muster is never dealt, and
+  ten seconds out one he has walked up to is given up for another ('change of plan' on the net). The panel's 'call QRF now' is the sandbox's numbers on
+  the first way. THE TEAM GOES ON WHAT WAS SAID (`RESPONSE.net`, needs `PICTURE.on`): control keeps THE NET'S WORD — per enemy, the freshest place a man
+  on the defenders' net held as an idea for the picture's `tellSecs` (he has said it) or was told — past the man who said it; a man in an arm or a
+  runner says nothing; a place since found empty adds nothing (the word only grows old). Where they go is that word, or the alarm's place when that was
+  raised later; control's rolling line carries the brief ('last word: one man, the duty room, a minute old' / 'no word on where'). The second lift
+  counts men FOUND down, not men who are. WITH NOTHING SAID, on a floor with no room plans (every quiet level), they walk the level's named places
+  (`sweep`, else the quiet spots and `places`) nearest first, each once every ninety seconds, and come back to the way in. THEIR ENEMY is whoever is
+  against them on the level by the shared sight test (a partner, a teammate), not Sam alone. BUDGET: with the switch on the team is spawned inside the
+  frame's sixteen skinned characters less civilians (the eight shadow capsules were the old gate: men past the eighth cast no shadow capsule); element
+  and outside posts together are never more than the block's `men[1]`. SWITCH: ON in the page (`?response=0`; `?responsedeal=0`, `?responsenet=0`;
+  the backtick panel's QRF section: three rows and a line saying this level's team), OFF in the module and on the frozen stand (`FROZEN_HOLDS
+  'RESPONSE.on'`, `TPS_RESPONSE=1`), in the knob registry and the journal (a recording without the table replays with it off). Off = the build as it
+  was: `probes.ts qrf` on the frozen stand is line for line what it was before the change. The net's word is in a save (`savestate.ts qrf.word`).
+  CHECK: `bun run tools/qa/response-check.ts` (`probes.ts response`, in the `qrf` family; lines (1) to (14) for this, both stands; `RESPONSE_BREAK=1` fails every line but
+  (1) and (2), which read files and floors); the block against the built floor is `qrf.ts checkResponse`. THE LEVEL FILES' FINGERPRINTS DID NOT MOVE (the block is words and marks). `tools/qa/lived-check.ts` reads a level's block as today's (not held to a base revision, like the gear picture) and still asks every place it names against the room's furniture.
+  MEASURED, headless, the shipped stand, god mode, a quiet mission gone loud by the real trigger (three rifle rounds heard, the floor locked down), eight
+  seeds a level, 200 s each: every run called its team (24 of 24), every team came in on its fan (24 of 24, the last man 1.8 to 3.6 s after the way in was thrown), and with the
+  player stood where he fired it made contact in 23 of 24; the deals over the eight seeds: the post 2 ways, 3 or 4 men, 50 to 85 s; the bazaar 3 ways, 2
+  to 4 men, 45 to 75 s; the crossing 2 ways, 3 or 4 men, 65 to 95 s. No spawn refused, nobody capped, never over sixteen characters. (In god mode the
+  fight never ends: a team that has him holds and fires for the rest of the run — not a measure of the fight.) Measured again after the review's fixes: the same counts. NOBODY HAS SEEN any of it on a GPU or played a run with a team on these levels: where the
+  marks sit in the picture, whether men stood up outside a gate can be seen arriving from inside, the radio lines' length on the HUD, and whether three
+  or four trained men on a solo quiet level is fair on hard are all unjudged. No arrival sound exists for a gate (the office's boots on the stairs are
+  its own).
+- **A squad's raid brings a level's team too, where its file says so (`RESPONSE.raid`, 2026-10-18; qrf.ts `raid`, `ResponseData.raid`).** The maintainer
+  asked for teams on "both quiet and maybe even some loud" levels, as level design. BEFORE: no squad mission could bring anybody (the trigger wanted Sam's
+  gunfire in a staff man's ears and a locked-down floor; defenders are units with neither). NOW a block that carries `raid: { room? }` answers a ROOM
+  CLEAR on that level and nothing else: the team is spawned on the DEFENDERS' side (`hostile`: the squad's enemies and Sam's, friends of the garrison),
+  never more than the eleven a squad ever faces with the garrison as staged (`SQUAD_MAX_MEN`), one lift, no outside posts. WHO CALLS: a living, un-held
+  defender of the block's `room` (a `roomClear` room id: where the place's set or telephone is; none named = any defender) who heard gunfire at report
+  level 1 or more (anybody's: suppressed rounds are not it, the defenders' own rifles are) and is still up `callSecs` (6 s) after the first of it HE
+  heard (a man in an arm at the time heard nothing). Those
+  men down first and nobody calls, whatever is fired afterwards: the response is something play can stop. WHICH LEVELS, and why: `depot` (a motor pool
+  with trucks out on the road under escort; the signals hut is what talks to them, and going round the back to the hut and the mains was already the
+  level's answer: the convoy escort, 2 or 3, by the main gate or the back gate) and `records` (a night desk with a telephone in the front office, 'the
+  first room on a quiet floor': the night patrol, 2, off the street or round the back lane). LEFT WITHOUT, ON PURPOSE: the office's three squad missions
+  (its block answers a quiet night; they stay as tuned), block-squads / warehouse / compound / barracks (at eleven: nobody is left to come), registry and
+  consulate (the hostage clock is the pressure), snatch / defuse / killhouse (each has its own clock), floodlit / mousehole / glasshouse (one idea each,
+  and it is not this), pass (a snowed-in road). `block` (a telephone exchange, eight men) and `hall` (a police barracks wing) would suit one and have
+  none yet: the maintainer's call. WHAT THE TEAM DOES: as on a quiet level, on the net's word — in a raid the net is the men at the set and the team itself (what another
+  defender knows reaches control only by being told to a man at the set: `PICTURE`'s tell); with
+  nothing said it looks in held rooms whose men have ALL gone quiet (an empty room counts) and the level's `places`, never walking through a room that
+  still answers. THE STRUCTURE IS NOT TAKEN while the team it called is up (`roomclear.ts` asks `responseUp`: stood at its way in, or on the floor, a man
+  living; one line says so, 'rooms clear — the convoy escort still on the ground', and the objective row keeps its name); a team still on the road
+  when the run ends, won or lost, is called off and never arrives. The debrief's 'of N defenders' counts the team's men once they exist. A restage despawns them with the cast. SWITCH: `RESPONSE.raid`,
+  on with `RESPONSE.on` in the page (`?responseraid=0`; the backtick panel's QRF section, 'the team: a raid brings it too'), nothing on the frozen stand
+  (`RESPONSE.on` is off there); a recording whose `RESPONSE` table has no `raid` key replays with it off (`journal.ts`). CHECK: `response-check.ts` lines
+  (15) to (20), both stands, and its `RAIDS` list ((18) also stages the office's hostage rescue: no block answers a rescue, so the rescue's own ending never has a team on its way); `RESPONSE_BREAK=1` fails all six. MEASURED, headless, the shipped stand, god mode, eight seeds a
+  level, 200 s, three rifle rounds at the start line and a squad that never leaves it (so not a played raid): the depot's hut called 8 of 8, the escort
+  (2 or 3, 55 to 90 s) came in 8 of 8, always by the back gate (the squad stood at the main one) and met the squad 8 of 8 — it lost every man in 5 runs
+  and put all four teammates down in 3; the records office's desk called 5 of 8 (in the other three the desk man came out and was shot inside his six
+  seconds), the patrol (2, 55 to 90 s, both ways dealt) came in 5 of 5. No spawn refused, never over sixteen characters. Before the review's last fixes
+  (the call is each man's own six seconds; the net is the set and the team); the check's lines ran after them. THE REAL PAGE, on the software adapter (never a GPU): the depot under `?roomclear&squad=4` booted with every pipeline built and no console or page error (the dev server has no favicon: its 404 is the one line); called through the page's hook, the escort stood up on the defenders' side, was dealt away from the main gate to the back gate when the squad stood at the first, came in and swept the yard. NOBODY HAS SEEN OR PLAYED IT: whether six seconds is a
+  window a player can use, whether two or three more men at 50 to 90 s is fair on the depot on hard, whether the squad's rear men are shot in the back at
+  the gate they came in by, and how the radio lines read on the HUD in a firefight are all unjudged. The headless squad stands at its start line: no
+  measurement here is of a played raid.
 - **The calm torch check reads every frame, and holds the close rule's dark term for its raised-men line** (`tools/qa/calmtorch-check.ts`, 10-13; no game code moved). Two reds, neither the
   rule's: (1) FROZEN, 'night … no frame goes against the dwell', 22 frames, red on the build since the join with real-size doors (bisected: `ae9897b2`; green at the rule's own commit): the
   rule asks four times a second on a frame of its own and the check read every FIFTH frame, so a ONE-frame dip of Reyes's reading in the break room (137.60 s, lit → between → lit) fell on
@@ -1109,3 +1178,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NEVER SEEN ON A GPU, NEVER PLAYED: who stands where in a stack and the strings are measured in the harness; how a seven-round string or a PKM's string
   looks and sounds, and whether a lane with the gun on it reads as a problem to solve or as a wall, nobody has seen. The PKM and the AKMS are STAND-INS:
   drawn as the short carbine, speaking with its report, no model, voice, reload or hand pose of their own.
+- **The men left alive on a rescue come for the hostages** (2026-10-18; `src/game/rescueflush.ts`, `RESCUEFLUSH.on` — ON in the page, `?norescueflush`; OFF in
+  the module and on the frozen stand, `TPS_RESCUEFLUSH=1`; a debugger toggle). The maintainer: "remaining enemies should try to flush you out and/or kill the
+  hostage when loud". WHAT WAS THERE: the captor's clock passed to a man of theirs only if he happened to stand in the hostage room; with the room the team's,
+  the men alive elsewhere stayed where the fight had left them. THE RULE, once the team has been LOUD (`rescue.noiseAt`) and THE ROOM HAS FALLEN (every man
+  posted in it down or held): `afterSecs` later the nearest man of theirs outside says so on their net and goes for the hostages, and every `gapSecs` the
+  next one follows — the first by the room's main door, the second by its side door where the level has one (two ways at once: he is sent to the floor OUTSIDE that door, `rescue.sideOutside`, and on in from
+  there), in turn; each is let go as
+  a roamer is let go to the noise (the room fight's 'free': his own eyes, grenades and pursuit drills; he fights whoever he meets) and a man at the mouth of
+  a lane the team's guns hold is not sent down it (`laneHolds` / `laneWarns`; the path is priced by the lanes as any walk is): he takes the turn's other way
+  if that one is not held, else he stays the lanes' own man (their look, their grenade, their way round). A man come to rest with nobody
+  in his sights is sent again `againSecs` after his last word. THEY'RE GONE: the first to stand in the room and find no hostage says so, and from then on they
+  go to the team's last loud thing and to the way out, in turn. THE GUN ON HER: a man of theirs inside `reachM` of a living hostage with a line a ROUND can fly (`shotBlocked`: a
+  pane that stops a round is a wall to this) and no smoke hiding her (`Game.sensors.segment`, under `smokeK`; headless the air is clear) HAS
+  her, as the man standing in the room always did (rescue.ts `captor()` → `flush.holder`); one who came for her is `killSecs` from turning his gun on her,
+  then `RESCUE.aimSecs` from the round — the same act, broken the same ways, and broken too if she leaves his line before the round (`act:broken`). Lines
+  (their net, said once per errand): "it's gone quiet in there — I'm going in for them!" · "going round — I'll take the other door!" · "the hostages are
+  gone — they're moving them! cut them off!" · "on the way out — they don't leave with the hostages!" · "moving on that noise — keep them boxed in!" (two of
+  them reworded by the dialogue pass, 10-18: its bullet in dialogue.md). Never: a man added,
+  more health, a response from outside, a place he has not heard or guarded (the room, a noise his side heard, the door the team came in by). SEAMS:
+  rescue.ts `tick()` (`flush.tick()`), `captor()`, `clock()`, `letGo()`, `outsidePoint`. OFF = THE BUILD AS IT WAS (the check's (f)). CHECK: `bun run
+  tools/qa/probes.ts rescueflush` (`RESCUEFLUSH_SEEDS=1,2,3`), per mission: they come (first word at `afterSecs`, the second by the side door) · the gun on
+  her · not when quiet · they're gone (hostages stood at the way out: the room found empty, men sent on, one shot out there by a man outside the room) ·
+  the state's pair · off; `RESCUEFLUSH_BREAK=1` fails. NOT asked by the check: that a held corridor turns a man round — the two tests are the lanes' own (`laneHolds` / `laneWarns`), and the check's floor has no
+  team on it to hold one.
+  MEASURED: `rescueflush` 24 of 24 lines on both stands, 72 of 72 on seeds 1,2,3; `RESCUEFLUSH_BREAK=1` 18 of 21 FAIL on both (its three 'not when quiet'
+  lines pass by design). In the check's scenes the first word comes 4.0 s after the room falls and the second 2.5 s later, round by the side door, on all
+  three; a man sent round alone is at the side door and through it in about half a minute. UNTUNED: `afterSecs` 4, `gapSecs` 2.5, `againSecs` 8, `reachM` 10, `killSecs` 3 are first numbers. Headless only: nobody has
+  played it; whether two men by two doors READS as a flush, and whether three seconds is fair warning, is a question for play.
