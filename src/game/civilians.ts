@@ -29,6 +29,7 @@ import type { Game, DownKind, DownBy } from './game';
 import { Guard } from './game';
 import type { PatrolRoute, CivilianDef, CivilianTask } from '../scene/level';
 import type { DialoguePick } from './dialogue';
+import { responseWords } from './qrf';
 import { CIV_LINES, CIV_COUNT, HOSTAGE_LINES, SNATCH_LINES, hashStr, roomName, isOffice } from './dialogue';
 import type { HostageMoment } from './dialogue';
 import { WORDS, w } from './words';   // (a leaf: the dialogue pass's one switch)
@@ -1205,7 +1206,7 @@ function evacuationCheck(g: Game) {
   if (!CIV.evacuateOnQrf || !g.qrf || g.qrf.state === 'idle') return;
   const F = floorOf(g);
   const movable = g.civilians.filter(cv => cv.state !== 'dead' && !cv.held && cv.civ!.state !== 'gone' && cv.civ!.state !== 'evacuate');
-  if (!F.evacTold) { F.evacTold = true; if (movable.length) { control(g, movable[0], w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
+  if (!F.evacTold) { F.evacTold = true; if (movable.length) { const RW = away(g) ? responseWords(g) : null; control(g, movable[0], RW ? `anybody who is not ours, clear out of ${RW.site} — ${RW.team} is coming in` : w(CIV_LINES.now.qrf, CIV_LINES.qrf)); log(g, movable[0], 'control clears the floor (QRF inbound)'); } }
   for (const cv of movable) {
     const C = cv.civ!; if (C.state === 'phone' && C.talkT < CIV.phoneSecs) continue;   // she finishes the call
     endTask(cv); C.riseT = 0; cv.char.anim.act = null;

@@ -35,7 +35,7 @@ const TEAM_TINT = teamTable('TEAM_TINT'), TEAM_TINT2 = teamTable('TEAM_TINT2');
 let SQUAD4: { name: string; tint: V3; tint2: V3 }[];
 try { SQUAD4 = (await import(`${REPO}/src/game/nightbreach.ts`)).SQUAD4; } catch { SQUAD4 = []; }
 if (!SQUAD4?.length) { notes.push('SQUAD4 not importable: operative team tints used for operator_2..5'); SQUAD4 = [0, 1, 2, 3].map(i => ({ name: `operative ${i + 1}`, tint: TEAM_TINT.operative, tint2: TEAM_TINT2.operative })); }
-const qrfLine = src('src/game/qrf.ts').split('\n').find(l => l.includes('spawnUnit(') && l.includes('QRF-') && l.includes('tint:'));
+const qrfLine = src('src/game/qrf.ts').split('\n').find(l => l.includes('spawnUnit(') && l.includes('M.tag') && l.includes('tint:'));
 const qrfT = qrfLine ? vecs(qrfLine.slice(qrfLine.indexOf('tint:'))) : [];
 const C: any = await import(`${REPO}/src/game/consts.ts`);   // a tree that names the suit (QRF_TINT / QRF_TINT2) instead of writing it on the spawn line
 const QRF = { tint: qrfT[0] ?? (C.QRF_TINT ? [...C.QRF_TINT] as V3 : TEAM_TINT.guard), tint2: qrfT[1] ?? (C.QRF_TINT2 ? [...C.QRF_TINT2] as V3 : TEAM_TINT2.guard) };

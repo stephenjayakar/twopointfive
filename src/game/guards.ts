@@ -3277,7 +3277,7 @@ export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: Weapon
 /** the character budget: BoxWorld uploads shadow capsules for at most 8 characters (scene/boxes.ts addCharacterCapsules), Sam included */
 const MAX_CHARACTERS = 8;
 /** … and the skinning holds this many (anim/characters.ts MAX_CHARS): the most a caller's own `budget` can ask for */
-const MAX_SKINNED = 16;
+export const MAX_SKINNED = 16;
 /** ids handed to units: clear of Sam's 1 and the staff's 10‥15, inside the owner byte */
 const UNIT_ID0 = 20, UNIT_ID1 = 250;
 let unitSerial = 0;

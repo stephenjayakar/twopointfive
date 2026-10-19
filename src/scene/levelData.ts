@@ -237,7 +237,7 @@ export const KEYS = {
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
-  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'snatch', 'defuse', 'issue', 'kitView', 'response'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
 } as const;
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ validation
@@ -791,6 +791,36 @@ export function validateLevelData(d: LevelData): string[] {
           devs.forEach((d: any, i) => { const dw = `${w}.devices[${i}]`; if (!isObj(d)) return; known(dw, d, ['id', 'name', 'pos', 'n']);
             if (!isStr(d.id) || !isStr(d.name)) err(dw, 'id, name: non-empty strings'); else if (ids.has(d.id)) err(dw, `id '${show(d.id)}' used twice`); ids.add(d.id);
             if (!isVec(d.pos)) err(`${dw}.pos`, 'Vec3'); if (!(Array.isArray(d.n) && d.n.length === 2 && d.n.every((x: unknown) => isNum(x)))) err(`${dw}.n`, '[x, z]'); else if (Math.abs(Math.hypot(d.n[0], d.n[1]) - 1) > 0.01) err(`${dw}.n`, 'a unit normal out of the face a man works'); });
+        }
+      }
+      if (S.response !== undefined) {   // (scene/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are game/qrf.ts checkResponse's)
+        const R = S.response, w = 'scenarios.response';
+        if (!isObj(R)) err(w, 'must be an object');
+        else {
+          known(w, R, ['why', 'site', 'at', 'team', 'tag', 'ways', 'men', 'eta', 'posts', 'outside', 'sweep', 'raid']);
+          for (const k of ['why', 'site', 'at', 'team']) if (!isStr(R[k])) err(`${w}.${k}`, 'a non-empty string');
+          if (R.tag !== undefined && !(isStr(R.tag) && /^[A-Z]{2,8}$/.test(R.tag))) err(`${w}.tag`, 'two to eight capital letters');
+          const pair = (k: string, lo: number, hi: number) => { const v = R[k]; if (v !== undefined && !(isVec(v, 2) && v[0] >= lo && v[1] <= hi && v[0] <= v[1] && Number.isInteger(v[0]) && Number.isInteger(v[1]))) err(`${w}.${k}`, `[fewest, most], whole numbers inside ${lo}‥${hi}`); };
+          pair('men', 2, 4); pair('eta', 15, 240);
+          const ways = recs(`${w}.ways`, R.ways); if (!ways.length) err(w, 'ways: at least one');
+          ways.forEach((y: any, i) => { const yw = `${w}.ways[${i}]`; if (!isObj(y)) return; known(yw, y, ['name', 'door', 'muster', 'entry', 'entryFace', 'coming', 'clear', 'stairs']);
+            if (!isStr(y.name)) err(`${yw}.name`, 'a non-empty string'); if (y.door !== undefined) doorOk(`${yw}.door`, y.door);
+            for (const k of ['coming', 'clear']) if (y[k] !== undefined && !isStr(y[k])) err(`${yw}.${k}`, 'a non-empty string');
+            if (y.stairs !== undefined && typeof y.stairs !== 'boolean') err(`${yw}.stairs`, 'true or false');
+            for (const k of ['muster', 'entry']) if (!(Array.isArray(y[k]) && y[k].length === 4 && y[k].every((p: unknown) => isVec(p)))) err(`${yw}.${k}`, 'four Vec3 marks, in element order');
+            if (!(Array.isArray(y.entryFace) && y.entryFace.length === 4 && y.entryFace.every(isNum))) err(`${yw}.entryFace`, 'four yaws'); });
+          if (R.posts !== undefined) recs(`${w}.posts`, R.posts).forEach((p: any, i) => { const pw = `${w}.posts[${i}]`; if (!isObj(p)) return; known(pw, p, ['name', 'pos', 'yaw', 'sweep']);
+            if (!isStr(p.name) || !isVec(p.pos) || !isNum(p.yaw)) err(pw, 'name, pos Vec3, yaw'); if (!(Array.isArray(p.sweep) && p.sweep.length === 2 && p.sweep.every((q: unknown) => isVec(q)))) err(`${pw}.sweep`, 'two Vec3'); });
+          if (R.outside !== undefined && !(Array.isArray(R.outside) && R.outside.every((p: unknown) => isVec(p)))) err(`${w}.outside`, 'Vec3[]');
+          if (R.sweep !== undefined) recs(`${w}.sweep`, R.sweep).forEach((p: any, i) => { const pw = `${w}.sweep[${i}]`; if (!isObj(p)) return; known(pw, p, ['name', 'pos']); if (!isStr(p.name) || !isVec(p.pos)) err(pw, 'name, pos Vec3'); });
+          if (Array.isArray(R.posts) && R.posts.length && !(Array.isArray(R.outside) && R.outside.length >= 2)) err(`${w}.outside`, 'posts want at least two marks to stand their own men up on');
+          if (R.raid !== undefined) {   // (a raid's team: the level must have a room clear to raid, and the room that calls must be one of its rooms)
+            if (!isObj(R.raid)) err(`${w}.raid`, 'must be an object');
+            else { known(`${w}.raid`, R.raid, ['room']);
+              if (!isObj(S.roomClear)) err(`${w}.raid`, 'a raid stands over a room clear: the level has no scenarios.roomClear');
+              else if (R.raid.room !== undefined && !(Array.isArray(S.roomClear.rooms) && S.roomClear.rooms.some((r: any) => r?.id === R.raid.room))) err(`${w}.raid.room`, `'${String(R.raid.room)}' is not a scenarios.roomClear room id`);
+              if (Array.isArray(R.posts) && R.posts.length) err(`${w}.posts`, 'a raid\'s team has no second lift: no posts'); }
+          }
         }
       }
       if (S.places !== undefined) {   // (scene/scenarios.ts PlacesData: the floor nobody holds, by name — words only)

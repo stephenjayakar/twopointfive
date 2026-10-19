@@ -33,7 +33,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/levels/<name>.ts` → `bun run tools/levels/export.ts <name>` → `levels/<name>.json` (`test-rooms` = the tiny test level), played with
   `?levelFile=<name>.json&roomclear[&squad4]` / `&rescue`, headless `standUp({ level })`. QA: `bun run tools/qa/scenario-level-probes.ts levels/<name>.json`
   (data checks — validate, `checkStructure`, `checkRescue`, the route — then each scenario staged, walked and finished under a plain scripted player) and
-  `probes.ts scenario-levels` (that on test-rooms). Still office-only by constant: weather INTERIOR / ANNEX, chronicle ROOMS, QRF_MARKS, NEED_SPOTS, CIV_SPOTS,
+  `probes.ts scenario-levels` (that on test-rooms). Still office-only by constant: weather INTERIOR / ANNEX, chronicle ROOMS, QRF_MARKS (only with `RESPONSE` off — on, the team's places are the level's own `scenarios.response`: enemies.md), NEED_SPOTS, CIV_SPOTS,
   the rescue flow's +x corridor.
 - **The default look = 2010s GWOT** (`src/scene/look.ts`, `LOOK.on`: ON in the page — `?look=plain` (or `?look=0|off`, `?nolook`) = every level and man as before; OFF in the module and on
   the frozen harness stand, `TPS_LOOK=1`; one of `FROZEN_HOLDS`' rows, in the knob registry; what the game looks like as a whole, as rules to hold new work to: `STYLE.md` at the repo root). LOOK ONLY: headless no run differs by it (on the page the repainted walls bounce other light into the GPU meter, so a sighting can differ between a level's two files). LEVELS: `LOOK_LEVELS` names the levels that have a SECOND FILE
@@ -248,3 +248,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   last bit another way than the file was written with (the `level-identity` probe was red on the shipped stand for that alone), and that staleness is
   `export.ts <name> --check`'s question. `tools/qa/level-needs.ts` needed nothing: it runs no generator in its own process, and `--run`'s export check is a
   fresh process that raises no stand. On build 956661a, both stands: 488 PASS, no FAIL, 65 NOTE.
+- **The level skill says a rescue's start is also its way out** (10-18; the skill's words only; the rule is `missions.md`'s "A rescue is won out, or
+  cleared"). Its mission section gains one item for whoever lays out a rescue: the team's start mark (`scenarios.rescue.team.sam`) is where the hostages are
+  led to, so it wants standing room and a way back a hostage can walk; said as the game is now, since the way out being the way in is an open call. No need
+  was added to `tools/qa/level-needs.ts`: `probes.ts rescueend` walks each rescue's hostages out. On build ab96d87, both stands: 488 PASS, no FAIL, 65 NOTE.

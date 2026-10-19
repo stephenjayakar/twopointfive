@@ -60,7 +60,7 @@ const jobs = seeds.map(seed => async () => {
   { const last = Math.max(...dead.map(([, t]) => t!)), early = (r.qrfLog as string[]).map(l => l.split(' ')).find(l => l[1] === 'requested'); if (early && Number(early[0]) < last) { console.log(`- (loud:${seed}: the team was requested at ${early[0]} s, before the last man fell at ${last.toFixed(1)} s — a living man called it in: not looked at)`); return; } }
   looked++;
   const last = Math.max(...dead.map(([, t]) => t!)), log = (r.qrfLog as string[]).map(l => { const i = l.indexOf(' '); return { t: Number(l.slice(0, i)), what: l.slice(i + 1) }; });
-  const check = log.find(l => l.t >= last && /radio check/.test(l.what)), asked = log.find(l => l.what === 'requested'), rolling = log.find(l => /QRF is rolling/.test(l.what) && /\d+ men/.test(l.what) && /\d+ seconds/.test(l.what));
+  const check = log.find(l => l.t >= last && /radio check/.test(l.what)), asked = log.find(l => l.what === 'requested'), rolling = log.find(l => /(QRF|the response team) is rolling/.test(l.what) && /\d+ men/.test(l.what) && /\d+ seconds/.test(l.what));
   const ok = !!check && !!asked && check.t < asked.t && asked.t - last <= WITHIN_SECS && !!rolling;
   if (!ok) failed = true;
   console.log(`- ${ok ? 'PASS' : 'FAIL'} — loud:${seed}: the last of the shift fell at ${last.toFixed(1)} s · control's radio check ${check ? `at ${check.t} s` : 'NEVER'} · the team ${asked ? `requested at ${asked.t} s (${(asked.t - last).toFixed(1)} s after; the bar is ${WITHIN_SECS})` : 'NEVER requested'} · ${rolling ? `"${rolling.what.replace(/^CONTROL — /, '').slice(0, 90)}"` : 'no word of how many, where and when'}${r.qrf === 'deployed' ? ' · on the floor before the run ended' : ` · the run ended with the team ${r.qrf}`}`);
