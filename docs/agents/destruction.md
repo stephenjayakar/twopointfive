@@ -783,5 +783,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   second and third walls on a fresh stand of his level: the lined man's numbers by the table, a man with no line folded where he was untouched, furniture
   against the far face and that man rooted to the end of his fold with the game running, a lined man inside the killing reach killed either way, the
   room's reach drawn in, the next room untouched, ours and the player the same seconds, the pall's emitters each at 0.75 with the blast's other emitters
-  unchanged, the switch in a recording; `WALLSHOT_BREAK=1`), both stands. NOT MEASURED: no tally over seeds (how often a room taken through a wall costs
-  a man before and after), and the seconds are a first setting for the maintainer's play, not a tuned one.
+  unchanged, the switch in a recording; `WALLSHOT_BREAK=1`), both stands. MEASURED ON THE PAGE (`tools/qa/pall-page.cjs` on-charge, the block's
+  wall, software adapter, verylow, one run with `?wallshot=0` and two without): the line THROUGH THE HOLE read hidden (under 0.3) 2.75 s before and 2.25 and
+  2.5 s now (0.02 → 0.06 a second after the blast, 0.13 → 0.22 two seconds after); along the wall on the charge's side 2.0 s before, 1.5 s now. So a lined
+  man, who came up at 2.0 s inside a hole still hidden, now comes up at 3.5 s, a second after it reads again. Runs differ by a quarter second. NOT
+  MEASURED: no tally over seeds (how often a room taken through a wall costs a man before and after); never seen on a GPU or played; the seconds are a
+  first setting for the maintainer's play, not a tuned one.
