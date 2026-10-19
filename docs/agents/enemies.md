@@ -225,6 +225,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   dealt a second man again.
   10-19: line 13 is also played with the defenders' gun deal held off (`AS_ARMED` = `GUNROLES.on` false): as dealt, seed 11's off arm no longer keeps a grenade (away 2, kept 0),
   so the line was red with the rule intact on the build that brought the gun roles in. Lines 7 and 8 are green with the gun roles on and are left as dealt.
+  THE SEAM WITH THE HOSTAGE RESCUE'S FLUSH (10-19, `rescueflush.ts`, check line 15). The flush sends the men left for the hostages; it asks this rule only which door
+  (`laneCovers` on the floor outside each) and whether the rule already holds the man at a corridor's mouth for that place (`laneHolds`), never whether he is warned off —
+  where he is sent is where the team's guns are, and asked that way nobody ever came (8 of 8 scripted rescues barred, 5 of 8 stalled, on the build before its mend). Sent, he
+  is this rule's on the walk: `corridor-check.ts` line 15 stages a rescue floor with the room fallen and no team (the office and the registry, as `rescueflush-check.ts`
+  stages its own), plants a lane over the floor outside every door of the room (`lanesRestore`), and asks that the men sent are stopped short (none in its line before a
+  look is under way), that a look finds it empty and the lane is forgotten, and that only then is a man of theirs in the room; `CORRIDOR_BREAK=1` reds it. NOT A FAULT, AND
+  LEFT: with a team in the room a held man finds out it has walked the hostages out only at his next look (6 and 16 s after they start, two scripted runs) — he neither sees
+  nor hears them go (a footfall carries 9 m by the walked path). The lever if he reads asleep in play is the look's back-off (`peekGap` 15 s, doubling to `peekMax` 60),
+  which moves every hold: a by-play call. Headless only; nobody has played a rescue's end against this.
   MEASURED (hard, the page's stand, headless, this tree on the build of 10-18 with the levels' own response teams in): the records office hold, seed 1631 — key off 3 of 4
   down, 2 of them after the lane was called; on 1 of 4, 8 stops short of the lane, 3 looks (2 found him there). The two charges as dealt, seeds 1‥12, 150 s a hold — the whole
   rule off: 60 of 84 defenders down, 31 walked in after a loss and died, 9 of 48 teammates down; the rule on with this key off: 47, 16, 3; with it on: 40, 9, 4. Twelve holds:

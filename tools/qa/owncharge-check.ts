@@ -263,8 +263,8 @@ export async function ownchargeOff(): Promise<boolean> {
     // (what a carried charge WEIGHS is the kit weight's rule, and kitload-check's to say: two carried charges slow the walk whether or not one is set. Held off in
     //  both runs here, after the stand has written it, so this asks of the row alone.)
     const weighs = KITLOAD.on;
-    const run = async (on: boolean) => {
-      const R: any = await hushed(() => rig(17, { stage: false })); OWNCHARGE.on = on; KITLOAD.on = false; const g = R.game; g.godMode = false; K.KIT.on = true; K.KIT.members[0].charges = on ? 2 : 0; K.kitSolo(g);
+    const run = async (on: boolean, n = on ? 2 : 0, weigh = false) => {
+      const R: any = await hushed(() => rig(17, { stage: false })); OWNCHARGE.on = on; KITLOAD.on = weigh && weighs; const g = R.game; g.godMode = false; K.KIT.on = true; K.KIT.members[0].charges = n; K.kitSolo(g);
       const a = R.door('breakroom_w'), b = R.door('manager'); shut(a); shut(b); const seen = new Set<string>(); const hashes: string[] = [];
       for (let i = 0; i < 900; i++) {   // a stand at each of two shut doors (one of them locked), a walk off between: the rows are read, nothing is picked
         if (i === 0) g.teleportPlayer(doorPt(a, a.def.width / 2, 0.75, faceToward(a, [20, 0, 18.9]))); if (i === 450) g.teleportPlayer(doorPt(b, b.def.width / 2, 0.75, 1));
@@ -273,8 +273,11 @@ export async function ownchargeOff(): Promise<boolean> {
       R.input.keys.delete('KeyA');
       return { hashes, rows: [...seen].sort().join(' '), n: R.D.charges };
     };
-    const off = await run(false), on = await run(!BREAK); KITLOAD.on = weighs;
+    const off = await run(false), on = await run(!BREAK);
+    // (…and with the weight as the stand has it, the pair that weighs the same: the switch on and NO charge carried, against the switch off)
+    const off2 = await run(false, 0, true), on2 = await run(true, 0, true); KITLOAD.on = weighs;
     F.verdict(J(off.hashes) === J(on.hashes) && on.rows.includes('charge') && !off.rows.includes('charge'), 'fifteen seconds at two shut doors and walking off them: the row is offered with the switch on, never used — and, what the two charges weigh apart, the run digests the same', `off: ${off.hashes.join(' ')} · rows ${off.rows}\n    on:  ${on.hashes.join(' ')} · rows ${on.rows} (carried ${on.n})`);
+    F.verdict(J(off2.hashes) === J(on2.hashes) && !on2.rows.includes('charge'), 'the kit\'s weight as the stand has it: the switch on with no charge carried is the same run as the switch off', `weight ${weighs ? 'on' : 'off on this stand'} · off: ${off2.hashes.join(' ')}\n    on:  ${on2.hashes.join(' ')} · rows ${on2.rows} (carried ${on2.n})`);
     const reg = knobRegistry(), page = /OWNCHARGE\.on = !q\.has\('noowncharge'\)/.test(await Bun.file(`${ROOT}/src/host/profile.ts`).text());
     F.verdict('OWNCHARGE.on' in FROZEN_HOLDS && reg.OWNCHARGE === OWNCHARGE && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?noowncharge', `frozen hold: ${FROZEN_HOLDS['OWNCHARGE.on']} · registered ${reg.OWNCHARGE === OWNCHARGE} · pageSwitches writes it: ${page}`);
   });

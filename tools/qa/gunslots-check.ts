@@ -10,7 +10,7 @@
 import { ROOT } from './headless.ts';
 import { rig } from './doortools-probes.ts';
 
-const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks } = await import(`${ROOT}/src/game/gunslots.ts`);
+const { GUNSLOTS, GUNSLOTS_STATS, sideOut, sideLocked, sideHung, gunPicks, pickRow, pickWord } = await import(`${ROOT}/src/game/gunslots.ts`);
 const K = await import(`${ROOT}/src/game/kit.ts`);
 const { KITTREE } = await import(`${ROOT}/src/game/kittree.ts`);
 const { WEAPONS, Rifle, Firearm, handlingOf } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -61,7 +61,7 @@ export async function gunslotsCard(): Promise<boolean> {
     F.verdict(WEAPONS[g0].cls !== 'pistol' && !!s0 && WEAPONS[s0].cls === 'pistol' && WEAPONS[g1].cls === 'pistol' && s1 === null && w1 === 'pistol' && w2 === 'rifle', 'as issued his hands hold the primary and the sidearm is his second gun; no primary: the sidearm is his gun, nothing behind it, and the old gun field reads pistol', `issued: ${g0} + ${s0} · none: ${g1} + ${s1} (weapon ${w1}) · back: weapon ${w2}`);
     const old = K.kitSanitize(2, { weapon: 'pistol', suppressed: false }), both = K.kitSanitize(2, { weapon: 'rifle', suppressed: true, primary: 'mk18', secondary: 'g19' }), junk = K.kitSanitize(2, { primary: 'bazooka', secondary: 7 });
     const kept2 = K.kitSanitize(2, { weapon: 'pistol', suppressed: true, primary: 'mk18', secondary: 'g19' });   // (a card saved with the slots, its gun row then changed with them off)
-    F.verdict(K.rowGet(P, old) === 'none' && old.weapon === 'pistol' && K.kitGun(old) === 'guard9mm' && WEAPONS[K.kitGun(kept2)].cls === 'pistol' && K.kitSide(kept2) === null && both.primary === 'mk18' && both.secondary === 'g19' && junk.primary === 'mk18' && junk.secondary === 'g19', 'a stored card from before the slots is its gun row in their words; a pick the table does not have is the issued one', `old pistol card → primary ${K.rowGet(P, old)}, in his hands ${K.kitGun(old)} · a pistol card that still names a long gun → ${K.kitGun(kept2)} · junk → ${junk.primary} + ${junk.secondary}`);
+    F.verdict(K.rowGet(P, old) === 'none' && old.weapon === 'pistol' && K.kitGun(old) === 'g19bare' && WEAPONS[K.kitGun(kept2)].cls === 'pistol' && K.kitSide(kept2) === null && both.primary === 'mk18' && both.secondary === 'g19' && junk.primary === 'mk18' && junk.secondary === 'g19', 'a stored card from before the slots is its gun row in their words; a pick the table does not have is the issued one', `old pistol card → primary ${K.rowGet(P, old)}, in his hands ${K.kitGun(old)} · a pistol card that still names a long gun → ${K.kitGun(kept2)} · junk → ${junk.primary} + ${junk.secondary}`);
     { K.KIT.members[1] = K.kitDefault(1); K.KIT.members[2] = K.kitDefault(2); P.set(K.KIT.members[1], 'none'); const r = K.kitPaste(2, K.KIT.members[1]), got = K.KIT.members[2];
       F.verdict(r.ok && r.changed.includes('primary') && K.rowGet(P, got) === 'none' && got.weapon === 'pistol' && K.kitWears(2, K.KIT.members[1]), 'a copied card pasted onto another man carries its two guns across (and the old gun field with the primary)', `changed ${r.changed.join(' ')} · he now has primary ${K.rowGet(P, got)}, weapon ${got.weapon}`); }
     // every hand that still writes the one gun field is right: a set, a mission's issue card (a bare field write), a tool that names the old row
@@ -161,6 +161,8 @@ export async function gunslotsOff(): Promise<boolean> {
     F.verdict('GUNSLOTS.on' in FROZEN_HOLDS && reg.GUNSLOTS === GUNSLOTS && page, 'the switch is one of the two stands\' rows, in the knob registry, and the page writes it on unless ?nogunslots', `frozen hold: ${FROZEN_HOLDS['GUNSLOTS.on']} · registered ${reg.GUNSLOTS === GUNSLOTS} · pageSwitches writes it: ${page}`);
     const R: any = await hushed(() => rig(17, { stage: false })); GUNSLOTS.on = true; const snap = knobsSnapshot(R.game); const has = !!snap.tables.GUNSLOTS; delete snap.tables.GUNSLOTS; applyKnobs(R.game, snap);
     F.verdict(has && GUNSLOTS.on === false, 'a recording carries the table, and one from before it replays with the switch off', `carried ${has} · after a file without it: on = ${GUNSLOTS.on}`);
+    GUNSLOTS.on = true; GUNSLOTS.heard = true; GUNSLOTS.bare = true; const snap2 = knobsSnapshot(R.game); delete (snap2.tables.GUNSLOTS as any).heard; delete (snap2.tables.GUNSLOTS as any).bare; applyKnobs(R.game, snap2);
+    F.verdict(GUNSLOTS.on === true && GUNSLOTS.heard === false && GUNSLOTS.bare === false, 'a recording from before a key replays without it: a teammate\'s quiet round unheard, a bare carbine the AKS-74U row', `on ${GUNSLOTS.on} · heard ${GUNSLOTS.heard} · bare ${GUNSLOTS.bare}`); GUNSLOTS.heard = true; GUNSLOTS.bare = true;
   });
   return F.done();
 }
@@ -236,6 +238,17 @@ export async function gunslotsGuns(): Promise<boolean> {
         'IN THE HANDS: the Mk 46 comes round slowest and the MP7 nearly like a pistol; the Mk 46 runs three magazines\' worth and takes over twice as long to feed; the Glock 18 holds twice the issue pistol and the HK45 less; the M1014 cycles in under half the pump\'s time',
         `turn weight (1 = a pistol): ${[...longs, ...sides].map(id => `${id} ${f2(turn(id))}`).join(' · ')}\n    rounds · seconds of trigger · reload: ${[...longs, ...sides].map(id => { const r = runs(id); return `${id} ${r.n} · ${f2(r.secs)} · ${f2(r.feed)}`; }).join(' | ')}`);
       F.verdict(Object.values(WEAPONS).every((d: any) => d.damage === 'oneShot') && Object.values(D).every((d: any) => d.weightKg > 0 && d.bulk >= 0), 'never by hit points: every row\'s round does what every round does; each row says what it weighs and how bulky it is', Object.entries(D).map(([id, d]) => `${id} ${d.weightKg} kg / ${d.bulk}`).join(' · ')); }
+    // THE SAME GUN WITH ITS SUPPRESSOR OFF — the issue carbine and the issue pistol bare are their own rows' gun, heard; the old meaning behind the key
+    { const W = WEAPONS as any, same = (a: string, b: string, keys: string[]) => keys.every(k => JSON.stringify(W[a][k]) === JSON.stringify(W[b][k]));
+      const long = pickRow('mk18', false), side = pickRow('g19', false), words = [pickWord('mk18', false) === pickWord('mk18', true), pickWord('g19', false) === pickWord('g19', true)];
+      const rows = long === 'mk18bare' && side === 'g19bare' && same('mk18bare', 'fn2000', ['short', 'cls', 'magCapacity', 'spareMags', 'reload', 'modes', 'cd', 'auto', 'rig', 'handling', 'muzzleAhead', 'bulk']) && same('g19bare', 'fiveseven', ['short', 'cls', 'magCapacity', 'spareMags', 'reload', 'modes', 'cd', 'rig', 'bulk'])
+        && !W.mk18bare.suppressed && !W.g19bare.suppressed && W.mk18bare.report.loud && W.g19bare.report.level >= 1 && W.fiveseven.report.level < 1 && W.mk18bare.muzzleFx !== W.fn2000.muzzleFx && W.mk18bare.weightKg < W.fn2000.weightKg && W.mk18bare.id === 'mk18bare' && W.fn2000.id === 'fn2000';
+      const tube = new Rifle(W.mk18bare), hasTube = Object.keys(tube).length === Object.keys(new Rifle(W.fn2000)).length;
+      const card = { ...K.kitDefault(1), weapon: 'rifle', primary: 'mk18', secondary: 'g19', suppressed: false }, held = K.kitGun(card), second = K.kitSide(card);
+      GUNSLOTS.bare = false; const was = [pickRow('mk18', false), pickRow('g19', false), pickRow('mk18', true)]; GUNSLOTS.bare = true;
+      F.verdict(rows && words.every(Boolean) && hasTube && held === 'mk18bare' && second === 'g19bare' && was.join() === 'aks74u,guard9mm,fn2000',
+        'THE SAME GUN, BARE: a Mk 18 or a Glock 19 with its suppressor off keeps its name, magazine, handling, hold and launcher and is heard as gunfire; a teammate is staged with those rows; with the key off a bare carbine is the AKS-74U row as it was',
+        `bare rows ${long} + ${side} · tile '${pickWord('mk18', false)}' / '${pickWord('g19', false)}' · a teammate's card with the suppressor off: ${held} + ${second} · key off: ${was.join(' ')}`); }
     // WHAT IT WEIGHS — the card's two scores (kitload.ts reads each gun's own weightKg and bulk): every pick stepped on your card and a teammate's
     { const lines: string[] = []; let ok = true; const slots0 = K.SLOTS.on; K.SLOTS.on = true;   // (a man is weighed under the pouches rule only: kitload.ts)
       for (const i of [0, 1]) {

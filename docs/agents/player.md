@@ -649,6 +649,12 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   round 9 m with `heard`, nobody without; two teammates with each gun finish three men at five metres. NOT DONE: models, reports, reloads and hand poses
   of their own; tuning by play. Never seen on a GPU, never fired by a person. (Defenders drawing from the list, and a man using a gun for what
   it is for, are `gunroles.ts`: `docs/agents/enemies.md`, GUNROLES.)
+  THE SAME GUN WITH ITS SUPPRESSOR OFF (`GUNSLOTS.bare`, on with the switch; a journal from before the key replays with it off): `weapons.ts mk18bare` and
+  `g19bare` are the issue carbine's and the issue pistol's own rows with what a suppressor changes changed (id, report, flame, a little weight: `bareRow`
+  keeps every other field, getters included), and `gunslots.ts PICKS` hands them out as the picks' `bare` — until them a bare carbine was the defenders'
+  AKS-74U row and a bare pistol their sidearm (`bareWas`, what the key off still gives). The tile and a man's line name the gun the same either way.
+  Checked: `gunslots-guns` THE SAME GUN, BARE and `gunslots-off`'s second journal verdict, both stands. Drawn with the suppressed row's rig (whether the
+  can is drawn is the look's); never seen or heard.
 - **Lighter kit moves faster and hides better** (`src/game/kitload.ts`, table `KITLOAD`; the maintainer, 10-18: "we should also model a mobility / concealment score like
   door kickers 2 does -- there should be legitimate reasons to bring less kit"). Every thing on a man's kit card takes a little off TWO SCORES, each 1 for a man with
   nothing on him: a gun by ITS OWN ROW's `weightKg` and `bulk` (`weapons.ts`; `gunLoad`: `gunKg` 0.035 of mobility a kilogram, `gunBulk` 0.04 of concealment + 0.17 a

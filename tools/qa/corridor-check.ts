@@ -69,12 +69,17 @@
 //      lost slicing the same door `LATE` s or more after the first, the lane long called (45 s played); on, line 6's own run loses nobody after the
 //      first, and men are stopped short of the lane.
 //      THE OFF ARM IS ABOUT THE BASE, as line 13's is: a step that keeps the drill off that door some other way reds this line with the rule intact
-// CORRIDOR_BREAK=1 = the 'on' arm played with the switch left off: lines 2‥4 and 6‥14 must FAIL (exit 1).
+//  15  the seam with the hostage rescue's flush (rescueflush.ts, 10-19): the flush sends the men left for the hostages and asks this rule only which door
+//      (its own check, rescueflush-check.ts (g) (h), holds that: nobody kept back, the covered door not chosen). What a man SENT does at a corridor a
+//      lane covers is this rule's: on a rescue floor with the room fallen and a lane planted over the floor outside every door of it, the men sent are
+//      stopped short of it (none stands in its line before a look is under way), one looks, finds it empty, the lane is forgotten, and only then is a
+//      man of theirs in the room. No team is on the floor: what the lane's own acts do under fire is lines 2‥8's.
+// CORRIDOR_BREAK=1 = the 'on' arm played with the switch left off: lines 2‥4 and 6‥15 must FAIL (exit 1).
 // (Lines 7, 8 and 13 are played on the page's stand with ONE row of it put off, `SQUADDEAL.on` — each says why: they ask the rule's mechanism on the floor
 // it was read on, and no longer say what the page's own dealt floors do. Lines 6, 12 and 14 are the floors as the page deals them.)
-// Lines 6 to 14 are always asked of the page's stand (TPS_PROFILE=shipped): run from the frozen stand (probes.ts) they are played in a child of this file
+// Lines 6 to 15 are always asked of the page's stand (TPS_PROFILE=shipped): run from the frozen stand (probes.ts) they are played in a child of this file
 // (`--look`), since on the frozen stand nobody is sent at the lane and so nobody is held at its mouth to look (and no round passes glass).
-// Exit 0 = all pass, 1 = a FAIL or an error. ~6 min on a quiet four-core box (three holds an arm; a red line 8 plays up to four holds: a minute more; line 13 two short holds, four when its first no longer shows the fault). Checked headless only: the team here cannot be flashed blind the way a player is on the page.
+// Exit 0 = all pass, 1 = a FAIL or an error. ~7 min on a quiet four-core box (line 15 half a minute; three holds an arm; a red line 8 plays up to four holds: a minute more; line 13 two short holds, four when its first no longer shows the fault). Checked headless only: the team here cannot be flashed blind the way a player is on the page.
 import type { HoldRun } from './corridor-hold';
 if (import.meta.main) process.env.TPS_PROFILE ??= 'shipped';   // (run by name: the page's stand; under probes.ts the runner's own — the check holds on both)
 const { holdRun } = await import('./corridor-hold');
@@ -154,6 +159,7 @@ async function lookLines(check: (ok: boolean, what: string) => void): Promise<vo
   check(!once.error && !stay.error && late(once) >= 1 && late(stay) === 0 && stat(stay, 'held') >= 1, `the doorway drill is asked again: a man it took before the lane was called does not slice the door into it (off: a second man is lost in the same door after the call)`);
   await reloadLine(check);
   await mendLines(check);
+  await flushLine(check);
 }
 
 /** line 9: a reload the rule started is counted once a frame, whoever else is counting it. One game (The block, the four), its two defenders farthest from the
@@ -193,6 +199,53 @@ async function reloadLine(check: (ok: boolean, what: string) => void): Promise<v
   const near = (n: number) => n >= want - 3 && n <= want + 3;
   console.log(`  a magazine change the rule started (${want} frames by the weapon's row): counted beside the guard code's own count ${both} frames, counted alone ${alone}${why ? ` · ${why}` : ''}`);
   check(!why && near(both) && near(alone), 'a magazine change the rule started is counted once: the weapon\'s own time beside the guard code\'s count, and alone');
+}
+
+/** line 15, the seam with the hostage rescue's flush (rescueflush.ts): a man SENT for the hostages whose way lies down a corridor a lane covers is the lane
+ *  rule's on that walk. One floor per mission in `FLUSH_FLOORS`, staged as rescueflush-check.ts stages its own (answers.ts: the mission's row, no teammates,
+ *  Sam out of everybody's sight; a loud round at the hostage door, the room's own men put down), then a lane their side knows planted with its gun in the
+ *  hostages' room and the floor outside EVERY door of that room in its line (the lanes' own save, lanesRestore) — so no door is the one to choose and the
+ *  first man goes by his turn's. Nobody of the team stands on that lane: the look that comes finds it empty. (The office and the registry: on the
+ *  consulate a gun planted mid-room gives the lane mouths with no line down it, and a look from one says nothing either way — the plant's doing) */
+const FLUSH_FLOORS: [string, number][] = [['hostage-rescue', 7], ['rescue-registry', 7]];
+async function flushLine(check: (ok: boolean, what: string) => void): Promise<void> {
+  const { ROOT } = await import('./headless.ts');
+  const { RESCUEFLUSH } = await import(`${ROOT}/src/game/rescueflush.ts`), { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { answerStand, seeded } = await import('./answers.ts'), { killGuard } = await import(`${ROOT}/src/game/combat.ts`), { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
+  const { lanesRestore, laneCovers, lanesStats, LANES } = await import(`${ROOT}/src/game/lanes.ts`);
+  const { setDifficulty, difficultyNow } = await import(`${ROOT}/src/game/difficulty.ts`);
+  const DT = 1 / 60, rnd = Math.random, was = { lanes: LANES.on, diff: difficultyNow() }, log = console.log, f1 = (n: number) => n.toFixed(1);
+  let ok = FLUSH_FLOORS.length > 0; const said: string[] = [];
+  try {
+    for (const [id, seed] of FLUSH_FLOORS) {
+      Math.random = seeded(seed); setDifficulty('hard', false);
+      const E = (ALL_MISSIONS as any[]).find(e => e.id === id), { W, g, why } = await answerStand(E, () => { LANES.on = !BREAK; });
+      if (why || !RESCUEFLUSH.on) { ok = false; said.push(`${id}: ${why ?? 'the flush is off on this stand'}`); continue; }
+      const R = g.rescue, B = R.bounds, inB = (q: number[]) => q[0] >= B.x0 && q[0] <= B.x1 && q[2] >= B.z0 && q[2] <= B.z1;
+      const step = (secs: number, each?: () => void) => { console.log = () => {}; try { for (let i = 0; i < Math.round(secs / DT); i++) { W.step(DT); each?.(); } } finally { console.log = log; } };
+      step(1);
+      { const P = R.outsidePoint; g.events.push({ kind: 'shot', pos: [P[0], 0, P[2]], time: g.time, loud: true, level: 1, who: PLAYER_ID }); step(0.5); }
+      for (const c of R.cast()) if (c.inRoom) killGuard(g, c.gd, [1, 0, 0], false, 'shot', 'player');
+      step(2 * DT);
+      const t0 = g.time, mid = [(B.x0 + B.x1) / 2, 0, (B.z0 + B.z1) / 2], O = [...R.outsidePoint], so = R.sideOutside ? [...R.sideOutside] : null;
+      lanesRestore(g, { serial: 1, lanes: [{ id: 1, from: mid, at: O, t0, lastT: t0, until: t0 + 150, weight: 1, downs: 1, known: true, knownAt: t0, guns: [mid], wedges: so ? [mid, O, mid, so] : [mid, O], roundAt: t0 + 1e6, stunAt: t0 + 1e6 }] });
+      const outside = R.hostiles.filter((h: any) => h.state !== 'dead' && !inB(h.char.pos));
+      let inLine = 0, clearAt = NaN, inAt = NaN, shortAt = NaN;
+      step(60, () => {
+        const S = lanesStats(g), t = g.time - t0;
+        if (isNaN(shortAt) && S.held >= 1) shortAt = t;
+        if (isNaN(clearAt) && S.peekClear >= 1) clearAt = t;
+        if (S.peeks === 0) for (const h of outside) if (h.state !== 'dead' && !inB(h.char.pos) && laneCovers(g, h, h.char.pos)) inLine++;   // (until a look is under way: the man who looks steps to the lane's mouth, by that rule's own hand)
+        if (isNaN(inAt) && outside.some((h: any) => h.state !== 'dead' && inB(h.char.pos))) inAt = t;
+      });
+      const S = lanesStats(g), words = R.log.filter((l: any) => /^flush:(room|side|noise|out):/.test(l.what)).map((l: any) => `${l.what} ${f1(l.t - t0)} s`);
+      const good = outside.length > 0 && words.length > 0 && S.held >= 1 && inLine === 0 && S.peekClear >= 1 && !isNaN(inAt) && inAt > clearAt;
+      if (!good) ok = false;
+      said.push(`${id} ${seed} — ${outside.length} outside the room, a side door ${!!so} · sent: ${words.join(', ') || 'nobody'} · stopped short ${S.held}${isNaN(shortAt) ? '' : ` (first at ${f1(shortAt)} s)`}, frames a man stood in its line before the look ${inLine} · looks ${S.peeks}, found it empty ${S.peekClear}${isNaN(clearAt) ? '' : ` at ${f1(clearAt)} s`} · in the room ${isNaN(inAt) ? 'never' : `at ${f1(inAt)} s`}`);
+    }
+  } finally { Math.random = rnd; LANES.on = was.lanes; setDifficulty(was.diff, false); console.log = log; }
+  console.log(`  a man sent for the hostages down a covered corridor: ${said.join(' · ')}`);
+  check(ok, 'the hostage flush: a man sent for them is stopped short of a corridor a lane covers, a look finds it empty, and only then does he go in (off: he walks straight in)');
 }
 
 /** lines 10 and 11, two mends from the replay dump, on one staged game (the records office, the pair, placement 1631 — the maintainer's own hold):
@@ -289,6 +342,9 @@ if (import.meta.main && argv.includes('--look')) {   // (the child of a run on t
   process.exit(fails ? 1 : 0);
 } else if (import.meta.main && argv.includes('--reload')) {   // (line 9 alone, on whatever stand this is: half a minute)
   let fails = 0; await reloadLine((ok, what) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}`); if (!ok) fails++; });
+  process.exit(fails ? 1 : 0);
+} else if (import.meta.main && argv.includes('--flush')) {   // (line 15 alone, on the page's stand: a quarter of a minute)
+  let fails = 0; await flushLine((ok, what) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}`); if (!ok) fails++; });
   process.exit(fails ? 1 : 0);
 } else if (import.meta.main && argv.includes('--mends')) {   // (lines 10 and 11 alone, on whatever stand this is: the glass line wants the page's)
   let fails = 0; await mendLines((ok, what) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what}`); if (!ok) fails++; });

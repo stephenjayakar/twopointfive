@@ -14,7 +14,7 @@ import type { Vec3 } from '../math/vec';
 import type { MuzzleFxKey } from './effects';
 import { GEAR, GEAR_NAMES, GEAR_MAG } from './gear';   // (a leaf: the issue kit's switch — read only inside the getters of Sam's two rows below, never as this module loads)
 
-export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm';
+export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
 export type FireMode = 'semi' | 'auto' | 'burst';
 export type WeaponClass = 'pistol' | 'carbine' | 'rifle' | 'shotgun';
 /** what leaves a dying (or downed) hand that held it: a throwables.ts ItemKind (combat.ts dropFromHand) — 'rifle' has no body of its own until R2 gives it one */
@@ -122,7 +122,7 @@ export interface WeaponDef {
 /** The service-pistol spread every guard's hands have had since the first firefight (combat.ts fireWeapon's old literal line): 0.05 + min(0.06, v·0.014) + max(0, range − 8)·0.006. */
 const AI_PISTOL_SPREAD: AiSpread = { base: 0.05, moveK: 0.014, moveCap: 0.06, rangeFrom: 8, rangeK: 0.006 };
 
-export const WEAPONS: Record<WeaponId, WeaponDef> = {
+const ROWS: Record<Exclude<WeaponId, 'mk18bare' | 'g19bare'>, WeaponDef> = {
   // Sam's sidearm — every number here is one the code used to carry in place: the Pistol class (10-round magazines, 10+1 and three spares, the 1.6 s reload staged
   // at 0.38 / 1.02 / 1.38), player.ts (0.22 s between rounds), combat.ts fireWeapon (the small dim flash card, the light at × suppressedGain, 'pistolSuppressed',
   // a 'shot' event at level 1, 4 N·s into a carton), hitPlayer (the gun leaves his hand drawn with its can), Character (muzzle 0.26 ahead of the wrist).
@@ -317,6 +317,18 @@ export const WEAPONS: Record<WeaponId, WeaponDef> = {
     handling: 0.45, weightKg: 7.5, bulk: 4,
   },
 };
+/** THE SAME GUN WITH ITS SUPPRESSOR OFF: every field of its row — the name it wears, its magazine, its handling, how it is held and drawn — but what a
+ *  suppressor changes (its own id, the report, the flame, the push on a prop, a little weight). A getter of the row stays a getter (gear.ts renames two rows
+ *  where they are read). */
+function bareRow(of: WeaponDef, over: Partial<WeaponDef>): WeaponDef { return Object.defineProperties({}, { ...Object.getOwnPropertyDescriptors(of), ...Object.getOwnPropertyDescriptors(over) }) as WeaponDef; }
+export const WEAPONS = Object.defineProperties({}, { ...Object.getOwnPropertyDescriptors(ROWS), ...Object.getOwnPropertyDescriptors({
+  // (gunslots.ts PICKS: what the issue carbine and the issue pistol are on a card with the suppressor off — until these rows a bare carbine was the
+  //  defenders' AKS-74U and a bare pistol their sidearm, another gun altogether. UNTUNED: nobody has fired one on a GPU.)
+  mk18bare: bareRow(ROWS.fn2000, { id: 'mk18bare', get name() { return GEAR.on ? GEAR_NAMES.rifle : 'FN2000'; }, suppressed: false,
+    report: { level: 1, loud: true, voice: 'carbineReport' }, muzzleFx: 'carbine', propImpulse: 6, weightKg: 3.4 }),
+  g19bare: bareRow(ROWS.fiveseven, { id: 'g19bare', get name() { return GEAR.on ? GEAR_NAMES.pistol : 'FN Five-seveN'; }, suppressed: false,
+    report: { level: 1, loud: true, voice: 'pistolLoud' }, muzzleFx: 'pistolBare', propImpulse: 6, weightKg: 0.8 }),
+}) }) as Record<WeaponId, WeaponDef>;   // (the same row objects under one table: nothing is written into ROWS)
 
 /** The ring-airfoil launcher's numbers (docs/internal/sc20k-design.md §5; launcher.ts flies them): how many Sam brings (spent, never retrieved — no scavenging of
  *  anything), and the seconds the launcher takes to hand-cycle between two rings. The rest of the ring — its speed, its arc, what a head or a hip does with it —
