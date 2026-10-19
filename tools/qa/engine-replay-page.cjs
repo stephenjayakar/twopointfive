@@ -14,6 +14,8 @@
 //           to what the run has = as played again); the player's goggles are never written; a seek back keeps it; the run drawn so is still the recording's
 //   map     the bar's line marked from the trace and dragged to scrub; the corner map drawn from the running game, opened large (click, M), a click on it
 //           sends the picture's camera to that floor point; the run still the recording's
+//   slow    the bar's pace (− · the reading · +, the keys - and +): slow motion is the recording's own steps fed more slowly — the game's clock a quarter
+//           as fast at ¼× — kept over a seek back, and the run slowed and sped on the way ends as recorded
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 // exit 0 = all of it with no page error · 1 = otherwise. ONLY=record,play,… runs fewer; FILE=<path to a replay .json[.gz]> walks that file instead of recording
 // one (its drift is REPORTED, not judged: a tape of another build may part).
@@ -478,6 +480,46 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     line(mapOk && !errors.length, 'a map of the game as it plays sits in the corner, opens large on a click or M, and a click on the large one sends the camera there', M.why ? M.why : `corner ${JSON.stringify(M.mini)} · large ${JSON.stringify(M.big)} · sent ${JSON.stringify(M.sent)} · keys ${JSON.stringify(M.keys)}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     line(aloneOk, 'nothing of the viewer is see-through over the game, and no room is kept for sound lanes that are not on the page', M.why ? M.why : JSON.stringify(A));
     line(lineOk && runOk && !errors.length, 'the bar’s line carries the trace’s marks and is dragged to scrub, and the run scrubbed is still the recording’s', M.why ? M.why : `line ${JSON.stringify(M.line)} · scrub ${JSON.stringify(M.scrub)} · the player’s dot after ${JSON.stringify(M.after)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · unjournaled ${s.unjournaled}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
+    await page.close();
+  }
+
+  // ── slow: the bar's pace (− · what it is now · +, the keys - and +). Slow motion is the recording's own steps fed more slowly: the game's clock moves a
+  //    quarter as fast at ¼×, the pace is kept over a seek back (a page load), and a run slowed and sped on the way still ends as the recording did.
+  if (want('slow')) {
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
+    const paced = () => { const T = window.__tape, E = window.__engine, g = window.__game, pace = document.querySelector('#tapebar .pace'), b = pace ? [...pace.querySelectorAll('button')] : [];
+      const look = () => ({ speed: T.state.speed, read: b[1]?.textContent, lit: !!b[1]?.classList.contains('on'), slowEnd: !!b[0]?.classList.contains('end'), fastEnd: !!b[2]?.classList.contains('end') });
+      // (frames PACKED, not drawn — see `map` — at a sixtieth of a second each: what the pace feeds is read off the game's own clock)
+      const fed = n => { const drawIt = E.render, f0 = T.state.f, t0 = g.time; E.render = () => { E.world.upload(); }; try { for (let i = 0; i < n; i++) window.__runFrames(1, 1 / 60); } finally { E.render = drawIt; } return { frames: n, steps: T.state.f - f0, game: +(g.time - t0).toFixed(4) }; };
+      return { T, b, look, fed, key: (key, code) => window.dispatchEvent(new KeyboardEvent('keydown', { key, code, bubbles: true, cancelable: true })) }; };
+    const A = await page.evaluate(`(() => { const { T, b, look, fed, key } = (${paced})(); if (!T || typeof T.speed !== 'function') return { why: 'no __tape.speed on the page' }; if (b.length !== 3) return { why: 'no pace group on the bar' };
+      const out = { first: look() }; b[0].click(); out.half = look(); b[0].click(); out.quarter = look(); b[0].click(); out.floor = look();
+      T.play(); out.q = fed(240);
+      // (the keys by the character typed: = and + where this keyboard has them, then a + that sits where this keyboard has its minus, and a minus on another key still: two other keyboards)
+      key('=', 'Equal'); key('+', 'Equal'); key('=', 'Equal'); key('+', 'NumpadAdd'); key('+', 'Minus'); out.four = look(); out.x4 = fed(30);
+      key('-', 'Slash'); out.two = look(); b[1].focus(); b[1].click(); out.one = look(); out.x1 = fed(60);
+      T.pause(); out.off = T.speed(3); b[0].focus(); b[0].click(); out.keep = look(); out.focus = b.includes(document.activeElement); out.state = T.state; return out; })()`);
+    let B = {};
+    if (!A.why) {
+      const nav = page.waitForNavigation({ timeout: NAV }).catch(e => console.log('    (no page load on the seek back: ' + String(e).slice(0, 120) + ')'));
+      await page.evaluate(() => { setTimeout(() => window.__tape.seek(60), 0); }); await nav;
+      await page.waitForFunction(() => !!window.__ready && !!window.__game && !!window.__audio && !!window.__tape, null, { timeout: 600000 });
+      B = await page.evaluate(`(async () => { await window.__ready; window.__testVisible = true; window.__heard = window.__heard || []; const { T, look, fed } = (${paced})();
+        const tick = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
+        let n = 0; const E = window.__engine, drawIt = E.render; E.render = () => { E.world.upload(); };
+        try { while ((T.state.seeking || T.state.f < 60) && n++ < 4000) { window.__runFrames(1, 1 / 60); await tick(); } } finally { E.render = drawIt; }
+        const out = { kept: look(), f: T.state.f, search: location.search }; T.play(); out.h = fed(60); T.pause(); T.run(0, true); await E.device.queue.onSubmittedWorkDone(); return out; })()`);
+      await shot(page, 'engine-replay-slow');
+    }
+    const R = A.why ? {} : await walk(page), s = R.state || {}, at = rec?.pos && R.pos ? Math.hypot(R.pos[0] - rec.pos[0], R.pos[2] - rec.pos[2]) : null;
+    const is = (l, speed, read, lit, slowEnd, fastEnd) => !!l && l.speed === speed && l.read === read && l.lit === lit && l.slowEnd === slowEnd && l.fastEnd === fastEnd;
+    const near = (r, speed) => !!r && (FILE ? r.steps > 0 : Math.abs(r.game - r.frames / 60 * speed) <= 0.035 && Math.abs(r.steps - r.frames * speed) <= 1);   // (a file's steps are whatever its page ran at, and whether it parts is reported, not judged)
+    const barOk = !A.why && is(A.first, 1, '1×', false, false, false) && is(A.half, 0.5, '½×', true, false, false) && is(A.quarter, 0.25, '¼×', true, true, false) && is(A.floor, 0.25, '¼×', true, true, false)
+      && is(A.four, 4, '4×', true, false, true) && is(A.two, 2, '2×', true, false, false) && is(A.one, 1, '1×', false, false, false) && A.off === 1 && is(A.keep, 0.5, '½×', true, false, false) && A.focus === false;
+    const paceOk = !A.why && near(A.q, 0.25) && near(A.x4, 4) && near(A.x1, 1) && (FILE || (!A.state.drift && A.state.unjournaled === 0)) && /[?&]at=60(&|$)/.test(B.search || '') && B.f >= 60 && B.f < A.state.f && is(B.kept, 0.5, '½×', true, false, false) && near(B.h, 0.5);
+    const runOk = s.ended && s.f === s.ticks && (FILE || (!s.drift && s.unjournaled === 0)) && (at === null || at < 0.01);
+    line(barOk && !errors.length, 'the bar’s pace steps from ¼× to 4× by its − and + and the keys, holds at the ends, and a click on the reading is 1× again', A.why ? A.why : `${['first', 'half', 'quarter', 'floor', 'four', 'two', 'one', 'keep'].map(k => `${k} ${JSON.stringify(A[k])}`).join(' · ')} · a pace off the list asked: ${A.off} · a pressed button still holds the keyboard: ${A.focus}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    line(paceOk && runOk && !errors.length, 'slow motion feeds the recording’s own steps more slowly, the pace is kept over a seek back, and the run slowed and sped on the way is still the recording’s', A.why ? A.why : `¼× ${JSON.stringify(A.q)} · 4× ${JSON.stringify(A.x4)} · 1× ${JSON.stringify(A.x1)} · after the seek back (from step ${A.state.f}) the page ${B.search} stands on step ${B.f}: ${JSON.stringify(B.kept)} · ½× ${JSON.stringify(B.h)} · ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at ' + s.drift.f : 'never'} · unjournaled ${s.unjournaled}${at === null ? '' : ` · ended ${at.toFixed(3)} m from the recording’s end`}`);
     await page.close();
   }
 
