@@ -146,7 +146,7 @@ class Player extends Run {
     const me = this as any; let self = false;   // (me.lastF: the base's own debounce stamp, private there — read and written here so F and this end game share one clock)
     for (;;) {
       const R = this.R, ops = this.ops;
-      if (R.state === 'secured') { this.step(); continue; }
+      if (R.state === 'secured') { this.hold(); continue; }   // (rescue-tally.ts hold: the page's ending has him lead them out; the frozen stand's hold ends the run)
       if (!ops.length && !self) { self = this.solo = true; this.say('the pair are down — Sam takes the room himself'); }
       if (self) { this.shootOnMove = true; if (!inRect(this.pos, this.B)) { this.watch = null;
           if (['sorting', 'stacks'].includes(spaceOf(this.pos))) { this.go(AT.sideFront, { max: 25 }); this.watch = AT.captor; this.go(AT.sideIn, { max: 6 }); }   // from the long line: by the side door he is at

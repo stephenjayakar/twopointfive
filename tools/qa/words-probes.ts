@@ -237,3 +237,100 @@ export const wordsFrag = guarded(async () => {
   }
   return F.done();
 });
+
+/** 'words-doornames' (game/doornames.ts authoredDoorNames, behind words.ts WORDS.doors — the page has it on, `?doornames=0` puts it off; off in the module
+ *  and on the frozen stand, `TPS_DOORNAMES=1` raises it): a level says what its own doors are called where the rooms cannot (scenarios.doorNames), and no
+ *  door's name on the HUD carries a bearing. All headless, read off the name the squad's row reads (orders.ts doorWords): no row seen on a page.
+ *    1 · the lookup on a made-up level: a written name is the door's name, wins over a made one, is nothing with the key down (the same doors, the key
+ *        asked when a name is read), names no door that is not there; a made name beside it is told apart as if the door had always been called that
+ *    2 · every level file and the office: a written name says no bearing and begins with no 'the'; no two doors of a level are called the same
+ *    3 · THE LIST OF WHAT IS OWED: the doors still called by a bearing are exactly DOORS_OWED below, door for door. A door that gets a name comes OFF the
+ *        list in the same change (the line is red until it does), and no door not on it is ever called by one.
+ *        `DOORNAMES_BREAK=1` reads the names with the key down: the office's two are owed again and the line must be red
+ *    4 · the office stood up: the squad's row, a rear man's 'holding ·' and the response team's 'stack on …' say the one name with the key up, and what
+ *        they said with it down
+ *    5 · the two stands' row and word, and a recording from before the key */
+const DOORS_OWED: Record<string, string> = {   // (10-19: 25 files, 96 doors, by id — the levels' own to name; the office's two are named)
+  'barracks-gwot.json': 'n_yard ng_w s_end s_yard sg_e sg_w',
+  'barracks.json': 'n_yard ng_w s_end s_yard sg_e sg_w',
+  'bazaar.json': 'gate_e gate_n gate_s',
+  'compound-gwot.json': 'c_n gate_n gate_w hall_n p_s yard_sw',
+  'compound.json': 'c_n gate_n gate_w hall_n p_s yard_sw',
+  'crossing.json': 'fence_e gate_e gate_n gate_ne gate_s gate_w hut_e imp_e rec_w shed_w',
+  'gwot-yard.json': 'gate_w n_e n_w s_n s_w',
+  'kit-yard.json': 'gate_s gate_w',
+  'lights-out.json': 'gate_e gate_w',
+  'police-post.json': 'gate_e gate_n gate_w hut_w shed_e side_e store_e yard_sw',
+  'quiet-relay.json': 'gate_e gate_n gate_s gate_w',
+  'quiet-yard.json': 'gate_s gate_w n_e n_w s_n s_w',
+  'registry-gwot.json': 'stacks_w',
+  'registry.json': 'stacks_w',
+  'test-rooms.json': 'a ab b c',
+  'train-hands.json': 'gate_e gate_w',
+  'train-kit.json': 'gate_e gate_w',
+  'train-lights.json': 'gate_e gate_w',
+  'train-move.json': 'gate_e gate_w',
+  'train-orders.json': 'gate_e gate_w hut_b_east',
+  'train-pairs.json': 'gate_e gate_w hut_s hut_w store_n',
+  'train-silent.json': 'gate_e gate_w',
+  'vault.json': 'gate_e gate_w',
+  'warehouse-gwot.json': 'b_s l_s p_s',
+  'warehouse.json': 'b_s l_s p_s',
+};
+export const wordsDoorNames = guarded(async () => {
+  const F = family('words-doornames: a level names its own doors where the rooms cannot, and no door\'s name carries a bearing');
+  const N = await import(`${ROOT}/src/game/doornames.ts`), O = await import(`${ROOT}/src/game/orders.ts`), PR = await import(`${ROOT}/src/host/profile.ts`), JR = await import(`${ROOT}/src/game/journal.ts`);
+  const shipped = process.env.TPS_PROFILE === 'shipped', was = { ...WORDS };
+  const BEARING = /\b(?:north|south|east|west)|\b(?:N|S|E|W|NE|NW|SE|SW)\b/;   // (a bearing begun: 'northern', 'eastside', 'south-west'; or its letters)
+  const bearing = (n: string) => BEARING.test(n) || /\b(?:north|south|east|west)/i.test(n);
+  try {
+    // ---- 5 (first: before the check writes any switch) · the two stands' row, the word, and a recording from before the key
+    { const s = (await import(`${ROOT}/src/host/standEnv.ts`)).STAND_ENV as string[], word = process.env.TPS_DOORNAMES;
+      const W = await (await import('./headless.ts')).standUp({ uploadEvery: 4 }), stood = WORDS.doors, want = word !== undefined ? word === '1' : shipped;   // (what THIS stand-up left the key at)
+      const snap = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); const had = 'doors' in snap.tables.WORDS;
+      WORDS.doors = true; const snapUp = JSON.parse(JSON.stringify(JR.knobsSnapshot(W.game))); WORDS.doors = false; JR.applyKnobs(W.game, snapUp); const kept = WORDS.doors;
+      delete snap.tables.WORDS.doors; WORDS.doors = true; JR.applyKnobs(W.game, snap); const old = WORDS.doors;
+      F.verdict(s.includes('TPS_DOORNAMES') && PR.FROZEN_HOLDS['WORDS.doors'] === 'TPS_DOORNAMES=1' && had && old === false && kept === true && stood === want,
+        'the key is a row of the two stands\' list with its word, stands up on the shipped stand and down on the frozen one (its word either way), rides a recording\'s tables, and a recording from before the key replays with it down',
+        `STAND_ENV ${s.includes('TPS_DOORNAMES')} · FROZEN_HOLDS ${PR.FROZEN_HOLDS['WORDS.doors']} · stood up ${stood}, wanted ${want} (shipped ${shipped}, word ${word ?? 'none'}) · in the tables ${had} · an old recording: ${old} · one recorded with it up: ${kept}`);
+      // ---- 4 · the office stood up: one name on the row, the rear man's row and the response team's line
+      { WORDS.on = true; const g = W.game, d = g.doors.byName('breakroom_w'), RW = await import(`${ROOT}/src/game/rearwatch.ts`), T = await import(`${ROOT}/src/game/tactics.ts`);
+        const read = () => `${O.doorWords(d)} | ${N.doorWrittenName(d) ?? `${T.doorLabel(d)} door`}`; void RW;
+        WORDS.doors = true; const upRow = read(); WORDS.doors = false; const downRow = read();
+        F.verdict(upRow === 'cubicles-side break room door | cubicles-side break room door' && downRow === 'break room west door | break room west door',
+          'the office\'s break room door off the cubicles: the squad\'s row and a line that names it some other way say one name with the key up, and what each said with it down', `up: ${upRow} · down: ${downRow}`); } }
+    WORDS.on = true;
+    // ---- 1 · the lookup
+    { const level: any = { scenarios: { roomClear: { rooms: [{ id: 'mess', name: 'mess', doors: [{ id: 'm_w', from: 'hall' }, { id: 'm_k', from: 'kitchen' }] }, { id: 'hall', name: 'hall', doors: [{ id: 'h_a', from: 'dock' }, { id: 'h_b', from: 'dock' }] }] },
+        doorNames: [{ door: 'm_w', name: 'serving hatch' }, { door: 'gate_n', name: 'the yard gate' }, { door: 'h_a', name: 'loading door' }, { door: 'nobody', name: 'a door that is not there' }, { door: 'blank', name: '  ' }] } };
+      const doors = (ids: string[]) => ids.map(id => ({ def: { name: id } })), said = (ds: any[]) => ds.map(d => O.doorWords(d)).join(' · ');
+      // (the names are hung on the doors once, at construction, whatever the key says then; the key is asked each time a name is read)
+      WORDS.doors = false; const ds = doors(['m_w', 'm_k', 'gate_n', 'gate_s', 'blank', 'h_a', 'h_b']); N.nameDoors(level, false, ds); const office = doors(['m_w', 'gate_n']); N.nameDoors(level, true, office);
+      WORDS.doors = true; const up = said(ds), upOffice = said(office); WORDS.doors = false; const down = said(ds); WORDS.doors = true;
+      F.verdict(up === 'serving hatch · kitchen-side mess door · yard gate · gate south door · blank door · loading door · hall door' && down === 'hall-side mess door · kitchen-side mess door · gate north door · gate south door · blank door · first hall door · second hall door' && upOffice === 'serving hatch · yard gate'
+        && [...N.authoredDoorNames(level, ['m_w', 'gate_n']).keys()].join() === 'm_w,gate_n',
+        'a written name is the door\'s name and wins over a made one (a leading \'the\' dropped); the door beside it is no longer a \'second\'; with the key down the same doors read as they were; a level with no made names (the office) takes them too; a row for no door, or an empty one, names nothing',
+        `up: ${up} | down: ${down} | the office's rule: ${upOffice}`); }
+    // ---- 2, 3 · the level files and the office
+    WORDS.doors = !process.env.DOORNAMES_BREAK;
+    const files: { file: string; L: any; office: boolean }[] = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json')).sort().map(file => ({ file, L: JSON.parse(readFileSync(`${ROOT}/levels/${file}`, 'utf8')), office: false }));
+    const OS = (await import(`${ROOT}/levels/office.scenarios.ts`)).OFFICE_SCENARIOS;
+    for (let i = files.length - 1; i >= 0; i--) if (!Array.isArray(files[i].L.doors)) files.splice(i, 1);   // (a lint list, a look file: not a level)
+    for (const f of files) if (/^office/.test(f.file) && !f.L.scenarios) { f.L = { ...f.L, scenarios: OS }; f.office = true; }
+    const bad: string[] = [], twins: string[] = [], owed: Record<string, string> = {}; let written = 0, doorsN = 0;
+    for (const { file, L, office } of files) {
+      const ids: string[] = (L.doors ?? []).map((d: any) => d.name ?? d.id);
+      for (const r of L.scenarios?.doorNames ?? []) { written++; if (bearing(r.name)) bad.push(`${file} ${r.door}: '${r.name}' says a bearing`); if (/^the\s/i.test(r.name)) bad.push(`${file} ${r.door}: '${r.name}' begins with 'the'`); }
+      const ds = ids.map(id => ({ def: { name: id } })); N.nameDoors(L, office, ds); const names = ds.map(d => O.doorWords(d)); doorsN += ids.length;
+      names.forEach((n, i) => { if (names.indexOf(n) !== i) twins.push(`${file}: two doors called '${n}'`); });
+      const k = ids.filter((_id, i) => bearing(names[i])).sort().join(' '); if (k) owed[file] = k;
+    }
+    F.verdict(files.length >= 30 && written >= 2 && !bad.length, 'every written name says no bearing and reads as a row does (no \'the\')', bad.slice(0, 8).join(' · ') || `${written} written names in ${files.length} level files`);
+    F.verdict(!twins.length, 'no two doors of a level are called the same', twins.slice(0, 8).join(' · ') || `${doorsN} doors, each level's all apart`);
+    const diff = [...new Set([...Object.keys(owed), ...Object.keys(DOORS_OWED)])].sort().filter(f => (owed[f] ?? '') !== (DOORS_OWED[f] ?? '')).map(f => `${f}: now [${owed[f] ?? ''}], on the list [${DOORS_OWED[f] ?? ''}]`);
+    F.verdict(!diff.length, 'the doors still called by a bearing are exactly the list of what is owed, door for door (a door named comes off it; no other door gets one)', diff.join(' · ') || `${Object.keys(owed).length} files owed, ${Object.values(owed).reduce((a, b) => a + b.split(' ').length, 0)} doors · the office: ${files.filter(f => f.office).map(f => f.file).join(' ')} none`);
+    if (process.env.DOORNAMES_CENSUS) console.log(Object.entries(owed).map(([f, k]) => `  '${f}': '${k}',`).join('\n'));
+  } catch (e) { F.verdict(false, 'the check ran', String((e as Error)?.stack ?? e)); }
+  finally { Object.assign(WORDS, was); }
+  return F.done();
+});

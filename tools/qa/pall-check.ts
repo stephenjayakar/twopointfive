@@ -15,7 +15,7 @@ import { standUp, ROOT } from './headless.ts';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { CHAOS, PALL_STATS, resetChaosKnobs } = await import(`${ROOT}/src/game/destruction.ts`);
-const { WALLCHARGE, wallAt, wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
+const { WALLCHARGE, WALLSHOT, wallAt, wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { blast: fragBlast, FRAG } = await import(`${ROOT}/src/game/frag.ts`);
 const { fireShell, HE40, HE40_STATS } = await import(`${ROOT}/src/game/he40.ts`);
@@ -41,6 +41,7 @@ export async function floor(rule: boolean, opts: { chaos?: number; sw?: boolean 
   const emits: any[] = []; let inPall = false; const pe = g.destr.pallEmit.bind(g.destr); g.destr.pallEmit = (...a: any[]) => { inPall = true; try { return pe(...a); } finally { inPall = false; } };
   g.smoke.emit = (e: any) => { emits.push({ ...e, pos: [...e.pos], t: g.time, pall: inPall }); };   // (`pall`: asked by the pall's own one emitter call)
   CHAOS.pall.on = rule; CHAOS.pall.solver = true; zero();
+  WALLSHOT.on = false;   // (this check holds the pall's OWN table: the share of it a wall charge asks for on the shipped stand is WALLSHOT's, held by its own check `wallshot`)
   return { g, step, emits };
 }
 export type Floor = Awaited<ReturnType<typeof floor>>;
