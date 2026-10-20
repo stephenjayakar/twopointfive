@@ -60,6 +60,7 @@ export class CpuSmoke {
   lives: number[] = [];
   /** an emitter handed to the solver: what it will let out, as one blob where it stands (a tracked source is taken where it was born) */
   emit(e: SmokeEmitter): void {
+    if (e.look) return;   // (a look-only source — a man's breath in the cold, snowBreath.ts: it hides nobody and is no emitter `budget` counts)
     const K = SENSE.smoke, r = Math.max(e.radius, 0.05), rate = e.density * PI15 * r * r * r;
     if (e.ttl > 0) { this.lives.push(e.ttl); if (this.lives.length > 2 * K.emitters) this.lives.shift(); }
     if (!(rate * e.ttl >= K.least)) return;
