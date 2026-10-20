@@ -2,8 +2,9 @@
 //   1. the page as it opens, sound on: the sounds are made a voice at a time while it boots (none left by the time it is ready and idle), the mixer's start
 //      inside the first click is then short, and every sound of the table has its buffer; the same page under ?sfxwarm=0 makes the whole table inside start,
 //      as it was — the two times are printed side by side, and the new one must be under a third of the old.
-//   2. the page's device destroyed (what a load to another address does to it): no red card, no console error; under ?gpuretry=0 the card, as it was.
-//   node tools/qa/shaderwait-page.cjs        env: PORT (the dev server's, default 5199)
+//   2. the page's device destroyed (what a load to another address does to it), on a page that draws nothing: once the browser has told the loss, no red
+//      card and no console error; under ?gpuretry=0 the card, as it was.
+//   node tools/qa/shaderwait-page.cjs        env: PORT (the dev server's, default 5199) · SHADERWAIT_ONLY=lost = the lost-device checks alone
 // A real loss (a driver that falls over) cannot be made here: its rule is tools/qa/gpulost-check.ts's. Nothing here is heard, and no time is a real machine's.
 // Exit 0 = every check passed, 1 = one failed or a page did not boot.   SHADERWAIT_BREAK=1: step 1 runs both pages under ?sfxwarm=0 — must FAIL.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -26,8 +27,9 @@ const BASE = `http://localhost:${PORT}/?quality=medium&levelFile=train-move.json
   const startMs = page => page.evaluate(() => { const a = window.__audio; const t = performance.now(); a.start(); const ms = performance.now() - t; const names = ['pistolLoud', 'pistolSuppressed', 'chairRoll', 'thunderFar', 'click', 'wallDebris', 'footSoft']; return { ms, started: a.started, rate: a.backend.sfxContext.sampleRate, missing: names.filter(n => !(a.backend.duration(n) > 0)), warm: window.__sfxWarm() }; });
 
   // 1. the first click
-  const A = await open(BREAK ? '&sfxwarm=0' : '');
-  const B = await open('&sfxwarm=0');
+  const LOST_ONLY = process.env.SHADERWAIT_ONLY === 'lost';   // the device checks alone, two pages
+  const A = LOST_ONLY ? null : await open(BREAK ? '&sfxwarm=0' : '');
+  const B = LOST_ONLY ? null : await open('&sfxwarm=0');
   if (A && B) {
     await A.page.waitForFunction(() => window.__sfxWarm().left === 0, null, { timeout: 120000 }).catch(() => {});
     const w = await A.page.evaluate(() => window.__sfxWarm());
@@ -42,16 +44,21 @@ const BASE = `http://localhost:${PORT}/?quality=medium&levelFile=train-move.json
     check(left.left === 0 && left.waiting === 0 && left.live, 'after the start nothing waits: what was made is the mixer\'s');
     check(A.errs.length === 0 && B.errs.length === 0, `no page or console error on either page${A.errs.length + B.errs.length ? ` — ${[...A.errs, ...B.errs][0]}` : ''}`);
   }
-  // 2. the device destroyed (on the first page, before it closes; then a page of its own under ?gpuretry=0)
-  for (const [P, name, want] of [[A, BREAK ? '?sfxwarm=0' : 'as it opens', false]]) { if (!P) continue;
-    const before = P.errs.length;
-    const up = await P.page.evaluate(async () => { window.__engine.gpu.device.destroy(); await new Promise(r => setTimeout(r, 800)); return getComputedStyle(document.getElementById('fatal')).display !== 'none'; });
-    check(up === want, `${name}: the device destroyed (a page on its way out) puts ${want ? 'the card up' : 'no card up'}`);
-    check(P.errs.slice(before).filter(e => /device lost/i.test(e)).length === 0, `${name}: and prints no 'device lost' error`); }
+  // 2. the device destroyed, on pages of their own that draw nothing (?paused): the browser's GPU side tells the loss, and behind a software-drawn frame that is
+  //    minutes late — a page that was only waited on for a second passed "no card" without the loss ever having been told. The loss must be TOLD, then judged.
   if (A) await A.page.close(); if (B) await B.page.close();
-  { const C = await open('&mute&gpuretry=0');
-    if (C) { const up = await C.page.evaluate(async () => { window.__engine.gpu.device.destroy(); await new Promise(r => setTimeout(r, 800)); const f = document.getElementById('fatal'); return { up: getComputedStyle(f).display !== 'none', text: f.textContent }; });
-      check(up.up && /^GPU device lost: /.test(up.text) && !/\n/.test(up.text), `?gpuretry=0: the card at once with the one line it always had ("${String(up.text).slice(0, 80)}")`);
+  const lose = page => page.evaluate(async () => { const d = window.__engine.gpu.device; let told = null; d.lost.then(i => { told = { reason: i.reason, message: i.message }; });
+    d.destroy(); for (let i = 0; i < 600 && !told; i++) await new Promise(r => setTimeout(r, 500)); await new Promise(r => setTimeout(r, 500));
+    const f = document.getElementById('fatal'); return { told, up: getComputedStyle(f).display !== 'none', text: f.textContent }; });
+  { const D = await open('&paused&mute');
+    if (D) { const before = D.errs.length; const r = await lose(D.page);
+      check(!!r.told && r.told.reason === 'destroyed', `as it opens: the browser tells the page its device is gone (reason ${r.told ? r.told.reason : 'never told'})`);
+      check(!!r.told && !r.up, 'as it opens: a device destroyed (a page on its way out) puts no card up');
+      check(D.errs.slice(before).filter(e => /device lost/i.test(e)).length === 0, "as it opens: and prints no 'device lost' error");
+      await D.page.close(); } }
+  { const C = await open('&paused&mute&gpuretry=0');
+    if (C) { const r = await lose(C.page);
+      check(!!r.told && r.up && /^GPU device lost: /.test(r.text) && !/\n/.test(r.text), `?gpuretry=0: the card at once with the one line it always had ("${String(r.text).slice(0, 80)}"${r.told ? '' : ' — the loss was never told'})`);
       await C.page.close(); } }
   await browser.close();
   console.log(red ? `${red} FAILED` : 'all passed');
