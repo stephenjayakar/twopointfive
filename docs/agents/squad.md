@@ -145,8 +145,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   through the fresh cast a load stands up); `PLAN_STATS` is a tally. PICTURE (ui/cmdring.ts `updatePlan`, index.html `.planmode`): a frame round
   the view and PLAN under it, a circle at each man's feet in his pair's colour (bright: picked), the box, each chain as a broken line from its men
   through its stops with the key's cap where it is still to be pressed (lit where they wait now). CHECK: `bun run tools/qa/planmode-check.ts`
-  (`probes.ts planmode`, family squadorders), 17 lines through real keys and buttons on the room clear with four; `PLANMODE_BREAK=1` fails 16 of
-  17 on both stands. LIMITS, as built: a chain's stop is always the first wedge (no other row can be chained); a chained 'fall in' is done at
+  (`probes.ts planmode`, family squadorders), 18 lines through real keys and buttons on the room clear with four (the last: two rooms chained for one pair);
+  `PLANMODE_BREAK=1` fails 17 of 18 on both stands. LIMITS, as built: a chain's stop is always the first wedge (no other row can be chained); a chained 'fall in' is done at
   once; the men of a chain are named when it is laid (a man who joins the pick later is not on it); men who part from a chain while it waits at a
   door go in with the rest on that door's word. SEEN: on the page with the software adapter at 960 × 540, real keys and mouse, no console or GPU
   errors. Never seen on a GPU, never played, and no tally has been run with it: whether chains beat B is not measured.

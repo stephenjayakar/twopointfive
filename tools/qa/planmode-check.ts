@@ -191,6 +191,16 @@ export async function planmodeCheck(): Promise<boolean> {
       // 17. a load's own fresh cast leaves the chains it put back; a fresh cast later clears them
       { R.aim(aimOf(R, A.d)!); R.click(4); const snap = PM.planSnapshot(O); P.chains.length = 0; PM.planRestore(O, snap); PM.planFresh(O); const stood = P.chains.length; R.step(30); PM.planFresh(O); const cleared = P.chains.length === 0;
         line(stood === 1 && cleared, 'the cast a load stands up leaves the chains the file put back; a fresh cast later clears them', `after the load's cast: ${stood} chain · after a later one: ${P.chains.length}`); }
+      R.home();
+      // 18. two rooms for one pair: F in, F on to the next door, where they stack and wait again, F in — and the other pair is never ordered
+      if (!B) line(false, 'a second door for a chain of two rooms', 'none the cursor can be put on');
+      else { const red = O.men('red'), blue = O.men('blue'), names = red.map((m: any) => m.callsign).sort().join(), n0 = O.log.length; O.who = 'red';
+        R.aim(aimOf(R, A.d)!); R.click(4); R.aim(aimOf(R, B.d)!); R.click(4, true); const C = P.chains[0], keys = planView(O)?.chains[0]?.stops.map((s: any) => s.keys).join('+');
+        R.until(() => C?.phase === 'wait', 25); R.word(); const in1 = isEntry() && C?.phase === 'in';
+        R.until(() => C?.phase === 'held', 60); const held = C?.phase === 'held'; R.word(); const on = R.tail()?.order === 'stack' && C?.steps.length === 1;
+        R.until(() => C?.phase === 'wait', 40); const wait2 = C?.phase === 'wait'; R.word(); const in2 = isEntry() && C?.phase === 'in';
+        R.until(() => P.chains.length === 0, 60); const rows = O.log.slice(n0), mine = rows.every((r: any) => [...r.who].sort().join() === names), still = blue.every((m: any) => O.of(m)?.order === 'fallIn');
+        line(keys === '2+1' && in1 && held && on && wait2 && in2 && P.chains.length === 0 && mine && still, 'two rooms chained for one pair: F in, F on to the next door, stacked there until F, in — the other pair never ordered', `keys ${keys} · first door: ${in1 ? 'in' : 'not in'}, ${held ? 'held' : `chain ${C?.phase}`} · F: ${on ? 'to the next door' : R.tail()?.order} · there: ${wait2 ? 'waiting' : `chain ${C?.phase}`}, ${in2 ? 'in' : 'not in'} · ${P.chains.length ? 'chain still up' : 'chain done'} · ${rows.length} orders, ${mine ? 'all red\'s' : 'not all red\'s'} · blue ${still ? 'with Sam' : 'moved'}`); }
     }
   } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
   console.log(fails ? `planmode-check: ${fails} FAIL` : 'planmode-check: ALL PASS');
