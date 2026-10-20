@@ -56,6 +56,7 @@ import { Input } from '../game/input';
 import type { Game } from '../game/game';
 import type { LoopCtx } from '../host/loop';
 import type { Tween, TweenCam } from '../host/tween';
+import { FINDME } from '../host/findme';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
 import * as Kt from '../game/kit';
@@ -95,8 +96,15 @@ export function paceFrame(owed: number, wall: number, speed: number, f: number, 
  *  on from where the frame before left it and never jumps ahead: it reaches a step as the next one runs, whatever the two steps' lengths (on a tape of uneven
  *  steps — one from before the fixed step — a step's movement is so shown over the NEXT step's length: unbroken, a little off the pace). */
 export function slowBlend(owed: number, next: number): number { const a = next > 0 && !SLOMO_BREAK ? owed / next : 1; return a >= 1 ? 1 - 1e-6 : a > 0 ? a : 0; }
+/** THE VIEW'S TURN FOR `dx` PIXELS OF THE MOUSE UNDER CTRL (rad): what the same hand does in play — host/loop.ts's 0.006 a pixel, and the way round the viewer
+ *  picked in Options > Game, 'Turn direction' (host/findme.ts FINDME.turn). The viewer's own setting, not the recording's: a tape's view is the tape's. */
+export function ctrlTurn(dx: number): number { return dx * 0.006 * (TURN_BREAK ? 1 : FINDME.turn); }
+/** a check's break word, said as `NAME=1` in front of a headless tool (never on a page: there is no process there) */
+const said = (name: string): boolean => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[name] ?? '') === '1'; } catch { return false; } };
+/** `REPLAYTURN_BREAK=1` (tools/qa/replayturn-check.ts's): the replay's Ctrl turn does not ask the row */
+const TURN_BREAK = said('REPLAYTURN_BREAK');
 /** `SLOMO_BREAK=1` (tools/qa/slomo-check.ts's): a slow frame stands on the last step, as every frame did before the picture was drawn between them */
-const SLOMO_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SLOMO_BREAK ?? '') === '1'; } catch { return false; } })();
+const SLOMO_BREAK = said('SLOMO_BREAK');
 /** the free camera: the keys that slide it · its tilt and zoom limits · metres it may be taken from the recorded look-at point · pixels a press may travel and still be a click · where a seek backwards keeps it */
 const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PITCH_MAX = 89 * DEG, DIST_MIN = 3, DIST_MAX = 60, FAR_M = 80, DRAG_PX = 5, CAM_KEEP = 'twopointsix.tapecam', SHOT_S = 1;
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
@@ -179,7 +187,7 @@ export class TapePlay {
   private noting: { pos: [number, number] | null; f: number; was: boolean } | null = null; private audioWas: boolean | null = null;
   /** THE PICTURE'S CAMERA OFF THE PLAYER'S VIEW (null = the recording's own camera). `look` null = turned / zoomed only: it still follows the recorded look-at point */
   private free: { look: Vec3 | null; yaw: number; pitch: number; dist: number } | null = null;
-  private drag: { id: number; x: number; y: number; u: number; v: number; turn: boolean; /** Ctrl's turn: no tilt, as in play */ level: boolean; left: boolean; moved: boolean; from: TapeView & { fov: number }; grab: Vec3 | null } | null = null;
+  private drag: { id: number; x: number; y: number; u: number; v: number; turn: boolean; /** Ctrl's turn: no tilt, as in play */ level: boolean; /** begun under Ctrl: it turns the way Ctrl turns (ctrlTurn) */ ctrl: boolean; left: boolean; moved: boolean; from: TapeView & { fov: number }; grab: Vec3 | null } | null = null;
   private dragged = false; private nofog = false; /** the viewer's night vision (null = the run's), the tube as drawn 0‥1, and whether the picture is on the run's own value frame for frame */ private nvView: boolean | null = null; private nvK = 0; private nvTrack = true; private held = new Set<string>(); private scratch = new FollowCamera();
 
   constructor(readonly F: ReplayFile | null, public id: number | null, readonly src: string, readonly refuse: string) {
@@ -397,15 +405,15 @@ export class TapePlay {
   private mouse(cv: HTMLCanvasElement): void {
     const uv = (e: MouseEvent): [number, number] => { const r = cv.getBoundingClientRect(); return [(e.clientX - r.left) / Math.max(1, r.width), (e.clientY - r.top) / Math.max(1, r.height)]; };
     cv.addEventListener('pointerdown', e => { this.dragged = false; if (!this.tape || this.noting || e.button > 2) return; const [u, v] = uv(e);
-      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, u, v, turn: e.button !== 0 || e.shiftKey || e.ctrlKey, level: e.ctrlKey && !e.shiftKey, left: e.button === 0, moved: false, from: this.view(), grab: null }; });
+      this.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, u, v, turn: e.button !== 0 || e.shiftKey || e.ctrlKey, level: e.ctrlKey && !e.shiftKey, ctrl: e.ctrlKey, left: e.button === 0, moved: false, from: this.view(), grab: null }; });
     const up = (e: PointerEvent): void => { const D = this.drag; if (!D || e.pointerId !== D.id) return; this.drag = null; if (D.moved) { this.dragged = D.left; try { cv.releasePointerCapture(D.id); } catch { /* */ } cv.style.cursor = ''; } };
     cv.addEventListener('pointermove', e => { const D = this.drag;
-      if (!D) { if (e.ctrlKey && !e.buttons && e.movementX && this.tape && !this.noting) this.take().yaw += e.movementX * 0.006; return; }   // (Ctrl + the mouse with no button turns the view, as it orbits the camera in play: game/input.ts orbitDX × host/loop.ts's 0.006)
+      if (!D) { if (e.ctrlKey && !e.buttons && e.movementX && this.tape && !this.noting) this.take().yaw += ctrlTurn(e.movementX); return; }   // (Ctrl + the mouse with no button turns the view, as it orbits the camera in play: game/input.ts orbitDX × host/loop.ts's 0.006, the way round his 'Turn direction' row says)
       if (e.pointerId !== D.id) return; if (!e.buttons) { up(e); return; }   // (no button down: the press ended somewhere this canvas did not hear of)
       const dx = e.clientX - D.x, dy = e.clientY - D.y;
       if (!D.moved) { if (Math.hypot(dx, dy) < DRAG_PX) return; D.moved = true; D.from = this.view(); D.grab = D.turn ? null : this.floorAt(D.from, D.u, D.v); try { cv.setPointerCapture(D.id); } catch { /* */ } cv.style.cursor = 'grabbing'; }
       const F = this.take();
-      if (D.turn) { F.yaw = D.from.yaw + dx * 0.006; if (!D.level) F.pitch = clamp(D.from.pitch + dy * 0.005, PITCH_MIN, PITCH_MAX); }
+      if (D.turn) { F.yaw = D.from.yaw + (D.ctrl ? ctrlTurn(dx) : dx * 0.006); if (!D.level) F.pitch = clamp(D.from.pitch + dy * 0.005, PITCH_MIN, PITCH_MAX); }
       else { const [u, v] = uv(e), q = D.grab && this.floorAt(D.from, u, v); if (D.grab && q) F.look = this.near([D.from.look[0] + D.grab[0] - q[0], D.from.look[1], D.from.look[2] + D.grab[2] - q[2]]); } });
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('wheel', e => { if (!this.tape || this.noting || !e.deltaY) return; const px = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 400 : 1);   // (a wheel that counts lines or pages, as pixels)
@@ -548,13 +556,13 @@ export class TapePlay {
 #tapemapbig canvas{border:1px solid rgb(72,73,70);border-radius:3px;background:var(--h-base,#0c0b09);cursor:crosshair}
 #tapebar .say{min-width:0;white-space:nowrap;opacity:.8}
 #tapebar .say:empty,#tapebar .say.ok{display:none}
-body:has(#panel:not(.hidden)) #tapemap{right:392px}
-body.taping #equip{bottom:calc(86px + var(--tape-h,44px) + var(--sndl-h,0px))}
-body.taping #meters{bottom:calc(16px + var(--tape-h,44px) + var(--sndl-h,0px))}
+body:has(#panel:not(.hidden)) #tapemap{right:calc(372px * var(--tz, 1) + 20px)}
+body.taping #equip{bottom:calc(86px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+body.taping #meters{bottom:calc(16px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
 body.tapetight #equip,body.tapetight #meters{visibility:hidden}
-body.taping #log{bottom:calc(44px + var(--tape-h,44px) + var(--sndl-h,0px))}
-body.taping #checkpoint,body.taping #journal{right:calc(var(--tape-map,236px) + 26px)}
-body.taping #replaytag{right:calc(var(--tape-map,236px) + 26px) !important}
+body.taping #log{bottom:calc(44px + (var(--tape-h,44px) + var(--sndl-h,0px)) / var(--tz, 1))}
+body.taping #checkpoint,body.taping #journal{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))}
+body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1)) !important}
 #tapebar .say.off{color:#ffb35c;opacity:1}
 #tapebig{position:fixed;left:0;right:0;top:0;bottom:calc(var(--tape-h,44px) + var(--sndl-h,0px));z-index:69;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#e9e2d6;font:14px var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 #tapebig b{display:grid;place-items:center;width:84px;height:84px;border:2px solid var(--m-accent,#e8833a);border-radius:50%;font-size:34px;color:var(--m-accent,#e8833a);padding-left:6px;box-sizing:border-box;background:var(--h-field,rgb(21,19,16))}

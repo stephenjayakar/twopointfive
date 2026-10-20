@@ -27,6 +27,7 @@ import { QUICKTHROW } from '../game/quickthrow';
 import { samBlind } from '../game/samstun';
 import { closeMarks } from '../game/close';
 import { PlanFloor } from './planfloor';
+import { FindMeViz } from './findme';
 import type { SlotKind } from '../game/game';
 import type { Firearm } from '../game/weapons';
 import { WindViz } from './windviz';
@@ -34,6 +35,7 @@ import { SquadThrowViz } from './squadthrowviz';
 import { AttentionViz } from './attentionviz';
 import { PictureViz } from './pictureviz';
 import { menuTheme } from './theme';
+import { textZoom } from './textsize';
 
 const EDGE = 1.1;   // markers / dots / the throw arc stay drawn until they are 10 % of the view past its edge (FollowCamera.project margin)
 /** The way off a lost man to where the round came from, as it lies on the screen: the turn, in degrees, of one right-pointing arrow ('' = the squad does not
@@ -98,6 +100,8 @@ export class Overlay implements HudLike {
   readonly windViz = new WindViz(this.root);
   /** the squad's plan on the floor (ui/planfloor.ts ← game/floorplan.ts): ways, marks, fans, who an open menu goes to */
   readonly plan = new PlanFloor(this.traj);
+  /** the player's own man made easy to find (ui/findme.ts ← host/findme.ts): a ring at his feet, a rim in the dark, his shape through a wall — nothing unless his Options ask */
+  readonly findme = new FindMeViz(this.traj);
   /** Tour timeline: one segment per stop (width ∝ duration) with its chapter title, the live one filled to its progress; segments are clickable. */
   setTimeline(ch: { list: { title: string; dur: number }[]; i: number; frac: number } | null, onPick: (k: number) => void) {
     this.tlOnPick = onPick;
@@ -173,7 +177,7 @@ export class Overlay implements HudLike {
     this.closeShown = n;
   }
   update(game: Game, cam: FollowCamera, canvas: HTMLCanvasElement) {
-    const w = canvas.clientWidth, h = canvas.clientHeight;
+    const tz = textZoom(), w = canvas.clientWidth / tz, h = canvas.clientHeight / tz;   // (the layer's own pixels: ui/textsize.ts)
     // guards
     while (this.markers.length < game.guards.length) { const el = document.createElement('div'); el.className = 'marker'; this.root.appendChild(el); this.markers.push(el); }
     game.guards.forEach((g, i) => {
@@ -361,6 +365,7 @@ export class Overlay implements HudLike {
     } else { this.trajPath.style.display = 'none'; this.trajLand.style.display = 'none'; }
     this.drawClose(game, cam, w, h);
     this.plan.update(game, cam, w, h);
+    this.findme.update(game, cam, w, h, this.plan.youOn);
     // equipment
     this.updateEquip(game);
     // the wind field's debug view (nothing drawn, nothing sampled unless a switch of it is on)

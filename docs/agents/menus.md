@@ -1196,3 +1196,115 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the wall charge'. That is a row's data and words only (no tally, no digest: a digest holds a row's kind and time), and a Training lesson's
   'downed how: takedown' step no longer counts a charge's knock. A checkpoint saved before keeps its 'takedown' rows. Check
   `bun run tools/qa/probes.ts debrief-charge` (family `debrief`; the rows' own words, the same on both stands). Text only; nobody has played to it.
+- **Finding your own man, and the camera under the hand: six rows on trial in Options > Game (10-19; `src/host/findme.ts` the table, `src/ui/findme.ts`
+  the HUD's drawing and the rows).** From a play test: a new player kept losing his own man on the screen, in the dark and behind walls, and reached
+  for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new default, so
+  THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, shape: false, turn: 1, behind: false }`
+  on the page and on both stands, and at those starts the build is the build as it was (measured: the same game digest and the same view matrix as
+  the commit before it over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
+  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all six back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  scales the follow camera's own `aimLead` as built and writes it only when the row moves, so the debugger's aim lead slider still works and the
+  later hand wins; at none the look-at is the man himself), `Ring at your feet` (the order menu's gold ring, `planfloor.ts` `py`, drawn at all times; ours stands down while that one is
+  up: `PlanFloor.youOn`), `Outline in the dark` (a rim round his figure, full at a light number of 0.12 and under, gone at 0.3), `Shape through walls` (his figure
+  faint and rimmed through whatever stands between the eye and him, as strong as the share of four points of him the eye cannot see: glass and the
+  `NoPrimary` ceilings do not count), `Turn direction` (Ctrl + mouse turns the view the other way: the sign in `host/loop.ts`, and in the engine replay's own Ctrl turn, `replay/engineplay.ts ctrlTurn`), `Double tap Ctrl`
+  (two short presses, answered as the second comes up, bring the view round over about a quarter of a second to look where he looked at the tap;
+  a hand's orbit, a pin, a show or a spectated man drops it; `TapTwice`: a press held is never a tap, nor one with another key, a button, the wheel or more than 12 px of orbit in
+  it). THE FIGURE IS THE HUD'S, NOT THE RENDERER'S: his joints (`character.ts bones`) joined by round-ended strokes as wide as the limb in the
+  overlay's SVG, the rim that shape grown 1.5 px with the shape cut out (one SVG filter over a box round him). No shader, no pass, no pipeline, the
+  same on every quality tier; it follows his pose, not his kit or his clothes, and stands a tick behind a picture drawn between ticks. ONE MODEL
+  HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording replays
+  the view it was made with; ring, outline and shape read his position, joints and light number and four sight lines, and write nothing (a run with
+  the three on and asked every frame is the run with them off, digest for digest). Checks: `bun run tools/qa/probes.ts findme` (family `ui`;
+  `FINDME_BREAK=1` = the rows moved and the table not: pan, turn, behind and the picture must fail), the same on both stands;
+  `PORT=… node tools/qa/findme-page.cjs` (the real page on the software adapter: the rows exist, move live, are kept over a reload and reset; a real
+  Ctrl drag, a real held press and a real double tap). THE DOUBLE TAP IS NOT 'THE CAMERA BEHIND HIM' as a third-person game means it, and cannot be while the system cursor is the aim: he faces the
+  cursor's point in the world and the cursor stays where it is on the screen, so as the view turns he turns with it (the check prints it: cursor 5 m
+  to his side, the view lands on where he looked and he has swung 130 degrees). What he was facing ends at the top of the screen; only with the
+  cursor already ahead of him does nothing else move. Truly behind needs the game to own the reticle (the system cursor hidden, ours moved), which
+  is the camera key's own work. NOT DONE: the Controls tab has no line for the double tap. Ctrl is still the camera key, and a double tap is two more presses of it: on Windows Ctrl then W
+  still closes the tab. NEVER SEEN ON A GPU, and nobody has played with any of the six: how faint the rim should be, whether the shape reads as him,
+  how fast the view should come round and whether 250 / 300 ms is the right tap are all first guesses in `FINDME_LOOK`, `BEHIND` and `TAPTWICE`.
+- **A mission's page loads behind that mission's brief and waits for Start** (2026-10-19; the maintainer, after watching a first-time player: "having
+  the loading screen make more sense (e.g. being a pre mission brief) that you then click through rather than flashing the controls"; that player's
+  notes: "stay on loading screen longer, would like to read"). `src/ui/loadbrief.ts`. BEFORE: a page whose address names a mission booted behind the
+  old start card's look-alike (`ui/menu.ts bootCard`: a grey Start, the notes, the whole controls list, the shader count) and the mission began under
+  it the moment the boot was done. NOW that page shows the mission, in a layer of its own (`#brief`, z 30: over the menu and the list, under the
+  options and the fatal card): the heading it is listed under, its title, place and one line, the sheet's three cells (Team AS DEPLOYED, Defenders,
+  Approach), its picture (`ui/menuStills.ts`; none came = the words alone), and ONE block, START, which fills by the boot's own status line and is
+  live when the boot is done. Every word is the mission list's (`briefOfQuery`: the row its address boots; deployed at a size no row has, the row of
+  that kind on that level; `?solo` alone = the solo night; NONE for an address that picks its level by `?level=` — the editor's own level plays the
+  moment it loads, under no other level's words); the only words that are the screen's own are Start, Enter, Controls and Back. IT STAYS
+  UNTIL STARTED (a click on the block, Enter or Space) with the world stood up and held still behind it — `main.ts`: `briefHolds()` is one more term
+  of the loop's `frozen`, as under the pause card, the quality ladder takes no sample under it, and it counts as a page that hides the view
+  (`viewCovered`: the frame is not drawn behind it once the warm-up frames are) — so the run's first tick, its try and its par
+  clock are the player's, and the first frames' warm-up is spent behind the brief. A PRESS WHILE IT BOOTS IS KEPT (the block sits pressed in) and the
+  run starts the moment it can: the brief never adds wait. A second press takes it back, and so does opening Controls: the run never starts under a
+  page the player is reading. The keys are the brief's while it is up (its listener is first at the window: no game key
+  and no pause-card Esc is read under it); CONTROLS opens Options ▸ Controls over it (where the keys are from every other screen; shut, the focus is START's), BACK / Esc is a
+  page load of the address a quit of that mission leaves, onto the list. It grows with a big window (`--u`: 1 px up to 1920 x 1080, 2 px at 3840 x
+  2160). NOT FOR A PAGE NOBODY SITS AT: none is made under `?paused`, a replay's tape, `?kitview`'s window or a benchmark's scene; one that is up is
+  dropped unstarted at the boot's end on a muted test rig (`?mute`), for a show, for a mission whose start was refused (the start card says why), and
+  at the loop's next step once a hook that drives the game is called (`__runFrames`, `__mouse`, `__click`, a save or load; NOT one that only
+  shoots the page: `docs/agents/qa.md`); the headless harness never comes through `main.ts`. A restart, a
+  checkpoint and the next try are not page loads and show no brief. SWITCH `LOADBRIEF.on` (`ui/loadbrief.ts`): ON in the page, `?loadbrief=0` = the
+  boot card and the straight start as the build was; OFF in the module, a page-only screen like `START_PAGE` — no game rule reads it, no knob table
+  or journal carries it, no `FROZEN_HOLDS` row: both stands are the build as it was, there being no code of it on either. WHO OWNS WHAT IN THE BOOT:
+  this screen is the card line, its branch of the READY block, the `frozen` term, the ladder's guard and its word in `viewCovered` in `main.ts`; when the level is READY
+  (`gpu/device.ts`, `engine.init`, `ui/boot.ts`, the status text — keep 'N / M' in it, the brief's fill reads it — `__ready`) is the boot's own.
+  CHECKS: `bun run tools/qa/probes.ts loadbrief` (family `ui`; `tools/qa/loadbrief-check.ts`: all 37 rows' words off their own addresses, the screen
+  and its hand-over on a fake DOM, `main.ts`'s wiring as text, the switch off on the stand; green on both stands, `LOADBRIEF_BREAK=1` red on both) and
+  `PORT=… node tools/qa/loadbrief-page.cjs` (the real page, one job for each kind of mission and one Training lesson, each started another way, then
+  `?loadbrief=0` and the automation boot; it runs the page's frames undrawn unless `REAL=1`). MEASURED 10-19 on the software adapter
+  (frames undrawn, 1024 x 576, verylow, about 5 minutes a boot): 8 of 8 PASS, no page error — night breach (Enter), the depot room clear (a click),
+  the registry rescue (a click made while it booted: kept, started by itself), the counting house quiet (Space), Training 1 (Controls opened, Esc,
+  the focus on START, Enter), the solo night (a script's `__runFrames`: the brief gone, its 3 frames run), `?loadbrief=0` (no brief, the old card's
+  14 control rows, the run under way unpressed) and `?paused&mute` (no brief at any point); in each brief job the game's clock stood at 0 across
+  the hold and ran after the start, with no key left held and no pause card. Night breach was also run once with its frames DRAWN (`REAL=1`,
+  about 9 minutes after the boot) before the review's mends: the same verdict. The brief's buttons were also driven in a page with no GPU boot at
+  all (a press kept, taken back by a second, taken back by Controls; a chorded Esc opens nothing; `?level=local` and `?loadbrief=0` show the old card).
+  NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the brief itself is plain DOM and was looked at as Chromium lays it out at 960 x 540, 1280 x 720, 1920 x
+  1080, 2560 x 1440, 3440 x 1440, 3840 x 2160 and a 700 px wide window; how long the hold feels, the fade into the first frames, and the sound that
+  starts on the press are unjudged.
+- **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
+  the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
+  `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:
+  the menu, the Play page, the options, the fight screen's read-outs, the marks over the picture, the debugger; never the picture's canvas). WITH NOTHING
+  CHOSEN it is the window over 1920 × 1080, never under 1 and never over 3: 3840 × 2160 draws at 2, 2560 × 1440 at 1.33, 1920 × 1080 and anything
+  smaller as it always did. A page zoomed from the browser's own menu is a smaller window, so the words stay the size they were. THE SETTING is Options ▸
+  Graphics ▸ Display ▸ Text size: five steps drawn as the letter at each size (0.85, 1, 1.15, 1.3, 1.5 times the window's), live while the page boots,
+  kept per machine (localStorage `twopointsix.textsize`, the step's index; nothing kept = the window's; Graphics ▸ Reset forgets it). A step never
+  takes the layout under 1200 × 675 of its own pixels (the smallest window the screens hold whole at, measured with the page check on the build before):
+  where the largest step asks for more room than there is, the larger steps share what there is (1366 × 768: 1.04, 1.08, 1.14; 1280 × 720: up to
+  1.07), and on a window of 1200 × 675 or less they do nothing. THE KEYS: Ctrl or ⌘ with + and − step it from anywhere, with 0 it is the window's
+  again; those chords, Ctrl + wheel and a pinch are taken from the browser (Ctrl + wheel over the picture is still the camera's).
+  FOUR THINGS A ZOOMED LAYER DOES NOT DO BY ITSELF, and a new screen has to: a viewport unit in a layer is written `calc(25vw / var(--tz, 1))` (the
+  check is red on a bare one in `index.html` or `src/ui`); an `@media` width or height is rewritten by the module to ask for px × factor (also when a
+  style sheet joins later, one microtask after it joins), and a script asks `uiMatch('(max-width: 720px)')` in place of `matchMedia`; a rectangle a
+  script measures off a zoomed element is in window pixels and one it writes into a layer is in the layer's, so divide by `rectZoom()` (the speech
+  bubbles' blockers, the debugger's tooltip, the kit picture's width), and a size read off the window or the picture's canvas by `textZoom()` (the
+  overlay's marks, `uiSize()`); a 2D canvas inside a layer multiplies its device pixels by `textZoom()` or it is stretched (the kit figure, the
+  debrief's map, the wind graph do). A new layer of the page joins `LAYERS`. The replay player's own bar, map and sound lanes are NOT layers (they
+  stay the size they were); its rules that move the fight screen's read-outs clear of them divide the bar's window pixels by the factor.
+  THE MISSION SELECT'S CUT NAMES (the play test's other note) had a cause of their own: the grid of cards has a fixed height and its lines shared it,
+  so on a tall window with few lines the picture (16:9 of a wide card) took the whole line and the name and tags hung out under the next line's picture;
+  at 3840 × 2160 no name could be read, at 1920 × 1080 the tags were cut. With the switch on a card's line is `minmax(0, 1fr) auto auto` with a floor of
+  the picture cropped to 2:1 plus its captions: the picture gives way before the words do, then the grid scrolls. The screen's look at 1920 × 1080 and
+  under is otherwise as it was; with the switch off it is the build before to the rectangle.
+  SWITCH: ON in the page, `?textsize=0` off (no factor, no class, no row, the browser's own zoom keys, every rule as written; `var(--tz, 1)` is 1), OFF
+  in the module, never in the Team & kit picture's own window. It is a look of the page, not a rule of the game: nothing under `src/game` reads it, it
+  is in no knob registry, journal or digest, the headless harness never boots it, so there is no stand word and no run can move. Hook `window.__textsize`
+  (`on`, `zoom`, `step`, `set(i | null)`, `layers`, `table`, `want(w, h, i)`, `media()`). CHECKS: `bun run tools/qa/probes.ts textsize` (family `ui`:
+  the factor's table, the browser-zoom invariance, the floor and the shared room, the media rewrite, the keys, the lints; `TEXTSIZE_BREAK=1` fails,
+  the same on both stands) and the real page, `PORT=<dev server> node tools/qa/textsize-page.cjs [outDir]` (`WAS=<port of a server of the build
+  before>` holds `?textsize=0` to it; `GPU=1` adds the pause card and the fight screen on the software adapter; `TEXTSIZE_BREAK=1` fails).
+  MEASURED 10-19 in headless Chromium with no adapter: at 3840 × 2160, 2560 × 1440, 1280 × 720, 2560 × 1440 at 1.5 device pixels and 1920 × 1080 at
+  2, and at the largest and smallest step, no text cut or covered on the title, the six groups of the mission select (33 cards), Team & kit or the
+  options, and every `@media` rule asked at its px × factor; the row, the keys, the wheel, the kept step across a load; `?textsize=0` at 3840 × 2160
+  equal to the build before in 588 text rectangles. On the SOFTWARE ADAPTER, one boot of the solo night at the three sizes: the kit, the meters and the
+  objective inside the window at the window's factor, the aim ring over the same point of the picture at the largest step as at none, the options
+  over the pause card whole (the pause card's run tally already ends three long labels in an ellipsis at 1280 × 720 on the build before; the check
+  holds the card to that). NEVER SEEN ON A GPU, and nobody has played it: not the sharpness of the words or of the three canvases, not the kit
+  picture's window inside the zoomed Play page (no adapter here draws it), not a real pinch or a real Ctrl + wheel. Chromium only: Safari was never
+  run (the boot asks the engine which pixels it measures a zoomed element in, and that answer has only ever been Chromium's). The replay player was
+  not run with a tape after its six rules changed.

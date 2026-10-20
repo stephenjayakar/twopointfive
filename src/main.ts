@@ -1,7 +1,9 @@
 import { kitViewOn, kitViewStart, kitViewFatal, kitViewQuietOf, type KitView } from './host/kitView';   // (FIRST on purpose: under ?kitview its load makes this window's storage read-only before any module below reads or writes a store — it imports no module at run time, so nobody's load order changes)
 import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions } from './ui/options';
+import { LOADBRIEF, loadBrief } from './ui/loadbrief';
 import { TABKEY, tabFromQuery } from './ui/tabkey';
+import { bootTextSize } from './ui/textsize';
 import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitIssuedPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
@@ -30,6 +32,7 @@ import { pageSwitches } from './host/profile';
 import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
+import { bindFindMe, watchCtrlTaps } from './host/findme';
 import { TWEEN, Tween } from './host/tween';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
@@ -159,6 +162,7 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
   // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
   { const to = PICKS_UI.on ? pickRedirect(location.search) : null; if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
@@ -173,6 +177,7 @@ async function main() {
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
   OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
+  LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
   wireMissions();   // one flow: a pick on the mission list is the loadout screen, whose Deploy is the page load (ui/loadout.ts)
   kitBoot(q);   // each member's kit and uniform read from this machine's store; ?kit = the cards' preview (ui/kitPreview.ts, game/kit.ts)
   if (kitAsIssued(TRAINING_MISSIONS.find(e => e.level === q.get('levelFile')))) kitIssuedPage();   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): every staging on this page puts the issue cards on the men (kit.ts kitIssuedPage), since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
@@ -200,7 +205,8 @@ async function main() {
   if (q.has('norainshadow')) rainShadowConfig.on = false;   // ?norainshadow: the rain lit by the reach masks alone — through a shut door, through the wall a weapon light is pointed at — as it was (render/frame.ts rainShadowConfig)
   initHour(q);   // ?hour=dawn|midday|overcast|dusk (+ ?sun=0‥1): the level at another hour than its own night (src/game/hours.ts) — standGame lays it over the level; no flag = the level as authored
   tape?.tables();
-  const card = bootCard(); loading.textContent = '';
+  const brief = tape || kitViewOn || q.has('paused') || q.has(BENCH_RUN_KEY) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, ?kitview's window, the automation boot, a benchmark's scene)
+  const card = brief ?? bootCard(); loading.textContent = '';
   const tick = () => document.hidden ? Promise.resolve() : new Promise<void>(r => setTimeout(r, 0));   // (a hidden pane / background tab services timers about once a second and paints nothing anyway: no yield there)
   await tick();
   const tGpu = performance.now();
@@ -278,6 +284,7 @@ async function main() {
   const { audio, testMute } = pageAudio(game);
   worldHooks(engine, game, audio);
   const input = new Input(canvas);
+  bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay();
   const bubbles = new Bubbles(document.getElementById('overlay')!);
@@ -447,6 +454,8 @@ async function main() {
 
   // scripted stepping for automated testing: __runFrames(n, dt, keys[]) runs n fixed steps with the given keys held
   let scripted = false;
+  // (THE LOAD BRIEF, ui/loadbrief.ts: up and live it holds the world still as a card does; a script that takes the page over meanwhile is not held by a screen it cannot press — the brief goes, unstarted)
+  const briefHolds = (): boolean => { if (!brief?.held) return false; if (automated || scripted) { brief.off(); return false; } return true; };
   // (draw = false: only the burst's last step is rendered; the steps before it pack the world a draw would have packed and draw nothing. For a long scripted run
   //  on a slow adapter: the game steps the same, the GPU's senses are answered at the bursts' ends)
   let leanBurst = false;
@@ -594,7 +603,7 @@ async function main() {
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)
       if (rawDt > 0) fpsSm = fpsSm * 0.95 + (1 / rawDt) * 0.05;   // HUD frame rate from wall-clock, not the clamped / time-scaled game dt
       if (quality.calibrating) { if (!bench.timing) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
-      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
+      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
         quality.sample(rawDt, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN);
       }
@@ -647,7 +656,7 @@ async function main() {
   const behind = { on: !q.has('menurender'), warm: 90, drawn: 0, skipped: 0, get hidden() { return viewHidden(); } };
   let behindSince = -1;   // (frames drawn when the page that hides the view went up; -1 = none is up)
   // (the options layer opened over a PAUSED run lets the frame show through on purpose — ui/options.ts `.over-game`: Brightness and the tier are judged against it — so it is drawn as ever)
-  const viewCovered = (): boolean => menu.isOpen && !attract.live && (!!startPage() || (optionsOpen() && !document.getElementById('options')?.classList.contains('over-game')));
+  const viewCovered = (): boolean => !!brief?.held || menu.isOpen && !attract.live && (!!startPage() || (optionsOpen() && !document.getElementById('options')?.classList.contains('over-game')));
   const viewHidden = (): boolean => {
     if (!behind.on || !rendered || scripted || tape || !viewCovered() || quality.calibrating || perfsweep.active || perfsweep.freezing || bench.active || perfrec.recording) { behindSince = -1; return false; }
     if (behindSince < 0) behindSince = behind.drawn;
@@ -663,11 +672,12 @@ async function main() {
     updateMs: 0,
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
     betweenTicks: () => { hudExpireBubbles(game); engine.world.upload(true); },
+    ctrlTwice,
     tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
     beforeTick: dt => handsTick(dt),
     timeScale: () => window.__timeScale ?? 1,
-    frozen: () => ((menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
+    frozen: () => (briefHolds() || (menu.isOpen && !attract.live) || perfsweep.freezing || bench.freezing) && !scripted,   // paused / start card: the world holds still, the picture stays live behind the card, hotkeys are off — unless attract mode has let the world go behind the start card (only once its opening veil is fully up): then the patrols walk
     present: () => !scripted || (lastOfBurstNow && !document.hidden),
     afterFreeze: (frozen) => { if (refreshStill) { refreshStill = false; if (frozen && canvas.clientWidth > 0 && canvas.clientHeight > 0) refreshFrozenStill(); } },   // (set by attract's onStop — refreshFrozenStill above; a stop that closed the card, i.e. the hand-over to the tour, needs none of it: that frame is live and under the tour's own veil)
     hotkeys: (frozen) => {
@@ -785,9 +795,12 @@ async function main() {
   tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
   boot.mark('hooks');
-  if (openStartCard) { menu.open('start');
+  // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
+  // drives, a benchmark, a show, or a mission whose start was refused (the start card says why) drops it here and goes on as before.
+  const briefGo = !openStartCard && !automated && !benchOn() && !demo.active && !game.director.showing;
+  if (openStartCard) { brief?.off(); menu.open('start');
     if (START_PAGE.on) { if (openMissionsIfAsked() && !startPage()) openStartPage(); }   // (ui/startpage.ts: the one page was put up by the boot card — `?loadout=` included; left on the list across a load: the page again)
-    else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
+    else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) brief.live(() => { audio.start(); input.focusGame(); }); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)

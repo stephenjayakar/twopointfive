@@ -36,6 +36,7 @@ import { PLAYER_ID } from '../game/consts';
 import { HOURS, cloudLight, cloudSoft, cloudSun, greyed, type HourId } from '../game/hours';
 import type { Box } from '../scene/boxes';
 import { quat, type Vec3 } from '../math/vec';
+import { textZoom } from './textsize';
 import { buildBvh, occluded, closest, hitT, hash01, R2A, R2B, toneInto, type Bvh } from './figureTrace';
 
 /** who to draw: the picked member (0 = you, 1‥squad), the team's size (it names him: his pair's colours), whether this mission wears the sneaking suit,
@@ -727,7 +728,7 @@ export function mountKitFigure(host: HTMLElement): KitFigure {
     if (drawn === key && now < due - 2) { try { if (model && model.key === key) trace(model); } catch (e) { fail(key, e); return; } queue(); return; }   // (his own frame rate, whatever the display's)
     if ((!model || model.key !== key) && bad !== key) { try { model = build(ask, key); } catch (e) { model = null; bad = key; console.warn('kit figure:', e); } if (buf) buf.n = 0; last = now; traced = 0; }   // (a build that threw is not tried again for the same ask)
     if (!model || model.key !== key) { clear(); model = null; return; }   // (no man yet — his dress still loading — is an empty stand, never the last man)
-    let ss = F.ss; try { ss = Math.max(ss, window.devicePixelRatio || 1); } catch { /* no window */ }
+    let ss = F.ss; try { ss = Math.max(ss, (window.devicePixelRatio || 1) * textZoom()); } catch { /* no window */ }   // (drawn inside a zoomed layer: ui/textsize.ts)
     while (ss > 1 && wCss * hCss * ss * ss > F.maxPx) ss -= 0.125;
     const w = Math.round(wCss * ss), h = Math.round(hCss * ss);
     // (a window being dragged to another size: the picture he has is stretched until the size has stood still a moment — a new set of buffers a frame is a lot to throw away)

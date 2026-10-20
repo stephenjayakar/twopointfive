@@ -55,13 +55,13 @@ const CSS = `
 #missions.one .mhead { height: 48px; box-sizing: border-box; padding: 0 var(--pg); gap: 0; align-items: center; border-bottom: 1px solid var(--line); }
 #missions.one .mback { order: 3; margin-left: auto; padding: 8px 0 7px; font: 600 12px/1 var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; color: var(--m-dim); background: none; border: 0; border-radius: 0; }
 #missions.one .mback:hover { color: var(--m-bright); background: none; }
-#missions.one .mt { flex: 0 0 auto; width: clamp(250px, 25vw, 330px); margin-left: calc(-1 * var(--pg)); padding-left: var(--pg); box-sizing: border-box; font: 700 13px/1 var(--m-head); letter-spacing: 0.34em; color: var(--m-dim); text-shadow: none; }
+#missions.one .mt { flex: 0 0 auto; width: clamp(250px, 25vw / var(--tz, 1), 330px); margin-left: calc(-1 * var(--pg)); padding-left: var(--pg); box-sizing: border-box; font: 700 13px/1 var(--m-head); letter-spacing: 0.34em; color: var(--m-dim); text-shadow: none; }
 #missions.one .mcount { margin-left: 16px; color: var(--m-dim); font: 600 11px var(--m-head); letter-spacing: 0.2em; text-transform: uppercase; }
 #missions.one .msteps { display: flex; align-items: center; gap: 12px; padding-left: var(--pg); font: 600 13px/1 var(--m-head); letter-spacing: 0.22em; text-transform: uppercase; color: var(--m-faint); }
 #missions.one .mstep { padding: 8px 0 7px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--m-dim); background: none; border: 0; border-radius: 0; cursor: pointer; }
 #missions.one .mstep:hover { color: var(--m-text); }
 #missions.one .mstep.on { color: var(--m-bright); cursor: default; }
-#missions.one .mbody { grid-template-columns: clamp(250px, 25vw, 330px) minmax(0, 1fr); }
+#missions.one .mbody { grid-template-columns: clamp(250px, 25vw / var(--tz, 1), 330px) minmax(0, 1fr); }
 /* the rows: words only, one line each; the highlighted one bright with the bar (the last 14 px track of a row is kept EMPTY: room at its right end) */
 #missions.one .mlist { display: flex; flex-direction: column; padding: 4px 0 30px; background: none; border-right: 1px solid var(--line); scrollbar-width: none; -webkit-mask-image: linear-gradient(#000 calc(100% - 30px), transparent); mask-image: linear-gradient(#000 calc(100% - 30px), transparent); }
 #missions.one .mlist::-webkit-scrollbar { display: none; }
@@ -89,7 +89,7 @@ const CSS = `
 #missions.one .msheet { --m-pad: var(--pg); display: grid; grid-template-columns: minmax(0, 1fr) 272px; grid-template-rows: 1fr auto; column-gap: 32px; row-gap: 0; padding: 22px var(--pg) 0; }
 #missions.one .mbrief { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 0; min-width: 0; max-width: 860px; }
 #missions.one .mtop { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
-#missions.one .mst { font: 700 clamp(30px, 3.2vw, 42px)/1 var(--m-head); letter-spacing: 0.03em; text-transform: uppercase; color: var(--m-bright); }
+#missions.one .mst { font: 700 clamp(30px, 3.2vw / var(--tz, 1), 42px)/1 var(--m-head); letter-spacing: 0.03em; text-transform: uppercase; color: var(--m-bright); }
 #missions.one .mtop .tag.untuned { padding: 0; border: 0; background: none; font: 10px/1 var(--m-mono); letter-spacing: 0.06em; color: var(--m-dim); }
 #missions.one .mcsum { display: none; font: 600 11px/1 var(--m-head); letter-spacing: 0.18em; text-transform: uppercase; color: var(--m-dim); }
 #missions.one .mfacts { display: flex; flex-wrap: wrap; gap: 4px 22px; margin: 9px 0 0; }
@@ -103,7 +103,7 @@ const CSS = `
     linear-gradient(var(--tick),var(--tick)) 0 100% / 12px 1px no-repeat, linear-gradient(var(--tick),var(--tick)) 0 100% / 1px 12px no-repeat, linear-gradient(var(--tick),var(--tick)) 100% 100% / 12px 1px no-repeat, linear-gradient(var(--tick),var(--tick)) 100% 100% / 1px 12px no-repeat, rgb(var(--m-panel-rgb)); }
 #missions.one .mmap:has(.mplan[style*="none"]) { background: none; }
 #missions.one .mmap:has(.mplan[style*="none"]) .mplace { display: block; position: static; }
-#missions.one .msheet .mbrief .mmap .mplan { display: block; box-sizing: border-box; width: 100%; height: auto; aspect-ratio: 40 / 28; max-width: none; max-height: max(180px, calc(100vh - 372px)); object-fit: contain; margin: 0; padding: 10px 10px 22px; background: none; border: 0; }   /* (outranks the old sheet's height rules in index.html, which squeezed the plan for a mission with a Way in row) */
+#missions.one .msheet .mbrief .mmap .mplan { display: block; box-sizing: border-box; width: 100%; height: auto; aspect-ratio: 40 / 28; max-width: none; max-height: max(180px, calc(100vh / var(--tz, 1) - 372px)); object-fit: contain; margin: 0; padding: 10px 10px 22px; background: none; border: 0; }   /* (outranks the old sheet's height rules in index.html, which squeezed the plan for a mission with a Way in row) */
 #missions.one .mplace { display: none; position: absolute; left: 12px; right: 96px; bottom: 9px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 10px/1 var(--m-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--m-soft); }
 #missions.one .mblurb { max-width: 62ch; margin: 14px 0 0; font-size: 14px; line-height: 1.5; color: var(--m-text); }
 #missions.one .mtip { display: none; }
@@ -277,8 +277,8 @@ const CSS = `
 #missions.one.pane-loadout #loadout .lo-btn.primary.sel { box-shadow: 0 0 0 2px var(--m-base), 0 0 0 4px var(--m-bright); }   /* (the keys are on Deploy) */
 /* THE GROUPS AS TILES, THEIR MISSIONS AS CARDS (root class 'tiles', the Mission step): a rail of six pictures down the left, the open group's missions as cards with
    their own place drawn on each, and the mission's sheet — name, setup, Deploy — down the right. The orange is still the cursor's alone: the picked card's frame. */
-#missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) clamp(292px, 26vw, 340px); }
-#missions.one.pane-list .mlist.tiles { display: grid; grid-template-columns: clamp(118px, 12.5vw, 164px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: 0; overflow: hidden; -webkit-mask-image: none; mask-image: none; }
+#missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) clamp(292px, 26vw / var(--tz, 1), 340px); }
+#missions.one.pane-list .mlist.tiles { display: grid; grid-template-columns: clamp(118px, 12.5vw / var(--tz, 1), 164px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); padding: 0; overflow: hidden; -webkit-mask-image: none; mask-image: none; }
 #missions.one .mgroups { display: flex; flex-direction: column; gap: 8px; min-height: 0; padding: 14px 0 14px var(--pg); overflow-y: auto; scrollbar-width: none; }
 #missions.one .mgroups::-webkit-scrollbar, #missions.one .mgrid::-webkit-scrollbar { display: none; }
 #missions.one .mgroups .msec, #missions.one .mgroups .msec.rest { position: relative; flex: 1 1 0; min-height: 58px; max-height: 112px; margin: 0; padding: 0; overflow: hidden; background: rgb(var(--m-panel-rgb)); border: 1px solid rgba(var(--m-edge),0.14); color: var(--m-dim); cursor: pointer; user-select: none; -webkit-user-select: none; }
@@ -298,6 +298,12 @@ const CSS = `
 #missions.one .mgrid .mtitle { grid-column: 1 / -1; grid-row: 2; padding: 8px 9px 0; font-size: 14px; line-height: 1.12; }
 #missions.one .mgrid .mrow .tag, #missions.one .mgrid .mrow .tag.team { grid-column: 1; grid-row: 3; justify-self: start; padding-left: 9px; line-height: 17px; }
 #missions.one .mgrid .mlean { grid-column: 2; grid-row: 3; line-height: 17px; }   /* (the rest of this line is kept EMPTY: room for what a mission has earned) */
+/* A GROUP OF THREE LINES IN A WINDOW TOO SHORT FOR THEM (ui/textsize.ts, its switch: the root's class): the lines shared the grid's height and each card's name and
+   tags hung out under the next line's picture (a 3840 x 2160 window showed no name at all; 1920 x 1080 cut the tags). Now the PICTURE gives: a card is never
+   under a picture cropped to 8 : 4 with its name and tags whole, and a group that still does not fit scrolls. */
+html.tsz #missions.one .mgrid { container-type: inline-size; }
+html.tsz #missions.one .mgrid .mrow { grid-template-rows: minmax(0, 1fr) auto auto; min-height: calc((100cqw - 24px) / 6 + 48px); }
+html.tsz #missions.one .mgrid .mthumb { height: 100%; min-height: 0; object-fit: cover; }
 #missions.one.tiles.pane-list .msheet { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; padding: 18px 22px 0 20px; overflow-y: auto; scrollbar-width: none; }
 #missions.one.tiles.pane-list .msheet:has(> .mmap) { grid-template-rows: auto auto minmax(0, 1fr) auto; }
 #missions.one.tiles.pane-list .msheet > .mmap { grid-column: 1; grid-row: 3; min-height: 0; margin: 14px 0 0; overflow: hidden; }   /* (the cards carry pictures: the MAP, with the way in on it, is here, in what the rail leaves) */
@@ -305,7 +311,7 @@ const CSS = `
 #missions.one.tiles.pane-list .msheet > .mmap:has(.mplan[style*="none"]) { display: none; }
 #missions.one.tiles.pane-list .msheet:has(> .mmap) .onehost { grid-row: 4; }
 @media (max-height: 730px) { #missions.one.tiles.pane-list .msheet > .mmap { display: none; } }
-#missions.one.tiles.pane-list .mst { font-size: clamp(24px, 2.3vw, 30px); }
+#missions.one.tiles.pane-list .mst { font-size: clamp(24px, 2.3vw / var(--tz, 1), 30px); }
 #missions.one.tiles.pane-list .mblurb { margin-top: 10px; font-size: 13px; line-height: 1.45; }
 #missions.one.tiles.pane-list .mrail { grid-column: 1; grid-row: 2; padding-top: 16px; }
 #missions.one.tiles.pane-list .onehost { grid-row: 3; justify-content: flex-end; }
@@ -319,7 +325,7 @@ const CSS = `
 @media (max-height: 920px) { #missions.one #loadout .lo-kit .kc-tree { padding-bottom: 12px; } #missions.one #loadout .lo-kit .kc-tree .kc-row { padding-top: 5px; padding-bottom: 5px; } #missions.one #loadout .lo-kit .kc-tree .kc-gun > .kc-row { min-height: 64px; } #missions.one #loadout .lo-kit .kc-tree .kc-kids .kc-row { padding-top: 3px; padding-bottom: 3px; } }   /* (the tree is three rows of tiles taller than the card before it: on a laptop's window its last tile, the big slot, sat under the footer until the sheet was scrolled) */
 @media (max-height: 740px) { #missions.one #loadout .lo-kit .kc-row { padding-top: 6px; padding-bottom: 6px; } #missions.one #loadout .lo-slots { margin-top: 12px; } #missions.one #loadout .lo-kit { margin-top: 14px; } }
 @media (max-width: 720px) { #missions.one.pane-loadout .onefig { display: none; } #missions.one .mbody { grid-template-columns: minmax(0, 1fr); } #missions.one .mlist { border-right: 0; } #missions.one .mt { display: none; } }
-@media (max-width: 900px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) 250px; } #missions.one .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-left: 10px; padding-right: 10px; } }
+@media (max-width: 900px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr) 250px; } #missions.one .mgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding-left: 10px; padding-right: 10px; } html.tsz #missions.one .mgrid .mrow { min-height: calc((100cqw - 10px) / 4 + 48px); } }
 @media (max-width: 720px) { #missions.one.tiles.pane-list .mbody { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 46%) minmax(0, 1fr); } }
 `;
 /** The sound mark on a tile of a quiet mission's gear screen: a source and one, two or three arcs (ui/kitNoise.ts says which), as a mask the rule fills with its own colour. */
