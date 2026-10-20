@@ -126,10 +126,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   as it was — the word menu-art-page and menu-idle-page already open him with), and `show()` answers true for every case the column is the picture's:
   shown (`#missions.kv-on`), WAITED FOR — the level's ways not yet fetched, or the child not yet `ready` (its own word, 12 drawn frames in), however long
   that takes: `#missions[data-kv-wait]`, the column empty and its hairline off so nothing shows and goes — or NONE TO BE HAD, for the page's life on that
-  query: the child said `none` (before `ready` or AFTER it), its load errored, 10 s passed without `ready` (`?kitwait=N` for a slow adapter), the level has
-  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. `show()` is false only with the switch off or under 720 px. CHECK:
-  kitview-page's outer half (the rows 'a slow child', 'a child that says nothing', 'says `none`', 'no kitView block'; `STANDIN_BREAK=1` opens the slow
-  child's row `?oldfigure` and must fail; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
+  query: the child said `none` (before `ready` or AFTER it), its load errored, the level has
+  no block or the way in is dealt: `#missions[data-kv-none]`, the column empty. THE WAIT HAS NO CLOCK (10-20): a child was given 10 s to say `ready`
+  (`KIT_VIEW.wait`, `?kitwait`: both gone) and then called none for the page's life — the standing man's cue while he stood in; with nobody standing in, a
+  second game slower than that (a cold shader cache, a slow adapter) left the column blank for good. Every fatal card in the child says `none`
+  (`main.ts kitViewFatal`), so a child that says nothing is one still coming up. `show()` is false only with the switch off or under 720 px. CHECK:
+  kitview-page's outer half (the rows 'a slow child' — 12 s of nothing and still waited for, then shown on its `ready`: red on the build with the clock — 'says `none`', 'no
+  kitView block'; `STANDIN_BREAK=1` puts a canvas in the column while the slow child is waited for and that row must fail on the canvas alone — it used to
+  open the row `?oldfigure`, where no iframe is made, and failed on the iframe count; `GRACE_BREAK` is gone with the grace). Headless Chromium with a stub child, and one run of the real page with the
   real child on the software adapter; never seen on a GPU. STILL IN THE REPO: `kitFigure.ts` and `figureTrace.ts`, reached only by `?oldfigure` and their own
   sheets and checks — deleting them is the kit figure's owner's call. THE SECOND GAME LIVES ONLY WHILE IT CAN SHOW: dropped on `none` / a failed
   boot / a mission with no block / a dealt way / a window gone under 720 px (the ResizeObserver repaints across the line) / Deploy / the page closing;
