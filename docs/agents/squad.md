@@ -86,20 +86,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   target is asked again whenever the camera has moved (hover()'s kept answer is dropped), so the outline stays under the cursor. No words are put on the
   cursor (the panel's line has them). THE RING'S SIZE FOLLOWS THE WINDOW (`CMDRING.ref`, `ringZoom`): the flick, the edge margins, a click near a man's
   feet and the picture grow together in a window over 1920 × 1080, and `ui/cmdring.ts` puts the ring in the zoomed layer's own pixels (ui/textsize.ts), so
-  the wedge under the cursor is the wedge the game lights; a text size step chosen by hand does not change the ring. Nothing is on a timer. Shift held with Tab opens nothing (kept for the plan mode, not built). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
+  the wedge under the cursor is the wedge the game lights; a text size step chosen by hand does not change the ring. HIS OWN HANDS ON THE SAME RING (`CMDRING.hands`, `interact.ts`: off in the module and on both stands, raised by the page with the ring,
+  `?nocmdhands` or the debugger's tick 'Tab ▸ the ring ▸ Space the same way (to try)' leaves Space as it was, and a recording from before the key replays
+  with the list; the maintainer, 10-20: "i'm curious if we can unify some of these squad command interactions with ours. our space menu feels really
+  clumsy today"): Space DOWN over something to choose puts the rows Space already had up as a ring at the cursor at once (`Player.sel.ring`; the
+  highlighted row lit, his colour the HUD's bright), Space UP does the lit row, so a tap is the tap it was. A digit (not his weapon slot while it is up)
+  or the cursor out of the middle lights another row that has a wedge; the wheel and the arrows step the highlight as they did; a right click, a left
+  click (his trigger, never the arm hold's knife), the back key or the window losing the keys give nothing. No quarter second, no cancel row, and his feet
+  are his own (`Player.listOpen` is the one question the feet, the cancel row, the hands and the panel ask: open as a LIST). A wedge's words are the
+  row's up to its dash; the thing's name and the lit row's words in full sit under the ring. The rows, their order, what each does, the sustained verbs and
+  how they stop are untouched. The two rings never stand together (Space under a held squad ring is taken; the squad's key over his is the back key).
+  Not on it: a row past the fifth (the wheel reaches it; nothing is lit), nothing on open floor. ONE GUARD ON THE CLOCK, both rings (`tapSecs` 0.15 s): the
+  cursor lights nothing in the key's first moment, and one already out of the middle by then lights nothing until it has been back, so a tap made with
+  the hand sweeping is still the first wedge; a digit counts from the first frame (`ringOpen` / `ringWant` in `cmdring.ts` are the halves both rings
+  share). Shift held with Tab opens nothing (kept for the plan mode, not built). TAB IS ALSO THE BACK KEY (`BACKKEY.tab`): with
   a menu, a Space list, a running verb or the launcher's arc to back out of, the press is theirs and no ring opens; on the page Esc is the pause, and a ring
   held under the pause card is gone, nothing given, when play comes back (the 'Paused' tick). NOT ON THE RING YET: rows on letters (the
   throw page on G, 'go'), the 'wait for my word' row (a ring's order goes at once), picking several men (one click is one man). B, X and T work beside it;
   with the ring on, Tab is not the debug tools' key (`main.ts`; `TABKEY.does` is 'off' in the page anyway). A load, or the tick put off, puts a held ring away
-  (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 12 lines through the game's own input on the office
-  room clear, the check raising the switch itself; `CMDRING_BREAK=1` (the switch left off) fails 10 of the 12 on both stands. SEEN: the 12 lines on both
+  (`ringRestore`). CHECK: `bun run tools/qa/cmdring-check.ts` (`probes.ts cmdring`, family squadorders), 17 lines through the game's own input on the office
+  room clear, the check raising the switch itself; `CMDRING_BREAK=1` (the switch left off) fails 13 of the 17 on both stands (the four that hold are the ones that say 'as it was'). SEEN: the 17 lines on both
   stands, one seed; the page on the software adapter with `?cmd` through real key and mouse events (the ring draws at the cursor and whole at the view's
   edge, the lit wedge fills, a tap stacks, a digit and the cursor each light a wedge and the key up gives it, a page turns and lights nothing, a click on a
   man tints the ring his pair's colour and fires nothing, no console or GPU error) and without it (Tab opens nothing). The hint on the same page, at 960 ×
   540 and at 2560 × 1440 (text factor 1.33): a glyph and outline for the floor, a man (his pair's colour), a wall, a door and the squad's own menu, none
   with Shift down, the glyph 15 px of the ring's own up and right of the cursor and the other way at the view's edge, in the ring's middle once the key is
   down, the cursor 0.8 of the flick out lighting nothing and 1.2 lighting a wedge at both sizes, no console or GPU error. The floor's glyph was redrawn (a
-  pin) after that look and has not been seen. NOT seen on the page: Esc, which
+  pin) after that look and has not been seen. Sam's own ring on the same page (960 × 540, Space pressed for real at a shut door): up on the key, his colour,
+  two wedges, the cursor lighting the second, the key up easing the leaf, Space again stopping it, no console or GPU error. With the ring off the
+  selector probes are all green on the frozen stand; on shipped selector-rows and selector-sustained are red the same way on the untouched build head of
+  that hour. NOT seen on the page: Esc, which
   there is the pause — a ring held under the pause card going away on the 'Paused' tick is in the check, by the tick alone. A ring opened near the view's top
   left sits under the squad panel. NEVER seen on a GPU, never played by a hand: whether the hold feels right, whether the ring hides what it is opened on,
   and whether Sam's aim swinging with the cursor matters are the maintainer's to judge. No tally was run: with the switch off nothing moves, and the ring

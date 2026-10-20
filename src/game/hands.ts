@@ -480,7 +480,7 @@ export function handsStep(g: Game, own: boolean, dt: number): [number, number] |
   if (h && pl.dragging) {
     if (h.phase === 'rise' || h.phase === 'set') return [0, 0];
     if (h.phase === 'reach') {
-      const rag = pl.dragging.char.ragdoll; if (!rag || pl.sel.open) return [0, 0];
+      const rag = pl.dragging.char.ragdoll; if (!rag || pl.listOpen) return [0, 0];
       if (own && !h.carry) { h.t = Math.max(h.t, HANDS.stepSecs); return null; }   // a step of his own: no walking him in — the pins gather it to him from where he goes, as they always did (not so on the way to lift it: he gets under it first, and only a sprint calls that off)
       if (h.carry?.spot) { const sp = h.carry.spot, dx = sp[0] - c.pos[0], dz = sp[2] - c.pos[2], dl = Math.hypot(dx, dz); return dl > 0.06 ? [dx / dl, dz / dl] : [0, 0]; }
       const m = mid(rag.point(h.iL), rag.point(h.iR)), dx = m[0] - c.pos[0], dz = m[2] - c.pos[2], dl = Math.hypot(dx, dz);
@@ -492,7 +492,7 @@ export function handsStep(g: Game, own: boolean, dt: number): [number, number] |
   if (m?.goal) {
     const done = () => { m.goal = null; return null; };
     if (own) return done();   // a step of his own: his feet are his again (the leaf still will not go into him)
-    if (pl.sel.open) return [0, 0];   // (choosing a row: feet still, the leaf waits)
+    if (pl.listOpen) return [0, 0];   // (choosing a row: feet still, the leaf waits)
     const dx = m.goal[0] - c.pos[0], dz = m.goal[2] - c.pos[2], dl = Math.hypot(dx, dz);
     if (dl < m.stepBest - 0.002) { m.stepBest = dl; m.stepStall = 0; } else m.stepStall += dt;   // (his real way made — a chair, a man in the way of the step ends it where he got to)
     if (dl < 0.06 || m.stepStall > 0.25) return done();

@@ -6,6 +6,7 @@ import { wallClock } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
+import type { RingState } from './cmdring';
 import { Level, PatrolRoute, Chokepoint } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { GltfCharacter } from '../anim/gltf';
@@ -359,7 +360,11 @@ export class Player {
    *  down) with rows on offer — the list shows its open state, a cancel row sits at its foot, his feet are frozen, and letting go performs the highlighted row;
    *  moved = the highlight was scrolled during this press (a press that scrolls is a choice, never a tap); wheelAcc = wheel travel toward the next row; runKey / moveLatch: which sustained verb was running
    *  last frame and the movement keys already down when it began (a step cancels a running verb — a key held into it does not until it has come up once). */
-  sel = { downT: -1, open: false, moved: false, wheelAcc: 0, runKey: '', moveLatch: 0 };
+  sel = { downT: -1, open: false, moved: false, wheelAcc: 0, runKey: '', moveLatch: 0,
+    /** the list up as a ring at the cursor (cmdring.ts CMDRING.hands — null: the list as it was): where, and whether the cursor may light a wedge yet; `key`: the rows it was last read over (Player.nearKey) */
+    ring: null as (RingState & { key: string }) | null };
+  /** the selector open AS A LIST (feet still, a cancel row at its foot, the panel in its open look) — not up as a ring */
+  get listOpen(): boolean { return this.sel.open && !this.sel.ring; }
   pace = 1; paceShownT = -10;   // walking-pace multiplier set with the mouse wheel, PACE_MIN‥1 of the walk / crouch-walk speed (sprint is its own held modifier); shown as ticks in the kit column
   nv = false; nvAmount = 0;
   light!: RtLight;   // the rail light: posed from the gun every frame (rigProps.rigLightPose)
@@ -1561,7 +1566,7 @@ export class Game {
     this.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
     if (squadThrowKey(this, input)) this.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
     squad40Tick(this);   // (a teammate's 40 mm on order — squad40.ts: its row on the throws' page kept in step, a man turning to his shot; a map read and a return unless a teammate's card brought a round)
-    updateInteract(this, dt, input);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
+    updateInteract(this, dt, input, canvas);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
     trackPlayer(this, dt);   // the aim-settle model, Sam's half (aim.ts): what the reticle is on is known now; his feet are last frame's, a frame is nothing to a 0.8 s settle — the fire sites in updatePlayer / updateHold read it below
     this.threatTick();
     updateSuppression(this, dt);   // everybody's suppression decays, and the guards' flinch / pinned edges fire, ahead of the player and the guards who read it (the rounds they fire below add to it for next frame)

@@ -98,7 +98,7 @@ import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewO
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
 import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint } from './autopilot';   // (read inside input(), hud() and show() only)
-import { CMDRING, CMDRING_STATS, wedgeAt, ringZoom, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
+import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { backableInteract } from './interact';   // (read inside ringInput only: what the back key would back out of)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
@@ -974,12 +974,11 @@ export class SquadOrders {
       if (!this.open(this.targetUnder(input, cam, canvas))) return false;
       this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
       // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
-      const cl = (v: number, m: number, max: number) => max > 2 * m ? Math.max(m, Math.min(max - m, v)) : v, z = ringZoom(canvas.clientWidth, canvas.clientHeight);
-      const ax = cl(input.mouseX, C.edgeX * z, canvas.clientWidth), ay = cl(input.mouseY, C.edgeY * z, canvas.clientHeight);
-      this.cmdRing = { ax, ay, z, lit: 1, armed: Math.hypot(input.mouseX - ax, input.mouseY - ay) < C.flickPx * z }; this.ringSel(); CMDRING_STATS.opened++;
+      this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, g.time); this.ringSel(); CMDRING_STATS.opened++;
       return true;
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
+    input.pressed.delete(INTERACT_KEY);   // (Sam's own ring is not opened under this one: interact.ts)
     const esc = input.pressed.delete('Escape'), blur = input.pressed.has('Blur') || input.pressed.has('Paused');   // ('Paused', backkey.ts: the key let go under the pause card gives nothing on the tick play comes back)
     const rmb = input.rmbHit(); if (rmb) input.clicked &= ~4;
     const lmb = input.lmbHit();
@@ -1002,10 +1001,7 @@ export class SquadOrders {
     } else if (wheel) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
-    const dx = input.mouseX - R.ax, dy = input.mouseY - R.ay, out = Math.hypot(dx, dy) >= C.flickPx * R.z;
-    if (!out) R.armed = true;
-    const want = digit ? (digit <= C.wedges ? digit : 0) : out && R.armed ? wedgeAt(dx, dy, C.wedges) : 0;
-    if (digit) R.armed = false;
+    const want = ringWant(R, input, digit, g.time);
     if (want && want !== R.lit) {
       const rows = this.menu!.rows, i = rows.findIndex(r => r.key === want), first = this.menu!.page === null;
       if (first && want === 1) R.lit = 1;
@@ -1067,7 +1063,7 @@ export class SquadOrders {
   }
   /** What the ring shows this frame (null: no ring): where it is, the lit wedge, whose colour it wears, and the wedge on each digit — the first page's
    *  first in the quick key's own words. ui/cmdring.ts draws it; the simulation never reads it. */
-  ringView(): { x: number; y: number; zoom: number; lit: number; tone: Tone | undefined; caption: string; wedges: { key: number; text: string; off: boolean; opens: boolean }[] } | null {
+  ringView(): RingView | null {
     const R = this.cmdRing, M = this.menu; if (!R || !M) return null;
     const mt = this.menuTarget()!, wedges: { key: number; text: string; off: boolean; opens: boolean }[] = [];
     for (let d = 1; d <= CMDRING.wedges; d++) {
