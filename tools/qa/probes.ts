@@ -163,6 +163,10 @@ const ROWS_BEFORE_THE_TREE = /^(wand-kit|wand-tile)$/;
 // pair's: with a tool in the squad the page has the big slot's row on its own key, and the walk that reads that page as the page opens it, in every
 // scenario, is orderkeys-walk. Held off on every stand, word and table, unless whoever runs the tool set the word.
 const MORE_AS_IT_WAS = /^(frameholds-tools|doortest|doormenu-rows|thresholdmenu-rows|shutdoor-menu|silent-pick|silent-tools|silent-boot|pressorders-squad4|pressorders-nightbreach4)$|^kitpaste(-|$)/;   // (kitpaste: its squads' big slots are the table's; a paste over a lent tool is kitdeal-more's line)
+/** PROBES WRITTEN AGAINST ONE CARD FOR EVERY MISSION (kit.ts KITDEAL.stealth, 10-20): on the shipped stand a stealth run wears your STEALTH card, issued as the
+ *  mission's kit, and a sponge round rides five to a pouch — so a probe that changes the loud card and stages a quiet run alone, or prices sponge rounds a pouch
+ *  each, runs with the key held off (TPS_KITSTEALTH set by hand wins). The rule's own lines are kitstealth's. */
+const STEALTH_AS_IT_WAS = /^(kittree)(-|$)/;   // (owncharge puts its charges on the card a night alone wears: it reads both)
 const CARD_HOLDS: readonly [string, string, string][] = [['TPS_GEAR', 'gear', 'GEAR'], ['TPS_OWNCHARGE', 'owncharge', 'OWNCHARGE'], ['TPS_STICKY', 'stickycam', 'STICKY'], ['TPS_WAND', 'wand', 'WAND']];
 async function run(name: string, fn: () => unknown): Promise<boolean> {
   RAN++; RAN_NAMES.push(name); const f0 = tapFails, p0 = tapPasses; tapDepth++;
@@ -173,11 +177,12 @@ async function run(name: string, fn: () => unknown): Promise<boolean> {
   const gunHeld = GUN_ROW_AS_IT_WAS.test(name) && process.env.TPS_GUNSLOTS === undefined; if (gunHeld) { process.env.TPS_GUNSLOTS = '0'; (await import(`${ROOT}/src/game/gunslots.ts`)).GUNSLOTS.on = false; }   // (as the big slot's line above)
   const treeHeld = ROWS_BEFORE_THE_TREE.test(name) && process.env.TPS_KITTREE === undefined; if (treeHeld) { process.env.TPS_KITTREE = '0'; (await import(`${ROOT}/src/game/kittree.ts`)).KITTREE.on = false; }
   const dealHeld = DEAL_AS_IT_WAS.test(name) && process.env.TPS_KITDEAL === undefined; if (dealHeld) { process.env.TPS_KITDEAL = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.on = false; }
+  const stealthHeld = STEALTH_AS_IT_WAS.test(name) && process.env.TPS_KITSTEALTH === undefined; if (stealthHeld) { process.env.TPS_KITSTEALTH = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.stealth = false; }
   const moreHeld = MORE_AS_IT_WAS.test(name) && process.env.TPS_KITMORE === undefined; if (moreHeld) { process.env.TPS_KITMORE = '0'; (await import(`${ROOT}/src/game/kit.ts`)).KITDEAL.more = false; }
   const cardHeld = CARD_AS_IT_WAS.test(name) ? CARD_HOLDS.filter(([word]) => process.env[word] === undefined) : []; for (const [word, file, table] of cardHeld) { process.env[word] = '0'; (await import(`${ROOT}/src/game/${file}.ts`))[table].on = false; }   // (as the line above: knobsBack puts the tables back)
   try { ret = await fn(); if (ret === false) ok = false; }
   catch (e: any) { ok = false; console.log(`error: probe '${name}' threw — ${e?.stack ?? e}`); }
-  finally { if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (moreHeld) delete process.env.TPS_KITMORE; if (gunHeld) delete process.env.TPS_GUNSLOTS; if (treeHeld) delete process.env.TPS_KITTREE; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
+  finally { try { (await import(`${ROOT}/src/game/kit.ts`)).kitMission(null); } catch { /* the kit module did not load */ }   /* (kit.ts KITDEAL.stealth: a probe that staged a quiet run leaves your stealth card first in the table — the loud one back for the next) */ if (layHeld) delete process.env.TPS_PLANLAY; if (bigHeld) delete process.env.TPS_BIGSLOT; if (dealHeld) delete process.env.TPS_KITDEAL; if (moreHeld) delete process.env.TPS_KITMORE; if (stealthHeld) delete process.env.TPS_KITSTEALTH; if (gunHeld) delete process.env.TPS_GUNSLOTS; if (treeHeld) delete process.env.TPS_KITTREE; for (const [word] of cardHeld) delete process.env[word]; tapDepth--; CUT_SWITCH.on = cutOn; CUT_SWITCH.swap = cutSwap; SOLO.on = soloOn; try { knobsBack(knobs); } catch (e: any) { ok = false; console.log(`error: the knob tables could not be put back after '${name}' — ${e?.stack ?? e}`); if (!FAILED.includes(name)) FAILED.push(name); } }
   if (tapFails > f0) ok = false;
   if (typeof ret === 'boolean' || tapFails > f0 || tapPasses > p0) { CHECKED++; RAN_CHECKED.add(name); }
   if (!ok && !FAILED.includes(name)) FAILED.push(name);
@@ -2505,6 +2510,7 @@ if (on('kitcan-tiles', 'kitcan', 'kit', 'all')) await run('kitcan-tiles', async 
 // THE SQUAD'S KIT IS DEALT OVER THE MEN WHO COME (src/game/kit.ts KITDEAL; tools/qa/kitdeal-check.ts sets its switches itself; KITDEAL_BREAK=1 must fail)
 if (on('kitdeal-cards', 'kitdeal', 'kit', 'all')) await run('kitdeal-cards', async () => (await import('./kitdeal-check.ts')).dealCards());   // nobody of three or four comes bare, the squad's count is the count it was
 if (on('kitdeal-more', 'kitdeal', 'kit', 'all')) await run('kitdeal-more', async () => (await import('./kitdeal-check.ts')).dealMore());   // KITDEAL.more: a tool each pair as issued, nobody with a gun alone (KITMORE_BREAK=1 must fail)
+if (on('kitstealth', 'kit', 'all')) await run('kitstealth', async () => (await import('./kitstealth-check.ts')).kitStealth());   // KITDEAL.stealth: a stealth mission's kit is what your card starts at there — nothing handed over a card, a stealth card of your own beside the loud one (KITSTEALTH_BREAK=1 must fail)
 if (on('kitdeal-run', 'kitdeal', 'kit', 'all')) await run('kitdeal-run', async () => (await import('./kitdeal-check.ts')).dealRun());   // the same run by digest; cards dealt for four staged smaller; a mission's own issue
 if (on('kitdeal-screen', 'kitdeal', 'kit', 'all')) await run('kitdeal-screen', async () => (await import('./kitdeal-check.ts')).dealScreen());   // the roster of four on the Team & kit screen
 if (on('kitdeal-stands', 'kitdeal', 'kit', 'all')) await run('kitdeal-stands', async () => (await import('./kitdeal-check.ts')).dealStands());   // the two stands, the registry, a recording's tables
@@ -3192,6 +3198,8 @@ if (on('squad40', 'squadorders', 'all')) await run('squad40', async () => (await
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
 // B is the squad's autopilot: on a door the men wait on they go in by the entry they pick; its plan is drawn for its own time (autopilot-check.ts; AUTOPILOT.on)
 if (on('autopilot', 'squadorders', 'all')) await run('autopilot', async () => (await import('./autopilot-check.ts')).autopilotCheck());
+// the orders ring, a prototype: the key down puts the menu up as a ring at the cursor, the key up gives the lit wedge; off unless asked for (cmdring-check.ts; CMDRING.on)
+if (on('cmdring', 'squadorders', 'all')) await run('cmdring', async () => (await import('./cmdring-check.ts')).cmdringCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
 if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family

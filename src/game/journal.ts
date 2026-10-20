@@ -86,6 +86,7 @@ import { INHAND } from './inhand';
 import { GUNHAND } from './gunhand';
 import { PACKSIDE } from './packside';
 import { PLANLAY } from './planlay';
+import { CMDRING } from './cmdring';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
 import { GUNHOLD } from './gunhold';
@@ -262,6 +263,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const rw = k.tables.REARWATCH as Partial<typeof REARWATCH> | undefined; if (rw && rw.roomLast === undefined) REARWATCH.roomLast = false; }   // (a file from before a room keeper waited for the men on their way out of the room: freed the moment they had come by him)
   if (!k.tables.GUNWALL) GUNWALL.on = false;   // (a file from before a raised gun came down at a wall: its men kept theirs up, and fired or did not by that)
   if ((k.tables.WORDS as Partial<typeof WORDS> | undefined)?.doors === undefined) WORDS.doors = false;   // (a file from before a level could name its own doors: every door called what it was)
+  if (!k.tables.CMDRING) CMDRING.on = false;   // (a file from before the orders ring: its key was nobody's)
+  if (typeof (k.tables.CMDRING as { hint?: boolean } | undefined)?.hint !== 'boolean') CMDRING.hint = false;   // (… and one from before its hint: nothing drawn at the cursor before the key)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
   if (!k.tables.KITANIM) KITANIM.on = false;   // (a file from before the kit animations: its draws were instant and its reloads the row's one beat)
@@ -296,6 +299,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else { const was = k.tables.BIGSLOT as Partial<typeof BIGSLOT>; if (was.shut === undefined) BIGSLOT.shut = false; if (was.beside === undefined) BIGSLOT.beside = false; if (was.moves === undefined) BIGSLOT.moves = false; if (was.snug === undefined) BIGSLOT.snug = false; if (was.weight === undefined) BIGSLOT.weight = false; }   // (…and one from before its tools opened an unlocked door, from beside the frame: a lock only, from where he stood)
   if (!k.tables.KITDEAL) KITDEAL.on = false;   // (a file from before the squad's kit was dealt over the men who come: the cards of three or four were the pair's, the others' pouches empty)
   else if ((k.tables.KITDEAL as Partial<typeof KITDEAL>).more === undefined) KITDEAL.more = false;   // (…and from before a team of three or four as issued was lent a big tool each pair: every man came with his big slot empty, and the Quiet kit's fourth man with his pistol alone)
+  if ((k.tables.KITDEAL as Partial<typeof KITDEAL> | undefined)?.stealth === undefined) KITDEAL.stealth = false;   // (…and from before a stealth mission's kit was your card's own: its sponge rounds, cameras and wand were handed over the card at the staging, and a sponge round cost a pouch)
   if (!k.tables.PLANLAY) PLANLAY.on = false;   // (a file from before an order could be laid for the word: 'wait for my word' was the four's door tools' row, and they walked to the door at once)
   if (!k.tables.CONDITION) CONDITION.on = false;   // (a file from before a blast left a man hurt: nobody in it ever was)
   if (!k.tables.GUNHAND) GUNHAND.on = false;   // (a file from before a move kept to the hand that is free: a whistle raised the empty fist, a defender threw with his carbine hand, a long gun reloaded on the pistol's clip)
