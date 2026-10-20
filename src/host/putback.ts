@@ -6,7 +6,6 @@
 // device (host/standup.ts wires it; the headless harness has no buffers to be wrong).
 import type { Engine } from '../engine';
 import type { Game } from '../game/game';
-import { airResend } from '../game/airSim';
 
 export function hostAfterPutBack(game: Game) {
   const engine = game.engine as unknown as Engine;
@@ -14,7 +13,6 @@ export function hostAfterPutBack(game: Game) {
   game.decals.touch();   // (the ring's list went back; its 'unchanged since the last frame' with it)
   game.smoke?.clearAll?.();   // (the solver's fields are the GPU's: a cloud of the abandoned moment is nobody's — a can that was venting at the save lies there without its smoke, as after a file's load)
   engine.particles?.clear();
-  airResend(game); game.airDust.resend();   // (the wind's map of what stands, the dust under the roofs: each sent when it changed, and it changed BACK)
-  game.snowRehand();   // (lying snow: the field and the tracks are handed over whole again, not by the rects that changed)
+  game.rehand();   // (lying snow, the wind's map of what stands, the dust under the roofs: each handed over only when it changed, and it changed BACK)
   engine.resetTaa('a save put back'); engine.invalidateWorldCache();
 }

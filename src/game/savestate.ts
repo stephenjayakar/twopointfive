@@ -952,7 +952,7 @@ export class Checkpoints {
     return this.put(KEY_PIC(info.key), `${info.savedAt}|${url}`);
   }
   /** F5 (player.ts, inside a step): a save by hand at the end of this update — the keys are the recording's, so a run played again saves where this one did */
-  askSave() { this.hand = true; }
+  askSave() { if (SAVETIMELINE.on) this.hand = true; }   // (the switch is read HERE: player.ts imports nothing of this module — an import there loads this file early from that door and the cycle then meets wind.ts before weather.ts)
   /** a load asked for INSIDE a step (player.ts: the bare Enter once down): a file is poured in at once, as ever; a save in memory is put back at the end of
    *  this update, where it was taken — never under the feet of the frame that is running */
   loadInStep(g: Game, key: string): string | null { const e = this.shelf.get(key); if (!e) return this.load(g, key); const why = this.memNo(g, e); if (why) return why; this.due = key; return null; }   // (refused NOW, where the caller can still fall back on a restart)
