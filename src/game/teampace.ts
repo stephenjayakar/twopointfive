@@ -14,7 +14,8 @@
 //                player's own sprint, and keeps it until the player stops running (`follow`).
 //   THE FIGHT    what the fight asks of his legs is not a walk to a place and keeps the pace it had (PACE.max): a man who has somebody in his sights or lost
 //                one `fightSecs` ago; the leg through an ordered door (ORDERS.entry: the stun's seconds are counted on it); a step the
-//                room fight orders (off a doorway's opening, round a friend in his line); the breach drill; a man leaving a grenade who may not run.
+//                room fight orders (off a doorway's opening, round a friend in his line); the breach drill; a man leaving a grenade who may not run;
+//                and a man a grenade took off his place, for `backSecs` after it (a door order waits for its men, and counts the seconds).
 //   A REASON     on his own (`own`) a teammate RUNS for one of two things, each written down as it is taken (TEAMPACE_STATS, TEAMPACE_DEBUG.log):
 //                  blast   he is running from a live grenade (frag.ts fragRunning) — at the pace the flee asks, as anybody's legs;
 //                  cover   loud has just reached him, he has no man in his sights, the floor he is on is in the line of a man he knows of, his mark is out
@@ -47,6 +48,8 @@ export const TEAMPACE = {
   follow: true, behindM: 1.0,
   /** a man who lost his man this long ago still moves at the fight's pace (s) */
   fightSecs: 2,
+  /** … and a man a grenade took off his place goes back to it at the fight's pace, this long after he stopped running from it (s; 0 = at the walk) */
+  backSecs: 6,
   /** on their own: a run for a reason (blast, cover) */
   own: true,
   /** a run to cover: the least leg worth running (m), how exposed the floor he stands on must be (picture.ts exposedAt), how often it is asked (s) */
@@ -116,6 +119,7 @@ function runWhy(g: Game, gd: Guard): RunWhy | null { if (fragRunning(g, gd)) ret
 /** ONCE A FRAME A MAN, after his legs have moved (squad.ts): a run under a reason is written down — once a run, and its seconds */
 export function teamRan(g: Game, gd: Guard): void {
   if (!teamSlow(g, gd)) return;
+  if (TEAMPACE.backSecs > 0 && fragRunning(g, gd)) teamLeave(g, gd, 'fight', PACE.max, TEAMPACE.backSecs);   // (the way back to his place: a door order counts the seconds its men are off it)
   const why = runWhy(g, gd); if (!why) return;
   reasonT.set(gd, g.time);
   if (gd.speed < TEAMPACE.runAt) return;

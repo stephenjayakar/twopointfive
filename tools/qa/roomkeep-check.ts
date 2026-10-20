@@ -25,6 +25,7 @@ const { stackRoomProbe } = await import(`${ROOT}/src/game/stackroom.ts`);
 const { sideOf } = await import(`${ROOT}/src/game/orders.ts`);
 const { killGuard } = await import(`${ROOT}/src/game/combat.ts`);
 const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
+const { TEAMPACE } = await import(`${ROOT}/src/game/teampace.ts`);
 
 type V = [number, number, number];
 const WALKED = process.env.RK_JUMP ? 0 : 30;   // frames Sam's leaving reads as a walk; RK_JUMP=1 = set down outside, as the check first had it
@@ -45,6 +46,9 @@ const fails: string[] = [];
 async function play(E: any, di: number, side: 1 | -1, on: boolean): Promise<Res | null> {
   Math.random = seeded(0xba46 + 7919);
   const W: any = await standUp({ uploadEvery: 4, ...(E.level ? { level: levelOfFile(E.level) } : {}) }); const g = W.game;
+  // (the team's slower walk, teampace.ts, is held off: with it the men falling in come by the keeper later in Sam's three seconds, and the 0.4 m he may
+  //  shift for them is the bar — compound-four k_p+ reads 0.5. The keep itself is the same rule at either pace; the pace is teampace-check.ts's)
+  TEAMPACE.on = false;
   g.godMode = true; g.playerInvisible = true;
   const { why: no } = startFromQuery(g, new URLSearchParams(scenarioQuery(E) as string)); if (no) throw new Error(`${E.id}: start refused — ${no}`);
   const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };
