@@ -3191,6 +3191,8 @@ if (on('squad40', 'squadorders', 'all')) await run('squad40', async () => (await
 if (on('plan', 'squadorders', 'all')) await run('plan', async () => (await import('./plan-check.ts')).planCheck());
 // B is the squad's autopilot: on a door the men wait on they go in by the entry they pick; its plan is drawn for its own time (autopilot-check.ts; AUTOPILOT.on)
 if (on('autopilot', 'squadorders', 'all')) await run('autopilot', async () => (await import('./autopilot-check.ts')).autopilotCheck());
+// the orders ring, a prototype: the key down puts the menu up as a ring at the cursor, the key up gives the lit wedge; off unless asked for (cmdring-check.ts; CMDRING.on)
+if (on('cmdring', 'squadorders', 'all')) await run('cmdring', async () => (await import('./cmdring-check.ts')).cmdringCheck());
 // X is where the plan is laid: an order picked with 'wait for my word' on is laid — nobody moves — F sends the plan, a restart puts it back (planlay-check.ts; PLANLAY.on)
 if (on('planlay', 'squadorders', 'all')) await run('planlay', async () => (await import('./planlay-check.ts')).planlayCheck());
 // ---------------------------------------------------------------- the BREACHING SHOTGUN (shotgun-probes.ts; game/shotgun.ts, weapons.ts row 'm870', doortools.ts toGun / gunStep, kit.ts 'shotgun'): 'shotgun' = the family

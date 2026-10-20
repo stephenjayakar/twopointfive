@@ -131,6 +131,7 @@ import { BIG_STATS } from '../game/bigkit';
 import { SQUADTHROW } from '../game/squadthrow';
 import { SQUAD40 } from '../game/squad40';
 import { AUTOPILOT } from '../game/autopilot';
+import { CMDRING, ringRestore } from '../game/cmdring';
 import { PLANLAY, layClear } from '../game/planlay';
 import { STICKY, stickyIssue, stickySummary } from '../game/stickycam';
 import { QUIETFOG } from '../game/quietfog';
@@ -1298,6 +1299,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.toggleBox(TF.menu, 'B ▸ the squad picks the entry', () => AUTOPILOT.on, v => { AUTOPILOT.on = v; }, 'also ?noautopilot on the address. B on a door your men are stacked on sends them in by the entry they pick (a stun for a room nobody has stood in, the last one kept for a room they can see is held; never a frag, never a wall); B on a door with something waiting on your word gives the word. Off = B is the first row of the menu, as it was', true);
   panel.toggleBox(TF.menu, 'X ▸ wait for my word lays the plan', () => PLANLAY.on, v => { PLANLAY.on = v; if (!v) layClear(game); }, 'also ?noplanlay on the address. The order menu has \'wait for my word\' under every order: picked with it on, the order is laid — drawn on the floor in the order mode, nobody moving — and F sends everything laid. Off = the row is the door tools\' alone for the squad of four, and the men walk to the door at once, as it was', true);
   panel.toggleBox(TF.menu, 'X ▸ a restart puts the plan back', () => PLANLAY.keep, v => { PLANLAY.keep = v; if (!v) { game.orders.lay.kept = null; game.orders.lay.keptFor = ''; } }, 'Enter (a restart) lays again the plan as it stood the first time it was sent in the last try; off = every try starts with nothing laid', true);
+  panel.toggleBox(TF.menu, 'Tab ▸ the orders ring (to try)', () => CMDRING.on, v => { CMDRING.on = v; if (!v) ringRestore(game); }, 'also ?cmd on the address. A PROTOTYPE, off unless asked for. Tab down puts the order menu up as a ring at the cursor; Tab up gives the lit wedge, so a tap is B. Held: a digit or a flick of the cursor lights another wedge, the wheel or a click on a man changes who, Esc gives nothing. B, X and T work beside it', false);
   panel.slider(TF.menu, 'B ▸ plan shown, s', 1, 10, 0.5, () => AUTOPILOT.showSecs, v => { AUTOPILOT.showSecs = v; }, 'how long the plan of a B order stays on the floor before it has faded (an order from the menu: 2.5)');
   panel.toggleBox(TF.menu, 'plan ▸ a teammate\'s throw', () => PLAN.throws, v => { PLAN.throws = v; }, 'who throws (a filled ring at his feet), his walk to where he throws from, the arc, where the thing comes to rest and a frag\'s lethal reach — also for the highlighted row of the throw page, fainter, before anything is given; off = the throw order\'s own stopgap picture, if that is on');
     // (one row per key teamfeel.ts keeps: the range comes from its list — a number's min / max / step — and each row saves ITS key, so only what a row

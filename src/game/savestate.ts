@@ -133,6 +133,7 @@ import type { WallsSave } from './wallbreak';
 import type { FurnSave } from './furnblast';
 import type { LaySnap } from './planlay';
 import { PLANLAY, laySnapshot, layRestore } from './planlay';
+import { ringRestore } from './cmdring';
 import { dialogueSnapshot, dialogueRestore, peekScript, forceScript, forcedScriptOf, hashStr } from './dialogue';
 import type { DialogueSnap } from './dialogue';
 import { civiliansSnapshot, civiliansRestore, civilianCompromise } from './civilians';
@@ -612,7 +613,7 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   g.restartEncounter();
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
