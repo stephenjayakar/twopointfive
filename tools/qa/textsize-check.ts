@@ -69,7 +69,13 @@ export async function textsizeCheck(): Promise<boolean> {
 
     // 5. a look, never a rule
     const readers: string[] = [];
-    for (const dir of ['src/game', 'src/scene', 'src/anim', 'src/math']) for (const f of readdirSync(`${ROOT}/${dir}`)) if (f.endsWith('.ts') && /textsize|textZoom|--tz\b/.test(readFileSync(`${ROOT}/${dir}/${f}`, 'utf8'))) readers.push(`${dir}/${f}`);
+    // (a READ is an import of the module, a call of one of its functions, its hook or its factor in a rule; a comment that names the file is not one)
+    const READS = /from\s+['"][^'"]*\/textsize['"]|\b(?:textZoom|rectZoom|uiSize|uiMatch|textStep|setTextStep|zoomFor|bootTextSize)\s*\(|__textsize\b|--tz\b/;
+    const code = (text: string) => text.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map(l => l.replace(/(^|\s)\/\/.*$/, '')).join('\n');
+    for (const dir of ['src/game', 'src/scene', 'src/anim', 'src/math']) for (const f of readdirSync(`${ROOT}/${dir}`)) if (f.endsWith('.ts') && READS.test(code(readFileSync(`${ROOT}/${dir}/${f}`, 'utf8')))) readers.push(`${dir}/${f}`);
+    const would = ["import { textZoom } from '../ui/textsize';", 'const z = textZoom();', "el.style.width = 'calc(10px * var(--tz, 1))';", 'const t = (window as any).__textsize;'].filter(l => READS.test(code(l))).length;
+    const wouldNot = ['// (the page\'s words grow the same way, ui/textsize.ts)', '/** see textZoom() in ui/textsize.ts */', 'const ringZoom = (w: number) => w / 1920;'].filter(l => READS.test(code(l))).length;
+    check(would === 4 && wouldNot === 0, 'the reader test is red on an import, a call, the hook and the factor in a rule, and not on a comment that names the file', `${would} of 4 reads caught · ${wouldNot} of 3 comments and look-alikes caught`);
     check(readers.length === 0, 'nothing in the simulation reads the text size', readers.join(' ') || 'src/game, src/scene, src/anim, src/math');
   } finally { TEXTSIZE.ref = ref0; }
   console.log(`=== textsize: ${all ? 'ALL PASS' : 'FAIL'} ===`);
